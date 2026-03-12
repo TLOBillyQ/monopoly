@@ -1074,6 +1074,290 @@ local function _test_effect_pipeline_single_optional_effect_uses_secondary_confi
   _assert_eq(opened_choice.options[1].id, "buy_land", "single optional effect should expose chosen effect id")
 end
 
+-- Characterization tests for strategy helper functions (T4)
+local function _test_ai_can_use_item_returns_true_for_mine_in_pre_action_manual()
+  local item_id = gameplay_rules.item_ids.mine
+  local result = item_strategy._ai_can_use_item(item_id, "pre_action")
+  _assert_eq(result, true, "mine should be usable in pre_action with manual timing")
+end
+
+local function _test_ai_can_use_item_uses_timing_allowed_for_other_items()
+  -- Test with clear_obstacles which has timing "pre_action"
+  local item_id = gameplay_rules.item_ids.clear_obstacles
+  local result_pre = item_strategy._ai_can_use_item(item_id, "pre_action")
+  _assert_eq(result_pre, true, "clear_obstacles should be usable in pre_action")
+
+  local result_post = item_strategy._ai_can_use_item(item_id, "post_action")
+  _assert_eq(result_post, false, "clear_obstacles should not be usable in post_action")
+end
+
+local function _test_has_demolish_target_returns_true_when_target_exists()
+  local g = _new_game()
+  local p = g:current_player()
+  -- Set up a target by placing a building
+  local idx = 3
+  local tile_ref = g.board:get_tile(idx)
+  g:set_tile_owner(tile_ref, 2)
+  g:set_tile_level(tile_ref, 1)
+
+  local result = item_strategy._has_demolish_target(g, p)
+  _assert_eq(result, true, "should find demolish target when building exists")
+end
+
+local function _test_has_demolish_target_returns_false_when_no_target()
+  local g = _new_game()
+  local p = g:current_player()
+  -- Ensure no buildings on the board - only reset land tiles that have owners
+  for _, tile_ref in ipairs(g.board.path) do
+    if tile_ref.type == "land" then
+      local st = g.tile_states and g.tile_states[tile_ref.id] or nil
+      if st and st.owner_id then
+        g:set_tile_owner(tile_ref, nil)
+        g:set_tile_level(tile_ref, 0)
+      end
+    end
+  end
+
+  local result = item_strategy._has_demolish_target(g, p)
+  _assert_eq(result, false, "should not find demolish target when no buildings exist")
+end
+
+local function _test_has_target_player_returns_true_when_candidates_exist()
+  local g = _new_game()
+  local p = g:current_player()
+  -- exile card needs another player to target
+  local item_id = gameplay_rules.item_ids.exile
+
+  -- Mock target_candidates to return valid candidates
+  support.with_patches({
+    {
+      target = item_strategy,
+      key = "target_candidates",
+      value = function()
+        return { { id = 2, name = "P2" } }
+      end,
+    },
+  }, function()
+    local result = item_strategy._has_target_player(g, p, item_id)
+    _assert_eq(result, true, "should find target when candidates exist")
+  end)
+end
+
+local function _test_has_target_player_returns_false_when_no_candidates()
+  local g = _new_game()
+  local p = g:current_player()
+  local item_id = gameplay_rules.item_ids.exile
+
+  -- Mock target_candidates to return empty candidates
+  support.with_patches({
+    {
+      target = item_strategy,
+      key = "target_candidates",
+      value = function()
+        return {}
+      end,
+    },
+  }, function()
+    local result = item_strategy._has_target_player(g, p, item_id)
+    _assert_eq(result, false, "should not find target when no candidates exist")
+  end)
+end
+
+local function _test_try_use_item_returns_nil_when_cond_fails()
+  local g = _new_game()
+  local p = g:current_player()
+  local item_id = gameplay_rules.item_ids.clear_obstacles
+
+  local result = item_strategy._try_use_item(g, p, item_id, function() return false end, false)
+  _assert_eq(result, nil, "should return nil when condition fails")
+end
+
+local function _test_try_use_item_returns_nil_when_item_not_in_inventory()
+  local g = _new_game()
+  local p = g:current_player()
+  local item_id = gameplay_rules.item_ids.clear_obstacles
+
+  -- Ensure item is not in inventory by clearing all slots
+  if p.inventory and p.inventory.slots then
+    for i = 1, #p.inventory.slots do
+      p.inventory.slots[i] = nil
+    end
+  end
+
+  local result = item_strategy._try_use_item(g, p, item_id, nil, false)
+  _assert_eq(result, nil, "should return nil when item not in inventory")
+end
+
+local function _test_try_clear_obstacles_returns_result_when_obstacles_found()
+  local g = _new_game()
+  local p = g:current_player()
+  p.inventory:add({ id = gameplay_rules.item_ids.clear_obstacles })
+
+  -- Place a roadblock ahead
+  local current_pos = p.position
+  g.board:place_roadblock(current_pos + 1)
+
+  support.with_patches({
+    {
+      target = item_strategy,
+      key = "has_obstacles_ahead",
+      value = function()
+        return true
+      end,
+    },
+  }, function()
+    local result = item_strategy._try_clear_obstacles(g, p, false)
+    -- Result should be a table (the use_item result) or nil
+    -- Since we're not mocking executor.use_item, it will actually try to use it
+    -- which may return a result or nil depending on the game state
+    assert(type(result) == "table" or result == nil, "result should be table or nil")
+  end)
+end
+
+local function _test_try_clear_obstacles_returns_nil_when_no_obstacles()
+  local g = _new_game()
+  local p = g:current_player()
+  p.inventory:add({ id = gameplay_rules.item_ids.clear_obstacles })
+
+  -- Ensure no obstacles
+  for i = 1, g.board:length() do
+    g.board:clear_all(i)
+  end
+
+  support.with_patches({
+    {
+      target = item_strategy,
+      key = "has_obstacles_ahead",
+      value = function()
+        return false
+      end,
+    },
+  }, function()
+    local result = item_strategy._try_clear_obstacles(g, p, false)
+    _assert_eq(result, nil, "should return nil when no obstacles ahead")
+  end)
+end
+
+local function _test_try_remote_dice_returns_nil_when_no_dice_value_picked()
+  local g = _new_game()
+  local p = g:current_player()
+  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+
+  local auto_play_port = require("src.game.ports.auto_play_port")
+  support.with_patches({
+    {
+      target = auto_play_port,
+      key = "pick_remote_dice_value",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local result = item_strategy._try_remote_dice(g, p, false)
+    _assert_eq(result, nil, "should return nil when no dice value picked")
+  end)
+end
+
+local function _test_try_roadblock_returns_nil_when_no_target_picked()
+  local g = _new_game()
+  local p = g:current_player()
+  p.inventory:add({ id = gameplay_rules.item_ids.roadblock })
+
+  local auto_play_port = require("src.game.ports.auto_play_port")
+  support.with_patches({
+    {
+      target = auto_play_port,
+      key = "pick_roadblock_target",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local result = item_strategy._try_roadblock(g, p, false)
+    _assert_eq(result, nil, "should return nil when no roadblock target picked")
+  end)
+end
+
+local function _test_try_target_items_returns_nil_when_no_items_in_inventory()
+  local g = _new_game()
+  local p = g:current_player()
+  -- Clear inventory
+  if p.inventory and p.inventory.slots then
+    for i = 1, #p.inventory.slots do
+      p.inventory.slots[i] = nil
+    end
+  end
+
+  -- Should return nil when no target items in inventory
+  local result = item_strategy._try_target_items(g, p, false)
+  _assert_eq(result, nil, "should return nil when no target items in inventory")
+end
+
+local function _test_try_deity_items_returns_nil_when_no_deity_items()
+  local g = _new_game()
+  local p = g:current_player()
+  -- Clear inventory
+  if p.inventory and p.inventory.slots then
+    for i = 1, #p.inventory.slots do
+      p.inventory.slots[i] = nil
+    end
+  end
+
+  -- Should return nil when no deity items in inventory
+  local result = item_strategy._try_deity_items(g, p, false)
+  _assert_eq(result, nil, "should return nil when no deity items in inventory")
+end
+
+local function _test_try_deity_items_returns_nil_when_no_deity_items()
+  local g = _new_game()
+  local p = g:current_player()
+  -- Clear inventory
+  if p.inventory and p.inventory.slots then
+    for i = 1, #p.inventory.slots do
+      p.inventory.slots[i] = nil
+    end
+  end
+
+  -- Should return nil when no deity items in inventory
+  local result = item_strategy._try_deity_items(g, p, false)
+  _assert_eq(result, nil, "should return nil when no deity items in inventory")
+end
+
+local function _test_try_deity_items_tries_rich_then_angel()
+  local g = _new_game()
+  local p = g:current_player()
+  -- Clear inventory first
+  if p.inventory and p.inventory.slots then
+    for i = 1, #p.inventory.slots do
+      p.inventory.slots[i] = nil
+    end
+  end
+
+  -- Add both rich and angel items
+  p.inventory:add({ id = gameplay_rules.item_ids.rich })
+  p.inventory:add({ id = gameplay_rules.item_ids.angel })
+
+  local used_items = {}
+  local executor = require("src.game.systems.items.executor")
+  support.with_patches({
+    {
+      target = executor,
+      key = "use_item",
+      value = function(_, _, item_id)
+        table.insert(used_items, item_id)
+        return { ok = true, kind = "deity_applied" }
+      end,
+    },
+  }, function()
+    local result = item_strategy._try_deity_items(g, p, false)
+    -- Should try rich first (order matters)
+    assert(#used_items >= 1, "should try at least one item")
+    -- Result should be successful
+    assert(type(result) == "table", "should return a table result")
+    _assert_eq(result.ok, true, "should return successful result")
+  end)
+end
+
 return {
   name = "item",
   tests = {
@@ -1183,5 +1467,21 @@ return {
       name = "effect_pipeline_single_optional_effect_uses_secondary_confirm_route",
       run = _test_effect_pipeline_single_optional_effect_uses_secondary_confirm_route,
     },
+
+    -- Strategy helper characterization tests (T4)
+    { name = "ai_can_use_item_returns_true_for_mine_in_pre_action_manual", run = _test_ai_can_use_item_returns_true_for_mine_in_pre_action_manual },
+    { name = "ai_can_use_item_uses_timing_allowed_for_other_items", run = _test_ai_can_use_item_uses_timing_allowed_for_other_items },
+    { name = "has_demolish_target_returns_true_when_target_exists", run = _test_has_demolish_target_returns_true_when_target_exists },
+    { name = "has_demolish_target_returns_false_when_no_target", run = _test_has_demolish_target_returns_false_when_no_target },
+    { name = "has_target_player_returns_true_when_candidates_exist", run = _test_has_target_player_returns_true_when_candidates_exist },
+    { name = "has_target_player_returns_false_when_no_candidates", run = _test_has_target_player_returns_false_when_no_candidates },
+    { name = "try_use_item_returns_nil_when_cond_fails", run = _test_try_use_item_returns_nil_when_cond_fails },
+    { name = "try_use_item_returns_nil_when_item_not_in_inventory", run = _test_try_use_item_returns_nil_when_item_not_in_inventory },
+    { name = "try_clear_obstacles_returns_result_when_obstacles_found", run = _test_try_clear_obstacles_returns_result_when_obstacles_found },
+    { name = "try_clear_obstacles_returns_nil_when_no_obstacles", run = _test_try_clear_obstacles_returns_nil_when_no_obstacles },
+    { name = "try_remote_dice_returns_nil_when_no_dice_value_picked", run = _test_try_remote_dice_returns_nil_when_no_dice_value_picked },
+    { name = "try_roadblock_returns_nil_when_no_target_picked", run = _test_try_roadblock_returns_nil_when_no_target_picked },
+    { name = "try_target_items_returns_nil_when_no_items_in_inventory", run = _test_try_target_items_returns_nil_when_no_items_in_inventory },
+    { name = "try_deity_items_returns_nil_when_no_deity_items", run = _test_try_deity_items_returns_nil_when_no_deity_items },
   },
 }

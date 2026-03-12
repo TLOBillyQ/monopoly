@@ -59,44 +59,54 @@ local function _pick_unique_dir(neigh, avoid_dir)
   return picked_dir, picked_id
 end
 
-local function _resolve_forward_next_id(map, current_id, neigh, facing, parity)
-  if map.outer_next[current_id] then
-    local next_id = map.outer_next[current_id]
-    local entry = map.entry_points[current_id]
-    if entry and parity and (parity % 2 == 0) and facing then
-      local prev_id = map.outer_prev[current_id]
-      if prev_id and map.direction(prev_id, current_id) == facing then
-        next_id = entry.inner_id
-      end
-    end
-    return next_id
+local function _resolve_outer_next(map, current_id, facing, parity)
+  if not map.outer_next[current_id] then
+    return nil
   end
-
-  if facing == nil then
-    local fresh_forward_next = map.fresh_forward_next or nil
-    local fresh_next_id = fresh_forward_next and fresh_forward_next[current_id] or nil
-    if fresh_next_id ~= nil then
-      return fresh_next_id
+  local next_id = map.outer_next[current_id]
+  local entry = map.entry_points[current_id]
+  if entry and parity and (parity % 2 == 0) and facing then
+    local prev_id = map.outer_prev[current_id]
+    if prev_id and map.direction(prev_id, current_id) == facing then
+      next_id = entry.inner_id
     end
   end
+  return next_id
+end
 
-  if current_id == map.market_id and facing and parity then
-    local exit_dir = map.turn_right[facing]
-    if parity % 2 == 1 then
-      exit_dir = map.turn_left[facing]
-    end
-    if exit_dir and neigh[exit_dir] then
-      return neigh[exit_dir]
-    end
-    if neigh[facing] then
-      return neigh[facing]
-    end
+local function _resolve_fresh_forward_next(map, current_id, facing)
+  if facing ~= nil then
+    return nil
   end
+  local fresh_forward_next = map.fresh_forward_next or nil
+  return fresh_forward_next and fresh_forward_next[current_id] or nil
+end
 
+local function _resolve_market_exit(map, current_id, neigh, facing, parity)
+  if current_id ~= map.market_id or not facing or not parity then
+    return nil
+  end
+  local exit_dir = map.turn_right[facing]
+  if parity % 2 == 1 then
+    exit_dir = map.turn_left[facing]
+  end
+  if exit_dir and neigh[exit_dir] then
+    return neigh[exit_dir]
+  end
+  if neigh[facing] then
+    return neigh[facing]
+  end
+  return nil
+end
+
+local function _resolve_facing_next(neigh, facing)
   if facing and neigh[facing] then
     return neigh[facing]
   end
+  return nil
+end
 
+local function _resolve_fallback_next(neigh, facing)
   local back_dir = opposite[facing]
   local _, next_id = _pick_unique_dir(neigh, back_dir)
   if next_id then
@@ -110,6 +120,30 @@ local function _resolve_forward_next_id(map, current_id, neigh, facing, parity)
 
   local _, any_id = _pick_any_dir(neigh, nil)
   return any_id
+end
+
+local function _resolve_forward_next_id(map, current_id, neigh, facing, parity)
+  local outer_next = _resolve_outer_next(map, current_id, facing, parity)
+  if outer_next then
+    return outer_next
+  end
+
+  local fresh_next = _resolve_fresh_forward_next(map, current_id, facing)
+  if fresh_next ~= nil then
+    return fresh_next
+  end
+
+  local market_exit = _resolve_market_exit(map, current_id, neigh, facing, parity)
+  if market_exit then
+    return market_exit
+  end
+
+  local facing_next = _resolve_facing_next(neigh, facing)
+  if facing_next then
+    return facing_next
+  end
+
+  return _resolve_fallback_next(neigh, facing)
 end
 
 local function _resolve_backward_next_id(map, current_id, neigh, facing)
@@ -328,5 +362,14 @@ function board:step_backward_by_facing(current_index, facing)
   local step_dir = map.direction(next_id, current_id)
   return next_index, passed_start, step_dir
 end
+
+-- Export helpers for testability
+board._resolve_outer_next = _resolve_outer_next
+board._resolve_fresh_forward_next = _resolve_fresh_forward_next
+board._resolve_market_exit = _resolve_market_exit
+board._resolve_facing_next = _resolve_facing_next
+board._resolve_fallback_next = _resolve_fallback_next
+board._pick_any_dir = _pick_any_dir
+board._pick_unique_dir = _pick_unique_dir
 
 return board

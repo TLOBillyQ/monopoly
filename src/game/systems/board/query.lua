@@ -14,18 +14,9 @@ function board_query.queue_walk(queue, visit)
   end
 end
 
-function board_query.indices_in_range(board, start, distance)
-  assert(board ~= nil, "missing board")
-  assert(board.map ~= nil, "missing board.map")
-  local neighbors = assert(board.map.neighbors, "missing board.map.neighbors")
-  local start_tile = assert(board:get_tile(start), "missing start tile: " .. tostring(start))
-  local max_dist = distance or 0
-  if max_dist <= 0 then
-    return {}
-  end
-
-  local dist_by_id = { [start_tile.id] = 0 }
-  local queue = { start_tile.id }
+local function _bfs_collect_indices(board, neighbors, start_tile_id, max_dist)
+  local dist_by_id = { [start_tile_id] = 0 }
+  local queue = { start_tile_id }
   local qhead = 1
   local by_dist = {}
 
@@ -51,6 +42,10 @@ function board_query.indices_in_range(board, start, distance)
     end
   end
 
+  return by_dist
+end
+
+local function _flatten_by_distance(by_dist, max_dist)
   local list = {}
   for step = 1, max_dist do
     local entries = by_dist[step] or {}
@@ -60,5 +55,23 @@ function board_query.indices_in_range(board, start, distance)
   end
   return list
 end
+
+function board_query.indices_in_range(board, start, distance)
+  assert(board ~= nil, "missing board")
+  assert(board.map ~= nil, "missing board.map")
+  local neighbors = assert(board.map.neighbors, "missing board.map.neighbors")
+  local start_tile = assert(board:get_tile(start), "missing start tile: " .. tostring(start))
+  local max_dist = distance or 0
+  if max_dist <= 0 then
+    return {}
+  end
+
+  local by_dist = _bfs_collect_indices(board, neighbors, start_tile.id, max_dist)
+  return _flatten_by_distance(by_dist, max_dist)
+end
+
+-- Export helpers for testability
+board_query._bfs_collect_indices = _bfs_collect_indices
+board_query._flatten_by_distance = _flatten_by_distance
 
 return board_query

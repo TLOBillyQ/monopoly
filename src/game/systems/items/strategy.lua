@@ -129,80 +129,115 @@ function strategy.can_offer_in_phase(game, player, item_id, phase, auto_play)
   return true
 end
 
+local function _ai_can_use_item(item_id, phase)
+  local cfg = inventory.cfg(item_id)
+  local timing = cfg.timing
+  if item_id == item_ids.mine and phase == "pre_action" and timing == "manual" then
+    return true
+  end
+  return strategy.timing_allowed(phase, timing, true)
+end
+
+local function _try_use_item(game, player, item_id, cond, auto_play)
+  if cond and cond() == false then return nil end
+  if _ai_can_use_item(item_id, player) then
+  else
+    return nil
+  end
+  if inventory.find_index(player, item_id) then
+  else
+    return nil
+  end
+  local res = executor.use_item(game, player, item_id, { by_ai = true, auto_play = auto_play })
+  if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
+    return res
+  end
+  return nil
+end
+
+local function _has_target_player(game, player, item_id)
+  return auto_play_port.pick_target_player(game, player, item_id, strategy.target_candidates(game, player, item_id)) and true or false
+end
+
+local function _has_demolish_target(game, player)
+  return demolish.find_target(game, player, 3) and true or false
+end
+
+local function _try_clear_obstacles(game, player, auto_play)
+  return _try_use_item(game, player, item_ids.clear_obstacles, function()
+    local found = strategy.has_obstacles_ahead(game, player, 12)
+    if found then logger.info(player.name .. " 前方发现障碍，准备使用清障卡") end
+    return found
+  end, auto_play)
+end
+
+local function _try_remote_dice(game, player, auto_play)
+  return _try_use_item(game, player, item_ids.remote_dice, function()
+    local dice_count = game:player_dice_count(player)
+    return auto_play_port.pick_remote_dice_value(game, player, dice_count) and true or false
+  end, auto_play)
+end
+
+local function _try_roadblock(game, player, auto_play)
+  return _try_use_item(game, player, item_ids.roadblock, function()
+    return auto_play_port.pick_roadblock_target(game, player) and true or false
+  end, auto_play)
+end
+
+local function _try_target_items(game, player, auto_play)
+  for _, id in ipairs(effects.target_item_ids()) do
+    local res = _try_use_item(game, player, id, function() return _has_target_player(game, player, id) end, auto_play)
+    if res then return res end
+  end
+  return nil
+end
+
+local function _try_deity_items(game, player, auto_play)
+  local rich_result = _try_use_item(game, player, item_ids.rich, nil, auto_play)
+  if rich_result then return rich_result end
+  return _try_use_item(game, player, item_ids.angel, nil, auto_play)
+end
+
 function strategy.auto_pre_action(game, player, phase)
   if not auto_play_port.is_auto_player(game, player) then
     return nil
   end
 
-  local function _can_use(item_id)
-    local cfg = inventory.cfg(item_id)
-    local timing = cfg.timing
-    if item_id == item_ids.mine and phase == "pre_action" and timing == "manual" then
-      return true
-    end
-    return strategy.timing_allowed(phase, timing, true)
-  end
-
-  local function _try_use(item_id, cond)
-    if cond and cond() == false then return nil end
-    if _can_use(item_id) then
-    else
-      return nil
-    end
-    if inventory.find_index(player, item_id) then
-    else
-      return nil
-    end
-    local res = executor.use_item(game, player, item_id, { by_ai = true, auto_play = auto_play })
-    if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
-      return res
-    end
-    return nil
-  end
-
-  local function _has_target(item_id)
-    return auto_play_port.pick_target_player(game, player, item_id, strategy.target_candidates(game, player, item_id)) and true or false
-  end
-
-  local function _has_demolish_target()
-    return demolish.find_target(game, player, 3) and true or false
-  end
-
-  local clear_result = _try_use(item_ids.clear_obstacles, function()
-    local found = strategy.has_obstacles_ahead(game, player, 12)
-    if found then logger.info(player.name .. " 前方发现障碍，准备使用清障卡") end
-    return found
-  end)
+  local clear_result = _try_clear_obstacles(game, player, auto_play)
   if clear_result then return clear_result end
 
-  local dice_result = _try_use(item_ids.remote_dice, function()
-    local dice_count = game:player_dice_count(player)
-    return auto_play_port.pick_remote_dice_value(game, player, dice_count) and true or false
-  end)
+  local dice_result = _try_remote_dice(game, player, auto_play)
   if dice_result then return dice_result end
 
-  local mine_result = _try_use(item_ids.mine)
+  local mine_result = _try_use_item(game, player, item_ids.mine, nil, auto_play)
   if mine_result then return mine_result end
 
-  local double_result = _try_use(item_ids.dice_multiplier)
+  local double_result = _try_use_item(game, player, item_ids.dice_multiplier, nil, auto_play)
   if double_result then return double_result end
 
-  local roadblock_result = _try_use(item_ids.roadblock, function()
-    return auto_play_port.pick_roadblock_target(game, player) and true or false
-  end)
+  local roadblock_result = _try_roadblock(game, player, auto_play)
   if roadblock_result then return roadblock_result end
 
-  local monster_result = _try_use(item_ids.monster, _has_demolish_target)
+  local monster_result = _try_use_item(game, player, item_ids.monster, function() return _has_demolish_target(game, player) end, auto_play)
   if monster_result then return monster_result end
-  local missile_result = _try_use(item_ids.missile, _has_demolish_target)
+  local missile_result = _try_use_item(game, player, item_ids.missile, function() return _has_demolish_target(game, player) end, auto_play)
   if missile_result then return missile_result end
 
-  for _, id in ipairs(effects.target_item_ids()) do
-    local res = _try_use(id, function() return _has_target(id) end)
-    if res then return res end
-  end
+  local target_result = _try_target_items(game, player, auto_play)
+  if target_result then return target_result end
 
-  return _try_use(item_ids.rich) or _try_use(item_ids.angel)
+  return _try_deity_items(game, player, auto_play)
 end
+
+-- Export helpers for testability
+strategy._ai_can_use_item = _ai_can_use_item
+strategy._try_use_item = _try_use_item
+strategy._has_target_player = _has_target_player
+strategy._has_demolish_target = _has_demolish_target
+strategy._try_clear_obstacles = _try_clear_obstacles
+strategy._try_remote_dice = _try_remote_dice
+strategy._try_roadblock = _try_roadblock
+strategy._try_target_items = _try_target_items
+strategy._try_deity_items = _try_deity_items
 
 return strategy

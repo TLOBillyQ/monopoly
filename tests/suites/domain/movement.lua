@@ -306,6 +306,312 @@ local function _test_move_anim_play_sequence_emits_step_sound_per_visited_tile()
   assert(#step_calls == 3, "move sequence should still execute three steps")
 end
 
+-- Characterization tests for board helper functions (T4)
+local Board = require("src.game.systems.board.init")
+
+local function _test_resolve_outer_next_returns_outer_next_when_no_entry()
+  local map = {
+    outer_next = { [1] = 2 },
+    entry_points = {},
+    outer_prev = {},
+    direction = function() return "up" end,
+  }
+  local result = Board._resolve_outer_next(map, 1, "up", 1)
+  _assert_eq(result, 2, "should return outer_next when no entry point")
+end
+
+local function _test_resolve_outer_next_returns_inner_on_even_parity_with_matching_facing()
+  -- The logic: if direction(prev_id, current_id) == facing, use inner_id
+  -- This means the player is coming from the direction they're facing (continuing forward)
+  -- Note: map.direction is called as map.direction(prev_id, current_id) - no self param
+  local map = {
+    outer_next = { [1] = 2 },
+    entry_points = { [1] = { inner_id = 10 } },
+    outer_prev = { [1] = 99 },
+    direction = function(from, to)
+      -- When coming from 99 to 1, if facing is "up", direction should return "up" for match
+      if from == 99 and to == 1 then return "up" end
+      return "down"
+    end,
+  }
+  -- When facing="up" and direction(99, 1)="up" (matching), should return inner_id
+  local result = Board._resolve_outer_next(map, 1, "up", 2)
+  _assert_eq(result, 10, "should return inner_id on even parity with matching facing")
+end
+
+local function _test_resolve_outer_next_returns_outer_on_even_parity_with_mismatched_facing()
+  -- The logic: if direction(prev_id, current_id) ~= facing, use outer_next
+  -- This means the player is coming from a different direction than they're facing
+  local map = {
+    outer_next = { [1] = 2 },
+    entry_points = { [1] = { inner_id = 10 } },
+    outer_prev = { [1] = 99 },
+    direction = function(from, to)
+      -- When coming from 99 to 1, if facing is "up", direction returns "down" for mismatch
+      if from == 99 and to == 1 then return "down" end
+      return "up"
+    end,
+  }
+  -- When facing="up" and direction(99, 1)="down" (mismatch), should return outer_next
+  local result = Board._resolve_outer_next(map, 1, "up", 2)
+  _assert_eq(result, 2, "should return outer_next on even parity with mismatched facing")
+end
+
+local function _test_resolve_outer_next_returns_nil_when_no_outer_next()
+  local map = {
+    outer_next = {},
+    entry_points = {},
+    outer_prev = {},
+  }
+  local result = Board._resolve_outer_next(map, 1, "up", 1)
+  _assert_eq(result, nil, "should return nil when no outer_next")
+end
+
+local function _test_resolve_fresh_forward_next_returns_fresh_next_when_facing_nil()
+  local map = {
+    fresh_forward_next = { [1] = 5 },
+  }
+  local result = Board._resolve_fresh_forward_next(map, 1, nil)
+  _assert_eq(result, 5, "should return fresh_forward_next when facing is nil")
+end
+
+local function _test_resolve_fresh_forward_next_returns_nil_when_facing_not_nil()
+  local map = {
+    fresh_forward_next = { [1] = 5 },
+  }
+  local result = Board._resolve_fresh_forward_next(map, 1, "up")
+  _assert_eq(result, nil, "should return nil when facing is not nil")
+end
+
+local function _test_resolve_fresh_forward_next_returns_nil_when_no_fresh_forward_next()
+  local map = {}
+  local result = Board._resolve_fresh_forward_next(map, 1, nil)
+  _assert_eq(result, nil, "should return nil when no fresh_forward_next")
+end
+
+local function _test_resolve_market_exit_returns_turn_right_on_even_parity()
+  local map = {
+    market_id = 5,
+    turn_right = { up = "right" },
+    turn_left = { up = "left" },
+  }
+  local neigh = { right = 10, left = 20, up = 30 }
+  local result = Board._resolve_market_exit(map, 5, neigh, "up", 2)
+  _assert_eq(result, 10, "should return turn_right direction on even parity")
+end
+
+local function _test_resolve_market_exit_returns_turn_left_on_odd_parity()
+  local map = {
+    market_id = 5,
+    turn_right = { up = "right" },
+    turn_left = { up = "left" },
+  }
+  local neigh = { right = 10, left = 20, up = 30 }
+  local result = Board._resolve_market_exit(map, 5, neigh, "up", 1)
+  _assert_eq(result, 20, "should return turn_left direction on odd parity")
+end
+
+local function _test_resolve_market_exit_returns_facing_when_exit_dir_nil()
+  local map = {
+    market_id = 5,
+    turn_right = { up = nil },
+    turn_left = { up = "left" },
+  }
+  local neigh = { right = 10, left = 20, up = 30 }
+  local result = Board._resolve_market_exit(map, 5, neigh, "up", 2)
+  _assert_eq(result, 30, "should return facing direction when exit_dir is nil but facing exists")
+end
+
+local function _test_resolve_market_exit_returns_nil_when_not_market()
+  local map = {
+    market_id = 5,
+    turn_right = {},
+    turn_left = {},
+  }
+  local neigh = {}
+  local result = Board._resolve_market_exit(map, 1, neigh, "up", 1)
+  _assert_eq(result, nil, "should return nil when current_id is not market_id")
+end
+
+local function _test_resolve_market_exit_returns_nil_when_facing_nil()
+  local map = {
+    market_id = 5,
+    turn_right = {},
+    turn_left = {},
+  }
+  local neigh = {}
+  local result = Board._resolve_market_exit(map, 5, neigh, nil, 1)
+  _assert_eq(result, nil, "should return nil when facing is nil")
+end
+
+local function _test_resolve_facing_next_returns_neighbor_in_facing_direction()
+  local neigh = { up = 10, down = 20, left = 30, right = 40 }
+  local result = Board._resolve_facing_next(neigh, "up")
+  _assert_eq(result, 10, "should return neighbor in facing direction")
+end
+
+local function _test_resolve_facing_next_returns_nil_when_no_facing()
+  local neigh = { up = 10 }
+  local result = Board._resolve_facing_next(neigh, nil)
+  _assert_eq(result, nil, "should return nil when facing is nil")
+end
+
+local function _test_resolve_facing_next_returns_nil_when_no_neighbor_in_facing()
+  local neigh = { up = 10 }
+  local result = Board._resolve_facing_next(neigh, "down")
+  _assert_eq(result, nil, "should return nil when no neighbor in facing direction")
+end
+
+local function _test_resolve_fallback_next_returns_unique_dir_avoiding_back()
+  -- When facing="up", back_dir="down" (opposite)
+  -- neigh has "up" and "down", avoiding "down" leaves only "up"
+  local neigh = { up = 10, down = 20 }
+  local result = Board._resolve_fallback_next(neigh, "up")
+  _assert_eq(result, 10, "should return unique dir avoiding back direction (down)")
+end
+
+local function _test_resolve_fallback_next_returns_any_dir_avoiding_back_when_not_unique()
+  -- When facing="up", back_dir="down"
+  -- neigh has up=10, down=20, left=30 - avoiding "down" leaves "up" and "left"
+  -- Since there are multiple options, _pick_unique_dir returns nil
+  -- Then _pick_any_dir is called which returns the first sorted dir (left before up)
+  local neigh = { up = 10, down = 20, left = 30 }
+  local result = Board._resolve_fallback_next(neigh, "up")
+  assert(result ~= nil, "should return some direction when multiple options")
+  assert(result ~= 20, "should not return back direction (down)")
+end
+
+local function _test_resolve_fallback_next_returns_any_dir_when_back_nil()
+  local neigh = { up = 10 }
+  local result = Board._resolve_fallback_next(neigh, nil)
+  _assert_eq(result, 10, "should return any dir when back direction is nil")
+end
+
+local function _test_pick_any_dir_returns_first_sorted_dir()
+  local neigh = { right = 10, up = 20, down = 30 }
+  local dir, id = Board._pick_any_dir(neigh, nil)
+  _assert_eq(dir, "up", "should return first sorted dir (up before right before down)")
+  _assert_eq(id, 20, "should return id for that dir")
+end
+
+local function _test_pick_any_dir_avoids_avoid_dir()
+  local neigh = { up = 10, down = 20 }
+  local dir, id = Board._pick_any_dir(neigh, "up")
+  _assert_eq(dir, "down", "should avoid the specified dir")
+  _assert_eq(id, 20, "should return id for non-avoided dir")
+end
+
+local function _test_pick_any_dir_returns_nil_when_all_avoided()
+  local neigh = { up = 10 }
+  local dir, id = Board._pick_any_dir(neigh, "up")
+  _assert_eq(dir, nil, "should return nil dir when all avoided")
+  _assert_eq(id, nil, "should return nil id when all avoided")
+end
+
+local function _test_pick_unique_dir_returns_unique_when_only_one_option()
+  local neigh = { up = 10 }
+  local dir, id = Board._pick_unique_dir(neigh, nil)
+  _assert_eq(dir, "up", "should return unique dir")
+  _assert_eq(id, 10, "should return unique id")
+end
+
+local function _test_pick_unique_dir_returns_nil_when_multiple_options()
+  local neigh = { up = 10, down = 20 }
+  local dir, id = Board._pick_unique_dir(neigh, nil)
+  _assert_eq(dir, nil, "should return nil when multiple options")
+  _assert_eq(id, nil, "should return nil id when multiple options")
+end
+
+local function _test_pick_unique_dir_returns_unique_when_others_avoided()
+  local neigh = { up = 10, down = 20 }
+  local dir, id = Board._pick_unique_dir(neigh, "up")
+  _assert_eq(dir, "down", "should return unique non-avoided dir")
+  _assert_eq(id, 20, "should return id for unique non-avoided dir")
+end
+
+-- Characterization tests for board_query helper functions (T4)
+local board_query = require("src.game.systems.board.query")
+
+local function _test_bfs_collect_indices_returns_empty_for_zero_distance()
+  local g = _new_game()
+  local start_tile = g.board:get_tile(1)
+  local by_dist = board_query._bfs_collect_indices(g.board, g.board.map.neighbors, start_tile.id, 0)
+  assert(type(by_dist) == "table", "should return a table")
+  assert(next(by_dist) == nil, "should return empty table for max_dist=0")
+end
+
+local function _test_bfs_collect_indices_finds_neighbors_at_distance_one()
+  local g = _new_game()
+  local start_idx = g.board:index_of_tile_id(1)
+  local start_tile = g.board:get_tile(start_idx)
+  local by_dist = board_query._bfs_collect_indices(g.board, g.board.map.neighbors, start_tile.id, 1)
+  assert(by_dist[1] ~= nil, "should have entries at distance 1")
+  assert(#by_dist[1] > 0, "should find at least one neighbor at distance 1")
+end
+
+local function _test_bfs_collect_indices_does_not_exceed_max_dist()
+  local g = _new_game()
+  local start_idx = g.board:index_of_tile_id(1)
+  local start_tile = g.board:get_tile(start_idx)
+  local by_dist = board_query._bfs_collect_indices(g.board, g.board.map.neighbors, start_tile.id, 2)
+  assert(by_dist[3] == nil, "should not have entries beyond max_dist")
+  assert(by_dist[4] == nil, "should not have entries beyond max_dist")
+end
+
+local function _test_bfs_collect_indices_avoids_revisiting_tiles()
+  local g = _new_game()
+  local start_idx = g.board:index_of_tile_id(1)
+  local start_tile = g.board:get_tile(start_idx)
+  local seen = {}
+  local by_dist = board_query._bfs_collect_indices(g.board, g.board.map.neighbors, start_tile.id, 3)
+  for dist, indices in pairs(by_dist) do
+    for _, idx in ipairs(indices) do
+      assert(seen[idx] == nil, "tile " .. tostring(idx) .. " should not be visited twice")
+      seen[idx] = dist
+    end
+  end
+end
+
+local function _test_flatten_by_distance_returns_empty_for_empty_input()
+  local result = board_query._flatten_by_distance({}, 3)
+  assert(type(result) == "table", "should return a table")
+  assert(#result == 0, "should return empty list for empty input")
+end
+
+local function _test_flatten_by_distance_orders_by_distance()
+  local by_dist = {
+    [1] = { 10, 11 },
+    [2] = { 20, 21 },
+    [3] = { 30 },
+  }
+  local result = board_query._flatten_by_distance(by_dist, 3)
+  _assert_eq(#result, 5, "should return all entries")
+  _assert_eq(result[1], 10, "first entry should be from distance 1")
+  _assert_eq(result[2], 11, "second entry should be from distance 1")
+  _assert_eq(result[3], 20, "third entry should be from distance 2")
+  _assert_eq(result[4], 21, "fourth entry should be from distance 2")
+  _assert_eq(result[5], 30, "fifth entry should be from distance 3")
+end
+
+local function _test_flatten_by_distance_skips_missing_distances()
+  local by_dist = {
+    [1] = { 10 },
+    [3] = { 30 },
+  }
+  local result = board_query._flatten_by_distance(by_dist, 3)
+  _assert_eq(#result, 2, "should return only existing entries")
+  _assert_eq(result[1], 10, "first entry should be from distance 1")
+  _assert_eq(result[2], 30, "second entry should be from distance 3")
+end
+
+local function _test_flatten_by_distance_handles_max_dist_greater_than_entries()
+  local by_dist = {
+    [1] = { 10 },
+  }
+  local result = board_query._flatten_by_distance(by_dist, 5)
+  _assert_eq(#result, 1, "should return only existing entries even when max_dist is larger")
+end
+
 return {
   name = "movement",
   tests = {
@@ -325,5 +631,39 @@ return {
     { name = "resume_forward_from_inner_ring_keeps_explicit_direction", run = _test_resume_forward_from_inner_ring_keeps_explicit_direction },
     { name = "resume_forward_requires_explicit_direction", run = _test_resume_forward_requires_explicit_direction },
     { name = "move_anim_play_sequence_emits_step_sound_per_visited_tile", run = _test_move_anim_play_sequence_emits_step_sound_per_visited_tile },
+    -- Board helper characterization tests (T4)
+    { name = "resolve_outer_next_returns_outer_next_when_no_entry", run = _test_resolve_outer_next_returns_outer_next_when_no_entry },
+    { name = "resolve_outer_next_returns_inner_on_even_parity_with_matching_facing", run = _test_resolve_outer_next_returns_inner_on_even_parity_with_matching_facing },
+    { name = "resolve_outer_next_returns_outer_on_even_parity_with_mismatched_facing", run = _test_resolve_outer_next_returns_outer_on_even_parity_with_mismatched_facing },
+    { name = "resolve_outer_next_returns_nil_when_no_outer_next", run = _test_resolve_outer_next_returns_nil_when_no_outer_next },
+    { name = "resolve_fresh_forward_next_returns_fresh_next_when_facing_nil", run = _test_resolve_fresh_forward_next_returns_fresh_next_when_facing_nil },
+    { name = "resolve_fresh_forward_next_returns_nil_when_facing_not_nil", run = _test_resolve_fresh_forward_next_returns_nil_when_facing_not_nil },
+    { name = "resolve_fresh_forward_next_returns_nil_when_no_fresh_forward_next", run = _test_resolve_fresh_forward_next_returns_nil_when_no_fresh_forward_next },
+    { name = "resolve_market_exit_returns_turn_right_on_even_parity", run = _test_resolve_market_exit_returns_turn_right_on_even_parity },
+    { name = "resolve_market_exit_returns_turn_left_on_odd_parity", run = _test_resolve_market_exit_returns_turn_left_on_odd_parity },
+    { name = "resolve_market_exit_returns_facing_when_exit_dir_nil", run = _test_resolve_market_exit_returns_facing_when_exit_dir_nil },
+    { name = "resolve_market_exit_returns_nil_when_not_market", run = _test_resolve_market_exit_returns_nil_when_not_market },
+    { name = "resolve_market_exit_returns_nil_when_facing_nil", run = _test_resolve_market_exit_returns_nil_when_facing_nil },
+    { name = "resolve_facing_next_returns_neighbor_in_facing_direction", run = _test_resolve_facing_next_returns_neighbor_in_facing_direction },
+    { name = "resolve_facing_next_returns_nil_when_no_facing", run = _test_resolve_facing_next_returns_nil_when_no_facing },
+    { name = "resolve_facing_next_returns_nil_when_no_neighbor_in_facing", run = _test_resolve_facing_next_returns_nil_when_no_neighbor_in_facing },
+    { name = "resolve_fallback_next_returns_unique_dir_avoiding_back", run = _test_resolve_fallback_next_returns_unique_dir_avoiding_back },
+    { name = "resolve_fallback_next_returns_any_dir_avoiding_back_when_not_unique", run = _test_resolve_fallback_next_returns_any_dir_avoiding_back_when_not_unique },
+    { name = "resolve_fallback_next_returns_any_dir_when_back_nil", run = _test_resolve_fallback_next_returns_any_dir_when_back_nil },
+    { name = "pick_any_dir_returns_first_sorted_dir", run = _test_pick_any_dir_returns_first_sorted_dir },
+    { name = "pick_any_dir_avoids_avoid_dir", run = _test_pick_any_dir_avoids_avoid_dir },
+    { name = "pick_any_dir_returns_nil_when_all_avoided", run = _test_pick_any_dir_returns_nil_when_all_avoided },
+    { name = "pick_unique_dir_returns_unique_when_only_one_option", run = _test_pick_unique_dir_returns_unique_when_only_one_option },
+    { name = "pick_unique_dir_returns_nil_when_multiple_options", run = _test_pick_unique_dir_returns_nil_when_multiple_options },
+    { name = "pick_unique_dir_returns_unique_when_others_avoided", run = _test_pick_unique_dir_returns_unique_when_others_avoided },
+    -- Board_query helper characterization tests (T4)
+    { name = "bfs_collect_indices_returns_empty_for_zero_distance", run = _test_bfs_collect_indices_returns_empty_for_zero_distance },
+    { name = "bfs_collect_indices_finds_neighbors_at_distance_one", run = _test_bfs_collect_indices_finds_neighbors_at_distance_one },
+    { name = "bfs_collect_indices_does_not_exceed_max_dist", run = _test_bfs_collect_indices_does_not_exceed_max_dist },
+    { name = "bfs_collect_indices_avoids_revisiting_tiles", run = _test_bfs_collect_indices_avoids_revisiting_tiles },
+    { name = "flatten_by_distance_returns_empty_for_empty_input", run = _test_flatten_by_distance_returns_empty_for_empty_input },
+    { name = "flatten_by_distance_orders_by_distance", run = _test_flatten_by_distance_orders_by_distance },
+    { name = "flatten_by_distance_skips_missing_distances", run = _test_flatten_by_distance_skips_missing_distances },
+    { name = "flatten_by_distance_handles_max_dist_greater_than_entries", run = _test_flatten_by_distance_handles_max_dist_greater_than_entries },
   },
 }
