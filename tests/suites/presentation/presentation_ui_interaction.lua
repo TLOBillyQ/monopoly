@@ -1025,6 +1025,141 @@ local function _test_actor_context_and_host_runtime_fallbacks()
 end
 
 
+local function _test_raycast_pick_with_tries_multiple_apis_in_order()
+  local calls = {}
+  local mock_hit = { unit = { _id = 123 } }
+
+  _with_patches({
+    { key = "GameAPI", value = {
+      raycast_unit = function()
+        calls[#calls + 1] = "raycast_unit"
+        return nil
+      end,
+      get_obstacle_by_raycast = function()
+        calls[#calls + 1] = "get_obstacle_by_raycast"
+        return mock_hit
+      end,
+      get_first_customtriggerspace_in_raycast = function()
+        calls[#calls + 1] = "get_first_customtriggerspace_in_raycast"
+        return nil
+      end,
+    } },
+  }, function()
+    local hit = raycast.pick_first_hit_unit({ x = 0, y = 0, z = 0 }, { x = 1, y = 0, z = 0 }, nil)
+    _assert_eq(hit ~= nil, true, "pick_first_hit_unit should return hit when second API succeeds")
+    _assert_eq(hit.unit._id, 123, "pick_first_hit_unit should return unit from successful API")
+    _assert_eq(calls[1], "raycast_unit", "pick_first_hit_unit should try raycast_unit first")
+    _assert_eq(calls[2], "get_obstacle_by_raycast", "pick_first_hit_unit should fall back to get_obstacle_by_raycast")
+    _assert_eq(#calls, 2, "pick_first_hit_unit should stop after successful hit")
+  end)
+end
+
+local function _test_raycast_pick_with_returns_nil_when_all_apis_fail()
+  local calls = {}
+
+  _with_patches({
+    { key = "GameAPI", value = {
+      raycast_unit = function()
+        calls[#calls + 1] = "raycast_unit"
+        error("api error")
+      end,
+      get_obstacle_by_raycast = function()
+        calls[#calls + 1] = "get_obstacle_by_raycast"
+        return nil
+      end,
+      get_first_customtriggerspace_in_raycast = function()
+        calls[#calls + 1] = "get_first_customtriggerspace_in_raycast"
+        return nil
+      end,
+    } },
+  }, function()
+    local hit, err = raycast.pick_first_hit_unit({ x = 0, y = 0, z = 0 }, { x = 1, y = 0, z = 0 }, nil)
+    _assert_eq(hit, nil, "pick_first_hit_unit should return nil when all APIs fail")
+    _assert_eq(err, "missing raycast api", "pick_first_hit_unit should return error message when all APIs fail")
+    _assert_eq(#calls, 3, "pick_first_hit_unit should try all three APIs")
+  end)
+end
+
+local function _test_raycast_pick_with_resolves_hit_unit_from_various_formats()
+  local results = {}
+
+  _with_patches({
+    { key = "GameAPI", value = {
+      raycast_unit = function()
+        return { unit = { _id = 1 } }
+      end,
+    } },
+  }, function()
+    local hit = raycast.pick_first_hit_unit({ x = 0, y = 0, z = 0 }, { x = 1, y = 0, z = 0 }, nil)
+    results.unit_field = hit and hit.unit._id
+  end)
+
+  _with_patches({
+    { key = "GameAPI", value = {
+      raycast_unit = function()
+        return { hit_unit = { _id = 2 } }
+      end,
+    } },
+  }, function()
+    local hit = raycast.pick_first_hit_unit({ x = 0, y = 0, z = 0 }, { x = 1, y = 0, z = 0 }, nil)
+    results.hit_unit_field = hit and hit.unit._id
+  end)
+
+  _with_patches({
+    { key = "GameAPI", value = {
+      raycast_unit = function()
+        return { obstacle = { _id = 3 } }
+      end,
+    } },
+  }, function()
+    local hit = raycast.pick_first_hit_unit({ x = 0, y = 0, z = 0 }, { x = 1, y = 0, z = 0 }, nil)
+    results.obstacle_field = hit and hit.unit._id
+  end)
+
+  _with_patches({
+    { key = "GameAPI", value = {
+      raycast_unit = function()
+        return { { _id = 4 } }
+      end,
+    } },
+  }, function()
+    local hit = raycast.pick_first_hit_unit({ x = 0, y = 0, z = 0 }, { x = 1, y = 0, z = 0 }, nil)
+    results.first_array_element = hit and hit.unit._id
+  end)
+
+  _assert_eq(results.unit_field, 1, "pick_with should resolve unit from hit.unit field")
+  _assert_eq(results.hit_unit_field, 2, "pick_with should resolve unit from hit.hit_unit field")
+  _assert_eq(results.obstacle_field, 3, "pick_with should resolve unit from hit.obstacle field")
+  _assert_eq(results.first_array_element, 4, "pick_with should resolve unit from hit[1] field")
+end
+
+local function _test_view_command_ports_toggle_action_log_aborts_when_ui_missing()
+  local view_command_ports = require("src.presentation.runtime.ports.view_command_ports")
+  local ports = view_command_ports.build()
+  local state = {}
+
+  local result = ports.dispatch(state, { type = "toggle_action_log", actor_role_id = 1 })
+  _assert_eq(result, true, "toggle_action_log should return true even when ui is missing")
+end
+
+local function _test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing()
+  local view_command_ports = require("src.presentation.runtime.ports.view_command_ports")
+  local logger = require("src.core.utils.logger")
+  local ports = view_command_ports.build()
+  local warn_calls = {}
+  local state = { ui = {} }
+
+  _with_patches({
+    { target = logger, key = "warn", value = function(...)
+      warn_calls[#warn_calls + 1] = table.concat({ ... }, " ")
+    end },
+  }, function()
+    local result = ports.dispatch(state, { type = "toggle_action_log" })
+    _assert_eq(result, true, "toggle_action_log should return true even when actor_role_id is missing")
+    _assert_eq(#warn_calls >= 1, true, "toggle_action_log should warn when actor_role_id is missing")
+  end)
+end
+
 return {
   name = "presentation_ui.interaction",
   tests = {
@@ -1047,5 +1182,10 @@ return {
     { name = "_test_ui_sync_ports_rebuilds_model_before_reopening_choice", run = _test_ui_sync_ports_rebuilds_model_before_reopening_choice },
     { name = "_test_debug_view_global_and_role_paths_preserve_state", run = _test_debug_view_global_and_role_paths_preserve_state },
     { name = "_test_actor_context_and_host_runtime_fallbacks", run = _test_actor_context_and_host_runtime_fallbacks },
+    { name = "_test_raycast_pick_with_tries_multiple_apis_in_order", run = _test_raycast_pick_with_tries_multiple_apis_in_order },
+    { name = "_test_raycast_pick_with_returns_nil_when_all_apis_fail", run = _test_raycast_pick_with_returns_nil_when_all_apis_fail },
+    { name = "_test_raycast_pick_with_resolves_hit_unit_from_various_formats", run = _test_raycast_pick_with_resolves_hit_unit_from_various_formats },
+    { name = "_test_view_command_ports_toggle_action_log_aborts_when_ui_missing", run = _test_view_command_ports_toggle_action_log_aborts_when_ui_missing },
+    { name = "_test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing", run = _test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing },
   },
 }

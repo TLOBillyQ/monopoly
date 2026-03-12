@@ -285,6 +285,113 @@ local function _test_bankruptcy_popup_avatar_uses_native_size_path()
   _assert_eq(avatar_image_key, 2002, "bankruptcy popup avatar should forward payload image key")
 end
 
+local function _test_resolve_bankruptcy_text_prefers_payload_text()
+  local popup_controller = require("src.presentation.runtime.controllers.popup_controller")
+  local state, _, query_nodes = _build_popup_view_state({
+    ["Empty"] = "EMPTY",
+  }, {
+    set_texture_native_size = function() end,
+  })
+  local captured_text = nil
+
+  state.ui.set_label = function(_, node_name, text)
+    captured_text = text
+  end
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+    { target = require("src.presentation.runtime.ui"), key = "for_each_role_or_global", value = function(fn) fn(nil) end },
+  }, function()
+    popup_controller.show_popup(state, {
+      kind = "bankruptcy",
+      text = "自定义破产文本",
+    })
+  end)
+
+  _assert_eq(captured_text, "自定义破产文本", "_resolve_bankruptcy_text should prefer payload.text")
+end
+
+local function _test_resolve_bankruptcy_text_falls_back_to_reason()
+  local popup_controller = require("src.presentation.runtime.controllers.popup_controller")
+  local state, _, query_nodes = _build_popup_view_state({
+    ["Empty"] = "EMPTY",
+  }, {
+    set_texture_native_size = function() end,
+  })
+  local captured_text = nil
+
+  state.ui.set_label = function(_, node_name, text)
+    captured_text = text
+  end
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+    { target = require("src.presentation.runtime.ui"), key = "for_each_role_or_global", value = function(fn) fn(nil) end },
+  }, function()
+    popup_controller.show_popup(state, {
+      kind = "bankruptcy",
+      reason = "破产原因说明",
+    })
+  end)
+
+  _assert_eq(captured_text, "破产原因说明", "_resolve_bankruptcy_text should fall back to payload.reason")
+end
+
+local function _test_resolve_bankruptcy_text_falls_back_to_player_name()
+  local popup_controller = require("src.presentation.runtime.controllers.popup_controller")
+  local state, _, query_nodes = _build_popup_view_state({
+    ["Empty"] = "EMPTY",
+  }, {
+    set_texture_native_size = function() end,
+  })
+  local captured_text = nil
+
+  state.ui.set_label = function(_, node_name, text)
+    captured_text = text
+  end
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+    { target = require("src.presentation.runtime.ui"), key = "for_each_role_or_global", value = function(fn) fn(nil) end },
+  }, function()
+    popup_controller.show_popup(state, {
+      kind = "bankruptcy",
+      player_name = "测试玩家",
+    })
+  end)
+
+  _assert_eq(captured_text, "测试玩家 破产出局", "_resolve_bankruptcy_text should append 破产出局 to player_name")
+end
+
+local function _test_resolve_bankruptcy_text_uses_default_when_all_missing()
+  local popup_controller = require("src.presentation.runtime.controllers.popup_controller")
+  local state, _, query_nodes = _build_popup_view_state({
+    ["Empty"] = "EMPTY",
+  }, {
+    set_texture_native_size = function() end,
+  })
+  local captured_text = nil
+
+  state.ui.set_label = function(_, node_name, text)
+    captured_text = text
+  end
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+    { target = require("src.presentation.runtime.ui"), key = "for_each_role_or_global", value = function(fn) fn(nil) end },
+  }, function()
+    popup_controller.show_popup(state, {
+      kind = "bankruptcy",
+    })
+  end)
+
+  _assert_eq(captured_text, "破产出局", "_resolve_bankruptcy_text should return default when all fields missing")
+end
+
 return {
   name = "presentation.popup_visibility",
   tests = {
@@ -294,5 +401,9 @@ return {
     { name = "_test_popup_visible_for_all_roles_when_allowed_kind", run = _test_popup_visible_for_all_roles_when_allowed_kind },
     { name = "_test_bankruptcy_popup_visible_for_all_roles", run = _test_bankruptcy_popup_visible_for_all_roles },
     { name = "_test_bankruptcy_popup_avatar_uses_native_size_path", run = _test_bankruptcy_popup_avatar_uses_native_size_path },
+    { name = "_test_resolve_bankruptcy_text_prefers_payload_text", run = _test_resolve_bankruptcy_text_prefers_payload_text },
+    { name = "_test_resolve_bankruptcy_text_falls_back_to_reason", run = _test_resolve_bankruptcy_text_falls_back_to_reason },
+    { name = "_test_resolve_bankruptcy_text_falls_back_to_player_name", run = _test_resolve_bankruptcy_text_falls_back_to_player_name },
+    { name = "_test_resolve_bankruptcy_text_uses_default_when_all_missing", run = _test_resolve_bankruptcy_text_uses_default_when_all_missing },
   },
 }

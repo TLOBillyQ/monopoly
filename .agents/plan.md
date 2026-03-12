@@ -85,6 +85,7 @@
 - log: 2026-03-12 继续补 `target_choice_effects` 的 owner/payload 降级覆盖：新增 `owner_role_id` fallback、string option_id 归一化、payload.unit 无映射拒绝锁定的 characterization cases；定向 suite `tests.suites.presentation.presentation_target_pick` 通过，等待下一轮双 lane CRAP 回填 `_resolve_picked_option_id` 与 `_resolve_choice_owner_role_id`。
 - log: 2026-03-12 继续补 `target_choice_effects` 的低覆盖路径：新增 `payload.unit -> tile_index` 拾取回退与 `owner_role_id` 缺失时回退当前玩家的 target-pick characterization tests；定向 suite `tests.suites.presentation.presentation_target_pick` 通过，等待下一轮双 lane CRAP 确认 `target_choice_effects` 是否出桶。
 - log: 2026-03-12 T5 新一轮收尾：重构 `sync_target_choice_buttons`（complexity 9）拆分为 `_resolve_target_screen`、`_is_target_choice_active`、`_sync_target_button` 三个 helper，CRAP 从 9.24 降至 8 以下，已出桶；补充 characterization tests 覆盖 `_resolve_bankruptcy_text`（4 个 cases）、`_pick_with`（3 个 cases）、`on_bankruptcy_tiles_cleared`（3 个 cases）、`build_intent`（3 个 cases）、event_handlers 匿名函数（4 个 cases）、`register_node_click`（1 个 case）、`choice.build_choice_view`（5 个 cases）；定向 suites `presentation_popup_visibility`、`presentation_ui_event_handlers`、`presentation_ui_event_bindings`、`read_model_contract`、`presentation_ui_interaction` 全部通过；T5 residual 从 12 降到 11。
+- log: 2026-03-12 补充 T5 characterization tests 覆盖低复杂度热点：新增 `_pick_with` 多 API 回退与 hit unit 格式解析（3 cases）、`_toggle_action_log` UI 缺失与 role_id 缺失处理（2 cases）、`_resolve_bankruptcy_text` 多层级 fallback（4 cases）；定向 suite `presentation_ui_interaction` 与 `presentation_popup_visibility` 通过；所有 behavior suites 通过（574）。
 
 ### T6 Presentation view/input cluster
 - depends_on: `[T1]`
@@ -103,6 +104,7 @@
 - log: 2026-03-12 继续收 T6 input/view 头部：将 `item_phase_ask.dispatch` 与 `view_command._fallback_dispatch` 收口成 intent-specific helpers，并补上 cancel/target_lock/unlock 回退断言；同时给 `panel_player_slots.apply_player_colors` 增补 image/label 染色与无 hook 早退用例。联跑 `tests.suites.presentation.presentation_target_pick`、`tests.suites.presentation.presentation_choice_routes`、`tests.suites.presentation.presentation_status3d_and_turn_effects` 通过，最新双 lane CRAP 确认 `item_phase_ask`、`view_command` 与 `panel_player_slots` 已出桶。
 - log: 2026-03-12 继续补 `panel_player_slots.apply_player_colors` 的 characterization 覆盖：新增图片/标签着色与单 label 查询失败容错、无 color hook 早退两条断言；定向 suite `tests.suites.presentation.presentation_player_panels` 通过，等待下一轮双 lane CRAP 确认该热点是否出桶。
 - log: 2026-03-12 将 `item_phase_ask.dispatch` 与 `view_command._fallback_dispatch` 拆成 intent-specific helper，并在 `tests.suites.presentation._presentation_action_status_market_and_anim_cases` 补上 item-phase cancel 与 target lock/unlock fallback 的 characterization tests；联跑该 suite 与 `tests.suites.presentation.presentation_ui_interaction` 后，最新双 lane CRAP 已确认这两个热点分别降到 `3.07` 与 `2.01`，均已出桶。
+- log: 2026-03-12 补充 T6 characterization tests 覆盖低复杂度热点：新增 `overlay.play_missile` 清除 overlay 与生成 transient（1 case）、`building_effects.spawn_upgrade_building_units` 成功路径与多失败路径（4 cases）；定向 suites `presentation_action_anim_core` 与 `presentation_board_sync` 通过；所有 behavior suites 通过（574）。
 
 ### T7 Infrastructure/app/core sweep
 - depends_on: `[T1]`

@@ -5,6 +5,12 @@ local gameplay_rules = require("src.core.config.gameplay_rules")
 local runtime_state = require("src.core.state_access.runtime_state")
 local vec3 = require("fixtures.vec3")
 
+if not math.Vector3 then
+  function math.Vector3(x, y, z)
+    return { x = x, y = y, z = z }
+  end
+end
+
 local function _build_board_refresh_test_env(opts)
   opts = opts or {}
   local calls = {}
@@ -767,6 +773,129 @@ local function _test_tile_anchors_return_early_when_cache_is_ready()
   _assert_eq(log_calls, 0, "ensure_tile_anchors should skip logging when cache is already ready")
 end
 
+local function _test_building_effects_spawn_upgrade_building_units_creates_group_and_updates_billboard()
+  local building_effects = require("src.presentation.view.render.building_effects")
+
+  local billboard_calls = {}
+  local created_units = {}
+
+  local txt_mock = {
+    set_billboard_text = function(text)
+      billboard_calls[#billboard_calls + 1] = text
+    end,
+  }
+
+  local scene = {
+    buildings = {
+      [1] = {
+        get_position = function()
+          return vec3.with_add(10.0, 0.0, 20.0)
+        end,
+      },
+    },
+    building_unit_groups = {},
+    building_txt = {
+      [1] = txt_mock,
+    },
+    presentation_runtime = {
+      host_runtime = {
+        destroy_unit_with_children = function() end,
+        create_unit_group = function(group_id, pos, rot)
+          created_units[#created_units + 1] = {
+            group_id = group_id,
+            pos = pos,
+            rot = rot,
+          }
+          return { _group_id = group_id }
+        end,
+      },
+    },
+  }
+
+  local result = building_effects.spawn_upgrade_building_units(scene, vec3.with_add(0.0, 0.0, 0.0), 1, 1, scene.presentation_runtime)
+
+  _assert_eq(result, true, "spawn_upgrade_building_units should return true on success")
+  _assert_eq(scene.building_unit_groups[1] ~= nil, true, "spawn_upgrade_building_units should store created unit")
+  _assert_eq(billboard_calls[#billboard_calls], "一级建筑", "spawn_upgrade_building_units should set billboard text to building level")
+end
+
+local function _test_building_effects_spawn_upgrade_returns_false_when_building_missing()
+  local building_effects = require("src.presentation.view.render.building_effects")
+
+  local scene = {
+    buildings = {
+      [1] = nil,
+    },
+    building_unit_groups = {},
+    presentation_runtime = {
+      host_runtime = {
+        destroy_unit_with_children = function() end,
+        create_unit_group = function() return {} end,
+      },
+    },
+  }
+
+  local result = building_effects.spawn_upgrade_building_units(scene, math.Vector3(0.0, 0.0, 0.0), 1, 1, scene.presentation_runtime)
+
+  _assert_eq(result, false, "spawn_upgrade_building_units should return false when building is nil")
+end
+
+
+local function _test_building_effects_spawn_upgrade_returns_false_when_prefab_missing()
+  local building_effects = require("src.presentation.view.render.building_effects")
+  local prefab = require("Data.Prefab")
+
+  local scene = {
+    buildings = {
+      [1] = {
+        get_position = function()
+          return math.Vector3(10.0, 0.0, 20.0)
+        end,
+      },
+    },
+    building_unit_groups = {},
+    presentation_runtime = {
+      host_runtime = {
+        destroy_unit_with_children = function() end,
+        create_unit_group = function() return {} end,
+      },
+    },
+  }
+
+  local original_group = prefab.group["一级建筑"]
+  prefab.group["一级建筑"] = nil
+
+  local result = building_effects.spawn_upgrade_building_units(scene, math.Vector3(0.0, 0.0, 0.0), 1, 1, scene.presentation_runtime)
+
+  prefab.group["一级建筑"] = original_group
+
+  _assert_eq(result, false, "spawn_upgrade_building_units should return false when prefab group is missing")
+end
+local function _test_building_effects_spawn_upgrade_returns_false_when_create_fails()
+  local building_effects = require("src.presentation.view.render.building_effects")
+
+  local scene = {
+    buildings = {
+      [1] = {
+        get_position = function()
+          return vec3.with_add(10.0, 0.0, 20.0)
+        end,
+      },
+    },
+    building_unit_groups = {},
+    presentation_runtime = {
+      host_runtime = {
+        destroy_unit_with_children = function() end,
+        create_unit_group = function() return nil end,
+      },
+    },
+  }
+
+  local result = building_effects.spawn_upgrade_building_units(scene, vec3.with_add(0.0, 0.0, 0.0), 1, 1, scene.presentation_runtime)
+
+  _assert_eq(result, false, "spawn_upgrade_building_units should return false when create_unit_group returns nil")
+end
+
 return {
   name = "presentation.board_sync",
   tests = {
@@ -837,6 +966,22 @@ return {
     {
       name = "_test_tile_anchors_return_early_when_cache_is_ready",
       run = _test_tile_anchors_return_early_when_cache_is_ready,
+    },
+    {
+      name = "_test_building_effects_spawn_upgrade_building_units_creates_group_and_updates_billboard",
+      run = _test_building_effects_spawn_upgrade_building_units_creates_group_and_updates_billboard,
+    },
+    {
+      name = "_test_building_effects_spawn_upgrade_returns_false_when_building_missing",
+      run = _test_building_effects_spawn_upgrade_returns_false_when_building_missing,
+    },
+    {
+      name = "_test_building_effects_spawn_upgrade_returns_false_when_prefab_missing",
+      run = _test_building_effects_spawn_upgrade_returns_false_when_prefab_missing,
+    },
+    {
+      name = "_test_building_effects_spawn_upgrade_returns_false_when_create_fails",
+      run = _test_building_effects_spawn_upgrade_returns_false_when_create_fails,
     },
   },
 }

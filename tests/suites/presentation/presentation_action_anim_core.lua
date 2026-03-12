@@ -694,6 +694,77 @@ local function _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_s
     "clear_obstacles robot should spawn above the acting player tile")
 end
 
+local function _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient()
+  local overlay = require("src.presentation.view.render.anim_unit_overlay")
+  local prefab = require("Data.Prefab")
+  local state = _build_state()
+  local cleared_calls = {}
+  local transient_calls = {}
+
+  state.presentation_runtime = {
+    host_runtime = {
+      create_unit_group = function(group_id, pos)
+        transient_calls[#transient_calls + 1] = {
+          group_id = group_id,
+          pos = pos,
+        }
+        return { _group_id = group_id }
+      end,
+      create_unit = function(unit_id, pos)
+        transient_calls[#transient_calls + 1] = {
+          unit_id = unit_id,
+          pos = pos,
+        }
+        return { _unit_id = unit_id }
+      end,
+      schedule = function() end,
+    },
+  }
+
+  local original_group = prefab.group["导弹"]
+  prefab.group["导弹"] = 9999
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "create_unit_group",
+      value = function(group_id, pos)
+        transient_calls[#transient_calls + 1] = {
+          group_id = group_id,
+          pos = pos,
+        }
+        return { _group_id = group_id }
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "create_unit",
+      value = function(unit_id, pos)
+        transient_calls[#transient_calls + 1] = {
+          unit_id = unit_id,
+          pos = pos,
+        }
+        return { _unit_id = unit_id }
+      end,
+    },
+  }, function()
+    overlay.play_missile(state, {
+      tile_index = 1,
+    }, 0.5, {
+      clear_overlay = function(_, kind, tile_index)
+        cleared_calls[#cleared_calls + 1] = kind .. ":" .. tostring(tile_index)
+      end,
+    })
+  end)
+
+  prefab.group["导弹"] = original_group
+
+  assert(#cleared_calls == 2, "play_missile should clear roadblock and mine")
+  assert(cleared_calls[1] == "roadblock:1", "play_missile should clear roadblock first")
+  assert(cleared_calls[2] == "mine:1", "play_missile should clear mine second")
+  assert(#transient_calls >= 1, "play_missile should spawn at least one transient")
+end
+
 return {
   name = "presentation.action_anim_core",
   tests = {
@@ -711,6 +782,7 @@ return {
     { name = "anim_tip_text_covers_roll_tile_and_cash_variants", run = _test_anim_tip_text_covers_roll_tile_and_cash_variants },
     { name = "anim_tip_text_covers_chance_item_and_unknown_tile_variants", run = _test_anim_tip_text_covers_chance_item_and_unknown_tile_variants },
     { name = "anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot", run = _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot },
+    { name = "anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient", run = _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
     { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },
   },
