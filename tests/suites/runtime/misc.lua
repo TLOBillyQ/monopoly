@@ -3,6 +3,10 @@ local _assert_eq = support.assert_eq
 local with_patches = support.with_patches
 local number_utils = support.number_utils
 local logger = require("src.core.utils.logger")
+local runtime_constants = require("src.core.config.runtime_constants")
+local runtime_context = require("src.infrastructure.runtime.context")
+local default_ports = require("src.infrastructure.runtime.default_ports")
+local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 
 local function _test_number_utils_to_integer()
   _assert_eq(number_utils.to_integer("12"), 12, "string integer should parse")
@@ -378,6 +382,140 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
   assert(tostring(missing):find("UI 节点缺失", 1, true) ~= nil, "ui bootstrap should report missing required nodes")
 end
 
+local function _test_runtime_context_vehicle_helper_consume_enter_delay_only_waits_once()
+  local emitted = {}
+  local role = { id = 3, get_roleid = function() return 3 end }
+  local ctx = runtime_context.new({
+    GameAPI = {
+      get_role = function(role_id)
+        if role_id == 3 then
+          return role
+        end
+        return nil
+      end,
+      get_all_valid_roles = function()
+        return { role }
+      end,
+    },
+    LuaAPI = {
+      call_delay_time = function() end,
+      global_register_custom_event = function() end,
+      global_register_trigger_event = function() end,
+      unit_register_custom_event = function() end,
+      unit_register_trigger_event = function() end,
+      global_send_custom_event = function() end,
+    },
+  })
+
+  with_patches({
+    {
+      target = require("src.game.systems.vehicle"),
+      key = "is_enabled",
+      value = function()
+        return true
+      end,
+    },
+    {
+      target = require("src.infrastructure.runtime.event_bridge"),
+      key = "emit_custom_event",
+      value = function(event_name)
+        emitted[#emitted + 1] = event_name
+        return true
+      end,
+    },
+  }, function()
+    runtime_context.install_environment(ctx)
+    runtime_context.install_runtime_helpers(ctx)
+
+    local helper = ctx.vehicle_helper
+    _assert_eq(helper.consume_enter_delay(3, 99), runtime_constants.vehicle_enter_delay or 0, "first enter should use configured enter delay")
+    _assert_eq(helper.consume_enter_delay(3, 99), 0, "same vehicle should not re-apply enter delay")
+    _assert_eq(helper.consume_enter_delay(3, 100), runtime_constants.vehicle_enter_delay or 0, "new vehicle should emit enter and wait again")
+  end)
+
+  _assert_eq(#emitted, 2, "vehicle helper should emit enter event only when vehicle changes")
+end
+
+local function _test_default_ports_wall_diff_seconds_prefers_game_api_then_falls_back()
+  local ctx = {
+    env = {
+      GameAPI = {
+        get_timestamp_diff = function(current, previous)
+          return (current - previous) * 2
+        end,
+      },
+    },
+  }
+  local runtime_ctx = {
+    current = function()
+      return ctx
+    end,
+  }
+  local ports = default_ports.build(runtime_ctx)
+
+  _assert_eq(ports.wall_diff_seconds(9, 7), 4, "wall diff should prefer GameAPI semantics when available")
+  ctx.env.GameAPI.get_timestamp_diff = nil
+  _assert_eq(ports.wall_diff_seconds(9, 7), 2, "wall diff should fall back to arithmetic when GameAPI diff is unavailable")
+  _assert_eq(ports.wall_diff_seconds("x", 7), 0, "wall diff should return 0 for non-numeric fallback inputs")
+end
+
+local function _test_ui_bootstrap_spawns_startup_synthetic_actors()
+  local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
+  local capture = {
+    registered_specs = nil,
+    spawned_map = nil,
+  }
+
+  with_patches({
+    {
+      target = require("src.infrastructure.runtime.context"),
+      key = "current",
+      value = function()
+        return {
+          synthetic_actor_registry = {
+            register_specs = function(specs)
+              capture.registered_specs = specs
+            end,
+            spawn_pending = function(map_cfg)
+              capture.spawned_map = map_cfg
+            end,
+          },
+        }
+      end,
+    },
+  }, function()
+    local game = {
+      startup_synthetic_players = {
+        { player_id = -2, unit_key = "npc_2" },
+      },
+      board = { map = { path = { 1, 2, 3 } } },
+    }
+    ui_bootstrap.spawn_startup_synthetic_actors(game)
+  end)
+
+  assert(type(capture.registered_specs) == "table" and capture.registered_specs[1].player_id == -2,
+    "ui bootstrap should register startup synthetic actor specs")
+  assert(capture.spawned_map and capture.spawned_map.path[1] == 1,
+    "ui bootstrap should spawn pending synthetic actors with board map")
+end
+
+local function _test_landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory()
+  local state = {}
+  local dirty = {
+    any = true,
+    players = true,
+    inventory_ids = {
+      [1] = true,
+      [2] = true,
+    },
+  }
+
+  local deferred = landing_visual_hold.defer_dirty(state, dirty)
+  assert(deferred.any == true and deferred.players == true, "defer_dirty should merge boolean dirty flags")
+  assert(deferred.inventory_ids[1] == true and deferred.inventory_ids[2] == true,
+    "defer_dirty should merge inventory_ids into initialized deferred bucket")
+end
+
 return {
   name = "misc",
   tests = {
@@ -392,5 +530,9 @@ return {
     { name = "logger_event_seq_only_tracks_event_feed_changes", run = _test_logger_event_seq_only_tracks_event_feed_changes },
     { name = "synthetic_actor_registry_spawns_from_first_path_tile", run = _test_synthetic_actor_registry_spawns_from_first_path_tile },
     { name = "ui_bootstrap_required_click_nodes_appends_extras", run = _test_ui_bootstrap_required_click_nodes_appends_extras },
+    { name = "runtime_context_vehicle_helper_consume_enter_delay_only_waits_once", run = _test_runtime_context_vehicle_helper_consume_enter_delay_only_waits_once },
+    { name = "default_ports_wall_diff_seconds_prefers_game_api_then_falls_back", run = _test_default_ports_wall_diff_seconds_prefers_game_api_then_falls_back },
+    { name = "ui_bootstrap_spawns_startup_synthetic_actors", run = _test_ui_bootstrap_spawns_startup_synthetic_actors },
+    { name = "landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory", run = _test_landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory },
   },
 }

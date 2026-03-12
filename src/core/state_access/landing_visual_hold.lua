@@ -14,6 +14,24 @@ local function _new_dirty_bucket()
   }
 end
 
+local function _ensure_dirty_inventory_ids(hold)
+  if type(hold.deferred_dirty) ~= "table" then
+    hold.deferred_dirty = _new_dirty_bucket()
+  end
+  if type(hold.deferred_dirty.inventory_ids) ~= "table" then
+    hold.deferred_dirty.inventory_ids = {}
+  end
+end
+
+local function _ensure_hold_buffers(hold)
+  hold.deferred_popups = hold.deferred_popups or {}
+  hold.deferred_runtime_events = hold.deferred_runtime_events or {}
+  hold.deferred_board_visual_syncs = hold.deferred_board_visual_syncs or {}
+  hold.deferred_tile_updates = hold.deferred_tile_updates or {}
+  hold.deferred_owner_changes = hold.deferred_owner_changes or {}
+  hold.deferred_bankruptcy_clears = hold.deferred_bankruptcy_clears or {}
+end
+
 local function _ensure_hold(state)
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
   local hold = turn_runtime.landing_visual_hold
@@ -33,43 +51,27 @@ local function _ensure_hold(state)
     }
     turn_runtime.landing_visual_hold = hold
   end
-  if type(hold.deferred_dirty) ~= "table" then
-    hold.deferred_dirty = _new_dirty_bucket()
-  end
-  if type(hold.deferred_dirty.inventory_ids) ~= "table" then
-    hold.deferred_dirty.inventory_ids = {}
-  end
-  hold.deferred_popups = hold.deferred_popups or {}
-  hold.deferred_runtime_events = hold.deferred_runtime_events or {}
-  hold.deferred_board_visual_syncs = hold.deferred_board_visual_syncs or {}
-  hold.deferred_tile_updates = hold.deferred_tile_updates or {}
-  hold.deferred_owner_changes = hold.deferred_owner_changes or {}
-  hold.deferred_bankruptcy_clears = hold.deferred_bankruptcy_clears or {}
+  _ensure_dirty_inventory_ids(hold)
+  _ensure_hold_buffers(hold)
   return hold
 end
 
-local function _merge_dirty_into(target, dirty)
-  if type(target) ~= "table" or type(dirty) ~= "table" then
-    return target
+local function _merge_dirty_flags(target, dirty)
+  for _, key in ipairs({
+    "any",
+    "players",
+    "board_tiles",
+    "turn",
+    "market",
+    "turn_countdown",
+  }) do
+    if dirty[key] then
+      target[key] = true
+    end
   end
-  if dirty.any then
-    target.any = true
-  end
-  if dirty.players then
-    target.players = true
-  end
-  if dirty.board_tiles then
-    target.board_tiles = true
-  end
-  if dirty.turn then
-    target.turn = true
-  end
-  if dirty.market then
-    target.market = true
-  end
-  if dirty.turn_countdown then
-    target.turn_countdown = true
-  end
+end
+
+local function _merge_inventory_ids(target, dirty)
   if type(dirty.inventory_ids) == "table" then
     local inventory_ids = target.inventory_ids or {}
     target.inventory_ids = inventory_ids
@@ -77,6 +79,14 @@ local function _merge_dirty_into(target, dirty)
       inventory_ids[player_id] = true
     end
   end
+end
+
+local function _merge_dirty_into(target, dirty)
+  if type(target) ~= "table" or type(dirty) ~= "table" then
+    return target
+  end
+  _merge_dirty_flags(target, dirty)
+  _merge_inventory_ids(target, dirty)
   return target
 end
 

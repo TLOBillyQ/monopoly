@@ -71,68 +71,90 @@ local function _warn_mapping_missing_once(rt, entry, reason)
   )
 end
 
+local function _load_goods_list()
+  if not (GameAPI and type(GameAPI.get_goods_list) == "function") then
+    return nil
+  end
+  local ok, list = pcall(GameAPI.get_goods_list)
+  if ok and type(list) == "table" then
+    return list
+  end
+  return nil
+end
+
+local function _index_goods_by_name(goods_list)
+  local goods_by_name = {}
+  local duplicate_name = {}
+  if type(goods_list) ~= "table" then
+    return goods_by_name, duplicate_name
+  end
+  for _, goods in ipairs(goods_list) do
+    local name = goods and goods.name or nil
+    if type(name) == "string" and name ~= "" then
+      if goods_by_name[name] and goods_by_name[name] ~= goods then
+        duplicate_name[name] = true
+      else
+        goods_by_name[name] = goods
+      end
+    end
+  end
+  return goods_by_name, duplicate_name
+end
+
+local function _should_map_paid_entry(context_service, entry)
+  local currency = context_service.entry_currency(entry)
+  return context_service.is_paid_currency(currency)
+    and context_service.entry_market_enabled(entry)
+    and context_service.entry_vehicle_enabled(entry)
+end
+
+local function _record_goods_mapping(rt, entry, market_name, goods_id, duplicate_name)
+  rt.goods_id_by_product_id[entry.product_id] = goods_id
+  local mapped_product_id = rt.product_id_by_goods_id[goods_id]
+  if mapped_product_id == nil then
+    rt.product_id_by_goods_id[goods_id] = entry.product_id
+  elseif mapped_product_id ~= entry.product_id then
+    logger.warn(
+      "market paid goods ambiguous goods_id:",
+      "goods_id=" .. tostring(goods_id),
+      "product_id=" .. tostring(entry.product_id),
+      "mapped_product_id=" .. tostring(mapped_product_id)
+    )
+  end
+  if duplicate_name[market_name] then
+    logger.warn(
+      "market paid goods duplicate name match:",
+      "name=" .. tostring(market_name),
+      "product_id=" .. tostring(entry.product_id)
+    )
+  end
+end
+
+local function _resolve_missing_mapping_reason(goods_list)
+  if type(goods_list) == "table" then
+    return "name_mapping_not_found"
+  end
+  return "goods_list_unavailable"
+end
+
 local function _build_goods_mappings(game)
   local rt = _runtime(game)
   rt.goods_id_by_product_id = {}
   rt.product_id_by_goods_id = {}
   rt.warned_missing_by_product_id = {}
 
-  local goods_by_name = {}
-  local duplicate_name = {}
-  local goods_list = nil
-  if GameAPI and type(GameAPI.get_goods_list) == "function" then
-    local ok, list = pcall(GameAPI.get_goods_list)
-    if ok and type(list) == "table" then
-      goods_list = list
-    end
-  end
-
-  if type(goods_list) == "table" then
-    for _, goods in ipairs(goods_list) do
-      local name = goods and goods.name or nil
-      if type(name) == "string" and name ~= "" then
-        if goods_by_name[name] and goods_by_name[name] ~= goods then
-          duplicate_name[name] = true
-        else
-          goods_by_name[name] = goods
-        end
-      end
-    end
-  end
-
+  local goods_list = _load_goods_list()
+  local goods_by_name, duplicate_name = _index_goods_by_name(goods_list)
   local context_service = _context()
   for _, entry in ipairs(context_service.entries()) do
-    local currency = context_service.entry_currency(entry)
-    local is_paid_entry = context_service.is_paid_currency(currency)
-    local is_market_enabled = context_service.entry_market_enabled(entry)
-    local is_vehicle_enabled = context_service.entry_vehicle_enabled(entry)
-    if is_paid_entry and is_market_enabled and is_vehicle_enabled then
+    if _should_map_paid_entry(context_service, entry) then
       local market_name = entry and entry.name or nil
       local goods = market_name and goods_by_name[market_name] or nil
       local goods_id = goods and goods.goods_id or nil
       if goods_id ~= nil and goods_id ~= "" then
-        rt.goods_id_by_product_id[entry.product_id] = goods_id
-        local mapped_product_id = rt.product_id_by_goods_id[goods_id]
-        if mapped_product_id == nil then
-          rt.product_id_by_goods_id[goods_id] = entry.product_id
-        elseif mapped_product_id ~= entry.product_id then
-          logger.warn(
-            "market paid goods ambiguous goods_id:",
-            "goods_id=" .. tostring(goods_id),
-            "product_id=" .. tostring(entry.product_id),
-            "mapped_product_id=" .. tostring(mapped_product_id)
-          )
-        end
-        if duplicate_name[market_name] then
-          logger.warn(
-            "market paid goods duplicate name match:",
-            "name=" .. tostring(market_name),
-            "product_id=" .. tostring(entry.product_id)
-          )
-        end
+        _record_goods_mapping(rt, entry, market_name, goods_id, duplicate_name)
       else
-        local reason = (type(goods_list) == "table") and "name_mapping_not_found" or "goods_list_unavailable"
-        _warn_mapping_missing_once(rt, entry, reason)
+        _warn_mapping_missing_once(rt, entry, _resolve_missing_mapping_reason(goods_list))
       end
     end
   end
