@@ -102,4 +102,7 @@ function session.new(opts)
   return _build_session(opts)
 end
 
+-- Export for testability
+session._mark_phase_default = _mark_phase_default
+
 return session
