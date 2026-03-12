@@ -362,34 +362,73 @@ local function _resolve_profile_rotation_hook(state)
   return hook
 end
 
+local function _resolve_profile_rotation_hook(state)
+  local hook = state and state.profile_rotation or nil
+  if type(hook) ~= "table" then
+    return nil
+  end
+  if type(hook.is_active) ~= "function"
+      or type(hook.turns_per_profile) ~= "function"
+      or type(hook.record_result) ~= "function"
+      or type(hook.advance) ~= "function"
+      or type(hook.current_profile_name) ~= "function" then
+    return nil
+  end
+  return hook
+end
+
+local function _should_rotate_profile(game, rotation)
+  local turn_count = game.turn and game.turn.turn_count or 0
+  return game.finished == true or turn_count >= rotation.turns_per_profile()
+end
+
+local function _record_profile_result(rotation, state, game, turn_count)
+  local current_profile_name = state and state.active_profile_name or rotation.current_profile_name() or "default"
+  rotation.record_result(current_profile_name, turn_count, game.finished == true)
+end
+
+local function _advance_to_next_profile(rotation, state)
+  if not rotation.advance() then
+    return nil
+  end
+  local next_profile_name = rotation.current_profile_name()
+  if state then
+    state.active_profile_name = next_profile_name
+  end
+  return next_profile_name
+end
+
+local function _start_next_profile_game(state)
+  local next_game = gameplay_loop.new_game(state)
+  if state and type(state.on_game_replaced) == "function" then
+    state.on_game_replaced(next_game)
+  else
+    gameplay_loop.set_game(state, next_game)
+  end
+end
+
+local function _disable_auto_runner(state)
+  if state and state.auto_runner and state.auto_runner.set_enabled then
+    state.auto_runner:set_enabled(false)
+  end
+end
+
 local function _maybe_rotate_profile(game, state)
   local rotation = _resolve_profile_rotation_hook(state)
   if not rotation or not rotation.is_active() then
     return false
   end
-  local turn_count = game.turn and game.turn.turn_count or 0
-  local should_rotate = game.finished == true or turn_count >= rotation.turns_per_profile()
-  if not should_rotate then
+  if not _should_rotate_profile(game, rotation) then
     return false
   end
-  local current_profile_name = state and state.active_profile_name or rotation.current_profile_name() or "default"
-  rotation.record_result(current_profile_name, turn_count, game.finished == true)
-  if rotation.advance() then
-    local next_profile_name = rotation.current_profile_name()
-    if state then
-      state.active_profile_name = next_profile_name
-    end
-    local next_game = gameplay_loop.new_game(state)
-    if state and type(state.on_game_replaced) == "function" then
-      state.on_game_replaced(next_game)
-    else
-      gameplay_loop.set_game(state, next_game)
-    end
+  local turn_count = game.turn and game.turn.turn_count or 0
+  _record_profile_result(rotation, state, game, turn_count)
+  local next_profile = _advance_to_next_profile(rotation, state)
+  if next_profile then
+    _start_next_profile_game(state)
     return true
   end
-  if state and state.auto_runner and state.auto_runner.set_enabled then
-    state.auto_runner:set_enabled(false)
-  end
+  _disable_auto_runner(state)
   return true
 end
 

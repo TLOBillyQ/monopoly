@@ -48,4 +48,6 @@ function turn_camera_policy.sync_follow(game, state, ports, ui_refreshed)
   ui_sync_ports.follow_camera(state, current_id)
 end
 
+turn_camera_policy._resolve_follow_player_id = _resolve_follow_player_id
+
 return turn_camera_policy

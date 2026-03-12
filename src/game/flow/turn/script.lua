@@ -19,11 +19,24 @@ local function _resolve_phase_handler(phases, state_name)
   return require("src.game.flow.turn.move_followup").run
 end
 
+local function _is_callable(v)
+  if type(v) == "function" then
+    return true
+  end
+  if type(v) == "table" then
+    local mt = getmetatable(v)
+    if mt and type(mt.__call) == "function" then
+      return true
+    end
+  end
+  return false
+end
+
 local function _run_phase(session, state_name, args)
   local phases = session.phases
   assert(type(phases) == "table", "missing session phases")
   local handler = _resolve_phase_handler(phases, state_name)
-  assert(type(handler) == "function", "missing phase handler: " .. tostring(state_name))
+  assert(_is_callable(handler), "missing phase handler: " .. tostring(state_name))
   if state_name == "start" then
     turn_logger.log_turn_start(session.game)
   end

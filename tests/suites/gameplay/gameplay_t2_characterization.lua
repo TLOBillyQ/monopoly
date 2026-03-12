@@ -334,6 +334,172 @@ local _roll_dice_tests = {
   end,
 }
 
+local land = require("src.game.flow.turn.land")
+local _resolve_wait_state_tests = {
+  function()
+    local game = {
+      turn = {},
+      dirty = {},
+    }
+    local next_state, next_args = land._resolve_wait_state(game, "move", { player = { id = 1 } }, true)
+    assert(next_state == "move", "should return next_state when no action anim and wait_action_anim is true")
+  end,
+  function()
+    local game = {
+      turn = { action_anim = { kind = "test" } },
+      dirty = {},
+    }
+    local next_state, next_args = land._resolve_wait_state(game, "move", { player = { id = 1 } }, true)
+    assert(next_state == "wait_action_anim", "should return wait_action_anim when action anim exists")
+    assert(next_args.next_state == "move", "should preserve next_state in args")
+  end,
+  function()
+    local game = {
+      turn = {},
+      dirty = {},
+    }
+    local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+    landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
+    local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
+    assert(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual hold is active")
+    landing_visual_hold.release(game)
+  end,
+  function()
+    local game = {
+      turn = { action_anim_queue = { { kind = "move_effect" } } },
+      dirty = {},
+    }
+    local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
+    assert(next_state == "wait_action_anim", "should return wait_action_anim when action anim queue has items")
+  end,
+}
+
+local tick_timeout = require("src.game.flow.turn.tick_timeout")
+local _resolve_choice_ui_state_tests = {
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local result = tick_timeout.resolve_choice_ui_state(game, state)
+    assert(result.route_key == nil, "should return nil route_key when no pending choice")
+    assert(result.should_warn == false, "should not warn when no pending choice")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    game.turn.pending_choice = { id = 1, route_key = "test_route" }
+    local result = tick_timeout.resolve_choice_ui_state(game, state)
+    assert(result.route_key == "test_route", "should return route_key from pending choice")
+    assert(result.should_warn == false, "should not warn when choice has route_key")
+  end,
+}
+
+local camera_policy = require("src.game.flow.turn.camera_policy")
+local _resolve_follow_player_id_tests = {
+  function()
+    local game = _new_game()
+    local result = camera_policy._resolve_follow_player_id(game)
+    local p1 = game.players[1]
+    assert(result == p1.id, "should return current player id when not eliminated")
+  end,
+  function()
+    local game = _new_game()
+    game.players[1].eliminated = true
+    local result = camera_policy._resolve_follow_player_id(game)
+    local p2 = game.players[2]
+    assert(result == p2.id, "should return next non-eliminated player")
+  end,
+  function()
+    local game = _new_game()
+    game.turn.current_player_index = nil
+    local result = camera_policy._resolve_follow_player_id(game)
+    assert(result == nil, "should return nil when no current player index")
+  end,
+  function()
+    local game = _new_game()
+    game.players = {}
+    local result = camera_policy._resolve_follow_player_id(game)
+    assert(result == nil, "should return nil when no players")
+  end,
+}
+
+local tick_ui_sync = require("src.game.flow.turn.tick_ui_sync")
+local _update_countdown_tests = {
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    game.turn.detained_wait_active = true
+    game.turn.detained_wait_seconds = 5
+    game.turn.detained_wait_elapsed = 2
+    tick_ui_sync.update_countdown(game, state)
+    assert(game.turn.countdown_seconds == 3, "should calculate remaining detained wait seconds")
+    assert(game.turn.countdown_active == true, "should set countdown active for detained wait")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    state.action_button_active = true
+    state.action_button_elapsed = 1
+    tick_ui_sync.update_countdown(game, state)
+    assert(game.turn.countdown_active == true, "should set countdown active for action button")
+  end,
+}
+
+local _is_action_button_wait_active_tests = {
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == true, "should be active when no blocking UI and game not finished")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    game.finished = true
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == false, "should not be active when game is finished")
+  end,
+  function()
+    local game = _new_game()
+    local state = _build_loop_state()
+    local ports = _build_test_ports()
+    state.ui = { input_blocked = true }
+    local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
+    assert(result == false, "should not be active when input is blocked")
+  end,
+}
+
+local choice_auto_policy = require("src.game.flow.turn.choice_auto_policy")
+local _choice_auto_policy_tests = {
+  function()
+    local game = _new_game()
+    local choice = { id = 1, options = { { id = "opt1" }, { id = "opt2" } } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = 0 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result == nil, "should return nil when not auto actor and min_visible not reached")
+  end,
+  function()
+    local game = _new_game()
+    local p1 = game.players[1]
+    p1.auto = true
+    local choice = { id = 1, options = { { id = "opt1" } }, meta = { item_preconsumed = true } }
+    local ctx = { mode = "wait_choice", elapsed_seconds = 0, min_visible_seconds = 0 }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result ~= nil, "should return action for preconsumed item")
+    assert(result.type == "choice_select", "should return choice_select action")
+    assert(result.option_id == "opt1", "should select first option")
+  end,
+  function()
+    local game = _new_game()
+    local choice = { id = 1, options = { { id = "opt1" } }, allow_cancel = true }
+    local ctx = { mode = "tick_timeout" }
+    local result = choice_auto_policy.decide(game, {}, choice, ctx)
+    assert(result ~= nil, "should return action for timeout mode")
+    assert(result.type == "choice_cancel", "should return choice_cancel when allow_cancel is true")
+  end,
+}
+
 return {
   name = "gameplay_t2_characterization",
   tests = {
@@ -357,5 +523,23 @@ return {
     { name = "_test_roll_dice_with_partial_override_uses_last_for_remaining", run = _roll_dice_tests[2] },
     { name = "_test_roll_dice_with_rng_no_override", run = _roll_dice_tests[3] },
     { name = "_test_roll_dice_with_empty_override_uses_rng", run = _roll_dice_tests[4] },
+    { name = "_test_resolve_wait_state_no_anim_wait_action_anim", run = _resolve_wait_state_tests[1] },
+    { name = "_test_resolve_wait_state_with_action_anim_wait_action_anim", run = _resolve_wait_state_tests[2] },
+    { name = "_test_resolve_wait_state_landing_visual_hold", run = _resolve_wait_state_tests[3] },
+    { name = "_test_resolve_wait_state_with_action_anim_queue", run = _resolve_wait_state_tests[4] },
+    { name = "_test_resolve_choice_ui_state_no_pending", run = _resolve_choice_ui_state_tests[1] },
+    { name = "_test_resolve_choice_ui_state_with_pending", run = _resolve_choice_ui_state_tests[2] },
+    { name = "_test_resolve_follow_player_id_current", run = _resolve_follow_player_id_tests[1] },
+    { name = "_test_resolve_follow_player_id_next_non_eliminated", run = _resolve_follow_player_id_tests[2] },
+    { name = "_test_resolve_follow_player_id_no_index", run = _resolve_follow_player_id_tests[3] },
+    { name = "_test_resolve_follow_player_id_no_players", run = _resolve_follow_player_id_tests[4] },
+    { name = "_test_update_countdown_detained_wait", run = _update_countdown_tests[1] },
+    { name = "_test_update_countdown_action_button", run = _update_countdown_tests[2] },
+    { name = "_test_is_action_button_wait_active_normal", run = _is_action_button_wait_active_tests[1] },
+    { name = "_test_is_action_button_wait_active_finished", run = _is_action_button_wait_active_tests[2] },
+    { name = "_test_is_action_button_wait_active_blocked", run = _is_action_button_wait_active_tests[3] },
+    { name = "_test_choice_auto_policy_wait_choice_not_auto", run = _choice_auto_policy_tests[1] },
+    { name = "_test_choice_auto_policy_preconsumed_item", run = _choice_auto_policy_tests[2] },
+    { name = "_test_choice_auto_policy_timeout_cancel", run = _choice_auto_policy_tests[3] },
   },
 }
