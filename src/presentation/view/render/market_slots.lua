@@ -207,4 +207,7 @@ function market_view_slots.resolve_selection(option_id, image_refs, empty_ref_ke
   }
 end
 
+-- Exported for testing
+market_view_slots._resolve_market_name = _resolve_market_name
+
 return market_view_slots

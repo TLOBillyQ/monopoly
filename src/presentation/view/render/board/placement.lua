@@ -203,4 +203,7 @@ end
 
 M.build_snapshot = _build_snapshot
 
+-- Exported for testing
+M._resolve_occupant_slot = _resolve_occupant_slot
+
 return M

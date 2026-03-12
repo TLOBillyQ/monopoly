@@ -57,7 +57,16 @@
   - `_roll_dice` (4 tests: with override, partial override, rng no override, empty override uses rng)
   导出必要的测试接口：`roll._resolve_phase_wait_result`, `loop._log_missing_auto_choice_action`, `tick_choice_timeout._resolve_choice_owner_id`
   所有 behavior suites (652 tests) 与 contract suites (97 tests) 通过；T2 characterization tests 单独验证通过。
-- files edited/created: `src/game/flow/turn/roll.lua`, `src/game/flow/turn/move.lua`, `src/game/flow/turn/phase_registry.lua`, `src/game/flow/turn/loop.lua`, `src/game/flow/turn/tick_timeout.lua`, `src/game/flow/turn/timer_policy.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_turn_flow_and_interrupts.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`, `tests/suites/architecture/usecase_boundary_contract.lua`, `tests/suites/architecture/architecture_guard_contract.lua`, `tests/suites/runtime/narrow_runtime_ports_contract.lua`, `src/game/flow/turn/loop_ports.lua`, `tests/suites/gameplay/gameplay_timeout_and_auto_runner.lua`, `tests/suites/gameplay/gameplay_t2_characterization.lua`
+- log: 2026-03-12 T2 Flow wait/landing cluster cleanup - add characterization tests and refactor:
+  - Refactor `loop.lua:_maybe_rotate_profile` (split into 6 helpers: `_resolve_profile_rotation_hook`, `_should_rotate_profile`, `_record_profile_result`, `_advance_to_next_profile`, `_start_next_profile_game`, `_disable_auto_runner`)
+  - Refactor `move.lua:_phase_move` (split into 8 helpers: `_apply_dice_multiplier`, `_build_move_opts`, `_resolve_move_total`, `_build_move_anim_data`, `_queue_move_anim`, `_build_wait_move_anim_result`, `_run_move_followup`, `_perform_move`)
+  - Fix `land.lua` to export `_resolve_wait_state` for testing while maintaining backward compatibility via callable table metatable
+  - Fix `script.lua` to support callable tables for phase handlers (added `_is_callable` helper)
+  - Export `_resolve_follow_player_id` from `camera_policy.lua`
+  - Add 18 characterization tests for T2 hotspots: `_resolve_wait_state` (4 tests), `_resolve_choice_ui_state` (2 tests), `_resolve_follow_player_id` (4 tests), `_update_countdown` (2 tests), `_is_action_button_wait_active` (3 tests), `choice_auto_policy.decide` (3 tests)
+  - T2 residual: 21 functions with CRAP > 8 (down from 23 in previous baseline)
+  - All behavior suites pass (652 tests)
+- files edited/created: `src/game/flow/turn/roll.lua`, `src/game/flow/turn/move.lua`, `src/game/flow/turn/phase_registry.lua`, `src/game/flow/turn/loop.lua`, `src/game/flow/turn/tick_timeout.lua`, `src/game/flow/turn/timer_policy.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_turn_flow_and_interrupts.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`, `tests/suites/architecture/usecase_boundary_contract.lua`, `tests/suites/architecture/architecture_guard_contract.lua`, `tests/suites/runtime/narrow_runtime_ports_contract.lua`, `src/game/flow/turn/loop_ports.lua`, `tests/suites/gameplay/gameplay_timeout_and_auto_runner.lua`, `tests/suites/gameplay/gameplay_t2_characterization.lua`, `src/game/flow/turn/land.lua`, `src/game/flow/turn/script.lua`, `src/game/flow/turn/camera_policy.lua`
 
 ### T3 Flow orchestration/AI cluster
 - depends_on: `[T1]`
@@ -133,6 +142,8 @@
 - log: 2026-03-12 继续补 `panel_player_slots.apply_player_colors` 的 characterization 覆盖：新增图片/标签着色与单 label 查询失败容错、无 color hook 早退两条断言；定向 suite `tests.suites.presentation.presentation_player_panels` 通过，等待下一轮双 lane CRAP 确认该热点是否出桶。
 - log: 2026-03-12 将 `item_phase_ask.dispatch` 与 `view_command._fallback_dispatch` 拆成 intent-specific helper，并在 `tests.suites.presentation._presentation_action_status_market_and_anim_cases` 补上 item-phase cancel 与 target lock/unlock fallback 的 characterization tests；联跑该 suite 与 `tests.suites.presentation.presentation_ui_interaction` 后，最新双 lane CRAP 已确认这两个热点分别降到 `3.07` 与 `2.01`，均已出桶。
 - log: 2026-03-12 补充 T6 characterization tests 覆盖低复杂度热点：新增 `overlay.play_missile` 清除 overlay 与生成 transient（1 case）、`building_effects.spawn_upgrade_building_units` 成功路径与多失败路径（4 cases）；定向 suites `presentation_action_anim_core` 与 `presentation_board_sync` 通过；所有 behavior suites 通过（574）。
+- log: 2026-03-12 T6 Presentation view/input cluster cleanup：导出测试接口 `_resolve_market_name`、`_resolve_occupant_slot`、`_create_scene_ui_bind_unit`；新增 24 个 characterization tests 覆盖 T6 剩余热点（`_resolve_market_name` 4 cases、`_resolve_occupant_slot` 4 cases、`_create_scene_ui_bind_unit` 4 cases、`resolve_player_status_key` 9 cases、`startup_render.apply` 3 cases、`_play_cue` 2 cases）；所有 behavior suites 通过（652），contract suites 通过（97）；T6 residual 从 10 降至 0（所有 complexity <= 8 的热点通过补测达标）。
+- status: Completed
 
 ### T7 Infrastructure/app/core sweep
 - depends_on: `[T1]`

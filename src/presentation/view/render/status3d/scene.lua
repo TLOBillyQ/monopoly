@@ -101,4 +101,7 @@ end
 M.resolve_observer_roles = _resolve_observer_roles
 M.set_layer_visible_for_roles = _set_layer_visible_for_roles
 
+-- Exported for testing
+M._create_scene_ui_bind_unit = _create_scene_ui_bind_unit
+
 return M
