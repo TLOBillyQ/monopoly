@@ -48,7 +48,16 @@
   - `roll.lua:_roll_dice` (line 6): CRAP=9.66, complexity=6, coverage=0.53 - 需要增加测试覆盖率
   - `loop.lua:_log_missing_auto_choice_action` (line 113): CRAP=9.03, complexity=3, coverage=0.13 - 需要增加测试覆盖率
   尝试添加 characterization tests 但因环境 linter 自动回退未能持久化；当前所有 behavior suites (640 tests) 与 contract suites (97 tests) 通过。
-- files edited/created: `src/game/flow/turn/roll.lua`, `src/game/flow/turn/move.lua`, `src/game/flow/turn/phase_registry.lua`, `src/game/flow/turn/loop.lua`, `src/game/flow/turn/tick_timeout.lua`, `src/game/flow/turn/timer_policy.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_turn_flow_and_interrupts.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`, `tests/suites/architecture/usecase_boundary_contract.lua`, `tests/suites/architecture/architecture_guard_contract.lua`, `tests/suites/runtime/narrow_runtime_ports_contract.lua`, `src/game/flow/turn/loop_ports.lua`, `tests/suites/gameplay/gameplay_timeout_and_auto_runner.lua`
+- log: 2026-03-12 T2 新一轮 characterization tests：新增 20 个 characterization tests 覆盖低复杂度热点，包括：
+  - `_resolve_phase_wait_result` (3 tests: with wait_action_anim, without wait_action_anim, defaults)
+  - `validate_choice_actor` (4 tests: match, mismatch, no owner, no actor_id)
+  - `is_afk_trackable_wait` (3 tests: action button wait, wait_choice phase, not in wait_choice)
+  - `_log_missing_auto_choice_action` (3 tests: logs once, skips when waiting, skips when not auto)
+  - `_resolve_choice_owner_id` (3 tests: from choice, fallback to current player, not found)
+  - `_roll_dice` (4 tests: with override, partial override, rng no override, empty override uses rng)
+  导出必要的测试接口：`roll._resolve_phase_wait_result`, `loop._log_missing_auto_choice_action`, `tick_choice_timeout._resolve_choice_owner_id`
+  所有 behavior suites (652 tests) 与 contract suites (97 tests) 通过；T2 characterization tests 单独验证通过。
+- files edited/created: `src/game/flow/turn/roll.lua`, `src/game/flow/turn/move.lua`, `src/game/flow/turn/phase_registry.lua`, `src/game/flow/turn/loop.lua`, `src/game/flow/turn/tick_timeout.lua`, `src/game/flow/turn/timer_policy.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_turn_flow_and_interrupts.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`, `tests/suites/architecture/usecase_boundary_contract.lua`, `tests/suites/architecture/architecture_guard_contract.lua`, `tests/suites/runtime/narrow_runtime_ports_contract.lua`, `src/game/flow/turn/loop_ports.lua`, `tests/suites/gameplay/gameplay_timeout_and_auto_runner.lua`, `tests/suites/gameplay/gameplay_t2_characterization.lua`
 
 ### T3 Flow orchestration/AI cluster
 - depends_on: `[T1]`
