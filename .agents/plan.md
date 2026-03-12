@@ -35,6 +35,7 @@
 - validation: 相关 behavior suites 通过；重新跑 CRAP 后，T2 负责的 `flow/turn` 文件不再出现 `crap > 8`。
 - status: In Progress
 - log: 2026-03-12 已拆分 `await.lua` 的 choice/action_anim/seconds/move_anim wait 辅助路径、`land.lua` 的 landing wait/post-action 收口，以及 `phase_registry.lua` 的 post_action wait 路由；`suites.gameplay.gameplay_coroutine`、`suites.gameplay.gameplay_turn_flow_and_interrupts`、`suites.gameplay.gameplay_timeout_and_auto_runner` 定向回归通过。
+- log: 2026-03-12 继续补 T2 characterization tests：覆盖 `await.move_anim` 匹配/日志分支、`await.landing_visual`、`await.inter_turn`、`turn_start` pre_action wait 路由、`phase_registry` post_action wait 路由、`turn_land` 的 move_effect followup 延迟路径，并修复 `await.move_anim` 在 debug log 开启时 `opts=nil` 触发的空索引问题；最新双 lane CRAP 中 T2 residual 从 45 降到 30。
 
 ### T3 Flow orchestration/AI cluster
 - depends_on: `[T1]`
@@ -43,6 +44,7 @@
 - validation: 相关 gameplay suites 通过；重新跑 CRAP 后，T3 负责的 `src/game/flow/**/*` 与 `src/game/ai/**/*` 不再出现 `crap > 8`。
 - status: In Progress
 - log: 2026-03-12 已拆分 `dispatch.lua`、`tick_choice_timeout.lua`、`movement/init.lua`、`agent.lua` 的分派/超时/移动/AI 选择路径；`suites.gameplay.gameplay_timeout_and_auto_runner`、`suites.gameplay.gameplay_afk`、`suites.gameplay.gameplay_intent_dispatch_and_event_feed`、`suites.gameplay.gameplay_runtime_context_and_camera_sync` 定向回归通过。
+- log: 2026-03-12 补充 `intent_dispatcher` 与 AI/auto-runner 定向覆盖：新增 descriptor meta validator、popup dispatch、board target fallback、choice owner actor fallback 等用例；最新双 lane CRAP 中 T3 residual 收敛到 1。
 
 ### T4 Gameplay systems/core cluster
 - depends_on: `[T1]`
@@ -51,6 +53,7 @@
 - validation: 相关 domain/gameplay suites 通过；重新跑 CRAP 后，T4 负责的 systems/core 文件不再出现 `crap > 8`。
 - status: In Progress
 - log: 2026-03-12 已对 `status_ops.lua`、`post_effects.lua`、`bankruptcy.lua`、`eligibility.lua`、`items/phase.lua` 做 helper 下沉与等待/收尾路径拆分；`suites.gameplay.gameplay_bankruptcy_and_tile_owner`、`suites.gameplay.gameplay_items_startup`、`suites.domain.item` 定向回归通过。
+- log: 2026-03-12 继续收尾 T4：将 `items/strategy.can_offer_in_phase` 拆成 roadblock/target/rent-response helper，并在 `suites.domain.item` 增补 `can_offer_in_phase`、`item_phase` move_followup patch、`set_player_seat`、`board.advance`、`collect_from_others` 的 characterization tests；定向 item suite 通过，最新 CRAP 报告中 T4 residual 从 34 降到 27。
 
 ### T5 Presentation model/runtime cluster
 - depends_on: `[T1]`
@@ -59,6 +62,7 @@
 - validation: 相关 presentation/contract suites 通过；重新跑 CRAP 后，T5 负责的 model/runtime 文件不再出现 `crap > 8`。
 - status: In Progress
 - log: 2026-03-12 已抽离 `model/init.lua`、`panel_slice.lua`、`event_handlers.lua`、`modal_controller.lua`、`view_command_ports.lua` 的 slice/route helper，并补充 UI model dispatch、event handler、interaction 定向用例；相关 presentation suites 通过。
+- log: 2026-03-12 补充 presentation runtime 定向覆盖：新增 `raycast` camera/id fallback、`event_bindings` action-log fallback、`event_handlers` tile-id/tile-payload 路径用例；全量 CRAP 后 T5 残余由 38 降到 29，已清除 `raycast.lua` 与 `_resolve_tile_index` 热点。
 
 ### T6 Presentation view/input cluster
 - depends_on: `[T1]`
@@ -67,6 +71,7 @@
 - validation: 相关 presentation suites 通过；重新跑 CRAP 后，T6 负责的 view/input 文件不再出现 `crap > 8`。
 - status: In Progress
 - log: 2026-03-12 已继续拆分 `item_slots.lua`、`game_action.lua`、`canvas_coordinator.lua`、`action_anim.lua` 的输入/画布/动画路径；`suites.presentation.presentation_item_slots`、`suites.presentation.presentation_choice_routes`、`suites.presentation.presentation_target_pick`、`suites.presentation.presentation_action_anim_core`、`suites.presentation.presentation_board_feedback` 定向回归通过。
+- log: 2026-03-12 补充 presentation T6 characterization tests：覆盖 item_slot pre-confirm 打开 secondary confirm、`item_phase_ask` 单选项直接 dispatch、`anim_tip_text` 的 named/fallback player 与 clear_obstacles/change_skin 文案、`player_units` 的 `resolve_roles`/`resolve_role` fallback；定向套件 `presentation_market_confirm_flow`、`presentation_action_anim_core`、`presentation_board_sync`、`presentation_item_slots` 通过。最新 CRAP 将 T6 residual 压到 28。
 
 ### T7 Infrastructure/app/core sweep
 - depends_on: `[T1]`
@@ -75,12 +80,15 @@
 - validation: runtime/contract/guard suites 通过；`lua scripts/arch.lua check` 保持通过；重新跑 CRAP 后，T7 负责的文件不再出现 `crap > 8`。
 - status: In Progress
 - log: 2026-03-12 已拆分 `synthetic_actor_registry.lua`、`context.lua`、`ui_bootstrap.lua` 的 fallback/anchor/wiring helper，并补充 runtime misc 覆盖；`lua scripts/arch.lua check` 与 `suites.runtime.misc` 通过。
+- log: 2026-03-12 继续收尾 T7：重构 `eggy_paid_purchase_gateway` 的 paid goods mapping 流程与 `landing_visual_hold` 的 dirty/hold helper，给 `runtime.misc` 与 `gameplay_runtime_context_and_camera_sync` 补充 vehicle enter delay、wall diff、startup synthetic actors、landing_visual_hold deferred dirty、runtime editor camera target 覆盖；定向回归与 `lua scripts/arch.lua check` 通过。最新 CRAP 将 T7 residual 从 23 降到 14。
 
 ### T8 Residual sweep and merge-safe cleanup
 - depends_on: `[T2, T3, T4, T5, T6, T7]`
 - location: 任意仍残留热点的源码文件；仅此任务允许碰共享测试 support
 - description: 全量重跑 CRAP，按分数倒序收尾所有残留 `>8`。规则固定：`complexity >= 9` 先拆；`complexity <= 8` 先补测。若并行阶段产生了重复的 suite-local helpers，在这里统一合并；这是唯一允许做共享 support 收口的任务。
 - validation: 重新生成的报告中，整个 `src/**/*.lua` 零个函数 `crap > 8`。
+- status: In Progress
+- log: 2026-03-12 最新双 lane CRAP 已降到 `src_over8=130`；当前 ownership bucket 为 `T2=30`、`T3=1`、`T4=27`、`T5=29`、`T6=28`、`T7=14`、`UNKNOWN=1`。本阶段已开始按最新报告继续收尾，但尚未清零。
 
 ### T9 Final verification
 - depends_on: `[T8]`
