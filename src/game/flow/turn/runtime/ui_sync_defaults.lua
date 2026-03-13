@@ -1,5 +1,23 @@
 local M = {}
 
+local function _build_ui_gate(ui, popup)
+  return {
+    input_blocked = ui and ui.input_blocked == true or false,
+    choice_active = ui and ui.choice_active == true or false,
+    market_active = ui and ui.market_active == true or false,
+    popup_active = ui and ui.popup_active == true or false,
+    popup_seq = ui and ui.popup_seq or nil,
+    popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
+    popup_owner_index = ui and ui.popup_owner_index or nil,
+  }
+end
+
+local function _resolve_ui_gate_from_state(state)
+  local ui = state and state.ui or nil
+  local popup = ui and ui.popup_payload or nil
+  return _build_ui_gate(ui, popup)
+end
+
 function M.build_base_ui_sync_ports(load_tick_timeout, load_tick_ui_sync)
   return {
     apply_input_lock = function() end,
@@ -16,19 +34,7 @@ function M.build_base_ui_sync_ports(load_tick_timeout, load_tick_ui_sync)
       local tick_ui_sync = load_tick_ui_sync()
       tick_ui_sync.update_countdown(game, state)
     end,
-    resolve_ui_gate = function(state)
-      local ui = state and state.ui or nil
-      local popup = ui and ui.popup_payload or nil
-      return {
-        input_blocked = ui and ui.input_blocked == true or false,
-        choice_active = ui and ui.choice_active == true or false,
-        market_active = ui and ui.market_active == true or false,
-        popup_active = ui and ui.popup_active == true or false,
-        popup_seq = ui and ui.popup_seq or nil,
-        popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
-        popup_owner_index = ui and ui.popup_owner_index or nil,
-      }
-    end,
+    resolve_ui_gate = _resolve_ui_gate_from_state,
     build_model = function() return {} end,
     refresh_from_dirty = function() return false end,
     follow_camera = function() return false end,
@@ -93,18 +99,6 @@ local function _default_set_input_blocked(ui_sync_ports)
     ui.input_blocked = blocked
     return true
   end
-end
-
-local function _build_ui_gate(ui, popup)
-  return {
-    input_blocked = ui and ui.input_blocked == true or false,
-    choice_active = ui and ui.choice_active == true or false,
-    market_active = ui and ui.market_active == true or false,
-    popup_active = ui and ui.popup_active == true or false,
-    popup_seq = ui and ui.popup_seq or nil,
-    popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
-    popup_owner_index = ui and ui.popup_owner_index or nil,
-  }
 end
 
 local function _default_resolve_ui_gate(ui_sync_ports)

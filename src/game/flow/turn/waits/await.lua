@@ -1,4 +1,4 @@
-local turn_decision = require("src.game.flow.turn.runtime.decision")
+local turn_decision = require("src.game.flow.turn.waits.decision")
 local validator = require("src.game.flow.turn.dispatch.validator")
 local number_utils = require("src.core.utils.number_utils")
 local gameplay_rules = require("src.core.config.gameplay_rules")

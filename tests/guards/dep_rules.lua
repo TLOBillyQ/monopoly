@@ -144,7 +144,7 @@ local rules = {
     description = "items subsystem must use neutral board/property helpers instead of land internals",
   },
   {
-    roots = { "src/game/systems/market/application" },
+    roots = { "src/game/systems/market" },
     forbidden_patterns = {
       "%f[%w_]GameAPI%f[^%w_]",
       "%f[%w_]RegisterTriggerEvent%f[^%w_]",

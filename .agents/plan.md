@@ -208,15 +208,15 @@ T0
 
 ### T7: 文档与目录清理
 - **depends_on**: [T6]
-- **location**: `docs/architecture/boundaries.md`；`docs/architecture/subsystems.md`；被清空的旧目录
+- **location**: `docs/architecture/boundaries.md`；`docs/architecture/subsystems.md`；`docs/architecture/layer-model.md`；被清空的旧目录
 - **description**: 更新文档中的路径示例与目录语义；删除旧空目录；明确不修改 `scripts/arch/config.lua`。
 - **validation**: 文档只引用新路径；旧目录树不再残留 `canvas_specs/`、`view/`、`choice_screen_service/`、`market/application/` 等已退休目录。
 - **status**: Completed
 - **log**:
-  - `2026-03-13 23:41 +0800` 更新 `docs/architecture/boundaries.md` 中的 loop port 示例与放置速查，把 `src/game/flow/turn/loop_ports.lua` 统一改为 `src/game/flow/turn/runtime/ports.lua`。
-  - `2026-03-13 23:41 +0800` 复扫 `docs/architecture/boundaries.md`、`docs/architecture/subsystems.md`，未发现旧路径示例；已退休目录 `canvas_specs/`、`view/`、`choice_screen_service/`、`market/application/` 均不存在。
-  - `2026-03-13 23:41 +0800` 保持 `scripts/arch/config.lua` 未修改。
-- **files edited/created**: `.agents/plan.md`, `docs/architecture/boundaries.md`
+  - `2026-03-14 00:00 +0800` 更新 `docs/architecture/boundaries.md` 与 `docs/architecture/layer-model.md` 中的 loop port 示例与放置速查，把 `src/game/flow/turn/loop_ports.lua` 统一改为 `src/game/flow/turn/runtime/ports.lua`。
+  - `2026-03-14 00:00 +0800` 复扫 `docs/architecture/boundaries.md`、`docs/architecture/subsystems.md`、`docs/architecture/layer-model.md`，未发现旧路径示例；已退休目录 `canvas_specs/`、`view/`、`choice_screen_service/`、`market/application/` 均不存在。
+  - `2026-03-14 00:00 +0800` 保持 `scripts/arch/config.lua` 未修改。
+- **files edited/created**: `.agents/plan.md`, `docs/architecture/boundaries.md`, `docs/architecture/layer-model.md`, `docs/architecture/layer-model.md`
 
 ### T8: 全量护栏与残留验收
 - **depends_on**: [T7]
@@ -229,9 +229,12 @@ T0
   - `lua scripts/crap.lua report --lane behavior --lane contract --top 30`
   - 用 T0 的同一组 `rg` 模式复扫 `src tests docs`
   - 解析 `tmp/crap_report.json`，确认不存在 `crap >= 10` 的函数
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
-- **files edited/created**:
+  - `2026-03-14 00:00 +0800` 先修 T8 护栏阻塞：`tests/guards/dep_rules.lua` 改为扫描新的 `src/game/systems/market` 子树；把 turn choice-decision 实现下沉到 `waits/decision.lua`，消除 `game.flow.turn` 的 projection cycle，同时保留 `runtime/decision.lua` 作为稳定入口。
+  - `2026-03-14 00:00 +0800` 全量验收通过：`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/regression.lua` 均通过；`lua scripts/crap.lua report --lane behavior --lane contract --top 10 --out tmp/crap_report.json` 输出最新报告且热点最高仅 `crap=8.21`。
+  - `2026-03-14 00:00 +0800` 复扫 `src tests docs`：旧模块字符串命中为零；`tmp/crap_report.json` 已刷新并确认 `crap >= 10` 的函数数为零。
+- **files edited/created**: `.agents/plan.md`, `tests/guards/dep_rules.lua`, `src/game/flow/turn/runtime/decision.lua`, `src/game/flow/turn/waits/decision.lua`, `src/game/flow/turn/waits/await.lua`, `src/game/flow/turn/runtime/ui_sync_defaults.lua`, `src/game/flow/turn/waits/ui_sync.lua`, `docs/architecture/layer-model.md`, `tmp/crap_report.json`
 
 ## Parallel Execution Groups
 

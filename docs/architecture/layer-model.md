@@ -50,12 +50,12 @@ systems → src/game/ports/xxx_port.lua (systems-facing contract)
 
 - `src/core/ports/` — 宿主/运行时广义契约，gameplay 无关
 - `src/game/ports/` — systems-facing 注入契约，允许业务名词
-- `src/game/flow/turn/loop_ports.lua` — turn use case 局部 override bundle，不是通用 Port 层
+- `src/game/flow/turn/runtime/ports.lua` — turn use case 局部 override bundle，不是通用 Port 层
 
 **命名规则：**
 
 - `*_port.lua` — 单一契约，落在 `src/core/ports/` 或 `src/game/ports/`
-- `*_ports.lua` — 同生命周期注入 bundle（如 `loop_ports.lua`、`runtime_ports.lua`）
+- `*_ports.lua` — 同生命周期注入 bundle（如 `runtime/ports.lua`、`runtime_ports.lua`）
 - `*_port_adapter.lua` — 外层对某契约的实现
 
 ## 依赖图
@@ -80,5 +80,5 @@ src/game/core/player/  (state)
 
 src/game/core/ai/      src/game/systems/endgame/
 src/core/ports/        (host/runtime-wide contracts)
-src/game/flow/turn/loop_ports.lua  (turn use case local override bundle)
+src/game/flow/turn/runtime/ports.lua  (turn use case local override bundle)
 ```
