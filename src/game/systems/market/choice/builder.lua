@@ -1,5 +1,5 @@
-local context = require("src.game.systems.market.application.context")
-local eligibility = require("src.game.systems.market.application.eligibility")
+local context = require("src.game.systems.market.query.context")
+local eligibility = require("src.game.systems.market.query.eligibility")
 local number_utils = require("src.core.utils.number_utils")
 
 local choice = {}

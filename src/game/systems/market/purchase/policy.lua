@@ -1,5 +1,5 @@
 local use_skip_choice = require("src.game.systems.choices.use_skip_choice")
-local context = require("src.game.systems.market.application.context")
+local context = require("src.game.systems.market.query.context")
 
 local policy = {}
 

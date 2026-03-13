@@ -5,10 +5,10 @@ local role_control_lock_policy = require("src.presentation.input.role_control_lo
 local ui_touch_policy = require("src.presentation.input.touch_policy")
 local runtime = require("src.presentation.runtime.ui")
 
-local state = require("src.presentation.runtime.view.state")
-local assets = require("src.presentation.runtime.view.assets")
-local item_slots = require("src.presentation.runtime.view.item_slots")
-local debug = require("src.presentation.runtime.view.debug")
+local state = require("src.presentation.runtime.ui_runtime.state")
+local assets = require("src.presentation.runtime.ui_runtime.assets")
+local item_slots = require("src.presentation.runtime.ui_runtime.item_slots")
+local debug = require("src.presentation.runtime.ui_runtime.debug")
 
 local service = {}
 

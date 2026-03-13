@@ -1,6 +1,6 @@
 local modal_state = require("src.presentation.runtime.modal_state")
 local canvas = require("src.presentation.runtime.canvas_coordinator")
-local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
+local common = require("src.presentation.runtime.controllers.choice_screens.helpers")
 local ui_nodes = require("src.presentation.runtime.node_ops")
 local ui_controls = require("src.presentation.view.support.ui_controls")
 local logger = require("src.core.utils.logger")

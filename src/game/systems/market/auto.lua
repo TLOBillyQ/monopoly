@@ -1,8 +1,8 @@
 local auto_play_port = require("src.game.ports.auto_play_port")
 local monopoly_event = require("src.core.events.monopoly_events")
-local query = require("src.game.systems.market.application.eligibility")
-local purchase = require("src.game.systems.market.application.purchase")
-local context = require("src.game.systems.market.application.context")
+local query = require("src.game.systems.market.query.eligibility")
+local purchase = require("src.game.systems.market.purchase.core")
+local context = require("src.game.systems.market.query.context")
 
 local auto = {}
 local _emit_event = monopoly_event.emit
@@ -38,4 +38,3 @@ function auto.execute(game, player)
 end
 
 return auto
-

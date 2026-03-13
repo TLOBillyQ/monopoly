@@ -1,4 +1,4 @@
-local choice_session = require("src.game.systems.market.application.choice_session")
+local choice_session = require("src.game.systems.market.choice.session")
 local intent_output_port = require("src.game.ports.intent_output_port")
 
 local outcome = {}

@@ -1,7 +1,7 @@
 local market_service = require("src.game.systems.market")
-local choice_outcome = require("src.game.systems.market.application.choice_outcome")
+local choice_outcome = require("src.game.systems.market.choice.outcome")
 local number_utils = require("src.core.utils.number_utils")
-local market_context = require("src.game.systems.market.application.context")
+local market_context = require("src.game.systems.market.query.context")
 
 local market_choice_handler = {}
 local TAB_ITEM = "item"

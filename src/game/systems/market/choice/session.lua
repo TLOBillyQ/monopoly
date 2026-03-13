@@ -1,5 +1,5 @@
-local choice_builder = require("src.game.systems.market.application.choice")
-local feedback = require("src.game.systems.market.application.feedback")
+local choice_builder = require("src.game.systems.market.choice.builder")
+local feedback = require("src.game.systems.market.choice.feedback")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
 local choice_contract = require("src.core.choice.contract")

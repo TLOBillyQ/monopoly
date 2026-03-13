@@ -1,5 +1,5 @@
-local paid_fulfillment = require("src.game.systems.market.application.paid_fulfillment")
-local choice_session = require("src.game.systems.market.application.choice_session")
+local paid_fulfillment = require("src.game.systems.market.purchase.paid_fulfillment")
+local choice_session = require("src.game.systems.market.choice.session")
 
 local paid_purchase_callback = {}
 

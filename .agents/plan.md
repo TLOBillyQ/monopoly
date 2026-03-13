@@ -140,9 +140,11 @@ T0
 - **location**: `src/presentation/runtime/canvas_specs/**`；`src/presentation/runtime/canvas_registry.lua`；`src/presentation/runtime/view/**`；`src/presentation/runtime/controllers/choice_screen_service/**`
 - **description**: 搬迁并重命名 `canvas_specs`、`canvas_registry`、`view`、`choice_screen_service`，只修正这些被搬迁家族内部的相互引用；不要碰 `src/app/**` 与测试。
 - **validation**: 新路径全部存在；旧路径文件全部消失；被搬迁家族内部不再引用旧模块路径。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
-- **files edited/created**:
+  - `2026-03-13 23:27 +0800` 完成 presentation 家族搬迁：`canvas_specs -> input/canvas_routes`、`canvas_registry -> input/canvas_route_registry`、`view -> runtime/ui_runtime`、`choice_screen_service -> controllers/choice_screens`，并同步修正搬迁家族内部 require。
+  - `2026-03-13 23:27 +0800` 验证 `src/presentation` 中旧路径残留只在待后续任务处理的外部调用点，搬迁家族内部旧引用为零；`lua -e 'require(...)'` 最小加载冒烟通过。
+- **files edited/created**: `.agents/plan.md`, `src/presentation/input/canvas_route_registry.lua`, `src/presentation/input/canvas_routes/*.lua`, `src/presentation/runtime/ui_runtime/*.lua`, `src/presentation/runtime/controllers/choice_screens/*.lua`
 
 ### T2: `presentation` 非测试调用点改写
 - **depends_on**: [T1]
@@ -167,9 +169,12 @@ T0
 - **location**: `src/game/systems/market/**`
 - **description**: 用 `query/`、`choice/`、`purchase/` 替换 `application/`，并把 `application/auto.lua` 提升为 `src/game/systems/market/auto.lua`；同步修正 `market` 目录内部引用，保留 `src/game/systems/market/init.lua` 的 façade 形状不变。
 - **validation**: `src/game/systems/market/application/**` 被完全替换；`src/game/systems/market/init.lua` 仍导出 `query/choice/purchase/auto`；`market` 目录内部无旧路径残留。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
-- **files edited/created**:
+  - `2026-03-13 23:27 +0800` 完成 `application/**` 到 `query/`、`choice/`、`purchase/` 的物理搬迁，并将 `application/auto.lua` 上提到 `src/game/systems/market/auto.lua`。
+  - `2026-03-13 23:27 +0800` 同步修正 `market` 子树内全部 require 路径，`init.lua` 继续导出 `query/choice/purchase/auto` 四个 façade 入口。
+  - `2026-03-13 23:27 +0800` 验证 `rg -n \"src\\.game\\.systems\\.market\\.application(\\.|$)\" src/game/systems/market` 结果为零，并执行最小 require 冒烟通过。
+- **files edited/created**: `.agents/plan.md`, `src/game/systems/market/auto.lua`, `src/game/systems/market/init.lua`, `src/game/systems/market/choice_handlers.lua`, `src/game/systems/market/query/context.lua`, `src/game/systems/market/query/eligibility.lua`, `src/game/systems/market/choice/builder.lua`, `src/game/systems/market/choice/feedback.lua`, `src/game/systems/market/choice/outcome.lua`, `src/game/systems/market/choice/session.lua`, `src/game/systems/market/purchase/core.lua`, `src/game/systems/market/purchase/fulfillment.lua`, `src/game/systems/market/purchase/local_purchase.lua`, `src/game/systems/market/purchase/paid_fulfillment.lua`, `src/game/systems/market/purchase/paid_purchase_callback.lua`, `src/game/systems/market/purchase/policy.lua`
 
 ### T5: 跨子系统生产代码集成改写
 - **depends_on**: [T2, T3, T4]

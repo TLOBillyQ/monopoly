@@ -1,7 +1,7 @@
-local context = require("src.game.systems.market.application.context")
-local feedback = require("src.game.systems.market.application.feedback")
-local purchase_policy = require("src.game.systems.market.application.purchase_policy")
-local fulfillment = require("src.game.systems.market.application.fulfillment")
+local context = require("src.game.systems.market.query.context")
+local feedback = require("src.game.systems.market.choice.feedback")
+local purchase_policy = require("src.game.systems.market.purchase.policy")
+local fulfillment = require("src.game.systems.market.purchase.fulfillment")
 
 local local_purchase = {}
 

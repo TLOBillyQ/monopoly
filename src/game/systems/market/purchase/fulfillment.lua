@@ -1,5 +1,5 @@
 local inventory = require("src.game.systems.items.inventory")
-local context = require("src.game.systems.market.application.context")
+local context = require("src.game.systems.market.query.context")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local runtime_ports = require("src.core.ports.runtime_ports")

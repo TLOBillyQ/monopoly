@@ -1,5 +1,5 @@
 local inventory = require("src.game.systems.items.inventory")
-local context = require("src.game.systems.market.application.context")
+local context = require("src.game.systems.market.query.context")
 local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
 
 local eligibility = {}
