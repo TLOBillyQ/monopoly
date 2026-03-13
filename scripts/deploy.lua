@@ -21,6 +21,10 @@ local env = bootstrap.install(_raw_script_path)
 local common = require("lib.common")
 local loc_counter = require("lib.loc_counter")
 
+local function _text(zh, en)
+  return common.bilingual(zh, en)
+end
+
 local function _fail(message)
   io.stderr:write("✗ " .. tostring(message) .. "\n")
   os.exit(1)
@@ -31,13 +35,14 @@ local function _println(message)
 end
 
 local function _default_sync_target_path()
-  if common.is_windows() then
-    return "C:/Users/Lzx_8/Desktop/dev/LuaSource_大富翁-开发"
+  local env_target = os.getenv("MONOPOLY_DEPLOY_TARGET")
+  if env_target ~= nil and env_target ~= "" then
+    return env_target
   end
-  if common.is_macos() then
-    return "/Users/billyq/Documents/eggy/LuaSource_大富翁-开发"
-  end
-  _fail("当前平台未配置默认同步目录，请先使用 --target-path 指定路径。")
+  _fail(_text(
+    "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 --target-path。",
+    "Deploy target is not configured, set MONOPOLY_DEPLOY_TARGET or pass --target-path."
+  ))
 end
 
 local function _normalize_target_path(path)
@@ -165,10 +170,16 @@ local function _parse_args(args)
       options.target_path = args[index + 1]
       index = index + 2
     elseif token == "--help" or token == "-h" then
-      print("Usage: lua scripts/deploy.lua [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]")
+      print(_text(
+        "用法: lua scripts/deploy.lua [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]",
+        "Usage: lua scripts/deploy.lua [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]"
+      ))
       os.exit(0)
     else
-      _fail("unknown flag: " .. tostring(token))
+      _fail(_text(
+        "未知参数: " .. tostring(token),
+        "Unknown flag: " .. tostring(token)
+      ))
     end
   end
   return options
@@ -177,10 +188,14 @@ end
 local function main(args)
   local options = _parse_args(args or {})
   local project_root = env.repo_root
-  local target_path = _normalize_target_path(options.target_path or _default_sync_target_path())
+  local target_source = options.target_path or _default_sync_target_path()
+  local target_path = _normalize_target_path(target_source)
 
   if _forbidden_deploy_target(target_path) then
-    _fail("禁止部署到名称包含“发布”的目录: " .. target_path)
+    _fail(_text(
+      "禁止部署到名称包含“发布”的目录: " .. target_path,
+      "Refusing to deploy into a path containing '发布': " .. target_path
+    ))
   end
 
   local directories = { "Config", "src" }
@@ -191,15 +206,18 @@ local function main(args)
   }
 
   _println("======================================")
-  _println("开始部署项目文件")
+  _println(_text("开始部署项目文件", "Starting project deployment"))
   _println("======================================")
-  _println("项目根目录: " .. project_root)
-  _println("目标目录: " .. target_path)
-  _println("部署模式: 默认同步目录")
+  _println(_text("项目根目录: ", "Project root: ") .. project_root)
+  _println(_text("目标目录: ", "Target path: ") .. target_path)
+  _println(_text("部署模式: 环境变量或显式路径", "Deploy mode: env var or explicit path"))
   if options.startup_profile == nil or options.startup_profile == "" then
-    _println("启动 Profile: default (未注入 STARTUP_TEST_PROFILE)")
+    _println(_text(
+      "启动 Profile: default（未注入 STARTUP_TEST_PROFILE）",
+      "Startup profile: default (STARTUP_TEST_PROFILE not injected)"
+    ))
   else
-    _println("启动 Profile: " .. options.startup_profile)
+    _println(_text("启动 Profile: ", "Startup profile: ") .. options.startup_profile)
   end
   _println("")
 
@@ -209,23 +227,26 @@ local function main(args)
   end
 
   _println("--------------------------------------")
-  _println("部署目标: " .. target_path)
+  _println(_text("部署目标: ", "Deploy target: ") .. target_path)
   _println("--------------------------------------")
 
   for _, dir_name in ipairs(directories) do
     local source_path = common.join_path(project_root, dir_name)
     local dest_path = common.join_path(target_path, dir_name)
     if common.is_dir(source_path) then
-      _println("正在拷贝目录: " .. dir_name .. " ...")
-      _println("  源: " .. source_path)
-      _println("  目: " .. dest_path)
+      _println(_text("正在拷贝目录: ", "Copying directory: ") .. dir_name .. " ...")
+      _println("  " .. _text("源", "Source") .. ": " .. source_path)
+      _println("  " .. _text("目", "Target") .. ": " .. dest_path)
       local ok, err = common.copy_tree(source_path, dest_path)
       if not ok then
-        _fail(dir_name .. " 拷贝失败: " .. tostring(err))
+        _fail(_text(
+          dir_name .. " 拷贝失败: " .. tostring(err),
+          "Failed to copy " .. dir_name .. ": " .. tostring(err)
+        ))
       end
-      _println("✓ " .. dir_name .. " 拷贝成功")
+      _println("✓ " .. _text(dir_name .. " 拷贝成功", dir_name .. " copied successfully"))
     else
-      _println("⚠ 源目录不存在: " .. source_path)
+      _println(_text("⚠ 源目录不存在: ", "⚠ Source directory does not exist: ") .. source_path)
     end
   end
 
@@ -233,9 +254,9 @@ local function main(args)
     local source_path = common.join_path(project_root, file_info.source)
     local target_file_path = common.join_path(target_path, file_info.target)
     if common.path_exists(source_path) then
-      _println("正在拷贝文件: " .. file_info.source .. " ...")
-      _println("  源: " .. source_path)
-      _println("  目: " .. target_file_path)
+      _println(_text("正在拷贝文件: ", "Copying file: ") .. file_info.source .. " ...")
+      _println("  " .. _text("源", "Source") .. ": " .. source_path)
+      _println("  " .. _text("目", "Target") .. ": " .. target_file_path)
       local ok, err = nil, nil
       if file_info.source == "main.lua" then
         ok, err = _write_main_lua(source_path, target_file_path, options.startup_profile)
@@ -243,11 +264,14 @@ local function main(args)
         ok, err = common.copy_file(source_path, target_file_path)
       end
       if not ok then
-        _fail(file_info.source .. " 拷贝失败: " .. tostring(err))
+        _fail(_text(
+          file_info.source .. " 拷贝失败: " .. tostring(err),
+          "Failed to copy " .. file_info.source .. ": " .. tostring(err)
+        ))
       end
-      _println("✓ " .. file_info.source .. " 拷贝成功")
+      _println("✓ " .. _text(file_info.source .. " 拷贝成功", file_info.source .. " copied successfully"))
     else
-      _println("⚠ 源文件不存在: " .. source_path)
+      _println(_text("⚠ 源文件不存在: ", "⚠ Source file does not exist: ") .. source_path)
     end
   end
 
@@ -257,15 +281,15 @@ local function main(args)
     _fail(breakdown_err)
   end
   local total_effective_line_count = _total_line_count(breakdown)
-  _println("有效代码行数: " .. tostring(total_effective_line_count))
+  _println(_text("有效代码行数: ", "Effective LOC: ") .. tostring(total_effective_line_count))
   for _, entry in ipairs(breakdown) do
     _println("  - " .. tostring(entry.name) .. ": " .. tostring(entry.effective_lua_line_count))
   end
   _println("")
 
   _println("======================================")
-  _println("部署完成！")
-  _println("  " .. target_path .. " -> 有效代码行数 " .. tostring(total_effective_line_count))
+  _println(_text("部署完成！", "Deployment completed!"))
+  _println("  " .. target_path .. " -> " .. _text("有效代码行数 ", "effective LOC ") .. tostring(total_effective_line_count))
   for _, entry in ipairs(breakdown) do
     _println("    - " .. tostring(entry.name) .. ": " .. tostring(entry.effective_lua_line_count))
   end

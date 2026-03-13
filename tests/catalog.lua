@@ -60,6 +60,7 @@ local contract_modules = {
   "suites.architecture.architecture_guard_contract",
   "suites.architecture.arch_view_contract",
   "suites.architecture.crap_contract",
+  "suites.architecture.script_tools_contract",
   "suites.architecture.guard_scripts_contract",
   "suites.architecture.usecase_boundary_contract",
   "suites.architecture.cross_module_contract",

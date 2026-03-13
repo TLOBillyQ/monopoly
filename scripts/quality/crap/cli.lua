@@ -5,8 +5,12 @@ local number_utils = require("src.core.utils.number_utils")
 
 local cli = {}
 
+local function _text(zh, en)
+  return common.bilingual(zh, en)
+end
+
 local function _usage()
-  io.write("Usage:\n")
+  io.write(_text("用法", "Usage") .. ":\n")
   io.write("  <lua> scripts/crap.lua report [--mode <auto|dev|release_trimmed>] [--lane <behavior|contract>] [--out <file>] [--top <n>] [--strict-tests]\n")
   io.write("  <lua> scripts/crap.lua viewer [--out-dir <dir>] [--in-json <file>] [--open]\n")
   io.write("  <lua> scripts/crap.lua\n")
@@ -67,7 +71,10 @@ local function _parse_args(args)
       options.project_root = args[index + 1]
       index = index + 2
     else
-      error("unknown flag: " .. tostring(token))
+      error(_text(
+        "未知参数: " .. tostring(token),
+        "Unknown flag: " .. tostring(token)
+      ))
     end
   end
   if #options.lanes == 0 then
@@ -121,11 +128,17 @@ local function _run_viewer(options, env)
     local loaded_report, load_err = loader(paths.in_json)
     if loaded_report == nil then
       error(
-        "viewer input json not found or unreadable: " .. tostring(paths.in_json)
-          .. "\nrun `lua scripts/crap.lua report --out "
+        _text(
+          "viewer 输入 json 不存在或不可读: ",
+          "viewer input json not found or unreadable: "
+        ) .. tostring(paths.in_json)
+          .. "\n" .. _text(
+            "请先运行 `lua scripts/crap.lua report --out ",
+            "run `lua scripts/crap.lua report --out "
+          )
           .. tostring(paths.in_json)
-          .. "` first, or omit `--in-json` to generate the report on demand"
-          .. (load_err and ("\nloader error: " .. tostring(load_err)) or "")
+          .. _text("`，或省略 `--in-json` 让脚本按需生成报告", "` first, or omit `--in-json` to generate the report on demand")
+          .. (load_err and ("\n" .. _text("加载错误: ", "loader error: ") .. tostring(load_err)) or "")
       )
     end
     view_report = loaded_report
@@ -170,7 +183,10 @@ function cli.run(args, env)
     return _run_viewer(options, env)
   end
   _usage()
-  error("unknown command: " .. tostring(options.command))
+  error(_text(
+    "未知命令: " .. tostring(options.command),
+    "Unknown command: " .. tostring(options.command)
+  ))
 end
 
 return cli

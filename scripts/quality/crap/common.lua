@@ -2,6 +2,10 @@ local arch_common = require("arch_view.common")
 
 local common = {}
 
+function common.bilingual(zh, en)
+  return arch_common.bilingual(zh, en)
+end
+
 function common.normalize_path(path)
   return arch_common.normalize_path(path)
 end
@@ -50,6 +54,14 @@ function common.write_file(path, content)
   return arch_common.write_file(path, content)
 end
 
+function common.collect_files(root, extension)
+  return arch_common.collect_files(root, extension)
+end
+
+function common.collect_lua_files(root)
+  return arch_common.collect_lua_files(root)
+end
+
 function common.open_path(path)
   return arch_common.open_path(path)
 end
@@ -95,25 +107,20 @@ function common.relative_to(root, path)
   return normalized_path
 end
 
-function common.run_command(command)
-  local process = io.popen(command)
-  if not process then
-    return nil, "failed to run command: " .. tostring(command)
-  end
-  local output = process:read("*a") or ""
-  local ok = process:close()
-  if ok == nil or ok == false then
+function common.run_command(command, options)
+  local result = arch_common.run_command(command, options)
+  if result == nil or result.ok ~= true then
+    local output = result and result.output or common.bilingual(
+      "命令执行失败",
+      "Command execution failed"
+    )
     return nil, output
   end
-  return output
+  return result.output
 end
 
 function common.shell_quote(path)
-  local normalized = common.normalize_path(path)
-  if package.config:sub(1, 1) == "\\" then
-    return '"' .. normalized:gsub("/", "\\") .. '"'
-  end
-  return '"' .. normalized .. '"'
+  return arch_common.shell_quote(path)
 end
 
 return common

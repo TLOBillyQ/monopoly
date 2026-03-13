@@ -5,6 +5,10 @@ local json_writer = require("arch_view.json_writer")
 
 local cli = {}
 
+local function _text(zh, en)
+    return common.bilingual(zh, en)
+end
+
 local function _repo_root(script_dir)
     return common.parent_dir(common.parent_dir(script_dir))
 end
@@ -16,18 +20,30 @@ local function _load_config(config_path)
     end
     local config = chunk()
     if type(config) ~= "table" then
-        error("invalid architecture config: " .. tostring(config_path))
+        error(_text(
+            "架构配置无效: " .. tostring(config_path),
+            "Invalid architecture config: " .. tostring(config_path)
+        ))
     end
     return config
 end
 
 local function _usage()
-    io.write("Usage:\n")
+    io.write(_text("用法", "Usage") .. ":\n")
     io.write(
-    "  <lua> scripts/arch.lua scan --out <file> [--project-root <dir>] [--config <file>]\n")
-    io.write("  <lua> scripts/arch.lua check [--project-root <dir>] [--config <file>]\n")
+    "  " .. _text(
+        "<lua> scripts/arch.lua scan --out <file> [--project-root <dir>] [--config <file>]",
+        "<lua> scripts/arch.lua scan --out <file> [--project-root <dir>] [--config <file>]"
+    ) .. "\n")
+    io.write("  " .. _text(
+        "<lua> scripts/arch.lua check [--project-root <dir>] [--config <file>]",
+        "<lua> scripts/arch.lua check [--project-root <dir>] [--config <file>]"
+    ) .. "\n")
     io.write(
-    "  <lua> scripts/arch.lua viewer [--out-dir <dir>] [--project-root <dir>] [--config <file>] [--in-json <file>] [--open]\n")
+    "  " .. _text(
+        "<lua> scripts/arch.lua viewer [--out-dir <dir>] [--project-root <dir>] [--config <file>] [--in-json <file>] [--open]",
+        "<lua> scripts/arch.lua viewer [--out-dir <dir>] [--project-root <dir>] [--config <file>] [--in-json <file>] [--open]"
+    ) .. "\n")
     io.write("  <lua> scripts/arch.lua\n")
 end
 
@@ -63,7 +79,10 @@ local function _parse_args(args)
             options.open = true
             index = index + 1
         else
-            error("unknown flag: " .. tostring(token))
+            error(_text(
+                "未知参数: " .. tostring(token),
+                "Unknown flag: " .. tostring(token)
+            ))
         end
     end
     return options
@@ -140,30 +159,33 @@ end
 local function _run_scan(options, env)
     local paths = _resolve_paths(options, env)
     if paths.out_path == nil then
-        error("scan requires --out <file>")
+        error(_text(
+            "scan 命令需要 --out <file>",
+            "scan command requires --out <file>"
+        ))
     end
     local architecture = _build_architecture(options, paths)
     _write_scan_output(paths.out_path, architecture)
-    print("arch_view scan ok: " .. paths.out_path)
+    print(_text("arch_view 扫描完成: ", "arch_view scan ok: ") .. paths.out_path)
 end
 
 local function _run_check(options, env)
     local paths = _resolve_paths(options, env)
     local architecture = _build_architecture(options, paths)
     if architecture.check and architecture.check.ok then
-        print("arch_view check ok")
+        print(_text("arch_view 检查通过", "arch_view check ok"))
         return
     end
-    io.stderr:write("arch_view check failed\n")
+    io.stderr:write(_text("arch_view 检查失败", "arch_view check failed"), "\n")
     for _, violation in ipairs((architecture.check and architecture.check.violations) or {}) do
         if violation.kind == "forbidden_dependency" then
-            io.stderr:write("  forbidden_dependency [", tostring(violation.rule), "] ", tostring(violation.from), " -> ",
+            io.stderr:write("  ", _text("禁止依赖", "forbidden_dependency"), " [", tostring(violation.rule), "] ", tostring(violation.from), " -> ",
                 tostring(violation.to), "\n")
             io.stderr:write("    ", tostring(violation.description), "\n")
         elseif violation.kind == "unclassified_module" then
-            io.stderr:write("  unclassified_module ", tostring(violation.module_id), "\n")
+            io.stderr:write("  ", _text("未分类模块", "unclassified_module"), " ", tostring(violation.module_id), "\n")
         elseif violation.kind == "projection_cycle" then
-            io.stderr:write("  projection_cycle ", tostring(violation.view), "\n")
+            io.stderr:write("  ", _text("投影循环", "projection_cycle"), " ", tostring(violation.view), "\n")
             io.stderr:write("    ", tostring(violation.description), "\n")
         else
             io.stderr:write("  ", tostring(violation.kind), " ", table.concat(violation.cycle or {}, ", "), "\n")
@@ -176,7 +198,10 @@ end
 local function _run_viewer(options, env)
     local paths = _resolve_paths(options, env)
     if paths.out_dir == nil then
-        error("viewer requires --out-dir <dir>")
+        error(_text(
+            "viewer 命令需要 --out-dir <dir>",
+            "viewer command requires --out-dir <dir>"
+        ))
     end
     local architecture = _build_architecture(options, paths)
     local ok, mkdir_err = common.ensure_dir(paths.out_dir)
@@ -199,7 +224,7 @@ local function _run_viewer(options, env)
             error(open_err)
         end
     end
-    print("arch_view viewer ok: " .. paths.out_dir)
+    print(_text("arch_view 视图已生成: ", "arch_view viewer ok: ") .. paths.out_dir)
 end
 
 function cli.run(args, env)
@@ -228,7 +253,10 @@ function cli.run(args, env)
         return true
     end
     _usage()
-    error("unknown command: " .. tostring(command))
+    error(_text(
+        "未知命令: " .. tostring(command),
+        "Unknown command: " .. tostring(command)
+    ))
 end
 
 return cli

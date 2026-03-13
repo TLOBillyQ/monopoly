@@ -1,40 +1,183 @@
-# 护栏统一与 Gherkin 迁移计划
+# 移动规则简化重构计划（src/）
 
-## 摘要
-- 先把现有护栏统一成一个可被提交 CI 消费的单一清单，再做行为抽取与编译，不直接换测试引擎。
-- 现状基线不是全绿：`behavior` 在 `release_trimmed` 下已激活 `422` 个 case，其中 `presentation_action_anim_queue_and_turn_lock._test_ui_sync_opens_choice_modal_after_wait_action_anim` 失败；`contract` 与 `guard` 还共同暴露 `src.presentation.runtime.ports.ui_sync_ports` 直接依赖 `src.game.flow.turn.choice_auto_policy` / `tick_timeout` 的 `arch_view` 违规。
-- 迁移顺序按你选的“行为优先”执行：先覆盖 `behavior` 热点，再把 `contract/guard` 补成规则型 spec。Gherkin 在迁移完成后成为真源，CI 采用“失败清单收缩”策略。
+## 目标
 
-## 关键改动
-- 把 [tests/catalog.lua](/Users/Lzx_8/Desktop/dev/repo/monopoly/tests/catalog.lua) 升级为唯一的 guardrail manifest。每个 entry 必须带稳定 id、lane（`behavior` / `contract` / `guard` / `generated`）、运行 mode、来源模块、是否 generated。现有 [tests/regression.lua](/Users/Lzx_8/Desktop/dev/repo/monopoly/tests/regression.lua)、`behavior.lua`、`contract.lua`、`guard.lua` 只做薄包装，不再各自维护名单。
-- 新增统一 CI 入口，例如 `tests/ci.lua`。它必须按 lane 独立执行，始终跑完全部 lane，再按稳定 id 对照 shrink-only baseline 判定结果，避免现在 `regression.lua` 一旦 behavior 失败就看不到后续 `contract/guard`。
-- 在 [tests/](/Users/Lzx_8/Desktop/dev/repo/monopoly/tests) 下新增 Gherkin 真源目录，先建 `tests/features/behavior/{domain,gameplay,presentation,runtime}`，后续再建 `tests/features/policy/{contract,guard}`。Feature/Scenario 文案用中文领域语言；tag、feature id、生成后的 case id 统一 `snake_case`。
-- 新增零依赖 Lua 编译器，例如 `scripts/gherkin/compile.lua`。v1 只支持 `Feature`、`Rule`、`Background`、`Scenario`、`Given/When/Then/And`、tag、表格或 doc string；不支持 `Scenario Outline`。编译输出到 `tests/generated/...` 和 `tests/generated/catalog.lua`，生成物提交入库，并提供 `--check` 模式做漂移校验。
-- 编译器不引入 LuaRocks/Busted，直接生成现有 `TestHarness` 能执行的 suite table。step registry 放在 `tests/support/gherkin/steps/`，只包装现有 `tests/support/*` 和 `TestSupport` 能表达的动作；数值解析统一走 `NumberUtils`，不得引入 `tonumber` 或 `type(...) == "number"`。
-- 行为抽取按三波落地：
-  - 第一波先做稳定且高价值的手写 suite 到 feature 的一比一迁移：`gameplay_turn_flow_and_interrupts`、`gameplay_timeout_and_auto_runner`、`presentation_market_confirm_flow`。
-  - 第二波覆盖更大的 presentation/gameplay 热点组，包含当前失败所在的 `presentation_action_anim_queue_and_turn_lock`，但在切换前先让生成测试复现同一失败签名。
-  - 第三波补 runtime/startup/domain 行为，并开始把 `contract/guard` 写成规则型 feature，再编译成 fixture 驱动的 contract case 或 guard wrapper。
-- `contract/guard` 不另起第二套执行器。规则型 feature 仍由同一个编译器产出 Lua suite，但 backend 分成两类：`behavior_backend` 生成普通回归 case，`policy_backend` 生成 fixture 驱动的 contract/guard case。
-- 每个迁移里程碑都要做遗留代码退役审查，但本仓库当前没有成片 `src/**/legacy` 子树，所以“遗留”主要指兼容桥、deprecated export、旧路径别名和已退休模块引用。`legacy_path_guard` 已退役；删除旧实现前仍需确认 feature 完整覆盖、生成 suite 已并跑验证，并由现有 contract/guard 文档同步声明新的边界真相。
+将当前移动规则简化为以下 4 条，并给出可落地的代码库重构路径：
 
-## 公开接口与工作流
-- `lua tests/ci.lua --lane behavior --mode release_trimmed`
-- `lua tests/ci.lua --lane contract`
-- `lua tests/ci.lua --lane guard`
-- `lua scripts/gherkin/compile.lua`
-- `lua scripts/gherkin/compile.lua --check`
-- `.github/workflows/regression.yml` 改为并行 job：至少包含 `behavior_observed`、`contract_observed`、`guard_observed`、`gherkin_compile_check`；等第一波 feature 并跑稳定后，再增加 `generated_behavior` job，并最终把 catalog 切到 generated suite。
+1. 外圈默认逆时针向前移动。
+2. 上下左右分叉点在本次移动步数为偶数时进入内圈。
+3. 进入内圈后维持直线向前，直到从对侧出口回到外圈。
+4. 位置选择屏的邻接关系按地图曼哈顿距离计算。
 
-## 验证与验收
-- 统一 CI 入口必须能在一次运行里报告所有 lane 的结果，不再因前一 lane 失败而中断后续 lane。
-- shrink-only baseline 初始冻结当前已知红线，id 采用 `<lane>:<suite_or_guard>:<signature>`；后续只能减少，不能新增未登记失败。
-- 第一波迁移完成时，选定的 3 个手写 suite 与对应 generated suite 必须并跑，并且 case id、通过数、失败签名一致。
-- `lua scripts/gherkin/compile.lua --check` 在生成物过期时必须失败，在生成物最新时必须通过。
-- 当某个手写 suite 被切换为 generated suite 后，总 case 数不能无理由下降；如果下降，必须在 feature 或 baseline 中有显式记录。
+---
 
-## 假设与默认
-- Gherkin 对已迁移切片是唯一行为真源；未迁移切片继续保留手写 suite，不强行双写。
-- 当前基线红线先冻结，不要求在迁移开始前全部修绿，但任何新 lane、新 feature、新生成 suite 必须全绿。
-- 不引入新的包管理器、测试框架或 C 模块依赖；实现语言保持 Lua。
-- UI 相关 step 只通过现有 support/port/adapter seam 进入系统，不直接把 UIManagerLib 细节写进 feature。
+## 当前实现深度理解（基于 src/ 与地图配置）
+
+### 1) 移动主链路
+
+- 入口：`src/game/systems/movement/init.lua` 的 `movement.move(game, player, steps, opts)`。
+- 每步推进调用：`board:step_forward_by_facing(current_index, facing, parity)`。
+- 步进实现：`src/game/systems/board/init.lua`，当前解析优先级为：
+	- `_resolve_outer_next`
+	- `_resolve_fresh_forward_next`
+	- `_resolve_market_exit`
+	- `_resolve_facing_next`
+	- `_resolve_fallback_next`
+
+### 2) 地图结构
+
+- 配置：`Config/maps/default_map.lua`
+- 外圈：`outer_next/outer_prev`（逆时针闭环）
+- 内圈：十字轴线在黑市 `39` 相交
+- 入口点：`42/40/41/43`（四边中点）
+
+### 3) 当前分叉与距离计算
+
+- 当前入口逻辑：偶数步 + 朝向匹配（从 `outer_prev` 方向进入）
+- 当前黑市逻辑：奇偶决定左转/右转（`turn_left/turn_right`）
+- 当前位置范围计算：`src/game/systems/board/query.lua` 的 BFS 图距离（`indices_in_range`）
+
+---
+
+## 目标规则到代码映射
+
+### 规则 1：外圈默认逆时针
+
+- 保留 `default_map.lua` 的 `outer_next`/`outer_prev`。
+- `board._resolve_outer_next` 继续作为外圈默认前进来源。
+
+### 规则 2：分叉点偶数进入内圈
+
+- 删除入口朝向匹配条件。
+- 条件简化为：`entry and parity and (parity % 2 == 0)`。
+- 同一次移动禁止多次进圈（见风险控制）。
+
+### 规则 3：内圈直线穿越
+
+- 删除黑市奇偶左/右转逻辑。
+- 在内圈及黑市处优先保持当前 `facing` 直行。
+- `fresh_forward_next` 仅用于 fresh 起步时给出初始导向；一旦有 `facing`，持续直行，直至回到外圈。
+
+### 规则 4：位置选择按曼哈顿距离
+
+- 将 `board_query.indices_in_range` 从 BFS 改为基于 tile 坐标 `(row, col)` 的曼哈顿距离：
+	- `|row_a - row_b| + |col_a - col_b| <= distance`
+- 影响所有使用该接口的系统（例如 `target_query`、`demolish`、`board_utils`）。
+
+---
+
+## 分阶段重构计划
+
+## Phase A：地图与步进规则收敛
+
+### A1. 简化入口规则
+
+- 文件：`src/game/systems/board/init.lua`
+- 改动：
+	- `_resolve_outer_next(map, current_id, facing, parity)` 改为不依赖 `facing` 匹配。
+	- 仅按偶数 `parity` 决定是否进入 `entry.inner_id`。
+
+### A2. 移除黑市分叉
+
+- 文件：`src/game/systems/board/init.lua`
+- 改动：
+	- 删除 `_resolve_market_exit` 及其在 `_resolve_forward_next_id` 中的调用。
+	- 前进解析链改为：
+		- `_resolve_outer_next`
+		- `_resolve_fresh_forward_next`
+		- `_resolve_facing_next`
+		- `_resolve_fallback_next`
+
+### A3. 同次移动禁止重入内圈
+
+- 文件：`src/game/systems/movement/init.lua`、`src/game/systems/board/init.lua`
+- 改动建议：
+	- 在 move context 中新增 `entered_inner` 状态。
+	- 首次由外圈进内圈后置 `true`。
+	- 后续同次移动经过其他入口点，即使偶数也不再进入。
+
+---
+
+## Phase B：距离模型替换为曼哈顿
+
+### B1. 重写 range 查询
+
+- 文件：`src/game/systems/board/query.lua`
+- 改动：
+	- `indices_in_range(board, start, distance)` 改为扫描 `board.path` 全量 tile。
+	- 用 tile `row/col` 计算曼哈顿距离并筛选。
+	- 返回值保持现有索引列表接口不变（兼容调用方）。
+
+### B2. 全局调用侧兼容验证
+
+- 重点文件：
+	- `src/game/systems/items/target_query.lua`
+	- `src/game/systems/items/demolish.lua`
+	- `src/game/systems/land/board_utils.lua`
+- 目标：无需改签名，仅验证语义变化可接受。
+
+---
+
+## Phase C：文档、测试与回归
+
+### C1. 设计文档同步
+
+- 文件：`docs/design/map.md`
+- 内容：
+	- 删除黑市奇偶左右转说明。
+	- 更新为“内圈直线穿越 + 偶数入口 + 禁止同次重入”。
+	- 新增位置选择使用曼哈顿距离说明。
+
+### C2. 测试重构
+
+- 文件：`tests/suites/domain/movement.lua`
+- 改动：
+	- 移除/改写 `market_exit` 奇偶转向测试。
+	- 更新入口判定测试：不再校验朝向匹配。
+	- 新增“直线穿越内圈”四方向路径测试。
+	- 新增“同次移动禁止重入”测试。
+	- 更新 `indices_in_range` 相关断言为曼哈顿语义。
+
+### C3. 回归验收
+
+- 命令：`lua tests/regression.lua`
+- 预期：
+	- 领域移动相关 case 与新规则一致
+	- target picker 范围行为与曼哈顿规则一致
+
+---
+
+## 关键变更清单（建议）
+
+- `Config/maps/default_map.lua`（必要时精简 map 返回字段）
+- `src/game/systems/board/init.lua`（核心前进规则）
+- `src/game/systems/movement/init.lua`（重入防护状态）
+- `src/game/systems/board/query.lua`（BFS → 曼哈顿）
+- `src/game/systems/items/target_query.lua`（语义回归确认）
+- `src/game/systems/items/demolish.lua`（语义回归确认）
+- `tests/suites/domain/movement.lua`（规则测试同步）
+- `docs/design/map.md`（规则文档同步）
+
+---
+
+## 风险与控制
+
+1. **规则切换导致测试大面积变更**
+	 - 控制：先改 `board` 核心，再逐步修测试；每步运行 domain + regression。
+
+2. **重入防护遗漏边界路径**
+	 - 控制：新增“进圈→穿出→再遇入口”专门测试，覆盖四个入口。
+
+3. **曼哈顿替换影响道具平衡**
+	 - 控制：对 `demolish`/`target_query` 做对照用例，确认可选集合与设计预期一致。
+
+---
+
+## 验收标准
+
+- 外圈移动始终逆时针。
+- 偶数步到入口即可进内圈（不再依赖朝向匹配）。
+- 内圈/黑市不再左右分叉，保持直线穿越到对侧外圈。
+- 同一次移动最多进入内圈一次。
+- 位置选择与范围判断统一使用曼哈顿距离。
+- 回归套件通过，且文档与实现一致。

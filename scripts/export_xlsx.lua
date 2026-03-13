@@ -21,6 +21,10 @@ local env = bootstrap.install(_raw_script_path)
 local common = require("lib.common")
 local xlsx_reader = require("lib.xlsx_reader")
 
+local function _text(zh, en)
+  return common.bilingual(zh, en)
+end
+
 local function _fail(message)
   io.stderr:write(tostring(message), "\n")
   os.exit(1)
@@ -125,7 +129,10 @@ local function _lua_value(value)
     end
     return "{ " .. table.concat(parts, ", ") .. " }"
   end
-  _fail("unsupported lua value: " .. tostring(value))
+  _fail(_text(
+    "不支持的 Lua 值类型: " .. tostring(value),
+    "Unsupported Lua value: " .. tostring(value)
+  ))
 end
 
 local function _write_lua_table(path, var_name, rows, field_order)
@@ -237,14 +244,23 @@ local function _parse_args(args)
       options.output_dir = args[index + 1]
       index = index + 2
     elseif token == "--help" or token == "-h" then
-      print("Usage: lua scripts/export_xlsx.lua [--mode dev|release] [--output-dir OUTDIR]")
+      print(_text(
+        "用法: lua scripts/export_xlsx.lua [--mode dev|release] [--output-dir OUTDIR]",
+        "Usage: lua scripts/export_xlsx.lua [--mode dev|release] [--output-dir OUTDIR]"
+      ))
       os.exit(0)
     else
-      _fail("unknown flag: " .. tostring(token))
+      _fail(_text(
+        "未知参数: " .. tostring(token),
+        "Unknown flag: " .. tostring(token)
+      ))
     end
   end
   if options.mode ~= "dev" and options.mode ~= "release" then
-    _fail("invalid --mode value: " .. tostring(options.mode))
+    _fail(_text(
+      "无效的 --mode 参数: " .. tostring(options.mode),
+      "Invalid --mode value: " .. tostring(options.mode)
+    ))
   end
   if options.output_dir ~= nil then
     options.output_dir = common.resolve_path(common.current_dir(), options.output_dir)
@@ -254,7 +270,10 @@ end
 
 local function _require_file(path)
   if not common.path_exists(path) then
-    _fail("missing required design file: " .. tostring(path))
+    _fail(_text(
+      "缺少设计文件: " .. tostring(path),
+      "Missing required design file: " .. tostring(path)
+    ))
   end
 end
 

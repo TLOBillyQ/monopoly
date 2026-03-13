@@ -7,7 +7,7 @@ local function _script_dir(script_path)
   return normalized:match("^(.*)/[^/]+$") or "scripts"
 end
 
-local _raw_script_path = arg and arg[0] or "scripts/eggy_api.lua"
+local _raw_script_path = arg and arg[0] or "scripts/update_api.lua"
 local _entry_script_dir = _script_dir(_raw_script_path)
 local _entry_parent_dir = _entry_script_dir:match("^(.*)/[^/]+$") or "."
 package.path = _entry_script_dir .. "/?.lua;"
@@ -19,6 +19,10 @@ package.path = _entry_script_dir .. "/?.lua;"
 local bootstrap = require("bootstrap")
 local env = bootstrap.install(_raw_script_path)
 local common = require("lib.common")
+
+local function _text(zh, en)
+  return common.bilingual(zh, en)
+end
 
 local function _fail(message)
   io.stderr:write(tostring(message), "\n")
@@ -212,7 +216,10 @@ local function _append_changelog(path, report_lines)
   if common.path_exists(path) then
     content = common.read_file(path)
     if content == nil then
-      _fail("cannot read changelog: " .. tostring(path))
+      _fail(_text(
+        "无法读取变更记录: " .. tostring(path),
+        "Cannot read changelog: " .. tostring(path)
+      ))
     end
     content = _trim(content)
     if content ~= "" then
@@ -414,24 +421,10 @@ local function _load_source_entries(text)
 end
 
 local function _collect_markdown_files(doc_dir)
-  local normalized_doc_dir = common.normalize_path(doc_dir)
-  local command
-  if common.is_windows() then
-    command = 'dir /b /s /a-d ' .. common.shell_quote(normalized_doc_dir:gsub("/", "\\") .. '\\*.md') .. ' 2>nul'
-  else
-    command = 'find ' .. common.shell_quote(normalized_doc_dir) .. ' -type f -name "*.md" 2>/dev/null'
-  end
-  local result = common.run_command(command)
-  if not result.ok then
+  local paths, err = common.collect_files(doc_dir, ".md")
+  if paths == nil then
     return {}
   end
-  local paths = {}
-  for line in (result.output .. "\n"):gmatch("(.-)\n") do
-    if line ~= "" then
-      paths[#paths + 1] = common.normalize_path(line)
-    end
-  end
-  table.sort(paths)
   return paths
 end
 
@@ -479,10 +472,10 @@ local function _build_check_report(source_entries, doc_entries)
   table.sort(extra)
 
   local lines = {
-    "Source count: " .. tostring(#_set_to_sorted_list(source_entries)),
-    "Split docs count: " .. tostring(#_set_to_sorted_list(doc_entries)),
-    "Missing: " .. tostring(#missing),
-    "Extra: " .. tostring(#extra),
+    _text("源码条目数", "Source count") .. ": " .. tostring(#_set_to_sorted_list(source_entries)),
+    _text("拆分文档条目数", "Split docs count") .. ": " .. tostring(#_set_to_sorted_list(doc_entries)),
+    _text("缺失项", "Missing") .. ": " .. tostring(#missing),
+    _text("多余项", "Extra") .. ": " .. tostring(#extra),
   }
   if #missing > 0 then
     local sample = {}
@@ -490,7 +483,7 @@ local function _build_check_report(source_entries, doc_entries)
     for index = 1, upper_bound do
       sample[#sample + 1] = missing[index]
     end
-    lines[#lines + 1] = "Missing sample: [" .. table.concat(sample, ", ") .. "]"
+    lines[#lines + 1] = _text("缺失示例", "Missing sample") .. ": [" .. table.concat(sample, ", ") .. "]"
   end
   if #extra > 0 then
     local sample = {}
@@ -498,23 +491,23 @@ local function _build_check_report(source_entries, doc_entries)
     for index = 1, upper_bound do
       sample[#sample + 1] = extra[index]
     end
-    lines[#lines + 1] = "Extra sample: [" .. table.concat(sample, ", ") .. "]"
+    lines[#lines + 1] = _text("多余示例", "Extra sample") .. ": [" .. table.concat(sample, ", ") .. "]"
   end
   return lines, missing, extra
 end
 
 local function _format_diff_report(added, removed, changed_params, type_changed, limit)
   local lines = {}
-  for _, line in ipairs(_format_list("Added", added, limit)) do
+  for _, line in ipairs(_format_list(_text("新增", "Added"), added, limit)) do
     lines[#lines + 1] = line
   end
-  for _, line in ipairs(_format_list("Removed", removed, limit)) do
+  for _, line in ipairs(_format_list(_text("删除", "Removed"), removed, limit)) do
     lines[#lines + 1] = line
   end
-  for _, line in ipairs(_format_changes("Signature changed", changed_params, limit)) do
+  for _, line in ipairs(_format_changes(_text("签名变更", "Signature changed"), changed_params, limit)) do
     lines[#lines + 1] = line
   end
-  for _, line in ipairs(_format_changes("Type changed", type_changed, limit)) do
+  for _, line in ipairs(_format_changes(_text("类型变更", "Type changed"), type_changed, limit)) do
     lines[#lines + 1] = line
   end
   return lines
@@ -556,7 +549,10 @@ local function _parse_args(args)
     elseif token == "--limit" then
       local parsed = common.to_integer(args[index + 1])
       if parsed == nil then
-        _fail("invalid --limit value: " .. tostring(args[index + 1]))
+        _fail(_text(
+          "无效的 --limit 参数: " .. tostring(args[index + 1]),
+          "Invalid --limit value: " .. tostring(args[index + 1])
+        ))
       end
       options.limit = parsed
       index = index + 2
@@ -570,10 +566,16 @@ local function _parse_args(args)
       options.skip_diff = true
       index = index + 1
     elseif token == "--help" or token == "-h" then
-      print("Usage: lua scripts/eggy_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff]")
+      print(_text(
+        "用法: lua scripts/update_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff]",
+        "Usage: lua scripts/update_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff]"
+      ))
       os.exit(0)
     else
-      _fail("unknown flag: " .. tostring(token))
+      _fail(_text(
+        "未知参数: " .. tostring(token),
+        "Unknown flag: " .. tostring(token)
+      ))
     end
   end
 
@@ -587,7 +589,10 @@ end
 
 local function _validate_file(path, label)
   if not common.path_exists(path) then
-    _fail(label .. " file does not exist: " .. tostring(path))
+    _fail(_text(
+      label .. " 文件不存在: " .. tostring(path),
+      label .. " file does not exist: " .. tostring(path)
+    ))
   end
 end
 
@@ -617,7 +622,10 @@ local function _delete_old_api(path)
 
   local ok = common.remove_path(path)
   if not ok then
-    _fail("cannot delete old file: " .. tostring(path))
+    _fail(_text(
+      "无法删除旧文件: " .. tostring(path),
+      "Cannot delete old file: " .. tostring(path)
+    ))
   end
 end
 
@@ -714,7 +722,7 @@ local function _generate_docs(text, options)
     "- 08_components.md：组件类方法索引（*Comp）。",
     "- 09_events.md：事件常量与示例。",
     "",
-    "校验方式：运行 `lua scripts/eggy_api.lua`，默认包含校验。",
+    "校验方式：运行 `lua scripts/update_api.lua`，默认包含校验。",
     "",
   }
   _write_text(common.join_path(options.doc_dir, "00_index.md"), table.concat(index_lines, "\n"))

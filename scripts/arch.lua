@@ -13,6 +13,7 @@ local ARCH_LIB_DIR = _normalize_path(SCRIPT_DIR .. "/arch")
 package.path = ARCH_LIB_DIR .. "/?.lua;"
   .. ARCH_LIB_DIR .. "/?/?.lua;"
   .. SCRIPT_DIR .. "/?.lua;"
+  .. SCRIPT_DIR .. "/?/?.lua;"
   .. package.path
 
 local cli = require("arch_view.cli")

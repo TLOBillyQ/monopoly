@@ -57,7 +57,7 @@ local function _collect_lines(items)
 end
 
 function luac_listing.analyze_module(module_info)
-  local command = "luac -p -l " .. common.shell_quote(module_info.source_path) .. " 2>&1"
+  local command = { "luac", "-p", "-l", module_info.source_path }
   local output, err = common.run_command(command)
   if output == nil then
     return nil, err

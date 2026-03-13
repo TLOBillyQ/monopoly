@@ -1,4 +1,4 @@
-package.path = package.path .. ";./scripts/arch/?.lua;./scripts/arch/?/?.lua"
+package.path = package.path .. ";./scripts/?.lua;./scripts/?/?.lua;./scripts/arch/?.lua;./scripts/arch/?/?.lua"
 
 local build = require("arch_view.build")
 local cli = require("arch_view.cli")

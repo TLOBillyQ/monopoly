@@ -16,6 +16,7 @@ package.path = QUALITY_DIR .. "/?.lua;"
   .. ARCH_DIR .. "/?.lua;"
   .. ARCH_DIR .. "/?/?.lua;"
   .. SCRIPT_DIR .. "/?.lua;"
+  .. SCRIPT_DIR .. "/?/?.lua;"
   .. package.path
 
 local cli = require("crap.cli")

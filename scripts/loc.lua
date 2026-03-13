@@ -24,6 +24,10 @@ local loc_counter = require("lib.loc_counter")
 
 local _blob_stats_cache = {}
 
+local function _text(zh, en)
+  return common.bilingual(zh, en)
+end
+
 local function _println(text)
   print(tostring(text or ""))
 end
@@ -51,19 +55,14 @@ local function _split_lines(text)
   return lines
 end
 
-local function _command_exists(name)
-  local result = common.run_command("command -v " .. tostring(name))
-  return result.ok and _trim(result.output) ~= ""
-end
-
 local function _get_git_root()
   local result = _run_git({ "rev-parse", "--show-toplevel" }, env.repo_root)
   if not result.ok then
-    return nil, "✗ 无法获取 git 仓库根目录"
+    return nil, _text("无法获取 git 仓库根目录", "Cannot resolve git repository root")
   end
   local output = _trim(result.output)
   if output == "" then
-    return nil, "✗ 无法获取 git 仓库根目录"
+    return nil, _text("无法获取 git 仓库根目录", "Cannot resolve git repository root")
   end
   return common.normalize_path(output)
 end
@@ -186,11 +185,15 @@ local function _populate_blob_stats_cache(object_ids, git_root)
     return nil, ids_err
   end
 
-  local command = "git -C " .. common.shell_quote(git_root) .. " cat-file --batch < " .. common.shell_quote(ids_path)
-  local result = common.run_command(command)
+  local result = common.run_command({ "git", "-C", git_root, "cat-file", "--batch" }, {
+    stdin_path = ids_path,
+  })
   common.remove_path(ids_path)
   if not result.ok then
-    return nil, _trim(result.output) ~= "" and _trim(result.output) or "git cat-file --batch failed"
+    return nil, _trim(result.output) ~= "" and _trim(result.output) or _text(
+      "git cat-file --batch 执行失败",
+      "git cat-file --batch failed"
+    )
   end
 
   local stats_by_id, parse_err = _parse_cat_file_batch(result.output, object_ids)
@@ -295,9 +298,9 @@ local function _write_chart_data(data, path)
 end
 
 local function _generate_chart(data, output_path)
-  if not _command_exists("gnuplot") then
-    _println("⚠ 未安装 gnuplot，跳过图表生成")
-    _println("  可选安装: brew install gnuplot")
+  if not common.command_exists("gnuplot") then
+    _println(_text("⚠ 未安装 gnuplot，跳过图表生成", "⚠ gnuplot is not installed, skipping chart generation"))
+    _println(_text("  可选安装命令: gnuplot", "  Optional install target: gnuplot"))
     return true
   end
 
@@ -306,7 +309,7 @@ local function _generate_chart(data, output_path)
 
   local data_ok, data_err = _write_chart_data(data, data_path)
   if not data_ok then
-    _println("⚠ 写入图表数据失败: " .. tostring(data_err))
+    _println(_text("⚠ 写入图表数据失败: ", "⚠ Failed to write chart data: ") .. tostring(data_err))
     return true
   end
 
@@ -332,7 +335,7 @@ local function _generate_chart(data, output_path)
   }, "\n")
   local write_ok, write_err = common.write_file(script_path, script_text)
   if not write_ok then
-    _println("⚠ 写入图表脚本失败: " .. tostring(write_err))
+    _println(_text("⚠ 写入图表脚本失败: ", "⚠ Failed to write chart script: ") .. tostring(write_err))
     common.remove_path(data_path)
     return true
   end
@@ -342,14 +345,14 @@ local function _generate_chart(data, output_path)
   common.remove_path(script_path)
 
   if not result.ok then
-    _println("⚠ 图表生成失败，已跳过 PNG 输出")
+    _println(_text("⚠ 图表生成失败，已跳过 PNG 输出", "⚠ Chart generation failed, skipped PNG output"))
     if _trim(result.output) ~= "" then
       _println(_trim(result.output))
     end
     return true
   end
 
-  _println("图表已保存到: " .. common.normalize_path(output_path))
+  _println(_text("图表已保存到: ", "Chart saved to: ") .. common.normalize_path(output_path))
   return true
 end
 
@@ -365,19 +368,27 @@ local function main()
   local start_time = os.time()
 
   _println(string.rep("=", 60))
-  _println("src/ 和 tests/ 目录有效代码行数变化分析（Lua 版）")
-  _println("平台: " .. (common.is_windows() and "Windows" or (common.is_macos() and "macOS" or "Linux/Unix")) .. " | Lua: " .. tostring(_VERSION or "Lua"))
+  _println(_text(
+    "src/ 和 tests/ 目录有效代码行数变化分析（Lua 版）",
+    "Effective LOC trend for src/ and tests/ (Lua)"
+  ))
+  _println(_text("平台", "Platform") .. ": "
+    .. (common.is_windows() and "Windows" or (common.is_macos() and "macOS" or "Linux/Unix"))
+    .. " | Lua: " .. tostring(_VERSION or "Lua"))
   _println(string.rep("=", 60))
 
   local git_version = common.run_command({ "git", "--version" })
   if not git_version.ok then
-    io.stderr:write("✗ 未找到 git 命令，请确保已安装 git 并添加到 PATH\n")
+    io.stderr:write(_text(
+      "✗ 未找到 git 命令，请确保已安装 git 并添加到 PATH",
+      "✗ git command was not found, make sure git is installed and available in PATH"
+    ), "\n")
     return 1
   end
   _println("Git: " .. _trim(git_version.output))
   _println("")
 
-  _println("正在获取最近3天提交...")
+  _println(_text("正在获取最近 3 天提交...", "Fetching commits from the last 3 days..."))
   local git_root, git_root_err = _get_git_root()
   if git_root == nil then
     io.stderr:write(tostring(git_root_err), "\n")
@@ -385,14 +396,14 @@ local function main()
   end
 
   local commits = _get_commits(git_root)
-  _println("共找到 " .. tostring(#commits) .. " 个提交")
+  _println(_text("共找到 ", "Found ") .. tostring(#commits) .. _text(" 个提交", " commits"))
   if #commits == 0 then
-    _println("没有找到最近三天的提交！")
+    _println(_text("最近 3 天没有找到提交。", "No commits were found in the last 3 days."))
     return 0
   end
 
   _println("")
-  _println("开始分析每个提交的代码行数...")
+  _println(_text("开始分析每个提交的代码行数...", "Analyzing LOC for each commit..."))
   _println(string.rep("-", 60))
 
   local data = {}
@@ -424,44 +435,44 @@ local function main()
     return 1
   end
   _println("")
-  _println("数据已保存到: " .. json_path)
+  _println(_text("数据已保存到: ", "Data saved to: ") .. json_path)
   _println("")
-  _println("正在生成折线图...")
+  _println(_text("正在生成折线图...", "Generating line chart..."))
   _generate_chart(data, chart_path)
 
   local elapsed = os.time() - start_time
   _println("")
   _println(string.rep("=", 60))
-  _println("Analysis Summary")
+  _println(_text("分析摘要", "Analysis Summary"))
   _println(string.rep("=", 60))
 
   if #data > 0 then
     local first = data[1]
     local last = data[#data]
-    _println("Period: " .. tostring(first.date):sub(1, 10) .. " ~ " .. tostring(last.date):sub(1, 10))
-    _println("Commits Analyzed: " .. tostring(#data))
+    _println(_text("周期", "Period") .. ": " .. tostring(first.date):sub(1, 10) .. " ~ " .. tostring(last.date):sub(1, 10))
+    _println(_text("分析提交数", "Commits analyzed") .. ": " .. tostring(#data))
     _println("")
-    _println("src/ Directory:")
+    _println(_text("src/ 目录", "src/ Directory") .. ":")
     local src_change = last.src_loc - first.src_loc
-    _println("  Start: " .. tostring(first.src_loc) .. " lines  |  End: " .. tostring(last.src_loc) .. " lines")
+    _println("  " .. _text("起始", "Start") .. ": " .. tostring(first.src_loc) .. " lines  |  " .. _text("结束", "End") .. ": " .. tostring(last.src_loc) .. " lines")
     if first.src_loc > 0 then
-      _println(string.format("  Change: %+d lines (%.1f%%)", src_change, (src_change / first.src_loc) * 100))
+      _println(string.format("  %s: %+d lines (%.1f%%)", _text("变化", "Change"), src_change, (src_change / first.src_loc) * 100))
     else
-      _println(string.format("  Change: %+d lines", src_change))
+      _println(string.format("  %s: %+d lines", _text("变化", "Change"), src_change))
     end
     _println("")
-    _println("tests/ Directory:")
+    _println(_text("tests/ 目录", "tests/ Directory") .. ":")
     local tests_change = last.tests_loc - first.tests_loc
-    _println("  Start: " .. tostring(first.tests_loc) .. " lines  |  End: " .. tostring(last.tests_loc) .. " lines")
+    _println("  " .. _text("起始", "Start") .. ": " .. tostring(first.tests_loc) .. " lines  |  " .. _text("结束", "End") .. ": " .. tostring(last.tests_loc) .. " lines")
     if first.tests_loc > 0 then
-      _println(string.format("  Change: %+d lines (%.1f%%)", tests_change, (tests_change / first.tests_loc) * 100))
+      _println(string.format("  %s: %+d lines (%.1f%%)", _text("变化", "Change"), tests_change, (tests_change / first.tests_loc) * 100))
     else
-      _println(string.format("  Change: %+d lines", tests_change))
+      _println(string.format("  %s: %+d lines", _text("变化", "Change"), tests_change))
     end
     _println("")
-    _println("Total (src + tests): " .. tostring(last.total_loc) .. " lines")
+    _println(_text("总计（src + tests）", "Total (src + tests)") .. ": " .. tostring(last.total_loc) .. " lines")
   end
-  _println(string.format("Elapsed Time: %.1fs", elapsed))
+  _println(string.format("%s: %.1fs", _text("耗时", "Elapsed time"), elapsed))
 
   return 0
 end

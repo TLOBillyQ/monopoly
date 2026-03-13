@@ -67,17 +67,29 @@ local function _get_attr(tag, attr_name)
 end
 
 local function _command_exists(name)
-  local result = common.run_command("command -v " .. tostring(name))
-  return result.ok and _trim(result.output) ~= ""
+  return common.command_exists(name)
 end
 
 local function _read_zip_entry(path, entry_name)
+  if _command_exists("tar") then
+    local tar_result = common.run_command({ "tar", "-xOf", path, entry_name })
+    if tar_result.ok then
+      return tar_result.output
+    end
+  end
+
   if not _command_exists("unzip") then
-    return nil, "missing required command: unzip"
+    return nil, common.bilingual(
+      "缺少必要命令: tar 或 unzip",
+      "Missing required command: tar or unzip"
+    )
   end
   local result = common.run_command({ "unzip", "-p", path, entry_name })
   if not result.ok then
-    return nil, _trim(result.output) ~= "" and _trim(result.output) or ("failed to read zip entry: " .. tostring(entry_name))
+    return nil, _trim(result.output) ~= "" and _trim(result.output) or common.bilingual(
+      "读取压缩条目失败: " .. tostring(entry_name),
+      "Failed to read zip entry: " .. tostring(entry_name)
+    )
   end
   return result.output
 end
