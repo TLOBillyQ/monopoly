@@ -1,73 +1,244 @@
-# `src/` 命名与层级重构计划
+# Plan: `src/` 命名与层级重构（Swarm 版）
 
 ## Summary
 
-当前 `arch_view` 护栏是绿的，`tmp/crap_report.json` 里也没有 `crap >= 10` 的函数；这次重构应当保持这一状态不变。核心目标不是重写逻辑，而是把已经存在的职责边界“叫对名字、放对位置”，让目录结构更像现有架构文档描述的样子。
-
-本次按你选定的策略执行：一次切换，不保留旧路径兼容壳；重构力度按“大幅重组”处理，但只在既有顶层组件内部移动，不跨 `app/core/game/infrastructure/presentation` 根目录，不改模块导出行为。
-
-## Implementation Changes
-
-- `presentation` 先收口到文档语义。
-  将 `src/presentation/runtime/canvas_specs/` 整体迁到 `src/presentation/input/canvas_routes/`。文件名统一去掉泛化的 `intents.lua`：`base/intents.lua -> base.lua`，`base/item_slot_intents.lua -> item_slots.lua`，其余 `player_choice/target_choice/remote_choice/market/popup/always_show/secondary_confirm/intents.lua -> <screen>.lua`。`src/presentation/runtime/canvas_registry.lua` 同步改名并迁到 `src/presentation/input/canvas_route_registry.lua`，`src/presentation/runtime/canvas_event_router.lua` 改为依赖这个新 registry。
-
-- `presentation/runtime/view/` 改名为 `src/presentation/runtime/ui_runtime/`，保留现有导出函数名不变。
-  迁移 `init.lua`、`state.lua`、`assets.lua`、`item_slots.lua`、`debug.lua`，所有原来 `require("src.presentation.runtime.view...")` 的地方一次性切到 `src.presentation.runtime.ui_runtime...`。这一步只改模块路径，不改 `build_ui_state`、`render`、`apply_input_lock`、`refresh_turn_label` 等接口名。
-
-- `presentation/runtime/controllers/choice_screen_service/` 合并并改名为 `src/presentation/runtime/controllers/choice_screens/`。
-  `common.lua -> helpers.lua`，`openers.lua` 保持文件名；`modal_controller.lua` 和相关调用点全部切到新路径。`choice_screen_service` 这个目录名不再保留。
-
-- `game/flow/turn/` 按职责分槽，减少 33 个文件平铺。
-  新建 `dispatch/`，迁入 `dispatch.lua`、`dispatch_validator.lua`、`action_gate.lua`。
-  新建 `phases/`，迁入 `start.lua`、`roll.lua`、`move.lua`、`move_followup.lua`、`land.lua`，并将 `phase_registry.lua -> registry.lua`。
-  新建 `runtime/`，迁入 `loop.lua`、`loop_ports.lua`、`loop_runtime.lua`、`loop_tick_flow.lua`、`loop_tick_steps.lua`、`loop_ui_sync_defaults.lua`，并统一改名为 `loop.lua`、`ports.lua`、`runtime_ports.lua`、`tick_flow.lua`、`tick_steps.lua`、`ui_sync_defaults.lua`。
-  新建 `waits/`，迁入 `await.lua`、`tick_timeout.lua`、`tick_choice_timeout.lua`、`tick_ui_gate.lua`、`tick_ui_sync.lua`、`anim.lua`，并改名为 `handlers.lua`、`timeout.lua`、`choice_timeout.lua`、`ui_gate.lua`、`ui_sync.lua`、`anim.lua`。
-  新建 `auto/`，迁入 `auto_runner.lua`、`auto_context.lua`、`choice_auto_policy.lua`、`item_auto_play_context.lua`，并改名为 `runner.lua`、`context.lua`、`choice_policy.lua`、`item_context.lua`。
-  新建 `policies/`，迁入 `timer_policy.lua`、`camera_policy.lua`、`role_control_policy.lua`，并改名为 `timer.lua`、`camera.lua`、`role_control.lua`。
-  根目录只保留 `decision.lua`、`logger.lua`、`item_slot_data.lua`，并把 `script.lua -> session_script.lua`、`engine.lua -> scheduler_runtime.lua`。
-
-- `game/systems/market/application/` 退役，换成按业务意图命名的子目录。
-  新建 `query/`，迁入 `context.lua -> catalog.lua`、`eligibility.lua -> eligibility.lua`。
-  新建 `choice/`，迁入 `choice.lua -> build.lua`、`choice_session.lua -> session.lua`、`choice_outcome.lua -> outcome.lua`。
-  新建 `purchase/`，迁入 `purchase.lua -> execute.lua`、`purchase_policy.lua -> policy.lua`、`local_purchase.lua -> local.lua`、`fulfillment.lua -> fulfillment.lua`、`paid_purchase_callback.lua -> paid_callback.lua`、`paid_fulfillment.lua -> paid_fulfillment.lua`、`feedback.lua -> feedback.lua`。
-  `application/auto.lua` 提升为 `src/game/systems/market/auto.lua`。`src/game/systems/market/init.lua` 保留为 façade，只改内部 require 路径，不改导出的 `market_service.query/choice/purchase/auto` 形状。
-
-- 所有 `src/` 与 `tests/` 内对旧模块路径的 `require(...)`、`package.loaded[...]`、stub key、reload helper 字符串一次性全量替换；删除所有空目录；同步更新 `docs/architecture/boundaries.md` 与 `docs/architecture/subsystems.md` 中受影响的路径示例。`scripts/arch/config.lua` 不改。
+- 目标是一次性完成模块重命名与归位，不保留旧路径兼容壳，不改导出函数名或 table 形状，不跨 `app/core/game/infrastructure/presentation` 顶层根目录。
+- 重构分三条可并行主线：`presentation`、`turn`、`market`。每条主线先完成“源文件搬迁/内部引用修正”，再进入跨子系统整合、测试字符串替换、文档收尾。
+- 关键整合点只有少数几个：`src/game/flow/turn/loop.lua`、`src/app/bootstrap/game_startup.lua`、`src/game/core/runtime/composition_root.lua`、`src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`。这些文件单独放到集成任务里，避免多 agent 冲突。
+- 不引入新外部依赖，因此无需额外拉取外部文档；所有验证依赖仓库现有测试/护栏脚本。
 
 ## Public Module Path Changes
 
-- 不保留旧路径兼容模块，旧路径全部删除。
-- 对外可见的路径变更按家族统一切换：
-  `src.presentation.runtime.canvas_*` 的输入路由模块改为 `src.presentation.input.canvas_*`。
-  `src.presentation.runtime.view*` 改为 `src.presentation.runtime.ui_runtime*`。
-  `src.game.flow.turn.loop*` 家族改为 `src.game.flow.turn.runtime.*`。
-  `src.game.flow.turn.phase_registry` 改为 `src.game.flow.turn.phases.registry`。
-  `src.game.flow.turn.move_followup` 改为 `src.game.flow.turn.phases.move_followup`。
-  `src.game.flow.turn.dispatch*` 家族改为 `src.game.flow.turn.dispatch.*`。
-  `src.game.systems.market.application.*` 全部改为 `src.game.systems.market.query.*`、`choice.*`、`purchase.*` 或 `auto`。
+- `src.presentation.runtime.canvas_specs.*` 全部切到 `src.presentation.input.canvas_routes.*`，其中 `base/intents.lua -> base.lua`，`base/item_slot_intents.lua -> item_slots.lua`，其余 `*/intents.lua -> *.lua`。
+- `src.presentation.runtime.canvas_registry` 改为 `src.presentation.input.canvas_route_registry`。
+- `src.presentation.runtime.view*` 改为 `src.presentation.runtime.ui_runtime*`。
+- `src.presentation.runtime.controllers.choice_screen_service.common` 改为 `src.presentation.runtime.controllers.choice_screens.helpers`；`...openers` 改为 `...choice_screens.openers`。
+- `src.game.flow.turn.*` 按目录重组到 `dispatch/`、`phases/`、`runtime/`、`waits/`、`auto/`、`policies/`；`script.lua -> session_script.lua`，`engine.lua -> scheduler_runtime.lua`。
+- `src.game.systems.market.application.*` 改为 `src.game.systems.market.query.*`、`choice.*`、`purchase.*` 或 `src.game.systems.market.auto`；`src/game/systems/market/init.lua` 的 façade 形状保持不变。
 
-- 模块导出的 table 结构与函数名保持原样；本次只允许“路径改名 + 文件归位”，不引入行为变更。
+## T0 Baseline Mapping
 
-## Test Plan
+### Presentation mapping
 
-- 每完成一个子系统批次，都先跑对应高风险回归：
-  `presentation` 批次后跑 presentation 相关 suite。
-  `market` 批次后跑 market / paid_currency / gameplay characterization 相关 suite。
-  `turn` 批次后跑 gameplay / runtime / architecture 相关 suite。
-- 全量完成后，在仓库根目录执行：
-  `lua scripts/arch.lua check`
-  `lua tests/guard.lua`
-  `lua tests/regression.lua`
-  `lua scripts/crap.lua report --lane behavior --lane contract --top 30`
-- 用 PowerShell 复核 CRAP 门槛：
-  `$json = Get-Content tmp/crap_report.json -Raw | ConvertFrom-Json; $json.functions | Where-Object { $_.crap -ge 10 }`
-  预期无输出。
-- 验收标准是：
-  所有测试通过；`arch_view check ok`；没有旧路径残留；没有 `crap >= 10` 的函数；`presentation/input` 新增的路由模块仍不依赖 `src.presentation.runtime.*`。
+| old module | new module |
+|---|---|
+| `src.presentation.runtime.canvas_specs.always_show.intents` | `src.presentation.input.canvas_routes.always_show` |
+| `src.presentation.runtime.canvas_specs.base.intents` | `src.presentation.input.canvas_routes.base` |
+| `src.presentation.runtime.canvas_specs.base.item_slot_intents` | `src.presentation.input.canvas_routes.item_slots` |
+| `src.presentation.runtime.canvas_specs.market.intents` | `src.presentation.input.canvas_routes.market` |
+| `src.presentation.runtime.canvas_specs.player_choice.intents` | `src.presentation.input.canvas_routes.player_choice` |
+| `src.presentation.runtime.canvas_specs.popup.intents` | `src.presentation.input.canvas_routes.popup` |
+| `src.presentation.runtime.canvas_specs.remote_choice.intents` | `src.presentation.input.canvas_routes.remote_choice` |
+| `src.presentation.runtime.canvas_specs.secondary_confirm.intents` | `src.presentation.input.canvas_routes.secondary_confirm` |
+| `src.presentation.runtime.canvas_specs.target_choice.intents` | `src.presentation.input.canvas_routes.target_choice` |
+| `src.presentation.runtime.canvas_registry` | `src.presentation.input.canvas_route_registry` |
+| `src.presentation.runtime.view` | `src.presentation.runtime.ui_runtime` |
+| `src.presentation.runtime.view.assets` | `src.presentation.runtime.ui_runtime.assets` |
+| `src.presentation.runtime.view.debug` | `src.presentation.runtime.ui_runtime.debug` |
+| `src.presentation.runtime.view.item_slots` | `src.presentation.runtime.ui_runtime.item_slots` |
+| `src.presentation.runtime.view.state` | `src.presentation.runtime.ui_runtime.state` |
+| `src.presentation.runtime.controllers.choice_screen_service.common` | `src.presentation.runtime.controllers.choice_screens.helpers` |
+| `src.presentation.runtime.controllers.choice_screen_service.openers` | `src.presentation.runtime.controllers.choice_screens.openers` |
 
-## Assumptions And Defaults
+### Turn mapping
 
-- 顶层组件边界不变；不新增跨层依赖；不为这次重构修改 `scripts/arch/config.lua`。
-- `presentation/input/canvas_routes/` 允许依赖 `src.core.state_access.*`、`src.presentation.input.*`、`src.presentation.schema.*`，但禁止依赖 `src.presentation.runtime.*`；若出现 runtime 耦合，优先把纯计算搬到 `src.presentation.input.event_intents` 或 `src.presentation.model.choice_support`，不要把 runtime 依赖带进 input。
-- 现有工作树里的无关改动保持原样，不碰 `Agents.md`、`scripts/lib/common.lua`、`test_mkdir.lua`、`test_path.lua`。
-- 这次不顺手处理 `land/items/effects` 等已对齐但仍可继续优化的区域，避免把“结构整理”扩成逻辑重写。
+| old module | new module |
+|---|---|
+| `src.game.flow.turn.action_gate` | `src.game.flow.turn.policies.action_gate` |
+| `src.game.flow.turn.anim` | `src.game.flow.turn.runtime.anim` |
+| `src.game.flow.turn.auto_context` | `src.game.flow.turn.auto.context` |
+| `src.game.flow.turn.auto_runner` | `src.game.flow.turn.auto.runner` |
+| `src.game.flow.turn.await` | `src.game.flow.turn.waits.await` |
+| `src.game.flow.turn.camera_policy` | `src.game.flow.turn.policies.camera_policy` |
+| `src.game.flow.turn.choice_auto_policy` | `src.game.flow.turn.auto.choice_auto_policy` |
+| `src.game.flow.turn.decision` | `src.game.flow.turn.runtime.decision` |
+| `src.game.flow.turn.dispatch` | `src.game.flow.turn.dispatch.action_dispatcher` |
+| `src.game.flow.turn.dispatch_validator` | `src.game.flow.turn.dispatch.validator` |
+| `src.game.flow.turn.engine` | `src.game.flow.turn.runtime.scheduler_runtime` |
+| `src.game.flow.turn.item_auto_play_context` | `src.game.flow.turn.auto.item_play_context` |
+| `src.game.flow.turn.item_slot_data` | `src.game.flow.turn.dispatch.item_slot_data` |
+| `src.game.flow.turn.land` | `src.game.flow.turn.phases.land` |
+| `src.game.flow.turn.logger` | `src.game.flow.turn.runtime.logger` |
+| `src.game.flow.turn.loop_ports` | `src.game.flow.turn.runtime.ports` |
+| `src.game.flow.turn.loop_runtime` | `src.game.flow.turn.runtime.loop_runtime` |
+| `src.game.flow.turn.loop_tick_flow` | `src.game.flow.turn.runtime.tick_flow` |
+| `src.game.flow.turn.loop_tick_steps` | `src.game.flow.turn.runtime.tick_steps` |
+| `src.game.flow.turn.loop_ui_sync_defaults` | `src.game.flow.turn.runtime.ui_sync_defaults` |
+| `src.game.flow.turn.move` | `src.game.flow.turn.phases.move` |
+| `src.game.flow.turn.move_followup` | `src.game.flow.turn.phases.move_followup` |
+| `src.game.flow.turn.phase_registry` | `src.game.flow.turn.phases.registry` |
+| `src.game.flow.turn.role_control_policy` | `src.game.flow.turn.policies.role_control_policy` |
+| `src.game.flow.turn.roll` | `src.game.flow.turn.phases.roll` |
+| `src.game.flow.turn.script` | `src.game.flow.turn.runtime.session_script` |
+| `src.game.flow.turn.start` | `src.game.flow.turn.phases.start` |
+| `src.game.flow.turn.tick_choice_timeout` | `src.game.flow.turn.waits.choice_timeout` |
+| `src.game.flow.turn.tick_timeout` | `src.game.flow.turn.waits.timeout` |
+| `src.game.flow.turn.tick_ui_gate` | `src.game.flow.turn.waits.ui_gate` |
+| `src.game.flow.turn.tick_ui_sync` | `src.game.flow.turn.waits.ui_sync` |
+| `src.game.flow.turn.timer_policy` | `src.game.flow.turn.policies.timer_policy` |
+
+`src/game/flow/turn/loop.lua` 保持原位，但其内部引用统一切到上表新路径；它是 T5 唯一允许保留旧物理位置的 turn 文件。
+
+### Market mapping
+
+| old module | new module |
+|---|---|
+| `src.game.systems.market.application.auto` | `src.game.systems.market.auto` |
+| `src.game.systems.market.application.context` | `src.game.systems.market.query.context` |
+| `src.game.systems.market.application.eligibility` | `src.game.systems.market.query.eligibility` |
+| `src.game.systems.market.application.choice` | `src.game.systems.market.choice.builder` |
+| `src.game.systems.market.application.choice_outcome` | `src.game.systems.market.choice.outcome` |
+| `src.game.systems.market.application.choice_session` | `src.game.systems.market.choice.session` |
+| `src.game.systems.market.application.feedback` | `src.game.systems.market.choice.feedback` |
+| `src.game.systems.market.application.fulfillment` | `src.game.systems.market.purchase.fulfillment` |
+| `src.game.systems.market.application.local_purchase` | `src.game.systems.market.purchase.local_purchase` |
+| `src.game.systems.market.application.paid_fulfillment` | `src.game.systems.market.purchase.paid_fulfillment` |
+| `src.game.systems.market.application.paid_purchase_callback` | `src.game.systems.market.purchase.paid_purchase_callback` |
+| `src.game.systems.market.application.purchase` | `src.game.systems.market.purchase.core` |
+| `src.game.systems.market.application.purchase_policy` | `src.game.systems.market.purchase.policy` |
+
+### Residual scan commands
+
+- presentation:
+  - `rg -n "src\.presentation\.runtime\.(canvas_specs|canvas_registry|view|controllers\.choice_screen_service)" src tests docs`
+- turn:
+  - `rg -n "src\.game\.flow\.turn\.(action_gate|anim|auto_context|auto_runner|await|camera_policy|choice_auto_policy|decision|dispatch|dispatch_validator|engine|item_auto_play_context|item_slot_data|land|logger|loop_ports|loop_runtime|loop_tick_flow|loop_tick_steps|loop_ui_sync_defaults|move|move_followup|phase_registry|role_control_policy|roll|script|start|tick_choice_timeout|tick_timeout|tick_ui_gate|tick_ui_sync|timer_policy)" src tests docs`
+- market:
+  - `rg -n "src\.game\.systems\.market\.application(\.|$)" src tests docs`
+
+### Bridge files reserved for T5
+
+- `src/game/flow/turn/loop.lua`
+- `src/app/bootstrap/game_startup.lua`
+- `src/game/core/runtime/composition_root.lua`
+- `src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`
+
+## Dependency Graph
+
+```text
+T0
+├── T1 ── T2 ──┐
+├── T3 ────────┼── T5 ── T6 ── T7 ── T8
+└── T4 ────────┘
+```
+
+## Tasks
+
+### T0: 建立映射表与残留检查基线
+- **depends_on**: []
+- **location**: repo root；`src/**`；`tests/**`；`docs/**`
+- **description**: 先生成完整 old->new 模块映射表，并用 `rg` 盘点三大家族的 `require(...)`、`package.loaded[...]`、`_reload_module(...)`、`_load_fresh(...)`、文档字符串引用。把会跨任务冲突的桥接文件单独标记：`src/game/flow/turn/loop.lua`、`src/app/bootstrap/game_startup.lua`、`src/game/core/runtime/composition_root.lua`、`src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`。
+- **validation**: 映射表覆盖所有将被删除的旧模块路径；三组残留检查命令可直接复用到最终验收。
+- **status**: Completed
+- **log**:
+  - `2026-03-13 23:23 +0800` 建立三大家族 old->new 映射表，补齐 turn/market 的精确目标模块名，并把四个跨任务桥接文件单独保留给 T5。
+  - `2026-03-13 23:23 +0800` 固化三组 `rg` 残留检查命令，后续 T5/T8 直接复用同一批模式复扫 `src tests docs`。
+- **files edited/created**: `.agents/plan.md`
+
+### T1: `presentation` 源文件搬迁与内部归位
+- **depends_on**: [T0]
+- **location**: `src/presentation/runtime/canvas_specs/**`；`src/presentation/runtime/canvas_registry.lua`；`src/presentation/runtime/view/**`；`src/presentation/runtime/controllers/choice_screen_service/**`
+- **description**: 搬迁并重命名 `canvas_specs`、`canvas_registry`、`view`、`choice_screen_service`，只修正这些被搬迁家族内部的相互引用；不要碰 `src/app/**` 与测试。
+- **validation**: 新路径全部存在；旧路径文件全部消失；被搬迁家族内部不再引用旧模块路径。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T2: `presentation` 非测试调用点改写
+- **depends_on**: [T1]
+- **location**: `src/presentation/runtime/**`；`src/presentation/input/**`；`src/app/bootstrap/ui_bootstrap.lua`
+- **description**: 改写 `presentation` 侧剩余生产代码调用点到新路径；`src/app/bootstrap/game_startup.lua` 先不动，留给集成任务统一处理，避免和 turn 重构冲突。
+- **validation**: `src/presentation/**` 与 `src/app/bootstrap/ui_bootstrap.lua` 不再出现旧 presentation 路径；`src/presentation/input/canvas_routes/**` 不新增对 `src.presentation.runtime.*` 的依赖。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T3: `turn` 源文件搬迁与内部归位
+- **depends_on**: [T0]
+- **location**: `src/game/flow/turn/**`（排除 `src/game/flow/turn/loop.lua`）
+- **description**: 完成 `dispatch/`、`phases/`、`runtime/`、`waits/`、`auto/`、`policies/` 重组，以及 `session_script.lua`、`scheduler_runtime.lua` 等改名；只修正 turn 家族内部引用，`loop.lua` 留给集成任务统一收口。
+- **validation**: 新目录结构与命名全部落位；除 `loop.lua` 外，turn 家族内部不再引用旧 turn 路径。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T4: `market` 源文件搬迁与内部归位
+- **depends_on**: [T0]
+- **location**: `src/game/systems/market/**`
+- **description**: 用 `query/`、`choice/`、`purchase/` 替换 `application/`，并把 `application/auto.lua` 提升为 `src/game/systems/market/auto.lua`；同步修正 `market` 目录内部引用，保留 `src/game/systems/market/init.lua` 的 façade 形状不变。
+- **validation**: `src/game/systems/market/application/**` 被完全替换；`src/game/systems/market/init.lua` 仍导出 `query/choice/purchase/auto`；`market` 目录内部无旧路径残留。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T5: 跨子系统生产代码集成改写
+- **depends_on**: [T2, T3, T4]
+- **location**: `src/game/flow/turn/loop.lua`；`src/app/**`；`src/game/core/runtime/composition_root.lua`；其余仍指向旧路径的 `src/game/**`
+- **description**: 统一处理跨主线桥接文件：`loop.lua` 同时切 turn 内部新路径和 market 新路径；`game_startup.lua` 同时切 `ui_runtime` 与 `auto.runner`；`composition_root.lua` 切 `scheduler_runtime` 与 `phases.registry`；支付网关切 market query 路径。此任务之后，`src/**` 应完全脱离旧路径。
+- **validation**: `rg` 扫描 `src/**` 对三大家族旧路径应为零；关键生产模块可被加载；不新增任何跨层依赖。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T6: 测试、reload helper、stub 字符串改写
+- **depends_on**: [T5]
+- **location**: `tests/**`
+- **description**: 按 T0 的映射表一次性替换测试中的 `require(...)`、`package.loaded[...]`、`_reload_module(...)`、`_load_fresh(...)`、stub key 与帮助函数字符串，避免边改边猜。
+- **validation**: `tests/**` 不再出现旧路径；以下代表性 suite 通过：`suites.presentation.presentation_ui_event_bindings`、`suites.presentation.presentation_ui_interaction`、`suites.presentation.gameplay_t5_characterization`、`suites.gameplay.gameplay_turn_flow_and_interrupts`、`suites.gameplay.gameplay_t2_characterization`、`suites.domain.market`、`suites.domain.paid_currency`、`suites.gameplay.gameplay_t4_characterization`。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T7: 文档与目录清理
+- **depends_on**: [T6]
+- **location**: `docs/architecture/boundaries.md`；`docs/architecture/subsystems.md`；被清空的旧目录
+- **description**: 更新文档中的路径示例与目录语义；删除旧空目录；明确不修改 `scripts/arch/config.lua`。
+- **validation**: 文档只引用新路径；旧目录树不再残留 `canvas_specs/`、`view/`、`choice_screen_service/`、`market/application/` 等已退休目录。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T8: 全量护栏与残留验收
+- **depends_on**: [T7]
+- **location**: repo root
+- **description**: 跑完整护栏、全量回归、CRAP 报告与旧路径残留扫描；验收通过后，这次重构结束。
+- **validation**:
+  - `lua scripts/arch.lua check`
+  - `lua tests/guard.lua`
+  - `lua tests/regression.lua`
+  - `lua scripts/crap.lua report --lane behavior --lane contract --top 30`
+  - 用 T0 的同一组 `rg` 模式复扫 `src tests docs`
+  - 解析 `tmp/crap_report.json`，确认不存在 `crap >= 10` 的函数
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+## Parallel Execution Groups
+
+| Wave | Tasks | Can Start When |
+|------|-------|----------------|
+| 1 | T0 | Immediately |
+| 2 | T1, T3, T4 | T0 complete |
+| 3 | T2 | T1 complete |
+| 4 | T5 | T2, T3, T4 complete |
+| 5 | T6 | T5 complete |
+| 6 | T7 | T6 complete |
+| 7 | T8 | T7 complete |
+
+## Testing Strategy
+
+- `T2` 后跑 presentation 冒烟，重点覆盖 `canvas_route_registry`、`ui_runtime`、`choice_screens`、item slots、event bindings。
+- `T5` 后跑生产代码冒烟，重点覆盖 turn runtime、`loop.lua`、`composition_root.lua`、market purchase/payment gateway。
+- `T6` 后跑代表性 suite，再进入全量：
+  - presentation: `presentation_ui_event_bindings`、`presentation_ui_interaction`、`gameplay_t5_characterization`
+  - turn/gameplay: `gameplay_turn_flow_and_interrupts`、`gameplay_t2_characterization`
+  - market: `domain.market`、`domain.paid_currency`、`gameplay_t4_characterization`
+- 最终验收以 `T8` 为准：所有测试通过、`arch_view check ok`、旧路径残留为零、无 `crap >= 10`、且 `src/presentation/input/canvas_routes/**` 不依赖 `src.presentation.runtime.*`。
+
+## Assumptions
+
+- 这是一次切换；不保留兼容模块，不做双路径迁移。
+- 只允许“路径改名 + 文件归位 + 调用点更新”；不顺手改业务逻辑、不改导出 API 形状。
+- 顶层组件边界不变，不新增跨层依赖；若出现边界冲突，优先把纯计算移回 `src/presentation/input/*` 或 `src/presentation/model/*`，不把 runtime 依赖带入 `canvas_routes`。
+- `scripts/arch/config.lua` 保持不变；若护栏失败，修代码以适配现有规则，不改规则。
+- 旧工作树中的无关修改保持原样，不在本计划里处理。
