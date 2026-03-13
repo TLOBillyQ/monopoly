@@ -21,14 +21,14 @@
 | 后缀 | 含义 | 示例 |
 |------|------|------|
 | `*_port.lua` | 单一窄接口契约 | `bankruptcy_feedback_port.lua` |
-| `*_ports.lua` | 同生命周期注入 bundle | `loop_ports.lua` |
+| `*_ports.lua` | 同生命周期注入 bundle | `runtime/ports.lua` |
 | `*_port_adapter.lua` | 外层对某契约的实现 | `auto_play_port_adapter.lua` |
 
 **三类 Port 目录：**
 
 - `src/core/ports/` — 宿主/运行时广义契约，gameplay 无关
 - `src/game/ports/` — systems-facing 注入契约，允许业务名词
-- `src/game/flow/turn/loop_ports.lua` — turn use case 局部 override，不是通用 Port 层
+- `src/game/flow/turn/runtime/ports.lua` — turn use case 局部 override，不是通用 Port 层
 
 ## 硬边界（不可违反）
 
@@ -56,6 +56,6 @@
 - 宿主能力接入端口 → `src/app/bootstrap`；实现 → `src/infrastructure/runtime`
 - 宿主/运行时广义契约 → `src/core/ports/`
 - 玩法规则业务能力契约 → `src/game/ports/`
-- 回合循环临时 override → `src/game/flow/turn/loop_ports.lua`
+- 回合循环临时 override → `src/game/flow/turn/runtime/ports.lua`
 
 > 模块同时涉及业务规则和宿主/UI 细节时，先拆边界，不新增跨层混合模块。

@@ -16,15 +16,17 @@ function M.build_base_ui_sync_ports(load_tick_timeout, load_tick_ui_sync)
       local tick_ui_sync = load_tick_ui_sync()
       tick_ui_sync.update_countdown(game, state)
     end,
-    resolve_ui_gate = function()
+    resolve_ui_gate = function(state)
+      local ui = state and state.ui or nil
+      local popup = ui and ui.popup_payload or nil
       return {
-        input_blocked = false,
-        choice_active = false,
-        market_active = false,
-        popup_active = false,
-        popup_seq = nil,
-        popup_auto_close_seconds = nil,
-        popup_owner_index = nil,
+        input_blocked = ui and ui.input_blocked == true or false,
+        choice_active = ui and ui.choice_active == true or false,
+        market_active = ui and ui.market_active == true or false,
+        popup_active = ui and ui.popup_active == true or false,
+        popup_seq = ui and ui.popup_seq or nil,
+        popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
+        popup_owner_index = ui and ui.popup_owner_index or nil,
       }
     end,
     build_model = function() return {} end,
@@ -114,7 +116,7 @@ local function _default_resolve_ui_gate(ui_sync_ports)
 end
 
 local function _fill_default(ui_sync_ports, base_ui_sync_ports, key, resolver)
-  if ui_sync_ports[key] == base_ui_sync_ports[key] then
+  if ui_sync_ports[key] == nil or ui_sync_ports[key] == base_ui_sync_ports[key] then
     ui_sync_ports[key] = resolver(ui_sync_ports)
   end
 end

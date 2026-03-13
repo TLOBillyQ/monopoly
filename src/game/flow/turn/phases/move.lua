@@ -25,7 +25,11 @@ local function _apply_dice_multiplier(game, player, total, raw_total)
     return total
   end
   local new_total = raw_total * pending_multiplier
-  game:set_player_status(player, "pending_dice_multiplier", 1)
+  if game.set_player_status then
+    game:set_player_status(player, "pending_dice_multiplier", 1)
+  else
+    player.status.pending_dice_multiplier = 1
+  end
   if game.last_turn then
     game.last_turn.total = new_total
   end

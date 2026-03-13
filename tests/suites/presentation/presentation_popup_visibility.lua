@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local runtime_port = require("src.presentation.runtime.ui")
-local ui_view = require("src.presentation.runtime.view")
+local ui_view = require("src.presentation.runtime.ui_runtime")
 local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
 
 local function _wrap_ui_refs(image_refs)

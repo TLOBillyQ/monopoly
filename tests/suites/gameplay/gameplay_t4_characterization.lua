@@ -465,13 +465,13 @@ local function _test_asset_handlers_reset_tiles_on_path()
 end
 
 local function _test_market_context_entry_name_vehicle_cfg()
-  local context = require("src.game.systems.market.application.context")
+  local context = require("src.game.systems.market.query.context")
   local name = context.entry_name({ kind = "vehicle", product_id = 5001 })
   assert(type(name) == "string" and name ~= "", "vehicle entry should resolve configured vehicle name")
 end
 
 local function _test_market_context_entry_name_item_cfg_and_fallback()
-  local context = require("src.game.systems.market.application.context")
+  local context = require("src.game.systems.market.query.context")
   local gameplay_rules = require("src.core.config.gameplay_rules")
   local configured = context.entry_name({ kind = "item", product_id = gameplay_rules.item_ids.free_rent })
   local fallback = context.entry_name({ kind = "item", product_id = 999999, name = "FallbackName" })
@@ -481,8 +481,8 @@ end
 
 local function _test_choice_session_apply_navigation_tab_select_and_empty_tab_feedback()
   local feedback_calls = {}
-  local result = _reload_module("src.game.systems.market.application.choice_session", {
-    ["src.game.systems.market.application.choice"] = {
+  local result = _reload_module("src.game.systems.market.choice.session", {
+    ["src.game.systems.market.choice.builder"] = {
       build = function()
         return {
           title = "Market",
@@ -498,7 +498,7 @@ local function _test_choice_session_apply_navigation_tab_select_and_empty_tab_fe
         }
       end,
     },
-    ["src.game.systems.market.application.feedback"] = {
+    ["src.game.systems.market.choice.feedback"] = {
       emit_buy_failed = function(player, entry, reason, body)
         feedback_calls[#feedback_calls + 1] = { player = player, reason = reason, body = body }
       end,
@@ -526,8 +526,8 @@ end
 
 local function _test_choice_session_apply_navigation_prev_next_and_rejects()
   local build_calls = {}
-  _reload_module("src.game.systems.market.application.choice_session", {
-    ["src.game.systems.market.application.choice"] = {
+  _reload_module("src.game.systems.market.choice.session", {
+    ["src.game.systems.market.choice.builder"] = {
       build = function(_, _, state)
         build_calls[#build_calls + 1] = {
           active_tab = state.active_tab,
@@ -551,7 +551,7 @@ local function _test_choice_session_apply_navigation_prev_next_and_rejects()
         }
       end,
     },
-    ["src.game.systems.market.application.feedback"] = {
+    ["src.game.systems.market.choice.feedback"] = {
       emit_buy_failed = function() end,
     },
     ["src.core.choice.contract"] = {
@@ -590,8 +590,8 @@ end
 
 local function _test_choice_session_refresh_after_paid_callback_rebuilds_pending()
   local rebuilt_calls = 0
-  local result = _reload_module("src.game.systems.market.application.choice_session", {
-    ["src.game.systems.market.application.choice"] = {
+  local result = _reload_module("src.game.systems.market.choice.session", {
+    ["src.game.systems.market.choice.builder"] = {
       build = function()
         rebuilt_calls = rebuilt_calls + 1
         return {
@@ -625,8 +625,8 @@ end
 
 local function _test_choice_session_refresh_after_paid_callback_rejects_non_owner_and_failed_rebuild()
   local warnings = {}
-  _reload_module("src.game.systems.market.application.choice_session", {
-    ["src.game.systems.market.application.choice"] = {
+  _reload_module("src.game.systems.market.choice.session", {
+    ["src.game.systems.market.choice.builder"] = {
       build = function()
         return nil
       end,
@@ -655,8 +655,8 @@ end
 
 local function _test_purchase_execute_paid_purchase_success_and_failure()
   local start_calls = {}
-  _reload_module("src.game.systems.market.application.purchase", {
-    ["src.game.systems.market.application.context"] = {
+  _reload_module("src.game.systems.market.purchase.core", {
+    ["src.game.systems.market.query.context"] = {
       entry_by_id = function(product_id)
         return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
       end,
@@ -667,22 +667,22 @@ local function _test_purchase_execute_paid_purchase_success_and_failure()
         return currency == "金豆"
       end,
     },
-    ["src.game.systems.market.application.purchase_policy"] = {
+    ["src.game.systems.market.purchase.policy"] = {
       validate_entry = function()
         return { ok = true }
       end,
     },
-    ["src.game.systems.market.application.local_purchase"] = {
+    ["src.game.systems.market.purchase.local_purchase"] = {
       execute = function()
         error("local purchase should not run for paid currency")
       end,
     },
-    ["src.game.systems.market.application.feedback"] = {
+    ["src.game.systems.market.choice.feedback"] = {
       emit_buy_failed = function(player, entry, reason, body)
         start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
       end,
     },
-    ["src.game.systems.market.application.paid_purchase_callback"] = {
+    ["src.game.systems.market.purchase.paid_purchase_callback"] = {
       handle = function() end,
     },
     ["src.game.systems.market.ports.paid_purchase_port"] = {
@@ -712,8 +712,8 @@ end
 local function _test_handle_paid_purchase_release_build_warning()
   local start_calls = {}
   local warn_calls = {}
-  _reload_module("src.game.systems.market.application.purchase", {
-    ["src.game.systems.market.application.context"] = {
+  _reload_module("src.game.systems.market.purchase.core", {
+    ["src.game.systems.market.query.context"] = {
       entry_by_id = function(product_id)
         return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
       end,
@@ -724,22 +724,22 @@ local function _test_handle_paid_purchase_release_build_warning()
         return currency == "金豆"
       end,
     },
-    ["src.game.systems.market.application.purchase_policy"] = {
+    ["src.game.systems.market.purchase.policy"] = {
       validate_entry = function()
         return { ok = true }
       end,
     },
-    ["src.game.systems.market.application.local_purchase"] = {
+    ["src.game.systems.market.purchase.local_purchase"] = {
       execute = function()
         error("local purchase should not run for paid currency")
       end,
     },
-    ["src.game.systems.market.application.feedback"] = {
+    ["src.game.systems.market.choice.feedback"] = {
       emit_buy_failed = function(player, entry, reason, body)
         start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
       end,
     },
-    ["src.game.systems.market.application.paid_purchase_callback"] = {
+    ["src.game.systems.market.purchase.paid_purchase_callback"] = {
       handle = function() end,
     },
     ["src.game.systems.market.ports.paid_purchase_port"] = {
@@ -768,8 +768,8 @@ end
 local function _test_handle_paid_purchase_non_release_build()
   local start_calls = {}
   local warn_calls = {}
-  _reload_module("src.game.systems.market.application.purchase", {
-    ["src.game.systems.market.application.context"] = {
+  _reload_module("src.game.systems.market.purchase.core", {
+    ["src.game.systems.market.query.context"] = {
       entry_by_id = function(product_id)
         return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
       end,
@@ -780,22 +780,22 @@ local function _test_handle_paid_purchase_non_release_build()
         return currency == "金豆"
       end,
     },
-    ["src.game.systems.market.application.purchase_policy"] = {
+    ["src.game.systems.market.purchase.policy"] = {
       validate_entry = function()
         return { ok = true }
       end,
     },
-    ["src.game.systems.market.application.local_purchase"] = {
+    ["src.game.systems.market.purchase.local_purchase"] = {
       execute = function()
         error("local purchase should not run for paid currency")
       end,
     },
-    ["src.game.systems.market.application.feedback"] = {
+    ["src.game.systems.market.choice.feedback"] = {
       emit_buy_failed = function(player, entry, reason, body)
         start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
       end,
     },
-    ["src.game.systems.market.application.paid_purchase_callback"] = {
+    ["src.game.systems.market.purchase.paid_purchase_callback"] = {
       handle = function() end,
     },
     ["src.game.systems.market.ports.paid_purchase_port"] = {
@@ -822,8 +822,8 @@ end
 
 local function _test_handle_paid_purchase_success_path()
   local start_calls = {}
-  _reload_module("src.game.systems.market.application.purchase", {
-    ["src.game.systems.market.application.context"] = {
+  _reload_module("src.game.systems.market.purchase.core", {
+    ["src.game.systems.market.query.context"] = {
       entry_by_id = function(product_id)
         return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
       end,
@@ -834,20 +834,20 @@ local function _test_handle_paid_purchase_success_path()
         return currency == "金豆"
       end,
     },
-    ["src.game.systems.market.application.purchase_policy"] = {
+    ["src.game.systems.market.purchase.policy"] = {
       validate_entry = function()
         return { ok = true }
       end,
     },
-    ["src.game.systems.market.application.local_purchase"] = {
+    ["src.game.systems.market.purchase.local_purchase"] = {
       execute = function()
         error("local purchase should not run for paid currency")
       end,
     },
-    ["src.game.systems.market.application.feedback"] = {
+    ["src.game.systems.market.choice.feedback"] = {
       emit_buy_failed = function() end,
     },
-    ["src.game.systems.market.application.paid_purchase_callback"] = {
+    ["src.game.systems.market.purchase.paid_purchase_callback"] = {
       handle = function() end,
     },
     ["src.game.systems.market.ports.paid_purchase_port"] = {
@@ -872,22 +872,22 @@ end
 local function _test_handle_paid_purchase_various_truthy_flags()
   local flags_to_test = { true, 1, "1", "true", "TRUE" }
   for _, flag in ipairs(flags_to_test) do
-    local result = _reload_module("src.game.systems.market.application.purchase", {
-      ["src.game.systems.market.application.context"] = {
+    local result = _reload_module("src.game.systems.market.purchase.core", {
+      ["src.game.systems.market.query.context"] = {
         entry_by_id = function() return { kind = "item", currency = "金豆", name = "Test" } end,
         entry_currency = function(e) return e.currency end,
         is_paid_currency = function() return true end,
       },
-      ["src.game.systems.market.application.purchase_policy"] = {
+      ["src.game.systems.market.purchase.policy"] = {
         validate_entry = function() return { ok = true } end,
       },
-      ["src.game.systems.market.application.local_purchase"] = {
+      ["src.game.systems.market.purchase.local_purchase"] = {
         execute = function() error("should not call local") end,
       },
-      ["src.game.systems.market.application.feedback"] = {
+      ["src.game.systems.market.choice.feedback"] = {
         emit_buy_failed = function() end,
       },
-      ["src.game.systems.market.application.paid_purchase_callback"] = {
+      ["src.game.systems.market.purchase.paid_purchase_callback"] = {
         handle = function() end,
       },
       ["src.game.systems.market.ports.paid_purchase_port"] = {

@@ -199,18 +199,24 @@ T0
 - **location**: `tests/**`
 - **description**: 按 T0 的映射表一次性替换测试中的 `require(...)`、`package.loaded[...]`、`_reload_module(...)`、`_load_fresh(...)`、stub key 与帮助函数字符串，避免边改边猜。
 - **validation**: `tests/**` 不再出现旧路径；以下代表性 suite 通过：`suites.presentation.presentation_ui_event_bindings`、`suites.presentation.presentation_ui_interaction`、`suites.presentation.gameplay_t5_characterization`、`suites.gameplay.gameplay_turn_flow_and_interrupts`、`suites.gameplay.gameplay_t2_characterization`、`suites.domain.market`、`suites.domain.paid_currency`、`suites.gameplay.gameplay_t4_characterization`。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
-- **files edited/created**:
+  - `2026-03-13 23:41 +0800` 按 T0 映射一次性替换 `tests/**` 中的 `require`、`package.loaded`、`_reload_module`、`_load_fresh` 与 stub key 字符串，覆盖 presentation/turn/market 三大家族。
+  - `2026-03-13 23:41 +0800` 补齐回归中暴露的兼容性缺口：`landing_visual_hold.hold_state_for_game`/`release(game)` 兼容入口、`runtime/ui_sync_defaults.lua` 缺省填充与 gate 行为、`waits/ui_sync.lua` 的 nil-turn 防护、`phases/move.lua` 的 `set_player_status` 回退。
+  - `2026-03-13 23:41 +0800` 验证：提取 `tests/**/*.lua` 中所有被引用的 `src.*` 字符串后，旧模块列表命中为零；代表性 8 个 suite 合并运行通过（329 checks passed）。
+- **files edited/created**: `.agents/plan.md`, `tests/suites/architecture/architecture_guard_contract.lua`, `tests/suites/architecture/guard_scripts_contract.lua`, `tests/suites/architecture/intent_output_contract.lua`, `tests/suites/architecture/usecase_boundary_contract.lua`, `tests/suites/domain/chance.lua`, `tests/suites/domain/item.lua`, `tests/suites/domain/landing.lua`, `tests/suites/domain/market.lua`, `tests/suites/domain/paid_currency.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_coroutine.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`, `tests/suites/gameplay/gameplay_t2_characterization.lua`, `tests/suites/gameplay/gameplay_t2_enabled_cases.lua`, `tests/suites/gameplay/gameplay_t4_characterization.lua`, `tests/suites/presentation/_presentation_action_status_choice_and_target_cases.lua`, `tests/suites/presentation/_presentation_action_status_market_and_anim_cases.lua`, `tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua`, `tests/suites/presentation/gameplay_t5_characterization.lua`, `tests/suites/presentation/presentation_market_confirm_flow.lua`, `tests/suites/presentation/presentation_move_anim.lua`, `tests/suites/presentation/presentation_player_colors.lua`, `tests/suites/presentation/presentation_popup_visibility.lua`, `tests/suites/presentation/presentation_ui_event_bindings.lua`, `tests/suites/presentation/presentation_ui_interaction.lua`, `tests/suites/presentation/presentation_ui_model_dispatch.lua`, `tests/suites/presentation/presentation_ui_role_slots.lua`, `tests/suites/presentation/presentation_ui_timing_anim.lua`, `tests/suites/presentation/presentation_ui_touch_policy.lua`, `tests/suites/presentation/ui_gate_contract.lua`, `tests/suites/presentation/ui_runtime_state_contract.lua`, `tests/suites/runtime/misc.lua`, `tests/suites/runtime/narrow_runtime_ports_contract.lua`, `tests/support/shared_support.lua`, `src/core/state_access/landing_visual_hold.lua`, `src/game/flow/turn/phases/move.lua`, `src/game/flow/turn/runtime/ui_sync_defaults.lua`, `src/game/flow/turn/waits/ui_sync.lua`
 
 ### T7: 文档与目录清理
 - **depends_on**: [T6]
 - **location**: `docs/architecture/boundaries.md`；`docs/architecture/subsystems.md`；被清空的旧目录
 - **description**: 更新文档中的路径示例与目录语义；删除旧空目录；明确不修改 `scripts/arch/config.lua`。
 - **validation**: 文档只引用新路径；旧目录树不再残留 `canvas_specs/`、`view/`、`choice_screen_service/`、`market/application/` 等已退休目录。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
-- **files edited/created**:
+  - `2026-03-13 23:41 +0800` 更新 `docs/architecture/boundaries.md` 中的 loop port 示例与放置速查，把 `src/game/flow/turn/loop_ports.lua` 统一改为 `src/game/flow/turn/runtime/ports.lua`。
+  - `2026-03-13 23:41 +0800` 复扫 `docs/architecture/boundaries.md`、`docs/architecture/subsystems.md`，未发现旧路径示例；已退休目录 `canvas_specs/`、`view/`、`choice_screen_service/`、`market/application/` 均不存在。
+  - `2026-03-13 23:41 +0800` 保持 `scripts/arch/config.lua` 未修改。
+- **files edited/created**: `.agents/plan.md`, `docs/architecture/boundaries.md`
 
 ### T8: 全量护栏与残留验收
 - **depends_on**: [T7]

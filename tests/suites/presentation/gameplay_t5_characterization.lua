@@ -20,7 +20,7 @@ end
 -- ============================================
 
 local function _test_build_intent_returns_nil_when_choice_does_not_use_item_slots()
-  local item_slot_intents = _load_fresh("src.presentation.runtime.canvas_specs.base.item_slot_intents")
+  local item_slot_intents = _load_fresh("src.presentation.input.canvas_routes.item_slots")
   local state = {
     ui = { item_slots = { "slot1", "slot2" } }
   }
@@ -39,7 +39,7 @@ local function _test_build_intent_returns_nil_when_choice_does_not_use_item_slot
 end
 
 local function _test_build_intent_returns_ui_button_when_choice_uses_item_slots()
-  local item_slot_intents = _load_fresh("src.presentation.runtime.canvas_specs.base.item_slot_intents")
+  local item_slot_intents = _load_fresh("src.presentation.input.canvas_routes.item_slots")
   local state = {
     ui = { item_slots = { "slot1" } }
   }
@@ -60,7 +60,7 @@ local function _test_build_intent_returns_ui_button_when_choice_uses_item_slots(
 end
 
 local function _test_build_intent_handles_missing_ui_state()
-  local item_slot_intents = _load_fresh("src.presentation.runtime.canvas_specs.base.item_slot_intents")
+  local item_slot_intents = _load_fresh("src.presentation.input.canvas_routes.item_slots")
   local nodes = require("src.presentation.schema.canvas.base.nodes")
 
   -- State with nil ui, should fall back to nodes

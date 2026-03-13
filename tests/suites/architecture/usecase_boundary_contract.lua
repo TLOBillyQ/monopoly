@@ -4,10 +4,10 @@ local _with_patches = support.with_patches
 
 local bankruptcy_feedback_port = require("src.game.ports.bankruptcy_feedback_port")
 local turn_action_port = require("src.presentation.input.intent_dispatch.turn_action_port")
-local gameplay_loop_ports = require("src.game.flow.turn.loop_ports")
+local gameplay_loop_ports = require("src.game.flow.turn.runtime.ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local turn_roll = require("src.game.flow.turn.roll")
-local turn_move = require("src.game.flow.turn.move")
+local turn_roll = require("src.game.flow.turn.phases.roll")
+local turn_move = require("src.game.flow.turn.phases.move")
 
 local function _test_turn_action_port_resolve_defaults()
   local resolved = turn_action_port.resolve({}, nil)

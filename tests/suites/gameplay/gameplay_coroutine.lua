@@ -1,7 +1,7 @@
 local support = require("support.gameplay_support")
-local turn_engine = require("src.game.flow.turn.engine")
+local turn_engine = require("src.game.flow.turn.runtime.scheduler_runtime")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
-local await = require("src.game.flow.turn.await")
+local await = require("src.game.flow.turn.waits.await")
 local logger = require("src.core.utils.logger")
 
 ---------------------------------------------------------------------------
@@ -284,8 +284,8 @@ local function _test_await_choice_bridges_action_anim_into_wait_state()
     actor_role_id = g:current_player().id,
   })
 
-  local original_resolve_choice = require("src.game.flow.turn.decision").resolve_choice
-  require("src.game.flow.turn.decision").resolve_choice = function(game, choice, action)
+  local original_resolve_choice = require("src.game.flow.turn.runtime.decision").resolve_choice
+  require("src.game.flow.turn.runtime.decision").resolve_choice = function(game, choice, action)
     game.turn.action_anim = { seq = 7, kind = "move_effect" }
     return {
       after_action_anim = {
@@ -298,7 +298,7 @@ local function _test_await_choice_bridges_action_anim_into_wait_state()
   end
 
   local res = await.choice(session, { next_state = "post_action", next_args = { player = g:current_player() } })
-  require("src.game.flow.turn.decision").resolve_choice = original_resolve_choice
+  require("src.game.flow.turn.runtime.decision").resolve_choice = original_resolve_choice
 
   assert(res and res.next_state == "wait_action_anim", "choice should bridge action anim into wait_action_anim")
   assert(res.next_args and res.next_args.next_state == "move_followup", "choice should preserve move_followup target")
@@ -441,7 +441,7 @@ local function _test_turn_script_wait_move_anim_yields_and_resumes()
     end,
   }
 
-  local co = require("src.game.flow.turn.script").create(session)
+  local co = require("src.game.flow.turn.runtime.session_script").create(session)
   local ok1, yielded = coroutine.resume(co)
   assert(ok1 == true, "turn_script should enter wait_move_anim")
   assert(yielded and yielded.kind == "wait" and yielded.wait_state == "wait_move_anim",

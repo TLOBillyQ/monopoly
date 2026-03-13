@@ -14,11 +14,11 @@ end
 
 local function _reload_market()
   package.loaded["src.game.systems.market"] = nil
-  package.loaded["src.game.systems.market.application.context"] = nil
-  package.loaded["src.game.systems.market.application.eligibility"] = nil
-  package.loaded["src.game.systems.market.application.purchase"] = nil
-  package.loaded["src.game.systems.market.application.auto"] = nil
-  package.loaded["src.game.systems.market.application.choice"] = nil
+  package.loaded["src.game.systems.market.query.context"] = nil
+  package.loaded["src.game.systems.market.query.eligibility"] = nil
+  package.loaded["src.game.systems.market.purchase.core"] = nil
+  package.loaded["src.game.systems.market.auto"] = nil
+  package.loaded["src.game.systems.market.choice.builder"] = nil
   return require("src.game.systems.market")
 end
 

@@ -47,14 +47,17 @@ function tick_ui_sync.log_once(state, level, key, ...)
 end
 
 function tick_ui_sync.update_countdown(game, state)
+  local turn = game and game.turn or nil
+  if not turn then
+    return
+  end
   local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
   local seconds = 0
   local active = false
   local gate = tick_timeout.resolve_modal_gate(state)
-  local pending_choice = game and game.turn and game.turn.pending_choice or runtime_state.get_pending_choice(state)
-  if game.turn and game.turn.detained_wait_active then
+  local pending_choice = turn.pending_choice or runtime_state.get_pending_choice(state)
+  if turn.detained_wait_active then
     active = true
-    local turn = game.turn
     local remaining = (turn.detained_wait_seconds or 0) - (turn.detained_wait_elapsed or 0)
     if remaining < 0 then
       remaining = 0
@@ -103,13 +106,13 @@ function tick_ui_sync.update_countdown(game, state)
   end
   if seconds ~= state.countdown_last then
     state.countdown_last = seconds
-    game.turn.countdown_seconds = seconds
+    turn.countdown_seconds = seconds
     game.dirty.turn_countdown = true
     game.dirty.any = true
   end
   if active ~= state.countdown_active_last then
     state.countdown_active_last = active
-    game.turn.countdown_active = active
+    turn.countdown_active = active
     game.dirty.turn_countdown = true
     game.dirty.any = true
   end

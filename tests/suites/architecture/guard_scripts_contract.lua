@@ -108,7 +108,7 @@ end
 local function _test_guard_scripts_allow_clean_fixtures()
     _with_fixture({
         ["src/clean.lua"] = "local state = {}\nstate.output = true\nreturn state\n",
-        ["tests/clean.lua"] = 'return require("src.game.flow.turn.engine")\n',
+        ["tests/clean.lua"] = 'return require("src.game.flow.turn.runtime.scheduler_runtime")\n',
         ["scripts/clean.lua"] = "return 1\n",
     }, function()
         local dep_result = dep_rules.run({

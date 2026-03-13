@@ -1,6 +1,6 @@
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
-local ui_view = require("src.presentation.runtime.view")
+local ui_view = require("src.presentation.runtime.ui_runtime")
 
 local function _wrap_ui_refs(image_refs)
   return {

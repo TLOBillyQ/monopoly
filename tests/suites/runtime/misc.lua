@@ -361,12 +361,12 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
       value = function() end,
     },
     {
-      target = require("src.presentation.runtime.view"),
+      target = require("src.presentation.runtime.ui_runtime"),
       key = "init_ui_assets",
       value = function() end,
     },
     {
-      target = require("src.presentation.runtime.view"),
+      target = require("src.presentation.runtime.ui_runtime"),
       key = "capture_player_colors",
       value = function() end,
     },
@@ -940,7 +940,7 @@ local function _test_eggy_paid_gateway_callback_missing_entry()
 
   with_patches({
     {
-      target = require("src.game.systems.market.application.context"),
+      target = require("src.game.systems.market.query.context"),
       key = "entry_by_id",
       value = function()
         return nil
@@ -983,7 +983,7 @@ local function _test_eggy_paid_gateway_callback_success_with_on_purchase()
 
   with_patches({
     {
-      target = require("src.game.systems.market.application.context"),
+      target = require("src.game.systems.market.query.context"),
       key = "entry_by_id",
       value = function(id)
         if id == 1001 then return mock_entry end
@@ -1012,7 +1012,7 @@ local function _test_eggy_paid_gateway_callback_success_without_on_purchase()
 
   with_patches({
     {
-      target = require("src.game.systems.market.application.context"),
+      target = require("src.game.systems.market.query.context"),
       key = "entry_by_id",
       value = function(id)
         if id == 1001 then return mock_entry end

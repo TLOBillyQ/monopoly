@@ -14,19 +14,19 @@ local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
 local event_handlers = require("src.presentation.runtime.event_handlers")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
-local dispatch = require("src.game.flow.turn.dispatch")
+local dispatch = require("src.game.flow.turn.dispatch.action_dispatcher")
 local runtime_port = require("src.presentation.runtime.ui")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
-local choice_openers = require("src.presentation.runtime.controllers.choice_screen_service.openers")
+local choice_openers = require("src.presentation.runtime.controllers.choice_screens.openers")
 local market_view = require("src.presentation.view.render.market")
 local market_layout = require("src.presentation.schema.market_layout")
 local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
-local ui_view = require("src.presentation.runtime.view")
+local ui_view = require("src.presentation.runtime.ui_runtime")
 local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
 local ui_status_3d_layer = require("src.presentation.view.render.status3d")
 local action_anim = require("src.presentation.view.render.action_anim")
 local move_anim = require("src.presentation.view.render.move_anim")
-local runtime_cls = require("src.game.flow.turn.engine")
+local runtime_cls = require("src.game.flow.turn.runtime.scheduler_runtime")
 local turn_effects = require("src.presentation.view.widgets.turn_effects")
 local popup_renderer = require("src.presentation.runtime.controllers.popup_controller")
 local market_modal_renderer = require("src.presentation.runtime.controllers.market_controller")
@@ -606,7 +606,7 @@ local function _test_target_screen_uses_labels_only_and_hides_projection_with_sl
     _assert_eq(nodes["位置-槽位7投影"].visible, true, "slot7 projection should be visible with populated slot")
     _assert_eq(nodes["位置-槽位7投影"].disabled, true, "slot7 projection should stay non-interactive")
 
-    local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
+    local common = require("src.presentation.runtime.controllers.choice_screens.helpers")
     common.hide_choice_screens(state.ui)
 
     _assert_eq(nodes["位置-槽位1文本"].visible, false, "hide_choice_screens should hide slot label")
@@ -1226,7 +1226,7 @@ local function _test_ui_event_router_rejects_action_log_without_role()
 end
 
 local function _test_secondary_confirm_copy_item_phase_selected_option()
-  local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
+  local common = require("src.presentation.runtime.controllers.choice_screens.helpers")
   local choice = {
     kind = "item_phase_choice",
     route_key = "base_inline",
@@ -1248,7 +1248,7 @@ local function _test_secondary_confirm_copy_item_phase_selected_option()
 end
 
 local function _test_secondary_confirm_copy_land_actions()
-  local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
+  local common = require("src.presentation.runtime.controllers.choice_screens.helpers")
   local choice = {
     kind = "landing_optional_effect",
     options = {
@@ -1290,7 +1290,7 @@ local function _test_secondary_confirm_copy_land_actions()
 end
 
 local function _test_secondary_confirm_copy_generic_pre_confirm()
-  local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
+  local common = require("src.presentation.runtime.controllers.choice_screens.helpers")
   local choice = {
     kind = "remote_dice_value",
     title = "遥控骰子",
@@ -1305,7 +1305,7 @@ local function _test_secondary_confirm_copy_generic_pre_confirm()
 end
 
 local function _test_secondary_confirm_prefers_usecase_confirm_copy()
-  local common = require("src.presentation.runtime.controllers.choice_screen_service.common")
+  local common = require("src.presentation.runtime.controllers.choice_screens.helpers")
   local choice = {
     kind = "landing_optional_effect",
     confirm_title = "不会被读取",

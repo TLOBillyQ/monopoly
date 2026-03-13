@@ -7,7 +7,7 @@ local runtime_constants = require("src.core.config.runtime_constants")
 local move_anim = require("src.presentation.view.render.move_anim")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local anim_ports = require("src.presentation.runtime.ports.anim_ports")
-local ui_view = require("src.presentation.runtime.view")
+local ui_view = require("src.presentation.runtime.ui_runtime")
 local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
 local vec3 = require("fixtures.vec3")
 

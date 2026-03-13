@@ -122,6 +122,10 @@ function landing_visual_hold.start(game)
   return true
 end
 
+function landing_visual_hold.hold_state_for_game(game, opts)
+  return landing_visual_hold.start(game, opts)
+end
+
 function landing_visual_hold.is_active_game(game)
   return game and game.turn and game.turn.landing_visual_hold_active == true or false
 end
@@ -278,6 +282,9 @@ function landing_visual_hold.with_flushing(state, fn)
 end
 
 function landing_visual_hold.release(state, game)
+  if game == nil and state and state.turn then
+    return landing_visual_hold.clear_game(state)
+  end
   if state and game then
     landing_visual_hold.sync_state_from_game(state, game)
   end

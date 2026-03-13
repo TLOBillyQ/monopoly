@@ -401,7 +401,7 @@ end
 
 -- T4 characterization tests for eligibility helpers
 local function _test_split_entries_by_buyable_separates_entries()
-  local eligibility = require("src.game.systems.market.application.eligibility")
+  local eligibility = require("src.game.systems.market.query.eligibility")
   local g = _new_game()
   local p = g:current_player()
 
@@ -417,7 +417,7 @@ local function _test_split_entries_by_buyable_separates_entries()
 end
 
 local function _test_append_visible_entries_respects_limit()
-  local eligibility = require("src.game.systems.market.application.eligibility")
+  local eligibility = require("src.game.systems.market.query.eligibility")
   local g = _new_game()
   local p = g:current_player()
 
@@ -434,7 +434,7 @@ local function _test_append_visible_entries_respects_limit()
 end
 
 local function _test_append_visible_entries_without_limit_adds_all()
-  local eligibility = require("src.game.systems.market.application.eligibility")
+  local eligibility = require("src.game.systems.market.query.eligibility")
   local g = _new_game()
 
   local entries = eligibility.sorted_entries()
@@ -448,7 +448,7 @@ end
 
 -- T4 characterization tests for market context
 local function _test_context_entry_name_returns_name()
-  local context = require("src.game.systems.market.application.context")
+  local context = require("src.game.systems.market.query.context")
   local market_cfg = require("Config.generated.market")
 
   if #market_cfg > 0 then
