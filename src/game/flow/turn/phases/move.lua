@@ -1,6 +1,6 @@
 local movement = require("src.game.systems.movement")
 local vehicle_feature = require("src.game.systems.vehicle")
-local move_followup = require("src.game.flow.turn.move_followup")
+local move_followup = require("src.game.flow.turn.phases.move_followup")
 
 local function _build_move_args(player, raw_total, extra)
   local out = {

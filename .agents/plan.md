@@ -160,9 +160,12 @@ T0
 - **location**: `src/game/flow/turn/**`（排除 `src/game/flow/turn/loop.lua`）
 - **description**: 完成 `dispatch/`、`phases/`、`runtime/`、`waits/`、`auto/`、`policies/` 重组，以及 `session_script.lua`、`scheduler_runtime.lua` 等改名；只修正 turn 家族内部引用，`loop.lua` 留给集成任务统一收口。
 - **validation**: 新目录结构与命名全部落位；除 `loop.lua` 外，turn 家族内部不再引用旧 turn 路径。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
-- **files edited/created**:
+  - `2026-03-13 23:28 +0800` 完成 `src/game/flow/turn/**` 重组：`dispatch/`、`phases/`、`runtime/`、`waits/`、`auto/`、`policies/` 六个子目录落位，`script.lua -> runtime/session_script.lua`、`engine.lua -> runtime/scheduler_runtime.lua` 等映射全部生效。
+  - `2026-03-13 23:28 +0800` 修正 turn 家族内部 require 到新路径，限定仅改 `src/game/flow/turn/**`（未改 `src/game/flow/turn/loop.lua`）。
+  - `2026-03-13 23:28 +0800` 验证：`lua -e 'require(\"src.game.flow.turn.runtime.scheduler_runtime\"); require(\"src.game.flow.turn.runtime.session_script\"); require(\"src.game.flow.turn.dispatch.action_dispatcher\"); require(\"src.game.flow.turn.phases.registry\"); require(\"src.game.flow.turn.waits.timeout\")'` 通过；旧路径严格匹配扫描仅剩 `loop.lua` 命中。
+- **files edited/created**: `.agents/plan.md`, `src/game/flow/turn/auto/choice_auto_policy.lua`, `src/game/flow/turn/auto/context.lua`, `src/game/flow/turn/auto/item_play_context.lua`, `src/game/flow/turn/auto/runner.lua`, `src/game/flow/turn/dispatch/action_dispatcher.lua`, `src/game/flow/turn/dispatch/item_slot_data.lua`, `src/game/flow/turn/dispatch/validator.lua`, `src/game/flow/turn/phases/land.lua`, `src/game/flow/turn/phases/move.lua`, `src/game/flow/turn/phases/move_followup.lua`, `src/game/flow/turn/phases/registry.lua`, `src/game/flow/turn/phases/roll.lua`, `src/game/flow/turn/phases/start.lua`, `src/game/flow/turn/policies/action_gate.lua`, `src/game/flow/turn/policies/camera_policy.lua`, `src/game/flow/turn/policies/role_control_policy.lua`, `src/game/flow/turn/policies/timer_policy.lua`, `src/game/flow/turn/runtime/anim.lua`, `src/game/flow/turn/runtime/decision.lua`, `src/game/flow/turn/runtime/logger.lua`, `src/game/flow/turn/runtime/loop_runtime.lua`, `src/game/flow/turn/runtime/ports.lua`, `src/game/flow/turn/runtime/scheduler_runtime.lua`, `src/game/flow/turn/runtime/session_script.lua`, `src/game/flow/turn/runtime/tick_flow.lua`, `src/game/flow/turn/runtime/tick_steps.lua`, `src/game/flow/turn/runtime/ui_sync_defaults.lua`, `src/game/flow/turn/waits/await.lua`, `src/game/flow/turn/waits/choice_timeout.lua`, `src/game/flow/turn/waits/timeout.lua`, `src/game/flow/turn/waits/ui_gate.lua`, `src/game/flow/turn/waits/ui_sync.lua`
 
 ### T4: `market` 源文件搬迁与内部归位
 - **depends_on**: [T0]

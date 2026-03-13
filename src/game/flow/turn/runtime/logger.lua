@@ -1,4 +1,4 @@
-local turn_decision = require("src.game.flow.turn.decision")
+local turn_decision = require("src.game.flow.turn.runtime.decision")
 
 local turn_logger = {}
 

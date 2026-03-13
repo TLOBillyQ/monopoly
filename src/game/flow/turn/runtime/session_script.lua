@@ -1,5 +1,5 @@
-local turn_logger = require("src.game.flow.turn.logger")
-local await = require("src.game.flow.turn.await")
+local turn_logger = require("src.game.flow.turn.runtime.logger")
+local await = require("src.game.flow.turn.waits.await")
 
 local turn_script = {}
 local WAIT_HANDLERS = {
@@ -16,7 +16,7 @@ local function _resolve_phase_handler(phases, state_name)
   if handler ~= nil or state_name ~= "move_followup" then
     return handler
   end
-  return require("src.game.flow.turn.move_followup").run
+  return require("src.game.flow.turn.phases.move_followup").run
 end
 
 local function _is_callable(v)

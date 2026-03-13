@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local item_phase = require("src.game.systems.items.phase")
-local item_auto_play_context = require("src.game.flow.turn.item_auto_play_context")
+local item_auto_play_context = require("src.game.flow.turn.auto.item_play_context")
 local monopoly_event = require("src.core.events.monopoly_events")
 local gameplay_rules = require("src.core.config.gameplay_rules")
 

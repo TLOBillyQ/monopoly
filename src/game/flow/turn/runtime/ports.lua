@@ -1,6 +1,6 @@
 local gameplay_loop_ports = {}
 local number_utils = require("src.core.utils.number_utils")
-local ui_sync_defaults = require("src.game.flow.turn.loop_ui_sync_defaults")
+local ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 local _tick_timeout = nil
 local _tick_ui_sync = nil
@@ -12,14 +12,14 @@ local function _load_tick_timeout()
   if _tick_timeout then
     return _tick_timeout
   end
-  _tick_timeout = require("src.game.flow.turn.tick_timeout")
+  _tick_timeout = require("src.game.flow.turn.waits.timeout")
   return _tick_timeout
 end
 local function _load_tick_ui_sync()
   if _tick_ui_sync then
     return _tick_ui_sync
   end
-  _tick_ui_sync = require("src.game.flow.turn.tick_ui_sync")
+  _tick_ui_sync = require("src.game.flow.turn.waits.ui_sync")
   return _tick_ui_sync
 end
 local port_groups = {
