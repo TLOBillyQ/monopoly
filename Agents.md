@@ -11,6 +11,7 @@
 | 任务 | 文档 |
 |------|------|
 | 理解架构边界与目录语义 | `docs/architecture/boundaries.md` + `docs/architecture/layer-model.md` |
+| 理解测试车道、静态分析职责与预估耗时 | `docs/architecture/quality_map.md` |
 | 使用静态架构扫描工具 | `docs/architecture/arch_view.md` |
 | 查看代码质量报告 | `docs/architecture/crap_report.md`、`docs/architecture/health_signals.md` |
 | 操作 UI 组件 | `docs/eggy/ui_manager_lib.md` |
