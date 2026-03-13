@@ -151,9 +151,12 @@ T0
 - **location**: `src/presentation/runtime/**`；`src/presentation/input/**`；`src/app/bootstrap/ui_bootstrap.lua`
 - **description**: 改写 `presentation` 侧剩余生产代码调用点到新路径；`src/app/bootstrap/game_startup.lua` 先不动，留给集成任务统一处理，避免和 turn 重构冲突。
 - **validation**: `src/presentation/**` 与 `src/app/bootstrap/ui_bootstrap.lua` 不再出现旧 presentation 路径；`src/presentation/input/canvas_routes/**` 不新增对 `src.presentation.runtime.*` 的依赖。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
-- **files edited/created**:
+  - `2026-03-13 23:33 +0800` 改写 `src/presentation/runtime/**` 与 `src/app/bootstrap/ui_bootstrap.lua` 中剩余的 production 调用点：`canvas_route_registry`、`ui_runtime*`、`choice_screens.*` 全部切到新路径。
+  - `2026-03-13 23:33 +0800` 保持 `src/app/bootstrap/game_startup.lua` 不动，避免与 T5 的 turn/market 集成点冲突。
+  - `2026-03-13 23:33 +0800` 验证：`rg -n "src\.presentation\.runtime\.(canvas_specs|canvas_registry|view|controllers\.choice_screen_service)" src/presentation src/app/bootstrap/ui_bootstrap.lua` 结果为零；`rg -n "src\.presentation\.runtime\." src/presentation/input/canvas_routes src/presentation/input/canvas_route_registry.lua` 结果为零；`lua -e 'require("src.presentation.input.canvas_route_registry"); require("src.presentation.runtime.ui_runtime"); require("src.presentation.runtime.controllers.choice_screens.openers"); require("src.presentation.runtime.canvas_event_router"); require("src.app.bootstrap.ui_bootstrap")'` 通过。
+- **files edited/created**: `.agents/plan.md`, `src/app/bootstrap/ui_bootstrap.lua`, `src/presentation/runtime/canvas_event_router.lua`, `src/presentation/runtime/controllers/modal_controller.lua`, `src/presentation/runtime/ports/anim_ports.lua`, `src/presentation/runtime/ports/debug_ports.lua`, `src/presentation/runtime/ports/modal_ports.lua`, `src/presentation/runtime/ports/state_ports.lua`, `src/presentation/runtime/ports/ui_sync/ui_model_sync.lua`, `src/presentation/runtime/ports/view_command_ports.lua`, `src/presentation/input/intent_dispatch/view_command.lua`
 
 ### T3: `turn` 源文件搬迁与内部归位
 - **depends_on**: [T0]
@@ -184,9 +187,12 @@ T0
 - **location**: `src/game/flow/turn/loop.lua`；`src/app/**`；`src/game/core/runtime/composition_root.lua`；其余仍指向旧路径的 `src/game/**`
 - **description**: 统一处理跨主线桥接文件：`loop.lua` 同时切 turn 内部新路径和 market 新路径；`game_startup.lua` 同时切 `ui_runtime` 与 `auto.runner`；`composition_root.lua` 切 `scheduler_runtime` 与 `phases.registry`；支付网关切 market query 路径。此任务之后，`src/**` 应完全脱离旧路径。
 - **validation**: `rg` 扫描 `src/**` 对三大家族旧路径应为零；关键生产模块可被加载；不新增任何跨层依赖。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
-- **files edited/created**:
+  - `2026-03-13 23:33 +0800` 统一改写桥接文件：`src/game/flow/turn/loop.lua` 切到 `dispatch.action_dispatcher`、`runtime.ports`、`runtime.loop_runtime`、`auto.context`、`runtime.tick_flow`、`policies.timer_policy` 与 `market.purchase.core`。
+  - `2026-03-13 23:33 +0800` 同步改写 `src/app/bootstrap/game_startup.lua`、`src/app/bootstrap/game_runtime_bootstrap.lua`、`src/game/core/runtime/composition_root.lua`、`src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`，让 `src/**` 脱离旧 presentation/turn/market 路径。
+  - `2026-03-13 23:33 +0800` 验证：提取 `src/**/*.lua` 中所有被引用的 `src.*` 字符串后，旧模块列表命中为零；`lua -e 'require("src.app.bootstrap.game_runtime_bootstrap"); require("src.app.bootstrap.game_startup"); require("src.game.core.runtime.composition_root"); require("src.game.flow.turn.loop"); require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")'` 通过。
+- **files edited/created**: `.agents/plan.md`, `src/app/bootstrap/game_runtime_bootstrap.lua`, `src/app/bootstrap/game_startup.lua`, `src/game/core/runtime/composition_root.lua`, `src/game/flow/turn/loop.lua`, `src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`
 
 ### T6: 测试、reload helper、stub 字符串改写
 - **depends_on**: [T5]

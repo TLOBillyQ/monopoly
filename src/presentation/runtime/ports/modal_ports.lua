@@ -1,5 +1,5 @@
 local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
-local choice_openers = require("src.presentation.runtime.controllers.choice_screen_service.openers")
+local choice_openers = require("src.presentation.runtime.controllers.choice_screens.openers")
 
 local modal_ports = {}
 

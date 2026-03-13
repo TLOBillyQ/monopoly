@@ -3,7 +3,7 @@ local runtime_state = require("src.core.state_access.runtime_state")
 local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
 local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_ui_state")
 local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
-local main_view = require("src.presentation.runtime.view")
+local main_view = require("src.presentation.runtime.ui_runtime")
 
 local ui_model_sync = {}
 

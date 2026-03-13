@@ -121,7 +121,7 @@ local function _fallback_dispatch(state, intent)
   end
   local market_controller = _resolve_loaded("src.presentation.runtime.controllers.market_controller")
   local modal_controller = _resolve_loaded("src.presentation.runtime.controllers.modal_controller")
-  local debug_view = _resolve_loaded("src.presentation.runtime.view.debug")
+  local debug_view = _resolve_loaded("src.presentation.runtime.ui_runtime.debug")
   local target_choice_effects = _resolve_loaded("src.presentation.runtime.controllers.target_choice_effects")
   local handlers = {
     market_select = function()

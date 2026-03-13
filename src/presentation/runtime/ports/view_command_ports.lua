@@ -8,7 +8,7 @@ local actor_context = require("src.presentation.runtime.actor_context")
 local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
 local market_controller = require("src.presentation.runtime.controllers.market_controller")
 local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
-local debug_view = require("src.presentation.runtime.view.debug")
+local debug_view = require("src.presentation.runtime.ui_runtime.debug")
 
 local view_command_ports = {}
 
