@@ -240,7 +240,7 @@ function common.build_list_command(root)
     local normalized_root = common.normalize_path(root)
     if common.is_windows() then
         local win_root = normalized_root:gsub("/", "\\")
-        return 'dir /b /s /a-d "' .. win_root .. '\\*.lua" 2>nul'
+        return 'cmd /c dir /b /s /a-d "' .. win_root .. '\\*.lua" 2>nul'
     end
     return 'find "' .. normalized_root .. '" -type f -name "*.lua" 2>/dev/null'
 end
@@ -300,12 +300,18 @@ function common.ensure_dir(path)
     local cmd
     if common.is_windows() then
         local win_path = normalized:gsub("/", "\\")
-        cmd = 'mkdir "' .. win_path .. '" >nul 2>nul'
+        cmd = 'cmd /c if not exist "' .. win_path .. '" mkdir "' .. win_path .. '"'
     else
         cmd = 'mkdir -p "' .. normalized .. '"'
     end
     local ok = os.execute(cmd)
     if ok == nil or ok == false then
+        local probe = io.open(common.join_path(normalized, ".dir_probe"), "w")
+        if probe then
+            probe:close()
+            os.remove(common.join_path(normalized, ".dir_probe"))
+            return true
+        end
         return nil, "failed to create directory: " .. normalized
     end
     return true
@@ -318,7 +324,7 @@ end
 function common.build_open_command(path)
     local normalized = common.normalize_path(path)
     if common.is_windows() then
-        return 'start "" "' .. normalized:gsub("/", "\\") .. '"'
+        return 'cmd /c start "" "' .. normalized:gsub("/", "\\") .. '"'
     end
     if common.is_macos() then
         return 'open "' .. normalized .. '"'

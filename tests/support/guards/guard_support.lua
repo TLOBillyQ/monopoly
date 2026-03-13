@@ -7,7 +7,7 @@ end
 function M.build_list_command(root)
   if M.is_windows() then
     local win_root = root:gsub("/", "\\")
-    return 'dir /b /s /a-d "' .. win_root .. '\\*.lua" 2>nul'
+    return 'cmd /c dir /b /s /a-d "' .. win_root .. '\\*.lua" 2>nul'
   end
   return 'find "' .. root .. '" -type f -name "*.lua" 2>/dev/null'
 end

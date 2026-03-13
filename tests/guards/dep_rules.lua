@@ -19,7 +19,7 @@ local rules = {
     description = "runtime must not depend on retired TurnFlow",
   },
   {
-    roots = { "src/presentation/view/canvas/base" },
+    roots = { "src/presentation/schema/canvas/base" },
     forbidden = {
       "canvas.always_show", "canvas.market", "canvas.secondary_confirm",
       "canvas.remote_choice", "canvas.player_choice", "canvas.popup",

@@ -128,3 +128,44 @@
   - 当前 tmp/crap_report.json 仅用于诊断，不作为最终基线；最终基线必须在修复 behavior 失败 case 后重生。
   - 不新增外部依赖，不需要引入新的第三方库或宿主接口；全部实现基于现有 Lua 5.4 与仓库内测试基础设施。
   - Saved 的 .agents/plan.md 必须初始化为活文档，并持续维护 进度、意外与发现、决策日志、结果与复盘 四个章节。
+
+  ## 进度
+
+  - [x] (2026-03-13 02:06Z) 读取 `parallel-task` 技能、当前 `.agents/plan.md`、harness 约束，并确认本次按 full plan 执行。
+  - [x] (2026-03-13 02:12Z) 重新验证 `T1` 的真实入口：`lua tests/behavior.lua` 与 `MONO_REGRESSION_MODE=release_trimmed lua tests/behavior.lua` 当前均通过，原计划中记录的 `wait_action_anim` presentation 失败在当前工作树未复现。
+  - [x] (2026-03-13 02:16Z) 发现 `T1` 当前真正阻塞项变为 Windows shell 兼容问题：`lua tests/contract.lua` 因 `scripts/arch/arch_view/common.lua` 建目录失败而红；`lua tests/guard.lua` 因 `tests/support/guards/guard_support.lua` 的 `dir` 调用与 `tests/guards/dep_rules.lua` 的过期 root 而红。
+  - [x] (2026-03-13 02:18Z) 修复 Windows shell 兼容：`scripts/arch/arch_view/common.lua` 的列目录/建目录/打开 viewer 命令改为显式 `cmd /c`；`tests/support/guards/guard_support.lua` 的列目录命令改为显式 `cmd /c`；`tests/guards/dep_rules.lua` 将失效 root 从 `src/presentation/view/canvas/base` 改到现存 `src/presentation/schema/canvas/base`。
+  - [x] (2026-03-13 02:21Z) 回归验证通过：`lua tests/contract.lua` 绿，`lua tests/guard.lua` 绿。
+  - [ ] (2026-03-13 02:24Z) `T1` 剩余：重新生成双 lane CRAP 基线并落盘 `.agents/crap_baseline.json` / `.agents/crap_baseline.md`。现状是 `lua scripts/crap.lua report --lane behavior --lane contract --out tmp/crap_report.json --top 300` 在当前 Windows 环境中长时间不返回，旧 `tmp/crap_report.json` 时间戳未更新。
+  - [ ] `T2` 到 `T7` 尚未启动；继续保持 Wave 1 串行约束。
+
+  ## 意外与发现
+
+  - 观察：原计划摘要里写的 `behavior` 失败在当前工作树上已经不是事实。
+    证据：`lua tests/behavior.lua` 输出 `All regression checks passed (990)`；`MONO_REGRESSION_MODE=release_trimmed lua tests/behavior.lua` 输出 `All regression checks passed (988)`。
+  - 观察：`contract` 的八个失败都收敛到同一个根因，不是 `arch_view` 业务逻辑，而是 Windows shell 下直接执行 `mkdir` / `dir` 的兼容性问题。
+    证据：`lua tests/contract.lua` 初次失败包含 `failed to create directory`；修复后输出 `All regression checks passed (97)`。
+  - 观察：`guard` 失败既有 shell 兼容问题，也有规则 root 已过期的问题。
+    证据：初次失败为 `list command failed for root: src/presentation/view/canvas/base`；仓库实际目录位于 `src/presentation/schema/canvas/base`；修复后 `lua tests/guard.lua` 输出 `dep_rules ok` 且 guard 全绿。
+  - 观察：双 lane CRAP 基线命令在当前 Windows 环境会卡住，且没有刷新现有产物。
+    证据：执行 `lua scripts/crap.lua report --lane behavior --lane contract --out tmp/crap_report.json --top 300` 后，`tmp/crap_report.json` 仍保持 `2026-03-10 17:52:02` 的旧时间戳，需手动终止 Lua 进程。
+
+  ## 决策日志
+
+  - 决策：先修正 `contract/guard` 的 Windows 兼容性，而不是继续追已经无法复现的 `behavior` case。
+    理由：`T1` 的目标是恢复可信基线；当前真正阻塞双 lane 基线的是 `contract` 与 `guard`，继续追旧行为回归不会推进 gate。
+    日期/作者：2026-03-13 / Codex
+  - 决策：只做最小修复面，落在 `scripts/arch/arch_view/common.lua`、`tests/support/guards/guard_support.lua`、`tests/guards/dep_rules.lua` 三处。
+    理由：三个失败都集中在 Windows shell 调用与过期路径，不需要扩大到 `cli.lua`、测试 harness 或架构规则本身。
+    日期/作者：2026-03-13 / Codex
+  - 决策：在双 lane CRAP 命令未稳定返回前，不启动 `T2` 到 `T7`。
+    理由：Wave 2 的分桶必须建立在可信的双 lane 基线上，否则热点分配与验收口径都会漂移。
+    日期/作者：2026-03-13 / Codex
+
+  ## 结果与复盘
+
+  当前只完成了 `T1` 的前半段：三条基础回归链路已经恢复为可用状态，`behavior`、`contract`、`guard` 都能在当前工作树通过，说明 Wave 1 不再被测试红灯卡住。`T1` 仍未闭环，因为双 lane CRAP 基线还没有重新落盘，`.agents/crap_baseline.json` / `.agents/crap_baseline.md` 也尚未生成。
+
+  这次最大的偏差不是代码实现，而是计划中的前提已经过期。后续继续执行前，应先把 `scripts/crap.lua` 在 Windows 下卡住的问题压实并修掉，再用新基线重新分桶 `T2` 到 `T7`。在那之前，本计划只能视为“Wave 1 已清出测试 gate，但基线重生未完成”。
+
+  改动说明：2026-03-13 本次更新补充了活文档章节，并把 `T1` 的真实执行状态、Windows 兼容修复与 CRAP 命令卡住现象写回计划，避免后续贡献者继续沿用过时的 `behavior` 失败前提。
