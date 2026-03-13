@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "generated_at": "2026-03-13T02:24:58Z",
+    "source_report": "tmp/crap_report.json",
+    "command": "lua scripts/crap.lua report --lane behavior --lane contract --out ./tmp/crap_report.json --top 300"
+  },
+  "summary": {
+    "function_count": 2580,
+    "crap_ge_10_count": 0,
+    "must_refactor_count": 0,
+    "coverage_first_count": 0
+  },
+  "top_hotspot": {
+    "source_path": "src/game/flow/turn/script.lua",
+    "name": "anonymous@88",
+    "start_line": 88,
+    "crap": 8.21,
+    "complexity": 3,
+    "coverage": 0.17
+  },
+  "must_refactor": [],
+  "coverage_first": []
+}
