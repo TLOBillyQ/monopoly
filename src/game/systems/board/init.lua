@@ -59,19 +59,17 @@ local function _pick_unique_dir(neigh, avoid_dir)
   return picked_dir, picked_id
 end
 
-local function _resolve_outer_next(map, current_id, facing, parity)
+local function _resolve_outer_next(map, current_id, parity, can_enter_inner)
   if not map.outer_next[current_id] then
-    return nil
+    return nil, false
   end
   local next_id = map.outer_next[current_id]
   local entry = map.entry_points[current_id]
-  if entry and parity and (parity % 2 == 0) and facing then
-    local prev_id = map.outer_prev[current_id]
-    if prev_id and map.direction(prev_id, current_id) == facing then
-      next_id = entry.inner_id
-    end
+  if entry and can_enter_inner and parity and (parity % 2 == 0) then
+    next_id = entry.inner_id
+    return next_id, true
   end
-  return next_id
+  return next_id, false
 end
 
 local function _resolve_fresh_forward_next(map, current_id, facing)
@@ -80,23 +78,6 @@ local function _resolve_fresh_forward_next(map, current_id, facing)
   end
   local fresh_forward_next = map.fresh_forward_next or nil
   return fresh_forward_next and fresh_forward_next[current_id] or nil
-end
-
-local function _resolve_market_exit(map, current_id, neigh, facing, parity)
-  if current_id ~= map.market_id or not facing or not parity then
-    return nil
-  end
-  local exit_dir = map.turn_right[facing]
-  if parity % 2 == 1 then
-    exit_dir = map.turn_left[facing]
-  end
-  if exit_dir and neigh[exit_dir] then
-    return neigh[exit_dir]
-  end
-  if neigh[facing] then
-    return neigh[facing]
-  end
-  return nil
 end
 
 local function _resolve_facing_next(neigh, facing)
@@ -122,28 +103,33 @@ local function _resolve_fallback_next(neigh, facing)
   return any_id
 end
 
-local function _resolve_forward_next_id(map, current_id, neigh, facing, parity)
-  local outer_next = _resolve_outer_next(map, current_id, facing, parity)
+local function _resolve_forward_next_id(map, current_id, neigh, facing, parity, can_enter_inner)
+  local outer_next, entered_inner = _resolve_outer_next(map, current_id, parity, can_enter_inner)
   if outer_next then
-    return outer_next
+    return outer_next, entered_inner
   end
 
   local fresh_next = _resolve_fresh_forward_next(map, current_id, facing)
   if fresh_next ~= nil then
-    return fresh_next
-  end
-
-  local market_exit = _resolve_market_exit(map, current_id, neigh, facing, parity)
-  if market_exit then
-    return market_exit
+    return fresh_next, false
   end
 
   local facing_next = _resolve_facing_next(neigh, facing)
   if facing_next then
-    return facing_next
+    return facing_next, false
   end
 
-  return _resolve_fallback_next(neigh, facing)
+  return _resolve_fallback_next(neigh, facing), false
+end
+
+local function _normalize_forward_step_context(parity_or_context)
+  if type(parity_or_context) == "table" then
+    return parity_or_context
+  end
+  return {
+    parity = parity_or_context,
+    entered_inner = false,
+  }
 end
 
 local function _resolve_backward_next_id(map, current_id, neigh, facing)
@@ -321,12 +307,20 @@ end
 ---根据朝向向前移动一步（用于精确导航）
 function board:step_forward_by_facing(current_index, facing, parity)
   local map = self.map
+  local step_context = _normalize_forward_step_context(parity)
 
   local current_tile = self:get_tile(current_index)
   assert(current_tile ~= nil, "missing current tile: " .. tostring(current_index))
   local current_id = current_tile.id
   local neigh = map.neighbors[current_id]
-  local next_id = _resolve_forward_next_id(map, current_id, neigh, facing, parity)
+  local next_id, entered_inner = _resolve_forward_next_id(
+    map,
+    current_id,
+    neigh,
+    facing,
+    step_context.parity,
+    not step_context.entered_inner
+  )
 
   assert(next_id ~= nil, "missing next tile id from: " .. tostring(current_id))
 
@@ -337,7 +331,7 @@ function board:step_forward_by_facing(current_index, facing, parity)
     passed_start = 1
   end
   local step_dir = map.direction(current_id, next_id)
-  return next_index, passed_start, step_dir
+  return next_index, passed_start, step_dir, entered_inner
 end
 
 ---根据朝向向后移动一步
@@ -366,9 +360,9 @@ end
 -- Export helpers for testability
 board._resolve_outer_next = _resolve_outer_next
 board._resolve_fresh_forward_next = _resolve_fresh_forward_next
-board._resolve_market_exit = _resolve_market_exit
 board._resolve_facing_next = _resolve_facing_next
 board._resolve_fallback_next = _resolve_fallback_next
+board._normalize_forward_step_context = _normalize_forward_step_context
 board._pick_any_dir = _pick_any_dir
 board._pick_unique_dir = _pick_unique_dir
 

@@ -51,6 +51,7 @@ local function _check_steal(player, encountered_step, step, abs_steps, facing, b
     remaining_steps = remaining,
     facing = facing,
     branch_parity = branch_parity,
+    entered_inner = opts.entered_inner == true,
     encountered_ids = encountered_step,
   }
 end
@@ -76,6 +77,7 @@ local function _check_market(board, current, step, steps, abs_steps, facing, bra
     remaining_steps = remaining,
     facing = facing,
     branch_parity = branch_parity,
+    entered_inner = opts.entered_inner == true,
   }
 end
 
@@ -117,6 +119,7 @@ local function _new_move_state(game, player, steps, opts, abs_steps)
     steal_interrupt = nil,
     current = player.position,
     backward = backward,
+    entered_inner = opts.entered_inner == true,
     persisted_facing = player.status and player.status.move_dir or nil,
   }
 end
@@ -126,6 +129,12 @@ local function _build_move_context(game, player, steps, opts)
   local abs_steps = steps < 0 and -steps or steps
   local ctx = _new_move_state(game, player, steps, opts, abs_steps)
   ctx.start_tile = ctx.board:get_tile(player.position)
+  if ctx.start_tile and ctx.board.map and ctx.board.map.outer_next then
+    local start_on_outer = ctx.board.map.outer_next[ctx.start_tile.id] ~= nil
+    if not start_on_outer then
+      ctx.entered_inner = true
+    end
+  end
   ctx.step_fn = _resolve_step_fn(ctx.board, ctx.backward)
   ctx.facing = facing_policy.resolve_initial_facing(_resolve_facing_mode(steps, opts), player, opts)
   return ctx
@@ -139,15 +148,21 @@ local function _arm_owned_mine(ctx)
 end
 
 local function _step_move(ctx, step)
-  local next_index, passed, step_dir
+  local next_index, passed, step_dir, entered_inner
   if ctx.backward then
     next_index, passed, step_dir = ctx.step_fn(ctx.board, ctx.current, ctx.facing)
   else
-    next_index, passed, step_dir = ctx.step_fn(ctx.board, ctx.current, ctx.facing, ctx.branch_parity)
+    next_index, passed, step_dir, entered_inner = ctx.step_fn(ctx.board, ctx.current, ctx.facing, {
+      parity = ctx.branch_parity,
+      entered_inner = ctx.entered_inner,
+    })
   end
   ctx.pass_start = ctx.pass_start + passed
   ctx.facing = step_dir
   ctx.current = next_index
+  if entered_inner then
+    ctx.entered_inner = true
+  end
   ctx.visited[#ctx.visited + 1] = ctx.current
   return step
 end
@@ -175,7 +190,10 @@ local function _resolve_step_interrupt(ctx, encountered_step, step)
     ctx.abs_steps,
     ctx.facing,
     ctx.branch_parity,
-    ctx.opts
+    {
+      skip_steal_check = ctx.opts.skip_steal_check,
+      entered_inner = ctx.entered_inner,
+    }
   )
   if ctx.steal_interrupt then
     ctx.steal_interrupt.position = ctx.current
@@ -190,7 +208,10 @@ local function _resolve_step_interrupt(ctx, encountered_step, step)
     ctx.facing,
     ctx.branch_parity,
     ctx.player,
-    ctx.opts
+    {
+      skip_market_check = ctx.opts.skip_market_check,
+      entered_inner = ctx.entered_inner,
+    }
   )
   if ctx.market_interrupt then
     ctx.market_interrupt.position = ctx.current

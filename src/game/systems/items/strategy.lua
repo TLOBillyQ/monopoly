@@ -29,11 +29,18 @@ function strategy.has_obstacles_ahead(game, player, distance)
   local parity = distance
   local current = player.position
   local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
+  local entered_inner = false
 
   for _ = 1, distance do
-    local next_index, _passed, step_dir = board:step_forward_by_facing(current, facing, parity)
+    local next_index, _passed, step_dir, step_entered_inner = board:step_forward_by_facing(current, facing, {
+      parity = parity,
+      entered_inner = entered_inner,
+    })
     current = next_index
     facing = step_dir
+    if step_entered_inner then
+      entered_inner = true
+    end
     if board:has_roadblock(current) or board:has_mine(current) then
       return true
     end

@@ -15,12 +15,24 @@ local function _simulate_heading(board, start_index, facing, steps, backward, pa
   local current = start_index
   local heading = facing
   local step_fn = backward and board.step_backward_by_facing or board.step_forward_by_facing
+  local entered_inner = false
+  local start_tile = board:get_tile(start_index)
+  if start_tile and board.map and board.map.outer_next and board.map.outer_next[start_tile.id] == nil then
+    entered_inner = true
+  end
   for _ = 1, steps do
     local next_index, _, next_heading
     if backward then
       next_index, _, next_heading = step_fn(board, current, heading)
     else
-      next_index, _, next_heading = step_fn(board, current, heading, parity)
+      local step_entered_inner
+      next_index, _, next_heading, step_entered_inner = step_fn(board, current, heading, {
+        parity = parity,
+        entered_inner = entered_inner,
+      })
+      if step_entered_inner then
+        entered_inner = true
+      end
     end
     current = next_index
     heading = next_heading
@@ -61,19 +73,17 @@ local function _test_movement_examples_from_issue()
 
   g:update_player_position(p, g.board:index_of_tile_id(25))
   local r3 = movement.move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
-  _assert_eq(g.board:get_tile(p.position).id, 7, "example3 end tile")
+  _assert_eq(g.board:get_tile(p.position).id, 1, "example3 end tile")
   assert(#r3.visited == 12, "example3 visited steps")
 end
 
-local function _test_board_indices_in_range_uses_graph_distance()
+local function _test_board_indices_in_range_uses_manhattan_distance()
   local g = _new_game()
-  local idx_a = g.board:index_of_tile_id(27)
-  local idx_b = g.board:index_of_tile_id(28)
-  assert(idx_a and idx_b, "expected tile ids 27/28")
-  local list = board_utils.indices_in_range(g.board, idx_a, 1)
-  for _, idx in ipairs(list) do
-    assert(idx ~= idx_b, "graph distance should not include path neighbor")
-  end
+  local start_idx = g.board:index_of_tile_id(1)
+  local target_idx = g.board:index_of_tile_id(34)
+  assert(start_idx and target_idx, "expected tile ids 1/34")
+  local list = board_utils.indices_in_range(g.board, start_idx, 4)
+  assert(support.list_contains(list, target_idx), "manhattan distance should include tiles within row/col radius")
 end
 
 local function _test_movement_backward_wrap()
@@ -159,34 +169,45 @@ local function _test_movement_multi_step_sets_move_dir_to_next_heading()
   _assert_eq(p.status.move_dir, expected, "multi-step move_dir should keep the next forward heading")
 end
 
-local function _test_entry_point_even_branch_requires_matching_inbound_facing()
+local function _test_entry_point_even_branch_ignores_inbound_facing()
   local g = _new_game()
   local entry_idx = g.board:index_of_tile_id(42)
 
   local matching_idx, _, matching_dir = g.board:step_forward_by_facing(entry_idx, "left", 2)
   local matching_tile = assert(g.board:get_tile(matching_idx), "missing matching branch tile")
-  _assert_eq(matching_tile.id, 45, "matching inbound facing should enter inner branch")
+  _assert_eq(matching_tile.id, 45, "even parity should enter inner branch")
   _assert_eq(matching_dir, "up", "matching branch should return the next heading after entering inner branch")
 
   local mismatched_idx, _, mismatched_dir = g.board:step_forward_by_facing(entry_idx, "right", 2)
-  local mismatched_tile = assert(g.board:get_tile(mismatched_idx), "missing outer path tile")
-  _assert_eq(mismatched_tile.id, 4, "mismatched inbound facing should stay on outer path")
-  _assert_eq(mismatched_dir, "left", "outer fallback should return the next heading on outer path")
+  local mismatched_tile = assert(g.board:get_tile(mismatched_idx), "missing branch tile")
+  _assert_eq(mismatched_tile.id, 45, "even parity should ignore inbound facing and still enter inner branch")
+  _assert_eq(mismatched_dir, "up", "inner branch should return the next heading after entering inner branch")
 end
 
-local function _test_market_exit_keeps_turn_parity_without_uturn()
+local function _test_market_keeps_forward_direction_regardless_of_parity()
   local g = _new_game()
   local market_idx = g.board:index_of_tile_id(g.board.map.market_id)
 
   local even_idx, _, even_dir = g.board:step_forward_by_facing(market_idx, "up", 2)
   local even_tile = assert(g.board:get_tile(even_idx), "missing even market exit tile")
-  _assert_eq(even_tile.id, 44, "even parity should turn right from market")
-  _assert_eq(even_dir, "right", "even parity should report the next heading after the market exit")
+  _assert_eq(even_tile.id, 28, "market should keep moving forward on even parity")
+  _assert_eq(even_dir, "up", "market should keep the same heading on even parity")
 
   local odd_idx, _, odd_dir = g.board:step_forward_by_facing(market_idx, "up", 1)
   local odd_tile = assert(g.board:get_tile(odd_idx), "missing odd market exit tile")
-  _assert_eq(odd_tile.id, 27, "odd parity should turn left from market")
-  _assert_eq(odd_dir, "left", "odd parity should report the next heading after the market exit")
+  _assert_eq(odd_tile.id, 28, "market should keep moving forward on odd parity")
+  _assert_eq(odd_dir, "up", "market should keep the same heading on odd parity")
+end
+
+local function _test_same_move_enters_inner_only_once()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:update_player_position(p, g.board:index_of_tile_id(3))
+  local res = movement.move(g, p, 10, { branch_parity = 10, skip_market_check = true })
+
+  _assert_eq(g.board:get_tile(p.position).id, 16, "move should exit inner ring and continue on outer ring without re-entering")
+  assert(#res.visited == 10, "same-move inner traversal should still record all steps")
 end
 
 local function _test_inner_ring_fresh_roll_defaults_toward_market()
@@ -197,7 +218,7 @@ local function _test_inner_ring_fresh_roll_defaults_toward_market()
     { start_tile_id = 30, steps = 1, expected_tile_id = 29 },
     { start_tile_id = 34, steps = 1, expected_tile_id = 33 },
     { start_tile_id = 45, steps = 1, expected_tile_id = 31 },
-    { start_tile_id = 28, steps = 4, expected_tile_id = 25 },
+    { start_tile_id = 28, steps = 4, expected_tile_id = 45 },
   }
 
   for _, case in ipairs(cases) do
@@ -320,41 +341,26 @@ local function _test_resolve_outer_next_returns_outer_next_when_no_entry()
   _assert_eq(result, 2, "should return outer_next when no entry point")
 end
 
-local function _test_resolve_outer_next_returns_inner_on_even_parity_with_matching_facing()
-  -- The logic: if direction(prev_id, current_id) == facing, use inner_id
-  -- This means the player is coming from the direction they're facing (continuing forward)
-  -- Note: map.direction is called as map.direction(prev_id, current_id) - no self param
+local function _test_resolve_outer_next_returns_inner_on_even_parity()
   local map = {
     outer_next = { [1] = 2 },
     entry_points = { [1] = { inner_id = 10 } },
     outer_prev = { [1] = 99 },
-    direction = function(from, to)
-      -- When coming from 99 to 1, if facing is "up", direction should return "up" for match
-      if from == 99 and to == 1 then return "up" end
-      return "down"
-    end,
   }
-  -- When facing="up" and direction(99, 1)="up" (matching), should return inner_id
-  local result = Board._resolve_outer_next(map, 1, "up", 2)
-  _assert_eq(result, 10, "should return inner_id on even parity with matching facing")
+  local result, entered_inner = Board._resolve_outer_next(map, 1, 2, true)
+  _assert_eq(result, 10, "should return inner_id on even parity")
+  _assert_eq(entered_inner, true, "should mark inner entry on even parity")
 end
 
-local function _test_resolve_outer_next_returns_outer_on_even_parity_with_mismatched_facing()
-  -- The logic: if direction(prev_id, current_id) ~= facing, use outer_next
-  -- This means the player is coming from a different direction than they're facing
+local function _test_resolve_outer_next_returns_outer_when_inner_entry_is_blocked()
   local map = {
     outer_next = { [1] = 2 },
     entry_points = { [1] = { inner_id = 10 } },
     outer_prev = { [1] = 99 },
-    direction = function(from, to)
-      -- When coming from 99 to 1, if facing is "up", direction returns "down" for mismatch
-      if from == 99 and to == 1 then return "down" end
-      return "up"
-    end,
   }
-  -- When facing="up" and direction(99, 1)="down" (mismatch), should return outer_next
-  local result = Board._resolve_outer_next(map, 1, "up", 2)
-  _assert_eq(result, 2, "should return outer_next on even parity with mismatched facing")
+  local result, entered_inner = Board._resolve_outer_next(map, 1, 2, false)
+  _assert_eq(result, 2, "should return outer_next when same move already entered inner")
+  _assert_eq(entered_inner, false, "should not mark inner entry when blocked")
 end
 
 local function _test_resolve_outer_next_returns_nil_when_no_outer_next()
@@ -363,8 +369,9 @@ local function _test_resolve_outer_next_returns_nil_when_no_outer_next()
     entry_points = {},
     outer_prev = {},
   }
-  local result = Board._resolve_outer_next(map, 1, "up", 1)
+  local result, entered_inner = Board._resolve_outer_next(map, 1, 1, true)
   _assert_eq(result, nil, "should return nil when no outer_next")
+  _assert_eq(entered_inner, false, "should not mark inner entry when outer_next is missing")
 end
 
 local function _test_resolve_fresh_forward_next_returns_fresh_next_when_facing_nil()
@@ -387,61 +394,6 @@ local function _test_resolve_fresh_forward_next_returns_nil_when_no_fresh_forwar
   local map = {}
   local result = Board._resolve_fresh_forward_next(map, 1, nil)
   _assert_eq(result, nil, "should return nil when no fresh_forward_next")
-end
-
-local function _test_resolve_market_exit_returns_turn_right_on_even_parity()
-  local map = {
-    market_id = 5,
-    turn_right = { up = "right" },
-    turn_left = { up = "left" },
-  }
-  local neigh = { right = 10, left = 20, up = 30 }
-  local result = Board._resolve_market_exit(map, 5, neigh, "up", 2)
-  _assert_eq(result, 10, "should return turn_right direction on even parity")
-end
-
-local function _test_resolve_market_exit_returns_turn_left_on_odd_parity()
-  local map = {
-    market_id = 5,
-    turn_right = { up = "right" },
-    turn_left = { up = "left" },
-  }
-  local neigh = { right = 10, left = 20, up = 30 }
-  local result = Board._resolve_market_exit(map, 5, neigh, "up", 1)
-  _assert_eq(result, 20, "should return turn_left direction on odd parity")
-end
-
-local function _test_resolve_market_exit_returns_facing_when_exit_dir_nil()
-  local map = {
-    market_id = 5,
-    turn_right = { up = nil },
-    turn_left = { up = "left" },
-  }
-  local neigh = { right = 10, left = 20, up = 30 }
-  local result = Board._resolve_market_exit(map, 5, neigh, "up", 2)
-  _assert_eq(result, 30, "should return facing direction when exit_dir is nil but facing exists")
-end
-
-local function _test_resolve_market_exit_returns_nil_when_not_market()
-  local map = {
-    market_id = 5,
-    turn_right = {},
-    turn_left = {},
-  }
-  local neigh = {}
-  local result = Board._resolve_market_exit(map, 1, neigh, "up", 1)
-  _assert_eq(result, nil, "should return nil when current_id is not market_id")
-end
-
-local function _test_resolve_market_exit_returns_nil_when_facing_nil()
-  local map = {
-    market_id = 5,
-    turn_right = {},
-    turn_left = {},
-  }
-  local neigh = {}
-  local result = Board._resolve_market_exit(map, 5, neigh, nil, 1)
-  _assert_eq(result, nil, "should return nil when facing is nil")
 end
 
 local function _test_resolve_facing_next_returns_neighbor_in_facing_direction()
@@ -532,44 +484,36 @@ end
 -- Characterization tests for board_query helper functions (T4)
 local board_query = require("src.game.systems.board.query")
 
-local function _test_bfs_collect_indices_returns_empty_for_zero_distance()
+local function _test_collect_indices_by_distance_returns_empty_for_zero_distance()
   local g = _new_game()
   local start_tile = g.board:get_tile(1)
-  local by_dist = board_query._bfs_collect_indices(g.board, g.board.map.neighbors, start_tile.id, 0)
+  local by_dist = board_query._collect_indices_by_distance(g.board, start_tile, 0)
   assert(type(by_dist) == "table", "should return a table")
   assert(next(by_dist) == nil, "should return empty table for max_dist=0")
 end
 
-local function _test_bfs_collect_indices_finds_neighbors_at_distance_one()
+local function _test_collect_indices_by_distance_groups_tiles_by_manhattan_radius()
   local g = _new_game()
   local start_idx = g.board:index_of_tile_id(1)
   local start_tile = g.board:get_tile(start_idx)
-  local by_dist = board_query._bfs_collect_indices(g.board, g.board.map.neighbors, start_tile.id, 1)
-  assert(by_dist[1] ~= nil, "should have entries at distance 1")
-  assert(#by_dist[1] > 0, "should find at least one neighbor at distance 1")
+  local by_dist = board_query._collect_indices_by_distance(g.board, start_tile, 4)
+  local target_idx = g.board:index_of_tile_id(34)
+  assert(by_dist[4] ~= nil, "should have entries at distance 4")
+  assert(support.list_contains(by_dist[4], target_idx), "should group tiles by manhattan radius")
 end
 
-local function _test_bfs_collect_indices_does_not_exceed_max_dist()
+local function _test_collect_indices_by_distance_does_not_exceed_max_dist()
   local g = _new_game()
   local start_idx = g.board:index_of_tile_id(1)
   local start_tile = g.board:get_tile(start_idx)
-  local by_dist = board_query._bfs_collect_indices(g.board, g.board.map.neighbors, start_tile.id, 2)
+  local by_dist = board_query._collect_indices_by_distance(g.board, start_tile, 2)
   assert(by_dist[3] == nil, "should not have entries beyond max_dist")
   assert(by_dist[4] == nil, "should not have entries beyond max_dist")
 end
 
-local function _test_bfs_collect_indices_avoids_revisiting_tiles()
-  local g = _new_game()
-  local start_idx = g.board:index_of_tile_id(1)
-  local start_tile = g.board:get_tile(start_idx)
-  local seen = {}
-  local by_dist = board_query._bfs_collect_indices(g.board, g.board.map.neighbors, start_tile.id, 3)
-  for dist, indices in pairs(by_dist) do
-    for _, idx in ipairs(indices) do
-      assert(seen[idx] == nil, "tile " .. tostring(idx) .. " should not be visited twice")
-      seen[idx] = dist
-    end
-  end
+local function _test_manhattan_distance_uses_tile_coordinates()
+  local distance = board_query._manhattan_distance({ row = 9, col = 8 }, { row = 5, col = 8 })
+  _assert_eq(distance, 4, "manhattan distance should use absolute row/col deltas")
 end
 
 local function _test_flatten_by_distance_returns_empty_for_empty_input()
@@ -618,32 +562,28 @@ return {
     { name = "pass_start", run = _test_pass_start },
     { name = "roadblock_stop", run = _test_roadblock_stop },
     { name = "movement_examples_from_issue", run = _test_movement_examples_from_issue },
-    { name = "board_indices_in_range_uses_graph_distance", run = _test_board_indices_in_range_uses_graph_distance },
+    { name = "board_indices_in_range_uses_manhattan_distance", run = _test_board_indices_in_range_uses_manhattan_distance },
     { name = "movement_backward_wrap", run = _test_movement_backward_wrap },
     { name = "movement_backward_from_hongkong_follows_three_unique_tiles", run = _test_movement_backward_from_hongkong_follows_three_unique_tiles },
     { name = "movement_backward_without_move_dir_keeps_nil", run = _test_movement_backward_without_move_dir_keeps_nil },
     { name = "movement_fresh_roll_ignores_stale_move_dir", run = _test_movement_fresh_roll_ignores_stale_move_dir },
     { name = "movement_single_step_sets_move_dir_to_next_heading", run = _test_movement_single_step_sets_move_dir_to_next_heading },
     { name = "movement_multi_step_sets_move_dir_to_next_heading", run = _test_movement_multi_step_sets_move_dir_to_next_heading },
-    { name = "entry_point_even_branch_requires_matching_inbound_facing", run = _test_entry_point_even_branch_requires_matching_inbound_facing },
-    { name = "market_exit_keeps_turn_parity_without_uturn", run = _test_market_exit_keeps_turn_parity_without_uturn },
+    { name = "entry_point_even_branch_ignores_inbound_facing", run = _test_entry_point_even_branch_ignores_inbound_facing },
+    { name = "market_keeps_forward_direction_regardless_of_parity", run = _test_market_keeps_forward_direction_regardless_of_parity },
+    { name = "same_move_enters_inner_only_once", run = _test_same_move_enters_inner_only_once },
     { name = "inner_ring_fresh_roll_defaults_toward_market", run = _test_inner_ring_fresh_roll_defaults_toward_market },
     { name = "resume_forward_from_inner_ring_keeps_explicit_direction", run = _test_resume_forward_from_inner_ring_keeps_explicit_direction },
     { name = "resume_forward_requires_explicit_direction", run = _test_resume_forward_requires_explicit_direction },
     { name = "move_anim_play_sequence_emits_step_sound_per_visited_tile", run = _test_move_anim_play_sequence_emits_step_sound_per_visited_tile },
     -- Board helper characterization tests (T4)
     { name = "resolve_outer_next_returns_outer_next_when_no_entry", run = _test_resolve_outer_next_returns_outer_next_when_no_entry },
-    { name = "resolve_outer_next_returns_inner_on_even_parity_with_matching_facing", run = _test_resolve_outer_next_returns_inner_on_even_parity_with_matching_facing },
-    { name = "resolve_outer_next_returns_outer_on_even_parity_with_mismatched_facing", run = _test_resolve_outer_next_returns_outer_on_even_parity_with_mismatched_facing },
+    { name = "resolve_outer_next_returns_inner_on_even_parity", run = _test_resolve_outer_next_returns_inner_on_even_parity },
+    { name = "resolve_outer_next_returns_outer_when_inner_entry_is_blocked", run = _test_resolve_outer_next_returns_outer_when_inner_entry_is_blocked },
     { name = "resolve_outer_next_returns_nil_when_no_outer_next", run = _test_resolve_outer_next_returns_nil_when_no_outer_next },
     { name = "resolve_fresh_forward_next_returns_fresh_next_when_facing_nil", run = _test_resolve_fresh_forward_next_returns_fresh_next_when_facing_nil },
     { name = "resolve_fresh_forward_next_returns_nil_when_facing_not_nil", run = _test_resolve_fresh_forward_next_returns_nil_when_facing_not_nil },
     { name = "resolve_fresh_forward_next_returns_nil_when_no_fresh_forward_next", run = _test_resolve_fresh_forward_next_returns_nil_when_no_fresh_forward_next },
-    { name = "resolve_market_exit_returns_turn_right_on_even_parity", run = _test_resolve_market_exit_returns_turn_right_on_even_parity },
-    { name = "resolve_market_exit_returns_turn_left_on_odd_parity", run = _test_resolve_market_exit_returns_turn_left_on_odd_parity },
-    { name = "resolve_market_exit_returns_facing_when_exit_dir_nil", run = _test_resolve_market_exit_returns_facing_when_exit_dir_nil },
-    { name = "resolve_market_exit_returns_nil_when_not_market", run = _test_resolve_market_exit_returns_nil_when_not_market },
-    { name = "resolve_market_exit_returns_nil_when_facing_nil", run = _test_resolve_market_exit_returns_nil_when_facing_nil },
     { name = "resolve_facing_next_returns_neighbor_in_facing_direction", run = _test_resolve_facing_next_returns_neighbor_in_facing_direction },
     { name = "resolve_facing_next_returns_nil_when_no_facing", run = _test_resolve_facing_next_returns_nil_when_no_facing },
     { name = "resolve_facing_next_returns_nil_when_no_neighbor_in_facing", run = _test_resolve_facing_next_returns_nil_when_no_neighbor_in_facing },
@@ -657,10 +597,10 @@ return {
     { name = "pick_unique_dir_returns_nil_when_multiple_options", run = _test_pick_unique_dir_returns_nil_when_multiple_options },
     { name = "pick_unique_dir_returns_unique_when_others_avoided", run = _test_pick_unique_dir_returns_unique_when_others_avoided },
     -- Board_query helper characterization tests (T4)
-    { name = "bfs_collect_indices_returns_empty_for_zero_distance", run = _test_bfs_collect_indices_returns_empty_for_zero_distance },
-    { name = "bfs_collect_indices_finds_neighbors_at_distance_one", run = _test_bfs_collect_indices_finds_neighbors_at_distance_one },
-    { name = "bfs_collect_indices_does_not_exceed_max_dist", run = _test_bfs_collect_indices_does_not_exceed_max_dist },
-    { name = "bfs_collect_indices_avoids_revisiting_tiles", run = _test_bfs_collect_indices_avoids_revisiting_tiles },
+    { name = "collect_indices_by_distance_returns_empty_for_zero_distance", run = _test_collect_indices_by_distance_returns_empty_for_zero_distance },
+    { name = "collect_indices_by_distance_groups_tiles_by_manhattan_radius", run = _test_collect_indices_by_distance_groups_tiles_by_manhattan_radius },
+    { name = "collect_indices_by_distance_does_not_exceed_max_dist", run = _test_collect_indices_by_distance_does_not_exceed_max_dist },
+    { name = "manhattan_distance_uses_tile_coordinates", run = _test_manhattan_distance_uses_tile_coordinates },
     { name = "flatten_by_distance_returns_empty_for_empty_input", run = _test_flatten_by_distance_returns_empty_for_empty_input },
     { name = "flatten_by_distance_orders_by_distance", run = _test_flatten_by_distance_orders_by_distance },
     { name = "flatten_by_distance_skips_missing_distances", run = _test_flatten_by_distance_skips_missing_distances },

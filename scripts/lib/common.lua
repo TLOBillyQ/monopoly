@@ -389,6 +389,17 @@ function common.build_command(args)
   return table.concat(parts, " ")
 end
 
+function common.build_open_command(path)
+  local normalized = common.normalize_path(path)
+  if common.is_windows() then
+    return 'start "" ' .. common.shell_quote(_windows_path(normalized))
+  end
+  if common.is_macos() then
+    return common.build_command({ "open", normalized })
+  end
+  return common.build_command({ "xdg-open", normalized })
+end
+
 function common.make_temp_path(prefix, suffix)
   _seed_random_once()
   _temp_counter = _temp_counter + 1
@@ -909,13 +920,7 @@ end
 function common.open_path(path)
   local normalized = common.normalize_path(path)
   if not common.is_windows() then
-    local command = nil
-    if common.is_macos() then
-      command = { "open", normalized }
-    else
-      command = { "xdg-open", normalized }
-    end
-    local result = common.run_command(command)
+    local result = common.run_command(common.build_open_command(normalized))
     if not result.ok then
       return nil, common.bilingual(
         "打开路径失败: " .. tostring(path),

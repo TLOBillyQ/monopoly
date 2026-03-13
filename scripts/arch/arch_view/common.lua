@@ -260,6 +260,10 @@ function common.open_path(path)
   return script_common.open_path(path)
 end
 
+function common.build_open_command(path)
+  return script_common.build_open_command(path)
+end
+
 function common.shell_quote(path)
   return script_common.shell_quote(path)
 end

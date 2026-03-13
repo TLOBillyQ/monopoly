@@ -181,3 +181,15 @@
 - 同一次移动最多进入内圈一次。
 - 位置选择与范围判断统一使用曼哈顿距离。
 - 回归套件通过，且文档与实现一致。
+
+---
+
+## 执行结果
+
+- 2026-03-13 23:03:12 +0800：已完成 `board`、`movement`、`board_query`、相关 AI/道具辅助路径、领域测试、gameplay 测试与 `docs/design/map.md` 同步。
+- 2026-03-13 23:03:12 +0800：中断恢复链路已补充 `entered_inner` 状态透传，确保黑市/偷窃中断后续走仍遵守“单次移动最多进入内圈一次”。
+- 2026-03-13 23:03:12 +0800：已运行 `lua tests/behavior.lua` 与 `lua tests/regression.lua`，全部通过。
+
+## 本次补充说明
+
+- 额外修复了与本次功能无直接关系、但会阻塞 `regression` 的架构脚本契约缺口：补回 `scripts/lib/common.lua` 与 `scripts/arch/arch_view/common.lua` 的 `build_open_command` 接口。

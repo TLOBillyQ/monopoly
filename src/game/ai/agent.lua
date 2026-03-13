@@ -23,10 +23,17 @@ local function _simulate_landing(game, player, steps)
   local board = game.board
   local current = player.position
   local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
+  local entered_inner = false
   for step = 1, steps do
-    local next_index, _, step_dir = board:step_forward_by_facing(current, facing, steps)
+    local next_index, _, step_dir, step_entered_inner = board:step_forward_by_facing(current, facing, {
+      parity = steps,
+      entered_inner = entered_inner,
+    })
     current = next_index
     facing = step_dir
+    if step_entered_inner then
+      entered_inner = true
+    end
 
     if board:has_roadblock(current) then
       break

@@ -37,6 +37,7 @@ local function _build_move_opts(args, raw_total)
   if args.continue_from_market or args.continue_from_steal then
     move_opts.direction = args.facing
     move_opts.branch_parity = args.branch_parity
+    move_opts.entered_inner = args.entered_inner
   end
   return move_opts
 end

@@ -608,9 +608,9 @@ local function _test_roadblock_ui_candidates_refill_to_seven_at_intersection()
     "重庆路",
     "天津路",
     "黑市",
-    "武汉路",
     "太原路",
-    "长沙路",
+    "西安路",
+    "银川路",
   }
 
   _assert_eq(#candidates, #expected_names, "intersection roadblock ui should refill to seven unique target tiles")

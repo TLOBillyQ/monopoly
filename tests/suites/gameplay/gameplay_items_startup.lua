@@ -146,6 +146,7 @@ local function _resume_after_steal_interrupt(game, player, interrupt)
   local resumed = movement.move(game, player, interrupt.remaining_steps, {
     branch_parity = interrupt.branch_parity,
     direction = interrupt.facing,
+    entered_inner = interrupt.entered_inner,
     skip_market_check = true,
     skip_steal_check = true,
   })
@@ -606,7 +607,7 @@ local function _test_choice_builders_reserve_base_inline_for_item_slots_only()
     "market vehicle replace should expose a descriptive confirm body")
 end
 
-local function _test_circle_startup_profile_second_remote_roll_reaches_nanchang_after_market_resume()
+local function _test_circle_startup_profile_second_remote_roll_reaches_chance45_after_market_resume()
   local g, _ = _new_profile_game("circle")
   local player = g.players[1]
   local remote_dice_id = gameplay_rules.item_ids.remote_dice
@@ -661,7 +662,7 @@ local function _test_circle_startup_profile_second_remote_roll_reaches_nanchang_
 
   local final_move_state, _ = _turn_move({ game = g }, second_move_args.next_args)
   assert(final_move_state == "landing", "circle second turn should land after market resume")
-  assert(player.position == assert(g.board:index_of_tile_id(25)), "circle second turn should land on nanchang")
+  assert(player.position == assert(g.board:index_of_tile_id(45)), "circle second turn should land on chance 45")
 end
 
 return {
@@ -720,8 +721,8 @@ return {
       run = _test_choice_builders_reserve_base_inline_for_item_slots_only,
     },
     {
-      name = "circle_startup_profile_second_remote_roll_reaches_nanchang_after_market_resume",
-      run = _test_circle_startup_profile_second_remote_roll_reaches_nanchang_after_market_resume,
+      name = "circle_startup_profile_second_remote_roll_reaches_chance45_after_market_resume",
+      run = _test_circle_startup_profile_second_remote_roll_reaches_chance45_after_market_resume,
     },
   },
 }

@@ -1644,6 +1644,7 @@ local function _test_complex_consecutive_turn_settlement()
     res1 = movement.move(g, p1, interrupt.remaining_steps, {
       branch_parity = interrupt.branch_parity,
       direction = interrupt.facing,
+      entered_inner = interrupt.entered_inner,
       skip_market_check = true,
       skip_steal_check = true,
     })
@@ -1727,11 +1728,19 @@ local function _test_complex_market_interrupt_with_rent()
   assert(true, "黑市中断 + 租金支付场景完成")
 end
 
-local function _walk_expected_forward(board, start_index, facing, remaining_steps, parity)
+local function _walk_expected_forward(board, start_index, facing, remaining_steps, parity, entered_inner)
   local current = start_index
   local step_dir = facing
+  local inner_state = entered_inner == true
   for step_index = 1, remaining_steps do
-    current, _, step_dir = board:step_forward_by_facing(current, step_dir, parity)
+    local step_entered_inner
+    current, _, step_dir, step_entered_inner = board:step_forward_by_facing(current, step_dir, {
+      parity = parity,
+      entered_inner = inner_state,
+    })
+    if step_entered_inner then
+      inner_state = true
+    end
   end
   return current, step_dir
 end
@@ -1750,13 +1759,15 @@ local function _test_market_interrupt_resume_uses_interrupt_facing()
     interrupt.position,
     interrupt.facing,
     interrupt.remaining_steps,
-    interrupt.branch_parity
+    interrupt.branch_parity,
+    interrupt.entered_inner
   )
 
   g:set_player_status(p, "move_dir", "up")
   local resumed = movement.move(g, p, interrupt.remaining_steps, {
     branch_parity = interrupt.branch_parity,
     direction = interrupt.facing,
+    entered_inner = interrupt.entered_inner,
     facing_mode = "resume_forward",
     skip_market_check = true,
   })
@@ -1788,13 +1799,15 @@ local function _test_steal_interrupt_resume_uses_interrupt_facing()
     interrupt.position,
     interrupt.facing,
     interrupt.remaining_steps,
-    interrupt.branch_parity
+    interrupt.branch_parity,
+    interrupt.entered_inner
   )
 
   g:set_player_status(p1, "move_dir", "up")
   local resumed = movement.move(g, p1, interrupt.remaining_steps, {
     branch_parity = interrupt.branch_parity,
     direction = interrupt.facing,
+    entered_inner = interrupt.entered_inner,
     facing_mode = "resume_forward",
     skip_market_check = true,
     skip_steal_check = true,

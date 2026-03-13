@@ -44,6 +44,7 @@ local function _build_resume_move_args(player, raw_total, interrupt, continue_ke
     remaining_steps = interrupt.remaining_steps,
     facing = interrupt.facing,
     branch_parity = interrupt.branch_parity,
+    entered_inner = interrupt.entered_inner,
   }
 end
 
