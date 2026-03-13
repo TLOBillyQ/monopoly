@@ -50,6 +50,8 @@ lua scripts/arch.lua check --project-root /path/to/project --config /path/to/arc
 
 根视图展示 `app`、`core`、`game`、`infrastructure`、`presentation` 五个顶层子树。点击非叶节点下钻；点击叶节点在右侧看到源码、内外依赖、组件、层级、抽象标记与循环标记。
 
+如果某个 package 同时有 `init.lua` 和后代模块（例如 `src.game.systems.market`），viewer 交互上仍按非叶节点处理：主点击继续下钻，不把“有源码”误判成叶子。`views[*].nodes[*].leaf` 与 `drillable` 是 projection 输出给 viewer 的内部契约；viewer 只在旧 payload 缺字段时做最小兼容推断，不再重算业务语义。
+
 **节点颜色：**
 - 红色：子树或依赖条目涉及循环依赖
 - 绿色：含抽象契约（主要对应 `src.core.ports.*` 与 `src.game.ports.*`）

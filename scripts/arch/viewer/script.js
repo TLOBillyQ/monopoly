@@ -335,6 +335,13 @@
     };
   }
 
+  function explicit_boolean(value) {
+    if (value === true || value === false) {
+      return value;
+    }
+    return null;
+  }
+
   function normalize_node(
     raw_node,
     index,
@@ -342,6 +349,7 @@
     layer_map,
     feedback_by_edge,
     cycle_by_id,
+    available_view_lookup,
   ) {
     var node = raw_node || {};
     var id =
@@ -353,10 +361,27 @@
       "node_" + index;
     var module_ref = node.module_id || node.module || (modules[id] ? id : null);
     var module_info = module_ref ? modules[module_ref] : null;
-    var is_leaf =
-      node.leaf === true ||
-      node.is_leaf === true ||
-      (!!module_info && node.branch !== true && node.group !== true);
+    var raw_view_key = node.view_key || node.child_view_key || node.next_view || null;
+    var explicit_leaf = explicit_boolean(node.leaf);
+    if (explicit_leaf === null) {
+      explicit_leaf = explicit_boolean(node.is_leaf);
+    }
+    var explicit_drillable = explicit_boolean(node.drillable);
+    if (explicit_drillable === null) {
+      explicit_drillable = explicit_boolean(node.is_drillable);
+    }
+    var has_real_child_view =
+      !!raw_view_key && available_view_lookup[raw_view_key] === true;
+    var drillable = explicit_drillable;
+    if (drillable === null) {
+      drillable = has_real_child_view;
+    }
+    var is_leaf = explicit_leaf;
+    if (drillable === true) {
+      is_leaf = false;
+    } else if (is_leaf === null) {
+      is_leaf = !!(module_info && node.branch !== true && node.group !== true);
+    }
     var layer = node.layer;
     if (layer === undefined || layer === null) {
       layer = layer_map[id];
@@ -386,16 +411,13 @@
         module_ref ||
         id,
       description: node.description || node.summary || "",
-      view_key: node.view_key || node.child_view_key || node.next_view || id,
+      view_key: raw_view_key,
       module_id: module_ref,
       leaf: is_leaf,
       abstract: abstract_flag,
       cycle: cycle_flag,
       has_cycle_subtree: cycle_flag,
-      drillable:
-        node.drillable === true ||
-        (!is_leaf &&
-          !!(node.view_key || node.child_view_key || node.next_view)),
+      drillable: drillable === true,
       component:
         node.component || (module_info && module_info.component) || null,
       source_path:
@@ -665,6 +687,7 @@
     layer_map,
     feedback_by_edge,
     cycle_by_id,
+    available_view_lookup,
   ) {
     var view = raw_view || {};
     var nodes = to_array(view.nodes).map(function (node, index) {
@@ -675,6 +698,7 @@
         layer_map,
         feedback_by_edge,
         cycle_by_id,
+        available_view_lookup,
       );
     });
     var node_ids = Object.create(null);
@@ -718,6 +742,11 @@
     var modules = normalize_modules(data);
     var layer_map = normalized_layer_map(data);
     var normalized_views = Object.create(null);
+    var available_view_lookup = Object.create(null);
+
+    Object.keys(data.views || {}).forEach(function (view_key) {
+      available_view_lookup[view_key] = true;
+    });
 
     Object.keys(data.views || {}).forEach(function (view_key) {
       normalized_views[view_key] = normalize_view(
@@ -727,6 +756,7 @@
         layer_map,
         feedback_by_edge,
         cycle_by_id,
+        available_view_lookup,
       );
     });
 
@@ -738,6 +768,7 @@
         layer_map,
         feedback_by_edge,
         cycle_by_id,
+        available_view_lookup,
       );
     }
 
@@ -1325,6 +1356,10 @@
       }
     });
     button.addEventListener("click", function () {
+      if (node.drillable && node.view_key) {
+        state.open_view(node.view_key, true);
+        return;
+      }
       if (node.leaf) {
         state.selected_leaf_id = node.id;
         state.pinned_highlight_node = node.id;
@@ -1338,9 +1373,6 @@
         render_inspector(node);
         render_view(state.current_view_key, state);
         return;
-      }
-      if (node.drillable && node.view_key) {
-        state.open_view(node.view_key, true);
       }
     });
 

@@ -38,6 +38,22 @@ local function _read_file(path)
     return content
 end
 
+local function _decode_arch_data_script(path)
+    local data_script = _read_file(path)
+    local payload = data_script:gsub("^%s*window%.ARCH_VIEW_DATA%s*=%s*", "", 1)
+    payload = payload:gsub(";%s*$", "", 1)
+    return json_reader.decode(payload), data_script
+end
+
+local function _find_node(view, node_id)
+    for _, node in ipairs((view and view.nodes) or {}) do
+        if node.id == node_id then
+            return node
+        end
+    end
+    return nil
+end
+
 local function _exists(path)
     local file = io.open(path, "r")
     if file then
@@ -244,9 +260,10 @@ local function _test_projection_collapses_package_init_nodes_into_single_drillab
     local architecture = _analyze_architecture()
     local root_view = architecture.views.root
     local game_view = architecture.views.game
+    local game_systems_view = architecture.views["game.systems"]
     local presentation_view = architecture.views.presentation
 
-    for _, view in ipairs({ root_view, game_view, presentation_view }) do
+    for _, view in ipairs({ root_view, game_view, game_systems_view, presentation_view }) do
         for _, node in ipairs(view.nodes or {}) do
             assert(
                 tostring(node.id):find("|file", 1, true) == nil,
@@ -266,6 +283,12 @@ local function _test_projection_collapses_package_init_nodes_into_single_drillab
     _assert_eq(app_node.display_label, "app", "package nodes with descendants should display namespace label")
     assert(app_node.drillable == true, "package nodes with descendants should remain drillable")
     assert(app_node.leaf == false, "package nodes with descendants should not be marked leaf")
+
+    local market_node = _find_node(game_systems_view, "market")
+    assert(market_node ~= nil, "game.systems view should expose market package node")
+    _assert_eq(market_node.module_id, "src.game.systems.market", "market package node should keep its init module id")
+    assert(market_node.drillable == true, "market package node should remain drillable")
+    assert(market_node.leaf == false, "market package node should not be marked leaf when descendants exist")
 end
 
 local function _test_config_classifies_runtime_game_and_ports()
@@ -552,11 +575,19 @@ local function _test_viewer_command_writes_static_bundle()
     assert(_exists(out_dir .. "/index.html"), "viewer should export index.html")
     assert(_exists(out_dir .. "/script.js"), "viewer should export script.js")
     assert(_exists(out_dir .. "/styles.css"), "viewer should export styles.css")
-    local data_script = _read_file(out_dir .. "/architecture_data.js")
+    local payload, data_script = _decode_arch_data_script(out_dir .. "/architecture_data.js")
     assert(data_script:find("window%.ARCH_VIEW_DATA%s*=", 1) ~= nil, "viewer bundle should expose global payload")
     assert(data_script:find('"display_edges"', 1, true) ~= nil, "viewer payload should contain display_edges")
     assert(data_script:find('"route_points"', 1, true) ~= nil, "viewer payload should contain route_points")
     assert(data_script:find('"indicators"', 1, true) ~= nil, "viewer payload should contain indicators")
+    assert(data_script:find('"leaf"', 1, true) ~= nil, "viewer payload should contain leaf field")
+    assert(data_script:find('"drillable"', 1, true) ~= nil, "viewer payload should contain drillable field")
+
+    local market_node = _find_node(payload.views["game.systems"], "market")
+    assert(market_node ~= nil, "viewer payload should expose market package node")
+    _assert_eq(market_node.module_id, "src.game.systems.market", "viewer payload should preserve market init module id")
+    assert(market_node.drillable == true, "viewer payload should preserve drillable package nodes")
+    assert(market_node.leaf == false, "viewer payload should preserve non-leaf package nodes")
 end
 
 local function _test_cli_viewer_defaults_to_tmp_arch_view()
