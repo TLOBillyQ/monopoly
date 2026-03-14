@@ -60,7 +60,10 @@ local function _test_wrapper_defaults_to_behavior_lane_driver()
     end,
     run = function(args)
       captured_args = args
-      captured_driver_command = project_module.default_test_command()
+      captured_driver_command = project_module.default_test_command(nil, {
+        target_file = "src/core/utils/role_id.lua",
+        project_hash = "project_hash_123",
+      })
       captured_project_hash = project_module.project_hash("/repo", "/repo/src/core/utils/role_id.lua", "return false\n")
       return 0
     end,
@@ -99,6 +102,10 @@ local function _test_wrapper_defaults_to_behavior_lane_driver()
   assert(captured_driver_command[2] == "scripts/quality/mutate_monopoly_driver.lua",
     "wrapper should inject Monopoly mutation driver")
   assert(captured_driver_command[4] == "behavior", "wrapper should default to behavior lane")
+  _assert_contains(table.concat(captured_driver_command, " "), "--target-file src/core/utils/role_id.lua",
+    "wrapper should pass mutation target to default driver")
+  _assert_contains(table.concat(captured_driver_command, " "), "--project-hash project_hash_123",
+    "wrapper should pass project hash to default driver")
   _assert_contains(captured_project_hash, "src/core/utils/role_id.lua\nreturn false\n",
     "wrapper should replace target content when building project hash")
   _assert_contains(captured_project_hash, "tests/probe.lua\nassert(true)\n",
@@ -169,6 +176,23 @@ local function _test_wrapper_help_is_bilingual()
   assert(err:text() == "", "help should not write stderr")
 end
 
+local function _test_list_project_hash_files_ignores_mutate_cache()
+  local files = mutate.list_project_hash_files("/repo", {
+    list_project_files = function()
+      return {
+        "src/core/utils/role_id.lua",
+        ".mutate4lua/cache/baseline/a.meta.lua",
+        ".mutate4lua/cache/baseline/a.coverage",
+        "tests/probe.lua",
+      }
+    end,
+  })
+
+  assert(#files == 2, "mutate cache files should be ignored")
+  assert(files[1] == "src/core/utils/role_id.lua", "source file should stay in project hash input")
+  assert(files[2] == "tests/probe.lua", "test file should stay in project hash input")
+end
+
 local function _test_driver_behavior_mode_writes_repo_relative_coverage()
   local root = _temp_dir("mutate_driver_behavior")
   local source_path = common.join_path(root, "src/probe.lua")
@@ -233,12 +257,42 @@ local function _test_driver_contract_forces_dev_mode()
   assert(captured_mode == "dev", "contract lane should always run in dev mode")
 end
 
+local function _test_driver_select_suites_for_target_uses_cached_index()
+  local suites = {
+    { name = "suite_a", module_name = "suite.a", tests = {} },
+    { name = "suite_b", module_name = "suite.b", tests = {} },
+  }
+  local selected = driver.select_suites_for_target("/repo", "behavior", "dev", "src/demo/target.lua", "abc", suites, {
+    load_suite_index = function()
+      return {
+        ["suite.a"] = { ["src/demo/other.lua"] = true },
+        ["suite.b"] = { ["src/demo/target.lua"] = true },
+      }
+    end,
+  })
+
+  assert(#selected == 1, "driver should keep only suites covering target file")
+  assert(selected[1].module_name == "suite.b", "driver should select matching suite by module_name")
+end
+
+local function _test_driver_select_suites_for_target_falls_back_for_contract_lane()
+  local suites = {
+    { name = "suite_a", module_name = "suite.a", tests = {} },
+    { name = "suite_b", module_name = "suite.b", tests = {} },
+  }
+  local selected = driver.select_suites_for_target("/repo", "contract", "dev", "src/demo/target.lua", "abc", suites, {})
+  assert(#selected == 2, "contract lane should skip suite slicing")
+end
+
 return {
   name = "architecture.mutate4lua_contract",
   tests = {
     { name = "wrapper_defaults_to_behavior_lane_driver", run = _test_wrapper_defaults_to_behavior_lane_driver },
     { name = "wrapper_bypasses_default_driver_when_test_command_is_explicit", run = _test_wrapper_bypasses_default_driver_when_test_command_is_explicit },
     { name = "wrapper_help_is_bilingual", run = _test_wrapper_help_is_bilingual },
+    { name = "list_project_hash_files_ignores_mutate_cache", run = _test_list_project_hash_files_ignores_mutate_cache },
+    { name = "driver_select_suites_for_target_uses_cached_index", run = _test_driver_select_suites_for_target_uses_cached_index },
+    { name = "driver_select_suites_for_target_falls_back_for_contract_lane", run = _test_driver_select_suites_for_target_falls_back_for_contract_lane },
     { name = "driver_behavior_mode_writes_repo_relative_coverage", run = _test_driver_behavior_mode_writes_repo_relative_coverage },
     { name = "driver_contract_forces_dev_mode", run = _test_driver_contract_forces_dev_mode },
   },

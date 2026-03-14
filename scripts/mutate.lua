@@ -127,6 +127,16 @@ function M.build_default_test_command(opts)
     lane,
   }
 
+  if opts.target_file ~= nil and tostring(opts.target_file) ~= "" then
+    command[#command + 1] = "--target-file"
+    command[#command + 1] = tostring(opts.target_file)
+  end
+
+  if opts.project_hash ~= nil and tostring(opts.project_hash) ~= "" then
+    command[#command + 1] = "--project-hash"
+    command[#command + 1] = tostring(opts.project_hash)
+  end
+
   if lane == "behavior" and opts.mode ~= nil and tostring(opts.mode) ~= "" then
     command[#command + 1] = "--mode"
     command[#command + 1] = tostring(opts.mode)
@@ -138,7 +148,15 @@ end
 function M.list_project_hash_files(project_root, env)
   env = env or {}
   if type(env.list_project_files) == "function" then
-    return env.list_project_files(project_root)
+    local listed = env.list_project_files(project_root)
+    local filtered = {}
+    for _, path in ipairs(listed or {}) do
+      local normalized = _normalize_path(path)
+      if normalized ~= "" and normalized:match("^%.mutate4lua/") == nil then
+        filtered[#filtered + 1] = normalized
+      end
+    end
+    return filtered
   end
 
   local command = table.concat({
@@ -161,7 +179,7 @@ function M.list_project_hash_files(project_root, env)
   local files = {}
   for line in tostring(output):gmatch("[^\n]+") do
     local normalized = _normalize_path(line)
-    if normalized ~= "" then
+    if normalized ~= "" and normalized:match("^%.mutate4lua/") == nil then
       files[#files + 1] = normalized
     end
   end
@@ -245,11 +263,14 @@ function M.run(args, env)
   local has_explicit_test_command = _has_option(options.passthrough, "--test-command")
 
   if not has_explicit_test_command then
-    project_module.default_test_command = function()
+    project_module.default_test_command = function(_, default_opts)
+      default_opts = default_opts or {}
       return M.build_default_test_command({
         driver_path = env.driver_path or DEFAULT_DRIVER_PATH,
         lane = options.lane,
         mode = options.mode,
+        target_file = default_opts.target_file or options.passthrough[1],
+        project_hash = default_opts.project_hash,
       })
     end
   end

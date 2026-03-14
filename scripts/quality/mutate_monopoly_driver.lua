@@ -21,8 +21,8 @@ end
 
 local function _help_text(command_name)
   return table.concat({
-    "用法: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] --coverage-file PATH",
-    "Usage: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] --coverage-file PATH",
+    "用法: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] --coverage-file PATH [--target-file FILE] [--project-hash HASH]",
+    "Usage: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] --coverage-file PATH [--target-file FILE] [--project-hash HASH]",
     "",
     "behavior 会走 tests/catalog.lua + regression_mode。",
     "behavior uses tests/catalog.lua plus regression_mode.",
@@ -37,6 +37,9 @@ local function _parse_args(args)
     lane = "behavior",
     mode = nil,
     coverage_file = nil,
+    target_file = nil,
+    project_hash = nil,
+    suite_module = nil,
     help = false,
   }
 
@@ -64,6 +67,27 @@ local function _parse_args(args)
         error("--coverage-file requires a value")
       end
       options.coverage_file = path
+    elseif token == "--target-file" then
+      index = index + 1
+      local path = args[index]
+      if path == nil or path == "" then
+        error("--target-file requires a value")
+      end
+      options.target_file = path
+    elseif token == "--project-hash" then
+      index = index + 1
+      local project_hash = args[index]
+      if project_hash == nil or project_hash == "" then
+        error("--project-hash requires a value")
+      end
+      options.project_hash = project_hash
+    elseif token == "--suite-module" then
+      index = index + 1
+      local suite_module = args[index]
+      if suite_module == nil or suite_module == "" then
+        error("--suite-module requires a value")
+      end
+      options.suite_module = suite_module
     elseif token == "--help" or token == "-h" then
       options.help = true
     else
@@ -134,7 +158,53 @@ local function _collect_coverage(lines, project_root, debug_api)
   end
 end
 
+local function _suite_key(suite, suite_index)
+  return tostring((suite and suite.module_name) or (suite and suite.name) or ("suite_" .. tostring(suite_index)))
+end
+
+local function _filter_suite_module(suites, suite_module)
+  if suite_module == nil then
+    return suites
+  end
+  local filtered = {}
+  for suite_index, suite in ipairs(suites or {}) do
+    if _suite_key(suite, suite_index) == suite_module then
+      filtered[#filtered + 1] = suite
+    end
+  end
+  return filtered
+end
+
+local function _silent_reporter()
+  return {
+    case_pass = function() end,
+    case_fail = function() end,
+    finish = function() end,
+  }
+end
+
 local M = {}
+
+function M.select_suites_for_target(_project_root, _lane, _mode, _target_file, _project_hash, suites, env)
+  env = env or {}
+  local load_suite_index = env.load_suite_index
+  if type(load_suite_index) ~= "function" then
+    return suites
+  end
+  local suite_index = load_suite_index()
+  if type(suite_index) ~= "table" or _target_file == nil or _target_file == "" or _lane ~= "behavior" then
+    return suites
+  end
+  local normalized_target = _normalize_path(_target_file):gsub("^%./", "")
+  local selected = {}
+  for suite_index_number, suite in ipairs(suites or {}) do
+    local suite_key = _suite_key(suite, suite_index_number)
+    if suite_index[suite_key] and suite_index[suite_key][normalized_target] then
+      selected[#selected + 1] = suite
+    end
+  end
+  return selected
+end
 
 function M.run(args, env)
   env = env or {}
@@ -160,14 +230,22 @@ function M.run(args, env)
   end
 
   local suites, mode = resolve_lane_suites(options.lane, options.mode)
+  suites = _filter_suite_module(suites, options.suite_module)
   local coverage_lines = {}
   debug_api.sethook(_collect_coverage(coverage_lines, project_root, debug_api), "l")
 
   local run_ok, run_result = xpcall(function()
-    return run_all(suites, {
+    local run_opts = {
       mode = mode,
       capture_logs = true,
-    })
+    }
+    if options.suite_module ~= nil then
+      run_opts.capture_logs = false
+      run_opts.reporter = _silent_reporter()
+      run_opts.raise_on_failure = false
+      run_opts.quiet = true
+    end
+    return run_all(suites, run_opts)
   end, debug.traceback)
 
   debug_api.sethook()

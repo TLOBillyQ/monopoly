@@ -77,6 +77,7 @@ end
 local function run_all(suites, opts)
   opts = opts or {}
   local reporter = opts.reporter or _default_reporter()
+  local quiet = opts.quiet == true
   local total = 0
   local failures = {}
   local summary = {}
@@ -135,7 +136,7 @@ local function run_all(suites, opts)
     end
   end
 
-  if #slow_cases > 0 then
+  if #slow_cases > 0 and not quiet then
     print("")
     print("Slow cases (>= " .. tostring(slow_ms) .. "ms):")
     table.sort(slow_cases, function(left, right)
@@ -157,19 +158,21 @@ local function run_all(suites, opts)
   }
 
   if #failures > 0 and opts.raise_on_failure ~= false then
-    io.stdout:write("\n")
-    print("Regression failed (" .. tostring(#failures) .. "/" .. tostring(total) .. ")")
-    for i, failure in ipairs(failures) do
-      print(tostring(i) .. ") " .. failure.name)
-      if failure.captured and failure.captured.lines and #failure.captured.lines > 0 then
-        log_capture.replay(failure.captured)
+    if not quiet then
+      io.stdout:write("\n")
+      print("Regression failed (" .. tostring(#failures) .. "/" .. tostring(total) .. ")")
+      for i, failure in ipairs(failures) do
+        print(tostring(i) .. ") " .. failure.name)
+        if failure.captured and failure.captured.lines and #failure.captured.lines > 0 then
+          log_capture.replay(failure.captured)
+        end
+        print(failure.err)
       end
-      print(failure.err)
     end
     error("regression failed")
   end
 
-  if #failures == 0 then
+  if #failures == 0 and not quiet then
     print("\nAll regression checks passed (" .. tostring(total) .. ")")
   end
 
