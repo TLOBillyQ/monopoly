@@ -39,7 +39,7 @@
 5. **破产反馈通过端口**：systems 通过 `src/game/ports/bankruptcy_feedback_port.lua` 发出语义，UI 更新由外层 adapter 决定。
 6. **root-state 镜像已退休**：`legacy_output_mirror.lua` 已删除，UI runtime 状态以 `state.ui_runtime` 为唯一真源。
 7. **loop_ports 拼装权限**：只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可直接拼装 `loop_ports` override。
-8. **架构边界可执行真源**：`scripts/arch/config.lua`。
+8. **架构边界可执行真源**：`scripts/arch/config.json`。
    - `lua scripts/arch.lua check` — 边界扫描
    - `lua scripts/arch.lua viewer --out-dir <dir> [--open]` — 导出静态 viewer
    - `lua tests/guard.lua` — 完整护栏

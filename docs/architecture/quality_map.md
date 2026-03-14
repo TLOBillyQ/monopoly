@@ -68,7 +68,7 @@
 - 入口：`lua scripts/arch.lua check`
 - 文档：`docs/architecture/arch_view.md`
 - 工具代码：`vendor/arch_view/`
-- Monopoly 规则真源：`scripts/arch/config.lua`
+- Monopoly 规则真源：`scripts/arch/config.json`
 - Monopoly 提交态快照：`scripts/arch/viewer/*`
 - 检查内容：
   - 模块级 `require` 依赖边界
@@ -90,7 +90,7 @@
 - 适用时机：需要给“先补测还是先重构”排序
 - 不适合：单独做合并 gate；它依赖测试 lane 质量
 
-现在的 CLI 入口由 `scripts/crap.lua` 负责兼容，核心实现来自子模块 `vendor/crap4lua/`，默认项目配置在 `scripts/quality/crap_monopoly.config.lua`，Monopoly lane 适配在 `scripts/quality/crap_monopoly_adapter.lua`：
+现在的 CLI 入口由 `scripts/crap.lua` 负责兼容，核心实现来自子模块 `vendor/crap4lua/`，其中静态分析 / report / viewer 主流程由 Go engine 提供；默认项目配置在 `scripts/quality/crap_monopoly.config.lua`，Monopoly lane 适配在 `scripts/quality/crap_monopoly_adapter.lua`：
 
 - `report`：生成 JSON 报告
 - `viewer`：导出静态页面

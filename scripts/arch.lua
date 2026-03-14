@@ -11,7 +11,7 @@ end
 local SCRIPT_DIR = _script_dir()
 local REPO_ROOT = _normalize_path(SCRIPT_DIR .. "/..")
 local ARCH_VIEW_DIR = _normalize_path(SCRIPT_DIR .. "/../vendor/arch_view")
-local ARCH_CONFIG_PATH = _normalize_path(SCRIPT_DIR .. "/arch/config.lua")
+local ARCH_CONFIG_PATH = _normalize_path(SCRIPT_DIR .. "/arch/config.json")
 local package_path_helper = require("scripts.package_path_helper")
 
 package_path_helper.install_monopoly_package_paths({ arch_view_root = ARCH_VIEW_DIR })
@@ -26,6 +26,7 @@ function M.run(args, env)
     cwd = env.cwd or REPO_ROOT,
     asset_root = env.asset_root or _normalize_path(ARCH_VIEW_DIR .. "/viewer"),
     default_config_path = env.default_config_path or ARCH_CONFIG_PATH,
+    default_engine = env.default_engine or "auto",
     open_path = env.open_path,
   })
 end

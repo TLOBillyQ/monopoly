@@ -9,13 +9,14 @@
 ## 代码位置
 
 - 通用工具源码与静态 viewer 资产在子模块 `vendor/arch_view/`
-- Monopoly 专属规则真源仍在 `scripts/arch/config.lua`
+- Monopoly 专属规则真源仍在 `scripts/arch/config.json`
 - Monopoly 提交态 viewer 快照仍保留在 `scripts/arch/viewer/`
 - Monopoly 宿主入口在 `scripts/arch.lua`，内部通过 `require("arch_view")` 调用 vendored 工具
+- 默认分析引擎为 `auto`：优先走 Go 核心，不可用时回退 Lua
 
 ## 真源与约束
 
-- 结构性依赖规则唯一真源：`scripts/arch/config.lua`
+- 结构性依赖规则唯一真源：`scripts/arch/config.json`
 - `tests/guards/dep_rules.lua` 只保留文本级硬边界（宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路，以及少量跨子系统禁令）
 - 零模块级循环依赖，无白名单，任意新循环直接让 `check` 失败
 
@@ -24,7 +25,7 @@
 ```
 lua scripts/arch.lua check
 ```
-扫描 `src/`，执行边界校验，失败则非零退出。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 均使用此能力；跑全部护栏用 `lua tests/guard.lua`。
+扫描 `src/`，执行边界校验，失败则非零退出。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 均使用此能力；跑全部护栏用 `lua tests/guard.lua`。配置默认来自 `scripts/arch/config.json`。
 
 `check` 同时校验两类循环：
 - 模块级 `require` 环
@@ -52,7 +53,7 @@ lua scripts/arch.lua scan --out /tmp/monopoly_architecture.json
 **扫描其他项目：**
 
 ```
-lua scripts/arch.lua check --project-root /path/to/project --config /path/to/architecture.lua
+lua scripts/arch.lua check --project-root /path/to/project --config /path/to/architecture.json
 ```
 
 ## Viewer 读法

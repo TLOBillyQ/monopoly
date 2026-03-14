@@ -11,7 +11,7 @@ local projection = require("arch_view.projection")
 local cached_architecture = nil
 local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
 local arch_view_root = "vendor/arch_view"
-local arch_config_path = "scripts/arch/config.lua"
+local arch_config_path = "scripts/arch/config.json"
 local default_viewer_out_dir = ".arch_view/viewer"
 
 local function _assert_eq(actual, expected, message)
