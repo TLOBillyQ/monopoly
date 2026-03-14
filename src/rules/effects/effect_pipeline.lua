@@ -1,5 +1,5 @@
 local effect_runner = require("src.rules.effects.effect_runner")
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 
 local pipeline = {}
 

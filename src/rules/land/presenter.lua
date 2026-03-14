@@ -1,4 +1,4 @@
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 local action_anim_port = require("src.core.ports.action_anim_port")
 
 local presenter = {}

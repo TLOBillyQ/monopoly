@@ -1,9 +1,9 @@
 local items_cfg = require("src.config.content.items")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local auto_play_port = require("src.game.ports.auto_play_port")
+local auto_play_port = require("src.rules.ports.auto_play_port")
 local strategy = require("src.rules.items.strategy")
 local inventory = require("src.rules.items.inventory")
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 
 local phase_module = {}
 

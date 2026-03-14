@@ -1,7 +1,7 @@
 local items_cfg = require("src.config.content.items")
 require "vendor.third_party.Utils"
 local logger = require("src.core.utils.logger")
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 
 local inventory = {}
 

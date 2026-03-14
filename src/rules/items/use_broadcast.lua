@@ -1,4 +1,4 @@
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 local inventory = require("src.rules.items.inventory")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 

@@ -32,7 +32,8 @@
 - [x] (2026-03-14 12:48+08:00) 已把 `players`、`tiles`、`turn` 与 `state_access` 迁到 `src/state/*`，旧路径改成 shim，并补 `src/state/player_state_ops/*` / `src/state/support/*` 过渡桥以消除 root 投影环，`T3` 完成。
 - [x] (2026-03-14 13:37+08:00) 已联合完成 `T4`/`T5`：宿主桥接迁到 `src/host/eggy/*`，规则实现迁到 `src/rules/*`，旧路径全部改成 shim，`T4` 与 `T5` 完成。
 - [x] (2026-03-14 14:09+08:00) 已联合完成 `T6`/`T7`：player 选择与动作迁到 `src/player/*`，AI 入口迁到 `src/computer/policies/*`，旧路径全部改成 shim，`T6` 与 `T7` 完成。
-- [ ] `T8` 共享 gameplay ports 归位进行中；`T9` 到 `T14` 仍待执行。
+- [x] (2026-03-14 14:24+08:00) 已把共享 gameplay ports 迁到 `src/rules/ports/*` 并切换 `src/` / `tests/` 消费方，`T8` 完成。
+- [ ] `T9` `turn` 核心归位进行中；`T10` 到 `T14` 仍待执行。
 
 ## 意外与发现
 
@@ -313,9 +314,9 @@
 - **location**: `src/game/ports/*`, `src/rules/ports/*`
 - **description**: 把共享 gameplay contract 从旧 `src/game/ports/*` 迁到中性的 `src/rules/ports/*`，不再把它们并入 `src/turn/output/ports/*`。这一步只处理 contract 的落点，不顺手处理 turn output adapter。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；本文件的目标树和“接口与依赖”章节都已出现 `src/rules/ports/*`；`rg -n 'src\.game\.ports' src/rules src/turn tests` 的残留必须能解释为 shim 或未切换调用点。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录哪些旧 port 已完成新路径归位。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 14:24+08:00` 已将 `src/game/ports/{auto_play_port,bankruptcy_feedback_port,bankruptcy_port,board_visual_feedback_port,contract_helper,intent_output_port}.lua` 迁到 `src/rules/ports/*`，旧路径全部改成 shim，并把 `src/` / `tests/` 的 consumer 批量切到 `src.rules.ports.*`。验证结果：`rg -n 'src\.game\.ports' src tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/game/ports/*.lua`, `src/rules/ports/*.lua`, `src/game/**/*`, `src/rules/**/*`, `tests/**/*`, `.agents/plan.md`
 
 ### T9：`turn` 核心归位
 

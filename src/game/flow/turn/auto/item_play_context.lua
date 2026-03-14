@@ -1,4 +1,4 @@
-local auto_play_port = require("src.game.ports.auto_play_port")
+local auto_play_port = require("src.rules.ports.auto_play_port")
 
 local item_auto_play_context = {}
 

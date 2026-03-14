@@ -7,7 +7,7 @@ local remote_dice = require("src.rules.items.remote_dice")
 local item_phase = require("src.rules.items.phase")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 local item_use_broadcast = require("src.rules.items.use_broadcast")
 
 local item_choice_handler = {}

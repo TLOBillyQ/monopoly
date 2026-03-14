@@ -1,5 +1,5 @@
 local effects = require("src.rules.items.post_effects")
-local auto_play_port = require("src.game.ports.auto_play_port")
+local auto_play_port = require("src.rules.ports.auto_play_port")
 local inventory = require("src.rules.items.inventory")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")

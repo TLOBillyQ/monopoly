@@ -19,7 +19,7 @@ function land_events.apply(game, result)
   emit(event_key, payload)
 
   if result.bankrupt_reason then
-    local bankruptcy_port = require("src.game.ports.bankruptcy_port")
+    local bankruptcy_port = require("src.rules.ports.bankruptcy_port")
     bankruptcy_port.eliminate(game, payload.player, { reason = result.bankrupt_reason })
   end
 end

@@ -23,7 +23,7 @@ local monopoly_event = require("src.core.events.monopoly_events")
 local move_followup = require("src.game.flow.turn.phases.move_followup")
 local effect_pipeline = require("src.rules.effects.effect_pipeline")
 local effect_runner = require("src.rules.effects.effect_runner")
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 
 local function _install_narrow_ports(game, ui_port)
   game.ui_port = ui_port
@@ -1243,7 +1243,7 @@ local function _test_try_remote_dice_returns_nil_when_no_dice_value_picked()
   local p = g:current_player()
   p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
 
-  local auto_play_port = require("src.game.ports.auto_play_port")
+  local auto_play_port = require("src.rules.ports.auto_play_port")
   support.with_patches({
     {
       target = auto_play_port,
@@ -1263,7 +1263,7 @@ local function _test_try_roadblock_returns_nil_when_no_target_picked()
   local p = g:current_player()
   p.inventory:add({ id = gameplay_rules.item_ids.roadblock })
 
-  local auto_play_port = require("src.game.ports.auto_play_port")
+  local auto_play_port = require("src.rules.ports.auto_play_port")
   support.with_patches({
     {
       target = auto_play_port,

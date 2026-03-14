@@ -1,5 +1,5 @@
 local choice_session = require("src.rules.market.choice.session")
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 
 local outcome = {}
 

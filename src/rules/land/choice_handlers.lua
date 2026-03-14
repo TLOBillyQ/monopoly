@@ -1,7 +1,7 @@
 local land_choice_specs = require("src.rules.land.choice_specs")
 local inventory = require("src.rules.items.inventory")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 
 local land_choice_handler = {}
 local item_ids = gameplay_rules.item_ids

@@ -1,6 +1,6 @@
 local effect_runner = require("src.rules.effects.effect_runner")
 local logger = require("src.core.utils.logger")
-local intent_output_port = require("src.game.ports.intent_output_port")
+local intent_output_port = require("src.rules.ports.intent_output_port")
 local number_utils = require("src.core.utils.number_utils")
 
 local optional_effect_handler = {}

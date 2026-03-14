@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local auto_play_port = require("src.game.ports.auto_play_port")
+local auto_play_port = require("src.rules.ports.auto_play_port")
 local effects = require("src.rules.items.post_effects")
 local inventory = require("src.rules.items.inventory")
 local number_utils = require("src.core.utils.number_utils")

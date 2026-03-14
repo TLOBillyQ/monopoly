@@ -1,6 +1,6 @@
 local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")
-local auto_play_port = require("src.game.ports.auto_play_port")
+local auto_play_port = require("src.rules.ports.auto_play_port")
 
 local choice_auto_policy = {}
 
