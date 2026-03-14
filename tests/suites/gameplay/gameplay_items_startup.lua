@@ -4,9 +4,9 @@ local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local game_startup = require("src.app.bootstrap.game_startup")
 local turn_roll = require("src.game.flow.turn.phases.roll")
 local move_followup = require("src.game.flow.turn.phases.move_followup")
-local board_utils = require("src.game.systems.land.board_utils")
-local land_rules = require("src.game.systems.land.rules")
-local item_phase = require("src.game.systems.items.phase")
+local board_utils = require("src.rules.land.board_utils")
+local land_rules = require("src.rules.land.rules")
+local item_phase = require("src.rules.items.phase")
 local choice_resolver = support.choice_resolver
 local movement = support.movement
 local steal = support.steal
@@ -566,8 +566,8 @@ end
 local function _test_choice_builders_reserve_base_inline_for_item_slots_only()
   local g, _ = _new_profile_game("steal")
   local player = g.players[1]
-  local land_choice_specs = require("src.game.systems.land.choice_specs")
-  local purchase_policy = require("src.game.systems.market.purchase.policy")
+  local land_choice_specs = require("src.rules.land.choice_specs")
+  local purchase_policy = require("src.rules.market.purchase.policy")
   player.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
 
   local item_phase_choice = item_phase.build_choice_spec(g, player, "pre_action")

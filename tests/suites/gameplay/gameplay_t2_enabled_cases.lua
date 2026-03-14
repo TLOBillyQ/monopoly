@@ -70,16 +70,16 @@ local function _build_loop_state()
 end
 
 local function _with_reloaded_move_module(movement_stub, followup_stub, fn)
-  local original_movement = package.loaded["src.game.systems.movement"]
+  local original_movement = package.loaded["src.rules.movement"]
   local original_followup = package.loaded["src.game.flow.turn.phases.move_followup"]
   local original_move = package.loaded["src.game.flow.turn.phases.move"]
-  package.loaded["src.game.systems.movement"] = movement_stub
+  package.loaded["src.rules.movement"] = movement_stub
   package.loaded["src.game.flow.turn.phases.move_followup"] = followup_stub
   package.loaded["src.game.flow.turn.phases.move"] = nil
   local ok, result = pcall(function()
     return fn(require("src.game.flow.turn.phases.move"))
   end)
-  package.loaded["src.game.systems.movement"] = original_movement
+  package.loaded["src.rules.movement"] = original_movement
   package.loaded["src.game.flow.turn.phases.move_followup"] = original_followup
   package.loaded["src.game.flow.turn.phases.move"] = original_move
   if not ok then

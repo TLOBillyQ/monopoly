@@ -1,5 +1,5 @@
 local runtime = require("src.presentation.runtime.ui")
-local host_runtime = require("src.presentation.runtime.host")
+local host_runtime = require("src.host.eggy")
 local local_actor_resolver = require("src.presentation.runtime.local_actor_resolver")
 local role_id_utils = require("src.core.utils.role_id")
 

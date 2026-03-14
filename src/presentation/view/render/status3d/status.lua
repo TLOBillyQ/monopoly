@@ -4,7 +4,7 @@ local scene = require("src.presentation.view.render.status3d.scene")
 local M = {}
 
 local function _resolve_role(player_id, deps)
-  local host_runtime = deps and deps.host_runtime or package.loaded["src.presentation.runtime.host"] or nil
+  local host_runtime = deps and deps.host_runtime or package.loaded["src.host.eggy"] or nil
   assert(host_runtime ~= nil, "missing deps.host_runtime")
   return host_runtime.resolve_role_with(player_id, function(role)
     return role.set_label_text ~= nil

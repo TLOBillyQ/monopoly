@@ -1,5 +1,5 @@
-local board = require("src.game.systems.board")
-local tile = require("src.game.systems.board.tile")
+local board = require("src.rules.board")
+local tile = require("src.rules.board.tile")
 local player = require("src.game.core.player")
 local inventory = require("src.game.core.player.inventory")
 local constants = require("src.config.content.constants")

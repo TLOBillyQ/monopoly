@@ -1,6 +1,6 @@
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
-local inventory = require("src.game.systems.items.inventory")
+local inventory = require("src.rules.items.inventory")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local _with_patches = support.with_patches
 local function _new_game()
@@ -14,15 +14,15 @@ local _resolve_landing = support.resolve_landing
 local land_actions = support.land_actions
 local pricing = support.pricing
 local choice_resolver = support.choice_resolver
-local choice_registry = require("src.game.systems.choices.registry")
-local choice_optional_effect_handler = require("src.game.systems.choices.handlers.optional_effect")
-local item_choice_handlers = require("src.game.systems.items.choice_handlers")
-local item_executor = require("src.game.systems.items.executor")
-local item_phase = require("src.game.systems.items.phase")
-local land_choice_handlers = require("src.game.systems.land.choice_handlers")
-local landing_defs = require("src.game.systems.land.specs.effects")
-local effect_runner = require("src.game.systems.effects.effect_runner")
-local market_choice_handlers = require("src.game.systems.market.choice_handlers")
+local choice_registry = require("src.rules.choices.registry")
+local choice_optional_effect_handler = require("src.rules.choices.handlers.optional_effect")
+local item_choice_handlers = require("src.rules.items.choice_handlers")
+local item_executor = require("src.rules.items.executor")
+local item_phase = require("src.rules.items.phase")
+local land_choice_handlers = require("src.rules.land.choice_handlers")
+local landing_defs = require("src.rules.land.specs.effects")
+local effect_runner = require("src.rules.effects.effect_runner")
+local market_choice_handlers = require("src.rules.market.choice_handlers")
 local item_ids = gameplay_rules.item_ids
 
 local function _build_choice_groups()
@@ -158,7 +158,7 @@ local function _test_land_rent_graph_adjacency_breaks_path_neighbors()
 end
 
 local function _test_rent_owner_missing_skips_payment()
-  local land = require("src.game.systems.land.executors")
+  local land = require("src.rules.land.executors")
   local g = _new_game()
   local tenant = g.players[1]
   local owner = g.players[2]
@@ -264,7 +264,7 @@ local function _test_land_actions_execute_strong_card_triggers_event()
 
   local events = {}
   _with_patches({
-    { target = require("src.game.systems.land.events"), key = "apply", value = function(_, result)
+    { target = require("src.rules.land.events"), key = "apply", value = function(_, result)
       events[#events + 1] = result
     end },
   }, function()
@@ -287,7 +287,7 @@ local function _test_land_actions_execute_free_card_triggers_event()
 
   local events = {}
   _with_patches({
-    { target = require("src.game.systems.land.events"), key = "apply", value = function(_, result)
+    { target = require("src.rules.land.events"), key = "apply", value = function(_, result)
       events[#events + 1] = result
     end },
   }, function()
@@ -304,7 +304,7 @@ local function _test_land_actions_execute_tax_free_card_triggers_event()
 
   local events = {}
   _with_patches({
-    { target = require("src.game.systems.land.events"), key = "apply", value = function(_, result)
+    { target = require("src.rules.land.events"), key = "apply", value = function(_, result)
       events[#events + 1] = result
     end },
   }, function()
@@ -356,7 +356,7 @@ local function _test_land_actions_resolve_rent_owner_skips_mountain_owner()
 
   local events = {}
   _with_patches({
-    { target = require("src.game.systems.land.events"), key = "apply", value = function(_, result)
+    { target = require("src.rules.land.events"), key = "apply", value = function(_, result)
       events[#events + 1] = result
     end },
   }, function()
@@ -369,7 +369,7 @@ end
 
 -- T4 characterization tests for _apply_tax
 local function _test_apply_tax_with_pending_tax_free_skips_payment()
-  local land = require("src.game.systems.land.executors")
+  local land = require("src.rules.land.executors")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_cash(p, 10000)
@@ -396,7 +396,7 @@ local function _test_apply_tax_with_pending_tax_free_skips_payment()
 end
 
 local function _test_apply_tax_without_tax_free_card_prompts_choice()
-  local land = require("src.game.systems.land.executors")
+  local land = require("src.rules.land.executors")
   local g = _new_game()
   local p = g:current_player()
   g:set_player_cash(p, 10000)

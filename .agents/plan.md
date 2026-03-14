@@ -30,7 +30,8 @@
 - [x] (2026-03-14 11:56+08:00) 已建立双路径护栏：arch 新命名空间规则、shim 纯转发 guard、兼容 contract 已落地，`T1` 完成。
 - [x] (2026-03-14 12:19+08:00) 已把 `Config/*` 与 `src/core/config/*` 迁到 `src/config/{content,gameplay,testing}/*`，旧路径改成 shim，并把 `src/`/`tests/` 消费方批量切到新 canonical require，`T2` 完成。
 - [x] (2026-03-14 12:48+08:00) 已把 `players`、`tiles`、`turn` 与 `state_access` 迁到 `src/state/*`，旧路径改成 shim，并补 `src/state/player_state_ops/*` / `src/state/support/*` 过渡桥以消除 root 投影环，`T3` 完成。
-- [ ] `T4` `host` 与 `T5` `rules` 准备并行执行；`T6` 到 `T14` 仍待执行。
+- [x] (2026-03-14 13:37+08:00) 已联合完成 `T4`/`T5`：宿主桥接迁到 `src/host/eggy/*`，规则实现迁到 `src/rules/*`，旧路径全部改成 shim，`T4` 与 `T5` 完成。
+- [ ] `T6` `player` 与 `T7` `computer` 准备并行执行；`T8` 到 `T14` 仍待执行。
 
 ## 意外与发现
 
@@ -267,9 +268,9 @@
 - **location**: `src/infrastructure/runtime/*`, `src/presentation/runtime/host/*`, `src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`, `src/host/eggy/*`
 - **description**: 迁移宿主桥接与宿主专用适配器，包括 `context.lua`、`default_ports.lua`、`event_bridge.lua`、`synthetic_actor_registry.lua`、`host/init.lua`、`scene_ui.lua`、`raycast.lua`、`role_resolver.lua`、`sfx_runtime.lua -> sound.lua`、`unit_lifecycle.lua -> units.lua` 和付费网关。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；`src/presentation/runtime/events.lua` 仍未归入本任务；`rg -n 'src\.infrastructure\.runtime|src\.presentation\.runtime\.host' src tests` 的残留要么是 shim，要么是尚未处理的调用点。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录宿主模块与新文件名映射。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 13:37+08:00` 已将 `src/infrastructure/runtime/{context,default_ports,event_bridge,synthetic_actor_registry}.lua` 迁到 `src/host/eggy/*`，并将 `src/presentation/runtime/host/{init,raycast,role_resolver,scene_ui}.lua` 迁到 `src/host/eggy/*`，`sfx_runtime.lua -> sound.lua`，`unit_lifecycle.lua -> units.lua`；付费网关迁到 `src/host/eggy/paid_purchase_gateway.lua`。为保持 `host` 不直接写出对 `config` / `rules` / `state` 的依赖，新增 `src/host/eggy/support/*` 过渡桥，把 `runtime_constants`、`runtime_refs`、`runtime_editor_exports`、vehicle feature 与 market context 的访问都收敛到 host 内侧。验证结果：`rg -n 'src\.(infrastructure\.runtime|presentation\.runtime\.host)' src tests` 无命中；`src/presentation/runtime/events.lua` 未迁移；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/infrastructure/runtime/*.lua`, `src/presentation/runtime/host/*.lua`, `src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua`, `src/host/eggy/*.lua`, `src/host/eggy/support/*.lua`, `src/app/**/*`, `src/presentation/**/*`, `tests/**/*`, `.agents/plan.md`
 
 ### T5：`rules` 归位
 
@@ -278,9 +279,9 @@
 - **location**: `src/game/systems/*`, `src/game/core/runtime/bootstrap.lua`, `src/rules/*`
 - **description**: 迁移全部规则子系统，并把注册器构建器迁到 `src/rules/bootstrap/registries.lua`。本任务只处理规则实现，不处理共享 gameplay ports。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；`rg -n 'src\.game\.systems' src/rules tests` 只剩 shim 或待切换调用点；`src/game/core/runtime/bootstrap.lua` 的新 canonical 路径已经稳定为 `src/rules/bootstrap/registries.lua`。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录已搬迁的 rules 子树与剩余例外。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 13:37+08:00` 已将 `src/game/systems/*` 整体迁到 `src/rules/*`，并把 `src/game/core/runtime/bootstrap.lua` 迁到 `src/rules/bootstrap/registries.lua`；旧路径全部改成 shim，`src/` 与 `tests/` 的 consumer 已切到 `src.rules.*`。迁移中保留的唯一旧 gameplay contract 例外是 `src/game/ports/*`：`src/rules/*` 继续经由这些旧 port 读取抽象契约，待 `T8` 再统一搬到 `src/rules/ports/*`。为了避免“抽象 port 的反向边”把 root 视图误判成投影环，本轮同步调整 `scripts/arch/arch_view/projection.lua`，让投影层反馈边只依据 direct edge 计算，abstract edge 继续显示但不参与 cycle 判定。验证结果：`rg -n 'src\.game\.systems|src\.game\.core\.runtime\.bootstrap' src tests` 无命中；`src/game/core/runtime/bootstrap.lua` 已稳定为 shim；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/game/systems/**/*.lua`, `src/game/core/runtime/bootstrap.lua`, `src/rules/**/*.lua`, `scripts/arch/arch_view/projection.lua`, `src/app/**/*`, `src/game/**/*`, `src/presentation/**/*`, `tests/**/*`, `.agents/plan.md`
 
 ### T6：`player` 归位
 

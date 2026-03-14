@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
-local land_pricing = require("src.game.systems.land.pricing")
+local land_pricing = require("src.rules.land.pricing")
 local choice_builder = require("src.presentation.model.choice_builder")
 
 local function _test_total_land_invested_matches_domain_pricing()

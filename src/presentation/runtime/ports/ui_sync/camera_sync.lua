@@ -1,5 +1,5 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
+local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local runtime_ports = require("src.core.ports.runtime_ports")
 
 local camera_sync = {}

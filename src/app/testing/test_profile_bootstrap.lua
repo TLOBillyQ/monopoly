@@ -1,5 +1,5 @@
 local test_profile_resolver = require("src.app.testing.test_profile_resolver")
-local inventory = require("src.game.systems.items.inventory")
+local inventory = require("src.rules.items.inventory")
 local constants = require("src.config.content.constants")
 local number_utils = require("src.core.utils.number_utils")
 

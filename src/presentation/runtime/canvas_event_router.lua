@@ -2,7 +2,7 @@ local ui_event_bindings = require("src.presentation.runtime.event_bindings")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
 local canvas_registry = require("src.presentation.input.canvas_route_registry")
 local local_actor_resolver = require("src.presentation.runtime.local_actor_resolver")
-local host_runtime = require("src.presentation.runtime.host")
+local host_runtime = require("src.host.eggy")
 local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
 local logger = require("src.core.utils.logger")
 

@@ -4,22 +4,22 @@ local _with_patches = support.with_patches
 local market_cfg = require("src.config.content.market")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
-local paid_goods_cfg = require("src.game.systems.commerce.specs.paid_goods")
-local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
+local paid_goods_cfg = require("src.rules.commerce.specs.paid_goods")
+local paid_purchase_port = require("src.rules.market.ports.paid_purchase_port")
 
 local function _reload_bridge()
-  package.loaded["src.game.systems.commerce.paid_currency_bridge"] = nil
-  return require("src.game.systems.commerce.paid_currency_bridge")
+  package.loaded["src.rules.commerce.paid_currency_bridge"] = nil
+  return require("src.rules.commerce.paid_currency_bridge")
 end
 
 local function _reload_market()
-  package.loaded["src.game.systems.market"] = nil
-  package.loaded["src.game.systems.market.query.context"] = nil
-  package.loaded["src.game.systems.market.query.eligibility"] = nil
-  package.loaded["src.game.systems.market.purchase.core"] = nil
-  package.loaded["src.game.systems.market.auto"] = nil
-  package.loaded["src.game.systems.market.choice.builder"] = nil
-  return require("src.game.systems.market")
+  package.loaded["src.rules.market"] = nil
+  package.loaded["src.rules.market.query.context"] = nil
+  package.loaded["src.rules.market.query.eligibility"] = nil
+  package.loaded["src.rules.market.purchase.core"] = nil
+  package.loaded["src.rules.market.auto"] = nil
+  package.loaded["src.rules.market.choice.builder"] = nil
+  return require("src.rules.market")
 end
 
 local function _find_hidden_paid_entry()
@@ -115,7 +115,7 @@ local function _with_currency_cfg(cfg, fn)
     { target = paid_goods_cfg, key = "currencies", value = cfg },
   }, function()
     paid_purchase_port.reset_for_tests()
-    paid_purchase_port.configure(require("src.app.bootstrap.payment.eggy_paid_purchase_gateway"))
+    paid_purchase_port.configure(require("src.host.eggy.paid_purchase_gateway"))
     fn()
   end)
 end

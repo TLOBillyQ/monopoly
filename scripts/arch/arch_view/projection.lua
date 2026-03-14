@@ -206,6 +206,7 @@ end
 
 local function _build_edge_maps(architecture, scoped_modules, module_node_map, module_feedback)
     local internal_entries = {}
+    local cycle_entries = {}
     local outgoing_by_node = {}
     local incoming_by_node = {}
 
@@ -219,7 +220,7 @@ local function _build_edge_maps(architecture, scoped_modules, module_node_map, m
             local cycle = module_feedback[edge.from] == true or module_feedback[edge.to] == true
 
             if from_node ~= nil and to_node ~= nil and from_node ~= to_node then
-                internal_entries[#internal_entries + 1] = {
+                local entry = {
                     from = from_node,
                     to = to_node,
                     module_from = edge.from,
@@ -228,6 +229,10 @@ local function _build_edge_maps(architecture, scoped_modules, module_node_map, m
                     cycle = cycle,
                     text = text,
                 }
+                internal_entries[#internal_entries + 1] = entry
+                if edge.type ~= "abstract" then
+                    cycle_entries[#cycle_entries + 1] = entry
+                end
             end
 
             if from_node ~= nil then
@@ -257,10 +262,18 @@ local function _build_edge_maps(architecture, scoped_modules, module_node_map, m
     end
 
     local pair_map = _build_pair_map(internal_entries)
+    local cycle_pair_map = _build_pair_map(cycle_entries)
     local classified_edges = {}
+    local cycle_edge_list = {}
     for _, edge in common.sorted_pairs(pair_map) do
         _append_sorted_entries(edge)
         classified_edges[#classified_edges + 1] = edge
+    end
+    for _, edge in common.sorted_pairs(cycle_pair_map) do
+        cycle_edge_list[#cycle_edge_list + 1] = {
+            from = edge.from,
+            to = edge.to,
+        }
     end
     table.sort(classified_edges, function(left, right)
         if left.from == right.from then
@@ -288,6 +301,7 @@ local function _build_edge_maps(architecture, scoped_modules, module_node_map, m
 
     return {
         classified_edges = classified_edges,
+        cycle_edges = cycle_edge_list,
         display_edges = common.copy_array(classified_edges),
         outgoing_by_node = outgoing_by_node,
         incoming_by_node = incoming_by_node,
@@ -357,7 +371,7 @@ local function _build_view(architecture, prefix_segments)
     local node_items = {}
 
     local edge_maps = _build_edge_maps(architecture, scoped_modules, module_node_map, module_feedback)
-    for _, edge in ipairs(edge_maps.classified_edges) do
+    for _, edge in ipairs(edge_maps.cycle_edges or {}) do
         child_graph.edges[#child_graph.edges + 1] = {
             from = edge.from,
             to = edge.to,

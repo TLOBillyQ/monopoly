@@ -3,7 +3,7 @@ local runtime = require("src.presentation.runtime.ui")
 local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
 local always_show_contract = require("src.presentation.schema.canvas.always_show.contract")
 local ui_touch_policy = require("src.presentation.input.touch_policy")
-local host_runtime = require("src.presentation.runtime.host")
+local host_runtime = require("src.host.eggy")
 
 local bindings = {}
 

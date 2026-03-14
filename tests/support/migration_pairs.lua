@@ -11,6 +11,7 @@ local exact_pairs = {
   { old_path = "src/game/core/runtime/bootstrap.lua", new_path = "src/rules/bootstrap/registries.lua" },
   { old_path = "src/presentation/runtime/host/sfx_runtime.lua", new_path = "src/host/eggy/sound.lua" },
   { old_path = "src/presentation/runtime/host/unit_lifecycle.lua", new_path = "src/host/eggy/units.lua" },
+  { old_path = "src/app/bootstrap/payment/eggy_paid_purchase_gateway.lua", new_path = "src/host/eggy/paid_purchase_gateway.lua" },
 }
 
 local root_pairs = {
@@ -26,7 +27,8 @@ local root_pairs = {
 }
 
 local function to_module_id(path)
-  return tostring(path):gsub("%.lua$", ""):gsub("/", ".")
+  local module_path = tostring(path):gsub("/init%.lua$", ""):gsub("%.lua$", "")
+  return module_path:gsub("/", ".")
 end
 
 local function build_pair(old_path, new_path)

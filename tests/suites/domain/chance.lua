@@ -1,8 +1,8 @@
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
-local facing_policy = require("src.game.systems.board.facing_policy")
+local facing_policy = require("src.rules.board.facing_policy")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local inventory = require("src.game.systems.items.inventory")
+local inventory = require("src.rules.items.inventory")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
@@ -126,8 +126,8 @@ local function _test_chance_forced_move_to_market_sets_default_forward_heading()
 end
 
 -- Characterization tests for chance handlers (T4)
-local chance_handlers = require("src.game.systems.chance.chance_handlers")
-local post_effects = require("src.game.systems.items.post_effects")
+local chance_handlers = require("src.rules.chance.chance_handlers")
+local post_effects = require("src.rules.items.post_effects")
 
 local function _test_chance_handlers_build_returns_handler_table()
   local handlers = chance_handlers.build()
@@ -338,7 +338,7 @@ local function _test_post_effects_get_target_spec_returns_spec()
 end
 
 -- T8 characterization tests for 0% coverage hotspots
-local bankruptcy = require("src.game.systems.endgame.bankruptcy")
+local bankruptcy = require("src.rules.endgame.bankruptcy")
 
 local function _test_chance_handler_discard_properties_removes_properties()
   local g = _new_game()
@@ -392,7 +392,7 @@ end
 
 -- T4 characterization tests for executors
 local function _test_merge_executor_groups_combines_groups()
-  local executors = require("src.game.systems.land.executors")
+  local executors = require("src.rules.land.executors")
   -- The module already uses _merge_executor_groups internally
   -- Test that executors module loads and has expected structure
   assert(type(executors.executors) == "table", "executors.executors should be a table")
@@ -401,7 +401,7 @@ end
 
 -- T4 characterization tests for eligibility helpers
 local function _test_split_entries_by_buyable_separates_entries()
-  local eligibility = require("src.game.systems.market.query.eligibility")
+  local eligibility = require("src.rules.market.query.eligibility")
   local g = _new_game()
   local p = g:current_player()
 
@@ -417,7 +417,7 @@ local function _test_split_entries_by_buyable_separates_entries()
 end
 
 local function _test_append_visible_entries_respects_limit()
-  local eligibility = require("src.game.systems.market.query.eligibility")
+  local eligibility = require("src.rules.market.query.eligibility")
   local g = _new_game()
   local p = g:current_player()
 
@@ -434,7 +434,7 @@ local function _test_append_visible_entries_respects_limit()
 end
 
 local function _test_append_visible_entries_without_limit_adds_all()
-  local eligibility = require("src.game.systems.market.query.eligibility")
+  local eligibility = require("src.rules.market.query.eligibility")
   local g = _new_game()
 
   local entries = eligibility.sorted_entries()
@@ -448,7 +448,7 @@ end
 
 -- T4 characterization tests for market context
 local function _test_context_entry_name_returns_name()
-  local context = require("src.game.systems.market.query.context")
+  local context = require("src.rules.market.query.context")
   local market_cfg = require("src.config.content.market")
 
   if #market_cfg > 0 then

@@ -11,18 +11,18 @@ local _assert_eq = support.assert_eq
 local executor = support.executor
 local choice_resolver = support.choice_resolver
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local land_choice_specs = require("src.game.systems.land.choice_specs")
-local item_phase = require("src.game.systems.items.phase")
-local item_strategy = require("src.game.systems.items.strategy")
-local roadblock = require("src.game.systems.items.roadblock")
-local steal = require("src.game.systems.items.steal")
+local land_choice_specs = require("src.rules.land.choice_specs")
+local item_phase = require("src.rules.items.phase")
+local item_strategy = require("src.rules.items.strategy")
+local roadblock = require("src.rules.items.roadblock")
+local steal = require("src.rules.items.steal")
 local status_ops = require("src.game.core.player.state_ops.status_ops")
-local cash_handlers = require("src.game.systems.chance.handlers.cash_handlers")
-local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
+local cash_handlers = require("src.rules.chance.handlers.cash_handlers")
+local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local monopoly_event = require("src.core.events.monopoly_events")
 local move_followup = require("src.game.flow.turn.phases.move_followup")
-local effect_pipeline = require("src.game.systems.effects.effect_pipeline")
-local effect_runner = require("src.game.systems.effects.effect_runner")
+local effect_pipeline = require("src.rules.effects.effect_pipeline")
+local effect_runner = require("src.rules.effects.effect_runner")
 local intent_output_port = require("src.game.ports.intent_output_port")
 
 local function _install_narrow_ports(game, ui_port)
@@ -413,7 +413,7 @@ local function _test_status_ops_set_player_seat_emits_exit_and_enter()
 end
 
 local function _test_board_advance_tracks_branch_and_wrap()
-  local board = require("src.game.systems.board.init"):new({
+  local board = require("src.rules.board.init"):new({
     tile_lookup = {
       [1] = { id = 1, name = "A" },
       [2] = { id = 2, name = "B" },
@@ -1338,7 +1338,7 @@ local function _test_try_deity_items_tries_rich_then_angel()
   p.inventory:add({ id = gameplay_rules.item_ids.angel })
 
   local used_items = {}
-  local executor = require("src.game.systems.items.executor")
+  local executor = require("src.rules.items.executor")
   support.with_patches({
     {
       target = executor,

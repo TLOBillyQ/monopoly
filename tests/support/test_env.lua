@@ -1,8 +1,8 @@
 local logger = require("src.core.utils.logger")
-local runtime_context = require("src.infrastructure.runtime.context")
-local default_ports = require("src.infrastructure.runtime.default_ports")
+local runtime_context = require("src.host.eggy.context")
+local default_ports = require("src.host.eggy.default_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
+local paid_purchase_port = require("src.rules.market.ports.paid_purchase_port")
 
 local M = {}
 
@@ -124,7 +124,7 @@ function M.refresh_runtime_context_for_tests(opts)
   runtime_ports.reset_for_tests()
   runtime_ports.configure(default_ports.build(runtime_context))
   paid_purchase_port.reset_for_tests()
-  paid_purchase_port.configure(require("src.app.bootstrap.payment.eggy_paid_purchase_gateway"))
+  paid_purchase_port.configure(require("src.host.eggy.paid_purchase_gateway"))
   logger.configure_host_runtime({
     game_api = opts.GameAPI or GameAPI,
     tip_presenter = function(text, duration)

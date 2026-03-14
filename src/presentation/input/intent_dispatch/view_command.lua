@@ -7,7 +7,7 @@ end
 
 local function _resolve_role_by_id(runtime, role_id)
   local normalized = role_id
-  local host_runtime = _resolve_loaded("src.presentation.runtime.host")
+  local host_runtime = _resolve_loaded("src.host.eggy")
   if host_runtime and type(host_runtime.resolve_roles) == "function" and runtime and type(runtime.resolve_role_id) == "function" then
     for _, role in ipairs(host_runtime.resolve_roles() or {}) do
       if tostring(runtime.resolve_role_id(role)) == tostring(normalized) then

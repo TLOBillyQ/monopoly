@@ -260,10 +260,10 @@ local function _test_projection_collapses_package_init_nodes_into_single_drillab
     local architecture = _analyze_architecture()
     local root_view = architecture.views.root
     local game_view = architecture.views.game
-    local game_systems_view = architecture.views["game.systems"]
+    local rules_view = architecture.views.rules
     local presentation_view = architecture.views.presentation
 
-    for _, view in ipairs({ root_view, game_view, game_systems_view, presentation_view }) do
+    for _, view in ipairs({ root_view, game_view, rules_view, presentation_view }) do
         for _, node in ipairs(view.nodes or {}) do
             assert(
                 tostring(node.id):find("|file", 1, true) == nil,
@@ -284,9 +284,9 @@ local function _test_projection_collapses_package_init_nodes_into_single_drillab
     assert(app_node.drillable == true, "package nodes with descendants should remain drillable")
     assert(app_node.leaf == false, "package nodes with descendants should not be marked leaf")
 
-    local market_node = _find_node(game_systems_view, "market")
-    assert(market_node ~= nil, "game.systems view should expose market package node")
-    _assert_eq(market_node.module_id, "src.game.systems.market", "market package node should keep its init module id")
+    local market_node = _find_node(rules_view, "market")
+    assert(market_node ~= nil, "rules view should expose market package node")
+    _assert_eq(market_node.module_id, "src.rules.market", "market package node should keep its init module id")
     assert(market_node.drillable == true, "market package node should remain drillable")
     assert(market_node.leaf == false, "market package node should not be marked leaf when descendants exist")
 end
@@ -583,9 +583,9 @@ local function _test_viewer_command_writes_static_bundle()
     assert(data_script:find('"leaf"', 1, true) ~= nil, "viewer payload should contain leaf field")
     assert(data_script:find('"drillable"', 1, true) ~= nil, "viewer payload should contain drillable field")
 
-    local market_node = _find_node(payload.views["game.systems"], "market")
+    local market_node = _find_node(payload.views.rules, "market")
     assert(market_node ~= nil, "viewer payload should expose market package node")
-    _assert_eq(market_node.module_id, "src.game.systems.market", "viewer payload should preserve market init module id")
+    _assert_eq(market_node.module_id, "src.rules.market", "viewer payload should preserve market init module id")
     assert(market_node.drillable == true, "viewer payload should preserve drillable package nodes")
     assert(market_node.leaf == false, "viewer payload should preserve non-leaf package nodes")
 end
@@ -1029,7 +1029,7 @@ local function _test_real_repo_projection_cycles_exclude_game_subtrees()
     local projection_cycles = projection.collect_projection_cycles(architecture.views)
     local blocked_views = {
         game = true,
-        ["game.systems"] = true,
+        rules = true,
     }
 
     for _, entry in ipairs(projection_cycles or {}) do

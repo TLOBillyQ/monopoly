@@ -5,9 +5,9 @@ local _with_patches = support.with_patches
 local intent_output_port = require("src.game.ports.intent_output_port")
 local intent_output_adapter = require("src.game.flow.output_adapters.intent_output_adapter")
 local gameplay_loop = require("src.game.flow.turn.loop")
-local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
-local market_purchase = require("src.game.systems.market.purchase.core")
-local presenter = require("src.game.systems.land.presenter")
+local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
+local market_purchase = require("src.rules.market.purchase.core")
+local presenter = require("src.rules.land.presenter")
 
 local function _build_state()
   return {

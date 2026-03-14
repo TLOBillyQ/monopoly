@@ -1,9 +1,9 @@
 local overlay_compute = require("src.presentation.view.render.anim_overlay_compute")
 local visual_sync = require("src.presentation.view.render.board.visual_sync")
 local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
-local host_runtime = require("src.presentation.runtime.host")
+local host_runtime = require("src.host.eggy")
 local logger = require("src.core.utils.logger")
-local runtime_context = require("src.infrastructure.runtime.context")
+local runtime_context = require("src.host.eggy.context")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)

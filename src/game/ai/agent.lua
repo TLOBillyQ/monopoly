@@ -1,9 +1,9 @@
-local tile = require("src.game.systems.board.tile")
-local roadblock = require("src.game.systems.items.roadblock")
-local demolish = require("src.game.systems.items.demolish")
-local pricing = require("src.game.systems.land.pricing")
+local tile = require("src.rules.board.tile")
+local roadblock = require("src.rules.items.roadblock")
+local demolish = require("src.rules.items.demolish")
+local pricing = require("src.rules.land.pricing")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local facing_policy = require("src.game.systems.board.facing_policy")
+local facing_policy = require("src.rules.board.facing_policy")
 
 local agent = {}
 local item_ids = gameplay_rules.item_ids

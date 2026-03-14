@@ -1,6 +1,6 @@
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
-local facing_policy = require("src.game.systems.board.facing_policy")
+local facing_policy = require("src.rules.board.facing_policy")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
@@ -328,7 +328,7 @@ local function _test_move_anim_play_sequence_emits_step_sound_per_visited_tile()
 end
 
 -- Characterization tests for board helper functions (T4)
-local Board = require("src.game.systems.board.init")
+local Board = require("src.rules.board.init")
 
 local function _test_resolve_outer_next_returns_outer_next_when_no_entry()
   local map = {
@@ -482,7 +482,7 @@ local function _test_pick_unique_dir_returns_unique_when_others_avoided()
 end
 
 -- Characterization tests for board_query helper functions (T4)
-local board_query = require("src.game.systems.board.query")
+local board_query = require("src.rules.board.query")
 
 local function _test_collect_indices_by_distance_returns_empty_for_zero_distance()
   local g = _new_game()

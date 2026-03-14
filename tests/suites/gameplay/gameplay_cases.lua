@@ -24,10 +24,10 @@ local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
 local turn_dispatch = require("src.game.flow.turn.dispatch.action_dispatcher")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local mine_effect = require("src.game.systems.effects.mine_effect")
-local runtime_context = require("src.infrastructure.runtime.context")
+local mine_effect = require("src.rules.effects.mine_effect")
+local runtime_context = require("src.host.eggy.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
+local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local runtime_state = require("src.state.state_access.runtime_state")
 local runtime_global_aliases = require("src.app.bootstrap.runtime.global_aliases")
 local dispatch_validator = require("src.game.flow.turn.dispatch.validator")
@@ -50,12 +50,12 @@ local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
 local logger = require("src.core.utils.logger")
-local market_service = require("src.game.systems.market")
+local market_service = require("src.rules.market")
 local phase_registry = require("src.game.flow.turn.phases.registry")
 local turn_decision = require("src.game.flow.turn.runtime.decision")
-local item_effects = require("src.game.systems.items.post_effects")
-local item_strategy = require("src.game.systems.items.strategy")
-local facing_policy = require("src.game.systems.board.facing_policy")
+local item_effects = require("src.rules.items.post_effects")
+local item_strategy = require("src.rules.items.strategy")
+local facing_policy = require("src.rules.board.facing_policy")
 local turn_start = require("src.game.flow.turn.phases.start")
 local turn_script = require("src.game.flow.turn.runtime.session_script")
 local roll = require("src.game.flow.turn.phases.roll")
@@ -1383,9 +1383,9 @@ local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.game.flow.turn.auto.runner")
   local agent = require("src.game.ai.agent")
   local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-  local land = require("src.game.systems.land.executors")
-  local land_actions = require("src.game.systems.land.actions")
-  local item_inventory = require("src.game.systems.items.inventory")
+  local land = require("src.rules.land.executors")
+  local land_actions = require("src.rules.land.actions")
+  local item_inventory = require("src.rules.items.inventory")
 
   local g = app:new(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
@@ -3675,7 +3675,7 @@ end
 local function _test_turn_start_waits_for_pre_action_item_phase_choice()
   local g = _new_game()
   local player = g:current_player()
-  local item_phase = require("src.game.systems.items.phase")
+  local item_phase = require("src.rules.items.phase")
 
   support.with_patches({
     { target = item_phase, key = "run", value = function(_, phase_name, args)
@@ -3698,7 +3698,7 @@ end
 local function _test_turn_start_waits_for_pre_action_item_phase_action_anim()
   local g = _new_game()
   local player = g:current_player()
-  local item_phase = require("src.game.systems.items.phase")
+  local item_phase = require("src.rules.items.phase")
 
   support.with_patches({
     { target = item_phase, key = "run", value = function()
@@ -3720,7 +3720,7 @@ end
 local function _test_phase_registry_post_action_routes_wait_variants()
   local g = _new_game()
   local player = g:current_player()
-  local item_phase = require("src.game.systems.items.phase")
+  local item_phase = require("src.rules.items.phase")
   local phases = phase_registry.build_default_phases()
 
   support.with_patches({
@@ -3757,7 +3757,7 @@ end
 
 local function _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending()
   local turn_land = require("src.game.flow.turn.phases.land")
-  local effect_pipeline = require("src.game.systems.effects.effect_pipeline")
+  local effect_pipeline = require("src.rules.effects.effect_pipeline")
   local g = _new_game()
   local player = g:current_player()
   local move_result = { kind = "move_result" }
@@ -3792,7 +3792,7 @@ local function _test_move_followup_resume_turn_move_waits_on_steal_interrupt_cho
   local g = _new_game()
   local player = g:current_player()
   g.last_turn = {}
-  local steal_module = require("src.game.systems.items.steal")
+  local steal_module = require("src.rules.items.steal")
   local move_result = {
     steal_interrupt = {
       encountered_ids = { g.players[2].id },
@@ -4367,16 +4367,16 @@ _t2_case_groups.roll_dice_tests = {
 }
 
 local function _with_reloaded_move_module(movement_stub, followup_stub, fn)
-  local original_movement = package.loaded["src.game.systems.movement"]
+  local original_movement = package.loaded["src.rules.movement"]
   local original_followup = package.loaded["src.game.flow.turn.phases.move_followup"]
   local original_move = package.loaded["src.game.flow.turn.phases.move"]
-  package.loaded["src.game.systems.movement"] = movement_stub
+  package.loaded["src.rules.movement"] = movement_stub
   package.loaded["src.game.flow.turn.phases.move_followup"] = followup_stub
   package.loaded["src.game.flow.turn.phases.move"] = nil
   local ok, result = pcall(function()
     return fn(require("src.game.flow.turn.phases.move"))
   end)
-  package.loaded["src.game.systems.movement"] = original_movement
+  package.loaded["src.rules.movement"] = original_movement
   package.loaded["src.game.flow.turn.phases.move_followup"] = original_followup
   package.loaded["src.game.flow.turn.phases.move"] = original_move
   if not ok then

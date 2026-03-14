@@ -515,8 +515,8 @@ local _apply_dice_multiplier_tests = {
       },
     }
     -- Mock movement to avoid complex setup
-    local original_movement = require("src.game.systems.movement")
-    package.loaded["src.game.systems.movement"] = {
+    local original_movement = require("src.rules.movement")
+    package.loaded["src.rules.movement"] = {
       move = function() return { visited = {}, steps = {} } end
     }
     package.loaded["src.game.flow.turn.phases.move_followup"] = {
@@ -531,7 +531,7 @@ local _apply_dice_multiplier_tests = {
       raw_total = 4,
     })
     -- Restore
-    package.loaded["src.game.systems.movement"] = original_movement
+    package.loaded["src.rules.movement"] = original_movement
     package.loaded["src.game.flow.turn.phases.move"] = nil
     -- The test validates the integration path works
     assert(result == "test_result", "should complete move phase")
@@ -547,7 +547,7 @@ local _apply_dice_multiplier_tests = {
         anim_gate_port = { wait_move_anim = false },
       },
     }
-    package.loaded["src.game.systems.movement"] = {
+    package.loaded["src.rules.movement"] = {
       move = function() return { visited = {}, steps = {} } end
     }
     package.loaded["src.game.flow.turn.phases.move_followup"] = {
@@ -560,7 +560,7 @@ local _apply_dice_multiplier_tests = {
       total = 7,
       raw_total = 7,
     })
-    package.loaded["src.game.systems.movement"] = nil
+    package.loaded["src.rules.movement"] = nil
     package.loaded["src.game.flow.turn.phases.move"] = nil
     assert(result == "test_result", "should complete move phase with multiplier 1")
   end,
@@ -575,7 +575,7 @@ local _apply_dice_multiplier_tests = {
         anim_gate_port = { wait_move_anim = false },
       },
     }
-    package.loaded["src.game.systems.movement"] = {
+    package.loaded["src.rules.movement"] = {
       move = function() return { visited = {}, steps = {} } end
     }
     package.loaded["src.game.flow.turn.phases.move_followup"] = {
@@ -588,7 +588,7 @@ local _apply_dice_multiplier_tests = {
       total = 10,
       raw_total = 8,
     })
-    package.loaded["src.game.systems.movement"] = nil
+    package.loaded["src.rules.movement"] = nil
     package.loaded["src.game.flow.turn.phases.move"] = nil
     assert(result == "test_result", "should skip multiplier when total ~= raw_total")
   end,
@@ -603,7 +603,7 @@ local _apply_dice_multiplier_tests = {
         anim_gate_port = { wait_move_anim = false },
       },
     }
-    package.loaded["src.game.systems.movement"] = {
+    package.loaded["src.rules.movement"] = {
       move = function() return { visited = {}, steps = {} } end
     }
     package.loaded["src.game.flow.turn.phases.move_followup"] = {
@@ -616,7 +616,7 @@ local _apply_dice_multiplier_tests = {
       total = 5,
       raw_total = 5,
     })
-    package.loaded["src.game.systems.movement"] = nil
+    package.loaded["src.rules.movement"] = nil
     package.loaded["src.game.flow.turn.phases.move"] = nil
     assert(result == "test_result", "should complete move phase without multiplier")
   end,
@@ -635,7 +635,7 @@ local _apply_dice_multiplier_tests = {
         end,
       },
     }
-    package.loaded["src.game.systems.movement"] = {
+    package.loaded["src.rules.movement"] = {
       move = function(game, p, total)
         -- Verify the multiplier was applied (4 * 3 = 12)
         assert(total == 12, "total should be multiplied: expected 12, got " .. tostring(total))
@@ -654,7 +654,7 @@ local _apply_dice_multiplier_tests = {
     })
     -- Verify status was reset
     assert(player.status.pending_dice_multiplier == 1, "should reset multiplier to 1")
-    package.loaded["src.game.systems.movement"] = nil
+    package.loaded["src.rules.movement"] = nil
     package.loaded["src.game.flow.turn.phases.move"] = nil
     assert(result == "test_result", "should complete move phase")
   end,
@@ -671,7 +671,7 @@ local _apply_dice_multiplier_tests = {
         set_player_status = function() end,
       },
     }
-    package.loaded["src.game.systems.movement"] = {
+    package.loaded["src.rules.movement"] = {
       move = function(game, p, total)
         -- raw_total is nil, so multiplier should not be applied
         assert(total == 6, "total should not be multiplied when raw_total is nil")
@@ -688,7 +688,7 @@ local _apply_dice_multiplier_tests = {
       total = 6,
       raw_total = nil,
     })
-    package.loaded["src.game.systems.movement"] = nil
+    package.loaded["src.rules.movement"] = nil
     package.loaded["src.game.flow.turn.phases.move"] = nil
     assert(result == "test_result", "should skip multiplier when raw_total is nil")
   end,

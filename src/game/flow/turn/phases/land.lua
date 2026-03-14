@@ -1,6 +1,6 @@
-local landing_defs = require("src.game.systems.land.specs.effects")
-local effect_pipeline = require("src.game.systems.effects.effect_pipeline")
-local effect_runner = require("src.game.systems.effects.effect_runner")
+local landing_defs = require("src.rules.land.specs.effects")
+local effect_pipeline = require("src.rules.effects.effect_pipeline")
+local effect_runner = require("src.rules.effects.effect_runner")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 local max_landing_depth = 10

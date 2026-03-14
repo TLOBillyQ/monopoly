@@ -1,4 +1,4 @@
-local bankruptcy = require("src.game.systems.endgame.bankruptcy")
+local bankruptcy = require("src.rules.endgame.bankruptcy")
 
 local adapter = {}
 

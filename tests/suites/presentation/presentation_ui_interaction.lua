@@ -13,7 +13,7 @@ local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
 local event_handlers = require("src.presentation.runtime.event_handlers")
-local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
+local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.game.flow.turn.dispatch.action_dispatcher")
 local runtime_port = require("src.presentation.runtime.ui")
 local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
@@ -35,14 +35,14 @@ local role_control_lock_policy = require("src.presentation.input.role_control_lo
 local ui_touch_policy = require("src.presentation.input.touch_policy")
 local ui_choice_route_policy = require("src.presentation.input.choice_route_policy")
 local logger = require("src.core.utils.logger")
-local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
+local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local host_runtime = require("src.presentation.runtime.host")
+local host_runtime = require("src.host.eggy")
 local runtime_state = require("src.state.state_access.runtime_state")
 local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
-local raycast = require("src.presentation.runtime.host.raycast")
+local raycast = require("src.host.eggy.raycast")
 local vec3 = require("fixtures.vec3")
 
 
@@ -958,9 +958,9 @@ end
 
 local function _test_actor_context_and_host_runtime_fallbacks()
   local actor_context = require("src.presentation.runtime.actor_context")
-  local host_runtime_local = require("src.presentation.runtime.host")
+  local host_runtime_local = require("src.host.eggy")
   local runtime_ui = require("src.presentation.runtime.ui")
-  local runtime_context = require("src.infrastructure.runtime.context")
+  local runtime_context = require("src.host.eggy.context")
   local listed_role = {
     get_roleid = function()
       return 3
@@ -980,10 +980,10 @@ local function _test_actor_context_and_host_runtime_fallbacks()
   local registered = nil
 
   _with_patches({
-    { target = require("src.presentation.runtime.host.role_resolver"), key = "resolve_roles", value = function()
+    { target = require("src.host.eggy.role_resolver"), key = "resolve_roles", value = function()
       return { listed_role }
     end },
-    { target = require("src.presentation.runtime.host.role_resolver"), key = "resolve_role_with", value = function(role_id)
+    { target = require("src.host.eggy.role_resolver"), key = "resolve_role_with", value = function(role_id)
       if role_id == 4 then
         return fallback_role
       end

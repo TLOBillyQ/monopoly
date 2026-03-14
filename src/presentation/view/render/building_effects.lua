@@ -7,7 +7,7 @@ local function _resolve_host_runtime(scene, deps)
   if resolved_deps and resolved_deps.host_runtime then
     return resolved_deps.host_runtime
   end
-  local loaded = package.loaded["src.presentation.runtime.host"]
+  local loaded = package.loaded["src.host.eggy"]
   if loaded ~= nil then
     return loaded
   end

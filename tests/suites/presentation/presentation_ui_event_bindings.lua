@@ -122,7 +122,7 @@ local function _test_register_node_click_handles_query_failure_and_missing_nodes
       end
       return {}
     end },
-    { target = require("src.presentation.runtime.host"), key = "show_tips", value = function(text)
+    { target = require("src.host.eggy"), key = "show_tips", value = function(text)
       shown[#shown + 1] = text
     end },
   }, function()

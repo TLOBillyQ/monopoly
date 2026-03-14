@@ -4,8 +4,8 @@ local with_patches = support.with_patches
 local number_utils = support.number_utils
 local logger = require("src.core.utils.logger")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local runtime_context = require("src.infrastructure.runtime.context")
-local default_ports = require("src.infrastructure.runtime.default_ports")
+local runtime_context = require("src.host.eggy.context")
+local default_ports = require("src.host.eggy.default_ports")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 local function _test_number_utils_to_integer()
@@ -230,7 +230,7 @@ local function _test_logger_event_seq_only_tracks_event_feed_changes()
 end
 
 local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
-  local registry_module = require("src.infrastructure.runtime.synthetic_actor_registry")
+  local registry_module = require("src.host.eggy.synthetic_actor_registry")
   local created = {}
   local registry = registry_module.new({
     LuaAPI = {
@@ -266,7 +266,7 @@ local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
 end
 
 local function _test_synthetic_actor_registry_reset_destroys_spawned_actor_and_clears_registry()
-  local registry_module = require("src.infrastructure.runtime.synthetic_actor_registry")
+  local registry_module = require("src.host.eggy.synthetic_actor_registry")
   local destroyed = {}
   local spawned_unit = {
     id = "synthetic_unit",
@@ -376,7 +376,7 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
       value = function() end,
     },
     {
-      target = require("src.infrastructure.runtime.context"),
+      target = require("src.host.eggy.context"),
       key = "current",
       value = function()
         return nil
@@ -451,14 +451,14 @@ local function _test_runtime_context_vehicle_helper_consume_enter_delay_only_wai
 
   with_patches({
     {
-      target = require("src.game.systems.vehicle"),
+      target = require("src.rules.vehicle"),
       key = "is_enabled",
       value = function()
         return true
       end,
     },
     {
-      target = require("src.infrastructure.runtime.event_bridge"),
+      target = require("src.host.eggy.event_bridge"),
       key = "emit_custom_event",
       value = function(event_name)
         emitted[#emitted + 1] = event_name
@@ -510,7 +510,7 @@ local function _test_ui_bootstrap_spawns_startup_synthetic_actors()
 
   with_patches({
     {
-      target = require("src.infrastructure.runtime.context"),
+      target = require("src.host.eggy.context"),
       key = "current",
       value = function()
         return {
@@ -836,7 +836,7 @@ local function _test_landing_visual_hold_release_skips_when_not_pending()
 end
 
 local function _test_eggy_paid_gateway_callback_missing_goods_id()
-  local gateway = require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
+  local gateway = require("src.host.eggy.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
   local warned = nil
@@ -857,7 +857,7 @@ local function _test_eggy_paid_gateway_callback_missing_goods_id()
 end
 
 local function _test_eggy_paid_gateway_callback_empty_goods_id()
-  local gateway = require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
+  local gateway = require("src.host.eggy.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
   local warned = nil
@@ -878,7 +878,7 @@ local function _test_eggy_paid_gateway_callback_empty_goods_id()
 end
 
 local function _test_eggy_paid_gateway_callback_missing_pending()
-  local gateway = require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
+  local gateway = require("src.host.eggy.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
   local warned = nil
@@ -899,7 +899,7 @@ local function _test_eggy_paid_gateway_callback_missing_pending()
 end
 
 local function _test_eggy_paid_gateway_callback_missing_player()
-  local gateway = require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
+  local gateway = require("src.host.eggy.paid_purchase_gateway")
   local game = {
     players = {},
     find_player_by_id = function()
@@ -926,7 +926,7 @@ local function _test_eggy_paid_gateway_callback_missing_player()
 end
 
 local function _test_eggy_paid_gateway_callback_missing_entry()
-  local gateway = require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
+  local gateway = require("src.host.eggy.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local game = {
     players = { mock_player },
@@ -940,7 +940,7 @@ local function _test_eggy_paid_gateway_callback_missing_entry()
 
   with_patches({
     {
-      target = require("src.game.systems.market.query.context"),
+      target = require("src.rules.market.query.context"),
       key = "entry_by_id",
       value = function()
         return nil
@@ -961,7 +961,7 @@ local function _test_eggy_paid_gateway_callback_missing_entry()
 end
 
 local function _test_eggy_paid_gateway_callback_success_with_on_purchase()
-  local gateway = require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
+  local gateway = require("src.host.eggy.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local mock_entry = { product_id = 1001, name = "Test Item" }
   local game = {
@@ -983,7 +983,7 @@ local function _test_eggy_paid_gateway_callback_success_with_on_purchase()
 
   with_patches({
     {
-      target = require("src.game.systems.market.query.context"),
+      target = require("src.rules.market.query.context"),
       key = "entry_by_id",
       value = function(id)
         if id == 1001 then return mock_entry end
@@ -998,7 +998,7 @@ local function _test_eggy_paid_gateway_callback_success_with_on_purchase()
 end
 
 local function _test_eggy_paid_gateway_callback_success_without_on_purchase()
-  local gateway = require("src.app.bootstrap.payment.eggy_paid_purchase_gateway")
+  local gateway = require("src.host.eggy.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local mock_entry = { product_id = 1001, name = "Test Item" }
   local game = {
@@ -1012,7 +1012,7 @@ local function _test_eggy_paid_gateway_callback_success_without_on_purchase()
 
   with_patches({
     {
-      target = require("src.game.systems.market.query.context"),
+      target = require("src.rules.market.query.context"),
       key = "entry_by_id",
       value = function(id)
         if id == 1001 then return mock_entry end

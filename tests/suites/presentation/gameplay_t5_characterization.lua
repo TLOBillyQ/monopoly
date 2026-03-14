@@ -5,7 +5,7 @@
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
 local monopoly_event = require("src.core.events.monopoly_events")
-local host_runtime = require("src.presentation.runtime.host")
+local host_runtime = require("src.host.eggy")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
 local choice_support = require("src.presentation.model.choice_support")
 
