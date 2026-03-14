@@ -26,14 +26,16 @@ local function _test_default_tmp_root_preserves_monopoly_path_convention()
 end
 
 local function _test_adapter_resolves_behavior_and_contract_lanes()
-  local behavior_suites, behavior_mode = adapter.resolve_lane_suites("behavior")
+  local behavior_suites, behavior_mode = adapter.resolve_suites("behavior")
   assert(#behavior_suites > 0, "behavior lane should expose behavior suites")
   assert(behavior_mode == "dev" or behavior_mode == "release_trimmed",
     "behavior lane should resolve to a concrete regression mode")
 
-  local contract_suites, contract_mode = adapter.resolve_lane_suites("contract")
+  local contract_suites, contract_mode = adapter.resolve_suites("contract")
   assert(#contract_suites > 0, "contract lane should expose contract suites")
   _assert_eq(contract_mode, "dev", "contract lane should always use dev mode")
+  assert(type(adapter.run) == "function", "adapter should expose the standalone run contract")
+  _assert_eq(adapter.debug_api, debug, "adapter should expose debug api for coverage hooks")
 end
 
 local function _test_cli_report_resolves_tmp_alias_before_runner()
@@ -101,6 +103,11 @@ local function _test_cli_without_args_defaults_to_opened_viewer()
   _assert_eq(open_calls, 1, "bare cli should auto-open viewer")
 end
 
+local function _test_default_config_path_points_at_monopoly_wrapper_config()
+  assert(crap.default_config_path():find("scripts/quality/crap_monopoly.config.lua", 1, true) ~= nil,
+    "wrapper should expose its default config path")
+end
+
 return {
   name = "architecture.crap_contract",
   tests = {
@@ -109,5 +116,6 @@ return {
     { name = "cli_report_resolves_tmp_alias_before_runner", run = _test_cli_report_resolves_tmp_alias_before_runner },
     { name = "cli_viewer_resolves_tmp_alias_before_loader_and_writer", run = _test_cli_viewer_resolves_tmp_alias_before_loader_and_writer },
     { name = "cli_without_args_defaults_to_opened_viewer", run = _test_cli_without_args_defaults_to_opened_viewer },
+    { name = "default_config_path_points_at_monopoly_wrapper_config", run = _test_default_config_path_points_at_monopoly_wrapper_config },
   },
 }

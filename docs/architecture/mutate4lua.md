@@ -1,0 +1,53 @@
+# mutate4lua
+
+`mutate4lua` 是按文件运行的 Lua 变异测试工具。Monopoly 通过子模块 `vendor/mutate4lua/` 引入上游实现，再用 `scripts/mutate.lua` 和 `scripts/quality/mutate_monopoly_driver.lua` 适配本仓库的测试车道。
+
+如果你想先看它在整套质量入口里的定位、耗时预估和与 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality_map.md`。
+
+## 入口
+
+```sh
+lua scripts/mutate.lua --help
+```
+
+Monopoly 包装层额外支持两个参数：
+
+- `--lane behavior|contract`
+- `--mode dev|release_trimmed`
+
+默认值：
+
+- lane：`behavior`
+- `contract` 固定跑 `dev`
+- 未显式传 `--test-command` 时，默认测试命令为 `lua scripts/quality/mutate_monopoly_driver.lua --lane behavior --coverage-file <tmp>`
+
+其余参数沿用上游 `mutate4lua`，例如：
+
+```sh
+lua scripts/mutate.lua src/core/utils/role_id.lua --scan
+lua scripts/mutate.lua src/core/utils/role_id.lua --since-last-run
+lua scripts/mutate.lua src/core/utils/role_id.lua --mutate-all
+lua scripts/mutate.lua src/core/utils/role_id.lua --lines 12,18
+lua scripts/mutate.lua src/core/utils/role_id.lua --lane contract
+lua scripts/mutate.lua src/core/utils/role_id.lua --test-command "lua tests/behavior.lua"
+```
+
+## Monopoly 适配层做了什么
+
+- `scripts/mutate.lua` 负责把 `vendor/mutate4lua/src` 接进 `package.path`
+- 默认把上游内置 test driver 替换成 Monopoly 专属 driver
+- project hash 改走 `git ls-files` 枚举仓库内 `.lua` / `.rockspec` 文件，避免把子模块内容逐文件扫进单次 mutation 启动成本
+- `scripts/quality/mutate_monopoly_driver.lua` 通过 `tests/catalog.lua` 装配 `behavior` 或 `contract` suites
+- driver 用 `debug.sethook(..., "l")` 记录运行时命中行，供上游过滤未覆盖变异点
+
+## 什么时候用
+
+- 怀疑某个模块“测试绿，但断言不够锋利”时
+- 准备重构高风险逻辑，想先看现有测试能不能杀掉简单变异时
+- 做热点治理时，把它和 `scripts/crap.lua` 搭配使用：先用 CRAP 找高风险函数，再对单文件做变异测试
+
+## 什么时候不要用
+
+- 不要把它当日常回归 gate；单次只适合盯一个文件
+- 不要默认跑全仓；上游工具设计就是单文件诊断，不是全仓 mutation farm
+- 如果你已经手写了自定义测试命令，Monopoly 包装层不会再注入默认 driver，也不会帮你采 coverage

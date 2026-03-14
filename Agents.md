@@ -14,6 +14,7 @@
 | 理解测试车道、静态分析职责与预估耗时 | `docs/architecture/quality_map.md` |
 | 使用静态架构扫描工具 | `docs/architecture/arch_view.md` |
 | 查看代码质量报告 | `docs/architecture/crap_report.md`、`docs/architecture/health_signals.md` |
+| 跑单文件变异测试 | `docs/architecture/mutate4lua.md` |
 | 操作 UI 组件 | `docs/eggy/ui_manager_lib.md` |
 | 查宿主 API | `docs/eggy/api/00_index.md`（入口，各类型分文件） |
 | 判断代码放哪个子系统 | `docs/architecture/subsystems.md` |

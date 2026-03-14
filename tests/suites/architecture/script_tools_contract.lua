@@ -135,6 +135,7 @@ local function _test_cli_help_text_is_bilingual()
     { "scripts/update_api.lua", "--help" },
     { "scripts/arch.lua", "--help" },
     { "scripts/crap.lua", "--help" },
+    { "scripts/mutate.lua", "--help" },
   }
 
   for _, args in ipairs(help_commands) do

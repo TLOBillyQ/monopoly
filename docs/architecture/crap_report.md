@@ -2,7 +2,7 @@
 
 `scripts/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `tests/behavior.lua`、`tests/contract.lua` 或 `lua tests/guard.lua`。
 
-当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。Monopoly 专属的 behavior / contract lane 映射在 `scripts/quality/crap_monopoly_adapter.lua`。
+当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。Monopoly 通过 `scripts/quality/crap_monopoly.config.lua` 提供默认项目配置，并通过 `scripts/quality/crap_monopoly_adapter.lua` 映射 behavior / contract lane。
 
 如果你想先看整个质量面里 `crap` 和 `behavior / contract / guard / arch_view` 的分工，先读 `docs/architecture/quality_map.md`。
 
@@ -36,6 +36,8 @@ lua scripts/crap.lua viewer --out-dir tmp/crap_view [--open]
 lua scripts/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
 ```
 导出静态 viewer。命令完成后打印实际路径，打开 `index.html` 即可查看，不需要本地服务。
+
+`viewer --in-json` 直接渲染现有 JSON，不会加载 Monopoly 配置或测试 lane；其余 `report` / `viewer` 调用会自动注入默认 config。
 
 ## 分数说明
 
