@@ -4,11 +4,11 @@ local _with_patches = support.with_patches
 local logger = require("src.core.utils.logger")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local move_anim = require("src.presentation.view.render.move_anim")
+local move_anim = require("src.ui.render.move_anim")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local anim_ports = require("src.presentation.runtime.ports.anim_ports")
-local ui_view = require("src.presentation.runtime.ui_runtime")
-local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
+local anim_ports = require("src.ui.controllers.ports.anim_ports")
+local ui_view = require("src.ui.controllers.ui_runtime")
+local gameplay_read_port = require("src.ui.presenters.gameplay_read_port")
 local vec3 = require("fixtures.vec3")
 
 local function _test_move_anim_sequence_stops_unit_when_duration_finishes()
@@ -550,9 +550,9 @@ local function _test_move_anim_step_duration_uses_vehicle_accel_curve_for_short_
     { target = gameplay_read_port, key = "resolve_vehicle_seat_id", value = function(vehicle_id)
       return vehicle_id == "vehicle_1" and 1 or nil
     end },
-    { target = package.loaded, key = "src.presentation.view.render.move_anim", value = nil },
+    { target = package.loaded, key = "src.ui.render.move_anim", value = nil },
   }, function()
-    local fresh_move_anim = require("src.presentation.view.render.move_anim")
+    local fresh_move_anim = require("src.ui.render.move_anim")
     duration = fresh_move_anim.step_duration(_build_step_duration_scene(5), 1, 2, {
       vehicle_id = "vehicle_1",
     })
@@ -570,9 +570,9 @@ local function _test_move_anim_step_duration_falls_back_to_linear_speed_when_veh
     { target = gameplay_read_port, key = "resolve_vehicle_seat_id", value = function(vehicle_id)
       return vehicle_id == "vehicle_2" and 2 or nil
     end },
-    { target = package.loaded, key = "src.presentation.view.render.move_anim", value = nil },
+    { target = package.loaded, key = "src.ui.render.move_anim", value = nil },
   }, function()
-    local fresh_move_anim = require("src.presentation.view.render.move_anim")
+    local fresh_move_anim = require("src.ui.render.move_anim")
     duration = fresh_move_anim.step_duration(_build_step_duration_scene(12), 1, 2, {
       vehicle_id = "vehicle_2",
     })

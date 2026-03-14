@@ -124,6 +124,16 @@ return {
         "^src%.host%..+",
         "^src%.entry%..+",
       },
+      allow = {
+        {
+          from = { "^src%.state%.game_state$" },
+          to = { "^src%.entry%.compose_game$" },
+        },
+        {
+          from = { "^src%.state%.game_state$" },
+          to = { "^src%.rules%.endgame%.game_victory$" },
+        },
+      },
     },
     {
       name = "config_no_outer_layers",

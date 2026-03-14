@@ -6,8 +6,8 @@ local support = require("support.presentation_support")
 local _with_patches = support.with_patches
 local monopoly_event = require("src.core.events.monopoly_events")
 local host_runtime = require("src.host.eggy")
-local board_feedback = require("src.presentation.view.render.board_feedback_service")
-local choice_support = require("src.presentation.model.choice_support")
+local board_feedback = require("src.ui.render.board_feedback_service")
+local choice_support = require("src.ui.presenters.choice_support")
 
 -- Helper to reload fresh modules for isolated testing
 local function _load_fresh(module_path)
@@ -20,7 +20,7 @@ end
 -- ============================================
 
 local function _test_build_intent_returns_nil_when_choice_does_not_use_item_slots()
-  local item_slot_intents = _load_fresh("src.presentation.input.canvas_routes.item_slots")
+  local item_slot_intents = _load_fresh("src.ui.input.canvas_routes.item_slots")
   local state = {
     ui = { item_slots = { "slot1", "slot2" } }
   }
@@ -39,7 +39,7 @@ local function _test_build_intent_returns_nil_when_choice_does_not_use_item_slot
 end
 
 local function _test_build_intent_returns_ui_button_when_choice_uses_item_slots()
-  local item_slot_intents = _load_fresh("src.presentation.input.canvas_routes.item_slots")
+  local item_slot_intents = _load_fresh("src.ui.input.canvas_routes.item_slots")
   local state = {
     ui = { item_slots = { "slot1" } }
   }
@@ -60,8 +60,8 @@ local function _test_build_intent_returns_ui_button_when_choice_uses_item_slots(
 end
 
 local function _test_build_intent_handles_missing_ui_state()
-  local item_slot_intents = _load_fresh("src.presentation.input.canvas_routes.item_slots")
-  local nodes = require("src.presentation.schema.canvas.base.nodes")
+  local item_slot_intents = _load_fresh("src.ui.input.canvas_routes.item_slots")
+  local nodes = require("src.ui.schema.canvas.base.nodes")
 
   -- State with nil ui, should fall back to nodes
   local state = {}
@@ -77,7 +77,7 @@ end
 -- ============================================
 
 local function _test_on_bankruptcy_tiles_cleared_returns_true_when_sync_succeeds()
-  local state_ports = _load_fresh("src.presentation.runtime.ports.state_ports")
+  local state_ports = _load_fresh("src.ui.controllers.ports.state_ports")
   local ports = state_ports.build()
 
   local game = {
@@ -94,7 +94,7 @@ local function _test_on_bankruptcy_tiles_cleared_returns_true_when_sync_succeeds
 end
 
 local function _test_on_bankruptcy_tiles_cleared_returns_false_when_no_state()
-  local state_ports = _load_fresh("src.presentation.runtime.ports.state_ports")
+  local state_ports = _load_fresh("src.ui.controllers.ports.state_ports")
   local ports = state_ports.build()
 
   local game = {}
@@ -103,7 +103,7 @@ local function _test_on_bankruptcy_tiles_cleared_returns_false_when_no_state()
 end
 
 local function _test_on_bankruptcy_tiles_cleared_returns_false_when_sync_returns_false()
-  local state_ports = _load_fresh("src.presentation.runtime.ports.state_ports")
+  local state_ports = _load_fresh("src.ui.controllers.ports.state_ports")
   local ports = state_ports.build()
 
   local game = {
@@ -123,8 +123,8 @@ end
 -- ============================================
 
 local function _load_fresh_handlers()
-  package.loaded["src.presentation.runtime.event_handlers"] = nil
-  return require("src.presentation.runtime.event_handlers")
+  package.loaded["src.ui.controllers.event_handlers"] = nil
+  return require("src.ui.controllers.event_handlers")
 end
 
 local function _test_rent_paid_handler_calls_board_feedback()
@@ -332,7 +332,7 @@ end
 -- ============================================
 
 local function _test_register_node_click_skips_when_already_registered()
-  local event_bindings = _load_fresh("src.presentation.runtime.event_bindings")
+  local event_bindings = _load_fresh("src.ui.controllers.event_bindings")
   local registered = { test_node = true }
   local listeners = {}
   local cache = {}
@@ -343,8 +343,8 @@ local function _test_register_node_click_skips_when_already_registered()
 end
 
 local function _test_register_node_click_handles_missing_nodes()
-  local event_bindings = _load_fresh("src.presentation.runtime.event_bindings")
-  local runtime = require("src.presentation.runtime.ui")
+  local event_bindings = _load_fresh("src.ui.controllers.event_bindings")
+  local runtime = require("src.ui.render.runtime_ui")
   local registered = {}
   local listeners = {}
   local cache = {}
@@ -366,8 +366,8 @@ local function _test_register_node_click_handles_missing_nodes()
 end
 
 local function _test_register_node_click_caches_nodes()
-  local event_bindings = _load_fresh("src.presentation.runtime.event_bindings")
-  local runtime = require("src.presentation.runtime.ui")
+  local event_bindings = _load_fresh("src.ui.controllers.event_bindings")
+  local runtime = require("src.ui.render.runtime_ui")
   local registered = {}
   local listeners = {}
   local cache = {}
@@ -405,8 +405,8 @@ local function _test_register_node_click_caches_nodes()
 end
 
 local function _test_register_node_click_registers_multiple_nodes()
-  local event_bindings = _load_fresh("src.presentation.runtime.event_bindings")
-  local runtime = require("src.presentation.runtime.ui")
+  local event_bindings = _load_fresh("src.ui.controllers.event_bindings")
+  local runtime = require("src.ui.render.runtime_ui")
   local registered = {}
   local listeners = {}
   local cache = {}
@@ -449,8 +449,8 @@ local function _test_register_node_click_registers_multiple_nodes()
 end
 
 local function _test_register_node_click_handles_empty_nodes_result()
-  local event_bindings = _load_fresh("src.presentation.runtime.event_bindings")
-  local runtime = require("src.presentation.runtime.ui")
+  local event_bindings = _load_fresh("src.ui.controllers.event_bindings")
+  local runtime = require("src.ui.render.runtime_ui")
   local registered = {}
   local listeners = {}
   local cache = {}
@@ -470,9 +470,9 @@ local function _test_register_node_click_handles_empty_nodes_result()
 end
 
 local function _test_register_node_click_logs_action_log_button_query_failure()
-  local event_bindings = _load_fresh("src.presentation.runtime.event_bindings")
-  local runtime = require("src.presentation.runtime.ui")
-  local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
+  local event_bindings = _load_fresh("src.ui.controllers.event_bindings")
+  local runtime = require("src.ui.render.runtime_ui")
+  local always_show_nodes = require("src.ui.schema.canvas.always_show.nodes")
   local registered = {}
   local listeners = {}
   local cache = {}
@@ -497,9 +497,9 @@ local function _test_register_node_click_logs_action_log_button_query_failure()
 end
 
 local function _test_register_node_click_logs_action_log_button_not_found()
-  local event_bindings = _load_fresh("src.presentation.runtime.event_bindings")
-  local runtime = require("src.presentation.runtime.ui")
-  local always_show_nodes = require("src.presentation.schema.canvas.always_show.nodes")
+  local event_bindings = _load_fresh("src.ui.controllers.event_bindings")
+  local runtime = require("src.ui.render.runtime_ui")
+  local always_show_nodes = require("src.ui.schema.canvas.always_show.nodes")
   local registered = {}
   local listeners = {}
   local cache = {}
@@ -527,7 +527,7 @@ end
 -- ============================================
 
 local function _test_build_choice_view_builds_basic_view()
-  local choice_builder = _load_fresh("src.presentation.model.choice_builder")
+  local choice_builder = _load_fresh("src.ui.presenters.choice_builder")
 
   local pending = {
     id = 123,
@@ -553,7 +553,7 @@ local function _test_build_choice_view_builds_basic_view()
 end
 
 local function _test_build_choice_view_uses_phase_title()
-  local choice_builder = _load_fresh("src.presentation.model.choice_builder")
+  local choice_builder = _load_fresh("src.ui.presenters.choice_builder")
 
   local pending = {
     id = 1,
@@ -572,7 +572,7 @@ local function _test_build_choice_view_uses_phase_title()
 end
 
 local function _test_build_choice_view_joins_body_lines()
-  local choice_builder = _load_fresh("src.presentation.model.choice_builder")
+  local choice_builder = _load_fresh("src.ui.presenters.choice_builder")
 
   local pending = {
     id = 1,
@@ -586,7 +586,7 @@ local function _test_build_choice_view_joins_body_lines()
 end
 
 local function _test_build_choice_view_prefers_body_lines_over_body()
-  local choice_builder = _load_fresh("src.presentation.model.choice_builder")
+  local choice_builder = _load_fresh("src.ui.presenters.choice_builder")
 
   local pending = {
     id = 1,
@@ -601,7 +601,7 @@ local function _test_build_choice_view_prefers_body_lines_over_body()
 end
 
 local function _test_build_choice_view_uses_default_option_label()
-  local choice_builder = _load_fresh("src.presentation.model.choice_builder")
+  local choice_builder = _load_fresh("src.ui.presenters.choice_builder")
 
   local pending = {
     id = 1,
@@ -614,7 +614,7 @@ local function _test_build_choice_view_uses_default_option_label()
 end
 
 local function _test_build_choice_view_copies_option_view_fields()
-  local choice_builder = _load_fresh("src.presentation.model.choice_builder")
+  local choice_builder = _load_fresh("src.ui.presenters.choice_builder")
 
   local pending = {
     id = 1,

@@ -1,6 +1,6 @@
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
-local ui_view = require("src.presentation.runtime.ui_runtime")
+local ui_view = require("src.ui.controllers.ui_runtime")
 
 local function _wrap_ui_refs(image_refs)
   return {
@@ -167,7 +167,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
 end
 
 local function _test_ui_events_send_without_roles_no_crash()
-  local ui_events = require("src.presentation.runtime.events")
+  local ui_events = require("src.ui.controllers.ui_events")
   ui_events.set_roles(nil)
   ui_events.send_to_all("测试事件", { ok = true })
 end

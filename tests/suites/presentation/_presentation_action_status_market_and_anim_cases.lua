@@ -12,27 +12,27 @@ local constants = support.constants
 local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.presentation.runtime.event_handlers")
+local event_handlers = require("src.ui.controllers.event_handlers")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
-local runtime_port = require("src.presentation.runtime.ui")
-local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
-local choice_openers = require("src.presentation.runtime.controllers.choice_screens.openers")
-local market_view = require("src.presentation.view.render.market")
-local market_layout = require("src.presentation.schema.market_layout")
-local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
-local ui_view = require("src.presentation.runtime.ui_runtime")
-local ui_status_3d_layer = require("src.presentation.view.render.status3d")
-local action_anim = require("src.presentation.view.render.action_anim")
-local move_anim = require("src.presentation.view.render.move_anim")
+local runtime_port = require("src.ui.render.runtime_ui")
+local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
+local choice_openers = require("src.ui.controllers.choice_screens.openers")
+local market_view = require("src.ui.render.market")
+local market_layout = require("src.ui.schema.market_layout")
+local canvas_event_router = require("src.ui.controllers.canvas_event_router")
+local ui_view = require("src.ui.controllers.ui_runtime")
+local ui_status_3d_layer = require("src.ui.render.status3d")
+local action_anim = require("src.ui.render.action_anim")
+local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.presentation.view.widgets.turn_effects")
-local popup_renderer = require("src.presentation.runtime.controllers.popup_controller")
-local market_modal_renderer = require("src.presentation.runtime.controllers.market_controller")
-local debug_ports_module = require("src.presentation.runtime.ports.debug_ports")
-local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
-local ui_touch_policy = require("src.presentation.input.touch_policy")
-local ui_choice_route_policy = require("src.presentation.input.choice_route_policy")
+local turn_effects = require("src.ui.widgets.turn_effects")
+local popup_renderer = require("src.ui.controllers.popup_controller")
+local market_modal_renderer = require("src.ui.controllers.market_controller")
+local debug_ports_module = require("src.ui.controllers.ports.debug_ports")
+local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
+local ui_touch_policy = require("src.ui.input.touch_policy")
+local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
 local logger = require("src.core.utils.logger")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local market_cfg = require("src.config.content.market")
@@ -40,7 +40,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local host_runtime = require("src.host.eggy")
 local runtime_state = require("src.state.state_access.runtime_state")
-local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
+local target_choice_effects = require("src.ui.controllers.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -449,12 +449,12 @@ local function _test_market_view_empty_filtered_tab_hides_selection_frames()
   }
 
   local market_cfg_size = #market_cfg
-  local old_market_view = package.loaded["src.presentation.view.render.market"]
+  local old_market_view = package.loaded["src.ui.render.market"]
   market_cfg[market_cfg_size + 1] = hidden_entry
-  package.loaded["src.presentation.view.render.market"] = nil
+  package.loaded["src.ui.render.market"] = nil
 
   local ok, err = xpcall(function()
-    local test_market_view = require("src.presentation.view.render.market")
+    local test_market_view = require("src.ui.render.market")
 
     test_market_view.refresh_market(state, {
       choice_id = 23,
@@ -482,8 +482,8 @@ local function _test_market_view_empty_filtered_tab_hides_selection_frames()
   end, debug.traceback or function(e) return e end)
 
   market_cfg[market_cfg_size + 1] = nil
-  package.loaded["src.presentation.view.render.market"] = nil
-  package.loaded["src.presentation.view.render.market"] = old_market_view
+  package.loaded["src.ui.render.market"] = nil
+  package.loaded["src.ui.render.market"] = old_market_view
   if not ok then
     error(err)
   end
@@ -642,7 +642,7 @@ local function _test_item_slot_refresh_shows_only_playable_outlines()
 end
 
 local function _test_item_slot_intents_include_outline_nodes()
-  local item_slot_intents = require("src.presentation.input.canvas_routes.item_slots")
+  local item_slot_intents = require("src.ui.input.canvas_routes.item_slots")
   local state = {
     ui = {
       item_slots = { "基础_道具槽位1" },
@@ -713,12 +713,12 @@ local function _test_market_view_hides_market_disabled_entries()
   }
 
   local market_cfg_size = #market_cfg
-  local old_market_view = package.loaded["src.presentation.view.render.market"]
+  local old_market_view = package.loaded["src.ui.render.market"]
   market_cfg[market_cfg_size + 1] = hidden_entry
-  package.loaded["src.presentation.view.render.market"] = nil
+  package.loaded["src.ui.render.market"] = nil
 
   local ok, err = xpcall(function()
-    local test_market_view = require("src.presentation.view.render.market")
+    local test_market_view = require("src.ui.render.market")
 
     local opened = test_market_view.refresh_market(state, {
       choice_id = 7,
@@ -751,8 +751,8 @@ local function _test_market_view_hides_market_disabled_entries()
   end, debug.traceback or function(e) return e end)
 
   market_cfg[market_cfg_size + 1] = nil
-  package.loaded["src.presentation.view.render.market"] = nil
-  package.loaded["src.presentation.view.render.market"] = old_market_view
+  package.loaded["src.ui.render.market"] = nil
+  package.loaded["src.ui.render.market"] = old_market_view
   if not ok then
     error(err)
   end
@@ -951,7 +951,7 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
 end
 
 local function _test_ui_model_market_payload_prefers_explicit_choice_fields()
-  local ui_model = require("src.presentation.model")
+  local ui_model = require("src.ui.presenters")
   local g = _new_game()
   local current_player = g:current_player()
   g.turn.pending_choice = {
@@ -1016,10 +1016,10 @@ local function _test_target_pick_prefers_explicit_owner_role_id()
 end
 
 local function _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel()
-  local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
-  local market_presenter = require("src.presentation.runtime.controllers.market_controller")
-  local target_choice_effects_local = require("src.presentation.runtime.controllers.target_choice_effects")
-  local canvas_store = require("src.presentation.runtime.canvas_store")
+  local modal_presenter = require("src.ui.controllers.modal_controller")
+  local market_presenter = require("src.ui.controllers.market_controller")
+  local target_choice_effects_local = require("src.ui.controllers.target_choice_effects")
+  local canvas_store = require("src.ui.stores.canvas_store")
 
   local opened = 0
   local state = {
@@ -1065,7 +1065,7 @@ local function _test_modal_presenter_market_same_choice_id_still_refreshes_marke
 end
 
 local function _test_ui_event_router_market_cancel_button_dispatches_choice_cancel()
-  local market_nodes = require("src.presentation.schema.canvas.market.nodes")
+  local market_nodes = require("src.ui.schema.canvas.market.nodes")
 
   local function new_node()
     local node = {}
@@ -1141,7 +1141,7 @@ local function _test_ui_event_router_market_cancel_button_dispatches_choice_canc
 end
 
 local function _test_item_phase_ask_confirm_clears_highlight_suppress()
-  local item_phase_ask_flow = require("src.presentation.input.intent_dispatch.item_phase_ask")
+  local item_phase_ask_flow = require("src.ui.input.intent_dispatch.item_phase_ask")
   local closed = 0
   local state = {
     _item_phase_ask_active = true,
@@ -1182,7 +1182,7 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
 end
 
 local function _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select()
-  local item_phase_ask_flow = require("src.presentation.input.intent_dispatch.item_phase_ask")
+  local item_phase_ask_flow = require("src.ui.input.intent_dispatch.item_phase_ask")
   local dispatched = {}
   local closed = 0
   local state = {
@@ -1244,7 +1244,7 @@ local function _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_
 end
 
 local function _test_item_phase_ask_cancel_closes_modal_and_dispatches_choice_cancel()
-  local item_phase_ask_flow = require("src.presentation.input.intent_dispatch.item_phase_ask")
+  local item_phase_ask_flow = require("src.ui.input.intent_dispatch.item_phase_ask")
   local dispatched = {}
   local closed = 0
   local state = {
@@ -1300,8 +1300,8 @@ local function _test_item_phase_ask_cancel_closes_modal_and_dispatches_choice_ca
 end
 
 local function _test_view_command_target_lock_and_unlock_fallback_routes_to_target_effects()
-  local view_command_dispatcher = require("src.presentation.input.intent_dispatch.view_command")
-  local target_choice_effects_local = require("src.presentation.runtime.controllers.target_choice_effects")
+  local view_command_dispatcher = require("src.ui.input.intent_dispatch.view_command")
+  local target_choice_effects_local = require("src.ui.controllers.target_choice_effects")
   local state = { ui = ui_view.build_ui_state() }
   local calls = {}
 
@@ -1348,7 +1348,7 @@ local function _test_view_command_target_lock_and_unlock_fallback_routes_to_targ
 end
 
 local function _test_item_phase_confirmed_skips_replay_before_slot_click()
-  local ui_events = require("src.presentation.runtime.events")
+  local ui_events = require("src.ui.controllers.ui_events")
   local events = {}
   local state = {
     _item_phase_ask_active = nil,
@@ -1419,7 +1419,7 @@ local function _test_item_phase_confirmed_skips_replay_before_slot_click()
 end
 
 local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines()
-  local ui_events = require("src.presentation.runtime.events")
+  local ui_events = require("src.ui.controllers.ui_events")
   local events = {}
   local visible_state = {}
   local timers = {}
@@ -1525,7 +1525,7 @@ local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_rev
 end
 
 local function _test_item_slot_refresh_resets_highlight_without_client_role()
-  local ui_events = require("src.presentation.runtime.events")
+  local ui_events = require("src.ui.controllers.ui_events")
   local events = {}
   local phase = ""
 
@@ -1673,15 +1673,15 @@ end
 
 local function _test_tick_skips_anim_when_no_anim()
   local dirty_tracker = require("src.core.utils.dirty_tracker")
-  local main_view = require("src.presentation.runtime.ui_runtime")
-  local ui_model = require("src.presentation.model")
-  local board_view_mod = require("src.presentation.view.render.board")
+  local main_view = require("src.ui.controllers.ui_runtime")
+  local ui_model = require("src.ui.presenters")
+  local board_view_mod = require("src.ui.render.board")
 
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
-    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function() end },
+    { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       return {
         current_player_name = "P",

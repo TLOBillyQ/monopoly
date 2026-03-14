@@ -1,10 +1,10 @@
 local support = require("support.runtime_support")
 local with_patches = support.with_patches
 local app = support.app
-local startup_policy = require("src.app.bootstrap.startup_policy")
-local game_startup = require("src.app.bootstrap.game_startup")
+local startup_policy = require("src.entry.startup_policy")
+local game_startup = require("src.entry.start_game")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
+local test_profile_bootstrap = require("src.entry.testing.test_profile_bootstrap")
 local runtime_refs = require("src.config.content.runtime_refs")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 
@@ -214,11 +214,11 @@ local function _reload_app_init_with_stubs(startup)
   }
 
   with_patches({
-    { target = package.loaded, key = "src.app.init", value = nil },
+    { target = package.loaded, key = "src.entry.init", value = nil },
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.runtime",
+      key = "src.entry.boot",
       value = {
         install = function()
           capture.runtime_install_called = true
@@ -227,7 +227,7 @@ local function _reload_app_init_with_stubs(startup)
     },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.game_startup",
+      key = "src.entry.start_game",
       value = {
         build_state = function(get_game, opts)
           capture.startup_get_game = get_game
@@ -238,7 +238,7 @@ local function _reload_app_init_with_stubs(startup)
     },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.game_startup_event_bridge",
+      key = "src.entry.wire_events",
       value = {
         install = function(installed_state, get_game)
           capture.bridge_state = installed_state
@@ -248,7 +248,7 @@ local function _reload_app_init_with_stubs(startup)
     },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.game_runtime_bootstrap",
+      key = "src.entry.wire_host",
       value = {
         start = function(installed_state, game_ref)
           capture.runtime_start_state = installed_state
@@ -269,7 +269,7 @@ local function _reload_app_init_with_stubs(startup)
     },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.ui_bootstrap",
+      key = "src.entry.start_ui",
       value = {
         install = function(installed_state, current_game_ref, opts)
           capture.ui_state = installed_state
@@ -280,7 +280,7 @@ local function _reload_app_init_with_stubs(startup)
     },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.startup_policy",
+      key = "src.entry.startup_policy",
       value = {
         resolve = function()
           return startup
@@ -307,10 +307,10 @@ local function _reload_app_init_with_stubs(startup)
       end,
     },
   }, function()
-    require("src.app.init")
+    require("src.entry.init")
   end, { skip_runtime_context_refresh = true })
 
-  package.loaded["src.app.init"] = nil
+  package.loaded["src.entry.init"] = nil
   capture.state = state
   return capture
 end
@@ -393,17 +393,17 @@ local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallbac
   }
 
   with_patches({
-    { target = package.loaded, key = "src.app.init", value = nil },
+    { target = package.loaded, key = "src.entry.init", value = nil },
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
-    { target = package.loaded, key = "src.app.bootstrap.runtime", value = { install = function() end } },
-    { target = package.loaded, key = "src.app.bootstrap.game_startup", value = { build_state = function() return state end } },
-    { target = package.loaded, key = "src.app.bootstrap.game_startup_event_bridge", value = { install = function() end } },
-    { target = package.loaded, key = "src.app.bootstrap.game_runtime_bootstrap", value = { start = function() return true end } },
+    { target = package.loaded, key = "src.entry.boot", value = { install = function() end } },
+    { target = package.loaded, key = "src.entry.start_game", value = { build_state = function() return state end } },
+    { target = package.loaded, key = "src.entry.wire_events", value = { install = function() end } },
+    { target = package.loaded, key = "src.entry.wire_host", value = { start = function() return true end } },
     { target = package.loaded, key = "src.turn.loop", value = { set_game = function() end } },
-    { target = package.loaded, key = "src.app.bootstrap.ui_bootstrap", value = { install = function() end } },
+    { target = package.loaded, key = "src.entry.start_ui", value = { install = function() end } },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.startup_policy",
+      key = "src.entry.startup_policy",
       value = {
         resolve = function()
           return { release_mode = false, profile_name = "default" }
@@ -414,10 +414,10 @@ local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallbac
     { key = "GlobalAPI", value = {} },
     { key = "SetTimeOut", value = nil },
   }, function()
-    require("src.app.init")
+    require("src.entry.init")
   end, { skip_runtime_context_refresh = true })
 
-  package.loaded["src.app.init"] = nil
+  package.loaded["src.entry.init"] = nil
   assert(gameplay_rules.debug_log_enabled == true, "non-release startup should keep debug logs enabled")
   assert(capture.host_runtime.tip_presenter("tip", 1) == false, "tip presenter should fall back when GlobalAPI is missing")
   local called = false

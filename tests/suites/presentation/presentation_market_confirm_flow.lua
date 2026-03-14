@@ -2,10 +2,10 @@ local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
-local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
-local choice_openers = require("src.presentation.runtime.controllers.choice_screens.openers")
-local ui_view = require("src.presentation.runtime.ui_runtime")
-local modal_presenter = require("src.presentation.runtime.controllers.modal_controller")
+local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
+local choice_openers = require("src.ui.controllers.choice_screens.openers")
+local ui_view = require("src.ui.controllers.ui_runtime")
+local modal_presenter = require("src.ui.controllers.modal_controller")
 
 local function _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_then_dispatches()
   local opened_pre_confirm = nil

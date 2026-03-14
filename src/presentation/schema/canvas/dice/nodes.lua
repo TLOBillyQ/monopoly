@@ -1,8 +1,1 @@
-return {
-  canvas = "骰子屏",
-  spin = "骰子_旋转中",
-  faces = {
-    "骰子_点数1", "骰子_点数2", "骰子_点数3",
-    "骰子_点数4", "骰子_点数5", "骰子_点数6",
-  },
-}
+return require("src.ui.schema.canvas.dice.nodes")

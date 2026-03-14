@@ -1,9 +1,1 @@
-return {
-  canvas = "遥控骰子屏",
-  title = "遥控骰子_标题",
-  body = "遥控骰子_正文",
-  options = {
-    "遥控骰子_选项_01", "遥控骰子_选项_02", "遥控骰子_选项_03",
-    "遥控骰子_选项_04", "遥控骰子_选项_05", "遥控骰子_选项_06",
-  },
-}
+return require("src.ui.schema.canvas.remote_choice.nodes")

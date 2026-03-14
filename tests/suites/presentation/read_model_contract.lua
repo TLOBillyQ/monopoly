@@ -2,9 +2,9 @@ local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
+local gameplay_read_port = require("src.ui.presenters.gameplay_read_port")
 local land_pricing = require("src.rules.land.pricing")
-local choice_builder = require("src.presentation.model.choice_builder")
+local choice_builder = require("src.ui.presenters.choice_builder")
 
 local function _test_total_land_invested_matches_domain_pricing()
   local tile = {

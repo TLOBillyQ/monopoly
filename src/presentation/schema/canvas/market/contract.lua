@@ -1,6 +1,1 @@
-local nodes = require("src.presentation.schema.canvas.market.nodes")
-
-return {
-  key = "market",
-  canvas = nodes.canvas,
-}
+return require("src.ui.schema.canvas.market.contract")

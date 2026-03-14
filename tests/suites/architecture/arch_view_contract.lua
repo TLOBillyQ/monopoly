@@ -221,49 +221,50 @@ local function _test_source_scan_resolves_relative_root_against_project_root()
     assert(scan_result.module_ids["src.demo.util"] == true, "relative source root should resolve sibling module id")
 end
 
-local function _test_projection_builds_root_and_game_views()
+local function _test_projection_builds_root_and_entry_views()
     local architecture = _analyze_architecture()
     local root_view = architecture.views.root
-    local game_view = architecture.views.game
+    local entry_view = architecture.views.entry
 
     assert(root_view ~= nil, "root view should exist")
-    assert(game_view ~= nil, "game view should exist")
+    assert(entry_view ~= nil, "entry view should exist")
     _assert_eq(root_view.breadcrumb[1].key, "root", "root breadcrumb should start from root")
 
     local root_labels = {}
     for _, node in ipairs(root_view.nodes or {}) do
         root_labels[#root_labels + 1] = node.label
     end
-    _assert_contains(root_labels, "game", "root view should expose game subtree")
-    _assert_contains(root_labels, "presentation", "root view should expose presentation subtree")
+    _assert_contains(root_labels, "entry", "root view should expose entry subtree")
+    _assert_contains(root_labels, "turn", "root view should expose turn subtree")
+    _assert_contains(root_labels, "ui", "root view should expose ui subtree")
 
-    local game_labels = {}
-    for _, node in ipairs(game_view.nodes or {}) do
-        game_labels[#game_labels + 1] = node.label
+    local entry_labels = {}
+    for _, node in ipairs(entry_view.nodes or {}) do
+        entry_labels[#entry_labels + 1] = node.label
     end
-    _assert_contains(game_labels, "flow", "game view should drill down into flow")
-    _assert_contains(game_labels, "systems", "game view should drill down into systems")
+    _assert_contains(entry_labels, "boot", "entry view should expose boot")
+    _assert_contains(entry_labels, "start_game", "entry view should expose start_game")
+    _assert_contains(entry_labels, "wire_host", "entry view should expose wire_host")
 
-    local game_node
+    local entry_node
     for _, node in ipairs(root_view.nodes or {}) do
-        if node.id == "game" then
-            game_node = node
+        if node.id == "entry" then
+            entry_node = node
             break
         end
     end
-    assert(game_node ~= nil, "root view should contain game node")
-    assert(#(game_node.incoming_dependencies or {}) > 0, "game node should expose incoming dependency indicators")
-    assert(#(game_node.outgoing_dependencies or {}) > 0, "game node should expose outgoing dependency indicators")
+    assert(entry_node ~= nil, "root view should contain entry node")
+    assert(#(entry_node.outgoing_dependencies or {}) > 0, "entry node should expose outgoing dependency indicators")
 end
 
 local function _test_projection_collapses_package_init_nodes_into_single_drillable_node()
     local architecture = _analyze_architecture()
     local root_view = architecture.views.root
-    local game_view = architecture.views.game
+    local entry_view = architecture.views.entry
     local rules_view = architecture.views.rules
-    local presentation_view = architecture.views.presentation
+    local ui_view = architecture.views.ui
 
-    for _, view in ipairs({ root_view, game_view, rules_view, presentation_view }) do
+    for _, view in ipairs({ root_view, entry_view, rules_view, ui_view }) do
         for _, node in ipairs(view.nodes or {}) do
             assert(
                 tostring(node.id):find("|file", 1, true) == nil,
@@ -272,17 +273,17 @@ local function _test_projection_collapses_package_init_nodes_into_single_drillab
         end
     end
 
-    local app_node = nil
+    local entry_node = nil
     for _, node in ipairs(root_view.nodes or {}) do
-        if node.id == "app" then
-            app_node = node
+        if node.id == "entry" then
+            entry_node = node
             break
         end
     end
-    assert(app_node ~= nil, "root view should keep a single app node")
-    _assert_eq(app_node.display_label, "app", "package nodes with descendants should display namespace label")
-    assert(app_node.drillable == true, "package nodes with descendants should remain drillable")
-    assert(app_node.leaf == false, "package nodes with descendants should not be marked leaf")
+    assert(entry_node ~= nil, "root view should keep a single entry node")
+    _assert_eq(entry_node.display_label, "entry", "package nodes with descendants should display namespace label")
+    assert(entry_node.drillable == true, "package nodes with descendants should remain drillable")
+    assert(entry_node.leaf == false, "package nodes with descendants should not be marked leaf")
 
     local market_node = _find_node(rules_view, "market")
     assert(market_node ~= nil, "rules view should expose market package node")
@@ -299,7 +300,7 @@ local function _test_config_classifies_runtime_game_and_ports()
     end
 
     _assert_eq(
-        architecture.modules["src.game.core.runtime.game"].component,
+        architecture.modules["src.state.game_state"].component,
         "state",
         "runtime.game should be classified as state"
     )
@@ -1021,15 +1022,16 @@ local function _test_check_includes_projection_cycles()
     assert(found_projection_violation, "check should report projection_cycle violation for root view")
 end
 
-local function _test_real_repo_projection_cycles_exclude_game_subtrees()
+local function _test_real_repo_projection_cycles_exclude_new_subtrees()
     local projection = require("arch_view.projection")
     local architecture = _analyze_architecture()
     architecture.views = architecture.views or projection.build_views(architecture)
 
     local projection_cycles = projection.collect_projection_cycles(architecture.views)
     local blocked_views = {
-        game = true,
+        turn = true,
         rules = true,
+        ui = true,
     }
 
     for _, entry in ipairs(projection_cycles or {}) do
@@ -1047,7 +1049,7 @@ return {
         { name = "layers_assign_feedback_edges_for_cycles",                   run = _test_layers_assign_feedback_edges_for_cycles },
         { name = "source_scan_treats_init_as_package_entry",                  run = _test_source_scan_treats_init_as_package_entry },
         { name = "source_scan_resolves_relative_root_against_project_root",   run = _test_source_scan_resolves_relative_root_against_project_root },
-        { name = "projection_builds_root_and_game_views",                     run = _test_projection_builds_root_and_game_views },
+        { name = "projection_builds_root_and_entry_views",                    run = _test_projection_builds_root_and_entry_views },
         { name = "projection_collapses_package_init_nodes_into_single_drillable_node", run = _test_projection_collapses_package_init_nodes_into_single_drillable_node },
         { name = "config_classifies_runtime_game_and_ports",                  run = _test_config_classifies_runtime_game_and_ports },
         { name = "any_cycle_fails_check",                                      run = _test_any_cycle_fails_check },
@@ -1069,6 +1071,6 @@ return {
         { name = "layout_renderer_preserves_viewer_contract_shape",           run = _test_layout_renderer_preserves_viewer_contract_shape },
         { name = "common_resolves_tmp_path_for_windows_shell_compat",         run = _test_common_resolves_tmp_path_for_windows_shell_compat },
         { name = "check_includes_projection_cycles",                           run = _test_check_includes_projection_cycles },
-        { name = "real_repo_projection_cycles_exclude_game_subtrees",         run = _test_real_repo_projection_cycles_exclude_game_subtrees },
+        { name = "real_repo_projection_cycles_exclude_new_subtrees",          run = _test_real_repo_projection_cycles_exclude_new_subtrees },
     },
 }

@@ -1,8 +1,8 @@
-local action_anim = require("src.presentation.view.render.action_anim")
-local runtime_port = require("src.presentation.runtime.ui")
-local handlers = require("src.presentation.view.render.anim_handlers")
+local action_anim = require("src.ui.render.action_anim")
+local runtime_port = require("src.ui.render.runtime_ui")
+local handlers = require("src.ui.render.anim_handlers")
 local host_runtime = require("src.host.eggy")
-local board_feedback = require("src.presentation.view.render.board_feedback_service")
+local board_feedback = require("src.ui.render.board_feedback_service")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local support = require("support.presentation_support")
@@ -516,7 +516,7 @@ local function _test_action_anim_cash_receive_routes_board_feedback()
 end
 
 local function _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy()
-  local tip_text = require("src.presentation.view.render.anim_tip_text")
+  local tip_text = require("src.ui.render.anim_tip_text")
   local state = _build_state()
 
   local target_copy = tip_text.build(state, {
@@ -536,7 +536,7 @@ local function _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy(
 end
 
 local function _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin()
-  local tip_text = require("src.presentation.view.render.anim_tip_text")
+  local tip_text = require("src.ui.render.anim_tip_text")
   local state = _build_state()
   state.game.find_player_by_id = function()
     return nil
@@ -560,7 +560,7 @@ local function _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin
 end
 
 local function _test_anim_tip_text_covers_roll_tile_and_cash_variants()
-  local tip_text = require("src.presentation.view.render.anim_tip_text")
+  local tip_text = require("src.ui.render.anim_tip_text")
   local state = _build_state()
 
   local focus_copy = tip_text.build(state, {
@@ -597,7 +597,7 @@ local function _test_anim_tip_text_covers_roll_tile_and_cash_variants()
 end
 
 local function _test_anim_tip_text_covers_chance_item_and_unknown_tile_variants()
-  local tip_text = require("src.presentation.view.render.anim_tip_text")
+  local tip_text = require("src.ui.render.anim_tip_text")
   local state = _build_state()
 
   state.game.board.get_tile = function(_, tile_index)
@@ -645,7 +645,7 @@ local function _test_anim_tip_text_covers_chance_item_and_unknown_tile_variants(
 end
 
 local function _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot()
-  local overlay = require("src.presentation.view.render.anim_unit_overlay")
+  local overlay = require("src.ui.render.anim_unit_overlay")
   local state = _build_state()
   local cleared_calls = {}
   local transient_calls = {}
@@ -695,7 +695,7 @@ local function _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_s
 end
 
 local function _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient()
-  local overlay = require("src.presentation.view.render.anim_unit_overlay")
+  local overlay = require("src.ui.render.anim_unit_overlay")
   local prefab = require("Data.Prefab")
   local state = _build_state()
   local cleared_calls = {}

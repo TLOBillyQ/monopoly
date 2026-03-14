@@ -1,8 +1,8 @@
 local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
-local ui_view = require("src.presentation.runtime.ui_runtime")
-local ui_touch_policy = require("src.presentation.input.touch_policy")
+local ui_view = require("src.ui.controllers.ui_runtime")
+local ui_touch_policy = require("src.ui.input.touch_policy")
 
 local function _wrap_ui_refs(image_refs)
   return {

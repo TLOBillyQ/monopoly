@@ -1,14 +1,14 @@
 -- T6 characterization tests for remaining hotspots
-local market_slots = require("src.presentation.view.render.market_slots")
-local placement = require("src.presentation.view.render.board.placement")
-local status3d_status = require("src.presentation.view.render.status3d.status")
-local board_feedback = require("src.presentation.view.render.board_feedback_service")
-local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
-local anim_overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
-local status3d_scene = require("src.presentation.view.render.status3d.scene")
-local pre_confirm_flow = require("src.presentation.input.intent_dispatch.pre_confirm")
-local status3d_init = require("src.presentation.view.render.status3d.init")
-local startup_render = require("src.presentation.view.render.board.startup_render")
+local market_slots = require("src.ui.render.market_slots")
+local placement = require("src.ui.render.board.placement")
+local status3d_status = require("src.ui.render.status3d.status")
+local board_feedback = require("src.ui.render.board_feedback_service")
+local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
+local anim_overlay_runtime = require("src.ui.render.anim_overlay_runtime")
+local status3d_scene = require("src.ui.render.status3d.scene")
+local pre_confirm_flow = require("src.ui.input.intent_dispatch.pre_confirm")
+local status3d_init = require("src.ui.render.status3d.init")
+local startup_render = require("src.ui.render.board.startup_render")
 local runtime_refs = require("src.config.content.runtime_refs")
 
 local state_module_aliases = {
@@ -617,13 +617,13 @@ local function _test_pre_confirm_enter_choice_select()
     },
   }
 
-  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
       end,
     },
-    ["src.presentation.model.choice_support"] = {
+    ["src.ui.presenters.choice_support"] = {
       resolve_option_label_by_id = function() return "Option 1" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -642,7 +642,7 @@ local function _test_pre_confirm_enter_no_choice_returns_false()
     ui = {},
     game = {},
   }
-  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function() return { choice = nil } end,
     },
@@ -665,13 +665,13 @@ local function _test_pre_confirm_enter_market_confirm()
     },
   }
 
-  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "1001", requires_pre_confirm = true, label = "Skin", screen_key = "market" } } } }
       end,
     },
-    ["src.presentation.model.choice_support"] = {
+    ["src.ui.presenters.choice_support"] = {
       resolve_screen_key = function() return "market" end,
       resolve_option_label_by_id = function() return "Skin" end,
       resolve_secondary_confirm_title = function() return "Title" end,
@@ -698,13 +698,13 @@ local function _test_pre_confirm_enter_ui_button_item_slot()
     },
   }
 
-  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "item1", label = "Item" } } } }
       end,
     },
-    ["src.presentation.model.choice_support"] = {
+    ["src.ui.presenters.choice_support"] = {
       resolve_option_label_by_id = function() return "Item" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -722,7 +722,7 @@ local function _test_pre_confirm_enter_unknown_intent_returns_false()
     ui = {},
     game = {},
   }
-  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1" } }
@@ -761,8 +761,8 @@ local function _test_status3d_init_sync_no_dirty_no_missing_layers()
     },
   }
   local game = { players = { { id = "p1" } } }
-  _reload_module("src.presentation.view.render.status3d.init", {
-    ["src.presentation.view.render.status3d.meta"] = {
+  _reload_module("src.ui.render.status3d.init", {
+    ["src.ui.render.status3d.meta"] = {
       ensure_cache = function(s) return s.ui_status_3d end,
       build_meta = function() return { layouts = {} } end,
       warn_once = function() end,
@@ -791,8 +791,8 @@ local function _test_status3d_init_sync_missing_scene_ui_support_disables()
       has_scene_ui_support = function() return false end,
     },
   }
-  _reload_module("src.presentation.view.render.status3d.init", {
-    ["src.presentation.view.render.status3d.meta"] = {
+  _reload_module("src.ui.render.status3d.init", {
+    ["src.ui.render.status3d.meta"] = {
       ensure_cache = function(s) return s.ui_status_3d end,
       build_meta = function() return { layouts = {} } end,
       warn_once = function() end,
@@ -824,8 +824,8 @@ local function _test_status3d_init_sync_missing_env_disables()
   local original_enums = Enums
   Enums = nil
   local ok, err = pcall(function()
-    _reload_module("src.presentation.view.render.status3d.init", {
-      ["src.presentation.view.render.status3d.meta"] = {
+    _reload_module("src.ui.render.status3d.init", {
+      ["src.ui.render.status3d.meta"] = {
         ensure_cache = function(s) return s.ui_status_3d end,
         build_meta = function() return { layouts = {} } end,
         warn_once = function() end,
@@ -873,8 +873,8 @@ local function _test_startup_render_apply_collects_tile_ids()
       },
     },
   }
-  local result = _reload_module("src.presentation.view.render.board.startup_render", {
-    ["src.presentation.view.render.board.visual_sync"] = {
+  local result = _reload_module("src.ui.render.board.startup_render", {
+    ["src.ui.render.board.visual_sync"] = {
       sync_many = function(_, opts)
         sync_calls[#sync_calls + 1] = opts
         return true
@@ -902,8 +902,8 @@ local function _test_startup_render_apply_collects_overlay_indices()
       },
     },
   }
-  local result = _reload_module("src.presentation.view.render.board.startup_render", {
-    ["src.presentation.view.render.board.visual_sync"] = {
+  local result = _reload_module("src.ui.render.board.startup_render", {
+    ["src.ui.render.board.visual_sync"] = {
       sync_many = function(_, opts)
         sync_calls[#sync_calls + 1] = opts
         return true
@@ -926,8 +926,8 @@ local function _test_startup_render_apply_marks_applied()
       },
     },
   }
-  _reload_module("src.presentation.view.render.board.startup_render", {
-    ["src.presentation.view.render.board.visual_sync"] = {
+  _reload_module("src.ui.render.board.startup_render", {
+    ["src.ui.render.board.visual_sync"] = {
       sync_many = function() return true end,
     },
   }, function(render)
@@ -993,13 +993,13 @@ local function _test_pre_confirm_enter_missing_modal_function()
     },
   }
 
-  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
       end,
     },
-    ["src.presentation.model.choice_support"] = {
+    ["src.ui.presenters.choice_support"] = {
       resolve_option_label_by_id = function() return "Option 1" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -1019,13 +1019,13 @@ local function _test_pre_confirm_enter_market_confirm_option_not_found()
     game = {},
   }
 
-  local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "9999", requires_pre_confirm = false } } } }
       end,
     },
-    ["src.presentation.model.choice_support"] = {
+    ["src.ui.presenters.choice_support"] = {
       resolve_screen_key = function() return "market" end,
     },
   }, function(flow)

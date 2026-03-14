@@ -3,7 +3,7 @@ local _with_patches = support.with_patches
 local number_utils = require("src.core.utils.number_utils")
 local monopoly_event = require("src.core.events.monopoly_events")
 local host_runtime = require("src.host.eggy")
-local board_feedback = require("src.presentation.view.render.board_feedback_service")
+local board_feedback = require("src.ui.render.board_feedback_service")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 if not math.Vector3 then
@@ -13,8 +13,8 @@ if not math.Vector3 then
 end
 
 local function _load_fresh_handlers()
-  package.loaded["src.presentation.runtime.event_handlers"] = nil
-  return require("src.presentation.runtime.event_handlers")
+  package.loaded["src.ui.controllers.event_handlers"] = nil
+  return require("src.ui.controllers.event_handlers")
 end
 
 local function _test_market_buy_failed_shows_tip_for_three_seconds_without_popup()
@@ -317,7 +317,7 @@ end
 local function _test_roadblock_hit_resolves_tile_index_from_tile_id()
   local handlers = {}
   local cleared = {}
-  local action_anim = require("src.presentation.view.render.action_anim")
+  local action_anim = require("src.ui.render.action_anim")
 
   _with_patches({
     {
@@ -366,7 +366,7 @@ local function _test_mine_hit_resolves_tile_index_from_tile_payload()
   local handlers = {}
   local cleared = {}
   local cues = {}
-  local action_anim = require("src.presentation.view.render.action_anim")
+  local action_anim = require("src.ui.render.action_anim")
 
   _with_patches({
     {

@@ -12,27 +12,27 @@ local constants = support.constants
 local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.presentation.runtime.event_handlers")
+local event_handlers = require("src.ui.controllers.event_handlers")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
-local runtime_port = require("src.presentation.runtime.ui")
-local ui_intent_dispatcher = require("src.presentation.input.intent_dispatcher")
-local choice_openers = require("src.presentation.runtime.controllers.choice_screens.openers")
-local market_view = require("src.presentation.view.render.market")
-local market_layout = require("src.presentation.schema.market_layout")
-local canvas_event_router = require("src.presentation.runtime.canvas_event_router")
-local ui_view = require("src.presentation.runtime.ui_runtime")
-local ui_status_3d_layer = require("src.presentation.view.render.status3d")
-local action_anim = require("src.presentation.view.render.action_anim")
-local move_anim = require("src.presentation.view.render.move_anim")
+local runtime_port = require("src.ui.render.runtime_ui")
+local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
+local choice_openers = require("src.ui.controllers.choice_screens.openers")
+local market_view = require("src.ui.render.market")
+local market_layout = require("src.ui.schema.market_layout")
+local canvas_event_router = require("src.ui.controllers.canvas_event_router")
+local ui_view = require("src.ui.controllers.ui_runtime")
+local ui_status_3d_layer = require("src.ui.render.status3d")
+local action_anim = require("src.ui.render.action_anim")
+local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.presentation.view.widgets.turn_effects")
-local popup_renderer = require("src.presentation.runtime.controllers.popup_controller")
-local market_modal_renderer = require("src.presentation.runtime.controllers.market_controller")
-local debug_ports_module = require("src.presentation.runtime.ports.debug_ports")
-local role_control_lock_policy = require("src.presentation.input.role_control_lock_policy")
-local ui_touch_policy = require("src.presentation.input.touch_policy")
-local ui_choice_route_policy = require("src.presentation.input.choice_route_policy")
+local turn_effects = require("src.ui.widgets.turn_effects")
+local popup_renderer = require("src.ui.controllers.popup_controller")
+local market_modal_renderer = require("src.ui.controllers.market_controller")
+local debug_ports_module = require("src.ui.controllers.ports.debug_ports")
+local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
+local ui_touch_policy = require("src.ui.input.touch_policy")
+local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
 local logger = require("src.core.utils.logger")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local market_cfg = require("src.config.content.market")
@@ -40,7 +40,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local host_runtime = require("src.host.eggy")
 local runtime_state = require("src.state.state_access.runtime_state")
-local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
+local target_choice_effects = require("src.ui.controllers.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -416,7 +416,7 @@ local function _test_choice_timeout_supports_explicit_timeout_strategy()
     { target = dispatch, key = "dispatch_action", value = function(_, _, action)
       dispatched = action
     end },
-    { target = require("src.presentation.runtime.controllers.modal_controller"), key = "close_choice_modal", value = function() end },
+    { target = require("src.ui.controllers.modal_controller"), key = "close_choice_modal", value = function() end },
   }, function()
     tick_timeout.step_choice_timeout(game, state, 0.11, {
       on_pending_choice = function() end,

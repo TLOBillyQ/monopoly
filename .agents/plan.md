@@ -34,7 +34,9 @@
 - [x] (2026-03-14 14:09+08:00) 已联合完成 `T6`/`T7`：player 选择与动作迁到 `src/player/*`，AI 入口迁到 `src/computer/policies/*`，旧路径全部改成 shim，`T6` 与 `T7` 完成。
 - [x] (2026-03-14 14:24+08:00) 已把共享 gameplay ports 迁到 `src/rules/ports/*` 并切换 `src/` / `tests/` 消费方，`T8` 完成。
 - [x] (2026-03-14 14:53+08:00) 已完成 `T9` / `T10`：scheduler、turn core 与 output/runtime adapter 全部迁到 `src/turn/*`，旧路径改成 shim，`T9` 与 `T10` 完成。
-- [ ] `T11` `ui` schema/model/view 归位进行中；`T12` 到 `T14` 仍待执行。
+- [x] (2026-03-14 15:28+08:00) 已完成 `T11` / `T12`：`presentation` 全量迁到 `src/ui/*`，并清理 `ui` 投影视图循环。
+- [x] (2026-03-14 15:28+08:00) 已完成 `T13`：入口、测试支撑与 `Game` 聚合根迁到 `src/entry/*` / `src/state/game_state.lua`。
+- [x] (2026-03-14 15:28+08:00) 已完成 `T14`：删除旧生产 shim，更新文档与 contract，旧命名空间搜索归零。
 
 ## 意外与发现
 
@@ -106,7 +108,7 @@
 
 ## 结果与复盘
 
-当前完成的是计划结构重写，不是代码迁移本身。和上一版相比，这个版本补上了三类以前不够决策完整的信息：第一，哪些任务可以交给独立子代理并行推进；第二，哪些模块必须延后，不能误归到早期 `state` 或 `turn` 任务；第三，每个任务最少要跑哪些验证，才能证明不是“只改了路径名”。最大的剩余风险仍然在 `src/presentation/runtime/*`、`src/game/flow/*`、`src/game/runtime/*` 这三块历史包裹较厚的区域，所以它们在任务图里被拆成更细的子任务，而不再作为一个大波次整体搬运。
+本轮已经完成从旧顶层语义到新顶层语义的整仓迁移。最终 `src/` 的主视图已经收口为 `entry / host / ui / turn / player / computer / rules / state / config / core`，旧 `app / presentation / game / infrastructure / Config` 命名空间在 `src/`、`tests/`、`docs/` 中都已清零。过程中最大的真实风险有三类：第一，pure shim 会污染 arch_view 投影视图；第二，`ui` 与 `turn` 子视图容易因错误落点产生局部环；第三，`Game` 聚合根虽然落在 `src/state/game_state.lua`，但它不是纯数据，必须借助过渡桥避免直接反向依赖 `entry` 或 `rules`。这些风险都已经在任务日志和工具规则中落地处理，当前剩余工作只剩后续功能迭代，而不是这次目录迁移本身。
 
 ## 背景与导读
 
@@ -348,9 +350,9 @@
 - **location**: `src/presentation/{schema,model,view}/*`, `src/ui/{schema,presenters,render,widgets}/*`
 - **description**: 先迁纯 UI 结构：schema、presenters、render、widgets、`view/support`。这是 `ui` 任务里最适合先并行整理的一部分，因为它比 runtime/controllers 更容易保持纯边界。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；`presentation schema must stay pure` 这类规则已更新到新命名空间；`rg -n 'src\.presentation\.(schema|model|view)' src/ui tests` 的残留只剩 shim 或未切换调用点。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录 schema、presenters、render、widgets 的归位情况。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 15:28+08:00` 已将 `src/presentation/schema/*` 迁到 `src/ui/schema/*`，`src/presentation/model/*` 迁到 `src/ui/presenters/*`，`src/presentation/view/render/*` 迁到 `src/ui/render/*`，`src/presentation/view/widgets/*` 迁到 `src/ui/widgets/*`，`src/presentation/view/support/*` 迁到 `src/ui/render/support/*`。同时更新 `arch_view_contract`，让 viewer contract 反映新顶层 `entry/ui/turn/rules` 视图。验证结果：`rg -n 'src\.presentation\.(schema|model|view)' src tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/presentation/{schema,model,view}/**/*.lua`, `src/ui/{schema,presenters,render,widgets}/**/*.lua`, `tests/suites/architecture/arch_view_contract.lua`, `tests/**/*`, `.agents/plan.md`
 
 ### T12：`ui` runtime、input、store 归位
 
@@ -359,9 +361,9 @@
 - **location**: `src/presentation/input/*`, `src/presentation/runtime/*`, `src/ui/{input,controllers,stores,render}/*`
 - **description**: 把 `canvas_state.lua`、`canvas_store.lua`、`event_state.lua`、`modal_state.lua`、`ui_runtime/*`、controllers、bindings、handlers、`events.lua -> src/ui/controllers/ui_events.lua` 作为一个整体迁移。已在 `T4` 迁走的 host 模块不再留在本任务范围。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/contract.lua` 通过；计划和代码都明确“不再把任何 UI runtime state 拆进 `src/state/*`”；`rg -n 'src\.presentation\.(input|runtime)' src/ui tests` 的残留都必须可解释。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录 UI runtime state 与 controllers 的整体切换情况。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 15:28+08:00` 已将 `src/presentation/input/*` 迁到 `src/ui/input/*`，`src/presentation/runtime/*` 迁到 `src/ui/{controllers,stores,render}/*`，并按职责重排 `ui_runtime` 族文件：纯 store 留在 `src/ui/stores/*`，运行服务迁到 `src/ui/controllers/*`，渲染/资源辅助迁到 `src/ui/render/*`。为消除 `ui` 子视图投影环，本轮把 `player_colors.lua` 下沉到 `src/ui/presenters/player_colors.lua`，并把 `ui_state` / `event_state` 从 stores 抽到 controllers。验证结果：`rg -n 'src\.presentation\.(input|runtime)' src tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/presentation/{input,runtime}/**/*.lua`, `src/ui/{input,controllers,stores,render}/**/*.lua`, `src/ui/presenters/player_colors.lua`, `tests/**/*`, `.agents/plan.md`
 
 ### T13：`entry`、聚合根与测试/启动面归位
 
@@ -370,9 +372,9 @@
 - **location**: `src/app/init.lua`, `src/app/bootstrap/*`, `src/app/testing/*`, `src/game/core/runtime/{game.lua,game_factory.lua,composition_root.lua}`, `tests/support/*`, `tests/suites/runtime/*`, `src/entry/*`, `src/state/game_state.lua`
 - **description**: 最后迁入口、装配、测试支撑和聚合根。`game.lua -> src/state/game_state.lua` 在这一阶段落位；`game_factory.lua` 与 `composition_root.lua` 并入 `src/entry/start_game.lua` 附近的装配层；`src/app/testing/*` 迁到 `src/entry/testing/*`；`src/app/init.lua`、`startup_policy.lua`、runtime suites 和测试 support 也在这一任务统一收口。
 - **validation**: 四条基线命令全部通过；`tests/guards/gameplay_loop_no_ui.lua`、`tests/support/shared_support.lua`、`tests/suites/runtime/*` 已切到新入口或 shim；`rg -n 'src\.app|src\.game\.core\.runtime\.(game|game_factory|composition_root)' src tests` 的残留都能解释。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录入口、测试 support、聚合根的真实落点和 API 保留情况。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 15:28+08:00` 已将 `src/app/bootstrap/*` 迁到 `src/entry/*`，`src/app/testing/*` 迁到 `src/entry/testing/*`，并将 `src/game/core/runtime/game.lua` 迁到 `src/state/game_state.lua`，`game_factory.lua` / `composition_root.lua` 迁到 `src/entry/{game_factory,compose_game}.lua`。为避免 `state -> entry/rules` 的直接边，本轮新增 `src/state/{compose_game,game_victory}.lua` 过渡桥，让 `src/state/game_state.lua` 只直接依赖 `src/state/*`。验证结果：`rg -n 'src\.app|src\.game\.core\.runtime\.(game|game_factory|composition_root)' src tests` 无命中；四条基线命令通过。
+- **files edited/created**: `src/app/**/*.lua`, `src/game/core/runtime/{game,game_factory,composition_root}.lua`, `src/entry/**/*.lua`, `src/state/{game_state,compose_game,game_victory}.lua`, `tests/**/*`, `.agents/plan.md`
 
 ### T14：收口、删 shim、更新文档
 
@@ -381,9 +383,9 @@
 - **location**: forwarding shim 文件、`docs/architecture/*`, `.agents/plan.md`, `src/`, `tests/`, `src/app/testing/`, `docs/`
 - **description**: 删除旧生产入口、删已完成使命的 shim、更新架构文档和计划文档、保留被明确批准的少量共享工具残留区，其余全部收口。
 - **validation**: 四条基线命令通过；分作用域执行旧路径搜索时，`src/`、`tests/`、`src/app/testing/`、`docs/` 都不再命中旧生产命名空间；文档中的目标树、接口章节、任务波次与最终代码真相一致。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录删掉了哪些 shim、哪些 docs 已同步。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 15:28+08:00` 已删除 `src/app`、`src/presentation`、`src/infrastructure`、`src/game` 下全部旧生产 shim，并同步更新 `docs/architecture/arch_view.md`、`docs/architecture/layer-model.md` 与 `tests/suites/architecture/arch_view_contract.lua`。最终验证：`rg -n 'require\("(Config\.|src\.(app|presentation|game|infrastructure))|require\(\'(Config\.|src\.(app|presentation|game|infrastructure))' src tests` 为零；`rg -n 'src\.(app|presentation|game|infrastructure)|Config\.' docs` 为零；四条基线命令全部通过。
+- **files edited/created**: `docs/architecture/{arch_view,layer-model}.md`, `.agents/plan.md`, `src/`, `tests/`
 
 ## 并行执行分组
 

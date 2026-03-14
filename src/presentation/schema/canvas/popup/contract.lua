@@ -1,6 +1,1 @@
-local nodes = require("src.presentation.schema.canvas.popup.nodes")
-
-return {
-  key = "popup",
-  canvas = nodes.canvas,
-}
+return require("src.ui.schema.canvas.popup.contract")

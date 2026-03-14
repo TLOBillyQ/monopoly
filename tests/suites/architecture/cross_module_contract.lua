@@ -7,8 +7,8 @@ local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local land_events = require("src.rules.land.events")
 local land_rules = require("src.rules.land.rules")
 local land_rent_resolver = require("src.rules.land.rent_resolver")
-local action_anim = require("src.presentation.view.render.action_anim")
-local handlers = require("src.presentation.view.render.anim_handlers")
+local action_anim = require("src.ui.render.action_anim")
+local handlers = require("src.ui.render.anim_handlers")
 
 local function _test_event_contract_land_events_use_catalog_keys()
   local emitted = {}

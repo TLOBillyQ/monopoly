@@ -1,3 +1,1 @@
-return {
-  canvas = "调试屏",
-}
+return require("src.ui.schema.canvas.debug.nodes")

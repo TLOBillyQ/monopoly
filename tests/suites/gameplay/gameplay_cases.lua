@@ -29,7 +29,7 @@ local runtime_context = require("src.host.eggy.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local runtime_state = require("src.state.state_access.runtime_state")
-local runtime_global_aliases = require("src.app.bootstrap.runtime.global_aliases")
+local runtime_global_aliases = require("src.entry.runtime_globals")
 local dispatch_validator = require("src.turn.actions.validator")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local tick_choice_timeout = require("src.turn.waits.choice_timeout")
@@ -41,11 +41,11 @@ local gameplay_loop_runtime = require("src.turn.loop.loop_runtime")
 local tick_flow = require("src.turn.loop.tick_flow")
 local move_followup = require("src.turn.phases.move_followup")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
-local game_startup = require("src.app.bootstrap.game_startup")
-local game_startup_event_bridge = require("src.app.bootstrap.game_startup_event_bridge")
-local profile_rotation = require("src.app.testing.profile_rotation")
+local game_startup = require("src.entry.start_game")
+local game_startup_event_bridge = require("src.entry.wire_events")
+local profile_rotation = require("src.entry.testing.profile_rotation")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
-local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
+local test_profile_bootstrap = require("src.entry.testing.test_profile_bootstrap")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
@@ -1265,7 +1265,7 @@ local function _test_runtime_editor_exports_camera_target_returns_nil_when_unit_
 end
 
 local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
-  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera_sync")
+  local camera_sync = require("src.ui.controllers.ports.ui_sync.camera_sync")
   local emitted = {}
   local helper = { target_role_id = nil }
 
@@ -1347,7 +1347,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
       board = { get_overlays = function() return { roadblocks = {}, mines = {} } end, tile_lookup = {}, path = {} },
     }
     support.with_patches({
-      { target = require("src.presentation.runtime.controllers.modal_controller"), key = "open_choice_modal", value = function(_, choice)
+      { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function(_, choice)
         opened = choice
       end },
     }, function()
@@ -2370,7 +2370,7 @@ local function _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_
 end
 
 local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice()
-  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_ui_state")
+  local choice_ui_state = require("src.ui.controllers.ports.ui_sync.choice_ui_state")
   local warned = {}
 
   local function _run_case(choice, state, current_player_index)
@@ -2439,7 +2439,7 @@ local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_
 end
 
 local function _test_tick_choice_timeout_warning_keeps_local_modal_choice()
-  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_ui_state")
+  local choice_ui_state = require("src.ui.controllers.ports.ui_sync.choice_ui_state")
   local warned = {}
   local g = _new_game()
   local state = _build_loop_state()
@@ -2937,10 +2937,10 @@ local function _test_board_visual_feedback_port_reconciles_destroyed_tile_and_cl
   local render_calls = {}
   local cleared_buildings = {}
   local cleared_overlays = {}
-  local board_view = require("src.presentation.view.render.board")
-  local tile_renderer = require("src.presentation.view.render.tile_renderer")
-  local building_effects = require("src.presentation.view.render.building_effects")
-  local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
+  local board_view = require("src.ui.render.board")
+  local tile_renderer = require("src.ui.render.tile_renderer")
+  local building_effects = require("src.ui.render.building_effects")
+  local overlay_runtime = require("src.ui.render.anim_overlay_runtime")
 
   tile_ref.owner_id = g.players[2].id
   tile_ref.level = 1
@@ -3015,10 +3015,10 @@ local function _test_board_visual_feedback_port_reconciles_spawned_tile_and_over
   local render_calls = {}
   local spawned_buildings = {}
   local spawned_overlays = {}
-  local board_view = require("src.presentation.view.render.board")
-  local tile_renderer = require("src.presentation.view.render.tile_renderer")
-  local building_effects = require("src.presentation.view.render.building_effects")
-  local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
+  local board_view = require("src.ui.render.board")
+  local tile_renderer = require("src.ui.render.tile_renderer")
+  local building_effects = require("src.ui.render.building_effects")
+  local overlay_runtime = require("src.ui.render.anim_overlay_runtime")
 
   state.board_scene = {
     tiles = { [idx] = {} },

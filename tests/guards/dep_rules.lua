@@ -4,22 +4,22 @@ local guard_support = require("support.guards.guard_support")
 
 local rules = {
   {
-    roots = { "src/presentation" },
+    roots = { "src/ui" },
     forbidden = { "shared.UINodes" },
     description = "no module may depend on retired shared.UINodes",
   },
   {
-    roots = { "src/presentation" },
+    roots = { "src/ui" },
     forbidden = { "intent_builders" },
     description = "no module may depend on retired intent_builders",
   },
   {
-    roots = { "src/game/core/runtime" },
+    roots = { "src/state" },
     forbidden = { "TurnFlow" },
     description = "runtime must not depend on retired TurnFlow",
   },
   {
-    roots = { "src/presentation/schema/canvas/base" },
+    roots = { "src/ui/schema/canvas/base" },
     forbidden = {
       "canvas.always_show", "canvas.market", "canvas.secondary_confirm",
       "canvas.remote_choice", "canvas.player_choice", "canvas.popup",
@@ -28,7 +28,7 @@ local rules = {
     description = "base canvas must not import other canvas modules",
   },
   {
-    roots = { "src/game/core" },
+    roots = { "src/state", "src/player", "src/computer", "src/rules" },
     forbidden_patterns = {
       "%f[%w_]GameAPI%f[^%w_]",
       "%f[%w_]GlobalAPI%f[^%w_]",
@@ -50,7 +50,7 @@ local rules = {
     description = "core utility layer must not use host runtime globals directly",
   },
   {
-    roots = { "src/game/core", "src/app", "src/presentation", "tests" },
+    roots = { "src/state", "src/entry", "src/ui", "tests" },
     forbidden_patterns = {
       "require%(\"src%.core%.runtime_compat\"%)",
       "require%('src%.core%.runtime_compat'%)",
@@ -84,7 +84,7 @@ local rules = {
     description = "source must not use retired clock.now/diff_seconds aliases",
   },
   {
-    roots = { "src/game/systems" },
+    roots = { "src/rules" },
     forbidden_patterns = {
       "ui_port%.wait_action_anim",
       "game%.ui_port%.wait_action_anim",
@@ -92,7 +92,7 @@ local rules = {
     description = "systems layer must use ActionAnimPort instead of direct ui_port.wait_action_anim checks",
   },
   {
-    roots = { "src/game/systems" },
+    roots = { "src/rules" },
     forbidden_patterns = {
       "game%.gameplay_loop_ports",
       "self%.gameplay_loop_ports",
@@ -102,7 +102,7 @@ local rules = {
     description = "systems layer must not read gameplay loop runtime object fields directly or depend on loop_ports",
   },
   {
-    roots = { "src/game/flow/turn" },
+    roots = { "src/turn" },
     forbidden_patterns = {
       "state%.ui%.",
       "state%.ui_[A-Za-z0-9_]+%s*=",
@@ -110,7 +110,7 @@ local rules = {
     description = "turn flow must route UI reads and writes through output/ui_sync ports",
   },
   {
-    roots = { "src/game/scheduler" },
+    roots = { "src/turn/timing" },
     forbidden_patterns = {
       "require%(\"src%.game%.flow%..+\"%)",
       "require%('src%.game%.flow%..+'%)",
@@ -118,33 +118,33 @@ local rules = {
     description = "scheduler must stay as a pure coroutine scheduler and not depend on flow modules",
   },
   {
-    roots = { "src/game/core/runtime" },
+    roots = { "src/state" },
     forbidden_patterns = {
-      "require%(\"src%.game%.runtime%..+\"%)",
-      "require%('src%.game%.runtime%..+'%)",
+      "require%(\"src%.turn%.output%..+\"%)",
+      "require%('src%.turn%.output%..+'%)",
     },
-    description = "core runtime must not depend on gameplay runtime adapters directly",
+    description = "state must not depend on turn output adapters directly",
   },
   {
-    roots = { "src/game/systems/market" },
+    roots = { "src/rules/market" },
     forbidden_patterns = {
-      "require%(\"src%.game%.systems%.land%.choice_specs\"%)",
-      "require%('src%.game%.systems%.land%.choice_specs'%)",
+      "require%(\"src%.rules%.land%.choice_specs\"%)",
+      "require%('src%.rules%.land%.choice_specs'%)",
     },
     description = "market subsystem must not depend on land choice specs",
   },
   {
-    roots = { "src/game/systems/items" },
+    roots = { "src/rules/items" },
     forbidden_patterns = {
-      "require%(\"src%.game%.systems%.land%.board_utils\"%)",
-      "require%('src%.game%.systems%.land%.board_utils'%)",
-      "require%(\"src%.game%.systems%.land%.rent_resolver\"%)",
-      "require%('src%.game%.systems%.land%.rent_resolver'%)",
+      "require%(\"src%.rules%.land%.board_utils\"%)",
+      "require%('src%.rules%.land%.board_utils'%)",
+      "require%(\"src%.rules%.land%.rent_resolver\"%)",
+      "require%('src%.rules%.land%.rent_resolver'%)",
     },
     description = "items subsystem must use neutral board/property helpers instead of land internals",
   },
   {
-    roots = { "src/game/systems/market" },
+    roots = { "src/rules/market" },
     forbidden_patterns = {
       "%f[%w_]GameAPI%f[^%w_]",
       "%f[%w_]RegisterTriggerEvent%f[^%w_]",
@@ -153,7 +153,7 @@ local rules = {
     description = "market service layer must not call host purchase globals directly",
   },
   {
-    roots = { "src/presentation/runtime/ports" },
+    roots = { "src/ui/controllers/ports" },
     forbidden_patterns = {
       "game%.ui_port",
       "ui_port%.get_board_scene",
@@ -162,7 +162,7 @@ local rules = {
     description = "presentation ports must consume narrow board_scene_port instead of retired ui_port fallbacks",
   },
   {
-    roots = { "src/game", "src/presentation" },
+    roots = { "src/turn", "src/ui", "src/player", "src/computer", "src/rules" },
     forbidden_patterns = {
       "%f[%w_]all_roles%f[^%w_]",
       "%f[%w_]ALLROLES%f[^%w_]",
@@ -185,8 +185,8 @@ local rules = {
 local dep_rules_whitelist = {}
 
 local forbidden_files = {
-  "src/game/flow/output_adapters/legacy_output_mirror.lua",
-  "src/game/systems/market/service/paid_purchase_gateway.lua",
+  "src/turn/output/legacy_output_mirror.lua",
+  "src/rules/market/service/paid_purchase_gateway.lua",
   "src/core/runtime_facade/runtime_context.lua",
   "src/core/runtime_facade/runtime_event_bridge.lua",
   "src/core/runtime_ports/default_ports.lua",

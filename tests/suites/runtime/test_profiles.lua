@@ -10,11 +10,11 @@ local movement = support.movement
 local default_ports = require("src.turn.output.default_ports")
 
 local constants = require("src.config.content.constants")
-local board_view = require("src.presentation.view.render.board")
+local board_view = require("src.ui.render.board")
 local runtime_state = require("src.state.state_access.runtime_state")
-local test_profiles_cfg = require("src.app.testing.config.test_profiles")
-local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
-local test_profile_resolver = require("src.app.testing.test_profile_resolver")
+local test_profiles_cfg = require("src.entry.testing.config.test_profiles")
+local test_profile_bootstrap = require("src.entry.testing.test_profile_bootstrap")
+local test_profile_resolver = require("src.entry.testing.test_profile_resolver")
 
 local function _load_map_for_profile(profile_name)
   return test_profile_resolver.resolve_map(profile_name)
@@ -464,8 +464,8 @@ local function _test_upgrade_build_marks_tile_render_called_for_startup_render()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "upgrade_build")
 
-  local tile_renderer = require("src.presentation.view.render.tile_renderer")
-  local building_effects = require("src.presentation.view.render.building_effects")
+  local tile_renderer = require("src.ui.render.tile_renderer")
+  local building_effects = require("src.ui.render.building_effects")
   local rendered_tile_ids = {}
   local rendered_building_tile_ids = {}
 
@@ -500,8 +500,8 @@ local function _test_strong_card_marks_tile_render_called_for_startup_render()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "strong_card")
 
-  local tile_renderer = require("src.presentation.view.render.tile_renderer")
-  local building_effects = require("src.presentation.view.render.building_effects")
+  local tile_renderer = require("src.ui.render.tile_renderer")
+  local building_effects = require("src.ui.render.building_effects")
   local rendered_tile_ids = {}
   local rendered_building_tile_ids = {}
 
@@ -537,9 +537,9 @@ local function _test_missile_marks_overlay_render_called_for_startup_render()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "missile")
 
-  local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
-  local tile_renderer = require("src.presentation.view.render.tile_renderer")
-  local building_effects = require("src.presentation.view.render.building_effects")
+  local overlay_runtime = require("src.ui.render.anim_overlay_runtime")
+  local tile_renderer = require("src.ui.render.tile_renderer")
+  local building_effects = require("src.ui.render.building_effects")
   local overlay_calls = {}
   local rendered_tile_ids = {}
   local rendered_building_tile_ids = {}

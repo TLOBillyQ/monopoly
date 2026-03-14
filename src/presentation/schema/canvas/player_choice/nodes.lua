@@ -1,8 +1,1 @@
-return {
-  canvas = "玩家选择屏",
-  title = "玩家选择_标题",
-  slots = {
-    "玩家选择_槽位1", "玩家选择_槽位2",
-    "玩家选择_槽位3", "玩家选择_槽位4",
-  },
-}
+return require("src.ui.schema.canvas.player_choice.nodes")

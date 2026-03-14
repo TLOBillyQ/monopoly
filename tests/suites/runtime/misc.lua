@@ -308,7 +308,7 @@ local function _test_synthetic_actor_registry_reset_destroys_spawned_actor_and_c
 end
 
 local function _test_ui_bootstrap_required_click_nodes_appends_extras()
-  local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
+  local ui_bootstrap = require("src.entry.start_ui")
   local ui_manager_nodes = {
     { "基础屏_行动按钮" },
   }
@@ -351,27 +351,27 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
       },
     },
     {
-      target = require("src.presentation.runtime.events"),
+      target = require("src.ui.controllers.ui_events"),
       key = "send_to_all",
       value = function() end,
     },
     {
-      target = require("src.presentation.runtime.canvas_event_router"),
+      target = require("src.ui.controllers.canvas_event_router"),
       key = "bind",
       value = function() end,
     },
     {
-      target = require("src.presentation.runtime.ui_runtime"),
+      target = require("src.ui.controllers.ui_runtime"),
       key = "init_ui_assets",
       value = function() end,
     },
     {
-      target = require("src.presentation.runtime.ui_runtime"),
+      target = require("src.ui.controllers.ui_runtime"),
       key = "capture_player_colors",
       value = function() end,
     },
     {
-      target = require("src.presentation.view.render.board_scene"),
+      target = require("src.ui.render.board_scene"),
       key = "init",
       value = function() end,
     },
@@ -502,7 +502,7 @@ local function _test_default_ports_wall_diff_seconds_prefers_game_api_then_falls
 end
 
 local function _test_ui_bootstrap_spawns_startup_synthetic_actors()
-  local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
+  local ui_bootstrap = require("src.entry.start_ui")
   local capture = {
     registered_specs = nil,
     spawned_map = nil,

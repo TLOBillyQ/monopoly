@@ -67,9 +67,9 @@ local function _build_board_refresh_test_env(opts)
 end
 
 local function _with_board_refresh_patches(extra_patches, fn)
-  local anchors = require("src.presentation.view.render.board.anchors")
-  local startup_render = require("src.presentation.view.render.board.startup_render")
-  local player_units = require("src.presentation.view.render.board.player_units")
+  local anchors = require("src.ui.render.board.anchors")
+  local startup_render = require("src.ui.render.board.startup_render")
+  local player_units = require("src.ui.render.board.player_units")
   local board_cfg = gameplay_rules.board
   local patches = {
     { target = anchors, key = "ensure_tile_anchors", value = function() end },
@@ -89,7 +89,7 @@ local function _with_board_refresh_patches(extra_patches, fn)
 end
 
 local function _test_board_refresh_stops_force_move_before_set_position()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local env = _build_board_refresh_test_env()
   env.unit.force_stop_move = function()
     env.calls[#env.calls + 1] = "force_stop_move"
@@ -115,7 +115,7 @@ local function _test_board_refresh_stops_force_move_before_set_position()
 end
 
 local function _test_board_refresh_falls_back_to_ai_stop_before_set_position()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local env = _build_board_refresh_test_env()
   local fixed_zero = { kind = "fixed_zero", value = 0 }
   env.unit.ai_command_stop_move = function(duration)
@@ -147,7 +147,7 @@ local function _test_board_refresh_falls_back_to_ai_stop_before_set_position()
 end
 
 local function _test_board_refresh_prefers_forced_move_stop_and_model_stop_before_set_position()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local env = _build_board_refresh_test_env()
   env.unit.stop_forced_move = function()
     env.calls[#env.calls + 1] = "stop_forced_move"
@@ -180,9 +180,9 @@ local function _test_board_refresh_prefers_forced_move_stop_and_model_stop_befor
 end
 
 local function _test_board_refresh_stops_vehicle_before_vehicle_set_position()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local runtime_ports = require("src.core.ports.runtime_ports")
-  local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
+  local gameplay_read_port = require("src.ui.presenters.gameplay_read_port")
   local env = _build_board_refresh_test_env({ seat_id = 4001 })
   local vehicle_helper = {
     emit_vehicle_stop = function(role_id)
@@ -220,7 +220,7 @@ local function _test_board_refresh_stops_vehicle_before_vehicle_set_position()
 end
 
 local function _test_board_refresh_keeps_base_y_when_already_above_minimum()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local env = _build_board_refresh_test_env({
     ground_y = 0,
     tile_y_1 = 0.75,
@@ -244,7 +244,7 @@ local function _test_board_refresh_keeps_base_y_when_already_above_minimum()
 end
 
 local function _test_board_refresh_suppresses_stop_and_snap_during_wait_move_anim()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local env = _build_board_refresh_test_env({
     phase = "wait_move_anim",
     move_anim = { seq = 1 },
@@ -269,7 +269,7 @@ local function _test_board_refresh_suppresses_stop_and_snap_during_wait_move_ani
 end
 
 local function _test_board_refresh_replays_pending_sync_with_stop_after_wait_move_anim()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local env = _build_board_refresh_test_env({
     phase = "wait_move_anim",
     move_anim = { seq = 1 },
@@ -310,7 +310,7 @@ local function _test_board_refresh_replays_pending_sync_with_stop_after_wait_mov
 end
 
 local function _test_board_refresh_clear_player_token_releases_sequence_lock()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local env = _build_board_refresh_test_env()
   local sequence_calls = {}
   env.state.board_scene._move_anim_runtime = {
@@ -356,7 +356,7 @@ local function _test_board_refresh_clear_player_token_releases_sequence_lock()
 end
 
 local function _test_board_refresh_synthetic_actor_stops_ai_before_snap()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local runtime_ports = require("src.core.ports.runtime_ports")
   local env = _build_board_refresh_test_env({ position = 2 })
   env.state.board_scene._move_anim_runtime = {
@@ -400,7 +400,7 @@ local function _test_board_refresh_synthetic_actor_stops_ai_before_snap()
 end
 
 local function _test_board_refresh_idle_synthetic_actor_skips_stop_ai()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local runtime_ports = require("src.core.ports.runtime_ports")
   local env = _build_board_refresh_test_env({ position = 2 })
   env.state.board_scene._move_anim_runtime = {
@@ -440,7 +440,7 @@ local function _test_board_refresh_idle_synthetic_actor_skips_stop_ai()
 end
 
 local function _test_board_refresh_pending_synthetic_ai_stop_consumes_only_once()
-  local board_view = require("src.presentation.view.render.board")
+  local board_view = require("src.ui.render.board")
   local runtime_ports = require("src.core.ports.runtime_ports")
   local env = _build_board_refresh_test_env({ position = 2 })
   env.state.board_scene._move_anim_runtime = {
@@ -485,7 +485,7 @@ local function _test_board_refresh_pending_synthetic_ai_stop_consumes_only_once(
 end
 
 local function _test_board_scene_init_binds_units_and_target_pick_metadata()
-  local board_scene = require("src.presentation.view.render.board_scene")
+  local board_scene = require("src.ui.render.board_scene")
   local runtime_ports = require("src.core.ports.runtime_ports")
   local state = {}
   local players = {
@@ -561,7 +561,7 @@ local function _test_board_scene_init_binds_units_and_target_pick_metadata()
 end
 
 local function _test_tile_renderer_renders_land_metadata()
-  local tile_renderer = require("src.presentation.view.render.tile_renderer")
+  local tile_renderer = require("src.ui.render.tile_renderer")
   local captured = {}
   local unit = {
     get_child_by_name = function(name)
@@ -591,7 +591,7 @@ local function _test_tile_renderer_renders_land_metadata()
 end
 
 local function _test_player_units_resolve_roles_by_name_and_role_id()
-  local player_units = require("src.presentation.view.render.board.player_units")
+  local player_units = require("src.ui.render.board.player_units")
   local resolved_role = {
     get_roleid = function()
       return 1
@@ -628,7 +628,7 @@ local function _test_player_units_resolve_roles_by_name_and_role_id()
 end
 
 local function _test_player_units_falls_back_to_resolve_role_when_roles_list_missing()
-  local player_units = require("src.presentation.view.render.board.player_units")
+  local player_units = require("src.ui.render.board.player_units")
   local state = {}
   local players = {
     { id = 2, name = "P2" },
@@ -662,7 +662,7 @@ local function _test_player_units_falls_back_to_resolve_role_when_roles_list_mis
 end
 
 local function _test_tile_anchors_collect_positions_render_tiles_and_spacing()
-  local anchors = require("src.presentation.view.render.board.anchors")
+  local anchors = require("src.ui.render.board.anchors")
   local render_calls = {}
   local log_calls = {}
   local state = {}
@@ -699,7 +699,7 @@ local function _test_tile_anchors_collect_positions_render_tiles_and_spacing()
       end,
     },
     {
-      target = require("src.presentation.view.render.tile_renderer"),
+      target = require("src.ui.render.tile_renderer"),
       key = "render_tile",
       value = function(unit, tile_id, owner_id)
         render_calls[#render_calls + 1] = {
@@ -730,7 +730,7 @@ local function _test_tile_anchors_collect_positions_render_tiles_and_spacing()
 end
 
 local function _test_tile_anchors_return_early_when_cache_is_ready()
-  local anchors = require("src.presentation.view.render.board.anchors")
+  local anchors = require("src.ui.render.board.anchors")
   local render_calls = 0
   local log_calls = 0
   local state = {
@@ -755,7 +755,7 @@ local function _test_tile_anchors_return_early_when_cache_is_ready()
 
   _with_patches({
     {
-      target = require("src.presentation.view.render.tile_renderer"),
+      target = require("src.ui.render.tile_renderer"),
       key = "render_tile",
       value = function()
         render_calls = render_calls + 1
@@ -774,7 +774,7 @@ local function _test_tile_anchors_return_early_when_cache_is_ready()
 end
 
 local function _test_building_effects_spawn_upgrade_building_units_creates_group_and_updates_billboard()
-  local building_effects = require("src.presentation.view.render.building_effects")
+  local building_effects = require("src.ui.render.building_effects")
 
   local billboard_calls = {}
   local created_units = {}
@@ -820,7 +820,7 @@ local function _test_building_effects_spawn_upgrade_building_units_creates_group
 end
 
 local function _test_building_effects_spawn_upgrade_returns_false_when_building_missing()
-  local building_effects = require("src.presentation.view.render.building_effects")
+  local building_effects = require("src.ui.render.building_effects")
 
   local scene = {
     buildings = {
@@ -842,7 +842,7 @@ end
 
 
 local function _test_building_effects_spawn_upgrade_returns_false_when_prefab_missing()
-  local building_effects = require("src.presentation.view.render.building_effects")
+  local building_effects = require("src.ui.render.building_effects")
   local prefab = require("Data.Prefab")
 
   local scene = {
@@ -872,7 +872,7 @@ local function _test_building_effects_spawn_upgrade_returns_false_when_prefab_mi
   _assert_eq(result, false, "spawn_upgrade_building_units should return false when prefab group is missing")
 end
 local function _test_building_effects_spawn_upgrade_returns_false_when_create_fails()
-  local building_effects = require("src.presentation.view.render.building_effects")
+  local building_effects = require("src.ui.render.building_effects")
 
   local scene = {
     buildings = {
