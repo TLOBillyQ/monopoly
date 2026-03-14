@@ -1,7 +1,7 @@
 local choice_support = require("src.presentation.model.choice_support")
 local runtime = require("src.presentation.runtime.ui")
 local canvas = require("src.presentation.runtime.canvas_coordinator")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local role_context = require("src.presentation.model.role_context")
 local ui_controls = require("src.presentation.view.support.ui_controls")
 

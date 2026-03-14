@@ -11,7 +11,7 @@ local secondary_confirm_nodes = require("src.presentation.schema.canvas.secondar
 local market_ui = require("src.presentation.schema.market_layout")
 local ui_events = require("src.presentation.runtime.events")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local role_globals = require("src.core.state_access.ui_role_globals")
+local role_globals = require("src.state.state_access.ui_role_globals")
 local runtime_context = require("src.infrastructure.runtime.context")
 
 local M = {}

@@ -2,7 +2,7 @@ local market_view = require("src.presentation.view.render.market")
 local canvas = require("src.presentation.runtime.canvas_coordinator")
 local runtime = require("src.presentation.runtime.ui")
 local role_context = require("src.presentation.model.role_context")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 
 local renderer = {}
 

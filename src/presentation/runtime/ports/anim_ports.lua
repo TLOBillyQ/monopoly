@@ -1,5 +1,5 @@
 local move_anim = require("src.presentation.view.render.move_anim")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local role_id_utils = require("src.core.utils.role_id")
 
 local anim_ports = {}

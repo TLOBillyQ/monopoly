@@ -3,7 +3,7 @@ local validator = require("src.game.flow.turn.dispatch.validator")
 local number_utils = require("src.core.utils.number_utils")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 local logger = require("src.core.utils.logger")
 
 local await = {}

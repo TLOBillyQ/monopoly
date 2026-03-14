@@ -6,7 +6,7 @@ local logger = require("src.core.utils.logger")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local runtime_context = require("src.infrastructure.runtime.context")
 local default_ports = require("src.infrastructure.runtime.default_ports")
-local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 local function _test_number_utils_to_integer()
   _assert_eq(number_utils.to_integer("12"), 12, "string integer should parse")
@@ -397,7 +397,7 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
       end,
     },
     {
-      target = require("src.core.state_access.ui_role_globals"),
+      target = require("src.state.state_access.ui_role_globals"),
       key = "install",
       value = function()
         return {}

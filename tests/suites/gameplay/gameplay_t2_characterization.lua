@@ -5,7 +5,7 @@ local gameplay_loop = require("src.game.flow.turn.loop")
 local tick_choice_timeout = require("src.game.flow.turn.waits.choice_timeout")
 local turn_timer_policy = require("src.game.flow.turn.policies.timer_policy")
 local dispatch_validator = require("src.game.flow.turn.dispatch.validator")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local roll = require("src.game.flow.turn.phases.roll")
 
 local function _build_test_ports(overrides)
@@ -358,7 +358,7 @@ local _resolve_wait_state_tests = {
       turn = {},
       dirty = {},
     }
-    local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+    local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
     assert(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual hold is active")
@@ -1143,7 +1143,7 @@ local _resolve_wait_state_extended_tests = {
       turn = { action_anim = { kind = "test" } },
       dirty = {},
     }
-    local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+    local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
     assert(next_state == "wait_action_anim", "should prefer wait_action_anim over landing_visual when both active")
@@ -1164,7 +1164,7 @@ local _resolve_wait_state_extended_tests = {
       turn = {},
       dirty = {},
     }
-    local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+    local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
     assert(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual is active")
@@ -1583,7 +1583,7 @@ local _resolve_choice_ui_state_tests = {
     -- Test that resolve_choice_timeout_seconds handles pending_choice from runtime state
     local game = _new_game()
     local state = _build_loop_state()
-    local runtime_state = require("src.core.state_access.runtime_state")
+    local runtime_state = require("src.state.state_access.runtime_state")
     runtime_state.set_pending_choice(state, { id = 2, kind = "market_buy" })
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
     local constants = require("src.config.content.constants")
@@ -1763,7 +1763,7 @@ local _update_countdown_more_tests = {
     state.countdown_active_last = nil
 
     -- Mock runtime_state functions
-    local runtime_state = require("src.core.state_access.runtime_state")
+    local runtime_state = require("src.state.state_access.runtime_state")
     local original_get_pending_choice = runtime_state.get_pending_choice
     local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
     runtime_state.get_pending_choice = function() return game.turn.pending_choice end
@@ -1959,7 +1959,7 @@ local _resolve_choice_ui_state_final_tests = {
     game.turn.pending_choice = { id = 1, kind = "test", route_key = "test_route" }
 
     -- Mock runtime_state
-    local runtime_state = require("src.core.state_access.runtime_state")
+    local runtime_state = require("src.state.state_access.runtime_state")
     local original_get_pending_choice = runtime_state.get_pending_choice
     local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
     runtime_state.get_pending_choice = function() return game.turn.pending_choice end
@@ -1990,7 +1990,7 @@ local _resolve_choice_ui_state_final_tests = {
     state.gameplay_loop_ports = ports
     game.turn.pending_choice = { id = 1, kind = "test" } -- no route_key
 
-    local runtime_state = require("src.core.state_access.runtime_state")
+    local runtime_state = require("src.state.state_access.runtime_state")
     local original_get_pending_choice = runtime_state.get_pending_choice
     local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
     runtime_state.get_pending_choice = function() return game.turn.pending_choice end
@@ -2018,7 +2018,7 @@ local _resolve_choice_ui_state_final_tests = {
     state._resolved_gameplay_loop_ports = ports
     state.gameplay_loop_ports = ports
 
-    local runtime_state = require("src.core.state_access.runtime_state")
+    local runtime_state = require("src.state.state_access.runtime_state")
     local original_get_pending_choice = runtime_state.get_pending_choice
     runtime_state.get_pending_choice = function() return nil end
 

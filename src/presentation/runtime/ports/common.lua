@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 
 local common = {}
 

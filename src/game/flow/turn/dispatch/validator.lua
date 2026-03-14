@@ -4,7 +4,7 @@ local item_slot_data = require("src.game.flow.turn.dispatch.item_slot_data")
 local turn_action_gate = require("src.game.flow.turn.policies.action_gate")
 local role_id_utils = require("src.core.utils.role_id")
 local choice_contract = require("src.core.choice.contract")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 
 local validator = {}
 

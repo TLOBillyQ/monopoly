@@ -7,7 +7,7 @@ local canvas = require("src.presentation.runtime.canvas_coordinator")
 local canvas_store = require("src.presentation.runtime.canvas_store")
 local logger = require("src.core.utils.logger")
 local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local ui_controls = require("src.presentation.view.support.ui_controls")
 
 local modal_presenter = {}

@@ -3,7 +3,7 @@ local role_context = require("src.presentation.model.role_context")
 local runtime = require("src.presentation.runtime.ui")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local canvas = require("src.presentation.runtime.canvas_coordinator")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local renderer = {}
 local _apply_node_image
 local function _with_client_role(role, fn)

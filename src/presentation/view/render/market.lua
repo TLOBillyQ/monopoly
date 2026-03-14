@@ -1,6 +1,6 @@
 local market_layout = require("src.presentation.schema.market_layout")
 local ui_controls = require("src.presentation.view.support.ui_controls")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local market_view_slots = require("src.presentation.view.render.market_slots")
 local market_view_controls = require("src.presentation.view.render.market_controls")
 

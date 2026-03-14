@@ -1,4 +1,4 @@
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local auto_play_port = require("src.game.ports.auto_play_port")
 
 local auto_context = {}

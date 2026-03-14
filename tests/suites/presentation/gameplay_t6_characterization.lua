@@ -11,6 +11,15 @@ local status3d_init = require("src.presentation.view.render.status3d.init")
 local startup_render = require("src.presentation.view.render.board.startup_render")
 local runtime_refs = require("src.config.content.runtime_refs")
 
+local state_module_aliases = {
+  ["src.state.state_access.runtime_state"] = "src.core.state_access.runtime_state",
+  ["src.state.state_access.landing_visual_hold"] = "src.core.state_access.landing_visual_hold",
+  ["src.state.state_access.ui_role_globals"] = "src.core.state_access.ui_role_globals",
+  ["src.state.player_state"] = "src.game.core.runtime.players",
+  ["src.state.board_state"] = "src.game.core.runtime.tiles",
+  ["src.state.turn_state"] = "src.game.core.runtime.turn",
+}
+
 local function _with_globals(overrides, fn)
   local original = {}
   for key, value in pairs(overrides or {}) do
@@ -28,8 +37,20 @@ local function _with_globals(overrides, fn)
 end
 
 local function _reload_module(module_name, overrides, fn)
-  local original = {}
+  local applied_overrides = {}
   for key, value in pairs(overrides or {}) do
+    applied_overrides[key] = value
+  end
+  for key, alias in pairs(state_module_aliases) do
+    if applied_overrides[key] ~= nil and applied_overrides[alias] == nil then
+      applied_overrides[alias] = applied_overrides[key]
+    elseif applied_overrides[alias] ~= nil and applied_overrides[key] == nil then
+      applied_overrides[key] = applied_overrides[alias]
+    end
+  end
+
+  local original = {}
+  for key, value in pairs(applied_overrides) do
     original[key] = package.loaded[key]
     package.loaded[key] = value
   end
@@ -597,7 +618,7 @@ local function _test_pre_confirm_enter_choice_select()
   }
 
   local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
-    ["src.core.state_access.runtime_state"] = {
+    ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
       end,
@@ -622,7 +643,7 @@ local function _test_pre_confirm_enter_no_choice_returns_false()
     game = {},
   }
   local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
-    ["src.core.state_access.runtime_state"] = {
+    ["src.state.state_access.runtime_state"] = {
       get_ui_model = function() return { choice = nil } end,
     },
   }, function(flow)
@@ -645,7 +666,7 @@ local function _test_pre_confirm_enter_market_confirm()
   }
 
   local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
-    ["src.core.state_access.runtime_state"] = {
+    ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "1001", requires_pre_confirm = true, label = "Skin", screen_key = "market" } } } }
       end,
@@ -678,7 +699,7 @@ local function _test_pre_confirm_enter_ui_button_item_slot()
   }
 
   local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
-    ["src.core.state_access.runtime_state"] = {
+    ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "item1", label = "Item" } } } }
       end,
@@ -702,7 +723,7 @@ local function _test_pre_confirm_enter_unknown_intent_returns_false()
     game = {},
   }
   local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
-    ["src.core.state_access.runtime_state"] = {
+    ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1" } }
       end,
@@ -973,7 +994,7 @@ local function _test_pre_confirm_enter_missing_modal_function()
   }
 
   local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
-    ["src.core.state_access.runtime_state"] = {
+    ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
       end,
@@ -999,7 +1020,7 @@ local function _test_pre_confirm_enter_market_confirm_option_not_found()
   }
 
   local result = _reload_module("src.presentation.input.intent_dispatch.pre_confirm", {
-    ["src.core.state_access.runtime_state"] = {
+    ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "9999", requires_pre_confirm = false } } } }
       end,

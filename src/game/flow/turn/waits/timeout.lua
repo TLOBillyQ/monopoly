@@ -6,7 +6,7 @@ local choice_auto_policy = require("src.game.flow.turn.auto.choice_auto_policy")
 local tick_ui_gate = require("src.game.flow.turn.waits.ui_gate")
 local tick_choice_timeout = require("src.game.flow.turn.waits.choice_timeout")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 
 local tick_timeout = {}
 

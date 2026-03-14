@@ -1,5 +1,5 @@
 local choice_support = require("src.presentation.model.choice_support")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 
 local item_phase_ask_flow = {}
 

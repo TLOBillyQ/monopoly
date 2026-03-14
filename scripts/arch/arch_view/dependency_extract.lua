@@ -40,6 +40,15 @@ local function _for_each_line(text, callback)
   end
 end
 
+local function _forwarding_shim_target(text)
+  local normalized = tostring(text or "")
+  normalized = normalized:gsub("%-%-[^\n]*", "")
+  normalized = normalized:gsub("%s+", " ")
+  normalized = normalized:match("^%s*(.-)%s*$") or ""
+  return normalized:match('^return require%(%s*"([^"]+)"%s*%)$')
+    or normalized:match("^return require%(%s*'([^']+)'%s*%)$")
+end
+
 function dependency_extract.build(scan_result)
   local modules = {}
   local edges = {}
@@ -50,23 +59,25 @@ function dependency_extract.build(scan_result)
     local internal_requires = {}
     local external_requires = {}
 
-    _for_each_line(source_module.source_text, function(line)
-      local line_requires = {}
-      _collect_requires_from_line(line, line_requires)
-      for dep in pairs(line_requires) do
-        if dep ~= module_id then
-          if scan_result.module_ids[dep] then
-            internal_requires[dep] = true
-            edge_map[common.edge_key(module_id, dep)] = {
-              from = module_id,
-              to = dep,
-            }
-          else
-            external_requires[dep] = true
+    if _forwarding_shim_target(source_module.source_text) == nil then
+      _for_each_line(source_module.source_text, function(line)
+        local line_requires = {}
+        _collect_requires_from_line(line, line_requires)
+        for dep in pairs(line_requires) do
+          if dep ~= module_id then
+            if scan_result.module_ids[dep] then
+              internal_requires[dep] = true
+              edge_map[common.edge_key(module_id, dep)] = {
+                from = module_id,
+                to = dep,
+              }
+            else
+              external_requires[dep] = true
+            end
           end
         end
-      end
-    end)
+      end)
+    end
 
     modules[module_id] = {
       module_id = module_id,

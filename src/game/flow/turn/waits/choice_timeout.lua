@@ -3,7 +3,7 @@ local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
 
 local tick_choice_timeout = {}

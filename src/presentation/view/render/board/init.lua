@@ -3,7 +3,7 @@ local startup_render = require("src.presentation.view.render.board.startup_rende
 local player_units = require("src.presentation.view.render.board.player_units")
 local placement = require("src.presentation.view.render.board.placement")
 local events = require("src.presentation.view.render.board.events")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 

@@ -1,9 +1,9 @@
 local monopoly_event = require("src.core.events.monopoly_events")
 local modal_controller = require("src.presentation.runtime.controllers.modal_controller")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local runtime_context = require("src.infrastructure.runtime.context")
 local choice_slice = require("src.presentation.model.choice_slice")
-local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 local M = {}
 

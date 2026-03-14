@@ -11,8 +11,8 @@ local tick_flow = require("src.game.flow.turn.runtime.tick_flow")
 local turn_timer_policy = require("src.game.flow.turn.policies.timer_policy")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
 local market_purchase = require("src.game.systems.market.purchase.core")
-local runtime_state = require("src.core.state_access.runtime_state")
-local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local runtime_state = require("src.state.state_access.runtime_state")
+local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 local role_id_utils = require("src.core.utils.role_id")
 local gameplay_loop = {}
 

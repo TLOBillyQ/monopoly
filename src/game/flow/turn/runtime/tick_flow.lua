@@ -2,7 +2,7 @@ local gameplay_loop_runtime = require("src.game.flow.turn.runtime.loop_runtime")
 local turn_role_control_policy = require("src.game.flow.turn.policies.role_control_policy")
 local auto_context = require("src.game.flow.turn.auto.context")
 local tick_steps = require("src.game.flow.turn.runtime.tick_steps")
-local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 local tick_flow = {}
 

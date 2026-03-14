@@ -17,7 +17,7 @@ local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local move_followup = require("src.game.flow.turn.phases.move_followup")
-local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 local function _install_narrow_ports(game, ui_port)
   game.ui_port = ui_port

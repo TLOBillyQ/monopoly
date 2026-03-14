@@ -29,7 +29,8 @@
 - [x] (2026-03-14 11:43+08:00) 已执行四条基线命令并记录当前绿色结果，`T0` 完成。
 - [x] (2026-03-14 11:56+08:00) 已建立双路径护栏：arch 新命名空间规则、shim 纯转发 guard、兼容 contract 已落地，`T1` 完成。
 - [x] (2026-03-14 12:19+08:00) 已把 `Config/*` 与 `src/core/config/*` 迁到 `src/config/{content,gameplay,testing}/*`，旧路径改成 shim，并把 `src/`/`tests/` 消费方批量切到新 canonical require，`T2` 完成。
-- [ ] `T3` 纯状态归位进行中；`T4` 到 `T14` 仍待执行。
+- [x] (2026-03-14 12:48+08:00) 已把 `players`、`tiles`、`turn` 与 `state_access` 迁到 `src/state/*`，旧路径改成 shim，并补 `src/state/player_state_ops/*` / `src/state/support/*` 过渡桥以消除 root 投影环，`T3` 完成。
+- [ ] `T4` `host` 与 `T5` `rules` 准备并行执行；`T6` 到 `T14` 仍待执行。
 
 ## 意外与发现
 
@@ -255,9 +256,9 @@
 - **location**: `src/game/core/runtime/{players,tiles,turn}.lua`, `src/core/state_access/*`, `src/state/*`
 - **description**: 只迁纯状态模块和 `state_access`。显式排除 `src/game/core/runtime/game.lua`、`src/game/core/runtime/game_factory.lua`、`src/game/core/runtime/composition_root.lua`，也不提前拆任何 UI runtime state。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；`rg -n 'src\.game\.core\.runtime\.(game|game_factory|composition_root)' src/state src/entry tests` 仍然只在计划允许的旧路径或注释里出现，不会被误搬进 `T3`。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录迁出的纯状态文件与排除项。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 12:48+08:00` 已将 `src/game/core/runtime/{players,tiles,turn}.lua` 迁到 `src/state/{player_state,board_state,turn_state}.lua`，并将 `src/core/state_access/*` 迁到 `src/state/state_access/*`；旧路径全部改成 shim，并把 `src/` 与 `tests/` 的 consumer 与 `package.loaded` 注入点切到新命名空间。执行中发现 root 投影环来自“旧路径 shim 仍被 arch_view 当作依赖边 + `player_state`/`state_access` 仍需要旧 `game/core` 辅助模块”。修复方式是两步：一，`scripts/arch/arch_view/dependency_extract.lua` 对纯 `return require(...)` shim 不再计入架构边；二，新增 `src/state/player_state_ops/*` 与 `src/state/support/*` 作为 state 侧转发桥，让 `src/state/*` 不再直接写出 `src.game.*` / `src.core.*` require。显式排除项保持不变：`src/game/core/runtime/{game,game_factory,composition_root}.lua` 未迁移，只更新其对纯状态模块的消费路径。验证结果：`rg -n 'src\.game\.core\.runtime\.(game|game_factory|composition_root)' src/state src/entry tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/game/core/runtime/{players,tiles,turn}.lua`, `src/core/state_access/*.lua`, `src/state/{player_state,board_state,turn_state}.lua`, `src/state/state_access/*.lua`, `src/state/player_state_ops/*.lua`, `src/state/support/*.lua`, `scripts/arch/arch_view/dependency_extract.lua`, `scripts/arch/config.lua`, `src/app/**/*`, `src/game/**/*`, `src/infrastructure/runtime/*`, `src/presentation/**/*`, `tests/**/*`, `.agents/plan.md`
 
 ### T4：`host` / Eggy 归位
 

@@ -1,5 +1,5 @@
 local support = require("support.gameplay_support")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local tick_choice_timeout = require("src.game.flow.turn.waits.choice_timeout")
 local tick_ui_sync = require("src.game.flow.turn.waits.ui_sync")
 local turn_timer_policy = require("src.game.flow.turn.policies.timer_policy")

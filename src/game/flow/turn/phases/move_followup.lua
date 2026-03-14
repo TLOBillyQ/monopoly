@@ -1,7 +1,7 @@
 local steal = require("src.game.systems.items.steal")
 local market_service = require("src.game.systems.market")
 local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
-local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 local move_followup = {}
 

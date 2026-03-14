@@ -40,7 +40,7 @@ local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local host_runtime = require("src.presentation.runtime.host")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local target_choice_effects = require("src.presentation.runtime.controllers.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 

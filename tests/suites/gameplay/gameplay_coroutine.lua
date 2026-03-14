@@ -1,6 +1,6 @@
 local support = require("support.gameplay_support")
 local turn_engine = require("src.game.flow.turn.runtime.scheduler_runtime")
-local landing_visual_hold = require("src.core.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 local await = require("src.game.flow.turn.waits.await")
 local logger = require("src.core.utils.logger")
 

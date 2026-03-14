@@ -1,6 +1,6 @@
 local choice_support = require("src.presentation.model.choice_support")
 local number_utils = require("src.core.utils.number_utils")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 
 local pre_confirm_flow = {}
 

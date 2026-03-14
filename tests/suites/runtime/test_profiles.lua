@@ -11,7 +11,7 @@ local default_ports = require("src.game.runtime.default_ports")
 
 local constants = require("src.config.content.constants")
 local board_view = require("src.presentation.view.render.board")
-local runtime_state = require("src.core.state_access.runtime_state")
+local runtime_state = require("src.state.state_access.runtime_state")
 local test_profiles_cfg = require("src.app.testing.config.test_profiles")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 local test_profile_resolver = require("src.app.testing.test_profile_resolver")
