@@ -42,6 +42,9 @@ function M.to_repo_relpath(path)
   return normalized:match(".*(src/.+)")
     or normalized:match(".*(tests/.+)")
     or normalized:match(".*(scripts/.+)")
+    or normalized:match(".*(Config/.+)")
+    or normalized:match(".*(docs/.+)")
+    or normalized:match(".*(%.agents/.+)")
     or normalized
 end
 

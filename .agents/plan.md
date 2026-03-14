@@ -27,7 +27,8 @@
 - [x] (2026-03-14 12:42+08:00) 已把概念说明改写成可执行计划，并修正 `bootstrap`、`events`、`host` 等归属错误。
 - [x] (2026-03-14 14:10+08:00) 已把里程碑式正文重写成 swarm-ready 子代理计划，新增依赖图、任务卡、并行波次，并修正 `game.lua`、`game/ports`、UI runtime state 的错误迁移假设。
 - [x] (2026-03-14 11:43+08:00) 已执行四条基线命令并记录当前绿色结果，`T0` 完成。
-- [ ] 代码迁移已启动；`T1` 到 `T14` 仍待执行。
+- [x] (2026-03-14 11:56+08:00) 已建立双路径护栏：arch 新命名空间规则、shim 纯转发 guard、兼容 contract 已落地，`T1` 完成。
+- [ ] `T2` `config` 归位进行中；`T3` 到 `T14` 仍待执行。
 
 ## 意外与发现
 
@@ -231,9 +232,9 @@
 - **location**: `.agents/plan.md`, `scripts/arch/config.lua`, `tests/guards/dep_rules.lua`, `tests/guards/gameplay_loop_no_ui.lua`
 - **description**: 建立过渡期护栏。把 arch 规则、guard 规则、compat require 检查、旧路径只允许做转发壳的约束写清楚，并把“shim 必须与目标文件同一步落地，禁止预建全仓旧路径壳”写成硬规则。
 - **validation**: `lua scripts/arch.lua check` 与 `lua tests/guard.lua` 通过；计划中出现 `require(old_path) == require(new_path)` 的契约检查；针对 `src/` 与 `tests/` 的 grep 策略已经写明，不再允许模糊搜索。
-- **status**: `Not Completed`
-- **log**: 留空；执行时填写新增的规则名和命中的兼容测试。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 11:56+08:00` 新增 `tests/guards/migration_shim_rules.lua`，要求“旧路径与新路径同时存在时，旧文件必须是纯 `return require("新路径")` shim”；新增 `tests/suites/architecture/migration_shim_contract.lua`，对已迁移双路径执行 `require(old) == require(new)` 契约；`scripts/arch/config.lua` 增补 `entry`、`host`、`ui`、`turn`、`player`、`computer`、`rules`、`state`、`config` 新命名空间与对应依赖禁令；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `.agents/plan.md`, `scripts/arch/config.lua`, `tests/catalog.lua`, `tests/guards/migration_shim_rules.lua`, `tests/suites/architecture/migration_shim_contract.lua`, `tests/support/guards/guard_support.lua`, `tests/support/migration_pairs.lua`
 
 ### T2：`config` 归位
 
