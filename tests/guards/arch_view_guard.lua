@@ -1,12 +1,14 @@
 require("tests.bootstrap").install_package_paths()
 
-local build = require("arch_view.build")
-local config = require("config")
+local arch_view = require("arch_view")
 
 local M = {}
 
 function M.run()
-  local architecture, err = build.analyze(config)
+  local architecture, err = arch_view.analyze({
+    project_root = ".",
+    config_path = "scripts/arch/config.lua",
+  })
   if architecture == nil then
     return { ok = false, error = "arch_view_guard error: " .. tostring(err) }
   end

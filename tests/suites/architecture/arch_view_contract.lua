@@ -2,18 +2,17 @@ local bootstrap = require("tests.bootstrap")
 
 bootstrap.install_package_paths()
 
-local build = require("arch_view.build")
-local cli = require("arch_view.cli")
+local arch_view = require("arch_view")
 local common = require("arch_view.common")
 local json_reader = require("arch_view.json_reader")
 local json_writer = require("arch_view.json_writer")
 local projection = require("arch_view.projection")
-local config = require("config")
 
 local cached_architecture = nil
 local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
 local arch_view_root = "vendor/arch_view"
 local arch_config_path = "scripts/arch/config.lua"
+local default_viewer_out_dir = ".arch_view/viewer"
 
 local function _assert_eq(actual, expected, message)
   if actual ~= expected then
@@ -60,7 +59,7 @@ end
 
 local function _analyze_architecture()
   if cached_architecture == nil then
-    local architecture, err = build.analyze(config, {
+    local architecture, err = arch_view.analyze({
       project_root = ".",
       config_path = arch_config_path,
     })
@@ -162,7 +161,7 @@ local function _test_projection_exposes_full_names_and_display_edges()
 end
 
 local function _test_build_includes_metadata_for_project_root_and_config_path()
-  local architecture, err = build.analyze(config, {
+  local architecture, err = arch_view.analyze({
     project_root = ".",
     config_path = arch_config_path,
   })
@@ -182,13 +181,13 @@ local function _test_cli_scan_writes_metadata()
     error(err)
   end
 
-  cli.run({
+  arch_view.run_cli({
     "scan",
     "--out", out_path,
   }, {
-    script_dir = arch_view_root,
-    default_project_root = ".",
     default_config_path = arch_config_path,
+    asset_root = arch_view_root .. "/viewer",
+    cwd = ".",
   })
 
   local payload = json_reader.decode(_read_file(out_path))
@@ -223,42 +222,42 @@ local function _test_viewer_command_writes_static_bundle()
 end
 
 local function _test_cli_viewer_defaults_to_tmp_arch_view()
-  local default_out_dir = "tmp/arch_view"
+  local default_out_dir = default_viewer_out_dir
   local open_calls = {}
 
-  cli.run({
+  arch_view.run_cli({
     "viewer",
   }, {
-    script_dir = arch_view_root,
-    default_project_root = ".",
     default_config_path = arch_config_path,
+    asset_root = arch_view_root .. "/viewer",
+    cwd = ".",
     open_path = function(path)
       open_calls[#open_calls + 1] = path
       return true
     end,
   })
 
-  assert(_exists(default_out_dir .. "/index.html"), "viewer should default to tmp/arch_view")
+  assert(_exists(default_out_dir .. "/index.html"), "viewer should default to .arch_view/viewer")
   _assert_eq(#open_calls, 0, "explicit viewer command should not auto-open")
 end
 
 local function _test_cli_without_args_defaults_to_opened_viewer()
-  local default_out_dir = "tmp/arch_view"
+  local default_out_dir = default_viewer_out_dir
   local open_calls = {}
 
-  cli.run({}, {
-    script_dir = arch_view_root,
-    default_project_root = ".",
+  arch_view.run_cli({}, {
     default_config_path = arch_config_path,
+    asset_root = arch_view_root .. "/viewer",
+    cwd = ".",
     open_path = function(path)
       open_calls[#open_calls + 1] = path
       return true
     end,
   })
 
-  assert(_exists(default_out_dir .. "/index.html"), "bare arch cli should export tmp/arch_view")
+  assert(_exists(default_out_dir .. "/index.html"), "bare arch cli should export .arch_view/viewer")
   _assert_eq(#open_calls, 1, "bare arch cli should auto-open viewer")
-  assert(open_calls[1]:match("tmp/arch_view/index%.html$") ~= nil, "auto-open should target tmp/arch_view/index.html")
+  assert(open_calls[1]:match("%.arch_view/viewer/index%.html$") ~= nil, "auto-open should target .arch_view/viewer/index.html")
 end
 
 local function _test_cli_viewer_supports_in_json()
@@ -274,14 +273,14 @@ local function _test_cli_viewer_supports_in_json()
     error(write_err)
   end
 
-  cli.run({
+  arch_view.run_cli({
     "viewer",
     "--in-json", json_path,
     "--out-dir", out_dir,
   }, {
-    script_dir = arch_view_root,
-    default_project_root = ".",
     default_config_path = arch_config_path,
+    asset_root = arch_view_root .. "/viewer",
+    cwd = ".",
   })
 
   assert(_exists(out_dir .. "/index.html"), "viewer --in-json should export index.html")
