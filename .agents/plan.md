@@ -26,7 +26,8 @@
 - [x] (2026-03-14 12:18+08:00) 已核对当前仓库目录、`scripts/arch/config.lua`、`tests/guards/dep_rules.lua`、`tests/guards/gameplay_loop_no_ui.lua`、`tests/support/shared_support.lua` 与关键启动模块，补齐迁移约束。
 - [x] (2026-03-14 12:42+08:00) 已把概念说明改写成可执行计划，并修正 `bootstrap`、`events`、`host` 等归属错误。
 - [x] (2026-03-14 14:10+08:00) 已把里程碑式正文重写成 swarm-ready 子代理计划，新增依赖图、任务卡、并行波次，并修正 `game.lua`、`game/ports`、UI runtime state 的错误迁移假设。
-- [ ] 实际代码迁移尚未开始；`T0` 到 `T14` 全部保持 `Not Completed`。
+- [x] (2026-03-14 11:43+08:00) 已执行四条基线命令并记录当前绿色结果，`T0` 完成。
+- [ ] 代码迁移已启动；`T1` 到 `T14` 仍待执行。
 
 ## 意外与发现
 
@@ -219,9 +220,9 @@
 - **location**: `.agents/plan.md`, `scripts/arch/config.lua`, `tests/guards/*`, `src/app/*`, `src/presentation/*`, `src/game/*`, `src/infrastructure/*`, `Config/*`
 - **description**: 在文档里固化旧路径到新路径的迁移矩阵、已知例外项、四条基线命令和暂不迁移的共享工具残留区。矩阵必须覆盖本计划点名的所有源码根路径，并明确哪些模块会延后到 `T13` 才处理。
 - **validation**: 读者仅通过本文件就能看出每个旧子系统的 canonical 新家、例外项和基线命令；执行前先跑四条基线命令，记录结果到“意外与发现”或“产物与备注”。
-- **status**: `Not Completed`
-- **log**: 留空；执行时填写实际命令、输出和发现。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 11:43+08:00` 在仓库根目录执行 `lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua`，全部通过；当前基线仍是 `arch_view check ok`、guard 四项通过、behavior `986`、contract `103`。
+- **files edited/created**: `.agents/plan.md`
 
 ### T1：双路径护栏与 shim 规则
 
