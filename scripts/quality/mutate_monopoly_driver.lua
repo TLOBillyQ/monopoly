@@ -21,8 +21,8 @@ end
 
 local function _help_text(command_name)
   return table.concat({
-    "用法: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] --coverage-file PATH [--target-file FILE] [--project-hash HASH]",
-    "Usage: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] --coverage-file PATH [--target-file FILE] [--project-hash HASH]",
+    "用法: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] [--coverage-file PATH] [--target-file FILE] [--project-hash HASH] [--suite-module NAME] [--suite-list-file PATH] [--list-suites] [--json] [--no-coverage] [--quiet]",
+    "Usage: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] [--coverage-file PATH] [--target-file FILE] [--project-hash HASH] [--suite-module NAME] [--suite-list-file PATH] [--list-suites] [--json] [--no-coverage] [--quiet]",
     "",
     "behavior 会走 tests/catalog.lua + regression_mode。",
     "behavior uses tests/catalog.lua plus regression_mode.",
@@ -40,6 +40,11 @@ local function _parse_args(args)
     target_file = nil,
     project_hash = nil,
     suite_module = nil,
+    suite_list_file = nil,
+    list_suites = false,
+    json = false,
+    no_coverage = false,
+    quiet = false,
     help = false,
   }
 
@@ -88,6 +93,21 @@ local function _parse_args(args)
         error("--suite-module requires a value")
       end
       options.suite_module = suite_module
+    elseif token == "--suite-list-file" then
+      index = index + 1
+      local suite_list_file = args[index]
+      if suite_list_file == nil or suite_list_file == "" then
+        error("--suite-list-file requires a value")
+      end
+      options.suite_list_file = suite_list_file
+    elseif token == "--list-suites" then
+      options.list_suites = true
+    elseif token == "--json" then
+      options.json = true
+    elseif token == "--no-coverage" then
+      options.no_coverage = true
+    elseif token == "--quiet" then
+      options.quiet = true
     elseif token == "--help" or token == "-h" then
       options.help = true
     else
@@ -96,7 +116,7 @@ local function _parse_args(args)
     index = index + 1
   end
 
-  if not options.help and (options.coverage_file == nil or options.coverage_file == "") then
+  if not options.help and not options.list_suites and not options.no_coverage and (options.coverage_file == nil or options.coverage_file == "") then
     error("--coverage-file requires a value")
   end
 
@@ -115,6 +135,10 @@ end
 
 local function _write_coverage(path, lines)
   local keys = {}
+  local parent = tostring(path or ""):match("^(.*)/[^/]+$")
+  if parent and parent ~= "" then
+    os.execute("mkdir -p " .. string.format("%q", parent))
+  end
   for key in pairs(lines or {}) do
     keys[#keys + 1] = key
   end
@@ -158,23 +182,6 @@ local function _collect_coverage(lines, project_root, debug_api)
   end
 end
 
-local function _suite_key(suite, suite_index)
-  return tostring((suite and suite.module_name) or (suite and suite.name) or ("suite_" .. tostring(suite_index)))
-end
-
-local function _filter_suite_module(suites, suite_module)
-  if suite_module == nil then
-    return suites
-  end
-  local filtered = {}
-  for suite_index, suite in ipairs(suites or {}) do
-    if _suite_key(suite, suite_index) == suite_module then
-      filtered[#filtered + 1] = suite
-    end
-  end
-  return filtered
-end
-
 local function _silent_reporter()
   return {
     case_pass = function() end,
@@ -183,27 +190,74 @@ local function _silent_reporter()
   }
 end
 
-local M = {}
+local function _suite_key(suite, suite_index)
+  return tostring((suite and suite.module_name) or (suite and suite.name) or ("suite_" .. tostring(suite_index)))
+end
 
-function M.select_suites_for_target(_project_root, _lane, _mode, _target_file, _project_hash, suites, env)
-  env = env or {}
-  local load_suite_index = env.load_suite_index
-  if type(load_suite_index) ~= "function" then
-    return suites
+local function _read_suite_list_file(path)
+  local handle = io.open(path, "rb")
+  if handle == nil then
+    return nil, "cannot open suite list: " .. tostring(path)
   end
-  local suite_index = load_suite_index()
-  if type(suite_index) ~= "table" or _target_file == nil or _target_file == "" or _lane ~= "behavior" then
-    return suites
-  end
-  local normalized_target = _normalize_path(_target_file):gsub("^%./", "")
+  local content = handle:read("*a") or ""
+  handle:close()
   local selected = {}
-  for suite_index_number, suite in ipairs(suites or {}) do
-    local suite_key = _suite_key(suite, suite_index_number)
-    if suite_index[suite_key] and suite_index[suite_key][normalized_target] then
-      selected[#selected + 1] = suite
+  for line in tostring(content):gmatch("[^\r\n]+") do
+    if line ~= "" then
+      selected[line] = true
     end
   end
   return selected
+end
+
+local function _filter_suites(suites, suite_module, suite_list_file)
+  local selected_lookup = nil
+  if suite_list_file ~= nil then
+    local loaded, err = _read_suite_list_file(suite_list_file)
+    if loaded == nil then
+      error(err)
+    end
+    selected_lookup = loaded
+  end
+
+  if suite_module == nil and selected_lookup == nil then
+    return suites
+  end
+
+  local filtered = {}
+  for suite_index, suite in ipairs(suites or {}) do
+    local key = _suite_key(suite, suite_index)
+    if suite_module ~= nil then
+      if key == suite_module then
+        filtered[#filtered + 1] = suite
+      end
+    elseif selected_lookup[key] == true then
+      filtered[#filtered + 1] = suite
+    end
+  end
+  return filtered
+end
+
+local function _encode_json_array(values)
+  local parts = {}
+  for _, value in ipairs(values or {}) do
+    parts[#parts + 1] = string.format("%q", tostring(value))
+  end
+  return "[" .. table.concat(parts, ",") .. "]"
+end
+
+local M = {}
+
+function M.list_suite_modules(lane, mode, env)
+  env = env or {}
+  local resolve_lane_suites = env.resolve_lane_suites or _resolve_lane_suites
+  local suites = select(1, resolve_lane_suites(lane, mode))
+  local modules = {}
+  for suite_index, suite in ipairs(suites or {}) do
+    modules[#modules + 1] = _suite_key(suite, suite_index)
+  end
+  table.sort(modules)
+  return modules
 end
 
 function M.run(args, env)
@@ -229,18 +283,29 @@ function M.run(args, env)
     return 0
   end
 
+  if options.list_suites then
+    local modules = M.list_suite_modules(options.lane, options.mode, { resolve_lane_suites = resolve_lane_suites })
+    if options.json then
+      stdout:write(_encode_json_array(modules), "\n")
+    else
+      stdout:write(table.concat(modules, "\n"), "\n")
+    end
+    return 0
+  end
+
   local suites, mode = resolve_lane_suites(options.lane, options.mode)
-  suites = _filter_suite_module(suites, options.suite_module)
+  suites = _filter_suites(suites, options.suite_module, options.suite_list_file)
   local coverage_lines = {}
-  debug_api.sethook(_collect_coverage(coverage_lines, project_root, debug_api), "l")
+  if not options.no_coverage then
+    debug_api.sethook(_collect_coverage(coverage_lines, project_root, debug_api), "l")
+  end
 
   local run_ok, run_result = xpcall(function()
     local run_opts = {
       mode = mode,
       capture_logs = true,
     }
-    if options.suite_module ~= nil then
-      run_opts.capture_logs = false
+    if options.quiet then
       run_opts.reporter = _silent_reporter()
       run_opts.raise_on_failure = false
       run_opts.quiet = true
@@ -248,12 +313,13 @@ function M.run(args, env)
     return run_all(suites, run_opts)
   end, debug.traceback)
 
-  debug_api.sethook()
-
-  local write_ok, write_err = _write_coverage(options.coverage_file, coverage_lines)
-  if write_ok == nil then
-    stderr:write(tostring(write_err), "\n")
-    return 1
+  if not options.no_coverage then
+    debug_api.sethook()
+    local write_ok, write_err = _write_coverage(options.coverage_file, coverage_lines)
+    if write_ok == nil then
+      stderr:write(tostring(write_err), "\n")
+      return 1
+    end
   end
 
   if not run_ok then

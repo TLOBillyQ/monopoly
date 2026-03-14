@@ -1,5 +1,10 @@
+local package_path_helper = dofile("scripts/package_path_helper.lua")
+package_path_helper.install_monopoly_package_paths()
+
+local common = require("lib.common")
+
 local function _normalize_path(path)
-  return tostring(path or ""):gsub("\\", "/")
+  return common.normalize_path(path)
 end
 
 local function _module_dir()
@@ -8,78 +13,36 @@ local function _module_dir()
   return normalized:match("^(.*)/[^/]+$") or "scripts"
 end
 
-local function _append_path(path_pattern)
-  if not tostring(package.path):find(path_pattern, 1, true) then
-    package.path = path_pattern .. ";" .. package.path
-  end
-end
-
-local function _join_path(base, child)
-  local normalized_base = _normalize_path(base):gsub("/+$", "")
-  local normalized_child = _normalize_path(child):gsub("^/+", "")
-  if normalized_base == "" then
-    return normalized_child
-  end
-  if normalized_child == "" then
-    return normalized_base
-  end
-  return normalized_base .. "/" .. normalized_child
-end
-
-local SCRIPT_DIR = _module_dir()
-local REPO_ROOT = _normalize_path(SCRIPT_DIR .. "/..")
-local MUTATE4LUA_ROOT = _normalize_path(REPO_ROOT .. "/vendor/mutate4lua")
+local SCRIPT_DIR = common.resolve_path(common.current_dir(), _module_dir())
+local REPO_ROOT = common.resolve_path(SCRIPT_DIR, "..")
+local MUTATE4LUA_ROOT = common.join_path(REPO_ROOT, "vendor/mutate4lua")
 local DEFAULT_DRIVER_PATH = "scripts/quality/mutate_monopoly_driver.lua"
 
-local function _install_package_paths()
-  local patterns = {
-    MUTATE4LUA_ROOT .. "/src/?.lua",
-    MUTATE4LUA_ROOT .. "/src/?/init.lua",
-    REPO_ROOT .. "/?.lua",
-    REPO_ROOT .. "/?/?.lua",
-    REPO_ROOT .. "/?/init.lua",
-    REPO_ROOT .. "/tests/?.lua",
-    REPO_ROOT .. "/tests/?/init.lua",
-    SCRIPT_DIR .. "/?.lua",
-    SCRIPT_DIR .. "/?/?.lua",
-  }
-
-  for _, pattern in ipairs(patterns) do
-    _append_path(pattern)
+local function _binary_path(repo_root)
+  local name = "mutate4lua-go"
+  if common.is_windows() then
+    name = name .. ".exe"
   end
+  return common.join_path(common.join_path(repo_root, "vendor/mutate4lua"), "bin/" .. name)
 end
 
-local function _has_option(args, option_name)
-  for _, value in ipairs(args or {}) do
-    if value == option_name then
-      return true
-    end
-  end
-  return false
-end
-
-local function _help_text(command_name, upstream_usage)
+local function _help_text(command_name)
   return table.concat({
-    "用法: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--mode MODE] [mutate4lua 原生参数]",
-    "Usage: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--mode MODE] [upstream mutate4lua args]",
+    "用法: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--mode MODE] [--scan|--update-manifest|--since-last-run|--mutate-all|--lines N,N] [--max-workers N] [--timeout-factor N] [--test-command CMD] [--json]",
+    "Usage: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--mode MODE] [--scan|--update-manifest|--since-last-run|--mutate-all|--lines N,N] [--max-workers N] [--timeout-factor N] [--test-command CMD] [--json]",
     "",
     "Monopoly 选项 / Monopoly options:",
     "  --lane behavior|contract   默认 behavior；contract 固定走 dev mode",
     "  --mode MODE                仅 behavior lane 使用，常见值 dev / release_trimmed",
-    "",
-    "默认测试命令 / Default test command:",
-    "  lua " .. DEFAULT_DRIVER_PATH .. " --lane behavior --coverage-file <tmp>",
-    "",
-    "上游 mutate4lua 帮助 / Upstream mutate4lua help:",
-    tostring(upstream_usage or ""),
+    "  --index-suites             显式预热 behavior suite index",
   }, "\n")
 end
 
 local function _parse_args(args)
   local options = {
     help = false,
-    lane = "behavior",
-    mode = nil,
+    index_suites = false,
+    target = nil,
     passthrough = {},
   }
 
@@ -88,20 +51,19 @@ local function _parse_args(args)
     local token = args[index]
     if token == "--help" or token == "-h" then
       options.help = true
-    elseif token == "--lane" then
+    elseif token == "--index-suites" then
+      options.index_suites = true
+      options.passthrough[#options.passthrough + 1] = token
+    elseif token == "--lane" or token == "--mode" or token == "--lines" or token == "--max-workers" or token == "--timeout-factor" or token == "--test-command" then
+      options.passthrough[#options.passthrough + 1] = token
       index = index + 1
-      local lane = args[index]
-      if lane ~= "behavior" and lane ~= "contract" then
-        error("unsupported lane: " .. tostring(lane))
+      local value = args[index]
+      if value == nil or value == "" then
+        error(token .. " requires a value")
       end
-      options.lane = lane
-    elseif token == "--mode" then
-      index = index + 1
-      local mode = args[index]
-      if mode == nil or mode == "" then
-        error("--mode requires a value")
-      end
-      options.mode = mode
+      options.passthrough[#options.passthrough + 1] = value
+    elseif options.target == nil and token:sub(1, 2) ~= "--" then
+      options.target = token
     else
       options.passthrough[#options.passthrough + 1] = token
     end
@@ -111,135 +73,74 @@ local function _parse_args(args)
   return options
 end
 
-_install_package_paths()
-
 local M = {}
 
-local mutate_util = require("mutate4lua.util")
-
-function M.build_default_test_command(opts)
-  opts = opts or {}
-  local lane = opts.lane or "behavior"
-  local command = {
-    "lua",
-    tostring(opts.driver_path or DEFAULT_DRIVER_PATH),
-    "--lane",
-    lane,
-  }
-
-  if opts.target_file ~= nil and tostring(opts.target_file) ~= "" then
-    command[#command + 1] = "--target-file"
-    command[#command + 1] = tostring(opts.target_file)
-  end
-
-  if opts.project_hash ~= nil and tostring(opts.project_hash) ~= "" then
-    command[#command + 1] = "--project-hash"
-    command[#command + 1] = tostring(opts.project_hash)
-  end
-
-  if lane == "behavior" and opts.mode ~= nil and tostring(opts.mode) ~= "" then
-    command[#command + 1] = "--mode"
-    command[#command + 1] = tostring(opts.mode)
-  end
-
-  return command
-end
-
-function M.list_project_hash_files(project_root, env)
+function M.ensure_binary(repo_root, env)
   env = env or {}
-  if type(env.list_project_files) == "function" then
-    local listed = env.list_project_files(project_root)
-    local filtered = {}
-    for _, path in ipairs(listed or {}) do
-      local normalized = _normalize_path(path)
-      if normalized ~= "" and normalized:match("^%.mutate4lua/") == nil then
-        filtered[#filtered + 1] = normalized
-      end
-    end
-    return filtered
+  local binary_path = _binary_path(repo_root)
+  if type(env.ensure_binary) == "function" then
+    return env.ensure_binary(binary_path)
   end
-
-  local command = table.concat({
-    "git",
-    "-C",
-    mutate_util.shell_quote(project_root),
-    "ls-files",
-    "--cached",
-    "--others",
-    "--exclude-standard",
-    "--",
-    mutate_util.shell_quote("*.lua"),
-    mutate_util.shell_quote("*.rockspec"),
-  }, " ")
-  local output, err = mutate_util.capture(command)
-  if output == nil then
+  if common.path_exists(binary_path) == true then
+    return binary_path, nil
+  end
+  if common.command_exists("go") ~= true then
+    return nil, common.bilingual("未找到 go 命令", "go command not found")
+  end
+  local ok, err = common.ensure_parent_dir(binary_path)
+  if not ok then
     return nil, err
   end
-
-  local files = {}
-  for line in tostring(output):gmatch("[^\n]+") do
-    local normalized = _normalize_path(line)
-    if normalized ~= "" and normalized:match("^%.mutate4lua/") == nil then
-      files[#files + 1] = normalized
-    end
+  local result = common.run_command({ "go", "build", "-o", binary_path, "./cmd/mutate4lua-go" }, {
+    cwd = env.go_tool_dir or MUTATE4LUA_ROOT,
+  })
+  if result.ok ~= true then
+    return nil, result.output
   end
-  return files
+  return binary_path, nil
 end
 
-function M.build_project_hash(project_root, target_file, stripped_source, env)
-  env = env or {}
-  local original_project_hash = env.original_project_hash
-  local files, err = M.list_project_hash_files(project_root, env)
-  if files == nil then
-    if type(original_project_hash) == "function" then
-      return original_project_hash(project_root, target_file, stripped_source)
-    end
-    error(err or "failed to list project hash files")
-  end
-
-  local hash_text = env.hash_text or mutate_util.fnv1a64
-  local read_file = env.read_file or mutate_util.read_file
-  local normalize_newlines = env.normalize_newlines or mutate_util.normalize_newlines
-  local normalized_root = _normalize_path(project_root):gsub("/+$", "")
-  local normalized_target = _normalize_path(target_file)
-  local prefix = normalized_root .. "/"
-  if normalized_target:sub(1, #prefix) ~= prefix then
-    if type(original_project_hash) == "function" then
-      return original_project_hash(project_root, target_file, stripped_source)
-    end
-    error("target file is outside project root: " .. tostring(target_file))
-  end
-
-  local target_relative = normalized_target:sub(#prefix + 1)
-  local parts = {}
-  for _, relative_path in ipairs(files) do
-    local content = nil
-    if relative_path == target_relative then
-      content = stripped_source
-    else
-      content = read_file(_join_path(project_root, relative_path))
-    end
-
-    if content == nil then
-      if type(original_project_hash) == "function" then
-        return original_project_hash(project_root, target_file, stripped_source)
+function M.build_core_command(binary_path, options)
+  local args = { binary_path }
+  if options.index_suites then
+    args[#args + 1] = "index-suites"
+    args[#args + 1] = "--driver-script"
+    args[#args + 1] = DEFAULT_DRIVER_PATH
+    for _, value in ipairs(options.passthrough or {}) do
+      if value ~= "--index-suites" then
+        args[#args + 1] = value
       end
-      error("failed to read file for project hash: " .. tostring(relative_path))
     end
-
-    parts[#parts + 1] = relative_path
-    parts[#parts + 1] = "\n"
-    parts[#parts + 1] = normalize_newlines(content)
-    parts[#parts + 1] = "\n\0\n"
+    return args
   end
-
-  return hash_text(table.concat(parts))
+  if options.target == nil then
+    error("mutate target must be a .lua file")
+  end
+  local subcommand = "mutate"
+  for _, value in ipairs(options.passthrough or {}) do
+    if value == "--scan" then
+      subcommand = "scan"
+      break
+    elseif value == "--update-manifest" then
+      subcommand = "migrate-manifest"
+      break
+    end
+  end
+  args[#args + 1] = subcommand
+  args[#args + 1] = "--target"
+  args[#args + 1] = options.target
+  args[#args + 1] = "--driver-script"
+  args[#args + 1] = DEFAULT_DRIVER_PATH
+  for _, value in ipairs(options.passthrough or {}) do
+    if value ~= "--scan" and value ~= "--update-manifest" then
+      args[#args + 1] = value
+    end
+  end
+  return args
 end
 
 function M.run(args, env)
   env = env or {}
-  local main_module = env.main_module or require("mutate4lua.main")
-  local project_module = env.project_module or require("mutate4lua.project")
   local stdout = env.stdout or io.stdout
   local stderr = env.stderr or io.stderr
   local command_name = env.command_name or "scripts/mutate.lua"
@@ -248,53 +149,32 @@ function M.run(args, env)
   local ok, parsed_or_err = pcall(_parse_args, args or arg or {})
   if not ok then
     stderr:write(tostring(parsed_or_err), "\n")
-    stdout:write(_help_text(command_name, main_module.usage()))
+    stdout:write(_help_text(command_name))
     return 1
   end
-
   local options = parsed_or_err
   if options.help then
-    stdout:write(_help_text(command_name, main_module.usage()))
+    stdout:write(_help_text(command_name))
     return 0
   end
-
-  local original_default_test_command = project_module.default_test_command
-  local original_project_hash = project_module.project_hash
-  local has_explicit_test_command = _has_option(options.passthrough, "--test-command")
-
-  if not has_explicit_test_command then
-    project_module.default_test_command = function(_, default_opts)
-      default_opts = default_opts or {}
-      return M.build_default_test_command({
-        driver_path = env.driver_path or DEFAULT_DRIVER_PATH,
-        lane = options.lane,
-        mode = options.mode,
-        target_file = default_opts.target_file or options.passthrough[1],
-        project_hash = default_opts.project_hash,
-      })
+  local binary_path, build_err = M.ensure_binary(workspace_root, env)
+  if binary_path == nil then
+    stderr:write(tostring(build_err), "\n")
+    return 1
+  end
+  local command = M.build_core_command(binary_path, options)
+  local result = (env.run_command or common.run_command)(command, {
+    cwd = workspace_root,
+  })
+  local output = tostring(result.output or "")
+  if output ~= "" then
+    if result.code == 0 or result.code == 3 then
+      stdout:write(output)
+    else
+      stderr:write(output)
     end
   end
-
-  project_module.project_hash = function(project_root, target_file, stripped_source)
-    local project_hash_env = {}
-    for key, value in pairs(env.project_hash_env or {}) do
-      project_hash_env[key] = value
-    end
-    project_hash_env.original_project_hash = original_project_hash
-    return M.build_project_hash(project_root, target_file, stripped_source, project_hash_env)
-  end
-
-  local run_ok, result = xpcall(function()
-    return main_module.run(options.passthrough, workspace_root, stdout, stderr)
-  end, debug.traceback)
-  project_module.default_test_command = original_default_test_command
-  project_module.project_hash = original_project_hash
-
-  if not run_ok then
-    error(result)
-  end
-
-  return result
+  return result.code or (result.ok and 0 or 1)
 end
 
 function M.main()

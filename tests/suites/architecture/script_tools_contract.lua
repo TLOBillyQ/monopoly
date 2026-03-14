@@ -134,6 +134,7 @@ local function _test_cli_help_text_is_bilingual()
     { "scripts/export_xlsx.lua", "--help" },
     { "scripts/update_api.lua", "--help" },
     { "scripts/arch.lua", "--help" },
+    { "scripts/airl.lua", "--help" },
     { "scripts/crap.lua", "--help" },
     { "scripts/mutate.lua", "--help" },
   }
@@ -173,6 +174,30 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
   end)
 end
 
+local function _test_airl_generate_verify_succeeds()
+  local result = _run_lua({ "scripts/airl.lua", "generate", "--verify" })
+  assert(result.ok == true, "airl generate --verify should succeed")
+  _assert_contains(result.output, "air_l generate verify ok", "airl verify output should include success text")
+end
+
+local function _test_airl_generate_supports_unicode_output_path()
+  _with_clean_tmp(function()
+    local out_dir = common.join_path(tmp_root, "airl_输出/中文 English")
+    local result = _run_lua({
+      "scripts/airl.lua",
+      "generate",
+      "--out-dir",
+      out_dir,
+    })
+
+    assert(result.ok == true, "airl generate should succeed for unicode output paths")
+    _assert_contains(result.output, "air_l generate ok", "airl generate output should include success text")
+    assert(common.path_exists(common.join_path(out_dir, "main.lua")) == true, "airl generate should write main.lua")
+    assert(common.path_exists(common.join_path(out_dir, "src/entry/init.lua")) == true,
+      "airl generate should write src/entry/init.lua")
+  end)
+end
+
 return {
   name = "script_tools_contract",
   tests = {
@@ -180,6 +205,8 @@ return {
     { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
     { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
     { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
+    { name = "airl_generate_verify_succeeds", run = _test_airl_generate_verify_succeeds },
+    { name = "airl_generate_supports_unicode_output_path", run = _test_airl_generate_supports_unicode_output_path },
     { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
     { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
   },
