@@ -65,6 +65,9 @@
 
 - 入口：`lua scripts/arch.lua check`
 - 文档：`docs/architecture/arch_view.md`
+- 工具代码：`vendor/arch_view/`
+- Monopoly 规则真源：`scripts/arch/config.lua`
+- Monopoly 提交态快照：`scripts/arch/viewer/*`
 - 检查内容：
   - 模块级 `require` 依赖边界
   - 未分类模块

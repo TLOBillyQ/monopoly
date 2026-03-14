@@ -2,28 +2,12 @@ local M = {}
 
 local _package_paths_installed = false
 
-local function _append_path(path_pattern)
-  if not tostring(package.path):find(path_pattern, 1, true) then
-    package.path = package.path .. ";" .. path_pattern
-  end
-end
-
 function M.install_package_paths()
   if _package_paths_installed then
     return
   end
 
-  _append_path("./?/init.lua")
-  _append_path("./tests/?.lua")
-  _append_path("./tests/?/init.lua")
-  _append_path("./tests/suites/?.lua")
-  _append_path("./tests/fixtures/?.lua")
-  _append_path("./scripts/?.lua")
-  _append_path("./scripts/?/?.lua")
-  _append_path("./scripts/arch/?.lua")
-  _append_path("./scripts/arch/?/?.lua")
-  _append_path("./scripts/quality/?.lua")
-  _append_path("./scripts/quality/?/?.lua")
+  require("scripts.package_path_helper").install_monopoly_package_paths()
 
   _package_paths_installed = true
 end

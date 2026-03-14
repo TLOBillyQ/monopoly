@@ -1,3 +1,6 @@
 [submodule "vendor/crap4lua"]
 	path = vendor/crap4lua
 	url = /Users/billyq/Dev/Github/Lua/crap4lua
+[submodule "vendor/arch_view"]
+	path = vendor/arch_view
+	url = ../arch_view

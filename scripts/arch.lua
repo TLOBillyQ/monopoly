@@ -9,12 +9,13 @@ local function _script_dir()
 end
 
 local SCRIPT_DIR = _script_dir()
-local ARCH_LIB_DIR = _normalize_path(SCRIPT_DIR .. "/arch")
-package.path = ARCH_LIB_DIR .. "/?.lua;"
-  .. ARCH_LIB_DIR .. "/?/?.lua;"
-  .. SCRIPT_DIR .. "/?.lua;"
-  .. SCRIPT_DIR .. "/?/?.lua;"
-  .. package.path
+local ARCH_VIEW_DIR = _normalize_path(SCRIPT_DIR .. "/../vendor/arch_view")
+local ARCH_CONFIG_PATH = _normalize_path(SCRIPT_DIR .. "/arch/config.lua")
+local package_path_helper = require("scripts.package_path_helper")
+
+package_path_helper.install_monopoly_package_paths({
+  arch_view_root = ARCH_VIEW_DIR,
+})
 
 local cli = require("arch_view.cli")
 
@@ -22,8 +23,9 @@ local M = {}
 
 function M.run(args, env)
   env = env or {}
-  env.script_dir = ARCH_LIB_DIR
+  env.script_dir = ARCH_VIEW_DIR
   env.default_project_root = _normalize_path(SCRIPT_DIR .. "/..")
+  env.default_config_path = ARCH_CONFIG_PATH
   return cli.run(args or arg or {}, env)
 end
 

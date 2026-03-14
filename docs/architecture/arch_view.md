@@ -6,6 +6,12 @@
 
 如果你想先判断 `arch_view` 在整套测试/静态分析里的位置，以及本地常见耗时，先读 `docs/architecture/quality_map.md`。
 
+## 代码位置
+
+- 通用工具源码与静态 viewer 资产在子模块 `vendor/arch_view/`
+- Monopoly 专属规则真源仍在 `scripts/arch/config.lua`
+- Monopoly 提交态 viewer 快照仍保留在 `scripts/arch/viewer/`
+
 ## 真源与约束
 
 - 结构性依赖规则唯一真源：`scripts/arch/config.lua`
@@ -34,6 +40,8 @@ lua scripts/arch.lua viewer --out-dir <dir> [--open]
 lua scripts/arch.lua viewer --in-json <file> --out-dir <dir> [--open]
 ```
 导出静态 viewer（`index.html`、`script.js`、`styles.css`、`architecture.json`、`architecture_data.js`）。有已导出 JSON 时可用 `--in-json` 跳过重扫。默认输出目录 `./tmp/arch_view`。
+
+`lua scripts/arch.lua viewer --out-dir scripts/arch/viewer` 可刷新仓库内提交的 viewer 快照；复制的静态资产来自子模块 `vendor/arch_view/viewer/`。
 
 ```
 lua scripts/arch.lua scan --out /tmp/monopoly_architecture.json

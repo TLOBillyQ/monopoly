@@ -1,4 +1,4 @@
-package.path = package.path .. ";./scripts/?.lua;./scripts/?/?.lua;./scripts/arch/?.lua;./scripts/arch/?/?.lua"
+require("tests.bootstrap").install_package_paths()
 
 local build = require("arch_view.build")
 local config = require("config")
