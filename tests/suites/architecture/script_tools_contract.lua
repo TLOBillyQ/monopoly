@@ -174,6 +174,37 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
   end)
 end
 
+local function _test_mutate_wrapper_scan_json_output()
+  local result = _run_lua({
+    "scripts/mutate.lua",
+    "src/core/utils/role_id.lua",
+    "--scan",
+    "--json",
+  })
+
+  assert(result.ok == true, "mutate wrapper scan should succeed")
+  _assert_contains(result.output, "\"relative_file\":\"src/core/utils/role_id.lua\"",
+    "mutate scan should report the normalized target path")
+  _assert_contains(result.output, "\"sites\":[",
+    "mutate scan should emit discovered mutation sites in json output")
+end
+
+local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
+  local result = _run_lua({
+    "scripts/mutate.lua",
+    "--index-suites",
+    "--lane",
+    "behavior",
+    "--json",
+  })
+
+  assert(result.ok == true, "mutate wrapper suite indexing should succeed")
+  _assert_contains(result.output, "\"ok\":true",
+    "suite indexing should report success in json output")
+  _assert_contains(result.output, "\"suite_count\":",
+    "suite indexing should report indexed suite count")
+end
+
 local function _test_airl_generate_verify_succeeds()
   local result = _run_lua({ "scripts/airl.lua", "generate", "--verify" })
   assert(result.ok == true, "airl generate --verify should succeed")
@@ -209,5 +240,7 @@ return {
     { name = "airl_generate_supports_unicode_output_path", run = _test_airl_generate_supports_unicode_output_path },
     { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
     { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
+    { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
+    { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
   },
 }
