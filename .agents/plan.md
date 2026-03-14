@@ -31,7 +31,8 @@
 - [x] (2026-03-14 12:19+08:00) 已把 `Config/*` 与 `src/core/config/*` 迁到 `src/config/{content,gameplay,testing}/*`，旧路径改成 shim，并把 `src/`/`tests/` 消费方批量切到新 canonical require，`T2` 完成。
 - [x] (2026-03-14 12:48+08:00) 已把 `players`、`tiles`、`turn` 与 `state_access` 迁到 `src/state/*`，旧路径改成 shim，并补 `src/state/player_state_ops/*` / `src/state/support/*` 过渡桥以消除 root 投影环，`T3` 完成。
 - [x] (2026-03-14 13:37+08:00) 已联合完成 `T4`/`T5`：宿主桥接迁到 `src/host/eggy/*`，规则实现迁到 `src/rules/*`，旧路径全部改成 shim，`T4` 与 `T5` 完成。
-- [ ] `T6` `player` 与 `T7` `computer` 准备并行执行；`T8` 到 `T14` 仍待执行。
+- [x] (2026-03-14 14:09+08:00) 已联合完成 `T6`/`T7`：player 选择与动作迁到 `src/player/*`，AI 入口迁到 `src/computer/policies/*`，旧路径全部改成 shim，`T6` 与 `T7` 完成。
+- [ ] `T8` 共享 gameplay ports 归位进行中；`T9` 到 `T14` 仍待执行。
 
 ## 意外与发现
 
@@ -290,9 +291,9 @@
 - **location**: `src/game/systems/choices/*`, `src/game/core/player/*`, `src/player/{choices,actions,policies}/*`
 - **description**: 迁移玩家选择、动作和 state ops，保持玩家层只面向 `rules`、`state`、`config`，不回流依赖 `turn` 和 `ui`。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；`rg -n 'src\.game\.(systems\.choices|core\.player)' src/player tests` 只剩 shim 或待切换调用点；如本任务引入旧路径 shim，必须补 `require(old) == require(new)` 契约测试。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录玩家动作与 choice 模块的归位情况。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 14:09+08:00` 已将 `src/game/core/player/{init,inventory}.lua` 迁到 `src/player/actions/*`，将 `src/game/core/player/state_ops/*` 迁到 `src/player/actions/state_ops/*`，并将原 `src/rules/choices/*` 的实现迁到 `src/player/choices/*`。为了不让 `rules` / `state` 在过渡期直接回流依赖 `player`，保留 `src/rules/choices/*` 与 `src/state/player_state_ops/*` 作为 shim 桥，由 `rules` 与 `state` 继续引用本层命名空间，最终落点则统一指向 `src/player/*`。验证结果：`rg -n 'src\.game\.(systems\.choices|core\.player)' src tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/game/core/player/**/*.lua`, `src/rules/choices/**/*.lua`, `src/player/actions/*.lua`, `src/player/actions/state_ops/*.lua`, `src/player/choices/**/*.lua`, `src/state/player_state.lua`, `src/state/player_state_ops/*.lua`, `src/game/**/*`, `tests/**/*`, `.agents/plan.md`
 
 ### T7：`computer` 归位
 
@@ -301,9 +302,9 @@
 - **location**: `src/game/ai/agent.lua`, `src/game/core/ai/agent.lua`, `src/computer/policies/*`
 - **description**: 把 AI 合并写成单独任务。先临时落地 `src/computer/policies/core_agent.lua`，完成公开 API 对比与收敛后，再把对外入口合并回 `src/computer/policies/agent.lua`。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；旧 `game/ai` 与 `game/core/ai` 的入口都还能通过 shim 加载；只有当两个旧 AI 文件都不再被任何生产代码直接 `require` 时，才允许删除临时文件。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录两个旧 AI 文件的 API 差异和保留项。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 14:09+08:00` 已将 `src/game/ai/agent.lua` 迁到 `src/computer/policies/core_agent.lua`，并新增 `src/computer/policies/agent.lua -> core_agent.lua` 的公开入口；旧 `src/game/ai/agent.lua` 与 `src/game/core/ai/agent.lua` 都改成 shim，`src/` / `tests/` 的生产消费方已切到 `src.computer.policies.agent`。当前仍保留 `core_agent.lua` 作为临时收敛文件，待后续收口时再决定是否合并回单一 `agent.lua` 实现。验证结果：`rg -n 'src\.game\.(ai\.agent|core\.ai\.agent)' src tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/game/ai/agent.lua`, `src/game/core/ai/agent.lua`, `src/computer/policies/core_agent.lua`, `src/computer/policies/agent.lua`, `src/app/**/*`, `src/game/**/*`, `tests/**/*`, `.agents/plan.md`
 
 ### T8：共享 gameplay ports 归位
 

@@ -1,4 +1,4 @@
-local agent = require("src.game.ai.agent")
+local agent = require("src.computer.policies.agent")
 
 local adapter = {}
 

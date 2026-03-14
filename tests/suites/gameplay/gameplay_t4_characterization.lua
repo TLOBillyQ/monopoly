@@ -289,7 +289,7 @@ end
 local function _test_apply_target_tax_normal()
   local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local constants = require("src.config.content.constants")
-  local Inventory = require("src.game.core.player.inventory")
+  local Inventory = require("src.player.actions.inventory")
   local game = {
     player_has_deity = function() return false end,
     player_balance = function() return 1000 end,
@@ -320,7 +320,7 @@ end
 local function _test_apply_target_tax_with_tax_free()
   local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local constants = require("src.config.content.constants")
-  local Inventory = require("src.game.core.player.inventory")
+  local Inventory = require("src.player.actions.inventory")
   local inventory = require("src.rules.items.inventory")
   local game = {
     player_has_deity = function() return false end,

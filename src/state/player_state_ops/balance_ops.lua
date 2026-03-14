@@ -1,1 +1,1 @@
-return require("src.game.core.player.state_ops.balance_ops")
+return require("src.player.actions.state_ops.balance_ops")

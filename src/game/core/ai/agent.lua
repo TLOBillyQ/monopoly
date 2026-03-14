@@ -1,1 +1,1 @@
-return require("src.game.ai.agent")
+return require("src.computer.policies.agent")

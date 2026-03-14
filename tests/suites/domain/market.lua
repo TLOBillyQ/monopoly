@@ -4,7 +4,7 @@ local market_cfg = require("src.config.content.market")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
-local choice_resolver = require("src.rules.choices.resolver")
+local choice_resolver = require("src.player.choices.resolver")
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do
@@ -55,8 +55,8 @@ end
 
 local function _reset_market_choice_runtime_modules()
   package.loaded["src.rules.market.choice_handlers"] = nil
-  package.loaded["src.rules.choices.registry"] = nil
-  package.loaded["src.rules.choices.resolver"] = nil
+  package.loaded["src.player.choices.registry"] = nil
+  package.loaded["src.player.choices.resolver"] = nil
 end
 
 local function _test_ai_skips_auto_buy_at_market()

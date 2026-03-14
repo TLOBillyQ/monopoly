@@ -27,7 +27,7 @@ function turn_decision.decide_choice_action(game, choice, pending_action, opts)
 end
 
 function turn_decision.resolve_choice(game, choice, action)
-  return require("src.rules.choices.resolver").resolve(game, choice, action) or {}
+  return require("src.player.choices.resolver").resolve(game, choice, action) or {}
 end
 
 function turn_decision.log_turn_start(game)

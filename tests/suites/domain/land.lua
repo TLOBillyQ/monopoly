@@ -14,8 +14,8 @@ local _resolve_landing = support.resolve_landing
 local land_actions = support.land_actions
 local pricing = support.pricing
 local choice_resolver = support.choice_resolver
-local choice_registry = require("src.rules.choices.registry")
-local choice_optional_effect_handler = require("src.rules.choices.handlers.optional_effect")
+local choice_registry = require("src.player.choices.registry")
+local choice_optional_effect_handler = require("src.player.choices.handlers.optional_effect")
 local item_choice_handlers = require("src.rules.items.choice_handlers")
 local item_executor = require("src.rules.items.executor")
 local item_phase = require("src.rules.items.phase")
@@ -69,7 +69,7 @@ local function _build_choice_groups()
 end
 
 local function _test_ai_picks_land_purchase()
-  local agent = require("src.game.ai.agent")
+  local agent = require("src.computer.policies.agent")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(agent.is_auto_player(ai_player), "player 2 should be AI")

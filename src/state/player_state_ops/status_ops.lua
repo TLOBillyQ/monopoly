@@ -1,1 +1,1 @@
-return require("src.game.core.player.state_ops.status_ops")
+return require("src.player.actions.state_ops.status_ops")
