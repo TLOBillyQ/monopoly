@@ -284,7 +284,7 @@ local function main(args)
   if not common.is_dir(design_dir) then
     design_dir = common.join_path(env.repo_root, "design")
   end
-  local config_dir = options.output_dir or common.join_path(env.repo_root, "Config/generated")
+  local config_dir = options.output_dir or common.join_path(env.repo_root, "src/config/content")
   local ensure_ok, ensure_err = common.ensure_dir(config_dir)
   if not ensure_ok then
     _fail(ensure_err)

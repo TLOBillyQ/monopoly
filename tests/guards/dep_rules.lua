@@ -76,6 +76,20 @@ local rules = {
     description = "MonopolyEvents proxy module is retired",
   },
   {
+    roots = { "src", "tests", "scripts" },
+    forbidden_patterns = {
+      "require%(\"Config%..+\"%)",
+      "require%('Config%..+'%)",
+      "require%(\"Config/.+\"%)",
+      "require%('Config/.+'%)",
+      "require%(\"src%.core%.config%..+\"%)",
+      "require%('src%.core%.config%..+'%)",
+      "require%(\"src/core/config/.+\"%)",
+      "require%('src/core/config/.+'%)",
+    },
+    description = "Config/src.core.config compatibility require paths are retired; use src.config.*",
+  },
+  {
     roots = { "src" },
     forbidden_patterns = {
       "clock%.now%(",

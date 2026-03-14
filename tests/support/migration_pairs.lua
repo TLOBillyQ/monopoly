@@ -3,8 +3,6 @@ local guard_support = require("support.guards.guard_support")
 local M = {}
 
 local exact_pairs = {
-  { old_path = "Config/runtime_refs.lua", new_path = "src/config/content/runtime_refs.lua" },
-  { old_path = "src/core/config/config_sanity.lua", new_path = "src/config/gameplay/config_sanity.lua" },
   { old_path = "src/game/core/runtime/players.lua", new_path = "src/state/player_state.lua" },
   { old_path = "src/game/core/runtime/tiles.lua", new_path = "src/state/board_state.lua" },
   { old_path = "src/game/core/runtime/turn.lua", new_path = "src/state/turn_state.lua" },
@@ -15,10 +13,6 @@ local exact_pairs = {
 }
 
 local root_pairs = {
-  { old_root = "Config/generated", new_root = "src/config/content" },
-  { old_root = "Config/maps", new_root = "src/config/content/maps" },
-  { old_root = "Config/testing", new_root = "src/config/testing" },
-  { old_root = "src/core/config", new_root = "src/config/gameplay" },
   { old_root = "src/core/state_access", new_root = "src/state/state_access" },
   { old_root = "src/infrastructure/runtime", new_root = "src/host/eggy" },
   { old_root = "src/presentation/runtime/host", new_root = "src/host/eggy" },

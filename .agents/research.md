@@ -26,7 +26,7 @@
 
 ### 2) 地图结构
 
-- 配置：`Config/maps/default_map.lua`
+- 配置：`src/config/content/maps/default_map.lua`
 - 外圈：`outer_next/outer_prev`（逆时针闭环）
 - 内圈：十字轴线在黑市 `39` 相交
 - 入口点：`42/40/41/43`（四边中点）
@@ -149,7 +149,7 @@
 
 ## 关键变更清单（建议）
 
-- `Config/maps/default_map.lua`（必要时精简 map 返回字段）
+- `src/config/content/maps/default_map.lua`（必要时精简 map 返回字段）
 - `src/game/systems/board/init.lua`（核心前进规则）
 - `src/game/systems/movement/init.lua`（重入防护状态）
 - `src/game/systems/board/query.lua`（BFS → 曼哈顿）
