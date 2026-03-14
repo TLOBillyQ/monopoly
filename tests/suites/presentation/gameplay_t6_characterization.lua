@@ -11,14 +11,7 @@ local status3d_init = require("src.ui.render.status3d.init")
 local startup_render = require("src.ui.render.board.startup_render")
 local runtime_refs = require("src.config.content.runtime_refs")
 
-local state_module_aliases = {
-  ["src.state.state_access.runtime_state"] = "src.core.state_access.runtime_state",
-  ["src.state.state_access.landing_visual_hold"] = "src.core.state_access.landing_visual_hold",
-  ["src.state.state_access.ui_role_globals"] = "src.core.state_access.ui_role_globals",
-  ["src.state.player_state"] = "src.game.core.runtime.players",
-  ["src.state.board_state"] = "src.game.core.runtime.tiles",
-  ["src.state.turn_state"] = "src.game.core.runtime.turn",
-}
+local state_module_aliases = {}
 
 local function _with_globals(overrides, fn)
   local original = {}

@@ -1,7 +1,7 @@
 local test_profiles = require("src.entry.testing.config.test_profiles")
 
 local resolver = {}
-local default_map_module = "Config.maps.default_map"
+local default_map_module = "src.config.content.maps.default_map"
 
 local function _resolve_name(profile_name)
   if profile_name == nil or profile_name == "" then
