@@ -85,7 +85,7 @@
 - 适用时机：需要给“先补测还是先重构”排序
 - 不适合：单独做合并 gate；它依赖测试 lane 质量
 
-`scripts/quality/crap/cli.lua` 负责统一 CLI 入口：
+现在的 CLI 入口由 `scripts/crap.lua` 负责兼容，核心实现来自子模块 `vendor/crap4lua/`，Monopoly lane 适配在 `scripts/quality/crap_monopoly_adapter.lua`：
 
 - `report`：生成 JSON 报告
 - `viewer`：导出静态页面

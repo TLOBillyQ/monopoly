@@ -2,6 +2,8 @@
 
 `scripts/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `tests/behavior.lua`、`tests/contract.lua` 或 `lua tests/guard.lua`。
 
+当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。Monopoly 专属的 behavior / contract lane 映射在 `scripts/quality/crap_monopoly_adapter.lua`。
+
 如果你想先看整个质量面里 `crap` 和 `behavior / contract / guard / arch_view` 的分工，先读 `docs/architecture/quality_map.md`。
 
 ## 命令

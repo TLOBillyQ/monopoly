@@ -1,0 +1,3 @@
+[submodule "vendor/crap4lua"]
+	path = vendor/crap4lua
+	url = /Users/billyq/Dev/Github/Lua/crap4lua

@@ -62,7 +62,9 @@ lua scripts/crap.lua viewer --in-json tmp/crap_report.json
 lua scripts/crap.lua
 ```
 
-输出在 `monopoly_crap/index.html`。用于找"复杂度高且测试触达不足"的函数，是热点雷达，不是周检 gate。默认 lane 失败也产出报告；加 `--strict-tests` 才会把测试失败升级为命令失败。
+输出在逻辑临时目录 `tmp/crap_view/index.html`（实际会展开到系统临时目录下的 `monopoly_crap/crap_view/index.html`）。用于找"复杂度高且测试触达不足"的函数，是热点雷达，不是周检 gate。默认 lane 失败也产出报告；加 `--strict-tests` 才会把测试失败升级为命令失败。
+
+实现上，`scripts/crap.lua` 会转发到子模块 `vendor/crap4lua/`，并通过 `scripts/quality/crap_monopoly_adapter.lua` 注入 Monopoly 的测试 lane。
 
 ## `output_adapters/` 迁移条件
 
