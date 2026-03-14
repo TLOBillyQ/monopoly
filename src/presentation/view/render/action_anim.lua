@@ -1,4 +1,4 @@
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
 local registry = require("src.presentation.view.render.anim_registry")

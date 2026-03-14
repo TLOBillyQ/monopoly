@@ -28,7 +28,8 @@
 - [x] (2026-03-14 14:10+08:00) 已把里程碑式正文重写成 swarm-ready 子代理计划，新增依赖图、任务卡、并行波次，并修正 `game.lua`、`game/ports`、UI runtime state 的错误迁移假设。
 - [x] (2026-03-14 11:43+08:00) 已执行四条基线命令并记录当前绿色结果，`T0` 完成。
 - [x] (2026-03-14 11:56+08:00) 已建立双路径护栏：arch 新命名空间规则、shim 纯转发 guard、兼容 contract 已落地，`T1` 完成。
-- [ ] `T2` `config` 归位进行中；`T3` 到 `T14` 仍待执行。
+- [x] (2026-03-14 12:19+08:00) 已把 `Config/*` 与 `src/core/config/*` 迁到 `src/config/{content,gameplay,testing}/*`，旧路径改成 shim，并把 `src/`/`tests/` 消费方批量切到新 canonical require，`T2` 完成。
+- [ ] `T3` 纯状态归位进行中；`T4` 到 `T14` 仍待执行。
 
 ## 意外与发现
 
@@ -243,9 +244,9 @@
 - **location**: `Config/*`, `src/core/config/*`, `src/config/{content,gameplay,testing}/*`
 - **description**: 先迁最内层配置。把 `Config/generated/*`、`Config/maps/*`、`Config/runtime_refs.lua`、`Config/testing/*` 和 `src/core/config/*` 统一改写到 `src/config/*`，并把新路径定义为后续任务唯一允许新增的 canonical require。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；`rg -n 'require\("(Config\.|src\.core\.config\.)' src tests` 只剩当前任务允许保留的 shim 或尚未执行的旧模块。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录哪些配置源已切换到 `src/config/*`。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 12:19+08:00` 使用双路径迁移把 `Config/generated/*`、`Config/maps/*`、`Config/runtime_refs.lua`、`Config/testing/test_profiles.lua` 与 `src/core/config/*` 迁到 `src/config/*`，旧路径全部改成 shim；随后批量把 `src/` 与 `tests/` 中的 `Config.*` / `src.core.config.*` require 切到 `src.config.*`。执行中发现 `config_sanity.lua` 若放在 `src/config/content/*` 会与 `vehicle_catalog.lua` 形成 `content <-> gameplay` 投影环，因此改判为 `src/config/gameplay/config_sanity.lua`。验证结果：`rg -n 'require\("(Config\.|src\.core\.config\.)|require\(\'(Config\.|src\.core\.config\.)' src tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `Config/generated/*.lua`, `Config/maps/*.lua`, `Config/runtime_refs.lua`, `Config/testing/test_profiles.lua`, `src/core/config/*.lua`, `src/config/content/*.lua`, `src/config/content/maps/*.lua`, `src/config/gameplay/*.lua`, `src/config/testing/test_profiles.lua`, `src/app/**/*`, `src/game/**/*`, `src/infrastructure/runtime/*`, `src/presentation/**/*`, `tests/**/*`
 
 ### T3：纯状态与 `state_access` 归位
 

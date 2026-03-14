@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local modal_state = require("src.presentation.runtime.modal_state")
 local host_runtime = require("src.presentation.runtime.host")
 local ui_nodes = require("src.presentation.runtime.node_ops")

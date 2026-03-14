@@ -23,7 +23,7 @@ local constants = support.constants
 local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
 local turn_dispatch = require("src.game.flow.turn.dispatch.action_dispatcher")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local mine_effect = require("src.game.systems.effects.mine_effect")
 local runtime_context = require("src.infrastructure.runtime.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
@@ -1382,7 +1382,7 @@ end
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.game.flow.turn.auto.runner")
   local agent = require("src.game.ai.agent")
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local land = require("src.game.systems.land.executors")
   local land_actions = require("src.game.systems.land.actions")
   local item_inventory = require("src.game.systems.items.inventory")
@@ -1614,7 +1614,7 @@ local function _test_complex_consecutive_turn_settlement()
     g.board:place_mine(chance_idx + 2)
   end
 
-  local chance_cfg = require("Config.generated.chance_cards")
+  local chance_cfg = require("src.config.content.chance_cards")
   local has_move_forward = false
   for _, card in ipairs(chance_cfg) do
     if card.effect == "move_forward" and card.steps == 2 and card.target == "self" then

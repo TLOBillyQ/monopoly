@@ -1,7 +1,7 @@
 local support = require("support.domain_support")
-local default_map = require("Config.maps.default_map")
+local default_map = require("src.config.content.maps.default_map")
 local inventory = require("src.game.systems.items.inventory")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local _with_patches = support.with_patches
 local function _new_game()
   return support.new_game({ map = default_map })

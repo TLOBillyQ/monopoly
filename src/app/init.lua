@@ -6,7 +6,7 @@ local game_runtime_bootstrap = require("src.app.bootstrap.game_runtime_bootstrap
 local gameplay_loop = require("src.game.flow.turn.loop")
 local ui_bootstrap = require("src.app.bootstrap.ui_bootstrap")
 local startup_policy = require("src.app.bootstrap.startup_policy")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 
 logger.configure_host_runtime({
   game_api = GameAPI,

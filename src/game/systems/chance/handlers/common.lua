@@ -3,11 +3,11 @@ local tile = require("src.game.systems.board.tile")
 local monopoly_event = require("src.core.events.monopoly_events")
 local movement = require("src.game.systems.movement")
 local bankruptcy_port = require("src.game.ports.bankruptcy_port")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local vehicle_feature = require("src.game.systems.vehicle")
 local number_utils = require("src.core.utils.number_utils")
 local action_anim_port = require("src.core.ports.action_anim_port")
-local vehicle_catalog = require("src.core.config.vehicle_catalog")
+local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 local facing_policy = require("src.game.systems.board.facing_policy")
 
 local common = {}

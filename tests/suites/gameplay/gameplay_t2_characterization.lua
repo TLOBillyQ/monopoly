@@ -1559,7 +1559,7 @@ local _resolve_choice_ui_state_tests = {
     local state = _build_loop_state()
     game.turn.pending_choice = { id = 1, kind = "market_buy" }
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
-    local constants = require("Config.generated.constants")
+    local constants = require("src.config.content.constants")
     assert(timeout == (constants.action_timeout_seconds or 0) * 2, "market_buy should double timeout")
   end,
   function()
@@ -1568,7 +1568,7 @@ local _resolve_choice_ui_state_tests = {
     local state = _build_loop_state()
     game.turn.pending_choice = { id = 1, kind = "normal_choice" }
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
-    local constants = require("Config.generated.constants")
+    local constants = require("src.config.content.constants")
     assert(timeout == (constants.action_timeout_seconds or 0), "normal choice should use normal timeout")
   end,
   function()
@@ -1576,7 +1576,7 @@ local _resolve_choice_ui_state_tests = {
     local game = _new_game()
     local state = _build_loop_state()
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
-    local constants = require("Config.generated.constants")
+    local constants = require("src.config.content.constants")
     assert(timeout == (constants.action_timeout_seconds or 0), "nil pending_choice should use normal timeout")
   end,
   function()
@@ -1586,7 +1586,7 @@ local _resolve_choice_ui_state_tests = {
     local runtime_state = require("src.core.state_access.runtime_state")
     runtime_state.set_pending_choice(state, { id = 2, kind = "market_buy" })
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
-    local constants = require("Config.generated.constants")
+    local constants = require("src.config.content.constants")
     assert(timeout == (constants.action_timeout_seconds or 0) * 2, "should get pending_choice from runtime state")
   end,
   function()
@@ -1594,7 +1594,7 @@ local _resolve_choice_ui_state_tests = {
     local game = _new_game()
     local state = _build_loop_state()
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state, { id = 3, kind = "market_buy" })
-    local constants = require("Config.generated.constants")
+    local constants = require("src.config.content.constants")
     assert(timeout == (constants.action_timeout_seconds or 0) * 2, "should use passed choice parameter")
   end,
 }
@@ -1755,8 +1755,8 @@ local _update_countdown_more_tests = {
     local game = _new_game()
     local state = _build_loop_state()
     -- Test with choice active and market active (gate conditions)
-    local original_timeout = require("Config.generated.constants").action_timeout_seconds
-    require("Config.generated.constants").action_timeout_seconds = 10
+    local original_timeout = require("src.config.content.constants").action_timeout_seconds
+    require("src.config.content.constants").action_timeout_seconds = 10
 
     game.turn.pending_choice = { id = 1, kind = "test" }
     state.countdown_last = nil
@@ -1773,7 +1773,7 @@ local _update_countdown_more_tests = {
 
     runtime_state.get_pending_choice = original_get_pending_choice
     runtime_state.get_pending_choice_elapsed = original_get_pending_choice_elapsed
-    require("Config.generated.constants").action_timeout_seconds = original_timeout
+    require("src.config.content.constants").action_timeout_seconds = original_timeout
 
     assert(game.turn.countdown_seconds ~= nil, "should set countdown_seconds")
     assert(game.turn.countdown_active == true, "should set countdown_active")
@@ -1782,7 +1782,7 @@ local _update_countdown_more_tests = {
     local game = _new_game()
     local state = _build_loop_state()
     -- Test with no timeout (timeout <= 0)
-    local constants = require("Config.generated.constants")
+    local constants = require("src.config.content.constants")
     local original = constants.action_timeout_seconds
     constants.action_timeout_seconds = 0
 
@@ -1857,7 +1857,7 @@ local _update_countdown_final_tests = {
     state.countdown_active_last = nil
 
     -- Test with popup active
-    local constants = require("Config.generated.constants")
+    local constants = require("src.config.content.constants")
     local original_timeout = constants.action_timeout_seconds
     constants.action_timeout_seconds = 10
 
@@ -1880,7 +1880,7 @@ local _update_countdown_final_tests = {
     state.action_button_active = true
     state.action_button_elapsed = 3
 
-    local constants = require("Config.generated.constants")
+    local constants = require("src.config.content.constants")
     local original_timeout = constants.action_timeout_seconds
     constants.action_timeout_seconds = 10
 

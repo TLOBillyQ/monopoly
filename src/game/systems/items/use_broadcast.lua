@@ -1,6 +1,6 @@
 local intent_output_port = require("src.game.ports.intent_output_port")
 local inventory = require("src.game.systems.items.inventory")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 
 local use_broadcast = {}
 

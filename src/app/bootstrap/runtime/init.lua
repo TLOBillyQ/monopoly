@@ -3,7 +3,7 @@ local default_ports = require("src.infrastructure.runtime.default_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_global_aliases = require("src.app.bootstrap.runtime.global_aliases")
 local paid_purchase_port = require("src.game.systems.market.ports.paid_purchase_port")
-local config_sanity = require("src.core.config.config_sanity")
+local config_sanity = require("src.config.gameplay.config_sanity")
 
 local M = {}
 

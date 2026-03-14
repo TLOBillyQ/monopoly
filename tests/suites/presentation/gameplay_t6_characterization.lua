@@ -9,7 +9,7 @@ local status3d_scene = require("src.presentation.view.render.status3d.scene")
 local pre_confirm_flow = require("src.presentation.input.intent_dispatch.pre_confirm")
 local status3d_init = require("src.presentation.view.render.status3d.init")
 local startup_render = require("src.presentation.view.render.board.startup_render")
-local runtime_refs = require("Config.runtime_refs")
+local runtime_refs = require("src.config.content.runtime_refs")
 
 local function _with_globals(overrides, fn)
   local original = {}

@@ -26,9 +26,9 @@ function M.resolve_behavior_mode(explicit_mode)
     return mode
   end
 
-  local vehicles_cfg = require("Config.generated.vehicles")
-  local market_cfg = require("Config.generated.market")
-  local chance_cfg = require("Config.generated.chance_cards")
+  local vehicles_cfg = require("src.config.content.vehicles")
+  local market_cfg = require("src.config.content.market")
+  local chance_cfg = require("src.config.content.chance_cards")
   if #vehicles_cfg > 0 then
     _resolved_mode = "dev"
     return _resolved_mode

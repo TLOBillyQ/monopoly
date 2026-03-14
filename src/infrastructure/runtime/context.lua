@@ -1,11 +1,11 @@
-local runtime_constants = require("src.core.config.runtime_constants")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")
 local logger = require("src.core.utils.logger")
 local runtime_editor_exports = require("src.core.state_access.runtime_editor_exports")
 local vehicle_feature = require("src.game.systems.vehicle")
 local number_utils = require("src.core.utils.number_utils")
 local synthetic_actor_registry = require("src.infrastructure.runtime.synthetic_actor_registry")
-require("Config.runtime_refs")
+require("src.config.content.runtime_refs")
 
 local runtime_context = {}
 local game_api_key = "Game" .. "API"

@@ -1,5 +1,5 @@
 local support = require("support.domain_support")
-local default_map = require("Config.maps.default_map")
+local default_map = require("src.config.content.maps.default_map")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
@@ -10,7 +10,7 @@ local _tile_state = support.tile_state
 local _assert_eq = support.assert_eq
 local executor = support.executor
 local choice_resolver = support.choice_resolver
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local land_choice_specs = require("src.game.systems.land.choice_specs")
 local item_phase = require("src.game.systems.items.phase")
 local item_strategy = require("src.game.systems.items.strategy")

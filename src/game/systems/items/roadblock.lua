@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local tile = require("src.game.systems.board.tile")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
 local number_utils = require("src.core.utils.number_utils")
 local facing_policy = require("src.game.systems.board.facing_policy")

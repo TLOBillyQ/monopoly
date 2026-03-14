@@ -3,7 +3,7 @@ local runtime_port = require("src.presentation.runtime.ui")
 local handlers = require("src.presentation.view.render.anim_handlers")
 local host_runtime = require("src.presentation.runtime.host")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local support = require("support.presentation_support")
 

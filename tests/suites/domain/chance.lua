@@ -1,7 +1,7 @@
 local support = require("support.domain_support")
-local default_map = require("Config.maps.default_map")
+local default_map = require("src.config.content.maps.default_map")
 local facing_policy = require("src.game.systems.board.facing_policy")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local inventory = require("src.game.systems.items.inventory")
 local function _new_game()
   return support.new_game({ map = default_map })
@@ -449,7 +449,7 @@ end
 -- T4 characterization tests for market context
 local function _test_context_entry_name_returns_name()
   local context = require("src.game.systems.market.query.context")
-  local market_cfg = require("Config.generated.market")
+  local market_cfg = require("src.config.content.market")
 
   if #market_cfg > 0 then
     local first_entry = market_cfg[1]

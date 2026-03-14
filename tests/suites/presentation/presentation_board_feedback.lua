@@ -1,6 +1,6 @@
 local host_runtime = require("src.presentation.runtime.host")
 local board_feedback = require("src.presentation.view.render.board_feedback_service")
-local runtime_refs = require("Config.runtime_refs")
+local runtime_refs = require("src.config.content.runtime_refs")
 local logger = require("src.core.utils.logger")
 local runtime_context = require("src.infrastructure.runtime.context")
 

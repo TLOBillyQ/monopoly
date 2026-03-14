@@ -1,5 +1,5 @@
-local constants = require("Config.generated.constants")
-local vehicle_catalog = require("src.core.config.vehicle_catalog")
+local constants = require("src.config.content.constants")
+local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local common = {}
 

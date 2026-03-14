@@ -1,4 +1,4 @@
-local constants = require("Config.generated.constants")
+local constants = require("src.config.content.constants")
 
 local turn_timer_policy = {}
 

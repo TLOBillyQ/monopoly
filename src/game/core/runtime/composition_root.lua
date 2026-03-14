@@ -2,7 +2,7 @@
 require "vendor.third_party.Utils"
 local dirty_tracker = require("src.core.utils.dirty_tracker")
 local logger = require("src.core.utils.logger")
-local market_cfg = require("Config.generated.market")
+local market_cfg = require("src.config.content.market")
 local turn_runtime = require("src.game.flow.turn.runtime.scheduler_runtime")
 local bootstrap = require("src.game.core.runtime.bootstrap")
 local game_factory = require("src.game.core.runtime.game_factory")

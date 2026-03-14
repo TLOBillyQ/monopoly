@@ -1,4 +1,4 @@
-local tiles_cfg = require("Config.generated.tiles")
+local tiles_cfg = require("src.config.content.tiles")
 local player_colors = require("src.presentation.view.support.player_colors")
 
 local tiles_by_id = {}

@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local monopoly_event = require("src.core.events.monopoly_events")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
 
 local mine_effect = {}

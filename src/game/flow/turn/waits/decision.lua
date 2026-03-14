@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local number_utils = require("src.core.utils.number_utils")
 local choice_auto_policy = require("src.game.flow.turn.auto.choice_auto_policy")
 

@@ -1,5 +1,5 @@
-local items_cfg = require("Config.generated.items")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local items_cfg = require("src.config.content.items")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local auto_play_port = require("src.game.ports.auto_play_port")
 local turn_dispatch = require("src.game.flow.turn.dispatch.action_dispatcher")

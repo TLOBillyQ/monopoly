@@ -1,5 +1,5 @@
-local constants = require("Config.generated.constants")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local constants = require("src.config.content.constants")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")

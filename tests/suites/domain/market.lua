@@ -1,6 +1,6 @@
 local support = require("support.domain_support")
 local _new_game = support.new_game
-local market_cfg = require("Config.generated.market")
+local market_cfg = require("src.config.content.market")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_event_bridge = require("src.infrastructure.runtime.event_bridge")

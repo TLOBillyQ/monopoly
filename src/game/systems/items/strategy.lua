@@ -1,6 +1,6 @@
 local auto_play_port = require("src.game.ports.auto_play_port")
 local effects = require("src.game.systems.items.post_effects")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 local inventory = require("src.game.systems.items.inventory")
 local executor = require("src.game.systems.items.executor")

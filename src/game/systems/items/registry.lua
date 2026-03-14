@@ -1,5 +1,5 @@
 local effects = require("src.game.systems.items.post_effects")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local handlers = require("src.game.systems.items.handlers")
 require "vendor.third_party.ClassUtils"
 

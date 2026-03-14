@@ -1,5 +1,5 @@
-local constants = require("Config.generated.constants")
-local runtime_constants = require("src.core.config.runtime_constants")
+local constants = require("src.config.content.constants")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local tick_timeout = require("src.game.flow.turn.waits.timeout")

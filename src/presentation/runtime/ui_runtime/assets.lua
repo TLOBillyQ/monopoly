@@ -8,7 +8,7 @@ local M = {}
 
 function M.init_ui_assets(state)
   assert(state ~= nil, "missing state")
-  local refs = require("Config.runtime_refs")
+  local refs = require("src.config.content.runtime_refs")
   local image_refs = refs.images or {}
   state.ui_refs = refs
 

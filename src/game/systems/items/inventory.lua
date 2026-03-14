@@ -1,4 +1,4 @@
-local items_cfg = require("Config.generated.items")
+local items_cfg = require("src.config.content.items")
 require "vendor.third_party.Utils"
 local logger = require("src.core.utils.logger")
 local intent_output_port = require("src.game.ports.intent_output_port")

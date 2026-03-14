@@ -9,7 +9,7 @@ local with_patches = support.with_patches
 local movement = support.movement
 local default_ports = require("src.game.runtime.default_ports")
 
-local constants = require("Config.generated.constants")
+local constants = require("src.config.content.constants")
 local board_view = require("src.presentation.view.render.board")
 local runtime_state = require("src.core.state_access.runtime_state")
 local test_profiles_cfg = require("src.app.testing.config.test_profiles")
@@ -68,7 +68,7 @@ local function _test_default_profile_map_is_stable()
 end
 
 local function _test_all_profiles_use_default_map()
-  local default_map = require("Config.maps.default_map")
+  local default_map = require("src.config.content.maps.default_map")
   local names = test_profile_resolver.available_profiles()
   for _, name in ipairs(names) do
     local map = _load_map_for_profile(name)

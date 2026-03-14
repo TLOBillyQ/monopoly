@@ -1,4 +1,4 @@
-local runtime_constants = require("src.core.config.runtime_constants")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local runtime = {}
 

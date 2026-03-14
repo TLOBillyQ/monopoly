@@ -7,7 +7,7 @@ local turn_roll = require("src.game.flow.turn.phases.roll")
 local turn_move = require("src.game.flow.turn.phases.move")
 local turn_land = require("src.game.flow.turn.phases.land")
 local move_followup = require("src.game.flow.turn.phases.move_followup")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 
 local turn_phase_registry = {}
 

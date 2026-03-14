@@ -155,7 +155,7 @@ local function _test_apply_target_share_wealth()
   }
   local user = { id = 1, name = "User" }
   local target = { id = 2, name = "Target" }
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.share_wealth, target, {})
   assert(result == true, "should return true")
   assert(user.cash == 2000, "user should have half of total")
@@ -173,7 +173,7 @@ local function _test_apply_target_invite_deity()
   }
   local user = { id = 1, name = "User", status = {} }
   local target = { id = 2, name = "Target", status = { deity = { type = "rich", remaining = 3 } } }
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.invite_deity, target, {})
   assert(result == true, "should return true")
   assert(target.status.deity == nil, "target should lose deity")
@@ -188,7 +188,7 @@ local function _test_apply_target_poor()
   }
   local user = { id = 1, name = "User" }
   local target = { id = 2, name = "Target", status = {} }
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.poor, target, {})
   assert(result == true, "should return true")
   assert(target.status.deity.type == "poor", "target should have poor deity")
@@ -208,7 +208,7 @@ local function _test_try_use_item_cond_false_returns_nil()
 end
 
 local function _test_try_use_item_no_inventory_returns_nil()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local game = { turn = { phase = "pre_action" } }
   -- Player has empty inventory, but try to use a valid item (dice_multiplier which AI can use)
   local player = { id = 1, status = { inventory = {} } }
@@ -217,7 +217,7 @@ local function _test_try_use_item_no_inventory_returns_nil()
 end
 
 local function _test_try_use_item_not_ai_usable_returns_nil()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local game = { turn = { phase = "post_action" } }
   local player = { id = 1, status = { inventory = {} } }
   local result = strategy._try_use_item(game, player, gameplay_rules.item_ids.dice_multiplier, nil, false)
@@ -225,7 +225,7 @@ local function _test_try_use_item_not_ai_usable_returns_nil()
 end
 
 local function _test_try_use_item_returns_waiting_payload()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local inventory_module = require("src.game.systems.items.inventory")
   local executor_module = require("src.game.systems.items.executor")
   local original_cfg = inventory_module.cfg
@@ -258,7 +258,7 @@ local function _test_try_use_item_returns_waiting_payload()
 end
 
 local function _test_try_use_item_returns_nil_for_non_waiting_result()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local inventory_module = require("src.game.systems.items.inventory")
   local executor_module = require("src.game.systems.items.executor")
   local original_cfg = inventory_module.cfg
@@ -287,8 +287,8 @@ end
 
 -- Tests for post_effects.apply_target tax item effect (CRAP=12.00, coverage=0%)
 local function _test_apply_target_tax_normal()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
-  local constants = require("Config.generated.constants")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
+  local constants = require("src.config.content.constants")
   local Inventory = require("src.game.core.player.inventory")
   local game = {
     player_has_deity = function() return false end,
@@ -305,7 +305,7 @@ local function _test_apply_target_tax_normal()
 end
 
 local function _test_apply_target_tax_with_angel()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local game = {
     player_has_deity = function(self, player, deity)
       return deity == "angel"
@@ -318,8 +318,8 @@ local function _test_apply_target_tax_with_angel()
 end
 
 local function _test_apply_target_tax_with_tax_free()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
-  local constants = require("Config.generated.constants")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
+  local constants = require("src.config.content.constants")
   local Inventory = require("src.game.core.player.inventory")
   local inventory = require("src.game.systems.items.inventory")
   local game = {
@@ -337,7 +337,7 @@ end
 
 -- Tests for post_effects.apply_target exile item effect
 local function _test_apply_target_exile()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local support = require("support.domain_support")
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   game.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
@@ -357,7 +357,7 @@ end
 
 -- Tests for post_effects.apply_target send_poor item effect
 local function _test_apply_target_send_poor()
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local game = {
     set_player_deity = function(self, player, deity_type, remaining)
       player.status.deity = { type = deity_type, remaining = remaining }
@@ -472,7 +472,7 @@ end
 
 local function _test_market_context_entry_name_item_cfg_and_fallback()
   local context = require("src.game.systems.market.query.context")
-  local gameplay_rules = require("src.core.config.gameplay_rules")
+  local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local configured = context.entry_name({ kind = "item", product_id = gameplay_rules.item_ids.free_rent })
   local fallback = context.entry_name({ kind = "item", product_id = 999999, name = "FallbackName" })
   assert(type(configured) == "string" and configured ~= "", "item entry should resolve configured item name")

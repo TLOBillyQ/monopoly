@@ -3,7 +3,7 @@ local building_effects = require("src.presentation.view.render.building_effects"
 local tile_renderer = require("src.presentation.view.render.tile_renderer")
 local overlay_runtime = require("src.presentation.view.render.anim_overlay_runtime")
 local overlay_compute = require("src.presentation.view.render.anim_overlay_compute")
-local runtime_constants = require("src.core.config.runtime_constants")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local visual_sync = {}
 

@@ -1,6 +1,6 @@
-local runtime_constants = require("src.core.config.runtime_constants")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.core.utils.logger")
-local vehicle_catalog = require("src.core.config.vehicle_catalog")
+local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 local number_utils = require("src.core.utils.number_utils")
 
 local runtime_editor_exports = {}

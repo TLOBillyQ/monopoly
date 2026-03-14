@@ -1,5 +1,5 @@
 local gameplay_read_port = require("src.presentation.model.gameplay_read_port")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local runtime_state = require("src.core.state_access.runtime_state")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")

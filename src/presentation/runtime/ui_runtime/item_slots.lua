@@ -3,7 +3,7 @@ local runtime = require("src.presentation.runtime.ui")
 local ui_events = require("src.presentation.runtime.events")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_state = require("src.core.state_access.runtime_state")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local role_id_utils = require("src.core.utils.role_id")
 local choice_support = require("src.presentation.model.choice_support")
 

@@ -4,7 +4,7 @@ local M = {}
 
 local exact_pairs = {
   { old_path = "Config/runtime_refs.lua", new_path = "src/config/content/runtime_refs.lua" },
-  { old_path = "src/core/config/config_sanity.lua", new_path = "src/config/content/config_sanity.lua" },
+  { old_path = "src/core/config/config_sanity.lua", new_path = "src/config/gameplay/config_sanity.lua" },
   { old_path = "src/game/core/runtime/players.lua", new_path = "src/state/player_state.lua" },
   { old_path = "src/game/core/runtime/tiles.lua", new_path = "src/state/board_state.lua" },
   { old_path = "src/game/core/runtime/turn.lua", new_path = "src/state/turn_state.lua" },

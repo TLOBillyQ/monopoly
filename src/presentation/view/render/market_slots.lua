@@ -1,9 +1,9 @@
 local market_layout = require("src.presentation.schema.market_layout")
 local ui_controls = require("src.presentation.view.support.ui_controls")
-local items_cfg = require("Config.generated.items")
-local market_cfg = require("Config.generated.market")
+local items_cfg = require("src.config.content.items")
+local market_cfg = require("src.config.content.market")
 local number_utils = require("src.core.utils.number_utils")
-local vehicle_catalog = require("src.core.config.vehicle_catalog")
+local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local market_view_slots = {}
 

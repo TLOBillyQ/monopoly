@@ -1,7 +1,7 @@
 local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local runtime_state = require("src.core.state_access.runtime_state")
 local vec3 = require("fixtures.vec3")
 

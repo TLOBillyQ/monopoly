@@ -1,8 +1,8 @@
-local market_cfg = require("Config.generated.market")
-local items_cfg = require("Config.generated.items")
+local market_cfg = require("src.config.content.market")
+local items_cfg = require("src.config.content.items")
 local paid_currency_bridge = require("src.game.systems.commerce.paid_currency_bridge")
 local vehicle_feature = require("src.game.systems.vehicle")
-local vehicle_catalog = require("src.core.config.vehicle_catalog")
+local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local context = {}
 

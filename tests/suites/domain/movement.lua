@@ -1,5 +1,5 @@
 local support = require("support.domain_support")
-local default_map = require("Config.maps.default_map")
+local default_map = require("src.config.content.maps.default_map")
 local facing_policy = require("src.game.systems.board.facing_policy")
 local function _new_game()
   return support.new_game({ map = default_map })

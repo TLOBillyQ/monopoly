@@ -4,7 +4,7 @@ local player_units = require("src.presentation.view.render.board.player_units")
 local placement = require("src.presentation.view.render.board.placement")
 local events = require("src.presentation.view.render.board.events")
 local runtime_state = require("src.core.state_access.runtime_state")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 
 local M = {}

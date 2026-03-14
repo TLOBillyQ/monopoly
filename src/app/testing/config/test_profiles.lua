@@ -1,4 +1,4 @@
-local raw_profiles = require("Config.testing.test_profiles")
+local raw_profiles = require("src.config.testing.test_profiles")
 
 local M = {}
 local default_profile = {

@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local tile = require("src.game.systems.board.tile")
 local land_actions = require("src.game.systems.land.actions")
 local land_choice_specs = require("src.game.systems.land.choice_specs")

@@ -2,8 +2,8 @@ local board = require("src.game.systems.board")
 local tile = require("src.game.systems.board.tile")
 local player = require("src.game.core.player")
 local inventory = require("src.game.core.player.inventory")
-local constants = require("Config.generated.constants")
-local roles_cfg = require("Config.generated.roles")
+local constants = require("src.config.content.constants")
+local roles_cfg = require("src.config.content.roles")
 local runtime_ports = require("src.core.ports.runtime_ports")
 require "vendor.third_party.Utils"
 

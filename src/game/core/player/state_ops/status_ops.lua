@@ -1,5 +1,5 @@
 local common = require("src.game.core.player.state_ops.common")
-local feature_toggles = require("src.core.config.feature_toggles")
+local feature_toggles = require("src.config.gameplay.feature_toggles")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
 

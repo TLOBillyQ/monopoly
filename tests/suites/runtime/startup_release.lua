@@ -5,8 +5,8 @@ local startup_policy = require("src.app.bootstrap.startup_policy")
 local game_startup = require("src.app.bootstrap.game_startup")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
-local runtime_refs = require("Config.runtime_refs")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local runtime_refs = require("src.config.content.runtime_refs")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 
 local function _build_role(role_id)
   return {

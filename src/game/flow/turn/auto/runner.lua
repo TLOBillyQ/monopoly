@@ -1,7 +1,7 @@
 require "vendor.third_party.ClassUtils"
 
 local choice_auto_policy = require("src.game.flow.turn.auto.choice_auto_policy")
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 
 local auto_runner = Class("AutoRunner")
 

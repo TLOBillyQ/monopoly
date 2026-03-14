@@ -1,6 +1,6 @@
 local support = require("support.gameplay_support")
 local gameplay_loop = support.gameplay_loop
-local gameplay_rules = require("src.core.config.gameplay_rules")
+local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local game_startup = require("src.app.bootstrap.game_startup")
 local turn_roll = require("src.game.flow.turn.phases.roll")
 local move_followup = require("src.game.flow.turn.phases.move_followup")

@@ -1,4 +1,4 @@
-local tiles_cfg = require("Config.generated.tiles")
+local tiles_cfg = require("src.config.content.tiles")
 
 local board_slice = {}
 local cached_board_tiles = {}

@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
-local runtime_constants = require("src.core.config.runtime_constants")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local sfx_runtime = {}
 local default_sfx_duration = 1.0
