@@ -17,12 +17,12 @@ local app = support.app
 local map_cfg = support.map_cfg
 local tiles_cfg = support.tiles_cfg
 local gameplay_loop = support.gameplay_loop
-local gameplay_loop_ports = require("src.game.flow.turn.runtime.ports")
+local gameplay_loop_ports = require("src.turn.loop.ports")
 local tick_timeout = support.tick_timeout
 local constants = support.constants
 local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
-local turn_dispatch = require("src.game.flow.turn.dispatch.action_dispatcher")
+local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local mine_effect = require("src.rules.effects.mine_effect")
 local runtime_context = require("src.host.eggy.context")
@@ -30,17 +30,17 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local runtime_state = require("src.state.state_access.runtime_state")
 local runtime_global_aliases = require("src.app.bootstrap.runtime.global_aliases")
-local dispatch_validator = require("src.game.flow.turn.dispatch.validator")
-local tick_ui_sync = require("src.game.flow.turn.waits.ui_sync")
-local tick_choice_timeout = require("src.game.flow.turn.waits.choice_timeout")
-local choice_auto_policy = require("src.game.flow.turn.auto.choice_auto_policy")
-local turn_timer_policy = require("src.game.flow.turn.policies.timer_policy")
-local turn_role_control_policy = require("src.game.flow.turn.policies.role_control_policy")
-local turn_camera_policy = require("src.game.flow.turn.policies.camera_policy")
-local gameplay_loop_runtime = require("src.game.flow.turn.runtime.loop_runtime")
-local tick_flow = require("src.game.flow.turn.runtime.tick_flow")
-local move_followup = require("src.game.flow.turn.phases.move_followup")
-local intent_dispatcher = require("src.game.flow.intent.intent_dispatcher")
+local dispatch_validator = require("src.turn.actions.validator")
+local tick_ui_sync = require("src.turn.waits.ui_sync")
+local tick_choice_timeout = require("src.turn.waits.choice_timeout")
+local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
+local turn_timer_policy = require("src.turn.policies.timer_policy")
+local turn_role_control_policy = require("src.turn.policies.role_control_policy")
+local turn_camera_policy = require("src.turn.policies.camera_policy")
+local gameplay_loop_runtime = require("src.turn.loop.loop_runtime")
+local tick_flow = require("src.turn.loop.tick_flow")
+local move_followup = require("src.turn.phases.move_followup")
+local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local game_startup = require("src.app.bootstrap.game_startup")
 local game_startup_event_bridge = require("src.app.bootstrap.game_startup_event_bridge")
 local profile_rotation = require("src.app.testing.profile_rotation")
@@ -51,16 +51,16 @@ local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
 local logger = require("src.core.utils.logger")
 local market_service = require("src.rules.market")
-local phase_registry = require("src.game.flow.turn.phases.registry")
-local turn_decision = require("src.game.flow.turn.runtime.decision")
+local phase_registry = require("src.turn.phases.registry")
+local turn_decision = require("src.turn.output.decision")
 local item_effects = require("src.rules.items.post_effects")
 local item_strategy = require("src.rules.items.strategy")
 local facing_policy = require("src.rules.board.facing_policy")
-local turn_start = require("src.game.flow.turn.phases.start")
-local turn_script = require("src.game.flow.turn.runtime.session_script")
-local roll = require("src.game.flow.turn.phases.roll")
-local item_slot_data = require("src.game.flow.turn.dispatch.item_slot_data")
-local default_ports = require("src.game.runtime.default_ports")
+local turn_start = require("src.turn.phases.start")
+local turn_script = require("src.turn.timing.session_script")
+local roll = require("src.turn.phases.roll")
+local item_slot_data = require("src.turn.actions.item_slot_data")
+local default_ports = require("src.turn.output.default_ports")
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -208,7 +208,7 @@ local function _build_test_ports(overrides)
 end
 
 local function _build_loop_state()
-  local auto_runner = require("src.game.flow.turn.auto.runner")
+  local auto_runner = require("src.turn.policies.auto_runner")
   local ui_port = _build_ui_port()
   local state = {
     gameplay_loop_ports = _build_test_ports({
@@ -1380,7 +1380,7 @@ local function _test_runtime_context_install_environment_fails_fast()
 end
 
 local function _test_autorunner_runs_to_end()
-  local auto_runner = require("src.game.flow.turn.auto.runner")
+  local auto_runner = require("src.turn.policies.auto_runner")
   local agent = require("src.computer.policies.agent")
   local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local land = require("src.rules.land.executors")
@@ -1398,7 +1398,7 @@ local function _test_autorunner_runs_to_end()
   g.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
   g.popup_port = { push_popup = function() return false end }
   g.tile_feedback_port = { on_tile_upgraded = function() return false end }
-  g.intent_output_port = require("src.game.flow.output_adapters.intent_output_adapter").build()
+  g.intent_output_port = require("src.turn.output.intent_output_adapter").build()
 
   local state = {
     gameplay_loop_ports = _build_test_ports({
@@ -3328,7 +3328,7 @@ local function _test_gameplay_loop_ports_rejects_legacy_flat_override()
 end
 
 local function _test_build_noop_group_characterization()
-  local loop_ports = require("src.game.flow.turn.runtime.ports")
+  local loop_ports = require("src.turn.loop.ports")
 
   local group1 = loop_ports._build_noop_group({ "key1", "key2", "key3" }, nil)
   assert(type(group1) == "table", "should return a table")
@@ -3756,7 +3756,7 @@ local function _test_phase_registry_post_action_routes_wait_variants()
 end
 
 local function _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending()
-  local turn_land = require("src.game.flow.turn.phases.land")
+  local turn_land = require("src.turn.phases.land")
   local effect_pipeline = require("src.rules.effects.effect_pipeline")
   local g = _new_game()
   local player = g:current_player()
@@ -3824,8 +3824,8 @@ local function _test_move_followup_resume_turn_move_waits_on_steal_interrupt_cho
 end
 
 local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
-  local auto_runner = require("src.game.flow.turn.auto.runner")
-  local auto_policy = require("src.game.flow.turn.auto.choice_auto_policy")
+  local auto_runner = require("src.turn.policies.auto_runner")
+  local auto_policy = require("src.turn.policies.choice_auto_policy")
   local runner = auto_runner:new({ interval = 0 })
   runner:set_enabled(true)
 
@@ -3865,7 +3865,7 @@ local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
 end
 
 local function _test_auto_runner_modal_without_buttons_confirms()
-  local auto_runner = require("src.game.flow.turn.auto.runner")
+  local auto_runner = require("src.turn.policies.auto_runner")
   local runner = auto_runner:new({ interval = 0 })
   runner:set_enabled(true)
 
@@ -3893,7 +3893,7 @@ local function _test_turn_script_dispatches_wait_states_and_move_followup_fallba
     end,
   }
 
-  local move_followup_module = require("src.game.flow.turn.phases.move_followup")
+  local move_followup_module = require("src.turn.phases.move_followup")
   support.with_patches({
     { target = move_followup_module, key = "run", value = function(_, args)
       phase_calls[#phase_calls + 1] = "move_followup"
@@ -4368,17 +4368,17 @@ _t2_case_groups.roll_dice_tests = {
 
 local function _with_reloaded_move_module(movement_stub, followup_stub, fn)
   local original_movement = package.loaded["src.rules.movement"]
-  local original_followup = package.loaded["src.game.flow.turn.phases.move_followup"]
-  local original_move = package.loaded["src.game.flow.turn.phases.move"]
+  local original_followup = package.loaded["src.turn.phases.move_followup"]
+  local original_move = package.loaded["src.turn.phases.move"]
   package.loaded["src.rules.movement"] = movement_stub
-  package.loaded["src.game.flow.turn.phases.move_followup"] = followup_stub
-  package.loaded["src.game.flow.turn.phases.move"] = nil
+  package.loaded["src.turn.phases.move_followup"] = followup_stub
+  package.loaded["src.turn.phases.move"] = nil
   local ok, result = pcall(function()
-    return fn(require("src.game.flow.turn.phases.move"))
+    return fn(require("src.turn.phases.move"))
   end)
   package.loaded["src.rules.movement"] = original_movement
-  package.loaded["src.game.flow.turn.phases.move_followup"] = original_followup
-  package.loaded["src.game.flow.turn.phases.move"] = original_move
+  package.loaded["src.turn.phases.move_followup"] = original_followup
+  package.loaded["src.turn.phases.move"] = original_move
   if not ok then
     error(result)
   end
@@ -4564,18 +4564,18 @@ _t2_case_groups.resolve_follow_player_id_tests = {
 _t2_case_groups.resolve_wait_state_tests = {
   function()
     local game = { turn = { action_anim = { kind = "test" } }, dirty = {} }
-    local state_name = require("src.game.flow.turn.phases.land")._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
+    local state_name = require("src.turn.phases.land")._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
     assert(state_name == "wait_action_anim", "wait_action_anim should win when requested")
   end,
   function()
     local game = { turn = {}, dirty = {} }
-    local state_name, args = require("src.game.flow.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
+    local state_name, args = require("src.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
     assert(state_name == "wait_choice", "no action anim should still route through wait_choice")
     assert(args.next_state == "move", "next state should be preserved")
   end,
   function()
     local game = { turn = { action_anim_queue = { { kind = "move_effect" } } }, dirty = {} }
-    local state_name, args = require("src.game.flow.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
+    local state_name, args = require("src.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
     assert(state_name == "wait_action_anim", "queued move effect should wait for action anim")
     assert(args.next_state == "wait_choice", "non-anim wait should wrap back to wait_choice")
   end,
@@ -4583,7 +4583,7 @@ _t2_case_groups.resolve_wait_state_tests = {
 
 _t2_case_groups.fill_ui_sync_defaults_tests = {
   function()
-    local loop_ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
+    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
     local ports = {}
     for key, value in pairs(base) do
@@ -4594,7 +4594,7 @@ _t2_case_groups.fill_ui_sync_defaults_tests = {
     assert(type(ports.set_input_blocked) == "function", "set_input_blocked default should be filled")
   end,
   function()
-    local loop_ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
+    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
     local ports = {}
     for key, value in pairs(base) do
@@ -4606,7 +4606,7 @@ _t2_case_groups.fill_ui_sync_defaults_tests = {
     assert(type(ports.is_popup_active) == "function", "missing ports should still be filled")
   end,
   function()
-    local loop_ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
+    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
     local ports = {}
     for key, value in pairs(base) do
@@ -4619,7 +4619,7 @@ _t2_case_groups.fill_ui_sync_defaults_tests = {
     assert(gate.popup_auto_close_seconds == 10, "ui gate should expose popup timeout")
   end,
   function()
-    local loop_ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
+    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
     local ports = {}
     for key, value in pairs(base) do
@@ -4631,7 +4631,7 @@ _t2_case_groups.fill_ui_sync_defaults_tests = {
     assert(ports.set_input_blocked(state, true) == false, "setter should report no-op")
   end,
   function()
-    local loop_ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
+    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
     local ports = {}
     for key, value in pairs(base) do

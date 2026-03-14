@@ -1,12 +1,12 @@
 local support = require("support.gameplay_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
-local gameplay_loop = require("src.game.flow.turn.loop")
-local tick_choice_timeout = require("src.game.flow.turn.waits.choice_timeout")
-local turn_timer_policy = require("src.game.flow.turn.policies.timer_policy")
-local dispatch_validator = require("src.game.flow.turn.dispatch.validator")
+local gameplay_loop = require("src.turn.loop")
+local tick_choice_timeout = require("src.turn.waits.choice_timeout")
+local turn_timer_policy = require("src.turn.policies.timer_policy")
+local dispatch_validator = require("src.turn.actions.validator")
 local runtime_state = require("src.state.state_access.runtime_state")
-local roll = require("src.game.flow.turn.phases.roll")
+local roll = require("src.turn.phases.roll")
 
 local function _build_test_ports(overrides)
   overrides = overrides or {}
@@ -104,7 +104,7 @@ local function _build_test_ports(overrides)
 end
 
 local function _build_loop_state()
-  local auto_runner = require("src.game.flow.turn.auto.runner")
+  local auto_runner = require("src.turn.policies.auto_runner")
   local ui_port = _build_ui_port()
   local state = {
     gameplay_loop_ports = _build_test_ports({
@@ -334,7 +334,7 @@ local _roll_dice_tests = {
   end,
 }
 
-local land = require("src.game.flow.turn.phases.land")
+local land = require("src.turn.phases.land")
 local _resolve_wait_state_tests = {
   function()
     local game = {
@@ -374,7 +374,7 @@ local _resolve_wait_state_tests = {
   end,
 }
 
-local tick_timeout = require("src.game.flow.turn.waits.timeout")
+local tick_timeout = require("src.turn.waits.timeout")
 local _resolve_choice_ui_state_tests = {
   function()
     local game = _new_game()
@@ -393,7 +393,7 @@ local _resolve_choice_ui_state_tests = {
   end,
 }
 
-local camera_policy = require("src.game.flow.turn.policies.camera_policy")
+local camera_policy = require("src.turn.policies.camera_policy")
 local _resolve_follow_player_id_tests = {
   function()
     local game = _new_game()
@@ -422,7 +422,7 @@ local _resolve_follow_player_id_tests = {
   end,
 }
 
-local tick_ui_sync = require("src.game.flow.turn.waits.ui_sync")
+local tick_ui_sync = require("src.turn.waits.ui_sync")
 local _update_countdown_tests = {
   function()
     local game = _new_game()
@@ -470,7 +470,7 @@ local _is_action_button_wait_active_tests = {
   end,
 }
 
-local choice_auto_policy = require("src.game.flow.turn.auto.choice_auto_policy")
+local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
 local _choice_auto_policy_tests = {
   function()
     local game = _new_game()
@@ -500,7 +500,7 @@ local _choice_auto_policy_tests = {
   end,
 }
 
-local move = require("src.game.flow.turn.phases.move")
+local move = require("src.turn.phases.move")
 local _apply_dice_multiplier_tests = {
   function()
     -- Test via _phase_move integration: when player has pending_dice_multiplier,
@@ -519,12 +519,12 @@ local _apply_dice_multiplier_tests = {
     package.loaded["src.rules.movement"] = {
       move = function() return { visited = {}, steps = {} } end
     }
-    package.loaded["src.game.flow.turn.phases.move_followup"] = {
+    package.loaded["src.turn.phases.move_followup"] = {
       run = function() return "test_result" end
     }
     -- Reload move module to pick up mocks
-    package.loaded["src.game.flow.turn.phases.move"] = nil
-    local move_module = require("src.game.flow.turn.phases.move")
+    package.loaded["src.turn.phases.move"] = nil
+    local move_module = require("src.turn.phases.move")
     local result = move_module(turn_mgr, {
       player = turn_mgr.game.players[1],
       total = 4,
@@ -532,7 +532,7 @@ local _apply_dice_multiplier_tests = {
     })
     -- Restore
     package.loaded["src.rules.movement"] = original_movement
-    package.loaded["src.game.flow.turn.phases.move"] = nil
+    package.loaded["src.turn.phases.move"] = nil
     -- The test validates the integration path works
     assert(result == "test_result", "should complete move phase")
   end,
@@ -550,18 +550,18 @@ local _apply_dice_multiplier_tests = {
     package.loaded["src.rules.movement"] = {
       move = function() return { visited = {}, steps = {} } end
     }
-    package.loaded["src.game.flow.turn.phases.move_followup"] = {
+    package.loaded["src.turn.phases.move_followup"] = {
       run = function() return "test_result" end
     }
-    package.loaded["src.game.flow.turn.phases.move"] = nil
-    local move_module = require("src.game.flow.turn.phases.move")
+    package.loaded["src.turn.phases.move"] = nil
+    local move_module = require("src.turn.phases.move")
     local result = move_module(turn_mgr, {
       player = turn_mgr.game.players[1],
       total = 7,
       raw_total = 7,
     })
     package.loaded["src.rules.movement"] = nil
-    package.loaded["src.game.flow.turn.phases.move"] = nil
+    package.loaded["src.turn.phases.move"] = nil
     assert(result == "test_result", "should complete move phase with multiplier 1")
   end,
   function()
@@ -578,18 +578,18 @@ local _apply_dice_multiplier_tests = {
     package.loaded["src.rules.movement"] = {
       move = function() return { visited = {}, steps = {} } end
     }
-    package.loaded["src.game.flow.turn.phases.move_followup"] = {
+    package.loaded["src.turn.phases.move_followup"] = {
       run = function() return "test_result" end
     }
-    package.loaded["src.game.flow.turn.phases.move"] = nil
-    local move_module = require("src.game.flow.turn.phases.move")
+    package.loaded["src.turn.phases.move"] = nil
+    local move_module = require("src.turn.phases.move")
     local result = move_module(turn_mgr, {
       player = turn_mgr.game.players[1],
       total = 10,
       raw_total = 8,
     })
     package.loaded["src.rules.movement"] = nil
-    package.loaded["src.game.flow.turn.phases.move"] = nil
+    package.loaded["src.turn.phases.move"] = nil
     assert(result == "test_result", "should skip multiplier when total ~= raw_total")
   end,
   function()
@@ -606,18 +606,18 @@ local _apply_dice_multiplier_tests = {
     package.loaded["src.rules.movement"] = {
       move = function() return { visited = {}, steps = {} } end
     }
-    package.loaded["src.game.flow.turn.phases.move_followup"] = {
+    package.loaded["src.turn.phases.move_followup"] = {
       run = function() return "test_result" end
     }
-    package.loaded["src.game.flow.turn.phases.move"] = nil
-    local move_module = require("src.game.flow.turn.phases.move")
+    package.loaded["src.turn.phases.move"] = nil
+    local move_module = require("src.turn.phases.move")
     local result = move_module(turn_mgr, {
       player = turn_mgr.game.players[1],
       total = 5,
       raw_total = 5,
     })
     package.loaded["src.rules.movement"] = nil
-    package.loaded["src.game.flow.turn.phases.move"] = nil
+    package.loaded["src.turn.phases.move"] = nil
     assert(result == "test_result", "should complete move phase without multiplier")
   end,
   function()
@@ -642,11 +642,11 @@ local _apply_dice_multiplier_tests = {
         return { visited = {}, steps = {} }
       end
     }
-    package.loaded["src.game.flow.turn.phases.move_followup"] = {
+    package.loaded["src.turn.phases.move_followup"] = {
       run = function() return "test_result" end
     }
-    package.loaded["src.game.flow.turn.phases.move"] = nil
-    local move_module = require("src.game.flow.turn.phases.move")
+    package.loaded["src.turn.phases.move"] = nil
+    local move_module = require("src.turn.phases.move")
     local result = move_module(turn_mgr, {
       player = player,
       total = 3,
@@ -655,7 +655,7 @@ local _apply_dice_multiplier_tests = {
     -- Verify status was reset
     assert(player.status.pending_dice_multiplier == 1, "should reset multiplier to 1")
     package.loaded["src.rules.movement"] = nil
-    package.loaded["src.game.flow.turn.phases.move"] = nil
+    package.loaded["src.turn.phases.move"] = nil
     assert(result == "test_result", "should complete move phase")
   end,
   function()
@@ -678,18 +678,18 @@ local _apply_dice_multiplier_tests = {
         return { visited = {}, steps = {} }
       end
     }
-    package.loaded["src.game.flow.turn.phases.move_followup"] = {
+    package.loaded["src.turn.phases.move_followup"] = {
       run = function() return "test_result" end
     }
-    package.loaded["src.game.flow.turn.phases.move"] = nil
-    local move_module = require("src.game.flow.turn.phases.move")
+    package.loaded["src.turn.phases.move"] = nil
+    local move_module = require("src.turn.phases.move")
     local result = move_module(turn_mgr, {
       player = player,
       total = 6,
       raw_total = nil,
     })
     package.loaded["src.rules.movement"] = nil
-    package.loaded["src.game.flow.turn.phases.move"] = nil
+    package.loaded["src.turn.phases.move"] = nil
     assert(result == "test_result", "should skip multiplier when raw_total is nil")
   end,
 }
@@ -1182,7 +1182,7 @@ local _resolve_wait_state_extended_tests = {
   end,
 }
 
-local loop_ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
+local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local _fill_ui_sync_defaults_tests = {
   function()
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
@@ -1551,7 +1551,7 @@ local _choice_auto_policy_coverage_tests = {
 -- Tests for resolve_choice_ui_state in tick_timeout.lua
 -- Note: resolve_choice_ui_state is an anonymous function inside step_default_choice
 -- We test it indirectly by checking the behavior of step_default_choice
-local tick_timeout = require("src.game.flow.turn.waits.timeout")
+local tick_timeout = require("src.turn.waits.timeout")
 local _resolve_choice_ui_state_tests = {
   function()
     -- Test that resolve_choice_timeout_seconds handles market_buy correctly
@@ -1601,7 +1601,7 @@ local _resolve_choice_ui_state_tests = {
 
 -- Tests for anonymous@88 in script.lua (coroutine create function)
 -- These tests exercise the coroutine creation and execution paths
-local turn_script = require("src.game.flow.turn.runtime.session_script")
+local turn_script = require("src.turn.timing.session_script")
 local _turn_script_tests = {
   function()
     -- Test script create with valid session - minimal test that just verifies coroutine creation
@@ -1626,7 +1626,7 @@ local _turn_script_tests = {
 
 -- Tests for _build_ui_gate in loop_ui_sync_defaults.lua
 -- Note: _build_ui_gate is a local function, we test via the public resolve_ui_gate function
-local loop_ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
+local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local _build_ui_gate_tests = {
   function()
     -- Test resolve_ui_gate with empty state (nil ui)
@@ -1893,7 +1893,7 @@ local _update_countdown_final_tests = {
 }
 
 -- T8 FINAL additional branches for _resolve_follow_player_id (targeting CRAP=8.01)
-local camera_policy = require("src.game.flow.turn.policies.camera_policy")
+local camera_policy = require("src.turn.policies.camera_policy")
 local _resolve_follow_player_id_final_tests = {
   function()
     -- Test with current player eliminated but others not
@@ -2036,7 +2036,7 @@ local _resolve_choice_ui_state_final_tests = {
 local _turn_script_final_tests = {
   function()
     -- Test that create returns a coroutine thread
-    local turn_script = require("src.game.flow.turn.runtime.session_script")
+    local turn_script = require("src.turn.timing.session_script")
 
     local session = {
       current_state = "start",
@@ -2054,7 +2054,7 @@ local _turn_script_final_tests = {
   function()
     -- Test coroutine creation with various wait states
     -- Just verify that create() works for different wait states
-    local turn_script = require("src.game.flow.turn.runtime.session_script")
+    local turn_script = require("src.turn.timing.session_script")
 
     for _, wait_state in ipairs({"wait_choice", "wait_move_anim", "wait_action_anim", "inter_turn_wait"}) do
       local session = {
@@ -2071,7 +2071,7 @@ local _turn_script_final_tests = {
   end,
   function()
     -- Test coroutine with different starting states
-    local turn_script = require("src.game.flow.turn.runtime.session_script")
+    local turn_script = require("src.turn.timing.session_script")
 
     for _, start_state in ipairs({"start", "move", "action", "end_turn"}) do
       local session = {

@@ -7,7 +7,7 @@ local tile_state = support.tile_state
 local build_ui_port = support.build_ui_port
 local with_patches = support.with_patches
 local movement = support.movement
-local default_ports = require("src.game.runtime.default_ports")
+local default_ports = require("src.turn.output.default_ports")
 
 local constants = require("src.config.content.constants")
 local board_view = require("src.presentation.view.render.board")

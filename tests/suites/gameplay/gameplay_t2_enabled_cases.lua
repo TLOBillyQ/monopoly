@@ -1,11 +1,11 @@
 local support = require("support.gameplay_support")
 local runtime_state = require("src.state.state_access.runtime_state")
-local tick_choice_timeout = require("src.game.flow.turn.waits.choice_timeout")
-local tick_ui_sync = require("src.game.flow.turn.waits.ui_sync")
-local turn_timer_policy = require("src.game.flow.turn.policies.timer_policy")
-local turn_camera_policy = require("src.game.flow.turn.policies.camera_policy")
-local loop_ui_sync_defaults = require("src.game.flow.turn.runtime.ui_sync_defaults")
-local roll = require("src.game.flow.turn.phases.roll")
+local tick_choice_timeout = require("src.turn.waits.choice_timeout")
+local tick_ui_sync = require("src.turn.waits.ui_sync")
+local turn_timer_policy = require("src.turn.policies.timer_policy")
+local turn_camera_policy = require("src.turn.policies.camera_policy")
+local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
+local roll = require("src.turn.phases.roll")
 
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -36,7 +36,7 @@ local function _build_test_ports(overrides)
 end
 
 local function _build_loop_state()
-  local auto_runner = require("src.game.flow.turn.auto.runner")
+  local auto_runner = require("src.turn.policies.auto_runner")
   local ui_port = _build_ui_port()
   local state = {
     gameplay_loop_ports = {
@@ -71,17 +71,17 @@ end
 
 local function _with_reloaded_move_module(movement_stub, followup_stub, fn)
   local original_movement = package.loaded["src.rules.movement"]
-  local original_followup = package.loaded["src.game.flow.turn.phases.move_followup"]
-  local original_move = package.loaded["src.game.flow.turn.phases.move"]
+  local original_followup = package.loaded["src.turn.phases.move_followup"]
+  local original_move = package.loaded["src.turn.phases.move"]
   package.loaded["src.rules.movement"] = movement_stub
-  package.loaded["src.game.flow.turn.phases.move_followup"] = followup_stub
-  package.loaded["src.game.flow.turn.phases.move"] = nil
+  package.loaded["src.turn.phases.move_followup"] = followup_stub
+  package.loaded["src.turn.phases.move"] = nil
   local ok, result = pcall(function()
-    return fn(require("src.game.flow.turn.phases.move"))
+    return fn(require("src.turn.phases.move"))
   end)
   package.loaded["src.rules.movement"] = original_movement
-  package.loaded["src.game.flow.turn.phases.move_followup"] = original_followup
-  package.loaded["src.game.flow.turn.phases.move"] = original_move
+  package.loaded["src.turn.phases.move_followup"] = original_followup
+  package.loaded["src.turn.phases.move"] = original_move
   if not ok then
     error(result)
   end
@@ -243,18 +243,18 @@ return {
   end,
   _test_resolve_wait_state_prefers_wait_action_anim = function()
     local game = { turn = { action_anim = { kind = "test" } }, dirty = {} }
-    local state_name = require("src.game.flow.turn.phases.land")._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
+    local state_name = require("src.turn.phases.land")._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
     assert(state_name == "wait_action_anim", "wait_action_anim should win when requested")
   end,
   _test_resolve_wait_state_without_anim_returns_wait_choice = function()
     local game = { turn = {}, dirty = {} }
-    local state_name, args = require("src.game.flow.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
+    local state_name, args = require("src.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
     assert(state_name == "wait_choice", "no action anim should still route through wait_choice")
     assert(args.next_state == "move", "next state should be preserved")
   end,
   _test_resolve_wait_state_wraps_move_effect_queue = function()
     local game = { turn = { action_anim_queue = { { kind = "move_effect" } } }, dirty = {} }
-    local state_name, args = require("src.game.flow.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
+    local state_name, args = require("src.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
     assert(state_name == "wait_action_anim", "queued move effect should wait for action anim")
     assert(args.next_state == "wait_choice", "non-anim wait should wrap back to wait_choice")
   end,

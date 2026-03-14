@@ -4,10 +4,10 @@ local _with_patches = support.with_patches
 
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback_port")
 local turn_action_port = require("src.presentation.input.intent_dispatch.turn_action_port")
-local gameplay_loop_ports = require("src.game.flow.turn.runtime.ports")
+local gameplay_loop_ports = require("src.turn.loop.ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local turn_roll = require("src.game.flow.turn.phases.roll")
-local turn_move = require("src.game.flow.turn.phases.move")
+local turn_roll = require("src.turn.phases.roll")
+local turn_move = require("src.turn.phases.move")
 
 local function _test_turn_action_port_resolve_defaults()
   local resolved = turn_action_port.resolve({}, nil)
@@ -143,7 +143,7 @@ local function _test_choice_contract_copies_explicit_fields_once()
 end
 
 local function _test_output_state_adapter_runtime_variant_stays_off_legacy_state()
-  local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
+  local output_state_adapter = require("src.turn.output.output_state_adapter")
   local output = output_state_adapter.build_runtime_output_ports()
   local state = {}
   local changed = output.invalidate_ui(state)

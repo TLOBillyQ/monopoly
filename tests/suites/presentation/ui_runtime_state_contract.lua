@@ -2,9 +2,9 @@ local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 
 local runtime_state = require("src.state.state_access.runtime_state")
-local output_port = require("src.game.flow.output_adapters.output_state_adapter")
-local tick_ui_sync = require("src.game.flow.turn.waits.ui_sync")
-local validator = require("src.game.flow.turn.dispatch.validator")
+local output_port = require("src.turn.output.output_state_adapter")
+local tick_ui_sync = require("src.turn.waits.ui_sync")
+local validator = require("src.turn.actions.validator")
 
 local function _test_runtime_state_defaults_to_runtime_only_structure()
   local state = {}

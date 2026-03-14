@@ -1,5 +1,5 @@
 local bankruptcy = require("src.rules.endgame.bankruptcy")
-local session = require("src.game.scheduler.session")
+local session = require("src.turn.timing.session")
 local post_effects = require("src.rules.items.post_effects")
 local strategy = require("src.rules.items.strategy")
 

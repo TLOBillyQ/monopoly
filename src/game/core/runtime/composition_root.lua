@@ -3,13 +3,13 @@ require "vendor.third_party.Utils"
 local dirty_tracker = require("src.core.utils.dirty_tracker")
 local logger = require("src.core.utils.logger")
 local market_cfg = require("src.config.content.market")
-local turn_runtime = require("src.game.flow.turn.runtime.scheduler_runtime")
+local turn_runtime = require("src.turn.loop.scheduler_runtime")
 local bootstrap = require("src.rules.bootstrap.registries")
 local game_factory = require("src.game.core.runtime.game_factory")
-local phase_registry = require("src.game.flow.turn.phases.registry")
+local phase_registry = require("src.turn.phases.registry")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
-local intent_output_adapter = require("src.game.flow.output_adapters.intent_output_adapter")
+local intent_output_adapter = require("src.turn.output.intent_output_adapter")
 
 local composition_root = {}
 

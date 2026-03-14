@@ -1,9 +1,9 @@
 local app = require("src.game.core.runtime.game")
-local gameplay_loop = require("src.game.flow.turn.loop")
+local gameplay_loop = require("src.turn.loop")
 local map_cfg = require("src.config.content.maps.default_map")
 local tiles_cfg = require("src.config.content.tiles")
 local test_env = require("tests.support.test_env")
-local default_ports = require("src.game.runtime.default_ports")
+local default_ports = require("src.turn.output.default_ports")
 
 local M = {}
 

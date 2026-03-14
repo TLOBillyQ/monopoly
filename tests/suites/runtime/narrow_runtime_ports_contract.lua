@@ -2,8 +2,8 @@ local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
 
 local action_anim_port = require("src.core.ports.action_anim_port")
-local turn_roll = require("src.game.flow.turn.phases.roll")
-local turn_move = require("src.game.flow.turn.phases.move")
+local turn_roll = require("src.turn.phases.roll")
+local turn_move = require("src.turn.phases.move")
 
 local function _test_game_requires_explicit_popup_port()
   local game = support.new_game({ ai = {} })

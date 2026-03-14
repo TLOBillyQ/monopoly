@@ -1,4 +1,4 @@
-local auto_runner = require("src.game.flow.turn.auto.runner")
+local auto_runner = require("src.turn.policies.auto_runner")
 local board_view = require("src.presentation.view.render.board")
 local game = require("src.game.core.runtime.game")
 local ui_view = require("src.presentation.runtime.ui_runtime")
@@ -12,7 +12,7 @@ local logger = require("src.core.utils.logger")
 local runtime_state = require("src.state.state_access.runtime_state")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_id_utils = require("src.core.utils.role_id")
-local default_ports = require("src.game.runtime.default_ports")
+local default_ports = require("src.turn.output.default_ports")
 
 local max_player_count = 4
 local synthetic_unit_keys = { 9000601, 9000602, 9000603, 9000604, 9000605, 9000607 }

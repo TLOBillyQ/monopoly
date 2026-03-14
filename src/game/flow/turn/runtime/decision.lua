@@ -1,1 +1,1 @@
-return require("src.game.flow.turn.waits.decision")
+return require("src.turn.output.decision")

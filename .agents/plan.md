@@ -33,7 +33,8 @@
 - [x] (2026-03-14 13:37+08:00) 已联合完成 `T4`/`T5`：宿主桥接迁到 `src/host/eggy/*`，规则实现迁到 `src/rules/*`，旧路径全部改成 shim，`T4` 与 `T5` 完成。
 - [x] (2026-03-14 14:09+08:00) 已联合完成 `T6`/`T7`：player 选择与动作迁到 `src/player/*`，AI 入口迁到 `src/computer/policies/*`，旧路径全部改成 shim，`T6` 与 `T7` 完成。
 - [x] (2026-03-14 14:24+08:00) 已把共享 gameplay ports 迁到 `src/rules/ports/*` 并切换 `src/` / `tests/` 消费方，`T8` 完成。
-- [ ] `T9` `turn` 核心归位进行中；`T10` 到 `T14` 仍待执行。
+- [x] (2026-03-14 14:53+08:00) 已完成 `T9` / `T10`：scheduler、turn core 与 output/runtime adapter 全部迁到 `src/turn/*`，旧路径改成 shim，`T9` 与 `T10` 完成。
+- [ ] `T11` `ui` schema/model/view 归位进行中；`T12` 到 `T14` 仍待执行。
 
 ## 意外与发现
 
@@ -325,9 +326,9 @@
 - **location**: `src/game/scheduler/*`, `src/game/flow/turn/{phases,policies,waits,auto,dispatch}/*`, `src/turn/{loop,phases,actions,policies,waits,timing}/*`
 - **description**: 先迁 scheduler、turn loop、phase、policy、wait、action、timing 核心，不在本任务里处理 `src/game/flow/turn/runtime/*`、`src/game/flow/output_adapters/*` 和 `src/game/runtime/*`。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua` 通过；`tests/guards/gameplay_loop_no_ui.lua` 仍能证明 turn flow 不直接读写 UI state；`rg -n 'src\.game\.(scheduler|flow\.turn\.(phases|policies|waits|auto|dispatch))' src/turn tests` 的残留都有解释。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录 turn core 与故意延后的 output 模块边界。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 14:53+08:00` 已将 `src/game/scheduler/*` 迁到 `src/turn/timing/*`，`src/game/flow/turn/{loop,auto,dispatch,phases,policies,waits}/*` 迁到 `src/turn/{loop,actions,phases,policies,waits}/*`，并把 `src/` / `tests/` 的 consumer 切到新 canonical require。执行中发现 root/turn 视图在过渡期出现投影环，原因是旧 `intent_dispatcher` 仍留在 `src/game/flow/*`，以及 `scheduler_runtime`、`ports`、`session_script`、`tick_flow`、`tick_steps` 的新落点会影响 turn 子视图依赖方向；本轮已把 `ports` 收回 `src/turn/loop/ports.lua`、`session_script` / `logger` 收回 `src/turn/timing/*`，并为后续 `T10` 预留最小耦合边界。验证结果：`rg -n 'src\.game\.(scheduler|flow\.turn\.(phases|policies|waits|auto|dispatch|loop))' src tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/game/scheduler/*.lua`, `src/game/flow/turn/{loop,auto,dispatch,phases,policies,waits}/*.lua`, `src/turn/{loop,actions,phases,policies,waits,timing}/*.lua`, `src/app/**/*`, `src/game/**/*`, `tests/**/*`, `.agents/plan.md`
 
 ### T10：`turn` 输出与 runtime adapter 归位
 
@@ -336,9 +337,9 @@
 - **location**: `src/game/flow/turn/runtime/*`, `src/game/flow/output_adapters/*`, `src/game/runtime/*`, `src/turn/output/*`
 - **description**: 在 turn core 稳定后，再迁 anim、output adapter、`default_ports.lua`、`intent_output_adapter.lua` 和 gameplay runtime adapter。此任务依赖 `T8`，因为它要消费新的 `src/rules/ports/*` contract。
 - **validation**: `lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua` 通过；`rg -n 'src\.game\.(flow\.turn\.runtime|flow\.output_adapters|runtime)' src/turn tests` 的残留只剩 shim 或未收口调用点。
-- **status**: `Not Completed`
-- **log**: 留空；执行时记录 turn output 与 runtime adapter 的新 canonical 路径。
-- **files edited/created**: 留空；执行时填写真实路径。
+- **status**: `Completed`
+- **log**: `2026-03-14 14:53+08:00` 已将 `src/game/flow/turn/runtime/*`、`src/game/flow/output_adapters/*`、`src/game/runtime/*` 迁到 `src/turn/output/*`，并把剩余 `src/game/flow/intent/intent_dispatcher.lua` 迁到 `src/turn/output/intent_dispatcher.lua`。为消除 turn 子视图循环，本轮把 `scheduler_runtime` 与 `loop_runtime` / `tick_flow` / `tick_steps` 调整到更贴近 loop/timing 的命名空间：`scheduler_runtime.lua -> src/turn/loop/scheduler_runtime.lua`，`loop_runtime.lua` / `tick_flow.lua` / `tick_steps.lua` -> `src/turn/loop/*`。验证结果：`rg -n 'src\.game\.(flow\.turn\.runtime|flow\.output_adapters|runtime)' src tests` 无命中；`lua scripts/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `src/game/flow/turn/runtime/*.lua`, `src/game/flow/output_adapters/*.lua`, `src/game/runtime/*.lua`, `src/game/flow/intent/intent_dispatcher.lua`, `src/turn/output/*.lua`, `src/turn/loop/*.lua`, `src/turn/timing/*.lua`, `src/app/**/*`, `src/game/**/*`, `tests/**/*`, `.agents/plan.md`
 
 ### T11：`ui` 的 schema、model、view 归位
 

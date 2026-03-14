@@ -3,11 +3,11 @@ local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 
-local gameplay_loop = require("src.game.flow.turn.loop")
-local gameplay_loop_ports = require("src.game.flow.turn.runtime.ports")
-local turn_dispatch = require("src.game.flow.turn.dispatch.action_dispatcher")
-local turn_roll = require("src.game.flow.turn.phases.roll")
-local output_state_adapter = require("src.game.flow.output_adapters.output_state_adapter")
+local gameplay_loop = require("src.turn.loop")
+local gameplay_loop_ports = require("src.turn.loop.ports")
+local turn_dispatch = require("src.turn.actions.action_dispatcher")
+local turn_roll = require("src.turn.phases.roll")
+local output_state_adapter = require("src.turn.output.output_state_adapter")
 local action_anim_port = require("src.core.ports.action_anim_port")
 
 local function _merge_group(base_group, override_group)
@@ -121,7 +121,7 @@ local function _build_guard_ports(output_log, overrides)
 end
 
 local function _build_loop_state()
-  local auto_runner = require("src.game.flow.turn.auto.runner")
+  local auto_runner = require("src.turn.policies.auto_runner")
   local ui_port = support.build_ui_port()
   local state = {
     gameplay_loop_ports = _build_guard_ports(),

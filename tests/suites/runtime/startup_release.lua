@@ -259,7 +259,7 @@ local function _reload_app_init_with_stubs(startup)
     },
     {
       target = package.loaded,
-      key = "src.game.flow.turn.loop",
+      key = "src.turn.loop",
       value = {
         set_game = function(installed_state, new_game)
           capture.set_game_state = installed_state
@@ -399,7 +399,7 @@ local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallbac
     { target = package.loaded, key = "src.app.bootstrap.game_startup", value = { build_state = function() return state end } },
     { target = package.loaded, key = "src.app.bootstrap.game_startup_event_bridge", value = { install = function() end } },
     { target = package.loaded, key = "src.app.bootstrap.game_runtime_bootstrap", value = { start = function() return true end } },
-    { target = package.loaded, key = "src.game.flow.turn.loop", value = { set_game = function() end } },
+    { target = package.loaded, key = "src.turn.loop", value = { set_game = function() end } },
     { target = package.loaded, key = "src.app.bootstrap.ui_bootstrap", value = { install = function() end } },
     {
       target = package.loaded,
