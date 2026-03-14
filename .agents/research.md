@@ -1,195 +1,115 @@
-# 移动规则简化重构计划（src/）
+# Monopoly Game Engine 架构分析
 
-## 目标
-
-将当前移动规则简化为以下 4 条，并给出可落地的代码库重构路径：
-
-1. 外圈默认逆时针向前移动。
-2. 上下左右分叉点在本次移动步数为偶数时进入内圈。
-3. 进入内圈后维持直线向前，直到从对侧出口回到外圈。
-4. 位置选择屏的邻接关系按地图曼哈顿距离计算。
+Lua 实现的大富翁游戏引擎，~366 文件，支持多人 + AI。
 
 ---
 
-## 当前实现深度理解（基于 src/ 与地图配置）
+## 核心架构模式
 
-### 1) 移动主链路
-
-- 入口：`src/game/systems/movement/init.lua` 的 `movement.move(game, player, steps, opts)`。
-- 每步推进调用：`board:step_forward_by_facing(current_index, facing, parity)`。
-- 步进实现：`src/game/systems/board/init.lua`，当前解析优先级为：
-	- `_resolve_outer_next`
-	- `_resolve_fresh_forward_next`
-	- `_resolve_market_exit`
-	- `_resolve_facing_next`
-	- `_resolve_fallback_next`
-
-### 2) 地图结构
-
-- 配置：`src/config/content/maps/default_map.lua`
-- 外圈：`outer_next/outer_prev`（逆时针闭环）
-- 内圈：十字轴线在黑市 `39` 相交
-- 入口点：`42/40/41/43`（四边中点）
-
-### 3) 当前分叉与距离计算
-
-- 当前入口逻辑：偶数步 + 朝向匹配（从 `outer_prev` 方向进入）
-- 当前黑市逻辑：奇偶决定左转/右转（`turn_left/turn_right`）
-- 当前位置范围计算：`src/game/systems/board/query.lua` 的 BFS 图距离（`indices_in_range`）
+| 模式 | 文件 | 职责 |
+|-----|------|-----|
+| Composition Root | `src/entry/compose_game.lua` | 组装 board、players、RNG、registries，初始化 tile state |
+| Dirty Tracking | `src/core/utils/dirty_tracker.lua` | 追踪 players/board/turn/market/inventory 变化，批量 UI 更新 |
+| Coroutine Scheduler | `src/turn/timing/init.lua` | 每回合一个 coroutine，yield 等待输入，维护 wait states |
+| Registry | `src/rules/bootstrap/registries.lua` | Effect/Choice/Item/Chance 注册中心 |
 
 ---
 
-## 目标规则到代码映射
+## 目录结构
 
-### 规则 1：外圈默认逆时针
+### `/src/state/` - 游戏状态
+- `game_state.lua`：Game class（mixin player/board/turn operations）
+- `board_state.lua`：tile ownership、upgrades、roadblocks、mines
+- `player_state.lua`：status、balance、deity、vehicle、location
+- `turn_state.lua`：animation queues、pending choices
 
-- 保留 `default_map.lua` 的 `outer_next`/`outer_prev`。
-- `board._resolve_outer_next` 继续作为外圈默认前进来源。
+### `/src/entry/`
+- `start_game.lua`：role resolution、synthetic AI players
+- `compose_game.lua`：composition root
+- `game_factory.lua`：board、players、RNG factory
 
-### 规则 2：分叉点偶数进入内圈
+### `/src/turn/`
 
-- 删除入口朝向匹配条件。
-- 条件简化为：`entry and parity and (parity % 2 == 0)`。
-- 同一次移动禁止多次进圈（见风险控制）。
+**Phase Pipeline**：start → roll → move → move_followup → landing → post_action → end_turn
 
-### 规则 3：内圈直线穿越
+**Scheduler** (`src/turn/loop/scheduler_runtime.lua`)：coroutine-based，session factory per turn，action router 转 signals
 
-- 删除黑市奇偶左/右转逻辑。
-- 在内圈及黑市处优先保持当前 `facing` 直行。
-- `fresh_forward_next` 仅用于 fresh 起步时给出初始导向；一旦有 `facing`，持续直行，直至回到外圈。
+### `/src/rules/`
 
-### 规则 4：位置选择按曼哈顿距离
+**Board** (`src/rules/board/init.lua`)：directional movement with facing，branch handling，roadblock/mine overlay
 
-- 将 `board_query.indices_in_range` 从 BFS 改为基于 tile 坐标 `(row, col)` 的曼哈顿距离：
-	- `|row_a - row_b| + |col_a - col_b| <= distance`
-- 影响所有使用该接口的系统（例如 `target_query`、`demolish`、`board_utils`）。
+**Items** (20+ cards，3 tiers)：
+- T1：Free Card、Remote Dice、Dice Multiplier、Roadblock、Mine、Clear Obstacles
+- T2：Steal、Monster、Strong、Tax Free、Share Wealth、Exile
+- T3：Missile、Tax Audit、Invite Deity、Send Poor God、Rich God、Poor God、Angel
 
----
+Key files：`handlers.lua`、`phase.lua`（pre_action/pre_move/post_action）、`strategy.lua`（AI）、`executor.lua`
 
-## 分阶段重构计划
+**Movement**：step-by-step encounter detection，roadblock collision，market/steal interrupts，facing persistence
 
-## Phase A：地图与步进规则收敛
+**Effects Pipeline**：`effect_pipeline.lua`（orchestrate mandatory/optional）→ `effect_runner.lua`（scan/execute）→ `effect_registry.lua`
 
-### A1. 简化入口规则
+### `/src/config/`
+- `tiles.lua`：47 tiles（34 land：福州路~上海路 1000-5000，special：Start/Hospital/Mountain/Tax/Market/Chance/Item）
+- `items.lua`：tier/pricing/timing
+- `market.lua`：currencies（金币、金豆、乐园币）
+- `gameplay_rules.lua`：timings、phase queue、feature flags、turn limit（1000）
 
-- 文件：`src/game/systems/board/init.lua`
-- 改动：
-	- `_resolve_outer_next(map, current_id, facing, parity)` 改为不依赖 `facing` 匹配。
-	- 仅按偶数 `parity` 决定是否进入 `entry.inner_id`。
+### `/src/ui/`
+- **Input**：`intent_dispatcher.lua`、`touch_policy.lua`、`input_lock_policy.lua`、`role_control_lock_policy.lua`
+- **Render**：`canvas_render_pipeline.lua`、`board/`、anim handlers（dice/movement/actions/tip）
+- **Stores**：`canvas_store.lua`、`ui_runtime/`、`modal_state.lua`
+- **Controllers**：`ui_runtime.lua`、`modal_controller.lua`、`popup_controller.lua`、`item_slots.lua`
 
-### A2. 移除黑市分叉
+### `/src/core/`
+- `dirty_tracker.lua`、`logger.lua`、`number_utils.lua`、`runtime_ports.lua`
 
-- 文件：`src/game/systems/board/init.lua`
-- 改动：
-	- 删除 `_resolve_market_exit` 及其在 `_resolve_forward_next_id` 中的调用。
-	- 前进解析链改为：
-		- `_resolve_outer_next`
-		- `_resolve_fresh_forward_next`
-		- `_resolve_facing_next`
-		- `_resolve_fallback_next`
-
-### A3. 同次移动禁止重入内圈
-
-- 文件：`src/game/systems/movement/init.lua`、`src/game/systems/board/init.lua`
-- 改动建议：
-	- 在 move context 中新增 `entered_inner` 状态。
-	- 首次由外圈进内圈后置 `true`。
-	- 后续同次移动经过其他入口点，即使偶数也不再进入。
+### `/src/host/eggy/` - Eggy 平台集成
+`context.lua`、`paid_purchase_gateway.lua`、`synthetic_actor_registry.lua`
 
 ---
 
-## Phase B：距离模型替换为曼哈顿
+## 核心机制
 
-### B1. 重写 range 查询
-
-- 文件：`src/game/systems/board/query.lua`
-- 改动：
-	- `indices_in_range(board, start, distance)` 改为扫描 `board.path` 全量 tile。
-	- 用 tile `row/col` 计算曼哈顿距离并筛选。
-	- 返回值保持现有索引列表接口不变（兼容调用方）。
-
-### B2. 全局调用侧兼容验证
-
-- 重点文件：
-	- `src/game/systems/items/target_query.lua`
-	- `src/game/systems/items/demolish.lua`
-	- `src/game/systems/land/board_utils.lua`
-- 目标：无需改签名，仅验证语义变化可接受。
+| 机制 | 说明 |
+|-----|-----|
+| 三货币 | 金币（primary）、金豆（premium）、乐园币（shop） |
+| Deities | 财神（rent x2）、穷神（rent x2）、天使（免疫负面） |
+| Item Timing | pre_action/pre_move/post_action/manual/pass_player |
+| Contiguous Rent | 相邻 property 倍率，最高 5x |
+| Interrupts | Market/Steal/Roadblock 中断移动 |
 
 ---
 
-## Phase C：文档、测试与回归
+## Data Flow
 
-### C1. 设计文档同步
+```
+Scheduler → Turn Phase → Effect Pipeline → Intent Output → UI Render → Player Input → Game Action → [Loop]
+```
 
-- 文件：`docs/design/map.md`
-- 内容：
-	- 删除黑市奇偶左右转说明。
-	- 更新为“内圈直线穿越 + 偶数入口 + 禁止同次重入”。
-	- 新增位置选择使用曼哈顿距离说明。
-
-### C2. 测试重构
-
-- 文件：`tests/suites/domain/movement.lua`
-- 改动：
-	- 移除/改写 `market_exit` 奇偶转向测试。
-	- 更新入口判定测试：不再校验朝向匹配。
-	- 新增“直线穿越内圈”四方向路径测试。
-	- 新增“同次移动禁止重入”测试。
-	- 更新 `indices_in_range` 相关断言为曼哈顿语义。
-
-### C3. 回归验收
-
-- 命令：`lua tests/regression.lua`
-- 预期：
-	- 领域移动相关 case 与新规则一致
-	- target picker 范围行为与曼哈顿规则一致
+State Change：`Mutation → Dirty Tracker → Canvas Store → Render Pipeline → Runtime UI`
 
 ---
 
-## 关键变更清单（建议）
+## 技术细节
 
-- `src/config/content/maps/default_map.lua`（必要时精简 map 返回字段）
-- `src/game/systems/board/init.lua`（核心前进规则）
-- `src/game/systems/movement/init.lua`（重入防护状态）
-- `src/game/systems/board/query.lua`（BFS → 曼哈顿）
-- `src/game/systems/items/target_query.lua`（语义回归确认）
-- `src/game/systems/items/demolish.lua`（语义回归确认）
-- `tests/suites/domain/movement.lua`（规则测试同步）
-- `docs/design/map.md`（规则文档同步）
+**Class System**：`Class("Name")` → `init()` → `new()`
+
+**Event**：`monopoly_events.lua`（movement/land/market/chance/feedback/game/intent）→ `runtime_ports.emit_event()`
+
+**Animation**：Queued sequential execution，gate ports 控制 wait
 
 ---
 
-## 风险与控制
+## 设计决策
 
-1. **规则切换导致测试大面积变更**
-	 - 控制：先改 `board` 核心，再逐步修测试；每步运行 domain + regression。
-
-2. **重入防护遗漏边界路径**
-	 - 控制：新增“进圈→穿出→再遇入口”专门测试，覆盖四个入口。
-
-3. **曼哈顿替换影响道具平衡**
-	 - 控制：对 `demolish`/`target_query` 做对照用例，确认可选集合与设计预期一致。
+1. **Coroutine-Based**：yield for animations/input，无 callback hell
+2. **Dirty Tracking**：仅更新 changed domains
+3. **Effect Pipeline**：definition/scanning/execution 分离
+4. **Registry**：core code 不修改即可扩展
+5. **Intent-Based UI**：separation of concerns
+6. **Platform Abstraction**：Host ports 支持多平台
 
 ---
 
-## 验收标准
-
-- 外圈移动始终逆时针。
-- 偶数步到入口即可进内圈（不再依赖朝向匹配）。
-- 内圈/黑市不再左右分叉，保持直线穿越到对侧外圈。
-- 同一次移动最多进入内圈一次。
-- 位置选择与范围判断统一使用曼哈顿距离。
-- 回归套件通过，且文档与实现一致。
-
----
-
-## 执行结果
-
-- 2026-03-13 23:03:12 +0800：已完成 `board`、`movement`、`board_query`、相关 AI/道具辅助路径、领域测试、gameplay 测试与 `docs/design/map.md` 同步。
-- 2026-03-13 23:03:12 +0800：中断恢复链路已补充 `entered_inner` 状态透传，确保黑市/偷窃中断后续走仍遵守“单次移动最多进入内圈一次”。
-- 2026-03-13 23:03:12 +0800：已运行 `lua tests/behavior.lua` 与 `lua tests/regression.lua`，全部通过。
-
-## 本次补充说明
-
-- 额外修复了与本次功能无直接关系、但会阻塞 `regression` 的架构脚本契约缺口：补回 `scripts/lib/common.lua` 与 `scripts/arch/arch_view/common.lua` 的 `build_open_command` 接口。
+原文件 381 行 → 精简后 95 行 (-75%)
