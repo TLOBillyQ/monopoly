@@ -33,3 +33,28 @@ function module.register_effect_executors(effect_registry)
 end
 
 return module
+
+--[[ mutate4lua-manifest
+version=1
+projectHash=d1c2a34360f5a71b
+scope.0.id=chunk:src/rules/market/effects.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=36
+scope.0.semanticHash=f52c61765986dcd4
+scope.1.id=function:anonymous@7:7
+scope.1.kind=function
+scope.1.startLine=7
+scope.1.endLine=9
+scope.1.semanticHash=705f5a33874e4053
+scope.2.id=function:anonymous@10:10
+scope.2.kind=function
+scope.2.startLine=10
+scope.2.endLine=25
+scope.2.semanticHash=d64543220b8ecfd6
+scope.3.id=function:module.register_effect_executors:29
+scope.3.kind=function
+scope.3.startLine=29
+scope.3.endLine=33
+scope.3.semanticHash=cdf16067ffd8563f
+]]

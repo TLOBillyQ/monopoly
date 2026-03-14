@@ -1,33 +1,80 @@
-# Legacy Cleanup Closeout
+# Delete Config Compatibility Shells
 
 ## Summary
 
-兼容层/转发清理目标已经满足：仓库内不再存在旧生产命名空间 `src.app` / `src.presentation` / `src.game` / `src.infrastructure` / `Config.` 的代码引用，也不再保留对应旧目录。当前不需要再执行新的迁移动作；只需要把这次结果视为最终状态并持续用现有校验守住。
+Retire both legacy config proxy namespaces in one pass: top-level `Config/` and `src/core/config/*`. After this change, `src/config/content/*`, `src/config/gameplay/*`, and `src/config/testing/*` are the only supported config entrypoints. The plan keeps non-config migration coverage intact, replaces config-specific old/new identity checks with explicit ban guards, and updates tooling so the default XLSX export path matches the canonical source tree.
 
-## Key Changes
+## Interface Changes
 
-- Canonical 顶层已稳定为 `src/entry`、`src/host/eggy`、`src/ui`、`src/turn`、`src/player`、`src/computer`、`src/rules`、`src/state`、`src/config`、`src/core`。
-- 旧兼容树已清空：`src/app`、`src/presentation`、`src/game`、`src/infrastructure` 不再保留 shim 或转发文件。
-- 部署入口已跟随迁移：`main.lua` 现在走 `src.entry.init`，`scripts/deploy.lua` 继续部署 `Config/` 与 `src/`，测试 profile 默认地图模块已切到 `src.config.content.maps.default_map`。
-- 文档与架构产物已跟随迁移：`docs/architecture/arch_view.md`、`docs/architecture/layer-model.md`、`scripts/arch/config.lua`、`scripts/arch/viewer/architecture.json`、`scripts/arch/viewer/architecture_data.js` 都已经反映新结构。
-- 测试/contract 已跟随迁移：`tests/guards/dep_rules.lua`、`tests/suites/architecture/arch_view_contract.lua`、以及依赖旧别名的 characterization helper 已更新到新命名空间。
+- Retired require paths:
+  - `Config.*`
+  - `src.core.config.*`
+- Supported require paths remain:
+  - `src.config.content.*`
+  - `src.config.gameplay.*`
+  - `src.config.testing.*`
+- Tooling behavior change:
+  - `scripts/export_xlsx.lua` default output root changes from `Config/generated` to `src/config/content`
+  - `--output-dir` override stays supported
 
-## Validation
+## Tasks
 
-- 旧残留归零检查：
-  - `rg -n 'src\.(app|presentation|game|infrastructure)|Config\.' .`
-  - `find src -type d \( -path 'src/app*' -o -path 'src/presentation*' -o -path 'src/game*' -o -path 'src/infrastructure*' \)`
-- 基线校验：
-  - `lua scripts/arch.lua check`
+### T0: Inventory remaining legacy config usage
+- **depends_on**: []
+- **location**: whole repo, especially `src/`, `tests/`, `scripts/`, `docs/`, `.agents/`
+- **description**: Run a repo-wide scan for `require("Config...")`, `require('Config...')`, `require("src.core.config...")`, and direct path references like `Config/generated`, `Config/maps`, `Config/testing`, `Config/runtime_refs.lua`. Use this as the gating truth before deletion; the expected remaining hits are migration helpers, docs, and tooling only.
+- **validation**: The scan produces a complete list of legacy references, and no runtime/gameplay/presentation module is left depending on either retired namespace.
+
+### T1: Redesign config migration safety net
+- **depends_on**: [T0]
+- **location**: `tests/support/migration_pairs.lua`, `tests/suites/architecture/migration_shim_contract.lua`, `tests/catalog.lua`, `tests/guards/dep_rules.lua`, `tests/guards/migration_shim_rules.lua`
+- **description**: Remove `Config/*` and `src/core/config/*` pairs from migration-shim identity coverage while preserving all non-config migration pairs. Replace config compatibility expectations with ban-style protections: text guards that reject new legacy imports and one negative regression that proves a retired config require fails instead of silently resolving.
+- **validation**: Contract coverage still exists for non-config migrations; guard lane fails on reintroduced `Config.*` or `src.core.config.*`; the negative regression confirms legacy config require paths no longer load.
+
+### T2: Delete compatibility shell trees
+- **depends_on**: [T1]
+- **location**: `Config/`, `src/core/config/`
+- **description**: Remove every pure forwarding Lua proxy under both trees and delete empty directories. Do not change canonical modules under `src/config/*`.
+- **validation**: `Config/` and `src/core/config/` no longer contain Lua proxy files; canonical `src.config.*` requires still resolve.
+
+### T3: Update tooling and documentation to canonical paths
+- **depends_on**: [T0]
+- **location**: `scripts/export_xlsx.lua`, `docs/eggy/guide/paid_currency.md`, `.agents/research.md`, any additional hits from T0
+- **description**: Change `export_xlsx` default output root to `src/config/content`, keep directory creation behavior intact, and preserve explicit `--output-dir` override. Update written guidance so market/map/runtime-ref references point at `src/config/*` instead of `Config/*`. Scrub any internal planning or automation notes that would otherwise revive the retired namespace.
+- **validation**: Grep finds no intended references to retired config paths outside historical context; `scripts/export_xlsx.lua --help` and default-path behavior match the new canonical location.
+
+### T4: Regression and acceptance sweep
+- **depends_on**: [T1, T2, T3]
+- **location**: `tests/`, `scripts/`
+- **description**: Run the architecture and regression lanes most likely to catch stale legacy imports, then run a lightweight require-level acceptance check proving canonical config modules load and retired ones fail.
+- **validation**:
   - `lua tests/guard.lua`
-  - `lua tests/behavior.lua`
   - `lua tests/contract.lua`
-- 部署/入口回归：
-  - 保持 `main.lua` -> `src.entry.init`
-  - 保持 `scripts/deploy.lua` 输出的 `src/` 和 `Config/` 可直接部署
+  - `lua scripts/arch.lua check`
+  - `lua tests/behavior.lua`
+  - a Lua smoke check that `pcall(require, "Config.generated.market")` and `pcall(require, "src.core.config.gameplay_rules")` fail, while canonical `src.config.content.market` and `src.config.gameplay.gameplay_rules` load successfully
+
+## Parallel Execution Groups
+
+| Wave | Tasks | Can Start When |
+|------|-------|----------------|
+| 1 | T0 | Immediately |
+| 2 | T1, T3 | T0 complete |
+| 3 | T2 | T1 complete |
+| 4 | T4 | T1, T2, T3 complete |
+
+## Test Plan
+
+- Guard against reintroduction of retired config namespaces.
+- Preserve non-config migration-shim coverage.
+- Verify canonical `src.config.*` entrypoints still power runtime and tests.
+- Prove behavior/contract/architecture lanes still pass after the shell deletion.
+- Prove legacy requires fail fast instead of resolving through hidden proxies.
 
 ## Assumptions
 
-- 顶层 `Config/` 继续作为部署产物的一部分保留，不再把它视为“旧生产命名空间残留”；约束仅针对代码中的旧模块引用与旧源码树。
-- `scripts/arch/viewer/*` 属于可提交的生成产物，应在结构调整后重新生成并提交，而不是忽略。
-- 后续若新增模块，只允许写入新顶层命名空间；若再出现旧命名空间引用，应视为回归并由现有 guard/contract 直接拦截。
+- This change includes both shim layers by decision: `Config/` and `src/core/config/*`.
+- Writing generated config into `src/config/content` is acceptable even though it updates versioned source files.
+- Canonical config schemas and data shape stay unchanged; this is a path-retirement cleanup, not a config-format refactor.
+- Other non-config migration shims remain in place and keep their existing contract coverage.
+- Because this turn stays in Plan Mode, the plan is not written to disk now; when implementing outside Plan Mode, save it as `delete-config-compat-shell-plan.md`.

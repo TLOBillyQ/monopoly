@@ -74,7 +74,7 @@ return role_id
 
 --[[ mutate4lua-manifest
 version=1
-projectHash=ac2f4760eaa61177
+projectHash=287382956344d6b7
 scope.0.id=chunk:src/core/utils/role_id.lua
 scope.0.kind=chunk
 scope.0.startLine=1

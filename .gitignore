@@ -1,5 +1,6 @@
 # Lua compiled files
 *.luac
+*.mutate4lua
 
 # LÖVE build artifacts
 *.love
