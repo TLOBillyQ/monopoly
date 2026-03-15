@@ -8,12 +8,10 @@ local gameplay_loop_runtime = require("src.turn.loop.loop_runtime")
 local intent_output_adapter = require("src.turn.output.intent_output_adapter")
 local auto_context = require("src.turn.policies.auto_context")
 local tick_flow = require("src.turn.loop.tick_flow")
-local turn_timer_policy = require("src.turn.policies.timer_policy")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local market_purchase = require("src.rules.market.purchase.core")
 local runtime_state = require("src.state.state_access.runtime_state")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
-local role_id_utils = require("src.core.utils.role_id")
 local gameplay_loop = {}
 
 local function _ensure_fallback_ports(game)
@@ -130,114 +128,6 @@ local function _log_missing_auto_choice_action(state, ctx)
     "kind=" .. tostring(ctx.pending_choice.kind),
     "actor_role_id=" .. tostring(ctx.current_player_id)
   )
-end
-local function _reset_afk_tracking(state, actor_role_id)
-  local turn_runtime = runtime_state.ensure_turn_runtime(state)
-  local normalized = role_id_utils.normalize(actor_role_id)
-  if normalized ~= nil then
-    role_id_utils.write(turn_runtime.afk_elapsed_seconds_by_role, normalized, 0)
-  end
-  turn_runtime.afk_actor_role_id = normalized
-  turn_runtime.afk_elapsed_seconds = 0
-  turn_runtime.afk_tracking_active = false
-end
-local function _read_afk_elapsed(turn_runtime, actor_role_id)
-  return role_id_utils.read(turn_runtime.afk_elapsed_seconds_by_role, actor_role_id) or 0
-end
-local function _write_afk_elapsed(turn_runtime, actor_role_id, elapsed_seconds)
-  local normalized = role_id_utils.write(turn_runtime.afk_elapsed_seconds_by_role, actor_role_id, elapsed_seconds or 0)
-  if normalized ~= nil and role_id_utils.equals(turn_runtime.afk_actor_role_id, normalized) then
-    turn_runtime.afk_elapsed_seconds = elapsed_seconds or 0
-  end
-  return normalized
-end
-local function _sync_afk_view(turn_runtime, actor_role_id, tracking_active)
-  local normalized = role_id_utils.normalize(actor_role_id)
-  turn_runtime.afk_actor_role_id = normalized
-  turn_runtime.afk_elapsed_seconds = _read_afk_elapsed(turn_runtime, normalized)
-  turn_runtime.afk_tracking_active = tracking_active == true
-end
-
-local function _is_afk_enabled()
-  local timeout = gameplay_rules.afk_auto_host_seconds or 0
-  return timeout and timeout > 0
-end
-
-local function _resolve_current_player(game)
-  return game.turn and game.players and game.players[game.turn.current_player_index] or nil
-end
-
-local function _is_player_afk_eligible(player)
-  return player and player.auto ~= true
-end
-
-local function _is_afk_trackable(game, state, ports)
-  return turn_timer_policy.is_afk_trackable_wait(game, state, ports)
-end
-
-local function _update_afk_tracking(turn_runtime, player, dt)
-  local elapsed_seconds = _read_afk_elapsed(turn_runtime, player.id) + (dt or 0)
-  _write_afk_elapsed(turn_runtime, player.id, elapsed_seconds)
-  turn_runtime.afk_actor_role_id = role_id_utils.normalize(player.id)
-  turn_runtime.afk_elapsed_seconds = elapsed_seconds
-  turn_runtime.afk_tracking_active = true
-  return elapsed_seconds
-end
-
-local function _mark_players_dirty(game)
-  if game.mark_players_dirty then
-    game:mark_players_dirty()
-  else
-    game.dirty.any = true
-    game.dirty.players = true
-  end
-end
-
-local function _reset_auto_runner_timer(auto_runner)
-  if auto_runner and auto_runner.reset_timer then
-    auto_runner:reset_timer()
-  end
-end
-
-local function _log_afk_auto_host_enabled(player)
-  logger.event_no_tips(tostring(player.name) .. " AFK 超时，进入托管")
-  logger.warn("afk auto host enabled:", tostring(player.name), "role_id=" .. tostring(player.id))
-end
-
-local function _enable_afk_auto_host(game, state, player, timeout)
-  player.auto = true
-  _mark_players_dirty(game)
-  local ports = _resolve_ports(state)
-  ports.output.invalidate_ui(state)
-  _reset_auto_runner_timer(state.auto_runner)
-  _reset_afk_tracking(state, player.id)
-  _log_afk_auto_host_enabled(player)
-  return true
-end
-
-function gameplay_loop.step_afk_auto_host(game, state, dt)
-  assert(game ~= nil, "missing game")
-  local timeout = gameplay_rules.afk_auto_host_seconds or 0
-  local turn_runtime = runtime_state.ensure_turn_runtime(state)
-  if not _is_afk_enabled() then
-    _sync_afk_view(turn_runtime, nil, false)
-    return false
-  end
-  local current_player = _resolve_current_player(game)
-  if not _is_player_afk_eligible(current_player) then
-    _sync_afk_view(turn_runtime, nil, false)
-    return false
-  end
-  local ports = _resolve_ports(state)
-  if not _is_afk_trackable(game, state, ports) then
-    _sync_afk_view(turn_runtime, current_player.id, false)
-    return false
-  end
-  local elapsed_seconds = _update_afk_tracking(turn_runtime, current_player, dt)
-  if elapsed_seconds < timeout then
-    return false
-  end
-  return _enable_afk_auto_host(game, state, current_player, timeout)
 end
 local function _initialize_ports(state, game)
   local ports = _resolve_ports(state)
@@ -461,7 +351,6 @@ function gameplay_loop.tick(game, state, dt)
   _ensure_runtime_ports(game)
   local ports = _resolve_ports(state)
   tick_flow.tick(game, state, dt, ports, {
-    step_afk_auto_host = gameplay_loop.step_afk_auto_host,
     step_auto_runner = gameplay_loop.step_auto_runner,
     dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
   })

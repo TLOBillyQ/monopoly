@@ -147,9 +147,6 @@ function runtime_state.ensure_turn_runtime(state)
   _ensure_field(turn_runtime, "next_turn_lock_phase", state.next_turn_lock_phase)
   _ensure_field(turn_runtime, "role_control_lock_active", state.role_control_lock_active == true)
   _ensure_field(turn_runtime, "role_control_lock_suppress", state.role_control_lock_suppress or 0)
-  _ensure_field(turn_runtime, "afk_actor_role_id", nil)
-  _ensure_field(turn_runtime, "afk_elapsed_seconds", 0)
-  _ensure_field(turn_runtime, "afk_tracking_active", false)
   if type(turn_runtime.landing_visual_hold) ~= "table" then
     turn_runtime.landing_visual_hold = {
       active = false,
@@ -172,9 +169,6 @@ function runtime_state.ensure_turn_runtime(state)
       deferred_owner_changes = {},
       deferred_bankruptcy_clears = {},
     }
-  end
-  if type(turn_runtime.afk_elapsed_seconds_by_role) ~= "table" then
-    turn_runtime.afk_elapsed_seconds_by_role = {}
   end
   return turn_runtime
 end

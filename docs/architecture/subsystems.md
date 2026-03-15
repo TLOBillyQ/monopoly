@@ -4,7 +4,7 @@
 
 | 路径 | 职责 | 不属于这里 |
 |------|------|-----------|
-| `src/game/scheduler/` | 协程调度：创建、推进、超时、AFK 时钟 | 游戏规则、UI 通知 |
+| `src/game/scheduler/` | 协程调度：创建、推进、超时 | 游戏规则、UI 通知 |
 | `src/game/ai/` | 中性 AI 策略：自动玩家判断、目标选择、自动 choice | 回合推进、宿主调用 |
 | `src/game/flow/output_adapters/` | turn use case 内部输出桥：接回 `intent_dispatcher` / `ui_runtime` | 宿主能力、跨用例共享 |
 | `src/game/core/player/` | 玩家状态：资金、道具、位置 | 业务规则（不引用 systems） |

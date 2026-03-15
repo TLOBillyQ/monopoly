@@ -17,7 +17,6 @@ local gameplay_rules = {
   landing_visual_hold_seconds = 0.1,
   item_slot_highlight_anim_delay_seconds = 0.35,
   ai_auto_turn_interval_seconds = 1.0,
-  afk_auto_host_seconds = 90,
 
   turn_limit = 1000,
 
@@ -31,14 +30,6 @@ local gameplay_rules = {
     nearest_tile_max_distance = 1.8,
     marker_height_offset = 1.6,
     arrow_height_offset = 1.6,
-  },
-
-  reconnect = {
-    freeze_on_disconnect = true,
-    grace_seconds = 20,
-    offline_auto_host_seconds = 90,
-    snapshot_interval_events = 20,
-    replay_max_events = 400,
   },
 
   item_ids = {

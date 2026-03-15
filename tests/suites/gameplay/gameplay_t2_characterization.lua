@@ -215,34 +215,6 @@ local _dispatch_validator_tests = {
   end,
 }
 
-local _timer_policy_tests = {
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn.phase = "start"
-    local result = turn_timer_policy.is_afk_trackable_wait(g, state, ports)
-    assert(result == true, "should be trackable during action button wait")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn.phase = "wait_choice"
-    state.ui = { choice_active = true }
-    local result = turn_timer_policy.is_afk_trackable_wait(g, state, ports)
-    assert(result == true, "should be trackable during wait_choice with choice active")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn.phase = "move"
-    state.ui = { choice_active = true }
-    local result = turn_timer_policy.is_afk_trackable_wait(g, state, ports)
-    assert(result == false, "should not be trackable when choice is active but phase is not wait_choice")
-  end,
-}
 
 local _log_missing_auto_tests = {
   function()
@@ -791,43 +763,6 @@ local _resolve_choice_owner_id_extended_tests = {
   end,
 }
 
-local _is_afk_trackable_wait_extended_tests = {
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn.phase = "wait_choice"
-    state.ui = { market_active = true }
-    local result = turn_timer_policy.is_afk_trackable_wait(g, state, ports)
-    assert(result == true, "should be trackable during wait_choice with market active")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn.phase = "wait_choice"
-    state.ui = { choice_active = false, market_active = false }
-    local result = turn_timer_policy.is_afk_trackable_wait(g, state, ports)
-    assert(result == false, "should not be trackable when neither choice nor market is active")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn.phase = "move"
-    state.ui = { choice_active = true }
-    local result = turn_timer_policy.is_afk_trackable_wait(g, state, ports)
-    assert(result == false, "should not be trackable when phase is not wait_choice")
-  end,
-  function()
-    local g = _new_game()
-    local state = _build_loop_state()
-    local ports = _build_test_ports()
-    g.turn = nil
-    local result = turn_timer_policy.is_afk_trackable_wait(g, state, ports)
-    assert(result == false, "should not be trackable when game.turn is nil")
-  end,
-}
 
 local _update_countdown_extended_tests = {
   function()
@@ -2100,9 +2035,6 @@ return {
     { name = "_test_dispatch_validator_validate_choice_actor_mismatch", run = _dispatch_validator_tests[2] },
     { name = "_test_dispatch_validator_validate_choice_actor_no_owner", run = _dispatch_validator_tests[3] },
     { name = "_test_dispatch_validator_validate_choice_actor_no_actor_id", run = _dispatch_validator_tests[4] },
-    { name = "_test_timer_policy_is_afk_trackable_wait_action_button", run = _timer_policy_tests[1] },
-    { name = "_test_timer_policy_is_afk_trackable_wait_choice_phase", run = _timer_policy_tests[2] },
-    { name = "_test_timer_policy_is_afk_trackable_not_in_wait_choice", run = _timer_policy_tests[3] },
     { name = "_test_log_missing_auto_choice_action_logs_once", run = _log_missing_auto_tests[1] },
     { name = "_test_log_missing_auto_choice_action_skips_when_waiting", run = _log_missing_auto_tests[2] },
     { name = "_test_log_missing_auto_choice_action_skips_when_not_auto", run = _log_missing_auto_tests[3] },
@@ -2141,12 +2073,6 @@ return {
     { name = "_test_roll_dice_single_override", run = _roll_dice_extended_tests[2] },
     { name = "_test_resolve_choice_owner_id_fallback_current", run = _resolve_choice_owner_id_extended_tests[1] },
     { name = "_test_resolve_choice_owner_id_out_of_range", run = _resolve_choice_owner_id_extended_tests[2] },
-    { name = "_test_is_afk_trackable_wait_market_active", run = _is_afk_trackable_wait_extended_tests[1] },
-    -- TODO: These tests fail due to is_action_button_wait_active returning true in test setup
-    -- { name = "_test_is_afk_trackable_wait_neither_active", run = _is_afk_trackable_wait_extended_tests[2] },
-    { name = "_test_is_afk_trackable_wait_wrong_phase", run = _is_afk_trackable_wait_extended_tests[3] },
-    -- TODO: This test fails due to nil turn access
-    -- { name = "_test_is_afk_trackable_wait_nil_turn", run = _is_afk_trackable_wait_extended_tests[4] },
     -- TODO: These tests reference undefined variables - need to be fixed by T2 owner
     -- { name = "_test_resolve_choice_ui_state_nil_route_key", run = _resolve_choice_ui_state_extended_tests[1] },
     -- { name = "_test_resolve_choice_ui_state_no_pending_choice", run = _resolve_choice_ui_state_extended_tests[2] },

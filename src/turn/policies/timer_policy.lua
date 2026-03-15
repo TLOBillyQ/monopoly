@@ -46,37 +46,6 @@ function turn_timer_policy.is_action_button_wait_active(game, state, ports)
   return true
 end
 
-local function _is_wait_choice_phase(game)
-  local phase = game.turn and game.turn.phase or nil
-  return phase == "wait_choice"
-end
-
-local function _is_choice_or_market_active(ui_sync_ports, state)
-  if ui_sync_ports.is_choice_active and ui_sync_ports.is_choice_active(state) then
-    return true
-  end
-  if ui_sync_ports.is_market_active and ui_sync_ports.is_market_active(state) then
-    return true
-  end
-  return false
-end
-
-function turn_timer_policy.is_afk_trackable_wait(game, state, ports)
-  if not (game and state and ports) then
-    return false
-  end
-  if turn_timer_policy.is_action_button_wait_active(game, state, ports) then
-    return true
-  end
-  if not _is_wait_choice_phase(game) then
-    return false
-  end
-  local ui_sync_ports = ports.ui_sync or nil
-  if not ui_sync_ports then
-    return false
-  end
-  return _is_choice_or_market_active(ui_sync_ports, state)
-end
 
 local function _resolve_timeout_seconds()
   return constants.action_timeout_seconds or 0

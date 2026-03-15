@@ -19,7 +19,6 @@ local behavior_modules = {
   "suites.gameplay.gameplay_turn_flow_and_interrupts",
   "suites.gameplay.gameplay_timeout_and_auto_runner",
   "suites.gameplay.gameplay_visual_feedback_and_prompts",
-  "suites.gameplay.gameplay_afk",
   "suites.gameplay.gameplay_items_startup",
   "suites.runtime.runtime_bootstrap",
   "suites.presentation.presentation_ui_timing_anim",
