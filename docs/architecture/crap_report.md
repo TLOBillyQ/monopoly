@@ -1,43 +1,43 @@
 # CRAP Report
 
-`scripts/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `tests/behavior.lua`、`tests/contract.lua` 或 `lua tests/guard.lua`。
+`scripts/quality/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `tests/behavior.lua`、`tests/contract.lua` 或 `lua tests/guard.lua`。
 
-当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。现在静态分析、报告组装和 viewer 导出由 `vendor/crap4lua` 里的 Go engine 负责，Monopoly 通过 `scripts/quality/crap_monopoly.config.lua` 提供默认项目配置，并通过 `scripts/quality/crap_monopoly_adapter.lua` 映射 behavior / contract lane。
+当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。现在静态分析、报告组装和 viewer 导出由 `vendor/crap4lua` 里的 Go engine 负责，Monopoly 通过 `scripts/quality/crap/config.lua` 提供默认项目配置，并通过 `scripts/quality/crap/adapter.lua` 映射 behavior / contract lane。
 
 如果你想先看整个质量面里 `crap` 和 `behavior / contract / guard / arch_view` 的分工，先读 `docs/architecture/quality_map.md`。
 
 ## 命令
 
 ```
-lua scripts/crap.lua
+lua scripts/quality/crap.lua
 ```
 无参数：生成并打开静态 viewer，等价于 `viewer --out-dir tmp/crap_view --open`。
 
 ```
-lua scripts/crap.lua report --out tmp/crap_report.json --top 20
+lua scripts/quality/crap.lua report --out tmp/crap_report.json --top 20
 ```
 生成报告。`tmp/...` 是逻辑临时目录别名，实际路径：macOS `$TMPDIR/monopoly_crap/`，Windows `%TEMP%/monopoly_crap/`。可通过 `MONOPOLY_CRAP_TMP` 覆盖。
 
 默认：作用域 `src/**/*.lua`，lane `behavior`，测试失败仍产出报告。
 
 ```
-lua scripts/crap.lua report --lane behavior --lane contract --out tmp/crap_report.json
+lua scripts/quality/crap.lua report --lane behavior --lane contract --out tmp/crap_report.json
 ```
 同时统计 behavior + contract 两条 lane 的触达。
 
 ```
-lua scripts/crap.lua report --strict-tests --out tmp/crap_report.json
+lua scripts/quality/crap.lua report --strict-tests --out tmp/crap_report.json
 ```
 测试 lane 失败时返回非零退出码。
 
 ```
-lua scripts/crap.lua viewer
-lua scripts/crap.lua viewer --out-dir tmp/crap_view [--open]
-lua scripts/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
+lua scripts/quality/crap.lua viewer
+lua scripts/quality/crap.lua viewer --out-dir tmp/crap_view [--open]
+lua scripts/quality/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
 ```
 导出静态 viewer。命令完成后打印实际路径，打开 `index.html` 即可查看，不需要本地服务。
 
-`viewer --in-json` 直接渲染现有 JSON，不会加载 Monopoly 配置或测试 lane；其余 `report` / `viewer` 调用会自动注入默认 config，并在缺少二进制时尝试构建 `vendor/crap4lua/bin/crap4lua-go`。
+`viewer --in-json` 直接渲染现有 JSON，不会加载 Monopoly 配置或测试 lane；其余 `report` / `viewer` 调用会自动注入默认 config，并在缺少二进制时尝试构建 `vendor/crap4lua/bin/crap4lua`。
 
 ## 分数说明
 

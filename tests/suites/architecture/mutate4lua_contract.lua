@@ -1,7 +1,7 @@
 local bootstrap = require("tests.bootstrap")
-local common = require("lib.common")
-local mutate = require("mutate")
-local driver = require("quality.mutate_monopoly_driver")
+local common = require("shared.lib.common")
+local mutate = require("quality.mutate")
+local driver = require("quality.mutate.driver")
 
 bootstrap.install_package_paths()
 
@@ -64,6 +64,7 @@ local function _test_wrapper_invokes_go_binary_for_mutate()
   })
 
   assert(exit_code == 0, "wrapper should return command exit code")
+  _assert_contains(captured_command[1], "mutate4lua-engine", "wrapper should target the new engine binary")
   assert(captured_command[2] == "mutate", "wrapper should default to mutate subcommand")
   assert(captured_command[4] == "src/core/utils/role_id.lua", "wrapper should pass target via --target")
   _assert_contains(table.concat(captured_command, " "), "--lane behavior", "wrapper should keep lane option")
@@ -94,7 +95,7 @@ local function _test_wrapper_routes_scan_update_and_index_commands()
   _capture({ "--index-suites", "--lane", "behavior" })
 
   _assert_contains(captured[1], " scan ", "--scan should map to scan subcommand")
-  _assert_contains(captured[2], " migrate-manifest ", "--update-manifest should map to migrate-manifest subcommand")
+  _assert_contains(captured[2], " update-manifest ", "--update-manifest should map to update-manifest subcommand")
   _assert_contains(captured[3], " index-suites ", "--index-suites should map to index-suites subcommand")
 end
 

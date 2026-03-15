@@ -15,9 +15,9 @@
 | `lua tests/behavior.lua` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 约 `0.4s` |
 | `lua tests/contract.lua` | 契约回归 | 端口、边界、读模型、架构契约有没有漂移 | 热启动常见 `14s-20s`，冷启动可到 `~29s` |
 | `lua tests/guard.lua` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
-| `lua scripts/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
-| `lua scripts/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构 | 约 `9s-10s` |
-| `lua scripts/mutate.lua src/foo.lua --scan` | 单文件变异测试 | 这个文件现有测试是否真能杀掉简单错误 | 目标文件和 lane 差异很大；默认先按 `behavior` 估算 |
+| `lua scripts/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
+| `lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构 | 约 `9s-10s` |
+| `lua scripts/quality/mutate.lua src/foo.lua --scan` | 单文件变异测试 | 这个文件现有测试是否真能杀掉简单错误 | 目标文件和 lane 差异很大；默认先按 `behavior` 估算 |
 
 建议把它们分成两层理解：
 
@@ -65,11 +65,11 @@
 
 ### `arch_view`
 
-- 入口：`lua scripts/arch.lua check`
+- 入口：`lua scripts/quality/arch.lua check`
 - 文档：`docs/architecture/arch_view.md`
 - 工具代码：`vendor/arch_view/`
-- Monopoly 规则真源：`scripts/arch/config.json`
-- Monopoly 提交态快照：`scripts/arch/viewer/*`
+- Monopoly 规则真源：`scripts/quality/arch/config.json`
+- Monopoly 提交态快照：`scripts/quality/arch/viewer/*`
 - 检查内容：
   - 模块级 `require` 依赖边界
   - 未分类模块
@@ -81,7 +81,7 @@
 
 ### `crap`
 
-- 入口：`lua scripts/crap.lua report ...` / `lua scripts/crap.lua viewer ...`
+- 入口：`lua scripts/quality/crap.lua report ...` / `lua scripts/quality/crap.lua viewer ...`
 - 文档：`docs/architecture/crap_report.md`
 - 性质：不是纯静态分析，而是“静态复杂度 + 动态覆盖率”混合
 - 数据来源：
@@ -90,7 +90,7 @@
 - 适用时机：需要给“先补测还是先重构”排序
 - 不适合：单独做合并 gate；它依赖测试 lane 质量
 
-现在的 CLI 入口由 `scripts/crap.lua` 负责兼容，核心实现来自子模块 `vendor/crap4lua/`，其中静态分析 / report / viewer 主流程由 Go engine 提供；默认项目配置在 `scripts/quality/crap_monopoly.config.lua`，Monopoly lane 适配在 `scripts/quality/crap_monopoly_adapter.lua`：
+现在的 CLI 入口由 `scripts/quality/crap.lua` 负责兼容，核心实现来自子模块 `vendor/crap4lua/`，其中静态分析 / report / viewer 主流程由 Go engine 提供；默认项目配置在 `scripts/quality/crap/config.lua`，Monopoly lane 适配在 `scripts/quality/crap/adapter.lua`：
 
 - `report`：生成 JSON 报告
 - `viewer`：导出静态页面
@@ -98,16 +98,16 @@
 
 ### `mutate4lua`
 
-- 入口：`lua scripts/mutate.lua <file.lua> ...`
+- 入口：`lua scripts/quality/mutate.lua <file.lua> ...`
 - 文档：`docs/architecture/mutate4lua.md`
 - 性质：单文件变异测试；看“测试有没有真正卡住错误”，不是看“代码有没有被执行到”
 - 数据来源：
   - 变异点：`vendor/mutate4lua/` 的 Lua lexer / scanner
-  - 覆盖率：`scripts/quality/mutate_monopoly_driver.lua` 运行 lane 时的 `debug.sethook(..., "l")`
+  - 覆盖率：`scripts/quality/mutate/driver.lua` 运行 lane 时的 `debug.sethook(..., "l")`
 - 适用时机：怀疑某个文件 assertion 太松、准备做高风险重构、想验证 characterization tests 是否够硬
 - 不适合：日常全量 gate；它本来就是按文件诊断
 
-现在的 CLI 入口由 `scripts/mutate.lua` 负责兼容，核心实现来自子模块 `vendor/mutate4lua/`，Monopoly 的默认 lane 适配在 `scripts/quality/mutate_monopoly_driver.lua`：
+现在的 CLI 入口由 `scripts/quality/mutate.lua` 负责兼容，核心实现来自子模块 `vendor/mutate4lua/`，Monopoly 的默认 lane 适配在 `scripts/quality/mutate/driver.lua`：
 
 - 默认 lane：`behavior`
 - 显式可选：`--lane contract`
@@ -120,16 +120,16 @@
 | 功能有没有坏 | `lua tests/behavior.lua` |
 | 跨层接口或读模型有没有漂移 | `lua tests/contract.lua` |
 | 有没有出现明确禁用写法 | `lua tests/guard.lua` |
-| 依赖图有没有越界或成环 | `lua scripts/arch.lua check` |
-| 哪些函数最值得先补测/重构 | `lua scripts/crap.lua report --lane behavior --out tmp/crap_report.json` |
-| 某个文件的测试是不是只是“跑到了”而不是“断严了” | `lua scripts/mutate.lua src/foo.lua --scan` 然后再决定是否真正跑 mutation |
+| 依赖图有没有越界或成环 | `lua scripts/quality/arch.lua check` |
+| 哪些函数最值得先补测/重构 | `lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json` |
+| 某个文件的测试是不是只是“跑到了”而不是“断严了” | `lua scripts/quality/mutate.lua src/foo.lua --scan` 然后再决定是否真正跑 mutation |
 
 ## 常用命令套餐
 
 ### 快速本地冒烟
 
 ```sh
-lua scripts/arch.lua check
+lua scripts/quality/arch.lua check
 lua tests/guard.lua
 lua tests/behavior.lua
 ```
@@ -140,7 +140,7 @@ lua tests/behavior.lua
 
 ```sh
 lua tests/contract.lua
-lua scripts/arch.lua check
+lua scripts/quality/arch.lua check
 ```
 
 适合改 Port、边界、装配、读模型之后跑。通常约 `15s-21s`，冷启动更慢。
@@ -148,8 +148,8 @@ lua scripts/arch.lua check
 ### 热点分析
 
 ```sh
-lua scripts/crap.lua report --lane behavior --out tmp/crap_report.json
-lua scripts/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
+lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json
+lua scripts/quality/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
 ```
 
 适合重构前排优先级。通常约 `10s`。
@@ -157,8 +157,8 @@ lua scripts/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_vi
 ### 单文件变异诊断
 
 ```sh
-lua scripts/mutate.lua src/core/utils/role_id.lua --scan
-lua scripts/mutate.lua src/core/utils/role_id.lua --since-last-run
+lua scripts/quality/mutate.lua src/core/utils/role_id.lua --scan
+lua scripts/quality/mutate.lua src/core/utils/role_id.lua --since-last-run
 ```
 
 适合先看一个文件值不值得做 mutation，再决定是否跑完整变异回合。耗时主要取决于目标文件的变异点数量和所选 lane。
@@ -169,8 +169,8 @@ lua scripts/mutate.lua src/core/utils/role_id.lua --since-last-run
 lua tests/behavior.lua
 lua tests/contract.lua
 lua tests/guard.lua
-lua scripts/arch.lua check
-lua scripts/crap.lua report --lane behavior --out tmp/crap_report.json
+lua scripts/quality/arch.lua check
+lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json
 ```
 
 当前机器按经验可按 `30s-35s` 预估；若 `contract` 冷启动或日志量上升，会更慢。

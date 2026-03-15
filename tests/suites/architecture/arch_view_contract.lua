@@ -11,7 +11,7 @@ local projection = require("arch_view.projection")
 local cached_architecture = nil
 local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
 local arch_view_root = "vendor/arch_view"
-local arch_config_path = "scripts/arch/config.json"
+local arch_config_path = "scripts/quality/arch/config.json"
 local default_viewer_out_dir = ".arch_view/viewer"
 
 local function _assert_eq(actual, expected, message)
@@ -203,7 +203,7 @@ local function _test_viewer_command_writes_static_bundle()
     error(err)
   end
 
-  local command = 'lua scripts/arch.lua viewer --out-dir "' .. out_dir .. '"'
+  local command = 'lua scripts/quality/arch.lua viewer --out-dir "' .. out_dir .. '"'
   if common.is_windows() then
     command = command .. " >nul 2>nul"
   else
@@ -290,7 +290,7 @@ end
 local function _test_json_modules_are_self_contained()
   local common_source = _read_file("vendor/arch_view/arch_view/common.lua")
   local script_common_source = _read_file("vendor/arch_view/arch_view/script_common.lua")
-  assert(common_source:find('require("lib.common")', 1, true) == nil, "arch_view common should not depend on monopoly lib.common")
+  assert(common_source:find('require("shared.lib.common")', 1, true) == nil, "arch_view common should not depend on monopoly lib.common")
   assert(script_common_source:find('src.core.utils.number_utils', 1, true) == nil,
     "arch_view script_common should not depend on monopoly src modules")
 end
@@ -315,11 +315,11 @@ local function _test_real_repo_projection_cycles_exclude_new_subtrees()
 end
 
 local function _test_snapshot_files_exist_in_repo()
-  assert(_exists("scripts/arch/viewer/index.html"), "snapshot viewer index should exist")
-  assert(_exists("scripts/arch/viewer/script.js"), "snapshot viewer script should exist")
-  assert(_exists("scripts/arch/viewer/styles.css"), "snapshot viewer styles should exist")
-  assert(_exists("scripts/arch/viewer/architecture.json"), "snapshot architecture json should exist")
-  assert(_exists("scripts/arch/viewer/architecture_data.js"), "snapshot architecture data should exist")
+  assert(_exists("scripts/quality/arch/viewer/index.html"), "snapshot viewer index should exist")
+  assert(_exists("scripts/quality/arch/viewer/script.js"), "snapshot viewer script should exist")
+  assert(_exists("scripts/quality/arch/viewer/styles.css"), "snapshot viewer styles should exist")
+  assert(_exists("scripts/quality/arch/viewer/architecture.json"), "snapshot architecture json should exist")
+  assert(_exists("scripts/quality/arch/viewer/architecture_data.js"), "snapshot architecture data should exist")
 end
 
 return {

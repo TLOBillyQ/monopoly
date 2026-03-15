@@ -39,11 +39,11 @@
 5. **破产反馈通过端口**：systems 通过 `src/game/ports/bankruptcy_feedback_port.lua` 发出语义，UI 更新由外层 adapter 决定。
 6. **root-state 镜像已退休**：`legacy_output_mirror.lua` 已删除，UI runtime 状态以 `state.ui_runtime` 为唯一真源。
 7. **loop_ports 拼装权限**：只有 `src/app/bootstrap/*`、`src/game/flow/turn/*` 与测试夹具可直接拼装 `loop_ports` override。
-8. **架构边界可执行真源**：`scripts/arch/config.json`。
-   - `lua scripts/arch.lua check` — 边界扫描
-   - `lua scripts/arch.lua viewer --out-dir <dir> [--open]` — 导出静态 viewer
+8. **架构边界可执行真源**：`scripts/quality/arch/config.json`。
+   - `lua scripts/quality/arch.lua check` — 边界扫描
+   - `lua scripts/quality/arch.lua viewer --out-dir <dir> [--open]` — 导出静态 viewer
    - `lua tests/guard.lua` — 完整护栏
-   - 工具实现位于子模块 `vendor/arch_view/`，仓库内 `scripts/arch/viewer/*` 仅保留当前项目快照
+   - 工具实现位于子模块 `vendor/arch_view/`，仓库内 `scripts/quality/arch/viewer/*` 仅保留当前项目快照
    - 当前额外硬边界：`scheduler -> flow` 禁止、`core.runtime -> game.runtime` 禁止、`market -> land.choice_specs` 禁止、`items -> land.board_utils/rent_resolver` 禁止。
 9. **零模块级循环依赖**：无白名单，任意新循环直接让 `arch_view` 护栏失败。
 10. **presentation schema 纯只读**：`src/presentation/schema` 只能承载节点名、画布常量与布局定义；运行时编排留在 `runtime`，渲染留在 `view`。

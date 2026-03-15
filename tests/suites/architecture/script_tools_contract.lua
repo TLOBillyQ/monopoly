@@ -1,5 +1,5 @@
 local bootstrap = require("tests.bootstrap")
-local common = require("lib.common")
+local common = require("shared.lib.common")
 local arch_common = require("arch_view.common")
 
 bootstrap.install_package_paths()
@@ -130,13 +130,13 @@ end
 
 local function _test_cli_help_text_is_bilingual()
   local help_commands = {
-    { "scripts/deploy.lua", "--help" },
-    { "scripts/export_xlsx.lua", "--help" },
-    { "scripts/update_api.lua", "--help" },
-    { "scripts/arch.lua", "--help" },
-    { "scripts/airl.lua", "--help" },
-    { "scripts/crap.lua", "--help" },
-    { "scripts/mutate.lua", "--help" },
+    { "scripts/ops/deploy.lua", "--help" },
+    { "scripts/data/export_xlsx.lua", "--help" },
+    { "scripts/ops/update_api.lua", "--help" },
+    { "scripts/quality/arch.lua", "--help" },
+    { "scripts/scaffold/airl.lua", "--help" },
+    { "scripts/quality/crap.lua", "--help" },
+    { "scripts/quality/mutate.lua", "--help" },
   }
 
   for _, args in ipairs(help_commands) do
@@ -148,7 +148,7 @@ local function _test_cli_help_text_is_bilingual()
 end
 
 local function _test_deploy_unknown_flag_is_bilingual()
-  local result = _run_lua({ "scripts/deploy.lua", "--bad-flag" })
+  local result = _run_lua({ "scripts/ops/deploy.lua", "--bad-flag" })
   assert(result.ok == false, "deploy should fail on unknown flags")
   _assert_contains(result.output, "未知参数", "unknown flag output should include Chinese text")
   _assert_contains(result.output, "Unknown flag", "unknown flag output should include English text")
@@ -158,12 +158,12 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
   _with_clean_tmp(function()
     local out_dir = common.join_path(tmp_root, "arch_view_目标/中文 English")
     local result = _run_lua({
-      "scripts/arch.lua",
+      "scripts/quality/arch.lua",
       "viewer",
       "--out-dir",
       out_dir,
       "--in-json",
-      "scripts/arch/viewer/architecture.json",
+      "scripts/quality/arch/viewer/architecture.json",
     })
 
     assert(result.ok == true, "arch viewer should succeed for unicode output paths")
@@ -176,7 +176,7 @@ end
 
 local function _test_mutate_wrapper_scan_json_output()
   local result = _run_lua({
-    "scripts/mutate.lua",
+    "scripts/quality/mutate.lua",
     "src/core/utils/role_id.lua",
     "--scan",
     "--json",
@@ -191,7 +191,7 @@ end
 
 local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
   local result = _run_lua({
-    "scripts/mutate.lua",
+    "scripts/quality/mutate.lua",
     "--index-suites",
     "--lane",
     "behavior",
@@ -206,7 +206,7 @@ local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
 end
 
 local function _test_airl_generate_verify_succeeds()
-  local result = _run_lua({ "scripts/airl.lua", "generate", "--verify" })
+  local result = _run_lua({ "scripts/scaffold/airl.lua", "generate", "--verify" })
   assert(result.ok == true, "airl generate --verify should succeed")
   _assert_contains(result.output, "air_l generate verify ok", "airl verify output should include success text")
 end
@@ -215,7 +215,7 @@ local function _test_airl_generate_supports_unicode_output_path()
   _with_clean_tmp(function()
     local out_dir = common.join_path(tmp_root, "airl_输出/中文 English")
     local result = _run_lua({
-      "scripts/airl.lua",
+      "scripts/scaffold/airl.lua",
       "generate",
       "--out-dir",
       out_dir,

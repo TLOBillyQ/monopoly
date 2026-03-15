@@ -17,7 +17,7 @@ jobs:
           sudo apt-get install -y lua5.4 golang-go
 
       - name: Build crap4lua Go engine
-        run: make -C vendor/crap4lua build-go
+        run: make -C vendor/crap4lua build
 
       - name: Run regression
         run: lua tests/regression.lua
@@ -25,7 +25,7 @@ jobs:
       - name: Collect deploy line counts
         run: |
           target_path="$RUNNER_TEMP/monopoly-deploy"
-          output="$(lua scripts/deploy.lua --target-path "$target_path" 2>&1)"
+          output="$(lua scripts/ops/deploy.lua --target-path "$target_path" 2>&1)"
           printf '%s\n' "$output"
 
           summary_lines="$(printf '%s\n' "$output" | grep -E '有效代码行数|^[[:space:]]+- (Config|src|vendor|main\.lua|Data/UIManagerNodes\.lua|Data/Prefab\.lua):' || true)"

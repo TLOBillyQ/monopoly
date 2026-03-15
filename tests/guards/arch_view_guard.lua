@@ -7,7 +7,7 @@ local M = {}
 function M.run()
   local architecture, err = arch_view.analyze({
     project_root = ".",
-    config_path = "scripts/arch/config.json",
+    config_path = "scripts/quality/arch/config.json",
   })
   if architecture == nil then
     return { ok = false, error = "arch_view_guard error: " .. tostring(err) }

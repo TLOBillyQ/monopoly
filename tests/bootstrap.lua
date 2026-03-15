@@ -7,7 +7,7 @@ function M.install_package_paths()
     return
   end
 
-  require("scripts.package_path_helper").install_monopoly_package_paths()
+  require("scripts.shared.package_path_helper").install_monopoly_package_paths({ repo_root = "." })
 
   _package_paths_installed = true
 end
