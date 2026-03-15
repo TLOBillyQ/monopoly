@@ -8,12 +8,13 @@
 
 > 基线日期：2026-03-14（Asia/Shanghai，本机实测）。耗时会随 case 数、日志量、冷启动状态变化。
 
-## 六块质量面
+## 七块质量面
 
 | 入口 | 类型 | 主要回答的问题 | 当前本地耗时参考 |
 |------|------|----------------|------------------|
 | `lua tests/behavior.lua` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 约 `0.4s` |
-| `lua tests/contract.lua` | 契约回归 | 端口、边界、读模型、架构契约有没有漂移 | 热启动常见 `14s-20s`，冷启动可到 `~29s` |
+| `lua tests/contract.lua` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 目标 warm `<5s`，cold `<8s` |
+| `lua tests/tooling.lua` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 约 `30s-35s` |
 | `lua tests/guard.lua` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
 | `lua scripts/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
 | `lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构 | 约 `9s-10s` |
@@ -28,9 +29,10 @@
 
 | 入口 | 当前规模 | 备注 |
 |------|----------|------|
-| `behavior` | `49` 个 suite，`992` 个 case | 其中 `8` 个 case 在特定 mode 下禁用 |
-| `contract` | `13` 个 suite，`103` 个 case | 当前最明显的耗时大头 |
-| `guard` | `4` 个 script | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard` |
+| `behavior` | `48` 个 suite，`976` 个 case | 其中 `8` 个 case 在特定 mode 下禁用 |
+| `contract` | `15` 个 suite，`92` 个 case | 默认高频快车道 |
+| `tooling` | `2` 个 suite，`7` 个 case | 慢工具链 smoke，显式按需运行 |
+| `guard` | `5` 个 script | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`、`migration_shim_rules` |
 | `arch_view` | 扫描 `src/**/*.lua` | 不扫 `tests/`、`scripts/`、`vendor/` |
 | `crap` | 当前 behavior lane 分析 `2588` 个函数 | 只给 `src/**/*.lua` 打分 |
 | `mutate4lua` | 每次只盯 `1` 个 `src/**/*.lua` 文件 | 诊断工具，不进默认回归 |
@@ -49,9 +51,17 @@
 
 - 入口：`tests/contract.lua`
 - 来源：`tests/catalog.lua` 中的 `contract_suites`
-- 关注点：读模型、架构护栏、窄 Port、UI gate、runtime ports、脚本工具契约
+- 关注点：读模型、架构护栏、窄 Port、UI gate、runtime ports、快速脚本工具契约
 - 适用时机：改了跨层接口、装配、端口、架构脚本、展示契约，先跑它
-- 特点：不是业务玩法回归，而是“接口和边界别偷偷变形”
+- 特点：不是业务玩法回归，而是“接口和边界别偷偷变形”；默认不再包含重型工具 smoke
+
+### `tooling`
+
+- 入口：`tests/tooling.lua`
+- 来源：`tests/catalog.lua` 中的 `tooling_suites`
+- 关注点：真实 `mutate --index-suites`、`arch_view scan/viewer`、真实导出产物
+- 适用时机：改了质量工具包装层、导出流程、viewer 产物或 suite indexing 逻辑，再显式跑它
+- 特点：故意和 `contract` 分开，避免慢工具 smoke 拖垮高频契约回归
 
 ### `guard`
 
@@ -61,6 +71,7 @@
   - `gameplay_loop_no_ui`：`gameplay loop` 在最小 runtime 下不直接依赖 UI 对象
   - `forbidden_globals`：禁用 `tonumber`、`type(...) == "number"`、`rawget` 等仓库级禁令
   - `arch_view_guard`：把 `arch_view` 的检查结果接入 guard lane
+  - `migration_shim_rules`：迁移对中的兼容 shim 只能保留纯转发桥，且不得重新引入退役 config shim 根路径
 - 适用时机：想快速知道有没有出现“明确不允许的写法”
 
 ### `arch_view`
@@ -143,7 +154,15 @@ lua tests/contract.lua
 lua scripts/quality/arch.lua check
 ```
 
-适合改 Port、边界、装配、读模型之后跑。通常约 `15s-21s`，冷启动更慢。
+适合改 Port、边界、装配、读模型之后跑。目标是高频快回归。
+
+### 工具链 smoke
+
+```sh
+lua tests/tooling.lua
+```
+
+适合改 `scripts/quality/*` 包装层、`vendor/arch_view` / `vendor/mutate4lua` 对接逻辑之后跑。它是慢车道，不建议日常每次都带。
 
 ### 热点分析
 
@@ -179,6 +198,7 @@ lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json
 
 - 改业务逻辑或 UI，默认先跑 `behavior`。
 - 改端口、契约、装配、边界，默认先跑 `contract + arch_view`。
+- 改 `scripts/quality/*`、viewer 导出、mutation suite index，默认补跑 `tooling`。
 - 改目录结构或依赖方向，默认先跑 `guard + arch_view`。
 - 做 CRAP 清理时，默认先看 behavior lane；只有明确需要时再叠加 contract lane。
 - 做 mutation 时，默认从单个 `src/*.lua` 文件开始，并优先用 `behavior` lane。

@@ -4,6 +4,8 @@
 
 如果你想先看它在整套质量入口里的定位、耗时预估和与 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality_map.md`。
 
+默认 `lua tests/contract.lua` 只保留快速契约；涉及真实 `mutate --index-suites` 的完整 smoke 已挪到 `lua tests/tooling.lua`。
+
 ## 入口
 
 ```sh

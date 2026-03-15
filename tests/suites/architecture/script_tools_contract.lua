@@ -229,18 +229,24 @@ local function _test_airl_generate_supports_unicode_output_path()
   end)
 end
 
+local contract_tests = {
+  { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
+  { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
+  { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
+  { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
+  { name = "airl_generate_verify_succeeds", run = _test_airl_generate_verify_succeeds },
+  { name = "airl_generate_supports_unicode_output_path", run = _test_airl_generate_supports_unicode_output_path },
+  { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
+  { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
+}
+
+local tooling_tests = {
+  { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
+  { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
+}
+
 return {
   name = "script_tools_contract",
-  tests = {
-    { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
-    { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
-    { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
-    { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
-    { name = "airl_generate_verify_succeeds", run = _test_airl_generate_verify_succeeds },
-    { name = "airl_generate_supports_unicode_output_path", run = _test_airl_generate_supports_unicode_output_path },
-    { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
-    { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
-    { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
-    { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
-  },
+  tests = contract_tests,
+  tooling_tests = tooling_tests,
 }

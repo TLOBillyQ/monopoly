@@ -6,6 +6,8 @@
 
 如果你想先判断 `arch_view` 在整套测试/静态分析里的位置，以及本地常见耗时，先读 `docs/architecture/quality_map.md`。
 
+默认 `lua tests/contract.lua` 只保留快速的 in-process 结构契约；真实 `scan/viewer` CLI 导出 smoke 已挪到 `lua tests/tooling.lua`。
+
 ## 代码位置
 
 - 通用工具源码与静态 viewer 资产在子模块 `vendor/arch_view/`

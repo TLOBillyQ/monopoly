@@ -161,14 +161,7 @@ local function _test_projection_exposes_full_names_and_display_edges()
 end
 
 local function _test_build_includes_metadata_for_project_root_and_config_path()
-  local architecture, err = arch_view.analyze({
-    project_root = ".",
-    config_path = arch_config_path,
-  })
-  if architecture == nil then
-    error(err)
-  end
-
+  local architecture = _analyze_architecture()
   _assert_eq(architecture.schema_version, 1, "build should stamp schema_version")
   assert(architecture.project_root ~= nil and architecture.project_root ~= "", "build should stamp project_root")
   assert(architecture.config_path ~= nil and architecture.config_path ~= "", "build should stamp config_path")
@@ -322,21 +315,27 @@ local function _test_snapshot_files_exist_in_repo()
   assert(_exists("scripts/quality/arch/viewer/architecture_data.js"), "snapshot architecture data should exist")
 end
 
+local contract_tests = {
+  { name = "projection_builds_root_and_entry_views", run = _test_projection_builds_root_and_entry_views },
+  { name = "projection_collapses_package_init_nodes_into_single_drillable_node", run = _test_projection_collapses_package_init_nodes_into_single_drillable_node },
+  { name = "config_classifies_runtime_game_and_ports", run = _test_config_classifies_runtime_game_and_ports },
+  { name = "projection_exposes_full_names_and_display_edges", run = _test_projection_exposes_full_names_and_display_edges },
+  { name = "build_includes_metadata_for_project_root_and_config_path", run = _test_build_includes_metadata_for_project_root_and_config_path },
+  { name = "json_modules_are_self_contained", run = _test_json_modules_are_self_contained },
+  { name = "real_repo_projection_cycles_exclude_new_subtrees", run = _test_real_repo_projection_cycles_exclude_new_subtrees },
+  { name = "snapshot_files_exist_in_repo", run = _test_snapshot_files_exist_in_repo },
+}
+
+local tooling_tests = {
+  { name = "cli_scan_writes_metadata", run = _test_cli_scan_writes_metadata },
+  { name = "viewer_command_writes_static_bundle", run = _test_viewer_command_writes_static_bundle },
+  { name = "cli_viewer_defaults_to_tmp_arch_view", run = _test_cli_viewer_defaults_to_tmp_arch_view },
+  { name = "cli_without_args_defaults_to_opened_viewer", run = _test_cli_without_args_defaults_to_opened_viewer },
+  { name = "cli_viewer_supports_in_json", run = _test_cli_viewer_supports_in_json },
+}
+
 return {
   name = "architecture.arch_view_contract",
-  tests = {
-    { name = "projection_builds_root_and_entry_views", run = _test_projection_builds_root_and_entry_views },
-    { name = "projection_collapses_package_init_nodes_into_single_drillable_node", run = _test_projection_collapses_package_init_nodes_into_single_drillable_node },
-    { name = "config_classifies_runtime_game_and_ports", run = _test_config_classifies_runtime_game_and_ports },
-    { name = "projection_exposes_full_names_and_display_edges", run = _test_projection_exposes_full_names_and_display_edges },
-    { name = "build_includes_metadata_for_project_root_and_config_path", run = _test_build_includes_metadata_for_project_root_and_config_path },
-    { name = "cli_scan_writes_metadata", run = _test_cli_scan_writes_metadata },
-    { name = "viewer_command_writes_static_bundle", run = _test_viewer_command_writes_static_bundle },
-    { name = "cli_viewer_defaults_to_tmp_arch_view", run = _test_cli_viewer_defaults_to_tmp_arch_view },
-    { name = "cli_without_args_defaults_to_opened_viewer", run = _test_cli_without_args_defaults_to_opened_viewer },
-    { name = "cli_viewer_supports_in_json", run = _test_cli_viewer_supports_in_json },
-    { name = "json_modules_are_self_contained", run = _test_json_modules_are_self_contained },
-    { name = "real_repo_projection_cycles_exclude_new_subtrees", run = _test_real_repo_projection_cycles_exclude_new_subtrees },
-    { name = "snapshot_files_exist_in_repo", run = _test_snapshot_files_exist_in_repo },
-  },
+  tests = contract_tests,
+  tooling_tests = tooling_tests,
 }

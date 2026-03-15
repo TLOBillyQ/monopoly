@@ -72,6 +72,11 @@ local contract_modules = {
   "suites.presentation.ui_runtime_state_contract",
 }
 
+local tooling_modules = {
+  "suites.architecture.arch_view_tooling_contract",
+  "suites.architecture.script_tools_tooling_contract",
+}
+
 local disabled_cases = {
   -- T8: Disable broken T2 characterization tests
   ["suites.gameplay.gameplay_t2_characterization::_test_apply_dice_multiplier_with_multiplier"] = { dev = true, release_trimmed = true },
@@ -142,6 +147,7 @@ end
 
 M.behavior_suites = behavior_modules
 M.contract_suites = contract_modules
+M.tooling_suites = tooling_modules
 M.guard_scripts = guard_scripts
 
 function M.load_behavior_suites()
@@ -152,6 +158,11 @@ end
 function M.load_contract_suites()
   bootstrap.install_package_paths()
   return _load_modules(M.contract_suites, "contract", "contract")
+end
+
+function M.load_tooling_suites()
+  bootstrap.install_package_paths()
+  return _load_modules(M.tooling_suites, "tooling", "tooling")
 end
 
 function M.load_all_suites()
