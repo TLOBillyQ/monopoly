@@ -40,7 +40,9 @@ lua scripts/quality/mutate.lua src/core/utils/role_id.lua --test-command "lua te
 - 默认把上游内置 test driver 替换成 Monopoly 专属 driver
 - project hash 改走 `git ls-files` 枚举仓库内 `.lua` / `.rockspec` 文件，避免把子模块内容逐文件扫进单次 mutation 启动成本
 - `scripts/quality/mutate/driver.lua` 通过 `tests/catalog.lua` 装配 `behavior` 或 `contract` suites
-- driver 用 `debug.sethook(..., "l")` 记录运行时命中行，供上游过滤未覆盖变异点
+- 常规 mutate 仍用 `debug.sethook(..., "l")` 记录运行时命中行，供上游过滤未覆盖变异点
+- `--index-suites` 改成单进程批量索引：driver 输出 `suite -> touched files` JSON，避免逐 suite 启进程和逐行 coverage 开销
+- suite index 以 `project_hash + lane + mode` 命中缓存；热路径命中时只需读取已有 index 文件
 
 ## 什么时候用
 

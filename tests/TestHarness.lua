@@ -92,7 +92,10 @@ local function run_all(suites, opts)
       if not _is_case_disabled(case_opts, opts.mode) then
         local full_name = suite_name .. "." .. case_name
         local context = {
+          suite = suite,
+          suite_index = suite_index,
           suite_name = suite_name,
+          suite_module = suite and suite.module_name or nil,
           case_name = case_name,
           full_name = full_name,
           case_opts = case_opts,

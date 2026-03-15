@@ -1,4 +1,5 @@
 local bootstrap = require("tests.bootstrap")
+local catalog = require("tests.catalog")
 local common = require("shared.lib.common")
 local mutate = require("quality.mutate")
 local driver = require("quality.mutate.driver")
@@ -137,6 +138,68 @@ local function _test_driver_lists_suite_modules_as_json()
   _assert_contains(out:text(), "suite.b", "json output should include suite.b")
 end
 
+local function _test_driver_emits_suite_file_map_json_without_line_granularity()
+  local root = _temp_dir("mutate_driver_index_map")
+  local source_a = common.join_path(root, "src/probe_a.lua")
+  local source_b = common.join_path(root, "src/probe_b.lua")
+  local ok, err = common.ensure_dir(common.join_path(root, "src"))
+  if not ok then
+    _cleanup(root)
+    error(err)
+  end
+  ok, err = common.write_file(source_a, "local M = {}\nfunction M.run()\n  return 'a'\nend\nreturn M\n")
+  if not ok then
+    _cleanup(root)
+    error(err)
+  end
+  ok, err = common.write_file(source_b, "local M = {}\nfunction M.run()\n  return 'b'\nend\nreturn M\n")
+  if not ok then
+    _cleanup(root)
+    error(err)
+  end
+
+  local original_package_loaded = package.loaded
+  package.loaded = setmetatable({}, { __index = original_package_loaded })
+
+  local out = _buffer()
+  local exit_code = driver.run({
+    "--lane", "behavior",
+    "--emit-suite-file-map-json",
+  }, {
+    stdout = out,
+    stderr = _buffer(),
+    project_root = root,
+    resolve_lane_suites = function(_, mode)
+      return {
+        {
+          name = "suite_a",
+          module_name = "suite.a",
+          tests = {
+            { name = "probe_a", run = function() assert(dofile(source_a).run() == "a") end },
+          },
+        },
+        {
+          name = "suite_b",
+          module_name = "suite.b",
+          tests = {
+            { name = "probe_b", run = function() assert(dofile(source_b).run() == "b") end },
+          },
+        },
+      }, mode
+    end,
+  })
+
+  package.loaded = original_package_loaded
+  _cleanup(root)
+
+  assert(exit_code == 0, "emit-suite-file-map-json should succeed")
+  _assert_contains(out:text(), '"suite.a"', "suite file map should include suite.a key")
+  _assert_contains(out:text(), '"suite.b"', "suite file map should include suite.b key")
+  _assert_contains(out:text(), '"src/probe_a.lua"', "suite file map should use repo-relative file paths")
+  _assert_contains(out:text(), '"src/probe_b.lua"', "suite file map should use repo-relative file paths")
+  assert(out:text():find("src/probe_a.lua:") == nil, "suite file map should not include line-level coverage entries")
+end
+
 local function _test_driver_behavior_mode_writes_repo_relative_coverage()
   local root = _temp_dir("mutate_driver_behavior")
   local source_path = common.join_path(root, "src/probe.lua")
@@ -235,6 +298,25 @@ local function _test_driver_contract_forces_dev_mode()
   assert(captured_mode == "dev", "contract lane should always run in dev mode")
 end
 
+local function _test_contract_lane_excludes_tooling_smoke_cases()
+  local suites = catalog.load_contract_suites()
+  local cases_by_suite = {}
+  for _, suite in ipairs(suites) do
+    local names = {}
+    for _, test in ipairs(suite.tests or {}) do
+      names[#names + 1] = test.name
+    end
+    cases_by_suite[suite.name] = table.concat(names, ",")
+  end
+
+  assert((cases_by_suite["script_tools_contract"] or ""):find("mutate_wrapper_indexes_behavior_suites_as_json", 1, true) == nil,
+    "contract lane should exclude mutate indexing tooling smoke")
+  assert((cases_by_suite["architecture.arch_view_contract"] or ""):find("cli_scan_writes_metadata", 1, true) == nil,
+    "contract lane should exclude arch_view scan tooling smoke")
+  assert((cases_by_suite["architecture.arch_view_contract"] or ""):find("viewer_command_writes_static_bundle", 1, true) == nil,
+    "contract lane should exclude arch_view viewer tooling smoke")
+end
+
 return {
   name = "architecture.mutate4lua_contract",
   tests = {
@@ -242,8 +324,10 @@ return {
     { name = "wrapper_routes_scan_update_and_index_commands", run = _test_wrapper_routes_scan_update_and_index_commands },
     { name = "wrapper_help_is_bilingual", run = _test_wrapper_help_is_bilingual },
     { name = "driver_lists_suite_modules_as_json", run = _test_driver_lists_suite_modules_as_json },
+    { name = "driver_emits_suite_file_map_json_without_line_granularity", run = _test_driver_emits_suite_file_map_json_without_line_granularity },
     { name = "driver_behavior_mode_writes_repo_relative_coverage", run = _test_driver_behavior_mode_writes_repo_relative_coverage },
     { name = "driver_suite_list_file_filters_suites", run = _test_driver_suite_list_file_filters_suites },
     { name = "driver_contract_forces_dev_mode", run = _test_driver_contract_forces_dev_mode },
+    { name = "contract_lane_excludes_tooling_smoke_cases", run = _test_contract_lane_excludes_tooling_smoke_cases },
   },
 }

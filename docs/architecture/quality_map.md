@@ -6,7 +6,7 @@
 2. 每条入口在守什么，不守什么。
 3. 本地该先跑哪条，通常要等多久。
 
-> 基线日期：2026-03-14（Asia/Shanghai，本机实测）。耗时会随 case 数、日志量、冷启动状态变化。
+> 基线日期：2026-03-15（Asia/Shanghai，本机实测）。耗时会随 case 数、日志量、冷启动状态变化。
 
 ## 七块质量面
 
@@ -14,7 +14,7 @@
 |------|------|----------------|------------------|
 | `lua tests/behavior.lua` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 约 `0.4s` |
 | `lua tests/contract.lua` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 目标 warm `<5s`，cold `<8s` |
-| `lua tests/tooling.lua` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 约 `30s-35s` |
+| `lua tests/tooling.lua` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | warm 约 `2s-3s`，cold 约 `8s` |
 | `lua tests/guard.lua` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
 | `lua scripts/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
 | `lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构 | 约 `9s-10s` |
@@ -31,7 +31,7 @@
 |------|----------|------|
 | `behavior` | `48` 个 suite，`976` 个 case | 其中 `8` 个 case 在特定 mode 下禁用 |
 | `contract` | `15` 个 suite，`92` 个 case | 默认高频快车道 |
-| `tooling` | `2` 个 suite，`7` 个 case | 慢工具链 smoke，显式按需运行 |
+| `tooling` | `2` 个 suite，`4` 个 case | 慢工具链 smoke，显式按需运行 |
 | `guard` | `5` 个 script | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`、`migration_shim_rules` |
 | `arch_view` | 扫描 `src/**/*.lua` | 不扫 `tests/`、`scripts/`、`vendor/` |
 | `crap` | 当前 behavior lane 分析 `2588` 个函数 | 只给 `src/**/*.lua` 打分 |
@@ -59,7 +59,7 @@
 
 - 入口：`tests/tooling.lua`
 - 来源：`tests/catalog.lua` 中的 `tooling_suites`
-- 关注点：真实 `mutate --index-suites`、`arch_view scan/viewer`、真实导出产物
+- 关注点：真实 `mutate --index-suites`、`arch_view scan`、`arch_view viewer --in-json` 这类工具链导出
 - 适用时机：改了质量工具包装层、导出流程、viewer 产物或 suite indexing 逻辑，再显式跑它
 - 特点：故意和 `contract` 分开，避免慢工具 smoke 拖垮高频契约回归
 
@@ -114,7 +114,8 @@
 - 性质：单文件变异测试；看“测试有没有真正卡住错误”，不是看“代码有没有被执行到”
 - 数据来源：
   - 变异点：`vendor/mutate4lua/` 的 Lua lexer / scanner
-  - 覆盖率：`scripts/quality/mutate/driver.lua` 运行 lane 时的 `debug.sethook(..., "l")`
+  - 覆盖率：常规 mutate 仍用 `scripts/quality/mutate/driver.lua` 的 `debug.sethook(..., "l")`
+  - suite index：`--index-suites` 改为单进程文件级触达映射，不再逐 suite 采行覆盖
 - 适用时机：怀疑某个文件 assertion 太松、准备做高风险重构、想验证 characterization tests 是否够硬
 - 不适合：日常全量 gate；它本来就是按文件诊断
 
@@ -192,7 +193,7 @@ lua scripts/quality/arch.lua check
 lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json
 ```
 
-当前机器按经验可按 `30s-35s` 预估；若 `contract` 冷启动或日志量上升，会更慢。
+当前机器按经验可按 `12s-15s` 预估；如果额外补跑 `tooling`，warm 常见总耗时在 `15s` 左右，cold 会再高几秒。
 
 ## 使用上的默认建议
 

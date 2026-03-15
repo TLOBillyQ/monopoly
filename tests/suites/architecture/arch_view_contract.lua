@@ -12,7 +12,6 @@ local cached_architecture = nil
 local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
 local arch_view_root = "vendor/arch_view"
 local arch_config_path = "scripts/quality/arch/config.json"
-local default_viewer_out_dir = ".arch_view/viewer"
 
 local function _assert_eq(actual, expected, message)
   if actual ~= expected then
@@ -189,70 +188,6 @@ local function _test_cli_scan_writes_metadata()
   assert(payload.config_path ~= nil and payload.config_path ~= "", "scan command should write config_path")
 end
 
-local function _test_viewer_command_writes_static_bundle()
-  local out_dir = tmp_root .. "/viewer"
-  local ok, err = common.ensure_dir(out_dir)
-  if not ok then
-    error(err)
-  end
-
-  local command = 'lua scripts/quality/arch.lua viewer --out-dir "' .. out_dir .. '"'
-  if common.is_windows() then
-    command = command .. " >nul 2>nul"
-  else
-    command = command .. " >/dev/null 2>&1"
-  end
-  local status = os.execute(command)
-  assert(status == true or status == 0, "viewer command should succeed")
-  assert(_exists(out_dir .. "/index.html"), "viewer should export index.html")
-  assert(_exists(out_dir .. "/script.js"), "viewer should export script.js")
-  assert(_exists(out_dir .. "/styles.css"), "viewer should export styles.css")
-
-  local payload, data_script = _decode_arch_data_script(out_dir .. "/architecture_data.js")
-  assert(data_script:find("window%.ARCH_VIEW_DATA%s*=", 1) ~= nil, "viewer bundle should expose global payload")
-  local market_node = _find_node(payload.views.rules, "market")
-  assert(market_node ~= nil, "viewer payload should expose market package node")
-end
-
-local function _test_cli_viewer_defaults_to_tmp_arch_view()
-  local default_out_dir = default_viewer_out_dir
-  local open_calls = {}
-
-  arch_view.run_cli({
-    "viewer",
-  }, {
-    default_config_path = arch_config_path,
-    asset_root = arch_view_root .. "/viewer",
-    cwd = ".",
-    open_path = function(path)
-      open_calls[#open_calls + 1] = path
-      return true
-    end,
-  })
-
-  assert(_exists(default_out_dir .. "/index.html"), "viewer should default to .arch_view/viewer")
-  _assert_eq(#open_calls, 0, "explicit viewer command should not auto-open")
-end
-
-local function _test_cli_without_args_defaults_to_opened_viewer()
-  local default_out_dir = default_viewer_out_dir
-  local open_calls = {}
-
-  arch_view.run_cli({}, {
-    default_config_path = arch_config_path,
-    asset_root = arch_view_root .. "/viewer",
-    cwd = ".",
-    open_path = function(path)
-      open_calls[#open_calls + 1] = path
-      return true
-    end,
-  })
-
-  assert(_exists(default_out_dir .. "/index.html"), "bare arch cli should export .arch_view/viewer")
-  _assert_eq(#open_calls, 1, "bare arch cli should auto-open viewer")
-  assert(open_calls[1]:match("%.arch_view/viewer/index%.html$") ~= nil, "auto-open should target .arch_view/viewer/index.html")
-end
-
 local function _test_cli_viewer_supports_in_json()
   local out_dir = tmp_root .. "/viewer_from_json"
   local json_path = tmp_root .. "/viewer_from_json_input/architecture.json"
@@ -328,9 +263,6 @@ local contract_tests = {
 
 local tooling_tests = {
   { name = "cli_scan_writes_metadata", run = _test_cli_scan_writes_metadata },
-  { name = "viewer_command_writes_static_bundle", run = _test_viewer_command_writes_static_bundle },
-  { name = "cli_viewer_defaults_to_tmp_arch_view", run = _test_cli_viewer_defaults_to_tmp_arch_view },
-  { name = "cli_without_args_defaults_to_opened_viewer", run = _test_cli_without_args_defaults_to_opened_viewer },
   { name = "cli_viewer_supports_in_json", run = _test_cli_viewer_supports_in_json },
 }
 

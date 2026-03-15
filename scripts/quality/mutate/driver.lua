@@ -42,6 +42,7 @@ local function _parse_args(args)
     suite_module = nil,
     suite_list_file = nil,
     list_suites = false,
+    emit_suite_file_map_json = false,
     json = false,
     no_coverage = false,
     quiet = false,
@@ -102,6 +103,8 @@ local function _parse_args(args)
       options.suite_list_file = suite_list_file
     elseif token == "--list-suites" then
       options.list_suites = true
+    elseif token == "--emit-suite-file-map-json" then
+      options.emit_suite_file_map_json = true
     elseif token == "--json" then
       options.json = true
     elseif token == "--no-coverage" then
@@ -116,7 +119,12 @@ local function _parse_args(args)
     index = index + 1
   end
 
-  if not options.help and not options.list_suites and not options.no_coverage and (options.coverage_file == nil or options.coverage_file == "") then
+  if not options.help
+    and not options.list_suites
+    and not options.emit_suite_file_map_json
+    and not options.no_coverage
+    and (options.coverage_file == nil or options.coverage_file == "")
+  then
     error("--coverage-file requires a value")
   end
 
@@ -246,6 +254,83 @@ local function _encode_json_array(values)
   return "[" .. table.concat(parts, ",") .. "]"
 end
 
+local function _encode_json_string_map_of_arrays(map)
+  local keys = {}
+  for key in pairs(map or {}) do
+    keys[#keys + 1] = key
+  end
+  table.sort(keys)
+  local parts = {}
+  for _, key in ipairs(keys) do
+    parts[#parts + 1] = string.format("%q", tostring(key)) .. ":" .. _encode_json_array(map[key] or {})
+  end
+  return "{" .. table.concat(parts, ",") .. "}"
+end
+
+local function _encode_suite_file_map_payload(payload)
+  return "{"
+    .. string.format("%q", "lane") .. ":" .. string.format("%q", tostring(payload.lane or ""))
+    .. "," .. string.format("%q", "mode") .. ":" .. string.format("%q", tostring(payload.mode or ""))
+    .. "," .. string.format("%q", "suite_files") .. ":" .. _encode_json_string_map_of_arrays(payload.suite_files or {})
+    .. "}"
+end
+
+local function _resolve_repo_relative_lua_path(source, project_root)
+  if source == nil or source:sub(1, 1) ~= "@" then
+    return nil
+  end
+
+  local source_path = _normalize_path(source:sub(2))
+  if source_path:match("^%a:/") == nil and source_path:sub(1, 1) ~= "/" then
+    source_path = _normalize_path(project_root .. "/" .. source_path)
+  end
+
+  local prefix = project_root:gsub("/+$", "") .. "/"
+  if source_path:sub(1, #prefix) ~= prefix then
+    return nil
+  end
+  if source_path:match("%.lua$") == nil then
+    return nil
+  end
+
+  return source_path:sub(#prefix + 1)
+end
+
+local function _sorted_suite_file_map(suite_files)
+  local normalized = {}
+  for suite_key, file_lookup in pairs(suite_files or {}) do
+    local files = {}
+    for path in pairs(file_lookup or {}) do
+      files[#files + 1] = path
+    end
+    table.sort(files)
+    normalized[suite_key] = files
+  end
+  return normalized
+end
+
+local function _collect_suite_file_map(current_suite_ref, suite_files, project_root, debug_api)
+  return function()
+    local suite_key = current_suite_ref.key
+    if suite_key == nil then
+      return
+    end
+
+    local info = debug_api.getinfo(2, "S")
+    local relative_path = info and _resolve_repo_relative_lua_path(info.source, project_root) or nil
+    if relative_path == nil then
+      return
+    end
+
+    local file_lookup = suite_files[suite_key]
+    if file_lookup == nil then
+      file_lookup = {}
+      suite_files[suite_key] = file_lookup
+    end
+    file_lookup[relative_path] = true
+  end
+end
+
 local M = {}
 
 function M.list_suite_modules(lane, mode, env)
@@ -295,6 +380,55 @@ function M.run(args, env)
 
   local suites, mode = resolve_lane_suites(options.lane, options.mode)
   suites = _filter_suites(suites, options.suite_module, options.suite_list_file)
+
+  if options.emit_suite_file_map_json then
+    local current_suite = { key = nil }
+    local suite_files = {}
+    for suite_index, suite in ipairs(suites or {}) do
+      suite_files[_suite_key(suite, suite_index)] = {}
+    end
+    debug_api.sethook(_collect_suite_file_map(current_suite, suite_files, project_root, debug_api), "c")
+
+    local run_ok, run_result = xpcall(function()
+      local run_opts = {
+        mode = mode,
+        capture_logs = true,
+        quiet = true,
+        reporter = _silent_reporter(),
+        raise_on_failure = false,
+        before_case = function(context)
+          current_suite.key = context.suite_module or context.suite_name
+        end,
+        after_case = function()
+          current_suite.key = nil
+        end,
+      }
+      return run_all(suites, run_opts)
+    end, debug.traceback)
+
+    debug_api.sethook()
+
+    if not run_ok then
+      stderr:write(tostring(run_result), "\n")
+      return 1
+    end
+    if type(run_result) == "table" and run_result.failed == true then
+      stderr:write("regression failed\n")
+      return 1
+    end
+    if run_result == false then
+      stderr:write("regression failed\n")
+      return 1
+    end
+
+    stdout:write(_encode_suite_file_map_payload({
+      lane = options.lane,
+      mode = mode,
+      suite_files = _sorted_suite_file_map(suite_files),
+    }), "\n")
+    return 0
+  end
+
   local coverage_lines = {}
   if not options.no_coverage then
     debug_api.sethook(_collect_coverage(coverage_lines, project_root, debug_api), "l")
