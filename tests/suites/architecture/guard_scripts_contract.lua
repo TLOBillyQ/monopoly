@@ -1,6 +1,6 @@
 local dep_rules = require("guards.dep_rules")
 local forbidden_globals = require("guards.forbidden_globals")
-local arch_common = require("arch_view.common")
+local arch_common = require("arch_view.runtime.common")
 
 local path_sep = package.config:sub(1, 1)
 local tmp_root = (function()

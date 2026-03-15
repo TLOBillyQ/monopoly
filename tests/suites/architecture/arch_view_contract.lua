@@ -3,10 +3,9 @@ local bootstrap = require("tests.bootstrap")
 bootstrap.install_package_paths()
 
 local arch_view = require("arch_view")
-local common = require("arch_view.common")
-local json_reader = require("arch_view.json_reader")
-local json_writer = require("arch_view.json_writer")
-local projection = require("arch_view.projection")
+local common = require("arch_view.runtime.common")
+local json_reader = require("arch_view.runtime.json_reader")
+local json_writer = require("arch_view.runtime.json_writer")
 
 local cached_architecture = nil
 local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
@@ -216,18 +215,16 @@ local function _test_cli_viewer_supports_in_json()
 end
 
 local function _test_json_modules_are_self_contained()
-  local common_source = _read_file("vendor/arch_view/arch_view/common.lua")
-  local script_common_source = _read_file("vendor/arch_view/arch_view/script_common.lua")
+  local common_source = _read_file("vendor/arch_view/arch_view/runtime/common.lua")
+  local host_source = _read_file("vendor/arch_view/arch_view/runtime/host.lua")
   assert(common_source:find('require("shared.lib.common")', 1, true) == nil, "arch_view common should not depend on monopoly lib.common")
-  assert(script_common_source:find('src.core.utils.number_utils', 1, true) == nil,
-    "arch_view script_common should not depend on monopoly src modules")
+  assert(host_source:find('src.core.utils.number_utils', 1, true) == nil,
+    "arch_view host runtime should not depend on monopoly src modules")
 end
 
 local function _test_real_repo_projection_cycles_exclude_new_subtrees()
   local architecture = _analyze_architecture()
-  architecture.views = architecture.views or projection.build_views(architecture)
-
-  local projection_cycles = projection.collect_projection_cycles(architecture.views)
+  local projection_cycles = architecture.check and architecture.check.projection_cycles or {}
   local blocked_views = {
     turn = true,
     rules = true,

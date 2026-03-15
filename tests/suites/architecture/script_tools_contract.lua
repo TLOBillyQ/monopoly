@@ -1,6 +1,6 @@
 local bootstrap = require("tests.bootstrap")
 local common = require("shared.lib.common")
-local arch_common = require("arch_view.common")
+local arch_common = require("arch_view.runtime.common")
 
 bootstrap.install_package_paths()
 
