@@ -2,7 +2,7 @@
 
 `scripts/quality/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `tests/behavior.lua`、`tests/contract.lua` 或 `lua tests/guard.lua`。
 
-当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。现在静态分析、报告组装和 viewer 导出由 `vendor/crap4lua` 里的 Go engine 负责，Monopoly 通过 `scripts/quality/crap/config.lua` 提供默认项目配置，并通过 `scripts/quality/crap/adapter.lua` 映射 behavior / contract lane。
+当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。Monopoly 现在先通过公开 Lua runtime `crap4lua.bridge` 加载 `scripts/quality/crap/config.lua` 并执行 `scripts/quality/crap/adapter.lua` 收集 coverage，再把生成的 `ReportRequest` JSON 交给上游 CLI 完成报告分析与 viewer 导出。
 
 如果你想先看整个质量面里 `crap` 和 `behavior / contract / guard / arch_view` 的分工，先读 `docs/architecture/quality_map.md`。
 
@@ -37,7 +37,7 @@ lua scripts/quality/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp
 ```
 导出静态 viewer。命令完成后打印实际路径，打开 `index.html` 即可查看，不需要本地服务。
 
-`viewer --in-json` 直接渲染现有 JSON，不会加载 Monopoly 配置或测试 lane；其余 `report` / `viewer` 调用会自动注入默认 config，并在缺少二进制时尝试构建 `vendor/crap4lua/bin/crap4lua`。
+`viewer --in-json` 直接渲染现有 JSON，不会加载 Monopoly 配置或测试 lane；`report` 会先 collect 再调用上游 CLI 的 `--request-json` 模式。缺少二进制时，包装层会在本地临时生成 launcher 并构建 `vendor/crap4lua/bin/crap4lua`，不会修改子模块提交态。
 
 ## 分数说明
 

@@ -39,17 +39,23 @@ local function _test_adapter_resolves_behavior_and_contract_lanes()
   _assert_eq(adapter.debug_api, debug, "adapter should expose debug api for coverage hooks")
 end
 
-local function _test_cli_report_translates_to_vendor_response_json()
+local function _test_cli_report_prepares_request_then_calls_vendor_cli()
+  local captured_request = nil
   local captured_command = nil
   local ok = crap.run({
     "report",
     "--out", "tmp/crap_report.json",
     "--lane", "behavior",
     "--top", "25",
+    "--strict-tests",
   }, {
     workspace_root = "/repo",
     ensure_binary = function(path)
       return path, nil
+    end,
+    prepare_report_request = function(options)
+      captured_request = options
+      return "/tmp/crap-request.json"
     end,
     run_command = function(command)
       captured_command = command
@@ -58,15 +64,44 @@ local function _test_cli_report_translates_to_vendor_response_json()
   })
 
   assert(ok == true, "cli report should return true")
+  _assert_eq(captured_request.config, crap.default_config_path(), "wrapper should inject default config path")
+  _assert_eq(captured_request.out, crap.default_tmp_root() .. "/crap_report.json", "wrapper should resolve tmp output path")
+  _assert_eq(captured_request.top, 25, "wrapper should preserve top option")
+  _assert_eq(captured_request.strict_tests, true, "wrapper should preserve strict-tests")
+  _assert_eq(captured_request.lanes[1], "behavior", "wrapper should preserve lane list")
   _assert_eq(captured_command[2], "report", "wrapper should dispatch vendor report command")
-  _assert_contains(table.concat(captured_command, " "), "--config " .. crap.default_config_path(),
-    "wrapper should inject default config path")
+  _assert_contains(table.concat(captured_command, " "), "--request-json /tmp/crap-request.json",
+    "wrapper should pass prepared request json to vendor CLI")
   _assert_contains(table.concat(captured_command, " "), "--response-json " .. crap.default_tmp_root() .. "/crap_report.json",
-    "wrapper should translate --out into vendor --response-json")
-  _assert_contains(table.concat(captured_command, " "), "--lane behavior",
-    "wrapper should preserve lane flags")
-  _assert_contains(table.concat(captured_command, " "), "--top 25",
-    "wrapper should preserve non-path report flags")
+    "wrapper should translate --out into vendor response json")
+end
+
+local function _test_cli_collect_uses_public_bridge_surface()
+  local captured_collect = nil
+  local ok = crap.run({
+    "collect",
+    "--out", "tmp/crap_collect.json",
+    "--lane", "contract",
+    "--mode", "dev",
+  }, {
+    collect_bridge_result = function(options)
+      captured_collect = options
+      return {
+        project_root = "/repo",
+        project_name = "Monopoly",
+        source_roots = { "src" },
+        coverage_result = {
+          line_hits = {},
+          lanes = {},
+        },
+      }
+    end,
+  })
+
+  assert(ok == true, "collect should return true")
+  _assert_eq(captured_collect.out, crap.default_tmp_root() .. "/crap_collect.json", "collect should resolve tmp output path")
+  _assert_eq(captured_collect.lanes[1], "contract", "collect should preserve lane list")
+  _assert_eq(captured_collect.mode, "dev", "collect should preserve mode")
 end
 
 local function _test_cli_viewer_resolves_tmp_alias_before_vendor_call()
@@ -96,11 +131,16 @@ local function _test_cli_viewer_resolves_tmp_alias_before_vendor_call()
 end
 
 local function _test_cli_without_args_defaults_to_report_then_opened_viewer()
+  local captured_request = nil
   local commands = {}
   local ok = crap.run({}, {
     workspace_root = "/repo",
     ensure_binary = function(path)
       return path, nil
+    end,
+    prepare_report_request = function(options)
+      captured_request = options
+      return "/tmp/default-crap-request.json"
     end,
     run_command = function(command)
       commands[#commands + 1] = command
@@ -109,11 +149,15 @@ local function _test_cli_without_args_defaults_to_report_then_opened_viewer()
   })
 
   assert(ok == true, "bare cli should return true")
+  _assert_eq(captured_request.out, crap.resolve_cli_path("/repo", "tmp/crap_report.json"),
+    "bare cli should prepare the default tmp report json")
   _assert_eq(#commands, 2, "bare cli should run report and viewer")
   _assert_eq(commands[1][2], "report", "bare cli should generate a report first")
   _assert_eq(commands[2][2], "viewer", "bare cli should open the generated viewer second")
+  _assert_contains(table.concat(commands[1], " "), "--request-json /tmp/default-crap-request.json",
+    "bare cli should pass the prepared request json to vendor report")
   _assert_contains(table.concat(commands[1], " "), "--response-json " .. crap.default_tmp_root() .. "/crap_report.json",
-    "bare cli should generate the default tmp report json")
+    "bare cli should write the default report json")
   _assert_contains(table.concat(commands[2], " "), "--in-json " .. crap.default_tmp_root() .. "/crap_report.json",
     "viewer should consume the generated report json")
   _assert_contains(table.concat(commands[2], " "), "--out-dir " .. crap.default_tmp_root() .. "/crap_view",
@@ -132,7 +176,8 @@ return {
   tests = {
     { name = "default_tmp_root_preserves_monopoly_paths", run = _test_default_tmp_root_preserves_monopoly_path_convention },
     { name = "adapter_resolves_behavior_and_contract_lanes", run = _test_adapter_resolves_behavior_and_contract_lanes },
-    { name = "cli_report_translates_to_vendor_response_json", run = _test_cli_report_translates_to_vendor_response_json },
+    { name = "cli_report_prepares_request_then_calls_vendor_cli", run = _test_cli_report_prepares_request_then_calls_vendor_cli },
+    { name = "cli_collect_uses_public_bridge_surface", run = _test_cli_collect_uses_public_bridge_surface },
     { name = "cli_viewer_resolves_tmp_alias_before_vendor_call", run = _test_cli_viewer_resolves_tmp_alias_before_vendor_call },
     { name = "cli_without_args_defaults_to_report_then_opened_viewer", run = _test_cli_without_args_defaults_to_report_then_opened_viewer },
     { name = "default_config_path_points_at_monopoly_wrapper_config", run = _test_default_config_path_points_at_monopoly_wrapper_config },

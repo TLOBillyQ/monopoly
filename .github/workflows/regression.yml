@@ -16,8 +16,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lua5.4 golang-go
 
-      - name: Build crap4lua Go engine
-        run: make -C vendor/crap4lua build
+      - name: Validate crap wrapper help
+        run: lua scripts/quality/crap.lua --help >/dev/null
 
       - name: Run regression
         run: lua tests/regression.lua

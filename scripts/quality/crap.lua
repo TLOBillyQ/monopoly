@@ -2,6 +2,7 @@ local package_path_helper = dofile("scripts/shared/package_path_helper.lua")
 package_path_helper.install_monopoly_package_paths({ repo_root = "." })
 
 local common = require("shared.lib.common")
+local json_writer = require("shared.lib.json_writer")
 
 local function _module_dir()
   local source = debug.getinfo(1, "S").source or "@scripts/quality/crap.lua"
@@ -15,6 +16,7 @@ local CRAP4LUA_ROOT = common.join_path(REPO_ROOT, "vendor/crap4lua")
 local DEFAULT_CONFIG_PATH = common.join_path(REPO_ROOT, "scripts/quality/crap/config.lua")
 local DEFAULT_REPORT_JSON = "tmp/crap_report.json"
 local DEFAULT_VIEW_DIR = "tmp/crap_view"
+local TMP_BUILD_DIR = ".monopoly_tmp/cmd/crap4lua"
 
 local M = {}
 
@@ -66,6 +68,7 @@ local function _help_text(command_name)
     "Monopoly 兼容项 / Monopoly compatibility:",
     "  tmp/... 路径会映射到系统临时目录下的 monopoly_crap/ 子目录",
     "  report --out 会翻译成 vendor CLI 的 --response-json",
+    "  report 先通过 Lua bridge 收集 coverage，再以 --request-json 调上游 CLI",
     "  裸调用会先生成 tmp/crap_report.json，再打开 tmp/crap_view",
   }, "\n") .. "\n"
 end
@@ -78,181 +81,213 @@ local function _copy_args(args)
   return copied
 end
 
-local function _has_flag(args, flag)
-  for _, value in ipairs(args or {}) do
-    if value == flag then
-      return true
-    end
-  end
-  return false
-end
+local function _parse_report_args(args)
+  local options = {
+    config = DEFAULT_CONFIG_PATH,
+    out = DEFAULT_REPORT_JSON,
+    top = 20,
+    strict_tests = false,
+    mode = nil,
+    project_root = nil,
+    lanes = {},
+  }
 
-local function _rewrite_path_token(base, flag, value, command)
-  if flag == "--out" and command == "report" then
-    return "--response-json", _resolve_cli_path(base, value)
-  end
-  if flag == "--config"
-      or flag == "--out"
-      or flag == "--response-json"
-      or flag == "--request-json"
-      or flag == "--project-root"
-      or flag == "--in-json"
-      or flag == "--out-dir" then
-    return flag, _resolve_cli_path(base, value)
-  end
-  return flag, value
-end
-
-local function _rewrite_cli_args(base, command, args)
-  local rewritten = { command }
   local index = 1
   while index <= #args do
     local token = args[index]
-    if token == "--open" or token == "--strict-tests" then
-      rewritten[#rewritten + 1] = token
+    if token == "--config" then
       index = index + 1
-    elseif args[index + 1] ~= nil then
-      local next_flag, next_value = _rewrite_path_token(base, token, args[index + 1], command)
-      rewritten[#rewritten + 1] = next_flag
-      rewritten[#rewritten + 1] = next_value
-      index = index + 2
-    else
-      rewritten[#rewritten + 1] = token
+      options.config = args[index]
+    elseif token == "--out" or token == "--response-json" then
       index = index + 1
-    end
-  end
-  return rewritten
-end
-
-local function _ensure_default_config(args)
-  if _has_flag(args, "--config") then
-    return args
-  end
-  local rewritten = { args[1], "--config", DEFAULT_CONFIG_PATH }
-  for index = 2, #args do
-    rewritten[#rewritten + 1] = args[index]
-  end
-  return rewritten
-end
-
-local function _with_default_report_json(args)
-  if _has_flag(args, "--response-json") or _has_flag(args, "--out") then
-    return args
-  end
-  local rewritten = _copy_args(args)
-  rewritten[#rewritten + 1] = "--response-json"
-  rewritten[#rewritten + 1] = DEFAULT_REPORT_JSON
-  return rewritten
-end
-
-local function _viewer_report_args_from_viewer_args(args)
-  local report_args = { "report", "--config", DEFAULT_CONFIG_PATH, "--response-json", DEFAULT_REPORT_JSON }
-  local index = 1
-  while index <= #args do
-    local token = args[index]
-    if token == "--lane" or token == "--mode" or token == "--project-root" or token == "--top" then
-      report_args[#report_args + 1] = token
-      report_args[#report_args + 1] = args[index + 1]
-      index = index + 2
+      options.out = args[index]
+    elseif token == "--lane" then
+      index = index + 1
+      options.lanes[#options.lanes + 1] = args[index]
+    elseif token == "--mode" then
+      index = index + 1
+      options.mode = args[index]
+    elseif token == "--project-root" then
+      index = index + 1
+      options.project_root = args[index]
+    elseif token == "--top" then
+      index = index + 1
+      options.top = common.to_integer(args[index]) or 20
     elseif token == "--strict-tests" then
-      report_args[#report_args + 1] = token
-      index = index + 1
-    elseif token == "--out-dir" or token == "--open" then
-      if token == "--out-dir" then
-        index = index + 2
-      else
-        index = index + 1
-      end
+      options.strict_tests = true
     else
-      if args[index + 1] ~= nil and token:sub(1, 2) == "--" and args[index + 1]:sub(1, 2) ~= "--" then
-        index = index + 2
-      else
-        index = index + 1
-      end
+      error("unknown flag: " .. tostring(token))
     end
+    index = index + 1
   end
-  return report_args
+
+  options.config = _resolve_cli_path(REPO_ROOT, options.config)
+  options.out = _resolve_cli_path(REPO_ROOT, options.out)
+  if options.project_root ~= nil then
+    options.project_root = _resolve_cli_path(REPO_ROOT, options.project_root)
+  end
+  return options
 end
 
-local function _viewer_args(args)
-  local viewer_args = { "viewer" }
-  local has_in_json = false
-  local has_out_dir = false
-  local has_open = false
+local function _parse_collect_args(args)
+  local options = {
+    config = DEFAULT_CONFIG_PATH,
+    out = nil,
+    mode = nil,
+    project_root = nil,
+    lanes = {},
+  }
+
+  local index = 1
+  while index <= #args do
+    local token = args[index]
+    if token == "--config" then
+      index = index + 1
+      options.config = args[index]
+    elseif token == "--out" then
+      index = index + 1
+      options.out = args[index]
+    elseif token == "--lane" then
+      index = index + 1
+      options.lanes[#options.lanes + 1] = args[index]
+    elseif token == "--mode" then
+      index = index + 1
+      options.mode = args[index]
+    elseif token == "--project-root" then
+      index = index + 1
+      options.project_root = args[index]
+    else
+      error("unknown flag: " .. tostring(token))
+    end
+    index = index + 1
+  end
+
+  if options.out == nil or options.out == "" then
+    error("collect requires --out FILE")
+  end
+  options.config = _resolve_cli_path(REPO_ROOT, options.config)
+  options.out = _resolve_cli_path(REPO_ROOT, options.out)
+  if options.project_root ~= nil then
+    options.project_root = _resolve_cli_path(REPO_ROOT, options.project_root)
+  end
+  return options
+end
+
+local function _parse_viewer_args(args)
+  local options = {
+    in_json = nil,
+    out_dir = DEFAULT_VIEW_DIR,
+    open = false,
+  }
   local index = 1
   while index <= #args do
     local token = args[index]
     if token == "--in-json" then
-      has_in_json = true
-      viewer_args[#viewer_args + 1] = token
-      viewer_args[#viewer_args + 1] = args[index + 1]
-      index = index + 2
-    elseif token == "--out-dir" then
-      has_out_dir = true
-      viewer_args[#viewer_args + 1] = token
-      viewer_args[#viewer_args + 1] = args[index + 1]
-      index = index + 2
-    elseif token == "--open" then
-      has_open = true
-      viewer_args[#viewer_args + 1] = token
       index = index + 1
+      options.in_json = args[index]
+    elseif token == "--out-dir" then
+      index = index + 1
+      options.out_dir = args[index]
+    elseif token == "--open" then
+      options.open = true
     else
-      if args[index + 1] ~= nil and token:sub(1, 2) == "--" and args[index + 1]:sub(1, 2) ~= "--" then
-        index = index + 2
-      else
-        index = index + 1
-      end
+      error("unknown flag: " .. tostring(token))
     end
+    index = index + 1
   end
-  if not has_in_json then
-    viewer_args[#viewer_args + 1] = "--in-json"
-    viewer_args[#viewer_args + 1] = DEFAULT_REPORT_JSON
+  if options.in_json ~= nil then
+    options.in_json = _resolve_cli_path(REPO_ROOT, options.in_json)
   end
-  if not has_out_dir then
-    viewer_args[#viewer_args + 1] = "--out-dir"
-    viewer_args[#viewer_args + 1] = DEFAULT_VIEW_DIR
-  end
-  if not has_open then
-    viewer_args[#viewer_args + 1] = "--open"
-  end
-  return viewer_args
+  options.out_dir = _resolve_cli_path(REPO_ROOT, options.out_dir)
+  return options
 end
 
-local function _build_commands(args)
-  local argv = _copy_args(args)
-  if #argv == 0 then
-    return {
-      _rewrite_cli_args(REPO_ROOT, "report", { "--config", DEFAULT_CONFIG_PATH, "--response-json", DEFAULT_REPORT_JSON }),
-      _rewrite_cli_args(REPO_ROOT, "viewer", { "--in-json", DEFAULT_REPORT_JSON, "--out-dir", DEFAULT_VIEW_DIR, "--open" }),
-    }
-  end
-
-  local command = argv[1]
-  if command == "report" then
-    local prepared = _with_default_report_json(_ensure_default_config(argv))
-    return { _rewrite_cli_args(REPO_ROOT, "report", { select(2, table.unpack(prepared)) }) }
-  end
-
-  if command == "collect" then
-    local prepared = _ensure_default_config(argv)
-    return { _rewrite_cli_args(REPO_ROOT, "collect", { select(2, table.unpack(prepared)) }) }
-  end
-
-  if command == "viewer" then
-    if _has_flag(argv, "--in-json") then
-      return { _rewrite_cli_args(REPO_ROOT, "viewer", { select(2, table.unpack(_viewer_args({ select(2, table.unpack(argv)) }))) }) }
+local function _ensure_bridge_package_paths(repo_root)
+  package_path_helper.install_monopoly_package_paths({
+    repo_root = repo_root,
+    arch_view_root = common.join_path(repo_root, "vendor/arch_view"),
+  })
+  local patterns = {
+    common.join_path(repo_root, "lib/?.lua"),
+    common.join_path(repo_root, "lib/?/?.lua"),
+    common.join_path(repo_root, "vendor/crap4lua/lib/?.lua"),
+    common.join_path(repo_root, "vendor/crap4lua/lib/?/?.lua"),
+  }
+  for _, pattern in ipairs(patterns) do
+    if not tostring(package.path):find(pattern, 1, true) then
+      package.path = pattern .. ";" .. package.path
     end
-    local viewer_tail = { select(2, table.unpack(argv)) }
-    return {
-      _rewrite_cli_args(REPO_ROOT, "report", { select(2, table.unpack(_viewer_report_args_from_viewer_args(viewer_tail))) }),
-      _rewrite_cli_args(REPO_ROOT, "viewer", { select(2, table.unpack(_viewer_args(viewer_tail))) }),
-    }
+  end
+end
+
+local function _collect_bridge_result(options, env)
+  if type(env.collect_bridge_result) == "function" then
+    return env.collect_bridge_result(options)
+  end
+  _ensure_bridge_package_paths(REPO_ROOT)
+  local bridge = require("crap4lua.bridge")
+  return bridge.collect({
+    config = options.config,
+    lanes = options.lanes,
+    mode = options.mode,
+    project_root = options.project_root,
+  })
+end
+
+local function _write_collect_output(options, env)
+  local result, err = _collect_bridge_result(options, env)
+  if result == nil then
+    return nil, err
+  end
+  local ok, write_err = common.write_file(options.out, json_writer.encode(result))
+  if not ok then
+    return nil, write_err
+  end
+  return result, nil
+end
+
+local function _prepare_report_request(options, env)
+  if type(env.prepare_report_request) == "function" then
+    return env.prepare_report_request(options)
   end
 
-  return nil, common.bilingual(
-    "未知命令: " .. tostring(command),
-    "Unknown command: " .. tostring(command)
-  )
+  local collect_result, err = _collect_bridge_result(options, env)
+  if collect_result == nil then
+    return nil, err
+  end
+
+  local request_path = common.make_temp_path("crap_request", ".json")
+  local request_payload = {
+    project_root = collect_result.project_root,
+    project_name = collect_result.project_name,
+    source_roots = collect_result.source_roots,
+    coverage_result = collect_result.coverage_result,
+    top = options.top,
+    strict_tests = options.strict_tests == true,
+  }
+  local ok, write_err = common.write_file(request_path, json_writer.encode(request_payload))
+  if not ok then
+    common.remove_path(request_path)
+    return nil, write_err
+  end
+  return request_path, nil
+end
+
+local function _launcher_source()
+  return table.concat({
+    "package main",
+    "",
+    "import (",
+    '\t"os"',
+    "",
+    '\t"github.com/billyq/crap4lua/internal/cli"',
+    ")",
+    "",
+    "func main() {",
+    '\tos.Exit(cli.Main(os.Args))',
+    "}",
+    "",
+  }, "\n")
 end
 
 function M.default_tmp_root()
@@ -274,6 +309,9 @@ function M.ensure_binary(repo_root, env)
   if type(env.ensure_binary) == "function" then
     return env.ensure_binary(binary_path)
   end
+  if common.path_exists(binary_path) == true then
+    return binary_path, nil
+  end
   if common.command_exists("go") ~= true then
     return nil, common.bilingual("未找到 go 命令", "go command not found")
   end
@@ -281,13 +319,69 @@ function M.ensure_binary(repo_root, env)
   if not ok then
     return nil, err
   end
-  local result = common.run_command({ "go", "build", "-o", binary_path, "./cmd/crap4lua" }, {
-    cwd = common.join_path(workspace_root, "vendor/crap4lua"),
+  local launcher_dir = common.join_path(CRAP4LUA_ROOT, TMP_BUILD_DIR)
+  local launcher_path = common.join_path(launcher_dir, "main.go")
+  ok, err = common.write_file(launcher_path, _launcher_source())
+  if not ok then
+    return nil, err
+  end
+  local result = common.run_command({ "go", "build", "-o", binary_path, "./" .. TMP_BUILD_DIR }, {
+    cwd = CRAP4LUA_ROOT,
   })
+  common.remove_path(common.join_path(CRAP4LUA_ROOT, ".monopoly_tmp"))
   if result.ok ~= true then
     return nil, result.output
   end
   return binary_path, nil
+end
+
+local function _run_report(options, env)
+  local binary_path, build_err = M.ensure_binary(REPO_ROOT, env)
+  if binary_path == nil then
+    return { ok = false, code = 1, err = build_err }
+  end
+  local request_path, req_err = _prepare_report_request(options, env)
+  if request_path == nil then
+    return { ok = false, code = 1, err = req_err }
+  end
+  local command = {
+    binary_path,
+    "report",
+    "--request-json", request_path,
+    "--response-json", options.out,
+  }
+  local result = (env.run_command or common.run_command)(command, {
+    cwd = REPO_ROOT,
+  })
+  common.remove_path(request_path)
+  return result
+end
+
+local function _run_collect(options, env)
+  local result, err = _write_collect_output(options, env)
+  if result == nil then
+    return { ok = false, code = 1, err = err }
+  end
+  return { ok = true, code = 0, output = "" }
+end
+
+local function _run_viewer(options, env)
+  local binary_path, build_err = M.ensure_binary(REPO_ROOT, env)
+  if binary_path == nil then
+    return { ok = false, code = 1, err = build_err }
+  end
+  local command = {
+    binary_path,
+    "viewer",
+    "--in-json", options.in_json,
+    "--out-dir", options.out_dir,
+  }
+  if options.open then
+    command[#command + 1] = "--open"
+  end
+  return (env.run_command or common.run_command)(command, {
+    cwd = REPO_ROOT,
+  })
 end
 
 local function _run_internal(args, env)
@@ -295,30 +389,22 @@ local function _run_internal(args, env)
   local stdout = env.stdout or io.stdout
   local stderr = env.stderr or io.stderr
   local command_name = env.command_name or "scripts/quality/crap.lua"
-  local workspace_root = env.workspace_root or REPO_ROOT
   local argv = _copy_args(args or arg or {})
 
   if #argv == 0 then
-    local binary_path, build_err = M.ensure_binary(workspace_root, env)
-    if binary_path == nil then
-      stderr:write(tostring(build_err), "\n")
-      return { ok = false, code = 1 }
+    local report_options = _parse_report_args({ "--out", DEFAULT_REPORT_JSON })
+    local report_result = _run_report(report_options, env)
+    if report_result.ok ~= true then
+      stderr:write(tostring(report_result.err or report_result.output or ""), "\n")
+      return { ok = false, code = report_result.code or 1 }
     end
-    local commands = _build_commands({})
-    for _, command in ipairs(commands) do
-      table.insert(command, 1, binary_path)
-      local result = (env.run_command or common.run_command)(command, { cwd = workspace_root })
-      local output = tostring(result.output or "")
-      if output ~= "" then
-        if result.ok == true then
-          stdout:write(output)
-        else
-          stderr:write(output)
-        end
-      end
-      if result.ok ~= true then
-        return { ok = false, code = result.code or 1 }
-      end
+    local viewer_result = _run_viewer(_parse_viewer_args({ "--in-json", DEFAULT_REPORT_JSON, "--out-dir", DEFAULT_VIEW_DIR, "--open" }), env)
+    if viewer_result.ok ~= true then
+      stderr:write(tostring(viewer_result.err or viewer_result.output or ""), "\n")
+      return { ok = false, code = viewer_result.code or 1 }
+    end
+    if viewer_result.output and viewer_result.output ~= "" then
+      stdout:write(viewer_result.output)
     end
     return { ok = true, code = 0 }
   end
@@ -329,36 +415,73 @@ local function _run_internal(args, env)
     return { ok = true, code = 0 }
   end
 
-  local commands, build_err = _build_commands(argv)
-  if commands == nil then
-    stderr:write(tostring(build_err), "\n")
-    stderr:write(_help_text(command_name))
-    return { ok = false, code = 1 }
-  end
-
-  local binary_path, ensure_err = M.ensure_binary(workspace_root, env)
-  if binary_path == nil then
-    stderr:write(tostring(ensure_err), "\n")
-    return { ok = false, code = 1 }
-  end
-
-  for _, command in ipairs(commands) do
-    table.insert(command, 1, binary_path)
-    local result = (env.run_command or common.run_command)(command, { cwd = workspace_root })
-    local output = tostring(result.output or "")
-    if output ~= "" then
-      if result.ok == true then
-        stdout:write(output)
-      else
-        stderr:write(output)
-      end
+  if first == "collect" then
+    local ok, options_or_err = pcall(_parse_collect_args, { select(2, table.unpack(argv)) })
+    if not ok then
+      stderr:write(tostring(options_or_err), "\n")
+      stderr:write(_help_text(command_name))
+      return { ok = false, code = 1 }
     end
+    local result = _run_collect(options_or_err, env)
     if result.ok ~= true then
+      stderr:write(tostring(result.err or result.output or ""), "\n")
       return { ok = false, code = result.code or 1 }
     end
+    if result.output and result.output ~= "" then
+      stdout:write(result.output)
+    end
+    return { ok = true, code = result.code or 0 }
   end
 
-  return { ok = true, code = 0 }
+  if first == "report" then
+    local ok, options_or_err = pcall(_parse_report_args, { select(2, table.unpack(argv)) })
+    if not ok then
+      stderr:write(tostring(options_or_err), "\n")
+      stderr:write(_help_text(command_name))
+      return { ok = false, code = 1 }
+    end
+    local result = _run_report(options_or_err, env)
+    if result.ok ~= true then
+      stderr:write(tostring(result.err or result.output or ""), "\n")
+      return { ok = false, code = result.code or 1 }
+    end
+    if result.output and result.output ~= "" then
+      stdout:write(result.output)
+    end
+    return { ok = true, code = result.code or 0 }
+  end
+
+  if first == "viewer" then
+    local ok, options_or_err = pcall(_parse_viewer_args, { select(2, table.unpack(argv)) })
+    if not ok then
+      stderr:write(tostring(options_or_err), "\n")
+      stderr:write(_help_text(command_name))
+      return { ok = false, code = 1 }
+    end
+    local options = options_or_err
+    if options.in_json == nil then
+      local report_options = _parse_report_args({ "--out", DEFAULT_REPORT_JSON })
+      local report_result = _run_report(report_options, env)
+      if report_result.ok ~= true then
+        stderr:write(tostring(report_result.err or report_result.output or ""), "\n")
+        return { ok = false, code = report_result.code or 1 }
+      end
+      options.in_json = _resolve_cli_path(REPO_ROOT, DEFAULT_REPORT_JSON)
+    end
+    local result = _run_viewer(options, env)
+    if result.ok ~= true then
+      stderr:write(tostring(result.err or result.output or ""), "\n")
+      return { ok = false, code = result.code or 1 }
+    end
+    if result.output and result.output ~= "" then
+      stdout:write(result.output)
+    end
+    return { ok = true, code = result.code or 0 }
+  end
+
+  stderr:write(common.bilingual("未知命令: " .. tostring(first), "Unknown command: " .. tostring(first)), "\n")
+  stderr:write(_help_text(command_name))
+  return { ok = false, code = 1 }
 end
 
 function M.run(args, env)
