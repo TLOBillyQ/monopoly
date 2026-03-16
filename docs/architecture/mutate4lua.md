@@ -1,6 +1,6 @@
 # mutate4lua
 
-`mutate4lua` 是按文件运行的 Lua 变异测试工具。Monopoly 通过直接 clone 到仓库内的 `vendor/mutate4lua/` 引入上游实现：现在 scan / mutate / manifest 主流程由上游 Go engine 提供，Monopoly 再用 `scripts/quality/mutate.lua` 和 `scripts/quality/mutate/driver.lua` 适配本仓库的测试车道。
+`mutate4lua` 是按文件运行的 Lua 变异测试工具。Monopoly 通过子模块 `vendor/mutate4lua/` 引入上游实现：现在 scan / mutate / manifest 主流程由上游 Go engine 提供，Monopoly 再用 `scripts/quality/mutate.lua` 和 `scripts/quality/mutate/driver.lua` 适配本仓库的测试车道。
 
 如果你想先看它在整套质量入口里的定位、耗时预估和与 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality_map.md`。
 
@@ -38,7 +38,7 @@ lua scripts/quality/mutate.lua src/core/utils/role_id.lua --test-command "lua te
 
 - `scripts/quality/mutate.lua` 负责包装 `vendor/mutate4lua/bin/mutate4lua-engine`，缺失时自动从 `vendor/mutate4lua/` 构建
 - 默认把上游内置 test driver 替换成 Monopoly 专属 driver
-- project hash 改走 `git ls-files` 枚举仓库内 `.lua` / `.rockspec` 文件，避免把 vendor 工具源码逐文件扫进单次 mutation 启动成本
+- project hash 改走 `git ls-files` 枚举仓库内 `.lua` / `.rockspec` 文件，避免把子模块内容逐文件扫进单次 mutation 启动成本
 - `scripts/quality/mutate/driver.lua` 通过 `tests/catalog.lua` 装配 `behavior` 或 `contract` suites
 - 常规 mutate 仍用 `debug.sethook(..., "l")` 记录运行时命中行，供上游过滤未覆盖变异点
 - `--index-suites` 改成单进程批量索引：driver 输出 `suite -> touched files` JSON，避免逐 suite 启进程和逐行 coverage 开销

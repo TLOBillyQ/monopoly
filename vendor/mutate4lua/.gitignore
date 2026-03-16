@@ -1,8 +1,0 @@
-.mutate4lua/
-*.coverage
-*.coverage.*
-.luacov
-.luacov.*
-__pycache__/
-bin/mutate4lua-engine
-bin/mutate4lua-engine.exe
