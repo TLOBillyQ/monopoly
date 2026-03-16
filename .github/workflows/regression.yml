@@ -4,17 +4,40 @@ on:
   push:
   pull_request:
 
+env:
+  LUA_VERSION: "5.5.0"
+  GO_VERSION: "1.22.0"
+
 jobs:
   lua-regression:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Install Lua and Go
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install Lua 5.5
         run: |
           sudo apt-get update
-          sudo apt-get install -y lua5.4 golang-go
+          sudo apt-get install -y build-essential
+          curl -fsSLO "https://www.lua.org/ftp/lua-${LUA_VERSION}.tar.gz"
+          tar -xzf "lua-${LUA_VERSION}.tar.gz"
+          cd "lua-${LUA_VERSION}"
+          make linux
+          make INSTALL_TOP="$HOME/.local/lua-${LUA_VERSION}" install
+          echo "$HOME/.local/lua-${LUA_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Verify toolchain
+        run: |
+          lua -v
+          lua -v | grep 'Lua 5.5'
+          go version
 
       - name: Validate crap wrapper help
         run: lua scripts/quality/crap.lua --help >/dev/null
