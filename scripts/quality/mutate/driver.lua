@@ -2,6 +2,7 @@ local bootstrap = require("tests.bootstrap")
 local catalog = require("tests.catalog")
 local harness = require("TestHarness")
 local regression_mode = require("tests.support.regression_mode")
+local common = require("shared.lib.common")
 
 bootstrap.install_package_paths()
 
@@ -143,9 +144,9 @@ end
 
 local function _write_coverage(path, lines)
   local keys = {}
-  local parent = tostring(path or ""):match("^(.*)/[^/]+$")
-  if parent and parent ~= "" then
-    os.execute("mkdir -p " .. string.format("%q", parent))
+  local ok, err = common.ensure_parent_dir(path)
+  if not ok then
+    return nil, err
   end
   for key in pairs(lines or {}) do
     keys[#keys + 1] = key

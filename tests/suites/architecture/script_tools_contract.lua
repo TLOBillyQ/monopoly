@@ -134,7 +134,6 @@ local function _test_cli_help_text_is_bilingual()
     { "scripts/data/export_xlsx.lua", "--help" },
     { "scripts/ops/update_api.lua", "--help" },
     { "scripts/quality/arch.lua", "--help" },
-    { "scripts/scaffold/airl.lua", "--help" },
     { "scripts/quality/crap.lua", "--help" },
     { "scripts/quality/mutate.lua", "--help" },
   }
@@ -205,37 +204,11 @@ local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
     "suite indexing should report indexed suite count")
 end
 
-local function _test_airl_generate_verify_succeeds()
-  local result = _run_lua({ "scripts/scaffold/airl.lua", "generate", "--verify" })
-  assert(result.ok == true, "airl generate --verify should succeed")
-  _assert_contains(result.output, "air_l generate verify ok", "airl verify output should include success text")
-end
-
-local function _test_airl_generate_supports_unicode_output_path()
-  _with_clean_tmp(function()
-    local out_dir = common.join_path(tmp_root, "airl_输出/中文 English")
-    local result = _run_lua({
-      "scripts/scaffold/airl.lua",
-      "generate",
-      "--out-dir",
-      out_dir,
-    })
-
-    assert(result.ok == true, "airl generate should succeed for unicode output paths")
-    _assert_contains(result.output, "air_l generate ok", "airl generate output should include success text")
-    assert(common.path_exists(common.join_path(out_dir, "main.lua")) == true, "airl generate should write main.lua")
-    assert(common.path_exists(common.join_path(out_dir, "src/entry/init.lua")) == true,
-      "airl generate should write src/entry/init.lua")
-  end)
-end
-
 local contract_tests = {
   { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
   { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
   { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
-  { name = "airl_generate_verify_succeeds", run = _test_airl_generate_verify_succeeds },
-  { name = "airl_generate_supports_unicode_output_path", run = _test_airl_generate_supports_unicode_output_path },
   { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
   { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
 }
