@@ -43,7 +43,7 @@
    - `lua scripts/quality/arch.lua check` — 边界扫描
    - `lua scripts/quality/arch.lua viewer --out-dir <dir> [--open]` — 导出静态 viewer
    - `lua tests/guard.lua` — 完整护栏
-   - 工具实现位于子模块 `vendor/arch_view/`，仓库内 `scripts/quality/arch/viewer/*` 仅保留当前项目快照
+   - 工具实现位于 `vendor/arch_view/`，仓库内 `scripts/quality/arch/viewer/*` 仅保留当前项目快照
    - 当前额外硬边界：`scheduler -> flow` 禁止、`core.runtime -> game.runtime` 禁止、`market -> land.choice_specs` 禁止、`items -> land.board_utils/rent_resolver` 禁止。
 9. **零模块级循环依赖**：无白名单，任意新循环直接让 `arch_view` 护栏失败。
 10. **presentation schema 纯只读**：`src/presentation/schema` 只能承载节点名、画布常量与布局定义；运行时编排留在 `runtime`，渲染留在 `view`。
