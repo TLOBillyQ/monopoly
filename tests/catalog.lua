@@ -57,9 +57,6 @@ local behavior_modules = {
 local contract_modules = {
   "suites.presentation.read_model_contract",
   "suites.architecture.architecture_guard_contract",
-  "suites.architecture.arch_view_contract",
-  "suites.architecture.crap_contract",
-  "suites.architecture.mutate4lua_contract",
   "suites.architecture.script_tools_contract",
   "suites.architecture.guard_scripts_contract",
   "suites.architecture.usecase_boundary_contract",
@@ -73,8 +70,12 @@ local contract_modules = {
 }
 
 local tooling_modules = {
-  "suites.architecture.arch_view_tooling_contract",
-  "suites.architecture.script_tools_tooling_contract",
+  "suites.architecture.arch_view_snapshot_tooling_contract",
+  "suites.architecture.arch_view_live_tooling_contract",
+  "suites.architecture.crap_tooling_contract",
+  "suites.architecture.mutate4lua_tooling_contract",
+  "suites.architecture.script_tools_io_tooling_contract",
+  "suites.architecture.script_tools_mutate_tooling_contract",
 }
 
 local disabled_cases = {

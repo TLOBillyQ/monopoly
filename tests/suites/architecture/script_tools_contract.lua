@@ -1,11 +1,15 @@
 local bootstrap = require("tests.bootstrap")
 local common = require("shared.lib.common")
 local arch_common = require("arch_view.runtime.common")
+local arch_cli = require("quality.arch")
 
 bootstrap.install_package_paths()
 
 local project_root = common.normalize_path(common.current_dir())
-local tmp_root = common.join_path(common.system_tmp_dir(), "monopoly_script_tools_contract_中文 English")
+
+local function _make_tmp_root(tag)
+  return common.make_temp_path("script_tools_contract_" .. tostring(tag or "tmp"), "") .. "_中文 English"
+end
 
 local function _assert_contains(text, expected, message)
   if tostring(text or ""):find(expected, 1, true) == nil then
@@ -13,17 +17,20 @@ local function _assert_contains(text, expected, message)
   end
 end
 
-local function _cleanup_tmp()
+local function _cleanup_tmp(tmp_root)
   local ok, err = common.remove_path(tmp_root)
   if ok == nil then
     error(err)
   end
 end
 
-local function _with_clean_tmp(fn)
-  _cleanup_tmp()
-  local ok, err = xpcall(fn, debug.traceback)
-  _cleanup_tmp()
+local function _with_clean_tmp(tag, fn)
+  local tmp_root = _make_tmp_root(tag)
+  _cleanup_tmp(tmp_root)
+  local ok, err = xpcall(function()
+    fn(tmp_root)
+  end, debug.traceback)
+  _cleanup_tmp(tmp_root)
   if not ok then
     error(err)
   end
@@ -40,7 +47,7 @@ local function _run_lua(args)
 end
 
 local function _test_common_handles_unicode_paths_for_file_ops()
-  _with_clean_tmp(function()
+  _with_clean_tmp("common_file_ops", function(tmp_root)
     local base = common.join_path(tmp_root, "common_子目录/更多目录")
     local file_path = common.join_path(base, "测试_文件.lua")
     local copy_source = common.join_path(tmp_root, "copy_source")
@@ -96,7 +103,7 @@ local function _test_common_handles_unicode_paths_for_file_ops()
 end
 
 local function _test_arch_common_reuses_unicode_safe_file_ops()
-  _with_clean_tmp(function()
+  _with_clean_tmp("arch_common_file_ops", function(tmp_root)
     local out_dir = arch_common.join_path(tmp_root, "arch_view_输出/子目录")
     local ok, err = arch_common.ensure_dir(out_dir)
     if not ok then
@@ -154,20 +161,40 @@ local function _test_deploy_unknown_flag_is_bilingual()
 end
 
 local function _test_arch_view_viewer_supports_unicode_output_path()
-  _with_clean_tmp(function()
+  _with_clean_tmp("arch_view_unicode_output", function(tmp_root)
     local out_dir = common.join_path(tmp_root, "arch_view_目标/中文 English")
-    local result = _run_lua({
-      "scripts/quality/arch.lua",
+    local messages = {}
+    local original_print = print
+    print = function(...)
+      local parts = {}
+      for index = 1, select("#", ...) do
+        parts[#parts + 1] = tostring(select(index, ...))
+      end
+      messages[#messages + 1] = table.concat(parts, "\t")
+    end
+
+    local ok, err = xpcall(function()
+      return arch_cli.run({
       "viewer",
       "--out-dir",
       out_dir,
       "--in-json",
       "scripts/quality/arch/viewer/architecture.json",
-    })
+      }, {
+        cwd = project_root,
+        asset_root = common.join_path(project_root, "vendor/arch_view/viewer"),
+        default_config_path = common.join_path(project_root, "scripts/quality/arch/config.json"),
+      })
+    end, debug.traceback)
+    print = original_print
 
-    assert(result.ok == true, "arch viewer should succeed for unicode output paths")
-    _assert_contains(result.output, "arch_view 视图已生成", "arch viewer logs should include Chinese text")
-    _assert_contains(result.output, "arch_view viewer ok", "arch viewer logs should include English text")
+    if not ok then
+      error(err)
+    end
+
+    local output = table.concat(messages, "\n")
+    _assert_contains(output, "arch_view 视图已生成", "arch viewer logs should include Chinese text")
+    _assert_contains(output, "arch_view viewer ok", "arch viewer logs should include English text")
     assert(common.path_exists(common.join_path(out_dir, "index.html")) == true, "arch viewer should write index.html")
     assert(common.path_exists(common.join_path(out_dir, "architecture.json")) == true, "arch viewer should write architecture.json")
   end)
@@ -205,16 +232,16 @@ local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
 end
 
 local contract_tests = {
-  { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
-  { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
-  { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
   { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
-  { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
 }
 
 local tooling_tests = {
+  { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
+  { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
+  { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
   { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
+  { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
   { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
 }
 

@@ -58,13 +58,30 @@ local function _run_hook(hook, ...)
 end
 
 local function _start_timer()
+  local cpu_now = runtime_ports.cpu_now_seconds()
+  local wall_now = runtime_ports.wall_now_seconds()
+  if (number_utils.is_numeric(cpu_now) and cpu_now > 0) or (number_utils.is_numeric(wall_now) and wall_now > 0) then
+    return {
+      source = "runtime_ports",
+      cpu = cpu_now,
+      wall = wall_now,
+    }
+  end
   return {
-    cpu = runtime_ports.cpu_now_seconds(),
-    wall = runtime_ports.wall_now_seconds(),
+    source = "os.time",
+    wall = os.time(),
   }
 end
 
 local function _elapsed_ms(timer)
+  if timer.source == "os.time" then
+    local wall_elapsed = os.time() - (timer.wall or 0)
+    if not number_utils.is_numeric(wall_elapsed) or wall_elapsed < 0 then
+      return 0
+    end
+    return math.floor(wall_elapsed * 1000)
+  end
+
   local cpu_elapsed = runtime_ports.cpu_diff_seconds(runtime_ports.cpu_now_seconds(), timer.cpu)
   local wall_elapsed = runtime_ports.wall_diff_seconds(runtime_ports.wall_now_seconds(), timer.wall)
   local elapsed_seconds = cpu_elapsed
@@ -82,11 +99,16 @@ local function run_all(suites, opts)
   local failures = {}
   local summary = {}
   local slow_cases = {}
+  local case_times = {}
+  local suite_times = {}
   local slow_ms = number_utils.to_integer(os.getenv("MONO_TEST_SLOW_MS")) or 500
   local capture_logs = opts.capture_logs ~= false and os.getenv("MONO_TEST_VERBOSE") ~= "1"
+  local total_timer = _start_timer()
 
   for suite_index, suite in ipairs(suites) do
     local suite_name, tests = normalize_suite(suite, suite_index)
+    local suite_timer = _start_timer()
+    local suite_case_count = 0
     for case_index, test in ipairs(tests) do
       local case_name, run, case_opts = normalize_case(test, case_index, suite_name)
       if not _is_case_disabled(case_opts, opts.mode) then
@@ -102,6 +124,7 @@ local function run_all(suites, opts)
           mode = opts.mode,
         }
         total = total + 1
+        suite_case_count = suite_case_count + 1
         math.randomseed(1)
         local timer = _start_timer()
         local before_ok, before_err = _run_hook(opts.before_case, context)
@@ -118,6 +141,12 @@ local function run_all(suites, opts)
         end
         local elapsed_ms = _elapsed_ms(timer)
         context.elapsed_ms = elapsed_ms
+        case_times[#case_times + 1] = {
+          name = full_name,
+          suite_name = suite_name,
+          elapsed_ms = elapsed_ms,
+          timer_source = timer.source,
+        }
         if elapsed_ms >= slow_ms then
           slow_cases[#slow_cases + 1] = {
             name = full_name,
@@ -137,6 +166,12 @@ local function run_all(suites, opts)
         end
       end
     end
+    suite_times[#suite_times + 1] = {
+      name = suite_name,
+      elapsed_ms = _elapsed_ms(suite_timer),
+      case_count = suite_case_count,
+      timer_source = suite_timer.source,
+    }
   end
 
   if #slow_cases > 0 and not quiet then
@@ -158,6 +193,12 @@ local function run_all(suites, opts)
     failed = #failures > 0,
     summary = summary,
     slow_cases = slow_cases,
+    timing_data = {
+      total_elapsed_ms = _elapsed_ms(total_timer),
+      suite_times = suite_times,
+      case_times = case_times,
+      timer_source = total_timer.source,
+    },
   }
 
   if #failures > 0 and opts.raise_on_failure ~= false then

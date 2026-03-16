@@ -5,12 +5,13 @@ bootstrap.install_package_paths()
 local arch_view = require("arch_view")
 local common = require("arch_view.runtime.common")
 local json_reader = require("arch_view.runtime.json_reader")
-local json_writer = require("arch_view.runtime.json_writer")
 
-local cached_architecture = nil
-local tmp_root = common.system_tmp_dir() .. "/monopoly_arch_view_test_output"
+local cached_snapshot = nil
+local cached_scan_result = nil
+local tmp_root = common.make_temp_path("arch_view_test_output", "")
 local arch_view_root = "vendor/arch_view"
 local arch_config_path = "scripts/quality/arch/config.json"
+local snapshot_json_path = "scripts/quality/arch/viewer/architecture.json"
 
 local function _assert_eq(actual, expected, message)
   if actual ~= expected then
@@ -55,22 +56,40 @@ local function _exists(path)
   return common.path_exists(path) == true
 end
 
-local function _analyze_architecture()
-  if cached_architecture == nil then
-    local architecture, err = arch_view.analyze({
-      project_root = ".",
-      config_path = arch_config_path,
-    })
-    if architecture == nil then
+local function _snapshot_architecture()
+  if cached_snapshot == nil then
+    cached_snapshot = json_reader.decode(_read_file(snapshot_json_path))
+  end
+  return cached_snapshot
+end
+
+local function _scan_architecture_json()
+  if cached_scan_result == nil then
+    local out_path = tmp_root .. "/scan/architecture.json"
+    local ok, err = common.ensure_parent_dir(out_path)
+    if not ok then
       error(err)
     end
-    cached_architecture = architecture
+
+    arch_view.run_cli({
+      "scan",
+      "--out", out_path,
+    }, {
+      default_config_path = arch_config_path,
+      asset_root = arch_view_root .. "/viewer",
+      cwd = ".",
+    })
+
+    cached_scan_result = {
+      out_path = out_path,
+      payload = json_reader.decode(_read_file(out_path)),
+    }
   end
-  return cached_architecture
+  return cached_scan_result
 end
 
 local function _test_projection_builds_root_and_entry_views()
-  local architecture = _analyze_architecture()
+  local architecture = _snapshot_architecture()
   local root_view = architecture.views.root
   local entry_view = architecture.views.entry
 
@@ -96,7 +115,7 @@ local function _test_projection_builds_root_and_entry_views()
 end
 
 local function _test_projection_collapses_package_init_nodes_into_single_drillable_node()
-  local architecture = _analyze_architecture()
+  local architecture = _snapshot_architecture()
   local root_view = architecture.views.root
   local rules_view = architecture.views.rules
 
@@ -121,7 +140,7 @@ local function _test_projection_collapses_package_init_nodes_into_single_drillab
 end
 
 local function _test_config_classifies_runtime_game_and_ports()
-  local architecture = _analyze_architecture()
+  local architecture = _snapshot_architecture()
 
   for module_id, module_info in pairs(architecture.modules or {}) do
     assert(module_info.component ~= nil, "every src module should be classified: " .. tostring(module_id))
@@ -140,7 +159,7 @@ local function _test_config_classifies_runtime_game_and_ports()
 end
 
 local function _test_projection_exposes_full_names_and_display_edges()
-  local architecture = _analyze_architecture()
+  local architecture = _snapshot_architecture()
   local utils_view = architecture.views["core.utils"]
   assert(utils_view ~= nil, "core.utils view should exist")
 
@@ -159,29 +178,14 @@ local function _test_projection_exposes_full_names_and_display_edges()
 end
 
 local function _test_build_includes_metadata_for_project_root_and_config_path()
-  local architecture = _analyze_architecture()
+  local architecture = _snapshot_architecture()
   _assert_eq(architecture.schema_version, 1, "build should stamp schema_version")
   assert(architecture.project_root ~= nil and architecture.project_root ~= "", "build should stamp project_root")
   assert(architecture.config_path ~= nil and architecture.config_path ~= "", "build should stamp config_path")
 end
 
 local function _test_cli_scan_writes_metadata()
-  local out_path = tmp_root .. "/scan/architecture.json"
-  local ok, err = common.ensure_parent_dir(out_path)
-  if not ok then
-    error(err)
-  end
-
-  arch_view.run_cli({
-    "scan",
-    "--out", out_path,
-  }, {
-    default_config_path = arch_config_path,
-    asset_root = arch_view_root .. "/viewer",
-    cwd = ".",
-  })
-
-  local payload = json_reader.decode(_read_file(out_path))
+  local payload = _scan_architecture_json().payload
   _assert_eq(payload.schema_version, 1, "scan command should write schema_version")
   assert(payload.project_root ~= nil and payload.project_root ~= "", "scan command should write project_root")
   assert(payload.config_path ~= nil and payload.config_path ~= "", "scan command should write config_path")
@@ -189,20 +193,11 @@ end
 
 local function _test_cli_viewer_supports_in_json()
   local out_dir = tmp_root .. "/viewer_from_json"
-  local json_path = tmp_root .. "/viewer_from_json_input/architecture.json"
-  local ok, err = common.ensure_parent_dir(json_path)
-  if not ok then
-    error(err)
-  end
-  local architecture = _analyze_architecture()
-  local write_ok, write_err = common.write_file(json_path, json_writer.encode(architecture))
-  if not write_ok then
-    error(write_err)
-  end
+  local scan = _scan_architecture_json()
 
   arch_view.run_cli({
     "viewer",
-    "--in-json", json_path,
+    "--in-json", scan.out_path,
     "--out-dir", out_dir,
   }, {
     default_config_path = arch_config_path,
@@ -222,23 +217,6 @@ local function _test_json_modules_are_self_contained()
     "arch_view host runtime should not depend on monopoly src modules")
 end
 
-local function _test_real_repo_projection_cycles_exclude_new_subtrees()
-  local architecture = _analyze_architecture()
-  local projection_cycles = architecture.check and architecture.check.projection_cycles or {}
-  local blocked_views = {
-    turn = true,
-    rules = true,
-    ui = true,
-  }
-
-  for _, entry in ipairs(projection_cycles or {}) do
-    assert(
-      blocked_views[entry.view] ~= true,
-      "projection_cycles should not include " .. tostring(entry.view)
-    )
-  end
-end
-
 local function _test_snapshot_files_exist_in_repo()
   assert(_exists("scripts/quality/arch/viewer/index.html"), "snapshot viewer index should exist")
   assert(_exists("scripts/quality/arch/viewer/script.js"), "snapshot viewer script should exist")
@@ -254,7 +232,6 @@ local contract_tests = {
   { name = "projection_exposes_full_names_and_display_edges", run = _test_projection_exposes_full_names_and_display_edges },
   { name = "build_includes_metadata_for_project_root_and_config_path", run = _test_build_includes_metadata_for_project_root_and_config_path },
   { name = "json_modules_are_self_contained", run = _test_json_modules_are_self_contained },
-  { name = "real_repo_projection_cycles_exclude_new_subtrees", run = _test_real_repo_projection_cycles_exclude_new_subtrees },
   { name = "snapshot_files_exist_in_repo", run = _test_snapshot_files_exist_in_repo },
 }
 
