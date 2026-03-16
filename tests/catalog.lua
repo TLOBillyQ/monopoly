@@ -67,6 +67,7 @@ local contract_modules = {
   "suites.runtime.narrow_runtime_ports_contract",
   "suites.runtime.runtime_ports_contract",
   "suites.presentation.ui_runtime_state_contract",
+  "suites.architecture.tooling_parallel_contract",
 }
 
 local tooling_modules = {
