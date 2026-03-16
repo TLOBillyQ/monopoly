@@ -30,8 +30,6 @@ function package_path_helper.install_monopoly_package_paths(opts)
   local patterns = {
     _join(repo_root, "?.lua"),
     _join(repo_root, "?/init.lua"),
-    _join(repo_root, "lib/?.lua"),
-    _join(repo_root, "lib/?/?.lua"),
     _join(repo_root, "tests/?.lua"),
     _join(repo_root, "tests/?/init.lua"),
     _join(repo_root, "tests/suites/?.lua"),

@@ -3,9 +3,9 @@ local function _normalize_path(path)
 end
 
 local function _repo_root()
-  local source = debug.getinfo(1, "S").source or "@lib/crap4lua/_internal/json_writer.lua"
+  local source = debug.getinfo(1, "S").source or "@scripts/crap4lua/_internal/json_writer.lua"
   local normalized = _normalize_path(source):gsub("^@", "")
-  local repo_root = normalized:match("^(.*)/lib/crap4lua/_internal/[^/]+$")
+  local repo_root = normalized:match("^(.*)/scripts/crap4lua/_internal/[^/]+$")
   return repo_root or "."
 end
 

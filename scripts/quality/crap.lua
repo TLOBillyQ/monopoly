@@ -208,8 +208,6 @@ local function _ensure_bridge_package_paths(repo_root)
     arch_view_root = common.join_path(repo_root, "vendor/arch_view"),
   })
   local patterns = {
-    common.join_path(repo_root, "lib/?.lua"),
-    common.join_path(repo_root, "lib/?/?.lua"),
     common.join_path(repo_root, "vendor/crap4lua/lib/?.lua"),
     common.join_path(repo_root, "vendor/crap4lua/lib/?/?.lua"),
   }
