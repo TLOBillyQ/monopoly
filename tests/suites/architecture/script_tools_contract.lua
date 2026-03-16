@@ -17,6 +17,12 @@ local function _assert_contains(text, expected, message)
   end
 end
 
+local function _assert_not_contains(text, unexpected, message)
+  if tostring(text or ""):find(unexpected, 1, true) ~= nil then
+    error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
+  end
+end
+
 local function _cleanup_tmp(tmp_root)
   local ok, err = common.remove_path(tmp_root)
   if ok == nil then
@@ -160,6 +166,46 @@ local function _test_deploy_unknown_flag_is_bilingual()
   _assert_contains(result.output, "Unknown flag", "unknown flag output should include English text")
 end
 
+local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
+  _with_clean_tmp("run_command_stderr_capture", function(tmp_root)
+    local script_path = common.join_path(tmp_root, "capture_output.lua")
+    local stdin_path = common.join_path(tmp_root, "stdin.txt")
+    local ok, err = common.write_file(script_path, table.concat({
+      "local input = io.read('*a') or ''",
+      "if input ~= '' then",
+      "  io.write(input)",
+      "  if input:sub(-1) ~= '\\n' then",
+      "    io.write('\\n')",
+      "  end",
+      "end",
+      "io.stderr:write('未知参数 / Unknown flag: --bad-flag\\n')",
+      "os.exit(7)",
+      "",
+    }, "\n"))
+    if not ok then
+      error(err)
+    end
+
+    ok, err = common.write_file(stdin_path, "stdin 中文 / utf8 stdin")
+    if not ok then
+      error(err)
+    end
+
+    local result = common.run_command({ "lua", script_path }, {
+      cwd = project_root,
+      stdin_path = stdin_path,
+    })
+
+    assert(result.ok == false, "run_command should surface non-zero exit codes")
+    assert(result.code ~= 0, "run_command should preserve the child exit code")
+    _assert_contains(result.output, "stdin 中文 / utf8 stdin", "run_command should preserve utf8 stdin content")
+    _assert_contains(result.output, "未知参数", "run_command should preserve Chinese stderr text")
+    _assert_contains(result.output, "Unknown flag", "run_command should preserve English stderr text")
+    _assert_not_contains(result.output, "System.Management.Automation.RemoteException",
+      "run_command should not wrap native stderr as a PowerShell exception")
+  end)
+end
+
 local function _test_arch_view_viewer_supports_unicode_output_path()
   _with_clean_tmp("arch_view_unicode_output", function(tmp_root)
     local out_dir = common.join_path(tmp_root, "arch_view_目标/中文 English")
@@ -234,6 +280,7 @@ end
 local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
   { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
+  { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
 
 local tooling_tests = {

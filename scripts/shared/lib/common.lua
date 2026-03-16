@@ -959,37 +959,60 @@ function common.run_command(command, options)
       "$out = " .. _powershell_literal(_windows_path(output_path)),
       "$cwd = " .. _powershell_literal(_windows_path(cwd_path or common.current_dir())),
       "$stdin = " .. _powershell_literal(_windows_path(stdin_path or "")),
-      "$argList = New-Object System.Collections.Generic.List[string]",
+      "$arguments = " .. _powershell_literal(_windows_argument_text(resolved_args)),
+      "$utf8 = [System.Text.UTF8Encoding]::new($false)",
     }
+    script_lines[#script_lines + 1] = "try {"
+    script_lines[#script_lines + 1] = "  $psi = New-Object System.Diagnostics.ProcessStartInfo"
+    script_lines[#script_lines + 1] = "  $psi.FileName = $exe"
+    script_lines[#script_lines + 1] = "  $psi.Arguments = $arguments"
+    script_lines[#script_lines + 1] = "  $psi.WorkingDirectory = $cwd"
+    script_lines[#script_lines + 1] = "  $psi.UseShellExecute = $false"
+    script_lines[#script_lines + 1] = "  $psi.CreateNoWindow = $true"
+    script_lines[#script_lines + 1] = "  $psi.RedirectStandardOutput = $true"
+    script_lines[#script_lines + 1] = "  $psi.RedirectStandardError = $true"
+    script_lines[#script_lines + 1] = "  $psi.RedirectStandardInput = ($stdin -ne '')"
+    script_lines[#script_lines + 1] = "  if ($null -ne $psi.PSObject.Properties['StandardOutputEncoding']) {"
+    script_lines[#script_lines + 1] = "    $psi.StandardOutputEncoding = $utf8"
+    script_lines[#script_lines + 1] = "  }"
+    script_lines[#script_lines + 1] = "  if ($null -ne $psi.PSObject.Properties['StandardErrorEncoding']) {"
+    script_lines[#script_lines + 1] = "    $psi.StandardErrorEncoding = $utf8"
+    script_lines[#script_lines + 1] = "  }"
     if lua_unicode_args ~= nil then
-      script_lines[#script_lines + 1] = "$env:MONOPOLY_LUA_ARGC = " .. _powershell_literal(tostring(#lua_unicode_args - 1))
+      script_lines[#script_lines + 1] = "  $psi.EnvironmentVariables['MONOPOLY_LUA_ARGC'] = " .. _powershell_literal(tostring(#lua_unicode_args - 1))
       for index, value in ipairs(lua_unicode_args) do
-        script_lines[#script_lines + 1] = "$env:MONOPOLY_LUA_ARG_" .. tostring(index - 1) .. " = " .. _powershell_literal(tostring(value))
+        script_lines[#script_lines + 1] = "  $psi.EnvironmentVariables['MONOPOLY_LUA_ARG_" .. tostring(index - 1) .. "'] = " .. _powershell_literal(tostring(value))
       end
     end
-    for index = 2, #resolved_args do
-      script_lines[#script_lines + 1] = "$argList.Add(" .. _powershell_literal(tostring(resolved_args[index])) .. ") | Out-Null"
-    end
-    script_lines[#script_lines + 1] = "$pushed = $false"
-    script_lines[#script_lines + 1] = "try {"
-    script_lines[#script_lines + 1] = "  Push-Location -LiteralPath $cwd"
-    script_lines[#script_lines + 1] = "  $pushed = $true"
+    script_lines[#script_lines + 1] = "  $process = New-Object System.Diagnostics.Process"
+    script_lines[#script_lines + 1] = "  $process.StartInfo = $psi"
+    script_lines[#script_lines + 1] = "  [void]$process.Start()"
+    script_lines[#script_lines + 1] = "  $stdoutTask = $process.StandardOutput.ReadToEndAsync()"
+    script_lines[#script_lines + 1] = "  $stderrTask = $process.StandardError.ReadToEndAsync()"
     script_lines[#script_lines + 1] = "  if ($stdin -ne '') {"
-    script_lines[#script_lines + 1] = "    $content = [System.IO.File]::ReadAllText($stdin, [System.Text.UTF8Encoding]::new($false))"
-    script_lines[#script_lines + 1] = "    $output = $content | & $exe @($argList.ToArray()) 2>&1 | Out-String"
-    script_lines[#script_lines + 1] = "  } else {"
-    script_lines[#script_lines + 1] = "    $output = & $exe @($argList.ToArray()) 2>&1 | Out-String"
+    script_lines[#script_lines + 1] = "    $content = [System.IO.File]::ReadAllBytes($stdin)"
+    script_lines[#script_lines + 1] = "    $process.StandardInput.BaseStream.Write($content, 0, $content.Length)"
+    script_lines[#script_lines + 1] = "    $process.StandardInput.BaseStream.Flush()"
+    script_lines[#script_lines + 1] = "    $process.StandardInput.Close()"
     script_lines[#script_lines + 1] = "  }"
-    script_lines[#script_lines + 1] = "  $exitCode = if ($LASTEXITCODE -ne $null) { [int]$LASTEXITCODE } else { 0 }"
-    script_lines[#script_lines + 1] = "  [System.IO.File]::WriteAllText($out, $output, [System.Text.UTF8Encoding]::new($false))"
+    script_lines[#script_lines + 1] = "  $process.WaitForExit()"
+    script_lines[#script_lines + 1] = "  $stdoutTask.Wait()"
+    script_lines[#script_lines + 1] = "  $stderrTask.Wait()"
+    script_lines[#script_lines + 1] = "  $stdout = $stdoutTask.Result"
+    script_lines[#script_lines + 1] = "  $stderr = $stderrTask.Result"
+    script_lines[#script_lines + 1] = "  $output = $stdout"
+    script_lines[#script_lines + 1] = "  if ($stderr -ne '') {"
+    script_lines[#script_lines + 1] = "    if ($output -ne '' -and -not $output.EndsWith(\"`n\") -and -not $output.EndsWith(\"`r\")) {"
+    script_lines[#script_lines + 1] = "      $output += \"`n\""
+    script_lines[#script_lines + 1] = "    }"
+    script_lines[#script_lines + 1] = "    $output += $stderr"
+    script_lines[#script_lines + 1] = "  }"
+    script_lines[#script_lines + 1] = "  [System.IO.File]::WriteAllText($out, $output, $utf8)"
+    script_lines[#script_lines + 1] = "  $exitCode = [int]$process.ExitCode"
     script_lines[#script_lines + 1] = "  exit $exitCode"
     script_lines[#script_lines + 1] = "} catch {"
-    script_lines[#script_lines + 1] = "  [System.IO.File]::WriteAllText($out, $_.Exception.ToString(), [System.Text.UTF8Encoding]::new($false))"
+    script_lines[#script_lines + 1] = "  [System.IO.File]::WriteAllText($out, $_.Exception.Message, $utf8)"
     script_lines[#script_lines + 1] = "  exit 1"
-    script_lines[#script_lines + 1] = "} finally {"
-    script_lines[#script_lines + 1] = "  if ($pushed) {"
-    script_lines[#script_lines + 1] = "    Pop-Location"
-    script_lines[#script_lines + 1] = "  }"
     script_lines[#script_lines + 1] = "}"
     local script = table.concat(script_lines, "\n")
     local ok, kind, code = _windows_execute_powershell(script)
