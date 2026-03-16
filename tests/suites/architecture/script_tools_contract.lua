@@ -42,6 +42,18 @@ local function _with_clean_tmp(tag, fn)
   end
 end
 
+local function _with_ascii_tmp(tag, fn)
+  local tmp_root = common.make_temp_path("script_tools_contract_" .. tostring(tag or "tmp"), "")
+  _cleanup_tmp(tmp_root)
+  local ok, err = xpcall(function()
+    fn(tmp_root)
+  end, debug.traceback)
+  _cleanup_tmp(tmp_root)
+  if not ok then
+    error(err)
+  end
+end
+
 local function _run_lua(args)
   local command = { "lua" }
   for _, value in ipairs(args or {}) do
@@ -166,6 +178,42 @@ local function _test_deploy_unknown_flag_is_bilingual()
   _assert_contains(result.output, "Unknown flag", "unknown flag output should include English text")
 end
 
+local function _test_publish_deploy_allows_publish_path()
+  _with_ascii_tmp("publish_deploy_allows_publish_path", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "release_deploy")
+    local result = _run_lua({
+      "scripts/ops/deploy.lua",
+      "--publish",
+      "--target-path",
+      publish_target,
+    })
+
+    assert(result.ok == true, "publish deploy should allow target paths that include 发布")
+    _assert_contains(result.output, "部署模式: 发布部署", "publish deploy should log the release mode in Chinese")
+    _assert_contains(result.output, "Deploy mode: release deploy", "publish deploy should log the release mode in English")
+    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
+      "publish deploy should copy main.lua into the target path")
+  end)
+end
+
+local function _test_publish_deploy_rejects_startup_profile()
+  _with_ascii_tmp("publish_deploy_rejects_startup_profile", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "release_deploy")
+    local result = _run_lua({
+      "scripts/ops/deploy.lua",
+      "--publish",
+      "--target-path",
+      publish_target,
+      "--startup-profile",
+      "smoke_test",
+    })
+
+    assert(result.ok == false, "publish deploy should reject startup profile injection")
+    _assert_contains(result.output, "禁止注入 STARTUP_TEST_PROFILE", "publish deploy should explain the release restriction in Chinese")
+    _assert_contains(result.output, "does not allow STARTUP_TEST_PROFILE", "publish deploy should explain the release restriction in English")
+  end)
+end
+
 local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
   _with_clean_tmp("run_command_stderr_capture", function(tmp_root)
     local script_path = common.join_path(tmp_root, "capture_output.lua")
@@ -280,6 +328,8 @@ end
 local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
   { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
+  { name = "publish_deploy_allows_publish_path", run = _test_publish_deploy_allows_publish_path },
+  { name = "publish_deploy_rejects_startup_profile", run = _test_publish_deploy_rejects_startup_profile },
   { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
 
