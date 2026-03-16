@@ -2,32 +2,24 @@ local number_utils = require("src.core.utils.number_utils")
 
 local common = {}
 
-local _random_seeded = false
 local _temp_counter = 0
 local _base64_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 local function _entropy_token()
-  local pointer = tostring({}):match("0x(%x+)") or "ptr"
-  local micros = math.floor((os.clock() or 0) * 1000000)
-  return tostring(micros) .. "_" .. tostring(pointer)
-end
-
-local function _seed_random_once()
-  if _random_seeded then
-    return
+  local pointer = tostring({}):gsub("[^%w]+", "")
+  if pointer == "" then
+    pointer = "ptr"
   end
-  local pointer = tostring({}):match("0x(%x+)") or "0"
-  local numeric_pointer = tonumber(pointer, 16) or 0
-  local seed = os.time() + math.floor((os.clock() or 0) * 1000000) + (numeric_pointer % 1000000)
-  math.randomseed(seed)
-  math.random()
-  math.random()
-  math.random()
-  _random_seeded = true
+  _temp_counter = _temp_counter + 1
+  return table.concat({
+    tostring(os.time()),
+    tostring(_temp_counter),
+    pointer,
+  }, "_")
 end
 
 local function _os_execute_success(ok, _, code)
-  if ok == true then
+  if ok == true and (code == nil or (number_utils.is_numeric(code) and code == 0)) then
     return true, code or 0
   end
   if number_utils.is_numeric(code) and code == 0 then
@@ -157,6 +149,40 @@ local function _windows_path(path)
   return tostring(path or ""):gsub("/", "\\")
 end
 
+local function _windows_copy_bytes(source_path, target_path, opts)
+  local mode = opts and opts.mode or "write"
+  local script = {
+    "$source = " .. _powershell_literal(_windows_path(source_path)),
+    "$target = " .. _powershell_literal(_windows_path(target_path)),
+    "$parent = [System.IO.Path]::GetDirectoryName($target)",
+    "try {",
+    "  if ($parent -and $parent -ne '') {",
+    "    [System.IO.Directory]::CreateDirectory($parent) | Out-Null",
+    "  }",
+    "  $bytes = [System.IO.File]::ReadAllBytes($source)",
+  }
+
+  if mode == "append" then
+    script[#script + 1] = "  $stream = [System.IO.File]::Open($target, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)"
+    script[#script + 1] = "  try {"
+    script[#script + 1] = "    [void]$stream.Seek(0, [System.IO.SeekOrigin]::End)"
+    script[#script + 1] = "    $stream.Write($bytes, 0, $bytes.Length)"
+    script[#script + 1] = "  } finally {"
+    script[#script + 1] = "    $stream.Dispose()"
+    script[#script + 1] = "  }"
+  else
+    script[#script + 1] = "  [System.IO.File]::WriteAllBytes($target, $bytes)"
+  end
+
+  script[#script + 1] = "  exit 0"
+  script[#script + 1] = "} catch {"
+  script[#script + 1] = "  [Console]::Error.WriteLine($_.Exception.Message)"
+  script[#script + 1] = "  exit 1"
+  script[#script + 1] = "}"
+
+  return _windows_execute_powershell(table.concat(script, "\n"))
+end
+
 local function _windows_process_quote(value)
   local text = tostring(value or "")
   if text == "" then
@@ -192,6 +218,10 @@ local function _windows_process_quote(value)
   parts[#parts + 1] = '"'
 
   return table.concat(parts)
+end
+
+local function _windows_has_non_ascii(text)
+  return tostring(text or ""):find("[\128-\255]") ~= nil
 end
 
 local function _windows_argument_text(args)
@@ -507,16 +537,11 @@ function common.build_open_command(path)
 end
 
 function common.make_temp_path(prefix, suffix)
-  _seed_random_once()
-  _temp_counter = _temp_counter + 1
   local base_dir = common.join_path(common.system_tmp_dir(), "monopoly_script_tools")
   common.ensure_dir(base_dir)
   local name = table.concat({
     tostring(prefix or "tmp"),
-    tostring(os.time()),
     _entropy_token(),
-    tostring(_temp_counter),
-    tostring(math.random(100000, 999999)),
   }, "_")
   return common.join_path(base_dir, name .. tostring(suffix or ""))
 end
@@ -555,17 +580,7 @@ function common.read_file(path)
   end
 
   local output_path = common.make_temp_path("read_file", ".txt")
-  local script = table.concat({
-    "$path = " .. _powershell_literal(_windows_path(normalized)),
-    "$out = " .. _powershell_literal(_windows_path(output_path)),
-    "try {",
-    "  [System.IO.File]::WriteAllBytes($out, [System.IO.File]::ReadAllBytes($path))",
-    "  exit 0",
-    "} catch {",
-    "  exit 1",
-    "}",
-  }, "\n")
-  local ok, kind, code = _windows_execute_powershell(script)
+  local ok, kind, code = _windows_copy_bytes(normalized, output_path, { mode = "write" })
   local success = _os_execute_success(ok, kind, code)
   if not success then
     common.remove_path(output_path)
@@ -656,17 +671,7 @@ function common.write_file(path, content)
     )
   end
 
-  local script = table.concat({
-    "$source = " .. _powershell_literal(_windows_path(temp_path)),
-    "$target = " .. _powershell_literal(_windows_path(normalized)),
-    "try {",
-    "  [System.IO.File]::WriteAllBytes($target, [System.IO.File]::ReadAllBytes($source))",
-    "  exit 0",
-    "} catch {",
-    "  exit 1",
-    "}",
-  }, "\n")
-  local exec_ok, kind, code = _windows_execute_powershell(script)
+  local exec_ok, kind, code = _windows_copy_bytes(temp_path, normalized, { mode = "write" })
   common.remove_path(temp_path)
   local success = _os_execute_success(exec_ok, kind, code)
   if not success then
@@ -705,23 +710,7 @@ function common.append_file(path, content)
     )
   end
 
-  local script = table.concat({
-    "$source = " .. _powershell_literal(_windows_path(temp_path)),
-    "$target = " .. _powershell_literal(_windows_path(normalized)),
-    "try {",
-    "  $bytes = [System.IO.File]::ReadAllBytes($source)",
-    "  $stream = [System.IO.File]::Open($target, [System.IO.FileMode]::Append, [System.IO.FileAccess]::Write, [System.IO.FileShare]::Read)",
-    "  try {",
-    "    $stream.Write($bytes, 0, $bytes.Length)",
-    "  } finally {",
-    "    $stream.Dispose()",
-    "  }",
-    "  exit 0",
-    "} catch {",
-    "  exit 1",
-    "}",
-  }, "\n")
-  local exec_ok, kind, code = _windows_execute_powershell(script)
+  local exec_ok, kind, code = _windows_copy_bytes(temp_path, normalized, { mode = "append" })
   common.remove_path(temp_path)
   local success = _os_execute_success(exec_ok, kind, code)
   if not success then
@@ -914,45 +903,102 @@ function common.run_command(command, options)
       end
     end
 
-    local script = table.concat({
+    local launcher_path = nil
+    local lua_unicode_args = nil
+    local lua_exe_name = common.normalize_path(resolved_args[1] or ""):lower():match("([^/]+)$") or ""
+    if (lua_exe_name == "lua" or lua_exe_name == "lua.exe" or lua_exe_name == "lua55.exe")
+        and type(resolved_args[2]) == "string"
+        and resolved_args[2]:sub(1, 1) ~= "-"
+    then
+      local has_unicode_args = false
+      for index = 2, #resolved_args do
+        if _windows_has_non_ascii(resolved_args[index]) then
+          has_unicode_args = true
+          break
+        end
+      end
+      if has_unicode_args then
+        launcher_path = common.make_temp_path("lua_unicode_args", ".lua")
+        local wrote_launcher = _write_raw_file(launcher_path, table.concat({
+          "local count = " .. "tonumber" .. "(os.getenv('MONOPOLY_LUA_ARGC') or '0') or 0",
+          "arg = {}",
+          "for index = 0, count do",
+          "  local value = os.getenv('MONOPOLY_LUA_ARG_' .. tostring(index))",
+          "  if value ~= nil then",
+          "    arg[index] = value",
+          "  end",
+          "end",
+          "return dofile(arg[0])",
+          "",
+        }, "\n"), "wb")
+        if wrote_launcher == nil then
+          return {
+            ok = false,
+            code = 1,
+            output = common.bilingual(
+              "无法创建 Lua Unicode 参数启动器",
+              "Cannot create Lua unicode argument launcher"
+            ),
+          }
+        end
+
+        lua_unicode_args = {}
+        lua_unicode_args[1] = resolved_args[2]
+        for index = 3, #resolved_args do
+          lua_unicode_args[#lua_unicode_args + 1] = resolved_args[index]
+        end
+        resolved_args = {
+          resolved_args[1],
+          launcher_path,
+        }
+      end
+    end
+
+    local script_lines = {
       "$exe = " .. _powershell_literal(_windows_path(resolved_args[1])),
       "$out = " .. _powershell_literal(_windows_path(output_path)),
       "$cwd = " .. _powershell_literal(_windows_path(cwd_path or common.current_dir())),
       "$stdin = " .. _powershell_literal(_windows_path(stdin_path or "")),
-      "$argText = " .. _powershell_literal(_windows_argument_text(resolved_args)),
-      "try {",
-      "  $psi = New-Object System.Diagnostics.ProcessStartInfo",
-      "  $psi.FileName = $exe",
-      "  $psi.Arguments = $argText",
-      "  $psi.WorkingDirectory = $cwd",
-      "  $psi.UseShellExecute = $false",
-      "  $psi.RedirectStandardOutput = $true",
-      "  $psi.RedirectStandardError = $true",
-      "  if ($stdin -ne '') {",
-      "    $psi.RedirectStandardInput = $true",
-      "  }",
-      "  $process = New-Object System.Diagnostics.Process",
-      "  $process.StartInfo = $psi",
-      "  [void]$process.Start()",
-      "  if ($stdin -ne '') {",
-      "    $content = [System.IO.File]::ReadAllText($stdin, [System.Text.UTF8Encoding]::new($false))",
-      "    $process.StandardInput.Write($content)",
-      "    $process.StandardInput.Close()",
-      "  }",
-      "  $stdout = $process.StandardOutput.ReadToEnd()",
-      "  $stderr = $process.StandardError.ReadToEnd()",
-      "  $process.WaitForExit()",
-      "  [System.IO.File]::WriteAllText($out, $stdout + $stderr, [System.Text.UTF8Encoding]::new($false))",
-      "  exit $process.ExitCode",
-      "} catch {",
-      "  [System.IO.File]::WriteAllText($out, $_.Exception.ToString(), [System.Text.UTF8Encoding]::new($false))",
-      "  exit 1",
-      "}",
-    }, "\n")
+      "$argList = New-Object System.Collections.Generic.List[string]",
+    }
+    if lua_unicode_args ~= nil then
+      script_lines[#script_lines + 1] = "$env:MONOPOLY_LUA_ARGC = " .. _powershell_literal(tostring(#lua_unicode_args - 1))
+      for index, value in ipairs(lua_unicode_args) do
+        script_lines[#script_lines + 1] = "$env:MONOPOLY_LUA_ARG_" .. tostring(index - 1) .. " = " .. _powershell_literal(tostring(value))
+      end
+    end
+    for index = 2, #resolved_args do
+      script_lines[#script_lines + 1] = "$argList.Add(" .. _powershell_literal(tostring(resolved_args[index])) .. ") | Out-Null"
+    end
+    script_lines[#script_lines + 1] = "$pushed = $false"
+    script_lines[#script_lines + 1] = "try {"
+    script_lines[#script_lines + 1] = "  Push-Location -LiteralPath $cwd"
+    script_lines[#script_lines + 1] = "  $pushed = $true"
+    script_lines[#script_lines + 1] = "  if ($stdin -ne '') {"
+    script_lines[#script_lines + 1] = "    $content = [System.IO.File]::ReadAllText($stdin, [System.Text.UTF8Encoding]::new($false))"
+    script_lines[#script_lines + 1] = "    $output = $content | & $exe @($argList.ToArray()) 2>&1 | Out-String"
+    script_lines[#script_lines + 1] = "  } else {"
+    script_lines[#script_lines + 1] = "    $output = & $exe @($argList.ToArray()) 2>&1 | Out-String"
+    script_lines[#script_lines + 1] = "  }"
+    script_lines[#script_lines + 1] = "  $exitCode = if ($LASTEXITCODE -ne $null) { [int]$LASTEXITCODE } else { 0 }"
+    script_lines[#script_lines + 1] = "  [System.IO.File]::WriteAllText($out, $output, [System.Text.UTF8Encoding]::new($false))"
+    script_lines[#script_lines + 1] = "  exit $exitCode"
+    script_lines[#script_lines + 1] = "} catch {"
+    script_lines[#script_lines + 1] = "  [System.IO.File]::WriteAllText($out, $_.Exception.ToString(), [System.Text.UTF8Encoding]::new($false))"
+    script_lines[#script_lines + 1] = "  exit 1"
+    script_lines[#script_lines + 1] = "} finally {"
+    script_lines[#script_lines + 1] = "  if ($pushed) {"
+    script_lines[#script_lines + 1] = "    Pop-Location"
+    script_lines[#script_lines + 1] = "  }"
+    script_lines[#script_lines + 1] = "}"
+    local script = table.concat(script_lines, "\n")
     local ok, kind, code = _windows_execute_powershell(script)
     local success, exit_code = _os_execute_success(ok, kind, code)
     local output = _read_raw_file(output_path) or ""
     common.remove_path(output_path)
+    if launcher_path ~= nil then
+      common.remove_path(launcher_path)
+    end
     return {
       ok = success,
       code = exit_code,
