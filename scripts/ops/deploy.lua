@@ -4,6 +4,7 @@ local bootstrap = require("scripts.shared.bootstrap")
 local env = bootstrap.install(_raw_script_path)
 local common = require("shared.lib.common")
 local loc_counter = require("shared.lib.loc_counter")
+local deploy_defaults = require("ops.deploy_defaults")
 
 local function _text(zh, en)
   return common.bilingual(zh, en)
@@ -18,14 +19,29 @@ local function _println(message)
   print(tostring(message or ""))
 end
 
-local function _default_sync_target_path()
+local function _home_dir()
+  return os.getenv("HOME") or os.getenv("USERPROFILE") or ""
+end
+
+local function _default_sync_target_path(options)
   local env_target = os.getenv("MONOPOLY_DEPLOY_TARGET")
   if env_target ~= nil and env_target ~= "" then
     return env_target
   end
+
+  local default_target = deploy_defaults.resolve({
+    home_dir = _home_dir(),
+    is_macos = common.is_macos(),
+    is_windows = common.is_windows(),
+    publish = options and options.publish == true,
+  })
+  if default_target ~= nil and default_target ~= "" then
+    return default_target
+  end
+
   _fail(_text(
-    "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 --target-path。",
-    "Deploy target is not configured, set MONOPOLY_DEPLOY_TARGET or pass --target-path."
+    "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET、传入 --target-path，或在默认目录下创建 LuaSource_大富翁-开发/发布。",
+    "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET, pass --target-path, or create the default LuaSource_大富翁 dev/release directory."
   ))
 end
 
@@ -257,7 +273,7 @@ end
 local function main(args)
   local options = _parse_args(args or {})
   local project_root = _resolve_project_root()
-  local target_source = options.target_path or _default_sync_target_path()
+  local target_source = options.target_path or _default_sync_target_path(options)
   local target_path = _normalize_target_path(target_source)
 
   if options.publish == true and options.startup_profile ~= nil and options.startup_profile ~= "" then

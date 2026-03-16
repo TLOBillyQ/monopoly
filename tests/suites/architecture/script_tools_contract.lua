@@ -2,6 +2,7 @@ local bootstrap = require("tests.bootstrap")
 local common = require("shared.lib.common")
 local arch_common = require("arch_view.runtime.common")
 local arch_cli = require("quality.arch")
+local deploy_defaults = require("ops.deploy_defaults")
 
 bootstrap.install_package_paths()
 
@@ -178,6 +179,54 @@ local function _test_deploy_unknown_flag_is_bilingual()
   _assert_contains(result.output, "Unknown flag", "unknown flag output should include English text")
 end
 
+local function _test_deploy_defaults_match_windows_history()
+  local resolved = deploy_defaults.resolve({
+    home_dir = "C:/Users/example",
+    is_windows = true,
+    is_macos = false,
+    publish = false,
+  })
+  local publish_resolved = deploy_defaults.resolve({
+    home_dir = "C:/Users/example",
+    is_windows = true,
+    is_macos = false,
+    publish = true,
+  })
+
+  assert(resolved == "C:/Users/example/Desktop/dev/LuaSource_大富翁-开发",
+    "windows dev deploy default should match the historical Desktop/dev path")
+  assert(publish_resolved == "C:/Users/example/Desktop/dev/LuaSource_大富翁-发布",
+    "windows release deploy default should match the historical Desktop/dev path")
+end
+
+local function _test_deploy_defaults_match_macos_history()
+  local resolved = deploy_defaults.resolve({
+    home_dir = "/Users/example",
+    is_windows = false,
+    is_macos = true,
+    publish = false,
+  })
+  local publish_resolved = deploy_defaults.resolve({
+    home_dir = "/Users/example",
+    is_windows = false,
+    is_macos = true,
+    publish = true,
+  })
+  local candidates = deploy_defaults.candidates({
+    home_dir = "/Users/example",
+    is_windows = false,
+    is_macos = true,
+    publish = false,
+  })
+
+  assert(resolved == "/Users/example/Documents/eggy/LuaSource_大富翁-开发",
+    "macOS dev deploy default should match the historical Documents/eggy path")
+  assert(publish_resolved == "/Users/example/Documents/eggy/LuaSource_大富翁-发布",
+    "macOS release deploy default should match the historical Documents/eggy path")
+  assert(candidates[2] == "/Users/example/Documents/eggy/LuaSource_monopoly",
+    "macOS should preserve the legacy LuaSource_monopoly fallback from git history")
+end
+
 local function _test_publish_deploy_allows_publish_path()
   _with_ascii_tmp("publish_deploy_allows_publish_path", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "release_deploy")
@@ -327,6 +376,8 @@ end
 
 local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
+  { name = "deploy_defaults_match_windows_history", run = _test_deploy_defaults_match_windows_history },
+  { name = "deploy_defaults_match_macos_history", run = _test_deploy_defaults_match_macos_history },
   { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
   { name = "publish_deploy_allows_publish_path", run = _test_publish_deploy_allows_publish_path },
   { name = "publish_deploy_rejects_startup_profile", run = _test_publish_deploy_rejects_startup_profile },
