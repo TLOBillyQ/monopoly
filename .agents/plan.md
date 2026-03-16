@@ -1,95 +1,151 @@
-# Delete Config Compatibility Shells
+# Plan: Tooling 并行调度优化
 
 ## Summary
 
-Retire both legacy config proxy namespaces in one pass: top-level `Config/` and `src/core/config/*`. After this change, `src/config/content/*`, `src/config/gameplay/*`, and `src/config/testing/*` are the only supported config entrypoints. The plan keeps non-config migration coverage intact, replaces config-specific old/new identity checks with explicit ban guards, and updates tooling so the default XLSX export path matches the canonical source tree.
+把 `lua tests/tooling.lua` 的默认无参执行从“固定 `min(4, suite_count)` + catalog 顺序分批”改成“平台感知 auto worker + 固定权重 LPT 调度”，只改 `tests/support/tooling_parallel.lua` 的主进程排程与测试，不改 `tests/support/tooling_worker.lua`、不改覆盖边界、不再拆 suite。
 
-## Interface Changes
+已锁定的默认策略：
+- 无参入口走 auto
+- Windows 默认解析为 `max(1, min(2, suite_count))`
+- 非 Windows 默认解析为 `max(1, min(3, suite_count))`
+- `--workers N` 严格覆盖 auto
+- 调度使用 `suite.module_name` 对应的固定 cost hint
+- ties 必须稳定可复现，不能依赖 table 遍历顺序
 
-- Retired require paths:
-  - `Config.*`
-  - `src.core.config.*`
-- Supported require paths remain:
-  - `src.config.content.*`
-  - `src.config.gameplay.*`
-  - `src.config.testing.*`
-- Tooling behavior change:
-  - `scripts/export_xlsx.lua` default output root changes from `Config/generated` to `src/config/content`
-  - `--output-dir` override stays supported
+## Key Changes
 
-## Tasks
+### 1. Auto worker 解析与输出
+- 在 `tests/support/tooling_parallel.lua` 抽出纯函数 `resolve_worker_count(raw_workers, suite_count, is_windows)`：
+  - `raw_workers == nil` 时走 auto
+  - Windows: `max(1, min(2, suite_count))`
+  - 非 Windows: `max(1, min(3, suite_count))`
+  - 显式 `--workers N` 仍走现有整数解析，并 clamp 到 `[1, suite_count]`；若 `suite_count == 0`，最终也返回 `1`
+- `tests/tooling.lua` CLI 不变：`lua tests/tooling.lua [--workers N]`
+- 运行时打印固定诊断行：`[tooling] workers=<raw|auto> resolved=<n> scheduler=lpt`
 
-### T0: Inventory remaining legacy config usage
-- **depends_on**: []
-- **location**: whole repo, especially `src/`, `tests/`, `scripts/`, `docs/`, `.agents/`
-- **description**: Run a repo-wide scan for `require("Config...")`, `require('Config...')`, `require("src.core.config...")`, and direct path references like `Config/generated`, `Config/maps`, `Config/testing`, `Config/runtime_refs.lua`. Use this as the gating truth before deletion; the expected remaining hits are migration helpers, docs, and tooling only.
-- **validation**: The scan produces a complete list of legacy references, and no runtime/gameplay/presentation module is left depending on either retired namespace.
-- **status**: Completed
-- **log**: Repo-wide grep confirmed no runtime/gameplay/presentation modules still import `Config.*` or `src.core.config.*`. Remaining hits are limited to the plan itself, migration helpers, `scripts/export_xlsx.lua`, `docs/eggy/guide/paid_currency.md`, and `.agents/research.md`.
-- **files edited/created**: none
+### 2. 固定权重表与 deterministic LPT 调度
+- 在 `tests/support/tooling_parallel.lua` 增加基于 `suite.module_name` 的固定权重表：
+  - `suites.architecture.arch_view_live_tooling_contract` -> `40`
+  - `suites.architecture.script_tools_io_tooling_contract` -> `28`
+  - `suites.architecture.script_tools_mutate_tooling_contract` -> `16`
+  - `suites.architecture.mutate4lua_tooling_contract` -> `10`
+  - `suites.architecture.arch_view_snapshot_tooling_contract` -> `5`
+  - `suites.architecture.crap_tooling_contract` -> `2`
+- 未命中的 suite 回退到 `max(1, #(suite.tests or {}))`
+- 新增纯函数 `suite_cost(suite)` 与 `build_execution_rounds(suites, worker_total)`：
+  - 先把 suites 转成 `{ suite, cost, module_name }`
+  - 先按 `cost desc` 排序
+  - 成本相同时按 `module_name asc`，再按原始 catalog index asc` 打破平局，保证稳定
+  - LPT 分配时把当前 suite 放入“累计成本最低”的 lane
+  - lane 负载相同时按 lane index asc 打破平局
+  - 最终把 lanes 展开为 rounds：第 `k` round 取每个 lane 的第 `k` 个 suite，跳过空槽，不创建空 worker
+- 对新增 tooling suite 的注册规则也一并写进代码注释和文档：默认先走 fallback；确认成为长期热点后，再把 `suite.module_name` 加入权重表
 
-### T1: Redesign config migration safety net
-- **depends_on**: [T0]
-- **location**: `tests/support/migration_pairs.lua`, `tests/suites/architecture/migration_shim_contract.lua`, `tests/catalog.lua`, `tests/guards/dep_rules.lua`, `tests/guards/migration_shim_rules.lua`
-- **description**: Remove `Config/*` and `src/core/config/*` pairs from migration-shim identity coverage while preserving all non-config migration pairs. Replace config compatibility expectations with ban-style protections: text guards that reject new legacy imports and one negative regression that proves a retired config require fails instead of silently resolving.
-- **validation**: Contract coverage still exists for non-config migrations; guard lane fails on reintroduced `Config.*` or `src.core.config.*`; the negative regression confirms legacy config require paths no longer load.
-- **status**: Completed
-- **log**: Removed config shim pairs from `tests/support/migration_pairs.lua`, kept non-config migration coverage intact, added `dep_rules` bans for `Config.*` and `src.core.config.*` imports, and taught `migration_shim_contract` / `migration_shim_rules` to treat deleted config shims as retired rather than required compatibility aliases.
-- **files edited/created**: `tests/support/migration_pairs.lua`, `tests/suites/architecture/migration_shim_contract.lua`, `tests/guards/dep_rules.lua`, `tests/guards/migration_shim_rules.lua`
+### 3. 保持 worker 协议不变，只替换主进程批次构造
+- `tests/support/tooling_worker.lua` 不改
+- `tooling_parallel.run()` 改为：
+  - 先解析 resolved worker count
+  - 若只有 1 个 worker 或 1 个及以下 suite，继续走 `harness.run_all`
+  - 否则先用 `build_execution_rounds()` 生成 deterministic rounds
+  - 再按 round 启 worker、等待、读 JSON、合并结果
+- 结果聚合、失败语义、JSON payload 格式保持不变
 
-### T2: Delete compatibility shell trees
-- **depends_on**: [T1]
-- **location**: `Config/`, `src/core/config/`
-- **description**: Remove every pure forwarding Lua proxy under both trees and delete empty directories. Do not change canonical modules under `src/config/*`.
-- **validation**: `Config/` and `src/core/config/` no longer contain Lua proxy files; canonical `src.config.*` requires still resolve.
-- **status**: Completed
-- **log**: Deleted the top-level `Config/` shim tree and the `src/core/config/` proxy tree so canonical `src.config.*` modules are the only remaining config entrypoints.
-- **files edited/created**: deleted `Config/`, deleted `src/core/config/`
+### 4. 为调度层补纯逻辑契约测试
+- 新增一个快速 contract suite，例如 `tests/suites/architecture/tooling_parallel_contract.lua`
+- 把它加入 `tests/catalog.lua` 的 `contract_modules`
+- 覆盖以下场景：
+  - `workers=nil` 时 Windows 解析为 2、非 Windows 解析为 3，并都受 `suite_count` 限制
+  - `suite_count == 0` 时 resolved worker 仍为 1，不输出 0
+  - 显式 `--workers 1/2/N` 不被 auto 改写
+  - LPT 会把 `arch_view_live`、`script_tools_io`、`script_tools_mutate` 分散到不同 lane
+  - ties 在相同权重下按 `module_name`/catalog index 稳定
+  - rounds 展开后不丢 suite、不重复 suite、不生成空 round 项
 
-### T3: Update tooling and documentation to canonical paths
-- **depends_on**: [T0]
-- **location**: `scripts/export_xlsx.lua`, `docs/eggy/guide/paid_currency.md`, `.agents/research.md`, any additional hits from T0
-- **description**: Change `export_xlsx` default output root to `src/config/content`, keep directory creation behavior intact, and preserve explicit `--output-dir` override. Update written guidance so market/map/runtime-ref references point at `src/config/*` instead of `Config/*`. Scrub any internal planning or automation notes that would otherwise revive the retired namespace.
-- **validation**: Grep finds no intended references to retired config paths outside historical context; `scripts/export_xlsx.lua --help` and default-path behavior match the new canonical location.
-- **status**: Completed
-- **log**: Updated `scripts/export_xlsx.lua` to default to `src/config/content`, preserving `--output-dir` override and directory creation. Repointed paid-currency documentation and internal research notes from retired `Config/*` locations to canonical `src/config/*` paths.
-- **files edited/created**: `scripts/export_xlsx.lua`, `docs/eggy/guide/paid_currency.md`, `.agents/research.md`
-
-### T4: Regression and acceptance sweep
-- **depends_on**: [T1, T2, T3]
-- **location**: `tests/`, `scripts/`
-- **description**: Run the architecture and regression lanes most likely to catch stale legacy imports, then run a lightweight require-level acceptance check proving canonical config modules load and retired ones fail.
-- **validation**:
-  - `lua tests/guard.lua`
+### 5. 文档与验收
+- 更新 `docs/architecture/quality_map.md`
+  - 默认行为改为“auto worker + weighted LPT schedule”
+  - 保留 `--workers 1` 串行调试说明
+  - 补一句“当前权重按 `suite.module_name` 在 runner 内注册，新增 suite 未注册时回退到 case 数估重”
+  - 用本轮实测刷新 Windows 默认时长说明
+- 回归与量测命令：
   - `lua tests/contract.lua`
-  - `lua scripts/arch.lua check`
-  - `lua tests/behavior.lua`
-  - a Lua smoke check that `pcall(require, "Config.generated.market")` and `pcall(require, "src.core.config.gameplay_rules")` fail, while canonical `src.config.content.market` and `src.config.gameplay.gameplay_rules` load successfully
+  - `lua tests/tooling.lua --workers 1`
+  - `lua tests/tooling.lua`
+  - `Measure-Command { lua tests/tooling.lua --workers 1 }`
+  - `Measure-Command { lua tests/tooling.lua }`
+- 验收标准：
+  - `lua tests/tooling.lua` 与 `--workers 1` 的通过/失败语义一致
+  - 默认无参明显优于当前 `~118s` 基线
+  - 目标 warm `<=95s`；若仍高于串行，则本轮到此为止，不继续动覆盖边界，下一轮单独评估减少 PowerShell 启动层或复用 worker 进程
+
+## Dependency-Aware Tasks
+
+### T1: 抽出调度原语
+- **depends_on**: []
+- **location**: `tests/support/tooling_parallel.lua`
+- **description**: 提炼 `resolve_worker_count`、`suite_cost`、`build_execution_rounds`，并通过 `M._test_support` 暴露给纯逻辑测试
+- **validation**: 不跑 worker 也能单测调度逻辑
 - **status**: Completed
-- **log**: Ran `lua tests/guard.lua`, `lua tests/contract.lua`, `lua scripts/arch.lua check`, and `lua tests/behavior.lua`, all passing after shim deletion. Added a Lua smoke check proving `Config.generated.market` and `src.core.config.gameplay_rules` now fail to resolve while canonical `src.config.content.market` and `src.config.gameplay.gameplay_rules` still load.
-- **files edited/created**: none
+- **log**: 已抽出 `resolve_worker_count`、`suite_cost` 与 `build_execution_plan`，并通过 `M._test_support` 暴露最小测试接口；顺带清理了原先内联批次构造入口。
+- **files edited/created**: `tests/support/tooling_parallel.lua`
+
+### T2: 实现 auto worker 解析与诊断输出
+- **depends_on**: [T1]
+- **location**: `tests/support/tooling_parallel.lua`, `tests/tooling.lua`
+- **description**: 完成平台感知 auto、worker floor、diagnostic print
+- **validation**: 无参输出 `workers=auto resolved=<n> scheduler=lpt`
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T3: 实现固定权重 LPT + deterministic round 展开
+- **depends_on**: [T1]
+- **location**: `tests/support/tooling_parallel.lua`
+- **description**: 用 `suite.module_name` 命中权重表，完成稳定排序、lane 分配与 round 展开
+- **validation**: 调度稳定、无空 worker、无重复/遗漏
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T4: 增加调度契约测试
+- **depends_on**: [T1]
+- **location**: `tests/suites/architecture/tooling_parallel_contract.lua`, `tests/catalog.lua`
+- **description**: 新增纯逻辑 contract suite，锁定 worker 解析、权重命中、tie break、round 展开
+- **validation**: `lua tests/contract.lua` 通过且不引入慢测试
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T5: 真实 tooling 回归与量测
+- **depends_on**: [T2, T3, T4]
+- **location**: command level
+- **description**: 跑 tooling 串行/默认并行，并用外层墙钟验收
+- **validation**: 默认无参优于当前并行基线，语义与串行一致
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T6: 同步文档
+- **depends_on**: [T5]
+- **location**: `docs/architecture/quality_map.md`
+- **description**: 刷新默认行为、权重注册说明、Windows 实测时长
+- **validation**: 文档与最终代码、实测结果一致
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
 ## Parallel Execution Groups
 
 | Wave | Tasks | Can Start When |
 |------|-------|----------------|
-| 1 | T0 | Immediately |
-| 2 | T1, T3 | T0 complete |
-| 3 | T2 | T1 complete |
-| 4 | T4 | T1, T2, T3 complete |
-
-## Test Plan
-
-- Guard against reintroduction of retired config namespaces.
-- Preserve non-config migration-shim coverage.
-- Verify canonical `src.config.*` entrypoints still power runtime and tests.
-- Prove behavior/contract/architecture lanes still pass after the shell deletion.
-- Prove legacy requires fail fast instead of resolving through hidden proxies.
+| 1 | T1 | Immediately |
+| 2 | T2, T3, T4 | T1 complete |
+| 3 | T5 | T2, T3, T4 complete |
+| 4 | T6 | T5 complete |
 
 ## Assumptions
 
-- This change includes both shim layers by decision: `Config/` and `src/core/config/*`.
-- Writing generated config into `src/config/content` is acceptable even though it updates versioned source files.
-- Canonical config schemas and data shape stay unchanged; this is a path-retirement cleanup, not a config-format refactor.
-- Other non-config migration shims remain in place and keep their existing contract coverage.
-- Because this turn stays in Plan Mode, the plan is not written to disk now; when implementing outside Plan Mode, save it as `delete-config-compat-shell-plan.md`.
+- 本轮只优化 `tests/support/tooling_parallel.lua` 的调度策略，不改 `tooling_worker` 协议
+- 当前 tooling suite 热点短期稳定，固定权重表足以支撑这轮优化
+- 权重命中统一基于 `suite.module_name`，不使用 `suite.name` 作为主键，避免重命名导致歧义
+- 若默认 auto 仍慢于串行，本轮仍算完成“调度策略收敛”；下一轮再专攻进程启动开销

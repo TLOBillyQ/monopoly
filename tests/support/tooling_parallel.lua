@@ -8,8 +8,39 @@ local number_utils = require("src.core.utils.number_utils")
 
 local M = {}
 
+local SUITE_COST_HINTS = {
+  ["suites.architecture.arch_view_live_tooling_contract"] = 40,
+  ["suites.architecture.script_tools_io_tooling_contract"] = 28,
+  ["suites.architecture.script_tools_mutate_tooling_contract"] = 16,
+  ["suites.architecture.mutate4lua_tooling_contract"] = 10,
+  ["suites.architecture.arch_view_snapshot_tooling_contract"] = 5,
+  ["suites.architecture.crap_tooling_contract"] = 2,
+}
+
 local function _ps_literal(value)
   return "'" .. tostring(value or ""):gsub("'", "''") .. "'"
+end
+
+local function _suite_identity(suite, index)
+  local module_name = tostring(suite and suite.module_name or "")
+  if module_name ~= "" then
+    return module_name
+  end
+  local suite_name = tostring(suite and suite.name or "")
+  if suite_name ~= "" then
+    return suite_name
+  end
+  return "tooling_suite_" .. tostring(index or 0)
+end
+
+local function _suite_tests(suite)
+  if type(suite) ~= "table" then
+    return {}
+  end
+  if type(suite.tests) == "table" then
+    return suite.tests
+  end
+  return {}
 end
 
 local function _silent_reporter()
@@ -20,18 +51,111 @@ local function _silent_reporter()
   }
 end
 
-local function _worker_count(value, suite_count)
-  local parsed = number_utils.to_integer(value)
-  if parsed == nil or parsed < 1 then
-    parsed = math.min(4, suite_count)
-  end
-  if parsed < 1 then
+local function _clamp_worker_count(parsed, suite_count)
+  local total = number_utils.to_integer(suite_count) or 0
+  if total <= 0 then
     return 1
   end
-  if parsed > suite_count then
-    return suite_count
+  if parsed == nil or parsed < 1 then
+    return 1
+  end
+  if parsed > total then
+    return total
   end
   return parsed
+end
+
+local function _resolve_worker_count(value, suite_count, is_windows)
+  local parsed = number_utils.to_integer(value)
+  if parsed == nil then
+    local auto_workers = is_windows == true and 2 or 3
+    parsed = math.min(auto_workers, math.max(1, suite_count or 0))
+  end
+  return _clamp_worker_count(parsed, suite_count)
+end
+
+local function _suite_cost(suite, index)
+  local module_name = tostring(suite and suite.module_name or "")
+  local hinted_cost = SUITE_COST_HINTS[module_name]
+  if number_utils.is_numeric(hinted_cost) and hinted_cost > 0 then
+    return hinted_cost
+  end
+  return math.max(1, #_suite_tests(suite))
+end
+
+local function _ranked_suites(suites)
+  local ranked = {}
+  for index, suite in ipairs(suites or {}) do
+    ranked[#ranked + 1] = {
+      suite = suite,
+      cost = _suite_cost(suite, index),
+      identity = _suite_identity(suite, index),
+      original_index = index,
+    }
+  end
+  table.sort(ranked, function(left, right)
+    if left.cost ~= right.cost then
+      return left.cost > right.cost
+    end
+    if left.identity ~= right.identity then
+      return left.identity < right.identity
+    end
+    return left.original_index < right.original_index
+  end)
+  return ranked
+end
+
+local function _build_execution_plan(suites, worker_total)
+  local normalized_workers = _clamp_worker_count(worker_total, #(suites or {}))
+  local lanes = {}
+  for index = 1, normalized_workers do
+    lanes[index] = {
+      index = index,
+      total_cost = 0,
+      suites = {},
+    }
+  end
+
+  for _, entry in ipairs(_ranked_suites(suites)) do
+    local target_lane = lanes[1]
+    for lane_index = 2, #lanes do
+      local candidate = lanes[lane_index]
+      if candidate.total_cost < target_lane.total_cost then
+        target_lane = candidate
+      elseif candidate.total_cost == target_lane.total_cost and candidate.index < target_lane.index then
+        target_lane = candidate
+      end
+    end
+    target_lane.total_cost = target_lane.total_cost + entry.cost
+    target_lane.suites[#target_lane.suites + 1] = entry.suite
+  end
+
+  local rounds = {}
+  local round_count = 0
+  for _, lane in ipairs(lanes) do
+    if #lane.suites > round_count then
+      round_count = #lane.suites
+    end
+  end
+
+  for round_index = 1, round_count do
+    local round = {}
+    for _, lane in ipairs(lanes) do
+      local suite = lane.suites[round_index]
+      if suite ~= nil then
+        round[#round + 1] = suite
+      end
+    end
+    if #round > 0 then
+      rounds[#rounds + 1] = round
+    end
+  end
+
+  return {
+    worker_total = normalized_workers,
+    lanes = lanes,
+    rounds = rounds,
+  }
 end
 
 local function _sleep_seconds(seconds)
@@ -208,14 +332,19 @@ end
 
 function M.run(suites, opts)
   opts = opts or {}
-  local worker_total = _worker_count(opts.workers, #(suites or {}))
-  if worker_total <= 1 or #(suites or {}) <= 1 then
+  local suite_count = #(suites or {})
+  local worker_total = _resolve_worker_count(opts.workers, suite_count, common.is_windows())
+  local worker_label = opts.workers == nil and "auto" or tostring(opts.workers)
+  print("[tooling] workers=" .. worker_label .. " resolved=" .. tostring(worker_total) .. " scheduler=lpt")
+
+  if worker_total <= 1 or suite_count <= 1 then
     return harness.run_all(suites, {
       mode = opts.mode or "dev",
       capture_logs = opts.capture_logs ~= false,
     })
   end
 
+  local plan = _build_execution_plan(suites, worker_total)
   local merged = {
     total = 0,
     failures = {},
@@ -231,38 +360,37 @@ function M.run(suites, opts)
   }
   local started_at = os.time()
 
-  for batch_start = 1, #(suites or {}), worker_total do
-    local batch = {}
-    local batch_end = math.min(batch_start + worker_total - 1, #(suites or {}))
-    for index = batch_start, batch_end do
-      local suite = suites[index]
-      local paths = _launcher_paths(suite and suite.module_name or suite and suite.name or tostring(index))
-      local ok, err = _write_launcher(suite.module_name, paths)
+  for _, batch in ipairs(plan.rounds) do
+    local active = {}
+    for _, suite in ipairs(batch) do
+      local suite_module = suite and suite.module_name or suite and suite.name or ""
+      local paths = _launcher_paths(suite_module)
+      local ok, err = _write_launcher(suite_module, paths)
       if not ok then
-        _cleanup_paths(batch)
+        _cleanup_paths(active)
         error(err)
       end
       local launched, launch_err = _launch_worker(paths)
       if not launched then
-        _cleanup_paths(batch)
+        _cleanup_paths(active)
         error(launch_err)
       end
-      batch[#batch + 1] = {
+      active[#active + 1] = {
         suite = suite,
         paths = paths,
       }
     end
 
-    local waited, wait_err = _wait_for_batch(batch)
+    local waited, wait_err = _wait_for_batch(active)
     if not waited then
-      _cleanup_paths(batch)
+      _cleanup_paths(active)
       error(wait_err)
     end
 
-    for _, entry in ipairs(batch) do
+    for _, entry in ipairs(active) do
       local status_code, status_err = _read_status(entry.paths.status_file)
       if status_code == nil then
-        _cleanup_paths(batch)
+        _cleanup_paths(active)
         error(status_err)
       end
 
@@ -281,7 +409,7 @@ function M.run(suites, opts)
       end
     end
 
-    _cleanup_paths(batch)
+    _cleanup_paths(active)
   end
 
   local result = _finalize_result(merged, started_at)
@@ -293,5 +421,11 @@ function M.run(suites, opts)
   print("\nAll tooling checks passed (" .. tostring(result.total) .. ")")
   return result
 end
+
+M._test_support = {
+  resolve_worker_count = _resolve_worker_count,
+  suite_cost = _suite_cost,
+  build_execution_plan = _build_execution_plan,
+}
 
 return M
