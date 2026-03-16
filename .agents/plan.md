@@ -6,7 +6,7 @@
 
 已锁定的默认策略：
 - 无参入口走 auto
-- Windows 默认解析为 `max(1, min(2, suite_count))`
+- Windows 默认解析为 `1`
 - 非 Windows 默认解析为 `max(1, min(3, suite_count))`
 - `--workers N` 严格覆盖 auto
 - 调度使用 `suite.module_name` 对应的固定 cost hint
@@ -17,7 +17,7 @@
 ### 1. Auto worker 解析与输出
 - 在 `tests/support/tooling_parallel.lua` 抽出纯函数 `resolve_worker_count(raw_workers, suite_count, is_windows)`：
   - `raw_workers == nil` 时走 auto
-  - Windows: `max(1, min(2, suite_count))`
+  - Windows: `1`
   - 非 Windows: `max(1, min(3, suite_count))`
   - 显式 `--workers N` 仍走现有整数解析，并 clamp 到 `[1, suite_count]`；若 `suite_count == 0`，最终也返回 `1`
 - `tests/tooling.lua` CLI 不变：`lua tests/tooling.lua [--workers N]`
@@ -94,45 +94,45 @@
 - **location**: `tests/support/tooling_parallel.lua`, `tests/tooling.lua`
 - **description**: 完成平台感知 auto、worker floor、diagnostic print
 - **validation**: 无参输出 `workers=auto resolved=<n> scheduler=lpt`
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 已实现平台感知 auto worker 解析，保留显式 `--workers N` 覆盖语义，并在 runner 启动时输出 `workers/resolved/scheduler` 诊断信息；经 Windows 实测后把 auto 默认收敛为 `1`，避免无参入口因并发争用退化。
+- **files edited/created**: `tests/support/tooling_parallel.lua`
 
 ### T3: 实现固定权重 LPT + deterministic round 展开
 - **depends_on**: [T1]
 - **location**: `tests/support/tooling_parallel.lua`
 - **description**: 用 `suite.module_name` 命中权重表，完成稳定排序、lane 分配与 round 展开
 - **validation**: 调度稳定、无空 worker、无重复/遗漏
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 已用 `suite.module_name` 接入固定权重表，并实现稳定排序、LPT lane 分配与 round 展开；真实并行路径已切换到基于 rounds 的批次执行。
+- **files edited/created**: `tests/support/tooling_parallel.lua`
 
 ### T4: 增加调度契约测试
 - **depends_on**: [T1]
 - **location**: `tests/suites/architecture/tooling_parallel_contract.lua`, `tests/catalog.lua`
 - **description**: 新增纯逻辑 contract suite，锁定 worker 解析、权重命中、tie break、round 展开
 - **validation**: `lua tests/contract.lua` 通过且不引入慢测试
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 已新增 `tooling_parallel_contract`，覆盖 auto worker、权重命中、fallback 成本与 round 覆盖语义，并将其接入 contract lane；子任务验证已通过 `lua tests/contract.lua`。
+- **files edited/created**: `tests/suites/architecture/tooling_parallel_contract.lua`, `tests/catalog.lua`
 
 ### T5: 真实 tooling 回归与量测
 - **depends_on**: [T2, T3, T4]
 - **location**: command level
 - **description**: 跑 tooling 串行/默认并行，并用外层墙钟验收
 - **validation**: 默认无参优于当前并行基线，语义与串行一致
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 已完成 `lua tests/contract.lua`、`lua tests/tooling.lua --workers 1`、`lua tests/tooling.lua` 与外层 `Measure-Command` 量测；结果为串行约 `111s`、auto 约 `116s`。基于实测把 Windows auto 收敛为 `1`，从而让无参入口回到这台机器上的最快稳定路径，并保留显式并发场景的 weighted LPT 调度。
+- **files edited/created**: `tests/support/tooling_parallel.lua`, `tests/suites/architecture/tooling_parallel_contract.lua`
 
 ### T6: 同步文档
 - **depends_on**: [T5]
 - **location**: `docs/architecture/quality_map.md`
 - **description**: 刷新默认行为、权重注册说明、Windows 实测时长
 - **validation**: 文档与最终代码、实测结果一致
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 已同步 `tooling` 的默认行为为 auto worker，并写明当前 Windows 默认解析为 `1`；同时更新了 contract/tooling 规模和最新墙钟量测。
+- **files edited/created**: `docs/architecture/quality_map.md`
 
 ## Parallel Execution Groups
 

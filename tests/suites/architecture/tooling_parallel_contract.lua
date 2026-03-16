@@ -20,8 +20,8 @@ end
 
 local function _test_auto_workers_windows()
   _assert_equal(support.resolve_worker_count(nil, 0, true), 1, "windows auto should floor at 1 even with zero suites")
-  _assert_equal(support.resolve_worker_count(nil, 2, true), 2, "windows auto should cap at 2")
-  _assert_equal(support.resolve_worker_count(nil, 5, true), 2, "windows auto should not exceed configured max")
+  _assert_equal(support.resolve_worker_count(nil, 2, true), 1, "windows auto should prefer the measured fast path")
+  _assert_equal(support.resolve_worker_count(nil, 5, true), 1, "windows auto should not exceed configured max")
 end
 
 local function _test_auto_workers_non_windows()

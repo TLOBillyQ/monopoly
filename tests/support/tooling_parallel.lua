@@ -68,7 +68,7 @@ end
 local function _resolve_worker_count(value, suite_count, is_windows)
   local parsed = number_utils.to_integer(value)
   if parsed == nil then
-    local auto_workers = is_windows == true and 2 or 3
+    local auto_workers = is_windows == true and 1 or 3
     parsed = math.min(auto_workers, math.max(1, suite_count or 0))
   end
   return _clamp_worker_count(parsed, suite_count)

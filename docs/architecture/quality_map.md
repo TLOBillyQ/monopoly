@@ -14,7 +14,7 @@
 |------|------|----------------|------------------|
 | `lua tests/behavior.lua` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 约 `0.4s` |
 | `lua tests/contract.lua` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 目标 warm `<5s`，cold `<8s` |
-| `lua tests/tooling.lua` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 本机实测：`--workers 1` 约 `105s`，默认并行约 `118s` |
+| `lua tests/tooling.lua` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 本机实测：`--workers 1` 约 `111s`，默认 auto 约 `116s` |
 | `lua tests/guard.lua` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
 | `lua scripts/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
 | `lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构 | 约 `9s-10s` |
@@ -30,8 +30,8 @@
 | 入口 | 当前规模 | 备注 |
 |------|----------|------|
 | `behavior` | `48` 个 suite，`976` 个 case | 其中 `8` 个 case 在特定 mode 下禁用 |
-| `contract` | `12` 个 suite，`64` 个 case | 默认高频快车道 |
-| `tooling` | `6` 个 suite，`31` 个 case | 默认并行；可用 `--workers 1` 退回串行调试 |
+| `contract` | `13` 个 suite，`68` 个 case | 默认高频快车道，含 tooling 调度纯逻辑契约 |
+| `tooling` | `6` 个 suite，`31` 个 case | 默认 auto；可用 `--workers 1` 退回串行调试 |
 | `guard` | `5` 个 script | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`、`migration_shim_rules` |
 | `arch_view` | 扫描 `src/**/*.lua` | 不扫 `tests/`、`scripts/`、`vendor/` |
 | `crap` | 当前 behavior lane 分析 `2588` 个函数 | 只给 `src/**/*.lua` 打分 |
@@ -62,7 +62,8 @@
 - 关注点：真实 `mutate --index-suites`、`arch_view scan`、`arch_view viewer --in-json` 这类工具链导出
 - 适用时机：改了质量工具包装层、导出流程、viewer 产物或 suite indexing 逻辑，再显式跑它
 - 特点：故意和 `contract` 分开，避免慢工具 smoke 拖垮高频契约回归；真实 `arch_view analyze(...)` 常驻覆盖留在 `guard` 的 `arch_view_guard`
-- 运行方式：默认按 suite 并行；可用 `lua tests/tooling.lua --workers 1` 退回串行，或用 `--workers N` 显式调并发度
+- 运行方式：默认走 auto worker；当前 Windows 会解析为 `1`，非 Windows 仍按小并发 auto；可用 `lua tests/tooling.lua --workers 1` 强制串行，或用 `--workers N` 显式调并发度
+- 调度策略：显式并发时按 `suite.module_name` 命中的固定 cost hint 做 weighted LPT；未注册的新 suite 回退到 `#tests`
 - 当前拆分：
   - `arch_view_snapshot_tooling_contract`
   - `arch_view_live_tooling_contract`
@@ -175,10 +176,10 @@ lua tests/tooling.lua
 
 当前本机（Windows，2026-03-16）外层墙钟实测：
 
-- `lua tests/tooling.lua --workers 1`：约 `105s`
-- `lua tests/tooling.lua`：约 `118s`
+- `lua tests/tooling.lua --workers 1`：约 `111s`
+- `lua tests/tooling.lua`：约 `116s`
 
-也就是说，“单进程 `index-suites` 快路径”已经把串行基线从原先约 `190s-210s` 压到了约 `105s`；默认并行入口已经就位，但这台机器上多进程争用仍高于收益，所以串行调试模式反而更快。
+也就是说，“单进程 `index-suites` 快路径”已经把串行基线从原先约 `190s-210s` 压到了约 `111s`；继续尝试默认多 worker 后，这台机器上仍然存在明显争用，因此当前 auto 默认直接解析为 `1`，把 weighted LPT 调度保留给显式 `--workers N` 场景。
 
 ### 热点分析
 
@@ -208,7 +209,7 @@ lua scripts/quality/arch.lua check
 lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json
 ```
 
-当前机器按经验可按 `12s-15s` 预估；如果额外补跑 `tooling`，请按上面的 `~105s-118s` 另算，不再适合并入“日常默认整套回归”。
+当前机器按经验可按 `12s-15s` 预估；如果额外补跑 `tooling`，请按上面的 `~111s-116s` 另算，不再适合并入“日常默认整套回归”。
 
 ## 使用上的默认建议
 
