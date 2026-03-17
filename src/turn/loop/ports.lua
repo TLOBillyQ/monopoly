@@ -215,6 +215,23 @@ local function _build_resolved_ports(grouped_override)
   _fill_clock_defaults(resolved.clock, base_ports.clock)
   return resolved
 end
+
+local function _copy_array(values)
+  local copied = {}
+  for index, value in ipairs(values or {}) do
+    copied[index] = value
+  end
+  return copied
+end
+
+local function _copy_port_groups()
+  local copied = {}
+  for group_name, keys in pairs(port_groups) do
+    copied[group_name] = _copy_array(keys)
+  end
+  return copied
+end
+
 function gameplay_loop_ports.resolve(override_ports)
   if override_ports == nil then
     return _build_resolved_ports(nil)
@@ -230,6 +247,13 @@ function gameplay_loop_ports.resolve(override_ports)
     error("legacy flat gameplay_loop_ports is not supported; use grouped ports: modal/anim/ui_sync/debug/clock/state")
   end
   return _build_resolved_ports(nil)
+end
+
+function gameplay_loop_ports.describe_contract()
+  return {
+    group_names = _copy_array(group_names),
+    port_groups = _copy_port_groups(),
+  }
 end
 
 gameplay_loop_ports._build_noop_group = _build_noop_group

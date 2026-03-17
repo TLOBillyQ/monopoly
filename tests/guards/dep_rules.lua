@@ -9,6 +9,24 @@ local rules = {
     description = "no module may depend on retired shared.UINodes",
   },
   {
+    roots = { "src/ui", "src/presentation/runtime" },
+    forbidden_patterns = {
+      'require%("src%.state%.state_access%.runtime_state"%)',
+      "require%('src%.state%.state_access%.runtime_state'%)",
+      'require%("src%.state%.state_access%.landing_visual_hold"%)',
+      "require%('src%.state%.state_access%.landing_visual_hold'%)",
+    },
+    description = "presentation modules must consume runtime state through seam adapters",
+  },
+  {
+    roots = { "src/ui", "src/presentation/runtime" },
+    forbidden_patterns = {
+      'require%("src%.host%.eggy',
+      "require%('src%.host%.eggy",
+    },
+    description = "presentation modules must consume host runtime through explicit adapters or bootstrap files",
+  },
+  {
     roots = { "src/ui" },
     forbidden = { "intent_builders" },
     description = "no module may depend on retired intent_builders",
@@ -249,6 +267,31 @@ local rules = {
 }
 
 local dep_rules_whitelist = {}
+
+dep_rules_whitelist["src/ui/ctl/ports/runtime_state_seam.lua"] = {
+  ['require("src.state.state_access.runtime_state")'] = true,
+}
+
+dep_rules_whitelist["src/ui/ctl/ports/landing_visual_hold_seam.lua"] = {
+  ['require("src.state.state_access.landing_visual_hold")'] = true,
+}
+
+dep_rules_whitelist["src/ui/ctl/ports/host_runtime_ports.lua"] = {
+  ['require("src.host.eggy")'] = true,
+  ['require("src.host.eggy.event_bridge")'] = true,
+}
+
+dep_rules_whitelist["src/ui/ctl/ports/state_ports.lua"] = {
+  ['require("src.host.eggy")'] = true,
+}
+
+dep_rules_whitelist["src/presentation/runtime/ui_bootstrap.lua"] = {
+  ['require("src.host.eggy.context")'] = true,
+}
+
+dep_rules_whitelist["src/presentation/runtime/runtime_event_bridge.lua"] = {
+  ['require("src.host.eggy.context")'] = true,
+}
 
 local forbidden_files = {
   "src/entry.lua",

@@ -6,6 +6,8 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_context = require("src.host.eggy.context")
 local runtime_install = require("src.app.bootstrap.runtime_install")
 local default_ports = require("src.host.eggy.default_ports")
+local gameplay_loop_ports = require("src.turn.loop.ports")
+local presentation_ports = require("src.ui.ctl.ports")
 
 local function _reset_runtime_contract_state()
   runtime_ports.reset_for_tests()
@@ -297,6 +299,30 @@ local function _test_runtime_ports_resolve_role_returns_nil_for_missing_id_and_s
   _reset_runtime_contract_state()
 end
 
+local function _test_gameplay_loop_port_contract_is_grouped_and_stable()
+  local contract = gameplay_loop_ports.describe_contract()
+  _assert_eq(table.concat(contract.group_names, ","), "modal,anim,ui_sync,debug,clock,state,output",
+    "gameplay loop port groups should stay grouped and ordered")
+  _assert_eq(contract.port_groups.ui_sync[1], "apply_input_lock", "ui_sync contract should keep apply_input_lock")
+  _assert_eq(contract.port_groups.ui_sync[2], "step_choice_timeout", "ui_sync contract should keep timeout step")
+  _assert_eq(contract.port_groups.output[1], "invalidate_ui", "output contract should expose invalidate_ui")
+  _assert_eq(contract.port_groups.state[1], "apply_role_control_lock", "state contract should expose role lock")
+end
+
+local function _test_presentation_boundary_contract_describes_seams_and_state_allowlists()
+  local contract = presentation_ports.describe_boundary_contract()
+  _assert_eq(contract.state_seam_modules.runtime_state, "src.ui.ctl.ports.runtime_state_seam",
+    "presentation contract should publish runtime state seam")
+  _assert_eq(contract.state_seam_modules.landing_visual_hold, "src.ui.ctl.ports.landing_visual_hold_seam",
+    "presentation contract should publish landing hold seam")
+  _assert_eq(contract.import_allowlists.host_runtime[1], "src.ui.ctl.ports.host_runtime_ports",
+    "presentation contract should publish host runtime allowlist")
+  _assert_eq(contract.state_field_allowlists.presentation_runtime[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
+    "presentation contract should pin presentation_runtime ownership")
+  _assert_eq(contract.state_field_allowlists.gameplay_loop_ports[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
+    "presentation contract should pin gameplay_loop_ports ownership")
+end
+
 return {
   name = "runtime_ports_contract",
   tests = {
@@ -343,6 +369,14 @@ return {
     {
       name = "runtime_ports_resolve_role_returns_nil_for_missing_id_and_skips_adapterless_synthetic_actor",
       run = _test_runtime_ports_resolve_role_returns_nil_for_missing_id_and_skips_adapterless_synthetic_actor,
+    },
+    {
+      name = "gameplay_loop_port_contract_is_grouped_and_stable",
+      run = _test_gameplay_loop_port_contract_is_grouped_and_stable,
+    },
+    {
+      name = "presentation_boundary_contract_describes_seams_and_state_allowlists",
+      run = _test_presentation_boundary_contract_describes_seams_and_state_allowlists,
     },
   },
 }

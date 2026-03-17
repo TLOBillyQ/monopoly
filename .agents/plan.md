@@ -47,9 +47,9 @@ T2 ──┘        └── T5 ──┘
 - **location**: `src/ui/ctl/ports/init.lua`, `src/turn/loop/ports.lua`, `tests/suites/runtime/runtime_ports_contract.lua`, `tests/suites/presentation/_presentation_action_status_*.lua`, `tests/guards/dep_rules.lua`
 - **description**: Lock the grouped loop-port contract and define the allowed state-shape ownership before broad consumer rewrites begin. This includes codifying which files may still touch `state.presentation_runtime`, `state.gameplay_loop_ports`, `state.game`, cached resolved ports, or host-touching bootstrap state directly.
 - **validation**: `lua tests/contract.lua` stays green with the seam contract assertions in place; grep/guard rules describe both import allowlists and direct state-field allowlists.
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: Added explicit boundary metadata to `src/ui/ctl/ports/init.lua`, exposed a stable grouped-port contract from `src/turn/loop/ports.lua`, asserted both contracts in `tests/suites/runtime/runtime_ports_contract.lua`, and taught `tests/guards/dep_rules.lua` to reject direct runtime-state/host imports outside the approved seam files. Also moved the action-status seam tests onto `runtime_state_seam` so the contract reads the same surface as production code. `lua tests/contract.lua` passes; `lua tests/guard.lua` still reports the pre-existing arch-view projection cycle under `ui`/`ui.ctl`, which T7 owns.
+- **files edited/created**: `src/ui/ctl/ports/init.lua`, `src/turn/loop/ports.lua`, `tests/suites/runtime/runtime_ports_contract.lua`, `tests/guards/dep_rules.lua`, `tests/suites/presentation/_presentation_action_status_choice_and_target_cases.lua`, `tests/suites/presentation/_presentation_action_status_market_and_anim_cases.lua`, `tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua`.
 
 ### T4: Refactor presentation consumers to use the new seams
 - **depends_on**: [T1, T2, T3]
