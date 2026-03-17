@@ -68,6 +68,7 @@ local contract_modules = {
   "suites.runtime.runtime_ports_contract",
   "suites.presentation.ui_runtime_state_contract",
   "suites.architecture.tooling_parallel_contract",
+  "suites.architecture.scrap4lua_contract",
 }
 
 local tooling_modules = {
@@ -77,6 +78,7 @@ local tooling_modules = {
   "suites.architecture.mutate4lua_tooling_contract",
   "suites.architecture.script_tools_io_tooling_contract",
   "suites.architecture.script_tools_mutate_tooling_contract",
+  "suites.architecture.scrap4lua_tooling_contract",
 }
 
 local disabled_cases = {

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrap4lua Viewer</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./scrap_data.js"></script>
+  <script defer src="./script.js"></script>
+</head>
+<body>
+  <div class="paper_grain" aria-hidden="true"></div>
+  <div class="app_shell">
+    <header class="topbar">
+      <div class="brand_block">
+        <p class="brand_eyebrow">Semantic Archive</p>
+        <h1>Scrap4lua Viewer</h1>
+        <p id="brand_subtitle" class="brand_subtitle">Search-first concept navigation for Lua code, tests, and docs.</p>
+      </div>
+      <div class="topbar_stats">
+        <div class="stat_card"><span class="stat_label">Scraps</span><strong id="scrap_count_label">0</strong></div>
+        <div class="stat_card"><span class="stat_label">Terms</span><strong id="term_count_label">0</strong></div>
+        <div class="stat_card"><span class="stat_label">Themes</span><strong id="theme_count_label">0</strong></div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="search_panel panel">
+        <div class="search_heading">
+          <p class="section_kicker">Query Desk</p>
+          <h2>Find where to read next</h2>
+        </div>
+
+        <label class="search_field">
+          <span class="search_label">Concept query</span>
+          <input id="query_input" type="text" placeholder="choice owner_role_id / bankruptcy feedback / market paid purchase">
+        </label>
+
+        <div class="control_row">
+          <label class="inline_field">
+            <span>Collection</span>
+            <select id="collection_filter">
+              <option value="all">All</option>
+            </select>
+          </label>
+          <label class="inline_field">
+            <span>Level</span>
+            <select id="level_filter">
+              <option value="all">All</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="toggle_row">
+          <label class="toggle_chip"><input id="exact_toggle" type="checkbox"> <span>Exact only</span></label>
+          <label class="toggle_chip"><input id="raw_theme_toggle" type="checkbox"> <span>Show raw themes</span></label>
+        </div>
+
+        <div>
+          <p class="mini_label">Suggested queries</p>
+          <div id="query_chip_list" class="chip_list"></div>
+        </div>
+
+        <div>
+          <div class="section_split">
+            <p class="mini_label">Theme spotlight</p>
+            <span id="theme_notice" class="minor_note"></span>
+          </div>
+          <div id="theme_list" class="theme_list"></div>
+        </div>
+      </section>
+
+      <section class="results_panel panel">
+        <div class="results_header">
+          <div>
+            <p class="section_kicker">Matches</p>
+            <h2 id="results_title">Recommended entry points</h2>
+          </div>
+          <div class="results_meta">
+            <span id="results_count_label">0 results</span>
+            <span id="expanded_terms_label" class="expanded_terms_label"></span>
+          </div>
+        </div>
+        <div id="empty_state" class="empty_state">
+          <p>Start with a concept query, or pick a spotlight theme to open a curated reading path.</p>
+        </div>
+        <div id="results_list" class="results_list"></div>
+      </section>
+
+      <aside class="inspector panel">
+        <div class="inspector_header">
+          <p class="section_kicker">Inspector</p>
+          <h2 id="inspector_title">Nothing selected</h2>
+          <p id="inspector_subtitle" class="brand_subtitle">Select a match card to inspect its terms, related scraps, and nearby symbols.</p>
+        </div>
+        <div class="inspector_sections">
+          <section>
+            <h3>Path</h3>
+            <p id="inspector_path" class="path_text">-</p>
+          </section>
+          <section>
+            <h3>Metadata</h3>
+            <dl id="inspector_meta" class="meta_grid"></dl>
+          </section>
+          <section>
+            <h3>Reasons</h3>
+            <div id="inspector_reasons" class="chip_list"></div>
+          </section>
+          <section>
+            <h3>Terms</h3>
+            <div id="inspector_terms" class="chip_list"></div>
+          </section>
+          <section>
+            <h3>Requires</h3>
+            <div id="inspector_requires" class="chip_list"></div>
+          </section>
+          <section>
+            <h3>Same path</h3>
+            <div id="inspector_neighbors" class="link_stack"></div>
+          </section>
+          <section>
+            <h3>Related scraps</h3>
+            <div id="inspector_related" class="link_stack"></div>
+          </section>
+        </div>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>

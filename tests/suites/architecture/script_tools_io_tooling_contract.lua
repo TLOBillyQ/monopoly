@@ -5,6 +5,7 @@ local names = {
   arch_common_reuses_unicode_safe_file_ops = true,
   cli_help_text_is_bilingual = true,
   arch_view_viewer_supports_unicode_output_path = true,
+  scrap_viewer_supports_unicode_output_path = true,
 }
 
 local tests = {}

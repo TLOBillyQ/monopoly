@@ -162,6 +162,7 @@ local function _test_cli_help_text_is_bilingual()
     { "scripts/quality/arch.lua", "--help" },
     { "scripts/quality/crap.lua", "--help" },
     { "scripts/quality/mutate.lua", "--help" },
+    { "scripts/quality/scrap.lua", "--help" },
   }
 
   for _, args in ipairs(help_commands) do
@@ -343,6 +344,24 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
   end)
 end
 
+local function _test_scrap_viewer_supports_unicode_output_path()
+  _with_clean_tmp("scrap_viewer_unicode_output", function(tmp_root)
+    local out_dir = common.join_path(tmp_root, "scrap_目标/中文 English")
+    local result = _run_lua({
+      "scripts/quality/scrap.lua",
+      "viewer",
+      "--out-dir",
+      out_dir,
+    })
+
+    assert(result.ok == true, "scrap viewer should support unicode output paths")
+    _assert_contains(result.output, "scrap4lua viewer ok", "scrap viewer output should include English success text")
+    _assert_contains(result.output, "视图已生成", "scrap viewer output should include Chinese success text")
+    assert(common.path_exists(common.join_path(out_dir, "index.html")) == true, "scrap viewer should write index.html")
+    assert(common.path_exists(common.join_path(out_dir, "scrap_data.js")) == true, "scrap viewer should write scrap_data.js")
+  end)
+end
+
 local function _test_mutate_wrapper_scan_json_output()
   local result = _run_lua({
     "scripts/quality/mutate.lua",
@@ -389,6 +408,7 @@ local tooling_tests = {
   { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
   { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
   { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
+  { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
   { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
   { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
 }
