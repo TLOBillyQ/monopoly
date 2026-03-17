@@ -188,9 +188,9 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
  - **validation**: UI 新路径与旧路径都可解析；`package.loaded` 热点键在 shim 期保持兼容；不再依赖 `init.lua` 作为唯一入口；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/behavior.lua` 通过。
 - **status**: Completed
 - **log**:
-  - 已完成 `src/ui/ctl`、`src/ui/pres`、`src/ui/wid`、`src/ui/render` 子树的内部引用收口：新命名空间内部不再回跳 `controllers/presenters/widgets` shim，避免 `arch_view` 在 `ui` 视图上聚合出 `controllers -> ctl` 投影环。
+  - 已完成 `src/ui/ctl`、`src/ui/pres`、`src/ui/wid`、`src/ui/render`、`src/ui/stores`、`src/ui/input` 子树的内部引用收口：新命名空间内部不再回跳 `controllers/presenters/widgets` shim，避免 `arch_view` 在 `ui` 视图上聚合出 `controllers -> ctl` 投影环。
   - 保留旧 `src/ui/controllers/**`、`src/ui/presenters/**`、`src/ui/widgets/**` 与 `src/ui/render/{board,status3d}/init.lua` 兼容 shim，同时继续双注册热点 `package.loaded` 键，维持旧调用面可解析。
-  - 为兼容现有 UI sync 测试夹具，`ui_model_sync` 仍通过 `src.ui.presenters` 入口取 presenter 聚合模块；其余 T6 内部实现统一切到 `src.ui.pres/*`、`src.ui.wid/*`。
+  - `ui_model_sync` 与其余 T6 内部实现已统一切到 `src.ui.pres/*`、`src.ui.wid/*`、`src.ui.ctl/*` 聚合入口；旧命名空间只作为兼容 shim 暴露给外部调用点与 cache key 热点。
   - 验证通过：`lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua`。
  - **files edited/created**:
    - `src/ui/ctl/**`

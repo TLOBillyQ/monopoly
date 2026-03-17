@@ -1,1 +1,1 @@
-return require("src.ui.controllers.ui_runtime")
+return require("src.ui.ctl.ui_runtime")

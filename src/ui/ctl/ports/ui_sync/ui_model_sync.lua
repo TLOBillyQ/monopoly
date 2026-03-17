@@ -25,7 +25,7 @@ local function _defer_refresh_for_landing_hold(state, dirty)
 end
 
 local function _update_runtime_ui_model(state, game, dirty)
-  local model = require("src.ui.presenters")
+  local model = require("src.ui.pres")
   local env = turn_ui_sync_shared.build_ui_env(state, game)
   local next_model = model.update(runtime_state.get_ui_model(state), game, env, dirty)
   runtime_state.set_ui_model(state, next_model)
@@ -60,7 +60,7 @@ function ui_model_sync.apply_input_lock(state)
 end
 
 function ui_model_sync.build_model(state, game)
-  local model = require("src.ui.presenters")
+  local model = require("src.ui.pres")
   local env = turn_ui_sync_shared.build_ui_env(state, game)
   return model.build(game, env)
 end

@@ -1,4 +1,4 @@
-local choice_support = require("src.ui.presenters.choice_support")
+local choice_support = require("src.ui.pres.choice_support")
 local number_utils = require("src.core.utils.number_utils")
 local runtime_state = require("src.state.state_access.runtime_state")
 

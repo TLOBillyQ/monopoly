@@ -1,1 +1,1 @@
-return require("src.ui.controllers.event_state")
+return require("src.ui.ctl.event_state")

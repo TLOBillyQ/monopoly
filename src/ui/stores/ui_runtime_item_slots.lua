@@ -1,1 +1,1 @@
-return require("src.ui.controllers.item_slots")
+return require("src.ui.ctl.item_slots")
