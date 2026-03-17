@@ -101,7 +101,18 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 - **validation**: 在尚未迁移源码前，guard/contract 继续通过；双轨规则不会因未来路径未落地而误报；package 入口类别名键有专门 contract；`scripts/migration/*` 能 dry-run 输出本次拟改清单。
 - **status**: Not Completed
 - **log**:
+  - 已把 `tests/support/migration_pairs.lua` 改为从 `tests/support/migration_map.lua` 派生，并给 `tests/guards/migration_shim_rules.lua`、`tests/suites/architecture/migration_shim_contract.lua` 加入 package-init `alias_modules` 检查。
+  - 已把 `scripts/quality/arch/config.json` 的 `ui_schema_pure` 扩成 `controllers/presenters/widgets` 与 `ctl/pres/wid` 双轨。
+  - 已新增 `scripts/migration/common.lua`、`scripts/migration/generate_shims.lua` 与 `scripts/migration/rewrite_modules.lua` 作为 dry-run 入口。
+  - 当前 `migration_map` 仅冻结了 13 个 `init.lua` 入口；`tests/guards/dep_rules.lua` 与 `scripts/quality/scrap/config.lua` 仍未接入 rename map，`lua tests/contract.lua` 也仍被既有 `script_tools_contract.deploy_defaults_match_windows_history` 失败拦住，因此 T2 不能标完成。
 - **files edited/created**:
+  - `tests/support/migration_pairs.lua`
+  - `tests/guards/migration_shim_rules.lua`
+  - `tests/suites/architecture/migration_shim_contract.lua`
+  - `scripts/quality/arch/config.json`
+  - `scripts/migration/common.lua`
+  - `scripts/migration/generate_shims.lua`
+  - `scripts/migration/rewrite_modules.lua`
 
 ### T3：迁移 gameplay 子树
 

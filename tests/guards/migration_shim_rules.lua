@@ -39,6 +39,24 @@ local function contains_alias_registration(text, alias_modules)
   return alias_hits >= 2
 end
 
+local function is_aliasing_forwarding_shim(text, new_module, alias_modules)
+  if text == nil then
+    return false
+  end
+
+  if not text:find('require("' .. new_module .. '")', 1, true)
+    and not text:find("require('" .. new_module .. "')", 1, true)
+  then
+    return false
+  end
+
+  if not text:find("return module", 1, true) then
+    return false
+  end
+
+  return contains_alias_registration(text, alias_modules)
+end
+
 local function is_retired_config_pair(pair)
   local old_path = pair and pair.old_path or ""
   for _, root in ipairs(retired_config_roots) do
@@ -64,19 +82,20 @@ function M.run()
 
     if migration_pairs.file_exists(pair.old_path) and migration_pairs.file_exists(pair.new_path) then
       local text = migration_pairs.read_file(pair.old_path)
-      if not is_forwarding_shim(text, pair.new_module) then
+      if needs_alias_validation(pair) then
+        if not is_aliasing_forwarding_shim(text, pair.new_module, pair.alias_modules) then
+          return {
+            ok = false,
+            error = "migration_shim_rules: " .. pair.old_path
+              .. " must forward to " .. pair.new_module
+              .. " and register alias package.loaded keys",
+          }
+        end
+      elseif not is_forwarding_shim(text, pair.new_module) then
         return {
           ok = false,
           error = "migration_shim_rules: " .. pair.old_path
             .. " must be a pure forwarding shim to " .. pair.new_module,
-        }
-      end
-
-      if needs_alias_validation(pair) and not contains_alias_registration(text, pair.alias_modules) then
-        return {
-          ok = false,
-          error = "migration_shim_rules: " .. pair.old_path
-            .. " must register alias package.loaded keys for migration compatibility",
         }
       end
     end
