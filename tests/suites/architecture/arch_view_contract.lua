@@ -5,6 +5,7 @@ bootstrap.install_package_paths()
 local arch_view = require("arch_view")
 local common = require("arch_view.runtime.common")
 local json_reader = require("arch_view.runtime.json_reader")
+local arch_filter = require("scripts.quality.arch.filter")
 
 local cached_snapshot = nil
 local cached_scan_result = nil
@@ -223,6 +224,16 @@ local function _test_cli_viewer_supports_in_json()
   assert(_exists(out_dir .. "/architecture.json"), "viewer --in-json should export architecture.json")
 end
 
+local function _test_filtered_check_ignores_presentation_namespace_projection_cycles()
+  local scan = _scan_architecture_json()
+  local payload = json_reader.decode(_read_file(scan.out_path))
+  arch_filter.apply(payload)
+  for _, violation in ipairs((payload.check and payload.check.violations) or {}) do
+    assert(violation.view ~= "ui", "filtered check should ignore presentation namespace ui projection cycle")
+    assert(violation.view ~= "ui.ctl", "filtered check should ignore presentation namespace ui.ctl projection cycle")
+  end
+end
+
 local function _test_json_modules_are_self_contained()
   local common_source = _read_file("vendor/arch_view/arch_view/runtime/common.lua")
   local host_source = _read_file("vendor/arch_view/arch_view/runtime/host.lua")
@@ -252,6 +263,7 @@ local contract_tests = {
 local tooling_tests = {
   { name = "cli_scan_writes_metadata", run = _test_cli_scan_writes_metadata },
   { name = "cli_viewer_supports_in_json", run = _test_cli_viewer_supports_in_json },
+  { name = "filtered_check_ignores_presentation_namespace_projection_cycles", run = _test_filtered_check_ignores_presentation_namespace_projection_cycles },
 }
 
 return {

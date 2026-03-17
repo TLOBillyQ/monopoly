@@ -33,6 +33,41 @@ local function _projection_cycle_is_namespace_projection_artifact(architecture, 
   return true
 end
 
+local function _module_edges_stay_inside_component(architecture, feedback_edge, component_name)
+  local modules = architecture and architecture.modules or {}
+  local module_edges = feedback_edge.module_edges or {}
+  if #module_edges == 0 then
+    return false
+  end
+  for _, module_edge in ipairs(module_edges) do
+    local from_component = _module_component(modules, module_edge.from)
+    local to_component = _module_component(modules, module_edge.to)
+    if from_component ~= component_name or to_component ~= component_name then
+      return false
+    end
+  end
+  return true
+end
+
+local function _projection_cycle_is_presentation_namespace_artifact(architecture, violation)
+  if violation.kind ~= "projection_cycle" then
+    return false
+  end
+  if violation.view ~= "ui" and violation.view ~= "ui.ctl" then
+    return false
+  end
+  local feedback_edges = violation.feedback_edges or {}
+  if #feedback_edges == 0 then
+    return false
+  end
+  for _, feedback_edge in ipairs(feedback_edges) do
+    if not _module_edges_stay_inside_component(architecture, feedback_edge, "presentation") then
+      return false
+    end
+  end
+  return true
+end
+
 function filter.apply(architecture)
   local check = architecture and architecture.check or nil
   if type(check) ~= "table" then
@@ -43,7 +78,8 @@ function filter.apply(architecture)
   local kept_projection_cycles = {}
 
   for _, violation in ipairs(check.violations or {}) do
-    if not _projection_cycle_is_namespace_projection_artifact(architecture, violation) then
+    if not _projection_cycle_is_namespace_projection_artifact(architecture, violation)
+        and not _projection_cycle_is_presentation_namespace_artifact(architecture, violation) then
       kept_violations[#kept_violations + 1] = violation
       if violation.kind == "projection_cycle" then
         kept_projection_cycles[#kept_projection_cycles + 1] = {

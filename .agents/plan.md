@@ -83,18 +83,18 @@ T2 ──┘        └── T5 ──┘
 - **location**: `tests/guards/dep_rules.lua`, `scripts/quality/arch/config.json`, `tests/suites/architecture/arch_view_contract.lua`, `docs/architecture/arch_view.md`, `scripts/quality/arch/viewer/`
 - **description**: Tighten the static boundary so presentation code cannot drift back to direct `runtime_state`, `landing_visual_hold`, or `src.host.eggy*` imports outside the chosen adapter files, and keep arch-view config/contracts/viewer aligned if the stricter rules expose root-view or projection drift.
 - **validation**: `lua tests/guard.lua` and `lua scripts/quality/arch.lua check` pass with the stricter rules enabled; viewer snapshot stays aligned with contract expectations.
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: Tightened the text guards in T3, then taught `scripts/quality/arch/filter.lua` and `tests/suites/architecture/arch_view_contract.lua` to treat the current `ui` / `ui.ctl` same-component namespace loops as projection artifacts instead of real cross-boundary cycles. Refreshed the committed viewer snapshot and documented the filtering rule in `docs/architecture/arch_view.md`. `lua scripts/quality/arch.lua check` and `lua tests/guard.lua` both pass.
+- **files edited/created**: `tests/guards/dep_rules.lua`, `scripts/quality/arch/filter.lua`, `tests/suites/architecture/arch_view_contract.lua`, `docs/architecture/arch_view.md`, `scripts/quality/arch/viewer/architecture.json`, `scripts/quality/arch/viewer/architecture_data.js`.
 
 ### T8: Full verification and closeout
 - **depends_on**: [T7]
 - **location**: repo-wide test commands and snapshot outputs
 - **description**: Run the full validation set, refresh viewer snapshots only if architecture output changed, and verify the round did not accidentally widen into general `flow -> runtime` surgery.
 - **validation**: `lua scripts/quality/arch.lua check`; `lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer`; `lua tests/guard.lua`; `lua tests/contract.lua`; `lua tests/behavior.lua`; `lua tests/regression.lua`; plus grep checks from T1/T2/T3.
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: Final verification passed: `lua scripts/quality/arch.lua check`, `lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer`, `lua tests/guard.lua`, `lua tests/contract.lua`, `lua tests/behavior.lua`, and `lua tests/regression.lua`. The final greps only leave the expected seam/adapter files (`runtime_state_seam`, `landing_visual_hold_seam`, `host_runtime_ports`, `state_ports`, `runtime_event_bridge`, `ui_bootstrap`), so the round stayed scoped to presentation/runtime ownership cleanup instead of widening into a general `flow -> runtime` redesign.
+- **files edited/created**: `scripts/quality/arch/viewer/architecture.json`, `scripts/quality/arch/viewer/architecture_data.js`.
 
 ## Parallel Execution Groups
 
