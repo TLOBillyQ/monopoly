@@ -293,7 +293,10 @@ local function main(args)
     ))
   end
 
-  local directories = { "src" }
+  local directories = {
+    "src",
+    "vendor/third_party",
+  }
   local files = {
     { source = "main.lua", target = "main.lua" },
     { source = "Data/UIManagerNodes.lua", target = "Data/UIManagerNodes.lua" },
