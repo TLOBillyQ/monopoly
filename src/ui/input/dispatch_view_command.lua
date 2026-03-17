@@ -1,5 +1,6 @@
 local view_command_dispatcher = {}
 local number_utils = require("src.core.utils.number_utils")
+local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
 
 local function _resolve_loaded(name)
   local loaded = package.loaded[name]
@@ -15,12 +16,17 @@ end
 
 local function _resolve_role_by_id(runtime, role_id)
   local normalized = role_id
-  local host_runtime = _resolve_loaded("src.host.eggy")
-  if host_runtime and type(host_runtime.resolve_roles) == "function" and runtime and type(runtime.resolve_role_id) == "function" then
-    for _, role in ipairs(host_runtime.resolve_roles() or {}) do
+  if host_runtime_ports and type(host_runtime_ports.resolve_roles) == "function" and runtime and type(runtime.resolve_role_id) == "function" then
+    for _, role in ipairs(host_runtime_ports.resolve_roles() or {}) do
       if tostring(runtime.resolve_role_id(role)) == tostring(normalized) then
         return role
       end
+    end
+  end
+  if host_runtime_ports and type(host_runtime_ports.resolve_role) == "function" then
+    local resolved = host_runtime_ports.resolve_role(normalized)
+    if resolved ~= nil then
+      return resolved
     end
   end
   local game_api = _G.GameAPI
