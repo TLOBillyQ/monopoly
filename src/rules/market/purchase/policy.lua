@@ -30,29 +30,4 @@ function policy.validate_entry(game, player, entry)
   return { ok = true }
 end
 
-function policy.build_vehicle_replace_intent(player, entry, price, currency)
-  local current_name = context.vehicle_name(player.seat_id)
-  local next_name = context.entry_name(entry)
-  local body_lines = {
-    "当前座驾：" .. current_name,
-    "新座驾：" .. next_name,
-    "价格：" .. tostring(price) .. " " .. currency,
-  }
-  return {
-    kind = "need_choice",
-    choice_spec = use_skip_choice.build(
-      "market_vehicle_replace",
-      "是否更换座驾",
-      body_lines,
-      { player_id = player.id, product_id = entry.product_id },
-      {
-        use = "更换",
-        skip = "算了",
-        confirm_title = "更换座驾",
-        confirm_body = table.concat(body_lines, "\n"),
-      }
-    ),
-  }
-end
-
 return policy

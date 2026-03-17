@@ -132,6 +132,7 @@
 
 - 默认 lane：`behavior`
 - 显式可选：`--lane contract`
+- `behavior` 支持 `--mode dev|release`；`contract` 只接受 `dev`
 - 上游原生参数继续透传，例如 `--scan`、`--since-last-run`、`--mutate-all`
 
 ## 按问题选命令

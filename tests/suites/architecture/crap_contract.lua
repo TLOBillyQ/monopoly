@@ -29,7 +29,7 @@ end
 local function _test_adapter_resolves_behavior_and_contract_lanes()
   local behavior_suites, behavior_mode = adapter.resolve_suites("behavior")
   assert(#behavior_suites > 0, "behavior lane should expose behavior suites")
-  assert(behavior_mode == "dev" or behavior_mode == "release_trimmed",
+  assert(behavior_mode == "dev" or behavior_mode == "release",
     "behavior lane should resolve to a concrete regression mode")
 
   local contract_suites, contract_mode = adapter.resolve_suites("contract")

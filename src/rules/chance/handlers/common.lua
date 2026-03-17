@@ -7,7 +7,6 @@ local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local vehicle_feature = require("src.rules.vehicle")
 local number_utils = require("src.core.utils.number_utils")
 local action_anim_port = require("src.core.ports.action_anim_port")
-local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 local facing_policy = require("src.rules.board.facing_policy")
 
 local common = {}
@@ -97,7 +96,6 @@ function common.dependencies()
     tile_state = tile_state,
     monopoly_event = monopoly_event,
     vehicle_feature = vehicle_feature,
-    vehicle_catalog = vehicle_catalog,
     number_utils = number_utils,
   }
 end

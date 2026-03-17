@@ -1,16 +1,11 @@
-local feature_toggles = require("src.config.gameplay.feature_toggles")
-
 local vehicle_feature = {}
 
 function vehicle_feature.is_enabled()
-  return feature_toggles.is_vehicle_enabled()
+  return false
 end
 
-function vehicle_feature.resolve_seat_id(seat_id)
-  if not vehicle_feature.is_enabled() then
-    return nil
-  end
-  return seat_id
+function vehicle_feature.resolve_seat_id(_seat_id)
+  return nil
 end
 
 function vehicle_feature.is_vehicle_market_entry(entry)

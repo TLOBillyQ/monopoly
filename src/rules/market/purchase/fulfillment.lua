@@ -10,12 +10,6 @@ local _emit_event = monopoly_event.emit
 
 local function _success_text(player, entry, price, currency, priced)
   local name = context.entry_name(entry)
-  if entry.kind == "vehicle" then
-    if priced then
-      return player.name .. " 在黑市购买座驾 " .. name .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency
-    end
-    return player.name .. " 在黑市购买座驾 " .. name .. " 成功"
-  end
   if entry.kind == "skin" then
     if priced then
       return player.name .. " 在黑市购买皮肤（占位） " .. name .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency
@@ -60,23 +54,6 @@ local function _fulfill_item(game, player, entry, opts, price, currency, priced_
   }
 end
 
-local function _fulfill_vehicle(game, player, entry, opts, price, currency, priced_text)
-  if not _charge_if_needed(game, player, currency, price, opts) then
-    return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
-  end
-  assert(game.set_player_seat ~= nil, "missing game.SetPlayerSeat")
-  game:set_player_seat(player, entry.product_id)
-  context.consume_global_limit(game, entry.product_id)
-  _emit_event(monopoly_event.market.bought_vehicle, {
-    player = player,
-    entry = entry,
-    price = price,
-    currency = currency,
-    text = _success_text(player, entry, price, currency, priced_text),
-  })
-  return { ok = true, fulfilled_now = true }
-end
-
 local function _fulfill_skin(game, player, entry, opts, price, currency, priced_text)
   if not _charge_if_needed(game, player, currency, price, opts) then
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
@@ -111,10 +88,6 @@ function fulfillment.apply(game, player, entry, opts)
 
   if entry.kind == "item" then
     return _fulfill_item(game, player, entry, opts, price, currency, priced_text)
-  end
-
-  if entry.kind == "vehicle" then
-    return _fulfill_vehicle(game, player, entry, opts, price, currency, priced_text)
   end
 
   if entry.kind == "skin" then

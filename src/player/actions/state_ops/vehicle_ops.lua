@@ -1,21 +1,14 @@
 local common = require("src.player.actions.state_ops.common")
-local feature_toggles = require("src.config.gameplay.feature_toggles")
 
 local vehicle_ops = {}
 
-function vehicle_ops.player_vehicle_cfg(_self, player)
-  local seat_id = nil
-  if feature_toggles.is_vehicle_enabled() then
-    seat_id = player.seat_id
-  end
-  if seat_id then
-    local cfg = common.vehicle_catalog.find(seat_id)
-    if cfg ~= nil then
-      return cfg
-    end
-    return common.default_vehicle_cfg
-  end
-  return common.default_vehicle_cfg
+function vehicle_ops.player_vehicle_cfg()
+  return {
+    id = 0,
+    name = "",
+    dice_count = common.constants.default_dice_count,
+    indestructible = false,
+  }
 end
 
 function vehicle_ops.player_vehicle_name(self, player)

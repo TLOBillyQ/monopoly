@@ -9,7 +9,7 @@
 **1. 全量回归（必跑）**
 
 ```
-MONO_REGRESSION_MODE=release_trimmed lua tests/regression.lua
+lua tests/regression.lua
 ```
 
 覆盖 behavior / contract / guard 三条车道。健康输出：
@@ -36,7 +36,7 @@ lua tests/contract.lua
 **3. UI 热点回归（改过 presentation 层时跑）**
 
 ```
-MONO_REGRESSION_MODE=release_trimmed lua tests/behavior.lua
+lua tests/behavior.lua
 ```
 
 守住市场弹窗、玩家面板、choice 路由、target picker 等 UI 行为。

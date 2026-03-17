@@ -92,7 +92,7 @@ local function _new_profile_game(profile_name)
     return nil
   end, {
     profile_name = profile_name,
-    release_mode = false,
+    mode = "dev",
     force_non_p1_ai = true,
     fail_fast_when_roles_empty = false,
   })
@@ -590,21 +590,8 @@ local function _test_choice_builders_reserve_base_inline_for_item_slots_only()
   assert(free_rent_prompt.confirm_title == "免费卡", "free rent prompt should expose confirm title")
   assert(free_rent_prompt.confirm_body == "这次要用免费卡吗？", "free rent prompt should expose confirm body")
 
-  local vehicle_intent = purchase_policy.build_vehicle_replace_intent(player, {
-    product_id = 9001,
-    name = "筋斗云",
-  }, 1200, "金币")
-  local vehicle_choice = vehicle_intent and vehicle_intent.choice_spec or nil
-  assert(vehicle_choice and vehicle_choice.route_key == "secondary_confirm",
-    "market vehicle replace should no longer use base_inline")
-  assert(vehicle_choice and vehicle_choice.requires_confirm == true,
-    "market vehicle replace should require confirm")
-  assert(vehicle_choice and vehicle_choice.cancel_label == "算了",
-    "market vehicle replace should expose skip wording")
-  assert(vehicle_choice and vehicle_choice.confirm_title == "更换座驾",
-    "market vehicle replace should expose confirm title")
-  assert(vehicle_choice and string.find(vehicle_choice.confirm_body, "当前座驾：", 1, true) ~= nil,
-    "market vehicle replace should expose a descriptive confirm body")
+  assert(purchase_policy.build_vehicle_replace_intent == nil,
+    "legacy market replace confirm flow should be removed after vehicle retirement")
 end
 
 local function _test_circle_startup_profile_second_remote_roll_reaches_chance45_after_market_resume()

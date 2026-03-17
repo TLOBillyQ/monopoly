@@ -196,9 +196,6 @@ local function _value_by_headers(row, col_map, headers)
 end
 
 local function _infer_market_kind(page, product_id)
-  if page == "座驾商店" then
-    return "vehicle"
-  end
   if page == "皮肤商店" then
     return "skin"
   end
@@ -206,31 +203,24 @@ local function _infer_market_kind(page, product_id)
     if product_id >= 5000 then
       return "skin"
     end
-    if product_id >= 4000 then
-      return "vehicle"
-    end
   end
   return "item"
 end
 
 local function _parse_args(args)
   local options = {
-    mode = "dev",
     output_dir = nil,
   }
   local index = 1
   while index <= #args do
     local token = args[index]
-    if token == "--mode" then
-      options.mode = args[index + 1] or "dev"
-      index = index + 2
-    elseif token == "--output-dir" then
+    if token == "--output-dir" then
       options.output_dir = args[index + 1]
       index = index + 2
     elseif token == "--help" or token == "-h" then
       print(_text(
-        "用法: lua scripts/data/export_xlsx.lua [--mode dev|release] [--output-dir OUTDIR]",
-        "Usage: lua scripts/data/export_xlsx.lua [--mode dev|release] [--output-dir OUTDIR]"
+        "用法: lua scripts/data/export_xlsx.lua [--output-dir OUTDIR]",
+        "Usage: lua scripts/data/export_xlsx.lua [--output-dir OUTDIR]"
       ))
       os.exit(0)
     else
@@ -239,12 +229,6 @@ local function _parse_args(args)
         "Unknown flag: " .. tostring(token)
       ))
     end
-  end
-  if options.mode ~= "dev" and options.mode ~= "release" then
-    _fail(_text(
-      "无效的 --mode 参数: " .. tostring(options.mode),
-      "Invalid --mode value: " .. tostring(options.mode)
-    ))
   end
   if options.output_dir ~= nil then
     options.output_dir = common.resolve_path(common.current_dir(), options.output_dir)
@@ -263,7 +247,6 @@ end
 
 local function main(args)
   local options = _parse_args(args or {})
-  local release_mode = options.mode == "release"
   local design_dir = common.join_path(env.repo_root, "docs/design")
   if not common.is_dir(design_dir) then
     design_dir = common.join_path(env.repo_root, "design")
@@ -280,7 +263,6 @@ local function main(args)
   local roles_path = common.join_path(design_dir, "蛋仔--大富翁--角色表.xlsx")
   local constants_path = common.join_path(design_dir, "蛋仔--大富翁--常量表.xlsx")
   local market_path = common.join_path(design_dir, "蛋仔--大富翁--黑市表.xlsx")
-  local vehicles_path = common.join_path(design_dir, "蛋仔--大富翁--座驾表.xlsx")
   local skins_path = common.join_path(design_dir, "蛋仔--大富翁--皮肤表.xlsx")
 
   _require_file(tiles_path)
@@ -289,7 +271,6 @@ local function main(args)
   _require_file(roles_path)
   _require_file(constants_path)
   _require_file(market_path)
-  _require_file(vehicles_path)
   _require_file(skins_path)
 
   local type_map = {
@@ -420,26 +401,6 @@ local function main(args)
     "id", "name", "tier", "shop_currency", "shop_price", "weight", "angel_immune", "timing", "usage", "description"
   })
 
-  col_map, rows = _table_from_sheet(vehicles_path)
-  local vehicles = {}
-  if not release_mode then
-    for _, row in ipairs(rows) do
-      local vehicle_id = _parse_int(row[col_map["座驾id"]])
-      if vehicle_id ~= nil and vehicle_id ~= 0 then
-        vehicles[#vehicles + 1] = {
-          id = vehicle_id,
-          name = row[col_map["座驾名称"]] or "",
-          tier = _parse_int(row[col_map["座驾等级"]]),
-          dice_count = _parse_int(row[col_map["骰子数"]]),
-          indestructible = _parse_bool(row[col_map["是否不可摧毁（免疫导弹、台风等效果）"]]),
-        }
-      end
-    end
-  end
-  _write_lua_table(common.join_path(config_dir, "vehicles.lua"), "vehicles", vehicles, {
-    "id", "name", "tier", "dice_count", "indestructible"
-  })
-
   col_map, rows = _table_from_sheet(skins_path)
   local skins = {}
   for _, row in ipairs(rows) do
@@ -463,7 +424,7 @@ local function main(args)
     if product_id ~= nil and product_id ~= 0 then
       local page = _value_by_headers(row, col_map, { "分页" }) or ""
       local kind = _infer_market_kind(page, product_id)
-      if not (release_mode and kind == "vehicle") then
+      if kind ~= "vehicle" then
         local record = {
           order = order,
           product_id = product_id,
@@ -514,7 +475,7 @@ local function main(args)
       local target_raw = row[col_map["事件目标"]] or ""
       local effect_raw = row[col_map["事件类型"]] or ""
       local effect = effect_map[effect_raw] or ""
-      if not (release_mode and effect == "set_vehicle") then
+      if effect ~= "set_vehicle" then
         local param = row[col_map["事件参数"]]
         local record = {
           id = card_id,
@@ -529,8 +490,6 @@ local function main(args)
           record.amount = _parse_int(param)
         elseif effect == "percent_pay_cash" then
           record.percent = _parse_int(param)
-        elseif effect == "set_vehicle" then
-          record.vehicle_id = _parse_int(param)
         elseif effect == "move_backward" or effect == "move_forward" then
           record.steps = _parse_int(param)
         elseif effect == "grant_item" then
@@ -549,7 +508,7 @@ local function main(args)
     end
   end
   _write_lua_table(common.join_path(config_dir, "chance_cards.lua"), "chance_cards", cards, {
-    "id", "description", "weight", "negative", "target", "effect", "amount", "percent", "vehicle_id", "steps", "item_id", "count", "destination_tile_id"
+    "id", "description", "weight", "negative", "target", "effect", "amount", "percent", "steps", "item_id", "count", "destination_tile_id"
   })
 
   col_map, rows = _table_from_sheet(constants_path)

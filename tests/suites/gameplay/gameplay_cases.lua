@@ -901,7 +901,6 @@ local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
   local before_seq = g.turn.vehicle_resync_seq or 0
   local stopped_ids = {}
   support.with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = {
       resolve_role = function(role_id)
         if role_id == g.players[1].id then
@@ -932,7 +931,6 @@ local function _test_end_turn_stops_all_players_movement()
   local before_seq = g.turn.vehicle_resync_seq or 0
   local stopped_ids = {}
   support.with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = {
       resolve_role = function(role_id)
         if role_id == g.players[1].id then
@@ -977,7 +975,6 @@ local function _test_stop_all_players_movement_skips_invalid_role_without_error(
   g:set_player_status(g.players[2], "move_dir", "right")
   local stopped_ids = {}
   support.with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
     { key = "vehicle_helper", value = {
       resolve_role = function(role_id)
         if role_id == g.players[1].id then
@@ -1011,7 +1008,6 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
       end,
     }
     support.with_patches({
-      { target = gameplay_rules, key = "vehicle_enabled", value = true },
     }, function()
       runtime_event_bridge._reset_for_tests()
       local ctx = runtime_context.new({

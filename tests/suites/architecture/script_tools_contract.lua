@@ -185,13 +185,13 @@ local function _test_deploy_defaults_match_windows_history()
     home_dir = "C:/Users/example",
     is_windows = true,
     is_macos = false,
-    publish = false,
+    mode = "dev",
   })
   local publish_resolved = deploy_defaults.resolve({
     home_dir = "C:/Users/example",
     is_windows = true,
     is_macos = false,
-    publish = true,
+    mode = "release",
   })
 
   assert(resolved == "C:/Users/example/Desktop/dev/LuaSource_大富翁-开发",
@@ -205,19 +205,19 @@ local function _test_deploy_defaults_match_macos_history()
     home_dir = "/Users/example",
     is_windows = false,
     is_macos = true,
-    publish = false,
+    mode = "dev",
   })
   local publish_resolved = deploy_defaults.resolve({
     home_dir = "/Users/example",
     is_windows = false,
     is_macos = true,
-    publish = true,
+    mode = "release",
   })
   local candidates = deploy_defaults.candidates({
     home_dir = "/Users/example",
     is_windows = false,
     is_macos = true,
-    publish = false,
+    mode = "dev",
   })
 
   assert(resolved == "/Users/example/Documents/eggy/LuaSource_大富翁-开发",
@@ -228,12 +228,13 @@ local function _test_deploy_defaults_match_macos_history()
     "macOS should preserve the legacy LuaSource_monopoly fallback from git history")
 end
 
-local function _test_publish_deploy_allows_publish_path()
-  _with_ascii_tmp("publish_deploy_allows_publish_path", function(tmp_root)
+local function _test_release_mode_deploy_allows_release_path()
+  _with_ascii_tmp("release_mode_deploy_allows_release_path", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "release_deploy")
     local result = _run_lua({
       "scripts/ops/deploy.lua",
-      "--publish",
+      "--mode",
+      "release",
       "--target-path",
       publish_target,
     })
@@ -246,12 +247,13 @@ local function _test_publish_deploy_allows_publish_path()
   end)
 end
 
-local function _test_publish_deploy_rejects_startup_profile()
-  _with_ascii_tmp("publish_deploy_rejects_startup_profile", function(tmp_root)
+local function _test_release_mode_deploy_rejects_startup_profile()
+  _with_ascii_tmp("release_mode_deploy_rejects_startup_profile", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "release_deploy")
     local result = _run_lua({
       "scripts/ops/deploy.lua",
-      "--publish",
+      "--mode",
+      "release",
       "--target-path",
       publish_target,
       "--startup-profile",
@@ -398,8 +400,8 @@ local contract_tests = {
   { name = "deploy_defaults_match_windows_history", run = _test_deploy_defaults_match_windows_history },
   { name = "deploy_defaults_match_macos_history", run = _test_deploy_defaults_match_macos_history },
   { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
-  { name = "publish_deploy_allows_publish_path", run = _test_publish_deploy_allows_publish_path },
-  { name = "publish_deploy_rejects_startup_profile", run = _test_publish_deploy_rejects_startup_profile },
+  { name = "release_mode_deploy_allows_release_path", run = _test_release_mode_deploy_allows_release_path },
+  { name = "release_mode_deploy_rejects_startup_profile", run = _test_release_mode_deploy_rejects_startup_profile },
   { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
 

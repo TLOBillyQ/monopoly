@@ -75,24 +75,24 @@ local function _assert_startup_synthetic_specs_have_slot_avatars(specs, expected
   end
 end
 
-local function _test_startup_policy_defaults_to_release()
+local function _test_startup_policy_defaults_to_dev()
   with_patches({
-    { key = "RELEASE_BUILD", value = nil },
+    { key = "MONO_BUILD_MODE", value = nil },
     { key = "STARTUP_TEST_PROFILE", value = nil },
   }, function()
     local policy = startup_policy.resolve(_G)
-    assert(policy.release_mode == true, "startup should default to release mode")
+    assert(policy.mode == "dev", "startup should default to dev mode")
     assert(policy.profile_name == "default", "startup should use default profile when unset")
   end)
 end
 
 local function _test_startup_policy_accepts_explicit_profile_override()
   with_patches({
-    { key = "RELEASE_BUILD", value = nil },
+    { key = "MONO_BUILD_MODE", value = "release" },
     { key = "STARTUP_TEST_PROFILE", value = "market" },
   }, function()
     local policy = startup_policy.resolve(_G)
-    assert(policy.release_mode == true, "startup should still use release mode")
+    assert(policy.mode == "release", "startup should keep explicit release mode")
     assert(policy.profile_name == "market", "startup should keep explicit profile override")
   end)
 end
@@ -318,7 +318,7 @@ end
 local function _test_app_init_release_mode_wires_runtime_and_debug_providers()
   gameplay_rules.debug_log_enabled = true
   local capture = _reload_app_init_with_stubs({
-    release_mode = true,
+    mode = "release",
     profile_name = "market",
   })
 
@@ -406,7 +406,7 @@ local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallbac
       key = "src.entry.startup_policy",
       value = {
         resolve = function()
-          return { release_mode = false, profile_name = "default" }
+          return { mode = "dev", profile_name = "default" }
         end,
       },
     },
@@ -431,7 +431,7 @@ end
 return {
   name = "startup_release",
   tests = {
-    { name = "startup_policy_defaults_to_release", run = _test_startup_policy_defaults_to_release },
+    { name = "startup_policy_defaults_to_dev", run = _test_startup_policy_defaults_to_dev },
     { name = "startup_policy_accepts_explicit_profile_override", run = _test_startup_policy_accepts_explicit_profile_override },
     {
       name = "game_startup_release_fills_synthetic_ai_when_role_roster_empty",

@@ -25,10 +25,10 @@ local function _help_text(command_name)
     "用法: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] [--coverage-file PATH] [--target-file FILE] [--project-hash HASH] [--suite-module NAME] [--suite-list-file PATH] [--list-suites] [--json] [--no-coverage] [--quiet]",
     "Usage: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] [--coverage-file PATH] [--target-file FILE] [--project-hash HASH] [--suite-module NAME] [--suite-list-file PATH] [--list-suites] [--json] [--no-coverage] [--quiet]",
     "",
-    "behavior 会走 tests/catalog.lua + regression_mode。",
-    "behavior uses tests/catalog.lua plus regression_mode.",
-    "contract 固定跑 dev mode。",
-    "contract always runs in dev mode.",
+    "behavior 会走 tests/catalog.lua + regression_mode，支持 dev|release。",
+    "behavior uses tests/catalog.lua plus regression_mode, with dev|release modes.",
+    "contract 仅支持 dev mode；传 release 会直接报错。",
+    "contract only supports dev mode; passing release fails fast.",
     "",
   }, "\n")
 end
@@ -140,6 +140,15 @@ local function _resolve_lane_suites(lane, mode)
     return catalog.load_contract_suites(), "dev"
   end
   error("unsupported lane: " .. tostring(lane))
+end
+
+local function _validate_mode(options)
+  if options.mode ~= nil and options.mode ~= "dev" and options.mode ~= "release" then
+    error("unsupported mode: " .. tostring(options.mode) .. " (expected dev|release)")
+  end
+  if options.lane == "contract" and options.mode ~= nil and options.mode ~= "dev" then
+    error("contract lane only supports dev mode")
+  end
 end
 
 local function _write_coverage(path, lines)
@@ -364,6 +373,12 @@ function M.run(args, env)
   end
 
   local options = parsed_or_err
+  local valid, valid_err = pcall(_validate_mode, options)
+  if not valid then
+    stderr:write(tostring(valid_err), "\n")
+    stdout:write(_help_text(command_name))
+    return 1
+  end
   if options.help then
     stdout:write(_help_text(command_name))
     return 0

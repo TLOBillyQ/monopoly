@@ -131,7 +131,7 @@ local case_groups = {
 local case_overrides = {
   _test_status3d_priority_single_status = {
     disabled_in = {
-      release_trimmed = true,
+      release = true,
     },
   },
 }

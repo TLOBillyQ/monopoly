@@ -385,31 +385,8 @@ local function _test_status_ops_set_player_seat_emits_exit_and_enter()
   local g = _new_game()
   local player = g.players[1]
   player.seat_id = 4001
-  local exited = {}
-  local entered = {}
-  local vehicle = {
-    needs_enter_wait_by_player = {},
-    emit_vehicle_exit = function(player_id)
-      exited[#exited + 1] = player_id
-    end,
-    emit_vehicle_enter = function(player_id, seat_id)
-      entered[#entered + 1] = { player_id = player_id, seat_id = seat_id }
-    end,
-  }
-
-  support.with_patches({
-    { target = gameplay_rules, key = "vehicle_enabled", value = true },
-    { key = "vehicle_helper", value = vehicle },
-  }, function()
-    status_ops.set_player_seat(g, player, 4002)
-  end)
-
-  _assert_eq(player.seat_id, 4002, "set_player_seat should update seat_id")
-  _assert_eq(#exited, 1, "set_player_seat should emit exit when leaving old seat")
-  _assert_eq(exited[1], player.id, "set_player_seat exit should target player")
-  _assert_eq(#entered, 1, "set_player_seat should emit enter for new seat")
-  _assert_eq(entered[1].seat_id, 4002, "set_player_seat should pass new seat to vehicle helper")
-  _assert_eq(vehicle.needs_enter_wait_by_player[player.id], true, "set_player_seat should mark enter wait for player")
+  status_ops.set_player_seat(g, player, nil)
+  _assert_eq(player.seat_id, nil, "set_player_seat should stay nil after vehicle retirement")
 end
 
 local function _test_board_advance_tracks_branch_and_wrap()

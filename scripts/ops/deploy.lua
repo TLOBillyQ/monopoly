@@ -33,7 +33,7 @@ local function _default_sync_target_path(options)
     home_dir = _home_dir(),
     is_macos = common.is_macos(),
     is_windows = common.is_windows(),
-    publish = options and options.publish == true,
+    mode = options and options.mode or "dev",
   })
   if default_target ~= nil and default_target ~= "" then
     return default_target
@@ -85,7 +85,11 @@ local function _write_main_lua(source_path, target_path, startup_profile)
   if startup_profile == nil or tostring(startup_profile) == "" then
     return common.write_file(target_path, source_text)
   end
-  local prefix = 'STARTUP_TEST_PROFILE = "' .. _escape_lua_string_double_quoted(startup_profile) .. '"\n'
+  local mode = _G and _G.MONO_BUILD_MODE or "dev"
+  local prefix = 'MONO_BUILD_MODE = "' .. _escape_lua_string_double_quoted(mode) .. '"\n'
+  if startup_profile ~= nil and tostring(startup_profile) ~= "" then
+    prefix = prefix .. 'STARTUP_TEST_PROFILE = "' .. _escape_lua_string_double_quoted(startup_profile) .. '"\n'
+  end
   return common.write_file(target_path, prefix .. source_text)
 end
 
@@ -233,21 +237,21 @@ local function _resolve_project_root()
 end
 
 local function _should_skip_line_breakdown(options)
-  return common.is_windows() and options.publish == true
+  return common.is_windows() and options.mode == "release"
 end
 
 local function _parse_args(args)
   local options = {
-    publish = false,
+    mode = "dev",
     startup_profile = nil,
     target_path = nil,
   }
   local index = 1
   while index <= #args do
     local token = args[index]
-    if token == "--publish" or token == "-Publish" then
-      options.publish = true
-      index = index + 1
+    if token == "--mode" or token == "-Mode" then
+      options.mode = args[index + 1] or "dev"
+      index = index + 2
     elseif token == "--startup-profile" or token == "-StartupProfile" then
       options.startup_profile = args[index + 1]
       index = index + 2
@@ -256,8 +260,8 @@ local function _parse_args(args)
       index = index + 2
     elseif token == "--help" or token == "-h" then
       print(_text(
-        "用法: lua scripts/ops/deploy.lua [--publish|-Publish] [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]",
-        "Usage: lua scripts/ops/deploy.lua [--publish|-Publish] [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]"
+        "用法: lua scripts/ops/deploy.lua [--mode dev|release|-Mode dev|release] [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]",
+        "Usage: lua scripts/ops/deploy.lua [--mode dev|release|-Mode dev|release] [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]"
       ))
       os.exit(0)
     else
@@ -266,6 +270,12 @@ local function _parse_args(args)
         "Unknown flag: " .. tostring(token)
       ))
     end
+  end
+  if options.mode ~= "dev" and options.mode ~= "release" then
+    _fail(_text(
+      "无效的 --mode 参数: " .. tostring(options.mode),
+      "Invalid --mode value: " .. tostring(options.mode)
+    ))
   end
   return options
 end
@@ -276,7 +286,7 @@ local function main(args)
   local target_source = options.target_path or _default_sync_target_path(options)
   local target_path = _normalize_target_path(target_source)
 
-  if options.publish == true and options.startup_profile ~= nil and options.startup_profile ~= "" then
+  if options.mode == "release" and options.startup_profile ~= nil and options.startup_profile ~= "" then
     _fail(_text(
       "发布部署禁止注入 STARTUP_TEST_PROFILE，请移除 --startup-profile。",
       "Release deploy does not allow STARTUP_TEST_PROFILE injection; remove --startup-profile."
@@ -295,10 +305,11 @@ local function main(args)
   _println("======================================")
   _println(_text("项目根目录: ", "Project root: ") .. project_root)
   _println(_text("目标目录: ", "Target path: ") .. target_path)
-  if options.publish == true then
+  _G.MONO_BUILD_MODE = options.mode
+  if options.mode == "release" then
     _println(_text("部署模式: 发布部署", "Deploy mode: release deploy"))
   else
-    _println(_text("部署模式: 环境变量或显式路径", "Deploy mode: env var or explicit path"))
+    _println(_text("部署模式: 开发部署", "Deploy mode: dev deploy"))
   end
   if options.startup_profile == nil or options.startup_profile == "" then
     _println(_text(

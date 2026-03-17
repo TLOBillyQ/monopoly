@@ -754,12 +754,11 @@ local function _test_handle_paid_purchase_release_build_warning()
       end,
     },
   }, function(purchase)
-    -- Set RELEASE_BUILD to true
-    _G.RELEASE_BUILD = true
+    _G.MONO_BUILD_MODE = "release"
     local game = {}
     local player = { id = 3, name = "Buyer" }
     local result = purchase.execute(game, player, "2001", {})
-    _G.RELEASE_BUILD = nil
+    _G.MONO_BUILD_MODE = nil
     assert(result.ok == false, "should fail when gateway returns error")
     assert(#warn_calls >= 1, "should log warning in release build")
   end)
@@ -810,8 +809,7 @@ local function _test_handle_paid_purchase_non_release_build()
       end,
     },
   }, function(purchase)
-    -- Ensure RELEASE_BUILD is not set
-    _G.RELEASE_BUILD = nil
+    _G.MONO_BUILD_MODE = nil
     local game = {}
     local player = { id = 3, name = "Buyer" }
     local result = purchase.execute(game, player, "2001", {})
@@ -869,9 +867,8 @@ local function _test_handle_paid_purchase_success_path()
   end)
 end
 
-local function _test_handle_paid_purchase_various_truthy_flags()
-  local flags_to_test = { true, 1, "1", "true", "TRUE" }
-  for _, flag in ipairs(flags_to_test) do
+local function _test_handle_paid_purchase_release_mode_flag()
+  for _, flag in ipairs({ "release" }) do
     local result = _reload_module("src.rules.market.purchase.core", {
       ["src.rules.market.query.context"] = {
         entry_by_id = function() return { kind = "item", currency = "金豆", name = "Test" } end,
@@ -898,13 +895,13 @@ local function _test_handle_paid_purchase_various_truthy_flags()
         warn = function() end,
       },
     }, function(purchase)
-      _G.RELEASE_BUILD = flag
+      _G.MONO_BUILD_MODE = flag
       local game = {}
       local player = { id = 1, name = "Test" }
       return purchase.execute(game, player, "2001", {})
     end)
     assert(result.ok == false, "should fail for flag: " .. tostring(flag))
-    _G.RELEASE_BUILD = nil
+    _G.MONO_BUILD_MODE = nil
   end
 end
 
@@ -1137,7 +1134,7 @@ return {
     { name = "_test_handle_paid_purchase_release_build_warning", run = _test_handle_paid_purchase_release_build_warning },
     { name = "_test_handle_paid_purchase_non_release_build", run = _test_handle_paid_purchase_non_release_build },
     { name = "_test_handle_paid_purchase_success_path", run = _test_handle_paid_purchase_success_path },
-    { name = "_test_handle_paid_purchase_various_truthy_flags", run = _test_handle_paid_purchase_various_truthy_flags },
+    { name = "_test_handle_paid_purchase_release_mode_flag", run = _test_handle_paid_purchase_release_mode_flag },
     -- T8 FINAL tests for anonymous@106 in asset_handlers.lua (targeting CRAP=8.21)
     { name = "_test_asset_handlers_discard_properties_count_zero", run = _asset_handlers_final_tests[1] },
     { name = "_test_asset_handlers_discard_properties_count_gt_props", run = _asset_handlers_final_tests[2] },

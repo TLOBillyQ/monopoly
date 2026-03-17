@@ -1,4 +1,3 @@
-local feature_toggles = require("src.config.gameplay.feature_toggles")
 local number_utils = require("src.core.utils.number_utils")
 
 local gameplay_read_port = {}
@@ -22,11 +21,8 @@ local function _purchase_price(tile)
   return price
 end
 
-function gameplay_read_port.resolve_vehicle_seat_id(seat_id)
-  if not feature_toggles.is_vehicle_enabled() then
-    return nil
-  end
-  return seat_id
+function gameplay_read_port.resolve_vehicle_seat_id(_seat_id)
+  return nil
 end
 
 function gameplay_read_port.total_land_invested(tile, level)

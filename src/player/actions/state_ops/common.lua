@@ -1,16 +1,8 @@
 local constants = require("src.config.content.constants")
-local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local common = {}
 
 common.constants = constants
-common.vehicle_catalog = vehicle_catalog
-common.default_vehicle_cfg = {
-  id = 0,
-  name = "",
-  dice_count = constants.default_dice_count,
-  indestructible = false,
-}
 
 function common.player_status_table(player)
   player.status = player.status or {}

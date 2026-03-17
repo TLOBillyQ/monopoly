@@ -6,9 +6,7 @@ local choice = {}
 local PAGE_SIZE = 10
 local TAB_ITEM = "item"
 local TAB_SKIN = "skin"
-local TAB_VEHICLE = "vehicle"
-local VEHICLE_TAB_ENABLED = false
-local TABS = { TAB_ITEM, TAB_SKIN, TAB_VEHICLE }
+local TABS = { TAB_ITEM, TAB_SKIN }
 local function _contains(list, value)
   for _, v in ipairs(list) do
     if v == value then
@@ -19,9 +17,6 @@ local function _contains(list, value)
 end
 
 local function _normalize_tab(tab)
-  if tab == TAB_VEHICLE and not VEHICLE_TAB_ENABLED then
-    return TAB_ITEM
-  end
   if _contains(TABS, tab) then
     return tab
   end
@@ -48,7 +43,6 @@ local function _build_tab_entries(player, game, active_tab)
   local unbuyable = {}
   for _, entry in ipairs(eligibility.sorted_entries()) do
     if entry.kind == active_tab
-        and context.entry_vehicle_enabled(entry)
         and context.entry_market_enabled(entry) then
       if eligibility.can_buy_entry(game, player, entry) then
         buyable[#buyable + 1] = entry

@@ -1,72 +1,34 @@
 local chance_cfg = require("src.config.content.chance_cards")
 local market_cfg = require("src.config.content.market")
 local runtime_refs = require("src.config.content.runtime_refs")
-local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local config_sanity = {}
 
 local validated = false
 
-local function _is_release_build()
-  local globals = _G
-  local raw = globals and globals.RELEASE_BUILD or nil
-  if raw == true or raw == 1 or raw == "1" then
-    return true
-  end
-  if raw == "true" or raw == "TRUE" then
-    return true
-  end
-  return false
-end
-
-local function _validate_chance_vehicle_refs()
-  for _, card in ipairs(chance_cfg) do
-    if card.effect == "set_vehicle" then
-      assert(
-        vehicle_catalog.has(card.vehicle_id),
-        "chance card references unknown vehicle_id: " .. tostring(card.vehicle_id) .. " (card_id=" .. tostring(card.id) .. ")"
-      )
-    end
-  end
-end
-
-local function _validate_market_vehicle_refs()
-  for _, entry in ipairs(market_cfg) do
-    if entry.kind == "vehicle" then
-      assert(
-        vehicle_catalog.has(entry.product_id),
-        "market entry references unknown vehicle product_id: " .. tostring(entry.product_id)
-      )
-    end
-  end
-end
-
-local function _validate_release_chance_card(card)
+local function _validate_chance_card(card)
   assert(
     card.effect ~= "set_vehicle",
-    "release config must not include chance set_vehicle cards (card_id=" .. tostring(card.id) .. ")"
+    "config must not include chance set_vehicle cards (card_id=" .. tostring(card.id) .. ")"
   )
 end
 
-local function _validate_release_market_entry(entry)
+local function _validate_market_entry(entry)
   assert(
     entry.kind ~= "vehicle",
-    "release config must not include vehicle market entries (product_id=" .. tostring(entry.product_id) .. ")"
+    "config must not include vehicle market entries (product_id=" .. tostring(entry.product_id) .. ")"
   )
 end
 
-local function _validate_release_rows(rows, validator)
+local function _validate_rows(rows, validator)
   for _, row in ipairs(rows) do
     validator(row)
   end
 end
 
-local function _validate_release_data_has_no_vehicle_content()
-  if not _is_release_build() then
-    return
-  end
-  _validate_release_rows(chance_cfg, _validate_release_chance_card)
-  _validate_release_rows(market_cfg, _validate_release_market_entry)
+local function _validate_data_has_no_vehicle_content()
+  _validate_rows(chance_cfg, _validate_chance_card)
+  _validate_rows(market_cfg, _validate_market_entry)
 end
 
 local function _validate_board_feedback_effect_ref(effect_refs, cue_name, cue)
@@ -144,9 +106,7 @@ function config_sanity.validate()
   if validated then
     return true
   end
-  _validate_release_data_has_no_vehicle_content()
-  _validate_chance_vehicle_refs()
-  _validate_market_vehicle_refs()
+  _validate_data_has_no_vehicle_content()
   _validate_board_feedback_audio_refs()
   validated = true
   return true

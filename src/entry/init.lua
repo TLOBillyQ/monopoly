@@ -35,10 +35,10 @@ local startup = startup_policy.resolve(_G)
 logger.info(
   "[Eggy]",
   "startup policy:",
-  "release_mode=" .. tostring(startup.release_mode),
+  "mode=" .. tostring(startup.mode),
   "resolved_profile=" .. tostring(startup.profile_name)
 )
-if startup.release_mode then
+if startup.mode == "release" then
   gameplay_rules.debug_log_enabled = false
 end
 

@@ -18,7 +18,7 @@ return {
     _case("_test_autorunner_runs_to_end"),
     _case("_test_action_button_timeout_auto_advances", {
       disabled_in = {
-        release_trimmed = true,
+        release = true,
       },
     }),
     _case("_test_action_button_timeout_blocked_when_input_locked"),

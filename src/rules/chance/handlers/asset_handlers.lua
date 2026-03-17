@@ -5,23 +5,7 @@ function asset_handlers.register(handlers, common)
   local inventory = deps.inventory
   local tile_state = deps.tile_state
   local monopoly_event = deps.monopoly_event
-  local vehicle_feature = deps.vehicle_feature
-  local vehicle_catalog = deps.vehicle_catalog
   local number_utils = deps.number_utils
-
-  handlers.set_vehicle = function(game, player, card)
-    if not vehicle_feature.is_enabled() then
-      return
-    end
-    game:set_player_seat(player, card.vehicle_id)
-    local vehicle_name = vehicle_catalog.name_of(card.vehicle_id)
-    common.emit_event(monopoly_event.chance.applied, {
-      player = player,
-      card = card,
-      effect = card.effect,
-      text = player.name .. " 获得座驾 " .. vehicle_name,
-    })
-  end
 
   handlers.destroy_buildings_on_path = function(game, _, _, context)
     assert(context ~= nil and context.visited ~= nil, "missing context.visited")

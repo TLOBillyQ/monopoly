@@ -9,17 +9,8 @@ local number_utils = require("src.core.utils.number_utils")
 
 local purchase = {}
 
-local function _read_truthy_flag(raw)
-  if raw == true or raw == 1 or raw == "1" or raw == "true" or raw == "TRUE" then
-    return true
-  end
-  return false
-end
-
 local function _is_release_build()
-  local globals = _G
-  local raw = globals and globals.RELEASE_BUILD or nil
-  return _read_truthy_flag(raw)
+  return _G and _G.MONO_BUILD_MODE == "release"
 end
 
 function purchase.setup_for_game(game)

@@ -32,7 +32,6 @@ function player:init(attrs)
   self.auto = attrs.auto
   self.cash = cash
   self.position = attrs.start_index
-  self.seat_id = nil
   self.deity_duration_turns = attrs.deity_duration_turns
   self.status = {
     stay_turns = 0,

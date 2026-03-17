@@ -15,12 +15,12 @@ lua scripts/quality/mutate.lua --help
 Monopoly 包装层额外支持两个参数：
 
 - `--lane behavior|contract`
-- `--mode dev|release_trimmed`
+- `--mode dev|release`（仅 `behavior` 可传 `release`；`contract` 只接受 `dev`，否则直接报错）
 
 默认值：
 
 - lane：`behavior`
-- `contract` 固定跑 `dev`
+- `contract` 固定跑 `dev`，显式传 `--mode release` 会直接失败
 - 未显式传 `--test-command` 时，默认测试命令为 `lua scripts/quality/mutate/driver.lua --lane behavior --coverage-file <tmp>`
 
 其余参数沿用上游 `mutate4lua`，例如：

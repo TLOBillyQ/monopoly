@@ -29,7 +29,7 @@
 | log_capture | `tests/support/log_capture.lua` | 73 | print 拦截与聚合 |
 | guard 脚本 | `tests/guards/*.lua` | ~300+ | 静态分析：dep_rules、legacy_path、forbidden_globals |
 
-特点：确定性执行（`randomseed(1)`）、per-test 全局补丁与清理、三层运行器（behavior / contract / guard）、模式条件过滤（dev / release_trimmed）。
+特点：确定性执行（`randomseed(1)`）、per-test 全局补丁与清理、三层运行器（behavior / contract / guard）、模式条件过滤（dev / release）。
 
 ## 成本
 

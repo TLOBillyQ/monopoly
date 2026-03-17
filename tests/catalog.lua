@@ -83,12 +83,12 @@ local tooling_modules = {
 
 local disabled_cases = {
   -- T8: Disable broken T2 characterization tests
-  ["suites.gameplay.gameplay_t2_characterization::_test_apply_dice_multiplier_with_multiplier"] = { dev = true, release_trimmed = true },
-  ["suites.gameplay.gameplay_t2_characterization::_test_resolve_wait_state_prefers_anim"] = { dev = true, release_trimmed = true },
-  ["suites.gameplay.gameplay_t2_characterization::_test_resolve_wait_state_landing_visual"] = { dev = true, release_trimmed = true },
-  ["suites.gameplay.gameplay_t2_characterization::_test_fill_ui_sync_defaults_preserves_custom"] = { dev = true, release_trimmed = true },
-  ["suites.gameplay.gameplay_t2_characterization::_test_update_countdown_nil_turn"] = { dev = true, release_trimmed = true },
-  ["suites.gameplay.gameplay_t2_characterization::_test_build_ui_gate_all_true"] = { dev = true, release_trimmed = true },
+  ["suites.gameplay.gameplay_t2_characterization::_test_apply_dice_multiplier_with_multiplier"] = { dev = true, release = true },
+  ["suites.gameplay.gameplay_t2_characterization::_test_resolve_wait_state_prefers_anim"] = { dev = true, release = true },
+  ["suites.gameplay.gameplay_t2_characterization::_test_resolve_wait_state_landing_visual"] = { dev = true, release = true },
+  ["suites.gameplay.gameplay_t2_characterization::_test_fill_ui_sync_defaults_preserves_custom"] = { dev = true, release = true },
+  ["suites.gameplay.gameplay_t2_characterization::_test_update_countdown_nil_turn"] = { dev = true, release = true },
+  ["suites.gameplay.gameplay_t2_characterization::_test_build_ui_gate_all_true"] = { dev = true, release = true },
 }
 
 local guard_scripts = {

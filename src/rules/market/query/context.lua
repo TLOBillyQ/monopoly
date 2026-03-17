@@ -1,8 +1,6 @@
 local market_cfg = require("src.config.content.market")
 local items_cfg = require("src.config.content.items")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
-local vehicle_feature = require("src.rules.vehicle")
-local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local context = {}
 
@@ -25,16 +23,6 @@ function context.entry_by_id(product_id)
 end
 
 function context.entry_name(entry)
-  if entry.kind == "vehicle" then
-    local cfg = vehicle_catalog.find(entry.product_id)
-    if cfg then
-      return cfg.name
-    end
-    if entry.name then
-      return entry.name
-    end
-    return tostring(entry.product_id)
-  end
   local cfg = items_by_id[entry.product_id]
   if cfg then
     return cfg.name
@@ -43,17 +31,6 @@ function context.entry_name(entry)
     return entry.name
   end
   return tostring(entry.product_id)
-end
-
-function context.vehicle_name(seat_id)
-  if seat_id then
-    local cfg = vehicle_catalog.find(seat_id)
-    if cfg then
-      return cfg.name
-    end
-    return tostring(seat_id)
-  end
-  return "无"
 end
 
 function context.entry_price(entry)
@@ -74,10 +51,7 @@ function context.entry_market_enabled(entry)
 end
 
 function context.entry_vehicle_enabled(entry)
-  if not vehicle_feature.is_vehicle_market_entry(entry) then
-    return true
-  end
-  return vehicle_feature.is_enabled()
+  return entry == nil or entry.kind ~= "vehicle"
 end
 
 function context.remaining_global_limit(game, product_id)

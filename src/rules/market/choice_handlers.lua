@@ -6,8 +6,6 @@ local market_context = require("src.rules.market.query.context")
 local market_choice_handler = {}
 local TAB_ITEM = "item"
 local TAB_SKIN = "skin"
-local TAB_VEHICLE = "vehicle"
-local VEHICLE_TAB_ENABLED = false
 
 local function _copy_table(source)
   local out = {}
@@ -22,9 +20,6 @@ end
 
 local function _normalize_market_tab(active_tab)
   if active_tab == TAB_ITEM or active_tab == TAB_SKIN then
-    return active_tab
-  end
-  if active_tab == TAB_VEHICLE and VEHICLE_TAB_ENABLED then
     return active_tab
   end
   return TAB_ITEM
@@ -56,24 +51,6 @@ local function _normalize_market_buy_meta(_, meta, choice_spec)
   return normalized_meta
 end
 
-local function _normalize_market_vehicle_replace_meta(_, meta, choice_spec)
-  local normalized_meta = _copy_table(meta)
-  if normalized_meta.player_id ~= nil then
-    normalized_meta.player_id = assert(
-      number_utils.to_integer(normalized_meta.player_id),
-      tostring(choice_spec.kind) .. " requires numeric meta.player_id"
-    )
-  end
-  if normalized_meta.product_id ~= nil then
-    normalized_meta.product_id = assert(
-      number_utils.to_integer(normalized_meta.product_id),
-      tostring(choice_spec.kind) .. " requires numeric meta.product_id"
-    )
-  end
-  choice_spec.owner_role_id = choice_spec.owner_role_id or normalized_meta.player_id
-  return normalized_meta
-end
-
 local function _validate_market_player(game, meta)
   return assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
 end
@@ -84,11 +61,6 @@ end
 
 local function _validate_market_buy_meta(game, meta)
   _validate_market_player(game, meta)
-end
-
-local function _validate_market_vehicle_replace_meta(game, meta)
-  _validate_market_player(game, meta)
-  _validate_market_entry(meta.product_id)
 end
 
 local function _normalize_market_buy_action(_, _, action)
@@ -112,17 +84,6 @@ function market_choice_handler.build(helpers)
     return choice_outcome.resolve_purchase(game, choice, player, entry, result, finish_choice)
   end
 
-  local function _handle_vehicle_replace(game, choice, action)
-    local use = action.option_id == "use"
-    local meta = choice.meta
-    local player = _validate_market_player(game, meta)
-    local product_id = assert(number_utils.to_integer(meta.product_id), "missing product_id")
-    if use then
-      market_service.purchase.execute(game, player, product_id, { skip_vehicle_prompt = true })
-    end
-    return finish_choice(game, false)
-  end
-
   return {
     market_buy = {
       required_meta = { "player_id" },
@@ -130,13 +91,6 @@ function market_choice_handler.build(helpers)
       meta_validator = _validate_market_buy_meta,
       normalize_action = _normalize_market_buy_action,
       execute = _handle_market_buy,
-    },
-    market_vehicle_replace = {
-      required_meta = { "player_id", "product_id" },
-      cancel = { mode = "select_option", option_id = "skip" },
-      normalize_meta = _normalize_market_vehicle_replace_meta,
-      meta_validator = _validate_market_vehicle_replace_meta,
-      execute = _handle_vehicle_replace,
     },
   }
 end

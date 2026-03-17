@@ -3,7 +3,6 @@ local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local chance_cfg = require("src.config.content.chance_cards")
 local chance_resolver = require("src.rules.chance.chance_resolver")
 local presenter = require("src.rules.land.presenter")
-local vehicle_feature = require("src.rules.vehicle")
 
 local popup_show_seconds = gameplay_rules.popup_auto_close_seconds or 1.0
 
@@ -16,21 +15,12 @@ for i, cfg in ipairs(chance_cfg) do
   chance_weights[i] = weight
 end
 
-local function _is_drawable_chance_card(card)
-  if vehicle_feature.is_vehicle_chance_card(card) and not vehicle_feature.is_enabled() then
-    return false
-  end
-  return true
-end
-
 local function _collect_drawable_cards()
   local drawable = {}
   local first_drawable = nil
   for i, card in ipairs(chance_cfg) do
-    if _is_drawable_chance_card(card) then
-      first_drawable = first_drawable or card
-      table.insert(drawable, { index = i, card = card })
-    end
+    first_drawable = first_drawable or card
+    table.insert(drawable, { index = i, card = card })
   end
   return drawable, first_drawable
 end

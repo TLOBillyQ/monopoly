@@ -25,15 +25,9 @@ function auto.execute(game, player)
     return
   end
 
-  local chosen = nil
-  for _, entry in ipairs(list) do
-    if entry.kind ~= "vehicle" or not player.seat_id then
-      chosen = entry
-      break
-    end
-  end
+  local chosen = list[1]
   if chosen then
-    purchase.execute(game, player, chosen.product_id, { skip_vehicle_prompt = true })
+    purchase.execute(game, player, chosen.product_id, nil)
   end
 end
 

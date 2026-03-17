@@ -5,7 +5,6 @@ local market_cfg = require("src.config.content.market")
 local chance_cfg = require("src.config.content.chance_cards")
 local tiles_cfg = require("src.config.content.tiles")
 local runtime_refs = require("src.config.content.runtime_refs")
-local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local function _test_config_sanity_validate_passes_current_generated_data()
   config_sanity.reset_for_tests()
@@ -131,37 +130,19 @@ local function _test_board_feedback_audio_refs_exist_in_runtime_refs()
   end
 end
 
-local function _test_config_sanity_release_build_rejects_vehicle_chance_cards()
-  local vehicle_id = vehicle_catalog.list()[1].id
-  with_patches({
-    {
-      target = _G,
-      key = "RELEASE_BUILD",
-      value = true,
-    },
-  }, function()
-    _with_release_tables({
-      { id = 99001, effect = "set_vehicle", vehicle_id = vehicle_id },
-    }, {}, function()
-      _assert_validate_fails("release config must not include chance set_vehicle cards")
-    end)
+local function _test_config_sanity_rejects_vehicle_chance_cards()
+  _with_release_tables({
+    { id = 99001, effect = "set_vehicle", vehicle_id = 4001 },
+  }, {}, function()
+    _assert_validate_fails("config must not include chance set_vehicle cards")
   end)
 end
 
-local function _test_config_sanity_release_build_rejects_vehicle_market_entries()
-  local vehicle_id = vehicle_catalog.list()[1].id
-  with_patches({
-    {
-      target = _G,
-      key = "RELEASE_BUILD",
-      value = "TRUE",
-    },
+local function _test_config_sanity_rejects_vehicle_market_entries()
+  _with_release_tables({}, {
+    { kind = "vehicle", product_id = 4001 },
   }, function()
-    _with_release_tables({}, {
-      { kind = "vehicle", product_id = vehicle_id },
-    }, function()
-      _assert_validate_fails("release config must not include vehicle market entries")
-    end)
+    _assert_validate_fails("config must not include vehicle market entries")
   end)
 end
 
@@ -198,30 +179,16 @@ local function _test_config_sanity_validate_rejects_missing_board_feedback_sound
 end
 
 local function _test_config_sanity_validate_rejects_unknown_vehicle_refs()
-  local original_has = vehicle_catalog.has
-  with_patches({
-    {
-      target = vehicle_catalog,
-      key = "has",
-      value = function(id)
-        if id == "missing_vehicle" or id == "missing_product" then
-          return false
-        end
-        return original_has(id)
-      end,
-    },
-  }, function()
-    _with_release_tables({
-      { id = 99002, effect = "set_vehicle", vehicle_id = "missing_vehicle" },
-    }, {}, function()
-      _assert_validate_fails("chance card references unknown vehicle_id")
-    end)
+  _with_release_tables({
+    { id = 99002, effect = "set_vehicle", vehicle_id = "missing_vehicle" },
+  }, {}, function()
+    _assert_validate_fails("config must not include chance set_vehicle cards")
+  end)
 
-    _with_release_tables({}, {
-      { kind = "vehicle", product_id = "missing_product" },
-    }, function()
-      _assert_validate_fails("market entry references unknown vehicle product_id")
-    end)
+  _with_release_tables({}, {
+    { kind = "vehicle", product_id = "missing_product" },
+  }, function()
+    _assert_validate_fails("config must not include vehicle market entries")
   end)
 end
 
@@ -252,12 +219,12 @@ return {
       run = _test_board_feedback_audio_refs_exist_in_runtime_refs,
     },
     {
-      name = "config_sanity_release_build_rejects_vehicle_chance_cards",
-      run = _test_config_sanity_release_build_rejects_vehicle_chance_cards,
+      name = "config_sanity_rejects_vehicle_chance_cards",
+      run = _test_config_sanity_rejects_vehicle_chance_cards,
     },
     {
-      name = "config_sanity_release_build_rejects_vehicle_market_entries",
-      run = _test_config_sanity_release_build_rejects_vehicle_market_entries,
+      name = "config_sanity_rejects_vehicle_market_entries",
+      run = _test_config_sanity_rejects_vehicle_market_entries,
     },
     {
       name = "config_sanity_validate_rejects_missing_board_feedback_effect_ref",

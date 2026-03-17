@@ -17,13 +17,6 @@ function local_purchase.execute(game, player, entry, opts)
     return { ok = false, reason = "insufficient_balance", option_id = product_id }
   end
 
-  if entry.kind == "vehicle" and player.seat_id and not opts.skip_vehicle_prompt then
-    return {
-      ok = false,
-      intent = purchase_policy.build_vehicle_replace_intent(player, entry, price, currency),
-    }
-  end
-
   local result = fulfillment.apply(game, player, entry, {
     skip_charge = false,
     price = price,

@@ -537,25 +537,25 @@ local function _test_choice_modal_routes_to_new_screens()
 
     modal_presenter.open_choice_modal(state, {
       id = 13,
-      kind = "market_vehicle_replace",
+      kind = "market_purchase_confirm",
       route_key = "secondary_confirm",
       requires_confirm = true,
-      title = "是否更换座驾",
+      title = "请确认购买",
       body = "",
-      confirm_title = "更换座驾",
-      confirm_body = "当前座驾：滑板\n新座驾：筋斗云\n价格：1200 金币",
+      confirm_title = "黑市购买",
+      confirm_body = "商品：筋斗云\n价格：1200 金币",
       options = {
-        { id = "use", label = "更换" },
-        { id = "skip", label = "算了" },
+        { id = "use", label = "购买" },
+        { id = "skip", label = "取消" },
       },
       allow_cancel = true,
-      cancel_label = "算了",
+      cancel_label = "取消",
       meta = { player_id = 1, product_id = 9001 },
     })
-    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "vehicle replace should route to secondary confirm")
-    _assert_eq(nodes["通用二次确认_标题"].text, "更换座驾", "vehicle replace should use explicit confirm title")
-    _assert_eq(nodes["通用二次确认_文本"].text, "当前座驾：滑板\n新座驾：筋斗云\n价格：1200 金币",
-      "vehicle replace should use descriptive confirm body")
+    _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "market purchase confirm should route to secondary confirm")
+    _assert_eq(nodes["通用二次确认_标题"].text, "黑市购买", "market purchase confirm should use explicit confirm title")
+    _assert_eq(nodes["通用二次确认_文本"].text, "商品：筋斗云\n价格：1200 金币",
+      "market purchase confirm should use descriptive confirm body")
   end)
 end
 

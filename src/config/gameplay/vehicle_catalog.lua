@@ -1,31 +1,18 @@
-local vehicles_cfg = require("src.config.content.vehicles")
-
 local vehicle_catalog = {}
 
-local by_id = {}
-for _, cfg in ipairs(vehicles_cfg) do
-  assert(cfg.id ~= nil, "vehicle config missing id")
-  assert(by_id[cfg.id] == nil, "duplicate vehicle id: " .. tostring(cfg.id))
-  by_id[cfg.id] = cfg
-end
-
 function vehicle_catalog.list()
-  return vehicles_cfg
+  return {}
 end
 
-function vehicle_catalog.find(id)
-  return by_id[id]
+function vehicle_catalog.find(_id)
+  return nil
 end
 
-function vehicle_catalog.has(id)
-  return by_id[id] ~= nil
+function vehicle_catalog.has(_id)
+  return false
 end
 
 function vehicle_catalog.name_of(id)
-  local cfg = by_id[id]
-  if cfg and cfg.name then
-    return cfg.name
-  end
   return tostring(id)
 end
 

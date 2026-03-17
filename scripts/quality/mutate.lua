@@ -32,8 +32,8 @@ local function _help_text(command_name)
     "Usage: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--mode MODE] [--scan|--update-manifest|--since-last-run|--mutate-all|--lines N,N] [--max-workers N] [--timeout-factor N] [--test-command CMD] [--json]",
     "",
     "Monopoly 选项 / Monopoly options:",
-    "  --lane behavior|contract   默认 behavior；contract 固定走 dev mode",
-    "  --mode MODE                仅 behavior lane 使用，常见值 dev / release_trimmed",
+    "  --lane behavior|contract   默认 behavior；contract 仅允许 dev mode",
+    "  --mode MODE                behavior 支持 dev|release；contract 仅支持 dev",
     "  --index-suites             显式预热 behavior suite index",
   }, "\n")
 end
@@ -43,6 +43,8 @@ local function _parse_args(args)
     help = false,
     index_suites = false,
     target = nil,
+    lane = "behavior",
+    mode = nil,
     passthrough = {},
   }
 
@@ -61,6 +63,11 @@ local function _parse_args(args)
       if value == nil or value == "" then
         error(token .. " requires a value")
       end
+      if token == "--lane" then
+        options.lane = value
+      elseif token == "--mode" then
+        options.mode = value
+      end
       options.passthrough[#options.passthrough + 1] = value
     elseif options.target == nil and token:sub(1, 2) ~= "--" then
       options.target = token
@@ -71,6 +78,18 @@ local function _parse_args(args)
   end
 
   return options
+end
+
+local function _validate_args(options)
+  if options.lane ~= "behavior" and options.lane ~= "contract" then
+    error("unsupported lane: " .. tostring(options.lane))
+  end
+  if options.mode ~= nil and options.mode ~= "dev" and options.mode ~= "release" then
+    error("unsupported mode: " .. tostring(options.mode) .. " (expected dev|release)")
+  end
+  if options.lane == "contract" and options.mode ~= nil and options.mode ~= "dev" then
+    error("contract lane only supports dev mode")
+  end
 end
 
 local M = {}
@@ -153,6 +172,12 @@ function M.run(args, env)
     return 1
   end
   local options = parsed_or_err
+  local valid, valid_err = pcall(_validate_args, options)
+  if not valid then
+    stderr:write(tostring(valid_err), "\n")
+    stdout:write(_help_text(command_name))
+    return 1
+  end
   if options.help then
     stdout:write(_help_text(command_name))
     return 0
