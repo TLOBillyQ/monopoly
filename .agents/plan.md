@@ -170,10 +170,23 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 - **depends_on**: [T2]
 - **location**: `src/ui/controllers/**`、`src/ui/presenters/**`、`src/ui/render/**`、`src/ui/widgets/**`
 - **description**: 完成 `controllers -> ctl`、`presenters -> pres`、`widgets -> wid`，并迁移 `ui.render.board`、`ui.render.status3d`、`ui.render.support` 等区域；只改这些子树内部引用，不动外部调用点。对运行时和测试直接访问的 cache key 做双注册，至少覆盖 `src.ui.controllers.ui_events`、`src.ui.render.runtime_ui`、`src.ui.stores.modal_state`、`src.host.eggy` 等真实热点。
-- **validation**: UI 新路径与旧路径都可解析；`package.loaded` 热点键在 shim 期保持兼容；不再依赖 `init.lua` 作为唯一入口；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/behavior.lua` 通过。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+ - **validation**: UI 新路径与旧路径都可解析；`package.loaded` 热点键在 shim 期保持兼容；不再依赖 `init.lua` 作为唯一入口；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/behavior.lua` 通过。
+ - **status**: Completed
+ - **log**:
+   - 复制 controller/presenter/widget 逻辑到 `src/ui/ctl`/`src/ui/pres`/`src/ui/wid`，更新内部 `require("src.ui.controllers.*")` 等引用为新命名空间，旧路径只保留 shim 并借助 `package.loaded[...]` 兼容 `src.ui.controllers.ui_events` 等热点。
+   - 将 `src/ui/render/board/init.lua` 与 `src/ui/render/status3d/init.lua` 替换为 `src/ui/render/board.lua` / `src/ui/render/status3d.lua`，旧层级保留 shim 以维持向后兼容。
+   - 运行 `lua tests/guard.lua`（`arch_view_guard` 报 `src.state.player_state_ops.location_ops -> src.rules.ports.bankruptcy_port`，`migration_shim_rules` 报 `src/entry/init.lua` 仍非纯 shim），因此 arch/behavior 车道未能继续。
+ - **files edited/created**:
+   - `src/ui/ctl/**`
+   - `src/ui/pres/**`
+   - `src/ui/wid/**`
+   - `src/ui/controllers/**`
+   - `src/ui/presenters/**`
+   - `src/ui/widgets/**`
+   - `src/ui/render/board.lua`
+   - `src/ui/render/status3d.lua`
+   - `src/ui/render/board/init.lua`
+   - `src/ui/render/status3d/init.lua`
 
 ### T7：统一切到 new-only 调用面与字符串消费者
 
