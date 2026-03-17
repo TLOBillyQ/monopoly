@@ -1,6 +1,7 @@
 local auto_runner = require("src.turn.policies.auto_runner")
 local board_view = require("src.ui.render.board")
 local composition_root = require("src.entry.compose_game")
+local app = require("src.state.game_state")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local modal_controller = require("src.ui.ctl.modal_controller")
 local tiles_cfg = require("src.config.content.tiles")
@@ -177,7 +178,7 @@ function M.build_state(get_current_game, opts)
         auto_all = false,
         map = map_cfg,
         tiles = tiles_cfg,
-      }))
+      }), app)
       local synthetic_players = {}
       for _, role in ipairs(role_roster) do
         if role and role.synthetic == true then

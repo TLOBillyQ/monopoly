@@ -118,7 +118,7 @@ function composition_root.assemble(opts, game_or_class)
   local phases = phase_registry.build_default_phases()
   local game = game_or_class
   if _is_class_like(game_or_class) then
-    game = game_or_class:new({ __skip_assemble = true })
+    game = game_or_class:new(opts)
   end
   assert(game, "CompositionRoot.Assemble requires game instance or class")
   game.board = board
@@ -160,8 +160,13 @@ function composition_root.assemble(opts, game_or_class)
   return game
 end
 
-function composition_root.new_game(opts)
-  return composition_root.assemble(opts, game_state)
+function composition_root.new_game(opts, game_class)
+  local target_game_class = game_class or game_state
+  local game = target_game_class:new(opts)
+  if type(game) ~= "table" or type(game.rebuild) ~= "function" then
+    return game
+  end
+  return composition_root.assemble(opts, game)
 end
 
 return composition_root
