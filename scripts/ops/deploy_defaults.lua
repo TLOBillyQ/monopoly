@@ -13,14 +13,14 @@ end
 local function _candidate_paths(options)
   local home_dir = _normalized_home_dir(options.home_dir or "")
 
-  if home_dir == "" then
-    return {}
-  end
-
   if options.is_windows == true then
     return {
-      common.join_path(home_dir, "Desktop/LuaSource_大富翁-发布"),
+      "C:/Users/Lzx_8/Desktop/dev/LuaSource_大富翁-发布",
     }
+  end
+
+  if home_dir == "" then
+    return {}
   end
 
   if options.is_macos == true then
