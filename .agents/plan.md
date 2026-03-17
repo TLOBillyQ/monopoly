@@ -22,7 +22,7 @@
 - [x] (2026-03-18 01:19 CST) 已定位主要错误依赖方向：`src.ui.pres` / `src.ui.stores` 反向依赖 `src.ui.ctl.ports.runtime_state_seam`；`src.ui.ctl.ports.*` 作为端口装配层反向依赖 `src.ui.ctl.*`
 - [x] (2026-03-18 01:24 CST) 已创建计划文件 `/Users/billyq/Dev/Github/Lua/monopoly/arch-view-cycle-dependency-fix-plan.md`
 - [x] (2026-03-18 01:33 CST) 已完成一次子代理计划审阅，并补入 `arch/config.json`、`dep_rules`、shim 顺序、直接测试消费者与文档同步等漏项
-- [ ] 实施 T1-T7
+- [ ] 实施 T2-T7（已完成：T1 基线冻结与 canonical path 定案）
 
 ## 意外与发现
 
@@ -146,9 +146,9 @@
 - **location**: `/Users/billyq/Dev/Github/Lua/monopoly/tmp/arch_cycle_scan.json`, `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/config.json`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/arch_view.md`
 - **description**: 记录两个 projection cycle 的完整反馈边，并正式拍板两类新路径：共享 seam 迁到 `src/ui/runtime/*`；presentation runtime adapter / gameplay loop port builder 迁到 `src/presentation/runtime/ports/*`。同时明确旧路径在迁移期间仅允许作为 compatibility shim 存在。
 - **validation**: 文档或任务日志中必须明确列出 `ui` 与 `ui.ctl` 的反馈边、目标 canonical path、以及 shim 约束；后续任务不得再改动根命名策略。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 01:50 CST 重新执行 raw `arch_view scan`，确认 `check.ok = false`、`check.cycles = 0`、`check.projection_cycles = 2`，视图稳定为 `ui` 与 `ui.ctl`。本任务正式冻结 canonical path：共享 seam 真源用 `src/ui/runtime/*`，presentation runtime 装配真源用 `src/presentation/runtime/ports/*`，旧 `src.ui.ctl.ports.*` 仅允许作为纯 alias shim。
+- **files edited/created**: `.agents/plan.md`, `tmp/arch_cycle_scan.json`
 
 ### T2: 先补齐 guardrail，让新 canonical path 被正确识别
 - **depends_on**: [T1]
@@ -335,3 +335,6 @@
     -> views: ui, ui.ctl
 
 后续每次修改本计划时，都要在文档底部追加一条变更说明，记录“改了什么、为什么改”。
+
+
+变更说明（2026-03-18 01:50 CST）：完成 T1，重新冻结 raw arch_view 基线，并把 canonical path 决策落入计划执行日志。
