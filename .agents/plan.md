@@ -1,176 +1,242 @@
-# Plan: 仓库级回归 / 告警 / 历史遗留清理（Swarm 版）
+# 重做计划：`src/` 压层级与短模块名迁移（按评论重排）
 
-**Generated**: 2026-03-17 Asia/Shanghai
+本计划是活文档，实施时必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。本计划面向 `.agents/plan.md` 的直接替换版本，维护规范遵循 `.agents/harness/PLANS.md`。
 
-## Overview
+## 目的 / 全局视角
 
-本轮工作分成 3 类债务同时推进：付费购买告警路径、6 个被屏蔽的 T2 characterization 用例、4 组高 ROI CRAP 热点。实现原则是“小补测 + 小修正 + 小提取”，不做跨层重构，不恢复已退役 helper，不覆盖用户在 `/Users/billyq/Dev/Github/Lua/monopoly/src/host/eggy/paid_purchase_gateway.lua` 里的未提交修改。
+这次改动的目标不是“一次性硬切到新命名”，而是把 `src/` 的深层目录、冗余文件名和 `init.lua` 包入口逐步压平，同时保持玩法、启动链、UI 渲染、架构护栏和测试回归持续可运行。
 
-本计划只依赖仓库内文档与代码：Lua 标准库、Eggy API 已由 `/Users/billyq/Dev/Github/Lua/monopoly/docs/eggy/api/07_unit_entities.md` 和架构文档覆盖；本轮不引入新外部依赖，因此无需额外外部文档查询。当前仍处于 Plan Mode，所以本计划先以内联形式交付，不落盘为 `*-plan.md`。
+对用户可见的结果是：模块路径更短、更稳定、更可读；迁移期间旧模块 ID 仍可通过 shim 与别名继续工作；最终状态只保留新模块 ID，`arch_view`/`scrap4lua`/测试快照全部反映新结构。是否真的成功，不看“文件改了多少”，只看这些可观察结果：中间态每一波都能继续跑护栏与回归，最终态 `lua tests/regression.lua`、`lua scripts/quality/arch.lua check`、`lua tests/tooling.lua --workers 1` 全绿，且仓库内不再依赖旧模块族。
 
-## Prerequisites
+## 进度
 
-- 工作目录固定为 `/Users/billyq/Dev/Github/Lua/monopoly`
-- 实施前先保留 `/Users/billyq/Dev/Github/Lua/monopoly/src/host/eggy/paid_purchase_gateway.lua` 当前 diff，不得回退用户 hunks
-- 本轮 CRAP 基线按以下符号记录并逐个比较 before/after：
-  - `pricing.total_invested`: `crap=30.00 coverage=0.00`
-  - `_add_neighbor`: `crap=20.00 coverage=0.00`
-  - `_handle_market_navigation`: `crap=20.00 coverage=0.00`
-  - `_resolve_market_choice`: `crap=12.00 coverage=0.00`
-  - `_build_move_anim_data`: `crap=17.01 coverage=0.07`
-  - `_build_move_args`: `crap=9.56 coverage=0.10`
+- [x] (2026-03-17) 已按原计划评论与二次 review 重排任务依赖、补齐缺失护栏和快照范围。
+- [ ] T1 冻结单一 rename map，并给 13 个 `init.lua` 全部分型。
+- [ ] T2 搭好双轨迁移基础设施、包别名兼容和批量脚本入口。
+- [ ] T3-T6 并行完成各自子树的“移文件 + 落 shim + 改内部引用”。
+- [ ] T7 统一切换所有外部调用点、字符串消费者、护栏配置到 new-only。
+- [ ] T8 删除临时 shim 与本次迁移专用 pair。
+- [ ] T9 刷新快照并做最终全量验收。
 
-## Dependency Graph
+## 意外与发现
+
+- 当前 `src/` 下确实有 13 个 `init.lua`，分布在 `entry`、`host/eggy`、`rules/{board,market,movement,vehicle}`、`turn/{loop,timing}`、`ui/controllers/ports`、`ui/presenters`、`ui/render/{board,status3d}`、`ui/stores/ui_runtime`。
+- `scripts/quality/arch/config.json` 的 `ui_schema_pure` 仍硬编码 `src.ui.controllers.*`、`src.ui.presenters.*`、`src.ui.widgets.*`；如果不做双轨扩展，`ctl/pres/wid` 落地后会静默失去边界检查力。
+- `tests/guards/dep_rules.lua` 仍直接绑定 `src/ui/schema/canvas/base` 与 `src/turn/output/legacy_output_mirror.lua` 等旧路径；如果不改，会在迁移后误报或漏报。
+- 兼容风险不只在 `require(...)`：仓库内已有多处直接读写 `package.loaded["src.entry.init"]`、`package.loaded["src.host.eggy"]`、`package.loaded["src.ui.render.runtime_ui"]`、`package.loaded["src.ui.controllers.ui_events"]` 等键。
+- `src/turn/output/loop_runtime.lua`、`scheduler_runtime.lua`、`tick_flow.lua`、`tick_steps.lua`、`session_script.lua`、`logger.lua`、`ports.lua` 目前仍是活跃转发别名，不能在 T4 过早删除。
+- `tests/regression.lua` 只覆盖 `behavior + contract + guard`，不覆盖 `arch check` 与 `tooling`；最终验收必须显式补跑这两条。
+- `scripts/quality/arch/viewer/*`、`scripts/quality/scrap/viewer/*`、`tests/suites/runtime/startup_profile.lua`、`tests/suites/architecture/arch_view_contract.lua` 等地方都消费字面模块 ID 或快照，T7/T9 必须一并迁移。
+
+## 决策日志
+
+- 决策：采用“双轨迁移，最终删 shim”，不做一次性硬切。  
+  理由：这是唯一能让 repo 在大规模改名期间持续可运行、可验证的路径。  
+  日期/作者：2026-03-17 / Codex
+- 决策：新增单一真源 `tests/support/migration_map.lua`，后续 pair、shim、批量脚本全部从这里派生。  
+  理由：避免 rename 规则散落在多个脚本和测试里，减少漏改与碰撞。  
+  日期/作者：2026-03-17 / Codex
+- 决策：T3-T6 只允许改各自子树内部引用；所有跨子树外部调用点统一延后到 T7。  
+  理由：这是避免并行波次写冲突和启动链抢改的必要条件。  
+  日期/作者：2026-03-17 / Codex
+- 决策：`turn/output/*` 的活跃转发别名保留到 T8，不在 T4 提前退休。  
+  理由：仓库内仍有大量外部调用与测试依赖这些旧键。  
+  日期/作者：2026-03-17 / Codex
+- 决策：兼容 contract 不只验证 `require(old)==require(new)`，还要覆盖需要双注册的 `package.loaded` 别名键。  
+  理由：本次迁移涉及 package 入口和运行时 cache key，纯转发检查不足以兜底。  
+  日期/作者：2026-03-17 / Codex
+
+## 背景与导读
+
+本次迁移不改变顶层组件边界：`entry`、`host`、`ui`、`turn`、`player`、`computer`、`rules`、`state`、`config`、`core` 继续作为 `arch_view` 的根组件。变化点只在组件内部：压缩深层目录、去掉冗余父前缀、退休 `init.lua` package 入口、把旧模块 ID 通过 shim 过渡到新模块 ID。
+
+架构与护栏的真源仍是三处：`scripts/quality/arch/config.json` 负责结构化边界，`tests/guards/dep_rules.lua` 负责文本硬边界，`tests/support/migration_pairs.lua` + `tests/guards/migration_shim_rules.lua` + `tests/suites/architecture/migration_shim_contract.lua` 负责迁移期兼容。此次迁移要把它们全部升级到“能理解 rename map、能处理 package 入口、能容忍中间态双轨”的版本。
+
+命名规则现在直接拍板，不留到实施时临时决定。所有 package 入口按“父目录同名文件”收口：`dir/init.lua -> dir.lua`。文件名默认只保留差异语义，不用 `_c.lua`/`_n.lua` 这类缩写；`_contract.lua`、`_nodes.lua`、`ports`、`state_access`、`runtime_ports` 这类边界语义名必须保留。`turn/loop/*` 的碰撞统一以 `loop_` 前缀处理；`turn/output/*` 的旧名字在迁移期只做别名，不参与抢新名。
+
+## 接口与依赖
+
+这次改动的公共变化是“模块 ID 与 package 入口语义迁移”，不是业务 API 改写。实施完成后，业务函数签名应保持不变，但模块加载契约会分两阶段变化：
+
+1. 迁移期：旧模块 ID 和新模块 ID 都可解析到同一实现；对被测试或运行时代码直接读写的 cache key，`package.loaded[old]` 与 `package.loaded[new]` 也必须能指向同一对象。
+2. 最终态：只保留新模块 ID，旧模块 ID 与旧 cache key 明确失败。
+
+为此新增一个仓库内接口真源：`tests/support/migration_map.lua`。它必须导出可枚举的条目，且每个条目至少包含：
+
+- `old_path`
+- `new_path`
+- `old_module`
+- `new_module`
+- `canonical_module`
+- `init_kind`（`forward_only` / `barrel` / `logic_bearing`）
+- `collision_group`
+- `keep_shim`
+- `alias_modules`（需要双注册 `package.loaded` 的旧/新键集合）
+
+`tests/support/migration_pairs.lua`、shim contract、批量改写脚本、shim 生成脚本都只能从这份 map 派生，不允许再维护第二份 rename 表。
+
+## 依赖图
 
 ```text
-T0A ──┬── T1 ──┐
-      ├── T3 ──┤
-      ├── T4A ─┤
-      └── T4B ─┤
-T0B ───── T2 ── T5 ──┘
-                    │
-                    v
-                   T6 ── T7 ── T8
+T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 ```
 
-## Tasks
+## 工作计划
 
-### T0A: 记录工作树保护点与 CRAP 基线
+### T1：冻结 rename map、`init.lua` 分型与碰撞命名
+
 - **depends_on**: []
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/host/eggy/paid_purchase_gateway.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tmp/crap_report.json`
-- **description**: 记录付费网关当前 diff，确认后续修改只能叠加；重新生成一次 CRAP 报告并单独摘出 6 个目标符号的 before 值，供 T1/T3/T4A/T4B 各自比较。这里不改代码，只产出基线证据。
-- **validation**: `git diff -- /Users/billyq/Dev/Github/Lua/monopoly/src/host/eggy/paid_purchase_gateway.lua` 与 `lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json` 都成功，且已记录 6 个符号的 before 值。
-- **status**: Completed
-- **log**: Recorded the current paid purchase gateway diff as a user-owned change boundary. Re-ran `crap` and captured before values: `pricing.total_invested` `crap=30.00 coverage=0.00`, `_add_neighbor` `crap=20.00 coverage=0.00`, `_handle_market_navigation` `crap=20.00 coverage=0.00`, `_build_move_anim_data` `crap=17.01 coverage=0.07`, `_resolve_market_choice` `crap=12.00 coverage=0.00`, `_build_move_args` `crap=9.56 coverage=0.10`.
-- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/.agents/plan.md`, `/Users/billyq/Dev/Github/Lua/monopoly/tmp/crap_report.json`
+- **location**: `tests/support/migration_map.lua`、`src/**`
+- **description**: 新增单一 rename map，覆盖全部迁移目标；逐一记录旧/新路径、旧/新模块 ID、canonical module、alias_modules、`init.lua` 类型、碰撞组与是否保留 shim。13 个 `init.lua` 全部在这一阶段拍板去向；`turn/loop/*` 与同名历史别名的唯一新名也在这一阶段冻结。
+- **validation**: rename map 覆盖全部目标文件；无路径冲突；13 个 `init.lua` 全部分型完成；所有碰撞组都有唯一目标名；对 package 入口类模块已标注 alias_modules。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-### T0B: 盘点 6 个 T2 disabled case 的真实失败模式
-- **depends_on**: []
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_t2_characterization.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/catalog.lua`
-- **description**: 不先删 catalog 屏蔽；先用 ad-hoc `TestHarness.run_all` 只跑 `gameplay_t2_characterization` 里这 6 个 case，并在内存里临时清掉对应 `disabled_in`。记录每个 case 失败是因为断言过时、依赖已迁移、还是引用了退役 API。允许把旧断言替换成“当前真实行为”断言，但不允许恢复 legacy helper。
-- **validation**: 六个 case 都有单独失败归因，且归因结果能直接指导 T2 改写。
-- **status**: Completed
-- **log**: 2026-03-17: 用 ad-hoc harness 仅在内存里清掉 6 个 target case 的 `disabled_in` 后重跑；6/6 全部通过，没有实际失败。结论：当前 `tests/catalog.lua` 的这 6 条屏蔽已过期，T2 应直接以“移除陈旧屏蔽 + 保持用例稳定通过”为主，而不是先修失败逻辑。逐项结果：`_test_apply_dice_multiplier_with_multiplier` 通过；`_test_resolve_wait_state_prefers_anim` 通过；`_test_resolve_wait_state_landing_visual` 通过；`_test_fill_ui_sync_defaults_preserves_custom` 通过；`_test_update_countdown_nil_turn` 通过；`_test_build_ui_gate_all_true` 通过。
-- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/.agents/plan.md`
+### T2：搭建双轨迁移基础设施与包别名兼容
 
-### T1: 锁定付费购买告警路径
-- **depends_on**: [T0A]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/host/eggy/paid_purchase_gateway.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/domain/paid_currency.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/misc.lua`
-- **description**: 在保留现有 dirty diff 的前提下，只补足必要行为：`setup_for_game` 只做映射预热，不为隐藏/禁用商品告警；`start` 遇到真实缺映射才 warn，并保持每个 `product_id` 只 warn 一次；角色缺少 `show_goods_purchase_panel` 时返回 `purchase_api_missing` 且不触发面板。优先通过测试驱动，只有测试暴露缺口时才改源文件。
-- **validation**: 至少覆盖 5 个断言：隐藏/禁用项 setup 不告警、真实缺映射 start 告警、重复 start 同一商品只告警一次、正常 paid purchase 仍打开面板、缺失 purchase API 返回 `purchase_api_missing`；本任务结束后跑 `lua tests/behavior.lua`。
-- **status**: Completed
-- **log**: 补齐了 paid purchase 告警路径测试：隐藏/禁用商品不告警、缺映射只告警一次、缺失购买 API 返回 `purchase_api_missing` 且不打开面板。沿用并保留了用户在 `paid_purchase_gateway.lua` 上已有的未提交改动。
-- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/domain/paid_currency.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/misc.lua`
+- **depends_on**: [T1]
+- **location**: `tests/support/migration_pairs.lua`、`tests/guards/migration_shim_rules.lua`、`tests/suites/architecture/migration_shim_contract.lua`、`tests/guards/dep_rules.lua`、`scripts/quality/arch/config.json`、`scripts/quality/scrap/config.lua`、`scripts/migration/*`
+- **description**: 让仓库先具备“旧/新路径并存且可验证”的能力。`migration_pairs` 改为从 rename map 派生；shim rules 继续要求普通 shim 为纯转发，同时为 package 入口类模块增加 alias key 验证；`migration_shim_contract` 同时验证 `require(old)==require(new)` 与需要双注册的 `package.loaded` 键。把 `arch/config.json` 的 `ui_schema_pure` 扩展为旧/新双轨，把 `dep_rules.lua` 中与 `ui/schema/canvas/base`、`turn/output/*`、`forbidden_files` 相关规则改成可消费 rename map 的双轨版本。为避免未来根目录尚未落地时误报，双轨规则必须按“文件存在才生效”的方式启用。新增两个唯一批量入口：一个按 map 改写 `require/package.loaded/字符串模块 ID`，一个按 map 生成 shim。
+- **validation**: 在尚未迁移源码前，guard/contract 继续通过；双轨规则不会因未来路径未落地而误报；package 入口类别名键有专门 contract；`scripts/migration/*` 能 dry-run 输出本次拟改清单。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-### T2: 修复并本地重启用 6 个 T2 case
-- **depends_on**: [T0B]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_t2_characterization.lua`
-- **description**: 只改 suite 文件，不动 catalog。修复这 6 个 case：`_test_apply_dice_multiplier_with_multiplier`、`_test_resolve_wait_state_prefers_anim`、`_test_resolve_wait_state_landing_visual`、`_test_fill_ui_sync_defaults_preserves_custom`、`_test_update_countdown_nil_turn`、`_test_build_ui_gate_all_true`。实现策略是面向当前真实入口：`landing_visual_hold`、`land._resolve_wait_state`、`ui_sync_defaults.resolve_ui_gate`、`tick_ui_sync.update_countdown`、当前 move phase 行为。可复用 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_t2_enabled_cases.lua` 的现态脚手架模式，但不要把它并入 catalog。
-- **validation**: 先通过 ad-hoc harness 让这 6 个 case 在本地“解除屏蔽”后全部通过；此阶段不得修改 `/Users/billyq/Dev/Github/Lua/monopoly/tests/catalog.lua`。
-- **status**: Completed
-- **log**: 由 T0B 结果确认 6 个 case 本身已通过，因此本任务不再需要修改 `gameplay_t2_characterization.lua`；实际收敛为保留现有测试并移除过期屏蔽。
-- **files edited/created**: None
+### T3：迁移 gameplay 子树
 
-### T3: 处理低风险 CRAP 热点（pricing + default_map）
-- **depends_on**: [T0A]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/rules/land/pricing.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/config/content/maps/default_map.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/read_model_contract.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/domain/movement.lua`
-- **description**: `pricing.total_invested` 一律扩展现有 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/read_model_contract.lua`，不要新增重复断言到别的 suite；目标是补齐负 level、空 price、稀疏/超长 level 等分支。`_add_neighbor` 放到 map/movement 相关 suite 中，验证双向邻接、方向推导、非法非正交边拒绝。除非测试无法命中，不改源实现。
-- **validation**: 跑 `lua tests/contract.lua`，然后重新跑 CRAP 报告；`pricing.total_invested` 与 `_add_neighbor` 的 coverage 必须大于 0，且 score 低于 T0A 记录值。
-- **status**: Completed
-- **log**: 新增了 `pricing.total_invested` 的负 level/上限断言，以及 default map reload 后的双向邻接验证；同时修正了对 Lua 稀疏数组 `#` 行为的错误预期。
-- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/domain/land.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/domain/movement.lua`
-
-### T4A: 处理 move phase 热点
-- **depends_on**: [T0A]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/turn/phases/move.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_cases.lua`
-- **description**: 只处理 `_build_move_args` 与 `_build_move_anim_data`。优先在 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_cases.lua` 增加行为测试，覆盖 `extra` 合并、`continue_from_market/steal` 相关字段透传、动画数据里的 `visited/steps/vehicle_id/interrupt flags`。除非测试达不到目标覆盖，不做额外重构。
-- **validation**: 跑 `lua tests/behavior.lua`，然后重新跑 CRAP 报告；`_build_move_args` 与 `_build_move_anim_data` 的 coverage 必须高于当前基线，且 score 下降。
-- **status**: Completed
-- **log**: 对 move phase 做了最小复杂度拆分：提取参数合并、动画序号与 interrupt flag helper，保持语义不变，同时让 `_build_move_args` 与 `_build_move_anim_data` 退出高位热点。
-- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/src/turn/phases/move.lua`
-
-### T4B: 处理 action dispatcher 热点
-- **depends_on**: [T0A]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/turn/actions/action_dispatcher.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/presentation_ui_model_dispatch.lua`
-- **description**: 覆盖 `_resolve_market_choice` 与 `_handle_market_navigation`，但测试必须经 `dispatch_action` 入口驱动，并 stub `validator`、`market_service.choice.apply_navigation`、`output_ports.sync_pending_choice`，不要直接白盒调用 local function。场景至少包括：turn pending choice 优先、fallback 到 state pending choice、非 `market_buy` 拒绝、validator 拒绝、apply_navigation 拒绝、成功同步 pending choice。
-- **validation**: 跑 `lua tests/behavior.lua`，必要时补跑 `lua tests/contract.lua`；然后重新跑 CRAP 报告，两个目标符号 coverage > 0 且 score 低于 T0A 基线。
-- **status**: Completed
-- **log**: 对 action dispatcher 做了最小提取：拆出 turn pending choice 解析与 market navigation failure helper，保留 `dispatch_action` 驱动路径与日志语义不变，同时让 `_resolve_market_choice` / `_handle_market_navigation` 退出高位热点。
-- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/src/turn/actions/action_dispatcher.lua`
-
-### T5: 移除 catalog 屏蔽并做第一次整体验证
 - **depends_on**: [T2]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/tests/catalog.lua`
-- **description**: 只有在 T2 本地重启用通过后，才删除对应 `disabled_cases` 的 6 条屏蔽项。不要顺手动其他注释掉的旧测试草稿。删除后立即跑 behavior lane，确保噪音来源只来自本轮修改。
-- **validation**: `lua tests/behavior.lua` 通过，且 `/Users/billyq/Dev/Github/Lua/monopoly/tests/catalog.lua` 中不再存在这 6 个 case 的 `disabled_cases` 项。
-- **status**: Completed
-- **log**: 已删除 6 条过期 `disabled_cases` 屏蔽；behavior lane 从 982 条通过提升到 987 条通过。
-- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/tests/catalog.lua`
+- **location**: `src/player/**`、`src/rules/**`、`src/state/**`、`src/config/**`、`src/computer/**`
+- **description**: 只处理 gameplay 侧文件移动与命名收缩；只允许改这些子树内部的 `require(...)` 与必要的 alias key，不改任何外部调用点。对旧路径保留 shim，并把 `rules/market`、`rules/land`、`player/actions/state_ops`、`config/content/maps` 的碰撞与短名落到 rename map 既定结果。
+- **validation**: gameplay 新路径可独立解析；旧路径 shim 与 alias key 仍指向同一实现；`rules/state/config` 不新增越界依赖；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua` 通过。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-### T6: 合流验证 behavior / contract
-- **depends_on**: [T1, T3, T4A, T4B, T5]
-- **location**: 仅验证，不新增实现位置
-- **description**: 所有并行任务落地后，先跑高频车道收敛冲突，只修本轮引入的回归，不扩大范围。
-- **validation**: `lua tests/behavior.lua` 和 `lua tests/contract.lua` 都通过。
-- **status**: Completed
-- **log**: `lua tests/behavior.lua` 与 `lua tests/contract.lua` 均通过，说明本轮功能回归与契约回归已收敛。
-- **files edited/created**: None
+### T4：迁移 entry / host / core / turn，但保留活跃 `turn/output` 别名
 
-### T7: 结构与护栏验证
-- **depends_on**: [T6]
-- **location**: 仅验证，不新增实现位置
-- **description**: 在重型回归前先做结构护栏，避免 CRAP/tooling 跑完才发现跨层漂移。
-- **validation**: `lua tests/guard.lua` 与 `lua scripts/quality/arch.lua check` 都通过。
-- **status**: Completed
-- **log**: `guard` 与 `arch_view` 全绿，说明小提取没有引入新的边界漂移或禁用写法。
-- **files edited/created**: None
+- **depends_on**: [T2]
+- **location**: `src/entry/**`、`src/host/**`、`src/core/**`、`src/turn/**`、`main.lua`
+- **description**: 迁移 runtime/app 侧模块，落实 `entry/init.lua`、`host/eggy/init.lua`、`turn/loop/init.lua`、`turn/timing/init.lua` 的具名入口；只改 `entry/host/core/turn` 子树内部引用，不把它们提前切到 T5/T6 未来的新 UI 模块 ID。`src/turn/output/{loop_runtime,scheduler_runtime,tick_flow,tick_steps,session_script,logger,ports}` 在此阶段只保留为兼容别名，不删除。
+- **validation**: 启动链仍能通过旧稳定 UI 模块 ID 工作；`main.lua` 与 boot 链没有跨到尚未落地的新 UI 命名；`turn/output/*` 活跃别名仍可解析；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua` 通过。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-### T8: 最终仓库级验收
+### T5：迁移 UI schema / input / stores 基座
+
+- **depends_on**: [T2]
+- **location**: `src/ui/schema/**`、`src/ui/input/**`、`src/ui/stores/**`
+- **description**: 退休 `ui/schema/canvas/*` 深层树，改为屏幕级短文件；压平 `canvas_routes`、`intent_dispatch`、`ui_runtime`；保留 `_contract` / `_nodes` 后缀；只改这三个子树内部引用。所有旧路径继续以 shim 形式保留，不改外部调用者。
+- **validation**: schema/input/stores 新路径完整可加载；旧 `src.ui.schema.canvas.*` 和旧 store/input 路径仍能解析；`base canvas` 相关 guard 在双轨中继续生效；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua` 通过。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T6：迁移 UI ctl / pres / render / wid，并补齐运行时 cache key 兼容
+
+- **depends_on**: [T2]
+- **location**: `src/ui/controllers/**`、`src/ui/presenters/**`、`src/ui/render/**`、`src/ui/widgets/**`
+- **description**: 完成 `controllers -> ctl`、`presenters -> pres`、`widgets -> wid`，并迁移 `ui.render.board`、`ui.render.status3d`、`ui.render.support` 等区域；只改这些子树内部引用，不动外部调用点。对运行时和测试直接访问的 cache key 做双注册，至少覆盖 `src.ui.controllers.ui_events`、`src.ui.render.runtime_ui`、`src.ui.stores.modal_state`、`src.host.eggy` 等真实热点。
+- **validation**: UI 新路径与旧路径都可解析；`package.loaded` 热点键在 shim 期保持兼容；不再依赖 `init.lua` 作为唯一入口；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/behavior.lua` 通过。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T7：统一切到 new-only 调用面与字符串消费者
+
+- **depends_on**: [T3, T4, T5, T6]
+- **location**: `src/**`、`tests/**`、`scripts/**`、`docs/**`、`scripts/quality/arch/config.json`、`tests/guards/dep_rules.lua`
+- **description**: 使用 T2 的批量脚本把所有剩余外部调用点一次性切到新模块 ID，包括 `require(...)`、`package.loaded[...]`、测试断言中的字面模块名、文档示例、viewer/snapshot payload、`startup_profile` 这类字符串消费者。同步把 `arch/config.json`、`dep_rules.lua`、`scrap4lua` 配置与相关 contract 从 dual-track 收窄为 new-only，并重写 `arch_view_contract` 中依赖 package-init 折叠语义的断言。
+- **validation**: repo 级检索不再命中被迁移旧模块族；`arch_view_contract` 不再依赖旧 package-init 语义；`startup_profile`、`scrap4lua`、viewer payload、文档示例都使用新模块 ID；`lua tests/regression.lua` 通过。
+
+> **[R2·Minor]** T7 把 `config.json` 从双轨收窄为 new-only，这是 new-only config 首次生效。validation 应显式包含 `lua scripts/quality/arch.lua check`，确认收窄后的 pattern 仍能正确分类全部新模块且 `ui_schema_pure` 边界有效。
+
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T8：删除临时 shim 与本次迁移专用 pair
+
 - **depends_on**: [T7]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/tmp/crap_report.json`
-- **description**: 跑最终全量门禁，并对 6 个目标符号逐个比较 before/after。验收标准不是“整体热点列表看起来变好”，而是每个目标符号都有可量化改进。
-- **validation**: 依次通过：
-  - `lua tests/regression.lua`
-  - `lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json`
-  - `lua tests/tooling.lua --workers 1`
-  并满足：
-  - 6 个 T2 case 已从 catalog 解禁
-  - 目标 6 个符号全部 `coverage > before`
-  - 目标 6 个符号全部 `crap < before`
-  - 不新增 0% coverage 的高位热点
-- **status**: Completed
-- **log**: `lua tests/regression.lua`、`lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json`、`lua tests/tooling.lua --workers 1` 全部通过；本轮 6 个目标热点已退出 CRAP 前 20。
-- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/tmp/crap_report.json`
+- **location**: 临时 shim 文件、`tests/support/migration_map.lua`、`tests/support/migration_pairs.lua`、shim contract/rules
+- **description**: 在 new-only 全绿前提下删除本次迁移期间的 forwarding shim、alias key 兼容和专用 pair；保留仓库历史上仍有价值的长期兼容项，但删除这次 rename 专用桥接。
+- **validation**: `require(old_module)` 与旧 cache key 明确失败；`migration_shim_contract`/`migration_shim_rules` 只覆盖保留项；仓库内不存在误留旧路径桥。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T9：刷新快照并做最终全量验收
+
+- **depends_on**: [T8]
+- **location**: `scripts/quality/arch/viewer/*`、`scripts/quality/scrap/viewer/*`、全仓
+- **description**: 在命名、模块 ID 和兼容桥都稳定后，刷新提交态快照，然后跑最终全量回归。顺序固定为：先刷新 `arch_view` 与 `scrap4lua` viewer 快照，再跑最终验收，避免 contract/tooling 读取旧快照。
+- **validation**: 依次执行  
+  `lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer`  
+  `lua scripts/quality/scrap.lua viewer --out-dir scripts/quality/scrap/viewer`  
+  `lua tests/regression.lua`  
+  `lua scripts/quality/arch.lua check`  
+  `lua tests/tooling.lua --workers 1`
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
 ## Parallel Execution Groups
 
 | Wave | Tasks | Can Start When |
 |------|-------|----------------|
-| 1 | T0A, T0B | Immediately |
-| 2 | T1, T2, T3, T4A, T4B | After respective preflight task completes |
-| 3 | T5 | T2 complete |
-| 4 | T6 | T1, T3, T4A, T4B, T5 complete |
-| 5 | T7 | T6 complete |
-| 6 | T8 | T7 complete |
+| 1 | T1 | Immediately |
+| 2 | T2 | T1 complete |
+| 3 | T3, T4, T5, T6 | T2 complete |
+| 4 | T7 | T3 + T4 + T5 + T6 complete |
+| 5 | T8 | T7 complete |
+| 6 | T9 | T8 complete |
 
-## Testing Strategy
+## 具体步骤
 
-- 局部任务必须先做本地验证，再进入共享车道；不要把首次反馈推迟到 T6。
-- T2 的局部验证必须分两段：
-  1. 仅改 `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_t2_characterization.lua`，用 ad-hoc harness 临时解除这 6 个 case 的屏蔽并跑通。
-  2. 再改 `/Users/billyq/Dev/Github/Lua/monopoly/tests/catalog.lua`，最后跑 `lua tests/behavior.lua`。
-- T3/T4A/T4B 每次结束都要单独重跑 CRAP 报告，对自己负责的目标符号做 before/after 比较，避免多个 agent 相互污染结论。
-- T4B 的 market navigation 一律通过 `dispatch_action` 入口测，不做 local function 直测。
+先做 T1，把 rename map 冻结成单一真源；这一步不移动文件，只做命名决策落盘。随后做 T2，把 guard、contract、arch 配置、批量脚本都升级到能吃 rename map 的版本，并且先把“普通转发 shim”和“package/cache key 别名兼容”这两类保护网搭好。只有在保护网已经能覆盖中间态时，才进入 T3-T6 的并行迁移。
 
-## Risks & Mitigations
+T3-T6 并行时，每个任务都只拥有自己的子树，不允许写其它子树文件，也不允许提早改外部调用点；所有旧 ID 一律先用 shim 或 alias key 兜住。T4 尤其不能把 `entry/host/turn` 过早切到 T5/T6 未来的新 UI 名字；`turn/output/*` 的活跃别名也必须继续保留。T6 需要特别关注运行时和测试中的 `package.loaded[...]` 热点键兼容。
 
-- `/Users/billyq/Dev/Github/Lua/monopoly/src/host/eggy/paid_purchase_gateway.lua` 已有用户未提交改动；T1 必须先看当前 diff，再叠加最小修复，绝不回退。
-- T2 的历史问题很可能是“断言过时”而不是“产品行为坏了”；因此允许把断言改写为现态行为检查，但不允许恢复退役 API。
-- T3 与 T4 的目标都是降 CRAP，不是重写模块；如果补测已经能把 coverage 拉起来，就不继续重构。
-- 若 T4A/T4B 为了可测性必须提取 helper，提取范围必须留在原层内，且 T7 作为强制边界检查，防止引入跨层依赖。
+等四个并行波次全部完成后，T7 再使用统一脚本一次性改 repo 里剩余的调用点和字符串消费者，并把双轨护栏缩回 new-only。T8 删除迁移桥，T9 刷新 viewer 快照并跑最终验收。
 
-## Assumptions
+## 验证与验收
 
-- “追告警测试”解释为：把 warn 路径做成稳定断言，而不是接受日志噪音。
-- “清理历史遗留”以这 3 组债务为边界，不顺手扩展到其他 legacy shim、其他 disabled 草稿或装配层重构。
-- 当前 Plan Mode 下不落盘；若后续切出 Plan Mode，再把本块原样写入一个 `*-plan.md` 文件即可。
+中间态验证不是“随便跑几个测试”，而是按波次固定执行：
+
+- **T2 完成后**：`lua tests/guard.lua`、`lua tests/contract.lua`、`lua scripts/quality/arch.lua check`
+- **T3 完成后**：`lua tests/guard.lua`、`lua tests/contract.lua`、`lua scripts/quality/arch.lua check`
+- **T4 完成后**：`lua tests/guard.lua`、`lua tests/contract.lua`、`lua scripts/quality/arch.lua check`
+- **T5 完成后**：`lua tests/guard.lua`、`lua tests/contract.lua`、`lua scripts/quality/arch.lua check`
+- **T6 完成后**：`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua scripts/quality/arch.lua check`
+
+> **[R3·Suggestion]** T3-T5 只跑 guard + contract，T6 额外跑 behavior。但 T3 移动的 `rules/market`、`rules/land`、`rules/chance` 被 **27 个测试文件**引用（domain + gameplay + presentation suites 都有）。如果 shim 有 bug（比如 alias_modules 遗漏），behavior 测试是最早能暴露问题的地方。建议 T3 也补 `lua tests/behavior.lua`，代价是多跑一次（约几十秒），收益是在并行波次最早点发现兼容缺陷。
+- **T7 完成后**：`lua tests/regression.lua`
+
+> **[R1]** T8（删除 shim）是风险最高的单步操作——移除安全网后所有旧路径立刻失效。验证与验收跳过了 T8。建议补：**T8 完成后**：`lua tests/regression.lua`、`lua scripts/quality/arch.lua check`。如果 T8 后 break，恢复路径是"还原 shim + 重新审查 T7 的改写覆盖率"。
+
+- **T9 最终验收**：按 T9 验证顺序完整跑一遍
+
+最终成功标准固定为：
+
+- 仓库不再依赖旧模块族与旧根名；
+- `arch_view` 与 `scrap4lua` 提交态快照只包含新模块 ID；
+- `arch_view_contract` 不再断言 package-init 折叠必须存在；
+- 删除 shim 后，旧模块 ID 与旧 cache key 明确失败；
+- 最终验收命令全绿。
+
+## 风险与缓解
+
+- **package/cache key 双载入风险**：通过 rename map 的 `alias_modules` 字段和 T2/T6 contract 显式覆盖，不把兼容仅仅寄托在 `require(old)` 上。
+- **并行波次写冲突风险**：T3-T6 只动各自子树；外部调用点全部归 T7；这是强约束，不允许实施时再放松。
+- **护栏静默失效风险**：T2 必须同步覆盖 `arch/config.json`、`dep_rules.lua`、`scrap4lua` 配置与 contract，不允许只改源码不改质量入口。
+- **快照返工风险**：所有 viewer/snapshot 只在 T8 后统一刷新，前面一律不提交快照。
+- **启动链提前断裂风险**：T4 不提前切换到未落地 UI 新名，`turn/output/*` 活跃别名保留到 T8。
+
+## 可重复性与恢复
+
+rename map、shim 生成与批量改写脚本都必须是可重复执行的：同一输入多次运行应得到相同结果，不允许夹杂手工维护的第二份 rename 表。任何单波次失败时，都以“保留当前 shim + 回到该波次重跑脚本”为恢复路径，不通过临时手改其它子树绕过问题。只要 T2 的保护网完整，中间态就应该始终可验证；如果某波次做完后连 `guard + arch` 都跑不通，必须先修复该波次，不能继续推进到下一波。
+
+## 结果与复盘
+
+当前仅完成计划重排，尚未实施代码迁移。实施完成后，这一节需要回填三件事：最终删除了哪些 shim、哪些旧模块 ID 被证明最难迁、以及这次 rename 是否真的降低了 `src/` 的导航成本和护栏维护成本。
