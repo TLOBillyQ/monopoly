@@ -22,7 +22,7 @@
 - [x] (2026-03-18 01:19 CST) 已定位主要错误依赖方向：`src.ui.pres` / `src.ui.stores` 反向依赖 `src.ui.ctl.ports.runtime_state_seam`；`src.ui.ctl.ports.*` 作为端口装配层反向依赖 `src.ui.ctl.*`
 - [x] (2026-03-18 01:24 CST) 已创建计划文件 `/Users/billyq/Dev/Github/Lua/monopoly/arch-view-cycle-dependency-fix-plan.md`
 - [x] (2026-03-18 01:33 CST) 已完成一次子代理计划审阅，并补入 `arch/config.json`、`dep_rules`、shim 顺序、直接测试消费者与文档同步等漏项
-- [ ] 实施 T5-T7（已完成：T1 基线冻结；T2 guardrail 迁移；T3 seam 抽离；T4 改为后续可选清理）
+- [ ] 实施 T6-T7（已完成：T1 基线冻结；T2 guardrail 迁移；T3 seam 抽离；T4 延后；T5 测试侧真源切换）
 
 ## 意外与发现
 
@@ -189,9 +189,9 @@
 - **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/gameplay_runtime_bootstrap.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/support/shared_support.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/runtime_ports_contract.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/runtime_bootstrap.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_cases.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/*.lua`
 - **description**: 批量切换生产 bootstrap、shared fixture 与直接依赖旧路径的测试。这里必须覆盖 patch-based 测试和直接 `require("src.ui.ctl.ports.*")` 的 suite，而不只是笼统地改共享 support。若保留 shim，则在此阶段确认所有测试都能通过 shim 访问到同一个 canonical table 对象。
 - **validation**: `rg 'src\.ui\.ctl\.ports' tests src/presentation/runtime` 仅剩 compatibility shim、明确保留的兼容断言或待删除注释；`lua tests/contract.lua` 通过；`runtime_bootstrap`、`runtime_ports_contract`、`gameplay_cases` 与高风险 presentation suites 可在本地单独或整组通过。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 02:19 CST 在不执行 T4 assembly 搬迁的前提下，先把仍直接把旧 seam 路径当真源的测试切到 `src.ui.runtime.runtime_state_seam`。共享 fixture 在 T3 已更新，本步补齐了三组 presentation action/status suites 的直接 import。验证结果：`rg` 已不再命中 tests 中的旧 seam 真源引用；`lua tests/contract.lua` 通过；`lua tests/behavior.lua` 通过。
+- **files edited/created**: `.agents/plan.md`, `tests/suites/presentation/_presentation_action_status_choice_and_target_cases.lua`, `tests/suites/presentation/_presentation_action_status_market_and_anim_cases.lua`, `tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua`
 
 ### T6: 去掉 `arch_view` 特例，补齐文档并刷新 viewer 快照
 - **depends_on**: [T5]
@@ -349,3 +349,5 @@
 变更说明（2026-03-18 02:03 CST）：完成 T2，先把 arch_view/dep_rules/contract 切到新 canonical guardrail，确保后续迁移不会先因分类或白名单失血而失败。
 
 变更说明（2026-03-18 02:12 CST）：完成 T3。共享 seam 抽离本身已经把 raw arch_view projection cycles 清零，因此将原 T4 大规模 assembly 迁移降级为后续可选清理，先沿低风险路线继续收尾。
+
+变更说明（2026-03-18 02:19 CST）：完成 T5，先把测试侧仍直接引用旧 seam 真源的文件切到 `src.ui.runtime.*`，在不扩大 assembly 迁移范围的情况下清理剩余真源漂移。
