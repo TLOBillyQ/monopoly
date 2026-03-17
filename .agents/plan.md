@@ -11,8 +11,8 @@
 ## 进度
 
 - [x] (2026-03-17) 已按原计划评论与二次 review 重排任务依赖、补齐缺失护栏和快照范围。
-- [ ] T1 冻结单一 rename map，并给 13 个 `init.lua` 全部分型。
-- [ ] T2 搭好双轨迁移基础设施、包别名兼容和批量脚本入口。
+- [x] (2026-03-17 19:49) T1 冻结单一 rename map，并给 13 个 `init.lua` 全部分型。
+- [ ] T2 部分完成：rename pair/shim contract/arch 双轨与 dry-run 脚本已起步；`dep_rules.lua`、`scrap/config.lua` 与全量 guard/contract 还未收口。
 - [ ] T3-T6 并行完成各自子树的“移文件 + 落 shim + 改内部引用”。
 - [ ] T7 统一切换所有外部调用点、字符串消费者、护栏配置到 new-only。
 - [ ] T8 删除临时 shim 与本次迁移专用 pair。
@@ -89,9 +89,9 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 - **location**: `tests/support/migration_map.lua`、`src/**`
 - **description**: 新增单一 rename map，覆盖全部迁移目标；逐一记录旧/新路径、旧/新模块 ID、canonical module、alias_modules、`init.lua` 类型、碰撞组与是否保留 shim。13 个 `init.lua` 全部在这一阶段拍板去向；`turn/loop/*` 与同名历史别名的唯一新名也在这一阶段冻结。
 - **validation**: rename map 覆盖全部目标文件；无路径冲突；13 个 `init.lua` 全部分型完成；所有碰撞组都有唯一目标名；对 package 入口类模块已标注 alias_modules。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-17 解析并编码 13 个 `init.lua` 入口的旧/新路径、`canonical_module`/`alias_modules`、`init_kind`、`collision_group` 与 `keep_shim`，在模块内部加了一致性校验。
+- **files edited/created**: `tests/support/migration_map.lua`, `.agents/plan.md`
 
 ### T2：搭建双轨迁移基础设施与包别名兼容
 
@@ -101,7 +101,18 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 - **validation**: 在尚未迁移源码前，guard/contract 继续通过；双轨规则不会因未来路径未落地而误报；package 入口类别名键有专门 contract；`scripts/migration/*` 能 dry-run 输出本次拟改清单。
 - **status**: Not Completed
 - **log**:
+  - 已把 `tests/support/migration_pairs.lua` 改为从 `tests/support/migration_map.lua` 派生，并给 `tests/guards/migration_shim_rules.lua`、`tests/suites/architecture/migration_shim_contract.lua` 加入 package-init `alias_modules` 检查。
+  - 已把 `scripts/quality/arch/config.json` 的 `ui_schema_pure` 扩成 `controllers/presenters/widgets` 与 `ctl/pres/wid` 双轨。
+  - 已新增 `scripts/migration/generate_shims.lua` 与 `scripts/migration/rewrite_module_ids.lua`，可 dry-run 输出 shim 计划与模块 ID 改写清单。
+  - 当前剩余：`tests/guards/dep_rules.lua` 仍未切到 rename-map 驱动的双轨模式，`scripts/quality/scrap/config.lua` 还未消费新 map；`lua scripts/quality/arch.lua check` 与直接运行 `lua tests/guards/migration_shim_rules.lua` 已通过，但 `lua tests/contract.lua` 仍被既有 `script_tools_contract.deploy_defaults_match_windows_history` 失败拦住，尚未完成 T2 的“guard/contract 持续通过”验收。
 - **files edited/created**:
+  - `tests/support/migration_map.lua`
+  - `tests/support/migration_pairs.lua`
+  - `tests/guards/migration_shim_rules.lua`
+  - `tests/suites/architecture/migration_shim_contract.lua`
+  - `scripts/quality/arch/config.json`
+  - `scripts/migration/generate_shims.lua`
+  - `scripts/migration/rewrite_module_ids.lua`
 
 ### T3：迁移 gameplay 子树
 

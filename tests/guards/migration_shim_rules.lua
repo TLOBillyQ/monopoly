@@ -22,6 +22,23 @@ local function is_forwarding_shim(text, new_module)
     or normalized == "return require('" .. new_module .. "')"
 end
 
+local function contains_alias_registration(text, alias_modules)
+  if text == nil then
+    return false
+  end
+
+  local alias_hits = 0
+  for _, alias in ipairs(alias_modules or {}) do
+    local quoted_double = 'package.loaded["' .. alias .. '"]'
+    local quoted_single = "package.loaded['" .. alias .. "']"
+    if text:find(quoted_double, 1, true) or text:find(quoted_single, 1, true) then
+      alias_hits = alias_hits + 1
+    end
+  end
+
+  return alias_hits >= 2
+end
+
 local function is_retired_config_pair(pair)
   local old_path = pair and pair.old_path or ""
   for _, root in ipairs(retired_config_roots) do
@@ -30,6 +47,10 @@ local function is_retired_config_pair(pair)
     end
   end
   return false
+end
+
+local function needs_alias_validation(pair)
+  return pair.init_kind ~= "forward_only" or #(pair.alias_modules or {}) > 2
 end
 
 function M.run()
@@ -48,6 +69,14 @@ function M.run()
           ok = false,
           error = "migration_shim_rules: " .. pair.old_path
             .. " must be a pure forwarding shim to " .. pair.new_module,
+        }
+      end
+
+      if needs_alias_validation(pair) and not contains_alias_registration(text, pair.alias_modules) then
+        return {
+          ok = false,
+          error = "migration_shim_rules: " .. pair.old_path
+            .. " must register alias package.loaded keys for migration compatibility",
         }
       end
     end
