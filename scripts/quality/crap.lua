@@ -54,14 +54,14 @@ end
 local function _help_text(command_name)
   return table.concat({
     "用法:",
-    "  lua " .. tostring(command_name) .. " report [--lane NAME] [--mode MODE] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
-    "  lua " .. tostring(command_name) .. " collect [--lane NAME] [--mode MODE] --out FILE [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " report [--lane NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " collect [--lane NAME] --out FILE [--project-root DIR]",
     "  lua " .. tostring(command_name) .. " viewer [--in-json FILE] [--out-dir DIR] [--open]",
     "  lua " .. tostring(command_name),
     "",
     "Usage:",
-    "  lua " .. tostring(command_name) .. " report [--lane NAME] [--mode MODE] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
-    "  lua " .. tostring(command_name) .. " collect [--lane NAME] [--mode MODE] --out FILE [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " report [--lane NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " collect [--lane NAME] --out FILE [--project-root DIR]",
     "  lua " .. tostring(command_name) .. " viewer [--in-json FILE] [--out-dir DIR] [--open]",
     "  lua " .. tostring(command_name),
     "",
@@ -87,7 +87,6 @@ local function _parse_report_args(args)
     out = DEFAULT_REPORT_JSON,
     top = 20,
     strict_tests = false,
-    mode = nil,
     project_root = nil,
     lanes = {},
   }
@@ -104,9 +103,6 @@ local function _parse_report_args(args)
     elseif token == "--lane" then
       index = index + 1
       options.lanes[#options.lanes + 1] = args[index]
-    elseif token == "--mode" then
-      index = index + 1
-      options.mode = args[index]
     elseif token == "--project-root" then
       index = index + 1
       options.project_root = args[index]
@@ -133,7 +129,6 @@ local function _parse_collect_args(args)
   local options = {
     config = DEFAULT_CONFIG_PATH,
     out = nil,
-    mode = nil,
     project_root = nil,
     lanes = {},
   }
@@ -150,9 +145,6 @@ local function _parse_collect_args(args)
     elseif token == "--lane" then
       index = index + 1
       options.lanes[#options.lanes + 1] = args[index]
-    elseif token == "--mode" then
-      index = index + 1
-      options.mode = args[index]
     elseif token == "--project-root" then
       index = index + 1
       options.project_root = args[index]
@@ -227,7 +219,6 @@ local function _collect_bridge_result(options, env)
   return bridge.collect({
     config = options.config,
     lanes = options.lanes,
-    mode = options.mode,
     project_root = options.project_root,
   })
 end

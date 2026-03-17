@@ -185,19 +185,10 @@ local function _test_deploy_defaults_match_windows_history()
     home_dir = "C:/Users/example",
     is_windows = true,
     is_macos = false,
-    mode = "dev",
-  })
-  local publish_resolved = deploy_defaults.resolve({
-    home_dir = "C:/Users/example",
-    is_windows = true,
-    is_macos = false,
-    mode = "release",
   })
 
-  assert(resolved == "C:/Users/example/Desktop/dev/LuaSource_大富翁-开发",
-    "windows dev deploy default should match the historical Desktop/dev path")
-  assert(publish_resolved == "C:/Users/example/Desktop/dev/LuaSource_大富翁-发布",
-    "windows release deploy default should match the historical Desktop/dev path")
+  assert(resolved == "C:/Users/example/Desktop/LuaSource_大富翁-发布",
+    "windows deploy default should converge to the release path")
 end
 
 local function _test_deploy_defaults_match_macos_history()
@@ -205,45 +196,31 @@ local function _test_deploy_defaults_match_macos_history()
     home_dir = "/Users/example",
     is_windows = false,
     is_macos = true,
-    mode = "dev",
-  })
-  local publish_resolved = deploy_defaults.resolve({
-    home_dir = "/Users/example",
-    is_windows = false,
-    is_macos = true,
-    mode = "release",
   })
   local candidates = deploy_defaults.candidates({
     home_dir = "/Users/example",
     is_windows = false,
     is_macos = true,
-    mode = "dev",
   })
 
-  assert(resolved == "/Users/example/Documents/eggy/LuaSource_大富翁-开发",
-    "macOS dev deploy default should match the historical Documents/eggy path")
-  assert(publish_resolved == "/Users/example/Documents/eggy/LuaSource_大富翁-发布",
-    "macOS release deploy default should match the historical Documents/eggy path")
-  assert(candidates[2] == "/Users/example/Documents/eggy/LuaSource_monopoly",
-    "macOS should preserve the legacy LuaSource_monopoly fallback from git history")
+  assert(resolved == "/Users/example/Documents/eggy/LuaSource_大富翁-发布",
+    "macOS deploy default should converge to the release path")
+  assert(#candidates == 1 and candidates[1] == "/Users/example/Documents/eggy/LuaSource_大富翁-发布",
+    "macOS deploy candidates should only keep the release path")
 end
 
-local function _test_release_mode_deploy_allows_release_path()
-  _with_ascii_tmp("release_mode_deploy_allows_release_path", function(tmp_root)
-    local publish_target = common.join_path(tmp_root, "release_deploy")
+local function _test_deploy_allows_explicit_target_path()
+  _with_ascii_tmp("deploy_allows_explicit_target_path", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_lua({
       "scripts/ops/deploy.lua",
-      "--mode",
-      "release",
       "--target-path",
       publish_target,
     })
 
-    assert(result.ok == true, "publish deploy should allow target paths that include 发布")
-    _assert_contains(result.output, "部署模式: 发布部署", "publish deploy should log the release mode in Chinese")
-    _assert_contains(result.output, "Deploy mode: release deploy", "publish deploy should log the release mode in English")
+    assert(result.ok == true, "deploy should allow explicit target paths")
     assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
-      "publish deploy should copy main.lua into the target path")
+      "deploy should copy main.lua into the target path")
   end)
 end
 
@@ -272,22 +249,21 @@ local function _test_deploy_aligns_with_current_repo_layout()
   end)
 end
 
-local function _test_release_mode_deploy_rejects_startup_profile()
-  _with_ascii_tmp("release_mode_deploy_rejects_startup_profile", function(tmp_root)
-    local publish_target = common.join_path(tmp_root, "release_deploy")
+local function _test_deploy_injects_startup_profile_when_requested()
+  _with_ascii_tmp("deploy_injects_startup_profile_when_requested", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_lua({
       "scripts/ops/deploy.lua",
-      "--mode",
-      "release",
       "--target-path",
       publish_target,
       "--startup-profile",
       "smoke_test",
     })
 
-    assert(result.ok == false, "publish deploy should reject startup profile injection")
-    _assert_contains(result.output, "禁止注入 STARTUP_TEST_PROFILE", "publish deploy should explain the release restriction in Chinese")
-    _assert_contains(result.output, "does not allow STARTUP_TEST_PROFILE", "publish deploy should explain the release restriction in English")
+    assert(result.ok == true, "deploy should allow startup profile injection")
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "smoke_test"',
+      "deploy should inject startup profile into main.lua when requested")
   end)
 end
 
@@ -426,8 +402,8 @@ local contract_tests = {
   { name = "deploy_defaults_match_macos_history", run = _test_deploy_defaults_match_macos_history },
   { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
   { name = "deploy_aligns_with_current_repo_layout", run = _test_deploy_aligns_with_current_repo_layout },
-  { name = "release_mode_deploy_allows_release_path", run = _test_release_mode_deploy_allows_release_path },
-  { name = "release_mode_deploy_rejects_startup_profile", run = _test_release_mode_deploy_rejects_startup_profile },
+  { name = "deploy_allows_explicit_target_path", run = _test_deploy_allows_explicit_target_path },
+  { name = "deploy_injects_startup_profile_when_requested", run = _test_deploy_injects_startup_profile_when_requested },
   { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
 

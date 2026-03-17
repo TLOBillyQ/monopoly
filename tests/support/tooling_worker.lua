@@ -64,7 +64,6 @@ function M.run(args)
 
   local ok, result_or_err = xpcall(function()
     return harness.run_all({ suite }, {
-      mode = "dev",
       capture_logs = true,
       quiet = true,
       reporter = _silent_reporter(),

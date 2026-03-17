@@ -12,28 +12,20 @@ end
 
 local function _candidate_paths(options)
   local home_dir = _normalized_home_dir(options.home_dir or "")
-  local mode = options.mode or "dev"
 
   if home_dir == "" then
     return {}
   end
 
   if options.is_windows == true then
-    local suffix = mode == "release" and "LuaSource_大富翁-发布" or "LuaSource_大富翁-开发"
     return {
-      common.join_path(home_dir, "Desktop/dev/" .. suffix),
+      common.join_path(home_dir, "Desktop/LuaSource_大富翁-发布"),
     }
   end
 
   if options.is_macos == true then
-    if mode == "release" then
-      return {
-        common.join_path(home_dir, "Documents/eggy/LuaSource_大富翁-发布"),
-      }
-    end
     return {
-      common.join_path(home_dir, "Documents/eggy/LuaSource_大富翁-开发"),
-      common.join_path(home_dir, "Documents/eggy/LuaSource_monopoly"),
+      common.join_path(home_dir, "Documents/eggy/LuaSource_大富翁-发布"),
     }
   end
 

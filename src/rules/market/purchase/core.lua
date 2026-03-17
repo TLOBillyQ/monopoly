@@ -9,10 +9,6 @@ local number_utils = require("src.core.utils.number_utils")
 
 local purchase = {}
 
-local function _is_release_build()
-  return _G and _G.MONO_BUILD_MODE == "release"
-end
-
 function purchase.setup_for_game(game)
   paid_purchase_gateway.setup_for_game(game, paid_purchase_callback.handle)
 end
@@ -38,14 +34,12 @@ local function _handle_paid_purchase(game, player, entry, product_id)
   purchase.setup_for_game(game)
   local ok_start, reason = paid_purchase_gateway.start(game, player, entry)
   if not ok_start then
-    if _is_release_build() then
-      logger.warn(
-        "market paid purchase blocked in release:",
-        "product_id=" .. tostring(product_id),
-        "name=" .. tostring(entry.name or ""),
-        "reason=" .. tostring(reason or "unknown")
-      )
-    end
+    logger.warn(
+      "market paid purchase blocked:",
+      "product_id=" .. tostring(product_id),
+      "name=" .. tostring(entry.name or ""),
+      "reason=" .. tostring(reason or "unknown")
+    )
     market_feedback.emit_buy_failed(player, entry, reason or "paid_purchase_start_failed", player.name .. " 购买通道暂不可用")
     return { ok = false, reason = reason or "paid_purchase_start_failed" }
   end

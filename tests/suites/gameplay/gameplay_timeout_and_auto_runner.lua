@@ -16,11 +16,7 @@ return {
   name = "gameplay_timeout_and_auto_runner",
   tests = {
     _case("_test_autorunner_runs_to_end"),
-    _case("_test_action_button_timeout_auto_advances", {
-      disabled_in = {
-        release = true,
-      },
-    }),
+    _case("_test_action_button_timeout_auto_advances"),
     _case("_test_action_button_timeout_blocked_when_input_locked"),
     _case("_test_action_button_timeout_blocked_when_popup_active"),
     _case("_test_profile_rotation_switches_game_after_turn_limit"),

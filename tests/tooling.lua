@@ -51,9 +51,7 @@ function M.run(args)
     print(_help_text())
     return 0
   end
-  print("[tooling] mode=dev")
   local result = tooling_parallel.run(catalog.load_tooling_suites(), {
-    mode = "dev",
     capture_logs = true,
     workers = options.workers,
   })

@@ -92,7 +92,6 @@ local function _new_profile_game(profile_name)
     return nil
   end, {
     profile_name = profile_name,
-    mode = "dev",
     force_non_p1_ai = true,
     fail_fast_when_roles_empty = false,
   })

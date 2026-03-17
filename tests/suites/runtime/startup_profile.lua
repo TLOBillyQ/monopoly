@@ -75,29 +75,25 @@ local function _assert_startup_synthetic_specs_have_slot_avatars(specs, expected
   end
 end
 
-local function _test_startup_policy_defaults_to_dev()
+local function _test_startup_policy_defaults_to_default_profile()
   with_patches({
-    { key = "MONO_BUILD_MODE", value = nil },
     { key = "STARTUP_TEST_PROFILE", value = nil },
   }, function()
     local policy = startup_policy.resolve(_G)
-    assert(policy.mode == "dev", "startup should default to dev mode")
     assert(policy.profile_name == "default", "startup should use default profile when unset")
   end)
 end
 
 local function _test_startup_policy_accepts_explicit_profile_override()
   with_patches({
-    { key = "MONO_BUILD_MODE", value = "release" },
     { key = "STARTUP_TEST_PROFILE", value = "market" },
   }, function()
     local policy = startup_policy.resolve(_G)
-    assert(policy.mode == "release", "startup should keep explicit release mode")
     assert(policy.profile_name == "market", "startup should keep explicit profile override")
   end)
 end
 
-local function _test_game_startup_release_fills_synthetic_ai_when_role_roster_empty()
+local function _test_game_startup_fills_synthetic_ai_when_role_roster_empty()
   local created_opts = nil
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
@@ -287,7 +283,7 @@ local function _reload_app_init_with_stubs(startup)
         end,
       },
     },
-    { target = package.loaded, key = "src.core.config.gameplay_rules", value = gameplay_rules },
+    { target = package.loaded, key = "src.config.gameplay.gameplay_rules", value = gameplay_rules },
     {
       key = "GlobalAPI",
       value = {
@@ -315,16 +311,15 @@ local function _reload_app_init_with_stubs(startup)
   return capture
 end
 
-local function _test_app_init_release_mode_wires_runtime_and_debug_providers()
+local function _test_app_init_wires_runtime_and_debug_providers()
   gameplay_rules.debug_log_enabled = true
   local capture = _reload_app_init_with_stubs({
-    mode = "release",
     profile_name = "market",
   })
 
   assert(capture.runtime_install_called == true, "app init should install runtime")
   assert(capture.startup_opts.profile_name == "market", "app init should pass resolved startup profile")
-  assert(gameplay_rules.debug_log_enabled == false, "release startup should disable gameplay debug logs")
+  assert(gameplay_rules.debug_log_enabled == true, "startup should keep gameplay debug log config unchanged")
   assert(type(capture.host_runtime.tip_presenter) == "function", "logger tip presenter should be configured")
   assert(type(capture.host_runtime.scheduler) == "function", "logger scheduler should be configured")
   with_patches({
@@ -375,7 +370,7 @@ local function _test_app_init_release_mode_wires_runtime_and_debug_providers()
   assert(type(capture.runtime_start_game_ref) == "table", "runtime start closure should forward game ref")
 end
 
-local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallback()
+local function _test_app_init_keeps_scheduler_fallback()
   gameplay_rules.debug_log_enabled = true
   local capture = {}
   local state = { ui = {} }
@@ -406,11 +401,11 @@ local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallbac
       key = "src.entry.startup_policy",
       value = {
         resolve = function()
-          return { mode = "dev", profile_name = "default" }
+          return { profile_name = "default" }
         end,
       },
     },
-    { target = package.loaded, key = "src.core.config.gameplay_rules", value = gameplay_rules },
+    { target = package.loaded, key = "src.config.gameplay.gameplay_rules", value = gameplay_rules },
     { key = "GlobalAPI", value = {} },
     { key = "SetTimeOut", value = nil },
   }, function()
@@ -418,7 +413,7 @@ local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallbac
   end, { skip_runtime_context_refresh = true })
 
   package.loaded["src.entry.init"] = nil
-  assert(gameplay_rules.debug_log_enabled == true, "non-release startup should keep debug logs enabled")
+  assert(gameplay_rules.debug_log_enabled == true, "startup should keep debug logs enabled")
   assert(capture.host_runtime.tip_presenter("tip", 1) == false, "tip presenter should fall back when GlobalAPI is missing")
   local called = false
   assert(capture.host_runtime.scheduler(0.5, function() called = true end) == true,
@@ -429,29 +424,14 @@ local function _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallbac
 end
 
 return {
-  name = "startup_release",
+  name = "startup_profile",
   tests = {
-    { name = "startup_policy_defaults_to_dev", run = _test_startup_policy_defaults_to_dev },
+    { name = "startup_policy_defaults_to_default_profile", run = _test_startup_policy_defaults_to_default_profile },
     { name = "startup_policy_accepts_explicit_profile_override", run = _test_startup_policy_accepts_explicit_profile_override },
-    {
-      name = "game_startup_release_fills_synthetic_ai_when_role_roster_empty",
-      run = _test_game_startup_release_fills_synthetic_ai_when_role_roster_empty,
-    },
-    {
-      name = "game_startup_real_roles_stay_human_by_default",
-      run = _test_game_startup_real_roles_stay_human_by_default,
-    },
-    {
-      name = "game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs",
-      run = _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs,
-    },
-    {
-      name = "app_init_release_mode_wires_runtime_and_debug_providers",
-      run = _test_app_init_release_mode_wires_runtime_and_debug_providers,
-    },
-    {
-      name = "app_init_non_release_keeps_debug_logs_and_scheduler_fallback",
-      run = _test_app_init_non_release_keeps_debug_logs_and_scheduler_fallback,
-    },
+    { name = "game_startup_fills_synthetic_ai_when_role_roster_empty", run = _test_game_startup_fills_synthetic_ai_when_role_roster_empty },
+    { name = "game_startup_real_roles_stay_human_by_default", run = _test_game_startup_real_roles_stay_human_by_default },
+    { name = "game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs", run = _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs },
+    { name = "app_init_wires_runtime_and_debug_providers", run = _test_app_init_wires_runtime_and_debug_providers },
+    { name = "app_init_keeps_scheduler_fallback", run = _test_app_init_keeps_scheduler_fallback },
   },
 }

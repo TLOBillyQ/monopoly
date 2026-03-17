@@ -23,7 +23,7 @@ local function _home_dir()
   return os.getenv("HOME") or os.getenv("USERPROFILE") or ""
 end
 
-local function _default_sync_target_path(options)
+local function _default_sync_target_path()
   local env_target = os.getenv("MONOPOLY_DEPLOY_TARGET")
   if env_target ~= nil and env_target ~= "" then
     return env_target
@@ -33,15 +33,14 @@ local function _default_sync_target_path(options)
     home_dir = _home_dir(),
     is_macos = common.is_macos(),
     is_windows = common.is_windows(),
-    mode = options and options.mode or "dev",
   })
   if default_target ~= nil and default_target ~= "" then
     return default_target
   end
 
   _fail(_text(
-    "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET、传入 --target-path，或在默认目录下创建 LuaSource_大富翁-开发/发布。",
-    "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET, pass --target-path, or create the default LuaSource_大富翁 dev/release directory."
+    "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET、传入 --target-path，或在默认目录下创建 LuaSource_大富翁-发布。",
+    "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET, pass --target-path, or create the default LuaSource_大富翁-发布 directory."
   ))
 end
 
@@ -85,11 +84,7 @@ local function _write_main_lua(source_path, target_path, startup_profile)
   if startup_profile == nil or tostring(startup_profile) == "" then
     return common.write_file(target_path, source_text)
   end
-  local mode = _G and _G.MONO_BUILD_MODE or "dev"
-  local prefix = 'MONO_BUILD_MODE = "' .. _escape_lua_string_double_quoted(mode) .. '"\n'
-  if startup_profile ~= nil and tostring(startup_profile) ~= "" then
-    prefix = prefix .. 'STARTUP_TEST_PROFILE = "' .. _escape_lua_string_double_quoted(startup_profile) .. '"\n'
-  end
+  local prefix = 'STARTUP_TEST_PROFILE = "' .. _escape_lua_string_double_quoted(startup_profile) .. '"\n'
   return common.write_file(target_path, prefix .. source_text)
 end
 
@@ -236,23 +231,19 @@ local function _resolve_project_root()
   return candidates[1] or candidates[2] or candidates[3]
 end
 
-local function _should_skip_line_breakdown(options)
-  return common.is_windows() and options.mode == "release"
+local function _should_skip_line_breakdown()
+  return common.is_windows()
 end
 
 local function _parse_args(args)
   local options = {
-    mode = "dev",
     startup_profile = nil,
     target_path = nil,
   }
   local index = 1
   while index <= #args do
     local token = args[index]
-    if token == "--mode" or token == "-Mode" then
-      options.mode = args[index + 1] or "dev"
-      index = index + 2
-    elseif token == "--startup-profile" or token == "-StartupProfile" then
+    if token == "--startup-profile" or token == "-StartupProfile" then
       options.startup_profile = args[index + 1]
       index = index + 2
     elseif token == "--target-path" or token == "-TargetPath" then
@@ -260,8 +251,8 @@ local function _parse_args(args)
       index = index + 2
     elseif token == "--help" or token == "-h" then
       print(_text(
-        "用法: lua scripts/ops/deploy.lua [--mode dev|release|-Mode dev|release] [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]",
-        "Usage: lua scripts/ops/deploy.lua [--mode dev|release|-Mode dev|release] [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]"
+        "用法: lua scripts/ops/deploy.lua [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]",
+        "Usage: lua scripts/ops/deploy.lua [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]"
       ))
       os.exit(0)
     else
@@ -271,27 +262,14 @@ local function _parse_args(args)
       ))
     end
   end
-  if options.mode ~= "dev" and options.mode ~= "release" then
-    _fail(_text(
-      "无效的 --mode 参数: " .. tostring(options.mode),
-      "Invalid --mode value: " .. tostring(options.mode)
-    ))
-  end
   return options
 end
 
 local function main(args)
   local options = _parse_args(args or {})
   local project_root = _resolve_project_root()
-  local target_source = options.target_path or _default_sync_target_path(options)
+  local target_source = options.target_path or _default_sync_target_path()
   local target_path = _normalize_target_path(target_source)
-
-  if options.mode == "release" and options.startup_profile ~= nil and options.startup_profile ~= "" then
-    _fail(_text(
-      "发布部署禁止注入 STARTUP_TEST_PROFILE，请移除 --startup-profile。",
-      "Release deploy does not allow STARTUP_TEST_PROFILE injection; remove --startup-profile."
-    ))
-  end
 
   local directories = {
     "src",
@@ -308,12 +286,6 @@ local function main(args)
   _println("======================================")
   _println(_text("项目根目录: ", "Project root: ") .. project_root)
   _println(_text("目标目录: ", "Target path: ") .. target_path)
-  _G.MONO_BUILD_MODE = options.mode
-  if options.mode == "release" then
-    _println(_text("部署模式: 发布部署", "Deploy mode: release deploy"))
-  else
-    _println(_text("部署模式: 开发部署", "Deploy mode: dev deploy"))
-  end
   if options.startup_profile == nil or options.startup_profile == "" then
     _println(_text(
       "启动 Profile: default（未注入 STARTUP_TEST_PROFILE）",
@@ -360,7 +332,8 @@ local function main(args)
       _println(_text("正在拷贝文件: ", "Copying file: ") .. file_info.source .. " ...")
       _println("  " .. _text("源", "Source") .. ": " .. source_path)
       _println("  " .. _text("目", "Target") .. ": " .. target_file_path)
-      local ok, err = nil, nil
+      local ok = nil
+      local err = nil
       if file_info.source == "main.lua" then
         ok, err = _write_main_lua(source_path, target_file_path, options.startup_profile)
       else
@@ -381,10 +354,10 @@ local function main(args)
   _println("")
   local breakdown = {}
   local total_effective_line_count = nil
-  if _should_skip_line_breakdown(options) then
+  if _should_skip_line_breakdown() then
     _println(_text(
-      "有效代码行数: 跳过（Windows 发布部署避免额外扫描）",
-      "Effective LOC: skipped to avoid extra scanning during Windows release deploy"
+      "有效代码行数: 跳过（Windows 部署避免额外扫描）",
+      "Effective LOC: skipped to avoid extra scanning during Windows deploy"
     ))
     _println("")
   else

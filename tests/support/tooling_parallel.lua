@@ -339,7 +339,6 @@ function M.run(suites, opts)
 
   if worker_total <= 1 or suite_count <= 1 then
     return harness.run_all(suites, {
-      mode = opts.mode or "dev",
       capture_logs = opts.capture_logs ~= false,
     })
   end

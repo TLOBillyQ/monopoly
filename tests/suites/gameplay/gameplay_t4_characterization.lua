@@ -709,7 +709,7 @@ local function _test_purchase_execute_paid_purchase_success_and_failure()
 end
 
 -- T8 tests for _handle_paid_purchase in purchase.lua
-local function _test_handle_paid_purchase_release_build_warning()
+local function _test_handle_paid_purchase_logs_warning_on_failure()
   local start_calls = {}
   local warn_calls = {}
   _reload_module("src.rules.market.purchase.core", {
@@ -754,67 +754,13 @@ local function _test_handle_paid_purchase_release_build_warning()
       end,
     },
   }, function(purchase)
-    _G.MONO_BUILD_MODE = "release"
-    local game = {}
-    local player = { id = 3, name = "Buyer" }
-    local result = purchase.execute(game, player, "2001", {})
-    _G.MONO_BUILD_MODE = nil
-    assert(result.ok == false, "should fail when gateway returns error")
-    assert(#warn_calls >= 1, "should log warning in release build")
-  end)
-end
-
-local function _test_handle_paid_purchase_non_release_build()
-  local start_calls = {}
-  local warn_calls = {}
-  _reload_module("src.rules.market.purchase.core", {
-    ["src.rules.market.query.context"] = {
-      entry_by_id = function(product_id)
-        return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
-      end,
-      entry_currency = function(entry)
-        return entry.currency
-      end,
-      is_paid_currency = function(currency)
-        return currency == "金豆"
-      end,
-    },
-    ["src.rules.market.purchase.policy"] = {
-      validate_entry = function()
-        return { ok = true }
-      end,
-    },
-    ["src.rules.market.purchase.local_purchase"] = {
-      execute = function()
-        error("local purchase should not run for paid currency")
-      end,
-    },
-    ["src.rules.market.choice.feedback"] = {
-      emit_buy_failed = function(player, entry, reason, body)
-        start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
-      end,
-    },
-    ["src.rules.market.purchase.paid_purchase_callback"] = {
-      handle = function() end,
-    },
-    ["src.rules.market.ports.paid_purchase_port"] = {
-      setup_for_game = function() end,
-      start = function(_, _, entry)
-        return false, "payment_failed"
-      end,
-    },
-    ["src.core.utils.logger"] = {
-      warn = function(...)
-        warn_calls[#warn_calls + 1] = table.concat({ ... }, " ")
-      end,
-    },
-  }, function(purchase)
-    _G.MONO_BUILD_MODE = nil
     local game = {}
     local player = { id = 3, name = "Buyer" }
     local result = purchase.execute(game, player, "2001", {})
     assert(result.ok == false, "should fail when gateway returns error")
-    -- In non-release build, warning may or may not be logged depending on implementation
+    assert(#warn_calls >= 1, "should log warning when gateway returns error")
+    assert(string.find(warn_calls[1], "market paid purchase blocked:", 1, true) ~= nil,
+      "warning should use the single-path message")
   end)
 end
 
@@ -865,44 +811,6 @@ local function _test_handle_paid_purchase_success_path()
     assert(result.product_id == 2001, "should preserve product_id")
     assert(#start_calls == 1, "should call start once")
   end)
-end
-
-local function _test_handle_paid_purchase_release_mode_flag()
-  for _, flag in ipairs({ "release" }) do
-    local result = _reload_module("src.rules.market.purchase.core", {
-      ["src.rules.market.query.context"] = {
-        entry_by_id = function() return { kind = "item", currency = "金豆", name = "Test" } end,
-        entry_currency = function(e) return e.currency end,
-        is_paid_currency = function() return true end,
-      },
-      ["src.rules.market.purchase.policy"] = {
-        validate_entry = function() return { ok = true } end,
-      },
-      ["src.rules.market.purchase.local_purchase"] = {
-        execute = function() error("should not call local") end,
-      },
-      ["src.rules.market.choice.feedback"] = {
-        emit_buy_failed = function() end,
-      },
-      ["src.rules.market.purchase.paid_purchase_callback"] = {
-        handle = function() end,
-      },
-      ["src.rules.market.ports.paid_purchase_port"] = {
-        setup_for_game = function() end,
-        start = function() return false, "test" end,
-      },
-      ["src.core.utils.logger"] = {
-        warn = function() end,
-      },
-    }, function(purchase)
-      _G.MONO_BUILD_MODE = flag
-      local game = {}
-      local player = { id = 1, name = "Test" }
-      return purchase.execute(game, player, "2001", {})
-    end)
-    assert(result.ok == false, "should fail for flag: " .. tostring(flag))
-    _G.MONO_BUILD_MODE = nil
-  end
 end
 
 -- T8 FINAL tests for anonymous@106 in asset_handlers.lua (discard_properties function)
@@ -1131,10 +1039,8 @@ return {
     { name = "_test_choice_session_refresh_after_paid_callback_rejects_non_owner_and_failed_rebuild", run = _test_choice_session_refresh_after_paid_callback_rejects_non_owner_and_failed_rebuild },
     { name = "_test_purchase_execute_paid_purchase_success_and_failure", run = _test_purchase_execute_paid_purchase_success_and_failure },
     -- T8 tests for _handle_paid_purchase
-    { name = "_test_handle_paid_purchase_release_build_warning", run = _test_handle_paid_purchase_release_build_warning },
-    { name = "_test_handle_paid_purchase_non_release_build", run = _test_handle_paid_purchase_non_release_build },
+    { name = "_test_handle_paid_purchase_logs_warning_on_failure", run = _test_handle_paid_purchase_logs_warning_on_failure },
     { name = "_test_handle_paid_purchase_success_path", run = _test_handle_paid_purchase_success_path },
-    { name = "_test_handle_paid_purchase_release_mode_flag", run = _test_handle_paid_purchase_release_mode_flag },
     -- T8 FINAL tests for anonymous@106 in asset_handlers.lua (targeting CRAP=8.21)
     { name = "_test_asset_handlers_discard_properties_count_zero", run = _asset_handlers_final_tests[1] },
     { name = "_test_asset_handlers_discard_properties_count_gt_props", run = _asset_handlers_final_tests[2] },

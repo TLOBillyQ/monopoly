@@ -6,7 +6,6 @@ local game_runtime_bootstrap = require("src.entry.wire_host")
 local gameplay_loop = require("src.turn.loop")
 local ui_bootstrap = require("src.entry.start_ui")
 local startup_policy = require("src.entry.startup_policy")
-local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 
 logger.configure_host_runtime({
   game_api = GameAPI,
@@ -35,12 +34,8 @@ local startup = startup_policy.resolve(_G)
 logger.info(
   "[Eggy]",
   "startup policy:",
-  "mode=" .. tostring(startup.mode),
   "resolved_profile=" .. tostring(startup.profile_name)
 )
-if startup.mode == "release" then
-  gameplay_rules.debug_log_enabled = false
-end
 
 runtime_install.install()
 local state = game_startup.build_state(function() return current_game_ref[1] end, {

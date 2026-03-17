@@ -11,7 +11,7 @@ local behavior_modules = {
   "suites.domain.market",
   "suites.domain.paid_currency",
   "suites.domain.config_sanity",
-  "suites.runtime.startup_release",
+  "suites.runtime.startup_profile",
   "suites.gameplay.gameplay_bankruptcy_and_tile_owner",
   "suites.gameplay.gameplay_intent_dispatch_and_event_feed",
   "suites.gameplay.gameplay_runtime_context_and_camera_sync",
@@ -81,8 +81,6 @@ local tooling_modules = {
   "suites.architecture.scrap4lua_tooling_contract",
 }
 
-local disabled_cases = {}
-
 local guard_scripts = {
   { name = "dep_rules", module_name = "guards.dep_rules", path = "tests/guards/dep_rules.lua" },
   { name = "gameplay_loop_no_ui", module_name = "guards.gameplay_loop_no_ui", path = "tests/guards/gameplay_loop_no_ui.lua" },
@@ -96,7 +94,6 @@ local function _clone_case(test)
     return {
       name = nil,
       run = test,
-      disabled_in = {},
       tags = {},
     }
   end
@@ -104,7 +101,6 @@ local function _clone_case(test)
   for key, value in pairs(test or {}) do
     clone[key] = value
   end
-  clone.disabled_in = clone.disabled_in or {}
   clone.tags = clone.tags or {}
   return clone
 end
@@ -120,13 +116,6 @@ local function _clone_suite(module_name, suite, layer, kind)
   local source_tests = suite.tests or suite
   for _, test in ipairs(source_tests or {}) do
     local case = _clone_case(test)
-    local key = module_name .. "::" .. tostring(case.name)
-    local disabled_in = disabled_cases[key]
-    if disabled_in then
-      for mode, value in pairs(disabled_in) do
-        case.disabled_in[mode] = value
-      end
-    end
     clone.tests[#clone.tests + 1] = case
   end
   return clone

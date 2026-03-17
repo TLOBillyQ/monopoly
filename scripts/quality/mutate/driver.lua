@@ -1,7 +1,6 @@
 local bootstrap = require("tests.bootstrap")
 local catalog = require("tests.catalog")
 local harness = require("TestHarness")
-local regression_mode = require("tests.support.regression_mode")
 local common = require("shared.lib.common")
 
 bootstrap.install_package_paths()
@@ -22,13 +21,13 @@ end
 
 local function _help_text(command_name)
   return table.concat({
-    "用法: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] [--coverage-file PATH] [--target-file FILE] [--project-hash HASH] [--suite-module NAME] [--suite-list-file PATH] [--list-suites] [--json] [--no-coverage] [--quiet]",
-    "Usage: lua " .. tostring(command_name) .. " --lane behavior|contract [--mode MODE] [--coverage-file PATH] [--target-file FILE] [--project-hash HASH] [--suite-module NAME] [--suite-list-file PATH] [--list-suites] [--json] [--no-coverage] [--quiet]",
+    "用法: lua " .. tostring(command_name) .. " --lane behavior|contract [--coverage-file PATH] [--target-file FILE] [--project-hash HASH] [--suite-module NAME] [--suite-list-file PATH] [--list-suites] [--json] [--no-coverage] [--quiet]",
+    "Usage: lua " .. tostring(command_name) .. " --lane behavior|contract [--coverage-file PATH] [--target-file FILE] [--project-hash HASH] [--suite-module NAME] [--suite-list-file PATH] [--list-suites] [--json] [--no-coverage] [--quiet]",
     "",
-    "behavior 会走 tests/catalog.lua + regression_mode，支持 dev|release。",
-    "behavior uses tests/catalog.lua plus regression_mode, with dev|release modes.",
-    "contract 仅支持 dev mode；传 release 会直接报错。",
-    "contract only supports dev mode; passing release fails fast.",
+    "behavior 会走 tests/catalog.lua 单一路径回归。",
+    "behavior uses tests/catalog.lua in a single regression path.",
+    "contract 会走契约套件，不再区分额外运行形态。",
+    "contract uses contract suites without alternate runtime variants.",
     "",
   }, "\n")
 end
@@ -36,7 +35,6 @@ end
 local function _parse_args(args)
   local options = {
     lane = "behavior",
-    mode = nil,
     coverage_file = nil,
     target_file = nil,
     project_hash = nil,
@@ -60,13 +58,6 @@ local function _parse_args(args)
         error("unsupported lane: " .. tostring(lane))
       end
       options.lane = lane
-    elseif token == "--mode" then
-      index = index + 1
-      local mode = args[index]
-      if mode == nil or mode == "" then
-        error("--mode requires a value")
-      end
-      options.mode = mode
     elseif token == "--coverage-file" then
       index = index + 1
       local path = args[index]
@@ -132,23 +123,14 @@ local function _parse_args(args)
   return options
 end
 
-local function _resolve_lane_suites(lane, mode)
+local function _resolve_lane_suites(lane)
   if lane == "behavior" then
-    return catalog.load_behavior_suites(), regression_mode.resolve_behavior_mode(mode)
+    return catalog.load_behavior_suites()
   end
   if lane == "contract" then
-    return catalog.load_contract_suites(), "dev"
+    return catalog.load_contract_suites()
   end
   error("unsupported lane: " .. tostring(lane))
-end
-
-local function _validate_mode(options)
-  if options.mode ~= nil and options.mode ~= "dev" and options.mode ~= "release" then
-    error("unsupported mode: " .. tostring(options.mode) .. " (expected dev|release)")
-  end
-  if options.lane == "contract" and options.mode ~= nil and options.mode ~= "dev" then
-    error("contract lane only supports dev mode")
-  end
 end
 
 local function _write_coverage(path, lines)
@@ -162,9 +144,9 @@ local function _write_coverage(path, lines)
   end
   table.sort(keys)
 
-  local handle, err = io.open(path, "wb")
+  local handle, open_err = io.open(path, "wb")
   if handle == nil then
-    return nil, err
+    return nil, open_err
   end
 
   if #keys > 0 then
@@ -280,7 +262,6 @@ end
 local function _encode_suite_file_map_payload(payload)
   return "{"
     .. string.format("%q", "lane") .. ":" .. string.format("%q", tostring(payload.lane or ""))
-    .. "," .. string.format("%q", "mode") .. ":" .. string.format("%q", tostring(payload.mode or ""))
     .. "," .. string.format("%q", "suite_files") .. ":" .. _encode_json_string_map_of_arrays(payload.suite_files or {})
     .. "}"
 end
@@ -343,10 +324,10 @@ end
 
 local M = {}
 
-function M.list_suite_modules(lane, mode, env)
+function M.list_suite_modules(lane, env)
   env = env or {}
   local resolve_lane_suites = env.resolve_lane_suites or _resolve_lane_suites
-  local suites = select(1, resolve_lane_suites(lane, mode))
+  local suites = resolve_lane_suites(lane)
   local modules = {}
   for suite_index, suite in ipairs(suites or {}) do
     modules[#modules + 1] = _suite_key(suite, suite_index)
@@ -373,19 +354,13 @@ function M.run(args, env)
   end
 
   local options = parsed_or_err
-  local valid, valid_err = pcall(_validate_mode, options)
-  if not valid then
-    stderr:write(tostring(valid_err), "\n")
-    stdout:write(_help_text(command_name))
-    return 1
-  end
   if options.help then
     stdout:write(_help_text(command_name))
     return 0
   end
 
   if options.list_suites then
-    local modules = M.list_suite_modules(options.lane, options.mode, { resolve_lane_suites = resolve_lane_suites })
+    local modules = M.list_suite_modules(options.lane, { resolve_lane_suites = resolve_lane_suites })
     if options.json then
       stdout:write(_encode_json_array(modules), "\n")
     else
@@ -394,7 +369,7 @@ function M.run(args, env)
     return 0
   end
 
-  local suites, mode = resolve_lane_suites(options.lane, options.mode)
+  local suites = resolve_lane_suites(options.lane)
   suites = _filter_suites(suites, options.suite_module, options.suite_list_file)
 
   if options.emit_suite_file_map_json then
@@ -407,7 +382,6 @@ function M.run(args, env)
 
     local run_ok, run_result = xpcall(function()
       local run_opts = {
-        mode = mode,
         capture_logs = true,
         quiet = true,
         reporter = _silent_reporter(),
@@ -439,7 +413,6 @@ function M.run(args, env)
 
     stdout:write(_encode_suite_file_map_payload({
       lane = options.lane,
-      mode = mode,
       suite_files = _sorted_suite_file_map(suite_files),
     }), "\n")
     return 0
@@ -452,7 +425,6 @@ function M.run(args, env)
 
   local run_ok, run_result = xpcall(function()
     local run_opts = {
-      mode = mode,
       capture_logs = true,
     }
     if options.quiet then

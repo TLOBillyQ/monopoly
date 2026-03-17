@@ -27,14 +27,11 @@ local function _test_default_tmp_root_preserves_monopoly_path_convention()
 end
 
 local function _test_adapter_resolves_behavior_and_contract_lanes()
-  local behavior_suites, behavior_mode = adapter.resolve_suites("behavior")
+  local behavior_suites = adapter.resolve_suites("behavior")
   assert(#behavior_suites > 0, "behavior lane should expose behavior suites")
-  assert(behavior_mode == "dev" or behavior_mode == "release",
-    "behavior lane should resolve to a concrete regression mode")
 
-  local contract_suites, contract_mode = adapter.resolve_suites("contract")
+  local contract_suites = adapter.resolve_suites("contract")
   assert(#contract_suites > 0, "contract lane should expose contract suites")
-  _assert_eq(contract_mode, "dev", "contract lane should always use dev mode")
   assert(type(adapter.run) == "function", "adapter should expose the standalone run contract")
   _assert_eq(adapter.debug_api, debug, "adapter should expose debug api for coverage hooks")
 end
@@ -82,7 +79,6 @@ local function _test_cli_collect_uses_public_bridge_surface()
     "collect",
     "--out", "tmp/crap_collect.json",
     "--lane", "contract",
-    "--mode", "dev",
   }, {
     collect_bridge_result = function(options)
       captured_collect = options
@@ -101,7 +97,6 @@ local function _test_cli_collect_uses_public_bridge_surface()
   assert(ok == true, "collect should return true")
   _assert_eq(captured_collect.out, crap.default_tmp_root() .. "/crap_collect.json", "collect should resolve tmp output path")
   _assert_eq(captured_collect.lanes[1], "contract", "collect should preserve lane list")
-  _assert_eq(captured_collect.mode, "dev", "collect should preserve mode")
 end
 
 local function _test_cli_viewer_resolves_tmp_alias_before_vendor_call()

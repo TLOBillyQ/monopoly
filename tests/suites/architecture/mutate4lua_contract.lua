@@ -47,8 +47,6 @@ local function _test_wrapper_invokes_go_binary_for_mutate()
     "src/core/utils/role_id.lua",
     "--lane",
     "behavior",
-    "--mode",
-    "release",
     "--since-last-run",
     "--json",
   }, {
@@ -69,7 +67,6 @@ local function _test_wrapper_invokes_go_binary_for_mutate()
   assert(captured_command[2] == "mutate", "wrapper should default to mutate subcommand")
   assert(captured_command[4] == "src/core/utils/role_id.lua", "wrapper should pass target via --target")
   _assert_contains(table.concat(captured_command, " "), "--lane behavior", "wrapper should keep lane option")
-  _assert_contains(table.concat(captured_command, " "), "--mode release", "wrapper should keep mode option")
   _assert_contains(table.concat(captured_command, " "), "--since-last-run", "wrapper should keep mutation selection flags")
   _assert_contains(table.concat(captured_command, " "), "--json", "wrapper should pass json flag through")
   assert(out:text() == "ok\n", "wrapper should write stdout for successful command")
@@ -116,60 +113,6 @@ local function _test_wrapper_help_is_bilingual()
   assert(err:text() == "", "help should not write stderr")
 end
 
-local function _test_wrapper_rejects_invalid_mode()
-  local out = _buffer()
-  local err = _buffer()
-
-  local exit_code = mutate.run({
-    "src/core/utils/role_id.lua",
-    "--lane", "behavior",
-    "--mode", "staging",
-  }, {
-    stdout = out,
-    stderr = err,
-  })
-
-  assert(exit_code == 1, "invalid mode should fail fast")
-  _assert_contains(err:text(), "unsupported mode", "wrapper should explain invalid mode")
-  _assert_contains(out:text(), "dev|release", "wrapper help should show supported modes")
-end
-
-local function _test_wrapper_rejects_contract_release_mode()
-  local out = _buffer()
-  local err = _buffer()
-
-  local exit_code = mutate.run({
-    "src/core/utils/role_id.lua",
-    "--lane", "contract",
-    "--mode", "release",
-  }, {
-    stdout = out,
-    stderr = err,
-  })
-
-  assert(exit_code == 1, "contract release mode should fail fast")
-  _assert_contains(err:text(), "contract lane only supports dev mode",
-    "wrapper should reject release for contract lane")
-end
-
-local function _test_wrapper_rejects_index_suites_contract_release_mode()
-  local out = _buffer()
-  local err = _buffer()
-
-  local exit_code = mutate.run({
-    "--index-suites",
-    "--lane", "contract",
-    "--mode", "release",
-  }, {
-    stdout = out,
-    stderr = err,
-  })
-
-  assert(exit_code == 1, "wrapper should reject contract release for index-suites")
-  _assert_contains(err:text(), "contract lane only supports dev mode",
-    "wrapper should reject release for contract index-suites")
-end
-
 local function _test_driver_lists_suite_modules_as_json()
   local suites = {
     { name = "suite_a", module_name = "suite.a", tests = {} },
@@ -183,7 +126,7 @@ local function _test_driver_lists_suite_modules_as_json()
   }, {
     stdout = out,
     resolve_lane_suites = function()
-      return suites, "dev"
+      return suites
     end,
   })
 
@@ -223,7 +166,7 @@ local function _test_driver_emits_suite_file_map_json_without_line_granularity()
     stdout = out,
     stderr = _buffer(),
     project_root = root,
-    resolve_lane_suites = function(_, mode)
+    resolve_lane_suites = function()
       return {
         {
           name = "suite_a",
@@ -239,7 +182,7 @@ local function _test_driver_emits_suite_file_map_json_without_line_granularity()
             { name = "probe_b", run = function() assert(dofile(source_b).run() == "b") end },
           },
         },
-      }, mode
+      }
     end,
   })
 
@@ -254,11 +197,10 @@ local function _test_driver_emits_suite_file_map_json_without_line_granularity()
   assert(out:text():find("src/probe_a.lua:") == nil, "suite file map should not include line-level coverage entries")
 end
 
-local function _test_driver_behavior_mode_writes_repo_relative_coverage()
+local function _test_driver_writes_repo_relative_coverage()
   local root = _temp_dir("mutate_driver_behavior")
   local source_path = common.join_path(root, "src/probe.lua")
   local coverage_file = common.join_path(root, "coverage.txt")
-  local captured_mode = nil
   local captured_lane = nil
 
   local ok, err = common.ensure_dir(common.join_path(root, "src"))
@@ -274,17 +216,12 @@ local function _test_driver_behavior_mode_writes_repo_relative_coverage()
 
   local exit_code = driver.run({
     "--lane", "behavior",
-    "--mode", "release",
     "--coverage-file", coverage_file,
   }, {
     project_root = root,
-    resolve_lane_suites = function(lane, mode)
+    resolve_lane_suites = function(lane)
       captured_lane = lane
-      return { { name = "fake", module_name = "suite.fake", tests = { { name = "probe", run = function() dofile(source_path)() end } } } }, mode
-    end,
-    run_all = function(suites, opts)
-      captured_mode = opts.mode
-      return require("TestHarness").run_all(suites, opts)
+      return { { name = "fake", module_name = "suite.fake", tests = { { name = "probe", run = function() dofile(source_path)() end } } } }
     end,
   })
 
@@ -293,7 +230,6 @@ local function _test_driver_behavior_mode_writes_repo_relative_coverage()
 
   assert(exit_code == 0, "driver should succeed when suites pass")
   assert(captured_lane == "behavior", "driver should resolve requested lane")
-  assert(captured_mode == "release", "behavior lane should preserve requested mode")
   _assert_contains(coverage, "src/probe.lua:1", "coverage output should use repo-relative lua paths")
 end
 
@@ -315,11 +251,11 @@ local function _test_driver_suite_list_file_filters_suites()
     "--quiet",
   }, {
     project_root = root,
-    resolve_lane_suites = function(_, mode)
+    resolve_lane_suites = function()
       return {
         { name = "suite_a", module_name = "suite.a", tests = { { name = "a", run = function() executed[#executed + 1] = "a" end } } },
         { name = "suite_b", module_name = "suite.b", tests = { { name = "b", run = function() executed[#executed + 1] = "b" end } } },
-      }, mode
+      }
     end,
     run_all = function(suites, opts)
       return require("TestHarness").run_all(suites, opts)
@@ -331,16 +267,15 @@ local function _test_driver_suite_list_file_filters_suites()
   assert(#executed == 1 and executed[1] == "b", "driver should only run suites from suite list file")
 end
 
-local function _test_driver_contract_forces_dev_mode()
-  local captured_mode = nil
+local function _test_driver_contract_lane_runs_without_mode_switching()
+  local captured_mode = "__unset__"
   local exit_code = driver.run({
     "--lane", "contract",
-    "--mode", "dev",
     "--coverage-file", common.make_temp_path("mutate_contract", ".coverage"),
   }, {
     project_root = "/repo",
     resolve_lane_suites = function()
-      return { { name = "fake", tests = {} } }, "dev"
+      return { { name = "fake", tests = {} } }
     end,
     run_all = function(_, opts)
       captured_mode = opts.mode
@@ -349,60 +284,7 @@ local function _test_driver_contract_forces_dev_mode()
   })
 
   assert(exit_code == 0, "contract lane should succeed for passing suites")
-  assert(captured_mode == "dev", "contract lane should always run in dev mode")
-end
-
-local function _test_driver_rejects_invalid_mode()
-  local out = _buffer()
-  local err = _buffer()
-
-  local exit_code = driver.run({
-    "--lane", "behavior",
-    "--mode", "staging",
-    "--coverage-file", common.make_temp_path("mutate_invalid_mode", ".coverage"),
-  }, {
-    stdout = out,
-    stderr = err,
-  })
-
-  assert(exit_code == 1, "driver should fail invalid mode")
-  _assert_contains(err:text(), "unsupported mode", "driver should explain invalid mode")
-end
-
-local function _test_driver_rejects_contract_release_mode()
-  local out = _buffer()
-  local err = _buffer()
-
-  local exit_code = driver.run({
-    "--lane", "contract",
-    "--mode", "release",
-    "--coverage-file", common.make_temp_path("mutate_contract_release", ".coverage"),
-  }, {
-    stdout = out,
-    stderr = err,
-  })
-
-  assert(exit_code == 1, "driver should reject release for contract lane")
-  _assert_contains(err:text(), "contract lane only supports dev mode",
-    "driver should reject release for contract lane")
-end
-
-local function _test_driver_rejects_suite_index_export_contract_release_mode()
-  local out = _buffer()
-  local err = _buffer()
-
-  local exit_code = driver.run({
-    "--lane", "contract",
-    "--mode", "release",
-    "--emit-suite-file-map-json",
-  }, {
-    stdout = out,
-    stderr = err,
-  })
-
-  assert(exit_code == 1, "driver should reject contract release even for index export")
-  _assert_contains(err:text(), "contract lane only supports dev mode",
-    "index export should share contract mode rejection")
+  assert(captured_mode == nil, "driver should not pass a mode flag into harness")
 end
 
 local function _test_contract_lane_excludes_tooling_smoke_cases()
@@ -430,17 +312,11 @@ return {
     { name = "wrapper_invokes_go_binary_for_mutate", run = _test_wrapper_invokes_go_binary_for_mutate },
     { name = "wrapper_routes_scan_update_and_index_commands", run = _test_wrapper_routes_scan_update_and_index_commands },
     { name = "wrapper_help_is_bilingual", run = _test_wrapper_help_is_bilingual },
-    { name = "wrapper_rejects_invalid_mode", run = _test_wrapper_rejects_invalid_mode },
-    { name = "wrapper_rejects_contract_release_mode", run = _test_wrapper_rejects_contract_release_mode },
-    { name = "wrapper_rejects_index_suites_contract_release_mode", run = _test_wrapper_rejects_index_suites_contract_release_mode },
     { name = "driver_lists_suite_modules_as_json", run = _test_driver_lists_suite_modules_as_json },
     { name = "driver_emits_suite_file_map_json_without_line_granularity", run = _test_driver_emits_suite_file_map_json_without_line_granularity },
-    { name = "driver_behavior_mode_writes_repo_relative_coverage", run = _test_driver_behavior_mode_writes_repo_relative_coverage },
+    { name = "driver_writes_repo_relative_coverage", run = _test_driver_writes_repo_relative_coverage },
     { name = "driver_suite_list_file_filters_suites", run = _test_driver_suite_list_file_filters_suites },
-    { name = "driver_contract_forces_dev_mode", run = _test_driver_contract_forces_dev_mode },
-    { name = "driver_rejects_invalid_mode", run = _test_driver_rejects_invalid_mode },
-    { name = "driver_rejects_contract_release_mode", run = _test_driver_rejects_contract_release_mode },
-    { name = "driver_rejects_suite_index_export_contract_release_mode", run = _test_driver_rejects_suite_index_export_contract_release_mode },
+    { name = "driver_contract_lane_runs_without_mode_switching", run = _test_driver_contract_lane_runs_without_mode_switching },
     { name = "contract_lane_excludes_tooling_smoke_cases", run = _test_contract_lane_excludes_tooling_smoke_cases },
   },
 }

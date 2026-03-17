@@ -22,11 +22,6 @@ local function normalize_case(test, case_index, suite_name)
   error("invalid test case in " .. tostring(suite_name) .. " at index " .. tostring(case_index))
 end
 
-local function _is_case_disabled(test, mode)
-  local disabled_in = test and test.disabled_in
-  return type(disabled_in) == "table" and disabled_in[mode] == true
-end
-
 local function _default_reporter()
   return {
     case_pass = function()
@@ -111,59 +106,56 @@ local function run_all(suites, opts)
     local suite_case_count = 0
     for case_index, test in ipairs(tests) do
       local case_name, run, case_opts = normalize_case(test, case_index, suite_name)
-      if not _is_case_disabled(case_opts, opts.mode) then
-        local full_name = suite_name .. "." .. case_name
-        local context = {
-          suite = suite,
-          suite_index = suite_index,
-          suite_name = suite_name,
-          suite_module = suite and suite.module_name or nil,
-          case_name = case_name,
-          full_name = full_name,
-          case_opts = case_opts,
-          mode = opts.mode,
-        }
-        total = total + 1
-        suite_case_count = suite_case_count + 1
-        math.randomseed(1)
-        local timer = _start_timer()
-        local before_ok, before_err = _run_hook(opts.before_case, context)
-        local ok = before_ok
-        local err = before_err
-        local captured = { lines = {} }
-        if before_ok then
-          ok, err, captured = log_capture.capture(run, { enabled = capture_logs })
-        end
-        local after_ok, after_err = _run_hook(opts.after_case, context, ok, err, captured)
-        if ok and not after_ok then
-          ok = false
-          err = after_err
-        end
-        local elapsed_ms = _elapsed_ms(timer)
-        context.elapsed_ms = elapsed_ms
-        case_times[#case_times + 1] = {
+      local full_name = suite_name .. "." .. case_name
+      local context = {
+        suite = suite,
+        suite_index = suite_index,
+        suite_name = suite_name,
+        suite_module = suite and suite.module_name or nil,
+        case_name = case_name,
+        full_name = full_name,
+        case_opts = case_opts,
+      }
+      total = total + 1
+      suite_case_count = suite_case_count + 1
+      math.randomseed(1)
+      local timer = _start_timer()
+      local before_ok, before_err = _run_hook(opts.before_case, context)
+      local ok = before_ok
+      local err = before_err
+      local captured = { lines = {} }
+      if before_ok then
+        ok, err, captured = log_capture.capture(run, { enabled = capture_logs })
+      end
+      local after_ok, after_err = _run_hook(opts.after_case, context, ok, err, captured)
+      if ok and not after_ok then
+        ok = false
+        err = after_err
+      end
+      local elapsed_ms = _elapsed_ms(timer)
+      context.elapsed_ms = elapsed_ms
+      case_times[#case_times + 1] = {
+        name = full_name,
+        suite_name = suite_name,
+        elapsed_ms = elapsed_ms,
+        timer_source = timer.source,
+      }
+      if elapsed_ms >= slow_ms then
+        slow_cases[#slow_cases + 1] = {
           name = full_name,
-          suite_name = suite_name,
-          elapsed_ms = elapsed_ms,
-          timer_source = timer.source,
+          ms = elapsed_ms,
         }
-        if elapsed_ms >= slow_ms then
-          slow_cases[#slow_cases + 1] = {
-            name = full_name,
-            ms = elapsed_ms,
-          }
-        end
-        if ok then
-          log_capture.collect_summary(summary, captured)
-          reporter.case_pass(full_name, captured)
-        else
-          reporter.case_fail(full_name, err, captured)
-          failures[#failures + 1] = {
-            name = full_name,
-            err = err,
-            captured = captured,
-          }
-        end
+      end
+      if ok then
+        log_capture.collect_summary(summary, captured)
+        reporter.case_pass(full_name, captured)
+      else
+        reporter.case_fail(full_name, err, captured)
+        failures[#failures + 1] = {
+          name = full_name,
+          err = err,
+          captured = captured,
+        }
       end
     end
     suite_times[#suite_times + 1] = {

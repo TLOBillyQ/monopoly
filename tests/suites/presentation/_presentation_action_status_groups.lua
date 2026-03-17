@@ -128,13 +128,7 @@ local case_groups = {
   },
 }
 
-local case_overrides = {
-  _test_status3d_priority_single_status = {
-    disabled_in = {
-      release = true,
-    },
-  },
-}
+local case_overrides = {}
 
 local case_index = {}
 
@@ -151,7 +145,6 @@ local function _clone_case(test)
   for key, value in pairs(test or {}) do
     clone[key] = value
   end
-  clone.disabled_in = _clone_table(clone.disabled_in)
   clone.tags = _clone_table(clone.tags)
   return clone
 end
@@ -170,11 +163,8 @@ local function _build_case(case_name)
   local cloned = _clone_case(test)
   local override = case_overrides[case_name]
   if override then
-    if override.disabled_in then
-      local disabled_in = cloned.disabled_in
-      for mode, value in pairs(override.disabled_in) do
-        disabled_in[mode] = value
-      end
+    for key, value in pairs(override) do
+      cloned[key] = value
     end
   end
   return cloned

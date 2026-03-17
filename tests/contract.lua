@@ -7,9 +7,7 @@ local M = {}
 
 function M.run()
   bootstrap.install_package_paths()
-  print("[contract] mode=dev")
   local result = harness.run_all(catalog.load_contract_suites(), {
-    mode = "dev",
     capture_logs = true,
   })
   timing_summary.print_lane_summary("contract", result)
