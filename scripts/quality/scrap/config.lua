@@ -1,5 +1,3 @@
-local migration_pairs = require("tests.support.migration_pairs")
-
 local aliases = {
   choice = { "owner_role_id", "pending_choice", "choice_id" },
   bankruptcy = { "bankruptcy_feedback_port", "tiles_cleared" },
@@ -8,13 +6,6 @@ local aliases = {
   ["src.game.ports"] = { "src.rules.ports" },
 }
 
-for _, pair in ipairs(migration_pairs.iter_pairs()) do
-  aliases[pair.old_module] = aliases[pair.old_module] or {}
-  aliases[pair.old_module][#aliases[pair.old_module] + 1] = pair.new_module
-
-  aliases[pair.new_module] = aliases[pair.new_module] or {}
-  aliases[pair.new_module][#aliases[pair.new_module] + 1] = pair.old_module
-end
 
 return {
   project_name = "Monopoly",
