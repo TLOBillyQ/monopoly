@@ -4,7 +4,7 @@ local _with_patches = support.with_patches
 
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_context = require("src.host.eggy.context")
-local runtime_install = require("src.entry.boot")
+local runtime_install = require("src.app.bootstrap.runtime_install")
 local default_ports = require("src.host.eggy.default_ports")
 
 local function _reset_runtime_contract_state()

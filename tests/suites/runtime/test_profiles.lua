@@ -11,9 +11,9 @@ local default_ports = require("src.turn.output.default_ports")
 local constants = require("src.config.content.constants")
 local board_view = require("src.ui.render.board")
 local runtime_state = require("src.state.state_access.runtime_state")
-local test_profiles_cfg = require("src.entry.testing.config.test_profiles")
-local test_profile_bootstrap = require("src.entry.testing.test_profile_bootstrap")
-local test_profile_resolver = require("src.entry.testing.test_profile_resolver")
+local test_profiles_cfg = require("src.app.bootstrap.testing.config.test_profiles")
+local test_profile_bootstrap = require("src.app.bootstrap.testing.test_profile_bootstrap")
+local test_profile_resolver = require("src.app.bootstrap.testing.test_profile_resolver")
 
 local function _load_map_for_profile(profile_name)
   return test_profile_resolver.resolve_map(profile_name)
@@ -28,7 +28,7 @@ local function _assert_unique_path(path)
 end
 
 local function _new_game()
-  return require("src.entry.compose_game").new_game(default_ports.resolve_game_opts({
+  return require("src.app.bootstrap.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = false,

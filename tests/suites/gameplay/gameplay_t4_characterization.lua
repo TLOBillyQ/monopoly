@@ -930,7 +930,7 @@ local _asset_handlers_final_tests = {
 }
 
 -- T8 FINAL tests for _create_players in game_factory.lua
-local game_factory = require("src.entry.game_factory")
+local game_factory = require("src.app.bootstrap.game_factory")
 local _create_players_final_tests = {
   function()
     -- Test _create_players with role_roster

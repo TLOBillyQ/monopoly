@@ -29,7 +29,7 @@ local runtime_context = require("src.host.eggy.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local runtime_state = require("src.state.state_access.runtime_state")
-local runtime_global_aliases = require("src.entry.runtime_globals")
+local runtime_global_aliases = require("src.infrastructure.runtime.runtime_global_aliases")
 local dispatch_validator = require("src.turn.actions.validator")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local tick_choice_timeout = require("src.turn.waits.choice_timeout")
@@ -41,11 +41,12 @@ local gameplay_loop_runtime = require("src.turn.loop.loop_runtime")
 local tick_flow = require("src.turn.loop.tick_flow")
 local move_followup = require("src.turn.phases.move_followup")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
-local game_startup = require("src.entry.start_game")
-local game_startup_event_bridge = require("src.entry.wire_events")
-local profile_rotation = require("src.entry.testing.profile_rotation")
+local startup_roster = require("src.app.bootstrap.startup_roster")
+local state_factory = require("src.presentation.runtime.state_factory")
+local game_startup_event_bridge = require("src.presentation.runtime.runtime_event_bridge")
+local profile_rotation = require("src.app.bootstrap.testing.profile_rotation")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
-local test_profile_bootstrap = require("src.entry.testing.test_profile_bootstrap")
+local test_profile_bootstrap = require("src.app.bootstrap.testing.test_profile_bootstrap")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
@@ -60,6 +61,19 @@ local turn_script = require("src.turn.timing.session_script")
 local roll = require("src.turn.phases.roll")
 local item_slot_data = require("src.turn.actions.item_slot_data")
 local default_ports = require("src.turn.output.default_ports")
+
+local function _build_startup_state(get_current_game, profile_name)
+  return state_factory.build_state({
+    profile_name = profile_name,
+    get_current_game = get_current_game,
+    build_game_factory = function(state)
+      return startup_roster.build_game_factory(state, {
+        profile_name = profile_name,
+      })
+    end,
+    auto_runner = startup_roster.build_auto_runner(),
+  })
+end
 
 local function _mock_lua_api(send_custom_event)
   return {
@@ -385,7 +399,7 @@ local function _test_bankruptcy_calls_role_life_die_before_lose()
 end
 
 local function _test_chance_pay_others_stops_after_bankruptcy()
-  local g = require("src.entry.compose_game").new_game(default_ports.resolve_game_opts({
+  local g = require("src.app.bootstrap.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = {},
     auto_all = false,
@@ -1308,7 +1322,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
     if runtime_ctx and runtime_ctx.env and runtime_ctx.env.LuaAPI then
       runtime_ctx.env.LuaAPI.global_register_custom_event = LuaAPI.global_register_custom_event
     end
-    state = game_startup.build_state(function()
+    state = _build_startup_state(function()
       return current_game
     end)
     assert(next(events) == nil, "build_state should not register custom events")
@@ -1371,7 +1385,7 @@ local function _test_autorunner_runs_to_end()
   local land_actions = require("src.rules.land.actions")
   local item_inventory = require("src.rules.items.inventory")
 
-  local g = require("src.entry.compose_game").new_game(default_ports.resolve_game_opts({
+  local g = require("src.app.bootstrap.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,
@@ -3206,7 +3220,7 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
     end },
     { target = test_profile_bootstrap, key = "apply", value = function() end },
   }, function()
-    state = game_startup.build_state(function()
+    state = _build_startup_state(function()
       return nil
     end)
     state.game_factory()

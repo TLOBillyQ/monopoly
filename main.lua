@@ -1,1 +1,1 @@
-require "src.entry"
+require "src.app.bootstrap"

@@ -1,4 +1,4 @@
-local composition_root = require("src.entry.compose_game")
+local composition_root = require("src.app.bootstrap.compose_game")
 local gameplay_loop = require("src.turn.loop")
 local map_cfg = require("src.config.content.maps.default_map")
 local tiles_cfg = require("src.config.content.tiles")

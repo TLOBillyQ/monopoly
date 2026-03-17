@@ -4,7 +4,7 @@ local M = {}
 require("tests.bootstrap")
 
 local app = require("src.state.game_state")
-local composition_root = require("src.entry.compose_game")
+local composition_root = require("src.app.bootstrap.compose_game")
 local movement = require("src.rules.movement")
 local turn_move = require("src.turn.phases.move")
 local inventory = require("src.rules.items.inventory")

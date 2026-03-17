@@ -50,7 +50,7 @@ local rules = {
     description = "core utility layer must not use host runtime globals directly",
   },
   {
-    roots = { "src/state", "src/entry", "src/ui", "tests" },
+    roots = { "src/state", "src/ui", "tests" },
     forbidden_patterns = {
       "require%(\"src%.core%.runtime_compat\"%)",
       "require%('src%.core%.runtime_compat'%)",
@@ -176,6 +176,14 @@ local rules = {
     description = "scheduler must stay as a pure coroutine scheduler and not depend on flow modules",
   },
   {
+    roots = { "src", "tests", "scripts", "main.lua" },
+    forbidden_patterns = {
+      "require%(\"src%.entry",
+      "require%('src%.entry"
+    },
+    description = "src.entry namespace is retired; require canonical bootstrap modules instead",
+  },
+  {
     roots = { "src/state" },
     forbidden_patterns = {
       "require%(\"src%.turn%.output%..+\"%)",
@@ -243,6 +251,7 @@ local rules = {
 local dep_rules_whitelist = {}
 
 local forbidden_files = {
+  "src/entry.lua",
   "src/turn/output/legacy_output_mirror.lua",
   "src/rules/market/service/paid_purchase_gateway.lua",
   "src/core/runtime_facade/runtime_context.lua",

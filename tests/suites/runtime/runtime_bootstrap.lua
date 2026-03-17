@@ -1,6 +1,6 @@
 local support = require("support.runtime_support")
 local with_patches = support.with_patches
-local game_runtime_bootstrap = require("src.entry.wire_host")
+local game_runtime_bootstrap = require("src.presentation.runtime.gameplay_runtime_bootstrap")
 local gameplay_loop = require("src.turn.loop")
 local presentation_ports = require("src.ui.ctl.ports")
 

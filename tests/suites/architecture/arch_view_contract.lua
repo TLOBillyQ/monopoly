@@ -88,30 +88,39 @@ local function _scan_architecture_json()
   return cached_scan_result
 end
 
-local function _test_projection_builds_root_and_entry_views()
+local function _test_projection_builds_root_and_app_views()
   local architecture = _snapshot_architecture()
   local root_view = architecture.views.root
-  local entry_view = architecture.views.entry
+  local app_view = architecture.views.app
+  local app_bootstrap_view = architecture.views["app.bootstrap"]
 
   assert(root_view ~= nil, "root view should exist")
-  assert(entry_view ~= nil, "entry view should exist")
+  assert(app_view ~= nil, "app view should exist")
+  assert(app_bootstrap_view ~= nil, "app.bootstrap view should exist")
   _assert_eq(root_view.breadcrumb[1].key, "root", "root breadcrumb should start from root")
 
   local root_labels = {}
   for _, node in ipairs(root_view.nodes or {}) do
     root_labels[#root_labels + 1] = node.label
   end
-  _assert_contains(root_labels, "entry", "root view should expose entry subtree")
-  _assert_contains(root_labels, "turn", "root view should expose turn subtree")
-  _assert_contains(root_labels, "ui", "root view should expose ui subtree")
+  _assert_contains(root_labels, "app", "root view should expose app subtree")
+  _assert_contains(root_labels, "infrastructure", "root view should expose infrastructure subtree")
+  _assert_contains(root_labels, "presentation", "root view should expose presentation subtree")
+  _assert_contains(root_labels, "flow", "root view should expose flow subtree")
 
-  local entry_labels = {}
-  for _, node in ipairs(entry_view.nodes or {}) do
-    entry_labels[#entry_labels + 1] = node.label
+  local app_labels = {}
+  for _, node in ipairs(app_view.nodes or {}) do
+    app_labels[#app_labels + 1] = node.label
   end
-  _assert_contains(entry_labels, "boot", "entry view should expose boot")
-  _assert_contains(entry_labels, "start_game", "entry view should expose start_game")
-  _assert_contains(entry_labels, "wire_host", "entry view should expose wire_host")
+  _assert_contains(app_labels, "bootstrap", "app view should expose bootstrap")
+
+  local app_bootstrap_labels = {}
+  for _, node in ipairs(app_bootstrap_view.nodes or {}) do
+    app_bootstrap_labels[#app_bootstrap_labels + 1] = node.label
+  end
+  _assert_contains(app_bootstrap_labels, "init", "app.bootstrap view should expose init")
+  _assert_contains(app_bootstrap_labels, "runtime_install", "app.bootstrap view should expose runtime_install")
+  _assert_contains(app_bootstrap_labels, "startup_roster", "app.bootstrap view should expose startup_roster")
 end
 
 local function _test_projection_collapses_package_init_nodes_into_single_drillable_node()
@@ -128,11 +137,11 @@ local function _test_projection_collapses_package_init_nodes_into_single_drillab
     end
   end
 
-  local entry_node = _find_node(root_view, "entry")
-  assert(entry_node ~= nil, "root view should keep a single entry node")
-  _assert_eq(entry_node.display_label, "entry", "package nodes with descendants should display namespace label")
-  assert(entry_node.drillable == true, "package nodes with descendants should remain drillable")
-  assert(entry_node.leaf == false, "package nodes with descendants should not be marked leaf")
+  local app_node = _find_node(root_view, "app")
+  assert(app_node ~= nil, "root view should keep a single app node")
+  _assert_eq(app_node.display_label, "app", "package nodes with descendants should display namespace label")
+  assert(app_node.drillable == true, "package nodes with descendants should remain drillable")
+  assert(app_node.leaf == false, "package nodes with descendants should not be marked leaf")
 
   local market_node = _find_node(rules_view, "market")
   assert(market_node ~= nil, "rules view should expose market package node")
@@ -148,8 +157,13 @@ local function _test_config_classifies_runtime_game_and_ports()
 
   _assert_eq(
     architecture.modules["src.state.game_state"].component,
-    "state",
-    "state.game_state should be classified as state"
+    "runtime",
+    "state.game_state should be classified as runtime"
+  )
+  _assert_eq(
+    architecture.modules["src.app.bootstrap.init"].component,
+    "app",
+    "app.bootstrap.init should be classified as app"
   )
   _assert_eq(
     architecture.modules["src.core.ports.runtime_ports"].abstract,
@@ -226,7 +240,7 @@ local function _test_snapshot_files_exist_in_repo()
 end
 
 local contract_tests = {
-  { name = "projection_builds_root_and_entry_views", run = _test_projection_builds_root_and_entry_views },
+  { name = "projection_builds_root_and_app_views", run = _test_projection_builds_root_and_app_views },
   { name = "projection_collapses_package_init_nodes_into_single_drillable_node", run = _test_projection_collapses_package_init_nodes_into_single_drillable_node },
   { name = "config_classifies_runtime_game_and_ports", run = _test_config_classifies_runtime_game_and_ports },
   { name = "projection_exposes_full_names_and_display_edges", run = _test_projection_exposes_full_names_and_display_edges },

@@ -1,7 +1,8 @@
 local support = require("support.gameplay_support")
 local gameplay_loop = support.gameplay_loop
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local game_startup = require("src.entry.start_game")
+local startup_roster = require("src.app.bootstrap.startup_roster")
+local state_factory = require("src.presentation.runtime.state_factory")
 local turn_roll = require("src.turn.phases.roll")
 local move_followup = require("src.turn.phases.move_followup")
 local board_utils = require("src.rules.land.board_utils")
@@ -17,6 +18,21 @@ local _open_choice = support.open_choice
 local _tile_state = support.tile_state
 local _turn_move = support.turn_move
 local _resolve_landing = support.resolve_landing
+
+local function _build_startup_state(profile_name)
+  return state_factory.build_state({
+    profile_name = profile_name,
+    get_current_game = function()
+      return nil
+    end,
+    build_game_factory = function(state)
+      return startup_roster.build_game_factory(state, {
+        profile_name = profile_name,
+      })
+    end,
+    auto_runner = startup_roster.build_auto_runner(),
+  })
+end
 
 local function _build_test_ports(overrides)
   overrides = overrides or {}
@@ -88,13 +104,7 @@ local function _build_test_ports(overrides)
 end
 
 local function _new_profile_game(profile_name)
-  local state = game_startup.build_state(function()
-    return nil
-  end, {
-    profile_name = profile_name,
-    force_non_p1_ai = true,
-    fail_fast_when_roles_empty = false,
-  })
+  local state = _build_startup_state(profile_name)
   state.gameplay_loop_ports = _build_test_ports()
   state.ui = _build_ui_port().ui
   _bind_ui_runtime(state)
