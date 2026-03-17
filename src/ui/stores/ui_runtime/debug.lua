@@ -1,1 +1,1 @@
-return require("src.ui.controllers.debug_view")
+return require("src.ui.stores.ui_runtime_debug")

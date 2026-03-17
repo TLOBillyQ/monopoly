@@ -1,1 +1,1 @@
-return require("src.ui.render.ui_assets")
+return require("src.ui.stores.ui_runtime_assets")

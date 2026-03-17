@@ -1,3 +1,1 @@
-return {
-  canvas = "加载屏",
-}
+return require("src.ui.schema.loading_nodes")

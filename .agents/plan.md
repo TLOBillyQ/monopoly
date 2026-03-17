@@ -13,7 +13,7 @@
 - [x] (2026-03-17) 已按原计划评论与二次 review 重排任务依赖、补齐缺失护栏和快照范围。
 - [x] (2026-03-17 19:49) T1 冻结单一 rename map，并给 13 个 `init.lua` 全部分型。
 - [x] (2026-03-17 20:07) T2 搭好双轨迁移基础设施、包别名兼容和批量脚本入口。
-- [ ] T3-T6 并行完成各自子树的“移文件 + 落 shim + 改内部引用”。
+- [ ] T3-T6 并行完成各自子树的“移文件 + 落 shim + 改内部引用”（已完成：T5；进行中：T3/T4）。
 - [ ] T7 统一切换所有外部调用点、字符串消费者、护栏配置到 new-only。
 - [ ] T8 删除临时 shim 与本次迁移专用 pair。
 - [ ] T9 刷新快照并做最终全量验收。
@@ -143,9 +143,17 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 - **location**: `src/entry/**`、`src/host/**`、`src/core/**`、`src/turn/**`、`main.lua`
 - **description**: 迁移 runtime/app 侧模块，落实 `entry/init.lua`、`host/eggy/init.lua`、`turn/loop/init.lua`、`turn/timing/init.lua` 的具名入口；只改 `entry/host/core/turn` 子树内部引用，不把它们提前切到 T5/T6 未来的新 UI 模块 ID。`src/turn/output/{loop_runtime,scheduler_runtime,tick_flow,tick_steps,session_script,logger,ports}` 在此阶段只保留为兼容别名，不删除。
 - **validation**: 启动链仍能通过旧稳定 UI 模块 ID 工作；`main.lua` 与 boot 链没有跨到尚未落地的新 UI 命名；`turn/output/*` 活跃别名仍可解析；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua` 通过。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 已把 `ui/schema/canvas/*/{contract,nodes}` 压平到 `src/ui/schema/<screen>_{contract,nodes}.lua`，旧路径改成 shim；`base canvas` 相关 guard 继续通过双轨规则校验。
+  - 已把 `ui/input/canvas_routes/*` 压平成 `src/ui/input/canvas_route_*.lua`，把 `ui/input/intent_dispatch/*` 压平成 `src/ui/input/dispatch_*.lua`，旧路径全部改成兼容 shim。
+  - 已把 `ui/stores/ui_runtime/*` 压平成 `src/ui/stores/ui_runtime_*.lua`，并保留 `src/ui/stores/ui_runtime/*` 与 `src/ui/stores/ui_runtime.lua` 的兼容入口。
+  - 验证通过：`lua tests/guard.lua`、`lua tests/contract.lua`、`lua scripts/quality/arch.lua check`。
 - **files edited/created**:
+  - `src/ui/schema/**`
+  - `src/ui/input/**`
+  - `src/ui/stores/**`
+  - `tests/guards/migration_shim_rules.lua`
 
 ### T5：迁移 UI schema / input / stores 基座
 

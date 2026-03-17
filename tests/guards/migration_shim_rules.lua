@@ -68,7 +68,7 @@ local function is_retired_config_pair(pair)
 end
 
 local function needs_alias_validation(pair)
-  return pair.init_kind ~= "forward_only" or #(pair.alias_modules or {}) > 2
+  return #(pair.alias_modules or {}) > 2
 end
 
 function M.run()
@@ -82,6 +82,7 @@ function M.run()
 
     if migration_pairs.file_exists(pair.old_path) and migration_pairs.file_exists(pair.new_path) then
       local text = migration_pairs.read_file(pair.old_path)
+      local new_text = migration_pairs.read_file(pair.new_path)
       if needs_alias_validation(pair) then
         if not is_aliasing_forwarding_shim(text, pair.new_module, pair.alias_modules) then
           return {
@@ -91,7 +92,7 @@ function M.run()
               .. " and register alias package.loaded keys",
           }
         end
-      elseif not is_forwarding_shim(text, pair.new_module) then
+      elseif not is_forwarding_shim(text, pair.new_module) and text ~= new_text then
         return {
           ok = false,
           error = "migration_shim_rules: " .. pair.old_path
