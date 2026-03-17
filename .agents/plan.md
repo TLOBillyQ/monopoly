@@ -40,9 +40,9 @@ T0B ───── T2 ── T5 ──┘
 - **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/host/eggy/paid_purchase_gateway.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tmp/crap_report.json`
 - **description**: 记录付费网关当前 diff，确认后续修改只能叠加；重新生成一次 CRAP 报告并单独摘出 6 个目标符号的 before 值，供 T1/T3/T4A/T4B 各自比较。这里不改代码，只产出基线证据。
 - **validation**: `git diff -- /Users/billyq/Dev/Github/Lua/monopoly/src/host/eggy/paid_purchase_gateway.lua` 与 `lua scripts/quality/crap.lua report --lane behavior --out tmp/crap_report.json` 都成功，且已记录 6 个符号的 before 值。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: Recorded the current paid purchase gateway diff as a user-owned change boundary. Re-ran `crap` and captured before values: `pricing.total_invested` `crap=30.00 coverage=0.00`, `_add_neighbor` `crap=20.00 coverage=0.00`, `_handle_market_navigation` `crap=20.00 coverage=0.00`, `_build_move_anim_data` `crap=17.01 coverage=0.07`, `_resolve_market_choice` `crap=12.00 coverage=0.00`, `_build_move_args` `crap=9.56 coverage=0.10`.
+- **files edited/created**: `/Users/billyq/Dev/Github/Lua/monopoly/.agents/plan.md`, `/Users/billyq/Dev/Github/Lua/monopoly/tmp/crap_report.json`
 
 ### T0B: 盘点 6 个 T2 disabled case 的真实失败模式
 - **depends_on**: []
