@@ -17,10 +17,10 @@
     {
       "component": "presentation",
       "match": [
-        "^src%.presentation%.runtime%.gameplay_runtime_bootstrap$",
-        "^src%.presentation%.runtime%.runtime_event_bridge$",
-        "^src%.presentation%.runtime%.state_factory$",
-        "^src%.presentation%.runtime%.ui_bootstrap$"
+        "^src%.presentation%.runtime$",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%.runtime%.ports$",
+        "^src%.presentation%.runtime%.ports%..+"
       ],
       "name": "presentation_runtime_bootstrap"
     },
@@ -151,7 +151,9 @@
     {
       "description": "presentation layer must not depend on runtime player modules directly",
       "from": [
-        "^src%.ui%..+"
+        "^src%.ui%..+",
+        "^src%.presentation%..+",
+        "^src%.presentation%.runtime%..+"
       ],
       "name": "presentation_no_runtime_players",
       "to": [
@@ -161,7 +163,9 @@
     {
       "description": "presentation layer must not depend on ai modules directly",
       "from": [
-        "^src%.ui%..+"
+        "^src%.ui%..+",
+        "^src%.presentation%..+",
+        "^src%.presentation%.runtime%..+"
       ],
       "name": "presentation_no_ai",
       "to": [
@@ -171,7 +175,9 @@
     {
       "description": "presentation layer must not depend on systems modules directly",
       "from": [
-        "^src%.ui%..+"
+        "^src%.ui%..+",
+        "^src%.presentation%..+",
+        "^src%.presentation%.runtime%..+"
       ],
       "name": "presentation_no_systems",
       "to": [
@@ -185,7 +191,9 @@
       ],
       "name": "flow_no_presentation",
       "to": [
-        "^src%.ui%..+"
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+"
       ]
     },
     {
@@ -205,7 +213,9 @@
       ],
       "name": "runtime_player_no_presentation",
       "to": [
-        "^src%.ui%..+"
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+"
       ]
     },
     {
@@ -236,7 +246,9 @@
       ],
       "name": "ai_no_presentation",
       "to": [
-        "^src%.ui%..+"
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+"
       ]
     },
     {
@@ -259,6 +271,8 @@
       "to": [
         "^src%.turn%..+",
         "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+",
         "^src%.computer%..+",
         "^src%.host%..+",
         "^src%.app%.bootstrap%..+"
@@ -273,6 +287,8 @@
       "to": [
         "^src%.turn%..+",
         "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+",
         "^src%.computer%..+",
         "^src%.host%..+"
       ]
@@ -286,6 +302,8 @@
       "to": [
         "^src%.turn%..+",
         "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+",
         "^src%.player%..+",
         "^src%.computer%..+",
         "^src%.rules%..+",
@@ -302,6 +320,8 @@
       "name": "infrastructure_no_gameplay_chain",
       "to": [
         "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+",
         "^src%.turn%..+",
         "^src%.player%..+",
         "^src%.computer%..+"
@@ -325,7 +345,8 @@
         "^src%.computer%..+",
         "^src%.rules%..+",
         "^src%.host%..+",
-        "^src%.app%.bootstrap%..+"
+        "^src%.app%.bootstrap%..+",
+        "^src%.presentation%.runtime%..+"
       ]
     }
   ],

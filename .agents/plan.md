@@ -22,7 +22,7 @@
 - [x] (2026-03-18 01:19 CST) 已定位主要错误依赖方向：`src.ui.pres` / `src.ui.stores` 反向依赖 `src.ui.ctl.ports.runtime_state_seam`；`src.ui.ctl.ports.*` 作为端口装配层反向依赖 `src.ui.ctl.*`
 - [x] (2026-03-18 01:24 CST) 已创建计划文件 `/Users/billyq/Dev/Github/Lua/monopoly/arch-view-cycle-dependency-fix-plan.md`
 - [x] (2026-03-18 01:33 CST) 已完成一次子代理计划审阅，并补入 `arch/config.json`、`dep_rules`、shim 顺序、直接测试消费者与文档同步等漏项
-- [ ] 实施 T2-T7（已完成：T1 基线冻结与 canonical path 定案）
+- [ ] 实施 T3-T7（已完成：T1 基线冻结；T2 guardrail 迁移）
 
 ## 意外与发现
 
@@ -155,9 +155,9 @@
 - **location**: `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/config.json`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/guards/dep_rules.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/runtime_ports_contract.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/init.lua`
 - **description**: 在真正迁移代码前，先让 `arch_view` 与 `dep_rules` 认识新路径。具体包括：为 `src/presentation/runtime/ports/*` 与 `src/ui/runtime/*` 增加 component rule；扩展 forbidden-dependency rule，使 `src.presentation.*` 不会因为新路径而逃逸出 presentation 约束；把 seam whitelist 与 `describe_boundary_contract()` 设计成能同时容纳 canonical path 与临时 shim 的状态。
 - **validation**: 修改后，新增的 canonical module path 不会被 `arch_view` 判成 unclassified；`dep_rules` 对新 canonical seam 的白名单已到位；`runtime_ports_contract` 不再只硬编码旧 seam 路径。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 02:03 CST 已先行补齐 guardrail。`scripts/quality/arch/config.json` 现在会把 `src.presentation.runtime.*` 与未来的 `src/presentation/runtime/ports/*` 归类为 presentation，并把 presentation 边界扩展到 `src.presentation.*`，避免新目录绕开旧护栏。`tests/guards/dep_rules.lua` 新增了未来 canonical seam 的 whitelist；`src/ui/ctl/ports/init.lua` 与 `tests/suites/runtime/runtime_ports_contract.lua` 已把 boundary contract 的 seam 真源切到 `src.ui.runtime.*`。验证结果：raw `arch_view scan` 无 unclassified module，`lua tests/guard.lua` 通过，`lua tests/contract.lua` 通过。
+- **files edited/created**: `.agents/plan.md`, `scripts/quality/arch/config.json`, `tests/guards/dep_rules.lua`, `src/ui/ctl/ports/init.lua`, `tests/suites/runtime/runtime_ports_contract.lua`, `tmp/arch_cycle_scan.json`
 
 ### T3: 抽离共享 seam，并重写所有 seam 消费者到 canonical path
 - **depends_on**: [T2]
@@ -338,3 +338,5 @@
 
 
 变更说明（2026-03-18 01:50 CST）：完成 T1，重新冻结 raw arch_view 基线，并把 canonical path 决策落入计划执行日志。
+
+变更说明（2026-03-18 02:03 CST）：完成 T2，先把 arch_view/dep_rules/contract 切到新 canonical guardrail，确保后续迁移不会先因分类或白名单失血而失败。
