@@ -232,8 +232,84 @@ function M.iter()
   return ipairs(entries)
 end
 
+local function clone_entry(entry)
+  local copy = {}
+  for key, value in pairs(entry or {}) do
+    if type(value) == "table" then
+      local list = {}
+      for index, item in ipairs(value) do
+        list[index] = item
+      end
+      copy[key] = list
+    else
+      copy[key] = value
+    end
+  end
+  return copy
+end
+
+function M.iter_entries()
+  local list = {}
+  for index, entry in ipairs(entries) do
+    list[index] = clone_entry(entry)
+  end
+  return list
+end
+
+function M.iter_pairs()
+  local list = {}
+  for _, entry in ipairs(entries) do
+    if entry.keep_shim ~= false then
+      list[#list + 1] = clone_entry(entry)
+    end
+  end
+  return list
+end
+
+function M.find_by_old_path(old_path)
+  for _, entry in ipairs(entries) do
+    if entry.old_path == old_path then
+      return entry
+    end
+  end
+  return nil
+end
+
+function M.find_by_old_module(old_module)
+  for _, entry in ipairs(entries) do
+    if entry.old_module == old_module then
+      return entry
+    end
+  end
+  return nil
+end
+
 function M.find_by_canonical_module(name)
   return index_by_canonical[name]
+end
+
+function M.file_exists(path)
+  local file = io.open(path, "r")
+  if not file then
+    return false
+  end
+  file:close()
+  return true
+end
+
+function M.read_file(path)
+  local file = io.open(path, "r")
+  if not file then
+    return nil
+  end
+  local text = file:read("*a")
+  file:close()
+  return text
+end
+
+function M.validate_entries()
+  validate_entries(entries)
+  return true
 end
 
 M.entries = entries
