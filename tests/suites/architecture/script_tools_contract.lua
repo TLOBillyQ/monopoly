@@ -247,6 +247,31 @@ local function _test_release_mode_deploy_allows_release_path()
   end)
 end
 
+local function _test_deploy_aligns_with_current_repo_layout()
+  _with_ascii_tmp("deploy_aligns_with_current_repo_layout", function(tmp_root)
+    local target = common.join_path(tmp_root, "dev_deploy")
+    local result = _run_lua({
+      "scripts/ops/deploy.lua",
+      "--target-path",
+      target,
+    })
+
+    assert(result.ok == true, "deploy should succeed for the current repo layout")
+    assert(common.path_exists(common.join_path(target, "main.lua")) == true,
+      "deploy should copy main.lua into the target path")
+    assert(common.path_exists(common.join_path(target, "src/config")) == true,
+      "deploy should include src/config through the src directory copy")
+    assert(common.path_exists(common.join_path(target, "Data/UIManagerNodes.lua")) == true,
+      "deploy should copy Data/UIManagerNodes.lua into the target path")
+    assert(common.path_exists(common.join_path(target, "Data/Prefab.lua")) == true,
+      "deploy should copy Data/Prefab.lua into the target path")
+    _assert_not_contains(result.output, "/Config",
+      "deploy output should not mention the retired Config directory")
+    _assert_not_contains(result.output, "Config: 0",
+      "deploy LOC breakdown should not include the retired Config directory")
+  end)
+end
+
 local function _test_release_mode_deploy_rejects_startup_profile()
   _with_ascii_tmp("release_mode_deploy_rejects_startup_profile", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "release_deploy")
@@ -400,6 +425,7 @@ local contract_tests = {
   { name = "deploy_defaults_match_windows_history", run = _test_deploy_defaults_match_windows_history },
   { name = "deploy_defaults_match_macos_history", run = _test_deploy_defaults_match_macos_history },
   { name = "deploy_unknown_flag_is_bilingual", run = _test_deploy_unknown_flag_is_bilingual },
+  { name = "deploy_aligns_with_current_repo_layout", run = _test_deploy_aligns_with_current_repo_layout },
   { name = "release_mode_deploy_allows_release_path", run = _test_release_mode_deploy_allows_release_path },
   { name = "release_mode_deploy_rejects_startup_profile", run = _test_release_mode_deploy_rejects_startup_profile },
   { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
