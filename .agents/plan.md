@@ -1,193 +1,122 @@
-# src/ 下兼容层、转发壳清理计划
+# Plan: Next Round Presentation/Runtime Boundary Cleanup
 
-本计划是活文档。实施过程中持续更新“进度 / 意外与发现 / 决策日志 / 结果与复盘”。
+**Generated**: 2026-03-17
 
-本文件遵循 `.agents/harness/PLANS.md` 维护。
+## Overview
+This round follows the completed `src.entry` hard cut and focuses on the next highest-value cleanup: shrinking presentation ownership so `src/ui/**` and `src/presentation/runtime/**` stop reaching into runtime state and host details directly. The intent is to make the presentation layer consume narrow injected seams, while leaving deeper `flow -> runtime` simplification as a later dedicated round.
 
-## 目的 / 全局视角
+Assumption for this plan: the next round prioritizes `presentation -> runtime` cleanup before the broader `flow -> runtime` edge reduction, because the current UI stack still imports `runtime_state`, `landing_visual_hold`, and `src.host.eggy*` in many places and that leak will otherwise keep the new root semantics blurry.
 
-这次工作的目标不是继续搬目录，而是把 `src/` 里迁移后残留的纯路径兼容层和转发壳清掉，让仓库尽量只保留 canonical 模块路径。完成后，`src/`、`tests/`、`scripts/` 不再引用这批旧 shim 路径，纯转发文件会被删除，而仍带行为适配的兼容层继续保留。
+## Prerequisites
+- Current post-migration tree is the baseline: `main.lua -> src.app.bootstrap`
+- No new external libraries are expected for this round; Context7 is not needed unless implementation introduces a new dependency
+- Keep the round scoped: do not physically migrate `src/ui`, `src/turn`, `src/state`, `src/player`, or `src/host`
+- Keep startup/test-profile behavior unchanged, especially fake `new(...)` patch points
+- Treat grouped loop ports and startup/runtime tests as protected contracts, not incidental implementation details
 
-可观察结果：
+## Dependency Graph
 
-- 仓库级搜索不再出现本轮退休模块族的 `require(old_path)`。
-- 纯转发 shim 文件已从 `src/` 删除。
-- `tests/guards/dep_rules.lua` 会阻止这些退休路径重新被引入。
-- `lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua`、`lua tests/behavior.lua`、`lua tests/regression.lua` 通过。
+```text
+T1 ──┬── T3 ──┬── T4 ──┐
+     │        │        ├── T6 ── T7 ── T8
+T2 ──┘        └── T5 ──┘
+```
 
-## 进度
+## Tasks
 
-- [x] 2026-03-17 22:01 +0800：完成 T1，逐文件复核候选 shim，确认纯转发壳清单与排除项。
-- [x] 2026-03-17 22:18 +0800：完成 T2，源码调用点已切到 canonical 路径。
-- [x] 2026-03-17 22:20 +0800：完成 T3，测试调用点已切到 canonical 路径。
-- [x] 2026-03-17 22:23 +0800：完成 T4，已删除本轮纳入的纯转发 shim 文件。
-- [x] 2026-03-17 22:31 +0800：完成 T5，已补 retired-path guard、收紧架构配置，并为 root-view namespace artifact 增加 `arch_view` 过滤层。
-- [x] 2026-03-17 22:48 +0800：完成 T6，`guard`、`arch check`、`contract`、`behavior`、`regression` 全部通过。
-- [x] 2026-03-17 23:05 +0800：完成下一批低风险行为兼容层清理，删除 `ui_aliases`、`market_context`，并移除 `turn.phases.land` 的 callable 兼容形态。
+### T1: Create narrow presentation state seams
+- **depends_on**: []
+- **location**: `src/presentation/runtime/state_factory.lua`, `src/ui/ctl/ports/common.lua`, `src/ui/ctl/ports/ui_sync_ports.lua`, `src/ui/ctl/ports/view_command_ports.lua`, `src/ui/ctl/ports/state_ports.lua`, new seam module(s) under `src/ui/ctl/ports/`
+- **description**: Introduce narrow read/write seams for UI-facing state such as `ui_model`, `pending_choice`, modal timer, landing-visual deferral, board feedback, and debug/runtime flags so generic presentation modules no longer import `src.state.state_access.runtime_state` or `src.state.state_access.landing_visual_hold` directly. `state_factory` should assemble these seams, not own reusable state logic.
+- **validation**: `rg -n 'require\("src\.state\.state_access\.(runtime_state|landing_visual_hold)' src/ui src/presentation/runtime` only hits the intentionally retained adapter files; targeted presentation suites still pass.
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-## 意外与发现
+### T2: Isolate host runtime access behind explicit presentation adapters
+- **depends_on**: []
+- **location**: `src/ui/ctl/deps.lua`, `src/ui/ctl/actor_context.lua`, `src/ui/ctl/event_handlers.lua`, `src/ui/ctl/event_bindings.lua`, `src/ui/ctl/target_choice_effects.lua`, `src/ui/ctl/canvas_event_router.lua`, `src/ui/ctl/ports/ui_sync/camera_sync.lua`, `src/presentation/runtime/ui_bootstrap.lua`
+- **description**: Consolidate `src.host.eggy` and `src.host.eggy.context` usage into a small adapter surface that presentation code receives via injected deps/ports. The expected host-touching allowlist at end of round is bootstrap/deps/adapter code only (for example `src/presentation/runtime/ui_bootstrap.lua`, `src/ui/ctl/deps.lua`, and the dedicated adapter files under `src/ui/ctl/ports/` that truly need host access).
+- **validation**: `rg -n 'require\("src\.host\.eggy' src/ui src/presentation/runtime` is reduced to the agreed adapter/bootstrap files only; behavior stays unchanged.
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-- 观察：`src/host/eggy/support/market_context.lua` 不是纯转发壳，不能纳入本轮删除。
-  证据：文件通过 `setmetatable(..., { __index, __newindex })` 代理 `src.rules.market.query.context` 的读写。
+### T3: Freeze seam contracts and state-shape allowlists
+- **depends_on**: [T1, T2]
+- **location**: `src/ui/ctl/ports/init.lua`, `src/turn/loop/ports.lua`, `tests/suites/runtime/runtime_ports_contract.lua`, `tests/suites/presentation/_presentation_action_status_*.lua`, `tests/guards/dep_rules.lua`
+- **description**: Lock the grouped loop-port contract and define the allowed state-shape ownership before broad consumer rewrites begin. This includes codifying which files may still touch `state.presentation_runtime`, `state.gameplay_loop_ports`, `state.game`, cached resolved ports, or host-touching bootstrap state directly.
+- **validation**: `lua tests/contract.lua` stays green with the seam contract assertions in place; grep/guard rules describe both import allowlists and direct state-field allowlists.
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-- 观察：`src/turn/output/**` 里只有 8 个文件是纯转发壳，其余是适配器或真实逻辑。
-  证据：`decision/logger/loop_runtime/ports/scheduler_runtime/session_script/tick_flow/tick_steps` 文件本体仅为 `return require(...)`；`auto_play_port_adapter.lua`、`default_ports.lua`、`intent_dispatcher.lua` 等含真实逻辑。
+### T4: Refactor presentation consumers to use the new seams
+- **depends_on**: [T1, T2, T3]
+- **location**: `src/ui/render/board.lua`, `src/ui/render/board/placement.lua`, `src/ui/render/market.lua`, `src/ui/render/market_controls.lua`, `src/ui/pres/choice_slice.lua`, `src/ui/stores/modal_state.lua`, `src/ui/ctl/modal_controller.lua`, `src/ui/ctl/market_controller.lua`, `src/ui/ctl/item_slots.lua`, `src/ui/input/*.lua`, `src/ui/ctl/choice_screens/helpers.lua`
+- **description**: Replace direct runtime-state and host-runtime reads/writes inside production presentation modules with the seams from T1/T2/T3. Keep gameplay behavior unchanged; this is an ownership cleanup, not a feature round.
+- **validation**: presentation suites under `tests/suites/presentation/` pass; grep confirms generic presentation modules no longer import runtime internals directly.
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-- 观察：把源码调用点改到 canonical 路径后，`arch_view` 的显式 forbidden dependency 报错可以通过配置映射消除，但仍残留一个 `projection_cycle root`。
-  证据：`lua scripts/quality/arch.lua check` 当前仅输出 `projection-level circular dependency detected`。
+### T5: Migrate test fixtures and integration helpers onto the same seams
+- **depends_on**: [T3]
+- **location**: `tests/support/shared_support.lua`, `tests/support/gameplay_support.lua`, `tests/support/runtime_support.lua`, `tests/suites/runtime/startup_profile.lua`, `tests/suites/runtime/runtime_bootstrap.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`
+- **description**: Update helpers and integration suites that build `state.gameplay_loop_ports`, `state.presentation_runtime`, or startup/runtime fixtures so they use the same seams and allowlists as production code. This prevents helper drift from hiding or reintroducing coupling.
+- **validation**: helper-backed startup/gameplay/runtime suites stay green while using the new contracts.
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-- 观察：扫描产物显示当前 projection cycle 至少包含两条反馈边：`player -> rules` 与 `state -> entry`。
-  证据：`lua scripts/quality/arch.lua scan --out tmp/arch_scan.json` 后，`projection_cycles[0].feedback_edges` 指向 `src.player.actions.state_ops.location_ops -> src.rules.ports.bankruptcy_port`、`src.player.choices.handlers.optional_effect -> src.rules.*`、`src.state.game_state -> src.entry.compose_game`。
+### T6: Slim `src/presentation/runtime` down to orchestration only
+- **depends_on**: [T4, T5]
+- **location**: `src/presentation/runtime/gameplay_runtime_bootstrap.lua`, `src/presentation/runtime/runtime_event_bridge.lua`, `src/presentation/runtime/state_factory.lua`, `src/app/bootstrap/init.lua`, `src/turn/loop.lua`, `src/turn/loop/loop_runtime.lua`
+- **description**: After consumers and fixtures have stabilized on the new seams, move reusable logic out of the runtime bootstrap layer so these modules only wire `state`, `ports`, `deps`, and bridge callbacks together. Any durable UI/runtime behavior discovered here should move to `src/ui/ctl/ports/*` or `src/turn/*` seam modules.
+- **validation**: code review shows bootstrap modules are mostly assembly; startup/runtime/gameplay tests continue to pass; no new direct ownership of `ui.*` behavior is added here.
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-- 观察：`projection_cycle root` 来自 namespace 视图与组件归类不一致，而不是新的组件级违例。
-  证据：过滤前的 root feedback edge 分别来自 `src.player.*` 命名空间下被归类到 `state/rules` 组件的模块，以及 `src.entry.compose_game` 被归类到 `state` 组件的模块。
+### T7: Lock the boundary in guards, arch config, and viewer alignment
+- **depends_on**: [T6]
+- **location**: `tests/guards/dep_rules.lua`, `scripts/quality/arch/config.json`, `tests/suites/architecture/arch_view_contract.lua`, `docs/architecture/arch_view.md`, `scripts/quality/arch/viewer/`
+- **description**: Tighten the static boundary so presentation code cannot drift back to direct `runtime_state`, `landing_visual_hold`, or `src.host.eggy*` imports outside the chosen adapter files, and keep arch-view config/contracts/viewer aligned if the stricter rules expose root-view or projection drift.
+- **validation**: `lua tests/guard.lua` and `lua scripts/quality/arch.lua check` pass with the stricter rules enabled; viewer snapshot stays aligned with contract expectations.
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-## 决策日志
+### T8: Full verification and closeout
+- **depends_on**: [T7]
+- **location**: repo-wide test commands and snapshot outputs
+- **description**: Run the full validation set, refresh viewer snapshots only if architecture output changed, and verify the round did not accidentally widen into general `flow -> runtime` surgery.
+- **validation**: `lua scripts/quality/arch.lua check`; `lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer`; `lua tests/guard.lua`; `lua tests/contract.lua`; `lua tests/behavior.lua`; `lua tests/regression.lua`; plus grep checks from T1/T2/T3.
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-- 决策：本轮只清理“纯路径兼容壳”，明确不碰行为兼容层。
-  理由：避免把路径迁移与行为变化混在一起，降低回归定位成本。
-  日期/作者：2026-03-17 / Codex
+## Parallel Execution Groups
 
-- 决策：`src/host/eggy/support/**` 不做目录级删除，只按文件级筛选。
-  理由：该目录混有真实运行时适配逻辑，`market_context.lua` 仍承担代理行为。
-  日期/作者：2026-03-17 / Codex
+| Wave | Tasks | Can Start When |
+|------|-------|----------------|
+| 1 | T1, T2 | Immediately |
+| 2 | T3 | T1 and T2 complete |
+| 3 | T4, T5 | T3 complete |
+| 4 | T6 | T4 and T5 complete |
+| 5 | T7 | T6 complete |
+| 6 | T8 | T7 complete |
 
-- 决策：先完成调用点切换，再删除 shim，再补 guard。
-  理由：符合仓库已有迁移模式，避免护栏过早生效阻断中途修改。
-  日期/作者：2026-03-17 / Codex
+## Testing Strategy
+- Use grep-based boundary checks during implementation, not only at the end
+- Protect grouped loop-port compatibility with contract tests before broad rewrites
+- Keep startup-profile and gameplay startup tests green to protect constructor patch seams
+- Migrate helper fixtures early enough that production and test seams stay aligned
+- Run full `arch/check + guard + contract + behavior + regression` before closing the round
 
-- 决策：为通过当前架构规则，先在 `scripts/quality/arch/config.json` 中把 canonical 路径按现有投影归类到旧组件。
-  理由：删除 shim 后，依赖图应该保持原有组件语义；否则静态检查会把“同语义新路径”误判为跨层依赖。
-  日期/作者：2026-03-17 / Codex
-
-## 背景与导读
-
-本仓库已经完成过多轮模块重命名与 shim 清理，但 `src/` 里还残留一批仅做 `return require("...")` 的兼容文件。它们主要分布在这些模块族：
-
-- `src/rules/choices/*` -> `src/player/choices/*`
-- `src/state/player_state_ops/*` -> `src/player/actions/state_ops/*`
-- `src/state/support/*` -> `src/core/utils/*`
-- `src/core/state_access/*` -> `src/state/state_access/*`
-- `src/host/eggy/support/*` 中的纯转发壳
-- `src/turn/output/*` 中的纯转发壳
-- 单文件别名：`src/state/compose_game.lua`、`src/state/game_victory.lua`、`src/computer/policies/agent.lua`
-
-本轮明确排除以下仍带行为的兼容层：
-
-- `src/host/eggy/support/market_context.lua`
-- `src/entry/runtime_globals.lua`
-- `src/ui/render/support/ui_aliases.lua`
-- `src/turn/phases/land.lua` 中的 backward-compatible callable 行为
-
-关键文件分布如下：
-
-- 源码调用点：`src/rules/bootstrap/registries.lua`、`src/state/player_state.lua`、`src/state/game_state.lua`、`src/state/state_access/runtime_editor_exports.lua`、`src/state/state_access/landing_visual_hold.lua`、`src/host/eggy/context.lua`、`src/host/eggy/synthetic_actor_registry.lua`、`src/host/eggy/sound.lua`、`src/turn/output/auto_play_port_adapter.lua`、`src/entry/boot.lua`
-- 测试调用点：`tests/suites/gameplay/gameplay_coroutine.lua`、`tests/suites/gameplay/gameplay_cases.lua`、`tests/suites/domain/land.lua`
-- 护栏与文档：`tests/guards/dep_rules.lua`、`scripts/quality/arch/config.json`、`docs/architecture/quality_map.md`
-
-## T1 最终清单
-
-### 可删除的纯转发壳
-
-- `src/rules/choices/handlers/optional_effect.lua` -> `src.player.choices.handlers.optional_effect`
-- `src/rules/choices/registry.lua` -> `src.player.choices.registry`
-- `src/rules/choices/resolver.lua` -> `src.player.choices.resolver`
-- `src/rules/choices/use_skip_choice.lua` -> `src.player.choices.use_skip_choice`
-- `src/state/player_state_ops/balance_ops.lua` -> `src.player.actions.state_ops.balance_ops`
-- `src/state/player_state_ops/deity_ops.lua` -> `src.player.actions.state_ops.deity_ops`
-- `src/state/player_state_ops/location_ops.lua` -> `src.player.actions.state_ops.location_ops`
-- `src/state/player_state_ops/status_ops.lua` -> `src.player.actions.state_ops.status_ops`
-- `src/state/player_state_ops/vehicle_ops.lua` -> `src.player.actions.state_ops.vehicle_ops`
-- `src/state/support/logger.lua` -> `src.core.utils.logger`
-- `src/state/support/number_utils.lua` -> `src.core.utils.number_utils`
-- `src/core/state_access/landing_visual_hold.lua` -> `src.state.state_access.landing_visual_hold`
-- `src/core/state_access/runtime_editor_exports.lua` -> `src.state.state_access.runtime_editor_exports`
-- `src/core/state_access/runtime_state.lua` -> `src.state.state_access.runtime_state`
-- `src/core/state_access/ui_role_globals.lua` -> `src.state.state_access.ui_role_globals`
-- `src/host/eggy/support/runtime_constants.lua` -> `src.config.gameplay.runtime_constants`
-- `src/host/eggy/support/runtime_editor_exports.lua` -> `src.state.state_access.runtime_editor_exports`
-- `src/host/eggy/support/runtime_refs.lua` -> `src.config.content.runtime_refs`
-- `src/host/eggy/support/vehicle.lua` -> `src.rules.vehicle`
-- `src/turn/output/decision.lua` -> `src.turn.waits.decision`
-- `src/turn/output/logger.lua` -> `src.turn.timing.logger`
-- `src/turn/output/loop_runtime.lua` -> `src.turn.loop.loop_runtime`
-- `src/turn/output/ports.lua` -> `src.turn.loop.ports`
-- `src/turn/output/scheduler_runtime.lua` -> `src.turn.loop.scheduler_runtime`
-- `src/turn/output/session_script.lua` -> `src.turn.timing.session_script`
-- `src/turn/output/tick_flow.lua` -> `src.turn.loop.tick_flow`
-- `src/turn/output/tick_steps.lua` -> `src.turn.loop.tick_steps`
-- `src/state/compose_game.lua` -> `src.entry.compose_game`
-- `src/state/game_victory.lua` -> `src.rules.endgame.game_victory`
-- `src/computer/policies/agent.lua` -> `src.computer.policies.core_agent`
-
-### 明确保留的非纯转发文件
-
-- `src/host/eggy/support/market_context.lua`：metatable 代理，保留行为。
-- `src/turn/output/anim.lua`：真实动画调度逻辑。
-- `src/turn/output/auto_play_port_adapter.lua`：port adapter。
-- `src/turn/output/bankruptcy_port_adapter.lua`：port adapter。
-- `src/turn/output/default_ports.lua`：默认端口补齐逻辑。
-- `src/turn/output/intent_dispatcher.lua`：输出分发逻辑。
-- `src/turn/output/intent_output_adapter.lua`：output adapter。
-- `src/turn/output/output_state_adapter.lua`：runtime 状态适配。
-- `src/turn/output/ui_sync_defaults.lua`：UI sync 默认实现。
-
-## 工作计划
-
-先完成调用点替换，让 `src/` 与 `tests/` 不再依赖旧 shim；然后删除纯转发文件；再补 retired-path guard 和必要文档。最后通过仓库级搜索与质量命令确认旧路径彻底退休。
-
-当前已经完成源码与测试调用点迁移、纯转发文件删除、guard 补充和文档初步收尾。接下来需要专注处理 `arch_view` 剩余的 `projection_cycle root`，判断是配置归类问题还是旧投影本来就存在而被这轮改动暴露，然后再做最终验收。
-
-现在这项工作已经完成：仓库级旧路径搜索清零，纯转发 shim 已删除，验证命令全部通过。
-
-## 具体步骤
-
-在仓库根目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行：
-
-1. 调用点迁移后验证：
-
-   - `lua tests/guard.lua`
-   - `lua scripts/quality/arch.lua check`
-
-2. 仓库级旧路径搜索：
-
-   - `rg -n --glob '!scripts/quality/**/viewer/*' 'require\("src\.(rules\.choices|state\.player_state_ops|state\.support|core\.state_access|host\.eggy\.support\.(runtime_constants|runtime_editor_exports|runtime_refs|vehicle)|state\.compose_game|state\.game_victory|computer\.policies\.agent|turn\.output\.(decision|logger|loop_runtime|ports|scheduler_runtime|session_script|tick_flow|tick_steps))' src tests scripts`
-
-3. 若需要查看架构循环细节：
-
-   - `lua scripts/quality/arch.lua scan --out tmp/arch_scan.json`
-   - 读取 `tmp/arch_scan.json` 中的 `projection_cycles`
-
-4. 最终全量回归：
-
-   - `lua tests/contract.lua`
-   - `lua tests/behavior.lua`
-   - `lua tests/regression.lua`
-
-## 验证与验收
-
-完成标准：
-
-- 上述 repo 级搜索在 `src/`、`tests/`、`scripts/` 中无结果。
-- 纯路径 shim 文件已从 `src/` 删除，行为兼容层保留不动。
-- `tests/guards/dep_rules.lua` 能阻止退休路径回流。
-- `lua tests/guard.lua` 与 `lua scripts/quality/arch.lua check` 通过。
-- `lua tests/contract.lua`、`lua tests/behavior.lua`、`lua tests/regression.lua` 通过。
-
-## 可重复性与恢复
-
-本计划采用“先改调用点，再删桥，再补 guard”的顺序，可重复执行。若验证失败，优先依据 `git diff` 和 `tmp/arch_scan.json` 定位是路径迁移遗漏、guard 误杀还是 `arch_view` 投影配置不一致。禁止回滚用户未授权的无关改动；只在本轮涉及文件内做增量修正。
-
-## 结果与复盘
-
-最终结果：本轮纳入的纯路径 shim 已从 `src/` 删除，源码与测试都改为 canonical 路径，退休路径 guard 已补齐，`quality_map` 已同步，`arch_view` 的 root-level namespace artifact 已通过仓库包装层过滤，不再阻塞质量入口。最终执行 `lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua`、`lua tests/behavior.lua`、`lua tests/regression.lua` 全部通过。
-
-复盘：这轮清理暴露了 `arch_view` root projection 依赖 namespace、而不是组件归类的局限。仓库当前通过 `scripts/quality/arch/filter.lua` 过滤仅由 namespace 漂移导致的 root projection artifact，同时保留真正的 forbidden dependency 与其他 projection cycle 检查。
-
-补充：后续低风险行为兼容层也已继续收缩。`runtime_ui` 不再接受旧英文 UI alias；付费商城 gateway 直接依赖 `src.rules.market.query.context`；`turn.phases.land` 的稳定接口收敛为显式 `run(...)`。
-
-## 变更记录
-
-- 2026-03-17 22:36 +0800：把原始 box drawing 文本整理成可读 markdown，保留 T1 清单、执行进度与当前未解决问题，便于继续推进。
-- 2026-03-17 22:48 +0800：补记 T5/T6 完成状态、root projection artifact 结论与最终验收结果。
-- 2026-03-17 23:05 +0800：补记低风险行为兼容层 batch 的执行结果。
+## Risks & Mitigations
+- **Risk**: scope creep into full `flow -> runtime` redesign; **Mitigation**: allow only seam extraction needed by T6 and defer larger flow cleanup to a separate round
+- **Risk**: presentation tests depend on current state shape and may break noisily; **Mitigation**: freeze seam contracts in T3 and migrate helpers in T5 before bootstrap slimming in T6
+- **Risk**: host/runtime access gets hidden but not reduced; **Mitigation**: enforce concrete bootstrap/adapter allowlists in T2 and T7 so only explicit files may touch `src.host.eggy*`
+- **Risk**: coupling leaks through direct state-field ownership instead of imports; **Mitigation**: T3/T7 guard both import edges and direct state-shape allowlists
+- **Risk**: arch-view root/projection drift becomes part of the failure surface once config tightens; **Mitigation**: T7 explicitly owns config/contract/viewer alignment instead of treating it as out of scope
