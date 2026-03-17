@@ -38,9 +38,9 @@ T2 ──┘        └── T5 ──┘
 - **location**: `src/ui/ctl/deps.lua`, `src/ui/ctl/actor_context.lua`, `src/ui/ctl/event_handlers.lua`, `src/ui/ctl/event_bindings.lua`, `src/ui/ctl/target_choice_effects.lua`, `src/ui/ctl/canvas_event_router.lua`, `src/ui/ctl/ports/ui_sync/camera_sync.lua`, `src/presentation/runtime/ui_bootstrap.lua`
 - **description**: Consolidate `src.host.eggy` and `src.host.eggy.context` usage into a small adapter surface that presentation code receives via injected deps/ports. The expected host-touching allowlist at end of round is bootstrap/deps/adapter code only (for example `src/presentation/runtime/ui_bootstrap.lua`, `src/ui/ctl/deps.lua`, and the dedicated adapter files under `src/ui/ctl/ports/` that truly need host access).
 - **validation**: `rg -n 'require\("src\.host\.eggy' src/ui src/presentation/runtime` is reduced to the agreed adapter/bootstrap files only; behavior stays unchanged.
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: Created `src/ui/ctl/ports/host_runtime_ports.lua` and rewired the listed presentation control modules to consume the new adapter so only bootstrap, deps, and the new adapter hold direct host imports.
+- **files edited/created**: `src/ui/ctl/ports/host_runtime_ports.lua`, `src/ui/ctl/deps.lua`, `src/ui/ctl/actor_context.lua`, `src/ui/ctl/event_handlers.lua`, `src/ui/ctl/event_bindings.lua`, `src/ui/ctl/target_choice_effects.lua`, `src/ui/ctl/canvas_event_router.lua`, `src/ui/ctl/ports/ui_sync/camera_sync.lua`
 
 ### T3: Freeze seam contracts and state-shape allowlists
 - **depends_on**: [T1, T2]

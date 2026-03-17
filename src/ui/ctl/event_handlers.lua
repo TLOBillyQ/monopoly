@@ -1,6 +1,6 @@
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local host_runtime = require("src.host.eggy")
+local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
@@ -98,7 +98,7 @@ function event_handlers.install(_, logger, state)
       context.handlers_by_event[event_name] = list
     end
     list[#list + 1] = handler
-    host_runtime.register_custom_event(event_name, function(_, _, data)
+    host_runtime_ports.register_custom_event(event_name, function(_, _, data)
       _dispatch_or_defer(event_name, data, handler)
     end)
   end
@@ -255,7 +255,7 @@ function event_handlers.install(_, logger, state)
   _register_handler(monopoly_event.market.buy_failed, function(data)
     local event_data = _event_data(data)
     local tip_text = _resolve_market_buy_failed_tip(event_data)
-    host_runtime.show_tips(tip_text, MARKET_BUY_FAILED_MIN_TIP_SECONDS)
+    host_runtime_ports.show_tips(tip_text, MARKET_BUY_FAILED_MIN_TIP_SECONDS)
   end)
 
   _register_handler(monopoly_event.game.finished, function(data)

@@ -1,5 +1,5 @@
 local runtime = require("src.ui.render.runtime_ui")
-local host_runtime = require("src.host.eggy")
+local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
 local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
 local role_id_utils = require("src.core.utils.role_id")
 
@@ -14,7 +14,7 @@ function actor_context.resolve_role_by_id(role_id)
   if role_id == nil then
     return runtime.get_client_role()
   end
-  local roles = host_runtime.resolve_roles()
+  local roles = host_runtime_ports.resolve_roles()
   if type(roles) == "table" then
     for _, role in ipairs(roles) do
       if role_id_utils.equals(runtime.resolve_role_id(role), role_id) then
@@ -22,7 +22,7 @@ function actor_context.resolve_role_by_id(role_id)
       end
     end
   end
-  local resolved = host_runtime.resolve_role(role_id)
+  local resolved = host_runtime_ports.resolve_role(role_id)
   if resolved ~= nil then
     return resolved
   end

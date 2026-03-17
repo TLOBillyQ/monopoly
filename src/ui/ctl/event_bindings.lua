@@ -3,7 +3,7 @@ local runtime = require("src.ui.render.runtime_ui")
 local always_show_nodes = require("src.ui.schema.always_show_nodes")
 local always_show_contract = require("src.ui.schema.always_show_contract")
 local ui_touch_policy = require("src.ui.input.touch_policy")
-local host_runtime = require("src.host.eggy")
+local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
 
 local bindings = {}
 
@@ -14,7 +14,7 @@ local function _show_missing_button_tip(name)
     return
   end
   missing_button_tips[name] = true
-  host_runtime.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
+  host_runtime_ports.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
 end
 
 function bindings.register_node_click(cache, name, callback, registered, listeners)

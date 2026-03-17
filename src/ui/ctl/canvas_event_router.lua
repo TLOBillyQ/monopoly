@@ -2,7 +2,7 @@ local ui_event_bindings = require("src.ui.ctl.event_bindings")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
 local canvas_registry = require("src.ui.input.canvas_route_registry")
 local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
-local host_runtime = require("src.host.eggy")
+local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
 local modal_controller = require("src.ui.ctl.modal_controller")
 local logger = require("src.core.utils.logger")
 
@@ -69,7 +69,7 @@ function router.bind(state, resolve_game)
       trace_auto = false,
     })
     if actor_role_id == nil then
-      host_runtime.show_tips("当前操作缺少玩家上下文，已忽略", 2.0)
+      host_runtime_ports.show_tips("当前操作缺少玩家上下文，已忽略", 2.0)
       logger.warn("ui intent rejected: missing actor_role_id", tostring(intent.type), tostring(intent.id))
       return false
     end

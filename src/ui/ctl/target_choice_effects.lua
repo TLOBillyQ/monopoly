@@ -2,7 +2,7 @@ local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local modal_state = require("src.ui.stores.modal_state")
-local host_runtime = require("src.host.eggy")
+local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
 local ui_nodes = require("src.ui.render.node_ops")
 local choice_contract = require("src.core.choice.contract")
 local target_choice_effects = {}
@@ -119,7 +119,7 @@ end
 local function _reset_runtime_state(state, runtime)
   _sync_highlight_state(state, nil, false)
   if runtime and runtime.scene_pick_listener_token ~= nil then
-    host_runtime.unregister_target_pick_listener(runtime.scene_pick_listener_token)
+    host_runtime_ports.unregister_target_pick_listener(runtime.scene_pick_listener_token)
   end
   state.target_choice_runtime = nil
 end
@@ -140,7 +140,7 @@ local function _resolve_picked_option_id(state, option_id, payload)
   if resolved_option_id ~= nil or not (payload and payload.unit ~= nil) then
     return resolved_option_id
   end
-  local picked_unit_id = host_runtime.get_unit_id(payload.unit)
+  local picked_unit_id = host_runtime_ports.get_unit_id(payload.unit)
   if picked_unit_id == nil then
     return nil
   end
@@ -179,7 +179,7 @@ function target_choice_effects.enter(state, choice)
   }
   state.target_choice_runtime = runtime
   _sync_highlight_state(state, nil, false)
-  runtime.scene_pick_listener_token = host_runtime.register_target_pick_listener(function(payload)
+  runtime.scene_pick_listener_token = host_runtime_ports.register_target_pick_listener(function(payload)
     local option_id = payload and (payload.option_id or payload.tile_index) or nil
     local actor_role_id = payload and payload.actor_role_id or nil
     target_choice_effects.on_scene_pick(state, option_id, actor_role_id, payload)

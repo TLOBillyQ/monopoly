@@ -1,5 +1,5 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local runtime_event_bridge = require("src.host.eggy.event_bridge")
+local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
 
 local camera_sync = {}
@@ -18,7 +18,7 @@ function camera_sync.follow_camera(player_id)
       and runtime_constants.eca_event.camera
       and runtime_constants.eca_event.camera.follow then
     local event_name = runtime_constants.eca_event.camera.follow
-    local emitted, emit_err = runtime_event_bridge.emit_custom_event(
+    local emitted, emit_err = host_runtime_ports.emit_custom_event(
       event_name,
       nil,
       { feature_key = "camera.follow" }
