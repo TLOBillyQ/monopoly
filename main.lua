@@ -1,1 +1,1 @@
-require "src.entry.init"
+require "src.entry"

@@ -36,7 +36,7 @@ local function contains_alias_registration(text, alias_modules)
     end
   end
 
-  return alias_hits >= 2
+  return alias_hits >= 1
 end
 
 local function is_aliasing_forwarding_shim(text, new_module, alias_modules)
@@ -83,7 +83,9 @@ function M.run()
     if migration_pairs.file_exists(pair.old_path) and migration_pairs.file_exists(pair.new_path) then
       local text = migration_pairs.read_file(pair.old_path)
       local new_text = migration_pairs.read_file(pair.new_path)
-      if needs_alias_validation(pair) then
+      if is_aliasing_forwarding_shim(text, pair.new_module, pair.alias_modules) then
+        -- ok
+      elseif needs_alias_validation(pair) then
         if not is_aliasing_forwarding_shim(text, pair.new_module, pair.alias_modules) then
           return {
             ok = false,

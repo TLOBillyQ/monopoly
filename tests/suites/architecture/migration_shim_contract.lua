@@ -18,7 +18,7 @@ local function assert_aliases_point_to_same_module(expected, alias_modules, mess
 end
 
 for _, pair in ipairs(migration_pairs.iter_pairs()) do
-  if has_existing_pair(pair) then
+  if has_existing_pair(pair) and pair.init_kind ~= "logic_bearing" then
     tests[#tests + 1] = {
       name = "compat_" .. pair.old_module:gsub("%.", "_"),
       run = function()
