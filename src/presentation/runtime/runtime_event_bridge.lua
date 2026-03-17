@@ -1,18 +1,9 @@
 local monopoly_event = require("src.core.events.monopoly_events")
-local modal_controller = require("src.ui.ctl.modal_controller")
-local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 local runtime_context = require("src.host.eggy.context")
-local choice_slice = require("src.ui.pres.choice_slice")
 local landing_visual_hold = require("src.ui.ctl.ports.landing_visual_hold_seam")
+local runtime_event_ports = require("src.ui.ctl.ports.runtime_event_ports")
 
 local M = {}
-
-local function _build_choice_view(state, current_game)
-  local choice, market = choice_slice.build_choice_and_market(current_game, {
-    game = current_game,
-  }, state.ui)
-  return choice, market
-end
 
 function M.install(state, get_current_game)
   assert(state ~= nil, "missing state")
@@ -36,31 +27,13 @@ function M.install(state, get_current_game)
 
   lua_api.global_register_custom_event(monopoly_event.land.tile_upgraded, function(_, _, data)
     _dispatch_or_defer(monopoly_event.land.tile_upgraded, data, function(payload)
-      if payload and payload.tile_id and state.on_board_visual_sync then
-        state:on_board_visual_sync({
-          tile_ids = { payload.tile_id },
-        })
-      end
+      runtime_event_ports.on_tile_upgraded(state, payload)
     end)
   end)
 
   lua_api.global_register_custom_event(monopoly_event.intent.need_choice, function(_, _, data)
     _dispatch_or_defer(monopoly_event.intent.need_choice, data, function(payload)
-      local choice = payload and payload.choice or nil
-      if not choice then
-        return
-      end
-      runtime_state.set_pending_choice(state, choice, {
-        choice_id = choice.id,
-        elapsed_seconds = 0,
-      })
-      runtime_state.set_ui_dirty(state, true)
-      local current_game = get_current_game()
-      assert(current_game ~= nil, "missing current_game")
-      local built_choice, built_market = _build_choice_view(state, current_game)
-      if built_choice then
-        modal_controller.open_choice_modal(state, built_choice, built_market)
-      end
+      runtime_event_ports.on_need_choice(state, get_current_game, payload)
     end)
   end)
 end

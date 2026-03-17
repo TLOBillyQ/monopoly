@@ -56,27 +56,27 @@ T2 ──┘        └── T5 ──┘
 - **location**: `src/ui/render/board.lua`, `src/ui/render/board/placement.lua`, `src/ui/render/market.lua`, `src/ui/render/market_controls.lua`, `src/ui/pres/choice_slice.lua`, `src/ui/stores/modal_state.lua`, `src/ui/ctl/modal_controller.lua`, `src/ui/ctl/market_controller.lua`, `src/ui/ctl/item_slots.lua`, `src/ui/input/*.lua`, `src/ui/ctl/choice_screens/helpers.lua`
 - **description**: Replace direct runtime-state and host-runtime reads/writes inside production presentation modules with the seams from T1/T2/T3. Keep gameplay behavior unchanged; this is an ownership cleanup, not a feature round.
 - **validation**: presentation suites under `tests/suites/presentation/` pass; grep confirms generic presentation modules no longer import runtime internals directly.
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: T1 rewired the listed render/controller/input modules onto `runtime_state_seam` and `landing_visual_hold_seam`, and the follow-up T4 cleanup finished the remaining host-runtime bypass in `src/ui/input/dispatch_view_command.lua` by routing role lookups through `host_runtime_ports`. `rg` now leaves only adapter files under `src/ui/ctl/ports/*`, and `lua tests/behavior.lua` passes.
+- **files edited/created**: `src/ui/render/board.lua`, `src/ui/render/board/placement.lua`, `src/ui/render/market.lua`, `src/ui/render/market_controls.lua`, `src/ui/pres/choice_slice.lua`, `src/ui/stores/modal_state.lua`, `src/ui/ctl/modal_controller.lua`, `src/ui/ctl/market_controller.lua`, `src/ui/ctl/item_slots.lua`, `src/ui/ctl/choice_screens/helpers.lua`, `src/ui/input/event_intents.lua`, `src/ui/input/canvas_route_market.lua`, `src/ui/input/canvas_route_item_slots.lua`, `src/ui/input/canvas_route_target_choice.lua`, `src/ui/input/canvas_route_remote_choice.lua`, `src/ui/input/dispatch_item_phase_ask.lua`, `src/ui/input/dispatch_pre_confirm.lua`, `src/ui/input/dispatch_view_command.lua`.
 
 ### T5: Migrate test fixtures and integration helpers onto the same seams
 - **depends_on**: [T3]
 - **location**: `tests/support/shared_support.lua`, `tests/support/gameplay_support.lua`, `tests/support/runtime_support.lua`, `tests/suites/runtime/startup_profile.lua`, `tests/suites/runtime/runtime_bootstrap.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `tests/suites/gameplay/gameplay_items_startup.lua`
 - **description**: Update helpers and integration suites that build `state.gameplay_loop_ports`, `state.presentation_runtime`, or startup/runtime fixtures so they use the same seams and allowlists as production code. This prevents helper drift from hiding or reintroducing coupling.
 - **validation**: helper-backed startup/gameplay/runtime suites stay green while using the new contracts.
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: Shared gameplay/runtime helpers now re-export `runtime_state_seam`, `landing_visual_hold_seam`, and `host_runtime_ports`, and `tests/suites/gameplay/gameplay_cases.lua` consumes those seam handles instead of the raw state-access modules. The helper-backed regression run stays green via `lua tests/behavior.lua`.
+- **files edited/created**: `tests/support/shared_support.lua`, `tests/support/gameplay_support.lua`, `tests/support/runtime_support.lua`, `tests/suites/gameplay/gameplay_cases.lua`.
 
 ### T6: Slim `src/presentation/runtime` down to orchestration only
 - **depends_on**: [T4, T5]
 - **location**: `src/presentation/runtime/gameplay_runtime_bootstrap.lua`, `src/presentation/runtime/runtime_event_bridge.lua`, `src/presentation/runtime/state_factory.lua`, `src/app/bootstrap/init.lua`, `src/turn/loop.lua`, `src/turn/loop/loop_runtime.lua`
 - **description**: After consumers and fixtures have stabilized on the new seams, move reusable logic out of the runtime bootstrap layer so these modules only wire `state`, `ports`, `deps`, and bridge callbacks together. Any durable UI/runtime behavior discovered here should move to `src/ui/ctl/ports/*` or `src/turn/*` seam modules.
 - **validation**: code review shows bootstrap modules are mostly assembly; startup/runtime/gameplay tests continue to pass; no new direct ownership of `ui.*` behavior is added here.
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: Extracted tick-wall-clock resolution into `src/turn/loop/tick_clock.lua`, moved runtime-event behavior into `src/ui/ctl/ports/runtime_event_ports.lua`, and moved state callback wiring into `src/ui/ctl/ports/state_callback_ports.lua`. The runtime bootstrap files now mostly assemble ports/deps and register callbacks; `lua tests/behavior.lua` and `lua tests/contract.lua` both pass afterward.
+- **files edited/created**: `src/turn/loop/tick_clock.lua`, `src/ui/ctl/ports/runtime_event_ports.lua`, `src/ui/ctl/ports/state_callback_ports.lua`, `src/presentation/runtime/gameplay_runtime_bootstrap.lua`, `src/presentation/runtime/runtime_event_bridge.lua`, `src/presentation/runtime/state_factory.lua`.
 
 ### T7: Lock the boundary in guards, arch config, and viewer alignment
 - **depends_on**: [T6]
