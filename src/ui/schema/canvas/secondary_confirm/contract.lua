@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.secondary_confirm.nodes")
+local nodes = require("src.ui.schema.secondary_confirm_nodes")
 
 return {
   key = "secondary_confirm",

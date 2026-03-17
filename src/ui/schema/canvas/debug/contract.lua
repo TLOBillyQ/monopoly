@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.debug.nodes")
+local nodes = require("src.ui.schema.debug_nodes")
 
 return {
   key = "debug",

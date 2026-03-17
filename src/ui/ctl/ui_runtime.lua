@@ -38,7 +38,7 @@ function service.refresh_turn_label(state_ctx, label_text)
     return
   end
   runtime.for_each_role_or_global(function()
-    ui:set_label(require("src.ui.schema.canvas.base.nodes").countdown, label_text)
+    ui:set_label(require("src.ui.schema.base_nodes").countdown, label_text)
   end)
   runtime.set_client_role(nil)
 end

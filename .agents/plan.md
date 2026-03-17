@@ -215,6 +215,9 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 
 - **status**: Not Completed
 - **log**:
+  - 已将一批当前干净文件切到 new-only schema ID：`src/ui/ctl/*`、`src/ui/render/*`、`src/ui/input/*`、`src/ui/wid/*` 与 `src/ui/schema/canvas/*/contract.lua` 不再引用 `src.ui.schema.canvas.*`，统一改读 `src.ui.schema.*_{nodes,contract}`。
+  - 这波刻意避开了工作树里已存在额外未提交改动的入口/测试文件，先提交可独立验证的子集；剩余 `src/entry/start_ui.lua`、若干 presentation/runtime 测试与 viewer/snapshot payload 仍待统一切换。
+  - 验证通过：`lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`。
 - **files edited/created**:
 
 ### T8：删除临时 shim 与本次迁移专用 pair

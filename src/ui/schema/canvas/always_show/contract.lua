@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.always_show.nodes")
+local nodes = require("src.ui.schema.always_show_nodes")
 
 return {
   key = "always_show",

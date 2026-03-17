@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.dice.nodes")
+local nodes = require("src.ui.schema.dice_nodes")
 
 return {
   key = "dice",

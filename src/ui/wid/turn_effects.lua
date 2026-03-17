@@ -1,4 +1,4 @@
-local base_nodes = require("src.ui.schema.canvas.base.nodes")
+local base_nodes = require("src.ui.schema.base_nodes")
 local role_id_utils = require("src.core.utils.role_id")
 
 local turn_effects = {}

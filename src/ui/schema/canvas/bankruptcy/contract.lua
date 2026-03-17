@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.bankruptcy.nodes")
+local nodes = require("src.ui.schema.bankruptcy_nodes")
 
 return {
   key = "bankruptcy",

@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.loading.nodes")
+local nodes = require("src.ui.schema.loading_nodes")
 
 return {
   key = "loading",

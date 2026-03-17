@@ -1,9 +1,9 @@
-local base_nodes = require("src.ui.schema.canvas.base.nodes")
-local popup_nodes = require("src.ui.schema.canvas.popup.nodes")
-local bankruptcy_nodes = require("src.ui.schema.canvas.bankruptcy.nodes")
-local always_show_nodes = require("src.ui.schema.canvas.always_show.nodes")
+local base_nodes = require("src.ui.schema.base_nodes")
+local popup_nodes = require("src.ui.schema.popup_nodes")
+local bankruptcy_nodes = require("src.ui.schema.bankruptcy_nodes")
+local always_show_nodes = require("src.ui.schema.always_show_nodes")
 local ui_nodes = require("src.ui.render.node_ops")
-local always_show_contract = require("src.ui.schema.canvas.always_show.contract")
+local always_show_contract = require("src.ui.schema.always_show_contract")
 local canvas_store = require("src.ui.stores.canvas_store")
 
 local M = {}

@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.remote_choice.nodes")
+local nodes = require("src.ui.schema.remote_choice_nodes")
 
 return {
   key = "remote_choice",

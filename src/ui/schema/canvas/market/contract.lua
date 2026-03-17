@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.market.nodes")
+local nodes = require("src.ui.schema.market_nodes")
 
 return {
   key = "market",

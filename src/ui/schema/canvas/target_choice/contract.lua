@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.canvas.target_choice.nodes")
+local nodes = require("src.ui.schema.target_choice_nodes")
 
 return {
   key = "target_choice",

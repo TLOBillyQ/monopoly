@@ -4,7 +4,7 @@ local logger = require("src.core.utils.logger")
 local registry = require("src.ui.render.anim_registry")
 local handlers = require("src.ui.render.anim_handlers")
 local board_feedback = require("src.ui.render.board_feedback_service")
-local dice_nodes = require("src.ui.schema.canvas.dice.nodes")
+local dice_nodes = require("src.ui.schema.dice_nodes")
 
 local action_anim = {}
 
