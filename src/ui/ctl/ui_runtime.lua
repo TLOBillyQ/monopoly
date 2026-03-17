@@ -1,4 +1,4 @@
-local panel_presenter = require("src.ui.widgets.panel_presenter")
+local panel_presenter = require("src.ui.wid.panel_presenter")
 local render_pipeline = require("src.ui.render.canvas_render_pipeline")
 local input_lock_policy = require("src.ui.input.input_lock_policy")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")

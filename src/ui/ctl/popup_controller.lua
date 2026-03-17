@@ -1,5 +1,5 @@
-local role_avatar = require("src.ui.presenters.role_avatar")
-local role_context = require("src.ui.presenters.role_context")
+local role_avatar = require("src.ui.pres.role_avatar")
+local role_context = require("src.ui.pres.role_context")
 local runtime = require("src.ui.render.runtime_ui")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local canvas = require("src.ui.ctl.canvas_coordinator")

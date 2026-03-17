@@ -13,7 +13,7 @@
 - [x] (2026-03-17) 已按原计划评论与二次 review 重排任务依赖、补齐缺失护栏和快照范围。
 - [x] (2026-03-17 19:49) T1 冻结单一 rename map，并给 13 个 `init.lua` 全部分型。
 - [x] (2026-03-17 20:07) T2 搭好双轨迁移基础设施、包别名兼容和批量脚本入口。
-- [ ] T3-T6 并行完成各自子树的“移文件 + 落 shim + 改内部引用”（已完成：T4/T5；进行中：T6；未完成：T3）。
+- [x] (2026-03-17 21:12) T3-T6 子树迁移全部收口，T6 清除了 `controllers -> ctl` 投影视图环并恢复 UI 行为回归。
 - [ ] T7 统一切换所有外部调用点、字符串消费者、护栏配置到 new-only。
 - [ ] T8 删除临时 shim 与本次迁移专用 pair。
 - [ ] T9 刷新快照并做最终全量验收。
@@ -186,11 +186,12 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 - **location**: `src/ui/controllers/**`、`src/ui/presenters/**`、`src/ui/render/**`、`src/ui/widgets/**`
 - **description**: 完成 `controllers -> ctl`、`presenters -> pres`、`widgets -> wid`，并迁移 `ui.render.board`、`ui.render.status3d`、`ui.render.support` 等区域；只改这些子树内部引用，不动外部调用点。对运行时和测试直接访问的 cache key 做双注册，至少覆盖 `src.ui.controllers.ui_events`、`src.ui.render.runtime_ui`、`src.ui.stores.modal_state`、`src.host.eggy` 等真实热点。
  - **validation**: UI 新路径与旧路径都可解析；`package.loaded` 热点键在 shim 期保持兼容；不再依赖 `init.lua` 作为唯一入口；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/behavior.lua` 通过。
- - **status**: Not Completed
- - **log**:
-   - 复制 controller/presenter/widget 逻辑到 `src/ui/ctl`/`src/ui/pres`/`src/ui/wid`，更新内部 `require("src.ui.controllers.*")` 等引用为新命名空间，旧路径只保留 shim 并借助 `package.loaded[...]` 兼容 `src.ui.controllers.ui_events` 等热点。
-   - 将 `src/ui/render/board/init.lua` 与 `src/ui/render/status3d/init.lua` 替换为 `src/ui/render/board.lua` / `src/ui/render/status3d.lua`，旧层级保留 shim 以维持向后兼容。
-   - 在修复 T3/T4 的 guard 问题后重新跑了 `lua tests/behavior.lua`，目前仍剩 17 个 UI 行为回归失败，集中在 `toggle_action_log`、`pre_confirm`、`event_handlers`、`market panel` 与若干 T6/T5 characterization 用例，说明这波迁移尚未满足行为验收。
+- **status**: Completed
+- **log**:
+  - 已完成 `src/ui/ctl`、`src/ui/pres`、`src/ui/wid`、`src/ui/render` 子树的内部引用收口：新命名空间内部不再回跳 `controllers/presenters/widgets` shim，避免 `arch_view` 在 `ui` 视图上聚合出 `controllers -> ctl` 投影环。
+  - 保留旧 `src/ui/controllers/**`、`src/ui/presenters/**`、`src/ui/widgets/**` 与 `src/ui/render/{board,status3d}/init.lua` 兼容 shim，同时继续双注册热点 `package.loaded` 键，维持旧调用面可解析。
+  - 为兼容现有 UI sync 测试夹具，`ui_model_sync` 仍通过 `src.ui.presenters` 入口取 presenter 聚合模块；其余 T6 内部实现统一切到 `src.ui.pres/*`、`src.ui.wid/*`。
+  - 验证通过：`lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua`。
  - **files edited/created**:
    - `src/ui/ctl/**`
    - `src/ui/pres/**`

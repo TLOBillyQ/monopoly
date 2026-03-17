@@ -1,6 +1,6 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local gameplay_read_port = require("src.ui.presenters.gameplay_read_port")
+local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local logger = require("src.core.utils.logger")

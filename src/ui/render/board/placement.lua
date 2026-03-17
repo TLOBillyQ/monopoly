@@ -1,4 +1,4 @@
-local gameplay_read_port = require("src.ui.presenters.gameplay_read_port")
+local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local runtime_state = require("src.state.state_access.runtime_state")
 local runtime_ports = require("src.core.ports.runtime_ports")

@@ -1,1 +1,1 @@
-return require("src.ui.presenters.player_colors")
+return require("src.ui.pres.player_colors")

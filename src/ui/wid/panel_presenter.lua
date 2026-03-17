@@ -1,4 +1,4 @@
-local role_context = require("src.ui.presenters.role_context")
+local role_context = require("src.ui.pres.role_context")
 local base_nodes = require("src.ui.schema.canvas.base.nodes")
 local always_show_nodes = require("src.ui.schema.canvas.always_show.nodes")
 local role_id_utils = require("src.core.utils.role_id")

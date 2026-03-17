@@ -1,4 +1,4 @@
-local player_colors = require("src.ui.presenters.player_colors")
+local player_colors = require("src.ui.pres.player_colors")
 local base_nodes = require("src.ui.schema.canvas.base.nodes")
 local number_utils = require("src.core.utils.number_utils")
 
