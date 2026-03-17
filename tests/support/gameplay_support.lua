@@ -34,4 +34,6 @@ return pick(shared, {
   "first_land_tile",
   "first_tile_by_type",
   "tile_state",
+  "runtime_state",
+  "landing_visual_hold",
 })

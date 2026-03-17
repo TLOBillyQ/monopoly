@@ -28,4 +28,6 @@ return pick(shared, {
   "new_game",
   "first_adjacent_land_pair",
   "tile_state",
+  "runtime_state",
+  "landing_visual_hold",
 })
