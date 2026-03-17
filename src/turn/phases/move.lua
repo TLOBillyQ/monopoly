@@ -2,18 +2,21 @@ local movement = require("src.rules.movement")
 local vehicle_feature = require("src.rules.vehicle")
 local move_followup = require("src.turn.phases.move_followup")
 
-local function _build_move_args(player, raw_total, extra)
-  local out = {
-    player = player,
-    raw_total = raw_total,
-  }
-  if not extra then
+local function _merge_move_args(out, extra)
+  if extra == nil then
     return out
   end
   for key, value in pairs(extra) do
     out[key] = value
   end
   return out
+end
+
+local function _build_move_args(player, raw_total, extra)
+  return _merge_move_args({
+    player = player,
+    raw_total = raw_total,
+  }, extra)
 end
 
 local function _apply_dice_multiplier(game, player, total, raw_total)
@@ -53,20 +56,33 @@ local function _resolve_move_total(args, raw_total)
   return raw_total
 end
 
-local function _build_move_anim_data(game, player, start_index, move_result)
-  local seq = (game.turn.move_anim_seq or 0) + 1
-  game.turn.move_anim_seq = seq
+local function _next_move_anim_seq(turn)
+  local seq = (turn.move_anim_seq or 0) + 1
+  turn.move_anim_seq = seq
+  return seq
+end
+
+local function _build_move_anim_flags(move_result)
   return {
-    seq = seq,
+    stopped_on_roadblock = move_result.stopped_on_roadblock == true,
+    market_interrupt = move_result.market_interrupt == true,
+    steal_interrupt = move_result.steal_interrupt == true,
+  }
+end
+
+local function _build_move_anim_data(game, player, start_index, move_result)
+  local flags = _build_move_anim_flags(move_result)
+  return {
+    seq = _next_move_anim_seq(game.turn),
     player_id = player.id,
     from_index = start_index,
     to_index = player.position,
     visited = move_result.visited,
     steps = move_result.steps,
     vehicle_id = vehicle_feature.resolve_seat_id(player.seat_id),
-    stopped_on_roadblock = move_result.stopped_on_roadblock == true,
-    market_interrupt = move_result.market_interrupt and true or false,
-    steal_interrupt = move_result.steal_interrupt and true or false,
+    stopped_on_roadblock = flags.stopped_on_roadblock,
+    market_interrupt = flags.market_interrupt,
+    steal_interrupt = flags.steal_interrupt,
   }
 end
 

@@ -700,6 +700,286 @@ local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
   assert(captured and captured.option_id == 3001, "should read actor role slot mapping")
 end
 
+local function _build_market_nav_dispatch_env()
+  local game = _new_game()
+  local state = {
+    pending_choice = nil,
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+  }
+  local calls = {
+    sync_pending_choice = 0,
+    invalidate_ui = 0,
+  }
+  state._resolved_gameplay_loop_ports = {
+    output = {
+      get_pending_choice = function(current_state)
+        return current_state.pending_choice
+      end,
+      sync_pending_choice = function(_, choice)
+        calls.sync_pending_choice = calls.sync_pending_choice + 1
+        calls.synced_choice = choice
+      end,
+      invalidate_ui = function()
+        calls.invalidate_ui = calls.invalidate_ui + 1
+      end,
+      clear_pending_choice = function() end,
+    },
+    ui_sync = {
+      get_ui_state = function(current_state)
+        return current_state and current_state.ui or nil
+      end,
+      resolve_ui_gate = function()
+        return {
+          input_blocked = false,
+          choice_active = false,
+          market_active = false,
+          popup_active = false,
+        }
+      end,
+    },
+  }
+  return game, state, calls
+end
+
+local function _with_reloaded_turn_dispatch(overrides, fn)
+  local original_dispatch = package.loaded["src.turn.actions.action_dispatcher"]
+  local originals = {}
+  for module_name, module_value in pairs(overrides or {}) do
+    originals[module_name] = package.loaded[module_name]
+    package.loaded[module_name] = module_value
+  end
+  package.loaded["src.turn.actions.action_dispatcher"] = nil
+  local ok, result = pcall(function()
+    return fn(require("src.turn.actions.action_dispatcher"))
+  end)
+  package.loaded["src.turn.actions.action_dispatcher"] = original_dispatch
+  for module_name, _ in pairs(overrides or {}) do
+    package.loaded[module_name] = originals[module_name]
+  end
+  if not ok then
+    error(result)
+  end
+  return result
+end
+
+local function _test_turn_dispatch_market_navigation_prefers_turn_pending_choice()
+  local g, state, calls = _build_market_nav_dispatch_env()
+  local turn_choice = {
+    id = 101,
+    kind = "market_buy",
+    owner_role_id = 1,
+  }
+  state.pending_choice = {
+    id = 202,
+    kind = "market_buy",
+    owner_role_id = 1,
+  }
+  g.turn.pending_choice = turn_choice
+
+  local validated_choice = nil
+  local applied_choice = nil
+  local base_validator = require("src.turn.actions.validator")
+  local validator_stub = {}
+  for key, value in pairs(base_validator) do
+    validator_stub[key] = value
+  end
+  validator_stub.validate_choice_action = function(_, _, choice)
+    validated_choice = choice
+    return true
+  end
+  _with_reloaded_turn_dispatch({
+    ["src.turn.actions.validator"] = validator_stub,
+    ["src.rules.market"] = {
+      choice = {
+        apply_navigation = function(_, choice, action)
+          applied_choice = choice
+          _assert_eq(action.type, "market_page_next", "should pass navigation action through")
+          return true
+        end,
+      },
+    },
+  }, function(dispatch_module)
+    local res = dispatch_module.dispatch_action(g, state, {
+      type = "market_page_next",
+      actor_role_id = 1,
+      choice_id = turn_choice.id,
+    }, {})
+    _assert_eq(res and res.status, "applied", "market navigation should apply")
+  end)
+
+  _assert_eq(validated_choice, turn_choice, "turn pending choice should take precedence")
+  _assert_eq(applied_choice, turn_choice, "navigation should apply to turn pending choice")
+  _assert_eq(calls.sync_pending_choice, 1, "successful navigation should sync pending choice once")
+  _assert_eq(calls.synced_choice, turn_choice, "synced choice should be turn pending choice")
+  _assert_eq(calls.invalidate_ui, 1, "market navigation should invalidate ui once")
+end
+
+local function _test_turn_dispatch_market_navigation_falls_back_to_state_choice()
+  local g, state, calls = _build_market_nav_dispatch_env()
+  local state_choice = {
+    id = 303,
+    kind = "market_buy",
+    owner_role_id = 1,
+  }
+  state.pending_choice = state_choice
+
+  local validated_choice = nil
+  local base_validator = require("src.turn.actions.validator")
+  local validator_stub = {}
+  for key, value in pairs(base_validator) do
+    validator_stub[key] = value
+  end
+  validator_stub.validate_choice_action = function(_, _, choice)
+    validated_choice = choice
+    return true
+  end
+  _with_reloaded_turn_dispatch({
+    ["src.turn.actions.validator"] = validator_stub,
+    ["src.rules.market"] = {
+      choice = {
+        apply_navigation = function()
+          return true
+        end,
+      },
+    },
+  }, function(dispatch_module)
+    local res = dispatch_module.dispatch_action(g, state, {
+      type = "market_tab_select",
+      actor_role_id = 1,
+      choice_id = state_choice.id,
+      tab = "items",
+    }, {})
+    _assert_eq(res and res.status, "applied", "state fallback choice should still apply")
+  end)
+
+  _assert_eq(validated_choice, state_choice, "state pending choice should be used when turn choice is absent")
+  _assert_eq(calls.synced_choice, state_choice, "synced choice should match state pending choice")
+end
+
+local function _test_turn_dispatch_market_navigation_rejects_non_market_choice()
+  local g, state, calls = _build_market_nav_dispatch_env()
+  state.pending_choice = {
+    id = 404,
+    kind = "item_phase_choice",
+    owner_role_id = 1,
+  }
+
+  local validate_calls = 0
+  local apply_calls = 0
+  local base_validator = require("src.turn.actions.validator")
+  local validator_stub = {}
+  for key, value in pairs(base_validator) do
+    validator_stub[key] = value
+  end
+  validator_stub.validate_choice_action = function()
+    validate_calls = validate_calls + 1
+    return true
+  end
+  _with_reloaded_turn_dispatch({
+    ["src.turn.actions.validator"] = validator_stub,
+    ["src.rules.market"] = {
+      choice = {
+        apply_navigation = function()
+          apply_calls = apply_calls + 1
+          return true
+        end,
+      },
+    },
+  }, function(dispatch_module)
+    local res = dispatch_module.dispatch_action(g, state, {
+      type = "market_page_prev",
+      actor_role_id = 1,
+      choice_id = 404,
+    }, {})
+    _assert_eq(res and res.status, "rejected", "non-market choice should reject navigation")
+  end)
+
+  _assert_eq(validate_calls, 0, "non-market choice should reject before choice validation")
+  _assert_eq(apply_calls, 0, "non-market choice should reject before navigation apply")
+  _assert_eq(calls.sync_pending_choice, 0, "rejected navigation should not sync pending choice")
+end
+
+local function _test_turn_dispatch_market_navigation_rejects_when_validator_fails()
+  local g, state, calls = _build_market_nav_dispatch_env()
+  state.pending_choice = {
+    id = 505,
+    kind = "market_buy",
+    owner_role_id = 1,
+  }
+
+  local apply_calls = 0
+  local base_validator = require("src.turn.actions.validator")
+  local validator_stub = {}
+  for key, value in pairs(base_validator) do
+    validator_stub[key] = value
+  end
+  validator_stub.validate_choice_action = function()
+    return false
+  end
+  _with_reloaded_turn_dispatch({
+    ["src.turn.actions.validator"] = validator_stub,
+    ["src.rules.market"] = {
+      choice = {
+        apply_navigation = function()
+          apply_calls = apply_calls + 1
+          return true
+        end,
+      },
+    },
+  }, function(dispatch_module)
+    local res = dispatch_module.dispatch_action(g, state, {
+      type = "market_page_next",
+      actor_role_id = 1,
+      choice_id = 505,
+    }, {})
+    _assert_eq(res and res.status, "rejected", "validator failure should reject navigation")
+  end)
+
+  _assert_eq(apply_calls, 0, "validator failure should stop before apply_navigation")
+  _assert_eq(calls.sync_pending_choice, 0, "validator failure should not sync pending choice")
+end
+
+local function _test_turn_dispatch_market_navigation_rejects_when_apply_fails()
+  local g, state, calls = _build_market_nav_dispatch_env()
+  state.pending_choice = {
+    id = 606,
+    kind = "market_buy",
+    owner_role_id = 1,
+  }
+
+  local base_validator = require("src.turn.actions.validator")
+  local validator_stub = {}
+  for key, value in pairs(base_validator) do
+    validator_stub[key] = value
+  end
+  validator_stub.validate_choice_action = function()
+    return true
+  end
+  _with_reloaded_turn_dispatch({
+    ["src.turn.actions.validator"] = validator_stub,
+    ["src.rules.market"] = {
+      choice = {
+        apply_navigation = function()
+          return false
+        end,
+      },
+    },
+  }, function(dispatch_module)
+    local res = dispatch_module.dispatch_action(g, state, {
+      type = "market_page_next",
+      actor_role_id = 1,
+      choice_id = 606,
+    }, {})
+    _assert_eq(res and res.status, "rejected", "apply_navigation failure should reject navigation")
+  end)
+
+  _assert_eq(calls.sync_pending_choice, 0, "failed apply_navigation should not sync pending choice")
+end
+
 local function _test_ui_intent_dispatcher_market_confirm_routes_choice_select()
   local captured = nil
   local state = {
@@ -920,6 +1200,26 @@ return {
     { name = "_test_turn_dispatch_rejects_choice_non_owner", run = _test_turn_dispatch_rejects_choice_non_owner },
     { name = "_test_turn_dispatch_auto_rejects_unmapped_role", run = _test_turn_dispatch_auto_rejects_unmapped_role },
     { name = "_test_turn_dispatch_item_slot_uses_actor_slot_map", run = _test_turn_dispatch_item_slot_uses_actor_slot_map },
+    {
+      name = "_test_turn_dispatch_market_navigation_prefers_turn_pending_choice",
+      run = _test_turn_dispatch_market_navigation_prefers_turn_pending_choice,
+    },
+    {
+      name = "_test_turn_dispatch_market_navigation_falls_back_to_state_choice",
+      run = _test_turn_dispatch_market_navigation_falls_back_to_state_choice,
+    },
+    {
+      name = "_test_turn_dispatch_market_navigation_rejects_non_market_choice",
+      run = _test_turn_dispatch_market_navigation_rejects_non_market_choice,
+    },
+    {
+      name = "_test_turn_dispatch_market_navigation_rejects_when_validator_fails",
+      run = _test_turn_dispatch_market_navigation_rejects_when_validator_fails,
+    },
+    {
+      name = "_test_turn_dispatch_market_navigation_rejects_when_apply_fails",
+      run = _test_turn_dispatch_market_navigation_rejects_when_apply_fails,
+    },
     { name = "_test_ui_intent_dispatcher_market_confirm_routes_choice_select", run = _test_ui_intent_dispatcher_market_confirm_routes_choice_select },
     { name = "_test_ui_model_update_refreshes_targeted_slices_only", run = _test_ui_model_update_refreshes_targeted_slices_only },
     { name = "_test_ui_model_update_refreshes_inventory_owned_slots", run = _test_ui_model_update_refreshes_inventory_owned_slots },

@@ -153,18 +153,19 @@ local function _build_goods_mappings(game)
       local goods_id = goods and goods.goods_id or nil
       if goods_id ~= nil and goods_id ~= "" then
         _record_goods_mapping(rt, entry, market_name, goods_id, duplicate_name)
-      else
-        _warn_mapping_missing_once(rt, entry, _resolve_missing_mapping_reason(goods_list))
       end
     end
   end
 end
 
-local function _resolve_goods_id(game, entry)
+local function _resolve_goods_id(game, entry, opts)
+  opts = opts or {}
   local rt = _runtime(game)
   local goods_id = rt.goods_id_by_product_id[entry.product_id]
   if goods_id == nil or goods_id == "" then
-    _warn_mapping_missing_once(rt, entry, "name_mapping_not_found")
+    if opts.warn_missing == true then
+      _warn_mapping_missing_once(rt, entry, _resolve_missing_mapping_reason(_load_goods_list()))
+    end
     return nil, "goods_mapping_missing"
   end
   return goods_id, nil
@@ -289,14 +290,17 @@ function gateway.can_start(game, player, entry)
 end
 
 function gateway.start(game, player, entry)
-  local ok_ready, goods_or_reason = gateway.can_start(game, player, entry)
-  if not ok_ready then
-    return false, goods_or_reason
+  gateway.setup_for_game(game)
+  local goods_id, goods_reason = _resolve_goods_id(game, entry, { warn_missing = true })
+  if goods_id == nil then
+    return false, goods_reason or "goods_mapping_missing"
   end
-  local goods_id = goods_or_reason
   local role = _resolve_role(player)
   if not role then
     return false, "role_unresolved"
+  end
+  if type(role.show_goods_purchase_panel) ~= "function" then
+    return false, "purchase_api_missing"
   end
   local ok_call = pcall(role.show_goods_purchase_panel, goods_id, panel_show_seconds)
   if not ok_call then

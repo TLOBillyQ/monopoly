@@ -1026,6 +1026,49 @@ local function _test_eggy_paid_gateway_callback_success_without_on_purchase()
   -- No error means success - on_purchase is optional
 end
 
+local function _test_eggy_paid_gateway_start_missing_purchase_api()
+  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local game = {
+    players = {
+      { id = 1 },
+    },
+  }
+  local entry = {
+    product_id = 2009,
+    name = "强征卡",
+    currency = "金豆",
+    market_enabled = true,
+  }
+
+  with_patches({
+    {
+      key = "GameAPI",
+      value = {
+        get_goods_list = function()
+          return {
+            { name = "强征卡", goods_id = "goods_strong_card" },
+          }
+        end,
+      },
+    },
+    {
+      target = require("src.core.ports.runtime_ports"),
+      key = "resolve_role",
+      value = function()
+        return {
+          get_roleid = function()
+            return 1
+          end,
+        }
+      end,
+    },
+  }, function()
+    local ok, reason = gateway.start(game, game.players[1], entry)
+    _assert_eq(ok, false, "start should reject when purchase api is missing")
+    _assert_eq(reason, "purchase_api_missing", "start should return explicit missing api reason")
+  end)
+end
+
 return {
   name = "misc",
   tests = {
@@ -1066,5 +1109,6 @@ return {
     { name = "eggy_paid_gateway_callback_missing_entry", run = _test_eggy_paid_gateway_callback_missing_entry },
     { name = "eggy_paid_gateway_callback_success_with_on_purchase", run = _test_eggy_paid_gateway_callback_success_with_on_purchase },
     { name = "eggy_paid_gateway_callback_success_without_on_purchase", run = _test_eggy_paid_gateway_callback_success_without_on_purchase },
+    { name = "eggy_paid_gateway_start_missing_purchase_api", run = _test_eggy_paid_gateway_start_missing_purchase_api },
   },
 }

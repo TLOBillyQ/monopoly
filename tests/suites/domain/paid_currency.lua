@@ -206,6 +206,39 @@ local function _test_market_paid_purchase_requires_goods_mapping()
   assert(joined:find("market paid goods mapping missing:", 1, true) ~= nil, "should log missing paid goods mapping")
 end
 
+local function _test_market_paid_purchase_warns_missing_mapping_only_once_per_product()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game, {
+    goods_list = {
+      { name = "不存在的商品", goods_id = "goods_unknown" },
+    },
+  })
+
+  local warns = _collect_warn_logs(function()
+    _with_currency_cfg({
+      ["金豆"] = { source = "external" },
+      ["乐园币"] = { source = "external" },
+    }, function()
+      _with_patches(env.patch_list, function()
+        local market = _reload_market()
+        local first = market.purchase.execute(game, p, 2009, nil)
+        local second = market.purchase.execute(game, p, 2009, nil)
+        assert(type(first) == "table" and first.ok == false, "first missing mapping should reject paid purchase")
+        assert(type(second) == "table" and second.ok == false, "second missing mapping should still reject paid purchase")
+      end)
+    end)
+  end)
+
+  local warn_count = 0
+  for _, warn in ipairs(warns) do
+    if warn:find("market paid goods mapping missing:", 1, true) ~= nil then
+      warn_count = warn_count + 1
+    end
+  end
+  assert(warn_count == 1, "missing mapping should only warn once per product_id")
+end
+
 local function _test_hidden_paid_entries_do_not_log_mapping_missing()
   local game = _new_game()
   local p = game.players[1]
@@ -235,6 +268,26 @@ local function _test_hidden_paid_entries_do_not_log_mapping_missing()
     assert(joined:find("product_id=" .. tostring(product_id), 1, true) == nil,
       "hidden paid entry should not emit missing mapping warning: " .. tostring(product_id))
   end
+end
+
+local function _test_paid_purchase_without_purchase_api_returns_explicit_reason()
+  local game = _new_game()
+  local p = game.players[1]
+  local env = _build_fake_env(game)
+  env.role_by_player_id[p.id].show_goods_purchase_panel = nil
+
+  _with_currency_cfg({
+    ["金豆"] = { source = "external" },
+    ["乐园币"] = { source = "external" },
+  }, function()
+    _with_patches(env.patch_list, function()
+      local market = _reload_market()
+      local result = market.purchase.execute(game, p, 2009, nil)
+      assert(type(result) == "table" and result.ok == false, "missing purchase api should reject paid purchase")
+      assert(result.reason == "purchase_api_missing", "missing purchase api reason should stay explicit")
+      assert(#env.panel_calls == 0, "missing purchase api should not open purchase panel")
+    end)
+  end)
 end
 
 local function _test_hidden_paid_product_is_rejected_before_mapping()
@@ -311,7 +364,15 @@ return {
       run = _test_external_paid_currency_still_starts_goods_purchase_panel,
     },
     { name = "market_paid_purchase_requires_goods_mapping", run = _test_market_paid_purchase_requires_goods_mapping },
+    {
+      name = "market_paid_purchase_warns_missing_mapping_only_once_per_product",
+      run = _test_market_paid_purchase_warns_missing_mapping_only_once_per_product,
+    },
     { name = "hidden_paid_entries_do_not_log_mapping_missing", run = _test_hidden_paid_entries_do_not_log_mapping_missing },
+    {
+      name = "paid_purchase_without_purchase_api_returns_explicit_reason",
+      run = _test_paid_purchase_without_purchase_api_returns_explicit_reason,
+    },
     { name = "hidden_paid_product_is_rejected_before_mapping", run = _test_hidden_paid_product_is_rejected_before_mapping },
     { name = "paid_purchase_callback_fulfills_item", run = _test_paid_purchase_callback_fulfills_item },
   },

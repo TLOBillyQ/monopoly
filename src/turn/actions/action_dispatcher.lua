@@ -204,26 +204,43 @@ local function _handle_choice_action(game, state, action, opts, ctx)
   return { status = "applied" }
 end
 
+local function _resolve_turn_pending_choice(game)
+  local turn = game and game.turn or nil
+  if not turn then
+    return nil
+  end
+  return turn.pending_choice
+end
+
 local function _resolve_market_choice(game, state, ctx)
-  local turn_choice = game and game.turn and game.turn.pending_choice or nil
-  return turn_choice or ctx.output_ports.get_pending_choice(state)
+  local turn_choice = _resolve_turn_pending_choice(game)
+  if turn_choice ~= nil then
+    return turn_choice
+  end
+  return ctx.output_ports.get_pending_choice(state)
+end
+
+local function _resolve_market_navigation_failure(game, state, action, ctx, choice)
+  if not choice or choice.kind ~= "market_buy" then
+    return "[MarketDebug] dispatch_market_nav rejected: pending_choice missing or kind not market_buy"
+  end
+  if not validator.validate_choice_action(game, action, choice) then
+    return "[MarketDebug] dispatch_market_nav rejected: validate_choice_action failed"
+  end
+  if not market_service.choice.apply_navigation(game, choice, action) then
+    return "[MarketDebug] dispatch_market_nav rejected: apply_navigation failed"
+  end
+  ctx.output_ports.sync_pending_choice(state, choice)
+  return nil
 end
 
 local function _handle_market_navigation(game, state, action, ctx)
   local choice = _resolve_market_choice(game, state, ctx)
-  if not choice or choice.kind ~= "market_buy" then
-    logger.warn("[MarketDebug] dispatch_market_nav rejected: pending_choice missing or kind not market_buy")
+  local failure = _resolve_market_navigation_failure(game, state, action, ctx, choice)
+  if failure ~= nil then
+    logger.warn(failure)
     return { status = "rejected" }
   end
-  if not validator.validate_choice_action(game, action, choice) then
-    logger.warn("[MarketDebug] dispatch_market_nav rejected: validate_choice_action failed")
-    return { status = "rejected" }
-  end
-  if not market_service.choice.apply_navigation(game, choice, action) then
-    logger.warn("[MarketDebug] dispatch_market_nav rejected: apply_navigation failed")
-    return { status = "rejected" }
-  end
-  ctx.output_ports.sync_pending_choice(state, choice)
   return { status = "applied" }
 end
 

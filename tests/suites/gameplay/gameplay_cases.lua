@@ -4191,6 +4191,127 @@ _t2_case_groups.apply_dice_multiplier_tests = {
   end,
 }
 
+local function _test_move_phase_wait_move_anim_records_anim_data_and_resume_args()
+  local player = {
+    id = 7,
+    seat_id = 3,
+    position = 5,
+    status = {},
+  }
+  local move_result = {
+    visited = { 2, 3, 4, 5 },
+    steps = { "a", "b" },
+    stopped_on_roadblock = true,
+    market_interrupt = true,
+    steal_interrupt = false,
+  }
+  local turn_mgr = {
+    game = {
+      turn = { move_anim_seq = 0 },
+      dirty = {},
+      players = { player },
+      anim_gate_port = { wait_move_anim = true },
+    },
+  }
+
+  local result, args = _with_reloaded_move_module({
+    move = function()
+      player.position = 9
+      return move_result
+    end,
+  }, {
+    run = function()
+      error("wait_move_anim path should not call move_followup.run")
+    end,
+  }, function(move_module)
+    return move_module(turn_mgr, {
+      player = player,
+      total = 4,
+      raw_total = 4,
+    })
+  end)
+
+  assert(result == "wait_move_anim", "move phase should wait for move animation")
+  assert(args.next_state == "move_followup", "wait_move_anim should resume move_followup")
+  assert(args.next_args.mode == "resume_turn_move", "resume args should keep resume_turn_move mode")
+  assert(args.next_args.player == player, "resume args should preserve player")
+  assert(args.next_args.raw_total == 4, "resume args should preserve raw_total")
+  assert(args.next_args.move_result == move_result, "resume args should preserve move_result")
+
+  local anim_data = turn_mgr.game.turn.move_anim
+  assert(anim_data ~= nil, "move animation data should be queued")
+  assert(anim_data.seq == 1, "move animation seq should increment from current sequence")
+  assert(anim_data.player_id == 7, "move animation should preserve player id")
+  assert(anim_data.from_index == 5, "move animation should preserve start index")
+  assert(anim_data.to_index == 9, "move animation should use moved player position")
+  assert(anim_data.visited == move_result.visited, "move animation should preserve visited path")
+  assert(anim_data.steps == move_result.steps, "move animation should preserve steps")
+  assert(anim_data.vehicle_id == require("src.rules.vehicle").resolve_seat_id(3),
+    "move animation should resolve vehicle_id from seat_id")
+  assert(anim_data.stopped_on_roadblock == true, "move animation should preserve roadblock flag")
+  assert(anim_data.market_interrupt == true, "move animation should preserve market interrupt flag")
+  assert(anim_data.steal_interrupt == false, "move animation should preserve steal interrupt flag")
+  assert(turn_mgr.game.dirty.turn == true and turn_mgr.game.dirty.any == true, "queueing anim should mark game dirty")
+end
+
+local function _test_move_phase_continue_interrupt_passes_direction_and_branch_parity()
+  local player = {
+    id = 8,
+    seat_id = 1,
+    position = 12,
+    status = {},
+  }
+  local captured_total = nil
+  local captured_opts = nil
+  local captured_followup_args = nil
+  local move_result = {
+    visited = { 12, 13 },
+    steps = { "move" },
+  }
+  local turn_mgr = {
+    game = {
+      turn = { move_anim_seq = 0 },
+      dirty = {},
+      players = { player },
+      anim_gate_port = { wait_move_anim = false },
+    },
+  }
+
+  local result = _with_reloaded_move_module({
+    move = function(_, _, total, opts)
+      captured_total = total
+      captured_opts = opts
+      return move_result
+    end,
+  }, {
+    run = function(_, args)
+      captured_followup_args = args
+      return "followup_ok"
+    end,
+  }, function(move_module)
+    return move_module(turn_mgr, {
+      player = player,
+      total = 99,
+      raw_total = 6,
+      continue_from_market = true,
+      remaining_steps = 2,
+      facing = "left",
+      branch_parity = 11,
+      entered_inner = true,
+    })
+  end)
+
+  assert(result == "followup_ok", "continue-from-market path should finish through move_followup")
+  assert(captured_total == 2, "move phase should use remaining_steps when resuming from interrupt")
+  assert(captured_opts.direction == "left", "move opts should preserve interrupt facing")
+  assert(captured_opts.branch_parity == 11, "move opts should preserve branch parity")
+  assert(captured_opts.entered_inner == true, "move opts should preserve entered_inner")
+  assert(captured_followup_args.mode == "resume_turn_move", "followup should use resume_turn_move mode")
+  assert(captured_followup_args.player == player, "followup should preserve player")
+  assert(captured_followup_args.raw_total == 11, "followup should pass branch_parity as raw_total")
+  assert(captured_followup_args.move_result == move_result, "followup should preserve move_result")
+end
+
 _t2_case_groups.roll_dice_extended_tests = {
   function()
     local results, total = roll._roll_dice(2, nil, { next_int = function() return 5 end })
@@ -4563,6 +4684,10 @@ return {
   _test_apply_dice_multiplier_applies_and_resets = _t2_case_groups.apply_dice_multiplier_tests[1],
   _test_apply_dice_multiplier_skips_when_total_changed = _t2_case_groups.apply_dice_multiplier_tests[2],
   _test_apply_dice_multiplier_skips_when_raw_total_nil = _t2_case_groups.apply_dice_multiplier_tests[3],
+  _test_move_phase_wait_move_anim_records_anim_data_and_resume_args =
+    _test_move_phase_wait_move_anim_records_anim_data_and_resume_args,
+  _test_move_phase_continue_interrupt_passes_direction_and_branch_parity =
+    _test_move_phase_continue_interrupt_passes_direction_and_branch_parity,
   _test_resolve_phase_wait_result_with_wait_action_anim = function()
     local player = { id = 1, name = "P1" }
     local phase_res = { next_state = "move", next_args = { player = player, total = 10 }, wait_action_anim = true }

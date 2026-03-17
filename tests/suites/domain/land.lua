@@ -157,6 +157,22 @@ local function _test_land_rent_graph_adjacency_breaks_path_neighbors()
   _assert_eq(before - tenant.cash, expected, "graph adjacency rent excludes non-neighbors")
 end
 
+local function _test_total_invested_returns_purchase_price_for_negative_level()
+  local tile = {
+    price = 400,
+    upgrade_costs = { 50, 75, 100 },
+  }
+  _assert_eq(pricing.total_invested(tile, -3), 400, "negative level should keep purchase price only")
+end
+
+local function _test_total_invested_caps_and_skips_sparse_upgrade_costs()
+  local tile = {
+    price = 200,
+    upgrade_costs = { 10, nil, 40 },
+  }
+  _assert_eq(pricing.total_invested(tile, 9), 210, "total invested should cap by contiguous upgrade cost entries")
+end
+
 local function _test_rent_owner_missing_skips_payment()
   local land = require("src.rules.land.executors")
   local g = _new_game()
@@ -429,6 +445,8 @@ return {
     { name = "ai_picks_land_purchase", run = _test_ai_picks_land_purchase },
     { name = "land_rent_contiguous_sum", run = _test_land_rent_contiguous_sum },
     { name = "land_rent_graph_adjacency_breaks_path_neighbors", run = _test_land_rent_graph_adjacency_breaks_path_neighbors },
+    { name = "total_invested_returns_purchase_price_for_negative_level", run = _test_total_invested_returns_purchase_price_for_negative_level },
+    { name = "total_invested_caps_and_skips_sparse_upgrade_costs", run = _test_total_invested_caps_and_skips_sparse_upgrade_costs },
     { name = "rent_owner_missing_skips_payment", run = _test_rent_owner_missing_skips_payment },
     { name = "tax_only_bankrupts_when_balance_depleted", run = _test_tax_only_bankrupts_when_balance_depleted },
     {

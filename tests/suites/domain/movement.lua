@@ -556,6 +556,28 @@ local function _test_flatten_by_distance_handles_max_dist_greater_than_entries()
   _assert_eq(#result, 1, "should return only existing entries even when max_dist is larger")
 end
 
+local function _test_default_map_reload_builds_bidirectional_neighbors()
+  local original = package.loaded["src.config.content.maps.default_map"]
+  package.loaded["src.config.content.maps.default_map"] = nil
+  local reloaded = require("src.config.content.maps.default_map")
+  package.loaded["src.config.content.maps.default_map"] = original or reloaded
+
+  local start_neighbors = reloaded.neighbors[reloaded.start_id]
+  assert(type(start_neighbors) == "table", "reloaded default map should expose neighbors for start tile")
+  _assert_eq(start_neighbors.left ~= nil or start_neighbors.up ~= nil or start_neighbors.right ~= nil or start_neighbors.down ~= nil,
+    true,
+    "start tile should connect to at least one neighbor")
+
+  local market_entry = reloaded.entry_points[reloaded.market_id]
+  assert(market_entry == nil, "market tile itself should not be an outer entry point")
+
+  local sample_outer_id = reloaded.path[1]
+  local next_outer_id = reloaded.outer_next[sample_outer_id]
+  local direction = reloaded.direction(sample_outer_id, next_outer_id)
+  _assert_eq(reloaded.neighbors[sample_outer_id][direction], next_outer_id,
+    "neighbor map should be bidirectional with direction lookup after reload")
+end
+
 return {
   name = "movement",
   tests = {
@@ -605,5 +627,6 @@ return {
     { name = "flatten_by_distance_orders_by_distance", run = _test_flatten_by_distance_orders_by_distance },
     { name = "flatten_by_distance_skips_missing_distances", run = _test_flatten_by_distance_skips_missing_distances },
     { name = "flatten_by_distance_handles_max_dist_greater_than_entries", run = _test_flatten_by_distance_handles_max_dist_greater_than_entries },
+    { name = "default_map_reload_builds_bidirectional_neighbors", run = _test_default_map_reload_builds_bidirectional_neighbors },
   },
 }

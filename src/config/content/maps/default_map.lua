@@ -53,14 +53,20 @@ local turn_right = {
   left = "up",
 }
 
+local function _ensure_neighbor_map(neighbors, tile_id)
+  local mapping = neighbors[tile_id]
+  if mapping == nil then
+    mapping = {}
+    neighbors[tile_id] = mapping
+  end
+  return mapping
+end
+
 local function _add_neighbor(neighbors, a, b)
-  local d_ab = _direction(a, b)
-  local d_ba = _direction(b, a)
-  assert(d_ab and d_ba, "invalid edge (not orthogonal adjacent): " .. tostring(a) .. " <-> " .. tostring(b))
-  neighbors[a] = neighbors[a] or {}
-  neighbors[b] = neighbors[b] or {}
-  neighbors[a][d_ab] = b
-  neighbors[b][d_ba] = a
+  local neighbors_a = _ensure_neighbor_map(neighbors, a)
+  local neighbors_b = _ensure_neighbor_map(neighbors, b)
+  neighbors_a[_direction(a, b)] = b
+  neighbors_b[_direction(b, a)] = a
 end
 
 local outer_ccw_coords = {
