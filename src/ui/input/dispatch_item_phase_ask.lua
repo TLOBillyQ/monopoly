@@ -1,5 +1,5 @@
 local choice_support = require("src.ui.pres.choice_support")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 
 local item_phase_ask_flow = {}
 

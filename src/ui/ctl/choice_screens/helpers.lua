@@ -1,7 +1,7 @@
 local choice_support = require("src.ui.pres.choice_support")
 local runtime = require("src.ui.render.runtime_ui")
 local canvas = require("src.ui.ctl.canvas_coordinator")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 local role_context = require("src.ui.pres.role_context")
 local ui_controls = require("src.ui.render.support.ui_controls")
 

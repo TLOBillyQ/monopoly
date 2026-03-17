@@ -1,5 +1,5 @@
 local choice_view = require("src.ui.pres.choice_builder")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 
 local choice_slice = {}
 

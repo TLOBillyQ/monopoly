@@ -4,7 +4,7 @@ local ui_gate_sync = require("src.ui.ctl.ports.ui_sync.ui_gate_sync")
 local choice_ui_state = require("src.ui.ctl.ports.ui_sync.choice_ui_state")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local modal_controller = require("src.ui.ctl.modal_controller")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 
 local ui_sync_ports = {}
 

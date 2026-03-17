@@ -3,7 +3,7 @@ local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
 local runtime = require("src.ui.render.runtime_ui")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_id_utils = require("src.core.utils.role_id")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 
 local choice_ui_state = {}
 

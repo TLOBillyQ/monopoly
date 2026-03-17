@@ -1,6 +1,6 @@
 local choice_support = require("src.ui.pres.choice_support")
 local number_utils = require("src.core.utils.number_utils")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 
 local pre_confirm_flow = {}
 

@@ -1,7 +1,7 @@
 local runtime = require("src.ui.render.runtime_ui")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 
 local resolver = {}
 

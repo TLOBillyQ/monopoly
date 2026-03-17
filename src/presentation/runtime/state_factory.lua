@@ -1,7 +1,7 @@
 local board_view = require("src.ui.render.board")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local modal_controller = require("src.ui.ctl.modal_controller")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 
 local M = {}
 

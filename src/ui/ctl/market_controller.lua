@@ -2,7 +2,7 @@ local market_view = require("src.ui.render.market")
 local canvas = require("src.ui.ctl.canvas_coordinator")
 local runtime = require("src.ui.render.runtime_ui")
 local role_context = require("src.ui.pres.role_context")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
 
 local renderer = {}
 
