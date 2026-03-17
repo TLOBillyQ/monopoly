@@ -37,9 +37,9 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_default_ports = require("src.host.eggy.default_ports")
 local paid_purchase_port = require("src.rules.market.ports.paid_purchase_port")
 local default_ports = require("src.turn.output.default_ports")
-local runtime_state_seam = require("src.ui.ctl.ports.runtime_state_seam")
-local landing_visual_hold_seam = require("src.ui.ctl.ports.landing_visual_hold_seam")
-local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
+local runtime_state_seam = require("src.ui.runtime.runtime_state_seam")
+local landing_visual_hold_seam = require("src.ui.runtime.landing_visual_hold_seam")
+local host_runtime_ports = require("src.ui.runtime.host_runtime_ports")
 
 local function assert_eq(a, b, msg)
   if a ~= b then

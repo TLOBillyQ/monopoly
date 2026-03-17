@@ -1,5 +1,5 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
+local host_runtime_ports = require("src.ui.runtime.host_runtime_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
 
 local camera_sync = {}

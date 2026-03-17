@@ -1,6 +1,6 @@
 local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
+local runtime_state = require("src.ui.runtime.runtime_state_seam")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
 local move_anim = require("src.ui.render.move_anim")

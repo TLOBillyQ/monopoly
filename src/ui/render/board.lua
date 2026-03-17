@@ -3,7 +3,7 @@ local startup_render = require("src.ui.render.board.startup_render")
 local player_units = require("src.ui.render.board.player_units")
 local placement = require("src.ui.render.board.placement")
 local events = require("src.ui.render.board.events")
-local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
+local runtime_state = require("src.ui.runtime.runtime_state_seam")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local logger = require("src.core.utils.logger")
 

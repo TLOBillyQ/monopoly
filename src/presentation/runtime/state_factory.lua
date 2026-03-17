@@ -1,5 +1,5 @@
 local ui_view = require("src.ui.ctl.ui_runtime")
-local runtime_state = require("src.ui.ctl.ports.runtime_state_seam")
+local runtime_state = require("src.ui.runtime.runtime_state_seam")
 local state_callback_ports = require("src.ui.ctl.ports.state_callback_ports")
 
 local M = {}

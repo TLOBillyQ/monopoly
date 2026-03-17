@@ -2,7 +2,7 @@ local ui_event_bindings = require("src.ui.ctl.event_bindings")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
 local canvas_registry = require("src.ui.input.canvas_route_registry")
 local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
-local host_runtime_ports = require("src.ui.ctl.ports.host_runtime_ports")
+local host_runtime_ports = require("src.ui.runtime.host_runtime_ports")
 local modal_controller = require("src.ui.ctl.modal_controller")
 local logger = require("src.core.utils.logger")
 
