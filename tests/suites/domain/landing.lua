@@ -146,7 +146,7 @@ local function _test_turn_land_bridges_to_wait_action_anim_for_chance()
     { key = "LuaAPI", value = patched },
     { target = patched, key = "rand", value = function() return 0 end },
   }, function()
-    local next_state, next_args = land({ game = g }, { player = p, move_result = {} })
+    local next_state, next_args = land.run({ game = g }, { player = p, move_result = {} })
     assert(next_state == "wait_landing_visual", "chance landing should defer visual release before action anim")
     assert(next_args and next_args.next_state == "wait_action_anim",
       "chance landing should resume into wait_action_anim after visual hold")
@@ -166,7 +166,7 @@ local function _test_turn_land_bridges_to_wait_action_anim_for_item()
       return { id = 2001, name = item_inventory.item_name(2001) }
     end },
   }, function()
-    local next_state, next_args = land({ game = g }, { player = p, move_result = {} })
+    local next_state, next_args = land.run({ game = g }, { player = p, move_result = {} })
     assert(next_state == "wait_landing_visual", "item landing should defer visual release before action anim")
     assert(next_args and next_args.next_state == "wait_action_anim",
       "item landing should resume into wait_action_anim after visual hold")
@@ -456,7 +456,7 @@ local function _test_mine_landing_defers_hospital_effect_until_move_followup()
     armed = true,
   })
 
-  local next_state, next_args = land({ game = g }, { player = player, move_result = {} })
+  local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
 
   _assert_eq(next_state, "wait_action_anim", "mine landing should wait for move effect animation")
   _assert_eq(next_args.next_state, "move_followup", "mine landing should resume through move_followup")

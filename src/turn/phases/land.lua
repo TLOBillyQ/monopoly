@@ -176,15 +176,9 @@ local function _phase_land(turn_mgr, args)
 end
 
 local _land = {
+  run = _phase_land,
   _resolve_wait_state = _resolve_wait_state,
   _phase_land = _phase_land,
 }
-
--- Make the table callable for backward compatibility
-setmetatable(_land, {
-  __call = function(_, turn_mgr, args)
-    return _phase_land(turn_mgr, args)
-  end,
-})
 
 return _land

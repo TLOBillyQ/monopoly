@@ -3490,7 +3490,7 @@ local function _test_turn_land_waits_for_move_followup_when_move_effect_queue_pe
       })
     end },
   }, function()
-    local next_state, next_args = turn_land({ game = g }, {
+    local next_state, next_args = turn_land.run({ game = g }, {
       player = player,
       move_result = move_result,
     })

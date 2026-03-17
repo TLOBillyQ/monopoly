@@ -23,6 +23,7 @@
 - [x] 2026-03-17 22:23 +0800：完成 T4，已删除本轮纳入的纯转发 shim 文件。
 - [x] 2026-03-17 22:31 +0800：完成 T5，已补 retired-path guard、收紧架构配置，并为 root-view namespace artifact 增加 `arch_view` 过滤层。
 - [x] 2026-03-17 22:48 +0800：完成 T6，`guard`、`arch check`、`contract`、`behavior`、`regression` 全部通过。
+- [x] 2026-03-17 23:05 +0800：完成下一批低风险行为兼容层清理，删除 `ui_aliases`、`market_context`，并移除 `turn.phases.land` 的 callable 兼容形态。
 
 ## 意外与发现
 
@@ -183,7 +184,10 @@
 
 复盘：这轮清理暴露了 `arch_view` root projection 依赖 namespace、而不是组件归类的局限。仓库当前通过 `scripts/quality/arch/filter.lua` 过滤仅由 namespace 漂移导致的 root projection artifact，同时保留真正的 forbidden dependency 与其他 projection cycle 检查。
 
+补充：后续低风险行为兼容层也已继续收缩。`runtime_ui` 不再接受旧英文 UI alias；付费商城 gateway 直接依赖 `src.rules.market.query.context`；`turn.phases.land` 的稳定接口收敛为显式 `run(...)`。
+
 ## 变更记录
 
 - 2026-03-17 22:36 +0800：把原始 box drawing 文本整理成可读 markdown，保留 T1 清单、执行进度与当前未解决问题，便于继续推进。
 - 2026-03-17 22:48 +0800：补记 T5/T6 完成状态、root projection artifact 结论与最终验收结果。
+- 2026-03-17 23:05 +0800：补记低风险行为兼容层 batch 的执行结果。

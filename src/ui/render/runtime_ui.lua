@@ -1,4 +1,3 @@
-local ui_aliases = require("src.ui.render.support.ui_aliases")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_id_utils = require("src.core.utils.role_id")
 
@@ -66,8 +65,7 @@ end
 function runtime.query_nodes(name)
   assert(name ~= nil, "missing ui node name")
   assert(UIManager ~= nil and UIManager.query_nodes_by_name ~= nil, "missing UIManager.query_nodes_by_name")
-  local resolved = ui_aliases.resolve(name)
-  local nodes = UIManager.query_nodes_by_name(resolved)
+  local nodes = UIManager.query_nodes_by_name(name)
   assert(nodes ~= nil and nodes[1] ~= nil, "missing ui node: " .. tostring(name))
   return nodes
 end
