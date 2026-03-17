@@ -182,7 +182,7 @@ end
 local function _test_board_refresh_stops_vehicle_before_vehicle_set_position()
   local board_view = require("src.ui.render.board")
   local runtime_ports = require("src.core.ports.runtime_ports")
-  local gameplay_read_port = require("src.ui.presenters.gameplay_read_port")
+  local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
   local env = _build_board_refresh_test_env({ seat_id = 4001 })
   local vehicle_helper = {
     emit_vehicle_stop = function(role_id)

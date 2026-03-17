@@ -1,7 +1,7 @@
 local gameplay_loop = require("src.turn.loop")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
-local presentation_ports = require("src.ui.controllers.ports")
-local runtime_deps = require("src.ui.controllers.deps")
+local presentation_ports = require("src.ui.ctl.ports")
+local runtime_deps = require("src.ui.ctl.deps")
 local number_utils = require("src.core.utils.number_utils")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 

@@ -103,7 +103,10 @@ local function _collect_directory_lua_files(project_root, dir_name)
       for line in (output .. "\n"):gmatch("(.-)\n") do
         local relative_path = common.normalize_path(line)
         if relative_path ~= "" and relative_path:match("%.lua$") ~= nil then
-          files[#files + 1] = common.join_path(project_root, relative_path)
+          local absolute_path = common.join_path(project_root, relative_path)
+          if common.path_exists(absolute_path) then
+            files[#files + 1] = absolute_path
+          end
         end
       end
       common.remove_path(output_path)

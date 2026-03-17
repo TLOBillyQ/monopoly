@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback_port")
-local turn_action_port = require("src.ui.input.intent_dispatch.turn_action_port")
+local turn_action_port = require("src.ui.input.dispatch_turn_action_port")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local turn_roll = require("src.turn.phases.roll")

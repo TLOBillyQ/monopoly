@@ -12,26 +12,26 @@ local constants = support.constants
 local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.ui.controllers.event_handlers")
+local event_handlers = require("src.ui.ctl.event_handlers")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
-local modal_presenter = require("src.ui.controllers.modal_controller")
-local panel_slice = require("src.ui.presenters.panel_slice")
+local modal_presenter = require("src.ui.ctl.modal_controller")
+local panel_slice = require("src.ui.pres.panel_slice")
 local runtime_port = require("src.ui.render.runtime_ui")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.controllers.choice_screens.openers")
+local choice_openers = require("src.ui.ctl.choice_screens.openers")
 local market_view = require("src.ui.render.market")
 local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.controllers.canvas_event_router")
-local ui_view = require("src.ui.controllers.ui_runtime")
+local canvas_event_router = require("src.ui.ctl.canvas_event_router")
+local ui_view = require("src.ui.ctl.ui_runtime")
 local ui_status_3d_layer = require("src.ui.render.status3d")
 local action_anim = require("src.ui.render.action_anim")
 local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.widgets.turn_effects")
-local popup_renderer = require("src.ui.controllers.popup_controller")
-local market_modal_renderer = require("src.ui.controllers.market_controller")
-local debug_ports_module = require("src.ui.controllers.ports.debug_ports")
+local turn_effects = require("src.ui.wid.turn_effects")
+local popup_renderer = require("src.ui.ctl.popup_controller")
+local market_modal_renderer = require("src.ui.ctl.market_controller")
+local debug_ports_module = require("src.ui.ctl.ports.debug_ports")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -42,7 +42,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local host_runtime = require("src.host.eggy")
 local runtime_state = require("src.state.state_access.runtime_state")
-local target_choice_effects = require("src.ui.controllers.target_choice_effects")
+local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -255,7 +255,7 @@ end
 
 
 local function _test_ui_model_structure()
-  local ui_model = require("src.ui.presenters")
+  local ui_model = require("src.ui.pres")
   local g = _new_game()
   local player = g:current_player()
   player.inventory:add({ id = 2001 })
@@ -277,7 +277,7 @@ local function _test_ui_model_structure()
 end
 
 local function _test_ui_panel_clamps_negative_assets_to_zero()
-  local ui_panel = require("src.ui.presenters.panel_builder")
+  local ui_panel = require("src.ui.pres.panel_builder")
   local statuses = ui_panel.build_player_statuses({
     players = {
       {
@@ -305,7 +305,7 @@ local function _test_ui_panel_clamps_negative_assets_to_zero()
 end
 
 local function _test_ui_panel_builds_empty_rows_and_counts_land_assets_only()
-  local ui_panel = require("src.ui.presenters.panel_builder")
+  local ui_panel = require("src.ui.pres.panel_builder")
   local statuses = ui_panel.build_player_statuses({
     players = {
       {
@@ -352,7 +352,7 @@ local function _test_ui_panel_builds_empty_rows_and_counts_land_assets_only()
 end
 
 local function _test_ui_model_player_slot_map_and_choice_owner()
-  local ui_model = require("src.ui.presenters")
+  local ui_model = require("src.ui.pres")
   local g = _new_game()
   g.players[1].inventory:add({ id = 2001 })
   g.players[2].inventory:add({ id = 2002 })
@@ -392,7 +392,7 @@ local function _test_ui_model_player_slot_map_and_choice_owner()
 end
 
 local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
-  local ui_model = require("src.ui.presenters")
+  local ui_model = require("src.ui.pres")
   local g = _new_game()
   g.players[1].name = "本地玩家1"
   g.players[2].name = "本地玩家2"
@@ -438,7 +438,7 @@ local function _test_ui_model_player_profile_prefers_role_api_with_fallback()
 end
 
 local function _test_ui_model_player_profile_accepts_stringified_avatar()
-  local ui_model = require("src.ui.presenters")
+  local ui_model = require("src.ui.pres")
   local g = _new_game()
   g.players[1].name = "本地玩家1"
   local icon_obj = setmetatable({}, {
@@ -475,7 +475,7 @@ local function _test_ui_model_player_profile_accepts_stringified_avatar()
 end
 
 local function _test_ui_model_player_profile_uses_slot_avatar_for_synthetic_ai()
-  local ui_model = require("src.ui.presenters")
+  local ui_model = require("src.ui.pres")
   local runtime_ports = require("src.core.ports.runtime_ports")
   local runtime_refs = require("src.config.content.runtime_refs")
   local g = _new_game()
@@ -1013,7 +1013,7 @@ local function _test_ui_intent_dispatcher_market_confirm_routes_choice_select()
 end
 
 local function _test_ui_model_update_refreshes_targeted_slices_only()
-  local ui_model = require("src.ui.presenters")
+  local ui_model = require("src.ui.pres")
   local g = _new_game()
   local state = {
     ui = {
@@ -1056,7 +1056,7 @@ local function _test_ui_model_update_refreshes_targeted_slices_only()
 end
 
 local function _test_ui_model_update_refreshes_inventory_owned_slots()
-  local ui_model = require("src.ui.presenters")
+  local ui_model = require("src.ui.pres")
   local g = _new_game()
   local state = {
     ui = {
@@ -1162,7 +1162,7 @@ local function _test_modal_presenter_close_choice_modal_resets_choice_and_market
 
   _with_patches({
     {
-      target = require("src.ui.controllers.market_controller"),
+      target = require("src.ui.ctl.market_controller"),
       key = "close",
       value = function()
         market_closed = market_closed + 1

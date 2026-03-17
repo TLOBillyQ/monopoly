@@ -230,8 +230,13 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 - **location**: 临时 shim 文件、`tests/support/migration_map.lua`、`tests/support/migration_pairs.lua`、shim contract/rules
 - **description**: 在 new-only 全绿前提下删除本次迁移期间的 forwarding shim、alias key 兼容和专用 pair；保留仓库历史上仍有价值的长期兼容项，但删除这次 rename 专用桥接。
 - **validation**: `require(old_module)` 与旧 cache key 明确失败；`migration_shim_contract`/`migration_shim_rules` 只覆盖保留项；仓库内不存在误留旧路径桥。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 已删除迁移期旧入口/兼容桥：`src/entry/init.lua`、`src/host/eggy/init.lua`、`src/rules/{board,movement,market,vehicle}/init.lua`、`src/turn/{loop,timing}/init.lua`、`src/ui/controllers/**`、`src/ui/presenters/**`、`src/ui/widgets/**`、`src/ui/schema/canvas/**`、`src/ui/input/{canvas_routes,intent_dispatch}/**`、`src/ui/stores/ui_runtime/**`、`src/ui/render/{board,status3d}/init.lua` 等旧 shim 已退休。
+  - 已删除迁移期专用真源与校验：`tests/support/migration_map.lua`、`tests/support/migration_pairs.lua`、`tests/guards/migration_shim_rules.lua`、`tests/suites/architecture/migration_shim_contract.lua`、`scripts/migration/*`，并从 `tests/catalog.lua` 摘除对应 contract/guard。
+  - 为避免删桥后出现 canonical 入口缺口，已补建真实 new-only 入口文件：`src/rules/board.lua`、`src/rules/movement.lua`、`src/rules/market.lua`、`src/rules/vehicle.lua`；同时把残留的 `src.rules.board.init`、旧 input route/dispatch shim 调用统一切到新模块名。
+  - `scripts/ops/deploy.lua` 已修正为只统计当前工作树里仍存在的 Lua 文件，避免 deploy LOC 统计在删桥过程中把已删除 shim 误当成必需输入。
+  - 验证通过：`lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/behavior.lua`、`lua tests/contract.lua`；repo 级检索下 `require(old_module)` 与旧 shim 路径均已清零，只剩待 T9 刷新的 viewer/snapshot 产物。
 - **files edited/created**:
 
 ### T9：刷新快照并做最终全量验收

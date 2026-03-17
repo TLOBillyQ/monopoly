@@ -6,8 +6,8 @@ local board_feedback = require("src.ui.render.board_feedback_service")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local anim_overlay_runtime = require("src.ui.render.anim_overlay_runtime")
 local status3d_scene = require("src.ui.render.status3d.scene")
-local pre_confirm_flow = require("src.ui.input.intent_dispatch.pre_confirm")
-local status3d_init = require("src.ui.render.status3d.init")
+local pre_confirm_flow = require("src.ui.input.dispatch_pre_confirm")
+local status3d_init = require("src.ui.render.status3d")
 local startup_render = require("src.ui.render.board.startup_render")
 local runtime_refs = require("src.config.content.runtime_refs")
 
@@ -610,13 +610,13 @@ local function _test_pre_confirm_enter_choice_select()
     },
   }
 
-  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
       end,
     },
-    ["src.ui.presenters.choice_support"] = {
+    ["src.ui.pres.choice_support"] = {
       resolve_option_label_by_id = function() return "Option 1" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -635,7 +635,7 @@ local function _test_pre_confirm_enter_no_choice_returns_false()
     ui = {},
     game = {},
   }
-  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function() return { choice = nil } end,
     },
@@ -658,13 +658,13 @@ local function _test_pre_confirm_enter_market_confirm()
     },
   }
 
-  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "1001", requires_pre_confirm = true, label = "Skin", screen_key = "market" } } } }
       end,
     },
-    ["src.ui.presenters.choice_support"] = {
+    ["src.ui.pres.choice_support"] = {
       resolve_screen_key = function() return "market" end,
       resolve_option_label_by_id = function() return "Skin" end,
       resolve_secondary_confirm_title = function() return "Title" end,
@@ -691,13 +691,13 @@ local function _test_pre_confirm_enter_ui_button_item_slot()
     },
   }
 
-  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "item1", label = "Item" } } } }
       end,
     },
-    ["src.ui.presenters.choice_support"] = {
+    ["src.ui.pres.choice_support"] = {
       resolve_option_label_by_id = function() return "Item" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -715,7 +715,7 @@ local function _test_pre_confirm_enter_unknown_intent_returns_false()
     ui = {},
     game = {},
   }
-  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1" } }
@@ -754,7 +754,7 @@ local function _test_status3d_init_sync_no_dirty_no_missing_layers()
     },
   }
   local game = { players = { { id = "p1" } } }
-  _reload_module("src.ui.render.status3d.init", {
+  _reload_module("src.ui.render.status3d", {
     ["src.ui.render.status3d.meta"] = {
       ensure_cache = function(s) return s.ui_status_3d end,
       build_meta = function() return { layouts = {} } end,
@@ -784,7 +784,7 @@ local function _test_status3d_init_sync_missing_scene_ui_support_disables()
       has_scene_ui_support = function() return false end,
     },
   }
-  _reload_module("src.ui.render.status3d.init", {
+  _reload_module("src.ui.render.status3d", {
     ["src.ui.render.status3d.meta"] = {
       ensure_cache = function(s) return s.ui_status_3d end,
       build_meta = function() return { layouts = {} } end,
@@ -817,7 +817,7 @@ local function _test_status3d_init_sync_missing_env_disables()
   local original_enums = Enums
   Enums = nil
   local ok, err = pcall(function()
-    _reload_module("src.ui.render.status3d.init", {
+    _reload_module("src.ui.render.status3d", {
       ["src.ui.render.status3d.meta"] = {
         ensure_cache = function(s) return s.ui_status_3d end,
         build_meta = function() return { layouts = {} } end,
@@ -986,13 +986,13 @@ local function _test_pre_confirm_enter_missing_modal_function()
     },
   }
 
-  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
       end,
     },
-    ["src.ui.presenters.choice_support"] = {
+    ["src.ui.pres.choice_support"] = {
       resolve_option_label_by_id = function() return "Option 1" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -1012,13 +1012,13 @@ local function _test_pre_confirm_enter_market_confirm_option_not_found()
     game = {},
   }
 
-  local result = _reload_module("src.ui.input.intent_dispatch.pre_confirm", {
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1", options = { { id = "9999", requires_pre_confirm = false } } } }
       end,
     },
-    ["src.ui.presenters.choice_support"] = {
+    ["src.ui.pres.choice_support"] = {
       resolve_screen_key = function() return "market" end,
     },
   }, function(flow)

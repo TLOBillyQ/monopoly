@@ -390,7 +390,7 @@ local function _test_status_ops_set_player_seat_emits_exit_and_enter()
 end
 
 local function _test_board_advance_tracks_branch_and_wrap()
-  local board = require("src.rules.board.init"):new({
+  local board = require("src.rules.board"):new({
     tile_lookup = {
       [1] = { id = 1, name = "A" },
       [2] = { id = 2, name = "B" },

@@ -328,7 +328,7 @@ local function _test_move_anim_play_sequence_emits_step_sound_per_visited_tile()
 end
 
 -- Characterization tests for board helper functions (T4)
-local Board = require("src.rules.board.init")
+local Board = require("src.rules.board")
 
 local function _test_resolve_outer_next_returns_outer_next_when_no_entry()
   local map = {

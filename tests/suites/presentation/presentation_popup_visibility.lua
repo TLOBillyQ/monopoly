@@ -3,8 +3,8 @@ local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local runtime_port = require("src.ui.render.runtime_ui")
-local ui_view = require("src.ui.controllers.ui_runtime")
-local modal_presenter = require("src.ui.controllers.modal_controller")
+local ui_view = require("src.ui.ctl.ui_runtime")
+local modal_presenter = require("src.ui.ctl.modal_controller")
 
 local function _wrap_ui_refs(image_refs)
   return {
@@ -87,7 +87,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.ui.controllers.ports").build(state)
+    state.gameplay_loop_ports = require("src.ui.ctl.ports").build(state)
     modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -115,7 +115,7 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.ui.controllers.ports").build(state)
+    state.gameplay_loop_ports = require("src.ui.ctl.ports").build(state)
     modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -286,7 +286,7 @@ local function _test_bankruptcy_popup_avatar_uses_native_size_path()
 end
 
 local function _test_resolve_bankruptcy_text_prefers_payload_text()
-  local popup_controller = require("src.ui.controllers.popup_controller")
+  local popup_controller = require("src.ui.ctl.popup_controller")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -313,7 +313,7 @@ local function _test_resolve_bankruptcy_text_prefers_payload_text()
 end
 
 local function _test_resolve_bankruptcy_text_falls_back_to_reason()
-  local popup_controller = require("src.ui.controllers.popup_controller")
+  local popup_controller = require("src.ui.ctl.popup_controller")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -340,7 +340,7 @@ local function _test_resolve_bankruptcy_text_falls_back_to_reason()
 end
 
 local function _test_resolve_bankruptcy_text_falls_back_to_player_name()
-  local popup_controller = require("src.ui.controllers.popup_controller")
+  local popup_controller = require("src.ui.ctl.popup_controller")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -367,7 +367,7 @@ local function _test_resolve_bankruptcy_text_falls_back_to_player_name()
 end
 
 local function _test_resolve_bankruptcy_text_uses_default_when_all_missing()
-  local popup_controller = require("src.ui.controllers.popup_controller")
+  local popup_controller = require("src.ui.ctl.popup_controller")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {

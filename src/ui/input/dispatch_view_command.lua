@@ -2,7 +2,15 @@ local view_command_dispatcher = {}
 local number_utils = require("src.core.utils.number_utils")
 
 local function _resolve_loaded(name)
-  return package.loaded[name]
+  local loaded = package.loaded[name]
+  if loaded ~= nil then
+    return loaded
+  end
+  local ok, module = pcall(require, name)
+  if ok then
+    return module
+  end
+  return nil
 end
 
 local function _resolve_role_by_id(runtime, role_id)
@@ -119,10 +127,10 @@ local function _fallback_dispatch(state, intent)
   if intent_type == nil then
     return false
   end
-  local market_controller = _resolve_loaded("src.ui.controllers.market_controller")
-  local modal_controller = _resolve_loaded("src.ui.controllers.modal_controller")
-  local debug_view = _resolve_loaded("src.ui.controllers.debug_view")
-  local target_choice_effects = _resolve_loaded("src.ui.controllers.target_choice_effects")
+  local market_controller = _resolve_loaded("src.ui.ctl.market_controller")
+  local modal_controller = _resolve_loaded("src.ui.ctl.modal_controller")
+  local debug_view = _resolve_loaded("src.ui.ctl.debug_view")
+  local target_choice_effects = _resolve_loaded("src.ui.ctl.target_choice_effects")
   local handlers = {
     market_select = function()
       return _handle_market_select(state, intent, market_controller)

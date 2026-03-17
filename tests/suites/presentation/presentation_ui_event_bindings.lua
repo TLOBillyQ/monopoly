@@ -11,9 +11,9 @@ local canvas = require("src.ui.ctl.canvas_coordinator")
 local ui_events = require("src.ui.ctl.ui_events")
 local base_nodes = require("src.ui.schema.base_nodes")
 local always_show_nodes = require("src.ui.schema.always_show_nodes")
-local remote_choice_intents = require("src.ui.input.canvas_routes.remote_choice")
-local target_choice_intents = require("src.ui.input.canvas_routes.target_choice")
-local market_intents = require("src.ui.input.canvas_routes.market")
+local remote_choice_intents = require("src.ui.input.canvas_route_remote_choice")
+local target_choice_intents = require("src.ui.input.canvas_route_target_choice")
+local market_intents = require("src.ui.input.canvas_route_market")
 
 local function _find_spec(specs, node_name)
   for _, spec in ipairs(specs or {}) do

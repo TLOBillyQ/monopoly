@@ -62,7 +62,6 @@ local contract_modules = {
   "suites.architecture.usecase_boundary_contract",
   "suites.architecture.cross_module_contract",
   "suites.architecture.intent_output_contract",
-  "suites.architecture.migration_shim_contract",
   "suites.presentation.ui_gate_contract",
   "suites.runtime.narrow_runtime_ports_contract",
   "suites.runtime.runtime_ports_contract",
@@ -86,7 +85,6 @@ local guard_scripts = {
   { name = "gameplay_loop_no_ui", module_name = "guards.gameplay_loop_no_ui", path = "tests/guards/gameplay_loop_no_ui.lua" },
   { name = "forbidden_globals", module_name = "guards.forbidden_globals", path = "tests/guards/forbidden_globals.lua" },
   { name = "arch_view_guard", module_name = "guards.arch_view_guard", path = "tests/guards/arch_view_guard.lua" },
-  { name = "migration_shim_rules", module_name = "guards.migration_shim_rules", path = "tests/guards/migration_shim_rules.lua" },
 }
 
 local function _clone_case(test)

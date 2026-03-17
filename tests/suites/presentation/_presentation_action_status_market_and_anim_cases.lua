@@ -642,7 +642,7 @@ local function _test_item_slot_refresh_shows_only_playable_outlines()
 end
 
 local function _test_item_slot_intents_include_outline_nodes()
-  local item_slot_intents = require("src.ui.input.canvas_routes.item_slots")
+  local item_slot_intents = require("src.ui.input.canvas_route_item_slots")
   local state = {
     ui = {
       item_slots = { "基础_道具槽位1" },
@@ -1141,7 +1141,7 @@ local function _test_ui_event_router_market_cancel_button_dispatches_choice_canc
 end
 
 local function _test_item_phase_ask_confirm_clears_highlight_suppress()
-  local item_phase_ask_flow = require("src.ui.input.intent_dispatch.item_phase_ask")
+  local item_phase_ask_flow = require("src.ui.input.dispatch_item_phase_ask")
   local closed = 0
   local state = {
     _item_phase_ask_active = true,
@@ -1182,7 +1182,7 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
 end
 
 local function _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select()
-  local item_phase_ask_flow = require("src.ui.input.intent_dispatch.item_phase_ask")
+  local item_phase_ask_flow = require("src.ui.input.dispatch_item_phase_ask")
   local dispatched = {}
   local closed = 0
   local state = {
@@ -1244,7 +1244,7 @@ local function _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_
 end
 
 local function _test_item_phase_ask_cancel_closes_modal_and_dispatches_choice_cancel()
-  local item_phase_ask_flow = require("src.ui.input.intent_dispatch.item_phase_ask")
+  local item_phase_ask_flow = require("src.ui.input.dispatch_item_phase_ask")
   local dispatched = {}
   local closed = 0
   local state = {
@@ -1300,7 +1300,7 @@ local function _test_item_phase_ask_cancel_closes_modal_and_dispatches_choice_ca
 end
 
 local function _test_view_command_target_lock_and_unlock_fallback_routes_to_target_effects()
-  local view_command_dispatcher = require("src.ui.input.intent_dispatch.view_command")
+  local view_command_dispatcher = require("src.ui.input.dispatch_view_command")
   local target_choice_effects_local = require("src.ui.ctl.target_choice_effects")
   local state = { ui = ui_view.build_ui_state() }
   local calls = {}

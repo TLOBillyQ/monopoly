@@ -13,8 +13,8 @@ if not math.Vector3 then
 end
 
 local function _load_fresh_handlers()
-  package.loaded["src.ui.controllers.event_handlers"] = nil
-  return require("src.ui.controllers.event_handlers")
+  package.loaded["src.ui.ctl.event_handlers"] = nil
+  return require("src.ui.ctl.event_handlers")
 end
 
 local function _test_market_buy_failed_shows_tip_for_three_seconds_without_popup()

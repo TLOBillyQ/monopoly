@@ -12,24 +12,24 @@ local constants = support.constants
 local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.ui.controllers.event_handlers")
+local event_handlers = require("src.ui.ctl.event_handlers")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
 local runtime_port = require("src.ui.render.runtime_ui")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.controllers.choice_screens.openers")
+local choice_openers = require("src.ui.ctl.choice_screens.openers")
 local market_view = require("src.ui.render.market")
 local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.controllers.canvas_event_router")
-local ui_view = require("src.ui.controllers.ui_runtime")
+local canvas_event_router = require("src.ui.ctl.canvas_event_router")
+local ui_view = require("src.ui.ctl.ui_runtime")
 local ui_status_3d_layer = require("src.ui.render.status3d")
 local action_anim = require("src.ui.render.action_anim")
 local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.widgets.turn_effects")
-local popup_renderer = require("src.ui.controllers.popup_controller")
-local market_modal_renderer = require("src.ui.controllers.market_controller")
-local debug_ports_module = require("src.ui.controllers.ports.debug_ports")
+local turn_effects = require("src.ui.wid.turn_effects")
+local popup_renderer = require("src.ui.ctl.popup_controller")
+local market_modal_renderer = require("src.ui.ctl.market_controller")
+local debug_ports_module = require("src.ui.ctl.ports.debug_ports")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -40,7 +40,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local host_runtime = require("src.host.eggy")
 local runtime_state = require("src.state.state_access.runtime_state")
-local target_choice_effects = require("src.ui.controllers.target_choice_effects")
+local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -753,8 +753,8 @@ end
 
 local function _test_tick_ui_sync_turn_switch_still_follows()
   local dirty_tracker = require("src.core.utils.dirty_tracker")
-  local main_view = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
+  local main_view = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
   local board_view_mod = require("src.ui.render.board")
   local helper = { target_role_id = nil }
   local follow_events = 0
@@ -764,7 +764,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
-    { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function() end },
+    { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       local _player_rows = {
         { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
@@ -863,7 +863,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
 
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
-    state.gameplay_loop_ports = require("src.ui.controllers.ports").build(state)
+    state.gameplay_loop_ports = require("src.ui.ctl.ports").build(state)
     gameplay_loop.tick(game, state, 0.1)
     runtime_event_bridge._reset_for_tests()
   end)
@@ -877,8 +877,8 @@ end
 
 local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable()
   local dirty_tracker = require("src.core.utils.dirty_tracker")
-  local main_view = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
+  local main_view = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
   local board_view_mod = require("src.ui.render.board")
   local helper = { target_role_id = nil }
   local follow_events = 0
@@ -893,7 +893,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
-    { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function() end },
+    { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       local _player_rows = {
         { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
@@ -989,7 +989,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
     local ok, err = pcall(function()
-      state.gameplay_loop_ports = require("src.ui.controllers.ports").build(state)
+      state.gameplay_loop_ports = require("src.ui.ctl.ports").build(state)
       gameplay_loop.tick(game, state, 0.1)
     end)
     runtime_event_bridge._reset_for_tests()
@@ -1001,9 +1001,9 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
 end
 
 local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
-  local ui_view_service = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
-  local ui_model_sync = require("src.ui.controllers.ports.ui_sync.ui_model_sync")
+  local ui_view_service = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
+  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
   local opened = 0
   local game = {
       turn = {
@@ -1033,7 +1033,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function()
+    { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -1062,9 +1062,9 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
 end
 
 local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
-  local ui_view_service = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
-  local ui_model_sync = require("src.ui.controllers.ports.ui_sync.ui_model_sync")
+  local ui_view_service = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
+  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
   local opened = 0
   local game = {
     turn = {
@@ -1094,7 +1094,7 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function()
+    { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -1132,9 +1132,9 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
 end
 
 local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
-  local ui_view_service = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
-  local ui_model_sync = require("src.ui.controllers.ports.ui_sync.ui_model_sync")
+  local ui_view_service = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
+  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
   local opened = 0
   local game = {
     turn = {
@@ -1164,7 +1164,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function()
+    { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -1193,11 +1193,11 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
 end
 
 local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner()
-  local ui_view_service = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
-  local ui_sync_ports = require("src.ui.controllers.ports.ui_sync_ports")
+  local ui_view_service = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
+  local ui_sync_ports = require("src.ui.ctl.ports.ui_sync_ports")
   local gameplay_loop_ports = require("src.turn.loop.ports")
-  local common = require("src.ui.controllers.ports.common")
+  local common = require("src.ui.ctl.ports.common")
   local runtime_ports_module = require("src.core.ports.runtime_ports")
   local opened = 0
   local game = {
@@ -1232,7 +1232,7 @@ local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local
   _bind_ui_runtime(state)
 
   _with_patches({
-    { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function()
+    { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -1264,14 +1264,14 @@ local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local
 end
 
 local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop()
-  local ui_view_service = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
-  local ui_model_sync = require("src.ui.controllers.ports.ui_sync.ui_model_sync")
+  local ui_view_service = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
+  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
   local anchors = require("src.ui.render.board.anchors")
   local startup_render = require("src.ui.render.board.startup_render")
   local player_units = require("src.ui.render.board.player_units")
-  local base_presenter = require("src.ui.widgets.panel_presenter")
-  local turn_effects = require("src.ui.widgets.turn_effects")
+  local base_presenter = require("src.ui.wid.panel_presenter")
+  local turn_effects = require("src.ui.wid.turn_effects")
   local fixed_zero = { kind = "fixed_zero", value = 0 }
   local calls = {}
   local game = {
@@ -1376,9 +1376,9 @@ local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop
 end
 
 local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render()
-  local ui_view_service = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
-  local ui_model_sync = require("src.ui.controllers.ports.ui_sync.ui_model_sync")
+  local ui_view_service = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
+  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
   local render_calls = 0
   local refreshed_label = nil
   local game = {
@@ -1432,9 +1432,9 @@ local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_labe
 end
 
 local function _test_popup_defer_policy_queues_and_replays_in_order()
-  local modal_presenter = require("src.ui.controllers.modal_controller")
-  local popup_presenter = require("src.ui.controllers.popup_controller")
-  local canvas = require("src.ui.controllers.canvas_coordinator")
+  local modal_presenter = require("src.ui.ctl.modal_controller")
+  local popup_presenter = require("src.ui.ctl.popup_controller")
+  local canvas = require("src.ui.ctl.canvas_coordinator")
   local state = {
     ui = ui_view.build_ui_state(),
     ui_dirty = false,
@@ -1470,8 +1470,8 @@ local function _test_popup_defer_policy_queues_and_replays_in_order()
 end
 
 local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil()
-  local canvas = require("src.ui.controllers.canvas_coordinator")
-  local role_ctx = require("src.ui.presenters.role_context")
+  local canvas = require("src.ui.ctl.canvas_coordinator")
+  local role_ctx = require("src.ui.pres.role_context")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }
@@ -1510,8 +1510,8 @@ local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil
 end
 
 local function _test_market_modal_renderer_open_restores_client_role_nil()
-  local canvas = require("src.ui.controllers.canvas_coordinator")
-  local role_ctx = require("src.ui.presenters.role_context")
+  local canvas = require("src.ui.ctl.canvas_coordinator")
+  local role_ctx = require("src.ui.pres.role_context")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }
@@ -1558,8 +1558,8 @@ local function _test_market_modal_renderer_open_restores_client_role_nil()
 end
 
 local function _test_debug_ports_sync_restores_client_role_nil()
-  local ui_event_state = require("src.ui.controllers.event_state")
-  local ui_view_service = require("src.ui.controllers.ui_runtime")
+  local ui_event_state = require("src.ui.ctl.event_state")
+  local ui_view_service = require("src.ui.ctl.ui_runtime")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }
@@ -1606,8 +1606,8 @@ local function _test_debug_ports_sync_restores_client_role_nil()
 end
 
 local function _test_debug_ports_sync_ignores_non_event_log_seq_changes()
-  local ui_event_state = require("src.ui.controllers.event_state")
-  local ui_view_service = require("src.ui.controllers.ui_runtime")
+  local ui_event_state = require("src.ui.ctl.event_state")
+  local ui_view_service = require("src.ui.ctl.ui_runtime")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }
@@ -1681,7 +1681,7 @@ local function _test_debug_ports_sync_ignores_non_event_log_seq_changes()
 end
 
 local function _test_panel_avatar_uses_native_size_path()
-  local presenter = require("src.ui.widgets.panel_presenter")
+  local presenter = require("src.ui.wid.panel_presenter")
   local native_size_calls = 0
   local client_role = { stale = true }
   local state = {
@@ -1743,7 +1743,7 @@ end
 
 local function _new_cash_delta_presenter_env(opts)
   opts = opts or {}
-  local presenter = require("src.ui.widgets.panel_presenter")
+  local presenter = require("src.ui.wid.panel_presenter")
   local number_utils = require("src.core.utils.number_utils")
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
@@ -1996,7 +1996,7 @@ local function _test_panel_crown_excludes_eliminated_players()
 end
 
 local function _test_panel_apply_player_colors_updates_image_and_labels()
-  local panel_player_slots = require("src.ui.widgets.panel_player_slots")
+  local panel_player_slots = require("src.ui.wid.panel_player_slots")
   local image_calls = {}
   local label_calls = {}
 
@@ -2027,7 +2027,7 @@ local function _test_panel_apply_player_colors_updates_image_and_labels()
 end
 
 local function _test_panel_apply_player_colors_skips_when_role_has_no_color_hooks()
-  local panel_player_slots = require("src.ui.widgets.panel_player_slots")
+  local panel_player_slots = require("src.ui.wid.panel_player_slots")
   local queried = 0
 
   panel_player_slots.apply_player_colors({}, {
