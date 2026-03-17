@@ -15,8 +15,8 @@
 - [x] (2026-03-17 20:07) T2 搭好双轨迁移基础设施、包别名兼容和批量脚本入口。
 - [x] (2026-03-17 21:12) T3-T6 子树迁移全部收口，T6 清除了 `controllers -> ctl` 投影视图环并恢复 UI 行为回归。
 - [ ] T7 统一切换所有外部调用点、字符串消费者、护栏配置到 new-only。
-- [ ] T8 删除临时 shim 与本次迁移专用 pair。
-- [ ] T9 刷新快照并做最终全量验收。
+- [x] (2026-03-17) T8 删除临时 shim 与本次迁移专用 pair。
+- [x] (2026-03-17) T9 刷新快照并完成最终全量验收。
 
 ## 意外与发现
 
@@ -250,8 +250,11 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
   `lua tests/regression.lua`  
   `lua scripts/quality/arch.lua check`  
   `lua tests/tooling.lua --workers 1`
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - 已按顺序刷新 `scripts/quality/arch/viewer/*` 与 `scripts/quality/scrap/viewer/*` 提交态快照，清除旧 shim/module ID 在静态 viewer 中的残留。
+  - 最终验收通过：`lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer`、`lua scripts/quality/scrap.lua viewer --out-dir scripts/quality/scrap/viewer`、`lua tests/regression.lua`、`lua scripts/quality/arch.lua check`、`lua tests/tooling.lua --workers 1`。
+  - 全计划完成，仓库已进入 new-only 布局；兼容桥仅剩 viewer 快照中的当前提交态数据，不再含运行时旧模块入口。
 - **files edited/created**:
 
 ## Parallel Execution Groups
