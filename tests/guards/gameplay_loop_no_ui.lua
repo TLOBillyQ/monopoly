@@ -1,4 +1,4 @@
-local app = require("src.state.game_state")
+local composition_root = require("src.entry.compose_game")
 local gameplay_loop = require("src.turn.loop")
 local map_cfg = require("src.config.content.maps.default_map")
 local tiles_cfg = require("src.config.content.tiles")
@@ -105,7 +105,7 @@ function M.run()
   }
 
   local ok, err = xpcall(function()
-    local game = app:new(default_ports.resolve_game_opts({
+    local game = composition_root.new_game(default_ports.resolve_game_opts({
       players = { "玩家1", "玩家2", "玩家3", "玩家4" },
       ai = {},
       auto_all = false,

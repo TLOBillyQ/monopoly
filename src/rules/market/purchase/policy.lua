@@ -1,4 +1,3 @@
-local use_skip_choice = require("src.player.choices.use_skip_choice")
 local context = require("src.rules.market.query.context")
 
 local policy = {}

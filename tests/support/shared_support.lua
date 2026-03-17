@@ -4,6 +4,7 @@ local M = {}
 require("tests.bootstrap")
 
 local app = require("src.state.game_state")
+local composition_root = require("src.entry.compose_game")
 local movement = require("src.rules.movement")
 local turn_move = require("src.turn.phases.move")
 local inventory = require("src.rules.items.inventory")
@@ -372,7 +373,7 @@ end
 
 local function new_game(opts)
   opts = opts or {}
-  local game = app:new(default_ports.resolve_game_opts({
+  local game = composition_root.new_game(default_ports.resolve_game_opts({
     players = opts.players or { "P1", "P2" },
     ai = opts.ai or { [2] = true },
     auto_all = opts.auto_all == true,

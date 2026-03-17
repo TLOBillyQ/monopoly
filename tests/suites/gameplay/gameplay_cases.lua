@@ -385,7 +385,7 @@ local function _test_bankruptcy_calls_role_life_die_before_lose()
 end
 
 local function _test_chance_pay_others_stops_after_bankruptcy()
-  local g = app:new(default_ports.resolve_game_opts({
+  local g = require("src.entry.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = {},
     auto_all = false,
@@ -1371,7 +1371,7 @@ local function _test_autorunner_runs_to_end()
   local land_actions = require("src.rules.land.actions")
   local item_inventory = require("src.rules.items.inventory")
 
-  local g = app:new(default_ports.resolve_game_opts({
+  local g = require("src.entry.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,

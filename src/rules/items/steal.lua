@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local inventory = require("src.rules.items.inventory")
-local use_skip_choice = require("src.player.choices.use_skip_choice")
+local use_skip_choice = require("src.core.choice.use_skip_choice")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
 

@@ -1,4 +1,3 @@
-local composition_root = require("src.entry.compose_game")
 local game_state_players = require("src.state.player_state")
 local game_state_tiles = require("src.state.board_state")
 local game_state_turn = require("src.state.turn_state")
@@ -72,12 +71,8 @@ local function _install_default_runtime_ports(game_ctx)
 end
 
 function game:init(opts)
-  if opts and opts.__skip_assemble then
-    return
-  end
   self.auto_play_port = opts and opts.auto_play_port or self.auto_play_port
   self.bankruptcy_port = opts and opts.bankruptcy_port or self.bankruptcy_port
-  composition_root.assemble(opts, self)
   _install_default_runtime_ports(self)
 end
 

@@ -1,5 +1,4 @@
 local support = require("support.runtime_support")
-local app = support.app
 local bind_ui_runtime = support.bind_ui_runtime
 local map_cfg = support.map_cfg
 local tiles_cfg = support.tiles_cfg
@@ -29,7 +28,7 @@ local function _assert_unique_path(path)
 end
 
 local function _new_game()
-  return app:new(default_ports.resolve_game_opts({
+  return require("src.entry.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = false,

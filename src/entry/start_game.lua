@@ -1,6 +1,6 @@
 local auto_runner = require("src.turn.policies.auto_runner")
 local board_view = require("src.ui.render.board")
-local game = require("src.state.game_state")
+local composition_root = require("src.entry.compose_game")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local modal_controller = require("src.ui.ctl.modal_controller")
 local tiles_cfg = require("src.config.content.tiles")
@@ -171,7 +171,7 @@ function M.build_state(get_current_game, opts)
       local role_roster = _build_startup_roster(max_player_count)
       local forced_ai = _build_startup_ai_map(role_roster)
       logger.info("[Eggy]", "使用四槽角色驱动初始化，角色数量:", tostring(#role_roster))
-      local created_game = game:new(default_ports.resolve_game_opts({
+      local created_game = composition_root.new_game(default_ports.resolve_game_opts({
         role_roster = role_roster,
         ai = forced_ai,
         auto_all = false,

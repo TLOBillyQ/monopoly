@@ -3,6 +3,7 @@ require "vendor.third_party.Utils"
 local dirty_tracker = require("src.core.utils.dirty_tracker")
 local logger = require("src.core.utils.logger")
 local market_cfg = require("src.config.content.market")
+local game_state = require("src.state.game_state")
 local turn_runtime = require("src.turn.loop.scheduler_runtime")
 local bootstrap = require("src.rules.bootstrap.registries")
 local game_factory = require("src.entry.game_factory")
@@ -12,8 +13,6 @@ local role_id_utils = require("src.core.utils.role_id")
 local intent_output_adapter = require("src.turn.output.intent_output_adapter")
 
 local composition_root = {}
-
-local deep_copy = Utils.deep_copy
 
 local function _build_player_by_id(players)
   local out = {}
@@ -159,6 +158,10 @@ function composition_root.assemble(opts, game_or_class)
   game.turn_engine = game.turn_runtime
 
   return game
+end
+
+function composition_root.new_game(opts)
+  return composition_root.assemble(opts, game_state)
 end
 
 return composition_root
