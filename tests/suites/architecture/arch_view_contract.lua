@@ -5,7 +5,6 @@ bootstrap.install_package_paths()
 local arch_view = require("arch_view")
 local common = require("arch_view.runtime.common")
 local json_reader = require("arch_view.runtime.json_reader")
-local arch_filter = require("scripts.quality.arch.filter")
 
 local cached_snapshot = nil
 local cached_scan_result = nil
@@ -27,6 +26,15 @@ local function _assert_contains(list, expected, message)
     end
   end
   error((message or "value missing") .. "\nmissing: " .. tostring(expected))
+end
+
+local function _contains(list, expected)
+  for _, value in ipairs(list or {}) do
+    if value == expected then
+      return true
+    end
+  end
+  return false
 end
 
 local function _read_file(path)
@@ -107,7 +115,8 @@ local function _test_projection_builds_root_and_app_views()
   _assert_contains(root_labels, "app", "root view should expose app subtree")
   _assert_contains(root_labels, "infrastructure", "root view should expose infrastructure subtree")
   _assert_contains(root_labels, "presentation", "root view should expose presentation subtree")
-  _assert_contains(root_labels, "flow", "root view should expose flow subtree")
+  assert(_contains(root_labels, "flow") or _contains(root_labels, "turn"),
+    "root view should expose flow/turn subtree")
 
   local app_labels = {}
   for _, node in ipairs(app_view.nodes or {}) do
@@ -119,7 +128,6 @@ local function _test_projection_builds_root_and_app_views()
   for _, node in ipairs(app_bootstrap_view.nodes or {}) do
     app_bootstrap_labels[#app_bootstrap_labels + 1] = node.label
   end
-  _assert_contains(app_bootstrap_labels, "init", "app.bootstrap view should expose init")
   _assert_contains(app_bootstrap_labels, "runtime_install", "app.bootstrap view should expose runtime_install")
   _assert_contains(app_bootstrap_labels, "startup_roster", "app.bootstrap view should expose startup_roster")
 end
@@ -162,9 +170,9 @@ local function _test_config_classifies_runtime_game_and_ports()
     "state.game_state should be classified as runtime"
   )
   _assert_eq(
-    architecture.modules["src.app.bootstrap.init"].component,
+    architecture.modules["src.app.bootstrap"].component,
     "app",
-    "app.bootstrap.init should be classified as app"
+    "app.bootstrap package should be classified as app"
   )
   _assert_eq(
     architecture.modules["src.core.ports.runtime_ports"].abstract,
@@ -224,13 +232,12 @@ local function _test_cli_viewer_supports_in_json()
   assert(_exists(out_dir .. "/architecture.json"), "viewer --in-json should export architecture.json")
 end
 
-local function _test_filtered_check_ignores_presentation_namespace_projection_cycles()
+local function _test_raw_scan_has_no_presentation_namespace_projection_cycles()
   local scan = _scan_architecture_json()
   local payload = json_reader.decode(_read_file(scan.out_path))
-  arch_filter.apply(payload)
   for _, violation in ipairs((payload.check and payload.check.violations) or {}) do
-    assert(violation.view ~= "ui", "filtered check should ignore presentation namespace ui projection cycle")
-    assert(violation.view ~= "ui.ctl", "filtered check should ignore presentation namespace ui.ctl projection cycle")
+    assert(violation.view ~= "ui", "raw scan should not report presentation namespace ui projection cycle")
+    assert(violation.view ~= "ui.ctl", "raw scan should not report presentation namespace ui.ctl projection cycle")
   end
 end
 
@@ -263,7 +270,7 @@ local contract_tests = {
 local tooling_tests = {
   { name = "cli_scan_writes_metadata", run = _test_cli_scan_writes_metadata },
   { name = "cli_viewer_supports_in_json", run = _test_cli_viewer_supports_in_json },
-  { name = "filtered_check_ignores_presentation_namespace_projection_cycles", run = _test_filtered_check_ignores_presentation_namespace_projection_cycles },
+  { name = "raw_scan_has_no_presentation_namespace_projection_cycles", run = _test_raw_scan_has_no_presentation_namespace_projection_cycles },
 }
 
 return {

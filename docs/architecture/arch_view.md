@@ -34,7 +34,7 @@ lua scripts/quality/arch.lua check
 - 模块级 `require` 环
 - projection/view 级反馈环（即模块图无环，但聚合到 viewer 视图后形成的往返依赖）
 
-Monopoly 还会在 `scripts/quality/arch/filter.lua` 里过滤两类 viewer 投影伪环：`root` 视图的纯命名空间折叠伪环，以及当前 `ui` / `ui.ctl` 视图里仅由 `presentation` 组件内部命名空间往返造成的聚合伪环。过滤后仍保留真实跨组件投影环。
+Monopoly 当前只在 `scripts/quality/arch/filter.lua` 里过滤 `root` 视图的纯命名空间折叠伪环。`ui` / `ui.ctl` 视图里的 presentation 命名空间投影环已经清零，不再保留额外特例。
 
 ```
 lua scripts/quality/arch.lua

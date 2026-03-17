@@ -13,7 +13,7 @@ app -> infrastructure -> presentation -> flow -> (runtime | ai) -> systems -> (r
 |------|--------------|
 | app | `src/app/bootstrap/` |
 | infrastructure | `src/infrastructure/runtime/` + `src/host/` |
-| presentation | `src/presentation/runtime/` + `src/ui/` |
+| presentation | `src/presentation/runtime/` + `src/ui/` + `src/ui/runtime/` |
 | flow | `src/turn/` |
 | runtime | `src/state/` + `src/player/` |
 | ai | `src/computer/` |
@@ -50,4 +50,4 @@ app -> infrastructure -> presentation -> flow -> runtime/ai -> systems -> runtim
 
 - 这一轮只对 `src.entry` 做硬切迁移：`main.lua` 现在从 `src.app.bootstrap` 启动。
 - `src/ui`、`src/turn`、`src/rules`、`src/state`、`src/player`、`src/host` 仍保留原物理目录，但在 arch_view 中已经按新组件语义投影。
-- `src/presentation/runtime/` 承接入口里的 UI/runtime wiring；`src/infrastructure/runtime/` 承接运行时全局别名注入。
+- `src/presentation/runtime/` 承接入口里的 UI/runtime wiring；`src/ui/runtime/` 承接展示侧共享 seam（`runtime_state` / `landing_visual_hold` / `host_runtime`）；`src/infrastructure/runtime/` 承接运行时全局别名注入。

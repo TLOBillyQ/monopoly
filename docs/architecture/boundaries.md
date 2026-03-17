@@ -11,6 +11,7 @@
 | `src/game/ai` | 中性 AI 策略：自动出牌、目标选择、自动 choice 决策 | 回合调度、宿主 API |
 | `src/game/runtime` | gameplay 端口实现（接 `src/game/ports/*` 契约） | 承接业务规则 |
 | `src/infrastructure/runtime` | 宿主细节：运行时上下文、事件桥、默认 runtime ports | — |
+| `src/ui/runtime` | 展示共享 seam：`runtime_state`、`landing_visual_hold`、`host_runtime` 这类窄桥接 | controller 装配、Canvas 渲染、输入路由 |
 | `src/presentation/schema` | 展示 schema：canvas 节点名、contract 常量、布局清单 | 写状态、宿主调用、输入路由 |
 | `src/presentation` | 展示适配：input 映射、UI model 查询、Canvas 渲染、UI 事件桥接 | 根据 `choice.kind`/`meta`/商品配置自行推断业务语义 |
 
@@ -54,6 +55,7 @@
 - 玩法业务规则 → `src/game/systems`
 - ViewModel 渲染 → `src/presentation`
 - 纯展示节点/schema → `src/presentation/schema`
+- 展示共享 seam / UI runtime 窄桥接 → `src/ui/runtime`
 - 宿主能力接入端口 → `src/app/bootstrap`；实现 → `src/infrastructure/runtime`
 - 宿主/运行时广义契约 → `src/core/ports/`
 - 玩法规则业务能力契约 → `src/game/ports/`

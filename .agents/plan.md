@@ -22,7 +22,7 @@
 - [x] (2026-03-18 01:19 CST) 已定位主要错误依赖方向：`src.ui.pres` / `src.ui.stores` 反向依赖 `src.ui.ctl.ports.runtime_state_seam`；`src.ui.ctl.ports.*` 作为端口装配层反向依赖 `src.ui.ctl.*`
 - [x] (2026-03-18 01:24 CST) 已创建计划文件 `/Users/billyq/Dev/Github/Lua/monopoly/arch-view-cycle-dependency-fix-plan.md`
 - [x] (2026-03-18 01:33 CST) 已完成一次子代理计划审阅，并补入 `arch/config.json`、`dep_rules`、shim 顺序、直接测试消费者与文档同步等漏项
-- [ ] 实施 T6-T7（已完成：T1 基线冻结；T2 guardrail 迁移；T3 seam 抽离；T4 延后；T5 测试侧真源切换）
+- [x] 实施完成：T1、T2、T3、T5、T6、T7（T4 保留为后续可选清理）
 
 ## 意外与发现
 
@@ -198,9 +198,9 @@
 - **location**: `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/filter.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/architecture/arch_view_contract.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/arch_view.md`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/boundaries.md`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/layer-model.md`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/subsystems.md`, `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/viewer/`
 - **description**: 删除 `filter.lua` 中针对 `ui` / `ui.ctl` 的特例过滤；把 `arch_view_contract` 从“过滤后忽略这两个环”改成“原始 scan 已无此环”；并同步更新架构文档，解释新的 `src/ui/runtime/*` 与 `src/presentation/runtime/ports/*` 归属。最后刷新提交态 viewer 快照。
 - **validation**: `lua scripts/quality/arch.lua check` 在不依赖这两个特例的情况下直接通过；`arch_view_contract` 断言原始 scan 无 `ui` / `ui.ctl` projection cycle；viewer 快照与实际 JSON 一致。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 03:02 CST 已移除 `filter.lua` 对 presentation namespace projection cycle 的特例，只保留 `root` 命名空间折叠伪环过滤；`arch_view_contract` 也改成直接验证 raw `scan` 无 `ui` / `ui.ctl` cycle。同步补齐了 `arch_view.md`、`boundaries.md`、`layer-model.md`、`subsystems.md` 对 `src/ui/runtime/*` 的归属说明，并刷新了 `scripts/quality/arch/viewer/` 快照。验证结果：`lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `.agents/plan.md`, `scripts/quality/arch/filter.lua`, `tests/suites/architecture/arch_view_contract.lua`, `docs/architecture/arch_view.md`, `docs/architecture/boundaries.md`, `docs/architecture/layer-model.md`, `docs/architecture/subsystems.md`, `scripts/quality/arch/viewer/*`
 
 ### T7: 最终验收、清理 shim 与旧白名单
 - **depends_on**: [T6]
@@ -216,9 +216,9 @@
   - `rg 'src\.ui\.ctl\.ports|src\.ui\.ctl\.ports\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)' src tests`
   - `rg 'src\.state\.state_access\.(runtime_state|landing_visual_hold)|src\.host\.eggy' src/ui src/presentation/runtime`
   预期 raw `scan` 的 `check.projection_cycles` 为空，测试全通过，旧白名单与旧 canonical import 已清理或被明确标记为兼容层。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 03:02 CST 已清掉 `tests/guards/dep_rules.lua` 中对旧 state port 宿主导入的过时 whitelist，并删除 `src/ui/ctl/ports/state_ports.lua` 里未使用的 `require("src.host.eggy")`。最终核验显示：raw `arch_view scan` 的 `projection_cycles = 0`；`arch_view check`、`guard`、`contract`、`behavior`、`tooling --workers 1` 全部通过。旧 seam 真源在 `src/` / `tests/` 中只剩 `src/ui/ctl/ports/init.lua` 的兼容元数据条目，已通过 `legacy_alias_modules` 与 allowlist 明确标记为兼容层，不再是 canonical source。
+- **files edited/created**: `.agents/plan.md`, `tests/guards/dep_rules.lua`, `src/ui/ctl/ports/state_ports.lua`, `tmp/arch_cycle_scan.json`
 
 ## Parallel Execution Groups
 
@@ -351,3 +351,5 @@
 变更说明（2026-03-18 02:12 CST）：完成 T3。共享 seam 抽离本身已经把 raw arch_view projection cycles 清零，因此将原 T4 大规模 assembly 迁移降级为后续可选清理，先沿低风险路线继续收尾。
 
 变更说明（2026-03-18 02:19 CST）：完成 T5，先把测试侧仍直接引用旧 seam 真源的文件切到 `src.ui.runtime.*`，在不扩大 assembly 迁移范围的情况下清理剩余真源漂移。
+
+变更说明（2026-03-18 03:02 CST）：完成 T6/T7。arch_view 不再豁免 presentation namespace cycle，viewer/documentation/contract 已对齐；最终再清掉一个过时 whitelist，并完成 scan/check/guard/contract/behavior/tooling 全量验收。
