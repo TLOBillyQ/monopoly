@@ -3,6 +3,8 @@ package_path_helper.install_monopoly_package_paths({ repo_root = "." })
 
 local common = require("shared.lib.common")
 
+common.ensure_windows_utf8_console()
+
 local function _normalize_path(path)
   return common.normalize_path(path)
 end

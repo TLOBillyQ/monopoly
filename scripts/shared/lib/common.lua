@@ -4,6 +4,7 @@ local common = {}
 
 local _temp_counter = 0
 local _base64_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local _windows_utf8_console_state = nil
 
 local function _entropy_token()
   local pointer = tostring({}):gsub("[^%w]+", "")
@@ -143,6 +144,32 @@ end
 
 local function _windows_execute_powershell(script)
   return os.execute(_windows_powershell_command(script))
+end
+
+local function _read_windows_code_page()
+  local process = io.popen("chcp")
+  if process == nil then
+    return nil, "failed to query active code page"
+  end
+
+  local output = process:read("*a") or ""
+  process:close()
+
+  local code_page = output:match("(%d+)%s*$")
+  if code_page == nil then
+    return nil, "failed to parse active code page"
+  end
+
+  return code_page
+end
+
+local function _set_windows_code_page_utf8()
+  local ok, kind, code = os.execute("chcp 65001 > nul")
+  local success, exit_code = _os_execute_success(ok, kind, code)
+  if success then
+    return true
+  end
+  return false, "failed to switch console code page: " .. tostring(exit_code)
 end
 
 local function _windows_path(path)
@@ -330,6 +357,58 @@ end
 
 function common.is_windows()
   return package.config:sub(1, 1) == "\\"
+end
+
+function common.ensure_windows_utf8_console(opts)
+  opts = opts or {}
+
+  if opts.reset == true then
+    _windows_utf8_console_state = nil
+  end
+
+  if not common.is_windows() then
+    local state = {
+      ok = true,
+      changed = false,
+      code_page = nil,
+      reason = "not_windows",
+    }
+    if opts.force ~= true then
+      _windows_utf8_console_state = state
+    end
+    return true, state
+  end
+
+  if opts.force ~= true and _windows_utf8_console_state ~= nil then
+    return _windows_utf8_console_state.ok, _windows_utf8_console_state
+  end
+
+  local get_code_page = opts.get_code_page or _read_windows_code_page
+  local set_code_page_utf8 = opts.set_code_page_utf8 or _set_windows_code_page_utf8
+
+  local code_page, code_page_err = get_code_page()
+  local state = {
+    ok = true,
+    changed = false,
+    code_page = code_page,
+    reason = nil,
+  }
+
+  if code_page == "65001" then
+    state.reason = "already_utf8"
+  else
+    local switched, switch_err = set_code_page_utf8()
+    state.ok = switched == true
+    state.changed = switched == true
+    state.code_page = switched == true and "65001" or code_page
+    state.reason = switch_err or code_page_err or "switched_to_utf8"
+  end
+
+  if opts.force ~= true then
+    _windows_utf8_console_state = state
+  end
+
+  return state.ok, state
 end
 
 function common.is_macos()

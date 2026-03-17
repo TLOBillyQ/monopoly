@@ -16,7 +16,10 @@ local package_path_helper = require("scripts.shared.package_path_helper")
 
 package_path_helper.install_monopoly_package_paths({ repo_root = REPO_ROOT, arch_view_root = ARCH_VIEW_DIR })
 
+local common = require("shared.lib.common")
 local arch_view = require("arch_view")
+
+common.ensure_windows_utf8_console()
 
 local M = {}
 

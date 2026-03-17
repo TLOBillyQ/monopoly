@@ -29,6 +29,7 @@ function bootstrap.install(script_path)
     repo_root = repo_root,
     arch_view_root = _normalize_path(repo_root .. "/vendor/arch_view"),
   })
+  require("shared.lib.common").ensure_windows_utf8_console()
 
   return {
     script_dir = _normalize_path(script_dir),

@@ -3,6 +3,8 @@ package_path_helper.install_monopoly_package_paths({ repo_root = "." })
 
 local common = require("shared.lib.common")
 
+common.ensure_windows_utf8_console()
+
 local function _module_dir()
   local source = debug.getinfo(1, "S").source or "@scripts/quality/scrap.lua"
   local normalized = common.normalize_path(source):gsub("^@", "")

@@ -65,6 +65,28 @@ local function _run_lua(args)
   })
 end
 
+local function _run_powershell_file(script_path, args)
+  local command = nil
+  if common.command_exists("pwsh") then
+    command = { "pwsh", "-File", script_path }
+  elseif common.command_exists("powershell") then
+    command = { "powershell", "-File", script_path }
+  else
+    return {
+      skipped = true,
+      output = "powershell not available",
+    }
+  end
+
+  for _, value in ipairs(args or {}) do
+    command[#command + 1] = value
+  end
+
+  return common.run_command(command, {
+    cwd = project_root,
+  })
+end
+
 local function _test_common_handles_unicode_paths_for_file_ops()
   _with_clean_tmp("common_file_ops", function(tmp_root)
     local base = common.join_path(tmp_root, "common_子目录/更多目录")
@@ -152,6 +174,159 @@ local function _test_command_exists_reports_present_and_missing_commands()
   assert(common.command_exists("lua") == true, "lua should exist in the test environment")
   assert(common.command_exists("monopoly_command_that_should_not_exist_12345") == false,
     "command_exists should return false for missing commands")
+end
+
+local function _test_windows_utf8_console_switches_once_per_process()
+  local original_is_windows = common.is_windows
+  local get_calls = 0
+  local set_calls = 0
+
+  common.is_windows = function()
+    return true
+  end
+
+  local ok, err = xpcall(function()
+    local switched, first_state = common.ensure_windows_utf8_console({
+      reset = true,
+      get_code_page = function()
+        get_calls = get_calls + 1
+        return "936"
+      end,
+      set_code_page_utf8 = function()
+        set_calls = set_calls + 1
+        return true
+      end,
+    })
+
+    assert(switched == true, "console helper should switch to utf8 on non-utf8 windows consoles")
+    assert(first_state.changed == true, "console helper should report a code page change")
+    assert(first_state.code_page == "65001", "console helper should report utf8 after switching")
+
+    local cached, cached_state = common.ensure_windows_utf8_console({
+      get_code_page = function()
+        error("cached call should not query code page again")
+      end,
+      set_code_page_utf8 = function()
+        error("cached call should not switch code page again")
+      end,
+    })
+
+    assert(cached == true, "cached console helper result should stay successful")
+    assert(cached_state.changed == true, "cached console helper state should preserve the first switch result")
+    assert(get_calls == 1, "console helper should query the code page only once per process")
+    assert(set_calls == 1, "console helper should switch the code page only once per process")
+  end, debug.traceback)
+
+  common.is_windows = original_is_windows
+  common.ensure_windows_utf8_console({ reset = true, force = true })
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_windows_utf8_console_skips_when_already_utf8()
+  local original_is_windows = common.is_windows
+  local get_calls = 0
+  local set_calls = 0
+
+  common.is_windows = function()
+    return true
+  end
+
+  local ok, err = xpcall(function()
+    local switched, state = common.ensure_windows_utf8_console({
+      reset = true,
+      force = true,
+      get_code_page = function()
+        get_calls = get_calls + 1
+        return "65001"
+      end,
+      set_code_page_utf8 = function()
+        set_calls = set_calls + 1
+        return true
+      end,
+    })
+
+    assert(switched == true, "console helper should succeed on utf8 consoles")
+    assert(state.changed == false, "console helper should not change an already utf8 console")
+    assert(state.reason == "already_utf8", "console helper should report the already utf8 fast path")
+    assert(get_calls == 1, "console helper should still inspect the current code page")
+    assert(set_calls == 0, "console helper should not switch code page when already utf8")
+  end, debug.traceback)
+
+  common.is_windows = original_is_windows
+  common.ensure_windows_utf8_console({ reset = true, force = true })
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_windows_utf8_console_is_noop_off_windows()
+  local original_is_windows = common.is_windows
+  local get_calls = 0
+  local set_calls = 0
+
+  common.is_windows = function()
+    return false
+  end
+
+  local ok, err = xpcall(function()
+    local passed, state = common.ensure_windows_utf8_console({
+      reset = true,
+      force = true,
+      get_code_page = function()
+        get_calls = get_calls + 1
+        return "936"
+      end,
+      set_code_page_utf8 = function()
+        set_calls = set_calls + 1
+        return true
+      end,
+    })
+
+    assert(passed == true, "console helper should no-op successfully off windows")
+    assert(state.changed == false, "console helper should not report changes off windows")
+    assert(state.reason == "not_windows", "console helper should explain the off-windows fast path")
+    assert(get_calls == 0, "console helper should not query code pages off windows")
+    assert(set_calls == 0, "console helper should not switch code pages off windows")
+  end, debug.traceback)
+
+  common.is_windows = original_is_windows
+  common.ensure_windows_utf8_console({ reset = true, force = true })
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_windows_utf8_console_failure_is_non_throwing()
+  local original_is_windows = common.is_windows
+
+  common.is_windows = function()
+    return true
+  end
+
+  local ok, err = xpcall(function()
+    local switched, state = common.ensure_windows_utf8_console({
+      reset = true,
+      force = true,
+      get_code_page = function()
+        return nil, "failed_to_read_code_page"
+      end,
+      set_code_page_utf8 = function()
+        return false, "switch_failed"
+      end,
+    })
+
+    assert(switched == false, "console helper should surface switching failures without throwing")
+    assert(state.changed == false, "console helper should not report a change on failure")
+    assert(state.reason == "switch_failed", "console helper should preserve the switching failure reason")
+  end, debug.traceback)
+
+  common.is_windows = original_is_windows
+  common.ensure_windows_utf8_console({ reset = true, force = true })
+  if not ok then
+    error(err)
+  end
 end
 
 local function _test_cli_help_text_is_bilingual()
@@ -264,6 +439,36 @@ local function _test_deploy_injects_startup_profile_when_requested()
     local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
     _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "smoke_test"',
       "deploy should inject startup profile into main.lua when requested")
+  end)
+end
+
+local function _test_deploy_powershell_wrapper_forwards_to_lua()
+  _with_ascii_tmp("deploy_powershell_wrapper_forwards_to_lua", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+    local result = _run_powershell_file("scripts/ops/deploy.ps1", {
+      "-TargetPath",
+      publish_target,
+      "-StartupProfile",
+      "smoke_test",
+    })
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "deploy PowerShell wrapper should succeed")
+    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
+      "deploy PowerShell wrapper should copy main.lua into the target path")
+    assert(common.path_exists(common.join_path(publish_target, "src/config")) == true,
+      "deploy PowerShell wrapper should include src/config through the src directory copy")
+    assert(common.path_exists(common.join_path(publish_target, "Data/UIManagerNodes.lua")) == true,
+      "deploy PowerShell wrapper should copy Data/UIManagerNodes.lua into the target path")
+    assert(common.path_exists(common.join_path(publish_target, "Data/Prefab.lua")) == true,
+      "deploy PowerShell wrapper should copy Data/Prefab.lua into the target path")
+
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "smoke_test"',
+      "deploy PowerShell wrapper should forward startup profile injection")
   end)
 end
 
@@ -404,12 +609,17 @@ local contract_tests = {
   { name = "deploy_aligns_with_current_repo_layout", run = _test_deploy_aligns_with_current_repo_layout },
   { name = "deploy_allows_explicit_target_path", run = _test_deploy_allows_explicit_target_path },
   { name = "deploy_injects_startup_profile_when_requested", run = _test_deploy_injects_startup_profile_when_requested },
+  { name = "deploy_powershell_wrapper_forwards_to_lua", run = _test_deploy_powershell_wrapper_forwards_to_lua },
   { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
 
 local tooling_tests = {
   { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
   { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
+  { name = "windows_utf8_console_switches_once_per_process", run = _test_windows_utf8_console_switches_once_per_process },
+  { name = "windows_utf8_console_skips_when_already_utf8", run = _test_windows_utf8_console_skips_when_already_utf8 },
+  { name = "windows_utf8_console_is_noop_off_windows", run = _test_windows_utf8_console_is_noop_off_windows },
+  { name = "windows_utf8_console_failure_is_non_throwing", run = _test_windows_utf8_console_failure_is_non_throwing },
   { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
   { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
   { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
