@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   LUA_VERSION: "5.5.0"
   GO_VERSION: "1.22.0"
@@ -12,9 +15,19 @@ jobs:
   lua-regression:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate submodule token
+        env:
+          CI_SUBMODULES_TOKEN: ${{ secrets.CI_SUBMODULES_TOKEN }}
+        run: |
+          if [[ -z "$CI_SUBMODULES_TOKEN" ]]; then
+            echo "::error::Missing secret CI_SUBMODULES_TOKEN. Configure a read-only token that can access TLOBillyQ/monopoly, TLOBillyQ/arch_view, TLOBillyQ/crap4lua, and TLOBillyQ/mutate4lua."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.CI_SUBMODULES_TOKEN }}
           submodules: recursive
 
       - name: Setup Go
