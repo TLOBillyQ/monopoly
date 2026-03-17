@@ -12,24 +12,24 @@ local constants = support.constants
 local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.ui.controllers.event_handlers")
+local event_handlers = require("src.ui.ctl.event_handlers")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
 local runtime_port = require("src.ui.render.runtime_ui")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.controllers.choice_screens.openers")
+local choice_openers = require("src.ui.ctl.choice_screens.openers")
 local market_view = require("src.ui.render.market")
 local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.controllers.canvas_event_router")
-local ui_view = require("src.ui.controllers.ui_runtime")
+local canvas_event_router = require("src.ui.ctl.canvas_event_router")
+local ui_view = require("src.ui.ctl.ui_runtime")
 local ui_status_3d_layer = require("src.ui.render.status3d")
 local action_anim = require("src.ui.render.action_anim")
 local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.widgets.turn_effects")
-local popup_renderer = require("src.ui.controllers.popup_controller")
-local market_modal_renderer = require("src.ui.controllers.market_controller")
-local debug_ports_module = require("src.ui.controllers.ports.debug_ports")
+local turn_effects = require("src.ui.wid.turn_effects")
+local popup_renderer = require("src.ui.ctl.popup_controller")
+local market_modal_renderer = require("src.ui.ctl.market_controller")
+local debug_ports_module = require("src.ui.ctl.ports.debug_ports")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -40,7 +40,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local host_runtime = require("src.host.eggy")
 local runtime_state = require("src.state.state_access.runtime_state")
-local target_choice_effects = require("src.ui.controllers.target_choice_effects")
+local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -951,7 +951,7 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
 end
 
 local function _test_ui_model_market_payload_prefers_explicit_choice_fields()
-  local ui_model = require("src.ui.presenters")
+  local ui_model = require("src.ui.pres")
   local g = _new_game()
   local current_player = g:current_player()
   g.turn.pending_choice = {
@@ -1016,9 +1016,9 @@ local function _test_target_pick_prefers_explicit_owner_role_id()
 end
 
 local function _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel()
-  local modal_presenter = require("src.ui.controllers.modal_controller")
-  local market_presenter = require("src.ui.controllers.market_controller")
-  local target_choice_effects_local = require("src.ui.controllers.target_choice_effects")
+  local modal_presenter = require("src.ui.ctl.modal_controller")
+  local market_presenter = require("src.ui.ctl.market_controller")
+  local target_choice_effects_local = require("src.ui.ctl.target_choice_effects")
   local canvas_store = require("src.ui.stores.canvas_store")
 
   local opened = 0
@@ -1065,7 +1065,7 @@ local function _test_modal_presenter_market_same_choice_id_still_refreshes_marke
 end
 
 local function _test_ui_event_router_market_cancel_button_dispatches_choice_cancel()
-  local market_nodes = require("src.ui.schema.canvas.market.nodes")
+  local market_nodes = require("src.ui.schema.market_nodes")
 
   local function new_node()
     local node = {}
@@ -1301,7 +1301,7 @@ end
 
 local function _test_view_command_target_lock_and_unlock_fallback_routes_to_target_effects()
   local view_command_dispatcher = require("src.ui.input.intent_dispatch.view_command")
-  local target_choice_effects_local = require("src.ui.controllers.target_choice_effects")
+  local target_choice_effects_local = require("src.ui.ctl.target_choice_effects")
   local state = { ui = ui_view.build_ui_state() }
   local calls = {}
 
@@ -1348,7 +1348,7 @@ local function _test_view_command_target_lock_and_unlock_fallback_routes_to_targ
 end
 
 local function _test_item_phase_confirmed_skips_replay_before_slot_click()
-  local ui_events = require("src.ui.controllers.ui_events")
+  local ui_events = require("src.ui.ctl.ui_events")
   local events = {}
   local state = {
     _item_phase_ask_active = nil,
@@ -1419,7 +1419,7 @@ local function _test_item_phase_confirmed_skips_replay_before_slot_click()
 end
 
 local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines()
-  local ui_events = require("src.ui.controllers.ui_events")
+  local ui_events = require("src.ui.ctl.ui_events")
   local events = {}
   local visible_state = {}
   local timers = {}
@@ -1525,7 +1525,7 @@ local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_rev
 end
 
 local function _test_item_slot_refresh_resets_highlight_without_client_role()
-  local ui_events = require("src.ui.controllers.ui_events")
+  local ui_events = require("src.ui.ctl.ui_events")
   local events = {}
   local phase = ""
 
@@ -1673,15 +1673,15 @@ end
 
 local function _test_tick_skips_anim_when_no_anim()
   local dirty_tracker = require("src.core.utils.dirty_tracker")
-  local main_view = require("src.ui.controllers.ui_runtime")
-  local ui_model = require("src.ui.presenters")
+  local main_view = require("src.ui.ctl.ui_runtime")
+  local ui_model = require("src.ui.pres")
   local board_view_mod = require("src.ui.render.board")
 
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
-    { target = require("src.ui.controllers.modal_controller"), key = "open_choice_modal", value = function() end },
+    { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       return {
         current_player_name = "P",

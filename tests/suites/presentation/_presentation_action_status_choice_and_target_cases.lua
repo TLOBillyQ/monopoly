@@ -12,25 +12,25 @@ local constants = support.constants
 local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.ui.controllers.event_handlers")
+local event_handlers = require("src.ui.ctl.event_handlers")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
 local runtime_port = require("src.ui.render.runtime_ui")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.controllers.choice_screens.openers")
+local choice_openers = require("src.ui.ctl.choice_screens.openers")
 local market_view = require("src.ui.render.market")
 local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.controllers.canvas_event_router")
-local ui_view = require("src.ui.controllers.ui_runtime")
-local modal_presenter = require("src.ui.controllers.modal_controller")
+local canvas_event_router = require("src.ui.ctl.canvas_event_router")
+local ui_view = require("src.ui.ctl.ui_runtime")
+local modal_presenter = require("src.ui.ctl.modal_controller")
 local ui_status_3d_layer = require("src.ui.render.status3d")
 local action_anim = require("src.ui.render.action_anim")
 local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.widgets.turn_effects")
-local popup_renderer = require("src.ui.controllers.popup_controller")
-local market_modal_renderer = require("src.ui.controllers.market_controller")
-local debug_ports_module = require("src.ui.controllers.ports.debug_ports")
+local turn_effects = require("src.ui.wid.turn_effects")
+local popup_renderer = require("src.ui.ctl.popup_controller")
+local market_modal_renderer = require("src.ui.ctl.market_controller")
+local debug_ports_module = require("src.ui.ctl.ports.debug_ports")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -41,7 +41,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local host_runtime = require("src.host.eggy")
 local runtime_state = require("src.state.state_access.runtime_state")
-local target_choice_effects = require("src.ui.controllers.target_choice_effects")
+local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 
@@ -265,7 +265,7 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.ui.controllers.ports").build(state)
+    state.gameplay_loop_ports = require("src.ui.ctl.ports").build(state)
     modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -606,7 +606,7 @@ local function _test_target_screen_uses_labels_only_and_hides_projection_with_sl
     _assert_eq(nodes["位置-槽位7投影"].visible, true, "slot7 projection should be visible with populated slot")
     _assert_eq(nodes["位置-槽位7投影"].disabled, true, "slot7 projection should stay non-interactive")
 
-    local common = require("src.ui.controllers.choice_screens.helpers")
+    local common = require("src.ui.ctl.choice_screens.helpers")
     common.hide_choice_screens(state.ui)
 
     _assert_eq(nodes["位置-槽位1文本"].visible, false, "hide_choice_screens should hide slot label")
@@ -1162,7 +1162,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
     assert(type(node_map["始终显示_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
-    local before = require("src.ui.controllers.event_state").resolve_debug_enabled(state, role_id)
+    local before = require("src.ui.ctl.event_state").resolve_debug_enabled(state, role_id)
     node_map["始终显示_行动日志图标"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
@@ -1226,7 +1226,7 @@ local function _test_ui_event_router_rejects_action_log_without_role()
 end
 
 local function _test_secondary_confirm_copy_item_phase_selected_option()
-  local common = require("src.ui.controllers.choice_screens.helpers")
+  local common = require("src.ui.ctl.choice_screens.helpers")
   local choice = {
     kind = "item_phase_choice",
     route_key = "base_inline",
@@ -1248,7 +1248,7 @@ local function _test_secondary_confirm_copy_item_phase_selected_option()
 end
 
 local function _test_secondary_confirm_copy_land_actions()
-  local common = require("src.ui.controllers.choice_screens.helpers")
+  local common = require("src.ui.ctl.choice_screens.helpers")
   local choice = {
     kind = "landing_optional_effect",
     options = {
@@ -1290,7 +1290,7 @@ local function _test_secondary_confirm_copy_land_actions()
 end
 
 local function _test_secondary_confirm_copy_generic_pre_confirm()
-  local common = require("src.ui.controllers.choice_screens.helpers")
+  local common = require("src.ui.ctl.choice_screens.helpers")
   local choice = {
     kind = "remote_dice_value",
     title = "遥控骰子",
@@ -1305,7 +1305,7 @@ local function _test_secondary_confirm_copy_generic_pre_confirm()
 end
 
 local function _test_secondary_confirm_prefers_usecase_confirm_copy()
-  local common = require("src.ui.controllers.choice_screens.helpers")
+  local common = require("src.ui.ctl.choice_screens.helpers")
   local choice = {
     kind = "landing_optional_effect",
     confirm_title = "不会被读取",
@@ -1384,7 +1384,7 @@ local function _test_ui_event_router_action_log_uses_cached_local_role_when_even
 end
 
 local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player()
-  local always_show_nodes = require("src.ui.schema.canvas.always_show.nodes")
+  local always_show_nodes = require("src.ui.schema.always_show_nodes")
 
   local function new_node()
     local node = {}
@@ -1466,8 +1466,8 @@ local function _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id
     },
   }
 
-  local enabled_by_int = require("src.ui.controllers.event_state").resolve_debug_enabled(state, 1)
-  local enabled_by_string = require("src.ui.controllers.event_state").resolve_debug_enabled(state, "1")
+  local enabled_by_int = require("src.ui.ctl.event_state").resolve_debug_enabled(state, 1)
+  local enabled_by_string = require("src.ui.ctl.event_state").resolve_debug_enabled(state, "1")
 
   _assert_eq(enabled_by_int, true, "debug_enabled should read string key by int role_id")
   _assert_eq(enabled_by_string, true, "debug_enabled should read string key by string role_id")

@@ -1,7 +1,7 @@
-local player_colors = require("src.ui.presenters.player_colors")
+local player_colors = require("src.ui.pres.player_colors")
 local assets = require("src.ui.render.ui_assets")
 local runtime = require("src.ui.render.runtime_ui")
-local base_nodes = require("src.ui.schema.canvas.base.nodes")
+local base_nodes = require("src.ui.schema.base_nodes")
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
 

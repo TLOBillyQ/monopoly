@@ -28,7 +28,7 @@ local function _resolve_runtime_bundle(state, opts)
   return {
     runtime = package.loaded["src.ui.render.runtime_ui"],
     host_runtime = package.loaded["src.host.eggy"],
-    ui_events = package.loaded["src.ui.controllers.ui_events"] or {
+    ui_events = package.loaded["src.ui.ctl.ui_events"] or {
       show = {},
       hide = {},
       send_to_all = function() end,

@@ -210,7 +210,7 @@ local function _reload_app_init_with_stubs(startup)
   }
 
   with_patches({
-    { target = package.loaded, key = "src.entry.init", value = nil },
+    { target = package.loaded, key = "src.entry", value = nil },
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
     {
       target = package.loaded,
@@ -303,10 +303,10 @@ local function _reload_app_init_with_stubs(startup)
       end,
     },
   }, function()
-    require("src.entry.init")
+    require("src.entry")
   end, { skip_runtime_context_refresh = true })
 
-  package.loaded["src.entry.init"] = nil
+  package.loaded["src.entry"] = nil
   capture.state = state
   return capture
 end
@@ -388,7 +388,7 @@ local function _test_app_init_keeps_scheduler_fallback()
   }
 
   with_patches({
-    { target = package.loaded, key = "src.entry.init", value = nil },
+    { target = package.loaded, key = "src.entry", value = nil },
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
     { target = package.loaded, key = "src.entry.boot", value = { install = function() end } },
     { target = package.loaded, key = "src.entry.start_game", value = { build_state = function() return state end } },
@@ -409,10 +409,10 @@ local function _test_app_init_keeps_scheduler_fallback()
     { key = "GlobalAPI", value = {} },
     { key = "SetTimeOut", value = nil },
   }, function()
-    require("src.entry.init")
+    require("src.entry")
   end, { skip_runtime_context_refresh = true })
 
-  package.loaded["src.entry.init"] = nil
+  package.loaded["src.entry"] = nil
   assert(gameplay_rules.debug_log_enabled == true, "startup should keep debug logs enabled")
   assert(capture.host_runtime.tip_presenter("tip", 1) == false, "tip presenter should fall back when GlobalAPI is missing")
   local called = false

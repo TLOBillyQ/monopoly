@@ -283,12 +283,9 @@
       "name": "ui_schema_pure",
       "to": [
         "^src%.ui%.input%..+",
-        "^src%.ui%.controllers%..+",
         "^src%.ui%.ctl%..+",
-        "^src%.ui%.presenters%..+",
         "^src%.ui%.pres%..+",
         "^src%.ui%.render%..+",
-        "^src%.ui%.widgets%..+",
         "^src%.ui%.wid%..+",
         "^src%.ui%.stores%..+",
         "^src%.turn%..+",

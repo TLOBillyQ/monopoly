@@ -167,7 +167,7 @@ local rules = {
     description = "market service layer must not call host purchase globals directly",
   },
   {
-    roots = { "src/ui/controllers/ports" },
+    roots = { "src/ui/ctl/ports" },
     forbidden_patterns = {
       "game%.ui_port",
       "ui_port%.get_board_scene",
