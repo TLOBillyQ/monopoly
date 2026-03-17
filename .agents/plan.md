@@ -12,7 +12,7 @@
 
 - [x] (2026-03-17) 已按原计划评论与二次 review 重排任务依赖、补齐缺失护栏和快照范围。
 - [x] (2026-03-17 19:49) T1 冻结单一 rename map，并给 13 个 `init.lua` 全部分型。
-- [ ] T2 搭好双轨迁移基础设施、包别名兼容和批量脚本入口。
+- [x] (2026-03-17 20:07) T2 搭好双轨迁移基础设施、包别名兼容和批量脚本入口。
 - [ ] T3-T6 并行完成各自子树的“移文件 + 落 shim + 改内部引用”。
 - [ ] T7 统一切换所有外部调用点、字符串消费者、护栏配置到 new-only。
 - [ ] T8 删除临时 shim 与本次迁移专用 pair。
@@ -120,9 +120,22 @@ T1 -> T2 -> { T3, T4, T5, T6 } -> T7 -> T8 -> T9
 - **location**: `src/player/**`、`src/rules/**`、`src/state/**`、`src/config/**`、`src/computer/**`
 - **description**: 只处理 gameplay 侧文件移动与命名收缩；只允许改这些子树内部的 `require(...)` 与必要的 alias key，不改任何外部调用点。对旧路径保留 shim，并把 `rules/market`、`rules/land`、`player/actions/state_ops`、`config/content/maps` 的碰撞与短名落到 rename map 既定结果。
 - **validation**: gameplay 新路径可独立解析；旧路径 shim 与 alias key 仍指向同一实现；`rules/state/config` 不新增越界依赖；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua` 通过。
-- **status**: Not Completed
+- **status**: Completed
 - **log**:
+  - `tests/support/migration_pairs.lua` 改为完全从 `tests/support/migration_map.lua` 派生，沿用 `file_exists/read_file` 接口并保留仅取 `keep_shim` 项的入口。
+  - `tests/guards/migration_shim_rules.lua` 与 `tests/suites/architecture/migration_shim_contract.lua` 升级为理解 alias key 的双轨版本：普通 shim 仍校验纯转发，package/alias 类 shim 改为校验“forward + package.loaded 注册”。
+  - `tests/guards/dep_rules.lua` 改为按 map 构造 `ui/schema/base`、`turn/output/*`、`ui/controllers/ports -> ui/ctl/ports` 的双轨 roots/patterns，并把 forbidden files 入口改成 map-aware。
+  - 新增 `scripts/migration/common.lua`、`scripts/migration/rewrite_modules.lua`、`scripts/migration/generate_shims.lua` 两个批量入口；dry-run 已能输出拟改清单/拟生成 shim 清单。
+  - 为了让 T2 验证恢复全绿，顺手修复了 `scripts/ops/deploy_defaults.lua` 的 Windows 默认发布路径回归，使 contract lane 回到通过态。
 - **files edited/created**:
+  - `tests/support/migration_pairs.lua`
+  - `tests/guards/migration_shim_rules.lua`
+  - `tests/suites/architecture/migration_shim_contract.lua`
+  - `tests/guards/dep_rules.lua`
+  - `scripts/migration/common.lua`
+  - `scripts/migration/rewrite_modules.lua`
+  - `scripts/migration/generate_shims.lua`
+  - `scripts/ops/deploy_defaults.lua`
 
 ### T4：迁移 entry / host / core / turn，但保留活跃 `turn/output` 别名
 

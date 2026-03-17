@@ -14,8 +14,11 @@ local function _candidate_paths(options)
   local home_dir = _normalized_home_dir(options.home_dir or "")
 
   if options.is_windows == true then
+    if home_dir == "" then
+      return {}
+    end
     return {
-      "C:/Users/Lzx_8/Desktop/dev/LuaSource_大富翁-发布",
+      common.join_path(home_dir, "Desktop/LuaSource_大富翁-发布"),
     }
   end
 
