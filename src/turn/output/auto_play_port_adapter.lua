@@ -1,4 +1,4 @@
-local agent = require("src.computer.policies.agent")
+local agent = require("src.computer.policies.core_agent")
 
 local adapter = {}
 

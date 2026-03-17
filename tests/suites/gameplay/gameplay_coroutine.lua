@@ -284,8 +284,8 @@ local function _test_await_choice_bridges_action_anim_into_wait_state()
     actor_role_id = g:current_player().id,
   })
 
-  local original_resolve_choice = require("src.turn.output.decision").resolve_choice
-  require("src.turn.output.decision").resolve_choice = function(game, choice, action)
+  local original_resolve_choice = require("src.turn.waits.decision").resolve_choice
+  require("src.turn.waits.decision").resolve_choice = function(game, choice, action)
     game.turn.action_anim = { seq = 7, kind = "move_effect" }
     return {
       after_action_anim = {
@@ -298,7 +298,7 @@ local function _test_await_choice_bridges_action_anim_into_wait_state()
   end
 
   local res = await.choice(session, { next_state = "post_action", next_args = { player = g:current_player() } })
-  require("src.turn.output.decision").resolve_choice = original_resolve_choice
+  require("src.turn.waits.decision").resolve_choice = original_resolve_choice
 
   assert(res and res.next_state == "wait_action_anim", "choice should bridge action anim into wait_action_anim")
   assert(res.next_args and res.next_args.next_state == "move_followup", "choice should preserve move_followup target")

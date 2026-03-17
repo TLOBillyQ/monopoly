@@ -32,7 +32,7 @@
 | `behavior` | `48` 个 suite，`976` 个 case | 其中 `8` 个 case 在特定 mode 下禁用 |
 | `contract` | `13` 个 suite，`68` 个 case | 默认高频快车道，含 tooling 调度纯逻辑契约 |
 | `tooling` | `6` 个 suite，`31` 个 case | 默认 auto；可用 `--workers 1` 退回串行调试 |
-| `guard` | `5` 个 script | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`、`migration_shim_rules` |
+| `guard` | `4` 个 script | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard` |
 | `arch_view` | 扫描 `src/**/*.lua` | 不扫 `tests/`、`scripts/`、`vendor/` |
 | `crap` | 当前 behavior lane 分析 `2588` 个函数 | 只给 `src/**/*.lua` 打分 |
 | `mutate4lua` | 每次只盯 `1` 个 `src/**/*.lua` 文件 | 诊断工具，不进默认回归 |
@@ -80,7 +80,6 @@
   - `gameplay_loop_no_ui`：`gameplay loop` 在最小 runtime 下不直接依赖 UI 对象
   - `forbidden_globals`：禁用 `tonumber`、`type(...) == "number"`、`rawget` 等仓库级禁令
   - `arch_view_guard`：把 `arch_view` 的检查结果接入 guard lane
-  - `migration_shim_rules`：迁移对中的兼容 shim 只能保留纯转发桥，且不得重新引入退役 config shim 根路径
 - 适用时机：想快速知道有没有出现“明确不允许的写法”
 
 ### `arch_view`

@@ -69,7 +69,7 @@ local function _build_choice_groups()
 end
 
 local function _test_ai_picks_land_purchase()
-  local agent = require("src.computer.policies.agent")
+  local agent = require("src.computer.policies.core_agent")
   local g = _new_game()
   local ai_player = g.players[2]
   assert(agent.is_auto_player(ai_player), "player 2 should be AI")

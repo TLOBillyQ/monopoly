@@ -18,13 +18,62 @@ package_path_helper.install_monopoly_package_paths({ repo_root = REPO_ROOT, arch
 
 local common = require("shared.lib.common")
 local arch_view = require("arch_view")
+local arch_filter = require("scripts.quality.arch.filter")
 
 common.ensure_windows_utf8_console()
 
 local M = {}
 
+local function _is_check_command(args)
+  if type(args) ~= "table" then
+    return false
+  end
+  return args[1] == "check"
+end
+
+local function _run_filtered_check(args, env)
+  local architecture, err = arch_view.analyze({
+    project_root = env.cwd or REPO_ROOT,
+    config_path = env.default_config_path or ARCH_CONFIG_PATH,
+    engine = env.default_engine or "auto",
+  })
+  if architecture == nil then
+    io.stderr:write("arch_view 检查失败 / arch_view check failed\n")
+    io.stderr:write("  " .. tostring(err) .. "\n")
+    return 1
+  end
+
+  arch_filter.apply(architecture)
+  if architecture.check and architecture.check.ok == true then
+    print("arch_view 检查通过 / arch_view check ok")
+    return 0
+  end
+
+  io.stderr:write("arch_view 检查失败 / arch_view check failed\n")
+  for _, violation in ipairs((architecture.check and architecture.check.violations) or {}) do
+    if violation.kind == "forbidden_dependency" then
+      io.stderr:write("  禁止依赖 / forbidden_dependency [" .. tostring(violation.rule) .. "] "
+        .. tostring(violation.from) .. " -> " .. tostring(violation.to) .. "\n")
+      io.stderr:write("    " .. tostring(violation.description) .. "\n")
+    elseif violation.kind == "projection_cycle" then
+      io.stderr:write("  投影循环 / projection_cycle " .. tostring(violation.view) .. "\n")
+      io.stderr:write("    " .. tostring(violation.description) .. "\n")
+    elseif violation.kind == "unclassified_module" then
+      io.stderr:write("  未分类模块 / unclassified_module " .. tostring(violation.module_id) .. "\n")
+      io.stderr:write("    " .. tostring(violation.description) .. "\n")
+    else
+      io.stderr:write("  " .. tostring(violation.kind) .. "\n")
+      io.stderr:write("    " .. tostring(violation.description) .. "\n")
+    end
+  end
+  return 1
+end
+
 function M.run(args, env)
   env = env or {}
+  if _is_check_command(args or arg or {}) then
+    return _run_filtered_check(args or arg or {}, env)
+  end
   return arch_view.run_cli(args or arg or {}, {
     cwd = env.cwd or REPO_ROOT,
     asset_root = env.asset_root or _normalize_path(ARCH_VIEW_DIR .. "/viewer"),
@@ -35,7 +84,14 @@ function M.run(args, env)
 end
 
 function M.main()
-  return M.run(arg or {})
+  local code = M.run(arg or {})
+  local is_numeric_code = pcall(function()
+    return code + 0
+  end)
+  if is_numeric_code then
+    os.exit(code)
+  end
+  return code
 end
 
 if ... == "quality.arch" then

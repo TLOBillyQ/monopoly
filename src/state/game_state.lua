@@ -1,8 +1,8 @@
-local composition_root = require("src.state.compose_game")
+local composition_root = require("src.entry.compose_game")
 local game_state_players = require("src.state.player_state")
 local game_state_tiles = require("src.state.board_state")
 local game_state_turn = require("src.state.turn_state")
-local game_victory = require("src.state.game_victory")
+local game_victory = require("src.rules.endgame.game_victory")
 require "vendor.third_party.ClassUtils"
 
 

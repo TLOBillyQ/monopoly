@@ -115,7 +115,7 @@ function landing_visual_hold.start(game)
     local hold = _ensure_hold(state)
     hold.active = true
     hold.release_pending = false
-    local logger = require("src.state.support.logger")
+    local logger = require("src.core.utils.logger")
     logger.push_event_buffer(hold)
   end
   _mark_turn_dirty(game)
@@ -184,7 +184,7 @@ function landing_visual_hold.sync_state_from_game(state, game)
   hold.active = landing_visual_hold.is_active_game(game)
   hold.release_pending = landing_visual_hold.is_release_pending_game(game)
   if hold.active == true and was_active ~= true then
-    local logger = require("src.state.support.logger")
+    local logger = require("src.core.utils.logger")
     logger.push_event_buffer(hold)
   end
   return hold
@@ -301,7 +301,7 @@ function landing_visual_hold.release(state, game)
   end
 
   local function _replay_deferred_entries(hold)
-    local logger = require("src.state.support.logger")
+    local logger = require("src.core.utils.logger")
     logger.flush_event_buffer(hold)
 
     for _, entry in ipairs(hold.deferred_board_visual_syncs) do
@@ -356,7 +356,7 @@ end
 
 function landing_visual_hold.reset_state(state)
   local hold = _ensure_hold(state)
-  local logger = require("src.state.support.logger")
+  local logger = require("src.core.utils.logger")
   logger.pop_event_buffer(hold)
   hold.active = false
   hold.release_pending = false

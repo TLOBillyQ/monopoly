@@ -41,7 +41,7 @@ function M.install(opts)
   end
   paid_purchase_port.configure(require("src.host.eggy.paid_purchase_gateway"))
   require "src.rules.endgame.bankruptcy"
-  require "src.computer.policies.agent"
+  require "src.computer.policies.core_agent"
   require "src.rules.endgame.game_victory"
   require "src.entry.compose_game"
 end

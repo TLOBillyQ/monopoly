@@ -1,7 +1,7 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local logger = require("src.state.support.logger")
+local logger = require("src.core.utils.logger")
 local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
-local number_utils = require("src.state.support.number_utils")
+local number_utils = require("src.core.utils.number_utils")
 
 local runtime_editor_exports = {}
 local game_api_key = "Game" .. "API"

@@ -1,11 +1,11 @@
-local runtime_constants = require("src.host.eggy.support.runtime_constants")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local logger = require("src.core.utils.logger")
-local runtime_editor_exports = require("src.host.eggy.support.runtime_editor_exports")
-local vehicle_feature = require("src.host.eggy.support.vehicle")
+local runtime_editor_exports = require("src.state.state_access.runtime_editor_exports")
+local vehicle_feature = require("src.rules.vehicle")
 local number_utils = require("src.core.utils.number_utils")
 local synthetic_actor_registry = require("src.host.eggy.synthetic_actor_registry")
-require("src.host.eggy.support.runtime_refs")
+require("src.config.content.runtime_refs")
 
 local runtime_context = {}
 local game_api_key = "Game" .. "API"

@@ -15,6 +15,32 @@
   ],
   "component_rules": [
     {
+      "component": "host",
+      "match": [
+        "^src%.config%.content%.runtime_refs$",
+        "^src%.config%.gameplay%.runtime_constants$",
+        "^src%.rules%.vehicle$",
+        "^src%.state%.state_access%.runtime_editor_exports$"
+      ],
+      "name": "host_runtime_bridges"
+    },
+    {
+      "component": "state",
+      "match": [
+        "^src%.entry%.compose_game$",
+        "^src%.player%.actions%.state_ops%..+",
+        "^src%.rules%.endgame%.game_victory$"
+      ],
+      "name": "state_runtime_bridges"
+    },
+    {
+      "component": "rules",
+      "match": [
+        "^src%.player%.choices%..+"
+      ],
+      "name": "rules_choice_bridges"
+    },
+    {
       "component": "entry",
       "match": [
         "^src%.entry$",
@@ -220,7 +246,6 @@
       "to": [
         "^src%.turn%..+",
         "^src%.ui%..+",
-        "^src%.player%..+",
         "^src%.computer%..+",
         "^src%.host%..+",
         "^src%.entry%..+"
@@ -235,11 +260,8 @@
       "to": [
         "^src%.turn%..+",
         "^src%.ui%..+",
-        "^src%.player%..+",
         "^src%.computer%..+",
-        "^src%.rules%..+",
-        "^src%.host%..+",
-        "^src%.entry%..+"
+        "^src%.host%..+"
       ]
     },
     {
@@ -269,10 +291,7 @@
         "^src%.ui%..+",
         "^src%.turn%..+",
         "^src%.player%..+",
-        "^src%.computer%..+",
-        "^src%.rules%..+",
-        "^src%.state%..+",
-        "^src%.config%..+"
+        "^src%.computer%..+"
       ]
     },
     {

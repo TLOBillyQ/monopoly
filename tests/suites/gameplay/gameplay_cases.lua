@@ -51,7 +51,7 @@ local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
 local market_service = require("src.rules.market")
 local phase_registry = require("src.turn.phases.registry")
-local turn_decision = require("src.turn.output.decision")
+local turn_decision = require("src.turn.waits.decision")
 local item_effects = require("src.rules.items.post_effects")
 local item_strategy = require("src.rules.items.strategy")
 local facing_policy = require("src.rules.board.facing_policy")
@@ -1365,7 +1365,7 @@ end
 
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.turn.policies.auto_runner")
-  local agent = require("src.computer.policies.agent")
+  local agent = require("src.computer.policies.core_agent")
   local gameplay_rules = require("src.config.gameplay.gameplay_rules")
   local land = require("src.rules.land.executors")
   local land_actions = require("src.rules.land.actions")
@@ -3649,7 +3649,7 @@ local function _test_intent_dispatcher_dispatch_handles_popup_and_ignores_invali
 end
 
 local function _test_ai_board_target_choice_falls_back_to_first_option()
-  local agent = require("src.computer.policies.agent")
+  local agent = require("src.computer.policies.core_agent")
   local g = _new_game()
   local ai_player = g.players[2]
   ai_player.auto = true

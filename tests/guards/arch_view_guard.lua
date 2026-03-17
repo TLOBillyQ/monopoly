@@ -1,6 +1,7 @@
 require("tests.bootstrap").install_package_paths()
 
 local arch_view = require("arch_view")
+local arch_filter = require("scripts.quality.arch.filter")
 
 local M = {}
 
@@ -12,6 +13,8 @@ function M.run()
   if architecture == nil then
     return { ok = false, error = "arch_view_guard error: " .. tostring(err) }
   end
+
+  arch_filter.apply(architecture)
 
   if architecture.views == nil or architecture.views.root == nil then
     return { ok = false, error = "arch_view_guard error: missing root view" }
