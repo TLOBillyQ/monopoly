@@ -62,7 +62,7 @@ jobs:
       - name: Collect deploy line counts
         run: |
           target_path="$RUNNER_TEMP/monopoly-deploy"
-          output="$(lua tools/ops/deploy.lua --target-path "$target_path" 2>&1)"
+          output="$(pwsh -File tools/ops/deploy.ps1 --target-path "$target_path" 2>&1)"
           printf '%s\n' "$output"
 
           summary_lines="$(printf '%s\n' "$output" | grep -E '有效代码行数|^[[:space:]]+- (Config|src|vendor|main\.lua|Data/UIManagerNodes\.lua|Data/Prefab\.lua):' || true)"

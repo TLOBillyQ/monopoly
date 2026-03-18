@@ -89,7 +89,11 @@ function choice_auto_policy.decide(game, state, choice, ctx)
 
   local mode = ctx.mode or "wait_choice"
   local actor = _resolve_choice_owner(game, choice)
-  local is_auto_actor = actor and auto_play_port.is_auto_player(game, actor) or false
+  local is_auto_actor = ctx.is_auto_actor
+  if is_auto_actor == nil then
+    is_auto_actor = actor and auto_play_port.is_auto_player(game, actor) or false
+  end
+  is_auto_actor = is_auto_actor == true
   local min_visible = _normalize_visible_seconds(ctx.min_visible_seconds)
   local elapsed = _normalize_visible_seconds(ctx.elapsed_seconds)
 
@@ -108,6 +112,9 @@ function choice_auto_policy.decide(game, state, choice, ctx)
   end
 
   if mode == "tick_timeout" then
+    if not is_auto_actor then
+      return nil
+    end
     if choice.allow_cancel == true then
       return {
         type = "choice_cancel",

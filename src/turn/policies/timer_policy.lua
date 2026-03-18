@@ -5,6 +5,7 @@ local turn_timer_policy = {}
 local function _reset_action_button(state)
   state.action_button_active = false
   state.action_button_elapsed = 0
+  state.action_button_player_id = nil
 end
 
 local function _has_blocking_ui(ui_sync_ports, state)
@@ -60,6 +61,20 @@ local function _resolve_current_player(game)
   return current_index and game.players and game.players[current_index] or nil
 end
 
+local function _is_auto_player(game, player)
+  if not player then
+    return false
+  end
+  local auto_play_port = game and game.auto_play_port or nil
+  if type(auto_play_port) == "table" and type(auto_play_port.is_auto_player) == "function" then
+    local ok, is_auto = pcall(auto_play_port.is_auto_player, game, player)
+    if ok then
+      return is_auto == true
+    end
+  end
+  return player.auto == true or player.is_ai == true or player.ai == true
+end
+
 local function _dispatch_timeout(ctx, current_player)
   if ctx.dispatch_next then
     ctx.dispatch_next(current_player.id, "timeout")
@@ -102,6 +117,23 @@ function turn_timer_policy.update_action_button_timer(ctx)
     _reset_action_button(state)
     return
   end
+
+  local current_player = _resolve_current_player(game)
+  if not current_player then
+    _reset_action_button(state)
+    return
+  end
+
+  if state.action_button_player_id ~= current_player.id then
+    state.action_button_player_id = current_player.id
+    state.action_button_elapsed = 0
+  end
+
+  if not _is_auto_player(game, current_player) then
+    _reset_action_button(state)
+    return
+  end
+
   state.action_button_active = true
 
   if _update_elapsed_timer(state, ctx.dt, timeout, game, ctx) then

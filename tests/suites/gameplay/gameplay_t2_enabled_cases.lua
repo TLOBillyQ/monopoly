@@ -315,7 +315,8 @@ return {
   _test_update_countdown_pending_choice = function()
     local game = _new_game()
     local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "test" }
+    game.turn.current_player_index = 2
+    game.turn.pending_choice = { id = 1, kind = "test", owner_role_id = game.players[2].id }
     tick_ui_sync.update_countdown(game, state)
     assert(game.turn.countdown_active == true, "pending choice should activate countdown")
   end,

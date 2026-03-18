@@ -91,6 +91,17 @@ local function _build_startup_state(profile_name)
   })
 end
 
+local function _assert_ai_map_has_no_positive_slot_keys(ai_map, max_slot)
+  if ai_map == nil then
+    return
+  end
+  for slot_index = 1, (max_slot or 4) do
+    assert(ai_map[slot_index] == nil, "ai map should not contain slot-index key: " .. tostring(slot_index))
+    assert(ai_map[tostring(slot_index)] == nil,
+      "ai map should not contain string slot-index key: " .. tostring(slot_index))
+  end
+end
+
 local function _test_state_factory_builds_runtime_state_when_package_global_missing()
   with_patches({
     { key = "package", value = nil },
@@ -212,6 +223,37 @@ local function _test_game_startup_mixed_real_and_synthetic_players_keep_slot_ava
   assert(type(created_game.startup_synthetic_players) == "table" and #created_game.startup_synthetic_players == 3,
     "mixed startup should emit three synthetic specs")
   _assert_startup_synthetic_specs_have_slot_avatars(created_game.startup_synthetic_players, { 2, 3, 4 })
+end
+
+local function _test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only()
+  local created_opts = nil
+  with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_roles",
+      value = function()
+        return { _build_role(2) }
+      end,
+    },
+    {
+      target = app,
+      key = "new",
+      value = function(_, opts)
+        created_opts = opts
+        return {}
+      end,
+    },
+    { target = test_profile_bootstrap, key = "apply", value = function() end },
+  }, function()
+    local state = _build_startup_state("default")
+    state.game_factory()
+  end)
+
+  assert(type(created_opts) == "table", "mixed startup should create game options")
+  assert(type(created_opts.ai) == "table", "mixed startup should create ai map")
+  assert(created_opts.ai[-2] == true and created_opts.ai[-3] == true and created_opts.ai[-4] == true,
+    "ai map should mark synthetic role ids")
+  _assert_ai_map_has_no_positive_slot_keys(created_opts.ai, 4)
 end
 
 local function _reload_app_init_with_stubs(startup)
@@ -457,6 +499,7 @@ return {
     { name = "game_startup_fills_synthetic_ai_when_role_roster_empty", run = _test_game_startup_fills_synthetic_ai_when_role_roster_empty },
     { name = "game_startup_real_roles_stay_human_by_default", run = _test_game_startup_real_roles_stay_human_by_default },
     { name = "game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs", run = _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs },
+    { name = "game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only", run = _test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only },
     { name = "app_init_wires_runtime_and_debug_providers", run = _test_app_init_wires_runtime_and_debug_providers },
     { name = "app_init_keeps_scheduler_fallback", run = _test_app_init_keeps_scheduler_fallback },
   },

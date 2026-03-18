@@ -133,12 +133,11 @@ end
 
 local function _build_startup_ai_map(role_roster)
   local ai = nil
-  for index, role in ipairs(role_roster or {}) do
+  for _, role in ipairs(role_roster or {}) do
     if role and role.synthetic == true then
       if ai == nil then
         ai = {}
       end
-      ai[index] = true
       ai[role.role_id] = true
     end
   end

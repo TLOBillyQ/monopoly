@@ -1000,6 +1000,33 @@ local _create_players_final_tests = {
     assert(players[1].role_id ~= nil, "player 1 should have role_id")
     assert(players[2].role_id ~= nil, "player 2 should have role_id")
   end,
+  function()
+    -- Test role_roster mode ignores slot-index ai keys to avoid human/AI key collisions
+    local opts = {
+      role_roster = {
+        { role_id = 20, name = "Human" },
+        { role_id = -2, name = "AI2", synthetic = true },
+        { role_id = -3, name = "AI3", synthetic = true },
+        { role_id = -4, name = "AI4", synthetic = true },
+      },
+      ai = {
+        [1] = true,
+        [2] = true,
+        [3] = true,
+        [4] = true,
+        [-2] = true,
+        [-3] = true,
+        [-4] = true,
+      },
+      auto_all = false,
+    }
+    local players = game_factory.build_players(opts)
+    assert(#players == 4, "should create 4 players from role_roster")
+    assert(players[1].is_ai ~= true, "human role should not be marked AI by slot-index keys")
+    assert(players[2].is_ai == true, "synthetic AI role -2 should stay AI")
+    assert(players[3].is_ai == true, "synthetic AI role -3 should stay AI")
+    assert(players[4].is_ai == true, "synthetic AI role -4 should stay AI")
+  end,
 }
 
 return {
@@ -1051,5 +1078,6 @@ return {
     { name = "_test_create_players_missing_name", run = _create_players_final_tests[3] },
     { name = "_test_create_players_ai_by_index", run = _create_players_final_tests[4] },
     { name = "_test_create_players_role_ids", run = _create_players_final_tests[5] },
+    { name = "_test_create_players_role_roster_ignores_slot_index_ai_keys", run = _create_players_final_tests[6] },
   },
 }

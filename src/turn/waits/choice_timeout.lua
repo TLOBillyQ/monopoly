@@ -180,7 +180,9 @@ function tick_choice_timeout.step(game, state, dt, opts)
       timeout_seconds = timeout,
       min_visible_seconds = min_visible,
     })
-    assert(action ~= nil, "missing timeout action")
+    if action == nil then
+      return
+    end
     _ensure_action_actor_role_id(game, active_choice, action)
     output_ports.set_pending_choice_elapsed(state, 0)
     opts.dispatch_action_with_close_choice(game, state, action)

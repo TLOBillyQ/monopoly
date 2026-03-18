@@ -1963,6 +1963,8 @@ local function _test_action_button_timeout_auto_advances()
   local g = _new_game()
   local state = _build_loop_state()
   g.ui_port = _build_ui_port()
+  g.players[1].auto = true
+  state.auto_runner:set_enabled(false)
   g.turn.current_player_index = 1
   g.turn.phase = "start"
   g.turn.pending_choice = nil
@@ -1999,6 +2001,59 @@ local function _test_action_button_timeout_auto_advances()
   assert(advanced == 1, "action button timeout should advance turn")
 end
 
+local function _test_action_button_timeout_manual_player_does_not_advance()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  state.auto_runner:set_enabled(false)
+  g.players[1].auto = false
+  g.players[1].is_ai = false
+  g.turn.current_player_index = 1
+  g.turn.phase = "start"
+  g.turn.pending_choice = nil
+  state.action_button_active = true
+  state.action_button_elapsed = (constants.action_timeout_seconds or 0) + 1
+  state.action_button_player_id = g.players[2].id
+
+  local advanced = 0
+  g.advance_turn = function()
+    advanced = advanced + 1
+  end
+
+  state.gameplay_loop_ports = _build_test_ports({
+    close_choice_modal = function() end,
+    open_choice_modal = function() end,
+    apply_input_lock = function() end,
+    play_move_anim = function() return 0 end,
+    play_action_anim = function() return 0 end,
+    step_choice_timeout = function() end,
+    step_modal_timeout = function() end,
+    update_countdown = function() end,
+    refresh_from_dirty = function()
+      return false
+    end,
+    sync_debug_log = function() end,
+    log_status = function() end,
+    build_model = function()
+      return { choice = nil, market = nil }
+    end,
+  })
+
+  support.with_patches({
+    { target = constants, key = "action_timeout_seconds", value = 15 },
+  }, function()
+    _with_timestamp_stub(function()
+      local dt = (constants.action_timeout_seconds or 0) + 0.1
+      gameplay_loop.tick(g, state, dt)
+    end)
+  end)
+
+  assert(advanced == 0, "manual player timeout should not advance turn")
+  assert(state.action_button_active == false, "manual player should keep action timer disabled")
+  assert(state.action_button_elapsed == 0, "manual player timeout should reset action timer")
+  assert(state.action_button_player_id == nil, "manual player timeout reset should clear tracked actor")
+end
+
 local function _test_action_button_timeout_blocked_when_input_locked()
   local g = _new_game()
   local state = _build_loop_state()
@@ -2033,9 +2088,13 @@ local function _test_action_button_timeout_blocked_when_input_locked()
     end,
   })
 
-  _with_timestamp_stub(function()
-    local dt = (constants.action_timeout_seconds or 0) + 0.1
-    gameplay_loop.tick(g, state, dt)
+  support.with_patches({
+    { target = constants, key = "action_timeout_seconds", value = 15 },
+  }, function()
+    _with_timestamp_stub(function()
+      local dt = (constants.action_timeout_seconds or 0) + 0.1
+      gameplay_loop.tick(g, state, dt)
+    end)
   end)
 
   assert(advanced == 0, "input locked should block action button timeout")
@@ -2130,6 +2189,71 @@ local function _test_auto_runner_human_turn_not_auto_advanced()
       current_player_auto = false,
     })
     assert(action == nil, "human turn should not auto dispatch next")
+  end)
+end
+
+local function _test_gameplay_loop_ai_rounds_do_not_force_manual_timeout()
+  local state = _build_loop_state()
+  local g = {
+    finished = false,
+    players = {
+      { id = 2, name = "Human2", is_ai = false, auto = false },
+      { id = -2, name = "AI2", is_ai = true, auto = false },
+      { id = -3, name = "AI3", is_ai = true, auto = false },
+      { id = -4, name = "AI4", is_ai = true, auto = false },
+    },
+    turn = {
+      current_player_index = 2,
+      pending_choice = nil,
+    },
+  }
+  local ports = _build_test_ports()
+  local advanced = 0
+
+  support.with_patches({
+    { target = constants, key = "action_timeout_seconds", value = 0.5 },
+  }, function()
+    local function _dispatch_next()
+      advanced = advanced + 1
+      local next_index = g.turn.current_player_index + 1
+      if next_index > #g.players then
+        next_index = 1
+      end
+      g.turn.current_player_index = next_index
+      g.turn.pending_choice = nil
+    end
+
+    for _ = 1, 3 do
+      turn_timer_policy.update_action_button_timer({
+        game = g,
+        state = state,
+        dt = 0.6,
+        ports = ports,
+        dispatch_next = _dispatch_next,
+      })
+    end
+    assert(g.turn.current_player_index == 1, "ai rounds should return control to manual player")
+    local advanced_before = advanced
+
+    state.action_button_active = true
+    state.action_button_elapsed = 9
+    state.action_button_player_id = g.players[4].id
+
+    for _ = 1, 6 do
+      turn_timer_policy.update_action_button_timer({
+        game = g,
+        state = state,
+        dt = 0.6,
+        ports = ports,
+        dispatch_next = _dispatch_next,
+      })
+    end
+
+    assert(g.turn.current_player_index == 1, "manual player should not be auto advanced by timeout")
+    assert(advanced == advanced_before, "manual player timeout should not dispatch synthetic next")
+    assert(state.action_button_active == false and state.action_button_elapsed == 0,
+      "manual player timeout should reset action timer state")
+    assert(state.action_button_player_id == nil, "manual player timeout reset should clear tracked actor")
   end)
 end
 
@@ -2334,6 +2458,47 @@ local function _test_tick_choice_timeout_uses_runtime_pending_choice_without_ui_
   assert(runtime_state.get_pending_choice_elapsed(state) == 0, "timeout should reset pending choice elapsed after dispatch")
 end
 
+local function _test_tick_choice_timeout_manual_player_keeps_waiting()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local player = g.players[1]
+  local dispatched = nil
+  local choice = {
+    id = 721,
+    kind = "landing_optional_effect",
+    route_key = "secondary_confirm",
+    requires_confirm = true,
+    owner_role_id = player.id,
+    options = { { id = "buy_land", label = "购买地块" } },
+    allow_cancel = true,
+    meta = {
+      player_id = player.id,
+      tile_id = 1,
+      effect_ids = { "buy_land" },
+    },
+  }
+  g.turn.current_player_index = 1
+  g.turn.phase = "wait_choice"
+  g.turn.pending_choice = choice
+  runtime_state.set_pending_choice(state, choice, { choice_id = choice.id, elapsed_seconds = 0 })
+
+  tick_choice_timeout.step(g, state, (constants.action_timeout_seconds or 0) + 0.1, {
+    on_pending_choice = function() end,
+    is_choice_active = function()
+      return false
+    end,
+    build_action = function(game_ctx, state_ctx, active_choice, payload)
+      return choice_auto_policy.decide(game_ctx, state_ctx, active_choice, payload)
+    end,
+    dispatch_action_with_close_choice = function(_, _, action)
+      dispatched = action
+    end,
+  })
+
+  assert(dispatched == nil, "manual player timeout should not dispatch choice action")
+  assert(runtime_state.get_pending_choice_elapsed(state) > 0, "manual player timeout should keep elapsed timer")
+end
+
 local function _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen()
   local g = _new_game()
   local state = _build_loop_state()
@@ -2365,6 +2530,38 @@ local function _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_
   assert(g.turn.countdown_active == true, "countdown should stay active for runtime pending choice without ui choice screen")
   assert(g.turn.countdown_seconds == (constants.action_timeout_seconds or 0) - 1,
     "countdown should use runtime pending choice elapsed seconds")
+end
+
+local function _test_tick_ui_sync_countdown_hides_manual_pending_choice_timeout()
+  local g = _new_game()
+  local state = _build_loop_state()
+  local player = g.players[1]
+  local choice = {
+    id = 722,
+    kind = "landing_optional_effect",
+    route_key = "secondary_confirm",
+    owner_role_id = player.id,
+    options = { { id = "buy_land", label = "购买地块" } },
+    meta = {
+      player_id = player.id,
+      tile_id = 1,
+      effect_ids = { "buy_land" },
+    },
+  }
+  g.turn.current_player_index = 1
+  g.turn.phase = "wait_choice"
+  g.turn.pending_choice = choice
+  runtime_state.set_pending_choice(state, choice, {
+    choice_id = choice.id,
+    elapsed_seconds = 1,
+  })
+  state.ui.choice_active = false
+  state.ui.market_active = false
+
+  tick_ui_sync.update_countdown(g, state)
+
+  assert(g.turn.countdown_active == false, "manual pending choice should not expose auto-timeout countdown")
+  assert(g.turn.countdown_seconds == 0, "manual pending choice countdown should stay hidden")
 end
 
 local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice()
@@ -3143,11 +3340,13 @@ end
 local function _test_market_countdown_uses_double_action_timeout()
   local g = _new_game()
   local state = _build_loop_state()
+  g.turn.current_player_index = 2
   state.pending_choice = {
     id = 2001,
     kind = "market_buy",
     route_key = "market",
-    meta = { player_id = g:current_player().id },
+    owner_role_id = g.players[2].id,
+    meta = { player_id = g.players[2].id },
   }
   state.pending_choice_elapsed = 12.2
   _bind_ui_runtime(state)
@@ -4497,7 +4696,8 @@ _t2_case_groups.update_countdown_tests = {
   function()
     local game = _new_game()
     local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, kind = "test" }
+    game.turn.current_player_index = 2
+    game.turn.pending_choice = { id = 1, kind = "test", owner_role_id = game.players[2].id }
     tick_ui_sync.update_countdown(game, state)
     assert(game.turn.countdown_active == true, "pending choice should activate countdown")
   end,
@@ -4625,15 +4825,19 @@ return {
   _test_profile_rotation_switches_game_when_current_game_finishes = _test_profile_rotation_switches_game_when_current_game_finishes,
   _test_profile_rotation_disables_auto_runner_after_last_profile = _test_profile_rotation_disables_auto_runner_after_last_profile,
   _test_action_button_timeout_auto_advances = _test_action_button_timeout_auto_advances,
+  _test_action_button_timeout_manual_player_does_not_advance = _test_action_button_timeout_manual_player_does_not_advance,
   _test_action_button_timeout_blocked_when_input_locked = _test_action_button_timeout_blocked_when_input_locked,
   _test_action_button_timeout_blocked_when_popup_active = _test_action_button_timeout_blocked_when_popup_active,
   _test_auto_runner_auto_advances_ai_player = _test_auto_runner_auto_advances_ai_player,
   _test_auto_runner_human_turn_not_auto_advanced = _test_auto_runner_human_turn_not_auto_advanced,
+  _test_gameplay_loop_ai_rounds_do_not_force_manual_timeout = _test_gameplay_loop_ai_rounds_do_not_force_manual_timeout,
   _test_auto_runner_selects_runtime_pending_choice_without_ui_choice_screen = _test_auto_runner_selects_runtime_pending_choice_without_ui_choice_screen,
   _test_auto_runner_resets_timer_when_wait_kind_changes = _test_auto_runner_resets_timer_when_wait_kind_changes,
   _test_auto_runner_not_advanced_when_input_blocked = _test_auto_runner_not_advanced_when_input_blocked,
   _test_tick_choice_timeout_uses_runtime_pending_choice_without_ui_choice_screen = _test_tick_choice_timeout_uses_runtime_pending_choice_without_ui_choice_screen,
+  _test_tick_choice_timeout_manual_player_keeps_waiting = _test_tick_choice_timeout_manual_player_keeps_waiting,
   _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen = _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen,
+  _test_tick_ui_sync_countdown_hides_manual_pending_choice_timeout = _test_tick_ui_sync_countdown_hides_manual_pending_choice_timeout,
   _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice = _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice,
   _test_tick_choice_timeout_warning_keeps_local_modal_choice = _test_tick_choice_timeout_warning_keeps_local_modal_choice,
   _test_auto_runner_depends_on_current_player_auto = _test_auto_runner_depends_on_current_player_auto,

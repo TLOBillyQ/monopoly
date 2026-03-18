@@ -5,6 +5,7 @@ local number_utils = require("src.core.utils.number_utils")
 local tick_timeout = require("src.turn.waits.timeout")
 local runtime_state = require("src.state.state_access.runtime_state")
 local turn_ui_sync_shared = require("src.core.ui_sync.turn_ui_sync_shared")
+local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
 
 local tick_ui_sync = {}
 
@@ -35,7 +36,23 @@ local function _resolve_detained_countdown(turn)
   return true, math.ceil(remaining)
 end
 
-local function _resolve_pending_choice_countdown(state, gate, timeout, pending_choice)
+local function _resolve_pending_choice_countdown(game, state, gate, timeout, pending_choice)
+  local owner = game and choice_auto_policy.resolve_choice_owner(game, pending_choice) or nil
+  local owner_auto = false
+  if owner ~= nil then
+    local auto_play_port = game and game.auto_play_port or nil
+    if type(auto_play_port) == "table" and type(auto_play_port.is_auto_player) == "function" then
+      local ok, is_auto = pcall(auto_play_port.is_auto_player, game, owner)
+      if ok then
+        owner_auto = is_auto == true
+      end
+    else
+      owner_auto = owner.auto == true or owner.is_ai == true or owner.ai == true
+    end
+  end
+  if owner ~= nil and owner_auto ~= true then
+    return false, 0
+  end
   local pending_choice_elapsed = runtime_state.get_pending_choice_elapsed(state)
   if pending_choice_elapsed < 0 then
     pending_choice_elapsed = 0
@@ -86,7 +103,7 @@ local function _resolve_countdown_state(game, state, turn, timeout, gate)
     return false, 0
   end
   if pending_choice ~= nil then
-    return _resolve_pending_choice_countdown(state, gate, timeout, pending_choice)
+    return _resolve_pending_choice_countdown(game, state, gate, timeout, pending_choice)
   end
   if gate.popup_active == true then
     return _resolve_popup_countdown(game, state)

@@ -374,7 +374,6 @@ end
 
 local function _test_cli_help_text_is_bilingual()
   local help_commands = {
-    { "tools/ops/deploy.lua", "--help" },
     { "tools/data/export_xlsx.lua", "--help" },
     { "tools/ops/update_api.lua", "--help" },
     { "tools/quality/arch.lua", "--help" },
@@ -392,7 +391,10 @@ local function _test_cli_help_text_is_bilingual()
 end
 
 local function _test_deploy_unknown_flag_is_bilingual()
-  local result = _run_lua({ "tools/ops/deploy.lua", "--bad-flag" })
+  local result = _run_powershell_file("tools/ops/deploy.ps1", { "--bad-flag" })
+  if result.skipped == true then
+    return
+  end
   assert(result.ok == false, "deploy should fail on unknown flags")
   _assert_contains(result.output, "未知参数", "unknown flag output should include Chinese text")
   _assert_contains(result.output, "Unknown flag", "unknown flag output should include English text")
@@ -430,11 +432,13 @@ end
 local function _test_deploy_allows_explicit_target_path()
   _with_ascii_tmp("deploy_allows_explicit_target_path", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
-    local result = _run_lua({
-      "tools/ops/deploy.lua",
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
       "--target-path",
       publish_target,
     })
+    if result.skipped == true then
+      return
+    end
 
     assert(result.ok == true, "deploy should allow explicit target paths")
     assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
@@ -445,11 +449,13 @@ end
 local function _test_deploy_aligns_with_current_repo_layout()
   _with_ascii_tmp("deploy_aligns_with_current_repo_layout", function(tmp_root)
     local target = common.join_path(tmp_root, "dev_deploy")
-    local result = _run_lua({
-      "tools/ops/deploy.lua",
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
       "--target-path",
       target,
     })
+    if result.skipped == true then
+      return
+    end
 
     assert(result.ok == true, "deploy should succeed for the current repo layout")
     assert(common.path_exists(common.join_path(target, "main.lua")) == true,
@@ -470,13 +476,15 @@ end
 local function _test_deploy_injects_startup_profile_when_requested()
   _with_ascii_tmp("deploy_injects_startup_profile_when_requested", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
-    local result = _run_lua({
-      "tools/ops/deploy.lua",
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
       "--target-path",
       publish_target,
       "--startup-profile",
       "smoke_test",
     })
+    if result.skipped == true then
+      return
+    end
 
     assert(result.ok == true, "deploy should allow startup profile injection")
     local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))

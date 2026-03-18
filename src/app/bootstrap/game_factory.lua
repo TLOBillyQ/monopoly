@@ -54,7 +54,7 @@ local function _create_players(opts)
       if not name or name == "" then
         name = "玩家" .. tostring(i)
       end
-      local is_ai = ai_map[role_id] or ai_map[i]
+      local is_ai = ai_map[role_id]
       local new_player = player:new({
         id = role_id,
         name = name,
