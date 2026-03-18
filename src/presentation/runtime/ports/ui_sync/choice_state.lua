@@ -47,7 +47,7 @@ local function _is_local_role(state, owner_role_id)
     return false
   end
 
-  local local_role_id = role_id_utils.normalize(local_actor_resolver.resolve_local(state))
+  local local_role_id = role_id_utils.normalize(local_actor_resolver.resolve_turn_bound(state))
   if local_role_id ~= nil then
     return role_id_utils.equals(local_role_id, owner_role_id)
   end

@@ -12,24 +12,50 @@ local function _cache_local_role_id(state, role_id)
   state.local_actor_role_id = role_id
 end
 
-function resolver.resolve_from_event(state, data, opts)
-  opts = opts or {}
-  local local_only = opts.local_only == true
+local function _resolve_role_id_from_event(state, data)
   local role = data and data.role or nil
   local role_id = runtime.resolve_role_id(role)
   if role_id ~= nil then
     _cache_local_role_id(state, role_id)
     return role_id
   end
+  return nil
+end
 
+local function _resolve_client_role_id(state)
   local current_role = runtime.get_client_role()
-  role_id = runtime.resolve_role_id(current_role)
+  local role_id = runtime.resolve_role_id(current_role)
   if role_id ~= nil then
     _cache_local_role_id(state, role_id)
     return role_id
   end
+  return nil
+end
 
-  local cached = role_id_utils.normalize(state and state.local_actor_role_id or nil)
+local function _resolve_current_player_role_id(state)
+  local current_model = state and runtime_state.get_ui_model(state) or nil
+  local current_player_id = current_model and current_model.current_player_id or nil
+  return number_utils.to_integer(current_player_id)
+end
+
+local function _resolve_cached_role_id(state)
+  return role_id_utils.normalize(state and state.local_actor_role_id or nil)
+end
+
+function resolver.resolve_from_event(state, data, opts)
+  opts = opts or {}
+  local local_only = opts.local_only == true
+  local role_id = _resolve_role_id_from_event(state, data)
+  if role_id ~= nil then
+    return role_id
+  end
+
+  role_id = _resolve_client_role_id(state)
+  if role_id ~= nil then
+    return role_id
+  end
+
+  local cached = _resolve_cached_role_id(state)
   if cached ~= nil then
     return cached
   end
@@ -38,10 +64,26 @@ function resolver.resolve_from_event(state, data, opts)
     return nil
   end
 
-  local current_model = state and runtime_state.get_ui_model(state) or nil
-  local current_player_id = current_model and current_model.current_player_id or nil
-  local fallback = number_utils.to_integer(current_player_id)
-  return fallback
+  return _resolve_current_player_role_id(state)
+end
+
+function resolver.resolve_turn_bound(state, data)
+  local role_id = _resolve_role_id_from_event(state, data)
+  if role_id ~= nil then
+    return role_id
+  end
+
+  role_id = _resolve_client_role_id(state)
+  if role_id ~= nil then
+    return role_id
+  end
+
+  role_id = _resolve_current_player_role_id(state)
+  if role_id ~= nil then
+    return role_id
+  end
+
+  return _resolve_cached_role_id(state)
 end
 
 function resolver.resolve_local(state)

@@ -64,10 +64,15 @@ function router.bind(state, resolve_game)
     end
     local local_only = intent.type == "toggle_action_log"
       or (intent.type == "ui_button" and intent.id == "auto")
-    local actor_role_id = local_actor_resolver.resolve_from_event(state, data, {
-      local_only = local_only,
-      trace_auto = false,
-    })
+    local actor_role_id = nil
+    if local_only then
+      actor_role_id = local_actor_resolver.resolve_from_event(state, data, {
+        local_only = true,
+        trace_auto = false,
+      })
+    else
+      actor_role_id = local_actor_resolver.resolve_turn_bound(state, data)
+    end
     if actor_role_id == nil then
       host_runtime_ports.show_tips("当前操作缺少玩家上下文，已忽略", 2.0)
       logger.warn("ui intent rejected: missing actor_role_id", tostring(intent.type), tostring(intent.id))

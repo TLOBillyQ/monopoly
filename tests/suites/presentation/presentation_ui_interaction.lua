@@ -656,6 +656,90 @@ local function _test_ui_event_router_injects_actor_for_next_with_current_player_
   _assert_eq(captured[1] and captured[1].actor_role_id, 2, "next click should inject normalized actor_role_id")
 end
 
+local function _test_ui_event_router_turn_bound_actor_prefers_current_player_over_stale_cache()
+  local base_nodes = require("src.ui.schema.base_nodes")
+
+  local function new_node()
+    local node = {}
+    function node:listen(_, cb)
+      self._listener_cb = cb
+      return {
+        destroy = function()
+          self._listener_cb = nil
+        end,
+      }
+    end
+    return node
+  end
+
+  local captured = {}
+  local node_map = {
+    [base_nodes.action_button] = new_node(),
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function() end } },
+    { key = "UIManager", value = {
+      EVENT = { CLICK = "click" },
+      query_nodes_by_name = function(name)
+        local node = node_map[name] or new_node()
+        node_map[name] = node
+        return { node }
+      end,
+      client_role = nil,
+    } },
+  }, function()
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          captured[#captured + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui = ui_view.build_ui_state(),
+      ui_model = {
+        current_player_id = "2",
+      },
+      local_actor_role_id = 1,
+    }
+    _bind_ui_runtime(state)
+    canvas_event_router.bind(state, function()
+      return {}
+    end)
+    node_map[base_nodes.action_button]._listener_cb({})
+  end)
+
+  _assert_eq(captured[1] and captured[1].actor_role_id, 2,
+    "turn-bound actor resolution should prefer current_player_id over stale cache")
+end
+
+local function _test_local_actor_resolver_turn_bound_prefers_client_role_over_current_player()
+  local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
+  local client_role = {
+    get_roleid = function()
+      return 3
+    end,
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "GlobalAPI", value = { show_tips = function() end } },
+    { key = "UIManager", value = { client_role = client_role } },
+  }, function()
+    local state = {
+      ui_model = {
+        current_player_id = "2",
+      },
+      local_actor_role_id = 1,
+    }
+    local resolved = local_actor_resolver.resolve_turn_bound(state)
+    _assert_eq(resolved, 3, "turn-bound actor resolution should keep explicit client role ahead of current_player_id")
+  end)
+end
+
 local function _test_ui_event_router_injects_actor_for_market_confirm_and_cancel()
   local market_nodes = require("src.ui.schema.market_nodes")
 
@@ -1160,6 +1244,47 @@ local function _test_view_command_ports_toggle_action_log_warns_when_actor_role_
   end)
 end
 
+local function _test_choice_ui_state_prefers_current_player_over_stale_cache()
+  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_state")
+  local players = {
+    { id = 1, is_ai = false, auto = false },
+    { id = 2, is_ai = false, auto = false },
+  }
+  local state = {
+    ui = ui_view.build_ui_state(),
+    local_actor_role_id = 1,
+  }
+  _bind_ui_runtime(state)
+  runtime_state.set_ui_model(state, {
+    current_player_id = 2,
+  })
+  local choice = {
+    id = 12,
+    kind = "market_buy",
+    route_key = "market",
+    owner_role_id = 2,
+  }
+  local game = {
+    turn = {
+      current_player_index = 2,
+      phase = "wait_choice",
+    },
+    players = players,
+  }
+  game.find_player_by_id = function(_, role_id)
+      for _, player in ipairs(players) do
+        if player.id == role_id then
+          return player
+        end
+      end
+      return nil
+    end
+
+  local gate = choice_ui_state.resolve_gate_state(game, state, choice)
+  _assert_eq(gate.local_owner, true, "choice gate should use current player before stale cache")
+  _assert_eq(gate.expects_ui, true, "shared market choice should still expect UI for current player")
+end
+
 return {
   name = "presentation_ui.interaction",
   tests = {
@@ -1174,6 +1299,14 @@ return {
     { name = "_test_ui_intent_dispatcher_auto_button_rejects_when_actor_missing", run = _test_ui_intent_dispatcher_auto_button_rejects_when_actor_missing },
     { name = "_test_ui_intent_dispatcher_auto_button_honors_intent_actor_during_other_turn", run = _test_ui_intent_dispatcher_auto_button_honors_intent_actor_during_other_turn },
     { name = "_test_ui_event_router_injects_actor_for_next_with_current_player_fallback", run = _test_ui_event_router_injects_actor_for_next_with_current_player_fallback },
+    {
+      name = "_test_ui_event_router_turn_bound_actor_prefers_current_player_over_stale_cache",
+      run = _test_ui_event_router_turn_bound_actor_prefers_current_player_over_stale_cache,
+    },
+    {
+      name = "_test_local_actor_resolver_turn_bound_prefers_client_role_over_current_player",
+      run = _test_local_actor_resolver_turn_bound_prefers_client_role_over_current_player,
+    },
     { name = "_test_ui_event_router_injects_actor_for_market_confirm_and_cancel", run = _test_ui_event_router_injects_actor_for_market_confirm_and_cancel },
     { name = "_test_ui_event_router_rejects_next_without_actor_context", run = _test_ui_event_router_rejects_next_without_actor_context },
     { name = "_test_raycast_build_camera_ray_supports_table_vectors", run = _test_raycast_build_camera_ray_supports_table_vectors },
@@ -1185,6 +1318,7 @@ return {
     { name = "_test_raycast_pick_with_tries_multiple_apis_in_order", run = _test_raycast_pick_with_tries_multiple_apis_in_order },
     { name = "_test_raycast_pick_with_returns_nil_when_all_apis_fail", run = _test_raycast_pick_with_returns_nil_when_all_apis_fail },
     { name = "_test_raycast_pick_with_resolves_hit_unit_from_various_formats", run = _test_raycast_pick_with_resolves_hit_unit_from_various_formats },
+    { name = "_test_choice_ui_state_prefers_current_player_over_stale_cache", run = _test_choice_ui_state_prefers_current_player_over_stale_cache },
     { name = "_test_view_command_ports_toggle_action_log_aborts_when_ui_missing", run = _test_view_command_ports_toggle_action_log_aborts_when_ui_missing },
     { name = "_test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing", run = _test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing },
   },
