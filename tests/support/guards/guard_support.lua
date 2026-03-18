@@ -12,7 +12,38 @@ function M.build_list_command(root)
   return 'find "' .. root .. '" -type f -name "*.lua" 2>/dev/null'
 end
 
+function M.is_file_path(path)
+  local file = io.open(path, "r")
+  if not file then
+    return false
+  end
+  file:close()
+  return true
+end
+
+function M.path_exists(path)
+  if M.is_file_path(path) then
+    return true
+  end
+  local ok = os.rename(path, path)
+  if ok then
+    return true
+  end
+  return false
+end
+
 function M.collect_lua_files(root)
+  local normalized_root = M.normalize_path(root)
+  if normalized_root:match("%.lua$") then
+    if M.is_file_path(root) then
+      return { root }
+    end
+    return nil, "no lua files found under root: " .. tostring(root)
+  end
+  if not M.path_exists(root) then
+    return nil, "no lua files found under root: " .. tostring(root)
+  end
+
   local process = io.popen(M.build_list_command(root))
   if not process then
     return nil, "cannot run list command for root: " .. tostring(root)
@@ -28,6 +59,10 @@ function M.collect_lua_files(root)
   local ok = process:close()
   if ok == nil or ok == false then
     return nil, "list command failed for root: " .. tostring(root)
+  end
+
+  if #files == 0 then
+    return nil, "no lua files found under root: " .. tostring(root)
   end
 
   return files
