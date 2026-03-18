@@ -2495,8 +2495,9 @@ local function _test_tick_choice_timeout_manual_player_keeps_waiting()
     end,
   })
 
-  assert(dispatched == nil, "manual player timeout should not dispatch choice action")
-  assert(runtime_state.get_pending_choice_elapsed(state) > 0, "manual player timeout should keep elapsed timer")
+  assert(dispatched ~= nil, "manual player timeout should dispatch cancel action")
+  assert(dispatched.type == "choice_cancel", "manual player timeout should dispatch choice_cancel")
+  assert(dispatched.choice_id == 721, "cancel action should have correct choice_id")
 end
 
 local function _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen()
@@ -2560,8 +2561,8 @@ local function _test_tick_ui_sync_countdown_hides_manual_pending_choice_timeout(
 
   tick_ui_sync.update_countdown(g, state)
 
-  assert(g.turn.countdown_active == false, "manual pending choice should not expose auto-timeout countdown")
-  assert(g.turn.countdown_seconds == 0, "manual pending choice countdown should stay hidden")
+  assert(g.turn.countdown_active == true, "manual pending choice should expose countdown")
+  assert(g.turn.countdown_seconds > 0, "manual pending choice countdown should be visible")
 end
 
 local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice()

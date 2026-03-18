@@ -50,9 +50,6 @@ local function _resolve_pending_choice_countdown(game, state, gate, timeout, pen
       owner_auto = owner.auto == true or owner.is_ai == true or owner.ai == true
     end
   end
-  if owner ~= nil and owner_auto ~= true then
-    return false, 0
-  end
   local pending_choice_elapsed = runtime_state.get_pending_choice_elapsed(state)
   if pending_choice_elapsed < 0 then
     pending_choice_elapsed = 0

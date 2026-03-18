@@ -112,9 +112,6 @@ function choice_auto_policy.decide(game, state, choice, ctx)
   end
 
   if mode == "tick_timeout" then
-    if not is_auto_actor then
-      return nil
-    end
     if choice.allow_cancel == true then
       return {
         type = "choice_cancel",
