@@ -169,6 +169,9 @@
 - **description**: 迁移 `scripts/tools/ui_manager_web` 到 `tools/web/ui_manager_web`，并在此时一次性更新所有直接消费者；不保留静态资源镜像目录
 - **location**: `tools/web/ui_manager_web/**`
 - **validation**: 仓库内不再有有效消费者依赖 `scripts/tools/ui_manager_web/*`
+- **status**: 已完成
+- **log**: `scripts/tools/ui_manager_web` 已物理迁移到 `tools/web/ui_manager_web`，仓库内搜索已无旧路径或直接消费者残留，因此不再保留静态镜像目录。
+- **files edited/created**: `tools/web/ui_manager_web/**`, `.agents/plan.md`
 
 ### T11
 - **depends_on**: `[T6, T7, T9, T10]`
