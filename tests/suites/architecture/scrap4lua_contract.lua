@@ -163,11 +163,23 @@ local function _test_bare_cli_defaults_to_viewer_bundle()
 end
 
 local function _test_snapshot_files_exist_in_repo()
-  assert(common.path_exists("scripts/quality/scrap/viewer/index.html") == true, "snapshot viewer index should exist")
-  assert(common.path_exists("scripts/quality/scrap/viewer/script.js") == true, "snapshot viewer script should exist")
-  assert(common.path_exists("scripts/quality/scrap/viewer/styles.css") == true, "snapshot viewer styles should exist")
-  assert(common.path_exists("scripts/quality/scrap/viewer/scrap_index.json") == true, "snapshot viewer json should exist")
-  assert(common.path_exists("scripts/quality/scrap/viewer/scrap_data.js") == true, "snapshot viewer data script should exist")
+  local snapshot_root = nil
+  for _, candidate in ipairs({
+    "tools/quality/scrap/viewer",
+    "scripts/quality/scrap/viewer",
+  }) do
+    if common.path_exists(candidate) == true then
+      snapshot_root = candidate
+      break
+    end
+  end
+
+  assert(snapshot_root ~= nil, "snapshot viewer root should exist")
+  assert(common.path_exists(snapshot_root .. "/index.html") == true, "snapshot viewer index should exist")
+  assert(common.path_exists(snapshot_root .. "/script.js") == true, "snapshot viewer script should exist")
+  assert(common.path_exists(snapshot_root .. "/styles.css") == true, "snapshot viewer styles should exist")
+  assert(common.path_exists(snapshot_root .. "/scrap_index.json") == true, "snapshot viewer json should exist")
+  assert(common.path_exists(snapshot_root .. "/scrap_data.js") == true, "snapshot viewer data script should exist")
 end
 
 return {

@@ -10,6 +10,15 @@ bootstrap.install_package_paths()
 
 local project_root = common.normalize_path(common.current_dir())
 
+local function _first_existing(paths)
+  for _, path in ipairs(paths or {}) do
+    if common.path_exists(path) == true then
+      return path
+    end
+  end
+  return paths and paths[1] or nil
+end
+
 local function _make_tmp_root(tag)
   return common.make_temp_path("script_tools_contract_" .. tostring(tag or "tmp"), "") .. "_中文 English"
 end
@@ -549,6 +558,14 @@ end
 local function _test_arch_view_viewer_supports_unicode_output_path()
   _with_clean_tmp("arch_view_unicode_output", function(tmp_root)
     local out_dir = common.join_path(tmp_root, "arch_view_目标/中文 English")
+    local input_json = _first_existing({
+      "tools/quality/arch/viewer/architecture.json",
+      "scripts/quality/arch/viewer/architecture.json",
+    })
+    local default_config_path = _first_existing({
+      common.join_path(project_root, "tools/quality/arch/config.json"),
+      common.join_path(project_root, "scripts/quality/arch/config.json"),
+    })
     local messages = {}
     local original_print = print
     print = function(...)
@@ -565,11 +582,11 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
       "--out-dir",
       out_dir,
       "--in-json",
-      "scripts/quality/arch/viewer/architecture.json",
+      input_json,
       }, {
         cwd = project_root,
         asset_root = common.join_path(project_root, "vendor/arch_view/viewer"),
-        default_config_path = common.join_path(project_root, "scripts/quality/arch/config.json"),
+        default_config_path = default_config_path,
       })
     end, debug.traceback)
     print = original_print

@@ -10,8 +10,24 @@ local cached_snapshot = nil
 local cached_scan_result = nil
 local tmp_root = common.make_temp_path("arch_view_test_output", "")
 local arch_view_root = "vendor/arch_view"
-local arch_config_path = "scripts/quality/arch/config.json"
-local snapshot_json_path = "scripts/quality/arch/viewer/architecture.json"
+
+local function _first_existing(paths)
+  for _, path in ipairs(paths or {}) do
+    if common.path_exists(path) == true then
+      return path
+    end
+  end
+  return paths and paths[1] or nil
+end
+
+local arch_config_path = _first_existing({
+  "tools/quality/arch/config.json",
+  "scripts/quality/arch/config.json",
+})
+local snapshot_json_path = _first_existing({
+  "tools/quality/arch/viewer/architecture.json",
+  "scripts/quality/arch/viewer/architecture.json",
+})
 
 local function _assert_eq(actual, expected, message)
   if actual ~= expected then
@@ -250,11 +266,15 @@ local function _test_json_modules_are_self_contained()
 end
 
 local function _test_snapshot_files_exist_in_repo()
-  assert(_exists("scripts/quality/arch/viewer/index.html"), "snapshot viewer index should exist")
-  assert(_exists("scripts/quality/arch/viewer/script.js"), "snapshot viewer script should exist")
-  assert(_exists("scripts/quality/arch/viewer/styles.css"), "snapshot viewer styles should exist")
-  assert(_exists("scripts/quality/arch/viewer/architecture.json"), "snapshot architecture json should exist")
-  assert(_exists("scripts/quality/arch/viewer/architecture_data.js"), "snapshot architecture data should exist")
+  local snapshot_root = _first_existing({
+    "tools/quality/arch/viewer",
+    "scripts/quality/arch/viewer",
+  })
+  assert(_exists(snapshot_root .. "/index.html"), "snapshot viewer index should exist")
+  assert(_exists(snapshot_root .. "/script.js"), "snapshot viewer script should exist")
+  assert(_exists(snapshot_root .. "/styles.css"), "snapshot viewer styles should exist")
+  assert(_exists(snapshot_root .. "/architecture.json"), "snapshot architecture json should exist")
+  assert(_exists(snapshot_root .. "/architecture_data.js"), "snapshot architecture data should exist")
 end
 
 local contract_tests = {

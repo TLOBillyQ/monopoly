@@ -94,7 +94,7 @@ local rules = {
     description = "MonopolyEvents proxy module is retired",
   },
   {
-    roots = { "src", "tests", "scripts" },
+    roots = { "src", "tests", "tools", "scripts" },
     forbidden_patterns = {
       "require%(\"Config%..+\"%)",
       "require%('Config%..+'%)",
@@ -108,7 +108,7 @@ local rules = {
     description = "Config/src.core.config compatibility require paths are retired; use src.config.*",
   },
   {
-    roots = { "src", "tests", "scripts" },
+    roots = { "src", "tests", "tools", "scripts" },
     forbidden_patterns = {
       "require%(\"src%.rules%.choices%..+\"%)",
       "require%('src%.rules%.choices%..+'%)",
@@ -194,7 +194,7 @@ local rules = {
     description = "scheduler must stay as a pure coroutine scheduler and not depend on flow modules",
   },
   {
-    roots = { "src", "tests", "scripts", "main.lua" },
+    roots = { "src", "tests", "tools", "scripts", "main.lua" },
     forbidden_patterns = {
       "require%(\"src%.entry",
       "require%('src%.entry"

@@ -124,6 +124,9 @@
 - **description**: 迁移共享实现与 `crap4lua` bridge 到 canonical 位置，并把所有调用点改为走统一 bootstrap/self-location
 - **location**: `tools/shared/**`, `tools/bridge/crap4lua/_internal/**`
 - **validation**: 不再有实现代码依赖写死的 `scripts/shared/...` 物理路径；旧路径只剩兼容壳
+- **status**: 已完成
+- **log**: 物理迁移了 `scripts/shared/lib/*` 到 `tools/shared/lib/*`，以及 `scripts/crap4lua/_internal/*` 到 `tools/bridge/crap4lua/_internal/*`；同步修正了搬迁后模块内的 fallback 路径与 bootstrap 相对路径，确保 `shared.lib.*` 和 `crap4lua._internal.*` 都由 canonical `tools/*` 提供实现。
+- **files edited/created**: `tools/shared/lib/*`, `tools/bridge/crap4lua/_internal/*`, `.agents/plan.md`
 
 ### T6
 - **depends_on**: `[T3, T5]`
@@ -142,6 +145,9 @@
 - **description**: 提前更新测试、guard、contract 与辅助代码，使其接受 `tools/*` canonical 或双路径，避免迁移期间长期红灯
 - **location**: `tests/**`
 - **validation**: `guard_support` 能识别 `tools/.+`；guard scan roots/contract 断言不再只写死 `scripts/*`
+- **status**: 已完成
+- **log**: guard 与 contract 已接受 `tools/*` repo 相对路径；扫描根扩到 `tools`；arch/crap/scrap 的 config 与 snapshot 断言改成优先 canonical、回退 legacy；wrapper 自身的 `scripts/*` 调用测试保留不变。
+- **files edited/created**: `tests/support/guards/guard_support.lua`, `tests/guards/forbidden_globals.lua`, `tests/guards/dep_rules.lua`, `tests/guards/arch_view_guard.lua`, `tests/suites/architecture/arch_view_contract.lua`, `tests/suites/architecture/crap_contract.lua`, `tests/suites/architecture/scrap4lua_contract.lua`, `tests/suites/architecture/script_tools_contract.lua`, `.agents/plan.md`
 
 ### T9
 - **depends_on**: `[T6, T7, T8]`

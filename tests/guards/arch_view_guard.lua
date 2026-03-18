@@ -1,14 +1,50 @@
 require("tests.bootstrap").install_package_paths()
 
 local arch_view = require("arch_view")
-local arch_filter = require("scripts.quality.arch.filter")
+
+local function _load_first(module_names)
+  local errors = {}
+  for _, module_name in ipairs(module_names or {}) do
+    local ok, loaded = pcall(require, module_name)
+    if ok then
+      return loaded
+    end
+    errors[#errors + 1] = tostring(loaded)
+  end
+  error(table.concat(errors, "\n"))
+end
+
+local function _path_exists(path)
+  local file = io.open(path, "r")
+  if file then
+    file:close()
+    return true
+  end
+  local ok = os.rename(path, path)
+  return ok == true
+end
+
+local function _first_existing(paths)
+  for _, path in ipairs(paths or {}) do
+    if _path_exists(path) then
+      return path
+    end
+  end
+  return paths and paths[1] or nil
+end
+
+local arch_filter = _load_first({ "quality.arch.filter", "scripts.quality.arch.filter" })
+local arch_config_path = _first_existing({
+  "tools/quality/arch/config.json",
+  "scripts/quality/arch/config.json",
+})
 
 local M = {}
 
 function M.run()
   local architecture, err = arch_view.analyze({
     project_root = ".",
-    config_path = "scripts/quality/arch/config.json",
+    config_path = arch_config_path,
   })
   if architecture == nil then
     return { ok = false, error = "arch_view_guard error: " .. tostring(err) }
