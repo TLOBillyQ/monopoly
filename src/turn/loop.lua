@@ -17,7 +17,7 @@ local gameplay_loop = {}
 local function _ensure_fallback_ports(game)
   if type(game.auto_play_port) ~= "table" then
     game.auto_play_port = {
-      is_auto_player = function(_, _, player)
+      is_auto_player = function(_, player)
         return player and (player.auto == true or player.is_ai == true or player.ai == true) or false
       end,
       choose_action = function()
