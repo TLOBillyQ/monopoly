@@ -3,7 +3,7 @@ local _raw_script_path = arg and arg[0] or "scripts/ops/deploy.lua"
 local bootstrap = require("scripts.shared.bootstrap")
 local env = bootstrap.install(_raw_script_path)
 local common = require("shared.lib.common")
-local loc_counter = require("shared.lib.loc_counter")
+local loc_scan = require("shared.lib.loc_scan")
 local deploy_defaults = require("ops.deploy_defaults")
 
 local function _text(zh, en)
@@ -59,23 +59,6 @@ local function _escape_lua_string_double_quoted(text)
   return value
 end
 
-local function _read_file_bytes_fast(path)
-  local file = io.open(path, "rb")
-  if file == nil then
-    return nil
-  end
-  local content = file:read("*a")
-  file:close()
-  return content
-end
-
-local function _os_execute_success(ok, _, code)
-  if ok == true and (code == nil or code == 0) then
-    return true
-  end
-  return code == 0
-end
-
 local function _write_main_lua(source_path, target_path, startup_profile)
   local source_text, err = common.read_file(source_path)
   if source_text == nil then
@@ -86,121 +69,6 @@ local function _write_main_lua(source_path, target_path, startup_profile)
   end
   local prefix = 'STARTUP_TEST_PROFILE = "' .. _escape_lua_string_double_quoted(startup_profile) .. '"\n'
   return common.write_file(target_path, prefix .. source_text)
-end
-
-local function _collect_directory_lua_files(project_root, dir_name)
-  if common.command_exists("git") then
-    local output_path = common.make_temp_path("deploy_git_ls_files", ".txt")
-    local command = common.wrap_command_with_cwd(
-      "git ls-files -- " .. common.shell_quote(dir_name) .. " > " .. common.shell_quote(output_path),
-      project_root
-    )
-    local ok, kind, code = os.execute(command)
-    local success = _os_execute_success(ok, kind, code)
-    if success then
-      local output = common.read_file(output_path) or ""
-      local files = {}
-      for line in (output .. "\n"):gmatch("(.-)\n") do
-        local relative_path = common.normalize_path(line)
-        if relative_path ~= "" and relative_path:match("%.lua$") ~= nil then
-          local absolute_path = common.join_path(project_root, relative_path)
-          if common.path_exists(absolute_path) then
-            files[#files + 1] = absolute_path
-          end
-        end
-      end
-      common.remove_path(output_path)
-      if #files > 0 then
-        table.sort(files)
-        return files
-      end
-    else
-      common.remove_path(output_path)
-    end
-  end
-
-  return common.collect_lua_files(common.join_path(project_root, dir_name))
-end
-
-local function _count_directory_lua_lines(project_root, dir_name)
-  local files, err = _collect_directory_lua_files(project_root, dir_name)
-  if files == nil then
-    return nil, err
-  end
-  local total = 0
-  for _, path in ipairs(files) do
-    local count, count_err = loc_counter.count_file(path)
-    if count == nil then
-      return nil, count_err
-    end
-    total = total + count
-  end
-  return total
-end
-
-local function _count_file_lua_lines(path)
-  if path:match("%.lua$") == nil then
-    return 0
-  end
-  local content = _read_file_bytes_fast(path)
-  if content ~= nil then
-    return loc_counter.count_effective_lines(content)
-  end
-  local count, err = loc_counter.count_file(path)
-  if count == nil then
-    return nil, err
-  end
-  return count
-end
-
-local function _deployment_line_breakdown(project_root, directories, files, startup_profile)
-  local breakdown = {}
-  for _, dir_name in ipairs(directories or {}) do
-    local source_dir_path = common.join_path(project_root, dir_name)
-    local effective_line_count = 0
-    if common.is_dir(source_dir_path) then
-      local dir_count, err = _count_directory_lua_lines(project_root, dir_name)
-      if dir_count == nil then
-        return nil, err
-      end
-      effective_line_count = dir_count
-    end
-    breakdown[#breakdown + 1] = {
-      name = dir_name,
-      kind = "Directory",
-      effective_lua_line_count = effective_line_count,
-    }
-  end
-
-  for _, file_info in ipairs(files or {}) do
-    local source_file_path = common.join_path(project_root, file_info.source)
-    local effective_line_count = 0
-    if common.path_exists(source_file_path) then
-      local file_count, err = _count_file_lua_lines(source_file_path)
-      if file_count == nil then
-        return nil, err
-      end
-      effective_line_count = file_count
-      if file_info.source == "main.lua" and startup_profile ~= nil and startup_profile ~= "" then
-        effective_line_count = effective_line_count + 1
-      end
-    end
-    breakdown[#breakdown + 1] = {
-      name = file_info.target,
-      kind = "File",
-      effective_lua_line_count = effective_line_count,
-    }
-  end
-
-  return breakdown
-end
-
-local function _total_line_count(breakdown)
-  local total = 0
-  for _, entry in ipairs(breakdown or {}) do
-    total = total + (entry.effective_lua_line_count or 0)
-  end
-  return total
 end
 
 local function _looks_like_project_root(path)
@@ -351,14 +219,30 @@ local function main(args)
   end
 
   _println("")
-  local breakdown = {}
-  local total_effective_line_count = nil
-  local breakdown_err = nil
-  breakdown, breakdown_err = _deployment_line_breakdown(project_root, directories, files, options.startup_profile)
-  if breakdown == nil then
+  local breakdown_request = {
+    project_root = project_root,
+    directories = {
+      { name = "src", path = "src" },
+      { name = "vendor/third_party", path = "vendor/third_party" },
+    },
+    files = {
+      {
+        name = "main.lua",
+        path = "main.lua",
+        extra_lines_if_exists = (options.startup_profile ~= nil and options.startup_profile ~= "") and 1 or 0,
+      },
+      { name = "Data/UIManagerNodes.lua", path = "Data/UIManagerNodes.lua", extra_lines_if_exists = 0 },
+      { name = "Data/Prefab.lua", path = "Data/Prefab.lua", extra_lines_if_exists = 0 },
+    },
+  }
+
+  local breakdown_result, breakdown_err = loc_scan.count_worktree(breakdown_request)
+  if breakdown_result == nil then
     _fail(breakdown_err)
   end
-  total_effective_line_count = _total_line_count(breakdown)
+
+  local breakdown = breakdown_result.breakdown or {}
+  local total_effective_line_count = breakdown_result.total_effective_line_count or 0
   _println(_text("有效代码行数: ", "Effective LOC: ") .. tostring(total_effective_line_count))
   for _, entry in ipairs(breakdown) do
     _println("  - " .. tostring(entry.name) .. ": " .. tostring(entry.effective_lua_line_count))

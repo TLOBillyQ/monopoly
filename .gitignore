@@ -21,6 +21,7 @@ Thumbs.db
 
 # Temporary files
 /tmp/
+.loc/
 *.tmp
 *.bak
 .venv/

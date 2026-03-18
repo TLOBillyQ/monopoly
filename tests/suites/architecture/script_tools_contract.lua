@@ -3,6 +3,8 @@ local common = require("shared.lib.common")
 local arch_common = require("arch_view.runtime.common")
 local arch_cli = require("quality.arch")
 local deploy_defaults = require("ops.deploy_defaults")
+local loc_counter = require("shared.lib.loc_counter")
+local loc_scan = require("shared.lib.loc_scan")
 
 bootstrap.install_package_paths()
 
@@ -85,6 +87,38 @@ local function _run_powershell_file(script_path, args)
   return common.run_command(command, {
     cwd = project_root,
   })
+end
+
+local function _run_in_dir(cwd, command)
+  local result = common.run_command(command, {
+    cwd = cwd,
+  })
+  if result.ok ~= true then
+    error(result.output)
+  end
+  return result
+end
+
+local function _write_fixture_file(path, content)
+  local ok, err = common.write_file(path, content)
+  if not ok then
+    error(err)
+  end
+end
+
+local function _init_git_repo(repo_root)
+  _run_in_dir(project_root, { "git", "init", repo_root })
+  _run_in_dir(repo_root, { "git", "config", "user.email", "codex@example.com" })
+  _run_in_dir(repo_root, { "git", "config", "user.name", "Codex" })
+end
+
+local function _commit_all(repo_root, message)
+  _run_in_dir(repo_root, { "git", "add", "-A" })
+  _run_in_dir(repo_root, { "git", "commit", "-m", message })
+end
+
+local function _line_count(text)
+  return loc_counter.count_effective_lines(text)
 end
 
 local function _test_common_handles_unicode_paths_for_file_ops()
@@ -601,6 +635,171 @@ local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
     "suite indexing should report indexed suite count")
 end
 
+local function _test_loc_scan_counts_worktree_with_go_engine()
+  _with_ascii_tmp("loc_scan_worktree", function(tmp_root)
+    local repo_root = common.join_path(tmp_root, "loc_repo")
+    local src_dir = common.join_path(repo_root, "src")
+    local vendor_dir = common.join_path(repo_root, "vendor/third_party")
+    local data_dir = common.join_path(repo_root, "Data")
+    local ok, err = common.ensure_dir(src_dir)
+    if not ok then
+      error(err)
+    end
+    ok, err = common.ensure_dir(vendor_dir)
+    if not ok then
+      error(err)
+    end
+    ok, err = common.ensure_dir(data_dir)
+    if not ok then
+      error(err)
+    end
+
+    local src_content = table.concat({
+      "local value = 1",
+      "",
+      "-- comment",
+      "return value",
+      "",
+    }, "\n")
+    local vendor_content = "return { enabled = true }\n"
+    local main_content = "return require('src.sample')\n"
+    local ui_nodes_content = "return { ui = true }\n"
+    local prefab_content = "return { prefab = true }\n"
+
+    _write_fixture_file(common.join_path(src_dir, "sample.lua"), src_content)
+    _write_fixture_file(common.join_path(vendor_dir, "feature.lua"), vendor_content)
+    _write_fixture_file(common.join_path(repo_root, "main.lua"), main_content)
+    _write_fixture_file(common.join_path(data_dir, "UIManagerNodes.lua"), ui_nodes_content)
+    _write_fixture_file(common.join_path(data_dir, "Prefab.lua"), prefab_content)
+
+    loc_scan.reset_caches()
+    local result, count_err = loc_scan.count_worktree({
+      project_root = repo_root,
+      directories = {
+        { name = "src", path = "src" },
+        { name = "vendor/third_party", path = "vendor/third_party" },
+      },
+      files = {
+        { name = "main.lua", path = "main.lua", extra_lines_if_exists = 1 },
+        { name = "Data/UIManagerNodes.lua", path = "Data/UIManagerNodes.lua", extra_lines_if_exists = 0 },
+        { name = "Data/Prefab.lua", path = "Data/Prefab.lua", extra_lines_if_exists = 0 },
+      },
+    })
+    if result == nil then
+      error(count_err)
+    end
+
+    local by_name = {}
+    for _, entry in ipairs(result.breakdown or {}) do
+      by_name[entry.name] = entry.effective_lua_line_count
+    end
+
+    assert(by_name["src"] == _line_count(src_content), "worktree scanner should count src directory LOC")
+    assert(by_name["vendor/third_party"] == _line_count(vendor_content),
+      "worktree scanner should count vendor directory LOC")
+    assert(by_name["main.lua"] == _line_count(main_content) + 1,
+      "worktree scanner should add the startup profile line only when the file exists")
+    assert(by_name["Data/UIManagerNodes.lua"] == _line_count(ui_nodes_content),
+      "worktree scanner should count UIManagerNodes.lua LOC")
+    assert(by_name["Data/Prefab.lua"] == _line_count(prefab_content),
+      "worktree scanner should count Prefab.lua LOC")
+    assert(result.total_effective_line_count == by_name["src"] + by_name["vendor/third_party"]
+      + by_name["main.lua"] + by_name["Data/UIManagerNodes.lua"] + by_name["Data/Prefab.lua"],
+      "worktree scanner should keep total_effective_line_count aligned with the breakdown")
+  end)
+end
+
+local function _test_loc_scan_counts_history_across_git_diff_shapes()
+  _with_ascii_tmp("loc_scan_history", function(tmp_root)
+    local repo_root = common.join_path(tmp_root, "history_repo")
+    local src_dir = common.join_path(repo_root, "src")
+    local tests_dir = common.join_path(repo_root, "tests")
+    local ok, err = common.ensure_dir(src_dir)
+    if not ok then
+      error(err)
+    end
+    ok, err = common.ensure_dir(tests_dir)
+    if not ok then
+      error(err)
+    end
+
+    _init_git_repo(repo_root)
+
+    local src_v1 = table.concat({
+      "local value = 1",
+      "-- comment",
+      "return value",
+      "",
+    }, "\n")
+    local src_v2 = table.concat({
+      "local value = 2",
+      "local bonus = 3",
+      "return value + bonus",
+      "",
+    }, "\n")
+    local src_v3 = table.concat({
+      "local next_value = 9",
+      "return next_value",
+      "",
+    }, "\n")
+    local test_v1 = table.concat({
+      "return { ok = true }",
+      "",
+    }, "\n")
+    local test_v2 = table.concat({
+      "return { more = true }",
+      "local value = 1",
+      "",
+    }, "\n")
+
+    _write_fixture_file(common.join_path(src_dir, "a.lua"), src_v1)
+    _write_fixture_file(common.join_path(tests_dir, "spec.lua"), test_v1)
+    _commit_all(repo_root, "initial loc fixtures")
+
+    _write_fixture_file(common.join_path(src_dir, "a.lua"), src_v2)
+    _write_fixture_file(common.join_path(tests_dir, "extra.lua"), test_v2)
+    _write_fixture_file(common.join_path(tests_dir, "empty.lua"), "")
+    _commit_all(repo_root, "modify add empty")
+
+    _run_in_dir(repo_root, { "git", "mv", "tests/spec.lua", "tests/spec_renamed.lua" })
+    local remove_ok, remove_err = common.remove_path(common.join_path(tests_dir, "extra.lua"))
+    if remove_ok == nil then
+      error(remove_err)
+    end
+    _run_in_dir(repo_root, { "git", "mv", "src/a.lua", "src/a.txt" })
+    _write_fixture_file(common.join_path(src_dir, "b.lua"), src_v3)
+    _commit_all(repo_root, "rename delete and replace")
+
+    loc_scan.reset_caches()
+    local result, history_err = loc_scan.count_history({
+      git_root = repo_root,
+      since = "10 days ago",
+    })
+    if result == nil then
+      error(history_err)
+    end
+
+    local rows = result.rows or {}
+    assert(#rows == 3, "history scanner should return one row per commit in the time window")
+
+    assert(rows[1].src_loc == _line_count(src_v1), "first history row should use the initial src LOC")
+    assert(rows[1].src_files == 1, "first history row should count the initial src file")
+    assert(rows[1].tests_loc == _line_count(test_v1), "first history row should use the initial tests LOC")
+    assert(rows[1].tests_files == 1, "first history row should count the initial tests file")
+
+    assert(rows[2].src_loc == _line_count(src_v2), "second history row should reflect the modified src LOC")
+    assert(rows[2].src_files == 1, "second history row should keep one counted src file")
+    assert(rows[2].tests_loc == _line_count(test_v1) + _line_count(test_v2),
+      "second history row should include added test LOC and ignore the empty file")
+    assert(rows[2].tests_files == 2, "second history row should ignore empty lua files in file totals")
+
+    assert(rows[3].src_loc == _line_count(src_v3), "third history row should drop the renamed non-lua src file")
+    assert(rows[3].src_files == 1, "third history row should count the replacement src lua file")
+    assert(rows[3].tests_loc == _line_count(test_v1), "third history row should keep renamed lua files in tests totals")
+    assert(rows[3].tests_files == 1, "third history row should reflect the deleted extra test file")
+  end)
+end
+
 local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
   { name = "deploy_defaults_match_windows_history", run = _test_deploy_defaults_match_windows_history },
@@ -625,6 +824,8 @@ local tooling_tests = {
   { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
   { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
   { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
+  { name = "loc_scan_counts_worktree_with_go_engine", run = _test_loc_scan_counts_worktree_with_go_engine },
+  { name = "loc_scan_counts_history_across_git_diff_shapes", run = _test_loc_scan_counts_history_across_git_diff_shapes },
 }
 
 return {

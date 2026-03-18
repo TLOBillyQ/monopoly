@@ -75,6 +75,7 @@ local tooling_modules = {
   "suites.architecture.arch_view_live_tooling_contract",
   "suites.architecture.crap_tooling_contract",
   "suites.architecture.mutate4lua_tooling_contract",
+  "suites.architecture.loc_scan_tooling_contract",
   "suites.architecture.script_tools_io_tooling_contract",
   "suites.architecture.script_tools_mutate_tooling_contract",
   "suites.architecture.scrap4lua_tooling_contract",
