@@ -13,9 +13,9 @@ local _engine_binary_cache = {
 }
 
 local function _module_dir()
-  local source = debug.getinfo(1, "S").source or "@scripts/shared/lib/loc_scan.lua"
+  local source = debug.getinfo(1, "S").source or "@tools/shared/lib/loc_scan.lua"
   local normalized = common.normalize_path(source):gsub("^@", "")
-  return normalized:match("^(.*)/[^/]+$") or "scripts/shared/lib"
+  return normalized:match("^(.*)/[^/]+$") or "tools/shared/lib"
 end
 
 local bootstrap = dofile(_module_dir() .. "/../bootstrap.lua")

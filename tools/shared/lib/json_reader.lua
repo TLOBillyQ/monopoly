@@ -7,9 +7,9 @@ local function _append_package_path(path_pattern)
 end
 
 local function _module_dir()
-  local source = debug.getinfo(1, "S").source or "@scripts/shared/lib/json_reader.lua"
+  local source = debug.getinfo(1, "S").source or "@tools/shared/lib/json_reader.lua"
   local normalized = common.normalize_path(source):gsub("^@", "")
-  return normalized:match("^(.*)/[^/]+$") or "scripts/shared/lib"
+  return normalized:match("^(.*)/[^/]+$") or "tools/shared/lib"
 end
 
 local bootstrap = dofile(_module_dir() .. "/../bootstrap.lua")
