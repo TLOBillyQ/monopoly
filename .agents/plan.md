@@ -160,6 +160,9 @@
 - **description**: 补齐所有 legacy executable wrappers：顶层 Lua CLI、`scripts/quality/mutate/driver.lua`、`scripts/ops/deploy.ps1`
 - **location**: `scripts/quality/**`, `scripts/ops/**`, `scripts/data/**`
 - **validation**: 旧路径调用实际转发到 `tools/*`，且 wrapper 本身不承载业务实现
+- **status**: 已完成
+- **log**: 重新补回了 `scripts/quality/*`、`scripts/ops/*`、`scripts/data/*` 和 `scripts/quality/mutate/driver.lua` 的 legacy wrapper；Lua 壳统一只做 `dofile` 转发，PowerShell 壳只做参数透传到 canonical `tools/ops/deploy.ps1`。
+- **files edited/created**: `scripts/quality/**`, `scripts/ops/**`, `scripts/data/**`, `.agents/plan.md`
 
 ### T10
 - **depends_on**: `[T6, T8, T9]`
