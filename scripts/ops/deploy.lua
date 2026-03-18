@@ -234,10 +234,6 @@ local function _resolve_project_root()
   return candidates[1] or candidates[2] or candidates[3]
 end
 
-local function _should_skip_line_breakdown()
-  return common.is_windows()
-end
-
 local function _parse_args(args)
   local options = {
     startup_profile = nil,
@@ -357,32 +353,21 @@ local function main(args)
   _println("")
   local breakdown = {}
   local total_effective_line_count = nil
-  if _should_skip_line_breakdown() then
-    _println(_text(
-      "有效代码行数: 跳过（Windows 部署避免额外扫描）",
-      "Effective LOC: skipped to avoid extra scanning during Windows deploy"
-    ))
-    _println("")
-  else
-    local breakdown_err = nil
-    breakdown, breakdown_err = _deployment_line_breakdown(project_root, directories, files, options.startup_profile)
-    if breakdown == nil then
-      _fail(breakdown_err)
-    end
-    total_effective_line_count = _total_line_count(breakdown)
-    _println(_text("有效代码行数: ", "Effective LOC: ") .. tostring(total_effective_line_count))
-    for _, entry in ipairs(breakdown) do
-      _println("  - " .. tostring(entry.name) .. ": " .. tostring(entry.effective_lua_line_count))
-    end
-    _println("")
+  local breakdown_err = nil
+  breakdown, breakdown_err = _deployment_line_breakdown(project_root, directories, files, options.startup_profile)
+  if breakdown == nil then
+    _fail(breakdown_err)
   end
+  total_effective_line_count = _total_line_count(breakdown)
+  _println(_text("有效代码行数: ", "Effective LOC: ") .. tostring(total_effective_line_count))
+  for _, entry in ipairs(breakdown) do
+    _println("  - " .. tostring(entry.name) .. ": " .. tostring(entry.effective_lua_line_count))
+  end
+  _println("")
 
   _println("======================================")
   _println(_text("部署完成！", "Deployment completed!"))
-  local effective_loc_text = total_effective_line_count ~= nil
-    and tostring(total_effective_line_count)
-    or _text("已跳过统计", "skipped")
-  _println("  " .. target_path .. " -> " .. _text("有效代码行数 ", "effective LOC ") .. effective_loc_text)
+  _println("  " .. target_path .. " -> " .. _text("有效代码行数 ", "effective LOC ") .. tostring(total_effective_line_count))
   for _, entry in ipairs(breakdown or {}) do
     _println("    - " .. tostring(entry.name) .. ": " .. tostring(entry.effective_lua_line_count))
   end
