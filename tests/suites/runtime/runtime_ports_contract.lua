@@ -7,7 +7,7 @@ local runtime_context = require("src.host.eggy.context")
 local runtime_install = require("src.app.bootstrap.runtime_install")
 local default_ports = require("src.host.eggy.default_ports")
 local gameplay_loop_ports = require("src.turn.loop.ports")
-local presentation_ports = require("src.ui.ctl.ports")
+local presentation_ports = require("src.presentation.runtime.ports")
 
 local function _assert_list_contains(list, expected, msg)
   for _, value in ipairs(list or {}) do

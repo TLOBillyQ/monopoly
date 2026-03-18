@@ -2,7 +2,7 @@ local support = require("support.runtime_support")
 local with_patches = support.with_patches
 local game_runtime_bootstrap = require("src.presentation.runtime.gameplay_runtime_bootstrap")
 local gameplay_loop = require("src.turn.loop")
-local presentation_ports = require("src.ui.ctl.ports")
+local presentation_ports = require("src.presentation.runtime.ports")
 
 local function _assert_close(actual, expected, epsilon, msg)
   local delta = math.abs((actual or 0) - (expected or 0))

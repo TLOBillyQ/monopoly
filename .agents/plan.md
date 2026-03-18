@@ -28,7 +28,8 @@
 - [x] (2026-03-18 10:29 CST) 已完成计划重写，准备交给后续实现者执行
 - [x] (2026-03-18 10:47 CST) 已完成 T1：冻结 canonical rename map、`host_bridge` 命名与 contract 不变量，并把 package entry cutover 设为后续所有迁移的前置条件
 - [x] (2026-03-18 10:57 CST) 已完成 T2：为未来 `src.ui.runtime.state` / `landing_visual_hold` / `host_bridge` 路径补齐 whitelist，并把 contract 测试改成接受过渡态 canonical path
-- [ ] 正在执行 T3 / T4：并行切 package entry 与 `ui/runtime` 三个真源
+- [x] (2026-03-18 11:05 CST) 已完成 T3：`src.presentation.runtime.ports` 成为新的 package entry 真源，`describe_boundary_contract()` 与 `common.lua` 已迁过去，旧 `src.ui.ctl.ports` / `common.lua` 已降为纯 alias
+- [ ] 正在执行 T4：重命名 `src/ui/runtime` 三个 canonical seam / bridge
 
 ## 意外与发现
 
@@ -155,9 +156,9 @@
 - **location**: `src/presentation/runtime/ports/init.lua`, `src/presentation/runtime/ports/common.lua`, `src/ui/ctl/ports/init.lua`
 - **description**: 创建新的包入口 `src.presentation.runtime.ports`，把现有 `build()`、`describe_boundary_contract()` 与 `boundary_contract` 真源迁过去。旧 `src/ui.ctl.ports` 在此任务结束时改成纯 alias：`return require("src.presentation.runtime.ports")`。若 `common.lua` 仍需共享，也一并迁到新目录并让旧路径 alias 到新文件。
 - **validation**: `src/presentation/runtime/gameplay_runtime_bootstrap.lua`、`tests/support/shared_support.lua`、`tests/suites/runtime/runtime_bootstrap.lua`、`tests/suites/runtime/runtime_ports_contract.lua` 可以切到新包入口；旧包入口仍返回同一个 module table。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 11:05 CST 已创建 `src/presentation/runtime/ports/init.lua` 与 `common.lua`，并把 `build()`、`describe_boundary_contract()` 真源迁入新包入口。旧 `src/ui/ctl/ports/init.lua` 与 `common.lua` 已改成纯 alias。生产入口与 runtime suite 已切到 `src.presentation.runtime.ports`。验证：`lua tests/contract.lua` 与 `lua -e 'package.path = package.path .. \";./tests/?.lua\"; require(\"TestHarness\").run_all({ require(\"tests.suites.runtime.runtime_bootstrap\") })'` 通过。
+- **files edited/created**: `.agents/plan.md`, `src/presentation/runtime/ports/init.lua`, `src/presentation/runtime/ports/common.lua`, `src/ui/ctl/ports/init.lua`, `src/ui/ctl/ports/common.lua`, `src/presentation/runtime/gameplay_runtime_bootstrap.lua`, `tests/support/shared_support.lua`, `tests/suites/runtime/runtime_bootstrap.lua`, `tests/suites/runtime/runtime_ports_contract.lua`
 
 ### T4: 重命名 `src/ui/runtime/*` 三个 canonical seam / bridge
 - **id**: T4
