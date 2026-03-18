@@ -5,6 +5,8 @@ local registry = require("src.ui.render.anim_registry")
 local handlers = require("src.ui.render.anim_handlers")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local dice_nodes = require("src.ui.schema.dice_nodes")
+local host_runtime_bridge = require("src.ui.runtime.host_bridge")
+local runtime_ui = require("src.ui.render.runtime_ui")
 
 local action_anim = {}
 
@@ -26,9 +28,9 @@ local function _resolve_runtime_bundle(state, opts)
     return state.presentation_runtime
   end
   return {
-    runtime = package.loaded["src.ui.render.runtime_ui"],
-    host_runtime = package.loaded["src.host.eggy"],
-    ui_events = package.loaded["src.ui.ctl.ui_events"] or {
+    runtime = runtime_ui,
+    host_runtime = host_runtime_bridge,
+    ui_events = {
       show = {},
       hide = {},
       send_to_all = function() end,

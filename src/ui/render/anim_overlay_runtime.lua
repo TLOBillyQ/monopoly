@@ -1,4 +1,5 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
+local host_runtime_bridge = require("src.ui.runtime.host_bridge")
 
 local runtime = {}
 
@@ -7,11 +8,7 @@ local function _resolve_host_runtime(scene, deps)
   if resolved_deps and resolved_deps.host_runtime then
     return resolved_deps.host_runtime
   end
-  local loaded = package.loaded["src.host.eggy"]
-  if loaded ~= nil then
-    return loaded
-  end
-  error("missing deps.host_runtime")
+  return host_runtime_bridge
 end
 
 local function _ensure_overlays(scene)

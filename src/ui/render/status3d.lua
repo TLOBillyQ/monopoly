@@ -1,6 +1,7 @@
 local meta = require("src.ui.render.status3d.meta")
 local scene = require("src.ui.render.status3d.scene")
 local status = require("src.ui.render.status3d.status")
+local host_runtime_bridge = require("src.ui.runtime.host_bridge")
 
 local M = {}
 
@@ -9,11 +10,7 @@ local function _resolve_host_runtime(state, deps)
   if resolved_deps and resolved_deps.host_runtime then
     return resolved_deps.host_runtime
   end
-  local loaded = package.loaded["src.host.eggy"]
-  if loaded ~= nil then
-    return loaded
-  end
-  error("missing deps.host_runtime")
+  return host_runtime_bridge
 end
 
 function M.reset(state, deps)

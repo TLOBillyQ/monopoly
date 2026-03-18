@@ -2,12 +2,13 @@ local market_layout = require("src.ui.schema.market_layout")
 local ui_controls = require("src.ui.render.support.ui_controls")
 local runtime_state = require("src.ui.runtime.state")
 local number_utils = require("src.core.utils.number_utils")
+local runtime_ui = require("src.ui.render.runtime_ui")
 
 local market_view_controls = {}
 
 local function _resolve_runtime(state, deps)
   local resolved_deps = deps or (state and state.presentation_runtime) or {}
-  return assert(resolved_deps.runtime or package.loaded["src.ui.render.runtime_ui"], "missing deps.runtime")
+  return assert(resolved_deps.runtime or runtime_ui, "missing deps.runtime")
 end
 
 local function _resolve_ref_key(refs, key)

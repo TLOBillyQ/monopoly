@@ -1,8 +1,7 @@
 local landing_visual_hold = {}
 
 local function _landing_visual_hold()
-  return package.loaded["src.state.state_access.landing_visual_hold"]
-    or require("src.state.state_access.landing_visual_hold")
+  return require("src.state.state_access.landing_visual_hold")
 end
 
 function landing_visual_hold.start(game)

@@ -1,12 +1,11 @@
 local host_bridge = {}
 
 local function _host_runtime()
-  return package.loaded["src.host.eggy"] or require("src.host.eggy")
+  return require("src.host.eggy")
 end
 
 local function _runtime_event_bridge()
-  return package.loaded["src.host.eggy.event_bridge"]
-    or require("src.host.eggy.event_bridge")
+  return require("src.host.eggy.event_bridge")
 end
 
 function host_bridge.resolve_roles()

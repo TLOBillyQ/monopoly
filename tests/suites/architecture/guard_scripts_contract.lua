@@ -85,6 +85,37 @@ local function _test_forbidden_globals_catches_numeric_cast()
     end)
 end
 
+local function _test_forbidden_globals_catches_src_package_access()
+    _with_fixture({
+        ["src/bad.lua"] = 'return package.loaded["x"]\n',
+    }, function(fixture_root)
+        local result = forbidden_globals.run({
+            scan_roots = { arch_common.join_path(fixture_root, "src") },
+        })
+
+        assert(result.ok == false, "forbidden_globals should reject package access in src")
+        assert(result.violations ~= nil and #result.violations == 1, "forbidden_globals should report one package violation")
+        assert(result.violations[1].name == "package.*", "forbidden_globals should identify package access")
+    end)
+end
+
+local function _test_forbidden_globals_allows_package_access_outside_src()
+    _with_fixture({
+        ["tests/clean.lua"] = 'return package.path\n',
+        ["scripts/clean.lua"] = 'return package.path\n',
+    }, function(fixture_root)
+        local tests_result = forbidden_globals.run({
+            scan_roots = { arch_common.join_path(fixture_root, "tests") },
+        })
+        local scripts_result = forbidden_globals.run({
+            scan_roots = { arch_common.join_path(fixture_root, "scripts") },
+        })
+
+        assert(tests_result.ok == true, "forbidden_globals should allow package access in tests")
+        assert(scripts_result.ok == true, "forbidden_globals should allow package access in scripts")
+    end)
+end
+
 local function _test_guard_scripts_allow_clean_fixtures()
     _with_fixture({
         ["src/clean.lua"] = "local state = {}\nstate.output = true\nreturn state\n",
@@ -115,6 +146,8 @@ return {
     tests = {
         { name = "dep_rules_catches_ui_runtime_bypass",              run = _test_dep_rules_catches_ui_runtime_bypass },
         { name = "forbidden_globals_catches_numeric_cast",           run = _test_forbidden_globals_catches_numeric_cast },
+        { name = "forbidden_globals_catches_src_package_access",     run = _test_forbidden_globals_catches_src_package_access },
+        { name = "forbidden_globals_allows_package_access_outside_src", run = _test_forbidden_globals_allows_package_access_outside_src },
         { name = "guard_scripts_allow_clean_fixtures",               run = _test_guard_scripts_allow_clean_fixtures },
     },
 }

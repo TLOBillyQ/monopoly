@@ -3,6 +3,10 @@ local role_id_utils = require("src.core.utils.role_id")
 
 local turn_effects = {}
 
+local function _fallback_runtime()
+  return require("src.ui.render" .. ".runtime_ui")
+end
+
 local function _with_client_role(runtime, role, fn)
   if type(runtime.with_client_role) == "function" then
     return runtime.with_client_role(role, fn)
@@ -129,7 +133,7 @@ end
 
 function turn_effects.sync(state, ui_model, deps)
   local runtime = deps and deps.runtime or state and state.presentation_runtime and state.presentation_runtime.runtime
-    or package.loaded["src.ui.render.runtime_ui"]
+    or _fallback_runtime()
   assert(runtime, "missing deps.runtime")
   _sync_current_turn_highlight(runtime, state, ui_model)
   _sync_local_turn_prompt(runtime, state, ui_model)

@@ -3,10 +3,6 @@ local number_utils = require("src.core.utils.number_utils")
 local host_runtime_ports = require("src.ui.runtime.host_bridge")
 
 local function _resolve_loaded(name)
-  local loaded = package.loaded[name]
-  if loaded ~= nil then
-    return loaded
-  end
   local ok, module = pcall(require, name)
   if ok then
     return module

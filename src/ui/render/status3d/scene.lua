@@ -1,6 +1,7 @@
 local meta = require("src.ui.render.status3d.meta")
 local specs = require("src.ui.render.status3d.specs")
 local runtime_ports = require("src.core.ports.runtime_ports")
+local host_runtime_bridge = require("src.ui.runtime.host_bridge")
 
 local M = {}
 
@@ -9,11 +10,7 @@ local function _resolve_host_runtime(deps)
   if resolved_deps.host_runtime then
     return resolved_deps.host_runtime
   end
-  local loaded = package.loaded["src.host.eggy"]
-  if loaded ~= nil then
-    return loaded
-  end
-  error("missing deps.host_runtime")
+  return host_runtime_bridge
 end
 
 local function _resolve_role(player_id, deps)

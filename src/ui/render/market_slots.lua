@@ -4,12 +4,13 @@ local items_cfg = require("src.config.content.items")
 local market_cfg = require("src.config.content.market")
 local number_utils = require("src.core.utils.number_utils")
 local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
+local runtime_ui = require("src.ui.render.runtime_ui")
 
 local market_view_slots = {}
 
 local function _resolve_runtime(deps)
   local resolved_deps = deps or {}
-  return assert(resolved_deps.runtime or package.loaded["src.ui.render.runtime_ui"], "missing deps.runtime")
+  return assert(resolved_deps.runtime or runtime_ui, "missing deps.runtime")
 end
 
 local function _item_cfg_by_id(product_id)

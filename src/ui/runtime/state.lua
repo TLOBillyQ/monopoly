@@ -1,8 +1,7 @@
 local runtime_state = {}
 
 local function _runtime_state()
-  return package.loaded["src.state.state_access.runtime_state"]
-    or require("src.state.state_access.runtime_state")
+  return require("src.state.state_access.runtime_state")
 end
 
 function runtime_state.ensure_all(state)

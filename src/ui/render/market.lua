@@ -3,6 +3,8 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 local runtime_state = require("src.ui.runtime.state")
 local market_view_slots = require("src.ui.render.market_slots")
 local market_view_controls = require("src.ui.render.market_controls")
+local runtime_ui = require("src.ui.render.runtime_ui")
+local modal_state = require("src.ui.stores.modal_state")
 
 local market_view = {}
 local VEHICLE_TAB_ENABLED = false
@@ -34,8 +36,8 @@ local function _resolve_deps(state, deps)
     return state.presentation_runtime
   end
   return {
-    runtime = package.loaded["src.ui.render.runtime_ui"],
-    modal_state = package.loaded["src.ui.stores.modal_state"],
+    runtime = runtime_ui,
+    modal_state = modal_state,
   }
 end
 

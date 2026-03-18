@@ -5,6 +5,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local catalog = require("src.ui.render.board_feedback_catalog")
 local effect_timeline = require("src.ui.render.support.effect_timeline")
 local unit_position = require("src.ui.render.unit_position")
+local host_runtime_bridge = require("src.ui.runtime.host_bridge")
 local service = {}
 local active_host_runtime = nil
 local warned_missing_refs = {
@@ -23,11 +24,7 @@ local function _resolve_host_runtime(state, deps)
   if resolved_deps and resolved_deps.host_runtime then
     return resolved_deps.host_runtime
   end
-  local loaded = package.loaded["src.host.eggy"]
-  if loaded ~= nil then
-    return loaded
-  end
-  error("missing deps.host_runtime")
+  return host_runtime_bridge
 end
 local function _warn(...)
   logger.warn("board_feedback", ...)

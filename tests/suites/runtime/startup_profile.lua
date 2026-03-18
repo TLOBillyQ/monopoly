@@ -91,6 +91,21 @@ local function _build_startup_state(profile_name)
   })
 end
 
+local function _test_state_factory_builds_runtime_state_when_package_global_missing()
+  with_patches({
+    { key = "package", value = nil },
+  }, function()
+    local state = _build_startup_state("default")
+    assert(type(state.ui_runtime) == "table", "state_factory should create ui_runtime when package is nil")
+    assert(type(state.board_runtime) == "table", "state_factory should create board_runtime when package is nil")
+    assert(type(state.anim_runtime) == "table", "state_factory should create anim_runtime when package is nil")
+    assert(type(state.turn_runtime) == "table", "state_factory should create turn_runtime when package is nil")
+    assert(type(state.debug_runtime) == "table", "state_factory should create debug_runtime when package is nil")
+  end, {
+    skip_runtime_context_refresh = true,
+  })
+end
+
 local function _test_startup_policy_defaults_to_default_profile()
   with_patches({
     { key = "STARTUP_TEST_PROFILE", value = nil },
@@ -436,6 +451,7 @@ end
 return {
   name = "startup_profile",
   tests = {
+    { name = "state_factory_builds_runtime_state_when_package_global_missing", run = _test_state_factory_builds_runtime_state_when_package_global_missing },
     { name = "startup_policy_defaults_to_default_profile", run = _test_startup_policy_defaults_to_default_profile },
     { name = "startup_policy_accepts_explicit_profile_override", run = _test_startup_policy_accepts_explicit_profile_override },
     { name = "game_startup_fills_synthetic_ai_when_role_roster_empty", run = _test_game_startup_fills_synthetic_ai_when_role_roster_empty },

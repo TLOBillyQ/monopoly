@@ -4,6 +4,7 @@ local always_show_nodes = require("src.ui.schema.always_show_nodes")
 local role_id_utils = require("src.core.utils.role_id")
 local panel_cash_delta = require("src.ui.wid.panel_cash_delta")
 local panel_player_slots = require("src.ui.wid.panel_player_slots")
+local ui_touch_policy_runtime = require("src.ui.input.touch_policy")
 
 local panel_presenter = {}
 
@@ -113,7 +114,7 @@ end
 local function _resolve_ui_touch_policy(state, deps)
   return deps.ui_touch_policy
     or state and state.presentation_runtime and state.presentation_runtime.ui_touch_policy
-    or package.loaded["src.ui.input.touch_policy"]
+    or ui_touch_policy_runtime
 end
 
 local function _render_player_slots(ui, runtime, panel, empty_avatar_key)

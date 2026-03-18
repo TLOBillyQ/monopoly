@@ -3,6 +3,12 @@ package.path = package.path .. ";./tests/?.lua"
 local guard_support = require("support.guards.guard_support")
 
 local forbidden = {
+  {
+    pattern = "%f[%w_]package%s*%.",
+    name = "package.*",
+    replacement = "deps injection, state.presentation_runtime, or seam require",
+    path_pattern = "^src/",
+  },
   { pattern = "%f[%w]tonumber%s*%(", name = "tonumber", replacement = "NumberUtils.to_integer()" },
   { pattern = "%f[%w_]rawget%s*%(", name = "rawget", replacement = "field access with nil-guard (_G and _G.key)" },
   { pattern = "%f[%w_]os%s*%.%s*clock%s*%(", name = "os.clock", replacement = "runtime port clock or injected now_fn" },
@@ -20,13 +26,15 @@ function M.run(opts)
   local violations, err = guard_support.collect_line_violations({
     roots = opts.scan_roots or scan_roots,
     allow_empty_roots = true,
-    find_violation = function(path, _, line, line_number)
+    find_violation = function(path, relpath, line, line_number)
       if guard_support.is_comment_line(line) then
         return nil
       end
 
       for _, rule in ipairs(opts.forbidden or forbidden) do
-        if line:find(rule.pattern) then
+        local path_allowed = rule.path_pattern == nil
+          or tostring(relpath):find(rule.path_pattern) ~= nil
+        if path_allowed and line:find(rule.pattern) then
           return {
             path = path,
             line = line_number,
