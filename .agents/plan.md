@@ -1,224 +1,212 @@
-# Plan: Arch View Cycle Dependency Fix
+# Plan: src 兼容层命名收口
 
 本计划是活文档。实施过程中必须持续更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”。
 
-本文件遵循 `/Users/billyq/Dev/Github/Lua/monopoly/.agents/harness/PLANS.md` 维护，并补充 `swarm-planner` 需要的显式任务依赖，便于后续分工执行。
+本文件遵循 `/Users/billyq/Dev/Github/Lua/monopoly/.agents/harness/PLANS.md` 维护，并补充 `swarm-planner` 需要的显式任务依赖，便于后续并行分工执行。
 
 **Generated**: 2026-03-18
 
 ## 目的 / 全局视角
 
-目标不是继续依赖 `scripts/quality/arch/filter.lua` 把问题隐藏掉，而是把 `arch_view` 原始扫描里已经存在的两个 projection cycle 真正拆掉，并把依赖方向恢复到 Clean Architecture 允许的方向。
+这次工作的目标不是改行为，而是清理 `src/` 里仍然带着兼容迁移痕迹的命名，让 Lua 文件名不再重复父目录已经表达过的信息，同时保留一条低风险的迁移路径。完成后，`src/ui/runtime/` 下不会再出现 `runtime_state_seam.lua`、`host_runtime_ports.lua` 这类重复目录语义的 canonical 文件；`src/ui/ctl/ports/` 里现有的 runtime adapter 会整体归位到 `src/presentation/runtime/ports/`，叶子文件名改成目录内短名，例如 `anim.lua`、`state.lua`、`ui_sync.lua`。
 
-2026-03-18 本地执行结果表明：`lua scripts/quality/arch.lua check` 会通过，但 `lua scripts/quality/arch.lua scan --out tmp/arch_cycle_scan.json` 产出的原始 JSON 中，`check.cycles = []`、`check.projection_cycles = 2`、`check.ok = false`。也就是说，现在没有模块级 `require` 真环，但仍有两个被过滤器掩盖的命名空间投影环，分别落在 `ui` 与 `ui.ctl` 视图。
+用户可见的完成标准有三类。第一，生产入口与测试入口都改为从新的 canonical 路径加载模块，但行为保持不变。第二，兼容层在迁移期只以纯 alias 存在，最终能整批删掉，而不是继续作为架构真源潜伏在 contract metadata 或测试白名单里。第三，文档、边界护栏和 checked-in `arch_view` viewer 快照都同步到新的命名规则，不再继续宣传旧的 `*_ports.lua` / `*_seam.lua` 真源。
 
-用户可见的完成标准是：原始 `scan` 结果不再包含这两个 projection cycle；`filter.lua` 不再对 `ui` / `ui.ctl` 开特例；`arch_view` 契约测试从“验证过滤器忽略它们”改成“验证原始扫描已无此环”；并且新引入的 canonical path 不会削弱现有架构护栏。
+## Prerequisites
+
+- 工作目录固定为 `/Users/billyq/Dev/Github/Lua/monopoly`
+- 本轮只涉及仓库内部 Lua 模块路径、测试、架构护栏与文档；不依赖外部第三方库的新 API，因此无需额外拉取外部文档
+- 需要能运行以下本地命令：`lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/contract.lua`、`lua tests/behavior.lua`
 
 ## 进度
 
-- [x] (2026-03-18 01:15 CST) 已读取架构与质量文档：`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/arch_view.md`、`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/boundaries.md`、`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/layer-model.md`、`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/quality_map.md`
-- [x] (2026-03-18 01:15 CST) 已读取计划规范与 Clean Architecture 审视技能：`/Users/billyq/Dev/Github/Lua/monopoly/.agents/harness/PLANS.md`、`/Users/billyq/Dev/Github/Lua/monopoly/.agents/skills/clean-architecture-reviewer/SKILL.md`
-- [x] (2026-03-18 01:16 CST) 已执行 `arch_view check/scan`，确认 0 个模块级 cycle、2 个 projection cycle
-- [x] (2026-03-18 01:19 CST) 已定位主要错误依赖方向：`src.ui.pres` / `src.ui.stores` 反向依赖 `src.ui.ctl.ports.runtime_state_seam`；`src.ui.ctl.ports.*` 作为端口装配层反向依赖 `src.ui.ctl.*`
-- [x] (2026-03-18 01:24 CST) 已创建计划文件 `/Users/billyq/Dev/Github/Lua/monopoly/arch-view-cycle-dependency-fix-plan.md`
-- [x] (2026-03-18 01:33 CST) 已完成一次子代理计划审阅，并补入 `arch/config.json`、`dep_rules`、shim 顺序、直接测试消费者与文档同步等漏项
-- [x] 实施完成：T1、T2、T3、T5、T6、T7（T4 保留为后续可选清理）
+- [x] (2026-03-18 10:12 CST) 已读取架构边界与层级文档：`docs/architecture/boundaries.md`、`docs/architecture/layer-model.md`、`docs/architecture/subsystems.md`
+- [x] (2026-03-18 10:14 CST) 已读取计划规范与编码纪律：`.agents/harness/PLANS.md`、`.agents/harness/READING.md`、`.agents/harness/CODING.md`
+- [x] (2026-03-18 10:18 CST) 已盘点当前兼容层热点：`src/ui/runtime/*.lua` 的三条 seam/host 路径，以及 `src/ui/ctl/ports/*.lua` 的 runtime adapter 组
+- [x] (2026-03-18 10:20 CST) 已定位直接消费者与高风险测试：`src/presentation/runtime/gameplay_runtime_bootstrap.lua`、`src/presentation/runtime/state_factory.lua`、`src/presentation/runtime/runtime_event_bridge.lua`、`tests/suites/runtime/runtime_ports_contract.lua`、`tests/suites/runtime/runtime_bootstrap.lua`、若干直接 `require("src.ui.ctl.ports.*")` 的 presentation suites
+- [x] (2026-03-18 10:23 CST) 已吸收审查意见，并确定新增约束：先切 package entry、原子迁移 `describe_boundary_contract()`、先改 guardrail 再重命名、补上 patch/reload 双 key 清理、最终移除 `legacy_alias_modules`
+- [x] (2026-03-18 10:29 CST) 已完成计划重写，准备交给后续实现者执行
+- [x] (2026-03-18 10:47 CST) 已完成 T1：冻结 canonical rename map、`host_bridge` 命名与 contract 不变量，并把 package entry cutover 设为后续所有迁移的前置条件
+- [ ] 正在执行 T2：先补齐 guardrail 与 contract 过渡态
 
 ## 意外与发现
 
-- 观察：`lua scripts/quality/arch.lua check` 输出通过，但原始 `scan` 的 `check.ok` 为 `false`
-  证据：同一次采样中 `check.cycles = []`、`check.projection_cycles = 2`
+- 观察：根入口消费者不只依赖叶子模块，还直接依赖 `src.ui.ctl.ports` 包入口。
+  证据：`src/presentation/runtime/gameplay_runtime_bootstrap.lua`、`tests/support/shared_support.lua`、`tests/suites/runtime/runtime_bootstrap.lua`、`tests/suites/runtime/runtime_ports_contract.lua` 都直接 `require("src.ui.ctl.ports")`。
 
-- 观察：这不是模块级 `require` 环，而是 view projection 级别的错误依赖方向
-  证据：`src.ui.pres.choice_slice -> src.ui.ctl.ports.runtime_state_seam`、`src.ui.stores.modal_state -> src.ui.ctl.ports.runtime_state_seam` 让 `ui` 视图出现 `pres/stores -> ctl`；`src.ui.ctl.ports.* -> src.ui.ctl.*` 让 `ui.ctl` 视图出现 `ports -> actor_context/modal_controller/ui_runtime/...`
+- 观察：`describe_boundary_contract()` 已经是公开接口，不是内部实现细节。
+  证据：`tests/suites/runtime/runtime_ports_contract.lua` 直接断言 `state_seam_modules`、`import_allowlists`、`state_field_allowlists` 的具体值。
 
-- 观察：仓库已经把这两个环当成“可过滤的已知问题”写进了工具测试与文档
-  证据：`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/architecture/arch_view_contract.lua` 里有 `filtered_check_ignores_presentation_namespace_projection_cycles`；`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/arch_view.md` 明写会过滤 `ui` / `ui.ctl` 投影环
+- 观察：当前 patch/reload 型测试只清单个 `package.loaded` key，若直接引入 alias 双路径，容易读到旧缓存。
+  证据：`tests/suites/presentation/gameplay_t5_characterization.lua` 的 `_load_fresh()` 只执行 `package.loaded[module_path] = nil`。
 
-- 观察：如果新增 `src/presentation/runtime/ports/*`，当前 `scripts/quality/arch/config.json` 不会自动把它们归类为 `presentation`
-  证据：现有 `component_rules` 只显式匹配 4 个 `src.presentation.runtime.*` 文件；并没有 `^src%.presentation%.runtime%..+` 或 `ports` 的泛化规则
+- 观察：架构文档还把 `*_ports.lua` 写成当前命名规则，会与新计划冲突。
+  证据：`docs/architecture/boundaries.md` 的 “Port 命名规则” 明确写了 `*_ports.lua`。
 
-- 观察：`tests/guards/dep_rules.lua` 对 seam 的白名单绑定在旧路径上
-  证据：当前 whitelist 仅包含 `src/ui/ctl/ports/runtime_state_seam.lua`、`src/ui/ctl/ports/landing_visual_hold_seam.lua`、`src/ui/ctl/ports/host_runtime_ports.lua`
-
-- 观察：这项工作不依赖外部第三方 API 文档
-  证据：问题完全落在仓库内部命名空间、Lua `require` 关系与本地 `arch_view` / `dep_rules` 配置；本轮无需额外 web/Context7 文档
-
-- 观察：仅完成共享 seam 抽离后，raw `arch_view scan` 的 `check.projection_cycles` 已降到 `0`
-  证据：2026-03-18 02:12 CST 重新执行 `lua scripts/quality/arch.lua scan --out tmp/arch_cycle_scan.json`，输出中不再出现 `ui` / `ui.ctl` projection cycle
+- 观察：checked-in `arch_view` viewer 快照会直接携带这些模块路径，若只改源码不刷新快照，提交态文档会过期。
+  证据：`scripts/quality/arch/viewer/architecture.json` 与 `architecture_data.js` 当前都包含 `src.ui.ctl.ports.*` 和 `src.ui.runtime.*_seam` 路径。
 
 ## 决策日志
 
-- 决策：把问题定义为“错误的依赖方向”而不是“arch_view 误报”
-  理由：原始扫描明确给出具体反馈边，且这些边都能在真实源码 `require` 中找到；过滤器只是隐藏问题
+- 决策：本轮范围采用“兼容层全收口”，同时处理 `src/ui/runtime/*` 和 `src/ui/ctl/ports/*`。
+  理由：如果只改 seam 三个文件，`src/ui/ctl/ports/*` 仍会继续把“兼容迁移后遗症”留在 canonical 命名空间里，目标无法闭环。
   日期/作者：2026-03-18 / Codex
 
-- 决策：共享 seam 的 canonical path 迁到中性 UI runtime 命名空间，推荐 `src/ui/runtime/*`
-  理由：`runtime_state`、`landing_visual_hold`、`host_runtime` 是共享适配层，不应挂在 `src/ui/ctl` 下面让 `pres/stores/render/input` 反向穿过 controller 命名空间
+- 决策：迁移策略采用“两阶段 alias”，不是一次性硬切。
+  理由：仓库里存在直接 patch module table 与 fresh-load 的测试；先建新真源、旧路径降成纯 alias，才能保证新旧路径指向同一个 table 对象。
   日期/作者：2026-03-18 / Codex
 
-- 决策：gameplay loop port builder 的 canonical path 迁到外层装配命名空间，推荐 `src/presentation/runtime/ports/*`
-  理由：这些模块本质是给 `turn.loop` 暴露的 adapter / assembly，应由外层 presentation runtime 拥有，而不是作为 `ui.ctl` 子命名空间反向拥有 controller 实现
+- 决策：`src.ui.runtime.host_runtime_ports` 的新 canonical 名称采用 `src.ui.runtime.host_bridge`，不使用 `host`。
+  理由：`host.lua` 与现有 `src/host/` 命名空间过近，语义含混；`host_bridge` 既满足“去掉父目录重复信息”，又保留桥接语义。
   日期/作者：2026-03-18 / Codex
 
-- 决策：迁移期间允许保留 compatibility shim，但 shim 必须是纯 alias：`return require("new.path")`
-  理由：多个测试会 patch 模块 table 本身；纯 alias 才能保证新旧路径指向同一个 table 对象，不在迁移期引入新行为差异
+- 决策：`boundary_contract` 的 key 语义保持不变，只更新 module path。
+  理由：这次要解决的是路径与文件名问题，不要顺手把 contract shape 也改掉，避免一次迁移承担两种风险。
   日期/作者：2026-03-18 / Codex
 
-- 决策：先建 canonical module 与 guardrail，再迁消费者，最后删除 filter 特例
-  理由：如果顺序相反，很容易在中途让 `arch_view`、`dep_rules` 或 patch-based 测试全部变红
+- 决策：必须先做 package entry cutover，再迁 leaf module consumer。
+  理由：包入口 `src.ui.ctl.ports` 目前既是生产依赖入口，又承载 `describe_boundary_contract()`；若跳过这一步，后续叶子迁移会把 contract 真源和实现真源分叉。
   日期/作者：2026-03-18 / Codex
 
-- 决策：把原计划 T4 的“assembly 整体搬迁到 `src/presentation/runtime/ports/*`”降级为后续可选清理，本轮先不执行
-  理由：T3 完成后 raw `arch_view` 已经无 projection cycle，主目标已达成；继续做大规模 assembly 搬迁会显著放大 patch-based 测试与兼容层迁移风险，不符合“小步提交”
+- 决策：最终阶段必须同时删除 alias 文件和 `legacy_alias_modules` 等兼容 metadata。
+  理由：若只删文件不删 metadata，compat layer 会继续在 contract 中“存活”，计划目标并未真正完成。
   日期/作者：2026-03-18 / Codex
 
 ## 结果与复盘
 
-当前只完成了调研与计划，未开始改码。
+当前只完成调研与计划重写，尚未改动任何生产代码、测试代码或文档。
 
-如果后续 T1-T7 全部完成，结果应当是：原始架构 JSON 的 `check.projection_cycles` 为空；`filter.lua` 不再豁免 `ui` / `ui.ctl`；`docs/architecture/arch_view.md`、`docs/architecture/boundaries.md`、`docs/architecture/layer-model.md` 与 `docs/architecture/subsystems.md` 的放置语义与实际代码一致；并且新路径已经被 `arch_view` 与 `dep_rules` 同步纳入护栏，而不是偷偷绕开旧约束。
+这版计划已经吸收了审查意见里最容易漏掉的四类风险：包入口先后顺序、公共 contract 原子迁移、patch/reload 缓存污染、以及文档与 viewer 快照的同步。后续实现若严格按任务依赖推进，应该可以把这次改动控制在“纯路径重命名 + 兼容层退役”的范围内，而不是扩散成行为重构。
 
 ## 背景与导读
 
-这次问题集中在 presentation 组件内部两个层次的命名空间。
+当前仓库里有两块与“父目录信息重复”直接相关的 canonical 模块。
 
-第一层是 `ui` 视图。这里预期的方向是 `ctl -> input/render`，以及 `pres/stores/render/input -> shared runtime seam`。但当前 `src/ui/pres/choice_slice.lua`、`src/ui/stores/modal_state.lua` 直接 `require("src.ui.ctl.ports.runtime_state_seam")`，把 controller 命名空间当成共享依赖入口，形成了 `pres/stores -> ctl` 的回边。
+第一块是 `src/ui/runtime/`。这里目前的三个真源分别是 `runtime_state_seam.lua`、`landing_visual_hold_seam.lua`、`host_runtime_ports.lua`。目录名已经表达了 “runtime 下的 UI seam / bridge”，文件名再次重复 `runtime`、`seam`、`ports`，属于本轮最直接的清理对象。直接消费者分布在 `src/ui/ctl/*`、`src/ui/render/*`、`src/ui/input/*`、`src/presentation/runtime/*` 和 `tests/support/shared_support.lua`。
 
-第二层是 `ui.ctl` 视图。这里 `actor_context`、`modal_controller`、`ui_runtime`、`event_handlers` 等属于 controller 实现；而 `modal_ports`、`ui_sync_ports`、`view_command_ports`、`anim_ports`、`debug_ports`、`state_ports`、`actor_context_ports`、`clock_ports` 本质上是外层 adapter / assembly。当前这些 port builder 物理位于 `src/ui/ctl/ports/*`，同时反向依赖 `src/ui/ctl/*` 实现，因此投影后出现 `ports -> implementation` 与 `implementation -> ports` 的往返。
+第二块是 `src/ui/ctl/ports/`。这个目录下的 `anim_ports.lua`、`clock_ports.lua`、`debug_ports.lua`、`modal_ports.lua`、`runtime_event_ports.lua`、`state_callback_ports.lua`、`state_ports.lua`、`ui_sync_ports.lua`、`view_command_ports.lua`、`actor_context_ports.lua` 本质上是给 `turn.loop` 和 presentation runtime 提供的 adapter / assembly。目录名 `ports` 已经说明用途，叶子文件再以 `_ports` 结尾属于重复表达；更重要的是，它们的语义位置更接近 `src/presentation/runtime/`，而不是 controller 内部命名空间。
 
-另外还有两个容易漏掉的相邻模块：`src/ui/ctl/ports/runtime_event_ports.lua` 与 `src/ui/ctl/ports/state_callback_ports.lua`。它们虽然不在这次 `ui.ctl` 反馈边列表里，但语义上也属于 presentation runtime adapter；如果这次不顺手定好归属，后续很容易再次把 `ports` 命名空间做成杂糅区。
+本轮计划把 `src.ui.ctl.ports` 的真正包入口迁到 `src.presentation.runtime.ports`，同时保留旧路径作为纯 alias 兼容层。新的 canonical 路径约定如下：
 
-与本任务直接相关的关键文件如下：
+    src.ui.runtime.runtime_state_seam      -> src.ui.runtime.state
+    src.ui.runtime.landing_visual_hold_seam -> src.ui.runtime.landing_visual_hold
+    src.ui.runtime.host_runtime_ports     -> src.ui.runtime.host_bridge
+    src.ui.ctl.ports                      -> src.presentation.runtime.ports
+    src.ui.ctl.ports.actor_context_ports  -> src.presentation.runtime.ports.actor_context
+    src.ui.ctl.ports.anim_ports           -> src.presentation.runtime.ports.anim
+    src.ui.ctl.ports.clock_ports          -> src.presentation.runtime.ports.clock
+    src.ui.ctl.ports.debug_ports          -> src.presentation.runtime.ports.debug
+    src.ui.ctl.ports.modal_ports          -> src.presentation.runtime.ports.modal
+    src.ui.ctl.ports.runtime_event_ports  -> src.presentation.runtime.ports.events
+    src.ui.ctl.ports.state_callback_ports -> src.presentation.runtime.ports.callbacks
+    src.ui.ctl.ports.state_ports          -> src.presentation.runtime.ports.state
+    src.ui.ctl.ports.ui_sync_ports        -> src.presentation.runtime.ports.ui_sync
+    src.ui.ctl.ports.view_command_ports   -> src.presentation.runtime.ports.view_command
 
-- 原始扫描与过滤：
-  - `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/filter.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/config.json`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/tmp/arch_cycle_scan.json`
-- 共享 seam 与错误回边：
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/runtime_state_seam.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/landing_visual_hold_seam.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/host_runtime_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/pres/choice_slice.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/stores/modal_state.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/*.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/input/*.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/state_factory.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/runtime_event_bridge.lua`
-- gameplay loop 端口装配：
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/init.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/common.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/modal_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/ui_sync_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/ui_sync/*.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/view_command_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/anim_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/debug_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/state_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/actor_context_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/clock_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/runtime_event_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/state_callback_ports.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/gameplay_runtime_bootstrap.lua`
-- 契约、护栏与文档：
-  - `/Users/billyq/Dev/Github/Lua/monopoly/tests/guards/dep_rules.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/architecture/arch_view_contract.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/runtime_ports_contract.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/runtime_bootstrap.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_cases.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/tests/support/shared_support.lua`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/arch_view.md`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/boundaries.md`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/layer-model.md`
-  - `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/subsystems.md`
+这次计划不改业务行为，不改 port 方法名，不改 state 字段语义。实现者要做的只是稳定地迁移 canonical path、兼容层和相关护栏。
 
 ## 概览
 
-推荐的修复路线分三段。
+推荐顺序分为五段。
 
-第一段，先冻结 canonical path，并同步补上 `arch_view config` 与 `dep_rules` 对新路径的识别能力，不让后续重构在分类与白名单层面先天失血。
+第一段，先冻结路径映射与 contract 不变量，再补齐 guardrail。这里的重点不是“开始改名”，而是先让 `dep_rules`、`runtime_ports_contract` 和 package entry 都认识新路径，避免第一步重命名就把护栏打红。
 
-第二段，先抽离共享 seam，再迁 gameplay loop port builder。这里必须顺序执行，因为 `ui_sync/common/anim/runtime_event` 等 port 子模块本身也直接依赖旧 seam；如果 seam canonical path 没先稳定，后续 port builder 迁移会同时踩路径与命名空间两种变更。
+第二段，先迁包入口和公共 contract。`src.ui.ctl.ports` 不能简单粗暴地被删掉，因为 `describe_boundary_contract()` 目前就挂在这个入口上。应先在 `src/presentation/runtime/ports/init.lua` 中建立新的真源，再把旧入口改成纯 alias。
 
-第三段，再统一修 bootstrap、fixture、直接测试消费者、文档与 `arch_view` filter，最后跑整套验证并清理 shim。
+第三段，再分两路并行迁移：一路处理 `src/ui/runtime/*` 三个 seam/bridge 真源；一路处理 `src/presentation/runtime/ports/*` 里的 leaf module。只有在新真源建立后，旧 `*_seam.lua` / `*_ports.lua` 才能安全退化为纯 alias。
+
+第四段，统一切消费者和测试辅助函数，尤其是 patch/reload 型测试。这一步必须覆盖 `_load_fresh()`、直接 `require("src.ui.ctl.ports.*")` 的 suite，以及 patch 包入口 `presentation_ports.build` 的 runtime bootstrap 测试。
+
+第五段，最后再删 alias、删 contract 中的 `legacy_alias_modules`、刷新文档和 `arch_view` viewer 快照，并用专项 `rg` 检查证明“文件名不再重复父目录信息”的目标确实达成。
 
 ## Dependency Graph
 
-    T1 ── T2 ── T3 ── T4 ── T5 ── T6 ── T7
+    T1 ── T2 ──┬── T3 ──┬── T5 ──┐
+               │        │        ├── T7 ── T8
+               │        └── T6 ──┘
+               └── T4 ───────────┘
 
 ## Tasks
 
-### T1: 冻结现状证据并拍板 canonical 命名空间
+### T1: 冻结 canonical rename map 与 contract 不变量
+- **id**: T1
 - **depends_on**: []
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/tmp/arch_cycle_scan.json`, `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/config.json`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/arch_view.md`
-- **description**: 记录两个 projection cycle 的完整反馈边，并正式拍板两类新路径：共享 seam 迁到 `src/ui/runtime/*`；presentation runtime adapter / gameplay loop port builder 迁到 `src/presentation/runtime/ports/*`。同时明确旧路径在迁移期间仅允许作为 compatibility shim 存在。
-- **validation**: 文档或任务日志中必须明确列出 `ui` 与 `ui.ctl` 的反馈边、目标 canonical path、以及 shim 约束；后续任务不得再改动根命名策略。
+- **location**: `.agents/plan.md`, `src/ui/runtime/`, `src/ui/ctl/ports/`, `src/presentation/runtime/`
+- **description**: 把本计划里的 canonical 路径映射正式定稿，并明确三条不变量：一，旧路径在迁移期只能是纯 alias；二，`describe_boundary_contract()` 的 key 语义不改，只改路径；三，`host_bridge` 是 `host_runtime_ports` 的唯一新名，不再讨论其他候选名。
+- **validation**: 后续任务与提交记录都使用同一套 rename map，不再临时追加或改名。
 - **status**: Completed
-- **log**: 2026-03-18 01:50 CST 重新执行 raw `arch_view scan`，确认 `check.ok = false`、`check.cycles = 0`、`check.projection_cycles = 2`，视图稳定为 `ui` 与 `ui.ctl`。本任务正式冻结 canonical path：共享 seam 真源用 `src/ui/runtime/*`，presentation runtime 装配真源用 `src/presentation/runtime/ports/*`，旧 `src.ui.ctl.ports.*` 仅允许作为纯 alias shim。
-- **files edited/created**: `.agents/plan.md`, `tmp/arch_cycle_scan.json`
+- **log**: 2026-03-18 10:47 CST 已以本计划正文冻结 canonical rename map，并明确三条不变量：旧路径在迁移期只能是纯 alias；`describe_boundary_contract()` 保持 key 语义稳定；`host_bridge` 是 `host_runtime_ports` 的唯一新名。后续任务必须以 package entry cutover 为前置，不允许再改命名策略。
+- **files edited/created**: `.agents/plan.md`
 
-### T2: 先补齐 guardrail，让新 canonical path 被正确识别
+### T2: 先补齐 guardrail 与 contract 过渡态
+- **id**: T2
 - **depends_on**: [T1]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/config.json`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/guards/dep_rules.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/runtime_ports_contract.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/init.lua`
-- **description**: 在真正迁移代码前，先让 `arch_view` 与 `dep_rules` 认识新路径。具体包括：为 `src/presentation/runtime/ports/*` 与 `src/ui/runtime/*` 增加 component rule；扩展 forbidden-dependency rule，使 `src.presentation.*` 不会因为新路径而逃逸出 presentation 约束；把 seam whitelist 与 `describe_boundary_contract()` 设计成能同时容纳 canonical path 与临时 shim 的状态。
-- **validation**: 修改后，新增的 canonical module path 不会被 `arch_view` 判成 unclassified；`dep_rules` 对新 canonical seam 的白名单已到位；`runtime_ports_contract` 不再只硬编码旧 seam 路径。
-- **status**: Completed
-- **log**: 2026-03-18 02:03 CST 已先行补齐 guardrail。`scripts/quality/arch/config.json` 现在会把 `src.presentation.runtime.*` 与未来的 `src/presentation/runtime/ports/*` 归类为 presentation，并把 presentation 边界扩展到 `src.presentation.*`，避免新目录绕开旧护栏。`tests/guards/dep_rules.lua` 新增了未来 canonical seam 的 whitelist；`src/ui/ctl/ports/init.lua` 与 `tests/suites/runtime/runtime_ports_contract.lua` 已把 boundary contract 的 seam 真源切到 `src.ui.runtime.*`。验证结果：raw `arch_view scan` 无 unclassified module，`lua tests/guard.lua` 通过，`lua tests/contract.lua` 通过。
-- **files edited/created**: `.agents/plan.md`, `scripts/quality/arch/config.json`, `tests/guards/dep_rules.lua`, `src/ui/ctl/ports/init.lua`, `tests/suites/runtime/runtime_ports_contract.lua`, `tmp/arch_cycle_scan.json`
-
-### T3: 抽离共享 seam，并重写所有 seam 消费者到 canonical path
-- **depends_on**: [T2]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/runtime/*`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/runtime_state_seam.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/landing_visual_hold_seam.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/host_runtime_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/pres/*.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/stores/*.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/**/*.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/input/**/*.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/**/*.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/state_factory.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/runtime_event_bridge.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/support/shared_support.lua`
-- **description**: 创建 `src/ui/runtime/*` canonical seam，并把所有真实消费者全部切过去，包括 `src/ui/ctl/ports/common.lua`、`src/ui/ctl/ports/anim_ports.lua`、`src/ui/ctl/ports/ui_sync_ports.lua`、`src/ui/ctl/ports/ui_sync/*.lua`、`src/ui/ctl/ports/runtime_event_ports.lua` 等容易漏掉的 port 子模块。旧 `src/ui/ctl/ports/*_seam.lua` / `host_runtime_ports.lua` 若暂时保留，只能是纯 alias。
-- **validation**: 运行 `rg 'src\.ui\.ctl\.ports\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)' src tests`，只允许命中 compatibility shim 或明确保留点；重新做 raw `scan` 时，`ui` 视图不再出现 `pres -> ctl` / `stores -> ctl` 反馈边。
-- **status**: Completed
-- **log**: 2026-03-18 02:12 CST 已创建 `src/ui/runtime/runtime_state_seam.lua`、`src/ui/runtime/landing_visual_hold_seam.lua`、`src/ui/runtime/host_runtime_ports.lua` 三个 canonical seam，并把 `src/` 下真实消费者和 `tests/support/shared_support.lua` 全部切到新路径。旧 `src/ui/ctl/ports/*` seam 模块已降为纯 alias shim。验证结果：`rg` 不再命中源码中的旧 seam `require`；raw `arch_view scan` 的 `check.projection_cycles` 已降到 `0`；`lua tests/guard.lua` 与 `lua tests/contract.lua` 都通过。
-- **files edited/created**: `.agents/plan.md`, `src/ui/runtime/runtime_state_seam.lua`, `src/ui/runtime/landing_visual_hold_seam.lua`, `src/ui/runtime/host_runtime_ports.lua`, `src/ui/ctl/ports/runtime_state_seam.lua`, `src/ui/ctl/ports/landing_visual_hold_seam.lua`, `src/ui/ctl/ports/host_runtime_ports.lua`, `src/presentation/runtime/runtime_event_bridge.lua`, `src/presentation/runtime/state_factory.lua`, `src/ui/ctl/*.lua`, `src/ui/ctl/ports/*.lua`, `src/ui/ctl/ports/ui_sync/*.lua`, `src/ui/input/*.lua`, `src/ui/render/*.lua`, `src/ui/render/board/placement.lua`, `src/ui/pres/choice_slice.lua`, `src/ui/stores/modal_state.lua`, `tests/support/shared_support.lua`, `tmp/arch_cycle_scan.json`
-
-### T4: 迁移 presentation runtime adapter / gameplay loop port builder 到外层装配层
-- **depends_on**: [T3]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/ports/*`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/init.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/common.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/modal_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/ui_sync_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/ui_sync/*.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/view_command_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/anim_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/debug_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/state_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/actor_context_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/clock_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/runtime_event_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/ui/ctl/ports/state_callback_ports.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/gameplay_runtime_bootstrap.lua`
-- **description**: 在 `src/presentation/runtime/ports/*` 建立新的装配真源，把 `modal/anim/ui_sync/debug/clock/state/view_command/actor_context` 以及 `runtime_event/state_callback` 这些 adapter 归位到外层命名空间。顺序必须是：先创建新 canonical module，再让旧 `src.ui.ctl.ports.*` 变成纯 alias，最后再逐步切换 bootstrap 与测试消费者，避免中途 patch-based 测试失效。
-- **validation**: raw `scan` 中 `ui.ctl` 视图不再出现 `ports -> actor_context/modal_controller/target_choice_effects/ui_runtime/...` 反馈边；旧 `src.ui.ctl.ports.*` 若还存在，必须全部是 `return require("new.path")` 形式，不得再包含装配逻辑。
-- **status**: Deferred
-- **log**: 2026-03-18 02:12 CST raw `arch_view` 在 T3 后已无 projection cycle，本轮先不执行这块大规模 assembly 迁移；保留为后续可选清理，避免扩大 patch-based 测试与兼容路径的迁移半径。
+- **location**: `tests/guards/dep_rules.lua`, `tests/suites/runtime/runtime_ports_contract.lua`, `src/ui/ctl/ports/init.lua`
+- **description**: 在真正重命名前先调整护栏。为新 `src.ui.runtime.state`、`src.ui.runtime.landing_visual_hold`、`src.ui.runtime.host_bridge` 路径补 whitelist；让 contract 测试允许新 package entry 与新 seam path；把 `boundary_contract` 设计成能同时容纳 canonical path 与临时 alias 的中间态，并提前为后续 `anim` / `state` 等 leaf rename 预留 allowlist 更新入口，避免迁移第一批叶子模块时再次打红。
+- **validation**: 第一次建立新文件后，`lua tests/guard.lua` 与 `lua tests/contract.lua` 不会因为“新路径还未入白名单”而失败。
+- **status**: Not Completed
+- **log**:
 - **files edited/created**:
 
-### T5: 统一 bootstrap、fixture、直接测试消费者与边界契约
+### T3: 迁移 package entry，并原子转移 `describe_boundary_contract()`
+- **id**: T3
+- **depends_on**: [T2]
+- **location**: `src/presentation/runtime/ports/init.lua`, `src/presentation/runtime/ports/common.lua`, `src/ui/ctl/ports/init.lua`
+- **description**: 创建新的包入口 `src.presentation.runtime.ports`，把现有 `build()`、`describe_boundary_contract()` 与 `boundary_contract` 真源迁过去。旧 `src/ui.ctl.ports` 在此任务结束时改成纯 alias：`return require("src.presentation.runtime.ports")`。若 `common.lua` 仍需共享，也一并迁到新目录并让旧路径 alias 到新文件。
+- **validation**: `src/presentation/runtime/gameplay_runtime_bootstrap.lua`、`tests/support/shared_support.lua`、`tests/suites/runtime/runtime_bootstrap.lua`、`tests/suites/runtime/runtime_ports_contract.lua` 可以切到新包入口；旧包入口仍返回同一个 module table。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T4: 重命名 `src/ui/runtime/*` 三个 canonical seam / bridge
+- **id**: T4
+- **depends_on**: [T2]
+- **location**: `src/ui/runtime/`, `src/presentation/runtime/`, `src/ui/`, `tests/support/shared_support.lua`
+- **description**: 新建 `src/ui/runtime/state.lua`、`src/ui/runtime/landing_visual_hold.lua`、`src/ui/runtime/host_bridge.lua` 作为真源，把现有实现迁过去，然后让旧 `runtime_state_seam.lua`、`landing_visual_hold_seam.lua`、`host_runtime_ports.lua` 退化为纯 alias。同步切所有直接消费者到新路径。
+- **validation**: `rg 'src\.ui\.runtime\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)' src tests` 只命中 alias shim 或兼容断言；新路径消费者能通过 `guard` 与 `contract`。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T5: 迁移 seam-sensitive adapter 到 `src/presentation/runtime/ports/`
+- **id**: T5
+- **depends_on**: [T3, T4]
+- **location**: `src/presentation/runtime/ports/`, `src/ui/ctl/ports/`, `src/presentation/runtime/state_factory.lua`, `src/presentation/runtime/runtime_event_bridge.lua`
+- **description**: 先迁最容易受 seam 重命名影响的 adapter：`anim`、`state`、`ui_sync`、`events`、`callbacks`。迁移顺序固定为“创建新 canonical 文件 -> 更新新消费者 -> 旧路径降为纯 alias”。`state_factory.lua` 与 `runtime_event_bridge.lua` 这两个直接依赖旧 leaf module 的文件必须在这一波一起切走；`boundary_contract` 里仍指向 `src.ui.ctl.ports.anim_ports`、`src.ui.ctl.ports.state_ports` 等旧叶子路径的 allowlist 也必须在同一波同步切到新 canonical path。
+- **validation**: 旧 `anim_ports.lua`、`state_ports.lua`、`ui_sync_ports.lua`、`runtime_event_ports.lua`、`state_callback_ports.lua` 只剩 `return require("new.path")`；相关 suite 通过。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
+
+### T6: 迁移其余 adapter 与根入口消费者，并修 reload helper
+- **id**: T6
 - **depends_on**: [T3]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/presentation/runtime/gameplay_runtime_bootstrap.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/support/shared_support.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/runtime_ports_contract.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/runtime/runtime_bootstrap.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/gameplay/gameplay_cases.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/presentation/*.lua`
-- **description**: 批量切换生产 bootstrap、shared fixture 与直接依赖旧路径的测试。这里必须覆盖 patch-based 测试和直接 `require("src.ui.ctl.ports.*")` 的 suite，而不只是笼统地改共享 support。若保留 shim，则在此阶段确认所有测试都能通过 shim 访问到同一个 canonical table 对象。
-- **validation**: `rg 'src\.ui\.ctl\.ports' tests src/presentation/runtime` 仅剩 compatibility shim、明确保留的兼容断言或待删除注释；`lua tests/contract.lua` 通过；`runtime_bootstrap`、`runtime_ports_contract`、`gameplay_cases` 与高风险 presentation suites 可在本地单独或整组通过。
-- **status**: Completed
-- **log**: 2026-03-18 02:19 CST 在不执行 T4 assembly 搬迁的前提下，先把仍直接把旧 seam 路径当真源的测试切到 `src.ui.runtime.runtime_state_seam`。共享 fixture 在 T3 已更新，本步补齐了三组 presentation action/status suites 的直接 import。验证结果：`rg` 已不再命中 tests 中的旧 seam 真源引用；`lua tests/contract.lua` 通过；`lua tests/behavior.lua` 通过。
-- **files edited/created**: `.agents/plan.md`, `tests/suites/presentation/_presentation_action_status_choice_and_target_cases.lua`, `tests/suites/presentation/_presentation_action_status_market_and_anim_cases.lua`, `tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua`
+- **location**: `src/presentation/runtime/ports/`, `src/presentation/runtime/gameplay_runtime_bootstrap.lua`, `src/app/bootstrap/init.lua`, `tests/support/shared_support.lua`, `tests/suites/presentation/`, `tests/suites/runtime/`, `tests/suites/gameplay/`
+- **description**: 迁移 `actor_context`、`clock`、`debug`、`modal`、`view_command` 等剩余 adapter，并把所有根入口消费者统一切到 `src.presentation.runtime.ports`。同时修补 patch/reload 辅助逻辑：凡是依赖 `_load_fresh()` 或直接清 `package.loaded` 的测试，都要在 alias 阶段同时清旧 key 和新 key，避免读取陈旧缓存。
+- **validation**: 直接 `require("src.ui.ctl.ports")` 与直接 `require("src.ui.ctl.ports.*")` 的消费者已切到新路径；`runtime_bootstrap` 一类 patch `presentation_ports.build` 的测试继续命中同一个 table 对象。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-### T6: 去掉 `arch_view` 特例，补齐文档并刷新 viewer 快照
-- **depends_on**: [T5]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/filter.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/architecture/arch_view_contract.lua`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/arch_view.md`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/boundaries.md`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/layer-model.md`, `/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/subsystems.md`, `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/viewer/`
-- **description**: 删除 `filter.lua` 中针对 `ui` / `ui.ctl` 的特例过滤；把 `arch_view_contract` 从“过滤后忽略这两个环”改成“原始 scan 已无此环”；并同步更新架构文档，解释新的 `src/ui/runtime/*` 与 `src/presentation/runtime/ports/*` 归属。最后刷新提交态 viewer 快照。
-- **validation**: `lua scripts/quality/arch.lua check` 在不依赖这两个特例的情况下直接通过；`arch_view_contract` 断言原始 scan 无 `ui` / `ui.ctl` projection cycle；viewer 快照与实际 JSON 一致。
-- **status**: Completed
-- **log**: 2026-03-18 03:02 CST 已移除 `filter.lua` 对 presentation namespace projection cycle 的特例，只保留 `root` 命名空间折叠伪环过滤；`arch_view_contract` 也改成直接验证 raw `scan` 无 `ui` / `ui.ctl` cycle。同步补齐了 `arch_view.md`、`boundaries.md`、`layer-model.md`、`subsystems.md` 对 `src/ui/runtime/*` 的归属说明，并刷新了 `scripts/quality/arch/viewer/` 快照。验证结果：`lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/contract.lua` 通过。
-- **files edited/created**: `.agents/plan.md`, `scripts/quality/arch/filter.lua`, `tests/suites/architecture/arch_view_contract.lua`, `docs/architecture/arch_view.md`, `docs/architecture/boundaries.md`, `docs/architecture/layer-model.md`, `docs/architecture/subsystems.md`, `scripts/quality/arch/viewer/*`
+### T7: 同步文档、viewer 快照与命名规则
+- **id**: T7
+- **depends_on**: [T5, T6]
+- **location**: `docs/architecture/boundaries.md`, `docs/architecture/layer-model.md`, `docs/architecture/subsystems.md`, `docs/architecture/arch_view.md`, `scripts/quality/arch/viewer/`
+- **description**: 把文档中仍把 `*_ports.lua` 当成当前规则的部分改成新说法：单文件 bundle 可以继续叫 `ports.lua`，但 `ports/` 目录下的 canonical leaf 文件统一使用短名。同步更新层级与子系统文档，说明 `src/presentation/runtime/ports/` 现在是 runtime adapter 的真源。最后刷新 checked-in `arch_view` viewer 快照。
+- **validation**: 文档与 viewer 中不再把 `src.ui.ctl.ports.*` 或 `src.ui.runtime.*_seam` 当 canonical source；viewer 快照中的模块路径与源码一致。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
-### T7: 最终验收、清理 shim 与旧白名单
-- **depends_on**: [T6]
-- **location**: `/Users/billyq/Dev/Github/Lua/monopoly/src/`, `/Users/billyq/Dev/Github/Lua/monopoly/tests/`, `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/`
-- **description**: 做最后一次全仓审计：删除不再需要的 shim、删除旧 whitelist 条目、检查是否还残留旧 canonical import、以及 `describe_boundary_contract()` 是否只发布新真源。若某些 shim 因测试兼容必须保留，也要在契约和注释里明确它只是兼容层，不是架构真源。
-- **validation**: 在仓库根目录依次运行：
-  - `lua scripts/quality/arch.lua scan --out tmp/arch_cycle_scan.json`
-  - `lua scripts/quality/arch.lua check`
-  - `lua tests/guard.lua`
-  - `lua tests/contract.lua`
-  - `lua tests/behavior.lua`
-  另外运行：
-  - `rg 'src\.ui\.ctl\.ports|src\.ui\.ctl\.ports\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)' src tests`
-  - `rg 'src\.state\.state_access\.(runtime_state|landing_visual_hold)|src\.host\.eggy' src/ui src/presentation/runtime`
-  预期 raw `scan` 的 `check.projection_cycles` 为空，测试全通过，旧白名单与旧 canonical import 已清理或被明确标记为兼容层。
-- **status**: Completed
-- **log**: 2026-03-18 03:02 CST 已清掉 `tests/guards/dep_rules.lua` 中对旧 state port 宿主导入的过时 whitelist，并删除 `src/ui/ctl/ports/state_ports.lua` 里未使用的 `require("src.host.eggy")`。最终核验显示：raw `arch_view scan` 的 `projection_cycles = 0`；`arch_view check`、`guard`、`contract`、`behavior`、`tooling --workers 1` 全部通过。旧 seam 真源在 `src/` / `tests/` 中只剩 `src/ui/ctl/ports/init.lua` 的兼容元数据条目，已通过 `legacy_alias_modules` 与 allowlist 明确标记为兼容层，不再是 canonical source。
-- **files edited/created**: `.agents/plan.md`, `tests/guards/dep_rules.lua`, `src/ui/ctl/ports/state_ports.lua`, `tmp/arch_cycle_scan.json`
+### T8: 删除 alias 与兼容 metadata，并做最终专项验收
+- **id**: T8
+- **depends_on**: [T7]
+- **location**: `src/ui/ctl/ports/`, `src/ui/runtime/`, `tests/guards/dep_rules.lua`, `tests/suites/runtime/runtime_ports_contract.lua`
+- **description**: 在所有消费者都切完且文档已同步后，删除旧 alias 文件，移除 `legacy_alias_modules`、过时 allowlist 与所有仅为兼容层保留的 metadata。最终执行行为、护栏与命名专项验收，证明 canonical 文件已经不再重复父目录信息。
+- **validation**: `lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/contract.lua`、`lua tests/behavior.lua` 全通过；`find src/presentation/runtime/ports -name '*_ports.lua'` 为空；`rg 'src\.ui\.runtime\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)|src\.ui\.ctl\.ports' src tests` 为空或仅剩注释性文档样例。
+- **status**: Not Completed
+- **log**:
+- **files edited/created**:
 
 ## Parallel Execution Groups
 
@@ -226,130 +214,125 @@
 |------|-------|----------------|
 | 1 | T1 | Immediately |
 | 2 | T2 | T1 complete |
-| 3 | T3 | T2 complete |
-| 4 | T4 | Optional / deferred after T3 |
-| 5 | T5 | T3 complete |
-| 6 | T6 | T5 complete |
-| 7 | T7 | T6 complete |
+| 3 | T3, T4 | T2 complete |
+| 4 | T5, T6 | T5 needs T3+T4; T6 needs T3 |
+| 5 | T7 | T5, T6 complete |
+| 6 | T8 | T7 complete |
 
 ## 工作计划
 
-先把命名真源和 guardrail 补齐，再迁代码。这一步看起来“慢”，但它能避免后面一边迁目录、一边让 `arch_view` 把新模块判成未分类，或者让 `dep_rules` 因旧白名单失效而整仓爆红。
+先做不会改变行为、但会影响后续所有 rename 成败的部分。也就是先锁 rename map、先迁 package entry、先让 guardrail 认识新路径。这一步做完后，后续每个文件迁移都只是“把真源搬到新地方，再让旧路径 alias 到新地方”，而不会再出现“新旧两套 contract 同时存在”的分叉状态。
 
-然后优先处理共享 seam。`runtime_state`、`landing_visual_hold`、`host_runtime` 之所以必须先动，是因为它们不仅被 `pres/stores/render/input` 用，也被 `ui/ctl/ports/common.lua`、`ui_sync/*.lua`、`anim_ports.lua`、`runtime_event_ports.lua` 这些后续要迁的模块用。只有 seam canonical path 稳定后，adapter 层迁移才不会同时夹带第二次路径切换。
+随后把 `src/ui/runtime/` 三个真源与 `src/presentation/runtime/ports/` 的 leaf adapter 分开处理。这样做的原因是它们的风险性质不同：前者主要风险在 seam canonical path 改名；后者主要风险在包入口与 patch-based 测试。把两块拆开，能让实现者在遇到局部失败时更容易回滚到“新真源已存在、旧路径仍 alias 可用”的安全状态。
 
-等共享 seam 全部切到 canonical path 后，再把 gameplay loop port builder 与 presentation runtime adapter 整体搬到 `src/presentation/runtime/ports/*`。迁移时不改行为，只改物理归属与依赖方向。旧路径如需暂存，必须是纯 alias。最后再统一更新 bootstrap、tests、contract、文档与 `filter.lua`。
+等新真源全部建立后，再统一处理消费者与测试。这里不要偷懒只改 shared support，因为仓库里已经存在直接 `require` leaf module、直接 patch 包入口、直接 fresh-load 旧路径的测试。如果这些点没补齐，就会在 alias 阶段留下缓存污染或 table 对象分叉。
+
+最后才做看起来“最轻”的文档与快照同步，并在最后一波删掉 alias 与兼容 metadata。删 alias 之前必须确保 viewer、contract、guardrail 都已经以新路径为真源，否则删完很容易出现“运行没问题，但仓库知识面还是旧状态”的残留问题。
 
 ## 具体步骤
 
 所有命令都在 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。
 
-1. 记录当前原始扫描结果，确认修复目标：
+1. 先做现状采样，确保实现前后的对照基线一致：
 
-       lua scripts/quality/arch.lua scan --out tmp/arch_cycle_scan.json
-
-   预期能在 JSON 中看到：
-
-       check.ok = false
-       check.cycles = []
-       check.projection_cycles = [ui, ui.ctl]
-
-2. 完成 T2 后，先验证新 canonical path 已被 guardrail 接纳：
-
-       lua scripts/quality/arch.lua scan --out tmp/arch_cycle_scan.json
+       rg 'src\.ui\.runtime\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)|src\.ui\.ctl\.ports' src tests
        lua tests/guard.lua
+       lua tests/contract.lua
 
-   此时重点不是“已经无环”，而是“新路径不再被判未分类，也不会因旧 whitelist 缺失而误报”。
+   预期当前会命中旧 seam / old ports 路径，但 `guard` 与 `contract` 应通过。
 
-3. 完成 T3 后，再扫描一次，确认 `ui` 视图里的 `pres/stores -> ctl` 回边已经消失。
+2. 完成 T2 后，先验证护栏允许新路径存在：
 
-4. 完成 T4 后，再扫描一次，确认 `ui.ctl` 视图里的 `ports -> implementation` 回边已经消失。
+       lua tests/guard.lua
+       lua tests/contract.lua
 
-5. 完成 T5-T6 后运行：
+   预期新 canonical path 加入后测试仍通过，不会因为 whitelist 缺失而失败。
+
+3. 完成 T3 与 T4 后，验证新真源已可单独被 require：
+
+       lua -e 'package.path = package.path .. ";./?.lua;./?/init.lua"; assert(require("src.presentation.runtime.ports")); assert(require("src.ui.runtime.state")); assert(require("src.ui.runtime.landing_visual_hold")); assert(require("src.ui.runtime.host_bridge"))'
+
+   预期命令正常退出。
+
+4. 完成 T5 与 T6 后，重点回归高风险测试：
+
+       lua tests/contract.lua
+       lua tests/behavior.lua
+
+   如需定位 patch/reload 问题，优先单跑：
+
+       lua -e 'package.path = package.path .. ";./tests/?.lua"; require("TestHarness").run({"suites.runtime.runtime_bootstrap","suites.presentation.gameplay_t5_characterization"})'
+
+5. 完成 T7 与 T8 后，执行最终专项验收：
 
        lua scripts/quality/arch.lua check
-       lua tests/contract.lua
+       lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer
        lua tests/guard.lua
-
-   预期 `arch_view` 直接通过，且 `arch_view_contract` 不再依赖过滤器忽略 `ui` / `ui.ctl` 环。
-
-6. 最终跑行为回归：
-
+       lua tests/contract.lua
        lua tests/behavior.lua
+       find src/presentation/runtime/ports -name '*_ports.lua'
+       rg 'src\.ui\.runtime\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)|src\.ui\.ctl\.ports' src tests
+
+   预期所有测试通过，`find` 无输出，`rg` 无输出或仅剩不影响运行的文档样例。
 
 ## 验证与验收
 
-必须同时满足以下六条，才算任务真正完成。
+验收不是“文件名看起来短了”，而是以下行为同时成立：
 
-第一，原始 `scan` JSON 中 `check.projection_cycles` 为空，而不是“先有环、再被 filter 吃掉”。
+- 运行时入口仍能正常建立 `gameplay_loop_ports`、`presentation_runtime` 与 event bridge
+- 所有 contract 与 guardrail 都接受新 canonical path，并拒绝把旧兼容路径继续当真源
+- patch-based 与 reload-based 测试在 alias 阶段不会命中不同的 module table
+- 文档、viewer、contract metadata 与源码中的 canonical path 完全一致
 
-第二，`/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/config.json` 已把新 canonical path 归类到 `presentation`，且对应 forbidden-dependency 规则没有因为新目录而变松。
+最低验收命令如下：
 
-第三，`/Users/billyq/Dev/Github/Lua/monopoly/tests/guards/dep_rules.lua` 的 seam whitelist 与禁令已经切到新真源，旧路径白名单要么删除，要么被明确标注为过渡用途。
-
-第四，`/Users/billyq/Dev/Github/Lua/monopoly/tests/suites/architecture/arch_view_contract.lua` 不再验证“过滤器忽略这两个环”，而是验证“原始扫描已无此环”。
-
-第五，`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/arch_view.md`、`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/boundaries.md`、`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/layer-model.md`、`/Users/billyq/Dev/Github/Lua/monopoly/docs/architecture/subsystems.md` 对新目录归属的叙述与代码一致。
-
-第六，`turn.loop`、presentation runtime bootstrap、shared fixture 与 patch-based 测试仍通过，说明这次改的是依赖方向，不是运行语义。
+- `lua scripts/quality/arch.lua check`
+- `lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer`
+- `lua tests/guard.lua`
+- `lua tests/contract.lua`
+- `lua tests/behavior.lua`
+- `find src/presentation/runtime/ports -name '*_ports.lua'`
+- `rg 'src\.ui\.runtime\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)|src\.ui\.ctl\.ports' src tests`
 
 ## 可重复性与恢复
 
-`arch_view scan/check` 与测试命令都可重复执行，不会修改源代码；唯一会写回仓库的是 viewer 快照刷新步骤。刷新快照前必须先确认代码、测试与文档都已稳定，否则不要覆盖 `/Users/billyq/Dev/Github/Lua/monopoly/scripts/quality/arch/viewer/`。
+本计划故意采用“先建新真源、旧路径暂时 alias”的策略，使每一步都可重复执行，并允许中途失败后回到稳定状态。
 
-如果迁移中途出现“新旧路径混用”导致测试大面积失败，优先保留旧路径 alias shim，确保主流程先恢复可跑，再在 T7 统一删 shim；不要在一个提交里同时删除旧路径、改 bootstrap、改 patch 测试和删 filter 特例。
+如果某一波迁移导致大批测试失败，优先回到“新文件保留、旧文件继续 alias”的中间态，不要立刻删旧路径。只要旧路径还是纯 alias，回滚成本就很低。相反，如果在消费者与文档还没切完时就提前删除 alias，恢复会变成跨多个目录的散点修复。
 
-## 风险与缓解
-
-- **风险**：新 `src/presentation/runtime/ports/*` 或 `src/ui/runtime/*` 文件刚创建就被 `arch_view` 判成未分类，或绕开旧 presentation 边界。
-  **缓解**：T2 先改 `scripts/quality/arch/config.json`，把 component rule 和 forbidden rule 一起补上。
-
-- **风险**：共享 seam 与 port builder 同时迁移，导致 `ui_sync/common/anim/runtime_event` 这些中间模块反复改路径。
-  **缓解**：严格按 T3 先稳定 seam，再做 T4；不要把两步并行执行。
-
-- **风险**：compatibility shim 不是纯 alias，导致 patch-based 测试打到不同 table 对象上。
-  **缓解**：所有 shim 都统一采用 `return require("new.path")`；禁止在 shim 内重新 `build()` 或复制函数表。
-
-- **风险**：删除过滤器后仍有残留反馈边，导致 `arch_view` / `guard` 直接红灯。
-  **缓解**：T6 前必须先看 raw `scan`，确认 `ui` 和 `ui.ctl` 的反馈边都已清空。
-
-- **风险**：文档不更新，后续贡献者继续把模块放回旧命名空间。
-  **缓解**：T6 明确要求同步 `arch_view.md`、`boundaries.md`、`layer-model.md`、`subsystems.md`。
-
-- **风险**：新 `state_ports` canonical module 复制旧的无用 `require("src.host.eggy")`，平白触发 `dep_rules`。
-  **缓解**：迁移时顺手删除无用宿主导入；只保留实际需要的 host seam 调用。
-
-## 接口与依赖
-
-最终应维持的接口语义如下：
-
-- `runtime_state` seam 仍提供 `ensure_*`、`get_ui_model`、`set_ui_model`、`set_pending_choice`、`set_ui_dirty` 等现有窄接口，但 canonical module path 不再位于 `src.ui.ctl.ports.*`
-- `landing_visual_hold` seam 与 `host_runtime` seam 仍负责 presentation 对 runtime / host 的窄桥接，但 canonical path 不再挂在 `src.ui.ctl` 下
-- gameplay loop 端口组仍保持 `modal/anim/ui_sync/debug/clock/state/view_command/actor_context` 这一组契约与现有导出函数名，避免 `turn.loop` 被迫感知本次重构
-- `runtime_event_ports` 与 `state_callback_ports` 的归属也要在本次完成后明确下来；即使继续保留旧 alias，也不能再作为真正的装配真源
-- `presentation_ports.describe_boundary_contract()` 最终只能发布新的 canonical seam / assembly path；旧路径最多作为兼容层存在，不能继续被 contract 当作真源
+`_load_fresh()` 一类测试辅助函数修改后同样应保持可重复。双 key 清缓存逻辑必须以“新旧 key 任一不存在也不报错”为原则，避免为测试恢复路径再制造新故障。
 
 ## 产物与备注
 
-本计划基于以下已验证的当前证据生成：
+实现完成后，仓库中应出现如下最终形态：
 
-    lua scripts/quality/arch.lua check
-    -> arch_view 检查通过 / arch_view check ok
+    src/presentation/runtime/ports/init.lua
+    src/presentation/runtime/ports/common.lua
+    src/presentation/runtime/ports/anim.lua
+    src/presentation/runtime/ports/state.lua
+    src/presentation/runtime/ports/ui_sync.lua
+    src/presentation/runtime/ports/events.lua
+    src/presentation/runtime/ports/callbacks.lua
+    src/presentation/runtime/ports/actor_context.lua
+    src/presentation/runtime/ports/clock.lua
+    src/presentation/runtime/ports/debug.lua
+    src/presentation/runtime/ports/modal.lua
+    src/presentation/runtime/ports/view_command.lua
+    src/ui/runtime/state.lua
+    src/ui/runtime/landing_visual_hold.lua
+    src/ui/runtime/host_bridge.lua
 
-    lua scripts/quality/arch.lua scan --out tmp/arch_cycle_scan.json
-    -> check.cycles = []
-    -> check.projection_cycles = 2
-    -> views: ui, ui.ctl
+旧 `src/ui/ctl/ports/*.lua` 与旧 `src/ui/runtime/*_seam.lua` / `*ports.lua` 最终不再作为 canonical source 存在。
 
-后续每次修改本计划时，都要在文档底部追加一条变更说明，记录“改了什么、为什么改”。
+## 接口与依赖
 
+`src.presentation.runtime.ports` 是新的 package entry，必须继续提供两个稳定入口：
 
-变更说明（2026-03-18 01:50 CST）：完成 T1，重新冻结 raw arch_view 基线，并把 canonical path 决策落入计划执行日志。
+    function presentation_ports.build()
+    function presentation_ports.describe_boundary_contract()
 
-变更说明（2026-03-18 02:03 CST）：完成 T2，先把 arch_view/dep_rules/contract 切到新 canonical guardrail，确保后续迁移不会先因分类或白名单失血而失败。
+`describe_boundary_contract()` 里的 key 保持当前语义名称，例如 `runtime_state`、`landing_visual_hold`、`host_runtime`、`presentation_runtime`、`gameplay_loop_ports`。允许变化的只有其对应的 module path 值，以及最后一波对过时 `legacy_alias_modules` 的删除。
 
-变更说明（2026-03-18 02:12 CST）：完成 T3。共享 seam 抽离本身已经把 raw arch_view projection cycles 清零，因此将原 T4 大规模 assembly 迁移降级为后续可选清理，先沿低风险路线继续收尾。
+`src.ui.runtime.state`、`src.ui.runtime.landing_visual_hold`、`src.ui.runtime.host_bridge` 仍然只是窄桥接层，不新增业务逻辑，不直写 UI controller 细节。`src.presentation.runtime.ports/*` 仍然只是 adapter / assembly 层，不改变 `turn.loop` 当前依赖的 grouped ports 形状。
 
-变更说明（2026-03-18 02:19 CST）：完成 T5，先把测试侧仍直接引用旧 seam 真源的文件切到 `src.ui.runtime.*`，在不扩大 assembly 迁移范围的情况下清理剩余真源漂移。
-
-变更说明（2026-03-18 03:02 CST）：完成 T6/T7。arch_view 不再豁免 presentation namespace cycle，viewer/documentation/contract 已对齐；最终再清掉一个过时 whitelist，并完成 scan/check/guard/contract/behavior/tooling 全量验收。
+当你修改这份计划时，必须同步更新“进度”、“意外与发现”、“决策日志”、“结果与复盘”，并在这些章节里明确写出新增的审查意见或实施发现为什么改变了执行顺序。
