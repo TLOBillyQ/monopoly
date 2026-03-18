@@ -133,12 +133,18 @@
 - **description**: 迁移 `quality` 桶：`arch/crap/mutate/loc/scrap` 入口、config、adapter、driver、viewer snapshot 全部切到 `tools/quality`
 - **location**: `tools/quality/**`
 - **validation**: `tools/quality/*` 下的 `--help`、默认 config 路径、viewer 导出路径、driver 路径、配置内容都不再引用 `scripts/*`
+- **status**: 已完成
+- **log**: 整个 `scripts/quality` 已迁到 `tools/quality`；同步修正了入口 fallback、`arch_filter` 的 canonical require、`crap/scrap` 默认 config 路径、`mutate` 默认 driver 路径、canonical command_name，以及 `scrap` 配置中的扫描根与排除规则。
+- **files edited/created**: `tools/quality/**`, `.agents/plan.md`
 
 ### T7
 - **depends_on**: `[T3, T5]`
 - **description**: 迁移 `ops` 与 `data` 桶到 `tools/ops`、`tools/data`，同步清理嵌入式示例路径与帮助文本
 - **location**: `tools/ops/**`, `tools/data/**`
 - **validation**: `deploy.lua`、`deploy.ps1`、`update_api.lua`、`export_xlsx.lua` 全部可从 canonical 路径运行
+- **status**: 已完成
+- **log**: `ops` 与 `data` 已迁到 `tools/ops`、`tools/data`，canonical Lua/PowerShell help 文本都已切到 `tools/*`，当前旧 `scripts/ops` / `scripts/data` 不再是实现真源。
+- **files edited/created**: `tools/ops/**`, `tools/data/**`, `.agents/plan.md`
 
 ### T8
 - **depends_on**: `[T3]`
