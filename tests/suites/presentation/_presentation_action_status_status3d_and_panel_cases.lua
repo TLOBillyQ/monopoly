@@ -1003,7 +1003,7 @@ end
 local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
   local opened = 0
   local game = {
       turn = {
@@ -1064,7 +1064,7 @@ end
 local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
   local opened = 0
   local game = {
     turn = {
@@ -1134,7 +1134,7 @@ end
 local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
   local opened = 0
   local game = {
     turn = {
@@ -1266,7 +1266,7 @@ end
 local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
   local anchors = require("src.ui.render.board.anchors")
   local startup_render = require("src.ui.render.board.startup_render")
   local player_units = require("src.ui.render.board.player_units")
@@ -1378,7 +1378,7 @@ end
 local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.ui.ctl.ports.ui_sync.ui_model_sync")
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
   local render_calls = 0
   local refreshed_label = nil
   local game = {

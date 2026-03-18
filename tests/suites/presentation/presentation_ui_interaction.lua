@@ -886,10 +886,10 @@ local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
   local opened_market = nil
 
   _with_patches({
-    { target = require("src.ui.ctl.ports.ui_sync.choice_ui_state"), key = "should_reconcile", value = function()
+    { target = require("src.presentation.runtime.ports.ui_sync.choice_state"), key = "should_reconcile", value = function()
       return true
     end },
-    { target = require("src.ui.ctl.ports.ui_sync.ui_model_sync"), key = "build_model", value = function()
+    { target = require("src.presentation.runtime.ports.ui_sync.model"), key = "build_model", value = function()
       return rebuilt
     end },
     { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function(_, choice, market)

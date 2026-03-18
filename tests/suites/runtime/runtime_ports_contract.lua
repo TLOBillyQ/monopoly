@@ -330,26 +330,18 @@ end
 
 local function _test_presentation_boundary_contract_describes_seams_and_state_allowlists()
   local contract = presentation_ports.describe_boundary_contract()
-  _assert_one_of(contract.state_seam_modules.runtime_state, {
-      "src.ui.runtime.runtime_state_seam",
-      "src.ui.runtime.state",
-    },
-    "presentation contract should publish runtime state canonical seam or transition target")
-  _assert_one_of(contract.state_seam_modules.landing_visual_hold, {
-      "src.ui.runtime.landing_visual_hold_seam",
-      "src.ui.runtime.landing_visual_hold",
-    },
-    "presentation contract should publish landing hold canonical seam or transition target")
-  _assert_list_contains(contract.import_allowlists.host_runtime, "src.ui.runtime.host_runtime_ports",
-    "presentation contract should keep legacy host runtime seam during transition")
+  _assert_eq(contract.state_seam_modules.runtime_state, "src.ui.runtime.state",
+    "presentation contract should publish runtime state canonical seam")
+  _assert_eq(contract.state_seam_modules.landing_visual_hold, "src.ui.runtime.landing_visual_hold",
+    "presentation contract should publish landing hold canonical seam")
+  _assert_eq(contract.state_seam_modules.host_runtime, "src.ui.runtime.host_bridge",
+    "presentation contract should publish host runtime canonical seam")
   _assert_list_contains(contract.import_allowlists.host_runtime, "src.ui.runtime.host_bridge",
-    "presentation contract should pre-allow future host bridge canonical path")
+    "presentation contract should allow host bridge canonical path")
   _assert_eq(contract.state_field_allowlists.presentation_runtime[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
     "presentation contract should pin presentation_runtime ownership")
-  _assert_list_contains(contract.state_field_allowlists.presentation_runtime, "src.ui.ctl.ports.anim_ports",
-    "presentation contract should keep legacy anim port allowlist during transition")
   _assert_list_contains(contract.state_field_allowlists.presentation_runtime, "src.presentation.runtime.ports.anim",
-    "presentation contract should pre-allow future anim port canonical path")
+    "presentation contract should allow anim port canonical path")
   _assert_eq(contract.state_field_allowlists.gameplay_loop_ports[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
     "presentation contract should pin gameplay_loop_ports ownership")
 end

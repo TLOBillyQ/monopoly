@@ -36,6 +36,7 @@ app -> infrastructure -> presentation -> flow -> (runtime | ai) -> systems -> (r
 
 - `src/core/ports/`：宿主/运行时广义契约
 - `src/rules/ports/`：gameplay 共享 contract
+- `src/presentation/runtime/ports/`：presentation runtime grouped ports / adapter 真源
 - `src/turn/output/`：flow 输出与 runtime adapter
 
 ## 读图方式
@@ -50,4 +51,7 @@ app -> infrastructure -> presentation -> flow -> runtime/ai -> systems -> runtim
 
 - 这一轮只对 `src.entry` 做硬切迁移：`main.lua` 现在从 `src.app.bootstrap` 启动。
 - `src/ui`、`src/turn`、`src/rules`、`src/state`、`src/player`、`src/host` 仍保留原物理目录，但在 arch_view 中已经按新组件语义投影。
-- `src/presentation/runtime/` 承接入口里的 UI/runtime wiring；`src/ui/runtime/` 承接展示侧共享 seam（`runtime_state` / `landing_visual_hold` / `host_runtime`）；`src/infrastructure/runtime/` 承接运行时全局别名注入。
+- `src/presentation/runtime/` 承接入口里的 UI/runtime wiring，其中 `src/presentation/runtime/ports/` 是 grouped ports / adapter 真源。
+- `src/ui/runtime/` 承接展示侧共享 seam（`state` / `landing_visual_hold` / `host_bridge`）。
+- `src/ui/ctl/ports/` 仍保留兼容 alias，但不再接收新的 canonical 实现。
+- `src/infrastructure/runtime/` 承接运行时全局别名注入。

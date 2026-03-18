@@ -25,6 +25,7 @@
 | `src/app/bootstrap/` | 装配：安装端口别名、读取启动参数 | 业务规则、宿主能力实现 |
 | `src/core/` | 跨层共享：日志、数值工具、配置访问、宿主广义契约 | Eggy 全局对象直读、UI 节点操作 |
 | `src/ui/runtime/` | 展示共享 seam：`runtime_state` / `landing_visual_hold` / `host_runtime` 窄桥接 | controller 装配、render/input 逻辑 |
+| `src/presentation/runtime/ports/` | presentation grouped ports / runtime adapter 真源 | gameplay 规则、宿主底层实现 |
 | `src/presentation/schema/` | 纯展示 schema：节点名、contract、布局常量 | 状态写入、事件桥、输入语义 |
 | `src/presentation/input/` | 输入事件 → turn action 映射 | 业务推断 |
 | `src/presentation/model/` | UI model 构建与只读查询 | 写状态、触发副作用 |
@@ -38,6 +39,7 @@
 - ViewModel 渲染 → `src/presentation/view/`
 - 节点名 / 画布 contract / 布局常量 → `src/presentation/schema/`
 - 展示共享 seam / 运行时窄桥接 → `src/ui/runtime/`
+- 展示 runtime grouped ports / adapter → `src/presentation/runtime/ports/`
 - 输入事件 → turn action → `src/presentation/input/`
 - 宿主能力接入端口 → `src/app/bootstrap/`
 - 宿主能力实现 → `src/infrastructure/runtime/`

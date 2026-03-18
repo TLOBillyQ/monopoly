@@ -11,7 +11,8 @@
 | `src/game/ai` | 中性 AI 策略：自动出牌、目标选择、自动 choice 决策 | 回合调度、宿主 API |
 | `src/game/runtime` | gameplay 端口实现（接 `src/game/ports/*` 契约） | 承接业务规则 |
 | `src/infrastructure/runtime` | 宿主细节：运行时上下文、事件桥、默认 runtime ports | — |
-| `src/ui/runtime` | 展示共享 seam：`runtime_state`、`landing_visual_hold`、`host_runtime` 这类窄桥接 | controller 装配、Canvas 渲染、输入路由 |
+| `src/ui/runtime` | 展示共享 seam：`state`、`landing_visual_hold`、`host_bridge` 这类窄桥接 | controller 装配、Canvas 渲染、输入路由 |
+| `src/presentation/runtime` | 展示运行时装配：`ports/*` grouped ports、state callback、runtime event bridge、bootstrap | 游戏规则、宿主底层实现 |
 | `src/presentation/schema` | 展示 schema：canvas 节点名、contract 常量、布局清单 | 写状态、宿主调用、输入路由 |
 | `src/presentation` | 展示适配：input 映射、UI model 查询、Canvas 渲染、UI 事件桥接 | 根据 `choice.kind`/`meta`/商品配置自行推断业务语义 |
 
@@ -22,8 +23,11 @@
 | 后缀 | 含义 | 示例 |
 |------|------|------|
 | `*_port.lua` | 单一窄接口契约 | `bankruptcy_feedback_port.lua` |
-| `*_ports.lua` | 同生命周期注入 bundle | `runtime/ports.lua` |
+| `ports.lua` | 包入口 bundle / grouped ports 装配 | `runtime/ports.lua` |
+| `ports/*.lua` | bundle 叶子模块，文件名用目录内短名 | `presentation/runtime/ports/anim.lua` |
 | `*_port_adapter.lua` | 外层对某契约的实现 | `auto_play_port_adapter.lua` |
+
+`*_ports.lua` 旧命名现在只允许作为兼容 alias 存在，不再作为新的 canonical 文件名。
 
 **三类 Port 目录：**
 
@@ -56,6 +60,7 @@
 - ViewModel 渲染 → `src/presentation`
 - 纯展示节点/schema → `src/presentation/schema`
 - 展示共享 seam / UI runtime 窄桥接 → `src/ui/runtime`
+- 展示 runtime adapter / grouped ports 装配 → `src/presentation/runtime/ports`
 - 宿主能力接入端口 → `src/app/bootstrap`；实现 → `src/infrastructure/runtime`
 - 宿主/运行时广义契约 → `src/core/ports/`
 - 玩法规则业务能力契约 → `src/game/ports/`

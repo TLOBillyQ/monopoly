@@ -32,7 +32,8 @@
 - [x] (2026-03-18 11:11 CST) 已完成 T4：`src.ui.runtime.state`、`landing_visual_hold`、`host_bridge` 已建成真源，旧 seam/host 文件与旧 ctl seam shim 已降为 alias
 - [x] (2026-03-18 11:24 CST) 已完成 T5：`anim`、`state`、`ui_sync`、`events`、`callbacks` 真源已归位到 `src.presentation.runtime.ports.*`，旧叶子文件仅保留 alias
 - [x] (2026-03-18 11:24 CST) 已完成 T6：剩余 adapter 与根入口消费者已切到新 package entry，presentation 高风险 suite 与 runtime bootstrap 回归通过
-- [ ] 正在执行 T7：同步文档、viewer 快照与命名规则
+- [x] (2026-03-18 11:34 CST) 已完成 T7：文档命名规则已改成 `ports.lua` + `ports/*.lua` 双层语义，`arch_view` 提交态 viewer 已刷新
+- [x] (2026-03-18 11:46 CST) 已完成 T8：删除全部 compat alias 与旧 metadata，并补齐计划外发现的 `ui_sync` 子模块迁移；最终 arch/guard/contract/behavior 与命名专项验收全部通过
 
 ## 意外与发现
 
@@ -50,6 +51,9 @@
 
 - 观察：checked-in `arch_view` viewer 快照会直接携带这些模块路径，若只改源码不刷新快照，提交态文档会过期。
   证据：`scripts/quality/arch/viewer/architecture.json` 与 `architecture_data.js` 当前都包含 `src.ui.ctl.ports.*` 和 `src.ui.runtime.*_seam` 路径。
+
+- 观察：`src/ui/ctl/ports/ui_sync/*` 子模块虽然不在顶层任务名里，但仍然构成旧 compat namespace 的最后残留。
+  证据：T8 前执行 `rg 'src\\.ui\\.ctl\\.ports\\.ui_sync\\.' src tests` 仍命中 `src/presentation/runtime/ports/ui_sync.lua`、`tests/suites/presentation/presentation_ui_interaction.lua`、`tests/suites/gameplay/gameplay_cases.lua` 等处。
 
 ## 决策日志
 
@@ -79,9 +83,9 @@
 
 ## 结果与复盘
 
-当前只完成调研与计划重写，尚未改动任何生产代码、测试代码或文档。
+本次执行已完成。最终结果是：`src.presentation.runtime.ports` 与 `src.ui.runtime/{state,landing_visual_hold,host_bridge}` 成为唯一真源；旧 `src.ui.ctl.ports.*`、旧 `*_seam.lua` / `*_ports.lua` compat 文件与 `legacy_alias_modules` 等 metadata 已全部删除；文档与 checked-in viewer 快照都已同步到新命名。
 
-这版计划已经吸收了审查意见里最容易漏掉的四类风险：包入口先后顺序、公共 contract 原子迁移、patch/reload 缓存污染、以及文档与 viewer 快照的同步。后续实现若严格按任务依赖推进，应该可以把这次改动控制在“纯路径重命名 + 兼容层退役”的范围内，而不是扩散成行为重构。
+过程中最大的计划外发现是 `src/ui/ctl/ports/ui_sync/*` 这组子模块仍在源码和测试里被直接引用。若不在 T8 顺手迁走，`src.ui.ctl.ports` 命名空间即使删除顶层 alias 也不会真正退场。最终通过把它们迁到 `src/presentation/runtime/ports/ui_sync/{camera,choice_state,gate,model}.lua` 解决了这个尾巴。
 
 ## 背景与导读
 
@@ -180,7 +184,7 @@
 - **description**: 先迁最容易受 seam 重命名影响的 adapter：`anim`、`state`、`ui_sync`、`events`、`callbacks`。迁移顺序固定为“创建新 canonical 文件 -> 更新新消费者 -> 旧路径降为纯 alias”。`state_factory.lua` 与 `runtime_event_bridge.lua` 这两个直接依赖旧 leaf module 的文件必须在这一波一起切走；`boundary_contract` 里仍指向 `src.ui.ctl.ports.anim_ports`、`src.ui.ctl.ports.state_ports` 等旧叶子路径的 allowlist 也必须在同一波同步切到新 canonical path。
 - **validation**: 旧 `anim_ports.lua`、`state_ports.lua`、`ui_sync_ports.lua`、`runtime_event_ports.lua`、`state_callback_ports.lua` 只剩 `return require("new.path")`；相关 suite 通过。
 - **status**: Completed
-- **log**: 2026-03-18 11:24 CST 已确认 `src/presentation/runtime/ports/anim.lua`、`state.lua`、`ui_sync.lua`、`events.lua`、`callbacks.lua` 为真源，并将旧 `src/ui/ctl/ports/anim_ports.lua`、`state_ports.lua`、`ui_sync_ports.lua`、`runtime_event_ports.lua`、`state_callback_ports.lua` 收敛为纯 alias。`src/presentation/runtime/state_factory.lua` 与 `runtime_event_bridge.lua` 已切到新叶子路径。验证：`lua tests/guard.lua`、`lua tests/contract.lua` 通过。
+- **log**: 2026-03-18 11:24 CST 已确认 `src/presentation/runtime/ports/anim.lua`、`state.lua`、`ui_sync.lua`、`events.lua`、`callbacks.lua` 为真源，并将旧 `src/ui/ctl/ports/anim_ports.lua`、`state_ports.lua`、`ui_sync_ports.lua`、`runtime_event_ports.lua`、`state_callback_ports.lua` 收敛为纯 alias。`src/presentation/runtime/state_factory.lua` 与 `runtime_event_bridge.lua` 已切到新叶子路径。2026-03-18 11:46 CST 最终清理中又把 `ui_sync` 子模块从旧 namespace 迁到 `src/presentation/runtime/ports/ui_sync/*`。验证：`lua tests/guard.lua`、`lua tests/contract.lua`、`lua tests/behavior.lua` 通过。
 - **files edited/created**: `.agents/plan.md`, `src/presentation/runtime/ports/anim.lua`, `src/presentation/runtime/ports/state.lua`, `src/presentation/runtime/ports/ui_sync.lua`, `src/presentation/runtime/ports/events.lua`, `src/presentation/runtime/ports/callbacks.lua`, `src/presentation/runtime/state_factory.lua`, `src/presentation/runtime/runtime_event_bridge.lua`, `src/ui/ctl/ports/anim_ports.lua`, `src/ui/ctl/ports/state_ports.lua`, `src/ui/ctl/ports/ui_sync_ports.lua`, `src/ui/ctl/ports/runtime_event_ports.lua`, `src/ui/ctl/ports/state_callback_ports.lua`, `tests/suites/presentation/gameplay_t5_characterization.lua`, `tests/suites/presentation/_presentation_action_status_market_and_anim_cases.lua`
 
 ### T6: 迁移其余 adapter 与根入口消费者，并修 reload helper
@@ -199,9 +203,9 @@
 - **location**: `docs/architecture/boundaries.md`, `docs/architecture/layer-model.md`, `docs/architecture/subsystems.md`, `docs/architecture/arch_view.md`, `scripts/quality/arch/viewer/`
 - **description**: 把文档中仍把 `*_ports.lua` 当成当前规则的部分改成新说法：单文件 bundle 可以继续叫 `ports.lua`，但 `ports/` 目录下的 canonical leaf 文件统一使用短名。同步更新层级与子系统文档，说明 `src/presentation/runtime/ports/` 现在是 runtime adapter 的真源。最后刷新 checked-in `arch_view` viewer 快照。
 - **validation**: 文档与 viewer 中不再把 `src.ui.ctl.ports.*` 或 `src.ui.runtime.*_seam` 当 canonical source；viewer 快照中的模块路径与源码一致。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 11:34 CST 已更新 `docs/architecture/boundaries.md`、`layer-model.md`、`subsystems.md`、`arch_view.md`，明确 `ports.lua` 作为包入口、`ports/*.lua` 作为 canonical leaf 的新规则，并把 `src/presentation/runtime/ports/` 写成 runtime adapter 真源。随后执行 `lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer` 刷新提交态 viewer。2026-03-18 11:46 CST 在 T8 最终删除 compat 文件后再次刷新 viewer，确保快照与最终源码一致。
+- **files edited/created**: `.agents/plan.md`, `docs/architecture/boundaries.md`, `docs/architecture/layer-model.md`, `docs/architecture/subsystems.md`, `docs/architecture/arch_view.md`, `scripts/quality/arch/viewer/architecture.json`, `scripts/quality/arch/viewer/architecture_data.js`
 
 ### T8: 删除 alias 与兼容 metadata，并做最终专项验收
 - **id**: T8
@@ -209,9 +213,9 @@
 - **location**: `src/ui/ctl/ports/`, `src/ui/runtime/`, `tests/guards/dep_rules.lua`, `tests/suites/runtime/runtime_ports_contract.lua`
 - **description**: 在所有消费者都切完且文档已同步后，删除旧 alias 文件，移除 `legacy_alias_modules`、过时 allowlist 与所有仅为兼容层保留的 metadata。最终执行行为、护栏与命名专项验收，证明 canonical 文件已经不再重复父目录信息。
 - **validation**: `lua scripts/quality/arch.lua check`、`lua tests/guard.lua`、`lua tests/contract.lua`、`lua tests/behavior.lua` 全通过；`find src/presentation/runtime/ports -name '*_ports.lua'` 为空；`rg 'src\.ui\.runtime\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)|src\.ui\.ctl\.ports' src tests` 为空或仅剩注释性文档样例。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 11:46 CST 已删除 `src/ui/runtime/*_seam.lua` / `host_runtime_ports.lua`、`src/ui/ctl/ports/*_ports.lua` / `*_seam.lua` / `init.lua` / `common.lua`，并将 `src/ui/ctl/ports/ui_sync/*` 迁到 `src/presentation/runtime/ports/ui_sync/{camera,choice_state,gate,model}.lua` 后一并删除旧文件。`src/presentation/runtime/ports/init.lua` 已移除 `legacy_alias_modules` 与全部旧 allowlist。`tests/suites/runtime/runtime_ports_contract.lua` 与 `tests/suites/presentation/gameplay_t5_characterization.lua` 已去掉对旧 compat path 的断言与双 key 兼容逻辑。最终验证：`lua scripts/quality/arch.lua check`、`lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer`、`lua tests/guard.lua`、`lua tests/contract.lua`、`lua tests/behavior.lua`、`find src/presentation/runtime/ports -name '*_ports.lua'`、`rg 'src\\.ui\\.runtime\\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)|src\\.ui\\.ctl\\.ports' src tests docs` 全通过或无输出。
+- **files edited/created**: `.agents/plan.md`, `src/presentation/runtime/ports/init.lua`, `src/presentation/runtime/ports/ui_sync/{camera,choice_state,gate,model}.lua`, `src/presentation/runtime/ports/ui_sync.lua`, `tests/suites/runtime/runtime_ports_contract.lua`, `tests/suites/presentation/gameplay_t5_characterization.lua`, `tests/suites/presentation/presentation_ui_interaction.lua`, `tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua`, `tests/suites/gameplay/gameplay_cases.lua`, `scripts/quality/arch/viewer/architecture.json`, `scripts/quality/arch/viewer/architecture_data.js`, `src/ui/runtime/runtime_state_seam.lua`, `src/ui/runtime/landing_visual_hold_seam.lua`, `src/ui/runtime/host_runtime_ports.lua`, `src/ui/ctl/ports/init.lua`, `src/ui/ctl/ports/common.lua`, `src/ui/ctl/ports/*.lua`, `src/ui/ctl/ports/ui_sync/*.lua`
 
 ## Parallel Execution Groups
 

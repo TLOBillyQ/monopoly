@@ -1263,7 +1263,7 @@ local function _test_runtime_editor_exports_camera_target_returns_nil_when_unit_
 end
 
 local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
-  local camera_sync = require("src.ui.ctl.ports.ui_sync.camera_sync")
+  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
   local emitted = {}
   local helper = { target_role_id = nil }
 
@@ -2368,7 +2368,7 @@ local function _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_
 end
 
 local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice()
-  local choice_ui_state = require("src.ui.ctl.ports.ui_sync.choice_ui_state")
+  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_state")
   local warned = {}
 
   local function _run_case(choice, state, current_player_index)
@@ -2437,7 +2437,7 @@ local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_
 end
 
 local function _test_tick_choice_timeout_warning_keeps_local_modal_choice()
-  local choice_ui_state = require("src.ui.ctl.ports.ui_sync.choice_ui_state")
+  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_state")
   local warned = {}
   local g = _new_game()
   local state = _build_loop_state()

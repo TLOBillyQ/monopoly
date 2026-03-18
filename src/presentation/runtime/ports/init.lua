@@ -15,26 +15,15 @@ local boundary_contract = {
     landing_visual_hold = "src.ui.runtime.landing_visual_hold",
     host_runtime = "src.ui.runtime.host_bridge",
   },
-  legacy_alias_modules = {
-    runtime_state = "src.ui.ctl.ports.runtime_state_seam",
-    landing_visual_hold = "src.ui.ctl.ports.landing_visual_hold_seam",
-    host_runtime = "src.ui.ctl.ports.host_runtime_ports",
-  },
   import_allowlists = {
     runtime_state = {
       "src.ui.runtime.state",
-      "src.ui.runtime.runtime_state_seam",
-      "src.ui.ctl.ports.runtime_state_seam",
     },
     landing_visual_hold = {
       "src.ui.runtime.landing_visual_hold",
-      "src.ui.runtime.landing_visual_hold_seam",
-      "src.ui.ctl.ports.landing_visual_hold_seam",
     },
     host_runtime = {
       "src.ui.runtime.host_bridge",
-      "src.ui.runtime.host_runtime_ports",
-      "src.ui.ctl.ports.host_runtime_ports",
       "src.presentation.runtime.ports.state",
       "src.presentation.runtime.ui_bootstrap",
       "src.presentation.runtime.runtime_event_bridge",
@@ -56,7 +45,6 @@ local boundary_contract = {
       "src.ui.wid.panel_presenter",
       "src.ui.wid.turn_effects",
       "src.presentation.runtime.ports.anim",
-      "src.ui.ctl.ports.anim_ports",
     },
     gameplay_loop_ports = {
       "src.presentation.runtime.gameplay_runtime_bootstrap",

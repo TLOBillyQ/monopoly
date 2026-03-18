@@ -22,6 +22,7 @@
 - `tests/guards/dep_rules.lua` 只保留文本级硬边界（宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路，以及少量跨子系统禁令）
 - 零模块级循环依赖，无白名单，任意新循环直接让 `check` 失败
 - 根组件语义现为：`app`、`infrastructure`、`presentation`、`flow`、`ai`、`systems`、`runtime`、`core`、`config`
+- 当前 canonical 命名已切到 `src/presentation/runtime/ports/*` 与 `src/ui/runtime/{state,landing_visual_hold,host_bridge}`；`src/ui/ctl/ports/*` 与旧 `*_seam` / `*_ports` 文件仅保留兼容 alias 语义
 
 ## 命令
 

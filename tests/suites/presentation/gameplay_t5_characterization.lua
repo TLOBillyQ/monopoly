@@ -9,18 +9,8 @@ local host_runtime = require("src.host.eggy")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local choice_support = require("src.ui.pres.choice_support")
 
--- Helper to reload fresh modules for isolated testing
-local _reload_aliases = {
-  ["src.ui.ctl.ports.state_ports"] = "src.presentation.runtime.ports.state",
-  ["src.presentation.runtime.ports.state"] = "src.ui.ctl.ports.state_ports",
-}
-
 local function _load_fresh(module_path)
   package.loaded[module_path] = nil
-  local alias = _reload_aliases[module_path]
-  if alias ~= nil then
-    package.loaded[alias] = nil
-  end
   return require(module_path)
 end
 
