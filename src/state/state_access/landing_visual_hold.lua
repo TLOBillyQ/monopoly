@@ -98,7 +98,8 @@ local function _mark_turn_dirty(game)
   game.dirty.any = true
 end
 
-function landing_visual_hold.start(game)
+function landing_visual_hold.start(game, opts)
+  local _ = opts
   if not (game and game.turn) then
     return false
   end

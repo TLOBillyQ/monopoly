@@ -19,7 +19,7 @@ function inventory:init(opts)
 
   self.items = {}
   self.max_slots = max_slots
-  self._on_change = function() end
+  self._on_change = function(_) end
 end
 
 ---创建新背包实例

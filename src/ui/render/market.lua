@@ -55,8 +55,7 @@ function market_view.refresh_market_selection(state, option_id, deps)
   local selection = market_view_slots.resolve_selection(
     option_id,
     state.ui_refs and state.ui_refs.images or {},
-    market_layout.empty_ref_key,
-    deps
+    market_layout.empty_ref_key
   )
   ui:set_label(market_layout.price_label, selection.price_text)
   _set_market_preview_icon(state, selection.icon_key, deps)
@@ -80,11 +79,11 @@ function market_view.refresh_market(state, market, deps)
   local ui = state.ui
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
   local options = market_view_slots.filter_market_options(market.options)
-  market_view_controls.set_market_container_active(ui, true, deps)
+  market_view_controls.set_market_container_active(ui, true)
   if #options == 0 then
     market_view_slots.hide_market_slots(ui)
     market_view_controls.reset_market_preview(state, resolved_deps)
-    market_view_controls.apply_market_common_controls(ui, market, false, VEHICLE_TAB_ENABLED, resolved_deps)
+    market_view_controls.apply_market_common_controls(ui, market, false, VEHICLE_TAB_ENABLED)
     modal_state.open_market(state, market.choice_id, {}, nil)
     return true
   end
@@ -92,7 +91,7 @@ function market_view.refresh_market(state, market, deps)
   local rendered = market_view_slots.populate_market_slots(ui, refs, options, resolved_deps)
   ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
   market_view_controls.clear_market_selection_frames(ui)
-  market_view_controls.apply_market_common_controls(ui, market, true, VEHICLE_TAB_ENABLED, resolved_deps)
+  market_view_controls.apply_market_common_controls(ui, market, true, VEHICLE_TAB_ENABLED)
   local selected = market_view_slots.resolve_selected_option(
     rendered.option_ids,
     market.selected_option_id,

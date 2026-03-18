@@ -90,9 +90,9 @@ T1 ── T2 ── T3 ──┬── T4 ──┐
 - **location**: [market.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/market.lua), [market_controls.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/market_controls.lua), [panel_slice.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/pres/panel_slice.lua), [panel_builder.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/pres/panel_builder.lua), [inventory.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/player/actions/inventory.lua), [landing_visual_hold.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/state/state_access/landing_visual_hold.lua)
 - **description**: 只处理 `redundant-parameter` 和明确的调用形态漂移。优先原则是让签名与真实调用方式一致，不改变行为语义。对可选尾参要保持兼容，对确属多传的调用点直接去掉多余参数；对本来就以方法形态使用的函数，改签名使 LuaLS 与运行时一致。
 - **validation**: 这些文件的 `redundant-parameter` 清零；相关调用路径通过 `luac -p` 与回归测试。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 12:09 CST 已完成 T4 写集的调用形态修复：`inventory._on_change` 默认回调签名改为接受 `self`，`landing_visual_hold.start` 增加兼容可选尾参，`panel_slice` 与 `market` 移除确属多传的尾参数调用。验证：`luac -p` 通过（4 个目标文件）；`lua-language-server --check=src --configpath=../.luarc.json --check_format=json --logpath=/tmp/luals-t4 --checklevel=Warning` 下 T4 目标文件 `redundant-parameter` 为 `0`。
+- **files edited/created**: `src/player/actions/inventory.lua`, `src/state/state_access/landing_visual_hold.lua`, `src/ui/pres/panel_slice.lua`, `src/ui/render/market.lua`, `.agents/plan.md`
 
 ### T5: 修复 `src/ui/render` 与 `src/host/eggy` 的字段/宿主桥接告警
 - **depends_on**: [T3]

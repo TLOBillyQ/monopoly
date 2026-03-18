@@ -31,8 +31,7 @@ function panel_slice.build(game, env, turn, current_player_id, auto_enabled_by_p
   return {
     turn_label = panel_view.build_turn_label(
       turn.turn_count,
-      turn.countdown_seconds or 0,
-      turn.countdown_active == true
+      turn.countdown_seconds or 0
     ),
     player_rows = panel_view.build_player_statuses(game, env.game, 4),
     auto_label_by_player = auto_label_by_player,
@@ -45,8 +44,7 @@ end
 local function _update_turn_label(panel, turn)
   panel.turn_label = panel_view.build_turn_label(
     turn.turn_count,
-    turn.countdown_seconds or 0,
-    turn.countdown_active == true
+    turn.countdown_seconds or 0
   )
 end
 
