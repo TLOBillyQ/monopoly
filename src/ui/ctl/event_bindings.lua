@@ -3,7 +3,7 @@ local runtime = require("src.ui.render.runtime_ui")
 local always_show_nodes = require("src.ui.schema.always_show_nodes")
 local always_show_contract = require("src.ui.schema.always_show_contract")
 local ui_touch_policy = require("src.ui.input.touch_policy")
-local host_runtime_ports = require("src.ui.runtime.host_runtime_ports")
+local host_runtime_ports = require("src.ui.runtime.host_bridge")
 
 local bindings = {}
 

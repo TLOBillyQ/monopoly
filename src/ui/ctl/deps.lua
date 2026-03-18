@@ -1,4 +1,4 @@
-local host_runtime_ports = require("src.ui.runtime.host_runtime_ports")
+local host_runtime_ports = require("src.ui.runtime.host_bridge")
 local runtime_deps = {}
 
 function runtime_deps.build()

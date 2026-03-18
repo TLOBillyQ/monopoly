@@ -1,5 +1,5 @@
 local modal_controller = require("src.ui.ctl.modal_controller")
-local runtime_state = require("src.ui.runtime.runtime_state_seam")
+local runtime_state = require("src.ui.runtime.state")
 local choice_slice = require("src.ui.pres.choice_slice")
 
 local runtime_event_ports = {}

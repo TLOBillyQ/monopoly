@@ -1,6 +1,6 @@
 local market_layout = require("src.ui.schema.market_layout")
 local ui_controls = require("src.ui.render.support.ui_controls")
-local runtime_state = require("src.ui.runtime.runtime_state_seam")
+local runtime_state = require("src.ui.runtime.state")
 local market_view_slots = require("src.ui.render.market_slots")
 local market_view_controls = require("src.ui.render.market_controls")
 

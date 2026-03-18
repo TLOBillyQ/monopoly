@@ -29,7 +29,8 @@
 - [x] (2026-03-18 10:47 CST) 已完成 T1：冻结 canonical rename map、`host_bridge` 命名与 contract 不变量，并把 package entry cutover 设为后续所有迁移的前置条件
 - [x] (2026-03-18 10:57 CST) 已完成 T2：为未来 `src.ui.runtime.state` / `landing_visual_hold` / `host_bridge` 路径补齐 whitelist，并把 contract 测试改成接受过渡态 canonical path
 - [x] (2026-03-18 11:05 CST) 已完成 T3：`src.presentation.runtime.ports` 成为新的 package entry 真源，`describe_boundary_contract()` 与 `common.lua` 已迁过去，旧 `src.ui.ctl.ports` / `common.lua` 已降为纯 alias
-- [ ] 正在执行 T4：重命名 `src/ui/runtime` 三个 canonical seam / bridge
+- [x] (2026-03-18 11:11 CST) 已完成 T4：`src.ui.runtime.state`、`landing_visual_hold`、`host_bridge` 已建成真源，旧 seam/host 文件与旧 ctl seam shim 已降为 alias
+- [ ] 正在执行 T5 / T6：迁移 leaf adapter 与剩余消费者
 
 ## 意外与发现
 
@@ -166,9 +167,9 @@
 - **location**: `src/ui/runtime/`, `src/presentation/runtime/`, `src/ui/`, `tests/support/shared_support.lua`
 - **description**: 新建 `src/ui/runtime/state.lua`、`src/ui/runtime/landing_visual_hold.lua`、`src/ui/runtime/host_bridge.lua` 作为真源，把现有实现迁过去，然后让旧 `runtime_state_seam.lua`、`landing_visual_hold_seam.lua`、`host_runtime_ports.lua` 退化为纯 alias。同步切所有直接消费者到新路径。
 - **validation**: `rg 'src\.ui\.runtime\.(runtime_state_seam|landing_visual_hold_seam|host_runtime_ports)' src tests` 只命中 alias shim 或兼容断言；新路径消费者能通过 `guard` 与 `contract`。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 11:11 CST 已创建 `src/ui/runtime/state.lua`、`landing_visual_hold.lua`、`host_bridge.lua` 三个真源，并把旧 `src/ui/runtime/*` 与 `src/ui/ctl/ports/*_seam.lua` / `host_runtime_ports.lua` 改成 alias。`src/ui/*`、`src/presentation/runtime/*`、`tests/support/shared_support.lua` 与三组 presentation status suites 已切到新路径。验证：`lua -e 'package.path = package.path .. \";./?.lua;./?/init.lua\"; assert(require(\"src.presentation.runtime.ports\")); assert(require(\"src.ui.runtime.state\")); assert(require(\"src.ui.runtime.landing_visual_hold\")); assert(require(\"src.ui.runtime.host_bridge\"))'`、`lua tests/guard.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `.agents/plan.md`, `src/ui/runtime/state.lua`, `src/ui/runtime/landing_visual_hold.lua`, `src/ui/runtime/host_bridge.lua`, `src/ui/runtime/runtime_state_seam.lua`, `src/ui/runtime/landing_visual_hold_seam.lua`, `src/ui/runtime/host_runtime_ports.lua`, `src/ui/ctl/ports/runtime_state_seam.lua`, `src/ui/ctl/ports/landing_visual_hold_seam.lua`, `src/ui/ctl/ports/host_runtime_ports.lua`, `src/ui/*`, `src/presentation/runtime/runtime_event_bridge.lua`, `src/presentation/runtime/state_factory.lua`, `tests/support/shared_support.lua`, `tests/suites/presentation/_presentation_action_status_choice_and_target_cases.lua`, `tests/suites/presentation/_presentation_action_status_market_and_anim_cases.lua`, `tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua`
 
 ### T5: 迁移 seam-sensitive adapter 到 `src/presentation/runtime/ports/`
 - **id**: T5

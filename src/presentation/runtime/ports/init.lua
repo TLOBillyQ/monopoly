@@ -11,9 +11,9 @@ local actor_context_ports = require("src.ui.ctl.ports.actor_context_ports")
 local presentation_ports = {}
 local boundary_contract = {
   state_seam_modules = {
-    runtime_state = "src.ui.runtime.runtime_state_seam",
-    landing_visual_hold = "src.ui.runtime.landing_visual_hold_seam",
-    host_runtime = "src.ui.runtime.host_runtime_ports",
+    runtime_state = "src.ui.runtime.state",
+    landing_visual_hold = "src.ui.runtime.landing_visual_hold",
+    host_runtime = "src.ui.runtime.host_bridge",
   },
   legacy_alias_modules = {
     runtime_state = "src.ui.ctl.ports.runtime_state_seam",
