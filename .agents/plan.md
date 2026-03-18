@@ -108,9 +108,9 @@ T1 ── T2 ── T3 ──┬── T4 ──┐
 - **location**: [runtime_editor_exports.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/state/state_access/runtime_editor_exports.lua), `src/ui/ctl/**`, `src/ui/input/**`, `src/turn/timing/**`, `src/app/bootstrap/**` 中仍有剩余告警的文件
 - **description**: 处理 `return-type-mismatch`、`undefined-doc-name`、`need-check-nil`、`cast-local-type` 和少量剩余的配置外 `undefined-global`。关键动作是让 Lua 注解真实反映运行时：实际可返回 `nil` 的导出函数改为可空返回；`Fixed` 等别名要与实际返回数值兼容；确实可能为空的对象访问补 guard。此任务不得接触 `src/ui/render/**` 或 `src/host/eggy/**`。
 - **validation**: 该写集内类型与 nilability 告警清零，并人工复核 editor/export helper 的注解没有比运行时更严格。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 已完成 T6 写集修复：`startup_policy.resolve` 用显式字符串赋值消除 `cast-local-type`；`demolish.lua` 移除 Lua 5.4 弃用的全局 `unpack` 回退；`runtime_editor_exports.lua` 将 `get_vehicle_player` / `get_camera_target` / `get_change_skin_role` 注解改为可空返回并补本地返回注解；`session_script.lua` 补可调用处理的显式类型收窄；`target_choice_effects.lua` 与 `dispatch_pre_confirm.lua` 补 `table` guard 和安全字段读取，消除 `need-check-nil` 与 `undefined-field`。验证：`luac -p` 通过（6 个目标文件）；`lua-language-server --check=src --configpath=../.luarc.json --check_format=json --logpath=/tmp/luals-t6 --checklevel=Warning` 下 T6 目标文件告警为 0。
+- **files edited/created**: `src/app/bootstrap/startup_policy.lua`, `src/rules/items/demolish.lua`, `src/state/state_access/runtime_editor_exports.lua`, `src/turn/timing/session_script.lua`, `src/ui/ctl/target_choice_effects.lua`, `src/ui/input/dispatch_pre_confirm.lua`, `.agents/plan.md`
 
 ### T7: 最终重扫与回归验证
 - **depends_on**: [T4, T5, T6]

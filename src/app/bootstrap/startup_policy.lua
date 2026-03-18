@@ -8,7 +8,7 @@ function startup_policy.resolve(globals)
   local startup_profile = globals and globals.STARTUP_TEST_PROFILE or nil
   local resolved_profile = "default"
   if _is_non_empty_string(startup_profile) then
-    resolved_profile = startup_profile
+    resolved_profile = tostring(startup_profile)
   end
 
   return {

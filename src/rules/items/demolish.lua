@@ -11,7 +11,7 @@ local target_query = require("src.rules.items.target_query")
 local demolish = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
-local list_unpack = table.unpack or unpack
+local list_unpack = table.unpack
 
 local function _clear_overlays(game, idx)
   assert(game ~= nil, "missing game")

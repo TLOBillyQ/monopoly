@@ -23,6 +23,7 @@ local function _resolve_synthetic_camera_target(ctx, role_id)
   return actor.unit
 end
 
+---@return Creature?
 local function _resolve_role_camera_target(ctx, role_id)
   local game_api = _resolve_game_api(ctx)
   if not (game_api and game_api.get_role) then
@@ -42,7 +43,7 @@ end
 local function _install_vehicle_exports(vehicle_helper)
   ---@export
   ---@desc 获取执行载具命令的玩家
-  ---@return Role
+  ---@return Role?
   function get_vehicle_player()
     local role_id = vehicle_helper.player_id
     local role = vehicle_helper.resolve_role and vehicle_helper.resolve_role(role_id) or nil
@@ -103,7 +104,7 @@ end
 local function _install_camera_exports(ctx, camera_helper)
   ---@export
   ---@desc 获取相机跟随目标单位
-  ---@return Creature
+  ---@return Creature?
   function get_camera_target()
     local role_id = number_utils.to_integer(camera_helper.target_role_id)
     if role_id == nil then
@@ -127,7 +128,7 @@ local function _install_change_skin_exports(ctx, change_skin_helper)
 
   ---@export
   ---@desc 获取换肤目标玩家
-  ---@return Role
+  ---@return Role?
   function get_change_skin_role()
     local role_id = number_utils.to_integer(change_skin_helper.target_role_id)
     if role_id == nil then

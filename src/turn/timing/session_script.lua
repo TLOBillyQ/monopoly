@@ -42,6 +42,7 @@ local function _run_phase(session, state_name, args)
   end
   session:mark_phase(state_name)
   local turn_mgr = session.turn_mgr or session
+  ---@cast handler function
   return handler(turn_mgr, args)
 end
 

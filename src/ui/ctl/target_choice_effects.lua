@@ -8,7 +8,7 @@ local choice_contract = require("src.core.choice.contract")
 local target_choice_effects = {}
 local _move_arrow
 local function _is_target_choice(choice)
-  return choice ~= nil and choice.route_key == "target" and choice_contract.uses_target_picker(choice)
+  return type(choice) == "table" and choice.route_key == "target" and choice_contract.uses_target_picker(choice)
 end
 local function _resolve_option_id(option)
   local raw = option
@@ -192,7 +192,12 @@ function target_choice_effects.step(game, state, _dt)
     return false
   end
   local choice = game and game.turn and game.turn.pending_choice or nil
-  if not _is_target_choice(choice) or choice.id ~= runtime.choice_id then
+  if type(choice) ~= "table" or not _is_target_choice(choice) then
+    target_choice_effects.leave(state, "choice_changed")
+    return false
+  end
+  local choice_id = choice.id
+  if choice_id ~= runtime.choice_id then
     target_choice_effects.leave(state, "choice_changed")
     return false
   end

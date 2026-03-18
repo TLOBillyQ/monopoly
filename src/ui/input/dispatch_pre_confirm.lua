@@ -49,9 +49,10 @@ local function _resolve_market_skin_option(state, intent)
   if product_id == nil then
     return nil, nil
   end
+  local options = type(choice) == "table" and choice.options or nil
   local matched_option = nil
-  for _, option in ipairs(choice.options or {}) do
-    local option_id = number_utils.to_integer(option and option.id)
+  for _, option in ipairs(options or {}) do
+    local option_id = number_utils.to_integer(type(option) == "table" and option.id or option)
     if option_id == product_id then
       matched_option = option
       break
