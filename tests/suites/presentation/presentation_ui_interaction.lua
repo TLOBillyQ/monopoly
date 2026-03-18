@@ -30,7 +30,7 @@ local runtime_cls = require("src.turn.loop.scheduler_runtime")
 local turn_effects = require("src.ui.wid.turn_effects")
 local popup_renderer = require("src.ui.ctl.popup_controller")
 local market_modal_renderer = require("src.ui.ctl.market_controller")
-local debug_ports_module = require("src.ui.ctl.ports.debug_ports")
+local debug_ports_module = require("src.presentation.runtime.ports.debug")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -870,7 +870,7 @@ local function _test_ui_event_state_base_screen_active_requires_modal_free_ui()
 end
 
 local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
-  local ui_sync_ports = require("src.ui.ctl.ports.ui_sync_ports")
+  local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync")
   local runtime_state_local = require("src.state.state_access.runtime_state")
   local rebuilt = {
     choice = { id = 42, kind = "remote", route_key = "remote", options = { { id = 1, label = "A" } } },
@@ -1134,7 +1134,7 @@ local function _test_raycast_pick_with_resolves_hit_unit_from_various_formats()
 end
 
 local function _test_view_command_ports_toggle_action_log_aborts_when_ui_missing()
-  local view_command_ports = require("src.ui.ctl.ports.view_command_ports")
+  local view_command_ports = require("src.presentation.runtime.ports.view_command")
   local ports = view_command_ports.build()
   local state = {}
 
@@ -1143,7 +1143,7 @@ local function _test_view_command_ports_toggle_action_log_aborts_when_ui_missing
 end
 
 local function _test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing()
-  local view_command_ports = require("src.ui.ctl.ports.view_command_ports")
+  local view_command_ports = require("src.presentation.runtime.ports.view_command")
   local logger = require("src.core.utils.logger")
   local ports = view_command_ports.build()
   local warn_calls = {}

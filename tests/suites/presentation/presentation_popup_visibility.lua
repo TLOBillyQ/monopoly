@@ -87,7 +87,7 @@ local function _test_push_popup_sets_card_image_by_image_ref()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.ui.ctl.ports").build(state)
+    state.gameplay_loop_ports = require("src.presentation.runtime.ports").build(state)
     modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
@@ -115,7 +115,7 @@ local function _test_push_popup_hides_card_and_clears_image_when_missing()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.ui.ctl.ports").build(state)
+    state.gameplay_loop_ports = require("src.presentation.runtime.ports").build(state)
     modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",

@@ -10,8 +10,17 @@ local board_feedback = require("src.ui.render.board_feedback_service")
 local choice_support = require("src.ui.pres.choice_support")
 
 -- Helper to reload fresh modules for isolated testing
+local _reload_aliases = {
+  ["src.ui.ctl.ports.state_ports"] = "src.presentation.runtime.ports.state",
+  ["src.presentation.runtime.ports.state"] = "src.ui.ctl.ports.state_ports",
+}
+
 local function _load_fresh(module_path)
   package.loaded[module_path] = nil
+  local alias = _reload_aliases[module_path]
+  if alias ~= nil then
+    package.loaded[alias] = nil
+  end
   return require(module_path)
 end
 
@@ -77,7 +86,7 @@ end
 -- ============================================
 
 local function _test_on_bankruptcy_tiles_cleared_returns_true_when_sync_succeeds()
-  local state_ports = _load_fresh("src.ui.ctl.ports.state_ports")
+  local state_ports = _load_fresh("src.presentation.runtime.ports.state")
   local ports = state_ports.build()
 
   local game = {
@@ -94,7 +103,7 @@ local function _test_on_bankruptcy_tiles_cleared_returns_true_when_sync_succeeds
 end
 
 local function _test_on_bankruptcy_tiles_cleared_returns_false_when_no_state()
-  local state_ports = _load_fresh("src.ui.ctl.ports.state_ports")
+  local state_ports = _load_fresh("src.presentation.runtime.ports.state")
   local ports = state_ports.build()
 
   local game = {}
@@ -103,7 +112,7 @@ local function _test_on_bankruptcy_tiles_cleared_returns_false_when_no_state()
 end
 
 local function _test_on_bankruptcy_tiles_cleared_returns_false_when_sync_returns_false()
-  local state_ports = _load_fresh("src.ui.ctl.ports.state_ports")
+  local state_ports = _load_fresh("src.presentation.runtime.ports.state")
   local ports = state_ports.build()
 
   local game = {

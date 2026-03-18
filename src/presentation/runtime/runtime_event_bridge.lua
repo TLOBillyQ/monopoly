@@ -1,7 +1,7 @@
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_context = require("src.host.eggy.context")
 local landing_visual_hold = require("src.ui.runtime.landing_visual_hold")
-local runtime_event_ports = require("src.ui.ctl.ports.runtime_event_ports")
+local runtime_event_ports = require("src.presentation.runtime.ports.events")
 
 local M = {}
 

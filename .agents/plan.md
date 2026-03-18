@@ -30,7 +30,9 @@
 - [x] (2026-03-18 10:57 CST) 已完成 T2：为未来 `src.ui.runtime.state` / `landing_visual_hold` / `host_bridge` 路径补齐 whitelist，并把 contract 测试改成接受过渡态 canonical path
 - [x] (2026-03-18 11:05 CST) 已完成 T3：`src.presentation.runtime.ports` 成为新的 package entry 真源，`describe_boundary_contract()` 与 `common.lua` 已迁过去，旧 `src.ui.ctl.ports` / `common.lua` 已降为纯 alias
 - [x] (2026-03-18 11:11 CST) 已完成 T4：`src.ui.runtime.state`、`landing_visual_hold`、`host_bridge` 已建成真源，旧 seam/host 文件与旧 ctl seam shim 已降为 alias
-- [ ] 正在执行 T5 / T6：迁移 leaf adapter 与剩余消费者
+- [x] (2026-03-18 11:24 CST) 已完成 T5：`anim`、`state`、`ui_sync`、`events`、`callbacks` 真源已归位到 `src.presentation.runtime.ports.*`，旧叶子文件仅保留 alias
+- [x] (2026-03-18 11:24 CST) 已完成 T6：剩余 adapter 与根入口消费者已切到新 package entry，presentation 高风险 suite 与 runtime bootstrap 回归通过
+- [ ] 正在执行 T7：同步文档、viewer 快照与命名规则
 
 ## 意外与发现
 
@@ -177,9 +179,9 @@
 - **location**: `src/presentation/runtime/ports/`, `src/ui/ctl/ports/`, `src/presentation/runtime/state_factory.lua`, `src/presentation/runtime/runtime_event_bridge.lua`
 - **description**: 先迁最容易受 seam 重命名影响的 adapter：`anim`、`state`、`ui_sync`、`events`、`callbacks`。迁移顺序固定为“创建新 canonical 文件 -> 更新新消费者 -> 旧路径降为纯 alias”。`state_factory.lua` 与 `runtime_event_bridge.lua` 这两个直接依赖旧 leaf module 的文件必须在这一波一起切走；`boundary_contract` 里仍指向 `src.ui.ctl.ports.anim_ports`、`src.ui.ctl.ports.state_ports` 等旧叶子路径的 allowlist 也必须在同一波同步切到新 canonical path。
 - **validation**: 旧 `anim_ports.lua`、`state_ports.lua`、`ui_sync_ports.lua`、`runtime_event_ports.lua`、`state_callback_ports.lua` 只剩 `return require("new.path")`；相关 suite 通过。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 11:24 CST 已确认 `src/presentation/runtime/ports/anim.lua`、`state.lua`、`ui_sync.lua`、`events.lua`、`callbacks.lua` 为真源，并将旧 `src/ui/ctl/ports/anim_ports.lua`、`state_ports.lua`、`ui_sync_ports.lua`、`runtime_event_ports.lua`、`state_callback_ports.lua` 收敛为纯 alias。`src/presentation/runtime/state_factory.lua` 与 `runtime_event_bridge.lua` 已切到新叶子路径。验证：`lua tests/guard.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `.agents/plan.md`, `src/presentation/runtime/ports/anim.lua`, `src/presentation/runtime/ports/state.lua`, `src/presentation/runtime/ports/ui_sync.lua`, `src/presentation/runtime/ports/events.lua`, `src/presentation/runtime/ports/callbacks.lua`, `src/presentation/runtime/state_factory.lua`, `src/presentation/runtime/runtime_event_bridge.lua`, `src/ui/ctl/ports/anim_ports.lua`, `src/ui/ctl/ports/state_ports.lua`, `src/ui/ctl/ports/ui_sync_ports.lua`, `src/ui/ctl/ports/runtime_event_ports.lua`, `src/ui/ctl/ports/state_callback_ports.lua`, `tests/suites/presentation/gameplay_t5_characterization.lua`, `tests/suites/presentation/_presentation_action_status_market_and_anim_cases.lua`
 
 ### T6: 迁移其余 adapter 与根入口消费者，并修 reload helper
 - **id**: T6
@@ -187,9 +189,9 @@
 - **location**: `src/presentation/runtime/ports/`, `src/presentation/runtime/gameplay_runtime_bootstrap.lua`, `src/app/bootstrap/init.lua`, `tests/support/shared_support.lua`, `tests/suites/presentation/`, `tests/suites/runtime/`, `tests/suites/gameplay/`
 - **description**: 迁移 `actor_context`、`clock`、`debug`、`modal`、`view_command` 等剩余 adapter，并把所有根入口消费者统一切到 `src.presentation.runtime.ports`。同时修补 patch/reload 辅助逻辑：凡是依赖 `_load_fresh()` 或直接清 `package.loaded` 的测试，都要在 alias 阶段同时清旧 key 和新 key，避免读取陈旧缓存。
 - **validation**: 直接 `require("src.ui.ctl.ports")` 与直接 `require("src.ui.ctl.ports.*")` 的消费者已切到新路径；`runtime_bootstrap` 一类 patch `presentation_ports.build` 的测试继续命中同一个 table 对象。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 11:24 CST 已确认 `actor_context.lua`、`clock.lua`、`debug.lua`、`modal.lua`、`view_command.lua` 为真源，并把旧 `src/ui/ctl/ports/*` 叶子文件降为 alias。剩余直接 `require(\"src.ui.ctl.ports\")` 与 `require(\"src.ui.ctl.ports.common\")` 的 presentation suite 已切到 `src.presentation.runtime.ports`。`gameplay_t5_characterization.lua` 继续通过 `_reload_aliases` 双清新旧 key，保证 alias 阶段 fresh-load 测试命中同一 table。验证：`lua -e 'package.path = package.path .. \";./tests/?.lua\"; require(\"TestHarness\").run_all({ require(\"tests.suites.runtime.runtime_bootstrap\"), require(\"tests.suites.presentation.gameplay_t5_characterization\"), require(\"tests.suites.presentation.presentation_move_anim\"), require(\"tests.suites.presentation.presentation_popup_visibility\"), require(\"tests.suites.presentation.presentation_ui_interaction\"), require(\"tests.suites.presentation.presentation_ui_model_dispatch\"), require(\"tests.suites.presentation.presentation_ui_timing_anim\"), require(\"tests.suites.presentation._presentation_action_status_choice_and_target_cases\"), require(\"tests.suites.presentation._presentation_action_status_market_and_anim_cases\"), require(\"tests.suites.presentation._presentation_action_status_status3d_and_panel_cases\") })'` 通过。
+- **files edited/created**: `.agents/plan.md`, `src/presentation/runtime/ports/actor_context.lua`, `src/presentation/runtime/ports/clock.lua`, `src/presentation/runtime/ports/debug.lua`, `src/presentation/runtime/ports/modal.lua`, `src/presentation/runtime/ports/view_command.lua`, `src/ui/ctl/ports/actor_context_ports.lua`, `src/ui/ctl/ports/clock_ports.lua`, `src/ui/ctl/ports/debug_ports.lua`, `src/ui/ctl/ports/modal_ports.lua`, `src/ui/ctl/ports/view_command_ports.lua`, `tests/suites/presentation/_presentation_action_status_choice_and_target_cases.lua`, `tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua`, `tests/suites/presentation/presentation_popup_visibility.lua`, `tests/suites/presentation/presentation_move_anim.lua`, `tests/suites/presentation/presentation_ui_interaction.lua`, `tests/suites/presentation/presentation_ui_model_dispatch.lua`, `tests/suites/presentation/presentation_ui_timing_anim.lua`
 
 ### T7: 同步文档、viewer 快照与命名规则
 - **id**: T7

@@ -1,12 +1,12 @@
 local common = require("src.presentation.runtime.ports.common")
-local modal_ports = require("src.ui.ctl.ports.modal_ports")
-local anim_ports = require("src.ui.ctl.ports.anim_ports")
-local ui_sync_ports = require("src.ui.ctl.ports.ui_sync_ports")
-local debug_ports = require("src.ui.ctl.ports.debug_ports")
-local state_ports = require("src.ui.ctl.ports.state_ports")
-local clock_ports = require("src.ui.ctl.ports.clock_ports")
-local view_command_ports = require("src.ui.ctl.ports.view_command_ports")
-local actor_context_ports = require("src.ui.ctl.ports.actor_context_ports")
+local modal_ports = require("src.presentation.runtime.ports.modal")
+local anim_ports = require("src.presentation.runtime.ports.anim")
+local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync")
+local debug_ports = require("src.presentation.runtime.ports.debug")
+local state_ports = require("src.presentation.runtime.ports.state")
+local clock_ports = require("src.presentation.runtime.ports.clock")
+local view_command_ports = require("src.presentation.runtime.ports.view_command")
+local actor_context_ports = require("src.presentation.runtime.ports.actor_context")
 
 local presentation_ports = {}
 local boundary_contract = {
@@ -35,7 +35,7 @@ local boundary_contract = {
       "src.ui.runtime.host_bridge",
       "src.ui.runtime.host_runtime_ports",
       "src.ui.ctl.ports.host_runtime_ports",
-      "src.ui.ctl.ports.state_ports",
+      "src.presentation.runtime.ports.state",
       "src.presentation.runtime.ui_bootstrap",
       "src.presentation.runtime.runtime_event_bridge",
     },
