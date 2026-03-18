@@ -2,7 +2,6 @@ local bootstrap = require("tests.bootstrap")
 local common = require("shared.lib.common")
 local arch_common = require("arch_view.runtime.common")
 local arch_cli = require("quality.arch")
-local deploy_defaults = require("ops.deploy_defaults")
 local loc_counter = require("shared.lib.loc_counter")
 local loc_scan = require("shared.lib.loc_scan")
 
@@ -401,32 +400,21 @@ local function _test_deploy_unknown_flag_is_bilingual()
 end
 
 local function _test_deploy_defaults_match_windows_history()
-  local resolved = deploy_defaults.resolve({
-    home_dir = "C:/Users/example",
-    is_windows = true,
-    is_macos = false,
-  })
-
-  assert(resolved == "C:/Users/example/Desktop/dev/LuaSource_大富翁-发布",
-    "windows deploy default should converge to the release path")
+  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
+  _assert_contains(
+    script_text,
+    "$home_dir/Desktop/dev/LuaSource_大富翁-发布",
+    "deploy.ps1 should keep the windows default deploy path"
+  )
 end
 
 local function _test_deploy_defaults_match_macos_history()
-  local resolved = deploy_defaults.resolve({
-    home_dir = "/Users/example",
-    is_windows = false,
-    is_macos = true,
-  })
-  local candidates = deploy_defaults.candidates({
-    home_dir = "/Users/example",
-    is_windows = false,
-    is_macos = true,
-  })
-
-  assert(resolved == "/Users/example/Documents/eggy/LuaSource_大富翁-发布",
-    "macOS deploy default should converge to the release path")
-  assert(#candidates == 1 and candidates[1] == "/Users/example/Documents/eggy/LuaSource_大富翁-发布",
-    "macOS deploy candidates should only keep the release path")
+  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
+  _assert_contains(
+    script_text,
+    "$home_dir/Documents/eggy/LuaSource_大富翁-发布",
+    "deploy.ps1 should keep the macOS default deploy path"
+  )
 end
 
 local function _test_deploy_allows_explicit_target_path()

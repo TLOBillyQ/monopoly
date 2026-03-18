@@ -132,6 +132,9 @@ function Copy-DirectoryTree {
         [string]$TargetDir
     )
 
+    if (Test-Path -LiteralPath $TargetDir -PathType Container) {
+        Remove-Item -LiteralPath $TargetDir -Recurse -Force
+    }
     [System.IO.Directory]::CreateDirectory($TargetDir) | Out-Null
     $entries = Get-ChildItem -LiteralPath $SourceDir -Force
     foreach ($entry in $entries) {
