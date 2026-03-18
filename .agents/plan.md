@@ -99,9 +99,9 @@ T1 ── T2 ── T3 ──┬── T4 ──┐
 - **location**: `src/ui/render/**`（排除 `market.lua`）、`src/host/eggy/**`、[runtime_constants.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/config/gameplay/runtime_constants.lua)、[tick_clock.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/turn/loop/tick_clock.lua)
 - **description**: 清理 `undefined-field`、剩余 `undefined-global`、与宿主数学/运行时扩展有关的告警。优先通过更准确的局部注解、nil-guard、适配器返回类型和最小 shape 声明解决；不要把真实缺字段情况简单压成 `any`。本任务不得修改 T4/T6 负责的文件。
 - **validation**: 该写集内 `undefined-field` / 宿主桥接类 `undefined-global` 清零，且不引入新的 `need-check-nil` 或行为回归。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 已在 `synthetic_actor_registry.lua` 增加 `GameAPI.create_creature_fixed_scale` 调用前置断言，消除潜在 nil 调用；在 `player_units.lua` 对 `_resolve_role_id` 结果做显式断言后再索引；在 `board_feedback_service.lua` 对 `active_host_runtime` 的 `play_3d_sound`、`play_sfx_by_key`、`bind_sfx_to_unit`、`schedule` 增加函数级 guard，并在无运行时能力时安全短路。验证：三文件 `luac -p` 通过，`lua-language-server --check=src --configpath=../.luarc.json --check_format=json --logpath=/tmp/luals-t5 --checklevel=Warning` 下这三文件告警为 0。
+- **files edited/created**: `src/host/eggy/synthetic_actor_registry.lua`, `src/ui/render/board/player_units.lua`, `src/ui/render/board_feedback_service.lua`, `.agents/plan.md`
 
 ### T6: 修复状态导出、nilability 与文档注解契约
 - **depends_on**: [T3]

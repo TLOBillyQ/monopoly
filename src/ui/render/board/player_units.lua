@@ -36,7 +36,7 @@ local function _build_role_units(roles)
     assert(role ~= nil, "missing role: " .. tostring(i))
     assert(role.get_ctrl_unit ~= nil, "missing role.get_ctrl_unit: " .. tostring(i))
     local unit = role.get_ctrl_unit()
-    local role_id = _resolve_role_id(role, i)
+    local role_id = assert(_resolve_role_id(role, i), "missing role_id: " .. tostring(i))
     role_units[role_id] = unit
     if role.get_name ~= nil then
       local name = role.get_name()

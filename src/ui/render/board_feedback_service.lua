@@ -130,6 +130,10 @@ local function _schedule_followup_sound(cue_name, pos, entry)
   if type(entry) ~= "table" then
     return false
   end
+  local host_runtime = active_host_runtime
+  if not (host_runtime and type(host_runtime.play_3d_sound) == "function" and type(host_runtime.schedule) == "function") then
+    return false
+  end
   local delay = _resolve_numeric(entry.delay, 0) or 0
   effect_timeline.run_step(delay, function()
     local sound_id_ref = entry.sound_id_ref
@@ -139,9 +143,9 @@ local function _schedule_followup_sound(cue_name, pos, entry)
       _warn_missing_ref_once("sound", cue_name, sound_id_ref, "missing_or_unconfigured")
       return
     end
-    active_host_runtime.play_3d_sound(pos, sound_id, _resolve_numeric(entry.duration, default_sound_duration), _resolve_numeric(entry.volume, default_sound_volume))
+    host_runtime.play_3d_sound(pos, sound_id, _resolve_numeric(entry.duration, default_sound_duration), _resolve_numeric(entry.volume, default_sound_volume))
   end, {
-    schedule = active_host_runtime.schedule,
+    schedule = host_runtime.schedule,
   })
   return true
 end
@@ -161,14 +165,21 @@ local function _play_effect(cue_name, cue, pos, unit, payload)
   if with_sound == nil then
     with_sound = default_with_sound
   end
-  local sfx_id = active_host_runtime.play_sfx_by_key(effect_id, pos, rot, scale, duration, rate, with_sound, {
+  local host_runtime = active_host_runtime
+  if not (host_runtime and type(host_runtime.play_sfx_by_key) == "function") then
+    return false
+  end
+  local sfx_id = host_runtime.play_sfx_by_key(effect_id, pos, rot, scale, duration, rate, with_sound, {
     cue_name = cue_name,
   })
   if sfx_id == nil then
     return false
   end
   if cue.bind_to_player == true and unit ~= nil then
-    active_host_runtime.bind_sfx_to_unit(
+    if type(host_runtime.bind_sfx_to_unit) ~= "function" then
+      return true
+    end
+    host_runtime.bind_sfx_to_unit(
       sfx_id,
       unit,
       cue.socket_name,
@@ -185,7 +196,11 @@ local function _play_sound(cue_name, cue, pos, payload)
   end
   local duration = _resolve_numeric(payload and payload.sound_duration or cue.sound_duration or cue.duration, default_sound_duration)
   local volume = _resolve_numeric(payload and payload.volume or cue.volume, default_sound_volume)
-  local sound_handle = active_host_runtime.play_3d_sound(pos, sound_id, duration, volume)
+  local host_runtime = active_host_runtime
+  if not (host_runtime and type(host_runtime.play_3d_sound) == "function") then
+    return false
+  end
+  local sound_handle = host_runtime.play_3d_sound(pos, sound_id, duration, volume)
   return sound_handle ~= nil
 end
 local function _play_cue(state, cue_name, pos, unit, payload)

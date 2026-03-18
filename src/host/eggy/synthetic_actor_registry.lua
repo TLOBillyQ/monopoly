@@ -117,6 +117,8 @@ local function _spawn_actor(registry, spec, spawn_pos)
   local player_id = role_id_utils.normalize(spec.player_id)
   assert(player_id ~= nil, "missing synthetic player_id")
   assert(spec.unit_key ~= nil, "missing synthetic unit_key")
+  assert(game_api and type(game_api.create_creature_fixed_scale) == "function",
+    "missing GameAPI.create_creature_fixed_scale")
   local ok_spawn, unit = pcall(
     game_api.create_creature_fixed_scale,
     spec.unit_key,
