@@ -46,3 +46,4 @@
 - 命名一律 snake_case。
 - `src/` 目录下数值操作遵循 `lua_env.md` 约束：禁用 `tonumber` / `type == "number"`，统一用 `NumberUtils`。
 - 记忆文件参见 `lua_agent_memory.md`。
+- 保持小步提交, 如果执行目标是 `.agents/plan.md`，结束前不要停下来

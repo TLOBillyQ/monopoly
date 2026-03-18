@@ -2,7 +2,7 @@ local common = require("src.player.actions.state_ops.common")
 
 local vehicle_ops = {}
 
-function vehicle_ops.player_vehicle_cfg()
+function vehicle_ops.player_vehicle_cfg(_self, _player)
   return {
     id = 0,
     name = "",
