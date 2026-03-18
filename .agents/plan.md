@@ -129,9 +129,9 @@ T1 ── T2 ── T3 ──┬── T4 ──┐
     预期通过
   - `lua tests/behavior.lua`
     预期通过
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 已完成最终验收：`lua-language-server --check=src --configpath=../.luarc.json --check_format=pretty --logpath=/tmp/luals-final-2 --checklevel=Warning` 返回 `Diagnosis completed, no problems found`；`rg --files src -g '*.lua' | xargs -I{} luac -p "{}"` 全通过；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua`、`lua tests/behavior.lua` 全通过。当前 `src/` LuaLS Warning 为 `0`。
+- **files edited/created**: `.agents/plan.md`
 
 ## Parallel Execution Groups
 
