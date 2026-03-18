@@ -27,7 +27,8 @@
 - [x] (2026-03-18 10:23 CST) 已吸收审查意见，并确定新增约束：先切 package entry、原子迁移 `describe_boundary_contract()`、先改 guardrail 再重命名、补上 patch/reload 双 key 清理、最终移除 `legacy_alias_modules`
 - [x] (2026-03-18 10:29 CST) 已完成计划重写，准备交给后续实现者执行
 - [x] (2026-03-18 10:47 CST) 已完成 T1：冻结 canonical rename map、`host_bridge` 命名与 contract 不变量，并把 package entry cutover 设为后续所有迁移的前置条件
-- [ ] 正在执行 T2：先补齐 guardrail 与 contract 过渡态
+- [x] (2026-03-18 10:57 CST) 已完成 T2：为未来 `src.ui.runtime.state` / `landing_visual_hold` / `host_bridge` 路径补齐 whitelist，并把 contract 测试改成接受过渡态 canonical path
+- [ ] 正在执行 T3 / T4：并行切 package entry 与 `ui/runtime` 三个真源
 
 ## 意外与发现
 
@@ -144,9 +145,9 @@
 - **location**: `tests/guards/dep_rules.lua`, `tests/suites/runtime/runtime_ports_contract.lua`, `src/ui/ctl/ports/init.lua`
 - **description**: 在真正重命名前先调整护栏。为新 `src.ui.runtime.state`、`src.ui.runtime.landing_visual_hold`、`src.ui.runtime.host_bridge` 路径补 whitelist；让 contract 测试允许新 package entry 与新 seam path；把 `boundary_contract` 设计成能同时容纳 canonical path 与临时 alias 的中间态，并提前为后续 `anim` / `state` 等 leaf rename 预留 allowlist 更新入口，避免迁移第一批叶子模块时再次打红。
 - **validation**: 第一次建立新文件后，`lua tests/guard.lua` 与 `lua tests/contract.lua` 不会因为“新路径还未入白名单”而失败。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 10:57 CST 已在 `tests/guards/dep_rules.lua` 中为 `src/ui/runtime/state.lua`、`landing_visual_hold.lua`、`host_bridge.lua` 补齐未来 whitelist；`src/ui/ctl/ports/init.lua` 已预留新 canonical path 的 allowlist；`tests/suites/runtime/runtime_ports_contract.lua` 改为接受旧路径与过渡态新路径并存。验证：`lua tests/guard.lua`、`lua tests/contract.lua` 通过。
+- **files edited/created**: `.agents/plan.md`, `tests/guards/dep_rules.lua`, `src/ui/ctl/ports/init.lua`, `tests/suites/runtime/runtime_ports_contract.lua`
 
 ### T3: 迁移 package entry，并原子转移 `describe_boundary_contract()`
 - **id**: T3

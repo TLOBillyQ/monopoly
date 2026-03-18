@@ -22,14 +22,17 @@ local boundary_contract = {
   },
   import_allowlists = {
     runtime_state = {
+      "src.ui.runtime.state",
       "src.ui.runtime.runtime_state_seam",
       "src.ui.ctl.ports.runtime_state_seam",
     },
     landing_visual_hold = {
+      "src.ui.runtime.landing_visual_hold",
       "src.ui.runtime.landing_visual_hold_seam",
       "src.ui.ctl.ports.landing_visual_hold_seam",
     },
     host_runtime = {
+      "src.ui.runtime.host_bridge",
       "src.ui.runtime.host_runtime_ports",
       "src.ui.ctl.ports.host_runtime_ports",
       "src.ui.ctl.ports.state_ports",
@@ -52,6 +55,7 @@ local boundary_contract = {
       "src.ui.render.anim_unit_overlay",
       "src.ui.wid.panel_presenter",
       "src.ui.wid.turn_effects",
+      "src.presentation.runtime.ports.anim",
       "src.ui.ctl.ports.anim_ports",
     },
     gameplay_loop_ports = {

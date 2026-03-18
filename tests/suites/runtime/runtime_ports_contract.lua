@@ -9,6 +9,25 @@ local default_ports = require("src.host.eggy.default_ports")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local presentation_ports = require("src.ui.ctl.ports")
 
+local function _assert_list_contains(list, expected, msg)
+  for _, value in ipairs(list or {}) do
+    if value == expected then
+      return
+    end
+  end
+  error(msg or ("expected list to contain " .. tostring(expected)))
+end
+
+local function _assert_one_of(actual, expected_values, msg)
+  for _, expected in ipairs(expected_values or {}) do
+    if actual == expected then
+      return
+    end
+  end
+  error((msg or "unexpected value")
+    .. " expected one of {" .. table.concat(expected_values or {}, ",") .. "} actual=" .. tostring(actual))
+end
+
 local function _reset_runtime_contract_state()
   runtime_ports.reset_for_tests()
   runtime_context.set_current(nil)
@@ -311,14 +330,26 @@ end
 
 local function _test_presentation_boundary_contract_describes_seams_and_state_allowlists()
   local contract = presentation_ports.describe_boundary_contract()
-  _assert_eq(contract.state_seam_modules.runtime_state, "src.ui.runtime.runtime_state_seam",
-    "presentation contract should publish runtime state canonical seam")
-  _assert_eq(contract.state_seam_modules.landing_visual_hold, "src.ui.runtime.landing_visual_hold_seam",
-    "presentation contract should publish landing hold canonical seam")
-  _assert_eq(contract.import_allowlists.host_runtime[1], "src.ui.runtime.host_runtime_ports",
-    "presentation contract should publish host runtime canonical allowlist")
+  _assert_one_of(contract.state_seam_modules.runtime_state, {
+      "src.ui.runtime.runtime_state_seam",
+      "src.ui.runtime.state",
+    },
+    "presentation contract should publish runtime state canonical seam or transition target")
+  _assert_one_of(contract.state_seam_modules.landing_visual_hold, {
+      "src.ui.runtime.landing_visual_hold_seam",
+      "src.ui.runtime.landing_visual_hold",
+    },
+    "presentation contract should publish landing hold canonical seam or transition target")
+  _assert_list_contains(contract.import_allowlists.host_runtime, "src.ui.runtime.host_runtime_ports",
+    "presentation contract should keep legacy host runtime seam during transition")
+  _assert_list_contains(contract.import_allowlists.host_runtime, "src.ui.runtime.host_bridge",
+    "presentation contract should pre-allow future host bridge canonical path")
   _assert_eq(contract.state_field_allowlists.presentation_runtime[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
     "presentation contract should pin presentation_runtime ownership")
+  _assert_list_contains(contract.state_field_allowlists.presentation_runtime, "src.ui.ctl.ports.anim_ports",
+    "presentation contract should keep legacy anim port allowlist during transition")
+  _assert_list_contains(contract.state_field_allowlists.presentation_runtime, "src.presentation.runtime.ports.anim",
+    "presentation contract should pre-allow future anim port canonical path")
   _assert_eq(contract.state_field_allowlists.gameplay_loop_ports[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
     "presentation contract should pin gameplay_loop_ports ownership")
 end
