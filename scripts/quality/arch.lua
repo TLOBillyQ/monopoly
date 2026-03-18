@@ -2,25 +2,24 @@ local function _normalize_path(path)
   return tostring(path or ""):gsub("\\", "/")
 end
 
-local function _script_dir()
-  local raw_path = arg and arg[0] or "scripts/quality/arch.lua"
-  local normalized = _normalize_path(raw_path)
-  return normalized:match("^(.*)/[^/]+$") or "scripts"
+local function _module_dir()
+  local source = debug.getinfo(1, "S").source or "@scripts/quality/arch.lua"
+  local normalized = _normalize_path(source):gsub("^@", "")
+  return normalized:match("^(.*)/[^/]+$") or "scripts/quality"
 end
 
-local SCRIPT_DIR = _script_dir()
-local REPO_ROOT = _normalize_path(SCRIPT_DIR .. "/../..")
-local ARCH_VIEW_DIR = _normalize_path(SCRIPT_DIR .. "/../../vendor/arch_view")
-local ARCH_CONFIG_PATH = _normalize_path(SCRIPT_DIR .. "/arch/config.json")
-local package_path_helper = require("scripts.shared.package_path_helper")
-
-package_path_helper.install_monopoly_package_paths({ repo_root = REPO_ROOT, arch_view_root = ARCH_VIEW_DIR })
+local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
+local env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local common = require("shared.lib.common")
 local arch_view = require("arch_view")
 local arch_filter = require("scripts.quality.arch.filter")
 
 common.ensure_windows_utf8_console()
+
+local REPO_ROOT = env.repo_root
+local ARCH_VIEW_DIR = common.join_path(REPO_ROOT, "vendor/arch_view")
+local ARCH_CONFIG_PATH = common.join_path(REPO_ROOT, "scripts/quality/arch/config.json")
 
 local M = {}
 

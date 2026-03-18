@@ -1,6 +1,16 @@
 local _raw_script_path = arg and arg[0] or "scripts/ops/update_api.lua"
 
-local bootstrap = require("scripts.shared.bootstrap")
+local function _normalize_path(path)
+  return tostring(path or ""):gsub("\\", "/")
+end
+
+local function _module_dir()
+  local source = debug.getinfo(1, "S").source or "@scripts/ops/update_api.lua"
+  local normalized = _normalize_path(source):gsub("^@", "")
+  return normalized:match("^(.*)/[^/]+$") or "scripts/ops"
+end
+
+local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local env = bootstrap.install(_raw_script_path)
 local common = require("shared.lib.common")
 

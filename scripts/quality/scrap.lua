@@ -1,18 +1,20 @@
-local package_path_helper = dofile("scripts/shared/package_path_helper.lua")
-package_path_helper.install_monopoly_package_paths({ repo_root = "." })
+local function _normalize_path(path)
+  return tostring(path or ""):gsub("\\", "/")
+end
+
+local function _module_dir()
+  local source = debug.getinfo(1, "S").source or "@scripts/quality/scrap.lua"
+  local normalized = _normalize_path(source):gsub("^@", "")
+  return normalized:match("^(.*)/[^/]+$") or "scripts/quality"
+end
+
+local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
+local env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local common = require("shared.lib.common")
 
 common.ensure_windows_utf8_console()
-
-local function _module_dir()
-  local source = debug.getinfo(1, "S").source or "@scripts/quality/scrap.lua"
-  local normalized = common.normalize_path(source):gsub("^@", "")
-  return normalized:match("^(.*)/[^/]+$") or "scripts"
-end
-
-local SCRIPT_DIR = common.resolve_path(common.current_dir(), _module_dir())
-local REPO_ROOT = common.resolve_path(SCRIPT_DIR, "../..")
+local REPO_ROOT = env.repo_root
 local DEFAULT_CONFIG_PATH = common.join_path(REPO_ROOT, "scripts/quality/scrap/config.lua")
 local DEFAULT_INDEX_JSON = "tmp/scrap_index.json"
 local DEFAULT_CLUSTER_JSON = "tmp/scrap_clusters.json"

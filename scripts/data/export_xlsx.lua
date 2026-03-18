@@ -1,6 +1,16 @@
 local _raw_script_path = arg and arg[0] or "scripts/data/export_xlsx.lua"
 
-local bootstrap = require("scripts.shared.bootstrap")
+local function _normalize_path(path)
+  return tostring(path or ""):gsub("\\", "/")
+end
+
+local function _module_dir()
+  local source = debug.getinfo(1, "S").source or "@scripts/data/export_xlsx.lua"
+  local normalized = _normalize_path(source):gsub("^@", "")
+  return normalized:match("^(.*)/[^/]+$") or "scripts/data"
+end
+
+local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local env = bootstrap.install(_raw_script_path)
 local common = require("shared.lib.common")
 local xlsx_reader = require("shared.lib.xlsx_reader")

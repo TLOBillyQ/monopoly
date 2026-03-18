@@ -635,6 +635,40 @@ local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
     "suite indexing should report indexed suite count")
 end
 
+local function _test_bootstrap_resolves_repo_root_from_non_repo_cwd()
+  _with_ascii_tmp("bootstrap_non_repo_cwd", function(tmp_root)
+    local outside_dir = common.join_path(tmp_root, "outside")
+    local ok, err = common.ensure_dir(outside_dir)
+    if not ok then
+      error(err)
+    end
+
+    local bootstrap_path = common.join_path(project_root, "tools/shared/bootstrap.lua")
+    local script_path = common.join_path(project_root, "scripts/quality/crap.lua")
+    local expected_root = common.normalize_path(project_root)
+    local lua_snippet = table.concat({
+      "local bootstrap = dofile(" .. string.format("%q", bootstrap_path) .. ")",
+      "local env = bootstrap.install(" .. string.format("%q", script_path) .. ")",
+      "assert(env.repo_root == " .. string.format("%q", expected_root) .. ", 'repo root mismatch')",
+      "io.write(env.repo_root)",
+    }, "\n")
+
+    local bootstrap_result = common.run_command({ "lua", "-e", lua_snippet }, {
+      cwd = outside_dir,
+    })
+    assert(bootstrap_result.ok == true, "bootstrap helper should resolve repo_root outside the repo cwd")
+    _assert_contains(bootstrap_result.output, expected_root,
+      "bootstrap helper should report the normalized repo root")
+
+    local help_result = common.run_command({ "lua", script_path, "--help" }, {
+      cwd = outside_dir,
+    })
+    assert(help_result.ok == true, "tool entrypoint should resolve bootstrap dependencies outside the repo cwd")
+    _assert_contains(help_result.output, "Usage",
+      "tool help should still render when launched outside the repo cwd")
+  end)
+end
+
 local function _test_loc_scan_counts_worktree_with_go_engine()
   _with_ascii_tmp("loc_scan_worktree", function(tmp_root)
     local repo_root = common.join_path(tmp_root, "loc_repo")
@@ -824,6 +858,7 @@ local tooling_tests = {
   { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
   { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
   { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
+  { name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
   { name = "loc_scan_counts_worktree_with_go_engine", run = _test_loc_scan_counts_worktree_with_go_engine },
   { name = "loc_scan_counts_history_across_git_diff_shapes", run = _test_loc_scan_counts_history_across_git_diff_shapes },
 }

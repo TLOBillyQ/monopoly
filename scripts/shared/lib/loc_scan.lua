@@ -18,8 +18,9 @@ local function _module_dir()
   return normalized:match("^(.*)/[^/]+$") or "scripts/shared/lib"
 end
 
-local MODULE_DIR = common.resolve_path(common.current_dir(), _module_dir())
-local REPO_ROOT = common.resolve_path(MODULE_DIR, "../../..")
+local bootstrap = dofile(_module_dir() .. "/../bootstrap.lua")
+local env = bootstrap.install(debug.getinfo(1, "S").source)
+local REPO_ROOT = env.repo_root
 local LOC_ENGINE_ROOT = common.join_path(REPO_ROOT, "tools/loc_engine")
 local LOC_TOOLCHAIN_ROOT = common.join_path(REPO_ROOT, ".loc/toolchain/current")
 

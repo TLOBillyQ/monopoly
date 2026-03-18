@@ -97,6 +97,9 @@
 - **description**: 先抽出统一的“自定位 + repo_root 解析 + bootstrap 入口”，禁止继续依赖写死的 `/scripts/` 正则和 cwd 假设
 - **location**: `tools/shared/*`（新 canonical loader/helper）
 - **validation**: 所有工具入口都可通过同一 helper 解析 repo_root，且从非仓库根目录启动时也能找到依赖
+- **status**: 已完成
+- **log**: 补齐了 `tools/shared/runtime_paths.lua` + `tools/shared/bootstrap.lua` 的 cwd/repo_root 解析；把 `arch.lua`、`loc.lua`、`deploy.lua`、`update_api.lua`、`export_xlsx.lua` 改成按自身文件定位 bootstrap，不再依赖 `require("scripts.shared.bootstrap")` 的 cwd 命中；同时修复了 `mutate.lua` 使用未定义 `REPO_ROOT` 的接线错误。
+- **files edited/created**: `tools/shared/runtime_paths.lua`, `tools/shared/bootstrap.lua`, `scripts/quality/arch.lua`, `scripts/quality/loc.lua`, `scripts/quality/mutate.lua`, `scripts/ops/deploy.lua`, `scripts/ops/update_api.lua`, `scripts/data/export_xlsx.lua`, `.agents/plan.md`
 
 ### T3
 - **depends_on**: `[T2]`

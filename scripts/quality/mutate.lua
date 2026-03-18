@@ -1,22 +1,21 @@
-local package_path_helper = dofile("scripts/shared/package_path_helper.lua")
-package_path_helper.install_monopoly_package_paths({ repo_root = "." })
-
-local common = require("shared.lib.common")
-
-common.ensure_windows_utf8_console()
-
 local function _normalize_path(path)
-  return common.normalize_path(path)
+  return tostring(path or ""):gsub("\\", "/")
 end
 
 local function _module_dir()
   local source = debug.getinfo(1, "S").source or "@scripts/quality/mutate.lua"
   local normalized = _normalize_path(source):gsub("^@", "")
-  return normalized:match("^(.*)/[^/]+$") or "scripts"
+  return normalized:match("^(.*)/[^/]+$") or "scripts/quality"
 end
 
-local SCRIPT_DIR = common.resolve_path(common.current_dir(), _module_dir())
-local REPO_ROOT = common.resolve_path(SCRIPT_DIR, "../..")
+local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
+local env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
+
+local common = require("shared.lib.common")
+
+common.ensure_windows_utf8_console()
+
+local REPO_ROOT = env.repo_root
 local MUTATE4LUA_ROOT = common.join_path(REPO_ROOT, "vendor/mutate4lua")
 local DEFAULT_DRIVER_PATH = "scripts/quality/mutate/driver.lua"
 
