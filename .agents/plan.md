@@ -1,169 +1,210 @@
-# Plan: LuaLS 全仓告警整理与 `src/` 优先修复计划
+# 计划：按用途将 `scripts/` 迁移到 `tools/`
 
-## Summary
+## 摘要
 
-当前基线分两层：
+本次迁移的目标是把仓库内工具脚本的**物理目录**从 `scripts/` 切到 `tools/`，同时保留一段过渡期兼容壳，避免 CI、测试、文档和外部调用一次性断掉。  
+本轮已经锁定的默认决策：
 
-- 全仓 `lua-language-server --check=. --checklevel=Warning`：`278` 个问题，`66` 个文件。
-- `src` 专用验收口径 `lua-language-server --check=src --checklevel=Warning`：`127` 个 Warning，`45` 个文件。
+- `tools/` 采用现有桶：`quality`、`ops`、`data`、`shared`
+- 额外按用途明确两类目录：`tools/bridge/crap4lua/_internal`、`tools/web/ui_manager_web`
+- 旧 `scripts/*` 只保留**可执行入口/兼容 bootstrap**，原始配置与静态资源改为 `tools/*` canonical
+- Lua 模块名先不改：继续保留 `quality.*`、`ops.*`、`data.*`、`shared.*`、`crap4lua._internal.*`
 
-按你的选择，本轮实施目标只清理 `src/`，并采用“先建基线再修代码”的方式。计划不会靠全局关闭诊断码来“消音” `src`；`vendor/tests/scripts` 只做现状整理，不纳入这一轮修复目标。第一波必须先补 LuaLS 基线配置和宿主类型面，否则 `undefined-global` / `undefined-field` 会持续污染 `src` 诊断面，后续文件修复无法稳定并行。
+## 接口与兼容变更
 
-官方参考将以 LuaLS 的 [Diagnosis report](https://luals.github.io/wiki/diagnosis-report/)、[Settings](https://luals.github.io/wiki/settings/)、[Annotations](https://luals.github.io/wiki/annotations/) 为准。由于 LuaLS 官方设置文档的 `runtime.version` 支持集不含 `Lua 5.5`，本计划默认在 `.luarc.json` 里使用最接近且受支持的 `Lua 5.4` 作为静态分析 runtime。
+- Canonical CLI 路径改为 `lua tools/...`
+- 旧 CLI 路径 `lua scripts/...` 继续可用，但只作为转发壳
+- `package.path` 改为优先解析 `tools/*`，`scripts/*` 只保留兼容命中
+- `require("scripts.shared.*")`、`require("scripts.quality.arch.filter")` 这类旧前缀在仓库内逐步清掉；兼容层仅兜底
+- 原始文件路径如 `arch config`、`viewer snapshot`、`scrap config`、`mutate driver path`、`help text/example path` 全部切到 `tools/*`
 
-## Important Changes
+## T1 产出：目录映射与兼容矩阵
 
-- 新增仓库根配置 `.luarc.json`，仅用于稳定 LuaLS 对 `src/` 的诊断基线。
-- 新增 LuaLS 专用宿主声明文件 `meta/luals_host.lua`，承载 `GameAPI`、`GlobalAPI`、`UIManager`、`EVENT`、`RegisterTriggerEvent`、`SetFrameOut`、`traceback`、扩展 `math` 字段，以及 `Role` / `Creature` / `Vector3` / `Fixed` 等别名或最小类型面。
-- 允许调整少量内部函数签名或调用方式以消除 `redundant-parameter`，例如 `src/ui/render`、`src/ui/pres`、`src/player/actions`、`src/state/state_access` 中已经确认的调用形态漂移。
-- 允许修正 LuaLS 注解契约，使返回类型真实反映运行时行为，例如把实际可返回 `nil` 的 editor/export helper 改成可空返回，而不是保留错误的非空注解。
-- 不修改 `vendor/third_party` 源码；如需要复用其注解，只通过 `.luarc.json` 的 `workspace.library` 暴露给 LuaLS。
+### Canonical 目录映射
 
-## Diagnostic Inventory
+| 当前路径 | Canonical 目标 | 处理方式 |
+|------|------|------|
+| `scripts/quality/**` | `tools/quality/**` | 真实实现迁移；`scripts/quality/*.lua` 与 `scripts/quality/mutate/driver.lua` 保留可执行 wrapper |
+| `scripts/ops/**` | `tools/ops/**` | 真实实现迁移；`scripts/ops/*.lua` 与 `scripts/ops/deploy.ps1` 保留 wrapper |
+| `scripts/data/**` | `tools/data/**` | 真实实现迁移；`scripts/data/*.lua` 保留 wrapper |
+| `scripts/shared/**` | `tools/shared/**` | 真实实现迁移；`scripts/shared/bootstrap.lua`、`scripts/shared/package_path_helper.lua` 保留兼容壳 |
+| `scripts/crap4lua/_internal/**` | `tools/bridge/crap4lua/_internal/**` | bridge 实现迁移；旧物理路径不保留镜像，仅通过加载兼容兜底 |
+| `scripts/tools/ui_manager_web/**` | `tools/web/ui_manager_web/**` | 静态资源硬切到 canonical；不保留提交态镜像目录 |
+| `tools/loc_engine/**` | `tools/loc_engine/**` | 保持不动，不参与迁移 |
 
-`src` 当前主要告警类型：
+### 命名空间与路径兼容矩阵
 
-- `47` 个 `undefined-global`
-- `42` 个 `undefined-field`
-- `10` 个 `need-check-nil`
-- `10` 个 `return-type-mismatch`
-- `8` 个 `redundant-parameter`
-- `8` 个 `undefined-doc-name`
-- `1` 个 `cast-local-type`
-- `1` 个 `deprecated`
+| 命名空间/路径 | Canonical 来源 | 过渡期策略 |
+|------|------|------|
+| `quality.*` | `tools/quality/**` | 保持模块名不变，通过 `package.path` 优先命中 canonical |
+| `ops.*` | `tools/ops/**` | 保持模块名不变，通过 `package.path` 优先命中 canonical |
+| `data.*` | `tools/data/**` | 保持模块名不变，通过 `package.path` 优先命中 canonical |
+| `shared.*` | `tools/shared/**` | 保持模块名不变，通过 `package.path` 优先命中 canonical |
+| `crap4lua._internal.*` | `tools/bridge/crap4lua/_internal/**` | 保持模块名不变，`package.path` 追加 `tools/bridge/?.lua` / `tools/bridge/?/?.lua` 族 |
+| `scripts.shared.*` | `scripts/shared/*.lua` wrapper | 仅保留兼容入口，内部立即转发到 `tools/shared/**` |
+| `scripts.quality.arch.filter` | 仓库内调用点改为 canonical 加载 | 兼容层不承诺长期保留，迁移期尽快改掉仓库内旧前缀 |
 
-`src` 热点目录：
+### Wrapper 与硬切边界
 
-- `58` 个在 `src/ui/render`
-- `19` 个在 `src/state/state_access`
-- `11` 个在 `src/host/eggy`
-- `5` 个在 `src/ui/ctl`
-- `5` 个在 `src/ui/input`
+#### 保留 wrapper 的旧路径
 
-热点文件：
+- `scripts/shared/bootstrap.lua`
+- `scripts/shared/package_path_helper.lua`
+- `scripts/quality/arch.lua`
+- `scripts/quality/crap.lua`
+- `scripts/quality/loc.lua`
+- `scripts/quality/mutate.lua`
+- `scripts/quality/mutate/driver.lua`
+- `scripts/quality/scrap.lua`
+- `scripts/ops/deploy.lua`
+- `scripts/ops/deploy.ps1`
+- `scripts/ops/update_api.lua`
+- `scripts/data/export_xlsx.lua`
 
-- [runtime_editor_exports.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/state/state_access/runtime_editor_exports.lua)
-- [runtime_ui.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/runtime_ui.lua)
-- [board_feedback_service.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/board_feedback_service.lua)
-- [market.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/market.lua)
-- [status3d/scene.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/status3d/scene.lua)
+#### 直接硬切到 canonical `tools/*` 的原始路径
 
-## Dependency Graph
+- `scripts/quality/arch/config.json` -> `tools/quality/arch/config.json`
+- `scripts/quality/arch/filter.lua` -> `tools/quality/arch/filter.lua`
+- `scripts/quality/arch/viewer/*` -> `tools/quality/arch/viewer/*`
+- `scripts/quality/crap/config.lua` -> `tools/quality/crap/config.lua`
+- `scripts/quality/crap/adapter.lua` -> `tools/quality/crap/adapter.lua`
+- `scripts/quality/mutate/driver.lua` 的默认被引用路径 -> `tools/quality/mutate/driver.lua`
+- `scripts/quality/scrap/config.lua` -> `tools/quality/scrap/config.lua`
+- `scripts/quality/scrap/viewer/*` -> `tools/quality/scrap/viewer/*`
+- `scripts/crap4lua/_internal/*` -> `tools/bridge/crap4lua/_internal/*`
+- `scripts/tools/ui_manager_web/*` -> `tools/web/ui_manager_web/*`
 
-```text
-T1 ── T2 ── T3 ──┬── T4 ──┐
-                 ├── T5 ──┼── T7
-                 └── T6 ──┘
-```
+#### T2+ 的硬性实施约束
 
-## Tasks
+- `package.path` 的 canonical 顺序必须是 `tools/*` 在前，`scripts/*` 在后，避免旧实现抢先命中。
+- 所有新 bootstrap / 自定位逻辑都必须支持从非仓库根目录启动，不能继续依赖 `dofile("scripts/...")` 和写死的 `/scripts/` 正则。
+- 仓库内测试、CI、文档和 helper 对 config / viewer / driver 的直接路径引用，后续统一改到 `tools/*`；`scripts/*` 不为这些原始资产保留镜像。
+- wrapper 只做转发，不承载业务实现；一旦 canonical 路径稳定，后续可单独删除 wrapper。
 
-### T1: 建立 LuaLS 基线配置
-- **depends_on**: []
-- **location**: repo root, [`.luarc.json`](/Users/billyq/Dev/Github/Lua/monopoly/.luarc.json)
-- **description**: 新增仓库根 `.luarc.json`，把 `src` 作为主分析目标，设置 `runtime.version = "Lua 5.4"`，补 `workspace.library` 指向 `vendor/third_party` 里可复用注解文件与 `meta/`，并通过 `diagnostics.globals` 声明当前 `src` 实际依赖的宿主全局。此任务不得全局禁用 `undefined-field`、`need-check-nil`、`return-type-mismatch` 等真实问题来源的诊断码。
-- **validation**: `lua-language-server --check=src --configpath=../.luarc.json --checklevel=Warning` 能稳定跑完；配置未通过 ignore 规则把 `src` 诊断面整体藏掉。
-- **status**: Completed
-- **log**: 2026-03-18 已新增根配置 `.luarc.json`，使用 LuaLS 扁平键格式，并将 `workspace.library` 写成相对 `src/` workspace 的 `../meta` 与 `../vendor/third_party`。执行探针后确认 `--check=src` 时 `--configpath` 的相对路径基准是 `src/`，因此后续静态验收统一使用 `--configpath=../.luarc.json`。基线从 `127` 降到 `104`，未通过 ignore 或主诊断禁用掩盖 `src` 问题。
-- **files edited/created**: `.luarc.json`
+## 任务与依赖
 
-### T2: 建立共享宿主/扩展类型面
-- **depends_on**: [T1]
-- **location**: [`meta/luals_host.lua`](/Users/billyq/Dev/Github/Lua/monopoly/meta/luals_host.lua)
-- **description**: 新增 LuaLS 专用 meta 文件，定义 `GameAPI` / `GlobalAPI` / `UIManager` / `EVENT` / `RegisterTriggerEvent` / `SetFrameOut` / `traceback` 的最小可用类型面，并补扩展 `math.Vector3`、`math.Quaternion`、`math.tofixed` 以及 `Role`、`Creature`、`Vector3`、`Fixed` 等别名。该文件只服务 LuaLS，不参与运行时加载。
-- **validation**: 重新跑 `lua-language-server --check=src --configpath=../.luarc.json --checklevel=Warning` 后，`undefined-global` 和 `undefined-field` 数量明显下降，且减少项主要集中在宿主 globals / 宿主字段相关告警。
-- **status**: Completed
-- **log**: 2026-03-18 已新增 `meta/luals_host.lua`，只补当前 `src` 真实访问到的 globals、`math.*` 扩展、`GameAPI`/`GlobalAPI` 方法面，以及 `Role` / `Creature` / `Vector3` / `Fixed` 等别名。过程中把 `Class()` 的返回类型放宽为普通 table，避免引入与当前类写法无关的 `inject-field` 噪音。基线从 `104` 进一步降到 `34`，`undefined-global` 清零，宿主桥接相关 `undefined-field` 基本出清。
-- **files edited/created**: `meta/luals_host.lua`
-
-### T3: 重扫并冻结 `src` 修复清单
-- **depends_on**: [T1, T2]
-- **location**: `src/`
-- **description**: 重新执行 `lua-language-server --check=src --check_format=json --checklevel=Warning`，以新的 `.luarc.json + meta` 为基线冻结剩余告警清单。按“文件 + 诊断码 + 行号”生成执行用清单，作为后续并行任务的唯一输入，不再使用当前这份旧统计。
-- **validation**: 产出一份明确的剩余清单，按文件分派到 T4/T5/T6，且三个任务写集不重叠。
-- **status**: Completed
-- **log**: 2026-03-18 已用 `lua-language-server --check=src --configpath=../.luarc.json --check_format=json --logpath=/tmp/luals-t2 --checklevel=Warning` 冻结新基线，剩余 `34` 个告警、`13` 个文件。执行清单已落到 `.agents/luals_src_inventory.md`，明确切成 T4 `8` 个 `redundant-parameter`、T5 `12` 个 host/render 桥接告警、T6 `14` 个 nilability/注解/单点兼容告警，三组写集不重叠。
-- **files edited/created**: `.agents/luals_src_inventory.md`
-
-### T4: 修复调用形态漂移与轻量 API 对齐
-- **depends_on**: [T3]
-- **location**: [market.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/market.lua), [market_controls.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/render/market_controls.lua), [panel_slice.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/pres/panel_slice.lua), [panel_builder.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/ui/pres/panel_builder.lua), [inventory.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/player/actions/inventory.lua), [landing_visual_hold.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/state/state_access/landing_visual_hold.lua)
-- **description**: 只处理 `redundant-parameter` 和明确的调用形态漂移。优先原则是让签名与真实调用方式一致，不改变行为语义。对可选尾参要保持兼容，对确属多传的调用点直接去掉多余参数；对本来就以方法形态使用的函数，改签名使 LuaLS 与运行时一致。
-- **validation**: 这些文件的 `redundant-parameter` 清零；相关调用路径通过 `luac -p` 与回归测试。
-- **status**: Completed
-- **log**: 2026-03-18 12:09 CST 已完成 T4 写集的调用形态修复：`inventory._on_change` 默认回调签名改为接受 `self`，`landing_visual_hold.start` 增加兼容可选尾参，`panel_slice` 与 `market` 移除确属多传的尾参数调用。验证：`luac -p` 通过（4 个目标文件）；`lua-language-server --check=src --configpath=../.luarc.json --check_format=json --logpath=/tmp/luals-t4 --checklevel=Warning` 下 T4 目标文件 `redundant-parameter` 为 `0`。
-- **files edited/created**: `src/player/actions/inventory.lua`, `src/state/state_access/landing_visual_hold.lua`, `src/ui/pres/panel_slice.lua`, `src/ui/render/market.lua`, `.agents/plan.md`
-
-### T5: 修复 `src/ui/render` 与 `src/host/eggy` 的字段/宿主桥接告警
-- **depends_on**: [T3]
-- **location**: `src/ui/render/**`（排除 `market.lua`）、`src/host/eggy/**`、[runtime_constants.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/config/gameplay/runtime_constants.lua)、[tick_clock.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/turn/loop/tick_clock.lua)
-- **description**: 清理 `undefined-field`、剩余 `undefined-global`、与宿主数学/运行时扩展有关的告警。优先通过更准确的局部注解、nil-guard、适配器返回类型和最小 shape 声明解决；不要把真实缺字段情况简单压成 `any`。本任务不得修改 T4/T6 负责的文件。
-- **validation**: 该写集内 `undefined-field` / 宿主桥接类 `undefined-global` 清零，且不引入新的 `need-check-nil` 或行为回归。
-- **status**: Completed
-- **log**: 2026-03-18 已在 `synthetic_actor_registry.lua` 增加 `GameAPI.create_creature_fixed_scale` 调用前置断言，消除潜在 nil 调用；在 `player_units.lua` 对 `_resolve_role_id` 结果做显式断言后再索引；在 `board_feedback_service.lua` 对 `active_host_runtime` 的 `play_3d_sound`、`play_sfx_by_key`、`bind_sfx_to_unit`、`schedule` 增加函数级 guard，并在无运行时能力时安全短路。验证：三文件 `luac -p` 通过，`lua-language-server --check=src --configpath=../.luarc.json --check_format=json --logpath=/tmp/luals-t5 --checklevel=Warning` 下这三文件告警为 0。
-- **files edited/created**: `src/host/eggy/synthetic_actor_registry.lua`, `src/ui/render/board/player_units.lua`, `src/ui/render/board_feedback_service.lua`, `.agents/plan.md`
-
-### T6: 修复状态导出、nilability 与文档注解契约
-- **depends_on**: [T3]
-- **location**: [runtime_editor_exports.lua](/Users/billyq/Dev/Github/Lua/monopoly/src/state/state_access/runtime_editor_exports.lua), `src/ui/ctl/**`, `src/ui/input/**`, `src/turn/timing/**`, `src/app/bootstrap/**` 中仍有剩余告警的文件
-- **description**: 处理 `return-type-mismatch`、`undefined-doc-name`、`need-check-nil`、`cast-local-type` 和少量剩余的配置外 `undefined-global`。关键动作是让 Lua 注解真实反映运行时：实际可返回 `nil` 的导出函数改为可空返回；`Fixed` 等别名要与实际返回数值兼容；确实可能为空的对象访问补 guard。此任务不得接触 `src/ui/render/**` 或 `src/host/eggy/**`。
-- **validation**: 该写集内类型与 nilability 告警清零，并人工复核 editor/export helper 的注解没有比运行时更严格。
-- **status**: Completed
-- **log**: 2026-03-18 已完成 T6 写集修复：`startup_policy.resolve` 用显式字符串赋值消除 `cast-local-type`；`demolish.lua` 移除 Lua 5.4 弃用的全局 `unpack` 回退；`runtime_editor_exports.lua` 将 `get_vehicle_player` / `get_camera_target` / `get_change_skin_role` 注解改为可空返回并补本地返回注解；`session_script.lua` 补可调用处理的显式类型收窄；`target_choice_effects.lua` 与 `dispatch_pre_confirm.lua` 补 `table` guard 和安全字段读取，消除 `need-check-nil` 与 `undefined-field`。验证：`luac -p` 通过（6 个目标文件）；`lua-language-server --check=src --configpath=../.luarc.json --check_format=json --logpath=/tmp/luals-t6 --checklevel=Warning` 下 T6 目标文件告警为 0。
-- **files edited/created**: `src/app/bootstrap/startup_policy.lua`, `src/rules/items/demolish.lua`, `src/state/state_access/runtime_editor_exports.lua`, `src/turn/timing/session_script.lua`, `src/ui/ctl/target_choice_effects.lua`, `src/ui/input/dispatch_pre_confirm.lua`, `.agents/plan.md`
-
-### T7: 最终重扫与回归验证
-- **depends_on**: [T4, T5, T6]
-- **location**: repo root, `src/`
-- **description**: 以 `src` 为唯一验收口径重跑 LuaLS，并补结构与行为回归。若仍有 `src` Warning，按文件回退到对应任务处理，不在此任务里临时加 ignore。
-- **validation**:
-  - `lua-language-server --check=src --configpath=../.luarc.json --check_format=pretty --checklevel=Warning`
-    预期 `no problems found`
-  - `rg --files src -g '*.lua' | xargs -I{} luac -p "{}"`
-    预期全部通过
-  - `lua tests/guard.lua`
-    预期通过
-  - `lua scripts/quality/arch.lua check`
-    预期通过
-  - `lua tests/contract.lua`
-    预期通过
-  - `lua tests/behavior.lua`
-    预期通过
-- **status**: Completed
-- **log**: 2026-03-18 已完成最终验收：`lua-language-server --check=src --configpath=../.luarc.json --check_format=pretty --logpath=/tmp/luals-final-2 --checklevel=Warning` 返回 `Diagnosis completed, no problems found`；`rg --files src -g '*.lua' | xargs -I{} luac -p "{}"` 全通过；`lua tests/guard.lua`、`lua scripts/quality/arch.lua check`、`lua tests/contract.lua`、`lua tests/behavior.lua` 全通过。当前 `src/` LuaLS Warning 为 `0`。
+### T1
+- **depends_on**: `[]`
+- **description**: 定义最终目录映射与兼容矩阵，明确哪些旧路径保留壳、哪些直接硬切
+- **location**: `scripts/**`, `tools/**`
+- **validation**: 输出一张固定映射表并覆盖这些名称：`quality.*`、`ops.*`、`data.*`、`shared.*`、`crap4lua._internal.*`、`scripts.shared.*`
+- **status**: 已完成
+- **log**: 补充了 canonical 目录映射、命名空间兼容矩阵，以及 wrapper/硬切边界，明确 `scripts/shared` 只保留 bootstrap 兼容壳、config/viewer/static asset 一律切到 `tools/*`。
 - **files edited/created**: `.agents/plan.md`
 
-## Parallel Execution Groups
+### T2
+- **depends_on**: `[T1]`
+- **description**: 先抽出统一的“自定位 + repo_root 解析 + bootstrap 入口”，禁止继续依赖写死的 `/scripts/` 正则和 cwd 假设
+- **location**: `tools/shared/*`（新 canonical loader/helper）
+- **validation**: 所有工具入口都可通过同一 helper 解析 repo_root，且从非仓库根目录启动时也能找到依赖
+
+### T3
+- **depends_on**: `[T2]`
+- **description**: 重写 `package_path_helper` 的安装顺序与 pattern，确保 `tools/*` 优先于 `scripts/*`，并补上 `tools/bridge` 解析能力
+- **location**: `tools/shared/package_path_helper.lua`, `tests/bootstrap.lua`
+- **validation**: `require("quality.arch")`、`require("shared.lib.common")`、`require("crap4lua._internal.common")` 命中 canonical `tools/*`
+
+### T4
+- **depends_on**: `[T3]`
+- **description**: 先创建 `scripts/shared/bootstrap.lua` 和 `scripts/shared/package_path_helper.lua` 的前置兼容壳，避免后续物理搬迁时中途断裂
+- **location**: `scripts/shared/*`
+- **validation**: 旧入口仍能通过 `require("scripts.shared.bootstrap")` 和 `dofile("scripts/shared/package_path_helper.lua")` 正常转发
+
+### T5
+- **depends_on**: `[T3, T4]`
+- **description**: 迁移共享实现与 `crap4lua` bridge 到 canonical 位置，并把所有调用点改为走统一 bootstrap/self-location
+- **location**: `tools/shared/**`, `tools/bridge/crap4lua/_internal/**`
+- **validation**: 不再有实现代码依赖写死的 `scripts/shared/...` 物理路径；旧路径只剩兼容壳
+
+### T6
+- **depends_on**: `[T3, T5]`
+- **description**: 迁移 `quality` 桶：`arch/crap/mutate/loc/scrap` 入口、config、adapter、driver、viewer snapshot 全部切到 `tools/quality`
+- **location**: `tools/quality/**`
+- **validation**: `tools/quality/*` 下的 `--help`、默认 config 路径、viewer 导出路径、driver 路径、配置内容都不再引用 `scripts/*`
+
+### T7
+- **depends_on**: `[T3, T5]`
+- **description**: 迁移 `ops` 与 `data` 桶到 `tools/ops`、`tools/data`，同步清理嵌入式示例路径与帮助文本
+- **location**: `tools/ops/**`, `tools/data/**`
+- **validation**: `deploy.lua`、`deploy.ps1`、`update_api.lua`、`export_xlsx.lua` 全部可从 canonical 路径运行
+
+### T8
+- **depends_on**: `[T3]`
+- **description**: 提前更新测试、guard、contract 与辅助代码，使其接受 `tools/*` canonical 或双路径，避免迁移期间长期红灯
+- **location**: `tests/**`
+- **validation**: `guard_support` 能识别 `tools/.+`；guard scan roots/contract 断言不再只写死 `scripts/*`
+
+### T9
+- **depends_on**: `[T6, T7, T8]`
+- **description**: 补齐所有 legacy executable wrappers：顶层 Lua CLI、`scripts/quality/mutate/driver.lua`、`scripts/ops/deploy.ps1`
+- **location**: `scripts/quality/**`, `scripts/ops/**`, `scripts/data/**`
+- **validation**: 旧路径调用实际转发到 `tools/*`，且 wrapper 本身不承载业务实现
+
+### T10
+- **depends_on**: `[T6, T8, T9]`
+- **description**: 迁移 `scripts/tools/ui_manager_web` 到 `tools/web/ui_manager_web`，并在此时一次性更新所有直接消费者；不保留静态资源镜像目录
+- **location**: `tools/web/ui_manager_web/**`
+- **validation**: 仓库内不再有有效消费者依赖 `scripts/tools/ui_manager_web/*`
+
+### T11
+- **depends_on**: `[T6, T7, T9, T10]`
+- **description**: 更新文档、CI、帮助文本、示例命令、已提交 snapshot metadata，移除仓库内剩余的 canonical `scripts/*` 字面量
+- **location**: `docs/**`, `.github/workflows/**`, 生成 snapshot 文件
+- **validation**: 搜索结果中 `scripts/*` 只剩过渡 wrapper 路径与明确标注为 deprecated 的说明
+
+### T12
+- **depends_on**: `[T11]`
+- **description**: 做完整验证，覆盖 canonical 路径、legacy wrapper、模块加载、非 repo-root cwd 启动
+- **location**: 测试与命令验证
+- **validation**:
+  - `lua tests/guard.lua`
+  - `lua tests/contract.lua`
+  - `lua tests/tooling.lua --workers 1`
+  - `lua tests/regression.lua`
+  - `lua tools/quality/arch.lua --help`
+  - `lua tools/quality/crap.lua --help`
+  - `lua tools/quality/mutate.lua --help`
+  - `lua tools/quality/scrap.lua --help`
+  - `lua tools/ops/deploy.lua --help`
+  - `lua tools/data/export_xlsx.lua --help`
+  - `lua scripts/quality/arch.lua --help`
+  - `lua scripts/quality/crap.lua --help`
+  - `lua scripts/quality/mutate.lua --help`
+  - `lua scripts/quality/scrap.lua --help`
+  - `lua scripts/ops/deploy.lua --help`
+  - `lua scripts/data/export_xlsx.lua --help`
+  - `pwsh -File scripts/ops/deploy.ps1 --help`
+  - `lua -e 'require(\"quality.arch\"); require(\"quality.crap\"); require(\"quality.mutate.driver\"); require(\"ops.deploy_defaults\"); require(\"shared.lib.common\"); require(\"crap4lua._internal.common\")'`
+  - 从非仓库根目录执行一条 canonical CLI，确认 bootstrap 不依赖 cwd
+
+## 并行波次
 
 | Wave | Tasks | Can Start When |
 |------|-------|----------------|
-| 1 | T1 | Immediately |
-| 2 | T2 | T1 complete |
-| 3 | T3 | T2 complete |
-| 4 | T4, T5, T6 | T3 complete |
-| 5 | T7 | T4, T5, T6 complete |
+| 1 | `T1` | 立即 |
+| 2 | `T2` | `T1` |
+| 3 | `T3` | `T2` |
+| 4 | `T4`, `T8` | `T3` |
+| 5 | `T5` | `T3`, `T4` |
+| 6 | `T6`, `T7` | `T3`, `T5` |
+| 7 | `T9` | `T6`, `T7`, `T8` |
+| 8 | `T10` | `T6`, `T8`, `T9` |
+| 9 | `T11` | `T6`, `T7`, `T9`, `T10` |
+| 10 | `T12` | `T11` |
 
-## Testing Strategy
+## 测试重点场景
 
-- 以 `lua-language-server --check=src --configpath=../.luarc.json --checklevel=Warning` 作为唯一静态验收口径，不使用“全仓再过滤 `src`”的二次脚本口径。
-- 每个并行任务完成后先跑本任务涉及文件的 `luac -p`，避免把语法错误带到汇总阶段。
-- T6 完成后必须人工复核导出注解是否真实反映运行时，特别是 `Role?` / `Creature?` / `Fixed` 这类契约变更。
-- 最终统一跑 `guard + arch + contract + behavior`，防止因为 host/UI glue 调整引入结构或回归问题。
+- canonical `tools/*` 入口全部可运行，且帮助文本/默认路径不再暴露 `scripts/*`
+- legacy `scripts/*` 入口仍能跑通，不出现双实现分叉
+- `quality.*` / `shared.*` / `ops.*` / `crap4lua._internal.*` 的 `require(...)` 仍稳定
+- `arch_view`/`scrap` 的 viewer snapshot、`crap`/`scrap` config、`mutate` driver 都切到 canonical 路径
+- guard 与 contract 能同时识别 `tools/*` canonical 和剩余过渡 `scripts/*` wrapper
+- 非 repo-root cwd 启动不再因为 `dofile("scripts/...")` 失败
 
-## Risks & Mitigations
+## 假设与默认拍板
 
-- `.luarc.json` 可能通过过宽的 globals 或 ignore 规则隐藏真实 `src` 问题。
-  处理：禁止在 `src` 范围关闭 `undefined-field`、`need-check-nil`、`return-type-mismatch` 等主诊断码；只声明已被仓库明确依赖的宿主全局。
-- 宿主 meta 文件如果建得过宽，会把真实字段缺失压成 `any`。
-  处理：`meta/luals_host.lua` 只声明当前 `src` 实际访问到的最小字段面，不做大而全模拟。
-- 注解修复可能改变“文档契约”而非运行时行为。
-  处理：T6 明确要求对 editor/export helper 做人工读回，确认可空返回与数值别名符合真实行为。
-- 本轮只修 `src`，repo-root 配置仍会影响编辑器查看 `tests/scripts/vendor`。
-  处理：计划默认保持这些目录的告警可见，不通过 ignoreDir 把它们整体藏掉；它们仅在当前轮次 out of scope。
-
-## Assumptions
-
-- 本轮实施目标是把 `src/` 的 LuaLS Warning 清到 `0`，不是把全仓 `278` 个问题一次清零。
-- `vendor/third_party` 不直接改源码；若需要其注解参与分析，只通过 `.luarc.json` 的 `workspace.library` 接入。
-- `tests/` 与 `scripts/` 本轮只保留现状统计，不进入修复任务。
-- 当前回合处于 Plan Mode，这份计划以内联形式交付；若后续进入执行模式，再落地为 `lua-lsp-src-plan.md`。
+- 只为**可执行入口**和 `scripts/shared` bootstrap/helper 保留过渡壳；非执行型 config/viewer/static asset 不保留镜像
+- `scripts/tools/ui_manager_web` 的 canonical 新位置固定为 `tools/web/ui_manager_web`
+- `scripts/crap4lua/_internal` 的 canonical 新位置固定为 `tools/bridge/crap4lua/_internal`
+- `tools/loc_engine` 保持原样，不参与此次重组
+- 当前仍在 Plan Mode，本回合输出的是最终实施蓝图；落地时可按此内容写成 `scripts-to-tools-plan.md`
