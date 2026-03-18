@@ -405,7 +405,7 @@ local function _test_deploy_defaults_match_windows_history()
     is_macos = false,
   })
 
-  assert(resolved == "C:/Users/example/Desktop/LuaSource_大富翁-发布",
+  assert(resolved == "C:/Users/example/Desktop/dev/LuaSource_大富翁-发布",
     "windows deploy default should converge to the release path")
 end
 
