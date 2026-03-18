@@ -1,3 +1,4 @@
+-- script_tools_tooling.lua - 重型 tooling 测试，在并行 tooling lane 中执行
 local bootstrap = require("tests.bootstrap")
 local common = require("shared.lib.common")
 local arch_common = require("arch_view.runtime.common")
@@ -9,7 +10,7 @@ bootstrap.install_package_paths()
 
 local project_root = common.normalize_path(common.current_dir())
 
--- 缓存 PowerShell 命令检测结果，避免每次调用都执行 command_exists
+-- 缓存 PowerShell 命令检测结果
 local _cached_powershell_cmd = nil
 local _cached_powershell_checked = false
 
@@ -36,18 +37,12 @@ local function _first_existing(paths)
 end
 
 local function _make_tmp_root(tag)
-  return common.make_temp_path("script_tools_contract_" .. tostring(tag or "tmp"), "") .. "_中文 English"
+  return common.make_temp_path("script_tools_tooling_" .. tostring(tag or "tmp"), "") .. "_中文 English"
 end
 
 local function _assert_contains(text, expected, message)
   if tostring(text or ""):find(expected, 1, true) == nil then
     error((message or "missing expected text") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(text))
-  end
-end
-
-local function _assert_not_contains(text, unexpected, message)
-  if tostring(text or ""):find(unexpected, 1, true) ~= nil then
-    error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
   end
 end
 
@@ -71,7 +66,7 @@ local function _with_clean_tmp(tag, fn)
 end
 
 local function _with_ascii_tmp(tag, fn)
-  local tmp_root = common.make_temp_path("script_tools_contract_" .. tostring(tag or "tmp"), "")
+  local tmp_root = common.make_temp_path("script_tools_tooling_" .. tostring(tag or "tmp"), "")
   _cleanup_tmp(tmp_root)
   local ok, err = xpcall(function()
     fn(tmp_root)
@@ -142,6 +137,8 @@ end
 local function _line_count(text)
   return loc_counter.count_effective_lines(text)
 end
+
+-- Tooling 测试函数
 
 local function _test_common_handles_unicode_paths_for_file_ops()
   _with_clean_tmp("common_file_ops", function(tmp_root)
@@ -224,12 +221,6 @@ local function _test_arch_common_reuses_unicode_safe_file_ops()
     end
     assert(#files == 1, "arch_common should collect unicode lua files through shared utility")
   end)
-end
-
-local function _test_command_exists_reports_present_and_missing_commands()
-  assert(common.command_exists("lua") == true, "lua should exist in the test environment")
-  assert(common.command_exists("monopoly_command_that_should_not_exist_12345") == false,
-    "command_exists should return false for missing commands")
 end
 
 local function _test_windows_utf8_console_switches_once_per_process()
@@ -385,180 +376,6 @@ local function _test_windows_utf8_console_failure_is_non_throwing()
   end
 end
 
-local function _test_cli_help_text_is_bilingual()
-  local help_commands = {
-    { "tools/data/export_xlsx.lua", "--help" },
-    { "tools/ops/update_api.lua", "--help" },
-    { "tools/quality/arch.lua", "--help" },
-    { "tools/quality/crap.lua", "--help" },
-    { "tools/quality/mutate.lua", "--help" },
-    { "tools/quality/scrap.lua", "--help" },
-  }
-
-  -- 并行执行所有 help 命令以减少总耗时
-  local results = {}
-  local threads = {}
-  
-  for i, args in ipairs(help_commands) do
-    threads[i] = coroutine.create(function()
-      results[i] = {
-        args = args,
-        result = _run_lua(args),
-      }
-    end)
-  end
-  
-  -- 轮询执行所有协程直到完成
-  local running = #threads
-  while running > 0 do
-    running = 0
-    for _, thread in ipairs(threads) do
-      if coroutine.status(thread) ~= "dead" then
-        local ok = coroutine.resume(thread)
-        if coroutine.status(thread) ~= "dead" then
-          running = running + 1
-        end
-      end
-    end
-  end
-  
-  -- 验证所有结果
-  for _, item in ipairs(results) do
-    assert(item.result.ok == true, "help command should exit successfully for " .. table.concat(item.args, " "))
-    _assert_contains(item.result.output, "用法", "help output should include Chinese usage text")
-    _assert_contains(item.result.output, "Usage", "help output should include English usage text")
-  end
-end
-
--- 合并的 Deploy 综合测试，将原来的 5 个单独测试合并为 1 个
--- 大幅减少 PowerShell 启动开销和文件复制时间
-local function _test_deploy_comprehensive()
-  -- 测试 1 & 2: 验证脚本内容包含历史路径（静态检查，无需执行）
-  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
-  _assert_contains(
-    script_text,
-    "$home_dir/Desktop/dev/LuaSource_大富翁-发布",
-    "deploy.ps1 should keep the windows default deploy path"
-  )
-  _assert_contains(
-    script_text,
-    "$home_dir/Documents/eggy/LuaSource_大富翁-发布",
-    "deploy.ps1 should keep the macOS default deploy path"
-  )
-
-  -- 测试 3: 综合执行测试 - 一次调用验证多个功能
-  _with_ascii_tmp("deploy_comprehensive", function(tmp_root)
-    local publish_target = common.join_path(tmp_root, "deploy_target")
-    
-    -- 测试 3a: 显式目标路径 + 启动配置文件注入
-    local result = _run_powershell_file("tools/ops/deploy.ps1", {
-      "--target-path", publish_target,
-      "--startup-profile", "smoke_test",
-    })
-    
-    if result.skipped == true then
-      return
-    end
-
-    -- 验证成功执行
-    assert(result.ok == true, "deploy should succeed with explicit target and startup profile")
-    
-    -- 验证文件复制正确
-    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
-      "deploy should copy main.lua into the target path")
-    assert(common.path_exists(common.join_path(publish_target, "src/config")) == true,
-      "deploy should include src/config through the src directory copy")
-    assert(common.path_exists(common.join_path(publish_target, "Data/UIManagerNodes.lua")) == true,
-      "deploy should copy Data/UIManagerNodes.lua into the target path")
-    assert(common.path_exists(common.join_path(publish_target, "Data/Prefab.lua")) == true,
-      "deploy should copy Data/Prefab.lua into the target path")
-    
-    -- 验证启动配置注入
-    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
-    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "smoke_test"',
-      "deploy should inject startup profile into main.lua when requested")
-    
-    -- 验证输出不包含已退役的 Config 目录
-    _assert_not_contains(result.output, "/Config",
-      "deploy output should not mention the retired Config directory")
-    _assert_not_contains(result.output, "Config: 0",
-      "deploy LOC breakdown should not include the retired Config directory")
-    
-    -- 测试 3b: 未知参数应该失败（复用同一个临时目录，避免重复创建）
-    local bad_result = _run_powershell_file("tools/ops/deploy.ps1", { "--bad-flag" })
-    assert(bad_result.ok == false, "deploy should fail on unknown flags")
-    _assert_contains(bad_result.output, "未知参数", "unknown flag output should include Chinese text")
-    _assert_contains(bad_result.output, "Unknown flag", "unknown flag output should include English text")
-  end)
-  
-  -- 测试 4: PowerShell 命名参数风格调用（使用不同的临时目录）
-  _with_ascii_tmp("deploy_powershell_style", function(tmp_root)
-    local publish_target = common.join_path(tmp_root, "deploy_target")
-    local result = _run_powershell_file("tools/ops/deploy.ps1", {
-      "-TargetPath", publish_target,
-      "-StartupProfile", "smoke_test",
-    })
-
-    if result.skipped == true then
-      return
-    end
-
-    assert(result.ok == true, "deploy PowerShell wrapper should succeed")
-    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
-      "deploy PowerShell wrapper should copy main.lua into the target path")
-    assert(common.path_exists(common.join_path(publish_target, "src/config")) == true,
-      "deploy PowerShell wrapper should include src/config through the src directory copy")
-    assert(common.path_exists(common.join_path(publish_target, "Data/UIManagerNodes.lua")) == true,
-      "deploy PowerShell wrapper should copy Data/UIManagerNodes.lua into the target path")
-    assert(common.path_exists(common.join_path(publish_target, "Data/Prefab.lua")) == true,
-      "deploy PowerShell wrapper should copy Data/Prefab.lua into the target path")
-
-    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
-    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "smoke_test"',
-      "deploy PowerShell wrapper should forward startup profile injection")
-  end)
-end
-
-local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
-  _with_clean_tmp("run_command_stderr_capture", function(tmp_root)
-    local script_path = common.join_path(tmp_root, "capture_output.lua")
-    local stdin_path = common.join_path(tmp_root, "stdin.txt")
-    local ok, err = common.write_file(script_path, table.concat({
-      "local input = io.read('*a') or ''",
-      "if input ~= '' then",
-      "  io.write(input)",
-      "  if input:sub(-1) ~= '\\n' then",
-      "    io.write('\\n')",
-      "  end",
-      "end",
-      "io.stderr:write('未知参数 / Unknown flag: --bad-flag\\n')",
-      "os.exit(7)",
-      "",
-    }, "\n"))
-    if not ok then
-      error(err)
-    end
-
-    ok, err = common.write_file(stdin_path, "stdin 中文 / utf8 stdin")
-    if not ok then
-      error(err)
-    end
-
-    local result = common.run_command({ "lua", script_path }, {
-      cwd = project_root,
-      stdin_path = stdin_path,
-    })
-
-    assert(result.ok == false, "run_command should surface non-zero exit codes")
-    assert(result.code ~= 0, "run_command should preserve the child exit code")
-    _assert_contains(result.output, "stdin 中文 / utf8 stdin", "run_command should preserve utf8 stdin content")
-    _assert_contains(result.output, "未知参数", "run_command should preserve Chinese stderr text")
-    _assert_contains(result.output, "Unknown flag", "run_command should preserve English stderr text")
-    _assert_not_contains(result.output, "System.Management.Automation.RemoteException",
-      "run_command should not wrap native stderr as a PowerShell exception")
-  end)
-end
-
 local function _test_arch_view_viewer_supports_unicode_output_path()
   _with_clean_tmp("arch_view_unicode_output", function(tmp_root)
     local out_dir = common.join_path(tmp_root, "arch_view_目标/中文 English")
@@ -632,9 +449,9 @@ local function _test_mutate_wrapper_scan_json_output()
   })
 
   assert(result.ok == true, "mutate wrapper scan should succeed")
-  _assert_contains(result.output, "\"relative_file\":\"src/core/utils/role_id.lua\"",
+  _assert_contains(result.output, '"relative_file":"src/core/utils/role_id.lua"',
     "mutate scan should report the normalized target path")
-  _assert_contains(result.output, "\"sites\":[",
+  _assert_contains(result.output, '"sites":[',
     "mutate scan should emit discovered mutation sites in json output")
 end
 
@@ -648,9 +465,9 @@ local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
   })
 
   assert(result.ok == true, "mutate wrapper suite indexing should succeed")
-  _assert_contains(result.output, "\"ok\":true",
+  _assert_contains(result.output, '"ok":true',
     "suite indexing should report success in json output")
-  _assert_contains(result.output, "\"suite_count\":",
+  _assert_contains(result.output, '"suite_count":',
     "suite indexing should report indexed suite count")
 end
 
@@ -762,7 +579,6 @@ local function _test_loc_scan_counts_worktree_with_go_engine()
   end)
 end
 
--- 轻量版 git 历史测试，使用 2 次提交而非 3 次，减少执行时间
 local function _test_loc_scan_counts_history_across_git_diff_shapes()
   _with_ascii_tmp("loc_scan_history", function(tmp_root)
     local repo_root = common.join_path(tmp_root, "history_repo")
@@ -800,12 +616,10 @@ local function _test_loc_scan_counts_history_across_git_diff_shapes()
       "",
     }, "\n")
 
-    -- 第一次提交：初始文件
     _write_fixture_file(common.join_path(src_dir, "a.lua"), src_v1)
     _write_fixture_file(common.join_path(tests_dir, "spec.lua"), test_v1)
     _commit_all(repo_root, "initial loc fixtures")
 
-    -- 第二次提交：合并修改、添加、重命名、删除操作（减少一次提交）
     _write_fixture_file(common.join_path(src_dir, "a.lua"), src_v2)
     _write_fixture_file(common.join_path(tests_dir, "extra.lua"), test_v2)
     _write_fixture_file(common.join_path(tests_dir, "empty.lua"), "")
@@ -815,7 +629,7 @@ local function _test_loc_scan_counts_history_across_git_diff_shapes()
     loc_scan.reset_caches()
     local result, history_err = loc_scan.count_history({
       git_root = repo_root,
-      since = "1 day ago",  -- 缩短时间范围加快查询
+      since = "1 day ago",
     })
     if result == nil then
       error(history_err)
@@ -824,29 +638,34 @@ local function _test_loc_scan_counts_history_across_git_diff_shapes()
     local rows = result.rows or {}
     assert(#rows == 2, "history scanner should return one row per commit in the time window")
 
-    -- 验证第一次提交
     assert(rows[1].src_loc == _line_count(src_v1), "first history row should use the initial src LOC")
     assert(rows[1].src_files == 1, "first history row should count the initial src file")
     assert(rows[1].tests_loc == _line_count(test_v1), "first history row should use the initial tests LOC")
     assert(rows[1].tests_files == 1, "first history row should count the initial tests file")
 
-    -- 验证第二次提交：包含修改、添加、重命名
     assert(rows[2].src_loc == _line_count(src_v2), "second history row should reflect the modified src LOC")
-    assert(rows[2].tests_loc == _line_count(test_v2),
-      "second history row should include added test LOC")
-    assert(rows[2].tests_files == 2, "second history row should count renamed and new files")
+    -- 第二次提交后：tests_loc = test_v1(重命名保留) + test_v2(新增) + empty.lua(空文件不计)
+    assert(rows[2].tests_loc == _line_count(test_v1) + _line_count(test_v2),
+      "second history row should include renamed and added test LOC")
+    assert(rows[2].tests_files == 2, "second history row should count renamed and new files, ignoring empty")
   end)
 end
 
-local contract_tests = {
-  { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
-  -- 合并的 deploy 综合测试，替代原来的 5 个单独测试，减少 PowerShell 启动开销
-  { name = "deploy_comprehensive", run = _test_deploy_comprehensive },
-  { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
-}
-
--- 注意：原来的 tooling_tests 已移至 script_tools_tooling.lua，在 tooling lane 中并行执行
 return {
-  name = "script_tools_contract",
-  tests = contract_tests,
+  name = "script_tools_tooling",
+  tests = {
+    { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
+    { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
+    { name = "windows_utf8_console_switches_once_per_process", run = _test_windows_utf8_console_switches_once_per_process },
+    { name = "windows_utf8_console_skips_when_already_utf8", run = _test_windows_utf8_console_skips_when_already_utf8 },
+    { name = "windows_utf8_console_is_noop_off_windows", run = _test_windows_utf8_console_is_noop_off_windows },
+    { name = "windows_utf8_console_failure_is_non_throwing", run = _test_windows_utf8_console_failure_is_non_throwing },
+    { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
+    { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
+    { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
+    { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
+    { name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
+    { name = "loc_scan_counts_worktree_with_go_engine", run = _test_loc_scan_counts_worktree_with_go_engine },
+    { name = "loc_scan_counts_history_across_git_diff_shapes", run = _test_loc_scan_counts_history_across_git_diff_shapes },
+  },
 }

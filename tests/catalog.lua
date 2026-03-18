@@ -79,6 +79,7 @@ local tooling_modules = {
   "suites.architecture.script_tools_io_tooling_contract",
   "suites.architecture.script_tools_mutate_tooling_contract",
   "suites.architecture.scrap4lua_tooling_contract",
+  "suites.architecture.script_tools_tooling",  -- 从 script_tools_contract 分离出的重型 tooling 测试
 }
 
 local guard_scripts = {
