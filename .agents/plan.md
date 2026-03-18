@@ -115,6 +115,9 @@
 - **description**: 先创建 `scripts/shared/bootstrap.lua` 和 `scripts/shared/package_path_helper.lua` 的前置兼容壳，避免后续物理搬迁时中途断裂
 - **location**: `scripts/shared/*`
 - **validation**: 旧入口仍能通过 `require("scripts.shared.bootstrap")` 和 `dofile("scripts/shared/package_path_helper.lua")` 正常转发
+- **status**: 已完成
+- **log**: `scripts/shared/bootstrap.lua` 与 `scripts/shared/package_path_helper.lua` 都已退化为纯 wrapper，真实实现分别转发到 `tools/shared/bootstrap.lua` 和 `tools/shared/package_path_helper.lua`，后续搬迁不再依赖旧目录承载实现。
+- **files edited/created**: `.agents/plan.md`
 
 ### T5
 - **depends_on**: `[T3, T4]`
