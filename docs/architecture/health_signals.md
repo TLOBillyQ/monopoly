@@ -47,7 +47,7 @@ lua tests/behavior.lua
 lua tools/quality/loc.lua
 ```
 
-更新 `scripts/analysis/loc_data.json`，有 gnuplot 则生成趋势图。LOC 上升但边界稳定、测试健康，不算退化；只有同时伴随边界漂移或覆盖下降才值得关注。
+更新 `tmp/loc_data.json`，有 gnuplot 则生成趋势图。LOC 上升但边界稳定、测试健康，不算退化；只有同时伴随边界漂移或覆盖下降才值得关注。
 
 ## CRAP 报告（按需诊断）
 

@@ -84,7 +84,7 @@ end
 local function _looks_like_project_root(path)
   return common.path_exists(common.join_path(path, "main.lua"))
     and common.is_dir(common.join_path(path, "src"))
-    and common.is_dir(common.join_path(path, "scripts"))
+    and common.is_dir(common.join_path(path, "tools"))
 end
 
 local function _project_root_from_script_path(script_path)

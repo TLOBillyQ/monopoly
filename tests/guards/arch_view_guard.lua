@@ -2,18 +2,6 @@ require("tests.bootstrap").install_package_paths()
 
 local arch_view = require("arch_view")
 
-local function _load_first(module_names)
-  local errors = {}
-  for _, module_name in ipairs(module_names or {}) do
-    local ok, loaded = pcall(require, module_name)
-    if ok then
-      return loaded
-    end
-    errors[#errors + 1] = tostring(loaded)
-  end
-  error(table.concat(errors, "\n"))
-end
-
 local function _path_exists(path)
   local file = io.open(path, "r")
   if file then
@@ -33,10 +21,9 @@ local function _first_existing(paths)
   return paths and paths[1] or nil
 end
 
-local arch_filter = _load_first({ "quality.arch.filter", "scripts.quality.arch.filter" })
+local arch_filter = require("quality.arch.filter")
 local arch_config_path = _first_existing({
   "tools/quality/arch/config.json",
-  "scripts/quality/arch/config.json",
 })
 
 local M = {}

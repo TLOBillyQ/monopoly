@@ -163,9 +163,8 @@ end
 
 local function _test_default_config_path_points_at_monopoly_wrapper_config()
   local path = crap.default_config_path()
-  local matches_legacy = path:find("scripts/quality/crap/config.lua", 1, true) ~= nil
   local matches_canonical = path:find("tools/quality/crap/config.lua", 1, true) ~= nil
-  assert(matches_legacy or matches_canonical, "wrapper should expose a monopoly config path")
+  assert(matches_canonical, "wrapper should expose the canonical monopoly config path")
 end
 
 return {

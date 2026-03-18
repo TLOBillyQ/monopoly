@@ -65,5 +65,5 @@ complexity² × (1 - coverage)³ + complexity
 
 ## 边界
 
-- 只分析 `src/**/*.lua`，不给 `tests/`、`scripts/`、`vendor/` 打分
+- 只分析 `src/**/*.lua`，不给 `tests/`、`tools/`、`vendor/` 打分
 - 行覆盖率，不是分支覆盖率（Lua 5.1 + 零额外依赖约束下最稳妥的选择）

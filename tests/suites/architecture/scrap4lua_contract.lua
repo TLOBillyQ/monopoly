@@ -166,7 +166,6 @@ local function _test_snapshot_files_exist_in_repo()
   local snapshot_root = nil
   for _, candidate in ipairs({
     "tools/quality/scrap/viewer",
-    "scripts/quality/scrap/viewer",
   }) do
     if common.path_exists(candidate) == true then
       snapshot_root = candidate

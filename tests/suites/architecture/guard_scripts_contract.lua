@@ -73,10 +73,10 @@ end
 local function _test_forbidden_globals_catches_numeric_cast()
     local forbidden_call = "ton" .. "umber"
     _with_fixture({
-        ["scripts/bad.lua"] = "return " .. forbidden_call .. "('1')\n",
+        ["tools/bad.lua"] = "return " .. forbidden_call .. "('1')\n",
     }, function(fixture_root)
         local result = forbidden_globals.run({
-            scan_roots = { arch_common.join_path(fixture_root, "scripts") },
+            scan_roots = { arch_common.join_path(fixture_root, "tools") },
         })
 
         assert(result.ok == false, "forbidden_globals should reject tonumber")
@@ -102,17 +102,17 @@ end
 local function _test_forbidden_globals_allows_package_access_outside_src()
     _with_fixture({
         ["tests/clean.lua"] = 'return package.path\n',
-        ["scripts/clean.lua"] = 'return package.path\n',
+        ["tools/clean.lua"] = 'return package.path\n',
     }, function(fixture_root)
         local tests_result = forbidden_globals.run({
             scan_roots = { arch_common.join_path(fixture_root, "tests") },
         })
-        local scripts_result = forbidden_globals.run({
-            scan_roots = { arch_common.join_path(fixture_root, "scripts") },
+        local tools_result = forbidden_globals.run({
+            scan_roots = { arch_common.join_path(fixture_root, "tools") },
         })
 
         assert(tests_result.ok == true, "forbidden_globals should allow package access in tests")
-        assert(scripts_result.ok == true, "forbidden_globals should allow package access in scripts")
+        assert(tools_result.ok == true, "forbidden_globals should allow package access in tools")
     end)
 end
 
@@ -120,7 +120,7 @@ local function _test_guard_scripts_allow_clean_fixtures()
     _with_fixture({
         ["src/clean.lua"] = "local state = {}\nstate.output = true\nreturn state\n",
         ["tests/clean.lua"] = 'return require("src.turn.loop.scheduler_runtime")\n',
-        ["scripts/clean.lua"] = "return 1\n",
+        ["tools/clean.lua"] = "return 1\n",
     }, function(fixture_root)
         local dep_result = dep_rules.run({
             rules = {
@@ -133,7 +133,7 @@ local function _test_guard_scripts_allow_clean_fixtures()
             forbidden_files = {},
         })
         local globals_result = forbidden_globals.run({
-            scan_roots = { arch_common.join_path(fixture_root, "scripts") },
+            scan_roots = { arch_common.join_path(fixture_root, "tools") },
         })
 
         assert(dep_result.ok == true, "dep_rules should allow clean fixtures")

@@ -17,7 +17,7 @@ local forbidden = {
   { pattern = "type%s*%b()%s*~=%s*[\"']number[\"']", name = "type(...) ~= \"number\"", replacement = "NumberUtils.is_numeric()/to_integer()" },
 }
 
-local scan_roots = { "src", "tests", "tools", "scripts" }
+local scan_roots = { "src", "tests", "tools" }
 
 local M = {}
 

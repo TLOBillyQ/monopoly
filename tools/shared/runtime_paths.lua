@@ -124,7 +124,6 @@ function runtime_paths.resolve(opts)
         script_dir = script_dir,
         repo_root = probe,
         tools_dir = _join_path(probe, "tools"),
-        scripts_dir = _join_path(probe, "scripts"),
         vendor_dir = _join_path(probe, "vendor"),
       }
     end

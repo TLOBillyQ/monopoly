@@ -374,13 +374,13 @@ end
 
 local function _test_cli_help_text_is_bilingual()
   local help_commands = {
-    { "scripts/ops/deploy.lua", "--help" },
-    { "scripts/data/export_xlsx.lua", "--help" },
-    { "scripts/ops/update_api.lua", "--help" },
-    { "scripts/quality/arch.lua", "--help" },
-    { "scripts/quality/crap.lua", "--help" },
-    { "scripts/quality/mutate.lua", "--help" },
-    { "scripts/quality/scrap.lua", "--help" },
+    { "tools/ops/deploy.lua", "--help" },
+    { "tools/data/export_xlsx.lua", "--help" },
+    { "tools/ops/update_api.lua", "--help" },
+    { "tools/quality/arch.lua", "--help" },
+    { "tools/quality/crap.lua", "--help" },
+    { "tools/quality/mutate.lua", "--help" },
+    { "tools/quality/scrap.lua", "--help" },
   }
 
   for _, args in ipairs(help_commands) do
@@ -392,7 +392,7 @@ local function _test_cli_help_text_is_bilingual()
 end
 
 local function _test_deploy_unknown_flag_is_bilingual()
-  local result = _run_lua({ "scripts/ops/deploy.lua", "--bad-flag" })
+  local result = _run_lua({ "tools/ops/deploy.lua", "--bad-flag" })
   assert(result.ok == false, "deploy should fail on unknown flags")
   _assert_contains(result.output, "未知参数", "unknown flag output should include Chinese text")
   _assert_contains(result.output, "Unknown flag", "unknown flag output should include English text")
@@ -431,7 +431,7 @@ local function _test_deploy_allows_explicit_target_path()
   _with_ascii_tmp("deploy_allows_explicit_target_path", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_lua({
-      "scripts/ops/deploy.lua",
+      "tools/ops/deploy.lua",
       "--target-path",
       publish_target,
     })
@@ -446,7 +446,7 @@ local function _test_deploy_aligns_with_current_repo_layout()
   _with_ascii_tmp("deploy_aligns_with_current_repo_layout", function(tmp_root)
     local target = common.join_path(tmp_root, "dev_deploy")
     local result = _run_lua({
-      "scripts/ops/deploy.lua",
+      "tools/ops/deploy.lua",
       "--target-path",
       target,
     })
@@ -471,7 +471,7 @@ local function _test_deploy_injects_startup_profile_when_requested()
   _with_ascii_tmp("deploy_injects_startup_profile_when_requested", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_lua({
-      "scripts/ops/deploy.lua",
+      "tools/ops/deploy.lua",
       "--target-path",
       publish_target,
       "--startup-profile",
@@ -485,10 +485,10 @@ local function _test_deploy_injects_startup_profile_when_requested()
   end)
 end
 
-local function _test_deploy_powershell_wrapper_forwards_to_lua()
-  _with_ascii_tmp("deploy_powershell_wrapper_forwards_to_lua", function(tmp_root)
+local function _test_deploy_powershell_entrypoint_runs()
+  _with_ascii_tmp("deploy_powershell_entrypoint_runs", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
-    local result = _run_powershell_file("scripts/ops/deploy.ps1", {
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
       "-TargetPath",
       publish_target,
       "-StartupProfile",
@@ -560,11 +560,9 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
     local out_dir = common.join_path(tmp_root, "arch_view_目标/中文 English")
     local input_json = _first_existing({
       "tools/quality/arch/viewer/architecture.json",
-      "scripts/quality/arch/viewer/architecture.json",
     })
     local default_config_path = _first_existing({
       common.join_path(project_root, "tools/quality/arch/config.json"),
-      common.join_path(project_root, "scripts/quality/arch/config.json"),
     })
     local messages = {}
     local original_print = print
@@ -607,7 +605,7 @@ local function _test_scrap_viewer_supports_unicode_output_path()
   _with_clean_tmp("scrap_viewer_unicode_output", function(tmp_root)
     local out_dir = common.join_path(tmp_root, "scrap_目标/中文 English")
     local result = _run_lua({
-      "scripts/quality/scrap.lua",
+      "tools/quality/scrap.lua",
       "viewer",
       "--out-dir",
       out_dir,
@@ -623,7 +621,7 @@ end
 
 local function _test_mutate_wrapper_scan_json_output()
   local result = _run_lua({
-    "scripts/quality/mutate.lua",
+    "tools/quality/mutate.lua",
     "src/core/utils/role_id.lua",
     "--scan",
     "--json",
@@ -638,7 +636,7 @@ end
 
 local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
   local result = _run_lua({
-    "scripts/quality/mutate.lua",
+    "tools/quality/mutate.lua",
     "--index-suites",
     "--lane",
     "behavior",
@@ -661,7 +659,7 @@ local function _test_bootstrap_resolves_repo_root_from_non_repo_cwd()
     end
 
     local bootstrap_path = common.join_path(project_root, "tools/shared/bootstrap.lua")
-    local script_path = common.join_path(project_root, "scripts/quality/crap.lua")
+    local script_path = common.join_path(project_root, "tools/quality/crap.lua")
     local expected_root = common.normalize_path(project_root)
     local lua_snippet = table.concat({
       "local bootstrap = dofile(" .. string.format("%q", bootstrap_path) .. ")",
@@ -859,7 +857,7 @@ local contract_tests = {
   { name = "deploy_aligns_with_current_repo_layout", run = _test_deploy_aligns_with_current_repo_layout },
   { name = "deploy_allows_explicit_target_path", run = _test_deploy_allows_explicit_target_path },
   { name = "deploy_injects_startup_profile_when_requested", run = _test_deploy_injects_startup_profile_when_requested },
-  { name = "deploy_powershell_wrapper_forwards_to_lua", run = _test_deploy_powershell_wrapper_forwards_to_lua },
+  { name = "deploy_powershell_entrypoint_runs", run = _test_deploy_powershell_entrypoint_runs },
   { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
 

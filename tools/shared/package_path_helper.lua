@@ -55,8 +55,6 @@ function package_path_helper.install_monopoly_package_paths(opts)
   end
 
   local compatibility_patterns = {
-    _join(repo_root, "scripts/?.lua"),
-    _join(repo_root, "scripts/?/init.lua"),
     _join(arch_view_root, "?.lua"),
     _join(arch_view_root, "?/?.lua"),
   }

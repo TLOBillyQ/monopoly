@@ -22,11 +22,9 @@ end
 
 local arch_config_path = _first_existing({
   "tools/quality/arch/config.json",
-  "scripts/quality/arch/config.json",
 })
 local snapshot_json_path = _first_existing({
   "tools/quality/arch/viewer/architecture.json",
-  "scripts/quality/arch/viewer/architecture.json",
 })
 
 local function _assert_eq(actual, expected, message)
@@ -268,7 +266,6 @@ end
 local function _test_snapshot_files_exist_in_repo()
   local snapshot_root = _first_existing({
     "tools/quality/arch/viewer",
-    "scripts/quality/arch/viewer",
   })
   assert(_exists(snapshot_root .. "/index.html"), "snapshot viewer index should exist")
   assert(_exists(snapshot_root .. "/script.js"), "snapshot viewer script should exist")
