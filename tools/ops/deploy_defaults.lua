@@ -18,7 +18,7 @@ local function _candidate_paths(options)
       return {}
     end
     return {
-      common.join_path(home_dir, "Desktop/dev/LuaSource_大富翁-发布"),
+      common.join_path(home_dir, "Desktop/LuaSource_大富翁-发布"),
     }
   end
 

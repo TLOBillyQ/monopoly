@@ -13,7 +13,18 @@ function Exit-WithError {
 }
 
 if ($RemainingArgs.Count -gt 0) {
-    Exit-WithError ("未知参数 / Unknown flag: {0}" -f ($RemainingArgs -join " "))
+    $unknownArgs = @()
+    foreach ($arg in $RemainingArgs) {
+        if ($arg -in @("--help", "-h")) {
+            $Help = $true
+        } else {
+            $unknownArgs += $arg
+        }
+    }
+
+    if ($unknownArgs.Count -gt 0) {
+        Exit-WithError ("未知参数 / Unknown flag: {0}" -f ($unknownArgs -join " "))
+    }
 }
 
 $lua = Get-Command "lua" -ErrorAction SilentlyContinue

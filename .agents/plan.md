@@ -206,6 +206,9 @@
   - `pwsh -File scripts/ops/deploy.ps1 --help`
   - `lua -e 'require(\"quality.arch\"); require(\"quality.crap\"); require(\"quality.mutate.driver\"); require(\"ops.deploy_defaults\"); require(\"shared.lib.common\"); require(\"crap4lua._internal.common\")'`
   - 从非仓库根目录执行一条 canonical CLI，确认 bootstrap 不依赖 cwd
+- **status**: 已完成
+- **log**: 已通过 `guard.lua`、`contract.lua`、`regression.lua`、`tooling.lua --workers 1`；canonical/legacy Lua help、模块 require smoke、非 repo-root canonical 启动全部通过；补齐了 `tools/ops/deploy.ps1` 与 `scripts/ops/deploy.ps1` 的 `--help` alias，以及 Windows 默认发布路径历史兼容。
+- **files edited/created**: `tools/ops/deploy_defaults.lua`, `tools/ops/deploy.ps1`, `scripts/ops/deploy.ps1`, `.agents/plan.md`
 
 ## 并行波次
 
