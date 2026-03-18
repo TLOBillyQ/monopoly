@@ -106,6 +106,9 @@
 - **description**: 重写 `package_path_helper` 的安装顺序与 pattern，确保 `tools/*` 优先于 `scripts/*`，并补上 `tools/bridge` 解析能力
 - **location**: `tools/shared/package_path_helper.lua`, `tests/bootstrap.lua`
 - **validation**: `require("quality.arch")`、`require("shared.lib.common")`、`require("crap4lua._internal.common")` 命中 canonical `tools/*`
+- **status**: 已完成
+- **log**: 新增 canonical `tools/shared/package_path_helper.lua`，把 `tools/*` 搜索路径前置、`scripts/*` 降为兼容命中，并补了 `tools/bridge` 解析；`scripts/shared/package_path_helper.lua` 退化为 wrapper；`tests/bootstrap.lua` 改为直接从 canonical helper 装配 package path。
+- **files edited/created**: `tools/shared/package_path_helper.lua`, `tools/shared/bootstrap.lua`, `scripts/shared/package_path_helper.lua`, `tests/bootstrap.lua`, `.agents/plan.md`
 
 ### T4
 - **depends_on**: `[T3]`

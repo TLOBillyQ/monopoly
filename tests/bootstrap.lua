@@ -2,12 +2,27 @@ local M = {}
 
 local _package_paths_installed = false
 
+local function _normalize_path(path)
+  return tostring(path or ""):gsub("\\", "/")
+end
+
+local function _module_dir()
+  local source = debug.getinfo(1, "S").source or "@tests/bootstrap.lua"
+  local normalized = _normalize_path(source):gsub("^@", "")
+  return normalized:match("^(.*)/[^/]+$") or "tests"
+end
+
 function M.install_package_paths()
   if _package_paths_installed then
     return
   end
 
-  require("scripts.shared.package_path_helper").install_monopoly_package_paths({ repo_root = "." })
+  local runtime_paths = dofile(_module_dir() .. "/../tools/shared/runtime_paths.lua")
+  local env = runtime_paths.resolve({ source_path = debug.getinfo(1, "S").source })
+  dofile(runtime_paths.join_path(env.tools_dir, "shared/package_path_helper.lua")).install_monopoly_package_paths({
+    repo_root = env.repo_root,
+    arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view"),
+  })
 
   _package_paths_installed = true
 end

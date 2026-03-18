@@ -22,7 +22,7 @@ end
 
 function bootstrap.install(script_path, opts)
   local env = bootstrap.resolve(script_path, opts)
-  dofile(runtime_paths.join_path(env.scripts_dir, "shared/package_path_helper.lua")).install_monopoly_package_paths({
+  dofile(runtime_paths.join_path(env.tools_dir, "shared/package_path_helper.lua")).install_monopoly_package_paths({
     repo_root = env.repo_root,
     arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view"),
   })
