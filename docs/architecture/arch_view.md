@@ -11,14 +11,14 @@
 ## 代码位置
 
 - 通用工具源码与静态 viewer 资产在子模块 `vendor/arch_view/`
-- Monopoly 专属规则真源仍在 `scripts/quality/arch/config.json`
-- Monopoly 提交态 viewer 快照仍保留在 `scripts/quality/arch/viewer/`
-- Monopoly 宿主入口在 `scripts/quality/arch.lua`，内部通过 `require("arch_view")` 调用 vendored 工具
+- Monopoly 专属规则真源仍在 `tools/quality/arch/config.json`
+- Monopoly 提交态 viewer 快照仍保留在 `tools/quality/arch/viewer/`
+- Monopoly 宿主入口在 `tools/quality/arch.lua`，内部通过 `require("arch_view")` 调用 vendored 工具
 - 默认分析引擎为 `auto`：优先走 Go 核心，不可用时回退 Lua
 
 ## 真源与约束
 
-- 结构性依赖规则唯一真源：`scripts/quality/arch/config.json`
+- 结构性依赖规则唯一真源：`tools/quality/arch/config.json`
 - `tests/guards/dep_rules.lua` 只保留文本级硬边界（宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路，以及少量跨子系统禁令）
 - 零模块级循环依赖，无白名单，任意新循环直接让 `check` 失败
 - 根组件语义现为：`app`、`infrastructure`、`presentation`、`flow`、`ai`、`systems`、`runtime`、`core`、`config`
@@ -27,39 +27,39 @@
 ## 命令
 
 ```
-lua scripts/quality/arch.lua check
+lua tools/quality/arch.lua check
 ```
-扫描 `src/`，执行边界校验，失败则非零退出。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 均使用此能力；跑全部护栏用 `lua tests/guard.lua`。配置默认来自 `scripts/quality/arch/config.json`。
+扫描 `src/`，执行边界校验，失败则非零退出。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 均使用此能力；跑全部护栏用 `lua tests/guard.lua`。配置默认来自 `tools/quality/arch/config.json`。
 
 `check` 同时校验两类循环：
 - 模块级 `require` 环
 - projection/view 级反馈环（即模块图无环，但聚合到 viewer 视图后形成的往返依赖）
 
-Monopoly 当前只在 `scripts/quality/arch/filter.lua` 里过滤 `root` 视图的纯命名空间折叠伪环。`ui` / `ui.ctl` 视图里的 presentation 命名空间投影环已经清零，不再保留额外特例。
+Monopoly 当前只在 `tools/quality/arch/filter.lua` 里过滤 `root` 视图的纯命名空间折叠伪环。`ui` / `ui.ctl` 视图里的 presentation 命名空间投影环已经清零，不再保留额外特例。
 
 ```
-lua scripts/quality/arch.lua
+lua tools/quality/arch.lua
 ```
 无参数：生成并打开静态 viewer，等价于 `viewer --out-dir ./.arch_view/viewer --open`。
 
 ```
-lua scripts/quality/arch.lua viewer
-lua scripts/quality/arch.lua viewer --out-dir <dir> [--open]
-lua scripts/quality/arch.lua viewer --in-json <file> --out-dir <dir> [--open]
+lua tools/quality/arch.lua viewer
+lua tools/quality/arch.lua viewer --out-dir <dir> [--open]
+lua tools/quality/arch.lua viewer --in-json <file> --out-dir <dir> [--open]
 ```
 导出静态 viewer（`index.html`、`script.js`、`styles.css`、`architecture.json`、`architecture_data.js`）。有已导出 JSON 时可用 `--in-json` 跳过重扫。默认输出目录 `./.arch_view/viewer`。
 
-`lua scripts/quality/arch.lua viewer --out-dir scripts/quality/arch/viewer` 可刷新仓库内提交的 viewer 快照；复制的静态资产来自子模块 `vendor/arch_view/viewer/`，导出产物不依赖 Google Fonts 或其他外网资源。
+`lua tools/quality/arch.lua viewer --out-dir tools/quality/arch/viewer` 可刷新仓库内提交的 viewer 快照；复制的静态资产来自子模块 `vendor/arch_view/viewer/`，导出产物不依赖 Google Fonts 或其他外网资源。
 
 ```
-lua scripts/quality/arch.lua scan --out /tmp/monopoly_architecture.json
+lua tools/quality/arch.lua scan --out /tmp/monopoly_architecture.json
 ```
 导出完整机器可读数据（含 `graph`、`modules`、`layout`、`classified_edges`、`views`、`check` 等）。
 
 **扫描其他项目：**
 
 ```
-lua scripts/quality/arch.lua check --project-root /path/to/project --config /path/to/architecture.json
+lua tools/quality/arch.lua check --project-root /path/to/project --config /path/to/architecture.json
 ```
 
 ## Viewer 读法

@@ -1,39 +1,39 @@
 # CRAP Report
 
-`scripts/quality/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `tests/behavior.lua`、`tests/contract.lua` 或 `lua tests/guard.lua`。
+`tools/quality/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `tests/behavior.lua`、`tests/contract.lua` 或 `lua tests/guard.lua`。
 
-当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。Monopoly 的本地兼容层位于 `scripts/crap4lua/_internal/`，再通过公开 Lua runtime `crap4lua.bridge` 加载 `scripts/quality/crap/config.lua` 并执行 `scripts/quality/crap/adapter.lua` 收集 coverage，最后把生成的 `ReportRequest` JSON 交给上游 CLI 完成报告分析与 viewer 导出。
+当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。Monopoly 的本地兼容层位于 `tools/bridge/crap4lua/_internal/`，再通过公开 Lua runtime `crap4lua.bridge` 加载 `tools/quality/crap/config.lua` 并执行 `tools/quality/crap/adapter.lua` 收集 coverage，最后把生成的 `ReportRequest` JSON 交给上游 CLI 完成报告分析与 viewer 导出。
 
 如果你想先看整个质量面里 `crap` 和 `behavior / contract / guard / arch_view` 的分工，先读 `docs/architecture/quality_map.md`。
 
 ## 命令
 
 ```
-lua scripts/quality/crap.lua
+lua tools/quality/crap.lua
 ```
 无参数：生成并打开静态 viewer，等价于 `viewer --out-dir tmp/crap_view --open`。
 
 ```
-lua scripts/quality/crap.lua report --out tmp/crap_report.json --top 20
+lua tools/quality/crap.lua report --out tmp/crap_report.json --top 20
 ```
 生成报告。`tmp/...` 是逻辑临时目录别名，实际路径：macOS `$TMPDIR/monopoly_crap/`，Windows `%TEMP%/monopoly_crap/`。可通过 `MONOPOLY_CRAP_TMP` 覆盖。
 
 默认：作用域 `src/**/*.lua`，lane `behavior`，测试失败仍产出报告。
 
 ```
-lua scripts/quality/crap.lua report --lane behavior --lane contract --out tmp/crap_report.json
+lua tools/quality/crap.lua report --lane behavior --lane contract --out tmp/crap_report.json
 ```
 同时统计 behavior + contract 两条 lane 的触达。
 
 ```
-lua scripts/quality/crap.lua report --strict-tests --out tmp/crap_report.json
+lua tools/quality/crap.lua report --strict-tests --out tmp/crap_report.json
 ```
 测试 lane 失败时返回非零退出码。
 
 ```
-lua scripts/quality/crap.lua viewer
-lua scripts/quality/crap.lua viewer --out-dir tmp/crap_view [--open]
-lua scripts/quality/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
+lua tools/quality/crap.lua viewer
+lua tools/quality/crap.lua viewer --out-dir tmp/crap_view [--open]
+lua tools/quality/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/crap_view
 ```
 导出静态 viewer。命令完成后打印实际路径，打开 `index.html` 即可查看，不需要本地服务。
 

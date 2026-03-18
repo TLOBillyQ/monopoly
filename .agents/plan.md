@@ -178,6 +178,9 @@
 - **description**: 更新文档、CI、帮助文本、示例命令、已提交 snapshot metadata，移除仓库内剩余的 canonical `scripts/*` 字面量
 - **location**: `docs/**`, `.github/workflows/**`, 生成 snapshot 文件
 - **validation**: 搜索结果中 `scripts/*` 只剩过渡 wrapper 路径与明确标注为 deprecated 的说明
+- **status**: 已完成
+- **log**: 已把 `docs/**`、`docs/eggy/api/00_index.md`、`.github/workflows/regression.yml` 以及 `tools/quality/scrap/viewer/*` 中的 canonical 路径切到 `tools/*`；保留的 `scripts/*` 只剩 wrapper 实现、测试 wrapper 调用和显式兼容场景。
+- **files edited/created**: `docs/**`, `.github/workflows/regression.yml`, `tools/quality/scrap/viewer/*`, `.agents/plan.md`
 
 ### T12
 - **depends_on**: `[T11]`

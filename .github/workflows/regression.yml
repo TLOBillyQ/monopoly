@@ -54,7 +54,7 @@ jobs:
           go version | grep 'go1.26'
 
       - name: Validate crap wrapper help
-        run: lua scripts/quality/crap.lua --help >/dev/null
+        run: lua tools/quality/crap.lua --help >/dev/null
 
       - name: Run regression
         run: lua tests/regression.lua
@@ -62,7 +62,7 @@ jobs:
       - name: Collect deploy line counts
         run: |
           target_path="$RUNNER_TEMP/monopoly-deploy"
-          output="$(lua scripts/ops/deploy.lua --target-path "$target_path" 2>&1)"
+          output="$(lua tools/ops/deploy.lua --target-path "$target_path" 2>&1)"
           printf '%s\n' "$output"
 
           summary_lines="$(printf '%s\n' "$output" | grep -E '有效代码行数|^[[:space:]]+- (Config|src|vendor|main\.lua|Data/UIManagerNodes\.lua|Data/Prefab\.lua):' || true)"

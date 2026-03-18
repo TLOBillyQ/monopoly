@@ -11,16 +11,16 @@
 ## 入口
 
 ```sh
-lua scripts/quality/scrap.lua --help
-lua scripts/quality/scrap.lua index --out tmp/scrap_index.json
-lua scripts/quality/scrap.lua find --query "choice owner_role_id"
-lua scripts/quality/scrap.lua clusters --out tmp/scrap_clusters.json
-lua scripts/quality/scrap.lua viewer --out-dir tmp/scrap_view
+lua tools/quality/scrap.lua --help
+lua tools/quality/scrap.lua index --out tmp/scrap_index.json
+lua tools/quality/scrap.lua find --query "choice owner_role_id"
+lua tools/quality/scrap.lua clusters --out tmp/scrap_clusters.json
+lua tools/quality/scrap.lua viewer --out-dir tmp/scrap_view
 ```
 
 `tmp/...` 会映射到系统临时目录下的 `monopoly_scrap/`。
 
-裸调用 `lua scripts/quality/scrap.lua` 默认直接导出并打开 viewer，等价于 `viewer --out-dir tmp/scrap_view --open`。
+裸调用 `lua tools/quality/scrap.lua` 默认直接导出并打开 viewer，等价于 `viewer --out-dir tmp/scrap_view --open`。
 
 ## Monopoly 适配层做了什么
 
@@ -28,7 +28,7 @@ lua scripts/quality/scrap.lua viewer --out-dir tmp/scrap_view
 - 自动加载 `tests/support/migration_pairs.lua`，把旧 `src/game/*` 概念映射到现路径模块
 - 查询排序默认 `code > test > doc`
 - 输出稳定 JSON，便于后续接静态 viewer 或 TUI
-- Monopoly 提交态 viewer 快照保留在 `scripts/quality/scrap/viewer/`
+- Monopoly 提交态 viewer 快照保留在 `tools/quality/scrap/viewer/`
 
 ## 输出说明
 
@@ -67,8 +67,8 @@ lua scripts/quality/scrap.lua viewer --out-dir tmp/scrap_view
 支持：
 
 ```sh
-lua scripts/quality/scrap.lua viewer --out-dir tmp/scrap_view
-lua scripts/quality/scrap.lua viewer --in-json tmp/scrap_index.json --out-dir tmp/scrap_view
+lua tools/quality/scrap.lua viewer --out-dir tmp/scrap_view
+lua tools/quality/scrap.lua viewer --in-json tmp/scrap_index.json --out-dir tmp/scrap_view
 ```
 
 viewer 是搜索优先的阅读台：左侧输入概念词，中间查看匹配 scraps，右侧检查 terms / requires / 同路径符号 / 相关 scraps。
@@ -76,7 +76,7 @@ viewer 是搜索优先的阅读台：左侧输入概念词，中间查看匹配 
 如果要刷新仓库内提交的快照：
 
 ```sh
-lua scripts/quality/scrap.lua viewer --out-dir scripts/quality/scrap/viewer
+lua tools/quality/scrap.lua viewer --out-dir tools/quality/scrap/viewer
 ```
 
 ## 边界
