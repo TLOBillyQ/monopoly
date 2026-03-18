@@ -62,28 +62,28 @@ T1 ── T2 ── T3 ──┬── T4 ──┐
 - **depends_on**: []
 - **location**: repo root, [`.luarc.json`](/Users/billyq/Dev/Github/Lua/monopoly/.luarc.json)
 - **description**: 新增仓库根 `.luarc.json`，把 `src` 作为主分析目标，设置 `runtime.version = "Lua 5.4"`，补 `workspace.library` 指向 `vendor/third_party` 里可复用注解文件与 `meta/`，并通过 `diagnostics.globals` 声明当前 `src` 实际依赖的宿主全局。此任务不得全局禁用 `undefined-field`、`need-check-nil`、`return-type-mismatch` 等真实问题来源的诊断码。
-- **validation**: `lua-language-server --check=src --checklevel=Warning` 能稳定跑完；配置未通过 ignore 规则把 `src` 诊断面整体藏掉。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **validation**: `lua-language-server --check=src --configpath=../.luarc.json --checklevel=Warning` 能稳定跑完；配置未通过 ignore 规则把 `src` 诊断面整体藏掉。
+- **status**: Completed
+- **log**: 2026-03-18 已新增根配置 `.luarc.json`，使用 LuaLS 扁平键格式，并将 `workspace.library` 写成相对 `src/` workspace 的 `../meta` 与 `../vendor/third_party`。执行探针后确认 `--check=src` 时 `--configpath` 的相对路径基准是 `src/`，因此后续静态验收统一使用 `--configpath=../.luarc.json`。基线从 `127` 降到 `104`，未通过 ignore 或主诊断禁用掩盖 `src` 问题。
+- **files edited/created**: `.luarc.json`
 
 ### T2: 建立共享宿主/扩展类型面
 - **depends_on**: [T1]
 - **location**: [`meta/luals_host.lua`](/Users/billyq/Dev/Github/Lua/monopoly/meta/luals_host.lua)
 - **description**: 新增 LuaLS 专用 meta 文件，定义 `GameAPI` / `GlobalAPI` / `UIManager` / `EVENT` / `RegisterTriggerEvent` / `SetFrameOut` / `traceback` 的最小可用类型面，并补扩展 `math.Vector3`、`math.Quaternion`、`math.tofixed` 以及 `Role`、`Creature`、`Vector3`、`Fixed` 等别名。该文件只服务 LuaLS，不参与运行时加载。
-- **validation**: 重新跑 `--check=src` 后，`undefined-global` 和 `undefined-field` 数量明显下降，且减少项主要集中在宿主 globals / 宿主字段相关告警。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **validation**: 重新跑 `lua-language-server --check=src --configpath=../.luarc.json --checklevel=Warning` 后，`undefined-global` 和 `undefined-field` 数量明显下降，且减少项主要集中在宿主 globals / 宿主字段相关告警。
+- **status**: Completed
+- **log**: 2026-03-18 已新增 `meta/luals_host.lua`，只补当前 `src` 真实访问到的 globals、`math.*` 扩展、`GameAPI`/`GlobalAPI` 方法面，以及 `Role` / `Creature` / `Vector3` / `Fixed` 等别名。过程中把 `Class()` 的返回类型放宽为普通 table，避免引入与当前类写法无关的 `inject-field` 噪音。基线从 `104` 进一步降到 `34`，`undefined-global` 清零，宿主桥接相关 `undefined-field` 基本出清。
+- **files edited/created**: `meta/luals_host.lua`
 
 ### T3: 重扫并冻结 `src` 修复清单
 - **depends_on**: [T1, T2]
 - **location**: `src/`
 - **description**: 重新执行 `lua-language-server --check=src --check_format=json --checklevel=Warning`，以新的 `.luarc.json + meta` 为基线冻结剩余告警清单。按“文件 + 诊断码 + 行号”生成执行用清单，作为后续并行任务的唯一输入，不再使用当前这份旧统计。
 - **validation**: 产出一份明确的剩余清单，按文件分派到 T4/T5/T6，且三个任务写集不重叠。
-- **status**: Not Completed
-- **log**:
-- **files edited/created**:
+- **status**: Completed
+- **log**: 2026-03-18 已用 `lua-language-server --check=src --configpath=../.luarc.json --check_format=json --logpath=/tmp/luals-t2 --checklevel=Warning` 冻结新基线，剩余 `34` 个告警、`13` 个文件。执行清单已落到 `.agents/luals_src_inventory.md`，明确切成 T4 `8` 个 `redundant-parameter`、T5 `12` 个 host/render 桥接告警、T6 `14` 个 nilability/注解/单点兼容告警，三组写集不重叠。
+- **files edited/created**: `.agents/luals_src_inventory.md`
 
 ### T4: 修复调用形态漂移与轻量 API 对齐
 - **depends_on**: [T3]
@@ -117,7 +117,7 @@ T1 ── T2 ── T3 ──┬── T4 ──┐
 - **location**: repo root, `src/`
 - **description**: 以 `src` 为唯一验收口径重跑 LuaLS，并补结构与行为回归。若仍有 `src` Warning，按文件回退到对应任务处理，不在此任务里临时加 ignore。
 - **validation**:
-  - `lua-language-server --check=src --check_format=pretty --checklevel=Warning`
+  - `lua-language-server --check=src --configpath=../.luarc.json --check_format=pretty --checklevel=Warning`
     预期 `no problems found`
   - `rg --files src -g '*.lua' | xargs -I{} luac -p "{}"`
     预期全部通过
@@ -145,7 +145,7 @@ T1 ── T2 ── T3 ──┬── T4 ──┐
 
 ## Testing Strategy
 
-- 以 `lua-language-server --check=src --checklevel=Warning` 作为唯一静态验收口径，不使用“全仓再过滤 `src`”的二次脚本口径。
+- 以 `lua-language-server --check=src --configpath=../.luarc.json --checklevel=Warning` 作为唯一静态验收口径，不使用“全仓再过滤 `src`”的二次脚本口径。
 - 每个并行任务完成后先跑本任务涉及文件的 `luac -p`，避免把语法错误带到汇总阶段。
 - T6 完成后必须人工复核导出注解是否真实反映运行时，特别是 `Role?` / `Creature?` / `Fixed` 这类契约变更。
 - 最终统一跑 `guard + arch + contract + behavior`，防止因为 host/UI glue 调整引入结构或回归问题。
