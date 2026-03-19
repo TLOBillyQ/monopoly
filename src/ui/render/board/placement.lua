@@ -157,13 +157,8 @@ local function _place_player_unit(pid, unit, target_pos, seat_id, vehicle)
 end
 
 local function _stop_and_log_player_motion(state, pid, seat_id, unit, vehicle)
-  local stop_synthetic_ai = move_anim.peek_pending_synthetic_ai_stop(state.board_scene, pid)
   move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
-  local stop_result = _stop_player_motion(pid, seat_id, unit, vehicle, stop_synthetic_ai)
-  if stop_synthetic_ai == true then
-    move_anim.consume_pending_synthetic_ai_stop(state.board_scene, pid)
-  end
-  return stop_result
+  return _stop_player_motion(pid, seat_id, unit, vehicle, false)
 end
 
 local function _place_single_player(state, player, i, occupants, spacing, min_player_y)

@@ -123,7 +123,7 @@ local function _spawn_actor(registry, spec, spawn_pos)
     game_api.create_creature_fixed_scale,
     spec.unit_key,
     spawn_pos,
-    runtime_constants.q_zero,
+    runtime_constants.q_left,
     1.0,
     nil
   )

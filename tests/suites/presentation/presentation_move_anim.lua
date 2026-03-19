@@ -282,7 +282,7 @@ local function _test_move_anim_prefers_forced_move_stop_and_model_stop_for_local
   _assert_eq(calls[8], nil, "finish callback should not fall through to ai stop when forced stop exists")
 end
 
-local function _test_move_anim_synthetic_actor_stops_ai_before_motion_stop()
+local function _test_move_anim_synthetic_actor_uses_forced_move_start_and_stop()
   local _vec3 = vec3.with_sub_length
   local scheduled = {}
   local calls = {}
@@ -293,11 +293,8 @@ local function _test_move_anim_synthetic_actor_stops_ai_before_motion_stop()
     },
     units_by_player_id = {
       [-2] = {
-        start_move_by_direction = function()
-          calls[#calls + 1] = "start_move_by_direction"
-        end,
-        stop_ai = function()
-          calls[#calls + 1] = "stop_ai"
+        force_start_move = function()
+          calls[#calls + 1] = "force_start_move"
         end,
         force_stop_move = function()
           calls[#calls + 1] = "force_stop_move"
@@ -329,15 +326,13 @@ local function _test_move_anim_synthetic_actor_stops_ai_before_motion_stop()
     })
     _assert_eq(#scheduled, 1, "synthetic move should schedule one finish callback")
     scheduled[1].fn()
-    _assert_eq(calls[2], "stop_ai", "synthetic actor should stop ai before motion stop")
-    _assert_eq(calls[3], "force_stop_move", "synthetic actor should still stop motion")
-    _assert_eq(calls[4], "stop_anim", "synthetic actor should still stop anim")
-    _assert_eq(move_anim.peek_pending_synthetic_ai_stop(scene, -2), true,
-      "synthetic finish should leave a pending board-sync ai stop marker")
+    _assert_eq(calls[1], "force_start_move", "synthetic actor should start moving via force_start_move")
+    _assert_eq(calls[2], "force_stop_move", "synthetic actor should stop via force_stop_move")
+    _assert_eq(calls[3], "stop_anim", "synthetic actor should still stop anim")
   end)
 end
 
-local function _test_move_anim_non_synthetic_actor_does_not_stop_ai()
+local function _test_move_anim_non_synthetic_actor_uses_regular_move_start()
   local _vec3 = vec3.with_sub_length
   local scheduled = {}
   local calls = {}
@@ -350,9 +345,6 @@ local function _test_move_anim_non_synthetic_actor_does_not_stop_ai()
       [-2] = {
         start_move_by_direction = function()
           calls[#calls + 1] = "start_move_by_direction"
-        end,
-        stop_ai = function()
-          calls[#calls + 1] = "stop_ai"
         end,
         force_stop_move = function()
           calls[#calls + 1] = "force_stop_move"
@@ -379,62 +371,10 @@ local function _test_move_anim_non_synthetic_actor_does_not_stop_ai()
     })
     _assert_eq(#scheduled, 1, "non-synthetic move should schedule one finish callback")
     scheduled[1].fn()
+    _assert_eq(calls[1], "start_move_by_direction", "non-synthetic actor should keep regular move start")
     _assert_eq(calls[2], "force_stop_move", "non-synthetic actor should go straight to motion stop")
     _assert_eq(calls[3], "stop_anim", "non-synthetic actor should still stop anim")
-    _assert_eq(calls[4], nil, "non-synthetic actor should not call stop_ai")
-    _assert_eq(move_anim.peek_pending_synthetic_ai_stop(scene, -2), false,
-      "non-synthetic finish should not mark pending board-sync ai stop")
-  end)
-end
-
-local function _test_move_anim_synthetic_stop_ai_failure_falls_through_to_motion_stop()
-  local _vec3 = vec3.with_sub_length
-  local scheduled = {}
-  local calls = {}
-  local scene = {
-    tiles = {
-      [1] = { get_position = function() return _vec3(0, 0, 0) end },
-      [2] = { get_position = function() return _vec3(10, 0, 0) end },
-    },
-    units_by_player_id = {
-      [-2] = {
-        start_move_by_direction = function()
-          calls[#calls + 1] = "start_move_by_direction"
-        end,
-        stop_ai = function()
-          calls[#calls + 1] = "stop_ai"
-          error("stop_ai_failed")
-        end,
-        force_stop_move = function()
-          calls[#calls + 1] = "force_stop_move"
-        end,
-        stop_anim = function()
-          calls[#calls + 1] = "stop_anim"
-        end,
-      },
-    },
-  }
-
-  _with_patches({
-    { target = runtime_ports, key = "resolve_role", value = function() return { is_synthetic_actor = true } end },
-    { target = runtime_ports, key = "schedule", value = function(delay, fn)
-      scheduled[#scheduled + 1] = { delay = delay, fn = fn }
-    end },
-  }, function()
-    move_anim.play_sequence(scene, {
-      player_id = -2,
-      seq = 84,
-      from_index = 1,
-      to_index = 2,
-      direction = { x = 1, y = 0, z = 0 },
-    })
-    local ok, err = pcall(scheduled[1].fn)
-    assert(ok == true, tostring(err))
-    _assert_eq(calls[2], "stop_ai", "synthetic actor should still attempt stop_ai first")
-    _assert_eq(calls[3], "force_stop_move", "stop_ai failure should not block motion stop")
-    _assert_eq(calls[4], "stop_anim", "stop_ai failure should not block anim stop")
-    _assert_eq(move_anim.peek_pending_synthetic_ai_stop(scene, -2), true,
-      "stop_ai failure should still leave a pending board-sync ai stop marker")
+    _assert_eq(calls[4], nil, "non-synthetic actor should not add extra stop calls")
   end)
 end
 
@@ -609,16 +549,12 @@ return {
       run = _test_anim_ports_role_control_exempt_stays_until_sequence_finish,
     },
     {
-      name = "_test_move_anim_synthetic_actor_stops_ai_before_motion_stop",
-      run = _test_move_anim_synthetic_actor_stops_ai_before_motion_stop,
+      name = "_test_move_anim_synthetic_actor_uses_forced_move_start_and_stop",
+      run = _test_move_anim_synthetic_actor_uses_forced_move_start_and_stop,
     },
     {
-      name = "_test_move_anim_non_synthetic_actor_does_not_stop_ai",
-      run = _test_move_anim_non_synthetic_actor_does_not_stop_ai,
-    },
-    {
-      name = "_test_move_anim_synthetic_stop_ai_failure_falls_through_to_motion_stop",
-      run = _test_move_anim_synthetic_stop_ai_failure_falls_through_to_motion_stop,
+      name = "_test_move_anim_non_synthetic_actor_uses_regular_move_start",
+      run = _test_move_anim_non_synthetic_actor_uses_regular_move_start,
     },
     {
       name = "_test_move_anim_debug_log_writes_when_enabled",

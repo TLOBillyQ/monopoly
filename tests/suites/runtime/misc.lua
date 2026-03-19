@@ -231,6 +231,7 @@ end
 
 local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
   local registry_module = require("src.host.eggy.synthetic_actor_registry")
+  local runtime_constants = require("src.config.gameplay.runtime_constants")
   local created = {}
   local registry = registry_module.new({
     LuaAPI = {
@@ -244,8 +245,8 @@ local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
       end,
     },
     GameAPI = {
-      create_creature_fixed_scale = function(unit_key, pos)
-        created[#created + 1] = { unit_key = unit_key, pos = pos }
+      create_creature_fixed_scale = function(unit_key, pos, rot)
+        created[#created + 1] = { unit_key = unit_key, pos = pos, rot = rot }
         return {
           start_ai = function() end,
         }
@@ -263,6 +264,7 @@ local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
   _assert_eq(created.query_name, "t7", "registry should use the first path tile as spawn anchor")
   _assert_eq(created[1].unit_key, "npc_2", "registry should spawn configured synthetic unit key")
   _assert_eq(created[1].pos.x, 1, "registry should pass queried spawn position to GameAPI")
+  _assert_eq(created[1].rot, runtime_constants.q_left, "registry should spawn synthetic actors facing left")
 end
 
 local function _test_synthetic_actor_registry_reset_destroys_spawned_actor_and_clears_registry()
