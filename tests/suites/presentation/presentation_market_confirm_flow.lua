@@ -36,11 +36,14 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_opens_pre_confirm_
       active_choice_screen_key = "market",
     },
     game = {},
+    local_actor_role_id = 7,
   }
   _bind_ui_runtime(state)
   local game = {}
+  state.ui_model.choice.owner_role_id = 7
 
   _with_patches({
+    { key = "UIManager", value = { client_role = nil } },
     { target = choice_openers, key = "open_pre_confirm_screen", value = function(_, _, option_id, title, body)
       opened_pre_confirm = {
         option_id = option_id,
@@ -98,11 +101,14 @@ local function _test_ui_intent_dispatcher_market_confirm_skin_cancel_restores_ma
       active_choice_screen_key = "market",
     },
     game = {},
+    local_actor_role_id = 7,
   }
   _bind_ui_runtime(state)
   local game = {}
+  state.ui_model.choice.owner_role_id = 7
 
   _with_patches({
+    { key = "UIManager", value = { client_role = nil } },
     { target = choice_openers, key = "open_pre_confirm_screen", value = function()
       opened_pre_confirm = opened_pre_confirm + 1
     end },
@@ -245,10 +251,13 @@ local function _test_ui_intent_dispatcher_item_slot_pre_confirm_opens_secondary_
       item_slot_item_ids_by_role = {},
     },
     game = {},
+    local_actor_role_id = 7,
   }
   _bind_ui_runtime(state)
+  state.ui_model.choice.owner_role_id = 7
 
   _with_patches({
+    { key = "UIManager", value = { client_role = nil } },
     { target = choice_openers, key = "open_pre_confirm_screen", value = function(_, _, option_id, title, body)
       opened_pre_confirm = {
         option_id = option_id,
@@ -275,6 +284,114 @@ local function _test_ui_intent_dispatcher_item_slot_pre_confirm_opens_secondary_
     "item slot pre-confirm should build body text")
 end
 
+local function _test_ui_intent_dispatcher_market_confirm_skin_skips_pre_confirm_for_non_owner()
+  local opened_pre_confirm = 0
+  local dispatched = {}
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        dispatched[#dispatched + 1] = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui_model = {
+      choice = {
+        id = 12,
+        kind = "market_buy",
+        route_key = "market",
+        owner_role_id = 7,
+        options = {
+          { id = 5001, label = "海绵宝宝皮肤", requires_pre_confirm = true, pre_confirm_kind = "market_skin_purchase" },
+        },
+      },
+    },
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+      active_choice_screen_key = "market",
+    },
+    game = {},
+    local_actor_role_id = 8,
+  }
+  _bind_ui_runtime(state)
+
+  _with_patches({
+    { key = "UIManager", value = { client_role = nil } },
+    { target = choice_openers, key = "open_pre_confirm_screen", value = function()
+      opened_pre_confirm = opened_pre_confirm + 1
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, {}, {
+      type = "market_confirm",
+      choice_id = 12,
+      option_id = 5001,
+    }, {})
+  end)
+
+  _assert_eq(opened_pre_confirm, 0, "non-owner market_confirm should not open pre-confirm")
+  _assert_eq(#dispatched, 1, "non-owner market_confirm should continue with original action path")
+  _assert_eq(dispatched[1] and dispatched[1].type, "choice_select", "non-owner market_confirm should dispatch choice_select")
+end
+
+local function _test_ui_intent_dispatcher_item_slot_pre_confirm_skips_secondary_confirm_for_non_owner()
+  local opened_pre_confirm = 0
+  local dispatched = {}
+  local state = {
+    turn_action_port = {
+      dispatch_action = function(_, _, action)
+        dispatched[#dispatched + 1] = action
+      end,
+      should_block_action = function()
+        return false
+      end,
+    },
+    ui_model = {
+      choice = {
+        id = 21,
+        kind = "item_phase_choice",
+        route_key = "base_inline",
+        owner_role_id = 7,
+        uses_item_slots = true,
+        pre_confirm_before_slot_pick = true,
+        options = {
+          { id = 2001, label = "路障卡" },
+          { id = 2002, label = "导弹卡" },
+        },
+      },
+    },
+    ui = {
+      input_blocked = false,
+      active_choice_screen_key = "base_inline",
+      item_slot_item_ids = { 2002, 2001 },
+      item_slot_item_ids_by_role = {},
+    },
+    game = {},
+    local_actor_role_id = 8,
+  }
+  _bind_ui_runtime(state)
+
+  _with_patches({
+    { key = "UIManager", value = { client_role = nil } },
+    { target = choice_openers, key = "open_pre_confirm_screen", value = function()
+      opened_pre_confirm = opened_pre_confirm + 1
+    end },
+  }, function()
+    ui_intent_dispatcher.dispatch(state, {}, {
+      type = "ui_button",
+      id = "item_slot_1",
+      actor_role_id = 7,
+    }, {})
+  end)
+
+  _assert_eq(opened_pre_confirm, 0, "non-owner item slot should not open pre-confirm")
+  _assert_eq(state._pre_confirm_active, nil, "non-owner item slot should keep pre-confirm inactive")
+  _assert_eq(#dispatched, 1, "non-owner item slot should continue with original action path")
+  _assert_eq(dispatched[1] and dispatched[1].type, "ui_button", "non-owner item slot should dispatch original ui_button")
+end
+
 return {
   name = "presentation.market_confirm_flow",
   tests = {
@@ -283,5 +400,7 @@ return {
     { name = "_test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_dispatch", run = _test_ui_intent_dispatcher_market_confirm_non_skin_still_direct_dispatch },
     { name = "_test_ui_intent_dispatcher_market_confirm_without_pre_confirm_flag_dispatches_directly", run = _test_ui_intent_dispatcher_market_confirm_without_pre_confirm_flag_dispatches_directly },
     { name = "_test_ui_intent_dispatcher_item_slot_pre_confirm_opens_secondary_confirm", run = _test_ui_intent_dispatcher_item_slot_pre_confirm_opens_secondary_confirm },
+    { name = "_test_ui_intent_dispatcher_market_confirm_skin_skips_pre_confirm_for_non_owner", run = _test_ui_intent_dispatcher_market_confirm_skin_skips_pre_confirm_for_non_owner },
+    { name = "_test_ui_intent_dispatcher_item_slot_pre_confirm_skips_secondary_confirm_for_non_owner", run = _test_ui_intent_dispatcher_item_slot_pre_confirm_skips_secondary_confirm_for_non_owner },
   },
 }

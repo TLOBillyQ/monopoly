@@ -602,6 +602,7 @@ local function _test_pre_confirm_enter_choice_select()
     ui = { active_choice_screen_key = "base" },
     _pre_confirm_active = false,
     game = {},
+    local_actor_role_id = 7,
   }
   local opened = false
   state.gameplay_loop_ports = {
@@ -613,7 +614,14 @@ local function _test_pre_confirm_enter_choice_select()
   local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
-        return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
+        return {
+          current_player_id = 7,
+          choice = {
+            id = "choice1",
+            owner_role_id = 7,
+            options = { { id = "opt1", label = "Option 1" } },
+          },
+        }
       end,
     },
     ["src.ui.pres.choice_support"] = {
@@ -650,6 +658,7 @@ local function _test_pre_confirm_enter_market_confirm()
     ui = { active_choice_screen_key = "market" },
     _pre_confirm_active = false,
     game = {},
+    local_actor_role_id = 7,
   }
   local opened = false
   state.gameplay_loop_ports = {
@@ -661,7 +670,16 @@ local function _test_pre_confirm_enter_market_confirm()
   local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
-        return { choice = { id = "choice1", options = { { id = "1001", requires_pre_confirm = true, label = "Skin", screen_key = "market" } } } }
+        return {
+          current_player_id = 7,
+          choice = {
+            id = "choice1",
+            owner_role_id = 7,
+            options = {
+              { id = "1001", requires_pre_confirm = true, label = "Skin", screen_key = "market" },
+            },
+          },
+        }
       end,
     },
     ["src.ui.pres.choice_support"] = {
@@ -683,6 +701,7 @@ local function _test_pre_confirm_enter_ui_button_item_slot()
     ui = { active_choice_screen_key = "base", item_slot_item_ids = { [1] = "item1" } },
     _pre_confirm_active = false,
     game = {},
+    local_actor_role_id = 7,
   }
   local opened = false
   state.gameplay_loop_ports = {
@@ -694,7 +713,14 @@ local function _test_pre_confirm_enter_ui_button_item_slot()
   local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
-        return { choice = { id = "choice1", options = { { id = "item1", label = "Item" } } } }
+        return {
+          current_player_id = 7,
+          choice = {
+            id = "choice1",
+            owner_role_id = 7,
+            options = { { id = "item1", label = "Item" } },
+          },
+        }
       end,
     },
     ["src.ui.pres.choice_support"] = {
@@ -979,6 +1005,7 @@ local function _test_pre_confirm_enter_missing_modal_function()
     ui = { active_choice_screen_key = "base" },
     _pre_confirm_active = false,
     game = {},
+    local_actor_role_id = 7,
     gameplay_loop_ports = {
       modal = {
         -- open_pre_confirm_screen is intentionally missing
@@ -989,7 +1016,14 @@ local function _test_pre_confirm_enter_missing_modal_function()
   local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
-        return { choice = { id = "choice1", options = { { id = "opt1", label = "Option 1" } } } }
+        return {
+          current_player_id = 7,
+          choice = {
+            id = "choice1",
+            owner_role_id = 7,
+            options = { { id = "opt1", label = "Option 1" } },
+          },
+        }
       end,
     },
     ["src.ui.pres.choice_support"] = {
@@ -1010,12 +1044,20 @@ local function _test_pre_confirm_enter_market_confirm_option_not_found()
     ui = { active_choice_screen_key = "market" },
     _pre_confirm_active = false,
     game = {},
+    local_actor_role_id = 7,
   }
 
   local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
     ["src.state.state_access.runtime_state"] = {
       get_ui_model = function()
-        return { choice = { id = "choice1", options = { { id = "9999", requires_pre_confirm = false } } } }
+        return {
+          current_player_id = 7,
+          choice = {
+            id = "choice1",
+            owner_role_id = 7,
+            options = { { id = "9999", requires_pre_confirm = false } },
+          },
+        }
       end,
     },
     ["src.ui.pres.choice_support"] = {
@@ -1026,6 +1068,85 @@ local function _test_pre_confirm_enter_market_confirm_option_not_found()
   end)
 
   assert(result == false, "should return false when market option not found or doesn't require pre_confirm")
+end
+
+local function _test_pre_confirm_enter_requires_local_owner()
+  local state = {
+    ui = { active_choice_screen_key = "base" },
+    _pre_confirm_active = false,
+    game = {},
+    local_actor_role_id = 8,
+  }
+  local opened = false
+  state.gameplay_loop_ports = {
+    modal = {
+      open_pre_confirm_screen = function() opened = true end,
+    },
+  }
+
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
+    ["src.state.state_access.runtime_state"] = {
+      get_ui_model = function()
+        return {
+          current_player_id = 7,
+          choice = {
+            id = "choice1",
+            owner_role_id = 7,
+            options = { { id = "opt1", label = "Option 1" } },
+          },
+        }
+      end,
+    },
+    ["src.ui.pres.choice_support"] = {
+      resolve_option_label_by_id = function() return "Option 1" end,
+      resolve_secondary_confirm_title = function() return "Title" end,
+      resolve_secondary_confirm_body = function() return "Body" end,
+    },
+  }, function(flow)
+    return flow.enter(state, { type = "choice_select", option_id = "opt1" })
+  end)
+
+  assert(result == false, "pre_confirm should reject non-owner local role")
+  assert(opened == false, "pre_confirm should not open modal for non-owner local role")
+end
+
+local function _test_pre_confirm_enter_requires_resolved_local_role()
+  local state = {
+    ui = { active_choice_screen_key = "base" },
+    _pre_confirm_active = false,
+    game = {},
+  }
+  local opened = false
+  state.gameplay_loop_ports = {
+    modal = {
+      open_pre_confirm_screen = function() opened = true end,
+    },
+  }
+
+  local result = _reload_module("src.ui.input.dispatch_pre_confirm", {
+    ["src.state.state_access.runtime_state"] = {
+      get_ui_model = function()
+        return {
+          current_player_id = 7,
+          choice = {
+            id = "choice1",
+            owner_role_id = 7,
+            options = { { id = "opt1", label = "Option 1" } },
+          },
+        }
+      end,
+    },
+    ["src.ui.pres.choice_support"] = {
+      resolve_option_label_by_id = function() return "Option 1" end,
+      resolve_secondary_confirm_title = function() return "Title" end,
+      resolve_secondary_confirm_body = function() return "Body" end,
+    },
+  }, function(flow)
+    return flow.enter(state, { type = "choice_select", option_id = "opt1" })
+  end)
+
+  assert(result == false, "pre_confirm should reject missing local role")
+  assert(opened == false, "pre_confirm should not open modal without local role")
 end
 
 -- Additional test for role_control_lock_policy.sync - unit with existing buff
@@ -1424,6 +1545,8 @@ return {
     { name = "play_sound_only_with_nil_pos_fallback", run = _test_play_sound_only_with_nil_pos_fallback },
     { name = "pre_confirm_enter_missing_modal_function", run = _test_pre_confirm_enter_missing_modal_function },
     { name = "pre_confirm_enter_market_confirm_option_not_found", run = _test_pre_confirm_enter_market_confirm_option_not_found },
+    { name = "pre_confirm_enter_requires_local_owner", run = _test_pre_confirm_enter_requires_local_owner },
+    { name = "pre_confirm_enter_requires_resolved_local_role", run = _test_pre_confirm_enter_requires_resolved_local_role },
     { name = "role_control_lock_sync_unit_with_existing_buff", run = _test_role_control_lock_sync_unit_with_existing_buff },
     { name = "role_control_lock_sync_nil_role_id", run = _test_role_control_lock_sync_nil_role_id },
     { name = "role_control_lock_sync_role_without_get_ctrl_unit", run = _test_role_control_lock_sync_role_without_get_ctrl_unit },

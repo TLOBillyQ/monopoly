@@ -1663,6 +1663,59 @@ local function _test_complex_consecutive_turn_settlement()
   assert(true, "复杂连续结算完成")
 end
 
+local function _test_forced_move_landing_optional_preserves_owner_role_id_for_buy_land()
+  local g = _new_game()
+  local player = g.players[1]
+  g:set_player_cash(player, 10000)
+
+  local _, tile = _first_land_tile(g.board)
+  local forced_move = assert(g.registries.chances.handlers.forced_move, "missing forced_move handler")
+  local move_out = forced_move(g, player, {
+    effect = "forced_move",
+    destination_tile_id = tile.id,
+  }, {})
+
+  assert(move_out and move_out.kind == "need_landing", "forced_move should enter need_landing flow")
+
+  local landing_out = _resolve_landing(g, player, tile, move_out.move_result)
+  assert(landing_out and landing_out.waiting == true, "empty land landing should wait on optional choice")
+
+  local pending = _get_choice(g)
+  assert(pending and pending.kind == "landing_optional_effect", "forced move landing should open landing_optional_effect")
+  assert(pending.owner_role_id == player.id, "forced move buy_land choice should preserve player owner_role_id")
+  assert(pending.route_key == "secondary_confirm", "single landing optional should stay on secondary_confirm route")
+  assert(pending.options and pending.options[1] and pending.options[1].id == "buy_land",
+    "forced move empty land should offer buy_land")
+end
+
+local function _test_forced_move_landing_optional_preserves_owner_role_id_for_upgrade_land()
+  local g = _new_game()
+  local player = g.players[1]
+  g:set_player_cash(player, 10000)
+
+  local _, tile = _first_land_tile(g.board)
+  g:set_tile_owner(tile, player.id)
+  g:set_player_property(player, tile.id, true)
+
+  local forced_move = assert(g.registries.chances.handlers.forced_move, "missing forced_move handler")
+  local move_out = forced_move(g, player, {
+    effect = "forced_move",
+    destination_tile_id = tile.id,
+  }, {})
+
+  assert(move_out and move_out.kind == "need_landing", "forced_move should enter need_landing flow")
+
+  local landing_out = _resolve_landing(g, player, tile, move_out.move_result)
+  assert(landing_out and landing_out.waiting == true, "owned land landing should wait on optional choice")
+
+  local pending = _get_choice(g)
+  assert(pending and pending.kind == "landing_optional_effect", "forced move landing should open landing_optional_effect")
+  assert(pending.owner_role_id == player.id, "forced move upgrade_land choice should preserve player owner_role_id")
+  assert(pending.route_key == "secondary_confirm", "single landing optional should stay on secondary_confirm route")
+  assert(pending.options and pending.options[1] and pending.options[1].id == "upgrade_land",
+    "forced move owned land should offer upgrade_land")
+end
+
 local function _test_complex_market_interrupt_with_rent()
   local g = _new_game()
   local p1 = g.players[1]
@@ -4862,6 +4915,10 @@ return {
   _test_stop_all_players_movement_skips_invalid_role_without_error = _test_stop_all_players_movement_skips_invalid_role_without_error,
   _test_autorunner_runs_to_end = _test_autorunner_runs_to_end,
   _test_complex_consecutive_turn_settlement = _test_complex_consecutive_turn_settlement,
+  _test_forced_move_landing_optional_preserves_owner_role_id_for_buy_land =
+    _test_forced_move_landing_optional_preserves_owner_role_id_for_buy_land,
+  _test_forced_move_landing_optional_preserves_owner_role_id_for_upgrade_land =
+    _test_forced_move_landing_optional_preserves_owner_role_id_for_upgrade_land,
   _test_complex_market_interrupt_with_rent = _test_complex_market_interrupt_with_rent,
   _test_market_interrupt_resume_uses_interrupt_facing = _test_market_interrupt_resume_uses_interrupt_facing,
   _test_steal_interrupt_resume_uses_interrupt_facing = _test_steal_interrupt_resume_uses_interrupt_facing,

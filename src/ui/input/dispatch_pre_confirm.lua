@@ -1,5 +1,8 @@
 local choice_support = require("src.ui.pres.choice_support")
 local number_utils = require("src.core.utils.number_utils")
+local choice_contract = require("src.core.choice.contract")
+local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
+local role_id_utils = require("src.core.utils.role_id")
 local runtime_state = require("src.ui.runtime.state")
 
 local pre_confirm_flow = {}
@@ -70,6 +73,24 @@ local function _resolve_market_skin_option(state, intent)
   return option_id, label
 end
 
+local function _resolve_choice_owner_role_id(state, choice)
+  local owner_role_id = choice_contract.resolve_owner_or_meta_role_id(choice)
+  if owner_role_id ~= nil then
+    return owner_role_id
+  end
+  local current_model = runtime_state.get_ui_model(state)
+  return role_id_utils.normalize(current_model and current_model.current_player_id or nil)
+end
+
+local function _can_local_owner_open_pre_confirm(state, choice)
+  local owner_role_id = _resolve_choice_owner_role_id(state, choice)
+  local local_role_id = role_id_utils.normalize(local_actor_resolver.resolve_local(state))
+  if owner_role_id == nil or local_role_id == nil then
+    return false
+  end
+  return role_id_utils.equals(local_role_id, owner_role_id)
+end
+
 function pre_confirm_flow.needs_pre_confirm(state, intent)
   local intent_type = intent.type
   local ui = state.ui
@@ -102,6 +123,9 @@ function pre_confirm_flow.enter(state, intent)
   local current_model = runtime_state.get_ui_model(state)
   local choice = current_model and current_model.choice or nil
   if not choice or not choice.id then
+    return false
+  end
+  if not _can_local_owner_open_pre_confirm(state, choice) then
     return false
   end
 

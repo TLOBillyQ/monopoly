@@ -1244,7 +1244,7 @@ local function _test_view_command_ports_toggle_action_log_warns_when_actor_role_
   end)
 end
 
-local function _test_choice_ui_state_prefers_current_player_over_stale_cache()
+local function _test_choice_ui_state_rejects_current_player_fallback_when_local_role_stale()
   local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_state")
   local players = {
     { id = 1, is_ai = false, auto = false },
@@ -1281,8 +1281,49 @@ local function _test_choice_ui_state_prefers_current_player_over_stale_cache()
     end
 
   local gate = choice_ui_state.resolve_gate_state(game, state, choice)
-  _assert_eq(gate.local_owner, true, "choice gate should use current player before stale cache")
-  _assert_eq(gate.expects_ui, true, "shared market choice should still expect UI for current player")
+  _assert_eq(gate.local_owner, false, "choice gate should reject current player fallback when local role is stale")
+  _assert_eq(gate.expects_ui, false, "shared market choice should stay hidden for non-owner local role")
+end
+
+local function _test_choice_ui_state_accepts_explicit_local_owner()
+  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_state")
+  local players = {
+    { id = 1, is_ai = false, auto = false },
+    { id = 2, is_ai = false, auto = false },
+  }
+  local state = {
+    ui = ui_view.build_ui_state(),
+    local_actor_role_id = 2,
+  }
+  _bind_ui_runtime(state)
+  runtime_state.set_ui_model(state, {
+    current_player_id = 1,
+  })
+  local choice = {
+    id = 13,
+    kind = "market_buy",
+    route_key = "market",
+    owner_role_id = 2,
+  }
+  local game = {
+    turn = {
+      current_player_index = 1,
+      phase = "wait_choice",
+    },
+    players = players,
+  }
+  game.find_player_by_id = function(_, role_id)
+      for _, player in ipairs(players) do
+        if player.id == role_id then
+          return player
+        end
+      end
+      return nil
+    end
+
+  local gate = choice_ui_state.resolve_gate_state(game, state, choice)
+  _assert_eq(gate.local_owner, true, "choice gate should honor explicit local owner")
+  _assert_eq(gate.expects_ui, true, "owner local role should still open shared confirm UI")
 end
 
 return {
@@ -1318,7 +1359,11 @@ return {
     { name = "_test_raycast_pick_with_tries_multiple_apis_in_order", run = _test_raycast_pick_with_tries_multiple_apis_in_order },
     { name = "_test_raycast_pick_with_returns_nil_when_all_apis_fail", run = _test_raycast_pick_with_returns_nil_when_all_apis_fail },
     { name = "_test_raycast_pick_with_resolves_hit_unit_from_various_formats", run = _test_raycast_pick_with_resolves_hit_unit_from_various_formats },
-    { name = "_test_choice_ui_state_prefers_current_player_over_stale_cache", run = _test_choice_ui_state_prefers_current_player_over_stale_cache },
+    {
+      name = "_test_choice_ui_state_rejects_current_player_fallback_when_local_role_stale",
+      run = _test_choice_ui_state_rejects_current_player_fallback_when_local_role_stale,
+    },
+    { name = "_test_choice_ui_state_accepts_explicit_local_owner", run = _test_choice_ui_state_accepts_explicit_local_owner },
     { name = "_test_view_command_ports_toggle_action_log_aborts_when_ui_missing", run = _test_view_command_ports_toggle_action_log_aborts_when_ui_missing },
     { name = "_test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing", run = _test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing },
   },
