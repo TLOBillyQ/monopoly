@@ -33,7 +33,12 @@ local function _update_runtime_ui_model(state, game, dirty)
 end
 
 local function _refresh_turn_label(state, next_model)
-  main_view.refresh_turn_label(state, next_model.panel and next_model.panel.turn_label or "")
+  local panel = next_model and next_model.panel or nil
+  main_view.refresh_turn_label(
+    state,
+    panel and panel.turn_label or "",
+    panel and panel.countdown_visible
+  )
 end
 
 local function _should_open_choice_modal(game, state, next_model)

@@ -1381,6 +1381,7 @@ local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_labe
   local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
   local render_calls = 0
   local refreshed_label = nil
+  local refreshed_visible = nil
   local game = {
     turn = {
       phase = "wait_choice",
@@ -1404,12 +1405,13 @@ local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_labe
     { target = ui_view_service, key = "render", value = function()
       render_calls = render_calls + 1
     end },
-    { target = ui_view_service, key = "refresh_turn_label", value = function(_, label)
+    { target = ui_view_service, key = "refresh_turn_label", value = function(_, label, visible)
       refreshed_label = label
+      refreshed_visible = visible
     end },
     { target = ui_model, key = "update", value = function()
       return {
-        panel = { turn_label = "倒计时 3" },
+        panel = { turn_label = "倒计时 3", countdown_visible = false },
       }
     end },
   }, function()
@@ -1428,6 +1430,7 @@ local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_labe
 
   _assert_eq(render_calls, 0, "countdown-only refresh should skip full render")
   _assert_eq(refreshed_label, "倒计时 3", "countdown-only refresh should update turn label directly")
+  _assert_eq(refreshed_visible, false, "countdown-only refresh should forward countdown visibility")
   _assert_eq(state.ui_dirty, false, "countdown-only refresh should clear ui dirty flag")
 end
 

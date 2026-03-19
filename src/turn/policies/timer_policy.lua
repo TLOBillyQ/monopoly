@@ -75,6 +75,14 @@ local function _is_auto_player(game, player)
   return player.auto == true or player.is_ai == true or player.ai == true
 end
 
+local function _should_track_action_button_for_player(game, player)
+  if _is_auto_player(game, player) then
+    return true
+  end
+  local phase = game and game.turn and game.turn.phase or nil
+  return phase == "wait_action"
+end
+
 local function _dispatch_timeout(ctx, current_player)
   if ctx.dispatch_next then
     ctx.dispatch_next(current_player.id, "timeout")
@@ -129,7 +137,7 @@ function turn_timer_policy.update_action_button_timer(ctx)
     state.action_button_elapsed = 0
   end
 
-  if not _is_auto_player(game, current_player) then
+  if not _should_track_action_button_for_player(game, current_player) then
     _reset_action_button(state)
     return
   end

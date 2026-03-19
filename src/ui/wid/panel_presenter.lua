@@ -76,9 +76,18 @@ local function _resolve_auto_effect_visible(ui_model, ctx)
   return role_id_utils.read(auto_by_player, role_id) == true
 end
 
+local function _resolve_countdown_visible(panel)
+  if panel and panel.countdown_visible ~= nil then
+    return panel.countdown_visible == true
+  end
+  return true
+end
+
 local function _apply_countdown(ui, panel)
-  ui:set_visible(base_nodes.countdown, true)
-  ui:set_label(base_nodes.countdown, panel.turn_label)
+  local visible = _resolve_countdown_visible(panel)
+  ui:set_visible(base_nodes.countdown, visible)
+  ui:set_visible(base_nodes.countdown_line, visible)
+  ui:set_label(base_nodes.countdown, panel.turn_label or "")
 end
 
 local function _apply_action_hint(ui, panel)

@@ -104,6 +104,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   local ui_model = {
     panel = {
       turn_label = "倒计时:0",
+      countdown_visible = true,
       auto_label = "自动：关",
       auto_label_by_player = {
         [1] = "自动：关",
@@ -166,6 +167,65 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(state.ui.item_slot_item_ids_by_role[2] and state.ui.item_slot_item_ids_by_role[2][1] == 2002, "role2 slot map expected")
 end
 
+local function _test_ui_view_hides_inactive_countdown()
+  local visible_logs = {}
+  local label_logs = {}
+
+  local state = {
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
+    ui = {
+      item_slots = {},
+      base_hidden_nodes = { "基础_行动按钮" },
+      base_hidden_labels = {},
+      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+      item_slot_item_ids_by_role = {},
+      set_label = function(_, name, text)
+        label_logs[name] = text
+      end,
+      set_visible = function(_, name, visible)
+        visible_logs[name] = visible
+      end,
+      set_touch_enabled = function() end,
+      query_node = function()
+        return {}
+      end,
+    },
+  }
+
+  local ui_model = {
+    panel = {
+      turn_label = "倒计时:0",
+      countdown_visible = false,
+      auto_label = "自动：关",
+      auto_label_by_player = { [1] = "自动：关" },
+      player_rows = {
+        { name = "P1", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "", avatar = nil, cash = "", land_count = "", total_assets = "" },
+        { name = "", avatar = nil, cash = "", land_count = "", total_assets = "" },
+      },
+    },
+    item_slots_by_player = { [1] = {} },
+    auto_enabled_by_player = { [1] = false },
+    item_slots = {},
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    choice = nil,
+    board = { players = {} },
+  }
+
+  _with_patches({
+    { key = "all_roles", value = nil },
+    { key = "UIManager", value = { client_role = nil, query_nodes_by_name = function() return { {} } end } },
+  }, function()
+    ui_view.refresh_panel(state, ui_model)
+  end)
+
+  assert(visible_logs["基础_倒计时"] == false, "inactive countdown should hide countdown label")
+  assert(visible_logs["基础_倒计时横线"] == false, "inactive countdown should hide countdown line")
+  assert(label_logs["基础_倒计时"] == "倒计时:0", "countdown label should stay synchronized when hidden")
+end
+
 local function _test_ui_events_send_without_roles_no_crash()
   local ui_events = require("src.ui.ctl.ui_events")
   ui_events.set_roles(nil)
@@ -195,6 +255,7 @@ return {
   name = "presentation_ui.role_slots",
   tests = {
     { name = "_test_ui_view_render_by_role_slots_are_isolated", run = _test_ui_view_render_by_role_slots_are_isolated },
+    { name = "_test_ui_view_hides_inactive_countdown", run = _test_ui_view_hides_inactive_countdown },
     { name = "_test_ui_events_send_without_roles_no_crash", run = _test_ui_events_send_without_roles_no_crash },
     { name = "_test_ui_nodes_validate_reports_missing", run = _test_ui_nodes_validate_reports_missing },
   },

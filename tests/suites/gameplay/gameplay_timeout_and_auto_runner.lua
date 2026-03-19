@@ -17,6 +17,7 @@ return {
   tests = {
     _case("_test_autorunner_runs_to_end"),
     _case("_test_action_button_timeout_auto_advances"),
+    _case("_test_action_button_timeout_manual_wait_action_auto_advances"),
     _case("_test_action_button_timeout_manual_player_does_not_advance"),
     _case("_test_action_button_timeout_blocked_when_input_locked"),
     _case("_test_action_button_timeout_blocked_when_popup_active"),

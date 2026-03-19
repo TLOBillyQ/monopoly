@@ -2001,6 +2001,49 @@ local function _test_action_button_timeout_auto_advances()
   assert(advanced == 1, "action button timeout should advance turn")
 end
 
+local function _test_action_button_timeout_manual_wait_action_auto_advances()
+  local g = _new_game()
+  local state = _build_loop_state()
+  g.ui_port = _build_ui_port()
+  state.auto_runner:set_enabled(false)
+  g.players[1].auto = false
+  g.players[1].is_ai = false
+  g.turn.current_player_index = 1
+  g.turn.phase = "wait_action"
+  g.turn.pending_choice = nil
+
+  state.gameplay_loop_ports = _build_test_ports({
+    close_choice_modal = function() end,
+    open_choice_modal = function() end,
+    apply_input_lock = function() end,
+    play_move_anim = function() return 0 end,
+    play_action_anim = function() return 0 end,
+    step_choice_timeout = function() end,
+    step_modal_timeout = function() end,
+    update_countdown = function() end,
+    refresh_from_dirty = function()
+      return false
+    end,
+    sync_debug_log = function() end,
+    log_status = function() end,
+    build_model = function()
+      return { choice = nil, market = nil }
+    end,
+  })
+
+  support.with_patches({
+    { target = constants, key = "action_timeout_seconds", value = 15 },
+  }, function()
+    _with_timestamp_stub(function()
+      local dt = (constants.action_timeout_seconds or 0) + 0.1
+      gameplay_loop.tick(g, state, dt)
+    end)
+  end)
+
+  assert(g.turn.phase ~= "wait_action", "manual wait_action timeout should leave wait_action")
+  assert(g.last_turn and g.last_turn.total ~= nil, "manual wait_action timeout should auto roll")
+end
+
 local function _test_action_button_timeout_manual_player_does_not_advance()
   local g = _new_game()
   local state = _build_loop_state()
@@ -4828,6 +4871,7 @@ return {
   _test_profile_rotation_switches_game_when_current_game_finishes = _test_profile_rotation_switches_game_when_current_game_finishes,
   _test_profile_rotation_disables_auto_runner_after_last_profile = _test_profile_rotation_disables_auto_runner_after_last_profile,
   _test_action_button_timeout_auto_advances = _test_action_button_timeout_auto_advances,
+  _test_action_button_timeout_manual_wait_action_auto_advances = _test_action_button_timeout_manual_wait_action_auto_advances,
   _test_action_button_timeout_manual_player_does_not_advance = _test_action_button_timeout_manual_player_does_not_advance,
   _test_action_button_timeout_blocked_when_input_locked = _test_action_button_timeout_blocked_when_input_locked,
   _test_action_button_timeout_blocked_when_popup_active = _test_action_button_timeout_blocked_when_popup_active,

@@ -24,6 +24,10 @@ local function _build_auto_label_by_player(players, enabled_by_player)
   return out
 end
 
+local function _resolve_countdown_visible(turn)
+  return turn and turn.countdown_active == true or false
+end
+
 function panel_slice.build(game, env, turn, current_player_id, auto_enabled_by_player)
   local auto_label_by_player = _build_auto_label_by_player(game.players, auto_enabled_by_player)
   local normalized_current_player_id = role_id_utils.normalize(current_player_id)
@@ -36,6 +40,7 @@ function panel_slice.build(game, env, turn, current_player_id, auto_enabled_by_p
     player_rows = panel_view.build_player_statuses(game, env.game, 4),
     auto_label_by_player = auto_label_by_player,
     auto_label = role_id_utils.read(auto_label_by_player, normalized_current_player_id) or panel_view.build_auto_label(false),
+    countdown_visible = _resolve_countdown_visible(turn),
     no_action_visible = no_action_visible,
     no_action_text = no_action_text,
   }
@@ -46,6 +51,7 @@ local function _update_turn_label(panel, turn)
     turn.turn_count,
     turn.countdown_seconds or 0
   )
+  panel.countdown_visible = _resolve_countdown_visible(turn)
 end
 
 local function _update_player_rows(panel, game, env)

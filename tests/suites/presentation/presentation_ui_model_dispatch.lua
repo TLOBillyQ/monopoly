@@ -1110,6 +1110,26 @@ local function _test_panel_slice_update_refreshes_only_requested_flags()
   assert(updated.no_action_text ~= "locked", "no_action notice should not refresh without turn_label flag")
 end
 
+local function _test_panel_slice_tracks_countdown_visibility()
+  local g = _new_game()
+  local env = { game = g }
+  local turn = g.turn
+  local current_player_id = g.players[1].id
+  local auto_enabled_by_player = { [current_player_id] = false }
+  local panel = panel_slice.build(g, env, turn, current_player_id, auto_enabled_by_player)
+
+  _assert_eq(panel.countdown_visible, false, "initial countdown should be hidden when inactive")
+
+  turn.countdown_active = true
+  turn.countdown_seconds = 12
+  local updated = panel_slice.update(panel, g, env, turn, current_player_id, auto_enabled_by_player, {
+    turn_label = true,
+  })
+
+  assert(updated == panel, "panel update should reuse panel table")
+  _assert_eq(updated.countdown_visible, true, "turn label refresh should track active countdown visibility")
+end
+
 local function _test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy()
   local state = _build_choice_modal_state()
   local labels = {}
@@ -1224,6 +1244,7 @@ return {
     { name = "_test_ui_model_update_refreshes_targeted_slices_only", run = _test_ui_model_update_refreshes_targeted_slices_only },
     { name = "_test_ui_model_update_refreshes_inventory_owned_slots", run = _test_ui_model_update_refreshes_inventory_owned_slots },
     { name = "_test_panel_slice_update_refreshes_only_requested_flags", run = _test_panel_slice_update_refreshes_only_requested_flags },
+    { name = "_test_panel_slice_tracks_countdown_visibility", run = _test_panel_slice_tracks_countdown_visibility },
     { name = "_test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy", run = _test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy },
     { name = "_test_modal_presenter_close_choice_modal_resets_choice_and_market", run = _test_modal_presenter_close_choice_modal_resets_choice_and_market },
   },
