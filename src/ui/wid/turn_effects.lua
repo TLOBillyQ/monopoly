@@ -74,15 +74,15 @@ local function _set_prompt_visible(nodes, visible)
   _set_node_visible(nodes.label, visible)
 end
 
-local function _is_pre_action_phase(phase)
-  return phase == "start" or phase == "end_turn"
+local function _is_turn_prompt_phase(phase)
+  return phase == "wait_action"
 end
 
 local function _sync_local_turn_prompt(runtime, _, ui_model)
   local board = ui_model and ui_model.board or nil
   local phase = board and board.phase or nil
   local current_player_id = role_id_utils.normalize(ui_model and ui_model.current_player_id or nil)
-  local can_show = _is_pre_action_phase(phase)
+  local can_show = _is_turn_prompt_phase(phase)
   runtime.for_each_role_or_global(function(role)
     local role_id = _get_role_id(runtime, role)
     _with_client_role(runtime, role, function()

@@ -906,10 +906,12 @@ local function _test_ai_obstacle_probe_does_not_enter_event_feed()
     "AI obstacle probe should not enter event feed")
 end
 
-local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
+local function _test_stop_all_players_movement_preserves_inner_move_dir_and_stop_event()
   local g = _new_game()
   g.players[1].seat_id = 4001
   g.players[2].seat_id = nil
+  g:update_player_position(g.players[1], g.board:index_of_tile_id(1))
+  g:update_player_position(g.players[2], g.board:index_of_tile_id(28))
   g:set_player_status(g.players[1], "move_dir", "left")
   g:set_player_status(g.players[2], "move_dir", "right")
   local before_seq = g.turn.vehicle_resync_seq or 0
@@ -929,8 +931,8 @@ local function _test_stop_all_players_movement_clears_move_dir_and_stop_event()
   }, function()
     g:stop_all_players_movement()
   end)
-  assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared")
-  assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared")
+  assert(g.players[1].status.move_dir == nil, "outer player move_dir should be cleared")
+  assert(g.players[2].status.move_dir == "right", "inner player move_dir should be preserved")
   assert(#stopped_ids == 1, "stop event should only be sent to players with vehicle and valid role")
   assert(stopped_ids[1] == g.players[1].id, "stop event should target player with valid role")
   assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "stop should bump vehicle_resync_seq")
@@ -940,6 +942,8 @@ local function _test_end_turn_stops_all_players_movement()
   local g = _new_game()
   g.players[1].seat_id = 4001
   g.players[2].seat_id = nil
+  g:update_player_position(g.players[1], g.board:index_of_tile_id(1))
+  g:update_player_position(g.players[2], g.board:index_of_tile_id(28))
   g:set_player_status(g.players[1], "move_dir", "left")
   g:set_player_status(g.players[2], "move_dir", "right")
   local before_seq = g.turn.vehicle_resync_seq or 0
@@ -961,8 +965,8 @@ local function _test_end_turn_stops_all_players_movement()
     assert(type(phase_end) == "function", "end_turn phase should exist")
     phase_end(g.turn_engine.turn_mgr, { player = g.players[1] })
   end)
-  assert(g.players[1].status.move_dir == nil, "player1 move_dir should be cleared at end turn")
-  assert(g.players[2].status.move_dir == nil, "player2 move_dir should be cleared at end turn")
+  assert(g.players[1].status.move_dir == nil, "outer player move_dir should be cleared at end turn")
+  assert(g.players[2].status.move_dir == "right", "inner player move_dir should be preserved at end turn")
   assert(#stopped_ids == 1, "end turn should only stop players with vehicle and valid role")
   assert(stopped_ids[1] == g.players[1].id, "end turn stop should target valid vehicle player")
   assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "end turn should bump vehicle_resync_seq")
@@ -4909,7 +4913,8 @@ return {
   _test_camera_sync_follow_camera_keeps_role_id_event_chain = _test_camera_sync_follow_camera_keeps_role_id_event_chain,
   _test_runtime_context_install_environment_fails_fast = _test_runtime_context_install_environment_fails_fast,
   _test_game_startup_build_state_is_pure_and_bridge_installs_events = _test_game_startup_build_state_is_pure_and_bridge_installs_events,
-  _test_stop_all_players_movement_clears_move_dir_and_stop_event = _test_stop_all_players_movement_clears_move_dir_and_stop_event,
+  _test_stop_all_players_movement_preserves_inner_move_dir_and_stop_event =
+    _test_stop_all_players_movement_preserves_inner_move_dir_and_stop_event,
   _test_end_turn_stops_all_players_movement = _test_end_turn_stops_all_players_movement,
   _test_location_transfers_clear_move_dir = _test_location_transfers_clear_move_dir,
   _test_stop_all_players_movement_skips_invalid_role_without_error = _test_stop_all_players_movement_skips_invalid_role_without_error,

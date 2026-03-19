@@ -1,4 +1,5 @@
 local movement_handlers = {}
+local market_default_move_dir = "right"
 
 function movement_handlers.register(handlers, common)
   handlers.move_backward = function(game, player, card)
@@ -38,7 +39,6 @@ function movement_handlers.register(handlers, common)
       local idx = game.board:index_of_tile_id(card.destination_tile_id)
       assert(idx ~= nil, "missing destination tile index: " .. tostring(card.destination_tile_id))
       game:update_player_position(player, idx)
-      game:set_player_status(player, "move_dir", common.resolve_forced_move_reset_facing(game, idx))
       common.queue_move_effect(game, player, from_index, idx, nil)
       return {
         kind = "need_landing",
@@ -78,7 +78,9 @@ function movement_handlers.register(handlers, common)
     local idx = game.board:find_first_by_type(tile_type)
     assert(idx ~= nil, "missing " .. tile_type .. " tile")
     game:update_player_position(player, idx)
-    game:set_player_status(player, "move_dir", common.resolve_forced_move_reset_facing(game, idx))
+    if tile_type == "market" then
+      game:set_player_status(player, "move_dir", market_default_move_dir)
+    end
     common.queue_move_effect(game, player, from_index, idx, nil)
     return {
       kind = "need_landing",

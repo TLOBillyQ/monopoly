@@ -650,7 +650,7 @@ local function _test_turn_effects_prompt_visibility_follows_phase_and_role()
     current_player_id = 1,
     current_player_name = "P1",
     board = {
-      phase = "start",
+      phase = "wait_action",
       players = { { id = 1 }, { id = 2 } },
     },
   }
@@ -661,11 +661,16 @@ local function _test_turn_effects_prompt_visibility_follows_phase_and_role()
     { target = runtime_port, key = "query_node", value = env.query_node },
   }, function()
     turn_effects.sync(state, ui_model)
-    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, true, "current player should see action prompt in start phase")
-    _assert_eq(env.per_role_nodes[1]["基础_行动提示特效"].visible, true, "current player should see action star in start phase")
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, true, "current player should see action prompt in wait_action phase")
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示特效"].visible, true, "current player should see action star in wait_action phase")
     _assert_eq(env.per_role_nodes[2]["基础_行动提示"].visible, false, "other player should hide local action prompt")
     _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].visible, true, "other player should always see other-action prompt")
     _assert_eq(env.per_role_nodes[2]["基础_其他玩家行动提示"].text, "P1正在行动", "other prompt text should use current player name")
+
+    ui_model.board.phase = "start"
+    turn_effects.sync(state, ui_model)
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, false, "current player prompt should stay hidden before countdown phase")
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示特效"].visible, false, "current player star should stay hidden before countdown phase")
 
     ui_model.board.phase = "wait_move_anim"
     turn_effects.sync(state, ui_model)
@@ -675,11 +680,11 @@ local function _test_turn_effects_prompt_visibility_follows_phase_and_role()
 
     ui_model.board.phase = "end_turn"
     turn_effects.sync(state, ui_model)
-    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, true, "current player prompt should show in end_turn phase")
+    _assert_eq(env.per_role_nodes[1]["基础_行动提示"].visible, false, "current player prompt should hide after countdown phase ends")
 
     ui_model.current_player_id = 2
     ui_model.current_player_name = "P2"
-    ui_model.board.phase = "start"
+    ui_model.board.phase = "wait_action"
     turn_effects.sync(state, ui_model)
     _assert_eq(env.per_role_nodes[1]["基础_其他玩家行动提示"].visible, true, "switched non-current player should see other-action prompt")
     _assert_eq(env.per_role_nodes[1]["基础_其他玩家行动提示"].text, "P2正在行动", "other prompt text should follow current player switch")

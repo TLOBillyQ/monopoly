@@ -1,6 +1,5 @@
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
-local facing_policy = require("src.rules.board.facing_policy")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local inventory = require("src.rules.items.inventory")
 local function _new_game()
@@ -93,6 +92,7 @@ local function _test_chance_forced_move_queues_move_effect_anim()
   local g = _new_game()
   g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
   local p = g:current_player()
+  g:set_player_status(p, "move_dir", "left")
   local dest = 38
   local out = chance_effects.resolve(g, p, {
     effect = "forced_move",
@@ -104,7 +104,7 @@ local function _test_chance_forced_move_queues_move_effect_anim()
   _assert_eq(out.board_index, idx, "forced_move board_index should match destination")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "move_effect", "forced_move should queue move_effect anim")
   _assert_eq(g.turn.action_anim.to_index, idx, "forced_move anim to_index should match destination")
-  assert(p.status.move_dir == nil, "forced_move should clear stale move_dir")
+  _assert_eq(p.status.move_dir, "left", "forced_move destination tile should preserve move_dir")
 end
 
 local function _test_chance_forced_move_to_market_sets_default_forward_heading()
@@ -112,7 +112,6 @@ local function _test_chance_forced_move_to_market_sets_default_forward_heading()
   local p = g:current_player()
   g:set_player_status(p, "move_dir", "left")
   local market_idx = assert(g.board:find_first_by_type("market"), "missing market tile")
-  local expected = facing_policy.resolve_forced_move_reset_facing(g.board, market_idx)
 
   local out = chance_effects.resolve(g, p, {
     effect = "forced_move",
@@ -122,7 +121,22 @@ local function _test_chance_forced_move_to_market_sets_default_forward_heading()
 
   assert(out and out.kind == "need_landing", "forced_move market should return need_landing")
   _assert_eq(out.board_index, market_idx, "forced_move market should land on market tile")
-  _assert_eq(p.status.move_dir, expected, "forced_move market should set default forward heading")
+  _assert_eq(p.status.move_dir, "right", "forced_move market should default to counterclockwise heading")
+end
+
+local function _test_chance_forced_move_to_hospital_clears_move_dir()
+  local g = _new_game()
+  local p = g:current_player()
+  g:set_player_status(p, "move_dir", "left")
+
+  local out = chance_effects.resolve(g, p, {
+    effect = "forced_move",
+    destination = "hospital",
+    target = "self",
+  }, {})
+
+  assert(out and out.waiting == true, "forced_move hospital should defer location effect")
+  _assert_eq(p.status.move_dir, nil, "forced_move hospital should clear move_dir")
 end
 
 -- Characterization tests for chance handlers (T4)
@@ -472,6 +486,7 @@ return {
       name = "chance_forced_move_to_market_sets_default_forward_heading",
       run = _test_chance_forced_move_to_market_sets_default_forward_heading,
     },
+    { name = "chance_forced_move_to_hospital_clears_move_dir", run = _test_chance_forced_move_to_hospital_clears_move_dir },
     -- T4 characterization tests for chance handlers
     { name = "chance_handlers_build_returns_handler_table", run = _test_chance_handlers_build_returns_handler_table },
     { name = "chance_handler_add_cash_applies_to_all_players", run = _test_chance_handler_add_cash_applies_to_all_players },

@@ -137,7 +137,8 @@ local function _run_start_move_with_stale_dir(start_index, stale_dir)
 end
 
 local function _test_movement_fresh_roll_ignores_stale_move_dir()
-  local start_index = 34
+  local g = _new_game()
+  local start_index = g.board:index_of_tile_id(1)
   local left_end = _run_start_move_with_stale_dir(start_index, "left")
   local right_end = _run_start_move_with_stale_dir(start_index, "right")
   local up_end = _run_start_move_with_stale_dir(start_index, "up")
@@ -210,27 +211,28 @@ local function _test_same_move_enters_inner_only_once()
   assert(#res.visited == 10, "same-move inner traversal should still record all steps")
 end
 
-local function _test_inner_ring_fresh_roll_defaults_toward_market()
+local function _test_inner_ring_fresh_roll_keeps_saved_direction()
   local g = _new_game()
   local p = g:current_player()
   local cases = {
-    { start_tile_id = 25, steps = 1, expected_tile_id = 26 },
-    { start_tile_id = 30, steps = 1, expected_tile_id = 29 },
-    { start_tile_id = 34, steps = 1, expected_tile_id = 33 },
-    { start_tile_id = 45, steps = 1, expected_tile_id = 31 },
-    { start_tile_id = 28, steps = 4, expected_tile_id = 45 },
+    { start_tile_id = 25, move_dir = "right", steps = 1, expected_tile_id = 26 },
+    { start_tile_id = 30, move_dir = "up", steps = 1, expected_tile_id = 41 },
+    { start_tile_id = 34, move_dir = "right", steps = 1, expected_tile_id = 43 },
+    { start_tile_id = 45, move_dir = "up", steps = 1, expected_tile_id = 31 },
+    { start_tile_id = 28, move_dir = "up", steps = 4, expected_tile_id = 16 },
+    { start_tile_id = 28, move_dir = "down", steps = 4, expected_tile_id = 45 },
   }
 
   for _, case in ipairs(cases) do
     g:update_player_position(p, g.board:index_of_tile_id(case.start_tile_id))
-    g:set_player_status(p, "move_dir", nil)
+    g:set_player_status(p, "move_dir", case.move_dir)
     local res = movement.move(g, p, case.steps, {
       branch_parity = case.steps,
       skip_market_check = true,
     })
     local landing_tile = assert(res.landing_tile, "fresh inner roll should land on a tile")
     _assert_eq(landing_tile.id, case.expected_tile_id,
-      "fresh inner roll should follow market-facing default from tile " .. tostring(case.start_tile_id))
+      "fresh inner roll should keep saved direction from tile " .. tostring(case.start_tile_id))
   end
 end
 
@@ -594,7 +596,7 @@ return {
     { name = "entry_point_even_branch_ignores_inbound_facing", run = _test_entry_point_even_branch_ignores_inbound_facing },
     { name = "market_keeps_forward_direction_regardless_of_parity", run = _test_market_keeps_forward_direction_regardless_of_parity },
     { name = "same_move_enters_inner_only_once", run = _test_same_move_enters_inner_only_once },
-    { name = "inner_ring_fresh_roll_defaults_toward_market", run = _test_inner_ring_fresh_roll_defaults_toward_market },
+    { name = "inner_ring_fresh_roll_keeps_saved_direction", run = _test_inner_ring_fresh_roll_keeps_saved_direction },
     { name = "resume_forward_from_inner_ring_keeps_explicit_direction", run = _test_resume_forward_from_inner_ring_keeps_explicit_direction },
     { name = "resume_forward_requires_explicit_direction", run = _test_resume_forward_requires_explicit_direction },
     { name = "move_anim_play_sequence_emits_step_sound_per_visited_tile", run = _test_move_anim_play_sequence_emits_step_sound_per_visited_tile },

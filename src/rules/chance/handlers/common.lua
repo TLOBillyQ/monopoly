@@ -7,7 +7,6 @@ local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local vehicle_feature = require("src.rules.vehicle")
 local number_utils = require("src.core.utils.number_utils")
 local action_anim_port = require("src.core.ports.action_anim_port")
-local facing_policy = require("src.rules.board.facing_policy")
 
 local common = {}
 
@@ -83,11 +82,6 @@ function common.move_steps(game, player, steps, opts)
     board_index = player.position,
     move_result = res,
   }
-end
-
-function common.resolve_forced_move_reset_facing(game, idx, parity)
-  assert(game ~= nil, "missing game")
-  return facing_policy.resolve_forced_move_reset_facing(game.board, idx, parity)
 end
 
 function common.dependencies()

@@ -46,15 +46,29 @@ local function _clear_player_move_dir(player)
   return true
 end
 
-local function _stop_player_movement(player)
+local function _is_outer_tile(game, player)
+  if not (game and game.board and game.board.map and game.board.map.outer_next and player and player.position) then
+    return true
+  end
+  local tile = game.board:get_tile(player.position)
+  if tile == nil then
+    return true
+  end
+  return game.board.map.outer_next[tile.id] ~= nil
+end
+
+local function _stop_player_movement(game, player)
+  if not _is_outer_tile(game, player) then
+    return false
+  end
   local dirty = _clear_player_move_dir(player)
   return dirty
 end
 
-local function _stop_all_players(players)
+local function _stop_all_players(game, players)
   local players_dirty = false
   for _, player in ipairs(players or {}) do
-    if _stop_player_movement(player) then
+    if _stop_player_movement(game, player) then
       players_dirty = true
     end
   end
@@ -62,7 +76,7 @@ local function _stop_all_players(players)
 end
 
 function status_ops.stop_all_players_movement(self)
-  local players_dirty = _stop_all_players(self.players)
+  local players_dirty = _stop_all_players(self, self.players)
   if players_dirty then
     common.mark_players(self)
   end
