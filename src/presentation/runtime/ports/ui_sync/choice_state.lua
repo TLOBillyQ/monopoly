@@ -1,4 +1,5 @@
 local choice_route_policy = require("src.ui.input.choice_route_policy")
+local choice_contract = require("src.core.choice.contract")
 local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
 local runtime = require("src.ui.render.runtime_ui")
 local runtime_ports = require("src.core.ports.runtime_ports")
@@ -8,12 +9,7 @@ local runtime_state = require("src.ui.runtime.state")
 local choice_ui_state = {}
 
 local function _resolve_choice_owner_role_id(game, choice)
-  local owner_role_id = role_id_utils.normalize(choice and choice.owner_role_id or nil)
-  if owner_role_id ~= nil then
-    return owner_role_id
-  end
-  local meta = choice and choice.meta or nil
-  owner_role_id = role_id_utils.normalize(meta and meta.player_id or nil)
+  local owner_role_id = choice_contract.resolve_owner_or_meta_role_id(choice)
   if owner_role_id ~= nil then
     return owner_role_id
   end

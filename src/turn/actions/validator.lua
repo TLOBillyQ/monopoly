@@ -12,13 +12,17 @@ local function _is_turn_bound_ui_button(action_id)
   return action_id == "next" or action_id and string.match(action_id, "^item_slot_(%d+)$") ~= nil
 end
 
+local function _resolve_current_player_role_id(game)
+  local current = game and game.current_player and game:current_player() or nil
+  return current and number_utils.to_integer(current.id) or nil
+end
+
 local function _resolve_choice_owner_role_id(game, choice)
   local owner_role_id = choice_contract.resolve_owner_role_id(choice)
   if owner_role_id ~= nil then
     return owner_role_id
   end
-  local current = game and game.current_player and game:current_player() or nil
-  return current and number_utils.to_integer(current.id) or nil
+  return _resolve_current_player_role_id(game)
 end
 
 local function _resolve_item_slot_source(item_slot_source)
