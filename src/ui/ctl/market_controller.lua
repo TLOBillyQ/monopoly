@@ -27,6 +27,18 @@ end
 
 function renderer.open_market_panel(state, choice, choice_id, market)
   local ui = state.ui
+  local market_payload = market or {
+    choice_id = choice_id,
+    options = choice.options,
+    allow_cancel = choice.allow_cancel,
+    cancel_label = choice.cancel_label,
+    selected_option_id = runtime_state.ensure_ui_runtime(state).pending_choice_selected_option_id,
+    active_tab = choice.active_tab,
+    page_index = choice.page_index,
+    page_count = choice.page_count,
+  }
+  local opened = false
+
   runtime.for_each_role_or_global(function(role)
     _with_client_role(role, function()
       local current_model = runtime_state.get_ui_model(state)
@@ -40,20 +52,13 @@ function renderer.open_market_panel(state, choice, choice_id, market)
       else
         canvas.switch(ui, target)
       end
+      if ctx.can_operate == true then
+        opened = market_view.refresh_market(state, market_payload, _view_deps()) == true or opened
+      end
     end)
   end)
   runtime.set_client_role(nil)
-  local market_payload = market or {
-    choice_id = choice_id,
-    options = choice.options,
-    allow_cancel = choice.allow_cancel,
-    cancel_label = choice.cancel_label,
-    selected_option_id = runtime_state.ensure_ui_runtime(state).pending_choice_selected_option_id,
-    active_tab = choice.active_tab,
-    page_index = choice.page_index,
-    page_count = choice.page_count,
-  }
-  ui.market_active = market_view.refresh_market(state, market_payload, _view_deps()) == true
+  ui.market_active = opened
 end
 
 function renderer.open(state, choice, choice_id, market)

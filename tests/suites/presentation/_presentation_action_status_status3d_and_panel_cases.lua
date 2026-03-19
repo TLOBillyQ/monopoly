@@ -1613,6 +1613,61 @@ local function _test_debug_ports_sync_restores_client_role_nil()
   _assert_eq(manager.client_role, nil, "debug ports sync should restore client_role to nil")
 end
 
+local function _test_market_modal_renderer_refreshes_market_only_for_operable_role()
+  local canvas = require("src.ui.ctl.canvas_coordinator")
+  local role_ctx = require("src.ui.pres.role_context")
+  local manager = { client_role = { stale = true } }
+  local role1 = { id = 1, get_roleid = function() return 1 end }
+  local role2 = { id = 2, get_roleid = function() return 2 end }
+  local refresh_roles = {}
+
+  _with_patches({
+    { key = "UIManager", value = manager },
+    { target = runtime_port, key = "for_each_role_or_global", value = function(fn)
+      fn(role1)
+      fn(role2)
+    end },
+    { target = runtime_port, key = "set_client_role", value = function(role)
+      manager.client_role = role
+    end },
+    { target = runtime_port, key = "with_client_role", value = function(role, fn)
+      local prev = manager.client_role
+      manager.client_role = role
+      local ok, err = pcall(fn)
+      manager.client_role = prev
+      if not ok then
+        error(err)
+      end
+    end },
+    { target = role_ctx, key = "resolve", value = function(role)
+      return { can_operate = role == role1 }
+    end },
+    { target = canvas, key = "switch_for_role", value = function() end },
+    { target = canvas, key = "switch", value = function() end },
+    { target = market_view, key = "refresh_market", value = function()
+      refresh_roles[#refresh_roles + 1] = manager.client_role and manager.client_role.id or 0
+      return true
+    end },
+  }, function()
+    local state = {
+      ui = {},
+      ui_model = {},
+      pending_choice_selected_option_id = nil,
+    }
+    local choice = {
+      options = { { id = 1 } },
+      allow_cancel = true,
+      cancel_label = "取消",
+    }
+    market_modal_renderer.open_market_panel(state, choice, 10, nil)
+    _assert_eq(state.ui.market_active, true, "market should stay active for the operable role")
+  end)
+
+  _assert_eq(#refresh_roles, 1, "market refresh should run only once for the operable role")
+  _assert_eq(refresh_roles[1], 1, "market refresh should stay scoped to the operable role")
+  _assert_eq(manager.client_role, nil, "market refresh should restore client_role to nil")
+end
+
 local function _test_debug_ports_sync_ignores_non_event_log_seq_changes()
   local ui_event_state = require("src.ui.ctl.event_state")
   local ui_view_service = require("src.ui.ctl.ui_runtime")
@@ -2073,6 +2128,7 @@ return {
   { name = "_test_popup_defer_policy_queues_and_replays_in_order", run = _test_popup_defer_policy_queues_and_replays_in_order },
   { name = "_test_popup_renderer_switch_popup_canvas_restores_client_role_nil", run = _test_popup_renderer_switch_popup_canvas_restores_client_role_nil },
   { name = "_test_market_modal_renderer_open_restores_client_role_nil", run = _test_market_modal_renderer_open_restores_client_role_nil },
+  { name = "_test_market_modal_renderer_refreshes_market_only_for_operable_role", run = _test_market_modal_renderer_refreshes_market_only_for_operable_role },
   { name = "_test_debug_ports_sync_restores_client_role_nil", run = _test_debug_ports_sync_restores_client_role_nil },
   { name = "_test_debug_ports_sync_ignores_non_event_log_seq_changes", run = _test_debug_ports_sync_ignores_non_event_log_seq_changes },
   { name = "_test_panel_avatar_uses_native_size_path", run = _test_panel_avatar_uses_native_size_path },
