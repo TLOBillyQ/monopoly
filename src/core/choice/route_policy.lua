@@ -20,6 +20,28 @@ local function _resolve_explicit_route(choice)
   return nil
 end
 
+local function _resolve_explicit_requires_confirm(choice_or_screen)
+  if type(choice_or_screen) ~= "table" then
+    return nil
+  end
+  if type(choice_or_screen.requires_confirm) == "boolean" then
+    return choice_or_screen.requires_confirm
+  end
+  local route = choice_or_screen.route
+  if type(route) == "table" and type(route.requires_confirm) == "boolean" then
+    return route.requires_confirm
+  end
+  local meta = choice_or_screen.meta
+  if type(meta) == "table" and type(meta.requires_confirm) == "boolean" then
+    return meta.requires_confirm
+  end
+  return nil
+end
+
+function policy.resolve_explicit_route(choice)
+  return _resolve_explicit_route(choice)
+end
+
 function policy.is_secondary_confirm_choice(choice)
   return _resolve_explicit_route(choice) == "secondary_confirm"
 end
@@ -36,19 +58,16 @@ function policy.resolve(choice)
   return "base_inline"
 end
 
+function policy.resolve_explicit_requires_confirm(choice_or_screen)
+  return _resolve_explicit_requires_confirm(choice_or_screen)
+end
+
 function policy.requires_confirm(choice_or_screen)
+  local explicit_requires_confirm = _resolve_explicit_requires_confirm(choice_or_screen)
+  if explicit_requires_confirm ~= nil then
+    return explicit_requires_confirm
+  end
   if type(choice_or_screen) == "table" then
-    if type(choice_or_screen.requires_confirm) == "boolean" then
-      return choice_or_screen.requires_confirm
-    end
-    local route = choice_or_screen.route
-    if type(route) == "table" and type(route.requires_confirm) == "boolean" then
-      return route.requires_confirm
-    end
-    local meta = choice_or_screen.meta
-    if type(meta) == "table" and type(meta.requires_confirm) == "boolean" then
-      return meta.requires_confirm
-    end
     return policy.resolve(choice_or_screen) == "secondary_confirm"
   end
   return choice_or_screen == "secondary_confirm"

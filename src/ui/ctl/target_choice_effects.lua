@@ -5,10 +5,13 @@ local modal_state = require("src.ui.stores.modal_state")
 local host_runtime_ports = require("src.ui.runtime.host_bridge")
 local ui_nodes = require("src.ui.render.node_ops")
 local choice_contract = require("src.core.choice.contract")
+local choice_route_policy = require("src.ui.input.choice_route_policy")
 local target_choice_effects = {}
 local _move_arrow
 local function _is_target_choice(choice)
-  return type(choice) == "table" and choice.route_key == "target" and choice_contract.uses_target_picker(choice)
+  return type(choice) == "table"
+    and choice_route_policy.resolve_explicit_route(choice) == "target"
+    and choice_contract.uses_target_picker(choice)
 end
 local function _resolve_option_id(option)
   local raw = option
