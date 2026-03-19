@@ -1,4 +1,5 @@
 local overlay = require("src.ui.render.anim_unit_overlay")
+local move_anim = require("src.ui.render.move_anim")
 local tip_text = require("src.ui.render.anim_tip_text")
 
 local units = {}
@@ -21,6 +22,10 @@ end
 
 function units.play_clear_obstacles(state, anim, duration, opts)
   overlay.play_clear_obstacles(state, anim, duration, opts)
+end
+
+function units.play_move_effect(state, anim)
+  return move_anim.play_sequence(state.board_scene, anim)
 end
 
 function units.build_tip(state, anim)

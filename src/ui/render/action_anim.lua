@@ -1,4 +1,5 @@
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
 local registry = require("src.ui.render.anim_registry")
@@ -55,6 +56,18 @@ local function _should_show_tip(anim)
   return user_tip_whitelist[anim.kind] == true
 end
 
+local function _ensure_move_effect_direction(anim)
+  if anim.direction or anim.steps then
+    return anim
+  end
+  local patched = {}
+  for key, value in pairs(anim) do
+    patched[key] = value
+  end
+  patched.direction = runtime_constants.v3_left
+  return patched
+end
+
 local function _register_default_handlers()
   if registry.resolve("roll") then
     return
@@ -75,6 +88,9 @@ local function _register_default_handlers()
   registry.register("mine", function(state, anim, duration, opts)
     handlers.play_overlay(state, anim, duration, opts)
     return duration
+  end)
+  registry.register("move_effect", function(state, anim)
+    return handlers.play_move_effect(state, _ensure_move_effect_direction(anim))
   end)
   registry.register("upgrade_land", function(state, anim, duration, opts)
     board_feedback.play_tile_cue(state, "upgrade_land_smoke", anim.tile_index, {

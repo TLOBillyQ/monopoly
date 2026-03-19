@@ -53,6 +53,34 @@ local function _test_action_anim_overlay_handler_returns_duration()
   assert(duration == 0.2, "roadblock duration should be used")
 end
 
+local function _test_action_anim_move_effect_uses_real_handler_duration()
+  local state = _build_state()
+  local captured_anim = nil
+
+  _with_patches({
+    {
+      target = handlers,
+      key = "play_move_effect",
+      value = function(_, anim)
+        captured_anim = anim
+        return 0.75
+      end,
+    },
+  }, function()
+    local duration = action_anim.play(state, {
+      kind = "move_effect",
+      player_id = 1,
+      from_index = 1,
+      to_index = 1,
+      duration = 2.0,
+    })
+    assert(duration == 0.75, "move_effect should use handler duration instead of default wait")
+  end)
+
+  assert(captured_anim ~= nil, "move_effect handler should receive animation payload")
+  assert(captured_anim.direction ~= nil, "move_effect handler should receive a fallback direction")
+end
+
 local function _test_action_anim_roadblock_overlay_uses_4x_scale()
   local state = _build_state()
   local unit_calls = 0
@@ -365,6 +393,13 @@ local function _test_action_anim_debug_log_uses_info_without_tip()
       key = "info_unlimited",
       value = function(...)
         info_calls[#info_calls + 1] = table.concat({ ... }, " ")
+      end,
+    },
+    {
+      target = handlers,
+      key = "play_move_effect",
+      value = function()
+        return 0.6
       end,
     },
   }, function()
@@ -769,6 +804,7 @@ return {
   name = "presentation.action_anim_core",
   tests = {
     { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
+    { name = "action_anim_move_effect_uses_real_handler_duration", run = _test_action_anim_move_effect_uses_real_handler_duration },
     { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
     { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },
     { name = "action_anim_is_silent_by_default", run = _test_action_anim_is_silent_by_default },

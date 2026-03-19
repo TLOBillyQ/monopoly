@@ -23,6 +23,10 @@ function handlers.play_clear_obstacles(state, anim, duration, opts)
   units.play_clear_obstacles(state, anim, duration, opts)
 end
 
+function handlers.play_move_effect(state, anim)
+  return units.play_move_effect(state, anim)
+end
+
 function handlers.build_tip(state, anim)
   return units.build_tip(state, anim)
 end
