@@ -4,6 +4,7 @@ local number_utils = require("src.core.utils.number_utils")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local auto_play_port = require("src.rules.ports.auto_play_port")
 local logger = require("src.core.utils.logger")
 
 local await = {}
@@ -416,6 +417,27 @@ function await.seconds(session, sec, opts)
     return { done = true }
   end
   return _await_seconds_step(session, wait_sec, opts)
+end
+
+function await.action(session, args)
+  assert(session ~= nil and session.game ~= nil, "missing await session")
+  local game = session.game
+  session:mark_phase("wait_action")
+  local player = game:current_player()
+  if auto_play_port.is_auto_player(game, player) then
+    return {
+      next_state = args and args.next_state or "roll",
+      next_args = args and args.next_args or { player = player },
+    }
+  end
+  local action = session:take_pending_action()
+  if action then
+    return {
+      next_state = args and args.next_state or "roll",
+      next_args = args and args.next_args or { player = player },
+    }
+  end
+  return { wait = true }
 end
 
 return await

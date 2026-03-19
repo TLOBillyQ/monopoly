@@ -3618,9 +3618,10 @@ local function _test_turn_start_waits_for_pre_action_item_phase_choice()
     end },
   }, function()
     local next_state, next_args = turn_start({ game = g })
-    assert(next_state == "wait_choice", "waiting pre_action item phase should route to wait_choice")
-    assert(next_args and next_args.next_state == "roll", "wait_choice should preserve next state")
-    assert(next_args.next_args and next_args.next_args.source == "pre_action", "wait_choice should preserve next args")
+    assert(next_state == "wait_action", "waiting pre_action item phase should route through wait_action")
+    assert(next_args and next_args.next_state == "wait_choice", "wait_action should forward to wait_choice")
+    assert(next_args.next_args and next_args.next_args.next_state == "roll", "wait_choice should preserve next state")
+    assert(next_args.next_args.next_args and next_args.next_args.next_args.source == "pre_action", "wait_choice should preserve next args")
   end)
 end
 
@@ -3640,9 +3641,10 @@ local function _test_turn_start_waits_for_pre_action_item_phase_action_anim()
     end },
   }, function()
     local next_state, next_args = turn_start({ game = g })
-    assert(next_state == "wait_action_anim", "wait_action_anim pre_action should route to wait_action_anim")
-    assert(next_args and next_args.next_state == "roll", "wait_action_anim should preserve next state")
-    assert(next_args.next_args and next_args.next_args.source == "action_anim", "wait_action_anim should preserve next args")
+    assert(next_state == "wait_action", "wait_action_anim pre_action should route through wait_action")
+    assert(next_args and next_args.next_state == "wait_action_anim", "wait_action should forward to wait_action_anim")
+    assert(next_args.next_args and next_args.next_args.next_state == "roll", "wait_action_anim should preserve next state")
+    assert(next_args.next_args.next_args and next_args.next_args.next_args.source == "action_anim", "wait_action_anim should preserve next args")
   end)
 end
 

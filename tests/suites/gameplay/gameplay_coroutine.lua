@@ -476,6 +476,70 @@ local function _test_await_seconds_waits_until_elapsed()
 end
 
 ---------------------------------------------------------------------------
+-- wait_action: AI player resolves immediately
+---------------------------------------------------------------------------
+local function _test_await_action_resolves_immediately_for_ai_player()
+  local g = support.new_game({ ai = { [1] = true, [2] = true } })
+  local session = _new_await_session(g)
+
+  local res = await.action(session, { next_state = "roll", next_args = { player = g:current_player() } })
+  assert(res and res.next_state == "roll", "AI player should resolve wait_action immediately")
+  assert(session.marked_phase == "wait_action", "wait_action should mark phase")
+end
+
+---------------------------------------------------------------------------
+-- wait_action: human player yields without pending action
+---------------------------------------------------------------------------
+local function _test_await_action_yields_for_human_player()
+  local g = support.new_game({ ai = { [2] = true } })
+  local session = _new_await_session(g)
+
+  local res = await.action(session, { next_state = "roll", next_args = { player = g:current_player() } })
+  assert(res and res.wait == true, "human player should yield at wait_action")
+  assert(session.marked_phase == "wait_action", "wait_action should mark phase")
+end
+
+---------------------------------------------------------------------------
+-- wait_action: human player resolves with pending action
+---------------------------------------------------------------------------
+local function _test_await_action_resolves_for_human_player_with_pending_action()
+  local g = support.new_game({ ai = { [2] = true } })
+  local session = _new_await_session(g, { type = "ui_button", id = "next" })
+
+  local res = await.action(session, { next_state = "roll", next_args = { player = g:current_player() } })
+  assert(res and res.next_state == "roll", "human player with pending action should resolve wait_action")
+end
+
+---------------------------------------------------------------------------
+-- wait_action: coroutine engine integration
+---------------------------------------------------------------------------
+local function _test_coroutine_mode_resolves_wait_action()
+  local g = support.new_game({ ai = { [2] = true } })
+
+  g.turn_engine = turn_engine:new(g, {
+    start = function()
+      return "wait_action", {
+        player = g:current_player(),
+        next_state = "done",
+        next_args = {},
+      }
+    end,
+    done = function()
+      return nil
+    end,
+  })
+
+  g:advance_turn()
+  assert(g.turn.phase == "wait_action", "human player should enter wait_action")
+
+  g:advance_turn()
+  assert(g.turn.phase == "wait_action", "tick advance without action should stay in wait_action")
+
+  g:dispatch_action({ type = "ui_button", id = "next" })
+  assert(g.turn.phase ~= "wait_action", "dispatch action should leave wait_action")
+end
+
+---------------------------------------------------------------------------
 -- suite export
 ---------------------------------------------------------------------------
 return {
@@ -544,6 +608,22 @@ return {
     {
       name = "await_seconds_waits_until_elapsed",
       run = _test_await_seconds_waits_until_elapsed,
+    },
+    {
+      name = "await_action_resolves_immediately_for_ai_player",
+      run = _test_await_action_resolves_immediately_for_ai_player,
+    },
+    {
+      name = "await_action_yields_for_human_player",
+      run = _test_await_action_yields_for_human_player,
+    },
+    {
+      name = "await_action_resolves_for_human_player_with_pending_action",
+      run = _test_await_action_resolves_for_human_player_with_pending_action,
+    },
+    {
+      name = "coroutine_mode_resolves_wait_action",
+      run = _test_coroutine_mode_resolves_wait_action,
     },
   },
 }

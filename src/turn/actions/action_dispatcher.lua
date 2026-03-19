@@ -164,7 +164,11 @@ local function _handle_next_turn(game, state, action, ctx)
   turn_runtime.next_turn_locked = true
   turn_runtime.next_turn_last_click = now
   turn_runtime.next_turn_lock_phase = phase
-  turn_dispatch.step_turn(game)
+  if phase == "wait_action" then
+    game:dispatch_action(action)
+  else
+    turn_dispatch.step_turn(game)
+  end
   return { status = "applied" }
 end
 

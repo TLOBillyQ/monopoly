@@ -3,6 +3,7 @@ local await = require("src.turn.waits.await")
 
 local turn_script = {}
 local WAIT_HANDLERS = {
+  wait_action = await.action,
   wait_choice = await.choice,
   wait_move_anim = await.move_anim,
   wait_action_anim = await.action_anim,

@@ -113,10 +113,10 @@ local function _phase_start(turn_mgr)
 
   local waiting_state, waiting_args = _run_pre_action_item_phase(turn_mgr, player)
   if waiting_state ~= nil then
-    return waiting_state, waiting_args
+    return "wait_action", { player = player, next_state = waiting_state, next_args = waiting_args }
   end
 
-  return "roll", { player = player }
+  return "wait_action", { player = player, next_state = "roll", next_args = { player = player } }
 end
 
 return _phase_start
