@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(powershell.exe -Command \"[Environment]::SetEnvironmentVariable\\('Path', [Environment]::GetEnvironmentVariable\\('Path', 'User'\\) + ';C:\\\\Users\\\\Lzx_8\\\\AppData\\\\Roaming\\\\npm', 'User'\\)\")"
-    ]
-  }
-}

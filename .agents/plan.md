@@ -1,92 +1,89 @@
-# Context
+# Swarm-Ready Rewrite of `./.agents/plan.md`
 
-这次 `/simplify` 不适合做 `src/` 全量重构；当前更稳妥的做法，是围绕最近收敛出来的 6 个核心模块做低风险简化：去掉重复逻辑、统一已有契约入口、保持行为与质量门不变。目标是减少重复 dirty 处理、choice owner / route 解析分叉、以及事件派发样板代码，同时不改事件名、payload、route 语义和外部调用方式。
+## Summary
 
-# Recommended Approach
+Upgrade the existing simplify plan into a dependency-aware execution plan for parallel agents. The code scope stays the same: reduce duplication around dirty buckets, choice owner parsing, route metadata, intent event emission, and action animation guards without changing player-visible behavior or crossing architecture boundaries.
 
-1. 先统一 dirty bucket 的内部实现，只做同源化，不改外部结构
-   - 修改 `src/core/utils/dirty_tracker.lua`
-   - 修改 `src/state/state_access/landing_visual_hold.lua`
-   - 修改 `src/turn/output/intent_dispatcher.lua`
-   - 做法：把 dirty bucket 的初始化 / merge / reset 逻辑收敛到 `dirty_tracker`，让 `landing_visual_hold` 复用它，`intent_dispatcher` 也改用统一打标入口，避免继续手写 `game.dirty.any = true` / `game.dirty.turn = true`
-   - 复用现有模式：保留 `dirty_tracker.new()`、`dirty_tracker.consume()` 的 snapshot 结构与 `inventory_ids` 语义
+Two repo facts must be reflected in the plan before implementation starts:
+- raw suite files are not valid verification entrypoints here; they must run through lane/bootstrap entrypoints
+- `lua tests/behavior.lua` is green on the current tree (`999` checks passed), while `guard` / `arch` still need one confirmed runnable context before they can be used as final acceptance gates in this shell
 
-2. 简化 `number_utils` 的重复转换路径，但保持边界行为完全一致
-   - 修改 `src/core/utils/number_utils.lua`
-   - 做法：合并 `is_numeric()`、`to_integer()`、`format_integer_part()` 内部重复的安全整型转换逻辑，减少重复探测与重复解析
-   - 复用现有模式：继续通过 `number_utils` 作为统一数字归一化入口，不在业务层新增 helper
-   - 注意：字符串解析、`tostring` fallback、`math.tointeger` / `math.floor` 回退都保持原行为
+## Public/Internal Interface Changes
 
-3. 收敛 choice owner / target owner 的重复解析
-   - 修改 `src/core/choice/contract.lua`
-   - 修改 `src/ui/ctl/target_choice_effects.lua`
-   - 修改 `src/presentation/runtime/ports/ui_sync/choice_state.lua`
-   - 必要时检查 `src/turn/actions/validator.lua`
-   - 做法：以 `choice_contract` 为唯一字段归一化入口，抽出共用 owner 解析逻辑；UI 层和表现层复用它，不再各自手写 `owner_role_id` / `target_picker_owner_role_id` 解析
-   - 复用现有函数：`choice_contract.resolve_owner_role_id()`、`choice_contract.resolve_target_picker_owner_role_id()`、`src/core/utils/role_id.lua`
-   - 注意：各处现有 fallback 顺序保持不变；仅收敛“从 choice 中取值并归一化”的重复部分
+- `src/core/utils/dirty_tracker.lua` becomes the single source for dirty-bucket shape plus merge/reset helpers; snapshot behavior from `consume()` stays byte-for-byte compatible in semantics
+- `src/core/choice/contract.lua` may add pure field-level helpers for `owner_role_id` / `target_picker_owner_role_id`; it must not absorb `game` or current-player fallback
+- `src/core/choice/route_policy.lua` becomes the canonical reader for explicit route and confirm metadata; `src/ui/input/choice_route_policy.lua` remains the UI-facing alias
+- `src/core/events/monopoly_events.lua` may add a dedicated intent-emission helper so `src/turn/output/intent_dispatcher.lua` stops re-assembling event emission locally
 
-4. 收敛 route policy 的重复字段读取，保留现有 route 语义
-   - 修改 `src/core/choice/route_policy.lua`
-   - 检查 `src/ui/input/choice_route_policy.lua`
-   - 做法：把 `choice -> route -> meta` 的 layered lookup 收敛成共享内部 helper；把 `base_inline`、`secondary_confirm` 这类核心 route 字面量集中在 policy 模块内部管理
-   - 复用现有模式：UI wrapper 继续只是薄代理，不新增 UI 逻辑
-   - 注意：`resolve()` fallback 到 `base_inline`、`requires_confirm()` 的判断结果与 warning 行为都不能变
+## Task Graph
 
-5. 简化 intent 事件派发样板代码，但不改事件契约
-   - 修改 `src/core/events/monopoly_events.lua`
-   - 修改 `src/turn/output/intent_dispatcher.lua`
-   - 做法：在 `monopoly_events` 内提供更直接的 intent 事件派发入口，内部仍走 `resolve_intent()` + `emit()`；`intent_dispatcher` 只负责构建 payload，不再重复拼事件名逻辑
-   - 复用现有函数：`monopoly_events.resolve_intent()`、`monopoly_events.emit()`、`runtime_ports.emit_event()`
-   - 注意：事件名、payload 字段、`feature_key = "event." .. kind` 语义全部保持不变
+### T0: Lock runnable validation context and plan ownership
+- **depends_on**: `[]`
+- **location**: `./.agents/plan.md`, test/quality entrypoints
+- **description**: Rewrite the plan’s verification section to use lane entrypoints (`lua tests/behavior.lua`, `lua tests/contract.lua`, `lua tests/guard.lua`, `lua tools/quality/arch.lua check`) instead of raw suite files; document one concrete runnable context for `guard` / `arch`; make this task the only one that rewrites plan structure and commands
+- **validation**: plan text no longer references raw suite execution; runnable validation context is explicit; current baseline evidence includes `behavior` green and the current `guard` / `arch` precondition
 
-6. 最后只对 action anim port 做微清理
-   - 修改 `src/core/ports/action_anim_port.lua`
-   - 做法：删掉局部重复 guard / 布尔冗余，让 `is_enabled()` / `queue()` 更直接
-   - 注意：assert 契约、返回值、`queue_action_anim(payload)` 的调用时机不变
+### T1: Unify dirty bucket construction, merge, and reset
+- **depends_on**: `[T0]`
+- **location**: `src/core/utils/dirty_tracker.lua`, `src/state/state_access/landing_visual_hold.lua`
+- **description**: Move duplicated dirty-bucket shape, merge, and reset logic behind `dirty_tracker`; replace `_new_dirty_bucket`, merge helpers, and reset sites in landing visual hold while preserving deferred dirty behavior
+- **validation**: keep `dirty_tracker.consume()` snapshot semantics exactly, including `inventory_ids` reference/reset behavior; keep landing hold release/replay behavior unchanged
 
-# Critical Files
+### T2: Centralize pure choice owner parsing
+- **depends_on**: `[T0]`
+- **location**: `src/core/choice/contract.lua`, `src/presentation/runtime/ports/ui_sync/choice_state.lua`, `src/ui/ctl/target_choice_effects.lua`, `src/turn/actions/validator.lua`
+- **description**: Centralize field parsing for `owner_role_id` and `target_picker_owner_role_id` in `choice_contract`; outer layers keep their own current-player fallback; remove duplicated numeric parsing from presentation/UI/turn callers
+- **validation**: preserve current-player fallback where explicit owner fields are absent; preserve permissive target-pick behavior when `actor_role_id` is missing and only reject mismatches when parsed actor id is non-nil
 
-- `src/core/utils/dirty_tracker.lua`
-- `src/state/state_access/landing_visual_hold.lua`
-- `src/turn/output/intent_dispatcher.lua`
-- `src/core/utils/number_utils.lua`
-- `src/core/choice/contract.lua`
-- `src/ui/ctl/target_choice_effects.lua`
-- `src/presentation/runtime/ports/ui_sync/choice_state.lua`
-- `src/core/choice/route_policy.lua`
-- `src/ui/input/choice_route_policy.lua`
-- `src/core/events/monopoly_events.lua`
-- `src/core/ports/action_anim_port.lua`
+### T3: Centralize route and confirm metadata reads
+- **depends_on**: `[T0]`
+- **location**: `src/core/choice/route_policy.lua`, `src/ui/input/choice_route_policy.lua`, `src/ui/ctl/target_choice_effects.lua`
+- **description**: Give `route_policy` one shared path for explicit `route_key` and `requires_confirm` extraction; keep the UI adapter file as a thin boundary alias; audit target-pick route checks so route semantics do not stay duplicated in UI code
+- **validation**: preserve fallback warning text, `secondary_confirm` semantics, target-route detection, and UI boundary import path
 
-# Existing Utilities / Patterns To Reuse
+### T4: Micro-clean `action_anim_port`
+- **depends_on**: `[T0]`
+- **location**: `src/core/ports/action_anim_port.lua`
+- **description**: Simplify boolean/guard flow only; do not change asserts, nil handling, queue behavior, or return contract
+- **validation**: missing `anim_gate_port` still asserts; disabled/no-queue paths still return `false`; successful queue still returns `true`
 
-- `src/core/utils/dirty_tracker.lua`：dirty bucket 的唯一语义源
-- `src/core/choice/contract.lua`：choice 显式字段复制与 owner 解析入口
-- `src/core/utils/role_id.lua`：role id 归一化 / 比较
-- `src/core/choice/route_policy.lua`：route / requires_confirm 的中心策略
-- `src/core/events/monopoly_events.lua`：事件常量表与统一 emit 入口
-- `src/ui/input/choice_route_policy.lua`：UI 对 core route policy 的薄包装边界
+### T5: Consolidate intent dispatch side effects and intent-event emission
+- **depends_on**: `[T2, T3]`
+- **location**: `src/core/events/monopoly_events.lua`, `src/turn/output/intent_dispatcher.lua`
+- **description**: Use shared route helpers and a single intent-event emission path in gameplay intent dispatch; preserve required-meta normalization/validation and owner backfill for market/item/landing choices
+- **validation**: preserve side-effect order in `open_choice()` as `choice_seq` increment -> `pending_choice` assignment -> dirty flags -> log text -> event emission; preserve event names, payload keys, waiting-choice log text, and `owner_role_id` / `target_picker_owner_role_id` backfill
 
-# Verification
+### T6: Serial evidence capture and plan closeout
+- **depends_on**: `[T1, T2, T3, T4, T5]`
+- **location**: `./.agents/plan.md`
+- **description**: Append implementation evidence to the live-document sections (`进度`, `意外与发现`, `决策日志`, `结果与复盘`) after all code work lands; no structural rewrite here, only final evidence and outcome
+- **validation**: plan reflects actual completed work, observed quirks, final decisions, and remaining gaps; final gates are recorded with pass/fail evidence
 
-1. 先跑与 dirty / runtime 相关的定向测试
-   - `lua tests/suites/runtime/misc.lua`
-   - 重点确认 `dirty_tracker.consume()` snapshot shape、`landing_visual_hold` defer/release 行为不变
+## Parallel Waves
 
-2. 跑 choice / route / target pick / intent 相关定向测试
-   - `lua tests/suites/presentation/presentation_ui_model_dispatch.lua`
-   - `lua tests/suites/presentation/presentation_choice_routes.lua`
-   - `lua tests/suites/presentation/presentation_target_pick.lua`
-   - `lua tests/suites/gameplay/gameplay_intent_dispatch_and_event_feed.lua`
+- **Wave 1**: `T0`
+- **Wave 2**: `T1`, `T2`, `T3`, `T4`
+- **Wave 3**: `T5`
+- **Wave 4**: `T6`
 
-3. 跑完整质量门
-   - `lua tests/guard.lua`
-   - `lua tests/contract.lua`
-   - `lua tests/behavior.lua`
+## Test Plan
 
-4. 人工核对重点
-   - choice 打开后 UI 路由是否仍按原规则展示
-   - target picker 的 owner 限制与锁定逻辑是否不变
-   - landing visual hold 释放后 dirty / UI 刷新是否仍准确
-   - action animation queue 与 wait phase 是否仍保持原时序
+- **Per-task checks**
+  - `T1`: landing-hold dirty merge/release/runtime dirty tests
+  - `T2`: presentation target-pick and owner-resolution tests plus validator actor-owner checks
+  - `T3`: presentation route/confirm tests and target-route cases
+  - `T4`: narrow runtime port contract covering `action_anim_port`
+  - `T5`: gameplay intent dispatcher cases for route metadata, required meta errors, market/item/landing normalization, waiting-choice logs, and popup dispatch
+- **Final gates**
+  - `lua tests/behavior.lua`
+  - `lua tests/contract.lua`
+  - `lua tests/guard.lua`
+  - `lua tools/quality/arch.lua check`
+
+## Assumptions and Defaults
+
+- No new library or framework dependency is introduced; Context7/web lookup is unnecessary for this plan because scope is internal repo code only
+- `src/ui/input/choice_route_policy.lua` stays as a compatibility boundary even if it becomes thinner
+- `choice_contract` stays pure and must not depend on `game`, `state`, or current-player lookup
+- `.agents/plan.md` edits are serialized through `T0` and `T6` only to avoid swarm merge churn
+- If `guard` / `arch` still cannot run in the agreed shell context, that is treated as a pre-existing validation-environment blocker to be documented in `T0`, not folded into the simplify refactor itself

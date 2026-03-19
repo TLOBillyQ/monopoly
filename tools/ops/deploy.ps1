@@ -129,14 +129,15 @@ function Escape-LuaDoubleQuotedString {
 function Copy-DirectoryTree {
     param(
         [string]$SourceDir,
-        [string]$TargetDir
+        [string]$TargetDir,
+        [string[]]$Exclude = @()
     )
 
     if (Test-Path -LiteralPath $TargetDir -PathType Container) {
         Remove-Item -LiteralPath $TargetDir -Recurse -Force
     }
     [System.IO.Directory]::CreateDirectory($TargetDir) | Out-Null
-    $entries = Get-ChildItem -LiteralPath $SourceDir -Force
+    $entries = Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object { $Exclude -notcontains $_.Name }
     foreach ($entry in $entries) {
         $destination = Join-Path $TargetDir $entry.Name
         Copy-Item -LiteralPath $entry.FullName -Destination $destination -Force -Recurse
@@ -198,18 +199,59 @@ function Get-EffectiveLuaLineCountForFile {
 }
 
 function Get-EffectiveLuaLineCountForDir {
-    param([string]$PathText)
+    param(
+        [string]$PathText,
+        [string[]]$Exclude = @()
+    )
 
     if (-not (Test-Path -LiteralPath $PathText -PathType Container)) {
         return 0
     }
 
     $total = 0
-    $files = Get-ChildItem -LiteralPath $PathText -Recurse -File -Filter "*.lua" -Force
+    $files = Get-ChildItem -LiteralPath $PathText -Recurse -File -Filter "*.lua" -Force | Where-Object {
+        $relPath = $_.FullName.Substring($PathText.Length).TrimStart('\', '/')
+        $shouldExclude = $false
+        foreach ($ex in $Exclude) {
+            if ($relPath -eq $ex -or $relPath.StartsWith($ex + "\") -or $relPath.StartsWith($ex + "/")) {
+                $shouldExclude = $true
+                break
+            }
+        }
+        -not $shouldExclude
+    }
     foreach ($file in $files) {
         $total += Get-EffectiveLuaLineCountForFile $file.FullName
     }
     return $total
+}
+
+function Get-LuaFileCount {
+    param(
+        [string]$PathText,
+        [string[]]$Exclude = @()
+    )
+
+    if (-not (Test-Path -LiteralPath $PathText)) {
+        return 0
+    }
+
+    if (Test-Path -LiteralPath $PathText -PathType Leaf) {
+        return 1
+    }
+
+    $files = Get-ChildItem -LiteralPath $PathText -Recurse -File -Filter "*.lua" -Force | Where-Object {
+        $relPath = $_.FullName.Substring($PathText.Length).TrimStart('\', '/')
+        $shouldExclude = $false
+        foreach ($ex in $Exclude) {
+            if ($relPath -eq $ex -or $relPath.StartsWith($ex + "\") -or $relPath.StartsWith($ex + "/")) {
+                $shouldExclude = $true
+                break
+            }
+        }
+        -not $shouldExclude
+    }
+    return $files.Count
 }
 
 function Parse-RemainingArgs {
@@ -296,6 +338,8 @@ try {
     Write-Info ((Get-Text "部署目标: " "Deploy target: ") + $target_path)
     Write-Info "--------------------------------------"
 
+    $third_party_exclude = @("Behavior", "NavMesh", "Bincore.lua")
+
     foreach ($dir_name in $directories) {
         $source_path = Join-Path $project_root $dir_name
         $target_dir_path = Join-Path $target_path $dir_name
@@ -303,7 +347,11 @@ try {
             Write-Info ((Get-Text "正在拷贝目录: " "Copying directory: ") + "$dir_name ...")
             Write-Info ("  " + (Get-Text "源" "Source") + ": " + (Normalize-PathText $source_path))
             Write-Info ("  " + (Get-Text "目" "Target") + ": " + (Normalize-PathText $target_dir_path))
-            Copy-DirectoryTree -SourceDir $source_path -TargetDir $target_dir_path
+            if ($dir_name -eq "vendor/third_party") {
+                Copy-DirectoryTree -SourceDir $source_path -TargetDir $target_dir_path -Exclude $third_party_exclude
+            } else {
+                Copy-DirectoryTree -SourceDir $source_path -TargetDir $target_dir_path
+            }
             Write-Info ("✓ " + (Get-Text "$dir_name 拷贝成功" "$dir_name copied successfully"))
         } else {
             Write-Info ((Get-Text "⚠ 源目录不存在: " "⚠ Source directory does not exist: ") + (Normalize-PathText $source_path))
@@ -330,34 +378,56 @@ try {
         }
     }
 
+    $third_party_exclude = @("Behavior", "NavMesh", "Bincore.lua")
+
     $breakdown = @()
-    $breakdown += @{ name = "src"; count = (Get-EffectiveLuaLineCountForDir (Join-Path $project_root "src")) }
-    $breakdown += @{ name = "vendor/third_party"; count = (Get-EffectiveLuaLineCountForDir (Join-Path $project_root "vendor/third_party")) }
+    $breakdown += @{
+        name = "src"
+        files = (Get-LuaFileCount (Join-Path $project_root "src"))
+        count = (Get-EffectiveLuaLineCountForDir (Join-Path $project_root "src"))
+    }
+    $breakdown += @{
+        name = "vendor/third_party"
+        files = (Get-LuaFileCount (Join-Path $project_root "vendor/third_party") -Exclude $third_party_exclude)
+        count = (Get-EffectiveLuaLineCountForDir (Join-Path $project_root "vendor/third_party") -Exclude $third_party_exclude)
+    }
 
     $main_count = Get-EffectiveLuaLineCountForFile (Join-Path $project_root "main.lua")
     if ((Test-Path -LiteralPath (Join-Path $project_root "main.lua") -PathType Leaf) -and -not [string]::IsNullOrWhiteSpace($StartupProfile)) {
         $main_count += 1
     }
-    $breakdown += @{ name = "main.lua"; count = $main_count }
-    $breakdown += @{ name = "Data/UIManagerNodes.lua"; count = (Get-EffectiveLuaLineCountForFile (Join-Path $project_root "Data/UIManagerNodes.lua")) }
-    $breakdown += @{ name = "Data/Prefab.lua"; count = (Get-EffectiveLuaLineCountForFile (Join-Path $project_root "Data/Prefab.lua")) }
+    $breakdown += @{ name = "main.lua"; files = 1; count = $main_count }
+    $breakdown += @{
+        name = "Data/UIManagerNodes.lua"
+        files = 1
+        count = (Get-EffectiveLuaLineCountForFile (Join-Path $project_root "Data/UIManagerNodes.lua"))
+    }
+    $breakdown += @{
+        name = "Data/Prefab.lua"
+        files = 1
+        count = (Get-EffectiveLuaLineCountForFile (Join-Path $project_root "Data/Prefab.lua"))
+    }
 
+    $total_files = 0
     $total_effective_line_count = 0
     foreach ($row in $breakdown) {
+        $total_files += [int]$row.files
         $total_effective_line_count += [int]$row.count
     }
 
     Write-Info ""
-    Write-Info ((Get-Text "有效代码行数: " "Effective LOC: ") + $total_effective_line_count)
+    Write-Info ("Lua文件: " + $total_files + " / Lua Files: " + $total_files)
+    Write-Info ("有效代码行数: " + $total_effective_line_count + " / Effective LOC: " + $total_effective_line_count)
     foreach ($row in $breakdown) {
-        Write-Info ("  - " + $row.name + ": " + [string]$row.count)
+        Write-Info ("  - " + $row.name + ": " + $row.files + " files, " + [string]$row.count + " LOC")
     }
     Write-Info ""
     Write-Info "======================================"
     Write-Info (Get-Text "部署完成！" "Deployment completed!")
-    Write-Info ("  " + $target_path + " -> " + (Get-Text "有效代码行数 " "effective LOC ") + $total_effective_line_count)
+    Write-Info ("  " + $target_path)
+    Write-Info ("  Lua文件 / Lua Files: " + $total_files + ", 有效代码行数 / Effective LOC: " + $total_effective_line_count)
     foreach ($row in $breakdown) {
-        Write-Info ("    - " + $row.name + ": " + [string]$row.count)
+        Write-Info ("    - " + $row.name + ": " + $row.files + " files, " + [string]$row.count + " LOC")
     }
     Write-Info "======================================"
     exit 0
