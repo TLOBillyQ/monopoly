@@ -1,26 +1,17 @@
 local runtime_state = require("src.state.state_access.runtime_state")
+local dirty_tracker = require("src.core.utils.dirty_tracker")
 
 local landing_visual_hold = {}
 
 local function _new_dirty_bucket()
-  return {
-    any = false,
-    players = false,
-    board_tiles = false,
-    turn = false,
-    market = false,
-    turn_countdown = false,
-    inventory_ids = {},
-  }
+  return dirty_tracker.new()
 end
 
 local function _ensure_dirty_inventory_ids(hold)
   if type(hold.deferred_dirty) ~= "table" then
     hold.deferred_dirty = _new_dirty_bucket()
   end
-  if type(hold.deferred_dirty.inventory_ids) ~= "table" then
-    hold.deferred_dirty.inventory_ids = {}
-  end
+  dirty_tracker.ensure_inventory_ids(hold.deferred_dirty)
 end
 
 local function _ensure_hold_buffers(hold)
@@ -56,38 +47,8 @@ local function _ensure_hold(state)
   return hold
 end
 
-local function _merge_dirty_flags(target, dirty)
-  for _, key in ipairs({
-    "any",
-    "players",
-    "board_tiles",
-    "turn",
-    "market",
-    "turn_countdown",
-  }) do
-    if dirty[key] then
-      target[key] = true
-    end
-  end
-end
-
-local function _merge_inventory_ids(target, dirty)
-  if type(dirty.inventory_ids) == "table" then
-    local inventory_ids = target.inventory_ids or {}
-    target.inventory_ids = inventory_ids
-    for player_id in pairs(dirty.inventory_ids) do
-      inventory_ids[player_id] = true
-    end
-  end
-end
-
 local function _merge_dirty_into(target, dirty)
-  if type(target) ~= "table" or type(dirty) ~= "table" then
-    return target
-  end
-  _merge_dirty_flags(target, dirty)
-  _merge_inventory_ids(target, dirty)
-  return target
+  return dirty_tracker.merge_into(target, dirty)
 end
 
 local function _mark_turn_dirty(game)
@@ -96,6 +57,16 @@ local function _mark_turn_dirty(game)
   end
   game.dirty.turn = true
   game.dirty.any = true
+end
+
+local function _reset_deferred_buffers(hold)
+  hold.deferred_dirty = _new_dirty_bucket()
+  hold.deferred_popups = {}
+  hold.deferred_runtime_events = {}
+  hold.deferred_board_visual_syncs = {}
+  hold.deferred_tile_updates = {}
+  hold.deferred_owner_changes = {}
+  hold.deferred_bankruptcy_clears = {}
 end
 
 function landing_visual_hold.start(game, opts)
@@ -342,13 +313,7 @@ function landing_visual_hold.release(state, game)
   end)
 
   hold.frozen_ui_model = nil
-  hold.deferred_dirty = _new_dirty_bucket()
-  hold.deferred_popups = {}
-  hold.deferred_runtime_events = {}
-  hold.deferred_board_visual_syncs = {}
-  hold.deferred_tile_updates = {}
-  hold.deferred_owner_changes = {}
-  hold.deferred_bankruptcy_clears = {}
+  _reset_deferred_buffers(hold)
 
   runtime_state.set_ui_dirty(state, true)
   landing_visual_hold.clear_game(game)
@@ -363,13 +328,7 @@ function landing_visual_hold.reset_state(state)
   hold.release_pending = false
   hold.flushing = false
   hold.frozen_ui_model = nil
-  hold.deferred_dirty = _new_dirty_bucket()
-  hold.deferred_popups = {}
-  hold.deferred_runtime_events = {}
-  hold.deferred_board_visual_syncs = {}
-  hold.deferred_tile_updates = {}
-  hold.deferred_owner_changes = {}
-  hold.deferred_bankruptcy_clears = {}
+  _reset_deferred_buffers(hold)
   return hold
 end
 
