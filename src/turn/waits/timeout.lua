@@ -134,7 +134,7 @@ local default_policy = {
       return tick_timeout.resolve_choice_timeout_seconds(game, state)
     end,
     get_min_visible_seconds = function()
-      return gameplay_rules.auto_choice_min_visible_seconds or 0
+      return gameplay_rules.auto_decision_delay_seconds or 0
     end,
     build_action = function(game_ctx, state_ctx, choice, action_ctx)
       return choice_auto_policy.decide(game_ctx, state_ctx, choice, action_ctx)

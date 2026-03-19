@@ -40,8 +40,29 @@ local function _is_local_role(state, owner_role_id)
     return false
   end
 
-  local local_role_id = role_id_utils.normalize(local_actor_resolver.resolve_local(state))
-  return role_id_utils.equals(local_role_id, owner_role_id)
+  local local_role_id = role_id_utils.normalize(local_actor_resolver.resolve_turn_bound(state))
+  if local_role_id ~= nil then
+    return role_id_utils.equals(local_role_id, owner_role_id)
+  end
+
+  local roles = runtime_ports.resolve_roles()
+  if type(roles) == "table" and #roles > 0 then
+    for _, role in ipairs(roles) do
+      local role_id = role_id_utils.normalize(runtime.resolve_role_id(role))
+      if role_id_utils.equals(role_id, owner_role_id) then
+        return true
+      end
+    end
+    return false
+  end
+
+  local current_model = runtime_state.get_ui_model(state)
+  local current_player_id = role_id_utils.normalize(current_model and current_model.current_player_id or nil)
+  if current_player_id ~= nil then
+    return role_id_utils.equals(current_player_id, owner_role_id)
+  end
+
+  return false
 end
 
 function choice_ui_state.resolve_route_key(choice)

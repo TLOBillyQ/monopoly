@@ -113,3 +113,31 @@ State Change：`Mutation → Dirty Tracker → Canvas Store → Render Pipeline 
 ---
 
 原文件 381 行 → 精简后 95 行 (-75%)
+
+---
+
+## 2026-03-19 自动决策时间统一
+
+- 新增统一配置源：`src/config/gameplay/gameplay_rules.lua` 中的 `auto_decision_delay_seconds = 2.0`
+- 覆盖范围：
+  - AI/托管玩家自动 `next` 间隔
+  - 自动 choice 最短可见时间
+  - 自动玩家 popup 最短停留时间
+- 明确保留独立配置：`popup_auto_close_seconds`
+  - 它控制 popup 自动关闭超时默认值
+  - 不等于 AI/托管自动决策延迟
+  - 业务 popup 若显式传入 `payload.auto_close_seconds`，则以 payload 为准
+- 本次改动涉及的主要代码点：
+  - `src/app/bootstrap/startup_roster.lua`
+  - `src/turn/policies/auto_runner.lua`
+  - `src/turn/loop.lua`
+  - `src/turn/waits/choice_timeout.lua`
+  - `src/turn/waits/decision.lua`
+  - `src/turn/waits/timeout.lua`
+- 已补回归：
+  - `tests/suites/gameplay/gameplay_cases.lua` 新增自动 popup 满 2s 后才继续的用例
+- 验证结果：
+  - 本次修改覆盖的关键 gameplay timing 用例单跑通过
+  - 全量 `lua tests/regression.lua` 仍有 2 条失败，均未在本次修改文件内：
+    - `gameplay_timeout_and_auto_runner._test_tick_choice_timeout_warning_keeps_local_modal_choice`
+    - `presentation_action_anim_queue_and_turn_lock._test_ui_sync_opens_choice_modal_after_wait_action_anim`

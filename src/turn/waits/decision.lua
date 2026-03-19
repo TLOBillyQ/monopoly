@@ -12,7 +12,7 @@ end
 
 function turn_decision.decide_choice_action(game, choice, pending_action, opts)
   opts = opts or {}
-  local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
+  local min_visible = gameplay_rules.auto_decision_delay_seconds or 0
   local elapsed = opts.elapsed_seconds or 0
   local action = choice_auto_policy.decide(game, nil, choice, {
     mode = "wait_choice",

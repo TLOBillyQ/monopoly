@@ -120,7 +120,7 @@ local function _sync_elapsed_choice_id(state, output_ports, active_choice)
 end
 
 local function _resolve_min_visible_seconds(game, state, active_choice, opts)
-  local min_visible = gameplay_rules.auto_choice_min_visible_seconds or 0
+  local min_visible = gameplay_rules.auto_decision_delay_seconds or 0
   if type(opts.get_min_visible_seconds) == "function" then
     local override_min_visible = opts.get_min_visible_seconds(game, state, active_choice)
     if number_utils.is_numeric(override_min_visible) and override_min_visible >= 0 then

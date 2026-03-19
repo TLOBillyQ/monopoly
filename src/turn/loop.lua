@@ -88,7 +88,7 @@ local function _is_auto_popup_owner(game, state)
 end
 
 local function _is_auto_popup_waiting(game, state, ui_sync_ports)
-  local min_popup_visible = gameplay_rules.auto_popup_min_visible_seconds or 0
+  local min_popup_visible = gameplay_rules.auto_decision_delay_seconds or 0
   if min_popup_visible <= 0 then
     return false
   end

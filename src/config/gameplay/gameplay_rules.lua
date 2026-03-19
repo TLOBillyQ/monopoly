@@ -6,8 +6,7 @@ local gameplay_rules = {
   info_log_per_turn_limit = 1,
   role_control_lock_enabled = true,
 
-  auto_choice_min_visible_seconds = 3.0,
-  auto_popup_min_visible_seconds = 3.0,
+  auto_decision_delay_seconds = 2.0,
   popup_auto_close_seconds = 2.0,
   action_anim_default_seconds = 2.0,
   detained_turn_wait_seconds = 5.0,
@@ -15,8 +14,6 @@ local gameplay_rules = {
   panel_cash_delta_visible_seconds = 3.0,
   landing_visual_hold_seconds = 0.1,
   item_slot_highlight_anim_delay_seconds = 0.35,
-  ai_auto_turn_interval_seconds = 1.0,
-
   turn_limit = 1000,
 
   item_phase_queue = { "pre_action", "pre_move", "post_action" },

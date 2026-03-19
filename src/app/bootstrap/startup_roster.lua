@@ -184,7 +184,7 @@ end
 
 function M.build_auto_runner()
   return auto_runner:new({
-    interval = gameplay_rules.ai_auto_turn_interval_seconds,
+    interval = gameplay_rules.auto_decision_delay_seconds,
   })
 end
 

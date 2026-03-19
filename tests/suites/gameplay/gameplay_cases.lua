@@ -2250,20 +2250,21 @@ local function _test_auto_runner_auto_advances_ai_player()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
-  state.auto_runner.interval = 1.0
+  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
+  state.auto_runner.interval = auto_decision_delay
   g.turn.current_player_index = 2
   g.turn.phase = "start"
   g.turn.turn_count = 1
 
   _with_timestamp_stub(function()
-    local a1 = gameplay_loop.step_auto_runner(g, state, 0.5, {
+    local a1 = gameplay_loop.step_auto_runner(g, state, auto_decision_delay - 0.1, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
       current_player_id = g.players[2].id,
       current_player_auto = true,
     })
     assert(a1 == nil, "should not trigger before reaching auto interval")
-    local a2 = gameplay_loop.step_auto_runner(g, state, 0.5, {
+    local a2 = gameplay_loop.step_auto_runner(g, state, 0.1, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
       current_player_id = g.players[2].id,
@@ -2357,12 +2358,51 @@ local function _test_gameplay_loop_ai_rounds_do_not_force_manual_timeout()
   end)
 end
 
+local function _test_auto_runner_waits_for_auto_popup_delay()
+  local g = _new_game()
+  g.ui_port = _build_ui_port()
+  local state = _build_loop_state()
+  local auto_player = g.players[2]
+  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  g.turn.current_player_index = 2
+  g.turn.phase = "start"
+  g.turn.turn_count = 1
+  state.ui.popup_active = true
+  state.ui.popup_owner_index = 2
+  state.ui.popup_payload = {
+    auto_close_seconds = auto_decision_delay + 3,
+  }
+
+  _with_timestamp_stub(function()
+    ui_runtime.ui_modal_elapsed = auto_decision_delay - 0.1
+    local blocked = gameplay_loop.step_auto_runner(g, state, auto_decision_delay, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+      current_player_id = auto_player.id,
+      current_player_auto = true,
+    })
+    assert(blocked == nil, "auto popup should keep auto runner waiting before delay elapses")
+
+    ui_runtime.ui_modal_elapsed = auto_decision_delay
+    local action = gameplay_loop.step_auto_runner(g, state, auto_decision_delay, {
+      game_finished = g.finished,
+      current_player_index = g.turn.current_player_index,
+      current_player_id = auto_player.id,
+      current_player_auto = true,
+    })
+    assert(action and action.type == "ui_button" and action.id == "next",
+      "auto popup should stop blocking once the shared delay is reached")
+  end)
+end
+
 local function _test_auto_runner_selects_runtime_pending_choice_without_ui_choice_screen()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
   local ai_player = g.players[2]
   local dispatched = nil
+  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
   local choice = {
     id = 701,
     kind = "landing_optional_effect",
@@ -2390,7 +2430,7 @@ local function _test_auto_runner_selects_runtime_pending_choice_without_ui_choic
   end
 
   _with_timestamp_stub(function()
-    local early = gameplay_loop.step_auto_runner(g, state, 2.0, {
+    local early = gameplay_loop.step_auto_runner(g, state, auto_decision_delay - 0.1, {
       game = g,
       state = state,
       pending_choice = choice,
@@ -2402,7 +2442,7 @@ local function _test_auto_runner_selects_runtime_pending_choice_without_ui_choic
       current_player_auto = true,
     })
     assert(early == nil, "choice auto action should wait before looking decided")
-    local action = gameplay_loop.step_auto_runner(g, state, 1.0, {
+    local action = gameplay_loop.step_auto_runner(g, state, 0.1, {
       game = g,
       state = state,
       pending_choice = choice,
@@ -2428,6 +2468,7 @@ local function _test_auto_runner_resets_timer_when_wait_kind_changes()
   local state = _build_loop_state()
   local ai_player = g.players[2]
   local dispatched = nil
+  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
   local choice = {
     id = 704,
     kind = "landing_optional_effect",
@@ -2442,7 +2483,7 @@ local function _test_auto_runner_resets_timer_when_wait_kind_changes()
       effect_ids = { "buy_land" },
     },
   }
-  state.auto_runner.interval = 1.0
+  state.auto_runner.interval = auto_decision_delay
   g.turn.current_player_index = 2
   g.turn.phase = "start"
   g.dispatch_action = function(_, action)
@@ -2451,7 +2492,7 @@ local function _test_auto_runner_resets_timer_when_wait_kind_changes()
   end
 
   _with_timestamp_stub(function()
-    local next_action = gameplay_loop.step_auto_runner(g, state, 0.8, {
+    local next_action = gameplay_loop.step_auto_runner(g, state, auto_decision_delay - 0.2, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
       current_player_id = ai_player.id,
@@ -2463,7 +2504,7 @@ local function _test_auto_runner_resets_timer_when_wait_kind_changes()
     g.turn.pending_choice = choice
     runtime_state.set_pending_choice(state, choice, { choice_id = choice.id, elapsed_seconds = 0 })
 
-    local early_choice = gameplay_loop.step_auto_runner(g, state, 2.2, {
+    local early_choice = gameplay_loop.step_auto_runner(g, state, auto_decision_delay - 0.2, {
       game = g,
       state = state,
       pending_choice = choice,
@@ -2476,7 +2517,7 @@ local function _test_auto_runner_resets_timer_when_wait_kind_changes()
     })
     assert(early_choice == nil, "choice timer should reset when switching from next to wait_choice")
 
-    local final_choice = gameplay_loop.step_auto_runner(g, state, 0.8, {
+    local final_choice = gameplay_loop.step_auto_runner(g, state, 0.2, {
       game = g,
       state = state,
       pending_choice = choice,
@@ -2807,6 +2848,7 @@ local function _test_auto_runner_depends_on_current_player_auto()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
+  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
   g.players[1].auto = true
   g.players[2].auto = false
   g.turn.current_player_index = 1
@@ -2814,7 +2856,7 @@ local function _test_auto_runner_depends_on_current_player_auto()
   g.turn.turn_count = 1
 
   _with_timestamp_stub(function()
-    local action1 = gameplay_loop.step_auto_runner(g, state, 1.0, {
+    local action1 = gameplay_loop.step_auto_runner(g, state, auto_decision_delay, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
       current_player_auto = true,
@@ -2824,7 +2866,7 @@ local function _test_auto_runner_depends_on_current_player_auto()
 
     state.turn_runtime.next_turn_locked = false
     g.turn.current_player_index = 2
-    local action2 = gameplay_loop.step_auto_runner(g, state, 1.0, {
+    local action2 = gameplay_loop.step_auto_runner(g, state, auto_decision_delay, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
       current_player_auto = false,
@@ -3403,7 +3445,7 @@ local function _test_turn_decision_wait_choice_no_longer_reads_ui_port_state()
 
   local action = nil
   support.with_patches({
-    { target = gameplay_rules, key = "auto_choice_min_visible_seconds", value = 0 },
+    { target = gameplay_rules, key = "auto_decision_delay_seconds", value = 0 },
   }, function()
     action = turn_decision.decide_choice_action(g, choice, nil, {
       elapsed_seconds = 1.2,
@@ -3873,7 +3915,7 @@ local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
     }
   end
   local ok, err = pcall(function()
-    action = runner:next_action((gameplay_rules.auto_choice_min_visible_seconds or 0) + 0.1, {
+    action = runner:next_action((gameplay_rules.auto_decision_delay_seconds or 0) + 0.1, {
       game = g,
       pending_choice = {
         id = 901,
@@ -4939,6 +4981,7 @@ return {
   _test_action_button_timeout_blocked_when_popup_active = _test_action_button_timeout_blocked_when_popup_active,
   _test_auto_runner_auto_advances_ai_player = _test_auto_runner_auto_advances_ai_player,
   _test_auto_runner_human_turn_not_auto_advanced = _test_auto_runner_human_turn_not_auto_advanced,
+  _test_auto_runner_waits_for_auto_popup_delay = _test_auto_runner_waits_for_auto_popup_delay,
   _test_gameplay_loop_ai_rounds_do_not_force_manual_timeout = _test_gameplay_loop_ai_rounds_do_not_force_manual_timeout,
   _test_auto_runner_selects_runtime_pending_choice_without_ui_choice_screen = _test_auto_runner_selects_runtime_pending_choice_without_ui_choice_screen,
   _test_auto_runner_resets_timer_when_wait_kind_changes = _test_auto_runner_resets_timer_when_wait_kind_changes,

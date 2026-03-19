@@ -70,7 +70,7 @@ end
 local function _resolve_interval_seconds(self, env)
   local wait_kind = _resolve_wait_kind(env)
   if wait_kind == "choice" then
-    return gameplay_rules.auto_choice_min_visible_seconds or 0
+    return gameplay_rules.auto_decision_delay_seconds or 0
   end
   return self.interval or 0
 end
