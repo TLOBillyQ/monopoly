@@ -3,7 +3,6 @@ local choice_contract = require("src.core.choice.contract")
 local choice_route_policy = require("src.core.choice.route_policy")
 
 local intent_dispatcher = {}
-local emit = monopoly_event.emit
 
 local function _build_choice_log_text(choice_spec, title, body_lines)
   local text = "等待选择：" .. tostring(title or "请选择")
@@ -20,6 +19,31 @@ local function _resolve_choice_route(choice_spec)
   local route_key = choice_route_policy.resolve(choice_spec)
   local requires_confirm = choice_route_policy.requires_confirm(choice_spec)
   return route_key, requires_confirm
+end
+
+local function _mark_turn_dirty(game)
+  game.dirty.turn = true
+  game.dirty.any = true
+end
+
+local function _build_choice_entry(choice_id, choice_spec)
+  local route_key, requires_confirm = _resolve_choice_route(choice_spec)
+  local entry = {
+    id = choice_id,
+    kind = choice_spec.kind,
+    title = choice_spec.title or "请选择",
+    body_lines = choice_spec.body_lines or {},
+    options = choice_spec.options or {},
+    allow_cancel = choice_spec.allow_cancel ~= false,
+    cancel_label = choice_spec.cancel_label or "取消",
+    meta = choice_spec.meta,
+    route_key = route_key,
+    requires_confirm = requires_confirm == true,
+  }
+  choice_contract.copy_explicit_fields(choice_spec, entry)
+  entry.route_key = route_key
+  entry.requires_confirm = requires_confirm == true
+  return entry
 end
 
 local function _run_descriptor_meta_validator(descriptor, game, meta, choice_spec)
@@ -70,29 +94,11 @@ function intent_dispatcher.open_choice(game, choice_spec, opts)
   seq = seq + 1
   game.turn.choice_seq = seq
 
-  local route_key, requires_confirm = _resolve_choice_route(choice_spec)
-  local entry = {
-    id = seq,
-    kind = choice_spec.kind,
-    title = choice_spec.title or "请选择",
-    body_lines = choice_spec.body_lines or {},
-    options = choice_spec.options or {},
-    allow_cancel = choice_spec.allow_cancel ~= false,
-    cancel_label = choice_spec.cancel_label or "取消",
-    meta = choice_spec.meta,
-    route_key = route_key,
-    requires_confirm = requires_confirm == true,
-  }
-  choice_contract.copy_explicit_fields(choice_spec, entry)
-  entry.route_key = route_key
-  entry.requires_confirm = requires_confirm == true
+  local entry = _build_choice_entry(seq, choice_spec)
   game.turn.pending_choice = entry
-  game.dirty.turn = true
-  game.dirty.any = true
+  _mark_turn_dirty(game)
   game.logger.event_no_tips(_build_choice_log_text(choice_spec, entry.title, entry.body_lines))
-
-  local event_name = monopoly_event.resolve_intent("need_choice")
-  emit(event_name, { choice = entry, choice_spec = choice_spec })
+  monopoly_event.emit_intent("need_choice", { choice = entry, choice_spec = choice_spec })
   return entry
 end
 
@@ -106,8 +112,7 @@ function intent_dispatcher.push_popup(game, payload, opts)
   assert(popup_port ~= nil, "missing popup_port")
   assert(popup_port.push_popup ~= nil, "missing popup_port.push_popup")
   popup_port:push_popup(payload, opts)
-  local event_name = monopoly_event.resolve_intent("push_popup")
-  emit(event_name, { payload = payload })
+  monopoly_event.emit_intent("push_popup", { payload = payload })
   return true
 end
 

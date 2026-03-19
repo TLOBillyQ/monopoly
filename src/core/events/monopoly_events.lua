@@ -43,6 +43,12 @@ local monopoly_events = {
   },
 }
 
+local function _emit_event(kind, payload)
+  runtime_ports.emit_event(kind, payload or {}, {
+    feature_key = "event." .. tostring(kind),
+  })
+end
+
 function monopoly_events.resolve_intent(kind)
   assert(kind ~= nil, "missing intent kind")
   local intent = assert(monopoly_events.intent, "missing monopoly_events.intent")
@@ -51,10 +57,14 @@ function monopoly_events.resolve_intent(kind)
   return event_name
 end
 
+function monopoly_events.emit_intent(kind, payload)
+  local event_name = monopoly_events.resolve_intent(kind)
+  _emit_event(event_name, payload)
+  return event_name
+end
+
 function monopoly_events.emit(kind, payload)
-  runtime_ports.emit_event(kind, payload or {}, {
-    feature_key = "event." .. tostring(kind),
-  })
+  _emit_event(kind, payload)
 end
 
 return monopoly_events

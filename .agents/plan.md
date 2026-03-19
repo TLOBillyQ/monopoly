@@ -28,9 +28,9 @@
 - [x] (2026-03-19 11:xx HKT) 完成 T0：重写并行计划格式，补齐任务依赖、状态字段、日志字段、文件字段，以及可运行验证上下文。
 - [x] (2026-03-19 11:xx HKT) 记录当前基线：`lua tests/behavior.lua` 通过，输出 `All regression checks passed (999)`。
 - [x] (2026-03-19 11:xx HKT) 记录当前基线：`cmd /c lua tests/guard.lua` 通过；`cmd /c lua tools/quality/arch.lua check` 通过。
-- [ ] 执行 T1 / T2 / T3 / T4 第一轮并行实现。
-- [ ] 执行 T5 串联共享 route / intent 收敛。
-- [ ] 执行 T6，补齐最终证据与复盘。
+- [x] (2026-03-19 12:xx HKT) 完成 Wave 2：T1 / T2 / T3 由并行 worker 落地，T4 由主执行者本地落地，并分别提交。
+- [x] (2026-03-19 12:xx HKT) 完成 T5：收敛 intent event 发射路径，并修复一次真实回归后恢复行为全绿。
+- [x] (2026-03-19 12:xx HKT) 完成 T6：补齐最终证据与复盘；按用户要求跳过 `contract`，不将其作为本轮阻塞项。
 
 ## 意外与发现
 
@@ -52,6 +52,21 @@
     cmd /c lua tools/quality/arch.lua check
     -> arch_view 检查通过 / arch_view check ok
 
+- 观察：T5 初版把 intent 事件改成动态走 `monopoly_event.emit` 后，`landing.upgrade_land_prefers_direct_ui_notify_before_event_bridge` 回归失败。
+  证据：
+
+    lua tests/behavior.lua
+    -> Regression failed (1/999)
+    -> landing.upgrade_land_prefers_direct_ui_notify_before_event_bridge
+
+  修复：保留 `emit_intent()` 统一入口，但改为走 `monopoly_events.lua` 内部 `_emit_event()`，不再动态回调可 patch 的 `monopoly_event.emit`。
+
+- 观察：`tests/contract.lua` 在当前 shell 里直接运行会因为 `tools/shared/lib/loc_scan.lua` 触发 repo_root 解析失败；本轮用户明确要求先跳过 contract。
+  证据：
+
+    lua tests/contract.lua
+    -> failed to resolve repo_root from source path: .../tools/shared/lib/loc_scan.lua
+
 ## 决策日志
 
 - 决策：T0 由主执行者串行完成，不交给并行 worker。
@@ -66,15 +81,39 @@
   理由：保持 core 纯度，避免把外层运行时上下文倒灌进共享核心模块。
   日期/作者：2026-03-19 / Codex
 
+- 决策：`T2` 与 `T3` 虽然都涉及 choice 语义，但在并行执行时拆成不重叠写集；`target_choice_effects.lua` 归 T3。
+  理由：缩短关键路径，同时避免并行冲突。
+  日期/作者：2026-03-19 / Codex
+
+- 决策：保留 `intent` 事件的统一发射入口，但不让它通过可 patch 的 `monopoly_event.emit` 动态分发。
+  理由：这样既能消除 `intent_dispatcher` 内部的重复样板，又能保持既有测试对 direct UI notify / event bridge fallback 的观察边界。
+  日期/作者：2026-03-19 / Codex
+
+- 决策：本轮按用户要求跳过 `contract`，最终验收以 `behavior + guard + arch` 为准，并把 `contract` 留作后续补验。
+  理由：用户明确要求先跳过，且当前 `behavior`、`guard`、`arch` 已能证明本轮重构没有破坏可见行为和静态边界。
+  日期/作者：2026-03-19 / Codex
+
 ## 结果与复盘
 
-当前仅完成 T0。结果是把原本“可读但不适合 swarm 执行”的计划重写成可并行执行版本，并确认了当前 shell 下可实际运行的验证入口。
+本轮已经完成 T0-T6。结果如下：
 
-后续复盘必须补充：
-- T1-T5 分别删掉了哪些重复逻辑；
-- 哪些行为合同被保留；
-- 哪些验证先失败后修复；
-- 是否还有故意保留的重复代码及原因。
+- T1：把 dirty bucket 的构造、merge、reset 真正收口到 `dirty_tracker`，并保持 `consume()` 与 landing hold release/reset 的旧语义。
+- T2：把 owner / target picker 的纯字段解析收口到 `choice_contract`，保留外层 current-player fallback，不污染 core。
+- T3：把 explicit route / requires_confirm 读取收口到 `route_policy`，UI 边界 alias 继续保留，target route 检查不再分叉。
+- T4：简化 `action_anim_port` 的布尔 guard，不改断言与返回值契约。
+- T5：收敛 `intent_dispatcher` 的 choice entry 组装和 intent event 发射路径；期间发现并修复一次 direct UI notify 回归。
+- T6：把证据、决策和遗留项完整写回计划。
+
+最终状态：
+- `behavior` 通过；
+- `guard` 通过；
+- `arch` 通过；
+- `contract` 按用户要求跳过，未作为本轮阻塞项。
+
+本轮保留的刻意边界：
+- `choice_contract` 仍然不接触 `game` / runtime；
+- `choice_route_policy.lua` 仍然保留为 UI alias；
+- `intent` 事件统一入口存在，但仍与可 patch 的 `emit` 观察边界解耦，以兼容既有测试语义。
 
 ## 背景与导读
 
@@ -117,9 +156,14 @@
 - **validation**:
   - `lua tests/behavior.lua`
   - 定向关注 `runtime.misc` 里的 `landing_visual_hold_*` 与 `number_utils_*` case 输出
-- **status**: Not Started
+- **status**: Completed
 - **log**:
+  - 新增 `dirty_tracker.ensure_inventory_ids()`、`dirty_tracker.merge_into()`、`dirty_tracker.reset()`。
+  - `landing_visual_hold` 不再自带重复 dirty bucket shape / merge / reset 实现。
+  - 保留 `consume()` 的 snapshot / reset 语义和 deferred replay 行为。
 - **files edited/created**:
+  - `src/core/utils/dirty_tracker.lua`
+  - `src/state/state_access/landing_visual_hold.lua`
 
 ### T2: 统一纯 choice owner / target picker 解析
 - **depends_on**: `[T0]`
@@ -128,9 +172,15 @@
 - **validation**:
   - `lua tests/behavior.lua`
   - 定向关注 `presentation_ui_model_dispatch`、`presentation_ui_interaction`、`presentation_target_pick`
-- **status**: Not Started
+- **status**: Completed
 - **log**:
+  - 在 `choice_contract` 中新增 `resolve_meta_player_role_id()` 与 `resolve_owner_or_meta_role_id()`。
+  - `choice_state` 与 `validator` 改为复用共享纯解析 helper。
+  - 保留 current-player fallback 在外层调用方，不把 runtime 上下文引入 core。
 - **files edited/created**:
+  - `src/core/choice/contract.lua`
+  - `src/presentation/runtime/ports/ui_sync/choice_state.lua`
+  - `src/turn/actions/validator.lua`
 
 ### T3: 统一 route / requires_confirm 读取
 - **depends_on**: `[T0]`
@@ -139,9 +189,15 @@
 - **validation**:
   - `lua tests/behavior.lua`
   - 定向关注 `presentation_choice_routes`、`presentation_ui_model_dispatch`、`presentation_ui_interaction`
-- **status**: Not Started
+- **status**: Completed
 - **log**:
+  - `route_policy` 新增 explicit route / explicit requires_confirm 读取 helper。
+  - `choice_route_policy` 继续只做 UI alias 转发。
+  - `target_choice_effects` 的 target route 检查改为复用共享 route helper。
 - **files edited/created**:
+  - `src/core/choice/route_policy.lua`
+  - `src/ui/input/choice_route_policy.lua`
+  - `src/ui/ctl/target_choice_effects.lua`
 
 ### T4: 微清理 action_anim_port
 - **depends_on**: `[T0]`
@@ -151,9 +207,12 @@
   - `lua tests/contract.lua`
   - `lua tests/behavior.lua`
   - 定向关注 `narrow_runtime_ports_contract` 与 action animation 相关 presentation case
-- **status**: Not Started
+- **status**: Completed
 - **log**:
+  - 简化 `is_enabled()` 和 `queue()` 的布尔判断。
+  - 保持 `missing anim_gate_port` 断言、disabled/no-queue 的 `false` 返回值、成功 queue 的 `true` 返回值。
 - **files edited/created**:
+  - `src/core/ports/action_anim_port.lua`
 
 ### T5: 收敛 intent dispatch 的共享 route / event 路径
 - **depends_on**: `[T2, T3]`
@@ -162,9 +221,14 @@
 - **validation**:
   - `lua tests/behavior.lua`
   - 定向关注 `gameplay_intent_dispatch_and_event_feed`
-- **status**: Not Started
+- **status**: Completed
 - **log**:
+  - 抽出 `_build_choice_entry()` 与 `_mark_turn_dirty()`，减少 `open_choice()` 的重复样板。
+  - 在 `monopoly_events` 中新增 `emit_intent()`。
+  - 首版实现引入了 direct UI notify 回归，随后改成内部 `_emit_event()` 以恢复旧观察边界。
 - **files edited/created**:
+  - `src/core/events/monopoly_events.lua`
+  - `src/turn/output/intent_dispatcher.lua`
 
 ### T6: 串行补齐证据与复盘
 - **depends_on**: `[T1, T2, T3, T4, T5]`
@@ -175,9 +239,13 @@
   - `lua tests/contract.lua`
   - `cmd /c lua tests/guard.lua`
   - `cmd /c lua tools/quality/arch.lua check`
-- **status**: Not Started
+- **status**: Completed
 - **log**:
+  - 已补写进度、发现、决策、结果章节。
+  - 已记录 `behavior` / `guard` / `arch` 结果。
+  - 已记录 `contract` 因用户要求而跳过。
 - **files edited/created**:
+  - `.agents/plan.md`
 
 ## 并行波次
 
@@ -201,7 +269,7 @@
 1. 每个任务先跑自己的定向验证，再跑至少一个 lane；
 2. 如果某任务会影响 gameplay + presentation 两侧，优先看 `behavior`；
 3. `action_anim_port` 这类窄契约变化必须补 `contract`；
-4. 最终验收必须同时满足：
+4. 默认最终验收必须同时满足：
 
     lua tests/behavior.lua
     lua tests/contract.lua
@@ -216,6 +284,12 @@
 - `landing_visual_hold` release / deferred dirty 行为不变；
 - `intent_dispatcher` 事件名、payload、日志文本、副作用顺序不变；
 - `action_anim_port` 的 assert / return contract 不变。
+
+本轮实际验收（按用户指令调整）：
+
+    lua tests/behavior.lua
+    cmd /c lua tests/guard.lua
+    cmd /c lua tools/quality/arch.lua check
 
 ## 可重复性与恢复
 
@@ -239,6 +313,23 @@
     cmd /c lua tools/quality/arch.lua check
     -> arch_view 检查通过 / arch_view check ok
 
+本轮最终证据：
+
+    lua tests/behavior.lua
+    -> All regression checks passed (999)
+
+    cmd /c lua tests/guard.lua
+    -> dep_rules ok
+    -> gameplay_loop_no_ui ok
+    -> forbidden_globals ok
+    -> arch_view_guard ok
+
+    cmd /c lua tools/quality/arch.lua check
+    -> arch_view 检查通过 / arch_view check ok
+
+    lua tests/contract.lua
+    -> skipped by user instruction
+
 ## 接口与依赖
 
 这轮收敛只允许复用和加强既有入口，不新增平行抽象：
@@ -257,4 +348,4 @@
 
 ---
 
-改动说明（2026-03-19）：将原始 swarm 计划重写为可并行执行版本。新增了活文档章节、任务状态字段、日志字段、文件字段、可运行验证上下文、并行波次和写集冲突说明，并记录了 `behavior`、`guard`、`arch` 的当前基线证据。
+改动说明（2026-03-19）：先将原始 swarm 计划重写为可并行执行版本；随后按该计划完成 T1-T5 的代码收敛，并在本文件补齐任务完成状态、真实回归、修复记录、最终验收结果，以及“按用户要求跳过 contract”的说明。
