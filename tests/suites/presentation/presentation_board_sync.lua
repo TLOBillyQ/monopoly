@@ -366,6 +366,9 @@ local function _test_board_refresh_synthetic_actor_stops_force_move_before_snap(
   env.unit.force_stop_move = function()
     env.calls[#env.calls + 1] = "force_stop_move"
   end
+  env.unit.ai_command_stop_move = function()
+    env.calls[#env.calls + 1] = "ai_command_stop_move"
+  end
   env.unit.stop_anim = function()
     env.calls[#env.calls + 1] = "stop_anim"
   end
@@ -386,8 +389,9 @@ local function _test_board_refresh_synthetic_actor_stops_force_move_before_snap(
   end)
 
   _assert_eq(env.calls[1], "force_stop_move", "synthetic refresh should stop motion before snap")
-  _assert_eq(env.calls[2], "stop_anim", "synthetic refresh should still stop anim before snap")
-  _assert_eq(env.calls[3], "set_position", "synthetic refresh should snap after stopping motion")
+  _assert_eq(env.calls[2], "ai_command_stop_move", "synthetic refresh should also reset ai movement before snap")
+  _assert_eq(env.calls[3], "stop_anim", "synthetic refresh should still stop anim before snap")
+  _assert_eq(env.calls[4], "set_position", "synthetic refresh should snap after stopping motion")
 end
 
 local function _test_board_refresh_synthetic_actor_matches_regular_stop_flow()
@@ -400,6 +404,9 @@ local function _test_board_refresh_synthetic_actor_matches_regular_stop_flow()
   }
   env.unit.force_stop_move = function()
     env.calls[#env.calls + 1] = "force_stop_move"
+  end
+  env.unit.ai_command_stop_move = function()
+    env.calls[#env.calls + 1] = "ai_command_stop_move"
   end
   env.unit.stop_anim = function()
     env.calls[#env.calls + 1] = "stop_anim"
@@ -421,9 +428,60 @@ local function _test_board_refresh_synthetic_actor_matches_regular_stop_flow()
   end)
 
   _assert_eq(env.calls[1], "force_stop_move", "synthetic refresh should stop motion first")
-  _assert_eq(env.calls[2], "stop_anim", "synthetic refresh should still stop anim before snap")
-  _assert_eq(env.calls[3], "set_position", "synthetic refresh should still snap to tile position")
-  _assert_eq(env.calls[4], nil, "synthetic refresh should not add extra stop calls")
+  _assert_eq(env.calls[2], "ai_command_stop_move", "synthetic refresh should also reset ai movement before snap")
+  _assert_eq(env.calls[3], "stop_anim", "synthetic refresh should still stop anim before snap")
+  _assert_eq(env.calls[4], "set_position", "synthetic refresh should still snap to tile position")
+  _assert_eq(env.calls[5], nil, "synthetic refresh should not add extra stop calls")
+end
+
+local function _test_board_refresh_replays_pending_sync_with_synthetic_ai_stop_before_snap()
+  local board_view = require("src.ui.render.board")
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local env = _build_board_refresh_test_env({
+    phase = "wait_move_anim",
+    move_anim = { seq = 1 },
+    position = 2,
+  })
+  env.state.board_scene._move_anim_runtime = {
+    active_token_by_player_id = {
+      [1] = "1:1",
+    },
+  }
+  env.unit.force_stop_move = function()
+    env.calls[#env.calls + 1] = "force_stop_move"
+  end
+  env.unit.ai_command_stop_move = function()
+    env.calls[#env.calls + 1] = "ai_command_stop_move"
+  end
+  env.unit.stop_anim = function()
+    env.calls[#env.calls + 1] = "stop_anim"
+  end
+  env.unit.set_position = function(pos)
+    env.calls[#env.calls + 1] = "set_position"
+    env.target_pos = pos
+  end
+
+  _with_board_refresh_patches({
+    { target = runtime_ports, key = "resolve_role", value = function(player_id)
+      if player_id == 1 then
+        return { is_synthetic_actor = true }
+      end
+      return nil
+    end },
+  }, function()
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+    _assert_eq(#env.calls, 0, "suppressed refresh should not stop or snap synthetic actor")
+    env.ui_model.board.phase = "start"
+    env.ui_model.board.move_anim = nil
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+  end)
+
+  _assert_eq(env.calls[1], "force_stop_move", "synthetic pending sync should stop force move first")
+  _assert_eq(env.calls[2], "ai_command_stop_move", "synthetic pending sync should reset ai movement before snap")
+  _assert_eq(env.calls[3], "stop_anim", "synthetic pending sync should stop anim before snap")
+  _assert_eq(env.calls[4], "set_position", "synthetic pending sync should snap after synthetic stop")
+  _assert_eq(env.target_pos.x, 20, "synthetic pending sync should snap to the current tile x")
+  _assert_eq(env.target_pos.z, 30, "synthetic pending sync should snap to the current tile z")
 end
 
 local function _test_board_scene_init_binds_units_and_target_pick_metadata()
@@ -880,6 +938,10 @@ return {
     {
       name = "_test_board_refresh_synthetic_actor_matches_regular_stop_flow",
       run = _test_board_refresh_synthetic_actor_matches_regular_stop_flow,
+    },
+    {
+      name = "_test_board_refresh_replays_pending_sync_with_synthetic_ai_stop_before_snap",
+      run = _test_board_refresh_replays_pending_sync_with_synthetic_ai_stop_before_snap,
     },
     {
       name = "_test_board_scene_init_binds_units_and_target_pick_metadata",

@@ -290,6 +290,17 @@ local function _stop_unit_motion(unit)
   return nil
 end
 
+local function _stop_synthetic_ai_motion(unit, enabled)
+  if enabled ~= true or unit == nil then
+    return nil
+  end
+  if type(unit.ai_command_stop_move) == "function" then
+    unit.ai_command_stop_move(_zero_fixed())
+    return "ai_command_stop_move"
+  end
+  return nil
+end
+
 local function _stop_unit_anim(unit)
   if unit == nil then
     return nil
@@ -325,11 +336,13 @@ function move_anim.stop_player_presentation(player_id, unit, opts)
     opts.emit_vehicle_stop(player_id)
     vehicle_stop_path = "emit_vehicle_stop"
   end
+  local synthetic_actor = _is_synthetic_actor(player_id) == true
+  local motion_stop_path = _stop_unit_motion(unit)
   return {
-    synthetic_actor = _is_synthetic_actor(player_id) == true,
-    ai_stop_path = nil,
+    synthetic_actor = synthetic_actor,
+    ai_stop_path = _stop_synthetic_ai_motion(unit, opts.stop_synthetic_ai == true and synthetic_actor),
     vehicle_stop_path = vehicle_stop_path,
-    motion_stop_path = _stop_unit_motion(unit),
+    motion_stop_path = motion_stop_path,
     anim_stop_path = _stop_unit_anim(unit),
   }
 end

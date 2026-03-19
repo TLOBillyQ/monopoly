@@ -158,7 +158,7 @@ end
 
 local function _stop_and_log_player_motion(state, pid, seat_id, unit, vehicle)
   move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
-  return _stop_player_motion(pid, seat_id, unit, vehicle, false)
+  return _stop_player_motion(pid, seat_id, unit, vehicle, true)
 end
 
 local function _place_single_player(state, player, i, occupants, spacing, min_player_y)
@@ -181,6 +181,7 @@ local function _place_single_player(state, player, i, occupants, spacing, min_pl
     "seat_id=" .. tostring(seat_id or "nil"),
     "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
     "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
+    "ai_stop=" .. tostring(stop_result.ai_stop_path or "none"),
     "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
     "target_pos=" .. tostring(target_pos)
   )

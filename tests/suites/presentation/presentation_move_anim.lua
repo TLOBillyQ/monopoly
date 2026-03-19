@@ -299,6 +299,9 @@ local function _test_move_anim_synthetic_actor_uses_forced_move_start_and_stop()
         force_stop_move = function()
           calls[#calls + 1] = "force_stop_move"
         end,
+        ai_command_stop_move = function()
+          calls[#calls + 1] = "ai_command_stop_move"
+        end,
         stop_anim = function()
           calls[#calls + 1] = "stop_anim"
         end,
@@ -328,7 +331,8 @@ local function _test_move_anim_synthetic_actor_uses_forced_move_start_and_stop()
     scheduled[1].fn()
     _assert_eq(calls[1], "force_start_move", "synthetic actor should start moving via force_start_move")
     _assert_eq(calls[2], "force_stop_move", "synthetic actor should stop via force_stop_move")
-    _assert_eq(calls[3], "stop_anim", "synthetic actor should still stop anim")
+    _assert_eq(calls[3], "ai_command_stop_move", "synthetic actor should also send ai stop to clear host movement state")
+    _assert_eq(calls[4], "stop_anim", "synthetic actor should still stop anim")
   end)
 end
 
