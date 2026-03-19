@@ -430,10 +430,7 @@ local function _test_cli_help_text_is_bilingual()
   end
 end
 
--- 合并的 Deploy 综合测试，将原来的 5 个单独测试合并为 1 个
--- 大幅减少 PowerShell 启动开销和文件复制时间
-local function _test_deploy_comprehensive()
-  -- 测试 1 & 2: 验证脚本内容包含历史路径（静态检查，无需执行）
+local function _test_deploy_script_keeps_default_paths()
   local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
   _assert_contains(
     script_text,
@@ -445,12 +442,14 @@ local function _test_deploy_comprehensive()
     "$home_dir/Documents/eggy/LuaSource_大富翁-发布",
     "deploy.ps1 should keep the macOS default deploy path"
   )
+end
 
-  -- 测试 3: 综合执行测试 - 一次调用验证多个功能
+local function _test_deploy_comprehensive()
+  _test_deploy_script_keeps_default_paths()
+
   _with_ascii_tmp("deploy_comprehensive", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
-    
-    -- 测试 3a: 显式目标路径 + 启动配置文件注入
+
     local result = _run_powershell_file("tools/ops/deploy.ps1", {
       "--target-path", publish_target,
       "--startup-profile", "smoke_test",
@@ -483,8 +482,7 @@ local function _test_deploy_comprehensive()
       "deploy output should not mention the retired Config directory")
     _assert_not_contains(result.output, "Config: 0",
       "deploy LOC breakdown should not include the retired Config directory")
-    
-    -- 测试 3b: 未知参数应该失败（复用同一个临时目录，避免重复创建）
+
     local bad_result = _run_powershell_file("tools/ops/deploy.ps1", { "--bad-flag" })
     assert(bad_result.ok == false, "deploy should fail on unknown flags")
     _assert_contains(bad_result.output, "未知参数", "unknown flag output should include Chinese text")
@@ -840,13 +838,16 @@ end
 
 local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
-  -- 合并的 deploy 综合测试，替代原来的 5 个单独测试，减少 PowerShell 启动开销
+  { name = "deploy_script_keeps_default_paths", run = _test_deploy_script_keeps_default_paths },
+}
+
+local tooling_tests = {
   { name = "deploy_comprehensive", run = _test_deploy_comprehensive },
   { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
 
--- 注意：原来的 tooling_tests 已移至 script_tools_tooling.lua，在 tooling lane 中并行执行
 return {
   name = "script_tools_contract",
   tests = contract_tests,
+  tooling_tests = tooling_tests,
 }

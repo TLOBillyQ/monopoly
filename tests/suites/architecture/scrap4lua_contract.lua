@@ -36,6 +36,17 @@ local function _temp_dir(name)
   return path
 end
 
+local function _with_vendor_cli_stub(stub, fn)
+  local original = package.loaded["scrap4lua.cli"]
+  package.loaded["scrap4lua.cli"] = stub
+  local ok, result = xpcall(fn, debug.traceback)
+  package.loaded["scrap4lua.cli"] = original
+  if not ok then
+    error(result)
+  end
+  return result
+end
+
 local function _test_default_tmp_root_preserves_monopoly_path_convention()
   assert(scrap.default_tmp_root():find("monopoly_scrap", 1, true) ~= nil,
     "default tmp root should preserve monopoly-specific directory name")
@@ -55,6 +66,78 @@ local function _test_help_is_bilingual()
   _assert_contains(out:text(), "用法", "help should include Chinese usage")
   _assert_contains(out:text(), "Usage", "help should include English usage")
   assert(err:text() == "", "help should not write stderr")
+end
+
+local function _test_index_forwards_resolved_out_path_to_vendor_cli()
+  local captured_args = nil
+  _with_vendor_cli_stub({
+    run = function(args)
+      captured_args = args
+      return 0
+    end,
+  }, function()
+    local exit_code = scrap.run({ "index", "--out", "tmp/demo.json" }, {
+      stdout = _buffer(),
+      stderr = _buffer(),
+    })
+    assert(exit_code == 0, "index wrapper should succeed")
+  end)
+
+  assert(captured_args[1] == "index", "wrapper should forward index command")
+  assert(captured_args[2] == "--config", "wrapper should always forward config flag")
+  assert(captured_args[4] == "--out", "wrapper should forward out flag")
+  assert(captured_args[5] == scrap.default_tmp_root() .. "/demo.json",
+    "wrapper should resolve tmp alias before calling vendor cli")
+end
+
+local function _test_find_forwards_query_and_limit_to_vendor_cli()
+  local captured_args = nil
+  _with_vendor_cli_stub({
+    run = function(args)
+      captured_args = args
+      return 0
+    end,
+  }, function()
+    local exit_code = scrap.run({ "find", "--query", "bankruptcy feedback", "--limit", "7" }, {
+      stdout = _buffer(),
+      stderr = _buffer(),
+    })
+    assert(exit_code == 0, "find wrapper should succeed")
+  end)
+
+  assert(captured_args[1] == "find", "wrapper should forward find command")
+  assert(captured_args[4] == "--query", "wrapper should forward query flag")
+  assert(captured_args[5] == "bankruptcy feedback", "wrapper should preserve query text")
+  assert(captured_args[6] == "--limit", "wrapper should forward limit flag")
+  assert(captured_args[7] == "7", "wrapper should preserve limit value")
+end
+
+local function _test_bare_cli_defaults_to_viewer_contract()
+  local captured_args = nil
+  local captured_has_open_path = false
+  _with_vendor_cli_stub({
+    run = function(args, env)
+      captured_args = args
+      captured_has_open_path = type(env and env.open_path) == "function"
+      return 0
+    end,
+  }, function()
+    local exit_code = scrap.run({}, {
+      stdout = _buffer(),
+      stderr = _buffer(),
+      open_path = function()
+        return true
+      end,
+    })
+    assert(exit_code == 0, "bare cli wrapper should succeed")
+  end)
+
+  assert(captured_args[1] == "viewer", "bare cli should default to viewer command")
+  assert(captured_args[4] == "--out-dir", "bare cli should forward viewer output dir")
+  assert(captured_args[5] == common.join_path(scrap.default_tmp_root(), "scrap_view"),
+    "bare cli should resolve default viewer dir under scrap tmp root")
+  assert(captured_args[6] == "--open", "bare cli should request viewer open by default")
+  assert(captured_has_open_path == true, "bare cli should pass open_path through to vendor cli")
 end
 
 local function _test_index_writes_json_contract()
@@ -186,12 +269,17 @@ return {
   tests = {
     { name = "default_tmp_root_preserves_monopoly_path_convention", run = _test_default_tmp_root_preserves_monopoly_path_convention },
     { name = "help_is_bilingual", run = _test_help_is_bilingual },
+    { name = "index_forwards_resolved_out_path_to_vendor_cli", run = _test_index_forwards_resolved_out_path_to_vendor_cli },
+    { name = "find_forwards_query_and_limit_to_vendor_cli", run = _test_find_forwards_query_and_limit_to_vendor_cli },
+    { name = "bare_cli_defaults_to_viewer_contract", run = _test_bare_cli_defaults_to_viewer_contract },
+    { name = "snapshot_files_exist_in_repo", run = _test_snapshot_files_exist_in_repo },
+  },
+  tooling_tests = {
     { name = "index_writes_json_contract", run = _test_index_writes_json_contract },
     { name = "find_expands_migration_aliases", run = _test_find_expands_migration_aliases },
     { name = "find_hits_bankruptcy_feedback_port", run = _test_find_hits_bankruptcy_feedback_port },
     { name = "viewer_exports_static_bundle_from_generated_index", run = _test_viewer_exports_static_bundle_from_generated_index },
     { name = "viewer_supports_in_json_input", run = _test_viewer_supports_in_json_input },
     { name = "bare_cli_defaults_to_viewer_bundle", run = _test_bare_cli_defaults_to_viewer_bundle },
-    { name = "snapshot_files_exist_in_repo", run = _test_snapshot_files_exist_in_repo },
   },
 }

@@ -300,10 +300,18 @@ local function _test_contract_lane_excludes_tooling_smoke_cases()
 
   assert((cases_by_suite["script_tools_contract"] or ""):find("mutate_wrapper_indexes_behavior_suites_as_json", 1, true) == nil,
     "contract lane should exclude mutate indexing tooling smoke")
+  assert((cases_by_suite["script_tools_contract"] or ""):find("deploy_comprehensive", 1, true) == nil,
+    "contract lane should exclude deploy powershell smoke")
+  assert((cases_by_suite["script_tools_contract"] or ""):find("run_command_preserves_bilingual_stderr_and_utf8_stdin", 1, true) == nil,
+    "contract lane should exclude subprocess stderr smoke")
   assert((cases_by_suite["architecture.arch_view_contract"] or ""):find("cli_scan_writes_metadata", 1, true) == nil,
     "contract lane should exclude arch_view scan tooling smoke")
   assert((cases_by_suite["architecture.arch_view_contract"] or ""):find("viewer_command_writes_static_bundle", 1, true) == nil,
     "contract lane should exclude arch_view viewer tooling smoke")
+  assert((cases_by_suite["architecture.scrap4lua_contract"] or ""):find("index_writes_json_contract", 1, true) == nil,
+    "contract lane should exclude scrap index tooling smoke")
+  assert((cases_by_suite["architecture.scrap4lua_contract"] or ""):find("viewer_exports_static_bundle_from_generated_index", 1, true) == nil,
+    "contract lane should exclude scrap viewer tooling smoke")
 end
 
 return {
