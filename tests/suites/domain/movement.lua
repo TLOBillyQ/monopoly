@@ -57,6 +57,40 @@ local function _test_roadblock_stop()
   _assert_eq(p.position, 2, "position should stop at roadblock")
 end
 
+local function _test_armed_mine_stops_movement_when_passed()
+  local g = _new_game()
+  local p = g:current_player()
+  local mine_index = 2
+  g.board:place_mine(mine_index, {
+    owner_id = g.players[2].id,
+    armed = true,
+  })
+
+  local res = movement.move(g, p, 3, { branch_parity = 3, skip_market_check = true })
+
+  _assert_eq(p.position, mine_index, "movement should stop on armed mine tile")
+  _assert_eq(#res.visited, 1, "movement should stop immediately after stepping onto armed mine")
+  _assert_eq(res.landing_tile.id, g.board:get_tile(mine_index).id, "landing tile should stay on mine tile")
+end
+
+local function _test_owner_mine_in_placement_turn_does_not_stop_movement()
+  local g = _new_game()
+  local p = g:current_player()
+  local mine_index = 2
+  g.board:place_mine(mine_index, {
+    owner_id = p.id,
+    armed = true,
+    placed_turn_count = g.turn.turn_count,
+  })
+
+  local steps = 3
+  local res = movement.move(g, p, steps, { branch_parity = steps, skip_market_check = true })
+  local expected_index = select(1, _simulate_heading(g.board, 1, nil, steps, false, steps))
+
+  _assert_eq(p.position, expected_index, "owner should ignore own mine during placement turn")
+  _assert_eq(#res.visited, steps, "owner should keep full movement during placement turn")
+end
+
 local function _test_movement_examples_from_issue()
   local g = _new_game()
   local p = g:current_player()
@@ -585,6 +619,8 @@ return {
   tests = {
     { name = "pass_start", run = _test_pass_start },
     { name = "roadblock_stop", run = _test_roadblock_stop },
+    { name = "armed_mine_stops_movement_when_passed", run = _test_armed_mine_stops_movement_when_passed },
+    { name = "owner_mine_in_placement_turn_does_not_stop_movement", run = _test_owner_mine_in_placement_turn_does_not_stop_movement },
     { name = "movement_examples_from_issue", run = _test_movement_examples_from_issue },
     { name = "board_indices_in_range_uses_manhattan_distance", run = _test_board_indices_in_range_uses_manhattan_distance },
     { name = "movement_backward_wrap", run = _test_movement_backward_wrap },

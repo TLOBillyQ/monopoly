@@ -3700,6 +3700,40 @@ local function _test_owner_mine_triggers_again_after_placement_turn()
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonating on owner later turn")
 end
 
+local function _test_passing_armed_mine_stops_and_triggers_followup()
+  local g = _new_game()
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  local mine_index = p1.position
+  local mine_tile = assert(g.board:get_tile(mine_index), "missing mine tile")
+
+  p1.inventory:add({ id = gameplay_rules.item_ids.mine })
+  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
+  assert(use_res ~= nil, "mine use should succeed")
+
+  local owner_move_res = movement.move(g, p1, 1, { branch_parity = 1, skip_market_check = true })
+  assert(owner_move_res and owner_move_res.landing_tile, "owner should leave tile and arm the mine")
+  local mine_state = assert(g.board:get_mine(mine_index), "mine should still exist after owner leaves tile")
+  assert(mine_state.armed == true, "mine should arm after owner leaves tile")
+
+  local before_mine_index = assert(g.board:index_of_tile_id(24), "missing tile before start")
+  g:update_player_position(p2, before_mine_index)
+  local move_res = movement.move(g, p2, 2, { branch_parity = 2, skip_market_check = true })
+  assert(move_res and move_res.landing_tile, "passing player should still produce landing tile")
+  assert(p2.position == mine_index, "passing player should stop on mine tile instead of moving past it")
+  assert(#move_res.visited == 1, "passing player should consume movement only until mine tile")
+
+  local trigger_res = _resolve_landing(g, p2, mine_tile, move_res)
+  assert(trigger_res and trigger_res.waiting == true, "passing mine trigger should wait for move followup")
+  assert(trigger_res.next_state == "move_followup", "passing mine trigger should resume through move_followup")
+  assert((p2.status.stay_turns or 0) == 0, "hospital stay should be deferred until followup")
+
+  local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
+  assert(resumed_state == "post_action", "passing mine trigger should resume into post_action after followup")
+  assert((p2.status.stay_turns or 0) > 0, "passing player should be hospitalized after mine followup")
+  assert(g.board:has_mine(mine_index) == false, "mine should clear after passing detonation")
+end
+
 local function _test_detained_turn_enters_wait_state_before_advancing()
   local g = _new_game()
   local p1 = g.players[1]
@@ -5037,6 +5071,7 @@ return {
   _test_find_player_by_id_accepts_mixed_representation = _test_find_player_by_id_accepts_mixed_representation,
   _test_owner_mine_does_not_trigger_until_owner_leaves_tile = _test_owner_mine_does_not_trigger_until_owner_leaves_tile,
   _test_owner_mine_triggers_again_after_placement_turn = _test_owner_mine_triggers_again_after_placement_turn,
+  _test_passing_armed_mine_stops_and_triggers_followup = _test_passing_armed_mine_stops_and_triggers_followup,
   _test_runtime_context_change_skin_exports_and_event = _test_runtime_context_change_skin_exports_and_event,
   _test_camera_policy_follows_eliminated_then_skips_to_next = _test_camera_policy_follows_eliminated_then_skips_to_next,
   _test_camera_policy_follows_current_when_not_eliminated = _test_camera_policy_follows_current_when_not_eliminated,

@@ -4,6 +4,7 @@ local inventory = require("src.rules.items.inventory")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local facing_policy = require("src.rules.board.facing_policy")
+local mine_effect = require("src.rules.effects.mine_effect")
 
 local movement = {}
 local item_ids = gameplay_rules.item_ids
@@ -29,6 +30,10 @@ local function _check_roadblock(game, board, current, player)
     prompt_text = _build_other_action_prompt_text(),
   })
   return true
+end
+
+local function _check_mine(game, player, current)
+  return mine_effect.can_trigger(game, player, current)
 end
 
 local function _check_steal(player, encountered_step, step, abs_steps, facing, branch_parity, opts)
@@ -186,6 +191,9 @@ end
 local function _resolve_step_interrupt(ctx, encountered_step, step)
   if _check_roadblock(ctx.game, ctx.board, ctx.current, ctx.player) then
     ctx.stopped_on_roadblock = true
+    return true
+  end
+  if _check_mine(ctx.game, ctx.player, ctx.current) then
     return true
   end
   ctx.steal_interrupt = _check_steal(

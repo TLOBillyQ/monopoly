@@ -22,24 +22,7 @@ M.executors = {
   mine = {
     can_apply = function(ctx)
       local position = ctx.player and ctx.player.position
-      local board = ctx.game.board
-      if not (board and position and board:has_mine(position)) then
-        return false
-      end
-      local mine = board:get_mine(position)
-      if type(mine) ~= "table" then
-        return true
-      end
-      if mine.armed ~= true then
-        return false
-      end
-      local player = ctx.player
-      local turn = ctx.game and ctx.game.turn or nil
-      if player and mine.owner_id == player.id and mine.placed_turn_count ~= nil
-          and turn and mine.placed_turn_count == turn.turn_count then
-        return false
-      end
-      return true
+      return mine_effect.can_trigger(ctx.game, ctx.player, position)
     end,
     apply = function(ctx)
       local player = ctx.player
