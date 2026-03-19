@@ -2,6 +2,9 @@ local choice_route_policy = require("src.ui.input.choice_route_policy")
 local choice_contract = require("src.core.choice.contract")
 local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
 local role_id_utils = require("src.core.utils.role_id")
+local runtime = require("src.ui.render.runtime_ui")
+local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_state = require("src.ui.runtime.state")
 
 local choice_ui_state = {}
 
@@ -40,7 +43,7 @@ local function _is_local_role(state, owner_role_id)
     return false
   end
 
-  local local_role_id = role_id_utils.normalize(local_actor_resolver.resolve_turn_bound(state))
+  local local_role_id = role_id_utils.normalize(local_actor_resolver.resolve_local(state))
   if local_role_id ~= nil then
     return role_id_utils.equals(local_role_id, owner_role_id)
   end
@@ -53,16 +56,11 @@ local function _is_local_role(state, owner_role_id)
         return true
       end
     end
-    return false
   end
 
   local current_model = runtime_state.get_ui_model(state)
   local current_player_id = role_id_utils.normalize(current_model and current_model.current_player_id or nil)
-  if current_player_id ~= nil then
-    return role_id_utils.equals(current_player_id, owner_role_id)
-  end
-
-  return false
+  return current_player_id ~= nil and role_id_utils.equals(current_player_id, owner_role_id)
 end
 
 function choice_ui_state.resolve_route_key(choice)
