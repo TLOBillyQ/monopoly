@@ -26,15 +26,4 @@ function choice_slice.build_choice_and_market(game, env, ui_state)
   return choice, market
 end
 
-function choice_slice.build_popup(ui_runtime)
-  if ui_runtime and ui_runtime.popup_active and ui_runtime.popup_payload then
-    return {
-      title = ui_runtime.popup_payload.title,
-      body = ui_runtime.popup_payload.body,
-      button_text = ui_runtime.popup_payload.button_text,
-    }
-  end
-  return nil
-end
-
 return choice_slice

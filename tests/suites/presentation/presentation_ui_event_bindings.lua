@@ -254,6 +254,21 @@ local function _test_canvas_store_patch_slice_marks_dirty()
   _assert_eq(dirty_after_consume.any, false, "canvas store consume should clear dirty flag")
 end
 
+local function _test_canvas_store_rejects_unsupported_dirty_key()
+  local state = {
+    ui = {
+      canvas_state = {},
+    },
+  }
+
+  local ok, err = pcall(function()
+    canvas_store.mark_dirty(state, "popup")
+  end)
+
+  _assert_eq(ok, false, "canvas store should reject unsupported dirty keys")
+  assert(string.find(err or "", "unsupported canvas dirty key", 1, true), "canvas store should explain rejected dirty key")
+end
+
 local function _test_canvas_switch_keeps_always_show_visible()
   local calls = {}
   local role = { id = "r1" }
@@ -327,6 +342,10 @@ return {
     {
       name = "canvas_store_patch_slice_marks_dirty",
       run = _test_canvas_store_patch_slice_marks_dirty,
+    },
+    {
+      name = "canvas_store_rejects_unsupported_dirty_key",
+      run = _test_canvas_store_rejects_unsupported_dirty_key,
     },
     {
       name = "canvas_switch_keeps_always_show_visible",

@@ -4,7 +4,6 @@ local choice_common = require("src.ui.ctl.choice_screens.helpers")
 local popup_controller = require("src.ui.ctl.popup_controller")
 local market_controller = require("src.ui.ctl.market_controller")
 local canvas = require("src.ui.ctl.canvas_coordinator")
-local canvas_store = require("src.ui.stores.canvas_store")
 local logger = require("src.core.utils.logger")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local runtime_state = require("src.ui.runtime.state")
@@ -50,7 +49,6 @@ local function _close_market_if_needed(state)
   end
   market_controller.close(state)
   state.ui.market_active = false
-  canvas_store.mark_dirty(state, "market")
 end
 
 local function _reset_active_choice_screen(ui)
@@ -81,7 +79,6 @@ end
 
 local function _open_market_choice(state, choice, choice_id, market)
   target_choice_effects.leave(state, "open_market")
-  canvas_store.mark_dirty(state, "market")
   market_controller.open(state, choice, choice_id, market)
 end
 
@@ -101,7 +98,6 @@ local function _close_or_reset_inline_choice(state)
   end
   modal_state.close_choice(state)
   choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
-  canvas_store.mark_dirty(state, "choice")
 end
 
 local function _open_base_inline_choice(state, choice)
@@ -173,7 +169,6 @@ function modal_presenter.close_choice_modal(state)
   local ui = state.ui
   if ui.choice_active then
     _reset_active_choice_screen(ui)
-    canvas_store.mark_dirty(state, "choice")
   end
   if ui.market_active then
     _close_market_if_needed(state)
@@ -194,15 +189,11 @@ function modal_presenter.push_popup(state, payload, opts)
       ui.popup_queue = queue
     end
     queue[#queue + 1] = payload
-    canvas_store.mark_dirty(state, "popup")
-    runtime_state.set_ui_dirty(state, true)
     return true
   end
   ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
   popup_controller.show(state, payload)
   modal_state.open_popup(state, payload)
-  canvas_store.mark_dirty(state, "popup")
-  runtime_state.set_ui_dirty(state, true)
   return true
 end
 
@@ -216,22 +207,18 @@ function modal_presenter.close_popup(state)
   popup_controller.hide(state)
   modal_state.close_popup(state)
   ui.popup_kind = nil
-  canvas_store.mark_dirty(state, "popup")
   local queue = ui.popup_queue
   if type(queue) == "table" and #queue > 0 then
     local next_payload = table.remove(queue, 1)
     ui.popup_return_canvas = canvas.resolve_popup_return_canvas(ui)
     popup_controller.show(state, next_payload)
     modal_state.open_popup(state, next_payload)
-    canvas_store.mark_dirty(state, "popup")
-    runtime_state.set_ui_dirty(state, true)
     return
   end
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
   local next_canvas = canvas.resolve_canvas_after_popup(ui, target)
   popup_controller.switch_canvas(state, kind, next_canvas, canvas.CANVAS_BASE)
-  runtime_state.set_ui_dirty(state, true)
 end
 
 return modal_presenter

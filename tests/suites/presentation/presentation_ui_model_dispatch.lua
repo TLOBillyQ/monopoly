@@ -1132,7 +1132,9 @@ end
 
 local function _test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy()
   local state = _build_choice_modal_state()
+  local canvas_store = require("src.ui.stores.canvas_store")
   local labels = {}
+  local choice_dirty_marks = 0
   state.ui.set_label = function(_, node_name, value)
     labels[node_name] = value
   end
@@ -1154,10 +1156,51 @@ local function _test_modal_presenter_select_choice_option_refreshes_secondary_co
   }
   _bind_ui_runtime(state)
 
-  modal_presenter.select_choice_option(state, "confirm")
+  _with_patches({
+    {
+      target = canvas_store,
+      key = "mark_dirty",
+      value = function(_, key)
+        if key == "choice" then
+          choice_dirty_marks = choice_dirty_marks + 1
+        end
+      end,
+    },
+  }, function()
+    modal_presenter.select_choice_option(state, "confirm")
+  end)
 
   assert(labels["通用二次确认_标题"] ~= nil, "secondary confirm title should refresh")
   assert(labels["通用二次确认_文本"] ~= nil, "secondary confirm body should refresh")
+  _assert_eq(choice_dirty_marks, 0, "secondary confirm selection should not write choice canvas dirty")
+  _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "secondary confirm selection should invalidate ui_model")
+end
+
+local function _test_modal_state_select_choice_option_invalidates_ui_model_without_choice_canvas_dirty()
+  local modal_state = require("src.ui.stores.modal_state")
+  local canvas_store = require("src.ui.stores.canvas_store")
+  local state = {}
+  local choice_dirty_marks = 0
+  _bind_ui_runtime(state)
+  runtime_state.set_ui_dirty(state, false)
+
+  _with_patches({
+    {
+      target = canvas_store,
+      key = "mark_dirty",
+      value = function(_, key)
+        if key == "choice" then
+          choice_dirty_marks = choice_dirty_marks + 1
+        end
+      end,
+    },
+  }, function()
+    modal_state.select_choice_option(state, 101)
+  end)
+
+  _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, 101, "modal_state should still store selected option in ui_runtime")
+  _assert_eq(choice_dirty_marks, 0, "modal_state choice selection should not write choice canvas dirty")
+  _assert_eq(_ui_runtime(state).ui_dirty, true, "modal_state choice selection should invalidate ui_model")
 end
 
 local function _test_modal_presenter_close_choice_modal_resets_choice_and_market()
@@ -1246,6 +1289,7 @@ return {
     { name = "_test_panel_slice_update_refreshes_only_requested_flags", run = _test_panel_slice_update_refreshes_only_requested_flags },
     { name = "_test_panel_slice_tracks_countdown_visibility", run = _test_panel_slice_tracks_countdown_visibility },
     { name = "_test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy", run = _test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy },
+    { name = "_test_modal_state_select_choice_option_invalidates_ui_model_without_choice_canvas_dirty", run = _test_modal_state_select_choice_option_invalidates_ui_model_without_choice_canvas_dirty },
     { name = "_test_modal_presenter_close_choice_modal_resets_choice_and_market", run = _test_modal_presenter_close_choice_modal_resets_choice_and_market },
   },
 }

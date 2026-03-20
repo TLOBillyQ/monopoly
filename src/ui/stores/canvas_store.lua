@@ -1,4 +1,19 @@
 local canvas_store = {}
+local _allowed_dirty_keys = {
+  always_show = true,
+  base = true,
+  board = true,
+  choice = true,
+  effects = true,
+  market = true,
+}
+
+local function _assert_valid_dirty_key(key)
+  if key == nil then
+    return
+  end
+  assert(_allowed_dirty_keys[key] == true, "unsupported canvas dirty key: " .. tostring(key))
+end
 
 local function _resolve_ui(state_or_ui)
   if type(state_or_ui) ~= "table" then
@@ -38,6 +53,7 @@ function canvas_store.get_slice(state_or_ui, key)
   if not store or not key then
     return nil
   end
+  _assert_valid_dirty_key(key)
   local slices = store.slices
   if type(slices[key]) ~= "table" then
     slices[key] = {}
@@ -50,6 +66,7 @@ function canvas_store.mark_dirty(state_or_ui, key)
   if not store then
     return
   end
+  _assert_valid_dirty_key(key)
   local dirty = store.dirty
   dirty.any = true
   if key then
@@ -60,6 +77,7 @@ end
 
 function canvas_store.patch_slice(state_or_ui, key, patch)
   assert(key ~= nil, "missing canvas slice key")
+  _assert_valid_dirty_key(key)
   local slice = canvas_store.get_slice(state_or_ui, key)
   if patch == nil then
     canvas_store.mark_dirty(state_or_ui, key)

@@ -163,6 +163,15 @@ local function _test_gameplay_loop_output_port_defaults_to_ui_runtime_only()
   _assert_eq(changed_again, false, "default output.invalidate_ui should be idempotent when ui_runtime already dirty")
 end
 
+local function _test_output_state_adapter_exposes_invalidate_ui_model_alias()
+  local output_state_adapter = require("src.turn.output.output_state_adapter")
+  local output = output_state_adapter.build_runtime_output_ports()
+  local state = {}
+  local changed = output.invalidate_ui_model(state)
+  _assert_eq(changed, true, "runtime output.invalidate_ui_model should mark ui_runtime dirty")
+  _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "invalidate_ui_model alias should share ui_runtime behavior")
+end
+
 local function _test_gameplay_loop_output_port_override_precedence()
   local calls = 0
   local resolved = gameplay_loop_ports.resolve({
@@ -242,6 +251,7 @@ return {
     { name = "gameplay_loop_clock_contract_split_sources", run = _test_gameplay_loop_clock_contract_split_sources },
     { name = "choice_contract_copies_explicit_fields_once", run = _test_choice_contract_copies_explicit_fields_once },
     { name = "gameplay_loop_output_port_defaults_to_ui_runtime_only", run = _test_gameplay_loop_output_port_defaults_to_ui_runtime_only },
+    { name = "output_state_adapter_exposes_invalidate_ui_model_alias", run = _test_output_state_adapter_exposes_invalidate_ui_model_alias },
     { name = "gameplay_loop_output_port_override_precedence", run = _test_gameplay_loop_output_port_override_precedence },
     { name = "bankruptcy_feedback_port_defaults_to_no_op_port", run = _test_bankruptcy_feedback_port_defaults_to_no_op_port },
     { name = "turn_roll_uses_anim_gate_port_without_ui_port", run = _test_turn_roll_uses_anim_gate_port_without_ui_port },

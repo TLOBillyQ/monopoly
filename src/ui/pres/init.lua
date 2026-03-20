@@ -158,10 +158,6 @@ local function _refresh_choice_and_meta(model, game, env, ui_state, ui_runtime, 
     model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, model.choice, current_player_id)
   end
 
-  if ui_dirty then
-    model.popup = choice_slice.build_popup(ui_runtime)
-  end
-
   if dirty.players or dirty.turn then
     _update_current_player_meta(model, current_name, current_cash, current_player_id, turn)
   end
@@ -192,7 +188,6 @@ function model_api.build(game, env)
     item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, choice, current_player_id),
     choice = choice,
     market = market,
-    popup = choice_slice.build_popup(ui_runtime),
   }
   return _fill_meta(model, env, current, turn)
 end

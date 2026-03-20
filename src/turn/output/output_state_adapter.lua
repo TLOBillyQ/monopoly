@@ -10,6 +10,10 @@ function output_state_adapter.invalidate_ui(state)
   return true
 end
 
+function output_state_adapter.invalidate_ui_model(state)
+  return output_state_adapter.invalidate_ui(state)
+end
+
 function output_state_adapter.clear_ui_dirty(state)
   if not runtime_state.is_ui_dirty(state) then
     return false
@@ -76,6 +80,7 @@ end
 function output_state_adapter.build_runtime_output_ports()
   return {
     invalidate_ui = output_state_adapter.invalidate_ui,
+    invalidate_ui_model = output_state_adapter.invalidate_ui_model,
     clear_ui_dirty = output_state_adapter.clear_ui_dirty,
     is_ui_dirty = output_state_adapter.is_ui_dirty,
     sync_ui_model = output_state_adapter.sync_ui_model,

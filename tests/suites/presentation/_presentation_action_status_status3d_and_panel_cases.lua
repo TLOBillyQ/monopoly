@@ -1477,6 +1477,35 @@ local function _test_popup_defer_policy_queues_and_replays_in_order()
   _assert_eq(shown[2], "B", "queued popup title should be B")
 end
 
+local function _test_popup_paths_do_not_mark_ui_model_dirty()
+  local modal_presenter = require("src.ui.ctl.modal_controller")
+  local popup_presenter = require("src.ui.ctl.popup_controller")
+  local canvas = require("src.ui.ctl.canvas_coordinator")
+  local state = {
+    ui = ui_view.build_ui_state(),
+  }
+  _bind_ui_runtime(state)
+  runtime_state.set_ui_dirty(state, false)
+
+  _with_patches({
+    { target = popup_presenter, key = "show", value = function() end },
+    { target = popup_presenter, key = "hide", value = function() end },
+    { target = popup_presenter, key = "switch_canvas", value = function() end },
+    { target = canvas, key = "resolve_popup_return_canvas", value = function()
+      return canvas.CANVAS_BASE
+    end },
+    { target = canvas, key = "resolve_canvas_after_popup", value = function()
+      return canvas.CANVAS_BASE
+    end },
+  }, function()
+    modal_presenter.push_popup(state, { title = "A", body = "A" })
+    _assert_eq(runtime_state.is_ui_dirty(state), false, "push_popup should not invalidate ui_model")
+    modal_presenter.close_popup(state)
+  end)
+
+  _assert_eq(runtime_state.is_ui_dirty(state), false, "close_popup should not invalidate ui_model")
+end
+
 local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil()
   local canvas = require("src.ui.ctl.canvas_coordinator")
   local role_ctx = require("src.ui.pres.role_context")
@@ -2126,6 +2155,7 @@ return {
   { name = "_test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop", run = _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop },
   { name = "_test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render", run = _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render },
   { name = "_test_popup_defer_policy_queues_and_replays_in_order", run = _test_popup_defer_policy_queues_and_replays_in_order },
+  { name = "_test_popup_paths_do_not_mark_ui_model_dirty", run = _test_popup_paths_do_not_mark_ui_model_dirty },
   { name = "_test_popup_renderer_switch_popup_canvas_restores_client_role_nil", run = _test_popup_renderer_switch_popup_canvas_restores_client_role_nil },
   { name = "_test_market_modal_renderer_open_restores_client_role_nil", run = _test_market_modal_renderer_open_restores_client_role_nil },
   { name = "_test_market_modal_renderer_refreshes_market_only_for_operable_role", run = _test_market_modal_renderer_refreshes_market_only_for_operable_role },
