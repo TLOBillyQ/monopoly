@@ -40,6 +40,7 @@ local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local host_runtime = require("src.host.eggy")
+local host_runtime_bridge = require("src.ui.runtime.host_bridge")
 local runtime_state = require("src.ui.runtime.state")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local vec3 = require("fixtures.vec3")
@@ -1070,7 +1071,24 @@ local function _test_ui_event_router_player_target_click_direct_submit()
   _bind_ui_runtime(state)
 
   _with_patches({
-    { key = "all_roles", value = nil },
+    { key = "all_roles", value = { role } },
+    { target = host_runtime_bridge, key = "resolve_roles", value = function()
+      return { role }
+    end },
+    { target = host_runtime_bridge, key = "resolve_role", value = function(role_id)
+      if tostring(role_id) == "101" then
+        return role
+      end
+      return nil
+    end },
+    { key = "GameAPI", value = {
+      get_role = function(role_id)
+        if role_id == 101 then
+          return role
+        end
+        return nil
+      end,
+    } },
     { key = "GlobalAPI", value = { show_tips = function() end } },
     { key = "UIManager", value = {
       EVENT = { CLICK = "click" },
@@ -1140,14 +1158,19 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     pending_choice_selected_option_id = nil,
     choice_visible_option_ids = nil,
   }
-  local role = {
-    get_roleid = function()
-      return 101
-    end,
-  }
+  local role = _build_role_with_events(101, {})
 
   _with_patches({
-    { key = "all_roles", value = nil },
+    { key = "all_roles", value = { role } },
+    { target = host_runtime_bridge, key = "resolve_roles", value = function()
+      return { role }
+    end },
+    { target = host_runtime_bridge, key = "resolve_role", value = function(role_id)
+      if tostring(role_id) == "101" then
+        return role
+      end
+      return nil
+    end },
     { key = "GlobalAPI", value = { show_tips = function() end } },
     { key = "UIManager", value = {
       EVENT = { CLICK = "click" },
@@ -1195,7 +1218,24 @@ local function _test_ui_event_router_rejects_action_log_without_role()
   }
 
   _with_patches({
-    { key = "all_roles", value = nil },
+    { key = "all_roles", value = { local_role } },
+    { target = host_runtime_bridge, key = "resolve_roles", value = function()
+      return { local_role }
+    end },
+    { target = host_runtime_bridge, key = "resolve_role", value = function(role_id)
+      if tostring(role_id) == "101" then
+        return local_role
+      end
+      return nil
+    end },
+    { key = "GameAPI", value = {
+      get_role = function(role_id)
+        if tostring(role_id) == "101" then
+          return local_role
+        end
+        return nil
+      end,
+    } },
     { key = "GlobalAPI", value = { show_tips = function()
       show_tip_calls = show_tip_calls + 1
     end } },
@@ -1343,14 +1383,19 @@ local function _test_ui_event_router_action_log_uses_cached_local_role_when_even
   local node_map = {
     ["始终显示_行动日志图标"] = new_node(),
   }
-  local local_role = {
-    get_roleid = function()
-      return "101"
-    end,
-  }
+  local local_role = _build_role_with_events("101", {})
 
   _with_patches({
-    { key = "all_roles", value = nil },
+    { key = "all_roles", value = { local_role } },
+    { target = host_runtime_bridge, key = "resolve_roles", value = function()
+      return { local_role }
+    end },
+    { target = host_runtime_bridge, key = "resolve_role", value = function(role_id)
+      if tostring(role_id) == "101" then
+        return local_role
+      end
+      return nil
+    end },
     { key = "GlobalAPI", value = { show_tips = function()
       show_tip_calls = show_tip_calls + 1
     end } },

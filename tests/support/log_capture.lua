@@ -1,5 +1,9 @@
 local M = {}
 
+local _DEFAULT_SUMMARY_LEVELS = {
+  warn = true,
+}
+
 local function _traceback(err)
   if type(traceback) == "function" then
     return traceback(err)
@@ -50,10 +54,29 @@ function M.collect_summary(summary, captured)
   return summary
 end
 
-function M.summary_lines(summary)
+local function _line_level(line)
+  if type(line) ~= "string" then
+    return nil
+  end
+  if line:find("%[warn%]", 1, false) then
+    return "warn"
+  end
+  if line:find("%[info%]", 1, false) then
+    return "info"
+  end
+  if line:find("%[event%]", 1, false) then
+    return "event"
+  end
+  return nil
+end
+
+function M.summary_lines(summary, opts)
+  opts = opts or {}
+  local levels = opts.levels or _DEFAULT_SUMMARY_LEVELS
   local lines = {}
   for text, count in pairs(summary or {}) do
-    if count > 1 then
+    local level = _line_level(text)
+    if count > 1 and level ~= nil and levels[level] == true then
       lines[#lines + 1] = {
         text = text,
         count = count,

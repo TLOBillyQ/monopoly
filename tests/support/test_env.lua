@@ -32,6 +32,8 @@ function M.install_defaults()
 
   GameAPI = GameAPI or {}
   UIManager = UIManager or {}
+  Enums = Enums or {}
+  Enums.BuffState = Enums.BuffState or {}
   if not UIManager.query_nodes_by_name then
     UIManager.query_nodes_by_name = function(name)
       local node = {
@@ -48,6 +50,19 @@ function M.install_defaults()
     GameAPI.random_int = function(min, max)
       return math.random(min, max)
     end
+  end
+  if not GameAPI.play_3d_sound then
+    GameAPI.play_3d_sound = function(_, sound_id)
+      return sound_id
+    end
+  end
+  if not GameAPI.play_sfx_by_key then
+    GameAPI.play_sfx_by_key = function(_, sfx_key)
+      return sfx_key
+    end
+  end
+  if Enums.BuffState.BUFF_FORBID_CONTROL == nil then
+    Enums.BuffState.BUFF_FORBID_CONTROL = 32
   end
 
   TriggerCustomEvent = TriggerCustomEvent or function() end

@@ -761,6 +761,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   local main_view = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
   local board_view_mod = require("src.ui.render.board")
+  local status3d = require("src.ui.render.status3d")
   local helper = { target_role_id = nil }
   local follow_events = 0
   local follow_event_name = nil
@@ -769,7 +770,9 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
+    { target = main_view, key = "apply_role_control_lock", value = function() end },
     { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function() end },
+    { target = status3d, key = "sync", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       local _player_rows = {
         { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
@@ -802,7 +805,10 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
     end },
     { key = "GameAPI", value = game_api },
     { target = game_api, key = "get_role", value = function() return {} end },
-    { key = "Enums", value = { CameraBindMode = { TRACK = 0 } } },
+    { key = "Enums", value = {
+      CameraBindMode = { TRACK = 0 },
+      BuffState = { BUFF_FORBID_CONTROL = 32 },
+    } },
     { key = "camera_helper", value = helper },
     { key = "TriggerCustomEvent", value = function(event_name, payload)
       follow_events = follow_events + 1
@@ -885,6 +891,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   local main_view = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
   local board_view_mod = require("src.ui.render.board")
+  local status3d = require("src.ui.render.status3d")
   local helper = { target_role_id = nil }
   local follow_events = 0
   local game_api = GameAPI or {}
@@ -898,7 +905,9 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
+    { target = main_view, key = "apply_role_control_lock", value = function() end },
     { target = require("src.ui.ctl.modal_controller"), key = "open_choice_modal", value = function() end },
+    { target = status3d, key = "sync", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       local _player_rows = {
         { name = "P1", cash = "0", land_count = "0", total_assets = "0" },
@@ -931,7 +940,10 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
     end },
     { key = "GameAPI", value = game_api },
     { target = game_api, key = "get_role", value = function() return {} end },
-    { key = "Enums", value = { CameraBindMode = { TRACK = 0 } } },
+    { key = "Enums", value = {
+      CameraBindMode = { TRACK = 0 },
+      BuffState = { BUFF_FORBID_CONTROL = 32 },
+    } },
     { key = "camera_helper", value = helper },
     { key = "TriggerCustomEvent", value = wrapped_trigger },
   }

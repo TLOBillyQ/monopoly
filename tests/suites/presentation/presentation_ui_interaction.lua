@@ -308,13 +308,17 @@ local function _test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_cont
     ui = ui_view.build_ui_state(),
   }
   local game = {}
-  local role = {
-    get_roleid = function()
-      return 101
-    end,
-  }
+  local role = _build_role_with_events(101, {})
   _with_patches({
     { key = "all_roles", value = { role } },
+    { key = "GameAPI", value = {
+      get_role = function(role_id)
+        if role_id == 101 then
+          return role
+        end
+        return nil
+      end,
+    } },
     { key = "UIManager", value = {
       client_role = nil,
       query_nodes_by_name = function()
@@ -352,14 +356,18 @@ local function _test_ui_intent_dispatcher_toggle_action_log_ignores_block_withou
       end,
     },
   }
-  local role = {
-    get_roleid = function()
-      return 101
-    end,
-  }
+  local role = _build_role_with_events(101, {})
 
   _with_patches({
     { key = "all_roles", value = { role } },
+    { key = "GameAPI", value = {
+      get_role = function(role_id)
+        if role_id == 101 then
+          return role
+        end
+        return nil
+      end,
+    } },
     { key = "UIManager", value = {
       client_role = nil,
       query_nodes_by_name = function()

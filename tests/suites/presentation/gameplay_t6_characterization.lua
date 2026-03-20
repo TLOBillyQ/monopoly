@@ -432,7 +432,7 @@ local function _test_role_control_lock_sync_cleans_stale_role_entries()
     role_control_lock_policy.sync(state, true, {
       runtime = {
         for_each_role_or_global = function(fn)
-          fn(nil)
+          return nil
         end,
         resolve_role_id = function() return nil end,
       },
