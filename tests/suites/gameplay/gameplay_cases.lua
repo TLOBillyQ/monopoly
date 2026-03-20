@@ -3930,6 +3930,32 @@ local function _test_move_followup_resume_turn_move_waits_on_steal_interrupt_cho
   end)
 end
 
+local function _test_roadblock_stop_does_not_detain_next_turn()
+  local g = _new_game()
+  local player = g:current_player()
+  g.last_turn = {}
+
+  local next_state, next_args = move_followup.run({ game = g }, {
+    mode = "resume_turn_move",
+    player = player,
+    raw_total = 3,
+    move_result = {
+      stopped_on_roadblock = true,
+    },
+  })
+
+  assert(next_state == "landing", "roadblock followup should still continue into landing")
+  assert(next_args and next_args.player == player, "roadblock followup should preserve landing player")
+  assert((player.status.stay_turns or 0) == 0, "roadblock should not write detained stay_turns")
+  assert(g.last_turn and g.last_turn.move_result and g.last_turn.move_result.stopped_on_roadblock == true,
+    "roadblock hit should remain visible through last_turn move_result")
+
+  local start_state = turn_start(g.turn_engine.turn_mgr)
+  assert(start_state == "wait_action", "next turn start should not detain player after roadblock")
+  assert(g.turn.phase ~= "detained_wait", "roadblock should not route next turn into detained_wait")
+  assert(g.last_turn and g.last_turn.skipped == false, "next turn should not be marked as skipped")
+end
+
 local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
   local auto_runner = require("src.turn.policies.auto_runner")
   local auto_policy = require("src.turn.policies.choice_auto_policy")
@@ -5037,6 +5063,7 @@ return {
     _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending,
   _test_move_followup_resume_turn_move_waits_on_steal_interrupt_choice =
     _test_move_followup_resume_turn_move_waits_on_steal_interrupt_choice,
+  _test_roadblock_stop_does_not_detain_next_turn = _test_roadblock_stop_does_not_detain_next_turn,
   _test_auto_runner_choice_actor_falls_back_to_choice_owner = _test_auto_runner_choice_actor_falls_back_to_choice_owner,
   _test_auto_runner_modal_without_buttons_confirms = _test_auto_runner_modal_without_buttons_confirms,
   _test_turn_script_dispatches_wait_states_and_move_followup_fallback = _test_turn_script_dispatches_wait_states_and_move_followup_fallback,

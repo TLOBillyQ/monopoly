@@ -26,16 +26,6 @@ local function _resolve_player(game, args)
   return assert(game:find_player_by_id(player_id), "missing move followup player: " .. tostring(player_id))
 end
 
-local function _apply_roadblock_detain(game, player, move_result)
-  if not (move_result and move_result.stopped_on_roadblock) then
-    return
-  end
-  local stay = player.status.stay_turns or 0
-  if stay < 1 then
-    game:set_player_status(player, "stay_turns", 1)
-  end
-end
-
 local function _build_resume_move_args(player, raw_total, interrupt, continue_key)
   return {
     player = player,
@@ -85,7 +75,6 @@ local function _handle_resume_turn_move(game, args)
   local move_result = assert(args.move_result, "missing move followup move_result")
   local raw_total = args.raw_total
   game.last_turn.move_result = move_result
-  _apply_roadblock_detain(game, player, move_result)
 
   if move_result.steal_interrupt then
     local interrupt = move_result.steal_interrupt
@@ -114,7 +103,6 @@ end
 local function _handle_resolve_landing(game, args)
   local player = _resolve_player(game, args)
   local move_result = args.move_result
-  _apply_roadblock_detain(game, player, move_result)
   landing_visual_hold.start(game)
   return "landing", {
     player = player,
