@@ -2,7 +2,7 @@ local bootstrap = require("tests.bootstrap")
 
 local M = {}
 
-local behavior_modules = {
+local domain_behavior_modules = {
   "suites.domain.chance",
   "suites.domain.land",
   "suites.domain.item",
@@ -11,7 +11,19 @@ local behavior_modules = {
   "suites.domain.market",
   "suites.domain.paid_currency",
   "suites.domain.config_sanity",
+}
+
+local runtime_behavior_modules = {
   "suites.runtime.startup_profile",
+  "suites.runtime.test_profile_resolver",
+  "suites.runtime.test_profile_rotation",
+  "suites.runtime.test_profile_bootstrap_core",
+  "suites.runtime.test_profile_bootstrap_scenarios",
+  "suites.runtime.test_profile_render_startup",
+  "suites.runtime.misc",
+}
+
+local gameplay_behavior_modules = {
   "suites.gameplay.gameplay_bankruptcy_and_tile_owner",
   "suites.gameplay.gameplay_intent_dispatch_and_event_feed",
   "suites.gameplay.gameplay_runtime_context_and_camera_sync",
@@ -20,6 +32,10 @@ local behavior_modules = {
   "suites.gameplay.gameplay_timeout_and_auto_runner",
   "suites.gameplay.gameplay_visual_feedback_and_prompts",
   "suites.gameplay.gameplay_items_startup",
+  "suites.gameplay.gameplay_forced_relocation_and_followup",
+}
+
+local presentation_behavior_modules = {
   "suites.runtime.runtime_bootstrap",
   "suites.presentation.presentation_ui_timing_anim",
   "suites.presentation.presentation_ui_model_dispatch",
@@ -37,22 +53,39 @@ local behavior_modules = {
   "suites.presentation.presentation_status3d_and_turn_effects",
   "suites.presentation.presentation_popup_and_modal_renderers",
   "suites.presentation.presentation_player_panels",
-  "suites.presentation.presentation_action_anim_core",
+  "suites.presentation.presentation_action_anim_effect_routes",
+  "suites.presentation.presentation_action_anim_tip_text",
+  "suites.presentation.presentation_action_anim_overlay_units",
+  "suites.presentation.presentation_action_anim_rollscreen",
   "suites.presentation.presentation_overlay_compute",
   "suites.presentation.presentation_board_feedback",
-  "suites.presentation.presentation_move_anim",
+  "suites.presentation.presentation_move_anim_sequence",
+  "suites.presentation.presentation_move_anim_actor_modes",
+  "suites.presentation.presentation_move_anim_teleport_and_vehicle",
   "suites.presentation.presentation_board_sync",
   "suites.presentation.presentation_ui_event_handlers",
   "suites.presentation.presentation_ui_event_bindings",
   "suites.presentation.presentation_player_colors",
-  "suites.runtime.test_profiles",
-  "suites.runtime.misc",
   "suites.presentation.gameplay_t6_characterization",
   "suites.presentation.gameplay_t5_characterization",
   "suites.gameplay.gameplay_t4_characterization",
   -- T8: Re-enabled T2 characterization tests for final CRAP cleanup
   "suites.gameplay.gameplay_t2_characterization",
 }
+
+local behavior_modules = {}
+for _, module_name in ipairs(domain_behavior_modules) do
+  behavior_modules[#behavior_modules + 1] = module_name
+end
+for _, module_name in ipairs(runtime_behavior_modules) do
+  behavior_modules[#behavior_modules + 1] = module_name
+end
+for _, module_name in ipairs(gameplay_behavior_modules) do
+  behavior_modules[#behavior_modules + 1] = module_name
+end
+for _, module_name in ipairs(presentation_behavior_modules) do
+  behavior_modules[#behavior_modules + 1] = module_name
+end
 
 local contract_modules = {
   "suites.presentation.read_model_contract",
