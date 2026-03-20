@@ -2,8 +2,9 @@ require("tests.bootstrap")
 
 local log_capture = require("tests.support.log_capture")
 local number_utils = require("src.core.utils.number_utils")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local wall_clock = require("tests.support.wall_clock")
 local unpack_args = table.unpack or unpack
+local _timing_enabled = os.getenv("MONO_TEST_TIMING") == "1"
 
 local function normalize_suite(suite, suite_index)
   if suite and suite.tests then
@@ -53,37 +54,24 @@ local function _run_hook(hook, ...)
 end
 
 local function _start_timer()
-  local cpu_now = runtime_ports.cpu_now_seconds()
-  local wall_now = runtime_ports.wall_now_seconds()
-  if (number_utils.is_numeric(cpu_now) and cpu_now > 0) or (number_utils.is_numeric(wall_now) and wall_now > 0) then
-    return {
-      source = "runtime_ports",
-      cpu = cpu_now,
-      wall = wall_now,
-    }
+  if _timing_enabled then
+    return wall_clock.start()
   end
   return {
+    started = os.time(),
     source = "os.time",
-    wall = os.time(),
   }
 end
 
 local function _elapsed_ms(timer)
-  if timer.source == "os.time" then
-    local wall_elapsed = os.time() - (timer.wall or 0)
-    if not number_utils.is_numeric(wall_elapsed) or wall_elapsed < 0 then
-      return 0
-    end
-    return math.floor(wall_elapsed * 1000)
+  if _timing_enabled then
+    return wall_clock.finish(timer).elapsed_ms
   end
-
-  local cpu_elapsed = runtime_ports.cpu_diff_seconds(runtime_ports.cpu_now_seconds(), timer.cpu)
-  local wall_elapsed = runtime_ports.wall_diff_seconds(runtime_ports.wall_now_seconds(), timer.wall)
-  local elapsed_seconds = cpu_elapsed
-  if elapsed_seconds <= 0 and wall_elapsed > 0 then
-    elapsed_seconds = wall_elapsed
+  local elapsed = (os.time() - (timer and timer.started or 0)) * 1000
+  if not number_utils.is_numeric(elapsed) or elapsed < 0 then
+    return 0
   end
-  return math.floor(elapsed_seconds * 1000)
+  return elapsed
 end
 
 local function run_all(suites, opts)
