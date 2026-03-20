@@ -1064,6 +1064,154 @@ local function _test_modal_presenter_market_same_choice_id_still_refreshes_marke
   _assert_eq(opened, 1, "market choice with same id should still refresh market presenter")
 end
 
+local function _test_ui_model_sync_refresh_reopens_market_modal_while_market_active()
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model = require("src.ui.pres")
+  local modal_presenter = require("src.ui.ctl.modal_controller")
+  local main_view = require("src.ui.ctl.ui_runtime")
+
+  local state = {
+    ui = ui_view.build_ui_state(),
+  }
+  _bind_ui_runtime(state)
+  state.ui.market_active = true
+
+  local choice = {
+    id = 31,
+    kind = "market_buy",
+    route_key = "market",
+    owner_role_id = 1,
+    title = "黑市",
+    options = {
+      { id = 5001, label = "小猪佩奇", can_buy = true },
+    },
+    allow_cancel = true,
+    active_tab = "skin",
+    page_index = 2,
+    page_count = 3,
+    meta = { player_id = 1 },
+  }
+  local market = {
+    choice_id = 31,
+    options = choice.options,
+    allow_cancel = true,
+    selected_option_id = 5001,
+    active_tab = "skin",
+    page_index = 2,
+    page_count = 3,
+  }
+  local captured_choice = nil
+  local captured_market = nil
+  local render_calls = 0
+  local game = {
+    turn = {
+      phase = "wait_action",
+    },
+  }
+  local common = {
+    log_once = function() end,
+    build_log_prefix = function()
+      return "[test]"
+    end,
+  }
+
+  _with_patches({
+    { target = ui_model, key = "update", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = choice,
+        market = market,
+      }
+    end },
+    { target = main_view, key = "render", value = function()
+      render_calls = render_calls + 1
+    end },
+    { target = modal_presenter, key = "open_choice_modal", value = function(_, open_choice, open_market)
+      captured_choice = open_choice
+      captured_market = open_market
+    end },
+  }, function()
+    local refreshed = ui_model_sync.refresh_from_dirty(game, state, { any = true }, common)
+    _assert_eq(refreshed, true, "market dirty refresh should report ui refreshed")
+  end)
+
+  _assert_eq(render_calls, 1, "market dirty refresh should still render base ui once")
+  _assert_eq(captured_choice, choice, "market dirty refresh should reopen modal with updated choice")
+  _assert_eq(captured_market, market, "market dirty refresh should reopen modal with updated market payload")
+  _assert_eq(captured_market and captured_market.active_tab, "skin", "market dirty refresh should propagate new active_tab")
+  _assert_eq(captured_market and captured_market.page_index, 2, "market dirty refresh should propagate new page_index")
+end
+
+local function _test_ui_model_sync_refresh_skips_market_reopen_during_action_anim()
+  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model = require("src.ui.pres")
+  local modal_presenter = require("src.ui.ctl.modal_controller")
+  local main_view = require("src.ui.ctl.ui_runtime")
+
+  local state = {
+    ui = ui_view.build_ui_state(),
+  }
+  _bind_ui_runtime(state)
+  state.ui.market_active = true
+
+  local choice = {
+    id = 32,
+    kind = "market_buy",
+    route_key = "market",
+    owner_role_id = 1,
+    title = "黑市",
+    options = {
+      { id = 5002, label = "小猪乔治", can_buy = true },
+    },
+    allow_cancel = true,
+    meta = { player_id = 1 },
+  }
+  local reopen_calls = 0
+  local render_calls = 0
+  local common = {
+    log_once = function() end,
+    build_log_prefix = function()
+      return "[test]"
+    end,
+  }
+
+  _with_patches({
+    { target = ui_model, key = "update", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = choice,
+        market = {
+          choice_id = 32,
+          options = choice.options,
+          allow_cancel = true,
+          selected_option_id = 5002,
+          active_tab = "skin",
+          page_index = 1,
+          page_count = 1,
+        },
+      }
+    end },
+    { target = main_view, key = "render", value = function()
+      render_calls = render_calls + 1
+    end },
+    { target = modal_presenter, key = "open_choice_modal", value = function()
+      reopen_calls = reopen_calls + 1
+    end },
+  }, function()
+    local refreshed = ui_model_sync.refresh_from_dirty({
+      turn = {
+        phase = "wait_action_anim",
+      },
+    }, state, { any = true }, common)
+    _assert_eq(refreshed, true, "anim-phase market dirty refresh should still render ui")
+  end)
+
+  _assert_eq(render_calls, 1, "anim-phase market dirty refresh should still render base ui once")
+  _assert_eq(reopen_calls, 0, "anim-phase market dirty refresh should not reopen market modal")
+end
+
 local function _test_ui_event_router_market_cancel_button_dispatches_choice_cancel()
   local market_nodes = require("src.ui.schema.market_nodes")
 
@@ -2090,6 +2238,8 @@ return {
   { name = "_test_ui_model_market_payload_prefers_explicit_choice_fields", run = _test_ui_model_market_payload_prefers_explicit_choice_fields },
   { name = "_test_target_pick_prefers_explicit_owner_role_id", run = _test_target_pick_prefers_explicit_owner_role_id },
   { name = "_test_modal_presenter_market_same_choice_id_still_refreshes_market_panel", run = _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel },
+  { name = "_test_ui_model_sync_refresh_reopens_market_modal_while_market_active", run = _test_ui_model_sync_refresh_reopens_market_modal_while_market_active },
+  { name = "_test_ui_model_sync_refresh_skips_market_reopen_during_action_anim", run = _test_ui_model_sync_refresh_skips_market_reopen_during_action_anim },
   { name = "_test_ui_event_router_market_cancel_button_dispatches_choice_cancel", run = _test_ui_event_router_market_cancel_button_dispatches_choice_cancel },
   { name = "_test_item_phase_ask_confirm_clears_highlight_suppress", run = _test_item_phase_ask_confirm_clears_highlight_suppress },
   { name = "_test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select", run = _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select },

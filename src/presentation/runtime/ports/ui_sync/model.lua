@@ -50,7 +50,13 @@ local function _should_open_choice_modal(game, state, next_model)
     return false
   end
   local route_key = choice_ui_state.resolve_route_key(next_model.choice)
-  return route_key == "base_inline" or choice_ui_state.should_reconcile(game, state, next_model.choice)
+  if route_key == "base_inline" then
+    return true
+  end
+  if route_key == "market" and next_model.market ~= nil then
+    return true
+  end
+  return choice_ui_state.should_reconcile(game, state, next_model.choice)
 end
 
 local function _render_ui_model(game, state, next_model, common)
