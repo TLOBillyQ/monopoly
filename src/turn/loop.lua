@@ -202,7 +202,11 @@ local function _reset_runtime_state(state, ports)
   local ui_sync_ports = ports.ui_sync
   state.player_units = nil
   state.player_units_missing = false
-  ports.output.invalidate_ui(state)
+  if type(ports.output.invalidate_ui_model) == "function" then
+    ports.output.invalidate_ui_model(state)
+  else
+    ports.output.invalidate_ui(state)
+  end
   state.countdown_last = nil
   state.countdown_active_last = nil
   if ui_sync_ports.set_input_blocked then

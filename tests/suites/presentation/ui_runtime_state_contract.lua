@@ -35,9 +35,9 @@ local function _test_output_port_uses_runtime_state_accessors()
   local model = { screen = "choice" }
   local choice = { id = 11, kind = "item_phase_choice" }
 
-  _assert_eq(output_port.invalidate_ui(state), true, "invalidate_ui should mark ui_runtime dirty")
-  _assert_eq(runtime_state.is_ui_dirty(state), true, "invalidate_ui should write ui_runtime dirty flag")
-  _assert_eq(state.ui_dirty, nil, "invalidate_ui should not write legacy ui_dirty directly")
+  _assert_eq(output_port.invalidate_ui_model(state), true, "invalidate_ui_model should mark ui_runtime dirty")
+  _assert_eq(runtime_state.is_ui_dirty(state), true, "invalidate_ui_model should write ui_runtime dirty flag")
+  _assert_eq(state.ui_dirty, nil, "invalidate_ui_model should not write legacy ui_dirty directly")
 
   output_port.sync_ui_model(state, model)
   _assert_eq(runtime_state.get_ui_model(state), model, "sync_ui_model should write ui_runtime model")

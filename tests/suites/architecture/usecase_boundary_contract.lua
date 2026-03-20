@@ -5,6 +5,7 @@ local _with_patches = support.with_patches
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback_port")
 local turn_action_port = require("src.ui.input.dispatch_turn_action_port")
 local gameplay_loop_ports = require("src.turn.loop.ports")
+local gameplay_loop_runtime = require("src.turn.loop.loop_runtime")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local turn_roll = require("src.turn.phases.roll")
 local turn_move = require("src.turn.phases.move")
@@ -146,21 +147,21 @@ local function _test_output_state_adapter_runtime_variant_stays_off_legacy_state
   local output_state_adapter = require("src.turn.output.output_state_adapter")
   local output = output_state_adapter.build_runtime_output_ports()
   local state = {}
-  local changed = output.invalidate_ui(state)
-  _assert_eq(changed, true, "runtime output.invalidate_ui should still mark ui runtime dirty")
-  _assert_eq(state.ui_dirty, nil, "runtime output.invalidate_ui should not write legacy ui_dirty bridge")
+  local changed = output.invalidate_ui_model(state)
+  _assert_eq(changed, true, "runtime output.invalidate_ui_model should still mark ui runtime dirty")
+  _assert_eq(state.ui_dirty, nil, "runtime output.invalidate_ui_model should not write legacy ui_dirty bridge")
   _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "runtime output should write ui_runtime only")
 end
 
 local function _test_gameplay_loop_output_port_defaults_to_ui_runtime_only()
   local resolved = gameplay_loop_ports.resolve(nil)
   local state = {}
-  local changed = resolved.output.invalidate_ui(state)
-  _assert_eq(changed, true, "default output.invalidate_ui should mark ui_runtime dirty")
-  _assert_eq(state.ui_dirty, nil, "default output.invalidate_ui should not mark legacy state.ui_dirty")
-  _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "default output.invalidate_ui should write ui_runtime")
-  local changed_again = resolved.output.invalidate_ui(state)
-  _assert_eq(changed_again, false, "default output.invalidate_ui should be idempotent when ui_runtime already dirty")
+  local changed = resolved.output.invalidate_ui_model(state)
+  _assert_eq(changed, true, "default output.invalidate_ui_model should mark ui_runtime dirty")
+  _assert_eq(state.ui_dirty, nil, "default output.invalidate_ui_model should not mark legacy state.ui_dirty")
+  _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "default output.invalidate_ui_model should write ui_runtime")
+  local changed_again = resolved.output.invalidate_ui_model(state)
+  _assert_eq(changed_again, false, "default output.invalidate_ui_model should be idempotent when ui_runtime already dirty")
 end
 
 local function _test_output_state_adapter_exposes_invalidate_ui_model_alias()
@@ -176,7 +177,7 @@ local function _test_gameplay_loop_output_port_override_precedence()
   local calls = 0
   local resolved = gameplay_loop_ports.resolve({
     output = {
-      invalidate_ui = function(state)
+      invalidate_ui_model = function(state)
         calls = calls + 1
         state.override_called = true
         return true
@@ -184,11 +185,61 @@ local function _test_gameplay_loop_output_port_override_precedence()
     },
   })
   local state = {}
-  local changed = resolved.output.invalidate_ui(state)
-  _assert_eq(changed, true, "override output.invalidate_ui should return override result")
-  _assert_eq(calls, 1, "override output.invalidate_ui should be called once")
-  _assert_eq(state.override_called, true, "override output.invalidate_ui should receive state")
-  _assert_eq(state.ui_dirty, nil, "override output.invalidate_ui should bypass default ui_dirty bridge")
+  local changed = resolved.output.invalidate_ui_model(state)
+  _assert_eq(changed, true, "override output.invalidate_ui_model should return override result")
+  _assert_eq(calls, 1, "override output.invalidate_ui_model should be called once")
+  _assert_eq(state.override_called, true, "override output.invalidate_ui_model should receive state")
+  _assert_eq(state.ui_dirty, nil, "override output.invalidate_ui_model should bypass default ui_dirty bridge")
+end
+
+local function _test_gameplay_loop_output_port_legacy_alias_override_still_feeds_invalidate_ui_model()
+  local calls = 0
+  local resolved = gameplay_loop_ports.resolve({
+    output = {
+      invalidate_ui = function(state)
+        calls = calls + 1
+        state.legacy_override_called = true
+        return true
+      end,
+    },
+  })
+  local state = {}
+  local changed = resolved.output.invalidate_ui_model(state)
+  _assert_eq(changed, true, "legacy invalidate_ui override should still satisfy invalidate_ui_model")
+  _assert_eq(calls, 1, "legacy invalidate_ui override should be called once via invalidate_ui_model")
+  _assert_eq(state.legacy_override_called, true, "legacy invalidate_ui override should still receive state")
+end
+
+local function _test_sync_input_blocked_does_not_invalidate_ui_model_on_unblock()
+  local state = {
+    ui = {
+      input_blocked = true,
+    },
+  }
+  local invalidations = 0
+  local ports = {
+    ui_sync = {
+      get_ui_state = function()
+        return state.ui
+      end,
+      set_input_blocked = function(_, blocked)
+        state.ui.input_blocked = blocked
+        return true
+      end,
+    },
+    output = {
+      invalidate_ui_model = function()
+        invalidations = invalidations + 1
+        return true
+      end,
+    },
+  }
+
+  local changed = gameplay_loop_runtime.sync_input_blocked(state, "wait_action", ports)
+
+  _assert_eq(changed, true, "sync_input_blocked should still report a changed gate state")
+  _assert_eq(state.ui.input_blocked, false, "sync_input_blocked should release input block outside blocked phases")
+  _assert_eq(invalidations, 0, "sync_input_blocked should not invalidate ui_model on unblock")
 end
 
 local function _test_bankruptcy_feedback_port_defaults_to_no_op_port()
@@ -253,6 +304,8 @@ return {
     { name = "gameplay_loop_output_port_defaults_to_ui_runtime_only", run = _test_gameplay_loop_output_port_defaults_to_ui_runtime_only },
     { name = "output_state_adapter_exposes_invalidate_ui_model_alias", run = _test_output_state_adapter_exposes_invalidate_ui_model_alias },
     { name = "gameplay_loop_output_port_override_precedence", run = _test_gameplay_loop_output_port_override_precedence },
+    { name = "gameplay_loop_output_port_legacy_alias_override_still_feeds_invalidate_ui_model", run = _test_gameplay_loop_output_port_legacy_alias_override_still_feeds_invalidate_ui_model },
+    { name = "sync_input_blocked_does_not_invalidate_ui_model_on_unblock", run = _test_sync_input_blocked_does_not_invalidate_ui_model_on_unblock },
     { name = "bankruptcy_feedback_port_defaults_to_no_op_port", run = _test_bankruptcy_feedback_port_defaults_to_no_op_port },
     { name = "turn_roll_uses_anim_gate_port_without_ui_port", run = _test_turn_roll_uses_anim_gate_port_without_ui_port },
     { name = "turn_move_uses_anim_gate_port_without_ui_port", run = _test_turn_move_uses_anim_gate_port_without_ui_port },

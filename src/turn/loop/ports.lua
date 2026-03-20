@@ -69,6 +69,7 @@ local port_groups = {
     "on_bankruptcy_tiles_cleared",
   },
   output = {
+    "invalidate_ui_model",
     "invalidate_ui",
     "clear_ui_dirty",
     "is_ui_dirty",
@@ -203,6 +204,18 @@ local function _fill_clock_defaults(clock_ports, base_clock_ports)
     end
   end
 end
+local function _fill_output_aliases(output_ports, override_output_ports)
+  if type(output_ports) ~= "table" then
+    return
+  end
+  local override_group = type(override_output_ports) == "table" and override_output_ports or nil
+  if override_group and type(override_group.invalidate_ui_model) ~= "function" and type(override_group.invalidate_ui) == "function" then
+    output_ports.invalidate_ui_model = override_group.invalidate_ui
+  end
+  if override_group and type(override_group.invalidate_ui) ~= "function" and type(override_group.invalidate_ui_model) == "function" then
+    output_ports.invalidate_ui = override_group.invalidate_ui_model
+  end
+end
 local base_ports = _resolve_base_ports()
 local function _build_resolved_ports(grouped_override)
   local resolved = {}
@@ -213,6 +226,7 @@ local function _build_resolved_ports(grouped_override)
   end
   ui_sync_defaults.fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
   _fill_clock_defaults(resolved.clock, base_ports.clock)
+  _fill_output_aliases(resolved.output, grouped_override and grouped_override.output or nil)
   return resolved
 end
 

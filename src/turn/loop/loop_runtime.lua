@@ -17,7 +17,6 @@ end
 
 function runtime.sync_input_blocked(state, phase, ports)
   local ui_sync_ports = ports and ports.ui_sync or nil
-  local output_ports = ports and ports.output or nil
   if not ui_sync_ports or not ui_sync_ports.get_ui_state or not ui_sync_ports.set_input_blocked then
     return false
   end
@@ -28,9 +27,6 @@ function runtime.sync_input_blocked(state, phase, ports)
   local input_blocked = runtime.is_phase_input_blocked(phase)
   if not ui_sync_ports.set_input_blocked(state, input_blocked) then
     return false
-  end
-  if not input_blocked and output_ports and output_ports.invalidate_ui then
-    output_ports.invalidate_ui(state)
   end
   return true
 end

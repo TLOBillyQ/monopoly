@@ -131,6 +131,19 @@ local function _should_invalidate_ui(action)
     or action.type == "market_tab_select"
 end
 
+local function _invalidate_ui_model(output_ports, state)
+  if not output_ports then
+    return false
+  end
+  if type(output_ports.invalidate_ui_model) == "function" then
+    return output_ports.invalidate_ui_model(state)
+  end
+  if type(output_ports.invalidate_ui) == "function" then
+    return output_ports.invalidate_ui(state)
+  end
+  return false
+end
+
 local function _handle_auto_toggle(game, state, action)
   local player = _resolve_actor_player(game, action)
   if not player then
@@ -259,7 +272,7 @@ end
     return { status = "blocked" }
   end
   if _should_invalidate_ui(action) then
-    ctx.output_ports.invalidate_ui(state)
+    _invalidate_ui_model(ctx.output_ports, state)
   end
   if action.type == "ui_button" then
     return _handle_ui_button(game, state, action, opts, ctx)

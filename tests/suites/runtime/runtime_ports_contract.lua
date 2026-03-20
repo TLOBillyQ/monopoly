@@ -324,7 +324,8 @@ local function _test_gameplay_loop_port_contract_is_grouped_and_stable()
     "gameplay loop port groups should stay grouped and ordered")
   _assert_eq(contract.port_groups.ui_sync[1], "apply_input_lock", "ui_sync contract should keep apply_input_lock")
   _assert_eq(contract.port_groups.ui_sync[2], "step_choice_timeout", "ui_sync contract should keep timeout step")
-  _assert_eq(contract.port_groups.output[1], "invalidate_ui", "output contract should expose invalidate_ui")
+  _assert_eq(contract.port_groups.output[1], "invalidate_ui_model", "output contract should expose invalidate_ui_model first")
+  _assert_eq(contract.port_groups.output[2], "invalidate_ui", "output contract should retain invalidate_ui compatibility alias")
   _assert_eq(contract.port_groups.state[1], "apply_role_control_lock", "state contract should expose role lock")
 end
 

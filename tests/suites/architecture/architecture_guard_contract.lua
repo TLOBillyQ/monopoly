@@ -24,6 +24,15 @@ end
 local function _build_output_ports(output_log)
   local base = output_state_adapter.build_base_output_ports()
   return {
+    invalidate_ui_model = function(state)
+      if output_log then
+        output_log[#output_log + 1] = {
+          kind = "invalidate_ui_model",
+          state = state,
+        }
+      end
+      return base.invalidate_ui_model(state)
+    end,
     invalidate_ui = function(state)
       if output_log then
         output_log[#output_log + 1] = {
@@ -237,7 +246,7 @@ local function _test_turn_dispatch_next_only_marks_ui_dirty()
   _assert_eq(stepped, 1, "dispatch should step turn once")
   _assert_eq(#ui_writes, 0, "next action should not directly write state.ui_*")
   _assert_eq(#output_log, 1, "next action should emit one output invalidate signal")
-  _assert_eq(output_log[1].kind, "invalidate_ui", "next action should invalidate UI through output port")
+  _assert_eq(output_log[1].kind, "invalidate_ui_model", "next action should invalidate ui_model through output port")
 end
 
 local function _test_turn_dispatch_choice_only_marks_ui_dirty()
@@ -298,7 +307,7 @@ local function _test_turn_dispatch_choice_only_marks_ui_dirty()
   _assert_eq(result.status, "applied", "choice selection should apply for owning player")
   _assert_eq(#ui_writes, 0, "choice action should not directly write state.ui_*")
   _assert_eq(#output_log, 2, "choice action should invalidate UI and clear choice through output port")
-  _assert_eq(output_log[1].kind, "invalidate_ui", "choice action should invalidate UI through output port")
+  _assert_eq(output_log[1].kind, "invalidate_ui_model", "choice action should invalidate ui_model through output port")
   _assert_eq(output_log[2].kind, "clear_pending_choice", "choice action should clear pending choice through output port")
 end
 
@@ -337,7 +346,7 @@ local function _test_gameplay_loop_set_game_routes_choice_state_through_output_p
   _assert_eq(#ui_writes, 0, "set_game should not directly write state.ui_*")
   _assert_eq(output_log[1].kind, "sync_pending_choice", "set_game should publish pending choice through output port")
   _assert_eq(output_log[2].kind, "sync_ui_model", "set_game should publish UI model through output port")
-  _assert_eq(output_log[3].kind, "invalidate_ui", "set_game should invalidate UI through output port")
+  _assert_eq(output_log[3].kind, "invalidate_ui_model", "set_game should invalidate ui_model through output port")
   _assert_eq(state.ui_runtime and state.ui_runtime.pending_choice_id, choice.id, "set_game should keep pending choice in ui_runtime")
   _assert_eq(state.ui_runtime and state.ui_runtime.ui_model and state.ui_runtime.ui_model.choice.id, choice.id, "set_game should keep ui_model in ui_runtime")
 end
