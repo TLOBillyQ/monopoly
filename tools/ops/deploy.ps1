@@ -1,6 +1,7 @@
 param(
     [string]$TargetPath,
     [string]$StartupProfile,
+    [switch]$Bak,
     [switch]$Help,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$RemainingArgs
@@ -74,6 +75,8 @@ function Resolve-HomeDir {
 }
 
 function Resolve-DefaultTargetPath {
+    param([string]$Suffix = "发布")
+
     if (-not [string]::IsNullOrWhiteSpace($env:MONOPOLY_DEPLOY_TARGET)) {
         return [string]$env:MONOPOLY_DEPLOY_TARGET
     }
@@ -81,15 +84,15 @@ function Resolve-DefaultTargetPath {
     $home_dir = (Resolve-HomeDir).TrimEnd("/")
     if ([string]::IsNullOrWhiteSpace($home_dir)) {
         Exit-WithError (Get-Text `
-            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET、传入 --target-path，或在默认目录下创建 LuaSource_大富翁-发布。" `
-            "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET, pass --target-path, or create the default LuaSource_大富翁-发布 directory.")
+            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET、传入 --target-path，或在默认目录下创建 LuaSource_大富翁-$Suffix。" `
+            "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET, pass --target-path, or create the default LuaSource_大富翁-$Suffix directory.")
     }
 
     if ($IsWindows) {
-        return "$home_dir/Desktop/dev/LuaSource_大富翁-发布"
+        return "$home_dir/Desktop/dev/LuaSource_大富翁-$Suffix"
     }
     if ($IsMacOS) {
-        return "$home_dir/Documents/eggy/LuaSource_大富翁-发布"
+        return "$home_dir/Documents/eggy/LuaSource_大富翁-$Suffix"
     }
 
     Exit-WithError (Get-Text `
@@ -285,6 +288,11 @@ function Parse-RemainingArgs {
                 $index += 2
                 continue
             }
+            "^(--bak|-Bak)$" {
+                $script:Bak = $true
+                $index += 1
+                continue
+            }
             default {
                 $unknown_args += $token
                 $index += 1
@@ -302,14 +310,15 @@ Parse-RemainingArgs
 
 if ($Help) {
     Write-Info (Get-Text `
-        "用法: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]" `
-        "Usage: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME]")
+        "用法: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME] [--bak|-Bak]" `
+        "Usage: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--startup-profile NAME|-StartupProfile NAME] [--bak|-Bak]")
     exit 0
 }
 
 try {
     $project_root = Resolve-ProjectRoot
-    $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath }
+    $suffix = if ($Bak) { "备份" } else { "发布" }
+    $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath -Suffix $suffix }
     $target_path = Resolve-NormalizedPath $target_source
 
     [System.IO.Directory]::CreateDirectory($target_path) | Out-Null
