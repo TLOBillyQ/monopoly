@@ -382,10 +382,13 @@ local function _test_mine_bootstraps_positions_and_inventory()
 
   assert(game.players[1].position == assert(game.board:index_of_tile_id(7)),
     "mine profile should place p1 on tile 7")
-  assert(game.players[2].position == assert(game.board:index_of_tile_id(8)),
-    "mine profile should place p2 on tile 8")
+  assert(game.players[2].position == assert(game.board:index_of_tile_id(6)),
+    "mine profile should place p2 on tile 6 (one step behind p1)")
   _assert_inventory_counts(game.players[1], {
     [2005] = 1,
+  })
+  _assert_inventory_counts(game.players[2], {
+    [2002] = 1,
   })
 end
 

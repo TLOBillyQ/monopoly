@@ -399,7 +399,10 @@ local profiles = {
         },
         [2] = {
           cash = 120000,
-          position_tile_id = 8,
+          position_tile_id = 6,
+          item_counts = {
+            [2002] = 1,
+          },
         },
         [3] = {
           cash = 120000,
