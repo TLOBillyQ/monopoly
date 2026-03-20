@@ -3,6 +3,15 @@ local dirty_tracker = require("src.core.utils.dirty_tracker")
 
 local landing_visual_hold = {}
 
+local release_priority = {
+  board_visual_sync = 1,
+  runtime_event = 2,
+  tile_update = 3,
+  owner_change = 4,
+  bankruptcy_clear = 5,
+  popup = 6,
+}
+
 local function _new_dirty_bucket()
   return dirty_tracker.new()
 end
@@ -15,12 +24,7 @@ local function _ensure_dirty_inventory_ids(hold)
 end
 
 local function _ensure_hold_buffers(hold)
-  hold.deferred_popups = hold.deferred_popups or {}
-  hold.deferred_runtime_events = hold.deferred_runtime_events or {}
-  hold.deferred_board_visual_syncs = hold.deferred_board_visual_syncs or {}
-  hold.deferred_tile_updates = hold.deferred_tile_updates or {}
-  hold.deferred_owner_changes = hold.deferred_owner_changes or {}
-  hold.deferred_bankruptcy_clears = hold.deferred_bankruptcy_clears or {}
+  hold.release_callbacks = hold.release_callbacks or {}
 end
 
 local function _ensure_hold(state)
@@ -33,12 +37,7 @@ local function _ensure_hold(state)
       flushing = false,
       frozen_ui_model = nil,
       deferred_dirty = _new_dirty_bucket(),
-      deferred_popups = {},
-      deferred_runtime_events = {},
-      deferred_board_visual_syncs = {},
-      deferred_tile_updates = {},
-      deferred_owner_changes = {},
-      deferred_bankruptcy_clears = {},
+      release_callbacks = {},
     }
     turn_runtime.landing_visual_hold = hold
   end
@@ -61,12 +60,7 @@ end
 
 local function _reset_deferred_buffers(hold)
   hold.deferred_dirty = _new_dirty_bucket()
-  hold.deferred_popups = {}
-  hold.deferred_runtime_events = {}
-  hold.deferred_board_visual_syncs = {}
-  hold.deferred_tile_updates = {}
-  hold.deferred_owner_changes = {}
-  hold.deferred_bankruptcy_clears = {}
+  hold.release_callbacks = {}
 end
 
 function landing_visual_hold.start(game, opts)
@@ -79,9 +73,6 @@ function landing_visual_hold.start(game, opts)
   end
   game.turn.landing_visual_hold_active = true
   game.turn.landing_visual_release_pending = false
-  game.turn.landing_visual_wait_started = false
-  game.turn.landing_visual_wait_seq = nil
-  game.turn.landing_visual_wait_ready = false
   local state = game.landing_visual_hold_state
   if type(state) == "table" then
     local hold = _ensure_hold(state)
@@ -114,8 +105,6 @@ function landing_visual_hold.mark_release_pending(game)
     return false
   end
   game.turn.landing_visual_release_pending = true
-  game.turn.landing_visual_wait_started = false
-  game.turn.landing_visual_wait_seq = nil
   _mark_turn_dirty(game)
   return true
 end
@@ -126,14 +115,8 @@ function landing_visual_hold.clear_game(game)
   end
   local changed = game.turn.landing_visual_hold_active == true
     or game.turn.landing_visual_release_pending == true
-    or game.turn.landing_visual_wait_started == true
-    or game.turn.landing_visual_wait_seq ~= nil
-    or game.turn.landing_visual_wait_ready == true
   game.turn.landing_visual_hold_active = false
   game.turn.landing_visual_release_pending = false
-  game.turn.landing_visual_wait_started = false
-  game.turn.landing_visual_wait_seq = nil
-  game.turn.landing_visual_wait_ready = false
   if changed then
     _mark_turn_dirty(game)
   end
@@ -162,6 +145,16 @@ function landing_visual_hold.sync_state_from_game(state, game)
   return hold
 end
 
+function landing_visual_hold.should_defer(state, game)
+  if state == nil then
+    return false
+  end
+  if game ~= nil then
+    landing_visual_hold.sync_state_from_game(state, game)
+  end
+  return landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state)
+end
+
 function landing_visual_hold.capture_frozen_ui_model(state)
   local hold = _ensure_hold(state)
   if hold.frozen_ui_model ~= nil then
@@ -185,58 +178,85 @@ function landing_visual_hold.defer_dirty(state, dirty)
   return hold.deferred_dirty
 end
 
-function landing_visual_hold.defer_popup(state, payload, opts, replay)
+function landing_visual_hold.register_release_callback(state, key, fn, opts)
+  assert(type(fn) == "function", "missing release callback")
   local hold = _ensure_hold(state)
-  hold.deferred_popups[#hold.deferred_popups + 1] = {
-    payload = payload,
-    opts = opts,
-    replay = replay,
+  opts = opts or {}
+  hold.release_callbacks[#hold.release_callbacks + 1] = {
+    key = key,
+    fn = fn,
+    order = #hold.release_callbacks + 1,
+    priority = release_priority[key] or opts.priority or 100,
   }
+  return fn
+end
+
+function landing_visual_hold.run_or_defer(state, game, key, fn, opts)
+  if landing_visual_hold.should_defer(state, game) then
+    landing_visual_hold.register_release_callback(state, key, fn, opts)
+    return true
+  end
+  return fn()
+end
+
+local function _register_deferred_replay(state, key, replay, ...)
+  local replay_args = { ... }
+  return landing_visual_hold.register_release_callback(state, key, function()
+    if type(replay) == "function" then
+      return replay(table.unpack(replay_args))
+    end
+    return nil
+  end)
+end
+
+function landing_visual_hold.defer_popup(state, payload, opts, replay)
+  return _register_deferred_replay(state, "popup", replay, payload, opts)
 end
 
 function landing_visual_hold.defer_runtime_event(state, event_name, payload, replay)
-  local hold = _ensure_hold(state)
-  hold.deferred_runtime_events[#hold.deferred_runtime_events + 1] = {
-    event_name = event_name,
-    payload = payload,
-    replay = replay,
-  }
+  local _ = event_name
+  return _register_deferred_replay(state, "runtime_event", replay, payload)
 end
 
 function landing_visual_hold.defer_board_visual_sync(state, payload, replay)
-  local hold = _ensure_hold(state)
-  hold.deferred_board_visual_syncs[#hold.deferred_board_visual_syncs + 1] = {
-    payload = payload,
-    replay = replay,
-  }
+  return _register_deferred_replay(state, "board_visual_sync", replay, payload)
 end
 
 function landing_visual_hold.defer_tile_update(state, tile_id, level, replay)
-  local hold = _ensure_hold(state)
-  hold.deferred_tile_updates[#hold.deferred_tile_updates + 1] = {
-    tile_id = tile_id,
-    level = level,
-    replay = replay,
-  }
+  return _register_deferred_replay(state, "tile_update", replay, tile_id, level)
 end
 
 function landing_visual_hold.defer_owner_change(state, tile_id, owner_id, replay)
-  local hold = _ensure_hold(state)
-  hold.deferred_owner_changes[#hold.deferred_owner_changes + 1] = {
-    tile_id = tile_id,
-    owner_id = owner_id,
-    replay = replay,
-  }
+  return _register_deferred_replay(state, "owner_change", replay, tile_id, owner_id)
 end
 
 function landing_visual_hold.defer_bankruptcy_clear(state, game, player, owned_tile_ids, replay)
-  local hold = _ensure_hold(state)
-  hold.deferred_bankruptcy_clears[#hold.deferred_bankruptcy_clears + 1] = {
-    game = game,
-    player = player,
-    owned_tile_ids = owned_tile_ids,
-    replay = replay,
-  }
+  return _register_deferred_replay(state, "bankruptcy_clear", replay, game, player, owned_tile_ids)
+end
+
+local function _sort_release_callbacks(release_callbacks)
+  table.sort(release_callbacks, function(left, right)
+    if left.priority ~= right.priority then
+      return left.priority < right.priority
+    end
+    return left.order < right.order
+  end)
+end
+
+local function _replay_release_callbacks(hold)
+  local logger = require("src.core.utils.logger")
+  logger.flush_event_buffer(hold)
+  _sort_release_callbacks(hold.release_callbacks)
+  for _, entry in ipairs(hold.release_callbacks) do
+    if type(entry.fn) == "function" then
+      entry.fn()
+    end
+  end
+end
+
+local function _reset_release_state(hold)
+  hold.frozen_ui_model = nil
+  _reset_deferred_buffers(hold)
 end
 
 function landing_visual_hold.with_flushing(state, fn)
@@ -272,48 +292,10 @@ function landing_visual_hold.release(state, game)
     _merge_dirty_into(game.dirty, hold.deferred_dirty)
   end
 
-  local function _replay_deferred_entries(hold)
-    local logger = require("src.core.utils.logger")
-    logger.flush_event_buffer(hold)
-
-    for _, entry in ipairs(hold.deferred_board_visual_syncs) do
-      if type(entry.replay) == "function" then
-        entry.replay(entry.payload)
-      end
-    end
-
-    for _, entry in ipairs(hold.deferred_runtime_events) do
-      if type(entry.replay) == "function" then
-        entry.replay(entry.payload)
-      end
-    end
-    for _, entry in ipairs(hold.deferred_tile_updates) do
-      if type(entry.replay) == "function" then
-        entry.replay(entry.tile_id, entry.level)
-      end
-    end
-    for _, entry in ipairs(hold.deferred_owner_changes) do
-      if type(entry.replay) == "function" then
-        entry.replay(entry.tile_id, entry.owner_id)
-      end
-    end
-    for _, entry in ipairs(hold.deferred_bankruptcy_clears) do
-      if type(entry.replay) == "function" then
-        entry.replay(entry.game, entry.player, entry.owned_tile_ids)
-      end
-    end
-    for _, entry in ipairs(hold.deferred_popups) do
-      if type(entry.replay) == "function" then
-        entry.replay(entry.payload, entry.opts)
-      end
-    end
-  end
   landing_visual_hold.with_flushing(state, function()
-    _replay_deferred_entries(hold)
+    _replay_release_callbacks(hold)
   end)
-
-  hold.frozen_ui_model = nil
-  _reset_deferred_buffers(hold)
+  _reset_release_state(hold)
 
   runtime_state.set_ui_dirty(state, true)
   landing_visual_hold.clear_game(game)

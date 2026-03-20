@@ -162,12 +162,7 @@ function runtime_state.ensure_turn_runtime(state)
         turn_countdown = false,
         inventory_ids = {},
       },
-      deferred_popups = {},
-      deferred_runtime_events = {},
-      deferred_board_visual_syncs = {},
-      deferred_tile_updates = {},
-      deferred_owner_changes = {},
-      deferred_bankruptcy_clears = {},
+      release_callbacks = {},
     }
   end
   return turn_runtime

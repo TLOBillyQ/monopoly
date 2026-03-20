@@ -396,6 +396,21 @@ local function _test_post_effects_share_wealth_queues_cash_anim_for_both_players
   _assert_eq(_action_anim_count(g), 2, "share_wealth should queue one cash anim per affected player")
 end
 
+local function _test_post_effects_share_wealth_item_target_path_keeps_item_target_anim_only()
+  local g = _new_game()
+  local user = g.players[1]
+  local target = g.players[2]
+  g:set_player_cash(user, 1000)
+  g:set_player_cash(target, 3000)
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+
+  post_effects.apply_target(g, user, item_ids.share_wealth, target, {
+    share_wealth_cash_receive_mode = "item_target_player_only",
+  })
+
+  assert(g.turn.action_anim == nil, "item target path should suppress post-effect cash_receive anim")
+end
+
 -- T8 characterization tests for 0% coverage hotspots
 local bankruptcy = require("src.rules.endgame.bankruptcy")
 
@@ -570,6 +585,7 @@ return {
     { name = "post_effects_target_item_ids_returns_ordered_list", run = _test_post_effects_target_item_ids_returns_ordered_list },
     { name = "post_effects_get_target_spec_returns_spec", run = _test_post_effects_get_target_spec_returns_spec },
     { name = "post_effects_share_wealth_queues_cash_anim_for_both_players", run = _test_post_effects_share_wealth_queues_cash_anim_for_both_players },
+    { name = "post_effects_share_wealth_item_target_path_keeps_item_target_anim_only", run = _test_post_effects_share_wealth_item_target_path_keeps_item_target_anim_only },
     -- T8 characterization tests for 0% coverage hotspots
     { name = "chance_handler_discard_properties_removes_properties", run = _test_chance_handler_discard_properties_removes_properties },
     { name = "bankruptcy_eliminate_calls_life_die", run = _test_bankruptcy_eliminate_calls_life_die },

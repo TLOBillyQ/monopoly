@@ -3,8 +3,10 @@ local turn_role_control_policy = require("src.turn.policies.role_control_policy"
 local auto_context = require("src.turn.policies.auto_context")
 local tick_steps = require("src.turn.loop.tick_steps")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local tick_flow = {}
+local wait_keys = wait_callbacks.wait_keys
 
 function tick_flow.tick(game, state, dt, ports, deps)
   assert(type(deps) == "table", "missing deps")
@@ -14,7 +16,7 @@ function tick_flow.tick(game, state, dt, ports, deps)
 
   if game.turn
       and game.turn.phase == "wait_landing_visual"
-      and game.turn.landing_visual_wait_ready == true
+      and wait_callbacks.is_wait_ready(game, wait_keys.landing_visual)
       and game.advance_turn then
     game:advance_turn()
   end

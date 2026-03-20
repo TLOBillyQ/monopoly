@@ -75,20 +75,18 @@ function event_handlers.install(_, logger, state)
     return nil
   end
 
-  local function _dispatch_or_defer(event_name, data, handler)
+  local function _dispatch_or_defer(data, handler)
     local current_state = context.state
-    if current_state then
-      landing_visual_hold.sync_state_from_game(current_state, current_state.game)
-    end
-    if current_state
-        and landing_visual_hold.is_active_state(current_state)
-        and not landing_visual_hold.is_flushing_state(current_state) then
-      landing_visual_hold.defer_runtime_event(current_state, event_name, data, function(payload)
-        handler(payload)
-      end)
+    if current_state == nil then
+      handler(data)
       return
     end
-    handler(data)
+    local deferred = landing_visual_hold.run_or_defer(current_state, current_state.game, "runtime_event", function()
+      handler(data)
+    end)
+    if deferred == true then
+      return
+    end
   end
 
   local function _register_handler(event_name, handler)
@@ -99,7 +97,7 @@ function event_handlers.install(_, logger, state)
     end
     list[#list + 1] = handler
     host_runtime_ports.register_custom_event(event_name, function(_, _, data)
-      _dispatch_or_defer(event_name, data, handler)
+      _dispatch_or_defer(data, handler)
     end)
   end
 

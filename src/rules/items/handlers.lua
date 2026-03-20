@@ -34,7 +34,16 @@ local function _queue_target_player_anim(game, user, item_id, target)
   })
 end
 
+local function _mark_share_wealth_item_target_context(context)
+  context.share_wealth_cash_receive_mode = "item_target_player_only"
+  context.suppress_cash_receive_anim = true
+end
+
 local function _apply_target_player_item(game, user, item_id, target, context)
+  context = context or {}
+  if item_id == item_ids.share_wealth then
+    _mark_share_wealth_item_target_context(context)
+  end
   local apply_res = effects.apply_target(game, user, item_id, target, context)
   local ok = _resolve_apply_ok(apply_res)
   if not ok then

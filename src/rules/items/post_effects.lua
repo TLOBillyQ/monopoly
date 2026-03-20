@@ -21,15 +21,31 @@ local target_item_order = {
   item_ids.poor,
 }
 
+local function _should_emit_share_wealth_cash_receive(context)
+  local mode = context and context.share_wealth_cash_receive_mode or nil
+  if mode == "item_target_player_only" then
+    return false
+  end
+  return not (context and context.suppress_cash_receive_anim == true)
+end
+
 local target_effects = {
   [item_ids.share_wealth] = {
-    apply = function(game, user, target, _context)
+    apply = function(game, user, target, context)
       local user_cash = game:player_balance(user, "金币")
       local target_cash = game:player_balance(target, "金币")
       local total = user_cash + target_cash
       local half = math.floor(total / 2)
-      game:add_player_cash(user, half - user_cash)
-      game:add_player_cash(target, (total - half) - target_cash)
+      local user_delta = half - user_cash
+      local target_delta = (total - half) - target_cash
+      local should_emit_cash_receive = _should_emit_share_wealth_cash_receive(context)
+      if should_emit_cash_receive and type(game.add_player_cash) == "function" then
+        game:add_player_cash(user, user_delta)
+        game:add_player_cash(target, target_delta)
+      else
+        game:set_player_cash(user, half)
+        game:set_player_cash(target, total - half)
+      end
       logger.event(user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
       return true
     end,

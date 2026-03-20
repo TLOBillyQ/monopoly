@@ -12,6 +12,7 @@ local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local market_purchase = require("src.rules.market.purchase.core")
 local runtime_state = require("src.state.state_access.runtime_state")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local wait_callbacks = require("src.turn.waits.callback_registry")
 local gameplay_loop = {}
 
 local function _ensure_fallback_ports(game)
@@ -216,6 +217,7 @@ function gameplay_loop.set_game(state, game)
   assert(game ~= nil, "missing game")
   runtime_state.ensure_all(state)
   landing_visual_hold.reset_state(state)
+  wait_callbacks.reset_runtime(game)
   game.landing_visual_hold_state = state
   local ports = _initialize_ports(state, game)
   _configure_environment(state, game, ports)

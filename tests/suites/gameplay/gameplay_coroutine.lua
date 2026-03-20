@@ -1,6 +1,7 @@
 local support = require("support.gameplay_support")
 local turn_engine = require("src.turn.loop.scheduler_runtime")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local wait_callbacks = require("src.turn.waits.callback_registry")
 local await = require("src.turn.waits.await")
 local logger = require("src.core.utils.logger")
 
@@ -191,7 +192,7 @@ local function _test_coroutine_mode_resolves_wait_landing_visual()
 
   g:advance_turn()
   assert(g.turn.phase == "wait_landing_visual", "should enter wait_landing_visual")
-  assert(g.turn.landing_visual_wait_ready == true, "wait_landing_visual should arm release callback")
+  assert(wait_callbacks.is_wait_ready(g, "landing_visual") == true, "wait_landing_visual should arm release callback")
 
   g:advance_turn()
   assert(g.turn.phase ~= "wait_landing_visual", "second advance should leave wait_landing_visual")
@@ -390,8 +391,8 @@ local function _test_await_landing_visual_marks_release_pending_after_wait()
 
   local first = await.landing_visual(session, { next_state = "done", next_args = { ok = true } })
   assert(first and first.wait == true, "landing visual should wait on first entry")
-  assert(g.turn.landing_visual_wait_started == true, "landing visual should arm wait state")
-  assert(g.turn.landing_visual_wait_ready == true, "landing visual test scheduler should mark wait ready")
+  assert(wait_callbacks.pending_wait_seq(g, "landing_visual") ~= nil, "landing visual should arm wait state")
+  assert(wait_callbacks.is_wait_ready(g, "landing_visual") == true, "landing visual test scheduler should mark wait ready")
 
   local second = await.landing_visual(session, { next_state = "done", next_args = { ok = true } })
   assert(second and second.next_state == "done", "landing visual should resume after timer fires")

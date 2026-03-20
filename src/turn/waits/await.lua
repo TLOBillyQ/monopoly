@@ -6,8 +6,11 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 local auto_play_port = require("src.rules.ports.auto_play_port")
 local logger = require("src.core.utils.logger")
+local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local await = {}
+local callback_keys = wait_callbacks.callback_keys
+local wait_keys = wait_callbacks.wait_keys
 local _resolve_after_action_anim_state
 local _build_move_anim_wait_details
 local _resolve_choice_action
@@ -295,40 +298,57 @@ function await.action_anim(session, args)
   if not _is_matching_done_action(action, anim, "action_anim_done") then
     return { wait = true }
   end
-  return _complete_action_anim(session, args, game)
+  local completed = _complete_action_anim(session, args, game)
+  local continuation = wait_callbacks.take(game, callback_keys.after_action_anim)
+  if continuation == nil then
+    return completed
+  end
+  local next_state, next_args = continuation()
+  return {
+    next_state = next_state,
+    next_args = next_args,
+  }
 end
 
 function await.landing_visual(session, args)
   assert(session ~= nil and session.game ~= nil, "missing await session")
   local game = session.game
   session:mark_phase("wait_landing_visual")
-  local turn = assert(game.turn, "missing game.turn")
+  assert(game.turn ~= nil, "missing game.turn")
 
-  if turn.landing_visual_wait_started ~= true then
-    local seq = (turn.landing_visual_wait_seq or 0) + 1
-    turn.landing_visual_wait_seq = seq
-    turn.landing_visual_wait_started = true
-    turn.landing_visual_wait_ready = false
+  if wait_callbacks.peek(game, callback_keys.after_landing_visual) == nil then
+    wait_callbacks.register(game, callback_keys.after_landing_visual, function()
+      return _next(args)
+    end)
+  end
+
+  local pending_seq = wait_callbacks.pending_wait_seq(game, wait_keys.landing_visual)
+  if pending_seq == nil then
+    local seq = wait_callbacks.begin_wait(game, wait_keys.landing_visual)
     _mark_dirty(game)
     local delay = gameplay_rules.landing_visual_hold_seconds or 0
     runtime_ports.schedule(delay, function()
-      if game and game.turn and game.turn.landing_visual_wait_seq == seq then
-        game.turn.landing_visual_wait_ready = true
+      if wait_callbacks.pending_wait_seq(game, wait_keys.landing_visual) == seq then
+        wait_callbacks.mark_wait_ready(game, wait_keys.landing_visual, seq)
         _mark_dirty(game)
       end
     end)
     return { wait = true }
   end
 
-  if turn.landing_visual_wait_ready ~= true then
+  if not wait_callbacks.is_wait_ready(game, wait_keys.landing_visual) then
     return { wait = true }
   end
 
-  turn.landing_visual_wait_started = false
-  turn.landing_visual_wait_ready = false
-  turn.landing_visual_wait_seq = nil
+  wait_callbacks.finish_wait(game, wait_keys.landing_visual, pending_seq)
   landing_visual_hold.mark_release_pending(game)
-  local next_state, next_args = _next(args)
+  local continuation = wait_callbacks.take(game, callback_keys.after_landing_visual)
+  local next_state, next_args
+  if continuation ~= nil then
+    next_state, next_args = continuation()
+  else
+    next_state, next_args = _next(args)
+  end
   return {
     next_state = next_state,
     next_args = next_args,

@@ -40,6 +40,10 @@ function landing_visual_hold.sync_state_from_game(state, game)
   return _landing_visual_hold().sync_state_from_game(state, game)
 end
 
+function landing_visual_hold.should_defer(state, game)
+  return _landing_visual_hold().should_defer(state, game)
+end
+
 function landing_visual_hold.capture_frozen_ui_model(state)
   return _landing_visual_hold().capture_frozen_ui_model(state)
 end
@@ -50,6 +54,14 @@ end
 
 function landing_visual_hold.defer_dirty(state, dirty)
   return _landing_visual_hold().defer_dirty(state, dirty)
+end
+
+function landing_visual_hold.register_release_callback(state, key, fn, opts)
+  return _landing_visual_hold().register_release_callback(state, key, fn, opts)
+end
+
+function landing_visual_hold.run_or_defer(state, game, key, fn, opts)
+  return _landing_visual_hold().run_or_defer(state, game, key, fn, opts)
 end
 
 function landing_visual_hold.defer_popup(state, payload, opts, replay)

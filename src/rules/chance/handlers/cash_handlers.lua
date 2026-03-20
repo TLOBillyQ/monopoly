@@ -131,6 +131,18 @@ function cash_handlers.register(handlers, common)
           end
           common.apply_cash_change(game, other, -fee)
           common.apply_cash_change(game, player, fee)
+          if fee > 0 then
+            if type(game.add_player_cash) == "function" then
+              -- Real game cash APIs already enqueue per-change animation cues.
+            else
+              -- Stub games skip add_player_cash, so explicitly queue receive anim here.
+              common.queue_action_anim(game, {
+                kind = "cash_receive",
+                player_id = player.id,
+                amount = fee,
+              })
+            end
+          end
         end
       end
     end

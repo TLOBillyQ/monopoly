@@ -7,6 +7,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local runtime_context = require("src.host.eggy.context")
 local default_ports = require("src.host.eggy.default_ports")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local function _test_number_utils_to_integer()
   _assert_eq(number_utils.to_integer("12"), 12, "string integer should parse")
@@ -805,6 +806,11 @@ local function _test_landing_visual_hold_release_flushes_event_buffer_and_replay
     replayed_popups[#replayed_popups + 1] = { payload = payload, opts = opts }
   end)
 
+  _assert_eq(#hold.release_callbacks, 3, "release should register all deferred callbacks")
+  _assert_eq(hold.release_callbacks[1].key, "board_visual_sync", "visual sync should register first")
+  _assert_eq(hold.release_callbacks[2].key, "runtime_event", "runtime event should register second")
+  _assert_eq(hold.release_callbacks[3].key, "popup", "popup should register third")
+
   local released = landing_visual_hold.release(state, game)
 
   _assert_eq(released, true, "release should return true when release was pending")
@@ -819,6 +825,60 @@ local function _test_landing_visual_hold_release_flushes_event_buffer_and_replay
   assert(string.find(text, "deferred event during hold", 1, true) ~= nil, "release should flush event buffer")
 
   logger.clear()
+end
+
+local function _test_callback_registry_wait_lifecycle()
+  local game = {}
+  local wait_key = wait_callbacks.wait_keys.landing_visual
+
+  local seq = wait_callbacks.begin_wait(game, wait_key)
+  _assert_eq(wait_callbacks.pending_wait_seq(game, wait_key), seq, "begin_wait should store pending seq")
+  _assert_eq(wait_callbacks.is_wait_ready(game, wait_key), false, "new wait should not be ready")
+  _assert_eq(wait_callbacks.mark_wait_ready(game, wait_key, seq), true, "mark_wait_ready should accept matching seq")
+  _assert_eq(wait_callbacks.is_wait_ready(game, wait_key), true, "ready wait should report ready")
+  _assert_eq(wait_callbacks.finish_wait(game, wait_key, seq), true, "finish_wait should clear matching wait")
+  _assert_eq(wait_callbacks.pending_wait_seq(game, wait_key), nil, "finish_wait should clear pending seq")
+  _assert_eq(wait_callbacks.is_wait_ready(game, wait_key), false, "finished wait should no longer be ready")
+end
+
+local function _test_landing_visual_hold_release_orders_wrappers_by_priority()
+  local state = {}
+  local game = {
+    dirty = {},
+    turn = {
+      landing_visual_hold_active = false,
+      landing_visual_release_pending = false,
+    },
+  }
+  local calls = {}
+
+  landing_visual_hold.start(game)
+  landing_visual_hold.mark_release_pending(game)
+  local hold = landing_visual_hold.sync_state_from_game(state, game)
+
+  landing_visual_hold.defer_popup(state, { name = "popup" }, nil, function(payload)
+    calls[#calls + 1] = payload.name
+  end)
+  landing_visual_hold.defer_bankruptcy_clear(state, game, { id = 1 }, { 2 }, function(_, player)
+    calls[#calls + 1] = "bankruptcy_" .. tostring(player.id)
+  end)
+  landing_visual_hold.defer_owner_change(state, 7, 8, function(tile_id, owner_id)
+    calls[#calls + 1] = "owner_" .. tostring(tile_id) .. "_" .. tostring(owner_id)
+  end)
+  landing_visual_hold.defer_tile_update(state, 5, 6, function(tile_id, level)
+    calls[#calls + 1] = "tile_" .. tostring(tile_id) .. "_" .. tostring(level)
+  end)
+  landing_visual_hold.defer_runtime_event(state, "evt", { name = "runtime" }, function(payload)
+    calls[#calls + 1] = payload.name
+  end)
+  landing_visual_hold.defer_board_visual_sync(state, { name = "board" }, function(payload)
+    calls[#calls + 1] = payload.name
+  end)
+
+  _assert_eq(#hold.release_callbacks, 6, "all wrapper helpers should register release callbacks")
+  _assert_eq(landing_visual_hold.release(state, game), true, "release should flush deferred callbacks")
+  _assert_eq(table.concat(calls, ","), "board,runtime,tile_5_6,owner_7_8,bankruptcy_1,popup",
+    "release should replay wrapper callbacks in configured priority order")
 end
 
 local function _test_landing_visual_hold_release_skips_when_not_pending()
@@ -1103,6 +1163,8 @@ return {
     { name = "runtime_context_first_role_from_game_api_nil_game_api", run = _test_runtime_context_first_role_from_game_api_nil_game_api },
     { name = "runtime_context_first_role_from_game_api_pcall_failure", run = _test_runtime_context_first_role_from_game_api_pcall_failure },
     { name = "landing_visual_hold_release_flushes_event_buffer_and_replays_deferred", run = _test_landing_visual_hold_release_flushes_event_buffer_and_replays_deferred },
+    { name = "callback_registry_wait_lifecycle", run = _test_callback_registry_wait_lifecycle },
+    { name = "landing_visual_hold_release_orders_wrappers_by_priority", run = _test_landing_visual_hold_release_orders_wrappers_by_priority },
     { name = "landing_visual_hold_release_skips_when_not_pending", run = _test_landing_visual_hold_release_skips_when_not_pending },
     { name = "eggy_paid_gateway_callback_missing_goods_id", run = _test_eggy_paid_gateway_callback_missing_goods_id },
     { name = "eggy_paid_gateway_callback_empty_goods_id", run = _test_eggy_paid_gateway_callback_empty_goods_id },

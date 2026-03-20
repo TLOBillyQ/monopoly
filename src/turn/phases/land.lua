@@ -2,8 +2,10 @@ local landing_defs = require("src.rules.land.specs.effects")
 local effect_pipeline = require("src.rules.effects.effect_pipeline")
 local effect_runner = require("src.rules.effects.effect_runner")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local max_landing_depth = 10
+local callback_keys = wait_callbacks.callback_keys
 local _resolve_landing
 
 local function _has_action_anim(game)
@@ -68,51 +70,101 @@ local function _wait_for_move_followup(game, target_player, out)
   }
 end
 
+local function _register_action_anim_resume(game, next_state, next_args, callback)
+  wait_callbacks.register(game, callback_keys.after_action_anim, callback)
+  if next_state == "move_followup" then
+    game.turn.move_followup_pending = true
+  end
+  return "wait_action_anim", {
+    next_state = next_state,
+    next_args = next_args,
+  }
+end
+
+local function _register_landing_visual_resume(game, next_state, next_args, callback)
+  wait_callbacks.register(game, callback_keys.after_landing_visual, callback)
+  return "wait_landing_visual", {
+    next_state = next_state,
+    next_args = next_args,
+  }
+end
+
+local function _resume_wait_choice(next_state, next_args)
+  return "wait_choice", {
+    next_state = next_state,
+    next_args = next_args,
+  }
+end
+
+local function _wait_for_choice_via_action_anim(game, next_state, next_args)
+  return _register_action_anim_resume(game, "wait_choice", {
+    next_state = next_state,
+    next_args = next_args,
+  }, function()
+    return _resume_wait_choice(next_state, next_args)
+  end)
+end
+
+local function _wait_for_choice_via_landing_visual(game, next_state, next_args)
+  return _register_landing_visual_resume(game, "wait_choice", {
+    next_state = next_state,
+    next_args = next_args,
+  }, function()
+    return _resume_wait_choice(next_state, next_args)
+  end)
+end
+
+local function _wait_for_choice_via_landing_visual_then_action_anim(game, next_state, next_args)
+  local action_anim_state, action_anim_args = _wait_for_choice_via_action_anim(game, next_state, next_args)
+  return _register_landing_visual_resume(game, action_anim_state, action_anim_args, function()
+    return _wait_for_choice_via_action_anim(game, next_state, next_args)
+  end)
+end
+
 local function _resolve_wait_state(game, next_state, next_args, wait_action_anim)
+  local wait_choice_args = {
+    next_state = next_state,
+    next_args = next_args,
+  }
+
   if wait_action_anim == true then
     if _has_action_anim(game) then
-      game.turn.move_followup_pending = next_state == "move_followup"
-      return "wait_action_anim", {
-        next_state = next_state,
-        next_args = next_args,
-      }
+      return _register_action_anim_resume(game, next_state, next_args, function()
+        return next_state, next_args
+      end)
     end
     return next_state, next_args
   end
   if _has_action_anim(game) then
-    return "wait_action_anim", {
-      next_state = "wait_choice",
-      next_args = { next_state = next_state, next_args = next_args },
-    }
+    if landing_visual_hold.is_active_game(game) then
+      return _wait_for_choice_via_landing_visual_then_action_anim(game, next_state, next_args)
+    end
+    return _wait_for_choice_via_action_anim(game, next_state, next_args)
   end
   if landing_visual_hold.is_active_game(game) then
-    return "wait_landing_visual", {
-      next_state = "wait_choice",
-      next_args = { next_state = next_state, next_args = next_args },
-    }
+    return _wait_for_choice_via_landing_visual(game, next_state, next_args)
   end
-  return "wait_choice", { next_state = next_state, next_args = next_args }
+  return "wait_choice", wait_choice_args
 end
 
 local function _resolve_finished_landing_state(game, player)
+  local function _resume_post_action()
+    return "post_action", { player = player }
+  end
+
   if _has_action_anim(game) then
-    local next_args = {
-      next_state = "post_action",
-      next_args = { player = player },
-    }
     if landing_visual_hold.is_active_game(game) then
-      return "wait_landing_visual", {
-        next_state = "wait_action_anim",
-        next_args = next_args,
-      }
+      return _register_landing_visual_resume(game, "wait_action_anim", {
+        next_state = "post_action",
+        next_args = { player = player },
+      }, function()
+        return _register_action_anim_resume(game, "post_action", { player = player }, _resume_post_action)
+      end)
     end
-    return "wait_action_anim", next_args
+    return _register_action_anim_resume(game, "post_action", { player = player }, _resume_post_action)
   end
   if landing_visual_hold.is_active_game(game) then
-    return "wait_landing_visual", {
-      next_state = "post_action",
-      next_args = { player = player },
-    }
+    return _register_landing_visual_resume(game, "post_action", { player = player }, _resume_post_action)
   end
   return "post_action", { player = player }
 end

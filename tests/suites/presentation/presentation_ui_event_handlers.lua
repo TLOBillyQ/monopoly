@@ -432,15 +432,13 @@ local function _test_turn_started_feedback_defers_during_landing_hold()
   local handlers = {}
   local calls = {}
   local state = {
-    game = {
-      turn = {
-        landing_visual_hold_active = true,
-        landing_visual_release_pending = false,
-        landing_visual_wait_started = false,
-        landing_visual_wait_ready = false,
-      },
-      dirty = {
-        any = false,
+      game = {
+        turn = {
+          landing_visual_hold_active = true,
+          landing_visual_release_pending = false,
+        },
+        dirty = {
+          any = false,
         turn = false,
       },
     },
@@ -471,8 +469,9 @@ local function _test_turn_started_feedback_defers_during_landing_hold()
     handler(nil, nil, { player_id = 5 })
     assert(#calls == 0, "landing hold should defer turn_started cue")
 
-    local hold = state.turn_runtime and state.turn_runtime.landing_visual_hold or nil
-    assert(hold and #hold.deferred_runtime_events == 1, "landing hold should queue deferred runtime event")
+      local hold = state.turn_runtime and state.turn_runtime.landing_visual_hold or nil
+      assert(hold and #hold.release_callbacks == 1, "landing hold should queue deferred runtime event")
+      assert(hold.release_callbacks[1].key == "runtime_event", "landing hold should register runtime_event callback")
 
     state.game.turn.landing_visual_release_pending = true
     landing_visual_hold.release(state, state.game)

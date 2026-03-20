@@ -3,6 +3,10 @@ local landing_visual_hold = require("src.state.state_access.landing_visual_hold"
 
 local runtime = {}
 
+local function _run_or_defer(state, game, key, fn)
+  return landing_visual_hold.run_or_defer(state, game, key, fn)
+end
+
 function runtime.is_phase_input_blocked(phase)
   return phase == "wait_move_anim"
     or phase == "wait_action_anim"
@@ -70,19 +74,13 @@ function runtime.build_popup_port(state)
 
   local port = {}
   port.push_popup = function(_, payload, opts)
-    if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
-      landing_visual_hold.defer_popup(state, payload, opts, function(inner_payload, inner_opts)
-        if type(state.push_popup) == "function" then
-          return state:push_popup(inner_payload, inner_opts)
-        end
-        return false
-      end)
-      return true
-    end
-    if type(state.push_popup) == "function" then
-      return state:push_popup(payload, opts)
-    end
-    return false
+    local game = state.game
+    return _run_or_defer(state, game, "popup", function()
+      if type(state.push_popup) == "function" then
+        return state:push_popup(payload, opts)
+      end
+      return false
+    end)
   end
 
   state._popup_port = port
@@ -131,19 +129,12 @@ function runtime.build_board_visual_feedback_port(state)
     if current_game ~= nil then
       state.game = current_game
     end
-    if landing_visual_hold.is_active_state(state) and not landing_visual_hold.is_flushing_state(state) then
-      landing_visual_hold.defer_board_visual_sync(state, payload, function(inner_payload)
-        if type(state.on_board_visual_sync) == "function" then
-          return state:on_board_visual_sync(inner_payload) == true
-        end
-        return false
-      end)
-      return true
-    end
-    if type(state.on_board_visual_sync) == "function" then
-      return state:on_board_visual_sync(payload) == true
-    end
-    return false
+    return _run_or_defer(state, current_game, "board_visual_sync", function()
+      if type(state.on_board_visual_sync) == "function" then
+        return state:on_board_visual_sync(payload) == true
+      end
+      return false
+    end)
   end
 
   state._board_visual_feedback_port = port

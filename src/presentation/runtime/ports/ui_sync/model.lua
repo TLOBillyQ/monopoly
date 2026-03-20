@@ -14,7 +14,7 @@ local function _mark_ui_dirty_from_runtime(state, dirty)
 end
 
 local function _defer_refresh_for_landing_hold(state, dirty)
-  if not landing_visual_hold.is_active_state(state) then
+  if not landing_visual_hold.should_defer(state) then
     return false
   end
   landing_visual_hold.freeze_active_ui(state)
