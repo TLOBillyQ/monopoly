@@ -144,11 +144,7 @@ function event_handlers.install(_, logger, state)
   end
 
   _register_handler(monopoly_event.movement.roadblock_hit, function(data)
-    local idx = _resolve_tile_index(data)
-    local ctx = context.state
-    if ok and action_anim and idx and ctx then
-      action_anim.clear_overlay(ctx, "roadblock", idx)
-    end
+    local _ = data
   end)
 
   _register_handler(monopoly_event.land.mine_hit, function(data)

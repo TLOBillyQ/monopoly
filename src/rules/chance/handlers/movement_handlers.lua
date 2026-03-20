@@ -31,7 +31,7 @@ function movement_handlers.register(handlers, common)
       move_dir_mode = "forced_move",
     })
     if teleport_tile_types[tile.type] == true then
-      common.queue_teleport_effect(game, player, from_index, idx)
+      common.queue_forced_relocation(game, player, from_index, idx)
     else
       common.queue_move_effect(game, player, from_index, idx, nil)
     end

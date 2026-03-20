@@ -5,6 +5,7 @@ local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local facing_policy = require("src.rules.board.facing_policy")
 local mine_effect = require("src.rules.effects.mine_effect")
+local action_anim_port = require("src.core.ports.action_anim_port")
 
 local movement = {}
 local item_ids = gameplay_rules.item_ids
@@ -23,6 +24,12 @@ local function _check_roadblock(game, board, current, player)
     return false
   end
   game:clear_roadblock(current)
+  action_anim_port.queue(game, {
+    kind = "roadblock_trigger",
+    player_id = player.id,
+    tile_index = current,
+    duration = gameplay_rules.action_anim_default_seconds or 1.0,
+  })
   _emit_event(monopoly_event.movement.roadblock_hit, {
     player = player,
     tile = board:get_tile(current),

@@ -29,6 +29,15 @@ local function _should_emit_share_wealth_cash_receive(context)
   return not (context and context.suppress_cash_receive_anim == true)
 end
 
+local function _build_exile_log_entry(user, target)
+  return user.name
+    .. " 使用流放卡，将 "
+    .. target.name
+    .. " 送往深山，停留 "
+    .. number_utils.format_integer_part(constants.mountain_stay_turns)
+    .. " 回合"
+end
+
 local target_effects = {
   [item_ids.share_wealth] = {
     apply = function(game, user, target, context)
@@ -55,6 +64,7 @@ local target_effects = {
       local idx = game.board:find_first_by_type("mountain")
       local from_index = target.position
       local queued = false
+      local log_entry = _build_exile_log_entry(user, target)
       if idx then
         idx = game:player_relocate(target, {
           destination_index = idx,
@@ -68,14 +78,6 @@ local target_effects = {
           duration = action_anim_duration,
         })
       end
-      logger.event(
-        user.name
-          .. " 使用流放卡，将 "
-          .. target.name
-          .. " 送往深山，停留 "
-          .. number_utils.format_integer_part(constants.mountain_stay_turns)
-          .. " 回合"
-      )
       if queued then
         return {
           ok = true,
@@ -84,6 +86,7 @@ local target_effects = {
             next_state = "move_followup",
             next_args = {
               mode = "apply_location_effects",
+              log_entries = { log_entry },
               effects = {
                 { player_id = target.id, effect = "mountain" },
               },
@@ -91,6 +94,7 @@ local target_effects = {
           },
         }
       end
+      logger.event(log_entry)
       game:player_apply_mountain_effects(target)
       return true
     end,

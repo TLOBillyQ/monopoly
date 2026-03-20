@@ -314,10 +314,9 @@ local function _test_negative_chance_routes_generic_negative_cue()
   assert(calls[1].player_id == 4, "negative chance should target payload player id")
 end
 
-local function _test_roadblock_hit_resolves_tile_index_from_tile_id()
+local function _test_roadblock_hit_no_longer_drives_visual_feedback()
   local handlers = {}
-  local cleared = {}
-  local action_anim = require("src.ui.render.action_anim")
+  local cleared = 0
 
   _with_patches({
     {
@@ -329,13 +328,10 @@ local function _test_roadblock_hit_resolves_tile_index_from_tile_id()
       end,
     },
     {
-      target = action_anim,
+      target = require("src.ui.render.action_anim"),
       key = "clear_overlay",
-      value = function(_, overlay_kind, tile_index)
-        cleared[#cleared + 1] = {
-          overlay_kind = overlay_kind,
-          tile_index = tile_index,
-        }
+      value = function()
+        cleared = cleared + 1
       end,
     },
   }, function()
@@ -357,9 +353,7 @@ local function _test_roadblock_hit_resolves_tile_index_from_tile_id()
     handler(nil, nil, { tile_id = 12 })
   end)
 
-  assert(#cleared == 1, "roadblock_hit should clear one overlay when tile_id resolves")
-  assert(cleared[1].overlay_kind == "roadblock", "roadblock_hit should clear roadblock overlay")
-  assert(cleared[1].tile_index == 7, "roadblock_hit should resolve tile index via board.index_of_tile_id")
+  assert(cleared == 0, "roadblock_hit should no longer clear overlay directly")
 end
 
 local function _test_mine_hit_no_longer_drives_visual_feedback()
@@ -536,8 +530,8 @@ return {
       run = _test_market_buy_failed_without_popup_body_uses_fallback_tip,
     },
     {
-      name = "roadblock_hit_resolves_tile_index_from_tile_id",
-      run = _test_roadblock_hit_resolves_tile_index_from_tile_id,
+      name = "roadblock_hit_no_longer_drives_visual_feedback",
+      run = _test_roadblock_hit_no_longer_drives_visual_feedback,
     },
     {
       name = "mine_hit_no_longer_drives_visual_feedback",

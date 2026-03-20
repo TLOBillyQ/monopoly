@@ -105,6 +105,11 @@ local function _test_missile_card()
   _assert_eq(g.board:has_mine(idx), false, "mine cleared")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "missile", "missile should queue missile action anim")
   assert(type(res.after_action_anim) == "table", "missile should expose move followup")
+  _assert_eq(
+    res.after_action_anim.next_args.log_entries[1],
+    p.name .. " 发射导弹轰炸 " .. tile_ref.name .. "，建筑被摧毁，1 名玩家送医",
+    "missile should defer main strike log until move followup"
+  )
   _assert_eq(g.players[2].status.stay_turns or 0, 0, "missile should defer hospital stay until move followup")
 
   local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
@@ -249,6 +254,11 @@ local function _test_exile_item_defers_mountain_effect_until_move_followup()
   assert(type(res.after_action_anim) == "table", "exile should expose move followup continuation")
   _assert_eq(target.status.stay_turns or 0, 0, "exile should not apply mountain stay immediately")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "teleport_effect", "exile should queue teleport effect first")
+  _assert_eq(
+    res.after_action_anim.next_args.log_entries[1],
+    user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山，停留 2 回合",
+    "exile should defer main log entry until move followup"
+  )
 
   local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
   _assert_eq(next_state, nil, "exile move followup should return to caller continuation")
@@ -482,9 +492,8 @@ local function _test_collect_from_others_caps_fee_and_rich_bonus()
   _assert_eq(game.players[1].cash, 1250, "collector should receive doubled fee from each payer up to their cash")
   _assert_eq(game.players[2].cash, 0, "payer cash should floor at zero")
   _assert_eq(game.players[3].cash, 100, "second payer should still contribute when collector is not in mountain")
-  _assert_eq(#anims, 2, "cash receive animation should queue once per successful collection")
-  _assert_eq(anims[1].amount, 50, "first receive animation should use capped collected amount")
-  _assert_eq(anims[2].amount, 200, "second receive animation should include rich bonus amount")
+  _assert_eq(#anims, 1, "cash receive animation should collapse into one summary collection anim")
+  _assert_eq(anims[1].amount, 250, "summary receive animation should use the total collected amount")
   _assert_eq(#events, 1, "collect_from_others should emit one summary event")
 end
 

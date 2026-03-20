@@ -23,8 +23,8 @@ function common.abs_value(value)
   return value
 end
 
-function common.apply_cash_change(game, player, delta)
-  game:add_player_cash(player, delta)
+function common.apply_cash_change(game, player, delta, opts)
+  game:add_player_cash(player, delta, opts)
 end
 
 function common.adjust_chance_delta(game, player, delta)
@@ -77,6 +77,10 @@ end
 
 function common.queue_teleport_effect(game, player, from_index, to_index)
   return _queue_relocation_anim(game, "teleport_effect", player, from_index, to_index, nil)
+end
+
+function common.queue_forced_relocation(game, player, from_index, to_index)
+  return _queue_relocation_anim(game, "forced_relocation", player, from_index, to_index, nil)
 end
 
 function common.move_steps(game, player, steps, opts)

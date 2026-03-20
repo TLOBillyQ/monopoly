@@ -255,6 +255,8 @@ local function _test_missile_startup_profile_defers_hospital_followup_until_afte
   assert(g.board:has_mine(target_index) == false, "missile staging should clear mine before followup")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "missile", "missile staging should queue missile anim")
   assert(type(choice_result.after_action_anim) == "table", "missile staging should expose move followup continuation")
+  assert(choice_result.after_action_anim.next_args.log_entries[1] == player.name .. " 发射导弹轰炸 " .. target_tile.name .. "，建筑被摧毁，1 名玩家送医",
+    "missile staging should defer strike log into move followup")
   assert((g.players[2].status.stay_turns or 0) == 0, "missile staging should defer hospital stay before followup")
 
   state.gameplay_loop_ports = _build_test_ports({

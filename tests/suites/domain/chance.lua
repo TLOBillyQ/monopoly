@@ -110,7 +110,7 @@ local function _test_chance_forced_move_queues_move_effect_anim()
   local idx = g.board:index_of_tile_id(dest)
   assert(out and out.kind == "need_landing", "forced_move destination tile should return need_landing")
   _assert_eq(out.board_index, idx, "forced_move board_index should match destination")
-  assert(g.turn.action_anim and g.turn.action_anim.kind == "teleport_effect", "forced_move should queue teleport_effect anim")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "forced_relocation", "forced_move should queue forced relocation anim")
   _assert_eq(g.turn.action_anim.to_index, idx, "forced_move anim to_index should match destination")
   _assert_eq(p.status.move_dir, "left", "forced_move destination tile should preserve move_dir")
 end
@@ -130,7 +130,7 @@ local function _test_chance_forced_move_to_market_sets_default_forward_heading()
 
   assert(out and out.kind == "need_landing", "forced_move market should return need_landing")
   _assert_eq(out.board_index, market_idx, "forced_move market should land on market tile")
-  _assert_eq(g.turn.action_anim.kind, "teleport_effect", "forced_move market should queue teleport anim kind")
+  _assert_eq(g.turn.action_anim.kind, "forced_relocation", "forced_move market should queue forced relocation anim kind")
   _assert_eq(p.status.move_dir, "right", "forced_move market should default to counterclockwise heading")
 end
 
@@ -149,7 +149,7 @@ local function _test_chance_forced_move_to_hospital_clears_move_dir()
 
   assert(out and out.kind == "need_landing", "forced_move hospital should continue into landing flow")
   _assert_eq(out.board_index, hospital_idx, "forced_move hospital should land on hospital tile")
-  _assert_eq(g.turn.action_anim.kind, "teleport_effect", "forced_move hospital should queue teleport anim kind")
+  _assert_eq(g.turn.action_anim.kind, "forced_relocation", "forced_move hospital should queue forced relocation anim kind")
   _assert_eq(p.status.move_dir, nil, "forced_move hospital should clear move_dir")
 end
 
@@ -539,7 +539,7 @@ local function _test_context_entry_name_returns_name()
   end
 end
 
-local function _test_chance_handler_collect_from_others_queues_one_anim_per_cash_change()
+local function _test_chance_handler_collect_from_others_queues_batched_actor_anim()
   local g = _new_game()
   local handlers = chance_handlers.build()
   local p = g:current_player()
@@ -551,7 +551,8 @@ local function _test_chance_handler_collect_from_others_queues_one_anim_per_cash
   handlers.collect_from_others(g, p, { effect = "collect_from_others", amount = 100, target = "self" })
 
   assert(g.turn.action_anim and g.turn.action_anim.kind == "cash_receive", "collect_from_others should queue cash_receive anim")
-  _assert_eq(_action_anim_count(g), (#g.players - 1) * 2, "collect_from_others should queue one anim per cash change")
+  _assert_eq(_action_anim_count(g), 1, "collect_from_others should collapse into one summary anim")
+  _assert_eq(g.turn.action_anim.amount, (#g.players - 1) * 100, "collect_from_others summary anim should use total collected amount")
 end
 
 return {
@@ -579,8 +580,8 @@ return {
     { name = "chance_handler_discard_items_removes_items", run = _test_chance_handler_discard_items_removes_items },
     { name = "chance_handler_move_forward_moves_player", run = _test_chance_handler_move_forward_moves_player },
     {
-      name = "chance_handler_collect_from_others_queues_one_anim_per_cash_change",
-      run = _test_chance_handler_collect_from_others_queues_one_anim_per_cash_change,
+      name = "chance_handler_collect_from_others_queues_batched_actor_anim",
+      run = _test_chance_handler_collect_from_others_queues_batched_actor_anim,
     },
     -- T4 characterization tests for post_effects
     { name = "post_effects_apply_sets_status", run = _test_post_effects_apply_sets_status },

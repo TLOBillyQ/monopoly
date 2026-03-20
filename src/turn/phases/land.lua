@@ -20,7 +20,7 @@ local function _has_action_anim(game)
 end
 
 local function _is_relocation_action_anim(entry)
-  return entry and (entry.kind == "move_effect" or entry.kind == "teleport_effect")
+  return entry and (entry.kind == "move_effect" or entry.kind == "teleport_effect" or entry.kind == "forced_relocation")
 end
 
 local function _has_pending_relocation_action_anim(game)

@@ -109,6 +109,53 @@ local function _test_action_anim_teleport_effect_uses_real_handler_duration_with
   assert(captured_anim.direction == nil, "teleport_effect should not receive move direction fallback")
 end
 
+local function _test_action_anim_forced_relocation_uses_real_handler_duration_without_direction_patch()
+  local state = _build_state()
+  local captured_anim = nil
+
+  _with_patches({
+    {
+      target = handlers,
+      key = "play_forced_relocation",
+      value = function(_, anim)
+        captured_anim = anim
+        return 0
+      end,
+    },
+  }, function()
+    local duration = action_anim.play(state, {
+      kind = "forced_relocation",
+      player_id = 1,
+      from_index = 1,
+      to_index = 1,
+      duration = 2.0,
+    })
+    assert(duration == 0, "forced_relocation should use handler duration instead of default wait")
+  end)
+
+  assert(captured_anim ~= nil, "forced_relocation handler should receive animation payload")
+  assert(captured_anim.direction == nil, "forced_relocation should not receive move direction fallback")
+end
+
+local function _test_action_anim_roadblock_trigger_routes_clear_overlay()
+  local state = _build_state()
+  local cleared = {}
+
+  _with_patches({
+    {
+      target = handlers,
+      key = "clear_overlay",
+      value = function(_, kind, tile_index)
+        cleared[#cleared + 1] = kind .. ":" .. tostring(tile_index)
+      end,
+    },
+  }, function()
+    action_anim.play(state, { kind = "roadblock_trigger", tile_index = 1, duration = 0.2 })
+  end)
+
+  assert(cleared[1] == "roadblock:1", "roadblock_trigger should clear the roadblock overlay")
+end
+
 local function _test_action_anim_mine_trigger_uses_real_handler_duration_without_direction_patch()
   local state = _build_state()
   local captured_anim = nil
@@ -864,6 +911,61 @@ local function _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_t
   assert(#transient_calls >= 1, "play_missile should spawn at least one transient")
 end
 
+local function _test_anim_units_play_missile_stops_and_snaps_targets_before_followup()
+  local units = require("src.ui.render.anim_units")
+  local calls = {}
+  local state = _build_state()
+  state.board_scene.units_by_player_id = {
+    [2] = {
+      get_position = function()
+        return math.Vector3(0.0, 0.0, 0.0)
+      end,
+    },
+  }
+  state.board_scene.tiles[3] = {
+    get_position = function()
+      return math.Vector3(30.0, 0.0, 0.0)
+    end,
+  }
+
+  _with_patches({
+    {
+      target = require("src.ui.render.move_anim"),
+      key = "prepare_player_for_snap",
+      value = function(_, player_id, _anim, reason)
+        calls[#calls + 1] = "prepare:" .. tostring(player_id) .. ":" .. tostring(reason)
+      end,
+    },
+    {
+      target = require("src.ui.render.move_anim"),
+      key = "snap_player_to_index",
+      value = function(_, player_id, to_index, _anim, reason)
+        calls[#calls + 1] = "snap:" .. tostring(player_id) .. ":" .. tostring(to_index) .. ":" .. tostring(reason)
+        return 0
+      end,
+    },
+    {
+      target = require("src.ui.render.anim_unit_overlay"),
+      key = "play_missile",
+      value = function()
+        calls[#calls + 1] = "overlay"
+      end,
+    },
+  }, function()
+    units.play_missile(state, {
+      tile_index = 1,
+      target_player_ids = { 2 },
+      to_index = 3,
+    }, 0.5, {
+      clear_overlay = function() end,
+    })
+  end)
+
+  assert(calls[1] == "prepare:2:missile", "missile should stop targets before overlay playback")
+  assert(calls[2] == "overlay", "missile should play strike overlay after stop phase")
+  assert(calls[3] == "snap:2:3:play_sequence_missile_target", "missile should snap targets after strike overlay starts")
+end
+
 return {
   name = "presentation.action_anim_core",
   tests = {
@@ -874,9 +976,14 @@ return {
       run = _test_action_anim_teleport_effect_uses_real_handler_duration_without_direction_patch,
     },
     {
+      name = "action_anim_forced_relocation_uses_real_handler_duration_without_direction_patch",
+      run = _test_action_anim_forced_relocation_uses_real_handler_duration_without_direction_patch,
+    },
+    {
       name = "action_anim_mine_trigger_uses_real_handler_duration_without_direction_patch",
       run = _test_action_anim_mine_trigger_uses_real_handler_duration_without_direction_patch,
     },
+    { name = "action_anim_roadblock_trigger_routes_clear_overlay", run = _test_action_anim_roadblock_trigger_routes_clear_overlay },
     { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
     { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },
     { name = "action_anim_is_silent_by_default", run = _test_action_anim_is_silent_by_default },
@@ -891,6 +998,7 @@ return {
     { name = "anim_tip_text_covers_chance_item_and_unknown_tile_variants", run = _test_anim_tip_text_covers_chance_item_and_unknown_tile_variants },
     { name = "anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot", run = _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot },
     { name = "anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient", run = _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient },
+    { name = "anim_units_play_missile_stops_and_snaps_targets_before_followup", run = _test_anim_units_play_missile_stops_and_snaps_targets_before_followup },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
     { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },
   },

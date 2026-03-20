@@ -15,7 +15,17 @@ function units.play_overlay(state, anim, duration, opts)
 end
 
 function units.play_missile(state, anim, duration, opts)
+  local board_scene = assert(state.board_scene, "missing board_scene")
+  local to_index = anim and anim.to_index or nil
+  for _, player_id in ipairs(anim and anim.target_player_ids or {}) do
+    move_anim.prepare_player_for_snap(board_scene, player_id, anim, "missile")
+  end
   overlay.play_missile(state, anim, duration, opts)
+  if to_index ~= nil then
+    for _, player_id in ipairs(anim and anim.target_player_ids or {}) do
+      move_anim.snap_player_to_index(board_scene, player_id, to_index, anim, "play_sequence_missile_target")
+    end
+  end
 end
 
 function units.play_monster(state, anim, duration, opts)
@@ -31,6 +41,10 @@ function units.play_move_effect(state, anim)
 end
 
 function units.play_teleport_effect(state, anim)
+  return move_anim.play_teleport(state.board_scene, anim)
+end
+
+function units.play_forced_relocation(state, anim)
   return move_anim.play_teleport(state.board_scene, anim)
 end
 
@@ -51,6 +65,12 @@ function units.play_mine_trigger(state, anim, opts)
   end
   clear_overlay(state, "mine", tile_index)
   return move_anim.snap_player_to_index(board_scene, player_id, to_index, anim, "play_sequence_mine_trigger")
+end
+
+function units.play_roadblock_trigger(state, anim, opts)
+  local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
+  clear_overlay(state, "roadblock", assert(anim.tile_index, "missing tile_index"))
+  return 0
 end
 
 function units.build_tip(state, anim)

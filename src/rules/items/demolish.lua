@@ -50,6 +50,7 @@ local function _relocate_to_hospital(game, targets)
       move_dir_mode = "clear",
     })
   end
+  return hospital_index
 end
 
 local function _apply_hospital_effects(game, targets)
@@ -58,7 +59,30 @@ local function _apply_hospital_effects(game, targets)
   end
 end
 
-local function _build_hospital_followup(targets)
+local function _build_target_player_ids(targets)
+  local ids = {}
+  for index, target in ipairs(targets or {}) do
+    ids[index] = target.id
+  end
+  return ids
+end
+
+local function _patch_queued_anim_targets(game, kind, player_id, tile_index, to_index)
+  if not (game and game.turn) then
+    return
+  end
+  local function _patch(anim)
+    if anim and anim.kind == kind and anim.tile_index == tile_index and anim.player_id == player_id then
+      anim.to_index = to_index
+    end
+  end
+  _patch(game.turn.action_anim)
+  for _, anim in ipairs(game.turn.action_anim_queue or {}) do
+    _patch(anim)
+  end
+end
+
+local function _build_hospital_followup(targets, log_entries)
   local effects = {}
   for index, target in ipairs(targets) do
     effects[index] = {
@@ -70,6 +94,7 @@ local function _build_hospital_followup(targets)
     next_state = "move_followup",
     next_args = {
       mode = "apply_location_effects",
+      log_entries = log_entries,
       effects = effects,
     },
   }
@@ -121,30 +146,34 @@ function demolish.apply(game, player, idx, opts)
     msg = player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑"
   end
 
-  logger.event(msg)
-
   local kind = "monster"
   if opts.injure then
     kind = "missile"
   end
+  local log_entries = { msg }
   local queued = action_anim_port.queue(game, {
     kind = kind,
     player_id = player.id,
     tile_index = idx,
     item_id = opts.item_id,
     duration = action_anim_duration,
+    target_player_ids = opts.injure and _build_target_player_ids(hospital_targets) or nil,
   })
   if opts.injure and hit > 0 then
-    _relocate_to_hospital(game, hospital_targets)
+    local hospital_index = _relocate_to_hospital(game, hospital_targets)
+    _patch_queued_anim_targets(game, kind, player.id, idx, hospital_index)
     if queued then
       return {
         ok = true,
         action_anim = queued,
-        after_action_anim = _build_hospital_followup(hospital_targets),
+        after_action_anim = _build_hospital_followup(hospital_targets, log_entries),
       }
     end
+    logger.event(msg)
     _apply_hospital_effects(game, hospital_targets)
+    return { ok = true, action_anim = queued }
   end
+  logger.event(msg)
   return { ok = true, action_anim = queued }
 end
 

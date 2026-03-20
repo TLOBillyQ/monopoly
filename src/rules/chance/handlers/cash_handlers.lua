@@ -104,8 +104,9 @@ function cash_handlers.register(handlers, common)
         end
         if not game:player_is_in_mountain(other) then
           local reason = player.name .. " 向他人支付后破产"
-          common.apply_cash_and_maybe_bankrupt(game, player, -fee, reason)
-          common.apply_cash_change(game, other, fee)
+          common.apply_cash_change(game, player, -fee, { suppress_cash_receive_anim = true })
+          common.handle_bankruptcy_if_non_positive(game, player, reason)
+          common.apply_cash_change(game, other, fee, { suppress_cash_receive_anim = true })
         end
       end
     end
@@ -118,6 +119,7 @@ function cash_handlers.register(handlers, common)
   end
 
   handlers.collect_from_others = function(game, player, card)
+    local total_collected = 0
     for _, other in ipairs(game.players) do
       if other.id ~= player.id and not other.eliminated then
         local fee = card.amount
@@ -129,22 +131,18 @@ function cash_handlers.register(handlers, common)
           if other_cash < fee then
             fee = other_cash
           end
-          common.apply_cash_change(game, other, -fee)
-          common.apply_cash_change(game, player, fee)
-          if fee > 0 then
-            if type(game.add_player_cash) == "function" then
-              -- Real game cash APIs already enqueue per-change animation cues.
-            else
-              -- Stub games skip add_player_cash, so explicitly queue receive anim here.
-              common.queue_action_anim(game, {
-                kind = "cash_receive",
-                player_id = player.id,
-                amount = fee,
-              })
-            end
-          end
+          common.apply_cash_change(game, other, -fee, { suppress_cash_receive_anim = true })
+          common.apply_cash_change(game, player, fee, { suppress_cash_receive_anim = true })
+          total_collected = total_collected + fee
         end
       end
+    end
+    if total_collected > 0 then
+      common.queue_action_anim(game, {
+        kind = "cash_receive",
+        player_id = player.id,
+        amount = total_collected,
+      })
     end
     common.emit_event(monopoly_event.chance.applied, {
       player = player,
