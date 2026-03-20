@@ -25,12 +25,12 @@ local function _simulate_landing(game, player, steps)
   local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
   local entered_inner = false
   for step = 1, steps do
-    local next_index, _, step_dir, step_entered_inner = board:step_forward_by_facing(current, facing, {
+    local next_index, _, next_facing, step_entered_inner = board:step_forward_by_facing(current, facing, {
       parity = steps,
       entered_inner = entered_inner,
     })
     current = next_index
-    facing = step_dir
+    facing = next_facing
     if step_entered_inner then
       entered_inner = true
     end

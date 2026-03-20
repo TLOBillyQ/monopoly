@@ -2,6 +2,7 @@ local logger = require("src.core.utils.logger")
 local monopoly_event = require("src.core.events.monopoly_events")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
+local facing_policy = require("src.rules.board.facing_policy")
 
 local mine_effect = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -58,7 +59,7 @@ function mine_effect.apply(game, player, position)
   local from_index = position
   local hospital_index = assert(board:find_first_by_type("hospital"), "missing hospital tile")
   game:update_player_position(player, hospital_index)
-  game:set_player_status(player, "move_dir", nil)
+  facing_policy.sync_move_dir_after_position_change(game, player, hospital_index, "clear")
   action_anim_port.queue(game, {
     kind = "move_effect",
     player_id = player.id,
@@ -84,4 +85,3 @@ function mine_effect.apply(game, player, position)
 end
 
 return mine_effect
-

@@ -8,6 +8,7 @@ local _get_choice = support.get_choice
 local _resolve_choice_first = support.resolve_choice_first
 local _tile_state = support.tile_state
 local _assert_eq = support.assert_eq
+local _assert_tile_id_sequence = support.assert_tile_id_sequence
 local executor = support.executor
 local choice_resolver = support.choice_resolver
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
@@ -491,7 +492,7 @@ local function _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_o
   local g = _new_game()
   local p = g:current_player()
   local item_id = gameplay_rules.item_ids.roadblock
-  local expected = roadblock.ui_candidates(g, p, 3)
+  local expected = roadblock.manual_candidates(g, p, 3)
   p.inventory:add({ id = item_id })
 
   local res = executor.use_item(g, p, item_id, { by_ai = false })
@@ -523,7 +524,7 @@ local function _test_roadblock_manual_choice_allows_current_tile()
   _assert_eq(g.board:has_roadblock(current_idx), true, "manual roadblock should allow current tile placement")
 end
 
-local function _test_roadblock_manual_choice_hongkong_keeps_backward_slots_ordered()
+local function _test_roadblock_manual_choice_hongkong_keeps_nearest_slots_ordered()
   local g = _new_game()
   local p = g:current_player()
   local item_id = gameplay_rules.item_ids.roadblock
@@ -532,15 +533,15 @@ local function _test_roadblock_manual_choice_hongkong_keeps_backward_slots_order
 
   local expected_names = {
     "香港路",
-    "澳门路",
     "广州路",
+    "澳门路",
     "医院",
     "道具卡",
-    "南宁路",
     "海口路",
+    "南宁路",
   }
 
-  local candidates = roadblock.ui_candidates(g, p, 3)
+  local candidates = roadblock.manual_candidates(g, p, 3)
   _assert_eq(#candidates, 7, "hongkong roadblock candidates should still expose seven slots")
   for index, expected_name in ipairs(expected_names) do
     _assert_eq(candidates[index].tile.name, expected_name, "hongkong candidate name mismatch at slot " .. index)
@@ -552,10 +553,10 @@ local function _test_roadblock_manual_choice_hongkong_keeps_backward_slots_order
   for index, expected_name in ipairs(expected_names) do
     _assert_eq(pending.options[index].label, expected_name, "pending roadblock option label mismatch at slot " .. index)
   end
-  _assert_eq(pending.options[7].id, 4, "slot7 should point to haikou index")
+  _assert_eq(pending.options[6].id, 4, "nearest haikou slot should keep the expected board index")
 end
 
-local function _test_roadblock_manual_choice_hongkong_slot7_places_on_haikou()
+local function _test_roadblock_manual_choice_hongkong_nearest_haikou_slot_places_correctly()
   local g = _new_game()
   local p = g:current_player()
   local item_id = gameplay_rules.item_ids.roadblock
@@ -566,33 +567,74 @@ local function _test_roadblock_manual_choice_hongkong_slot7_places_on_haikou()
   assert(type(res) == "table" and res.waiting, "manual roadblock should wait for target choice at hongkong")
   local pending = _open_choice(g, res.intent.choice_spec)
 
-  _assert_eq(pending.options[7].id, 4, "slot7 should resolve to haikou before placement")
-  choice_resolver.resolve(g, pending, { option_id = pending.options[7].id })
+  _assert_eq(pending.options[6].id, 4, "nearest haikou slot should resolve before placement")
+  choice_resolver.resolve(g, pending, { option_id = pending.options[6].id })
 
-  _assert_eq(g.board:has_roadblock(4), true, "slot7 should place roadblock on haikou")
-  _assert_eq(g.board:has_roadblock(10), false, "slot7 should not incorrectly place roadblock on nanning")
+  _assert_eq(g.board:has_roadblock(4), true, "nearest haikou slot should place roadblock on haikou")
+  _assert_eq(g.board:has_roadblock(10), false, "nearest haikou slot should not incorrectly place roadblock on nanning")
 end
 
-local function _test_roadblock_ui_candidates_refill_to_seven_at_intersection()
+local function _test_roadblock_manual_candidates_expose_nearest_unique_tiles_at_intersection()
   local g = _new_game()
   local p = g:current_player()
   g:update_player_position(p, g.board:index_of_tile_id(45))
   g:set_player_status(p, "move_dir", nil)
 
-  local candidates = roadblock.ui_candidates(g, p, 3)
+  local candidates = roadblock.manual_candidates(g, p, 3)
   local expected_names = {
     "机会卡",
     "重庆路",
+    "道具卡",
+    "海口路",
+    "广州路",
     "天津路",
-    "黑市",
-    "太原路",
-    "西安路",
-    "银川路",
+    "台北路",
   }
 
-  _assert_eq(#candidates, #expected_names, "intersection roadblock ui should refill to seven unique target tiles")
+  _assert_eq(#candidates, #expected_names, "intersection roadblock ui should expose seven nearest unique target tiles")
   for index, expected_name in ipairs(expected_names) do
     _assert_eq(candidates[index].tile.name, expected_name, "intersection candidate name mismatch at slot " .. index)
+  end
+end
+
+local function _test_roadblock_manual_candidates_use_shared_manhattan_range_at_branch()
+  local g = _new_game()
+  local p = g:current_player()
+  g:update_player_position(p, g.board:index_of_tile_id(42))
+
+  local candidates = roadblock.manual_candidates(g, p, 3)
+  local expected_ids = { 42, 3, 4, 45, 2, 5, 31 }
+
+  _assert_tile_id_sequence(candidates, expected_ids, "branch roadblock candidate sequence mismatch")
+end
+
+local function _test_demolish_manual_choice_uses_manhattan_range_at_branch()
+  local g = _new_game()
+  local p = g:current_player()
+  local item_id = gameplay_rules.item_ids.monster
+  g:update_player_position(p, g.board:index_of_tile_id(42))
+  p.inventory:add({ id = item_id })
+
+  local target_ids = { 3, 4, 31, 5, 2, 1 }
+  local target_indices = {}
+  for _, tile_id in ipairs(target_ids) do
+    local tile_ref = assert(g.board:get_tile(g.board:index_of_tile_id(tile_id)), "missing target tile")
+    g:set_tile_owner(tile_ref, g.players[2].id)
+    g:set_tile_level(tile_ref, 1)
+    target_indices[#target_indices + 1] = g.board:index_of_tile_id(tile_id)
+  end
+
+  local res = executor.use_item(g, p, item_id, { by_ai = false })
+  assert(type(res) == "table" and res.waiting == true, "monster manual use should open choice")
+  local pending = res.intent.choice_spec
+  assert(pending and pending.kind == "demolish_target", "monster manual use should expose demolish target choice")
+
+  local option_ids = {}
+  for _, option in ipairs(pending.options or {}) do
+    option_ids[#option_ids + 1] = option.id
+  end
+  for _, target_idx in ipairs(target_indices) do
+    assert(support.list_contains(option_ids, target_idx), "demolish manual choice should include index " .. tostring(target_idx))
   end
 end
 
@@ -1380,16 +1422,24 @@ return {
     },
     { name = "roadblock_manual_choice_allows_current_tile", run = _test_roadblock_manual_choice_allows_current_tile },
     {
-      name = "roadblock_manual_choice_hongkong_keeps_backward_slots_ordered",
-      run = _test_roadblock_manual_choice_hongkong_keeps_backward_slots_ordered,
+      name = "roadblock_manual_choice_hongkong_keeps_nearest_slots_ordered",
+      run = _test_roadblock_manual_choice_hongkong_keeps_nearest_slots_ordered,
     },
     {
-      name = "roadblock_manual_choice_hongkong_slot7_places_on_haikou",
-      run = _test_roadblock_manual_choice_hongkong_slot7_places_on_haikou,
+      name = "roadblock_manual_choice_hongkong_nearest_haikou_slot_places_correctly",
+      run = _test_roadblock_manual_choice_hongkong_nearest_haikou_slot_places_correctly,
     },
     {
-      name = "roadblock_ui_candidates_refill_to_seven_at_intersection",
-      run = _test_roadblock_ui_candidates_refill_to_seven_at_intersection,
+      name = "roadblock_manual_candidates_expose_nearest_unique_tiles_at_intersection",
+      run = _test_roadblock_manual_candidates_expose_nearest_unique_tiles_at_intersection,
+    },
+    {
+      name = "roadblock_manual_candidates_use_shared_manhattan_range_at_branch",
+      run = _test_roadblock_manual_candidates_use_shared_manhattan_range_at_branch,
+    },
+    {
+      name = "demolish_manual_choice_uses_manhattan_range_at_branch",
+      run = _test_demolish_manual_choice_uses_manhattan_range_at_branch,
     },
     { name = "roadblock_ai_uses_auto_candidates_only", run = _test_roadblock_ai_uses_auto_candidates_only },
     {

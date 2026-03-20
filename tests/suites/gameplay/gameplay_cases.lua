@@ -1785,11 +1785,11 @@ end
 
 local function _walk_expected_forward(board, start_index, facing, remaining_steps, parity, entered_inner)
   local current = start_index
-  local step_dir = facing
+  local next_facing = facing
   local inner_state = entered_inner == true
   for step_index = 1, remaining_steps do
     local step_entered_inner
-    current, _, step_dir, step_entered_inner = board:step_forward_by_facing(current, step_dir, {
+    current, _, next_facing, step_entered_inner = board:step_forward_by_facing(current, next_facing, {
       parity = parity,
       entered_inner = inner_state,
     })
@@ -1797,7 +1797,7 @@ local function _walk_expected_forward(board, start_index, facing, remaining_step
       inner_state = true
     end
   end
-  return current, step_dir
+  return current, next_facing
 end
 
 local function _test_market_interrupt_resume_uses_interrupt_facing()

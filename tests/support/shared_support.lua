@@ -47,6 +47,27 @@ local function assert_eq(a, b, msg)
   end
 end
 
+local function assert_player_move_dir(player, expected, msg)
+  local status = player and player.status or nil
+  assert_eq(status and status.move_dir or nil, expected, msg or "move_dir mismatch")
+end
+
+local function assert_tile_id_sequence(entries, expected_ids, msg)
+  assert_eq(#entries, #expected_ids, (msg or "tile id sequence length mismatch"))
+  for index, expected_id in ipairs(expected_ids) do
+    local entry = entries[index]
+    local actual_id = entry
+    if type(entry) == "table" then
+      if entry.tile and entry.tile.id ~= nil then
+        actual_id = entry.tile.id
+      else
+        actual_id = entry.id
+      end
+    end
+    assert_eq(actual_id, expected_id, (msg or "tile id sequence mismatch") .. " at slot " .. tostring(index))
+  end
+end
+
 local function ensure_ui_runtime_for_test(state)
   assert(type(state) == "table", "missing state")
   local ui_runtime = state.ui_runtime
@@ -452,6 +473,8 @@ M.map_cfg = map_cfg
 M.tiles_cfg = tiles_cfg
 M.number_utils = number_utils
 M.assert_eq = assert_eq
+M.assert_player_move_dir = assert_player_move_dir
+M.assert_tile_id_sequence = assert_tile_id_sequence
 M.bind_ui_runtime = bind_ui_runtime
 M.with_patches = with_patches
 M.build_ui_port = build_ui_port

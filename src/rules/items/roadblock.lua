@@ -1,5 +1,6 @@
 local logger = require("src.core.utils.logger")
 local tile = require("src.rules.board.tile")
+local board_query = require("src.rules.board.query")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
 local number_utils = require("src.core.utils.number_utils")
@@ -36,14 +37,24 @@ local function _make_ui_candidate(board, idx, dir, step)
   }
 end
 
+local function _tile_distance(board, start_idx, idx)
+  local start_tile = assert(board:get_tile(start_idx), "missing start tile: " .. tostring(start_idx))
+  local tile = assert(board:get_tile(idx), "missing tile: " .. tostring(idx))
+  return math.abs(start_tile.row - tile.row) + math.abs(start_tile.col - tile.col)
+end
+
+local function _build_manual_candidate(board, start_idx, idx)
+  return _make_ui_candidate(board, idx, "nearby", _tile_distance(board, start_idx, idx))
+end
+
 local function _forward_indices(board, player, distance)
   local list = {}
   local current = player.position
   local facing = facing_policy.resolve_initial_facing("relative_forward", player)
   for step = 1, distance do
-    local next_idx, _, next_dir = board:step_forward_by_facing(current, facing, 1)
+    local next_idx, _, next_facing = board:step_forward_by_facing(current, facing, 1)
     current = next_idx
-    facing = next_dir
+    facing = next_facing
     table.insert(list, { idx = current, step = step, dir = "forward" })
   end
   return list
@@ -54,9 +65,9 @@ local function _backward_indices(board, player, distance)
   local current = player.position
   local facing = facing_policy.resolve_initial_facing("relative_backward", player)
   for step = 1, distance do
-    local prev_idx, _, prev_dir = board:step_backward_by_facing(current, facing)
+    local prev_idx, _, next_facing = board:step_backward_by_facing(current, facing)
     current = prev_idx
-    facing = prev_dir
+    facing = next_facing
     table.insert(list, { idx = current, step = step, dir = "backward" })
   end
   return list
@@ -160,33 +171,28 @@ function roadblock.candidates(game, player, distance)
   return roadblock.auto_candidates(game, player, distance)
 end
 
-function roadblock.ui_candidates(game, player, distance)
+function roadblock.manual_candidates(game, player, distance)
+  -- Manual target picking uses the shared Manhattan-range query instead of
+  -- forward/backward path scanning.
   local board = game.board
   local list = {}
   local seen = {}
   _append_unique_ui_candidate(list, seen, board, player.position, "current", 0)
-  local max_steps = board:length() - 1
-  local forward = _forward_indices(board, player, max_steps)
-  local backward = _backward_indices(board, player, max_steps)
-
-  for step = 1, max_steps do
-    local forward_entry = forward[step]
-    if forward_entry then
-      _append_unique_ui_candidate(list, seen, board, forward_entry.idx, forward_entry.dir, forward_entry.step)
-      if #list >= ui_candidate_slots then
-        break
-      end
+  for _, idx in ipairs(board_query.indices_in_range(board, player.position, distance or 3)) do
+    if not seen[idx] then
+      seen[idx] = true
+      list[#list + 1] = _build_manual_candidate(board, player.position, idx)
     end
-    local backward_entry = backward[step]
-    if backward_entry then
-      _append_unique_ui_candidate(list, seen, board, backward_entry.idx, backward_entry.dir, backward_entry.step)
-      if #list >= ui_candidate_slots then
-        break
-      end
+    if #list >= ui_candidate_slots then
+      break
     end
   end
 
   return list
+end
+
+function roadblock.ui_candidates(game, player, distance)
+  return roadblock.manual_candidates(game, player, distance)
 end
 
 function roadblock.is_ui_candidate(game, player, idx, distance)
@@ -194,7 +200,7 @@ function roadblock.is_ui_candidate(game, player, idx, distance)
   if target_idx == nil then
     return false
   end
-  for _, cand in ipairs(roadblock.ui_candidates(game, player, distance)) do
+  for _, cand in ipairs(roadblock.manual_candidates(game, player, distance)) do
     if cand.idx == target_idx then
       return true
     end

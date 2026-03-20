@@ -122,6 +122,26 @@ local function _resolve_forward_next_id(map, current_id, neigh, facing, parity, 
   return _resolve_fallback_next(neigh, facing), false
 end
 
+local function _resolve_forward_facing(map, current_id, facing, step_context)
+  local neigh = map.neighbors[current_id]
+  if neigh == nil then
+    return facing
+  end
+
+  local next_id = _resolve_forward_next_id(
+    map,
+    current_id,
+    neigh,
+    facing,
+    step_context.parity,
+    not step_context.entered_inner
+  )
+  if next_id == nil then
+    return facing
+  end
+  return map.direction(current_id, next_id)
+end
+
 local function _normalize_forward_step_context(parity_or_context)
   if type(parity_or_context) == "table" then
     return parity_or_context
@@ -142,6 +162,11 @@ local function _resolve_backward_next_id(map, current_id, neigh, facing)
 
   if map.outer_prev[current_id] then
     return map.outer_prev[current_id]
+  end
+
+  local backward_fallback = map.backward_fallback or nil
+  if backward_fallback and backward_fallback[current_id] then
+    return backward_fallback[current_id]
   end
 
   local _, next_id = _pick_unique_dir(neigh, facing)
@@ -305,6 +330,7 @@ function board:advance(index, steps, branch_parity)
 end
 
 ---根据朝向向前移动一步（用于精确导航）
+---第三返回值表示“落点后的下一步前进朝向”，不是刚刚走过来的那一步方向。
 function board:step_forward_by_facing(current_index, facing, parity)
   local map = self.map
   local step_context = _normalize_forward_step_context(parity)
@@ -330,11 +356,17 @@ function board:step_forward_by_facing(current_index, facing, parity)
   if next_id == map.start_id then
     passed_start = 1
   end
-  local step_dir = map.direction(current_id, next_id)
-  return next_index, passed_start, step_dir, entered_inner
+  local travel_dir = map.direction(current_id, next_id)
+  local next_step_context = {
+    parity = step_context.parity,
+    entered_inner = step_context.entered_inner or entered_inner,
+  }
+  local next_facing = _resolve_forward_facing(map, next_id, travel_dir, next_step_context)
+  return next_index, passed_start, next_facing, entered_inner
 end
 
 ---根据朝向向后移动一步
+---第三返回值表示“落点后的下一步前进朝向”，供后续继续后退时取反使用。
 function board:step_backward_by_facing(current_index, facing)
   local map = self.map
 
@@ -353,8 +385,8 @@ function board:step_backward_by_facing(current_index, facing)
   if next_id == map.start_id then
     passed_start = 1
   end
-  local step_dir = map.direction(next_id, current_id)
-  return next_index, passed_start, step_dir
+  local next_facing = map.direction(next_id, current_id)
+  return next_index, passed_start, next_facing
 end
 
 -- Export helpers for testability
@@ -362,6 +394,7 @@ board._resolve_outer_next = _resolve_outer_next
 board._resolve_fresh_forward_next = _resolve_fresh_forward_next
 board._resolve_facing_next = _resolve_facing_next
 board._resolve_fallback_next = _resolve_fallback_next
+board._resolve_forward_facing = _resolve_forward_facing
 board._normalize_forward_step_context = _normalize_forward_step_context
 board._pick_any_dir = _pick_any_dir
 board._pick_unique_dir = _pick_unique_dir

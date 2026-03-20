@@ -65,7 +65,9 @@ local target_effects = {
           duration = action_anim_duration,
         })
       end
-      game:set_player_status(target, "move_dir", nil)
+      if idx then
+        facing_policy.sync_move_dir_after_position_change(game, target, idx, "clear")
+      end
       logger.event(
         user.name
           .. " 使用流放卡，将 "

@@ -1,4 +1,5 @@
 local facing_policy = {}
+local market_default_move_dir = "right"
 
 local valid_modes = {
   fresh_forward = true,
@@ -7,27 +8,52 @@ local valid_modes = {
   relative_backward = true,
 }
 
+local valid_sync_modes = {
+  clear = true,
+  preserve = true,
+  forced_move = true,
+}
+
 local function _player_move_dir(player)
   local status = player and player.status or nil
   return status and status.move_dir or nil
 end
 
-function facing_policy.resolve_forward_continuation(board, current_index, facing, parity)
-  assert(board ~= nil, "missing board")
-  assert(current_index ~= nil, "missing current_index")
-  local _next_index, _passed_start, next_facing = board:step_forward_by_facing(current_index, facing, parity)
-  return next_facing
+local function _set_move_dir(game, player, value)
+  assert(game ~= nil and type(game.set_player_status) == "function", "missing game.set_player_status")
+  if _player_move_dir(player) == value then
+    return false
+  end
+  game:set_player_status(player, "move_dir", value)
+  return true
 end
 
-function facing_policy.resolve_forced_move_reset_facing(board, current_index, parity)
-  assert(board ~= nil, "missing board")
+function facing_policy.sync_move_dir_after_position_change(game, player, current_index, mode)
+  -- Centralize move_dir updates for teleports/relocations so special handlers
+  -- don't each re-encode board-facing rules.
+  assert(game ~= nil, "missing game")
+  assert(player ~= nil, "missing player")
   assert(current_index ~= nil, "missing current_index")
-  local tile = board:get_tile(current_index)
-  assert(tile ~= nil, "missing tile: " .. tostring(current_index))
-  if tile.type ~= "market" then
-    return nil
+  mode = mode or "preserve"
+  assert(valid_sync_modes[mode] == true, "invalid move_dir sync mode: " .. tostring(mode))
+
+  if mode == "clear" then
+    return _set_move_dir(game, player, nil)
   end
-  return facing_policy.resolve_forward_continuation(board, current_index, nil, parity)
+
+  if mode == "preserve" then
+    return _set_move_dir(game, player, _player_move_dir(player))
+  end
+
+  local board = assert(game.board, "missing game.board")
+  local tile = assert(board:get_tile(current_index), "missing tile: " .. tostring(current_index))
+  if tile.type == "hospital" or tile.type == "mountain" then
+    return _set_move_dir(game, player, nil)
+  end
+  if tile.type == "market" then
+    return _set_move_dir(game, player, market_default_move_dir)
+  end
+  return _set_move_dir(game, player, _player_move_dir(player))
 end
 
 function facing_policy.resolve_initial_facing(mode, player, opts)

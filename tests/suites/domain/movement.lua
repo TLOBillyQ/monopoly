@@ -5,15 +5,16 @@ local function _new_game()
   return support.new_game({ map = default_map })
 end
 local _assert_eq = support.assert_eq
+local _assert_player_move_dir = support.assert_player_move_dir
 local movement = support.movement
 local board_utils = support.board_utils
 local move_anim = require("src.ui.render.move_anim")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local runtime_ports = require("src.core.ports.runtime_ports")
 
-local function _simulate_heading(board, start_index, facing, steps, backward, parity)
+local function _simulate_path_result(board, start_index, facing, steps, backward, parity)
   local current = start_index
-  local heading = facing
+  local next_facing = facing
   local step_fn = backward and board.step_backward_by_facing or board.step_forward_by_facing
   local entered_inner = false
   local start_tile = board:get_tile(start_index)
@@ -21,12 +22,12 @@ local function _simulate_heading(board, start_index, facing, steps, backward, pa
     entered_inner = true
   end
   for _ = 1, steps do
-    local next_index, _, next_heading
+    local next_index, _, resolved_next_facing
     if backward then
-      next_index, _, next_heading = step_fn(board, current, heading)
+      next_index, _, resolved_next_facing = step_fn(board, current, next_facing)
     else
       local step_entered_inner
-      next_index, _, next_heading, step_entered_inner = step_fn(board, current, heading, {
+      next_index, _, resolved_next_facing, step_entered_inner = step_fn(board, current, next_facing, {
         parity = parity,
         entered_inner = entered_inner,
       })
@@ -35,9 +36,9 @@ local function _simulate_heading(board, start_index, facing, steps, backward, pa
       end
     end
     current = next_index
-    heading = next_heading
+    next_facing = resolved_next_facing
   end
-  return current, heading
+  return current, next_facing
 end
 
 local function _test_pass_start()
@@ -85,7 +86,7 @@ local function _test_owner_mine_in_placement_turn_does_not_stop_movement()
 
   local steps = 3
   local res = movement.move(g, p, steps, { branch_parity = steps, skip_market_check = true })
-  local expected_index = select(1, _simulate_heading(g.board, 1, nil, steps, false, steps))
+  local expected_index = select(1, _simulate_path_result(g.board, 1, nil, steps, false, steps))
 
   _assert_eq(p.position, expected_index, "owner should ignore own mine during placement turn")
   _assert_eq(#res.visited, steps, "owner should keep full movement during placement turn")
@@ -146,7 +147,7 @@ local function _test_movement_backward_from_hongkong_follows_three_unique_tiles(
   _assert_eq(names[1], "广州路", "backward step 1 should be guangzhou")
   _assert_eq(names[2], "道具卡", "backward step 2 should be item tile")
   _assert_eq(names[3], "海口路", "backward step 3 should be haikou")
-  _assert_eq(p.status.move_dir, "down", "backward move should preserve the recorded forward heading")
+  _assert_player_move_dir(p, "down", "backward move should preserve the recorded forward heading")
 end
 
 local function _test_movement_backward_without_move_dir_keeps_nil()
@@ -158,7 +159,7 @@ local function _test_movement_backward_without_move_dir_keeps_nil()
   local res = movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true })
 
   assert(#res.visited == 1, "backward move should still record visited tiles")
-  _assert_eq(p.status.move_dir, nil, "backward move without stored heading should keep nil")
+  _assert_player_move_dir(p, nil, "backward move without stored heading should keep nil")
 end
 
 local function _run_start_move_with_stale_dir(start_index, stale_dir)
@@ -187,8 +188,8 @@ local function _test_movement_single_step_sets_move_dir_to_next_heading()
   g:update_player_position(p, g.board:index_of_tile_id(42))
   local res = movement.move(g, p, 1, { branch_parity = 1, skip_market_check = true })
   assert(#res.visited == 1, "single-step move should record exactly one visited index")
-  local _, expected = _simulate_heading(g.board, g.board:index_of_tile_id(42), nil, 1, false, 1)
-  _assert_eq(p.status.move_dir, expected, "single-step move_dir should keep the next forward heading")
+  local _, expected = _simulate_path_result(g.board, g.board:index_of_tile_id(42), nil, 1, false, 1)
+  _assert_player_move_dir(p, expected, "single-step move_dir should keep the next forward heading")
 end
 
 local function _test_movement_multi_step_sets_move_dir_to_next_heading()
@@ -200,38 +201,114 @@ local function _test_movement_multi_step_sets_move_dir_to_next_heading()
   local parity = 4
   local res = movement.move(g, p, steps, { branch_parity = parity, skip_market_check = true })
   assert(#res.visited == 4, "multi-step move should record every visited index")
-  local _, expected = _simulate_heading(g.board, start_index, nil, steps, false, parity)
-  _assert_eq(p.status.move_dir, expected, "multi-step move_dir should keep the next forward heading")
+  local _, expected = _simulate_path_result(g.board, start_index, nil, steps, false, parity)
+  _assert_player_move_dir(p, expected, "multi-step move_dir should keep the next forward heading")
+end
+
+local function _test_inner_exit_tiles_persist_outer_heading()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:update_player_position(p, g.board:index_of_tile_id(30))
+  movement.move(g, p, 1, { branch_parity = 1, skip_market_check = true, direction = "up" })
+  _assert_player_move_dir(p, "right", "tile 41 should persist outer heading after leaving inner ring")
+
+  g:update_player_position(p, g.board:index_of_tile_id(34))
+  movement.move(g, p, 1, { branch_parity = 1, skip_market_check = true, direction = "right" })
+  _assert_player_move_dir(p, "down", "tile 43 should persist outer heading after leaving inner ring")
+end
+
+local function _test_backward_from_exit_tiles_uses_outer_heading()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:update_player_position(p, g.board:index_of_tile_id(41))
+  g:set_player_status(p, "move_dir", "right")
+  movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true, skip_steal_check = true })
+  _assert_eq(g.board:get_tile(p.position).id, 15, "tile 41 backward should follow outer heading")
+
+  g:update_player_position(p, g.board:index_of_tile_id(43))
+  g:set_player_status(p, "move_dir", "down")
+  movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true, skip_steal_check = true })
+  _assert_eq(g.board:get_tile(p.position).id, 21, "tile 43 backward should follow outer heading")
+end
+
+local function _test_inner_backward_without_move_dir_uses_reverse_fallback()
+  local g = _new_game()
+  local p = g:current_player()
+  local cases = {
+    { start_tile_id = 45, expected_tile_id = 42 },
+    { start_tile_id = 31, expected_tile_id = 45 },
+    { start_tile_id = 32, expected_tile_id = 31 },
+    { start_tile_id = 25, expected_tile_id = 40 },
+    { start_tile_id = 26, expected_tile_id = 25 },
+    { start_tile_id = 27, expected_tile_id = 26 },
+    { start_tile_id = 28, expected_tile_id = 39 },
+    { start_tile_id = 29, expected_tile_id = 28 },
+    { start_tile_id = 30, expected_tile_id = 29 },
+    { start_tile_id = 33, expected_tile_id = 44 },
+    { start_tile_id = 34, expected_tile_id = 33 },
+    { start_tile_id = 39, expected_tile_id = 27 },
+    { start_tile_id = 44, expected_tile_id = 39 },
+  }
+
+  for _, case in ipairs(cases) do
+    g:update_player_position(p, g.board:index_of_tile_id(case.start_tile_id))
+    g:set_player_status(p, "move_dir", nil)
+    movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true, skip_steal_check = true })
+    _assert_eq(g.board:get_tile(p.position).id, case.expected_tile_id,
+      "inner nil move_dir backward fallback mismatch at tile " .. tostring(case.start_tile_id))
+    _assert_player_move_dir(p, nil, "reverse fallback should not persist backward heading")
+  end
+end
+
+local function _test_sync_move_dir_after_position_change_covers_core_modes()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:set_player_status(p, "move_dir", "left")
+  facing_policy.sync_move_dir_after_position_change(g, p, g.board:index_of_tile_id(3), "forced_move")
+  _assert_player_move_dir(p, "left", "ordinary forced move should preserve move_dir")
+
+  facing_policy.sync_move_dir_after_position_change(g, p, g.board:index_of_tile_id(39), "forced_move")
+  _assert_player_move_dir(p, "right", "market forced move should use default heading")
+
+  facing_policy.sync_move_dir_after_position_change(g, p, g.board:index_of_tile_id(36), "clear")
+  _assert_player_move_dir(p, nil, "hospital sync mode should clear move_dir")
+
+  g:set_player_status(p, "move_dir", "up")
+  facing_policy.sync_move_dir_after_position_change(g, p, g.board:index_of_tile_id(37), "clear")
+  _assert_player_move_dir(p, nil, "mountain sync mode should clear move_dir")
 end
 
 local function _test_entry_point_even_branch_ignores_inbound_facing()
   local g = _new_game()
   local entry_idx = g.board:index_of_tile_id(42)
 
-  local matching_idx, _, matching_dir = g.board:step_forward_by_facing(entry_idx, "left", 2)
+  local matching_idx, _, matching_next_facing = g.board:step_forward_by_facing(entry_idx, "left", 2)
   local matching_tile = assert(g.board:get_tile(matching_idx), "missing matching branch tile")
   _assert_eq(matching_tile.id, 45, "even parity should enter inner branch")
-  _assert_eq(matching_dir, "up", "matching branch should return the next heading after entering inner branch")
+  _assert_eq(matching_next_facing, "up", "matching branch should return the next heading after entering inner branch")
 
-  local mismatched_idx, _, mismatched_dir = g.board:step_forward_by_facing(entry_idx, "right", 2)
+  local mismatched_idx, _, mismatched_next_facing = g.board:step_forward_by_facing(entry_idx, "right", 2)
   local mismatched_tile = assert(g.board:get_tile(mismatched_idx), "missing branch tile")
   _assert_eq(mismatched_tile.id, 45, "even parity should ignore inbound facing and still enter inner branch")
-  _assert_eq(mismatched_dir, "up", "inner branch should return the next heading after entering inner branch")
+  _assert_eq(mismatched_next_facing, "up", "inner branch should return the next heading after entering inner branch")
 end
 
 local function _test_market_keeps_forward_direction_regardless_of_parity()
   local g = _new_game()
   local market_idx = g.board:index_of_tile_id(g.board.map.market_id)
 
-  local even_idx, _, even_dir = g.board:step_forward_by_facing(market_idx, "up", 2)
+  local even_idx, _, even_next_facing = g.board:step_forward_by_facing(market_idx, "up", 2)
   local even_tile = assert(g.board:get_tile(even_idx), "missing even market exit tile")
   _assert_eq(even_tile.id, 28, "market should keep moving forward on even parity")
-  _assert_eq(even_dir, "up", "market should keep the same heading on even parity")
+  _assert_eq(even_next_facing, "up", "market should keep the same heading on even parity")
 
-  local odd_idx, _, odd_dir = g.board:step_forward_by_facing(market_idx, "up", 1)
+  local odd_idx, _, odd_next_facing = g.board:step_forward_by_facing(market_idx, "up", 1)
   local odd_tile = assert(g.board:get_tile(odd_idx), "missing odd market exit tile")
   _assert_eq(odd_tile.id, 28, "market should keep moving forward on odd parity")
-  _assert_eq(odd_dir, "up", "market should keep the same heading on odd parity")
+  _assert_eq(odd_next_facing, "up", "market should keep the same heading on odd parity")
 end
 
 local function _test_same_move_enters_inner_only_once()
@@ -629,6 +706,10 @@ return {
     { name = "movement_fresh_roll_ignores_stale_move_dir", run = _test_movement_fresh_roll_ignores_stale_move_dir },
     { name = "movement_single_step_sets_move_dir_to_next_heading", run = _test_movement_single_step_sets_move_dir_to_next_heading },
     { name = "movement_multi_step_sets_move_dir_to_next_heading", run = _test_movement_multi_step_sets_move_dir_to_next_heading },
+    { name = "inner_exit_tiles_persist_outer_heading", run = _test_inner_exit_tiles_persist_outer_heading },
+    { name = "backward_from_exit_tiles_uses_outer_heading", run = _test_backward_from_exit_tiles_uses_outer_heading },
+    { name = "inner_backward_without_move_dir_uses_reverse_fallback", run = _test_inner_backward_without_move_dir_uses_reverse_fallback },
+    { name = "sync_move_dir_after_position_change_covers_core_modes", run = _test_sync_move_dir_after_position_change_covers_core_modes },
     { name = "entry_point_even_branch_ignores_inbound_facing", run = _test_entry_point_even_branch_ignores_inbound_facing },
     { name = "market_keeps_forward_direction_regardless_of_parity", run = _test_market_keeps_forward_direction_regardless_of_parity },
     { name = "same_move_enters_inner_only_once", run = _test_same_move_enters_inner_only_once },

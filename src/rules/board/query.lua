@@ -16,6 +16,17 @@ local function _manhattan_distance(a, b)
   return math.abs(a.row - b.row) + math.abs(a.col - b.col)
 end
 
+local function _sort_by_distance_bucket(board, entries)
+  table.sort(entries, function(left, right)
+    local left_tile = board:get_tile(left)
+    local right_tile = board:get_tile(right)
+    if left_tile.id ~= right_tile.id then
+      return left_tile.id < right_tile.id
+    end
+    return left < right
+  end)
+end
+
 local function _collect_indices_by_distance(board, start_tile, max_dist)
   local by_dist = {}
   for idx, tile in ipairs(board.path or {}) do
@@ -26,6 +37,9 @@ local function _collect_indices_by_distance(board, start_tile, max_dist)
         table.insert(by_dist[distance], idx)
       end
     end
+  end
+  for _, entries in pairs(by_dist) do
+    _sort_by_distance_bucket(board, entries)
   end
   return by_dist
 end

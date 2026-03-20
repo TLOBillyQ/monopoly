@@ -125,6 +125,7 @@ local function _new_move_state(game, player, steps, opts, abs_steps)
     current = player.position,
     backward = backward,
     entered_inner = opts.entered_inner == true,
+    -- move_dir stores the next forward heading from the player's landing tile.
     persisted_facing = player.status and player.status.move_dir or nil,
   }
 end
@@ -158,17 +159,17 @@ local function _arm_owned_mine(ctx)
 end
 
 local function _step_move(ctx, step)
-  local next_index, passed, step_dir, entered_inner
+  local next_index, passed, next_facing, entered_inner
   if ctx.backward then
-    next_index, passed, step_dir = ctx.step_fn(ctx.board, ctx.current, ctx.facing)
+    next_index, passed, next_facing = ctx.step_fn(ctx.board, ctx.current, ctx.facing)
   else
-    next_index, passed, step_dir, entered_inner = ctx.step_fn(ctx.board, ctx.current, ctx.facing, {
+    next_index, passed, next_facing, entered_inner = ctx.step_fn(ctx.board, ctx.current, ctx.facing, {
       parity = ctx.branch_parity,
       entered_inner = ctx.entered_inner,
     })
   end
   ctx.pass_start = ctx.pass_start + passed
-  ctx.facing = step_dir
+  ctx.facing = next_facing
   ctx.current = next_index
   if entered_inner then
     ctx.entered_inner = true

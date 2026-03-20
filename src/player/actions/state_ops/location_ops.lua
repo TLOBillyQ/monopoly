@@ -1,5 +1,6 @@
 local logger = require("src.core.utils.logger")
 local bankruptcy_port = require("src.rules.ports.bankruptcy_port")
+local facing_policy = require("src.rules.board.facing_policy")
 local common = require("src.player.actions.state_ops.common")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
@@ -42,7 +43,7 @@ function location_ops.player_send_to_hospital(self, player)
   local hospital_index = self.board:find_first_by_type("hospital")
   assert(hospital_index ~= nil, "missing hospital tile")
   self:update_player_position(player, hospital_index)
-  self:set_player_status(player, "move_dir", nil)
+  facing_policy.sync_move_dir_after_position_change(self, player, hospital_index, "clear")
   self:player_apply_hospital_effects(player)
 end
 
@@ -56,7 +57,7 @@ function location_ops.player_send_to_mountain(self, player)
   local idx = self.board:find_first_by_type("mountain")
   assert(idx ~= nil, "missing mountain tile")
   self:update_player_position(player, idx)
-  self:set_player_status(player, "move_dir", nil)
+  facing_policy.sync_move_dir_after_position_change(self, player, idx, "clear")
   self:player_apply_mountain_effects(player)
 end
 

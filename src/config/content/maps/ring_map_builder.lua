@@ -94,6 +94,7 @@ function builder.build(opts)
     neighbors = neighbors,
     outer_next = outer_next,
     outer_prev = outer_prev,
+    backward_fallback = {},
     entry_points = {},
     fresh_forward_next = {},
     branches = {},

@@ -10,6 +10,8 @@ end
 
 return pick(shared, {
   "assert_eq",
+  "assert_player_move_dir",
+  "assert_tile_id_sequence",
   "with_patches",
   "build_ui_port",
   "new_game",

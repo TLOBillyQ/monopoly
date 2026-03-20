@@ -7,6 +7,7 @@ local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
 local number_utils = require("src.core.utils.number_utils")
 local target_query = require("src.rules.items.target_query")
+local facing_policy = require("src.rules.board.facing_policy")
 
 local demolish = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -46,7 +47,7 @@ local function _relocate_to_hospital(game, targets)
   for _, target in ipairs(targets) do
     game:set_player_seat(target, nil)
     game:update_player_position(target, hospital_index)
-    game:set_player_status(target, "move_dir", nil)
+    facing_policy.sync_move_dir_after_position_change(game, target, hospital_index, "clear")
   end
 end
 

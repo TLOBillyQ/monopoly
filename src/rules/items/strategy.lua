@@ -32,12 +32,12 @@ function strategy.has_obstacles_ahead(game, player, distance)
   local entered_inner = false
 
   for _ = 1, distance do
-    local next_index, _passed, step_dir, step_entered_inner = board:step_forward_by_facing(current, facing, {
+    local next_index, _passed, next_facing, step_entered_inner = board:step_forward_by_facing(current, facing, {
       parity = parity,
       entered_inner = entered_inner,
     })
     current = next_index
-    facing = step_dir
+    facing = next_facing
     if step_entered_inner then
       entered_inner = true
     end
@@ -73,7 +73,7 @@ local function _resolve_roadblock_candidates(game, player)
   if auto_play_port.is_auto_player(game, player) then
     return roadblock.auto_candidates(game, player, 3)
   end
-  return roadblock.ui_candidates(game, player, 3)
+  return roadblock.manual_candidates(game, player, 3)
 end
 
 local function _can_offer_target_item(game, player, item_id)

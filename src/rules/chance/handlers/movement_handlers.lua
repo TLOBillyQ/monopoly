@@ -1,5 +1,5 @@
 local movement_handlers = {}
-local market_default_move_dir = "right"
+local facing_policy = require("src.rules.board.facing_policy")
 
 function movement_handlers.register(handlers, common)
   handlers.move_backward = function(game, player, card)
@@ -39,6 +39,7 @@ function movement_handlers.register(handlers, common)
       local idx = game.board:index_of_tile_id(card.destination_tile_id)
       assert(idx ~= nil, "missing destination tile index: " .. tostring(card.destination_tile_id))
       game:update_player_position(player, idx)
+      facing_policy.sync_move_dir_after_position_change(game, player, idx, "forced_move")
       common.queue_move_effect(game, player, from_index, idx, nil)
       return {
         kind = "need_landing",
@@ -52,7 +53,7 @@ function movement_handlers.register(handlers, common)
       local idx = game.board:find_first_by_type("hospital")
       assert(idx ~= nil, "missing hospital tile")
       game:update_player_position(player, idx)
-      game:set_player_status(player, "move_dir", nil)
+      facing_policy.sync_move_dir_after_position_change(game, player, idx, "forced_move")
       common.queue_move_effect(game, player, from_index, idx, nil)
       return _build_location_followup("hospital")
     end
@@ -61,7 +62,7 @@ function movement_handlers.register(handlers, common)
       local idx = game.board:find_first_by_type("mountain")
       assert(idx ~= nil, "missing mountain tile")
       game:update_player_position(player, idx)
-      game:set_player_status(player, "move_dir", nil)
+      facing_policy.sync_move_dir_after_position_change(game, player, idx, "forced_move")
       common.queue_move_effect(game, player, from_index, idx, nil)
       return _build_location_followup("mountain")
     end
@@ -78,9 +79,7 @@ function movement_handlers.register(handlers, common)
     local idx = game.board:find_first_by_type(tile_type)
     assert(idx ~= nil, "missing " .. tile_type .. " tile")
     game:update_player_position(player, idx)
-    if tile_type == "market" then
-      game:set_player_status(player, "move_dir", market_default_move_dir)
-    end
+    facing_policy.sync_move_dir_after_position_change(game, player, idx, "forced_move")
     common.queue_move_effect(game, player, from_index, idx, nil)
     return {
       kind = "need_landing",
