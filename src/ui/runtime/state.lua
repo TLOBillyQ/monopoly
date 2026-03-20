@@ -44,6 +44,25 @@ function runtime_state.set_ui_model(state, model)
   return _runtime_state().set_ui_model(state, model)
 end
 
+function runtime_state.get_local_actor_role_id(state)
+  local impl = _runtime_state()
+  if type(impl.get_local_actor_role_id) == "function" then
+    return impl.get_local_actor_role_id(state)
+  end
+  return state and state.local_actor_role_id or nil
+end
+
+function runtime_state.set_local_actor_role_id(state, role_id)
+  local impl = _runtime_state()
+  if type(impl.set_local_actor_role_id) == "function" then
+    impl.set_local_actor_role_id(state, role_id)
+  end
+  if state then
+    state.local_actor_role_id = role_id
+  end
+  return role_id
+end
+
 function runtime_state.get_pending_choice(state)
   return _runtime_state().get_pending_choice(state)
 end

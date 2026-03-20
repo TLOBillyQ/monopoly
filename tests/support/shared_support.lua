@@ -117,6 +117,9 @@ local function bind_ui_runtime(state)
   if state.ui_dirty ~= nil and ui_runtime.ui_dirty == nil then
     ui_runtime.ui_dirty = state.ui_dirty == true
   end
+  if state.local_actor_role_id ~= nil and ui_runtime.local_actor_role_id == nil then
+    ui_runtime.local_actor_role_id = state.local_actor_role_id
+  end
   return state
 end
 

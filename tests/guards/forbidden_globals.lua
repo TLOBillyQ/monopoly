@@ -19,13 +19,25 @@ local forbidden = {
 
 local scan_roots = { "src", "tests", "tools" }
 
+local function _skip_fixture_path(path, relpath)
+  local normalized_path = guard_support.normalize_path(path)
+  local normalized_relpath = guard_support.normalize_path(relpath)
+  return normalized_path:find("tests/fixtures/guards/", 1, true) ~= nil
+    or normalized_relpath:find("tests/fixtures/guards/", 1, true) ~= nil
+end
+
 local M = {}
 
 function M.run(opts)
   opts = opts or {}
+  local skip_path = opts.skip_path
+  if skip_path == nil and opts.scan_roots == nil then
+    skip_path = _skip_fixture_path
+  end
   local violations, err = guard_support.collect_line_violations({
     roots = opts.scan_roots or scan_roots,
     allow_empty_roots = true,
+    skip_path = skip_path,
     find_violation = function(path, relpath, line, line_number)
       if guard_support.is_comment_line(line) then
         return nil

@@ -1,7 +1,6 @@
 local choice_support = require("src.ui.pres.choice_support")
 local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")
-local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
 local role_id_utils = require("src.core.utils.role_id")
 local runtime_state = require("src.ui.runtime.state")
 
@@ -84,7 +83,7 @@ end
 
 local function _can_local_owner_open_pre_confirm(state, choice)
   local owner_role_id = _resolve_choice_owner_role_id(state, choice)
-  local local_role_id = role_id_utils.normalize(local_actor_resolver.resolve_local(state))
+  local local_role_id = role_id_utils.normalize(runtime_state.get_local_actor_role_id(state))
   if owner_role_id == nil or local_role_id == nil then
     return false
   end

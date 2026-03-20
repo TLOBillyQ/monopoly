@@ -54,6 +54,17 @@ function runtime_state.set_ui_model(state, model)
   return model
 end
 
+function runtime_state.get_local_actor_role_id(state)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  return ui_runtime.local_actor_role_id
+end
+
+function runtime_state.set_local_actor_role_id(state, role_id)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.local_actor_role_id = role_id
+  return role_id
+end
+
 function runtime_state.get_pending_choice(state)
   local ui_runtime = runtime_state.ensure_ui_runtime(state)
   return ui_runtime.pending_choice

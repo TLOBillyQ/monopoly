@@ -9,7 +9,7 @@ local function _cache_local_role_id(state, role_id)
   if not state then
     return
   end
-  state.local_actor_role_id = role_id
+  runtime_state.set_local_actor_role_id(state, role_id)
 end
 
 local function _resolve_role_id_from_event(state, data)
@@ -39,7 +39,7 @@ local function _resolve_current_player_role_id(state)
 end
 
 local function _resolve_cached_role_id(state)
-  return role_id_utils.normalize(state and state.local_actor_role_id or nil)
+  return role_id_utils.normalize(runtime_state.get_local_actor_role_id(state))
 end
 
 function resolver.resolve_from_event(state, data, opts)
