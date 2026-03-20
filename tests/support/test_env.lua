@@ -52,12 +52,12 @@ function M.install_defaults()
     end
   end
   if not GameAPI.play_3d_sound then
-    GameAPI.play_3d_sound = function(_, sound_id)
+    GameAPI.play_3d_sound = function(sound_id, ...)
       return sound_id
     end
   end
   if not GameAPI.play_sfx_by_key then
-    GameAPI.play_sfx_by_key = function(_, sfx_key)
+    GameAPI.play_sfx_by_key = function(sfx_key, ...)
       return sfx_key
     end
   end
