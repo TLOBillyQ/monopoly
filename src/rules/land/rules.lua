@@ -125,8 +125,8 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
   end
 
   local paid = game:player_balance(player, "金币")
+  game:deduct_player_cash(player, paid)
   game:add_player_cash(owner, paid)
-  game:set_player_cash(player, 0)
   local reason = player.name .. " 资金不足，支付(" .. owner.name .. ") " .. number_utils.format_integer_part(paid) .. " 后破产"
   result.event = "rent_bankrupt"
   result.payload.amount = paid

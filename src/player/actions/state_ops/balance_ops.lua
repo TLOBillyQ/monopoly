@@ -1,6 +1,18 @@
+local action_anim_port = require("src.core.ports.action_anim_port")
 local common = require("src.player.actions.state_ops.common")
 
 local balance_ops = {}
+
+local function _queue_cash_anim(self, player, delta)
+  if delta == 0 then
+    return
+  end
+  action_anim_port.queue(self, {
+    kind = "cash_receive",
+    player_id = player.id,
+    amount = delta,
+  })
+end
 
 function balance_ops.player_balance(self, player, currency)
   local key = common.normalize_currency(currency)
@@ -25,7 +37,9 @@ end
 
 function balance_ops.add_player_cash(self, player, amount)
   local next_cash = self:player_balance(player, "金币") + amount
-  return self:set_player_cash(player, next_cash)
+  local updated_cash = self:set_player_cash(player, next_cash)
+  _queue_cash_anim(self, player, amount)
+  return updated_cash
 end
 
 function balance_ops.set_player_cash(self, player, amount)
@@ -35,8 +49,7 @@ function balance_ops.set_player_cash(self, player, amount)
 end
 
 function balance_ops.deduct_player_cash(self, player, amount)
-  local next_cash = self:player_balance(player, "金币") - amount
-  return self:set_player_cash(player, next_cash)
+  return self:add_player_cash(player, -amount)
 end
 
 function balance_ops.deduct_player_balance(self, player, currency, amount)

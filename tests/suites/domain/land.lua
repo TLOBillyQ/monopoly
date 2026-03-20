@@ -25,6 +25,14 @@ local effect_runner = require("src.rules.effects.effect_runner")
 local market_choice_handlers = require("src.rules.market.choice_handlers")
 local item_ids = gameplay_rules.item_ids
 
+local function _action_anim_count(game)
+  local count = 0
+  if game.turn.action_anim then
+    count = count + 1
+  end
+  return count + #(game.turn.action_anim_queue or {})
+end
+
 local function _build_choice_groups()
   local helpers = choice_resolver.helpers({
     use_item = item_executor.use_item,
@@ -332,6 +340,47 @@ local function _test_land_actions_execute_tax_free_card_triggers_event()
   assert(true, "execute_tax_free_card should execute without error")
 end
 
+local function _test_land_actions_execute_pay_rent_queues_cash_anim_for_both_players()
+  local g = _new_game()
+  local owner = g.players[1]
+  local tenant = g.players[2]
+  local idx, tile_ref = _first_land_tile(g.board)
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+  g:set_tile_owner(tile_ref, owner.id)
+  g:set_tile_level(tile_ref, 1)
+  g:set_player_property(owner, tile_ref.id, true)
+  g:update_player_position(tenant, idx)
+
+  local ok = land_actions.execute_pay_rent(g, tenant.id, tile_ref.id)
+
+  assert(ok == true, "execute_pay_rent should succeed")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "cash_receive", "rent should queue cash_receive anim")
+  _assert_eq(g.turn.action_anim.player_id, tenant.id, "rent first anim should play on payer")
+  _assert_eq(_action_anim_count(g), 2, "rent should queue one anim per changed player")
+  _assert_eq(g.turn.action_anim_queue[1].player_id, owner.id, "rent second anim should play on owner")
+end
+
+local function _test_land_actions_execute_pay_rent_bankruptcy_queues_cash_anim_for_both_players()
+  local g = _new_game()
+  local owner = g.players[1]
+  local tenant = g.players[2]
+  local idx, tile_ref = _first_land_tile(g.board)
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+  g:set_tile_owner(tile_ref, owner.id)
+  g:set_tile_level(tile_ref, 1)
+  g:set_player_property(owner, tile_ref.id, true)
+  g:update_player_position(tenant, idx)
+  g:set_player_cash(tenant, 1)
+
+  local ok = land_actions.execute_pay_rent(g, tenant.id, tile_ref.id)
+
+  assert(ok == true, "execute_pay_rent should still resolve on bankruptcy")
+  assert(tenant.eliminated == true, "rent bankruptcy should eliminate tenant")
+  _assert_eq(_action_anim_count(g), 2, "rent bankruptcy should still queue both payer and owner cash anims")
+  _assert_eq(g.turn.action_anim.player_id, tenant.id, "rent bankruptcy first anim should play on payer")
+  _assert_eq(g.turn.action_anim_queue[1].player_id, owner.id, "rent bankruptcy second anim should play on owner")
+end
+
 local function _test_land_actions_safe_tile_state_returns_state()
   local g = _new_game()
   local idx, tile_ref = _first_land_tile(g.board)
@@ -457,6 +506,14 @@ return {
     { name = "land_actions_execute_strong_card_triggers_event", run = _test_land_actions_execute_strong_card_triggers_event },
     { name = "land_actions_execute_free_card_triggers_event", run = _test_land_actions_execute_free_card_triggers_event },
     { name = "land_actions_execute_tax_free_card_triggers_event", run = _test_land_actions_execute_tax_free_card_triggers_event },
+    {
+      name = "land_actions_execute_pay_rent_queues_cash_anim_for_both_players",
+      run = _test_land_actions_execute_pay_rent_queues_cash_anim_for_both_players,
+    },
+    {
+      name = "land_actions_execute_pay_rent_bankruptcy_queues_cash_anim_for_both_players",
+      run = _test_land_actions_execute_pay_rent_bankruptcy_queues_cash_anim_for_both_players,
+    },
     { name = "land_actions_safe_tile_state_returns_state", run = _test_land_actions_safe_tile_state_returns_state },
     { name = "land_actions_resolve_rent_owner_returns_owner", run = _test_land_actions_resolve_rent_owner_returns_owner },
     { name = "land_actions_resolve_rent_owner_skips_mountain_owner", run = _test_land_actions_resolve_rent_owner_skips_mountain_owner },

@@ -5,6 +5,7 @@ local market_cfg = require("src.config.content.market")
 local chance_cfg = require("src.config.content.chance_cards")
 local tiles_cfg = require("src.config.content.tiles")
 local runtime_refs = require("src.config.content.runtime_refs")
+local board_feedback_catalog = require("src.ui.render.board_feedback_catalog")
 
 local function _test_config_sanity_validate_passes_current_generated_data()
   config_sanity.reset_for_tests()
@@ -130,6 +131,14 @@ local function _test_board_feedback_audio_refs_exist_in_runtime_refs()
   end
 end
 
+local function _test_cash_burst_board_feedback_binds_above_player()
+  local cue = assert(board_feedback_catalog.get("cash_burst"), "cash_burst cue should exist")
+  assert(cue.bind_to_player == true, "cash_burst should bind to player")
+  assert(cue.socket_name == "Bip001", "cash_burst should bind to Bip001 socket")
+  assert(type(cue.bind_offset) == "table", "cash_burst bind_offset should resolve to vector")
+  assert(cue.bind_offset.y == 1.6, "cash_burst bind_offset should move effect above player head")
+end
+
 local function _test_config_sanity_rejects_vehicle_chance_cards()
   _with_release_tables({
     { id = 99001, effect = "set_vehicle", vehicle_id = 4001 },
@@ -217,6 +226,10 @@ return {
     {
       name = "board_feedback_audio_refs_exist_in_runtime_refs",
       run = _test_board_feedback_audio_refs_exist_in_runtime_refs,
+    },
+    {
+      name = "cash_burst_board_feedback_binds_above_player",
+      run = _test_cash_burst_board_feedback_binds_above_player,
     },
     {
       name = "config_sanity_rejects_vehicle_chance_cards",

@@ -16,6 +16,7 @@ local q_zero = _quat(0.0, 0.0, 0.0)
 
 local runtime_constants = {
   v3_one = _vec3(1.0, 1.0, 1.0),
+  v3_cash_fx_head_offset = _vec3(0.0, 1.6, 0.0),
   v3_left = _vec3(0.0, 0.0, -1.0),
   v3_right = _vec3(0.0, 0.0, 1.0),
   v3_up = _vec3(-1.0, 0.0, 0.0),

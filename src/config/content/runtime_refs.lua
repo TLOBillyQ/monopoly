@@ -130,6 +130,9 @@ refs.board_feedback = {
         scale = 1.6,
         duration = 1.0,
         volume = 1.0,
+        bind_to_player = true,
+        socket_name = "Bip001",
+        bind_offset = "v3_cash_fx_head_offset",
         allow_missing_resource = true,
     },
     mountain_stun = {

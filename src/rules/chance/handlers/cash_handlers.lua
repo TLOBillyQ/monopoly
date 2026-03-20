@@ -5,24 +5,12 @@ function cash_handlers.register(handlers, common)
   local monopoly_event = deps.monopoly_event
   local number_utils = deps.number_utils
 
-  local function _queue_cash_receive_anim(game, player, delta)
-    if delta <= 0 then
-      return
-    end
-    common.queue_action_anim(game, {
-      kind = "cash_receive",
-      player_id = player.id,
-      amount = delta,
-    })
-  end
-
   handlers.add_cash = function(game, player, card)
     if card.target == "all" then
       for _, p in ipairs(game.players) do
         if not p.eliminated then
           local delta = common.adjust_chance_delta(game, p, card.amount)
           common.apply_cash_change(game, p, delta)
-          _queue_cash_receive_anim(game, p, delta)
           common.emit_event(monopoly_event.chance.applied, {
             player = p,
             card = card,
@@ -36,7 +24,6 @@ function cash_handlers.register(handlers, common)
 
     local delta = common.adjust_chance_delta(game, player, card.amount)
     common.apply_cash_change(game, player, delta)
-    _queue_cash_receive_anim(game, player, delta)
     common.emit_event(monopoly_event.chance.applied, {
       player = player,
       card = card,
@@ -144,7 +131,6 @@ function cash_handlers.register(handlers, common)
           end
           common.apply_cash_change(game, other, -fee)
           common.apply_cash_change(game, player, fee)
-          _queue_cash_receive_anim(game, player, fee)
         end
       end
     end

@@ -24,10 +24,12 @@ local target_item_order = {
 local target_effects = {
   [item_ids.share_wealth] = {
     apply = function(game, user, target, _context)
-      local total = game:player_balance(user, "金币") + game:player_balance(target, "金币")
+      local user_cash = game:player_balance(user, "金币")
+      local target_cash = game:player_balance(target, "金币")
+      local total = user_cash + target_cash
       local half = math.floor(total / 2)
-      game:set_player_cash(user, half)
-      game:set_player_cash(target, total - half)
+      game:add_player_cash(user, half - user_cash)
+      game:add_player_cash(target, (total - half) - target_cash)
       logger.event(user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
       return true
     end,

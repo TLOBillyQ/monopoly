@@ -15,6 +15,14 @@ local chance_effects = support.chance_effects
 local _build_ui_port = support.build_ui_port
 local item_ids = gameplay_rules.item_ids
 
+local function _action_anim_count(game)
+  local count = 0
+  if game.turn.action_anim then
+    count = count + 1
+  end
+  return count + #(game.turn.action_anim_queue or {})
+end
+
 local function _test_chance_is_mandatory_effect_entrypoint()
   local g = _new_game()
   local p = g:current_player()
@@ -182,6 +190,18 @@ local function _test_chance_handler_add_cash_applies_to_all_players()
   assert(events[1].text:find("获得"), "add_cash event text should indicate gain")
 end
 
+local function _test_chance_handler_add_cash_queues_cash_anim_for_all_players()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+
+  handlers.add_cash(g, p, { effect = "add_cash", amount = 100, target = "all" })
+
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "cash_receive", "add_cash should queue cash_receive anim")
+  _assert_eq(_action_anim_count(g), #g.players, "add_cash should queue one cash anim per player")
+end
+
 local function _test_chance_handler_pay_cash_applies_to_single_player()
   local g = _new_game()
   local handlers = chance_handlers.build()
@@ -201,6 +221,17 @@ local function _test_chance_handler_pay_cash_applies_to_single_player()
   assert(#events == 1, "pay_cash should emit one event for single player")
   assert(events[1].effect == "pay_cash", "pay_cash event should have correct effect")
   assert(events[1].text:find("支付"), "pay_cash event text should indicate payment")
+end
+
+local function _test_set_player_cash_does_not_queue_cash_anim()
+  local g = _new_game()
+  local p = g:current_player()
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+
+  g:set_player_cash(p, 12345)
+
+  assert(g.turn.action_anim == nil, "set_player_cash should not queue gameplay cash anim")
+  _assert_eq(_action_anim_count(g), 0, "set_player_cash should not enqueue any cash anims")
 end
 
 local function _test_chance_handler_percent_pay_cash_calculates_correctly()
@@ -351,6 +382,20 @@ local function _test_post_effects_get_target_spec_returns_spec()
   assert(type(spec.apply) == "function", "target spec should have apply function")
 end
 
+local function _test_post_effects_share_wealth_queues_cash_anim_for_both_players()
+  local g = _new_game()
+  local user = g.players[1]
+  local target = g.players[2]
+  g:set_player_cash(user, 1000)
+  g:set_player_cash(target, 3000)
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+
+  post_effects.apply_target(g, user, item_ids.share_wealth, target, {})
+
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "cash_receive", "share_wealth should queue cash_receive anim")
+  _assert_eq(_action_anim_count(g), 2, "share_wealth should queue one cash anim per affected player")
+end
+
 -- T8 characterization tests for 0% coverage hotspots
 local bankruptcy = require("src.rules.endgame.bankruptcy")
 
@@ -473,6 +518,21 @@ local function _test_context_entry_name_returns_name()
   end
 end
 
+local function _test_chance_handler_collect_from_others_queues_one_anim_per_cash_change()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  for i = 2, #g.players do
+    g:set_player_cash(g.players[i], 1000)
+  end
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+
+  handlers.collect_from_others(g, p, { effect = "collect_from_others", amount = 100, target = "self" })
+
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "cash_receive", "collect_from_others should queue cash_receive anim")
+  _assert_eq(_action_anim_count(g), (#g.players - 1) * 2, "collect_from_others should queue one anim per cash change")
+end
+
 return {
   name = "chance",
   tests = {
@@ -490,11 +550,17 @@ return {
     -- T4 characterization tests for chance handlers
     { name = "chance_handlers_build_returns_handler_table", run = _test_chance_handlers_build_returns_handler_table },
     { name = "chance_handler_add_cash_applies_to_all_players", run = _test_chance_handler_add_cash_applies_to_all_players },
+    { name = "chance_handler_add_cash_queues_cash_anim_for_all_players", run = _test_chance_handler_add_cash_queues_cash_anim_for_all_players },
     { name = "chance_handler_pay_cash_applies_to_single_player", run = _test_chance_handler_pay_cash_applies_to_single_player },
+    { name = "set_player_cash_does_not_queue_cash_anim", run = _test_set_player_cash_does_not_queue_cash_anim },
     { name = "chance_handler_percent_pay_cash_calculates_correctly", run = _test_chance_handler_percent_pay_cash_calculates_correctly },
     { name = "chance_handler_grant_item_gives_item_to_player", run = _test_chance_handler_grant_item_gives_item_to_player },
     { name = "chance_handler_discard_items_removes_items", run = _test_chance_handler_discard_items_removes_items },
     { name = "chance_handler_move_forward_moves_player", run = _test_chance_handler_move_forward_moves_player },
+    {
+      name = "chance_handler_collect_from_others_queues_one_anim_per_cash_change",
+      run = _test_chance_handler_collect_from_others_queues_one_anim_per_cash_change,
+    },
     -- T4 characterization tests for post_effects
     { name = "post_effects_apply_sets_status", run = _test_post_effects_apply_sets_status },
     { name = "post_effects_apply_deity_sets_deity", run = _test_post_effects_apply_deity_sets_deity },
@@ -503,6 +569,7 @@ return {
     { name = "post_effects_apply_clear_obstacles_ahead_clears_obstacles", run = _test_post_effects_apply_clear_obstacles_ahead_clears_obstacles },
     { name = "post_effects_target_item_ids_returns_ordered_list", run = _test_post_effects_target_item_ids_returns_ordered_list },
     { name = "post_effects_get_target_spec_returns_spec", run = _test_post_effects_get_target_spec_returns_spec },
+    { name = "post_effects_share_wealth_queues_cash_anim_for_both_players", run = _test_post_effects_share_wealth_queues_cash_anim_for_both_players },
     -- T8 characterization tests for 0% coverage hotspots
     { name = "chance_handler_discard_properties_removes_properties", run = _test_chance_handler_discard_properties_removes_properties },
     { name = "bankruptcy_eliminate_calls_life_die", run = _test_bankruptcy_eliminate_calls_life_die },
