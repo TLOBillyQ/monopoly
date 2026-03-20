@@ -60,8 +60,6 @@ local turn_script = require("src.turn.timing.session_script")
 local roll = require("src.turn.phases.roll")
 local item_slot_data = require("src.turn.actions.item_slot_data")
 local default_ports = require("src.turn.output.default_ports")
-local _has_mine_trigger_anim
-
 local function _build_startup_state(get_current_game, profile_name)
   return state_factory.build_state({
     profile_name = profile_name,
@@ -3684,7 +3682,7 @@ local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
 end
 
-function _has_mine_trigger_anim(turn)
+local function _has_mine_trigger_anim(turn)
   if turn and turn.action_anim and turn.action_anim.kind == "mine_trigger" then
     return true
   end
