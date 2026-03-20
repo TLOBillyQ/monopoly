@@ -5,7 +5,8 @@ local startup_policy = require("src.app.bootstrap.startup_policy")
 local startup_roster = require("src.app.bootstrap.startup_roster")
 local state_factory = require("src.presentation.runtime.state_factory")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local test_profile_bootstrap = require("src.app.bootstrap.testing.test_profile_bootstrap")
+local startup_bootstrap = require("src.app.bootstrap.startup_bootstrap")
+local startup_profile_source = require("src.app.bootstrap.startup_profile_source")
 local runtime_refs = require("src.config.content.runtime_refs")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 
@@ -135,10 +136,25 @@ local function _test_startup_policy_accepts_explicit_profile_override()
   end)
 end
 
+local function _test_startup_policy_accepts_generated_profile_module()
+  with_patches({
+    { key = "STARTUP_TEST_PROFILE", value = "missile" },
+    { key = "STARTUP_PROFILE_SOURCE", value = "generated" },
+    { key = "STARTUP_PROFILE_MODULE", value = "Data.StartupProfileGenerated" },
+  }, function()
+    local policy = startup_policy.resolve(_G)
+    assert(policy.profile_name == "missile", "startup should keep generated profile name for logging")
+    assert(policy.profile_source == "generated", "startup should keep generated profile source")
+    assert(policy.profile_module == "Data.StartupProfileGenerated", "startup should keep generated module path")
+  end)
+end
+
 local function _test_game_startup_fills_synthetic_ai_when_role_roster_empty()
   local created_opts = nil
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
+    { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
+    { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
     {
       target = app,
       key = "new",
@@ -147,7 +163,7 @@ local function _test_game_startup_fills_synthetic_ai_when_role_roster_empty()
         return {}
       end,
     },
-    { target = test_profile_bootstrap, key = "apply", value = function() end },
+    { target = startup_bootstrap, key = "apply_bootstrap", value = function() end },
   }, function()
     local state = _build_startup_state("default")
     state.game_factory()
@@ -172,6 +188,8 @@ local function _test_game_startup_real_roles_stay_human_by_default()
         return { _build_role(11), _build_role(22), _build_role(33), _build_role(44) }
       end,
     },
+    { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
+    { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
     {
       target = app,
       key = "new",
@@ -180,7 +198,7 @@ local function _test_game_startup_real_roles_stay_human_by_default()
         return {}
       end,
     },
-    { target = test_profile_bootstrap, key = "apply", value = function() end },
+    { target = startup_bootstrap, key = "apply_bootstrap", value = function() end },
   }, function()
     local state = _build_startup_state("default")
     state.game_factory()
@@ -201,6 +219,8 @@ local function _test_game_startup_mixed_real_and_synthetic_players_keep_slot_ava
         return { _build_role(11) }
       end,
     },
+    { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
+    { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
     {
       target = app,
       key = "new",
@@ -209,7 +229,7 @@ local function _test_game_startup_mixed_real_and_synthetic_players_keep_slot_ava
         return {}
       end,
     },
-    { target = test_profile_bootstrap, key = "apply", value = function() end },
+    { target = startup_bootstrap, key = "apply_bootstrap", value = function() end },
   }, function()
     local state = _build_startup_state("default")
     created_game = state.game_factory()
@@ -235,6 +255,8 @@ local function _test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_r
         return { _build_role(2) }
       end,
     },
+    { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
+    { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
     {
       target = app,
       key = "new",
@@ -243,7 +265,7 @@ local function _test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_r
         return {}
       end,
     },
-    { target = test_profile_bootstrap, key = "apply", value = function() end },
+    { target = startup_bootstrap, key = "apply_bootstrap", value = function() end },
   }, function()
     local state = _build_startup_state("default")
     state.game_factory()
@@ -496,6 +518,7 @@ return {
     { name = "state_factory_builds_runtime_state_when_package_global_missing", run = _test_state_factory_builds_runtime_state_when_package_global_missing },
     { name = "startup_policy_defaults_to_default_profile", run = _test_startup_policy_defaults_to_default_profile },
     { name = "startup_policy_accepts_explicit_profile_override", run = _test_startup_policy_accepts_explicit_profile_override },
+    { name = "startup_policy_accepts_generated_profile_module", run = _test_startup_policy_accepts_generated_profile_module },
     { name = "game_startup_fills_synthetic_ai_when_role_roster_empty", run = _test_game_startup_fills_synthetic_ai_when_role_roster_empty },
     { name = "game_startup_real_roles_stay_human_by_default", run = _test_game_startup_real_roles_stay_human_by_default },
     { name = "game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs", run = _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs },

@@ -453,6 +453,7 @@ local function _test_runtime_context_vehicle_helper_consume_enter_delay_only_wai
   })
 
   with_patches({
+    { key = "VEHICLE_RUNTIME_MODE", value = "legacy" },
     {
       target = require("src.rules.vehicle"),
       key = "is_enabled",

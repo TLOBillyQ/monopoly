@@ -451,8 +451,9 @@ local function _test_deploy_comprehensive()
     local publish_target = common.join_path(tmp_root, "deploy_target")
 
     local result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "--build-mode", "debug",
       "--target-path", publish_target,
-      "--startup-profile", "smoke_test",
+      "--startup-profile", "missile",
     })
     
     if result.skipped == true then
@@ -474,7 +475,9 @@ local function _test_deploy_comprehensive()
     
     -- 验证启动配置注入
     local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
-    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "smoke_test"',
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
+      "deploy should inject debug build mode into main.lua")
+    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
       "deploy should inject startup profile into main.lua when requested")
     
     -- 验证输出不包含已退役的 Config 目录
@@ -493,8 +496,9 @@ local function _test_deploy_comprehensive()
   _with_ascii_tmp("deploy_powershell_style", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-BuildMode", "debug",
       "-TargetPath", publish_target,
-      "-StartupProfile", "smoke_test",
+      "-StartupProfile", "missile",
     })
 
     if result.skipped == true then
@@ -512,7 +516,9 @@ local function _test_deploy_comprehensive()
       "deploy PowerShell wrapper should copy Data/Prefab.lua into the target path")
 
     local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
-    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "smoke_test"',
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
+      "deploy PowerShell wrapper should forward build mode")
+    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
       "deploy PowerShell wrapper should forward startup profile injection")
   end)
 end

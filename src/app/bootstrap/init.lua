@@ -33,7 +33,10 @@ local startup = startup_policy.resolve(_G)
 logger.info(
   "[Eggy]",
   "startup policy:",
-  "resolved_profile=" .. tostring(startup.profile_name)
+  "build_mode=" .. tostring(startup.build_mode),
+  "resolved_profile=" .. tostring(startup.profile_name),
+  "profile_source=" .. tostring(startup.profile_source),
+  "profile_module=" .. tostring(startup.profile_module)
 )
 
 runtime_install.install()
@@ -45,7 +48,10 @@ local state = state_factory.build_state(_get_current_game, {
   profile_name = startup.profile_name,
   build_game_factory = function(child_state)
     return startup_roster.build_game_factory(child_state, {
+      build_mode = startup.build_mode,
       profile_name = startup.profile_name,
+      profile_source = startup.profile_source,
+      profile_module = startup.profile_module,
     })
   end,
   auto_runner = auto_runner,

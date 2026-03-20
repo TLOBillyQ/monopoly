@@ -14,6 +14,7 @@ local runtime_state = require("src.state.state_access.runtime_state")
 local test_profiles_cfg = require("src.app.bootstrap.testing.config.test_profiles")
 local test_profile_bootstrap = require("src.app.bootstrap.testing.test_profile_bootstrap")
 local test_profile_resolver = require("src.app.bootstrap.testing.test_profile_resolver")
+local profile_rotation = require("src.app.bootstrap.testing.profile_rotation")
 
 local function _load_map_for_profile(profile_name)
   return test_profile_resolver.resolve_map(profile_name)
@@ -148,6 +149,48 @@ local function _test_non_default_profiles_define_p1_item_counts()
       assert(type(item_counts) == "table", "non-default profile should define p1 item_counts: " .. tostring(profile_name))
     end
   end
+end
+
+local function _contains(list, value)
+  for _, entry in ipairs(list or {}) do
+    if entry == value then
+      return true
+    end
+  end
+  return false
+end
+
+local function _test_profile_groups_are_exposed_in_priority_order()
+  local groups = test_profile_resolver.available_groups()
+  assert(groups[1] == "startup_smoke", "startup_smoke should be the first group")
+  assert(_contains(groups, "combat_obstacle"), "groups should include combat_obstacle")
+  assert(_contains(groups, "relocation_status"), "groups should include relocation_status")
+  assert(_contains(groups, "interrupt_resume"), "groups should include interrupt_resume")
+  assert(_contains(groups, "property_control"), "groups should include property_control")
+  assert(_contains(groups, "economy_core"), "groups should include economy_core")
+end
+
+local function _test_profiles_in_group_returns_curated_members()
+  local combat = test_profile_resolver.profiles_in_group("combat_obstacle", { include_default = false })
+  assert(_contains(combat, "monster"), "combat group should include monster")
+  assert(_contains(combat, "missile"), "combat group should include missile")
+  assert(_contains(combat, "mine"), "combat group should include mine")
+  assert(_contains(combat, "roadblock_hit"), "combat group should include roadblock_hit")
+  assert(_contains(combat, "clear_obstacles"), "combat group should include clear_obstacles")
+end
+
+local function _test_high_value_profiles_drive_default_rotation_queue()
+  profile_rotation._reset_for_tests()
+  local expected = test_profile_resolver.high_value_profiles()
+  profile_rotation.init()
+  local snapshot = profile_rotation.snapshot()
+  assert(#snapshot.queue == #expected, "default rotation should use curated high value profiles")
+  for index, name in ipairs(expected) do
+    assert(snapshot.queue[index] == name, "rotation queue mismatch at index " .. tostring(index))
+  end
+  assert(_contains(snapshot.queue, "forced_move_hospital"), "high value queue should include forced_move_hospital")
+  assert(_contains(snapshot.queue, "exile"), "high value queue should include exile")
+  profile_rotation._reset_for_tests()
 end
 
 local function _test_bankruptcy_applies_tile_override()
@@ -403,6 +446,57 @@ local function _test_circle_bootstraps_position_and_inventory()
   })
 end
 
+local function _test_forced_move_hospital_bootstraps_position_and_remote_dice()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "forced_move_hospital")
+
+  assert(game.players[1].position == assert(game.board:index_of_tile_id(44)),
+    "forced_move_hospital should place p1 on tile 44 for chance staging")
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
+  })
+end
+
+local function _test_exile_bootstraps_target_pair_and_item()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "exile")
+
+  assert(game.players[1].position == assert(game.board:index_of_tile_id(7)),
+    "exile should place p1 on tile 7")
+  assert(game.players[2].position == assert(game.board:index_of_tile_id(8)),
+    "exile should place target p2 on tile 8")
+  _assert_inventory_counts(game.players[1], {
+    [2012] = 1,
+  })
+end
+
+local function _test_roadblock_hit_bootstraps_forward_overlay()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "roadblock_hit")
+
+  local target_index = assert(game.board:index_of_tile_id(8), "roadblock_hit target tile should exist")
+  assert(game.players[1].position == assert(game.board:index_of_tile_id(7)),
+    "roadblock_hit should place p1 one step before target")
+  assert(game.board:has_roadblock(target_index) == true, "roadblock_hit should preload roadblock overlay")
+  _assert_inventory_counts(game.players[1], {
+    [2002] = 1,
+  })
+end
+
+local function _test_clear_obstacles_bootstraps_overlay_cluster()
+  local game = _new_game()
+  test_profile_bootstrap.apply(game, "clear_obstacles")
+
+  local idx8 = assert(game.board:index_of_tile_id(8), "clear_obstacles tile 8 should exist")
+  local idx9 = assert(game.board:index_of_tile_id(9), "clear_obstacles tile 9 should exist")
+  assert(game.board:has_roadblock(idx8) == true, "clear_obstacles should preload first roadblock")
+  assert(game.board:has_roadblock(idx9) == true, "clear_obstacles should preload second roadblock")
+  assert(game.board:has_mine(idx9) == true, "clear_obstacles should preload mine on second obstacle tile")
+  _assert_inventory_counts(game.players[1], {
+    [2006] = 1,
+  })
+end
+
 local function _test_steal_bootstraps_positions_and_inventory()
   local game = _new_game()
   test_profile_bootstrap.apply(game, "steal")
@@ -608,6 +702,9 @@ return {
       run = _test_profile_bootstrap_rejects_item_count_over_inventory_limit,
     },
     { name = "non_default_profiles_define_p1_item_counts", run = _test_non_default_profiles_define_p1_item_counts },
+    { name = "profile_groups_are_exposed_in_priority_order", run = _test_profile_groups_are_exposed_in_priority_order },
+    { name = "profiles_in_group_returns_curated_members", run = _test_profiles_in_group_returns_curated_members },
+    { name = "high_value_profiles_drive_default_rotation_queue", run = _test_high_value_profiles_drive_default_rotation_queue },
     { name = "bankruptcy_applies_tile_override", run = _test_bankruptcy_applies_tile_override },
     {
       name = "upgrade_build_applies_bootstrap",
@@ -652,6 +749,22 @@ return {
     {
       name = "circle_bootstraps_position_and_inventory",
       run = _test_circle_bootstraps_position_and_inventory,
+    },
+    {
+      name = "forced_move_hospital_bootstraps_position_and_remote_dice",
+      run = _test_forced_move_hospital_bootstraps_position_and_remote_dice,
+    },
+    {
+      name = "exile_bootstraps_target_pair_and_item",
+      run = _test_exile_bootstraps_target_pair_and_item,
+    },
+    {
+      name = "roadblock_hit_bootstraps_forward_overlay",
+      run = _test_roadblock_hit_bootstraps_forward_overlay,
+    },
+    {
+      name = "clear_obstacles_bootstraps_overlay_cluster",
+      run = _test_clear_obstacles_bootstraps_overlay_cluster,
     },
     {
       name = "steal_bootstraps_positions_and_inventory",

@@ -46,7 +46,6 @@ local startup_roster = require("src.app.bootstrap.startup_roster")
 local state_factory = require("src.presentation.runtime.state_factory")
 local game_startup_event_bridge = require("src.presentation.runtime.runtime_event_bridge")
 local profile_rotation = require("src.app.bootstrap.testing.profile_rotation")
-local test_profile_bootstrap = require("src.app.bootstrap.testing.test_profile_bootstrap")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
@@ -3562,7 +3561,17 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
       created_opts = opts
       return {}
     end },
-    { target = test_profile_bootstrap, key = "apply", value = function() end },
+    {
+      target = require("src.app.bootstrap.startup_profile_source"),
+      key = "resolve_map",
+      value = function() return require("src.config.content.maps.default_map") end,
+    },
+    {
+      target = require("src.app.bootstrap.startup_profile_source"),
+      key = "resolve_bootstrap",
+      value = function() return {} end,
+    },
+    { target = require("src.app.bootstrap.startup_bootstrap"), key = "apply_bootstrap", value = function() end },
   }, function()
     state = _build_startup_state(function()
       return nil

@@ -2,7 +2,6 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local logger = require("src.core.utils.logger")
 local runtime_editor_exports = require("src.state.state_access.runtime_editor_exports")
-local vehicle_feature = require("src.rules.vehicle")
 local number_utils = require("src.core.utils.number_utils")
 local synthetic_actor_registry = require("src.host.eggy.synthetic_actor_registry")
 require("src.config.content.runtime_refs")
@@ -12,7 +11,7 @@ local game_api_key = "Game" .. "API"
 
 local current_context = nil
 
-local function _build_vehicle_helper(get_roles, get_game_api)
+local function _build_noop_vehicle_helper(get_roles, get_game_api)
   local function _safe_get_role(role_id)
     if role_id == nil then
       return nil
@@ -40,62 +39,7 @@ local function _build_vehicle_helper(get_roles, get_game_api)
     return nil
   end
 
-  local function _first_role_from_provider()
-    if type(get_roles) ~= "function" then
-      return nil
-    end
-    return _first_role_from_list(get_roles())
-  end
-
-  local function _first_role_from_game_api(game_api)
-    if not (game_api and game_api.get_all_valid_roles) then
-      return nil
-    end
-    local ok, valid_roles = pcall(game_api.get_all_valid_roles)
-    if not ok then
-      return nil
-    end
-    return _first_role_from_list(valid_roles)
-  end
-
-  local function _first_role_from_range()
-    for role_id = 1, 8 do
-      local role = _safe_get_role(role_id)
-      if role ~= nil then
-        return role
-      end
-    end
-    return nil
-  end
-
-  local function _first_valid_role()
-    local provider_role = _first_role_from_provider()
-    if provider_role ~= nil then
-      return provider_role
-    end
-    local game_api = get_game_api and get_game_api() or nil
-    local api_role = _first_role_from_game_api(game_api)
-    if api_role ~= nil then
-      return api_role
-    end
-    return _first_role_from_range()
-  end
-
-  local function _ensure_valid_role(role_id, action)
-    local role = _safe_get_role(role_id)
-    if role ~= nil then
-      return role
-    end
-    logger.warn(
-      "[Eggy]",
-      "skip vehicle event: invalid role",
-      tostring(action),
-      tostring(role_id)
-    )
-    return nil
-  end
-
-  local helper = {
+  return {
     player_id = nil,
     vehicle_id = nil,
     move_direction = nil,
@@ -103,127 +47,44 @@ local function _build_vehicle_helper(get_roles, get_game_api)
     set_position = nil,
     active_vehicle_by_player = {},
     needs_enter_wait_by_player = {},
+    resolve_role = _safe_get_role,
+    resolve_any_role = function()
+      local provider_roles = type(get_roles) == "function" and get_roles() or nil
+      local first = _first_role_from_list(provider_roles)
+      if first ~= nil then
+        return first
+      end
+      local game_api = get_game_api and get_game_api() or nil
+      if game_api and type(game_api.get_all_valid_roles) == "function" then
+        local ok, valid_roles = pcall(game_api.get_all_valid_roles)
+        if ok then
+          return _first_role_from_list(valid_roles)
+        end
+      end
+      return nil
+    end,
+    emit_vehicle_enter = function() return false end,
+    emit_vehicle_exit = function() return false end,
+    emit_vehicle_move = function() return false end,
+    emit_vehicle_stop = function() return false end,
+    emit_vehicle_set_position = function() return false end,
+    consume_enter_delay = function() return 0 end,
   }
+end
 
-  helper.resolve_role = function(role_id)
-    return _safe_get_role(role_id)
+local function _resolve_vehicle_helper_builder()
+  if _G and _G.MONOPOLY_BUILD_MODE == "release" then
+    return function(get_roles, get_game_api)
+      return _build_noop_vehicle_helper(get_roles, get_game_api)
+    end
   end
-
-  helper.resolve_any_role = function()
-    return _first_valid_role()
+  return function(get_roles, get_game_api)
+    return require("src.state.state_access.vehicle_runtime_source").build_helper(get_roles, get_game_api, {
+      logger = logger,
+      runtime_constants = runtime_constants,
+      runtime_event_bridge = runtime_event_bridge,
+    }, _G)
   end
-
-  helper.emit_vehicle_enter = function(role_id, vehicle_id)
-    if not vehicle_feature.is_enabled() then
-      return false
-    end
-    if _ensure_valid_role(role_id, "enter") == nil then
-      return false
-    end
-    helper.player_id = role_id
-    helper.vehicle_id = vehicle_id
-    if role_id ~= nil then
-      helper.active_vehicle_by_player[role_id] = vehicle_id
-      helper.needs_enter_wait_by_player[role_id] = true
-    end
-    runtime_event_bridge.emit_custom_event(
-      runtime_constants.eca_event.vehicle.enter,
-      {},
-      { feature_key = "vehicle.enter" }
-    )
-    return true
-  end
-
-  helper.emit_vehicle_exit = function(role_id)
-    if not vehicle_feature.is_enabled() then
-      return false
-    end
-    if _ensure_valid_role(role_id, "exit") == nil then
-      return false
-    end
-    helper.player_id = role_id
-    if role_id ~= nil then
-      helper.active_vehicle_by_player[role_id] = nil
-      helper.needs_enter_wait_by_player[role_id] = nil
-    end
-    runtime_event_bridge.emit_custom_event(
-      runtime_constants.eca_event.vehicle.exit,
-      {},
-      { feature_key = "vehicle.exit" }
-    )
-    return true
-  end
-
-  helper.emit_vehicle_move = function(role_id, dir, time)
-    if not vehicle_feature.is_enabled() then
-      return false
-    end
-    if _ensure_valid_role(role_id, "move") == nil then
-      return false
-    end
-    helper.player_id = role_id
-    helper.move_direction = dir
-    helper.move_time = time
-    runtime_event_bridge.emit_custom_event(
-      runtime_constants.eca_event.vehicle.move,
-      {},
-      { feature_key = "vehicle.move" }
-    )
-    return true
-  end
-
-  helper.emit_vehicle_stop = function(role_id)
-    if not vehicle_feature.is_enabled() then
-      return false
-    end
-    if _ensure_valid_role(role_id, "stop") == nil then
-      return false
-    end
-    helper.player_id = role_id
-    runtime_event_bridge.emit_custom_event(
-      runtime_constants.eca_event.vehicle.stop,
-      {},
-      { feature_key = "vehicle.stop" }
-    )
-    return true
-  end
-
-  helper.emit_vehicle_set_position = function(role_id, pos)
-    if not vehicle_feature.is_enabled() then
-      return false
-    end
-    if _ensure_valid_role(role_id, "set_position") == nil then
-      return false
-    end
-    helper.player_id = role_id
-    helper.set_position = pos
-    runtime_event_bridge.emit_custom_event(
-      runtime_constants.eca_event.vehicle.set_position,
-      {},
-      { feature_key = "vehicle.set_position" }
-    )
-    return true
-  end
-
-  helper.consume_enter_delay = function(role_id, vehicle_id)
-    if not vehicle_feature.is_enabled() then
-      return 0
-    end
-    if role_id == nil or vehicle_id == nil then
-      return 0
-    end
-    local active_vehicle = helper.active_vehicle_by_player[role_id]
-    if active_vehicle ~= vehicle_id then
-      helper.emit_vehicle_enter(role_id, vehicle_id)
-    end
-    if helper.needs_enter_wait_by_player[role_id] then
-      helper.needs_enter_wait_by_player[role_id] = nil
-      return runtime_constants.vehicle_enter_delay or 0
-    end
-    return 0
-  end
-
-  return helper
 end
 
 local function _build_change_skin_helper()
@@ -318,7 +179,7 @@ function runtime_context.install_runtime_helpers(ctx, opts)
     local function _resolve_game_api()
       return ctx.env and ctx.env[game_api_key] or nil
     end
-    ctx.vehicle_helper = _build_vehicle_helper(function()
+    ctx.vehicle_helper = _resolve_vehicle_helper_builder()(function()
       return ctx.roles
     end, _resolve_game_api)
   end

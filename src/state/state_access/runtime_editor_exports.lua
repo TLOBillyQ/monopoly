@@ -1,6 +1,5 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.core.utils.logger")
-local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 local number_utils = require("src.core.utils.number_utils")
 
 local runtime_editor_exports = {}
@@ -38,67 +37,6 @@ local function _resolve_role_camera_target(ctx, role_id)
     return nil
   end
   return unit
-end
-
-local function _install_vehicle_exports(vehicle_helper)
-  ---@export
-  ---@desc 获取执行载具命令的玩家
-  ---@return Role?
-  function get_vehicle_player()
-    local role_id = vehicle_helper.player_id
-    local role = vehicle_helper.resolve_role and vehicle_helper.resolve_role(role_id) or nil
-    if role ~= nil then
-      return role
-    end
-    logger.warn("[Eggy]", "vehicle player unresolved", tostring(role_id))
-    return nil
-  end
-
-  ---@export
-  ---@desc 获取载具移动方向
-  ---@return Vector3
-  function get_vehicle_move_direction()
-    return vehicle_helper.move_direction or runtime_constants.v3_left
-  end
-
-  ---@export
-  ---@desc 获取载具移动时间
-  ---@return Fixed
-  function get_vehicle_move_time()
-    return vehicle_helper.move_time or 0
-  end
-
-  ---@export
-  ---@desc 获取刷载具的ID
-  ---@return integer
-  function get_spawn_vehicle_id()
-    local first = vehicle_catalog.list()[1]
-    return vehicle_helper.vehicle_id or (first and first.id) or 0
-  end
-
-  ---@export
-  ---@desc 获取载具设置位置X
-  ---@return Fixed
-  function get_vehicle_set_position_x()
-    local pos = vehicle_helper.set_position
-    return pos and pos.x or 0
-  end
-
-  ---@export
-  ---@desc 获取载具设置位置Y
-  ---@return Fixed
-  function get_vehicle_set_position_y()
-    local pos = vehicle_helper.set_position
-    return pos and pos.y or 0
-  end
-
-  ---@export
-  ---@desc 获取载具设置位置Z
-  ---@return Fixed
-  function get_vehicle_set_position_z()
-    local pos = vehicle_helper.set_position
-    return pos and pos.z or 0
-  end
 end
 
 local function _install_camera_exports(ctx, camera_helper)
@@ -151,7 +89,15 @@ function runtime_editor_exports.install(ctx)
   assert(ctx.vehicle_helper ~= nil, "missing context.vehicle_helper")
   assert(ctx.camera_helper ~= nil, "missing context.camera_helper")
   assert(ctx.change_skin_helper ~= nil, "missing context.change_skin_helper")
-  _install_vehicle_exports(ctx.vehicle_helper)
+  if not (_G and _G.MONOPOLY_BUILD_MODE == "release") then
+    local ok_vehicle_catalog, vehicle_catalog = pcall(require, "src.config.gameplay.vehicle_catalog")
+    require("src.state.state_access.vehicle_runtime_source").install_editor_exports(ctx, {
+      runtime_constants = runtime_constants,
+      logger = logger,
+      vehicle_catalog = ok_vehicle_catalog and vehicle_catalog or nil,
+      number_utils = number_utils,
+    }, _G)
+  end
   _install_camera_exports(ctx, ctx.camera_helper)
   _install_change_skin_exports(ctx, ctx.change_skin_helper)
 end

@@ -26,7 +26,7 @@ function rotation.init(opts)
   if type(queue) == "table" then
     queue = _build_queue(queue)
   else
-    queue = _build_queue(test_profile_resolver.available_profiles())
+    queue = _build_queue(test_profile_resolver.high_value_profiles())
   end
   local turns_per_profile = opts.turns_per_profile
   if turns_per_profile == nil or turns_per_profile <= 0 then

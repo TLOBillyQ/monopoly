@@ -2,10 +2,9 @@ local auto_runner = require("src.turn.policies.auto_runner")
 local composition_root = require("src.app.bootstrap.compose_game")
 local app = require("src.state.game_state")
 local tiles_cfg = require("src.config.content.tiles")
+local default_map = require("src.config.content.maps.default_map")
 local runtime_refs = require("src.config.content.runtime_refs")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
-local test_profile_bootstrap = require("src.app.bootstrap.testing.test_profile_bootstrap")
-local test_profile_resolver = require("src.app.bootstrap.testing.test_profile_resolver")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_id_utils = require("src.core.utils.role_id")
 local default_ports = require("src.turn.output.default_ports")
@@ -15,6 +14,26 @@ local max_player_count = 4
 local synthetic_unit_keys = { 9000601, 9000602, 9000603, 9000604, 9000605, 9000607 }
 local synthetic_avatar_refs = runtime_refs.images or {}
 local M = {}
+
+local function _is_release_build(build_mode)
+  return build_mode == "release"
+end
+
+local function _resolve_startup_map(startup)
+  if _is_release_build(startup and startup.build_mode) then
+    return default_map
+  end
+  return require("src.app.bootstrap.startup_profile_source").resolve_map(startup)
+end
+
+local function _apply_startup_bootstrap(game, startup)
+  if _is_release_build(startup and startup.build_mode) then
+    return
+  end
+  local bootstrap = require("src.app.bootstrap.startup_bootstrap")
+  local startup_profile_source = require("src.app.bootstrap.startup_profile_source")
+  bootstrap.apply_bootstrap(game, startup_profile_source.resolve_bootstrap(startup))
+end
 
 local function _resolve_roles()
   local roles = runtime_ports.resolve_roles()
@@ -162,10 +181,19 @@ end
 function M.build_game_factory(state, opts)
   assert(state ~= nil, "missing state")
   opts = opts or {}
+  local build_mode = opts.build_mode
   local profile_name = opts.profile_name
+  local profile_source = opts.profile_source
+  local profile_module = opts.profile_module
   return function()
     local active_profile = state.active_profile_name or profile_name
-    local map_cfg = test_profile_resolver.resolve_map(active_profile)
+    local startup = {
+      build_mode = build_mode,
+      profile_name = active_profile,
+      profile_source = profile_source,
+      profile_module = profile_module,
+    }
+    local map_cfg = _resolve_startup_map(startup)
     local role_roster = _build_startup_roster(max_player_count)
     local forced_ai = _build_startup_ai_map(role_roster)
     logger.info("[Eggy]", "使用四槽角色驱动初始化，角色数量:", tostring(#role_roster))
@@ -177,7 +205,7 @@ function M.build_game_factory(state, opts)
       tiles = tiles_cfg,
     }), app)
     created_game.startup_synthetic_players = _build_synthetic_player_specs(role_roster)
-    test_profile_bootstrap.apply(created_game, active_profile)
+    _apply_startup_bootstrap(created_game, startup)
     return created_game
   end
 end
