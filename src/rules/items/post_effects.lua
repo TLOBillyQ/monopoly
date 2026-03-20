@@ -56,17 +56,17 @@ local target_effects = {
       local from_index = target.position
       local queued = false
       if idx then
-        game:update_player_position(target, idx)
+        idx = game:player_relocate(target, {
+          destination_index = idx,
+          move_dir_mode = "clear",
+        })
         queued = action_anim_port.queue(game, {
-          kind = "move_effect",
+          kind = "teleport_effect",
           player_id = target.id,
           from_index = from_index,
           to_index = idx,
           duration = action_anim_duration,
         })
-      end
-      if idx then
-        facing_policy.sync_move_dir_after_position_change(game, target, idx, "clear")
       end
       logger.event(
         user.name

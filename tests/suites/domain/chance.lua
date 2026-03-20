@@ -110,40 +110,46 @@ local function _test_chance_forced_move_queues_move_effect_anim()
   local idx = g.board:index_of_tile_id(dest)
   assert(out and out.kind == "need_landing", "forced_move destination tile should return need_landing")
   _assert_eq(out.board_index, idx, "forced_move board_index should match destination")
-  assert(g.turn.action_anim and g.turn.action_anim.kind == "move_effect", "forced_move should queue move_effect anim")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "teleport_effect", "forced_move should queue teleport_effect anim")
   _assert_eq(g.turn.action_anim.to_index, idx, "forced_move anim to_index should match destination")
   _assert_eq(p.status.move_dir, "left", "forced_move destination tile should preserve move_dir")
 end
 
 local function _test_chance_forced_move_to_market_sets_default_forward_heading()
   local g = _new_game()
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
   local p = g:current_player()
   g:set_player_status(p, "move_dir", "left")
   local market_idx = assert(g.board:find_first_by_type("market"), "missing market tile")
 
   local out = chance_effects.resolve(g, p, {
     effect = "forced_move",
-    destination = "market",
+    destination_tile_id = 39,
     target = "self",
   }, {})
 
   assert(out and out.kind == "need_landing", "forced_move market should return need_landing")
   _assert_eq(out.board_index, market_idx, "forced_move market should land on market tile")
+  _assert_eq(g.turn.action_anim.kind, "teleport_effect", "forced_move market should queue teleport anim kind")
   _assert_eq(p.status.move_dir, "right", "forced_move market should default to counterclockwise heading")
 end
 
 local function _test_chance_forced_move_to_hospital_clears_move_dir()
   local g = _new_game()
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
   local p = g:current_player()
   g:set_player_status(p, "move_dir", "left")
+  local hospital_idx = assert(g.board:find_first_by_type("hospital"), "missing hospital tile")
 
   local out = chance_effects.resolve(g, p, {
     effect = "forced_move",
-    destination = "hospital",
+    destination_tile_id = 36,
     target = "self",
   }, {})
 
-  assert(out and out.waiting == true, "forced_move hospital should defer location effect")
+  assert(out and out.kind == "need_landing", "forced_move hospital should continue into landing flow")
+  _assert_eq(out.board_index, hospital_idx, "forced_move hospital should land on hospital tile")
+  _assert_eq(g.turn.action_anim.kind, "teleport_effect", "forced_move hospital should queue teleport anim kind")
   _assert_eq(p.status.move_dir, nil, "forced_move hospital should clear move_dir")
 end
 

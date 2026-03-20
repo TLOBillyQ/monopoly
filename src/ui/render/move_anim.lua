@@ -190,6 +190,13 @@ local function _is_vehicle_anim(anim_ctx)
   return gameplay_read_port.resolve_vehicle_seat_id(anim_ctx.vehicle_id) ~= nil
 end
 
+local function _resolve_vehicle_seat_id(anim_ctx)
+  if anim_ctx == nil then
+    return nil
+  end
+  return gameplay_read_port.resolve_vehicle_seat_id(anim_ctx.vehicle_id)
+end
+
 local function _vehicle_helper_method(method_name)
   local vehicle = runtime_ports.resolve_vehicle_helper()
   return vehicle and vehicle[method_name] or nil
@@ -218,6 +225,20 @@ local function _calc_step_time(scene, from_index, to_index, anim_ctx)
     return _calc_vehicle_step_time(len)
   end
   return _calc_walk_step_time(len)
+end
+
+local function _set_player_position(scene, player_id, target_pos, anim_ctx)
+  local seat_id = _resolve_vehicle_seat_id(anim_ctx)
+  local vehicle = runtime_ports.resolve_vehicle_helper()
+  if seat_id and vehicle and vehicle.emit_vehicle_set_position then
+    vehicle.emit_vehicle_set_position(player_id, target_pos)
+    return "emit_vehicle_set_position"
+  end
+  local unit = scene and scene.units_by_player_id and scene.units_by_player_id[player_id] or nil
+  assert(unit ~= nil, "missing unit: " .. tostring(player_id))
+  assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(player_id))
+  unit.set_position(target_pos)
+  return "set_position"
 end
 
 function move_anim.step_duration(scene, from_index, to_index, anim_ctx)
@@ -345,6 +366,32 @@ function move_anim.stop_player_presentation(player_id, unit, opts)
     motion_stop_path = motion_stop_path,
     anim_stop_path = _stop_unit_anim(unit),
   }
+end
+
+local function _play_teleport(board_scene, player_id, to_index, anim_ctx)
+  move_anim.clear_player_token(board_scene, player_id, "teleport")
+  local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
+  move_anim.stop_player_presentation(player_id, unit, {
+    stop_vehicle = _resolve_vehicle_seat_id(anim_ctx) ~= nil,
+    emit_vehicle_stop = _vehicle_helper_method("emit_vehicle_stop"),
+    stop_synthetic_ai = true,
+  })
+  local tile = assert(board_scene.tiles[to_index], "missing tile: " .. tostring(to_index))
+  _set_player_position(board_scene, player_id, tile.get_position(), anim_ctx)
+  _debug_log(
+    "play_sequence_teleport",
+    "player_id=" .. tostring(player_id),
+    "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
+    "to=" .. tostring(to_index)
+  )
+  return 0
+end
+
+function move_anim.play_teleport(board_scene, anim_ctx)
+  assert(anim_ctx ~= nil, "missing anim")
+  local player_id = assert(anim_ctx.player_id, "missing player_id")
+  local to_index = assert(anim_ctx.to_index, "missing to_index")
+  return _play_teleport(board_scene, player_id, to_index, anim_ctx)
 end
 
 local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)

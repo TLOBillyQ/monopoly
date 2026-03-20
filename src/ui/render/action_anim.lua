@@ -92,6 +92,9 @@ local function _register_default_handlers()
   registry.register("move_effect", function(state, anim)
     return handlers.play_move_effect(state, _ensure_move_effect_direction(anim))
   end)
+  registry.register("teleport_effect", function(state, anim)
+    return handlers.play_teleport_effect(state, anim)
+  end)
   registry.register("upgrade_land", function(state, anim, duration, opts)
     board_feedback.play_tile_cue(state, "upgrade_land_smoke", anim.tile_index, {
       player_id = anim.player_id,

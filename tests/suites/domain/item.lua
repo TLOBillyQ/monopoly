@@ -248,7 +248,7 @@ local function _test_exile_item_defers_mountain_effect_until_move_followup()
   _assert_eq(res.ok, true, "exile should succeed")
   assert(type(res.after_action_anim) == "table", "exile should expose move followup continuation")
   _assert_eq(target.status.stay_turns or 0, 0, "exile should not apply mountain stay immediately")
-  assert(g.turn.action_anim and g.turn.action_anim.kind == "move_effect", "exile should queue move effect first")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "teleport_effect", "exile should queue teleport effect first")
 
   local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
   _assert_eq(next_state, nil, "exile move followup should return to caller continuation")

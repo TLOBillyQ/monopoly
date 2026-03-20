@@ -85,6 +85,7 @@ local function _test_chance_forced_move_destinations_are_valid_tiles()
     by_id[card.id] = card
     if card.effect == "forced_move" then
       assert(card.destination_tile_id ~= nil, "forced_move card missing destination_tile_id: " .. tostring(card.id))
+      assert(card.destination == nil, "forced_move card should not use legacy destination field: " .. tostring(card.id))
       assert(
         tile_exists_by_id[card.destination_tile_id] == true,
         "forced_move card destination_tile_id not found in tiles: "
@@ -96,10 +97,10 @@ local function _test_chance_forced_move_destinations_are_valid_tiles()
     end
   end
 
-  assert(by_id[3031] and by_id[3031].destination_tile_id, "card 3031 should exist")
-  assert(by_id[3033] and by_id[3033].destination_tile_id, "card 3033 should exist")
-  assert(tile_exists_by_id[by_id[3031].destination_tile_id] == true, "card 3031 destination should exist in tiles")
-  assert(tile_exists_by_id[by_id[3033].destination_tile_id] == true, "card 3033 destination should exist in tiles")
+  assert(by_id[3031] and by_id[3031].destination_tile_id == 36, "card 3031 should point to hospital tile 36")
+  assert(by_id[3032] and by_id[3032].destination_tile_id == 37, "card 3032 should point to mountain tile 37")
+  assert(by_id[3033] and by_id[3033].destination_tile_id == 38, "card 3033 should point to tax tile 38")
+  assert(by_id[3034] and by_id[3034].destination_tile_id == 39, "card 3034 should point to market tile 39")
 end
 
 local function _test_board_feedback_audio_refs_exist_in_runtime_refs()

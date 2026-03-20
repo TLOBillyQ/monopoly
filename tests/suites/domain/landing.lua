@@ -457,9 +457,11 @@ local function _test_mine_landing_defers_hospital_effect_until_move_followup()
   })
 
   local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
+  local move_anim = g.turn.action_anim_queue and g.turn.action_anim_queue[1] or nil
 
   _assert_eq(next_state, "wait_action_anim", "mine landing should wait for move effect animation")
   _assert_eq(next_args.next_state, "move_followup", "mine landing should resume through move_followup")
+  _assert_eq(move_anim and move_anim.kind, "teleport_effect", "mine landing should queue teleport effect behind any current action anim")
   _assert_eq(player.status.stay_turns or 0, 0, "mine landing should not hospitalize before move followup")
 
   local resumed_state, _ = move_followup.run({ game = g }, next_args.next_args)

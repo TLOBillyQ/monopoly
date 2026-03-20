@@ -1,5 +1,11 @@
 local movement_handlers = {}
-local facing_policy = require("src.rules.board.facing_policy")
+
+local teleport_tile_types = {
+  hospital = true,
+  mountain = true,
+  tax = true,
+  market = true,
+}
 
 function movement_handlers.register(handlers, common)
   handlers.move_backward = function(game, player, card)
@@ -20,67 +26,15 @@ function movement_handlers.register(handlers, common)
 
   handlers.forced_move = function(game, player, card, context)
     local from_index = player.position
-    local function _build_location_followup(effect_name)
-      return {
-        waiting = true,
-        wait_action_anim = true,
-        next_state = "move_followup",
-        next_args = {
-          mode = "apply_location_effects",
-          effects = {
-            { player_id = player.id, effect = effect_name },
-          },
-          next_state = "post_action",
-          next_args = { player = player },
-        },
-      }
-    end
-    if card.destination_tile_id then
-      local idx = game.board:index_of_tile_id(card.destination_tile_id)
-      assert(idx ~= nil, "missing destination tile index: " .. tostring(card.destination_tile_id))
-      game:update_player_position(player, idx)
-      facing_policy.sync_move_dir_after_position_change(game, player, idx, "forced_move")
+    local idx, tile = game:player_relocate(player, {
+      destination_tile_id = assert(card.destination_tile_id, "forced_move requires destination_tile_id"),
+      move_dir_mode = "forced_move",
+    })
+    if teleport_tile_types[tile.type] == true then
+      common.queue_teleport_effect(game, player, from_index, idx)
+    else
       common.queue_move_effect(game, player, from_index, idx, nil)
-      return {
-        kind = "need_landing",
-        player_id = player.id,
-        board_index = idx,
-        move_result = context,
-      }
     end
-
-    if card.destination == "hospital" then
-      local idx = game.board:find_first_by_type("hospital")
-      assert(idx ~= nil, "missing hospital tile")
-      game:update_player_position(player, idx)
-      facing_policy.sync_move_dir_after_position_change(game, player, idx, "forced_move")
-      common.queue_move_effect(game, player, from_index, idx, nil)
-      return _build_location_followup("hospital")
-    end
-
-    if card.destination == "mountain" then
-      local idx = game.board:find_first_by_type("mountain")
-      assert(idx ~= nil, "missing mountain tile")
-      game:update_player_position(player, idx)
-      facing_policy.sync_move_dir_after_position_change(game, player, idx, "forced_move")
-      common.queue_move_effect(game, player, from_index, idx, nil)
-      return _build_location_followup("mountain")
-    end
-
-    local type_by_destination = {
-      tax = "tax",
-      market = "market",
-    }
-    local tile_type = type_by_destination[card.destination]
-    if not tile_type then
-      return
-    end
-
-    local idx = game.board:find_first_by_type(tile_type)
-    assert(idx ~= nil, "missing " .. tile_type .. " tile")
-    game:update_player_position(player, idx)
-    facing_policy.sync_move_dir_after_position_change(game, player, idx, "forced_move")
-    common.queue_move_effect(game, player, from_index, idx, nil)
     return {
       kind = "need_landing",
       player_id = player.id,

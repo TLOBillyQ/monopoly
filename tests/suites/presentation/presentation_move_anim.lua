@@ -382,6 +382,162 @@ local function _test_move_anim_non_synthetic_actor_uses_regular_move_start()
   end)
 end
 
+local function _test_move_anim_teleport_snaps_local_player_without_starting_move()
+  local _vec3 = vec3.with_sub_length
+  local calls = {}
+  local target_pos = nil
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        start_move_by_direction = function()
+          calls[#calls + 1] = "start_move_by_direction"
+        end,
+        force_stop_move = function()
+          calls[#calls + 1] = "force_stop_move"
+        end,
+        stop_anim = function()
+          calls[#calls + 1] = "stop_anim"
+        end,
+        set_position = function(pos)
+          calls[#calls + 1] = "set_position"
+          target_pos = pos
+        end,
+      },
+    },
+  }
+
+  local duration = move_anim.play_teleport(scene, {
+    player_id = 1,
+    seq = 84,
+    to_index = 2,
+  })
+
+  _assert_eq(duration, 0, "teleport move should finish immediately")
+  _assert_eq(calls[1], "force_stop_move", "teleport should stop current motion before snap")
+  _assert_eq(calls[2], "stop_anim", "teleport should stop current anim before snap")
+  _assert_eq(calls[3], "set_position", "teleport should snap player unit directly")
+  _assert_eq(calls[4], nil, "teleport should not start movement")
+  _assert_eq(target_pos.x, 10, "teleport should snap to destination tile x")
+end
+
+local function _test_move_anim_teleport_snaps_synthetic_actor_without_force_start_move()
+  local _vec3 = vec3.with_sub_length
+  local calls = {}
+  local target_pos = nil
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = {
+      [-2] = {
+        force_start_move = function()
+          calls[#calls + 1] = "force_start_move"
+        end,
+        force_stop_move = function()
+          calls[#calls + 1] = "force_stop_move"
+        end,
+        ai_command_stop_move = function()
+          calls[#calls + 1] = "ai_command_stop_move"
+        end,
+        stop_anim = function()
+          calls[#calls + 1] = "stop_anim"
+        end,
+        set_position = function(pos)
+          calls[#calls + 1] = "set_position"
+          target_pos = pos
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = runtime_ports, key = "resolve_role", value = function(player_id)
+      if player_id == -2 then
+        return { is_synthetic_actor = true }
+      end
+      return nil
+    end },
+  }, function()
+    local duration = move_anim.play_teleport(scene, {
+      player_id = -2,
+      seq = 85,
+      to_index = 2,
+    })
+
+    _assert_eq(duration, 0, "synthetic teleport should finish immediately")
+  end)
+
+  _assert_eq(calls[1], "force_stop_move", "synthetic teleport should stop forced motion first")
+  _assert_eq(calls[2], "ai_command_stop_move", "synthetic teleport should clear host ai move state")
+  _assert_eq(calls[3], "stop_anim", "synthetic teleport should stop anim before snap")
+  _assert_eq(calls[4], "set_position", "synthetic teleport should snap unit directly")
+  _assert_eq(calls[5], nil, "synthetic teleport should not start forced movement")
+  _assert_eq(target_pos.x, 10, "synthetic teleport should snap to destination tile x")
+end
+
+local function _test_move_anim_teleport_snaps_vehicle_presentation()
+  local _vec3 = vec3.with_sub_length
+  local calls = {}
+  local target_pos = nil
+  local scene = {
+    tiles = {
+      [1] = { get_position = function() return _vec3(0, 0, 0) end },
+      [2] = { get_position = function() return _vec3(10, 0, 0) end },
+    },
+    units_by_player_id = {
+      [1] = {
+        force_stop_move = function()
+          calls[#calls + 1] = "force_stop_move"
+        end,
+        stop_anim = function()
+          calls[#calls + 1] = "stop_anim"
+        end,
+        set_position = function()
+          calls[#calls + 1] = "set_position"
+        end,
+      },
+    },
+  }
+
+  _with_patches({
+    { target = gameplay_read_port, key = "resolve_vehicle_seat_id", value = function(vehicle_id)
+      return vehicle_id == "vehicle_teleport" and 9 or nil
+    end },
+    { target = runtime_ports, key = "resolve_vehicle_helper", value = function()
+      return {
+        emit_vehicle_stop = function(player_id)
+          calls[#calls + 1] = "emit_vehicle_stop:" .. tostring(player_id)
+        end,
+        emit_vehicle_set_position = function(player_id, pos)
+          calls[#calls + 1] = "emit_vehicle_set_position:" .. tostring(player_id)
+          target_pos = pos
+        end,
+      }
+    end },
+  }, function()
+    local duration = move_anim.play_teleport(scene, {
+      player_id = 1,
+      seq = 86,
+      to_index = 2,
+      vehicle_id = "vehicle_teleport",
+    })
+
+    _assert_eq(duration, 0, "vehicle teleport should finish immediately")
+  end)
+
+  _assert_eq(calls[1], "emit_vehicle_stop:1", "vehicle teleport should stop vehicle first")
+  _assert_eq(calls[2], "force_stop_move", "vehicle teleport should stop control unit motion")
+  _assert_eq(calls[3], "stop_anim", "vehicle teleport should stop unit anim before snap")
+  _assert_eq(calls[4], "emit_vehicle_set_position:1", "vehicle teleport should snap vehicle directly")
+  _assert_eq(calls[5], nil, "vehicle teleport should not fall back to unit.set_position")
+  _assert_eq(target_pos.x, 10, "vehicle teleport should snap to destination tile x")
+end
+
 local function _test_anim_ports_role_control_exempt_stays_until_sequence_finish()
   local _vec3 = vec3.with_sub_length
   local scheduled = {}
@@ -559,6 +715,18 @@ return {
     {
       name = "_test_move_anim_non_synthetic_actor_uses_regular_move_start",
       run = _test_move_anim_non_synthetic_actor_uses_regular_move_start,
+    },
+    {
+      name = "_test_move_anim_teleport_snaps_local_player_without_starting_move",
+      run = _test_move_anim_teleport_snaps_local_player_without_starting_move,
+    },
+    {
+      name = "_test_move_anim_teleport_snaps_synthetic_actor_without_force_start_move",
+      run = _test_move_anim_teleport_snaps_synthetic_actor_without_force_start_move,
+    },
+    {
+      name = "_test_move_anim_teleport_snaps_vehicle_presentation",
+      run = _test_move_anim_teleport_snaps_vehicle_presentation,
     },
     {
       name = "_test_move_anim_debug_log_writes_when_enabled",

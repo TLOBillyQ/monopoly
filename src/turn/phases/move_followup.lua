@@ -114,13 +114,7 @@ local function _handle_apply_location_effects(game, args)
   local effects = args.effects or {}
   for _, entry in ipairs(effects) do
     local player = assert(game:find_player_by_id(entry.player_id), "missing move followup effect player")
-    if entry.effect == "hospital" then
-      game:player_apply_hospital_effects(player)
-    elseif entry.effect == "mountain" then
-      game:player_apply_mountain_effects(player)
-    else
-      error("unknown move followup effect: " .. tostring(entry.effect))
-    end
+    game:player_apply_location_effect(player, entry.effect)
   end
   return args.next_state, args.next_args
 end

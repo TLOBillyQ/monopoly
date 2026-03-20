@@ -93,6 +93,7 @@ local TIP_BUILDERS = {
   item_use = _build_item_use_text,
   item_target_player = _build_item_target_player_text,
   move_effect = _build_move_effect_text,
+  teleport_effect = _build_move_effect_text,
   change_skin = _build_change_skin_text,
   cash_receive = _build_cash_receive_text,
 }

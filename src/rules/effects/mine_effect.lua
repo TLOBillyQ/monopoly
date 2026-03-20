@@ -2,7 +2,6 @@ local logger = require("src.core.utils.logger")
 local monopoly_event = require("src.core.events.monopoly_events")
 local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
-local facing_policy = require("src.rules.board.facing_policy")
 
 local mine_effect = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -54,14 +53,15 @@ function mine_effect.apply(game, player, position)
     logger.event(player.name .. " 座驾免疫地雷")
     return { detonated = true, protected = true }
   end
-  game:set_player_seat(player, nil)
   logger.event(player.name .. " 触发地雷，座驾被摧毁并送医")
   local from_index = position
-  local hospital_index = assert(board:find_first_by_type("hospital"), "missing hospital tile")
-  game:update_player_position(player, hospital_index)
-  facing_policy.sync_move_dir_after_position_change(game, player, hospital_index, "clear")
+  local hospital_index = game:player_relocate(player, {
+    tile_type = "hospital",
+    clear_seat = true,
+    move_dir_mode = "clear",
+  })
   action_anim_port.queue(game, {
-    kind = "move_effect",
+    kind = "teleport_effect",
     player_id = player.id,
     from_index = from_index,
     to_index = hospital_index,

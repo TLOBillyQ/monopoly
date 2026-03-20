@@ -21,6 +21,24 @@ local function _emit_status_feedback(self, player, status_type, cue_name)
   })
 end
 
+local function _resolve_relocate_index(self, opts)
+  opts = opts or {}
+  if opts.destination_index ~= nil then
+    return opts.destination_index
+  end
+  if opts.destination_tile_id ~= nil then
+    local idx = self.board:index_of_tile_id(opts.destination_tile_id)
+    assert(idx ~= nil, "missing destination tile index: " .. tostring(opts.destination_tile_id))
+    return idx
+  end
+  if opts.tile_type ~= nil then
+    local idx = self.board:find_first_by_type(opts.tile_type)
+    assert(idx ~= nil, "missing tile type: " .. tostring(opts.tile_type))
+    return idx
+  end
+  error("missing relocation destination")
+end
+
 function location_ops.player_apply_hospital_effects(self, player)
   self:set_player_status(player, "stay_turns", common.constants.hospital_stay_turns)
   local fee = common.constants.hospital_fee
@@ -39,26 +57,31 @@ function location_ops.player_apply_hospital_effects(self, player)
   logger.event(player.name .. " 住院，需停留 " .. tostring(player.status.stay_turns) .. " 回合")
 end
 
-function location_ops.player_send_to_hospital(self, player)
-  local hospital_index = self.board:find_first_by_type("hospital")
-  assert(hospital_index ~= nil, "missing hospital tile")
-  self:update_player_position(player, hospital_index)
-  facing_policy.sync_move_dir_after_position_change(self, player, hospital_index, "clear")
-  self:player_apply_hospital_effects(player)
-end
-
 function location_ops.player_apply_mountain_effects(self, player)
   self:set_player_status(player, "stay_turns", common.constants.mountain_stay_turns)
   _emit_status_feedback(self, player, "mountain", "mountain_stun")
   logger.event(player.name .. " 进入深山，停留 " .. tostring(player.status.stay_turns) .. " 回合")
 end
 
-function location_ops.player_send_to_mountain(self, player)
-  local idx = self.board:find_first_by_type("mountain")
-  assert(idx ~= nil, "missing mountain tile")
+function location_ops.player_apply_location_effect(self, player, effect)
+  if effect == "hospital" then
+    return self:player_apply_hospital_effects(player)
+  end
+  if effect == "mountain" then
+    return self:player_apply_mountain_effects(player)
+  end
+  error("unknown location effect: " .. tostring(effect))
+end
+
+function location_ops.player_relocate(self, player, opts)
+  opts = opts or {}
+  local idx = _resolve_relocate_index(self, opts)
+  if opts.clear_seat == true and type(self.set_player_seat) == "function" then
+    self:set_player_seat(player, nil)
+  end
   self:update_player_position(player, idx)
-  facing_policy.sync_move_dir_after_position_change(self, player, idx, "clear")
-  self:player_apply_mountain_effects(player)
+  facing_policy.sync_move_dir_after_position_change(self, player, idx, opts.move_dir_mode or "forced_move")
+  return idx, assert(self.board:get_tile(idx), "missing tile: " .. tostring(idx))
 end
 
 function location_ops.player_is_in_mountain(self, player)

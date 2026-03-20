@@ -27,6 +27,10 @@ function handlers.play_move_effect(state, anim)
   return units.play_move_effect(state, anim)
 end
 
+function handlers.play_teleport_effect(state, anim)
+  return units.play_teleport_effect(state, anim)
+end
+
 function handlers.build_tip(state, anim)
   return units.build_tip(state, anim)
 end

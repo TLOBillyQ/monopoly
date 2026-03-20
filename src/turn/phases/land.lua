@@ -19,12 +19,16 @@ local function _has_action_anim(game)
   return type(queue) == "table" and #queue > 0
 end
 
-local function _has_pending_move_action_anim(game)
+local function _is_relocation_action_anim(entry)
+  return entry and (entry.kind == "move_effect" or entry.kind == "teleport_effect")
+end
+
+local function _has_pending_relocation_action_anim(game)
   if not game or not game.turn then
     return false
   end
   local current = game.turn.action_anim
-  if current and current.kind == "move_effect" then
+  if _is_relocation_action_anim(current) then
     return true
   end
   local queue = game.turn.action_anim_queue
@@ -32,7 +36,7 @@ local function _has_pending_move_action_anim(game)
     return false
   end
   for _, entry in ipairs(queue) do
-    if entry and entry.kind == "move_effect" then
+    if _is_relocation_action_anim(entry) then
       return true
     end
   end
@@ -184,7 +188,7 @@ local function _resolve_followup_landing(game, player, out, depth)
   if not next_tile then
     return out
   end
-  if _has_pending_move_action_anim(game) then
+  if _has_pending_relocation_action_anim(game) then
     return _wait_for_move_followup(game, target_player, out)
   end
   return _resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)

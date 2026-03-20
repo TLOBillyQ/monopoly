@@ -7,7 +7,6 @@ local gameplay_rules = require("src.config.gameplay.gameplay_rules")
 local action_anim_port = require("src.core.ports.action_anim_port")
 local number_utils = require("src.core.utils.number_utils")
 local target_query = require("src.rules.items.target_query")
-local facing_policy = require("src.rules.board.facing_policy")
 
 local demolish = {}
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
@@ -45,9 +44,11 @@ end
 local function _relocate_to_hospital(game, targets)
   local hospital_index = assert(game.board:find_first_by_type("hospital"), "missing hospital")
   for _, target in ipairs(targets) do
-    game:set_player_seat(target, nil)
-    game:update_player_position(target, hospital_index)
-    facing_policy.sync_move_dir_after_position_change(game, target, hospital_index, "clear")
+    game:player_relocate(target, {
+      destination_index = hospital_index,
+      clear_seat = true,
+      move_dir_mode = "clear",
+    })
   end
 end
 

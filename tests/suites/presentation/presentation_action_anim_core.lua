@@ -81,6 +81,34 @@ local function _test_action_anim_move_effect_uses_real_handler_duration()
   assert(captured_anim.direction ~= nil, "move_effect handler should receive a fallback direction")
 end
 
+local function _test_action_anim_teleport_effect_uses_real_handler_duration_without_direction_patch()
+  local state = _build_state()
+  local captured_anim = nil
+
+  _with_patches({
+    {
+      target = handlers,
+      key = "play_teleport_effect",
+      value = function(_, anim)
+        captured_anim = anim
+        return 0
+      end,
+    },
+  }, function()
+    local duration = action_anim.play(state, {
+      kind = "teleport_effect",
+      player_id = 1,
+      from_index = 1,
+      to_index = 1,
+      duration = 2.0,
+    })
+    assert(duration == 0, "teleport_effect should use handler duration instead of default wait")
+  end)
+
+  assert(captured_anim ~= nil, "teleport_effect handler should receive animation payload")
+  assert(captured_anim.direction == nil, "teleport_effect should not receive move direction fallback")
+end
+
 local function _test_action_anim_roadblock_overlay_uses_4x_scale()
   local state = _build_state()
   local unit_calls = 0
@@ -618,6 +646,11 @@ local function _test_anim_tip_text_covers_roll_tile_and_cash_variants()
     from_index = 1,
     to_index = 2,
   })
+  local teleport_copy = tip_text.build(state, {
+    kind = "teleport_effect",
+    from_index = 1,
+    to_index = 2,
+  })
   local cash_copy = tip_text.build(state, {
     kind = "cash_receive",
     player_id = 1,
@@ -628,6 +661,7 @@ local function _test_anim_tip_text_covers_roll_tile_and_cash_variants()
   assert(roll_copy == "投骰动画：2,6 => 8", "roll tip should join rolls and total")
   assert(roadblock_copy == "路障动画：放置在 测试地块", "roadblock tip should resolve tile name")
   assert(move_copy == "位移动画：从 测试地块 到 测试地块", "move_effect tip should resolve both tile names")
+  assert(teleport_copy == "位移动画：从 测试地块 到 测试地块", "teleport_effect tip should reuse move copy")
   assert(cash_copy == "收钱动画：测试玩家 +500", "cash_receive tip should resolve player name and amount")
 end
 
@@ -805,6 +839,10 @@ return {
   tests = {
     { name = "action_anim_overlay_handler_returns_duration", run = _test_action_anim_overlay_handler_returns_duration },
     { name = "action_anim_move_effect_uses_real_handler_duration", run = _test_action_anim_move_effect_uses_real_handler_duration },
+    {
+      name = "action_anim_teleport_effect_uses_real_handler_duration_without_direction_patch",
+      run = _test_action_anim_teleport_effect_uses_real_handler_duration_without_direction_patch,
+    },
     { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
     { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },
     { name = "action_anim_is_silent_by_default", run = _test_action_anim_is_silent_by_default },

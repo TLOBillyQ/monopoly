@@ -56,12 +56,12 @@ function common.queue_action_anim(game, payload)
   return action_anim_port.queue(game, payload)
 end
 
-function common.queue_move_effect(game, player, from_index, to_index, visited)
+local function _queue_relocation_anim(game, kind, player, from_index, to_index, visited)
   if not player then
     return false
   end
   local payload = {
-    kind = "move_effect",
+    kind = kind,
     player_id = player.id,
     from_index = from_index,
     to_index = to_index,
@@ -69,6 +69,14 @@ function common.queue_move_effect(game, player, from_index, to_index, visited)
     duration = action_anim_duration,
   }
   return common.queue_action_anim(game, payload)
+end
+
+function common.queue_move_effect(game, player, from_index, to_index, visited)
+  return _queue_relocation_anim(game, "move_effect", player, from_index, to_index, visited)
+end
+
+function common.queue_teleport_effect(game, player, from_index, to_index)
+  return _queue_relocation_anim(game, "teleport_effect", player, from_index, to_index, nil)
 end
 
 function common.move_steps(game, player, steps, opts)

@@ -28,6 +28,10 @@ function units.play_move_effect(state, anim)
   return move_anim.play_sequence(state.board_scene, anim)
 end
 
+function units.play_teleport_effect(state, anim)
+  return move_anim.play_teleport(state.board_scene, anim)
+end
+
 function units.build_tip(state, anim)
   return tip_text.build(state, anim)
 end

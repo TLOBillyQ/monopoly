@@ -194,7 +194,8 @@ local function _test_rent_owner_missing_skips_payment()
   g:update_player_position(tenant, idx)
 
   g:set_player_status(tenant, "pending_free_rent", true)
-  g:player_send_to_mountain(owner)
+  g:player_relocate(owner, { tile_type = "mountain", move_dir_mode = "clear" })
+  g:player_apply_location_effect(owner, "mountain")
   local before = tenant.cash
   land.executors.pay_rent.apply({ game = g, player = tenant, tile = tile_ref })
   _assert_eq(tenant.cash, before, "rent skipped when owner in mountain")
@@ -416,7 +417,8 @@ local function _test_land_actions_resolve_rent_owner_skips_mountain_owner()
   g:set_tile_owner(tile_ref, owner.id)
   g:set_tile_level(tile_ref, 1)
   g:set_player_property(owner, tile_ref.id, true)
-  g:player_send_to_mountain(owner)
+  g:player_relocate(owner, { tile_type = "mountain", move_dir_mode = "clear" })
+  g:player_apply_location_effect(owner, "mountain")
   g:update_player_position(p, idx)
 
   local events = {}

@@ -977,11 +977,13 @@ local function _test_location_transfers_clear_move_dir()
   local p = g:current_player()
 
   g:set_player_status(p, "move_dir", "left")
-  g:player_send_to_hospital(p)
+  g:player_relocate(p, { tile_type = "hospital", move_dir_mode = "clear" })
+  g:player_apply_location_effect(p, "hospital")
   assert(p.status.move_dir == nil, "hospital transfer should clear move_dir")
 
   g:set_player_status(p, "move_dir", "right")
-  g:player_send_to_mountain(p)
+  g:player_relocate(p, { tile_type = "mountain", move_dir_mode = "clear" })
+  g:player_apply_location_effect(p, "mountain")
   assert(p.status.move_dir == nil, "mountain transfer should clear move_dir")
 end
 
@@ -3862,7 +3864,7 @@ local function _test_phase_registry_post_action_routes_wait_variants()
   end)
 end
 
-local function _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending()
+local function _test_turn_land_waits_for_move_followup_when_teleport_effect_queue_pending()
   local turn_land = require("src.turn.phases.land")
   local effect_pipeline = require("src.rules.effects.effect_pipeline")
   local g = _new_game()
@@ -3870,7 +3872,7 @@ local function _test_turn_land_waits_for_move_followup_when_move_effect_queue_pe
   local move_result = { kind = "move_result" }
   local tile = g.board:get_tile(player.position)
   g.turn.action_anim_queue = {
-    { kind = "move_effect", seq = 41 },
+    { kind = "teleport_effect", seq = 41 },
   }
 
   support.with_patches({
@@ -3886,12 +3888,12 @@ local function _test_turn_land_waits_for_move_followup_when_move_effect_queue_pe
       player = player,
       move_result = move_result,
     })
-    assert(next_state == "wait_action_anim", "pending move_effect queue should defer landing followup behind wait_action_anim")
-    assert(next_args and next_args.next_state == "move_followup", "pending move_effect queue should resume through move_followup")
+    assert(next_state == "wait_action_anim", "pending teleport_effect queue should defer landing followup behind wait_action_anim")
+    assert(next_args and next_args.next_state == "move_followup", "pending teleport_effect queue should resume through move_followup")
     assert(next_args.next_args and next_args.next_args.mode == "resolve_landing", "move_followup should resume landing resolution mode")
     assert(next_args.next_args.player_id == player.id, "move_followup should preserve target player id")
     assert(next_args.next_args.move_result == move_result, "move_followup should preserve move result")
-    assert(g.turn.move_followup_pending == true, "pending move_effect queue should flag move_followup_pending")
+    assert(g.turn.move_followup_pending == true, "pending teleport_effect queue should flag move_followup_pending")
   end)
 end
 
@@ -5059,8 +5061,8 @@ return {
   _test_turn_start_waits_for_pre_action_item_phase_choice = _test_turn_start_waits_for_pre_action_item_phase_choice,
   _test_turn_start_waits_for_pre_action_item_phase_action_anim = _test_turn_start_waits_for_pre_action_item_phase_action_anim,
   _test_phase_registry_post_action_routes_wait_variants = _test_phase_registry_post_action_routes_wait_variants,
-  _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending =
-    _test_turn_land_waits_for_move_followup_when_move_effect_queue_pending,
+  _test_turn_land_waits_for_move_followup_when_teleport_effect_queue_pending =
+    _test_turn_land_waits_for_move_followup_when_teleport_effect_queue_pending,
   _test_move_followup_resume_turn_move_waits_on_steal_interrupt_choice =
     _test_move_followup_resume_turn_move_waits_on_steal_interrupt_choice,
   _test_roadblock_stop_does_not_detain_next_turn = _test_roadblock_stop_does_not_detain_next_turn,
