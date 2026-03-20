@@ -237,7 +237,7 @@ function service.play_tile_cue(state, cue_name, tile_index, payload, deps)
 end
 function service.play_player_cue(state, cue_name, player_id, payload, deps)
   active_host_runtime = _resolve_host_runtime(state, deps)
-  local pos = _resolve_player_position(state, player_id)
+  local pos = payload and payload.pos or _resolve_player_position(state, player_id)
   if pos == nil then
     return false
   end

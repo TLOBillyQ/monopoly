@@ -69,6 +69,14 @@ local function _build_move_effect_text(state, anim)
     .. _resolve_tile_name(state, anim.to_index)
 end
 
+local function _build_mine_trigger_text(state, anim)
+  local player_name = _resolve_player_name(state, anim.player_id)
+  return "地雷触发：" .. player_name .. " 从 "
+    .. _resolve_tile_name(state, anim.from_index)
+    .. " 到 "
+    .. _resolve_tile_name(state, anim.to_index)
+end
+
 local function _build_change_skin_text(state, anim)
   local player_name = _resolve_player_name(state, anim.player_id)
   local skin = anim.skin_name or anim.skin_id or "?"
@@ -94,6 +102,7 @@ local TIP_BUILDERS = {
   item_target_player = _build_item_target_player_text,
   move_effect = _build_move_effect_text,
   teleport_effect = _build_move_effect_text,
+  mine_trigger = _build_mine_trigger_text,
   change_skin = _build_change_skin_text,
   cash_receive = _build_cash_receive_text,
 }

@@ -109,6 +109,36 @@ local function _test_action_anim_teleport_effect_uses_real_handler_duration_with
   assert(captured_anim.direction == nil, "teleport_effect should not receive move direction fallback")
 end
 
+local function _test_action_anim_mine_trigger_uses_real_handler_duration_without_direction_patch()
+  local state = _build_state()
+  local captured_anim = nil
+
+  _with_patches({
+    {
+      target = handlers,
+      key = "play_mine_trigger",
+      value = function(_, anim)
+        captured_anim = anim
+        return 0
+      end,
+    },
+  }, function()
+    local duration = action_anim.play(state, {
+      kind = "mine_trigger",
+      player_id = 1,
+      tile_index = 1,
+      from_index = 1,
+      to_index = 1,
+      cue_name = "mine_blast",
+      duration = 2.0,
+    })
+    assert(duration == 0, "mine_trigger should use handler duration instead of default wait")
+  end)
+
+  assert(captured_anim ~= nil, "mine_trigger handler should receive animation payload")
+  assert(captured_anim.direction == nil, "mine_trigger should not receive move direction fallback")
+end
+
 local function _test_action_anim_roadblock_overlay_uses_4x_scale()
   local state = _build_state()
   local unit_calls = 0
@@ -842,6 +872,10 @@ return {
     {
       name = "action_anim_teleport_effect_uses_real_handler_duration_without_direction_patch",
       run = _test_action_anim_teleport_effect_uses_real_handler_duration_without_direction_patch,
+    },
+    {
+      name = "action_anim_mine_trigger_uses_real_handler_duration_without_direction_patch",
+      run = _test_action_anim_mine_trigger_uses_real_handler_duration_without_direction_patch,
     },
     { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
     { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },

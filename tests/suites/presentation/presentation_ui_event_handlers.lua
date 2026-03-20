@@ -362,11 +362,10 @@ local function _test_roadblock_hit_resolves_tile_index_from_tile_id()
   assert(cleared[1].tile_index == 7, "roadblock_hit should resolve tile index via board.index_of_tile_id")
 end
 
-local function _test_mine_hit_resolves_tile_index_from_tile_payload()
+local function _test_mine_hit_no_longer_drives_visual_feedback()
   local handlers = {}
-  local cleared = {}
-  local cues = {}
-  local action_anim = require("src.ui.render.action_anim")
+  local cleared = 0
+  local cues = 0
 
   _with_patches({
     {
@@ -378,23 +377,17 @@ local function _test_mine_hit_resolves_tile_index_from_tile_payload()
       end,
     },
     {
-      target = action_anim,
+      target = require("src.ui.render.action_anim"),
       key = "clear_overlay",
-      value = function(_, overlay_kind, tile_index)
-        cleared[#cleared + 1] = {
-          overlay_kind = overlay_kind,
-          tile_index = tile_index,
-        }
+      value = function()
+        cleared = cleared + 1
       end,
     },
     {
       target = board_feedback,
-      key = "play_tile_cue",
-      value = function(_, cue_name, tile_index)
-        cues[#cues + 1] = {
-          cue_name = cue_name,
-          tile_index = tile_index,
-        }
+      key = "play_player_cue",
+      value = function()
+        cues = cues + 1
         return true
       end,
     },
@@ -420,12 +413,8 @@ local function _test_mine_hit_resolves_tile_index_from_tile_payload()
     })
   end)
 
-  assert(#cleared == 1, "mine_hit should clear one mine overlay")
-  assert(cleared[1].overlay_kind == "mine", "mine_hit should clear mine overlay")
-  assert(cleared[1].tile_index == 11, "mine_hit should resolve tile index from tile payload")
-  assert(#cues == 1, "mine_hit should emit one tile cue")
-  assert(cues[1].cue_name == "mine_blast", "mine_hit should use mine_blast cue")
-  assert(cues[1].tile_index == 11, "mine_hit cue should target the resolved tile index")
+  assert(cleared == 0, "mine_hit should no longer clear overlay directly")
+  assert(cues == 0, "mine_hit should no longer emit direct cue playback")
 end
 
 local function _test_turn_started_feedback_defers_during_landing_hold()
@@ -551,8 +540,8 @@ return {
       run = _test_roadblock_hit_resolves_tile_index_from_tile_id,
     },
     {
-      name = "mine_hit_resolves_tile_index_from_tile_payload",
-      run = _test_mine_hit_resolves_tile_index_from_tile_payload,
+      name = "mine_hit_no_longer_drives_visual_feedback",
+      run = _test_mine_hit_no_longer_drives_visual_feedback,
     },
     {
       name = "turn_started_feedback_routes_to_player_cue",

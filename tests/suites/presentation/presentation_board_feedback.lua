@@ -340,6 +340,41 @@ local function _test_board_feedback_cash_burst_routes_scalar_scale()
   assert(effect_calls[1].scale == 1.6, "cash_burst should use scalar scale")
 end
 
+local function _test_board_feedback_player_cue_prefers_explicit_payload_position()
+  local effect_calls = {}
+  local explicit_pos = math.Vector3(9.0, 8.0, 7.0)
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos)
+        effect_calls[#effect_calls + 1] = {
+          sfx_key = sfx_key,
+          pos = pos,
+        }
+        return 889
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "play_3d_sound",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local state = _build_state()
+    local played = board_feedback.play_player_cue(state, "cash_burst", 1, {
+      pos = explicit_pos,
+    })
+    assert(played == true, "player cue should play when explicit position is provided")
+  end)
+
+  assert(#effect_calls == 1, "explicit player cue should call engine once")
+  assert(effect_calls[1].pos == explicit_pos, "explicit payload position should override resolved player position")
+end
+
 local function _test_board_feedback_bankruptcy_routes_scalar_scale()
   local effect_calls = {}
 
@@ -670,6 +705,7 @@ return {
     { name = "board_feedback_tile_cue_reads_host_unit_position", run = _test_board_feedback_tile_cue_reads_host_unit_position },
     { name = "board_feedback_player_effect_binding_keeps_bind_call", run = _test_board_feedback_player_effect_binding_keeps_bind_call },
     { name = "board_feedback_cash_burst_routes_scalar_scale", run = _test_board_feedback_cash_burst_routes_scalar_scale },
+    { name = "board_feedback_player_cue_prefers_explicit_payload_position", run = _test_board_feedback_player_cue_prefers_explicit_payload_position },
     { name = "board_feedback_bankruptcy_routes_scalar_scale", run = _test_board_feedback_bankruptcy_routes_scalar_scale },
     { name = "board_feedback_followup_sound_defaults_are_numeric", run = _test_board_feedback_followup_sound_defaults_are_numeric },
     { name = "board_feedback_unconfigured_effect_id_ref_skips_without_error", run = _test_board_feedback_unconfigured_effect_id_ref_skips_without_error },

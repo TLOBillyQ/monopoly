@@ -2,6 +2,7 @@ local steal = require("src.rules.items.steal")
 local market_service = require("src.rules.market")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local logger = require("src.core.utils.logger")
 
 local move_followup = {}
 
@@ -111,6 +112,10 @@ local function _handle_resolve_landing(game, args)
 end
 
 local function _handle_apply_location_effects(game, args)
+  local log_entries = args.log_entries or {}
+  for _, entry in ipairs(log_entries) do
+    logger.event(entry)
+  end
   local effects = args.effects or {}
   for _, entry in ipairs(effects) do
     local player = assert(game:find_player_by_id(entry.player_id), "missing move followup effect player")

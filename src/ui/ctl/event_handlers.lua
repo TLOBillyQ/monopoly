@@ -152,16 +152,7 @@ function event_handlers.install(_, logger, state)
   end)
 
   _register_handler(monopoly_event.land.mine_hit, function(data)
-    local idx = _resolve_tile_index(data)
-    local ctx = context.state
-    if ok and action_anim and idx and ctx then
-      action_anim.clear_overlay(ctx, "mine", idx)
-    end
-    if idx and ctx then
-      board_feedback.play_tile_cue(ctx, "mine_blast", idx, {
-        player_id = data and data.player and data.player.id or nil,
-      })
-    end
+    local _ = data
   end)
 
   _register_handler(monopoly_event.land.rent_paid, function(data)

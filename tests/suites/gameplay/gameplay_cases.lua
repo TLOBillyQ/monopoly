@@ -3665,11 +3665,26 @@ local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
   assert(not g.turn.pending_choice, "mine trigger should not open a pending choice")
   assert(trigger_res and trigger_res.waiting == true, "mine trigger should wait for move effect animation")
   assert(trigger_res.next_state == "move_followup", "mine trigger should resume through move_followup")
+  assert(_has_mine_trigger_anim(g.turn), "mine trigger should use staged mine animation")
+  assert(trigger_res.next_args and trigger_res.next_args.log_entries and trigger_res.next_args.log_entries[1] == p2.name .. " 触发地雷并送医",
+    "mine trigger should defer no-vehicle trigger log through move_followup")
   assert((p2.status.stay_turns or 0) == 0, "hospital stay should be deferred until move followup")
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
   assert(resumed_state == "post_action", "mine trigger should resume into post_action after followup")
   assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by armed mine after move followup")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
+end
+
+local function _has_mine_trigger_anim(turn)
+  if turn and turn.action_anim and turn.action_anim.kind == "mine_trigger" then
+    return true
+  end
+  for _, entry in ipairs(turn and turn.action_anim_queue or {}) do
+    if entry.kind == "mine_trigger" then
+      return true
+    end
+  end
+  return false
 end
 
 local function _test_owner_mine_triggers_again_after_placement_turn()
@@ -3694,6 +3709,7 @@ local function _test_owner_mine_triggers_again_after_placement_turn()
   local trigger_res = _resolve_landing(g, p1, mine_tile, {})
   assert(trigger_res and trigger_res.waiting == true, "owner should be hit by own mine after placement turn ends")
   assert(trigger_res.next_state == "move_followup", "owner mine trigger should resume through move_followup")
+  assert(_has_mine_trigger_anim(g.turn), "owner mine trigger should use staged mine animation")
   assert((p1.status.stay_turns or 0) == 0, "hospital stay should still be deferred until move followup")
 
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
@@ -3728,6 +3744,7 @@ local function _test_passing_armed_mine_stops_and_triggers_followup()
   local trigger_res = _resolve_landing(g, p2, mine_tile, move_res)
   assert(trigger_res and trigger_res.waiting == true, "passing mine trigger should wait for move followup")
   assert(trigger_res.next_state == "move_followup", "passing mine trigger should resume through move_followup")
+  assert(_has_mine_trigger_anim(g.turn), "passing mine trigger should use staged mine animation")
   assert((p2.status.stay_turns or 0) == 0, "hospital stay should be deferred until followup")
 
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)

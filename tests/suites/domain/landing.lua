@@ -457,16 +457,44 @@ local function _test_mine_landing_defers_hospital_effect_until_move_followup()
   })
 
   local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
-  local move_anim = g.turn.action_anim_queue and g.turn.action_anim_queue[1] or nil
+  local move_anim = nil
+  if g.turn.action_anim and g.turn.action_anim.kind == "mine_trigger" then
+    move_anim = g.turn.action_anim
+  else
+    for _, entry in ipairs(g.turn.action_anim_queue or {}) do
+      if entry.kind == "mine_trigger" then
+        move_anim = entry
+        break
+      end
+    end
+  end
 
   _assert_eq(next_state, "wait_action_anim", "mine landing should wait for move effect animation")
   _assert_eq(next_args.next_state, "move_followup", "mine landing should resume through move_followup")
-  _assert_eq(move_anim and move_anim.kind, "teleport_effect", "mine landing should queue teleport effect behind any current action anim")
+  _assert_eq(move_anim and move_anim.kind, "mine_trigger", "mine landing should queue staged mine animation")
+  _assert_eq(next_args.next_args.log_entries[1], player.name .. " 触发地雷并送医", "mine landing should defer no-vehicle trigger log")
   _assert_eq(player.status.stay_turns or 0, 0, "mine landing should not hospitalize before move followup")
 
   local resumed_state, _ = move_followup.run({ game = g }, next_args.next_args)
   _assert_eq(resumed_state, "post_action", "mine move followup should resume into post_action")
   assert((player.status.stay_turns or 0) > 0, "mine move followup should apply hospital stay")
+end
+
+local function _test_mine_landing_log_mentions_vehicle_when_present()
+  local g = _new_game()
+  _set_ui_port(g, { wait_action_anim = true })
+  local player = g.players[1]
+  local idx = player.position
+  player.seat_id = 4001
+  g.board:place_mine(idx, {
+    owner_id = g.players[2].id,
+    armed = true,
+  })
+
+  local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
+  _assert_eq(next_state, "wait_action_anim", "mine landing with vehicle should still wait for move effect animation")
+  _assert_eq(next_args.next_args.log_entries[1], player.name .. " 触发地雷，座驾被摧毁并送医",
+    "mine landing should mention vehicle destruction when seat exists")
 end
 
 return {
@@ -499,6 +527,10 @@ return {
     {
       name = "mine_landing_defers_hospital_effect_until_move_followup",
       run = _test_mine_landing_defers_hospital_effect_until_move_followup,
+    },
+    {
+      name = "mine_landing_log_mentions_vehicle_when_present",
+      run = _test_mine_landing_log_mentions_vehicle_when_present,
     },
     { name = "execute_strong_card_pushes_item_card_popup", run = _test_execute_strong_card_pushes_item_card_popup },
     { name = "execute_free_card_pushes_item_card_popup", run = _test_execute_free_card_pushes_item_card_popup },

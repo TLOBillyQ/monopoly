@@ -368,23 +368,31 @@ function move_anim.stop_player_presentation(player_id, unit, opts)
   }
 end
 
-local function _play_teleport(board_scene, player_id, to_index, anim_ctx)
-  move_anim.clear_player_token(board_scene, player_id, "teleport")
+function move_anim.prepare_player_for_snap(board_scene, player_id, anim_ctx, reason)
+  move_anim.clear_player_token(board_scene, player_id, reason or "teleport")
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
-  move_anim.stop_player_presentation(player_id, unit, {
+  return move_anim.stop_player_presentation(player_id, unit, {
     stop_vehicle = _resolve_vehicle_seat_id(anim_ctx) ~= nil,
     emit_vehicle_stop = _vehicle_helper_method("emit_vehicle_stop"),
     stop_synthetic_ai = true,
   })
+end
+
+function move_anim.snap_player_to_index(board_scene, player_id, to_index, anim_ctx, reason)
   local tile = assert(board_scene.tiles[to_index], "missing tile: " .. tostring(to_index))
   _set_player_position(board_scene, player_id, tile.get_position(), anim_ctx)
   _debug_log(
-    "play_sequence_teleport",
+    reason or "play_sequence_teleport",
     "player_id=" .. tostring(player_id),
     "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
     "to=" .. tostring(to_index)
   )
   return 0
+end
+
+local function _play_teleport(board_scene, player_id, to_index, anim_ctx)
+  move_anim.prepare_player_for_snap(board_scene, player_id, anim_ctx, "teleport")
+  return move_anim.snap_player_to_index(board_scene, player_id, to_index, anim_ctx, "play_sequence_teleport")
 end
 
 function move_anim.play_teleport(board_scene, anim_ctx)
