@@ -55,6 +55,10 @@
 - **location**: `tools/ops/deploy.ps1`, `tools/shared/package_path_helper.lua`, `tools/quality/scrap/config.lua`, 相关 tool contract / help text
 - **description**: 删除 deploy 的 `legacy` 选项与文案，删除 package-path compatibility patterns，删除质量工具 historical alias 扩展与对外说明。
 - **validation**: 工具链不再接受 legacy 输入，也不再声明历史别名或兼容路径。
+- **status**: completed
+- **work_log**: 删除了 `package_path_helper` 里的 `vendor/arch_view` 兼容注入，改由 `tests/bootstrap.lua` 和 `tools/shared/bootstrap.lua` 显式加回所需路径；清空 `tools/quality/scrap/config.lua` 的历史搜索别名；更新 `docs/architecture/scrap4lua.md` 与相关契约测试，确认 `deploy.ps1` 不再暴露 `vehicle-runtime` 入口。
+- **files_changed**: `tools/shared/package_path_helper.lua`, `tools/shared/bootstrap.lua`, `tests/bootstrap.lua`, `tools/quality/crap.lua`, `tools/quality/scrap/config.lua`, `docs/architecture/scrap4lua.md`, `tests/suites/architecture/crap_contract.lua`, `tests/suites/architecture/scrap4lua_contract.lua`, `tests/suites/architecture/script_tools_contract.lua`
+- **gotchas**: `arch_view` 运行时代码仍需要 `vendor/arch_view` 的 Lua 路径，所以兼容注入不能直接删到运行入口；必须先从 helper 移走，再在 bootstrap 入口显式补回。
 
 ### T5: 重写 tests / guards / support contract
 - **depends_on**: `[T1b, T4a, T4b]`

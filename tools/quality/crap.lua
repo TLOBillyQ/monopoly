@@ -70,7 +70,7 @@ local function _help_text(command_name)
     "  lua " .. tostring(command_name) .. " viewer [--in-json FILE] [--out-dir DIR] [--open]",
     "  lua " .. tostring(command_name),
     "",
-    "Monopoly 兼容项 / Monopoly compatibility:",
+    "Monopoly 默认值 / Monopoly defaults:",
     "  tmp/... 路径会映射到系统临时目录下的 monopoly_crap/ 子目录",
     "  report --out 会翻译成 vendor CLI 的 --response-json",
     "  report 先通过 Lua bridge 收集 coverage，再以 --request-json 调上游 CLI",
@@ -202,7 +202,6 @@ end
 local function _ensure_bridge_package_paths(repo_root)
   package_path_helper.install_monopoly_package_paths({
     repo_root = repo_root,
-    arch_view_root = common.join_path(repo_root, "vendor/arch_view"),
   })
   local patterns = {
     common.join_path(repo_root, "vendor/crap4lua/lib/?.lua"),

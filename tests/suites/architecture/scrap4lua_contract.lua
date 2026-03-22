@@ -157,7 +157,7 @@ local function _test_index_writes_json_contract()
   assert(type(decoded.themes) == "table", "index should emit themes")
 end
 
-local function _test_find_expands_historical_search_terms()
+local function _test_find_keeps_query_without_historical_aliases()
   local out = _buffer()
   local exit_code = scrap.run({ "find", "--query", "src.game.systems", "--limit", "5" }, {
     stdout = out,
@@ -167,11 +167,13 @@ local function _test_find_expands_historical_search_terms()
 
   local decoded = json_reader.decode(out:text())
   assert(type(decoded.expanded_terms) == "table" and #decoded.expanded_terms > 0, "find should emit expanded terms")
-  _assert_contains(table.concat(decoded.expanded_terms, " "), "src.rules", "historical search terms should expand to current root")
+  local expanded = table.concat(decoded.expanded_terms, " ")
+  assert(expanded:find("src.rules", 1, true) == nil,
+    "find should not expand retired historical aliases to current roots")
 
   local doc = assert(common.read_file("docs/architecture/scrap4lua.md"))
-  _assert_contains(doc, "历史搜索词 `src.game.*`", "scrap4lua doc should call src.game.* a historical search term")
-  _assert_contains(doc, "不承诺任何文件路径映射", "scrap4lua doc should avoid a canonical path mapping promise")
+  assert(doc:find("历史搜索词 `src.game.*`", 1, true) == nil,
+    "scrap4lua doc should not advertise retired historical search terms")
 end
 
 local function _test_find_hits_bankruptcy_feedback_port()
@@ -260,7 +262,7 @@ return {
   },
   tooling_tests = {
     { name = "index_writes_json_contract", run = _test_index_writes_json_contract },
-    { name = "find_expands_historical_search_terms", run = _test_find_expands_historical_search_terms },
+    { name = "find_keeps_query_without_historical_aliases", run = _test_find_keeps_query_without_historical_aliases },
     { name = "find_hits_bankruptcy_feedback_port", run = _test_find_hits_bankruptcy_feedback_port },
     { name = "viewer_exports_static_bundle_from_generated_index", run = _test_viewer_exports_static_bundle_from_generated_index },
     { name = "viewer_supports_in_json_input", run = _test_viewer_supports_in_json_input },

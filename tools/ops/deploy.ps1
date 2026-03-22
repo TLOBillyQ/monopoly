@@ -2,7 +2,6 @@ param(
     [string]$TargetPath,
     [string]$StartupProfile,
     [string]$BuildMode = "release",
-    [string]$VehicleRuntime = "none",
     [switch]$KeepTestStartup,
     [switch]$Bak,
     [switch]$Help,
@@ -163,9 +162,7 @@ function Write-MainLua {
         [string]$StartupProfileValue,
         [string]$BuildMode,
         [string]$StartupProfileSource,
-        [string]$StartupProfileModule,
-        [string]$VehicleRuntimeMode,
-        [string]$VehicleRuntimeModule
+        [string]$StartupProfileModule
     )
 
     $target_parent = Split-Path -Parent $TargetPath
@@ -177,8 +174,7 @@ function Write-MainLua {
     if ([string]::IsNullOrWhiteSpace($BuildMode) `
         -and [string]::IsNullOrWhiteSpace($StartupProfileValue) `
         -and [string]::IsNullOrWhiteSpace($StartupProfileModule) `
-        -and [string]::IsNullOrWhiteSpace($VehicleRuntimeMode) `
-        -and [string]::IsNullOrWhiteSpace($VehicleRuntimeModule)) {
+        -and [string]::IsNullOrWhiteSpace($StartupProfileSource)) {
         Set-Content -LiteralPath $TargetPath -Encoding UTF8 -NoNewline -Value $source_text
         return
     }
@@ -199,14 +195,6 @@ function Write-MainLua {
     if (-not [string]::IsNullOrWhiteSpace($StartupProfileModule)) {
         $escaped_module = Escape-LuaDoubleQuotedString $StartupProfileModule
         $prefix_lines += "STARTUP_PROFILE_MODULE = ""$escaped_module"""
-    }
-    if (-not [string]::IsNullOrWhiteSpace($VehicleRuntimeMode)) {
-        $escaped_vehicle_mode = Escape-LuaDoubleQuotedString $VehicleRuntimeMode
-        $prefix_lines += "VEHICLE_RUNTIME_MODE = ""$escaped_vehicle_mode"""
-    }
-    if (-not [string]::IsNullOrWhiteSpace($VehicleRuntimeModule)) {
-        $escaped_vehicle_module = Escape-LuaDoubleQuotedString $VehicleRuntimeModule
-        $prefix_lines += "VEHICLE_RUNTIME_MODULE = ""$escaped_vehicle_module"""
     }
     $prefix = ($prefix_lines -join "`n") + "`n"
     Set-Content -LiteralPath $TargetPath -Encoding UTF8 -NoNewline -Value ($prefix + $source_text)
@@ -388,14 +376,6 @@ function Parse-RemainingArgs {
                 $index += 1
                 continue
             }
-            "^(--vehicle-runtime|-VehicleRuntime)$" {
-                if (($index + 1) -ge $RemainingArgs.Count) {
-                    Exit-WithError (Get-Text "参数缺少取值: $token" "Missing value for flag: $token")
-                }
-                $script:VehicleRuntime = [string]$RemainingArgs[$index + 1]
-                $index += 2
-                continue
-            }
             "^(--bak|-Bak)$" {
                 $script:Bak = $true
                 $index += 1
@@ -418,8 +398,8 @@ Parse-RemainingArgs
 
 if ($Help) {
     Write-Info (Get-Text `
-        "用法: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--vehicle-runtime none|legacy|-VehicleRuntime none|legacy] [--keep-test-startup|-KeepTestStartup] [--bak|-Bak]" `
-        "Usage: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--vehicle-runtime none|legacy|-VehicleRuntime none|legacy] [--keep-test-startup|-KeepTestStartup] [--bak|-Bak]")
+        "用法: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--keep-test-startup|-KeepTestStartup] [--bak|-Bak]" `
+        "Usage: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--keep-test-startup|-KeepTestStartup] [--bak|-Bak]")
     exit 0
 }
 
@@ -451,7 +431,6 @@ try {
         Write-Info ((Get-Text "启动 Profile: " "Startup profile: ") + $StartupProfile)
     }
     Write-Info ((Get-Text "构建模式: " "Build mode: ") + $BuildMode)
-    Write-Info ((Get-Text "载具运行时: " "Vehicle runtime: ") + $VehicleRuntime)
     Write-Info ""
     Write-Info "--------------------------------------"
     Write-Info ((Get-Text "部署目标: " "Deploy target: ") + $target_path)
@@ -467,12 +446,6 @@ try {
         if (-not [string]::IsNullOrWhiteSpace($StartupProfile)) {
             Exit-WithError (Get-Text "release 模式不允许注入 startup profile" "startup profile injection is not allowed in release mode")
         }
-        if ($VehicleRuntime -ne "none") {
-            Exit-WithError (Get-Text "release 模式不允许启用 legacy 载具运行时" "legacy vehicle runtime is not allowed in release mode")
-        }
-    }
-    if ($VehicleRuntime -ne "none" -and $VehicleRuntime -ne "legacy") {
-        Exit-WithError (Get-Text "载具运行时参数仅支持 none 或 legacy" "Vehicle runtime must be none or legacy")
     }
     $generated_profile_module = $null
     $generated_profile_rel_path = "Data/StartupProfileGenerated.lua"
@@ -481,7 +454,6 @@ try {
         "app/bootstrap/startup_profile_source.lua",
         "app/bootstrap/startup_bootstrap.lua"
     )
-    $vehicle_legacy_files = @("host/eggy/vehicle_runtime_legacy.lua")
 
     foreach ($dir_name in $directories) {
         $source_path = Join-Path $project_root $dir_name
@@ -499,9 +471,6 @@ try {
                 }
                 if ($dir_name -eq "src" -and $BuildMode -eq "release") {
                     Remove-NestedPaths -RootDir $target_dir_path -RelativePaths $release_bridge_files
-                }
-                if ($dir_name -eq "src" -and $VehicleRuntime -eq "none") {
-                    Remove-NestedPaths -RootDir $target_dir_path -RelativePaths $vehicle_legacy_files
                 }
             }
             Write-Info ("✓ " + (Get-Text "$dir_name 拷贝成功" "$dir_name copied successfully"))
@@ -526,14 +495,11 @@ try {
                     $generated_profile_module = "Data.StartupProfileGenerated"
                 }
                 $startup_profile_source = if ([string]::IsNullOrWhiteSpace($generated_profile_module)) { $null } else { "generated" }
-                $vehicle_runtime_module = if ($VehicleRuntime -eq "legacy") { "src.host.eggy.vehicle_runtime_legacy" } else { $null }
                 Write-MainLua -SourcePath $source_path -TargetPath $target_file_path `
                   -BuildMode $BuildMode `
                   -StartupProfileValue $StartupProfile `
                   -StartupProfileSource $startup_profile_source `
-                  -StartupProfileModule $generated_profile_module `
-                  -VehicleRuntimeMode $VehicleRuntime `
-                  -VehicleRuntimeModule $vehicle_runtime_module
+                  -StartupProfileModule $generated_profile_module
             } else {
                 Copy-FileWithParentDir -SourcePath $source_path -TargetPath $target_file_path
             }

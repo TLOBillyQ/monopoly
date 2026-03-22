@@ -21,8 +21,17 @@ function M.install_package_paths()
   local env = runtime_paths.resolve({ source_path = debug.getinfo(1, "S").source })
   dofile(runtime_paths.join_path(env.tools_dir, "shared/package_path_helper.lua")).install_monopoly_package_paths({
     repo_root = env.repo_root,
-    arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view"),
   })
+  local arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view")
+  local arch_view_patterns = {
+    runtime_paths.join_path(arch_view_root, "?.lua"),
+    runtime_paths.join_path(arch_view_root, "?/?.lua"),
+  }
+  for _, pattern in ipairs(arch_view_patterns) do
+    if not tostring(package.path):find(pattern, 1, true) then
+      package.path = pattern .. ";" .. package.path
+    end
+  end
 
   _package_paths_installed = true
 end

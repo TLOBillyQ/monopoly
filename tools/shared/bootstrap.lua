@@ -24,8 +24,17 @@ function bootstrap.install(script_path, opts)
   local env = bootstrap.resolve(script_path, opts)
   dofile(runtime_paths.join_path(env.tools_dir, "shared/package_path_helper.lua")).install_monopoly_package_paths({
     repo_root = env.repo_root,
-    arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view"),
   })
+  local arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view")
+  local arch_view_patterns = {
+    runtime_paths.join_path(arch_view_root, "?.lua"),
+    runtime_paths.join_path(arch_view_root, "?/?.lua"),
+  }
+  for _, pattern in ipairs(arch_view_patterns) do
+    if not tostring(package.path):find(pattern, 1, true) then
+      package.path = pattern .. ";" .. package.path
+    end
+  end
   require("shared.lib.common").ensure_windows_utf8_console()
   return env
 end

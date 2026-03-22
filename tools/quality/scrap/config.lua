@@ -1,13 +1,3 @@
--- Historical search-term expansion only; this does not define canonical path mappings.
-local historical_search_term_aliases = {
-  choice = { "owner_role_id", "pending_choice", "choice_id" },
-  bankruptcy = { "bankruptcy_feedback_port", "tiles_cleared" },
-  market = { "paid_purchase_gateway", "product_id", "price" },
-  ["src.game.systems"] = { "src.rules" },
-  ["src.game.ports"] = { "src.rules.ports" },
-}
-
-
 return {
   project_name = "Monopoly",
   project_root = REPO_ROOT or ".",
@@ -49,7 +39,6 @@ return {
     },
   },
   glossary = {
-    aliases = historical_search_term_aliases,
     stop_words = {
       "state",
       "value",

@@ -464,6 +464,20 @@ local function _test_deploy_script_keeps_default_paths()
     "$home_dir/Documents/eggy/LuaSource_大富翁-发布",
     "deploy.ps1 should keep the macOS default deploy path"
   )
+  _assert_not_contains(
+    script_text,
+    "vehicle-runtime",
+    "deploy.ps1 should not expose the retired vehicle runtime flag"
+  )
+end
+
+local function _test_deploy_script_removes_vehicle_runtime_legacy_support()
+  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
+  _assert_not_contains(script_text, "--vehicle-runtime", "deploy.ps1 should no longer advertise the vehicle runtime flag")
+  _assert_not_contains(script_text, "VehicleRuntime", "deploy.ps1 should not keep the legacy vehicle runtime parameter")
+  _assert_not_contains(script_text, "vehicle_runtime_legacy", "deploy.ps1 should not reference the retired legacy runtime module")
+  _assert_not_contains(script_text, "legacy 载具运行时", "deploy.ps1 should not mention the retired legacy runtime mode")
+  _assert_not_contains(script_text, "legacy vehicle runtime", "deploy.ps1 should not mention the retired legacy runtime mode")
 end
 
 local function _test_deploy_comprehensive()
@@ -512,6 +526,11 @@ local function _test_deploy_comprehensive()
     assert(bad_result.ok == false, "deploy should fail on unknown flags")
     _assert_contains(bad_result.output, "未知参数", "unknown flag output should include Chinese text")
     _assert_contains(bad_result.output, "Unknown flag", "unknown flag output should include English text")
+
+    local retired_flag_result = _run_powershell_file("tools/ops/deploy.ps1", { "--vehicle-runtime", "legacy" })
+    assert(retired_flag_result.ok == false, "deploy should reject retired vehicle runtime flag")
+    _assert_contains(retired_flag_result.output, "未知参数", "retired flag output should include Chinese text")
+    _assert_contains(retired_flag_result.output, "Unknown flag", "retired flag output should include English text")
   end)
   
   -- 测试 4: PowerShell 命名参数风格调用（使用不同的临时目录）
@@ -862,6 +881,7 @@ end
 local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
   { name = "deploy_script_keeps_default_paths", run = _test_deploy_script_keeps_default_paths },
+  { name = "deploy_script_removes_vehicle_runtime_legacy_support", run = _test_deploy_script_removes_vehicle_runtime_legacy_support },
 }
 
 local tooling_tests = {

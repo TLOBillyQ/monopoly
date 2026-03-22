@@ -26,16 +26,9 @@ local function _prepend_path(path_pattern)
   end
 end
 
-local function _append_path(path_pattern)
-  if not _contains_path(path_pattern) then
-    package.path = package.path .. ";" .. path_pattern
-  end
-end
-
 function package_path_helper.install_monopoly_package_paths(opts)
   opts = opts or {}
   local repo_root = _normalize_path(opts.repo_root or ".")
-  local arch_view_root = _normalize_path(opts.arch_view_root or _join(repo_root, "vendor/arch_view"))
 
   local canonical_patterns = {
     _join(repo_root, "tools/?.lua"),
@@ -52,15 +45,6 @@ function package_path_helper.install_monopoly_package_paths(opts)
 
   for index = #canonical_patterns, 1, -1 do
     _prepend_path(canonical_patterns[index])
-  end
-
-  local compatibility_patterns = {
-    _join(arch_view_root, "?.lua"),
-    _join(arch_view_root, "?/?.lua"),
-  }
-
-  for _, pattern in ipairs(compatibility_patterns) do
-    _append_path(pattern)
   end
 end
 

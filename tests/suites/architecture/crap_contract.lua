@@ -1,6 +1,7 @@
 local bootstrap = require("tests.bootstrap")
 local crap = require("quality.crap")
 local adapter = require("quality.crap.adapter")
+local package_path_helper = require("shared.package_path_helper")
 
 bootstrap.install_package_paths()
 
@@ -16,6 +17,12 @@ local function _assert_contains(text, expected, message)
   end
 end
 
+local function _assert_not_contains(text, unexpected, message)
+  if tostring(text or ""):find(unexpected, 1, true) ~= nil then
+    error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
+  end
+end
+
 local function _test_default_tmp_root_preserves_monopoly_path_convention()
   local override = "/tmp/monopoly_crap_override"
   _assert_eq(crap.resolve_cli_path("/repo", "tmp/demo.json"), crap.default_tmp_root() .. "/demo.json",
@@ -24,6 +31,27 @@ local function _test_default_tmp_root_preserves_monopoly_path_convention()
     "default tmp root should preserve monopoly-specific directory name")
   assert(crap.resolve_cli_path("/repo", override) == override,
     "absolute paths should bypass tmp alias handling")
+end
+
+local function _test_install_monopoly_package_paths_only_installs_canonical_repo_patterns()
+  local original_package_path = package.path
+  package.path = "/tmp/monopoly_package_path_sentinel.lua"
+
+  local ok, err = pcall(function()
+    package_path_helper.install_monopoly_package_paths({
+      repo_root = "/repo",
+      arch_view_root = "/repo/vendor/arch_view",
+    })
+    _assert_contains(package.path, "/repo/tools/?.lua", "helper should keep canonical repo tool paths")
+    _assert_contains(package.path, "/repo/tests/?.lua", "helper should keep canonical test paths")
+    _assert_not_contains(package.path, "/repo/vendor/arch_view/?.lua", "helper should not install arch_view compatibility paths")
+    _assert_not_contains(package.path, "/repo/vendor/arch_view/?/?.lua", "helper should not install arch_view nested compatibility paths")
+  end)
+
+  package.path = original_package_path
+  if not ok then
+    error(err)
+  end
 end
 
 local function _test_adapter_resolves_behavior_and_contract_lanes()
@@ -171,6 +199,7 @@ return {
   name = "architecture.crap_contract",
   tests = {
     { name = "default_tmp_root_preserves_monopoly_paths", run = _test_default_tmp_root_preserves_monopoly_path_convention },
+    { name = "install_monopoly_package_paths_only_installs_canonical_repo_patterns", run = _test_install_monopoly_package_paths_only_installs_canonical_repo_patterns },
     { name = "adapter_resolves_behavior_and_contract_lanes", run = _test_adapter_resolves_behavior_and_contract_lanes },
     { name = "cli_report_prepares_request_then_calls_vendor_cli", run = _test_cli_report_prepares_request_then_calls_vendor_cli },
     { name = "cli_collect_uses_public_bridge_surface", run = _test_cli_collect_uses_public_bridge_surface },

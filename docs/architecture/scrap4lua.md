@@ -6,7 +6,7 @@
 
 - `choice owner_role_id` 相关代码和文档分散在哪
 - `bankruptcy feedback` 先读哪个 Port、哪个规则实现、哪些测试
-- 历史搜索词 `src.game.*` 扩展到现路径后，该从哪继续读
+- `market price` 相关实现、测试、文档分别在哪
 
 ## 入口
 
@@ -22,14 +22,12 @@ lua tools/quality/scrap.lua viewer --out-dir tmp/scrap_view
 
 裸调用 `lua tools/quality/scrap.lua` 默认直接导出并打开 viewer，等价于 `viewer --out-dir tmp/scrap_view --open`。
 
-## Monopoly 适配层做了什么
+## Monopoly 默认行为
 
 - 默认索引 `src/**/*.lua`、`tests/**/*.lua`、`docs/architecture/**/*.md`
-- 自动加载 `tests/support/migration_pairs.lua`，把历史搜索词 `src.game.*` 扩展到现路径模块
 - 查询排序默认 `code > test > doc`
 - 输出稳定 JSON，便于后续接静态 viewer 或 TUI
 - Monopoly viewer bundle 默认导出到临时或本地工作目录，不再把提交态快照入库
-- `src.game.*` 只用于历史搜索词扩展，不承诺任何文件路径映射，也不表示仓库里存在对应的 `src/game/*` 运行时目录
 
 ## 输出说明
 
@@ -81,4 +79,3 @@ viewer 是搜索优先的阅读台：左侧输入概念词，中间查看匹配 
 - 它是阅读辅助，不是 CI gate
 - 第一版只做 CLI + JSON
 - Theme 由确定性的共现聚类生成，不做在线学习
-- 历史搜索词扩展只是阅读入口，不是 canonical 路径承诺
