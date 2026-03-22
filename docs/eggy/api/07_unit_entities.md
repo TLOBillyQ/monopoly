@@ -1,0 +1,495 @@
+## Ability
+
+Ability|add_state_to_target|_unit, _state_id
+Ability|begin_cast|_dir_info, _target_point, _target_unit
+Ability|break_accumulate
+Ability|break_cast
+Ability|change_affect_radius|_delta_affect_radius
+Ability|change_affect_width|_delta_affect_width
+Ability|change_max_release_distance|_delta_level
+Ability|downgrade_ability_level|_delta_level
+Ability|enter_cd
+Ability|get_ability_level
+Ability|get_ability_max_level
+Ability|get_ability_slot
+Ability|get_accumulate_ratio
+Ability|get_affect_character_list|_height, _use_fixed_release_point
+Ability|get_affect_creature_list|_height, _use_fixed_release_point
+Ability|get_affect_lifeentity_list|_height, _use_fixed_release_point
+Ability|get_affect_obstacle_list|_height, _use_fixed_release_point
+Ability|get_affect_radius
+Ability|get_affect_width
+Ability|get_cd_time
+Ability|get_charge_time
+Ability|get_cur_release_num
+Ability|get_desc
+Ability|get_key
+Ability|get_left_cd_time
+Ability|get_left_charge_time
+Ability|get_lock_obstacle
+Ability|get_lock_target
+Ability|get_lock_target_char
+Ability|get_lock_target_creature
+Ability|get_max_release_distance
+Ability|get_max_release_num
+Ability|get_name
+Ability|get_owner
+Ability|get_owner_character
+Ability|get_owner_creature
+Ability|get_owner_equipment
+Ability|get_pointer_type
+Ability|get_release_direction
+Ability|get_release_direction_list
+Ability|get_release_point
+Ability|get_release_point_list
+Ability|is_in_cd
+Ability|is_in_charge
+Ability|is_limitation_enabled|_limit
+Ability|play_countdown_ui|_time
+Ability|remove_state_to_target|_unit, _state_id
+Ability|set_ability_level|_new_level
+Ability|set_ability_max_level|_new_max_level
+Ability|set_affect_radius|_new_affect_radius
+Ability|set_affect_width|_new_affect_width
+Ability|set_cur_release_num|_release_num
+Ability|set_left_cd_time|_cd_time
+Ability|set_left_charge_time|_cd_time
+Ability|set_max_release_distance|_new_max_release_distance
+Ability|set_max_release_num|_release_num_max
+Ability|upgrade_ability_level|_delta_level
+
+## Actor
+
+Actor|get_id
+
+## Camp
+
+Camp|change_camp_score|_add_score
+Camp|get_camp_score
+Camp|get_name
+Camp|get_roles
+Camp|set_camp_score|_score
+
+## Character
+
+Character|change_custom_model_by_creature|_creature
+Character|change_custom_model_by_creature_key|_creature_key
+Character|fling_rush
+Character|get_ability_point
+Character|get_climb_obstacle
+Character|get_ctrl_role
+Character|get_joystick_direction
+Character|increase_ability_point|_increase
+Character|lift
+Character|reset_target_socket_model|_model_socket
+Character|set_aim_move_enabled|_enable
+Character|set_character_prefab|_c_key, _reset_prop, _reset_trigger_system, _reset_model
+Character|set_climb_enabled|_enable
+Character|set_climb_max_angle|_angle
+Character|set_climb_min_angle|_angle
+Character|set_climb_speed|_speed
+Character|set_socket_model|_model_socket, _creature, _creature_model_socket
+Character|set_socket_model_by_creature_key|_model_socket, _creature_key, _creature_model_socket
+Character|set_voice_enabled|_enabled
+Character|start_move_to_pos|_target_pos, _duration
+
+## Creature
+
+Creature|force_start_move|_direction, _t
+Creature|force_stop_move
+Creature|reset_target_socket_model|_model_socket
+Creature|set_draggable|_enable
+Creature|set_dragged_plane_type|_value
+Creature|set_name|_name
+Creature|set_name_visible|_visible
+Creature|set_socket_model|_model_socket, _creature, _creature_model_socket
+Creature|set_socket_model_by_creature_key|_model_socket, _creature_key, _creature_model_socket
+Creature|set_touchable|_enable
+
+## CustomTriggerSpace
+
+CustomTriggerSpace|random_point
+
+## Equipment
+
+Equipment|can_drop
+Equipment|change_current_stack_size|_num
+Equipment|change_max_stack_size|_num
+Equipment|destroy_equipment
+Equipment|drop
+Equipment|get_current_stack_num
+Equipment|get_desc
+Equipment|get_equipment_slot
+Equipment|get_equipment_type
+Equipment|get_key
+Equipment|get_max_stack_num
+Equipment|get_name
+Equipment|get_owner_character
+Equipment|get_owner_creature
+Equipment|get_position
+Equipment|get_price|_res_type
+Equipment|get_slot_type
+Equipment|get_unit
+Equipment|has_owner
+Equipment|is_auto_picking
+Equipment|is_auto_using
+Equipment|move_to_slot|_slot_type, _slot
+Equipment|set_auto_aim_enabled|_is_auto_aim
+Equipment|set_auto_fire_enabled|_is_auto_fire
+Equipment|set_charge_cost_free|_is_free
+Equipment|set_current_stack_num|_num
+Equipment|set_desc|_desc
+Equipment|set_droppable|_droppable
+Equipment|set_icon|_icon_key
+Equipment|set_max_stack_num|_num
+Equipment|set_name|_name
+Equipment|set_price|_res_type, _price
+Equipment|set_saleable|_saleable
+Equipment|set_usable|_usable
+Equipment|start_charge
+
+## ItemBox
+
+ItemBox|add_ability|_ability_key, _weight
+ItemBox|add_equipment|_key, _weight
+ItemBox|remove_ability|_ability_key
+ItemBox|remove_equipment|_key
+
+## KVBase
+
+KVBase|add_tag|_tag
+KVBase|clear_kv
+KVBase|clear_tag
+KVBase|get_kv_by_type|_value_type, _key
+KVBase|has_kv|_key
+KVBase|has_tag|_tag
+KVBase|remove_kv|_key
+KVBase|remove_tag|_tag
+KVBase|set_kv_by_type|_value_type, _key, _val
+
+## LifeEntity
+
+LifeEntity|activate_multi_animation|_anim_id, _acceptor_type
+LifeEntity|ai_command_alert|_tagert_pos, _target_dir, _dalay_time, _reject_time, _move_mode
+LifeEntity|ai_command_chase_with_ability|_target, _chase_range, _reject_time, _action_distance, _ability_key, _move_mode, _action_count
+LifeEntity|ai_command_chase_with_action|_target, _chase_range, _reject_time, _action_distance, _action_mode, _move_mode, _action_count
+LifeEntity|ai_command_chase_with_equipment|_target, _chase_range, _reject_time, _action_distance, _equipment_key, _move_mode, _action_count
+LifeEntity|ai_command_follow|_target_unit, _follow_dis, _tolerate_dis, _reject_time, _move_mode
+LifeEntity|ai_command_imitate|_target_unit, _delay, _disable_actions
+LifeEntity|ai_command_jump
+LifeEntity|ai_command_lift
+LifeEntity|ai_command_patrol|_waypoint, _reject_time, _round_mode, _move_mode
+LifeEntity|ai_command_pick_up_equipment|_target_equipment, _move_mode, _reject_time
+LifeEntity|ai_command_roll
+LifeEntity|ai_command_rush
+LifeEntity|ai_command_start_move|_direction, _t
+LifeEntity|ai_command_start_move_high_priority|_target_position, _duration, _threshold
+LifeEntity|ai_command_stop_move|_duration
+LifeEntity|disable_yaw_speed_limit
+LifeEntity|get_direction
+LifeEntity|get_hard_punch_threshold
+LifeEntity|get_hpbar_scale_x
+LifeEntity|get_hpbar_scale_y
+LifeEntity|get_lifted_lifeentity
+LifeEntity|get_lifted_obstacle
+LifeEntity|get_owner
+LifeEntity|get_punch_threshold
+LifeEntity|interrupt_multi_animation
+LifeEntity|is_draggable
+LifeEntity|is_ghost_mode
+LifeEntity|is_jumping
+LifeEntity|is_moving
+LifeEntity|is_rushing
+LifeEntity|is_touchable
+LifeEntity|jump
+LifeEntity|play_face_expression|_emoji_key, _show_time
+LifeEntity|reset_model
+LifeEntity|set_ai_move_threshold|_threshold
+LifeEntity|set_direction|_face_dir
+LifeEntity|set_hard_punch_threshold|_punch_threshold
+LifeEntity|set_hpbar_scale|_hpbar_scale_x, _hpbar_scale_y
+LifeEntity|set_mass_bar_visible|_visible
+LifeEntity|set_max_yaw_speed|_limit_yaw_speed
+LifeEntity|set_model_by_character|_character, _include_ugc_model, _inherit_scale, _inherit_capsule_size
+LifeEntity|set_model_by_creature|_creature, _include_custom_model, _inherit_scale, _inherit_capsule_size
+LifeEntity|set_model_by_creature_key|_creature_key, _include_custom_model, _inherit_scale, _inherit_capsule_size
+LifeEntity|set_multi_animation_acceptor_enabled|_enable
+LifeEntity|set_multi_animation_acceptor_type|_acceptor_type
+LifeEntity|set_punch_threshold|_punch_threshold
+LifeEntity|set_search_enemy_focus_target|_target
+LifeEntity|set_search_enemy_priority_value_by_tag|_tag, _priority
+LifeEntity|set_search_enemy_priority_value_by_unit|_unit, _priority
+LifeEntity|set_search_enemy_priority_value_by_unit_key|_unit_key, _priority
+LifeEntity|set_search_enemy_priority_value_by_unit_type|_unit_prefab_type, _priority
+LifeEntity|set_skeleton_offset|_skeleton, _offset
+LifeEntity|set_skeleton_scale|_skeleton, _scale
+LifeEntity|start_ai
+LifeEntity|start_move_by_direction|_direction, _duration
+LifeEntity|start_move_to_pos_with_threshold|_target_pos, _duration, _threshold
+LifeEntity|stop_ai
+LifeEntity|swap_equipment_slot|_equipment, _slot_type, _slot
+LifeEntity|try_exit_vehicle
+
+## Modifier
+
+Modifier|add_duration|_add_time
+Modifier|add_stack_count|_stack_count_add
+Modifier|change_shield_value|_shield_value
+Modifier|get_desc
+Modifier|get_key
+Modifier|get_max_stack_count
+Modifier|get_name
+Modifier|get_owner_ability
+Modifier|get_owner_character
+Modifier|get_owner_creature
+Modifier|get_owner_life_entity
+Modifier|get_owner_unit
+Modifier|get_releaser_unit
+Modifier|get_remain_duration
+Modifier|get_shield_value
+Modifier|get_stack_count
+Modifier|set_remain_duration|_remain_duration
+Modifier|set_shield_value|_shield_value
+Modifier|set_stack_count|_stack_count_add
+
+## Obstacle
+
+Obstacle|get_billboard_font_size
+Obstacle|get_billboard_text
+Obstacle|get_bound_equipment
+Obstacle|get_chess_rank
+Obstacle|get_chess_type
+Obstacle|is_draggable
+Obstacle|is_touchable
+Obstacle|reset_collision_limit|_limit_type
+Obstacle|set_billboard_font_size|_font_size
+Obstacle|set_billboard_text|_content
+Obstacle|set_billboard_text_color|_color, _gradient_color_1, _gradient_color_2, _gradient_color_3, _gradient_color_4
+Obstacle|set_chess_type_and_rank|_card_type, _card_rank
+Obstacle|set_climbable|_enable
+Obstacle|set_collision_count_limit|_limit_type, _value
+Obstacle|set_collision_interval_limit|_limit_type, _value
+Obstacle|set_draggable|_enabled
+Obstacle|set_ranklist_score|_role, _score
+
+## Role
+
+Role|add_achievement_progress|_event_id, _add_count
+Role|add_score|_add_score
+Role|consume_commodity|_commodity_id, _num
+Role|disable_unit_fresnel|_unit
+Role|disable_unit_mask|_unit
+Role|disable_unit_outline|_unit
+Role|enter_watch_mode|_camp_limit, _exit_visible
+Role|exit_watch_mode
+Role|game_lose_and_show_result_panel
+Role|game_win_and_show_result_panel
+Role|get_achievement_progress|_event_id
+Role|get_archive_by_type|_archive_type, _key
+Role|get_archive_sheetid|_key
+Role|get_camera_direction
+Role|get_camera_rotation
+Role|get_camp
+Role|get_commodity_count|_commodity_id
+Role|get_ctrl_unit
+Role|get_game_result
+Role|get_head_icon
+Role|get_name
+Role|get_roleid
+Role|get_score
+Role|get_voice_volume
+Role|has_commodity|_commodity_id
+Role|has_saved_archive
+Role|is_achievement_completed|_event_id
+Role|is_gallery_vip
+Role|is_lost
+Role|is_map_favorited
+Role|is_map_liked
+Role|is_online
+Role|is_pass_premium_vip
+Role|is_subscribed_map_author
+Role|is_watch_mode
+Role|is_won
+Role|lose
+Role|pause_camera_motor
+Role|play_2d_sound_with_params|_event_id, _duration, _volume, _speed
+Role|play_advertisement_with_event|_success_event, _fail_event, _ad_tag, _success_data, _fail_data
+Role|play_montage|_montage_key, _start_time, _play_to_end, _play_time
+Role|play_screen_sfx|_sfx_key, _duration, _rate
+Role|play_ui_effect|_effect_node
+Role|reset_animation|_node
+Role|reset_camera|_reset_angle, _reset_bind, _reset_point, _reset_prop_pitch
+Role|resume_camera_motor
+Role|send_track_data_change|_track_data_key, _change_num
+Role|send_ui_custom_event|_event_name, _data
+Role|set_achievement_progress|_event_id, _count
+Role|set_animation_state|_node, _animation_name, _state
+Role|set_archive_by_type|_archive_type, _key, _val
+Role|set_archive_point|_position, _priority, _direction
+Role|set_archive_sheetid|_key, _val
+Role|set_bagslot_related_lifeentity|_bag_slot, _life_entity
+Role|set_battle_shop_visible|_battle_shop_id, _visible
+Role|set_blind_corner|_enable, _strength, _color
+Role|set_button_enabled|_button, _enabled
+Role|set_button_font_size|_key, _font_size
+Role|set_button_normal_image|_button, _image_key
+Role|set_button_pressed_image|_button, _image_key
+Role|set_button_text|_button, _text
+Role|set_button_text_color|_button, _text_color
+Role|set_camera_bind_mode|_mode
+Role|set_camera_draggable|_draggable
+Role|set_camera_gyroscope_control_enabled|_is_control
+Role|set_camera_lock_position|_pos
+Role|set_camera_projection_type|_projection_type
+Role|set_camera_property|_property, _value
+Role|set_camera_rotation_by_direction|_target_dir, _duration
+Role|set_camera_rotation_sync_enabled|_enabled
+Role|set_goods_panel_visible|_visible
+Role|set_goods_visible|_goods_key, _visible
+Role|set_gyroscope_control_unit|_is_control, _unit
+Role|set_gyroscope_sync_enabled|_enabled
+Role|set_image_color|_image, _image_color, _transition_time
+Role|set_image_texture_by_key_with_auto_resize|_image, _image_key, _reset_size
+Role|set_image_texture_with_auto_resize|_image, _image_path, _reset_size
+Role|set_input_field_text|_input_field, _text
+Role|set_label_background_color|_label, _color, _transition_time
+Role|set_label_background_opacity|_label, _opacity, _transition_time
+Role|set_label_color|_label, _color, _transition_time
+Role|set_label_font|_label, _font_key
+Role|set_label_font_size|_label, _font_size, _transition_time
+Role|set_label_outline_color|_label, _color
+Role|set_label_outline_enabled|_label, _enable
+Role|set_label_outline_opacity|_label, _opacity
+Role|set_label_outline_width|_label, _width
+Role|set_label_shadow_color|_label, _color
+Role|set_label_shadow_enabled|_label, _enable
+Role|set_label_shadow_x_offset|_label, _offset
+Role|set_label_shadow_y_offset|_label, _offset
+Role|set_label_text|_label, _text
+Role|set_name_visible|_visible
+Role|set_node_touch_enabled|_node, _touch_enabled
+Role|set_node_visible|_node, _visible
+Role|set_progressbar_current|_progress_bar, _current
+Role|set_progressbar_max|_progress_bar, _max
+Role|set_progressbar_min|_progress_bar, _min
+Role|set_progressbar_transition|_progress_bar, _current, _transition_time
+Role|set_role_ctrl_enabled|_enable
+Role|set_score|_score
+Role|set_ui_opacity|_node, _opacity
+Role|set_uipreset_visible|_ui, _visible
+Role|set_unit_fresnel|_unit, _fresnel_scale, _color, _intensity
+Role|set_unit_fresnel_gradual|_unit, _fresnel_scale, _color, _intensity, _duration
+Role|set_unit_mask|_unit, _color
+Role|set_unit_outline|_unit, _width, _color
+Role|set_unit_see_through_enabled|_unit, _enabled
+Role|set_unit_visible|_unit, _is_visible
+Role|set_voice_volume_sync_enabled|_enabled
+Role|shake_camera|_shake_type, _shake_max_amplitude, _shake_time, _shake_source, _shake_frequency, _shake_time_decay, _shake_effect_scope, _shake_undamped_scope, _shake_distance_decay
+Role|show_bag_panel|_visible
+Role|show_dynamic_text|_text, _pos, _color, _duration, _anim_type
+Role|show_goods_purchase_panel|_raw_goods_id, _show_time
+Role|show_like_panel
+Role|show_map_share_panel
+Role|show_tips|_content, _duration
+Role|show_ultimate_ability_panel|_keep_time
+Role|skip_current_montage|_has_black_screen
+Role|start_level_vote|_level_key
+Role|start_vibration|_vibrate_type, _vibrate_count, _vibrate_interval
+Role|stop_2d_sound|_sound_instance_id
+Role|stop_camera_motor
+Role|stop_montage|_montage_key, _has_black_screen
+Role|stop_ui_effect|_effect_node
+Role|unbind_label_text|_label
+Role|unbind_progressbar_current|_progress_bar
+Role|unbind_progressbar_max|_progress_bar
+Role|win
+
+## SceneUI
+
+SceneUI|create_scene_ui_bind_unit|_layer_key, _socket_name, _offset_pos, _duration, _bind_event, _inherit_visible
+
+## TriggerSpace
+
+TriggerSpace|get_virtual_light_brightness
+TriggerSpace|set_virtual_light_brightness|_brightness
+
+## TriggerSystem
+
+TriggerSystem|has_timer|_timer
+
+## Unit
+
+Unit|add_child|_unit
+Unit|add_circle_motor|_vel, _time, _is_local
+Unit|add_linear_motor|_vel, _time, _is_local
+Unit|add_surround_motor|_follow_target, _ang_vel, _time, _follow_rotate
+Unit|apply_force|_force
+Unit|apply_impact_force|_force, _max_speed, _force_lost_control, _lost_ctrl_time
+Unit|disable_gravity
+Unit|disable_interact
+Unit|disable_motor|_index
+Unit|enable_gravity
+Unit|enable_interact
+Unit|enable_motor|_index
+Unit|get_angular_velocity
+Unit|get_camp
+Unit|get_camp_id
+Unit|get_child_by_name|_name
+Unit|get_child_customtriggerspaces
+Unit|get_child_obstacles
+Unit|get_children
+Unit|get_current_mass
+Unit|get_current_mass_center
+Unit|get_key
+Unit|get_linear_velocity
+Unit|get_local_direction|_direction_type
+Unit|get_local_offset_position|_offset
+Unit|get_local_quaternion|_direction_type
+Unit|get_max_linear_velocity
+Unit|get_name
+Unit|get_orientation
+Unit|get_parent
+Unit|get_position
+Unit|get_rigid_body_type
+Unit|get_role
+Unit|get_role_id
+Unit|get_scale
+Unit|get_unit_type
+Unit|hide_bubble_msg
+Unit|is_character
+Unit|is_creature
+Unit|is_dynamic
+Unit|is_dynamic_body
+Unit|is_in_customtriggerspace|_custom_trigger_space, _consider_mask
+Unit|is_kinematic_body
+Unit|is_model_visible
+Unit|is_physics_active
+Unit|is_static_body
+Unit|is_valid_ability_target|_ability
+Unit|model_play_animation|_anim_name, _start_time, _is_loop, _play_speed
+Unit|model_stop_animation
+Unit|play_3d_sound|_sound_key, _duration, _volume
+Unit|play_emoji|_emoji_key
+Unit|play_emoji_with_offset|_emoji_key, _show_time, _offset
+Unit|play_sound_with_dis_and_attenuation|_event_id, _vis_dis, _sound_attenuation_curve
+Unit|recover_max_linear_velocity
+Unit|remove_from_parent
+Unit|remove_surround_motor
+Unit|set_acc_motor_init_velocity|_index, _init_vel
+Unit|set_angular_velocity|_vel
+Unit|set_current_mass|_mass
+Unit|set_current_mass_center|_center
+Unit|set_linear_motor_velocity|_index, _vel, _is_local
+Unit|set_linear_velocity|_vel
+Unit|set_max_linear_velocity|_velocity
+Unit|set_mirror_reflect_enabled|_enable
+Unit|set_model_visible|_v
+Unit|set_orientation|_rot
+Unit|set_orientation_smooth|_rot
+Unit|set_paint_area_color|_paint_area, _color
+Unit|set_physics_active|_is_active
+Unit|set_position|_pos
+Unit|set_position_smooth|_pos
+Unit|set_world_scale|_scale
+Unit|show_bubble_msg|_show_msg, _show_time, _max_dis, _offset
+Unit|stop_sound|_lres_id
