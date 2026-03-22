@@ -1,0 +1,57 @@
+local rules = {
+  debug_log_enabled = true,
+  action_anim_debug_log_enabled = false,
+  move_anim_debug_log_enabled = false,
+  debug_log_max_lines = 50,
+  info_log_per_turn_limit = 1,
+  role_control_lock_enabled = true,
+
+  auto_decision_delay_seconds = 2.0,
+  popup_auto_close_seconds = 2.0,
+  action_anim_default_seconds = 2.0,
+  event_tip_default_seconds = 2.0,
+  event_tip_fast_seconds = 0.5,
+  event_tip_fast_backlog_threshold = 2,
+  detained_turn_wait_seconds = 5.0,
+  inter_turn_wait_seconds = 1.0,
+  panel_cash_delta_visible_seconds = 3.0,
+  landing_visual_hold_seconds = 0.1,
+  item_slot_highlight_anim_delay_seconds = 0.35,
+  turn_limit = 1000,
+
+  item_phase_queue = { "pre_action", "post_action" },
+  board = {
+    player_min_ground_offset = 0.5,
+  },
+  target_pick = {
+    eye_offset_y = 1.5,
+    ray_distance = 24.0,
+    nearest_tile_max_distance = 1.8,
+    marker_height_offset = 1.6,
+    arrow_height_offset = 1.6,
+  },
+
+  item_ids = {
+    free_rent = 2001,
+    remote_dice = 2002,
+    dice_multiplier = 2003,
+    roadblock = 2004,
+    mine = 2005,
+    clear_obstacles = 2006,
+    steal = 2007,
+    monster = 2008,
+    strong = 2009,
+    tax_free = 2010,
+    share_wealth = 2011,
+    exile = 2012,
+    missile = 2013,
+    tax = 2014,
+    invite_deity = 2015,
+    send_poor = 2016,
+    rich = 2017,
+    poor = 2018,
+    angel = 2019,
+  },
+}
+
+return rules
