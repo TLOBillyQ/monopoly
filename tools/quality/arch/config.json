@@ -1,0 +1,356 @@
+{
+  "abstract_rules": [
+    {
+      "match": [
+        "^src%.core%.ports%..+"
+      ],
+      "name": "core_ports"
+    },
+    {
+      "match": [
+        "^src%.rules%.ports%..+"
+      ],
+      "name": "rules_ports"
+    }
+  ],
+  "component_rules": [
+    {
+      "component": "presentation",
+      "match": [
+        "^src%.presentation%.runtime$",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%.runtime%.ports$",
+        "^src%.presentation%.runtime%.ports%..+"
+      ],
+      "name": "presentation_runtime_bootstrap"
+    },
+    {
+      "component": "infrastructure",
+      "match": [
+        "^src%.infrastructure%.runtime%.global_aliases$"
+      ],
+      "name": "infrastructure_runtime_bridge_exception"
+    },
+    {
+      "component": "infrastructure",
+      "match": [
+        "^src%.config%.content%.runtime_refs$",
+        "^src%.config%.gameplay%.runtime_constants$",
+        "^src%.rules%.vehicle$",
+        "^src%.state%.state_access%.runtime_editor_exports$"
+      ],
+      "name": "infrastructure_runtime_bridges"
+    },
+    {
+      "component": "runtime",
+      "match": [
+        "^src%.player%.actions%.state_ops%..+",
+        "^src%.rules%.endgame%.game_victory$"
+      ],
+      "name": "runtime_state_bridges"
+    },
+    {
+      "component": "systems",
+      "match": [
+        "^src%.player%.choices%..+"
+      ],
+      "name": "systems_choice_bridges"
+    },
+    {
+      "component": "core",
+      "match": [
+        "^src%.state%.state_access%..+"
+      ],
+      "name": "state_access"
+    },
+    {
+      "component": "runtime",
+      "match": [
+        "^src%.state%.player_state$"
+      ],
+      "name": "player_state_bridge"
+    },
+    {
+      "component": "app",
+      "match": [
+        "^src%.entry$",
+        "^src%.entry%..+",
+        "^src%.app%.bootstrap$",
+        "^src%.app%.bootstrap%..+"
+      ],
+      "name": "app"
+    },
+    {
+      "component": "infrastructure",
+      "match": [
+        "^src%.host$",
+        "^src%.host%..+"
+      ],
+      "name": "infrastructure"
+    },
+    {
+      "component": "presentation",
+      "match": [
+        "^src%.ui$",
+        "^src%.ui%..+"
+      ],
+      "name": "presentation"
+    },
+    {
+      "component": "flow",
+      "match": [
+        "^src%.turn$",
+        "^src%.turn%..+"
+      ],
+      "name": "flow"
+    },
+    {
+      "component": "runtime",
+      "match": [
+        "^src%.player$",
+        "^src%.player%..+",
+        "^src%.state$",
+        "^src%.state%..+"
+      ],
+      "name": "runtime"
+    },
+    {
+      "component": "ai",
+      "match": [
+        "^src%.computer$",
+        "^src%.computer%..+"
+      ],
+      "name": "ai"
+    },
+    {
+      "component": "systems",
+      "match": [
+        "^src%.rules$",
+        "^src%.rules%..+"
+      ],
+      "name": "systems"
+    },
+    {
+      "component": "core",
+      "match": [
+        "^src%.core$",
+        "^src%.core%..+"
+      ],
+      "name": "core"
+    },
+    {
+      "component": "config",
+      "match": [
+        "^src%.config$",
+        "^src%.config%..+"
+      ],
+      "name": "config"
+    }
+  ],
+  "forbidden_dependency_rules": [
+    {
+      "description": "presentation layer must not depend on runtime player modules directly",
+      "from": [
+        "^src%.ui%..+",
+        "^src%.presentation%..+",
+        "^src%.presentation%.runtime%..+"
+      ],
+      "name": "presentation_no_runtime_players",
+      "to": [
+        "^src%.player%..+"
+      ]
+    },
+    {
+      "description": "presentation layer must not depend on ai modules directly",
+      "from": [
+        "^src%.ui%..+",
+        "^src%.presentation%..+",
+        "^src%.presentation%.runtime%..+"
+      ],
+      "name": "presentation_no_ai",
+      "to": [
+        "^src%.computer%..+"
+      ]
+    },
+    {
+      "description": "presentation layer must not depend on systems modules directly",
+      "from": [
+        "^src%.ui%..+",
+        "^src%.presentation%..+",
+        "^src%.presentation%.runtime%..+"
+      ],
+      "name": "presentation_no_systems",
+      "to": [
+        "^src%.rules%..+"
+      ]
+    },
+    {
+      "description": "flow layer must not depend on presentation modules directly",
+      "from": [
+        "^src%.turn%..+"
+      ],
+      "name": "flow_no_presentation",
+      "to": [
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+"
+      ]
+    },
+    {
+      "description": "runtime player modules must not depend on flow modules directly",
+      "from": [
+        "^src%.player%..+"
+      ],
+      "name": "runtime_player_no_flow",
+      "to": [
+        "^src%.turn%..+"
+      ]
+    },
+    {
+      "description": "runtime player modules must not depend on presentation modules directly",
+      "from": [
+        "^src%.player%..+"
+      ],
+      "name": "runtime_player_no_presentation",
+      "to": [
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+"
+      ]
+    },
+    {
+      "description": "runtime player modules must not depend on infrastructure or app modules directly",
+      "from": [
+        "^src%.player%..+"
+      ],
+      "name": "runtime_player_no_infrastructure",
+      "to": [
+        "^src%.host%..+",
+        "^src%.app%.bootstrap%..+"
+      ]
+    },
+    {
+      "description": "ai layer must not depend on flow modules directly",
+      "from": [
+        "^src%.computer%..+"
+      ],
+      "name": "ai_no_flow",
+      "to": [
+        "^src%.turn%..+"
+      ]
+    },
+    {
+      "description": "ai layer must not depend on presentation modules directly",
+      "from": [
+        "^src%.computer%..+"
+      ],
+      "name": "ai_no_presentation",
+      "to": [
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+"
+      ]
+    },
+    {
+      "description": "ai layer must not depend on infrastructure or app modules directly",
+      "from": [
+        "^src%.computer%..+"
+      ],
+      "name": "ai_no_infrastructure_app",
+      "to": [
+        "^src%.host%..+",
+        "^src%.app%.bootstrap%..+"
+      ]
+    },
+    {
+      "description": "systems layer must stay inner and not depend on flow, presentation, ai, infrastructure, or app",
+      "from": [
+        "^src%.rules%..+"
+      ],
+      "name": "systems_no_outer_layers",
+      "to": [
+        "^src%.turn%..+",
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+",
+        "^src%.computer%..+",
+        "^src%.host%..+",
+        "^src%.app%.bootstrap%..+"
+      ]
+    },
+    {
+      "description": "runtime state modules must stay pure and not depend on flow, presentation, ai, or infrastructure",
+      "from": [
+        "^src%.state%..+"
+      ],
+      "name": "runtime_state_no_outer",
+      "to": [
+        "^src%.turn%..+",
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+",
+        "^src%.computer%..+",
+        "^src%.host%..+"
+      ]
+    },
+    {
+      "description": "config layer must not depend on flow, presentation, ai, systems, runtime, or infrastructure layers",
+      "from": [
+        "^src%.config%..+"
+      ],
+      "name": "config_no_outer_layers",
+      "to": [
+        "^src%.turn%..+",
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+",
+        "^src%.player%..+",
+        "^src%.computer%..+",
+        "^src%.rules%..+",
+        "^src%.state%..+",
+        "^src%.host%..+",
+        "^src%.app%.bootstrap%..+"
+      ]
+    },
+    {
+      "description": "infrastructure layer must not depend on presentation, flow, runtime, or ai modules",
+      "from": [
+        "^src%.host%..+"
+      ],
+      "name": "infrastructure_no_gameplay_chain",
+      "to": [
+        "^src%.ui%..+",
+        "^src%.presentation%.runtime%..+",
+        "^src%.presentation%..+",
+        "^src%.turn%..+",
+        "^src%.player%..+",
+        "^src%.computer%..+"
+      ]
+    },
+    {
+      "description": "presentation schema must stay pure and only depend on presentation schema or shared inner modules",
+      "from": [
+        "^src%.ui%.schema%..+"
+      ],
+      "name": "presentation_schema_pure",
+      "to": [
+        "^src%.ui%.input%..+",
+        "^src%.ui%.ctl%..+",
+        "^src%.ui%.pres%..+",
+        "^src%.ui%.render%..+",
+        "^src%.ui%.wid%..+",
+        "^src%.ui%.stores%..+",
+        "^src%.turn%..+",
+        "^src%.player%..+",
+        "^src%.computer%..+",
+        "^src%.rules%..+",
+        "^src%.host%..+",
+        "^src%.app%.bootstrap%..+",
+        "^src%.presentation%.runtime%..+"
+      ]
+    }
+  ],
+  "source_roots": [
+    "src"
+  ]
+}
