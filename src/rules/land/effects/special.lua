@@ -22,7 +22,8 @@ M.executors = {
   mine = {
     can_apply = function(ctx)
       local position = ctx.player and ctx.player.position
-      return mine_effect.can_trigger(ctx.game, ctx.player, position)
+      local game = ctx.game
+      return mine_effect.can_trigger(game, ctx.player, position)
     end,
     apply = function(ctx)
       local player = ctx.player

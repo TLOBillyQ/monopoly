@@ -596,6 +596,101 @@ local function _test_create_scene_ui_bind_unit_returns_nil_when_unavailable()
   end
 end
 
+local function _test_ensure_layers_for_player_uses_role_factory_when_ctrl_unit_factory_missing()
+  _with_globals({
+    Enums = { ModelSocket = { socket_head = 1 } },
+  }, function()
+    local original_vector3 = math.Vector3
+    math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
+
+    local created = 0
+    local cache = {
+      layers = {},
+      text_nodes = {},
+      last_status_key_by_player = {},
+      warned_once = {},
+      disabled = false,
+      meta = { layouts = { hospital = "layout_hospital" } },
+    }
+    local player = { id = 1 }
+    local host_runtime = {
+      resolve_role_with = function(_, predicate)
+        local role = {
+          get_ctrl_unit = function()
+            return {}
+          end,
+          create_scene_ui_bind_unit = function()
+            created = created + 1
+            return { id = "layer_role" }
+          end,
+        }
+        if predicate == nil or predicate(role) == true then
+          return role
+        end
+        return nil
+      end,
+      has_scene_ui_support = function()
+        return true
+      end,
+      set_scene_ui_visible = function() end,
+    }
+
+    local ok = status3d_scene.ensure_layers_for_player(cache, player, { host_runtime = host_runtime })
+    math.Vector3 = original_vector3
+
+    assert(ok == true, "role factory fallback should create player layers")
+    assert(created == 1, "role factory should be used when ctrl_unit factory is missing")
+    assert(cache.layers[player.id].hospital ~= nil, "hospital layer should be cached")
+  end)
+end
+
+local function _test_ensure_layers_for_player_uses_global_factory_when_ctrl_unit_factory_missing()
+  _with_globals({
+    Enums = { ModelSocket = { socket_head = 1 } },
+    SceneUI = {
+      create_scene_ui_bind_unit = function()
+        return { id = "layer_global" }
+      end,
+    },
+  }, function()
+    local original_vector3 = math.Vector3
+    math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
+
+    local cache = {
+      layers = {},
+      text_nodes = {},
+      last_status_key_by_player = {},
+      warned_once = {},
+      disabled = false,
+      meta = { layouts = { hospital = "layout_hospital" } },
+    }
+    local player = { id = 2 }
+    local host_runtime = {
+      resolve_role_with = function(_, predicate)
+        local role = {
+          get_ctrl_unit = function()
+            return {}
+          end,
+        }
+        if predicate == nil or predicate(role) == true then
+          return role
+        end
+        return nil
+      end,
+      has_scene_ui_support = function()
+        return true
+      end,
+      set_scene_ui_visible = function() end,
+    }
+
+    local ok = status3d_scene.ensure_layers_for_player(cache, player, { host_runtime = host_runtime })
+    math.Vector3 = original_vector3
+
+    assert(ok == true, "global SceneUI fallback should create player layers")
+    assert(cache.layers[player.id].hospital ~= nil, "hospital layer should be cached from global factory")
+  end)
+end
+
 -- Tests for pre_confirm_flow.enter
 local function _test_pre_confirm_enter_choice_select()
   local state = {
@@ -1522,6 +1617,14 @@ return {
     { name = "create_scene_ui_bind_unit_from_role", run = _test_create_scene_ui_bind_unit_from_role },
     { name = "create_scene_ui_bind_unit_from_global", run = _test_create_scene_ui_bind_unit_from_global },
     { name = "create_scene_ui_bind_unit_returns_nil_when_unavailable", run = _test_create_scene_ui_bind_unit_returns_nil_when_unavailable },
+    {
+      name = "ensure_layers_for_player_uses_role_factory_when_ctrl_unit_factory_missing",
+      run = _test_ensure_layers_for_player_uses_role_factory_when_ctrl_unit_factory_missing,
+    },
+    {
+      name = "ensure_layers_for_player_uses_global_factory_when_ctrl_unit_factory_missing",
+      run = _test_ensure_layers_for_player_uses_global_factory_when_ctrl_unit_factory_missing,
+    },
     -- pre_confirm_flow tests
     { name = "pre_confirm_enter_choice_select", run = _test_pre_confirm_enter_choice_select },
     { name = "pre_confirm_enter_no_choice_returns_false", run = _test_pre_confirm_enter_no_choice_returns_false },

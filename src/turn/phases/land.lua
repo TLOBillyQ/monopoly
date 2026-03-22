@@ -222,13 +222,14 @@ end
 local function _phase_land(turn_mgr, args)
   local player = args.player
   local move_result = args.move_result
-  local tile = turn_mgr.game.board:get_tile(player.position)
+  local game = turn_mgr.game
+  local tile = game.board:get_tile(player.position)
 
-  local res = _resolve_landing(turn_mgr.game, player, tile, move_result)
+  local res = _resolve_landing(game, player, tile, move_result)
   if res and res.waiting then
-    return _resolve_waiting_landing_result(turn_mgr.game, res, player, move_result)
+    return _resolve_waiting_landing_result(game, res, player, move_result)
   end
-  return _resolve_finished_landing_state(turn_mgr.game, player)
+  return _resolve_finished_landing_state(game, player)
 end
 
 local _land = {

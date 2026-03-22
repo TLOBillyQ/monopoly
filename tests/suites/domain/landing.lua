@@ -498,6 +498,24 @@ local function _test_mine_landing_log_mentions_vehicle_when_present()
     "mine landing should mention vehicle destruction when seat exists")
 end
 
+local function _test_inert_mine_does_not_trigger_on_landing()
+  local g = _new_game()
+  local player = g.players[1]
+  local idx = player.position
+  g.board:place_mine(idx, {
+    owner_id = g.players[2].id,
+    armed = false,
+  })
+
+  local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
+
+  assert(next_state ~= "wait_action_anim", "explicitly inert mine should not stage a mine trigger animation")
+  assert(next_state ~= "move_followup", "explicitly inert mine should not divert into hospital followup")
+  _assert_eq(next_args and next_args.player, player, "inert mine should preserve normal landing continuation")
+  _assert_eq(player.status.stay_turns or 0, 0, "inert mine should not hospitalize anyone")
+  _assert_eq(g.board:has_mine(idx), true, "inert mine should remain on the tile")
+end
+
 local function _test_black_market_mine_resolves_before_market_choice()
   local g = _new_game()
   _set_ui_port(g, { wait_action_anim = true })
@@ -614,6 +632,10 @@ return {
     {
       name = "mine_landing_log_mentions_vehicle_when_present",
       run = _test_mine_landing_log_mentions_vehicle_when_present,
+    },
+    {
+      name = "inert_mine_does_not_trigger_on_landing",
+      run = _test_inert_mine_does_not_trigger_on_landing,
     },
     {
       name = "black_market_mine_resolves_before_market_choice",

@@ -54,6 +54,12 @@ local function _create_scene_ui_bind_unit(role, ctrl_unit, layout_id)
   return nil
 end
 
+local function _can_create_scene_ui_bind_unit(role, ctrl_unit)
+  return (ctrl_unit and ctrl_unit.create_scene_ui_bind_unit ~= nil)
+    or (role and role.create_scene_ui_bind_unit ~= nil)
+    or (SceneUI and SceneUI.create_scene_ui_bind_unit ~= nil)
+end
+
 function M.ensure_layers_for_player(cache, player, deps)
   local player_id = player.id
   if cache.layers[player_id] ~= nil then
@@ -66,7 +72,7 @@ function M.ensure_layers_for_player(cache, player, deps)
     return false
   end
   local ctrl_unit = role.get_ctrl_unit and role.get_ctrl_unit()
-  if ctrl_unit == nil or ctrl_unit.create_scene_ui_bind_unit == nil then
+  if not _can_create_scene_ui_bind_unit(role, ctrl_unit) then
     meta.warn_once(cache, "missing_ctrl_unit_" .. tostring(player_id), "status3d unit missing create_scene_ui_bind_unit:", tostring(player_id))
     return false
   end

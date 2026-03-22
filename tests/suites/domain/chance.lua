@@ -351,6 +351,13 @@ local function _test_post_effects_apply_place_mine_here_places_mine()
   post_effects.apply_post(g, p, item_ids.mine, {})
 
   assert(g.board:has_mine(tile_idx), "post_effects place_mine_here should place a mine at player position")
+  local mine = assert(g.board:get_mine(tile_idx), "post_effects place_mine_here should keep mine payload")
+  assert(mine.armed == true, "post_effects place_mine_here should arm normal mines immediately")
+  assert(mine.owner_id == p.id, "post_effects place_mine_here should record owner id")
+  assert(
+    mine.owner_turn_started_count_at_placement == (p.status.own_turn_started_count or 0),
+    "post_effects place_mine_here should snapshot owner own-turn count"
+  )
 end
 
 local function _test_post_effects_apply_clear_obstacles_ahead_clears_obstacles()

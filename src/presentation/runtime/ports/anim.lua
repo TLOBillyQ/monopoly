@@ -91,9 +91,10 @@ function anim_ports.build()
     end,
     play_action_anim = function(state, anim_ctx)
       local player = _load_action_anim_player()
-      return player.play(state, anim_ctx, {
+      local delay = player.play(state, anim_ctx, {
         runtime_bundle = state and state.presentation_runtime or nil,
       })
+      return delay
     end,
     reset_status_3d = function(state)
       local status3d = require("src.ui.render.status3d")

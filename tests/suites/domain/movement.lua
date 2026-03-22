@@ -81,7 +81,7 @@ local function _test_owner_mine_in_placement_turn_does_not_stop_movement()
   g.board:place_mine(mine_index, {
     owner_id = p.id,
     armed = true,
-    placed_turn_count = g.turn.turn_count,
+    owner_turn_started_count_at_placement = p.status.own_turn_started_count,
   })
 
   local steps = 3
@@ -90,6 +90,44 @@ local function _test_owner_mine_in_placement_turn_does_not_stop_movement()
 
   _assert_eq(p.position, expected_index, "owner should ignore own mine during placement turn")
   _assert_eq(#res.visited, steps, "owner should keep full movement during placement turn")
+end
+
+local function _test_owner_mine_in_next_own_turn_does_not_stop_movement()
+  local g = _new_game()
+  local p = g:current_player()
+  local mine_index = 2
+  local placement_turn_started_count = 4
+  g:set_player_status(p, "own_turn_started_count", placement_turn_started_count + 1)
+  g.board:place_mine(mine_index, {
+    owner_id = p.id,
+    armed = true,
+    owner_turn_started_count_at_placement = placement_turn_started_count,
+  })
+
+  local steps = 3
+  local res = movement.move(g, p, steps, { branch_parity = steps, skip_market_check = true })
+  local expected_index = select(1, _simulate_path_result(g.board, 1, nil, steps, false, steps))
+
+  _assert_eq(p.position, expected_index, "owner should stay immune on the next own turn after placement")
+  _assert_eq(#res.visited, steps, "owner next-turn immunity should keep full movement")
+end
+
+local function _test_owner_mine_on_third_own_turn_stops_movement()
+  local g = _new_game()
+  local p = g:current_player()
+  local mine_index = 2
+  local placement_turn_started_count = 4
+  g:set_player_status(p, "own_turn_started_count", placement_turn_started_count + 2)
+  g.board:place_mine(mine_index, {
+    owner_id = p.id,
+    armed = true,
+    owner_turn_started_count_at_placement = placement_turn_started_count,
+  })
+
+  local res = movement.move(g, p, 3, { branch_parity = 3, skip_market_check = true })
+
+  _assert_eq(p.position, mine_index, "owner should trigger own mine starting from the third own turn")
+  _assert_eq(#res.visited, 1, "owner third-turn self-trigger should stop movement on the mine tile")
 end
 
 local function _test_movement_examples_from_issue()
@@ -698,6 +736,8 @@ return {
     { name = "roadblock_stop", run = _test_roadblock_stop },
     { name = "armed_mine_stops_movement_when_passed", run = _test_armed_mine_stops_movement_when_passed },
     { name = "owner_mine_in_placement_turn_does_not_stop_movement", run = _test_owner_mine_in_placement_turn_does_not_stop_movement },
+    { name = "owner_mine_in_next_own_turn_does_not_stop_movement", run = _test_owner_mine_in_next_own_turn_does_not_stop_movement },
+    { name = "owner_mine_on_third_own_turn_stops_movement", run = _test_owner_mine_on_third_own_turn_stops_movement },
     { name = "movement_examples_from_issue", run = _test_movement_examples_from_issue },
     { name = "board_indices_in_range_uses_manhattan_distance", run = _test_board_indices_in_range_uses_manhattan_distance },
     { name = "movement_backward_wrap", run = _test_movement_backward_wrap },

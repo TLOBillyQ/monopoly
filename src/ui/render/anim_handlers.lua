@@ -35,12 +35,12 @@ function handlers.play_forced_relocation(state, anim)
   return units.play_forced_relocation(state, anim)
 end
 
-function handlers.play_mine_trigger(state, anim, opts)
-  return units.play_mine_trigger(state, anim, opts)
+function handlers.play_mine_trigger(state, anim, duration, opts)
+  return units.play_mine_trigger(state, anim, duration, opts)
 end
 
-function handlers.play_roadblock_trigger(state, anim, opts)
-  return units.play_roadblock_trigger(state, anim, opts)
+function handlers.play_roadblock_trigger(state, anim, duration, opts)
+  return units.play_roadblock_trigger(state, anim, duration, opts)
 end
 
 function handlers.build_tip(state, anim)

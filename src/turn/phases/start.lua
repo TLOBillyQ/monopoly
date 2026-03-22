@@ -33,6 +33,12 @@ local function _emit_turn_started(player, turn_count)
   })
 end
 
+local function _increment_own_turn_started_count(game, player)
+  local status = player and player.status or nil
+  local current = status and status.own_turn_started_count or 0
+  game:set_player_status(player, "own_turn_started_count", current + 1)
+end
+
 local function _skip_eliminated_player(game, player)
   if not player.eliminated then
     return nil
@@ -99,6 +105,7 @@ local function _phase_start(turn_mgr)
     tostring(player.id)
   )
   _set_last_turn(turn_mgr.game, player)
+  _increment_own_turn_started_count(turn_mgr.game, player)
   _emit_turn_started(player, tc)
   local eliminated_state, eliminated_args = _skip_eliminated_player(turn_mgr.game, player)
   if eliminated_state ~= nil then

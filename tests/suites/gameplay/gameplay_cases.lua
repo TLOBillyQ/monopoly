@@ -3686,7 +3686,7 @@ local function _test_find_player_by_id_accepts_mixed_representation()
   assert(by_string == p1, "find_player_by_id should match string input to string player id")
 end
 
-local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
+local function _test_owner_mine_other_player_triggers_immediately_after_placement()
   local g = _new_game()
   local p1 = g.players[1]
   local p2 = g.players[2]
@@ -3697,35 +3697,29 @@ local function _test_owner_mine_does_not_trigger_until_owner_leaves_tile()
   local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
   assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
+  local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
+  assert(mine_state.armed == true, "freshly placed mine should be active immediately")
+  assert(
+    mine_state.owner_turn_started_count_at_placement == (p1.status.own_turn_started_count or 0),
+    "mine should record the owner's own-turn counter at placement"
+  )
 
   local owner_res = _resolve_landing(g, p1, mine_tile, {})
   assert(not owner_res, "owner landing on freshly placed mine should not trigger extra landing")
-  assert((p1.status.stay_turns or 0) == 0, "owner should not be hospitalized before leaving mine tile")
-  assert(g.board:has_mine(mine_index), "mine should stay until armed mine is triggered")
-
-  local move_res = movement.move(g, p1, 1, { branch_parity = 1, skip_market_check = true })
-  assert(move_res and move_res.landing_tile, "owner should move away from mine tile")
-  local mine_state = g.board:get_mine(mine_index)
-  assert(type(mine_state) == "table" and mine_state.armed == true, "mine should arm after owner leaves tile")
-  assert(mine_state.placed_turn_count == g.turn.turn_count, "mine should record placement turn count")
-
-  g:update_player_position(p1, mine_index)
-  local owner_return_res = _resolve_landing(g, p1, mine_tile, {})
-  assert(not owner_return_res, "owner should stay immune when returning in the placement turn")
-  assert((p1.status.stay_turns or 0) == 0, "owner should not be hospitalized by own mine in placement turn")
-  assert(g.board:has_mine(mine_index), "mine should remain after owner returns during placement turn")
+  assert((p1.status.stay_turns or 0) == 0, "owner should stay immune on the placement turn")
+  assert(g.board:has_mine(mine_index), "mine should remain after owner ignores it")
 
   g:update_player_position(p2, mine_index)
   local trigger_res = _resolve_landing(g, p2, mine_tile, {})
   assert(not g.turn.pending_choice, "mine trigger should not open a pending choice")
-  assert(trigger_res and trigger_res.waiting == true, "mine trigger should wait for move effect animation")
+  assert(trigger_res and trigger_res.waiting == true, "other player should trigger the mine immediately")
   assert(trigger_res.next_state == "move_followup", "mine trigger should resume through move_followup")
   assert(trigger_res.next_args and trigger_res.next_args.log_entries and trigger_res.next_args.log_entries[1] == p2.name .. " 触发地雷并送医",
     "mine trigger should defer no-vehicle trigger log through move_followup")
   assert((p2.status.stay_turns or 0) == 0, "hospital stay should be deferred until move followup")
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
   assert(resumed_state == "end_turn", "mine trigger should end the turn after hospital followup")
-  assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by armed mine after move followup")
+  assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by the fresh mine")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
 end
 
@@ -3741,7 +3735,7 @@ local function _has_mine_trigger_anim(turn)
   return false
 end
 
-local function _test_owner_mine_triggers_again_after_placement_turn()
+local function _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third()
   local g = _new_game()
   local p1 = g.players[1]
   local mine_index = p1.position
@@ -3751,23 +3745,25 @@ local function _test_owner_mine_triggers_again_after_placement_turn()
   local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
   assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
+  local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
+  local placement_turn_started_count = mine_state.owner_turn_started_count_at_placement
 
-  local move_res = movement.move(g, p1, 1, { branch_parity = 1, skip_market_check = true })
-  assert(move_res and move_res.landing_tile, "owner should move away from mine tile")
-  local mine_state = assert(g.board:get_mine(mine_index), "mine should still exist after owner leaves tile")
-  assert(mine_state.armed == true, "mine should arm after owner leaves tile")
+  g:set_player_status(p1, "own_turn_started_count", placement_turn_started_count + 1)
+  local next_turn_res = _resolve_landing(g, p1, mine_tile, {})
+  assert(not next_turn_res, "owner should stay immune on the next own turn after placement")
+  assert((p1.status.stay_turns or 0) == 0, "owner should not be hospitalized on the next own turn")
+  assert(g.board:has_mine(mine_index), "mine should remain after the second immunity pass")
 
-  g.turn.turn_count = g.turn.turn_count + 1
-  g:update_player_position(p1, mine_index)
+  g:set_player_status(p1, "own_turn_started_count", placement_turn_started_count + 2)
 
   local trigger_res = _resolve_landing(g, p1, mine_tile, {})
-  assert(trigger_res and trigger_res.waiting == true, "owner should be hit by own mine after placement turn ends")
+  assert(trigger_res and trigger_res.waiting == true, "owner should be hit by own mine on the third own turn")
   assert(trigger_res.next_state == "move_followup", "owner mine trigger should resume through move_followup")
   assert((p1.status.stay_turns or 0) == 0, "hospital stay should still be deferred until move followup")
 
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
   assert(resumed_state == "end_turn", "owner mine trigger should end the turn after hospital followup")
-  assert((p1.status.stay_turns or 0) > 0, "owner should be hospitalized by own mine on later turns")
+  assert((p1.status.stay_turns or 0) > 0, "owner should be hospitalized by own mine on the third own turn")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonating on owner later turn")
 end
 
@@ -3781,11 +3777,8 @@ local function _test_passing_armed_mine_stops_and_triggers_followup()
   p1.inventory:add({ id = gameplay_rules.item_ids.mine })
   local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
-
-  local owner_move_res = movement.move(g, p1, 1, { branch_parity = 1, skip_market_check = true })
-  assert(owner_move_res and owner_move_res.landing_tile, "owner should leave tile and arm the mine")
-  local mine_state = assert(g.board:get_mine(mine_index), "mine should still exist after owner leaves tile")
-  assert(mine_state.armed == true, "mine should arm after owner leaves tile")
+  local mine_state = assert(g.board:get_mine(mine_index), "mine should still exist after placement")
+  assert(mine_state.armed == true, "mine should be active immediately for non-owners")
 
   local before_mine_index = assert(g.board:index_of_tile_id(24), "missing tile before start")
   g:update_player_position(p2, before_mine_index)
@@ -3818,6 +3811,7 @@ local function _test_detained_turn_enters_wait_state_before_advancing()
   assert(g.last_turn and g.last_turn.player_id == p1.id, "last_turn should record skipped player")
   assert(g.last_turn and g.last_turn.skipped == true, "last_turn should mark detained turn as skipped")
   assert(g.last_turn and g.last_turn.stay_turns == 0, "last_turn should keep post-decrement stay_turns for UI projection")
+  assert((p1.status.own_turn_started_count or 0) == 1, "detained turn should still increment own-turn counter")
   assert(g.turn.phase == "detained_wait", "detained turn should enter detained_wait")
   assert(g.turn.detained_wait_active == true, "detained wait flag should stay enabled during wait")
   assert(g.turn.detained_wait_seconds == 5.0, "detained wait should use configured 5 second delay")
@@ -3846,6 +3840,7 @@ local function _test_turn_start_emits_turn_started_feedback_event()
   assert(#emitted >= 1, "turn_start should emit at least one event")
   assert(emitted[1].kind == monopoly_event.feedback.turn_started, "turn_start should emit feedback.turn_started")
   assert(emitted[1].payload.player_id == g:current_player().id, "turn_start should emit current player id")
+  assert((g:current_player().status.own_turn_started_count or 0) == 1, "turn_start should increment own-turn counter")
 end
 
 local function _test_turn_start_waits_for_pre_action_item_phase_choice()
@@ -5009,8 +5004,10 @@ return {
   _test_dispatch_gate_blocks_next_when_choice_active = _test_dispatch_gate_blocks_next_when_choice_active,
   _test_game_startup_role_roster_retries_before_debug_players_fallback = _test_game_startup_role_roster_retries_before_debug_players_fallback,
   _test_find_player_by_id_accepts_mixed_representation = _test_find_player_by_id_accepts_mixed_representation,
-  _test_owner_mine_does_not_trigger_until_owner_leaves_tile = _test_owner_mine_does_not_trigger_until_owner_leaves_tile,
-  _test_owner_mine_triggers_again_after_placement_turn = _test_owner_mine_triggers_again_after_placement_turn,
+  _test_owner_mine_other_player_triggers_immediately_after_placement =
+    _test_owner_mine_other_player_triggers_immediately_after_placement,
+  _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third =
+    _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third,
   _test_passing_armed_mine_stops_and_triggers_followup = _test_passing_armed_mine_stops_and_triggers_followup,
   _test_runtime_context_change_skin_exports_and_event = _test_runtime_context_change_skin_exports_and_event,
   _test_camera_policy_follows_eliminated_then_skips_to_next = _test_camera_policy_follows_eliminated_then_skips_to_next,

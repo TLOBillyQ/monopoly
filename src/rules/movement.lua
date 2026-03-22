@@ -24,6 +24,7 @@ local function _check_roadblock(game, board, current, player)
     return false
   end
   game:clear_roadblock(current)
+  local tile = board:get_tile(current)
   action_anim_port.queue(game, {
     kind = "roadblock_trigger",
     player_id = player.id,
@@ -32,8 +33,8 @@ local function _check_roadblock(game, board, current, player)
   })
   _emit_event(monopoly_event.movement.roadblock_hit, {
     player = player,
-    tile = board:get_tile(current),
-    text = player.name .. " 触发路障，停在 " .. board:get_tile(current).name,
+    tile = tile,
+    text = player.name .. " 触发路障，停在 " .. tile.name,
     prompt_text = _build_other_action_prompt_text(),
   })
   return true
@@ -156,13 +157,6 @@ local function _build_move_context(game, player, steps, opts)
     ctx.facing = ctx.persisted_facing
   end
   return ctx
-end
-
-local function _arm_owned_mine(ctx)
-  local mine = ctx.board.get_mine and ctx.board:get_mine(ctx.current) or nil
-  if type(mine) == "table" and mine.owner_id == ctx.player.id then
-    ctx.board:arm_mine(ctx.current)
-  end
 end
 
 local function _step_move(ctx, step)
@@ -295,7 +289,6 @@ end
 
 function movement.move(game, player, steps, opts)
   local ctx = _build_move_context(game, player, steps, opts)
-  _arm_owned_mine(ctx)
   _run_move_steps(ctx)
   _resolve_persisted_facing(ctx)
   local landing_tile = ctx.board:get_tile(ctx.current)

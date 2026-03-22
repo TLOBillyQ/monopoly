@@ -105,16 +105,6 @@ local function _sync_text_status(cache, player, status_key, deps)
   end
 end
 
-local function _sync_visible_layers(player_layers, status_key, deps)
-  local roles = scene.resolve_observer_roles()
-  for _, key in ipairs(specs.status_priority) do
-    local layer = player_layers[key]
-    if layer then
-      scene.set_layer_visible_for_roles(layer, roles, status_key == key, deps)
-    end
-  end
-end
-
 function M.sync_layer_status(cache, player, status_key, deps)
   local player_id = player.id
   local player_layers = cache.layers[player_id]
@@ -125,7 +115,16 @@ function M.sync_layer_status(cache, player, status_key, deps)
     _sync_text_status(cache, player, status_key, deps)
     return
   end
-  _sync_visible_layers(player_layers, status_key, deps)
+  local roles = scene.resolve_observer_roles()
+  for _, key in ipairs(specs.status_priority) do
+    local layer = player_layers[key]
+    if layer then
+      scene.set_layer_visible_for_roles(layer, roles, status_key == key, deps, {
+        player_id = player_id,
+        status_key = key,
+      })
+    end
+  end
   _sync_text_status(cache, player, status_key, deps)
   cache.last_status_key_by_player[player_id] = status_key
 end

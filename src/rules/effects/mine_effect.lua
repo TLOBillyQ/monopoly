@@ -22,14 +22,16 @@ function mine_effect.can_trigger(game, player, position)
   if type(mine) ~= "table" then
     return true
   end
-  if mine.armed ~= true then
+  if mine.armed == false then
     return false
   end
 
-  local turn = game and game.turn or nil
-  if player and mine.owner_id == player.id and mine.placed_turn_count ~= nil
-      and turn and mine.placed_turn_count == turn.turn_count then
-    return false
+  if player and mine.owner_id == player.id then
+    local own_turn_started_count = player.status and player.status.own_turn_started_count or 0
+    local placement_turn_count = mine.owner_turn_started_count_at_placement
+    if placement_turn_count ~= nil then
+      return own_turn_started_count > placement_turn_count + 1
+    end
   end
   return true
 end
@@ -59,7 +61,7 @@ function mine_effect.apply(game, player, position)
     move_dir_mode = "clear",
   })
   game:set_player_status(player, "pending_location_effect", "hospital")
-  action_anim_port.queue(game, {
+  local queued = action_anim_port.queue(game, {
     kind = "mine_trigger",
     player_id = player.id,
     tile_index = position,

@@ -203,8 +203,12 @@ end
 local function _handle_place_mine_here(game, player, _cfg, context)
   game:place_mine(player.position, {
     owner_id = player.id,
-    armed = false,
+    armed = true,
     placed_turn_count = game.turn and game.turn.turn_count or nil,
+    owner_turn_started_count_at_placement = player
+      and player.status
+      and player.status.own_turn_started_count
+      or 0,
   })
   logger.event(player.name .. " 在脚下埋设地雷")
   local queued = action_anim_port.queue(game, {

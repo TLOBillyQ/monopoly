@@ -35,6 +35,7 @@ function player:init(attrs)
   self.deity_duration_turns = attrs.deity_duration_turns
   self.status = {
     stay_turns = 0,
+    own_turn_started_count = 0,
     deity = { type = "", remaining = 0 },
     pending_remote_dice = nil,
     pending_dice_multiplier = 1,
