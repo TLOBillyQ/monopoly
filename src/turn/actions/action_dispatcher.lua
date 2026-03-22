@@ -202,8 +202,17 @@ local function _handle_ui_button(game, state, action, opts, ctx)
   return { status = "rejected" }
 end
 
+local function _resolve_choice_action_choice(game, state, ctx)
+  local turn = game and game.turn or nil
+  local turn_choice = turn and turn.pending_choice or nil
+  if turn_choice ~= nil then
+    return turn_choice
+  end
+  return ctx.output_ports.get_pending_choice(state)
+end
+
 local function _handle_choice_action(game, state, action, opts, ctx)
-  local choice = ctx.output_ports.get_pending_choice(state)
+  local choice = _resolve_choice_action_choice(game, state, ctx)
   if not validator.validate_choice_action(game, action, choice) then
     return { status = "rejected" }
   end
@@ -212,7 +221,7 @@ local function _handle_choice_action(game, state, action, opts, ctx)
     game:dispatch_action(action)
   end
   local pending = game and game.turn and game.turn.pending_choice or nil
-  if not pending or not pending.id or pending.id ~= choice.id then
+  if choice and (not pending or not pending.id or pending.id ~= choice.id) then
     turn_dispatch.clear_choice(state, opts)
   end
   return { status = "applied" }

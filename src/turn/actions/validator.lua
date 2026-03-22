@@ -139,6 +139,10 @@ function validator.resolve_item_slot_action(item_slot_source, state, action, gam
     return nil
   end
   local choice = runtime_state.get_pending_choice(state)
+  local runtime_game = game or (state and state.game)
+  if (not choice) and runtime_game and runtime_game.turn then
+    choice = runtime_game.turn.pending_choice
+  end
   if not choice or choice.kind ~= "item_phase_choice" then
     return { ok = false }
   end
@@ -160,7 +164,6 @@ function validator.resolve_item_slot_action(item_slot_source, state, action, gam
     logger.warn("invalid item option:", tostring(item_id))
     return { ok = false }
   end
-  local runtime_game = game or (state and state.game)
   if runtime_game and type(runtime_game.find_player_by_id) == "function" then
     local actor = runtime_game:find_player_by_id(action.actor_role_id)
     local phase = choice and choice.meta and choice.meta.phase or nil

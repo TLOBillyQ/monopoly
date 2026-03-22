@@ -461,6 +461,80 @@ local function _test_turn_dispatch_auto_rejects_unmapped_role()
   assert(g.players[1].auto == before, "mapped players auto should keep unchanged")
 end
 
+local function _test_turn_dispatch_choice_action_prefers_turn_pending_choice()
+  local g = _new_game()
+  local turn_choice = {
+    id = 707,
+    kind = "item_phase_choice",
+    owner_role_id = 1,
+    options = { { id = 2005, label = "地雷卡" } },
+    allow_cancel = true,
+    meta = { player_id = 1, phase = "post_action" },
+  }
+  local stale_state_choice = {
+    id = 808,
+    kind = "item_phase_choice",
+    owner_role_id = 1,
+    options = { { id = 2004, label = "路障卡" } },
+    allow_cancel = true,
+    meta = { player_id = 1, phase = "post_action" },
+  }
+  g.turn.pending_choice = turn_choice
+
+  local cleared = 0
+  local dispatched = nil
+  local state = {
+    pending_choice = stale_state_choice,
+    ui = {
+      input_blocked = false,
+      item_slot_item_ids = {},
+      item_slot_item_ids_by_role = {},
+    },
+    _resolved_gameplay_loop_ports = {
+      output = {
+        get_pending_choice = function(current_state)
+          return current_state.pending_choice
+        end,
+        clear_pending_choice = function(current_state)
+          cleared = cleared + 1
+          current_state.pending_choice = nil
+        end,
+        invalidate_ui_model = function() end,
+      },
+      ui_sync = {
+        get_ui_state = function(current_state)
+          return current_state and current_state.ui or nil
+        end,
+        resolve_ui_gate = function()
+          return {
+            input_blocked = false,
+            choice_active = false,
+            market_active = false,
+            popup_active = false,
+          }
+        end,
+      },
+    },
+  }
+
+  function g:dispatch_action(action)
+    dispatched = action
+    self.turn.pending_choice = nil
+  end
+
+  local res = dispatch.dispatch_action(g, state, {
+    type = "choice_select",
+    choice_id = 707,
+    option_id = 2005,
+    actor_role_id = 1,
+  }, {})
+  _assert_eq(res and res.status, "applied", "choice_select should apply with turn pending choice")
+
+  _assert_eq(dispatched and dispatched.choice_id, 707, "dispatch should keep turn pending choice id")
+  _assert_eq(dispatched and dispatched.option_id, 2005, "dispatch should keep turn pending choice option")
+  _assert_eq(cleared, 1, "resolved choice should clear stale runtime pending choice")
+end
+
 local function _test_turn_dispatch_item_slot_uses_actor_slot_map()
   local g = _new_game()
   local captured = nil
@@ -1066,6 +1140,7 @@ return {
     { name = "_test_turn_dispatch_rejects_non_current_actor", run = _test_turn_dispatch_rejects_non_current_actor },
     { name = "_test_turn_dispatch_rejects_choice_non_owner", run = _test_turn_dispatch_rejects_choice_non_owner },
     { name = "_test_turn_dispatch_auto_rejects_unmapped_role", run = _test_turn_dispatch_auto_rejects_unmapped_role },
+    { name = "_test_turn_dispatch_choice_action_prefers_turn_pending_choice", run = _test_turn_dispatch_choice_action_prefers_turn_pending_choice },
     { name = "_test_turn_dispatch_item_slot_uses_actor_slot_map", run = _test_turn_dispatch_item_slot_uses_actor_slot_map },
     {
       name = "_test_turn_dispatch_market_navigation_prefers_turn_pending_choice",

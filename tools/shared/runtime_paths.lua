@@ -57,7 +57,19 @@ local function _path_exists(path)
     return true
   end
 
-  local ok = os.rename(path, path)
+  local normalized = _normalize_path(path)
+  local escaped = normalized:gsub('"', '\\"')
+  local command
+  if _is_windows() then
+    command = string.format('if exist "%s" (exit 0) else (exit 1)', escaped)
+  else
+    command = string.format('[ -e "%s" ]', escaped)
+  end
+
+  local ok = os.execute(command)
+  if type(ok) == "number" then
+    return ok == 0
+  end
   return ok == true
 end
 

@@ -112,6 +112,48 @@ local function _test_validator_resolve_item_slot_action_reads_ui_runtime_choice(
   _assert_eq(resolved.action.option_id, 1001, "resolved action should keep resolved item id")
 end
 
+local function _test_validator_resolve_item_slot_action_falls_back_to_turn_pending_choice()
+  local state = {
+    ui_runtime = {
+      pending_choice = nil,
+    },
+  }
+  local game = {
+    turn = {
+      pending_choice = {
+        id = 31,
+        kind = "item_phase_choice",
+        options = {
+          { id = 2005 },
+        },
+        meta = {
+          phase = "post_action",
+        },
+      },
+    },
+    find_player_by_id = function()
+      return nil
+    end,
+  }
+  local action = {
+    id = "item_slot_1",
+    actor_role_id = 8,
+    input_source = "user",
+  }
+  local item_slot_source = {
+    resolve_slot_action = function(actor_role_id, slot_id)
+      _assert_eq(actor_role_id, 8, "resolve_slot_action should receive actor role id")
+      _assert_eq(slot_id, "item_slot_1", "resolve_slot_action should receive slot id")
+      return 2005
+    end,
+  }
+
+  local resolved = validator.resolve_item_slot_action(item_slot_source, state, action, game)
+  _assert_eq(resolved.ok, true, "validator should fall back to turn pending choice when ui_runtime is stale")
+  _assert_eq(resolved.action.choice_id, 31, "resolved action should keep turn pending choice id")
+  _assert_eq(resolved.action.option_id, 2005, "resolved action should keep resolved item id")
+end
+
 return {
   name = "ui_runtime_state_contract",
   tests = {
@@ -130,6 +172,10 @@ return {
     {
       name = "validator_resolve_item_slot_action_reads_ui_runtime_choice",
       run = _test_validator_resolve_item_slot_action_reads_ui_runtime_choice,
+    },
+    {
+      name = "validator_resolve_item_slot_action_falls_back_to_turn_pending_choice",
+      run = _test_validator_resolve_item_slot_action_falls_back_to_turn_pending_choice,
     },
   },
 }
