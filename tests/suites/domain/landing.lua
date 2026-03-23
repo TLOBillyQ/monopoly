@@ -572,8 +572,9 @@ local function _test_black_market_roadblock_then_mine_skips_market_and_clears_mi
 
   local next_state, next_args = land.run({ game = g }, followup_args)
 
-  _assert_eq(next_state, "wait_action_anim", "landing should trigger mine after roadblock on black market")
-  _assert_eq(next_args.next_state, "move_followup", "roadblock plus mine should continue through move_followup")
+  _assert_eq(next_state, "wait_landing_visual", "landing should release visual hold before mine anim on black market")
+  _assert_eq(next_args.next_state, "wait_action_anim", "visual hold should chain into action anim wait")
+  _assert_eq(next_args.next_args.next_state, "move_followup", "roadblock plus mine should continue through move_followup")
   _assert_eq(_get_choice(g), nil, "roadblock plus mine should skip market choice after hospitalization")
   _assert_eq(g.board:has_mine(market_idx), false, "mine should clear after post-roadblock landing resolves")
 end
@@ -596,6 +597,29 @@ local function _test_black_market_angel_clears_mine_then_opens_market()
   _assert_eq(pending and pending.kind, "market_buy", "protected black market mine should reopen market choice")
   _assert_eq(g.board:has_mine(idx), false, "protected black market mine should still clear")
   _assert_eq(player.position, idx, "protected black market mine should not relocate player")
+end
+
+local function _test_mine_with_active_hold_routes_through_landing_visual()
+  local g = _new_game()
+  _set_ui_port(g, { wait_action_anim = true })
+  local player = g.players[1]
+  local idx = player.position
+  g.board:place_mine(idx, {
+    owner_id = g.players[2].id,
+    armed = true,
+  })
+  landing_visual_hold.start(g)
+
+  local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
+
+  _assert_eq(next_state, "wait_landing_visual",
+    "mine with active hold should route through wait_landing_visual first")
+  _assert_eq(next_args.next_state, "wait_action_anim",
+    "after visual hold release, should chain into wait_action_anim")
+  _assert_eq(next_args.next_args.next_state, "move_followup",
+    "action anim should chain into move_followup for hospital effects")
+  assert(landing_visual_hold.is_active_game(g),
+    "hold should still be active until tick releases it")
 end
 
 return {
@@ -648,6 +672,10 @@ return {
     {
       name = "black_market_angel_clears_mine_then_opens_market",
       run = _test_black_market_angel_clears_mine_then_opens_market,
+    },
+    {
+      name = "mine_with_active_hold_routes_through_landing_visual",
+      run = _test_mine_with_active_hold_routes_through_landing_visual,
     },
     { name = "execute_strong_card_pushes_item_card_popup", run = _test_execute_strong_card_pushes_item_card_popup },
     { name = "execute_free_card_pushes_item_card_popup", run = _test_execute_free_card_pushes_item_card_popup },

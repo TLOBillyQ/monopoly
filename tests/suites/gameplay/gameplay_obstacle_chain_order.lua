@@ -71,12 +71,18 @@ local function _test_same_tile_roadblock_then_mine_without_action_anim()
 
   assert(next_state == "landing", "roadblock followup should still enter landing")
   assert(move_result.stopped_on_roadblock == true, "roadblock should stop movement before mine followup")
-  assert(land_state == "move_followup", "mine should continue through move_followup after roadblock landing")
+  assert(land_state == "wait_landing_visual", "mine with active hold should release visual hold before continuing")
+  assert(land_args.next_state == "move_followup", "mine should continue through move_followup after visual hold")
   assert(game.board:has_roadblock(target_index) == false, "roadblock should clear after the first trigger")
   assert(game.board:has_mine(target_index) == false, "mine should clear after the second trigger")
   assert(player.position ~= target_index, "mine should relocate the player after roadblock landing resolves")
 
-  local resumed_state = move_followup.run({ game = game }, land_args)
+  local visual_cb = wait_callbacks.take(game, callback_keys.after_landing_visual)
+  assert(visual_cb ~= nil, "landing should register a visual hold resume callback")
+  local resumed_next_state, resumed_next_args = visual_cb()
+  assert(resumed_next_state == "move_followup", "visual hold callback should resume into move_followup")
+
+  local resumed_state = move_followup.run({ game = game }, resumed_next_args)
   assert(resumed_state == "end_turn", "roadblock then mine followup should end the turn")
   assert((player.status.stay_turns or 0) > 0, "mine followup should hospitalize the player")
 end
@@ -90,21 +96,28 @@ local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_ord
 
   assert(next_state == "landing", "roadblock followup should still enter landing before action anim wait")
   assert(move_result.stopped_on_roadblock == true, "roadblock should stop movement before queued mine followup")
-  assert(land_state == "wait_action_anim", "same-tile obstacle chain should wait for ordered action animations")
+  assert(land_state == "wait_landing_visual", "same-tile obstacle chain should release visual hold before action animations")
+  assert(land_args.next_state == "wait_action_anim", "visual hold should chain into action anim wait")
   assert(game.turn.action_anim and game.turn.action_anim.kind == "roadblock_trigger",
     "roadblock trigger should remain first in the action anim slot")
   assert(#queue == 1 and queue[1].kind == "mine_trigger",
     "mine trigger should be queued after the roadblock trigger")
   assert(game.board:has_roadblock(target_index) == false, "roadblock should clear as soon as it triggers")
   assert(game.board:has_mine(target_index) == false, "mine should clear after it is staged")
+
+  local visual_cb = wait_callbacks.take(game, callback_keys.after_landing_visual)
+  assert(visual_cb ~= nil, "landing should register a visual hold resume callback for action anim chain")
+
+  local anim_state, anim_args = visual_cb()
+  assert(anim_state == "wait_action_anim", "visual hold callback should resume into wait_action_anim")
   assert(wait_callbacks.peek(game, callback_keys.after_action_anim) ~= nil,
-    "landing should register a continuation behind the queued mine animation")
+    "visual hold callback should register a continuation behind the queued mine animation")
 
   local first_session = _new_await_session(game, {
     type = "action_anim_done",
     seq = game.turn.action_anim.seq,
   })
-  local first = await.action_anim(first_session, land_args)
+  local first = await.action_anim(first_session, anim_args)
   assert(first and first.wait == true, "first action anim should keep waiting for the queued mine animation")
   assert(game.turn.phase == "wait_action_anim", "first action anim should keep phase in wait_action_anim")
   assert(wait_callbacks.peek(game, callback_keys.after_action_anim) ~= nil,
@@ -121,7 +134,7 @@ local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_ord
     type = "action_anim_done",
     seq = game.turn.action_anim.seq,
   })
-  local second = await.action_anim(second_session, land_args)
+  local second = await.action_anim(second_session, anim_args)
   assert(second and second.next_state == "move_followup",
     "second action anim should resume the queued move_followup continuation")
   assert(wait_callbacks.peek(game, callback_keys.after_action_anim) == nil,

@@ -1081,7 +1081,8 @@ local _resolve_wait_state_extended_tests = {
     local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
-    assert(next_state == "wait_action_anim", "should prefer wait_action_anim over landing_visual when both active")
+    assert(next_state == "wait_landing_visual", "should route through landing_visual first when both hold and action_anim active")
+    assert(next_args.next_state == "wait_action_anim", "landing_visual should chain into wait_action_anim")
     landing_visual_hold.release(game)
   end,
   function()

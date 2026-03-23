@@ -133,7 +133,22 @@ local function _resolve_wait_state(game, next_state, next_args, wait_action_anim
 
   if wait_action_anim == true then
     if _has_action_anim(game) then
+      if landing_visual_hold.is_active_game(game) then
+        return _register_landing_visual_resume(game, "wait_action_anim", {
+          next_state = next_state,
+          next_args = next_args,
+        }, function()
+          return _register_action_anim_resume(game, next_state, next_args, function()
+            return next_state, next_args
+          end)
+        end)
+      end
       return _register_action_anim_resume(game, next_state, next_args, function()
+        return next_state, next_args
+      end)
+    end
+    if landing_visual_hold.is_active_game(game) then
+      return _register_landing_visual_resume(game, next_state, next_args, function()
         return next_state, next_args
       end)
     end
