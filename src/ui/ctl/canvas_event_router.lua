@@ -74,17 +74,13 @@ function router.bind(state, resolve_game)
       actor_role_id = local_actor_resolver.resolve_turn_bound(state, data)
     end
     if actor_role_id == nil then
-      if type(host_runtime_ports.enqueue_tip) == "function" then
-        host_runtime_ports.enqueue_tip({
-          text = "当前操作缺少玩家上下文，已忽略",
-          duration = 2.0,
-          dedupe_key = "missing_actor:" .. tostring(intent.type) .. ":" .. tostring(intent.id),
-          blocks_inter_turn = false,
-          source = "ui.missing_actor",
-        })
-      else
-        host_runtime_ports.show_tips("当前操作缺少玩家上下文，已忽略", 2.0)
-      end
+      host_runtime_ports.enqueue_tip({
+        text = "当前操作缺少玩家上下文，已忽略",
+        duration = 2.0,
+        dedupe_key = "missing_actor:" .. tostring(intent.type) .. ":" .. tostring(intent.id),
+        blocks_inter_turn = false,
+        source = "ui.missing_actor",
+      })
       logger.warn("ui intent rejected: missing actor_role_id", tostring(intent.type), tostring(intent.id))
       return false
     end

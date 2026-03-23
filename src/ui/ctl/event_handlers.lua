@@ -9,10 +9,7 @@ local context = { installed = false, logger = nil, state = nil, handlers_by_even
 local MARKET_BUY_FAILED_MIN_TIP_SECONDS = 3.0
 
 local function _enqueue_tip(intent)
-  if host_runtime_ports and type(host_runtime_ports.enqueue_tip) == "function" then
-    return host_runtime_ports.enqueue_tip(intent)
-  end
-  return host_runtime_ports.show_tips(intent and intent.text, intent and intent.duration)
+  return host_runtime_ports.enqueue_tip(intent)
 end
 
 local function _resolve_market_buy_failed_tip(event_data)

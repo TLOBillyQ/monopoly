@@ -172,7 +172,7 @@ local function _emit_tip_text(host_runtime, anim, tip_text, should_show_tip, sho
     logger.info_unlimited("[ActionAnim]", tip_text)
   end
   if should_show_tip and tip_text ~= nil and tip_text ~= "" then
-    if host_runtime and type(host_runtime.enqueue_tip) == "function" then
+    if host_runtime then
       host_runtime.enqueue_tip({
         text = tip_text,
         duration = tip_duration,
@@ -182,9 +182,6 @@ local function _emit_tip_text(host_runtime, anim, tip_text, should_show_tip, sho
         chain_key = anim and anim.chain_key or nil,
       })
       return
-    end
-    if host_runtime and type(host_runtime.show_tips) == "function" then
-      host_runtime.show_tips(tip_text, tip_duration)
     end
   end
 end
@@ -196,16 +193,13 @@ local function _build_handler_opts(state, runtime_bundle, host_runtime)
     schedule = host_runtime and host_runtime.schedule or nil,
     runtime_bundle = runtime_bundle,
     show_tip = function(text, duration_seconds)
-      if host_runtime and type(host_runtime.enqueue_tip) == "function" then
+      if host_runtime then
         return host_runtime.enqueue_tip({
           text = text,
           duration = duration_seconds,
           blocks_inter_turn = false,
           source = "action_anim.handler",
         })
-      end
-      if host_runtime and type(host_runtime.show_tips) == "function" then
-        return host_runtime.show_tips(text, duration_seconds)
       end
     end,
     hold_seconds = roll_face_hold_seconds,
