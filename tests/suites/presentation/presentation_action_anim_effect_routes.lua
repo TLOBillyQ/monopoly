@@ -578,6 +578,71 @@ local function _test_play_mine_trigger_uses_tile_cue_without_any_position_and_no
   assert(tile_calls[1] == "mine_blast:3", "play_mine_trigger should fall back to tile cue when position lookup fails")
 end
 
+local function _test_play_mine_trigger_delays_snap_when_schedule_available()
+  local state = support.build_min_state()
+  local scheduled_delay = nil
+  local scheduled_fn = nil
+  local steps = {}
+  local expected_delay = gameplay_rules.mine_trigger_snap_delay_seconds or 0.6
+
+  _with_patches({
+    {
+      target = unit_position,
+      key = "read_unit_position",
+      value = function()
+        return { x = 1, y = 2, z = 3 }
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_player_cue",
+      value = function()
+        steps[#steps + 1] = "cue"
+      end,
+    },
+    {
+      target = move_anim,
+      key = "prepare_player_for_snap",
+      value = function()
+        steps[#steps + 1] = "prepare"
+      end,
+    },
+    {
+      target = move_anim,
+      key = "snap_player_to_index",
+      value = function()
+        steps[#steps + 1] = "snap"
+        return 0
+      end,
+    },
+  }, function()
+    local duration = anim_units.play_mine_trigger(state, {
+      player_id = 1,
+      tile_index = 1,
+      to_index = 2,
+    }, 0, {
+      clear_overlay = function()
+        steps[#steps + 1] = "clear"
+      end,
+      schedule = function(delay, fn)
+        scheduled_delay = delay
+        scheduled_fn = fn
+      end,
+    })
+
+    assert(duration == expected_delay, "play_mine_trigger should return configured delayed snap duration")
+    assert(scheduled_delay == expected_delay, "play_mine_trigger should schedule snap with configured delay")
+    assert(type(scheduled_fn) == "function", "play_mine_trigger should enqueue delayed snap callback")
+    assert(steps[1] == "cue", "mine feedback cue should emit immediately")
+    assert(steps[2] == "clear", "mine overlay should clear before delayed snap")
+    assert(steps[3] == nil, "snap should not run before scheduled callback executes")
+
+    scheduled_fn()
+    assert(steps[3] == "prepare", "scheduled callback should prepare player for snap")
+    assert(steps[4] == "snap", "scheduled callback should snap player to hospital")
+  end)
+end
+
 return {
   name = "presentation.action_anim_effect_routes",
   tests = {
@@ -597,5 +662,6 @@ return {
     { name = "play_mine_trigger_prefers_player_cue_with_unit_position", run = _test_play_mine_trigger_prefers_player_cue_with_unit_position },
     { name = "play_mine_trigger_falls_back_to_tile_position_for_player_cue", run = _test_play_mine_trigger_falls_back_to_tile_position_for_player_cue },
     { name = "play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay", run = _test_play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay },
+    { name = "play_mine_trigger_delays_snap_when_schedule_available", run = _test_play_mine_trigger_delays_snap_when_schedule_available },
   },
 }

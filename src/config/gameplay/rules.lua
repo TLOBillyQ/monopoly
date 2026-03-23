@@ -17,6 +17,7 @@ local rules = {
   panel_cash_delta_visible_seconds = 3.0,
   landing_visual_hold_seconds = 0.1,
   item_slot_highlight_anim_delay_seconds = 0.35,
+  mine_trigger_snap_delay_seconds = 0.6,
   turn_limit = 1000,
 
   item_phase_queue = { "pre_action", "post_action" },

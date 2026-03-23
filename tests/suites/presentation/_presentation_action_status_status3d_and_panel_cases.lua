@@ -306,6 +306,50 @@ local function _test_status3d_hospital_visible_during_pending_location_effect()
     "deity layer should stay hidden while hospital effect is pending")
 end
 
+local function _test_status3d_roadblock_anim_pending_overrides_hospital_pending()
+  local env = _build_status3d_test_env()
+  local state = {}
+  local game = _build_status3d_game({
+    tile_type = "hospital",
+    player_status_1 = {
+      stay_turns = 0,
+      pending_location_effect = "hospital",
+      deity = { type = "poor", remaining = 5 },
+    },
+    turn = {
+      phase = "wait_action_anim",
+      action_anim = {
+        kind = "roadblock_trigger",
+        player_id = 1,
+        tile_index = 1,
+      },
+      action_anim_queue = {},
+      detained_wait_active = false,
+      no_action_notice_active = false,
+    },
+    last_turn = {
+      player_id = 1,
+      move_result = { stopped_on_roadblock = true },
+    },
+  })
+  local prefab = require("Data.Prefab")
+  local hospital_layout = prefab.scene_eui["医院状态"]
+  local roadblock_layout = prefab.scene_eui["路障状态"]
+  _with_patches({
+    { key = "GameAPI", value = env.game_api },
+    { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+  }, function()
+    ui_status_3d_layer.sync(game, state, { any = true, players = true, turn = true })
+  end)
+
+  local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+  local roadblock_layer = "layer_1_" .. tostring(roadblock_layout)
+  _assert_eq(env.layer_visibility[roadblock_layer][1], true,
+    "roadblock should stay visible while roadblock trigger anim is pending")
+  _assert_eq(env.layer_visibility[hospital_layer][1], false,
+    "hospital should remain hidden until roadblock trigger anim drains")
+end
+
 local function _test_status3d_mountain_visible_when_no_action_notice_even_if_stay_turns_zero()
   local env = _build_status3d_test_env()
   local state = {}
@@ -2028,6 +2072,7 @@ return {
   { name = "_test_status3d_roadblock_only_current_turn", run = _test_status3d_roadblock_only_current_turn },
   { name = "_test_status3d_hospital_visible_when_no_action_notice_even_if_stay_turns_zero", run = _test_status3d_hospital_visible_when_no_action_notice_even_if_stay_turns_zero },
   { name = "_test_status3d_hospital_visible_during_pending_location_effect", run = _test_status3d_hospital_visible_during_pending_location_effect },
+  { name = "_test_status3d_roadblock_anim_pending_overrides_hospital_pending", run = _test_status3d_roadblock_anim_pending_overrides_hospital_pending },
   { name = "_test_status3d_mountain_visible_when_no_action_notice_even_if_stay_turns_zero", run = _test_status3d_mountain_visible_when_no_action_notice_even_if_stay_turns_zero },
   { name = "_test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero", run = _test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero },
   { name = "_test_status3d_reset_destroy_layers", run = _test_status3d_reset_destroy_layers },

@@ -4,6 +4,30 @@ local host_runtime_bridge = require("src.ui.runtime.host_bridge")
 
 local M = {}
 
+local function _has_pending_roadblock_trigger(game, player)
+  if not (game and game.turn and player and player.id ~= nil) then
+    return false
+  end
+  local current = game.turn.action_anim
+  if current
+      and current.kind == "roadblock_trigger"
+      and current.player_id == player.id then
+    return true
+  end
+  local queue = game.turn.action_anim_queue
+  if type(queue) ~= "table" then
+    return false
+  end
+  for _, entry in ipairs(queue) do
+    if entry
+        and entry.kind == "roadblock_trigger"
+        and entry.player_id == player.id then
+      return true
+    end
+  end
+  return false
+end
+
 local function _resolve_role(player_id, deps)
   local host_runtime = deps and deps.host_runtime or host_runtime_bridge
   assert(host_runtime ~= nil, "missing deps.host_runtime")
@@ -46,6 +70,13 @@ function M.resolve_player_status_key(game, player)
     return nil
   end
   local status = player.status or {}
+  local last_turn = game and game.last_turn or nil
+  if last_turn and last_turn.player_id == player.id then
+    local move_result = last_turn.move_result
+    if move_result and move_result.stopped_on_roadblock == true and _has_pending_roadblock_trigger(game, player) then
+      return "roadblock"
+    end
+  end
   local stay_turns = status.stay_turns or 0
   local detained_this_turn = _is_player_detained_this_turn(game, player)
   local pending_location_effect = status.pending_location_effect
@@ -59,7 +90,6 @@ function M.resolve_player_status_key(game, player)
       return "mountain"
     end
   end
-  local last_turn = game.last_turn
   if last_turn and last_turn.player_id == player.id then
     local move_result = last_turn.move_result
     if move_result and move_result.stopped_on_roadblock == true then

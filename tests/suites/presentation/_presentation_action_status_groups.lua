@@ -98,6 +98,7 @@ local case_groups = {
     "_test_status3d_roadblock_only_current_turn",
     "_test_status3d_hospital_visible_when_no_action_notice_even_if_stay_turns_zero",
     "_test_status3d_hospital_visible_during_pending_location_effect",
+    "_test_status3d_roadblock_anim_pending_overrides_hospital_pending",
     "_test_status3d_mountain_visible_when_no_action_notice_even_if_stay_turns_zero",
     "_test_status3d_hospital_mountain_not_visible_when_not_detained_and_stay_turns_zero",
     "_test_status3d_reset_destroy_layers",
