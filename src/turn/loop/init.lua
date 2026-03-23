@@ -136,6 +136,7 @@ local function _initialize_ports(state, game)
   state.gameplay_loop_ports = ports
   game.board_scene_port = gameplay_loop_runtime.build_board_scene_port(state)
   game.popup_port = gameplay_loop_runtime.build_popup_port(state)
+  game.tip_output_port = gameplay_loop_runtime.build_tip_output_port(state)
   game.board_visual_feedback_port = gameplay_loop_runtime.build_board_visual_feedback_port(state)
   game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
   game.bankruptcy_feedback_port = {

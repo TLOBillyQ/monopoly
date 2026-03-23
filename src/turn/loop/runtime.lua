@@ -83,6 +83,24 @@ function runtime.build_popup_port(state)
   return port
 end
 
+function runtime.build_tip_output_port(state)
+  assert(type(state) == "table", "missing state")
+  if type(state._tip_output_port) == "table" then
+    return state._tip_output_port
+  end
+
+  local port = {}
+  port.enqueue = function(_, intent)
+    if type(state.show_tip) ~= "function" then
+      return false
+    end
+    return state:show_tip(intent) == true
+  end
+
+  state._tip_output_port = port
+  return port
+end
+
 function runtime.build_tile_feedback_port(state)
   assert(type(state) == "table", "missing state")
   if type(state._tile_feedback_port) == "table" then

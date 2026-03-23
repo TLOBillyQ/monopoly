@@ -1,5 +1,6 @@
 local board_view = require("src.ui.render.board")
 local modal = require("src.ui.ctl.modal")
+local host_bridge = require("src.ui.runtime.host_bridge")
 
 local state_callback_ports = {}
 
@@ -15,6 +16,13 @@ function state_callback_ports.install(state, get_current_game)
       end
     end
     return ok
+  end
+
+  state.show_tip = function(_, intent)
+    if type(intent) ~= "table" then
+      return false
+    end
+    return host_bridge.enqueue_tip(intent) == true
   end
 
   state.on_tile_upgraded = function(_, tile_id, level)

@@ -272,6 +272,15 @@ local function build_ui_port(overrides)
     wait_move_anim = false,
     wait_action_anim = false,
     push_popup = function() end,
+    show_tip = function(_, intent)
+      if type(intent) ~= "table" then
+        return false
+      end
+      if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
+        return GlobalAPI.show_tips(intent.text, intent.duration) == true
+      end
+      return false
+    end,
     on_tile_owner_changed = function() end,
     on_tile_upgraded = function() end,
     build_model = function(state, game)
@@ -433,6 +442,18 @@ local function new_game(opts)
       local ui_port = game.ui_port
       if ui_port and type(ui_port.push_popup) == "function" then
         return ui_port:push_popup(payload, popup_opts)
+      end
+      return false
+    end,
+  }
+  game.tip_output_port = {
+    enqueue = function(_, intent)
+      local ui_port = game.ui_port
+      if ui_port and type(ui_port.show_tip) == "function" then
+        return ui_port:show_tip(intent) == true
+      end
+      if GlobalAPI and type(GlobalAPI.show_tips) == "function" and type(intent) == "table" then
+        return GlobalAPI.show_tips(intent.text, intent.duration) == true
       end
       return false
     end,

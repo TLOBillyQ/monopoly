@@ -45,6 +45,13 @@ local function _install_default_runtime_ports(game_ctx)
       end,
     }
   end
+  if type(game_ctx.tip_output_port) ~= "table" or type(game_ctx.tip_output_port.enqueue) ~= "function" then
+    game_ctx.tip_output_port = {
+      enqueue = function()
+        return false
+      end,
+    }
+  end
   if type(game_ctx.tile_feedback_port) ~= "table" or type(game_ctx.tile_feedback_port.on_tile_upgraded) ~= "function" then
     game_ctx.tile_feedback_port = {
       on_tile_upgraded = function()
@@ -86,6 +93,14 @@ function game:ensure_popup_port()
     return popup_port
   end
   error("missing popup_port")
+end
+
+function game:ensure_tip_output_port()
+  local tip_output_port = self.tip_output_port
+  if type(tip_output_port) == "table" and type(tip_output_port.enqueue) == "function" then
+    return tip_output_port
+  end
+  error("missing tip_output_port")
 end
 
 function game:ensure_tile_feedback_port()
