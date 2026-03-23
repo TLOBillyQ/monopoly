@@ -107,8 +107,11 @@ local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_ord
   assert(land_args.next_state == "wait_action_anim", "visual hold should chain into action anim wait")
   assert(game.turn.action_anim and game.turn.action_anim.kind == "roadblock_trigger",
     "roadblock trigger should remain first in the action anim slot")
+  assert(game.turn.action_anim and game.turn.action_anim.chain_key == nil,
+    "roadblock trigger should not be mutated with mine chain metadata")
   assert(#queue == 1 and queue[1].kind == "mine_trigger",
     "mine trigger should be queued after the roadblock trigger")
+  assert(queue[1].chain_key ~= nil, "mine trigger should carry obstacle chain metadata itself")
   assert(game.board:has_roadblock(target_index) == false, "roadblock should clear as soon as it triggers")
   assert(game.board:has_mine(target_index) == false, "mine should clear after it is staged")
 

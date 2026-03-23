@@ -103,7 +103,6 @@ function mine_effect.apply(game, player, position)
   local tip_source = nil
   if roadblock_trigger ~= nil then
     chain_key = _build_obstacle_chain_key(game, player, position)
-    roadblock_trigger.chain_key = chain_key
     focus_text = _build_chain_tip_text(game, player, position, had_vehicle)
     tip_policy = "user"
     dedupe_key = "obstacle_chain:" .. chain_key
