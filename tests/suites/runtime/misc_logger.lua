@@ -242,6 +242,66 @@ local function _test_logger_flush_event_buffer_invalid_buffer_returns_false()
   end
 end
 
+local function _test_logger_set_test_mode_syncs_tip_queue_runtime()
+  local shown = {}
+  local timers = {}
+  local original_test_mode = logger.is_test_mode()
+
+  logger.clear()
+  _with_tip_runtime(function()
+    tip_queue.configure_runtime({
+      presenter = function(text)
+        shown[#shown + 1] = text
+      end,
+      scheduler = function(delay, fn)
+        timers[#timers + 1] = { delay = delay, fn = fn }
+        return true
+      end,
+      test_mode = false,
+    })
+
+    logger.set_test_mode(false)
+    tip_queue.enqueue({
+      text = "non_test_mode_active",
+      duration = 3.0,
+      dedupe_key = "non_test_mode_active",
+    })
+    tip_queue.enqueue({
+      text = "non_test_mode_pending",
+      duration = 2.0,
+      dedupe_key = "non_test_mode_pending",
+    })
+
+    _assert_eq(#shown, 1, "without test mode, handled scheduler should keep pending tip queued")
+    _assert_eq(shown[1], "non_test_mode_active", "first queued tip should still show immediately")
+
+    tip_queue.clear()
+    shown = {}
+    timers = {}
+
+    logger.set_test_mode(true)
+    tip_queue.enqueue({
+      text = "test_mode_first",
+      duration = 3.0,
+      dedupe_key = "test_mode_first",
+    })
+    tip_queue.enqueue({
+      text = "test_mode_second",
+      duration = 2.0,
+      dedupe_key = "test_mode_second",
+    })
+
+    _assert_eq(#shown, 2, "logger.set_test_mode should propagate to tip_queue and drain handled tips")
+    _assert_eq(shown[1], "test_mode_first", "first tip should preserve FIFO order after logger sync")
+    _assert_eq(shown[2], "test_mode_second", "second tip should drain immediately after logger sync")
+    _assert_eq(#timers, 2, "scheduler should still be called for both drained tips")
+
+    logger.set_test_mode(original_test_mode)
+  end)
+  logger.set_test_mode(original_test_mode)
+  logger.clear()
+end
+
 return {
   { name = "logger_event_only_writes_event_feed_without_showing_tip", run = _test_logger_event_only_writes_event_feed_without_showing_tip },
   { name = "logger_event_no_tips_stays_in_event_feed_without_showing_tip", run = _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip },
@@ -253,4 +313,5 @@ return {
   { name = "logger_flush_event_buffer_no_tip_replay", run = _test_logger_flush_event_buffer_no_tip_replay },
   { name = "logger_flush_event_buffer_empty_buffer_returns_false", run = _test_logger_flush_event_buffer_empty_buffer_returns_false },
   { name = "logger_flush_event_buffer_invalid_buffer_returns_false", run = _test_logger_flush_event_buffer_invalid_buffer_returns_false },
+  { name = "logger_set_test_mode_syncs_tip_queue_runtime", run = _test_logger_set_test_mode_syncs_tip_queue_runtime },
 }

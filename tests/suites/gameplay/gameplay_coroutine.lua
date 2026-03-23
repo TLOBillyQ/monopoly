@@ -486,6 +486,7 @@ local function _test_await_inter_turn_wait_blocks_until_tip_queue_drains()
       timers[#timers + 1] = { delay = delay, fn = fn }
       return true
     end,
+    test_mode = false,
   })
 
   local ok, err = pcall(function()

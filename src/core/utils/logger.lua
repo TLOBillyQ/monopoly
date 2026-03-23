@@ -1,3 +1,5 @@
+local tip_queue = require("src.core.utils.tip_queue")
+
 local logger = {
   entries = {},
   max_entries = 200,
@@ -204,6 +206,9 @@ end
 
 function logger.set_test_mode(enabled)
   logger.test_mode = enabled == true
+  tip_queue.configure_runtime({
+    test_mode = logger.test_mode,
+  })
 end
 
 function logger.is_test_mode()

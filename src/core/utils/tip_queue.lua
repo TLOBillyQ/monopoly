@@ -75,6 +75,32 @@ local function _present_tip(tip)
   return ok
 end
 
+local function _schedule_release(delay, release_fn)
+  local scheduler = tip_queue.runtime.scheduler
+  if type(scheduler) ~= "function" then
+    release_fn()
+    return
+  end
+
+  local invoked = false
+  local function _wrapped()
+    invoked = true
+    release_fn()
+  end
+
+  local ok, handled = pcall(scheduler, delay, _wrapped)
+  if ok and invoked then
+    return
+  end
+  if ok and handled == true then
+    if tip_queue.runtime.test_mode == true then
+      release_fn()
+    end
+    return
+  end
+  release_fn()
+end
+
 local function _release_tip(epoch, tip)
   if tip_queue.epoch ~= epoch then
     return
@@ -94,25 +120,7 @@ local function _release_tip(epoch, tip)
       _release_tip(current_epoch, next_tip)
     end
 
-    local scheduler = tip_queue.runtime.scheduler
-    if type(scheduler) == "function" then
-      local invoked = false
-      local function _wrapped()
-        invoked = true
-        _release_next()
-      end
-      local ok, handled = pcall(scheduler, next_tip.duration, _wrapped)
-      if ok and (invoked or handled == true) then
-        return
-      end
-      if ok and tip_queue.runtime.test_mode == true then
-        _release_next()
-        return
-      end
-      _release_next()
-      return
-    end
-    _release_next()
+    _schedule_release(next_tip.duration, _release_next)
   end
 end
 
@@ -134,26 +142,7 @@ local function _dispatch_next_tip()
     _release_tip(current_epoch, next_tip)
   end
 
-  local scheduler = tip_queue.runtime.scheduler
-  if type(scheduler) == "function" then
-    local invoked = false
-    local function _wrapped()
-      invoked = true
-      _release_next()
-    end
-    local ok, handled = pcall(scheduler, next_tip.duration, _wrapped)
-    if ok and (invoked or handled == true) then
-      return
-    end
-    if ok and tip_queue.runtime.test_mode == true then
-      _release_next()
-      return
-    end
-    _release_next()
-    return
-  end
-
-  _release_next()
+  _schedule_release(next_tip.duration, _release_next)
 end
 
 function tip_queue.configure_runtime(adapter)

@@ -204,10 +204,46 @@ local function _test_tip_queue_clear_cancels_stale_timeout_without_replaying_que
   end)
 end
 
+local function _test_tip_queue_test_mode_drains_handled_scheduler_queue()
+  local shown = {}
+  local timers = {}
+
+  _with_queue_runtime(function()
+    tip_queue.configure_runtime({
+      presenter = function(text)
+        shown[#shown + 1] = text
+      end,
+      scheduler = function(delay, fn)
+        timers[#timers + 1] = { delay = delay, fn = fn }
+        return true
+      end,
+      test_mode = true,
+    })
+
+    tip_queue.enqueue({
+      text = "first",
+      duration = 3.0,
+      dedupe_key = "first_tip",
+    })
+    tip_queue.enqueue({
+      text = "second",
+      duration = 2.0,
+      dedupe_key = "second_tip",
+    })
+
+    _assert_eq(#shown, 2, "test mode should drain both handled tips without waiting for timer callbacks")
+    _assert_eq(shown[1], "first", "first tip should still preserve FIFO order in test mode")
+    _assert_eq(shown[2], "second", "second tip should drain immediately after the first tip")
+    _assert_eq(#timers, 2, "test mode should still invoke the scheduler for each shown tip")
+    _assert_eq(tip_queue.has_blocking_pending("inter_turn"), false, "test mode drain should leave no blocking tip behind")
+  end)
+end
+
 return {
   { name = "tip_queue_uses_fifo_queue_without_override", run = _test_tip_queue_uses_fifo_queue_without_override },
   { name = "tip_queue_dedupes_same_semantic_key_across_active_and_pending", run = _test_tip_queue_dedupes_same_semantic_key_across_active_and_pending },
   { name = "tip_queue_only_blocks_inter_turn_for_blocking_tips", run = _test_tip_queue_only_blocks_inter_turn_for_blocking_tips },
   { name = "tip_queue_non_blocking_tip_never_gates_inter_turn", run = _test_tip_queue_non_blocking_tip_never_gates_inter_turn },
   { name = "tip_queue_clear_cancels_stale_timeout_without_replaying_queue", run = _test_tip_queue_clear_cancels_stale_timeout_without_replaying_queue },
+  { name = "tip_queue_test_mode_drains_handled_scheduler_queue", run = _test_tip_queue_test_mode_drains_handled_scheduler_queue },
 }
