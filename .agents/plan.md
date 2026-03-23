@@ -134,21 +134,32 @@
 
     - [x] 2026-03-23 17:00 - T1a 完成：新增 `src/core/utils/tip_queue.lua`，`logger` 已剥离 tip 状态与 event 侧自动弹 tip，`logger.event(...)` 只写 event feed。
     - [x] 2026-03-23 17:00 - 已做最小验证：`luac.exe -p src/core/utils/logger.lua`、`luac.exe -p src/core/utils/tip_queue.lua`、`lua.cmd` 队列去重/阻塞探针、`lua.cmd` logger event 无 tip 探针。
+    - [x] 2026-03-23 17:20 - T1b 完成：新增 `tests/suites/runtime/misc_tip_queue.lua`，把 FIFO、semantic dedupe、blocking/non-blocking、phase gating、clear 后 stale timeout 不回放收口到独立队列测试；`misc_logger` 只保留 logger 自身职责断言。
+    - [x] 2026-03-23 17:20 - 已做行为回归：`lua tests/behavior.lua`，当前只剩 3 个失败，全部落在后续任务范围内（`item.steal_*` allowlist tip、`await_inter_turn_wait_blocks_until_tip_queue_drains`）。
 
     ## 意外与发现
 
     - 观察：现有测试夹具仍会调用 `logger.set_tip_presenter(nil)` 和 `logger.set_scheduler(nil)`；为了不让旧夹具残留 runtime，`tip_queue.configure_runtime` 需要支持显式清空 presenter/scheduler。
       证据：`lua.cmd` 探针通过，且 `logger.event(...)` 不再触发 tip。
+    - 观察：`## Parallel Waves` 里把 `T1b, T2` 放同一波，但 `T2` 明确依赖 `T1b`，实际执行顺序必须是 `T1b -> T2`。
+      证据：当前计划的 `depends_on: [T1a, T1b]` 与波次描述不一致。
+    - 观察：`T1b` 完成后 `lua tests/behavior.lua` 只剩 3 个失败，说明队列拆分本身已稳定，剩余都是 allowlist tip 迁移与 inter-turn gate 语义未接好。
+      证据：失败列表仅剩 `tests/suites/domain/item.lua` 两条 tip 用例和 `tests/suites/gameplay/gameplay_coroutine.lua` 一条 inter-turn 用例。
 
     ## 决策日志
 
     - 决策：T1a 先保留 `logger.show_tip`、`logger.set_tip_presenter`、`logger.set_scheduler` 作为薄转发，但把实际 tip 生命周期状态迁到 `tip_queue`。
       理由：先切 ownership，再在后续任务里迁移调用方，能把变更面压到最小。
       日期/作者：2026-03-23 / Codex
+    - 决策：T1b 不再给 `logger` 追加新的 tip 行为测试，而是把队列契约独立到 `misc_tip_queue`，并把 `misc_logger` 收缩回 event feed / runtime clock / event buffer。
+      理由：避免后续清理 `logger.show_tip`、`logger.has_pending_tips` 时被旧测试绑住，符合“logger 退回日志系统本职”的目标。
+      日期/作者：2026-03-23 / Codex
 
     ## 结果与复盘
 
     - T1a 已把 tip 生命周期从 logger 中抽出，logger 现在专注于 event feed、时间戳和 event buffer。
-    - 下一步由 T1b/T2 接手队列级测试与外层宿主适配，继续把现有 tip 调用点迁到独立队列。
+    - T1b 已把队列语义钉死为独立测试面，后续迁移调用方时不再需要借 logger 间接验证。
+    - 下一步进入 T2，把宿主 `show_tips/enqueue_tip` 适配到 `tip_queue`，再接 T3/T4 收掉剩余行为失败。
 
     2026-03-23 17:00: 本次更新把 tip 状态、调度和展示从 `src/core/utils/logger.lua` 拆到 `src/core/utils/tip_queue.lua`，原因是先冻结独立队列契约，再让后续任务只处理调用方迁移。
+    2026-03-23 17:20: 本次更新补上 `tip_queue` 独立测试并收缩 `misc_logger`，原因是先把队列行为固定住，再让后续适配与迁移只关注调用边界。

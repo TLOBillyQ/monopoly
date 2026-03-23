@@ -8,6 +8,7 @@ local default_ports = require("src.host.eggy.default_ports")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local logger_tests = require("suites.runtime.misc_logger")
+local tip_queue_tests = require("suites.runtime.misc_tip_queue")
 local lvh_tests = require("suites.runtime.misc_landing_visual_hold")
 local gateway_tests = require("suites.runtime.misc_eggy_paid_gateway")
 
@@ -479,13 +480,16 @@ return {
     { name = "number_utils_to_integer", run = _test_number_utils_to_integer },
     { name = "number_utils_to_integer_fallback_from_tostring", run = _test_number_utils_to_integer_fallback_from_tostring },
     { name = "number_utils_to_integer_fallback_rejects_non_integer_text", run = _test_number_utils_to_integer_fallback_rejects_non_integer_text },
-    logger_tests[1],  -- logger_show_tip_uses_fifo_queue_without_override
-    logger_tests[2],  -- logger_event_tip_defers_until_current_tip_finishes
-    logger_tests[3],  -- logger_event_tip_uses_fast_duration_when_backlog_builds
-    logger_tests[4],  -- logger_event_no_tips_stays_in_event_feed_without_showing_tip
-    logger_tests[5],  -- logger_configure_host_runtime_uses_injected_hooks
-    logger_tests[6],  -- logger_event_collection_provider_drops_closed_action_log_events
-    logger_tests[7],  -- logger_event_seq_only_tracks_event_feed_changes
+    tip_queue_tests[1], -- tip_queue_uses_fifo_queue_without_override
+    tip_queue_tests[2], -- tip_queue_dedupes_same_semantic_key_across_active_and_pending
+    tip_queue_tests[3], -- tip_queue_only_blocks_inter_turn_for_blocking_tips
+    tip_queue_tests[4], -- tip_queue_non_blocking_tip_never_gates_inter_turn
+    tip_queue_tests[5], -- tip_queue_clear_cancels_stale_timeout_without_replaying_queue
+    logger_tests[1],  -- logger_event_only_writes_event_feed_without_showing_tip
+    logger_tests[2],  -- logger_event_no_tips_stays_in_event_feed_without_showing_tip
+    logger_tests[3],  -- logger_configure_host_runtime_uses_injected_hooks
+    logger_tests[4],  -- logger_event_collection_provider_drops_closed_action_log_events
+    logger_tests[5],  -- logger_event_seq_only_tracks_event_feed_changes
     { name = "synthetic_actor_registry_spawns_from_first_path_tile", run = _test_synthetic_actor_registry_spawns_from_first_path_tile },
     {
       name = "synthetic_actor_registry_reset_destroys_spawned_actor_and_clears_registry",
@@ -496,11 +500,11 @@ return {
     { name = "default_ports_wall_diff_seconds_prefers_game_api_then_falls_back", run = _test_default_ports_wall_diff_seconds_prefers_game_api_then_falls_back },
     { name = "ui_bootstrap_spawns_startup_synthetic_actors", run = _test_ui_bootstrap_spawns_startup_synthetic_actors },
     lvh_tests[1],   -- landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory
-    logger_tests[8],  -- logger_flush_event_buffer_replays_buffered_events
-    logger_tests[9],  -- logger_flush_event_buffer_skips_when_buffer_not_active
-    logger_tests[10], -- logger_flush_event_buffer_no_tip_replay
-    logger_tests[11], -- logger_flush_event_buffer_empty_buffer_returns_false
-    logger_tests[12], -- logger_flush_event_buffer_invalid_buffer_returns_false
+    logger_tests[6],  -- logger_flush_event_buffer_replays_buffered_events
+    logger_tests[7],  -- logger_flush_event_buffer_skips_when_buffer_not_active
+    logger_tests[8],  -- logger_flush_event_buffer_no_tip_replay
+    logger_tests[9],  -- logger_flush_event_buffer_empty_buffer_returns_false
+    logger_tests[10], -- logger_flush_event_buffer_invalid_buffer_returns_false
     { name = "runtime_context_first_role_from_game_api_with_valid_roles", run = _test_runtime_context_first_role_from_game_api_with_valid_roles },
     { name = "runtime_context_first_role_from_game_api_empty_list_fallback", run = _test_runtime_context_first_role_from_game_api_empty_list_fallback },
     { name = "runtime_context_first_role_from_game_api_nil_game_api", run = _test_runtime_context_first_role_from_game_api_nil_game_api },
