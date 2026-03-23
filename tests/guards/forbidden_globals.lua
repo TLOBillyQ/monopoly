@@ -2,19 +2,51 @@ package.path = package.path .. ";./tests/?.lua"
 
 local guard_support = require("support.guards.guard_support")
 
+local src_path_pattern = "^src/"
+
 local forbidden = {
   {
     pattern = "%f[%w_]package%s*%.",
     name = "package.*",
     replacement = "deps injection, state.presentation_runtime, or seam require",
-    path_pattern = "^src/",
+    path_pattern = src_path_pattern,
   },
-  { pattern = "%f[%w]tonumber%s*%(", name = "tonumber", replacement = "NumberUtils.to_integer()" },
-  { pattern = "%f[%w_]rawget%s*%(", name = "rawget", replacement = "field access with nil-guard (_G and _G.key)" },
-  { pattern = "%f[%w_]os%s*%.%s*clock%s*%(", name = "os.clock", replacement = "runtime port clock or injected now_fn" },
-  { pattern = "%f[%w_]debug%s*%.%s*traceback%s*%(", name = "debug.traceback", replacement = "traceback() global" },
-  { pattern = "type%s*%b()%s*==%s*[\"']number[\"']", name = "type(...) == \"number\"", replacement = "NumberUtils.is_numeric()/to_integer()" },
-  { pattern = "type%s*%b()%s*~=%s*[\"']number[\"']", name = "type(...) ~= \"number\"", replacement = "NumberUtils.is_numeric()/to_integer()" },
+  {
+    pattern = "%f[%w]tonumber%s*%(",
+    name = "tonumber",
+    replacement = "NumberUtils.to_integer()",
+    path_pattern = src_path_pattern,
+  },
+  {
+    pattern = "%f[%w_]rawget%s*%(",
+    name = "rawget",
+    replacement = "field access with nil-guard (_G and _G.key)",
+    path_pattern = src_path_pattern,
+  },
+  {
+    pattern = "%f[%w_]os%s*%.%s*clock%s*%(",
+    name = "os.clock",
+    replacement = "runtime port clock or injected now_fn",
+    path_pattern = src_path_pattern,
+  },
+  {
+    pattern = "%f[%w_]debug%s*%.%s*traceback%s*%(",
+    name = "debug.traceback",
+    replacement = "traceback() global",
+    path_pattern = src_path_pattern,
+  },
+  {
+    pattern = "type%s*%b()%s*==%s*[\"']number[\"']",
+    name = "type(...) == \"number\"",
+    replacement = "NumberUtils.is_numeric()/to_integer()",
+    path_pattern = src_path_pattern,
+  },
+  {
+    pattern = "type%s*%b()%s*~=%s*[\"']number[\"']",
+    name = "type(...) ~= \"number\"",
+    replacement = "NumberUtils.is_numeric()/to_integer()",
+    path_pattern = src_path_pattern,
+  },
 }
 
 local scan_roots = { "src", "tests", "tools" }

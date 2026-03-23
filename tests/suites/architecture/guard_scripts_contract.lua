@@ -25,12 +25,12 @@ local function _test_dep_rules_catches_ui_runtime_bypass()
     assert(result.violation.path:find("src/turn.lua", 1, true) ~= nil, "dep_rules should point to fixture file")
 end
 
-local function _test_forbidden_globals_catches_numeric_cast()
+local function _test_forbidden_globals_catches_numeric_cast_in_src()
     local result = forbidden_globals.run({
-        scan_roots = { _fixture_path("forbidden_globals/numeric_cast/tools/bad.lua") },
+        scan_roots = { _fixture_path("forbidden_globals/numeric_cast/src/bad.lua") },
     })
 
-    assert(result.ok == false, "forbidden_globals should reject tonumber")
+    assert(result.ok == false, "forbidden_globals should reject tonumber in src")
     assert(result.violations ~= nil and #result.violations == 1, "forbidden_globals should report one violation")
     assert(result.violations[1].name == "tonumber", "forbidden_globals should identify tonumber")
 end
@@ -43,6 +43,18 @@ local function _test_forbidden_globals_catches_src_package_access()
     assert(result.ok == false, "forbidden_globals should reject package access in src")
     assert(result.violations ~= nil and #result.violations == 1, "forbidden_globals should report one package violation")
     assert(result.violations[1].name == "package.*", "forbidden_globals should identify package access")
+end
+
+local function _test_forbidden_globals_allows_numeric_cast_outside_src()
+    local tests_result = forbidden_globals.run({
+        scan_roots = { _fixture_path("forbidden_globals/numeric_cast/tests/bad.lua") },
+    })
+    local tools_result = forbidden_globals.run({
+        scan_roots = { _fixture_path("forbidden_globals/numeric_cast/tools/bad.lua") },
+    })
+
+    assert(tests_result.ok == true, "forbidden_globals should allow numeric casts in tests")
+    assert(tools_result.ok == true, "forbidden_globals should allow numeric casts in tools")
 end
 
 local function _test_forbidden_globals_allows_package_access_outside_src()
@@ -80,8 +92,9 @@ return {
     name = "guard_scripts_contract",
     tests = {
         { name = "dep_rules_catches_ui_runtime_bypass",              run = _test_dep_rules_catches_ui_runtime_bypass },
-        { name = "forbidden_globals_catches_numeric_cast",           run = _test_forbidden_globals_catches_numeric_cast },
+        { name = "forbidden_globals_catches_numeric_cast_in_src",    run = _test_forbidden_globals_catches_numeric_cast_in_src },
         { name = "forbidden_globals_catches_src_package_access",     run = _test_forbidden_globals_catches_src_package_access },
+        { name = "forbidden_globals_allows_numeric_cast_outside_src", run = _test_forbidden_globals_allows_numeric_cast_outside_src },
         { name = "forbidden_globals_allows_package_access_outside_src", run = _test_forbidden_globals_allows_package_access_outside_src },
         { name = "guard_scripts_allow_clean_fixtures",               run = _test_guard_scripts_allow_clean_fixtures },
     },

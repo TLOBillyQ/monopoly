@@ -2,7 +2,7 @@
 
 `arch_view` 是静态架构扫描器，分析 `src/**/*.lua` 的模块级 `require` 依赖。职责：生成依赖图、按层投影视图、校验声明式边界规则。
 
-文本护栏（宿主全局 API、运行时禁用语法与少量仓库级硬边界）仍由 `tests/guards/dep_rules.lua`、`tests/guards/forbidden_globals.lua` 负责，arch_view 不替代它们。
+文本护栏（宿主全局 API、`src/` 运行时禁用语法与少量文本级硬边界）仍由 `tests/guards/dep_rules.lua`、`tests/guards/forbidden_globals.lua` 负责，arch_view 不替代它们。
 
 如果你想先判断 `arch_view` 在整套测试/静态分析里的位置，以及本地常见耗时，先读 `docs/architecture/quality_map.md`。
 

@@ -79,7 +79,7 @@
 - 当前子项：
   - `dep_rules`：文本级硬边界、禁用旧路径、禁用少量跨子系统依赖
   - `gameplay_loop_no_ui`：`gameplay loop` 在最小 runtime 下不直接依赖 UI 对象
-  - `forbidden_globals`：禁用 `tonumber`、`type(...) == "number"`、`rawget` 等仓库级禁令
+  - `forbidden_globals`：禁用 `src/` 下的 `tonumber`、`type(...) == "number"`、`rawget` 等运行时禁用写法
   - `arch_view_guard`：把 `arch_view` 的检查结果接入 guard lane
 - 适用时机：想快速知道有没有出现“明确不允许的写法”
 
