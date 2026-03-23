@@ -184,6 +184,34 @@ local function _test_item_phase_hides_rent_cards_on_other_owned_land()
   _assert_eq(spec, nil, "other player land should still hide reactive cards in active windows")
 end
 
+local function _test_build_wait_choice_args_requires_resume_next_state()
+  local ok, err = pcall(function()
+    item_phase.build_wait_choice_args(nil)
+  end)
+  _assert_eq(ok, false, "build_wait_choice_args should assert when meta is missing")
+  assert(type(err) == "string" and string.find(err, "missing meta%.resume_next_state", 1, false),
+    "build_wait_choice_args should explain missing resume_next_state")
+end
+
+local function _test_build_wait_choice_args_allows_nil_resume_next_args()
+  local result = item_phase.build_wait_choice_args({
+    resume_next_state = "landing",
+    resume_next_args = nil,
+  })
+  _assert_eq(result.next_state, "landing", "build_wait_choice_args should forward resume_next_state")
+  _assert_eq(result.next_args, nil, "build_wait_choice_args should preserve nil resume_next_args")
+end
+
+local function _test_build_wait_choice_args_restores_next_state_and_args()
+  local resume_next_args = { tile_id = 12, skip_anim = true }
+  local result = item_phase.build_wait_choice_args({
+    resume_next_state = "move_followup",
+    resume_next_args = resume_next_args,
+  })
+  _assert_eq(result.next_state, "move_followup", "build_wait_choice_args should restore resume_next_state")
+  assert(result.next_args == resume_next_args, "build_wait_choice_args should forward the original next_args table")
+end
+
 local function _test_item_equalize_cash()
   local g = _new_game()
   local user = g.players[1]
@@ -943,6 +971,9 @@ return {
     { name = "item_phase_keeps_demolish_when_target_exists", run = _test_item_phase_keeps_demolish_when_target_exists },
     { name = "item_phase_hides_rent_cards_on_owned_land", run = _test_item_phase_hides_rent_cards_on_owned_land },
     { name = "item_phase_hides_rent_cards_on_other_owned_land", run = _test_item_phase_hides_rent_cards_on_other_owned_land },
+    { name = "build_wait_choice_args_requires_resume_next_state", run = _test_build_wait_choice_args_requires_resume_next_state },
+    { name = "build_wait_choice_args_allows_nil_resume_next_args", run = _test_build_wait_choice_args_allows_nil_resume_next_args },
+    { name = "build_wait_choice_args_restores_next_state_and_args", run = _test_build_wait_choice_args_restores_next_state_and_args },
     { name = "item_equalize_cash", run = _test_item_equalize_cash },
     { name = "target_item_manual_direct_exec_and_duration", run = _test_target_item_manual_direct_exec_and_duration },
     {

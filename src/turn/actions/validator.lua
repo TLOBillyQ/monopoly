@@ -40,6 +40,94 @@ local function _resolve_item_slot_id(source, actor_role_id, slot_id)
   return source.resolve_slot_action(actor_role_id, slot_id)
 end
 
+local function _resolve_runtime_game(state, game)
+  return game or (state and state.game)
+end
+
+local function _resolve_pending_item_phase_choice(state, runtime_game)
+  local choice = runtime_state.get_pending_choice(state)
+  if (not choice) and runtime_game and runtime_game.turn then
+    choice = runtime_game.turn.pending_choice
+  end
+  if not choice or choice.kind ~= "item_phase_choice" then
+    return nil
+  end
+  return choice
+end
+
+local function _resolve_item_phase_choice(state, runtime_game)
+  return _resolve_pending_item_phase_choice(state, runtime_game)
+end
+
+local function _choice_has_item_option(choice, item_id)
+  local options = assert(choice.options, "missing choice options")
+  for _, option in ipairs(options) do
+    if (option.id or option) == item_id then
+      return true
+    end
+  end
+  return false
+end
+
+local function _validate_item_phase_option(choice, item_id)
+  if _choice_has_item_option(choice, item_id) then
+    return true
+  end
+  logger.warn("invalid item option:", tostring(item_id))
+  return false
+end
+
+local function _resolve_item_phase_actor(runtime_game, actor_role_id)
+  if not runtime_game or type(runtime_game.find_player_by_id) ~= "function" then
+    return nil
+  end
+  return runtime_game:find_player_by_id(actor_role_id)
+end
+
+local function _validate_item_phase_availability(runtime_game, choice, actor_role_id, item_id)
+  local actor = _resolve_item_phase_actor(runtime_game, actor_role_id)
+  local phase = choice and choice.meta and choice.meta.phase or nil
+  if not actor or type(phase) ~= "string" or phase == "" then
+    return true
+  end
+  local can_offer = availability.can_offer_in_phase(runtime_game, actor, item_id, phase)
+  if can_offer then
+    return true
+  end
+  logger.warn("item slot denied by availability:", tostring(item_id), tostring(phase))
+  return false
+end
+
+local function _resolve_selected_item_id(item_slot_source, action)
+  local source = _resolve_item_slot_source(item_slot_source)
+  local item_id = _resolve_item_slot_id(source, action.actor_role_id, action.id)
+  if item_id then
+    return item_id
+  end
+  logger.warn("missing item_id:", tostring(action.id))
+  return nil
+end
+
+local function _validate_item_slot_action(runtime_game, choice, action, item_id)
+  if not _validate_item_phase_option(choice, item_id) then
+    return false
+  end
+  if not _validate_item_phase_availability(runtime_game, choice, action.actor_role_id, item_id) then
+    return false
+  end
+  return true
+end
+
+local function _build_choice_select_action(choice, action, item_id)
+  return {
+    type = "choice_select",
+    choice_id = choice.id,
+    option_id = item_id,
+    actor_role_id = action.actor_role_id,
+    input_source = action.input_source,
+  }
+end
+
 function validator.resolve_gate_state(state, ui_sync_ports)
   local gate = turn_action_gate.resolve_gate_state(
     ui_sync_ports and type(ui_sync_ports.resolve_ui_gate) == "function" and ui_sync_ports.resolve_ui_gate(state) or nil
@@ -138,52 +226,21 @@ function validator.resolve_item_slot_action(item_slot_source, state, action, gam
   if not (action and action.id and string.match(action.id, "^item_slot_(%d+)$")) then
     return nil
   end
-  local choice = runtime_state.get_pending_choice(state)
-  local runtime_game = game or (state and state.game)
-  if (not choice) and runtime_game and runtime_game.turn then
-    choice = runtime_game.turn.pending_choice
-  end
-  if not choice or choice.kind ~= "item_phase_choice" then
+  local runtime_game = _resolve_runtime_game(state, game)
+  local choice = _resolve_item_phase_choice(state, runtime_game)
+  if not choice then
     return { ok = false }
   end
-  local source = _resolve_item_slot_source(item_slot_source)
-  local item_id = _resolve_item_slot_id(source, action.actor_role_id, action.id)
+  local item_id = _resolve_selected_item_id(item_slot_source, action)
   if not item_id then
-    logger.warn("missing item_id:", tostring(action.id))
     return { ok = false }
   end
-  local options = assert(choice.options, "missing choice options")
-  local option_ok = false
-  for _, opt in ipairs(options) do
-    if (opt.id or opt) == item_id then
-      option_ok = true
-      break
-    end
-  end
-  if not option_ok then
-    logger.warn("invalid item option:", tostring(item_id))
+  if not _validate_item_slot_action(runtime_game, choice, action, item_id) then
     return { ok = false }
-  end
-  if runtime_game and type(runtime_game.find_player_by_id) == "function" then
-    local actor = runtime_game:find_player_by_id(action.actor_role_id)
-    local phase = choice and choice.meta and choice.meta.phase or nil
-    if actor and type(phase) == "string" and phase ~= "" then
-      local can_offer = availability.can_offer_in_phase(runtime_game, actor, item_id, phase)
-      if not can_offer then
-        logger.warn("item slot denied by availability:", tostring(item_id), tostring(phase))
-        return { ok = false }
-      end
-    end
   end
   return {
     ok = true,
-    action = {
-      type = "choice_select",
-      choice_id = choice.id,
-      option_id = item_id,
-      actor_role_id = action.actor_role_id,
-      input_source = action.input_source,
-    },
+    action = _build_choice_select_action(choice, action, item_id),
   }
 end
 

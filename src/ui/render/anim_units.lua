@@ -63,21 +63,30 @@ local function _resolve_minimum_delay(delay, minimum_delay)
   return resolved_delay
 end
 
+local function _resolve_mine_hit_position(board_scene, player_id, tile_index)
+  local unit = board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
+  return unit_position.read_unit_position(unit) or unit_position.read_scene_tile_position(board_scene, tile_index)
+end
+
+local function _play_mine_feedback(state, cue_name, player_id, tile_index, hit_pos)
+  if hit_pos ~= nil then
+    board_feedback.play_player_cue(state, cue_name, player_id, { pos = hit_pos })
+    return
+  end
+  board_feedback.play_tile_cue(state, cue_name, tile_index, {})
+end
+
 function units.play_mine_trigger(state, anim, duration, opts)
   local board_scene = assert(state.board_scene, "missing board_scene")
   local player_id = assert(anim.player_id, "missing player_id")
   local tile_index = assert(anim.tile_index, "missing tile_index")
   local to_index = assert(anim.to_index, "missing to_index")
-  local unit = board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
-  local hit_pos = unit_position.read_unit_position(unit) or unit_position.read_scene_tile_position(board_scene, tile_index)
+  local cue_name = anim.cue_name or "mine_blast"
+  local hit_pos = _resolve_mine_hit_position(board_scene, player_id, tile_index)
   local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
 
   move_anim.prepare_player_for_snap(board_scene, player_id, anim, "mine_trigger")
-  if hit_pos ~= nil then
-    board_feedback.play_player_cue(state, anim.cue_name or "mine_blast", player_id, { pos = hit_pos })
-  else
-    board_feedback.play_tile_cue(state, anim.cue_name or "mine_blast", tile_index, {})
-  end
+  _play_mine_feedback(state, cue_name, player_id, tile_index, hit_pos)
   clear_overlay(state, "mine", tile_index)
   local snap_delay = move_anim.snap_player_to_index(board_scene, player_id, to_index, anim, "play_sequence_mine_trigger")
   return _resolve_minimum_delay(snap_delay, duration)

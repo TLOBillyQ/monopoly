@@ -1289,6 +1289,43 @@ local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_labe
   _assert_eq(state.ui_dirty, false, "countdown-only refresh should clear ui dirty flag")
 end
 
+local function _test_ui_runtime_refresh_turn_label_toggles_countdown_nodes_and_label()
+  local runtime_ui = require("src.ui.render.runtime_ui")
+  local visible_calls = {}
+  local label_calls = {}
+  local reset_calls = 0
+  local state = {
+    ui = {
+      set_visible = function(_, node, value)
+        visible_calls[#visible_calls + 1] = { node = node, value = value }
+      end,
+      set_label = function(_, node, value)
+        label_calls[#label_calls + 1] = { node = node, value = value }
+      end,
+    },
+  }
+
+  _with_patches({
+    { target = package.loaded, key = "src.ui.ctl.ui_runtime", value = nil },
+    { target = runtime_ui, key = "for_each_role_or_global", value = function(fn) fn() end },
+    { target = runtime_ui, key = "set_client_role", value = function(role)
+      if role == nil then
+        reset_calls = reset_calls + 1
+      end
+    end },
+  }, function()
+    local ui_view_service = require("src.ui.ctl.ui_runtime")
+    ui_view_service.refresh_turn_label(state, "倒计时 9", false)
+  end)
+
+  _assert_eq(#visible_calls, 2, "refresh_turn_label should update countdown and countdown_line visibility together")
+  _assert_eq(visible_calls[1].value, false, "refresh_turn_label should forward hidden countdown visibility")
+  _assert_eq(visible_calls[2].value, false, "refresh_turn_label should hide countdown line with countdown label")
+  _assert_eq(#label_calls, 1, "refresh_turn_label should update countdown label text")
+  _assert_eq(label_calls[1].value, "倒计时 9", "refresh_turn_label should pass the latest label text")
+  _assert_eq(reset_calls, 1, "refresh_turn_label should reset runtime client role after iteration")
+end
+
 local function _test_popup_defer_policy_queues_and_replays_in_order()
   local modal_presenter = require("src.ui.ctl.modal")
   local popup_presenter = require("src.ui.ctl.popup")
@@ -2005,6 +2042,7 @@ return {
   { name = "_test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner", run = _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner },
   { name = "_test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop", run = _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop },
   { name = "_test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render", run = _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render },
+  { name = "_test_ui_runtime_refresh_turn_label_toggles_countdown_nodes_and_label", run = _test_ui_runtime_refresh_turn_label_toggles_countdown_nodes_and_label },
   { name = "_test_popup_defer_policy_queues_and_replays_in_order", run = _test_popup_defer_policy_queues_and_replays_in_order },
   { name = "_test_popup_paths_do_not_mark_ui_model_dirty", run = _test_popup_paths_do_not_mark_ui_model_dirty },
   { name = "_test_popup_renderer_switch_popup_canvas_restores_client_role_nil", run = _test_popup_renderer_switch_popup_canvas_restores_client_role_nil },

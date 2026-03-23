@@ -5,6 +5,7 @@ local runtime_state = require("src.state.state_access.runtime_state")
 local output_port = require("src.turn.output.state_adapter")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local validator = require("src.turn.actions.validator")
+local availability = require("src.rules.items.availability")
 
 local function _test_runtime_state_defaults_to_runtime_only_structure()
   local state = {}
@@ -154,6 +155,139 @@ local function _test_validator_resolve_item_slot_action_falls_back_to_turn_pendi
   _assert_eq(resolved.action.option_id, 2005, "resolved action should keep resolved item id")
 end
 
+local function _test_validator_resolve_item_slot_action_rejects_non_item_phase_choice()
+  local state = {
+    ui_runtime = {
+      pending_choice = {
+        id = 41,
+        kind = "market_buy",
+        options = {
+          { id = 1001 },
+        },
+      },
+    },
+  }
+
+  local resolved = validator.resolve_item_slot_action({}, state, {
+    id = "item_slot_1",
+    actor_role_id = 8,
+  })
+  _assert_eq(resolved.ok, false, "validator should reject non item_phase pending choice")
+end
+
+local function _test_validator_resolve_item_slot_action_rejects_missing_slot_mapping()
+  local state = {
+    ui_runtime = {
+      pending_choice = {
+        id = 51,
+        kind = "item_phase_choice",
+        options = {
+          { id = 1001 },
+        },
+      },
+    },
+  }
+
+  local resolved = validator.resolve_item_slot_action({}, state, {
+    id = "item_slot_1",
+    actor_role_id = 8,
+  })
+  _assert_eq(resolved.ok, false, "validator should reject missing slot mapping")
+end
+
+local function _test_validator_resolve_item_slot_action_asserts_when_choice_options_are_missing()
+  local ok, err = pcall(function()
+    validator.resolve_item_slot_action({
+      resolve_slot_action = function()
+        return 1001
+      end,
+    }, {
+      ui_runtime = {
+        pending_choice = {
+          id = 61,
+          kind = "item_phase_choice",
+        },
+      },
+    }, {
+      id = "item_slot_1",
+      actor_role_id = 8,
+    })
+  end)
+
+  _assert_eq(ok, false, "validator should assert when choice.options is missing")
+  assert(tostring(err):find("missing choice options", 1, true) ~= nil,
+    "validator should report missing choice options")
+end
+
+local function _test_validator_resolve_item_slot_action_skips_availability_when_phase_is_blank()
+  local calls = 0
+  local original_can_offer = availability.can_offer_in_phase
+  availability.can_offer_in_phase = function()
+    calls = calls + 1
+    return false
+  end
+
+  local ok, resolved = pcall(function()
+    return validator.resolve_item_slot_action({
+      resolve_slot_action = function()
+        return 1001
+      end,
+    }, {
+      ui_runtime = {
+        pending_choice = {
+          id = 71,
+          kind = "item_phase_choice",
+          options = {
+            { id = 1001 },
+          },
+          meta = {
+            phase = "",
+          },
+        },
+      },
+      game = {
+        find_player_by_id = function()
+          return { id = 8 }
+        end,
+      },
+    }, {
+      id = "item_slot_1",
+      actor_role_id = 8,
+      input_source = "user",
+    })
+  end)
+
+  availability.can_offer_in_phase = original_can_offer
+
+  assert(ok, resolved)
+  _assert_eq(calls, 0, "blank phase should skip availability recheck")
+  _assert_eq(resolved.ok, true, "blank phase should still resolve a valid item slot action")
+  _assert_eq(resolved.action.option_id, 1001, "blank phase should preserve resolved item id")
+end
+
+local function _test_validator_resolve_item_slot_action_rejects_invalid_option()
+  local resolved = validator.resolve_item_slot_action({
+    resolve_slot_action = function()
+      return 9999
+    end,
+  }, {
+    ui_runtime = {
+      pending_choice = {
+        id = 81,
+        kind = "item_phase_choice",
+        options = {
+          { id = 1001 },
+        },
+      },
+    },
+  }, {
+    id = "item_slot_1",
+    actor_role_id = 8,
+  })
+
+  _assert_eq(resolved.ok, false, "validator should reject slot ids that are not in choice options")
+end
+
 return {
   name = "ui_runtime_state_contract",
   tests = {
@@ -176,6 +310,26 @@ return {
     {
       name = "validator_resolve_item_slot_action_falls_back_to_turn_pending_choice",
       run = _test_validator_resolve_item_slot_action_falls_back_to_turn_pending_choice,
+    },
+    {
+      name = "validator_resolve_item_slot_action_rejects_non_item_phase_choice",
+      run = _test_validator_resolve_item_slot_action_rejects_non_item_phase_choice,
+    },
+    {
+      name = "validator_resolve_item_slot_action_rejects_missing_slot_mapping",
+      run = _test_validator_resolve_item_slot_action_rejects_missing_slot_mapping,
+    },
+    {
+      name = "validator_resolve_item_slot_action_asserts_when_choice_options_are_missing",
+      run = _test_validator_resolve_item_slot_action_asserts_when_choice_options_are_missing,
+    },
+    {
+      name = "validator_resolve_item_slot_action_skips_availability_when_phase_is_blank",
+      run = _test_validator_resolve_item_slot_action_skips_availability_when_phase_is_blank,
+    },
+    {
+      name = "validator_resolve_item_slot_action_rejects_invalid_option",
+      run = _test_validator_resolve_item_slot_action_rejects_invalid_option,
     },
   },
 }

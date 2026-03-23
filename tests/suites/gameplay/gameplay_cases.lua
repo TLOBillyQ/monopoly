@@ -1166,6 +1166,45 @@ local function _test_runtime_context_install_helpers_without_globals()
   end)
 end
 
+local function _test_runtime_context_release_helper_install_flow()
+  _with_runtime_context_globals(function()
+    support.with_patches({
+      { key = "MONOPOLY_BUILD_MODE", value = "release" },
+    }, function()
+      local provider_role = { id = 1, get_roleid = function() return 1 end }
+      local fallback_role = { id = 2, get_roleid = function() return 2 end }
+      local ctx = runtime_context.new({
+        GameAPI = {
+          get_role = function(role_id)
+            if role_id == 1 then
+              return provider_role
+            end
+            if role_id == 2 then
+              return fallback_role
+            end
+            return nil
+          end,
+          get_all_valid_roles = function()
+            return { fallback_role }
+          end,
+        },
+        LuaAPI = _mock_lua_api(),
+      })
+
+      runtime_context.install_environment(ctx)
+      ctx.roles = { provider_role }
+      local helpers = runtime_context.install_runtime_helpers(ctx)
+
+      assert(type(helpers.vehicle_helper.resolve_any_role) == "function",
+        "release install flow should still expose resolve_any_role")
+      assert(helpers.vehicle_helper.resolve_any_role() == provider_role,
+        "release install flow should keep provider role priority")
+      assert(helpers.vehicle_helper.resolve_role(2) == fallback_role,
+        "release install flow should keep resolve_role available")
+    end)
+  end)
+end
+
 local function _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit()
   _with_runtime_context_globals(function()
     local ctrl_unit = { tag = "real_ctrl_unit" }
@@ -4931,6 +4970,7 @@ return {
     _test_runtime_event_bridge_disables_feature_after_dispatch_failure,
   _test_runtime_context_split_install_stages = _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals = _test_runtime_context_install_helpers_without_globals,
+  _test_runtime_context_release_helper_install_flow = _test_runtime_context_release_helper_install_flow,
   _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit = _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit,
   _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit = _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit,
   _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable = _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable,

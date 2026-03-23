@@ -7,6 +7,8 @@ local turn_timer_policy = require("src.turn.policies.timer_policy")
 local dispatch_validator = require("src.turn.actions.validator")
 local runtime_state = require("src.state.state_access.runtime_state")
 local roll = require("src.turn.phases.roll")
+local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
+local item_choice_handlers = require("src.rules.items.choice_handlers")
 
 local function _build_test_ports(overrides)
   overrides = overrides or {}
@@ -2026,6 +2028,158 @@ local _turn_script_final_tests = {
   end,
 }
 
+local _item_choice_handler_t2_tests = {
+  function()
+    local decorated = item_preconsume_policy.decorate_followup_choice_spec(nil, {
+      item_id = 2005,
+      player_id = 7,
+    })
+    assert(decorated == nil, "decorate_followup_choice_spec should return nil choice_spec unchanged")
+  end,
+  function()
+    local choice_spec = {
+      allow_cancel = true,
+      cancel_label = "返回",
+    }
+    local decorated = item_preconsume_policy.decorate_followup_choice_spec(choice_spec, nil)
+    assert(decorated == choice_spec, "decorate_followup_choice_spec should mutate and return the original choice_spec")
+    assert(choice_spec.allow_cancel == false, "decorate_followup_choice_spec should disable cancel")
+    assert(choice_spec.cancel_label == nil, "decorate_followup_choice_spec should clear cancel label")
+    assert(choice_spec.meta.item_preconsumed == true, "decorate_followup_choice_spec should mark item_preconsumed")
+  end,
+  function()
+    local choice_spec = {
+      meta = {
+        item_id = 9001,
+        player_id = 77,
+      },
+    }
+    item_preconsume_policy.decorate_followup_choice_spec(choice_spec, {
+      item_id = 2005,
+      player_id = 7,
+    })
+    assert(choice_spec.meta.item_preconsumed == true, "decorate_followup_choice_spec should keep preconsumed marker")
+    assert(choice_spec.meta.item_id == 9001, "decorate_followup_choice_spec should not overwrite existing item_id")
+    assert(choice_spec.meta.player_id == 77, "decorate_followup_choice_spec should not overwrite existing player_id")
+  end,
+  function()
+    local game = _new_game()
+    local player = game.players[1]
+    local captured_choice_spec = nil
+    player.inventory:add({ id = 2005 })
+    local handlers = item_choice_handlers.build({
+      finish_choice = function(_, stay)
+        return { stay = stay == true }
+      end,
+      finish_active_item_phase = function() end,
+      use_item = function(_, _, item_id)
+        assert(item_id == 2005, "item_phase_choice should forward selected item_id")
+        return {
+          waiting = true,
+          intent = {
+            choice_spec = {
+              kind = "remote_dice_value",
+              allow_cancel = false,
+              cancel_label = "old",
+              meta = {
+                player_id = 999,
+              },
+            },
+          },
+        }
+      end,
+    })
+    local original_dispatch = require("src.rules.ports.intent_output").dispatch
+    require("src.rules.ports.intent_output").dispatch = function(_, intent)
+      captured_choice_spec = intent and intent.choice_spec or nil
+      return true
+    end
+
+    local ok, result = pcall(function()
+      return handlers.item_phase_choice.execute(game, {
+        kind = "item_phase_choice",
+        meta = {
+          player_id = player.id,
+          phase = "pre_action",
+          resume_next_state = "roll",
+          resume_next_args = { player_id = player.id },
+        },
+      }, {
+        option_id = 2005,
+      })
+    end)
+
+    require("src.rules.ports.intent_output").dispatch = original_dispatch
+
+    assert(ok, result)
+    assert(result and result.stay == true, "repeatable item phase should keep waiting when followup choice opens")
+    assert(captured_choice_spec ~= nil, "repeatable item phase should dispatch followup choice")
+    assert(captured_choice_spec.allow_cancel == true, "repeatable followup should stay cancelable")
+    assert(captured_choice_spec.cancel_label == "old", "repeatable followup should preserve existing cancel label")
+    assert(captured_choice_spec.meta.phase == "pre_action", "repeatable followup should preserve phase meta")
+    assert(captured_choice_spec.meta.item_id == 2005, "repeatable followup should attach selected item_id")
+    assert(captured_choice_spec.meta.player_id == 999, "repeatable followup should not overwrite existing player_id")
+  end,
+  function()
+    local game = _new_game()
+    local player = game.players[1]
+    local captured_choice_spec = nil
+    player.inventory:add({ id = 2005 })
+    local handlers = item_choice_handlers.build({
+      finish_choice = function(_, stay)
+        return { stay = stay == true }
+      end,
+      finish_active_item_phase = function() end,
+      use_item = function(_, _, item_id)
+        assert(item_id == 2005, "item_phase_choice should forward selected item_id")
+        return {
+          waiting = true,
+          intent = {
+            choice_spec = {
+              kind = "remote_dice_value",
+              allow_cancel = true,
+              cancel_label = "返回",
+              meta = {
+                item_id = 7001,
+                player_id = 88,
+              },
+            },
+          },
+        }
+      end,
+    })
+    local intent_output_port = require("src.rules.ports.intent_output")
+    local original_dispatch = intent_output_port.dispatch
+    intent_output_port.dispatch = function(_, intent)
+      captured_choice_spec = intent and intent.choice_spec or nil
+      return true
+    end
+
+    local ok, result = pcall(function()
+      return handlers.item_phase_choice.execute(game, {
+        kind = "item_phase_choice",
+        meta = {
+          player_id = player.id,
+          phase = "landing",
+        },
+      }, {
+        option_id = 2005,
+      })
+    end)
+
+    intent_output_port.dispatch = original_dispatch
+
+    assert(ok, result)
+    assert(result and result.stay == true, "non-repeatable item phase should keep waiting when followup choice opens")
+    assert(captured_choice_spec ~= nil, "non-repeatable item phase should dispatch followup choice")
+    assert(captured_choice_spec.allow_cancel == false, "preconsumed followup should disable cancel")
+    assert(captured_choice_spec.cancel_label == nil, "preconsumed followup should clear cancel label")
+    assert(captured_choice_spec.meta.item_preconsumed == true, "preconsumed followup should mark consumed state")
+    assert(captured_choice_spec.meta.item_id == 7001, "preconsumed followup should preserve existing item_id")
+    assert(captured_choice_spec.meta.player_id == 88, "preconsumed followup should preserve existing player_id")
+  end,
+}
+
 return {
   name = "gameplay_t2_characterization",
   tests = {
@@ -2203,5 +2357,10 @@ return {
     { name = "_test_resolve_follow_player_next_non_eliminated", run = _resolve_follow_player_id_final_tests[1] },
     { name = "_test_resolve_follow_player_wrap_around", run = _resolve_follow_player_id_final_tests[2] },
     { name = "_test_resolve_follow_player_current_valid", run = _resolve_follow_player_id_final_tests[3] },
+    { name = "_test_item_preconsume_returns_nil_choice_spec_unchanged", run = _item_choice_handler_t2_tests[1] },
+    { name = "_test_item_preconsume_marks_choice_spec_and_disables_cancel", run = _item_choice_handler_t2_tests[2] },
+    { name = "_test_item_preconsume_preserves_existing_context_fields", run = _item_choice_handler_t2_tests[3] },
+    { name = "_test_item_phase_choice_decorates_repeatable_followup_meta", run = _item_choice_handler_t2_tests[4] },
+    { name = "_test_item_phase_choice_decorates_preconsumed_followup_meta", run = _item_choice_handler_t2_tests[5] },
   },
 }

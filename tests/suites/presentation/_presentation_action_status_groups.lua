@@ -108,6 +108,7 @@ local case_groups = {
     "_test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable",
     "_test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop",
     "_test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render",
+    "_test_ui_runtime_refresh_turn_label_toggles_countdown_nodes_and_label",
   },
   popup_and_modal_renderers = {
     "_test_popup_timeout_closes_even_when_input_blocked",

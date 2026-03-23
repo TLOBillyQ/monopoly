@@ -25,6 +25,24 @@ local effect_runner = require("src.rules.effects.effect_runner")
 local market_choice_handlers = require("src.rules.market.choice_handlers")
 local item_ids = gameplay_rules.item_ids
 
+local function _require_upvalue(fn, expected_name)
+  assert(debug and type(debug.getupvalue) == "function", "debug.getupvalue should be available for characterization tests")
+  local index = 1
+  while true do
+    local name, value = debug.getupvalue(fn, index)
+    assert(name ~= nil, "missing upvalue: " .. tostring(expected_name))
+    if name == expected_name then
+      return value
+    end
+    index = index + 1
+  end
+end
+
+local function _reload_core_agent()
+  package.loaded["src.computer.policies.core_agent"] = nil
+  return require("src.computer.policies.core_agent")
+end
+
 local function _action_anim_count(game)
   local count = 0
   if game.turn.action_anim then
@@ -77,7 +95,7 @@ local function _build_choice_groups()
 end
 
 local function _test_ai_picks_land_purchase()
-  local agent = require("src.computer.policies.core_agent")
+  local agent = _reload_core_agent()
   local g = _new_game()
   local ai_player = g.players[2]
   assert(agent.is_auto_player(ai_player), "player 2 should be AI")
@@ -112,6 +130,146 @@ local function _test_ai_picks_land_purchase()
   choice_resolver.resolve(g, pending, action)
   assert(ai_player.cash == before_cash - tile_ref.price, "AI cash should decrease by land price")
   assert(_tile_state(g, tile_ref).owner_id == ai_player.id, "land should be purchased")
+end
+
+local function _test_ai_remote_priority_ranks_item_chance_land_market_cases()
+  local agent = _reload_core_agent()
+  local remote_priority = _require_upvalue(agent.pick_remote_dice_value, "_remote_priority")
+  local player = { id = 7 }
+  local cases = {
+    {
+      name = "item",
+      sim = { tile = { type = "item" }, steps = 2 },
+      expected_rank = 1,
+      expected_score = 2,
+    },
+    {
+      name = "chance",
+      sim = { tile = { type = "chance" }, steps = 3 },
+      expected_rank = 2,
+      expected_score = 3,
+    },
+    {
+      name = "unowned_land",
+      sim = {
+        tile = { type = "land", owner_id = nil, level = 0, rents = { 80 } },
+        steps = 4,
+      },
+      expected_rank = 3,
+      expected_score = 4,
+    },
+    {
+      name = "self_owned_land",
+      sim = {
+        tile = { type = "land", owner_id = player.id, level = 1, rents = { 80, 160 } },
+        steps = 5,
+      },
+      expected_rank = 4,
+      expected_score = 5,
+    },
+    {
+      name = "market",
+      sim = { tile = { type = "market" }, steps = 6 },
+      expected_rank = 6,
+      expected_score = 6,
+    },
+  }
+
+  for _, case in ipairs(cases) do
+    local rank, score = remote_priority({}, player, case.sim)
+    _assert_eq(rank, case.expected_rank, case.name .. " should keep expected rank")
+    _assert_eq(score, case.expected_score, case.name .. " should keep expected score")
+  end
+end
+
+local function _test_ai_remote_priority_scores_enemy_land_by_negative_rent()
+  local agent = _reload_core_agent()
+  local remote_priority = _require_upvalue(agent.pick_remote_dice_value, "_remote_priority")
+  local player = { id = 1 }
+  local enemy_land = {
+    type = "land",
+    owner_id = 2,
+    level = 1,
+    rents = { 120, 300 },
+  }
+
+  local rank, score = remote_priority({}, player, {
+    tile = enemy_land,
+    steps = 4,
+  })
+
+  _assert_eq(rank, 10, "enemy-owned land should keep the fallback rank")
+  _assert_eq(score, -300, "enemy-owned land score should be negative rent")
+end
+
+local function _test_ai_pick_remote_dice_value_prefers_item_rank_over_market()
+  local agent = _reload_core_agent()
+  local tiles = {
+    [1] = { type = "item" },
+    [2] = { type = "market" },
+    [3] = { type = "chance" },
+    [4] = { type = "start" },
+    [5] = { type = "tax" },
+    [6] = { type = "hospital" },
+  }
+  local board = {
+    step_forward_by_facing = function(_, current, facing)
+      return current + 1, nil, facing, false
+    end,
+    has_roadblock = function()
+      return false
+    end,
+    has_mine = function()
+      return false
+    end,
+    get_tile = function(_, idx)
+      return tiles[idx]
+    end,
+  }
+  local value, tile = agent.pick_remote_dice_value({
+    board = board,
+  }, {
+    id = 1,
+    position = 0,
+  }, 1)
+
+  _assert_eq(value, 1, "remote dice should prefer item rank over lower-priority tiles")
+  _assert_eq(tile.type, "item", "remote dice should return the chosen item tile")
+end
+
+local function _test_ai_pick_remote_dice_value_prefers_lower_enemy_rent()
+  local agent = _reload_core_agent()
+  local tiles = {
+    [1] = { type = "land", owner_id = 2, level = 0, rents = { 100 } },
+    [2] = { type = "land", owner_id = 2, level = 1, rents = { 100, 400 } },
+    [3] = { type = "land", owner_id = 2, level = 0, rents = { 150 } },
+    [4] = { type = "land", owner_id = 2, level = 0, rents = { 200 } },
+    [5] = { type = "land", owner_id = 2, level = 0, rents = { 250 } },
+    [6] = { type = "land", owner_id = 2, level = 0, rents = { 300 } },
+  }
+  local board = {
+    step_forward_by_facing = function(_, current, facing)
+      return current + 1, nil, facing, false
+    end,
+    has_roadblock = function()
+      return false
+    end,
+    has_mine = function()
+      return false
+    end,
+    get_tile = function(_, idx)
+      return tiles[idx]
+    end,
+  }
+  local value, tile = agent.pick_remote_dice_value({
+    board = board,
+  }, {
+    id = 1,
+    position = 0,
+  }, 1)
+
+  _assert_eq(value, 1, "remote dice should prefer the lowest-rent enemy land when all ranks match")
+  _assert_eq(tile.rents[1], 100, "remote dice should keep negative-rent tie-break behavior")
 end
 
 local function _test_land_rent_contiguous_sum()
@@ -494,6 +652,22 @@ return {
   name = "land",
   tests = {
     { name = "ai_picks_land_purchase", run = _test_ai_picks_land_purchase },
+    {
+      name = "ai_remote_priority_ranks_item_chance_land_market_cases",
+      run = _test_ai_remote_priority_ranks_item_chance_land_market_cases,
+    },
+    {
+      name = "ai_remote_priority_scores_enemy_land_by_negative_rent",
+      run = _test_ai_remote_priority_scores_enemy_land_by_negative_rent,
+    },
+    {
+      name = "ai_pick_remote_dice_value_prefers_item_rank_over_market",
+      run = _test_ai_pick_remote_dice_value_prefers_item_rank_over_market,
+    },
+    {
+      name = "ai_pick_remote_dice_value_prefers_lower_enemy_rent",
+      run = _test_ai_pick_remote_dice_value_prefers_lower_enemy_rent,
+    },
     { name = "land_rent_contiguous_sum", run = _test_land_rent_contiguous_sum },
     { name = "land_rent_graph_adjacency_breaks_path_neighbors", run = _test_land_rent_graph_adjacency_breaks_path_neighbors },
     { name = "total_invested_returns_purchase_price_for_negative_level", run = _test_total_invested_returns_purchase_price_for_negative_level },

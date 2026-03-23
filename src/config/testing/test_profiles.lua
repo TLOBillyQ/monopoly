@@ -1,8 +1,13 @@
-local function _profile(meta, bootstrap)
+local function _copy_meta(meta)
   local out = {}
   for key, value in pairs(meta or {}) do
     out[key] = value
   end
+  return out
+end
+
+local function _profile(meta, bootstrap)
+  local out = _copy_meta(meta)
   out.bootstrap = bootstrap or {}
   return out
 end

@@ -14,6 +14,7 @@ return {
     _case("_test_runtime_event_bridge_disables_feature_after_dispatch_failure"),
     _case("_test_runtime_context_split_install_stages"),
     _case("_test_runtime_context_install_helpers_without_globals"),
+    _case("_test_runtime_context_release_helper_install_flow"),
     _case("_test_runtime_context_install_environment_fails_fast"),
     _case("_test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit"),
     _case("_test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit"),

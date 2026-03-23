@@ -102,6 +102,106 @@ local function _test_followup_choice_flags_for_remote_and_roadblock()
   _assert_eq(roadblock.requires_followup_choice, true, "roadblock should require followup choice")
 end
 
+local function _with_offer_phase_cfg(item_ids_to_patch, fn)
+  local original_cfg = inventory.cfg
+  support.with_patches({
+    {
+      target = inventory,
+      key = "cfg",
+      value = function(item_id)
+        local cfg = original_cfg(item_id)
+        if item_ids_to_patch[item_id] ~= true or type(cfg) ~= "table" then
+          return cfg
+        end
+        local patched = {}
+        for key, value in pairs(cfg) do
+          patched[key] = value
+        end
+        patched.offer_in_phases = { "post_action" }
+        return patched
+      end,
+    },
+  }, fn)
+end
+
+local function _test_trigger_timing_allowed_handles_missing_and_unknown_inputs()
+  _assert_eq(availability.trigger_timing_allowed(nil, "pre_action", true), true, "missing phase should honor allow_missing_phase=true")
+  _assert_eq(availability.trigger_timing_allowed(nil, "pre_action", false), false, "missing phase should honor allow_missing_phase=false")
+  _assert_eq(availability.trigger_timing_allowed("unknown_phase", "pre_action", true), false, "unknown phase should be rejected")
+  _assert_eq(availability.trigger_timing_allowed("pre_action", nil, false), false, "missing timing should be rejected")
+  _assert_eq(availability.trigger_timing_allowed("pre_action", "unknown_timing", false), false, "unknown timing should be rejected")
+  _assert_eq(availability.trigger_timing_allowed("pre_action", "pre_action", false), true, "pre_action timing should be allowed in pre_action phase")
+  _assert_eq(availability.trigger_timing_allowed("pre_action", "turn", false), true, "turn timing should be allowed in pre_action phase")
+  _assert_eq(availability.trigger_timing_allowed("post_action", "pre_action", false), false, "pre_action timing should be rejected in post_action phase")
+end
+
+local function _test_rent_response_cards_require_land_tile_and_other_owner()
+  _with_offer_phase_cfg({
+    [gameplay_rules.item_ids.free_rent] = true,
+  }, function()
+    local g = _new_game()
+    local p = g:current_player()
+    local item_id = gameplay_rules.item_ids.free_rent
+
+    g.board = nil
+    local no_board_ok, no_board_reason = availability.can_offer_in_phase(g, p, item_id, "post_action")
+    _assert_eq(no_board_ok, false, "rent response card should be unavailable without board")
+    _assert_eq(no_board_reason, "special_condition_failed", "missing board should fail through special condition")
+
+    g.board = _new_game().board
+    g:update_player_position(p, 9999)
+    local no_tile_ok, no_tile_reason = availability.can_offer_in_phase(g, p, item_id, "post_action")
+    _assert_eq(no_tile_ok, false, "rent response card should be unavailable without tile")
+    _assert_eq(no_tile_reason, "special_condition_failed", "missing tile should fail through special condition")
+
+    local start_tile = assert(g.board:get_tile(1), "default map should expose start tile")
+    g:update_player_position(p, 1)
+    local non_land_ok, non_land_reason = availability.can_offer_in_phase(g, p, item_id, "post_action")
+    _assert_eq(non_land_ok, false, "rent response card should be unavailable on non-land tile")
+    _assert_eq(non_land_reason, "special_condition_failed", "non-land tile should fail through special condition")
+
+    local land_index = 3
+    local land_tile = assert(g.board:get_tile(land_index), "default map should expose land tile for rent response test")
+    g:update_player_position(p, land_index)
+    g:set_tile_owner(land_tile, p.id)
+    g:set_player_property(p, land_tile.id, true)
+    local self_owned_ok, self_owned_reason = availability.can_offer_in_phase(g, p, item_id, "post_action")
+    _assert_eq(self_owned_ok, false, "rent response card should be unavailable on self-owned land")
+    _assert_eq(self_owned_reason, "special_condition_failed", "self-owned land should fail through special condition")
+
+    g:set_player_property(p, land_tile.id, false)
+    g:set_tile_owner(land_tile, g.players[2].id)
+    local rival_owned_ok, rival_owned_reason = availability.can_offer_in_phase(g, p, item_id, "post_action")
+    _assert_eq(rival_owned_ok, true, "free_rent should be available on rival-owned land")
+    _assert_eq(rival_owned_reason, "ok", "free_rent should pass special condition on rival-owned land")
+  end)
+end
+
+local function _test_strong_card_requires_enough_balance_for_rent_response()
+  _with_offer_phase_cfg({
+    [gameplay_rules.item_ids.strong] = true,
+  }, function()
+    local g = _new_game()
+    local p = g:current_player()
+    local land_index = 3
+    local land_tile = assert(g.board:get_tile(land_index), "default map should expose land tile for strong-card test")
+    g:update_player_position(p, land_index)
+    g:set_tile_owner(land_tile, g.players[2].id)
+    g:set_tile_level(land_tile, 2)
+    local rent_value = require("src.rules.commerce.property_value").total_invested(land_tile, 2)
+
+    g:set_player_cash(p, rent_value)
+    local exact_cash_ok, exact_cash_reason = availability.can_offer_in_phase(g, p, gameplay_rules.item_ids.strong, "post_action")
+    _assert_eq(exact_cash_ok, true, "strong card should be available when balance equals rent value")
+    _assert_eq(exact_cash_reason, "ok", "strong card should be allowed when balance equals rent value")
+
+    g:set_player_cash(p, rent_value - 1)
+    local low_cash_ok, low_cash_reason = availability.can_offer_in_phase(g, p, gameplay_rules.item_ids.strong, "post_action")
+    _assert_eq(low_cash_ok, false, "strong card should be unavailable when balance is below rent value")
+    _assert_eq(low_cash_reason, "special_condition_failed", "strong card should fail special condition when balance is low")
+  end)
+end
+
 local function _test_triggered_cards_stay_hidden_from_active_windows()
   local g = _new_game()
   local p = g:current_player()
@@ -136,6 +236,18 @@ return {
       run = _test_missing_offer_in_phases_does_not_fallback_to_timing,
     },
     { name = "followup_choice_flags_for_remote_and_roadblock", run = _test_followup_choice_flags_for_remote_and_roadblock },
+    {
+      name = "trigger_timing_allowed_handles_missing_and_unknown_inputs",
+      run = _test_trigger_timing_allowed_handles_missing_and_unknown_inputs,
+    },
+    {
+      name = "rent_response_cards_require_land_tile_and_other_owner",
+      run = _test_rent_response_cards_require_land_tile_and_other_owner,
+    },
+    {
+      name = "strong_card_requires_enough_balance_for_rent_response",
+      run = _test_strong_card_requires_enough_balance_for_rent_response,
+    },
     { name = "triggered_cards_stay_hidden_from_active_windows", run = _test_triggered_cards_stay_hidden_from_active_windows },
   },
 }

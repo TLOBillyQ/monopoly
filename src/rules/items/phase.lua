@@ -118,9 +118,13 @@ function phase_module.finish(game, phase)
   game.dirty.any = true
 end
 
+local function _require_resume_next_state(meta)
+  return assert(meta and meta.resume_next_state, "missing meta.resume_next_state")
+end
+
 function phase_module.build_wait_choice_args(meta)
   return {
-    next_state = assert(meta and meta.resume_next_state, "missing meta.resume_next_state"),
+    next_state = _require_resume_next_state(meta),
     next_args = meta and meta.resume_next_args or nil,
   }
 end

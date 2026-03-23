@@ -67,11 +67,18 @@ local function _offer_phase_allowed(offer_in_phases, phase, allow_missing_phase)
   return _contains(offer_in_phases, phase)
 end
 
+local function _resolve_phase_timing(phase)
+  if not phase then
+    return nil
+  end
+  return phase_timing[phase]
+end
+
 function availability.trigger_timing_allowed(phase, timing, allow_missing_phase)
   if not phase then
     return allow_missing_phase
   end
-  local allowed = phase_timing[phase]
+  local allowed = _resolve_phase_timing(phase)
   if not allowed or not timing then
     return false
   end
@@ -100,20 +107,50 @@ local function _can_offer_target_item(game, player, item_id)
   return type(candidates) == "table" and #candidates > 0
 end
 
-local function _can_offer_rent_response(game, player, item_id)
-  local tile_ref = game.board and game.board:get_tile(player.position) or nil
+local function _resolve_rent_response_tile(game, player)
+  local board = game and game.board or nil
+  local player_position = player and player.position or nil
+  local tile_ref = board and board:get_tile(player_position) or nil
   if not (tile_ref and tile_ref.type == "land") then
-    return false
+    return nil
   end
-  local owner, st = property_query.resolve_rent_owner(game, tile_ref)
-  if not owner or owner.id == player.id then
+  return tile_ref
+end
+
+local function _resolve_rent_response_context(game, player)
+  local tile_ref = _resolve_rent_response_tile(game, player)
+  if tile_ref == nil then
+    return nil
+  end
+  local owner, tile_state = property_query.resolve_rent_owner(game, tile_ref)
+  return {
+    tile_ref = tile_ref,
+    owner = owner,
+    tile_state = tile_state,
+  }
+end
+
+local function _rent_response_available(ctx, player)
+  local owner = ctx and ctx.owner or nil
+  return owner ~= nil and owner.id ~= player.id
+end
+
+local function _can_afford_strong_rent_response(game, player, ctx)
+  local tile_ref = assert(ctx and ctx.tile_ref, "missing rent response tile")
+  local tile_state = ctx and ctx.tile_state or nil
+  local total_value = property_value.total_invested(tile_ref, tile_state and tile_state.level or 0)
+  return game:player_balance(player, "金币") >= total_value
+end
+
+local function _can_offer_rent_response(game, player, item_id)
+  local ctx = _resolve_rent_response_context(game, player)
+  if not _rent_response_available(ctx, player) then
     return false
   end
   if item_id ~= item_ids.strong then
     return true
   end
-  local total_value = property_value.total_invested(tile_ref, st and st.level or 0)
-  return game:player_balance(player, "金币") >= total_value
+  return _can_afford_strong_rent_response(game, player, ctx)
 end
 
 local function _can_offer_special_item(game, player, item_id)

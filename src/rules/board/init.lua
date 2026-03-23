@@ -152,23 +152,29 @@ local function _normalize_forward_step_context(parity_or_context)
   }
 end
 
-local function _resolve_backward_next_id(map, current_id, neigh, facing)
-  if facing then
-    local back_dir = opposite[facing]
-    if back_dir and neigh[back_dir] then
-      return neigh[back_dir]
-    end
+local function _resolve_backward_by_facing(neigh, facing)
+  if not facing then
+    return nil
   end
+  local back_dir = opposite[facing]
+  if not back_dir then
+    return nil
+  end
+  return neigh[back_dir]
+end
 
+local function _resolve_backward_from_map(map, current_id)
   if map.outer_prev[current_id] then
     return map.outer_prev[current_id]
   end
-
   local backward_fallback = map.backward_fallback or nil
   if backward_fallback and backward_fallback[current_id] then
     return backward_fallback[current_id]
   end
+  return nil
+end
 
+local function _resolve_backward_from_neighbors(neigh, facing)
   local _, next_id = _pick_unique_dir(neigh, facing)
   if next_id then
     return next_id
@@ -181,6 +187,20 @@ local function _resolve_backward_next_id(map, current_id, neigh, facing)
 
   local _, any_id = _pick_any_dir(neigh, nil)
   return any_id
+end
+
+local function _resolve_backward_next_id(map, current_id, neigh, facing)
+  local reverse_facing_next_id = _resolve_backward_by_facing(neigh, facing)
+  if reverse_facing_next_id then
+    return reverse_facing_next_id
+  end
+
+  local mapped_next_id = _resolve_backward_from_map(map, current_id)
+  if mapped_next_id then
+    return mapped_next_id
+  end
+
+  return _resolve_backward_from_neighbors(neigh, facing)
 end
 
 ---创建新棋盘实例
@@ -394,6 +414,7 @@ board._resolve_outer_next = _resolve_outer_next
 board._resolve_fresh_forward_next = _resolve_fresh_forward_next
 board._resolve_facing_next = _resolve_facing_next
 board._resolve_fallback_next = _resolve_fallback_next
+board._resolve_backward_next_id = _resolve_backward_next_id
 board._resolve_forward_facing = _resolve_forward_facing
 board._normalize_forward_step_context = _normalize_forward_step_context
 board._pick_any_dir = _pick_any_dir

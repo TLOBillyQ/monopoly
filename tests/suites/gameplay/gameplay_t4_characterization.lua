@@ -2,6 +2,7 @@ local bankruptcy = require("src.rules.endgame.bankruptcy")
 local session = require("src.turn.timing.session")
 local post_effects = require("src.rules.items.post_effects")
 local strategy = require("src.rules.items.strategy")
+local ring_map_builder = require("src.config.content.maps.ring_map_builder")
 
 local function _reload_module(module_name, overrides, fn)
   local original = {}
@@ -1036,6 +1037,48 @@ local _create_players_final_tests = {
   end,
 }
 
+local function _test_ring_map_direction_handles_next_prev_and_wraparound()
+  local map = ring_map_builder.build({
+    tile_ids = { 11, 12, 13, 14 },
+    start_id = 11,
+    market_id = 13,
+  })
+
+  assert(map.direction(11, 12) == "right", "ring map should mark next tile as right")
+  assert(map.direction(12, 11) == "left", "ring map should mark previous tile as left")
+  assert(map.direction(14, 11) == "right", "ring map should wrap last->first as right")
+  assert(map.direction(11, 14) == "left", "ring map should wrap first->last as left")
+end
+
+local function _test_ring_map_direction_rejects_missing_ids_and_non_adjacent_jump()
+  local map = ring_map_builder.build({
+    tile_ids = { 21, 22, 23, 24 },
+    start_id = 21,
+    market_id = 23,
+  })
+
+  local ok_missing_from, err_missing_from = pcall(function()
+    return map.direction(999, 22)
+  end)
+  assert(ok_missing_from == false, "ring map should reject missing from_id")
+  assert(type(err_missing_from) == "string" and string.find(err_missing_from, "missing from_id", 1, true),
+    "ring map should explain missing from_id")
+
+  local ok_missing_to, err_missing_to = pcall(function()
+    return map.direction(21, 999)
+  end)
+  assert(ok_missing_to == false, "ring map should reject missing to_id")
+  assert(type(err_missing_to) == "string" and string.find(err_missing_to, "missing to_id", 1, true),
+    "ring map should explain missing to_id")
+
+  local ok_invalid_jump, err_invalid_jump = pcall(function()
+    return map.direction(21, 23)
+  end)
+  assert(ok_invalid_jump == false, "ring map should reject non-adjacent jump")
+  assert(type(err_invalid_jump) == "string" and string.find(err_invalid_jump, "invalid direction in ring map", 1, true),
+    "ring map should explain invalid non-adjacent jump")
+end
+
 return {
   name = "gameplay_t4_characterization",
   tests = {
@@ -1086,5 +1129,7 @@ return {
     { name = "_test_create_players_ai_by_index", run = _create_players_final_tests[4] },
     { name = "_test_create_players_role_ids", run = _create_players_final_tests[5] },
     { name = "_test_create_players_role_roster_ignores_slot_index_ai_keys", run = _create_players_final_tests[6] },
+    { name = "_test_ring_map_direction_handles_next_prev_and_wraparound", run = _test_ring_map_direction_handles_next_prev_and_wraparound },
+    { name = "_test_ring_map_direction_rejects_missing_ids_and_non_adjacent_jump", run = _test_ring_map_direction_rejects_missing_ids_and_non_adjacent_jump },
   },
 }

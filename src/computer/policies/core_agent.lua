@@ -19,6 +19,16 @@ local function _current_rent(tile_ref, level)
   return pricing.rent_for_level(tile_ref, level or 0)
 end
 
+local remote_step_rank_by_type = {
+  item = 1,
+  chance = 2,
+  start = 5,
+  market = 6,
+  mountain = 7,
+  tax = 8,
+  hospital = 9,
+}
+
 local function _simulate_landing(game, player, steps)
   local board = game.board
   local current = player.position
@@ -51,41 +61,34 @@ local function _simulate_landing(game, player, steps)
   return { idx = current, tile = board:get_tile(current), steps = steps }
 end
 
+local function _remote_priority_for_step_tile(tile_type, steps)
+  local rank = remote_step_rank_by_type[tile_type]
+  if not rank then
+    return nil
+  end
+  return rank, steps
+end
+
+local function _remote_priority_for_land(game, player, tile_ref, steps)
+  local st = tile_state(game, tile_ref)
+  if not st or not st.owner_id then
+    return 3, steps
+  end
+  if st.owner_id == player.id then
+    return 4, steps
+  end
+  return 10, -_current_rent(tile_ref, st.level)
+end
+
 local function _remote_priority(game, player, sim)
   local tile_ref = sim.tile
   if not tile_ref then
     return nil
   end
-  local st = nil
   if tile_ref.type == "land" then
-    st = tile_state(game, tile_ref)
+    return _remote_priority_for_land(game, player, tile_ref, sim.steps)
   end
-  local rank, score
-  if tile_ref.type == "item" then
-    rank, score = 1, sim.steps
-  elseif tile_ref.type == "chance" then
-    rank, score = 2, sim.steps
-  elseif tile_ref.type == "land" and st and not st.owner_id then
-    rank, score = 3, sim.steps
-  elseif tile_ref.type == "land" and st and st.owner_id == player.id then
-    rank, score = 4, sim.steps
-  elseif tile_ref.type == "start" then
-    rank, score = 5, sim.steps
-  elseif tile_ref.type == "market" then
-    rank, score = 6, sim.steps
-  elseif tile_ref.type == "mountain" then
-    rank, score = 7, sim.steps
-  elseif tile_ref.type == "tax" then
-    rank, score = 8, sim.steps
-  elseif tile_ref.type == "hospital" then
-    rank, score = 9, sim.steps
-  elseif tile_ref.type == "land" and st and st.owner_id and st.owner_id ~= player.id then
-    rank, score = 10, -_current_rent(tile_ref, st.level)
-  end
-  if not rank then
-    return nil
-  end
-  return rank, score
+  return _remote_priority_for_step_tile(tile_ref.type, sim.steps)
 end
 
 local function _is_better_remote_choice(best, rank, score_value)

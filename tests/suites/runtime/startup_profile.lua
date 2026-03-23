@@ -10,6 +10,13 @@ local startup_profile_source = require("src.app.bootstrap.startup_profile_source
 local runtime_refs = require("src.config.content.runtime_refs")
 local gameplay_rules = require("src.config.gameplay.rules")
 
+local function _reload_module(module_name, reset_module_names)
+  for _, name in ipairs(reset_module_names or {}) do
+    package.loaded[name] = nil
+  end
+  return require(module_name)
+end
+
 local function _build_role(role_id)
   return {
     id = role_id,
@@ -147,6 +154,53 @@ local function _test_startup_policy_accepts_generated_profile_module()
     assert(policy.profile_source == "generated", "startup should keep generated profile source")
     assert(policy.profile_module == "Data.StartupProfileGenerated", "startup should keep generated module path")
   end)
+end
+
+local function _test_raw_test_profiles_reload_copies_meta_into_profile_table()
+  local profiles = _reload_module("src.config.testing.test_profiles", {
+    "src.config.testing.test_profiles",
+  })
+  local bankruptcy = profiles.bankruptcy
+
+  assert(type(bankruptcy) == "table", "raw config should expose named profiles")
+  assert(bankruptcy.group == "economy_core", "raw profile should copy meta group")
+  assert(bankruptcy.goal == "bankruptcy_rent_resolution", "raw profile should copy meta goal")
+  assert(type(bankruptcy.bootstrap) == "table", "raw profile should attach bootstrap payload")
+  assert(bankruptcy.bootstrap.players[1].cash == 3000, "raw profile should keep bootstrap content")
+end
+
+local function _test_test_profile_resolver_returns_fresh_profile_copies()
+  local resolver = _reload_module("src.app.bootstrap.testing.test_profile_resolver", {
+    "src.config.testing.test_profiles",
+    "src.app.bootstrap.testing.config.test_profiles",
+    "src.app.bootstrap.testing.test_profile_resolver",
+  })
+  local first = resolver.resolve_profile("bankruptcy")
+  first.covers[1] = "mutated"
+  first.owner_tests[1] = "mutated"
+  first.bootstrap.players[1].cash = 1
+
+  local second = resolver.resolve_profile("bankruptcy")
+
+  assert(second.covers[1] == "bankruptcy", "resolver should deep copy covers for each resolve")
+  assert(second.owner_tests[1] == "runtime.test_profiles", "resolver should deep copy owner_tests for each resolve")
+  assert(second.bootstrap.players[1].cash == 3000, "resolver should deep copy bootstrap for each resolve")
+end
+
+local function _test_test_profile_resolver_default_bootstrap_is_empty_and_not_shared()
+  local resolver = _reload_module("src.app.bootstrap.testing.test_profile_resolver", {
+    "src.config.testing.test_profiles",
+    "src.app.bootstrap.testing.config.test_profiles",
+    "src.app.bootstrap.testing.test_profile_resolver",
+  })
+  local first_bootstrap = resolver.resolve_bootstrap("default")
+  first_bootstrap.synthetic = true
+
+  local second_bootstrap = resolver.resolve_bootstrap(nil)
+
+  assert(type(second_bootstrap) == "table", "default bootstrap should always be a table")
+  assert(next(second_bootstrap) == nil, "default bootstrap should default to an empty table")
+  assert(second_bootstrap.synthetic == nil, "default bootstrap should not share references across resolves")
 end
 
 local function _test_game_startup_fills_synthetic_ai_when_role_roster_empty()
@@ -525,6 +579,12 @@ return {
     { name = "startup_policy_defaults_to_default_profile", run = _test_startup_policy_defaults_to_default_profile },
     { name = "startup_policy_accepts_explicit_profile_override", run = _test_startup_policy_accepts_explicit_profile_override },
     { name = "startup_policy_accepts_generated_profile_module", run = _test_startup_policy_accepts_generated_profile_module },
+    { name = "raw_test_profiles_reload_copies_meta_into_profile_table", run = _test_raw_test_profiles_reload_copies_meta_into_profile_table },
+    { name = "test_profile_resolver_returns_fresh_profile_copies", run = _test_test_profile_resolver_returns_fresh_profile_copies },
+    {
+      name = "test_profile_resolver_default_bootstrap_is_empty_and_not_shared",
+      run = _test_test_profile_resolver_default_bootstrap_is_empty_and_not_shared,
+    },
     { name = "game_startup_fills_synthetic_ai_when_role_roster_empty", run = _test_game_startup_fills_synthetic_ai_when_role_roster_empty },
     { name = "game_startup_real_roles_stay_human_by_default", run = _test_game_startup_real_roles_stay_human_by_default },
     { name = "game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs", run = _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs },

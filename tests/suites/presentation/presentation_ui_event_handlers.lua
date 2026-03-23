@@ -365,6 +365,7 @@ end
 local function _test_roadblock_hit_no_longer_drives_visual_feedback()
   local handlers = {}
   local cleared = 0
+  local looked_up_tile_id = nil
 
   _with_patches({
     {
@@ -388,6 +389,7 @@ local function _test_roadblock_hit_no_longer_drives_visual_feedback()
       game = {
         board = {
           index_of_tile_id = function(_, tile_id)
+            looked_up_tile_id = tile_id
             if tile_id == 12 then
               return 7
             end
@@ -402,12 +404,14 @@ local function _test_roadblock_hit_no_longer_drives_visual_feedback()
   end)
 
   assert(cleared == 0, "roadblock_hit should no longer clear overlay directly")
+  assert(looked_up_tile_id == 12, "roadblock_hit should still resolve payload tile ids through board lookup")
 end
 
 local function _test_mine_hit_no_longer_drives_visual_feedback()
   local handlers = {}
   local cleared = 0
   local cues = 0
+  local looked_up_tile_id = nil
 
   _with_patches({
     {
@@ -439,6 +443,7 @@ local function _test_mine_hit_no_longer_drives_visual_feedback()
       game = {
         board = {
           index_of_tile_id = function(_, tile_id)
+            looked_up_tile_id = tile_id
             if tile_id == 20 then
               return 11
             end
@@ -457,6 +462,40 @@ local function _test_mine_hit_no_longer_drives_visual_feedback()
 
   assert(cleared == 0, "mine_hit should no longer clear overlay directly")
   assert(cues == 0, "mine_hit should no longer emit direct cue playback")
+  assert(looked_up_tile_id == 20, "mine_hit should still resolve nested payload tile ids through board lookup")
+end
+
+local function _test_mine_hit_tolerates_missing_state_and_lookup_api()
+  local handlers = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+  }, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, {})
+    local handler = handlers[monopoly_event.land.mine_hit]
+    assert(type(handler) == "function", "mine_hit handler should be registered")
+    handler(nil, nil, { tile_id = 77 })
+
+    package.loaded["src.ui.ctl.event_handlers"] = nil
+    handlers = {}
+    event_handlers = require("src.ui.ctl.event_handlers")
+    event_handlers.install(nil, nil, {
+      game = {
+        board = {},
+      },
+    })
+    handler = handlers[monopoly_event.land.mine_hit]
+    assert(type(handler) == "function", "mine_hit handler should stay registered without lookup api")
+    handler(nil, nil, { tile_id = 88 })
+  end)
 end
 
 local function _test_turn_started_feedback_defers_during_landing_hold()
@@ -584,6 +623,10 @@ return {
     {
       name = "mine_hit_no_longer_drives_visual_feedback",
       run = _test_mine_hit_no_longer_drives_visual_feedback,
+    },
+    {
+      name = "mine_hit_tolerates_missing_state_and_lookup_api",
+      run = _test_mine_hit_tolerates_missing_state_and_lookup_api,
     },
     {
       name = "turn_started_feedback_routes_to_player_cue",

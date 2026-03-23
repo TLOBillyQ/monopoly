@@ -1,9 +1,12 @@
 local action_anim = require("src.ui.render.action_anim")
 local handlers = require("src.ui.render.anim_handlers")
+local anim_units = require("src.ui.render.anim_units")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local gameplay_rules = require("src.config.gameplay.rules")
 local logger = require("src.core.utils.logger")
 local host_runtime = require("src.host.eggy")
+local move_anim = require("src.ui.render.move_anim")
+local unit_position = require("src.ui.render.unit_position")
 local support = require("support.presentation_action_anim_support")
 
 local _with_patches = support.with_patches
@@ -380,6 +383,201 @@ local function _test_action_anim_cash_receive_routes_board_feedback()
   assert(calls[1].amount == 500, "cash cue should preserve amount")
 end
 
+local function _test_play_mine_trigger_prefers_player_cue_with_unit_position()
+  local state = support.build_min_state()
+  local player_calls = {}
+  local tile_calls = 0
+  local cleared = {}
+
+  _with_patches({
+    {
+      target = unit_position,
+      key = "read_unit_position",
+      value = function()
+        return { x = 1, y = 2, z = 3 }
+      end,
+    },
+    {
+      target = unit_position,
+      key = "read_scene_tile_position",
+      value = function()
+        return { x = 9, y = 9, z = 9 }
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_player_cue",
+      value = function(_, cue_name, player_id, payload)
+        player_calls[#player_calls + 1] = {
+          cue_name = cue_name,
+          player_id = player_id,
+          payload = payload,
+        }
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_tile_cue",
+      value = function()
+        tile_calls = tile_calls + 1
+      end,
+    },
+    {
+      target = move_anim,
+      key = "prepare_player_for_snap",
+      value = function() end,
+    },
+    {
+      target = move_anim,
+      key = "snap_player_to_index",
+      value = function()
+        return 0.4
+      end,
+    },
+  }, function()
+    local duration = anim_units.play_mine_trigger(state, {
+      player_id = 1,
+      tile_index = 1,
+      to_index = 2,
+      cue_name = "mine_blast",
+    }, 0.1, {
+      clear_overlay = function(_, kind, tile_index)
+        cleared[#cleared + 1] = kind .. ":" .. tostring(tile_index)
+      end,
+    })
+
+    assert(duration == 0.4, "play_mine_trigger should keep positive snap delay when above minimum duration")
+  end)
+
+  assert(#player_calls == 1, "play_mine_trigger should route one player cue when unit position exists")
+  assert(player_calls[1].payload.pos.x == 1, "play_mine_trigger should prefer unit position over tile position")
+  assert(tile_calls == 0, "play_mine_trigger should not emit tile cue when player cue is available")
+  assert(cleared[1] == "mine:1", "play_mine_trigger should clear mine overlay after feedback")
+end
+
+local function _test_play_mine_trigger_falls_back_to_tile_position_for_player_cue()
+  local state = support.build_min_state()
+  local player_calls = {}
+  local tile_calls = 0
+
+  _with_patches({
+    {
+      target = unit_position,
+      key = "read_unit_position",
+      value = function()
+        return nil
+      end,
+    },
+    {
+      target = unit_position,
+      key = "read_scene_tile_position",
+      value = function()
+        return { x = 4, y = 5, z = 6 }
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_player_cue",
+      value = function(_, _, _, payload)
+        player_calls[#player_calls + 1] = payload
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_tile_cue",
+      value = function()
+        tile_calls = tile_calls + 1
+      end,
+    },
+    {
+      target = move_anim,
+      key = "prepare_player_for_snap",
+      value = function() end,
+    },
+    {
+      target = move_anim,
+      key = "snap_player_to_index",
+      value = function()
+        return 0
+      end,
+    },
+  }, function()
+    anim_units.play_mine_trigger(state, {
+      player_id = 1,
+      tile_index = 1,
+      to_index = 2,
+    }, 0, {
+      clear_overlay = function() end,
+    })
+  end)
+
+  assert(#player_calls == 1, "play_mine_trigger should keep player cue when tile position exists")
+  assert(player_calls[1].pos.x == 4, "play_mine_trigger should fall back to tile position")
+  assert(tile_calls == 0, "play_mine_trigger should avoid tile cue when tile position fallback exists")
+end
+
+local function _test_play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay()
+  local state = support.build_min_state()
+  local player_calls = 0
+  local tile_calls = {}
+
+  _with_patches({
+    {
+      target = unit_position,
+      key = "read_unit_position",
+      value = function()
+        return nil
+      end,
+    },
+    {
+      target = unit_position,
+      key = "read_scene_tile_position",
+      value = function()
+        return nil
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_player_cue",
+      value = function()
+        player_calls = player_calls + 1
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_tile_cue",
+      value = function(_, cue_name, tile_index)
+        tile_calls[#tile_calls + 1] = cue_name .. ":" .. tostring(tile_index)
+      end,
+    },
+    {
+      target = move_anim,
+      key = "prepare_player_for_snap",
+      value = function() end,
+    },
+    {
+      target = move_anim,
+      key = "snap_player_to_index",
+      value = function()
+        return -1
+      end,
+    },
+  }, function()
+    local duration = anim_units.play_mine_trigger(state, {
+      player_id = 1,
+      tile_index = 3,
+      to_index = 2,
+    }, 0.2, {
+      clear_overlay = function() end,
+    })
+
+    assert(duration == 0.2, "play_mine_trigger should clamp negative snap delay to minimum duration")
+  end)
+
+  assert(player_calls == 0, "play_mine_trigger should skip player cue when no hit position exists")
+  assert(tile_calls[1] == "mine_blast:3", "play_mine_trigger should fall back to tile cue when position lookup fails")
+end
+
 return {
   name = "presentation.action_anim_effect_routes",
   tests = {
@@ -396,5 +594,8 @@ return {
     { name = "host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls", run = _test_host_runtime_sfx_port_skips_missing_keys_and_routes_valid_calls },
     { name = "action_anim_upgrade_land_routes_board_feedback", run = _test_action_anim_upgrade_land_routes_board_feedback },
     { name = "action_anim_cash_receive_routes_board_feedback", run = _test_action_anim_cash_receive_routes_board_feedback },
+    { name = "play_mine_trigger_prefers_player_cue_with_unit_position", run = _test_play_mine_trigger_prefers_player_cue_with_unit_position },
+    { name = "play_mine_trigger_falls_back_to_tile_position_for_player_cue", run = _test_play_mine_trigger_falls_back_to_tile_position_for_player_cue },
+    { name = "play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay", run = _test_play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay },
   },
 }

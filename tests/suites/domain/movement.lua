@@ -590,6 +590,56 @@ local function _test_resolve_fallback_next_returns_any_dir_when_back_nil()
   _assert_eq(result, 10, "should return any dir when back direction is nil")
 end
 
+local function _test_resolve_backward_next_returns_facing_reverse_neighbor_when_available()
+  local map = {
+    outer_prev = { [1] = 30 },
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { down = 20, left = 50 }
+  local result = Board._resolve_backward_next_id(map, 1, neigh, "up")
+  _assert_eq(result, 20, "should prefer the reverse-facing neighbor before all other backward sources")
+end
+
+local function _test_resolve_backward_next_returns_outer_prev_before_map_fallback()
+  local map = {
+    outer_prev = { [1] = 30 },
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { left = 50 }
+  local result = Board._resolve_backward_next_id(map, 1, neigh, nil)
+  _assert_eq(result, 30, "should prefer outer_prev before backward_fallback")
+end
+
+local function _test_resolve_backward_next_returns_backward_fallback_before_neighbor_fallback()
+  local map = {
+    outer_prev = {},
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { left = 50, right = 60 }
+  local result = Board._resolve_backward_next_id(map, 1, neigh, nil)
+  _assert_eq(result, 40, "should prefer backward_fallback before neighbor fallback")
+end
+
+local function _test_resolve_backward_next_returns_unique_neighbor_when_only_one_remains()
+  local map = {
+    outer_prev = {},
+    backward_fallback = {},
+  }
+  local neigh = { up = 10, left = 20 }
+  local result = Board._resolve_backward_next_id(map, 1, neigh, "up")
+  _assert_eq(result, 20, "should return the unique remaining neighbor when one option remains")
+end
+
+local function _test_resolve_backward_next_returns_sorted_any_neighbor_when_multiple_remain()
+  local map = {
+    outer_prev = {},
+    backward_fallback = {},
+  }
+  local neigh = { up = 10, right = 30, left = 20 }
+  local result = Board._resolve_backward_next_id(map, 1, neigh, "up")
+  _assert_eq(result, 30, "should fall back to the first sorted non-facing neighbor when multiple options remain")
+end
+
 local function _test_pick_any_dir_returns_first_sorted_dir()
   local neigh = { right = 10, up = 20, down = 30 }
   local dir, id = Board._pick_any_dir(neigh, nil)
@@ -771,6 +821,11 @@ return {
     { name = "resolve_fallback_next_returns_unique_dir_avoiding_back", run = _test_resolve_fallback_next_returns_unique_dir_avoiding_back },
     { name = "resolve_fallback_next_returns_any_dir_avoiding_back_when_not_unique", run = _test_resolve_fallback_next_returns_any_dir_avoiding_back_when_not_unique },
     { name = "resolve_fallback_next_returns_any_dir_when_back_nil", run = _test_resolve_fallback_next_returns_any_dir_when_back_nil },
+    { name = "resolve_backward_next_returns_facing_reverse_neighbor_when_available", run = _test_resolve_backward_next_returns_facing_reverse_neighbor_when_available },
+    { name = "resolve_backward_next_returns_outer_prev_before_map_fallback", run = _test_resolve_backward_next_returns_outer_prev_before_map_fallback },
+    { name = "resolve_backward_next_returns_backward_fallback_before_neighbor_fallback", run = _test_resolve_backward_next_returns_backward_fallback_before_neighbor_fallback },
+    { name = "resolve_backward_next_returns_unique_neighbor_when_only_one_remains", run = _test_resolve_backward_next_returns_unique_neighbor_when_only_one_remains },
+    { name = "resolve_backward_next_returns_sorted_any_neighbor_when_multiple_remain", run = _test_resolve_backward_next_returns_sorted_any_neighbor_when_multiple_remain },
     { name = "pick_any_dir_returns_first_sorted_dir", run = _test_pick_any_dir_returns_first_sorted_dir },
     { name = "pick_any_dir_avoids_avoid_dir", run = _test_pick_any_dir_avoids_avoid_dir },
     { name = "pick_any_dir_returns_nil_when_all_avoided", run = _test_pick_any_dir_returns_nil_when_all_avoided },

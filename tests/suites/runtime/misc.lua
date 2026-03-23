@@ -461,6 +461,191 @@ local function _test_runtime_context_first_role_from_game_api_pcall_failure()
   _assert_eq(resolved, role, "resolve_any_role should return role from GameAPI when pcall succeeds")
 end
 
+local function _test_release_runtime_context_resolve_any_role_prefers_provider_roles()
+  support.with_patches({
+    { key = "MONOPOLY_BUILD_MODE", value = "release" },
+  }, function()
+    local provider_role = { id = 7, get_roleid = function() return 7 end }
+    local fallback_role = { id = 8, get_roleid = function() return 8 end }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_all_valid_roles = function()
+          return { fallback_role }
+        end,
+        get_role = function(role_id)
+          if role_id == 7 then
+            return provider_role
+          end
+          if role_id == 8 then
+            return fallback_role
+          end
+          return nil
+        end,
+      },
+      LuaAPI = {
+        call_delay_time = function() end,
+        global_register_custom_event = function() end,
+        global_register_trigger_event = function() end,
+        unit_register_custom_event = function() end,
+        unit_register_trigger_event = function() end,
+        global_send_custom_event = function() end,
+      },
+    })
+
+    runtime_context.install_environment(ctx)
+    ctx.roles = { provider_role }
+    runtime_context.install_runtime_helpers(ctx)
+
+    local helper = ctx.vehicle_helper
+    local resolved = helper.resolve_any_role()
+    _assert_eq(resolved, provider_role, "release helper should prefer provider roles before GameAPI fallback")
+  end)
+end
+
+local function _test_release_runtime_context_resolve_any_role_uses_game_api_fallback()
+  support.with_patches({
+    { key = "MONOPOLY_BUILD_MODE", value = "release" },
+  }, function()
+    local fallback_role = { id = 8, get_roleid = function() return 8 end }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_all_valid_roles = function()
+          return { fallback_role }
+        end,
+        get_role = function(role_id)
+          if role_id == 8 then
+            return fallback_role
+          end
+          return nil
+        end,
+      },
+      LuaAPI = {
+        call_delay_time = function() end,
+        global_register_custom_event = function() end,
+        global_register_trigger_event = function() end,
+        unit_register_custom_event = function() end,
+        unit_register_trigger_event = function() end,
+        global_send_custom_event = function() end,
+      },
+    })
+
+    runtime_context.install_environment(ctx)
+    ctx.roles = {}
+    runtime_context.install_runtime_helpers(ctx)
+
+    local helper = ctx.vehicle_helper
+    local resolved = helper.resolve_any_role()
+    _assert_eq(resolved, fallback_role, "release helper should use GameAPI valid roles when provider roles are empty")
+  end)
+end
+
+local function _test_release_runtime_context_resolve_any_role_returns_nil_on_game_api_error()
+  support.with_patches({
+    { key = "MONOPOLY_BUILD_MODE", value = "release" },
+  }, function()
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_all_valid_roles = function()
+          error("boom")
+        end,
+      },
+      LuaAPI = {
+        call_delay_time = function() end,
+        global_register_custom_event = function() end,
+        global_register_trigger_event = function() end,
+        unit_register_custom_event = function() end,
+        unit_register_trigger_event = function() end,
+        global_send_custom_event = function() end,
+      },
+    })
+
+    runtime_context.install_environment(ctx)
+    ctx.roles = {}
+    runtime_context.install_runtime_helpers(ctx)
+
+    local helper = ctx.vehicle_helper
+    local resolved = helper.resolve_any_role()
+    _assert_eq(resolved, nil, "release helper should return nil when GameAPI valid role lookup errors")
+  end)
+end
+
+local function _test_release_runtime_context_resolve_any_role_returns_nil_without_game_api()
+  support.with_patches({
+    { key = "MONOPOLY_BUILD_MODE", value = "release" },
+  }, function()
+    local ctx = runtime_context.new({
+      LuaAPI = {
+        call_delay_time = function() end,
+        global_register_custom_event = function() end,
+        global_register_trigger_event = function() end,
+        unit_register_custom_event = function() end,
+        unit_register_trigger_event = function() end,
+        global_send_custom_event = function() end,
+      },
+    })
+
+    runtime_context.install_environment(ctx)
+    ctx.roles = {}
+    runtime_context.install_runtime_helpers(ctx)
+
+    local helper = ctx.vehicle_helper
+    local resolved = helper.resolve_any_role()
+    _assert_eq(resolved, nil, "release helper should return nil when no provider roles or GameAPI exist")
+  end)
+end
+
+local function _test_release_runtime_context_resolve_role_handles_nil_missing_error_and_success()
+  support.with_patches({
+    { key = "MONOPOLY_BUILD_MODE", value = "release" },
+  }, function()
+    local role = { id = 4, get_roleid = function() return 4 end }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 4 then
+            return role
+          end
+          error("missing role")
+        end,
+      },
+      LuaAPI = {
+        call_delay_time = function() end,
+        global_register_custom_event = function() end,
+        global_register_trigger_event = function() end,
+        unit_register_custom_event = function() end,
+        unit_register_trigger_event = function() end,
+        global_send_custom_event = function() end,
+      },
+    })
+
+    runtime_context.install_environment(ctx)
+    runtime_context.install_runtime_helpers(ctx)
+
+    local helper = ctx.vehicle_helper
+    _assert_eq(helper.resolve_role(nil), nil, "release helper should return nil when role_id is nil")
+
+    ctx.env.GameAPI = {}
+    _assert_eq(helper.resolve_role(4), nil, "release helper should return nil when GameAPI.get_role is missing")
+
+    ctx.env.GameAPI = {
+      get_role = function()
+        error("boom")
+      end,
+    }
+    _assert_eq(helper.resolve_role(4), nil, "release helper should swallow get_role errors")
+
+    ctx.env.GameAPI = {
+      get_role = function(role_id)
+        if role_id == 4 then
+          return role
+        end
+        return nil
+      end,
+    }
+    _assert_eq(helper.resolve_role(4), role, "release helper should return role when GameAPI.get_role succeeds")
+  end)
+end
+
 local function _test_callback_registry_wait_lifecycle()
   local game = {}
   local wait_key = wait_callbacks.wait_keys.landing_visual
@@ -509,6 +694,11 @@ return {
     { name = "runtime_context_first_role_from_game_api_empty_list_fallback", run = _test_runtime_context_first_role_from_game_api_empty_list_fallback },
     { name = "runtime_context_first_role_from_game_api_nil_game_api", run = _test_runtime_context_first_role_from_game_api_nil_game_api },
     { name = "runtime_context_first_role_from_game_api_pcall_failure", run = _test_runtime_context_first_role_from_game_api_pcall_failure },
+    { name = "release_runtime_context_resolve_any_role_prefers_provider_roles", run = _test_release_runtime_context_resolve_any_role_prefers_provider_roles },
+    { name = "release_runtime_context_resolve_any_role_uses_game_api_fallback", run = _test_release_runtime_context_resolve_any_role_uses_game_api_fallback },
+    { name = "release_runtime_context_resolve_any_role_returns_nil_on_game_api_error", run = _test_release_runtime_context_resolve_any_role_returns_nil_on_game_api_error },
+    { name = "release_runtime_context_resolve_any_role_returns_nil_without_game_api", run = _test_release_runtime_context_resolve_any_role_returns_nil_without_game_api },
+    { name = "release_runtime_context_resolve_role_handles_nil_missing_error_and_success", run = _test_release_runtime_context_resolve_role_handles_nil_missing_error_and_success },
     lvh_tests[2],  -- landing_visual_hold_release_flushes_event_buffer_and_replays_deferred
     { name = "callback_registry_wait_lifecycle", run = _test_callback_registry_wait_lifecycle },
     lvh_tests[3],  -- landing_visual_hold_release_orders_wrappers_by_priority

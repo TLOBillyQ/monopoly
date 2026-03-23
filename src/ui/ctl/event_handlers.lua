@@ -41,6 +41,24 @@ local function _apply_game_result_panels(event_data)
   end
 end
 
+local function _resolve_tile_id(payload)
+  if type(payload) ~= "table" then
+    return nil
+  end
+  if payload.tile and payload.tile.id then
+    return payload.tile.id
+  end
+  return payload.tile_id
+end
+
+local function _index_of_tile_id_from_context(tile_id)
+  local ctx = context.state
+  if tile_id == nil or not (ctx and ctx.game and ctx.game.board and ctx.game.board.index_of_tile_id) then
+    return nil
+  end
+  return ctx.game.board:index_of_tile_id(tile_id)
+end
+
 function event_handlers.install(_, logger, state)
   context.logger = logger
   context.state = state
@@ -131,28 +149,18 @@ function event_handlers.install(_, logger, state)
     if type(payload) ~= "table" then
       return nil
     end
-    if payload.tile_index then
+    if payload.tile_index ~= nil then
       return payload.tile_index
     end
-    local tile_id = nil
-    if payload.tile and payload.tile.id then
-      tile_id = payload.tile.id
-    elseif payload.tile_id then
-      tile_id = payload.tile_id
-    end
-    local ctx = context.state
-    if tile_id and ctx and ctx.game and ctx.game.board and ctx.game.board.index_of_tile_id then
-      return ctx.game.board:index_of_tile_id(tile_id)
-    end
-    return nil
+    return _index_of_tile_id_from_context(_resolve_tile_id(payload))
   end
 
   _register_handler(monopoly_event.movement.roadblock_hit, function(data)
-    local _ = data
+    _resolve_tile_index(_event_data(data))
   end)
 
   _register_handler(monopoly_event.land.mine_hit, function(data)
-    local _ = data
+    _resolve_tile_index(_event_data(data))
   end)
 
   _register_handler(monopoly_event.land.rent_paid, function(data)

@@ -48,21 +48,34 @@ function item_preconsume_policy.normalize_cancel_action(choice, action)
   }
 end
 
+local function _ensure_preconsume_meta(choice_spec)
+  choice_spec.meta = choice_spec.meta or {}
+  choice_spec.meta.item_preconsumed = true
+  return choice_spec.meta
+end
+
+local function _disable_cancel(choice_spec)
+  choice_spec.allow_cancel = false
+  choice_spec.cancel_label = nil
+end
+
+local function _merge_preconsume_context(meta, context)
+  local ctx = context or {}
+  if ctx.item_id ~= nil then
+    meta.item_id = meta.item_id or ctx.item_id
+  end
+  if ctx.player_id ~= nil then
+    meta.player_id = meta.player_id or ctx.player_id
+  end
+end
+
 function item_preconsume_policy.decorate_followup_choice_spec(choice_spec, context)
   if type(choice_spec) ~= "table" then
     return choice_spec
   end
-  local ctx = context or {}
-  choice_spec.allow_cancel = false
-  choice_spec.cancel_label = nil
-  choice_spec.meta = choice_spec.meta or {}
-  choice_spec.meta.item_preconsumed = true
-  if ctx.item_id ~= nil then
-    choice_spec.meta.item_id = choice_spec.meta.item_id or ctx.item_id
-  end
-  if ctx.player_id ~= nil then
-    choice_spec.meta.player_id = choice_spec.meta.player_id or ctx.player_id
-  end
+  _disable_cancel(choice_spec)
+  local meta = _ensure_preconsume_meta(choice_spec)
+  _merge_preconsume_context(meta, context)
   return choice_spec
 end
 

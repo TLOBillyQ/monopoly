@@ -9,15 +9,15 @@
 ## 进度
 
 - [x] (2026-03-23 21:31 CST) 已完成只读调研：读取 `.agents/research.md`、`.agents/harness/PLANS.md`、`.agents/harness/READING.md`、`.agents/harness/CODING.md`，并核对热点源码、相邻测试和质量命令。
-- [ ] 在 `.agents/plan.md` 落地本计划初稿，并把 14 个目标函数的基线 CRAP/coverage 逐条写入“决策日志”或“意外与发现”，作为后续对照。
-- [ ] 完成 T0 基线冻结与命令脚本化。
-- [ ] 完成 T1 道具可用性与 item phase 热点治理。
-- [ ] 完成 T2 preconsume / validator / choice_handlers 热点治理。
-- [ ] 完成 T3 runtime context 角色解析热点治理。
-- [ ] 完成 T4 UI 动画 / event handler / turn label 热点治理。
-- [ ] 完成 T5 棋盘 backward / ring map 热点治理。
-- [ ] 完成 T6 AI 评分 / test profile 工厂热点治理。
-- [ ] 完成 T7 全量回归、CRAP 对比和结果回写。
+- [x] (2026-03-23 21:50 CST) 已在 `.agents/plan.md` 落地活文档，并把 14 个冻结目标函数的基线 CRAP / coverage 写入“意外与发现”；同时完成两次 `mutate --scan` 和一次本地 `crap` 基线报告。
+- [x] (2026-03-23 21:50 CST) 已完成 T0 基线冻结与命令脚本化；当前可按依赖图启动第二波 T1 / T3 / T4 / T5 / T6。
+- [x] (2026-03-23 22:15 CST) 已完成 T1 道具可用性与 item phase 热点治理：补齐 `trigger_timing_allowed` / rent-response / `build_wait_choice_args` 的 characterization tests，并把 availability / phase helper 拆回单一职责。
+- [x] (2026-03-23 22:15 CST) 已完成 T2 preconsume / validator / choice_handlers 热点治理：补齐 preconsume decorator、slot action validator 和 choice handler 串联验证，把 item choice 解析改成线性 helper 管道。
+- [x] (2026-03-23 22:15 CST) 已完成 T3 runtime context 角色解析热点治理：补齐 provider/GameAPI fallback 与 `_safe_get_role` 边界测试，保持 `get_roles()` 不吞异常。
+- [x] (2026-03-23 22:15 CST) 已完成 T4 UI 动画 / event handler / turn label 热点治理：补齐地雷反馈、tile index 解析与 turn label helper 测试，并把匿名闭包提名为 `_refresh_turn_label_for_runtime_role`。
+- [x] (2026-03-23 22:15 CST) 已完成 T5 棋盘 backward / ring map 热点治理：补齐 backward 优先级和 ring map direction 行为覆盖，并把 backward 解析拆成来源明确的小 helper。
+- [x] (2026-03-23 22:15 CST) 已完成 T6 AI 评分 / test profile 工厂热点治理：补齐 `_remote_priority` 六类 rank 和 `_profile` copy/bootstrap 行为证明，并把 AI 评分规则拆成轻量分发。
+- [x] (2026-03-23 22:15 CST) 已完成 T7 全量回归、CRAP 对比和结果回写：`behavior / contract / guard / arch / crap` 全绿，14 个冻结热点全部相对基线改善。
 
 ## 意外与发现
 
@@ -31,6 +31,28 @@
   证据：`tests/suites/gameplay/gameplay_t2_characterization.lua`、`tests/suites/gameplay/gameplay_t4_characterization.lua`、`tests/suites/presentation/gameplay_t5_characterization.lua`、`tests/suites/presentation/gameplay_t6_characterization.lua` 已在 `tests/catalog.lua` 注册。
 - 观察：`src/config/testing/test_profiles.lua:1` 的 `_profile` 是文件顶层 local helper；如果只跑高层 startup suite，coverage 可能不会稳定命中这个 factory，需要在测试里显式 `package.loaded[...] = nil` 后重载原模块。
   证据：review 子代理指出高层 `startup_profile` 断言不足以稳定覆盖 `_profile` 本体。
+- 观察：2026-03-23 本地重新生成的 `tmp/crap_report.json` 结构以 `.functions` 为主，直接对比 14 个冻结目标时以 CLI 的 `top_hotspots` 摘要和手工过滤更可靠；同时排行榜第 10 名变成了 `runtime_install.M.install`，但冻结范围仍保持 research 的 14 个函数不变。
+  证据：`lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` 输出的 `top_hotspots` 中，`anonymous@42` 已退到第 15 名，而不是 research 中的第 14 名。
+- 观察：T0 基线已冻结，后续所有任务都应对照以下 14 个函数，而不是只看榜单前 20 名。
+  证据：
+  - `_can_offer_rent_response` | `src/rules/items/availability.lua:103` | CRAP 56.00 | coverage 0.00% | 任务 T1 | 守护套件 `tests/suites/domain/item_availability_matrix.lua`
+  - `availability.trigger_timing_allowed` | `src/rules/items/availability.lua:70` | CRAP 12.00 | coverage 0.00% | 任务 T1 | 守护套件 `tests/suites/domain/item_availability_matrix.lua`
+  - `phase_module.build_wait_choice_args` | `src/rules/items/phase.lua:121` | CRAP 12.00 | coverage 0.00% | 任务 T1 | 守护套件 `tests/suites/domain/item.lua`
+  - `item_preconsume_policy.decorate_followup_choice_spec` | `src/core/choice/item_preconsume_policy.lua:51` | CRAP 30.00 | coverage 0.00% | 任务 T2 | 守护套件 `tests/suites/gameplay/gameplay_t2_characterization.lua`
+  - `validator.resolve_item_slot_action` | `src/turn/actions/validator.lua:137` | CRAP 16.94 | coverage 71.00% | 任务 T2 | 守护套件 `tests/suites/presentation/ui_runtime_state_contract.lua`
+  - `_safe_get_role` | `src/host/eggy/context.lua:15` | CRAP 20.00 | coverage 0.00% | 任务 T3 | 守护套件 `tests/suites/runtime/misc.lua`
+  - `resolve_any_role` | `src/host/eggy/context.lua:51` | CRAP 30.00 | coverage 0.00% | 任务 T3 | 守护套件 `tests/suites/runtime/misc.lua`
+  - `units.play_mine_trigger` | `src/ui/render/anim_units.lua:66` | CRAP 42.00 | coverage 0.00% | 任务 T4 | 守护套件 `tests/suites/presentation/presentation_action_anim_effect_routes.lua`
+  - `_resolve_tile_index` | `src/ui/ctl/event_handlers.lua:130` | CRAP 25.02 | coverage 7.00% | 任务 T4 | 守护套件 `tests/suites/presentation/presentation_ui_event_handlers.lua`
+  - `anonymous@42` | `src/ui/ctl/ui_runtime.lua:42` | CRAP 12.00 | coverage 0.00% | 任务 T4 | 守护套件 `tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua`
+  - `_resolve_backward_next_id` | `src/rules/board/init.lua:155` | CRAP 16.00 | coverage 50.00% | 任务 T5 | 守护套件 `tests/suites/domain/movement.lua`
+  - `_direction` | `src/config/content/maps/ring_map_builder.lua:48` | CRAP 12.00 | coverage 0.00% | 任务 T5 | 守护套件 `tests/suites/gameplay/gameplay_t4_characterization.lua`
+  - `_remote_priority` | `src/computer/policies/core_agent.lua:54` | CRAP 13.05 | coverage 42.00% | 任务 T6 | 守护套件 `tests/suites/domain/land.lua`
+  - `_profile` | `src/config/testing/test_profiles.lua:1` | CRAP 12.00 | coverage 0.00% | 任务 T6 | 守护套件 `tests/suites/runtime/startup_profile.lua`
+- 观察：`lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` 实际把报告写到系统临时目录的 `monopoly_crap/crap_report.json`，仓库里的 `tmp/crap_report.json` 可能是旧文件，不能直接用于 T7 对账。
+  证据：最新有效报告位于 `/var/folders/qw/32_j34_d44zbrwgwp0_x487h0000gn/T/monopoly_crap/crap_report.json`，其 `generated_at` 为 `2026-03-23T14:12:27Z`；而仓库内 `tmp/crap_report.json` 的 `generated_at` 仍是 `2026-03-14T08:50:05Z`。
+- 观察：`_test_ui_runtime_refresh_turn_label_toggles_countdown_nodes_and_label` 虽然断言正确，但初版没有被聚合到 behavior lane；只有把它加入 `tests/suites/presentation/_presentation_action_status_groups.lua` 的 `status3d_and_turn_effects` 组，`_refresh_turn_label_for_runtime_role` 才真正获得覆盖。
+  证据：补齐聚合前，系统临时 CRAP report 中 `src/ui/ctl/ui_runtime.lua:_refresh_turn_label_for_runtime_role` 仍是 `crap=12`、`coverage=0`；补齐后降为 `crap=3`、`coverage=1`。
 
 ## 决策日志
 
@@ -49,10 +71,29 @@
 - 决策：T3 保持当前容错边界，不把 `get_roles()` 包进新的 `pcall`。
   理由：现状只有 GameAPI 调用是容错边界；如果顺手扩大异常吞噬范围，会改变 runtime helper 的错误语义。
   日期/作者：2026-03-23 / Codex
+- 决策：T0 之后的第二波按写集并行执行 `T1 + T3 + T4 + T5 + T6`，但活文档 `.agents/plan.md` 只由主代理串行回写，避免多代理同时写计划文件产生冲突。
+  理由：业务文件写集天然解耦，适合并行；而计划文件是共享热点，集中回写更稳。
+  日期/作者：2026-03-23 / Codex
+- 决策：T7 的 CRAP 对账以系统临时目录中的最新 report 为准，不读取仓库内陈旧的 `tmp/crap_report.json`。
+  理由：质量工具会把 `tmp/...` 映射到系统临时目录；仓库内同名文件只是历史残留，若直接读取会把旧数据误当成本轮结果。
+  日期/作者：2026-03-23 / Codex
 
 ## 结果与复盘
 
-本节在实施前保持为空白结论，但不能省略。每完成一个里程碑，都要回写两件事：第一，本轮新增了什么以前没有的验证或 helper 边界；第二，还剩哪些热点未降到可接受风险。本计划完成时，这里要逐条对照 14 个目标函数，说明它们是通过“覆盖提升”“CRAP 下降”还是“退出热点榜”达成目标的。
+本轮已按依赖图完成 T1-T7，并把 14 个冻结热点全部拉出当前 `top_hotspots`。最终验收命令 `lua tests/behavior.lua`、`lua tests/contract.lua`、`lua tests/guard.lua`、`lua tools/quality/arch.lua check`、`lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` 全部通过；其中行为车道为 `1139` 绿例，契约车道为 `83` 绿例，guard 输出 `dep_rules ok / gameplay_loop_no_ui ok / forbidden_globals ok / arch_view_guard ok / repo_hygiene ok`，架构检查输出 `arch_view 检查通过 / arch_view check ok`。
+
+新增的稳定护栏主要集中在六个 owner suite 簇：`tests/suites/domain/item_availability_matrix.lua` 与 `tests/suites/domain/item.lua` 守住 item availability / phase；`tests/suites/gameplay/gameplay_t2_characterization.lua` 与 `tests/suites/presentation/ui_runtime_state_contract.lua` 守住 preconsume / validator；`tests/suites/runtime/misc.lua` 与 `tests/suites/gameplay/gameplay_runtime_context_and_camera_sync.lua` 守住 runtime context；`tests/suites/presentation/presentation_action_anim_effect_routes.lua`、`tests/suites/presentation/presentation_ui_event_handlers.lua`、`tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua` 守住 UI 反馈；`tests/suites/domain/movement.lua` 与 `tests/suites/gameplay/gameplay_t4_characterization.lua` 守住 backward / ring map；`tests/suites/domain/land.lua` 与 `tests/suites/runtime/startup_profile.lua` 守住 AI/profile。对应的局部重构都收敛为同文件 `local helper`，没有新增 shim、没有改公开模块名、没有新增 test lane。
+
+按 T0 基线对比，本轮 14 个函数的结果如下，全部满足“coverage 提升或 CRAP 下降”：
+
+- T1：`_can_offer_rent_response` 从 `CRAP 56.00 / coverage 0.00%` 降到 `CRAP 3.03 / coverage 86%`；`availability.trigger_timing_allowed` 从 `12.00 / 0.00%` 降到 `3.03 / 86%`；`phase_module.build_wait_choice_args` 从 `12.00 / 0.00%` 降到 `2.03 / 80%`。
+- T2：`item_preconsume_policy.decorate_followup_choice_spec` 从 `30.00 / 0.00%` 降到 `1.00 / 86%`；`validator.resolve_item_slot_action` 从 `16.94 / 71%` 降到 `5.39 / 75%`。
+- T3：`_safe_get_role` 从 `20.00 / 0.00%` 降到 `2.01 / 86%`；`resolve_any_role` 从 `30.00 / 0.00%` 降到 `1.00 / 100%`。
+- T4：`units.play_mine_trigger` 从 `42.00 / 0.00%` 降到 `3.00 / 92%`；`_resolve_tile_index` 从 `25.02 / 7%` 降到 `1.04 / 67%`；`anonymous@42` 提名为 `_refresh_turn_label_for_runtime_role` 后，从 `12.00 / 0.00%` 降到 `3.00 / 100%`。
+- T5：`_resolve_backward_next_id` 从 `16.00 / 50%` 降到 `3.02 / 88%`；`_direction` 从 `12.00 / 0.00%` 降到 `3.02 / 88%`。
+- T6：`_remote_priority` 从 `13.05 / 42%` 降到 `2.01 / 86%`；`_profile` 从 `12.00 / 0.00%` 降到 `2.00 / 100%`。
+
+五个高风险热点的守护证据也已经补齐：`_can_offer_rent_response` 由 `item_availability_matrix` 守住 rent-response 上下文和余额边界；`units.play_mine_trigger` 由 `presentation_action_anim_effect_routes` 守住 player cue / tile cue / 最小时序归一化；`validator.resolve_item_slot_action` 由 `ui_runtime_state_contract` 与 `gameplay_t2_characterization` 守住 option / availability / handler 串联；`_resolve_backward_next_id` 由 `movement.lua` 与 `gameplay_t4_characterization.lua` 守住 backward 来源优先级；`_remote_priority` 由 `domain/land.lua` 守住六类 tile rank 与敌方地块负租金 score。到本轮收尾时，没有剩余冻结热点维持基线风险；新的 `top_hotspots` 已换成本轮范围外的函数，说明本次目标已经完成。
 
 ## 背景与导读
 
@@ -167,3 +208,4 @@ T3 与 T4 完成后运行：
 本计划不引入新依赖，不新增新测试车道，不改变任何公开模块名。以下公开函数必须保持签名与调用方式不变：`availability.can_offer_in_phase`、`availability.trigger_timing_allowed`、`phase_module.build_wait_choice_args`、`item_preconsume_policy.decorate_followup_choice_spec`、`validator.resolve_item_slot_action`、`runtime_context.install_runtime_helpers`、`units.play_mine_trigger`、`service.refresh_turn_label`、`agent.pick_remote_dice_value`。所有变更都限于这些公开接口背后的局部 helper 提炼与测试补强。若需要新增 helper，只能作为同文件 `local function`，并保持依赖方向不跨层：rules 不能直连 UI，UI helper 不能把宿主细节拉回 core/rules，runtime context 不能新增对 gameplay 规则层的依赖。
 
 2026-03-23 21:31 CST：本次更新将 `.agents/research.md` 的 14 个 CRAP 热点整理成 7 个带依赖的执行任务，补充了现有 suite 落点、波次验证命令和逐函数验收标准，原因是让下一位实现者无需外部上下文即可直接执行，并且能在每一波后证明风险确实下降。
+2026-03-23 22:15 CST：本次更新回写了 T1-T7 的完成态，补充了系统临时 CRAP report 路径与 T4 behavior lane 聚合入口这两条关键发现，并把最终 `behavior / contract / guard / arch / crap` 验证结果及 14 个冻结热点的基线→现状对账写入“结果与复盘”，原因是让后续执行者直接看到本轮已经闭环且验收通过。

@@ -11,34 +11,76 @@ local game_api_key = "Game" .. "API"
 
 local current_context = nil
 
-local function _build_noop_vehicle_helper(get_roles, get_game_api)
-  local function _safe_get_role(role_id)
-    if role_id == nil then
-      return nil
-    end
-    local game_api = get_game_api and get_game_api() or nil
-    if not (game_api and game_api.get_role) then
-      return nil
-    end
-    local ok, role = pcall(game_api.get_role, role_id)
-    if not ok then
-      return nil
-    end
-    return role
-  end
-
-  local function _first_role_from_list(roles)
-    if type(roles) ~= "table" then
-      return nil
-    end
-    for _, role in ipairs(roles) do
-      if role ~= nil then
-        return role
-      end
-    end
+local function _resolve_game_api_instance(get_game_api)
+  if type(get_game_api) ~= "function" then
     return nil
   end
+  return get_game_api()
+end
 
+local function _can_get_role(game_api)
+  return game_api and game_api.get_role
+end
+
+local function _pcall_get_role(game_api, role_id)
+  local ok, role = pcall(game_api.get_role, role_id)
+  if not ok then
+    return nil
+  end
+  return role
+end
+
+local function _safe_get_role(get_game_api, role_id)
+  if role_id == nil then
+    return nil
+  end
+  local game_api = _resolve_game_api_instance(get_game_api)
+  if not _can_get_role(game_api) then
+    return nil
+  end
+  return _pcall_get_role(game_api, role_id)
+end
+
+local function _first_role_from_list(roles)
+  if type(roles) ~= "table" then
+    return nil
+  end
+  for _, role in ipairs(roles) do
+    if role ~= nil then
+      return role
+    end
+  end
+  return nil
+end
+
+local function _resolve_provider_roles(get_roles)
+  if type(get_roles) ~= "function" then
+    return nil
+  end
+  return _first_role_from_list(get_roles())
+end
+
+local function _resolve_valid_roles_from_game_api(get_game_api)
+  local game_api = _resolve_game_api_instance(get_game_api)
+  if not (game_api and type(game_api.get_all_valid_roles) == "function") then
+    return nil
+  end
+  local ok, valid_roles = pcall(game_api.get_all_valid_roles)
+  if not ok then
+    return nil
+  end
+  return _first_role_from_list(valid_roles)
+end
+
+local function _resolve_any_role(get_roles, get_game_api)
+  local provider_role = _resolve_provider_roles(get_roles)
+  if provider_role ~= nil then
+    return provider_role
+  end
+  return _resolve_valid_roles_from_game_api(get_game_api)
+end
+
+local function _build_noop_vehicle_helper(get_roles, get_game_api)
   return {
     player_id = nil,
     vehicle_id = nil,
@@ -47,21 +89,11 @@ local function _build_noop_vehicle_helper(get_roles, get_game_api)
     set_position = nil,
     active_vehicle_by_player = {},
     needs_enter_wait_by_player = {},
-    resolve_role = _safe_get_role,
+    resolve_role = function(role_id)
+      return _safe_get_role(get_game_api, role_id)
+    end,
     resolve_any_role = function()
-      local provider_roles = type(get_roles) == "function" and get_roles() or nil
-      local first = _first_role_from_list(provider_roles)
-      if first ~= nil then
-        return first
-      end
-      local game_api = get_game_api and get_game_api() or nil
-      if game_api and type(game_api.get_all_valid_roles) == "function" then
-        local ok, valid_roles = pcall(game_api.get_all_valid_roles)
-        if ok then
-          return _first_role_from_list(valid_roles)
-        end
-      end
-      return nil
+      return _resolve_any_role(get_roles, get_game_api)
     end,
     emit_vehicle_enter = function() return false end,
     emit_vehicle_exit = function() return false end,

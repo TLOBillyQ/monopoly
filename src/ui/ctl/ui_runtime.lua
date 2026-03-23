@@ -32,6 +32,16 @@ function service.refresh_panel(state_ctx, ui_model)
   })
 end
 
+local function _refresh_turn_label_for_runtime_role(ui, base_nodes, label_text, countdown_visible)
+  if ui.set_visible then
+    ui:set_visible(base_nodes.countdown, countdown_visible)
+    ui:set_visible(base_nodes.countdown_line, countdown_visible)
+  end
+  if ui.set_label then
+    ui:set_label(base_nodes.countdown, label_text)
+  end
+end
+
 function service.refresh_turn_label(state_ctx, label_text, visible)
   local ui = state_ctx.ui
   if not ui then
@@ -40,13 +50,7 @@ function service.refresh_turn_label(state_ctx, label_text, visible)
   local base_nodes = require("src.ui.schema.base_nodes")
   local countdown_visible = visible ~= false
   runtime.for_each_role_or_global(function()
-    if ui.set_visible then
-      ui:set_visible(base_nodes.countdown, countdown_visible)
-      ui:set_visible(base_nodes.countdown_line, countdown_visible)
-    end
-    if ui.set_label then
-      ui:set_label(base_nodes.countdown, label_text)
-    end
+    _refresh_turn_label_for_runtime_role(ui, base_nodes, label_text, countdown_visible)
   end)
   runtime.set_client_role(nil)
 end
