@@ -13,18 +13,12 @@ local logger = {
   time_formatter = function(timestamp)
     return tostring(timestamp)
   end,
-  tip_queue = {},
-  tip_active = false,
-  tip_epoch = 0,
-  tip_presenter = nil,
-  scheduler = nil,
   event_buffer_stack = {},
   event_collection_enabled_provider = nil,
   anim_debug_enabled_provider = nil,
   test_mode = false,
 }
-local number_utils = require("src.core.utils.number_utils")
-local gameplay_rules = require("src.config.gameplay.rules")
+local tip_queue = require("src.core.utils.tip_queue")
 
 local function _stringify(start_index, ...)
   local start = start_index or 1
@@ -47,65 +41,6 @@ end
 
 local _format_entry
 
-local function _schedule_tip_release(delay, fn)
-  if type(fn) ~= "function" then
-    return false
-  end
-  if type(logger.scheduler) == "function" then
-    local invoked = false
-    local function _wrapped()
-      invoked = true
-      fn()
-    end
-    local ok, handled = pcall(logger.scheduler, delay, _wrapped)
-    if ok and (invoked or handled == true) then
-      return true
-    end
-    if ok and logger.test_mode == true then
-      fn()
-      return true
-    end
-    return ok
-  end
-  fn()
-  return true
-end
-
-local function _normalize_tip_duration(duration, fallback_seconds)
-  local fallback = fallback_seconds
-  if not number_utils.is_numeric(fallback) or fallback <= 0 then
-    fallback = 2.0
-  end
-  if number_utils.is_numeric(duration) and duration > 0 then
-    return duration
-  end
-  return fallback
-end
-
-local function _tip_queue_ref()
-  if type(logger.tip_queue) ~= "table" then
-    logger.tip_queue = {}
-  end
-  return logger.tip_queue
-end
-
-local function _queued_tip_count()
-  local queue = _tip_queue_ref()
-  local count = #queue
-  if logger.tip_active == true then
-    count = count + 1
-  end
-  return count
-end
-
-local function _show_tip_immediately(text, duration)
-  if type(logger.tip_presenter) == "function" then
-    local ok = pcall(logger.tip_presenter, text, duration)
-    return ok
-  end
-  return false
-end
-
 local function _active_event_buffer()
   local stack = logger.event_buffer_stack
   if type(stack) ~= "table" or #stack == 0 then
@@ -126,51 +61,16 @@ local function _should_collect_event()
   return enabled == true
 end
 
-local function _dispatch_next_tip()
-  if logger.tip_active then
-    return
-  end
-  local queue = _tip_queue_ref()
-  if #queue <= 0 then
-    return
-  end
-
-  local tip = table.remove(queue, 1)
-  if type(tip) ~= "table" then
-    _dispatch_next_tip()
-    return
-  end
-
-  logger.tip_active = true
-  local current_epoch = logger.tip_epoch
-  local duration = _normalize_tip_duration(tip.duration, 2.0)
-  _show_tip_immediately(tip.text, duration)
-
-  local function _release()
-    if logger.tip_epoch ~= current_epoch then
-      return
-    end
-    logger.tip_active = false
-    _dispatch_next_tip()
-  end
-
-  local ok = _schedule_tip_release(duration, _release)
-  if not ok then
-    _release()
-  end
-end
-
 function logger.show_tip(text, duration)
   if text == nil then
     return false
   end
-  local queue = _tip_queue_ref()
-  queue[#queue + 1] = {
-    text = tostring(text),
-    duration = _normalize_tip_duration(duration, 2.0),
-  }
-  _dispatch_next_tip()
-  return true
+  return tip_queue.enqueue({
+    text = text,
+    duration = duration,
+    blocks_inter_turn = false,
+    source = "logger.show_tip",
+  })
 end
 
 local function _check_info_turn_limit(opts)
@@ -225,18 +125,6 @@ local function _try_buffer_event(level, text, no_tip)
   return true
 end
 
-local function _maybe_show_event_tip(level, no_tip, text)
-  if level ~= "event" or no_tip then
-    return
-  end
-  local backlog_threshold = gameplay_rules.event_tip_fast_backlog_threshold or 2
-  local duration = gameplay_rules.event_tip_default_seconds or 2.0
-  if (_queued_tip_count() + 1) >= backlog_threshold then
-    duration = gameplay_rules.event_tip_fast_seconds or duration
-  end
-  logger.show_tip(text, duration)
-end
-
 local function _should_skip_event_collection(level)
   if level ~= "event" then
     return false
@@ -288,7 +176,6 @@ local function _push(level, opts, ...)
   if _try_buffer_event(level, text, no_tip) then
     return
   end
-  _maybe_show_event_tip(level, no_tip, text)
   if _should_skip_event_collection(level) then
     return
   end
@@ -316,11 +203,17 @@ function logger.reset_time_runtime()
 end
 
 function logger.set_tip_presenter(presenter)
-  logger.tip_presenter = presenter
+  tip_queue.configure_runtime({
+    presenter = presenter,
+    clear_presenter = presenter == nil,
+  })
 end
 
 function logger.set_scheduler(scheduler)
-  logger.scheduler = scheduler
+  tip_queue.configure_runtime({
+    scheduler = scheduler,
+    clear_scheduler = scheduler == nil,
+  })
 end
 
 function logger.set_event_collection_enabled_provider(provider)
@@ -339,6 +232,9 @@ end
 
 function logger.set_test_mode(enabled)
   logger.test_mode = enabled == true
+  tip_queue.configure_runtime({
+    test_mode = logger.test_mode,
+  })
 end
 
 function logger.is_test_mode()
@@ -359,8 +255,11 @@ end
 
 function logger.configure_host_runtime(opts)
   opts = opts or {}
-  logger.set_tip_presenter(opts.tip_presenter)
-  logger.set_scheduler(opts.scheduler)
+  tip_queue.configure_runtime({
+    presenter = opts.tip_presenter,
+    scheduler = opts.scheduler,
+    test_mode = logger.test_mode,
+  })
   logger.set_event_collection_enabled_provider(opts.event_collection_enabled_provider)
   local game_api = opts.game_api
   if game_api ~= nil
@@ -438,9 +337,6 @@ function logger.clear()
   logger.event_seq = (logger.event_seq or 0) + 1
   logger.info_turn = nil
   logger.info_turn_count = 0
-  logger.tip_queue = {}
-  logger.tip_active = false
-  logger.tip_epoch = (logger.tip_epoch or 0) + 1
   logger.event_buffer_stack = {}
 end
 
@@ -449,7 +345,7 @@ function logger.get_seq()
 end
 
 function logger.has_pending_tips()
-  return _queued_tip_count() > 0
+  return tip_queue.active_tip ~= nil or #tip_queue.pending > 0
 end
 
 function logger.get_event_seq()

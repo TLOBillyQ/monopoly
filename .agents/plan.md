@@ -129,3 +129,26 @@
       enqueue_tip(intent)。
     - “重复”优先按同语义事件治理，而不是按字符串硬匹配；因此 dedupe_key/chain_key 是本次方案的强约束。
     - 阻塞策略固定为：仅切回合前等待 blocking tip；其他阶段不因 tip 队列暂停。
+
+    ## 进度
+
+    - [x] 2026-03-23 17:00 - T1a 完成：新增 `src/core/utils/tip_queue.lua`，`logger` 已剥离 tip 状态与 event 侧自动弹 tip，`logger.event(...)` 只写 event feed。
+    - [x] 2026-03-23 17:00 - 已做最小验证：`luac.exe -p src/core/utils/logger.lua`、`luac.exe -p src/core/utils/tip_queue.lua`、`lua.cmd` 队列去重/阻塞探针、`lua.cmd` logger event 无 tip 探针。
+
+    ## 意外与发现
+
+    - 观察：现有测试夹具仍会调用 `logger.set_tip_presenter(nil)` 和 `logger.set_scheduler(nil)`；为了不让旧夹具残留 runtime，`tip_queue.configure_runtime` 需要支持显式清空 presenter/scheduler。
+      证据：`lua.cmd` 探针通过，且 `logger.event(...)` 不再触发 tip。
+
+    ## 决策日志
+
+    - 决策：T1a 先保留 `logger.show_tip`、`logger.set_tip_presenter`、`logger.set_scheduler` 作为薄转发，但把实际 tip 生命周期状态迁到 `tip_queue`。
+      理由：先切 ownership，再在后续任务里迁移调用方，能把变更面压到最小。
+      日期/作者：2026-03-23 / Codex
+
+    ## 结果与复盘
+
+    - T1a 已把 tip 生命周期从 logger 中抽出，logger 现在专注于 event feed、时间戳和 event buffer。
+    - 下一步由 T1b/T2 接手队列级测试与外层宿主适配，继续把现有 tip 调用点迁到独立队列。
+
+    2026-03-23 17:00: 本次更新把 tip 状态、调度和展示从 `src/core/utils/logger.lua` 拆到 `src/core/utils/tip_queue.lua`，原因是先冻结独立队列契约，再让后续任务只处理调用方迁移。
