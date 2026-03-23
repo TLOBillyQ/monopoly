@@ -1,7 +1,7 @@
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local runtime_context = require("src.host.eggy.context")
-local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 local role_resolver = require("src.host.eggy.role_resolver")
 local unit_lifecycle = require("src.host.eggy.units")
 local scene_ui = require("src.host.eggy.scene_ui")
@@ -16,8 +16,17 @@ function host_runtime.schedule(delay, fn)
   return runtime_ports.schedule(delay or 0, fn)
 end
 
+function host_runtime.enqueue_tip(intent)
+  return tip_queue.enqueue(intent)
+end
+
 function host_runtime.show_tips(text, duration)
-  return logger.show_tip(text, duration)
+  return host_runtime.enqueue_tip({
+    text = text,
+    duration = duration,
+    blocks_inter_turn = false,
+    source = "host_runtime.show_tips",
+  })
 end
 
 function host_runtime.register_custom_event(event_name, handler)

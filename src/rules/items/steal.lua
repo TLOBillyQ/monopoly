@@ -1,4 +1,5 @@
 local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 local inventory = require("src.rules.items.inventory")
 local use_skip_choice = require("src.core.choice.use_skip_choice")
 local gameplay_rules = require("src.config.gameplay.rules")
@@ -8,9 +9,21 @@ local steal = {}
 local item_ids = gameplay_rules.item_ids
 local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
 
+local function _show_tip(text, dedupe_key)
+  return tip_queue.enqueue({
+    text = text,
+    duration = action_anim_duration,
+    dedupe_key = dedupe_key,
+    blocks_inter_turn = false,
+    source = "rules.items.steal",
+  })
+end
+
 local function _fail_popup(game, stealer, target)
   local msg = "很遗憾，" .. target.name .. " 没有任何道具。"
-  logger.event(stealer.name .. " 使用偷窃卡失败：" .. msg)
+  local log_text = stealer.name .. " 使用偷窃卡失败：" .. msg
+  logger.event(log_text)
+  _show_tip(log_text, "steal_fail:" .. tostring(stealer.id) .. ":" .. tostring(target.id))
   return {
     ok = false,
   }
@@ -29,7 +42,9 @@ function steal.steal_item_at_index(game, player, target, item_idx)
   assert(inventory.add(player, stolen) == true, "add stolen item failed")
   inventory.consume(player, item_ids.steal)
   local name = inventory.item_name(stolen.id)
-  logger.event(player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name)
+  local log_text = player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name
+  logger.event(log_text)
+  _show_tip(log_text, "steal_success:" .. tostring(player.id) .. ":" .. tostring(target.id) .. ":" .. tostring(stolen.id))
   local queued = action_anim_port.queue(game, {
     kind = "item_target_player",
     player_id = player.id,

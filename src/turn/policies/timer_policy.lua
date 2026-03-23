@@ -1,5 +1,5 @@
 local constants = require("src.config.content.constants")
-local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 
 local turn_timer_policy = {}
 
@@ -196,7 +196,7 @@ function turn_timer_policy.update_inter_turn_wait_timer(game, state, dt, step_tu
   end
 
   turn.inter_turn_wait_elapsed = timeout
-  if logger.has_pending_tips() then
+  if tip_queue.has_blocking_pending("inter_turn") then
     return
   end
 

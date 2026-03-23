@@ -122,8 +122,8 @@ local function _test_register_node_click_handles_query_failure_and_missing_nodes
       end
       return {}
     end },
-    { target = require("src.host.eggy"), key = "show_tips", value = function(text)
-      shown[#shown + 1] = text
+    { target = require("src.host.eggy"), key = "enqueue_tip", value = function(intent)
+      shown[#shown + 1] = intent and intent.text or nil
     end },
   }, function()
     bindings.register_node_click({}, "missing_query", function() end, registered, listeners)

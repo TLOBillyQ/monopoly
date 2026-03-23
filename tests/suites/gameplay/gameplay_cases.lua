@@ -48,6 +48,7 @@ local game_startup_event_bridge = require("src.presentation.runtime.event_bridge
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 local market_service = require("src.rules.market")
 local phase_registry = require("src.turn.phases.registry")
 local turn_decision = require("src.turn.waits.decision")
@@ -3374,17 +3375,26 @@ end
     local timers = {}
 
     logger.clear()
-    logger.set_tip_presenter(function() end)
-    logger.set_scheduler(function(delay, fn)
-      timers[#timers + 1] = { delay = delay, fn = fn }
-      return true
-    end)
+    tip_queue.clear()
+    tip_queue.configure_runtime({
+      presenter = function() end,
+      scheduler = function(delay, fn)
+        timers[#timers + 1] = { delay = delay, fn = fn }
+        return true
+      end,
+    })
 
     local ok, err = pcall(function()
       g.turn.inter_turn_wait_active = true
       g.turn.inter_turn_wait_elapsed = 0.4
       g.turn.inter_turn_wait_seconds = 0.5
-      logger.event("mine log still showing")
+      tip_queue.enqueue({
+        text = "mine log still showing",
+        duration = 1.0,
+        dedupe_key = "inter_turn_tip_timer",
+        blocks_inter_turn = true,
+        source = "test.turn_timer_policy",
+      })
 
       turn_timer_policy.update_inter_turn_wait_timer(g, state, 0.2, function(game)
         assert(game == g, "inter-turn wait should step the current game")
@@ -3407,8 +3417,11 @@ end
       assert(g.turn.inter_turn_wait_elapsed == 0, "inter-turn wait should reset elapsed after tips drain")
     end)
 
-    logger.set_tip_presenter(nil)
-    logger.set_scheduler(nil)
+    tip_queue.configure_runtime({
+      clear_presenter = true,
+      clear_scheduler = true,
+    })
+    tip_queue.clear()
     logger.clear()
     if not ok then
       error(err)

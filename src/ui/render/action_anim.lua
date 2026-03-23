@@ -167,11 +167,22 @@ local function _resolve_tip_text(state, anim)
   return tip_text, should_show_tip, should_debug_log
 end
 
-local function _emit_tip_text(host_runtime, tip_text, should_show_tip, should_debug_log, tip_duration)
+local function _emit_tip_text(host_runtime, anim, tip_text, should_show_tip, should_debug_log, tip_duration)
   if should_debug_log and tip_text ~= nil and tip_text ~= "" then
     logger.info_unlimited("[ActionAnim]", tip_text)
   end
   if should_show_tip and tip_text ~= nil and tip_text ~= "" then
+    if host_runtime and type(host_runtime.enqueue_tip) == "function" then
+      host_runtime.enqueue_tip({
+        text = tip_text,
+        duration = tip_duration,
+        dedupe_key = anim and anim.dedupe_key or nil,
+        blocks_inter_turn = anim and anim.blocks_inter_turn == true or false,
+        source = anim and anim.tip_source or ("action_anim." .. tostring(anim and anim.kind or "tip")),
+        chain_key = anim and anim.chain_key or nil,
+      })
+      return
+    end
     if host_runtime and type(host_runtime.show_tips) == "function" then
       host_runtime.show_tips(tip_text, tip_duration)
     end
@@ -185,8 +196,16 @@ local function _build_handler_opts(state, runtime_bundle, host_runtime)
     schedule = host_runtime and host_runtime.schedule or nil,
     runtime_bundle = runtime_bundle,
     show_tip = function(text, duration_seconds)
+      if host_runtime and type(host_runtime.enqueue_tip) == "function" then
+        return host_runtime.enqueue_tip({
+          text = text,
+          duration = duration_seconds,
+          blocks_inter_turn = false,
+          source = "action_anim.handler",
+        })
+      end
       if host_runtime and type(host_runtime.show_tips) == "function" then
-        host_runtime.show_tips(text, duration_seconds)
+        return host_runtime.show_tips(text, duration_seconds)
       end
     end,
     hold_seconds = roll_face_hold_seconds,
@@ -204,7 +223,7 @@ function action_anim.play(state, anim, opts)
   local handler = registry.resolve(anim.kind)
   local tip_duration = _resolve_tip_duration(duration)
   local tip_text, should_show_tip, should_debug_log = _resolve_tip_text(state, anim)
-  _emit_tip_text(host_runtime, tip_text, should_show_tip, should_debug_log, tip_duration)
+  _emit_tip_text(host_runtime, anim, tip_text, should_show_tip, should_debug_log, tip_duration)
   if handler then
     return handler(state, anim, duration, _build_handler_opts(state, runtime_bundle, host_runtime))
   end

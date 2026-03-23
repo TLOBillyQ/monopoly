@@ -2,6 +2,7 @@ local host_runtime = require("src.host.eggy")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local runtime_refs = require("src.config.content.runtime_refs")
 local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 local runtime_context = require("src.host.eggy.context")
 
 if not math.Vector3 then
@@ -35,9 +36,8 @@ local function _with_patches(patches, fn)
       GameAPI = GameAPI,
       LuaAPI = lua_api,
     }))
-    logger.configure_host_runtime({
-      game_api = GameAPI,
-      tip_presenter = function(text, duration)
+    tip_queue.configure_runtime({
+      presenter = function(text, duration)
         if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
           return GlobalAPI.show_tips(text, duration)
         end
@@ -46,6 +46,7 @@ local function _with_patches(patches, fn)
       scheduler = function(delay, cb)
         return lua_api.call_delay_time(delay, cb)
       end,
+      test_mode = logger.is_test_mode(),
     })
   end
 

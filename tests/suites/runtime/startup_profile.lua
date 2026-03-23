@@ -283,10 +283,12 @@ local function _reload_app_init_with_stubs(startup)
   local state = {
     ui = {},
   }
-  local logger_stub = {
-    configure_host_runtime = function(opts)
-      capture.host_runtime = opts
+  local tip_queue_stub = {
+    configure_runtime = function(opts)
+      capture.tip_runtime = opts
     end,
+  }
+  local logger_stub = {
     info = function(...)
       capture.info = { ... }
     end,
@@ -301,6 +303,7 @@ local function _reload_app_init_with_stubs(startup)
   with_patches({
     { target = package.loaded, key = "src.app.bootstrap", value = nil },
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
+    { target = package.loaded, key = "src.core.utils.tip_queue", value = tip_queue_stub },
     {
       target = package.loaded,
       key = "src.app.bootstrap.runtime_install",
@@ -409,8 +412,8 @@ local function _test_app_init_wires_runtime_and_debug_providers()
   assert(capture.runtime_install_called == true, "app init should install runtime")
   assert(capture.startup_opts.profile_name == "market", "app init should pass resolved startup profile")
   assert(gameplay_rules.debug_log_enabled == true, "startup should keep gameplay debug log config unchanged")
-  assert(type(capture.host_runtime.tip_presenter) == "function", "logger tip presenter should be configured")
-  assert(type(capture.host_runtime.scheduler) == "function", "logger scheduler should be configured")
+  assert(type(capture.tip_runtime.presenter) == "function", "tip presenter should be configured")
+  assert(type(capture.tip_runtime.scheduler) == "function", "tip scheduler should be configured")
   with_patches({
     {
       key = "GlobalAPI",
@@ -431,9 +434,9 @@ local function _test_app_init_wires_runtime_and_debug_providers()
       end,
     },
   }, function()
-    assert(capture.host_runtime.tip_presenter("hello", 3) == "tip_called", "tip presenter should forward to GlobalAPI")
+    assert(capture.tip_runtime.presenter("hello", 3) == "tip_called", "tip presenter should forward to GlobalAPI")
     assert(capture.tip_text == "hello" and capture.tip_duration == 3, "tip presenter should forward arguments")
-    assert(capture.host_runtime.scheduler(0.25, function() end) == "timeout_scheduled",
+    assert(capture.tip_runtime.scheduler(0.25, function() end) == "timeout_scheduled",
       "scheduler should forward to SetTimeOut when available")
   end)
   assert(type(capture.event_provider) == "function", "event debug provider should be installed")
@@ -463,10 +466,12 @@ local function _test_app_init_keeps_scheduler_fallback()
   gameplay_rules.debug_log_enabled = true
   local capture = {}
   local state = { ui = {} }
-  local logger_stub = {
-    configure_host_runtime = function(opts)
-      capture.host_runtime = opts
+  local tip_queue_stub = {
+    configure_runtime = function(opts)
+      capture.tip_runtime = opts
     end,
+  }
+  local logger_stub = {
     info = function() end,
     set_event_collection_enabled_provider = function(fn)
       capture.event_provider = fn
@@ -479,6 +484,7 @@ local function _test_app_init_keeps_scheduler_fallback()
   with_patches({
     { target = package.loaded, key = "src.app.bootstrap", value = nil },
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
+    { target = package.loaded, key = "src.core.utils.tip_queue", value = tip_queue_stub },
     { target = package.loaded, key = "src.app.bootstrap.runtime_install", value = { install = function() end } },
     { target = package.loaded, key = "src.presentation.runtime.state_factory", value = { build_state = function() return state end } },
     { target = package.loaded, key = "src.presentation.runtime.event_bridge", value = { install = function() end } },
@@ -503,9 +509,9 @@ local function _test_app_init_keeps_scheduler_fallback()
 
   package.loaded["src.app.bootstrap"] = nil
   assert(gameplay_rules.debug_log_enabled == true, "startup should keep debug logs enabled")
-  assert(capture.host_runtime.tip_presenter("tip", 1) == false, "tip presenter should fall back when GlobalAPI is missing")
+  assert(capture.tip_runtime.presenter("tip", 1) == false, "tip presenter should fall back when GlobalAPI is missing")
   local called = false
-  assert(capture.host_runtime.scheduler(0.5, function() called = true end) == true,
+  assert(capture.tip_runtime.scheduler(0.5, function() called = true end) == true,
     "scheduler should execute callback inline when SetTimeOut is missing")
   assert(called == true, "scheduler fallback should invoke callback")
   assert(capture.event_provider() == false and capture.anim_provider() == false,

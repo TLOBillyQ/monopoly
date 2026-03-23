@@ -6,6 +6,7 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 local auto_play_port = require("src.rules.ports.auto_play")
 local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local await = {}
@@ -380,7 +381,7 @@ function await.inter_turn(session, args)
     session:clear_pending_action()
     return { wait = true }
   end
-  if logger.has_pending_tips() then
+  if tip_queue.has_blocking_pending("inter_turn") then
     session:clear_pending_action()
     return { wait = true }
   end

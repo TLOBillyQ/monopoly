@@ -4,6 +4,7 @@ local landing_visual_hold = require("src.state.state_access.landing_visual_hold"
 local wait_callbacks = require("src.turn.waits.callback_registry")
 local await = require("src.turn.waits.await")
 local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 
 ---------------------------------------------------------------------------
 -- 1. coroutine mode default
@@ -478,14 +479,23 @@ local function _test_await_inter_turn_wait_blocks_until_tip_queue_drains()
   end
 
   logger.clear()
-  logger.set_tip_presenter(function() end)
-  logger.set_scheduler(function(delay, fn)
-    timers[#timers + 1] = { delay = delay, fn = fn }
-    return true
-  end)
+  tip_queue.clear()
+  tip_queue.configure_runtime({
+    presenter = function() end,
+    scheduler = function(delay, fn)
+      timers[#timers + 1] = { delay = delay, fn = fn }
+      return true
+    end,
+  })
 
   local ok, err = pcall(function()
-    logger.event("pending inter-turn tip")
+    tip_queue.enqueue({
+      text = "pending inter-turn tip",
+      duration = 1.0,
+      dedupe_key = "inter_turn_tip",
+      blocks_inter_turn = true,
+      source = "test.await_inter_turn",
+    })
 
     local first = await.inter_turn(session, { resumed = true })
     assert(first and first.wait == true, "pending tips should keep inter-turn wait blocked")
@@ -499,8 +509,11 @@ local function _test_await_inter_turn_wait_blocks_until_tip_queue_drains()
     assert(g.turn.current_player_index == 2, "drained tips should move to next player")
   end)
 
-  logger.set_tip_presenter(nil)
-  logger.set_scheduler(nil)
+  tip_queue.configure_runtime({
+    clear_presenter = true,
+    clear_scheduler = true,
+  })
+  tip_queue.clear()
   logger.clear()
   if not ok then
     error(err)

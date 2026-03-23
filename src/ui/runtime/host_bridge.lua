@@ -28,6 +28,10 @@ function host_bridge.show_tips(...)
   return _host_runtime().show_tips(...)
 end
 
+function host_bridge.enqueue_tip(...)
+  return _host_runtime().enqueue_tip(...)
+end
+
 function host_bridge.register_target_pick_listener(listener)
   return _host_runtime().register_target_pick_listener(listener)
 end

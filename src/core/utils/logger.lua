@@ -18,8 +18,6 @@ local logger = {
   anim_debug_enabled_provider = nil,
   test_mode = false,
 }
-local tip_queue = require("src.core.utils.tip_queue")
-
 local function _stringify(start_index, ...)
   local start = start_index or 1
   local parts = {}
@@ -59,18 +57,6 @@ local function _should_collect_event()
     return true
   end
   return enabled == true
-end
-
-function logger.show_tip(text, duration)
-  if text == nil then
-    return false
-  end
-  return tip_queue.enqueue({
-    text = text,
-    duration = duration,
-    blocks_inter_turn = false,
-    source = "logger.show_tip",
-  })
 end
 
 local function _check_info_turn_limit(opts)
@@ -202,20 +188,6 @@ function logger.reset_time_runtime()
   end)
 end
 
-function logger.set_tip_presenter(presenter)
-  tip_queue.configure_runtime({
-    presenter = presenter,
-    clear_presenter = presenter == nil,
-  })
-end
-
-function logger.set_scheduler(scheduler)
-  tip_queue.configure_runtime({
-    scheduler = scheduler,
-    clear_scheduler = scheduler == nil,
-  })
-end
-
 function logger.set_event_collection_enabled_provider(provider)
   if provider ~= nil then
     assert(type(provider) == "function", "event collection provider must be function or nil")
@@ -232,9 +204,6 @@ end
 
 function logger.set_test_mode(enabled)
   logger.test_mode = enabled == true
-  tip_queue.configure_runtime({
-    test_mode = logger.test_mode,
-  })
 end
 
 function logger.is_test_mode()
@@ -251,26 +220,6 @@ function logger.is_anim_debug_enabled()
     return false
   end
   return enabled == true
-end
-
-function logger.configure_host_runtime(opts)
-  opts = opts or {}
-  tip_queue.configure_runtime({
-    presenter = opts.tip_presenter,
-    scheduler = opts.scheduler,
-    test_mode = logger.test_mode,
-  })
-  logger.set_event_collection_enabled_provider(opts.event_collection_enabled_provider)
-  local game_api = opts.game_api
-  if game_api ~= nil
-      and type(game_api.get_timestamp) == "function"
-      and type(game_api.get_hour) == "function"
-      and type(game_api.get_minute) == "function"
-      and type(game_api.get_second) == "function" then
-    logger.configure_game_time(opts.game_api)
-  else
-    logger.reset_time_runtime()
-  end
 end
 
 function logger.configure_game_time(game_api)
@@ -342,10 +291,6 @@ end
 
 function logger.get_seq()
   return logger.seq
-end
-
-function logger.has_pending_tips()
-  return tip_queue.active_tip ~= nil or #tip_queue.pending > 0
 end
 
 function logger.get_event_seq()

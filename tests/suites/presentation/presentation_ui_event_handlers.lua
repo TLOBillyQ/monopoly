@@ -32,9 +32,9 @@ local function _test_market_buy_failed_shows_tip_for_three_seconds_without_popup
     },
     {
       target = host_runtime,
-      key = "show_tips",
-      value = function(text, duration)
-        tips[#tips + 1] = { text = text, duration = duration }
+      key = "enqueue_tip",
+      value = function(intent)
+        tips[#tips + 1] = { text = intent.text, duration = intent.duration }
         return true
       end,
     },
@@ -72,9 +72,9 @@ local function _test_market_buy_failed_without_popup_body_uses_fallback_tip()
     },
     {
       target = host_runtime,
-      key = "show_tips",
-      value = function(text, duration)
-        tips[#tips + 1] = { text = text, duration = duration }
+      key = "enqueue_tip",
+      value = function(intent)
+        tips[#tips + 1] = { text = intent.text, duration = intent.duration }
         return true
       end,
     },

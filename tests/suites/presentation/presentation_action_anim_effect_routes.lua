@@ -150,7 +150,7 @@ local function _test_action_anim_is_silent_by_default()
   _with_patches({
     {
       target = host_runtime,
-      key = "show_tips",
+      key = "enqueue_tip",
       value = function()
         tip_calls = tip_calls + 1
         return true
@@ -176,9 +176,9 @@ local function _test_action_anim_user_tip_policy_forces_tip()
   _with_patches({
     {
       target = host_runtime,
-      key = "show_tips",
-      value = function(text, duration)
-        tips[#tips + 1] = { text = text, duration = duration }
+      key = "enqueue_tip",
+      value = function(intent)
+        tips[#tips + 1] = intent
         return true
       end,
     },
@@ -213,7 +213,7 @@ local function _test_action_anim_debug_log_uses_info_without_tip()
     },
     {
       target = host_runtime,
-      key = "show_tips",
+      key = "enqueue_tip",
       value = function()
         tip_calls = tip_calls + 1
         return true

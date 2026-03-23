@@ -1,53 +1,74 @@
 local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
 local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
+
+local function _with_tip_runtime(fn)
+  tip_queue.clear()
+  tip_queue.configure_runtime({
+    clear_presenter = true,
+    clear_scheduler = true,
+    test_mode = logger.is_test_mode(),
+  })
+  local ok, err = pcall(fn)
+  tip_queue.configure_runtime({
+    clear_presenter = true,
+    clear_scheduler = true,
+    test_mode = logger.is_test_mode(),
+  })
+  tip_queue.clear()
+  if not ok then
+    error(err)
+  end
+end
 
 local function _test_logger_event_only_writes_event_feed_without_showing_tip()
   local shown = {}
 
   logger.clear()
-  logger.set_tip_presenter(function(text, duration)
-    shown[#shown + 1] = { text = text, duration = duration }
-  end)
-  local ok, err = pcall(function()
+  _with_tip_runtime(function()
+    tip_queue.configure_runtime({
+      presenter = function(text, duration)
+        shown[#shown + 1] = { text = text, duration = duration }
+      end,
+    })
     logger.event("log event message")
     local text = logger.get_text_by_level("event")
     assert(string.find(text, "log event message", 1, true) ~= nil, "event should still enter event feed")
     _assert_eq(#shown, 0, "event should no longer trigger tips")
   end)
-  logger.set_tip_presenter(nil)
   logger.clear()
-  if not ok then
-    error(err)
-  end
 end
 
 local function _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip()
   local shown = {}
 
   logger.clear()
-  logger.set_tip_presenter(function(text, duration)
-    shown[#shown + 1] = { text = text, duration = duration }
-  end)
-  local ok, err = pcall(function()
+  _with_tip_runtime(function()
+    tip_queue.configure_runtime({
+      presenter = function(text, duration)
+        shown[#shown + 1] = { text = text, duration = duration }
+      end,
+    })
     logger.event_no_tips("phase event message")
     local text = logger.get_text_by_level("event")
     assert(string.find(text, "phase event message", 1, true) ~= nil, "event_no_tips should still enter event feed")
     _assert_eq(#shown, 0, "event_no_tips should not trigger tips")
   end)
-  logger.set_tip_presenter(nil)
   logger.clear()
-  if not ok then
-    error(err)
-  end
 end
 
-local function _test_logger_configure_host_runtime_uses_injected_hooks()
+local function _test_logger_configure_game_time_uses_injected_clock()
   local shown = {}
 
   logger.clear()
-  logger.configure_host_runtime({
-    game_api = {
+  _with_tip_runtime(function()
+    tip_queue.configure_runtime({
+      presenter = function(text, duration)
+        shown[#shown + 1] = { text = text, duration = duration }
+      end,
+    })
+    logger.configure_game_time({
       get_timestamp = function()
         return 65
       end,
@@ -60,56 +81,37 @@ local function _test_logger_configure_host_runtime_uses_injected_hooks()
       get_second = function()
         return 3
       end,
-    },
-    tip_presenter = function(text, duration)
-      shown[#shown + 1] = { text = text, duration = duration }
-    end,
-  })
-
-  local ok, err = pcall(function()
+    })
     logger.event("host runtime injected")
     local text = logger.get_text_by_level("event")
     assert(string.find(text, "01:02:03", 1, true) ~= nil, "logger should use injected game clock formatter")
     _assert_eq(#shown, 0, "logger runtime config should not reintroduce event tips")
   end)
-
-  logger.set_tip_presenter(nil)
-  logger.set_timestamp_provider(function()
-    return 0
-  end)
-  logger.set_time_formatter(function(timestamp)
-    return tostring(timestamp)
-  end)
+  logger.reset_time_runtime()
   logger.clear()
-  if not ok then
-    error(err)
-  end
 end
 
 local function _test_logger_event_collection_provider_drops_closed_action_log_events()
   local shown = {}
 
   logger.clear()
-  logger.set_tip_presenter(function(text, duration)
-    shown[#shown + 1] = { text = text, duration = duration }
-  end)
-  logger.set_event_collection_enabled_provider(function()
-    return false
-  end)
+  _with_tip_runtime(function()
+    tip_queue.configure_runtime({
+      presenter = function(text, duration)
+        shown[#shown + 1] = { text = text, duration = duration }
+      end,
+    })
+    logger.set_event_collection_enabled_provider(function()
+      return false
+    end)
 
-  local ok, err = pcall(function()
     logger.event("closed action log event")
     local text = logger.get_text_by_level("event")
     _assert_eq(text, "", "closed action log should not retain event feed entries")
     _assert_eq(#shown, 0, "closed action log should not emit tips anymore")
   end)
-
-  logger.set_tip_presenter(nil)
   logger.set_event_collection_enabled_provider(nil)
   logger.clear()
-  if not ok then
-    error(err)
-  end
 end
 
 local function _test_logger_event_seq_only_tracks_event_feed_changes()
@@ -188,14 +190,15 @@ end
 local function _test_logger_flush_event_buffer_no_tip_replay()
   logger.clear()
   local shown = {}
-  logger.set_tip_presenter(function(text, duration)
-    shown[#shown + 1] = { text = text, duration = duration }
-  end)
-
   local buffer = { entries = {} }
   logger.push_event_buffer(buffer)
 
-  local ok, err = pcall(function()
+  _with_tip_runtime(function()
+    tip_queue.configure_runtime({
+      presenter = function(text, duration)
+        shown[#shown + 1] = { text = text, duration = duration }
+      end,
+    })
     logger.event_no_tips("no tip event")
     logger.flush_event_buffer(buffer)
 
@@ -205,11 +208,7 @@ local function _test_logger_flush_event_buffer_no_tip_replay()
   end)
 
   logger.pop_event_buffer(buffer)
-  logger.set_tip_presenter(nil)
   logger.clear()
-  if not ok then
-    error(err)
-  end
 end
 
 local function _test_logger_flush_event_buffer_empty_buffer_returns_false()
@@ -246,7 +245,7 @@ end
 return {
   { name = "logger_event_only_writes_event_feed_without_showing_tip", run = _test_logger_event_only_writes_event_feed_without_showing_tip },
   { name = "logger_event_no_tips_stays_in_event_feed_without_showing_tip", run = _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip },
-  { name = "logger_configure_host_runtime_uses_injected_hooks", run = _test_logger_configure_host_runtime_uses_injected_hooks },
+  { name = "logger_configure_game_time_uses_injected_clock", run = _test_logger_configure_game_time_uses_injected_clock },
   { name = "logger_event_collection_provider_drops_closed_action_log_events", run = _test_logger_event_collection_provider_drops_closed_action_log_events },
   { name = "logger_event_seq_only_tracks_event_feed_changes", run = _test_logger_event_seq_only_tracks_event_feed_changes },
   { name = "logger_flush_event_buffer_replays_buffered_events", run = _test_logger_flush_event_buffer_replays_buffered_events },

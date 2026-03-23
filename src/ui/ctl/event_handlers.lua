@@ -8,6 +8,13 @@ local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil, handlers_by_event = {} }
 local MARKET_BUY_FAILED_MIN_TIP_SECONDS = 3.0
 
+local function _enqueue_tip(intent)
+  if host_runtime_ports and type(host_runtime_ports.enqueue_tip) == "function" then
+    return host_runtime_ports.enqueue_tip(intent)
+  end
+  return host_runtime_ports.show_tips(intent and intent.text, intent and intent.duration)
+end
+
 local function _resolve_market_buy_failed_tip(event_data)
   local popup = event_data and event_data.popup or nil
   local body = popup and popup.body or nil
@@ -240,7 +247,13 @@ function event_handlers.install(_, logger, state)
   _register_handler(monopoly_event.market.buy_failed, function(data)
     local event_data = _event_data(data)
     local tip_text = _resolve_market_buy_failed_tip(event_data)
-    host_runtime_ports.show_tips(tip_text, MARKET_BUY_FAILED_MIN_TIP_SECONDS)
+    _enqueue_tip({
+      text = tip_text,
+      duration = MARKET_BUY_FAILED_MIN_TIP_SECONDS,
+      dedupe_key = "market_buy_failed:" .. tostring(tip_text),
+      blocks_inter_turn = false,
+      source = "market.buy_failed",
+    })
   end)
 
   _register_handler(monopoly_event.market.bought_item, function(data)

@@ -14,6 +14,16 @@ local function _show_missing_button_tip(name)
     return
   end
   missing_button_tips[name] = true
+  if type(host_runtime_ports.enqueue_tip) == "function" then
+    host_runtime_ports.enqueue_tip({
+      text = "UI 节点未适配: " .. tostring(name),
+      duration = 2.0,
+      dedupe_key = "ui_missing_button:" .. tostring(name),
+      blocks_inter_turn = false,
+      source = "ui.missing_button",
+    })
+    return
+  end
   host_runtime_ports.show_tips("UI 节点未适配: " .. tostring(name), 2.0)
 end
 

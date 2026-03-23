@@ -1,4 +1,5 @@
 local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 local runtime_install = require("src.app.bootstrap.runtime_install")
 local startup_roster = require("src.app.bootstrap.startup_roster")
 local state_factory = require("src.presentation.runtime.state_factory")
@@ -8,9 +9,34 @@ local gameplay_runtime_bootstrap = require("src.presentation.runtime.gameplay_ru
 local gameplay_loop = require("src.turn.loop")
 local startup_policy = require("src.app.bootstrap.startup_policy")
 
-logger.configure_host_runtime({
-  game_api = GameAPI,
-  tip_presenter = function(text, duration)
+local function _is_test_mode_enabled()
+  if type(logger.is_test_mode) ~= "function" then
+    return false
+  end
+  local ok, enabled = pcall(logger.is_test_mode)
+  if not ok then
+    return false
+  end
+  return enabled == true
+end
+
+local function _configure_game_time_logger(game_api)
+  if game_api ~= nil
+      and type(game_api.get_timestamp) == "function"
+      and type(game_api.get_hour) == "function"
+      and type(game_api.get_minute) == "function"
+      and type(game_api.get_second) == "function"
+      and type(logger.configure_game_time) == "function" then
+    logger.configure_game_time(game_api)
+    return
+  end
+  if type(logger.reset_time_runtime) == "function" then
+    logger.reset_time_runtime()
+  end
+end
+
+tip_queue.configure_runtime({
+  presenter = function(text, duration)
     if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
       return GlobalAPI.show_tips(text, duration)
     end
@@ -26,7 +52,10 @@ logger.configure_host_runtime({
     end
     return false
   end,
+  test_mode = _is_test_mode_enabled(),
 })
+
+_configure_game_time_logger(GameAPI)
 
 local current_game_ref = { nil }
 local startup = startup_policy.resolve(_G)

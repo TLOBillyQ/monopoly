@@ -1,4 +1,5 @@
 local logger = require("src.core.utils.logger")
+local tip_queue = require("src.core.utils.tip_queue")
 local runtime_context = require("src.host.eggy.context")
 local default_ports = require("src.host.eggy.default_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
@@ -140,9 +141,8 @@ function M.refresh_runtime_context_for_tests(opts)
   runtime_ports.configure(default_ports.build(runtime_context))
   paid_purchase_port.reset_for_tests()
   paid_purchase_port.configure(require("src.host.eggy.paid_purchase_gateway"))
-  logger.configure_host_runtime({
-    game_api = opts.GameAPI or GameAPI,
-    tip_presenter = function(text, duration)
+  tip_queue.configure_runtime({
+    presenter = function(text, duration)
       local global_api = opts.GlobalAPI or GlobalAPI
       if global_api and type(global_api.show_tips) == "function" then
         return global_api.show_tips(text, duration)
@@ -159,7 +159,18 @@ function M.refresh_runtime_context_for_tests(opts)
       end
       return false
     end,
+    test_mode = logger.is_test_mode(),
   })
+  local game_api = opts.GameAPI or GameAPI
+  if game_api ~= nil
+      and type(game_api.get_timestamp) == "function"
+      and type(game_api.get_hour) == "function"
+      and type(game_api.get_minute) == "function"
+      and type(game_api.get_second) == "function" then
+    logger.configure_game_time(game_api)
+  else
+    logger.reset_time_runtime()
+  end
   return ctx
 end
 

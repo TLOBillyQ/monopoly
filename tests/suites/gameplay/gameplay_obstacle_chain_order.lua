@@ -4,6 +4,8 @@ local move_followup = require("src.turn.phases.move_followup")
 local turn_land = require("src.turn.phases.land")
 local await = require("src.turn.waits.await")
 local logger = require("src.core.utils.logger")
+local action_anim = require("src.ui.render.action_anim")
+local anim_handlers = require("src.ui.render.anim_handlers")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local callback_keys = wait_callbacks.callback_keys
@@ -151,6 +153,60 @@ local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_ord
   assert(event_text:find("住院，需停留", 1, true) ~= nil, "hospital log should appear after queued animation completion")
 end
 
+local function _test_same_tile_obstacle_chain_emits_single_summary_tip()
+  local game, _, _, _, _, land_state, land_args = _run_same_tile_obstacle_chain(true)
+  local captured = {}
+  local runtime_bundle = {
+    host_runtime = {
+      enqueue_tip = function(intent)
+        captured[#captured + 1] = intent
+        return true
+      end,
+      schedule = function(_, fn)
+        if fn then
+          fn()
+        end
+        return true
+      end,
+    },
+    runtime = {},
+    ui_events = {
+      show = {},
+      hide = {},
+      send_to_all = function() end,
+    },
+  }
+
+  assert(land_state == "wait_landing_visual", "same-tile obstacle chain should still defer through landing visual")
+  local visual_cb = wait_callbacks.take(game, callback_keys.after_landing_visual)
+  assert(visual_cb ~= nil, "same-tile obstacle chain should register landing visual callback")
+  local anim_state, anim_args = visual_cb()
+  assert(anim_state == "wait_action_anim", "same-tile obstacle chain should resume into action anim wait")
+
+  support.with_patches({
+    { target = anim_handlers, key = "play_roadblock_trigger", value = function() return 0 end },
+    { target = anim_handlers, key = "play_mine_trigger", value = function() return 0 end },
+  }, function()
+    action_anim.play({ game = game, board_scene = {} }, game.turn.action_anim, {
+      runtime_bundle = runtime_bundle,
+    })
+    local first_session = _new_await_session(game, {
+      type = "action_anim_done",
+      seq = game.turn.action_anim.seq,
+    })
+    local first = await.action_anim(first_session, anim_args)
+    assert(first and first.wait == true, "roadblock action anim should still wait for queued mine trigger")
+    action_anim.play({ game = game, board_scene = {} }, game.turn.action_anim, {
+      runtime_bundle = runtime_bundle,
+    })
+  end)
+
+  assert(#captured == 1, "same-tile obstacle chain should emit exactly one summary tip")
+  assert(captured[1].text:find("路障", 1, true) ~= nil, "summary tip should mention roadblock")
+  assert(captured[1].text:find("地雷", 1, true) ~= nil, "summary tip should mention mine")
+  assert(captured[1].text:find("送医", 1, true) ~= nil, "summary tip should mention hospitalization")
+end
+
 return {
   name = "gameplay_obstacle_chain_order",
   tests = {
@@ -161,6 +217,10 @@ return {
     {
       name = "same_tile_roadblock_then_mine_action_anim_keeps_trigger_order",
       run = _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_order,
+    },
+    {
+      name = "same_tile_obstacle_chain_emits_single_summary_tip",
+      run = _test_same_tile_obstacle_chain_emits_single_summary_tip,
     },
   },
 }
