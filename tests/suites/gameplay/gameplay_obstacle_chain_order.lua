@@ -38,10 +38,15 @@ local function _new_await_session(game, action)
   return session
 end
 
-local function _run_same_tile_obstacle_chain(wait_action_anim)
+local function _run_same_tile_obstacle_chain(wait_action_anim, opts)
+  opts = opts or {}
   local game = support.new_game()
   local player = game:current_player()
   local target_index = 2
+
+  if opts.player_seat_id ~= nil then
+    player.seat_id = opts.player_seat_id
+  end
 
   game.last_turn = {}
   game.anim_gate_port.wait_action_anim = wait_action_anim == true
@@ -207,6 +212,27 @@ local function _test_same_tile_obstacle_chain_emits_single_summary_tip()
   assert(captured[1].text:find("送医", 1, true) ~= nil, "summary tip should mention hospitalization")
 end
 
+local function _test_same_tile_obstacle_chain_keeps_vehicle_log_text()
+  logger.clear()
+  local game, player, _, _, _, land_state, land_args = _run_same_tile_obstacle_chain(false, {
+    player_seat_id = 4001,
+  })
+
+  assert(land_state == "wait_landing_visual", "vehicle obstacle chain should still defer through landing visual")
+  local visual_cb = wait_callbacks.take(game, callback_keys.after_landing_visual)
+  assert(visual_cb ~= nil, "vehicle obstacle chain should register landing visual callback")
+  local resumed_next_state, resumed_next_args = visual_cb()
+  assert(resumed_next_state == "move_followup", "vehicle obstacle chain should resume into move_followup")
+
+  local resumed_state = move_followup.run({ game = game }, resumed_next_args)
+  assert(resumed_state == "end_turn", "vehicle obstacle chain should still end the turn")
+  assert(player.seat_id == nil, "mine relocation should still clear seat after capture")
+
+  local event_text = logger.get_text_by_level("event")
+  assert(event_text:find("座驾被摧毁并送医", 1, true) ~= nil,
+    "vehicle obstacle chain log should preserve pre-relocation vehicle context")
+end
+
 return {
   name = "gameplay_obstacle_chain_order",
   tests = {
@@ -221,6 +247,10 @@ return {
     {
       name = "same_tile_obstacle_chain_emits_single_summary_tip",
       run = _test_same_tile_obstacle_chain_emits_single_summary_tip,
+    },
+    {
+      name = "same_tile_obstacle_chain_keeps_vehicle_log_text",
+      run = _test_same_tile_obstacle_chain_keeps_vehicle_log_text,
     },
   },
 }
