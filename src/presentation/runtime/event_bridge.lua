@@ -15,7 +15,7 @@ function M.install(state, get_current_game)
   local function _dispatch_or_defer(data, handler)
     local current_game = get_current_game()
     state.game = current_game
-    landing_visual_hold.run_or_defer(state, current_game, "runtime_event", function()
+    landing_visual_hold.run_or_defer(state, nil, "runtime_event", function()
       handler(data)
     end)
   end

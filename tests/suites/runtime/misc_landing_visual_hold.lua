@@ -1,6 +1,7 @@
 local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
 local logger = require("src.core.utils.logger")
+local runtime_state = require("src.state.state_access.runtime_state")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 
 local function _test_landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory()
@@ -131,9 +132,106 @@ local function _test_landing_visual_hold_release_skips_when_not_pending()
   _assert_eq(released, false, "release should return false when release_pending is false")
 end
 
+local function _test_landing_visual_hold_start_repairs_attached_state_when_game_is_already_active()
+  local state = {}
+  local game = {
+    dirty = {},
+    turn = {
+      landing_visual_hold_active = true,
+      landing_visual_release_pending = false,
+    },
+    landing_visual_hold_state = state,
+  }
+  local hold = runtime_state.ensure_turn_runtime(state).landing_visual_hold
+
+  _assert_eq(hold.active, false, "precondition should start with inactive hold state")
+
+  local started = landing_visual_hold.start(game)
+
+  _assert_eq(started, false, "start should stay idempotent when game is already active")
+  _assert_eq(hold.active, true, "start should repair the attached hold state when game is already active")
+  _assert_eq(hold.release_pending, false, "start should keep release pending cleared on the attached hold state")
+end
+
+local function _test_landing_visual_hold_mark_release_pending_repairs_attached_state()
+  local state = {}
+  local game = {
+    dirty = {},
+    turn = {
+      landing_visual_hold_active = true,
+      landing_visual_release_pending = false,
+    },
+    landing_visual_hold_state = state,
+  }
+  local hold = landing_visual_hold.sync_state_from_game(state, game)
+
+  _assert_eq(hold.active, true, "precondition should sync active hold state")
+  _assert_eq(hold.release_pending, false, "precondition should start without release pending")
+
+  local marked = landing_visual_hold.mark_release_pending(game)
+
+  _assert_eq(marked, true, "mark_release_pending should accept an active hold")
+  _assert_eq(hold.release_pending, true, "mark_release_pending should repair the attached hold state")
+end
+
+local function _test_landing_visual_hold_clear_game_repairs_attached_state()
+  local state = {}
+  local game = {
+    dirty = {},
+    turn = {
+      landing_visual_hold_active = true,
+      landing_visual_release_pending = true,
+    },
+    landing_visual_hold_state = state,
+  }
+  local hold = landing_visual_hold.sync_state_from_game(state, game)
+
+  _assert_eq(hold.active, true, "precondition should sync active hold state")
+  _assert_eq(hold.release_pending, true, "precondition should sync release pending hold state")
+
+  local cleared = landing_visual_hold.clear_game(game)
+
+  _assert_eq(cleared, true, "clear_game should report a changed hold")
+  _assert_eq(hold.active, false, "clear_game should clear the attached hold state")
+  _assert_eq(hold.release_pending, false, "clear_game should clear release pending on the attached hold state")
+end
+
+local function _test_landing_visual_hold_state_wins_over_stale_game_turn_flags()
+  local state = {}
+  local game = {
+    dirty = {},
+    turn = {
+      landing_visual_hold_active = false,
+      landing_visual_release_pending = false,
+    },
+    landing_visual_hold_state = state,
+  }
+  local hold = runtime_state.ensure_turn_runtime(state).landing_visual_hold
+
+  landing_visual_hold.start(game)
+  landing_visual_hold.mark_release_pending(game)
+
+  _assert_eq(hold.active, true, "precondition should activate the attached hold state")
+  _assert_eq(hold.release_pending, true, "precondition should mark the attached hold state for release")
+
+  game.turn.landing_visual_hold_active = false
+  game.turn.landing_visual_release_pending = false
+
+  local synced = landing_visual_hold.sync_state_from_game(state, game)
+
+  _assert_eq(synced.active, true, "sync_state_from_game should keep the attached hold state authoritative")
+  _assert_eq(synced.release_pending, true, "sync_state_from_game should keep release pending on the attached hold state")
+  _assert_eq(game.turn.landing_visual_hold_active, true, "sync_state_from_game should repair stale game hold flags")
+  _assert_eq(game.turn.landing_visual_release_pending, true, "sync_state_from_game should repair stale release flags")
+end
+
 return {
   { name = "landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory", run = _test_landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory },
   { name = "landing_visual_hold_release_flushes_event_buffer_and_replays_deferred", run = _test_landing_visual_hold_release_flushes_event_buffer_and_replays_deferred },
   { name = "landing_visual_hold_release_orders_wrappers_by_priority", run = _test_landing_visual_hold_release_orders_wrappers_by_priority },
   { name = "landing_visual_hold_release_skips_when_not_pending", run = _test_landing_visual_hold_release_skips_when_not_pending },
+  { name = "landing_visual_hold_start_repairs_attached_state_when_game_is_already_active", run = _test_landing_visual_hold_start_repairs_attached_state_when_game_is_already_active },
+  { name = "landing_visual_hold_mark_release_pending_repairs_attached_state", run = _test_landing_visual_hold_mark_release_pending_repairs_attached_state },
+  { name = "landing_visual_hold_clear_game_repairs_attached_state", run = _test_landing_visual_hold_clear_game_repairs_attached_state },
+  { name = "landing_visual_hold_state_wins_over_stale_game_turn_flags", run = _test_landing_visual_hold_state_wins_over_stale_game_turn_flags },
 }

@@ -2,7 +2,7 @@ local action_anim = require("src.ui.render.action_anim")
 local handlers = require("src.ui.render.anim_handlers")
 local anim_units = require("src.ui.render.anim_units")
 local board_feedback = require("src.ui.render.board_feedback_service")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local logger = require("src.core.utils.logger")
 local host_runtime = require("src.host.eggy")
 local move_anim = require("src.ui.render.move_anim")
@@ -578,12 +578,81 @@ local function _test_play_mine_trigger_uses_tile_cue_without_any_position_and_no
   assert(tile_calls[1] == "mine_blast:3", "play_mine_trigger should fall back to tile cue when position lookup fails")
 end
 
+local function _test_play_mine_trigger_uses_prepare_before_feedback_without_scheduler()
+  local state = support.build_min_state()
+  local steps = {}
+
+  _with_patches({
+    {
+      target = unit_position,
+      key = "read_unit_position",
+      value = function()
+        return nil
+      end,
+    },
+    {
+      target = unit_position,
+      key = "read_scene_tile_position",
+      value = function()
+        return nil
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_player_cue",
+      value = function()
+        steps[#steps + 1] = "player_cue"
+      end,
+    },
+    {
+      target = board_feedback,
+      key = "play_tile_cue",
+      value = function(_, cue_name, tile_index)
+        steps[#steps + 1] = cue_name .. ":" .. tostring(tile_index)
+      end,
+    },
+    {
+      target = move_anim,
+      key = "prepare_player_for_snap",
+      value = function()
+        steps[#steps + 1] = "prepare"
+      end,
+    },
+    {
+      target = move_anim,
+      key = "snap_player_to_index",
+      value = function()
+        steps[#steps + 1] = "snap"
+        return -1
+      end,
+    },
+  }, function()
+    local duration = anim_units.play_mine_trigger(state, {
+      player_id = 1,
+      tile_index = 3,
+      to_index = 2,
+      cue_name = "mine_blast",
+    }, -0.5, {
+      clear_overlay = function(_, kind, tile_index)
+        steps[#steps + 1] = kind .. ":" .. tostring(tile_index)
+      end,
+    })
+
+    assert(duration == 0, "play_mine_trigger should normalize negative fallback duration to zero")
+  end)
+
+  assert(steps[1] == "prepare", "play_mine_trigger should prepare the player before fallback feedback")
+  assert(steps[2] == "mine_blast:3", "play_mine_trigger should emit tile cue after prepare when no hit position exists")
+  assert(steps[3] == "mine:3", "play_mine_trigger should clear the mine overlay after feedback")
+  assert(steps[4] == "snap", "play_mine_trigger should snap after fallback feedback")
+end
+
 local function _test_play_mine_trigger_delays_snap_when_schedule_available()
   local state = support.build_min_state()
   local scheduled_delay = nil
   local scheduled_fn = nil
   local steps = {}
-  local expected_delay = gameplay_rules.mine_trigger_snap_delay_seconds or 0.6
+  local expected_delay = timing.mine_trigger_snap_delay_seconds or 0.6
 
   _with_patches({
     {
@@ -662,6 +731,7 @@ return {
     { name = "play_mine_trigger_prefers_player_cue_with_unit_position", run = _test_play_mine_trigger_prefers_player_cue_with_unit_position },
     { name = "play_mine_trigger_falls_back_to_tile_position_for_player_cue", run = _test_play_mine_trigger_falls_back_to_tile_position_for_player_cue },
     { name = "play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay", run = _test_play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay },
+    { name = "play_mine_trigger_uses_prepare_before_feedback_without_scheduler", run = _test_play_mine_trigger_uses_prepare_before_feedback_without_scheduler },
     { name = "play_mine_trigger_delays_snap_when_schedule_available", run = _test_play_mine_trigger_delays_snap_when_schedule_available },
   },
 }

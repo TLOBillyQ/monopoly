@@ -5,35 +5,16 @@ local roadblock = require("src.rules.items.roadblock")
 local logger = require("src.core.utils.logger")
 local remote_dice = require("src.rules.items.remote_dice")
 local item_phase = require("src.rules.items.phase")
-local gameplay_rules = require("src.config.gameplay.rules")
+local availability = require("src.rules.items.availability")
+local item_ids = require("src.config.gameplay.item_ids")
 local number_utils = require("src.core.utils.number_utils")
 local intent_output_port = require("src.rules.ports.intent_output")
 local item_use_broadcast = require("src.rules.items.use_broadcast")
 local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
 
 local item_choice_handler = {}
-local item_ids = gameplay_rules.item_ids
-
-local function _copy_table(source)
-  local out = {}
-  if type(source) ~= "table" then
-    return out
-  end
-  for key, value in pairs(source) do
-    out[key] = value
-  end
-  return out
-end
-
-local function _normalize_integer_field(meta, key, choice_kind)
-  if meta[key] == nil then
-    return
-  end
-  meta[key] = assert(
-    number_utils.to_integer(meta[key]),
-    tostring(choice_kind) .. " requires numeric meta." .. tostring(key)
-  )
-end
+local copy_table = availability.copy_table
+local normalize_integer_field = availability.normalize_integer_field
 
 local function _normalize_integer_list(values, field_name, choice_kind)
   assert(type(values) == "table", tostring(choice_kind) .. " requires table meta." .. tostring(field_name))
@@ -48,11 +29,8 @@ local function _normalize_integer_list(values, field_name, choice_kind)
 end
 
 local function _normalize_choice_action_option_id(choice_kind, action)
-  local normalized_action = _copy_table(action)
-  normalized_action.option_id = assert(
-    number_utils.to_integer(normalized_action.option_id),
-    tostring(choice_kind) .. " requires numeric action.option_id"
-  )
+  local normalized_action = copy_table(action)
+  normalize_integer_field(normalized_action, "option_id", choice_kind, "action", true)
   return normalized_action
 end
 
@@ -316,15 +294,15 @@ function item_choice_handler.build(helpers)
   end
 
   local function _normalize_owner_meta(choice_kind, meta, choice_spec)
-    local normalized_meta = _copy_table(meta)
-    _normalize_integer_field(normalized_meta, "player_id", choice_kind)
+    local normalized_meta = copy_table(meta)
+    normalize_integer_field(normalized_meta, "player_id", choice_kind)
     choice_spec.owner_role_id = choice_spec.owner_role_id or normalized_meta.player_id
     return normalized_meta
   end
 
   local function _normalize_target_picker_meta(choice_kind, meta, choice_spec)
     local normalized_meta = _normalize_owner_meta(choice_kind, meta, choice_spec)
-    _normalize_integer_field(normalized_meta, "item_id", choice_kind)
+    normalize_integer_field(normalized_meta, "item_id", choice_kind)
     choice_spec.target_picker_owner_role_id = choice_spec.target_picker_owner_role_id or normalized_meta.player_id
     return normalized_meta
   end
@@ -347,7 +325,7 @@ function item_choice_handler.build(helpers)
 
   local function _normalize_steal_meta(game, meta, choice_spec)
     local normalized_meta = _normalize_owner_meta(choice_spec.kind, meta, choice_spec)
-    _normalize_integer_field(normalized_meta, "target_id", choice_spec.kind)
+    normalize_integer_field(normalized_meta, "target_id", choice_spec.kind)
     return normalized_meta
   end
 
@@ -359,7 +337,7 @@ function item_choice_handler.build(helpers)
   local function _normalize_steal_prompt_meta(game, meta, choice_spec)
     local normalized_meta = _normalize_steal_meta(game, meta, choice_spec)
     normalized_meta.queue = _normalize_integer_list(normalized_meta.queue, "queue", choice_spec.kind)
-    _normalize_integer_field(normalized_meta, "index", choice_spec.kind)
+    normalize_integer_field(normalized_meta, "index", choice_spec.kind)
     return normalized_meta
   end
 
@@ -370,13 +348,13 @@ function item_choice_handler.build(helpers)
 
   local function _normalize_item_target_meta(game, meta, choice_spec)
     local normalized_meta = _normalize_owner_meta(choice_spec.kind, meta, choice_spec)
-    _normalize_integer_field(normalized_meta, "item_id", choice_spec.kind)
+    normalize_integer_field(normalized_meta, "item_id", choice_spec.kind)
     return normalized_meta
   end
 
   local function _normalize_remote_dice_meta(game, meta, choice_spec)
     local normalized_meta = _normalize_item_target_meta(game, meta, choice_spec)
-    _normalize_integer_field(normalized_meta, "dice_count", choice_spec.kind)
+    normalize_integer_field(normalized_meta, "dice_count", choice_spec.kind)
     return normalized_meta
   end
 

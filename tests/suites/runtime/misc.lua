@@ -461,6 +461,66 @@ local function _test_runtime_context_first_role_from_game_api_pcall_failure()
   _assert_eq(resolved, role, "resolve_any_role should return role from GameAPI when pcall succeeds")
 end
 
+local function _test_runtime_context_install_runtime_helpers_survives_game_api_refresh_error()
+  local ctx = runtime_context.new({
+    GameAPI = {
+      get_all_valid_roles = function()
+        error("boom")
+      end,
+    },
+    LuaAPI = {
+      call_delay_time = function() end,
+      global_register_custom_event = function() end,
+      global_register_trigger_event = function() end,
+      unit_register_custom_event = function() end,
+      unit_register_trigger_event = function() end,
+      global_send_custom_event = function() end,
+    },
+  })
+
+  runtime_context.install_environment(ctx)
+
+  local ok, helpers_or_err = pcall(function()
+    return runtime_context.install_runtime_helpers(ctx)
+  end)
+
+  _assert_eq(ok, true, "install_runtime_helpers should ignore GameAPI refresh errors")
+  local helpers = helpers_or_err
+  _assert_eq(type(helpers.vehicle_helper.resolve_any_role), "function",
+    "install_runtime_helpers should still return the noop vehicle helper")
+  _assert_eq(helpers.vehicle_helper.resolve_any_role(), nil,
+    "noop helper should keep returning nil after refresh failure")
+  _assert_eq(type(ctx.roles), "table", "refresh failure should still leave roles as a table")
+  _assert_eq(#ctx.roles, 0, "refresh failure should fall back to an empty role list")
+end
+
+local function _test_release_runtime_context_resolve_role_ignores_non_function_get_role()
+  support.with_patches({
+    { key = "MONOPOLY_BUILD_MODE", value = "release" },
+  }, function()
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = "not a function",
+      },
+      LuaAPI = {
+        call_delay_time = function() end,
+        global_register_custom_event = function() end,
+        global_register_trigger_event = function() end,
+        unit_register_custom_event = function() end,
+        unit_register_trigger_event = function() end,
+        global_send_custom_event = function() end,
+      },
+    })
+
+    runtime_context.install_environment(ctx)
+    ctx.roles = {}
+    runtime_context.install_runtime_helpers(ctx)
+
+    local helper = ctx.vehicle_helper
+    _assert_eq(helper.resolve_role(4), nil, "release helper should return nil when GameAPI.get_role is not callable")
+  end)
+end
+
 local function _test_release_runtime_context_resolve_any_role_prefers_provider_roles()
   support.with_patches({
     { key = "MONOPOLY_BUILD_MODE", value = "release" },
@@ -659,6 +719,63 @@ local function _test_callback_registry_wait_lifecycle()
   _assert_eq(wait_callbacks.is_wait_ready(game, wait_key), false, "finished wait should no longer be ready")
 end
 
+local function _clear_module(module_name)
+  package.loaded[module_name] = nil
+end
+
+local function _with_game_state_mixins(player_mixin, board_mixin, turn_mixin, fn)
+  with_patches({
+    { target = package.loaded, key = "src.state.player_state", value = player_mixin },
+    { target = package.loaded, key = "src.state.board_state", value = board_mixin },
+    { target = package.loaded, key = "src.state.turn_state", value = turn_mixin },
+    { target = package.loaded, key = "src.state.game_state", value = nil },
+  }, function()
+    _clear_module("src.state.game_state")
+    fn()
+    _clear_module("src.state.game_state")
+  end, {
+    skip_runtime_context_refresh = true,
+  })
+end
+
+local function _test_game_state_installs_distinct_mixins()
+  _with_game_state_mixins({
+    player_only = function()
+      return "player"
+    end,
+  }, {
+    board_only = function()
+      return "board"
+    end,
+  }, {
+    turn_only = function()
+      return "turn"
+    end,
+  }, function()
+    local game_state = require("src.state.game_state")
+    assert(type(game_state.player_only) == "function", "player mixin should install")
+    assert(type(game_state.board_only) == "function", "board mixin should install")
+    assert(type(game_state.turn_only) == "function", "turn mixin should install")
+  end)
+end
+
+local function _test_game_state_rejects_mixin_key_collision()
+  _with_game_state_mixins({
+    shared_key = function()
+      return "player"
+    end,
+  }, {
+    shared_key = function()
+      return "board"
+    end,
+  }, {}, function()
+    local ok, err = pcall(require, "src.state.game_state")
+    _assert_eq(ok, false, "duplicate mixin key should fail module assembly")
+    assert(string.find(tostring(err), "game_state mixin collision: board.shared_key", 1, true) ~= nil,
+      "collision error should include conflicting mixin key, err=" .. tostring(err))
+  end)
+end
+
 return {
   name = "misc",
   tests = {
@@ -694,6 +811,14 @@ return {
     { name = "runtime_context_first_role_from_game_api_empty_list_fallback", run = _test_runtime_context_first_role_from_game_api_empty_list_fallback },
     { name = "runtime_context_first_role_from_game_api_nil_game_api", run = _test_runtime_context_first_role_from_game_api_nil_game_api },
     { name = "runtime_context_first_role_from_game_api_pcall_failure", run = _test_runtime_context_first_role_from_game_api_pcall_failure },
+    {
+      name = "runtime_context_install_runtime_helpers_survives_game_api_refresh_error",
+      run = _test_runtime_context_install_runtime_helpers_survives_game_api_refresh_error,
+    },
+    {
+      name = "release_runtime_context_resolve_role_ignores_non_function_get_role",
+      run = _test_release_runtime_context_resolve_role_ignores_non_function_get_role,
+    },
     { name = "release_runtime_context_resolve_any_role_prefers_provider_roles", run = _test_release_runtime_context_resolve_any_role_prefers_provider_roles },
     { name = "release_runtime_context_resolve_any_role_uses_game_api_fallback", run = _test_release_runtime_context_resolve_any_role_uses_game_api_fallback },
     { name = "release_runtime_context_resolve_any_role_returns_nil_on_game_api_error", run = _test_release_runtime_context_resolve_any_role_returns_nil_on_game_api_error },
@@ -701,6 +826,8 @@ return {
     { name = "release_runtime_context_resolve_role_handles_nil_missing_error_and_success", run = _test_release_runtime_context_resolve_role_handles_nil_missing_error_and_success },
     lvh_tests[2],  -- landing_visual_hold_release_flushes_event_buffer_and_replays_deferred
     { name = "callback_registry_wait_lifecycle", run = _test_callback_registry_wait_lifecycle },
+    { name = "game_state_installs_distinct_mixins", run = _test_game_state_installs_distinct_mixins },
+    { name = "game_state_rejects_mixin_key_collision", run = _test_game_state_rejects_mixin_key_collision },
     lvh_tests[3],  -- landing_visual_hold_release_orders_wrappers_by_priority
     lvh_tests[4],  -- landing_visual_hold_release_skips_when_not_pending
     gateway_tests[1],  -- eggy_paid_gateway_callback_missing_goods_id

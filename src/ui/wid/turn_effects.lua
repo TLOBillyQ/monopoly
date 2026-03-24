@@ -1,25 +1,11 @@
 local base_nodes = require("src.ui.schema.base_nodes")
 local role_id_utils = require("src.core.utils.role_id")
+local with_client_role = require("src.core.utils.with_client_role")
 
 local turn_effects = {}
 
 local function _fallback_runtime()
   return require("src.ui.render" .. ".runtime_ui")
-end
-
-local function _with_client_role(runtime, role, fn)
-  if type(runtime.with_client_role) == "function" then
-    return runtime.with_client_role(role, fn)
-  end
-  if type(runtime.set_client_role) ~= "function" then
-    return fn()
-  end
-  runtime.set_client_role(role)
-  local ok, err = pcall(fn)
-  runtime.set_client_role(nil)
-  if not ok then
-    error(err)
-  end
 end
 
 local function _resolve_current_player_index(ui_model)
@@ -52,7 +38,7 @@ local function _set_highlight_visible(runtime, index)
 end
 
 local function _sync_current_turn_highlight(runtime, _, ui_model)
-  _with_client_role(runtime, nil, function()
+  with_client_role(runtime, nil, function()
     local current_index = _resolve_current_player_index(ui_model)
     _set_highlight_visible(runtime, current_index)
   end)
@@ -85,7 +71,7 @@ local function _sync_local_turn_prompt(runtime, _, ui_model)
   local can_show = _is_turn_prompt_phase(phase)
   runtime.for_each_role_or_global(function(role)
     local role_id = _get_role_id(runtime, role)
-    _with_client_role(runtime, role, function()
+    with_client_role(runtime, role, function()
       local nodes = _get_prompt_nodes(runtime)
       local show = role_id ~= nil and current_player_id ~= nil and role_id_utils.equals(role_id, current_player_id) and can_show
       _set_prompt_visible(nodes, show)
@@ -98,7 +84,7 @@ local function _get_other_action_prompt_label_node(runtime)
 end
 
 local function _set_other_action_prompt(runtime, role, text, visible)
-  _with_client_role(runtime, role, function()
+  with_client_role(runtime, role, function()
     local node = _get_other_action_prompt_label_node(runtime)
     if node then
       node.text = text or ""

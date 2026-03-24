@@ -19,7 +19,7 @@ local function _resolve_game_api_instance(get_game_api)
 end
 
 local function _can_get_role(game_api)
-  return game_api and game_api.get_role
+  return game_api and type(game_api.get_role) == "function"
 end
 
 local function _pcall_get_role(game_api, role_id)
@@ -60,16 +60,20 @@ local function _resolve_provider_roles(get_roles)
   return _first_role_from_list(get_roles())
 end
 
-local function _resolve_valid_roles_from_game_api(get_game_api)
+local function _resolve_game_api_roles(get_game_api)
   local game_api = _resolve_game_api_instance(get_game_api)
   if not (game_api and type(game_api.get_all_valid_roles) == "function") then
-    return nil
+    return {}
   end
   local ok, valid_roles = pcall(game_api.get_all_valid_roles)
-  if not ok then
-    return nil
+  if not ok or type(valid_roles) ~= "table" then
+    return {}
   end
-  return _first_role_from_list(valid_roles)
+  return valid_roles
+end
+
+local function _resolve_valid_roles_from_game_api(get_game_api)
+  return _first_role_from_list(_resolve_game_api_roles(get_game_api))
 end
 
 local function _resolve_any_role(get_roles, get_game_api)
@@ -171,12 +175,9 @@ end
 
 function runtime_context.refresh_roles(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
-  local game_api = ctx.env[game_api_key]
-  if game_api and game_api.get_all_valid_roles then
-    ctx.roles = game_api.get_all_valid_roles()
-  else
-    ctx.roles = {}
-  end
+  ctx.roles = _resolve_game_api_roles(function()
+    return ctx.env and ctx.env[game_api_key] or nil
+  end)
   return ctx.roles
 end
 

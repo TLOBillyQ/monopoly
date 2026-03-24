@@ -4,13 +4,13 @@ local player_units = require("src.ui.render.board.player_units")
 local placement = require("src.ui.render.board.placement")
 local events = require("src.ui.render.board.events")
 local runtime_state = require("src.ui.runtime.state")
-local gameplay_rules = require("src.config.gameplay.rules")
+local debug_flags = require("src.config.gameplay.debug_flags")
 local logger = require("src.core.utils.logger")
 
 local M = {}
 
 local function _should_debug_log()
-  return logger.is_anim_debug_enabled() or gameplay_rules.move_anim_debug_log_enabled == true
+  return logger.is_anim_debug_enabled() or debug_flags.move_anim_debug_log_enabled == true
 end
 
 local function _debug_log(...)

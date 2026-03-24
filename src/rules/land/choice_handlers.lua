@@ -1,10 +1,9 @@
 local land_choice_specs = require("src.rules.land.choice_specs")
 local inventory = require("src.rules.items.inventory")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local intent_output_port = require("src.rules.ports.intent_output")
 
 local land_choice_handler = {}
-local item_ids = gameplay_rules.item_ids
 
 function land_choice_handler.build(helpers)
   local finish_choice = helpers.finish_choice

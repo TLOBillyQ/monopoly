@@ -1,6 +1,6 @@
 local support = require("support.gameplay_support")
 local gameplay_loop = support.gameplay_loop
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local startup_roster = require("src.app.bootstrap.startup_roster")
 local state_factory = require("src.presentation.runtime.state_factory")
 local turn_start = require("src.turn.phases.start")
@@ -11,6 +11,7 @@ local await = require("src.turn.waits.await")
 local board_utils = require("src.rules.land.board_utils")
 local land_rules = require("src.rules.land.rules")
 local item_phase = require("src.rules.items.phase")
+local item_strategy = require("src.rules.items.strategy")
 local choice_resolver = support.choice_resolver
 local movement = support.movement
 local steal = support.steal
@@ -174,9 +175,9 @@ end
 local function _setup_circle_market_bought_roadblock_and_mine()
   local g, _ = _new_profile_game("circle")
   local player = g.players[1]
-  local remote_dice_id = gameplay_rules.item_ids.remote_dice
-  local roadblock_id = gameplay_rules.item_ids.roadblock
-  local mine_id = gameplay_rules.item_ids.mine
+  local remote_dice_id = item_ids.remote_dice
+  local roadblock_id = item_ids.roadblock
+  local mine_id = item_ids.mine
 
   g.last_turn = {}
   g.anim_gate_port.wait_action_anim = false
@@ -318,7 +319,7 @@ local function _advance_strong_card_staging_to_rent_prompt()
   g.anim_gate_port.wait_move_anim = false
   g.last_turn = {}
 
-  local use_result = support.executor.use_item(g, player, gameplay_rules.item_ids.remote_dice, { by_ai = false })
+  local use_result = support.executor.use_item(g, player, item_ids.remote_dice, { by_ai = false })
   assert(type(use_result) == "table" and use_result.waiting == true, "strong card staging should open remote dice choice")
   _open_choice(g, use_result.intent.choice_spec)
 
@@ -354,7 +355,7 @@ local function _test_monster_startup_profile_runs_choice_to_action_anim()
     dispatched[#dispatched + 1] = action
   end
 
-  local res = support.executor.use_item(g, player, gameplay_rules.item_ids.monster, { by_ai = false })
+  local res = support.executor.use_item(g, player, item_ids.monster, { by_ai = false })
   assert(type(res) == "table" and res.waiting == true, "monster staging should open target choice")
   _open_choice(g, res.intent.choice_spec)
 
@@ -388,7 +389,7 @@ local function _test_missile_startup_profile_defers_hospital_followup_until_afte
     dispatched[#dispatched + 1] = action
   end
 
-  local res = support.executor.use_item(g, player, gameplay_rules.item_ids.missile, { by_ai = false })
+  local res = support.executor.use_item(g, player, item_ids.missile, { by_ai = false })
   assert(type(res) == "table" and res.waiting == true, "missile staging should open target choice")
   _open_choice(g, res.intent.choice_spec)
 
@@ -428,7 +429,7 @@ local function _test_mine_startup_profile_other_player_triggers_immediately_afte
   local mine_index = p1.position
   local mine_tile = assert(g.board:get_tile(mine_index), "mine startup tile should exist")
 
-  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = false })
+  local use_res = support.executor.use_item(g, p1, item_ids.mine, { by_ai = false })
   assert(use_res ~= nil, "mine startup profile should allow mine use")
   assert(g.board:has_mine(mine_index), "mine startup profile should place mine on owner tile")
   local mine_state = assert(g.board:get_mine(mine_index), "mine startup profile should keep mine payload")
@@ -461,7 +462,7 @@ local function _test_mine_startup_profile_owner_triggers_on_third_own_turn()
   local mine_index = p1.position
   local mine_tile = assert(g.board:get_tile(mine_index), "mine startup tile should exist")
 
-  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = false })
+  local use_res = support.executor.use_item(g, p1, item_ids.mine, { by_ai = false })
   assert(use_res ~= nil, "mine startup profile should allow mine use")
   assert(g.board:has_mine(mine_index), "mine startup profile should place mine on owner tile")
   local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
@@ -582,7 +583,7 @@ local function _test_post_action_item_phase_keeps_reactive_rent_cards_out_after_
   local target_state_before = _tile_state(g, target_tile)
   local player_cash_before = g:player_balance(player, "金币")
   local owner_cash_before = g:player_balance(owner, "金币")
-  player.inventory:add({ id = gameplay_rules.item_ids.rich })
+  player.inventory:add({ id = item_ids.rich })
   g.auto_play_port.is_auto_player = function()
     return false
   end
@@ -617,9 +618,44 @@ local function _test_post_action_item_phase_keeps_reactive_rent_cards_out_after_
   assert(pending and pending.kind == "item_phase_choice", "post_action should reopen item phase choice")
   assert(_find_option_id_by_label(pending, "财神卡") ~= nil, "reopened post_action should expose rich card")
 
-  local rich_result = choice_resolver.resolve(g, pending, { option_id = gameplay_rules.item_ids.rich })
+  local rich_result = choice_resolver.resolve(g, pending, { option_id = item_ids.rich })
   assert(rich_result and rich_result.stay == false, "using second post_action card should resolve current choice")
-  assert(_count_item(player, gameplay_rules.item_ids.rich) == 0, "using second post_action card should consume rich card")
+  assert(_count_item(player, item_ids.rich) == 0, "using second post_action card should consume rich card")
+end
+
+local function _test_post_action_auto_phase_waits_for_action_anim_followup()
+  local g, _ = _new_profile_game("strong_card")
+  local player = g.players[1]
+  local phases = phase_registry.build_default_phases()
+  local original_auto_pre_action = item_strategy.auto_pre_action
+
+  g.auto_play_port.is_auto_player = function()
+    return true
+  end
+  g.turn.action_anim = { seq = 99, kind = "item_use" }
+  item_strategy.auto_pre_action = function(_, _, phase)
+    assert(phase == "post_action", "auto post_action should pass explicit phase to strategy")
+    return {
+      after_action_anim = {
+        next_state = "move_followup",
+        next_args = {
+          mode = "resume_turn_post_action",
+        },
+      },
+    }
+  end
+
+  local ok, wait_state, wait_args = pcall(function()
+    return phases.post_action({ game = g }, { player = player })
+  end)
+  item_strategy.auto_pre_action = original_auto_pre_action
+
+  assert(ok, wait_state)
+  assert(wait_state == "wait_action_anim", "auto post_action should wait for action anim followup")
+  assert(wait_args.next_state == "move_followup", "auto post_action should keep move_followup next state")
+  assert(wait_args.next_args.mode == "resume_turn_post_action", "auto post_action should keep custom resume payload")
+  assert(wait_args.next_args.next_state == "post_action", "auto post_action should patch default next_state")
+  assert(wait_args.next_args.next_args.player == player, "auto post_action should patch default next_args")
 end
 
 local function _test_pre_action_item_phase_remote_dice_then_mine_reopens_before_roll()
@@ -628,7 +664,7 @@ local function _test_pre_action_item_phase_remote_dice_then_mine_reopens_before_
   g.auto_play_port.is_auto_player = function()
     return false
   end
-  player.inventory:add({ id = gameplay_rules.item_ids.mine })
+  player.inventory:add({ id = item_ids.mine })
 
   local next_state, next_args = turn_start({ game = g })
   assert(next_state == "wait_action", "pre_action item phase should run during turn start")
@@ -637,7 +673,7 @@ local function _test_pre_action_item_phase_remote_dice_then_mine_reopens_before_
   local pending = _get_choice(g)
   assert(pending and pending.kind == "item_phase_choice", "turn start should open item_phase_choice")
 
-  local remote_select = choice_resolver.resolve(g, pending, { option_id = gameplay_rules.item_ids.remote_dice })
+  local remote_select = choice_resolver.resolve(g, pending, { option_id = item_ids.remote_dice })
   assert(remote_select and remote_select.stay == true, "selecting remote dice should enter follow-up choice")
 
   pending = _get_choice(g)
@@ -690,7 +726,7 @@ local function _test_dice_multiplier_used_in_pre_action_changes_same_turn_roll_t
     end,
   }
 
-  local use_result = support.executor.use_item(g, player, gameplay_rules.item_ids.dice_multiplier, { by_ai = false })
+  local use_result = support.executor.use_item(g, player, item_ids.dice_multiplier, { by_ai = false })
   assert(use_result ~= nil, "dice_multiplier should be usable in pre_action")
   assert(player.status.pending_dice_multiplier == 2, "dice_multiplier should arm multiplier before rolling")
 
@@ -726,10 +762,10 @@ local function _test_steal_startup_profile_multi_item_choice_resumes_to_chance()
   local choice_result = choice_resolver.resolve(g, pending, { option_id = tax_free_option_id })
 
   assert(choice_result and choice_result.status == "resolved", "steal item selection should resolve")
-  assert(_count_item(player, gameplay_rules.item_ids.steal) == 0, "steal card should be consumed after success")
-  assert(_count_item(player, gameplay_rules.item_ids.tax_free) == 1, "p1 should receive stolen tax_free")
-  assert(_count_item(target, gameplay_rules.item_ids.tax_free) == 0, "p2 should lose stolen tax_free")
-  assert(_count_item(target, gameplay_rules.item_ids.free_rent) == 1, "p2 should keep the unstolen item")
+  assert(_count_item(player, item_ids.steal) == 0, "steal card should be consumed after success")
+  assert(_count_item(player, item_ids.tax_free) == 1, "p1 should receive stolen tax_free")
+  assert(_count_item(target, item_ids.tax_free) == 0, "p2 should lose stolen tax_free")
+  assert(_count_item(target, item_ids.free_rent) == 1, "p2 should keep the unstolen item")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player",
     "steal success should queue target-player action anim")
 
@@ -747,9 +783,9 @@ local function _test_steal_startup_profile_single_item_auto_steal_resumes_to_cha
 
   assert(prompt_result and prompt_result.status == "resolved", "single-item steal should resolve directly")
   assert(_get_choice(g) == nil, "single-item steal should not open steal_item picker")
-  assert(_count_item(player, gameplay_rules.item_ids.steal) == 0, "single-item steal should consume steal card")
-  assert(_count_item(player, gameplay_rules.item_ids.free_rent) == 1, "p1 should receive the only target item")
-  assert(_count_item(target, gameplay_rules.item_ids.free_rent) == 0, "p2 should lose the only target item")
+  assert(_count_item(player, item_ids.steal) == 0, "single-item steal should consume steal card")
+  assert(_count_item(player, item_ids.free_rent) == 1, "p1 should receive the only target item")
+  assert(_count_item(target, item_ids.free_rent) == 0, "p2 should lose the only target item")
   assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player",
     "single-item steal should queue target-player action anim")
 
@@ -775,9 +811,9 @@ local function _test_steal_queue_startup_profile_skip_opens_next_target_and_resu
 
   local use_result = choice_resolver.resolve(g, pending, { option_id = "use" })
   assert(use_result and use_result.status == "resolved", "single-item queued target should resolve directly")
-  assert(_count_item(player, gameplay_rules.item_ids.steal) == 0, "queued steal success should consume steal card")
-  assert(_count_item(player, gameplay_rules.item_ids.tax_free) == 1, "queued steal should transfer p3 tax_free to p1")
-  assert(_count_item(second_target, gameplay_rules.item_ids.tax_free) == 0, "queued steal should remove p3 tax_free")
+  assert(_count_item(player, item_ids.steal) == 0, "queued steal success should consume steal card")
+  assert(_count_item(player, item_ids.tax_free) == 1, "queued steal should transfer p3 tax_free to p1")
+  assert(_count_item(second_target, item_ids.tax_free) == 0, "queued steal should remove p3 tax_free")
   assert(_get_choice(g) == nil, "queued steal success should clear pending choice")
 
   _resume_after_steal_interrupt(g, player, interrupt)
@@ -803,10 +839,10 @@ local function _test_steal_startup_profile_cancel_item_picker_keeps_state_and_re
 
   assert(cancel_result and cancel_result.status == "resolved", "cancel should resolve steal_item picker")
   assert(_get_choice(g) == nil, "cancel should clear pending choice without reopening another prompt")
-  assert(_count_item(player, gameplay_rules.item_ids.steal) == 1, "cancel should keep steal card on p1")
-  assert(_count_item(player, gameplay_rules.item_ids.tax_free) == 0, "cancel should not transfer any item to p1")
-  assert(_count_item(target, gameplay_rules.item_ids.tax_free) == 1, "cancel should keep target inventory unchanged")
-  assert(_count_item(target, gameplay_rules.item_ids.free_rent) == 1, "cancel should keep all target items intact")
+  assert(_count_item(player, item_ids.steal) == 1, "cancel should keep steal card on p1")
+  assert(_count_item(player, item_ids.tax_free) == 0, "cancel should not transfer any item to p1")
+  assert(_count_item(target, item_ids.tax_free) == 1, "cancel should keep target inventory unchanged")
+  assert(_count_item(target, item_ids.free_rent) == 1, "cancel should keep all target items intact")
 
   _resume_after_steal_interrupt(g, player, interrupt)
 end
@@ -816,7 +852,7 @@ local function _test_choice_builders_reserve_base_inline_for_item_slots_only()
   local player = g.players[1]
   local land_choice_specs = require("src.rules.land.choice_specs")
   local purchase_policy = require("src.rules.market.purchase.policy")
-  player.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+  player.inventory:add({ id = item_ids.remote_dice })
 
   local item_phase_choice = item_phase.build_choice_spec(g, player, "pre_action")
   assert(item_phase_choice and item_phase_choice.route_key == "base_inline",
@@ -845,7 +881,7 @@ end
 local function _test_circle_startup_profile_second_remote_roll_reaches_chance45_after_market_resume()
   local g, _ = _new_profile_game("circle")
   local player = g.players[1]
-  local remote_dice_id = gameplay_rules.item_ids.remote_dice
+  local remote_dice_id = item_ids.remote_dice
   g.last_turn = {}
   g.anim_gate_port.wait_action_anim = false
   g.anim_gate_port.wait_move_anim = false
@@ -986,6 +1022,10 @@ return {
     {
       name = "post_action_item_phase_keeps_reactive_rent_cards_out_after_skipping_strong",
       run = _test_post_action_item_phase_keeps_reactive_rent_cards_out_after_skipping_strong,
+    },
+    {
+      name = "post_action_auto_phase_waits_for_action_anim_followup",
+      run = _test_post_action_auto_phase_waits_for_action_anim_followup,
     },
     {
       name = "pre_action_item_phase_remote_dice_then_mine_reopens_before_roll",

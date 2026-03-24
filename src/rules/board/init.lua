@@ -3,12 +3,8 @@ require "vendor.third_party.ClassUtils"
 ---棋盘管理类，负责路径、地块和分支的管理
 local board = Class("Board")
 
-local opposite = {
-  up = "down",
-  down = "up",
-  left = "right",
-  right = "left",
-}
+local direction_constants = require("src.rules.board.directions")
+local opposite = direction_constants.opposite
 
 local dir_priority = {
   up = 1,
@@ -189,18 +185,48 @@ local function _resolve_backward_from_neighbors(neigh, facing)
   return any_id
 end
 
+local _resolve_backward_next_source
+
 local function _resolve_backward_next_id(map, current_id, neigh, facing)
+  return _resolve_backward_next_source(map, current_id, neigh, facing).next_id
+end
+
+function _resolve_backward_next_source(map, current_id, neigh, facing)
   local reverse_facing_next_id = _resolve_backward_by_facing(neigh, facing)
   if reverse_facing_next_id then
-    return reverse_facing_next_id
+    return {
+      next_id = reverse_facing_next_id,
+      source = "facing_reverse_neighbor",
+    }
   end
 
   local mapped_next_id = _resolve_backward_from_map(map, current_id)
   if mapped_next_id then
-    return mapped_next_id
+    local outer_prev = map.outer_prev or nil
+    if outer_prev and outer_prev[current_id] then
+      return {
+        next_id = mapped_next_id,
+        source = "outer_prev",
+      }
+    end
+    return {
+      next_id = mapped_next_id,
+      source = "backward_fallback",
+    }
   end
 
-  return _resolve_backward_from_neighbors(neigh, facing)
+  local fallback_next_id = _resolve_backward_from_neighbors(neigh, facing)
+  if fallback_next_id then
+    return {
+      next_id = fallback_next_id,
+      source = "neighbor_fallback",
+    }
+  end
+
+  return {
+    next_id = nil,
+    source = nil,
+  }
 end
 
 ---创建新棋盘实例
@@ -395,7 +421,8 @@ function board:step_backward_by_facing(current_index, facing)
   local current_id = current_tile.id
   local neigh = map.neighbors[current_id]
 
-  local next_id = _resolve_backward_next_id(map, current_id, neigh, facing)
+  local next_result = _resolve_backward_next_source(map, current_id, neigh, facing)
+  local next_id = next_result.next_id
 
   assert(next_id ~= nil, "missing prev tile id from: " .. tostring(current_id))
 
@@ -415,6 +442,7 @@ board._resolve_fresh_forward_next = _resolve_fresh_forward_next
 board._resolve_facing_next = _resolve_facing_next
 board._resolve_fallback_next = _resolve_fallback_next
 board._resolve_backward_next_id = _resolve_backward_next_id
+board._resolve_backward_next_source = _resolve_backward_next_source
 board._resolve_forward_facing = _resolve_forward_facing
 board._normalize_forward_step_context = _normalize_forward_step_context
 board._pick_any_dir = _pick_any_dir

@@ -1,5 +1,6 @@
 local market_view = require("src.ui.render.market")
 local canvas = require("src.ui.ctl.canvas_coordinator")
+local with_client_role = require("src.core.utils.with_client_role")
 local runtime = require("src.ui.render.runtime_ui")
 local role_context = require("src.ui.pres.role_context")
 local runtime_state = require("src.ui.runtime.state")
@@ -11,18 +12,6 @@ local function _view_deps()
     runtime = runtime,
     modal_state = require("src.ui.stores.modal_state"),
   }
-end
-
-local function _with_client_role(role, fn)
-  if type(runtime.with_client_role) == "function" then
-    return runtime.with_client_role(role, fn)
-  end
-  runtime.set_client_role(role)
-  local ok, err = pcall(fn)
-  runtime.set_client_role(nil)
-  if not ok then
-    error(err)
-  end
 end
 
 function renderer.open_market_panel(state, choice, choice_id, market)
@@ -40,7 +29,7 @@ function renderer.open_market_panel(state, choice, choice_id, market)
   local opened = false
 
   runtime.for_each_role_or_global(function(role)
-    _with_client_role(role, function()
+    with_client_role(runtime, role, function()
       local current_model = runtime_state.get_ui_model(state)
       local ctx = role_context.resolve(role, current_model, { runtime = runtime })
       local target = canvas.CANVAS_BASE

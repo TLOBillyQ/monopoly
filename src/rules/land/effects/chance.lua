@@ -1,10 +1,10 @@
 local logger = require("src.core.utils.logger")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local chance_cfg = require("src.config.content.chance_cards")
 local chance_resolver = require("src.rules.chance.resolver")
 local presenter = require("src.rules.land.presenter")
 
-local popup_show_seconds = gameplay_rules.popup_auto_close_seconds or 1.0
+local popup_show_seconds = timing.popup_auto_close_seconds or 1.0
 
 local M = {}
 
@@ -33,17 +33,18 @@ local function _calc_total_weight(drawable)
   return total
 end
 
-local function _pick_weighted_card(drawable, total_weight)
-  local rand = LuaAPI.rand() * total_weight
+local function _pick_weighted_card(drawable, total_weight, rng)
+  assert(rng and type(rng.next_int) == "function", "missing game.rng.next_int for chance draw")
+  local pick = rng:next_int(1, total_weight)
   local accumulated = 0
   for _, item in ipairs(drawable) do
     accumulated = accumulated + (chance_weights[item.index] or 0)
-    if accumulated >= rand then return item.card end
+    if accumulated >= pick then return item.card end
   end
   return nil
 end
 
-local function _pick_chance_card()
+local function _pick_chance_card(game)
   local drawable, first_drawable = _collect_drawable_cards()
 
   if first_drawable == nil then return nil end
@@ -51,7 +52,7 @@ local function _pick_chance_card()
   local total_weight = _calc_total_weight(drawable)
   if total_weight <= 0 then return first_drawable end
 
-  local picked = _pick_weighted_card(drawable, total_weight)
+  local picked = _pick_weighted_card(drawable, total_weight, game and game.rng)
   if picked then return picked end
 
   if #chance_cfg == 0 then return nil end
@@ -64,7 +65,7 @@ M.executors = {
       return ctx.game and ctx.player and ctx.tile and ctx.tile.type == "chance"
     end,
     apply = function(ctx)
-      local card = _pick_chance_card() or chance_cfg[1]
+      local card = _pick_chance_card(ctx.game) or chance_cfg[1]
       if not card then return end
       logger.event(ctx.player.name .. " 抽到机会卡 " .. card.description)
       presenter.push_popup(ctx.game, "机会卡", ctx.player.name .. " 抽到机会卡：" .. card.description, {

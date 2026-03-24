@@ -1,10 +1,10 @@
-local gameplay_rules = require("src.config.gameplay.rules")
+local debug_flags = require("src.config.gameplay.debug_flags")
 local runtime_state = require("src.state.state_access.runtime_state")
 
 local turn_role_control_policy = {}
 
 local function _resolve_role_control_lock_enabled(game)
-  if gameplay_rules.role_control_lock_enabled ~= true then
+  if debug_flags.role_control_lock_enabled ~= true then
     return false
   end
   if not game or game.finished then

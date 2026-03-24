@@ -1,6 +1,6 @@
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local availability = require("src.rules.items.availability")
 local inventory = require("src.rules.items.inventory")
 
@@ -13,7 +13,7 @@ local _assert_eq = support.assert_eq
 local function _test_mine_offer_in_pre_action_and_post_action_only()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.mine
+  local item_id = item_ids.mine
 
   local pre_action = availability.analyze_offer(g, p, item_id, "pre_action")
   _assert_eq(pre_action.can_offer, true, "mine should be offered in pre_action")
@@ -33,7 +33,7 @@ end
 local function _test_roadblock_offer_in_pre_action_and_post_action()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.roadblock
+  local item_id = item_ids.roadblock
 
   local pre_action = availability.analyze_offer(g, p, item_id, "pre_action")
   _assert_eq(pre_action.can_offer, true, "roadblock should be offered in pre_action")
@@ -47,7 +47,7 @@ end
 local function _test_dice_multiplier_offer_only_in_pre_action()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.dice_multiplier
+  local item_id = item_ids.dice_multiplier
 
   local pre_action = availability.analyze_offer(g, p, item_id, "pre_action")
   _assert_eq(pre_action.can_offer, true, "dice_multiplier should be offered in pre_action")
@@ -93,12 +93,12 @@ local function _test_followup_choice_flags_for_remote_and_roadblock()
   local g = _new_game()
   local p = g:current_player()
 
-  local remote = availability.analyze_offer(g, p, gameplay_rules.item_ids.remote_dice, "pre_action")
+  local remote = availability.analyze_offer(g, p, item_ids.remote_dice, "pre_action")
   _assert_eq(remote.can_offer, true, "remote_dice should be offered in pre_action")
   _assert_eq(remote.requires_followup_choice, true, "remote_dice should require followup choice")
   _assert_eq(remote.can_execute_now, false, "remote_dice should not execute immediately")
 
-  local roadblock = availability.analyze_offer(g, p, gameplay_rules.item_ids.roadblock, "post_action")
+  local roadblock = availability.analyze_offer(g, p, item_ids.roadblock, "post_action")
   _assert_eq(roadblock.requires_followup_choice, true, "roadblock should require followup choice")
 end
 
@@ -133,15 +133,17 @@ local function _test_trigger_timing_allowed_handles_missing_and_unknown_inputs()
   _assert_eq(availability.trigger_timing_allowed("pre_action", "pre_action", false), true, "pre_action timing should be allowed in pre_action phase")
   _assert_eq(availability.trigger_timing_allowed("pre_action", "turn", false), true, "turn timing should be allowed in pre_action phase")
   _assert_eq(availability.trigger_timing_allowed("post_action", "pre_action", false), false, "pre_action timing should be rejected in post_action phase")
+  _assert_eq(availability.trigger_timing_allowed("post_action", "post_action", false), true, "post_action timing should be allowed in post_action phase")
+  _assert_eq(availability.trigger_timing_allowed("post_action", "turn", false), true, "turn timing should be allowed in post_action phase")
 end
 
 local function _test_rent_response_cards_require_land_tile_and_other_owner()
   _with_offer_phase_cfg({
-    [gameplay_rules.item_ids.free_rent] = true,
+    [item_ids.free_rent] = true,
   }, function()
     local g = _new_game()
     local p = g:current_player()
-    local item_id = gameplay_rules.item_ids.free_rent
+    local item_id = item_ids.free_rent
 
     g.board = nil
     local no_board_ok, no_board_reason = availability.can_offer_in_phase(g, p, item_id, "post_action")
@@ -179,7 +181,7 @@ end
 
 local function _test_strong_card_requires_enough_balance_for_rent_response()
   _with_offer_phase_cfg({
-    [gameplay_rules.item_ids.strong] = true,
+    [item_ids.strong] = true,
   }, function()
     local g = _new_game()
     local p = g:current_player()
@@ -191,12 +193,12 @@ local function _test_strong_card_requires_enough_balance_for_rent_response()
     local rent_value = require("src.rules.commerce.property_value").total_invested(land_tile, 2)
 
     g:set_player_cash(p, rent_value)
-    local exact_cash_ok, exact_cash_reason = availability.can_offer_in_phase(g, p, gameplay_rules.item_ids.strong, "post_action")
+    local exact_cash_ok, exact_cash_reason = availability.can_offer_in_phase(g, p, item_ids.strong, "post_action")
     _assert_eq(exact_cash_ok, true, "strong card should be available when balance equals rent value")
     _assert_eq(exact_cash_reason, "ok", "strong card should be allowed when balance equals rent value")
 
     g:set_player_cash(p, rent_value - 1)
-    local low_cash_ok, low_cash_reason = availability.can_offer_in_phase(g, p, gameplay_rules.item_ids.strong, "post_action")
+    local low_cash_ok, low_cash_reason = availability.can_offer_in_phase(g, p, item_ids.strong, "post_action")
     _assert_eq(low_cash_ok, false, "strong card should be unavailable when balance is below rent value")
     _assert_eq(low_cash_reason, "special_condition_failed", "strong card should fail special condition when balance is low")
   end)
@@ -206,16 +208,16 @@ local function _test_triggered_cards_stay_hidden_from_active_windows()
   local g = _new_game()
   local p = g:current_player()
 
-  local free_rent = availability.analyze_offer(g, p, gameplay_rules.item_ids.free_rent, "pre_action")
+  local free_rent = availability.analyze_offer(g, p, item_ids.free_rent, "pre_action")
   _assert_eq(free_rent.can_offer, false, "free_rent should stay hidden in pre_action")
 
-  local strong = availability.analyze_offer(g, p, gameplay_rules.item_ids.strong, "post_action")
+  local strong = availability.analyze_offer(g, p, item_ids.strong, "post_action")
   _assert_eq(strong.can_offer, false, "strong should stay hidden in post_action")
 
-  local tax_free = availability.analyze_offer(g, p, gameplay_rules.item_ids.tax_free, "pre_action")
+  local tax_free = availability.analyze_offer(g, p, item_ids.tax_free, "pre_action")
   _assert_eq(tax_free.can_offer, false, "tax_free should stay hidden in pre_action")
 
-  local steal = availability.analyze_offer(g, p, gameplay_rules.item_ids.steal, "post_action")
+  local steal = availability.analyze_offer(g, p, item_ids.steal, "post_action")
   _assert_eq(steal.can_offer, false, "steal should stay hidden in post_action")
 end
 

@@ -9,7 +9,7 @@ local _assert_eq = support.assert_eq
 local _assert_tile_id_sequence = support.assert_tile_id_sequence
 local executor = support.executor
 local choice_resolver = support.choice_resolver
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local roadblock = require("src.rules.items.roadblock")
 
 local function _install_narrow_ports(game, ui_port)
@@ -43,7 +43,7 @@ end
 local function _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.roadblock
+  local item_id = item_ids.roadblock
   local expected = roadblock.manual_candidates(g, p, 3)
   p.inventory:add({ id = item_id })
 
@@ -63,7 +63,7 @@ end
 local function _test_roadblock_manual_choice_allows_current_tile()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.roadblock
+  local item_id = item_ids.roadblock
   local current_idx = p.position
   p.inventory:add({ id = item_id })
 
@@ -79,7 +79,7 @@ end
 local function _test_roadblock_manual_choice_hongkong_keeps_nearest_slots_ordered()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.roadblock
+  local item_id = item_ids.roadblock
   g:update_player_position(p, 7)
   p.inventory:add({ id = item_id })
 
@@ -111,7 +111,7 @@ end
 local function _test_roadblock_manual_choice_hongkong_nearest_haikou_slot_places_correctly()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.roadblock
+  local item_id = item_ids.roadblock
   g:update_player_position(p, 7)
   p.inventory:add({ id = item_id })
 
@@ -163,7 +163,7 @@ end
 local function _test_demolish_manual_choice_uses_manhattan_range_at_branch()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.monster
+  local item_id = item_ids.monster
   g:update_player_position(p, g.board:index_of_tile_id(42))
   p.inventory:add({ id = item_id })
 
@@ -193,7 +193,7 @@ end
 local function _test_roadblock_ai_uses_auto_candidates_only()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.roadblock
+  local item_id = item_ids.roadblock
   p.inventory:add({ id = item_id })
 
   local res = executor.use_item(g, p, item_id, { by_ai = true })

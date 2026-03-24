@@ -1,6 +1,6 @@
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
 local function _new_game()
   return support.new_game({ map = default_map })
@@ -13,8 +13,6 @@ local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
 local chance_effects = support.chance_effects
 local _build_ui_port = support.build_ui_port
-local item_ids = gameplay_rules.item_ids
-
 local function _action_anim_count(game)
   local count = 0
   if game.turn.action_anim then
@@ -29,21 +27,66 @@ local function _test_chance_is_mandatory_effect_entrypoint()
   local idx, tile_ref = _first_tile_by_type(g.board, "chance")
   g:update_player_position(p, idx)
 
-  local called = { rand = 0 }
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+  local called = { next_int = 0 }
   local prev_lua_api = LuaAPI
   local lua_api = prev_lua_api or {}
-  local function rand()
-    called.rand = called.rand + 1
-    return 0
-  end
+  g.rng = {
+    next_int = function(_, min, max)
+      called.next_int = called.next_int + 1
+      _assert_eq(min, 1, "chance draw should start at 1")
+      assert(max > 0, "chance draw should use a positive upper bound")
+      return 1
+    end,
+  }
   _with_patches({
     { key = "LuaAPI", value = lua_api },
-    { target = lua_api, key = "rand", value = rand },
+    { target = lua_api, key = "rand", value = function()
+      error("chance draw should not call LuaAPI.rand")
+    end },
   }, function()
     _resolve_landing(g, p, tile_ref, {})
   end)
 
-  assert(called.rand > 0, "chance logic was executed (LuaAPI.rand used)")
+  assert(called.next_int > 0, "chance logic should use injected rng")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "chance", "chance logic should queue a chance anim")
+  _assert_eq(g.turn.action_anim.card_id, 3001, "chance logic should pick the first card with deterministic rng")
+end
+
+local function _test_chance_draw_uses_injected_rng_and_ignores_lua_api_rand()
+  local g = _new_game()
+  local p = g:current_player()
+  local idx, tile_ref = _first_tile_by_type(g.board, "chance")
+  g:update_player_position(p, idx)
+
+  g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+  local rng_calls = {}
+  g.rng = {
+    next_int = function(_, min, max)
+      rng_calls[#rng_calls + 1] = { min = min, max = max }
+      return 1
+    end,
+  }
+
+  local prev_lua_api = LuaAPI
+  local lua_api = prev_lua_api or {}
+  local called_rand = 0
+  _with_patches({
+    { key = "LuaAPI", value = lua_api },
+    { target = lua_api, key = "rand", value = function()
+      called_rand = called_rand + 1
+      error("chance draw should not call LuaAPI.rand")
+    end },
+  }, function()
+    _resolve_landing(g, p, tile_ref, {})
+  end)
+
+  assert(#rng_calls == 1, "chance draw should use injected rng exactly once")
+  _assert_eq(rng_calls[1].min, 1, "chance draw should start from 1")
+  assert(rng_calls[1].max > 0, "chance draw should use a positive upper bound")
+  _assert_eq(called_rand, 0, "chance draw should not touch LuaAPI.rand")
+  assert(g.turn.action_anim and g.turn.action_anim.kind == "chance", "chance draw should queue a chance anim")
+  _assert_eq(g.turn.action_anim.card_id, 3001, "chance draw should pick the first card with deterministic rng")
 end
 
 local function _test_chance_move_backward_pass_market()
@@ -566,6 +609,7 @@ return {
   name = "chance",
   tests = {
     { name = "chance_is_mandatory_effect_entrypoint", run = _test_chance_is_mandatory_effect_entrypoint },
+    { name = "chance_draw_uses_injected_rng_and_ignores_lua_api_rand", run = _test_chance_draw_uses_injected_rng_and_ignores_lua_api_rand },
     { name = "chance_move_backward_pass_market", run = _test_chance_move_backward_pass_market },
     { name = "chance_move_backward_pass_intersection", run = _test_chance_move_backward_pass_intersection },
     { name = "chance_move_backward_queues_move_effect_anim", run = _test_chance_move_backward_queues_move_effect_anim },

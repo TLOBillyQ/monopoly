@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
-local gameplay_rules = require("src.config.gameplay.rules")
+local target_pick = require("src.config.gameplay.target_pick")
 local modal_state = require("src.ui.stores.modal_state")
 local host_runtime_ports = require("src.ui.runtime.host_bridge")
 local ui_nodes = require("src.ui.render.node_ops")
@@ -107,7 +107,7 @@ function _move_arrow(scene, option_id)
   if not pos then
     return
   end
-  local cfg = gameplay_rules.target_pick or {}
+  local cfg = target_pick or {}
   local y_offset = cfg.arrow_height_offset or cfg.marker_height_offset or 1.6
   if type(arrow.set_position) == "function" then
     arrow.set_position(_offset_pos(pos, y_offset))

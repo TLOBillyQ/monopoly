@@ -1,5 +1,6 @@
 local items_cfg = require("src.config.content.items")
-local gameplay_rules = require("src.config.gameplay.rules")
+local debug_flags = require("src.config.gameplay.debug_flags")
+local timing = require("src.config.gameplay.timing")
 local logger = require("src.core.utils.logger")
 local auto_play_port = require("src.rules.ports.auto_play")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
@@ -89,7 +90,7 @@ local function _is_auto_popup_owner(game, state)
 end
 
 local function _is_auto_popup_waiting(game, state, ui_sync_ports)
-  local min_popup_visible = gameplay_rules.auto_decision_delay_seconds or 0
+  local min_popup_visible = timing.auto_decision_delay_seconds or 0
   if min_popup_visible <= 0 then
     return false
   end
@@ -181,7 +182,7 @@ local function _configure_environment(state, game, ports)
   paid_currency_bridge.setup_for_game(game)
   market_purchase.setup_for_game(game)
   state_ports.install_event_handlers(game, logger, state)
-  logger.set_info_per_turn_limit(gameplay_rules.info_log_per_turn_limit)
+  logger.set_info_per_turn_limit(debug_flags.info_log_per_turn_limit)
   logger.set_info_turn_provider(function() return game.turn and game.turn.turn_count end)
 end
 local function _configure_pending_choice(state, game, ports)

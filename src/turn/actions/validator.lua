@@ -128,6 +128,51 @@ local function _build_choice_select_action(choice, action, item_id)
   }
 end
 
+local function _resolve_item_slot_resolution(item_slot_source, state, action, game)
+  if not (action and action.id and string.match(action.id, "^item_slot_(%d+)$")) then
+    return {
+      ok = false,
+      reason = "invalid_action",
+    }
+  end
+
+  local runtime_game = _resolve_runtime_game(state, game)
+  local choice = _resolve_item_phase_choice(state, runtime_game)
+  if not choice then
+    return {
+      ok = false,
+      reason = "missing_choice",
+    }
+  end
+
+  local item_id = _resolve_selected_item_id(item_slot_source, action)
+  if not item_id then
+    return {
+      ok = false,
+      reason = "missing_item_id",
+    }
+  end
+
+  if not _validate_item_phase_option(choice, item_id) then
+    return {
+      ok = false,
+      reason = "invalid_item_option",
+    }
+  end
+
+  if not _validate_item_phase_availability(runtime_game, choice, action.actor_role_id, item_id) then
+    return {
+      ok = false,
+      reason = "item_slot_denied_by_availability",
+    }
+  end
+
+  return {
+    ok = true,
+    action = _build_choice_select_action(choice, action, item_id),
+  }
+end
+
 function validator.resolve_gate_state(state, ui_sync_ports)
   local gate = turn_action_gate.resolve_gate_state(
     ui_sync_ports and type(ui_sync_ports.resolve_ui_gate) == "function" and ui_sync_ports.resolve_ui_gate(state) or nil
@@ -223,25 +268,16 @@ function validator.validate_choice_action(game, action, choice)
 end
 
 function validator.resolve_item_slot_action(item_slot_source, state, action, game)
-  if not (action and action.id and string.match(action.id, "^item_slot_(%d+)$")) then
+  local result = _resolve_item_slot_resolution(item_slot_source, state, action, game)
+  if result.reason == "invalid_action" then
     return nil
   end
-  local runtime_game = _resolve_runtime_game(state, game)
-  local choice = _resolve_item_phase_choice(state, runtime_game)
-  if not choice then
+  if not result.ok then
     return { ok = false }
   end
-  local item_id = _resolve_selected_item_id(item_slot_source, action)
-  if not item_id then
-    return { ok = false }
-  end
-  if not _validate_item_slot_action(runtime_game, choice, action, item_id) then
-    return { ok = false }
-  end
-  return {
-    ok = true,
-    action = _build_choice_select_action(choice, action, item_id),
-  }
+  return result
 end
+
+validator._resolve_item_slot_resolution = _resolve_item_slot_resolution
 
 return validator

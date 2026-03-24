@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local number_utils = require("src.core.utils.number_utils")
 local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
 
@@ -12,7 +12,7 @@ end
 
 function turn_decision.decide_choice_action(game, choice, pending_action, opts)
   opts = opts or {}
-  local min_visible = gameplay_rules.auto_decision_delay_seconds or 0
+  local min_visible = timing.auto_decision_delay_seconds or 0
   local elapsed = opts.elapsed_seconds or 0
   local action = choice_auto_policy.decide(game, nil, choice, {
     mode = "wait_choice",

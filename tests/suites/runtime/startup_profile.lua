@@ -1,3 +1,6 @@
+local bootstrap = require("tests.bootstrap")
+bootstrap.install_package_paths()
+
 local support = require("support.runtime_support")
 local with_patches = support.with_patches
 local app = support.app
@@ -8,13 +11,50 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local startup_bootstrap = require("src.app.bootstrap.startup_bootstrap")
 local startup_profile_source = require("src.app.bootstrap.startup_profile_source")
 local runtime_refs = require("src.config.content.runtime_refs")
-local gameplay_rules = require("src.config.gameplay.rules")
+local debug_flags = require("src.config.gameplay.debug_flags")
 
 local function _reload_module(module_name, reset_module_names)
   for _, name in ipairs(reset_module_names or {}) do
     package.loaded[name] = nil
   end
   return require(module_name)
+end
+
+local function _capture_local_function(file_path, local_name)
+  local chunk = assert(loadfile(file_path))
+  local captured = nil
+  local previous_hook, previous_mask, previous_count = debug.gethook()
+
+  local function hook()
+    for index = 1, 64 do
+      local name, value = debug.getlocal(2, index)
+      if not name then
+        break
+      end
+      if name == local_name then
+        captured = value
+        if previous_hook == nil then
+          debug.sethook()
+        else
+          debug.sethook(previous_hook, previous_mask, previous_count)
+        end
+        return
+      end
+    end
+  end
+
+  debug.sethook(hook, "l")
+  local ok, result = pcall(chunk)
+  if previous_hook == nil then
+    debug.sethook()
+  else
+    debug.sethook(previous_hook, previous_mask, previous_count)
+  end
+  if not ok then
+    error(result)
+  end
+  assert(captured ~= nil, "missing local helper: " .. tostring(local_name))
+  return captured, result
 end
 
 local function _build_role(role_id)
@@ -167,6 +207,42 @@ local function _test_raw_test_profiles_reload_copies_meta_into_profile_table()
   assert(bankruptcy.goal == "bankruptcy_rent_resolution", "raw profile should copy meta goal")
   assert(type(bankruptcy.bootstrap) == "table", "raw profile should attach bootstrap payload")
   assert(bankruptcy.bootstrap.players[1].cash == 3000, "raw profile should keep bootstrap content")
+end
+
+local function _test_raw_test_profiles_profile_factory_copies_nested_meta_and_bootstrap()
+  local profile_factory = _capture_local_function("src/config/testing/test_profiles.lua", "_profile")
+  local meta = {
+    group = "custom_group",
+    nested = {
+      marker = "alpha",
+    },
+    owner_tests = { "runtime.test_profiles" },
+  }
+  local bootstrap = {
+    players = {
+      [1] = {
+        cash = 123,
+      },
+    },
+  }
+  local profile = profile_factory(meta, bootstrap)
+
+  meta.group = "mutated_group"
+  meta.nested.marker = "beta"
+  bootstrap.players[1].cash = 456
+
+  assert(profile.group == "custom_group", "profile factory should copy top-level meta fields")
+  assert(profile.nested.marker == "alpha", "profile factory should copy nested meta tables")
+  assert(profile.bootstrap.players[1].cash == 123, "profile factory should copy bootstrap tables")
+
+  local empty_profile = profile_factory({ group = "empty_bootstrap" })
+  assert(type(empty_profile.bootstrap) == "table", "profile factory should default bootstrap to a table")
+  assert(next(empty_profile.bootstrap) == nil, "profile factory should default bootstrap to an empty table")
+  empty_profile.bootstrap.flag = true
+
+  local another_empty_profile = profile_factory({ group = "another_empty_bootstrap" })
+  assert(another_empty_profile.bootstrap.flag == nil,
+    "profile factory should not share default bootstrap tables")
 end
 
 local function _test_test_profile_resolver_returns_fresh_profile_copies()
@@ -332,7 +408,7 @@ local function _test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_r
   _assert_ai_map_has_no_positive_slot_keys(created_opts.ai, 4)
 end
 
-local function _reload_app_init_with_stubs(startup)
+local function _reload_app_init_with_stubs(startup, runner)
   local capture = {}
   local state = {
     ui = {},
@@ -364,6 +440,7 @@ local function _reload_app_init_with_stubs(startup)
       value = {
         install = function()
           capture.runtime_install_called = true
+          capture.runtime_install_call_count = (capture.runtime_install_call_count or 0) + 1
         end,
       },
     },
@@ -372,6 +449,7 @@ local function _reload_app_init_with_stubs(startup)
       key = "src.presentation.runtime.state_factory",
       value = {
         build_state = function(get_game, opts)
+          capture.startup_state_factory_call_count = (capture.startup_state_factory_call_count or 0) + 1
           capture.startup_get_game = get_game
           capture.startup_opts = opts
           return state
@@ -429,7 +507,7 @@ local function _reload_app_init_with_stubs(startup)
         end,
       },
     },
-    { target = package.loaded, key = "src.config.gameplay.rules", value = gameplay_rules },
+    { target = package.loaded, key = "src.config.gameplay.debug_flags", value = debug_flags },
     {
       key = "GlobalAPI",
       value = {
@@ -449,7 +527,10 @@ local function _reload_app_init_with_stubs(startup)
       end,
     },
   }, function()
-    require("src.app.bootstrap")
+    local bootstrap = require("src.app.bootstrap")
+    if type(runner) == "function" then
+      runner(capture, bootstrap, state)
+    end
   end, { skip_runtime_context_refresh = true })
 
   package.loaded["src.app.bootstrap"] = nil
@@ -457,15 +538,38 @@ local function _reload_app_init_with_stubs(startup)
   return capture
 end
 
-local function _test_app_init_wires_runtime_and_debug_providers()
-  gameplay_rules.debug_log_enabled = true
+local function _test_app_init_requires_explicit_init_and_runs_once()
+  debug_flags.debug_log_enabled = true
   local capture = _reload_app_init_with_stubs({
     profile_name = "market",
-  })
+  }, function(capture, bootstrap)
+    assert(type(bootstrap) == "table", "bootstrap module should export a table")
+    assert(type(bootstrap.init) == "function", "bootstrap module should expose init")
+    assert(capture.runtime_install_call_count == nil, "require should not auto-start bootstrap")
+    bootstrap.init()
+    assert(capture.runtime_install_call_count == 1, "first init should install runtime once")
+    assert(capture.startup_state_factory_call_count == 1, "first init should build state once")
+    bootstrap.init()
+    assert(capture.runtime_install_call_count == 1, "second init should not reinstall runtime")
+    assert(capture.startup_state_factory_call_count == 1, "second init should not rebuild state")
+  end)
+
+  assert(capture.runtime_install_called == true, "init should install runtime")
+  assert(capture.startup_opts.profile_name == "market", "init should pass resolved startup profile")
+  assert(debug_flags.debug_log_enabled == true, "startup should keep gameplay debug log config unchanged")
+end
+
+local function _test_app_init_wires_runtime_and_debug_providers()
+  debug_flags.debug_log_enabled = true
+  local capture = _reload_app_init_with_stubs({
+    profile_name = "market",
+  }, function(capture, bootstrap)
+    bootstrap.init()
+  end)
 
   assert(capture.runtime_install_called == true, "app init should install runtime")
   assert(capture.startup_opts.profile_name == "market", "app init should pass resolved startup profile")
-  assert(gameplay_rules.debug_log_enabled == true, "startup should keep gameplay debug log config unchanged")
+  assert(debug_flags.debug_log_enabled == true, "startup should keep gameplay debug log config unchanged")
   assert(type(capture.tip_runtime.presenter) == "function", "tip presenter should be configured")
   assert(type(capture.tip_runtime.scheduler) == "function", "tip scheduler should be configured")
   with_patches({
@@ -517,7 +621,7 @@ local function _test_app_init_wires_runtime_and_debug_providers()
 end
 
 local function _test_app_init_keeps_scheduler_fallback()
-  gameplay_rules.debug_log_enabled = true
+  debug_flags.debug_log_enabled = true
   local capture = {}
   local state = { ui = {} }
   local tip_queue_stub = {
@@ -554,15 +658,16 @@ local function _test_app_init_keeps_scheduler_fallback()
         end,
       },
     },
-    { target = package.loaded, key = "src.config.gameplay.rules", value = gameplay_rules },
+    { target = package.loaded, key = "src.config.gameplay.debug_flags", value = debug_flags },
     { key = "GlobalAPI", value = {} },
     { key = "SetTimeOut", value = nil },
   }, function()
-    require("src.app.bootstrap")
+    local bootstrap = require("src.app.bootstrap")
+    bootstrap.init()
   end, { skip_runtime_context_refresh = true })
 
   package.loaded["src.app.bootstrap"] = nil
-  assert(gameplay_rules.debug_log_enabled == true, "startup should keep debug logs enabled")
+  assert(debug_flags.debug_log_enabled == true, "startup should keep debug logs enabled")
   assert(capture.tip_runtime.presenter("tip", 1) == false, "tip presenter should fall back when GlobalAPI is missing")
   local called = false
   assert(capture.tip_runtime.scheduler(0.5, function() called = true end) == true,
@@ -570,6 +675,68 @@ local function _test_app_init_keeps_scheduler_fallback()
   assert(called == true, "scheduler fallback should invoke callback")
   assert(capture.event_provider() == false and capture.anim_provider() == false,
     "providers should stay disabled when ui debug flags are absent")
+end
+
+local function _test_presentation_install_delegates_to_app_bootstrap()
+  local capture = {
+    app_init_call_count = 0,
+  }
+
+  with_patches({
+    { target = package.loaded, key = "src.presentation.runtime.install", value = nil },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap",
+      value = {
+        init = function()
+          capture.app_init_call_count = capture.app_init_call_count + 1
+          return "bootstrap_state"
+        end,
+      },
+    },
+  }, function()
+    local presentation_install = require("src.presentation.runtime.install")
+    assert(type(presentation_install) == "table", "presentation install module should export a table")
+    assert(type(presentation_install.install) == "function", "presentation install module should expose install")
+    assert(capture.app_init_call_count == 0, "require should not auto-start presentation install")
+    assert(presentation_install.install() == "bootstrap_state",
+      "presentation install should forward to app bootstrap init")
+  end, { skip_runtime_context_refresh = true })
+
+  assert(capture.app_init_call_count == 1, "presentation install should call app bootstrap init once")
+end
+
+local function _test_main_lua_calls_presentation_install()
+  local capture = {
+    presentation_install_call_count = 0,
+  }
+
+  with_patches({
+    {
+      target = package.loaded,
+      key = "src.presentation.runtime.install",
+      value = {
+        install = function()
+          capture.presentation_install_call_count = capture.presentation_install_call_count + 1
+          return "presentation_state"
+        end,
+      },
+    },
+    {
+      target = package.loaded,
+      key = "src.app.bootstrap",
+      value = {
+        init = function()
+          error("main.lua should not call src.app.bootstrap directly")
+        end,
+      },
+    },
+  }, function()
+    local chunk = assert(loadfile("main.lua"))
+    assert(chunk() == nil, "main.lua should not return a value")
+  end, { skip_runtime_context_refresh = true })
+
+  assert(capture.presentation_install_call_count == 1, "main.lua should call presentation install once")
 end
 
 return {
@@ -580,6 +747,10 @@ return {
     { name = "startup_policy_accepts_explicit_profile_override", run = _test_startup_policy_accepts_explicit_profile_override },
     { name = "startup_policy_accepts_generated_profile_module", run = _test_startup_policy_accepts_generated_profile_module },
     { name = "raw_test_profiles_reload_copies_meta_into_profile_table", run = _test_raw_test_profiles_reload_copies_meta_into_profile_table },
+    {
+      name = "raw_test_profiles_profile_factory_copies_nested_meta_and_bootstrap",
+      run = _test_raw_test_profiles_profile_factory_copies_nested_meta_and_bootstrap,
+    },
     { name = "test_profile_resolver_returns_fresh_profile_copies", run = _test_test_profile_resolver_returns_fresh_profile_copies },
     {
       name = "test_profile_resolver_default_bootstrap_is_empty_and_not_shared",
@@ -589,7 +760,13 @@ return {
     { name = "game_startup_real_roles_stay_human_by_default", run = _test_game_startup_real_roles_stay_human_by_default },
     { name = "game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs", run = _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs },
     { name = "game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only", run = _test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only },
+    { name = "app_init_requires_explicit_init_and_runs_once", run = _test_app_init_requires_explicit_init_and_runs_once },
     { name = "app_init_wires_runtime_and_debug_providers", run = _test_app_init_wires_runtime_and_debug_providers },
     { name = "app_init_keeps_scheduler_fallback", run = _test_app_init_keeps_scheduler_fallback },
+    {
+      name = "presentation_install_delegates_to_app_bootstrap",
+      run = _test_presentation_install_delegates_to_app_bootstrap,
+    },
+    { name = "main_lua_calls_presentation_install", run = _test_main_lua_calls_presentation_install },
   },
 }

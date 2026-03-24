@@ -97,7 +97,4 @@ function state_adapter.build_base_output_ports()
   return state_adapter.build_runtime_output_ports()
 end
 
-function state_adapter.fill_output_defaults()
-end
-
 return state_adapter

@@ -1,8 +1,12 @@
+local bootstrap = require("tests.bootstrap")
+bootstrap.install_package_paths()
+
 local bankruptcy = require("src.rules.endgame.bankruptcy")
 local session = require("src.turn.timing.session")
 local post_effects = require("src.rules.items.post_effects")
 local strategy = require("src.rules.items.strategy")
 local ring_map_builder = require("src.config.content.maps.ring_map_builder")
+local item_ids = require("src.config.gameplay.item_ids")
 
 local function _reload_module(module_name, overrides, fn)
   local original = {}
@@ -156,8 +160,7 @@ local function _test_apply_target_share_wealth()
   }
   local user = { id = 1, name = "User" }
   local target = { id = 2, name = "Target" }
-  local gameplay_rules = require("src.config.gameplay.rules")
-  local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.share_wealth, target, {})
+  local result = post_effects.apply_target(game, user, item_ids.share_wealth, target, {})
   assert(result == true, "should return true")
   assert(user.cash == 2000, "user should have half of total")
   assert(target.cash == 2000, "target should have other half")
@@ -174,8 +177,7 @@ local function _test_apply_target_invite_deity()
   }
   local user = { id = 1, name = "User", status = {} }
   local target = { id = 2, name = "Target", status = { deity = { type = "rich", remaining = 3 } } }
-  local gameplay_rules = require("src.config.gameplay.rules")
-  local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.invite_deity, target, {})
+  local result = post_effects.apply_target(game, user, item_ids.invite_deity, target, {})
   assert(result == true, "should return true")
   assert(target.status.deity == nil, "target should lose deity")
   assert(user.status.deity.type == "rich", "user should gain deity")
@@ -189,8 +191,7 @@ local function _test_apply_target_poor()
   }
   local user = { id = 1, name = "User" }
   local target = { id = 2, name = "Target", status = {} }
-  local gameplay_rules = require("src.config.gameplay.rules")
-  local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.poor, target, {})
+  local result = post_effects.apply_target(game, user, item_ids.poor, target, {})
   assert(result == true, "should return true")
   assert(target.status.deity.type == "poor", "target should have poor deity")
 end
@@ -209,7 +210,6 @@ local function _test_try_use_item_cond_false_returns_nil()
 end
 
 local function _test_try_use_item_no_inventory_returns_nil()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local game = { turn = { phase = "pre_action" } }
   local player = {
     id = 1,
@@ -220,20 +220,18 @@ local function _test_try_use_item_no_inventory_returns_nil()
       end,
     },
   }
-  local result = strategy._try_use_item(game, player, gameplay_rules.item_ids.dice_multiplier, nil, false)
+  local result = strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, false)
   assert(result == nil, "should return nil when item not in inventory")
 end
 
 local function _test_try_use_item_not_ai_usable_returns_nil()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local game = { turn = { phase = "post_action" } }
   local player = { id = 1, status = { inventory = {} } }
-  local result = strategy._try_use_item(game, player, gameplay_rules.item_ids.dice_multiplier, nil, false)
+  local result = strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, false)
   assert(result == nil, "should return nil when item not AI-usable in phase")
 end
 
 local function _test_try_use_item_returns_waiting_payload()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local inventory_module = require("src.rules.items.inventory")
   local executor_module = require("src.rules.items.executor")
   local original_cfg = inventory_module.cfg
@@ -251,8 +249,8 @@ local function _test_try_use_item_returns_waiting_payload()
 
   local ok, err = pcall(function()
     local game = { turn = { phase = "pre_action" } }
-    local player = { id = 1, status = { inventory = { gameplay_rules.item_ids.dice_multiplier } } }
-    local result = strategy._try_use_item(game, player, gameplay_rules.item_ids.dice_multiplier, nil, true)
+    local player = { id = 1, status = { inventory = { item_ids.dice_multiplier } } }
+    local result = strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, true)
     assert(type(result) == "table", "should return waiting table")
     assert(result.source == "test", "should preserve executor payload")
   end)
@@ -266,7 +264,6 @@ local function _test_try_use_item_returns_waiting_payload()
 end
 
 local function _test_try_use_item_returns_nil_for_non_waiting_result()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local inventory_module = require("src.rules.items.inventory")
   local executor_module = require("src.rules.items.executor")
   local original_cfg = inventory_module.cfg
@@ -280,8 +277,8 @@ local function _test_try_use_item_returns_nil_for_non_waiting_result()
 
   local ok, err = pcall(function()
     local game = { turn = { phase = "pre_action" } }
-    local player = { id = 1, status = { inventory = { gameplay_rules.item_ids.dice_multiplier } } }
-    local result = strategy._try_use_item(game, player, gameplay_rules.item_ids.dice_multiplier, nil, false)
+    local player = { id = 1, status = { inventory = { item_ids.dice_multiplier } } }
+    local result = strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, false)
     assert(result == nil, "should ignore non-waiting executor result")
   end)
 
@@ -295,7 +292,6 @@ end
 
 -- Tests for post_effects.apply_target tax item effect (CRAP=12.00, coverage=0%)
 local function _test_apply_target_tax_normal()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local constants = require("src.config.content.constants")
   local Inventory = require("src.player.actions.inventory")
   local game = {
@@ -307,13 +303,12 @@ local function _test_apply_target_tax_normal()
   }
   local user = { id = 1, name = "User" }
   local target = { id = 2, name = "Target", status = {}, cash = 1000, inventory = Inventory:new({ constants = constants }) }
-  local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.tax, target, {})
+  local result = post_effects.apply_target(game, user, item_ids.tax, target, {})
   assert(result == true, "should return true")
   assert(target.cash == 500, "target should lose 50% of cash")
 end
 
 local function _test_apply_target_tax_with_angel()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local game = {
     player_has_deity = function(self, player, deity)
       return deity == "angel"
@@ -321,12 +316,11 @@ local function _test_apply_target_tax_with_angel()
   }
   local user = { id = 1, name = "User" }
   local target = { id = 2, name = "Target", status = {} }
-  local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.tax, target, {})
+  local result = post_effects.apply_target(game, user, item_ids.tax, target, {})
   assert(result == true, "should return true when target has angel")
 end
 
 local function _test_apply_target_tax_with_tax_free()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local constants = require("src.config.content.constants")
   local Inventory = require("src.player.actions.inventory")
   local inventory = require("src.rules.items.inventory")
@@ -336,16 +330,15 @@ local function _test_apply_target_tax_with_tax_free()
   local user = { id = 1, name = "User" }
   local target = { id = 2, name = "Target", status = {}, inventory = Inventory:new({ constants = constants }) }
   -- Give target a tax_free item
-  inventory.give(target, gameplay_rules.item_ids.tax_free)
-  local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.tax, target, {})
+  inventory.give(target, item_ids.tax_free)
+  local result = post_effects.apply_target(game, user, item_ids.tax, target, {})
   assert(result == true, "should return true when target uses tax_free")
   -- Tax_free item should be consumed
-  assert(inventory.find_index(target, gameplay_rules.item_ids.tax_free) == nil, "tax_free should be consumed")
+  assert(inventory.find_index(target, item_ids.tax_free) == nil, "tax_free should be consumed")
 end
 
 -- Tests for post_effects.apply_target exile item effect
 local function _test_apply_target_exile()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local support = require("support.domain_support")
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   game.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
@@ -354,7 +347,7 @@ local function _test_apply_target_exile()
   local target = game.players[2]
   target.position = 1
 
-  local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.exile, target, {})
+  local result = post_effects.apply_target(game, user, item_ids.exile, target, {})
   assert(result == true, "should return true")
   -- Target should be moved to mountain tile
   local mountain_idx = game.board:find_first_by_type("mountain")
@@ -365,7 +358,6 @@ end
 
 -- Tests for post_effects.apply_target send_poor item effect
 local function _test_apply_target_send_poor()
-  local gameplay_rules = require("src.config.gameplay.rules")
   local game = {
     set_player_deity = function(self, player, deity_type, remaining)
       player.status.deity = { type = deity_type, remaining = remaining }
@@ -376,7 +368,7 @@ local function _test_apply_target_send_poor()
   }
   local user = { id = 1, name = "User", status = { deity = { type = "poor", remaining = 3 } } }
   local target = { id = 2, name = "Target", status = {} }
-  local result = post_effects.apply_target(game, user, gameplay_rules.item_ids.send_poor, target, {})
+  local result = post_effects.apply_target(game, user, item_ids.send_poor, target, {})
   assert(result == true, "should return true")
   assert(target.status.deity.type == "poor", "target should have poor deity")
   assert(user.status.deity == nil, "user should lose poor deity")
@@ -480,8 +472,7 @@ end
 
 local function _test_market_context_entry_name_item_cfg_and_fallback()
   local context = require("src.rules.market.query.context")
-  local gameplay_rules = require("src.config.gameplay.rules")
-  local configured = context.entry_name({ kind = "item", product_id = gameplay_rules.item_ids.free_rent })
+  local configured = context.entry_name({ kind = "item", product_id = item_ids.free_rent })
   local fallback = context.entry_name({ kind = "item", product_id = 999999, name = "FallbackName" })
   assert(type(configured) == "string" and configured ~= "", "item entry should resolve configured item name")
   assert(fallback == "FallbackName", "unknown item should fallback to entry.name")
@@ -1064,12 +1055,26 @@ local function _test_ring_map_direction_rejects_missing_ids_and_non_adjacent_jum
   assert(type(err_missing_from) == "string" and string.find(err_missing_from, "missing from_id", 1, true),
     "ring map should explain missing from_id")
 
+  local ok_nil_from, err_nil_from = pcall(function()
+    return map.direction(nil, 22)
+  end)
+  assert(ok_nil_from == false, "ring map should reject nil from_id")
+  assert(type(err_nil_from) == "string" and string.find(err_nil_from, "missing from_id", 1, true),
+    "ring map should explain nil from_id")
+
   local ok_missing_to, err_missing_to = pcall(function()
     return map.direction(21, 999)
   end)
   assert(ok_missing_to == false, "ring map should reject missing to_id")
   assert(type(err_missing_to) == "string" and string.find(err_missing_to, "missing to_id", 1, true),
     "ring map should explain missing to_id")
+
+  local ok_nil_to, err_nil_to = pcall(function()
+    return map.direction(21, nil)
+  end)
+  assert(ok_nil_to == false, "ring map should reject nil to_id")
+  assert(type(err_nil_to) == "string" and string.find(err_nil_to, "missing to_id", 1, true),
+    "ring map should explain nil to_id")
 
   local ok_invalid_jump, err_invalid_jump = pcall(function()
     return map.direction(21, 23)

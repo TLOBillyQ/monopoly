@@ -4,7 +4,7 @@ local function _new_game()
   return support.new_game({ map = default_map })
 end
 local _assert_eq = support.assert_eq
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local item_strategy = require("src.rules.items.strategy")
 local effect_pipeline = require("src.rules.effects.effect_pipeline")
 local effect_runner = require("src.rules.effects.effect_runner")
@@ -176,7 +176,7 @@ end
 
 -- Characterization tests for strategy helper functions (T4)
 local function _test_ai_can_use_item_returns_true_for_mine_in_pre_action_and_post_action()
-  local item_id = gameplay_rules.item_ids.mine
+  local item_id = item_ids.mine
   local result_pre = item_strategy._ai_can_use_item(item_id, "pre_action")
   _assert_eq(result_pre, true, "mine should be usable in pre_action via declared offer window")
 
@@ -186,7 +186,7 @@ end
 
 local function _test_ai_can_use_item_uses_offer_in_phases_for_other_items()
   -- clear_obstacles declares pre_action in offer_in_phases
-  local item_id = gameplay_rules.item_ids.clear_obstacles
+  local item_id = item_ids.clear_obstacles
   local result_pre = item_strategy._ai_can_use_item(item_id, "pre_action")
   _assert_eq(result_pre, true, "clear_obstacles should be usable in pre_action")
 
@@ -229,7 +229,7 @@ local function _test_has_target_player_returns_true_when_candidates_exist()
   local g = _new_game()
   local p = g:current_player()
   -- exile card needs another player to target
-  local item_id = gameplay_rules.item_ids.exile
+  local item_id = item_ids.exile
 
   -- Mock target_candidates to return valid candidates
   support.with_patches({
@@ -249,7 +249,7 @@ end
 local function _test_has_target_player_returns_false_when_no_candidates()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.exile
+  local item_id = item_ids.exile
 
   -- Mock target_candidates to return empty candidates
   support.with_patches({
@@ -269,7 +269,7 @@ end
 local function _test_try_use_item_returns_nil_when_cond_fails()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.clear_obstacles
+  local item_id = item_ids.clear_obstacles
 
   local result = item_strategy._try_use_item(g, p, item_id, function() return false end, false)
   _assert_eq(result, nil, "should return nil when condition fails")
@@ -278,7 +278,7 @@ end
 local function _test_try_use_item_returns_nil_when_item_not_in_inventory()
   local g = _new_game()
   local p = g:current_player()
-  local item_id = gameplay_rules.item_ids.clear_obstacles
+  local item_id = item_ids.clear_obstacles
 
   -- Ensure item is not in inventory by clearing all slots
   if p.inventory and p.inventory.slots then
@@ -294,7 +294,7 @@ end
 local function _test_try_clear_obstacles_returns_result_when_obstacles_found()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.clear_obstacles })
+  p.inventory:add({ id = item_ids.clear_obstacles })
 
   -- Place a roadblock ahead
   local current_pos = p.position
@@ -320,7 +320,7 @@ end
 local function _test_try_clear_obstacles_returns_nil_when_no_obstacles()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.clear_obstacles })
+  p.inventory:add({ id = item_ids.clear_obstacles })
 
   -- Ensure no obstacles
   for i = 1, g.board:length() do
@@ -344,7 +344,7 @@ end
 local function _test_try_remote_dice_returns_nil_when_no_dice_value_picked()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+  p.inventory:add({ id = item_ids.remote_dice })
 
   local auto_play_port = require("src.rules.ports.auto_play")
   support.with_patches({
@@ -364,7 +364,7 @@ end
 local function _test_try_roadblock_returns_nil_when_no_target_picked()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.roadblock })
+  p.inventory:add({ id = item_ids.roadblock })
 
   local auto_play_port = require("src.rules.ports.auto_play")
   support.with_patches({
@@ -422,8 +422,8 @@ local function _test_try_deity_items_tries_rich_then_angel()
   end
 
   -- Add both rich and angel items
-  p.inventory:add({ id = gameplay_rules.item_ids.rich })
-  p.inventory:add({ id = gameplay_rules.item_ids.angel })
+  p.inventory:add({ id = item_ids.rich })
+  p.inventory:add({ id = item_ids.angel })
 
   local used_items = {}
   local executor = require("src.rules.items.executor")

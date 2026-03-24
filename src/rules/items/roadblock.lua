@@ -1,12 +1,12 @@
 local logger = require("src.core.utils.logger")
 local tile = require("src.rules.board.tile")
 local board_query = require("src.rules.board.query")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number_utils")
 local facing_policy = require("src.rules.board.facing_policy")
 local roadblock = {}
-local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
 local ui_candidate_slots = 7
 
 local function _make_candidate(board, player, idx, dir, step, seen)

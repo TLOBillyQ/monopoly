@@ -9,6 +9,11 @@ local gameplay_runtime_bootstrap = require("src.presentation.runtime.gameplay_ru
 local gameplay_loop = require("src.turn.loop")
 local startup_policy = require("src.app.bootstrap.startup_policy")
 
+local M = {}
+local initialized = false
+local current_game_ref = { nil }
+local state = nil
+
 local function _is_test_mode_enabled()
   if type(logger.is_test_mode) ~= "function" then
     return false
@@ -34,57 +39,6 @@ local function _configure_game_time_logger(game_api)
     logger.reset_time_runtime()
   end
 end
-
-tip_queue.configure_runtime({
-  presenter = function(text, duration)
-    if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
-      return GlobalAPI.show_tips(text, duration)
-    end
-    return false
-  end,
-  scheduler = function(delay, fn)
-    if type(SetTimeOut) == "function" then
-      return SetTimeOut(delay, fn)
-    end
-    if fn then
-      fn()
-      return true
-    end
-    return false
-  end,
-  test_mode = _is_test_mode_enabled(),
-})
-
-_configure_game_time_logger(GameAPI)
-
-local current_game_ref = { nil }
-local startup = startup_policy.resolve(_G)
-logger.info(
-  "[Eggy]",
-  "startup policy:",
-  "build_mode=" .. tostring(startup.build_mode),
-  "resolved_profile=" .. tostring(startup.profile_name),
-  "profile_source=" .. tostring(startup.profile_source),
-  "profile_module=" .. tostring(startup.profile_module)
-)
-
-runtime_install.install()
-local auto_runner = startup_roster.build_auto_runner()
-local function _get_current_game()
-  return current_game_ref[1]
-end
-local state = state_factory.build_state(_get_current_game, {
-  profile_name = startup.profile_name,
-  build_game_factory = function(child_state)
-    return startup_roster.build_game_factory(child_state, {
-      build_mode = startup.build_mode,
-      profile_name = startup.profile_name,
-      profile_source = startup.profile_source,
-      profile_module = startup.profile_module,
-    })
-  end,
-  auto_runner = auto_runner,
-})
 
 local function _has_enabled_debug_role(enabled_by_role)
   for _, enabled in pairs(enabled_by_role or {}) do
@@ -112,16 +66,77 @@ local function _is_debug_log_enabled()
   return _has_enabled_debug_role(enabled_by_role)
 end
 
-logger.set_event_collection_enabled_provider(_is_debug_log_enabled)
-logger.set_anim_debug_enabled_provider(_is_debug_log_enabled)
-state.on_game_replaced = function(new_game)
-  current_game_ref[1] = new_game
-  gameplay_loop.set_game(state, new_game)
+function M.init()
+  if initialized then
+    return state
+  end
+
+  tip_queue.configure_runtime({
+    presenter = function(text, duration)
+      if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
+        return GlobalAPI.show_tips(text, duration)
+      end
+      return false
+    end,
+    scheduler = function(delay, fn)
+      if type(SetTimeOut) == "function" then
+        return SetTimeOut(delay, fn)
+      end
+      if fn then
+        fn()
+        return true
+      end
+      return false
+    end,
+    test_mode = _is_test_mode_enabled(),
+  })
+
+  _configure_game_time_logger(GameAPI)
+
+  local startup = startup_policy.resolve(_G)
+  logger.info(
+    "[Eggy]",
+    "startup policy:",
+    "build_mode=" .. tostring(startup.build_mode),
+    "resolved_profile=" .. tostring(startup.profile_name),
+    "profile_source=" .. tostring(startup.profile_source),
+    "profile_module=" .. tostring(startup.profile_module)
+  )
+
+  runtime_install.install()
+  local auto_runner = startup_roster.build_auto_runner()
+  local function _get_current_game()
+    return current_game_ref[1]
+  end
+  state = state_factory.build_state(_get_current_game, {
+    profile_name = startup.profile_name,
+    build_game_factory = function(child_state)
+      return startup_roster.build_game_factory(child_state, {
+        build_mode = startup.build_mode,
+        profile_name = startup.profile_name,
+        profile_source = startup.profile_source,
+        profile_module = startup.profile_module,
+      })
+    end,
+    auto_runner = auto_runner,
+  })
+
+  logger.set_event_collection_enabled_provider(_is_debug_log_enabled)
+  logger.set_anim_debug_enabled_provider(_is_debug_log_enabled)
+  state.on_game_replaced = function(new_game)
+    current_game_ref[1] = new_game
+    gameplay_loop.set_game(state, new_game)
+  end
+
+  runtime_event_bridge.install(state, function() return current_game_ref[1] end)
+  ui_bootstrap.install(state, current_game_ref, {
+    start_runtime = function(ctx_state, game_ref)
+      return gameplay_runtime_bootstrap.start(ctx_state, game_ref)
+    end,
+  })
+
+  initialized = true
+  return state
 end
 
-runtime_event_bridge.install(state, function() return current_game_ref[1] end)
-ui_bootstrap.install(state, current_game_ref, {
-  start_runtime = function(ctx_state, game_ref)
-    return gameplay_runtime_bootstrap.start(ctx_state, game_ref)
-  end,
-})
+return M

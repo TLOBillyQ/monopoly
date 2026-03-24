@@ -7,17 +7,16 @@ require "vendor.third_party.ClassUtils"
 
 local game = Class("Game")
 
-for key, fn in pairs(game_state_players) do
-  game[key] = fn
+local function _install_mixin(target, source, source_name)
+  for key, fn in pairs(source) do
+    assert(target[key] == nil, "game_state mixin collision: " .. tostring(source_name) .. "." .. tostring(key))
+    target[key] = fn
+  end
 end
 
-for key, fn in pairs(game_state_tiles) do
-  game[key] = fn
-end
-
-for key, fn in pairs(game_state_turn) do
-  game[key] = fn
-end
+_install_mixin(game, game_state_players, "players")
+_install_mixin(game, game_state_tiles, "board")
+_install_mixin(game, game_state_turn, "turn")
 
 game.check_victory = game_victory.check_victory
 

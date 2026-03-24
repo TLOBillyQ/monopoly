@@ -13,7 +13,8 @@ local land = require("src.turn.phases.land")
 local chance_cfg = require("src.config.content.chance_cards")
 local item_inventory = require("src.rules.items.inventory")
 local land_rules = require("src.rules.land.rules")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
+local timing = require("src.config.gameplay.timing")
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local move_followup = require("src.turn.phases.move_followup")
@@ -200,7 +201,7 @@ local function _test_item_landing_pushes_popup_on_success()
   assert(string.find(popups[1].body, p.name, 1, true), "item landing popup should include player name")
   assert(string.find(popups[1].body, "免费卡", 1, true), "item landing popup should include item name")
   assert(popups[1].image_ref == 2001, "item landing popup image_ref mismatch")
-  assert(popups[1].auto_close_seconds == gameplay_rules.action_anim_default_seconds, "item popup auto close mismatch")
+  assert(popups[1].auto_close_seconds == timing.action_anim_default_seconds, "item popup auto close mismatch")
 end
 
 local function _test_item_landing_full_inventory_no_duplicate_success_popup()
@@ -242,11 +243,20 @@ local function _test_chance_landing_pushes_popup()
   local p = g:current_player()
   local idx, tile_ref = _first_tile_by_type(g.board, "chance")
   g:update_player_position(p, idx)
+  g.rng = {
+    next_int = function(_, min, max)
+      assert(min == 1, "chance landing rng should start at 1")
+      assert(max > 0, "chance landing rng should use a positive upper bound")
+      return 1
+    end,
+  }
   local old_lua_api = LuaAPI
   local patched = old_lua_api or {}
   _with_patches({
     { key = "LuaAPI", value = patched },
-    { target = patched, key = "rand", value = function() return 0 end },
+    { target = patched, key = "rand", value = function()
+      error("chance landing should not call LuaAPI.rand")
+    end },
   }, function()
     local res = _resolve_landing(g, p, tile_ref, {})
     assert(not res, "chance landing should not wait")
@@ -257,7 +267,7 @@ local function _test_chance_landing_pushes_popup()
   assert(string.find(popups[1].body, p.name, 1, true), "chance landing popup should include player name")
   assert(string.find(popups[1].body, card_desc, 1, true), "chance landing popup should include card description")
   assert(popups[1].image_ref == chance_cfg[1].id, "chance landing popup image_ref mismatch")
-  assert(popups[1].auto_close_seconds == gameplay_rules.action_anim_default_seconds, "chance popup auto close mismatch")
+  assert(popups[1].auto_close_seconds == timing.action_anim_default_seconds, "chance popup auto close mismatch")
 end
 
 local function _test_upgrade_land_emits_tile_upgraded_event()
@@ -344,14 +354,14 @@ local function _test_execute_strong_card_pushes_item_card_popup()
   g:set_player_property(owner, tile_ref.id, true)
   g:set_tile_level(tile_ref, 1)
   g:set_player_cash(player, 100000)
-  player.inventory:add({ id = gameplay_rules.item_ids.strong })
+  player.inventory:add({ id = item_ids.strong })
 
   local res = land_rules.execute_strong_card(g, player.id, tile_ref.id)
 
   _assert_eq(res and res.ok, true, "strong card should execute successfully")
   _assert_eq(#popups, 1, "strong card should push one broadcast popup")
   _assert_eq(popups[1].kind, "item_card", "strong card broadcast should use item_card kind")
-  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.strong, "strong card broadcast image_ref mismatch")
+  _assert_eq(popups[1].image_ref, item_ids.strong, "strong card broadcast image_ref mismatch")
 end
 
 local function _test_execute_free_card_pushes_item_card_popup()
@@ -364,14 +374,14 @@ local function _test_execute_free_card_pushes_item_card_popup()
       popups[#popups + 1] = payload
     end,
   })
-  player.inventory:add({ id = gameplay_rules.item_ids.free_rent })
+  player.inventory:add({ id = item_ids.free_rent })
 
   local res = land_rules.execute_free_card(g, player.id, tile_ref.id)
 
   _assert_eq(res and res.ok, true, "free card should execute successfully")
   _assert_eq(#popups, 1, "free card should push one broadcast popup")
   _assert_eq(popups[1].kind, "item_card", "free card broadcast should use item_card kind")
-  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.free_rent, "free card broadcast image_ref mismatch")
+  _assert_eq(popups[1].image_ref, item_ids.free_rent, "free card broadcast image_ref mismatch")
 end
 
 local function _test_execute_tax_free_card_pushes_item_card_popup()
@@ -383,14 +393,14 @@ local function _test_execute_tax_free_card_pushes_item_card_popup()
       popups[#popups + 1] = payload
     end,
   })
-  player.inventory:add({ id = gameplay_rules.item_ids.tax_free })
+  player.inventory:add({ id = item_ids.tax_free })
 
   local res = land_rules.execute_tax_free_card(g, player.id)
 
   _assert_eq(res and res.ok, true, "tax_free card should execute successfully")
   _assert_eq(#popups, 1, "tax_free card should push one broadcast popup")
   _assert_eq(popups[1].kind, "item_card", "tax_free broadcast should use item_card kind")
-  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.tax_free, "tax_free broadcast image_ref mismatch")
+  _assert_eq(popups[1].image_ref, item_ids.tax_free, "tax_free broadcast image_ref mismatch")
 end
 
 local function _test_hospital_landing_emits_status_feedback_event()

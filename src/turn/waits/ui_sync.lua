@@ -3,6 +3,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local tick_timeout = require("src.turn.waits.timeout")
+local wait_log_once = require("src.turn.waits.log_once")
 local runtime_state = require("src.state.state_access.runtime_state")
 local turn_ui_sync_shared = require("src.core.ui_sync.turn_ui_sync_shared")
 local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
@@ -14,17 +15,10 @@ local function _build_log_prefix()
 end
 
 local function _log_once(state, level, key, ...)
-  assert(state ~= nil, "missing state")
-  local debug_runtime = runtime_state.ensure_debug_runtime(state)
-  assert(debug_runtime.log_once ~= nil, "missing state.debug_runtime.log_once")
-  if debug_runtime.log_once[key] then
-    return
-  end
-  debug_runtime.log_once[key] = true
   if level == "warn" then
-    logger.warn(...)
+    wait_log_once.warn(state, key, ...)
   else
-    logger.info(...)
+    wait_log_once.info(state, key, ...)
   end
 end
 

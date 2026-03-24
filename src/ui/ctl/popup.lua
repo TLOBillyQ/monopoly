@@ -1,22 +1,12 @@
 local role_avatar = require("src.ui.pres.role_avatar")
 local role_context = require("src.ui.pres.role_context")
+local with_client_role = require("src.core.utils.with_client_role")
 local runtime = require("src.ui.render.runtime_ui")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local canvas = require("src.ui.ctl.canvas_coordinator")
 local runtime_state = require("src.ui.runtime.state")
 local renderer = {}
 local _apply_node_image
-local function _with_client_role(role, fn)
-  if type(runtime.with_client_role) == "function" then
-    return runtime.with_client_role(role, fn)
-  end
-  runtime.set_client_role(role)
-  local ok, err = pcall(fn)
-  runtime.set_client_role(nil)
-  if not ok then
-    error(err)
-  end
-end
 local function _resolve_popup_image_key(state, payload)
   if not payload then
     return nil
@@ -117,7 +107,7 @@ end
 function renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canvas)
   local ui = state.ui
   runtime.for_each_role_or_global(function(role)
-    _with_client_role(role, function()
+    with_client_role(runtime, role, function()
       local current_model = runtime_state.get_ui_model(state)
       local ctx = role_context.resolve(role, current_model, { runtime = runtime })
       if _should_show_modal_for_ctx(ctx, kind) then

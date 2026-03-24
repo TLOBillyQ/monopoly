@@ -3,14 +3,14 @@ local tile = require("src.rules.board.tile")
 local monopoly_event = require("src.core.events.monopoly_events")
 local movement = require("src.rules.movement")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local vehicle_feature = require("src.rules.vehicle")
 local number_utils = require("src.core.utils.number_utils")
 local action_anim_port = require("src.core.ports.action_anim")
 
 local common = {}
 
-local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
 local tile_state = tile.get_state
 function common.emit_event(kind, payload)
   monopoly_event.emit(kind, payload or {})

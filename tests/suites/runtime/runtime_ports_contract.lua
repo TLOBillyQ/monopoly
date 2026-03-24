@@ -169,6 +169,34 @@ local function _test_runtime_install_builds_context_and_ports()
   _reset_runtime_contract_state()
 end
 
+local function _test_runtime_install_survives_game_api_refresh_error()
+  _reset_runtime_contract_state()
+  _with_patches({
+    {
+      key = "GameAPI",
+      value = {
+        random_int = function(min) return min end,
+        get_all_valid_roles = function()
+          error("boom")
+        end,
+      },
+    },
+    { key = "LuaAPI", value = _mock_lua_api() },
+  }, function()
+    local ok, err = pcall(function()
+      runtime_install.install()
+    end)
+    _assert_eq(ok, true, "runtime_install should ignore GameAPI role refresh errors")
+    local ctx = runtime_context.current()
+    assert(ctx ~= nil, "runtime_install should still set runtime context")
+    local roles = runtime_ports.resolve_roles()
+    _assert_eq(type(roles), "table", "runtime_ports should still resolve a table after refresh error")
+    _assert_eq(#roles, 0, "runtime_ports should fall back to an empty role list after refresh error")
+    _assert_eq(err, nil, "runtime_install should not return an error when refresh fails")
+  end)
+  _reset_runtime_contract_state()
+end
+
 local function _test_runtime_ports_resolve_roles_refreshes_empty_context_from_game_api()
   _reset_runtime_contract_state()
   local ctx = runtime_context.new({
@@ -186,6 +214,27 @@ local function _test_runtime_ports_resolve_roles_refreshes_empty_context_from_ga
     _assert_eq(roles[1].id, 9, "resolve_roles should return refreshed role id")
     _assert_eq(ctx.roles[1].id, 9, "resolve_roles should write refreshed roles back into context")
   end, { skip_runtime_context_refresh = true })
+  _reset_runtime_contract_state()
+end
+
+local function _test_game_factory_builds_rng_adapter_from_runtime_ports()
+  _reset_runtime_contract_state()
+  local calls = {}
+  _with_patches({
+    { target = runtime_ports, key = "rng_next_int", value = function(min, max)
+      calls[#calls + 1] = { min = min, max = max }
+      return max
+    end },
+  }, function()
+    local game = support.new_game({ ai = {} })
+    assert(type(game.rng) == "table", "compose_game should install game.rng")
+    assert(type(game.rng.next_int) == "function", "compose_game should expose rng next_int")
+    local value = game.rng:next_int(2, 7)
+    _assert_eq(value, 7, "game.rng should delegate to runtime_ports.rng_next_int")
+  end, { skip_runtime_context_refresh = true })
+  _assert_eq(#calls, 1, "game.rng should call runtime_ports.rng_next_int once")
+  _assert_eq(calls[1].min, 2, "game.rng should forward min bound")
+  _assert_eq(calls[1].max, 7, "game.rng should forward max bound")
   _reset_runtime_contract_state()
 end
 
@@ -362,6 +411,10 @@ return {
       run = _test_runtime_ports_resolve_roles_refreshes_empty_context_from_game_api,
     },
     {
+      name = "game_factory_builds_rng_adapter_from_runtime_ports",
+      run = _test_game_factory_builds_rng_adapter_from_runtime_ports,
+    },
+    {
       name = "runtime_ports_legacy_apis_are_removed",
       run = _test_runtime_ports_legacy_apis_are_removed,
     },
@@ -376,6 +429,10 @@ return {
     {
       name = "runtime_install_builds_context_and_ports",
       run = _test_runtime_install_builds_context_and_ports,
+    },
+    {
+      name = "runtime_install_survives_game_api_refresh_error",
+      run = _test_runtime_install_survives_game_api_refresh_error,
     },
     {
       name = "runtime_ports_resolve_role_uses_zero_arity_get_roleid_and_id_fallback",

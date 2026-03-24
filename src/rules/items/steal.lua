@@ -1,13 +1,13 @@
 local logger = require("src.core.utils.logger")
 local inventory = require("src.rules.items.inventory")
 local use_skip_choice = require("src.core.choice.use_skip_choice")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
+local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
 local tip_output = require("src.rules.ports.tip_output")
 
 local steal = {}
-local item_ids = gameplay_rules.item_ids
-local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local function _show_tip(game, text, dedupe_key)
   return tip_output.enqueue(game, {

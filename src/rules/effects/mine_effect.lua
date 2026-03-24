@@ -1,9 +1,9 @@
 local logger = require("src.core.utils.logger")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
 
 local mine_effect = {}
-local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local function _build_obstacle_chain_key(game, player, position)
   local turn = game and game.turn or nil

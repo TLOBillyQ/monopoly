@@ -124,9 +124,10 @@ local function _test_landing_visual_release_flushes_before_scheduler_advances_tu
 
   gameplay_loop.set_game(state, game)
   game.turn.phase = "wait_landing_visual"
-  game.turn.landing_visual_hold_active = true
-  game.turn.landing_visual_release_pending = true
-  landing_visual_hold.sync_state_from_game(state, game)
+  landing_visual_hold.start(game)
+  landing_visual_hold.mark_release_pending(game)
+  game.turn.landing_visual_hold_active = false
+  game.turn.landing_visual_release_pending = false
   landing_visual_hold.register_release_callback(state, "runtime_event", function()
     sequence[#sequence + 1] = "release"
   end)

@@ -1,4 +1,4 @@
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local number_utils = require("src.core.utils.number_utils")
 
 local tick_ui_gate = {}
@@ -31,7 +31,7 @@ function tick_ui_gate.resolve_modal_timeout_seconds(state, ui_sync_ports)
   if auto_close_seconds ~= nil and number_utils.is_numeric(auto_close_seconds) and auto_close_seconds > 0 then
     return auto_close_seconds
   end
-  local timeout = gameplay_rules.popup_auto_close_seconds
+  local timeout = timing.popup_auto_close_seconds
   if number_utils.is_numeric(timeout) and timeout > 0 then
     return timeout
   end

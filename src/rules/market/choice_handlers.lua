@@ -2,21 +2,11 @@ local market_service = require("src.rules.market")
 local choice_outcome = require("src.rules.market.choice.outcome")
 local number_utils = require("src.core.utils.number_utils")
 local market_context = require("src.rules.market.query.context")
+local availability = require("src.rules.items.availability")
 
 local market_choice_handler = {}
 local TAB_ITEM = "item"
 local TAB_SKIN = "skin"
-
-local function _copy_table(source)
-  local out = {}
-  if type(source) ~= "table" then
-    return out
-  end
-  for key, value in pairs(source) do
-    out[key] = value
-  end
-  return out
-end
 
 local function _normalize_market_tab(active_tab)
   if active_tab == TAB_ITEM or active_tab == TAB_SKIN then
@@ -34,13 +24,8 @@ local function _normalize_page_value(value)
 end
 
 local function _normalize_market_buy_meta(_, meta, choice_spec)
-  local normalized_meta = _copy_table(meta)
-  if normalized_meta.player_id ~= nil then
-    normalized_meta.player_id = assert(
-      number_utils.to_integer(normalized_meta.player_id),
-      tostring(choice_spec.kind) .. " requires numeric meta.player_id"
-    )
-  end
+  local normalized_meta = availability.copy_table(meta)
+  availability.normalize_integer_field(normalized_meta, "player_id", choice_spec.kind)
   normalized_meta.active_tab = _normalize_market_tab(normalized_meta.active_tab or choice_spec.active_tab)
   normalized_meta.page_index = _normalize_page_value(normalized_meta.page_index or choice_spec.page_index)
   normalized_meta.page_count = _normalize_page_value(normalized_meta.page_count or choice_spec.page_count)
@@ -64,11 +49,8 @@ local function _validate_market_buy_meta(game, meta)
 end
 
 local function _normalize_market_buy_action(_, _, action)
-  local normalized_action = _copy_table(action)
-  normalized_action.option_id = assert(
-    number_utils.to_integer(normalized_action.option_id),
-    "market_buy requires numeric action.option_id"
-  )
+  local normalized_action = availability.copy_table(action)
+  availability.normalize_integer_field(normalized_action, "option_id", "market_buy", "action", true)
   return normalized_action
 end
 

@@ -2,11 +2,10 @@ local tile = require("src.rules.board.tile")
 local roadblock = require("src.rules.items.roadblock")
 local demolish = require("src.rules.items.demolish")
 local pricing = require("src.rules.land.pricing")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local facing_policy = require("src.rules.board.facing_policy")
 
 local agent = {}
-local item_ids = gameplay_rules.item_ids
 local tile_state = tile.get_state
 
 local function _is_auto_player(player)
@@ -61,7 +60,7 @@ local function _simulate_landing(game, player, steps)
   return { idx = current, tile = board:get_tile(current), steps = steps }
 end
 
-local function _remote_priority_for_step_tile(tile_type, steps)
+local function _remote_priority_for_tile_type(tile_type, steps)
   local rank = remote_step_rank_by_type[tile_type]
   if not rank then
     return nil
@@ -88,7 +87,7 @@ local function _remote_priority(game, player, sim)
   if tile_ref.type == "land" then
     return _remote_priority_for_land(game, player, tile_ref, sim.steps)
   end
-  return _remote_priority_for_step_tile(tile_ref.type, sim.steps)
+  return _remote_priority_for_tile_type(tile_ref.type, sim.steps)
 end
 
 local function _is_better_remote_choice(best, rank, score_value)

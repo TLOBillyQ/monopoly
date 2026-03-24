@@ -1,12 +1,12 @@
 local logger = require("src.core.utils.logger")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local constants = require("src.config.content.constants")
 local inventory = require("src.rules.items.inventory")
 local presenter = require("src.rules.land.presenter")
 local steal = require("src.rules.items.steal")
 local number_utils = require("src.core.utils.number_utils")
 
-local popup_show_seconds = gameplay_rules.popup_auto_close_seconds or 1.0
+local popup_show_seconds = timing.popup_auto_close_seconds or 1.0
 
 local M = {}
 

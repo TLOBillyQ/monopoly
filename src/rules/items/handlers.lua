@@ -6,12 +6,12 @@ local number_utils = require("src.core.utils.number_utils")
 local roadblock = require("src.rules.items.roadblock")
 local remote_dice = require("src.rules.items.remote_dice")
 local demolish = require("src.rules.items.demolish")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
+local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
 
 local handlers = {}
-local item_ids = gameplay_rules.item_ids
-local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local function _resolve_apply_ok(res)
   if type(res) == "table" then

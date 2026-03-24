@@ -1,7 +1,7 @@
 local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
-local gameplay_rules = require("src.config.gameplay.rules")
+local board_geometry = require("src.config.gameplay.board_geometry")
 local runtime_state = require("src.state.state_access.runtime_state")
 local vec3 = require("fixtures.vec3")
 
@@ -70,12 +70,14 @@ local function _with_board_refresh_patches(extra_patches, fn)
   local anchors = require("src.ui.render.board.anchors")
   local startup_render = require("src.ui.render.board.startup_render")
   local player_units = require("src.ui.render.board.player_units")
-  local board_cfg = gameplay_rules.board
+  local board_cfg = {
+    player_min_ground_offset = board_geometry.player_min_ground_offset,
+  }
   local patches = {
     { target = anchors, key = "ensure_tile_anchors", value = function() end },
     { target = startup_render, key = "apply", value = function() end },
     { target = player_units, key = "ensure_player_units", value = function() end },
-    { target = gameplay_rules, key = "board", value = { player_min_ground_offset = 0.5 } },
+    { target = board_geometry, key = "player_min_ground_offset", value = 0.5 },
   }
   if type(extra_patches) == "table" then
     for _, patch in ipairs(extra_patches) do
@@ -84,7 +86,7 @@ local function _with_board_refresh_patches(extra_patches, fn)
   end
   _with_patches(patches, function()
     fn()
-    gameplay_rules.board = board_cfg
+    board_geometry.player_min_ground_offset = board_cfg.player_min_ground_offset
   end)
 end
 

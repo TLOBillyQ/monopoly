@@ -2030,6 +2030,55 @@ local _turn_script_final_tests = {
 
 local _item_choice_handler_t2_tests = {
   function()
+    local seen = {}
+    local result = item_preconsume_policy.each_option({
+      options = {
+        { id = "opt1", label = "A" },
+        "opt2",
+        { label = "ignored" },
+      },
+    }, function(option, option_id, index)
+      seen[#seen + 1] = {
+        option = option,
+        option_id = option_id,
+        index = index,
+      }
+    end)
+    assert(result == nil, "each_option should return nil when the visitor never stops iteration")
+    assert(seen[1].option_id == "opt1", "each_option should expose the first table option id")
+    assert(seen[2].option_id == "opt2", "each_option should expose string options directly")
+    assert(seen[3].option_id == seen[3].option, "each_option should fall back to the raw option when id is missing")
+  end,
+  function()
+    local seen = {}
+    local result = item_preconsume_policy.each_option({
+      options = {
+        { id = "opt1" },
+        "opt2",
+        { id = "opt3" },
+      },
+    }, function(option, option_id, index)
+      seen[#seen + 1] = {
+        option = option,
+        option_id = option_id,
+        index = index,
+      }
+      if index == 2 then
+        return option_id
+      end
+    end)
+    assert(result == "opt2", "each_option should stop when the visitor returns a value")
+    assert(#seen == 2, "each_option should stop visiting after a non-nil return")
+  end,
+  function()
+    assert(item_preconsume_policy.is_cancel_action({ type = "choice_cancel" }) == true,
+      "is_cancel_action should accept choice_cancel")
+    assert(item_preconsume_policy.is_cancel_action({ type = "choice_select" }) == false,
+      "is_cancel_action should reject non-cancel actions")
+    assert(item_preconsume_policy.is_cancel_action(nil) == false,
+      "is_cancel_action should reject nil actions")
+  end,
+  function()
     local decorated = item_preconsume_policy.decorate_followup_choice_spec(nil, {
       item_id = 2005,
       player_id = 7,
@@ -2046,6 +2095,33 @@ local _item_choice_handler_t2_tests = {
     assert(choice_spec.allow_cancel == false, "decorate_followup_choice_spec should disable cancel")
     assert(choice_spec.cancel_label == nil, "decorate_followup_choice_spec should clear cancel label")
     assert(choice_spec.meta.item_preconsumed == true, "decorate_followup_choice_spec should mark item_preconsumed")
+  end,
+  function()
+    local choice_spec = {
+      allow_cancel = true,
+      cancel_label = "返回",
+    }
+    local meta = item_preconsume_policy.ensure_followup_meta(choice_spec)
+    assert(meta == choice_spec.meta, "ensure_followup_meta should return the choice meta table")
+    assert(meta.item_preconsumed == true, "ensure_followup_meta should mark item_preconsumed")
+
+    item_preconsume_policy.disable_followup_cancel(choice_spec)
+    assert(choice_spec.allow_cancel == false, "disable_followup_cancel should disable cancel")
+    assert(choice_spec.cancel_label == nil, "disable_followup_cancel should clear cancel label")
+
+    item_preconsume_policy.merge_preconsume_context(meta, {
+      item_id = 2005,
+      player_id = 7,
+    })
+    assert(meta.item_id == 2005, "merge_preconsume_context should backfill item_id")
+    assert(meta.player_id == 7, "merge_preconsume_context should backfill player_id")
+
+    item_preconsume_policy.merge_preconsume_context(meta, {
+      item_id = 9001,
+      player_id = 77,
+    })
+    assert(meta.item_id == 2005, "merge_preconsume_context should not overwrite item_id")
+    assert(meta.player_id == 7, "merge_preconsume_context should not overwrite player_id")
   end,
   function()
     local choice_spec = {
@@ -2357,10 +2433,13 @@ return {
     { name = "_test_resolve_follow_player_next_non_eliminated", run = _resolve_follow_player_id_final_tests[1] },
     { name = "_test_resolve_follow_player_wrap_around", run = _resolve_follow_player_id_final_tests[2] },
     { name = "_test_resolve_follow_player_current_valid", run = _resolve_follow_player_id_final_tests[3] },
-    { name = "_test_item_preconsume_returns_nil_choice_spec_unchanged", run = _item_choice_handler_t2_tests[1] },
-    { name = "_test_item_preconsume_marks_choice_spec_and_disables_cancel", run = _item_choice_handler_t2_tests[2] },
-    { name = "_test_item_preconsume_preserves_existing_context_fields", run = _item_choice_handler_t2_tests[3] },
-    { name = "_test_item_phase_choice_decorates_repeatable_followup_meta", run = _item_choice_handler_t2_tests[4] },
-    { name = "_test_item_phase_choice_decorates_preconsumed_followup_meta", run = _item_choice_handler_t2_tests[5] },
+    { name = "_test_item_preconsume_each_option_iterates_without_return", run = _item_choice_handler_t2_tests[1] },
+    { name = "_test_item_preconsume_each_option_stops_on_return", run = _item_choice_handler_t2_tests[2] },
+    { name = "_test_item_preconsume_is_cancel_action_recognizes_choice_cancel", run = _item_choice_handler_t2_tests[3] },
+    { name = "_test_item_preconsume_returns_nil_choice_spec_unchanged", run = _item_choice_handler_t2_tests[4] },
+    { name = "_test_item_preconsume_marks_choice_spec_and_disables_cancel", run = _item_choice_handler_t2_tests[5] },
+    { name = "_test_item_preconsume_preserves_existing_context_fields", run = _item_choice_handler_t2_tests[6] },
+    { name = "_test_item_phase_choice_decorates_repeatable_followup_meta", run = _item_choice_handler_t2_tests[7] },
+    { name = "_test_item_phase_choice_decorates_preconsumed_followup_meta", run = _item_choice_handler_t2_tests[8] },
   },
 }

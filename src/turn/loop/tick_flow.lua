@@ -15,9 +15,8 @@ function tick_flow.tick(game, state, dt, ports, deps)
   assert(type(deps.dispatch_action_with_close_choice) == "function",
     "missing deps.dispatch_action_with_close_choice")
 
-  landing_visual_hold.sync_state_from_game(state, game)
   local released_landing_visual = false
-  if landing_visual_hold.is_release_pending_game(game) then
+  if runtime_state.get_landing_visual_release_pending(state) then
     released_landing_visual = landing_visual_hold.release(state, game) == true
     if released_landing_visual then
       runtime_state.mark_landing_visual_release_pulse(state)

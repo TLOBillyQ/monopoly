@@ -1,6 +1,6 @@
 local base_nodes = require("src.ui.schema.base_nodes")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local number_utils = require("src.core.utils.number_utils")
 
 local panel_cash_delta = {}
@@ -44,7 +44,7 @@ end
 local function _schedule_hide_cash_delta(ui, index)
   local token = (ui.player_cash_delta_hide_token_by_index[index] or 0) + 1
   ui.player_cash_delta_hide_token_by_index[index] = token
-  runtime_ports.schedule(gameplay_rules.panel_cash_delta_visible_seconds or 3.0, function()
+  runtime_ports.schedule(timing.panel_cash_delta_visible_seconds or 3.0, function()
     if not ui.player_cash_delta_hide_token_by_index then
       return
     end

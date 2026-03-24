@@ -4,7 +4,7 @@ local app = require("src.state.game_state")
 local tiles_cfg = require("src.config.content.tiles")
 local default_map = require("src.config.content.maps.default_map")
 local runtime_refs = require("src.config.content.runtime_refs")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_id_utils = require("src.core.utils.role_id")
 local default_ports = require("src.turn.output.default_ports")
@@ -211,7 +211,7 @@ end
 
 function M.build_auto_runner()
   return auto_runner:new({
-    interval = gameplay_rules.auto_decision_delay_seconds,
+    interval = timing.auto_decision_delay_seconds,
   })
 end
 

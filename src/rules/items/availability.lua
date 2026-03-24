@@ -1,15 +1,14 @@
 local auto_play_port = require("src.rules.ports.auto_play")
 local effects = require("src.rules.items.post_effects")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
 local demolish = require("src.rules.items.demolish")
 local roadblock = require("src.rules.items.roadblock")
 local property_query = require("src.rules.board.property_query")
 local property_value = require("src.rules.commerce.property_value")
+local number_utils = require("src.core.utils.number_utils")
 
 local availability = {}
-local item_ids = gameplay_rules.item_ids
-
 local phase_timing = {
   pre_action = { pre_action = true, turn = true },
   post_action = { post_action = true, turn = true },
@@ -31,7 +30,18 @@ for _, target_item_id in ipairs(effects.target_item_ids()) do
   followup_choice_item_set[target_item_id] = true
 end
 
-local function _contains(list, value)
+local function copy_table(source)
+  local out = {}
+  if type(source) ~= "table" then
+    return out
+  end
+  for key, value in pairs(source) do
+    out[key] = value
+  end
+  return out
+end
+
+local function contains(list, value)
   if type(list) ~= "table" then
     return false
   end
@@ -42,6 +52,25 @@ local function _contains(list, value)
   end
   return false
 end
+
+local function normalize_integer_field(target, key, choice_kind, field_prefix, required)
+  local value = target[key]
+  if value == nil then
+    if required then
+      assert(false, tostring(choice_kind) .. " requires numeric " .. tostring(field_prefix or "meta") .. "." .. tostring(key))
+    end
+    return nil
+  end
+  target[key] = assert(
+    number_utils.to_integer(value),
+    tostring(choice_kind) .. " requires numeric " .. tostring(field_prefix or "meta") .. "." .. tostring(key)
+  )
+  return target[key]
+end
+
+availability.copy_table = copy_table
+availability.contains = contains
+availability.normalize_integer_field = normalize_integer_field
 
 local function _resolve_item_cfg(item_id)
   return inventory.cfg(item_id)
@@ -64,7 +93,7 @@ local function _offer_phase_allowed(offer_in_phases, phase, allow_missing_phase)
   if not phase then
     return allow_missing_phase
   end
-  return _contains(offer_in_phases, phase)
+  return contains(offer_in_phases, phase)
 end
 
 local function _resolve_phase_timing(phase)

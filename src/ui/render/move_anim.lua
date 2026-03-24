@@ -1,5 +1,5 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local gameplay_rules = require("src.config.gameplay.rules")
+local debug_flags = require("src.config.gameplay.debug_flags")
 local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local board_feedback = require("src.ui.render.board_feedback_service")
@@ -8,7 +8,7 @@ local logger = require("src.core.utils.logger")
 local move_anim = {}
 
 local function _should_debug_log()
-  return logger.is_anim_debug_enabled() or gameplay_rules.move_anim_debug_log_enabled == true
+  return logger.is_anim_debug_enabled() or debug_flags.move_anim_debug_log_enabled == true
 end
 
 local function _debug_log(...)

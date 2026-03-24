@@ -1,6 +1,6 @@
 local auto_play_port = require("src.rules.ports.auto_play")
 local effects = require("src.rules.items.post_effects")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local logger = require("src.core.utils.logger")
 local inventory = require("src.rules.items.inventory")
 local executor = require("src.rules.items.executor")
@@ -9,8 +9,6 @@ local demolish = require("src.rules.items.demolish")
 local facing_policy = require("src.rules.board.facing_policy")
 
 local strategy = {}
-local item_ids = gameplay_rules.item_ids
-
 function strategy.target_candidates(game, player, item_id)
   local registries = assert(game.registries, "missing game.registries")
   local registry = assert(registries.items, "missing item registry")

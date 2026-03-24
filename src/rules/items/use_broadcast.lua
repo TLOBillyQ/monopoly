@@ -1,6 +1,6 @@
 local intent_output_port = require("src.rules.ports.intent_output")
 local inventory = require("src.rules.items.inventory")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 
 local use_broadcast = {}
 
@@ -20,7 +20,7 @@ function use_broadcast.dispatch(game, player, item_id)
     body = player.name .. " 使用了 " .. inventory.item_name(item_id),
     kind = "item_card",
     image_ref = item_id,
-    auto_close_seconds = gameplay_rules.action_anim_default_seconds,
+    auto_close_seconds = timing.action_anim_default_seconds,
   })
   return true
 end

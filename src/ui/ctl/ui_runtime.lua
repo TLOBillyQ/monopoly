@@ -11,6 +11,12 @@ local item_slots = require("src.ui.ctl.item_slots")
 local debug = require("src.ui.ctl.debug_view")
 
 local service = {}
+local turn_label_refresh_context = {
+  ui = nil,
+  base_nodes = nil,
+  label_text = nil,
+  countdown_visible = nil,
+}
 
 function service.build_ui_state()
   return state.build_ui_state()
@@ -42,6 +48,23 @@ local function _refresh_turn_label_for_runtime_role(ui, base_nodes, label_text, 
   end
 end
 
+local function _refresh_turn_label_for_client_role()
+  local ui = turn_label_refresh_context.ui
+  local base_nodes = turn_label_refresh_context.base_nodes
+  local label_text = turn_label_refresh_context.label_text
+  local countdown_visible = turn_label_refresh_context.countdown_visible
+  if ui ~= nil and base_nodes ~= nil then
+    _refresh_turn_label_for_runtime_role(ui, base_nodes, label_text, countdown_visible)
+  end
+end
+
+local function _clear_turn_label_refresh_context()
+  turn_label_refresh_context.ui = nil
+  turn_label_refresh_context.base_nodes = nil
+  turn_label_refresh_context.label_text = nil
+  turn_label_refresh_context.countdown_visible = nil
+end
+
 function service.refresh_turn_label(state_ctx, label_text, visible)
   local ui = state_ctx.ui
   if not ui then
@@ -49,9 +72,15 @@ function service.refresh_turn_label(state_ctx, label_text, visible)
   end
   local base_nodes = require("src.ui.schema.base_nodes")
   local countdown_visible = visible ~= false
-  runtime.for_each_role_or_global(function()
-    _refresh_turn_label_for_runtime_role(ui, base_nodes, label_text, countdown_visible)
-  end)
+
+  turn_label_refresh_context.ui = ui
+  turn_label_refresh_context.base_nodes = base_nodes
+  turn_label_refresh_context.label_text = label_text
+  turn_label_refresh_context.countdown_visible = countdown_visible
+
+  runtime.for_each_role_or_global(_refresh_turn_label_for_client_role)
+
+  _clear_turn_label_refresh_context()
   runtime.set_client_role(nil)
 end
 

@@ -1,20 +1,14 @@
 local constants = require("src.config.content.constants")
-local gameplay_rules = require("src.config.gameplay.rules")
-local logger = require("src.core.utils.logger")
+local timing = require("src.config.gameplay.timing")
 local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")
-local runtime_state = require("src.state.state_access.runtime_state")
 local output_state_adapter = require("src.turn.output.state_adapter")
+local wait_log_once = require("src.turn.waits.log_once")
 
 local tick_choice_timeout = {}
 
 local function _log_once(state, key, ...)
-  local debug_runtime = runtime_state.ensure_debug_runtime(state)
-  if debug_runtime.log_once[key] then
-    return
-  end
-  debug_runtime.log_once[key] = true
-  logger.warn(...)
+  wait_log_once.warn(state, key, ...)
 end
 
 local function _resolve_output_ports(state)
@@ -120,7 +114,7 @@ local function _sync_elapsed_choice_id(state, output_ports, active_choice)
 end
 
 local function _resolve_min_visible_seconds(game, state, active_choice, opts)
-  local min_visible = gameplay_rules.auto_decision_delay_seconds or 0
+  local min_visible = timing.auto_decision_delay_seconds or 0
   if type(opts.get_min_visible_seconds) == "function" then
     local override_min_visible = opts.get_min_visible_seconds(game, state, active_choice)
     if number_utils.is_numeric(override_min_visible) and override_min_visible >= 0 then

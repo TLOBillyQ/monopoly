@@ -25,7 +25,8 @@ local constants = support.constants
 local bankruptcy = support.bankruptcy
 local turn_move = support.turn_move
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
+local timing = require("src.config.gameplay.timing")
 local mine_effect = require("src.rules.effects.mine_effect")
 local runtime_context = require("src.host.eggy.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
@@ -589,7 +590,7 @@ local function _test_intent_dispatcher_normalizes_item_choice_meta()
     kind = "item_phase_choice",
     route_key = "base_inline",
     title = "行动前：使用道具？",
-    options = { { id = gameplay_rules.item_ids.remote_dice, label = "遥控骰子" } },
+    options = { { id = item_ids.remote_dice, label = "遥控骰子" } },
     meta = {
       player_id = tostring(g:current_player().id),
       phase = "pre_action",
@@ -662,7 +663,7 @@ local function _test_turn_start_logs_phase_event_to_event_feed()
   local g = _new_game()
   g.players[1].status.stay_turns = 2
   g.players[1].status.deity = { type = "poor", remaining = 3 }
-  inventory.give(g.players[1], gameplay_rules.item_ids.remote_dice)
+  inventory.give(g.players[1], item_ids.remote_dice)
   local _, tile_ref = _first_land_tile(g.board)
   g:set_tile_owner(tile_ref, g.players[1].id)
   g:set_tile_level(tile_ref, 2)
@@ -836,7 +837,7 @@ local function _test_choice_resolver_normalizes_roadblock_action_before_execute(
     options = { { id = 3, label = "上海路" } },
     meta = {
       player_id = p.id,
-      item_id = gameplay_rules.item_ids.roadblock,
+      item_id = item_ids.roadblock,
     },
   }
   g.turn.pending_choice = choice
@@ -881,7 +882,7 @@ local function _test_clear_obstacles_zero_does_not_log_event_noise()
   local g = _new_game()
   local player = g.players[1]
   logger.clear()
-  item_effects.apply_post(g, player, gameplay_rules.item_ids.clear_obstacles, { branch_parity = 12 })
+  item_effects.apply_post(g, player, item_ids.clear_obstacles, { branch_parity = 12 })
   local text = logger.get_text_by_level("event")
   assert(string.find(text, "清除前方障碍数：0", 1, true) == nil,
     "clear obstacles zero result should not enter event feed")
@@ -891,7 +892,7 @@ local function _test_ai_obstacle_probe_does_not_enter_event_feed()
   local g = _new_game()
   local player = g.players[1]
   player.auto = true
-  inventory.give(player, gameplay_rules.item_ids.clear_obstacles)
+  inventory.give(player, item_ids.clear_obstacles)
   local current = player.position
   local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
   local next_index = select(1, g.board:step_forward_by_facing(current, facing, 12))
@@ -1423,7 +1424,6 @@ end
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.turn.policies.auto_runner")
   local agent = require("src.computer.policies.core_agent")
-  local gameplay_rules = require("src.config.gameplay.rules")
   local land = require("src.rules.land.executors")
   local land_actions = require("src.rules.land.actions")
   local item_inventory = require("src.rules.items.inventory")
@@ -1469,7 +1469,7 @@ local function _test_autorunner_runs_to_end()
   state.auto_runner:set_enabled(true)
   gameplay_loop.set_game(state, g)
 
-  local turn_limit = gameplay_rules.turn_limit or 0
+  local turn_limit = timing.turn_limit or 0
   local env_steps = number_utils.to_integer(os.getenv("MONO_TEST_AUTORUNNER_STEPS"))
   local max_steps = env_steps or (turn_limit * 40)
   assert(max_steps > 0, "invalid turn_limit for autorunner test")
@@ -1501,10 +1501,10 @@ local function _test_autorunner_runs_to_end()
   local old_can_pay_rent = land.executors.pay_rent.can_apply
   local game_api = GameAPI or {}
   local patches = {
-    { target = gameplay_rules, key = "detained_turn_wait_seconds", value = 0 },
-    { target = gameplay_rules, key = "inter_turn_wait_seconds", value = 0 },
+    { target = timing, key = "detained_turn_wait_seconds", value = 0 },
+    { target = timing, key = "inter_turn_wait_seconds", value = 0 },
     { target = steal, key = "handle_pass_players", value = function(game_ctx, player, encountered_ids)
-      if not item_inventory.find_index(player, gameplay_rules.item_ids.steal) then
+      if not item_inventory.find_index(player, item_ids.steal) then
         return nil
       end
       return old_handle_pass_players(game_ctx, player, encountered_ids)
@@ -1877,8 +1877,8 @@ local function _test_steal_interrupt_resume_uses_interrupt_facing()
   local p2 = g.players[2]
   local chance_idx = _first_tile_by_type(g.board, "chance")
 
-  if not inventory.find_index(p1, gameplay_rules.item_ids.steal) then
-    p1.inventory:add({ id = gameplay_rules.item_ids.steal })
+  if not inventory.find_index(p1, item_ids.steal) then
+    p1.inventory:add({ id = item_ids.steal })
   end
 
   g:update_player_position(p1, chance_idx - 3)
@@ -2289,7 +2289,7 @@ local function _test_auto_runner_auto_advances_ai_player()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
-  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
+  local auto_decision_delay = timing.auto_decision_delay_seconds or 0
   state.auto_runner.interval = auto_decision_delay
   g.turn.current_player_index = 2
   g.turn.phase = "start"
@@ -2402,7 +2402,7 @@ local function _test_auto_runner_waits_for_auto_popup_delay()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
   local auto_player = g.players[2]
-  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
+  local auto_decision_delay = timing.auto_decision_delay_seconds or 0
   local ui_runtime = runtime_state.ensure_ui_runtime(state)
   g.turn.current_player_index = 2
   g.turn.phase = "start"
@@ -2441,7 +2441,7 @@ local function _test_auto_runner_selects_runtime_pending_choice_without_ui_choic
   local state = _build_loop_state()
   local ai_player = g.players[2]
   local dispatched = nil
-  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
+  local auto_decision_delay = timing.auto_decision_delay_seconds or 0
   local choice = {
     id = 701,
     kind = "landing_optional_effect",
@@ -2507,7 +2507,7 @@ local function _test_auto_runner_resets_timer_when_wait_kind_changes()
   local state = _build_loop_state()
   local ai_player = g.players[2]
   local dispatched = nil
-  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
+  local auto_decision_delay = timing.auto_decision_delay_seconds or 0
   local choice = {
     id = 704,
     kind = "landing_optional_effect",
@@ -2825,7 +2825,7 @@ local function _test_tick_choice_timeout_warning_keeps_local_modal_choice()
     route_key = "remote",
     owner_role_id = 1,
     options = { { id = 1, label = "1" } },
-    meta = { player_id = 1, item_id = gameplay_rules.item_ids.remote_dice, dice_count = 1 },
+    meta = { player_id = 1, item_id = item_ids.remote_dice, dice_count = 1 },
   }
   g.turn.current_player_index = 1
   g.turn.phase = "wait_choice"
@@ -2887,7 +2887,7 @@ local function _test_auto_runner_depends_on_current_player_auto()
   local g = _new_game()
   g.ui_port = _build_ui_port()
   local state = _build_loop_state()
-  local auto_decision_delay = gameplay_rules.auto_decision_delay_seconds or 0
+  local auto_decision_delay = timing.auto_decision_delay_seconds or 0
   g.players[1].auto = true
   g.players[2].auto = false
   g.turn.current_player_index = 1
@@ -3017,8 +3017,10 @@ local function _test_gameplay_loop_set_game_defers_visual_ports_during_landing_h
 
   gameplay_loop.set_game(state, g)
 
-  g.turn.landing_visual_hold_active = true
-  landing_visual_hold.sync_state_from_game(state, g)
+  landing_visual_hold.start(g)
+  landing_visual_hold.mark_release_pending(g)
+  g.turn.landing_visual_hold_active = false
+  g.turn.landing_visual_release_pending = false
 
   g.popup_port:push_popup({ kind = "held_popup" })
   g.tile_owner_notifier:notify_owner_changed(11, 22)
@@ -3028,7 +3030,6 @@ local function _test_gameplay_loop_set_game_defers_visual_ports_during_landing_h
   assert(state._last_popup == nil, "popup should be deferred during landing hold")
   assert(#board_syncs == 0, "board visual sync should be deferred during landing hold")
 
-  g.turn.landing_visual_release_pending = true
   gameplay_loop.tick(g, state, 0.1)
 
   assert(state._last_popup and state._last_popup.kind == "held_popup", "popup should flush after landing hold release")
@@ -3328,7 +3329,7 @@ local function _test_choice_auto_policy_timeout_keeps_non_cancelable_choice_fall
     allow_cancel = false,
     meta = {
       player_id = auto_player.id,
-      item_id = gameplay_rules.item_ids.remote_dice,
+      item_id = item_ids.remote_dice,
       dice_count = 1,
       item_preconsumed = true,
     },
@@ -3535,7 +3536,7 @@ local function _test_turn_decision_wait_choice_no_longer_reads_ui_port_state()
     allow_cancel = false,
     meta = {
       player_id = auto_player.id,
-      item_id = gameplay_rules.item_ids.remote_dice,
+      item_id = item_ids.remote_dice,
       dice_count = 1,
       item_preconsumed = true,
     },
@@ -3544,7 +3545,7 @@ local function _test_turn_decision_wait_choice_no_longer_reads_ui_port_state()
 
   local action = nil
   support.with_patches({
-    { target = gameplay_rules, key = "auto_decision_delay_seconds", value = 0 },
+    { target = timing, key = "auto_decision_delay_seconds", value = 0 },
   }, function()
     action = turn_decision.decide_choice_action(g, choice, nil, {
       elapsed_seconds = 1.2,
@@ -3570,7 +3571,7 @@ local function _test_popup_countdown_uses_effective_modal_timeout()
 
   support.with_patches({
     { target = constants, key = "action_timeout_seconds", value = 10 },
-    { target = gameplay_rules, key = "popup_auto_close_seconds", value = 8 },
+    { target = timing, key = "popup_auto_close_seconds", value = 8 },
   }, function()
     tick_ui_sync.update_countdown(g, state)
   end)
@@ -3745,8 +3746,8 @@ local function _test_owner_mine_other_player_triggers_immediately_after_placemen
   local mine_index = p1.position
   local mine_tile = assert(g.board:get_tile(mine_index), "missing owner tile")
 
-  p1.inventory:add({ id = gameplay_rules.item_ids.mine })
-  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
+  p1.inventory:add({ id = item_ids.mine })
+  local use_res = support.executor.use_item(g, p1, item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
   assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
   local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
@@ -3793,8 +3794,8 @@ local function _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_
   local mine_index = p1.position
   local mine_tile = assert(g.board:get_tile(mine_index), "missing owner tile")
 
-  p1.inventory:add({ id = gameplay_rules.item_ids.mine })
-  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
+  p1.inventory:add({ id = item_ids.mine })
+  local use_res = support.executor.use_item(g, p1, item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
   assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
   local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
@@ -3826,8 +3827,8 @@ local function _test_passing_armed_mine_stops_and_triggers_followup()
   local mine_index = p1.position
   local mine_tile = assert(g.board:get_tile(mine_index), "missing mine tile")
 
-  p1.inventory:add({ id = gameplay_rules.item_ids.mine })
-  local use_res = support.executor.use_item(g, p1, gameplay_rules.item_ids.mine, { by_ai = true })
+  p1.inventory:add({ id = item_ids.mine })
+  local use_res = support.executor.use_item(g, p1, item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
   local mine_state = assert(g.board:get_mine(mine_index), "mine should still exist after placement")
   assert(mine_state.armed == true, "mine should be active immediately for non-owners")
@@ -4093,7 +4094,7 @@ local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
     }
   end
   local ok, err = pcall(function()
-    action = runner:next_action((gameplay_rules.auto_decision_delay_seconds or 0) + 0.1, {
+    action = runner:next_action((timing.auto_decision_delay_seconds or 0) + 0.1, {
       game = g,
       pending_choice = {
         id = 901,
@@ -4276,7 +4277,7 @@ local function _test_game_victory_turn_limit_tie_keeps_multiple_winners()
   g:set_player_cash(p2, 3000)
 
   support.with_patches({
-    { target = gameplay_rules, key = "turn_limit", value = 1 },
+    { target = timing, key = "turn_limit", value = 1 },
     {
       target = monopoly_event,
       key = "emit",
@@ -4312,7 +4313,7 @@ local function _test_game_victory_turn_limit_with_no_survivors_reports_empty_win
   g.turn.turn_count = 1
 
   support.with_patches({
-    { target = gameplay_rules, key = "turn_limit", value = 1 },
+    { target = timing, key = "turn_limit", value = 1 },
     {
       target = monopoly_event,
       key = "emit",

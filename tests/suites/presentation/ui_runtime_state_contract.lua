@@ -288,6 +288,71 @@ local function _test_validator_resolve_item_slot_action_rejects_invalid_option()
   _assert_eq(resolved.ok, false, "validator should reject slot ids that are not in choice options")
 end
 
+local function _test_validator_resolve_item_slot_resolution_reports_missing_slot_mapping()
+  local result = validator._resolve_item_slot_resolution({
+    resolve_slot_action = function()
+      return nil
+    end,
+  }, {
+    ui_runtime = {
+      pending_choice = {
+        id = 91,
+        kind = "item_phase_choice",
+        options = {
+          { id = 1001 },
+        },
+      },
+    },
+  }, {
+    id = "item_slot_1",
+    actor_role_id = 8,
+  })
+
+  _assert_eq(result.ok, false, "intermediate result should fail when slot mapping is missing")
+  _assert_eq(result.reason, "missing_item_id", "intermediate result should expose missing item id reason")
+end
+
+local function _test_validator_resolve_item_slot_resolution_reports_availability_denial()
+  local original_can_offer = availability.can_offer_in_phase
+  availability.can_offer_in_phase = function()
+    return false, "special_condition_failed"
+  end
+
+  local result = validator._resolve_item_slot_resolution({
+    resolve_slot_action = function()
+      return 1001
+    end,
+  }, {
+    ui_runtime = {
+      pending_choice = {
+        id = 92,
+        kind = "item_phase_choice",
+        options = {
+          { id = 1001 },
+        },
+        meta = {
+          phase = "post_action",
+        },
+      },
+    },
+    game = {
+      find_player_by_id = function()
+        return { id = 8 }
+      end,
+    },
+  }, {
+    id = "item_slot_1",
+    actor_role_id = 8,
+    input_source = "user",
+  })
+
+  availability.can_offer_in_phase = original_can_offer
+
+  _assert_eq(result.ok, false, "intermediate result should fail when availability denies the slot")
+  _assert_eq(result.reason, "item_slot_denied_by_availability",
+    "intermediate result should expose availability denial reason")
+end
+
 return {
   name = "ui_runtime_state_contract",
   tests = {
@@ -330,6 +395,14 @@ return {
     {
       name = "validator_resolve_item_slot_action_rejects_invalid_option",
       run = _test_validator_resolve_item_slot_action_rejects_invalid_option,
+    },
+    {
+      name = "validator_resolve_item_slot_resolution_reports_missing_slot_mapping",
+      run = _test_validator_resolve_item_slot_resolution_reports_missing_slot_mapping,
+    },
+    {
+      name = "validator_resolve_item_slot_resolution_reports_availability_denial",
+      run = _test_validator_resolve_item_slot_resolution_reports_availability_denial,
     },
   },
 }

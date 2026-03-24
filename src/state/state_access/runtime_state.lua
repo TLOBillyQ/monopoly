@@ -16,6 +16,31 @@ local function _ensure_field(tbl, key, fallback)
   return tbl[key]
 end
 
+local function _ensure_landing_visual_hold(turn_runtime)
+  local hold = turn_runtime.landing_visual_hold
+  if type(hold) ~= "table" then
+    hold = {
+      active = false,
+      release_pending = false,
+      flushing = false,
+      frozen_ui_model = nil,
+      source = nil,
+      deferred_dirty = {
+        any = false,
+        players = false,
+        board_tiles = false,
+        turn = false,
+        market = false,
+        turn_countdown = false,
+        inventory_ids = {},
+      },
+      release_callbacks = {},
+    }
+    turn_runtime.landing_visual_hold = hold
+  end
+  return hold
+end
+
 function runtime_state.ensure_ui_runtime(state)
   assert(type(state) == "table", "missing state")
   local ui_runtime = _ensure_table(state, "ui_runtime")
@@ -160,25 +185,46 @@ function runtime_state.ensure_turn_runtime(state)
   _ensure_field(turn_runtime, "role_control_lock_suppress", state.role_control_lock_suppress or 0)
   _ensure_field(turn_runtime, "landing_visual_release_pulse", false)
   _ensure_field(turn_runtime, "last_follow_player_id", nil)
-  if type(turn_runtime.landing_visual_hold) ~= "table" then
-    turn_runtime.landing_visual_hold = {
-      active = false,
-      release_pending = false,
-      flushing = false,
-      frozen_ui_model = nil,
-      deferred_dirty = {
-        any = false,
-        players = false,
-        board_tiles = false,
-        turn = false,
-        market = false,
-        turn_countdown = false,
-        inventory_ids = {},
-      },
-      release_callbacks = {},
-    }
-  end
+  _ensure_landing_visual_hold(turn_runtime)
   return turn_runtime
+end
+
+function runtime_state.get_landing_visual_hold(state)
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  return _ensure_landing_visual_hold(turn_runtime)
+end
+
+function runtime_state.get_landing_visual_hold_active(state)
+  local hold = runtime_state.get_landing_visual_hold(state)
+  return hold.active == true
+end
+
+function runtime_state.set_landing_visual_hold_active(state, active)
+  local hold = runtime_state.get_landing_visual_hold(state)
+  hold.active = active == true
+  return hold.active
+end
+
+function runtime_state.get_landing_visual_release_pending(state)
+  local hold = runtime_state.get_landing_visual_hold(state)
+  return hold.release_pending == true
+end
+
+function runtime_state.set_landing_visual_release_pending(state, release_pending)
+  local hold = runtime_state.get_landing_visual_hold(state)
+  hold.release_pending = release_pending == true
+  return hold.release_pending
+end
+
+function runtime_state.get_landing_visual_hold_source(state)
+  local hold = runtime_state.get_landing_visual_hold(state)
+  return hold.source
+end
+
+function runtime_state.set_landing_visual_hold_source(state, source)
+  local hold = runtime_state.get_landing_visual_hold(state)
+  hold.source = source
+  return source
 end
 
 function runtime_state.mark_landing_visual_release_pulse(state)

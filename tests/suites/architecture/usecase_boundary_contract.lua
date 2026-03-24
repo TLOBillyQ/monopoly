@@ -1,4 +1,5 @@
 local support = require("support.runtime_support")
+local shared_support = require("support.shared_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
@@ -294,6 +295,39 @@ local function _test_turn_move_uses_anim_gate_port_without_ui_port()
   _assert_eq(game.last_turn.move_result, nil, "turn_move should not publish move_result before move anim completes")
 end
 
+local function _test_chance_uses_injected_rng_without_lua_api_rand()
+  local game = support.new_game({ ai = {} })
+  local player = game:current_player()
+  local chance_idx = assert(game.board:find_first_by_type("chance"), "missing chance tile")
+  local chance_tile = assert(game.board:get_tile(chance_idx), "missing chance tile ref")
+  game:update_player_position(player, chance_idx)
+  game.anim_gate_port = {
+    wait_action_anim = true,
+    wait_move_anim = false,
+  }
+  game.rng = {
+    next_int = function(_, min, max)
+      _assert_eq(min, 1, "chance should start rng range at 1")
+      assert(max > 0, "chance should use a positive rng upper bound")
+      return 1
+    end,
+  }
+
+  local prev_lua_api = LuaAPI
+  local lua_api = prev_lua_api or {}
+  _with_patches({
+    { key = "LuaAPI", value = lua_api },
+    { target = lua_api, key = "rand", value = function()
+      error("chance should not call LuaAPI.rand when game.rng exists")
+    end },
+  }, function()
+    shared_support.resolve_landing(game, player, chance_tile, {})
+  end)
+
+  _assert_eq(game.turn.action_anim and game.turn.action_anim.kind, "chance", "chance should queue chance anim through injected rng")
+  _assert_eq(game.turn.action_anim.card_id, 3001, "chance should deterministically pick the first card from injected rng")
+end
+
 return {
   name = "usecase_boundary_contract",
   tests = {
@@ -311,5 +345,6 @@ return {
     { name = "bankruptcy_feedback_port_defaults_to_no_op_port", run = _test_bankruptcy_feedback_port_defaults_to_no_op_port },
     { name = "turn_roll_uses_anim_gate_port_without_ui_port", run = _test_turn_roll_uses_anim_gate_port_without_ui_port },
     { name = "turn_move_uses_anim_gate_port_without_ui_port", run = _test_turn_move_uses_anim_gate_port_without_ui_port },
+    { name = "chance_uses_injected_rng_without_lua_api_rand", run = _test_chance_uses_injected_rng_without_lua_api_rand },
   },
 }

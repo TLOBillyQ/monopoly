@@ -37,7 +37,7 @@ local logger = require("src.core.utils.logger")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local host_runtime = require("src.host.eggy")
 local runtime_state = require("src.ui.runtime.state")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
@@ -1866,7 +1866,7 @@ end
 
 local function _test_panel_cash_delta_shows_negative_and_auto_hides()
   local runtime_ports = require("src.core.ports.runtime_ports")
-  local gameplay_rules = require("src.config.gameplay.rules")
+  local timing = require("src.config.gameplay.timing")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 
@@ -1884,7 +1884,7 @@ local function _test_panel_cash_delta_shows_negative_and_auto_hides()
   _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "-20", "cash delta should render negative text")
   _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "cash delta label should be visible")
   _assert_eq(#scheduled, 1, "cash delta should schedule hide once")
-  _assert_eq(scheduled[1].delay, gameplay_rules.panel_cash_delta_visible_seconds,
+  _assert_eq(scheduled[1].delay, timing.panel_cash_delta_visible_seconds,
     "cash delta hide duration should follow dedicated gameplay rule")
   scheduled[1].cb()
   _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "cash delta label should clear after timeout")

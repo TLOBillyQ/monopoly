@@ -1,5 +1,5 @@
 local constants = require("src.config.content.constants")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local number_utils = require("src.core.utils.number_utils")
 local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
@@ -134,7 +134,7 @@ local default_policy = {
       return tick_timeout.resolve_choice_timeout_seconds(game, state)
     end,
     get_min_visible_seconds = function()
-      return gameplay_rules.auto_decision_delay_seconds or 0
+      return timing.auto_decision_delay_seconds or 0
     end,
     build_action = function(game_ctx, state_ctx, choice, action_ctx)
       return choice_auto_policy.decide(game_ctx, state_ctx, choice, action_ctx)

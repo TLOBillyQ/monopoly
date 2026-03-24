@@ -1,5 +1,6 @@
 local movement = require("src.rules.movement")
 local vehicle_feature = require("src.rules.vehicle")
+local dice_multiplier = require("src.turn.phases.dice_multiplier")
 local move_followup = require("src.turn.phases.move_followup")
 
 local function _merge_move_args(out, extra)
@@ -17,26 +18,6 @@ local function _build_move_args(player, raw_total, extra)
     player = player,
     raw_total = raw_total,
   }, extra)
-end
-
-local function _apply_dice_multiplier(game, player, total, raw_total)
-  local pending_multiplier = player.status.pending_dice_multiplier
-  if not pending_multiplier or pending_multiplier <= 1 then
-    return total
-  end
-  if raw_total == nil or total ~= raw_total then
-    return total
-  end
-  local new_total = raw_total * pending_multiplier
-  if game.set_player_status then
-    game:set_player_status(player, "pending_dice_multiplier", 1)
-  else
-    player.status.pending_dice_multiplier = 1
-  end
-  if game.last_turn then
-    game.last_turn.total = new_total
-  end
-  return new_total
 end
 
 local function _build_move_opts(args, raw_total)
@@ -131,7 +112,7 @@ local function _phase_move(turn_mgr, args)
   local move_result = args.move_result
   local game = turn_mgr.game
 
-  local total = _apply_dice_multiplier(game, player, args.total, raw_total)
+  local total = dice_multiplier.apply_move_total(game, player, args.total, raw_total)
   local move_opts = _build_move_opts(args, raw_total)
   total = _resolve_move_total(args, total)
 

@@ -1,12 +1,12 @@
 local effects = require("src.rules.items.post_effects")
 local auto_play_port = require("src.rules.ports.auto_play")
 local inventory = require("src.rules.items.inventory")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
 local use_broadcast = require("src.rules.items.use_broadcast")
 
 local executor = {}
-local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local function _is_success_result(res)
   if type(res) == "table" then

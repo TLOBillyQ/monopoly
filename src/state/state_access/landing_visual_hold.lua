@@ -63,23 +63,67 @@ local function _reset_deferred_buffers(hold)
   hold.release_callbacks = {}
 end
 
+local function _game_turn(game)
+  return game and game.turn or nil
+end
+
+local function _game_turn_active(game)
+  local turn = _game_turn(game)
+  return turn and turn.landing_visual_hold_active == true or false
+end
+
+local function _game_turn_release_pending(game)
+  local turn = _game_turn(game)
+  return turn and turn.landing_visual_release_pending == true or false
+end
+
+local function _project_hold_to_game(game, hold)
+  local turn = _game_turn(game)
+  if turn == nil then
+    return
+  end
+  turn.landing_visual_hold_active = hold.active == true
+  turn.landing_visual_release_pending = hold.release_pending == true
+end
+
+local function _hold_is_state_source(hold)
+  return hold.source == "state"
+end
+
+local function _set_hold_state(state, active, release_pending, source)
+  runtime_state.set_landing_visual_hold_active(state, active)
+  runtime_state.set_landing_visual_release_pending(state, release_pending)
+  runtime_state.set_landing_visual_hold_source(state, source)
+  return _ensure_hold(state)
+end
+
 function landing_visual_hold.start(game, opts)
   local _ = opts
   if not (game and game.turn) then
     return false
   end
-  if game.turn.landing_visual_hold_active == true then
+  local state = game.landing_visual_hold_state
+  if landing_visual_hold.is_active_game(game) == true then
+    if type(state) == "table" then
+      local hold = _ensure_hold(state)
+      local was_active = hold.active == true
+      hold = _set_hold_state(state, true, false, "state")
+      _project_hold_to_game(game, hold)
+      if was_active ~= true then
+        local logger = require("src.core.utils.logger")
+        logger.push_event_buffer(hold)
+      end
+    end
     return false
   end
-  game.turn.landing_visual_hold_active = true
-  game.turn.landing_visual_release_pending = false
-  local state = game.landing_visual_hold_state
   if type(state) == "table" then
-    local hold = _ensure_hold(state)
-    hold.active = true
-    hold.release_pending = false
+    local hold = _set_hold_state(state, true, false, "state")
+    _project_hold_to_game(game, hold)
     local logger = require("src.core.utils.logger")
     logger.push_event_buffer(hold)
+  else
+    game.turn.landing_visual_hold_active = true
+    game.turn.landing_visual_release_pending = false
   end
   _mark_turn_dirty(game)
   return true
@@ -90,21 +134,41 @@ function landing_visual_hold.hold_state_for_game(game, opts)
 end
 
 function landing_visual_hold.is_active_game(game)
-  return game and game.turn and game.turn.landing_visual_hold_active == true or false
+  local state = game and game.landing_visual_hold_state or nil
+  if type(state) == "table" then
+    local hold = _ensure_hold(state)
+    if _hold_is_state_source(hold) then
+      return hold.active == true
+    end
+  end
+  return _game_turn_active(game)
 end
 
 function landing_visual_hold.is_release_pending_game(game)
-  return game and game.turn and game.turn.landing_visual_release_pending == true or false
+  local state = game and game.landing_visual_hold_state or nil
+  if type(state) == "table" then
+    local hold = _ensure_hold(state)
+    if _hold_is_state_source(hold) then
+      return hold.release_pending == true
+    end
+  end
+  return _game_turn_release_pending(game)
 end
 
 function landing_visual_hold.mark_release_pending(game)
   if not (game and game.turn) then
     return false
   end
-  if game.turn.landing_visual_hold_active ~= true then
+  if landing_visual_hold.is_active_game(game) ~= true then
     return false
   end
-  game.turn.landing_visual_release_pending = true
+  local state = game.landing_visual_hold_state
+  if type(state) == "table" then
+    local hold = _set_hold_state(state, true, true, "state")
+    _project_hold_to_game(game, hold)
+  else
+    game.turn.landing_visual_release_pending = true
+  end
   _mark_turn_dirty(game)
   return true
 end
@@ -113,10 +177,16 @@ function landing_visual_hold.clear_game(game)
   if not (game and game.turn) then
     return false
   end
-  local changed = game.turn.landing_visual_hold_active == true
-    or game.turn.landing_visual_release_pending == true
-  game.turn.landing_visual_hold_active = false
-  game.turn.landing_visual_release_pending = false
+  local changed = landing_visual_hold.is_active_game(game) == true
+    or landing_visual_hold.is_release_pending_game(game) == true
+  local state = game.landing_visual_hold_state
+  if type(state) == "table" then
+    local hold = _set_hold_state(state, false, false, "state")
+    _project_hold_to_game(game, hold)
+  else
+    game.turn.landing_visual_hold_active = false
+    game.turn.landing_visual_release_pending = false
+  end
   if changed then
     _mark_turn_dirty(game)
   end
@@ -124,8 +194,7 @@ function landing_visual_hold.clear_game(game)
 end
 
 function landing_visual_hold.is_active_state(state)
-  local hold = _ensure_hold(state)
-  return hold.active == true
+  return runtime_state.get_landing_visual_hold_active(state)
 end
 
 function landing_visual_hold.is_flushing_state(state)
@@ -136,8 +205,17 @@ end
 function landing_visual_hold.sync_state_from_game(state, game)
   local hold = _ensure_hold(state)
   local was_active = hold.active == true
-  hold.active = landing_visual_hold.is_active_game(game)
-  hold.release_pending = landing_visual_hold.is_release_pending_game(game)
+  if _hold_is_state_source(hold) then
+    _project_hold_to_game(game, hold)
+    if hold.active == true and was_active ~= true then
+      local logger = require("src.core.utils.logger")
+      logger.push_event_buffer(hold)
+    end
+    return hold
+  end
+  runtime_state.set_landing_visual_hold_active(state, _game_turn_active(game))
+  runtime_state.set_landing_visual_release_pending(state, _game_turn_release_pending(game))
+  runtime_state.set_landing_visual_hold_source(state, "game")
   if hold.active == true and was_active ~= true then
     local logger = require("src.core.utils.logger")
     logger.push_event_buffer(hold)
@@ -310,6 +388,7 @@ function landing_visual_hold.reset_state(state)
   hold.release_pending = false
   hold.flushing = false
   hold.frozen_ui_model = nil
+  hold.source = nil
   _reset_deferred_buffers(hold)
   return hold
 end

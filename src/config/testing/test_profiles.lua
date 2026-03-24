@@ -1,14 +1,17 @@
-local function _copy_meta(meta)
+local function _copy_table(value)
+  if type(value) ~= "table" then
+    return value
+  end
   local out = {}
-  for key, value in pairs(meta or {}) do
-    out[key] = value
+  for key, child in pairs(value) do
+    out[key] = _copy_table(child)
   end
   return out
 end
 
 local function _profile(meta, bootstrap)
-  local out = _copy_meta(meta)
-  out.bootstrap = bootstrap or {}
+  local out = _copy_table(meta or {})
+  out.bootstrap = _copy_table(bootstrap or {})
   return out
 end
 

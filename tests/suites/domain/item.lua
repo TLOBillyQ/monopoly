@@ -10,7 +10,8 @@ local _tile_state = support.tile_state
 local _assert_eq = support.assert_eq
 local executor = support.executor
 local choice_resolver = support.choice_resolver
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
+local timing = require("src.config.gameplay.timing")
 local land_choice_specs = require("src.rules.land.choice_specs")
 local item_phase = require("src.rules.items.phase")
 local item_strategy = require("src.rules.items.strategy")
@@ -163,8 +164,8 @@ local function _test_item_phase_hides_rent_cards_on_owned_land()
   g:update_player_position(p, idx)
   g:set_tile_owner(tile_ref, p.id)
   g:set_player_property(p, tile_ref.id, true)
-  p.inventory:add({ id = gameplay_rules.item_ids.strong })
-  p.inventory:add({ id = gameplay_rules.item_ids.free_rent })
+  p.inventory:add({ id = item_ids.strong })
+  p.inventory:add({ id = item_ids.free_rent })
 
   local spec = item_phase.build_choice_spec(g, p, "post_action")
   _assert_eq(spec, nil, "owned land should not expose reactive cards in active windows")
@@ -177,8 +178,8 @@ local function _test_item_phase_hides_rent_cards_on_other_owned_land()
   local tile_ref = g.board:get_tile(idx)
   g:update_player_position(p, idx)
   g:set_tile_owner(tile_ref, g.players[2].id)
-  p.inventory:add({ id = gameplay_rules.item_ids.strong })
-  p.inventory:add({ id = gameplay_rules.item_ids.free_rent })
+  p.inventory:add({ id = item_ids.strong })
+  p.inventory:add({ id = item_ids.free_rent })
 
   local spec = item_phase.build_choice_spec(g, p, "post_action")
   _assert_eq(spec, nil, "other player land should still hide reactive cards in active windows")
@@ -210,6 +211,19 @@ local function _test_build_wait_choice_args_restores_next_state_and_args()
   })
   _assert_eq(result.next_state, "move_followup", "build_wait_choice_args should restore resume_next_state")
   assert(result.next_args == resume_next_args, "build_wait_choice_args should forward the original next_args table")
+end
+
+local function _test_wait_choice_arg_helpers_split_state_and_args()
+  local resume_next_args = { tile_id = 12, skip_anim = true }
+  local next_state = item_phase._build_wait_choice_next_state({
+    resume_next_state = "move_followup",
+  })
+  local next_args = item_phase._build_wait_choice_next_args({
+    resume_next_args = resume_next_args,
+  })
+
+  _assert_eq(next_state, "move_followup", "_build_wait_choice_next_state should forward resume_next_state")
+  assert(next_args == resume_next_args, "_build_wait_choice_next_args should forward the original next_args table")
 end
 
 local function _test_item_equalize_cash()
@@ -258,7 +272,7 @@ local function _test_target_item_manual_direct_exec_and_duration()
   assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "target item should queue anim")
   _assert_eq(
     g.turn.action_anim.duration,
-    gameplay_rules.action_anim_default_seconds or 1.0,
+    timing.action_anim_default_seconds or 1.0,
     "target item anim should use default duration"
   )
 end
@@ -268,9 +282,9 @@ local function _test_exile_item_defers_mountain_effect_until_move_followup()
   _set_ui_port(g, { wait_action_anim = true })
   local user = g.players[1]
   local target = g.players[2]
-  user.inventory:add({ id = gameplay_rules.item_ids.exile })
+  user.inventory:add({ id = item_ids.exile })
 
-  local res = executor.use_item(g, user, gameplay_rules.item_ids.exile, {
+  local res = executor.use_item(g, user, item_ids.exile, {
     by_ai = true,
     target_id = target.id,
   })
@@ -302,7 +316,7 @@ local function _test_item_executor_fallback_item_use_anim()
   assert(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "fallback should queue item_use anim")
   _assert_eq(
     g.turn.action_anim.duration,
-    gameplay_rules.action_anim_default_seconds or 1.0,
+    timing.action_anim_default_seconds or 1.0,
     "fallback item anim should use default duration"
   )
 end
@@ -318,7 +332,7 @@ local function _test_item_executor_keeps_specific_anim_without_fallback()
   assert(g.turn.action_anim and g.turn.action_anim.kind == "mine", "specific mine anim should not be replaced")
   _assert_eq(
     g.turn.action_anim.duration,
-    gameplay_rules.action_anim_default_seconds or 1.0,
+    timing.action_anim_default_seconds or 1.0,
     "specific mine anim should use default duration"
   )
 end
@@ -326,7 +340,7 @@ end
 local function _test_item_phase_exposes_mine_in_pre_action()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.mine })
+  p.inventory:add({ id = item_ids.mine })
 
   local spec = assert(item_phase.build_choice_spec(g, p, "pre_action"), "mine should be offered in pre_action")
   _assert_eq(spec.uses_item_slots, true, "item_phase choice should expose uses_item_slots flag")
@@ -336,7 +350,7 @@ local function _test_item_phase_exposes_mine_in_pre_action()
   _assert_eq(spec.confirm_body, "可用道具：地雷卡", "item_phase choice should expose confirm body from use-case output")
   local found = nil
   for _, option in ipairs(spec.options) do
-    if option.id == gameplay_rules.item_ids.mine then
+    if option.id == item_ids.mine then
       found = option
       break
     end
@@ -349,14 +363,14 @@ end
 local function _test_item_phase_exposes_mine_in_post_action()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.mine })
+  p.inventory:add({ id = item_ids.mine })
 
   local spec = assert(item_phase.build_choice_spec(g, p, "post_action"), "mine should be offered in post_action")
   _assert_eq(spec.confirm_title, "行动后", "post_action choice should expose confirm title from use-case output")
   _assert_eq(spec.confirm_body, "可用道具：地雷卡", "post_action choice should expose confirm body from use-case output")
   local found = nil
   for _, option in ipairs(spec.options) do
-    if option.id == gameplay_rules.item_ids.mine then
+    if option.id == item_ids.mine then
       found = option
       break
     end
@@ -369,7 +383,7 @@ end
 local function _test_item_phase_exposes_send_poor_in_post_action()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.send_poor })
+  p.inventory:add({ id = item_ids.send_poor })
   g:set_player_deity(p, "poor", 2)
 
   local pre_action = item_phase.build_choice_spec(g, p, "pre_action")
@@ -380,7 +394,7 @@ local function _test_item_phase_exposes_send_poor_in_post_action()
   _assert_eq(spec.confirm_body, "可用道具：送神卡", "post_action choice should expose confirm body from use-case output")
   local found = nil
   for _, option in ipairs(spec.options) do
-    if option.id == gameplay_rules.item_ids.send_poor then
+    if option.id == item_ids.send_poor then
       found = option
       break
     end
@@ -393,12 +407,12 @@ end
 local function _test_item_phase_dedupes_same_item_id_options()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
-  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+  p.inventory:add({ id = item_ids.remote_dice })
+  p.inventory:add({ id = item_ids.remote_dice })
 
   local spec = assert(item_phase.build_choice_spec(g, p, "pre_action"), "duplicate remote dice should still build choice")
   _assert_eq(#spec.options, 1, "item_phase choice should collapse duplicate item ids into one option")
-  _assert_eq(spec.options[1] and spec.options[1].id, gameplay_rules.item_ids.remote_dice,
+  _assert_eq(spec.options[1] and spec.options[1].id, item_ids.remote_dice,
     "deduped option should keep remote dice id")
   _assert_eq(spec.confirm_body, "可用道具：遥控骰子卡", "deduped confirm body should not repeat card names")
 end
@@ -449,22 +463,22 @@ local function _test_item_strategy_hides_reactive_cards_from_active_window()
   local idx = 3
   local tile_ref = g.board:get_tile(idx)
   g:update_player_position(p, idx)
-  p.inventory:add({ id = gameplay_rules.item_ids.strong })
-  p.inventory:add({ id = gameplay_rules.item_ids.free_rent })
-  p.inventory:add({ id = gameplay_rules.item_ids.roadblock })
+  p.inventory:add({ id = item_ids.strong })
+  p.inventory:add({ id = item_ids.free_rent })
+  p.inventory:add({ id = item_ids.roadblock })
 
   g:set_tile_owner(tile_ref, p.id)
   g:set_player_property(p, tile_ref.id, true)
   assert(
-    item_strategy.can_offer_in_phase(g, p, gameplay_rules.item_ids.strong, "post_action") == false,
+    item_strategy.can_offer_in_phase(g, p, item_ids.strong, "post_action") == false,
     "strong card should stay hidden in active windows"
   )
   assert(
-    item_strategy.can_offer_in_phase(g, p, gameplay_rules.item_ids.free_rent, "post_action") == false,
+    item_strategy.can_offer_in_phase(g, p, item_ids.free_rent, "post_action") == false,
     "free_rent card should stay hidden in active windows"
   )
   assert(
-    item_strategy.can_offer_in_phase(g, p, gameplay_rules.item_ids.roadblock, "post_action") == true,
+    item_strategy.can_offer_in_phase(g, p, item_ids.roadblock, "post_action") == true,
     "roadblock should be offered when UI candidates exist"
   )
 end
@@ -612,7 +626,7 @@ end
 local function _test_item_phase_select_remote_dice_keeps_followup_cancelable_in_repeatable_phase()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+  p.inventory:add({ id = item_ids.remote_dice })
 
   local spec = assert(item_phase.build_choice_spec(g, p, "pre_action", {
     next_state = "roll",
@@ -625,7 +639,7 @@ local function _test_item_phase_select_remote_dice_keeps_followup_cancelable_in_
   local res = choice_resolver.resolve(g, pending, {
     type = "choice_select",
     choice_id = pending.id,
-    option_id = gameplay_rules.item_ids.remote_dice,
+    option_id = item_ids.remote_dice,
     actor_role_id = p.id,
   })
   assert(res and res.stay == true, "selecting remote dice should open follow-up choice")
@@ -641,7 +655,7 @@ end
 local function _test_repeatable_phase_followup_cancel_reopens_item_phase_without_consuming()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+  p.inventory:add({ id = item_ids.remote_dice })
 
   local pending = _open_choice(g, assert(item_phase.build_choice_spec(g, p, "pre_action", {
     next_state = "roll",
@@ -650,7 +664,7 @@ local function _test_repeatable_phase_followup_cancel_reopens_item_phase_without
   local select_res = choice_resolver.resolve(g, pending, {
     type = "choice_select",
     choice_id = pending.id,
-    option_id = gameplay_rules.item_ids.remote_dice,
+    option_id = item_ids.remote_dice,
     actor_role_id = p.id,
   })
   assert(select_res and select_res.stay == true, "selecting remote dice should enter follow-up choice")
@@ -672,8 +686,8 @@ end
 local function _test_repeatable_phase_followup_confirm_consumes_and_reopens_item_phase()
   local g = _new_game()
   local p = g:current_player()
-  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
-  p.inventory:add({ id = gameplay_rules.item_ids.mine })
+  p.inventory:add({ id = item_ids.remote_dice })
+  p.inventory:add({ id = item_ids.mine })
 
   local pending = _open_choice(g, assert(item_phase.build_choice_spec(g, p, "pre_action", {
     next_state = "roll",
@@ -682,7 +696,7 @@ local function _test_repeatable_phase_followup_confirm_consumes_and_reopens_item
   local select_res = choice_resolver.resolve(g, pending, {
     type = "choice_select",
     choice_id = pending.id,
-    option_id = gameplay_rules.item_ids.remote_dice,
+    option_id = item_ids.remote_dice,
     actor_role_id = p.id,
   })
   assert(select_res and select_res.stay == true, "selecting remote dice should enter follow-up choice")
@@ -716,7 +730,7 @@ local function _test_preconsumed_followup_cancel_falls_back_to_first_option()
     allow_cancel = false,
     meta = {
       player_id = p.id,
-      item_id = gameplay_rules.item_ids.remote_dice,
+      item_id = item_ids.remote_dice,
       dice_count = 1,
       item_preconsumed = true,
     },
@@ -779,14 +793,14 @@ local function _test_simple_item_use_pushes_item_card_popup()
       popups[#popups + 1] = payload
     end,
   })
-  p.inventory:add({ id = gameplay_rules.item_ids.tax_free })
+  p.inventory:add({ id = item_ids.tax_free })
 
-  local res = executor.use_item(g, p, gameplay_rules.item_ids.tax_free, { by_ai = true })
+  local res = executor.use_item(g, p, item_ids.tax_free, { by_ai = true })
   local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
   _assert_eq(ok, true, "tax_free use ok")
   _assert_eq(#popups, 1, "simple item use should push one broadcast popup")
   _assert_eq(popups[1].kind, "item_card", "simple item broadcast should use item_card kind")
-  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.tax_free, "simple item broadcast image_ref mismatch")
+  _assert_eq(popups[1].image_ref, item_ids.tax_free, "simple item broadcast image_ref mismatch")
   assert(string.find(popups[1].body, p.name, 1, true), "simple item broadcast should include player name")
   assert(string.find(popups[1].body, "免税卡", 1, true), "simple item broadcast should include item name")
 end
@@ -803,9 +817,9 @@ local function _test_target_item_use_pushes_item_card_popup()
   })
   g:set_player_cash(user, 1000)
   g:set_player_cash(target, 9000)
-  user.inventory:add({ id = gameplay_rules.item_ids.share_wealth })
+  user.inventory:add({ id = item_ids.share_wealth })
 
-  local res = executor.use_item(g, user, gameplay_rules.item_ids.share_wealth, {
+  local res = executor.use_item(g, user, item_ids.share_wealth, {
     by_ai = true,
     target_id = target.id,
   })
@@ -813,7 +827,7 @@ local function _test_target_item_use_pushes_item_card_popup()
   _assert_eq(ok, true, "target item use ok")
   _assert_eq(#popups, 1, "target item use should push one broadcast popup")
   _assert_eq(popups[1].kind, "item_card", "target item broadcast should use item_card kind")
-  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.share_wealth, "target item broadcast image_ref mismatch")
+  _assert_eq(popups[1].image_ref, item_ids.share_wealth, "target item broadcast image_ref mismatch")
   assert(string.find(popups[1].body, user.name, 1, true), "target item broadcast should include player name")
   assert(string.find(popups[1].body, "均富卡", 1, true), "target item broadcast should include item name")
 end
@@ -828,7 +842,7 @@ local function _test_remote_dice_followup_pushes_item_card_popup()
     end,
   })
   g.turn.item_phase_active = "pre_action"
-  p.inventory:add({ id = gameplay_rules.item_ids.remote_dice })
+  p.inventory:add({ id = item_ids.remote_dice })
   local pending = _open_choice(g, {
     kind = "remote_dice_value",
     route_key = "remote",
@@ -837,7 +851,7 @@ local function _test_remote_dice_followup_pushes_item_card_popup()
     allow_cancel = false,
     meta = {
       player_id = p.id,
-      item_id = gameplay_rules.item_ids.remote_dice,
+      item_id = item_ids.remote_dice,
       dice_count = 1,
       item_preconsumed = false,
     },
@@ -853,7 +867,7 @@ local function _test_remote_dice_followup_pushes_item_card_popup()
   _assert_eq(res and res.stay, false, "remote dice follow-up should resolve immediately")
   _assert_eq(#popups, 1, "remote dice follow-up should push one broadcast popup")
   _assert_eq(popups[1].kind, "item_card", "remote dice broadcast should use item_card kind")
-  _assert_eq(popups[1].image_ref, gameplay_rules.item_ids.remote_dice, "remote dice broadcast image_ref mismatch")
+  _assert_eq(popups[1].image_ref, item_ids.remote_dice, "remote dice broadcast image_ref mismatch")
 end
 
 local function _test_steal_uses_tip_without_popup()
@@ -862,8 +876,8 @@ local function _test_steal_uses_tip_without_popup()
   local tips = {}
   local stealer = g.players[1]
   local target = g.players[2]
-  stealer.inventory:add({ id = gameplay_rules.item_ids.steal })
-  target.inventory:add({ id = gameplay_rules.item_ids.tax_free })
+  stealer.inventory:add({ id = item_ids.steal })
+  target.inventory:add({ id = item_ids.tax_free })
 
   support.with_patches({
     {
@@ -900,7 +914,7 @@ local function _test_steal_failure_uses_tip_without_popup()
   local tips = {}
   local stealer = g.players[1]
   local target = g.players[2]
-  stealer.inventory:add({ id = gameplay_rules.item_ids.steal })
+  stealer.inventory:add({ id = item_ids.steal })
 
   support.with_patches({
     {
@@ -946,8 +960,8 @@ local function _test_rich_item_emits_deity_feedback_event()
       end,
     },
   }, function()
-    p.inventory:add({ id = gameplay_rules.item_ids.rich })
-    local res = executor.use_item(g, p, gameplay_rules.item_ids.rich, { by_ai = true })
+    p.inventory:add({ id = item_ids.rich })
+    local res = executor.use_item(g, p, item_ids.rich, { by_ai = true })
     local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
     _assert_eq(ok, true, "rich item use ok")
   end)
@@ -974,6 +988,7 @@ return {
     { name = "build_wait_choice_args_requires_resume_next_state", run = _test_build_wait_choice_args_requires_resume_next_state },
     { name = "build_wait_choice_args_allows_nil_resume_next_args", run = _test_build_wait_choice_args_allows_nil_resume_next_args },
     { name = "build_wait_choice_args_restores_next_state_and_args", run = _test_build_wait_choice_args_restores_next_state_and_args },
+    { name = "wait_choice_arg_helpers_split_state_and_args", run = _test_wait_choice_arg_helpers_split_state_and_args },
     { name = "item_equalize_cash", run = _test_item_equalize_cash },
     { name = "target_item_manual_direct_exec_and_duration", run = _test_target_item_manual_direct_exec_and_duration },
     {

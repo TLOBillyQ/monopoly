@@ -640,6 +640,39 @@ local function _test_resolve_backward_next_returns_sorted_any_neighbor_when_mult
   _assert_eq(result, 30, "should fall back to the first sorted non-facing neighbor when multiple options remain")
 end
 
+local function _test_resolve_backward_next_source_reports_facing_hit()
+  local map = {
+    outer_prev = {},
+    backward_fallback = {},
+  }
+  local neigh = { down = 20, left = 50 }
+  local result = Board._resolve_backward_next_source(map, 1, neigh, "up")
+  _assert_eq(result.next_id, 20, "result should keep the reverse-facing neighbor")
+  _assert_eq(result.source, "facing_reverse_neighbor", "result should report facing hit as the source")
+end
+
+local function _test_resolve_backward_next_source_reports_outer_prev_hit()
+  local map = {
+    outer_prev = { [1] = 30 },
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { left = 50 }
+  local result = Board._resolve_backward_next_source(map, 1, neigh, nil)
+  _assert_eq(result.next_id, 30, "result should keep the outer_prev tile")
+  _assert_eq(result.source, "outer_prev", "result should report outer_prev as the source")
+end
+
+local function _test_resolve_backward_next_source_reports_backward_fallback_hit()
+  local map = {
+    outer_prev = {},
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { left = 50, right = 60 }
+  local result = Board._resolve_backward_next_source(map, 1, neigh, nil)
+  _assert_eq(result.next_id, 40, "result should keep the backward fallback tile")
+  _assert_eq(result.source, "backward_fallback", "result should report backward_fallback as the source")
+end
+
 local function _test_pick_any_dir_returns_first_sorted_dir()
   local neigh = { right = 10, up = 20, down = 30 }
   local dir, id = Board._pick_any_dir(neigh, nil)
@@ -826,6 +859,9 @@ return {
     { name = "resolve_backward_next_returns_backward_fallback_before_neighbor_fallback", run = _test_resolve_backward_next_returns_backward_fallback_before_neighbor_fallback },
     { name = "resolve_backward_next_returns_unique_neighbor_when_only_one_remains", run = _test_resolve_backward_next_returns_unique_neighbor_when_only_one_remains },
     { name = "resolve_backward_next_returns_sorted_any_neighbor_when_multiple_remain", run = _test_resolve_backward_next_returns_sorted_any_neighbor_when_multiple_remain },
+    { name = "resolve_backward_next_source_reports_facing_hit", run = _test_resolve_backward_next_source_reports_facing_hit },
+    { name = "resolve_backward_next_source_reports_outer_prev_hit", run = _test_resolve_backward_next_source_reports_outer_prev_hit },
+    { name = "resolve_backward_next_source_reports_backward_fallback_hit", run = _test_resolve_backward_next_source_reports_backward_fallback_hit },
     { name = "pick_any_dir_returns_first_sorted_dir", run = _test_pick_any_dir_returns_first_sorted_dir },
     { name = "pick_any_dir_avoids_avoid_dir", run = _test_pick_any_dir_avoids_avoid_dir },
     { name = "pick_any_dir_returns_nil_when_all_avoided", run = _test_pick_any_dir_returns_nil_when_all_avoided },

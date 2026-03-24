@@ -38,7 +38,7 @@ local logger = require("src.core.utils.logger")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local gameplay_rules = require("src.config.gameplay.rules")
+local target_pick = require("src.config.gameplay.target_pick")
 local host_runtime = require("src.host.eggy")
 local host_runtime_bridge = require("src.ui.runtime.host_bridge")
 local runtime_state = require("src.ui.runtime.state")
@@ -685,13 +685,13 @@ end
 
 local function _test_target_pick_enter_spawns_candidate_markers_at_height_1_6()
   local env = _build_target_pick_env()
-  local old_height = gameplay_rules.target_pick.marker_height_offset
-  gameplay_rules.target_pick.marker_height_offset = 1.6
+  local old_height = target_pick.marker_height_offset
+  target_pick.marker_height_offset = 1.6
   _with_target_pick_runtime(env, function(runtime)
     target_choice_effects.enter(env.state, env.choice)
     _assert_eq(#runtime.created_markers, 0, "enter should wait external event and skip marker spawn")
   end)
-  gameplay_rules.target_pick.marker_height_offset = old_height
+  target_pick.marker_height_offset = old_height
 end
 
 local function _test_target_pick_degrades_without_raycast_api()

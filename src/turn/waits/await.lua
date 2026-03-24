@@ -1,7 +1,8 @@
 local turn_decision = require("src.turn.waits.decision")
 local validator = require("src.turn.actions.validator")
 local number_utils = require("src.core.utils.number_utils")
-local gameplay_rules = require("src.config.gameplay.rules")
+local debug_flags = require("src.config.gameplay.debug_flags")
+local timing = require("src.config.gameplay.timing")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 local auto_play_port = require("src.rules.ports.auto_play")
@@ -20,7 +21,7 @@ local _wait_for_choice_action_anim
 local _next_action_anim
 
 local function _should_move_anim_debug_log()
-  return logger.is_anim_debug_enabled() or gameplay_rules.move_anim_debug_log_enabled == true
+  return logger.is_anim_debug_enabled() or debug_flags.move_anim_debug_log_enabled == true
 end
 
 local function _move_anim_debug_log(...)
@@ -330,7 +331,7 @@ function await.landing_visual(session, args)
   if pending_seq == nil then
     local seq = wait_callbacks.begin_wait(game, wait_keys.landing_visual)
     _mark_dirty(game)
-    local delay = gameplay_rules.landing_visual_hold_seconds or 0
+    local delay = timing.landing_visual_hold_seconds or 0
     runtime_ports.schedule(delay, function()
       if wait_callbacks.pending_wait_seq(game, wait_keys.landing_visual) == seq then
         wait_callbacks.mark_wait_ready(game, wait_keys.landing_visual, seq)

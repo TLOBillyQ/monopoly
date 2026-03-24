@@ -1,5 +1,6 @@
 local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
-local gameplay_rules = require("src.config.gameplay.rules")
+local board_geometry = require("src.config.gameplay.board_geometry")
+local debug_flags = require("src.config.gameplay.debug_flags")
 local runtime_state = require("src.ui.runtime.state")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
@@ -8,7 +9,7 @@ local move_anim = require("src.ui.render.move_anim")
 local M = {}
 
 local function _should_debug_log()
-  return logger.is_anim_debug_enabled() or gameplay_rules.move_anim_debug_log_enabled == true
+  return logger.is_anim_debug_enabled() or debug_flags.move_anim_debug_log_enabled == true
 end
 
 local function _debug_log(...)
@@ -90,7 +91,7 @@ function M.resolve_min_player_y(scene)
   assert(scene.ground.get_position ~= nil, "missing board_scene.ground.get_position")
   local ground_pos = scene.ground.get_position()
   assert(ground_pos ~= nil and ground_pos.y ~= nil, "missing ground position")
-  local board_cfg = gameplay_rules.board or {}
+  local board_cfg = board_geometry or {}
   local offset = board_cfg.player_min_ground_offset
   if offset == nil then
     offset = 0.5

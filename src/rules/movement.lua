@@ -1,5 +1,6 @@
 local constants = require("src.config.content.constants")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
+local timing = require("src.config.gameplay.timing")
 local inventory = require("src.rules.items.inventory")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
@@ -8,7 +9,6 @@ local mine_effect = require("src.rules.effects.mine_effect")
 local action_anim_port = require("src.core.ports.action_anim")
 
 local movement = {}
-local item_ids = gameplay_rules.item_ids
 local _emit_event = monopoly_event.emit
 
 local function _build_other_action_prompt_text()
@@ -29,7 +29,7 @@ local function _check_roadblock(game, board, current, player)
     kind = "roadblock_trigger",
     player_id = player.id,
     tile_index = current,
-    duration = gameplay_rules.action_anim_default_seconds or 1.0,
+    duration = timing.action_anim_default_seconds or 1.0,
   })
   _emit_event(monopoly_event.movement.roadblock_hit, {
     player = player,

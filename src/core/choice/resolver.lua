@@ -3,33 +3,8 @@ local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
 
 local choice_resolver = {}
 
-local function _each_option(choice, visitor)
-  local options = choice and choice.options or nil
-  if type(options) ~= "table" then
-    return nil
-  end
-  for index, option in ipairs(options) do
-    local option_id = type(option) == "table" and option.id or option
-    local result = visitor(option, option_id, index)
-    if result ~= nil then
-      return result
-    end
-  end
-  return nil
-end
-
-local function _is_cancel(action)
-  return action ~= nil and action.type == "choice_cancel"
-end
-
-local function _first_option_id(choice)
-  return _each_option(choice, function(_, option_id)
-    return option_id
-  end)
-end
-
 local function _find_option_id(choice, target_option_id)
-  return _each_option(choice, function(_, option_id)
+  return item_preconsume_policy.each_option(choice, function(_, option_id)
     if option_id == target_option_id then
       return option_id
     end
@@ -70,7 +45,7 @@ local function _option_exists(choice, target_option_id)
   if choice == nil or target_option_id == nil then
     return false
   end
-  return _each_option(choice, function(_, option_id)
+  return item_preconsume_policy.each_option(choice, function(_, option_id)
     if option_id == target_option_id or tostring(option_id) == tostring(target_option_id) then
       return true
     end
@@ -109,7 +84,7 @@ local function _resolve_cancel_followup(game, choice, descriptor)
 end
 
 local base_helpers = {
-  is_cancel = _is_cancel,
+  is_cancel = item_preconsume_policy.is_cancel_action,
   clear_choice = _clear_choice,
   finish_choice = _finish_choice,
   contains = _contains,
@@ -140,7 +115,7 @@ function choice_resolver.resolve(game, choice, action)
 
   action = item_preconsume_policy.normalize_cancel_action(choice, action)
 
-  if _is_cancel(action) then
+  if item_preconsume_policy.is_cancel_action(action) then
     local fallback_option_id, cancel_result = _resolve_cancel_followup(game, choice, descriptor)
     if fallback_option_id ~= nil then
       action = _build_select_action(choice, fallback_option_id, action)

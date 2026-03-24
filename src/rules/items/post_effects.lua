@@ -2,15 +2,16 @@ local logger = require("src.core.utils.logger")
 local constants = require("src.config.content.constants")
 local board_query = require("src.rules.board.query")
 local inventory = require("src.rules.items.inventory")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
+local timing = require("src.config.gameplay.timing")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number_utils")
 local facing_policy = require("src.rules.board.facing_policy")
+local direction_constants = require("src.rules.board.directions")
 
 local post_effects = {}
-local item_ids = gameplay_rules.item_ids
-local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local target_item_order = {
   item_ids.share_wealth,
@@ -282,7 +283,7 @@ end
 local function _walk_and_clear_obstacles(game, player, board, state, context)
   local map = assert(board.map, "missing board.map")
   local neighbors = assert(map.neighbors, "missing board.map.neighbors")
-  local opposite = { up = "down", down = "up", left = "right", right = "left" }
+  local opposite = direction_constants.opposite
   local walk = _seed_walk_queue(board, player, context, state.distance)
 
   board_query.queue_walk(walk.queue, function(node, push)

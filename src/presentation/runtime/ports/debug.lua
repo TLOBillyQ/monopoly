@@ -1,22 +1,11 @@
-local gameplay_rules = require("src.config.gameplay.rules")
+local debug_flags = require("src.config.gameplay.debug_flags")
+local with_client_role = require("src.core.utils.with_client_role")
 local logger = require("src.core.utils.logger")
 local ui_event_state = require("src.ui.ctl.event_state")
 local runtime = require("src.ui.render.runtime_ui")
 local role_id_utils = require("src.core.utils.role_id")
 
 local debug_ports = {}
-
-local function _with_client_role(role, fn)
-  if type(runtime.with_client_role) == "function" then
-    return runtime.with_client_role(role, fn)
-  end
-  runtime.set_client_role(role)
-  local ok, err = pcall(fn)
-  runtime.set_client_role(nil)
-  if not ok then
-    error(err)
-  end
-end
 
 function debug_ports.build(common)
   return {
@@ -32,7 +21,7 @@ function debug_ports.build(common)
         if role_id == nil then
           return
         end
-        _with_client_role(role, function()
+        with_client_role(runtime, role, function()
           local debug_enabled = ui_event_state.resolve_debug_enabled(state, role_id)
           if role_id_utils.read(state._debug_log_enabled_by_role, role_id) ~= debug_enabled then
             role_id_utils.write(state._debug_log_enabled_by_role, role_id, debug_enabled)
@@ -47,7 +36,7 @@ function debug_ports.build(common)
             local seq = logger.get_event_seq()
             if seq ~= role_id_utils.read(state._debug_log_seq_by_role, role_id) then
               role_id_utils.write(state._debug_log_seq_by_role, role_id, seq)
-              local max_lines = gameplay_rules.debug_log_max_lines or 50
+              local max_lines = debug_flags.debug_log_max_lines or 50
               ui_view.set_debug_log_for_role(state, role, logger.get_text_by_level("event", max_lines))
             end
           end

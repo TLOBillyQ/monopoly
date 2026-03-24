@@ -1,6 +1,6 @@
 local tile = require("src.rules.board.tile")
 local pricing = require("src.rules.land.pricing")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local monopoly_event = require("src.core.events.monopoly_events")
 
 local game_victory = {}
@@ -59,7 +59,7 @@ function game_victory.check_victory(self)
     return true
   end
   local alive = self:alive_players()
-  local turn_limit = gameplay_rules.turn_limit
+  local turn_limit = timing.turn_limit
   assert(turn_limit ~= nil, "missing turn_limit")
   if turn_limit > 0 then
     local turn_count = self.turn.turn_count
@@ -91,4 +91,3 @@ function game_victory.check_victory(self)
 end
 
 return game_victory
-

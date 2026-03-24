@@ -1,7 +1,7 @@
 require "vendor.third_party.ClassUtils"
 
 local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 
 local auto_runner = Class("AutoRunner")
 
@@ -70,7 +70,7 @@ end
 local function _resolve_interval_seconds(self, env)
   local wait_kind = _resolve_wait_kind(env)
   if wait_kind == "choice" then
-    return gameplay_rules.auto_decision_delay_seconds or 0
+    return timing.auto_decision_delay_seconds or 0
   end
   return self.interval or 0
 end

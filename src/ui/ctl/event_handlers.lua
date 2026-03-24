@@ -53,10 +53,21 @@ end
 
 local function _index_of_tile_id_from_context(tile_id)
   local ctx = context.state
-  if tile_id == nil or not (ctx and ctx.game and ctx.game.board and ctx.game.board.index_of_tile_id) then
+  local board = ctx and ctx.game and ctx.game.board or nil
+  if tile_id == nil or type(board and board.index_of_tile_id) ~= "function" then
     return nil
   end
-  return ctx.game.board:index_of_tile_id(tile_id)
+  return board:index_of_tile_id(tile_id)
+end
+
+local function _resolve_tile_index_from_payload(payload)
+  if type(payload) ~= "table" then
+    return nil
+  end
+  if payload.tile_index ~= nil then
+    return payload.tile_index
+  end
+  return _index_of_tile_id_from_context(_resolve_tile_id(payload))
 end
 
 function event_handlers.install(_, logger, state)
@@ -97,19 +108,20 @@ function event_handlers.install(_, logger, state)
     return nil
   end
 
-  local function _dispatch_or_defer(data, handler)
-    local current_state = context.state
-    if current_state == nil then
-      handler(data)
-      return
-    end
-    local deferred = landing_visual_hold.run_or_defer(current_state, current_state.game, "runtime_event", function()
-      handler(data)
-    end)
-    if deferred == true then
-      return
-    end
+local function _dispatch_or_defer(data, handler)
+  local current_state = context.state
+  if current_state == nil then
+    return handler(data)
   end
+  local result = nil
+  local deferred = landing_visual_hold.run_or_defer(current_state, nil, "runtime_event", function()
+    result = handler(data)
+  end)
+  if deferred == true then
+    return result
+  end
+  return result
+end
 
   local function _register_handler(event_name, handler)
     local list = context.handlers_by_event[event_name]
@@ -119,7 +131,7 @@ function event_handlers.install(_, logger, state)
     end
     list[#list + 1] = handler
     host_runtime_ports.register_custom_event(event_name, function(_, _, data)
-      _dispatch_or_defer(data, handler)
+      return _dispatch_or_defer(data, handler)
     end)
   end
 
@@ -145,22 +157,12 @@ function event_handlers.install(_, logger, state)
 
   local ok, action_anim = pcall(require, "src.ui.render.action_anim")
 
-  local function _resolve_tile_index(payload)
-    if type(payload) ~= "table" then
-      return nil
-    end
-    if payload.tile_index ~= nil then
-      return payload.tile_index
-    end
-    return _index_of_tile_id_from_context(_resolve_tile_id(payload))
-  end
-
   _register_handler(monopoly_event.movement.roadblock_hit, function(data)
-    _resolve_tile_index(_event_data(data))
+    return _resolve_tile_index_from_payload(_event_data(data))
   end)
 
   _register_handler(monopoly_event.land.mine_hit, function(data)
-    _resolve_tile_index(_event_data(data))
+    return _resolve_tile_index_from_payload(_event_data(data))
   end)
 
   _register_handler(monopoly_event.land.rent_paid, function(data)

@@ -1,9 +1,8 @@
 local effects = require("src.rules.items.post_effects")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local handlers = require("src.rules.items.handlers")
 require "vendor.third_party.ClassUtils"
 
-local item_ids = gameplay_rules.item_ids
 local registry = Class("ItemRegistry")
 
 local function _copy_context(context)

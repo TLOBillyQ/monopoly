@@ -1,14 +1,12 @@
 local board_utils = require("src.rules.land.board_utils")
 local constants = require("src.config.content.constants")
-local gameplay_rules = require("src.config.gameplay.rules")
+local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
 local use_broadcast = require("src.rules.items.use_broadcast")
 local rent_resolver = require("src.rules.land.rent_resolver")
 local number_utils = require("src.core.utils.number_utils")
 
 local land_rules = {}
-local item_ids = gameplay_rules.item_ids
-
 function land_rules.safe_tile_state(game, tile)
   return rent_resolver.safe_tile_state(game, tile)
 end

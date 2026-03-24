@@ -3,7 +3,7 @@ local runtime = require("src.ui.render.runtime_ui")
 local ui_events = require("src.ui.ctl.ui_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_state = require("src.ui.runtime.state")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local role_id_utils = require("src.core.utils.role_id")
 local choice_support = require("src.ui.pres.choice_support")
 
@@ -184,7 +184,7 @@ local function _sync_slot_images(ctx)
 end
 
 local function _schedule_highlight_ready(state, gate_key, token)
-  local delay_seconds = gameplay_rules.item_slot_highlight_anim_delay_seconds or 0.35
+  local delay_seconds = timing.item_slot_highlight_anim_delay_seconds or 0.35
   runtime_ports.schedule(delay_seconds, function()
     local current_gate = state and state._item_slot_highlight_gate and state._item_slot_highlight_gate[gate_key] or nil
     if current_gate and current_gate.timer_token == token then

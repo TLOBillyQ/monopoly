@@ -1,5 +1,5 @@
 local items_cfg = require("src.config.content.items")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local auto_play_port = require("src.rules.ports.auto_play")
 local strategy = require("src.rules.items.strategy")
 local availability = require("src.rules.items.availability")
@@ -53,7 +53,7 @@ local function _resolve_after_action_anim(args, res)
 end
 
 function phase_module.is_enabled(phase)
-  local queue = gameplay_rules.item_phase_queue
+  local queue = timing.item_phase_queue
   assert(type(queue) == "table", "invalid item_phase_queue")
   for _, name in ipairs(queue) do
     if name == phase then
@@ -65,17 +65,6 @@ end
 
 function phase_module.is_repeatable(phase)
   return repeatable_phases[phase] == true
-end
-
-local function _copy_table(source)
-  local out = {}
-  if type(source) ~= "table" then
-    return out
-  end
-  for key, value in pairs(source) do
-    out[key] = value
-  end
-  return out
 end
 
 local function _build_resume_meta(phase, args)
@@ -122,10 +111,18 @@ local function _require_resume_next_state(meta)
   return assert(meta and meta.resume_next_state, "missing meta.resume_next_state")
 end
 
+function phase_module._build_wait_choice_next_state(meta)
+  return _require_resume_next_state(meta)
+end
+
+function phase_module._build_wait_choice_next_args(meta)
+  return meta and meta.resume_next_args or nil
+end
+
 function phase_module.build_wait_choice_args(meta)
   return {
-    next_state = _require_resume_next_state(meta),
-    next_args = meta and meta.resume_next_args or nil,
+    next_state = phase_module._build_wait_choice_next_state(meta),
+    next_args = phase_module._build_wait_choice_next_args(meta),
   }
 end
 
@@ -312,7 +309,7 @@ function phase_module.build_choice_spec(game, player, phase, args)
       player_id = player.id,
       phase = phase,
       resume_next_state = resume_meta.resume_next_state,
-      resume_next_args = _copy_table(resume_meta.resume_next_args),
+      resume_next_args = availability.copy_table(resume_meta.resume_next_args),
     },
   }
 end

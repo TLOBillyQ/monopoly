@@ -3,13 +3,13 @@ local tile = require("src.rules.board.tile")
 local board_query = require("src.rules.board.query")
 local property_value = require("src.rules.commerce.property_value")
 local constants = require("src.config.content.constants")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number_utils")
 local target_query = require("src.rules.items.target_query")
 
 local demolish = {}
-local action_anim_duration = gameplay_rules.action_anim_default_seconds or 1.0
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local list_unpack = table.unpack
 

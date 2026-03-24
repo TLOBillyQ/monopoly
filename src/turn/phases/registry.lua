@@ -8,7 +8,7 @@ local turn_roll = require("src.turn.phases.roll")
 local turn_move = require("src.turn.phases.move")
 local turn_land = require("src.turn.phases.land")
 local move_followup = require("src.turn.phases.move_followup")
-local gameplay_rules = require("src.config.gameplay.rules")
+local timing = require("src.config.gameplay.timing")
 
 local turn_phase_registry = {}
 
@@ -58,7 +58,7 @@ local function _phase_end(turn_mgr, args)
   game.turn.post_action = nil
   game.turn.item_phase = {}
   game.turn.item_phase_active = ""
-  local inter_turn_wait_seconds = gameplay_rules.inter_turn_wait_seconds or 1.0
+  local inter_turn_wait_seconds = timing.inter_turn_wait_seconds or 1.0
   if inter_turn_wait_seconds <= 0 then
     turn_mgr:next_player()
     return nil

@@ -1,4 +1,5 @@
-local gameplay_rules = require("src.config.gameplay.rules")
+local debug_flags = require("src.config.gameplay.debug_flags")
+local timing = require("src.config.gameplay.timing")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local number_utils = require("src.core.utils.number_utils")
 local logger = require("src.core.utils.logger")
@@ -42,7 +43,7 @@ end
 local function _should_debug_log(anim)
   return anim
     and anim.kind ~= "roll"
-    and (logger.is_anim_debug_enabled() or gameplay_rules.action_anim_debug_log_enabled == true)
+    and (logger.is_anim_debug_enabled() or debug_flags.action_anim_debug_log_enabled == true)
     or false
 end
 
@@ -138,7 +139,7 @@ function action_anim.clear_overlay(state, kind, tile_index)
 end
 
 local function _resolve_duration(anim)
-  local default_duration = gameplay_rules.action_anim_default_seconds or 1.0
+  local default_duration = timing.action_anim_default_seconds or 1.0
   local duration = anim.duration or durations[anim.kind] or default_duration
   if duration <= 0 then
     duration = default_duration

@@ -407,6 +407,43 @@ local function _test_roadblock_hit_no_longer_drives_visual_feedback()
   assert(looked_up_tile_id == 12, "roadblock_hit should still resolve payload tile ids through board lookup")
 end
 
+local function _test_roadblock_hit_returns_explicit_tile_index_without_lookup()
+  local handlers = {}
+  local looked_up_tile_id = nil
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+  }, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, {
+      game = {
+        board = {
+          index_of_tile_id = function(_, tile_id)
+            looked_up_tile_id = tile_id
+            return 99
+          end,
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.movement.roadblock_hit]
+    assert(type(handler) == "function", "roadblock_hit handler should be registered")
+    local resolved = handler(nil, nil, {
+      tile_index = 7,
+      tile_id = 12,
+    })
+    assert(resolved == 7, "roadblock_hit should return the explicit tile_index")
+  end)
+
+  assert(looked_up_tile_id == nil, "roadblock_hit should not consult board lookup when tile_index exists")
+end
+
 local function _test_mine_hit_no_longer_drives_visual_feedback()
   local handlers = {}
   local cleared = 0
@@ -465,6 +502,43 @@ local function _test_mine_hit_no_longer_drives_visual_feedback()
   assert(looked_up_tile_id == 20, "mine_hit should still resolve nested payload tile ids through board lookup")
 end
 
+local function _test_mine_hit_returns_board_lookup_index_for_nested_tile_id()
+  local handlers = {}
+  local looked_up_tile_id = nil
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+  }, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, {
+      game = {
+        board = {
+          index_of_tile_id = function(_, tile_id)
+            looked_up_tile_id = tile_id
+            return 11
+          end,
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.land.mine_hit]
+    assert(type(handler) == "function", "mine_hit handler should be registered")
+    local resolved = handler(nil, nil, {
+      tile = { id = 20 },
+      player = { id = 3 },
+    })
+    assert(resolved == 11, "mine_hit should return the board lookup index")
+  end)
+
+  assert(looked_up_tile_id == 20, "mine_hit should resolve nested payload tile ids through board lookup")
+end
+
 local function _test_mine_hit_tolerates_missing_state_and_lookup_api()
   local handlers = {}
 
@@ -502,13 +576,13 @@ local function _test_turn_started_feedback_defers_during_landing_hold()
   local handlers = {}
   local calls = {}
   local state = {
-      game = {
-        turn = {
-          landing_visual_hold_active = true,
-          landing_visual_release_pending = false,
-        },
-        dirty = {
-          any = false,
+    game = {
+      turn = {
+        landing_visual_hold_active = true,
+        landing_visual_release_pending = false,
+      },
+      dirty = {
+        any = false,
         turn = false,
       },
     },
@@ -534,6 +608,11 @@ local function _test_turn_started_feedback_defers_during_landing_hold()
   }, function()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, state)
+    state.game.landing_visual_hold_state = state
+    landing_visual_hold.start(state.game)
+    landing_visual_hold.mark_release_pending(state.game)
+    state.game.turn.landing_visual_hold_active = false
+    state.game.turn.landing_visual_release_pending = false
     local handler = handlers[monopoly_event.feedback.turn_started]
     assert(type(handler) == "function", "turn_started handler should be registered")
     handler(nil, nil, { player_id = 5 })
@@ -621,8 +700,16 @@ return {
       run = _test_roadblock_hit_no_longer_drives_visual_feedback,
     },
     {
+      name = "roadblock_hit_returns_explicit_tile_index_without_lookup",
+      run = _test_roadblock_hit_returns_explicit_tile_index_without_lookup,
+    },
+    {
       name = "mine_hit_no_longer_drives_visual_feedback",
       run = _test_mine_hit_no_longer_drives_visual_feedback,
+    },
+    {
+      name = "mine_hit_returns_board_lookup_index_for_nested_tile_id",
+      run = _test_mine_hit_returns_board_lookup_index_for_nested_tile_id,
     },
     {
       name = "mine_hit_tolerates_missing_state_and_lookup_api",
