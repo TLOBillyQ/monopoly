@@ -6,6 +6,26 @@ local M = {}
 local _timing_enabled = os.getenv("MONO_TEST_TIMING") == "1"
 local wall_clock = _timing_enabled and require("tests.support.wall_clock") or nil
 
+local function _sum_elapsed(script_times)
+  local total = 0
+  for _, entry in ipairs(script_times) do
+    total = total + entry.elapsed_ms
+  end
+  return total
+end
+
+local function _print_timing_report(script_times)
+  local total_ms = _sum_elapsed(script_times)
+  table.sort(script_times, function(left, right)
+    return (left.elapsed_ms or 0) > (right.elapsed_ms or 0)
+  end)
+  print(string.format("[guard] wall total=%dms", total_ms))
+  print("[guard] script timings:")
+  for _, entry in ipairs(script_times) do
+    print(string.format("  %6dms  %s", entry.elapsed_ms, entry.name))
+  end
+end
+
 local function _run_script(script, summary)
   local guard_module = require(script.module_name)
   local timer = _timing_enabled and wall_clock.start() or nil
@@ -36,11 +56,9 @@ local function _run_script(script, summary)
 end
 
 function M.run()
-  bootstrap.install_package_paths()
   local failures = {}
   local summary = {}
   local script_times = _timing_enabled and {} or nil
-  local total_timer = _timing_enabled and wall_clock.start() or nil
 
   for _, script in ipairs(catalog.guard_scripts) do
     local failure, timing = _run_script(script, summary)
@@ -55,18 +73,11 @@ function M.run()
     end
   end
 
-  if _timing_enabled then
-    table.sort(script_times, function(left, right)
-      return (left.elapsed_ms or 0) > (right.elapsed_ms or 0)
-    end)
-  end
-  local total_timing = _timing_enabled and wall_clock.finish(total_timer) or nil
-
   if #failures > 0 then
     io.stdout:write("\n")
-    print("Guard checks failed (" .. tostring(#failures) .. "/" .. tostring(#catalog.guard_scripts) .. ")")
+    print("Guard checks failed (" .. #failures .. "/" .. #catalog.guard_scripts .. ")")
     for index, failure in ipairs(failures) do
-      print(tostring(index) .. ") " .. failure.name)
+      print(index .. ") " .. failure.name)
       if type(failure.result) == "table" and failure.result.error then
         print(failure.result.error)
       elseif failure.err then
@@ -75,25 +86,17 @@ function M.run()
       log_capture.replay(failure.captured)
     end
     if _timing_enabled then
-      print(string.format("[guard] wall total=%dms source=%s", total_timing.elapsed_ms, total_timing.source))
-      print("[guard] script timings:")
-      for _, entry in ipairs(script_times) do
-        print(string.format("  %6dms  %s", entry.elapsed_ms, tostring(entry.name)))
-      end
+      _print_timing_report(script_times)
     end
     error("guard checks failed")
   end
 
   io.stdout:write("\n")
   for _, line in ipairs(log_capture.summary_lines(summary)) do
-    print("[guard] suppressed x" .. tostring(line.count) .. " " .. line.text)
+    print("[guard] suppressed x" .. line.count .. " " .. line.text)
   end
   if _timing_enabled then
-    print(string.format("[guard] wall total=%dms source=%s", total_timing.elapsed_ms, total_timing.source))
-    print("[guard] script timings:")
-    for _, entry in ipairs(script_times) do
-      print(string.format("  %6dms  %s", entry.elapsed_ms, tostring(entry.name)))
-    end
+    _print_timing_report(script_times)
   end
   for _, script in ipairs(catalog.guard_scripts) do
     print(script.name .. " ok")
