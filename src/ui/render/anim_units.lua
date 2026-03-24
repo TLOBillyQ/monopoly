@@ -106,7 +106,7 @@ function units.play_mine_trigger(state, anim, duration, opts)
     _schedule_mine_trigger_snap(board_scene, player_id, anim, to_index, snap_delay, schedule)
     return _resolve_minimum_delay(snap_delay, duration)
   end
-  -- Fallback: no scheduler — preserve original call order
+  -- Fallback: no scheduler - preserve original call order
   move_anim.prepare_player_for_snap(board_scene, player_id, anim, "mine_trigger")
   _play_mine_feedback(state, cue_name, player_id, tile_index, hit_pos)
   _clear_mine_overlay(state, opts, tile_index)

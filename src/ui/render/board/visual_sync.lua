@@ -13,6 +13,37 @@ local roadblock_scale = math and math.Vector3 and math.Vector3(4.0, 4.0, 4.0) or
   z = 4.0,
 }
 
+local _trigger_kind_for_overlay = {
+  roadblock = "roadblock_trigger",
+  mine = "mine_trigger",
+}
+
+local function _has_pending_trigger_anim(state, overlay_kind, tile_index)
+  local game = state and state.game or nil
+  local turn = game and game.turn or nil
+  if not turn then
+    return false
+  end
+  local target_kind = _trigger_kind_for_overlay[overlay_kind]
+  if not target_kind then
+    return false
+  end
+  local current = turn.action_anim
+  if current and current.kind == target_kind and current.tile_index == tile_index then
+    return true
+  end
+  local queue = turn.action_anim_queue
+  if type(queue) ~= "table" then
+    return false
+  end
+  for _, entry in ipairs(queue) do
+    if entry.kind == target_kind and entry.tile_index == tile_index then
+      return true
+    end
+  end
+  return false
+end
+
 local function _dedupe_list(raw_list)
   local list = {}
   local seen = {}
@@ -131,13 +162,13 @@ function visual_sync.sync_overlay_visual(state, board_index)
 
   if has_roadblock then
     _spawn_roadblock_overlay(state, board_index)
-  else
+  elseif not _has_pending_trigger_anim(state, "roadblock", board_index) then
     overlay_runtime.clear_overlay(scene, "roadblock", board_index, _deps(state))
   end
 
   if has_mine then
     _spawn_mine_overlay(state, board_index)
-  else
+  elseif not _has_pending_trigger_anim(state, "mine", board_index) then
     overlay_runtime.clear_overlay(scene, "mine", board_index, _deps(state))
   end
 
