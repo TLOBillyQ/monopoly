@@ -2,6 +2,8 @@ local prefab = require("Data.Prefab")
 local logger = require("src.core.utils.logger")
 local compute = require("src.ui.render.anim_overlay_compute")
 local runtime = require("src.ui.render.anim_overlay_runtime")
+local host_runtime_bridge = require("src.ui.runtime.host_bridge")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local overlay = {}
 local roadblock_scale = (function()
@@ -13,6 +15,11 @@ end)()
 
 local function _deps(state)
   return state and state.presentation_runtime or nil
+end
+
+local function _resolve_hr(deps)
+  if deps and deps.host_runtime then return deps.host_runtime end
+  return host_runtime_bridge
 end
 
 function overlay.clear_overlay(state, kind, tile_index)
@@ -69,19 +76,21 @@ end
 function overlay.play_monster(_state, _anim, _duration, _opts)
 end
 
-local function _clear_obstacle_overlays(state, clear_overlay, cleared_indices)
-  for _, idx in ipairs(cleared_indices) do
-    clear_overlay(state, "roadblock", idx)
-    clear_overlay(state, "mine", idx)
-  end
-end
-
 function overlay.play_clear_obstacles(state, anim, duration, opts)
   local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
-  local cleared = anim.cleared_indices or {}
-  _clear_obstacle_overlays(state, clear_overlay, cleared)
+  local branches = anim.branches or {}
   local robot_id = prefab.group["清障机器人"]
-  runtime.spawn_transient(robot_id, nil, compute.overlay_pos_for_player(state, assert(anim.player_id, "missing clear_obstacles player_id")), duration, _deps(state))
+  local player_pos = compute.overlay_pos_for_player(state, assert(anim.player_id, "missing player_id"))
+  local hr = _resolve_hr(_deps(state))
+  for _, branch in ipairs(branches) do
+    hr.create_unit_group(robot_id, player_pos, runtime_constants.q_zero)
+    for _, entry in ipairs(branch) do
+      if entry.has_obstacle then
+        clear_overlay(state, "roadblock", entry.tile_index)
+        clear_overlay(state, "mine", entry.tile_index)
+      end
+    end
+  end
 end
 
 return overlay

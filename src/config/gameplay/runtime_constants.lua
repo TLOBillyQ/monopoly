@@ -29,6 +29,7 @@ local runtime_constants = {
   q_down = _quat(0.0, 90.0, 0.0),
 
   walk_speed = 7.0,
+  robot_speed = 18.0,
 
   -- 仓库内未引用，暂保留兼容
   vehicle_speed = 20.0,

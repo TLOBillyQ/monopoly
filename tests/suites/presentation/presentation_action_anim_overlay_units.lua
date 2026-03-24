@@ -38,18 +38,19 @@ local function _test_action_anim_roadblock_overlay_uses_4x_scale()
   assert(captured_scale.x == 4.0 and captured_scale.y == 4.0 and captured_scale.z == 4.0, "roadblock should use 4x scale")
 end
 
-local function _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot()
+local function _test_anim_unit_overlay_clear_obstacles_multi_branch_creates_multiple_robot_groups()
   local overlay = require("src.ui.render.anim_unit_overlay")
   local state = support.build_min_state()
   local cleared_calls = {}
-  local transient_calls = {}
+  local group_calls = {}
+  local scheduled_callbacks = {}
 
   _with_patches({
     {
       target = host_runtime,
       key = "create_unit_group",
       value = function(group_id, pos)
-        transient_calls[#transient_calls + 1] = {
+        group_calls[#group_calls + 1] = {
           group_id = group_id,
           pos = pos,
         }
@@ -58,35 +59,96 @@ local function _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_s
     },
     {
       target = host_runtime,
-      key = "create_unit",
-      value = function(unit_id, pos)
-        transient_calls[#transient_calls + 1] = {
-          unit_id = unit_id,
-          pos = pos,
-        }
-        return { _unit_id = unit_id }
+      key = "schedule",
+      value = function(callback)
+        scheduled_callbacks[#scheduled_callbacks + 1] = callback
       end,
     },
   }, function()
     overlay.play_clear_obstacles(state, {
-      cleared_indices = { 2, 4 },
+      branches = {
+        {
+          { tile_index = 2, has_obstacle = true },
+          { tile_index = 3, has_obstacle = false },
+          { tile_index = 5, has_obstacle = false },
+        },
+        {
+          { tile_index = 6, has_obstacle = false },
+          { tile_index = 7, has_obstacle = true },
+          { tile_index = 8, has_obstacle = false },
+        },
+      },
       player_id = 1,
-    }, 0.75, {
+      duration = 0.5,
+    }, 0.5, {
       clear_overlay = function(_, kind, tile_index)
         cleared_calls[#cleared_calls + 1] = kind .. ":" .. tostring(tile_index)
       end,
     })
   end)
 
-  assert(#cleared_calls == 4, "clear_obstacles should clear roadblock and mine for each cleared tile")
-  assert(cleared_calls[1] == "roadblock:2", "clear_obstacles should clear roadblock first")
-  assert(cleared_calls[2] == "mine:2", "clear_obstacles should clear mine second")
-  assert(cleared_calls[3] == "roadblock:4", "clear_obstacles should repeat for each cleared tile")
-  assert(cleared_calls[4] == "mine:4", "clear_obstacles should clear mine for each cleared tile")
-  assert(#transient_calls == 1, "clear_obstacles should spawn one robot transient")
-  assert(transient_calls[1].pos.x == 0.0 and transient_calls[1].pos.y == 1.0 and transient_calls[1].pos.z == 0.0,
-    "clear_obstacles robot should spawn above the acting player tile")
+  assert(#group_calls == 2, "clear_obstacles with 2 branches should create 2 robot unit groups")
+  assert(#cleared_calls == 4, "clear_obstacles should clear obstacles from branch 1 (tile 2) and branch 2 (tile 7)")
+  assert(cleared_calls[1] == "roadblock:2", "should clear roadblock from branch 1, tile 2")
+  assert(cleared_calls[2] == "mine:2", "should clear mine from branch 1, tile 2")
+  assert(cleared_calls[3] == "roadblock:7", "should clear roadblock from branch 2, tile 7")
+  assert(cleared_calls[4] == "mine:7", "should clear mine from branch 2, tile 7")
 end
+
+local function _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot()
+  local overlay = require("src.ui.render.anim_unit_overlay")
+  local state = support.build_min_state()
+  local cleared_calls = {}
+  local group_calls = {}
+  local scheduled_callbacks = {}
+
+  _with_patches({
+    {
+      target = host_runtime,
+      key = "create_unit_group",
+      value = function(group_id, pos)
+        group_calls[#group_calls + 1] = {
+          group_id = group_id,
+          pos = pos,
+        }
+        return { _group_id = group_id }
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "schedule",
+      value = function(callback)
+        scheduled_callbacks[#scheduled_callbacks + 1] = callback
+      end,
+    },
+  }, function()
+    overlay.play_clear_obstacles(state, {
+      branches = {
+        {
+          { tile_index = 2, has_obstacle = true },
+          { tile_index = 3, has_obstacle = false },
+          { tile_index = 4, has_obstacle = true },
+        },
+      },
+      player_id = 1,
+      duration = 0.5,
+    }, 0.5, {
+      clear_overlay = function(_, kind, tile_index)
+        cleared_calls[#cleared_calls + 1] = kind .. ":" .. tostring(tile_index)
+      end,
+    })
+  end)
+
+  assert(#group_calls == 1, "clear_obstacles should create one unit group for single branch")
+  assert(group_calls[1].pos.x == 0.0 and group_calls[1].pos.y == 1.0 and group_calls[1].pos.z == 0.0,
+    "clear_obstacles robot group should spawn above the acting player tile")
+  assert(#cleared_calls == 4, "clear_obstacles should clear roadblock and mine for each tile with has_obstacle=true")
+  assert(cleared_calls[1] == "roadblock:2", "clear_obstacles should clear roadblock for tile 2 (has_obstacle=true)")
+  assert(cleared_calls[2] == "mine:2", "clear_obstacles should clear mine for tile 2")
+  assert(cleared_calls[3] == "roadblock:4", "clear_obstacles should clear roadblock for tile 4 (has_obstacle=true)")
+  assert(cleared_calls[4] == "mine:4", "clear_obstacles should clear mine for tile 4")
+end
+
 
 local function _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient()
   local overlay = require("src.ui.render.anim_unit_overlay")
@@ -222,6 +284,7 @@ return {
   tests = {
     { name = "action_anim_roadblock_overlay_uses_4x_scale", run = _test_action_anim_roadblock_overlay_uses_4x_scale },
     { name = "anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot", run = _test_anim_unit_overlay_clear_obstacles_clears_each_overlay_and_spawns_robot },
+    { name = "anim_unit_overlay_clear_obstacles_multi_branch_creates_multiple_robot_groups", run = _test_anim_unit_overlay_clear_obstacles_multi_branch_creates_multiple_robot_groups },
     { name = "anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient", run = _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient },
     { name = "anim_units_play_missile_stops_and_snaps_targets_before_followup", run = _test_anim_units_play_missile_stops_and_snaps_targets_before_followup },
   },

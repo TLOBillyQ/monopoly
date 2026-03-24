@@ -12,6 +12,7 @@ local domain_behavior_modules = {
   "suites.domain.market",
   "suites.domain.paid_currency",
   "suites.domain.config_sanity",
+  "suites.domain.clear_obstacles_branch_walk",
 }
 
 local runtime_behavior_modules = {

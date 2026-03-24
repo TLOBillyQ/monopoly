@@ -9,6 +9,7 @@ local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number_utils")
 local facing_policy = require("src.rules.board.facing_policy")
 local direction_constants = require("src.rules.board.directions")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local post_effects = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -157,7 +158,7 @@ local target_effects = {
   },
 }
 
-local post_effects = {
+local post_effects_cfg = {
 
   [item_ids.free_rent] = { type = "set_status", key = "pending_free_rent", value = true, message = " 使用免费卡，下一次租金免除" },
   [item_ids.dice_multiplier] = { type = "set_status", key = "pending_dice_multiplier", value = 2, message = " 使用骰子加倍卡，本次步数翻倍" },
@@ -228,88 +229,176 @@ local function _new_obstacle_clear_state(distance, context)
   assert(context ~= nil, "missing context")
   return {
     cleared = 0,
-    cleared_indices = {},
     cleared_map = {},
+    obstacle_snapshot = {},
+    branches = {},
     distance = distance,
     parity = context.branch_parity or distance,
   }
 end
 
-local function _mark_visited(visited, tile_id, dir, depth)
-  visited[tile_id] = visited[tile_id] or {}
-  local key = dir or ""
-  local prev = visited[tile_id][key]
-  if prev and prev <= depth then
-    return false
+local function _get_sorted_forward_dirs(neigh, back_dir)
+  local dirs = {}
+  for dir, _ in pairs(neigh) do
+    if dir ~= back_dir then
+      dirs[#dirs + 1] = dir
+    end
   end
-  visited[tile_id][key] = depth
-  return true
+  table.sort(dirs)
+  return dirs
 end
 
-local function _record_cleared_index(state, next_index)
-  state.cleared = state.cleared + 1
-  if state.cleared_map[next_index] then
-    return
+local function _copy_path(src)
+  local dst = {}
+  for i = 1, #src do
+    dst[i] = src[i]
   end
-  state.cleared_map[next_index] = true
-  state.cleared_indices[#state.cleared_indices + 1] = next_index
+  return dst
 end
 
-local function _clear_obstacle_at(game, board, state, next_index)
-  if board:has_roadblock(next_index) then
-    game:clear_roadblock(next_index)
-    _record_cleared_index(state, next_index)
+local function _visit_tile(game, board, state, tile_id, tile_index)
+  if not state.obstacle_snapshot[tile_id] then
+    local had_rb = board:has_roadblock(tile_index)
+    local had_mine = board:has_mine(tile_index)
+    local had = had_rb or had_mine
+    state.obstacle_snapshot[tile_id] = had and "yes" or "no"
+    if not state.cleared_map[tile_index] then
+      if had_rb then
+        game:clear_roadblock(tile_index)
+        state.cleared_map[tile_index] = true
+        state.cleared = state.cleared + 1
+      end
+      if had_mine then
+        game:clear_mine(tile_index)
+        state.cleared_map[tile_index] = true
+        state.cleared = state.cleared + 1
+      end
+    end
   end
-  if board:has_mine(next_index) then
-    game:clear_mine(next_index)
-    _record_cleared_index(state, next_index)
-  end
+  return state.obstacle_snapshot[tile_id] == "yes"
 end
 
-local function _seed_walk_queue(board, player, context, distance)
-  local facing = facing_policy.resolve_initial_facing("relative_forward", player, context)
-  local start_tile = assert(board:get_tile(player.position), "missing start tile")
-  local start_id = assert(start_tile.id, "missing start tile id")
-  local visited = {}
-  _mark_visited(visited, start_id, facing, 0)
-  return {
-    queue = {
-      { tile_id = start_id, facing = facing, depth = 0 },
-    },
-    visited = visited,
-  }
+local function _next_strict_or_turn(neigh, facing, opposite)
+  if neigh[facing] then
+    return { facing }
+  end
+  local back_dir = opposite[facing]
+  return _get_sorted_forward_dirs(neigh, back_dir)
 end
 
 local function _walk_and_clear_obstacles(game, player, board, state, context)
   local map = assert(board.map, "missing board.map")
   local neighbors = assert(map.neighbors, "missing board.map.neighbors")
   local opposite = direction_constants.opposite
-  local walk = _seed_walk_queue(board, player, context, state.distance)
 
-  board_query.queue_walk(walk.queue, function(node, push)
-    if node.depth >= state.distance then
-      return
-    end
-    local neigh = assert(neighbors[node.tile_id], "missing neighbors: " .. tostring(node.tile_id))
-    local back = opposite[node.facing]
-    for dir, next_id in pairs(neigh) do
-      if not back or dir ~= back then
-        local next_index = assert(board:index_of_tile_id(next_id), "missing tile index: " .. tostring(next_id))
-        _clear_obstacle_at(game, board, state, next_index)
-        if _mark_visited(walk.visited, next_id, dir, node.depth + 1) then
-          push({ tile_id = next_id, facing = dir, depth = node.depth + 1 })
+  local facing = facing_policy.resolve_initial_facing("relative_forward", player, context)
+  local start_tile = assert(board:get_tile(player.position), "missing start tile")
+  local start_id = assert(start_tile.id, "missing start tile id")
+
+  local start_neigh = neighbors[start_id]
+  if not start_neigh then
+    return
+  end
+
+  -- When facing is nil (no move_dir set), treat ALL neighbors as forward (old BFS behavior).
+  -- When facing is known, only the single forward neighbor is the start of the walk.
+  local initial_dirs
+  if facing == nil then
+    initial_dirs = _get_sorted_forward_dirs(start_neigh, nil)  -- nil back = include all
+  else
+    local fwd = start_neigh[facing]
+    initial_dirs = fwd and { facing } or {}
+  end
+
+  if #initial_dirs == 0 then
+    return
+  end
+
+  local stack = {}
+  local is_multi_start = #initial_dirs > 1
+  for i = #initial_dirs, 1, -1 do
+    local dir = initial_dirs[i]
+    local first_id = start_neigh[dir]
+    if first_id then
+      local first_index = board:index_of_tile_id(first_id)
+      if first_index then
+        local first_had_obstacle = _visit_tile(game, board, state, first_id, first_index)
+        local first_path = { { tile_index = first_index, has_obstacle = first_had_obstacle } }
+        local first_neigh = neighbors[first_id]
+        if not first_neigh then
+          state.branches[#state.branches + 1] = first_path
+        else
+          local back_from_first = opposite[dir]
+          local fork_dirs = _get_sorted_forward_dirs(first_neigh, back_from_first)
+          if #fork_dirs == 0 then
+            state.branches[#state.branches + 1] = first_path
+          else
+            local is_fork = is_multi_start or #fork_dirs > 1
+            for j = #fork_dirs, 1, -1 do
+              local fdir = fork_dirs[j]
+              local seed_path = is_fork and _copy_path(first_path) or first_path
+              stack[#stack + 1] = { id = first_id, facing = fdir, depth = 1, path = seed_path }
+            end
+          end
         end
       end
     end
-  end)
+  end
+
+  while #stack > 0 do
+    local frame = stack[#stack]
+    stack[#stack] = nil
+
+    if frame.depth >= state.distance then
+      state.branches[#state.branches + 1] = frame.path
+    else
+      local neigh = neighbors[frame.id]
+      if not neigh then
+        state.branches[#state.branches + 1] = frame.path
+      else
+        local dirs = _next_strict_or_turn(neigh, frame.facing, opposite)
+        if #dirs == 0 then
+          state.branches[#state.branches + 1] = frame.path
+        else
+          local branching = #dirs > 1
+          for i = #dirs, 1, -1 do
+            local dir = dirs[i]
+            local next_id = neigh[dir]
+            local next_index = next_id and board:index_of_tile_id(next_id) or nil
+            if next_index then
+              local had_obstacle = _visit_tile(game, board, state, next_id, next_index)
+              local entry = { tile_index = next_index, has_obstacle = had_obstacle }
+              local new_path = branching and _copy_path(frame.path) or frame.path
+              new_path[#new_path + 1] = entry
+              stack[#stack + 1] = { id = next_id, facing = dir, depth = frame.depth + 1, path = new_path }
+            else
+              state.branches[#state.branches + 1] = frame.path
+            end
+          end
+        end
+      end
+    end
+  end
 end
 
 local function _queue_clear_obstacles_anim(game, player, state)
+  local longest = 0
+  for _, branch in ipairs(state.branches) do
+    if #branch > longest then
+      longest = #branch
+    end
+  end
+  local step_time = 3.0 / runtime_constants.robot_speed
+  local duration = longest * step_time
+  if duration <= 0 then
+    duration = action_anim_duration
+  end
+
   local queued = action_anim_port.queue(game, {
     kind = "clear_obstacles",
     player_id = player.id,
-    cleared_indices = state.cleared_indices,
-    duration = action_anim_duration,
+    branches = state.branches,
+    duration = duration,
   })
   if queued then
     return { ok = true, action_anim = true }
@@ -350,7 +439,7 @@ end
 
 function post_effects.apply_post(game, player, item_id, context)
   context = context or {}
-  local cfg = assert(post_effects[item_id], "missing post effect: " .. tostring(item_id))
+  local cfg = assert(post_effects_cfg[item_id], "missing post effect: " .. tostring(item_id))
   local handler = assert(handlers[cfg.type], "missing post effect handler: " .. tostring(cfg.type))
   return handler(game, player, cfg, context)
 end
