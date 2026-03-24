@@ -1,114 +1,58 @@
-# 路障地雷同格渲染链修复计划
+# 计划：全研究项并行治理与计划重建
 
-本可执行计划是活文档。实施过程中必须持续更新“进度”“意外与发现”“决策日志”“结果与复盘”。本文件遵循 `.agents/harness/PLANS.md` 维护，面向第一次接触本仓库的新手。
+**Summary**
+- 用这份计划完整替换 `.agents/plan.md:1`，并按 `.agents/harness/PLANS.md:1` 维护成活文档；新文档必须自带“进度 / 意外与发现 / 决策日志 / 结果与复盘”四章。
+- 范围覆盖 `.agents/research.md:1` 的四类工作：CRAP 热点降险、重复代码收敛、仅限已证实零消费者的安全清理、架构边界整改。
+- 默认策略是“先补行为护栏，再做小步重构，再做结构迁移”；不引入新依赖，不做跨任务混合重构，不在 `src/` 保留兼容 shim。
+- 已确认的 repo 真相要先写回计划：`src/config/gameplay/vehicle_catalog.lua:1`、`src/infrastructure/runtime/global_aliases.lua:1`、`src/player/actions/state_ops/status_ops.lua:9` 仍有消费者，不进入首轮死代码删除。
 
-## 目的 / 全局视角
+**接口变化**
+- `src.app.bootstrap` 从副作用入口改为显式 `init()`；最终宿主入口切到 `src/presentation/runtime/install.lua:1`，`main.lua:1` 只负责调用 presentation 入口。
+- `src/config/gameplay/rules.lua:1` 在同一波迁移中拆分并删除；消费者直接改用 `src/config/gameplay/debug_flags.lua:1`、`src/config/gameplay/timing.lua:1`、`src/config/gameplay/board_geometry.lua:1`、`src/config/gameplay/target_pick.lua:1`、`src/config/gameplay/item_ids.lua:1`。
+- `src/ui/runtime/landing_visual_hold.lua:1` 保留为 presentation 唯一可见 seam；`landing_visual_hold` 的真实状态只保留一个来源。
 
-当前用户可见问题是：同一地块同时触发路障和地雷时，路障“无法移动”3D HUD 看不到，地雷爆炸也看不到或几乎看不到，视觉上像被“送医院状态”直接覆盖。修复后，玩家应先看到路障状态，再进入送医状态；地雷爆炸应先可见，再执行送医院位移。可观察证明是：相关行为测试通过，且新增测试能稳定复现“先路障后医院、先爆炸后送医”的顺序。
+**任务与依赖**
+- `T0` `[depends_on: []]` 基线与计划重写 —— `.agents/plan.md:1`、`.agents/research.md:1`、`tmp/crap_report.json`；重写计划骨架，记录 baseline 命令结果，并把 CRAP top 热点“函数名 + 分数 + 文件”原样抄入计划；验证：`lua tests/behavior.lua`、`lua tests/contract.lua`、`lua tests/guard.lua`、`lua tools/quality/arch.lua check`、`lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` 全部入档。
+- `T1` `[depends_on: [T0]]` 道具可用性热点 —— `src/rules/items/availability.lua:1`、`tests/suites/domain/item_availability_matrix.lua:1`；只治理 `_can_offer_rent_response` / `trigger_timing_allowed`，补 rent-response 分支与余额边界测试；验证：目标 suite、`lua tests/behavior.lua`，并记录这两个函数的新 CRAP 分数。
+- `T2` `[depends_on: [T0]]` preconsume + item phase 热点 —— `src/core/choice/item_preconsume_policy.lua:1`、`src/rules/items/phase.lua:1`、`tests/suites/gameplay/gameplay_t2_characterization.lua:2033`；把 cancel 禁用、meta 初始化、resume args 构造拆成单职责 helper，不改选择流转语义；验证：相关 characterization、`tests/suites/domain/item.lua:1`、`tests/suites/gameplay/gameplay_items_startup.lua:1`。
+- `T3` `[depends_on: [T0]]` runtime context 热点 —— `src/host/eggy/context.lua:1`、`tests/suites/runtime/misc.lua:330`、`tests/suites/runtime/runtime_ports_contract.lua:1`；隔离 provider roles、GameAPI fallback、`get_role` 容错，保持 release/noop helper 行为不变；验证：misc + runtime ports contract。
+- `T4` `[depends_on: [T0]]` presentation 热点 —— `src/ui/render/anim_units.lua:1`、`src/ui/ctl/event_handlers.lua:1`、`src/ui/ctl/ui_runtime.lua:1`；分别治理 `play_mine_trigger`、`_resolve_tile_index`、turn label 匿名闭包命名化，先补护栏再提炼 helper；验证：`tests/suites/presentation/presentation_action_anim_effect_routes.lua:386`、`tests/suites/presentation/presentation_ui_event_handlers.lua:1`、相关 presentation suite。
+- `T5` `[depends_on: [T0]]` validator + backward board 热点 —— `src/turn/actions/validator.lua:1`、`src/rules/board/init.lua:1`、`tests/suites/presentation/ui_runtime_state_contract.lua:85`、`tests/suites/domain/movement.lua:599`；把 item slot 校验链与 backward 选路链拆成中间结果函数；验证：对应 contract/domain suite。
+- `T6` `[depends_on: [T0]]` AI 远程骰子热点 —— `src/computer/policies/core_agent.lua:1`、`tests/suites/domain/land.lua:135`；把 `_remote_priority` 拆成 tile-type / land 子规则，保证排序语义不变；验证：domain land suite 与 CRAP 分数下降。
+- `T7` `[depends_on: [T0]]` ring map + test profile 热点 —— `src/config/content/maps/ring_map_builder.lua:1`、`src/config/testing/test_profiles.lua:1`、`tests/suites/gameplay/gameplay_t4_characterization.lua:1041`、`tests/suites/runtime/startup_profile.lua:159`；以补覆盖为主，只做最小意图拆分；验证：ring map characterization + startup profile suite。
+- `T8` `[depends_on: [T2]]` choice 迭代 / cancel helper 合并 —— `src/core/choice/resolver.lua:1`、`src/core/choice/item_preconsume_policy.lua:1`；抽共享 `_each_option` 与 cancel 判定 helper，迁移 resolver 与 preconsume；验证：gameplay T2 characterization + choice 相关 contract。
+- `T9` `[depends_on: [T1, T2]]` copy / normalize / contains helper 合并 —— `src/rules/bootstrap/choice_optional_effect_handler.lua:1`、`src/rules/items/choice_handlers.lua:1`、`src/rules/market/choice_handlers.lua:1`、`src/rules/items/phase.lua:1`、`src/rules/items/availability.lua:1`、`src/rules/market/choice/builder.lua:1`；只合并“同因变化”的表复制、整数归一化、包含判断；验证：受影响的 gameplay/domain suite 全绿。
+- `T10` `[depends_on: [T0]]` 骰子倍率 helper 合并 —— `src/turn/phases/roll.lua:1`、`src/turn/phases/move.lua:1`；提取统一倍率逻辑到 `src/turn/phases/` 内共享模块；验证：相关 gameplay turn flow suite。
+- `T11` `[depends_on: [T5]]` 方向表共享 —— `src/rules/board/init.lua:1`、`src/rules/items/post_effects.lua:285`；抽单一方向映射常量，保持 backward / post effects 语义不变；验证：movement + item/domain 回归。
+- `T12` `[depends_on: [T0]]` `_with_client_role` 去重 —— `src/presentation/runtime/ports/debug.lua:1`、`src/ui/ctl/market.lua:1`、`src/ui/ctl/popup.lua:1`、`src/ui/wid/turn_effects.lua:1`；抽 presentation 共享 helper，不混入 turn wait；验证：presentation suites。
+- `T13` `[depends_on: [T0]]` `_log_once` 去重 —— `src/turn/waits/ui_sync.lua:1`、`src/turn/waits/choice_timeout.lua:1`；抽 wait 层共享 helper；验证：wait 相关 behavior/contract suite。
+- `T14` `[depends_on: [T0]]` 安全清理第一批 —— `src/config/content/skins.lua:1`、`src/config/gameplay/feature_toggles.lua:1`、`src/turn/output/state_adapter.lua:100`、`src/turn/loop/ports.lua:199`；只删零消费者或空实现；runtime refs 先审计后删，不先假定 orphan key 可删；验证：每删一波立即跑 `lua tests/contract.lua`、`lua tests/guard.lua`、`lua tools/quality/arch.lua check`。
+- `T15` `[depends_on: [T0]]` rules 层宿主解耦 —— `src/rules/land/effects/chance.lua:1`、`src/app/bootstrap/compose_game.lua:1`、`tests/suites/domain/chance.lua:1`、`tests/suites/runtime/runtime_ports_contract.lua:1`、`tests/suites/architecture/usecase_boundary_contract.lua:1`；把 `LuaAPI.rand()` 改成现有注入 RNG（优先 `ctx.game.rng:next_int(...)`），补确定性测试，禁止 rules 直读宿主全局；验证：chance/domain + runtime ports + usecase boundary。
+- `T16` `[depends_on: [T0]]` game state 组装保护 —— `src/state/game_state.lua:1`；为 mixin 合并加 collision assert，并新增“重复 key 组装失败”负向测试；验证：现有 game assemble 正常、专门负测失败信息可读。
+- `T17` `[depends_on: [T0]]` bootstrap 显式化兼容阶段 —— `src/app/bootstrap/init.lua:1`、`main.lua:1`、`tests/suites/runtime/startup_profile.lua:430`；先把 app bootstrap 改为显式 `init()`，确保 `require("src.app.bootstrap")` 不自动执行，同时保住当前启动路径；验证：startup profile suite 新增“显式 init 只执行一次 / require 不自启动”。
+- `T18` `[depends_on: [T17]]` 入口反转切换 —— `src/presentation/runtime/install.lua:1`、`main.lua:1`、`tools/ops/deploy.ps1:416`；新建 presentation-owned 入口，main 改为 require 新入口，部署脚本和 repo 内启动引用一起切换；验证：main 启动、deploy 打包路径、runtime 启动测试全部通过。
+- `T19` `[depends_on: [T1, T2, T4, T5, T6, T7, T12, T15, T16, T18]]` gameplay rules 拆分 —— `src/config/gameplay/rules.lua:1`；按五个模块一次性迁移所有消费者，删旧聚合文件，不留 shim；先用 `rg 'src.config.gameplay.rules' src tests` 生成迁移清单，再在同一波完成替换；验证：清单归零，`lua tests/contract.lua`、`lua tests/guard.lua`、`lua tools/quality/arch.lua check`、`lua tests/behavior.lua` 通过。
+- `T20` `[depends_on: [T0]]` landing visual hold 原型门 —— `src/state/state_access/landing_visual_hold.lua:1`、`src/ui/runtime/landing_visual_hold.lua:1`；先盘点所有 caller：`src/turn/waits/await.lua:1`、`src/turn/loop/tick_flow.lua:1`、`src/turn/loop/tick_steps.lua:1`、`src/turn/phases/land.lua:1`、`src/turn/phases/move_followup.lua:1`、`src/presentation/runtime/event_bridge.lua:1`、`src/ui/ctl/event_handlers.lua:1`、`src/ui/runtime/landing_visual_hold.lua:1`，再用 characterization tests 固定“单一状态源”目标行为与 release 顺序；验证：`tests/suites/runtime/misc_landing_visual_hold.lua:23`、`:78`，以及相关 gameplay/presentation hold tests。
+- `T21` `[depends_on: [T20]]` hold 单一状态源迁移 —— `src/state/state_access/landing_visual_hold.lua:1`、`src/state/state_access/runtime_state.lua:163`；把 hold/release 真相收敛到一个状态源，先完成底层读写迁移，不做 caller 清理；验证：新增“无双写漂移”测试 + 原有 misc_landing_visual_hold 顺序测试。
+- `T22` `[depends_on: [T4, T18, T19, T21]]` hold caller 切换与清理 —— `src/turn/loop/tick_flow.lua:1`、`src/turn/loop/tick_steps.lua:1`、`src/turn/phases/land.lua:1`、`src/presentation/runtime/event_bridge.lua:1`、`src/ui/ctl/event_handlers.lua:1`；统一 callers 到新单源，再删旧双源同步逻辑；验证：runtime/presentation/gameplay 全部 hold 相关 suite。
+- `T23` `[depends_on: [T3, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T18, T19, T22]]` 最终质量收口 —— `.agents/plan.md:1`、`tmp/crap_report.json`；重跑 baseline 五条命令，核对 T0 记录的 CRAP 热点分数逐项下降，arch/guard 不回退，并把证据、偏差、剩余风险写回计划文档。
 
-## 进度
+**并行波次**
+- **Wave 0**：`T0`
+- **Wave 1**：`T1 T2 T3 T4 T5 T6 T7 T12 T13 T14 T15 T16 T17 T20`
+- **Wave 2**：`T8 T9 T10 T11 T18 T21`
+- **Wave 3**：`T19 T22`
+- **Wave 4**：`T23`
 
-- [x] (2026-03-23 22:34 CST) 完成根因定位，确认是 status3d 优先级覆盖 + mine_trigger 同帧 snap 两个独立问题。
-- [x] (2026-03-23 22:43 CST) 按 PLANS 标准重写 `.agents/plan.md`，替换掉与本任务无关的旧计划。
-- [x] (2026-03-23 22:52 CST) 实现 status3d 在路障触发动画进行中优先显示路障状态，并新增 `_test_status3d_roadblock_anim_pending_overrides_hospital_pending`。
-- [x] (2026-03-23 22:56 CST) 实现 mine_trigger 延迟 snap（默认 0.6s，可配置）并新增 `_test_play_mine_trigger_delays_snap_when_schedule_available`。
-- [x] (2026-03-23 23:00 CST) 完成目标测试与回归：2 个目标 presentation suite、`gameplay_obstacle_chain_order`、`behavior`、`contract` 全绿。
-- [x] (2026-03-23 23:02 CST) 回写计划文档“结果与复盘”“产物与备注”并完成收尾。
-- [x] (2026-03-23 23:10 CST) 代码审查修复：将 play_mine_trigger fallback 路径的调用顺序恢复为 prepare→feedback→clear→snap，与原始代码一致。scheduled 路径保持 feedback→clear→schedule(prepare+snap)。全量回归通过。
+**测试计划**
+- 每个热点任务先跑对应目标 suite，再补 `lua tests/behavior.lua`；只有确认行为锁住后才继续共享 helper 合并。
+- 每个删除 / 配置迁移 / 架构边界任务都必须至少跑 `lua tests/contract.lua`、`lua tests/guard.lua`、`lua tools/quality/arch.lua check`；不要等到最后一波才发现越界。
+- bootstrap 任务必须额外验证 `main.lua:1`、`tests/suites/runtime/startup_profile.lua:430`、`tools/ops/deploy.ps1:416`。
+- landing visual hold 任务必须同时验证“无双源漂移”和“release callback 顺序不变”，以 `tests/suites/runtime/misc_landing_visual_hold.lua:78` 为硬护栏。
+- 最终验收必须包含 baseline 五条命令重跑，并把 T0 的 CRAP 基线和 T23 的结果并排写进 `.agents/plan.md:1`。
 
-## 意外与发现
-
-- 观察：`status3d` 不是队列模型，而是单槽优先级替换模型，`hospital` 优先级高于 `roadblock`。
-  证据：`src/ui/render/status3d/specs.lua` 中 `status_priority = { "hospital", "mountain", "roadblock", ... }`。
-- 观察：`mine_effect.apply()` 在地雷动作动画前就写入 `pending_location_effect = "hospital"`，导致 status3d 很早就能解析到 hospital。
-  证据：`src/rules/effects/mine_effect.lua:116`。
-- 观察：`units.play_mine_trigger()` 先播爆炸 cue，随后同次调用内立即 `snap_player_to_index()`，没有给“先看爆炸”预留位移延迟。
-  证据：`src/ui/render/anim_units.lua:79-93`。
-- 观察：`presentation_action_anim_effect_routes` 新增延迟 snap 用例初次失败，不是实现错误，而是测试把 `scheduled_fn()` 放到 patch 作用域外，导致真实 `move_anim.snap_player_to_index` 被调用并触发 `missing tile: 2`。
-  证据：失败栈 `src/ui/render/move_anim.lua:382: missing tile: 2`；将 `scheduled_fn()` 移入 `_with_patches` 作用域后通过。
-
-- 观察：代码审查发现 fallback 路径（无 scheduler）中 `prepare_player_for_snap` 调用顺序被意外改变，从原始的 prepare→feedback→clear→snap 变成了 feedback→clear→prepare→snap。
-  证据：git diff 显示原始代码第一行是 `prepare_player_for_snap`，而新代码把它放入了 `run_snap()` 函数中，在 feedback 和 clear 之后才调用。已通过拆分两条路径修复。
-
-## 决策日志
-
-- 决策：不改动 obstacle chain 的核心状态机顺序（roadblock -> mine -> move_followup），只修复展示层时序。
-  理由：现有 `tests/suites/gameplay/gameplay_obstacle_chain_order.lua` 已锁定业务顺序，改状态机会引入更大回归面。
-  日期/作者：2026-03-23 / Codex。
-- 决策：status3d 通过“检测路障触发动画是否仍在 action_anim 槽/队列”来临时提升 roadblock 显示优先，不删除 hospital pending 语义。
-  理由：最小改动可覆盖用户问题，同时保留已有“pending hospital 可见”能力。
-  日期/作者：2026-03-23 / Codex。
-- 决策：mine_trigger 增加可配置的延迟 snap（默认 0.6s），通过 `opts.schedule` 调度位移。
-  理由：保持现有动作动画框架不变，最小侵入实现“先爆炸后送医”的视觉节奏。
-  日期/作者：2026-03-23 / Codex。
-- 决策：保留 `play_mine_trigger` 无 `schedule` 时的即时 snap 回退，并保持返回值兼容（回退路径仍按实际 snap delay 与 minimum duration 归一化）。
-  理由：避免影响没有 runtime scheduler 注入的现有测试与运行路径，降低兼容风险。
-  日期/作者：2026-03-23 / Codex。
-
-## 结果与复盘
-
-本任务已完成并通过回归。改动后，status3d 在“同玩家本回合路障触发且 roadblock_trigger 动画仍在槽/队列中”时会优先显示 `roadblock`，不会被 `pending_location_effect = hospital` 抢占。与此同时，`mine_trigger` 渲染改为“立即爆炸反馈 + 清除地雷 overlay，延迟执行 snap 送医”，默认延迟 0.6 秒，可由规则配置覆盖。
-
-用户可见层面对应到两个效果：
-
-第一，路障“无法移动”3D HUD 在链式触发窗口中可见，不再被医院状态立刻覆盖。证明来自新增 status3d 用例 `_test_status3d_roadblock_anim_pending_overrides_hospital_pending` 与原有 status3d 组回归全绿。
-
-第二，地雷爆炸与送医不再同帧发生，爆炸有独立展示窗口。证明来自新增渲染用例 `_test_play_mine_trigger_delays_snap_when_schedule_available`，并且 `gameplay_obstacle_chain_order` 继续全绿，说明业务链顺序未被破坏。
-
-最终回归结果：目标 presentation suites 34/34 通过，`gameplay_obstacle_chain_order` 4/4 通过，`behavior` 1141 通过 0 失败，`contract` 83 通过 0 失败。当前无已知回归缺口。
-
-## 背景与导读
-
-本任务涉及三个直接模块和两个测试簇。`src/ui/render/status3d/status.lua` 负责为每个玩家解析当前应显示的 3D 状态层（例如 hospital、roadblock）。`src/rules/effects/mine_effect.lua` 负责地雷触发后的状态写入与动作动画入队。`src/ui/render/anim_units.lua` 负责动作动画真实渲染，包括地雷爆炸 cue、障碍物 overlay 清理、角色 snap 位移。测试侧，`tests/suites/presentation/_presentation_action_status_status3d_and_panel_cases.lua` 负责 status3d 行为验证，`tests/suites/presentation/presentation_action_anim_effect_routes.lua` 负责动作动画路由与 mine_trigger 细节验证。
-
-“pending_location_effect”在本仓库中的含义是“位置效果已决定，但尚未在 move_followup 中落地到 stay_turns/费用结算”。“snap”是瞬移式位置同步，不走逐步移动动画。
-
-## 工作计划
-
-先修 status3d：在 `resolve_player_status_key()` 内新增一个局部 helper，识别“该玩家是否仍有 roadblock_trigger 动画待播或正在播”。若为真，优先返回 `roadblock`，避免 hospital pending 抢占显示。该改动只影响显示决策，不改 turn state。
-
-再修 mine_trigger 渲染：在 `anim_units.play_mine_trigger()` 中引入延迟位移窗口。爆炸 cue 与地雷 overlay 清理保持立即执行，角色 snap 改为在 delay 后通过调度器执行。若没有调度器（单元测试或极简运行态），回退到即时 snap，保证兼容。
-
-最后补测试并回归：新增 status3d 用例覆盖“hospital pending + roadblock anim pending 时必须显示 roadblock”；新增 mine_trigger 用例覆盖“存在 schedule 时 snap 被延迟执行且返回时长不低于延迟阈值”。完成后跑目标套件和 behavior 车道。
-
-## 具体步骤
-
-所有命令在工作目录 `/Users/billyq/Dev/Github/Lua/monopoly` 执行。
-
-先实现并验证 status3d：
-
-    lua tests/behavior.lua
-
-再实现并验证 mine_trigger 延迟 snap：
-
-    lua tests/behavior.lua
-
-在最终验收时至少执行：
-
-    lua tests/behavior.lua
-
-如果全量 behavior 耗时过长且需要快速定位，可先运行目标套件（通过 Lua 直接加载 suite + TestHarness），确认局部通过后再跑全量。
-
-## 验证与验收
-
-验收以“可观察行为”定义，而不是代码形态。status3d 的验收标准是：当玩家处于 hospital pending 且同一玩家还有 roadblock_trigger 动画待播/在播时，显示层应为 `roadblock`，不是 `hospital`。mine_trigger 的验收标准是：爆炸 cue 先触发，snap 通过调度器在延迟后执行；函数返回值不早于该延迟。最后以 `lua tests/behavior.lua` 绿灯作为回归证明。
-
-## 可重复性与恢复
-
-本计划步骤可重复执行。若某次修改导致失败，优先保留新增测试，仅回退本任务涉及文件中的实现改动，不删除测试护栏。若调度器缺失导致兼容问题，`play_mine_trigger` 保留“无 schedule 时即时 snap”的兜底路径，确保旧运行路径可恢复。
-
-## 产物与备注
-
-关键证据如下：
-
-    targeted suites: All regression checks passed (34)
-    obstacle chain: All regression checks passed (4)
-    behavior lane: All regression checks passed (1141)
-    contract lane: All regression checks passed (83)
-
-## 接口与依赖
-
-不新增第三方依赖，不新增测试车道，不改公开导出模块名。需保持签名不变：`status.resolve_player_status_key(game, player)` 与 `units.play_mine_trigger(state, anim, duration, opts)`。允许新增同文件 `local function`。`opts.schedule` 继续沿用 action_anim 现有传参约定，不引入新的跨层依赖。
-
-2026-03-23 22:43 CST：本次更新将旧的 CRAP 治理计划整体替换为“路障地雷同格渲染链修复计划”，原因是用户任务已切换，且 PLANS 要求计划必须与当前实施目标一致并可独立执行。
-2026-03-23 23:02 CST：本次更新回写了实现完成态（status3d 路障动画优先 + mine_trigger 延迟 snap）、新增测试与回归证据，并记录一次测试作用域导致的误报修复，原因是让计划保持可重启、可审计、可验证。
+**Assumptions**
+- 不需要新三方库，也不需要额外外部文档；全部工作基于仓内 Lua 代码、现有 runtime ports、现有测试/质量工具完成。
+- `vehicle_catalog.lua`、全局别名桥、`set_player_seat` 本轮默认保留；只有未来新增“迁移其消费者”的明确任务时才允许删除。
+- `src/config/gameplay/rules.lua:1` 不能长期保留兼容层；拆分任务必须“一次迁完再删旧文件”。
+- bootstrap 入口允许切换；最终以 presentation 入口为唯一宿主启动点。
