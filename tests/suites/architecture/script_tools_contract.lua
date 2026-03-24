@@ -165,6 +165,77 @@ local function _line_count(text)
   return loc_counter.count_effective_lines(text)
 end
 
+local function _test_encoding_check_accepts_utf8_chinese_strings()
+  _with_ascii_tmp("encoding_chinese_strings", function(tmp_root)
+    local src_dir = common.join_path(tmp_root, "src")
+    local fixture_path = common.join_path(src_dir, "ui/prompt.lua")
+    _write_fixture_file(fixture_path, table.concat({
+      'local prompt = "中文提示…继续"',
+      "return prompt",
+      "",
+    }, "\n"))
+
+    local result = _run_lua({
+      "tools/quality/encoding.lua",
+      "check",
+      "--root",
+      src_dir,
+    })
+
+    assert(result.ok == true, "encoding check should allow utf-8 Chinese business strings")
+    _assert_contains(result.output, "encoding check ok",
+      "encoding check should report success for Chinese business strings")
+  end)
+end
+
+local function _test_encoding_check_reports_suspicious_english_comment()
+  _with_ascii_tmp("encoding_english_comment", function(tmp_root)
+    local src_dir = common.join_path(tmp_root, "src")
+    local fixture_path = common.join_path(src_dir, "ui/anim.lua")
+    _write_fixture_file(fixture_path, table.concat({
+      "-- Fallback: no scheduler — preserve original call order",
+      "return true",
+      "",
+    }, "\n"))
+
+    local result = _run_lua({
+      "tools/quality/encoding.lua",
+      "check",
+      "--root",
+      src_dir,
+    })
+
+    assert(result.ok == false, "encoding check should fail on suspicious punctuation in English comments")
+    _assert_contains(result.output, "U+2014",
+      "encoding check should report the em dash codepoint")
+    _assert_contains(result.output, 'replace with "-"',
+      "encoding check should suggest the ASCII replacement")
+    _assert_contains(result.output, "comment",
+      "encoding check should classify the violation as a comment issue")
+  end)
+end
+
+local function _test_encoding_check_reports_invalid_utf8_bytes()
+  _with_ascii_tmp("encoding_invalid_utf8", function(tmp_root)
+    local src_dir = common.join_path(tmp_root, "src")
+    local fixture_path = common.join_path(src_dir, "broken.lua")
+    _write_fixture_file(fixture_path, "local broken = '" .. string.char(0xFF) .. "'\n")
+
+    local result = _run_lua({
+      "tools/quality/encoding.lua",
+      "check",
+      "--root",
+      src_dir,
+    })
+
+    assert(result.ok == false, "encoding check should fail on invalid utf-8 bytes")
+    _assert_contains(result.output, "invalid UTF-8 byte sequence",
+      "encoding check should report invalid utf-8 bytes")
+    _assert_contains(result.output, "broken.lua:1:",
+      "encoding check should include the file and line location")
+  end)
+end
+
 local function _test_common_handles_unicode_paths_for_file_ops()
   _with_clean_tmp("common_file_ops", function(tmp_root)
     local base = common.join_path(tmp_root, "common_子目录/更多目录")
@@ -413,6 +484,7 @@ local function _test_cli_help_text_is_bilingual()
     { "tools/ops/update_api.lua", "--help" },
     { "tools/quality/arch.lua", "--help" },
     { "tools/quality/crap.lua", "--help" },
+    { "tools/quality/encoding.lua", "--help" },
     { "tools/quality/mutate.lua", "--help" },
     { "tools/quality/scrap.lua", "--help" },
   }
@@ -885,6 +957,9 @@ local contract_tests = {
 }
 
 local tooling_tests = {
+  { name = "encoding_check_accepts_utf8_chinese_strings", run = _test_encoding_check_accepts_utf8_chinese_strings },
+  { name = "encoding_check_reports_suspicious_english_comment", run = _test_encoding_check_reports_suspicious_english_comment },
+  { name = "encoding_check_reports_invalid_utf8_bytes", run = _test_encoding_check_reports_invalid_utf8_bytes },
   { name = "deploy_comprehensive", run = _test_deploy_comprehensive },
   { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }

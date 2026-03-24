@@ -1,6 +1,9 @@
 local base_suite = require("suites.architecture.script_tools_contract")
 
 local names = {
+  encoding_check_accepts_utf8_chinese_strings = true,
+  encoding_check_reports_suspicious_english_comment = true,
+  encoding_check_reports_invalid_utf8_bytes = true,
   common_handles_unicode_paths_for_file_ops = true,
   arch_common_reuses_unicode_safe_file_ops = true,
   cli_help_text_is_bilingual = true,
