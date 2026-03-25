@@ -77,8 +77,6 @@ function Resolve-HomeDir {
 }
 
 function Resolve-DefaultTargetPath {
-    param([string]$Suffix = "发布")
-
     if (-not [string]::IsNullOrWhiteSpace($env:MONOPOLY_DEPLOY_TARGET)) {
         return [string]$env:MONOPOLY_DEPLOY_TARGET
     }
@@ -86,26 +84,64 @@ function Resolve-DefaultTargetPath {
     $home_dir = (Resolve-HomeDir).TrimEnd("/")
     if ([string]::IsNullOrWhiteSpace($home_dir)) {
         Exit-WithError (Get-Text `
-            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET、传入 --target-path，或在默认目录下创建 LuaSource_大富翁-$Suffix。" `
-            "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET, pass --target-path, or create the default LuaSource_大富翁-$Suffix directory.")
+            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET、传入 --target-path，或在默认目录下创建 LuaSource_大富翁。" `
+            "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET, pass --target-path, or create the default LuaSource_大富翁 directory.")
     }
 
     if ($IsWindows) {
-        if ($Suffix -eq "发布") {
-            return "$home_dir/Desktop/dev/LuaSource_大富翁-发布"
-        }
-        return "$home_dir/Desktop/dev/LuaSource_大富翁-$Suffix"
+        return "$home_dir/Desktop/dev/LuaSource_大富翁"
     }
     if ($IsMacOS) {
-        if ($Suffix -eq "发布") {
-            return "$home_dir/Documents/eggy/LuaSource_大富翁-发布"
-        }
-        return "$home_dir/Documents/eggy/LuaSource_大富翁-$Suffix"
+        return "$home_dir/Documents/eggy/LuaSource_大富翁"
     }
 
     Exit-WithError (Get-Text `
         "当前平台未配置默认部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 --target-path。" `
         "No default deploy target is configured for this platform; set MONOPOLY_DEPLOY_TARGET or pass --target-path.")
+}
+
+function Resolve-EffectiveBuildMode {
+    param(
+        [string]$RequestedBuildMode,
+        [string]$StartupProfileValue
+    )
+
+    $normalized_requested = ([string]$RequestedBuildMode).Trim().ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($normalized_requested)) {
+        $normalized_requested = "release"
+    }
+
+    if ($normalized_requested -ne "release" -and $normalized_requested -ne "debug") {
+        Exit-WithError (Get-Text "构建模式仅支持 release 或 debug" "Build mode must be release or debug")
+    }
+
+    if ([string]::IsNullOrWhiteSpace($StartupProfileValue)) {
+        if ($normalized_requested -ne "release") {
+            return [pscustomobject]@{
+                mode = "release"
+                note = (Get-Text `
+                    "未指定 startup profile，已自动切换为 release 模式。" `
+                    "No startup profile was specified; forcing release build mode.")
+            }
+        }
+        return [pscustomobject]@{
+            mode = "release"
+            note = $null
+        }
+    }
+
+    if ($normalized_requested -ne "debug") {
+        return [pscustomobject]@{
+            mode = "debug"
+            note = (Get-Text `
+                "检测到 startup profile，已自动切换为 debug 模式。" `
+                "Startup profile detected; forcing debug build mode.")
+        }
+    }
+    return [pscustomobject]@{
+        mode = "debug"
+        note = $null
+    }
 }
 
 function Test-ProjectRoot {
@@ -377,9 +413,9 @@ function Parse-RemainingArgs {
                 continue
             }
             "^(--bak|-Bak)$" {
-                $script:Bak = $true
-                $index += 1
-                continue
+                Exit-WithError (Get-Text `
+                    "--bak 已废弃，请改用 --target-path 指向备份目录。" `
+                    "--bak is deprecated; use --target-path to point at a backup directory.")
             }
             default {
                 $unknown_args += $token
@@ -398,15 +434,22 @@ Parse-RemainingArgs
 
 if ($Help) {
     Write-Info (Get-Text `
-        "用法: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--keep-test-startup|-KeepTestStartup] [--bak|-Bak]" `
-        "Usage: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--keep-test-startup|-KeepTestStartup] [--bak|-Bak]")
+        "用法: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--keep-test-startup|-KeepTestStartup]" `
+        "Usage: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--keep-test-startup|-KeepTestStartup]")
     exit 0
+}
+
+if ($Bak) {
+    Exit-WithError (Get-Text `
+        "--bak 已废弃，请改用 --target-path 指向备份目录。" `
+        "--bak is deprecated; use --target-path to point at a backup directory.")
 }
 
 try {
     $project_root = Resolve-ProjectRoot
-    $suffix = if ($Bak) { "备份" } else { "发布" }
-    $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath -Suffix $suffix }
+    $build_mode_resolution = Resolve-EffectiveBuildMode -RequestedBuildMode $BuildMode -StartupProfileValue $StartupProfile
+    $BuildMode = [string]$build_mode_resolution.mode
+    $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath }
     $target_path = Resolve-NormalizedPath $target_source
 
     [System.IO.Directory]::CreateDirectory($target_path) | Out-Null
@@ -430,22 +473,19 @@ try {
     } else {
         Write-Info ((Get-Text "启动 Profile: " "Startup profile: ") + $StartupProfile)
     }
+    if (-not [string]::IsNullOrWhiteSpace($build_mode_resolution.note)) {
+        Write-Info $build_mode_resolution.note
+    }
     Write-Info ((Get-Text "构建模式: " "Build mode: ") + $BuildMode)
     Write-Info ""
     Write-Info "--------------------------------------"
     Write-Info ((Get-Text "部署目标: " "Deploy target: ") + $target_path)
     Write-Info "--------------------------------------"
 
-    if ($BuildMode -ne "release" -and $BuildMode -ne "debug") {
-        Exit-WithError (Get-Text "构建模式仅支持 release 或 debug" "Build mode must be release or debug")
-    }
     $third_party_exclude = @("Behavior", "NavMesh", "Bincore.lua")
     $strip_test_startup = -not $KeepTestStartup
     if ($BuildMode -eq "release") {
         $strip_test_startup = $true
-        if (-not [string]::IsNullOrWhiteSpace($StartupProfile)) {
-            Exit-WithError (Get-Text "release 模式不允许注入 startup profile" "startup profile injection is not allowed in release mode")
-        }
     }
     $generated_profile_module = $null
     $generated_profile_rel_path = "Data/StartupProfileGenerated.lua"

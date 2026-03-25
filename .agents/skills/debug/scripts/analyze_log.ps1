@@ -71,8 +71,8 @@ function Resolve-DefaultTargetPath {
 
     $home_dir = Resolve-HomeDir
     switch ($ResolvedPlatform) {
-        "win" { return (Join-Path (Join-Path (Join-Path $home_dir "Desktop") "dev") "LuaSource_大富翁-发布") }
-        "mac" { return (Join-Path (Join-Path (Join-Path $home_dir "Documents") "eggy") "LuaSource_大富翁-发布") }
+        "win" { return (Join-Path (Join-Path (Join-Path $home_dir "Desktop") "dev") "LuaSource_大富翁") }
+        "mac" { return (Join-Path (Join-Path (Join-Path $home_dir "Documents") "eggy") "LuaSource_大富翁") }
         default { throw "Unsupported platform '$ResolvedPlatform'." }
     }
 }

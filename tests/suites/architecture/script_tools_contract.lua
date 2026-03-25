@@ -528,13 +528,23 @@ local function _test_deploy_script_keeps_default_paths()
   local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
   _assert_contains(
     script_text,
-    "$home_dir/Desktop/dev/LuaSource_大富翁-发布",
+    "$home_dir/Desktop/dev/LuaSource_大富翁",
     "deploy.ps1 should keep the windows default deploy path"
   )
   _assert_contains(
     script_text,
-    "$home_dir/Documents/eggy/LuaSource_大富翁-发布",
+    "$home_dir/Documents/eggy/LuaSource_大富翁",
     "deploy.ps1 should keep the macOS default deploy path"
+  )
+  _assert_not_contains(
+    script_text,
+    "LuaSource_大富翁-发布",
+    "deploy.ps1 should no longer keep suffix-based default deploy paths"
+  )
+  _assert_not_contains(
+    script_text,
+    "LuaSource_大富翁-备份",
+    "deploy.ps1 should no longer keep suffix-based backup deploy paths"
   )
   _assert_not_contains(
     script_text,
@@ -587,6 +597,8 @@ local function _test_deploy_comprehensive()
       "deploy should inject debug build mode into main.lua")
     _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
       "deploy should inject startup profile into main.lua when requested")
+    _assert_contains(result.output, "Build mode: debug",
+      "deploy output should show debug mode when startup profile is present")
     
     -- 验证输出不包含已退役的 Config 目录
     _assert_not_contains(result.output, "/Config",
@@ -603,13 +615,62 @@ local function _test_deploy_comprehensive()
     assert(retired_flag_result.ok == false, "deploy should reject retired vehicle runtime flag")
     _assert_contains(retired_flag_result.output, "未知参数", "retired flag output should include Chinese text")
     _assert_contains(retired_flag_result.output, "Unknown flag", "retired flag output should include English text")
+
+    local bak_result = _run_powershell_file("tools/ops/deploy.ps1", { "--bak" })
+    assert(bak_result.ok == false, "deploy should reject deprecated --bak flag")
+    _assert_contains(bak_result.output, "已废弃", "bak output should include Chinese deprecation text")
+    _assert_contains(bak_result.output, "deprecated", "bak output should include English deprecation text")
+    _assert_contains(bak_result.output, "--target-path", "bak output should tell users to switch to --target-path")
+  end)
+
+  _with_ascii_tmp("deploy_release_default", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "--target-path", publish_target,
+    })
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "deploy should succeed without startup profile")
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "release"',
+      "deploy without startup profile should inject release build mode")
+    _assert_not_contains(deployed_main, 'STARTUP_TEST_PROFILE = ',
+      "deploy without startup profile should not inject STARTUP_TEST_PROFILE")
+    _assert_contains(result.output, "Build mode: release",
+      "deploy output should show release mode when no startup profile is present")
+  end)
+
+  _with_ascii_tmp("deploy_profile_forces_debug", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "--target-path", publish_target,
+      "--startup-profile", "missile",
+      "--build-mode", "release",
+    })
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "deploy should force debug instead of failing when startup profile is present")
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
+      "deploy should force debug build mode when startup profile is present")
+    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
+      "deploy should keep startup profile injection when forcing debug")
+    _assert_contains(result.output, "自动切换为 debug 模式",
+      "deploy output should explain the automatic debug override in Chinese")
+    _assert_contains(result.output, "forcing debug build mode",
+      "deploy output should explain the automatic debug override in English")
   end)
   
   -- 测试 4: PowerShell 命名参数风格调用（使用不同的临时目录）
   _with_ascii_tmp("deploy_powershell_style", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_powershell_file("tools/ops/deploy.ps1", {
-      "-BuildMode", "debug",
       "-TargetPath", publish_target,
       "-StartupProfile", "missile",
     })
@@ -630,7 +691,7 @@ local function _test_deploy_comprehensive()
 
     local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
     _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
-      "deploy PowerShell wrapper should forward build mode")
+      "deploy PowerShell wrapper should auto-select debug mode for startup profiles")
     _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
       "deploy PowerShell wrapper should forward startup profile injection")
   end)
