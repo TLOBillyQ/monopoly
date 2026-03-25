@@ -1,7 +1,6 @@
--- RED phase tests: assert the NEW contract for _handle_clear_obstacles_ahead.
--- Current code produces { kind="clear_obstacles", cleared_indices=..., duration=... }.
--- New contract requires { kind="clear_obstacles", branches=..., duration=... }.
--- ALL 4 tests MUST FAIL on current code (RED phase in TDD).
+-- Contract tests for _handle_clear_obstacles_ahead.
+-- Payload must use branch-based walk data:
+-- { kind="clear_obstacles", branches=..., duration=... }.
 
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")

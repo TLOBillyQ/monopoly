@@ -44,8 +44,22 @@ local function _build_tile_text(prefix)
   end
 end
 
+local function _count_cleared_obstacle_tiles(anim)
+  local seen = {}
+  local count = 0
+  for _, branch in ipairs(anim.branches or {}) do
+    for _, entry in ipairs(branch or {}) do
+      if entry.has_obstacle == true and entry.tile_index ~= nil and not seen[entry.tile_index] then
+        seen[entry.tile_index] = true
+        count = count + 1
+      end
+    end
+  end
+  return count
+end
+
 local function _build_clear_obstacles_text(_, anim)
-  local count = anim.cleared_indices and #anim.cleared_indices or 0
+  local count = _count_cleared_obstacle_tiles(anim)
   return "清障动画：清除数量 " .. tostring(count)
 end
 

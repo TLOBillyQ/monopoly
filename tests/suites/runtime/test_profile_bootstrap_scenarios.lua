@@ -112,13 +112,18 @@ local function _test_roadblock_hit_bootstraps_forward_overlay()
   support.assert_inventory_counts(game.players[1], { [2002] = 1 })
 end
 
-local function _test_clear_obstacles_bootstraps_overlay_cluster()
+local function _test_clear_obstacles_bootstraps_branch_overlay_cluster()
   local game = support.apply_profile("clear_obstacles")
-  local idx8 = assert(game.board:index_of_tile_id(8), "clear_obstacles tile 8 should exist")
-  local idx9 = assert(game.board:index_of_tile_id(9), "clear_obstacles tile 9 should exist")
-  assert(game.board:has_roadblock(idx8) == true, "clear_obstacles should preload first roadblock")
-  assert(game.board:has_roadblock(idx9) == true, "clear_obstacles should preload second roadblock")
-  assert(game.board:has_mine(idx9) == true, "clear_obstacles should preload mine on second obstacle tile")
+  local idx42 = assert(game.board:index_of_tile_id(42), "clear_obstacles fork tile 42 should exist")
+  local idx8 = assert(game.board:index_of_tile_id(8), "clear_obstacles branch tile 8 should exist")
+  local idx41 = assert(game.board:index_of_tile_id(41), "clear_obstacles branch tile 41 should exist")
+  support.assert_player_on_tile_id(game, 1, 3)
+  assert(game.players[1].status and game.players[1].status.move_dir == "left",
+    "clear_obstacles should preload move_dir toward the fork")
+  assert(game.board:has_roadblock(idx42) == true, "clear_obstacles should preload shared fork roadblock")
+  assert(game.board:has_roadblock(idx8) == true, "clear_obstacles should preload outer-branch roadblock")
+  assert(game.board:has_roadblock(idx41) == true, "clear_obstacles should preload inner-branch roadblock")
+  assert(game.board:has_mine(idx41) == true, "clear_obstacles should preload inner-branch mine")
   support.assert_inventory_counts(game.players[1], { [2006] = 1 })
 end
 
@@ -249,7 +254,7 @@ return {
     { name = "forced_move_hospital_bootstraps_position_and_remote_dice", run = _test_forced_move_hospital_bootstraps_position_and_remote_dice },
     { name = "exile_bootstraps_target_pair_and_item", run = _test_exile_bootstraps_target_pair_and_item },
     { name = "roadblock_hit_bootstraps_forward_overlay", run = _test_roadblock_hit_bootstraps_forward_overlay },
-    { name = "clear_obstacles_bootstraps_overlay_cluster", run = _test_clear_obstacles_bootstraps_overlay_cluster },
+    { name = "clear_obstacles_bootstraps_branch_overlay_cluster", run = _test_clear_obstacles_bootstraps_branch_overlay_cluster },
     { name = "steal_bootstraps_positions_and_inventory", run = _test_steal_bootstraps_positions_and_inventory },
     { name = "steal_one_bootstraps_positions_and_inventory", run = _test_steal_one_bootstraps_positions_and_inventory },
     { name = "steal_queue_keeps_route_and_interrupt_stable", run = _test_steal_queue_keeps_route_and_interrupt_stable },

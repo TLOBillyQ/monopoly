@@ -61,16 +61,19 @@ local profiles = {
   }),
   clear_obstacles = _profile({
     group = "combat_obstacle",
-    goal = "clear_obstacles_overlay_scan",
+    goal = "clear_obstacles_branch_overlay_scan",
     value = "edge",
-    covers = { "clear_obstacles", "overlay_cleanup" },
+    covers = { "clear_obstacles", "overlay_cleanup", "fork_branch" },
     owner_tests = { "domain.chance", "gameplay.intent_dispatch" },
   }, {
     players = {
       [1] = {
         cash = 120000,
-        position_tile_id = 7,
+        position_tile_id = 3,
         item_counts = { [2006] = 1 },
+        statuses = {
+          move_dir = "left",
+        },
       },
       [2] = { cash = 120000, position_tile_id = 35 },
       [3] = { cash = 120000, position_tile_id = 44 },
@@ -78,11 +81,12 @@ local profiles = {
     },
     overlays = {
       roadblocks = {
+        { tile_id = 42, render_called = true },
         { tile_id = 8, render_called = true },
-        { tile_id = 9, render_called = true },
+        { tile_id = 41, render_called = true },
       },
       mines = {
-        { tile_id = 9, render_called = true },
+        { tile_id = 41, render_called = true },
       },
     },
   }),

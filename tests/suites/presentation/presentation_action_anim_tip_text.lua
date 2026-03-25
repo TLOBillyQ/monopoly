@@ -11,13 +11,22 @@ local function _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy(
   })
   local clear_copy = tip_text.build(state, {
     kind = "clear_obstacles",
-    cleared_indices = { 3, 4, 5 },
+    branches = {
+      {
+        { tile_index = 3, has_obstacle = true },
+        { tile_index = 4, has_obstacle = false },
+      },
+      {
+        { tile_index = 3, has_obstacle = true },
+        { tile_index = 5, has_obstacle = true },
+      },
+    },
   })
 
   assert(target_copy == "目标道具：导弹卡 -> 玩家 测试玩家",
     "item_target_player tip should resolve runtime player name")
-  assert(clear_copy == "清障动画：清除数量 3",
-    "clear_obstacles tip should count removed indices")
+  assert(clear_copy == "清障动画：清除数量 2",
+    "clear_obstacles tip should count unique obstacle tiles from branch payload")
 end
 
 local function _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin()
