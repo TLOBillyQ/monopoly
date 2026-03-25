@@ -34,6 +34,16 @@ local monopoly_events = {
     deity_applied = "fb.deity_applied",
     bankruptcy = "fb.bankruptcy",
   },
+  vehicle = {
+    created = "vh.created",
+    copied = "vh.copied",
+    destroyed = "vh.destroyed",
+    entered = "vh.entered",
+    exited = "vh.exited",
+    moved = "vh.moved",
+    stopped = "vh.stopped",
+    reset = "vh.reset",
+  },
   game = {
     finished = "gm.finished",
   },

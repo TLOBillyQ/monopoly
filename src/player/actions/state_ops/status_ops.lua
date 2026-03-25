@@ -9,8 +9,8 @@ function status_ops.set_player_status(self, player, key, value)
 end
 
 function status_ops.set_player_seat(self, player, seat_id)
-  assert(seat_id == nil, "vehicle feature retired; seat_id must be nil")
-  player.seat_id = nil
+  player.seat_id = seat_id
+  common.mark_players(self)
 end
 
 function status_ops.set_player_eliminated(self, player, eliminated)

@@ -1,5 +1,3 @@
--- Eggy host bridge seam for runtime vehicle behavior.
--- "legacy" names the implementation source only; it does not imply a business-layer compatibility contract.
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local vehicle_feature = require("src.rules.vehicle")
 
@@ -91,6 +89,35 @@ local function _build_vehicle_helper(get_roles, get_game_api, deps)
     return nil
   end
 
+  local function _is_native_move_enabled()
+    return runtime_constants.vehicle_move_api_enabled == true
+  end
+
+  local function _resolve_character(role)
+    if role == nil then
+      return nil
+    end
+    if type(role.get_ctrl_unit) ~= "function" then
+      return nil
+    end
+    local ok, character = pcall(role.get_ctrl_unit)
+    if not ok then
+      return nil
+    end
+    return character
+  end
+
+  local function _resolve_driving_vehicle(character)
+    if character == nil then
+      return nil
+    end
+    local ok, vehicle = pcall(GameAPI.get_driving_vehicle, character)
+    if not ok then
+      return nil
+    end
+    return vehicle
+  end
+
   local helper = {
     player_id = nil,
     vehicle_id = nil,
@@ -113,7 +140,8 @@ local function _build_vehicle_helper(get_roles, get_game_api, deps)
     if not vehicle_feature.is_enabled() then
       return false
     end
-    if _ensure_valid_role(role_id, "enter") == nil then
+    local role = _ensure_valid_role(role_id, "enter")
+    if role == nil then
       return false
     end
     helper.player_id = role_id
@@ -134,7 +162,8 @@ local function _build_vehicle_helper(get_roles, get_game_api, deps)
     if not vehicle_feature.is_enabled() then
       return false
     end
-    if _ensure_valid_role(role_id, "exit") == nil then
+    local role = _ensure_valid_role(role_id, "exit")
+    if role == nil then
       return false
     end
     helper.player_id = role_id
@@ -154,12 +183,21 @@ local function _build_vehicle_helper(get_roles, get_game_api, deps)
     if not vehicle_feature.is_enabled() then
       return false
     end
-    if _ensure_valid_role(role_id, "move") == nil then
+    local role = _ensure_valid_role(role_id, "move")
+    if role == nil then
       return false
     end
     helper.player_id = role_id
     helper.move_direction = dir
     helper.move_time = time
+    if _is_native_move_enabled() then
+      local character = _resolve_character(role)
+      local vehicle = _resolve_driving_vehicle(character)
+      if vehicle and type(vehicle.start_move_by_direction) == "function" then
+        pcall(vehicle.start_move_by_direction, dir, time)
+        return true
+      end
+    end
     runtime_event_bridge.emit_custom_event(
       runtime_constants.eca_event.vehicle.move,
       {},
@@ -172,10 +210,19 @@ local function _build_vehicle_helper(get_roles, get_game_api, deps)
     if not vehicle_feature.is_enabled() then
       return false
     end
-    if _ensure_valid_role(role_id, "stop") == nil then
+    local role = _ensure_valid_role(role_id, "stop")
+    if role == nil then
       return false
     end
     helper.player_id = role_id
+    if _is_native_move_enabled() then
+      local character = _resolve_character(role)
+      local vehicle = _resolve_driving_vehicle(character)
+      if vehicle and type(vehicle.stop_move) == "function" then
+        pcall(vehicle.stop_move)
+        return true
+      end
+    end
     runtime_event_bridge.emit_custom_event(
       runtime_constants.eca_event.vehicle.stop,
       {},
@@ -226,7 +273,6 @@ local function _install_editor_exports(ctx, deps)
   local runtime_constants = assert(deps.runtime_constants, "missing deps.runtime_constants")
   local logger = assert(deps.logger, "missing deps.logger")
   local vehicle_catalog = assert(deps.vehicle_catalog, "missing deps.vehicle_catalog")
-  local number_utils = assert(deps.number_utils, "missing deps.number_utils")
   local vehicle_helper = assert(ctx and ctx.vehicle_helper, "missing ctx.vehicle_helper")
 
   function get_vehicle_player()

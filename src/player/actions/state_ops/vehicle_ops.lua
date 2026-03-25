@@ -1,13 +1,31 @@
 local common = require("src.player.actions.state_ops.common")
+local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local vehicle_ops = {}
 
-function vehicle_ops.player_vehicle_cfg(_self, _player)
+local function _default_vehicle_cfg()
   return {
     id = 0,
     name = "",
     dice_count = common.constants.default_dice_count,
     indestructible = false,
+  }
+end
+
+function vehicle_ops.player_vehicle_cfg(_self, player)
+  local seat_id = player and player.seat_id or nil
+  if seat_id == nil then
+    return _default_vehicle_cfg()
+  end
+  local entry = vehicle_catalog.find(seat_id)
+  if entry == nil then
+    return _default_vehicle_cfg()
+  end
+  return {
+    id = entry.id,
+    name = entry.name,
+    dice_count = entry.dice_count or common.constants.default_dice_count,
+    indestructible = entry.indestructible == true,
   }
 end
 

@@ -1,4 +1,5 @@
 local number_utils = require("src.core.utils.number_utils")
+local vehicle_feature = require("src.rules.vehicle")
 
 local gameplay_read_port = {}
 
@@ -21,8 +22,8 @@ local function _purchase_price(tile)
   return price
 end
 
-function gameplay_read_port.resolve_vehicle_seat_id(_seat_id)
-  return nil
+function gameplay_read_port.resolve_vehicle_seat_id(seat_id)
+  return vehicle_feature.resolve_seat_id(seat_id)
 end
 
 function gameplay_read_port.total_land_invested(tile, level)
