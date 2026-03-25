@@ -110,6 +110,11 @@ Creature|set_touchable|_enable
 
 CustomTriggerSpace|random_point
 
+## DebugAPI
+
+DebugAPI|draw_line|_start_pos, _end_pos, _color, _duration
+DebugAPI|draw_text|_pos, _text
+
 ## Equipment
 
 Equipment|can_drop
@@ -171,9 +176,6 @@ KVBase|set_kv_by_type|_value_type, _key, _val
 
 LifeEntity|activate_multi_animation|_anim_id, _acceptor_type
 LifeEntity|ai_command_alert|_tagert_pos, _target_dir, _dalay_time, _reject_time, _move_mode
-LifeEntity|ai_command_chase_with_ability|_target, _chase_range, _reject_time, _action_distance, _ability_key, _move_mode, _action_count
-LifeEntity|ai_command_chase_with_action|_target, _chase_range, _reject_time, _action_distance, _action_mode, _move_mode, _action_count
-LifeEntity|ai_command_chase_with_equipment|_target, _chase_range, _reject_time, _action_distance, _equipment_key, _move_mode, _action_count
 LifeEntity|ai_command_follow|_target_unit, _follow_dis, _tolerate_dis, _reject_time, _move_mode
 LifeEntity|ai_command_imitate|_target_unit, _delay, _disable_actions
 LifeEntity|ai_command_jump
@@ -228,6 +230,7 @@ LifeEntity|start_move_by_direction|_direction, _duration
 LifeEntity|start_move_to_pos_with_threshold|_target_pos, _duration, _threshold
 LifeEntity|stop_ai
 LifeEntity|swap_equipment_slot|_equipment, _slot_type, _slot
+LifeEntity|try_enter_vehicle|_vehicle
 LifeEntity|try_exit_vehicle
 
 ## Modifier
@@ -264,7 +267,6 @@ Obstacle|is_touchable
 Obstacle|reset_collision_limit|_limit_type
 Obstacle|set_billboard_font_size|_font_size
 Obstacle|set_billboard_text|_content
-Obstacle|set_billboard_text_color|_color, _gradient_color_1, _gradient_color_2, _gradient_color_3, _gradient_color_4
 Obstacle|set_chess_type_and_rank|_card_type, _card_rank
 Obstacle|set_climbable|_enable
 Obstacle|set_collision_count_limit|_limit_type, _value
@@ -295,6 +297,7 @@ Role|get_ctrl_unit
 Role|get_game_result
 Role|get_head_icon
 Role|get_name
+Role|get_party_id
 Role|get_roleid
 Role|get_score
 Role|get_voice_volume
@@ -384,7 +387,6 @@ Role|set_unit_outline|_unit, _width, _color
 Role|set_unit_see_through_enabled|_unit, _enabled
 Role|set_unit_visible|_unit, _is_visible
 Role|set_voice_volume_sync_enabled|_enabled
-Role|shake_camera|_shake_type, _shake_max_amplitude, _shake_time, _shake_source, _shake_frequency, _shake_time_decay, _shake_effect_scope, _shake_undamped_scope, _shake_distance_decay
 Role|show_bag_panel|_visible
 Role|show_dynamic_text|_text, _pos, _color, _duration, _anim_type
 Role|show_goods_purchase_panel|_raw_goods_id, _show_time
@@ -403,10 +405,6 @@ Role|unbind_label_text|_label
 Role|unbind_progressbar_current|_progress_bar
 Role|unbind_progressbar_max|_progress_bar
 Role|win
-
-## SceneUI
-
-SceneUI|create_scene_ui_bind_unit|_layer_key, _socket_name, _offset_pos, _duration, _bind_event, _inherit_visible
 
 ## TriggerSpace
 
@@ -490,6 +488,7 @@ Unit|set_paint_area_color|_paint_area, _color
 Unit|set_physics_active|_is_active
 Unit|set_position|_pos
 Unit|set_position_smooth|_pos
+Unit|set_scale|_scale, _time
 Unit|set_world_scale|_scale
 Unit|show_bubble_msg|_show_msg, _show_time, _max_dis, _offset
 Unit|stop_sound|_lres_id

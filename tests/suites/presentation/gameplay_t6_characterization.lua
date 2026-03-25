@@ -537,32 +537,32 @@ local function _test_create_scene_ui_bind_unit_from_ctrl_unit()
     local mock_ctrl_unit = {
       create_scene_ui_bind_unit = function() created = true return { id = "layer1" } end,
     }
-    local mock_role = {}
-    local result = status3d_scene._create_scene_ui_bind_unit(mock_role, mock_ctrl_unit, "layout_1")
+    local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_1")
     math.Vector3 = original_vector3
     assert(result ~= nil, "should create layer from ctrl_unit")
     assert(created == true, "ctrl_unit.create_scene_ui_bind_unit should be called")
   end)
 end
 
-local function _test_create_scene_ui_bind_unit_from_role()
+local function _test_create_scene_ui_bind_unit_ignores_role_factory_when_ctrl_unit_missing()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
   }, function()
     local original_vector3 = math.Vector3
     math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
     local created = false
+    local mock_ctrl_unit = nil
     local mock_role = {
       create_scene_ui_bind_unit = function() created = true return { id = "layer2" } end,
     }
-    local result = status3d_scene._create_scene_ui_bind_unit(mock_role, nil, "layout_2")
+    local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_2")
     math.Vector3 = original_vector3
-    assert(result ~= nil, "should create layer from role")
-    assert(created == true, "role.create_scene_ui_bind_unit should be called")
+    assert(result == nil, "should not fall back to role factory")
+    assert(created == false, "role factory should no longer be called")
   end)
 end
 
-local function _test_create_scene_ui_bind_unit_from_global()
+local function _test_create_scene_ui_bind_unit_ignores_global_factory_when_ctrl_unit_missing()
   _with_globals({
     SceneUI = {
       create_scene_ui_bind_unit = function() return { id = "layer3" } end,
@@ -571,9 +571,9 @@ local function _test_create_scene_ui_bind_unit_from_global()
   }, function()
     local original_vector3 = math.Vector3
     math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
-    local result = status3d_scene._create_scene_ui_bind_unit({}, nil, "layout_3")
+    local result = status3d_scene._create_scene_ui_bind_unit(nil, "layout_3")
     math.Vector3 = original_vector3
-    assert(result ~= nil, "should create layer from global SceneUI")
+    assert(result == nil, "should not fall back to global SceneUI")
   end)
 end
 
@@ -585,7 +585,7 @@ local function _test_create_scene_ui_bind_unit_returns_nil_when_unavailable()
   Enums = { ModelSocket = { socket_head = 1 } }
   math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
   local ok, err = pcall(function()
-    local result = status3d_scene._create_scene_ui_bind_unit({}, {}, "layout_4")
+    local result = status3d_scene._create_scene_ui_bind_unit({}, "layout_4")
     assert(result == nil, "should return nil when no method available")
   end)
   SceneUI = original_scene_ui
@@ -596,14 +596,13 @@ local function _test_create_scene_ui_bind_unit_returns_nil_when_unavailable()
   end
 end
 
-local function _test_ensure_layers_for_player_uses_role_factory_when_ctrl_unit_factory_missing()
+local function _test_ensure_layers_for_player_returns_false_when_ctrl_unit_factory_missing()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
   }, function()
     local original_vector3 = math.Vector3
     math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
 
-    local created = 0
     local cache = {
       layers = {},
       text_nodes = {},
@@ -618,10 +617,6 @@ local function _test_ensure_layers_for_player_uses_role_factory_when_ctrl_unit_f
         local role = {
           get_ctrl_unit = function()
             return {}
-          end,
-          create_scene_ui_bind_unit = function()
-            created = created + 1
-            return { id = "layer_role" }
           end,
         }
         if predicate == nil or predicate(role) == true then
@@ -638,13 +633,12 @@ local function _test_ensure_layers_for_player_uses_role_factory_when_ctrl_unit_f
     local ok = status3d_scene.ensure_layers_for_player(cache, player, { host_runtime = host_runtime })
     math.Vector3 = original_vector3
 
-    assert(ok == true, "role factory fallback should create player layers")
-    assert(created == 1, "role factory should be used when ctrl_unit factory is missing")
-    assert(cache.layers[player.id].hospital ~= nil, "hospital layer should be cached")
+    assert(ok == false, "ensure_layers should fail when ctrl_unit factory is missing")
+    assert(cache.layers[player.id] == nil, "player layers should not be cached without ctrl_unit factory")
   end)
 end
 
-local function _test_ensure_layers_for_player_uses_global_factory_when_ctrl_unit_factory_missing()
+local function _test_ensure_layers_for_player_ignores_global_factory_when_ctrl_unit_factory_missing()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
     SceneUI = {
@@ -686,8 +680,8 @@ local function _test_ensure_layers_for_player_uses_global_factory_when_ctrl_unit
     local ok = status3d_scene.ensure_layers_for_player(cache, player, { host_runtime = host_runtime })
     math.Vector3 = original_vector3
 
-    assert(ok == true, "global SceneUI fallback should create player layers")
-    assert(cache.layers[player.id].hospital ~= nil, "hospital layer should be cached from global factory")
+    assert(ok == false, "ensure_layers should ignore global SceneUI fallback")
+    assert(cache.layers[player.id] == nil, "player layers should not be cached from global fallback")
   end)
 end
 
@@ -1375,7 +1369,7 @@ local function _test_create_scene_ui_bind_unit_preserves_offset()
         return { id = "layer", offset = offset }
       end,
     }
-    local result = status3d_scene._create_scene_ui_bind_unit({}, mock_ctrl_unit, "layout_1")
+    local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_1")
     math.Vector3 = original_vector3
     assert(result ~= nil, "should create layer")
     assert(captured_offset ~= nil, "should create offset vector")
@@ -1614,16 +1608,16 @@ return {
     { name = "anim_overlay_spawn_overlay_no_ids_returns_false", run = _test_anim_overlay_spawn_overlay_no_ids_returns_false },
     -- status3d_scene tests
     { name = "create_scene_ui_bind_unit_from_ctrl_unit", run = _test_create_scene_ui_bind_unit_from_ctrl_unit },
-    { name = "create_scene_ui_bind_unit_from_role", run = _test_create_scene_ui_bind_unit_from_role },
-    { name = "create_scene_ui_bind_unit_from_global", run = _test_create_scene_ui_bind_unit_from_global },
+    { name = "create_scene_ui_bind_unit_ignores_role_factory_when_ctrl_unit_missing", run = _test_create_scene_ui_bind_unit_ignores_role_factory_when_ctrl_unit_missing },
+    { name = "create_scene_ui_bind_unit_ignores_global_factory_when_ctrl_unit_missing", run = _test_create_scene_ui_bind_unit_ignores_global_factory_when_ctrl_unit_missing },
     { name = "create_scene_ui_bind_unit_returns_nil_when_unavailable", run = _test_create_scene_ui_bind_unit_returns_nil_when_unavailable },
     {
-      name = "ensure_layers_for_player_uses_role_factory_when_ctrl_unit_factory_missing",
-      run = _test_ensure_layers_for_player_uses_role_factory_when_ctrl_unit_factory_missing,
+      name = "ensure_layers_for_player_returns_false_when_ctrl_unit_factory_missing",
+      run = _test_ensure_layers_for_player_returns_false_when_ctrl_unit_factory_missing,
     },
     {
-      name = "ensure_layers_for_player_uses_global_factory_when_ctrl_unit_factory_missing",
-      run = _test_ensure_layers_for_player_uses_global_factory_when_ctrl_unit_factory_missing,
+      name = "ensure_layers_for_player_ignores_global_factory_when_ctrl_unit_factory_missing",
+      run = _test_ensure_layers_for_player_ignores_global_factory_when_ctrl_unit_factory_missing,
     },
     -- pre_confirm_flow tests
     { name = "pre_confirm_enter_choice_select", run = _test_pre_confirm_enter_choice_select },

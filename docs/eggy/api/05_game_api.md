@@ -8,6 +8,7 @@ GameAPI|add_pathpoint|_path_id, _index, _point_id
 GameAPI|add_sheet_column|_sheet_id, _key, _type_name
 GameAPI|clear_sheet|_sheet_id
 GameAPI|copy_sheet|_sheet_id
+GameAPI|copy_vehicle|_vehicle, _pos, _direction, _role
 GameAPI|create_constant_wind_field|_pos, _wind_type, _wind_range, _duration
 GameAPI|create_creature_fixed_scale|_u_key, _pos, _rotation, _scale_ratio, _role
 GameAPI|create_customtriggerspace|_u_key, _pos, _rotation, _scale, _role
@@ -19,11 +20,11 @@ GameAPI|create_obstacle|_u_key, _pos, _rotation, _scale, _role
 GameAPI|create_obstacle_from_geometry|_u_key, _pos, _rotation, _scale, _role, _geometry_path
 GameAPI|create_scene_ui_at_point|_layer_key, _pos, _duration
 GameAPI|create_sfx_with_socket|_sfx_key, _unit, _socket_name, _scale, _duration, _bind_type
-GameAPI|create_sfx_with_socket_offset|_sfx_key, _unit, _socket_name, _offset, _rot, _scale, _duration, _bind_type
 GameAPI|create_sheet
 GameAPI|create_triggerspace|_u_key, _pos, _rotation, _scale, _role
 GameAPI|create_unit_group|_unit_group_id, _pos, _root_quaternion, _role, _use_center_offset
 GameAPI|create_unit_with_scale|_u_key, _pos, _rotation, _scale
+GameAPI|create_vehicle|_vehicle_key, _pos, _direction, _role
 GameAPI|creature_prefab_get_kv_by_type|_value_type, _key, _prop
 GameAPI|creature_prefab_get_prop_by_type|_value_type, _key, _prop
 GameAPI|creature_prefab_has_kv|_unit_key, _prop
@@ -31,6 +32,7 @@ GameAPI|customtriggerspace_prefab_get_kv_by_type|_value_type, _key, _prop
 GameAPI|customtriggerspace_prefab_get_prop_by_type|_value_type, _key, _prop
 GameAPI|customtriggerspace_prefab_has_kv|_key, _prop
 GameAPI|deal_damage|_dst, _dmg, _src, _schema, _data
+GameAPI|delay_destroy_vehicle|_unit
 GameAPI|destroy_scene_ui|_layer
 GameAPI|destroy_unit|_unit
 GameAPI|destroy_unit_with_children|_unit, _destroy_children
@@ -65,6 +67,7 @@ GameAPI|get_creatures_in_sphere|_center, _radius
 GameAPI|get_customtriggerspaces_by_key|_key
 GameAPI|get_customtriggerspaces_in_raycast|_start_pos, _end_pos
 GameAPI|get_day|_timestamp
+GameAPI|get_driving_vehicle|_character
 GameAPI|get_env_time
 GameAPI|get_env_time_ratio
 GameAPI|get_env_time_running_enabled
@@ -93,6 +96,7 @@ GameAPI|get_obstacles_in_annulus|_center, _radius1, _radius2, _height
 GameAPI|get_obstacles_in_cylinder|_bottom_center, _radius, _height
 GameAPI|get_obstacles_in_sector|_center, _face_dir, _central_angle, _radius, _height
 GameAPI|get_obstacles_in_sphere|_center, _radius
+GameAPI|get_party_roles|_party_id
 GameAPI|get_pathpoint_by_id|_point_id
 GameAPI|get_pathpoint_by_index|_path_id, _index
 GameAPI|get_role|_role_id
@@ -130,9 +134,6 @@ GameAPI|random_int|_min_value, _max_value
 GameAPI|raycast_test|_start_pos, _end_pos, _collision_mask, _find_closest, _callback
 GameAPI|raycast_unit|_start_pos, _end_pos, _include_unit_types, _raycast_handler
 GameAPI|register_geometry_box|_size, _chamfer_radius, _chamfer_level, _use_box_collider, _preconf
-GameAPI|register_geometry_frustum|_height, _inner_radius, _outer_radius, _inner_poly_count, _outer_poly_count, _chamfer_radius, _angle, _layer, _bend, _preconf
-GameAPI|register_geometry_ring|_height, _inner_radius, _outer_radius, _inner_poly_count, _outer_poly_count, _chamfer_radius, _angle, _preconf
-GameAPI|register_geometry_spline|_is_rope, _pos_list, _normal_list, _radius_list, _dist_precision, _normal_precision, _depth, _preconf
 GameAPI|remove_pathpoint|_path_id, _index
 GameAPI|set_all_scene_ui_visible|_role, _visible
 GameAPI|set_env_time|_target_time, _duration, _direction

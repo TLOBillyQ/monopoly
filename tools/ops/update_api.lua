@@ -26,7 +26,7 @@ end
 local DEFAULT_NEW = common.join_path(env.repo_root, "EggyAPI.lua")
 local DEFAULT_OLD = common.join_path(env.repo_root, "EggyAPI copy.lua")
 local DEFAULT_DOC_DIR = common.join_path(env.repo_root, "docs/eggy/api")
-local DEFAULT_CHANGELOG = common.join_path(env.repo_root, "docs/eggy/api_changelog.md")
+local DEFAULT_CHANGELOG = common.join_path(env.repo_root, "docs/eggy/api/changelog.md")
 
 local function _trim(text)
   local source = tostring(text or "")
@@ -835,12 +835,12 @@ local function main(args)
     check_failed = #missing > 0 or #extra > 0
   end
 
-  if diff_failed or check_failed then
-    return 1
+  if not options.skip_generate and not check_failed then
+    _delete_old_api(options.old)
   end
 
-  if not options.skip_generate then
-    _delete_old_api(options.old)
+  if diff_failed or check_failed then
+    return 1
   end
 
   return 0

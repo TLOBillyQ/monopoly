@@ -115,6 +115,7 @@ math|Quaternion|pitch, yaw, roll
 - JointAssistant: JointAssistantComp, Unit
 - Timer
 - UnitGroup: Unit
+- Vehicle: Unit, VehicleComp
 - Enums
 - GlobalAPI
 - Ability: Actor, AttrComp, KVBase, TriggerSystem
@@ -127,6 +128,7 @@ math|Quaternion|pitch, yaw, roll
 - CharacterComp
 - Creature: LifeEntity, OwnerComp
 - CustomTriggerSpace: ExprDeviceComp, OwnerComp, SceneUI, Unit, UnitInteractVolumeComp
+- DebugAPI
 - DisplayComp
 - Equipment: KVBase, OwnerComp, TriggerSystem
 - EquipmentComp

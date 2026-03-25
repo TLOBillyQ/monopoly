@@ -524,6 +524,95 @@ local function _test_cli_help_text_is_bilingual()
   end
 end
 
+local function _test_update_api_writes_changelog_into_docs_eggy_api_dir()
+  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/update_api.lua")))
+  _assert_contains(
+    script_text,
+    'docs/eggy/api/changelog.md',
+    "update_api should keep the changelog under docs/eggy/api"
+  )
+  _assert_not_contains(
+    script_text,
+    'docs/eggy/api_changelog.md',
+    "update_api should not write changelog beside the api directory"
+  )
+end
+
+local function _write_update_api_fixture(path, function_name)
+  _write_fixture_file(path, table.concat({
+    "---@meta EggyAPI",
+    "",
+    "---@class GlobalAPI",
+    "GlobalAPI = {}",
+    "",
+    "function GlobalAPI." .. tostring(function_name) .. "() end",
+    "",
+  }, "\n"))
+end
+
+local function _run_update_api_with_paths(old_path, new_path, doc_dir, changelog_path)
+  return _run_lua({
+    "tools/ops/update_api.lua",
+    "--old", old_path,
+    "--new", new_path,
+    "--doc-dir", doc_dir,
+    "--changelog", changelog_path,
+  })
+end
+
+local function _test_update_api_deletes_old_baseline_when_only_diff_fails()
+  _with_ascii_tmp("update_api_delete_old_on_diff", function(tmp_root)
+    local fixture_root = common.join_path(tmp_root, "update_api_delete_old_on_diff")
+    local old_path = common.join_path(fixture_root, "EggyAPI copy.lua")
+    local new_path = common.join_path(fixture_root, "EggyAPI.lua")
+    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local changelog_path = common.join_path(doc_dir, "changelog.md")
+
+    _write_update_api_fixture(old_path, "legacy_call")
+    _write_update_api_fixture(new_path, "current_call")
+
+    local result = _run_update_api_with_paths(old_path, new_path, doc_dir, changelog_path)
+
+    assert(result.ok == false, "update_api should still exit non-zero when API diff exists")
+    assert(common.path_exists(old_path) == false, "update_api should delete old baseline after docs/check succeed")
+    assert(common.path_exists(common.join_path(doc_dir, "04_global_api.md")) == true,
+      "update_api should generate split docs before deleting the old baseline")
+    assert(common.path_exists(changelog_path) == true, "update_api should write changelog into the requested path")
+    _assert_contains(result.output, "新增 / Added: 1", "update_api should report the added API in diff output")
+    _assert_contains(result.output, "删除 / Removed: 1", "update_api should report the removed API in diff output")
+    _assert_contains(result.output, "缺失项 / Missing: 0", "update_api should keep doc entries aligned with source entries")
+    _assert_contains(result.output, "多余项 / Extra: 0", "update_api should keep doc entries aligned with source entries")
+  end)
+end
+
+local function _test_update_api_keeps_old_baseline_when_check_fails()
+  _with_ascii_tmp("update_api_keep_old_on_check_failure", function(tmp_root)
+    local fixture_root = common.join_path(tmp_root, "update_api_keep_old_on_check_failure")
+    local old_path = common.join_path(fixture_root, "EggyAPI copy.lua")
+    local new_path = common.join_path(fixture_root, "EggyAPI.lua")
+    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local changelog_path = common.join_path(doc_dir, "changelog.md")
+    local extra_doc_path = common.join_path(doc_dir, "zz_extra.md")
+
+    _write_update_api_fixture(old_path, "shared_call")
+    _write_update_api_fixture(new_path, "shared_call")
+    _write_fixture_file(extra_doc_path, table.concat({
+      "# extra",
+      "",
+      "GhostAPI|ghost_call",
+      "",
+    }, "\n"))
+
+    local result = _run_update_api_with_paths(old_path, new_path, doc_dir, changelog_path)
+
+    assert(result.ok == false, "update_api should exit non-zero when doc check finds extra entries")
+    assert(common.path_exists(old_path) == true, "update_api should keep old baseline when check fails")
+    _assert_contains(result.output, "多余项 / Extra: 1", "update_api should surface the extra doc entry count")
+    _assert_contains(result.output, "多余示例 / Extra sample: [GhostAPI|ghost_call]",
+      "update_api should surface the offending extra doc entry")
+  end)
+end
+
 local function _test_deploy_script_keeps_default_paths()
   local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
   _assert_contains(
@@ -1015,6 +1104,9 @@ local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
   { name = "deploy_script_keeps_default_paths", run = _test_deploy_script_keeps_default_paths },
   { name = "deploy_script_removes_vehicle_runtime_legacy_support", run = _test_deploy_script_removes_vehicle_runtime_legacy_support },
+  { name = "update_api_writes_changelog_into_docs_eggy_api_dir", run = _test_update_api_writes_changelog_into_docs_eggy_api_dir },
+  { name = "update_api_deletes_old_baseline_when_only_diff_fails", run = _test_update_api_deletes_old_baseline_when_only_diff_fails },
+  { name = "update_api_keeps_old_baseline_when_check_fails", run = _test_update_api_keeps_old_baseline_when_check_fails },
 }
 
 local tooling_tests = {

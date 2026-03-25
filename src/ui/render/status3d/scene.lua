@@ -40,24 +40,16 @@ local function _set_layer_visible_for_roles(layer, roles, visible, deps)
   end
 end
 
-local function _create_scene_ui_bind_unit(role, ctrl_unit, layout_id)
+local function _create_scene_ui_bind_unit(ctrl_unit, layout_id)
   local offset = math.Vector3(0, 4, 0)
   if ctrl_unit and ctrl_unit.create_scene_ui_bind_unit then
     return ctrl_unit.create_scene_ui_bind_unit(layout_id, Enums.ModelSocket.socket_head, offset, -1.0, true, true)
   end
-  if role and role.create_scene_ui_bind_unit then
-    return role.create_scene_ui_bind_unit(layout_id, Enums.ModelSocket.socket_head, offset, -1.0, true, true)
-  end
-  if SceneUI and SceneUI.create_scene_ui_bind_unit then
-    return SceneUI.create_scene_ui_bind_unit(layout_id, Enums.ModelSocket.socket_head, offset, -1.0, true, true)
-  end
   return nil
 end
 
-local function _can_create_scene_ui_bind_unit(role, ctrl_unit)
-  return (ctrl_unit and ctrl_unit.create_scene_ui_bind_unit ~= nil)
-    or (role and role.create_scene_ui_bind_unit ~= nil)
-    or (SceneUI and SceneUI.create_scene_ui_bind_unit ~= nil)
+local function _can_create_scene_ui_bind_unit(ctrl_unit)
+  return ctrl_unit and ctrl_unit.create_scene_ui_bind_unit ~= nil
 end
 
 function M.ensure_layers_for_player(cache, player, deps)
@@ -72,7 +64,7 @@ function M.ensure_layers_for_player(cache, player, deps)
     return false
   end
   local ctrl_unit = role.get_ctrl_unit and role.get_ctrl_unit()
-  if not _can_create_scene_ui_bind_unit(role, ctrl_unit) then
+  if not _can_create_scene_ui_bind_unit(ctrl_unit) then
     meta.warn_once(cache, "missing_ctrl_unit_" .. tostring(player_id), "status3d unit missing create_scene_ui_bind_unit:", tostring(player_id))
     return false
   end
@@ -86,7 +78,7 @@ function M.ensure_layers_for_player(cache, player, deps)
   local player_text_nodes = {}
   local roles = _resolve_observer_roles()
   for status_key, layout_id in pairs(resolved_meta.layouts) do
-    local layer = _create_scene_ui_bind_unit(role, ctrl_unit, layout_id)
+    local layer = _create_scene_ui_bind_unit(ctrl_unit, layout_id)
     if layer == nil then
       meta.warn_once(cache, "create_layer_" .. tostring(status_key) .. "_" .. tostring(player_id),
         "status3d create layer failed:", tostring(status_key), tostring(player_id))

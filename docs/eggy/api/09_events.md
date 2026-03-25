@@ -177,6 +177,50 @@ end)
 --]]
 EVENT.ABILITY_ADD = "ABILITY_ADD"
 
+---技能指定锚点开始
+---事件主体 Ability 技能
+---注册参数 _anchor AbilityAnchorID ABILITY_ANCHOR
+---事件回调参数 ability Ability 触发技能
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.ABILITY_SPEC_ANCHOR_BEGIN, _anchor}, function(event_name, actor, data)
+	print(data.ability)
+end)
+--]]
+EVENT.ABILITY_SPEC_ANCHOR_BEGIN = "ABILITY_SPEC_ANCHOR_BEGIN"
+
+---技能指定锚点被打断
+---事件主体 Ability 技能
+---注册参数 _anchor AbilityAnchorID ABILITY_ANCHOR
+---事件回调参数 ability Ability 触发技能
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.ABILITY_SPEC_ANCHOR_BREAK, _anchor}, function(event_name, actor, data)
+	print(data.ability)
+end)
+--]]
+EVENT.ABILITY_SPEC_ANCHOR_BREAK = "ABILITY_SPEC_ANCHOR_BREAK"
+
+---技能指定锚点结束
+---事件主体 Ability 技能
+---注册参数 _anchor AbilityAnchorID ABILITY_ANCHOR
+---事件回调参数 ability Ability 触发技能
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.ABILITY_SPEC_ANCHOR_END, _anchor}, function(event_name, actor, data)
+	print(data.ability)
+end)
+--]]
+EVENT.ABILITY_SPEC_ANCHOR_END = "ABILITY_SPEC_ANCHOR_END"
+
+---技能指定锚点停止
+---事件主体 Ability 技能
+---注册参数 _anchor AbilityAnchorID ABILITY_ANCHOR
+---事件回调参数 ability Ability 触发技能
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.ABILITY_SPEC_ANCHOR_STOP, _anchor}, function(event_name, actor, data)
+	print(data.ability)
+end)
+--]]
+EVENT.ABILITY_SPEC_ANCHOR_STOP = "ABILITY_SPEC_ANCHOR_STOP"
+
 ---技能升级
 ---事件主体 Ability 技能
 ---事件回调参数 ability Ability 触发技能
@@ -346,6 +390,19 @@ LuaAPI.global_register_trigger_event({EVENT.ANY_OBSTACLE_TRIGGER_SPACE, _trigger
 end)
 --]]
 EVENT.ANY_OBSTACLE_TRIGGER_SPACE = "ANY_OBSTACLE_TRIGGER_SPACE"
+
+---任意玩家低帧率
+---事件主体 Global 全局触发器
+---注册参数 _frame_rate integer 当前帧数
+---事件回调参数 role Role 目标玩家
+---事件回调参数 frame_rate integer 当前帧数
+--[[
+LuaAPI.global_register_trigger_event({EVENT.ANY_ROLE_LOW_FPS, _frame_rate}, function(event_name, actor, data)
+	print(data.role)
+	print(data.frame_rate)
+end)
+--]]
+EVENT.ANY_ROLE_LOW_FPS = "ANY_ROLE_LOW_FPS"
 
 ---玩家积分变化
 ---事件主体 Global 全局触发器
@@ -617,8 +674,8 @@ EVENT.SPEC_CHARACTER_SELECT_EQUIPMENT_SLOT = "SPEC_CHARACTER_SELECT_EQUIPMENT_SL
 
 ---指定道具被获取
 ---事件主体 Default 多类型
----注册参数 _commodity_id UgcCommodity SPEC_UGC_COMMODITY
----事件回调参数 commodity_id UgcCommodity SPEC_UGC_COMMODITY
+---注册参数 _commodity_id UgcCommodity 商城道具
+---事件回调参数 commodity_id UgcCommodity 商城道具
 ---事件回调参数 camp_role_owner Role 携带道具的玩家
 ---事件回调参数 commodity_num integer 获得数量
 --[[
@@ -679,6 +736,26 @@ LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_CUSTOMTRIGGERSPACE_DESTROY
 end)
 --]]
 EVENT.SPEC_CUSTOMTRIGGERSPACE_DESTROY = "SPEC_CUSTOMTRIGGERSPACE_DESTROY"
+
+---指定物品即将被批量使用
+---事件主体 Equipment 物品
+---事件回调参数 equipment Equipment 当前物品
+---事件回调参数 equipment_user LifeEntity 使用物品的角色/生物
+---事件回调参数 slot_type Enums.EquipmentSlotType 物品槽位类型
+---事件回调参数 slot_index integer 物品槽位索引
+---事件回调参数 use_count integer 批量使用次数
+---事件回调参数 cost_count integer 批量使用消耗数
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_EQUIPMENT_BATCH_USE_BEFORE, }, function(event_name, actor, data)
+	print(data.equipment)
+	print(data.equipment_user)
+	print(data.slot_type)
+	print(data.slot_index)
+	print(data.use_count)
+	print(data.cost_count)
+end)
+--]]
+EVENT.SPEC_EQUIPMENT_BATCH_USE_BEFORE = "SPEC_EQUIPMENT_BATCH_USE_BEFORE"
 
 ---指定物品位置发生变化
 ---事件主体 Equipment 物品
@@ -1021,9 +1098,11 @@ EVENT.SPEC_LIFEENTITY_DMG_BEFORE = "SPEC_LIFEENTITY_DMG_BEFORE"
 ---指定生命体上载具
 ---事件主体 LifeEntity 生命体
 ---事件回调参数 unit LifeEntity 触发角色/生物
+---事件回调参数 vehicle Vehicle 触发载具
 --[[
 LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_LIFEENTITY_ENTER_VEHICLE, }, function(event_name, actor, data)
 	print(data.unit)
+	print(data.vehicle)
 end)
 --]]
 EVENT.SPEC_LIFEENTITY_ENTER_VEHICLE = "SPEC_LIFEENTITY_ENTER_VEHICLE"
@@ -1049,9 +1128,11 @@ EVENT.SPEC_LIFEENTITY_EQUIPMENT_SLOT_CHANGE = "SPEC_LIFEENTITY_EQUIPMENT_SLOT_CH
 ---指定生命体下载具
 ---事件主体 LifeEntity 生命体
 ---事件回调参数 unit LifeEntity 触发角色/生物
+---事件回调参数 vehicle Vehicle 触发载具
 --[[
 LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_LIFEENTITY_EXIT_VEHICLE, }, function(event_name, actor, data)
 	print(data.unit)
+	print(data.vehicle)
 end)
 --]]
 EVENT.SPEC_LIFEENTITY_EXIT_VEHICLE = "SPEC_LIFEENTITY_EXIT_VEHICLE"
@@ -1366,7 +1447,7 @@ EVENT.SPEC_OBSTACLE_TOUCH_END = "SPEC_OBSTACLE_TOUCH_END"
 ---事件主体 Global 全局触发器
 ---注册参数 _role RoleID 目标玩家
 ---事件回调参数 role Role 目标玩家
----事件回调参数 achieve_id Achievement TARGET_ACHIEVE
+---事件回调参数 achieve_id Achievement 目标成就
 --[[
 LuaAPI.global_register_trigger_event({EVENT.SPEC_ROLE_ACHIEVEMENT_COMPLETE, _role}, function(event_name, actor, data)
 	print(data.role)
@@ -1378,9 +1459,9 @@ EVENT.SPEC_ROLE_ACHIEVEMENT_COMPLETE = "SPEC_ROLE_ACHIEVEMENT_COMPLETE"
 ---指定玩家领取成就奖励
 ---事件主体 Global 全局触发器
 ---注册参数 _role RoleID 目标玩家
----注册参数 _achievement Achievement TARGET_ACHIEVE
+---注册参数 _achievement Achievement 目标成就
 ---事件回调参数 role Role 目标玩家
----事件回调参数 achieve_id Achievement TARGET_ACHIEVE
+---事件回调参数 achieve_id Achievement 目标成就
 --[[
 LuaAPI.global_register_trigger_event({EVENT.SPEC_ROLE_ACHIEVEMENT_REWARD_GAIN, _role, _achievement}, function(event_name, actor, data)
 	print(data.role)

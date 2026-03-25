@@ -1,6 +1,7 @@
 # 类型别名
 
 Fixed number
+AbilityAnchorID string 技能锚点ID
 AbilityKey integer 技能编号
 AbilitySlot integer 技能槽位
 Achievement integer 自定义成就
@@ -62,4 +63,5 @@ UgcGoods string 商品
 UnitGroupKey UnitKey 组件组编号
 UnitID integer 单位ID
 UnitKey integer 单位编号
+VehicleKey UnitKey 单位编号(载具)
 CommodityInfo {[1]: UgcCommodity, [2]: integer}  {商品项目ID, 道具数量}
