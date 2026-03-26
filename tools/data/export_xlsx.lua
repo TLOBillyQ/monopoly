@@ -217,6 +217,27 @@ local function _infer_market_kind(page, product_id)
   return "item"
 end
 
+local function _parse_phases(value)
+  if value == nil then
+    return nil
+  end
+  local normalized = _trim(value)
+  if normalized == "" then
+    return nil
+  end
+  local phases = {}
+  for phase in normalized:gmatch("[^,]+") do
+    local p = _trim(phase)
+    if p ~= "" then
+      phases[#phases + 1] = p
+    end
+  end
+  if #phases == 0 then
+    return nil
+  end
+  return phases
+end
+
 local function _parse_args(args)
   local options = {
     output_dir = nil,
@@ -274,6 +295,7 @@ local function main(args)
   local constants_path = common.join_path(design_dir, "蛋仔--大富翁--常量表.xlsx")
   local market_path = common.join_path(design_dir, "蛋仔--大富翁--黑市表.xlsx")
   local skins_path = common.join_path(design_dir, "蛋仔--大富翁--皮肤表.xlsx")
+  local vehicles_path = common.join_path(design_dir, "蛋仔--大富翁--座驾表.xlsx")
 
   _require_file(tiles_path)
   _require_file(items_path)
@@ -282,6 +304,7 @@ local function main(args)
   _require_file(constants_path)
   _require_file(market_path)
   _require_file(skins_path)
+  _require_file(vehicles_path)
 
   local type_map = {
     ["地皮"] = "land",
@@ -393,7 +416,8 @@ local function main(args)
     local item_id = _parse_int(row[col_map["道具id"]])
     if item_id ~= nil and item_id ~= 0 then
       local timing_raw = row[col_map["使用时机"]] or ""
-      items[#items + 1] = {
+      local offer_in_phases = _parse_phases(row[col_map["offer_in_phases"]])
+      local item = {
         id = item_id,
         name = row[col_map["道具名称"]] or "",
         tier = _parse_int(row[col_map["道具等级"]]),
@@ -402,13 +426,15 @@ local function main(args)
         weight = _parse_int(row[col_map["随机权重"]]),
         angel_immune = _parse_bool(row[col_map["天使是否免疫"]]),
         timing = timing_map[timing_raw] or "manual",
+        offer_in_phases = offer_in_phases,
         usage = row[col_map["操作方式"]] or "",
         description = row[col_map["道具说明"]] or "",
       }
+      items[#items + 1] = item
     end
   end
   _write_lua_table(common.join_path(config_dir, "items.lua"), "items", items, {
-    "id", "name", "tier", "shop_currency", "shop_price", "weight", "angel_immune", "timing", "usage", "description"
+    "id", "name", "tier", "shop_currency", "shop_price", "weight", "angel_immune", "timing", "offer_in_phases", "usage", "description"
   })
 
   col_map, rows = _table_from_sheet(skins_path)
@@ -424,6 +450,24 @@ local function main(args)
   end
   _write_lua_table(common.join_path(config_dir, "skins.lua"), "skins", skins, {
     "id", "name"
+  })
+
+  col_map, rows = _table_from_sheet(vehicles_path)
+  local vehicles = {}
+  for _, row in ipairs(rows) do
+    local vehicle_id = _parse_int(row[col_map["座驾id"]])
+    if vehicle_id ~= nil and vehicle_id ~= 0 then
+      vehicles[#vehicles + 1] = {
+        id = vehicle_id,
+        name = row[col_map["座驾名称"]] or "",
+        level = _parse_int(row[col_map["座驾等级"]]),
+        dice_count = _parse_int(row[col_map["骰子数"]]),
+        indestructible = _parse_bool(row[col_map["是否不可摧毁（免疫导弹、台风等效果）"]]) or false,
+      }
+    end
+  end
+  _write_lua_table(common.join_path(config_dir, "vehicles.lua"), "vehicles", vehicles, {
+    "id", "name", "level", "dice_count", "indestructible"
   })
 
   col_map, rows = _table_from_sheet(market_path)
