@@ -15,16 +15,19 @@ end
 
 local phase_titles = {
   pre_action = "行动前：使用道具？",
+  pre_move = "掷骰后：使用道具？",
   post_action = "行动后：使用道具？",
 }
 
 local phase_confirm_titles = {
   pre_action = "行动前",
+  pre_move = "掷骰后",
   post_action = "行动后",
 }
 
 local repeatable_phases = {
   pre_action = true,
+  pre_move = true,
   post_action = true,
 }
 

@@ -12,7 +12,7 @@ local timing = {
   item_slot_highlight_anim_delay_seconds = 0.35,
   mine_trigger_snap_delay_seconds = 0.6,
   turn_limit = 1000,
-  item_phase_queue = { "pre_action", "post_action" },
+  item_phase_queue = { "pre_action", "pre_move", "post_action" },
 }
 
 return timing

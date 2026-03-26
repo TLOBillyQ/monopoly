@@ -11,6 +11,7 @@ local number_utils = require("src.core.utils.number_utils")
 local availability = {}
 local phase_timing = {
   pre_action = { pre_action = true, turn = true },
+  pre_move = { pre_move = true, turn = true },
   post_action = { post_action = true, turn = true },
 }
 
