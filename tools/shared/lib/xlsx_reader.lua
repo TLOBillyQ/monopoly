@@ -70,28 +70,72 @@ local function _command_exists(name)
   return common.command_exists(name)
 end
 
-local function _read_zip_entry(path, entry_name)
-  if _command_exists("tar") then
-    local tar_result = common.run_command({ "tar", "-xOf", path, entry_name })
-    if tar_result.ok then
-      return tar_result.output
-    end
+local _zip_entry_readers = nil
+
+local function _zip_entry_error(entry_name, err)
+  local message = _trim(err)
+  if message ~= "" then
+    return message
+  end
+  return common.bilingual(
+    "读取压缩条目失败: " .. tostring(entry_name),
+    "Failed to read zip entry: " .. tostring(entry_name)
+  )
+end
+
+local function _read_zip_entry_with_tar(path, entry_name)
+  local tar_result = common.run_command({ "tar", "-xOf", path, entry_name })
+  if tar_result.ok then
+    return tar_result.output
+  end
+  return nil, tar_result.output
+end
+
+local function _read_zip_entry_with_unzip(path, entry_name)
+  local result = common.run_command({ "unzip", "-p", path, entry_name })
+  if result.ok then
+    return result.output
+  end
+  return nil, result.output
+end
+
+local function _resolve_zip_entry_readers()
+  if _zip_entry_readers ~= nil then
+    return _zip_entry_readers
   end
 
-  if not _command_exists("unzip") then
+  local readers = {}
+  if _command_exists("tar") then
+    readers[#readers + 1] = _read_zip_entry_with_tar
+  end
+  if _command_exists("unzip") then
+    readers[#readers + 1] = _read_zip_entry_with_unzip
+  end
+  _zip_entry_readers = readers
+  return _zip_entry_readers
+end
+
+local function _read_zip_entry(path, entry_name)
+  local readers = _resolve_zip_entry_readers()
+  if #readers == 0 then
     return nil, common.bilingual(
       "缺少必要命令: tar 或 unzip",
       "Missing required command: tar or unzip"
     )
   end
-  local result = common.run_command({ "unzip", "-p", path, entry_name })
-  if not result.ok then
-    return nil, _trim(result.output) ~= "" and _trim(result.output) or common.bilingual(
-      "读取压缩条目失败: " .. tostring(entry_name),
-      "Failed to read zip entry: " .. tostring(entry_name)
-    )
+
+  local last_err = nil
+  for _, reader in ipairs(readers) do
+    local content, err = reader(path, entry_name)
+    if content ~= nil then
+      return content
+    end
+    if _trim(err) ~= "" then
+      last_err = err
+    end
   end
-  return result.output
+
+  return nil, _zip_entry_error(entry_name, last_err)
 end
 
 local function _load_shared_strings(path)
@@ -165,7 +209,7 @@ local function _sheet_map(path)
     local target = relationship_id and rid_to_target[relationship_id] or nil
     sheets[#sheets + 1] = {
       name = name,
-      path = target and ("xl/" .. target) or nil,
+      path = target and common.simplify_path("xl/" .. target) or nil,
     }
   end
 
