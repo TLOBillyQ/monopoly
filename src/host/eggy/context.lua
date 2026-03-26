@@ -158,7 +158,6 @@ function runtime_context.new(env)
     env = env or {},
     roles = nil,
     vehicle_helper = nil,
-    camera_helper = nil,
     change_skin_helper = nil,
     synthetic_actor_registry = nil,
   }
@@ -216,9 +215,6 @@ function runtime_context.install_runtime_helpers(ctx, opts)
       return ctx.roles
     end, _resolve_game_api)
   end
-  if not ctx.camera_helper then
-    ctx.camera_helper = { target_role_id = 1 }
-  end
   if not ctx.change_skin_helper then
     ctx.change_skin_helper = _build_change_skin_helper()
   end
@@ -231,7 +227,6 @@ function runtime_context.install_runtime_helpers(ctx, opts)
   end
   local helpers = {
     vehicle_helper = ctx.vehicle_helper,
-    camera_helper = ctx.camera_helper,
     change_skin_helper = ctx.change_skin_helper,
     roles = ctx.roles,
   }
@@ -244,7 +239,6 @@ end
 function runtime_context.install_runtime_helper_globals(helpers)
   assert(helpers ~= nil, "missing helpers")
   vehicle_helper = helpers.vehicle_helper
-  camera_helper = helpers.camera_helper
   change_skin_helper = helpers.change_skin_helper
   all_roles = helpers.roles
   ALLROLES = helpers.roles

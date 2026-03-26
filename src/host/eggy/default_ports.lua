@@ -123,14 +123,6 @@ function default_ports.build(runtime_context)
     return nil
   end
 
-  function defaults.resolve_camera_helper()
-    local ctx = runtime_context.current()
-    if ctx and type(ctx.camera_helper) == "table" then
-      return ctx.camera_helper
-    end
-    return nil
-  end
-
   function defaults.resolve_change_skin_helper()
     local ctx = runtime_context.current()
     if ctx and type(ctx.change_skin_helper) == "table" then
