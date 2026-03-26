@@ -107,7 +107,7 @@ local function _with_runtime_context_globals(fn)
     { key = "get_vehicle_set_position_x", value = nil },
     { key = "get_vehicle_set_position_y", value = nil },
     { key = "get_vehicle_set_position_z", value = nil },
-    { key = "get_camera_target", value = nil },
+    { key = "get_camera_follow_creature", value = nil },
     { key = "get_skin_id", value = nil },
     { key = "get_change_skin_role", value = nil },
   }, fn)
@@ -1136,7 +1136,7 @@ local function _test_runtime_context_split_install_stages()
     assert(camera_helper == nil, "install_runtime_helpers should not export globals by default")
 
     runtime_context.install_editor_exports(ctx)
-    assert(type(get_camera_target) == "function", "install_editor_exports should expose camera getter")
+    assert(type(get_camera_follow_creature) == "function", "install_editor_exports should expose camera getter")
   end)
 end
 
@@ -1237,7 +1237,7 @@ local function _test_runtime_editor_exports_camera_target_returns_real_role_ctrl
     ctx.camera_helper.target_role_id = 1
     runtime_context.install_editor_exports(ctx)
 
-    assert(get_camera_target() == ctrl_unit, "camera target should return real player ctrl_unit")
+    assert(get_camera_follow_creature() == ctrl_unit, "camera target should return real player ctrl_unit")
   end)
 end
 
@@ -1268,7 +1268,7 @@ local function _test_runtime_editor_exports_camera_target_returns_synthetic_acto
     }
     runtime_context.install_editor_exports(ctx)
 
-    assert(get_camera_target() == synthetic_unit, "camera target should return synthetic actor unit")
+    assert(get_camera_follow_creature() == synthetic_unit, "camera target should return synthetic actor unit")
   end)
 end
 
@@ -1299,10 +1299,10 @@ local function _test_runtime_editor_exports_camera_target_returns_nil_when_unit_
     runtime_context.install_editor_exports(ctx)
 
     ctx.camera_helper.target_role_id = 1
-    assert(get_camera_target() == nil, "camera target should return nil when role has no ctrl unit")
+    assert(get_camera_follow_creature() == nil, "camera target should return nil when role has no ctrl unit")
 
     ctx.camera_helper.target_role_id = 7
-    assert(get_camera_target() == nil, "camera target should return nil when get_role fails")
+    assert(get_camera_follow_creature() == nil, "camera target should return nil when get_role fails")
   end)
 end
 
