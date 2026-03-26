@@ -1,0 +1,37 @@
+{
+  "active_plan": "C:\\Users\\Lzx_8\\Desktop\\dev\\repo\\monopoly\\.sisyphus\\plans\\config-data-upgrade.md",
+  "started_at": "2026-03-26T09:56:44.414Z",
+  "session_ids": [
+    "ses_2d752acf7ffeYnbWXIV0E362ED",
+    "ses_2d64b5fc0ffeRofsds2qWpKAJS",
+    "ses_2d64b5f24ffewOPALMaO9OxJU4",
+    "ses_2d632bc52ffetpPAz7BxG4NR2X",
+    "ses_2d628bc5dffeh51kbPetHldQpJ",
+    "ses_2d626e5c3ffemDyIViL1gsACKs",
+    "ses_2d626730cffefBeevDdiRRCCB7",
+    "ses_2d61abf2effeFUky3rZ9IYJ2Kj",
+    "ses_2d61abf1cffeGu6Y3iHIiCfj8S"
+  ],
+  "plan_name": "config-data-upgrade",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "扩展道具表xlsx (新增 offer_in_phases 列)",
+      "session_id": "ses_2d632bc52ffetpPAz7BxG4NR2X",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-low",
+      "updated_at": "2026-03-26T11:07:52.430Z"
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "新增 pre_move 到 timing.item_phase_queue",
+      "session_id": "ses_2d626e5c3ffemDyIViL1gsACKs",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-03-26T11:34:43.816Z"
+    }
+  }
+}

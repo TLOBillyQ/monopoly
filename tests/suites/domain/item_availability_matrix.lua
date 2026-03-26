@@ -44,13 +44,17 @@ local function _test_roadblock_offer_in_pre_action_and_post_action()
   _assert_eq(post_action.requires_followup_choice, true, "roadblock post_action should require followup choice")
 end
 
-local function _test_dice_multiplier_offer_only_in_pre_action()
+local function _test_dice_multiplier_offer_only_in_pre_move()
   local g = _new_game()
   local p = g:current_player()
   local item_id = item_ids.dice_multiplier
 
+  local pre_move = availability.analyze_offer(g, p, item_id, "pre_move")
+  _assert_eq(pre_move.can_offer, true, "dice_multiplier should be offered in pre_move")
+
   local pre_action = availability.analyze_offer(g, p, item_id, "pre_action")
-  _assert_eq(pre_action.can_offer, true, "dice_multiplier should be offered in pre_action")
+  _assert_eq(pre_action.can_offer, false, "dice_multiplier should not be offered in pre_action")
+  _assert_eq(pre_action.deny_reason, "offer_in_phases_not_allowed", "dice_multiplier pre_action deny reason")
 
   local post_action = availability.analyze_offer(g, p, item_id, "post_action")
   _assert_eq(post_action.can_offer, false, "dice_multiplier should not be offered in post_action")
@@ -232,7 +236,7 @@ return {
       name = "mine_offer_in_pre_action_and_post_action_only",
       run = _test_mine_offer_in_pre_action_and_post_action_only,
     },
-    { name = "dice_multiplier_offer_only_in_pre_action", run = _test_dice_multiplier_offer_only_in_pre_action },
+    { name = "dice_multiplier_offer_only_in_pre_move", run = _test_dice_multiplier_offer_only_in_pre_move },
     {
       name = "missing_offer_in_phases_does_not_fallback_to_timing",
       run = _test_missing_offer_in_phases_does_not_fallback_to_timing,
