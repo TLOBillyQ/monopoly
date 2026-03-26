@@ -107,9 +107,6 @@ local function _with_runtime_context_globals(fn)
     { key = "get_vehicle_set_position_x", value = nil },
     { key = "get_vehicle_set_position_y", value = nil },
     { key = "get_vehicle_set_position_z", value = nil },
-    { key = "get_camera_follow_creature", value = nil },
-    { key = "get_skin_id", value = nil },
-    { key = "get_change_skin_role", value = nil },
   }, fn)
 end
 
