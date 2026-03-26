@@ -5,6 +5,7 @@ local logger = require("src.core.utils.logger")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 local turn_start = require("src.turn.phases.start")
 local turn_roll = require("src.turn.phases.roll")
+local turn_pre_move = require("src.turn.phases.pre_move")
 local turn_move = require("src.turn.phases.move")
 local turn_land = require("src.turn.phases.land")
 local move_followup = require("src.turn.phases.move_followup")
@@ -73,7 +74,8 @@ end
 function turn_phase_registry.build_default_phases()
   return {
     start = turn_start,
-    roll = turn_roll._phase_roll,
+    roll = turn_roll._phase_roll_with_pre_move,
+    pre_move = turn_pre_move,
     move = turn_move,
     move_followup = move_followup.run,
     landing = turn_land.run,

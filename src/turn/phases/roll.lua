@@ -119,11 +119,20 @@ local function _phase_roll(turn_mgr, args)
     return _build_anim_wait_result(player, rolls, raw_total, total)
   end
 
-  return "move", { player = player, total = total, raw_total = raw_total }
+  return "pre_move", { player = player, total = total, raw_total = raw_total }
+end
+
+local function _phase_roll_direct(turn_mgr, args)
+  local next_state, next_args = _phase_roll(turn_mgr, args)
+  if next_state == "pre_move" then
+    return "move", next_args
+  end
+  return next_state, next_args
 end
 
 local roll = {}
 roll._roll_dice = _roll_dice
-roll._phase_roll = _phase_roll
+roll._phase_roll = _phase_roll_direct
+roll._phase_roll_with_pre_move = _phase_roll
 roll._resolve_phase_wait_result = _resolve_phase_wait_result
 return roll
