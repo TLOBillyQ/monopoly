@@ -700,6 +700,18 @@ local function _test_deploy_comprehensive()
     _assert_contains(bad_result.output, "未知参数", "unknown flag output should include Chinese text")
     _assert_contains(bad_result.output, "Unknown flag", "unknown flag output should include English text")
 
+    local invalid_profile_result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "--target-path", publish_target,
+      "--startup-profile", "test_quick_3_rounds",
+    })
+    assert(invalid_profile_result.ok == false, "deploy should fail on unknown startup profiles")
+    _assert_contains(invalid_profile_result.output, "unknown test profile: test_quick_3_rounds",
+      "invalid startup profile output should keep the requested profile name")
+    _assert_contains(invalid_profile_result.output, "available profiles:",
+      "invalid startup profile output should list available startup profiles")
+    _assert_contains(invalid_profile_result.output, "missile",
+      "invalid startup profile output should include a valid startup profile example")
+
     local retired_flag_result = _run_powershell_file("tools/ops/deploy.ps1", { "--vehicle-runtime", "legacy" })
     assert(retired_flag_result.ok == false, "deploy should reject retired vehicle runtime flag")
     _assert_contains(retired_flag_result.output, "未知参数", "retired flag output should include Chinese text")

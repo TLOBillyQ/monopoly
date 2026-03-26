@@ -3,12 +3,23 @@ local test_profiles = require("src.app.bootstrap.testing.config.test_profiles")
 local resolver = {}
 local default_map_module = "src.config.content.maps.default_map"
 
+local function _join_profile_names(profile_names)
+  if type(profile_names) ~= "table" or #profile_names == 0 then
+    return "default"
+  end
+  return table.concat(profile_names, ", ")
+end
+
 local function _resolve_name(profile_name)
   if profile_name == nil or profile_name == "" then
     return "default"
   end
   assert(type(profile_name) == "string", "invalid profile_name type")
-  assert(test_profiles.has(profile_name), "unknown test profile: " .. tostring(profile_name))
+  assert(
+    test_profiles.has(profile_name),
+    "unknown test profile: " .. tostring(profile_name)
+      .. "; available profiles: " .. _join_profile_names(test_profiles.names())
+  )
   return profile_name
 end
 
