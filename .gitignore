@@ -47,3 +47,4 @@ scripts/analysis/loc_data.json
 /tools/quality/arch/viewer/
 /tools/quality/scrap/viewer/
 /tools/loc_engine/monopoly-loc.exe
+.sisyphus
