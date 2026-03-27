@@ -5,13 +5,13 @@ local camera_sync = {}
 
 local CAMERA_BIND_MODE_FIXED = 1
 
-local CAMERA_DIST = 50
-local CAMERA_FOV = 40
-local CAMERA_PITCH = 60
-local CAMERA_YAW = -80
-local CAMERA_PITCH_MIN = 60
-local CAMERA_PITCH_MAX = 60
-local CAMERA_OBSERVER_HEIGHT = 1
+local CAMERA_DIST = 75
+local CAMERA_FOV = 45
+local CAMERA_PITCH = 40
+local CAMERA_YAW = -60
+local CAMERA_PITCH_MIN = 40
+local CAMERA_PITCH_MAX = 40
+local CAMERA_OBSERVER_HEIGHT = 6
 local CAMERA_HORIZONTAL_OFFSET = 0
 local CAMERA_DRAG_SPEED = 70
 
@@ -59,15 +59,15 @@ end
 
 local function _apply_camera_init(role)
   if type(role.set_camera_property) == "function" then
-    pcall(role.set_camera_property, PROP_DIST, CAMERA_DIST)
-    pcall(role.set_camera_property, PROP_FOV, CAMERA_FOV)
-    pcall(role.set_camera_property, PROP_PITCH, CAMERA_PITCH)
-    pcall(role.set_camera_property, PROP_YAW, CAMERA_YAW)
-    pcall(role.set_camera_property, PROP_PITCH_MIN, CAMERA_PITCH_MIN)
-    pcall(role.set_camera_property, PROP_PITCH_MAX, CAMERA_PITCH_MAX)
-    pcall(role.set_camera_property, PROP_OBSERVER_HEIGHT, CAMERA_OBSERVER_HEIGHT)
-    pcall(role.set_camera_property, PROP_HORIZONTAL_OFFSET, CAMERA_HORIZONTAL_OFFSET)
-    pcall(role.set_camera_property, PROP_DRAG_SPEED, CAMERA_DRAG_SPEED)
+    pcall(role.set_camera_property, PROP_DIST, math.tofixed(CAMERA_DIST))
+    pcall(role.set_camera_property, PROP_FOV, math.tofixed(CAMERA_FOV))
+    pcall(role.set_camera_property, PROP_PITCH, math.tofixed(CAMERA_PITCH))
+    pcall(role.set_camera_property, PROP_YAW, math.tofixed(CAMERA_YAW))
+    pcall(role.set_camera_property, PROP_PITCH_MIN, math.tofixed(CAMERA_PITCH_MIN))
+    pcall(role.set_camera_property, PROP_PITCH_MAX, math.tofixed(CAMERA_PITCH_MAX))
+    pcall(role.set_camera_property, PROP_OBSERVER_HEIGHT, math.tofixed(CAMERA_OBSERVER_HEIGHT))
+    pcall(role.set_camera_property, PROP_HORIZONTAL_OFFSET, math.tofixed(CAMERA_HORIZONTAL_OFFSET))
+    pcall(role.set_camera_property, PROP_DRAG_SPEED, math.tofixed(CAMERA_DRAG_SPEED))
   end
   if type(role.set_camera_draggable) == "function" then
     pcall(role.set_camera_draggable, true)

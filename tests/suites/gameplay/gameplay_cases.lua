@@ -1240,14 +1240,14 @@ local function _test_camera_sync_init_camera_sets_all_properties()
   end
 
   local expected = {
-    [7] = 50,   -- DIST
-    [8] = 40,   -- FOV
-    [9] = 60,   -- PITCH_MAX
-    [10] = 60,  -- PITCH_MIN
-    [11] = 1,   -- OBSERVER_HEIGHT
+    [7] = 75,   -- DIST
+    [8] = 45,   -- FOV
+    [9] = 40,   -- PITCH_MAX
+    [10] = 40,  -- PITCH_MIN
+    [11] = 6,   -- OBSERVER_HEIGHT
     [12] = 0,   -- HORIZONTAL_OFFSET
-    [15] = 60,  -- PITCH
-    [16] = -80, -- YAW
+    [15] = 40,  -- PITCH
+    [16] = -60, -- YAW
     [25] = 70,  -- DRAG_SPEED
   }
 

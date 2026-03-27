@@ -107,13 +107,13 @@ local function _test_anim_unit_overlay_clear_obstacles_splits_at_fork_and_destro
   _with_patches({
     {
       target = host_runtime,
-      key = "create_unit_group",
-      value = function(group_id, pos)
+      key = "create_unit_with_scale",
+      value = function(unit_id, pos)
         local records = { spawn_pos = pos, moves = {} }
         local handle = _new_robot_handle(pos, records)
         robot_records[#robot_records + 1] = records
         group_calls[#group_calls + 1] = {
-          group_id = group_id,
+          unit_id = unit_id,
           pos = pos,
           handle = handle,
         }
@@ -212,13 +212,13 @@ local function _test_anim_unit_overlay_clear_obstacles_walks_per_step_then_clear
   _with_patches({
     {
       target = host_runtime,
-      key = "create_unit_group",
-      value = function(group_id, pos)
+      key = "create_unit_with_scale",
+      value = function(unit_id, pos)
         local records = { spawn_pos = pos, moves = {} }
         local handle = _new_robot_handle(pos, records)
         robot_records[#robot_records + 1] = records
         group_calls[#group_calls + 1] = {
-          group_id = group_id,
+          unit_id = unit_id,
           pos = pos,
           handle = handle,
         }
