@@ -26,6 +26,7 @@ Thumbs.db
 *.bak
 .venv/
 .opencode
+.sysyphus
 
 # Local worktrees
 /.claude/worktrees/
