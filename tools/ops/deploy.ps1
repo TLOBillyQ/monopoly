@@ -1,12 +1,11 @@
+[CmdletBinding()]
 param(
     [string]$TargetPath,
     [string]$StartupProfile,
+    [ValidateSet("release", "debug")]
     [string]$BuildMode = "release",
     [switch]$KeepTestStartup,
-    [switch]$Bak,
-    [switch]$Help,
-    [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]]$RemainingArgs
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,18 +51,15 @@ function Normalize-PathText {
 function Resolve-NormalizedPath {
     param([string]$PathText)
 
-    $raw = [string]$PathText
-    if ([string]::IsNullOrWhiteSpace($raw)) {
+    if ([string]::IsNullOrWhiteSpace($PathText)) {
         return ""
     }
 
-    $absolute = $raw
-    if (-not [System.IO.Path]::IsPathRooted($raw)) {
-        $absolute = [System.IO.Path]::Combine((Get-Location).Path, $raw)
+    $candidate = [string]$PathText
+    if (-not [System.IO.Path]::IsPathRooted($candidate)) {
+        $candidate = [System.IO.Path]::Combine((Get-Location).Path, $candidate)
     }
-    $full = [System.IO.Path]::GetFullPath($absolute)
-    $normalized = Normalize-PathText $full
-    return $normalized.TrimEnd("/")
+    return (Normalize-PathText ([System.IO.Path]::GetFullPath($candidate))).TrimEnd("/")
 }
 
 function Resolve-HomeDir {
@@ -84,8 +80,8 @@ function Resolve-DefaultTargetPath {
     $home_dir = (Resolve-HomeDir).TrimEnd("/")
     if ([string]::IsNullOrWhiteSpace($home_dir)) {
         Exit-WithError (Get-Text `
-            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET、传入 --target-path，或在默认目录下创建 LuaSource_大富翁。" `
-            "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET, pass --target-path, or create the default LuaSource_大富翁 directory.")
+            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 -TargetPath。" `
+            "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath.")
     }
 
     if ($IsWindows) {
@@ -96,8 +92,8 @@ function Resolve-DefaultTargetPath {
     }
 
     Exit-WithError (Get-Text `
-        "当前平台未配置默认部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 --target-path。" `
-        "No default deploy target is configured for this platform; set MONOPOLY_DEPLOY_TARGET or pass --target-path.")
+        "当前平台未配置默认部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 -TargetPath。" `
+        "No default deploy target is configured for this platform; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath.")
 }
 
 function Resolve-EffectiveBuildMode {
@@ -106,17 +102,8 @@ function Resolve-EffectiveBuildMode {
         [string]$StartupProfileValue
     )
 
-    $normalized_requested = ([string]$RequestedBuildMode).Trim().ToLowerInvariant()
-    if ([string]::IsNullOrWhiteSpace($normalized_requested)) {
-        $normalized_requested = "release"
-    }
-
-    if ($normalized_requested -ne "release" -and $normalized_requested -ne "debug") {
-        Exit-WithError (Get-Text "构建模式仅支持 release 或 debug" "Build mode must be release or debug")
-    }
-
     if ([string]::IsNullOrWhiteSpace($StartupProfileValue)) {
-        if ($normalized_requested -ne "release") {
+        if ($RequestedBuildMode -ne "release") {
             return [pscustomobject]@{
                 mode = "release"
                 note = (Get-Text `
@@ -130,7 +117,7 @@ function Resolve-EffectiveBuildMode {
         }
     }
 
-    if ($normalized_requested -ne "debug") {
+    if ($RequestedBuildMode -ne "debug") {
         return [pscustomobject]@{
             mode = "debug"
             note = (Get-Text `
@@ -138,6 +125,7 @@ function Resolve-EffectiveBuildMode {
                 "Startup profile detected; forcing debug build mode.")
         }
     }
+
     return [pscustomobject]@{
         mode = "debug"
         note = $null
@@ -146,106 +134,81 @@ function Resolve-EffectiveBuildMode {
 
 function Test-ProjectRoot {
     param([string]$PathText)
+
     return (Test-Path -LiteralPath (Join-Path $PathText "main.lua") -PathType Leaf) `
         -and (Test-Path -LiteralPath (Join-Path $PathText "src") -PathType Container) `
         -and (Test-Path -LiteralPath (Join-Path $PathText "tools") -PathType Container)
 }
 
 function Resolve-ProjectRoot {
-    $candidates = @()
-    $candidates += [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "../.."))
-    $candidates += (Get-Location).Path
+    $candidates = @(
+        [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "../..")),
+        (Get-Location).Path
+    )
 
     foreach ($candidate in $candidates) {
         if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-ProjectRoot $candidate)) {
-            return (Resolve-NormalizedPath $candidate)
+            return Resolve-NormalizedPath $candidate
         }
     }
 
-    return (Resolve-NormalizedPath $candidates[0])
+    return Resolve-NormalizedPath $candidates[0]
 }
 
 function Escape-LuaDoubleQuotedString {
     param([string]$Text)
+
     $value = [string]$Text
     $value = $value.Replace("\", "\\")
     $value = $value.Replace('"', '\"')
     return $value
 }
 
+function Reset-Directory {
+    param([string]$PathText)
+
+    if (Test-Path -LiteralPath $PathText) {
+        Remove-Item -LiteralPath $PathText -Recurse -Force
+    }
+    [System.IO.Directory]::CreateDirectory($PathText) | Out-Null
+}
+
 function Copy-DirectoryTree {
     param(
         [string]$SourceDir,
         [string]$TargetDir,
-        [string[]]$Exclude = @()
+        [string[]]$ExcludeNames = @()
     )
 
-    if (Test-Path -LiteralPath $TargetDir -PathType Container) {
-        Remove-Item -LiteralPath $TargetDir -Recurse -Force
+    Reset-Directory $TargetDir
+    $entries = Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object {
+        $ExcludeNames -notcontains $_.Name
     }
-    [System.IO.Directory]::CreateDirectory($TargetDir) | Out-Null
-    $entries = Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object { $Exclude -notcontains $_.Name }
     foreach ($entry in $entries) {
-        $destination = Join-Path $TargetDir $entry.Name
-        Copy-Item -LiteralPath $entry.FullName -Destination $destination -Force -Recurse
+        Copy-Item -LiteralPath $entry.FullName -Destination (Join-Path $TargetDir $entry.Name) -Force -Recurse
     }
 }
 
-function Write-MainLua {
+function Copy-FileWithParentDir {
     param(
         [string]$SourcePath,
-        [string]$TargetPath,
-        [string]$StartupProfileValue,
-        [string]$BuildMode,
-        [string]$StartupProfileSource,
-        [string]$StartupProfileModule
+        [string]$TargetPath
     )
 
     $target_parent = Split-Path -Parent $TargetPath
     if (-not [string]::IsNullOrWhiteSpace($target_parent)) {
         [System.IO.Directory]::CreateDirectory($target_parent) | Out-Null
     }
-
-    $source_text = Get-Content -LiteralPath $SourcePath -Raw -Encoding UTF8
-    if ([string]::IsNullOrWhiteSpace($BuildMode) `
-        -and [string]::IsNullOrWhiteSpace($StartupProfileValue) `
-        -and [string]::IsNullOrWhiteSpace($StartupProfileModule) `
-        -and [string]::IsNullOrWhiteSpace($StartupProfileSource)) {
-        Set-Content -LiteralPath $TargetPath -Encoding UTF8 -NoNewline -Value $source_text
-        return
-    }
-
-    $prefix_lines = @()
-    if (-not [string]::IsNullOrWhiteSpace($BuildMode)) {
-        $escaped_build_mode = Escape-LuaDoubleQuotedString $BuildMode
-        $prefix_lines += "MONOPOLY_BUILD_MODE = ""$escaped_build_mode"""
-    }
-    if (-not [string]::IsNullOrWhiteSpace($StartupProfileValue)) {
-        $escaped = Escape-LuaDoubleQuotedString $StartupProfileValue
-        $prefix_lines += "STARTUP_TEST_PROFILE = ""$escaped"""
-    }
-    if (-not [string]::IsNullOrWhiteSpace($StartupProfileSource)) {
-        $escaped_source = Escape-LuaDoubleQuotedString $StartupProfileSource
-        $prefix_lines += "STARTUP_PROFILE_SOURCE = ""$escaped_source"""
-    }
-    if (-not [string]::IsNullOrWhiteSpace($StartupProfileModule)) {
-        $escaped_module = Escape-LuaDoubleQuotedString $StartupProfileModule
-        $prefix_lines += "STARTUP_PROFILE_MODULE = ""$escaped_module"""
-    }
-    $prefix = ($prefix_lines -join "`n") + "`n"
-    Set-Content -LiteralPath $TargetPath -Encoding UTF8 -NoNewline -Value ($prefix + $source_text)
+    Copy-Item -LiteralPath $SourcePath -Destination $TargetPath -Force
 }
 
 function Remove-NestedPaths {
     param(
         [string]$RootDir,
-        [string[]]$RelativePaths = @()
+        [string[]]$RelativePaths
     )
 
     foreach ($relative_path in $RelativePaths) {
-        if ([string]::IsNullOrWhiteSpace($relative_path)) {
-            continue
-        }
         $target = Join-Path $RootDir $relative_path
         if (Test-Path -LiteralPath $target) {
             Remove-Item -LiteralPath $target -Recurse -Force
@@ -281,17 +244,41 @@ function Invoke-GenerateStartupProfile {
     return $true
 }
 
-function Copy-FileWithParentDir {
+function Write-MainLua {
     param(
         [string]$SourcePath,
-        [string]$TargetPath
+        [string]$TargetPath,
+        [string]$BuildModeValue,
+        [string]$StartupProfileValue,
+        [string]$StartupProfileSource,
+        [string]$StartupProfileModule
     )
+
+    $prefix_lines = @()
+    if (-not [string]::IsNullOrWhiteSpace($BuildModeValue)) {
+        $prefix_lines += "MONOPOLY_BUILD_MODE = ""$(Escape-LuaDoubleQuotedString $BuildModeValue)"""
+    }
+    if (-not [string]::IsNullOrWhiteSpace($StartupProfileValue)) {
+        $prefix_lines += "STARTUP_TEST_PROFILE = ""$(Escape-LuaDoubleQuotedString $StartupProfileValue)"""
+    }
+    if (-not [string]::IsNullOrWhiteSpace($StartupProfileSource)) {
+        $prefix_lines += "STARTUP_PROFILE_SOURCE = ""$(Escape-LuaDoubleQuotedString $StartupProfileSource)"""
+    }
+    if (-not [string]::IsNullOrWhiteSpace($StartupProfileModule)) {
+        $prefix_lines += "STARTUP_PROFILE_MODULE = ""$(Escape-LuaDoubleQuotedString $StartupProfileModule)"""
+    }
 
     $target_parent = Split-Path -Parent $TargetPath
     if (-not [string]::IsNullOrWhiteSpace($target_parent)) {
         [System.IO.Directory]::CreateDirectory($target_parent) | Out-Null
     }
-    Copy-Item -LiteralPath $SourcePath -Destination $TargetPath -Force
+
+    $source_text = Get-Content -LiteralPath $SourcePath -Raw -Encoding UTF8
+    $prefix = ""
+    if ($prefix_lines.Count -gt 0) {
+        $prefix = ($prefix_lines -join "`n") + "`n"
+    }
+    Set-Content -LiteralPath $TargetPath -Encoding UTF8 -NoNewline -Value ($prefix + $source_text)
 }
 
 function Get-EffectiveLuaLineCountForFile {
@@ -302,8 +289,7 @@ function Get-EffectiveLuaLineCountForFile {
     }
 
     $count = 0
-    $lines = Get-Content -LiteralPath $PathText -Encoding UTF8
-    foreach ($line in $lines) {
+    foreach ($line in (Get-Content -LiteralPath $PathText -Encoding UTF8)) {
         $trimmed = $line.Trim()
         if ($trimmed -ne "" -and -not $trimmed.StartsWith("--")) {
             $count += 1
@@ -313,153 +299,46 @@ function Get-EffectiveLuaLineCountForFile {
 }
 
 function Get-EffectiveLuaLineCountForDir {
-    param(
-        [string]$PathText,
-        [string[]]$Exclude = @()
-    )
+    param([string]$PathText)
 
     if (-not (Test-Path -LiteralPath $PathText -PathType Container)) {
         return 0
     }
 
     $total = 0
-    $files = Get-ChildItem -LiteralPath $PathText -Recurse -File -Filter "*.lua" -Force | Where-Object {
-        $relPath = $_.FullName.Substring($PathText.Length).TrimStart('\', '/')
-        $shouldExclude = $false
-        foreach ($ex in $Exclude) {
-            if ($relPath -eq $ex -or $relPath.StartsWith($ex + "\") -or $relPath.StartsWith($ex + "/")) {
-                $shouldExclude = $true
-                break
-            }
-        }
-        -not $shouldExclude
-    }
-    foreach ($file in $files) {
+    foreach ($file in (Get-ChildItem -LiteralPath $PathText -Recurse -File -Filter "*.lua" -Force)) {
         $total += Get-EffectiveLuaLineCountForFile $file.FullName
     }
     return $total
 }
 
 function Get-LuaFileCount {
-    param(
-        [string]$PathText,
-        [string[]]$Exclude = @()
-    )
+    param([string]$PathText)
 
     if (-not (Test-Path -LiteralPath $PathText)) {
         return 0
     }
-
     if (Test-Path -LiteralPath $PathText -PathType Leaf) {
         return 1
     }
-
-    $files = Get-ChildItem -LiteralPath $PathText -Recurse -File -Filter "*.lua" -Force | Where-Object {
-        $relPath = $_.FullName.Substring($PathText.Length).TrimStart('\', '/')
-        $shouldExclude = $false
-        foreach ($ex in $Exclude) {
-            if ($relPath -eq $ex -or $relPath.StartsWith($ex + "\") -or $relPath.StartsWith($ex + "/")) {
-                $shouldExclude = $true
-                break
-            }
-        }
-        -not $shouldExclude
-    }
-    return $files.Count
+    return (Get-ChildItem -LiteralPath $PathText -Recurse -File -Filter "*.lua" -Force).Count
 }
-
-function Parse-RemainingArgs {
-    if ($null -eq $RemainingArgs -or $RemainingArgs.Count -eq 0) {
-        return
-    }
-
-    $unknown_args = @()
-    $index = 0
-    while ($index -lt $RemainingArgs.Count) {
-        $token = [string]$RemainingArgs[$index]
-        switch -Regex ($token) {
-            "^(--help|-h)$" {
-                $script:Help = $true
-                $index += 1
-                continue
-            }
-            "^(--target-path|-TargetPath)$" {
-                if (($index + 1) -ge $RemainingArgs.Count) {
-                    Exit-WithError (Get-Text "参数缺少取值: $token" "Missing value for flag: $token")
-                }
-                $script:TargetPath = [string]$RemainingArgs[$index + 1]
-                $index += 2
-                continue
-            }
-            "^(--startup-profile|-StartupProfile)$" {
-                if (($index + 1) -ge $RemainingArgs.Count) {
-                    Exit-WithError (Get-Text "参数缺少取值: $token" "Missing value for flag: $token")
-                }
-                $script:StartupProfile = [string]$RemainingArgs[$index + 1]
-                $index += 2
-                continue
-            }
-            "^(--build-mode|-BuildMode)$" {
-                if (($index + 1) -ge $RemainingArgs.Count) {
-                    Exit-WithError (Get-Text "参数缺少取值: $token" "Missing value for flag: $token")
-                }
-                $script:BuildMode = [string]$RemainingArgs[$index + 1]
-                $index += 2
-                continue
-            }
-            "^(--keep-test-startup|-KeepTestStartup)$" {
-                $script:KeepTestStartup = $true
-                $index += 1
-                continue
-            }
-            "^(--bak|-Bak)$" {
-                Exit-WithError (Get-Text `
-                    "--bak 已废弃，请改用 --target-path 指向备份目录。" `
-                    "--bak is deprecated; use --target-path to point at a backup directory.")
-            }
-            default {
-                $unknown_args += $token
-                $index += 1
-                continue
-            }
-        }
-    }
-
-    if ($unknown_args.Count -gt 0) {
-        Exit-WithError ("未知参数 / Unknown flag: {0}" -f ($unknown_args -join " "))
-    }
-}
-
-Parse-RemainingArgs
 
 if ($Help) {
     Write-Info (Get-Text `
-        "用法: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--keep-test-startup|-KeepTestStartup]" `
-        "Usage: pwsh -File tools/ops/deploy.ps1 [--target-path PATH|-TargetPath PATH] [--build-mode release|debug|-BuildMode release|debug] [--startup-profile NAME|-StartupProfile NAME] [--keep-test-startup|-KeepTestStartup]")
+        "用法: .\tools\ops\deploy.ps1 [-TargetPath PATH] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]" `
+        "Usage: .\tools\ops\deploy.ps1 [-TargetPath PATH] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]")
     exit 0
-}
-
-if ($Bak) {
-    Exit-WithError (Get-Text `
-        "--bak 已废弃，请改用 --target-path 指向备份目录。" `
-        "--bak is deprecated; use --target-path to point at a backup directory.")
 }
 
 try {
     $project_root = Resolve-ProjectRoot
     $build_mode_resolution = Resolve-EffectiveBuildMode -RequestedBuildMode $BuildMode -StartupProfileValue $StartupProfile
-    $BuildMode = [string]$build_mode_resolution.mode
+    $effective_build_mode = [string]$build_mode_resolution.mode
     $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath }
     $target_path = Resolve-NormalizedPath $target_source
 
     [System.IO.Directory]::CreateDirectory($target_path) | Out-Null
-
-    $directories = @("src", "vendor/third_party")
-    $files = @(
-        @{ source = "main.lua"; target = "main.lua" },
-        @{ source = "Data/UIManagerNodes.lua"; target = "Data/UIManagerNodes.lua" },
-        @{ source = "Data/Prefab.lua"; target = "Data/Prefab.lua" }
-    )
 
     Write-Info "======================================"
     Write-Info (Get-Text "开始部署项目文件" "Starting project deployment")
@@ -476,126 +355,79 @@ try {
     if (-not [string]::IsNullOrWhiteSpace($build_mode_resolution.note)) {
         Write-Info $build_mode_resolution.note
     }
-    Write-Info ((Get-Text "构建模式: " "Build mode: ") + $BuildMode)
+    Write-Info ((Get-Text "构建模式: " "Build mode: ") + $effective_build_mode)
     Write-Info ""
     Write-Info "--------------------------------------"
     Write-Info ((Get-Text "部署目标: " "Deploy target: ") + $target_path)
     Write-Info "--------------------------------------"
 
-    $third_party_exclude = @("Behavior", "NavMesh", "Bincore.lua")
+    Copy-DirectoryTree -SourceDir (Join-Path $project_root "src") -TargetDir (Join-Path $target_path "src")
+    Copy-DirectoryTree `
+        -SourceDir (Join-Path $project_root "vendor/third_party") `
+        -TargetDir (Join-Path $target_path "vendor/third_party") `
+        -ExcludeNames @("Behavior", "NavMesh", "Bincore.lua")
+
     $strip_test_startup = -not $KeepTestStartup
-    if ($BuildMode -eq "release") {
+    if ($effective_build_mode -eq "release") {
         $strip_test_startup = $true
     }
+    if ($strip_test_startup) {
+        Remove-NestedPaths -RootDir (Join-Path $target_path "src") -RelativePaths @(
+            "config/testing",
+            "app/bootstrap/testing"
+        )
+    }
+    if ($effective_build_mode -eq "release") {
+        Remove-NestedPaths -RootDir (Join-Path $target_path "src") -RelativePaths @(
+            "app/bootstrap/startup_profile_source.lua",
+            "app/bootstrap/startup_bootstrap.lua"
+        )
+    }
+
     $generated_profile_module = $null
-    $generated_profile_rel_path = "Data/StartupProfileGenerated.lua"
-    $src_nested_exclude = @("config/testing", "app/bootstrap/testing")
-    $release_bridge_files = @(
-        "app/bootstrap/startup_profile_source.lua",
-        "app/bootstrap/startup_bootstrap.lua"
-    )
+    if (Invoke-GenerateStartupProfile `
+        -ProjectRoot $project_root `
+        -ProfileName $StartupProfile `
+        -OutputPath (Join-Path $target_path "Data/StartupProfileGenerated.lua")) {
+        $generated_profile_module = "Data.StartupProfileGenerated"
+    }
+    $startup_profile_source = if ($generated_profile_module) { "generated" } else { $null }
 
-    foreach ($dir_name in $directories) {
-        $source_path = Join-Path $project_root $dir_name
-        $target_dir_path = Join-Path $target_path $dir_name
-        if (Test-Path -LiteralPath $source_path -PathType Container) {
-            Write-Info ((Get-Text "正在拷贝目录: " "Copying directory: ") + "$dir_name ...")
-            Write-Info ("  " + (Get-Text "源" "Source") + ": " + (Normalize-PathText $source_path))
-            Write-Info ("  " + (Get-Text "目" "Target") + ": " + (Normalize-PathText $target_dir_path))
-            if ($dir_name -eq "vendor/third_party") {
-                Copy-DirectoryTree -SourceDir $source_path -TargetDir $target_dir_path -Exclude $third_party_exclude
-            } else {
-                Copy-DirectoryTree -SourceDir $source_path -TargetDir $target_dir_path
-                if ($dir_name -eq "src" -and $strip_test_startup) {
-                    Remove-NestedPaths -RootDir $target_dir_path -RelativePaths $src_nested_exclude
-                }
-                if ($dir_name -eq "src" -and $BuildMode -eq "release") {
-                    Remove-NestedPaths -RootDir $target_dir_path -RelativePaths $release_bridge_files
-                }
-            }
-            Write-Info ("✓ " + (Get-Text "$dir_name 拷贝成功" "$dir_name copied successfully"))
-        } else {
-            Write-Info ((Get-Text "⚠ 源目录不存在: " "⚠ Source directory does not exist: ") + (Normalize-PathText $source_path))
-        }
-    }
+    Write-MainLua `
+        -SourcePath (Join-Path $project_root "main.lua") `
+        -TargetPath (Join-Path $target_path "main.lua") `
+        -BuildModeValue $effective_build_mode `
+        -StartupProfileValue $StartupProfile `
+        -StartupProfileSource $startup_profile_source `
+        -StartupProfileModule $generated_profile_module
+    Copy-FileWithParentDir `
+        -SourcePath (Join-Path $project_root "Data/UIManagerNodes.lua") `
+        -TargetPath (Join-Path $target_path "Data/UIManagerNodes.lua")
+    Copy-FileWithParentDir `
+        -SourcePath (Join-Path $project_root "Data/Prefab.lua") `
+        -TargetPath (Join-Path $target_path "Data/Prefab.lua")
 
-    foreach ($entry in $files) {
-        $source_rel = [string]$entry.source
-        $target_rel = [string]$entry.target
-        $source_path = Join-Path $project_root $source_rel
-        $target_file_path = Join-Path $target_path $target_rel
-        if (Test-Path -LiteralPath $source_path -PathType Leaf) {
-            Write-Info ((Get-Text "正在拷贝文件: " "Copying file: ") + "$source_rel ...")
-            Write-Info ("  " + (Get-Text "源" "Source") + ": " + (Normalize-PathText $source_path))
-            Write-Info ("  " + (Get-Text "目" "Target") + ": " + (Normalize-PathText $target_file_path))
-            if ($source_rel -eq "main.lua") {
-                if ([string]::IsNullOrWhiteSpace($generated_profile_module) -and `
-                    (Invoke-GenerateStartupProfile -ProjectRoot $project_root -ProfileName $StartupProfile `
-                      -OutputPath (Join-Path $target_path $generated_profile_rel_path))) {
-                    $generated_profile_module = "Data.StartupProfileGenerated"
-                }
-                $startup_profile_source = if ([string]::IsNullOrWhiteSpace($generated_profile_module)) { $null } else { "generated" }
-                Write-MainLua -SourcePath $source_path -TargetPath $target_file_path `
-                  -BuildMode $BuildMode `
-                  -StartupProfileValue $StartupProfile `
-                  -StartupProfileSource $startup_profile_source `
-                  -StartupProfileModule $generated_profile_module
-            } else {
-                Copy-FileWithParentDir -SourcePath $source_path -TargetPath $target_file_path
-            }
-            Write-Info ("✓ " + (Get-Text "$source_rel 拷贝成功" "$source_rel copied successfully"))
-        } else {
-            Write-Info ((Get-Text "⚠ 源文件不存在: " "⚠ Source file does not exist: ") + (Normalize-PathText $source_path))
-        }
-    }
-
-    $third_party_exclude = @("Behavior", "NavMesh", "Bincore.lua")
-
-    $breakdown = @()
-    $breakdown += @{
-        name = "src"
-        files = (Get-LuaFileCount (Join-Path $target_path "src"))
-        count = (Get-EffectiveLuaLineCountForDir (Join-Path $target_path "src"))
-    }
-    $breakdown += @{
-        name = "vendor/third_party"
-        files = (Get-LuaFileCount (Join-Path $target_path "vendor/third_party"))
-        count = (Get-EffectiveLuaLineCountForDir (Join-Path $target_path "vendor/third_party"))
-    }
-
-    $breakdown += @{ name = "main.lua"; files = 1; count = (Get-EffectiveLuaLineCountForFile (Join-Path $target_path "main.lua")) }
-    $breakdown += @{
-        name = "Data/UIManagerNodes.lua"
-        files = 1
-        count = (Get-EffectiveLuaLineCountForFile (Join-Path $target_path "Data/UIManagerNodes.lua"))
-    }
-    $breakdown += @{
-        name = "Data/Prefab.lua"
-        files = 1
-        count = (Get-EffectiveLuaLineCountForFile (Join-Path $target_path "Data/Prefab.lua"))
-    }
-
-    $total_files = 0
-    $total_effective_line_count = 0
-    foreach ($row in $breakdown) {
-        $total_files += [int]$row.files
-        $total_effective_line_count += [int]$row.count
-    }
+    $total_files = `
+        (Get-LuaFileCount (Join-Path $target_path "src")) + `
+        (Get-LuaFileCount (Join-Path $target_path "vendor/third_party")) + `
+        (Get-LuaFileCount (Join-Path $target_path "main.lua")) + `
+        (Get-LuaFileCount (Join-Path $target_path "Data/UIManagerNodes.lua")) + `
+        (Get-LuaFileCount (Join-Path $target_path "Data/Prefab.lua"))
+    $total_effective_line_count = `
+        (Get-EffectiveLuaLineCountForDir (Join-Path $target_path "src")) + `
+        (Get-EffectiveLuaLineCountForDir (Join-Path $target_path "vendor/third_party")) + `
+        (Get-EffectiveLuaLineCountForFile (Join-Path $target_path "main.lua")) + `
+        (Get-EffectiveLuaLineCountForFile (Join-Path $target_path "Data/UIManagerNodes.lua")) + `
+        (Get-EffectiveLuaLineCountForFile (Join-Path $target_path "Data/Prefab.lua"))
 
     Write-Info ""
     Write-Info ("Lua文件: " + $total_files + " / Lua Files: " + $total_files)
     Write-Info ("有效代码行数: " + $total_effective_line_count + " / Effective LOC: " + $total_effective_line_count)
-    foreach ($row in $breakdown) {
-        Write-Info ("  - " + $row.name + ": " + $row.files + " files, " + [string]$row.count + " LOC")
-    }
     Write-Info ""
     Write-Info "======================================"
     Write-Info (Get-Text "部署完成！" "Deployment completed!")
     Write-Info ("  " + $target_path)
     Write-Info ("  Lua文件 / Lua Files: " + $total_files + ", 有效代码行数 / Effective LOC: " + $total_effective_line_count)
-    foreach ($row in $breakdown) {
-        Write-Info ("    - " + $row.name + ": " + $row.files + " files, " + [string]$row.count + " LOC")
-    }
     Write-Info "======================================"
     exit 0
 } catch {

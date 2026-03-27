@@ -133,6 +133,24 @@ local function _run_powershell_file(script_path, args)
   })
 end
 
+local function _powershell_single_quote(value)
+  return "'" .. tostring(value or ""):gsub("'", "''") .. "'"
+end
+
+local function _run_powershell_command(command_text)
+  local cmd = _get_powershell_cmd()
+  if cmd == nil then
+    return {
+      skipped = true,
+      output = "powershell not available",
+    }
+  end
+
+  return common.run_command({ cmd, "-Command", command_text }, {
+    cwd = project_root,
+  })
+end
+
 local function _run_in_dir(cwd, command)
   local result = common.run_command(command, {
     cwd = cwd,
@@ -658,9 +676,9 @@ local function _test_deploy_comprehensive()
     local publish_target = common.join_path(tmp_root, "deploy_target")
 
     local result = _run_powershell_file("tools/ops/deploy.ps1", {
-      "--build-mode", "debug",
-      "--target-path", publish_target,
-      "--startup-profile", "missile",
+      "-BuildMode", "debug",
+      "-TargetPath", publish_target,
+      "-StartupProfile", "missile",
     })
     
     if result.skipped == true then
@@ -688,21 +706,14 @@ local function _test_deploy_comprehensive()
       "deploy should inject startup profile into main.lua when requested")
     _assert_contains(result.output, "Build mode: debug",
       "deploy output should show debug mode when startup profile is present")
+    _assert_contains(result.output, "Lua Files:",
+      "deploy output should keep total lua file count")
+    _assert_contains(result.output, "Effective LOC:",
+      "deploy output should keep total effective loc")
     
-    -- 验证输出不包含已退役的 Config 目录
-    _assert_not_contains(result.output, "/Config",
-      "deploy output should not mention the retired Config directory")
-    _assert_not_contains(result.output, "Config: 0",
-      "deploy LOC breakdown should not include the retired Config directory")
-
-    local bad_result = _run_powershell_file("tools/ops/deploy.ps1", { "--bad-flag" })
-    assert(bad_result.ok == false, "deploy should fail on unknown flags")
-    _assert_contains(bad_result.output, "未知参数", "unknown flag output should include Chinese text")
-    _assert_contains(bad_result.output, "Unknown flag", "unknown flag output should include English text")
-
     local invalid_profile_result = _run_powershell_file("tools/ops/deploy.ps1", {
-      "--target-path", publish_target,
-      "--startup-profile", "test_quick_3_rounds",
+      "-TargetPath", publish_target,
+      "-StartupProfile", "test_quick_3_rounds",
     })
     assert(invalid_profile_result.ok == false, "deploy should fail on unknown startup profiles")
     _assert_contains(invalid_profile_result.output, "unknown test profile: test_quick_3_rounds",
@@ -711,23 +722,12 @@ local function _test_deploy_comprehensive()
       "invalid startup profile output should list available startup profiles")
     _assert_contains(invalid_profile_result.output, "missile",
       "invalid startup profile output should include a valid startup profile example")
-
-    local retired_flag_result = _run_powershell_file("tools/ops/deploy.ps1", { "--vehicle-runtime", "legacy" })
-    assert(retired_flag_result.ok == false, "deploy should reject retired vehicle runtime flag")
-    _assert_contains(retired_flag_result.output, "未知参数", "retired flag output should include Chinese text")
-    _assert_contains(retired_flag_result.output, "Unknown flag", "retired flag output should include English text")
-
-    local bak_result = _run_powershell_file("tools/ops/deploy.ps1", { "--bak" })
-    assert(bak_result.ok == false, "deploy should reject deprecated --bak flag")
-    _assert_contains(bak_result.output, "已废弃", "bak output should include Chinese deprecation text")
-    _assert_contains(bak_result.output, "deprecated", "bak output should include English deprecation text")
-    _assert_contains(bak_result.output, "--target-path", "bak output should tell users to switch to --target-path")
   end)
 
   _with_ascii_tmp("deploy_release_default", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_powershell_file("tools/ops/deploy.ps1", {
-      "--target-path", publish_target,
+      "-TargetPath", publish_target,
     })
 
     if result.skipped == true then
@@ -747,9 +747,9 @@ local function _test_deploy_comprehensive()
   _with_ascii_tmp("deploy_profile_forces_debug", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_powershell_file("tools/ops/deploy.ps1", {
-      "--target-path", publish_target,
-      "--startup-profile", "missile",
-      "--build-mode", "release",
+      "-TargetPath", publish_target,
+      "-StartupProfile", "missile",
+      "-BuildMode", "release",
     })
 
     if result.skipped == true then
@@ -767,8 +767,7 @@ local function _test_deploy_comprehensive()
     _assert_contains(result.output, "forcing debug build mode",
       "deploy output should explain the automatic debug override in English")
   end)
-  
-  -- 测试 4: PowerShell 命名参数风格调用（使用不同的临时目录）
+
   _with_ascii_tmp("deploy_powershell_style", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
     local result = _run_powershell_file("tools/ops/deploy.ps1", {
@@ -795,6 +794,56 @@ local function _test_deploy_comprehensive()
       "deploy PowerShell wrapper should auto-select debug mode for startup profiles")
     _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
       "deploy PowerShell wrapper should forward startup profile injection")
+  end)
+
+  _with_ascii_tmp("deploy_direct_invocation", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+    local command = table.concat({
+      "$env:MONOPOLY_DEPLOY_TARGET = " .. _powershell_single_quote(publish_target),
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -StartupProfile clear_obstacles",
+    }, "; ")
+    local result = _run_powershell_command(command)
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "direct script invocation should succeed with StartupProfile only")
+    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
+      "direct script invocation should deploy to MONOPOLY_DEPLOY_TARGET instead of misbinding StartupProfile")
+    _assert_contains(result.output, common.normalize_path(publish_target),
+      "direct script invocation should report the resolved deploy target")
+  end)
+
+  _with_ascii_tmp("deploy_keep_test_startup", function(tmp_root)
+    local keep_target = common.join_path(tmp_root, "keep_target")
+    local keep_result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-TargetPath", keep_target,
+      "-StartupProfile", "missile",
+      "-KeepTestStartup",
+    })
+
+    if keep_result.skipped == true then
+      return
+    end
+
+    assert(keep_result.ok == true, "deploy should allow KeepTestStartup in debug mode")
+    assert(common.path_exists(common.join_path(keep_target, "src/config/testing")) == true,
+      "KeepTestStartup should preserve src/config/testing when StartupProfile forces debug mode")
+    assert(common.path_exists(common.join_path(keep_target, "src/app/bootstrap/testing")) == true,
+      "KeepTestStartup should preserve src/app/bootstrap/testing when StartupProfile forces debug mode")
+
+    local release_target = common.join_path(tmp_root, "release_target")
+    local release_result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-TargetPath", release_target,
+      "-BuildMode", "release",
+      "-KeepTestStartup",
+    })
+    assert(release_result.ok == true, "deploy release should still succeed with KeepTestStartup present")
+    assert(common.path_exists(common.join_path(release_target, "src/config/testing")) == false,
+      "release deploy should strip src/config/testing even when KeepTestStartup is set")
+    assert(common.path_exists(common.join_path(release_target, "src/app/bootstrap/testing")) == false,
+      "release deploy should strip src/app/bootstrap/testing even when KeepTestStartup is set")
   end)
 end
 
