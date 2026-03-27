@@ -1085,7 +1085,8 @@ local function _test_runtime_context_install_helpers_without_globals()
     })
     runtime_context.install_environment(ctx)
     local helpers = runtime_context.install_runtime_helpers(ctx, { install_globals = false })
-    assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return helpers")
+    assert(helpers ~= nil and helpers.vehicle_helper ~= nil, "install_runtime_helpers should return helpers")
+    assert(helpers.roles == ctx.roles, "install_runtime_helpers should return refreshed roles")
     assert(all_roles == nil, "install_runtime_helpers install_globals=false should not write all_roles")
 
     runtime_context.install_runtime_helper_globals(helpers)
@@ -1134,38 +1135,60 @@ end
 
 local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
   local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
-  local emitted = {}
-  local helper = { target_role_id = nil }
+  local target_pos = { x = 3, y = 4, z = 5 }
+  local bind_modes = {}
+  local lock_positions = {}
+  local observer_roles = {
+    {
+      set_camera_bind_mode = function(mode)
+        bind_modes[1] = mode
+      end,
+      set_camera_lock_position = function(pos)
+        lock_positions[1] = pos
+      end,
+    },
+    {
+      set_camera_bind_mode = function(mode)
+        bind_modes[2] = mode
+      end,
+      set_camera_lock_position = function(pos)
+        lock_positions[2] = pos
+      end,
+    },
+  }
+  local target_role = {
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return target_pos
+        end,
+      }
+    end,
+  }
 
   support.with_patches({
     {
       target = runtime_ports,
-      key = "resolve_camera_helper",
+      key = "resolve_role",
       value = function()
-        return helper
+        return target_role
       end,
     },
     {
-      target = runtime_event_bridge,
-      key = "emit_custom_event",
-      value = function(event_name, payload, opts)
-        emitted[#emitted + 1] = {
-          event_name = event_name,
-          payload = payload,
-          opts = opts,
-        }
-        return true
+      target = runtime_ports,
+      key = "resolve_roles",
+      value = function()
+        return observer_roles
       end,
     },
   }, function()
     local ok = camera_sync.follow_camera(9)
-    assert(ok == true, "camera_sync.follow_camera should still emit event")
+    assert(ok == true, "camera_sync.follow_camera should lock observer cameras")
   end)
 
-  assert(helper.target_role_id == 9, "camera sync should still write target_role_id")
-  assert(#emitted == 1, "camera sync should emit one camera follow event")
-  assert(emitted[1].event_name == "follow_camera", "camera sync should keep follow_camera event name")
-  assert(emitted[1].payload == nil, "camera sync should keep nil payload")
+  assert(bind_modes[1] == 1 and bind_modes[2] == 1, "camera sync should set fixed bind mode for all observers")
+  assert(lock_positions[1] == target_pos, "camera sync should lock observer 1 to target position")
+  assert(lock_positions[2] == target_pos, "camera sync should lock observer 2 to target position")
 end
 
 local function _test_game_startup_build_state_is_pure_and_bridge_installs_events()
