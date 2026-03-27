@@ -34,7 +34,6 @@ local role_control_lock_policy = require("src.ui.input.role_control_lock_policy"
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
 local logger = require("src.core.utils.logger")
-local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_event_bridge = require("src.host.eggy.event_bridge")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
@@ -55,39 +54,6 @@ local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
 local _build_choice_modal_state = support.build_choice_modal_state
 local _build_target_pick_env = support.build_target_pick_env
-
-local function _build_turn_switch_camera_roles(target_role_id, target_pos)
-  local bind_modes = {}
-  local lock_positions = {}
-  local roles = {
-    [1] = {
-      id = 1,
-      set_camera_bind_mode = function(mode)
-        bind_modes[1] = mode
-      end,
-      set_camera_lock_position = function(pos)
-        lock_positions[1] = pos
-      end,
-    },
-    [2] = {
-      id = 2,
-      set_camera_bind_mode = function(mode)
-        bind_modes[2] = mode
-      end,
-      set_camera_lock_position = function(pos)
-        lock_positions[2] = pos
-      end,
-    },
-  }
-  roles[target_role_id].get_ctrl_unit = function()
-    return {
-      get_position = function()
-        return target_pos
-      end,
-    }
-  end
-  return roles, bind_modes, lock_positions
-end
 
 
 local function _build_status3d_test_env()
@@ -678,9 +644,10 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   local ui_model = require("src.ui.pres")
   local board_view_mod = require("src.ui.render.board")
   local status3d = require("src.ui.render.status3d")
-  local target_pos = { x = 1, y = 2, z = 3 }
-  local camera_roles, bind_modes, lock_positions = _build_turn_switch_camera_roles(2, target_pos)
+  local helper = { target_role_id = nil }
   local follow_events = 0
+  local follow_event_name = nil
+  local follow_event_payload = nil
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
@@ -719,14 +686,16 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
       }
     end },
     { key = "GameAPI", value = game_api },
+    { target = game_api, key = "get_role", value = function() return {} end },
     { key = "Enums", value = {
       CameraBindMode = { TRACK = 0 },
       BuffState = { BUFF_FORBID_CONTROL = 32 },
     } },
-    { target = runtime_ports, key = "resolve_role", value = function(player_id) return camera_roles[player_id] end },
-    { target = runtime_ports, key = "resolve_roles", value = function() return { camera_roles[1], camera_roles[2] } end },
+    { key = "camera_helper", value = helper },
     { key = "TriggerCustomEvent", value = function(event_name, payload)
       follow_events = follow_events + 1
+      follow_event_name = event_name
+      follow_event_payload = payload
     end },
   }
   local game = {
@@ -792,11 +761,11 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
     runtime_event_bridge._reset_for_tests()
   end)
 
-  _assert_eq(bind_modes[1], 1, "turn switch should set fixed camera bind mode for observer 1")
-  _assert_eq(bind_modes[2], 1, "turn switch should set fixed camera bind mode for observer 2")
-  assert(lock_positions[1] == target_pos, "turn switch should lock observer 1 to current player position")
-  assert(lock_positions[2] == target_pos, "turn switch should lock observer 2 to current player position")
-  _assert_eq(follow_events, 0, "turn switch should not depend on legacy follow_camera custom event")
+  _assert_eq(helper.target_role_id, 2, "turn switch should follow current player")
+  assert(follow_events >= 1, "turn switch should trigger follow event")
+  _assert_eq(follow_event_name, "follow_camera", "turn switch should emit follow_camera event")
+  assert(type(follow_event_payload) == "table", "turn switch follow event should include payload table")
+  _assert_eq(follow_event_payload.target_role_id, nil, "turn switch follow event should not carry target_role_id payload")
 end
 
 local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable()
@@ -805,8 +774,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   local ui_model = require("src.ui.pres")
   local board_view_mod = require("src.ui.render.board")
   local status3d = require("src.ui.render.status3d")
-  local target_pos = { x = 7, y = 8, z = 9 }
-  local camera_roles, bind_modes, lock_positions = _build_turn_switch_camera_roles(2, target_pos)
+  local helper = { target_role_id = nil }
   local follow_events = 0
   local game_api = GameAPI or {}
   local name = "j4MHTwbxEfG+CjRaYHE42T"
@@ -853,12 +821,12 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
       }
     end },
     { key = "GameAPI", value = game_api },
+    { target = game_api, key = "get_role", value = function() return {} end },
     { key = "Enums", value = {
       CameraBindMode = { TRACK = 0 },
       BuffState = { BUFF_FORBID_CONTROL = 32 },
     } },
-    { target = runtime_ports, key = "resolve_role", value = function(player_id) return camera_roles[player_id] end },
-    { target = runtime_ports, key = "resolve_roles", value = function() return { camera_roles[1], camera_roles[2] } end },
+    { key = "camera_helper", value = helper },
     { key = "TriggerCustomEvent", value = wrapped_trigger },
   }
   local game = {
@@ -927,10 +895,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
     assert(ok == true, "turn switch should not fail when follow event is unavailable: " .. tostring(err))
   end)
 
-  _assert_eq(bind_modes[1], 1, "degraded turn switch should set fixed camera bind mode for observer 1")
-  _assert_eq(bind_modes[2], 1, "degraded turn switch should set fixed camera bind mode for observer 2")
-  assert(lock_positions[1] == target_pos, "degraded turn switch should still lock observer 1 to current player position")
-  assert(lock_positions[2] == target_pos, "degraded turn switch should still lock observer 2 to current player position")
+  _assert_eq(helper.target_role_id, 2, "turn switch should still track current player on degraded follow event")
   _assert_eq(follow_events, 0, "degraded follow event path should avoid wrapped TriggerCustomEvent call")
 end
 

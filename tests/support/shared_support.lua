@@ -163,6 +163,9 @@ local _RUNTIME_CONTEXT_KEYS = {
   get_vehicle_move_direction = true,
   get_vehicle_move_time = true,
   get_spawn_vehicle_id = true,
+  get_camera_target = true,
+  get_skin_id = true,
+  get_change_skin_role = true,
 }
 
 local function _patches_need_context_refresh(patches)

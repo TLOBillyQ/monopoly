@@ -171,66 +171,6 @@ local function _test_camera_policy_retargets_when_player_changes_without_ui_refr
   assert(followed[2] == game.players[2].id, "camera should retarget on player change even without a full ui refresh")
 end
 
-local function _test_camera_policy_continues_follow_for_same_player_each_tick()
-  local game = support.new_game()
-  local state = {
-    turn_runtime = {
-      last_follow_player_id = nil,
-    },
-  }
-  local followed = {}
-  local ports = {
-    ui_sync = {
-      follow_camera = function(_, player_id)
-        followed[#followed + 1] = player_id
-        return true
-      end,
-    },
-  }
-
-  game.turn.current_player_index = 1
-  turn_camera_policy.sync_follow(game, state, ports, true)
-  turn_camera_policy.sync_follow(game, state, ports, false)
-
-  assert(#followed == 2, "camera should keep following every tick for the same player")
-  assert(followed[1] == game.players[1].id, "first follow should target current player")
-  assert(followed[2] == game.players[1].id, "second follow should keep targeting current player")
-end
-
-local function _test_camera_policy_retries_when_follow_camera_fails()
-  local game = support.new_game()
-  local state = {
-    turn_runtime = {
-      last_follow_player_id = nil,
-    },
-  }
-  local followed = {}
-  local call_count = 0
-  local ports = {
-    ui_sync = {
-      follow_camera = function(_, player_id)
-        call_count = call_count + 1
-        followed[#followed + 1] = player_id
-        if call_count == 1 then
-          return false
-        end
-        return true
-      end,
-    },
-  }
-
-  game.turn.current_player_index = 1
-  turn_camera_policy.sync_follow(game, state, ports, true)
-  assert(state.turn_runtime.last_follow_player_id == nil, "failed follow should not cache player id")
-
-  turn_camera_policy.sync_follow(game, state, ports, false)
-  assert(#followed == 2, "camera should retry follow after failure")
-  assert(followed[1] == game.players[1].id, "first follow should target current player")
-  assert(followed[2] == game.players[1].id, "retry follow should keep targeting current player")
-  assert(state.turn_runtime.last_follow_player_id == game.players[1].id,
-    "successful retry should cache current player id")
-end
-
 return {
   name = "gameplay_landing_visual_release_and_camera_follow",
   tests = {
@@ -241,14 +181,6 @@ return {
     {
       name = "camera_policy_retargets_when_player_changes_without_ui_refresh",
       run = _test_camera_policy_retargets_when_player_changes_without_ui_refresh,
-    },
-    {
-      name = "camera_policy_continues_follow_for_same_player_each_tick",
-      run = _test_camera_policy_continues_follow_for_same_player_each_tick,
-    },
-    {
-      name = "camera_policy_retries_when_follow_camera_fails",
-      run = _test_camera_policy_retries_when_follow_camera_fails,
     },
   },
 }

@@ -36,7 +36,8 @@
       "match": [
         "^src%.config%.content%.runtime_refs$",
         "^src%.config%.gameplay%.runtime_constants$",
-        "^src%.rules%.vehicle$"
+        "^src%.rules%.vehicle$",
+        "^src%.state%.state_access%.runtime_editor_exports$"
       ],
       "name": "infrastructure_runtime_bridges"
     },

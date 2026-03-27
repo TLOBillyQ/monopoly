@@ -3,7 +3,6 @@ local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local presentation_ports = require("src.presentation.runtime.ports")
 local runtime_deps = require("src.ui.ctl.deps")
 local tick_clock = require("src.turn.loop.tick_clock")
-local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
 
 local M = {}
 
@@ -44,10 +43,8 @@ function M.start(state, current_game_ref)
   state.presentation_runtime = runtime_deps.build()
   local current_game = gameplay_loop.new_game(state)
   current_game_ref[1] = current_game
-   gameplay_loop.set_game(state, current_game)
- 
-  camera_sync.init_camera()
- 
+  gameplay_loop.set_game(state, current_game)
+
   if not state.tick_started then
     state.tick_started = true
     _start_tick_loop(state, current_game_ref)

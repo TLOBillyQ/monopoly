@@ -107,6 +107,9 @@ local function _with_runtime_context_globals(fn)
     { key = "get_vehicle_set_position_x", value = nil },
     { key = "get_vehicle_set_position_y", value = nil },
     { key = "get_vehicle_set_position_z", value = nil },
+    { key = "get_camera_target", value = nil },
+    { key = "get_skin_id", value = nil },
+    { key = "get_change_skin_role", value = nil },
   }, fn)
 end
 
@@ -1009,6 +1012,44 @@ local function _test_stop_all_players_movement_skips_invalid_role_without_error(
   assert(stopped_ids[1] == g.players[1].id, "only valid role should receive stop")
 end
 
+local function _test_runtime_context_forward_stop_skips_invalid_role()
+  _with_runtime_context_globals(function()
+    local stop_events = 0
+    local game_api = {
+      get_role = function(role_id)
+        if role_id == 1 then
+          return { id = 1 }
+        end
+        return nil
+      end,
+      get_all_valid_roles = function()
+        return { { id = 1 } }
+      end,
+    }
+    support.with_patches({
+    }, function()
+      runtime_event_bridge._reset_for_tests()
+      local ctx = runtime_context.new({
+        GameAPI = game_api,
+        LuaAPI = _mock_lua_api(function(event_name)
+          if event_name == "stop_vehicle_forward" then
+            stop_events = stop_events + 1
+          end
+        end),
+      })
+      _install_global_aliases(ctx)
+      runtime_context.install_runtime_helpers(ctx, { install_globals = true })
+      runtime_context.install_editor_exports(ctx)
+      local invalid_ok = vehicle_helper.emit_vehicle_stop(2)
+      local valid_ok = vehicle_helper.emit_vehicle_stop(1)
+      assert(invalid_ok == false, "forward stop should reject invalid role")
+      assert(valid_ok == true, "forward stop should allow valid role")
+      assert(stop_events == 1, "forward stop should only emit event for valid role")
+      runtime_event_bridge._reset_for_tests()
+    end)
+  end)
+end
+
 local function _test_runtime_event_bridge_detects_unbound_binding_without_call()
   local calls = 0
   local name = "j4MHTwbxEfG+CjRaYHE42T"
@@ -1066,6 +1107,39 @@ local function _test_runtime_event_bridge_disables_feature_after_dispatch_failur
   end)
 end
 
+local function _test_runtime_context_split_install_stages()
+  _with_runtime_context_globals(function()
+    local role1 = { id = 1, get_roleid = function() return 1 end }
+    local game_api = {
+      get_role = function(role_id)
+        if role_id == 1 then
+          return role1
+        end
+        return nil
+      end,
+      get_all_valid_roles = function()
+        return { role1 }
+      end,
+    }
+    local lua_api = _mock_lua_api()
+    local ctx = runtime_context.new({
+      GameAPI = game_api,
+      LuaAPI = lua_api,
+    })
+
+    runtime_context.install_environment(ctx)
+    assert(SetTimeOut ~= lua_api.call_delay_time, "install_environment should stay validation-only")
+    assert(type(get_vehicle_player) ~= "function", "install_environment should not export helpers")
+
+    local helpers = runtime_context.install_runtime_helpers(ctx)
+    assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
+    assert(camera_helper == nil, "install_runtime_helpers should not export globals by default")
+
+    runtime_context.install_editor_exports(ctx)
+    assert(type(get_camera_target) == "function", "install_editor_exports should expose camera getter")
+  end)
+end
+
 local function _test_runtime_context_install_helpers_without_globals()
   _with_runtime_context_globals(function()
     local role1 = { id = 1, get_roleid = function() return 1 end }
@@ -1085,8 +1159,7 @@ local function _test_runtime_context_install_helpers_without_globals()
     })
     runtime_context.install_environment(ctx)
     local helpers = runtime_context.install_runtime_helpers(ctx, { install_globals = false })
-    assert(helpers ~= nil and helpers.vehicle_helper ~= nil, "install_runtime_helpers should return helpers")
-    assert(helpers.roles == ctx.roles, "install_runtime_helpers should return refreshed roles")
+    assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return helpers")
     assert(all_roles == nil, "install_runtime_helpers install_globals=false should not write all_roles")
 
     runtime_context.install_runtime_helper_globals(helpers)
@@ -1133,174 +1206,140 @@ local function _test_runtime_context_release_helper_install_flow()
   end)
 end
 
+local function _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit()
+  _with_runtime_context_globals(function()
+    local ctrl_unit = { tag = "real_ctrl_unit" }
+    local role1 = {
+      id = 1,
+      get_roleid = function()
+        return 1
+      end,
+      get_ctrl_unit = function()
+        return ctrl_unit
+      end,
+    }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 1 then
+            return role1
+          end
+          return nil
+        end,
+        get_all_valid_roles = function()
+          return { role1 }
+        end,
+      },
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_environment(ctx)
+    runtime_context.install_runtime_helpers(ctx)
+    ctx.camera_helper.target_role_id = 1
+    runtime_context.install_editor_exports(ctx)
+
+    assert(get_camera_target() == ctrl_unit, "camera target should return real player ctrl_unit")
+  end)
+end
+
+local function _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit()
+  _with_runtime_context_globals(function()
+    local synthetic_unit = { tag = "synthetic_unit" }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function()
+          return nil
+        end,
+        get_all_valid_roles = function()
+          return {}
+        end,
+      },
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_environment(ctx)
+    runtime_context.install_runtime_helpers(ctx)
+    ctx.camera_helper.target_role_id = -1
+    ctx.synthetic_actor_registry = {
+      resolve_actor = function(role_id)
+        if role_id == -1 then
+          return { unit = synthetic_unit }
+        end
+        return nil
+      end,
+    }
+    runtime_context.install_editor_exports(ctx)
+
+    assert(get_camera_target() == synthetic_unit, "camera target should return synthetic actor unit")
+  end)
+end
+
+local function _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable()
+  _with_runtime_context_globals(function()
+    local role_without_unit = {
+      id = 1,
+      get_roleid = function()
+        return 1
+      end,
+    }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 1 then
+            return role_without_unit
+          end
+          error("missing role")
+        end,
+        get_all_valid_roles = function()
+          return { role_without_unit }
+        end,
+      },
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_environment(ctx)
+    runtime_context.install_runtime_helpers(ctx)
+    runtime_context.install_editor_exports(ctx)
+
+    ctx.camera_helper.target_role_id = 1
+    assert(get_camera_target() == nil, "camera target should return nil when role has no ctrl unit")
+
+    ctx.camera_helper.target_role_id = 7
+    assert(get_camera_target() == nil, "camera target should return nil when get_role fails")
+  end)
+end
+
 local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
   local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
-  local target_pos = { x = 3, y = 4, z = 5 }
-  local bind_modes = {}
-  local lock_positions = {}
-  local observer_roles = {
-    {
-      set_camera_bind_mode = function(mode)
-        bind_modes[1] = mode
-      end,
-      set_camera_lock_position = function(pos)
-        lock_positions[1] = pos
-      end,
-    },
-    {
-      set_camera_bind_mode = function(mode)
-        bind_modes[2] = mode
-      end,
-      set_camera_lock_position = function(pos)
-        lock_positions[2] = pos
-      end,
-    },
-  }
-  local target_role = {
-    get_ctrl_unit = function()
-      return {
-        get_position = function()
-          return target_pos
-        end,
-      }
-    end,
-  }
+  local emitted = {}
+  local helper = { target_role_id = nil }
 
   support.with_patches({
     {
       target = runtime_ports,
-      key = "resolve_role",
+      key = "resolve_camera_helper",
       value = function()
-        return target_role
+        return helper
       end,
     },
     {
-      target = runtime_ports,
-      key = "resolve_roles",
-      value = function()
-        return observer_roles
+      target = runtime_event_bridge,
+      key = "emit_custom_event",
+      value = function(event_name, payload, opts)
+        emitted[#emitted + 1] = {
+          event_name = event_name,
+          payload = payload,
+          opts = opts,
+        }
+        return true
       end,
     },
   }, function()
     local ok = camera_sync.follow_camera(9)
-    assert(ok == true, "camera_sync.follow_camera should lock observer cameras")
+    assert(ok == true, "camera_sync.follow_camera should still emit event")
   end)
 
-  assert(bind_modes[1] == 1 and bind_modes[2] == 1, "camera sync should set fixed bind mode for all observers")
-  assert(lock_positions[1] == target_pos, "camera sync should lock observer 1 to target position")
-  assert(lock_positions[2] == target_pos, "camera sync should lock observer 2 to target position")
-end
-
-local function _test_camera_sync_init_camera_sets_all_properties()
-  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
-  -- 构造 spy roles，每个 role 记录 set_camera_property 的所有调用 (prop, val) 和 set_camera_draggable 的调用
-  local props_set_1 = {}
-  local draggable_set_1 = {}
-  local props_set_2 = {}
-  local draggable_set_2 = {}
-  local observer_roles = {
-    {
-      set_camera_property = function(prop, val)
-        props_set_1[#props_set_1 + 1] = { prop = prop, val = val }
-      end,
-      set_camera_draggable = function(flag)
-        draggable_set_1[#draggable_set_1 + 1] = flag
-      end,
-    },
-    {
-      set_camera_property = function(prop, val)
-        props_set_2[#props_set_2 + 1] = { prop = prop, val = val }
-      end,
-      set_camera_draggable = function(flag)
-        draggable_set_2[#draggable_set_2 + 1] = flag
-      end,
-    },
-  }
-
-  support.with_patches({
-    {
-      target = runtime_ports,
-      key = "resolve_roles",
-      value = function()
-        return observer_roles
-      end,
-    },
-  }, function()
-    local ok = camera_sync.init_camera()
-    assert(ok == true, "init_camera should return true when roles exist")
-  end)
-
-  -- 构建实际调用的 (prop→val) 映射
-  local function props_to_map(list)
-    local m = {}
-    for _, entry in ipairs(list) do
-      m[entry.prop] = entry.val
-    end
-    return m
-  end
-
-  local expected = {
-    [7] = 75,   -- DIST
-    [8] = 45,   -- FOV
-    [9] = 40,   -- PITCH_MAX
-    [10] = 40,  -- PITCH_MIN
-    [11] = 6,   -- OBSERVER_HEIGHT
-    [12] = 0,   -- HORIZONTAL_OFFSET
-    [15] = 40,  -- PITCH
-    [16] = -60, -- YAW
-    [25] = 70,  -- DRAG_SPEED
-  }
-
-  local map1 = props_to_map(props_set_1)
-  local map2 = props_to_map(props_set_2)
-
-  for prop, val in pairs(expected) do
-    assert(map1[prop] == val,
-      "role1 expected set_camera_property(" .. prop .. ", " .. val .. ") but got " .. tostring(map1[prop]))
-    assert(map2[prop] == val,
-      "role2 expected set_camera_property(" .. prop .. ", " .. val .. ") but got " .. tostring(map2[prop]))
-  end
-
-  assert(#draggable_set_1 >= 1 and draggable_set_1[1] == true,
-    "role1 should have set_camera_draggable(true) called")
-  assert(#draggable_set_2 >= 1 and draggable_set_2[1] == true,
-    "role2 should have set_camera_draggable(true) called")
-end
-
-local function _test_camera_sync_init_camera_returns_false_when_no_roles()
-  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
-  support.with_patches({
-    {
-      target = runtime_ports,
-      key = "resolve_roles",
-      value = function()
-        return nil
-      end,
-    },
-  }, function()
-    local ok = camera_sync.init_camera()
-    assert(ok == false, "init_camera should return false when resolve_roles returns nil")
-  end)
-end
-
-local function _test_camera_sync_init_camera_survives_missing_set_camera_property()
-  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
-  -- role 没有 set_camera_property 方法时不应崩溃
-  local observer_roles = {
-    { set_camera_draggable = function() end },  -- 无 set_camera_property
-  }
-  support.with_patches({
-    {
-      target = runtime_ports,
-      key = "resolve_roles",
-      value = function()
-        return observer_roles
-      end,
-    },
-  }, function()
-    local ok = pcall(camera_sync.init_camera)
-    assert(ok == true, "init_camera should not throw when role lacks set_camera_property")
-  end)
+  assert(helper.target_role_id == 9, "camera sync should still write target_role_id")
+  assert(#emitted == 1, "camera sync should emit one camera follow event")
+  assert(emitted[1].event_name == "follow_camera", "camera sync should keep follow_camera event name")
+  assert(emitted[1].payload == nil, "camera sync should keep nil payload")
 end
 
 local function _test_game_startup_build_state_is_pure_and_bridge_installs_events()
@@ -3650,6 +3689,43 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
   assert(created_opts.players == nil, "game startup should keep role_roster startup when retry succeeds")
 end
 
+local function _test_runtime_context_change_skin_exports_and_event()
+  _with_runtime_context_globals(function()
+    local emitted_event = nil
+    local role1 = { id = 1, name = "role1" }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 1 then
+            return role1
+          end
+          return nil
+        end,
+        get_all_valid_roles = function()
+          return {}
+        end,
+      },
+      LuaAPI = _mock_lua_api(function(event_name)
+        emitted_event = event_name
+      end),
+    })
+    runtime_event_bridge._reset_for_tests()
+    _install_global_aliases(ctx)
+    runtime_context.install_runtime_helpers(ctx, { install_globals = true })
+    runtime_context.install_editor_exports(ctx)
+
+    assert(type(get_skin_id) == "function", "runtime exports should expose get_skin_id")
+    assert(type(get_change_skin_role) == "function", "runtime exports should expose get_change_skin_role")
+
+    local ok = ctx.change_skin_helper.emit_change_skin(1, 5001)
+    assert(ok == true, "change_skin_helper should emit change skin event")
+    assert(emitted_event == "change_skin", "change_skin_helper should emit change_skin event name")
+    assert(get_skin_id() == 5001, "get_skin_id should return helper skin id")
+    assert(get_change_skin_role() == role1, "get_change_skin_role should return helper role")
+    runtime_event_bridge._reset_for_tests()
+  end)
+end
+
 local function _test_find_player_by_id_accepts_mixed_representation()
   local g = _new_game()
   local p1 = g.players[1]
@@ -4893,12 +4969,13 @@ return {
   _test_runtime_event_bridge_detects_unbound_binding_without_call = _test_runtime_event_bridge_detects_unbound_binding_without_call,
   _test_runtime_event_bridge_disables_feature_after_dispatch_failure =
     _test_runtime_event_bridge_disables_feature_after_dispatch_failure,
+  _test_runtime_context_split_install_stages = _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals = _test_runtime_context_install_helpers_without_globals,
   _test_runtime_context_release_helper_install_flow = _test_runtime_context_release_helper_install_flow,
+  _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit = _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit,
+  _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit = _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit,
+  _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable = _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable,
   _test_camera_sync_follow_camera_keeps_role_id_event_chain = _test_camera_sync_follow_camera_keeps_role_id_event_chain,
-  _test_camera_sync_init_camera_sets_all_properties = _test_camera_sync_init_camera_sets_all_properties,
-  _test_camera_sync_init_camera_returns_false_when_no_roles = _test_camera_sync_init_camera_returns_false_when_no_roles,
-  _test_camera_sync_init_camera_survives_missing_set_camera_property = _test_camera_sync_init_camera_survives_missing_set_camera_property,
   _test_runtime_context_install_environment_fails_fast = _test_runtime_context_install_environment_fails_fast,
   _test_game_startup_build_state_is_pure_and_bridge_installs_events = _test_game_startup_build_state_is_pure_and_bridge_installs_events,
   _test_stop_all_players_movement_preserves_inner_move_dir_and_stop_event =
@@ -4986,6 +5063,7 @@ return {
   _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third =
     _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third,
   _test_passing_armed_mine_stops_and_triggers_followup = _test_passing_armed_mine_stops_and_triggers_followup,
+  _test_runtime_context_change_skin_exports_and_event = _test_runtime_context_change_skin_exports_and_event,
   _test_camera_policy_follows_eliminated_then_skips_to_next = _test_camera_policy_follows_eliminated_then_skips_to_next,
   _test_camera_policy_follows_current_when_not_eliminated = _test_camera_policy_follows_current_when_not_eliminated,
   _test_camera_policy_skips_all_eliminated_and_returns_nil = _test_camera_policy_skips_all_eliminated_and_returns_nil,
