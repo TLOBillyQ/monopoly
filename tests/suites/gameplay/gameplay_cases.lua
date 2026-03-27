@@ -1191,6 +1191,118 @@ local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
   assert(lock_positions[2] == target_pos, "camera sync should lock observer 2 to target position")
 end
 
+local function _test_camera_sync_init_camera_sets_all_properties()
+  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
+  -- 构造 spy roles，每个 role 记录 set_camera_property 的所有调用 (prop, val) 和 set_camera_draggable 的调用
+  local props_set_1 = {}
+  local draggable_set_1 = {}
+  local props_set_2 = {}
+  local draggable_set_2 = {}
+  local observer_roles = {
+    {
+      set_camera_property = function(prop, val)
+        props_set_1[#props_set_1 + 1] = { prop = prop, val = val }
+      end,
+      set_camera_draggable = function(flag)
+        draggable_set_1[#draggable_set_1 + 1] = flag
+      end,
+    },
+    {
+      set_camera_property = function(prop, val)
+        props_set_2[#props_set_2 + 1] = { prop = prop, val = val }
+      end,
+      set_camera_draggable = function(flag)
+        draggable_set_2[#draggable_set_2 + 1] = flag
+      end,
+    },
+  }
+
+  support.with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_roles",
+      value = function()
+        return observer_roles
+      end,
+    },
+  }, function()
+    local ok = camera_sync.init_camera()
+    assert(ok == true, "init_camera should return true when roles exist")
+  end)
+
+  -- 构建实际调用的 (prop→val) 映射
+  local function props_to_map(list)
+    local m = {}
+    for _, entry in ipairs(list) do
+      m[entry.prop] = entry.val
+    end
+    return m
+  end
+
+  local expected = {
+    [7] = 50,   -- DIST
+    [8] = 40,   -- FOV
+    [9] = 60,   -- PITCH_MAX
+    [10] = 60,  -- PITCH_MIN
+    [11] = 1,   -- OBSERVER_HEIGHT
+    [12] = 0,   -- HORIZONTAL_OFFSET
+    [15] = 60,  -- PITCH
+    [16] = -80, -- YAW
+    [25] = 70,  -- DRAG_SPEED
+  }
+
+  local map1 = props_to_map(props_set_1)
+  local map2 = props_to_map(props_set_2)
+
+  for prop, val in pairs(expected) do
+    assert(map1[prop] == val,
+      "role1 expected set_camera_property(" .. prop .. ", " .. val .. ") but got " .. tostring(map1[prop]))
+    assert(map2[prop] == val,
+      "role2 expected set_camera_property(" .. prop .. ", " .. val .. ") but got " .. tostring(map2[prop]))
+  end
+
+  assert(#draggable_set_1 >= 1 and draggable_set_1[1] == true,
+    "role1 should have set_camera_draggable(true) called")
+  assert(#draggable_set_2 >= 1 and draggable_set_2[1] == true,
+    "role2 should have set_camera_draggable(true) called")
+end
+
+local function _test_camera_sync_init_camera_returns_false_when_no_roles()
+  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
+  support.with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_roles",
+      value = function()
+        return nil
+      end,
+    },
+  }, function()
+    local ok = camera_sync.init_camera()
+    assert(ok == false, "init_camera should return false when resolve_roles returns nil")
+  end)
+end
+
+local function _test_camera_sync_init_camera_survives_missing_set_camera_property()
+  local camera_sync = require("src.presentation.runtime.ports.ui_sync.camera")
+  -- role 没有 set_camera_property 方法时不应崩溃
+  local observer_roles = {
+    { set_camera_draggable = function() end },  -- 无 set_camera_property
+  }
+  support.with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_roles",
+      value = function()
+        return observer_roles
+      end,
+    },
+  }, function()
+    local ok = pcall(camera_sync.init_camera)
+    assert(ok == true, "init_camera should not throw when role lacks set_camera_property")
+  end)
+end
+
 local function _test_game_startup_build_state_is_pure_and_bridge_installs_events()
   local events = {}
   local state = nil
@@ -4784,6 +4896,9 @@ return {
   _test_runtime_context_install_helpers_without_globals = _test_runtime_context_install_helpers_without_globals,
   _test_runtime_context_release_helper_install_flow = _test_runtime_context_release_helper_install_flow,
   _test_camera_sync_follow_camera_keeps_role_id_event_chain = _test_camera_sync_follow_camera_keeps_role_id_event_chain,
+  _test_camera_sync_init_camera_sets_all_properties = _test_camera_sync_init_camera_sets_all_properties,
+  _test_camera_sync_init_camera_returns_false_when_no_roles = _test_camera_sync_init_camera_returns_false_when_no_roles,
+  _test_camera_sync_init_camera_survives_missing_set_camera_property = _test_camera_sync_init_camera_survives_missing_set_camera_property,
   _test_runtime_context_install_environment_fails_fast = _test_runtime_context_install_environment_fails_fast,
   _test_game_startup_build_state_is_pure_and_bridge_installs_events = _test_game_startup_build_state_is_pure_and_bridge_installs_events,
   _test_stop_all_players_movement_preserves_inner_move_dir_and_stop_event =

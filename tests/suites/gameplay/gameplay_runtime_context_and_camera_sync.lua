@@ -23,5 +23,8 @@ return {
     _case("_test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics"),
     _case("_test_game_startup_role_roster_retries_before_debug_players_fallback"),
     _case("_test_find_player_by_id_accepts_mixed_representation"),
+    _case("_test_camera_sync_init_camera_sets_all_properties"),
+    _case("_test_camera_sync_init_camera_returns_false_when_no_roles"),
+    _case("_test_camera_sync_init_camera_survives_missing_set_camera_property"),
   },
 }
