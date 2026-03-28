@@ -11,6 +11,7 @@ GlobalAPI|is_none|_obj
 GlobalAPI|is_not_none|_obj
 GlobalAPI|mute_sfx_sound|_sfx_id
 GlobalAPI|set_direct_light|_param_dict, _duration
+GlobalAPI|set_render_color|_hue, _brightness, _saturation, _contrast, _amount, _mid_tones, _mid_tones_power, _shadows, _shadows_power, _highlight, _highlight_power, _duration
 GlobalAPI|set_sfx_orientation|_sfx_id, _orientation
 GlobalAPI|set_sfx_position|_sfx_id, _pos
 GlobalAPI|set_sfx_rate|_sfx_id, _rate

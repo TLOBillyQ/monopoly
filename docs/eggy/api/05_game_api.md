@@ -20,6 +20,7 @@ GameAPI|create_obstacle|_u_key, _pos, _rotation, _scale, _role
 GameAPI|create_obstacle_from_geometry|_u_key, _pos, _rotation, _scale, _role, _geometry_path
 GameAPI|create_scene_ui_at_point|_layer_key, _pos, _duration
 GameAPI|create_sfx_with_socket|_sfx_key, _unit, _socket_name, _scale, _duration, _bind_type
+GameAPI|create_sfx_with_socket_offset|_sfx_key, _unit, _socket_name, _offset, _rot, _scale, _duration, _bind_type
 GameAPI|create_sheet
 GameAPI|create_triggerspace|_u_key, _pos, _rotation, _scale, _role
 GameAPI|create_unit_group|_unit_group_id, _pos, _root_quaternion, _role, _use_center_offset
@@ -70,7 +71,6 @@ GameAPI|get_day|_timestamp
 GameAPI|get_driving_vehicle|_character
 GameAPI|get_env_time
 GameAPI|get_env_time_ratio
-GameAPI|get_env_time_running_enabled
 GameAPI|get_eui_child_by_index|_node, _index
 GameAPI|get_eui_child_by_name|_node, _name
 GameAPI|get_eui_children|_node
@@ -102,9 +102,9 @@ GameAPI|get_pathpoint_by_index|_path_id, _index
 GameAPI|get_role|_role_id
 GameAPI|get_role_friendship_value|_role_1, _role_2
 GameAPI|get_second|_timestamp
+GameAPI|get_sheet_cell_value|_value_type, _sheet_id, _key1, _key2
 GameAPI|get_sheet_col_count|_sheet_id
 GameAPI|get_sheet_row_count|_sheet_id
-GameAPI|get_sheet_value_by_type|_value_type, _sheet_id, _key1, _key2
 GameAPI|get_timestamp
 GameAPI|get_timestamp_by_time|_year, _month, _day, _hour, _minute, _second
 GameAPI|get_timestamp_diff|_timestamp_1, _timestamp_2
@@ -116,6 +116,7 @@ GameAPI|get_weekday|_timestamp
 GameAPI|get_year|_timestamp
 GameAPI|has_global_kv|_var_name
 GameAPI|is_archives_enabled
+GameAPI|is_env_time_running_enabled
 GameAPI|is_point_in_customtriggerspace|_point, _custom_trigger_space
 GameAPI|is_role_friendship_type_match|_role_1, _role_2, _friendship_type
 GameAPI|load_level|_level_key
@@ -134,6 +135,9 @@ GameAPI|random_int|_min_value, _max_value
 GameAPI|raycast_test|_start_pos, _end_pos, _collision_mask, _find_closest, _callback
 GameAPI|raycast_unit|_start_pos, _end_pos, _include_unit_types, _raycast_handler
 GameAPI|register_geometry_box|_size, _chamfer_radius, _chamfer_level, _use_box_collider, _preconf
+GameAPI|register_geometry_frustum|_height, _inner_radius, _outer_radius, _inner_poly_count, _outer_poly_count, _chamfer_radius, _angle, _layer, _bend, _preconf
+GameAPI|register_geometry_ring|_height, _inner_radius, _outer_radius, _inner_poly_count, _outer_poly_count, _chamfer_radius, _angle, _preconf
+GameAPI|register_geometry_spline|_is_rope, _pos_list, _normal_list, _radius_list, _dist_precision, _normal_precision, _depth, _preconf
 GameAPI|remove_pathpoint|_path_id, _index
 GameAPI|set_all_scene_ui_visible|_role, _visible
 GameAPI|set_env_time|_target_time, _duration, _direction
@@ -147,7 +151,7 @@ GameAPI|set_global_wind_frequency|_fixed_value
 GameAPI|set_life_entity_survival_scene_boundary|_x, _y, _z
 GameAPI|set_scene_ui_position|_role, _layer, _position
 GameAPI|set_scene_ui_visible|_layer, _role, _visible
-GameAPI|set_sheet_value_by_type|_value_type, _sheet_id, _key1, _key2, _val
+GameAPI|set_sheet_cell_value|_value_type, _sheet_id, _key1, _key2, _val
 GameAPI|set_unit_survival_scene_boundary|_x, _y, _z
 GameAPI|stop_sound|_assigned_id
 GameAPI|sweep_test|_body_unit, _test_dir, _max_dist, _collision_mask, _find_closest, _callback

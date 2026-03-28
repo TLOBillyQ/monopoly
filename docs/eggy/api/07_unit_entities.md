@@ -176,6 +176,9 @@ KVBase|set_kv_by_type|_value_type, _key, _val
 
 LifeEntity|activate_multi_animation|_anim_id, _acceptor_type
 LifeEntity|ai_command_alert|_tagert_pos, _target_dir, _dalay_time, _reject_time, _move_mode
+LifeEntity|ai_command_chase_with_ability|_target, _chase_range, _reject_time, _action_distance, _ability_key, _move_mode, _action_count
+LifeEntity|ai_command_chase_with_action|_target, _chase_range, _reject_time, _action_distance, _action_mode, _move_mode, _action_count
+LifeEntity|ai_command_chase_with_equipment|_target, _chase_range, _reject_time, _action_distance, _equipment_key, _move_mode, _action_count
 LifeEntity|ai_command_follow|_target_unit, _follow_dis, _tolerate_dis, _reject_time, _move_mode
 LifeEntity|ai_command_imitate|_target_unit, _delay, _disable_actions
 LifeEntity|ai_command_jump
@@ -267,6 +270,7 @@ Obstacle|is_touchable
 Obstacle|reset_collision_limit|_limit_type
 Obstacle|set_billboard_font_size|_font_size
 Obstacle|set_billboard_text|_content
+Obstacle|set_billboard_text_color|_color, _gradient_color_1, _gradient_color_2, _gradient_color_3, _gradient_color_4
 Obstacle|set_chess_type_and_rank|_card_type, _card_rank
 Obstacle|set_climbable|_enable
 Obstacle|set_collision_count_limit|_limit_type, _value
@@ -296,6 +300,7 @@ Role|get_commodity_count|_commodity_id
 Role|get_ctrl_unit
 Role|get_game_result
 Role|get_head_icon
+Role|get_map_total_cost
 Role|get_name
 Role|get_party_id
 Role|get_roleid
@@ -387,6 +392,7 @@ Role|set_unit_outline|_unit, _width, _color
 Role|set_unit_see_through_enabled|_unit, _enabled
 Role|set_unit_visible|_unit, _is_visible
 Role|set_voice_volume_sync_enabled|_enabled
+Role|shake_camera|_shake_type, _shake_max_amplitude, _shake_time, _shake_source, _shake_frequency, _shake_time_decay, _shake_effect_scope, _shake_undamped_scope, _shake_distance_decay
 Role|show_bag_panel|_visible
 Role|show_dynamic_text|_text, _pos, _color, _duration, _anim_type
 Role|show_goods_purchase_panel|_raw_goods_id, _show_time
@@ -405,6 +411,10 @@ Role|unbind_label_text|_label
 Role|unbind_progressbar_current|_progress_bar
 Role|unbind_progressbar_max|_progress_bar
 Role|win
+
+## SceneUI
+
+SceneUI|create_scene_ui_bind_unit|_layer_key, _socket_name, _offset_pos, _duration, _bind_event, _inherit_visible
 
 ## TriggerSpace
 

@@ -217,7 +217,15 @@ local function _append_changelog(path, report_lines)
     end
     content = _trim(content)
     if content ~= "" then
-      content = content .. "\n\n" .. entry_text .. "\n"
+      -- 将新条目插入到标题之后（最新的在最上面）
+      local title_pattern = "^(.-\n\n)"
+      local before, after = content:match(title_pattern .. "(.*)$")
+      if before then
+        content = before .. entry_text .. "\n" .. after
+      else
+        -- 没有找到标题分隔，直接插入到开头
+        content = "# EggyAPI 变更记录\n\n" .. entry_text .. "\n" .. content:gsub("^# EggyAPI 变更记录\n\n?", "")
+      end
     else
       content = "# EggyAPI 变更记录\n\n" .. entry_text .. "\n"
     end
