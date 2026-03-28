@@ -130,8 +130,8 @@ local rules = {
       "require%('src%.state%.compose_game'%)",
       "require%(\"src%.state%.game_victory\"%)",
       "require%('src%.state%.game_victory'%)",
-      "require%(\"src%.computer%.policies%.agent\"%)",
-      "require%('src%.computer%.policies%.agent'%)",
+       "require%(\"src%.computer%.policies%..+\"%)",
+        "require%('src%.computer%.policies%..+'%)",
       "require%(\"src%.turn%.output%.decision\"%)",
       "require%('src%.turn%.output%.decision'%)",
       "require%(\"src%.turn%.output%.logger\"%)",
@@ -372,7 +372,6 @@ local forbidden_files = {
   "src/turn/output/tick_steps.lua",
   "src/state/compose_game.lua",
   "src/state/game_victory.lua",
-  "src/computer/policies/agent.lua",
 }
 
 local function _is_whitelisted_line(relpath, line)

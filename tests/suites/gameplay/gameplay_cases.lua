@@ -1423,7 +1423,7 @@ end
 
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.turn.policies.auto_runner")
-  local agent = require("src.computer.policies.core_agent")
+  local agent = require("src.computer.core_agent")
   local land = require("src.rules.land.executors")
   local land_actions = require("src.rules.land.actions")
   local item_inventory = require("src.rules.items.inventory")
@@ -4186,7 +4186,7 @@ local function _test_intent_dispatcher_dispatch_handles_popup_and_ignores_invali
 end
 
 local function _test_ai_board_target_choice_falls_back_to_first_option()
-  local agent = require("src.computer.policies.core_agent")
+  local agent = require("src.computer.core_agent")
   local g = _new_game()
   local ai_player = g.players[2]
   ai_player.auto = true
