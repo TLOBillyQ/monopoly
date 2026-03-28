@@ -29,7 +29,7 @@
 
 ## 相关代码
 
-- synthetic AI 启动：`src/host/eggy/synthetic_actor_registry.lua:140`
+- synthetic AI 启动：`src/host/synthetic_actor_registry.lua:140`
 - AI 移动：`src/ui/render/move_anim.lua:458`
 - 玩家移动：`src/ui/render/move_anim.lua:463`
 - placement 里 stop 后立即放置：`src/ui/render/board/placement.lua:176`

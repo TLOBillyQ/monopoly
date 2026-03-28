@@ -11,10 +11,10 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  宿主层 host/ + infrastructure/  ← Eggy 引擎 SDK 适配   │
+│  宿主层 host/                    ← Eggy 引擎 SDK 适配   │
 │  应用层 app/                     ← 启动 & 依赖组装       │
 │  ┌────────────────────────────────────────────────────┐ │
-│  │  表现层 ui/ + presentation/   ← UI 渲染 & 事件桥    │ │
+│  │  表现层 ui/                    ← UI 渲染 & 事件桥    │ │
 │  │  ┌──────────────────────────────────────────────┐  │ │
 │  │  │  回合层 turn/              ← 协程状态机驱动   │  │ │
 │  │  │  ┌──────────────────────────────────────────┐│  │ │
@@ -203,13 +203,13 @@ start → wait_action → roll → move → move_followup → landing → post_a
 宿主引擎加载 init.lua
   → logger 初始化
   → startup_policy 读全局变量（build_mode/profile_name）
-  → runtime_install
+  → host_install
       a. config_sanity.validate()
       b. runtime_context.new()       ← 创建上下文
       c. global_aliases.install()          ← 安装宿主桥接例外
       d. runtime_ports.configure()   ← 注册 port 实现
       e. 触发规则模块加载（破产/AI/胜利）
-  → startup_roster 构建玩家名单（真实角色 + 补 AI 合成角色）
+  → roster 构建玩家名单（真实角色 + 补 AI 合成角色）
   → composition_root.assemble
       a. game_factory.build_board/players/rng
       b. 注入所有依赖（turn/dirty/registries/ports）
@@ -219,7 +219,7 @@ start → wait_action → roll → move → move_followup → landing → post_a
   → gameplay_loop 接管
 ```
 
-#### host/eggy/ 宿主适配层
+#### host/ 宿主适配层
 
 | 文件 | 职责 |
 |------|------|
@@ -230,20 +230,16 @@ start → wait_action → roll → move → move_followup → landing → post_a
 | `paid_purchase_gateway.lua` | 付费购买网关（维护 pending 队列 + 回调处理） |
 | `synthetic_actor_registry.lua` | AI 合成角色 → 与真实 role 同接口的适配器 |
 
-`src/infrastructure/runtime/global_aliases.lua`：将 `LuaAPI.SetTimeOut/RegisterCustomEvent/…` 注入全局，作为宿主桥接的显式 seam exception，而不是业务兼容别名层。
+`src/host/global_aliases.lua`：将 `LuaAPI.SetTimeOut/RegisterCustomEvent/…` 注入全局，作为宿主桥接的显式 seam exception，而不是业务兼容别名层。
 
 ---
 
-### `ui/` + `presentation/` — 表现层
+### `ui/` — 表现层
 
 #### 分层架构
 
 ```
-presentation/runtime/     Bootstrap（GAME_INIT序列）+ 事件桥（外部事件→modal_controller）
-  └─ ui_bootstrap          GAME_INIT 序列（节点校验→事件绑定→加载屏）
-  └─ runtime_event_bridge  外部事件 → modal_controller（通过 landing_visual_hold 延迟安全执行）
-  └─ ports/                运行时依赖注入接口组
-
+ui/ports/                运行时依赖注入接口组
 ui/ctl/                   控制器层（协调 canvas 和 modal）
   └─ canvas_coordinator    canvas 切换（命名事件广播）
   └─ canvas_event_router   点击事件 → intent（遍历路由规则注册监听）
@@ -270,7 +266,7 @@ ui/render/                渲染执行层
   └─ anim_*.lua              动画系统（registry + 各类 anim handler）
 
 ui/stores/                UI 状态存储（canvas_state / modal_state）
-ui/runtime/               与宿主运行时桥接（host_bridge / landing_visual_hold）
+ui/                       与宿主运行时桥接（host_bridge / landing_visual_hold / ui_bootstrap）
 ```
 
 #### 关键机制

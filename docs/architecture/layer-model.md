@@ -11,9 +11,9 @@ app -> infrastructure -> presentation -> turn -> (state | computer) -> rules -> 
 
 | 组件 | 当前目录语义 |
 |------|--------------|
-| app | `src/app/bootstrap/` |
-| infrastructure | `src/infrastructure/runtime/` + `src/host/` |
-| presentation | `src/presentation/runtime/` + `src/ui/` + `src/ui/runtime/` |
+| app | `src/app/` |
+| infrastructure | `src/host/` |
+| presentation | `src/ui/` + `src/ui/ports/` |
 | turn | `src/turn/` |
 | state | `src/state/` |
 | player | `src/player/` |
@@ -37,7 +37,7 @@ app -> infrastructure -> presentation -> turn -> (state | computer) -> rules -> 
 
 - `src/core/ports/`：宿主/运行时广义契约
 - `src/rules/ports/`：gameplay 共享 contract
-- `src/presentation/runtime/ports/`：presentation runtime grouped ports / adapter 真源
+- `src/ui/ports/`：presentation runtime grouped ports / adapter 真源
 - `src/turn/output/`：turn 输出与 runtime adapter
 
 ## 读图方式
@@ -45,13 +45,13 @@ app -> infrastructure -> presentation -> turn -> (state | computer) -> rules -> 
 从功能定位时，优先按下面顺序找代码：
 
 ```
-app -> infrastructure -> presentation -> turn -> state/computer -> rules -> state/config
+app -> host -> ui -> turn -> state/computer -> rules -> state/config
 ```
 
 ## 迁移备注
 
-- `main.lua` 现在从 `src.app.bootstrap` 启动。
+- `main.lua` 现在从 `src.app` 启动。
 - `src/ui`、`src/turn`、`src/rules`、`src/state`、`src/player`、`src/host` 仍保留原物理目录，但在 arch_view 中已经按新组件语义投影。
-- `src/presentation/runtime/` 承接入口里的 UI/runtime wiring，其中 `src/presentation/runtime/ports/` 是 grouped ports / adapter 真源。
-- `src/ui/runtime/` 承接展示侧共享 seam（`state` / `landing_visual_hold` / `host_bridge`）。
-- `src/infrastructure/runtime/global_aliases.lua` 是显式 seam exception，而不是业务兼容别名层。
+- `src/ui/` 承接入口里的 UI/runtime wiring，其中 `src/ui/ports/` 是 grouped ports / adapter 真源。
+- `src/ui/` 承接展示侧共享 seam（`state` / `landing_visual_hold` / `host_bridge`）。
+- `src/host/global_aliases.lua` 是显式 seam exception，而不是业务兼容别名层。

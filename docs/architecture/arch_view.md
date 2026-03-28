@@ -22,7 +22,7 @@
 - `tests/guards/dep_rules.lua` 只保留文本级硬边界（宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路，以及少量跨子系统禁令）
 - 零模块级循环依赖，无白名单，任意新循环直接让 `check` 失败
 - 根组件语义现为：`app`、`infrastructure`、`presentation`、`flow`、`ai`、`systems`、`runtime`、`core`、`config`
-- 当前 canonical 命名已切到 `src/presentation/runtime/ports/*` 与 `src/ui/runtime/{state,landing_visual_hold,host_bridge}`；旧 `src/ui/ctl/ports/*`、`*_seam`、`*_ports` 只应作为历史说明出现，不再代表当前兼容入口或 canonical 文件名
+- 当前 canonical 命名已切到 `src/ui/ports/*` 与 `src/ui/{state,landing_visual_hold,host_bridge}`；旧 `src/ui/ctl/ports/*`、`*_seam`、`*_ports` 只应作为历史说明出现，不再代表当前兼容入口或 canonical 文件名
 
 ## 命令
 
@@ -66,7 +66,7 @@ lua tools/quality/arch.lua check --project-root /path/to/project --config /path/
 
 根视图展示当前生效的顶层子树：`app`、`infrastructure`、`presentation`、`flow`、`ai`、`systems`、`runtime`、`config`，以及仍保留的 `core`。点击非叶节点下钻；点击叶节点在右侧看到源码、内外依赖、组件、层级、抽象标记与循环标记。
 
-当前目录迁移是“语义先行”：例如 `src/ui/**` 在 viewer 中投影为 `presentation`，`src/turn/**` 投影为 `flow`，`src/player/** + src/state/**` 投影为 `runtime`。因此根视图不再出现 `entry`，而是由 `src/app/bootstrap/**` 收口到 `app`。
+当前目录迁移是“语义先行”：例如 `src/ui/**` 在 viewer 中投影为 `presentation`，`src/turn/**` 投影为 `flow`，`src/player/** + src/state/**` 投影为 `runtime`。因此根视图不再出现 `entry`，而是由 `src/app/**` 收口到 `app`。
 
 如果某个 package 同时有 `init.lua` 和后代模块（例如 `src.rules.market`），viewer 交互上仍按非叶节点处理：主点击继续下钻，不把“有源码”误判成叶子。`views[*].nodes[*].leaf` 与 `drillable` 是 projection 输出给 viewer 的内部契约；viewer 只在旧 payload 缺字段时做最小兼容推断，不再重算业务语义。
 
