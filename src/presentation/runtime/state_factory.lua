@@ -1,5 +1,5 @@
 local ui_view = require("src.ui.ctl.ui_runtime")
-local runtime_state = require("src.ui.runtime.state")
+local runtime_state = require("src.ui.state")
 local state_callback_ports = require("src.presentation.runtime.ports.callbacks")
 
 local M = {}

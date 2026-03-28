@@ -298,7 +298,7 @@ dep_rules_whitelist["src/ui/runtime/runtime_state_seam.lua"] = {
   ['require("src.state.state_access.runtime_state")'] = true,
 }
 
-dep_rules_whitelist["src/ui/runtime/state.lua"] = {
+dep_rules_whitelist["src/ui/state.lua"] = {
   ['require("src.state.state_access.runtime_state")'] = true,
 }
 
@@ -306,7 +306,7 @@ dep_rules_whitelist["src/ui/runtime/landing_visual_hold_seam.lua"] = {
   ['require("src.state.state_access.landing_visual_hold")'] = true,
 }
 
-dep_rules_whitelist["src/ui/runtime/landing_visual_hold.lua"] = {
+dep_rules_whitelist["src/ui/landing_visual_hold.lua"] = {
   ['require("src.state.state_access.landing_visual_hold")'] = true,
 }
 
@@ -315,7 +315,7 @@ dep_rules_whitelist["src/ui/runtime/host_runtime_ports.lua"] = {
   ['require("src.host.eggy.event_bridge")'] = true,
 }
 
-dep_rules_whitelist["src/ui/runtime/host_bridge.lua"] = {
+dep_rules_whitelist["src/ui/host_bridge.lua"] = {
   ['require("src.host.eggy")'] = true,
   ['require("src.host.eggy.event_bridge")'] = true,
 }

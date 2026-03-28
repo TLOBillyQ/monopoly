@@ -1,6 +1,6 @@
 local board_view = require("src.ui.render.board")
 local modal = require("src.ui.ctl.modal")
-local host_bridge = require("src.ui.runtime.host_bridge")
+local host_bridge = require("src.ui.host_bridge")
 
 local state_callback_ports = {}
 

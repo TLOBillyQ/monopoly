@@ -7,7 +7,7 @@ local registry = require("src.ui.render.anim_registry")
 local handlers = require("src.ui.render.anim_handlers")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local dice_nodes = require("src.ui.schema.dice_nodes")
-local host_runtime_bridge = require("src.ui.runtime.host_bridge")
+local host_runtime_bridge = require("src.ui.host_bridge")
 local runtime_ui = require("src.ui.render.runtime_ui")
 
 local action_anim = {}

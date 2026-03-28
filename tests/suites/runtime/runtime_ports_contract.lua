@@ -379,13 +379,13 @@ end
 
 local function _test_presentation_boundary_contract_describes_seams_and_state_allowlists()
   local contract = presentation_ports.describe_boundary_contract()
-  _assert_eq(contract.state_seam_modules.runtime_state, "src.ui.runtime.state",
+  _assert_eq(contract.state_seam_modules.runtime_state, "src.ui.state",
     "presentation contract should publish runtime state canonical seam")
-  _assert_eq(contract.state_seam_modules.landing_visual_hold, "src.ui.runtime.landing_visual_hold",
+  _assert_eq(contract.state_seam_modules.landing_visual_hold, "src.ui.landing_visual_hold",
     "presentation contract should publish landing hold canonical seam")
-  _assert_eq(contract.state_seam_modules.host_runtime, "src.ui.runtime.host_bridge",
+  _assert_eq(contract.state_seam_modules.host_runtime, "src.ui.host_bridge",
     "presentation contract should publish host runtime canonical seam")
-  _assert_list_contains(contract.import_allowlists.host_runtime, "src.ui.runtime.host_bridge",
+  _assert_list_contains(contract.import_allowlists.host_runtime, "src.ui.host_bridge",
     "presentation contract should allow host bridge canonical path")
   _assert_eq(contract.state_field_allowlists.presentation_runtime[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
     "presentation contract should pin presentation_runtime ownership")

@@ -1,8 +1,8 @@
 local monopoly_event = require("src.core.events.monopoly_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local host_runtime_ports = require("src.ui.runtime.host_bridge")
+local host_runtime_ports = require("src.ui.host_bridge")
 local board_feedback = require("src.ui.render.board_feedback_service")
-local landing_visual_hold = require("src.ui.runtime.landing_visual_hold")
+local landing_visual_hold = require("src.ui.landing_visual_hold")
 
 local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil, handlers_by_event = {} }

@@ -1,5 +1,5 @@
 local runtime = require("src.ui.render.runtime_ui")
-local host_runtime_ports = require("src.ui.runtime.host_bridge")
+local host_runtime_ports = require("src.ui.host_bridge")
 local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
 local role_id_utils = require("src.core.utils.role_id")
 

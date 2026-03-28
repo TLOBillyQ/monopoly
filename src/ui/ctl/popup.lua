@@ -4,7 +4,7 @@ local with_client_role = require("src.core.utils.with_client_role")
 local runtime = require("src.ui.render.runtime_ui")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local canvas = require("src.ui.ctl.canvas_coordinator")
-local runtime_state = require("src.ui.runtime.state")
+local runtime_state = require("src.ui.state")
 local renderer = {}
 local _apply_node_image
 local function _resolve_popup_image_key(state, payload)

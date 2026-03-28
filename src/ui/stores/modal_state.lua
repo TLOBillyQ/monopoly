@@ -1,5 +1,5 @@
 local modal_state = {}
-local runtime_state = require("src.ui.runtime.state")
+local runtime_state = require("src.ui.state")
 
 local function _ui_runtime(state)
   return runtime_state.ensure_ui_runtime(state)

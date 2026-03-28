@@ -2,7 +2,7 @@ local choice_support = require("src.ui.pres.choice_support")
 local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")
 local role_id_utils = require("src.core.utils.role_id")
-local runtime_state = require("src.ui.runtime.state")
+local runtime_state = require("src.ui.state")
 
 local pre_confirm_flow = {}
 

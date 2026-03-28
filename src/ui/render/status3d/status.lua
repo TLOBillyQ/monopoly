@@ -1,6 +1,6 @@
 local specs = require("src.ui.render.status3d.specs")
 local scene = require("src.ui.render.status3d.scene")
-local host_runtime_bridge = require("src.ui.runtime.host_bridge")
+local host_runtime_bridge = require("src.ui.host_bridge")
 
 local M = {}
 

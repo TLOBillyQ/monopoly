@@ -1,7 +1,7 @@
 local meta = require("src.ui.render.status3d.meta")
 local scene = require("src.ui.render.status3d.scene")
 local status = require("src.ui.render.status3d.status")
-local host_runtime_bridge = require("src.ui.runtime.host_bridge")
+local host_runtime_bridge = require("src.ui.host_bridge")
 
 local M = {}
 

@@ -11,19 +11,19 @@ local actor_context_ports = require("src.presentation.runtime.ports.actor_contex
 local presentation_ports = {}
 local boundary_contract = {
   state_seam_modules = {
-    runtime_state = "src.ui.runtime.state",
-    landing_visual_hold = "src.ui.runtime.landing_visual_hold",
-    host_runtime = "src.ui.runtime.host_bridge",
+    runtime_state = "src.ui.state",
+    landing_visual_hold = "src.ui.landing_visual_hold",
+    host_runtime = "src.ui.host_bridge",
   },
   import_allowlists = {
     runtime_state = {
-      "src.ui.runtime.state",
+      "src.ui.state",
     },
     landing_visual_hold = {
-      "src.ui.runtime.landing_visual_hold",
+      "src.ui.landing_visual_hold",
     },
     host_runtime = {
-      "src.ui.runtime.host_bridge",
+      "src.ui.host_bridge",
       "src.presentation.runtime.ports.state",
       "src.presentation.runtime.ui_bootstrap",
       "src.presentation.runtime.event_bridge",

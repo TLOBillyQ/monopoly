@@ -1,6 +1,6 @@
 local view_command_dispatcher = {}
 local number_utils = require("src.core.utils.number_utils")
-local host_runtime_ports = require("src.ui.runtime.host_bridge")
+local host_runtime_ports = require("src.ui.host_bridge")
 
 local function _resolve_loaded(name)
   local ok, module = pcall(require, name)

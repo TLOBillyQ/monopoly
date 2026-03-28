@@ -3,7 +3,7 @@ local canvas = require("src.ui.ctl.canvas_coordinator")
 local with_client_role = require("src.core.utils.with_client_role")
 local runtime = require("src.ui.render.runtime_ui")
 local role_context = require("src.ui.pres.role_context")
-local runtime_state = require("src.ui.runtime.state")
+local runtime_state = require("src.ui.state")
 
 local renderer = {}
 

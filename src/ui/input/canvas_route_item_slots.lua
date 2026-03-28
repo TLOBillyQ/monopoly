@@ -1,7 +1,7 @@
 local logger = require("src.core.utils.logger")
 local nodes = require("src.ui.schema.base_nodes")
 local choice_support = require("src.ui.pres.choice_support")
-local runtime_state = require("src.ui.runtime.state")
+local runtime_state = require("src.ui.state")
 
 local intents = {}
 

@@ -1,5 +1,5 @@
 local prefab = require("Data.Prefab")
-local host_runtime_bridge = require("src.ui.runtime.host_bridge")
+local host_runtime_bridge = require("src.ui.host_bridge")
 
 local building_effects = {}
 

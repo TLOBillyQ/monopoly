@@ -6,7 +6,7 @@ local market_presenter = require("src.ui.ctl.market")
 local canvas = require("src.ui.ctl.canvas_coordinator")
 local logger = require("src.core.utils.logger")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
-local runtime_state = require("src.ui.runtime.state")
+local runtime_state = require("src.ui.state")
 local ui_controls = require("src.ui.render.support.ui_controls")
 
 local modal_presenter = {}
