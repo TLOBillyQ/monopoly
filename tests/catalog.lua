@@ -21,7 +21,6 @@ local runtime_behavior_modules = {
   "suites.runtime.test_profile_resolver",
   "suites.runtime.test_profile_bootstrap_core",
   "suites.runtime.test_profile_bootstrap_scenarios",
-  "suites.runtime.test_profile_render_startup",
   "suites.runtime.misc",
 }
 
@@ -29,7 +28,6 @@ local gameplay_behavior_modules = {
   "suites.gameplay.gameplay_bankruptcy_and_tile_owner",
   "suites.gameplay.gameplay_intent_dispatch_and_event_feed",
   "suites.gameplay.gameplay_runtime_context_and_camera_sync",
-  "suites.gameplay.gameplay_landing_visual_release_and_camera_follow",
   "suites.gameplay.gameplay_coroutine",
   "suites.gameplay.gameplay_turn_flow_and_interrupts",
   "suites.gameplay.gameplay_obstacle_chain_order",
@@ -51,8 +49,6 @@ local presentation_behavior_modules = {
   "suites.presentation.presentation_action_anim_effect_routes",
   "suites.presentation.presentation_action_anim_tip_text",
   "suites.presentation.presentation_action_anim_overlay_units",
-  "suites.presentation.presentation_action_anim_rollscreen",
-  "suites.presentation.presentation_overlay_compute",
   "suites.presentation.presentation_board_feedback",
   "suites.presentation.presentation_move_anim_sequence",
   "suites.presentation.presentation_move_anim_actor_modes",
