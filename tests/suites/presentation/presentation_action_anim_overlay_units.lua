@@ -1,5 +1,5 @@
 local action_anim = require("src.ui.render.action_anim")
-local host_runtime = require("src.host.eggy")
+local host_runtime = require("src.host")
 local support = require("support.presentation_action_anim_support")
 
 local _with_patches = support.with_patches

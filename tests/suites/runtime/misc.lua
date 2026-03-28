@@ -3,8 +3,8 @@ local _assert_eq = support.assert_eq
 local with_patches = support.with_patches
 local number_utils = support.number_utils
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local runtime_context = require("src.host.eggy.context")
-local default_ports = require("src.host.eggy.default_ports")
+local runtime_context = require("src.host.context")
+local default_ports = require("src.host.default_ports")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local logger_tests = require("suites.runtime.misc_logger")
@@ -37,7 +37,7 @@ local function _test_number_utils_to_integer_fallback_rejects_non_integer_text()
 end
 
 local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
-  local registry_module = require("src.host.eggy.synthetic_actor_registry")
+  local registry_module = require("src.host.synthetic_actor_registry")
   local runtime_constants = require("src.config.gameplay.runtime_constants")
   local created = {}
   local registry = registry_module.new({
@@ -75,7 +75,7 @@ local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
 end
 
 local function _test_synthetic_actor_registry_reset_destroys_spawned_actor_and_clears_registry()
-  local registry_module = require("src.host.eggy.synthetic_actor_registry")
+  local registry_module = require("src.host.synthetic_actor_registry")
   local destroyed = {}
   local spawned_unit = {
     id = "synthetic_unit",
@@ -185,7 +185,7 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
       value = function() end,
     },
     {
-      target = require("src.host.eggy.context"),
+      target = require("src.host.context"),
       key = "current",
       value = function()
         return nil
@@ -268,7 +268,7 @@ local function _test_runtime_context_vehicle_helper_consume_enter_delay_only_wai
       end,
     },
     {
-      target = require("src.host.eggy.event_bridge"),
+      target = require("src.host.event_bridge"),
       key = "emit_custom_event",
       value = function(event_name)
         emitted[#emitted + 1] = event_name
@@ -320,7 +320,7 @@ local function _test_ui_bootstrap_spawns_startup_synthetic_actors()
 
   with_patches({
     {
-      target = require("src.host.eggy.context"),
+      target = require("src.host.context"),
       key = "current",
       value = function()
         return {

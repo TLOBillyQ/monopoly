@@ -1,10 +1,10 @@
 local overlay_compute = require("src.ui.render.anim_overlay_compute")
 local visual_sync = require("src.ui.render.board.visual_sync")
 local overlay_runtime = require("src.ui.render.anim_overlay_runtime")
-local host_runtime = require("src.host.eggy")
+local host_runtime = require("src.host")
 local logger = require("src.core.utils.logger")
 local tip_queue = require("src.core.utils.tip_queue")
-local runtime_context = require("src.host.eggy.context")
+local runtime_context = require("src.host.context")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)

@@ -311,29 +311,29 @@ dep_rules_whitelist["src/ui/landing_visual_hold.lua"] = {
 }
 
 dep_rules_whitelist["src/ui/runtime/host_runtime_ports.lua"] = {
-  ['require("src.host.eggy")'] = true,
-  ['require("src.host.eggy.event_bridge")'] = true,
+  ['require("src.host")'] = true,
+  ['require("src.host.event_bridge")'] = true,
 }
 
 dep_rules_whitelist["src/ui/host_bridge.lua"] = {
-  ['require("src.host.eggy")'] = true,
-  ['require("src.host.eggy.event_bridge")'] = true,
+  ['require("src.host")'] = true,
+  ['require("src.host.event_bridge")'] = true,
 }
 
 dep_rules_whitelist["src/host/global_aliases.lua"] = {
   ["bridge exception, not a business compatibility alias layer."] = true,
 }
 
-dep_rules_whitelist["src/host/eggy/vehicle_runtime_legacy.lua"] = {
+dep_rules_whitelist["src/host/vehicle_runtime_legacy.lua"] = {
   ["\"legacy\" names the implementation source only; it does not imply a business-layer compatibility contract."] = true,
 }
 
 dep_rules_whitelist["src/presentation/runtime/ui_bootstrap.lua"] = {
-  ['require("src.host.eggy.context")'] = true,
+  ['require("src.host.context")'] = true,
 }
 
 dep_rules_whitelist["src/presentation/runtime/event_bridge.lua"] = {
-  ['require("src.host.eggy.context")'] = true,
+  ['require("src.host.context")'] = true,
 }
 
 local forbidden_files = {
@@ -358,10 +358,10 @@ local forbidden_files = {
   "src/core/state_access/runtime_editor_exports.lua",
   "src/core/state_access/runtime_state.lua",
   "src/core/state_access/ui_role_globals.lua",
-  "src/host/eggy/support/runtime_constants.lua",
-  "src/host/eggy/support/runtime_editor_exports.lua",
-  "src/host/eggy/support/runtime_refs.lua",
-  "src/host/eggy/support/vehicle.lua",
+  "src/host/support/runtime_constants.lua",
+  "src/host/support/runtime_editor_exports.lua",
+  "src/host/support/runtime_refs.lua",
+  "src/host/support/vehicle.lua",
   "src/turn/output/decision.lua",
   "src/turn/output/logger.lua",
   "src/turn/output/loop_runtime.lua",

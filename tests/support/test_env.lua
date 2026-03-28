@@ -1,7 +1,7 @@
 local logger = require("src.core.utils.logger")
 local tip_queue = require("src.core.utils.tip_queue")
-local runtime_context = require("src.host.eggy.context")
-local default_ports = require("src.host.eggy.default_ports")
+local runtime_context = require("src.host.context")
+local default_ports = require("src.host.default_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local paid_purchase_port = require("src.rules.market.ports.paid_purchase_port")
 
@@ -140,7 +140,7 @@ function M.refresh_runtime_context_for_tests(opts)
   runtime_ports.reset_for_tests()
   runtime_ports.configure(default_ports.build(runtime_context))
   paid_purchase_port.reset_for_tests()
-  paid_purchase_port.configure(require("src.host.eggy.paid_purchase_gateway"))
+  paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
   tip_queue.configure_runtime({
     presenter = function(text, duration)
       local global_api = opts.GlobalAPI or GlobalAPI

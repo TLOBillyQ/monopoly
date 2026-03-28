@@ -1,9 +1,9 @@
-local host_runtime = require("src.host.eggy")
+local host_runtime = require("src.host")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local runtime_refs = require("src.config.content.runtime_refs")
 local logger = require("src.core.utils.logger")
 local tip_queue = require("src.core.utils.tip_queue")
-local runtime_context = require("src.host.eggy.context")
+local runtime_context = require("src.host.context")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)

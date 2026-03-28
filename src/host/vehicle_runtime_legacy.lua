@@ -1,4 +1,4 @@
-local runtime_event_bridge = require("src.host.eggy.event_bridge")
+local runtime_event_bridge = require("src.host.event_bridge")
 local vehicle_feature = require("src.rules.vehicle")
 
 local M = {}

@@ -35,13 +35,13 @@ local role_control_lock_policy = require("src.ui.input.role_control_lock_policy"
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
 local logger = require("src.core.utils.logger")
-local runtime_event_bridge = require("src.host.eggy.event_bridge")
+local runtime_event_bridge = require("src.host.event_bridge")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local host_runtime = require("src.host.eggy")
+local host_runtime = require("src.host")
 local runtime_state = require("src.state.state_access.runtime_state")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
-local raycast = require("src.host.eggy.raycast")
+local raycast = require("src.host.raycast")
 local vec3 = require("fixtures.vec3")
 
 
@@ -853,9 +853,9 @@ end
 
 local function _test_actor_context_and_host_runtime_fallbacks()
   local actor_context = require("src.ui.ctl.actor_context")
-  local host_runtime_local = require("src.host.eggy")
+  local host_runtime_local = require("src.host")
   local runtime_ui = require("src.ui.render.runtime_ui")
-  local runtime_context = require("src.host.eggy.context")
+  local runtime_context = require("src.host.context")
   local listed_role = {
     get_roleid = function()
       return 3
@@ -875,10 +875,10 @@ local function _test_actor_context_and_host_runtime_fallbacks()
   local registered = nil
 
   _with_patches({
-    { target = require("src.host.eggy.role_resolver"), key = "resolve_roles", value = function()
+    { target = require("src.host.role_resolver"), key = "resolve_roles", value = function()
       return { listed_role }
     end },
-    { target = require("src.host.eggy.role_resolver"), key = "resolve_role_with", value = function(role_id)
+    { target = require("src.host.role_resolver"), key = "resolve_role_with", value = function(role_id)
       if role_id == 4 then
         return fallback_role
       end

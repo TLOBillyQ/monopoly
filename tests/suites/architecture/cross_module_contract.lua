@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local monopoly_events = require("src.core.events.monopoly_events")
-local runtime_event_bridge = require("src.host.eggy.event_bridge")
+local runtime_event_bridge = require("src.host.event_bridge")
 local land_events = require("src.rules.land.events")
 local land_rules = require("src.rules.land.rules")
 local land_rent_resolver = require("src.rules.land.rent_resolver")

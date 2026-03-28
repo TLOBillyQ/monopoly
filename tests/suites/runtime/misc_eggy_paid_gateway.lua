@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local with_patches = support.with_patches
 
 local function _test_eggy_paid_gateway_callback_missing_goods_id()
-  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
   local warned = nil
@@ -24,7 +24,7 @@ local function _test_eggy_paid_gateway_callback_missing_goods_id()
 end
 
 local function _test_eggy_paid_gateway_callback_empty_goods_id()
-  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
   local warned = nil
@@ -45,7 +45,7 @@ local function _test_eggy_paid_gateway_callback_empty_goods_id()
 end
 
 local function _test_eggy_paid_gateway_callback_missing_pending()
-  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
   local warned = nil
@@ -66,7 +66,7 @@ local function _test_eggy_paid_gateway_callback_missing_pending()
 end
 
 local function _test_eggy_paid_gateway_callback_missing_player()
-  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local gateway = require("src.host.paid_purchase_gateway")
   local game = {
     players = {},
     find_player_by_id = function()
@@ -93,7 +93,7 @@ local function _test_eggy_paid_gateway_callback_missing_player()
 end
 
 local function _test_eggy_paid_gateway_callback_missing_entry()
-  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local gateway = require("src.host.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local game = {
     players = { mock_player },
@@ -128,7 +128,7 @@ local function _test_eggy_paid_gateway_callback_missing_entry()
 end
 
 local function _test_eggy_paid_gateway_callback_success_with_on_purchase()
-  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local gateway = require("src.host.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local mock_entry = { product_id = 1001, name = "Test Item" }
   local game = {
@@ -165,7 +165,7 @@ local function _test_eggy_paid_gateway_callback_success_with_on_purchase()
 end
 
 local function _test_eggy_paid_gateway_callback_success_without_on_purchase()
-  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local gateway = require("src.host.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local mock_entry = { product_id = 1001, name = "Test Item" }
   local game = {
@@ -194,7 +194,7 @@ local function _test_eggy_paid_gateway_callback_success_without_on_purchase()
 end
 
 local function _test_eggy_paid_gateway_start_missing_purchase_api()
-  local gateway = require("src.host.eggy.paid_purchase_gateway")
+  local gateway = require("src.host.paid_purchase_gateway")
   local game = {
     players = {
       { id = 1 },

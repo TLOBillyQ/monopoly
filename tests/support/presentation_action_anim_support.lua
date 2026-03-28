@@ -1,5 +1,5 @@
 local handlers = require("src.ui.render.anim_handlers")
-local host_runtime = require("src.host.eggy")
+local host_runtime = require("src.host")
 local support = require("support.presentation_support")
 
 local M = {}

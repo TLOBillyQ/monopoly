@@ -94,7 +94,7 @@ local function _resolve_module(globals)
   end
   -- The legacy module name only points at the host bridge implementation.
   -- It does not mean the business layer still supports a legacy contract.
-  return "src.host.eggy.vehicle_runtime_legacy"
+  return "src.host.vehicle_runtime_legacy"
 end
 
 local function _load_runtime(globals)

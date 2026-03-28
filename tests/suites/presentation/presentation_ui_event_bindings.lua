@@ -122,7 +122,7 @@ local function _test_register_node_click_handles_query_failure_and_missing_nodes
       end
       return {}
     end },
-    { target = require("src.host.eggy"), key = "enqueue_tip", value = function(intent)
+    { target = require("src.host"), key = "enqueue_tip", value = function(intent)
       shown[#shown + 1] = intent and intent.text or nil
     end },
   }, function()

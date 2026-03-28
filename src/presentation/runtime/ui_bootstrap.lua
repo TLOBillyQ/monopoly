@@ -12,7 +12,7 @@ local market_ui = require("src.ui.schema.market_layout")
 local ui_events = require("src.ui.ctl.ui_events")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local role_globals = require("src.state.state_access.ui_role_globals")
-local runtime_context = require("src.host.eggy.context")
+local runtime_context = require("src.host.context")
 
 local M = {}
 

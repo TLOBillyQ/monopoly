@@ -115,7 +115,7 @@ local function _with_currency_cfg(cfg, fn)
     { target = paid_goods_cfg, key = "currencies", value = cfg },
   }, function()
     paid_purchase_port.reset_for_tests()
-    paid_purchase_port.configure(require("src.host.eggy.paid_purchase_gateway"))
+    paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
     fn()
   end)
 end

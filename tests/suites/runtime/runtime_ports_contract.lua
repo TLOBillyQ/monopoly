@@ -3,9 +3,9 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_context = require("src.host.eggy.context")
+local runtime_context = require("src.host.context")
 local runtime_install = require("src.app.bootstrap.runtime_install")
-local default_ports = require("src.host.eggy.default_ports")
+local default_ports = require("src.host.default_ports")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local presentation_ports = require("src.presentation.runtime.ports")
 

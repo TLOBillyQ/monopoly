@@ -1,5 +1,5 @@
-local runtime_context = require("src.host.eggy.context")
-local default_ports = require("src.host.eggy.default_ports")
+local runtime_context = require("src.host.context")
+local default_ports = require("src.host.default_ports")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local global_aliases = require("src.host.global_aliases")
 local paid_purchase_port = require("src.rules.market.ports.paid_purchase_port")
@@ -39,7 +39,7 @@ function M.install(opts)
   if runtime_ctx ~= nil then
     runtime_ports.configure(default_ports.build(runtime_context))
   end
-  paid_purchase_port.configure(require("src.host.eggy.paid_purchase_gateway"))
+  paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
   require "src.rules.endgame.bankruptcy"
   require "src.computer.core_agent"
   require "src.rules.endgame.game_victory"
