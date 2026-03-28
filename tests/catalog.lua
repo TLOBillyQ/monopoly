@@ -48,15 +48,6 @@ local presentation_behavior_modules = {
   "suites.presentation.presentation_ui_touch_policy",
   "suites.presentation.presentation_market_confirm_flow",
   "suites.presentation.presentation_popup_visibility",
-  "suites.presentation.presentation_choice_routes",
-  "suites.presentation.presentation_target_pick",
-  "suites.presentation.presentation_action_log_and_role_context",
-  "suites.presentation.presentation_market_panel",
-  "suites.presentation.presentation_item_slots",
-  "suites.presentation.presentation_action_anim_queue_and_turn_lock",
-  "suites.presentation.presentation_status3d_and_turn_effects",
-  "suites.presentation.presentation_popup_and_modal_renderers",
-  "suites.presentation.presentation_player_panels",
   "suites.presentation.presentation_action_anim_effect_routes",
   "suites.presentation.presentation_action_anim_tip_text",
   "suites.presentation.presentation_action_anim_overlay_units",
@@ -176,7 +167,19 @@ M.guard_scripts = guard_scripts
 
 function M.load_behavior_suites()
   bootstrap.install_package_paths()
-  return _load_modules(M.behavior_suites, "behavior", "suite")
+  local suites = _load_modules(M.behavior_suites, "behavior", "suite")
+  -- Append the 9 action_status group suites
+  local action_status_groups = require("suites.presentation._presentation_action_status_groups")
+  local group_keys = {
+    "choice_routes", "target_pick", "action_log_and_role_context",
+    "market_panel", "item_slots", "action_anim_queue_and_turn_lock",
+    "status3d_and_turn_effects", "popup_and_modal_renderers", "player_panels",
+  }
+  for _, key in ipairs(group_keys) do
+    local suite = action_status_groups.build_suite(key)
+    suites[#suites + 1] = _clone_suite("group:" .. key, suite, "behavior", "suite")
+  end
+  return suites
 end
 
 function M.load_contract_suites()
