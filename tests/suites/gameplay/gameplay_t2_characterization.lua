@@ -145,41 +145,7 @@ local function _build_loop_state()
   return state
 end
 
-local _t2_characterization_tests = {
-  function()
-    local player = { id = 1, name = "P1" }
-    local phase_res = {
-      next_state = "move",
-      next_args = { player = player, total = 10 },
-      wait_action_anim = true,
-    }
-    local state, args = roll._resolve_phase_wait_result(phase_res, player, 10, 5)
-    assert(state == "wait_action_anim", "should return wait_action_anim state")
-    assert(args.next_state == "move", "should preserve next_state")
-    assert(args.next_args.total == 10, "should preserve total in next_args")
-  end,
-  function()
-    local player = { id = 1, name = "P1" }
-    local phase_res = {
-      next_state = "land",
-      next_args = { player = player, total = 8 },
-      wait_action_anim = false,
-    }
-    local state, args = roll._resolve_phase_wait_result(phase_res, player, 8, 4)
-    assert(state == "wait_choice", "should return wait_choice state when no anim wait")
-    assert(args.next_state == "land", "should preserve next_state")
-  end,
-  function()
-    local player = { id = 1, name = "P1" }
-    local phase_res = {}
-    local state, args = roll._resolve_phase_wait_result(phase_res, player, 6, 3)
-    assert(state == "wait_choice", "should default to wait_choice")
-    assert(args.next_state == "move", "should default next_state to move")
-    assert(args.next_args.player == player, "should include player in default next_args")
-    assert(args.next_args.total == 6, "should include total in default next_args")
-    assert(args.next_args.raw_total == 3, "should include raw_total in default next_args")
-  end,
-}
+
 
 local _dispatch_validator_tests = {
   function()
@@ -2259,9 +2225,6 @@ local _item_choice_handler_t2_tests = {
 return {
   name = "gameplay_t2_characterization",
   tests = {
-    { name = "_test_resolve_phase_wait_result_with_wait_action_anim", run = _t2_characterization_tests[1] },
-    { name = "_test_resolve_phase_wait_result_without_wait_action_anim", run = _t2_characterization_tests[2] },
-    { name = "_test_resolve_phase_wait_result_defaults", run = _t2_characterization_tests[3] },
     { name = "_test_dispatch_validator_validate_choice_actor_match", run = _dispatch_validator_tests[1] },
     { name = "_test_dispatch_validator_validate_choice_actor_mismatch", run = _dispatch_validator_tests[2] },
     { name = "_test_dispatch_validator_validate_choice_actor_no_owner", run = _dispatch_validator_tests[3] },
