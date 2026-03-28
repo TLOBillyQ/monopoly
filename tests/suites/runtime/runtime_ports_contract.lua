@@ -7,7 +7,7 @@ local runtime_context = require("src.host.context")
 local runtime_install = require("src.app.host_install")
 local default_ports = require("src.host.default_ports")
 local gameplay_loop_ports = require("src.turn.loop.ports")
-local presentation_ports = require("src.presentation.runtime.ports")
+local presentation_ports = require("src.ui.ports")
 
 local function _assert_list_contains(list, expected, msg)
   for _, value in ipairs(list or {}) do
@@ -387,11 +387,11 @@ local function _test_presentation_boundary_contract_describes_seams_and_state_al
     "presentation contract should publish host runtime canonical seam")
   _assert_list_contains(contract.import_allowlists.host_runtime, "src.ui.host_bridge",
     "presentation contract should allow host bridge canonical path")
-  _assert_eq(contract.state_field_allowlists.presentation_runtime[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
+  _assert_eq(contract.state_field_allowlists.presentation_runtime[1], "src.app.gameplay_start",
     "presentation contract should pin presentation_runtime ownership")
-  _assert_list_contains(contract.state_field_allowlists.presentation_runtime, "src.presentation.runtime.ports.anim",
+  _assert_list_contains(contract.state_field_allowlists.presentation_runtime, "src.ui.ports.anim",
     "presentation contract should allow anim port canonical path")
-  _assert_eq(contract.state_field_allowlists.gameplay_loop_ports[1], "src.presentation.runtime.gameplay_runtime_bootstrap",
+  _assert_eq(contract.state_field_allowlists.gameplay_loop_ports[1], "src.app.gameplay_start",
     "presentation contract should pin gameplay_loop_ports ownership")
 end
 

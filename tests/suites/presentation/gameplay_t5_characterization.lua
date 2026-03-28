@@ -76,7 +76,7 @@ end
 -- ============================================
 
 local function _test_on_bankruptcy_tiles_cleared_returns_true_when_sync_succeeds()
-  local state_ports = _load_fresh("src.presentation.runtime.ports.state")
+  local state_ports = _load_fresh("src.ui.ports.state")
   local ports = state_ports.build()
 
   local game = {
@@ -93,7 +93,7 @@ local function _test_on_bankruptcy_tiles_cleared_returns_true_when_sync_succeeds
 end
 
 local function _test_on_bankruptcy_tiles_cleared_returns_false_when_no_state()
-  local state_ports = _load_fresh("src.presentation.runtime.ports.state")
+  local state_ports = _load_fresh("src.ui.ports.state")
   local ports = state_ports.build()
 
   local game = {}
@@ -102,7 +102,7 @@ local function _test_on_bankruptcy_tiles_cleared_returns_false_when_no_state()
 end
 
 local function _test_on_bankruptcy_tiles_cleared_returns_false_when_sync_returns_false()
-  local state_ports = _load_fresh("src.presentation.runtime.ports.state")
+  local state_ports = _load_fresh("src.ui.ports.state")
   local ports = state_ports.build()
 
   local game = {

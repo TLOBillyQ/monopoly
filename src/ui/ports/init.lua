@@ -1,12 +1,12 @@
-local common = require("src.presentation.runtime.ports.common")
-local modal_ports = require("src.presentation.runtime.ports.modal")
-local anim_ports = require("src.presentation.runtime.ports.anim")
-local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync")
-local debug_ports = require("src.presentation.runtime.ports.debug")
-local state_ports = require("src.presentation.runtime.ports.state")
-local clock_ports = require("src.presentation.runtime.ports.clock")
-local view_command_ports = require("src.presentation.runtime.ports.view_command")
-local actor_context_ports = require("src.presentation.runtime.ports.actor_context")
+local common = require("src.ui.ports.common")
+local modal_ports = require("src.ui.ports.modal")
+local anim_ports = require("src.ui.ports.anim")
+local ui_sync_ports = require("src.ui.ports.ui_sync")
+local debug_ports = require("src.ui.ports.debug")
+local state_ports = require("src.ui.ports.state")
+local clock_ports = require("src.ui.ports.clock")
+local view_command_ports = require("src.ui.ports.view_command")
+local actor_context_ports = require("src.ui.ports.actor_context")
 
 local presentation_ports = {}
 local boundary_contract = {
@@ -24,14 +24,14 @@ local boundary_contract = {
     },
     host_runtime = {
       "src.ui.host_bridge",
-      "src.presentation.runtime.ports.state",
-      "src.presentation.runtime.ui_bootstrap",
-      "src.presentation.runtime.event_bridge",
+      "src.ui.ports.state",
+      "src.app.ui_bootstrap",
+      "src.app.event_bridge",
     },
   },
   state_field_allowlists = {
     presentation_runtime = {
-      "src.presentation.runtime.gameplay_runtime_bootstrap",
+      "src.app.gameplay_start",
       "src.turn.loop",
       "src.ui.render.action_anim",
       "src.ui.render.anim_overlay_runtime",
@@ -44,10 +44,10 @@ local boundary_contract = {
       "src.ui.render.anim_unit_overlay",
       "src.ui.wid.panel_presenter",
       "src.ui.wid.turn_effects",
-      "src.presentation.runtime.ports.anim",
+      "src.ui.ports.anim",
     },
     gameplay_loop_ports = {
-      "src.presentation.runtime.gameplay_runtime_bootstrap",
+      "src.app.gameplay_start",
       "src.turn.loop",
       "src.turn.actions.action_dispatcher",
       "src.turn.waits.choice_timeout",
@@ -65,7 +65,7 @@ local boundary_contract = {
       "src.turn.waits.timeout",
     },
     game = {
-      "src.presentation.runtime.event_bridge",
+      "src.app.event_bridge",
       "src.turn.loop",
       "src.turn.loop.runtime",
       "src.turn.actions.validator",

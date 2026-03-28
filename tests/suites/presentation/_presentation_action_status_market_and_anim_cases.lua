@@ -29,7 +29,7 @@ local runtime_cls = require("src.turn.loop.scheduler_runtime")
 local turn_effects = require("src.ui.wid.turn_effects")
 local popup_renderer = require("src.ui.ctl.popup")
 local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.presentation.runtime.ports.debug")
+local debug_ports_module = require("src.ui.ports.debug")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -926,7 +926,7 @@ local function _test_modal_presenter_market_same_choice_id_still_refreshes_marke
 end
 
 local function _test_ui_model_sync_refresh_reopens_market_modal_while_market_active()
-  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local ui_model = require("src.ui.pres")
   local modal_presenter = require("src.ui.ctl.modal")
   local main_view = require("src.ui.ctl.ui_runtime")
@@ -1005,7 +1005,7 @@ local function _test_ui_model_sync_refresh_reopens_market_modal_while_market_act
 end
 
 local function _test_ui_model_sync_refresh_skips_market_reopen_during_action_anim()
-  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local ui_model = require("src.ui.pres")
   local modal_presenter = require("src.ui.ctl.modal")
   local main_view = require("src.ui.ctl.ui_runtime")

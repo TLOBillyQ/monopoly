@@ -1,5 +1,5 @@
 local move_anim = require("src.ui.render.move_anim")
-local anim_ports = require("src.presentation.runtime.ports.anim")
+local anim_ports = require("src.ui.ports.anim")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local support = require("support.move_anim_support")
 

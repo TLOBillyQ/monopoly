@@ -30,7 +30,7 @@ local runtime_cls = require("src.turn.loop.scheduler_runtime")
 local turn_effects = require("src.ui.wid.turn_effects")
 local popup_renderer = require("src.ui.ctl.popup")
 local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.presentation.runtime.ports.debug")
+local debug_ports_module = require("src.ui.ports.debug")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -765,7 +765,7 @@ local function _test_ui_event_state_base_screen_active_requires_modal_free_ui()
 end
 
 local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
-  local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync")
+  local ui_sync_ports = require("src.ui.ports.ui_sync")
   local runtime_state_local = require("src.state.state_access.runtime_state")
   local rebuilt = {
     choice = { id = 42, kind = "remote", route_key = "remote", options = { { id = 1, label = "A" } } },
@@ -781,10 +781,10 @@ local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
   local opened_market = nil
 
   _with_patches({
-    { target = require("src.presentation.runtime.ports.ui_sync.choice_state"), key = "should_reconcile", value = function()
+    { target = require("src.ui.ports.ui_sync.choice_state"), key = "should_reconcile", value = function()
       return true
     end },
-    { target = require("src.presentation.runtime.ports.ui_sync.model"), key = "build_model", value = function()
+    { target = require("src.ui.ports.ui_sync.model"), key = "build_model", value = function()
       return rebuilt
     end },
     { target = require("src.ui.ctl.modal"), key = "open_choice_modal", value = function(_, choice, market)
@@ -1029,7 +1029,7 @@ local function _test_raycast_pick_with_resolves_hit_unit_from_various_formats()
 end
 
 local function _test_view_command_ports_toggle_action_log_aborts_when_ui_missing()
-  local view_command_ports = require("src.presentation.runtime.ports.view_command")
+  local view_command_ports = require("src.ui.ports.view_command")
   local ports = view_command_ports.build()
   local state = {}
 
@@ -1038,7 +1038,7 @@ local function _test_view_command_ports_toggle_action_log_aborts_when_ui_missing
 end
 
 local function _test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing()
-  local view_command_ports = require("src.presentation.runtime.ports.view_command")
+  local view_command_ports = require("src.ui.ports.view_command")
   local logger = require("src.core.utils.logger")
   local ports = view_command_ports.build()
   local warn_calls = {}
@@ -1056,7 +1056,7 @@ local function _test_view_command_ports_toggle_action_log_warns_when_actor_role_
 end
 
 local function _test_choice_ui_state_rejects_current_player_fallback_when_local_role_stale()
-  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_state")
+  local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
   local players = {
     { id = 1, is_ai = false, auto = false },
     { id = 2, is_ai = false, auto = false },
@@ -1097,7 +1097,7 @@ local function _test_choice_ui_state_rejects_current_player_fallback_when_local_
 end
 
 local function _test_choice_ui_state_accepts_explicit_local_owner()
-  local choice_ui_state = require("src.presentation.runtime.ports.ui_sync.choice_state")
+  local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
   local players = {
     { id = 1, is_ai = false, auto = false },
     { id = 2, is_ai = false, auto = false },

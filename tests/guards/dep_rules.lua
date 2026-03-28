@@ -9,7 +9,7 @@ local rules = {
     description = "no module may depend on retired shared.UINodes",
   },
   {
-    roots = { "src/ui", "src/presentation/runtime" },
+    roots = { "src/ui", "src/app" },
     forbidden_patterns = {
       'require%("src%.state%.state_access%.runtime_state"%)',
       "require%('src%.state%.state_access%.runtime_state'%)",
@@ -19,7 +19,7 @@ local rules = {
     description = "presentation modules must consume runtime state through seam adapters",
   },
   {
-    roots = { "src/ui", "src/presentation/runtime" },
+    roots = { "src/ui", "src/app" },
     forbidden_patterns = {
       'require%("src%.host%.eggy',
       "require%('src%.host%.eggy",
@@ -328,11 +328,11 @@ dep_rules_whitelist["src/host/vehicle_runtime_legacy.lua"] = {
   ["\"legacy\" names the implementation source only; it does not imply a business-layer compatibility contract."] = true,
 }
 
-dep_rules_whitelist["src/presentation/runtime/ui_bootstrap.lua"] = {
+dep_rules_whitelist["src/app/ui_bootstrap.lua"] = {
   ['require("src.host.context")'] = true,
 }
 
-dep_rules_whitelist["src/presentation/runtime/event_bridge.lua"] = {
+dep_rules_whitelist["src/app/event_bridge.lua"] = {
   ['require("src.host.context")'] = true,
 }
 

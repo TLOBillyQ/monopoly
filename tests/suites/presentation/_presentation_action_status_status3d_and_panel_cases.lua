@@ -29,7 +29,7 @@ local runtime_cls = require("src.turn.loop.scheduler_runtime")
 local turn_effects = require("src.ui.wid.turn_effects")
 local popup_renderer = require("src.ui.ctl.popup")
 local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.presentation.runtime.ports.debug")
+local debug_ports_module = require("src.ui.ports.debug")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -756,7 +756,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
 
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
-    state.gameplay_loop_ports = require("src.presentation.runtime.ports").build(state)
+    state.gameplay_loop_ports = require("src.ui.ports").build(state)
     gameplay_loop.tick(game, state, 0.1)
     runtime_event_bridge._reset_for_tests()
   end)
@@ -888,7 +888,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   _with_patches(patches, function()
     runtime_event_bridge._reset_for_tests()
     local ok, err = pcall(function()
-      state.gameplay_loop_ports = require("src.presentation.runtime.ports").build(state)
+      state.gameplay_loop_ports = require("src.ui.ports").build(state)
       gameplay_loop.tick(game, state, 0.1)
     end)
     runtime_event_bridge._reset_for_tests()
@@ -902,7 +902,7 @@ end
 local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local opened = 0
   local game = {
       turn = {
@@ -963,7 +963,7 @@ end
 local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local opened = 0
   local game = {
     turn = {
@@ -1033,7 +1033,7 @@ end
 local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local opened = 0
   local game = {
     turn = {
@@ -1094,9 +1094,9 @@ end
 local function _test_ui_sync_step_choice_timeout_reopens_remote_choice_for_local_owner()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_sync_ports = require("src.presentation.runtime.ports.ui_sync")
+  local ui_sync_ports = require("src.ui.ports.ui_sync")
   local gameplay_loop_ports = require("src.turn.loop.ports")
-  local common = require("src.presentation.runtime.ports.common")
+  local common = require("src.ui.ports.common")
   local runtime_ports_module = require("src.core.ports.runtime_ports")
   local opened = 0
   local game = {
@@ -1165,7 +1165,7 @@ end
 local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local anchors = require("src.ui.render.board.anchors")
   local startup_render = require("src.ui.render.board.startup_render")
   local player_units = require("src.ui.render.board.player_units")
@@ -1277,7 +1277,7 @@ end
 local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render()
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local ui_model = require("src.ui.pres")
-  local ui_model_sync = require("src.presentation.runtime.ports.ui_sync.model")
+  local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local render_calls = 0
   local refreshed_label = nil
   local refreshed_visible = nil

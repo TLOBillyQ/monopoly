@@ -1,6 +1,6 @@
 local gameplay_loop = require("src.turn.loop")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
-local presentation_ports = require("src.presentation.runtime.ports")
+local presentation_ports = require("src.ui.ports")
 local runtime_deps = require("src.ui.ctl.deps")
 local tick_clock = require("src.turn.loop.tick_clock")
 

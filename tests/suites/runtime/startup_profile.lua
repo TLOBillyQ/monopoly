@@ -6,7 +6,7 @@ local with_patches = support.with_patches
 local app = support.app
 local startup_policy = require("src.app.policy")
 local startup_roster = require("src.app.roster")
-local state_factory = require("src.presentation.runtime.state_factory")
+local state_factory = require("src.app.state_factory")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local startup_bootstrap = require("src.app.profile_bootstrap")
 local startup_profile_source = require("src.app.profile_source")
@@ -446,7 +446,7 @@ local function _reload_app_init_with_stubs(startup, runner)
     },
     {
       target = package.loaded,
-      key = "src.presentation.runtime.state_factory",
+      key = "src.app.state_factory",
       value = {
         build_state = function(get_game, opts)
           capture.startup_state_factory_call_count = (capture.startup_state_factory_call_count or 0) + 1
@@ -458,7 +458,7 @@ local function _reload_app_init_with_stubs(startup, runner)
     },
     {
       target = package.loaded,
-      key = "src.presentation.runtime.event_bridge",
+      key = "src.app.event_bridge",
       value = {
         install = function(installed_state, get_game)
           capture.bridge_state = installed_state
@@ -468,7 +468,7 @@ local function _reload_app_init_with_stubs(startup, runner)
     },
     {
       target = package.loaded,
-      key = "src.presentation.runtime.gameplay_runtime_bootstrap",
+      key = "src.app.gameplay_start",
       value = {
         start = function(installed_state, game_ref)
           capture.runtime_start_state = installed_state
@@ -489,7 +489,7 @@ local function _reload_app_init_with_stubs(startup, runner)
     },
     {
       target = package.loaded,
-      key = "src.presentation.runtime.ui_bootstrap",
+      key = "src.app.ui_bootstrap",
       value = {
         install = function(installed_state, current_game_ref, opts)
           capture.ui_state = installed_state
@@ -644,11 +644,11 @@ local function _test_app_init_keeps_scheduler_fallback()
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
     { target = package.loaded, key = "src.core.utils.tip_queue", value = tip_queue_stub },
     { target = package.loaded, key = "src.app.host_install", value = { install = function() end } },
-    { target = package.loaded, key = "src.presentation.runtime.state_factory", value = { build_state = function() return state end } },
-    { target = package.loaded, key = "src.presentation.runtime.event_bridge", value = { install = function() end } },
-    { target = package.loaded, key = "src.presentation.runtime.gameplay_runtime_bootstrap", value = { start = function() return true end } },
+    { target = package.loaded, key = "src.app.state_factory", value = { build_state = function() return state end } },
+    { target = package.loaded, key = "src.app.event_bridge", value = { install = function() end } },
+    { target = package.loaded, key = "src.app.gameplay_start", value = { start = function() return true end } },
     { target = package.loaded, key = "src.turn.loop", value = { set_game = function() end } },
-    { target = package.loaded, key = "src.presentation.runtime.ui_bootstrap", value = { install = function() end } },
+    { target = package.loaded, key = "src.app.ui_bootstrap", value = { install = function() end } },
     {
       target = package.loaded,
       key = "src.app.policy",
@@ -677,13 +677,12 @@ local function _test_app_init_keeps_scheduler_fallback()
     "providers should stay disabled when ui debug flags are absent")
 end
 
-local function _test_presentation_install_delegates_to_app_bootstrap()
+local function _test_app_module_exposes_init_function()
   local capture = {
     app_init_call_count = 0,
   }
 
   with_patches({
-    { target = package.loaded, key = "src.presentation.runtime.install", value = nil },
     {
       target = package.loaded,
       key = "src.app",
@@ -695,39 +694,30 @@ local function _test_presentation_install_delegates_to_app_bootstrap()
       },
     },
   }, function()
-    local presentation_install = require("src.presentation.runtime.install")
-    assert(type(presentation_install) == "table", "presentation install module should export a table")
-    assert(type(presentation_install.install) == "function", "presentation install module should expose install")
-    assert(capture.app_init_call_count == 0, "require should not auto-start presentation install")
-    assert(presentation_install.install() == "bootstrap_state",
-      "presentation install should forward to app bootstrap init")
+    local app_module = require("src.app")
+    assert(type(app_module) == "table", "app module should export a table")
+    assert(type(app_module.init) == "function", "app module should expose init")
+    assert(capture.app_init_call_count == 0, "require should not auto-start app init")
+    assert(app_module.init() == "bootstrap_state",
+      "app init should return bootstrap state")
   end, { skip_runtime_context_refresh = true })
 
-  assert(capture.app_init_call_count == 1, "presentation install should call app bootstrap init once")
+  assert(capture.app_init_call_count == 1, "app init should be callable once")
 end
 
-local function _test_main_lua_calls_presentation_install()
+local function _test_main_lua_calls_app_init()
   local capture = {
-    presentation_install_call_count = 0,
+    app_init_call_count = 0,
   }
 
   with_patches({
     {
       target = package.loaded,
-      key = "src.presentation.runtime.install",
-      value = {
-        install = function()
-          capture.presentation_install_call_count = capture.presentation_install_call_count + 1
-          return "presentation_state"
-        end,
-      },
-    },
-    {
-      target = package.loaded,
       key = "src.app",
       value = {
         init = function()
-          error("main.lua should not call src.app directly")
+          capture.app_init_call_count = capture.app_init_call_count + 1
+          return "app_state"
         end,
       },
     },
@@ -736,7 +726,7 @@ local function _test_main_lua_calls_presentation_install()
     assert(chunk() == nil, "main.lua should not return a value")
   end, { skip_runtime_context_refresh = true })
 
-  assert(capture.presentation_install_call_count == 1, "main.lua should call presentation install once")
+  assert(capture.app_init_call_count == 1, "main.lua should call app init once")
 end
 
 return {
@@ -764,9 +754,9 @@ return {
     { name = "app_init_wires_runtime_and_debug_providers", run = _test_app_init_wires_runtime_and_debug_providers },
     { name = "app_init_keeps_scheduler_fallback", run = _test_app_init_keeps_scheduler_fallback },
     {
-      name = "presentation_install_delegates_to_app_bootstrap",
-      run = _test_presentation_install_delegates_to_app_bootstrap,
+      name = "app_module_exposes_init_function",
+      run = _test_app_module_exposes_init_function,
     },
-    { name = "main_lua_calls_presentation_install", run = _test_main_lua_calls_presentation_install },
+    { name = "main_lua_calls_app_init", run = _test_main_lua_calls_app_init },
   },
 }

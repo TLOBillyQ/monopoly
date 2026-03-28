@@ -30,7 +30,7 @@ local runtime_cls = require("src.turn.loop.scheduler_runtime")
 local turn_effects = require("src.ui.wid.turn_effects")
 local popup_renderer = require("src.ui.ctl.popup")
 local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.presentation.runtime.ports.debug")
+local debug_ports_module = require("src.ui.ports.debug")
 local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
@@ -70,7 +70,7 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
   }, function()
-    state.gameplay_loop_ports = require("src.presentation.runtime.ports").build(state)
+    state.gameplay_loop_ports = require("src.ui.ports").build(state)
     modal_presenter.push_popup(state, {
       title = "道具卡",
       body = "测试",
