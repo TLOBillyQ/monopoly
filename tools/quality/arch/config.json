@@ -25,11 +25,11 @@
       "name": "presentation_runtime_bootstrap"
     },
     {
-      "component": "infrastructure",
+      "component": "host",
       "match": [
-        "^src%.infrastructure%.runtime%.global_aliases$"
+        "^src%.host%.global_aliases$"
       ],
-      "name": "infrastructure_runtime_bridge_exception"
+      "name": "host_bridge_exception"
     },
     {
       "component": "infrastructure",

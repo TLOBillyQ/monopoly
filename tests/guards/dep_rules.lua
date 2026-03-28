@@ -320,7 +320,7 @@ dep_rules_whitelist["src/ui/runtime/host_bridge.lua"] = {
   ['require("src.host.eggy.event_bridge")'] = true,
 }
 
-dep_rules_whitelist["src/infrastructure/runtime/global_aliases.lua"] = {
+dep_rules_whitelist["src/host/global_aliases.lua"] = {
   ["bridge exception, not a business compatibility alias layer."] = true,
 }
 
