@@ -830,8 +830,8 @@ local function _test_deploy_comprehensive()
     assert(keep_result.ok == true, "deploy should allow KeepTestStartup in debug mode")
     assert(common.path_exists(common.join_path(keep_target, "src/config/testing")) == true,
       "KeepTestStartup should preserve src/config/testing when StartupProfile forces debug mode")
-    assert(common.path_exists(common.join_path(keep_target, "src/app/bootstrap/testing")) == true,
-      "KeepTestStartup should preserve src/app/bootstrap/testing when StartupProfile forces debug mode")
+    assert(common.path_exists(common.join_path(keep_target, "src/app/testing")) == true,
+      "KeepTestStartup should preserve src/app/testing when StartupProfile forces debug mode")
 
     local release_target = common.join_path(tmp_root, "release_target")
     local release_result = _run_powershell_file("tools/ops/deploy.ps1", {
@@ -842,8 +842,8 @@ local function _test_deploy_comprehensive()
     assert(release_result.ok == true, "deploy release should still succeed with KeepTestStartup present")
     assert(common.path_exists(common.join_path(release_target, "src/config/testing")) == false,
       "release deploy should strip src/config/testing even when KeepTestStartup is set")
-    assert(common.path_exists(common.join_path(release_target, "src/app/bootstrap/testing")) == false,
-      "release deploy should strip src/app/bootstrap/testing even when KeepTestStartup is set")
+    assert(common.path_exists(common.join_path(release_target, "src/app/testing")) == false,
+      "release deploy should strip src/app/testing even when KeepTestStartup is set")
   end)
 end
 

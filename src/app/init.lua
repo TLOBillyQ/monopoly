@@ -1,13 +1,13 @@
 local logger = require("src.core.utils.logger")
 local tip_queue = require("src.core.utils.tip_queue")
-local runtime_install = require("src.app.bootstrap.runtime_install")
-local startup_roster = require("src.app.bootstrap.startup_roster")
+local runtime_install = require("src.app.host_install")
+local startup_roster = require("src.app.roster")
 local state_factory = require("src.presentation.runtime.state_factory")
 local runtime_event_bridge = require("src.presentation.runtime.event_bridge")
 local ui_bootstrap = require("src.presentation.runtime.ui_bootstrap")
 local gameplay_runtime_bootstrap = require("src.presentation.runtime.gameplay_runtime_bootstrap")
 local gameplay_loop = require("src.turn.loop")
-local startup_policy = require("src.app.bootstrap.startup_policy")
+local startup_policy = require("src.app.policy")
 
 local M = {}
 local initialized = false

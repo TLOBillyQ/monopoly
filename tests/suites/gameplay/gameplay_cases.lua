@@ -43,7 +43,7 @@ local gameplay_loop_runtime = require("src.turn.loop.runtime")
 local tick_flow = require("src.turn.loop.tick_flow")
 local move_followup = require("src.turn.phases.move_followup")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
-local startup_roster = require("src.app.bootstrap.startup_roster")
+local startup_roster = require("src.app.roster")
 local state_factory = require("src.presentation.runtime.state_factory")
 local game_startup_event_bridge = require("src.presentation.runtime.event_bridge")
 local monopoly_event = require("src.core.events.monopoly_events")
@@ -398,7 +398,7 @@ local function _test_bankruptcy_calls_role_life_die_before_lose()
 end
 
 local function _test_chance_pay_others_stops_after_bankruptcy()
-  local g = require("src.app.bootstrap.compose_game").new_game(default_ports.resolve_game_opts({
+  local g = require("src.app.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = {},
     auto_all = false,
@@ -1428,7 +1428,7 @@ local function _test_autorunner_runs_to_end()
   local land_actions = require("src.rules.land.actions")
   local item_inventory = require("src.rules.items.inventory")
 
-  local g = require("src.app.bootstrap.compose_game").new_game(default_ports.resolve_game_opts({
+  local g = require("src.app.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = true,
@@ -3661,16 +3661,16 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
       return {}
     end },
     {
-      target = require("src.app.bootstrap.startup_profile_source"),
+      target = require("src.app.profile_source"),
       key = "resolve_map",
       value = function() return require("src.config.content.maps.default_map") end,
     },
     {
-      target = require("src.app.bootstrap.startup_profile_source"),
+      target = require("src.app.profile_source"),
       key = "resolve_bootstrap",
       value = function() return {} end,
     },
-    { target = require("src.app.bootstrap.startup_bootstrap"), key = "apply_bootstrap", value = function() end },
+    { target = require("src.app.profile_bootstrap"), key = "apply_bootstrap", value = function() end },
   }, function()
     state = _build_startup_state(function()
       return nil

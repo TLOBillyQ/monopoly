@@ -43,7 +43,7 @@ function M.install(opts)
   require "src.rules.endgame.bankruptcy"
   require "src.computer.core_agent"
   require "src.rules.endgame.game_victory"
-  require "src.app.bootstrap.compose_game"
+  require "src.app.compose_game"
 end
 
 return M

@@ -6,7 +6,7 @@ local build_ui_port = support.build_ui_port
 local runtime_state = require("src.state.state_access.runtime_state")
 local board_view = require("src.ui.render.board")
 local default_ports = require("src.turn.output.default_ports")
-local test_profile_bootstrap = require("src.app.bootstrap.testing.test_profile_bootstrap")
+local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 
 local M = {}
 
@@ -19,7 +19,7 @@ local function _inventory_counts_by_id(player)
 end
 
 function M.new_game()
-  return require("src.app.bootstrap.compose_game").new_game(default_ports.resolve_game_opts({
+  return require("src.app.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
     ai = { [2] = true, [3] = true, [4] = true },
     auto_all = false,

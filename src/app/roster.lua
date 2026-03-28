@@ -1,5 +1,5 @@
 local auto_runner = require("src.turn.policies.auto_runner")
-local composition_root = require("src.app.bootstrap.compose_game")
+local composition_root = require("src.app.compose_game")
 local app = require("src.state.game_state")
 local tiles_cfg = require("src.config.content.tiles")
 local default_map = require("src.config.content.maps.default_map")
@@ -23,15 +23,15 @@ local function _resolve_startup_map(startup)
   if _is_release_build(startup and startup.build_mode) then
     return default_map
   end
-  return require("src.app.bootstrap.startup_profile_source").resolve_map(startup)
+  return require("src.app.profile_source").resolve_map(startup)
 end
 
 local function _apply_startup_bootstrap(game, startup)
   if _is_release_build(startup and startup.build_mode) then
     return
   end
-  local bootstrap = require("src.app.bootstrap.startup_bootstrap")
-  local startup_profile_source = require("src.app.bootstrap.startup_profile_source")
+  local bootstrap = require("src.app.profile_bootstrap")
+  local startup_profile_source = require("src.app.profile_source")
   bootstrap.apply_bootstrap(game, startup_profile_source.resolve_bootstrap(startup))
 end
 

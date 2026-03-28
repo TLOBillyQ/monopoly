@@ -21,7 +21,7 @@ local function _resolve_testing_bootstrap(profile_name)
   if type(profile_name) ~= "string" or profile_name == "" or profile_name == "default" then
     return {}
   end
-  local resolver = require("src.app.bootstrap.testing.test_profile_resolver")
+  local resolver = require("src.app.testing.test_profile_resolver")
   return resolver.resolve_bootstrap(profile_name)
 end
 

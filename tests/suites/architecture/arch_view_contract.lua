@@ -109,11 +109,9 @@ local function _test_projection_builds_root_and_app_views()
   local architecture = _snapshot_architecture()
   local root_view = architecture.views.root
   local app_view = architecture.views.app
-  local app_bootstrap_view = architecture.views["app.bootstrap"]
 
   assert(root_view ~= nil, "root view should exist")
   assert(app_view ~= nil, "app view should exist")
-  assert(app_bootstrap_view ~= nil, "app.bootstrap view should exist")
   _assert_eq(root_view.breadcrumb[1].key, "root", "root breadcrumb should start from root")
 
   local root_labels = {}
@@ -130,14 +128,8 @@ local function _test_projection_builds_root_and_app_views()
   for _, node in ipairs(app_view.nodes or {}) do
     app_labels[#app_labels + 1] = node.label
   end
-  _assert_contains(app_labels, "bootstrap", "app view should expose bootstrap")
-
-  local app_bootstrap_labels = {}
-  for _, node in ipairs(app_bootstrap_view.nodes or {}) do
-    app_bootstrap_labels[#app_bootstrap_labels + 1] = node.label
-  end
-  _assert_contains(app_bootstrap_labels, "runtime_install", "app.bootstrap view should expose runtime_install")
-  _assert_contains(app_bootstrap_labels, "startup_roster", "app.bootstrap view should expose startup_roster")
+  _assert_contains(app_labels, "host_install", "app view should expose host_install")
+  _assert_contains(app_labels, "roster", "app view should expose roster")
 end
 
 local function _test_projection_collapses_package_init_nodes_into_single_drillable_node()
@@ -178,9 +170,9 @@ local function _test_config_classifies_runtime_game_and_ports()
     "state.game_state should be classified as runtime"
   )
   _assert_eq(
-    architecture.modules["src.app.bootstrap"].component,
+    architecture.modules["src.app"].component,
     "app",
-    "app.bootstrap package should be classified as app"
+    "app package should be classified as app"
   )
   _assert_eq(
     architecture.modules["src.core.ports.runtime_ports"].abstract,

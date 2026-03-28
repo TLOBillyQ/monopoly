@@ -1,7 +1,7 @@
 local M = {}
 
 local function _app_bootstrap()
-  return require("src.app" .. ".bootstrap")
+  return require("src." .. "app")
 end
 
 function M.install()

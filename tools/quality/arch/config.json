@@ -75,8 +75,8 @@
       "match": [
         "^src%.entry$",
         "^src%.entry%..+",
-        "^src%.app%.bootstrap$",
-        "^src%.app%.bootstrap%..+"
+        "^src%.app$",
+        "^src%.app%..+"
       ],
       "name": "app"
     },
@@ -226,7 +226,7 @@
       "name": "runtime_player_no_infrastructure",
       "to": [
         "^src%.host%..+",
-        "^src%.app%.bootstrap%..+"
+        "^src%.app%..+"
       ]
     },
     {
@@ -259,7 +259,7 @@
       "name": "ai_no_infrastructure_app",
       "to": [
         "^src%.host%..+",
-        "^src%.app%.bootstrap%..+"
+        "^src%.app%..+"
       ]
     },
     {
@@ -275,7 +275,7 @@
         "^src%.presentation%..+",
         "^src%.computer%..+",
         "^src%.host%..+",
-        "^src%.app%.bootstrap%..+"
+        "^src%.app%..+"
       ]
     },
     {
@@ -309,7 +309,7 @@
         "^src%.rules%..+",
         "^src%.state%..+",
         "^src%.host%..+",
-        "^src%.app%.bootstrap%..+"
+        "^src%.app%..+"
       ]
     },
     {
@@ -345,7 +345,7 @@
         "^src%.computer%..+",
         "^src%.rules%..+",
         "^src%.host%..+",
-        "^src%.app%.bootstrap%..+",
+        "^src%.app%..+",
         "^src%.presentation%.runtime%..+"
       ]
     }

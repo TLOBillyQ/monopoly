@@ -1,6 +1,6 @@
 require("tests.bootstrap")
 
-local resolver = require("src.app.bootstrap.testing.test_profile_resolver")
+local resolver = require("src.app.testing.test_profile_resolver")
 
 local function _is_array(value)
   if type(value) ~= "table" then

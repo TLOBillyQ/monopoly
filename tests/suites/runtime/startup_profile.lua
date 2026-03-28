@@ -4,12 +4,12 @@ bootstrap.install_package_paths()
 local support = require("support.runtime_support")
 local with_patches = support.with_patches
 local app = support.app
-local startup_policy = require("src.app.bootstrap.startup_policy")
-local startup_roster = require("src.app.bootstrap.startup_roster")
+local startup_policy = require("src.app.policy")
+local startup_roster = require("src.app.roster")
 local state_factory = require("src.presentation.runtime.state_factory")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local startup_bootstrap = require("src.app.bootstrap.startup_bootstrap")
-local startup_profile_source = require("src.app.bootstrap.startup_profile_source")
+local startup_bootstrap = require("src.app.profile_bootstrap")
+local startup_profile_source = require("src.app.profile_source")
 local runtime_refs = require("src.config.content.runtime_refs")
 local debug_flags = require("src.config.gameplay.debug_flags")
 
@@ -246,10 +246,10 @@ local function _test_raw_test_profiles_profile_factory_copies_nested_meta_and_bo
 end
 
 local function _test_test_profile_resolver_returns_fresh_profile_copies()
-  local resolver = _reload_module("src.app.bootstrap.testing.test_profile_resolver", {
+  local resolver = _reload_module("src.app.testing.test_profile_resolver", {
     "src.config.testing.test_profiles",
-    "src.app.bootstrap.testing.config.test_profiles",
-    "src.app.bootstrap.testing.test_profile_resolver",
+    "src.app.testing.config.test_profiles",
+    "src.app.testing.test_profile_resolver",
   })
   local first = resolver.resolve_profile("bankruptcy")
   first.covers[1] = "mutated"
@@ -264,10 +264,10 @@ local function _test_test_profile_resolver_returns_fresh_profile_copies()
 end
 
 local function _test_test_profile_resolver_default_bootstrap_is_empty_and_not_shared()
-  local resolver = _reload_module("src.app.bootstrap.testing.test_profile_resolver", {
+  local resolver = _reload_module("src.app.testing.test_profile_resolver", {
     "src.config.testing.test_profiles",
-    "src.app.bootstrap.testing.config.test_profiles",
-    "src.app.bootstrap.testing.test_profile_resolver",
+    "src.app.testing.config.test_profiles",
+    "src.app.testing.test_profile_resolver",
   })
   local first_bootstrap = resolver.resolve_bootstrap("default")
   first_bootstrap.synthetic = true
@@ -431,12 +431,12 @@ local function _reload_app_init_with_stubs(startup, runner)
   }
 
   with_patches({
-    { target = package.loaded, key = "src.app.bootstrap", value = nil },
+    { target = package.loaded, key = "src.app", value = nil },
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
     { target = package.loaded, key = "src.core.utils.tip_queue", value = tip_queue_stub },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.runtime_install",
+      key = "src.app.host_install",
       value = {
         install = function()
           capture.runtime_install_called = true
@@ -500,7 +500,7 @@ local function _reload_app_init_with_stubs(startup, runner)
     },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.startup_policy",
+      key = "src.app.policy",
       value = {
         resolve = function()
           return startup
@@ -527,13 +527,13 @@ local function _reload_app_init_with_stubs(startup, runner)
       end,
     },
   }, function()
-    local bootstrap = require("src.app.bootstrap")
+    local bootstrap = require("src.app")
     if type(runner) == "function" then
       runner(capture, bootstrap, state)
     end
   end, { skip_runtime_context_refresh = true })
 
-  package.loaded["src.app.bootstrap"] = nil
+  package.loaded["src.app"] = nil
   capture.state = state
   return capture
 end
@@ -640,10 +640,10 @@ local function _test_app_init_keeps_scheduler_fallback()
   }
 
   with_patches({
-    { target = package.loaded, key = "src.app.bootstrap", value = nil },
+    { target = package.loaded, key = "src.app", value = nil },
     { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
     { target = package.loaded, key = "src.core.utils.tip_queue", value = tip_queue_stub },
-    { target = package.loaded, key = "src.app.bootstrap.runtime_install", value = { install = function() end } },
+    { target = package.loaded, key = "src.app.host_install", value = { install = function() end } },
     { target = package.loaded, key = "src.presentation.runtime.state_factory", value = { build_state = function() return state end } },
     { target = package.loaded, key = "src.presentation.runtime.event_bridge", value = { install = function() end } },
     { target = package.loaded, key = "src.presentation.runtime.gameplay_runtime_bootstrap", value = { start = function() return true end } },
@@ -651,7 +651,7 @@ local function _test_app_init_keeps_scheduler_fallback()
     { target = package.loaded, key = "src.presentation.runtime.ui_bootstrap", value = { install = function() end } },
     {
       target = package.loaded,
-      key = "src.app.bootstrap.startup_policy",
+      key = "src.app.policy",
       value = {
         resolve = function()
           return { profile_name = "default" }
@@ -662,11 +662,11 @@ local function _test_app_init_keeps_scheduler_fallback()
     { key = "GlobalAPI", value = {} },
     { key = "SetTimeOut", value = nil },
   }, function()
-    local bootstrap = require("src.app.bootstrap")
+    local bootstrap = require("src.app")
     bootstrap.init()
   end, { skip_runtime_context_refresh = true })
 
-  package.loaded["src.app.bootstrap"] = nil
+  package.loaded["src.app"] = nil
   assert(debug_flags.debug_log_enabled == true, "startup should keep debug logs enabled")
   assert(capture.tip_runtime.presenter("tip", 1) == false, "tip presenter should fall back when GlobalAPI is missing")
   local called = false
@@ -686,7 +686,7 @@ local function _test_presentation_install_delegates_to_app_bootstrap()
     { target = package.loaded, key = "src.presentation.runtime.install", value = nil },
     {
       target = package.loaded,
-      key = "src.app.bootstrap",
+      key = "src.app",
       value = {
         init = function()
           capture.app_init_call_count = capture.app_init_call_count + 1
@@ -724,10 +724,10 @@ local function _test_main_lua_calls_presentation_install()
     },
     {
       target = package.loaded,
-      key = "src.app.bootstrap",
+      key = "src.app",
       value = {
         init = function()
-          error("main.lua should not call src.app.bootstrap directly")
+          error("main.lua should not call src.app directly")
         end,
       },
     },

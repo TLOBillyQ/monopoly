@@ -1,6 +1,6 @@
 local support = require("support.test_profile_support")
 local tile_state = support.tile_state
-local test_profile_resolver = require("src.app.bootstrap.testing.test_profile_resolver")
+local test_profile_resolver = require("src.app.testing.test_profile_resolver")
 
 local function _test_profile_bootstrap_applies_player_position_by_tile_id()
   local game = support.apply_profile("bankruptcy")
@@ -39,7 +39,7 @@ local function _test_profile_bootstrap_rejects_item_count_over_inventory_limit()
         end,
       },
     }, function()
-      require("src.app.bootstrap.testing.test_profile_bootstrap").apply(game, "default")
+      require("src.app.testing.test_profile_bootstrap").apply(game, "default")
     end)
   end)
   assert(ok == false, "item_counts exceeding inventory limit should fail fast")

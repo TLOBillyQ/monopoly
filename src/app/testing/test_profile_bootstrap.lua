@@ -1,5 +1,5 @@
-local test_profile_resolver = require("src.app.bootstrap.testing.test_profile_resolver")
-local startup_bootstrap = require("src.app.bootstrap.startup_bootstrap")
+local test_profile_resolver = require("src.app.testing.test_profile_resolver")
+local startup_bootstrap = require("src.app.profile_bootstrap")
 
 local bootstrap = {}
 

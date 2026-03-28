@@ -374,13 +374,13 @@ try {
     if ($strip_test_startup) {
         Remove-NestedPaths -RootDir (Join-Path $target_path "src") -RelativePaths @(
             "config/testing",
-            "app/bootstrap/testing"
+            "app/testing"
         )
     }
     if ($effective_build_mode -eq "release") {
         Remove-NestedPaths -RootDir (Join-Path $target_path "src") -RelativePaths @(
-            "app/bootstrap/startup_profile_source.lua",
-            "app/bootstrap/startup_bootstrap.lua"
+            "app/profile_source.lua",
+            "app/profile_bootstrap.lua"
         )
     }
 
