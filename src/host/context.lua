@@ -217,10 +217,18 @@ function runtime_context.install_runtime_helpers(ctx, opts)
     end, _resolve_game_api)
   end
   if not ctx.camera_helper then
-    ctx.camera_helper = { target_role_id = 1 }
+    ctx.camera_helper = require("src.host.camera_helper").new(ctx.env, {
+      runtime_constants = runtime_constants,
+      runtime_event_bridge = runtime_event_bridge,
+    })
   end
   if not ctx.change_skin_helper then
-    ctx.change_skin_helper = _build_change_skin_helper()
+    ctx.change_skin_helper = require("src.host.skin_helper").new({
+      runtime_constants = runtime_constants,
+      runtime_event_bridge = runtime_event_bridge,
+      logger = logger,
+      number_utils = number_utils,
+    })
   end
   if not ctx.synthetic_actor_registry then
     ctx.synthetic_actor_registry = synthetic_actor_registry.new(ctx.env)
