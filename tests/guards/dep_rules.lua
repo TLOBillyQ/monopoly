@@ -323,6 +323,8 @@ dep_rules_whitelist["src/app/event_bridge.lua"] = {
   ['require("src.host.context")'] = true,
 }
 
+-- TODO: add "src/state/state_access/runtime_editor_exports.lua" to forbidden_files
+-- after it is deleted in the dismantle-runtime-editor-exports plan (Wave 1, Task 4)
 local forbidden_files = {
   "src/entry.lua",
   "src/turn/output/legacy_output_mirror.lua",
