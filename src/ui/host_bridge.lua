@@ -4,10 +4,6 @@ local function _host_runtime()
   return require("src.host")
 end
 
-local function _runtime_event_bridge()
-  return require("src.host.event_bridge")
-end
-
 function host_bridge.resolve_roles()
   return _host_runtime().resolve_roles()
 end
@@ -86,10 +82,6 @@ end
 
 function host_bridge.play_3d_sound(...)
   return _host_runtime().play_3d_sound(...)
-end
-
-function host_bridge.emit_custom_event(event_name, ...)
-  return _runtime_event_bridge().emit_custom_event(event_name, ...)
 end
 
 return host_bridge
