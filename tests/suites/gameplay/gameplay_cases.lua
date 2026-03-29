@@ -100,16 +100,6 @@ local function _with_runtime_context_globals(fn)
     { key = "change_skin_helper", value = nil },
     { key = "all_roles", value = nil },
     { key = "ALLROLES", value = nil },
-    { key = "get_vehicle_player", value = nil },
-    { key = "get_vehicle_move_direction", value = nil },
-    { key = "get_vehicle_move_time", value = nil },
-    { key = "get_spawn_vehicle_id", value = nil },
-    { key = "get_vehicle_set_position_x", value = nil },
-    { key = "get_vehicle_set_position_y", value = nil },
-    { key = "get_vehicle_set_position_z", value = nil },
-    { key = "get_camera_target", value = nil },
-    { key = "get_skin_id", value = nil },
-    { key = "get_change_skin_role", value = nil },
   }, fn)
 end
 
@@ -1039,7 +1029,6 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
       })
       _install_global_aliases(ctx)
       runtime_context.install_runtime_helpers(ctx, { install_globals = true })
-      runtime_context.install_editor_exports(ctx)
       local invalid_ok = vehicle_helper.emit_vehicle_stop(2)
       local valid_ok = vehicle_helper.emit_vehicle_stop(1)
       assert(invalid_ok == false, "forward stop should reject invalid role")
@@ -1129,14 +1118,10 @@ local function _test_runtime_context_split_install_stages()
 
     runtime_context.install_environment(ctx)
     assert(SetTimeOut ~= lua_api.call_delay_time, "install_environment should stay validation-only")
-    assert(type(get_vehicle_player) ~= "function", "install_environment should not export helpers")
 
     local helpers = runtime_context.install_runtime_helpers(ctx)
     assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
     assert(camera_helper == nil, "install_runtime_helpers should not export globals by default")
-
-    runtime_context.install_editor_exports(ctx)
-    assert(type(get_camera_target) == "function", "install_editor_exports should expose camera getter")
   end)
 end
 
@@ -1203,106 +1188,6 @@ local function _test_runtime_context_release_helper_install_flow()
       assert(helpers.vehicle_helper.resolve_role(2) == fallback_role,
         "release install flow should keep resolve_role available")
     end)
-  end)
-end
-
-local function _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit()
-  _with_runtime_context_globals(function()
-    local ctrl_unit = { tag = "real_ctrl_unit" }
-    local role1 = {
-      id = 1,
-      get_roleid = function()
-        return 1
-      end,
-      get_ctrl_unit = function()
-        return ctrl_unit
-      end,
-    }
-    local ctx = runtime_context.new({
-      GameAPI = {
-        get_role = function(role_id)
-          if role_id == 1 then
-            return role1
-          end
-          return nil
-        end,
-        get_all_valid_roles = function()
-          return { role1 }
-        end,
-      },
-      LuaAPI = _mock_lua_api(),
-    })
-    runtime_context.install_environment(ctx)
-    runtime_context.install_runtime_helpers(ctx)
-    ctx.camera_helper.target_role_id = 1
-    runtime_context.install_editor_exports(ctx)
-
-    assert(get_camera_target() == ctrl_unit, "camera target should return real player ctrl_unit")
-  end)
-end
-
-local function _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit()
-  _with_runtime_context_globals(function()
-    local synthetic_unit = { tag = "synthetic_unit" }
-    local ctx = runtime_context.new({
-      GameAPI = {
-        get_role = function()
-          return nil
-        end,
-        get_all_valid_roles = function()
-          return {}
-        end,
-      },
-      LuaAPI = _mock_lua_api(),
-    })
-    runtime_context.install_environment(ctx)
-    runtime_context.install_runtime_helpers(ctx)
-    ctx.camera_helper.target_role_id = -1
-    ctx.synthetic_actor_registry = {
-      resolve_actor = function(role_id)
-        if role_id == -1 then
-          return { unit = synthetic_unit }
-        end
-        return nil
-      end,
-    }
-    runtime_context.install_editor_exports(ctx)
-
-    assert(get_camera_target() == synthetic_unit, "camera target should return synthetic actor unit")
-  end)
-end
-
-local function _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable()
-  _with_runtime_context_globals(function()
-    local role_without_unit = {
-      id = 1,
-      get_roleid = function()
-        return 1
-      end,
-    }
-    local ctx = runtime_context.new({
-      GameAPI = {
-        get_role = function(role_id)
-          if role_id == 1 then
-            return role_without_unit
-          end
-          error("missing role")
-        end,
-        get_all_valid_roles = function()
-          return { role_without_unit }
-        end,
-      },
-      LuaAPI = _mock_lua_api(),
-    })
-    runtime_context.install_environment(ctx)
-    runtime_context.install_runtime_helpers(ctx)
-    runtime_context.install_editor_exports(ctx)
-
-    ctx.camera_helper.target_role_id = 1
-    assert(get_camera_target() == nil, "camera target should return nil when role has no ctrl unit")
-
-    ctx.camera_helper.target_role_id = 7
-    assert(get_camera_target() == nil, "camera target should return nil when get_role fails")
   end)
 end
 
@@ -3712,16 +3597,10 @@ local function _test_runtime_context_change_skin_exports_and_event()
     runtime_event_bridge._reset_for_tests()
     _install_global_aliases(ctx)
     runtime_context.install_runtime_helpers(ctx, { install_globals = true })
-    runtime_context.install_editor_exports(ctx)
-
-    assert(type(get_skin_id) == "function", "runtime exports should expose get_skin_id")
-    assert(type(get_change_skin_role) == "function", "runtime exports should expose get_change_skin_role")
 
     local ok = ctx.change_skin_helper.emit_change_skin(1, 5001)
     assert(ok == true, "change_skin_helper should emit change skin event")
     assert(emitted_event == "change_skin", "change_skin_helper should emit change_skin event name")
-    assert(get_skin_id() == 5001, "get_skin_id should return helper skin id")
-    assert(get_change_skin_role() == role1, "get_change_skin_role should return helper role")
     runtime_event_bridge._reset_for_tests()
   end)
 end
@@ -4972,9 +4851,6 @@ return {
   _test_runtime_context_split_install_stages = _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals = _test_runtime_context_install_helpers_without_globals,
   _test_runtime_context_release_helper_install_flow = _test_runtime_context_release_helper_install_flow,
-  _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit = _test_runtime_editor_exports_camera_target_returns_real_role_ctrl_unit,
-  _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit = _test_runtime_editor_exports_camera_target_returns_synthetic_actor_unit,
-  _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable = _test_runtime_editor_exports_camera_target_returns_nil_when_unit_unavailable,
   _test_camera_sync_follow_camera_keeps_role_id_event_chain = _test_camera_sync_follow_camera_keeps_role_id_event_chain,
   _test_runtime_context_install_environment_fails_fast = _test_runtime_context_install_environment_fails_fast,
   _test_game_startup_build_state_is_pure_and_bridge_installs_events = _test_game_startup_build_state_is_pure_and_bridge_installs_events,
