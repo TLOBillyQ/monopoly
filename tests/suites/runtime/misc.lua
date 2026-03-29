@@ -233,61 +233,6 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
   assert(tostring(missing):find("UI 节点缺失", 1, true) ~= nil, "ui bootstrap should report missing required nodes")
 end
 
-local function _test_runtime_context_vehicle_helper_consume_enter_delay_only_waits_once()
-  local emitted = {}
-  local role = { id = 3, get_roleid = function() return 3 end }
-  local ctx = runtime_context.new({
-    GameAPI = {
-      get_role = function(role_id)
-        if role_id == 3 then
-          return role
-        end
-        return nil
-      end,
-      get_all_valid_roles = function()
-        return { role }
-      end,
-    },
-    LuaAPI = {
-      call_delay_time = function() end,
-      global_register_custom_event = function() end,
-      global_register_trigger_event = function() end,
-      unit_register_custom_event = function() end,
-      unit_register_trigger_event = function() end,
-      global_send_custom_event = function() end,
-    },
-  })
-
-  with_patches({
-    { key = "VEHICLE_RUNTIME_MODE", value = "legacy" },
-    {
-      target = require("src.rules.vehicle"),
-      key = "is_enabled",
-      value = function()
-        return true
-      end,
-    },
-    {
-      target = require("src.host.event_bridge"),
-      key = "emit_custom_event",
-      value = function(event_name)
-        emitted[#emitted + 1] = event_name
-        return true
-      end,
-    },
-  }, function()
-    runtime_context.install_environment(ctx)
-    runtime_context.install_runtime_helpers(ctx)
-
-    local helper = ctx.vehicle_helper
-    _assert_eq(helper.consume_enter_delay(3, 99), runtime_constants.vehicle_enter_delay or 0, "first enter should use configured enter delay")
-    _assert_eq(helper.consume_enter_delay(3, 99), 0, "same vehicle should not re-apply enter delay")
-    _assert_eq(helper.consume_enter_delay(3, 100), runtime_constants.vehicle_enter_delay or 0, "new vehicle should emit enter and wait again")
-  end)
-
-  _assert_eq(#emitted, 2, "vehicle helper should emit enter event only when vehicle changes")
-end
-
 local function _test_default_ports_wall_diff_seconds_prefers_game_api_then_falls_back()
   local ctx = {
     env = {
@@ -798,7 +743,6 @@ return {
       run = _test_synthetic_actor_registry_reset_destroys_spawned_actor_and_clears_registry,
     },
     { name = "ui_bootstrap_required_click_nodes_appends_extras", run = _test_ui_bootstrap_required_click_nodes_appends_extras },
-    { name = "runtime_context_vehicle_helper_consume_enter_delay_only_waits_once", run = _test_runtime_context_vehicle_helper_consume_enter_delay_only_waits_once },
     { name = "default_ports_wall_diff_seconds_prefers_game_api_then_falls_back", run = _test_default_ports_wall_diff_seconds_prefers_game_api_then_falls_back },
     { name = "ui_bootstrap_spawns_startup_synthetic_actors", run = _test_ui_bootstrap_spawns_startup_synthetic_actors },
     lvh_tests[1],   -- landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory

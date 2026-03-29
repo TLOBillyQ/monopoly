@@ -34,7 +34,6 @@ local role_control_lock_policy = require("src.ui.input.role_control_lock_policy"
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
 local logger = require("src.core.utils.logger")
-local runtime_event_bridge = require("src.host.event_bridge")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local timing = require("src.config.gameplay.timing")

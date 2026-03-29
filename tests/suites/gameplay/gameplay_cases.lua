@@ -30,7 +30,6 @@ local timing = require("src.config.gameplay.timing")
 local mine_effect = require("src.rules.effects.mine_effect")
 local runtime_context = require("src.host.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_event_bridge = require("src.host.event_bridge")
 local global_aliases = require("src.host.global_aliases")
 local dispatch_validator = require("src.turn.actions.validator")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
@@ -1018,7 +1017,6 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
     }
     support.with_patches({
     }, function()
-      runtime_event_bridge._reset_for_tests()
       local ctx = runtime_context.new({
         GameAPI = game_api,
         LuaAPI = _mock_lua_api(function(event_name)
@@ -1034,65 +1032,7 @@ local function _test_runtime_context_forward_stop_skips_invalid_role()
       assert(invalid_ok == false, "forward stop should reject invalid role")
       assert(valid_ok == true, "forward stop should allow valid role")
       assert(stop_events == 1, "forward stop should only emit event for valid role")
-      runtime_event_bridge._reset_for_tests()
     end)
-  end)
-end
-
-local function _test_runtime_event_bridge_detects_unbound_binding_without_call()
-  local calls = 0
-  local name = "j4MHTwbxEfG+CjRaYHE42T"
-  local newenv = {}
-
-  local function wrapped_trigger()
-    local _ = name
-    local __ = newenv
-    calls = calls + 1
-  end
-
-  support.with_patches({
-    { key = "TriggerCustomEvent", value = wrapped_trigger },
-  }, function()
-    runtime_event_bridge._reset_for_tests()
-    assert(runtime_event_bridge.is_trigger_available() == false,
-      "bridge should reject unbound wrapper before dispatch")
-    local emitted = runtime_event_bridge.emit_custom_event("follow_camera", {}, {
-      feature_key = "test.unbound",
-    })
-    assert(emitted == false, "bridge should skip dispatch when wrapper binding is unbound")
-    assert(calls == 0, "bridge precheck should avoid calling wrapped TriggerCustomEvent")
-    runtime_event_bridge._reset_for_tests()
-  end)
-end
-
-local function _test_runtime_event_bridge_disables_feature_after_dispatch_failure()
-  local calls = 0
-
-  support.with_patches({
-    { key = "TriggerCustomEvent", value = function()
-      calls = calls + 1
-      error("boom")
-    end },
-  }, function()
-    runtime_event_bridge._reset_for_tests()
-    local ok1, err1 = runtime_event_bridge.emit_custom_event("follow_camera", {}, {
-      feature_key = "test.dispatch_failure",
-    })
-    local ok2, err2 = runtime_event_bridge.emit_custom_event("follow_camera", {}, {
-      feature_key = "test.dispatch_failure",
-    })
-    local ok3, err3 = runtime_event_bridge.emit_custom_event(nil, {}, {
-      feature_key = "test.missing_name",
-    })
-
-    assert(ok1 == false, "bridge should report dispatch failure")
-    assert(tostring(err1):find("dispatch failed:", 1, true) ~= nil,
-      "bridge should surface dispatch failure reason")
-    assert(ok2 == false and err2 == err1,
-      "bridge should short-circuit repeated calls with the stored disable reason")
-    assert(calls == 1, "bridge should stop dispatching once feature is disabled")
-    assert(ok3 == false and err3 == "missing event_name", "bridge should reject missing event_name")
-    runtime_event_bridge._reset_for_tests()
   end)
 end
 
@@ -1193,8 +1133,14 @@ end
 
 local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
   local camera_sync = require("src.ui.ports.ui_sync.camera")
-  local emitted = {}
-  local helper = { target_role_id = nil }
+  local follow_calls = 0
+  local helper = {
+    target_role_id = nil,
+    follow = function(role_id)
+      follow_calls = follow_calls + 1
+      return role_id == 9
+    end,
+  }
 
   support.with_patches({
     {
@@ -1204,27 +1150,13 @@ local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
         return helper
       end,
     },
-    {
-      target = runtime_event_bridge,
-      key = "emit_custom_event",
-      value = function(event_name, payload, opts)
-        emitted[#emitted + 1] = {
-          event_name = event_name,
-          payload = payload,
-          opts = opts,
-        }
-        return true
-      end,
-    },
   }, function()
     local ok = camera_sync.follow_camera(9)
-    assert(ok == true, "camera_sync.follow_camera should still emit event")
+    assert(ok == true, "camera_sync.follow_camera should call helper.follow")
   end)
 
   assert(helper.target_role_id == 9, "camera sync should still write target_role_id")
-  assert(#emitted == 1, "camera sync should emit one camera follow event")
-  assert(emitted[1].event_name == "follow_camera", "camera sync should keep follow_camera event name")
-  assert(emitted[1].payload == nil, "camera sync should keep nil payload")
+  assert(follow_calls == 1, "camera sync should call helper.follow once")
 end
 
 local function _test_game_startup_build_state_is_pure_and_bridge_installs_events()
@@ -3576,7 +3508,6 @@ end
 
 local function _test_runtime_context_change_skin_exports_and_event()
   _with_runtime_context_globals(function()
-    local emitted_event = nil
     local role1 = { id = 1, name = "role1" }
     local ctx = runtime_context.new({
       GameAPI = {
@@ -3590,18 +3521,15 @@ local function _test_runtime_context_change_skin_exports_and_event()
           return {}
         end,
       },
-      LuaAPI = _mock_lua_api(function(event_name)
-        emitted_event = event_name
-      end),
+      LuaAPI = _mock_lua_api(),
     })
-    runtime_event_bridge._reset_for_tests()
     _install_global_aliases(ctx)
     runtime_context.install_runtime_helpers(ctx, { install_globals = true })
 
     local ok = ctx.change_skin_helper.emit_change_skin(1, 5001)
     assert(ok == true, "change_skin_helper should emit change skin event")
-    assert(emitted_event == "change_skin", "change_skin_helper should emit change_skin event name")
-    runtime_event_bridge._reset_for_tests()
+    assert(ctx.change_skin_helper.target_role_id == 1, "change_skin_helper should set target_role_id")
+    assert(ctx.change_skin_helper.skin_id == 5001, "change_skin_helper should set skin_id")
   end)
 end
 
@@ -3757,8 +3685,8 @@ local function _test_turn_start_emits_turn_started_feedback_event()
 
   support.with_patches({
     {
-      target = runtime_event_bridge,
-      key = "emit_custom_event",
+      target = monopoly_event,
+      key = "emit",
       value = function(kind, payload, opts)
         emitted[#emitted + 1] = { kind = kind, payload = payload }
         return true
@@ -4097,8 +4025,8 @@ local function _test_bankruptcy_emits_feedback_event()
 
   support.with_patches({
     {
-      target = runtime_event_bridge,
-      key = "emit_custom_event",
+      target = monopoly_event,
+      key = "emit",
       value = function(kind, payload, opts)
         emitted[#emitted + 1] = { kind = kind, payload = payload }
         return true
@@ -4845,9 +4773,6 @@ return {
   _test_end_turn_logs_phase_event_to_event_feed = _test_end_turn_logs_phase_event_to_event_feed,
   _test_clear_obstacles_zero_does_not_log_event_noise = _test_clear_obstacles_zero_does_not_log_event_noise,
   _test_ai_obstacle_probe_does_not_enter_event_feed = _test_ai_obstacle_probe_does_not_enter_event_feed,
-  _test_runtime_event_bridge_detects_unbound_binding_without_call = _test_runtime_event_bridge_detects_unbound_binding_without_call,
-  _test_runtime_event_bridge_disables_feature_after_dispatch_failure =
-    _test_runtime_event_bridge_disables_feature_after_dispatch_failure,
   _test_runtime_context_split_install_stages = _test_runtime_context_split_install_stages,
   _test_runtime_context_install_helpers_without_globals = _test_runtime_context_install_helpers_without_globals,
   _test_runtime_context_release_helper_install_flow = _test_runtime_context_release_helper_install_flow,

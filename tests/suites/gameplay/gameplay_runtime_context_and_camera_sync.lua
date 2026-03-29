@@ -182,8 +182,6 @@ end
 return {
   name = "gameplay_runtime_context_and_camera_sync",
   tests = {
-    _case("_test_runtime_event_bridge_detects_unbound_binding_without_call"),
-    _case("_test_runtime_event_bridge_disables_feature_after_dispatch_failure"),
     _case("_test_runtime_context_split_install_stages"),
     _case("_test_runtime_context_install_helpers_without_globals"),
     _case("_test_runtime_context_release_helper_install_flow"),

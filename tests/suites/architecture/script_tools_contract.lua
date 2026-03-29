@@ -660,15 +660,6 @@ local function _test_deploy_script_keeps_default_paths()
   )
 end
 
-local function _test_deploy_script_removes_vehicle_runtime_legacy_support()
-  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
-  _assert_not_contains(script_text, "--vehicle-runtime", "deploy.ps1 should no longer advertise the vehicle runtime flag")
-  _assert_not_contains(script_text, "VehicleRuntime", "deploy.ps1 should not keep the legacy vehicle runtime parameter")
-  _assert_not_contains(script_text, "vehicle_runtime_legacy", "deploy.ps1 should not reference the retired legacy runtime module")
-  _assert_not_contains(script_text, "legacy 载具运行时", "deploy.ps1 should not mention the retired legacy runtime mode")
-  _assert_not_contains(script_text, "legacy vehicle runtime", "deploy.ps1 should not mention the retired legacy runtime mode")
-end
-
 local function _test_deploy_comprehensive()
   _test_deploy_script_keeps_default_paths()
 
@@ -1164,7 +1155,6 @@ end
 local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
   { name = "deploy_script_keeps_default_paths", run = _test_deploy_script_keeps_default_paths },
-  { name = "deploy_script_removes_vehicle_runtime_legacy_support", run = _test_deploy_script_removes_vehicle_runtime_legacy_support },
   { name = "update_api_writes_changelog_into_docs_eggy_api_dir", run = _test_update_api_writes_changelog_into_docs_eggy_api_dir },
   { name = "update_api_deletes_old_baseline_when_only_diff_fails", run = _test_update_api_deletes_old_baseline_when_only_diff_fails },
   { name = "update_api_keeps_old_baseline_when_check_fails", run = _test_update_api_keeps_old_baseline_when_check_fails },

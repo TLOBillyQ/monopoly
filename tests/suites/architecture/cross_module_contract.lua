@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local monopoly_events = require("src.core.events.monopoly_events")
-local runtime_event_bridge = require("src.host.event_bridge")
+local runtime_ports = require("src.core.ports.runtime_ports")
 local land_events = require("src.rules.land.events")
 local land_rules = require("src.rules.land.rules")
 local land_rent_resolver = require("src.rules.land.rent_resolver")
@@ -14,8 +14,8 @@ local function _test_event_contract_land_events_use_catalog_keys()
   local emitted = {}
   _with_patches({
     {
-      target = runtime_event_bridge,
-      key = "emit_custom_event",
+      target = runtime_ports,
+      key = "emit_event",
       value = function(kind, payload)
         emitted[#emitted + 1] = { kind = kind, payload = payload }
       end,

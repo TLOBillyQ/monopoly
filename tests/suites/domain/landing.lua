@@ -16,7 +16,6 @@ local land_rules = require("src.rules.land.rules")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local monopoly_event = require("src.core.events.monopoly_events")
-local runtime_event_bridge = require("src.host.event_bridge")
 local move_followup = require("src.turn.phases.move_followup")
 local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
 local movement = require("src.rules.movement")
@@ -412,8 +411,8 @@ local function _test_hospital_landing_emits_status_feedback_event()
 
   _with_patches({
     {
-      target = runtime_event_bridge,
-      key = "emit_custom_event",
+      target = monopoly_event,
+      key = "emit",
       value = function(kind, payload, opts)
         emitted[#emitted + 1] = { kind = kind, payload = payload }
         return true
@@ -439,8 +438,8 @@ local function _test_mountain_landing_emits_status_feedback_event()
 
   _with_patches({
     {
-      target = runtime_event_bridge,
-      key = "emit_custom_event",
+      target = monopoly_event,
+      key = "emit",
       value = function(kind, payload, opts)
         emitted[#emitted + 1] = { kind = kind, payload = payload }
         return true

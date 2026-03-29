@@ -458,14 +458,12 @@ local function _reload_app_init_with_stubs(startup, runner)
       },
     },
     {
-      target = package.loaded,
-      key = "src.app.event_bridge",
-      value = {
-        install = function(installed_state, get_game)
-          capture.bridge_state = installed_state
-          capture.bridge_get_game = get_game
-        end,
-      },
+      target = require("src.app.event_bridge"),
+      key = "install",
+      value = function(installed_state, get_game)
+        capture.bridge_state = installed_state
+        capture.bridge_get_game = get_game
+      end,
     },
     {
       target = package.loaded,
@@ -646,7 +644,7 @@ local function _test_app_init_keeps_scheduler_fallback()
     { target = package.loaded, key = "src.core.utils.tip_queue", value = tip_queue_stub },
     { target = package.loaded, key = "src.app.host_install", value = { install = function() end } },
     { target = package.loaded, key = "src.app.state_factory", value = { build_state = function() return state end } },
-    { target = package.loaded, key = "src.app.event_bridge", value = { install = function() end } },
+    { target = require("src.app.event_bridge"), key = "install", value = function() end },
     { target = package.loaded, key = "src.app.gameplay_start", value = { start = function() return true end } },
     { target = package.loaded, key = "src.turn.loop", value = { set_game = function() end } },
     { target = package.loaded, key = "src.app.ui_bootstrap", value = { install = function() end } },

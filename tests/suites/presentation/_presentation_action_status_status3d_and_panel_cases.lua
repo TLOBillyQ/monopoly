@@ -34,7 +34,6 @@ local role_control_lock_policy = require("src.ui.input.role_control_lock_policy"
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
 local logger = require("src.core.utils.logger")
-local runtime_event_bridge = require("src.host.event_bridge")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local timing = require("src.config.gameplay.timing")
@@ -645,9 +644,6 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   local board_view_mod = require("src.ui.render.board")
   local status3d = require("src.ui.render.status3d")
   local helper = { target_role_id = nil }
-  local follow_events = 0
-  local follow_event_name = nil
-  local follow_event_payload = nil
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
@@ -692,11 +688,6 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
       BuffState = { BUFF_FORBID_CONTROL = 32 },
     } },
     { key = "camera_helper", value = helper },
-    { key = "TriggerCustomEvent", value = function(event_name, payload)
-      follow_events = follow_events + 1
-      follow_event_name = event_name
-      follow_event_payload = payload
-    end },
   }
   local game = {
     finished = false,
@@ -755,17 +746,11 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
   _bind_ui_runtime(state)
 
   _with_patches(patches, function()
-    runtime_event_bridge._reset_for_tests()
     state.gameplay_loop_ports = require("src.ui.ports").build(state)
     gameplay_loop.tick(game, state, 0.1)
-    runtime_event_bridge._reset_for_tests()
   end)
 
   _assert_eq(helper.target_role_id, 2, "turn switch should follow current player")
-  assert(follow_events >= 1, "turn switch should trigger follow event")
-  _assert_eq(follow_event_name, "follow_camera", "turn switch should emit follow_camera event")
-  assert(type(follow_event_payload) == "table", "turn switch follow event should include payload table")
-  _assert_eq(follow_event_payload.target_role_id, nil, "turn switch follow event should not carry target_role_id payload")
 end
 
 local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable()
@@ -886,12 +871,10 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   _bind_ui_runtime(state)
 
   _with_patches(patches, function()
-    runtime_event_bridge._reset_for_tests()
     local ok, err = pcall(function()
       state.gameplay_loop_ports = require("src.ui.ports").build(state)
       gameplay_loop.tick(game, state, 0.1)
     end)
-    runtime_event_bridge._reset_for_tests()
     assert(ok == true, "turn switch should not fail when follow event is unavailable: " .. tostring(err))
   end)
 

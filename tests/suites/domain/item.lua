@@ -18,7 +18,6 @@ local item_strategy = require("src.rules.items.strategy")
 local steal = require("src.rules.items.steal")
 local status_ops = require("src.player.actions.state_ops.status_ops")
 local cash_handlers = require("src.rules.chance.handlers.cash_handlers")
-local runtime_event_bridge = require("src.host.event_bridge")
 local monopoly_event = require("src.core.events.monopoly_events")
 local move_followup = require("src.turn.phases.move_followup")
 
@@ -952,8 +951,8 @@ local function _test_rich_item_emits_deity_feedback_event()
 
   support.with_patches({
     {
-      target = runtime_event_bridge,
-      key = "emit_custom_event",
+      target = monopoly_event,
+      key = "emit",
       value = function(kind, payload, opts)
         emitted[#emitted + 1] = { kind = kind, payload = payload }
         return true

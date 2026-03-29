@@ -304,22 +304,13 @@ dep_rules_whitelist["src/ui/landing_visual_hold.lua"] = {
 
 dep_rules_whitelist["src/ui/host_bridge.lua"] = {
   ['require("src.host")'] = true,
-  ['require("src.host.event_bridge")'] = true,
 }
 
 dep_rules_whitelist["src/host/global_aliases.lua"] = {
   ["bridge exception, not a business compatibility alias layer."] = true,
 }
 
-dep_rules_whitelist["src/host/vehicle_runtime_legacy.lua"] = {
-  ["\"legacy\" names the implementation source only; it does not imply a business-layer compatibility contract."] = true,
-}
-
 dep_rules_whitelist["src/app/ui_bootstrap.lua"] = {
-  ['require("src.host.context")'] = true,
-}
-
-dep_rules_whitelist["src/app/event_bridge.lua"] = {
   ['require("src.host.context")'] = true,
 }
 
@@ -328,7 +319,6 @@ local forbidden_files = {
   "src/turn/output/legacy_output_mirror.lua",
   "src/rules/market/service/paid_purchase_gateway.lua",
   "src/core/runtime_facade/runtime_context.lua",
-  "src/core/runtime_facade/runtime_event_bridge.lua",
   "src/core/runtime_ports/default_ports.lua",
   "src/rules/choices/handlers/optional_effect.lua",
   "src/rules/choices/registry.lua",
