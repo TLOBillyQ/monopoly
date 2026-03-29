@@ -1,5 +1,4 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local runtime_event_bridge = require("src.host.event_bridge")
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local synthetic_actor_registry = require("src.host.synthetic_actor_registry")
@@ -117,7 +116,6 @@ local function _resolve_vehicle_helper_builder()
     return require("src.state.state_access.vehicle_runtime_source").build_helper(get_roles, get_game_api, {
       logger = logger,
       runtime_constants = runtime_constants,
-      runtime_event_bridge = runtime_event_bridge,
     }, _G)
   end
 end
@@ -141,11 +139,6 @@ local function _build_change_skin_helper()
     end
     helper.target_role_id = resolved_role_id
     helper.skin_id = resolved_skin_id
-    runtime_event_bridge.emit_custom_event(
-      runtime_constants.eca_event.skin.change,
-      {},
-      { feature_key = "skin.change" }
-    )
     return true
   end
 
@@ -215,15 +208,10 @@ function runtime_context.install_runtime_helpers(ctx, opts)
     end, _resolve_game_api)
   end
   if not ctx.camera_helper then
-    ctx.camera_helper = require("src.host.camera_helper").new(ctx.env, {
-      runtime_constants = runtime_constants,
-      runtime_event_bridge = runtime_event_bridge,
-    })
+    ctx.camera_helper = require("src.host.camera_helper").new(ctx.env)
   end
   if not ctx.change_skin_helper then
     ctx.change_skin_helper = require("src.host.skin_helper").new({
-      runtime_constants = runtime_constants,
-      runtime_event_bridge = runtime_event_bridge,
       logger = logger,
       number_utils = number_utils,
     })

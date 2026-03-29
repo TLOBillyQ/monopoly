@@ -22,11 +22,6 @@ function skin_helper.new(deps)
 
     helper.target_role_id = resolved_role_id
     helper.skin_id = resolved_skin_id
-    deps.runtime_event_bridge.emit_custom_event(
-      deps.runtime_constants.eca_event.skin.change,
-      {},
-      { feature_key = "skin.change" }
-    )
     return true
   end
 

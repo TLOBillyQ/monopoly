@@ -1,6 +1,5 @@
 local default_ports = {}
 local number_utils = require("src.core.utils.number_utils")
-local runtime_event_bridge = require("src.host.event_bridge")
 local game_api_key = "Game" .. "API"
 local lua_api_key = "Lua" .. "API"
 
@@ -140,7 +139,10 @@ function default_ports.build(runtime_context)
   end
 
   function defaults.emit_event(event_name, payload, opts)
-    local ok = runtime_event_bridge.emit_custom_event(event_name, payload or {}, opts)
+    if type(TriggerCustomEvent) ~= "function" then
+      return false
+    end
+    local ok = pcall(TriggerCustomEvent, event_name, payload or {})
     return ok == true
   end
 

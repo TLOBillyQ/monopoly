@@ -1,5 +1,4 @@
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_event_bridge = require("src.host.event_bridge")
 local runtime_context = require("src.host.context")
 local tip_queue = require("src.core.utils.tip_queue")
 local role_resolver = require("src.host.role_resolver")
@@ -40,10 +39,6 @@ function host_runtime.register_custom_event(event_name, handler)
   end
   lua_api.global_register_custom_event(event_name, handler)
   return true
-end
-
-function host_runtime.emit_custom_event(event_name, payload)
-  return runtime_event_bridge.emit_custom_event(event_name, payload)
 end
 
 function host_runtime.resolve_role(player_id)
