@@ -31,30 +31,11 @@ local runtime_constants = {
   walk_speed = 7.0,
   robot_speed = 18.0,
 
-  -- 仓库内未引用，暂保留兼容
   vehicle_speed = 20.0,
   vehicle_accel = 20.0,
-  -- 默认关闭：载具移动降级为 set_position 逐格跳
   vehicle_move_api_enabled = false,
   vehicle_enter_delay = 1.2,
   fps = 30.0,
-  forward_eca_event_ui = "ui_forward",
-
-  eca_event = {
-    vehicle = {
-      enter = "enter_vehicle_forward",
-      exit = "exit_vehicle_forward",
-      move = "move_vehicle_forward",
-      stop = "stop_vehicle_forward",
-      set_position = "set_position_vehicle_forward",
-    },
-    camera = {
-      follow = "follow_camera",
-    },
-    skin = {
-      change = "change_skin",
-    },
-  },
 }
 
 return runtime_constants
