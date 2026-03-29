@@ -81,6 +81,9 @@ function tick_steps.refresh_tick_from_dirty(game, state, ports, input_blocked_ch
     dirty.turn = true
   end
   local ui_refreshed = ui_sync_ports.refresh_from_dirty(game, state, dirty)
+  if dirty.turn then
+    turn_camera_policy.reset_follow(state)
+  end
   turn_camera_policy.sync_follow(game, state, ports, ui_refreshed)
   if landing_visual_release_pulse or not landing_visual_hold.is_active_state(state) then
     anim_ports.sync_status_3d(game, state, dirty)

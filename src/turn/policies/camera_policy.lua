@@ -59,6 +59,13 @@ function turn_camera_policy.sync_follow(game, state, ports, ui_refreshed)
   end
 end
 
+function turn_camera_policy.reset_follow(state)
+  local turn_runtime = state and runtime_state.ensure_turn_runtime(state) or nil
+  if turn_runtime then
+    turn_runtime.last_follow_player_id = nil
+  end
+end
+
 turn_camera_policy._resolve_follow_player_id = _resolve_follow_player_id
 
 return turn_camera_policy

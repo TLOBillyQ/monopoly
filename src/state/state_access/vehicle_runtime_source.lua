@@ -92,9 +92,7 @@ local function _resolve_module(globals)
   if _is_non_empty_string(module_name) then
     return tostring(module_name)
   end
-  -- The legacy module name only points at the host bridge implementation.
-  -- It does not mean the business layer still supports a legacy contract.
-  return "src.host.vehicle_runtime_legacy"
+  return nil
 end
 
 local function _load_runtime(globals)
@@ -107,6 +105,13 @@ local function _load_runtime(globals)
   end
 
   local module_name = _resolve_module(globals)
+  if module_name == nil then
+    return {
+      build_helper = function(get_roles, get_game_api)
+        return _build_none_helper(get_roles, get_game_api)
+      end,
+    }
+  end
   local ok, module_or_err = pcall(require, module_name)
   assert(ok, "failed to require vehicle runtime module: " .. tostring(module_or_err))
   return module_or_err
