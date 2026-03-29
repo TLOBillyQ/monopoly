@@ -155,28 +155,285 @@ local function _test_landing_visual_release_flushes_before_scheduler_advances_tu
 end
 
 local function _test_camera_policy_retargets_when_player_changes_without_ui_refresh()
-  local game = support.new_game()
+   local game = support.new_game()
+   local state = {
+     turn_runtime = {
+       last_follow_player_id = nil,
+     },
+   }
+   local followed = {}
+   local ports = {
+     ui_sync = {
+       follow_camera = function(_, player_id)
+         followed[#followed + 1] = player_id
+       end,
+     },
+   }
+ 
+   game.turn.current_player_index = 1
+   turn_camera_policy.sync_follow(game, state, ports, true)
+   game.turn.current_player_index = 2
+   turn_camera_policy.sync_follow(game, state, ports, false)
+ 
+   assert(followed[1] == game.players[1].id, "initial follow should target the current player")
+   assert(followed[2] == game.players[2].id, "camera should retarget on player change even without a full ui refresh")
+end
+
+local function _test_camera_sync_other_path_calls_set_camera_property_after_lock()
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_state = require("src.state.state_access.runtime_state")
+  local camera_sync = require("src.ui.ports.ui_sync.camera")
+
+  -- Track set_camera_property calls
+  local set_camera_property_calls = {}
+  local set_camera_lock_position_called = false
+
+  -- Mock local_role
+  local local_role = {
+    set_camera_lock_position = function(pos)
+      set_camera_lock_position_called = true
+      return nil
+    end,
+    set_camera_property = function(prop, value)
+      set_camera_property_calls[#set_camera_property_calls + 1] = { prop, value }
+      return nil
+    end,
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return { x = 0, y = 0, z = 0 }
+        end,
+      }
+    end,
+    get_camera_direction = function()
+      return { x = 0, y = 0, z = 1 }
+    end,
+    reset_camera = function()
+      return nil
+    end,
+  }
+
+  -- Mock target_role
+  local target_role = {
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return { x = 1, y = 1, z = 1 }
+        end,
+      }
+    end,
+  }
+
+  -- Mock state with ui_runtime and local_actor_role_id
   local state = {
-    turn_runtime = {
-      last_follow_player_id = nil,
-    },
+    ui = {},
   }
-  local followed = {}
-  local ports = {
-    ui_sync = {
-      follow_camera = function(_, player_id)
-        followed[#followed + 1] = player_id
-      end,
-    },
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.local_actor_role_id = 1
+
+  -- Configure runtime_ports with mocks
+  runtime_ports.configure({
+    resolve_role = function(player_id)
+      if player_id == 1 then
+        return local_role
+      elseif player_id == 2 then
+        return target_role
+      end
+      return nil
+    end,
+    resolve_camera_helper = function()
+      return { target_role_id = nil, follow = function() end }
+    end,
+  })
+
+  local ok, err = pcall(function()
+    -- Call follow_camera with player_id=2 (OTHER path)
+    local result = camera_sync.follow_camera(state, 2)
+
+    -- Assertions
+    assert(set_camera_lock_position_called == true, "set_camera_lock_position should be called in OTHER path")
+    
+    local has_dist = false
+    local has_height = false
+    local has_pitch = false
+    local has_yaw = false
+
+    for _, call in ipairs(set_camera_property_calls) do
+      if call[1] == 7 and call[2] == 30 then has_dist = true end
+      if call[1] == 11 and call[2] == 10 then has_height = true end
+      if call[1] == 15 and call[2] == 45 then has_pitch = true end
+      if call[1] == 16 and call[2] == -90 then has_yaw = true end
+    end
+
+    assert(has_dist, "set_camera_property should be called with DIST (7, 30)")
+    assert(has_height, "set_camera_property should be called with OBSERVER_HEIGHT (11, 10)")
+    assert(has_pitch, "set_camera_property should be called with PITCH (15, 45)")
+    assert(has_yaw, "set_camera_property should be called with YAW (16, -90)")
+  end)
+
+  -- Cleanup - CRITICAL: always reset ports even if test fails
+  runtime_ports.reset_for_tests()
+
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_camera_sync_self_path_does_not_call_set_camera_property()
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_state = require("src.state.state_access.runtime_state")
+  local camera_sync = require("src.ui.ports.ui_sync.camera")
+
+  -- Track set_camera_property calls
+  local set_camera_property_calls = {}
+  local reset_camera_called = false
+
+  -- Mock local_role
+  local local_role = {
+    set_camera_lock_position = function(pos)
+      return nil
+    end,
+    set_camera_property = function(prop, value)
+      set_camera_property_calls[#set_camera_property_calls + 1] = { prop, value }
+      return nil
+    end,
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return { x = 0, y = 0, z = 0 }
+        end,
+      }
+    end,
+    get_camera_direction = function()
+      return { x = 0, y = 0, z = 1 }
+    end,
+    reset_camera = function(a, b, c, d)
+      reset_camera_called = true
+      return nil
+    end,
   }
 
-  game.turn.current_player_index = 1
-  turn_camera_policy.sync_follow(game, state, ports, true)
-  game.turn.current_player_index = 2
-  turn_camera_policy.sync_follow(game, state, ports, false)
+  -- Mock state with ui_runtime and local_actor_role_id
+  local state = {
+    ui = {},
+  }
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.local_actor_role_id = 1
 
-  assert(followed[1] == game.players[1].id, "initial follow should target the current player")
-  assert(followed[2] == game.players[2].id, "camera should retarget on player change even without a full ui refresh")
+  -- Configure runtime_ports with mocks
+  runtime_ports.configure({
+    resolve_role = function(player_id)
+      if player_id == 1 then
+        return local_role
+      end
+      return nil
+    end,
+    resolve_camera_helper = function()
+      return { target_role_id = nil, follow = function() end }
+    end,
+  })
+
+  local ok, err = pcall(function()
+    -- Call follow_camera with player_id=1 (SELF path)
+    local result = camera_sync.follow_camera(state, 1)
+
+    -- Assertions
+    assert(reset_camera_called == true, "reset_camera should be called in SELF path")
+    assert(#set_camera_property_calls == 0, "set_camera_property should NOT be called in SELF path")
+  end)
+
+  -- Cleanup - CRITICAL: always reset ports even if test fails
+  runtime_ports.reset_for_tests()
+
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_camera_sync_sync_camera_position_also_restores_props()
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_state = require("src.state.state_access.runtime_state")
+  local camera_sync = require("src.ui.ports.ui_sync.camera")
+
+  -- Track set_camera_property calls
+  local set_camera_property_calls = {}
+
+  -- Mock local_role
+  local local_role = {
+    set_camera_lock_position = function(pos)
+      return nil
+    end,
+    set_camera_property = function(prop, value)
+      set_camera_property_calls[#set_camera_property_calls + 1] = { prop, value }
+      return nil
+    end,
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return { x = 0, y = 0, z = 0 }
+        end,
+      }
+    end,
+    get_camera_direction = function()
+      return { x = 0, y = 0, z = 1 }
+    end,
+    reset_camera = function()
+      return nil
+    end,
+  }
+
+  -- Mock target_role
+  local target_role = {
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return { x = 2, y = 2, z = 2 }
+        end,
+      }
+    end,
+  }
+
+  -- Mock state with ui_runtime and local_actor_role_id
+  local state = {
+    ui = {},
+  }
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.local_actor_role_id = 1
+
+  -- Configure runtime_ports with mocks
+  runtime_ports.configure({
+    resolve_role = function(player_id)
+      if player_id == 1 then
+        return local_role
+      elseif player_id == 2 then
+        return target_role
+      end
+      return nil
+    end,
+    resolve_camera_helper = function()
+      return { target_role_id = 2, follow = function() end }
+    end,
+  })
+
+  local ok, err = pcall(function()
+    -- Call sync_camera_position
+    local result = camera_sync.sync_camera_position(state)
+
+    -- Assertions
+    local has_dist = false
+    for _, call in ipairs(set_camera_property_calls) do
+      if call[1] == 7 and call[2] == 30 then has_dist = true end
+    end
+
+    assert(has_dist, "set_camera_property should be called with DIST (7, 30) in sync_camera_position")
+  end)
+
+  -- Cleanup - CRITICAL: always reset ports even if test fails
+  runtime_ports.reset_for_tests()
+
+  if not ok then
+    error(err)
+  end
 end
 
 return {
@@ -197,5 +454,8 @@ return {
     _case("_test_runtime_context_change_skin_exports_and_event"),
     { name = "landing_visual_release_flushes_before_scheduler_advances_turn", run = _test_landing_visual_release_flushes_before_scheduler_advances_turn },
     { name = "camera_policy_retargets_when_player_changes_without_ui_refresh", run = _test_camera_policy_retargets_when_player_changes_without_ui_refresh },
+    { name = "camera_sync_other_path_calls_set_camera_property_after_lock", run = _test_camera_sync_other_path_calls_set_camera_property_after_lock },
+    { name = "camera_sync_self_path_does_not_call_set_camera_property", run = _test_camera_sync_self_path_does_not_call_set_camera_property },
+    { name = "camera_sync_sync_camera_position_also_restores_props", run = _test_camera_sync_sync_camera_position_also_restores_props },
   },
 }
