@@ -5,12 +5,44 @@ local logger = require("src.core.utils.logger")
 local camera_sync = {}
 local _warned = {}
 
+local CAMERA_PROP_DIST = 7
+local CAMERA_PROP_OBSERVER_HEIGHT = 11
+local CAMERA_PROP_PITCH = 15
+local CAMERA_PROP_YAW = 16
+
+local FOLLOW_CAMERA_DIST = 30
+local FOLLOW_CAMERA_OBSERVER_HEIGHT = 10
+local FOLLOW_CAMERA_PITCH = 45
+local FOLLOW_CAMERA_YAW = -90
+
 local function _warn_once(key, ...)
   if _warned[key] then
     return
   end
   _warned[key] = true
   logger.warn("camera_sync", ...)
+end
+
+local function _restore_camera_props(local_role)
+  local props = {
+    { CAMERA_PROP_DIST, FOLLOW_CAMERA_DIST },
+    { CAMERA_PROP_OBSERVER_HEIGHT, FOLLOW_CAMERA_OBSERVER_HEIGHT },
+    { CAMERA_PROP_PITCH, FOLLOW_CAMERA_PITCH },
+    { CAMERA_PROP_YAW, FOLLOW_CAMERA_YAW },
+  }
+  if type(local_role.set_camera_property) ~= "function" then
+    _warn_once("set_camera_property_unavailable", "set_camera_property not available on role")
+    return
+  end
+  for _, entry in ipairs(props) do
+    local prop, value = entry[1], entry[2]
+    local ok, err = pcall(function()
+      return local_role.set_camera_property(prop, value)
+    end)
+    if not ok then
+      _warn_once("set_camera_property_" .. tostring(prop), "set_camera_property(" .. tostring(prop) .. ") failed:", tostring(err))
+    end
+  end
 end
 
 local function _resolve_unit_position(role)
@@ -73,12 +105,13 @@ local function _lock_camera_to_target(local_role, target_role, ctx_info)
   local ok, err = pcall(function()
     return local_role.set_camera_lock_position(pos)
   end)
-   if not ok then
+  if not ok then
      _warn_once("set_camera_lock_position_failed", "set_camera_lock_position failed:", tostring(err))
      logger.warn("[CAMERA_INVESTIGATE] set_camera_lock_position failed:", tostring(err))
    else
      logger.warn("[CAMERA_INVESTIGATE] set_camera_lock_position succeeded")
-  end
+     _restore_camera_props(local_role)
+   end
 
    local dir_after = _get_camera_direction_safe(local_role)
    logger.warn("[CAMERA_INVESTIGATE] camera direction AFTER lock: " .. tostring(dir_after))
