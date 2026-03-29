@@ -27,6 +27,7 @@ local DEFAULT_NEW = common.join_path(env.repo_root, "EggyAPI.lua")
 local DEFAULT_OLD = common.join_path(env.repo_root, "EggyAPI copy.lua")
 local DEFAULT_DOC_DIR = common.join_path(env.repo_root, "docs/eggy/api")
 local DEFAULT_CHANGELOG = common.join_path(env.repo_root, "docs/eggy/api/changelog.md")
+local DEFAULT_META_FILE = common.join_path(env.repo_root, "meta/luals_host.lua")
 
 local function _trim(text)
   local source = tostring(text or "")
@@ -527,10 +528,12 @@ local function _parse_args(args)
     new = DEFAULT_NEW,
     doc_dir = DEFAULT_DOC_DIR,
     changelog = DEFAULT_CHANGELOG,
+    meta = DEFAULT_META_FILE,
     limit = 50,
     skip_generate = false,
     skip_check = false,
     skip_diff = false,
+    skip_meta = false,
   }
 
   local index = 1
@@ -567,10 +570,16 @@ local function _parse_args(args)
     elseif token == "--skip-diff" then
       options.skip_diff = true
       index = index + 1
+    elseif token == "--meta" then
+      options.meta = args[index + 1]
+      index = index + 2
+    elseif token == "--skip-meta" then
+      options.skip_meta = true
+      index = index + 1
     elseif token == "--help" or token == "-h" then
       print(_text(
-        "用法: lua tools/ops/update_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff]",
-        "Usage: lua tools/ops/update_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff]"
+        "用法: lua tools/ops/update_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--meta PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff] [--skip-meta]",
+        "Usage: lua tools/ops/update_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--meta PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff] [--skip-meta]"
       ))
       os.exit(0)
     else
@@ -585,6 +594,7 @@ local function _parse_args(args)
   options.new = common.resolve_path(common.current_dir(), options.new)
   options.doc_dir = common.resolve_path(common.current_dir(), options.doc_dir)
   options.changelog = common.resolve_path(common.current_dir(), options.changelog)
+  options.meta = common.resolve_path(common.current_dir(), options.meta)
 
   return options
 end
@@ -802,12 +812,466 @@ local function _generate_docs(text, options)
   end
 end
 
+-- ============================================================================
+-- Meta File Generation (for LuaCATS/luals_host.lua)
+-- ============================================================================
+
+---@class MetaClassInfo
+---@field name string
+---@field parent string?
+---@field fields MetaFieldInfo[]
+---@field operators MetaOperatorInfo[]
+
+---@class MetaFieldInfo
+---@field name string
+---@field type string
+
+---@class MetaOperatorInfo
+---@field op string
+---@field param string
+---@field ret string
+
+---@class MetaAliasInfo
+---@field name string
+---@field target string
+---@field desc string?
+
+---@class MetaEnumInfo
+---@field name string
+
+---@class MetaGlobalInfo
+---@field name string
+---@field type string
+
+---Parse param definition from @param line
+---@param line string
+---@return string?, string?
+local function _parse_param_line(line)
+  local param_name, param_type = line:match("^%-%-%-@param%s+(%S+)%s+(%S+)")
+  return param_name, param_type
+end
+
+---Parse return definition from @return line
+---@param line string
+---@return string?
+local function _parse_return_line(line)
+  local ret_type = line:match("^%-%-%-@return%s+(%S+)")
+  return ret_type
+end
+
+---Parse class definition from @class line
+---@param line string
+---@return string?, string?
+local function _parse_class_line(line)
+  local class_def = line:match("^%-%-%-@class%s+(.+)$")
+  if not class_def then
+    return nil, nil
+  end
+
+  -- Handle (partial) marker
+  class_def = class_def:gsub("^%(partial%)%s*", "")
+
+  -- Split class name and parent
+  local class_name, parent = class_def:match("^([^:]+)%s*:%s*(.+)$")
+  if class_name then
+    return _trim(class_name), _trim(parent)
+  else
+    return _trim(class_def), nil
+  end
+end
+
+---Parse field definition from @field line
+---@param line string
+---@return string?, string?
+local function _parse_field_line(line)
+  local field_name, field_type = line:match("^%-%-%-@field%s+(%S+)%s+(.+)$")
+  if field_name and field_type then
+    -- Remove trailing description
+    field_type = field_type:match("^([^\n]+)") or field_type
+    return _trim(field_name), _trim(field_type)
+  end
+  return nil, nil
+end
+
+---Parse operator definition from @operator line
+---@param line string
+---@return string?, string?, string?
+local function _parse_operator_line(line)
+  local op, param, ret = line:match("^%-%-%-@operator%s+(%S+)%(([^)]+)%)%s*:%s*(%S+)")
+  if op and param and ret then
+    return op, _trim(param), _trim(ret)
+  end
+  -- Handle unary operators like unm
+  local op_unary, ret_unary = line:match("^%-%-%-@operator%s+(%S+)%s*:%s*(%S+)")
+  if op_unary and ret_unary then
+    return op_unary, "", _trim(ret_unary)
+  end
+  return nil, nil, nil
+end
+
+---Parse alias definition from @alias line
+---@param line string
+---@return MetaAliasInfo?
+local function _parse_alias_line(line)
+  local alias_def = line:match("^%-%-%-@alias%s+(.+)$")
+  if not alias_def then
+    return nil
+  end
+
+  -- Match: Name type [description]
+  local name, target, desc = alias_def:match("^(%S+)%s+(%S+)%s*(.*)$")
+  if name and target then
+    return {
+      name = name,
+      target = target,
+      desc = desc ~= "" and desc or nil,
+    }
+  end
+
+  return nil
+end
+
+---Parse enum definition from @enum line
+---@param line string
+---@return string?
+local function _parse_enum_line(line)
+  local enum_name = line:match("^%-%-%-@enum%s+(%S+)")
+  return enum_name
+end
+
+---Parse function definition line
+---@param line string
+---@return string?, string?
+local function _parse_function_line(line)
+  local full_name, params = line:match("^function%s+([A-Za-z_][%w_%.:]*)%s*%(([^)]*)%)")
+  return full_name, params
+end
+
+---Extract all API information from EggyAPI text
+---@param text string
+---@return MetaClassInfo[], MetaAliasInfo[], MetaEnumInfo[], MetaGlobalInfo[]
+local function _extract_api_info(text)
+  local lines = _split_lines(text)
+
+  local classes = {}
+  local aliases = {}
+  local enums = {}
+  local globals = {}
+
+  local current_class = nil
+  local pending_func_doc = {
+    params = {},
+    returns = {},
+    overloads = {},
+  }
+
+  for i, line in ipairs(lines) do
+    local trimmed = _trim(line)
+
+    -- Parse @alias
+    local alias_info = _parse_alias_line(line)
+    if alias_info then
+      table.insert(aliases, alias_info)
+      goto continue
+    end
+
+    -- Parse @enum
+    local enum_name = _parse_enum_line(line)
+    if enum_name then
+      table.insert(enums, { name = enum_name })
+      goto continue
+    end
+
+    -- Parse @class
+    local class_name, parent = _parse_class_line(line)
+    if class_name then
+      current_class = {
+        name = class_name,
+        parent = parent,
+        fields = {},
+        operators = {},
+      }
+      table.insert(classes, current_class)
+      goto continue
+    end
+
+    -- Parse @field (only within class context)
+    if current_class then
+      local field_name, field_type = _parse_field_line(line)
+      if field_name and field_type then
+        table.insert(current_class.fields, {
+          name = field_name,
+          type = field_type,
+        })
+        goto continue
+      end
+
+      -- Parse @operator
+      local op, op_param, op_ret = _parse_operator_line(line)
+      if op then
+        table.insert(current_class.operators, {
+          op = op,
+          param = op_param,
+          ret = op_ret,
+        })
+        goto continue
+      end
+    end
+
+    -- Parse @param (accumulate for next function)
+    local param_name, param_type = _parse_param_line(line)
+    if param_name and param_type then
+      table.insert(pending_func_doc.params, { name = param_name, type = param_type })
+      goto continue
+    end
+
+    -- Parse @return (accumulate for next function)
+    local ret_type = _parse_return_line(line)
+    if ret_type then
+      table.insert(pending_func_doc.returns, ret_type)
+      goto continue
+    end
+
+    -- Parse @overload
+    local overload_sig = line:match("^%-%-%-@overload%s+fun(%([^)]*%)[^:]*:?.*)$")
+    if overload_sig then
+      table.insert(pending_func_doc.overloads, overload_sig)
+      goto continue
+    end
+
+    -- Parse function definition
+    local func_full_name, func_params = _parse_function_line(line)
+    if func_full_name then
+      -- Determine if this is a method (ClassName:methodName) or static (ClassName.methodName or just name)
+      local class_part, func_part = func_full_name:match("^([^:]+):(.+)$")
+      local is_method = class_part ~= nil
+
+      if not is_method then
+        class_part, func_part = func_full_name:match("^([^.]+)%.(.+)$")
+      end
+
+      if class_part and func_part then
+        -- Find or create class
+        local target_class = nil
+        for _, cls in ipairs(classes) do
+          if cls.name == class_part then
+            target_class = cls
+            break
+          end
+        end
+
+        if target_class then
+          -- Build function type string
+          local func_type_parts = { "fun(" }
+
+          -- Add self parameter for methods
+          if is_method then
+            func_type_parts[#func_type_parts + 1] = "self: " .. class_part
+          end
+
+          -- Add documented parameters
+          for j, param in ipairs(pending_func_doc.params) do
+            if j > 1 or is_method then
+              func_type_parts[#func_type_parts + 1] = ", "
+            end
+            func_type_parts[#func_type_parts + 1] = param.name .. ": " .. param.type
+          end
+
+          func_type_parts[#func_type_parts + 1] = ")"
+
+          -- Add return type
+          if #pending_func_doc.returns > 0 then
+            func_type_parts[#func_type_parts + 1] = ": " .. table.concat(pending_func_doc.returns, ", ")
+          end
+
+          local func_type = table.concat(func_type_parts)
+
+          -- Check for overloads
+          if #pending_func_doc.overloads > 0 then
+            -- Use the overload signature directly
+            for _, overload in ipairs(pending_func_doc.overloads) do
+              table.insert(target_class.fields, {
+                name = func_part,
+                type = "fun" .. overload,
+              })
+            end
+          else
+            table.insert(target_class.fields, {
+              name = func_part,
+              type = func_type,
+            })
+          end
+        else
+          -- Global function - add to globals if not already defined
+          local global_type = "fun("
+          for j, param in ipairs(pending_func_doc.params) do
+            if j > 1 then
+              global_type = global_type .. ", "
+            end
+            global_type = global_type .. param.name .. ": " .. param.type
+          end
+          global_type = global_type .. ")"
+          if #pending_func_doc.returns > 0 then
+            global_type = global_type .. ": " .. table.concat(pending_func_doc.returns, ", ")
+          end
+
+          table.insert(globals, {
+            name = func_full_name,
+            type = global_type,
+          })
+        end
+      else
+        -- Simple global function
+        local global_type = "fun("
+        for j, param in ipairs(pending_func_doc.params) do
+          if j > 1 then
+            global_type = global_type .. ", "
+          end
+          global_type = global_type .. param.name .. ": " .. param.type
+        end
+        global_type = global_type .. ")"
+        if #pending_func_doc.returns > 0 then
+          global_type = global_type .. ": " .. table.concat(pending_func_doc.returns, ", ")
+        end
+
+        table.insert(globals, {
+          name = func_full_name,
+          type = global_type,
+        })
+      end
+
+      -- Reset pending docs
+      pending_func_doc = { params = {}, returns = {}, overloads = {} }
+      goto continue
+    end
+
+    -- Parse global variable assignment like "Xxx = {}" or "Xxx = value"
+    local global_name = line:match("^([A-Za-z_][%w_]*)%s*=%s*")
+    if global_name and not line:match("^function") then
+      -- Check if this looks like a class instance
+      local is_class_instance = false
+      for _, cls in ipairs(classes) do
+        if cls.name == global_name then
+          is_class_instance = true
+          break
+        end
+      end
+
+      if is_class_instance then
+        table.insert(globals, {
+          name = global_name,
+          type = global_name,
+        })
+      end
+    end
+
+    ::continue::
+  end
+
+  return classes, aliases, enums, globals
+end
+
+---Generate luals_host.lua content
+---@param classes MetaClassInfo[]
+---@param aliases MetaAliasInfo[]
+---@param enums MetaEnumInfo[]
+---@param globals MetaGlobalInfo[]
+---@return string
+local function _generate_luals_host_content(classes, aliases, enums, globals)
+  local lines = {}
+
+  -- Header
+  table.insert(lines, "---@meta")
+  table.insert(lines, "")
+
+  -- Aliases
+  if #aliases > 0 then
+    for _, alias in ipairs(aliases) do
+      if alias.desc then
+        table.insert(lines, "---@alias " .. alias.name .. " " .. alias.target .. " " .. alias.desc)
+      else
+        table.insert(lines, "---@alias " .. alias.name .. " " .. alias.target)
+      end
+    end
+    table.insert(lines, "")
+  end
+
+  -- Classes
+  for _, class in ipairs(classes) do
+    -- Class definition
+    if class.parent then
+      table.insert(lines, "---@class " .. class.name .. ": " .. class.parent)
+    else
+      table.insert(lines, "---@class " .. class.name)
+    end
+
+    -- Operators (before fields)
+    for _, op in ipairs(class.operators) do
+      if op.param and op.param ~= "" then
+        table.insert(lines, "---@operator " .. op.op .. "(" .. op.param .. "): " .. op.ret)
+      else
+        table.insert(lines, "---@operator " .. op.op .. ": " .. op.ret)
+      end
+    end
+
+    -- Fields (including methods converted to field fun)
+    for _, field in ipairs(class.fields) do
+      table.insert(lines, "---@field " .. field.name .. " " .. field.type)
+    end
+
+    table.insert(lines, "")
+  end
+
+  -- Enums as classes with fields
+  if #enums > 0 then
+    for _, enum in ipairs(enums) do
+      table.insert(lines, "---@class " .. enum.name)
+      table.insert(lines, "")
+    end
+  end
+
+  for _, g in ipairs(globals) do
+    if g.type:match("^fun%(") then
+      table.insert(lines, "---@type " .. g.type)
+      table.insert(lines, g.name .. " = function(...) end")
+    else
+      table.insert(lines, "---@type " .. g.type)
+      table.insert(lines, g.name .. " = " .. g.name)
+    end
+    table.insert(lines, "")
+  end
+
+  return table.concat(lines, "\n")
+end
+
+---Generate meta file from EggyAPI content
+---@param text string
+---@param meta_path string
+local function _generate_meta_file(text, meta_path)
+  local classes, aliases, enums, globals = _extract_api_info(text)
+
+  local content = _generate_luals_host_content(classes, aliases, enums, globals)
+
+  local ok, err = common.write_file(meta_path, content)
+  if not ok then
+    _fail(_text(
+      "无法写入 meta 文件: " .. tostring(err),
+      "Cannot write meta file: " .. tostring(err)
+    ))
+  end
+
+  print(_text(
+    "已生成 meta 文件: " .. meta_path .. " (" .. #classes .. " 类, " .. #aliases .. " 别名, " .. #enums .. " 枚举, " .. #globals .. " 全局)",
+    "Generated meta file: " .. meta_path .. " (" .. #classes .. " classes, " .. #aliases .. " aliases, " .. #enums .. " enums, " .. #globals .. " globals)"
+  ))
+end
+
 local function main(args)
   local options = _parse_args(args or {})
   _cleanup_deprecated_api(options.new)
 
   local text = ""
-  if not options.skip_generate or not options.skip_check then
+  if not options.skip_generate or not options.skip_check or not options.skip_meta then
     local read_text, read_err = common.read_file(options.new)
     if read_text == nil then
       _fail(read_err)
@@ -817,6 +1281,10 @@ local function main(args)
 
   if not options.skip_generate then
     _generate_docs(text, options)
+  end
+
+  if not options.skip_meta then
+    _generate_meta_file(text, options.meta)
   end
 
   local diff_failed = false
