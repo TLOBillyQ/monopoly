@@ -3,6 +3,7 @@ local bootstrap = require("tests.bootstrap")
 local M = {}
 
 local domain_behavior_modules = {
+  "suites.domain.camera_helper",
   "suites.domain.chance",
   "suites.domain.land",
   "suites.domain.item",
@@ -13,6 +14,7 @@ local domain_behavior_modules = {
   "suites.domain.paid_currency",
   "suites.domain.config_sanity",
   "suites.domain.clear_obstacles_branch_walk",
+  "suites.domain.skin_helper",
   "suites.domain.vehicle_helper",
 }
 
