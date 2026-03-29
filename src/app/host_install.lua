@@ -29,7 +29,6 @@ function M.install(opts)
     runtime_context.install_environment(runtime_ctx)
     global_aliases.install(runtime_ctx.env)
     runtime_context.install_runtime_helpers(runtime_ctx, { install_globals = install_globals })
-    runtime_context.install_editor_exports(runtime_ctx)
   else
     runtime_context.set_current(nil)
   end

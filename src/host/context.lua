@@ -1,7 +1,6 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local runtime_event_bridge = require("src.host.event_bridge")
 local logger = require("src.core.utils.logger")
-local runtime_editor_exports = require("src.state.state_access.runtime_editor_exports")
 local number_utils = require("src.core.utils.number_utils")
 local synthetic_actor_registry = require("src.host.synthetic_actor_registry")
 require("src.config.content.runtime_refs")
@@ -185,7 +184,6 @@ function runtime_context.install_globals(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
   runtime_context.install_environment(ctx)
   runtime_context.install_runtime_helpers(ctx, { install_globals = true })
-  runtime_context.install_editor_exports(ctx)
 end
 
 function runtime_context.install_environment(ctx)
@@ -257,11 +255,6 @@ function runtime_context.install_runtime_helper_globals(helpers)
   all_roles = helpers.roles
   ALLROLES = helpers.roles
   return helpers
-end
-
-function runtime_context.install_editor_exports(ctx)
-  assert(ctx ~= nil, "missing runtime context")
-  runtime_editor_exports.install(ctx)
 end
 
 return runtime_context
