@@ -269,59 +269,8 @@ local function _build_vehicle_helper(get_roles, get_game_api, deps)
   return helper
 end
 
-local function _install_editor_exports(ctx, deps)
-  local runtime_constants = assert(deps.runtime_constants, "missing deps.runtime_constants")
-  local logger = assert(deps.logger, "missing deps.logger")
-  local vehicle_catalog = assert(deps.vehicle_catalog, "missing deps.vehicle_catalog")
-  local vehicle_helper = assert(ctx and ctx.vehicle_helper, "missing ctx.vehicle_helper")
-
-  function get_vehicle_player()
-    local role_id = vehicle_helper.player_id
-    local role = vehicle_helper.resolve_role and vehicle_helper.resolve_role(role_id) or nil
-    if role ~= nil then
-      return role
-    end
-    logger.warn("[Eggy]", "vehicle player unresolved", tostring(role_id))
-    return nil
-  end
-
-  function get_vehicle_move_direction()
-    return vehicle_helper.move_direction or runtime_constants.v3_left
-  end
-
-  function get_vehicle_move_time()
-    return vehicle_helper.move_time or 0
-  end
-
-  function get_spawn_vehicle_id()
-    local first = vehicle_catalog.list()[1]
-    return vehicle_helper.vehicle_id or (first and first.id) or 0
-  end
-
-  function get_vehicle_set_position_x()
-    local pos = vehicle_helper.set_position
-    return pos and pos.x or 0
-  end
-
-  function get_vehicle_set_position_y()
-    local pos = vehicle_helper.set_position
-    return pos and pos.y or 0
-  end
-
-  function get_vehicle_set_position_z()
-    local pos = vehicle_helper.set_position
-    return pos and pos.z or 0
-  end
-
-  return true
-end
-
 function M.build_helper(get_roles, get_game_api, deps)
   return _build_vehicle_helper(get_roles, get_game_api, deps or {})
-end
-
-function M.install_editor_exports(ctx, deps)
-  return _install_editor_exports(ctx, deps or {})
 end
 
 return M

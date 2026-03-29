@@ -103,9 +103,6 @@ local function _load_runtime(globals)
       build_helper = function(get_roles, get_game_api)
         return _build_none_helper(get_roles, get_game_api)
       end,
-      install_editor_exports = function()
-        return false
-      end,
     }
   end
 
@@ -122,14 +119,6 @@ end
 function source.build_helper(get_roles, get_game_api, deps, globals)
   local runtime = _load_runtime(globals or _G)
   return runtime.build_helper(get_roles, get_game_api, deps or {})
-end
-
-function source.install_editor_exports(ctx, deps, globals)
-  local runtime = _load_runtime(globals or _G)
-  if type(runtime.install_editor_exports) ~= "function" then
-    return false
-  end
-  return runtime.install_editor_exports(ctx, deps or {})
 end
 
 return source
