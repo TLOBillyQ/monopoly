@@ -31,15 +31,7 @@ local function _default_reporter()
     case_fail = function()
       io.stdout:write("F")
     end,
-    finish = function(summary)
-      local lines = log_capture.summary_lines(summary)
-      if #lines > 0 then
-        print("")
-        for _, line in ipairs(lines) do
-          print("[captured] suppressed x" .. tostring(line.count) .. " " .. line.text)
-        end
-      end
-    end,
+    finish = function() end,
   }
 end
 

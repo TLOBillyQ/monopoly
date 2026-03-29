@@ -2677,11 +2677,10 @@ end
 
 local function _test_turn_prompt_initialized_for_first_player()
   local g = _new_game()
-  local current_player = g:current_player()
 
-  assert((g.turn.turn_start_prompt_seq or 0) == 1, "first turn should initialize prompt seq")
-  assert(g.turn.turn_start_prompt_player_id == current_player.id,
-    "first turn prompt target should be current player")
+  assert((g.turn.turn_start_prompt_seq or 0) == 0, "first turn should not pre-seed prompt seq")
+  assert(g.turn.turn_start_prompt_player_id == nil,
+    "first turn prompt target should be nil until runtime emits it")
 end
 
 local function _test_turn_prompt_emitted_on_next_player_switch()

@@ -123,8 +123,8 @@ function composition_root.assemble(opts, game_or_class)
   game.player_by_id = _build_player_by_id(players)
   game.turn = _build_initial_turn()
   local first_player = players and players[game.turn.current_player_index] or nil
-  game.turn.turn_start_prompt_seq = 1
-  game.turn.turn_start_prompt_player_id = first_player and first_player.id or nil
+  game.turn.turn_start_prompt_seq = 0
+  game.turn.turn_start_prompt_player_id = nil
   game.dirty = dirty
   game.market_limits = _build_market_limits()
   game.registries = registries
