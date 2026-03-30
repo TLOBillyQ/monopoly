@@ -61,9 +61,9 @@ local function _pick_synthetic_unit_keys(count)
   if limit > #pool then
     limit = #pool
   end
-  for index = 1, limit do
-    local pick_index = runtime_ports.rng_next_int(index, #pool)
-    local picked = pool[pick_index]
+   for index = 1, limit do
+     local pick_index = GameAPI.random_int(index, #pool)
+     local picked = pool[pick_index]
     pool[pick_index] = pool[index]
     pool[index] = picked
     selected[index] = pool[index]
