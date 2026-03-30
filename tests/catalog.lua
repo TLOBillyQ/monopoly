@@ -115,6 +115,7 @@ local guard_scripts = {
   { name = "forbidden_globals", module_name = "guards.forbidden_globals", path = "tests/guards/forbidden_globals.lua" },
   { name = "arch_view_guard", module_name = "guards.arch_view_guard", path = "tests/guards/arch_view_guard.lua" },
   { name = "repo_hygiene", module_name = "guards.repo_hygiene", path = "tests/guards/repo_hygiene.lua" },
+  { name = "fixed_type", module_name = "guards.fixed_type_guard", path = "tests/guards/fixed_type_guard.lua" },
 }
 
 local function _clone_case(test)

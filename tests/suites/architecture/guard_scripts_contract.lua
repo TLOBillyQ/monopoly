@@ -1,5 +1,6 @@
 local dep_rules = require("guards.dep_rules")
 local forbidden_globals = require("guards.forbidden_globals")
+local fixed_type_guard = require("guards.fixed_type_guard")
 local arch_common = require("arch_view.runtime.common")
 
 local fixture_root = arch_common.normalize_path("tests/fixtures/guards")
@@ -88,6 +89,31 @@ local function _test_guard_scripts_allow_clean_fixtures()
     assert(globals_result.ok == true, "forbidden_globals should allow clean fixtures")
 end
 
+local function _test_fixed_type_catches_int_literals()
+    local result = fixed_type_guard.run({
+        scan_roots = { _fixture_path("fixed_type/int_literal/src") },
+    })
+
+    assert(result.ok == false, "fixed_type_guard should reject integer literals in Fixed-typed params")
+    assert(result.violations ~= nil and #result.violations >= 3, "fixed_type_guard should report at least 3 violations")
+end
+
+local function _test_fixed_type_allows_float_literals()
+    local result = fixed_type_guard.run({
+        scan_roots = { _fixture_path("fixed_type/float_literal/src") },
+    })
+
+    assert(result.ok == true, "fixed_type_guard should allow float literals for Fixed-typed params")
+end
+
+local function _test_fixed_type_allows_clean_src()
+    local result = fixed_type_guard.run({
+        scan_roots = { _fixture_path("clean/src") },
+    })
+
+    assert(result.ok == true, "fixed_type_guard should allow clean source files")
+end
+
 return {
     name = "guard_scripts_contract",
     tests = {
@@ -97,5 +123,8 @@ return {
         { name = "forbidden_globals_allows_numeric_cast_outside_src", run = _test_forbidden_globals_allows_numeric_cast_outside_src },
         { name = "forbidden_globals_allows_package_access_outside_src", run = _test_forbidden_globals_allows_package_access_outside_src },
         { name = "guard_scripts_allow_clean_fixtures",               run = _test_guard_scripts_allow_clean_fixtures },
+        { name = "fixed_type_catches_int_literals",   run = _test_fixed_type_catches_int_literals },
+        { name = "fixed_type_allows_float_literals",  run = _test_fixed_type_allows_float_literals },
+        { name = "fixed_type_allows_clean_src",       run = _test_fixed_type_allows_clean_src },
     },
 }
