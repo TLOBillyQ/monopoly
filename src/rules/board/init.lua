@@ -436,16 +436,4 @@ function board:step_backward_by_facing(current_index, facing)
   return next_index, passed_start, next_facing
 end
 
--- Export helpers for testability
-board._resolve_outer_next = _resolve_outer_next
-board._resolve_fresh_forward_next = _resolve_fresh_forward_next
-board._resolve_facing_next = _resolve_facing_next
-board._resolve_fallback_next = _resolve_fallback_next
-board._resolve_backward_next_id = _resolve_backward_next_id
-board._resolve_backward_next_source = _resolve_backward_next_source
-board._resolve_forward_facing = _resolve_forward_facing
-board._normalize_forward_step_context = _normalize_forward_step_context
-board._pick_any_dir = _pick_any_dir
-board._pick_unique_dir = _pick_unique_dir
-
 return board

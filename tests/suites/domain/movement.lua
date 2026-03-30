@@ -478,6 +478,186 @@ local function _test_move_anim_play_sequence_emits_step_sound_per_visited_tile()
   assert(#step_calls == 3, "move sequence should still execute three steps")
 end
 
+-- ============================================================
+-- Inlined board helpers (formerly exported via board._xxx = _xxx)
+-- ============================================================
+local _direction_constants = require("src.rules.board.directions")
+local _opposite = _direction_constants.opposite
+
+local _dir_priority = {
+  up = 1,
+  right = 2,
+  down = 3,
+  left = 4,
+}
+
+local function _sorted_dirs(neigh)
+  local keys = {}
+  for dir in pairs(neigh) do
+    table.insert(keys, dir)
+  end
+  table.sort(keys, function(a, b)
+    local pa = _dir_priority[a] or 100
+    local pb = _dir_priority[b] or 100
+    if pa ~= pb then
+      return pa < pb
+    end
+    return tostring(a) < tostring(b)
+  end)
+  return keys
+end
+
+local function _pick_any_dir(neigh, avoid_dir)
+  assert(neigh ~= nil, "missing neighbors")
+  for _, dir in ipairs(_sorted_dirs(neigh)) do
+    if dir ~= avoid_dir then
+      return dir, neigh[dir]
+    end
+  end
+  return nil, nil
+end
+
+local function _pick_unique_dir(neigh, avoid_dir)
+  assert(neigh ~= nil, "missing neighbors")
+  local picked_dir = nil
+  local picked_id = nil
+  for _, dir in ipairs(_sorted_dirs(neigh)) do
+    if dir ~= avoid_dir then
+      if picked_dir ~= nil then
+        return nil, nil
+      end
+      picked_dir = dir
+      picked_id = neigh[dir]
+    end
+  end
+  return picked_dir, picked_id
+end
+
+local function _resolve_outer_next(map, current_id, parity, can_enter_inner)
+  if not map.outer_next[current_id] then
+    return nil, false
+  end
+  local next_id = map.outer_next[current_id]
+  local entry = map.entry_points[current_id]
+  if entry and can_enter_inner and parity and (parity % 2 == 0) then
+    next_id = entry.inner_id
+    return next_id, true
+  end
+  return next_id, false
+end
+
+local function _resolve_fresh_forward_next(map, current_id, facing)
+  if facing ~= nil then
+    return nil
+  end
+  local fresh_forward_next = map.fresh_forward_next or nil
+  return fresh_forward_next and fresh_forward_next[current_id] or nil
+end
+
+local function _resolve_facing_next(neigh, facing)
+  if facing and neigh[facing] then
+    return neigh[facing]
+  end
+  return nil
+end
+
+local function _resolve_fallback_next(neigh, facing)
+  local back_dir = _opposite[facing]
+  local _, next_id = _pick_unique_dir(neigh, back_dir)
+  if next_id then
+    return next_id
+  end
+
+  local _, fallback_id = _pick_any_dir(neigh, back_dir)
+  if fallback_id then
+    return fallback_id
+  end
+
+  local _, any_id = _pick_any_dir(neigh, nil)
+  return any_id
+end
+
+local function _resolve_backward_by_facing(neigh, facing)
+  if not facing then
+    return nil
+  end
+  local back_dir = _opposite[facing]
+  if not back_dir then
+    return nil
+  end
+  return neigh[back_dir]
+end
+
+local function _resolve_backward_from_map(map, current_id)
+  if map.outer_prev[current_id] then
+    return map.outer_prev[current_id]
+  end
+  local backward_fallback = map.backward_fallback or nil
+  if backward_fallback and backward_fallback[current_id] then
+    return backward_fallback[current_id]
+  end
+  return nil
+end
+
+local function _resolve_backward_from_neighbors(neigh, facing)
+  local _, next_id = _pick_unique_dir(neigh, facing)
+  if next_id then
+    return next_id
+  end
+
+  local _, fallback_id = _pick_any_dir(neigh, facing)
+  if fallback_id then
+    return fallback_id
+  end
+
+  local _, any_id = _pick_any_dir(neigh, nil)
+  return any_id
+end
+
+local _resolve_backward_next_source
+
+local function _resolve_backward_next_id(map, current_id, neigh, facing)
+  return _resolve_backward_next_source(map, current_id, neigh, facing).next_id
+end
+
+_resolve_backward_next_source = function(map, current_id, neigh, facing)
+  local reverse_facing_next_id = _resolve_backward_by_facing(neigh, facing)
+  if reverse_facing_next_id then
+    return {
+      next_id = reverse_facing_next_id,
+      source = "facing_reverse_neighbor",
+    }
+  end
+
+  local mapped_next_id = _resolve_backward_from_map(map, current_id)
+  if mapped_next_id then
+    local outer_prev = map.outer_prev or nil
+    if outer_prev and outer_prev[current_id] then
+      return {
+        next_id = mapped_next_id,
+        source = "outer_prev",
+      }
+    end
+    return {
+      next_id = mapped_next_id,
+      source = "backward_fallback",
+    }
+  end
+
+  local fallback_next_id = _resolve_backward_from_neighbors(neigh, facing)
+  if fallback_next_id then
+    return {
+      next_id = fallback_next_id,
+      source = "neighbor_fallback",
+    }
+  end
+
+  return {
+    next_id = nil,
+    source = nil,
+  }
+end
+
 -- Characterization tests for board helper functions (T4)
 local Board = require("src.rules.board")
 
@@ -488,7 +668,7 @@ local function _test_resolve_outer_next_returns_outer_next_when_no_entry()
     outer_prev = {},
     direction = function() return "up" end,
   }
-  local result = Board._resolve_outer_next(map, 1, "up", 1)
+  local result = _resolve_outer_next(map, 1, "up", 1)
   _assert_eq(result, 2, "should return outer_next when no entry point")
 end
 
@@ -498,7 +678,7 @@ local function _test_resolve_outer_next_returns_inner_on_even_parity()
     entry_points = { [1] = { inner_id = 10 } },
     outer_prev = { [1] = 99 },
   }
-  local result, entered_inner = Board._resolve_outer_next(map, 1, 2, true)
+  local result, entered_inner = _resolve_outer_next(map, 1, 2, true)
   _assert_eq(result, 10, "should return inner_id on even parity")
   _assert_eq(entered_inner, true, "should mark inner entry on even parity")
 end
@@ -509,7 +689,7 @@ local function _test_resolve_outer_next_returns_outer_when_inner_entry_is_blocke
     entry_points = { [1] = { inner_id = 10 } },
     outer_prev = { [1] = 99 },
   }
-  local result, entered_inner = Board._resolve_outer_next(map, 1, 2, false)
+  local result, entered_inner = _resolve_outer_next(map, 1, 2, false)
   _assert_eq(result, 2, "should return outer_next when same move already entered inner")
   _assert_eq(entered_inner, false, "should not mark inner entry when blocked")
 end
@@ -520,7 +700,7 @@ local function _test_resolve_outer_next_returns_nil_when_no_outer_next()
     entry_points = {},
     outer_prev = {},
   }
-  local result, entered_inner = Board._resolve_outer_next(map, 1, 1, true)
+  local result, entered_inner = _resolve_outer_next(map, 1, 1, true)
   _assert_eq(result, nil, "should return nil when no outer_next")
   _assert_eq(entered_inner, false, "should not mark inner entry when outer_next is missing")
 end
@@ -529,7 +709,7 @@ local function _test_resolve_fresh_forward_next_returns_fresh_next_when_facing_n
   local map = {
     fresh_forward_next = { [1] = 5 },
   }
-  local result = Board._resolve_fresh_forward_next(map, 1, nil)
+  local result = _resolve_fresh_forward_next(map, 1, nil)
   _assert_eq(result, 5, "should return fresh_forward_next when facing is nil")
 end
 
@@ -537,31 +717,31 @@ local function _test_resolve_fresh_forward_next_returns_nil_when_facing_not_nil(
   local map = {
     fresh_forward_next = { [1] = 5 },
   }
-  local result = Board._resolve_fresh_forward_next(map, 1, "up")
+  local result = _resolve_fresh_forward_next(map, 1, "up")
   _assert_eq(result, nil, "should return nil when facing is not nil")
 end
 
 local function _test_resolve_fresh_forward_next_returns_nil_when_no_fresh_forward_next()
   local map = {}
-  local result = Board._resolve_fresh_forward_next(map, 1, nil)
+  local result = _resolve_fresh_forward_next(map, 1, nil)
   _assert_eq(result, nil, "should return nil when no fresh_forward_next")
 end
 
 local function _test_resolve_facing_next_returns_neighbor_in_facing_direction()
   local neigh = { up = 10, down = 20, left = 30, right = 40 }
-  local result = Board._resolve_facing_next(neigh, "up")
+  local result = _resolve_facing_next(neigh, "up")
   _assert_eq(result, 10, "should return neighbor in facing direction")
 end
 
 local function _test_resolve_facing_next_returns_nil_when_no_facing()
   local neigh = { up = 10 }
-  local result = Board._resolve_facing_next(neigh, nil)
+  local result = _resolve_facing_next(neigh, nil)
   _assert_eq(result, nil, "should return nil when facing is nil")
 end
 
 local function _test_resolve_facing_next_returns_nil_when_no_neighbor_in_facing()
   local neigh = { up = 10 }
-  local result = Board._resolve_facing_next(neigh, "down")
+  local result = _resolve_facing_next(neigh, "down")
   _assert_eq(result, nil, "should return nil when no neighbor in facing direction")
 end
 
@@ -569,7 +749,7 @@ local function _test_resolve_fallback_next_returns_unique_dir_avoiding_back()
   -- When facing="up", back_dir="down" (opposite)
   -- neigh has "up" and "down", avoiding "down" leaves only "up"
   local neigh = { up = 10, down = 20 }
-  local result = Board._resolve_fallback_next(neigh, "up")
+  local result = _resolve_fallback_next(neigh, "up")
   _assert_eq(result, 10, "should return unique dir avoiding back direction (down)")
 end
 
@@ -579,14 +759,14 @@ local function _test_resolve_fallback_next_returns_any_dir_avoiding_back_when_no
   -- Since there are multiple options, _pick_unique_dir returns nil
   -- Then _pick_any_dir is called which returns the first sorted dir (left before up)
   local neigh = { up = 10, down = 20, left = 30 }
-  local result = Board._resolve_fallback_next(neigh, "up")
+  local result = _resolve_fallback_next(neigh, "up")
   assert(result ~= nil, "should return some direction when multiple options")
   assert(result ~= 20, "should not return back direction (down)")
 end
 
 local function _test_resolve_fallback_next_returns_any_dir_when_back_nil()
   local neigh = { up = 10 }
-  local result = Board._resolve_fallback_next(neigh, nil)
+  local result = _resolve_fallback_next(neigh, nil)
   _assert_eq(result, 10, "should return any dir when back direction is nil")
 end
 
@@ -596,7 +776,7 @@ local function _test_resolve_backward_next_returns_facing_reverse_neighbor_when_
     backward_fallback = { [1] = 40 },
   }
   local neigh = { down = 20, left = 50 }
-  local result = Board._resolve_backward_next_id(map, 1, neigh, "up")
+  local result = _resolve_backward_next_id(map, 1, neigh, "up")
   _assert_eq(result, 20, "should prefer the reverse-facing neighbor before all other backward sources")
 end
 
@@ -606,7 +786,7 @@ local function _test_resolve_backward_next_returns_outer_prev_before_map_fallbac
     backward_fallback = { [1] = 40 },
   }
   local neigh = { left = 50 }
-  local result = Board._resolve_backward_next_id(map, 1, neigh, nil)
+  local result = _resolve_backward_next_id(map, 1, neigh, nil)
   _assert_eq(result, 30, "should prefer outer_prev before backward_fallback")
 end
 
@@ -616,7 +796,7 @@ local function _test_resolve_backward_next_returns_backward_fallback_before_neig
     backward_fallback = { [1] = 40 },
   }
   local neigh = { left = 50, right = 60 }
-  local result = Board._resolve_backward_next_id(map, 1, neigh, nil)
+  local result = _resolve_backward_next_id(map, 1, neigh, nil)
   _assert_eq(result, 40, "should prefer backward_fallback before neighbor fallback")
 end
 
@@ -626,7 +806,7 @@ local function _test_resolve_backward_next_returns_unique_neighbor_when_only_one
     backward_fallback = {},
   }
   local neigh = { up = 10, left = 20 }
-  local result = Board._resolve_backward_next_id(map, 1, neigh, "up")
+  local result = _resolve_backward_next_id(map, 1, neigh, "up")
   _assert_eq(result, 20, "should return the unique remaining neighbor when one option remains")
 end
 
@@ -636,7 +816,7 @@ local function _test_resolve_backward_next_returns_sorted_any_neighbor_when_mult
     backward_fallback = {},
   }
   local neigh = { up = 10, right = 30, left = 20 }
-  local result = Board._resolve_backward_next_id(map, 1, neigh, "up")
+  local result = _resolve_backward_next_id(map, 1, neigh, "up")
   _assert_eq(result, 30, "should fall back to the first sorted non-facing neighbor when multiple options remain")
 end
 
@@ -646,7 +826,7 @@ local function _test_resolve_backward_next_source_reports_facing_hit()
     backward_fallback = {},
   }
   local neigh = { down = 20, left = 50 }
-  local result = Board._resolve_backward_next_source(map, 1, neigh, "up")
+  local result = _resolve_backward_next_source(map, 1, neigh, "up")
   _assert_eq(result.next_id, 20, "result should keep the reverse-facing neighbor")
   _assert_eq(result.source, "facing_reverse_neighbor", "result should report facing hit as the source")
 end
@@ -657,7 +837,7 @@ local function _test_resolve_backward_next_source_reports_outer_prev_hit()
     backward_fallback = { [1] = 40 },
   }
   local neigh = { left = 50 }
-  local result = Board._resolve_backward_next_source(map, 1, neigh, nil)
+  local result = _resolve_backward_next_source(map, 1, neigh, nil)
   _assert_eq(result.next_id, 30, "result should keep the outer_prev tile")
   _assert_eq(result.source, "outer_prev", "result should report outer_prev as the source")
 end
@@ -668,49 +848,49 @@ local function _test_resolve_backward_next_source_reports_backward_fallback_hit(
     backward_fallback = { [1] = 40 },
   }
   local neigh = { left = 50, right = 60 }
-  local result = Board._resolve_backward_next_source(map, 1, neigh, nil)
+  local result = _resolve_backward_next_source(map, 1, neigh, nil)
   _assert_eq(result.next_id, 40, "result should keep the backward fallback tile")
   _assert_eq(result.source, "backward_fallback", "result should report backward_fallback as the source")
 end
 
 local function _test_pick_any_dir_returns_first_sorted_dir()
   local neigh = { right = 10, up = 20, down = 30 }
-  local dir, id = Board._pick_any_dir(neigh, nil)
+  local dir, id = _pick_any_dir(neigh, nil)
   _assert_eq(dir, "up", "should return first sorted dir (up before right before down)")
   _assert_eq(id, 20, "should return id for that dir")
 end
 
 local function _test_pick_any_dir_avoids_avoid_dir()
   local neigh = { up = 10, down = 20 }
-  local dir, id = Board._pick_any_dir(neigh, "up")
+  local dir, id = _pick_any_dir(neigh, "up")
   _assert_eq(dir, "down", "should avoid the specified dir")
   _assert_eq(id, 20, "should return id for non-avoided dir")
 end
 
 local function _test_pick_any_dir_returns_nil_when_all_avoided()
   local neigh = { up = 10 }
-  local dir, id = Board._pick_any_dir(neigh, "up")
+  local dir, id = _pick_any_dir(neigh, "up")
   _assert_eq(dir, nil, "should return nil dir when all avoided")
   _assert_eq(id, nil, "should return nil id when all avoided")
 end
 
 local function _test_pick_unique_dir_returns_unique_when_only_one_option()
   local neigh = { up = 10 }
-  local dir, id = Board._pick_unique_dir(neigh, nil)
+  local dir, id = _pick_unique_dir(neigh, nil)
   _assert_eq(dir, "up", "should return unique dir")
   _assert_eq(id, 10, "should return unique id")
 end
 
 local function _test_pick_unique_dir_returns_nil_when_multiple_options()
   local neigh = { up = 10, down = 20 }
-  local dir, id = Board._pick_unique_dir(neigh, nil)
+  local dir, id = _pick_unique_dir(neigh, nil)
   _assert_eq(dir, nil, "should return nil when multiple options")
   _assert_eq(id, nil, "should return nil id when multiple options")
 end
 
 local function _test_pick_unique_dir_returns_unique_when_others_avoided()
   local neigh = { up = 10, down = 20 }
-  local dir, id = Board._pick_unique_dir(neigh, "up")
+  local dir, id = _pick_unique_dir(neigh, "up")
   _assert_eq(dir, "down", "should return unique non-avoided dir")
   _assert_eq(id, 20, "should return id for unique non-avoided dir")
 end
