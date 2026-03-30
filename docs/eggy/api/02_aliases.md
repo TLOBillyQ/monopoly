@@ -1,6 +1,8 @@
 # 类型别名
 
 Fixed number
+运行时对应 framecore.fixmath.Fix32，Lua 端必须用浮点数字面量（如 `30.0`），
+整数（如 `30`）会导致类型不匹配错误。
 AbilityAnchorID string 技能锚点ID
 AbilityKey integer 技能编号
 AbilitySlot integer 技能槽位
