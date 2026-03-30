@@ -1,6 +1,7 @@
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_state = require("src.ui.state")
 local logger = require("src.core.utils.logger")
+local camera_follow = require("src.config.gameplay.camera_follow")
 
 local camera_sync = {}
 local _warned = {}
@@ -9,11 +10,6 @@ local CAMERA_PROP_DIST = 7
 local CAMERA_PROP_OBSERVER_HEIGHT = 11
 local CAMERA_PROP_PITCH = 15
 local CAMERA_PROP_YAW = 16
-
-local FOLLOW_CAMERA_DIST = 30.0
-local FOLLOW_CAMERA_OBSERVER_HEIGHT = 10.0
-local FOLLOW_CAMERA_PITCH = 45.0
-local FOLLOW_CAMERA_YAW = -90.0
 
 local function _warn_once(key, ...)
   if _warned[key] then
@@ -25,10 +21,10 @@ end
 
 local function _restore_camera_props(local_role)
   local props = {
-    { CAMERA_PROP_DIST, FOLLOW_CAMERA_DIST },
-    { CAMERA_PROP_OBSERVER_HEIGHT, FOLLOW_CAMERA_OBSERVER_HEIGHT },
-    { CAMERA_PROP_PITCH, FOLLOW_CAMERA_PITCH },
-    { CAMERA_PROP_YAW, FOLLOW_CAMERA_YAW },
+    { CAMERA_PROP_DIST, camera_follow.dist },
+    { CAMERA_PROP_OBSERVER_HEIGHT, camera_follow.observer_height },
+    { CAMERA_PROP_PITCH, camera_follow.pitch },
+    { CAMERA_PROP_YAW, camera_follow.yaw },
   }
   if type(local_role.set_camera_property) ~= "function" then
     _warn_once("set_camera_property_unavailable", "set_camera_property not available on role")
