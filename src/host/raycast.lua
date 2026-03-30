@@ -107,7 +107,7 @@ function raycast.build_camera_ray(role, cfg)
   if type(get_ctrl_unit) ~= "function" then
     return nil, "missing role.get_ctrl_unit"
   end
-  local ok, ctrl_unit = pcall(get_ctrl_unit, role)
+  local ok, ctrl_unit = pcall(get_ctrl_unit)
   if not ok or ctrl_unit == nil then
     return nil, "missing ctrl_unit"
   end
