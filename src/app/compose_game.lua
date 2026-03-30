@@ -97,7 +97,6 @@ function composition_root.assemble(opts, game_or_class)
   assert(opts ~= nil, "missing assemble opts")
 
   local board = game_factory.build_board(opts)
-  local rng = game_factory.build_rng()
   local players = game_factory.build_players(opts)
 
   _init_tile_state(board)
@@ -129,7 +128,7 @@ function composition_root.assemble(opts, game_or_class)
   game.market_limits = _build_market_limits()
   game.registries = registries
   game.effect_registry = registries.effects
-  game.rng = rng
+  game.rng = opts.rng or game_factory.build_rng()
   game.logger = logger
   game.finished = false
   game.winner = nil
