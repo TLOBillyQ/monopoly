@@ -41,7 +41,7 @@ local function _set_layer_visible_for_roles(layer, roles, visible, deps)
 end
 
 local function _create_scene_ui_bind_unit(ctrl_unit, layout_id)
-  local offset = math.Vector3(0, 4, 0)
+  local offset = math.Vector3(0.0, 4.0, 0.0)
   if ctrl_unit and ctrl_unit.create_scene_ui_bind_unit then
     return ctrl_unit.create_scene_ui_bind_unit(layout_id, Enums.ModelSocket.socket_head, offset, -1.0, true, true)
   end
