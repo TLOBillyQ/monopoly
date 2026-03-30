@@ -217,11 +217,11 @@ local function _test_runtime_ports_resolve_roles_refreshes_empty_context_from_ga
   _reset_runtime_contract_state()
 end
 
-local function _test_game_factory_builds_rng_adapter_from_runtime_ports()
+local function _test_game_factory_builds_rng_adapter_from_game_api()
   _reset_runtime_contract_state()
   local calls = {}
   _with_patches({
-    { target = runtime_ports, key = "rng_next_int", value = function(min, max)
+    { target = GameAPI, key = "random_int", value = function(min, max)
       calls[#calls + 1] = { min = min, max = max }
       return max
     end },
@@ -230,11 +230,20 @@ local function _test_game_factory_builds_rng_adapter_from_runtime_ports()
     assert(type(game.rng) == "table", "compose_game should install game.rng")
     assert(type(game.rng.next_int) == "function", "compose_game should expose rng next_int")
     local value = game.rng:next_int(2, 7)
-    _assert_eq(value, 7, "game.rng should delegate to runtime_ports.rng_next_int")
+    _assert_eq(value, 7, "game.rng should delegate to GameAPI.random_int")
   end, { skip_runtime_context_refresh = true })
-  _assert_eq(#calls, 1, "game.rng should call runtime_ports.rng_next_int once")
+  _assert_eq(#calls, 1, "game.rng should call GameAPI.random_int once")
   _assert_eq(calls[1].min, 2, "game.rng should forward min bound")
   _assert_eq(calls[1].max, 7, "game.rng should forward max bound")
+  _reset_runtime_contract_state()
+end
+
+local function _test_game_rng_works_after_runtime_ports_reset()
+  runtime_ports.reset_for_tests()
+  local game = support.new_game({ ai = {} })
+  local value = game.rng:next_int(1, 6)
+  assert(type(value) == "number", "game.rng:next_int should return a number after ports reset")
+  assert(value >= 1 and value <= 6, "game.rng:next_int should return value in [1, 6] after ports reset")
   _reset_runtime_contract_state()
 end
 
@@ -411,8 +420,12 @@ return {
       run = _test_runtime_ports_resolve_roles_refreshes_empty_context_from_game_api,
     },
     {
-      name = "game_factory_builds_rng_adapter_from_runtime_ports",
-      run = _test_game_factory_builds_rng_adapter_from_runtime_ports,
+      name = "game_factory_builds_rng_adapter_from_game_api",
+      run = _test_game_factory_builds_rng_adapter_from_game_api,
+    },
+    {
+      name = "game_rng_works_after_runtime_ports_reset",
+      run = _test_game_rng_works_after_runtime_ports_reset,
     },
     {
       name = "runtime_ports_legacy_apis_are_removed",
