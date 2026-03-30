@@ -4,15 +4,15 @@ local player = require("src.player.actions.player")
 local inventory = require("src.player.actions.inventory")
 local constants = require("src.config.content.constants")
 local roles_cfg = require("src.config.content.roles")
-local runtime_ports = require("src.core.ports.runtime_ports")
 require "vendor.third_party.Utils"
 
 local game_factory = {}
 
-local function _new_rng()
+local function _new_rng(random_fn)
+  random_fn = random_fn or GameAPI.random_int
   local rng = {}
   function rng:next_int(min, max)
-    return runtime_ports.rng_next_int(min, max)
+    return random_fn(min, max)
   end
   return rng
 end
@@ -104,8 +104,8 @@ local function _create_players(opts)
   return players
 end
 
-function game_factory.build_rng()
-  return _new_rng()
+function game_factory.build_rng(random_fn)
+  return _new_rng(random_fn)
 end
 
 function game_factory.build_board(opts)
