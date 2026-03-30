@@ -48,3 +48,5 @@
 - `src/` canonical 命名采用目录内短名硬切：不保留 alias/shim 兼容文件，旧模块名只允许出现在明确标注为 historical/retired 的说明里。
 - 记忆文件参见 `lua_agent_memory.md`。
 - 保持小步提交, 如果执行目标是 `.agents/plan.md`，结束前不要停下来
+- Eggy API 的 `Fixed` 类型参数必须使用浮点数字面量（如 `30.0`），禁止传递 Lua 整数（如 `30`）。
+  Lua 5.5 区分 integer/float 子类型，引擎运行时 Fix32 只接受 float。
