@@ -1,63 +1,12 @@
 local landing_defs = require("src.rules.land.specs.effects")
 local effect_pipeline = require("src.rules.effects.effect_pipeline")
 local effect_runner = require("src.rules.effects.effect_runner")
-local runtime_state = require("src.state.state_access.runtime_state")
 local wait_callbacks = require("src.turn.waits.callback_registry")
+local predicates = require("src.turn.phases.land.predicates")
 
 local max_landing_depth = 10
 local callback_keys = wait_callbacks.callback_keys
 local _resolve_landing
-
-local function _has_action_anim(game)
-  if not game or not game.turn then
-    return false
-  end
-  if game.turn.action_anim then
-    return true
-  end
-  local queue = game.turn.action_anim_queue
-  return type(queue) == "table" and #queue > 0
-end
-
-local function _is_relocation_action_anim(entry)
-  return entry and (entry.kind == "move_effect" or entry.kind == "teleport_effect" or entry.kind == "forced_relocation")
-end
-
-local function _has_pending_relocation_action_anim(game)
-  if not game or not game.turn then
-    return false
-  end
-  local current = game.turn.action_anim
-  if _is_relocation_action_anim(current) then
-    return true
-  end
-  local queue = game.turn.action_anim_queue
-  if type(queue) ~= "table" then
-    return false
-  end
-  for _, entry in ipairs(queue) do
-    if _is_relocation_action_anim(entry) then
-      return true
-    end
-  end
-  return false
-end
-
-local function _landing_visual_hold_state(game)
-  if not game then
-    return nil
-  end
-  return game.landing_visual_hold_state
-end
-
-local function _is_landing_visual_hold_active(game)
-  local state = _landing_visual_hold_state(game)
-  if state ~= nil and runtime_state.get_landing_visual_hold_source(state) ~= nil then
-    return runtime_state.get_landing_visual_hold_active(state)
-  end
-  local turn = game and game.turn or nil
-  return turn and turn.landing_visual_hold_active == true or false
-end
 
 local function _resolve_target_player(game, player, out)
   if not out.player_id then
@@ -148,8 +97,8 @@ local function _resolve_wait_state(game, next_state, next_args, wait_action_anim
   }
 
   if wait_action_anim == true then
-    if _has_action_anim(game) then
-      if _is_landing_visual_hold_active(game) then
+    if predicates.has_action_anim(game) then
+      if predicates.is_landing_visual_hold_active(game) then
         return _register_landing_visual_resume(game, "wait_action_anim", {
           next_state = next_state,
           next_args = next_args,
@@ -163,20 +112,20 @@ local function _resolve_wait_state(game, next_state, next_args, wait_action_anim
         return next_state, next_args
       end)
     end
-    if _is_landing_visual_hold_active(game) then
+    if predicates.is_landing_visual_hold_active(game) then
       return _register_landing_visual_resume(game, next_state, next_args, function()
         return next_state, next_args
       end)
     end
     return next_state, next_args
   end
-  if _has_action_anim(game) then
-    if _is_landing_visual_hold_active(game) then
+  if predicates.has_action_anim(game) then
+    if predicates.is_landing_visual_hold_active(game) then
       return _wait_for_choice_via_landing_visual_then_action_anim(game, next_state, next_args)
     end
     return _wait_for_choice_via_action_anim(game, next_state, next_args)
   end
-  if _is_landing_visual_hold_active(game) then
+  if predicates.is_landing_visual_hold_active(game) then
     return _wait_for_choice_via_landing_visual(game, next_state, next_args)
   end
   return "wait_choice", wait_choice_args
@@ -187,8 +136,8 @@ local function _resolve_finished_landing_state(game, player)
     return "post_action", { player = player }
   end
 
-  if _has_action_anim(game) then
-    if _is_landing_visual_hold_active(game) then
+  if predicates.has_action_anim(game) then
+    if predicates.is_landing_visual_hold_active(game) then
       return _register_landing_visual_resume(game, "wait_action_anim", {
         next_state = "post_action",
         next_args = { player = player },
@@ -198,7 +147,7 @@ local function _resolve_finished_landing_state(game, player)
     end
     return _register_action_anim_resume(game, "post_action", { player = player }, _resume_post_action)
   end
-  if _is_landing_visual_hold_active(game) then
+  if predicates.is_landing_visual_hold_active(game) then
     return _register_landing_visual_resume(game, "post_action", { player = player }, _resume_post_action)
   end
   return "post_action", { player = player }
@@ -219,7 +168,7 @@ local function _resolve_followup_landing(game, player, out, depth)
   if not next_tile then
     return out
   end
-  if _has_pending_relocation_action_anim(game) then
+  if predicates.has_pending_relocation_action_anim(game) then
     return _wait_for_move_followup(game, target_player, out)
   end
   return _resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
@@ -263,10 +212,7 @@ local function _phase_land(turn_mgr, args)
   return _resolve_finished_landing_state(game, player)
 end
 
-local _land = {
-  run = _phase_land,
-  _resolve_wait_state = _resolve_wait_state,
-  _phase_land = _phase_land,
+return {
+  resolve_wait_state = _resolve_wait_state,
+  phase_land = _phase_land,
 }
-
-return _land
