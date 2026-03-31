@@ -1,18 +1,16 @@
 local choice_registry_module = require("src.core.choice.registry")
 local chance_handlers = require("src.rules.chance.handlers")
 local item_registry_module = require("src.rules.items.registry")
-local item_choice_handlers = require("src.rules.items.choice_handlers")
+local choice_handler_factory = require("src.rules.choice_handler_factory")
 local choice_optional_effect_handler = require("src.rules.bootstrap.choice_optional_effect_handler")
 local effect_registry_module = require("src.rules.effects.effect_registry")
 local effect_runner = require("src.rules.effects.effect_runner")
-local land_choice_handlers = require("src.rules.land.choice_handlers")
 local choice_resolver = require("src.core.choice.resolver")
 local land_executors = require("src.rules.land.executors")
 local landing_defs = require("src.rules.land.specs.effects")
 local item_executor = require("src.rules.items.executor")
 local item_phase = require("src.rules.items.phase")
 local market_effects = require("src.rules.market.effects")
-local market_choice_handlers = require("src.rules.market.choice_handlers")
 
 local bootstrap = {}
 
@@ -62,9 +60,9 @@ local function _build_choice_groups()
   local helpers = _build_choice_helpers()
   return {
     choice_optional_effect_handler.build(helpers),
-    land_choice_handlers.build(helpers),
-    item_choice_handlers.build(helpers),
-    market_choice_handlers.build(helpers),
+    choice_handler_factory.build_land_handlers(helpers),
+    choice_handler_factory.build_item_handlers(helpers),
+    choice_handler_factory.build_market_handlers(helpers),
   }
 end
 

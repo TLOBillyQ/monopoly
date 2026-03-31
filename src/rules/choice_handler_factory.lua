@@ -11,10 +11,31 @@ local number_utils = require("src.core.utils.number_utils")
 local intent_output_port = require("src.rules.ports.intent_output")
 local item_use_broadcast = require("src.rules.items.use_broadcast")
 local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
+local land_choice_specs = require("src.rules.land.choice_specs")
+local market_service = require("src.rules.market")
+local choice_outcome = require("src.rules.market.choice.outcome")
+local market_context = require("src.rules.market.query.context")
 
-local item_choice_handler = {}
+local choice_handler_factory = {}
+
 local copy_table = availability.copy_table
 local normalize_integer_field = availability.normalize_integer_field
+
+local TAB_ITEM = "item"
+local TAB_SKIN = "skin"
+
+function choice_handler_factory.build(handlers_config, helpers)
+  assert(type(handlers_config) == "function", "choice_handler_factory.build requires function handlers_config")
+  return handlers_config(helpers)
+end
+
+function choice_handler_factory.create(handlers_config)
+  return {
+    build = function(helpers)
+      return choice_handler_factory.build(handlers_config, helpers)
+    end,
+  }
+end
 
 local function _normalize_integer_list(values, field_name, choice_kind)
   assert(type(values) == "table", tostring(choice_kind) .. " requires table meta." .. tostring(field_name))
@@ -56,7 +77,7 @@ local function _merge_after_action_anim(result, final_res)
   return final_res
 end
 
-function item_choice_handler.build(helpers)
+local function _build_item_choice_handlers(helpers)
   local finish_choice = helpers.finish_choice
   local use_item = helpers.use_item
 
@@ -307,7 +328,7 @@ function item_choice_handler.build(helpers)
     return normalized_meta
   end
 
-  local function _normalize_item_phase_meta(game, meta, choice_spec)
+  local function _normalize_item_phase_meta(_, meta, choice_spec)
     local normalized_meta = _normalize_owner_meta(choice_spec.kind, meta, choice_spec)
     assert(type(normalized_meta.phase) == "string" and normalized_meta.phase ~= "",
       tostring(choice_spec.kind) .. " requires string meta.phase")
@@ -323,7 +344,7 @@ function item_choice_handler.build(helpers)
     _validate_item_player(game, choice_spec.kind, meta)
   end
 
-  local function _normalize_steal_meta(game, meta, choice_spec)
+  local function _normalize_steal_meta(_, meta, choice_spec)
     local normalized_meta = _normalize_owner_meta(choice_spec.kind, meta, choice_spec)
     normalize_integer_field(normalized_meta, "target_id", choice_spec.kind)
     return normalized_meta
@@ -334,8 +355,8 @@ function item_choice_handler.build(helpers)
     _validate_item_target(game, "target_id", meta)
   end
 
-  local function _normalize_steal_prompt_meta(game, meta, choice_spec)
-    local normalized_meta = _normalize_steal_meta(game, meta, choice_spec)
+  local function _normalize_steal_prompt_meta(_, meta, choice_spec)
+    local normalized_meta = _normalize_steal_meta(nil, meta, choice_spec)
     normalized_meta.queue = _normalize_integer_list(normalized_meta.queue, "queue", choice_spec.kind)
     normalize_integer_field(normalized_meta, "index", choice_spec.kind)
     return normalized_meta
@@ -346,14 +367,14 @@ function item_choice_handler.build(helpers)
     assert(meta.queue[meta.index] ~= nil, tostring(choice_spec.kind) .. " requires meta.queue[meta.index]")
   end
 
-  local function _normalize_item_target_meta(game, meta, choice_spec)
+  local function _normalize_item_target_meta(_, meta, choice_spec)
     local normalized_meta = _normalize_owner_meta(choice_spec.kind, meta, choice_spec)
     normalize_integer_field(normalized_meta, "item_id", choice_spec.kind)
     return normalized_meta
   end
 
-  local function _normalize_remote_dice_meta(game, meta, choice_spec)
-    local normalized_meta = _normalize_item_target_meta(game, meta, choice_spec)
+  local function _normalize_remote_dice_meta(_, meta, choice_spec)
+    local normalized_meta = _normalize_item_target_meta(nil, meta, choice_spec)
     normalize_integer_field(normalized_meta, "dice_count", choice_spec.kind)
     return normalized_meta
   end
@@ -460,4 +481,142 @@ function item_choice_handler.build(helpers)
   }
 end
 
-return item_choice_handler
+local function _build_land_choice_handlers(helpers)
+  local finish_choice = helpers.finish_choice
+  local land_actions = require("src.rules.land.actions")
+
+  local function _handle_rent_prompt(game, choice, action)
+    local meta = choice.meta
+    local player_id = meta.player_id
+    local tile_id = meta.tile_id
+    local card_kind = meta.card_kind
+    local use_card = action.option_id == "use"
+
+    if use_card and card_kind == "strong" then
+      land_actions.execute_strong_card(game, player_id, tile_id)
+    elseif use_card and card_kind == "free" then
+      land_actions.execute_free_card(game, player_id, tile_id)
+    else
+      if card_kind == "strong" then
+        local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
+        if inventory.find_index(player, item_ids.free_rent) then
+          intent_output_port.open_choice(game, land_choice_specs.rent_prompt(player_id, tile_id, "free"))
+          return { stay = true }
+        end
+      end
+      land_actions.execute_pay_rent(game, player_id, tile_id)
+    end
+
+    return finish_choice(game, false)
+  end
+
+  local function _handle_tax_prompt(game, choice, action)
+    local meta = choice.meta
+    local player_id = meta.player_id
+    local use_card = action.option_id == "use"
+
+    if use_card then
+      land_actions.execute_tax_free_card(game, player_id)
+    else
+      land_actions.execute_pay_tax(game, player_id)
+    end
+
+    return finish_choice(game, false)
+  end
+
+  return {
+    rent_card_prompt = {
+      required_meta = { "player_id", "tile_id" },
+      cancel = { mode = "select_option", option_id = "skip" },
+      execute = _handle_rent_prompt,
+    },
+    tax_card_prompt = {
+      required_meta = { "player_id" },
+      cancel = { mode = "select_option", option_id = "skip" },
+      execute = _handle_tax_prompt,
+    },
+  }
+end
+
+local function _normalize_market_tab(active_tab)
+  if active_tab == TAB_ITEM or active_tab == TAB_SKIN then
+    return active_tab
+  end
+  return TAB_ITEM
+end
+
+local function _normalize_page_value(value)
+  local page_value = number_utils.to_integer(value) or 1
+  if page_value < 1 then
+    return 1
+  end
+  return page_value
+end
+
+local function _normalize_market_buy_meta(_, meta, choice_spec)
+  local normalized_meta = availability.copy_table(meta)
+  availability.normalize_integer_field(normalized_meta, "player_id", choice_spec.kind)
+  normalized_meta.active_tab = _normalize_market_tab(normalized_meta.active_tab or choice_spec.active_tab)
+  normalized_meta.page_index = _normalize_page_value(normalized_meta.page_index or choice_spec.page_index)
+  normalized_meta.page_count = _normalize_page_value(normalized_meta.page_count or choice_spec.page_count)
+  choice_spec.owner_role_id = choice_spec.owner_role_id or normalized_meta.player_id
+  choice_spec.active_tab = normalized_meta.active_tab
+  choice_spec.page_index = normalized_meta.page_index
+  choice_spec.page_count = normalized_meta.page_count
+  return normalized_meta
+end
+
+local function _validate_market_player(game, meta)
+  return assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
+end
+
+local function _validate_market_entry(product_id)
+  return assert(market_context.entry_by_id(product_id), "missing market entry: " .. tostring(product_id))
+end
+
+local function _validate_market_buy_meta(game, meta)
+  _validate_market_player(game, meta)
+end
+
+local function _normalize_market_buy_action(_, _, action)
+  local normalized_action = availability.copy_table(action)
+  availability.normalize_integer_field(normalized_action, "option_id", "market_buy", "action", true)
+  return normalized_action
+end
+
+local function _build_market_choice_handlers(helpers)
+  local finish_choice = helpers.finish_choice
+
+  local function _handle_market_buy(game, choice, action)
+    local meta = choice.meta
+    local player = _validate_market_player(game, meta)
+    local product_id = assert(number_utils.to_integer(action.option_id), "missing product_id")
+    local entry = _validate_market_entry(product_id)
+    local result = market_service.purchase.execute(game, player, product_id, nil)
+    return choice_outcome.resolve_purchase(game, choice, player, entry, result, finish_choice)
+  end
+
+  return {
+    market_buy = {
+      required_meta = { "player_id" },
+      normalize_meta = _normalize_market_buy_meta,
+      meta_validator = _validate_market_buy_meta,
+      normalize_action = _normalize_market_buy_action,
+      execute = _handle_market_buy,
+    },
+  }
+end
+
+function choice_handler_factory.build_item_handlers(helpers)
+  return choice_handler_factory.build(_build_item_choice_handlers, helpers)
+end
+
+function choice_handler_factory.build_land_handlers(helpers)
+  return choice_handler_factory.build(_build_land_choice_handlers, helpers)
+end
+
+function choice_handler_factory.build_market_handlers(helpers)
+  return choice_handler_factory.build(_build_market_choice_handlers, helpers)
+end
+
+return choice_handler_factory

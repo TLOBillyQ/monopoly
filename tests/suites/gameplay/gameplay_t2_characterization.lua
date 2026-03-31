@@ -8,7 +8,7 @@ local dispatch_validator = require("src.turn.actions.validator")
 local runtime_state = require("src.state.state_access.runtime_state")
 local roll = require("src.turn.phases.roll")
 local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
-local item_choice_handlers = require("src.rules.items.choice_handlers")
+local choice_handler_factory = require("src.rules.choice_handler_factory")
 
 local function _build_test_ports(overrides)
   overrides = overrides or {}
@@ -2109,7 +2109,7 @@ local _item_choice_handler_t2_tests = {
     local player = game.players[1]
     local captured_choice_spec = nil
     player.inventory:add({ id = 2005 })
-    local handlers = item_choice_handlers.build({
+    local handlers = choice_handler_factory.build_item_handlers({
       finish_choice = function(_, stay)
         return { stay = stay == true }
       end,
@@ -2167,7 +2167,7 @@ local _item_choice_handler_t2_tests = {
     local player = game.players[1]
     local captured_choice_spec = nil
     player.inventory:add({ id = 2005 })
-    local handlers = item_choice_handlers.build({
+    local handlers = choice_handler_factory.build_item_handlers({
       finish_choice = function(_, stay)
         return { stay = stay == true }
       end,

@@ -16,13 +16,11 @@ local pricing = support.pricing
 local choice_resolver = support.choice_resolver
 local choice_registry = require("src.core.choice.registry")
 local choice_optional_effect_handler = require("src.rules.bootstrap.choice_optional_effect_handler")
-local item_choice_handlers = require("src.rules.items.choice_handlers")
+local choice_handler_factory = require("src.rules.choice_handler_factory")
 local item_executor = require("src.rules.items.executor")
 local item_phase = require("src.rules.items.phase")
-local land_choice_handlers = require("src.rules.land.choice_handlers")
 local landing_defs = require("src.rules.land.specs.effects")
 local effect_runner = require("src.rules.effects.effect_runner")
-local market_choice_handlers = require("src.rules.market.choice_handlers")
 local function _require_upvalue(fn, expected_name)
   assert(debug and type(debug.getupvalue) == "function", "debug.getupvalue should be available for characterization tests")
   local index = 1
@@ -98,9 +96,9 @@ local function _build_choice_groups()
 
   return {
     choice_optional_effect_handler.build(helpers),
-    land_choice_handlers.build(helpers),
-    item_choice_handlers.build(helpers),
-    market_choice_handlers.build(helpers),
+    choice_handler_factory.build_land_handlers(helpers),
+    choice_handler_factory.build_item_handlers(helpers),
+    choice_handler_factory.build_market_handlers(helpers),
   }
 end
 
