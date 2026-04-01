@@ -159,4 +159,8 @@ function M.sync_layer_status(cache, player, status_key, deps)
   cache.last_status_key_by_player[player_id] = status_key
 end
 
+M._M_test = {
+  _has_pending_roadblock_trigger = _has_pending_roadblock_trigger,
+}
+
 return M

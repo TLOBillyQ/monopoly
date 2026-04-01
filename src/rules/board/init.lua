@@ -13,19 +13,21 @@ local dir_priority = {
   left = 4,
 }
 
+local function _sorted_dirs_comparator(a, b)
+  local pa = dir_priority[a] or 100
+  local pb = dir_priority[b] or 100
+  if pa ~= pb then
+    return pa < pb
+  end
+  return tostring(a) < tostring(b)
+end
+
 local function _sorted_dirs(neigh)
   local keys = {}
   for dir in pairs(neigh) do
     table.insert(keys, dir)
   end
-  table.sort(keys, function(a, b)
-    local pa = dir_priority[a] or 100
-    local pb = dir_priority[b] or 100
-    if pa ~= pb then
-      return pa < pb
-    end
-    return tostring(a) < tostring(b)
-  end)
+  table.sort(keys, _sorted_dirs_comparator)
   return keys
 end
 
@@ -435,5 +437,10 @@ function board:step_backward_by_facing(current_index, facing)
   local next_facing = map.direction(next_id, current_id)
   return next_index, passed_start, next_facing
 end
+
+board._M_test = {
+  _sorted_dirs_comparator = _sorted_dirs_comparator,
+  _pick_any_dir = _pick_any_dir,
+}
 
 return board

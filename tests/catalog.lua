@@ -16,6 +16,9 @@ local domain_behavior_modules = {
   "suites.domain.clear_obstacles_branch_walk",
   "suites.domain.skin_helper",
   "suites.domain.vehicle_helper",
+  "suites.domain.board_init_crap_coverage",
+  "suites.domain.board_direction_utils_crap_coverage",
+  "suites.domain.board_query_crap_coverage",
 }
 
 local runtime_behavior_modules = {
@@ -37,6 +40,7 @@ local gameplay_behavior_modules = {
   "suites.gameplay.gameplay_visual_feedback_and_prompts",
   "suites.gameplay.gameplay_items_startup",
   "suites.gameplay.gameplay_forced_relocation_and_followup",
+  "suites.gameplay.pre_move_phase_crap_coverage",
 }
 
 local presentation_behavior_modules = {
@@ -73,6 +77,7 @@ local presentation_behavior_modules = {
   "suites.gameplay.gameplay_t4_characterization",
   -- T8: Re-enabled T2 characterization tests for final CRAP cleanup
   "suites.gameplay.gameplay_t2_characterization",
+  "suites.presentation.status3d_roadblock_crap_coverage",
 }
 
 local behavior_modules = {}
