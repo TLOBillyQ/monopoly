@@ -59,6 +59,15 @@ local presentation_behavior_modules = {
   "suites.presentation.presentation_ui_event_handlers",
   "suites.presentation.presentation_ui_event_bindings",
   "suites.presentation.presentation_player_colors",
+  "suites.presentation._presentation_action_status_choice_routes",
+  "suites.presentation._presentation_action_status_target_pick",
+  "suites.presentation._presentation_action_status_action_log",
+  "suites.presentation._presentation_action_status_market_panel",
+  "suites.presentation._presentation_action_status_item_slots",
+  "suites.presentation._presentation_action_status_action_anim",
+  "suites.presentation._presentation_action_status_status3d",
+  "suites.presentation._presentation_action_status_popup_modal",
+  "suites.presentation._presentation_action_status_player_panels",
   "suites.presentation.gameplay_t6_characterization",
   "suites.presentation.gameplay_t5_characterization",
   "suites.gameplay.gameplay_t4_characterization",
@@ -167,17 +176,6 @@ M.guard_scripts = guard_scripts
 function M.load_behavior_suites()
   bootstrap.install_package_paths()
   local suites = _load_modules(M.behavior_suites, "behavior", "suite")
-  -- Append the 9 action_status group suites
-  local action_status_groups = require("suites.presentation._presentation_action_status_groups")
-  local group_keys = {
-    "choice_routes", "target_pick", "action_log_and_role_context",
-    "market_panel", "item_slots", "action_anim_queue_and_turn_lock",
-    "status3d_and_turn_effects", "popup_and_modal_renderers", "player_panels",
-  }
-  for _, key in ipairs(group_keys) do
-    local suite = action_status_groups.build_suite(key)
-    suites[#suites + 1] = _clone_suite("group:" .. key, suite, "behavior", "suite")
-  end
   return suites
 end
 
