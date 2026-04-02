@@ -11,6 +11,8 @@ local timing = {
   landing_visual_hold_seconds = 0.1,
   item_slot_highlight_anim_delay_seconds = 0.35,
   mine_trigger_snap_delay_seconds = 0.6,
+  demolish_effect_start_delay_seconds = 0.2,
+  demolish_effect_followup_delay_seconds = 0.35,
   turn_limit = 1000,
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
 }

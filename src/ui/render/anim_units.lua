@@ -8,6 +8,8 @@ local timing = require("src.config.gameplay.timing")
 
 local units = {}
 local mine_trigger_snap_delay_seconds = timing.mine_trigger_snap_delay_seconds or 0.6
+local demolish_effect_followup_delay_seconds = timing.demolish_effect_followup_delay_seconds or 0.35
+local _play_demolish_feedback
 
 function units.clear_overlay(state, kind, tile_index)
   overlay.clear_overlay(state, kind, tile_index)
@@ -23,6 +25,7 @@ function units.play_missile(state, anim, duration, opts)
   for _, player_id in ipairs(anim and anim.target_player_ids or {}) do
     move_anim.prepare_player_for_snap(board_scene, player_id, anim, "missile")
   end
+  _play_demolish_feedback(state, assert(anim.tile_index, "missing missile tile_index"), opts, false)
   overlay.play_missile(state, anim, duration, opts)
   if to_index ~= nil then
     for _, player_id in ipairs(anim and anim.target_player_ids or {}) do
@@ -32,6 +35,7 @@ function units.play_missile(state, anim, duration, opts)
 end
 
 function units.play_monster(state, anim, duration, opts)
+  _play_demolish_feedback(state, assert(anim.tile_index, "missing monster tile_index"), opts, true)
   overlay.play_monster(state, anim, duration, opts)
 end
 
@@ -76,6 +80,24 @@ local function _play_mine_feedback(state, cue_name, player_id, tile_index, hit_p
     return
   end
   board_feedback.play_tile_cue(state, cue_name, tile_index, {})
+end
+
+function _play_demolish_feedback(state, tile_index, opts, use_building_tile_position)
+  board_feedback.play_tile_cue(state, "mine_blast", tile_index, {
+    use_building_tile_position = use_building_tile_position == true,
+  })
+  local schedule = opts and opts.schedule or nil
+  if type(schedule) == "function" and demolish_effect_followup_delay_seconds > 0 then
+    schedule(demolish_effect_followup_delay_seconds, function()
+      board_feedback.play_tile_cue(state, "upgrade_land_smoke", tile_index, {
+        use_building_tile_position = use_building_tile_position == true,
+      })
+    end)
+    return
+  end
+  board_feedback.play_tile_cue(state, "upgrade_land_smoke", tile_index, {
+    use_building_tile_position = use_building_tile_position == true,
+  })
 end
 
 local function _clear_mine_overlay(state, opts, tile_index)

@@ -104,6 +104,82 @@ local function _test_action_anim_mine_trigger_uses_real_handler_duration_without
   assert(captured_anim.direction == nil, "mine_trigger should not receive move direction fallback")
 end
 
+local function _test_action_anim_missile_waits_before_starting_handler()
+  local state = support.build_min_state()
+  local scheduled_delay = nil
+  local scheduled_fn = nil
+  local handler_calls = 0
+  local expected_delay = timing.demolish_effect_start_delay_seconds or 0.2
+
+  _with_patches({
+    {
+      target = handlers,
+      key = "play_missile",
+      value = function()
+        handler_calls = handler_calls + 1
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "schedule",
+      value = function(delay, fn)
+        scheduled_delay = delay
+        scheduled_fn = fn
+      end,
+    },
+  }, function()
+    local duration = action_anim.play(state, {
+      kind = "missile",
+      tile_index = 1,
+      duration = 0.6,
+    })
+    assert(duration == 0.6 + expected_delay, "missile should add startup delay to total duration")
+    assert(scheduled_delay == expected_delay, "missile should schedule handler after startup delay")
+    assert(handler_calls == 0, "missile handler should not run immediately before ui closes")
+    assert(type(scheduled_fn) == "function", "missile should enqueue delayed handler callback")
+    scheduled_fn()
+    assert(handler_calls == 1, "missile handler should run after delayed callback")
+  end)
+end
+
+local function _test_action_anim_monster_waits_before_starting_handler()
+  local state = support.build_min_state()
+  local scheduled_delay = nil
+  local scheduled_fn = nil
+  local handler_calls = 0
+  local expected_delay = timing.demolish_effect_start_delay_seconds or 0.2
+
+  _with_patches({
+    {
+      target = handlers,
+      key = "play_monster",
+      value = function()
+        handler_calls = handler_calls + 1
+      end,
+    },
+    {
+      target = host_runtime,
+      key = "schedule",
+      value = function(delay, fn)
+        scheduled_delay = delay
+        scheduled_fn = fn
+      end,
+    },
+  }, function()
+    local duration = action_anim.play(state, {
+      kind = "monster",
+      tile_index = 1,
+      duration = 0.6,
+    })
+    assert(duration == 0.6 + expected_delay, "monster should add startup delay to total duration")
+    assert(scheduled_delay == expected_delay, "monster should schedule handler after startup delay")
+    assert(handler_calls == 0, "monster handler should not run immediately before ui closes")
+    assert(type(scheduled_fn) == "function", "monster should enqueue delayed handler callback")
+    scheduled_fn()
+    assert(handler_calls == 1, "monster handler should run after delayed callback")
+  end)
+end
+
 local function _test_action_anim_roadblock_trigger_routes_clear_overlay()
   local state = support.build_min_state()
   local cleared = {}
@@ -772,6 +848,123 @@ local function _test_action_anim_roll_screen_fallback_face_when_invalid()
   end)
 end
 
+local function _test_play_missile_plays_blast_and_delays_upgrade_smoke()
+  local state = support.build_min_state()
+  local cue_calls = {}
+  local scheduled_delay = nil
+  local scheduled_fn = nil
+  local expected_delay = timing.demolish_effect_followup_delay_seconds or 0.35
+
+  _with_patches({
+    {
+      target = board_feedback,
+      key = "play_tile_cue",
+      value = function(_, cue_name, tile_index, payload)
+        cue_calls[#cue_calls + 1] = {
+          cue_name = cue_name,
+          tile_index = tile_index,
+          use_building_tile_position = payload and payload.use_building_tile_position,
+        }
+        return true
+      end,
+    },
+    {
+      target = move_anim,
+      key = "prepare_player_for_snap",
+      value = function() end,
+    },
+    {
+      target = move_anim,
+      key = "snap_player_to_index",
+      value = function()
+        return 0
+      end,
+    },
+    {
+      target = require("src.ui.render.anim_unit_overlay"),
+      key = "play_missile",
+      value = function() end,
+    },
+  }, function()
+    anim_units.play_missile(state, {
+      tile_index = 3,
+      target_player_ids = { 2 },
+      to_index = 4,
+    }, 0.5, {
+      schedule = function(delay, fn)
+        scheduled_delay = delay
+        scheduled_fn = fn
+      end,
+      clear_overlay = function() end,
+    })
+
+    assert(#cue_calls == 1, "play_missile should emit mine blast immediately")
+    assert(cue_calls[1].cue_name == "mine_blast", "play_missile should reuse mine blast cue")
+    assert(cue_calls[1].tile_index == 3, "play_missile should target the demolished tile")
+    assert(cue_calls[1].use_building_tile_position == false, "play_missile blast should use tile position")
+    assert(scheduled_delay == expected_delay, "play_missile should delay upgrade smoke cue")
+    assert(type(scheduled_fn) == "function", "play_missile should schedule followup upgrade smoke cue")
+
+    scheduled_fn()
+
+    assert(#cue_calls == 2, "play_missile should emit delayed upgrade smoke cue")
+    assert(cue_calls[2].cue_name == "upgrade_land_smoke", "play_missile should reuse upgrade smoke cue")
+    assert(cue_calls[2].tile_index == 3, "play_missile delayed smoke should target the demolished tile")
+    assert(cue_calls[2].use_building_tile_position == false, "play_missile delayed smoke should use tile position")
+  end)
+end
+
+local function _test_play_monster_plays_blast_and_delays_upgrade_smoke()
+  local state = support.build_min_state()
+  local cue_calls = {}
+  local scheduled_delay = nil
+  local scheduled_fn = nil
+  local expected_delay = timing.demolish_effect_followup_delay_seconds or 0.35
+
+  _with_patches({
+    {
+      target = board_feedback,
+      key = "play_tile_cue",
+      value = function(_, cue_name, tile_index, payload)
+        cue_calls[#cue_calls + 1] = {
+          cue_name = cue_name,
+          tile_index = tile_index,
+          use_building_tile_position = payload and payload.use_building_tile_position,
+        }
+        return true
+      end,
+    },
+    {
+      target = require("src.ui.render.anim_unit_overlay"),
+      key = "play_monster",
+      value = function() end,
+    },
+  }, function()
+    anim_units.play_monster(state, {
+      tile_index = 5,
+    }, 0.5, {
+      schedule = function(delay, fn)
+        scheduled_delay = delay
+        scheduled_fn = fn
+      end,
+    })
+
+    assert(#cue_calls == 1, "play_monster should emit mine blast immediately")
+    assert(cue_calls[1].cue_name == "mine_blast", "play_monster should reuse mine blast cue")
+    assert(cue_calls[1].tile_index == 5, "play_monster should target the demolished tile")
+    assert(cue_calls[1].use_building_tile_position == true, "play_monster blast should use building position")
+    assert(scheduled_delay == expected_delay, "play_monster should delay upgrade smoke cue")
+    assert(type(scheduled_fn) == "function", "play_monster should schedule followup upgrade smoke cue")
+
+    scheduled_fn()
+
+    assert(#cue_calls == 2, "play_monster should emit delayed upgrade smoke cue")
+    assert(cue_calls[2].cue_name == "upgrade_land_smoke", "play_monster should reuse upgrade smoke cue")
+    assert(cue_calls[2].tile_index == 5, "play_monster delayed smoke should target the demolished tile")
+    assert(cue_calls[2].use_building_tile_position == true, "play_monster delayed smoke should use building position")
+  end)
+end
+
 local function _test_play_mine_trigger_delays_snap_when_schedule_available()
   local state = support.build_min_state()
   local scheduled_delay = nil
@@ -845,6 +1038,8 @@ return {
     { name = "action_anim_teleport_effect_uses_real_handler_duration_without_direction_patch", run = _test_action_anim_teleport_effect_uses_real_handler_duration_without_direction_patch },
     { name = "action_anim_forced_relocation_uses_real_handler_duration_without_direction_patch", run = _test_action_anim_forced_relocation_uses_real_handler_duration_without_direction_patch },
     { name = "action_anim_mine_trigger_uses_real_handler_duration_without_direction_patch", run = _test_action_anim_mine_trigger_uses_real_handler_duration_without_direction_patch },
+    { name = "action_anim_missile_waits_before_starting_handler", run = _test_action_anim_missile_waits_before_starting_handler },
+    { name = "action_anim_monster_waits_before_starting_handler", run = _test_action_anim_monster_waits_before_starting_handler },
     { name = "action_anim_roadblock_trigger_routes_clear_overlay", run = _test_action_anim_roadblock_trigger_routes_clear_overlay },
     { name = "action_anim_upgrade_land_does_not_call_overlay_handler", run = _test_action_anim_upgrade_land_does_not_call_overlay_handler },
     { name = "action_anim_is_silent_by_default", run = _test_action_anim_is_silent_by_default },
@@ -857,6 +1052,8 @@ return {
     { name = "play_mine_trigger_falls_back_to_tile_position_for_player_cue", run = _test_play_mine_trigger_falls_back_to_tile_position_for_player_cue },
     { name = "play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay", run = _test_play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay },
     { name = "play_mine_trigger_uses_prepare_before_feedback_without_scheduler", run = _test_play_mine_trigger_uses_prepare_before_feedback_without_scheduler },
+    { name = "play_missile_plays_blast_and_delays_upgrade_smoke", run = _test_play_missile_plays_blast_and_delays_upgrade_smoke },
+    { name = "play_monster_plays_blast_and_delays_upgrade_smoke", run = _test_play_monster_plays_blast_and_delays_upgrade_smoke },
     { name = "play_mine_trigger_delays_snap_when_schedule_available", run = _test_play_mine_trigger_delays_snap_when_schedule_available },
     { name = "action_anim_roll_screen_two_stage_timeline", run = _test_action_anim_roll_screen_two_stage_timeline },
     { name = "action_anim_roll_screen_fallback_face_when_invalid", run = _test_action_anim_roll_screen_fallback_face_when_invalid },

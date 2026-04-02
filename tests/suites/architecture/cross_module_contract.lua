@@ -9,6 +9,7 @@ local land_rules = require("src.rules.land.rules")
 local land_rent_resolver = require("src.rules.land.rent_resolver")
 local action_anim = require("src.ui.render.action_anim")
 local handlers = require("src.ui.render.anim_handlers")
+local timing = require("src.config.gameplay.timing")
 
 local function _test_event_contract_land_events_use_catalog_keys()
   local emitted = {}
@@ -78,10 +79,12 @@ local function _test_action_anim_bridge_contract_dispatches_by_kind()
       "roadblock should keep anim duration")
     _assert_eq(action_anim.play(state, { kind = "mine", tile_index = 1, duration = 0.2 }), 0.2,
       "mine should keep anim duration")
-    _assert_eq(action_anim.play(state, { kind = "missile", tile_index = 1, duration = 0.2 }), 0.2,
-      "missile should keep anim duration")
-    _assert_eq(action_anim.play(state, { kind = "monster", tile_index = 1, duration = 0.2 }), 0.2,
-      "monster should keep anim duration")
+    _assert_eq(action_anim.play(state, { kind = "missile", tile_index = 1, duration = 0.2 }),
+      0.2 + (timing.demolish_effect_start_delay_seconds or 0.2),
+      "missile should include startup delay in anim duration")
+    _assert_eq(action_anim.play(state, { kind = "monster", tile_index = 1, duration = 0.2 }),
+      0.2 + (timing.demolish_effect_start_delay_seconds or 0.2),
+      "monster should include startup delay in anim duration")
     _assert_eq(action_anim.play(state, { kind = "clear_obstacles", tile_index = 1, duration = 0.2 }), 0.2,
       "clear_obstacles should keep anim duration")
   end)

@@ -16,6 +16,10 @@ local durations = {
   missile = 1.2,
   monster = 1.2,
 }
+local start_delays = {
+  missile = timing.demolish_effect_start_delay_seconds or 0.2,
+  monster = timing.demolish_effect_start_delay_seconds or 0.2,
+}
 local user_tip_whitelist = {
   change_skin = true,
 }
@@ -144,6 +148,10 @@ local function _resolve_duration(anim)
   if duration <= 0 then
     duration = default_duration
   end
+  local start_delay = start_delays[anim.kind] or 0
+  if start_delay > 0 then
+    duration = duration + start_delay
+  end
   return duration
 end
 
@@ -220,6 +228,13 @@ function action_anim.play(state, anim, opts)
   local tip_text, should_show_tip, should_debug_log = _resolve_tip_text(state, anim)
   _emit_tip_text(host_runtime, anim, tip_text, should_show_tip, should_debug_log, tip_duration)
   if handler then
+    local start_delay = start_delays[anim.kind] or 0
+    if start_delay > 0 and host_runtime and type(host_runtime.schedule) == "function" then
+      host_runtime.schedule(start_delay, function()
+        handler(state, anim, duration, _build_handler_opts(state, runtime_bundle, host_runtime))
+      end)
+      return duration
+    end
     return handler(state, anim, duration, _build_handler_opts(state, runtime_bundle, host_runtime))
   end
   return duration
