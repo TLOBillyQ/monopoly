@@ -67,6 +67,7 @@ end
 local function _test_cli_report_prepares_request_then_calls_vendor_cli()
   local captured_request = nil
   local captured_command = nil
+  local ensured_report_dir = nil
   local ok = crap.run({
     "report",
     "--out", "tmp/crap_report.json",
@@ -86,9 +87,14 @@ local function _test_cli_report_prepares_request_then_calls_vendor_cli()
       captured_command = command
       return { ok = true, code = 0, output = "report ok\n" }
     end,
+    ensure_parent_dir = function(path)
+      ensured_report_dir = path
+      return true
+    end,
   })
 
   assert(ok == true, "cli report should return true")
+  _assert_eq(ensured_report_dir, crap.default_tmp_root() .. "/crap_report.json", "report should ensure the response json parent dir")
   _assert_eq(captured_request.config, crap.default_config_path(), "wrapper should inject default config path")
   _assert_eq(captured_request.out, crap.default_tmp_root() .. "/crap_report.json", "wrapper should resolve tmp output path")
   _assert_eq(captured_request.top, 25, "wrapper should preserve top option")
@@ -129,6 +135,7 @@ end
 
 local function _test_cli_viewer_resolves_tmp_alias_before_vendor_call()
   local captured_command = nil
+  local ensured_view_dir = nil
   local ok = crap.run({
     "viewer",
     "--in-json", "tmp/crap_report.json",
@@ -143,9 +150,14 @@ local function _test_cli_viewer_resolves_tmp_alias_before_vendor_call()
       captured_command = command
       return { ok = true, code = 0, output = "viewer ok\n" }
     end,
+    ensure_dir = function(path)
+      ensured_view_dir = path
+      return true
+    end,
   })
 
   assert(ok == true, "cli viewer should return true")
+  _assert_eq(ensured_view_dir, crap.default_tmp_root() .. "/crap_view", "viewer should ensure the output dir before launch")
   _assert_eq(captured_command[2], "viewer", "wrapper should dispatch vendor viewer command")
   _assert_contains(table.concat(captured_command, " "), "--in-json " .. crap.default_tmp_root() .. "/crap_report.json",
     "tmp input json should resolve under Monopoly tmp root")

@@ -116,6 +116,31 @@ local function _test_board_refresh_stops_force_move_before_set_position()
   _assert_eq(env.target_pos.z, 20, "refresh should snap to tile z")
 end
 
+local function _test_board_refresh_updates_follow_target_on_snap()
+  local board_view = require("src.ui.render.board")
+  local env = _build_board_refresh_test_env()
+  env.unit.force_stop_move = function()
+    env.calls[#env.calls + 1] = "force_stop_move"
+  end
+  env.unit.stop_anim = function()
+    env.calls[#env.calls + 1] = "stop_anim"
+  end
+  env.unit.set_position = function(pos)
+    env.calls[#env.calls + 1] = "set_position"
+    env.target_pos = pos
+  end
+
+  _with_board_refresh_patches(nil, function()
+    board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
+  end)
+
+  local follow_target = runtime_state.get_follow_target_position(env.state, 1)
+  assert(follow_target ~= nil, "refresh should publish follow target position on snap")
+  _assert_eq(follow_target.x, 10, "follow target should snap to tile x")
+  _assert_eq(follow_target.y, 0.5, "follow target should use configured minimum y")
+  _assert_eq(follow_target.z, 20, "follow target should snap to tile z")
+end
+
 local function _test_board_refresh_falls_back_to_ai_stop_before_set_position()
   local board_view = require("src.ui.render.board")
   local env = _build_board_refresh_test_env()
@@ -904,6 +929,10 @@ return {
     {
       name = "_test_board_refresh_stops_force_move_before_set_position",
       run = _test_board_refresh_stops_force_move_before_set_position,
+    },
+    {
+      name = "_test_board_refresh_updates_follow_target_on_snap",
+      run = _test_board_refresh_updates_follow_target_on_snap,
     },
     {
       name = "_test_board_refresh_falls_back_to_ai_stop_before_set_position",

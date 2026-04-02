@@ -147,6 +147,12 @@ local function _resolve_vehicle_emit_set_position(seat_id, vehicle)
   return nil
 end
 
+local function _publish_follow_target(state, pid, target_pos, source)
+  runtime_state.set_follow_target_position(state, pid, target_pos, {
+    source = source,
+  })
+end
+
 local function _place_player_unit(pid, unit, target_pos, seat_id, vehicle)
   local emit_set_position = _resolve_vehicle_emit_set_position(seat_id, vehicle)
   if emit_set_position then
@@ -187,6 +193,7 @@ local function _place_single_player(state, player, i, occupants, spacing, min_pl
     "target_pos=" .. tostring(target_pos)
   )
   _place_player_unit(pid, unit, target_pos, seat_id, vehicle)
+  _publish_follow_target(state, pid, target_pos, "board_sync_snap")
 end
 
 function M.place_players(state, players, occupants, spacing, min_player_y)

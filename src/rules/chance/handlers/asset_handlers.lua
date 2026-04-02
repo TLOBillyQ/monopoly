@@ -57,7 +57,8 @@ function asset_handlers.register(handlers, common)
       to_drop = inventory.count(player)
     end
     local dropped_names = {}
-    local rng = assert(game and game.rng and game.rng.next_int, "missing game.rng.next_int for discard_items")
+    local rng = assert(game and game.rng, "missing game.rng for discard_items")
+    assert(type(rng.next_int) == "function", "missing game.rng.next_int for discard_items")
     for _ = 1, to_drop do
       local item_count = inventory.count(player)
       if item_count == 0 then
@@ -103,8 +104,10 @@ function asset_handlers.register(handlers, common)
     end
 
     local rng = nil
-    if to_drop > 0 and #property_ids > 1 then
-      rng = assert(game and game.rng and game.rng.next_int, "missing game.rng.next_int for discard_properties")
+    local needs_random_pick = to_drop > 0 and to_drop < #property_ids and #property_ids > 1
+    if needs_random_pick then
+      rng = assert(game and game.rng, "missing game.rng for discard_properties")
+      assert(type(rng.next_int) == "function", "missing game.rng.next_int for discard_properties")
     end
 
     for _ = 1, to_drop do

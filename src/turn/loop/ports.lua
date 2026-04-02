@@ -44,6 +44,7 @@ local port_groups = {
     "build_model",
     "refresh_from_dirty",
     "follow_camera",
+    "sync_camera_position",
     "get_ui_state",
     "is_input_blocked",
     "is_popup_active",

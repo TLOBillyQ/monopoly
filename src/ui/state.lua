@@ -99,4 +99,12 @@ function runtime_state.set_modal_timer(state, payload)
   return _runtime_state().set_modal_timer(state, payload)
 end
 
+function runtime_state.set_follow_target_position(state, player_id, position, opts)
+  return _runtime_state().set_follow_target_position(state, player_id, position, opts)
+end
+
+function runtime_state.get_follow_target_position(state, player_id)
+  return _runtime_state().get_follow_target_position(state, player_id)
+end
+
 return runtime_state

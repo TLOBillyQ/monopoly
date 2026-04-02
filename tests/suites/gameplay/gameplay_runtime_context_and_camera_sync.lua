@@ -154,30 +154,30 @@ local function _test_landing_visual_release_flushes_before_scheduler_advances_tu
   assert(sequence[2] == "advance", "scheduler should advance on the first tick after landing visual release")
 end
 
-local function _test_camera_policy_retargets_when_player_changes_without_ui_refresh()
-   local game = support.new_game()
-   local state = {
-     turn_runtime = {
-       last_follow_player_id = nil,
-     },
-   }
-   local followed = {}
-   local ports = {
-     ui_sync = {
-       follow_camera = function(_, player_id)
-         followed[#followed + 1] = player_id
-       end,
-     },
-   }
- 
-   game.turn.current_player_index = 1
-   turn_camera_policy.sync_follow(game, state, ports, true)
-   game.turn.current_player_index = 2
-   turn_camera_policy.sync_follow(game, state, ports, false)
- 
-   assert(followed[1] == game.players[1].id, "initial follow should target the current player")
-   assert(followed[2] == game.players[2].id, "camera should retarget on player change even without a full ui refresh")
-end
+  local function _test_camera_policy_retargets_when_player_changes_without_ui_refresh()
+    local game = support.new_game()
+    local state = {
+      turn_runtime = {
+        last_follow_player_id = nil,
+      },
+    }
+    local followed = {}
+    local ports = {
+      ui_sync = {
+        follow_camera = function(_, player_id)
+          followed[#followed + 1] = player_id
+        end,
+      },
+    }
+
+    game.turn.current_player_index = 1
+    turn_camera_policy.sync_follow(game, state, ports, true)
+    game.turn.current_player_index = 2
+    turn_camera_policy.sync_follow(game, state, ports, false)
+
+    assert(followed[1] == game.players[1].id, "initial follow should target the current player")
+    assert(followed[2] == game.players[2].id, "camera should retarget on player change even without a full ui refresh")
+  end
 
 local function _test_camera_sync_other_path_calls_set_camera_property_after_lock()
   local runtime_ports = require("src.core.ports.runtime_ports")
@@ -272,6 +272,80 @@ local function _test_camera_sync_other_path_calls_set_camera_property_after_lock
   end)
 
   -- Cleanup - CRITICAL: always reset ports even if test fails
+  runtime_ports.reset_for_tests()
+
+  if not ok then
+    error(err)
+  end
+end
+
+local function _test_camera_sync_prefers_presentation_follow_target_over_ctrl_unit()
+  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_state = require("src.state.state_access.runtime_state")
+  local camera_sync = require("src.ui.ports.ui_sync.camera")
+
+  local locked_positions = {}
+  local local_role = {
+    set_camera_lock_position = function(pos)
+      locked_positions[#locked_positions + 1] = pos
+      return nil
+    end,
+    set_camera_property = function() return nil end,
+    reset_camera = function()
+      return nil
+    end,
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return { x = 0, y = 0, z = 0 }
+        end,
+      }
+    end,
+  }
+
+  local target_role = {
+    get_ctrl_unit = function()
+      return {
+        get_position = function()
+          return { x = 99, y = 99, z = 99 }
+        end,
+      }
+    end,
+  }
+
+  local state = {
+    ui = {},
+  }
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.local_actor_role_id = 1
+  runtime_state.set_follow_target_position(state, 2, { x = 12, y = 34, z = 56 }, {
+    source = "test",
+    seq = 7,
+  })
+
+  runtime_ports.configure({
+    resolve_role = function(player_id)
+      if player_id == 1 then
+        return local_role
+      elseif player_id == 2 then
+        return target_role
+      end
+      return nil
+    end,
+    resolve_camera_helper = function()
+      return { target_role_id = nil, follow = function() end }
+    end,
+  })
+
+  local ok, err = pcall(function()
+    local result = camera_sync.follow_camera(state, 2)
+    assert(result == true, "follow_camera should succeed when presentation follow target exists")
+    assert(#locked_positions == 1, "follow_camera should lock once")
+    assert(locked_positions[1].x == 12, "follow_camera should prefer presentation follow target x")
+    assert(locked_positions[1].y == 34, "follow_camera should prefer presentation follow target y")
+    assert(locked_positions[1].z == 56, "follow_camera should prefer presentation follow target z")
+  end)
+
   runtime_ports.reset_for_tests()
 
   if not ok then
@@ -455,6 +529,7 @@ return {
     { name = "landing_visual_release_flushes_before_scheduler_advances_turn", run = _test_landing_visual_release_flushes_before_scheduler_advances_turn },
     { name = "camera_policy_retargets_when_player_changes_without_ui_refresh", run = _test_camera_policy_retargets_when_player_changes_without_ui_refresh },
     { name = "camera_sync_other_path_calls_set_camera_property_after_lock", run = _test_camera_sync_other_path_calls_set_camera_property_after_lock },
+    { name = "camera_sync_prefers_presentation_follow_target_over_ctrl_unit", run = _test_camera_sync_prefers_presentation_follow_target_over_ctrl_unit },
     { name = "camera_sync_self_path_does_not_call_set_camera_property", run = _test_camera_sync_self_path_does_not_call_set_camera_property },
     { name = "camera_sync_sync_camera_position_also_restores_props", run = _test_camera_sync_sync_camera_position_also_restores_props },
   },

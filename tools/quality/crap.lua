@@ -333,6 +333,10 @@ local function _run_report(options, env)
   if binary_path == nil then
     return { ok = false, code = 1, err = build_err }
   end
+  local out_ok, out_err = common.ensure_parent_dir(options.out)
+  if not out_ok then
+    return { ok = false, code = 1, err = out_err }
+  end
   local request_path, req_err = _prepare_report_request(options, env)
   if request_path == nil then
     return { ok = false, code = 1, err = req_err }
@@ -362,6 +366,10 @@ local function _run_viewer(options, env)
   local binary_path, build_err = M.ensure_binary(REPO_ROOT, env)
   if binary_path == nil then
     return { ok = false, code = 1, err = build_err }
+  end
+  local out_ok, out_err = common.ensure_dir(options.out_dir)
+  if not out_ok then
+    return { ok = false, code = 1, err = out_err }
   end
   local command = {
     binary_path,

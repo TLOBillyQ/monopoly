@@ -1,4 +1,5 @@
 local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_state = require("src.ui.state")
 local board_feedback = require("src.ui.render.board_feedback_service")
 local debug_mod = require("src.ui.render.move_anim.debug")
 local rt = require("src.ui.render.move_anim.runtime")
@@ -6,6 +7,17 @@ local seq_builder = require("src.ui.render.move_anim.sequence_builder")
 local stop = require("src.ui.render.move_anim.stop")
 
 local playback = {}
+
+local function _publish_follow_target(anim_ctx, player_id, position, source)
+  local state = anim_ctx and anim_ctx.state or nil
+  if state == nil or player_id == nil or position == nil then
+    return false
+  end
+  return runtime_state.set_follow_target_position(state, player_id, position, {
+    source = source,
+    seq = anim_ctx and anim_ctx.seq or nil,
+  })
+end
 
 function playback.step_duration(scene, from_index, to_index, anim_ctx)
   return seq_builder.calc_step_time(scene, from_index, to_index, anim_ctx)
@@ -25,11 +37,15 @@ function playback.one_step(scene, player_id, from_index, to_index, anim_ctx)
     end)
   end
   if seq_builder.is_vehicle_jump_mode(anim_ctx) then
-    seq_builder.vehicle_helper_method("emit_vehicle_set_position")(player_id, scene.tiles[to_index].get_position())
+    local target_pos = scene.tiles[to_index].get_position()
+    seq_builder.vehicle_helper_method("emit_vehicle_set_position")(player_id, target_pos)
+    _publish_follow_target(anim_ctx, player_id, target_pos, "move_anim_vehicle_jump")
     return time
   end
   if seq_builder.is_vehicle_move_mode(anim_ctx) then
+    local target_pos = scene.tiles[to_index].get_position()
     seq_builder.vehicle_helper_method("emit_vehicle_move")(player_id, step_dir, time)
+    _publish_follow_target(anim_ctx, player_id, target_pos, "move_anim_vehicle_move")
     return time
   end
   local unit = scene.units_by_player_id[player_id]
@@ -37,10 +53,12 @@ function playback.one_step(scene, player_id, from_index, to_index, anim_ctx)
   if seq_builder.is_synthetic_actor(player_id) then
     assert(unit.force_start_move ~= nil, "missing unit.force_start_move: " .. tostring(player_id))
     unit.force_start_move(step_dir, time)
+    _publish_follow_target(anim_ctx, player_id, scene.tiles[to_index].get_position(), "move_anim_synthetic_step")
     return time
   end
   assert(unit.start_move_by_direction ~= nil, "missing unit.start_move_by_direction: " .. tostring(player_id))
   unit.start_move_by_direction(step_dir, time)
+  _publish_follow_target(anim_ctx, player_id, scene.tiles[to_index].get_position(), "move_anim_step")
   return time
 end
 

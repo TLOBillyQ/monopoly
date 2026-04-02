@@ -1,4 +1,5 @@
 local move_anim = require("src.ui.render.move_anim")
+local runtime_state = require("src.ui.state")
 local anim_ports = require("src.ui.ports.anim")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local support = require("support.move_anim_support")
@@ -191,10 +192,34 @@ local function _test_anim_ports_role_control_exempt_stays_until_sequence_finish(
   end)
 end
 
+local function _test_move_anim_sequence_updates_follow_target_runtime()
+  local unit, _ = support.new_unit_spy()
+  local state = {}
+  local scene = support.new_scene_with_linear_tiles(2, {
+    units_by_player_id = { [1] = unit },
+  })
+
+  support.capture_scheduled_callbacks(function()
+    move_anim.play_sequence(scene, {
+      state = state,
+      player_id = 1,
+      seq = 91,
+      from_index = 1,
+      to_index = 2,
+      direction = { x = 1, y = 0, z = 0 },
+    })
+  end)
+
+  local pos = runtime_state.get_follow_target_position(state, 1)
+  assert(pos ~= nil, "move sequence should publish follow target position")
+  _assert_eq(pos.x, 10, "move sequence follow target should point at destination tile x")
+end
+
 return {
   name = "presentation.move_anim_sequence",
   tests = {
     { name = "sequence_stops_unit_when_duration_finishes", run = _test_move_anim_sequence_stops_unit_when_duration_finishes },
+    { name = "sequence_updates_follow_target_runtime", run = _test_move_anim_sequence_updates_follow_target_runtime },
     { name = "sequence_stale_finish_callback_does_not_stop_new_sequence", run = _test_move_anim_stale_finish_callback_does_not_stop_new_sequence },
     { name = "sequence_lock_lifecycle_single_step", run = _test_move_anim_sequence_lock_lifecycle_single_step },
     { name = "sequence_lock_releases_previous_sequence_only_once", run = _test_move_anim_sequence_lock_releases_previous_sequence_only_once },

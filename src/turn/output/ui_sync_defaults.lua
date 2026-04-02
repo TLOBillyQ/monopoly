@@ -38,6 +38,7 @@ function M.build_base_ui_sync_ports(load_tick_timeout, load_tick_ui_sync)
     build_model = function() return {} end,
     refresh_from_dirty = function() return false end,
     follow_camera = function() return false end,
+    sync_camera_position = function() return false end,
     get_ui_state = function() return nil end,
     is_input_blocked = function() return false end,
     is_popup_active = function() return false end,
