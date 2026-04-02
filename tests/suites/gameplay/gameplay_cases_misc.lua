@@ -170,7 +170,7 @@ local function _test_detained_turn_enters_wait_state_before_advancing()
   assert((p1.status.own_turn_started_count or 0) == 1, "detained turn should still increment own-turn counter")
   assert(g.turn.phase == "detained_wait", "detained turn should enter detained_wait")
   assert(g.turn.detained_wait_active == true, "detained wait flag should stay enabled during wait")
-  assert(g.turn.detained_wait_seconds == 5.0, "detained wait should use configured 5 second delay")
+  assert(g.turn.detained_wait_seconds == 2.0, "detained wait should use configured 2 second delay")
   assert(g.turn.no_action_notice_active == true, "detained wait should still expose a non-blocking notice")
   assert(g.turn.no_action_notice_player_id == p1.id, "notice should belong to skipped player")
 end
