@@ -105,7 +105,7 @@ local function _test_anim_unit_overlay_clear_obstacles_splits_at_fork_and_destro
     end,
   })
   local cleared_calls = {}
-  local group_calls = {}
+  local unit_calls = {}
   local scheduled_callbacks = {}
   local destroyed_handles = {}
   local robot_records = {}
@@ -113,13 +113,13 @@ local function _test_anim_unit_overlay_clear_obstacles_splits_at_fork_and_destro
   _with_patches({
     {
       target = host_runtime,
-      key = "create_unit_group",
-      value = function(group_id, pos)
+      key = "create_unit_with_scale",
+      value = function(unit_id, pos)
         local records = { spawn_pos = pos, moves = {} }
         local handle = _new_robot_handle(pos, records)
         robot_records[#robot_records + 1] = records
-        group_calls[#group_calls + 1] = {
-          group_id = group_id,
+        unit_calls[#unit_calls + 1] = {
+          unit_id = unit_id,
           pos = pos,
           handle = handle,
         }
@@ -136,12 +136,12 @@ local function _test_anim_unit_overlay_clear_obstacles_splits_at_fork_and_destro
         }
       end,
     },
-    {
-      target = host_runtime,
-      key = "destroy_unit_with_children",
-      value = function(handle)
-        destroyed_handles[#destroyed_handles + 1] = handle
-      end,
+      {
+        target = host_runtime,
+        key = "destroy_unit",
+        value = function(handle)
+          destroyed_handles[#destroyed_handles + 1] = handle
+        end,
     },
   }, function()
     overlay.play_clear_obstacles(state, {
@@ -164,15 +164,15 @@ local function _test_anim_unit_overlay_clear_obstacles_splits_at_fork_and_destro
         cleared_calls[#cleared_calls + 1] = kind .. ":" .. tostring(tile_index)
       end,
     })
-    assert(#group_calls == 1, "merged branches should start with one robot before the fork")
+    assert(#unit_calls == 1, "merged branches should start with one robot before the fork")
     assert(#scheduled_callbacks == 1 and math.abs(scheduled_callbacks[1].delay - 0.2) < 0.0001,
       "first step should be scheduled with duration / longest_branch_len")
     assert(#cleared_calls == 0, "overlays should not clear before robot reaches obstacle tiles")
 
     _drain_scheduled(scheduled_callbacks, 1)
 
-    assert(#group_calls == 2, "robot should split only after reaching the fork tile")
-    assert(group_calls[2].pos.x == 10.0 and group_calls[2].pos.y == 1.0 and group_calls[2].pos.z == 0.0,
+    assert(#unit_calls == 2, "robot should split only after reaching the fork tile")
+    assert(unit_calls[2].pos.x == 10.0 and unit_calls[2].pos.y == 1.0 and unit_calls[2].pos.z == 0.0,
       "forked robot should spawn at the fork position instead of the player start")
 
     _drain_scheduled(scheduled_callbacks)
@@ -210,7 +210,7 @@ local function _test_anim_unit_overlay_clear_obstacles_walks_per_step_then_clear
     end,
   })
   local cleared_calls = {}
-  local group_calls = {}
+  local unit_calls = {}
   local scheduled_callbacks = {}
   local destroyed_handles = {}
   local robot_records = {}
@@ -218,13 +218,13 @@ local function _test_anim_unit_overlay_clear_obstacles_walks_per_step_then_clear
   _with_patches({
     {
       target = host_runtime,
-      key = "create_unit_group",
-      value = function(group_id, pos)
+      key = "create_unit_with_scale",
+      value = function(unit_id, pos)
         local records = { spawn_pos = pos, moves = {} }
         local handle = _new_robot_handle(pos, records)
         robot_records[#robot_records + 1] = records
-        group_calls[#group_calls + 1] = {
-          group_id = group_id,
+        unit_calls[#unit_calls + 1] = {
+          unit_id = unit_id,
           pos = pos,
           handle = handle,
         }
@@ -241,12 +241,12 @@ local function _test_anim_unit_overlay_clear_obstacles_walks_per_step_then_clear
         }
       end,
     },
-    {
-      target = host_runtime,
-      key = "destroy_unit_with_children",
-      value = function(handle)
-        destroyed_handles[#destroyed_handles + 1] = handle
-      end,
+      {
+        target = host_runtime,
+        key = "destroy_unit",
+        value = function(handle)
+          destroyed_handles[#destroyed_handles + 1] = handle
+        end,
     },
   }, function()
     overlay.play_clear_obstacles(state, {
@@ -264,9 +264,9 @@ local function _test_anim_unit_overlay_clear_obstacles_walks_per_step_then_clear
         cleared_calls[#cleared_calls + 1] = kind .. ":" .. tostring(tile_index)
       end,
     })
-    assert(#group_calls == 1, "single branch should create exactly one robot")
-    assert(group_calls[1].pos.x == 0.0 and group_calls[1].pos.y == 1.0 and group_calls[1].pos.z == 0.0,
-      "clear_obstacles robot group should spawn above the acting player tile")
+    assert(#unit_calls == 1, "single branch should create exactly one robot")
+    assert(unit_calls[1].pos.x == 0.0 and unit_calls[1].pos.y == 1.0 and unit_calls[1].pos.z == 0.0,
+      "clear_obstacles robot unit should spawn above the acting player tile")
     assert(#scheduled_callbacks == 1 and math.abs(scheduled_callbacks[1].delay - 0.2) < 0.0001,
       "single branch should schedule the first move using duration / path_len")
     assert(#cleared_calls == 0, "single branch should not clear overlays before the first arrival")

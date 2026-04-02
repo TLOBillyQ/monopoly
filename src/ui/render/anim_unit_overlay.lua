@@ -36,22 +36,26 @@ local function _call_handle_method(handle, method_name, ...)
 end
 
 local function _spawn_robot(hr, robot_id, pos)
-  if type(hr.create_unit_group) ~= "function" then
+  if robot_id == nil then
     return nil
   end
-  return hr.create_unit_group(robot_id, pos, runtime_constants.q_zero)
+  if type(hr.create_unit_with_scale) ~= "function" then
+    return nil
+  end
+  return hr.create_unit_with_scale(robot_id, pos, runtime_constants.q_zero, runtime_constants.v3_one)
 end
 
 local function _destroy_robot(hr, handle)
   if handle == nil then
     return
   end
+  if type(hr.destroy_unit) == "function" then
+    hr.destroy_unit(handle)
+    return
+  end
   if type(hr.destroy_unit_with_children) == "function" then
     hr.destroy_unit_with_children(handle, true)
     return
-  end
-  if type(hr.destroy_unit) == "function" then
-    hr.destroy_unit(handle)
   end
 end
 
@@ -212,7 +216,11 @@ function overlay.play_clear_obstacles(state, anim, duration, opts)
   if #branches == 0 then
     return
   end
-  local robot_id = prefab.group["清障机器人"]
+  local robot_id = prefab.unit and prefab.unit["清障机器人"] or nil
+  if robot_id == nil then
+    logger.warn("[Eggy]", "清障机器人 prefab 缺失，已跳过生成")
+    return
+  end
   local player_pos = compute.overlay_pos_for_player(state, assert(anim.player_id, "missing player_id"))
   local hr = _resolve_hr(_deps(state))
   local schedule = opts.schedule or hr.schedule
