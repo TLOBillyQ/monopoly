@@ -139,6 +139,26 @@ local function _test_chance_move_backward_without_move_dir_uses_stable_fallback(
   _assert_eq(p.status.move_dir, nil, "move_backward fallback should not record a backward heading")
 end
 
+local function _test_chance_move_backward_uses_arrival_direction_on_immediate_landing()
+  local g = _new_game()
+  local p = g:current_player()
+  g:update_player_position(p, g.board:index_of_tile_id(25))
+  g:set_player_status(p, "move_dir", "right")
+
+  local landing_result = support.movement.move(g, p, -1, { skip_market_check = true })
+  _assert_eq(g.board:get_tile(p.position).id, 40, "setup should land on the outer chance tile")
+  _assert_eq(p.status.move_dir, "right", "setup should preserve the recorded forward heading")
+
+  local out = chance_effects.resolve(g, p, { effect = "move_backward", steps = 1, target = "self" }, landing_result)
+
+  assert(out and out.move_result, "move_backward should return move result when triggered from landing")
+  local visited_ids = _visited_tile_ids(g.board, out.move_result.visited)
+  _assert_eq(#visited_ids, 1, "immediate landing retreat should move exactly one tile")
+  _assert_eq(visited_ids[1], 25, "immediate landing retreat should go back along the arrival edge")
+  _assert_eq(g.board:get_tile(p.position).id, 25, "immediate landing retreat should return to the inner tile")
+  _assert_eq(p.status.move_dir, "right", "immediate landing retreat should still preserve forward heading")
+end
+
 local function _test_chance_forced_move_queues_move_effect_anim()
   local g = _new_game()
   g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
@@ -680,6 +700,10 @@ return {
     { name = "chance_move_backward_pass_intersection", run = _test_chance_move_backward_pass_intersection },
     { name = "chance_move_backward_queues_move_effect_anim", run = _test_chance_move_backward_queues_move_effect_anim },
     { name = "chance_move_backward_without_move_dir_uses_stable_fallback", run = _test_chance_move_backward_without_move_dir_uses_stable_fallback },
+    {
+      name = "chance_move_backward_uses_arrival_direction_on_immediate_landing",
+      run = _test_chance_move_backward_uses_arrival_direction_on_immediate_landing,
+    },
     { name = "chance_forced_move_queues_move_effect_anim", run = _test_chance_forced_move_queues_move_effect_anim },
     {
       name = "chance_forced_move_to_market_sets_default_forward_heading",

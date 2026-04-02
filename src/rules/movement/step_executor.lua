@@ -4,6 +4,7 @@ local step_executor = {}
 
 local function _step_move(ctx, step)
   local next_index, passed, next_facing, entered_inner
+  local previous_index = ctx.current
   if ctx.backward then
     next_index, passed, next_facing = ctx.step_fn(ctx.board, ctx.current, ctx.facing)
   else
@@ -18,6 +19,10 @@ local function _step_move(ctx, step)
   local previous_tile = ctx.board:get_tile(ctx.current)
   ctx.current = next_index
   local current_tile = ctx.board:get_tile(ctx.current)
+  if previous_tile and current_tile and ctx.board and ctx.board.map then
+    ctx.arrival_direction = ctx.board.map.direction(previous_tile.id, current_tile.id)
+    ctx.arrival_from_index = previous_index
+  end
   if entered_inner then
     ctx.entered_inner = true
   elseif previous_tile
@@ -63,6 +68,8 @@ local function _build_move_result(ctx, landing_tile)
   return {
     encountered_players = ctx.encountered,
     passed_start = ctx.pass_start,
+    arrival_direction = ctx.arrival_direction,
+    arrival_from_index = ctx.arrival_from_index,
     stopped_on_roadblock = ctx.stopped_on_roadblock,
     visited = ctx.visited,
     landing_tile = landing_tile,

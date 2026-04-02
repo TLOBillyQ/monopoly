@@ -8,12 +8,16 @@ local teleport_tile_types = {
 }
 
 function movement_handlers.register(handlers, common)
-  handlers.move_backward = function(game, player, card)
-    local res = common.move_steps(game, player, -(card.steps or 0), {
+  handlers.move_backward = function(game, player, card, context)
+    local move_opts = {
       facing_mode = "relative_backward",
       skip_steal_check = true,
       skip_market_check = true,
-    })
+    }
+    if context and context.arrival_direction ~= nil then
+      move_opts.direction = context.arrival_direction
+    end
+    local res = common.move_steps(game, player, -(card.steps or 0), move_opts)
     if res and res.move_result then
       res.move_result.allow_optional = true
     end
