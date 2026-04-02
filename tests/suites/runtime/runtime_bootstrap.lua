@@ -86,6 +86,88 @@ local function _test_runtime_bootstrap_uses_wall_clock_diff_after_first_tick()
   _assert_close(capture.dt_values[2], 0.05, 0.0001, "second tick should use wall clock diff delta")
 end
 
+local function _test_runtime_bootstrap_primes_first_turn_before_set_game()
+  local capture = { tick_callback = nil, dt_values = {}, primed_game = nil, set_game_received = nil }
+  local clock = {
+    wall_now_seconds = function()
+      return 0
+    end,
+    wall_diff_seconds = function()
+      return 0
+    end,
+    cpu_now_seconds = function()
+      return 0
+    end,
+    cpu_diff_seconds = function(current, previous)
+      return current - previous
+    end,
+  }
+  local primed_game = {
+    logger = { info = function() end },
+    turn = {
+      turn_count = 0,
+      phase = "start",
+      pending_choice = nil,
+    },
+    advance_turn = function(self)
+      self.turn.turn_count = 1
+      self.turn.phase = "wait_action"
+      capture.primed_game = self
+    end,
+  }
+
+  with_patches({
+    { target = package.loaded, key = "vendor.third_party.Utils", value = true },
+    {
+      key = "SetFrameOut",
+      value = function(_, cb)
+        capture.tick_callback = cb
+        return {}
+      end,
+    },
+    {
+      target = presentation_ports,
+      key = "build",
+      value = function()
+        return {
+          clock = clock,
+        }
+      end,
+    },
+    {
+      target = gameplay_loop,
+      key = "new_game",
+      value = function()
+        return primed_game
+      end,
+    },
+    {
+      target = gameplay_loop,
+      key = "set_game",
+      value = function(_, game)
+        capture.set_game_received = game
+      end,
+    },
+    {
+      target = gameplay_loop,
+      key = "tick",
+      value = function(_, _, dt)
+        capture.dt_values[#capture.dt_values + 1] = dt
+      end,
+    },
+  }, function()
+    local state = {}
+    local game_ref = { nil }
+    local started = game_runtime_bootstrap.start(state, game_ref)
+    assert(started == primed_game, "start should return the created game")
+  end)
+
+  assert(capture.primed_game == primed_game, "runtime bootstrap should prime the first turn on startup")
+  assert(capture.set_game_received == primed_game, "set_game should receive the primed game instance")
+  assert(primed_game.turn.turn_count == 1, "primed startup game should increment first turn count")
+  assert(primed_game.turn.phase == "wait_action", "primed startup game should reach wait_action before rendering")
+end
+
 local function _test_runtime_bootstrap_falls_back_when_wall_clock_unavailable()
   local capture = { tick_callback = nil, dt_values = {} }
   local clock = {
@@ -259,6 +341,10 @@ return {
     {
       name = "runtime_bootstrap_uses_wall_clock_diff_after_first_tick",
       run = _test_runtime_bootstrap_uses_wall_clock_diff_after_first_tick,
+    },
+    {
+      name = "runtime_bootstrap_primes_first_turn_before_set_game",
+      run = _test_runtime_bootstrap_primes_first_turn_before_set_game,
     },
     {
       name = "runtime_bootstrap_falls_back_when_wall_clock_unavailable",

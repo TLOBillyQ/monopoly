@@ -31,6 +31,22 @@ local function _build_turn_action_port()
   }
 end
 
+local function _should_prime_first_turn(game)
+  local turn = game and game.turn or nil
+  return turn ~= nil
+    and turn.turn_count == 0
+    and turn.phase == "start"
+    and turn.pending_choice == nil
+end
+
+local function _prime_first_turn(game)
+  if not _should_prime_first_turn(game) then
+    return false
+  end
+  game:advance_turn()
+  return true
+end
+
 function M.start(state, current_game_ref)
   assert(state ~= nil, "missing state")
   assert(type(current_game_ref) == "table", "missing current_game_ref")
@@ -42,6 +58,7 @@ function M.start(state, current_game_ref)
   state.gameplay_loop_ports = _build_gameplay_loop_ports()
   state.presentation_runtime = runtime_deps.build()
   local current_game = gameplay_loop.new_game(state)
+  _prime_first_turn(current_game)
   current_game_ref[1] = current_game
   gameplay_loop.set_game(state, current_game)
 
