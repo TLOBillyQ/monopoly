@@ -57,11 +57,13 @@ function asset_handlers.register(handlers, common)
       to_drop = inventory.count(player)
     end
     local dropped_names = {}
+    local rng = assert(game and game.rng and game.rng.next_int, "missing game.rng.next_int for discard_items")
     for _ = 1, to_drop do
-      if inventory.count(player) == 0 then
+      local item_count = inventory.count(player)
+      if item_count == 0 then
         break
       end
-      local item = inventory.remove_by_index(player, 1)
+      local item = inventory.remove_by_index(player, rng:next_int(1, item_count))
       table.insert(dropped_names, inventory.item_name(item.id))
     end
     if #dropped_names > 0 then
@@ -95,7 +97,25 @@ function asset_handlers.register(handlers, common)
       end
       return tostring(a) < tostring(b)
     end)
-    for _, tile_id in ipairs(property_ids) do
+
+    if to_drop == 0 then
+      to_drop = #property_ids
+    end
+
+    local rng = nil
+    if to_drop > 0 and #property_ids > 1 then
+      rng = assert(game and game.rng and game.rng.next_int, "missing game.rng.next_int for discard_properties")
+    end
+
+    for _ = 1, to_drop do
+      if #property_ids == 0 then
+        break
+      end
+      local pick_index = 1
+      if rng then
+        pick_index = rng:next_int(1, #property_ids)
+      end
+      local tile_id = table.remove(property_ids, pick_index)
       local tile = game.board:get_tile_by_id(tile_id)
       assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
       game:reset_tile(tile)
@@ -107,10 +127,6 @@ function asset_handlers.register(handlers, common)
         text = player.name .. " 丢失地块 " .. tile.name,
       })
       game:set_player_property(player, tile_id, false)
-      to_drop = to_drop - 1
-      if to_drop == 0 then
-        break
-      end
     end
   end
 end

@@ -335,6 +335,38 @@ local function _test_chance_handler_discard_items_removes_items()
   assert(events[1].text:find("丢弃道具"), "discard_items event text should indicate item discard")
 end
 
+local function _test_chance_handler_discard_items_uses_injected_rng_for_random_pick()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  inventory.give(p, item_ids.free_rent, { game = g })
+  inventory.give(p, item_ids.tax_free, { game = g })
+  local events = {}
+  local rng_calls = {}
+
+  g.rng = {
+    next_int = function(_, min, max)
+      rng_calls[#rng_calls + 1] = { min = min, max = max }
+      return 2
+    end,
+  }
+
+  _with_patches({
+    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+      events[#events + 1] = payload
+    end },
+  }, function()
+    handlers.discard_items(g, p, { effect = "discard_items", count = 1 })
+  end)
+
+  assert(#rng_calls == 1, "discard_items should use injected rng exactly once when dropping one item")
+  _assert_eq(rng_calls[1].min, 1, "discard_items rng should start at 1")
+  _assert_eq(rng_calls[1].max, 2, "discard_items rng upper bound should match current item count")
+  assert(inventory.find_index(p, item_ids.free_rent) ~= nil, "discard_items should keep the first item when rng picks the second")
+  assert(inventory.find_index(p, item_ids.tax_free) == nil, "discard_items should remove the rng-selected item")
+  assert(#events == 1, "discard_items should emit one event")
+end
+
 local function _test_chance_handler_move_forward_moves_player()
   local g = _new_game()
   local handlers = chance_handlers.build()
@@ -493,6 +525,40 @@ local function _test_chance_handler_discard_properties_removes_properties()
   assert(#events >= 1, "discard_properties should emit events")
 end
 
+local function _test_chance_handler_discard_properties_uses_injected_rng_for_random_pick()
+  local g = _new_game()
+  local handlers = chance_handlers.build()
+  local p = g:current_player()
+  local first_tile_id = 2
+  local second_tile_id = 4
+  g:set_player_property(p, first_tile_id, true)
+  g:set_player_property(p, second_tile_id, true)
+  local events = {}
+  local rng_calls = {}
+
+  g.rng = {
+    next_int = function(_, min, max)
+      rng_calls[#rng_calls + 1] = { min = min, max = max }
+      return 2
+    end,
+  }
+
+  _with_patches({
+    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+      events[#events + 1] = payload
+    end },
+  }, function()
+    handlers.discard_properties(g, p, { effect = "discard_properties", count = 1 })
+  end)
+
+  assert(#rng_calls == 1, "discard_properties should use injected rng exactly once when dropping one property")
+  _assert_eq(rng_calls[1].min, 1, "discard_properties rng should start at 1")
+  _assert_eq(rng_calls[1].max, 2, "discard_properties rng upper bound should match current property count")
+  assert(p.properties[first_tile_id] == true, "discard_properties should keep the first property when rng picks the second")
+  assert(p.properties[second_tile_id] == nil or p.properties[second_tile_id] == false, "discard_properties should remove the rng-selected property")
+  assert(#events >= 1, "discard_properties should emit events")
+end
+
 local function _test_bankruptcy_eliminate_calls_life_die()
   local g = _new_game()
   local p = g:current_player()
@@ -629,6 +695,10 @@ return {
     { name = "chance_handler_percent_pay_cash_calculates_correctly", run = _test_chance_handler_percent_pay_cash_calculates_correctly },
     { name = "chance_handler_grant_item_gives_item_to_player", run = _test_chance_handler_grant_item_gives_item_to_player },
     { name = "chance_handler_discard_items_removes_items", run = _test_chance_handler_discard_items_removes_items },
+    {
+      name = "chance_handler_discard_items_uses_injected_rng_for_random_pick",
+      run = _test_chance_handler_discard_items_uses_injected_rng_for_random_pick,
+    },
     { name = "chance_handler_move_forward_moves_player", run = _test_chance_handler_move_forward_moves_player },
     {
       name = "chance_handler_collect_from_others_queues_batched_actor_anim",
@@ -646,6 +716,10 @@ return {
     { name = "post_effects_share_wealth_item_target_path_keeps_item_target_anim_only", run = _test_post_effects_share_wealth_item_target_path_keeps_item_target_anim_only },
     -- T8 characterization tests for 0% coverage hotspots
     { name = "chance_handler_discard_properties_removes_properties", run = _test_chance_handler_discard_properties_removes_properties },
+    {
+      name = "chance_handler_discard_properties_uses_injected_rng_for_random_pick",
+      run = _test_chance_handler_discard_properties_uses_injected_rng_for_random_pick,
+    },
     { name = "bankruptcy_eliminate_calls_life_die", run = _test_bankruptcy_eliminate_calls_life_die },
     -- T4 characterization tests for low-complexity hotspots
     { name = "merge_executor_groups_combines_groups", run = _test_merge_executor_groups_combines_groups },
