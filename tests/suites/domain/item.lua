@@ -942,11 +942,36 @@ local function _test_steal_failure_uses_tip_without_popup()
     _assert_eq(res and res.intent, nil, "steal failure should not return popup intent")
   end)
 
+  _assert_eq(stealer.inventory:count(), 0, "steal failure should still consume steal card")
   _assert_eq(#popups, 0, "steal failure should not push popup")
   assert(#tips >= 1, "steal failure should show tip")
   assert(string.find(tips[1], stealer.name, 1, true), "steal failure tip should include stealer name")
   assert(string.find(tips[1], target.name, 1, true), "steal failure tip should include target name")
   assert(string.find(tips[1], "没有任何道具", 1, true), "steal failure tip should explain failure")
+end
+
+local function _test_steal_consumes_card_before_adding_stolen_item_when_inventory_full()
+  local g = _new_game()
+  local stealer = g.players[1]
+  local target = g.players[2]
+  stealer.inventory:add({ id = item_ids.steal })
+  while stealer.inventory:count() < 5 do
+    local ok = stealer.inventory:add({ id = item_ids.tax_free })
+    assert(ok == true, "preload stealer inventory failed")
+  end
+  target.inventory:add({ id = item_ids.roadblock })
+
+  local res = steal.steal_item_at_index(g, stealer, target, 1)
+
+  _assert_eq(res and res.ok, true, "full inventory should still allow steal after consuming card")
+  _assert_eq(stealer.inventory:count(), 5, "stealer inventory should stay full after replacing consumed steal card")
+  _assert_eq(target.inventory:count(), 0, "target item should be removed after successful steal")
+  assert(stealer.inventory:find_index(function(it)
+    return it.id == item_ids.steal
+  end) == nil, "steal card should be consumed before receiving stolen item")
+  assert(stealer.inventory:find_index(function(it)
+    return it.id == item_ids.roadblock
+  end) ~= nil, "stolen item should be added into freed inventory slot")
 end
 
 local function _test_rich_item_emits_deity_feedback_event()
@@ -1723,6 +1748,10 @@ return {
     {
       name = "steal_failure_uses_tip_without_popup",
       run = _test_steal_failure_uses_tip_without_popup,
+    },
+    {
+      name = "steal_consumes_card_before_adding_stolen_item_when_inventory_full",
+      run = _test_steal_consumes_card_before_adding_stolen_item_when_inventory_full,
     },
     {
       name = "rich_item_emits_deity_feedback_event",

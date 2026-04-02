@@ -30,17 +30,13 @@ local function _fail_popup(game, stealer, target)
 end
 
 function steal.steal_item_at_index(game, player, target, item_idx)
+  inventory.consume(player, item_ids.steal)
   if inventory.count(target) == 0 then
     return _fail_popup(game, player, target)
   end
   local stolen = inventory.remove_by_index(target, item_idx or 1)
   assert(stolen ~= nil, "missing stolen item")
-  if inventory.is_full(player) then
-    logger.warn(player.name .. " 背包已满，偷窃道具被销毁")
-    return nil
-  end
   assert(inventory.add(player, stolen) == true, "add stolen item failed")
-  inventory.consume(player, item_ids.steal)
   local name = inventory.item_name(stolen.id)
   local log_text = player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name
   logger.event(log_text)
