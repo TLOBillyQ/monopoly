@@ -80,7 +80,7 @@ function Resolve-DefaultTargetPath {
     $home_dir = (Resolve-HomeDir).TrimEnd("/")
     if ([string]::IsNullOrWhiteSpace($home_dir)) {
         Exit-WithError (Get-Text `
-            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 -TargetPath。" `
+            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 -TargetPath。", `
             "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath.")
     }
 
@@ -92,7 +92,7 @@ function Resolve-DefaultTargetPath {
     }
 
     Exit-WithError (Get-Text `
-        "当前平台未配置默认部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 -TargetPath。" `
+        "当前平台未配置默认部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 -TargetPath。", `
         "No default deploy target is configured for this platform; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath.")
 }
 
@@ -107,7 +107,7 @@ function Resolve-EffectiveBuildMode {
             return [pscustomobject]@{
                 mode = "release"
                 note = (Get-Text `
-                    "未指定 startup profile，已自动切换为 release 模式。" `
+                    "未指定 startup profile，已自动切换为 release 模式。", `
                     "No startup profile was specified; forcing release build mode.")
             }
         }
@@ -121,7 +121,7 @@ function Resolve-EffectiveBuildMode {
         return [pscustomobject]@{
             mode = "debug"
             note = (Get-Text `
-                "检测到 startup profile，已自动切换为 debug 模式。" `
+                "检测到 startup profile，已自动切换为 debug 模式。", `
                 "Startup profile detected; forcing debug build mode.")
         }
     }
@@ -326,7 +326,7 @@ function Get-LuaFileCount {
 
 if ($Help) {
     Write-Info (Get-Text `
-        "用法: .\tools\ops\deploy.ps1 [-TargetPath PATH] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]" `
+        "用法: .\tools\ops\deploy.ps1 [-TargetPath PATH] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]", `
         "Usage: .\tools\ops\deploy.ps1 [-TargetPath PATH] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]")
     exit 0
 }
@@ -347,7 +347,7 @@ try {
     Write-Info ((Get-Text "目标目录: " "Target path: ") + $target_path)
     if ([string]::IsNullOrWhiteSpace($StartupProfile)) {
         Write-Info (Get-Text `
-            "启动 Profile: default（未注入 STARTUP_TEST_PROFILE）" `
+            "启动 Profile: default（未注入 STARTUP_TEST_PROFILE）", `
             "Startup profile: default (STARTUP_TEST_PROFILE not injected)")
     } else {
         Write-Info ((Get-Text "启动 Profile: " "Startup profile: ") + $StartupProfile)
