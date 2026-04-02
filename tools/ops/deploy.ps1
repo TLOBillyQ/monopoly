@@ -2,6 +2,8 @@
 param(
     [string]$TargetPath,
     [string]$StartupProfile,
+    [ValidateSet("auto", "win", "windows", "mac", "macos")]
+    [string]$Platform = "auto",
     [ValidateSet("release", "debug")]
     [string]$BuildMode = "release",
     [switch]$KeepTestStartup,
@@ -10,7 +12,37 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if ($IsWindows) {
+function Test-IsWindowsHost {
+    if ($env:OS -eq "Windows_NT") {
+        return $true
+    }
+    return [System.IO.Path]::DirectorySeparatorChar -eq '\'
+}
+
+function Test-IsMacOSHost {
+    if (Test-IsWindowsHost) {
+        return $false
+    }
+
+    $runtime_info_type = [System.Type]::GetType("System.Runtime.InteropServices.RuntimeInformation")
+    $os_platform_type = [System.Type]::GetType("System.Runtime.InteropServices.OSPlatform")
+    if ($runtime_info_type -ne $null -and $os_platform_type -ne $null) {
+        $osx_field = $os_platform_type.GetField("OSX")
+        $is_os_platform = $runtime_info_type.GetMethod("IsOSPlatform")
+        if ($osx_field -ne $null -and $is_os_platform -ne $null) {
+            return $is_os_platform.Invoke($null, @($osx_field.GetValue($null))) -eq $true
+        }
+    }
+
+    try {
+        $uname = & uname 2>$null
+        return ([string]$uname).Trim() -eq "Darwin"
+    } catch {
+        return $false
+    }
+}
+
+if (Test-IsWindowsHost) {
     try {
         chcp 65001 | Out-Null
     } catch {
@@ -39,7 +71,7 @@ function Write-Info {
 
 function Exit-WithError {
     param([string]$Message)
-    [Console]::Error.WriteLine("✗ $Message")
+    [Console]::Error.WriteLine("ERROR: $Message")
     exit 1
 }
 
@@ -55,7 +87,10 @@ function Resolve-NormalizedPath {
         return ""
     }
 
-    $candidate = [string]$PathText
+    $candidate = [Environment]::ExpandEnvironmentVariables([string]$PathText)
+    if ($candidate.StartsWith("~/") -or $candidate.StartsWith("~\")) {
+        $candidate = Join-Path (Resolve-HomeDir) $candidate.Substring(2)
+    }
     if (-not [System.IO.Path]::IsPathRooted($candidate)) {
         $candidate = [System.IO.Path]::Combine((Get-Location).Path, $candidate)
     }
@@ -72,28 +107,56 @@ function Resolve-HomeDir {
     return ""
 }
 
+function Resolve-PlatformName {
+    param([string]$RawPlatform)
+
+    $value = ([string]$RawPlatform).Trim().ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($value) -or $value -eq "auto") {
+        if (Test-IsWindowsHost) {
+            return "win"
+        }
+        if (Test-IsMacOSHost) {
+            return "mac"
+        }
+        Exit-WithError "Platform is not supported. Pass -Platform win or -Platform mac."
+    }
+
+    switch ($value) {
+        "win" { return "win" }
+        "windows" { return "win" }
+        "mac" { return "mac" }
+        "macos" { return "mac" }
+        default { Exit-WithError ("Unsupported platform '{0}'. Use win or mac." -f $RawPlatform) }
+    }
+}
+
 function Resolve-DefaultTargetPath {
+    param([string]$ResolvedPlatform)
+
     if (-not [string]::IsNullOrWhiteSpace($env:MONOPOLY_DEPLOY_TARGET)) {
-        return [string]$env:MONOPOLY_DEPLOY_TARGET
+        return Resolve-NormalizedPath $env:MONOPOLY_DEPLOY_TARGET
     }
 
-    $home_dir = (Resolve-HomeDir).TrimEnd("/")
+    $home_dir = Resolve-HomeDir
     if ([string]::IsNullOrWhiteSpace($home_dir)) {
-        Exit-WithError (Get-Text `
-            "未配置部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 -TargetPath。", `
-            "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath.")
+        Exit-WithError "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath."
     }
 
-    if ($IsWindows) {
-        return "$home_dir/Desktop/dev/LuaSource_大富翁"
+    switch ($ResolvedPlatform) {
+        "win" {
+            return Resolve-NormalizedPath (Join-Path (Join-Path (Join-Path $home_dir "Desktop") "dev") (Join-LuaSourceDirName))
+        }
+        "mac" {
+            return Resolve-NormalizedPath (Join-Path (Join-Path (Join-Path $home_dir "Documents") "eggy") (Join-LuaSourceDirName))
+        }
+        default {
+            Exit-WithError "No default deploy target is configured for this platform; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath."
+        }
     }
-    if ($IsMacOS) {
-        return "$home_dir/Documents/eggy/LuaSource_大富翁"
-    }
+}
 
-    Exit-WithError (Get-Text `
-        "当前平台未配置默认部署目录，请设置 MONOPOLY_DEPLOY_TARGET 或传入 -TargetPath。", `
-        "No default deploy target is configured for this platform; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath.")
+function Join-LuaSourceDirName {
+    return ("LuaSource_" + [string][char]0x5927 + [string][char]0x5BCC + [string][char]0x7FC1)
 }
 
 function Resolve-EffectiveBuildMode {
@@ -106,9 +169,7 @@ function Resolve-EffectiveBuildMode {
         if ($RequestedBuildMode -ne "release") {
             return [pscustomobject]@{
                 mode = "release"
-                note = (Get-Text `
-                    "未指定 startup profile，已自动切换为 release 模式。", `
-                    "No startup profile was specified; forcing release build mode.")
+                note = "No startup profile was specified; forcing release build mode."
             }
         }
         return [pscustomobject]@{
@@ -120,9 +181,7 @@ function Resolve-EffectiveBuildMode {
     if ($RequestedBuildMode -ne "debug") {
         return [pscustomobject]@{
             mode = "debug"
-            note = (Get-Text `
-                "检测到 startup profile，已自动切换为 debug 模式。", `
-                "Startup profile detected; forcing debug build mode.")
+            note = "Startup profile detected; forcing debug build mode."
         }
     }
 
@@ -229,7 +288,7 @@ function Invoke-GenerateStartupProfile {
 
     $generator = Join-Path $ProjectRoot "tools/ops/generate_startup_profile.lua"
     if (-not (Test-Path -LiteralPath $generator -PathType Leaf)) {
-        Exit-WithError (Get-Text "缺少启动档生成脚本" "Missing startup profile generator script")
+        Exit-WithError "Missing startup profile generator script"
     }
 
     $output_parent = Split-Path -Parent $OutputPath
@@ -239,7 +298,7 @@ function Invoke-GenerateStartupProfile {
 
     & lua $generator $ProfileName $OutputPath
     if ($LASTEXITCODE -ne 0) {
-        Exit-WithError (Get-Text "生成启动档模块失败" "Failed to generate startup profile module")
+        Exit-WithError "Failed to generate startup profile module"
     }
     return $true
 }
@@ -325,40 +384,38 @@ function Get-LuaFileCount {
 }
 
 if ($Help) {
-    Write-Info (Get-Text `
-        "用法: .\tools\ops\deploy.ps1 [-TargetPath PATH] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]", `
-        "Usage: .\tools\ops\deploy.ps1 [-TargetPath PATH] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]")
+    Write-Info "Usage: .\\tools\\ops\\deploy.ps1 [-TargetPath PATH] [-Platform auto|win|mac] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]"
     exit 0
 }
 
 try {
     $project_root = Resolve-ProjectRoot
+    $resolved_platform = Resolve-PlatformName $Platform
     $build_mode_resolution = Resolve-EffectiveBuildMode -RequestedBuildMode $BuildMode -StartupProfileValue $StartupProfile
     $effective_build_mode = [string]$build_mode_resolution.mode
-    $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath }
+    $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath $resolved_platform }
     $target_path = Resolve-NormalizedPath $target_source
 
     [System.IO.Directory]::CreateDirectory($target_path) | Out-Null
 
     Write-Info "======================================"
-    Write-Info (Get-Text "开始部署项目文件" "Starting project deployment")
+    Write-Info "Starting project deployment"
     Write-Info "======================================"
-    Write-Info ((Get-Text "项目根目录: " "Project root: ") + $project_root)
-    Write-Info ((Get-Text "目标目录: " "Target path: ") + $target_path)
+    Write-Info ("Project root: " + $project_root)
+    Write-Info ("Target path: " + $target_path)
+    Write-Info ("Platform: " + $resolved_platform)
     if ([string]::IsNullOrWhiteSpace($StartupProfile)) {
-        Write-Info (Get-Text `
-            "启动 Profile: default（未注入 STARTUP_TEST_PROFILE）", `
-            "Startup profile: default (STARTUP_TEST_PROFILE not injected)")
+        Write-Info "Startup profile: default (STARTUP_TEST_PROFILE not injected)"
     } else {
-        Write-Info ((Get-Text "启动 Profile: " "Startup profile: ") + $StartupProfile)
+        Write-Info ("Startup profile: " + $StartupProfile)
     }
     if (-not [string]::IsNullOrWhiteSpace($build_mode_resolution.note)) {
         Write-Info $build_mode_resolution.note
     }
-    Write-Info ((Get-Text "构建模式: " "Build mode: ") + $effective_build_mode)
+    Write-Info ("Build mode: " + $effective_build_mode)
     Write-Info ""
     Write-Info "--------------------------------------"
-    Write-Info ((Get-Text "部署目标: " "Deploy target: ") + $target_path)
+    Write-Info ("Deploy target: " + $target_path)
     Write-Info "--------------------------------------"
 
     Copy-DirectoryTree -SourceDir (Join-Path $project_root "src") -TargetDir (Join-Path $target_path "src")
@@ -421,13 +478,13 @@ try {
         (Get-EffectiveLuaLineCountForFile (Join-Path $target_path "Data/Prefab.lua"))
 
     Write-Info ""
-    Write-Info ("Lua文件: " + $total_files + " / Lua Files: " + $total_files)
-    Write-Info ("有效代码行数: " + $total_effective_line_count + " / Effective LOC: " + $total_effective_line_count)
+    Write-Info ("Lua Files: " + $total_files)
+    Write-Info ("Effective LOC: " + $total_effective_line_count)
     Write-Info ""
     Write-Info "======================================"
-    Write-Info (Get-Text "部署完成！" "Deployment completed!")
+    Write-Info "Deployment completed!"
     Write-Info ("  " + $target_path)
-    Write-Info ("  Lua文件 / Lua Files: " + $total_files + ", 有效代码行数 / Effective LOC: " + $total_effective_line_count)
+    Write-Info ("  Lua Files: " + $total_files + ", Effective LOC: " + $total_effective_line_count)
     Write-Info "======================================"
     exit 0
 } catch {

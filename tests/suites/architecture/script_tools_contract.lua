@@ -635,13 +635,23 @@ local function _test_deploy_script_keeps_default_paths()
   local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
   _assert_contains(
     script_text,
-    "$home_dir/Desktop/dev/LuaSource_大富翁",
-    "deploy.ps1 should keep the windows default deploy path"
+    "[string]$Platform = \"auto\"",
+    "deploy.ps1 should expose an auto platform parameter"
   )
   _assert_contains(
     script_text,
-    "$home_dir/Documents/eggy/LuaSource_大富翁",
-    "deploy.ps1 should keep the macOS default deploy path"
+    "function Join-LuaSourceDirName",
+    "deploy.ps1 should centralize the LuaSource directory name construction"
+  )
+  _assert_contains(
+    script_text,
+    "Join-Path (Join-Path (Join-Path $home_dir \"Desktop\") \"dev\") (Join-LuaSourceDirName)",
+    "deploy.ps1 should keep the windows default deploy path semantics"
+  )
+  _assert_contains(
+    script_text,
+    "Join-Path (Join-Path (Join-Path $home_dir \"Documents\") \"eggy\") (Join-LuaSourceDirName)",
+    "deploy.ps1 should keep the macOS default deploy path semantics"
   )
   _assert_not_contains(
     script_text,
@@ -660,8 +670,58 @@ local function _test_deploy_script_keeps_default_paths()
   )
 end
 
+local function _test_deploy_resolves_default_target_for_windows_platform()
+  _with_ascii_tmp("deploy_default_target_win", function(tmp_root)
+    local fake_home = common.join_path(tmp_root, "fake_home")
+    local expected_target = common.join_path(fake_home, "Desktop/dev/LuaSource_大富翁")
+    local command = table.concat({
+      "$env:HOME = " .. _powershell_single_quote(fake_home),
+      "$env:USERPROFILE = " .. _powershell_single_quote(fake_home),
+      "$env:MONOPOLY_DEPLOY_TARGET = ''",
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -Platform win",
+    }, "; ")
+    local result = _run_powershell_command(command)
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "deploy should resolve the Windows default target path when -Platform win is passed")
+    _assert_contains(result.output, common.normalize_path(expected_target),
+      "deploy should report the Windows default deploy target path")
+    assert(common.path_exists(common.join_path(expected_target, "main.lua")) == true,
+      "deploy should write main.lua into the Windows default deploy target")
+  end)
+end
+
+local function _test_deploy_resolves_default_target_for_macos_platform()
+  _with_ascii_tmp("deploy_default_target_mac", function(tmp_root)
+    local fake_home = common.join_path(tmp_root, "fake_home")
+    local expected_target = common.join_path(fake_home, "Documents/eggy/LuaSource_大富翁")
+    local command = table.concat({
+      "$env:HOME = " .. _powershell_single_quote(fake_home),
+      "$env:USERPROFILE = ''",
+      "$env:MONOPOLY_DEPLOY_TARGET = ''",
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -Platform mac",
+    }, "; ")
+    local result = _run_powershell_command(command)
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "deploy should resolve the macOS default target path when -Platform mac is passed")
+    _assert_contains(result.output, common.normalize_path(expected_target),
+      "deploy should report the macOS default deploy target path")
+    assert(common.path_exists(common.join_path(expected_target, "main.lua")) == true,
+      "deploy should write main.lua into the macOS default deploy target")
+  end)
+end
+
 local function _test_deploy_comprehensive()
   _test_deploy_script_keeps_default_paths()
+  _test_deploy_resolves_default_target_for_windows_platform()
+  _test_deploy_resolves_default_target_for_macos_platform()
 
   _with_ascii_tmp("deploy_comprehensive", function(tmp_root)
     local publish_target = common.join_path(tmp_root, "deploy_target")
