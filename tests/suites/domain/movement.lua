@@ -300,6 +300,39 @@ local function _test_inner_backward_without_move_dir_uses_reverse_fallback()
   end
 end
 
+local function _test_exit_inner_to_entry_tile_skips_reentering_next_turn()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:update_player_position(p, g.board:index_of_tile_id(30))
+  local exit_res = movement.move(g, p, 1, { branch_parity = 1, skip_market_check = true, direction = "up" })
+  _assert_eq(assert(exit_res.landing_tile, "exit move should land on tile").id, 41,
+    "inner exit should land on entry tile 41")
+  assert(p.status and p.status.skip_next_inner_entry == true,
+    "landing on entry tile right after exiting inner ring should arm skip-next-inner-entry")
+
+  local next_res = movement.move(g, p, 2, { branch_parity = 2, skip_market_check = true })
+  _assert_eq(assert(next_res.landing_tile, "next move should land on tile").id, 17,
+    "next turn from tile 41 should stay on outer ring even on even parity")
+  _assert_player_move_dir(p, "right", "outer continuation should keep outer heading on tile 17")
+  assert(p.status and p.status.skip_next_inner_entry == false,
+    "skip-next-inner-entry should be consumed after the next move starts on that entry tile")
+end
+
+local function _test_skip_next_inner_entry_only_blocks_current_entry_tile_once()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:update_player_position(p, g.board:index_of_tile_id(41))
+  g:set_player_status(p, "skip_next_inner_entry", true)
+  local res = movement.move(g, p, 12, { branch_parity = 12, skip_market_check = true })
+
+  _assert_eq(assert(res.landing_tile, "move should land on tile").id, 39,
+    "same move should skip re-entry at starting tile 41 but still allow entering inner ring later at 43")
+  assert(p.status and p.status.skip_next_inner_entry == false,
+    "skip-next-inner-entry should clear after it is consumed")
+end
+
 local function _test_sync_move_dir_after_position_change_covers_core_modes()
   local g = _new_game()
   local p = g:current_player()
@@ -1012,6 +1045,8 @@ return {
     { name = "inner_exit_tiles_persist_outer_heading", run = _test_inner_exit_tiles_persist_outer_heading },
     { name = "backward_from_exit_tiles_uses_outer_heading", run = _test_backward_from_exit_tiles_uses_outer_heading },
     { name = "inner_backward_without_move_dir_uses_reverse_fallback", run = _test_inner_backward_without_move_dir_uses_reverse_fallback },
+    { name = "exit_inner_to_entry_tile_skips_reentering_next_turn", run = _test_exit_inner_to_entry_tile_skips_reentering_next_turn },
+    { name = "skip_next_inner_entry_only_blocks_current_entry_tile_once", run = _test_skip_next_inner_entry_only_blocks_current_entry_tile_once },
     { name = "sync_move_dir_after_position_change_covers_core_modes", run = _test_sync_move_dir_after_position_change_covers_core_modes },
     { name = "entry_point_even_branch_ignores_inbound_facing", run = _test_entry_point_even_branch_ignores_inbound_facing },
     { name = "market_keeps_forward_direction_regardless_of_parity", run = _test_market_keeps_forward_direction_regardless_of_parity },

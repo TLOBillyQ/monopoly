@@ -57,13 +57,17 @@ local function _pick_unique_dir(neigh, avoid_dir)
   return picked_dir, picked_id
 end
 
-local function _resolve_outer_next(map, current_id, parity, can_enter_inner)
+local function _resolve_outer_next(map, current_id, parity, can_enter_inner, skip_entry_on_tile_id)
   if not map.outer_next[current_id] then
     return nil, false
   end
   local next_id = map.outer_next[current_id]
   local entry = map.entry_points[current_id]
-  if entry and can_enter_inner and parity and (parity % 2 == 0) then
+  if entry
+    and can_enter_inner
+    and skip_entry_on_tile_id ~= current_id
+    and parity
+    and (parity % 2 == 0) then
     next_id = entry.inner_id
     return next_id, true
   end
@@ -101,8 +105,14 @@ local function _resolve_fallback_next(neigh, facing)
   return any_id
 end
 
-local function _resolve_forward_next_id(map, current_id, neigh, facing, parity, can_enter_inner)
-  local outer_next, entered_inner = _resolve_outer_next(map, current_id, parity, can_enter_inner)
+local function _resolve_forward_next_id(map, current_id, neigh, facing, parity, can_enter_inner, skip_entry_on_tile_id)
+  local outer_next, entered_inner = _resolve_outer_next(
+    map,
+    current_id,
+    parity,
+    can_enter_inner,
+    skip_entry_on_tile_id
+  )
   if outer_next then
     return outer_next, entered_inner
   end
@@ -132,7 +142,8 @@ local function _resolve_forward_facing(map, current_id, facing, step_context)
     neigh,
     facing,
     step_context.parity,
-    not step_context.entered_inner
+    not step_context.entered_inner,
+    step_context.skip_entry_on_tile_id
   )
   if next_id == nil then
     return facing
@@ -147,6 +158,7 @@ local function _normalize_forward_step_context(parity_or_context)
   return {
     parity = parity_or_context,
     entered_inner = false,
+    skip_entry_on_tile_id = nil,
   }
 end
 
@@ -393,7 +405,8 @@ function board:step_forward_by_facing(current_index, facing, parity)
     neigh,
     facing,
     step_context.parity,
-    not step_context.entered_inner
+    not step_context.entered_inner,
+    step_context.skip_entry_on_tile_id
   )
 
   assert(next_id ~= nil, "missing next tile id from: " .. tostring(current_id))

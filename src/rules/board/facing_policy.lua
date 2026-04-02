@@ -38,7 +38,8 @@ function facing_policy.sync_move_dir_after_position_change(game, player, current
   assert(valid_sync_modes[mode] == true, "invalid move_dir sync mode: " .. tostring(mode))
 
   if mode == "clear" then
-    return _set_move_dir(game, player, nil)
+    _set_move_dir(game, player, nil)
+    return game:set_player_status(player, "skip_next_inner_entry", false)
   end
 
   if mode == "preserve" then
@@ -54,6 +55,18 @@ function facing_policy.sync_move_dir_after_position_change(game, player, current
     return _set_move_dir(game, player, market_default_move_dir)
   end
   return _set_move_dir(game, player, _player_move_dir(player))
+end
+
+function facing_policy.should_skip_inner_entry(board, player)
+  if not (board and board.map and board.map.entry_points and player and player.position) then
+    return false
+  end
+  local status = player.status or nil
+  if not (status and status.skip_next_inner_entry == true) then
+    return false
+  end
+  local tile = board:get_tile(player.position)
+  return tile ~= nil and board.map.entry_points[tile.id] ~= nil
 end
 
 function facing_policy.resolve_initial_facing(mode, player, opts)

@@ -12,6 +12,10 @@ function movement.move(game, player, steps, opts)
   event_emitter.emit(ctx, landing_tile)
   ctx.game:update_player_position(ctx.player, ctx.current)
   ctx.game:set_player_status(ctx.player, "move_dir", ctx.persisted_facing)
+  local should_skip_next_inner_entry = ctx.exited_inner == true
+    and landing_tile ~= nil
+    and ctx.board.map.entry_points[landing_tile.id] ~= nil
+  ctx.game:set_player_status(ctx.player, "skip_next_inner_entry", should_skip_next_inner_entry)
   return step_executor.build_result(ctx, landing_tile)
 end
 

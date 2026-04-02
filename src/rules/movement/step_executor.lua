@@ -10,13 +10,23 @@ local function _step_move(ctx, step)
     next_index, passed, next_facing, entered_inner = ctx.step_fn(ctx.board, ctx.current, ctx.facing, {
       parity = ctx.branch_parity,
       entered_inner = ctx.entered_inner,
+      skip_entry_on_tile_id = ctx.skip_entry_on_tile_id,
     })
   end
   ctx.pass_start = ctx.pass_start + passed
   ctx.facing = next_facing
+  local previous_tile = ctx.board:get_tile(ctx.current)
   ctx.current = next_index
+  local current_tile = ctx.board:get_tile(ctx.current)
   if entered_inner then
     ctx.entered_inner = true
+  elseif previous_tile
+    and current_tile
+    and ctx.board.map
+    and ctx.board.map.outer_next
+    and ctx.board.map.outer_next[previous_tile.id] == nil
+    and ctx.board.map.outer_next[current_tile.id] ~= nil then
+    ctx.exited_inner = true
   end
   ctx.visited[#ctx.visited + 1] = ctx.current
   return step
