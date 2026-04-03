@@ -568,52 +568,58 @@ local function _write_update_api_fixture(path, function_name)
   }, "\n"))
 end
 
-local function _run_update_api_with_paths(old_path, new_path, doc_dir, changelog_path)
+local function _run_update_api_git(new_path, doc_dir, changelog_path)
   return _run_lua({
     "tools/ops/update_api.lua",
-    "--old", old_path,
     "--new", new_path,
     "--doc-dir", doc_dir,
     "--changelog", changelog_path,
+    "--skip-meta",
   })
 end
 
-local function _test_update_api_deletes_old_baseline_when_only_diff_fails()
-  _with_ascii_tmp("update_api_delete_old_on_diff", function(tmp_root)
-    local fixture_root = common.join_path(tmp_root, "update_api_delete_old_on_diff")
-    local old_path = common.join_path(fixture_root, "EggyAPI copy.lua")
+local function _test_update_api_updates_docs_and_changelog_when_api_changes()
+  _with_ascii_tmp("update_api_api_changes", function(tmp_root)
+    local fixture_root = common.join_path(tmp_root, "update_api_api_changes")
     local new_path = common.join_path(fixture_root, "EggyAPI.lua")
     local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
     local changelog_path = common.join_path(doc_dir, "changelog.md")
 
-    _write_update_api_fixture(old_path, "legacy_call")
+    _init_git_repo(fixture_root)
+    _write_update_api_fixture(new_path, "legacy_call")
+    _commit_all(fixture_root, "init")
     _write_update_api_fixture(new_path, "current_call")
 
-    local result = _run_update_api_with_paths(old_path, new_path, doc_dir, changelog_path)
+    local result = _run_update_api_git(new_path, doc_dir, changelog_path)
 
-    assert(result.ok == false, "update_api should still exit non-zero when API diff exists")
-    assert(common.path_exists(old_path) == false, "update_api should delete old baseline after docs/check succeed")
+    assert(result.ok == false, "update_api should exit non-zero when API diff exists")
     assert(common.path_exists(common.join_path(doc_dir, "04_global_api.md")) == true,
-      "update_api should generate split docs before deleting the old baseline")
-    assert(common.path_exists(changelog_path) == true, "update_api should write changelog into the requested path")
-    _assert_contains(result.output, "新增 / Added: 1", "update_api should report the added API in diff output")
-    _assert_contains(result.output, "删除 / Removed: 1", "update_api should report the removed API in diff output")
-    _assert_contains(result.output, "缺失项 / Missing: 0", "update_api should keep doc entries aligned with source entries")
-    _assert_contains(result.output, "多余项 / Extra: 0", "update_api should keep doc entries aligned with source entries")
+      "update_api should generate split docs")
+    assert(common.path_exists(changelog_path) == true,
+      "update_api should write changelog")
+    _assert_contains(result.output, "新增 / Added: 1",
+      "update_api should report the added API")
+    _assert_contains(result.output, "删除 / Removed: 1",
+      "update_api should report the removed API")
+    _assert_contains(result.output, "缺失项 / Missing: 0",
+      "update_api should keep doc entries aligned with source entries")
+    _assert_contains(result.output, "多余项 / Extra: 0",
+      "update_api should keep doc entries aligned with source entries")
   end)
 end
 
-local function _test_update_api_keeps_old_baseline_when_check_fails()
-  _with_ascii_tmp("update_api_keep_old_on_check_failure", function(tmp_root)
-    local fixture_root = common.join_path(tmp_root, "update_api_keep_old_on_check_failure")
-    local old_path = common.join_path(fixture_root, "EggyAPI copy.lua")
+local function _test_update_api_reports_extra_doc_entries_when_check_fails()
+  _with_ascii_tmp("update_api_extra_doc", function(tmp_root)
+    local fixture_root = common.join_path(tmp_root, "update_api_extra_doc")
     local new_path = common.join_path(fixture_root, "EggyAPI.lua")
     local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
     local changelog_path = common.join_path(doc_dir, "changelog.md")
     local extra_doc_path = common.join_path(doc_dir, "zz_extra.md")
 
-    _write_update_api_fixture(old_path, "shared_call")
-    _write_update_api_fixture(new_path, "shared_call")
+    _init_git_repo(fixture_root)
+    _write_update_api_fixture(new_path, "old_call")
+    _commit_all(fixture_root, "init")
+    _write_update_api_fixture(new_path, "new_call")
     _write_fixture_file(extra_doc_path, table.concat({
       "# extra",
       "",
@@ -621,13 +627,36 @@ local function _test_update_api_keeps_old_baseline_when_check_fails()
       "",
     }, "\n"))
 
-    local result = _run_update_api_with_paths(old_path, new_path, doc_dir, changelog_path)
+    local result = _run_update_api_git(new_path, doc_dir, changelog_path)
 
-    assert(result.ok == false, "update_api should exit non-zero when doc check finds extra entries")
-    assert(common.path_exists(old_path) == true, "update_api should keep old baseline when check fails")
-    _assert_contains(result.output, "多余项 / Extra: 1", "update_api should surface the extra doc entry count")
+    assert(result.ok == false,
+      "update_api should exit non-zero when doc check finds extra entries")
+    _assert_contains(result.output, "多余项 / Extra: 1",
+      "update_api should surface the extra doc entry count")
     _assert_contains(result.output, "多余示例 / Extra sample: [GhostAPI|ghost_call]",
       "update_api should surface the offending extra doc entry")
+  end)
+end
+
+local function _test_update_api_skips_all_writes_when_api_unchanged()
+  _with_ascii_tmp("update_api_no_change", function(tmp_root)
+    local fixture_root = common.join_path(tmp_root, "update_api_no_change")
+    local new_path = common.join_path(fixture_root, "EggyAPI.lua")
+    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local changelog_path = common.join_path(doc_dir, "changelog.md")
+
+    _init_git_repo(fixture_root)
+    _write_update_api_fixture(new_path, "stable_call")
+    _commit_all(fixture_root, "init")
+    -- 不覆盖文件，内容与 git HEAD 相同
+
+    local result = _run_update_api_git(new_path, doc_dir, changelog_path)
+
+    assert(result.ok == true, "update_api should exit 0 when API unchanged")
+    assert(common.path_exists(changelog_path) == false,
+      "update_api should not write changelog when API unchanged")
+    assert(common.path_exists(common.join_path(doc_dir, "04_global_api.md")) == false,
+      "update_api should not generate docs when API unchanged")
   end)
 end
 
@@ -1216,8 +1245,9 @@ local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
   { name = "deploy_script_keeps_default_paths", run = _test_deploy_script_keeps_default_paths },
   { name = "update_api_writes_changelog_into_docs_eggy_api_dir", run = _test_update_api_writes_changelog_into_docs_eggy_api_dir },
-  { name = "update_api_deletes_old_baseline_when_only_diff_fails", run = _test_update_api_deletes_old_baseline_when_only_diff_fails },
-  { name = "update_api_keeps_old_baseline_when_check_fails", run = _test_update_api_keeps_old_baseline_when_check_fails },
+  { name = "update_api_updates_docs_and_changelog_when_api_changes", run = _test_update_api_updates_docs_and_changelog_when_api_changes },
+  { name = "update_api_reports_extra_doc_entries_when_check_fails", run = _test_update_api_reports_extra_doc_entries_when_check_fails },
+  { name = "update_api_skips_all_writes_when_api_unchanged", run = _test_update_api_skips_all_writes_when_api_unchanged },
 }
 
 local tooling_tests = {
