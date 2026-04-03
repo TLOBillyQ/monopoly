@@ -24,7 +24,6 @@ local function _fail(message)
 end
 
 local DEFAULT_NEW = common.join_path(env.repo_root, "EggyAPI.lua")
-local DEFAULT_OLD = common.join_path(env.repo_root, "EggyAPI copy.lua")
 local DEFAULT_DOC_DIR = common.join_path(env.repo_root, "docs/eggy/api")
 local DEFAULT_CHANGELOG = common.join_path(env.repo_root, "docs/eggy/api/changelog.md")
 local DEFAULT_META_FILE = common.join_path(env.repo_root, "meta/luals_host.lua")
@@ -524,7 +523,6 @@ end
 
 local function _parse_args(args)
   local options = {
-    old = DEFAULT_OLD,
     new = DEFAULT_NEW,
     doc_dir = DEFAULT_DOC_DIR,
     changelog = DEFAULT_CHANGELOG,
@@ -539,10 +537,7 @@ local function _parse_args(args)
   local index = 1
   while index <= #args do
     local token = args[index]
-    if token == "--old" then
-      options.old = args[index + 1]
-      index = index + 2
-    elseif token == "--new" then
+    if token == "--new" then
       options.new = args[index + 1]
       index = index + 2
     elseif token == "--doc-dir" then
@@ -578,8 +573,8 @@ local function _parse_args(args)
       index = index + 1
     elseif token == "--help" or token == "-h" then
       print(_text(
-        "用法: lua tools/ops/update_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--meta PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff] [--skip-meta]",
-        "Usage: lua tools/ops/update_api.lua [--old PATH] [--new PATH] [--doc-dir PATH] [--changelog PATH] [--meta PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff] [--skip-meta]"
+        "用法: lua tools/ops/update_api.lua [--new PATH] [--doc-dir PATH] [--changelog PATH] [--meta PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff] [--skip-meta]",
+        "Usage: lua tools/ops/update_api.lua [--new PATH] [--doc-dir PATH] [--changelog PATH] [--meta PATH] [--limit NUM] [--skip-generate] [--skip-check] [--skip-diff] [--skip-meta]"
       ))
       os.exit(0)
     else
@@ -590,7 +585,6 @@ local function _parse_args(args)
     end
   end
 
-  options.old = common.resolve_path(common.current_dir(), options.old)
   options.new = common.resolve_path(common.current_dir(), options.new)
   options.doc_dir = common.resolve_path(common.current_dir(), options.doc_dir)
   options.changelog = common.resolve_path(common.current_dir(), options.changelog)
@@ -615,6 +609,42 @@ local function _write_text(path, text)
   end
 end
 
+local function _read_git_head(new_path)
+  local dir = new_path:match("^(.*)/[^/]+$") or "."
+
+  local rev_result = common.run_command(
+    { "git", "rev-parse", "--show-toplevel" },
+    { cwd = dir }
+  )
+  if not rev_result.ok then
+    _fail(_text(
+      "无法找到 git 仓库，请在 git 仓库中运行此脚本",
+      "Cannot find git repository; run this script inside a git repo"
+    ))
+  end
+
+  local git_root = _trim(rev_result.output)
+  local norm_root = git_root:gsub("\\", "/"):gsub("/$", "")
+  local norm_new  = new_path:gsub("\\", "/")
+
+  local rel_path
+  if norm_new:sub(1, #norm_root + 1) == norm_root .. "/" then
+    rel_path = norm_new:sub(#norm_root + 2)
+  else
+    rel_path = norm_new:match("([^/]+)$") or "EggyAPI.lua"
+  end
+
+  local show_result = common.run_command(
+    { "git", "show", "HEAD:" .. rel_path },
+    { cwd = git_root }
+  )
+  if not show_result.ok then
+    return ""
+  end
+
+  return show_result.output
+end
+
 local function _cleanup_deprecated_api(path)
   _validate_file(path, "new")
 
@@ -625,20 +655,6 @@ local function _cleanup_deprecated_api(path)
 
   local updated = table.concat(_remove_deprecated_api(_split_lines_keepends(original)))
   _write_text(path, updated)
-end
-
-local function _delete_old_api(path)
-  if not common.path_exists(path) then
-    return
-  end
-
-  local ok = common.remove_path(path)
-  if not ok then
-    _fail(_text(
-      "无法删除旧文件: " .. tostring(path),
-      "Cannot delete old file: " .. tostring(path)
-    ))
-  end
 end
 
 local function _generate_docs(text, options)
@@ -1268,6 +1284,20 @@ end
 
 local function main(args)
   local options = _parse_args(args or {})
+
+  -- 提前用 git HEAD 检测 API 变化，无变化时跳过所有写操作
+  local added, removed, changed_params, type_changed = {}, {}, {}, {}
+  if not options.skip_diff then
+    local old_text = _read_git_head(options.new)
+    local old_symbols = _parse_symbols(old_text)
+    local new_symbols = _parse_path(options.new)
+    added, removed, changed_params, type_changed = _diff_symbols(old_symbols, new_symbols)
+    if #added == 0 and #removed == 0 and #changed_params == 0 and #type_changed == 0 then
+      print(_text("无 API 变化，跳过", "No API changes, skipping"))
+      return 0
+    end
+  end
+
   _cleanup_deprecated_api(options.new)
 
   local text = ""
@@ -1289,10 +1319,6 @@ local function main(args)
 
   local diff_failed = false
   if not options.skip_diff then
-    _validate_file(options.old, "old")
-    local old_symbols = _parse_path(options.old)
-    local new_symbols = _parse_path(options.new)
-    local added, removed, changed_params, type_changed = _diff_symbols(old_symbols, new_symbols)
     local diff_lines = _format_diff_report(added, removed, changed_params, type_changed, options.limit)
     _print_lines(diff_lines)
     _append_changelog(options.changelog, _format_diff_report(added, removed, changed_params, type_changed, nil))
@@ -1309,10 +1335,6 @@ local function main(args)
     end
     _print_lines(check_lines)
     check_failed = #missing > 0 or #extra > 0
-  end
-
-  if not options.skip_generate and not check_failed then
-    _delete_old_api(options.old)
   end
 
   if diff_failed or check_failed then
