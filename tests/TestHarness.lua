@@ -70,6 +70,7 @@ local function run_all(suites, opts)
   opts = opts or {}
   local reporter = opts.reporter or _default_reporter()
   local quiet = opts.quiet == true
+  local summary_label = opts.summary_label or "regression"
   local total = 0
   local failures = {}
   local summary = {}
@@ -176,7 +177,12 @@ local function run_all(suites, opts)
   if #failures > 0 and opts.raise_on_failure ~= false then
     if not quiet then
       io.stdout:write("\n")
-      print("Regression failed (" .. tostring(#failures) .. "/" .. tostring(total) .. ")")
+      print(string.format(
+        "%s failed (%d/%d)",
+        tostring(summary_label),
+        #failures,
+        total
+      ))
       for i, failure in ipairs(failures) do
         print(tostring(i) .. ") " .. failure.name)
         if failure.captured and failure.captured.lines and #failure.captured.lines > 0 then
@@ -189,7 +195,7 @@ local function run_all(suites, opts)
   end
 
   if #failures == 0 and not quiet then
-    print("\nAll regression checks passed (" .. tostring(total) .. ")")
+    print(string.format("\nAll %s checks passed (%d)", tostring(summary_label), total))
   end
 
   return result

@@ -37,7 +37,6 @@ local function _run_script(script, summary)
   local timing = _timing_enabled and wall_clock.finish(timer) or nil
 
   if ok and type(result) == "table" and result.ok == true then
-    io.stdout:write(".")
     log_capture.collect_summary(summary, captured)
     if result.message then
       summary[result.message] = (summary[result.message] or 0) + 1
@@ -51,7 +50,6 @@ local function _run_script(script, summary)
     err = ok and nil or result,
     captured = captured,
   }
-  io.stdout:write("F")
   return failure, timing
 end
 
