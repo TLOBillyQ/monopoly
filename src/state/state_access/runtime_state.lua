@@ -161,14 +161,8 @@ function runtime_state.ensure_board_runtime(state)
   if board_runtime.board_last_positions == nil then
     board_runtime.board_last_positions = state.board_last_positions or {}
   end
-  if board_runtime.follow_target_by_player_id == nil then
-    board_runtime.follow_target_by_player_id = {}
-  end
-  if board_runtime.follow_target_source_by_player_id == nil then
-    board_runtime.follow_target_source_by_player_id = {}
-  end
-  if board_runtime.follow_target_seq_by_player_id == nil then
-    board_runtime.follow_target_seq_by_player_id = {}
+  if board_runtime.follow_targets == nil then
+    board_runtime.follow_targets = {}
   end
   _ensure_field(board_runtime, "board_sync_pending", state.board_sync_pending == true)
   _ensure_field(board_runtime, "board_last_phase", state.board_last_phase)
@@ -183,15 +177,17 @@ function runtime_state.set_follow_target_position(state, player_id, position, op
   local board_runtime = runtime_state.ensure_board_runtime(state)
   opts = opts or {}
   local next_seq = opts.seq
-  local last_seq = board_runtime.follow_target_seq_by_player_id[player_id]
+  local entry = board_runtime.follow_targets[player_id]
+  local last_seq = entry and entry.seq
   if next_seq ~= nil and last_seq ~= nil and next_seq < last_seq then
     return false
   end
-  board_runtime.follow_target_by_player_id[player_id] = position
-  board_runtime.follow_target_source_by_player_id[player_id] = opts.source
-  if next_seq ~= nil then
-    board_runtime.follow_target_seq_by_player_id[player_id] = next_seq
-  end
+  local new_entry = {
+    position = position,
+    source = opts.source,
+    seq = next_seq ~= nil and next_seq or (entry and entry.seq),
+  }
+  board_runtime.follow_targets[player_id] = new_entry
   return true
 end
 
@@ -200,7 +196,8 @@ function runtime_state.get_follow_target_position(state, player_id)
     return nil
   end
   local board_runtime = runtime_state.ensure_board_runtime(state)
-  return board_runtime.follow_target_by_player_id[player_id]
+  local entry = board_runtime.follow_targets[player_id]
+  return entry and entry.position or nil
 end
 
 function runtime_state.ensure_anim_runtime(state)
