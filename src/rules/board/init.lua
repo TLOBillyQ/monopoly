@@ -57,7 +57,10 @@ local function _pick_unique_dir(neigh, avoid_dir)
   return picked_dir, picked_id
 end
 
-local function _resolve_outer_next(map, current_id, parity, can_enter_inner, skip_entry_on_tile_id)
+local function _resolve_outer_next(map, current_id, step_context)
+  local parity = step_context.parity
+  local can_enter_inner = not step_context.entered_inner
+  local skip_entry_on_tile_id = step_context.skip_entry_on_tile_id
   if not map.outer_next[current_id] then
     return nil, false
   end
@@ -109,9 +112,11 @@ local function _resolve_forward_next_id(map, current_id, neigh, facing, parity, 
   local outer_next, entered_inner = _resolve_outer_next(
     map,
     current_id,
-    parity,
-    can_enter_inner,
-    skip_entry_on_tile_id
+    {
+      parity = parity,
+      entered_inner = not can_enter_inner,
+      skip_entry_on_tile_id = skip_entry_on_tile_id,
+    }
   )
   if outer_next then
     return outer_next, entered_inner

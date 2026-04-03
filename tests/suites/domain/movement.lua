@@ -566,13 +566,16 @@ local function _pick_unique_dir(neigh, avoid_dir)
   return picked_dir, picked_id
 end
 
-local function _resolve_outer_next(map, current_id, parity, can_enter_inner)
+local function _resolve_outer_next(map, current_id, step_context)
+  local parity = step_context.parity
+  local can_enter_inner = not step_context.entered_inner
+  local skip_entry_on_tile_id = step_context.skip_entry_on_tile_id
   if not map.outer_next[current_id] then
     return nil, false
   end
   local next_id = map.outer_next[current_id]
   local entry = map.entry_points[current_id]
-  if entry and can_enter_inner and parity and (parity % 2 == 0) then
+  if entry and can_enter_inner and skip_entry_on_tile_id ~= current_id and parity and (parity % 2 == 0) then
     next_id = entry.inner_id
     return next_id, true
   end
@@ -701,7 +704,7 @@ local function _test_resolve_outer_next_returns_outer_next_when_no_entry()
     outer_prev = {},
     direction = function() return "up" end,
   }
-  local result = _resolve_outer_next(map, 1, "up", 1)
+  local result = _resolve_outer_next(map, 1, { parity = "up", entered_inner = false, skip_entry_on_tile_id = nil })
   _assert_eq(result, 2, "should return outer_next when no entry point")
 end
 
@@ -711,7 +714,7 @@ local function _test_resolve_outer_next_returns_inner_on_even_parity()
     entry_points = { [1] = { inner_id = 10 } },
     outer_prev = { [1] = 99 },
   }
-  local result, entered_inner = _resolve_outer_next(map, 1, 2, true)
+  local result, entered_inner = _resolve_outer_next(map, 1, { parity = 2, entered_inner = false, skip_entry_on_tile_id = nil })
   _assert_eq(result, 10, "should return inner_id on even parity")
   _assert_eq(entered_inner, true, "should mark inner entry on even parity")
 end
@@ -722,7 +725,7 @@ local function _test_resolve_outer_next_returns_outer_when_inner_entry_is_blocke
     entry_points = { [1] = { inner_id = 10 } },
     outer_prev = { [1] = 99 },
   }
-  local result, entered_inner = _resolve_outer_next(map, 1, 2, false)
+  local result, entered_inner = _resolve_outer_next(map, 1, { parity = 2, entered_inner = true, skip_entry_on_tile_id = nil })
   _assert_eq(result, 2, "should return outer_next when same move already entered inner")
   _assert_eq(entered_inner, false, "should not mark inner entry when blocked")
 end
@@ -733,7 +736,7 @@ local function _test_resolve_outer_next_returns_nil_when_no_outer_next()
     entry_points = {},
     outer_prev = {},
   }
-  local result, entered_inner = _resolve_outer_next(map, 1, 1, true)
+  local result, entered_inner = _resolve_outer_next(map, 1, { parity = 1, entered_inner = false, skip_entry_on_tile_id = nil })
   _assert_eq(result, nil, "should return nil when no outer_next")
   _assert_eq(entered_inner, false, "should not mark inner entry when outer_next is missing")
 end
