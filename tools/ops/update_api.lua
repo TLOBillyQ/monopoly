@@ -1290,8 +1290,11 @@ local function main(args)
   if not options.skip_diff then
     local old_text = _read_git_head(options.new)
     local old_symbols = _parse_symbols(old_text)
-    local new_raw, _ = common.read_file(options.new)
-    local new_clean = table.concat(_remove_deprecated_api(_split_lines_keepends(new_raw or "")))
+    local new_raw, new_err = common.read_file(options.new)
+    if new_raw == nil then
+      _fail(new_err)
+    end
+    local new_clean = table.concat(_remove_deprecated_api(_split_lines_keepends(new_raw)))
     local new_symbols = _parse_symbols(new_clean)
     added, removed, changed_params, type_changed = _diff_symbols(old_symbols, new_symbols)
     if #added == 0 and #removed == 0 and #changed_params == 0 and #type_changed == 0 then
