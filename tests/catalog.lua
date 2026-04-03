@@ -18,7 +18,10 @@ local domain_behavior_modules = {
   "suites.domain.vehicle_helper",
   "suites.domain.board_init_crap_coverage",
   "suites.domain.board_direction_utils_crap_coverage",
+  "suites.domain.board_direction_crap_coverage",
   "suites.domain.board_query_crap_coverage",
+  "suites.domain.resolver_crap_coverage",
+  "suites.domain.mine_effect_crap_coverage",
 }
 
 local runtime_behavior_modules = {
@@ -26,6 +29,7 @@ local runtime_behavior_modules = {
   "suites.runtime.test_profile_resolver",
   "suites.runtime.test_profile_bootstrap_core",
   "suites.runtime.test_profile_bootstrap_scenarios",
+  "suites.runtime.misc_vehicle_runtime_source",
   "suites.runtime.misc",
 }
 
@@ -41,6 +45,8 @@ local gameplay_behavior_modules = {
   "suites.gameplay.gameplay_items_startup",
   "suites.gameplay.gameplay_forced_relocation_and_followup",
   "suites.gameplay.pre_move_phase_crap_coverage",
+  "suites.gameplay.action_anim_wait_crap_coverage",
+  "suites.gameplay.validator_crap_coverage",
 }
 
 local presentation_behavior_modules = {
@@ -78,6 +84,8 @@ local presentation_behavior_modules = {
   -- T8: Re-enabled T2 characterization tests for final CRAP cleanup
   "suites.gameplay.gameplay_t2_characterization",
   "suites.presentation.status3d_roadblock_crap_coverage",
+  "suites.presentation.effect_track_crap_coverage",
+  "suites.presentation.anchors_sequence_crap_coverage",
 }
 
 local behavior_modules = {}

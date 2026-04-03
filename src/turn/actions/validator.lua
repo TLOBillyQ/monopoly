@@ -279,5 +279,6 @@ function validator.resolve_item_slot_action(item_slot_source, state, action, gam
 end
 
 validator._resolve_item_slot_resolution = _resolve_item_slot_resolution
+validator._validate_item_slot_action = _validate_item_slot_action
 
 return validator

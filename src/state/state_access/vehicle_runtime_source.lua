@@ -126,4 +126,8 @@ function source.build_helper(get_roles, get_game_api, deps, globals)
   return runtime.build_helper(get_roles, get_game_api, deps or {})
 end
 
+source._M_test = {
+  _resolve_module = _resolve_module,
+}
+
 return source

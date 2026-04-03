@@ -148,4 +148,8 @@ function mine_effect.apply(game, player, position)
   }
 end
 
+mine_effect._M_test = {
+  _find_pending_roadblock_trigger = _find_pending_roadblock_trigger,
+}
+
 return mine_effect

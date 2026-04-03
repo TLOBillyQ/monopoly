@@ -154,4 +154,8 @@ function choice_resolver.resolve(game, choice, action)
   return result or { status = "resolved", stay = false }
 end
 
+choice_resolver._M_test = {
+  _contains = _contains,
+}
+
 return choice_resolver

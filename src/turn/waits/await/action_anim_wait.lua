@@ -164,4 +164,8 @@ function M.action_anim(session, args)
   }
 end
 
+M._M_test = {
+  _coalesce_head = _coalesce_head,
+}
+
 return M

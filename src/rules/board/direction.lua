@@ -242,6 +242,9 @@ end
 direction._M_test = {
   _sorted_dirs_comparator = _sorted_dirs_comparator,
   _pick_any_dir = _pick_any_dir,
+  _pick_unique_dir = _pick_unique_dir,
+  _resolve_fallback_next = _resolve_fallback_next,
+  _resolve_backward_from_neighbors = _resolve_backward_from_neighbors,
 }
 
 return direction
