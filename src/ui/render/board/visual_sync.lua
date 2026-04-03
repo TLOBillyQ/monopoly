@@ -126,7 +126,16 @@ function visual_sync.sync_tile_visual(state, tile_id)
   local tile_unit = _resolve_tile_unit(state, scene, idx)
   if tile_unit ~= nil then
     local tile = board:get_tile_by_id(tile_id)
-    tile_renderer.render_tile(tile_unit, tile_id, tile and tile.owner_id or nil)
+    local owner_id = tile and tile.owner_id or nil
+    local owner_name = nil
+    if owner_id then
+      local game = state and state.game or nil
+      if game and type(game.find_player_by_id) == "function" then
+        local player = game:find_player_by_id(owner_id)
+        owner_name = player and player.name or nil
+      end
+    end
+    tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name)
   end
 
   local tile = board:get_tile_by_id(tile_id)

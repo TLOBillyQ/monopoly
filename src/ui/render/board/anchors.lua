@@ -21,6 +21,18 @@ local function _collect_tile_ids(board)
   return tile_ids
 end
 
+local function _find_owner_name(players, owner_id)
+  if not owner_id or type(players) ~= "table" then
+    return nil
+  end
+  for _, p in ipairs(players) do
+    if p.id == owner_id then
+      return p.name
+    end
+  end
+  return nil
+end
+
 local function _render_board_tiles(board, tiles, tile_count)
   local board_tiles = assert(board.tile_states, "missing ui_model.board.tile_states")
   local tile_ids = _collect_tile_ids(board)
@@ -33,7 +45,8 @@ local function _render_board_tiles(board, tiles, tile_count)
       assert(tile_state ~= nil, "missing board tile state: " .. tostring(tile_id))
     end
     local owner_id = tile_state and tile_state.owner_id or nil
-    tile_renderer.render_tile(unit, tile_id, owner_id)
+    local owner_name = _find_owner_name(board.players, owner_id)
+    tile_renderer.render_tile(unit, tile_id, owner_id, owner_name)
   end
 end
 

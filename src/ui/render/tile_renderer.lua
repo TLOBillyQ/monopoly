@@ -30,9 +30,10 @@ local function _render_name(unit, cfg, tile_id, is_land)
   _assert_land_node_present(is_land, "name")
 end
 
-local function _render_price(unit, cfg, tile_id, is_land)
+local function _render_price(unit, cfg, tile_id, is_land, owner_name)
   local price_node = unit.get_child_by_name("price")
-  if _set_billboard_text(price_node, "价格：" .. tostring(cfg.price)) then
+  local text = owner_name or ("价格：" .. tostring(cfg.price))
+  if _set_billboard_text(price_node, text) then
     return
   end
   _assert_land_node_present(is_land, "price")
@@ -48,7 +49,7 @@ local function _render_color(unit, owner_id, is_land)
   _assert_land_node_present(is_land, "color")
 end
 
-function tile_renderer.render_tile(unit, tile_id, owner_id)
+function tile_renderer.render_tile(unit, tile_id, owner_id, owner_name)
   local cfg = tiles_by_id[tile_id]
   assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
   assert(unit ~= nil and unit.get_child_by_name ~= nil, "invalid tile unit")
@@ -58,7 +59,7 @@ function tile_renderer.render_tile(unit, tile_id, owner_id)
     assert(cfg.price ~= nil, "missing tile price: " .. tostring(tile_id))
   end
   _render_name(unit, cfg, tile_id, is_land)
-  _render_price(unit, cfg, tile_id, is_land)
+  _render_price(unit, cfg, tile_id, is_land, owner_name)
   _render_color(unit, owner_id, is_land)
 end
 
