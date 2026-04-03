@@ -1,5 +1,4 @@
 local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_state = require("src.ui.state")
 local debug_mod = require("src.ui.render.move_anim.debug")
 local rt = require("src.ui.render.move_anim.runtime")
 local seq_builder = require("src.ui.render.move_anim.sequence_builder")
@@ -95,17 +94,6 @@ local function _set_player_position(scene, player_id, target_pos, anim_ctx)
   return "set_position"
 end
 
-local function _publish_follow_target(anim_ctx, player_id, position, source)
-  local state = anim_ctx and anim_ctx.state or nil
-  if state == nil or player_id == nil or position == nil then
-    return false
-  end
-  return runtime_state.set_follow_target_position(state, player_id, position, {
-    source = source,
-    seq = anim_ctx and anim_ctx.seq or nil,
-  })
-end
-
 function stop.stop_player_presentation(player_id, unit, opts)
   opts = opts or {}
   local vehicle_stop_path = nil
@@ -175,7 +163,7 @@ function stop.snap_player_to_index(board_scene, player_id, to_index, anim_ctx, r
   local tile = assert(board_scene.tiles[to_index], "missing tile: " .. tostring(to_index))
   local target_pos = tile.get_position()
   _set_player_position(board_scene, player_id, target_pos, anim_ctx)
-  _publish_follow_target(anim_ctx, player_id, target_pos, reason or "play_sequence_teleport")
+  seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, reason or "play_sequence_teleport")
   debug_mod.debug_log(
     reason or "play_sequence_teleport",
     "player_id=" .. tostring(player_id),
