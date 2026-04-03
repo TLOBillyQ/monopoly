@@ -96,9 +96,13 @@ local function _resolve_wait_state(game, next_state, next_args, wait_action_anim
     next_args = next_args,
   }
 
+  local has_anim = predicates.has_action_anim(game)
+  local has_hold = predicates.is_landing_visual_hold_active(game)
+  local effects_pending = not predicates.is_effect_idle()
+
   if wait_action_anim == true then
-    if predicates.has_action_anim(game) then
-      if predicates.is_landing_visual_hold_active(game) then
+    if has_anim then
+      if has_hold or effects_pending then
         return _register_landing_visual_resume(game, "wait_action_anim", {
           next_state = next_state,
           next_args = next_args,
@@ -112,20 +116,20 @@ local function _resolve_wait_state(game, next_state, next_args, wait_action_anim
         return next_state, next_args
       end)
     end
-    if predicates.is_landing_visual_hold_active(game) then
+    if has_hold or effects_pending then
       return _register_landing_visual_resume(game, next_state, next_args, function()
         return next_state, next_args
       end)
     end
     return next_state, next_args
   end
-  if predicates.has_action_anim(game) then
-    if predicates.is_landing_visual_hold_active(game) then
+  if has_anim then
+    if has_hold or effects_pending then
       return _wait_for_choice_via_landing_visual_then_action_anim(game, next_state, next_args)
     end
     return _wait_for_choice_via_action_anim(game, next_state, next_args)
   end
-  if predicates.is_landing_visual_hold_active(game) then
+  if has_hold or effects_pending then
     return _wait_for_choice_via_landing_visual(game, next_state, next_args)
   end
   return "wait_choice", wait_choice_args
@@ -136,8 +140,12 @@ local function _resolve_finished_landing_state(game, player)
     return "post_action", { player = player }
   end
 
-  if predicates.has_action_anim(game) then
-    if predicates.is_landing_visual_hold_active(game) then
+  local has_anim = predicates.has_action_anim(game)
+  local has_hold = predicates.is_landing_visual_hold_active(game)
+  local effects_pending = not predicates.is_effect_idle()
+
+  if has_anim then
+    if has_hold or effects_pending then
       return _register_landing_visual_resume(game, "wait_action_anim", {
         next_state = "post_action",
         next_args = { player = player },
@@ -147,7 +155,7 @@ local function _resolve_finished_landing_state(game, player)
     end
     return _register_action_anim_resume(game, "post_action", { player = player }, _resume_post_action)
   end
-  if predicates.is_landing_visual_hold_active(game) then
+  if has_hold or effects_pending then
     return _register_landing_visual_resume(game, "post_action", { player = player }, _resume_post_action)
   end
   return "post_action", { player = player }

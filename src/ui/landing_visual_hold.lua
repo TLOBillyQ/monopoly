@@ -1,8 +1,14 @@
+local effect_track = require("src.ui.render.support.effect_track")
+
 local landing_visual_hold = {}
 
 local function _landing_visual_hold()
   return require("src.state.state_access.landing_visual_hold")
 end
+
+_landing_visual_hold().set_post_release_hook(function()
+  effect_track.await_all()
+end)
 
 function landing_visual_hold.start(game)
   return _landing_visual_hold().start(game)
@@ -102,6 +108,10 @@ end
 
 function landing_visual_hold.reset_state(state)
   return _landing_visual_hold().reset_state(state)
+end
+
+function landing_visual_hold.set_post_release_hook(fn)
+  return _landing_visual_hold().set_post_release_hook(fn)
 end
 
 return landing_visual_hold

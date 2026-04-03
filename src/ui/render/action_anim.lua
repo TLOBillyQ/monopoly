@@ -9,6 +9,7 @@ local board_feedback = require("src.ui.render.board_feedback_service")
 local dice_nodes = require("src.ui.schema.dice_nodes")
 local host_runtime_bridge = require("src.ui.host_bridge")
 local runtime_ui = require("src.ui.render.runtime_ui")
+local effect_track = require("src.ui.render.support.effect_track")
 
 local action_anim = {}
 
@@ -144,10 +145,11 @@ end
 
 local function _resolve_duration(anim)
   local default_duration = timing.action_anim_default_seconds or 1.0
-  local duration = anim.duration or durations[anim.kind] or default_duration
-  if duration <= 0 then
-    duration = default_duration
+  local base_duration = anim.duration or durations[anim.kind] or default_duration
+  if base_duration <= 0 then
+    base_duration = default_duration
   end
+  local duration = effect_track.scaled_duration(base_duration)
   local start_delay = start_delays[anim.kind] or 0
   if start_delay > 0 then
     duration = duration + start_delay

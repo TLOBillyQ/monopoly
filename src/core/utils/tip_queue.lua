@@ -1,4 +1,5 @@
 local number_utils = require("src.core.utils.number_utils")
+local timing = require("src.config.gameplay.timing")
 
 local tip_queue = {
   pending = {},
@@ -16,6 +17,19 @@ local function _normalize_duration(duration)
     return duration
   end
   return 2.0
+end
+
+local function _apply_backlog_acceleration(duration)
+  local backlog = #tip_queue.pending
+  local threshold = timing.event_tip_fast_backlog_threshold or 2
+  if backlog < threshold then
+    return duration
+  end
+  local fast = timing.event_tip_fast_seconds or 0.5
+  if fast < duration then
+    return fast
+  end
+  return duration
 end
 
 local function _normalize_text(text)
@@ -101,6 +115,10 @@ local function _schedule_release(delay, release_fn)
   release_fn()
 end
 
+local function _effective_duration(tip)
+  return _apply_backlog_acceleration(tip.duration)
+end
+
 local function _release_tip(epoch, tip)
   if tip_queue.epoch ~= epoch then
     return
@@ -120,7 +138,7 @@ local function _release_tip(epoch, tip)
       _release_tip(current_epoch, next_tip)
     end
 
-    _schedule_release(next_tip.duration, _release_next)
+    _schedule_release(_effective_duration(next_tip), _release_next)
   end
 end
 
@@ -142,7 +160,7 @@ local function _dispatch_next_tip()
     _release_tip(current_epoch, next_tip)
   end
 
-  _schedule_release(next_tip.duration, _release_next)
+  _schedule_release(_effective_duration(next_tip), _release_next)
 end
 
 function tip_queue.configure_runtime(adapter)

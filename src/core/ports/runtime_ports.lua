@@ -118,6 +118,14 @@ function runtime_ports.cpu_diff_seconds(timestamp_1, timestamp_2)
   return fn(timestamp_1, timestamp_2)
 end
 
+function runtime_ports.is_effect_idle()
+  local fn = _resolve_port("is_effect_idle")
+  if type(fn) ~= "function" then
+    return true
+  end
+  return fn()
+end
+
 function runtime_ports.reset_for_tests()
   configured = nil
 end

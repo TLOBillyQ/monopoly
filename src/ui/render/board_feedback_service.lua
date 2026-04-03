@@ -4,6 +4,7 @@ local runtime_refs = require("src.config.content.runtime_refs")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local catalog = require("src.ui.render.board_feedback_catalog")
 local effect_timeline = require("src.ui.render.support.effect_timeline")
+local effect_track = require("src.ui.render.support.effect_track")
 local unit_position = require("src.ui.render.unit_position")
 local host_runtime_bridge = require("src.ui.host_bridge")
 local service = {}
@@ -151,7 +152,8 @@ local function _play_effect(cue_name, cue, pos, unit, payload)
   if effect_id == nil then
     return false
   end
-  local duration = _resolve_numeric(payload and payload.duration or cue.duration, default_sfx_duration)
+  local raw_duration = _resolve_numeric(payload and payload.duration or cue.duration, default_sfx_duration)
+  local duration = effect_track.scaled_duration(raw_duration)
   local scale = _resolve_sfx_scale(cue_name, payload and payload.scale or cue.scale, default_sfx_scale)
   local rot = payload and payload.rot or cue.rot or runtime_constants.q_zero
   local rate = _resolve_numeric(payload and payload.rate or cue.rate, default_sfx_rate)
@@ -172,6 +174,7 @@ local function _play_effect(cue_name, cue, pos, unit, payload)
   if sfx_id == nil then
     return false
   end
+  effect_track.spawn(cue_name, "effect", duration)
   if cue.bind_to_player == true and unit ~= nil then
     if type(host_runtime.bind_sfx_to_unit) ~= "function" then
       return true

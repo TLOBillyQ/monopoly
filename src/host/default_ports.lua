@@ -192,6 +192,14 @@ function default_ports.build(runtime_context)
     return 0
   end
 
+  function defaults.is_effect_idle()
+    local ok, effect_track = pcall(require, "src.ui.render.support.effect_track")
+    if ok and type(effect_track) == "table" and type(effect_track.is_idle) == "function" then
+      return effect_track.is_idle()
+    end
+    return true
+  end
+
   return defaults
 end
 
