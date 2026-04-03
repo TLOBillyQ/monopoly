@@ -657,6 +657,8 @@ local function _test_update_api_skips_all_writes_when_api_unchanged()
       "update_api should not write changelog when API unchanged")
     assert(common.path_exists(common.join_path(doc_dir, "04_global_api.md")) == false,
       "update_api should not generate docs when API unchanged")
+    _assert_contains(result.output, "无 API 变化",
+      "update_api should report no-op reason when API unchanged")
   end)
 end
 
