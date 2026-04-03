@@ -69,32 +69,15 @@ local function _next_strict_or_turn(neigh, facing, opposite)
   return _get_sorted_forward_dirs(neigh, back_dir)
 end
 
-local function _walk_and_clear(game, player, board, state, context)
-  local map = assert(board.map, "missing board.map")
-  local neighbors = assert(map.neighbors, "missing board.map.neighbors")
-  local opposite = direction_constants.opposite
-
-  local facing = facing_policy.resolve_initial_facing("relative_forward", player, context)
-  local start_tile = assert(board:get_tile(player.position), "missing start tile")
-  local start_id = assert(start_tile.id, "missing start tile id")
-
-  local start_neigh = neighbors[start_id]
-  if not start_neigh then
-    return
-  end
-
-  local initial_dirs
+local function _resolve_initial_dirs(start_neigh, facing)
   if facing == nil then
-    initial_dirs = _get_sorted_forward_dirs(start_neigh, nil)
-  else
-    local fwd = start_neigh[facing]
-    initial_dirs = fwd and { facing } or {}
+    return _get_sorted_forward_dirs(start_neigh, nil)
   end
+  local fwd = start_neigh[facing]
+  return fwd and { facing } or {}
+end
 
-  if #initial_dirs == 0 then
-    return
-  end
-
+local function _seed_stack(game, board, state, start_neigh, initial_dirs, neighbors, opposite)
   local stack = {}
   local is_multi_start = #initial_dirs > 1
   for i = #initial_dirs, 1, -1 do
@@ -125,6 +108,29 @@ local function _walk_and_clear(game, player, board, state, context)
       end
     end
   end
+  return stack
+end
+
+local function _walk_and_clear(game, player, board, state, context)
+  local map = assert(board.map, "missing board.map")
+  local neighbors = assert(map.neighbors, "missing board.map.neighbors")
+  local opposite = direction_constants.opposite
+
+  local facing = facing_policy.resolve_initial_facing("relative_forward", player, context)
+  local start_tile = assert(board:get_tile(player.position), "missing start tile")
+  local start_id = assert(start_tile.id, "missing start tile id")
+
+  local start_neigh = neighbors[start_id]
+  if not start_neigh then
+    return
+  end
+
+  local initial_dirs = _resolve_initial_dirs(start_neigh, facing)
+  if #initial_dirs == 0 then
+    return
+  end
+
+  local stack = _seed_stack(game, board, state, start_neigh, initial_dirs, neighbors, opposite)
 
   while #stack > 0 do
     local frame = stack[#stack]

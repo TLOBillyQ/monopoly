@@ -36,6 +36,17 @@ local function _resolve_role(player_id, deps)
   end)
 end
 
+local _deity_status_map = {
+  poor = "poor",
+  rich = "rich",
+  angel = "angel",
+}
+
+local _location_effect_status = {
+  hospital = "hospital",
+  mountain = "mountain",
+}
+
 local function _is_player_detained_this_turn(game, player)
   if game == nil or player == nil then
     return false
@@ -65,50 +76,68 @@ local function _is_player_detained_this_turn(game, player)
   return last_turn.stay_turns ~= nil
 end
 
+local function _check_roadblock_status(last_turn, player)
+  if not last_turn then
+    return false
+  end
+  if last_turn.player_id ~= player.id then
+    return false
+  end
+  local move_result = last_turn.move_result
+  return move_result ~= nil and move_result.stopped_on_roadblock == true
+end
+
+local function _resolve_location_status(game, player, status)
+  local stay_turns = status.stay_turns or 0
+  local detained = _is_player_detained_this_turn(game, player)
+  local pending = status.pending_location_effect
+  if stay_turns <= 0 and not detained and pending == nil then
+    return nil
+  end
+  local board = game.board
+  if not board or not board.get_tile then
+    return nil
+  end
+  local tile = board:get_tile(player.position)
+  local tile_type = tile and tile.type or nil
+  local expected = _location_effect_status[tile_type]
+  if not expected then
+    return nil
+  end
+  if pending ~= nil and pending ~= expected then
+    return nil
+  end
+  return expected
+end
+
+local function _resolve_deity_status(status)
+  local deity = status.deity
+  if not deity then
+    return nil
+  end
+  if (deity.remaining or 0) <= 0 then
+    return nil
+  end
+  return _deity_status_map[deity.type]
+end
+
 function M.resolve_player_status_key(game, player)
   if player == nil or player.eliminated == true then
     return nil
   end
   local status = player.status or {}
   local last_turn = game and game.last_turn or nil
-  if last_turn and last_turn.player_id == player.id then
-    local move_result = last_turn.move_result
-    if move_result and move_result.stopped_on_roadblock == true and _has_pending_roadblock_trigger(game, player) then
-      return "roadblock"
-    end
+  if _check_roadblock_status(last_turn, player) and _has_pending_roadblock_trigger(game, player) then
+    return "roadblock"
   end
-  local stay_turns = status.stay_turns or 0
-  local detained_this_turn = _is_player_detained_this_turn(game, player)
-  local pending_location_effect = status.pending_location_effect
-  if (stay_turns > 0 or detained_this_turn or pending_location_effect ~= nil) and game.board and game.board.get_tile then
-    local tile = game.board:get_tile(player.position)
-    local tile_type = tile and tile.type or nil
-    if tile_type == "hospital" and (pending_location_effect == nil or pending_location_effect == "hospital") then
-      return "hospital"
-    end
-    if tile_type == "mountain" and (pending_location_effect == nil or pending_location_effect == "mountain") then
-      return "mountain"
-    end
+  local location = _resolve_location_status(game, player, status)
+  if location then
+    return location
   end
-  if last_turn and last_turn.player_id == player.id then
-    local move_result = last_turn.move_result
-    if move_result and move_result.stopped_on_roadblock == true then
-      return "roadblock"
-    end
+  if _check_roadblock_status(last_turn, player) then
+    return "roadblock"
   end
-  local deity = status.deity
-  if deity and (deity.remaining or 0) > 0 then
-    if deity.type == "poor" then
-      return "poor"
-    end
-    if deity.type == "rich" then
-      return "rich"
-    end
-    if deity.type == "angel" then
-      return "angel"
-    end
-  end
-  return nil
+  return _resolve_deity_status(status)
 end
 
 local function _resolve_text_status_context(cache, player, status_key)

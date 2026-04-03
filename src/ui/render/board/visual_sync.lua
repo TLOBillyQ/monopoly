@@ -109,35 +109,24 @@ local function _spawn_mine_overlay(state, idx)
   )
 end
 
-function visual_sync.sync_tile_visual(state, tile_id)
-  if tile_id == nil then
-    return false
+local function _sync_owner_visual(state, tile_unit, tile_id, board)
+  if tile_unit == nil then
+    return
   end
-  local board = _resolve_board(state)
-  local scene = _resolve_scene(state)
-  if not (board and scene and type(board.index_of_tile_id) == "function") then
-    return false
-  end
-  local idx = board:index_of_tile_id(tile_id)
-  if idx == nil then
-    return false
-  end
-
-  local tile_unit = _resolve_tile_unit(state, scene, idx)
-  if tile_unit ~= nil then
-    local tile = board:get_tile_by_id(tile_id)
-    local owner_id = tile and tile.owner_id or nil
-    local owner_name = nil
-    if owner_id then
-      local game = state and state.game or nil
-      if game and type(game.find_player_by_id) == "function" then
-        local player = game:find_player_by_id(owner_id)
-        owner_name = player and player.name or nil
-      end
+  local tile = board:get_tile_by_id(tile_id)
+  local owner_id = tile and tile.owner_id or nil
+  local owner_name = nil
+  if owner_id then
+    local game = state and state.game or nil
+    if game and type(game.find_player_by_id) == "function" then
+      local player = game:find_player_by_id(owner_id)
+      owner_name = player and player.name or nil
     end
-    tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name)
   end
+  tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name)
+end
 
+local function _sync_building_visual(state, scene, idx, board, tile_id, tile_unit)
   local tile = board:get_tile_by_id(tile_id)
   local level = tile and tile.level or 0
   if not (scene.buildings and scene.building_unit_groups) then
@@ -154,6 +143,25 @@ function visual_sync.sync_tile_visual(state, tile_id)
   end
   building_effects.clear_building_units(scene, idx, _deps(state))
   return true
+end
+
+function visual_sync.sync_tile_visual(state, tile_id)
+  if tile_id == nil then
+    return false
+  end
+  local board = _resolve_board(state)
+  local scene = _resolve_scene(state)
+  if not (board and scene and type(board.index_of_tile_id) == "function") then
+    return false
+  end
+  local idx = board:index_of_tile_id(tile_id)
+  if idx == nil then
+    return false
+  end
+
+  local tile_unit = _resolve_tile_unit(state, scene, idx)
+  _sync_owner_visual(state, tile_unit, tile_id, board)
+  return _sync_building_visual(state, scene, idx, board, tile_id, tile_unit)
 end
 
 function visual_sync.sync_overlay_visual(state, board_index)

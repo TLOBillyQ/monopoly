@@ -108,48 +108,55 @@ local function _handle_timeout_elapsed(state, game, ctx)
   _dispatch_timeout(ctx, current_player)
 end
 
-function turn_timer_policy.update_action_button_timer(ctx)
+local function _resolve_action_timer_context(ctx)
   local state = ctx and ctx.state
   if not state then
-    return
+    return nil
   end
-
   local game = ctx.game
   local ports = ctx.ports
   if not turn_timer_policy.is_action_button_wait_active(game, state, ports) then
-    _reset_action_button(state)
-    return
+    return nil
   end
-
   local timeout = _resolve_timeout_seconds()
   if not _should_activate_button(timeout) then
-    _reset_action_button(state)
+    return nil
+  end
+  local current_player = _resolve_current_player(game)
+  if not current_player then
+    return nil
+  end
+  if not _should_track_action_button_for_player(game, current_player) then
+    return nil
+  end
+  return { state = state, game = game, timeout = timeout, player = current_player }
+end
+
+function turn_timer_policy.update_action_button_timer(ctx)
+  local resolved = _resolve_action_timer_context(ctx)
+  if not resolved then
+    local state = ctx and ctx.state
+    if state then
+      _reset_action_button(state)
+    end
     return
   end
 
-  local current_player = _resolve_current_player(game)
-  if not current_player then
-    _reset_action_button(state)
-    return
-  end
+  local state = resolved.state
+  local current_player = resolved.player
 
   if state.action_button_player_id ~= current_player.id then
     state.action_button_player_id = current_player.id
     state.action_button_elapsed = 0
   end
 
-  if not _should_track_action_button_for_player(game, current_player) then
-    _reset_action_button(state)
-    return
-  end
-
   state.action_button_active = true
 
-  if _update_elapsed_timer(state, ctx.dt, timeout, game, ctx) then
+  if _update_elapsed_timer(state, ctx.dt, resolved.timeout, resolved.game, ctx) then
     return
   end
 
-  _handle_timeout_elapsed(state, game, ctx)
+  _handle_timeout_elapsed(state, resolved.game, ctx)
 end
 
 function turn_timer_policy.update_detained_wait_timer(game, state, dt, step_turn)
