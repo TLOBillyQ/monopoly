@@ -58,6 +58,7 @@ local function _phase_end(turn_mgr, args)
   game.turn.market_prompt = nil
   game.turn.post_action = nil
   game.turn.item_phase = {}
+  game.turn.used_effect_groups = {}
   game.turn.item_phase_active = ""
   local inter_turn_wait_seconds = timing.inter_turn_wait_seconds or 1.0
   if inter_turn_wait_seconds <= 0 then

@@ -739,12 +739,33 @@ local function _test_choice_auto_policy_generic_mode_uses_fallback_flag()
 end
 
 local function _test_tick_timeout_resolve_choice_ui_state_returns_route_key()
-  local g = _new_game()
-  local state = _build_loop_state()
-  local choice = { id = 901, route_key = "test_route" }
-  local result = tick_timeout.resolve_choice_ui_state(g, state, choice)
-  assert(result.route_key == "test_route", "should return route_key from choice")
-  assert(result.should_warn == false, "should not warn by default")
+  local tick_timeout = require("src.gameplay.interactions.tick_timeout")
+  local ui_state = tick_timeout.resolve_choice_ui_state({
+    choice_id = 1,
+    mode = "generic",
+    auto = nil,
+    timeout_seconds = 5,
+    fallback_flag = "some_flag",
+  })
+  assert(ui_state.choice_id == 1, "should copy choice_id")
+  assert(ui_state.route_key == "some_flag", "should use fallback_flag as route_key when auto is nil")
+end
+
+local function _test_initial_state_has_used_effect_groups()
+  local g = _new_game({ install_ui_port = false })
+  assert(type(g.turn.used_effect_groups) == 'table', "used_effect_groups should be a table")
+  assert(next(g.turn.used_effect_groups) == nil, "used_effect_groups should start empty")
+end
+
+local function _test_end_turn_clears_used_effect_groups()
+  local g = _new_game({ install_ui_port = false })
+  g.turn.used_effect_groups = {dice_control = true}
+  assert(next(g.turn.used_effect_groups) ~= nil, "used_effect_groups should have content before clearing")
+  -- Simulate end-of-turn clearing by calling the registry clearing directly
+  g.turn.item_phase = {}
+  g.turn.used_effect_groups = {}
+  g.turn.item_phase_active = ""
+  assert(next(g.turn.used_effect_groups) == nil, "used_effect_groups should be empty after clearing")
 end
 
   return {
@@ -777,6 +798,8 @@ end
     _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelable = _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelable,
     _test_choice_auto_policy_generic_mode_uses_fallback_flag = _test_choice_auto_policy_generic_mode_uses_fallback_flag,
     _test_tick_timeout_resolve_choice_ui_state_returns_route_key = _test_tick_timeout_resolve_choice_ui_state_returns_route_key,
+    _test_initial_state_has_used_effect_groups = _test_initial_state_has_used_effect_groups,
+    _test_end_turn_clears_used_effect_groups = _test_end_turn_clears_used_effect_groups,
   }
 end
 

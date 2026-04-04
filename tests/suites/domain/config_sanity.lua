@@ -203,18 +203,50 @@ local function _test_config_sanity_validate_rejects_unknown_vehicle_refs()
 end
 
 local function _test_config_sanity_validate_is_cached_until_reset()
-  config_sanity.reset_for_tests()
-  assert(config_sanity.validate() == true, "first validate should pass on generated data")
+   config_sanity.reset_for_tests()
+   assert(config_sanity.validate() == true, "first validate should pass on generated data")
 
-  _with_runtime_ref_tables({
-    cue = {
-      effect_id_ref = "missing_effect",
-    },
-  }, {}, {}, function()
-    assert(config_sanity.validate() == true, "validated cache should skip re-validating until reset")
-    _assert_validate_fails("board feedback cue references unknown effect_id_ref")
-  end)
-end
+   _with_runtime_ref_tables({
+     cue = {
+       effect_id_ref = "missing_effect",
+     },
+   }, {}, {}, function()
+     assert(config_sanity.validate() == true, "validated cache should skip re-validating until reset")
+     _assert_validate_fails("board feedback cue references unknown effect_id_ref")
+   end)
+ end
+
+ local function _test_all_items_have_prompt_style()
+   local items = require("src.config.content.items")
+   for _, item in ipairs(items) do
+     assert(
+       item.prompt_style == "alert" or item.prompt_style == "passive",
+       "item " .. tostring(item.id) .. " missing or invalid prompt_style: " .. tostring(item.prompt_style)
+     )
+   end
+ end
+
+ local function _test_effect_group_only_on_specified_items()
+   local items = require("src.config.content.items")
+   local items_with_effect_group = {}
+   for _, item in ipairs(items) do
+     if item.effect_group ~= nil then
+       table.insert(items_with_effect_group, item.id)
+     end
+   end
+   assert(
+     #items_with_effect_group == 2,
+     "expected exactly 2 items with effect_group, got " .. #items_with_effect_group .. " items: " .. table.concat(items_with_effect_group, ", ")
+   )
+   local effect_groups_by_id = {}
+   for _, item in ipairs(items) do
+     if item.effect_group then
+       effect_groups_by_id[item.id] = item.effect_group
+     end
+   end
+   assert(effect_groups_by_id[2002] == "dice_control", "item 2002 should have effect_group=dice_control")
+   assert(effect_groups_by_id[2003] == "dice_multiply", "item 2003 should have effect_group=dice_multiply")
+ end
 
 return {
   name = "config_sanity",
@@ -259,6 +291,14 @@ return {
     {
       name = "config_sanity_validate_is_cached_until_reset",
       run = _test_config_sanity_validate_is_cached_until_reset,
+    },
+    {
+      name = "all_items_have_prompt_style",
+      run = _test_all_items_have_prompt_style,
+    },
+    {
+      name = "effect_group_only_on_specified_items",
+      run = _test_effect_group_only_on_specified_items,
     },
   },
 }

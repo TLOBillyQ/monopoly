@@ -75,6 +75,7 @@ local function _build_initial_turn()
     no_action_notice_player_id = nil,
     no_action_notice_text = nil,
     item_phase = {},
+    used_effect_groups = {},
     item_phase_active = "",
     market_prompt = nil,
     post_action = nil,

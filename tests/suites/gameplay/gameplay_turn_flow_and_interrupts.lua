@@ -58,5 +58,7 @@ return {
     _case("_test_resolve_follow_player_id_all_eliminated"),
     _case("_test_resolve_follow_player_id_nil_turn"),
     _case("_test_resolve_follow_player_id_empty_players"),
+    _case("_test_initial_state_has_used_effect_groups"),
+    _case("_test_end_turn_clears_used_effect_groups"),
   },
 }
