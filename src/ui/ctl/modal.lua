@@ -154,6 +154,13 @@ function modal_presenter.open_choice_modal(state, choice, market_state)
 
   _close_market_if_needed(state)
 
+  if screen_key == "item_phase_passive" then
+    choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
+    state._item_phase_ask_active = false
+    state._suppress_item_slot_highlight_until_pick = false
+    return
+  end
+
   if screen_key == "base_inline" then
     if _open_base_inline_choice(state, choice) then
       return

@@ -545,6 +545,57 @@ local function _test_secondary_confirm_prefers_usecase_confirm_copy()
   _assert_eq(body, "地块：星光街。要买吗？", "secondary confirm should prefer option confirm body from use-case output")
 end
 
+local function _test_passive_kind_no_modal()
+  local state, _, query_nodes = _build_choice_modal_state()
+  local choice_support = require("src.ui.pres.choice_support")
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
+  }, function()
+    modal_presenter.open_choice_modal(state, {
+      id = 101,
+      kind = "item_phase_passive",
+      route_key = "item_phase_passive",
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = false,
+      title = "行动：被动道具",
+      body = "",
+      options = {
+        { id = 2005, label = "移动加速" },
+      },
+      allow_cancel = true,
+      cancel_label = "继续",
+      meta = { phase = "action" },
+    })
+    _assert_eq(state.ui.choice_active, false, "passive kind must not open any modal")
+    _assert_eq(state.ui.active_choice_screen_key, nil, "passive kind must not set active choice screen")
+    _assert_eq(choice_support.is_passive_item_phase({ kind = "item_phase_passive" }), true, "is_passive_item_phase should return true for passive kind")
+    _assert_eq(choice_support.is_passive_item_phase({ kind = "item_phase_choice" }), false, "is_passive_item_phase should return false for non-passive kind")
+    _assert_eq(choice_support.is_passive_item_phase(nil), false, "is_passive_item_phase should return false for nil")
+  end)
+end
+
+local function _test_pre_confirm_skipped_for_passive_kind()
+  local choice_support = require("src.ui.pres.choice_support")
+  local passive_choice = {
+    id = 102,
+    kind = "item_phase_passive",
+    route_key = "item_phase_passive",
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = false,
+    options = { { id = 2005, label = "移动加速" } },
+  }
+  _assert_eq(choice_support.requires_item_slot_pre_confirm(passive_choice), false,
+    "passive kind with pre_confirm_before_slot_pick=false must skip pre-confirm")
+  local active_choice = {
+    kind = "item_phase_choice",
+    pre_confirm_before_slot_pick = true,
+    options = { { id = 2001, label = "路障卡" } },
+  }
+  _assert_eq(choice_support.requires_item_slot_pre_confirm(active_choice), true,
+    "active item phase with pre_confirm_before_slot_pick=true must require pre-confirm")
+end
+
 return {
   name = "presentation_choice_routes",
   tests = {
@@ -554,5 +605,7 @@ return {
     { name = "_test_secondary_confirm_copy_land_actions", run = _test_secondary_confirm_copy_land_actions },
     { name = "_test_secondary_confirm_copy_generic_pre_confirm", run = _test_secondary_confirm_copy_generic_pre_confirm },
     { name = "_test_secondary_confirm_prefers_usecase_confirm_copy", run = _test_secondary_confirm_prefers_usecase_confirm_copy },
+    { name = "_test_passive_kind_no_modal", run = _test_passive_kind_no_modal },
+    { name = "_test_pre_confirm_skipped_for_passive_kind", run = _test_pre_confirm_skipped_for_passive_kind },
   },
 }

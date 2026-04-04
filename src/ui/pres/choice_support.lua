@@ -106,6 +106,10 @@ function M.requires_item_slot_pre_confirm(choice)
   return choice ~= nil and choice.pre_confirm_before_slot_pick == true
 end
 
+function M.is_passive_item_phase(choice)
+  return choice ~= nil and choice.kind == "item_phase_passive"
+end
+
 function M.resolve_screen_key(choice)
   return choice_route_policy.resolve(choice)
 end
