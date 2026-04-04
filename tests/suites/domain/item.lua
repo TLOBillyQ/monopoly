@@ -344,6 +344,63 @@ local function _test_passive_handler_no_effect_group_on_cancel()
     "waiting follow-up should not mark dice_control effect group")
 end
 
+local function _test_passive_handler_resolve_returns_table_when_reopened()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  p.inventory:add({ id = item_ids.mine })
+  p.inventory:add({ id = item_ids.remote_dice })
+
+  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+    next_state = "roll",
+    next_args = { player = p },
+  }), "passive pre_action choice should open"))
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_select",
+    choice_id = pending.id,
+    option_id = item_ids.mine,
+    actor_role_id = p.id,
+  })
+
+  assert(type(res) == "table", "passive handler resolve should return table when phase reopens")
+  _assert_eq(res.stay, true, "passive handler resolve should return stay=true when phase reopens")
+end
+
+local function _test_passive_followup_completion_marks_effect_group()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  p.inventory:add({ id = item_ids.remote_dice })
+
+  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+    next_state = "roll",
+    next_args = { player = p },
+  }), "passive pre_action choice should open"))
+  local select_res = choice_resolver.resolve(g, pending, {
+    type = "choice_select",
+    choice_id = pending.id,
+    option_id = item_ids.remote_dice,
+    actor_role_id = p.id,
+  })
+  assert(select_res and select_res.stay == true, "remote dice passive execute should open follow-up choice")
+  _assert_eq(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control, nil,
+    "effect group should stay unmarked before follow-up completion")
+
+  local followup = assert(g.turn.pending_choice, "remote dice should open follow-up choice")
+  _assert_eq(followup.kind, "remote_dice_value", "remote dice follow-up kind mismatch")
+  local option = assert(followup.options and followup.options[1], "remote dice follow-up should expose options")
+  local followup_res = choice_resolver.resolve(g, followup, {
+    type = "choice_select",
+    choice_id = followup.id,
+    option_id = option.id,
+    actor_role_id = p.id,
+  })
+
+  assert(type(followup_res) == "table", "remote dice follow-up completion should return table")
+  assert(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control == true,
+    "passive-origin follow-up completion should mark dice_control effect group")
+end
+
 local function _test_build_wait_choice_args_requires_resume_next_state()
   local ok, err = pcall(function()
     item_phase.build_wait_choice_args(nil)
@@ -1804,6 +1861,14 @@ return {
     { name = "passive_handler_cancel_finishes_phase", run = _test_passive_handler_cancel_finishes_phase },
     { name = "passive_handler_marks_effect_group_after_use", run = _test_passive_handler_marks_effect_group_after_use },
     { name = "passive_handler_no_effect_group_on_cancel", run = _test_passive_handler_no_effect_group_on_cancel },
+    {
+      name = "passive_handler_resolve_returns_table_when_reopened",
+      run = _test_passive_handler_resolve_returns_table_when_reopened,
+    },
+    {
+      name = "passive_followup_completion_marks_effect_group",
+      run = _test_passive_followup_completion_marks_effect_group,
+    },
     { name = "build_wait_choice_args_requires_resume_next_state", run = _test_build_wait_choice_args_requires_resume_next_state },
     { name = "build_wait_choice_args_allows_nil_resume_next_args", run = _test_build_wait_choice_args_allows_nil_resume_next_args },
     { name = "build_wait_choice_args_restores_next_state_and_args", run = _test_build_wait_choice_args_restores_next_state_and_args },

@@ -220,6 +220,9 @@ local function _build(helpers)
 
   local function _resolve_followup_completion(game, choice, player, result)
     local meta = choice.meta or {}
+    if meta.passive_origin and meta.item_id then
+      availability.mark_effect_group_used(game, meta.item_id)
+    end
     if _is_repeatable_phase_meta(meta) then
       return _resolve_phase_completion(game, player, meta, result)
     end
@@ -380,6 +383,7 @@ local function _build(helpers)
         choice_spec.meta = choice_spec.meta or {}
         choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
         choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
+        choice_spec.meta.passive_origin = true
         item_phase.decorate_followup_choice_spec(choice_spec, meta)
       end
       intent_output_port.dispatch(game, intent)
@@ -387,7 +391,8 @@ local function _build(helpers)
     end
 
     availability.mark_effect_group_used(game, item_id)
-    return item_phase.reopen_passive_or_finish(game, player, meta)
+    local reopened = item_phase.reopen_passive_or_finish(game, player, meta)
+    return reopened and { stay = true } or nil
   end
 
   return {

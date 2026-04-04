@@ -74,7 +74,8 @@ local function _test_item_phase_passive_happy_path_use_then_continue_finishes_ph
 
   local mine_before = _count_item(player, item_ids.mine)
   local use_res = _execute_passive_choice_direct(g, pending, item_ids.mine)
-  assert(use_res == true, "using mine should reopen passive phase when options remain")
+  assert(type(use_res) == "table" and use_res.stay == true,
+    "using mine should reopen passive phase when options remain")
   assert(_count_item(player, item_ids.mine) == mine_before - 1, "mine should be consumed after passive use")
 
   pending = assert(g.turn.pending_choice, "passive phase should reopen after mine use when another item remains")
@@ -126,7 +127,8 @@ local function _test_item_phase_passive_effect_group_blocks_same_group_slots()
     },
   }, function()
     local remote_use_select = _execute_passive_choice_direct(g, pending, item_ids.remote_dice)
-    assert(remote_use_select == true, "AI-backed remote dice execute should reopen passive phase")
+    assert(type(remote_use_select) == "table" and remote_use_select.stay == true,
+      "AI-backed remote dice execute should reopen passive phase")
   end)
   assert(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control == true,
     "using remote dice should mark dice_control effect_group used")
@@ -268,7 +270,8 @@ local function _test_item_phase_passive_effect_group_persists_across_phases_and_
     },
   }, function()
     local select_res = _execute_passive_choice_direct(g, pending, item_ids.remote_dice)
-    assert(select_res == true, "pre_action remote dice execute should reopen passive phase")
+    assert(type(select_res) == "table" and select_res.stay == true,
+      "pre_action remote dice execute should reopen passive phase")
   end)
   assert(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control == true,
     "dice_control effect_group should be marked in pre_action")
