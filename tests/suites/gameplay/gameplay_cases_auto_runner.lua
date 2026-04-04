@@ -493,6 +493,30 @@ local function _test_steal_interrupt_resume_uses_interrupt_facing()
   assert(p1.status.move_dir == expected_facing, "steal resume should persist the next heading after resume")
 end
 
+local function _test_decision_engine_cancels_item_phase_passive()
+  local decision_engine = require("src.computer.agent.decision_engine")
+  local g = _new_game()
+  local player = g.players[1]
+  player.is_ai = true
+  
+  local decide = decision_engine.build(require("src.computer.core_agent"))
+  
+  local choice = {
+    id = 100,
+    kind = "item_phase_passive",
+    title = "被动物品",
+    options = { { id = 2005, label = "物品选项" } },
+    meta = { player_id = player.id },
+  }
+  
+  local result = decide(g, choice)
+  
+  assert(result, "decide should return an action for item_phase_passive")
+  assert(result.type == "choice_cancel", "item_phase_passive should result in choice_cancel")
+  assert(result.choice_id == choice.id, "should preserve choice_id")
+  assert(result.actor_role_id == player.id, "should preserve actor_role_id")
+end
+
   return {
     _test_autorunner_runs_to_end = _test_autorunner_runs_to_end,
     _test_complex_consecutive_turn_settlement = _test_complex_consecutive_turn_settlement,
@@ -501,6 +525,7 @@ end
     _test_complex_market_interrupt_with_rent = _test_complex_market_interrupt_with_rent,
     _test_market_interrupt_resume_uses_interrupt_facing = _test_market_interrupt_resume_uses_interrupt_facing,
     _test_steal_interrupt_resume_uses_interrupt_facing = _test_steal_interrupt_resume_uses_interrupt_facing,
+    _test_decision_engine_cancels_item_phase_passive = _test_decision_engine_cancels_item_phase_passive,
   }
 end
 

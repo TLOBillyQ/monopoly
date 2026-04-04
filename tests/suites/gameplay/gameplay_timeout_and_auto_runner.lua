@@ -56,5 +56,6 @@ return {
     _case("_test_item_slot_data_prefers_role_specific_items_and_falls_back"),
     _case("_test_gameplay_loop_ports_rejects_legacy_flat_override"),
     _case("_test_build_noop_group_characterization"),
+    _case("_test_decision_engine_cancels_item_phase_passive"),
   },
 }

@@ -112,6 +112,9 @@ function decision_engine.build(agent_ref)
     if choice.kind == "item_phase_choice" then
       return _build_choice_action(choice, actor, nil, "choice_cancel")
     end
+    if choice.kind == "item_phase_passive" then
+      return _build_choice_action(choice, actor, nil, "choice_cancel")
+    end
     if choice.kind == "market_buy" then
       return _build_choice_action(choice, actor, nil, "choice_cancel")
     end
