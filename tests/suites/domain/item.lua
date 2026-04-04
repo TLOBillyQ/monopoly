@@ -189,6 +189,73 @@ local function _test_item_phase_hides_rent_cards_on_other_owned_land()
   _assert_eq(spec, nil, "other player land should still hide reactive cards in active windows")
 end
 
+local function _test_passive_spec_mixed_slots()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  local idx = 3
+  local tile_ref = g.board:get_tile(idx)
+  g:update_player_position(p, idx)
+  g:set_tile_owner(tile_ref, g.players[2].id)
+  g:set_player_deity(p, "poor", 3)
+  p.inventory:add({ id = item_ids.send_poor })
+  p.inventory:add({ id = item_ids.remote_dice })
+  p.inventory:add({ id = item_ids.mine })
+
+  local spec = item_phase.build_passive_choice_spec(g, p, "post_action", {
+    next_state = "roll",
+    next_args = { player = p },
+  })
+  assert(spec ~= nil, "passive spec should exist with mixed available items")
+  _assert_eq(spec.kind, "item_phase_passive", "passive spec kind mismatch")
+  _assert_eq(spec.route_key, "item_phase_passive", "passive spec route key mismatch")
+  assert(type(spec.slot_states) == "table", "passive spec should expose slot_states")
+  assert(type(spec.options) == "table", "passive spec should expose options")
+
+  local slot1 = spec.slot_states[1]
+  local slot2 = spec.slot_states[2]
+  local slot3 = spec.slot_states[3]
+  assert(type(slot1) == "table" and type(slot2) == "table" and type(slot3) == "table",
+    "first three slot states should be present")
+  _assert_eq(slot1.available, true, "send_poor should be available in post_action")
+  _assert_eq(slot1.alert, true, "send_poor should mark alert bubble when available")
+  _assert_eq(slot1.alert_text, "送神卡可用！", "send_poor alert text mismatch")
+  _assert_eq(slot2.available, false, "remote_dice should be unavailable in post_action")
+  _assert_eq(slot2.alert, false, "unavailable slot should not alert")
+  _assert_eq(slot2.alert_text, nil, "unavailable slot should not expose alert text")
+  _assert_eq(slot3.available, true, "mine should be available in post_action")
+  _assert_eq(slot3.alert, false, "passive available slot should not alert")
+  _assert_eq(slot3.alert_text, nil, "passive available slot should not expose alert text")
+end
+
+local function _test_passive_spec_auto_skip_empty_inventory()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  local spec = item_phase.build_passive_choice_spec(g, p, "pre_action", {
+    next_state = "roll",
+    next_args = { player = p },
+  })
+  _assert_eq(spec, nil, "empty inventory should auto skip passive spec")
+end
+
+local function _test_passive_spec_has_options_for_validator()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  p.inventory:add({ id = item_ids.remote_dice })
+  local spec = item_phase.build_passive_choice_spec(g, p, "pre_action", {
+    next_state = "roll",
+    next_args = { player = p },
+  })
+  assert(spec ~= nil, "passive spec should exist when item is available")
+  assert(type(spec.options) == "table" and #spec.options > 0, "passive spec options should be non-empty")
+  for _, option in ipairs(spec.options) do
+    assert(option.id ~= nil, "validator option should include id")
+    assert(type(option.label) == "string" and option.label ~= "", "validator option should include label")
+  end
+end
+
 local function _test_build_wait_choice_args_requires_resume_next_state()
   local ok, err = pcall(function()
     item_phase.build_wait_choice_args(nil)
@@ -1642,6 +1709,9 @@ return {
     { name = "item_phase_keeps_demolish_when_target_exists", run = _test_item_phase_keeps_demolish_when_target_exists },
     { name = "item_phase_hides_rent_cards_on_owned_land", run = _test_item_phase_hides_rent_cards_on_owned_land },
     { name = "item_phase_hides_rent_cards_on_other_owned_land", run = _test_item_phase_hides_rent_cards_on_other_owned_land },
+    { name = "passive_spec_mixed_slots", run = _test_passive_spec_mixed_slots },
+    { name = "passive_spec_auto_skip_empty_inventory", run = _test_passive_spec_auto_skip_empty_inventory },
+    { name = "passive_spec_has_options_for_validator", run = _test_passive_spec_has_options_for_validator },
     { name = "build_wait_choice_args_requires_resume_next_state", run = _test_build_wait_choice_args_requires_resume_next_state },
     { name = "build_wait_choice_args_allows_nil_resume_next_args", run = _test_build_wait_choice_args_allows_nil_resume_next_args },
     { name = "build_wait_choice_args_restores_next_state_and_args", run = _test_build_wait_choice_args_restores_next_state_and_args },

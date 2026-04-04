@@ -188,6 +188,23 @@ function phase_module.reopen_or_finish(game, player, meta)
   return true
 end
 
+function phase_module.reopen_passive_or_finish(game, player, meta)
+  assert(game ~= nil, "missing game")
+  assert(player ~= nil, "missing player")
+  assert(type(meta) == "table", "missing phase meta")
+  local spec = phase_module.build_passive_choice_spec(game, player, meta.phase, {
+    next_state = meta.resume_next_state,
+    next_args = meta.resume_next_args,
+  })
+  if spec == nil then
+    phase_module.finish(game, meta.phase)
+    return false
+  end
+  intent_output_port.open_choice(game, spec)
+  phase_module.mark_active(game, meta.phase)
+  return true
+end
+
 local function _resolve_auto_phase_wait(game, phase, args, pre)
   if not (pre and pre.waiting) then
     return nil
@@ -250,7 +267,7 @@ local function _run_auto_phase(game, player, phase, args)
 end
 
 local function _run_player_phase(game, player, phase, args)
-  local spec = phase_module.build_choice_spec(game, player, phase, args)
+  local spec = phase_module.build_passive_choice_spec(game, player, phase, args)
   if spec == nil then
     phase_module.finish(game, phase)
     return nil
@@ -258,6 +275,62 @@ local function _run_player_phase(game, player, phase, args)
   intent_output_port.open_choice(game, spec)
   phase_module.mark_active(game, phase)
   return { waiting = true, next_state = args.next_state, next_args = args.next_args }
+end
+
+function phase_module.build_passive_choice_spec(game, player, phase, args)
+  assert(game ~= nil, "missing game")
+  assert(player ~= nil, "missing player")
+  local _ = args
+
+  local slot_states = {}
+  local options = {}
+  local item_slots = inventory.items(player)
+  for slot_index = 1, 5 do
+    local item = item_slots[slot_index]
+    local available = false
+    local alert = false
+    local alert_text = nil
+    if type(item) == "table" and item.id ~= nil then
+      local can_offer = availability.can_offer_in_phase(game, player, item.id, phase)
+      available = can_offer == true
+      local cfg = inventory.cfg(item.id)
+      local item_name = cfg and cfg.name or nil
+      if available then
+        if cfg and cfg.prompt_style == "alert" then
+          alert = true
+          alert_text = (item_name or "") .. "可用！"
+        end
+        options[#options + 1] = {
+          id = item.id,
+          label = item_name or tostring(item.id),
+        }
+      end
+    end
+    slot_states[slot_index] = {
+      available = available,
+      alert = alert,
+      alert_text = alert_text,
+    }
+  end
+
+  if #options == 0 then
+    return nil
+  end
+
+  return {
+    kind = "item_phase_passive",
+    route_key = "item_phase_passive",
+    owner_role_id = player.id,
+    uses_item_slots = true,
+    pre_confirm_before_slot_pick = false,
+    slot_states = slot_states,
+    options = options,
+    show_continue_button = true,
+    continue_label = "继续",
+    allow_cancel = true,
+    cancel_label = "继续",
+    meta = { player_id = player.id, phase = phase },
+  }
 end
 
 function phase_module.run(turn_mgr, phase, args)

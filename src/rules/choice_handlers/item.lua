@@ -381,6 +381,20 @@ local function _build(helpers)
       end,
       execute = _handle_item_phase_choice,
     },
+    item_phase_passive = {
+      required_meta = { "player_id", "phase" },
+      cancel = {
+        resolve = function(game, choice)
+          item_phase.finish(game, choice.meta and choice.meta.phase or nil)
+        end,
+      },
+      normalize_meta = _normalize_item_phase_meta,
+      meta_validator = _validate_item_phase_meta,
+      normalize_action = function(_, _, action)
+        return _normalize_choice_action_option_id("item_phase_choice", action)
+      end,
+      execute = _handle_item_phase_choice,
+    },
     demolish_target = {
       required_meta = { "player_id", "item_id" },
       cancel = {

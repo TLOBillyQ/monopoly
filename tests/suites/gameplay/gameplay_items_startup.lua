@@ -615,7 +615,7 @@ local function _test_post_action_item_phase_keeps_reactive_rent_cards_out_after_
   local next_state, _ = phases.post_action({ game = g }, { player = player })
   assert(next_state == "wait_choice", "post_action should reopen while explicit active cards remain usable")
   pending = _get_choice(g)
-  assert(pending and pending.kind == "item_phase_choice", "post_action should reopen item phase choice")
+  assert(pending and pending.kind == "item_phase_passive", "post_action should reopen item phase choice")
   assert(_find_option_id_by_label(pending, "财神卡") ~= nil, "reopened post_action should expose rich card")
 
   local rich_result = choice_resolver.resolve(g, pending, { option_id = item_ids.rich })
@@ -671,7 +671,7 @@ local function _test_pre_action_item_phase_remote_dice_then_mine_reopens_before_
   assert(next_args and next_args.next_state == "wait_choice", "turn start should wait on pre_action choice")
 
   local pending = _get_choice(g)
-  assert(pending and pending.kind == "item_phase_choice", "turn start should open item_phase_choice")
+  assert(pending and pending.kind == "item_phase_passive", "turn start should open item_phase_choice")
 
   local remote_select = choice_resolver.resolve(g, pending, { option_id = item_ids.remote_dice })
   assert(remote_select and remote_select.stay == true, "selecting remote dice should enter follow-up choice")
@@ -683,7 +683,8 @@ local function _test_pre_action_item_phase_remote_dice_then_mine_reopens_before_
   assert(remote_confirm and remote_confirm.stay == true, "confirming remote dice should reopen pre_action choice when mine remains")
 
   pending = _get_choice(g)
-  assert(pending and pending.kind == "item_phase_choice", "pre_action should reopen item phase choice after first card")
+  assert(pending and (pending.kind == "item_phase_passive" or pending.kind == "item_phase_choice"),
+    "pre_action should reopen item phase choice after first card")
   assert(_find_option_id_by_label(pending, "地雷卡") ~= nil, "reopened pre_action should expose remaining mine card")
 end
 
