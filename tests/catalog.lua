@@ -43,6 +43,7 @@ local gameplay_behavior_modules = {
   "suites.gameplay.gameplay_timeout_and_auto_runner",
   "suites.gameplay.gameplay_visual_feedback_and_prompts",
   "suites.gameplay.gameplay_items_startup",
+  "suites.gameplay.gameplay_item_phase_passive",
   "suites.gameplay.gameplay_forced_relocation_and_followup",
   "suites.gameplay.pre_move_phase_crap_coverage",
   "suites.gameplay.action_anim_wait_crap_coverage",
