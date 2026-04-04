@@ -49,7 +49,7 @@ local function _resolve_pending_item_phase_choice(state, runtime_game)
   if (not choice) and runtime_game and runtime_game.turn then
     choice = runtime_game.turn.pending_choice
   end
-  if not choice or choice.kind ~= "item_phase_choice" then
+  if not choice or (choice.kind ~= "item_phase_choice" and choice.kind ~= "item_phase_passive") then
     return nil
   end
   return choice

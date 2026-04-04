@@ -353,6 +353,36 @@ local function _test_validator_resolve_item_slot_resolution_reports_availability
     "intermediate result should expose availability denial reason")
 end
 
+local function _test_validator_accepts_item_phase_passive()
+  local state = {
+    ui_runtime = {
+      pending_choice = {
+        id = 51,
+        kind = "item_phase_passive",
+        options = {
+          { id = 2005 },
+        },
+        meta = {
+          phase = "post_action",
+        },
+      },
+    },
+  }
+  local item_slot_source = {
+    resolve_slot_action = function(actor_role_id, slot_id)
+      return 2005
+    end,
+  }
+
+  local resolved = validator.resolve_item_slot_action(item_slot_source, state, {
+    id = "item_slot_1",
+    actor_role_id = 8,
+  })
+  _assert_eq(resolved.ok, true, "validator should accept item_phase_passive as valid pending choice kind")
+  _assert_eq(resolved.action.choice_id, 51, "resolved action should keep pending choice id from item_phase_passive")
+  _assert_eq(resolved.action.option_id, 2005, "resolved action should keep resolved item id")
+end
+
 return {
   name = "ui_runtime_state_contract",
   tests = {
@@ -379,6 +409,10 @@ return {
     {
       name = "validator_resolve_item_slot_action_rejects_non_item_phase_choice",
       run = _test_validator_resolve_item_slot_action_rejects_non_item_phase_choice,
+    },
+    {
+      name = "validator_accepts_item_phase_passive",
+      run = _test_validator_accepts_item_phase_passive,
     },
     {
       name = "validator_resolve_item_slot_action_rejects_missing_slot_mapping",
