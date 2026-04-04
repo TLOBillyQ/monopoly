@@ -366,6 +366,30 @@ local function _build(helpers)
     return _resolve_phase_completion(game, player, meta, result)
   end
 
+  local function _handle_item_phase_passive(game, choice, action)
+    local meta = choice.meta
+    local player = _validate_item_player(game, choice.kind, meta)
+    local item_id = action.option_id
+
+    local result = use_item(game, player, item_id)
+    assert(result ~= nil, "missing use_item result")
+    if type(result) == "table" and result.waiting then
+      local intent = result.intent or {}
+      local choice_spec = intent.choice_spec
+      if type(choice_spec) == "table" then
+        choice_spec.meta = choice_spec.meta or {}
+        choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
+        choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
+        item_phase.decorate_followup_choice_spec(choice_spec, meta)
+      end
+      intent_output_port.dispatch(game, intent)
+      return { stay = true }
+    end
+
+    availability.mark_effect_group_used(game, item_id)
+    return item_phase.reopen_passive_or_finish(game, player, meta)
+  end
+
   return {
     item_phase_choice = {
       required_meta = { "player_id", "phase" },
@@ -391,9 +415,9 @@ local function _build(helpers)
       normalize_meta = _normalize_item_phase_meta,
       meta_validator = _validate_item_phase_meta,
       normalize_action = function(_, _, action)
-        return _normalize_choice_action_option_id("item_phase_choice", action)
+        return _normalize_choice_action_option_id("item_phase_passive", action)
       end,
-      execute = _handle_item_phase_choice,
+      execute = _handle_item_phase_passive,
     },
     demolish_target = {
       required_meta = { "player_id", "item_id" },

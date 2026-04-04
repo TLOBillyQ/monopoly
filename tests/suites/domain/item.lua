@@ -256,6 +256,94 @@ local function _test_passive_spec_has_options_for_validator()
   end
 end
 
+local function _test_passive_handler_direct_execute()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  p.inventory:add({ id = item_ids.mine })
+
+  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+    next_state = "roll",
+    next_args = { player = p },
+  }), "passive pre_action choice should open"))
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_select",
+    choice_id = pending.id,
+    option_id = item_ids.mine,
+    actor_role_id = p.id,
+  })
+
+  _assert_eq(res and res.stay, false, "direct execute should finish passive phase when no more options")
+  _assert_eq(support.inventory.count(p), 0, "mine should be consumed after direct passive execute")
+end
+
+local function _test_passive_handler_cancel_finishes_phase()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  p.inventory:add({ id = item_ids.mine })
+
+  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+    next_state = "roll",
+    next_args = { player = p },
+  }), "passive pre_action choice should open"))
+
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_cancel",
+    choice_id = pending.id,
+    actor_role_id = p.id,
+  })
+
+  _assert_eq(res and res.stay, false, "cancel should finish passive phase")
+  assert(g.turn.item_phase and g.turn.item_phase.pre_action and g.turn.item_phase.pre_action.done == true,
+    "cancel should mark phase finished")
+  _assert_eq(g.turn.item_phase_active, "", "cancel should clear active item phase")
+end
+
+local function _test_passive_handler_marks_effect_group_after_use()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  p.inventory:add({ id = item_ids.dice_multiplier })
+
+  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_move", {
+    next_state = "roll",
+    next_args = { player = p },
+  }), "passive pre_move choice should open"))
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_select",
+    choice_id = pending.id,
+    option_id = item_ids.dice_multiplier,
+    actor_role_id = p.id,
+  })
+
+  _assert_eq(res and res.stay, false, "effect-group item execute should finish passive phase when no options remain")
+  assert(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_multiply == true,
+    "dice_double execute should mark dice_multiply effect group used")
+end
+
+local function _test_passive_handler_no_effect_group_on_cancel()
+  local g = _new_game()
+  local p = g:current_player()
+  support.inventory.clear(p)
+  p.inventory:add({ id = item_ids.remote_dice })
+
+  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+    next_state = "roll",
+    next_args = { player = p },
+  }), "passive pre_action choice should open"))
+  local res = choice_resolver.resolve(g, pending, {
+    type = "choice_select",
+    choice_id = pending.id,
+    option_id = item_ids.remote_dice,
+    actor_role_id = p.id,
+  })
+
+  assert(res and res.stay == true, "remote dice passive execute should open follow-up choice")
+  _assert_eq(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control, nil,
+    "waiting follow-up should not mark dice_control effect group")
+end
+
 local function _test_build_wait_choice_args_requires_resume_next_state()
   local ok, err = pcall(function()
     item_phase.build_wait_choice_args(nil)
@@ -1712,6 +1800,10 @@ return {
     { name = "passive_spec_mixed_slots", run = _test_passive_spec_mixed_slots },
     { name = "passive_spec_auto_skip_empty_inventory", run = _test_passive_spec_auto_skip_empty_inventory },
     { name = "passive_spec_has_options_for_validator", run = _test_passive_spec_has_options_for_validator },
+    { name = "passive_handler_direct_execute", run = _test_passive_handler_direct_execute },
+    { name = "passive_handler_cancel_finishes_phase", run = _test_passive_handler_cancel_finishes_phase },
+    { name = "passive_handler_marks_effect_group_after_use", run = _test_passive_handler_marks_effect_group_after_use },
+    { name = "passive_handler_no_effect_group_on_cancel", run = _test_passive_handler_no_effect_group_on_cancel },
     { name = "build_wait_choice_args_requires_resume_next_state", run = _test_build_wait_choice_args_requires_resume_next_state },
     { name = "build_wait_choice_args_allows_nil_resume_next_args", run = _test_build_wait_choice_args_allows_nil_resume_next_args },
     { name = "build_wait_choice_args_restores_next_state_and_args", run = _test_build_wait_choice_args_restores_next_state_and_args },
