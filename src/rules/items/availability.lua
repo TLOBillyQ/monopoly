@@ -215,11 +215,27 @@ function availability.can_offer_in_phase(game, player, item_id, phase)
   local special_offer = _can_offer_special_item(game, player, item_id)
   if special_offer ~= nil then
     if special_offer then
-      return true, "ok"
+    else
+      return false, "special_condition_failed"
     end
-    return false, "special_condition_failed"
+  end
+  local used_effect_groups = game and game.turn and game.turn.used_effect_groups or nil
+  if type(used_effect_groups) == "table" and cfg.effect_group ~= nil and used_effect_groups[cfg.effect_group] == true then
+    return false, "effect_group_used"
   end
   return true, "ok"
+end
+
+function availability.mark_effect_group_used(game, item_id)
+  local cfg = inventory.cfg(item_id)
+  if type(cfg) ~= "table" or cfg.effect_group == nil then
+    return
+  end
+  local used_effect_groups = game and game.turn and game.turn.used_effect_groups or nil
+  if type(used_effect_groups) ~= "table" then
+    return
+  end
+  used_effect_groups[cfg.effect_group] = true
 end
 
 function availability.can_auto_consider_item(item_id, phase, cfg)

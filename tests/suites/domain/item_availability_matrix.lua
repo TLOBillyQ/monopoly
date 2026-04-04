@@ -225,6 +225,34 @@ local function _test_triggered_cards_stay_hidden_from_active_windows()
   _assert_eq(steal.can_offer, false, "steal should stay hidden in post_action")
 end
 
+local function _test_effect_group_blocks_same_group()
+  local g = _new_game()
+  local p = g:current_player()
+
+  local initial = availability.can_offer_in_phase(g, p, item_ids.remote_dice, "pre_action")
+  _assert_eq(initial, true, "remote_dice should be available before effect_group is used")
+
+  availability.mark_effect_group_used(g, item_ids.remote_dice)
+
+  local blocked_ok, blocked_reason = availability.can_offer_in_phase(g, p, item_ids.remote_dice, "pre_action")
+  _assert_eq(blocked_ok, false, "remote_dice should be blocked after dice_control is used")
+  _assert_eq(blocked_reason, "effect_group_used", "remote_dice should return effect_group_used when blocked")
+
+  availability.mark_effect_group_used(g, item_ids.remote_dice)
+  _assert_eq(g.turn.used_effect_groups.dice_control, true, "mark_effect_group_used should be idempotent for same group")
+end
+
+local function _test_effect_group_does_not_affect_ungrouped_items()
+  local g = _new_game()
+  local p = g:current_player()
+
+  availability.mark_effect_group_used(g, item_ids.remote_dice)
+
+  local mine_ok, mine_reason = availability.can_offer_in_phase(g, p, item_ids.mine, "pre_action")
+  _assert_eq(mine_ok, true, "mine should remain available even when dice_control is used")
+  _assert_eq(mine_reason, "ok", "mine should keep ok reason when unaffected by effect_group")
+end
+
 return {
   name = "item_availability_matrix",
   tests = {
@@ -255,5 +283,10 @@ return {
       run = _test_strong_card_requires_enough_balance_for_rent_response,
     },
     { name = "triggered_cards_stay_hidden_from_active_windows", run = _test_triggered_cards_stay_hidden_from_active_windows },
+    { name = "effect_group_blocks_same_group", run = _test_effect_group_blocks_same_group },
+    {
+      name = "effect_group_does_not_affect_ungrouped_items",
+      run = _test_effect_group_does_not_affect_ungrouped_items,
+    },
   },
 }
