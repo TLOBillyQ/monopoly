@@ -18,6 +18,7 @@ GameAPI|create_joint_assistant|_unit_key, _unit1, _unit2
 GameAPI|create_life_entity|_unit_key, _pos, _rotation, _scale_ratio, _role
 GameAPI|create_obstacle|_u_key, _pos, _rotation, _scale, _role
 GameAPI|create_obstacle_from_geometry|_u_key, _pos, _rotation, _scale, _role, _geometry_path
+GameAPI|create_obstacle_with_anim|_anim_type, _u_key, _pos, _duration, _intensity, _role, _rotation, _scale
 GameAPI|create_scene_ui_at_point|_layer_key, _pos, _duration
 GameAPI|create_sfx_with_socket|_sfx_key, _unit, _socket_name, _scale, _duration, _bind_type
 GameAPI|create_sfx_with_socket_offset|_sfx_key, _unit, _socket_name, _offset, _rot, _scale, _duration, _bind_type
@@ -34,6 +35,7 @@ GameAPI|customtriggerspace_prefab_get_prop_by_type|_value_type, _key, _prop
 GameAPI|customtriggerspace_prefab_has_kv|_key, _prop
 GameAPI|deal_damage|_dst, _dmg, _src, _schema, _data
 GameAPI|delay_destroy_vehicle|_unit
+GameAPI|destroy_obstacle_with_anim|_anim_type, _obstacle, _duration, _intensity
 GameAPI|destroy_scene_ui|_layer
 GameAPI|destroy_unit|_unit
 GameAPI|destroy_unit_with_children|_unit, _destroy_children

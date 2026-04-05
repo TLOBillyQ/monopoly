@@ -390,7 +390,7 @@ Role|set_unit_fresnel_gradual|_unit, _fresnel_scale, _color, _intensity, _durati
 Role|set_unit_mask|_unit, _color
 Role|set_unit_outline|_unit, _width, _color
 Role|set_unit_see_through_enabled|_unit, _enabled
-Role|set_unit_visible|_unit, _is_visible
+Role|set_unit_visible|_unit, _is_visible, _affect_children
 Role|set_voice_volume_sync_enabled|_enabled
 Role|shake_camera|_shake_type, _shake_max_amplitude, _shake_time, _shake_source, _shake_frequency, _shake_time_decay, _shake_effect_scope, _shake_undamped_scope, _shake_distance_decay
 Role|show_bag_panel|_visible

@@ -1,5 +1,7 @@
 ## LuaAPI
 
+LuaAPI|ability_register_creation_handler|_ability_key, _callback
+LuaAPI|ability_unregister_creation_handler|_ability_key
 LuaAPI|call_delay_frame|_interval, _callback
 LuaAPI|call_delay_time|_interval, _callback
 LuaAPI|dispatch_flush
@@ -20,6 +22,8 @@ LuaAPI|global_unregister_custom_event|_id
 LuaAPI|global_unregister_trigger_event|_id
 LuaAPI|has_component|_object, _name
 LuaAPI|log|_content, _log_level
+LuaAPI|modifier_register_creation_handler|_modifier_key, _callback
+LuaAPI|modifier_unregister_creation_handler|_modifier_key
 LuaAPI|query_ui_node|_name
 LuaAPI|query_ui_nodes|_name_list
 LuaAPI|query_unit|_name

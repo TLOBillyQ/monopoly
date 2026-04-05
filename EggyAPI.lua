@@ -2486,6 +2486,18 @@ function GameAPI.create_obstacle(_u_key, _pos, _rotation, _scale, _role) end
 ---@return Obstacle 创建的组件
 function GameAPI.create_obstacle_from_geometry(_u_key, _pos, _rotation, _scale, _role, _geometry_path) end
 
+---带动效创建组件
+---@param _anim_type integer 动效类型
+---@param _u_key ObstacleKey 组件编号
+---@param _pos Vector3 创建坐标
+---@param _duration Fixed 动画时长
+---@param _intensity Fixed 效果系数
+---@param _role Role? 所属玩家
+---@param _rotation Quaternion? 旋转
+---@param _scale Vector3? 缩放
+---@return Obstacle 创建出的组件
+function GameAPI.create_obstacle_with_anim(_anim_type, _u_key, _pos, _duration, _intensity, _role, _rotation, _scale) end
+
 ---创建场景界面到坐标点
 ---@param _layer_key E3DLayerKey 场景界面预设编号
 ---@param _pos Vector3 坐标点
@@ -2606,6 +2618,13 @@ function GameAPI.deal_damage(_dst, _dmg, _src, _schema, _data) end
 ---删除载具
 ---@param _unit Vehicle 载具
 function GameAPI.delay_destroy_vehicle(_unit) end
+
+---带动效销毁组件
+---@param _anim_type integer 动效类型
+---@param _obstacle Obstacle 目标组件
+---@param _duration Fixed 动画时长
+---@param _intensity Fixed 效果系数
+function GameAPI.destroy_obstacle_with_anim(_anim_type, _obstacle, _duration, _intensity) end
 
 ---销毁场景界面
 ---@param _layer E3DLayer 场景界面
@@ -3974,6 +3993,15 @@ function LiftedComp.set_lifted_enabled(_enable) end
 ---@class LuaAPI
 LuaAPI = {}
 
+---注册技能创建回调
+---@param _ability_key AbilityKey 技能编号
+---@param _callback function 回调
+function LuaAPI.ability_register_creation_handler(_ability_key, _callback) end
+
+---注销技能创建回调
+---@param _ability_key AbilityKey 技能编号
+function LuaAPI.ability_unregister_creation_handler(_ability_key) end
+
 ---延迟调用函数（按帧数）
 ---@param _interval integer 间隔帧数
 ---@param _callback function 回调
@@ -4069,6 +4097,15 @@ function LuaAPI.has_component(_object, _name) end
 ---@param _content string 日志内容
 ---@param _log_level integer? 日志级别
 function LuaAPI.log(_content, _log_level) end
+
+---注册效果创建回调
+---@param _modifier_key ModifierKey 效果编号
+---@param _callback function 回调
+function LuaAPI.modifier_register_creation_handler(_modifier_key, _callback) end
+
+---注销效果创建回调
+---@param _modifier_key ModifierKey 效果编号
+function LuaAPI.modifier_unregister_creation_handler(_modifier_key) end
 
 ---查询UI单位（慢）
 ---@param _name string 名字
@@ -4958,7 +4995,8 @@ function Role.set_unit_see_through_enabled(_unit, _enabled) end
 ---设置单位对玩家可见性
 ---@param _unit Unit 单位
 ---@param _is_visible boolean 是否显示
-function Role.set_unit_visible(_unit, _is_visible) end
+---@param _affect_children boolean? 是否影响绑定的子组件
+function Role.set_unit_visible(_unit, _is_visible, _affect_children) end
 
 ---设置是否开启语音音量同步
 ---@param _enabled boolean 是否同步

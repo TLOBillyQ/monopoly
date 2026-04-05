@@ -1,5 +1,19 @@
 # EggyAPI 变更记录
 
+## 2026-04-05
+
+新增 / Added: 6
+  - GameAPI.create_obstacle_with_anim
+  - GameAPI.destroy_obstacle_with_anim
+  - LuaAPI.ability_register_creation_handler
+  - LuaAPI.ability_unregister_creation_handler
+  - LuaAPI.modifier_register_creation_handler
+  - LuaAPI.modifier_unregister_creation_handler
+删除 / Removed: 0
+签名变更 / Signature changed: 1
+  - Role.set_unit_visible: _unit, _is_visible -> _unit, _is_visible, _affect_children
+类型变更 / Type changed: 0
+
 ## 2026-03-28
 
 新增 / Added: 15
