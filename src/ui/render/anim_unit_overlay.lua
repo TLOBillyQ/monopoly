@@ -191,8 +191,9 @@ function overlay.play_overlay(state, anim, duration, opts)
       logger.warn("[Eggy]", "地雷 prefab 缺失，已跳过生成")
       return
     end
+    -- 地雷贴近地面生成 (y_offset = 0.05)
     runtime.spawn_overlay(assert(state.board_scene, "missing board_scene"), overlay_kind, tile_index, group_id, unit_id,
-      compute.overlay_pos_for_tile(state, tile_index), nil, _deps(state))
+      compute.overlay_pos_for_tile(state, tile_index, 0.05), nil, _deps(state))
     return
   end
 end

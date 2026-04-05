@@ -77,8 +77,9 @@ function compute.offset_pos(pos, offset)
   return pos
 end
 
-function compute.overlay_pos_for_tile(state, tile_index)
-  return compute.offset_pos(compute.resolve_tile_pos(state, tile_index), math.Vector3(0.0, 1.0, 0.0))
+function compute.overlay_pos_for_tile(state, tile_index, y_offset)
+  local offset = y_offset ~= nil and math.Vector3(0.0, y_offset, 0.0) or math.Vector3(0.0, 1.0, 0.0)
+  return compute.offset_pos(compute.resolve_tile_pos(state, tile_index), offset)
 end
 
 function compute.overlay_pos_for_player(state, player_id)
