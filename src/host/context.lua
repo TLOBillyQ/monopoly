@@ -120,38 +120,12 @@ local function _resolve_vehicle_helper_builder()
   end
 end
 
-local function _build_change_skin_helper()
-  local helper = {
-    skin_id = nil,
-    target_role_id = nil,
-  }
-
-  helper.emit_change_skin = function(role_id, skin_id)
-    local resolved_role_id = number_utils.to_integer(role_id)
-    local resolved_skin_id = number_utils.to_integer(skin_id)
-    if resolved_role_id == nil then
-      logger.warn("[Eggy]", "skip skin change event: invalid role_id", tostring(role_id))
-      return false
-    end
-    if resolved_skin_id == nil or resolved_skin_id <= 0 then
-      logger.warn("[Eggy]", "skip skin change event: invalid skin_id", tostring(skin_id))
-      return false
-    end
-    helper.target_role_id = resolved_role_id
-    helper.skin_id = resolved_skin_id
-    return true
-  end
-
-  return helper
-end
-
 function runtime_context.new(env)
   return {
     env = env or {},
     roles = nil,
     vehicle_helper = nil,
     camera_helper = nil,
-    change_skin_helper = nil,
     synthetic_actor_registry = nil,
   }
 end
@@ -210,9 +184,6 @@ function runtime_context.install_runtime_helpers(ctx, opts)
   if not ctx.camera_helper then
     ctx.camera_helper = require("src.host.camera_helper").new(ctx.env)
   end
-  if not ctx.change_skin_helper then
-    ctx.change_skin_helper = _build_change_skin_helper()
-  end
   if not ctx.synthetic_actor_registry then
     ctx.synthetic_actor_registry = synthetic_actor_registry.new(ctx.env)
   end
@@ -223,7 +194,6 @@ function runtime_context.install_runtime_helpers(ctx, opts)
   local helpers = {
     vehicle_helper = ctx.vehicle_helper,
     camera_helper = ctx.camera_helper,
-    change_skin_helper = ctx.change_skin_helper,
     roles = ctx.roles,
   }
   if install_globals then
@@ -236,7 +206,6 @@ function runtime_context.install_runtime_helper_globals(helpers)
   assert(helpers ~= nil, "missing helpers")
   vehicle_helper = helpers.vehicle_helper
   camera_helper = helpers.camera_helper
-  change_skin_helper = helpers.change_skin_helper
   all_roles = helpers.roles
   ALLROLES = helpers.roles
   return helpers

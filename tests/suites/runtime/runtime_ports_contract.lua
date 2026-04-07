@@ -43,15 +43,12 @@ local function _test_runtime_ports_strict_mode_requires_context()
   _with_patches({
     { key = "all_roles", value = { { id = 1 } } },
     { key = "camera_helper", value = { id = "camera_global" } },
-    { key = "change_skin_helper", value = { id = "change_skin_global" } },
   }, function()
     local roles = runtime_ports.resolve_roles()
     local camera = runtime_ports.resolve_camera_helper()
-    local change_skin = runtime_ports.resolve_change_skin_helper()
     _assert_eq(type(roles), "table", "strict mode should always return a table")
     _assert_eq(#roles, 0, "strict mode should not read global roles")
     _assert_eq(camera, nil, "strict mode should not read global camera helper")
-    _assert_eq(change_skin, nil, "strict mode should not read global change_skin helper")
   end, { skip_runtime_context_refresh = true })
   _reset_runtime_contract_state()
 end

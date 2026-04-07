@@ -29,30 +29,6 @@ local function _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy(
     "clear_obstacles tip should count unique obstacle tiles from branch payload")
 end
 
-local function _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin()
-  local state = support.build_min_state({
-    find_player_by_id = function()
-      return nil
-    end,
-  })
-
-  local target_copy = tip_text.build(state, {
-    kind = "item_target_player",
-    item_id = 2009,
-    target_player_id = 99,
-  })
-  local change_skin_copy = tip_text.build(state, {
-    kind = "change_skin",
-    player_id = 99,
-    skin_name = "海绵宝宝",
-  })
-
-  assert(target_copy == "目标道具：2009 -> 玩家 99",
-    "item_target_player tip should fall back to raw player id when lookup is missing")
-  assert(change_skin_copy == "换肤动画：99 -> 海绵宝宝",
-    "change_skin tip should fall back to raw player id when lookup is missing")
-end
-
 local function _test_anim_tip_text_covers_roll_tile_and_cash_variants()
   local state = support.build_min_state()
 
@@ -146,7 +122,6 @@ return {
   name = "presentation.action_anim_tip_text",
   tests = {
     { name = "anim_tip_text_builds_named_player_and_clear_obstacles_copy", run = _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy },
-    { name = "anim_tip_text_falls_back_for_unknown_player_and_change_skin", run = _test_anim_tip_text_falls_back_for_unknown_player_and_change_skin },
     { name = "anim_tip_text_covers_roll_tile_and_cash_variants", run = _test_anim_tip_text_covers_roll_tile_and_cash_variants },
     { name = "anim_tip_text_covers_chance_item_and_unknown_tile_variants", run = _test_anim_tip_text_covers_chance_item_and_unknown_tile_variants },
   },

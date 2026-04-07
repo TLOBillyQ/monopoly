@@ -91,12 +91,6 @@ local function _build_mine_trigger_text(state, anim)
     .. _resolve_tile_name(state, anim.to_index)
 end
 
-local function _build_change_skin_text(state, anim)
-  local player_name = _resolve_player_name(state, anim.player_id)
-  local skin = anim.skin_name or anim.skin_id or "?"
-  return "换肤动画：" .. player_name .. " -> " .. tostring(skin)
-end
-
 local function _build_cash_receive_text(state, anim)
   local player_name = _resolve_player_name(state, anim.player_id)
   local amount = anim.amount or "?"
@@ -117,10 +111,9 @@ local TIP_BUILDERS = {
   move_effect = _build_move_effect_text,
   teleport_effect = _build_move_effect_text,
   forced_relocation = _build_move_effect_text,
-  roadblock_trigger = _build_tile_text("路障触发："),
-  mine_trigger = _build_mine_trigger_text,
-  change_skin = _build_change_skin_text,
-  cash_receive = _build_cash_receive_text,
+   roadblock_trigger = _build_tile_text("路障触发："),
+   mine_trigger = _build_mine_trigger_text,
+   cash_receive = _build_cash_receive_text,
 }
 
 function tip_text.build(state, anim)

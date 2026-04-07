@@ -22,7 +22,6 @@ local start_delays = {
   monster = timing.demolish_effect_start_delay_seconds or 0.2,
 }
 local user_tip_whitelist = {
-  change_skin = true,
 }
 local roll_spin_seconds = 1.0
 local roll_face_hold_seconds = 1.0

@@ -70,14 +70,6 @@ function runtime_ports.resolve_camera_helper()
   return resolver()
 end
 
-function runtime_ports.resolve_change_skin_helper()
-  local resolver = _resolve_port("resolve_change_skin_helper")
-  if type(resolver) ~= "function" then
-    return nil
-  end
-  return resolver()
-end
-
 function runtime_ports.emit_event(event_name, payload, opts)
   local emitter = _resolve_port("emit_event")
   if type(emitter) ~= "function" then

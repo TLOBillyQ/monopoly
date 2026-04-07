@@ -156,7 +156,6 @@ local _RUNTIME_CONTEXT_KEYS = {
   TriggerCustomEvent = true,
   vehicle_helper = true,
   camera_helper = true,
-  change_skin_helper = true,
   all_roles = true,
   ALLROLES = true,
 }
