@@ -1,6 +1,6 @@
 local inventory = require("src.rules.items.inventory")
 local tile = require("src.rules.board.tile")
-local monopoly_event = require("src.core.events.monopoly_events")
+local monopoly_event = require("src.core.events")
 local movement = require("src.rules.movement")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local timing = require("src.config.gameplay.timing")

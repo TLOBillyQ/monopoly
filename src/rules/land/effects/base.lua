@@ -7,7 +7,7 @@ local land_choice_specs = require("src.rules.land.choice_specs")
 local inventory = require("src.rules.items.inventory")
 local pricing = require("src.rules.land.pricing")
 local board_utils = require("src.rules.land.board_utils")
-local monopoly_event = require("src.core.events.monopoly_events")
+local monopoly_event = require("src.core.events")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number_utils")
 

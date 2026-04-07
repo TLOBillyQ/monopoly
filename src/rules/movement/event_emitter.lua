@@ -1,5 +1,5 @@
 local constants = require("src.config.content.constants")
-local monopoly_event = require("src.core.events.monopoly_events")
+local monopoly_event = require("src.core.events")
 local number_utils = require("src.core.utils.number_utils")
 
 local event_emitter = {}

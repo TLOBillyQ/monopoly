@@ -4,7 +4,7 @@ local facing_policy = require("src.rules.board.facing_policy")
 local common = require("src.player.actions.state_ops.common")
 local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
-local monopoly_event = require("src.core.events.monopoly_events")
+local monopoly_event = require("src.core.events")
 
 local location_ops = {}
 

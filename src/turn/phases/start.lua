@@ -1,7 +1,7 @@
 local logger = require("src.core.utils.logger")
 local item_phase = require("src.rules.items.phase")
 local item_auto_play_context = require("src.turn.policies.item_play_context")
-local monopoly_event = require("src.core.events.monopoly_events")
+local monopoly_event = require("src.core.events")
 local timing = require("src.config.gameplay.timing")
 
 local function _clear_no_action_notice(turn)

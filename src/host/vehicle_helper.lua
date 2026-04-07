@@ -1,4 +1,4 @@
-local monopoly_event = require("src.core.events.monopoly_events")
+local monopoly_event = require("src.core.events")
 local vehicle_feature = require("src.rules.vehicle")
 local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 

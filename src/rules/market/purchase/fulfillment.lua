@@ -1,6 +1,6 @@
 local inventory = require("src.rules.items.inventory")
 local context = require("src.rules.market.query.context")
-local monopoly_event = require("src.core.events.monopoly_events")
+local monopoly_event = require("src.core.events")
 local number_utils = require("src.core.utils.number_utils")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")

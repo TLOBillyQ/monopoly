@@ -247,7 +247,7 @@ local function _test_chance_handler_add_cash_applies_to_all_players()
   local events = {}
 
   _with_patches({
-    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+    { target = require("src.core.events"), key = "emit", value = function(_, payload)
       events[#events + 1] = payload
     end },
   }, function()
@@ -279,7 +279,7 @@ local function _test_chance_handler_pay_cash_applies_to_single_player()
   local events = {}
 
   _with_patches({
-    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+    { target = require("src.core.events"), key = "emit", value = function(_, payload)
       events[#events + 1] = payload
     end },
   }, function()
@@ -311,7 +311,7 @@ local function _test_chance_handler_percent_pay_cash_calculates_correctly()
   local events = {}
 
   _with_patches({
-    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+    { target = require("src.core.events"), key = "emit", value = function(_, payload)
       events[#events + 1] = payload
     end },
   }, function()
@@ -343,7 +343,7 @@ local function _test_chance_handler_discard_items_removes_items()
   local events = {}
 
   _with_patches({
-    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+    { target = require("src.core.events"), key = "emit", value = function(_, payload)
       events[#events + 1] = payload
     end },
   }, function()
@@ -372,7 +372,7 @@ local function _test_chance_handler_discard_items_uses_injected_rng_for_random_p
   }
 
   _with_patches({
-    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+    { target = require("src.core.events"), key = "emit", value = function(_, payload)
       events[#events + 1] = payload
     end },
   }, function()
@@ -534,7 +534,7 @@ local function _test_chance_handler_discard_properties_removes_properties()
 
   local events = {}
   _with_patches({
-    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+    { target = require("src.core.events"), key = "emit", value = function(_, payload)
       events[#events + 1] = payload
     end },
   }, function()
@@ -564,7 +564,7 @@ local function _test_chance_handler_discard_properties_uses_injected_rng_for_ran
   }
 
   _with_patches({
-    { target = require("src.core.events.monopoly_events"), key = "emit", value = function(_, payload)
+    { target = require("src.core.events"), key = "emit", value = function(_, payload)
       events[#events + 1] = payload
     end },
   }, function()

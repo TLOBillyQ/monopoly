@@ -376,8 +376,8 @@ end
 
 -- Tests for asset_handlers (CRAP hotspots with low coverage)
 local function _test_asset_handlers_destroy_buildings_on_path()
-  local asset_handlers = require("src.rules.chance.handlers.asset_handlers")
-  local monopoly_event = require("src.core.events.monopoly_events")
+   local asset_handlers = require("src.rules.chance.handlers.asset_handlers")
+   local monopoly_event = require("src.core.events")
   local events = {}
   local common = {
     emit_event = function(_, payload)
@@ -413,8 +413,8 @@ local function _test_asset_handlers_destroy_buildings_on_path()
 end
 
 local function _test_asset_handlers_reset_tiles_on_path()
-  local asset_handlers = require("src.rules.chance.handlers.asset_handlers")
-  local monopoly_event = require("src.core.events.monopoly_events")
+   local asset_handlers = require("src.rules.chance.handlers.asset_handlers")
+   local monopoly_event = require("src.core.events")
   local events = {}
   local tile_state_calls = {}
   local common = {
@@ -823,17 +823,17 @@ local _asset_handlers_final_tests = {
       emit_event = function(_, payload)
         table.insert(events, payload)
       end,
-      dependencies = function()
-        return {
-          monopoly_event = require("src.core.events.monopoly_events"),
-          number_utils = require("src.core.utils.number_utils"),
-        }
-      end,
-    }
-    local handlers = {}
-    asset_handlers.register(handlers, common)
+       dependencies = function()
+         return {
+           monopoly_event = require("src.core.events"),
+           number_utils = require("src.core.utils.number_utils"),
+         }
+       end,
+     }
+     local handlers = {}
+     asset_handlers.register(handlers, common)
 
-    local reset_tiles = {}
+     local reset_tiles = {}
     local game = {
       board = {
         get_tile_by_id = function(_, id)
@@ -863,23 +863,23 @@ local _asset_handlers_final_tests = {
       emit_event = function(_, payload)
         table.insert(events, payload)
       end,
-      dependencies = function()
-        return {
-          monopoly_event = require("src.core.events.monopoly_events"),
-          number_utils = require("src.core.utils.number_utils"),
-        }
-      end,
-    }
-    local handlers = {}
-    asset_handlers.register(handlers, common)
+       dependencies = function()
+         return {
+           monopoly_event = require("src.core.events"),
+           number_utils = require("src.core.utils.number_utils"),
+         }
+       end,
+     }
+     local handlers = {}
+     asset_handlers.register(handlers, common)
 
-    local game = {
-      board = {
-        get_tile_by_id = function(_, id)
-          return { id = id, name = "Tile" .. tostring(id) }
-        end,
-      },
-      reset_tile = function() end,
+     local game = {
+       board = {
+         get_tile_by_id = function(_, id)
+           return { id = id, name = "Tile" .. tostring(id) }
+         end,
+       },
+       reset_tile = function() end,
       set_player_property = function() end,
     }
     local player = {
@@ -900,18 +900,18 @@ local _asset_handlers_final_tests = {
       emit_event = function(_, payload)
         table.insert(events, payload)
       end,
-      dependencies = function()
-        return {
-          monopoly_event = require("src.core.events.monopoly_events"),
-          number_utils = require("src.core.utils.number_utils"),
-        }
-      end,
-    }
-    local handlers = {}
-    asset_handlers.register(handlers, common)
+       dependencies = function()
+         return {
+           monopoly_event = require("src.core.events"),
+           number_utils = require("src.core.utils.number_utils"),
+         }
+       end,
+     }
+     local handlers = {}
+     asset_handlers.register(handlers, common)
 
-    local game = {
-      board = { get_tile_by_id = function() return nil end },
+     local game = {
+       board = { get_tile_by_id = function() return nil end },
       reset_tile = function() end,
       set_player_property = function() end,
     }

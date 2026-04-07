@@ -2,7 +2,7 @@ local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local monopoly_events = require("src.core.events.monopoly_events")
+local monopoly_events = require("src.core.events")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local land_events = require("src.rules.land.events")
 local land_rules = require("src.rules.land.rules")

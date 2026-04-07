@@ -1,4 +1,4 @@
-local monopoly_event = require("src.core.events.monopoly_events")
+local monopoly_event = require("src.core.events")
 local choice_contract = require("src.core.choice.contract")
 local choice_route_policy = require("src.core.choice.route_policy")
 
