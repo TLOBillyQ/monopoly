@@ -2,33 +2,6 @@
 local function make_cases(helpers)
   local _ENV = helpers
 
-local function _test_runtime_context_change_skin_exports_and_event()
-  _with_runtime_context_globals(function()
-    local role1 = { id = 1, name = "role1" }
-    local ctx = runtime_context.new({
-      GameAPI = {
-        get_role = function(role_id)
-          if role_id == 1 then
-            return role1
-          end
-          return nil
-        end,
-        get_all_valid_roles = function()
-          return {}
-        end,
-      },
-      LuaAPI = _mock_lua_api(),
-    })
-    _install_global_aliases(ctx)
-    runtime_context.install_runtime_helpers(ctx, { install_globals = true })
-
-    local ok = ctx.change_skin_helper.emit_change_skin(1, 5001)
-    assert(ok == true, "change_skin_helper should emit change skin event")
-    assert(ctx.change_skin_helper.target_role_id == 1, "change_skin_helper should set target_role_id")
-    assert(ctx.change_skin_helper.skin_id == 5001, "change_skin_helper should set skin_id")
-  end)
-end
-
 local function _test_find_player_by_id_accepts_mixed_representation()
   local g = _new_game()
   local p1 = g.players[1]

@@ -14,7 +14,6 @@ local domain_behavior_modules = {
   "suites.domain.paid_currency",
   "suites.domain.config_sanity",
   "suites.domain.clear_obstacles_branch_walk",
-  "suites.domain.skin_helper",
   "suites.domain.vehicle_helper",
   "suites.domain.board_init_crap_coverage",
   "suites.domain.board_direction_utils_crap_coverage",

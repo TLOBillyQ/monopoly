@@ -211,10 +211,7 @@ function runtime_context.install_runtime_helpers(ctx, opts)
     ctx.camera_helper = require("src.host.camera_helper").new(ctx.env)
   end
   if not ctx.change_skin_helper then
-    ctx.change_skin_helper = require("src.host.skin_helper").new({
-      logger = logger,
-      number_utils = number_utils,
-    })
+    ctx.change_skin_helper = _build_change_skin_helper()
   end
   if not ctx.synthetic_actor_registry then
     ctx.synthetic_actor_registry = synthetic_actor_registry.new(ctx.env)
