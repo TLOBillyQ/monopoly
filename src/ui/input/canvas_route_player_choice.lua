@@ -1,5 +1,5 @@
 local ui_event_intents = require("src.ui.input.event_intents")
-local nodes = require("src.ui.schema.player_choice_nodes")
+local nodes = require("src.ui.schema.player_choice")
 
 local intents = {}
 

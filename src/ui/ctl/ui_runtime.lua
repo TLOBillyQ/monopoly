@@ -70,7 +70,7 @@ function service.refresh_turn_label(state_ctx, label_text, visible)
   if not ui then
     return
   end
-  local base_nodes = require("src.ui.schema.base_nodes")
+  local base_nodes = require("src.ui.schema.base")
   local countdown_visible = visible ~= false
 
   turn_label_refresh_context.ui = ui

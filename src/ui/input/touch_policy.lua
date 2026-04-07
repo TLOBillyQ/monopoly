@@ -1,4 +1,4 @@
-local always_show_nodes = require("src.ui.schema.always_show_nodes")
+local always_show_nodes = require("src.ui.schema.always_show")
 local always_show_contract = require("src.ui.schema.always_show_contract")
 
 local touch_policy = {}

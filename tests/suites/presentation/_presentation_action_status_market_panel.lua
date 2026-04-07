@@ -808,7 +808,7 @@ local function _test_modal_presenter_market_same_choice_id_still_refreshes_marke
 end
 
 local function _test_ui_event_router_market_cancel_button_dispatches_choice_cancel()
-  local market_nodes = require("src.ui.schema.market_nodes")
+  local market_nodes = require("src.ui.schema.market")
 
   local function new_node()
     local node = {}

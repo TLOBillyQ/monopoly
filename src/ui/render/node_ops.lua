@@ -1,9 +1,9 @@
 local runtime = require("src.ui.render.runtime_ui")
-local debug_nodes = require("src.ui.schema.debug_nodes")
-local player_choice_nodes = require("src.ui.schema.player_choice_nodes")
-local target_choice_nodes = require("src.ui.schema.target_choice_nodes")
-local remote_choice_nodes = require("src.ui.schema.remote_choice_nodes")
-local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm_nodes")
+local debug_nodes = require("src.ui.schema.debug")
+local player_choice_nodes = require("src.ui.schema.player_choice")
+local target_choice_nodes = require("src.ui.schema.target_choice")
+local remote_choice_nodes = require("src.ui.schema.remote_choice")
+local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
 local always_show_contract = require("src.ui.schema.always_show_contract")
 
 local M = {}

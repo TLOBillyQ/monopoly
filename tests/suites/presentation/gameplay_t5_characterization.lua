@@ -60,7 +60,7 @@ end
 
 local function _test_build_intent_handles_missing_ui_state()
   local item_slot_intents = _load_fresh("src.ui.input.canvas_route_item_slots")
-  local nodes = require("src.ui.schema.base_nodes")
+  local nodes = require("src.ui.schema.base")
 
   -- State with nil ui, should fall back to nodes
   local state = {}
@@ -474,7 +474,7 @@ end
 local function _test_register_node_click_logs_action_log_button_query_failure()
   local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
   local runtime = require("src.ui.render.runtime_ui")
-  local always_show_nodes = require("src.ui.schema.always_show_nodes")
+  local always_show_nodes = require("src.ui.schema.always_show")
   local registered = {}
   local listeners = {}
   local cache = {}
@@ -501,7 +501,7 @@ end
 local function _test_register_node_click_logs_action_log_button_not_found()
   local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
   local runtime = require("src.ui.render.runtime_ui")
-  local always_show_nodes = require("src.ui.schema.always_show_nodes")
+  local always_show_nodes = require("src.ui.schema.always_show")
   local registered = {}
   local listeners = {}
   local cache = {}

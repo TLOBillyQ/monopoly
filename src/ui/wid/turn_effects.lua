@@ -1,4 +1,4 @@
-local base_nodes = require("src.ui.schema.base_nodes")
+local base_nodes = require("src.ui.schema.base")
 local role_id_utils = require("src.core.utils.role_id")
 local with_client_role = require("src.core.utils.with_client_role")
 

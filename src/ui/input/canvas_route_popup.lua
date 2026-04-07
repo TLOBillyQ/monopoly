@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.popup_nodes")
+local nodes = require("src.ui.schema.popup")
 
 local intents = {}
 

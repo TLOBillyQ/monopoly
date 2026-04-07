@@ -1,4 +1,4 @@
-local nodes = require("src.ui.schema.always_show_nodes")
+local nodes = require("src.ui.schema.always_show")
 
 local intents = {}
 

@@ -1,7 +1,7 @@
 local runtime = require("src.ui.render.runtime_ui")
 local player_colors = require("src.ui.pres.player_colors")
 local ui_nodes = require("src.ui.render.node_ops")
-local base_nodes = require("src.ui.schema.base_nodes")
+local base_nodes = require("src.ui.schema.base")
 local number_utils = require("src.core.utils.number_utils")
 
 local M = {}

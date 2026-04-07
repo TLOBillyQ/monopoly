@@ -403,7 +403,7 @@ end
 
 
 local function _test_ui_event_router_injects_actor_for_next_with_current_player_fallback()
-  local base_nodes = require("src.ui.schema.base_nodes")
+  local base_nodes = require("src.ui.schema.base")
 
   local function new_node()
     local node = {}
@@ -467,7 +467,7 @@ local function _test_ui_event_router_injects_actor_for_next_with_current_player_
 end
 
 local function _test_ui_event_router_turn_bound_actor_prefers_current_player_over_stale_cache()
-  local base_nodes = require("src.ui.schema.base_nodes")
+  local base_nodes = require("src.ui.schema.base")
 
   local function new_node()
     local node = {}
@@ -551,7 +551,7 @@ local function _test_local_actor_resolver_turn_bound_prefers_client_role_over_cu
 end
 
 local function _test_ui_event_router_injects_actor_for_market_confirm_and_cancel()
-  local market_nodes = require("src.ui.schema.market_nodes")
+  local market_nodes = require("src.ui.schema.market")
 
   local function new_node()
     local node = {}
@@ -629,7 +629,7 @@ local function _test_ui_event_router_injects_actor_for_market_confirm_and_cancel
 end
 
 local function _test_ui_event_router_rejects_next_without_actor_context()
-  local base_nodes = require("src.ui.schema.base_nodes")
+  local base_nodes = require("src.ui.schema.base")
 
   local function new_node()
     local node = {}

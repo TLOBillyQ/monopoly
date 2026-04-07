@@ -1,4 +1,4 @@
-local base_nodes = require("src.ui.schema.base_nodes")
+local base_nodes = require("src.ui.schema.base")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local timing = require("src.config.gameplay.timing")
 local number_utils = require("src.core.utils.number_utils")

@@ -318,7 +318,7 @@ local function _test_ui_event_router_action_log_uses_cached_local_role_when_even
 end
 
 local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player()
-  local always_show_nodes = require("src.ui.schema.always_show_nodes")
+  local always_show_nodes = require("src.ui.schema.always_show")
 
   local function new_node()
     local node = {}
