@@ -325,8 +325,6 @@ function phase_module.build_passive_choice_spec(game, player, phase, args)
     pre_confirm_before_slot_pick = false,
     slot_states = slot_states,
     options = options,
-    show_continue_button = true,
-    continue_label = "继续",
     allow_cancel = true,
     cancel_label = "继续",
     meta = { player_id = player.id, phase = phase },

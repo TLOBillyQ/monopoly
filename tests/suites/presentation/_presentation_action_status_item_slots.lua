@@ -185,7 +185,7 @@ local function _test_item_slot_intents_include_outline_nodes()
   _bind_ui_runtime(state)
 
   local specs = item_slot_intents.build(state)
-  _assert_eq(#specs, 3, "item slot intents should include slot, outline, and continue button")
+  _assert_eq(#specs, 2, "item slot intents should include slot and outline")
   _assert_eq(specs[1].name, "基础_道具槽位1", "slot intent node expected")
   _assert_eq(specs[2].name, "基础_可出牌外框1", "outline intent node expected")
   local intent = specs[2].build_intent()
@@ -623,6 +623,7 @@ end
 local function _test_passive_slot_three_state_rendering()
   local touch_state = {}
   local visible_state = {}
+  local label_state = {}
   local events = {}
   local state = {
     ui_refs = _wrap_ui_refs({
@@ -648,7 +649,9 @@ local function _test_passive_slot_three_state_rendering()
       set_visible = function(_, name, visible)
         visible_state[name] = visible == true
       end,
-      set_label = function() end,
+      set_label = function(_, name, text)
+        label_state[name] = text
+      end,
     },
   }
   local ui_model = {
@@ -685,142 +688,7 @@ local function _test_passive_slot_three_state_rendering()
   _assert_eq(touch_state["基础_道具槽位3"], true,  "passive: available slot 3 should be touchable")
   _assert_eq(touch_state["基础_道具槽位4"], false, "passive: unavailable slot 4 should not be touchable")
   _assert_eq(touch_state["基础_道具槽位5"], false, "passive: unavailable slot 5 should not be touchable")
-  _assert_eq(visible_state["基础_道具继续按钮"], true, "passive: continue button should be visible")
-end
-
-local function _test_passive_slot_bubbles_shown_for_alert_slots()
-  local visible_state = {}
-  local label_state = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = "EMPTY",
-      ["2001"] = "ICON2001",
-      ["2002"] = "ICON2002",
-      ["2003"] = "ICON2003",
-      ["2004"] = "ICON2004",
-      ["2005"] = "ICON2005",
-    }),
-    ui = {
-      item_slots = {
-        "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3",
-        "基础_道具槽位4", "基础_道具槽位5",
-      },
-      card_outlines = {},
-      set_touch_enabled = function() end,
-      set_visible = function(_, name, visible)
-        visible_state[name] = visible == true
-      end,
-      set_label = function(_, name, text)
-        label_state[name] = text
-      end,
-    },
-  }
-  local ui_model = {
-    current_player_id = 1,
-    item_slots = { 2001, 2002, 2003, 2004, 2005 },
-    item_slots_by_player = { [1] = { 2001, 2002, 2003, 2004, 2005 } },
-    choice = {
-      kind = "item_phase_passive",
-      route_key = "item_phase_passive",
-      uses_item_slots = true,
-      options = { { id = 2001 }, { id = 2003 } },
-      slot_states = {
-        [1] = { available = true,  alert = true,  alert_text = "已充能" },
-        [2] = { available = false, alert = false },
-        [3] = { available = true,  alert = false },
-        [4] = { available = false, alert = false },
-        [5] = { available = false, alert = false },
-      },
-    },
-  }
-
-  _with_patches({
-    { key = "UIManager", value = { query_nodes_by_name = function() return { { set_texture_keep_size = function() end } } end } },
-  }, function()
-    ui_view.refresh_item_slots(state, ui_model, {
-      display_player_id = 1,
-      allow_interact = true,
-    })
-  end)
-
-  _assert_eq(visible_state["基础_道具气泡1"], true,  "passive: alert slot 1 bubble should be visible")
-  _assert_eq(label_state["基础_道具气泡1"], "已充能",  "passive: alert slot 1 bubble should show alert_text")
-  _assert_eq(visible_state["基础_道具气泡2"], false, "passive: unavailable slot 2 bubble should be hidden")
-  _assert_eq(visible_state["基础_道具气泡3"], false, "passive: available non-alert slot 3 bubble should be hidden")
-  _assert_eq(visible_state["基础_道具气泡4"], false, "passive: unavailable slot 4 bubble should be hidden")
-  _assert_eq(visible_state["基础_道具气泡5"], false, "passive: unavailable slot 5 bubble should be hidden")
-end
-
-local function _test_continue_button_emits_cancel()
-  local item_slot_intents = require("src.ui.input.canvas_route_item_slots")
-  local state = {
-    ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
-    },
-    ui_model = {
-      choice = {
-        kind = "item_phase_passive",
-        route_key = "item_phase_passive",
-        uses_item_slots = true,
-      },
-    },
-  }
-  _bind_ui_runtime(state)
-
-  local specs = item_slot_intents.build(state)
-  local continue_spec = nil
-  for _, spec in ipairs(specs) do
-    if spec.name == "基础_道具继续按钮" then
-      continue_spec = spec
-      break
-    end
-  end
-
-  _assert_eq(continue_spec ~= nil, true, "continue button spec should be present")
-  local intent = continue_spec and continue_spec.build_intent()
-  _assert_eq(intent and intent.type, "choice_cancel", "continue button click should emit choice_cancel")
-end
-
-local function _test_non_passive_choice_hides_bubbles_and_continue_button()
-  local visible_state = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = "EMPTY",
-      ["2001"] = "ICON2001",
-    }),
-    ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
-      set_touch_enabled = function() end,
-      set_visible = function(_, name, visible)
-        visible_state[name] = visible == true
-      end,
-    },
-  }
-  local ui_model = {
-    current_player_id = 1,
-    item_slots = { 2001 },
-    item_slots_by_player = { [1] = { 2001 } },
-    choice = {
-      kind = "item_phase_choice",
-      route_key = "base_inline",
-      uses_item_slots = true,
-      options = { { id = 2001 } },
-    },
-  }
-
-  _with_patches({
-    { key = "UIManager", value = { query_nodes_by_name = function() return { { set_texture_keep_size = function() end } } end } },
-  }, function()
-    ui_view.refresh_item_slots(state, ui_model, {
-      display_player_id = 1,
-      allow_interact = true,
-    })
-  end)
-
-  _assert_eq(visible_state["基础_道具继续按钮"], false, "non-passive: continue button should be hidden")
-  _assert_eq(visible_state["基础_道具气泡1"], false, "non-passive: bubble 1 should be hidden")
+  _assert_eq(label_state["基础_行动按钮"], "继续", "passive: action button label should be 继续")
 end
 
 return {
@@ -835,8 +703,5 @@ return {
     { name = "_test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines", run = _test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines },
     { name = "_test_item_slot_refresh_resets_highlight_without_client_role", run = _test_item_slot_refresh_resets_highlight_without_client_role },
     { name = "_test_passive_slot_three_state_rendering", run = _test_passive_slot_three_state_rendering },
-    { name = "_test_passive_slot_bubbles_shown_for_alert_slots", run = _test_passive_slot_bubbles_shown_for_alert_slots },
-    { name = "_test_continue_button_emits_cancel", run = _test_continue_button_emits_cancel },
-    { name = "_test_non_passive_choice_hides_bubbles_and_continue_button", run = _test_non_passive_choice_hides_bubbles_and_continue_button },
   },
 }

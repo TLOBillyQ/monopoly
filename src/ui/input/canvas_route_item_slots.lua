@@ -39,14 +39,6 @@ function intents.build(state)
       }
     end
   end
-  if nodes.item_continue_button then
-    specs[#specs + 1] = {
-      name = nodes.item_continue_button,
-      build_intent = function()
-        return { type = "choice_cancel" }
-      end,
-    }
-  end
   return specs
 end
 

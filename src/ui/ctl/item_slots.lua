@@ -254,68 +254,19 @@ local function _store_item_ids(ui, role_id, item_ids)
   ui.item_slot_item_ids = item_ids
 end
 
-local function _hide_passive_ui(ui)
-  if not (ui and ui.set_visible) then
-    return
-  end
-  local bubbles = base_nodes.item_bubbles or {}
-  for i = 1, 5 do
-    local bubble = bubbles[i]
-    if bubble then
-      ui:set_visible(bubble, false)
-    end
-  end
-  if base_nodes.item_continue_button then
-    ui:set_visible(base_nodes.item_continue_button, false)
-  end
-end
-
-local function _refresh_passive_slots(ctx)
-  local ui = ctx.ui
-  local choice = ctx.choice
-  local slot_states = (choice and type(choice.slot_states) == "table") and choice.slot_states or {}
-  local bubbles = base_nodes.item_bubbles or {}
-  local slots = ctx.slots or {}
-
-  for i = 1, 5 do
-    local slot_name = slots[i]
-    local state_entry = slot_states[i]
-    local available = state_entry ~= nil and state_entry.available == true
-
-    if slot_name then
-      if available then
-        ui:set_touch_enabled(slot_name, true)
-        _emit_slot_animation(i, "高亮道具槽位牌")
-      else
-        ui:set_touch_enabled(slot_name, false)
-      end
-    end
-
-    local bubble = bubbles[i]
-    if bubble then
-      if available and state_entry.alert == true then
-        ui:set_visible(bubble, true)
-        local alert_text = state_entry.alert_text or ""
-        ui:set_label(bubble, alert_text)
-      else
-        ui:set_visible(bubble, false)
-      end
-    end
-  end
-
-  if base_nodes.item_continue_button then
-    ui:set_visible(base_nodes.item_continue_button, true)
-  end
-end
-
 function M.refresh_item_slots(state, ui_model, opts)
   local ctx = _build_refresh_context(state, ui_model, opts)
   ctx.image_refs = state.ui_refs and state.ui_refs.images or {}
   local slot_pickable = _sync_slot_images(ctx)
   if ctx.choice and ctx.choice.kind == "item_phase_passive" then
-    _refresh_passive_slots(ctx)
+    _refresh_highlight_state(state, ctx, slot_pickable)
+    if ctx.ui.set_label then
+      ctx.ui:set_label(base_nodes.action_button, "继续")
+    end
   else
-    _hide_passive_ui(ctx.ui)
+    if ctx.ui.set_label then
+      ctx.ui:set_label(base_nodes.action_button, "")
+    end
     _refresh_highlight_state(state, ctx, slot_pickable)
   end
   _store_item_ids(ctx.ui, ctx.role_id, ctx.item_ids)
