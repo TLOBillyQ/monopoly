@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
-local pre_confirm_flow = require("src.ui.input.dispatch_pre_confirm")
-local item_phase_ask_flow = require("src.ui.input.dispatch_item_phase_ask")
+local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
+local item_phase_ask_flow = require("src.ui.input.dispatch.item_phase_ask")
 
 local game_action_dispatcher = {}
 
