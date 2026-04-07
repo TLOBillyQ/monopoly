@@ -1,12 +1,12 @@
-local base_intents = require("src.ui.input.canvas_route_base")
-local popup_intents = require("src.ui.input.canvas_route_popup")
-local item_slot_intents = require("src.ui.input.canvas_route_item_slots")
-local player_choice_intents = require("src.ui.input.canvas_route_player_choice")
-local target_choice_intents = require("src.ui.input.canvas_route_target_choice")
-local remote_choice_intents = require("src.ui.input.canvas_route_remote_choice")
-local market_intents = require("src.ui.input.canvas_route_market")
-local always_show_intents = require("src.ui.input.canvas_route_always_show")
-local secondary_confirm_intents = require("src.ui.input.canvas_route_secondary_confirm")
+local base_intents = require("src.ui.input.canvas_route.base")
+local popup_intents = require("src.ui.input.canvas_route.popup")
+local item_slot_intents = require("src.ui.input.canvas_route.item_slots")
+local player_choice_intents = require("src.ui.input.canvas_route.player_choice")
+local target_choice_intents = require("src.ui.input.canvas_route.target_choice")
+local remote_choice_intents = require("src.ui.input.canvas_route.remote_choice")
+local market_intents = require("src.ui.input.canvas_route.market")
+local always_show_intents = require("src.ui.input.canvas_route.always_show")
+local secondary_confirm_intents = require("src.ui.input.canvas_route.secondary_confirm")
 
 local registry = {}
 
