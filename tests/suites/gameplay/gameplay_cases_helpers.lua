@@ -92,17 +92,16 @@ local function _with_runtime_context_globals(fn)
   support.with_patches({
     { key = "GameAPI", value = nil },
     { key = "LuaAPI", value = nil },
-    { key = "SetTimeOut", value = nil },
-    { key = "RegisterCustomEvent", value = nil },
-    { key = "RegisterTriggerEvent", value = nil },
-    { key = "UnitCustomEvent", value = nil },
-    { key = "UnitTriggerEvent", value = nil },
-    { key = "TriggerCustomEvent", value = nil },
-    { key = "vehicle_helper", value = nil },
-    { key = "camera_helper", value = nil },
-    { key = "change_skin_helper", value = nil },
-    { key = "all_roles", value = nil },
-    { key = "ALLROLES", value = nil },
+     { key = "SetTimeOut", value = nil },
+     { key = "RegisterCustomEvent", value = nil },
+     { key = "RegisterTriggerEvent", value = nil },
+     { key = "UnitCustomEvent", value = nil },
+     { key = "UnitTriggerEvent", value = nil },
+     { key = "TriggerCustomEvent", value = nil },
+     { key = "vehicle_helper", value = nil },
+     { key = "camera_helper", value = nil },
+     { key = "all_roles", value = nil },
+     { key = "ALLROLES", value = nil },
   }, fn)
 end
 
