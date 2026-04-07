@@ -1,5 +1,5 @@
 local debug_flags = require("src.config.gameplay.debug_flags")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.state.runtime_state")
 
 local turn_role_control_policy = {}
 

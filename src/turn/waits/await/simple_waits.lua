@@ -1,7 +1,7 @@
 local wait_callbacks = require("src.turn.waits.callback_registry")
 local timing = require("src.config.gameplay.timing")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.landing_visual_hold")
 local auto_play_port = require("src.rules.ports.auto_play")
 local tip_queue = require("src.core.utils.tip_queue")
 

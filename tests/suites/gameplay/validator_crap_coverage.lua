@@ -1,6 +1,6 @@
 local validator = require("src.turn.actions.validator")
 local availability = require("src.rules.items.availability")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.state.runtime_state")
 local logger = require("src.core.utils.logger")
 
 local _validate = validator._validate_item_slot_action

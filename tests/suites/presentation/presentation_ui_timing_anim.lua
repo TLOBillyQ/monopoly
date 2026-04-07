@@ -37,7 +37,7 @@ local logger = require("src.core.utils.logger")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local host_runtime = require("src.host")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.state.runtime_state")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 

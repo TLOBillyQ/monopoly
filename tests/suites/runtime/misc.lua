@@ -206,7 +206,7 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
       end,
     },
     {
-      target = require("src.state.state_access.ui_role_globals"),
+    target = require("src.state.ui_role_globals"),
       key = "install",
       value = function()
         return {}

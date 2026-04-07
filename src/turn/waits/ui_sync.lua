@@ -4,7 +4,7 @@ local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
 local tick_timeout = require("src.turn.waits.timeout")
 local wait_log_once = require("src.turn.waits.log_once")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.state.runtime_state")
 local turn_ui_sync_shared = require("src.core.ui_sync.turn_ui_sync_shared")
 local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
 

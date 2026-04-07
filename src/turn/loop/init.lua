@@ -11,8 +11,8 @@ local auto_context = require("src.turn.policies.auto_context")
 local tick_flow = require("src.turn.loop.tick_flow")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local market_purchase = require("src.rules.market.purchase.core")
-local runtime_state = require("src.state.state_access.runtime_state")
-local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local runtime_state = require("src.state.runtime_state")
+local landing_visual_hold = require("src.state.landing_visual_hold")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 local gameplay_loop = {}
 

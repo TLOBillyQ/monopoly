@@ -17,7 +17,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local monopoly_event = require("src.core.events")
 local move_followup = require("src.turn.phases.move_followup")
-local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.landing_visual_hold")
 local movement = require("src.rules.movement")
 
 local function _install_narrow_ports(game, ui_port)

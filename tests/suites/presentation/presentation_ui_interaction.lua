@@ -38,7 +38,7 @@ local logger = require("src.core.utils.logger")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local host_runtime = require("src.host")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.state.runtime_state")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local raycast = require("src.host.raycast")
 local vec3 = require("fixtures.vec3")
@@ -765,7 +765,7 @@ end
 
 local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
   local ui_sync_ports = require("src.ui.ports.ui_sync")
-  local runtime_state_local = require("src.state.state_access.runtime_state")
+  local runtime_state_local = require("src.state.runtime_state")
   local rebuilt = {
     choice = { id = 42, kind = "remote", route_key = "remote", options = { { id = 1, label = "A" } } },
     market = { choice_id = 42 },

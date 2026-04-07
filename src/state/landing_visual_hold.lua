@@ -1,6 +1,6 @@
-local runtime_state = require("src.state.state_access.runtime_state")
-local deferred_dirty = require("src.state.state_access.deferred_dirty")
-local release_scheduler = require("src.state.state_access.release_scheduler")
+local runtime_state = require("src.state.runtime_state")
+local deferred_dirty = require("src.state.deferred_dirty")
+local release_scheduler = require("src.state.release_scheduler")
 
 local landing_visual_hold = {}
 

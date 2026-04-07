@@ -1,5 +1,5 @@
 -- Turn flow-local bridge that syncs runtime-facing output back into ui_runtime state.
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.state.runtime_state")
 local state_adapter = {}
 
 function state_adapter.invalidate_ui_model(state)

@@ -1,7 +1,7 @@
 local steal = require("src.rules.items.steal")
 local market_service = require("src.rules.market")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
-local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.landing_visual_hold")
 local logger = require("src.core.utils.logger")
 
 local move_followup = {}

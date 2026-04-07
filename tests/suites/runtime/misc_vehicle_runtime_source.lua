@@ -1,4 +1,4 @@
-local vehicle_runtime_source = require("src.state.state_access.vehicle_runtime_source")
+local vehicle_runtime_source = require("src.state.vehicle_runtime_source")
 
 local _resolve_module = vehicle_runtime_source._M_test._resolve_module
 

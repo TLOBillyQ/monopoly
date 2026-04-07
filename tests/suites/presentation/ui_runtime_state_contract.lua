@@ -1,7 +1,7 @@
 local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.state.runtime_state")
 local output_port = require("src.turn.output.state_adapter")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local validator = require("src.turn.actions.validator")

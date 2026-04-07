@@ -1,5 +1,5 @@
 local number_utils = require("src.core.utils.number_utils")
-local runtime_state = require("src.state.state_access.runtime_state")
+local runtime_state = require("src.state.runtime_state")
 
 local turn_camera_policy = {}
 

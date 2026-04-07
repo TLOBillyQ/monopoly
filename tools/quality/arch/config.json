@@ -48,7 +48,12 @@
     {
       "component": "core",
       "match": [
-        "^src%.state%.state_access%..+"
+        "^src%.state%.deferred_dirty$",
+        "^src%.state%.landing_visual_hold$",
+        "^src%.state%.release_scheduler$",
+        "^src%.state%.runtime_state$",
+        "^src%.state%.ui_role_globals$",
+        "^src%.state%.vehicle_runtime_source$"
       ],
       "name": "state_access"
     },

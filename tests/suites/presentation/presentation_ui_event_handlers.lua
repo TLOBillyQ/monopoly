@@ -4,7 +4,7 @@ local number_utils = require("src.core.utils.number_utils")
 local monopoly_event = require("src.core.events")
 local host_runtime = require("src.host")
 local board_feedback = require("src.ui.render.board_feedback.service")
-local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local landing_visual_hold = require("src.state.landing_visual_hold")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)

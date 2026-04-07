@@ -11,10 +11,10 @@ local rules = {
   {
     roots = { "src/ui", "src/app" },
     forbidden_patterns = {
-      'require%("src%.state%.state_access%.runtime_state"%)',
-      "require%('src%.state%.state_access%.runtime_state'%)",
-      'require%("src%.state%.state_access%.landing_visual_hold"%)',
-      "require%('src%.state%.state_access%.landing_visual_hold'%)",
+      'require%("src%.state%.runtime_state"%)',
+      "require%('src%.state%.runtime_state'%)",
+      'require%("src%.state%.landing_visual_hold"%)',
+      "require%('src%.state%.landing_visual_hold'%)",
     },
     description = "presentation modules must consume runtime state through seam adapters",
   },
@@ -295,11 +295,11 @@ local rules = {
 local dep_rules_whitelist = {}
 
 dep_rules_whitelist["src/ui/state.lua"] = {
-  ['require("src.state.state_access.runtime_state")'] = true,
+  ['require("src.state.runtime_state")'] = true,
 }
 
 dep_rules_whitelist["src/ui/landing_visual_hold.lua"] = {
-  ['require("src.state.state_access.landing_visual_hold")'] = true,
+  ['require("src.state.landing_visual_hold")'] = true,
 }
 
 dep_rules_whitelist["src/ui/host_bridge.lua"] = {

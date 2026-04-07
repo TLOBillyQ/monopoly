@@ -1,8 +1,8 @@
 local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
 local logger = require("src.core.utils.logger")
-local runtime_state = require("src.state.state_access.runtime_state")
-local landing_visual_hold = require("src.state.state_access.landing_visual_hold")
+local runtime_state = require("src.state.runtime_state")
+local landing_visual_hold = require("src.state.landing_visual_hold")
 
 local function _test_landing_visual_hold_defer_dirty_initializes_bucket_and_merges_inventory()
   local state = {}

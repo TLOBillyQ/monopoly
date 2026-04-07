@@ -701,7 +701,7 @@ local function _test_pre_confirm_enter_choice_select()
   }
 
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function()
         return {
           current_player_id = 7,
@@ -733,7 +733,7 @@ local function _test_pre_confirm_enter_no_choice_returns_false()
     game = {},
   }
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function() return { choice = nil } end,
     },
   }, function(flow)
@@ -757,7 +757,7 @@ local function _test_pre_confirm_enter_market_confirm()
   }
 
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function()
         return {
           current_player_id = 7,
@@ -800,7 +800,7 @@ local function _test_pre_confirm_enter_ui_button_item_slot()
   }
 
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function()
         return {
           current_player_id = 7,
@@ -831,7 +831,7 @@ local function _test_pre_confirm_enter_unknown_intent_returns_false()
     game = {},
   }
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function()
         return { choice = { id = "choice1" } }
       end,
@@ -1103,7 +1103,7 @@ local function _test_pre_confirm_enter_missing_modal_function()
   }
 
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function()
         return {
           current_player_id = 7,
@@ -1137,7 +1137,7 @@ local function _test_pre_confirm_enter_market_confirm_option_not_found()
   }
 
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function()
         return {
           current_player_id = 7,
@@ -1174,7 +1174,7 @@ local function _test_pre_confirm_enter_requires_local_owner()
   }
 
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function()
         return {
           current_player_id = 7,
@@ -1213,7 +1213,7 @@ local function _test_pre_confirm_enter_requires_resolved_local_role()
   }
 
   local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.state_access.runtime_state"] = {
+["src.state.runtime_state"] = {
       get_ui_model = function()
         return {
           current_player_id = 7,
