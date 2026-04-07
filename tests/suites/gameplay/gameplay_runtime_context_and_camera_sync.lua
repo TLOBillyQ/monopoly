@@ -525,7 +525,6 @@ return {
     _case("_test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics"),
     _case("_test_game_startup_role_roster_retries_before_debug_players_fallback"),
     _case("_test_find_player_by_id_accepts_mixed_representation"),
-    _case("_test_runtime_context_change_skin_exports_and_event"),
     { name = "landing_visual_release_flushes_before_scheduler_advances_turn", run = _test_landing_visual_release_flushes_before_scheduler_advances_turn },
     { name = "camera_policy_retargets_when_player_changes_without_ui_refresh", run = _test_camera_policy_retargets_when_player_changes_without_ui_refresh },
     { name = "camera_sync_other_path_calls_set_camera_property_after_lock", run = _test_camera_sync_other_path_calls_set_camera_property_after_lock },

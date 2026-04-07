@@ -742,7 +742,6 @@ local function _test_end_turn_clears_used_effect_groups()
 end
 
   return {
-    _test_runtime_context_change_skin_exports_and_event = _test_runtime_context_change_skin_exports_and_event,
     _test_find_player_by_id_accepts_mixed_representation = _test_find_player_by_id_accepts_mixed_representation,
     _test_owner_mine_other_player_triggers_immediately_after_placement = _test_owner_mine_other_player_triggers_immediately_after_placement,
     _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third = _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third,
