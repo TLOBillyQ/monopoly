@@ -113,7 +113,7 @@ local function _resolve_vehicle_helper_builder()
     end
   end
   return function(get_roles, get_game_api)
-return require("src.state.vehicle_runtime_source").build_helper(get_roles, get_game_api, {
+    return require("src.state.vehicle_runtime_source").build_helper(get_roles, get_game_api, {
       logger = logger,
       runtime_constants = runtime_constants,
     }, _G)
