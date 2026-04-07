@@ -376,7 +376,7 @@ end
 
 -- Tests for asset_handlers (CRAP hotspots with low coverage)
 local function _test_asset_handlers_destroy_buildings_on_path()
-   local asset_handlers = require("src.rules.chance.handlers.asset_handlers")
+   local asset_handlers = require("src.rules.chance.handlers.asset")
    local monopoly_event = require("src.core.events")
   local events = {}
   local common = {
@@ -413,7 +413,7 @@ local function _test_asset_handlers_destroy_buildings_on_path()
 end
 
 local function _test_asset_handlers_reset_tiles_on_path()
-   local asset_handlers = require("src.rules.chance.handlers.asset_handlers")
+   local asset_handlers = require("src.rules.chance.handlers.asset")
    local monopoly_event = require("src.core.events")
   local events = {}
   local tile_state_calls = {}
@@ -814,7 +814,7 @@ end
 
 -- T8 FINAL tests for anonymous@106 in asset_handlers.lua (discard_properties function)
 -- This is the anonymous function at line 106 which is the discard_properties handler
-local asset_handlers = require("src.rules.chance.handlers.asset_handlers")
+local asset_handlers = require("src.rules.chance.handlers.asset")
 local _asset_handlers_final_tests = {
   function()
     -- Test discard_properties with card.count = 0 (should drop all properties)

@@ -1,7 +1,7 @@
 local common = require("src.rules.chance.handlers.common")
-local cash_handlers = require("src.rules.chance.handlers.cash_handlers")
-local asset_handlers = require("src.rules.chance.handlers.asset_handlers")
-local movement_handlers = require("src.rules.chance.handlers.movement_handlers")
+local cash_handlers = require("src.rules.chance.handlers.cash")
+local asset_handlers = require("src.rules.chance.handlers.asset")
+local movement_handlers = require("src.rules.chance.handlers.movement")
 
 local handlers = {}
 
