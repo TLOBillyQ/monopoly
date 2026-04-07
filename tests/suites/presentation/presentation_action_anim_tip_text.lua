@@ -1,4 +1,4 @@
-local tip_text = require("src.ui.render.anim_tip_text")
+local tip_text = require("src.ui.render.anim.tip_text")
 local support = require("support.presentation_action_anim_support")
 
 local function _test_anim_tip_text_builds_named_player_and_clear_obstacles_copy()

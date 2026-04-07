@@ -5,7 +5,7 @@ local turn_land = require("src.turn.phases.land")
 local await = require("src.turn.waits.await")
 local logger = require("src.core.utils.logger")
 local action_anim = require("src.ui.render.action_anim")
-local anim_handlers = require("src.ui.render.anim_handlers")
+local anim_handlers = require("src.ui.render.anim.handlers")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local callback_keys = wait_callbacks.callback_keys

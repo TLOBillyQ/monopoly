@@ -1,8 +1,8 @@
 local action_anim = require("src.ui.render.action_anim")
 local host_runtime = require("src.host")
-local overlay_compute = require("src.ui.render.anim_overlay_compute")
+local overlay_compute = require("src.ui.render.anim.overlay_compute")
 local visual_sync = require("src.ui.render.board.visual_sync")
-local overlay_runtime = require("src.ui.render.anim_overlay_runtime")
+local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 local logger = require("src.core.utils.logger")
 local tip_queue = require("src.core.utils.tip_queue")
 local runtime_context = require("src.host.context")
@@ -74,7 +74,7 @@ local function _test_action_anim_roadblock_overlay_uses_4x_scale()
 end
 
 local function _test_anim_unit_overlay_clear_obstacles_splits_at_fork_and_destroys_all_robots()
-  local overlay = require("src.ui.render.anim_unit_overlay")
+  local overlay = require("src.ui.render.anim.unit_overlay")
   local state = support.build_min_state({
     mutate = function(target)
       target.board_scene.tiles[2] = {
@@ -189,7 +189,7 @@ local function _test_anim_unit_overlay_clear_obstacles_splits_at_fork_and_destro
 end
 
 local function _test_anim_unit_overlay_clear_obstacles_walks_per_step_then_clears_and_destroys()
-  local overlay = require("src.ui.render.anim_unit_overlay")
+  local overlay = require("src.ui.render.anim.unit_overlay")
   local state = support.build_min_state({
     mutate = function(target)
       target.board_scene.tiles[2] = {
@@ -285,7 +285,7 @@ end
 
 
 local function _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_transient()
-  local overlay = require("src.ui.render.anim_unit_overlay")
+  local overlay = require("src.ui.render.anim.unit_overlay")
   local prefab = require("Data.Prefab")
   local state = support.build_min_state()
   local cleared_calls = {}
@@ -356,7 +356,7 @@ local function _test_anim_unit_overlay_play_missile_clears_overlays_and_spawns_t
 end
 
 local function _test_anim_units_play_missile_stops_and_snaps_targets_before_followup()
-  local units = require("src.ui.render.anim_units")
+  local units = require("src.ui.render.anim.units")
   local calls = {}
   local state = support.build_min_state({
     mutate = function(target)
@@ -392,7 +392,7 @@ local function _test_anim_units_play_missile_stops_and_snaps_targets_before_foll
       end,
     },
     {
-      target = require("src.ui.render.anim_unit_overlay"),
+      target = require("src.ui.render.anim.unit_overlay"),
       key = "play_missile",
       value = function()
         calls[#calls + 1] = "overlay"

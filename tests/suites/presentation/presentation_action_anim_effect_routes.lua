@@ -1,6 +1,6 @@
 local action_anim = require("src.ui.render.action_anim")
-local handlers = require("src.ui.render.anim_handlers")
-local anim_units = require("src.ui.render.anim_units")
+local handlers = require("src.ui.render.anim.handlers")
+local anim_units = require("src.ui.render.anim.units")
 local board_feedback = require("src.ui.render.board_feedback.service")
 local timing = require("src.config.gameplay.timing")
 local logger = require("src.core.utils.logger")
@@ -881,7 +881,7 @@ local function _test_play_missile_plays_blast_and_delays_upgrade_smoke()
       end,
     },
     {
-      target = require("src.ui.render.anim_unit_overlay"),
+      target = require("src.ui.render.anim.unit_overlay"),
       key = "play_missile",
       value = function() end,
     },
@@ -935,7 +935,7 @@ local function _test_play_monster_plays_blast_and_delays_upgrade_smoke()
       end,
     },
     {
-      target = require("src.ui.render.anim_unit_overlay"),
+      target = require("src.ui.render.anim.unit_overlay"),
       key = "play_monster",
       value = function() end,
     },

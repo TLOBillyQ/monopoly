@@ -1,8 +1,8 @@
 local prefab = require("Data.Prefab")
 local building_effects = require("src.ui.render.building_effects")
 local tile_renderer = require("src.ui.render.tile_renderer")
-local overlay_runtime = require("src.ui.render.anim_overlay_runtime")
-local overlay_compute = require("src.ui.render.anim_overlay_compute")
+local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
+local overlay_compute = require("src.ui.render.anim.overlay_compute")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local visual_sync = {}

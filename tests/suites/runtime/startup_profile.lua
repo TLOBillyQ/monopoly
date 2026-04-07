@@ -799,7 +799,7 @@ end
 
 local function _test_missile_marks_overlay_render_called_for_startup_render()
   local game = profile_support.apply_profile("missile")
-  local overlay_runtime = require("src.ui.render.anim_overlay_runtime")
+  local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
   local tile_renderer = require("src.ui.render.tile_renderer")
   local building_effects = require("src.ui.render.building_effects")
   local overlay_calls = {}

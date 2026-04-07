@@ -1,5 +1,5 @@
-local dice = require("src.ui.render.anim_dice")
-local units = require("src.ui.render.anim_units")
+local dice = require("src.ui.render.anim.dice")
+local units = require("src.ui.render.anim.units")
 
 local handlers = {}
 
