@@ -1,5 +1,5 @@
 -- T6 characterization tests for remaining hotspots
-local market_slots = require("src.ui.render.market_slots")
+local market_slots = require("src.ui.render.market.slots")
 local placement = require("src.ui.render.board.placement")
 local status3d_status = require("src.ui.render.status3d.status")
 local board_feedback = require("src.ui.render.board_feedback.service")
