@@ -1,5 +1,5 @@
 local runtime_ports = require("src.core.ports.runtime_ports")
-local board_feedback = require("src.ui.render.board_feedback_service")
+local board_feedback = require("src.ui.render.board_feedback.service")
 local debug_mod = require("src.ui.render.move_anim.debug")
 local rt = require("src.ui.render.move_anim.runtime")
 local seq_builder = require("src.ui.render.move_anim.sequence_builder")

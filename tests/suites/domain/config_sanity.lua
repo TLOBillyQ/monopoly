@@ -5,7 +5,7 @@ local market_cfg = require("src.config.content.market")
 local chance_cfg = require("src.config.content.chance_cards")
 local tiles_cfg = require("src.config.content.tiles")
 local runtime_refs = require("src.config.content.runtime_refs")
-local board_feedback_catalog = require("src.ui.render.board_feedback_catalog")
+local board_feedback_catalog = require("src.ui.render.board_feedback.catalog")
 
 local function _test_config_sanity_validate_passes_current_generated_data()
   config_sanity.reset_for_tests()

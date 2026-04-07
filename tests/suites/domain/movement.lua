@@ -9,7 +9,7 @@ local _assert_player_move_dir = support.assert_player_move_dir
 local movement = support.movement
 local board_utils = support.board_utils
 local move_anim = require("src.ui.render.move_anim")
-local board_feedback = require("src.ui.render.board_feedback_service")
+local board_feedback = require("src.ui.render.board_feedback.service")
 local runtime_ports = require("src.core.ports.runtime_ports")
 
 local function _simulate_path_result(board, start_index, facing, steps, backward, parity)

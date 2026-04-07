@@ -1,5 +1,5 @@
 local host_runtime = require("src.host")
-local board_feedback = require("src.ui.render.board_feedback_service")
+local board_feedback = require("src.ui.render.board_feedback.service")
 local runtime_refs = require("src.config.content.runtime_refs")
 local logger = require("src.core.utils.logger")
 local tip_queue = require("src.core.utils.tip_queue")
