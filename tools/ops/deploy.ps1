@@ -337,7 +337,7 @@ function Write-MainLua {
     if ($prefix_lines.Count -gt 0) {
         $prefix = ($prefix_lines -join "`n") + "`n"
     }
-    Set-Content -LiteralPath $TargetPath -Encoding UTF8 -NoNewline -Value ($prefix + $source_text)
+    [System.IO.File]::WriteAllText($TargetPath, $prefix + $source_text, [System.Text.UTF8Encoding]::new($false))
 }
 
 function Get-EffectiveLuaLineCountForFile {
