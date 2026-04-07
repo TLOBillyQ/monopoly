@@ -3,7 +3,7 @@ local context = require("src.rules.market.query.context")
 local monopoly_event = require("src.core.events.monopoly_events")
 local number_utils = require("src.core.utils.number_utils")
 local runtime_ports = require("src.core.ports.runtime_ports")
-local action_anim_port = require("src.core.ports.action_anim")
+local logger = require("src.core.utils.logger")
 
 local fulfillment = {}
 local _emit_event = monopoly_event.emit
@@ -61,17 +61,22 @@ local function _fulfill_skin(game, player, entry, opts, price, currency, priced_
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
   end
   context.consume_global_limit(game, entry.product_id)
-  local change_skin_helper = runtime_ports.resolve_change_skin_helper()
-  if change_skin_helper and type(change_skin_helper.emit_change_skin) == "function" then
-    change_skin_helper.emit_change_skin(player.id, entry.product_id)
+  local role = runtime_ports.resolve_role(player.id)
+  if role and type(role.get_ctrl_unit) == "function" then
+    local unit = role.get_ctrl_unit()
+    if unit and type(unit.change_custom_model_by_creature_key) == "function" then
+      local creature_key = number_utils.to_integer(entry.product_id)
+      if creature_key then
+        unit.change_custom_model_by_creature_key(creature_key)
+      else
+        logger.warn("fulfill_skin: invalid product_id " .. tostring(entry.product_id))
+      end
+    else
+      logger.warn("fulfill_skin: unit missing change_custom_model_by_creature_key for player " .. tostring(player.id))
+    end
+  else
+    logger.warn("fulfill_skin: no role found for player " .. tostring(player.id))
   end
-  action_anim_port.queue(game, {
-    kind = "change_skin",
-    player_id = player.id,
-    skin_id = entry.product_id,
-    skin_name = context.entry_name(entry),
-    duration = 1.0,
-  })
   _emit_event(monopoly_event.market.bought_item, {
     player = player,
     entry = entry,

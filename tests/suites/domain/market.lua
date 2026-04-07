@@ -4,6 +4,7 @@ local market_cfg = require("src.config.content.market")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local monopoly_event = require("src.core.events.monopoly_events")
 local choice_resolver = require("src.core.choice.resolver")
+local number_utils = require("src.core.utils.number_utils")
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do
@@ -67,7 +68,7 @@ local function _test_ai_skips_auto_buy_at_market()
   g:set_player_cash(ai_player, 1000)
 
   local before_cash = ai_player.cash
-  market_service.auto.execute(g, ai_player, { is_auto_player = true })
+  market_service.auto.execute(g, ai_player)
 
   assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
 end
@@ -102,7 +103,6 @@ local function _test_auto_execute_purchases_first_non_vehicle()
     return -- skip if no items available
   end
 
-  local first_entry = list[1]
   local before_cash = p.cash
 
   market_service.auto.execute(g, p)
@@ -216,8 +216,7 @@ local function _test_skin_entry_can_buy_but_no_effect()
     g:set_player_balance(p, currency, price + 1000)
   end
 
-  local change_skin_role_id = nil
-  local change_skin_id = nil
+  local change_skin_creature_key = nil
 
   local before_count = p.inventory:count()
   local before_balance = g:player_balance(p, currency)
@@ -251,7 +250,17 @@ local function _test_skin_entry_can_buy_but_no_effect()
       key = "resolve_role",
       value = function(role_id)
         if role_id == p.id then
-          return role
+          return {
+            get_roleid = role.get_roleid,
+            show_goods_purchase_panel = role.show_goods_purchase_panel,
+            get_ctrl_unit = function()
+              return {
+                change_custom_model_by_creature_key = function(creature_key)
+                  change_skin_creature_key = creature_key
+                end,
+              }
+            end,
+          }
         end
         return nil
       end,
@@ -264,19 +273,6 @@ local function _test_skin_entry_can_buy_but_no_effect()
       key = "RegisterTriggerEvent",
       value = function(args, callback)
         purchase_handlers[args[2]] = callback
-      end,
-    },
-    {
-      target = runtime_ports,
-      key = "resolve_change_skin_helper",
-      value = function()
-        return {
-          emit_change_skin = function(role_id, skin_id)
-            change_skin_role_id = role_id
-            change_skin_id = skin_id
-            return true
-          end,
-        }
       end,
     },
   }, function()
@@ -298,12 +294,8 @@ local function _test_skin_entry_can_buy_but_no_effect()
   assert(g.market_limits[target.product_id] == before_limit - 1, "skin callback should consume global limit")
   assert(p.inventory:count() == before_count, "skin purchase should not change inventory")
   assert(p.seat_id == before_seat_id, "skin purchase should not change seat")
-  assert(change_skin_role_id == p.id, "skin purchase should emit change_skin for buyer role id")
-  assert(change_skin_id == target.product_id, "skin purchase should emit change_skin with product id")
-  assert(g.turn.action_anim and g.turn.action_anim.kind == "change_skin",
-    "skin purchase should queue change_skin action anim when wait_action_anim enabled")
-  assert(g.turn.action_anim and g.turn.action_anim.duration == 1.0,
-    "change_skin action anim should wait for 1 second")
+  assert(change_skin_creature_key == number_utils.to_integer(target.product_id),
+    "skin purchase should call change_custom_model_by_creature_key with integer product_id")
 end
 
 local function _test_market_choice_marks_skin_options_for_pre_confirm()
