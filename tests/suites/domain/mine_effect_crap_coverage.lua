@@ -1,4 +1,4 @@
-local mine_effect = require("src.rules.effects.mine_effect")
+local mine_effect = require("src.rules.effects.mine")
 
 local _find = mine_effect._M_test._find_pending_roadblock_trigger
 

@@ -20,7 +20,7 @@ local choice_handler_factory = require("src.rules.choice_handler_factory")
 local item_executor = require("src.rules.items.executor")
 local item_phase = require("src.rules.items.phase")
 local landing_defs = require("src.rules.land.specs.effects")
-local effect_runner = require("src.rules.effects.effect_runner")
+local effect_runner = require("src.rules.effects.runner")
 local function _require_upvalue(fn, expected_name)
   assert(debug and type(debug.getupvalue) == "function", "debug.getupvalue should be available for characterization tests")
   local index = 1

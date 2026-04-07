@@ -1,4 +1,4 @@
-local effect_executor = require("src.rules.effects.effect_executor")
+local effect_executor = require("src.rules.effects.executor")
 require "vendor.third_party.ClassUtils"
 
 local effect_registry = Class("EffectRegistry")

@@ -21,8 +21,8 @@ local cash_handlers = require("src.rules.chance.handlers.cash")
 local monopoly_event = require("src.core.events")
 local move_followup = require("src.turn.phases.move_followup")
 local roadblock = require("src.rules.items.roadblock")
-local effect_pipeline = require("src.rules.effects.effect_pipeline")
-local effect_runner = require("src.rules.effects.effect_runner")
+local effect_pipeline = require("src.rules.effects.pipeline")
+local effect_runner = require("src.rules.effects.runner")
 local intent_output_port = require("src.rules.ports.intent_output")
 local _assert_tile_id_sequence = support.assert_tile_id_sequence
 

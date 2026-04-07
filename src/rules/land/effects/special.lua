@@ -1,4 +1,4 @@
-local mine_effect = require("src.rules.effects.mine_effect")
+local mine_effect = require("src.rules.effects.mine")
 
 local M = {}
 

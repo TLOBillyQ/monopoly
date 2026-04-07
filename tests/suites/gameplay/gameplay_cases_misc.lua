@@ -259,7 +259,7 @@ end
 
 local function _test_turn_land_waits_for_move_followup_when_teleport_effect_queue_pending()
   local turn_land = require("src.turn.phases.land")
-  local effect_pipeline = require("src.rules.effects.effect_pipeline")
+  local effect_pipeline = require("src.rules.effects.pipeline")
   local g = _new_game()
   local player = g:current_player()
   local move_result = { kind = "move_result" }

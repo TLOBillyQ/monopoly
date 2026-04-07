@@ -3,7 +3,7 @@ local timing = require("src.config.gameplay.timing")
 local inventory = require("src.rules.items.inventory")
 local monopoly_event = require("src.core.events")
 local number_utils = require("src.core.utils.number_utils")
-local mine_effect = require("src.rules.effects.mine_effect")
+local mine_effect = require("src.rules.effects.mine")
 local action_anim_port = require("src.core.ports.action_anim")
 
 local interrupt_handler = {}
