@@ -224,12 +224,24 @@ local function _test_skin_entry_can_buy_but_no_effect()
   local before_limit = g.market_limits[target.product_id]
   local panel_calls = {}
   local purchase_handlers = {}
+  local ctrl_unit = {
+    change_custom_model_by_creature_key = function(...)
+      assert(select("#", ...) == 1, "change_custom_model_by_creature_key should be called with only creature_key")
+      change_skin_creature_key = select(1, ...)
+    end,
+  }
+
   local role = {
-    get_roleid = function()
+    get_roleid = function(...)
+      assert(select("#", ...) == 0, "get_roleid should be called without implicit self")
       return p.id
     end,
     show_goods_purchase_panel = function(goods_id, show_time)
       panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
+    end,
+    get_ctrl_unit = function(...)
+      assert(select("#", ...) == 0, "get_ctrl_unit should be called without implicit self")
+      return ctrl_unit
     end,
   }
   local res = nil
@@ -253,13 +265,7 @@ local function _test_skin_entry_can_buy_but_no_effect()
           return {
             get_roleid = role.get_roleid,
             show_goods_purchase_panel = role.show_goods_purchase_panel,
-            get_ctrl_unit = function()
-              return {
-                change_custom_model_by_creature_key = function(creature_key)
-                  change_skin_creature_key = creature_key
-                end,
-              }
-            end,
+            get_ctrl_unit = role.get_ctrl_unit,
           }
         end
         return nil

@@ -236,6 +236,67 @@ local function _test_eggy_paid_gateway_start_missing_purchase_api()
   end)
 end
 
+local function _test_eggy_paid_gateway_start_uses_zero_arity_role_id_and_dot_panel_args()
+  local gateway = require("src.host.paid_purchase_gateway")
+  local player = { id = 1 }
+  local game = {
+    players = { player },
+  }
+  local entry = {
+    product_id = 2009,
+    name = "强征卡",
+    currency = "金豆",
+    market_enabled = true,
+  }
+  local panel_call = nil
+
+  with_patches({
+    {
+      key = "GameAPI",
+      value = {
+        get_goods_list = function()
+          return {
+            { name = "强征卡", goods_id = "goods_strong_card" },
+          }
+        end,
+      },
+    },
+    {
+      target = require("src.core.ports.runtime_ports"),
+      key = "resolve_role",
+      value = function(role_id)
+        if role_id ~= player.id then
+          return nil
+        end
+        return {
+          get_roleid = function(...)
+            _assert_eq(select("#", ...), 0, "get_roleid should be called without implicit self")
+            return 77
+          end,
+          show_goods_purchase_panel = function(...)
+            _assert_eq(select("#", ...), 2, "show_goods_purchase_panel should receive exactly goods_id and show_time")
+            panel_call = {
+              goods_id = select(1, ...),
+              show_time = select(2, ...),
+            }
+          end,
+        }
+      end,
+    },
+  }, function()
+    local ok, reason = gateway.start(game, player, entry)
+    _assert_eq(ok, true, "start should succeed with valid zero-arity role api")
+    _assert_eq(reason, nil, "start should not return error on valid host api")
+  end)
+
+  _assert_eq(panel_call and panel_call.goods_id, "goods_strong_card", "panel should receive mapped goods id")
+  _assert_eq(panel_call and panel_call.show_time, 10.0, "panel should receive configured show time")
+
+  local rt = gateway._runtime(game)
+  _assert_eq(type(rt.pending_by_role_id[77]), "table", "pending queue should use resolved host role id")
+  _assert_eq(rt.pending_by_role_id[77][1].goods_id, "goods_strong_card", "pending queue should store goods id under host role id")
+end
+
 return {
   { name = "eggy_paid_gateway_callback_missing_goods_id", run = _test_eggy_paid_gateway_callback_missing_goods_id },
   { name = "eggy_paid_gateway_callback_empty_goods_id", run = _test_eggy_paid_gateway_callback_empty_goods_id },
@@ -245,4 +306,8 @@ return {
   { name = "eggy_paid_gateway_callback_success_with_on_purchase", run = _test_eggy_paid_gateway_callback_success_with_on_purchase },
   { name = "eggy_paid_gateway_callback_success_without_on_purchase", run = _test_eggy_paid_gateway_callback_success_without_on_purchase },
   { name = "eggy_paid_gateway_start_missing_purchase_api", run = _test_eggy_paid_gateway_start_missing_purchase_api },
+  {
+    name = "eggy_paid_gateway_start_uses_zero_arity_role_id_and_dot_panel_args",
+    run = _test_eggy_paid_gateway_start_uses_zero_arity_role_id_and_dot_panel_args,
+  },
 }

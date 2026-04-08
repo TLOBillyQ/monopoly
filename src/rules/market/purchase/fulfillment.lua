@@ -61,13 +61,33 @@ local function _fulfill_skin(game, player, entry, opts, price, currency, priced_
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
   end
   context.consume_global_limit(game, entry.product_id)
+  local creature_key = number_utils.to_integer(entry.product_id)
+  logger.info(
+    "market skin fulfill start",
+    "player_id=" .. tostring(player.id),
+    "product_id=" .. tostring(entry.product_id),
+    "creature_key=" .. tostring(creature_key)
+  )
   local role = runtime_ports.resolve_role(player.id)
   if role and type(role.get_ctrl_unit) == "function" then
-    local unit = role.get_ctrl_unit()
+    local ok_unit, unit = pcall(role.get_ctrl_unit)
+    if not ok_unit then
+      logger.warn("fulfill_skin: role get_ctrl_unit failed for player " .. tostring(player.id))
+      unit = nil
+    end
     if unit and type(unit.change_custom_model_by_creature_key) == "function" then
-      local creature_key = number_utils.to_integer(entry.product_id)
       if creature_key then
-        unit.change_custom_model_by_creature_key(creature_key)
+        local ok_change = pcall(unit.change_custom_model_by_creature_key, creature_key)
+        if ok_change then
+          logger.info(
+            "market skin fulfill applied",
+            "player_id=" .. tostring(player.id),
+            "product_id=" .. tostring(entry.product_id),
+            "creature_key=" .. tostring(creature_key)
+          )
+        else
+          logger.warn("fulfill_skin: change_custom_model_by_creature_key failed for player " .. tostring(player.id))
+        end
       else
         logger.warn("fulfill_skin: invalid product_id " .. tostring(entry.product_id))
       end
