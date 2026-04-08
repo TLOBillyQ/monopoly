@@ -71,11 +71,15 @@ local function _profile_for_name(name)
   return profiles[name]
 end
 
+local function _group_sort_key(profile)
+  return group_order[profile.group] or 999
+end
+
 local function _sort_names(left, right)
   local left_profile = _profile_for_name(left) or default_profile
   local right_profile = _profile_for_name(right) or default_profile
-  local left_group = group_order[left_profile.group] or 999
-  local right_group = group_order[right_profile.group] or 999
+  local left_group = _group_sort_key(left_profile)
+  local right_group = _group_sort_key(right_profile)
   if left_group ~= right_group then
     return left_group < right_group
   end

@@ -106,6 +106,29 @@ function choice_resolver.helpers(overrides)
   })
 end
 
+local function _handle_cancel_result(game, choice, cancel_result, descriptor)
+  if type(cancel_result) == "table" and cancel_result.stay then
+    cancel_result.status = cancel_result.status or "waiting"
+    return cancel_result
+  end
+  logger.event_no_tips("跳过选择：" .. _choice_title(choice))
+  _clear_choice(game)
+  return { status = "resolved", stay = false }
+end
+
+local function _resolve_cancel_fallback(game, choice, action, descriptor)
+  local fallback_option_id, cancel_result = _resolve_cancel_followup(game, choice, descriptor)
+  if fallback_option_id ~= nil then
+    action = _build_select_action(choice, fallback_option_id, action)
+    return nil, action
+  end
+  cancel_result = cancel_result or (descriptor.cancel and descriptor.cancel.resolve)
+  if type(cancel_result) == "function" then
+    cancel_result = cancel_result(game, choice)
+  end
+  return _handle_cancel_result(game, choice, cancel_result, descriptor)
+end
+
 function choice_resolver.resolve(game, choice, action)
   assert(game ~= nil, "missing game")
   assert(choice ~= nil, "missing choice")
@@ -116,22 +139,11 @@ function choice_resolver.resolve(game, choice, action)
   action = item_preconsume_policy.normalize_cancel_action(choice, action)
 
   if item_preconsume_policy.is_cancel_action(action) then
-    local fallback_option_id, cancel_result = _resolve_cancel_followup(game, choice, descriptor)
-    if fallback_option_id ~= nil then
-      action = _build_select_action(choice, fallback_option_id, action)
-    else
-      cancel_result = cancel_result or (descriptor.cancel and descriptor.cancel.resolve)
-      if type(cancel_result) == "function" then
-        cancel_result = cancel_result(game, choice)
-      end
-      if type(cancel_result) == "table" and cancel_result.stay then
-        cancel_result.status = cancel_result.status or "waiting"
-        return cancel_result
-      end
-      logger.event_no_tips("跳过选择：" .. _choice_title(choice))
-      _clear_choice(game)
-      return { status = "resolved", stay = false }
+    local cancel_result, new_action = _resolve_cancel_fallback(game, choice, action, descriptor)
+    if cancel_result ~= nil then
+      return cancel_result
     end
+    action = new_action
   end
 
   if descriptor.normalize_action ~= nil then

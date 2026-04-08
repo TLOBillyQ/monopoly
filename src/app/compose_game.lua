@@ -94,6 +94,36 @@ local function _is_class_like(value)
   return value.__name ~= nil and type(value.new) == "function"
 end
 
+local function _apply_game_defaults(game, opts, board, players, dirty)
+  game.board = board
+  game.players = players
+  game.player_by_id = _build_player_by_id(players)
+  game.turn = _build_initial_turn()
+  game.turn.turn_start_prompt_seq = 0
+  game.turn.turn_start_prompt_player_id = nil
+  game.dirty = dirty
+  game.market_limits = _build_market_limits()
+  game.rng = opts.rng or game_factory.build_rng()
+  game.logger = logger
+  game.finished = false
+  game.winner = nil
+  game.last_turn = nil
+  game._land_rent_version = 0
+  game._land_rent_cache = nil
+  game.tile_owner_notifier = game.tile_owner_notifier or {
+    notify_owner_changed = function() end,
+  }
+  game.board_visual_feedback_port = game.board_visual_feedback_port or {
+    sync_many = function()
+      return false
+    end,
+  }
+  game.intent_output_port = game.intent_output_port or intent_output_adapter.build()
+  function game:consume_dirty()
+    return dirty_tracker.consume(self.dirty)
+  end
+end
+
 function composition_root.assemble(opts, game_or_class)
   assert(opts ~= nil, "missing assemble opts")
 
@@ -118,37 +148,11 @@ function composition_root.assemble(opts, game_or_class)
     game = game_or_class:new(opts)
   end
   assert(game, "CompositionRoot.Assemble requires game instance or class")
-  game.board = board
-  game.players = players
-  game.player_by_id = _build_player_by_id(players)
-  game.turn = _build_initial_turn()
-  local first_player = players and players[game.turn.current_player_index] or nil
-  game.turn.turn_start_prompt_seq = 0
-  game.turn.turn_start_prompt_player_id = nil
-  game.dirty = dirty
-  game.market_limits = _build_market_limits()
+
+  _apply_game_defaults(game, opts, board, players, dirty)
+
   game.registries = registries
   game.effect_registry = registries.effects
-  game.rng = opts.rng or game_factory.build_rng()
-  game.logger = logger
-  game.finished = false
-  game.winner = nil
-  game.last_turn = nil
-  game._land_rent_version = 0
-  game._land_rent_cache = nil
-  game.tile_owner_notifier = game.tile_owner_notifier or {
-    notify_owner_changed = function() end,
-  }
-  game.board_visual_feedback_port = game.board_visual_feedback_port or {
-    sync_many = function()
-      return false
-    end,
-  }
-  game.intent_output_port = game.intent_output_port or intent_output_adapter.build()
-
-  function game:consume_dirty()
-    return dirty_tracker.consume(self.dirty)
-  end
 
   game:rebuild()
   game.turn_runtime = turn_runtime:new(game, phases)

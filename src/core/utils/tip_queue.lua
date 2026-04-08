@@ -19,13 +19,20 @@ local function _normalize_duration(duration)
   return 2.0
 end
 
+local function _backlog_threshold()
+  return timing.event_tip_fast_backlog_threshold or 2
+end
+
+local function _fast_seconds()
+  return timing.event_tip_fast_seconds or 0.5
+end
+
 local function _apply_backlog_acceleration(duration)
   local backlog = #tip_queue.pending
-  local threshold = timing.event_tip_fast_backlog_threshold or 2
-  if backlog < threshold then
+  if backlog < _backlog_threshold() then
     return duration
   end
-  local fast = timing.event_tip_fast_seconds or 0.5
+  local fast = _fast_seconds()
   if fast < duration then
     return fast
   end

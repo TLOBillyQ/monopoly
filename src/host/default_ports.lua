@@ -78,35 +78,44 @@ function default_ports.build(runtime_context)
     return _query_game_roles()
   end
 
-  function defaults.resolve_role(player_id)
-    if player_id == nil then
-      return nil
-    end
-    local ctx = runtime_context.current()
-    local synthetic_registry = ctx and ctx.synthetic_actor_registry or nil
-    if synthetic_registry and type(synthetic_registry.resolve_actor) == "function" then
-      local synthetic_actor = synthetic_registry.resolve_actor(player_id)
-      if synthetic_actor and synthetic_actor.adapter then
-        return synthetic_actor.adapter
-      end
-    end
-    local roles = defaults.resolve_roles()
-    if type(roles) == "table" then
-      for _, role in ipairs(roles) do
-        if _try_get_role_id(role) == player_id then
-          return role
-        end
-      end
-    end
-    local game_api = _current_game_api(runtime_context)
-    if game_api and type(game_api.get_role) == "function" then
-      local ok, role = pcall(game_api.get_role, player_id)
-      if ok then
+  local function _try_resolve_synthetic_role(player_id, ctx)
+  local synthetic_registry = ctx and ctx.synthetic_actor_registry or nil
+  if not (synthetic_registry and type(synthetic_registry.resolve_actor) == "function") then
+    return nil
+  end
+  local synthetic_actor = synthetic_registry.resolve_actor(player_id)
+  if synthetic_actor and synthetic_actor.adapter then
+    return synthetic_actor.adapter
+  end
+  return nil
+end
+
+function defaults.resolve_role(player_id)
+  if player_id == nil then
+    return nil
+  end
+  local ctx = runtime_context.current()
+  local synthetic_adapter = _try_resolve_synthetic_role(player_id, ctx)
+  if synthetic_adapter then
+    return synthetic_adapter
+  end
+  local roles = defaults.resolve_roles()
+  if type(roles) == "table" then
+    for _, role in ipairs(roles) do
+      if _try_get_role_id(role) == player_id then
         return role
       end
     end
-    return nil
   end
+  local game_api = _current_game_api(runtime_context)
+  if game_api and type(game_api.get_role) == "function" then
+    local ok, role = pcall(game_api.get_role, player_id)
+    if ok then
+      return role
+    end
+  end
+  return nil
+end
 
   function defaults.mark_role_lose(role)
     if role and role.lose then
@@ -138,15 +147,19 @@ function default_ports.build(runtime_context)
     return ok == true
   end
 
-  function defaults.wall_now_seconds()
-    local game_api = _current_game_api(runtime_context)
+  local function _try_timestamp_from_api(game_api)
     if game_api and type(game_api.get_timestamp) == "function" then
       local ok, ts = pcall(game_api.get_timestamp)
       if ok and number_utils.is_numeric(ts) then
         return ts
       end
     end
-    return 0
+    return nil
+  end
+
+  function defaults.wall_now_seconds()
+    local ts = _try_timestamp_from_api(_current_game_api(runtime_context))
+    return ts or 0
   end
 
   function defaults.wall_diff_seconds(timestamp_1, timestamp_2)
@@ -167,14 +180,8 @@ function default_ports.build(runtime_context)
   end
 
   function defaults.cpu_now_seconds()
-    local game_api = _current_game_api(runtime_context)
-    if game_api and type(game_api.get_timestamp) == "function" then
-      local ok, ts = pcall(game_api.get_timestamp)
-      if ok and number_utils.is_numeric(ts) then
-        return ts
-      end
-    end
-    return 0
+    local ts = _try_timestamp_from_api(_current_game_api(runtime_context))
+    return ts or 0
   end
 
   function defaults.cpu_diff_seconds(timestamp_1, timestamp_2)

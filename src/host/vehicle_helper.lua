@@ -12,9 +12,11 @@ local function _require_enabled()
   return true
 end
 
-local function _require_param(value, name, action)
-  if value == nil then
-    return nil, action .. ": missing " .. name
+local function _require_params(opts, action, ...)
+  for _, name in ipairs({...}) do
+    if opts[name] == nil then
+      return nil, action .. ": missing " .. name
+    end
   end
   return true
 end
@@ -25,15 +27,7 @@ function vehicle_helper.create(opts)
   if not ok then
     return nil, err
   end
-  ok, err = _require_param(opts.vehicle_key, "vehicle_key", "create")
-  if not ok then
-    return nil, err
-  end
-  ok, err = _require_param(opts.position, "position", "create")
-  if not ok then
-    return nil, err
-  end
-  ok, err = _require_param(opts.direction, "direction", "create")
+  ok, err = _require_params(opts, "create", "vehicle_key", "position", "direction")
   if not ok then
     return nil, err
   end
@@ -65,15 +59,7 @@ function vehicle_helper.copy(opts)
   if not ok then
     return nil, err
   end
-  ok, err = _require_param(opts.vehicle, "vehicle", "copy")
-  if not ok then
-    return nil, err
-  end
-  ok, err = _require_param(opts.position, "position", "copy")
-  if not ok then
-    return nil, err
-  end
-  ok, err = _require_param(opts.direction, "direction", "copy")
+  ok, err = _require_params(opts, "copy", "vehicle", "position", "direction")
   if not ok then
     return nil, err
   end
@@ -101,7 +87,7 @@ function vehicle_helper.destroy(vehicle)
   if not ok then
     return false, err
   end
-  ok, err = _require_param(vehicle, "vehicle", "destroy")
+  ok, err = _require_params({ vehicle = vehicle }, "destroy", "vehicle")
   if not ok then
     return false, err
   end
@@ -119,7 +105,7 @@ function vehicle_helper.destroy(vehicle)
 end
 
 function vehicle_helper.get_driving_vehicle(character)
-  local ok, err = _require_param(character, "character", "get_driving_vehicle")
+  local ok, err = _require_params({ character = character }, "get_driving_vehicle", "character")
   if not ok then
     return nil, err
   end
@@ -137,11 +123,7 @@ function vehicle_helper.enter(life_entity, vehicle)
   if not ok then
     return false, err
   end
-  ok, err = _require_param(life_entity, "life_entity", "enter")
-  if not ok then
-    return false, err
-  end
-  ok, err = _require_param(vehicle, "vehicle", "enter")
+  ok, err = _require_params({ life_entity = life_entity, vehicle = vehicle }, "enter", "life_entity", "vehicle")
   if not ok then
     return false, err
   end
@@ -164,7 +146,7 @@ function vehicle_helper.exit(life_entity)
   if not ok then
     return false, err
   end
-  ok, err = _require_param(life_entity, "life_entity", "exit")
+  ok, err = _require_params({ life_entity = life_entity }, "exit", "life_entity")
   if not ok then
     return false, err
   end
@@ -186,15 +168,7 @@ function vehicle_helper.move(vehicle, direction, duration)
   if not ok then
     return false, err
   end
-  ok, err = _require_param(vehicle, "vehicle", "move")
-  if not ok then
-    return false, err
-  end
-  ok, err = _require_param(direction, "direction", "move")
-  if not ok then
-    return false, err
-  end
-  ok, err = _require_param(duration, "duration", "move")
+  ok, err = _require_params({ vehicle = vehicle, direction = direction, duration = duration }, "move", "vehicle", "direction", "duration")
   if not ok then
     return false, err
   end
@@ -218,7 +192,7 @@ function vehicle_helper.stop(vehicle)
   if not ok then
     return false, err
   end
-  ok, err = _require_param(vehicle, "vehicle", "stop")
+  ok, err = _require_params({ vehicle = vehicle }, "stop", "vehicle")
   if not ok then
     return false, err
   end
@@ -240,7 +214,7 @@ function vehicle_helper.reset(vehicle)
   if not ok then
     return false, err
   end
-  ok, err = _require_param(vehicle, "vehicle", "reset")
+  ok, err = _require_params({ vehicle = vehicle }, "reset", "vehicle")
   if not ok then
     return false, err
   end
