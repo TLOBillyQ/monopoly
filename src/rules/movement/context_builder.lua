@@ -53,18 +53,23 @@ local function _new_move_state(game, player, steps, opts, abs_steps)
   }
 end
 
+local function _resolve_start_on_outer(ctx)
+  if not (ctx.start_tile and ctx.board.map and ctx.board.map.outer_next) then
+    return false
+  end
+  local start_on_outer = ctx.board.map.outer_next[ctx.start_tile.id] ~= nil
+  if not start_on_outer then
+    ctx.entered_inner = true
+  end
+  return start_on_outer
+end
+
 local function _build_move_context(game, player, steps, opts)
   opts = opts or {}
   local abs_steps = steps < 0 and -steps or steps
   local ctx = _new_move_state(game, player, steps, opts, abs_steps)
   ctx.start_tile = ctx.board:get_tile(player.position)
-  local start_on_outer = false
-  if ctx.start_tile and ctx.board.map and ctx.board.map.outer_next then
-    start_on_outer = ctx.board.map.outer_next[ctx.start_tile.id] ~= nil
-    if not start_on_outer then
-      ctx.entered_inner = true
-    end
-  end
+  local start_on_outer = _resolve_start_on_outer(ctx)
   ctx.step_fn = _resolve_step_fn(ctx.board, ctx.backward)
   local facing_mode = _resolve_facing_mode(steps, opts)
   ctx.facing = facing_policy.resolve_initial_facing(facing_mode, player, opts)

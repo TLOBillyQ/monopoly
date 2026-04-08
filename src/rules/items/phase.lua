@@ -229,6 +229,23 @@ local function _resolve_auto_phase_action_anim(game, phase, args, pre, should_fi
   return { waiting = true, wait_action_anim = true, next_state = next_state, next_args = next_args }
 end
 
+local function _try_dispatch_animation(game, player, phase, args, pre, repeatable)
+  if type(pre) == "table" and type(pre.after_action_anim) == "table" then
+    return _resolve_auto_phase_action_anim(game, phase, args, pre, phase ~= "post_action"), false
+  end
+  if game.turn.action_anim then
+    if not repeatable then
+      return _resolve_auto_phase_action_anim(game, phase, args, pre, true), false
+    end
+    return nil, true
+  end
+  if not repeatable then
+    phase_module.finish(game, phase)
+    return nil, false
+  end
+  return nil, false
+end
+
 local function _run_auto_phase(game, player, phase, args)
   local repeatable = phase_module.is_repeatable(phase)
   local saw_action_anim = false
@@ -244,18 +261,12 @@ local function _run_auto_phase(game, player, phase, args)
     if pre == nil then
       break
     end
-    local after_action_anim = type(pre) == "table" and pre.after_action_anim or nil
-    if type(after_action_anim) == "table" then
-      return _resolve_auto_phase_action_anim(game, phase, args, pre, phase ~= "post_action")
+    local dispatch_result, saw_anim = _try_dispatch_animation(game, player, phase, args, pre, repeatable)
+    if dispatch_result ~= nil then
+      return dispatch_result
     end
-    if game.turn.action_anim then
+    if saw_anim then
       saw_action_anim = true
-      if not repeatable then
-        return _resolve_auto_phase_action_anim(game, phase, args, pre, true)
-      end
-    elseif not repeatable then
-      phase_module.finish(game, phase)
-      return nil
     end
   end
   phase_module.finish(game, phase)

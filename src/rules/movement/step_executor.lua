@@ -2,6 +2,21 @@ local interrupt_handler = require("src.rules.movement.interrupt_handler")
 
 local step_executor = {}
 
+local function _sync_inner_transition(ctx, entered_inner, previous_tile, current_tile)
+  if entered_inner then
+    ctx.entered_inner = true
+    return
+  end
+  if previous_tile
+    and current_tile
+    and ctx.board.map
+    and ctx.board.map.outer_next
+    and ctx.board.map.outer_next[previous_tile.id] == nil
+    and ctx.board.map.outer_next[current_tile.id] ~= nil then
+    ctx.exited_inner = true
+  end
+end
+
 local function _step_move(ctx, step)
   local next_index, passed, next_facing, entered_inner
   local previous_index = ctx.current
@@ -23,16 +38,7 @@ local function _step_move(ctx, step)
     ctx.arrival_direction = ctx.board.map.direction(previous_tile.id, current_tile.id)
     ctx.arrival_from_index = previous_index
   end
-  if entered_inner then
-    ctx.entered_inner = true
-  elseif previous_tile
-    and current_tile
-    and ctx.board.map
-    and ctx.board.map.outer_next
-    and ctx.board.map.outer_next[previous_tile.id] == nil
-    and ctx.board.map.outer_next[current_tile.id] ~= nil then
-    ctx.exited_inner = true
-  end
+  _sync_inner_transition(ctx, entered_inner, previous_tile, current_tile)
   ctx.visited[#ctx.visited + 1] = ctx.current
   return step
 end

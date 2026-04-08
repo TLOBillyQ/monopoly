@@ -77,6 +77,25 @@ local function _resolve_initial_dirs(start_neigh, facing)
   return fwd and { facing } or {}
 end
 
+local function _push_branch_or_seed_to_stack(state, is_multi_start, stack, first_id, first_path, first_neigh, opposite, dir)
+  if not first_neigh then
+    state.branches[#state.branches + 1] = first_path
+    return
+  end
+  local back_from_first = opposite[dir]
+  local fork_dirs = _get_sorted_forward_dirs(first_neigh, back_from_first)
+  if #fork_dirs == 0 then
+    state.branches[#state.branches + 1] = first_path
+    return
+  end
+  local is_fork = is_multi_start or #fork_dirs > 1
+  for j = #fork_dirs, 1, -1 do
+    local fdir = fork_dirs[j]
+    local seed_path = is_fork and _copy_path(first_path) or first_path
+    stack[#stack + 1] = { id = first_id, facing = fdir, depth = 1, path = seed_path }
+  end
+end
+
 local function _seed_stack(game, board, state, start_neigh, initial_dirs, neighbors, opposite)
   local stack = {}
   local is_multi_start = #initial_dirs > 1
@@ -89,26 +108,43 @@ local function _seed_stack(game, board, state, start_neigh, initial_dirs, neighb
         local first_had_obstacle = _visit_tile(game, board, state, first_id, first_index)
         local first_path = { { tile_index = first_index, has_obstacle = first_had_obstacle } }
         local first_neigh = neighbors[first_id]
-        if not first_neigh then
-          state.branches[#state.branches + 1] = first_path
-        else
-          local back_from_first = opposite[dir]
-          local fork_dirs = _get_sorted_forward_dirs(first_neigh, back_from_first)
-          if #fork_dirs == 0 then
-            state.branches[#state.branches + 1] = first_path
-          else
-            local is_fork = is_multi_start or #fork_dirs > 1
-            for j = #fork_dirs, 1, -1 do
-              local fdir = fork_dirs[j]
-              local seed_path = is_fork and _copy_path(first_path) or first_path
-              stack[#stack + 1] = { id = first_id, facing = fdir, depth = 1, path = seed_path }
-            end
-          end
-        end
+        _push_branch_or_seed_to_stack(state, is_multi_start, stack, first_id, first_path, first_neigh, opposite, dir)
       end
     end
   end
   return stack
+end
+
+local function _process_stack_frame(game, board, frame, state, neighbors, opposite, stack)
+  if frame.depth >= state.distance then
+    state.branches[#state.branches + 1] = frame.path
+    return
+  end
+  local neigh = neighbors[frame.id]
+  if not neigh then
+    state.branches[#state.branches + 1] = frame.path
+    return
+  end
+  local dirs = _next_strict_or_turn(neigh, frame.facing, opposite)
+  if #dirs == 0 then
+    state.branches[#state.branches + 1] = frame.path
+    return
+  end
+  local branching = #dirs > 1
+  for i = #dirs, 1, -1 do
+    local dir = dirs[i]
+    local next_id = neigh[dir]
+    local next_index = next_id and board:index_of_tile_id(next_id) or nil
+    if next_index then
+      local had_obstacle = _visit_tile(game, board, state, next_id, next_index)
+      local entry = { tile_index = next_index, has_obstacle = had_obstacle }
+      local new_path = branching and _copy_path(frame.path) or frame.path
+      new_path[#new_path + 1] = entry
+      stack[#stack + 1] = { id = next_id, facing = dir, depth = frame.depth + 1, path = new_path }
+    else
+      state.branches[#state.branches + 1] = frame.path
+    end
+  end
 end
 
 local function _walk_and_clear(game, player, board, state, context)
@@ -135,36 +171,7 @@ local function _walk_and_clear(game, player, board, state, context)
   while #stack > 0 do
     local frame = stack[#stack]
     stack[#stack] = nil
-
-    if frame.depth >= state.distance then
-      state.branches[#state.branches + 1] = frame.path
-    else
-      local neigh = neighbors[frame.id]
-      if not neigh then
-        state.branches[#state.branches + 1] = frame.path
-      else
-        local dirs = _next_strict_or_turn(neigh, frame.facing, opposite)
-        if #dirs == 0 then
-          state.branches[#state.branches + 1] = frame.path
-        else
-          local branching = #dirs > 1
-          for i = #dirs, 1, -1 do
-            local dir = dirs[i]
-            local next_id = neigh[dir]
-            local next_index = next_id and board:index_of_tile_id(next_id) or nil
-            if next_index then
-              local had_obstacle = _visit_tile(game, board, state, next_id, next_index)
-              local entry = { tile_index = next_index, has_obstacle = had_obstacle }
-              local new_path = branching and _copy_path(frame.path) or frame.path
-              new_path[#new_path + 1] = entry
-              stack[#stack + 1] = { id = next_id, facing = dir, depth = frame.depth + 1, path = new_path }
-            else
-              state.branches[#state.branches + 1] = frame.path
-            end
-          end
-        end
-      end
-    end
+    _process_stack_frame(game, board, frame, state, neighbors, opposite, stack)
   end
 end
 

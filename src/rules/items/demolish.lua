@@ -119,6 +119,20 @@ function demolish.find_target(game, player, distance)
   return idx
 end
 
+local function _build_demolish_msg(player, tile, injure, hit)
+  if injure then
+    local msg = player.name .. " 发射导弹轰炸 " .. tile.name
+    if tile.type == "land" then
+       msg = msg .. "，建筑被摧毁"
+    end
+    if hit > 0 then
+      msg = msg .. "，" .. number_utils.format_integer_part(hit) .. " 名玩家送医"
+    end
+    return msg, "missile"
+  end
+  return player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑", "monster"
+end
+
 function demolish.apply(game, player, idx, opts)
   opts = opts or {}
   _clear_overlays(game, idx)
@@ -133,23 +147,7 @@ function demolish.apply(game, player, idx, opts)
     hit = #hospital_targets
   end
 
-  local msg
-  if opts.injure then
-    msg = player.name .. " 发射导弹轰炸 " .. tile.name
-    if tile.type == "land" then
-       msg = msg .. "，建筑被摧毁"
-    end
-    if hit > 0 then
-      msg = msg .. "，" .. number_utils.format_integer_part(hit) .. " 名玩家送医"
-    end
-  else
-    msg = player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑"
-  end
-
-  local kind = "monster"
-  if opts.injure then
-    kind = "missile"
-  end
+  local msg, kind = _build_demolish_msg(player, tile, opts.injure, hit)
   local log_entries = { msg }
   local queued = action_anim_port.queue(game, {
     kind = kind,

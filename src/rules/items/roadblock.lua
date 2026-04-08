@@ -128,29 +128,28 @@ local function _format_label(cand)
   return dir_label .. number_utils.format_integer_part(cand.step) .. "格：" .. cand.tile.name .. " (" .. cand.tile.type .. ")"
 end
 
+local function _append_auto_candidate(list, game, player, board, seen, entry)
+  local cand = _make_candidate(board, player, entry.idx, entry.dir, entry.step, seen)
+  if not cand then
+    return
+  end
+  cand.priority = _priority_for_candidate(game, player, cand)
+  if cand.priority then
+    table.insert(list, cand)
+  end
+end
+
 function roadblock.auto_candidates(game, player, distance)
   local board = game.board
   local seen = {}
   local list = {}
 
   for _, entry in ipairs(_forward_indices(board, player, distance or 3)) do
-    local cand = _make_candidate(board, player, entry.idx, entry.dir, entry.step, seen)
-    if cand then
-      cand.priority = _priority_for_candidate(game, player, cand)
-      if cand.priority then
-        table.insert(list, cand)
-      end
-    end
+    _append_auto_candidate(list, game, player, board, seen, entry)
   end
 
   for _, entry in ipairs(_backward_indices(board, player, distance or 3)) do
-    local cand = _make_candidate(board, player, entry.idx, entry.dir, entry.step, seen)
-    if cand then
-      cand.priority = _priority_for_candidate(game, player, cand)
-      if cand.priority then
-        table.insert(list, cand)
-      end
-    end
+    _append_auto_candidate(list, game, player, board, seen, entry)
   end
 
   table.sort(list, function(a, b)

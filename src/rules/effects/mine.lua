@@ -11,15 +11,19 @@ local function _build_obstacle_chain_key(game, player, position)
   return tostring(turn_count) .. ":" .. tostring(player.id) .. ":" .. tostring(position)
 end
 
+local function _is_matching_roadblock_trigger(entry, player, position)
+  return entry
+    and entry.kind == "roadblock_trigger"
+    and entry.player_id == player.id
+    and entry.tile_index == position
+end
+
 local function _find_pending_roadblock_trigger(game, player, position)
   if not (game and game.turn) then
     return nil
   end
   local current = game.turn.action_anim
-  if current
-      and current.kind == "roadblock_trigger"
-      and current.player_id == player.id
-      and current.tile_index == position then
+  if _is_matching_roadblock_trigger(current, player, position) then
     return current
   end
   local queue = game.turn.action_anim_queue
@@ -27,9 +31,7 @@ local function _find_pending_roadblock_trigger(game, player, position)
     return nil
   end
   for _, entry in ipairs(queue) do
-    if entry.kind == "roadblock_trigger"
-        and entry.player_id == player.id
-        and entry.tile_index == position then
+    if _is_matching_roadblock_trigger(entry, player, position) then
       return entry
     end
   end

@@ -57,6 +57,38 @@ local function _fulfill_item(game, player, entry, opts, price, currency, priced_
   }
 end
 
+local function _try_apply_skin_to_unit(player_id, creature_key)
+  local role = runtime_ports.resolve_role(player_id)
+  if not (role and type(role.get_ctrl_unit) == "function") then
+    logger.warn("fulfill_skin: no role found for player " .. tostring(player_id))
+    return
+  end
+  local ok_unit, unit = pcall(role.get_ctrl_unit)
+  if not ok_unit then
+    logger.warn("fulfill_skin: role get_ctrl_unit failed for player " .. tostring(player_id))
+    unit = nil
+  end
+  if not (unit and type(unit.change_custom_model_by_creature_key) == "function") then
+    logger.warn("fulfill_skin: unit missing change_custom_model_by_creature_key for player " .. tostring(player_id))
+    return
+  end
+  if creature_key then
+    local ok_change = pcall(unit.change_custom_model_by_creature_key, creature_key)
+    if ok_change then
+      logger.info(
+        "market skin fulfill applied",
+        "player_id=" .. tostring(player_id),
+        "product_id=N/A",
+        "creature_key=" .. tostring(creature_key)
+      )
+    else
+      logger.warn("fulfill_skin: change_custom_model_by_creature_key failed for player " .. tostring(player_id))
+    end
+  else
+    logger.warn("fulfill_skin: invalid product_id for player " .. tostring(player_id))
+  end
+end
+
 local function _fulfill_skin(game, player, entry, opts, price, currency, priced_text)
   if not _charge_if_needed(game, player, currency, price, opts) then
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
@@ -73,35 +105,7 @@ local function _fulfill_skin(game, player, entry, opts, price, currency, priced_
     "product_id=" .. tostring(entry.product_id),
     "creature_key=" .. tostring(creature_key)
   )
-  local role = runtime_ports.resolve_role(player.id)
-  if role and type(role.get_ctrl_unit) == "function" then
-    local ok_unit, unit = pcall(role.get_ctrl_unit)
-    if not ok_unit then
-      logger.warn("fulfill_skin: role get_ctrl_unit failed for player " .. tostring(player.id))
-      unit = nil
-    end
-    if unit and type(unit.change_custom_model_by_creature_key) == "function" then
-      if creature_key then
-        local ok_change = pcall(unit.change_custom_model_by_creature_key, creature_key)
-        if ok_change then
-          logger.info(
-            "market skin fulfill applied",
-            "player_id=" .. tostring(player.id),
-            "product_id=" .. tostring(entry.product_id),
-            "creature_key=" .. tostring(creature_key)
-          )
-        else
-          logger.warn("fulfill_skin: change_custom_model_by_creature_key failed for player " .. tostring(player.id))
-        end
-      else
-        logger.warn("fulfill_skin: invalid product_id " .. tostring(entry.product_id))
-      end
-    else
-      logger.warn("fulfill_skin: unit missing change_custom_model_by_creature_key for player " .. tostring(player.id))
-    end
-  else
-    logger.warn("fulfill_skin: no role found for player " .. tostring(player.id))
-  end
+  _try_apply_skin_to_unit(player.id, creature_key)
   _emit_event(monopoly_event.market.bought_item, {
     player = player,
     entry = entry,
