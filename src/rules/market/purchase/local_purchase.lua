@@ -11,7 +11,6 @@ function local_purchase.execute(game, player, entry, opts)
   local price = context.entry_price(entry)
   local currency = context.entry_currency(entry)
 
-  context.sync_managed_balance(game, player, currency)
   if game:player_balance(player, currency) < price then
     feedback.emit_buy_failed(player, entry, "insufficient_balance", player.name .. " 余额不足")
     return { ok = false, reason = "insufficient_balance", option_id = product_id }

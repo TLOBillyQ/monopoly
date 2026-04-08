@@ -1,7 +1,5 @@
 local constants = {
   starting_cash = 100000,
-  starting_jindou = 0,
-  starting_leyuanbi = 0,
   default_dice_count = 1,
   action_timeout_seconds = 15,
   pass_start_bonus = 2000,

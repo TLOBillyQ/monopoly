@@ -5,6 +5,7 @@ local runtime_ports = require("src.core.ports.runtime_ports")
 local monopoly_event = require("src.core.events")
 local choice_resolver = require("src.core.choice.resolver")
 local number_utils = require("src.core.utils.number_utils")
+local runtime_refs = require("src.config.content.runtime_refs")
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do
@@ -80,8 +81,6 @@ local function _test_auto_execute_empty_list_no_purchase()
 
   -- Set player to have no cash so no items are available
   g:set_player_cash(p, 0)
-  g:set_player_balance(p, "金豆", 0)
-  g:set_player_balance(p, "乐园币", 0)
 
   local before_cash = p.cash
   market_service.auto.execute(g, p)
@@ -212,14 +211,11 @@ local function _test_skin_entry_can_buy_but_no_effect()
   local currency = target.currency or "金币"
   if currency == "金币" then
     g:set_player_cash(p, price + 1000)
-  else
-    g:set_player_balance(p, currency, price + 1000)
   end
 
   local change_skin_creature_key = nil
 
   local before_count = p.inventory:count()
-  local before_balance = g:player_balance(p, currency)
   local before_seat_id = p.seat_id
   local before_limit = g.market_limits[target.product_id]
   local panel_calls = {}
@@ -288,7 +284,6 @@ local function _test_skin_entry_can_buy_but_no_effect()
     assert(type(res) == "table" and res.ok == true and res.deferred_fulfillment == true,
       "skin entry purchase should start external goods flow")
     assert(#panel_calls == 1, "skin entry should open purchase panel")
-    assert(g:player_balance(p, currency) == before_balance, "skin purchase should not deduct local balance before callback")
     assert(g.market_limits[target.product_id] == before_limit, "skin purchase should not consume global limit before callback")
 
     local cb = purchase_handlers[p.id]
@@ -296,12 +291,12 @@ local function _test_skin_entry_can_buy_but_no_effect()
     cb(nil, nil, { role = role, goods_id = "goods_skin_test" })
   end)
 
-  assert(g:player_balance(p, currency) == before_balance, "skin callback should not deduct local display balance")
   assert(g.market_limits[target.product_id] == before_limit - 1, "skin callback should consume global limit")
   assert(p.inventory:count() == before_count, "skin purchase should not change inventory")
   assert(p.seat_id == before_seat_id, "skin purchase should not change seat")
-  assert(change_skin_creature_key == number_utils.to_integer(target.product_id),
-    "skin purchase should call change_custom_model_by_creature_key with integer product_id")
+  local expected_creature_key = runtime_refs.skins[tostring(target.product_id)] or number_utils.to_integer(target.product_id)
+  assert(change_skin_creature_key == expected_creature_key,
+    "skin purchase should call change_custom_model_by_creature_key with creature_key")
 end
 
 local function _test_market_choice_marks_skin_options_for_pre_confirm()
@@ -317,7 +312,6 @@ local function _test_market_choice_marks_skin_options_for_pre_confirm()
   local market_service = require("src.rules.market")
   local g = _new_game()
   local p = g:current_player()
-  g:set_player_balance(p, "金豆", 999999)
 
   local spec = market_service.choice.build(p, g, { active_tab = "skin" })
   assert(type(spec) == "table" and spec.kind == "market_buy", "skin tab should build market choice")
@@ -335,7 +329,6 @@ local function _test_market_disabled_products_hidden()
   local market_service = require("src.rules.market")
   local g = _new_game()
   local p = g:current_player()
-  g:set_player_balance(p, "金豆", 999999)
 
   local blocked_product_ids = {}
   for _, entry in ipairs(market_cfg) do
@@ -364,7 +357,6 @@ local function _test_buy_disabled_market_product_rejected()
   local market_service = require("src.rules.market")
   local g = _new_game()
   local p = g:current_player()
-  g:set_player_balance(p, "金豆", 999999)
 
   local blocked_product_id = nil
   for _, entry in ipairs(market_cfg) do
@@ -376,12 +368,10 @@ local function _test_buy_disabled_market_product_rejected()
   if blocked_product_id == nil then
     return
   end
-  local before_balance = g:player_balance(p, "金豆")
   local before_seat_id = p.seat_id
 
   local res = market_service.purchase.execute(g, p, blocked_product_id, nil)
   assert(type(res) == "table" and res.ok == false, "disabled market product should be rejected")
-  assert(g:player_balance(p, "金豆") == before_balance, "balance should not change when buying disabled product")
   assert(p.seat_id == before_seat_id, "seat should not change when buying disabled product")
 end
 
@@ -390,8 +380,6 @@ local function _test_market_tab_all_unbuyable_still_builds_market_choice()
   local g = _new_game()
   local p = g:current_player()
 
-  g:set_player_balance(p, "金豆", 0)
-  g:set_player_balance(p, "乐园币", 0)
   g:set_player_cash(p, 0)
 
   local spec = market_service.choice.build(p, g, { active_tab = "skin" })
@@ -408,8 +396,6 @@ local function _test_market_tab_select_navigation_applies_with_unbuyable_tab()
   local g = _new_game()
   local p = g:current_player()
 
-  g:set_player_balance(p, "金豆", 0)
-  g:set_player_balance(p, "乐园币", 0)
   g:set_player_cash(p, 0)
 
   local spec = market_service.choice.build(p, g, { active_tab = "item" })

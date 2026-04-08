@@ -65,8 +65,6 @@ local function _create_players(opts)
         constants = constants,
         balances = {
           ["金币"] = constants.starting_cash,
-          ["金豆"] = constants.starting_jindou,
-          ["乐园币"] = constants.starting_leyuanbi,
         },
         deity_duration_turns = constants.deity_duration_turns,
         inventory = inventory:new({ constants = constants }),
@@ -93,8 +91,6 @@ local function _create_players(opts)
       constants = constants,
       balances = {
         ["金币"] = constants.starting_cash,
-        ["金豆"] = constants.starting_jindou,
-        ["乐园币"] = constants.starting_leyuanbi,
       },
       deity_duration_turns = constants.deity_duration_turns,
       inventory = inventory:new({ constants = constants }),

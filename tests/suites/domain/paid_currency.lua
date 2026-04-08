@@ -298,7 +298,6 @@ local function _test_hidden_paid_product_is_rejected_before_mapping()
 
   local game = _new_game()
   local p = game.players[1]
-  game:set_player_balance(p, hidden_entry.currency, 999999)
   local env = _build_fake_env(game, {
     goods_list = {
       { name = "强征卡", goods_id = "goods_strong_card" },

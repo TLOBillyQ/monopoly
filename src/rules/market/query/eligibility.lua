@@ -24,7 +24,6 @@ function eligibility.can_buy_entry(game, player, entry)
     local ok = paid_purchase_port.can_start(game, player, entry)
     return ok == true
   end
-  context.sync_managed_balance(game, player, currency)
   return game:player_balance(player, currency) >= price
 end
 

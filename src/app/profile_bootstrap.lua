@@ -40,13 +40,6 @@ local function _apply_player_resources(game, player, player_cfg)
   if player_cfg.cash ~= nil then
     game:set_player_cash(player, player_cfg.cash)
   end
-
-  local balances = player_cfg.balances
-  if type(balances) == "table" then
-    for currency, amount in pairs(balances) do
-      game:set_player_balance(player, currency, amount)
-    end
-  end
 end
 
 local function _apply_player_position_bootstrap(game, player, player_cfg)

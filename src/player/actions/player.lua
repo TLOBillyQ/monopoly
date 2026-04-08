@@ -21,8 +21,6 @@ function player:init(attrs)
   local cash = balances["金币"]
   assert(cash ~= nil, "balances missing 金币")
   balances["金币"] = nil
-  assert(balances["金豆"] ~= nil, "balances missing 金豆")
-  assert(balances["乐园币"] ~= nil, "balances missing 乐园币")
 
   self.id = attrs.id
   assert(attrs.name ~= nil, "Player.new(attrs) requires attrs.name")
@@ -44,7 +42,6 @@ function player:init(attrs)
   }
   self.inventory = attrs.inventory
   self.properties = {}
-  self.balances = balances
   self.eliminated = false
 end
 

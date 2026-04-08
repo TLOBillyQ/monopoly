@@ -60,20 +60,11 @@ function context.remaining_global_limit(game, product_id)
   return game.market_limits[product_id]
 end
 
-function context.sync_managed_balance(game, player, currency)
-  if paid_currency_bridge.is_managed_currency(game, currency) then
-    paid_currency_bridge.sync_player_currency(game, player, currency)
-  end
-end
-
 function context.is_paid_currency(currency)
   return paid_currency_bridge.is_paid_currency(currency)
 end
 
 function context.try_charge_player(game, player, currency, price, opts)
-  if paid_currency_bridge.is_managed_currency(game, currency) then
-    return paid_currency_bridge.consume_currency(game, player, currency, price)
-  end
   game:deduct_player_balance(player, currency, price, opts)
   return true
 end
