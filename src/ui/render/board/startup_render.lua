@@ -2,6 +2,12 @@ local visual_sync = require("src.ui.render.board.visual_sync")
 
 local M = {}
 
+local function _append_overlay_indices(overlay_indices, overlay_map)
+  for board_index in pairs(overlay_map or {}) do
+    overlay_indices[#overlay_indices + 1] = board_index
+  end
+end
+
 function M.apply(state, board, scene)
   local game = state and state.game or nil
   local render_bootstrap = game and game.test_profile_render_bootstrap or nil
@@ -17,12 +23,8 @@ function M.apply(state, board, scene)
   end
 
   local overlays = render_bootstrap.overlays or {}
-  for board_index in pairs(overlays.roadblock or {}) do
-    overlay_indices[#overlay_indices + 1] = board_index
-  end
-  for board_index in pairs(overlays.mine or {}) do
-    overlay_indices[#overlay_indices + 1] = board_index
-  end
+  _append_overlay_indices(overlay_indices, overlays.roadblock)
+  _append_overlay_indices(overlay_indices, overlays.mine)
   local rendered = visual_sync.sync_many(state, {
     tile_ids = tile_ids,
     overlay_indices = overlay_indices,

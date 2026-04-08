@@ -7,6 +7,19 @@ local stop = require("src.ui.render.move_anim.stop")
 
 local playback = {}
 
+local function _should_skip_stop_active_sequence(board_scene, player_id, anim_ctx, token)
+  if rt.token_matches(board_scene, player_id, token) then
+    return false
+  end
+  debug_mod.debug_log(
+    "finish_skip_stale_token",
+    "player_id=" .. tostring(player_id),
+    "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
+    "token=" .. tostring(token)
+  )
+  return true
+end
+
 function playback.step_duration(scene, from_index, to_index, anim_ctx)
   return seq_builder.calc_step_time(scene, from_index, to_index, anim_ctx)
 end
@@ -51,13 +64,7 @@ function playback.one_step(scene, player_id, from_index, to_index, anim_ctx)
 end
 
 local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
-  if not rt.token_matches(board_scene, player_id, token) then
-    debug_mod.debug_log(
-      "finish_skip_stale_token",
-      "player_id=" .. tostring(player_id),
-      "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
-      "token=" .. tostring(token)
-    )
+  if _should_skip_stop_active_sequence(board_scene, player_id, anim_ctx, token) then
     return
   end
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil

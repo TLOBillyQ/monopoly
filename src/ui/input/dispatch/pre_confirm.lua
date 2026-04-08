@@ -125,6 +125,29 @@ function pre_confirm_flow.needs_pre_confirm(state, intent)
   return false
 end
 
+local function _resolve_enter_params(state, intent, choice)
+  local source_screen = state.ui and state.ui.active_choice_screen_key or nil
+  local option_id, option_label
+
+  if intent.type == "choice_select" then
+    option_id = intent.option_id
+    option_label = choice_support.resolve_option_label_by_id(choice, option_id) or tostring(option_id)
+  elseif intent.type == "market_confirm" then
+    source_screen = "market"
+    option_id, option_label = _resolve_market_skin_option(state, intent)
+  elseif intent.type == "ui_button" then
+    source_screen = "base_inline"
+    option_id, option_label = _resolve_item_slot_option(state, intent)
+  end
+
+  if not option_id then
+    return nil
+  end
+  local title = choice_support.resolve_secondary_confirm_title(choice, state.game, source_screen, option_id)
+  local body = choice_support.resolve_secondary_confirm_body(choice, state.game, source_screen, option_id, option_label)
+  return { source_screen = source_screen, option_id = option_id, title = title, body = body }
+end
+
 function pre_confirm_flow.enter(state, intent)
   local current_model = runtime_state.get_ui_model(state)
   local choice = current_model and current_model.choice or nil
@@ -135,44 +158,18 @@ function pre_confirm_flow.enter(state, intent)
     return false
   end
 
-  local source_screen = state.ui and state.ui.active_choice_screen_key or nil
-  local option_id
-  local option_label
-  local title
-  local body
-
-  if intent.type == "choice_select" then
-    option_id = intent.option_id
-    option_label = choice_support.resolve_option_label_by_id(choice, option_id) or tostring(option_id)
-    title = choice_support.resolve_secondary_confirm_title(choice, state.game, source_screen, option_id)
-    body = choice_support.resolve_secondary_confirm_body(choice, state.game, source_screen, option_id, option_label)
-  elseif intent.type == "market_confirm" then
-    source_screen = "market"
-    option_id, option_label = _resolve_market_skin_option(state, intent)
-    if not option_id then
-      return false
-    end
-    title = choice_support.resolve_secondary_confirm_title(choice, state.game, source_screen, option_id)
-    body = choice_support.resolve_secondary_confirm_body(choice, state.game, source_screen, option_id, option_label)
-  elseif intent.type == "ui_button" then
-    source_screen = "base_inline"
-    option_id, option_label = _resolve_item_slot_option(state, intent)
-    if not option_id then
-      return false
-    end
-    title = choice_support.resolve_secondary_confirm_title(choice, state.game, source_screen, option_id)
-    body = choice_support.resolve_secondary_confirm_body(choice, state.game, source_screen, option_id, option_label)
-  else
+  local params = _resolve_enter_params(state, intent, choice)
+  if not params then
     return false
   end
 
   state._pre_confirm_active = true
-  state._pre_confirm_source_screen = source_screen
+  state._pre_confirm_source_screen = params.source_screen
   local modal = _modal_ports(state)
   if type(modal.open_pre_confirm_screen) ~= "function" then
     return false
   end
-  modal.open_pre_confirm_screen(state, choice, option_id, title, body)
+  modal.open_pre_confirm_screen(state, choice, params.option_id, params.title, params.body)
   return true
 end
 

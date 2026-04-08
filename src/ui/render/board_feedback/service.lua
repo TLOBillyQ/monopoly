@@ -147,6 +147,17 @@ local function _schedule_followup_sound(cue_name, pos, entry)
   })
   return true
 end
+local function _resolve_with_sound(cue, payload)
+  local with_sound = payload and payload.with_sound
+  if with_sound == nil then
+    with_sound = cue.with_sound
+  end
+  if with_sound == nil then
+    with_sound = default_with_sound
+  end
+  return with_sound
+end
+
 local function _play_effect(cue_name, cue, pos, unit, payload)
   local effect_id = _resolve_cue_ref_id(cue_name, cue, payload, "effect", runtime_refs.effects)
   if effect_id == nil then
@@ -157,13 +168,7 @@ local function _play_effect(cue_name, cue, pos, unit, payload)
   local scale = _resolve_sfx_scale(cue_name, payload and payload.scale or cue.scale, default_sfx_scale)
   local rot = payload and payload.rot or cue.rot or runtime_constants.q_zero
   local rate = _resolve_numeric(payload and payload.rate or cue.rate, default_sfx_rate)
-  local with_sound = payload and payload.with_sound
-  if with_sound == nil then
-    with_sound = cue.with_sound
-  end
-  if with_sound == nil then
-    with_sound = default_with_sound
-  end
+  local with_sound = _resolve_with_sound(cue, payload)
   local host_runtime = active_host_runtime
   if not (host_runtime and type(host_runtime.play_sfx_by_key) == "function") then
     return false
@@ -203,6 +208,20 @@ local function _play_sound(cue_name, cue, pos, payload)
   local sound_handle = host_runtime.play_3d_sound(pos, sound_id, duration, volume)
   return sound_handle ~= nil
 end
+
+local function _play_followup_sounds(cue_name, pos, followup_sounds)
+  local played = false
+  if type(followup_sounds) ~= "table" then
+    return played
+  end
+  for _, entry in ipairs(followup_sounds) do
+    if _schedule_followup_sound(cue_name, pos, entry) then
+      played = true
+    end
+  end
+  return played
+end
+
 local function _play_cue(state, cue_name, pos, unit, payload)
   local cue = type(cue_name) == "string" and cue_name ~= "" and catalog.get(cue_name) or nil
   if cue == nil then
@@ -219,12 +238,8 @@ local function _play_cue(state, cue_name, pos, unit, payload)
     played = true
   end
   local followup_sounds = payload and payload.followup_sounds or cue.followup_sounds
-  if type(followup_sounds) == "table" then
-    for _, entry in ipairs(followup_sounds) do
-      if _schedule_followup_sound(cue_name, pos, entry) then
-        played = true
-      end
-    end
+  if _play_followup_sounds(cue_name, pos, followup_sounds) then
+    played = true
   end
   return played
 end

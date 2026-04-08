@@ -18,6 +18,18 @@ local _trigger_kind_for_overlay = {
   mine = "mine_trigger",
 }
 
+local function _match_in_anim_queue(queue, target_kind, tile_index)
+  if type(queue) ~= "table" then
+    return false
+  end
+  for _, entry in ipairs(queue) do
+    if entry.kind == target_kind and entry.tile_index == tile_index then
+      return true
+    end
+  end
+  return false
+end
+
 local function _has_pending_trigger_anim(state, overlay_kind, tile_index)
   local game = state and state.game or nil
   local turn = game and game.turn or nil
@@ -32,16 +44,7 @@ local function _has_pending_trigger_anim(state, overlay_kind, tile_index)
   if current and current.kind == target_kind and current.tile_index == tile_index then
     return true
   end
-  local queue = turn.action_anim_queue
-  if type(queue) ~= "table" then
-    return false
-  end
-  for _, entry in ipairs(queue) do
-    if entry.kind == target_kind and entry.tile_index == tile_index then
-      return true
-    end
-  end
-  return false
+  return _match_in_anim_queue(turn.action_anim_queue, target_kind, tile_index)
 end
 
 local function _dedupe_list(raw_list)

@@ -177,22 +177,31 @@ local function _resolve_tip_text(state, anim)
   return tip_text, should_show_tip, should_debug_log
 end
 
+local function _has_tip_text(tip_text)
+  return tip_text ~= nil and tip_text ~= ""
+end
+
+local function _enqueue_tip_text(host_runtime, anim, tip_text, tip_duration)
+  if not host_runtime then
+    return
+  end
+  host_runtime.enqueue_tip({
+    text = tip_text,
+    duration = tip_duration,
+    dedupe_key = anim and anim.dedupe_key or nil,
+    blocks_inter_turn = anim and anim.blocks_inter_turn == true or false,
+    source = anim and anim.tip_source or ("action_anim." .. tostring(anim and anim.kind or "tip")),
+    chain_key = anim and anim.chain_key or nil,
+  })
+end
+
 local function _emit_tip_text(host_runtime, anim, tip_text, should_show_tip, should_debug_log, tip_duration)
-  if should_debug_log and tip_text ~= nil and tip_text ~= "" then
+  local has_tip_text = _has_tip_text(tip_text)
+  if should_debug_log and has_tip_text then
     logger.info_unlimited("[ActionAnim]", tip_text)
   end
-  if should_show_tip and tip_text ~= nil and tip_text ~= "" then
-    if host_runtime then
-      host_runtime.enqueue_tip({
-        text = tip_text,
-        duration = tip_duration,
-        dedupe_key = anim and anim.dedupe_key or nil,
-        blocks_inter_turn = anim and anim.blocks_inter_turn == true or false,
-        source = anim and anim.tip_source or ("action_anim." .. tostring(anim and anim.kind or "tip")),
-        chain_key = anim and anim.chain_key or nil,
-      })
-      return
-    end
+  if should_show_tip and has_tip_text then
+    _enqueue_tip_text(host_runtime, anim, tip_text, tip_duration)
   end
 end
 

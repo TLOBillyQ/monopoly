@@ -84,12 +84,13 @@ function sequence_builder.vehicle_helper_method(method_name)
 end
 
 local function _is_vehicle_mode(anim_ctx, move_enabled, method_name)
-  return anim_ctx
-    and sequence_builder.is_vehicle_anim(anim_ctx)
-    and (runtime_constants.vehicle_move_api_enabled == true) == move_enabled
-    and sequence_builder.vehicle_helper_method(method_name)
-    and true
-    or false
+  if not anim_ctx or not sequence_builder.is_vehicle_anim(anim_ctx) then
+    return false
+  end
+  if (runtime_constants.vehicle_move_api_enabled == true) ~= move_enabled then
+    return false
+  end
+  return sequence_builder.vehicle_helper_method(method_name) ~= nil
 end
 
 function sequence_builder.is_vehicle_move_mode(anim_ctx)

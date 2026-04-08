@@ -57,13 +57,17 @@ local function _has_any_debug_canvas(ui)
   return false
 end
 
+local function _should_hide_canvas(name, target_name, keep_debug)
+  local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
+  return name ~= coordinator.CANVAS_BASE
+    and name ~= coordinator.CANVAS_ALWAYS_SHOW
+    and name ~= target_name
+    and not keep_debug_canvas
+end
+
 local function _hide_other_canvases(target_name, keep_debug, send_fn)
   for _, name in ipairs(ui_events.canvas_names) do
-    local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
-    if name ~= coordinator.CANVAS_BASE
-      and name ~= coordinator.CANVAS_ALWAYS_SHOW
-      and name ~= target_name
-      and not keep_debug_canvas then
+    if _should_hide_canvas(name, target_name, keep_debug) then
       local hide_event = ui_events.hide[name]
       if hide_event then
         send_fn(hide_event, {})

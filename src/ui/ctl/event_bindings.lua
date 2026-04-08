@@ -23,6 +23,13 @@ local function _show_missing_button_tip(name)
   })
 end
 
+local function _report_register_node_click_failure(name, reason)
+  _show_missing_button_tip(name)
+  if name == always_show_nodes.action_log_button then
+    logger.info("[调试屏] 行动日志按钮注册失败: " .. tostring(reason))
+  end
+end
+
 function bindings.register_node_click(cache, name, callback, registered, listeners)
   assert(name ~= nil, "missing node name")
   assert(type(callback) == "function", "missing callback")
@@ -35,22 +42,16 @@ function bindings.register_node_click(cache, name, callback, registered, listene
   if not nodes then
     local ok, result = pcall(runtime.query_nodes, name)
     if not ok then
-      _show_missing_button_tip(name)
-      if name == always_show_nodes.action_log_button then
-        logger.info("[调试屏] 行动日志按钮注册失败: query_nodes异常")
-      end
+      _report_register_node_click_failure(name, "query_nodes异常")
       return
     end
     nodes = result
     cache[name] = nodes
   end
   if not nodes or not nodes[1] then
-      _show_missing_button_tip(name)
-      if name == always_show_nodes.action_log_button then
-        logger.info("[调试屏] 行动日志按钮注册失败: 未找到节点")
-      end
-      return
-    end
+    _report_register_node_click_failure(name, "未找到节点")
+    return
+  end
   registered[name] = true
   for _, node in ipairs(nodes) do
     local listener = node:listen(UIManager.EVENT.CLICK, function(data)
