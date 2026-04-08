@@ -1,12 +1,10 @@
 [CmdletBinding()]
 param(
     [string]$TargetPath,
-    [string]$StartupProfile,
     [ValidateSet("auto", "win", "windows", "mac", "macos")]
     [string]$Platform = "auto",
     [ValidateSet("release", "debug")]
     [string]$BuildMode = "release",
-    [switch]$KeepTestStartup,
     [switch]$Help
 )
 
@@ -161,32 +159,11 @@ function Join-LuaSourceDirName {
 
 function Resolve-EffectiveBuildMode {
     param(
-        [string]$RequestedBuildMode,
-        [string]$StartupProfileValue
+        [string]$RequestedBuildMode
     )
 
-    if ([string]::IsNullOrWhiteSpace($StartupProfileValue)) {
-        if ($RequestedBuildMode -ne "release") {
-            return [pscustomobject]@{
-                mode = "release"
-                note = "No startup profile was specified; forcing release build mode."
-            }
-        }
-        return [pscustomobject]@{
-            mode = "release"
-            note = $null
-        }
-    }
-
-    if ($RequestedBuildMode -ne "debug") {
-        return [pscustomobject]@{
-            mode = "debug"
-            note = "Startup profile detected; forcing debug build mode."
-        }
-    }
-
     return [pscustomobject]@{
-        mode = "debug"
+        mode = $RequestedBuildMode
         note = $null
     }
 }
@@ -275,34 +252,6 @@ function Remove-NestedPaths {
     }
 }
 
-function Invoke-GenerateStartupProfile {
-    param(
-        [string]$ProjectRoot,
-        [string]$ProfileName,
-        [string]$OutputPath
-    )
-
-    if ([string]::IsNullOrWhiteSpace($ProfileName) -or $ProfileName -eq "default") {
-        return $false
-    }
-
-    $generator = Join-Path $ProjectRoot "tools/ops/generate_startup_profile.lua"
-    if (-not (Test-Path -LiteralPath $generator -PathType Leaf)) {
-        Exit-WithError "Missing startup profile generator script"
-    }
-
-    $output_parent = Split-Path -Parent $OutputPath
-    if (-not [string]::IsNullOrWhiteSpace($output_parent)) {
-        [System.IO.Directory]::CreateDirectory($output_parent) | Out-Null
-    }
-
-    & lua $generator $ProfileName $OutputPath
-    if ($LASTEXITCODE -ne 0) {
-        Exit-WithError "Failed to generate startup profile module"
-    }
-    return $true
-}
-
 function Write-MainLua {
     param(
         [string]$SourcePath,
@@ -384,14 +333,14 @@ function Get-LuaFileCount {
 }
 
 if ($Help) {
-    Write-Info "Usage: .\\tools\\ops\\deploy.ps1 [-TargetPath PATH] [-Platform auto|win|mac] [-BuildMode release|debug] [-StartupProfile NAME] [-KeepTestStartup]"
+    Write-Info "Usage: .\\tools\\ops\\deploy.ps1 [-TargetPath PATH] [-Platform auto|win|mac] [-BuildMode release|debug]"
     exit 0
 }
 
 try {
     $project_root = Resolve-ProjectRoot
     $resolved_platform = Resolve-PlatformName $Platform
-    $build_mode_resolution = Resolve-EffectiveBuildMode -RequestedBuildMode $BuildMode -StartupProfileValue $StartupProfile
+    $build_mode_resolution = Resolve-EffectiveBuildMode -RequestedBuildMode $BuildMode
     $effective_build_mode = [string]$build_mode_resolution.mode
     $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath $resolved_platform }
     $target_path = Resolve-NormalizedPath $target_source
@@ -404,14 +353,6 @@ try {
     Write-Info ("Project root: " + $project_root)
     Write-Info ("Target path: " + $target_path)
     Write-Info ("Platform: " + $resolved_platform)
-    if ([string]::IsNullOrWhiteSpace($StartupProfile)) {
-        Write-Info "Startup profile: default (STARTUP_TEST_PROFILE not injected)"
-    } else {
-        Write-Info ("Startup profile: " + $StartupProfile)
-    }
-    if (-not [string]::IsNullOrWhiteSpace($build_mode_resolution.note)) {
-        Write-Info $build_mode_resolution.note
-    }
     Write-Info ("Build mode: " + $effective_build_mode)
     Write-Info ""
     Write-Info "--------------------------------------"
@@ -423,40 +364,28 @@ try {
         -SourceDir (Join-Path $project_root "vendor/third_party") `
         -TargetDir (Join-Path $target_path "vendor/third_party") `
         -ExcludeNames @("Behavior", "NavMesh", "Bincore.lua")
-
-    $strip_test_startup = -not $KeepTestStartup
     if ($effective_build_mode -eq "release") {
-        $strip_test_startup = $true
-    }
-    if ($strip_test_startup) {
         Remove-NestedPaths -RootDir (Join-Path $target_path "src") -RelativePaths @(
             "config/testing",
-            "app/testing"
-        )
-    }
-    if ($effective_build_mode -eq "release") {
-        Remove-NestedPaths -RootDir (Join-Path $target_path "src") -RelativePaths @(
+            "app/testing",
             "app/profile_source.lua",
             "app/profile_bootstrap.lua"
         )
     }
 
-    $generated_profile_module = $null
-    if (Invoke-GenerateStartupProfile `
-        -ProjectRoot $project_root `
-        -ProfileName $StartupProfile `
-        -OutputPath (Join-Path $target_path "Data/StartupProfileGenerated.lua")) {
-        $generated_profile_module = "Data.StartupProfileGenerated"
+    if ($effective_build_mode -eq "debug") {
+        Write-MainLua `
+            -SourcePath (Join-Path $project_root "main.lua") `
+            -TargetPath (Join-Path $target_path "main.lua") `
+            -BuildModeValue $effective_build_mode `
+            -StartupProfileValue "default"
     }
-    $startup_profile_source = if ($generated_profile_module) { "generated" } else { $null }
-
-    Write-MainLua `
-        -SourcePath (Join-Path $project_root "main.lua") `
-        -TargetPath (Join-Path $target_path "main.lua") `
-        -BuildModeValue $effective_build_mode `
-        -StartupProfileValue $StartupProfile `
-        -StartupProfileSource $startup_profile_source `
-        -StartupProfileModule $generated_profile_module
+    else {
+        Write-MainLua `
+            -SourcePath (Join-Path $project_root "main.lua") `
+            -TargetPath (Join-Path $target_path "main.lua") `
+            -BuildModeValue $effective_build_mode
+    }
     Copy-FileWithParentDir `
         -SourcePath (Join-Path $project_root "Data/UIManagerNodes.lua") `
         -TargetPath (Join-Path $target_path "Data/UIManagerNodes.lua")
