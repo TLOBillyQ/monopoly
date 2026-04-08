@@ -75,6 +75,37 @@ local function _can_auto_actor_choose(is_auto_actor, min_visible, elapsed)
   return min_visible <= 0 or elapsed >= min_visible
 end
 
+local function _resolve_auto_actor_flag(game, choice, ctx)
+  local is_auto_actor = ctx.is_auto_actor
+  if is_auto_actor == nil then
+    local actor = _resolve_choice_owner(game, choice)
+    is_auto_actor = actor and auto_play_port.is_auto_player(game, actor) or false
+  end
+  return is_auto_actor == true
+end
+
+local function _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, elapsed)
+  if mode == "wait_choice" then
+    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
+      return nil
+    end
+    return _build_auto_or_fallback_action(game, choice, false)
+  end
+  if mode == "tick_min_visible" then
+    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
+      return nil
+    end
+    return _build_auto_or_fallback_action(game, choice, true)
+  end
+  if mode == "tick_timeout" then
+    if choice.allow_cancel == true then
+      return { type = "choice_cancel", choice_id = choice.id }
+    end
+    return _build_auto_or_fallback_action(game, choice, true)
+  end
+  return nil
+end
+
 function choice_auto_policy.resolve_choice_owner(game, choice)
   return _resolve_choice_owner(game, choice)
 end
@@ -89,39 +120,14 @@ function choice_auto_policy.decide(game, state, choice, ctx)
   end
 
   local mode = ctx.mode or "wait_choice"
-  local actor = _resolve_choice_owner(game, choice)
-  local is_auto_actor = ctx.is_auto_actor
-  if is_auto_actor == nil then
-    is_auto_actor = actor and auto_play_port.is_auto_player(game, actor) or false
-  end
-  is_auto_actor = is_auto_actor == true
+  local is_auto_actor = _resolve_auto_actor_flag(game, choice, ctx)
   local min_visible = _normalize_visible_seconds(ctx.min_visible_seconds)
   local elapsed = _normalize_visible_seconds(ctx.elapsed_seconds)
 
-  if mode == "wait_choice" then
-    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
-      return nil
-    end
-    return _build_auto_or_fallback_action(game, choice, false)
+  local result = _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, elapsed)
+  if result ~= nil then
+    return result
   end
-
-  if mode == "tick_min_visible" then
-    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
-      return nil
-    end
-    return _build_auto_or_fallback_action(game, choice, true)
-  end
-
-  if mode == "tick_timeout" then
-    if choice.allow_cancel == true then
-      return {
-        type = "choice_cancel",
-        choice_id = choice.id,
-      }
-    end
-    return _build_auto_or_fallback_action(game, choice, true)
-  end
-
   return _build_auto_or_fallback_action(game, choice, ctx.allow_first_option_fallback == true)
 end
 

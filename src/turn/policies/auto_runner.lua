@@ -75,14 +75,18 @@ local function _resolve_interval_seconds(self, env)
   return self.interval or 0
 end
 
+local function _wait_signature_changed(self, actor_role_id, wait_kind, choice_id)
+  return actor_role_id ~= self.last_actor_role_id
+      or wait_kind ~= self.last_wait_kind
+      or choice_id ~= self.last_choice_id
+end
+
 local function _sync_wait_signature(self, env)
   local actor_role_id = env and (env.current_player_id or env.current_player_index) or nil
   local wait_kind = _resolve_wait_kind(env)
   local choice = env and env.pending_choice or nil
   local choice_id = choice and choice.id or nil
-  local changed = actor_role_id ~= self.last_actor_role_id
-      or wait_kind ~= self.last_wait_kind
-      or choice_id ~= self.last_choice_id
+  local changed = _wait_signature_changed(self, actor_role_id, wait_kind, choice_id)
   if changed then
     self.timer = 0
     self.waiting_for_interval = false

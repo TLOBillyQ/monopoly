@@ -8,6 +8,16 @@ local landing_visual_hold = require("src.state.landing_visual_hold")
 
 local tick_steps = {}
 
+local function _sync_input_lock(ui_sync_ports, state, input_blocked_changed, ui_refreshed)
+  if not (ui_sync_ports.get_ui_state and ui_sync_ports.is_input_blocked) then
+    return
+  end
+  local ui = ui_sync_ports.get_ui_state(state)
+  if ui and (input_blocked_changed or (ui_sync_ports.is_input_blocked(state) and ui_refreshed)) then
+    ui_sync_ports.apply_input_lock(state)
+  end
+end
+
 local function _step_phase_animation(game, state, phase, ports)
   local anim_ports = ports.anim
   if phase == "wait_move_anim" then
@@ -89,12 +99,7 @@ function tick_steps.refresh_tick_from_dirty(game, state, ports, input_blocked_ch
     anim_ports.sync_status_3d(game, state, dirty)
   end
 
-  if ui_sync_ports.get_ui_state and ui_sync_ports.is_input_blocked then
-    local ui = ui_sync_ports.get_ui_state(state)
-    if ui and (input_blocked_changed or (ui_sync_ports.is_input_blocked(state) and ui_refreshed)) then
-      ui_sync_ports.apply_input_lock(state)
-    end
-  end
+  _sync_input_lock(ui_sync_ports, state, input_blocked_changed, ui_refreshed)
   local ui_model = runtime_state.get_ui_model(state)
   if ui_model and not landing_visual_hold.is_active_state(state) then
     debug_ports.log_status(ui_model)

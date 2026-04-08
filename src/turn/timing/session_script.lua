@@ -85,10 +85,14 @@ local function _finish_script(session)
   session.finished = true
 end
 
+local function _initial_state(session)
+  return session.current_state or "start"
+end
+
 function turn_script.create(session)
   assert(session ~= nil, "missing script session")
   return coroutine.create(function()
-    local state_name = session.current_state or "start"
+    local state_name = _initial_state(session)
     local state_args = session.current_args
     while state_name do
       state_name, state_args = _step_script(session, state_name, state_args)

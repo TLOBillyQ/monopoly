@@ -15,6 +15,18 @@ local function _has_blocking_ui(ui_sync_ports, state)
       or (ui_sync_ports and ui_sync_ports.is_popup_active and ui_sync_ports.is_popup_active(state))
 end
 
+local function _is_ui_state_absent(ui_sync_ports, state)
+  return ui_sync_ports
+    and ui_sync_ports.get_ui_state
+    and not ui_sync_ports.get_ui_state(state)
+end
+
+local function _is_input_blocked_port(ui_sync_ports, state)
+  return ui_sync_ports
+    and ui_sync_ports.is_input_blocked
+    and ui_sync_ports.is_input_blocked(state)
+end
+
 local function _resolve_elapsed(elapsed, dt)
   return (elapsed or 0) + (dt or 0)
 end
@@ -25,18 +37,25 @@ local function _complete_wait(turn, active_key, elapsed_key, step_turn, game)
   step_turn(game)
 end
 
-function turn_timer_policy.is_action_button_wait_active(game, state, ports)
-  local ui_sync_ports = ports and ports.ui_sync or nil
+local function _get_valid_ui_sync(game, state, ports)
   if not (game and state and ports) then
+    return nil, false
+  end
+  return ports.ui_sync, true
+end
+
+function turn_timer_policy.is_action_button_wait_active(game, state, ports)
+  local ui_sync_ports, is_valid = _get_valid_ui_sync(game, state, ports)
+  if not is_valid then
     return false
   end
-  if ui_sync_ports and ui_sync_ports.get_ui_state and not ui_sync_ports.get_ui_state(state) then
+  if _is_ui_state_absent(ui_sync_ports, state) then
     return false
   end
   if game.finished then
     return false
   end
-  if ui_sync_ports and ui_sync_ports.is_input_blocked and ui_sync_ports.is_input_blocked(state) then
+  if _is_input_blocked_port(ui_sync_ports, state) then
     return false
   end
   if _has_blocking_ui(ui_sync_ports, state) then

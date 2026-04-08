@@ -1,14 +1,22 @@
 local M = {}
 
+local function _bool_field(obj, field)
+  return obj and obj[field] == true or false
+end
+
+local function _opt_field(obj, field)
+  return obj and obj[field] or nil
+end
+
 local function _build_ui_gate(ui, popup)
   return {
-    input_blocked = ui and ui.input_blocked == true or false,
-    choice_active = ui and ui.choice_active == true or false,
-    market_active = ui and ui.market_active == true or false,
-    popup_active = ui and ui.popup_active == true or false,
-    popup_seq = ui and ui.popup_seq or nil,
+    input_blocked = _bool_field(ui, "input_blocked"),
+    choice_active = _bool_field(ui, "choice_active"),
+    market_active = _bool_field(ui, "market_active"),
+    popup_active = _bool_field(ui, "popup_active"),
+    popup_seq = _opt_field(ui, "popup_seq"),
     popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
-    popup_owner_index = ui and ui.popup_owner_index or nil,
+    popup_owner_index = _opt_field(ui, "popup_owner_index"),
   }
 end
 
