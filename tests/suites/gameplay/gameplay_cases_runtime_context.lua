@@ -571,6 +571,7 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
   end)
 end
 
+
 local function _test_runtime_context_install_environment_fails_fast()
   _with_runtime_context_globals(function()
     local ctx = runtime_context.new({

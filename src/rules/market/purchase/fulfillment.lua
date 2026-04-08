@@ -2,6 +2,7 @@ local inventory = require("src.rules.items.inventory")
 local context = require("src.rules.market.query.context")
 local monopoly_event = require("src.core.events")
 local number_utils = require("src.core.utils.number_utils")
+local runtime_refs = require("src.config.content.runtime_refs")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
 
@@ -61,7 +62,11 @@ local function _fulfill_skin(game, player, entry, opts, price, currency, priced_
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
   end
   context.consume_global_limit(game, entry.product_id)
-  local creature_key = number_utils.to_integer(entry.product_id)
+  local product_id_key = tostring(entry.product_id)
+  local creature_key = runtime_refs.skins[product_id_key]
+  if creature_key == nil then
+    creature_key = number_utils.to_integer(entry.product_id)
+  end
   logger.info(
     "market skin fulfill start",
     "player_id=" .. tostring(player.id),

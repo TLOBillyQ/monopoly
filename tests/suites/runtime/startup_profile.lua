@@ -197,6 +197,64 @@ local function _test_startup_policy_accepts_generated_profile_module()
   end)
 end
 
+local function _test_gameplay_start_sets_current_game_before_priming_first_turn()
+  local gameplay_start = require("src.app.gameplay_start")
+  local current_game_ref = { nil }
+  local advanced = false
+  local fake_game = {
+    turn = {
+      turn_count = 0,
+      phase = "start",
+      pending_choice = nil,
+    },
+    advance_turn = function(self)
+      advanced = true
+      assert(current_game_ref[1] == self, "gameplay_start should publish current_game before priming first turn")
+    end,
+  }
+
+  with_patches({
+    {
+      target = require("src.turn.loop"),
+      key = "new_game",
+      value = function(state)
+        assert(state ~= nil, "gameplay_start should pass state to gameplay_loop.new_game")
+        return fake_game
+      end,
+    },
+    {
+      target = require("src.turn.loop"),
+      key = "set_game",
+      value = function(_, game)
+        assert(game == fake_game, "gameplay_start should pass created game to gameplay_loop.set_game")
+      end,
+    },
+    {
+      target = require("src.ui.ports"),
+      key = "build",
+      value = function()
+        return {}
+      end,
+    },
+    {
+      target = require("src.ui.ctl.deps"),
+      key = "build",
+      value = function()
+        return {}
+      end,
+    },
+  }, function()
+    local state = {
+      tick_started = true,
+    }
+    local result = gameplay_start.start(state, current_game_ref)
+    assert(result == fake_game, "gameplay_start should return created game")
+  end)
+
+  assert(advanced == true, "gameplay_start should prime first turn when new game is at start phase")
+  assert(current_game_ref[1] == fake_game, "gameplay_start should store current_game_ref after start")
+end
+
 local function _test_raw_test_profiles_reload_copies_meta_into_profile_table()
   local profiles = _reload_module("src.config.testing.test_profiles", {
     "src.config.testing.test_profiles",
@@ -884,6 +942,10 @@ return {
       run = _test_app_module_exposes_init_function,
     },
     { name = "main_lua_calls_app_init", run = _test_main_lua_calls_app_init },
+    {
+      name = "gameplay_start_sets_current_game_before_priming_first_turn",
+      run = _test_gameplay_start_sets_current_game_before_priming_first_turn,
+    },
     { name = "upgrade_build_marks_tile_render_called_for_startup_render", run = _test_upgrade_build_marks_tile_render_called_for_startup_render },
     { name = "strong_card_marks_tile_render_called_for_startup_render", run = _test_strong_card_marks_tile_render_called_for_startup_render },
     { name = "missile_marks_overlay_render_called_for_startup_render", run = _test_missile_marks_overlay_render_called_for_startup_render },

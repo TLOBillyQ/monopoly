@@ -234,6 +234,10 @@ local function _on_purchase_goods_callback(game, rt, data)
     "goods_id=" .. tostring(goods_id),
     "role_id=" .. tostring(callback_role_id)
   )
+  print("[Eggy] market paid callback matched: player_id=" .. tostring(callback_player.id)
+    .. " product_id=" .. tostring(pending.product_id)
+    .. " goods_id=" .. tostring(goods_id)
+    .. " role_id=" .. tostring(callback_role_id))
   if type(rt.on_purchase) == "function" then
     rt.on_purchase(game, callback_player, entry, pending)
   end
@@ -314,7 +318,7 @@ function gateway.start(game, player, entry)
   if role_id == nil then
     return false, "role_id_missing"
   end
-  logger.info(
+logger.info(
     "market paid start",
     "player_id=" .. tostring(player.id),
     "product_id=" .. tostring(entry.product_id),

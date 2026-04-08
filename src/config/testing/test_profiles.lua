@@ -280,7 +280,7 @@ local profiles = {
         players = {
             [1] = {
                 position_tile_id = 27,
-                item_counts = { [2002] = 1 },
+                item_counts = { [2002] = 2 },
             },
             [2] = { position_tile_id = 44 },
             [3] = { position_tile_id = 35 },

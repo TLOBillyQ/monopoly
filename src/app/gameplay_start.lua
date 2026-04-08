@@ -58,8 +58,8 @@ function M.start(state, current_game_ref)
   state.gameplay_loop_ports = _build_gameplay_loop_ports()
   state.presentation_runtime = runtime_deps.build()
   local current_game = gameplay_loop.new_game(state)
-  _prime_first_turn(current_game)
   current_game_ref[1] = current_game
+  _prime_first_turn(current_game)
   gameplay_loop.set_game(state, current_game)
 
   if not state.tick_started then

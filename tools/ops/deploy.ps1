@@ -5,6 +5,7 @@ param(
     [string]$Platform = "auto",
     [ValidateSet("release", "debug")]
     [string]$BuildMode = "release",
+    [string]$Profile,
     [switch]$Help
 )
 
@@ -333,7 +334,7 @@ function Get-LuaFileCount {
 }
 
 if ($Help) {
-    Write-Info "Usage: .\\tools\\ops\\deploy.ps1 [-TargetPath PATH] [-Platform auto|win|mac] [-BuildMode release|debug]"
+    Write-Info "Usage: .\\tools\\ops\\deploy.ps1 [-TargetPath PATH] [-Platform auto|win|mac] [-BuildMode release|debug] [-Profile NAME]"
     exit 0
 }
 
@@ -374,11 +375,12 @@ try {
     }
 
     if ($effective_build_mode -eq "debug") {
+        $effective_profile = if (-not [string]::IsNullOrWhiteSpace($Profile)) { $Profile } else { "default" }
         Write-MainLua `
             -SourcePath (Join-Path $project_root "main.lua") `
             -TargetPath (Join-Path $target_path "main.lua") `
             -BuildModeValue $effective_build_mode `
-            -StartupProfileValue "default"
+            -StartupProfileValue $effective_profile
     }
     else {
         Write-MainLua `
