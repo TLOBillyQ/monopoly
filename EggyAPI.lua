@@ -297,13 +297,21 @@ function math.Quaternion(pitch, yaw, roll) end
 
 ---@alias AbilitySlot integer 技能槽位
 
+---@alias AbilityStyleKey integer 技能控件样式编号
+
 ---@alias Achievement integer 自定义成就
 
 ---@alias AnimKey integer 动画编号
 
+---@alias AnimationStyleKey integer 动效样式编号
+
 ---@alias Archive integer 自定义存档
 
+---@alias BagSlotStyleKey integer 物品格样式编号
+
 ---@alias BattleShopKey integer 商店
+
+---@alias BtnStyleKey integer 按钮样式编号
 
 ---@alias CampID integer 阵营ID
 
@@ -367,12 +375,16 @@ Decoration = {}
 
 ---@alias ImageKey integer 图片编号
 
+---@alias InputStyleKey integer 输入框样式编号
+
 ---@alias InteractBtnID integer 交互按钮编号
 
 ---@class JointAssistant: JointAssistantComp, Unit
 JointAssistant = {}
 
 ---@alias JointAssistantType integer 关节类型
+
+---@alias LabelStyleKey integer 文本样式编号
 
 ---@alias LevelKey string 关卡编号
 
@@ -391,6 +403,10 @@ JointAssistant = {}
 ---@alias PathID UnitID 路径ID
 
 ---@alias PathPointID UnitID 路点ID
+
+---@alias ProgressBarStyleKey integer 条形进度条样式编号
+
+---@alias ProgressTimerStyleKey integer 环形进度条样式编号
 
 ---@alias RoleID integer 玩家ID
 
@@ -915,14 +931,18 @@ Enums.ValueType = {
 	AbilityLimitation = 'AbilityLimitation',  ---技能使用限制
 	AbilityPointerType = 'AbilityPointerType',  ---技能指示器类型
 	AbilitySlot = 'AbilitySlot',  ---技能槽位
+	AbilityStyleKey = 'AbilityStyleKey',  ---技能控件样式编号
 	Achievement = 'Achievement',  ---自定义成就
 	Actor = 'Actor',  ---Actor
 	AnimKey = 'AnimKey',  ---动画编号
+	AnimationStyleKey = 'AnimationStyleKey',  ---动效样式编号
 	Archive = 'Archive',  ---自定义存档
 	ArchiveType = 'ArchiveType',  ---存档类型
+	BagSlotStyleKey = 'BagSlotStyleKey',  ---物品格样式编号
 	BattleShopKey = 'BattleShopKey',  ---商店
 	BindType = 'BindType',  ---绑定类型
 	Bool = 'Bool',  ---布尔值
+	BtnStyleKey = 'BtnStyleKey',  ---按钮样式编号
 	BuffState = 'BuffState',  ---状态
 	CameraBindMode = 'CameraBindMode',  ---相机绑定模式
 	CameraDragType = 'CameraDragType',  ---相机拖动类型
@@ -980,6 +1000,7 @@ Enums.ValueType = {
 	GameResult = 'GameResult',  ---游戏结局
 	HpBarDisplayMode = 'HpBarDisplayMode',  ---血条显示模式
 	ImageKey = 'ImageKey',  ---图片编号
+	InputStyleKey = 'InputStyleKey',  ---输入框样式编号
 	Int = 'Int',  ---整型
 	InteractBtnID = 'InteractBtnID',  ---交互按钮编号
 	InteractBtnType = 'InteractBtnType',  ---交互按钮类型
@@ -987,6 +1008,7 @@ Enums.ValueType = {
 	JointAssistantKey = 'JointAssistantKey',  ---关节预设编号
 	JointAssistantProperty = 'JointAssistantProperty',  ---关节属性
 	JointAssistantType = 'JointAssistantType',  ---关节类型
+	LabelStyleKey = 'LabelStyleKey',  ---文本样式编号
 	LevelKey = 'LevelKey',  ---关卡编号
 	LifeEntity = 'LifeEntity',  ---生命体
 	LifeEntityKey = 'LifeEntityKey',  ---生命体编号
@@ -998,14 +1020,18 @@ Enums.ValueType = {
 	ListAbilityLimitation = 'ListAbilityLimitation',  ---技能使用限制列表
 	ListAbilityPointerType = 'ListAbilityPointerType',  ---技能指示器类型列表
 	ListAbilitySlot = 'ListAbilitySlot',  ---技能槽位列表
+	ListAbilityStyleKey = 'ListAbilityStyleKey',  ---技能控件样式编号列表
 	ListAchievement = 'ListAchievement',  ---自定义成就列表
 	ListActor = 'ListActor',  ---Actor列表
 	ListAnimKey = 'ListAnimKey',  ---动画编号列表
+	ListAnimationStyleKey = 'ListAnimationStyleKey',  ---动效样式编号列表
 	ListArchive = 'ListArchive',  ---自定义存档列表
 	ListArchiveType = 'ListArchiveType',  ---存档类型列表
+	ListBagSlotStyleKey = 'ListBagSlotStyleKey',  ---物品格样式编号列表
 	ListBattleShopKey = 'ListBattleShopKey',  ---商店列表
 	ListBindType = 'ListBindType',  ---绑定类型列表
 	ListBool = 'ListBool',  ---布尔值列表
+	ListBtnStyleKey = 'ListBtnStyleKey',  ---按钮样式编号列表
 	ListBuffState = 'ListBuffState',  ---状态列表
 	ListCameraBindMode = 'ListCameraBindMode',  ---相机绑定模式列表
 	ListCameraDragType = 'ListCameraDragType',  ---相机拖动类型列表
@@ -1062,6 +1088,7 @@ Enums.ValueType = {
 	ListGameResult = 'ListGameResult',  ---游戏结局列表
 	ListHpBarDisplayMode = 'ListHpBarDisplayMode',  ---血条显示模式列表
 	ListImageKey = 'ListImageKey',  ---图片编号列表
+	ListInputStyleKey = 'ListInputStyleKey',  ---输入框样式编号列表
 	ListInt = 'ListInt',  ---整型列表
 	ListInteractBtnID = 'ListInteractBtnID',  ---交互按钮编号列表
 	ListInteractBtnType = 'ListInteractBtnType',  ---交互按钮类型列表
@@ -1069,6 +1096,7 @@ Enums.ValueType = {
 	ListJointAssistantKey = 'ListJointAssistantKey',  ---关节预设编号列表
 	ListJointAssistantProperty = 'ListJointAssistantProperty',  ---关节属性列表
 	ListJointAssistantType = 'ListJointAssistantType',  ---关节类型列表
+	ListLabelStyleKey = 'ListLabelStyleKey',  ---文本样式编号列表
 	ListLevelKey = 'ListLevelKey',  ---关卡编号列表
 	ListLifeEntity = 'ListLifeEntity',  ---生命体列表
 	ListLifeEntityKey = 'ListLifeEntityKey',  ---生命体编号列表
@@ -1086,6 +1114,8 @@ Enums.ValueType = {
 	ListPathPointID = 'ListPathPointID',  ---路点ID列表
 	ListPatrolType = 'ListPatrolType',  ---AI巡逻类型列表
 	ListPlaneType = 'ListPlaneType',  ---拖动平面列表
+	ListProgressBarStyleKey = 'ListProgressBarStyleKey',  ---条形进度条样式编号列表
+	ListProgressTimerStyleKey = 'ListProgressTimerStyleKey',  ---环形进度条样式编号列表
 	ListQuaternion = 'ListQuaternion',  ---四元数列表
 	ListRigidBodyType = 'ListRigidBodyType',  ---物理类型列表
 	ListRole = 'ListRole',  ---玩家列表
@@ -1136,6 +1166,8 @@ Enums.ValueType = {
 	PathPointID = 'PathPointID',  ---路点ID
 	PatrolType = 'PatrolType',  ---AI巡逻类型
 	PlaneType = 'PlaneType',  ---拖动平面
+	ProgressBarStyleKey = 'ProgressBarStyleKey',  ---条形进度条样式编号
+	ProgressTimerStyleKey = 'ProgressTimerStyleKey',  ---环形进度条样式编号
 	Quaternion = 'Quaternion',  ---四元数
 	RigidBodyType = 'RigidBodyType',  ---物理类型
 	Role = 'Role',  ---玩家
@@ -2451,6 +2483,132 @@ function GameAPI.create_decoration(_u_key, _pos, _rotation, _scale, _parent) end
 function GameAPI.create_equipment(_equipment_eid, _pos) end
 
 
+---创建技能控件
+---@param _ability_style_key AbilityStyleKey 技能预设编号
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _show_when_empty boolean 未关联技能时显示
+---@param _show_name boolean 显示技能名称
+---@param _name string 名称
+---@return EButton 技能控件
+function GameAPI.create_eui_ability_at_position(_ability_style_key, _parent, _x, _y, _width, _height, _show_when_empty, _show_name, _name) end
+
+
+---创建物品格控件
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _bag_slot_style_key BagSlotStyleKey 物品格预设编号
+---@param _name string 名称
+---@return EBagSlot 物品格控件
+function GameAPI.create_eui_bagslot_at_position(_parent, _x, _y, _width, _height, _bag_slot_style_key, _name) end
+
+---创建按钮节点
+---@param _btn_style_key BtnStyleKey 按钮预设编号
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@return ENode 按钮节点
+function GameAPI.create_eui_button_at_position(_btn_style_key, _parent, _x, _y, _width, _height, _name) end
+
+---创建遮罩节点
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@param _clipping_path ImageKey 蒙版图片ID
+---@return ENode 遮罩节点
+function GameAPI.create_eui_clipping_at_position(_parent, _x, _y, _width, _height, _name, _clipping_path) end
+
+---创建动效节点
+---@param _animation_style_key AnimationStyleKey 动效预设编号
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _is_loop boolean 循环播放
+---@param _name string 名称
+---@return EEffectNode 动效节点
+function GameAPI.create_eui_effect_at_position(_animation_style_key, _parent, _x, _y, _width, _height, _is_loop, _name) end
+
+---创建图片节点
+---@param _image_key ImageKey 图片预设编号
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@return EImage 图片节点
+function GameAPI.create_eui_image_at_position(_image_key, _parent, _x, _y, _width, _height, _name) end
+
+---创建输入框节点
+---@param _input_style_key InputStyleKey 输入框预设编号
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@param _text string 默认文本
+---@return ENode 输入框节点
+function GameAPI.create_eui_input_at_position(_input_style_key, _parent, _x, _y, _width, _height, _name, _text) end
+
+---创建文本节点
+---@param _label_style_key LabelStyleKey 文本预设编号
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@param _text string 文本内容
+---@return ENode 文本节点
+function GameAPI.create_eui_label_at_position(_label_style_key, _parent, _x, _y, _width, _height, _name, _text) end
+
+---创建列表节点
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@return ENode 列表节点
+function GameAPI.create_eui_listview_at_position(_parent, _x, _y, _width, _height, _name) end
+
+---创建条形进度条节点
+---@param _progress_bar_style_key ProgressBarStyleKey 条形进度条预设编号
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@return ENode 进度条节点
+function GameAPI.create_eui_progress_at_position(_progress_bar_style_key, _parent, _x, _y, _width, _height, _name) end
+
+---创建环形进度条节点
+---@param _progress_timer_style_key ProgressTimerStyleKey 环形进度条预设编号
+---@param _parent ENode 父节点
+---@param _x Fixed X
+---@param _y Fixed Y
+---@param _width Fixed 宽
+---@param _height Fixed 高
+---@param _name string 名称
+---@return ENode 环形进度条节点
+function GameAPI.create_eui_progresstimer_at_position(_progress_timer_style_key, _parent, _x, _y, _width, _height, _name) end
+
 ---创建关节助手
 ---@param _unit_key Enums.JointAssistantKey 关节助手类型
 ---@param _unit1 Unit 连接主体
@@ -3321,6 +3479,74 @@ function GameAPI.set_equipment_max_stock_count(_battle_shop_key, _equipment_key,
 ---@param _equipment_key EquipmentKey 物品编号
 ---@param _cur_stock_count integer 剩余库存
 function GameAPI.set_equipment_remaining_stock_count(_battle_shop_key, _equipment_key, _cur_stock_count) end
+
+---设置节点屏幕自适应配置，顺序为：左 右 上 下。（开启百分比时，值的单位是百分比）
+---@param _node ENode 节点
+---@param _left_enable boolean 启用左侧
+---@param _left_is_percent boolean 启用百分比
+---@param _left_value Fixed 值
+---@param _right_enable boolean 启用右侧
+---@param _right_is_percent boolean 启用百分比
+---@param _right_value Fixed 值
+---@param _top_enable boolean 启用上侧
+---@param _top_is_percent boolean 启用百分比
+---@param _top_value Fixed 值
+---@param _bottom_enable boolean 启用下侧
+---@param _bottom_is_percent boolean 启用百分比
+---@param _bottom_value Fixed 值
+function GameAPI.set_eui_node_auto_adaption(_node, _left_enable, _left_is_percent, _left_value, _right_enable, _right_is_percent, _right_value, _top_enable, _top_is_percent, _top_value, _bottom_enable, _bottom_is_percent, _bottom_value) end
+
+---设置节点屏幕居中配置，顺序为：水平 垂直。（开启百分比时，值的单位是百分比）
+---@param _node ENode 节点
+---@param _horizontal_center boolean 启用水平居中
+---@param _horizontal_is_percent boolean 启用百分比
+---@param _horizontal_value Fixed 值
+---@param _vertical_center boolean 启用垂直居中
+---@param _vertical_is_percent boolean 启用百分比
+---@param _vertical_value Fixed 值
+function GameAPI.set_eui_node_auto_center(_node, _horizontal_center, _horizontal_is_percent, _horizontal_value, _vertical_center, _vertical_is_percent, _vertical_value) end
+
+---设置节点下侧屏幕自适应配置
+---@param _node ENode 节点
+---@param _enable boolean 启用下侧
+---@param _is_percent boolean 启用百分比
+---@param _value Fixed 值
+function GameAPI.set_eui_node_bottom_auto_adaption(_node, _enable, _is_percent, _value) end
+
+---设置节点水平居中配置。（开启百分比时，值的单位是百分比）
+---@param _node ENode 节点
+---@param _enable boolean 启用水平居中
+---@param _is_percent boolean 启用百分比
+---@param _value Fixed 值
+function GameAPI.set_eui_node_horizontal_auto_center(_node, _enable, _is_percent, _value) end
+
+---设置节点左侧屏幕自适应配置。（开启百分比时，值的单位是百分比）
+---@param _node ENode 节点
+---@param _enable boolean 启用左侧
+---@param _is_percent boolean 启用百分比
+---@param _value Fixed 值
+function GameAPI.set_eui_node_left_auto_adaption(_node, _enable, _is_percent, _value) end
+
+---设置节点右侧屏幕自适应配置
+---@param _node ENode 节点
+---@param _enable boolean 启用右侧
+---@param _is_percent boolean 启用百分比
+---@param _value Fixed 值
+function GameAPI.set_eui_node_right_auto_adaption(_node, _enable, _is_percent, _value) end
+
+---设置节点上侧屏幕自适应配置
+---@param _node ENode 节点
+---@param _enable boolean 启用上侧
+---@param _is_percent boolean 启用百分比
+---@param _value Fixed 值
+function GameAPI.set_eui_node_top_auto_adaption(_node, _enable, _is_percent, _value) end
+
+---设置节点垂直居中配置。（开启百分比时，值的单位是百分比）
+---@param _node ENode 节点
+---@param _enable boolean 启用垂直居中
+---@param _is_percent boolean 启用百分比
+---@param _value Fixed 值
+function GameAPI.set_eui_node_vertical_auto_center(_node, _enable, _is_percent, _value) end
 
 ---设置全局风场开关
 ---@param _bool_value boolean 是否开启

@@ -14,6 +14,17 @@ GameAPI|create_creature_fixed_scale|_u_key, _pos, _rotation, _scale_ratio, _role
 GameAPI|create_customtriggerspace|_u_key, _pos, _rotation, _scale, _role
 GameAPI|create_decoration|_u_key, _pos, _rotation, _scale, _parent
 GameAPI|create_equipment|_equipment_eid, _pos
+GameAPI|create_eui_ability_at_position|_ability_style_key, _parent, _x, _y, _width, _height, _show_when_empty, _show_name, _name
+GameAPI|create_eui_bagslot_at_position|_parent, _x, _y, _width, _height, _bag_slot_style_key, _name
+GameAPI|create_eui_button_at_position|_btn_style_key, _parent, _x, _y, _width, _height, _name
+GameAPI|create_eui_clipping_at_position|_parent, _x, _y, _width, _height, _name, _clipping_path
+GameAPI|create_eui_effect_at_position|_animation_style_key, _parent, _x, _y, _width, _height, _is_loop, _name
+GameAPI|create_eui_image_at_position|_image_key, _parent, _x, _y, _width, _height, _name
+GameAPI|create_eui_input_at_position|_input_style_key, _parent, _x, _y, _width, _height, _name, _text
+GameAPI|create_eui_label_at_position|_label_style_key, _parent, _x, _y, _width, _height, _name, _text
+GameAPI|create_eui_listview_at_position|_parent, _x, _y, _width, _height, _name
+GameAPI|create_eui_progress_at_position|_progress_bar_style_key, _parent, _x, _y, _width, _height, _name
+GameAPI|create_eui_progresstimer_at_position|_progress_timer_style_key, _parent, _x, _y, _width, _height, _name
 GameAPI|create_joint_assistant|_unit_key, _unit1, _unit2
 GameAPI|create_life_entity|_unit_key, _pos, _rotation, _scale_ratio, _role
 GameAPI|create_obstacle|_u_key, _pos, _rotation, _scale, _role
@@ -147,6 +158,14 @@ GameAPI|set_env_time_ratio|_time_ratio
 GameAPI|set_env_time_running_enabled|_enabled
 GameAPI|set_equipment_max_stock_count|_battle_shop_key, _equipment_key, _max_stock_count
 GameAPI|set_equipment_remaining_stock_count|_battle_shop_key, _equipment_key, _cur_stock_count
+GameAPI|set_eui_node_auto_adaption|_node, _left_enable, _left_is_percent, _left_value, _right_enable, _right_is_percent, _right_value, _top_enable, _top_is_percent, _top_value, _bottom_enable, _bottom_is_percent, _bottom_value
+GameAPI|set_eui_node_auto_center|_node, _horizontal_center, _horizontal_is_percent, _horizontal_value, _vertical_center, _vertical_is_percent, _vertical_value
+GameAPI|set_eui_node_bottom_auto_adaption|_node, _enable, _is_percent, _value
+GameAPI|set_eui_node_horizontal_auto_center|_node, _enable, _is_percent, _value
+GameAPI|set_eui_node_left_auto_adaption|_node, _enable, _is_percent, _value
+GameAPI|set_eui_node_right_auto_adaption|_node, _enable, _is_percent, _value
+GameAPI|set_eui_node_top_auto_adaption|_node, _enable, _is_percent, _value
+GameAPI|set_eui_node_vertical_auto_center|_node, _enable, _is_percent, _value
 GameAPI|set_global_wind_enabled|_bool_value
 GameAPI|set_global_wind_force|_x_value, _y_value
 GameAPI|set_global_wind_frequency|_fixed_value

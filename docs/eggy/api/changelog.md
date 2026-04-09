@@ -1,5 +1,49 @@
 # EggyAPI 变更记录
 
+## 2026-04-09
+
+新增 / Added: 35
+  - AbilityStyleKey
+  - AnimationStyleKey
+  - BagSlotStyleKey
+  - BtnStyleKey
+  - GameAPI.create_eui_ability_at_position
+  - GameAPI.create_eui_bagslot_at_position
+  - GameAPI.create_eui_button_at_position
+  - GameAPI.create_eui_clipping_at_position
+  - GameAPI.create_eui_effect_at_position
+  - GameAPI.create_eui_image_at_position
+  - GameAPI.create_eui_input_at_position
+  - GameAPI.create_eui_label_at_position
+  - GameAPI.create_eui_listview_at_position
+  - GameAPI.create_eui_progress_at_position
+  - GameAPI.create_eui_progresstimer_at_position
+  - GameAPI.set_eui_node_auto_adaption
+  - GameAPI.set_eui_node_auto_center
+  - GameAPI.set_eui_node_bottom_auto_adaption
+  - GameAPI.set_eui_node_horizontal_auto_center
+  - GameAPI.set_eui_node_left_auto_adaption
+  - GameAPI.set_eui_node_right_auto_adaption
+  - GameAPI.set_eui_node_top_auto_adaption
+  - GameAPI.set_eui_node_vertical_auto_center
+  - InputStyleKey
+  - LabelStyleKey
+  - ListAbilityStyleKey
+  - ListAnimationStyleKey
+  - ListBagSlotStyleKey
+  - ListBtnStyleKey
+  - ListInputStyleKey
+  - ListLabelStyleKey
+  - ListProgressBarStyleKey
+  - ListProgressTimerStyleKey
+  - ProgressBarStyleKey
+  - ProgressTimerStyleKey
+删除 / Removed: 0
+签名变更 / Signature changed: 0
+类型变更 / Type changed: 0
+
+# EggyAPI 变更记录
+
 ## 2026-04-05
 
 新增 / Added: 6

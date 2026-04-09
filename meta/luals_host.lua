@@ -4,10 +4,14 @@
 ---@alias AbilityAnchorID string 技能锚点ID
 ---@alias AbilityKey integer 技能编号
 ---@alias AbilitySlot integer 技能槽位
+---@alias AbilityStyleKey integer 技能控件样式编号
 ---@alias Achievement integer 自定义成就
 ---@alias AnimKey integer 动画编号
+---@alias AnimationStyleKey integer 动效样式编号
 ---@alias Archive integer 自定义存档
+---@alias BagSlotStyleKey integer 物品格样式编号
 ---@alias BattleShopKey integer 商店
+---@alias BtnStyleKey integer 按钮样式编号
 ---@alias CampID integer 阵营ID
 ---@alias CharacterKey LifeEntityKey 角色编号
 ---@alias ChessType integer 麻将/扑克花色
@@ -36,8 +40,10 @@
 ---@alias EquipmentSlot integer 物品槽位
 ---@alias FontKey integer 字体key
 ---@alias ImageKey integer 图片编号
+---@alias InputStyleKey integer 输入框样式编号
 ---@alias InteractBtnID integer 交互按钮编号
 ---@alias JointAssistantType integer 关节类型
+---@alias LabelStyleKey integer 文本样式编号
 ---@alias LevelKey string 关卡编号
 ---@alias LifeEntityKey UnitKey 生命体编号
 ---@alias ModifierKey integer 效果编号
@@ -47,6 +53,8 @@
 ---@alias PaintArea integer 染色区域
 ---@alias PathID UnitID 路径ID
 ---@alias PathPointID UnitID 路点ID
+---@alias ProgressBarStyleKey integer 条形进度条样式编号
+---@alias ProgressTimerStyleKey integer 环形进度条样式编号
 ---@alias RoleID integer 玩家ID
 ---@alias SfxID integer 特效ID
 ---@alias SfxKey integer 特效编号
@@ -438,6 +446,17 @@
 ---@field create_customtriggerspace fun(_u_key: CustomTriggerSpaceKey, _pos: Vector3, _rotation: Quaternion, _scale: Vector3, _role: Role?): CustomTriggerSpace
 ---@field create_decoration fun(_u_key: DecorationKey, _pos: Vector3, _rotation: Quaternion, _scale: Vector3, _parent: Unit?): Decoration
 ---@field create_equipment fun(_equipment_eid: EquipmentKey, _pos: Vector3): Equipment
+---@field create_eui_ability_at_position fun(_ability_style_key: AbilityStyleKey, _parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _show_when_empty: boolean, _show_name: boolean, _name: string): EButton
+---@field create_eui_bagslot_at_position fun(_parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _bag_slot_style_key: BagSlotStyleKey, _name: string): EBagSlot
+---@field create_eui_button_at_position fun(_btn_style_key: BtnStyleKey, _parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _name: string): ENode
+---@field create_eui_clipping_at_position fun(_parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _name: string, _clipping_path: ImageKey): ENode
+---@field create_eui_effect_at_position fun(_animation_style_key: AnimationStyleKey, _parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _is_loop: boolean, _name: string): EEffectNode
+---@field create_eui_image_at_position fun(_image_key: ImageKey, _parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _name: string): EImage
+---@field create_eui_input_at_position fun(_input_style_key: InputStyleKey, _parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _name: string, _text: string): ENode
+---@field create_eui_label_at_position fun(_label_style_key: LabelStyleKey, _parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _name: string, _text: string): ENode
+---@field create_eui_listview_at_position fun(_parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _name: string): ENode
+---@field create_eui_progress_at_position fun(_progress_bar_style_key: ProgressBarStyleKey, _parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _name: string): ENode
+---@field create_eui_progresstimer_at_position fun(_progress_timer_style_key: ProgressTimerStyleKey, _parent: ENode, _x: Fixed, _y: Fixed, _width: Fixed, _height: Fixed, _name: string): ENode
 ---@field create_joint_assistant fun(_unit_key: Enums.JointAssistantKey, _unit1: Unit, _unit2: Unit): JointAssistant
 ---@field create_life_entity fun(_unit_key: UnitKey, _pos: Vector3, _rotation: Quaternion, _scale_ratio: Fixed, _role: Role?): LifeEntity
 ---@field create_obstacle fun(_u_key: UnitKey, _pos: Vector3, _rotation: Quaternion, _scale: Vector3, _role: Role?): Obstacle
@@ -571,6 +590,14 @@
 ---@field set_env_time_running_enabled fun(_enabled: boolean)
 ---@field set_equipment_max_stock_count fun(_battle_shop_key: BattleShopKey, _equipment_key: EquipmentKey, _max_stock_count: integer)
 ---@field set_equipment_remaining_stock_count fun(_battle_shop_key: BattleShopKey, _equipment_key: EquipmentKey, _cur_stock_count: integer)
+---@field set_eui_node_auto_adaption fun(_node: ENode, _left_enable: boolean, _left_is_percent: boolean, _left_value: Fixed, _right_enable: boolean, _right_is_percent: boolean, _right_value: Fixed, _top_enable: boolean, _top_is_percent: boolean, _top_value: Fixed, _bottom_enable: boolean, _bottom_is_percent: boolean, _bottom_value: Fixed)
+---@field set_eui_node_auto_center fun(_node: ENode, _horizontal_center: boolean, _horizontal_is_percent: boolean, _horizontal_value: Fixed, _vertical_center: boolean, _vertical_is_percent: boolean, _vertical_value: Fixed)
+---@field set_eui_node_bottom_auto_adaption fun(_node: ENode, _enable: boolean, _is_percent: boolean, _value: Fixed)
+---@field set_eui_node_horizontal_auto_center fun(_node: ENode, _enable: boolean, _is_percent: boolean, _value: Fixed)
+---@field set_eui_node_left_auto_adaption fun(_node: ENode, _enable: boolean, _is_percent: boolean, _value: Fixed)
+---@field set_eui_node_right_auto_adaption fun(_node: ENode, _enable: boolean, _is_percent: boolean, _value: Fixed)
+---@field set_eui_node_top_auto_adaption fun(_node: ENode, _enable: boolean, _is_percent: boolean, _value: Fixed)
+---@field set_eui_node_vertical_auto_center fun(_node: ENode, _enable: boolean, _is_percent: boolean, _value: Fixed)
 ---@field set_global_wind_enabled fun(_bool_value: boolean)
 ---@field set_global_wind_force fun(_x_value: Fixed, _y_value: Fixed)
 ---@field set_global_wind_frequency fun(_fixed_value: Fixed)

@@ -4,10 +4,14 @@ Fixed number
 AbilityAnchorID string 技能锚点ID
 AbilityKey integer 技能编号
 AbilitySlot integer 技能槽位
+AbilityStyleKey integer 技能控件样式编号
 Achievement integer 自定义成就
 AnimKey integer 动画编号
+AnimationStyleKey integer 动效样式编号
 Archive integer 自定义存档
+BagSlotStyleKey integer 物品格样式编号
 BattleShopKey integer 商店
+BtnStyleKey integer 按钮样式编号
 CampID integer 阵营ID
 CharacterKey LifeEntityKey 角色编号
 ChessType integer 麻将/扑克花色
@@ -36,8 +40,10 @@ EquipmentKey integer 物品编号
 EquipmentSlot integer 物品槽位
 FontKey integer 字体key
 ImageKey integer 图片编号
+InputStyleKey integer 输入框样式编号
 InteractBtnID integer 交互按钮编号
 JointAssistantType integer 关节类型
+LabelStyleKey integer 文本样式编号
 LevelKey string 关卡编号
 LifeEntityKey UnitKey 生命体编号
 ModifierKey integer 效果编号
@@ -47,6 +53,8 @@ ObstacleKey UnitKey 组件编号
 PaintArea integer 染色区域
 PathID UnitID 路径ID
 PathPointID UnitID 路点ID
+ProgressBarStyleKey integer 条形进度条样式编号
+ProgressTimerStyleKey integer 环形进度条样式编号
 RoleID integer 玩家ID
 SfxID integer 特效ID
 SfxKey integer 特效编号
