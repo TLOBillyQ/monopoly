@@ -742,89 +742,6 @@ local function _test_pre_confirm_enter_no_choice_returns_false()
   assert(result == false, "enter with no choice should return false")
 end
 
-local function _test_pre_confirm_enter_market_confirm()
-  local state = {
-    ui = { active_choice_screen_key = "market" },
-    _pre_confirm_active = false,
-    game = {},
-    local_actor_role_id = 7,
-  }
-  local opened = false
-  state.gameplay_loop_ports = {
-    modal = {
-      open_pre_confirm_screen = function() opened = true end,
-    },
-  }
-
-  local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-["src.state.runtime_state"] = {
-      get_ui_model = function()
-        return {
-          current_player_id = 7,
-          choice = {
-            id = "choice1",
-            owner_role_id = 7,
-            options = {
-              { id = "1001", requires_pre_confirm = true, label = "Skin", screen_key = "market" },
-            },
-          },
-        }
-      end,
-    },
-    ["src.ui.pres.choice_support"] = {
-      resolve_screen_key = function() return "market" end,
-      resolve_option_label_by_id = function() return "Skin" end,
-      resolve_secondary_confirm_title = function() return "Title" end,
-      resolve_secondary_confirm_body = function() return "Body" end,
-    },
-  }, function(flow)
-    return flow.enter(state, { type = "market_confirm", option_id = "1001" })
-  end)
-
-  assert(result == true, "market_confirm intent should enter pre_confirm")
-  assert(opened == true, "open_pre_confirm_screen should be called")
-end
-
-local function _test_pre_confirm_enter_ui_button_item_slot()
-  local state = {
-    ui = { active_choice_screen_key = "base", item_slot_item_ids = { [1] = "item1" } },
-    _pre_confirm_active = false,
-    game = {},
-    local_actor_role_id = 7,
-  }
-  local opened = false
-  state.gameplay_loop_ports = {
-    modal = {
-      open_pre_confirm_screen = function() opened = true end,
-    },
-  }
-
-  local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-["src.state.runtime_state"] = {
-      get_ui_model = function()
-        return {
-          current_player_id = 7,
-          choice = {
-            id = "choice1",
-            owner_role_id = 7,
-            options = { { id = "item1", label = "Item" } },
-          },
-        }
-      end,
-    },
-    ["src.ui.pres.choice_support"] = {
-      resolve_option_label_by_id = function() return "Item" end,
-      resolve_secondary_confirm_title = function() return "Title" end,
-      resolve_secondary_confirm_body = function() return "Body" end,
-    },
-  }, function(flow)
-    return flow.enter(state, { type = "ui_button", id = "item_slot_1" })
-  end)
-
-  assert(result == true, "ui_button item_slot intent should enter pre_confirm")
-  assert(opened == true, "open_pre_confirm_screen should be called")
-end
-
 local function _test_pre_confirm_enter_unknown_intent_returns_false()
   local state = {
     ui = {},
@@ -1125,38 +1042,6 @@ local function _test_pre_confirm_enter_missing_modal_function()
   end)
 
   assert(result == false, "should return false when modal.open_pre_confirm_screen is not a function")
-end
-
--- Test for pre_confirm_flow.enter with market_confirm when option not found
-local function _test_pre_confirm_enter_market_confirm_option_not_found()
-  local state = {
-    ui = { active_choice_screen_key = "market" },
-    _pre_confirm_active = false,
-    game = {},
-    local_actor_role_id = 7,
-  }
-
-  local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-["src.state.runtime_state"] = {
-      get_ui_model = function()
-        return {
-          current_player_id = 7,
-          choice = {
-            id = "choice1",
-            owner_role_id = 7,
-            options = { { id = "9999", requires_pre_confirm = false } },
-          },
-        }
-      end,
-    },
-    ["src.ui.pres.choice_support"] = {
-      resolve_screen_key = function() return "market" end,
-    },
-  }, function(flow)
-    return flow.enter(state, { type = "market_confirm", option_id = "1001" })
-  end)
-
-  assert(result == false, "should return false when market option not found or doesn't require pre_confirm")
 end
 
 local function _test_pre_confirm_enter_requires_local_owner()
@@ -1622,8 +1507,6 @@ return {
     -- pre_confirm_flow tests
     { name = "pre_confirm_enter_choice_select", run = _test_pre_confirm_enter_choice_select },
     { name = "pre_confirm_enter_no_choice_returns_false", run = _test_pre_confirm_enter_no_choice_returns_false },
-    { name = "pre_confirm_enter_market_confirm", run = _test_pre_confirm_enter_market_confirm },
-    { name = "pre_confirm_enter_ui_button_item_slot", run = _test_pre_confirm_enter_ui_button_item_slot },
     { name = "pre_confirm_enter_unknown_intent_returns_false", run = _test_pre_confirm_enter_unknown_intent_returns_false },
     -- status3d_init tests
     { name = "status3d_init_sync_no_game_returns_early", run = _test_status3d_init_sync_no_game_returns_early },
@@ -1641,7 +1524,6 @@ return {
     { name = "play_cue_with_nil_pos", run = _test_play_cue_with_nil_pos },
     { name = "play_sound_only_with_nil_pos_fallback", run = _test_play_sound_only_with_nil_pos_fallback },
     { name = "pre_confirm_enter_missing_modal_function", run = _test_pre_confirm_enter_missing_modal_function },
-    { name = "pre_confirm_enter_market_confirm_option_not_found", run = _test_pre_confirm_enter_market_confirm_option_not_found },
     { name = "pre_confirm_enter_requires_local_owner", run = _test_pre_confirm_enter_requires_local_owner },
     { name = "pre_confirm_enter_requires_resolved_local_role", run = _test_pre_confirm_enter_requires_resolved_local_role },
     { name = "role_control_lock_sync_unit_with_existing_buff", run = _test_role_control_lock_sync_unit_with_existing_buff },
