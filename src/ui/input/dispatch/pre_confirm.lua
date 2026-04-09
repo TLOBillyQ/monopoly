@@ -1,5 +1,4 @@
 local choice_support = require("src.ui.pres.choice_support")
-local number_utils = require("src.core.utils.number_utils")
 local choice_contract = require("src.core.choice.contract")
 local role_id_utils = require("src.core.utils.role_id")
 local runtime_state = require("src.ui.state")
@@ -11,66 +10,7 @@ local function _modal_ports(state)
   return ports and ports.modal or {}
 end
 
-local function _parse_item_slot_index(intent)
-  if intent.type ~= "ui_button" or not intent.id then
-    return nil
-  end
-  return string.match(intent.id, "^item_slot_(%d+)$")
-end
 
-local function _resolve_item_slot_option(state, intent)
-  local slot_str = _parse_item_slot_index(intent)
-  if not slot_str then
-    return nil, nil
-  end
-  local slot_index = number_utils.to_integer(slot_str)
-  local item_ids = state.ui and state.ui.item_slot_item_ids or nil
-  if not item_ids or not slot_index then
-    return nil, nil
-  end
-  local item_id = item_ids[slot_index]
-  if not item_id then
-    return nil, nil
-  end
-  local current_model = runtime_state.get_ui_model(state)
-  local choice = current_model and current_model.choice or nil
-  local label = choice_support.resolve_option_label_by_id(choice, item_id)
-  return item_id, label
-end
-
-local function _resolve_market_skin_option(state, intent)
-  if intent.type ~= "market_confirm" then
-    return nil, nil
-  end
-  local current_model = runtime_state.get_ui_model(state)
-  local choice = current_model and current_model.choice or nil
-  if choice_support.resolve_screen_key(choice) ~= "market" then
-    return nil, nil
-  end
-  local product_id = number_utils.to_integer(intent.option_id)
-  if product_id == nil then
-    return nil, nil
-  end
-  local options = type(choice) == "table" and choice.options or nil
-  local matched_option = nil
-  for _, option in ipairs(options or {}) do
-    local option_id = number_utils.to_integer(type(option) == "table" and option.id or option)
-    if option_id == product_id then
-      matched_option = option
-      break
-    end
-  end
-  if not (matched_option and matched_option.requires_pre_confirm == true) then
-    return nil, nil
-  end
-  local option_id = intent.option_id
-  local label = choice_support.resolve_option_label_by_id(choice, option_id)
-  if label == nil then
-    option_id = product_id
-    label = choice_support.resolve_option_label_by_id(choice, option_id)
-  end
-  return option_id, label
-end
 
 local function _resolve_choice_owner_role_id(state, choice)
   local owner_role_id = choice_contract.resolve_owner_or_meta_role_id(choice)
@@ -114,14 +54,6 @@ function pre_confirm_flow.needs_pre_confirm(state, intent)
     return _requires_choice_select_pre_confirm(choice, screen_key)
   end
 
-  if intent_type == "ui_button" and _parse_item_slot_index(intent) then
-    return choice_support.requires_item_slot_pre_confirm(choice)
-  end
-  if intent_type == "market_confirm" then
-    local option_id = _resolve_market_skin_option(state, intent)
-    return option_id ~= nil
-  end
-
   return false
 end
 
@@ -132,12 +64,6 @@ local function _resolve_enter_params(state, intent, choice)
   if intent.type == "choice_select" then
     option_id = intent.option_id
     option_label = choice_support.resolve_option_label_by_id(choice, option_id) or tostring(option_id)
-  elseif intent.type == "market_confirm" then
-    source_screen = "market"
-    option_id, option_label = _resolve_market_skin_option(state, intent)
-  elseif intent.type == "ui_button" then
-    source_screen = "base_inline"
-    option_id, option_label = _resolve_item_slot_option(state, intent)
   end
 
   if not option_id then
