@@ -21,7 +21,6 @@ local function _normalize_item_slot_flags(state, intent)
   if state._suppress_item_slot_highlight_until_pick == true then
     state._suppress_item_slot_highlight_until_pick = nil
   end
-  state._skip_item_slot_highlight_replay_choice_id = nil
 end
 
 local function _handle_pre_confirm(state, game, intent, opts, action_port)
