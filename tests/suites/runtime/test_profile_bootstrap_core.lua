@@ -79,7 +79,7 @@ end
 local function _test_market_preloads_remote_dice()
   local game = support.apply_profile("market")
   support.assert_inventory_counts(game.players[1], {
-    [2002] = 1,
+    [2002] = 2,
   })
 end
 

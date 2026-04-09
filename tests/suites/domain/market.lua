@@ -221,8 +221,8 @@ local function _test_skin_entry_can_buy_but_no_effect()
   local panel_calls = {}
   local purchase_handlers = {}
   local ctrl_unit = {
-    change_custom_model_by_creature_key = function(...)
-      assert(select("#", ...) == 1, "change_custom_model_by_creature_key should be called with only creature_key")
+    set_model_by_creature_key = function(...)
+      assert(select("#", ...) == 1, "set_model_by_creature_key should be called with only creature_key")
       change_skin_creature_key = select(1, ...)
     end,
   }
@@ -296,7 +296,7 @@ local function _test_skin_entry_can_buy_but_no_effect()
   assert(p.seat_id == before_seat_id, "skin purchase should not change seat")
   local expected_creature_key = runtime_refs.skins[tostring(target.product_id)] or number_utils.to_integer(target.product_id)
   assert(change_skin_creature_key == expected_creature_key,
-    "skin purchase should call change_custom_model_by_creature_key with creature_key")
+    "skin purchase should call set_model_by_creature_key with creature_key")
 end
 
 local function _test_market_choice_marks_skin_options_for_pre_confirm()

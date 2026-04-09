@@ -68,12 +68,12 @@ local function _try_apply_skin_to_unit(player_id, creature_key)
     logger.warn("fulfill_skin: role get_ctrl_unit failed for player " .. tostring(player_id))
     unit = nil
   end
-  if not (unit and type(unit.change_custom_model_by_creature_key) == "function") then
-    logger.warn("fulfill_skin: unit missing change_custom_model_by_creature_key for player " .. tostring(player_id))
+  if not (unit and type(unit.set_model_by_creature_key) == "function") then
+    logger.warn("fulfill_skin: unit missing set_model_by_creature_key for player " .. tostring(player_id))
     return
   end
   if creature_key then
-    local ok_change = pcall(unit.change_custom_model_by_creature_key, creature_key)
+    local ok_change = pcall(unit.set_model_by_creature_key, creature_key)
     if ok_change then
       logger.info(
         "market skin fulfill applied",
@@ -82,7 +82,7 @@ local function _try_apply_skin_to_unit(player_id, creature_key)
         "creature_key=" .. tostring(creature_key)
       )
     else
-      logger.warn("fulfill_skin: change_custom_model_by_creature_key failed for player " .. tostring(player_id))
+      logger.warn("fulfill_skin: set_model_by_creature_key failed for player " .. tostring(player_id))
     end
   else
     logger.warn("fulfill_skin: invalid product_id for player " .. tostring(player_id))
