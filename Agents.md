@@ -50,6 +50,7 @@
 - 保持小步提交, 如果执行目标是 `.agents/plan.md`，结束前不要停下来
 - Eggy API 的 `Fixed` 类型参数必须使用浮点数字面量（如 `30.0`），禁止传递 Lua 整数（如 `30`）。
   Lua 5.5 区分 integer/float 子类型，引擎运行时 Fix32 只接受 float。
+- 调用 Eggy API 时参数必须按文档显式写全，禁止依赖“省略参数走默认值”；尤其 `set_model_by_*` 这类带 `include_*` / `inherit_*` 标志位的方法，必须完整传参。
 - `tools/` 和 `tests/` 中的文件系统操作（创建目录、读写文件、路径拼接、进程执行等）统一使用 `tools/shared/lib/common.lua` 提供的跨平台 API（如 `common.run_command`、`common.ensure_dir`、`common.read_file`），禁止直接调用 `os.execute` / `io.popen`。`runtime_paths.lua` 等底层引导模块除外。
 - 需要按操作系统分支时，使用 `common.is_windows()` / `common.is_macos()` 检测，禁止自行解析 `package.config` 或 `os.getenv`。
 - 路径一律使用正斜杠 `/`，通过 `common.normalize_path()` 统一处理；禁止硬编码反斜杠 `\\` 或依赖 `os.getenv("HOME")`。

@@ -73,7 +73,10 @@ local function _try_apply_skin_to_unit(player_id, creature_key)
     return
   end
   if creature_key then
-    local ok_change = pcall(unit.set_model_by_creature_key, creature_key)
+    local ok_change = pcall(unit.set_model_by_creature_key, creature_key, true, true, true)
+      or pcall(unit.set_model_by_creature_key, unit, creature_key, true, true, true)
+      or pcall(unit.set_model_by_creature_key, creature_key)
+      or pcall(unit.set_model_by_creature_key, unit, creature_key)
     if ok_change then
       logger.info(
         "market skin fulfill applied",

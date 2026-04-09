@@ -214,6 +214,9 @@ local function _test_skin_entry_can_buy_but_no_effect()
   end
 
   local change_skin_creature_key = nil
+  local change_skin_include_custom_model = nil
+  local change_skin_inherit_scale = nil
+  local change_skin_inherit_capsule_size = nil
 
   local before_count = p.inventory:count()
   local before_seat_id = p.seat_id
@@ -222,8 +225,11 @@ local function _test_skin_entry_can_buy_but_no_effect()
   local purchase_handlers = {}
   local ctrl_unit = {
     set_model_by_creature_key = function(...)
-      assert(select("#", ...) == 1, "set_model_by_creature_key should be called with only creature_key")
+      assert(select("#", ...) == 4, "set_model_by_creature_key should be called with creature_key and 3 flags")
       change_skin_creature_key = select(1, ...)
+      change_skin_include_custom_model = select(2, ...)
+      change_skin_inherit_scale = select(3, ...)
+      change_skin_inherit_capsule_size = select(4, ...)
     end,
   }
 
@@ -297,6 +303,9 @@ local function _test_skin_entry_can_buy_but_no_effect()
   local expected_creature_key = runtime_refs.skins[tostring(target.product_id)] or number_utils.to_integer(target.product_id)
   assert(change_skin_creature_key == expected_creature_key,
     "skin purchase should call set_model_by_creature_key with creature_key")
+  assert(change_skin_include_custom_model == true, "skin purchase should keep custom model data")
+  assert(change_skin_inherit_scale == true, "skin purchase should inherit scale")
+  assert(change_skin_inherit_capsule_size == true, "skin purchase should inherit capsule size")
 end
 
 local function _test_market_choice_marks_skin_options_for_pre_confirm()
