@@ -812,6 +812,15 @@ local function _test_non_passive_action_button_label_restored()
   _assert_eq(label_state["基础_行动按钮"], "", "nil choice: action_button_label.apply should set empty")
 end
 
+local function _test_action_button_label_skips_without_set_label()
+  local action_button_label = require("src.ui.ctl.action_button_label")
+  local called = false
+  action_button_label.apply(nil, { kind = "item_phase_passive" })
+  action_button_label.apply({}, { kind = "item_phase_passive" })
+  action_button_label.apply({ set_label = nil }, { kind = "item_phase_passive" })
+  _assert_eq(called, false, "apply should skip when ui is nil or has no set_label")
+end
+
 return {
   name = "presentation_item_slots",
   tests = {
@@ -827,5 +836,6 @@ return {
     { name = "_test_passive_outlines_highlight_available_slots", run = _test_passive_outlines_highlight_available_slots },
     { name = "_test_passive_action_button_shows_continue_label", run = _test_passive_action_button_shows_continue_label },
     { name = "_test_non_passive_action_button_label_restored", run = _test_non_passive_action_button_label_restored },
+    { name = "_test_action_button_label_skips_without_set_label", run = _test_action_button_label_skips_without_set_label },
   },
 }
