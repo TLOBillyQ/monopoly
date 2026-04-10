@@ -688,7 +688,6 @@ local function _test_passive_slot_three_state_rendering()
   _assert_eq(touch_state["基础_道具槽位3"], true,  "passive: available slot 3 should be touchable")
   _assert_eq(touch_state["基础_道具槽位4"], false, "passive: unavailable slot 4 should not be touchable")
   _assert_eq(touch_state["基础_道具槽位5"], false, "passive: unavailable slot 5 should not be touchable")
-  _assert_eq(label_state["基础_行动按钮"], "继续", "passive: action button label should be 继续")
 end
 
 local function _test_passive_outlines_highlight_available_slots()
@@ -760,82 +759,57 @@ local function _test_passive_outlines_highlight_available_slots()
 end
 
 local function _test_passive_action_button_shows_continue_label()
+  local action_button_label = require("src.ui.ctl.action_button_label")
+  local label = action_button_label.resolve_label({
+    kind = "item_phase_passive",
+    uses_item_slots = true,
+    options = { { id = 2001 } },
+  })
+  _assert_eq(label, "继续", "passive: action_button_label.resolve_label should return 继续")
+
   local label_state = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
-    ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
-      set_touch_enabled = function() end,
-      set_visible = function() end,
-      set_label = function(_, name, text)
-        label_state[name] = text
-      end,
-    },
+  local ui = {
+    item_slots = { "基础_道具槽位1" },
+    card_outlines = { "基础_可出牌外框1" },
+    set_touch_enabled = function() end,
+    set_visible = function() end,
+    set_label = function(_, name, text)
+      label_state[name] = text
+    end,
   }
-  local ui_model = {
-    current_player_id = 1,
-    item_choice_owner_id = 1,
-    item_slots = { 2001 },
-    item_slots_by_player = { [1] = { 2001 } },
-    choice = {
-      kind = "item_phase_passive",
-      route_key = "item_phase_passive",
-      uses_item_slots = true,
-      options = { { id = 2001 } },
-      slot_states = { [1] = { available = true, alert = false } },
-    },
-  }
-
-  _with_patches({
-    { key = "UIManager", value = { query_nodes_by_name = function() return { { set_texture_keep_size = function() end } } end } },
-  }, function()
-    ui_view.refresh_item_slots(state, ui_model, {
-      display_player_id = 1,
-      allow_interact = true,
-    })
-  end)
-
-  _assert_eq(label_state["基础_行动按钮"], "继续", "passive: action button label should be 继续")
+  action_button_label.apply(ui, {
+    kind = "item_phase_passive",
+    uses_item_slots = true,
+    options = { { id = 2001 } },
+  })
+  _assert_eq(label_state["基础_行动按钮"], "继续", "passive: action_button_label.apply should set 继续")
 end
 
 local function _test_non_passive_action_button_label_restored()
+  local action_button_label = require("src.ui.ctl.action_button_label")
+  local label = action_button_label.resolve_label({
+    kind = "item_phase_choice",
+    uses_item_slots = true,
+    options = { { id = 2001 } },
+  })
+  _assert_eq(label, "", "non-passive: action_button_label.resolve_label should return empty")
+
   local label_state = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
-    ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
-      set_touch_enabled = function() end,
-      set_visible = function() end,
-      set_label = function(_, name, text)
-        label_state[name] = text
-      end,
-    },
+  local ui = {
+    set_label = function(_, name, text)
+      label_state[name] = text
+    end,
   }
-  local ui_model = {
-    current_player_id = 1,
-    item_choice_owner_id = 1,
-    item_slots = { 2001 },
-    item_slots_by_player = { [1] = { 2001 } },
-    choice = {
-      kind = "item_phase_choice",
-      route_key = "base_inline",
-      uses_item_slots = true,
-      options = { { id = 2001 } },
-    },
-  }
+  action_button_label.apply(ui, {
+    kind = "item_phase_choice",
+    uses_item_slots = true,
+    options = { { id = 2001 } },
+  })
+  _assert_eq(label_state["基础_行动按钮"], "", "non-passive: action_button_label.apply should set empty")
 
-  _with_patches({
-    { key = "UIManager", value = { query_nodes_by_name = function() return { { set_texture_keep_size = function() end } } end } },
-  }, function()
-    ui_view.refresh_item_slots(state, ui_model, {
-      display_player_id = 1,
-      allow_interact = true,
-    })
-  end)
-
-  _assert_eq(label_state["基础_行动按钮"], "", "non-passive: action button label should be reset to empty")
+  label_state = {}
+  action_button_label.apply(ui, nil)
+  _assert_eq(label_state["基础_行动按钮"], "", "nil choice: action_button_label.apply should set empty")
 end
 
 return {

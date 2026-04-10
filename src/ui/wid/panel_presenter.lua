@@ -5,6 +5,7 @@ local role_id_utils = require("src.core.utils.role_id")
 local panel_cash_delta = require("src.ui.wid.panel_cash_delta")
 local panel_player_slots = require("src.ui.wid.panel_player_slots")
 local ui_touch_policy_runtime = require("src.ui.input.touch_policy")
+local action_button_label = require("src.ui.ctl.action_button_label")
 
 local panel_presenter = {}
 
@@ -111,6 +112,7 @@ local function _refresh_for_role(state, ui_model, runtime, role, panel, refresh_
   _apply_countdown(ui, panel)
   _apply_action_hint(ui, panel)
   ui:set_touch_enabled(base_nodes.action_button, base_visible)
+  action_button_label.apply(ui, ui_model and ui_model.choice or nil)
   refresh_item_slots(state, ui_model, {
     role_id = ctx.role_id,
     display_player_id = ctx.display_player_id,

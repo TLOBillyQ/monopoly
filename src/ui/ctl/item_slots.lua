@@ -6,7 +6,6 @@ local runtime_state = require("src.ui.state")
 local timing = require("src.config.gameplay.timing")
 local role_id_utils = require("src.core.utils.role_id")
 local choice_support = require("src.ui.pres.choice_support")
-local base_nodes = require("src.ui.schema.base")
 
 local M = {}
 
@@ -222,6 +221,21 @@ local function _should_skip_highlight_replay(state, choice, choice_id)
     and tostring(state._skip_item_slot_highlight_replay_choice_id) == tostring(choice_id)
 end
 
+local function _needs_passive_replay(gate_store, gate_key, choice_id, slot_pickable)
+  local signature = _build_pickable_signature(slot_pickable)
+  local gate = gate_store[gate_key]
+  if gate ~= nil and gate.slot_signature == signature and gate.choice_id == choice_id then
+    return false
+  end
+  gate_store[gate_key] = {
+    choice_id = choice_id,
+    slot_signature = signature,
+    timer_token = 0,
+    ready = true,
+  }
+  return true
+end
+
 local function _refresh_highlight_state(state, ctx, slot_pickable)
   local is_item_phase_ask = choice_support.requires_item_slot_pre_confirm(ctx.choice)
     and state._item_phase_ask_active == true
@@ -232,11 +246,14 @@ local function _refresh_highlight_state(state, ctx, slot_pickable)
     _apply_outline_state(ctx.ui, ctx.outlines, slot_pickable, gate.ready == true)
     return
   end
-  gate_store[gate_key] = nil
   local suppress_slot_highlight_anim = ctx.suppress_flag and choice_support.uses_item_slots(ctx.choice)
   local skip_replay = _should_skip_highlight_replay(state, ctx.choice, ctx.choice_id)
   if not suppress_slot_highlight_anim and not skip_replay then
-    _emit_pickable_slot_animation(slot_pickable)
+    if _needs_passive_replay(gate_store, gate_key, ctx.choice_id, slot_pickable) then
+      _emit_pickable_slot_animation(slot_pickable)
+    end
+  else
+    gate_store[gate_key] = nil
   end
   if not skip_replay then
     state._skip_item_slot_highlight_replay_choice_id = nil
@@ -258,17 +275,7 @@ function M.refresh_item_slots(state, ui_model, opts)
   local ctx = _build_refresh_context(state, ui_model, opts)
   ctx.image_refs = state.ui_refs and state.ui_refs.images or {}
   local slot_pickable = _sync_slot_images(ctx)
-  if ctx.choice and ctx.choice.kind == "item_phase_passive" then
-    _refresh_highlight_state(state, ctx, slot_pickable)
-    if ctx.ui.set_label then
-      ctx.ui:set_label(base_nodes.action_button, "继续")
-    end
-  else
-    if ctx.ui.set_label then
-      ctx.ui:set_label(base_nodes.action_button, "")
-    end
-    _refresh_highlight_state(state, ctx, slot_pickable)
-  end
+  _refresh_highlight_state(state, ctx, slot_pickable)
   _store_item_ids(ctx.ui, ctx.role_id, ctx.item_ids)
 end
 
