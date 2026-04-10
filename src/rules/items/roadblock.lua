@@ -171,8 +171,6 @@ function roadblock.candidates(game, player, distance)
 end
 
 function roadblock.manual_candidates(game, player, distance)
-  -- Manual target picking uses the shared Manhattan-range query instead of
-  -- forward/backward path scanning.
   local board = game.board
   local list = {}
   local seen = {}

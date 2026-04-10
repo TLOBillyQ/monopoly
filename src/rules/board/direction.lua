@@ -201,6 +201,60 @@ local function _resolve_backward_from_neighbors(neigh, facing)
   return any_id
 end
 
+function direction.try_resolve_forward_next_id(map, current_id, neigh, facing, parity, can_enter_inner, skip_entry_on_tile_id)
+  return direction.resolve_forward_next_id(map, current_id, neigh, facing, parity, can_enter_inner, skip_entry_on_tile_id)
+end
+
+function direction.collect_forward_indices(board, player, max_steps)
+  local map = board.map
+  local facing = player.status and player.status.move_dir or nil
+  local set = {}
+  local list = {}
+  local current_id = board:get_tile(player.position).id
+  for step = 1, max_steps do
+    local neigh = map.neighbors[current_id]
+    local next_id = direction.try_resolve_forward_next_id(map, current_id, neigh, facing, nil, true, nil)
+    if next_id == nil then
+      break
+    end
+    local next_index = board:index_of_tile_id(next_id)
+    if next_index == nil then
+      break
+    end
+    set[next_index] = true
+    list[#list + 1] = { index = next_index, step = step }
+    local travel_dir = map.direction(current_id, next_id)
+    facing = direction.resolve_forward_facing(map, next_id, travel_dir, { parity = nil, entered_inner = false })
+    current_id = next_id
+  end
+  return { set = set, list = list }
+end
+
+function direction.collect_backward_indices(board, player, max_steps)
+  local map = board.map
+  local facing = player.status and player.status.move_dir or nil
+  local set = {}
+  local list = {}
+  local current_id = board:get_tile(player.position).id
+  for step = 1, max_steps do
+    local neigh = map.neighbors[current_id]
+    local result = direction.resolve_backward_next_source(map, current_id, neigh, facing)
+    local next_id = result.next_id
+    if next_id == nil then
+      break
+    end
+    local next_index = board:index_of_tile_id(next_id)
+    if next_index == nil then
+      break
+    end
+    set[next_index] = true
+    list[#list + 1] = { index = next_index, step = step }
+    facing = map.direction(next_id, current_id)
+    current_id = next_id
+  end
+  return { set = set, list = list }
+end
+
 function direction.resolve_backward_next_source(map, current_id, neigh, facing)
   local reverse_facing_next_id = _resolve_backward_by_facing(neigh, facing)
   if reverse_facing_next_id then

@@ -9,6 +9,7 @@ local demolish = require("src.rules.items.demolish")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
+local board_query = require("src.rules.board.query")
 
 local handlers = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -211,13 +212,14 @@ function handlers.handle_roadblock(game, player, item_id, context)
       assert(inventory.consume(inner_player, inner_item_id) == true, "consume roadblock failed")
       return roadblock.apply(inner_game, inner_player, idx)
     end,
-    choice_spec = function(_, inner_player, inner_item_id, candidates)
-      local options = {}
+    choice_spec = function(inner_game, inner_player, inner_item_id, candidates)
+      local flat_options = {}
       local body_lines = {}
       for _, cand in ipairs(candidates) do
-        table.insert(options, { id = cand.idx, label = cand.label })
+        table.insert(flat_options, { id = cand.idx, label = cand.label })
         table.insert(body_lines, cand.label)
       end
+      local options, slot_layout = board_query.arrange_target_options(inner_game.board, inner_player, flat_options)
       return {
         kind = "roadblock_target",
         route_key = "target",
@@ -227,6 +229,7 @@ function handlers.handle_roadblock(game, player, item_id, context)
         title = "路障卡：选择位置",
         body_lines = body_lines,
         options = options,
+        target_slot_layout = slot_layout,
         allow_cancel = true,
         cancel_label = "放弃",
         meta = { player_id = inner_player.id, item_id = inner_item_id },

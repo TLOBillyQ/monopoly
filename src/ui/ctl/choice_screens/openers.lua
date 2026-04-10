@@ -109,19 +109,17 @@ local function _fill_option_nodes(ui, screen, options, opts)
 end
 
 local function _order_target_options(choice)
-  local option_ids = {}
-  local deferred_option = nil
-  for _, option in ipairs(choice.options or {}) do
-    if deferred_option == nil and common.is_under_option(option) then
-      deferred_option = option
-    else
-      option_ids[#option_ids + 1] = option
-    end
+  local options = choice.options or {}
+  local layout = choice.target_slot_layout
+  if not layout then
+    return options
   end
-  if deferred_option ~= nil then
-    option_ids[#option_ids + 1] = deferred_option
+  local slots = {}
+  for i, option in ipairs(options) do
+    local slot = layout[i] or i
+    slots[slot] = option
   end
-  return option_ids
+  return slots
 end
 
 function M.open_choice_modal(state, choice, market)

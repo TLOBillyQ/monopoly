@@ -18,6 +18,7 @@ local domain_behavior_modules = {
   "suites.domain.board_init_crap_coverage",
   "suites.domain.board_direction_utils_crap_coverage",
   "suites.domain.board_direction_crap_coverage",
+  "suites.domain.board_direction_collect_crap_coverage",
   "suites.domain.board_query_crap_coverage",
   "suites.domain.resolver_crap_coverage",
   "suites.domain.mine_effect_crap_coverage",

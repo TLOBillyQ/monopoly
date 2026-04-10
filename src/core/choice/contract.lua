@@ -21,6 +21,7 @@ choice_contract.explicit_fields = {
   "pre_confirm_before_slot_pick",
   "uses_target_picker",
   "target_picker_owner_role_id",
+  "target_slot_layout",
   "active_tab",
   "page_index",
   "page_count",

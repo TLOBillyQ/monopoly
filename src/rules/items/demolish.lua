@@ -211,6 +211,7 @@ function demolish.use(game, player, distance, consume_fn, opts)
 
     if #options > 0 then
       local title = opts.title or "选择目标"
+      local arranged, slot_layout = board_query.arrange_target_options(game.board, player, options)
       return {
         waiting = true,
         intent = {
@@ -223,7 +224,8 @@ function demolish.use(game, player, distance, consume_fn, opts)
             target_picker_owner_role_id = player.id,
             title = title .. "：选择目标格子",
             body_lines = body_lines,
-            options = options,
+            options = arranged,
+            target_slot_layout = slot_layout,
             allow_cancel = true,
             cancel_label = "取消",
             meta = {
