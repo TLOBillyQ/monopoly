@@ -1,3 +1,171 @@
+# 道具卡 UX 审计：所有组合持有下单玩家使用体验
+
+审计日期：2026-04-10
+范围：玩家持有道具卡的所有组合情况下，item phase 交互流程、高亮事件、行动按钮文字、取消分支
+
+---
+
+## 1 完整使用流程总览
+
+```
+turn start
+  → pre_action phase → build_passive_choice_spec (item_phase_passive)
+    → 展示 5 个道具槽位，可选项高亮
+    → 玩家点击槽位 → use_item
+      → 无 followup → mark_effect_group_used → reopen_passive_or_finish
+      → 有 followup → 打开 followup choice（roadblock_target / demolish_target / remote_dice_value / item_target_player / steal_item）
+        → followup 完成 → _resolve_followup_completion → reopen_or_finish
+    → 玩家点击"继续"→ choice_cancel → item_phase.finish
+  → pre_move phase → 同上
+  → post_action phase → 同上
+```
+
+### 1.1 choice spec 种类
+
+| choice kind | route_key | `uses_item_slots` | `pre_confirm_before_slot_pick` | cancel_label | 来源 |
+|---|---|---|---|---|---|
+| `item_phase_passive` | `item_phase_passive` | ✅ | ❌ | "继续" | `phase.lua:331-343` |
+| `item_phase_choice` | `base_inline` | ✅ | ✅ | "结束阶段" | `phase.lua:380-400` |
+| `roadblock_target` | — | ❌ | ❌ | "取消" | choice_handlers/item.lua:441-454 |
+| `demolish_target` | — | ❌ | ❌ | "取消" | choice_handlers/item.lua:427-440 |
+| `remote_dice_value` | — | ❌ | ❌ | "取消" | choice_handlers/item.lua:490-503 |
+| `item_target_player` | — | ❌ | ❌ | "取消" | choice_handlers/item.lua:476-489 |
+| `steal_item` | — | ❌ | ❌ | "取消" | choice_handlers/item.lua:455-468 |
+| `steal_prompt` | — | ❌ | ❌ | (cancel → skip) | choice_handlers/item.lua:469-475 |
+
+### 1.2 需要 followup 的道具
+
+`availability.lua:23-31`：
+remote_dice(2002)、roadblock(2004)、monster(2008)、missile(2013)、所有 target_item（exile/send_poor/invite_deity 等）
+
+---
+
+## 2 问题 A：行动按钮文字覆写
+
+### 位置
+
+`src/ui/ctl/item_slots.lua:257-273` — `refresh_item_slots()`
+
+```lua
+if ctx.choice and ctx.choice.kind == "item_phase_passive" then
+  _refresh_highlight_state(state, ctx, slot_pickable)
+  if ctx.ui.set_label then
+    ctx.ui:set_label(base_nodes.action_button, "继续")   -- ← 写入
+  end
+else
+  if ctx.ui.set_label then
+    ctx.ui:set_label(base_nodes.action_button, "")       -- ← 写入
+  end
+  _refresh_highlight_state(state, ctx, slot_pickable)
+end
+```
+
+### 问题描述
+
+1. **每次 UI 刷新都覆写**：`panel_presenter.refresh` → `_refresh_all_roles` → 对每个 role 都调用 `refresh_item_slots`。在 4 人游戏中，action button label 在一帧内被写 4 次（每 role 一次）。
+2. **职责错位**：item slot 渲染模块（`item_slots.lua`）不应管理行动按钮文字。按钮文字属于通用面板层级（panel_presenter 或 choice modal 层），不属于 slot 渲染。
+3. **非 passive choice 强制清空**：当 choice 不是 `item_phase_passive` 时（如 `roadblock_target`），行动按钮文字被清空为 `""`，但这时行动按钮可能应显示其他文案（如倒计时文字）。
+
+### 重构方向
+
+- 将行动按钮文字的决定逻辑从 `item_slots.lua` 移到 `panel_presenter` 或新增独立模块 `action_button_label.lua`。
+- 逻辑：根据当前 `choice.kind` 和 `choice.cancel_label` 统一决定按钮文案，一处写入，不重复设置。
+- `item_slots.lua` 只负责渲染 5 个道具槽的图像、可选性和高亮，不触碰行动按钮。
+
+---
+
+## 3 问题 B：高亮事件重复发射
+
+### 3.1 gate 机制（ask 路径）— 正常
+
+`_refresh_highlight_state` 行 230-233：当 `is_item_phase_ask == true` 时，走 gate 路径：
+- `_refresh_item_phase_gate` 通过 `slot_signature + choice_id` 检测是否需要 replay
+- 如果 signature 没变，`needs_replay = false`，不发射任何事件
+- ✅ 不会重复发射
+
+### 3.2 非 ask 被动路径 — 存在多余发射
+
+`_refresh_highlight_state` 行 236-240：当 `is_item_phase_ask == false` 时：
+
+```lua
+local suppress_slot_highlight_anim = ctx.suppress_flag and choice_support.uses_item_slots(ctx.choice)
+local skip_replay = _should_skip_highlight_replay(state, ctx.choice, ctx.choice_id)
+if not suppress_slot_highlight_anim and not skip_replay then
+  _emit_pickable_slot_animation(slot_pickable)   -- ← 每次刷新都触发
+end
+```
+
+**问题**：
+- `suppress_flag`（`_suppress_item_slot_highlight_until_pick`）只在 item_phase_ask 打开时设置为 true，在 ask confirm/cancel 后清除
+- `skip_replay`（`_skip_item_slot_highlight_replay_choice_id`）只在 ask confirm 后设置，且只跳过一次
+- **正常的 passive 模式下**（ask 未激活，suppress 和 skip 都为 nil），每次 `refresh_item_slots` 调用都会触发 `_emit_pickable_slot_animation`
+- 在 `_refresh_all_roles` 中对每个 role 调用一次 → 4 人游戏中，passive 阶段每帧发射 4 次 `重置高亮` + N 次 `高亮道具槽位牌{i}`
+
+**影响**：
+- 性能：每帧重复发射 UI 事件到宿主
+- 视觉：虽然高亮效果最终是幂等的，但反复触发动画重播可能导致闪烁
+
+### 3.3 重构方向
+
+- 将 gate 机制扩展到非 ask 路径，统一使用 signature + choice_id 判定是否需要 replay
+- 或在 `_refresh_highlight_state` 入口增加 "dirty 标记"检查，只有在 choice/slot 真正变化时才发射事件
+
+---
+
+## 4 问题 C："不使用道具"分支 — ✅ 完整
+
+### 所有 item choice 均有取消路径
+
+| choice kind | allow_cancel | cancel 处理 | 效果 |
+|---|---|---|---|
+| `item_phase_passive` | ✅ true | `item_phase.finish(game, phase)` | 结束当前 item phase，回合继续 |
+| `item_phase_choice` | ✅ true | `item_phase.finish(game, phase)` | 同上 |
+| `roadblock_target` | ✅ true | `_resolve_followup_cancel` | repeatable → reopen_or_finish；否则 finish phase |
+| `demolish_target` | ✅ true | `_resolve_followup_cancel` | 同上 |
+| `remote_dice_value` | ✅ true | `_resolve_followup_cancel` | 同上 |
+| `item_target_player` | ✅ true | `_resolve_followup_cancel` | 同上 |
+| `steal_item` | ✅ true | `_resolve_followup_cancel` | 同上 |
+| `steal_prompt` | ✅ (cancel → skip) | `option_id = "skip"` | 跳到下一个 steal 目标或结束 |
+
+### 行动按钮路由
+
+`src/ui/input/canvas_route/base.lua:14-15`：当 choice 为 `item_phase_passive` 时，行动按钮点击生成 `choice_cancel_intent`，正确路由到取消流程。
+
+**结论：所有道具组合持有场景下，玩家都有明确的"不使用"退出路径。无遗漏。**
+
+---
+
+## 5 总结与重构优先级
+
+| # | 问题 | 严重性 | 影响范围 | 重构建议 |
+|---|---|---|---|---|
+| A | 行动按钮文字在 item_slots.lua 中覆写 | **高** | 所有带 choice 的刷新帧 | 抽到独立模块，从 item_slots.lua 移除 |
+| B | 非 ask 被动路径高亮事件每帧重复发射 | **中** | passive item phase 每帧 × 每 role | 扩展 gate 机制覆盖非 ask 路径 |
+| C | "不使用道具"分支缺失 | **无**（已完整） | — | 无需修改 |
+
+### 行动按钮重构方案
+
+**目标**：所有行动按钮文字的写入归一处，`item_slots.lua` 不再触碰 `action_button`。
+
+**步骤**：
+1. 新建 `src/ui/ctl/action_button_label.lua`，导出 `resolve_label(choice) → string`
+   - `item_phase_passive` → `"继续"`
+   - 有 `cancel_label` → 使用 `cancel_label`
+   - 其他 → `""`
+2. 在 `panel_presenter._refresh_for_role` 中，调用 `action_button_label.resolve_label(choice)` 设置文字，替代 `item_slots.lua` 中的 set_label 调用
+3. 从 `item_slots.lua:261-270` 删除两处 `set_label(base_nodes.action_button, ...)` 调用
+4. 更新测试 `_test_passive_action_button_shows_continue_label` 和 `_test_non_passive_action_button_label_restored` 以验证新路径
+
+### 高亮去重方案
+
+**步骤**：
+1. 在 `_refresh_highlight_state` 的非 ask 分支也使用 gate_store 做 signature 检查
+2. 只有 signature 或 choice_id 变化时才调用 `_emit_pickable_slot_animation`
+3. 保留 `suppress_flag` 和 `skip_replay` 作为额外短路条件
+4. 更新/新增测试验证：同一 passive choice 连续两次 refresh 只发射一次高亮事件
+
+---
+
 # CRAP 热点函数
 
 来源：`C:/Users/Lzx_8/AppData/Local/Temp/monopoly_crap/crap_report.json`
