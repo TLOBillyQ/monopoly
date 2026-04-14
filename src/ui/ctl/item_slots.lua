@@ -260,13 +260,7 @@ function M.refresh_item_slots(state, ui_model, opts)
   local slot_pickable = _sync_slot_images(ctx)
   if ctx.choice and ctx.choice.kind == "item_phase_passive" then
     _refresh_highlight_state(state, ctx, slot_pickable)
-    if ctx.ui.set_label then
-      ctx.ui:set_label(base_nodes.action_button, "继续")
-    end
   else
-    if ctx.ui.set_label then
-      ctx.ui:set_label(base_nodes.action_button, "")
-    end
     _refresh_highlight_state(state, ctx, slot_pickable)
   end
   _store_item_ids(ctx.ui, ctx.role_id, ctx.item_ids)
