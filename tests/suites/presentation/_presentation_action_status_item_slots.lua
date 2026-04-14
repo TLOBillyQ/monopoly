@@ -688,7 +688,6 @@ local function _test_passive_slot_three_state_rendering()
   _assert_eq(touch_state["基础_道具槽位3"], true,  "passive: available slot 3 should be touchable")
   _assert_eq(touch_state["基础_道具槽位4"], false, "passive: unavailable slot 4 should not be touchable")
   _assert_eq(touch_state["基础_道具槽位5"], false, "passive: unavailable slot 5 should not be touchable")
-  _assert_eq(label_state["基础_行动按钮"], "继续", "passive: action button label should be 继续")
 end
 
 local function _test_passive_outlines_highlight_available_slots()
@@ -759,7 +758,7 @@ local function _test_passive_outlines_highlight_available_slots()
   _assert_eq(touch_state["基础_可出牌外框3"], true,  "passive: available outline 3 should be touchable")
 end
 
-local function _test_passive_action_button_shows_continue_label()
+local function _test_action_button_label_never_written()
   local label_state = {}
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
@@ -773,7 +772,9 @@ local function _test_passive_action_button_shows_continue_label()
       end,
     },
   }
-  local ui_model = {
+
+  -- passive 场景
+  local passive_model = {
     current_player_id = 1,
     item_choice_owner_id = 1,
     item_slots = { 2001 },
@@ -786,34 +787,18 @@ local function _test_passive_action_button_shows_continue_label()
       slot_states = { [1] = { available = true, alert = false } },
     },
   }
-
   _with_patches({
     { key = "UIManager", value = { query_nodes_by_name = function() return { { set_texture_keep_size = function() end } } end } },
   }, function()
-    ui_view.refresh_item_slots(state, ui_model, {
+    ui_view.refresh_item_slots(state, passive_model, {
       display_player_id = 1,
       allow_interact = true,
     })
   end)
+  _assert_eq(label_state["基础_行动按钮"], nil, "guard: passive should not write action button label")
 
-  _assert_eq(label_state["基础_行动按钮"], "继续", "passive: action button label should be 继续")
-end
-
-local function _test_non_passive_action_button_label_restored()
-  local label_state = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
-    ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
-      set_touch_enabled = function() end,
-      set_visible = function() end,
-      set_label = function(_, name, text)
-        label_state[name] = text
-      end,
-    },
-  }
-  local ui_model = {
+  -- 非 passive 场景
+  local non_passive_model = {
     current_player_id = 1,
     item_choice_owner_id = 1,
     item_slots = { 2001 },
@@ -825,17 +810,16 @@ local function _test_non_passive_action_button_label_restored()
       options = { { id = 2001 } },
     },
   }
-
+  label_state = {}
   _with_patches({
     { key = "UIManager", value = { query_nodes_by_name = function() return { { set_texture_keep_size = function() end } } end } },
   }, function()
-    ui_view.refresh_item_slots(state, ui_model, {
+    ui_view.refresh_item_slots(state, non_passive_model, {
       display_player_id = 1,
       allow_interact = true,
     })
   end)
-
-  _assert_eq(label_state["基础_行动按钮"], "", "non-passive: action button label should be reset to empty")
+  _assert_eq(label_state["基础_行动按钮"], nil, "guard: non-passive should not write action button label")
 end
 
 return {
@@ -851,7 +835,6 @@ return {
     { name = "_test_item_slot_refresh_resets_highlight_without_client_role", run = _test_item_slot_refresh_resets_highlight_without_client_role },
     { name = "_test_passive_slot_three_state_rendering", run = _test_passive_slot_three_state_rendering },
     { name = "_test_passive_outlines_highlight_available_slots", run = _test_passive_outlines_highlight_available_slots },
-    { name = "_test_passive_action_button_shows_continue_label", run = _test_passive_action_button_shows_continue_label },
-    { name = "_test_non_passive_action_button_label_restored", run = _test_non_passive_action_button_label_restored },
+    { name = "_test_action_button_label_never_written", run = _test_action_button_label_never_written },
   },
 }
