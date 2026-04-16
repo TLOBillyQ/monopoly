@@ -23,8 +23,11 @@ local domain_behavior_modules = {
   "suites.domain.resolver_crap_coverage",
   "suites.domain.mine_effect_crap_coverage",
   "suites.domain.item_availability_rent_response_crap_coverage",
+  "suites.domain.item_availability_trigger_timing_crap_coverage",
   "suites.domain.item_preconsume_crap_coverage",
   "suites.domain.host_context_crap_coverage",
+  "suites.domain.remote_priority_crap_coverage",
+  "suites.domain.ring_map_direction_crap_coverage",
 }
 
 local runtime_behavior_modules = {
@@ -48,10 +51,11 @@ local gameplay_behavior_modules = {
   "suites.gameplay.gameplay_items_startup",
   "suites.gameplay.gameplay_item_phase_passive",
   "suites.gameplay.gameplay_forced_relocation_and_followup",
-  "suites.gameplay.pre_move_phase_crap_coverage",
-  "suites.gameplay.action_anim_wait_crap_coverage",
-  "suites.gameplay.validator_crap_coverage",
-}
+   "suites.gameplay.pre_move_phase_crap_coverage",
+   "suites.gameplay.action_anim_wait_crap_coverage",
+   "suites.gameplay.validator_crap_coverage",
+   "suites.gameplay.phase_crap_coverage",
+ }
 
 local presentation_behavior_modules = {
   "suites.runtime.runtime_bootstrap",
