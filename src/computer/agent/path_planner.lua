@@ -16,6 +16,10 @@ local function _current_rent(tile_ref, level)
   return pricing.rent_for_level(tile_ref, level or 0)
 end
 
+local function _step_priority(rank, steps)
+  return rank, steps
+end
+
 local remote_step_rank_by_type = {
   item = 1,
   chance = 2,
@@ -25,6 +29,38 @@ local remote_step_rank_by_type = {
   tax = 8,
   hospital = 9,
 }
+
+local remote_land_priority_rules = {
+  unowned = function(_, _, _, steps)
+    return _step_priority(3, steps)
+  end,
+  self_owned = function(_, _, _, steps)
+    return _step_priority(4, steps)
+  end,
+  enemy_owned = function(_, _, tile_ref)
+    return 10, -_current_rent(tile_ref, tile_ref.level)
+  end,
+}
+
+local remote_priority_rules = {
+  land = function(game, player, tile_ref, steps)
+    local st = tile_state(game, tile_ref)
+    local land_rule_key = "enemy_owned"
+    if not st or not st.owner_id then
+      land_rule_key = "unowned"
+    elseif st.owner_id == player.id then
+      land_rule_key = "self_owned"
+    end
+    return remote_land_priority_rules[land_rule_key](game, player, tile_ref, steps)
+  end,
+}
+
+for tile_type, rank in pairs(remote_step_rank_by_type) do
+  local current_rank = rank
+  remote_priority_rules[tile_type] = function(_, _, _, steps)
+    return _step_priority(current_rank, steps)
+  end
+end
 
 local function _simulate_landing(game, player, steps)
   local board = game.board
@@ -59,22 +95,15 @@ local function _simulate_landing(game, player, steps)
 end
 
 local function _remote_priority_for_tile_type(tile_type, steps)
-  local rank = remote_step_rank_by_type[tile_type]
-  if not rank then
+  local rule = remote_priority_rules[tile_type]
+  if not rule then
     return nil
   end
-  return rank, steps
+  return rule(nil, nil, nil, steps)
 end
 
 local function _remote_priority_for_land(game, player, tile_ref, steps)
-  local st = tile_state(game, tile_ref)
-  if not st or not st.owner_id then
-    return 3, steps
-  end
-  if st.owner_id == player.id then
-    return 4, steps
-  end
-  return 10, -_current_rent(tile_ref, st.level)
+  return remote_priority_rules.land(game, player, tile_ref, steps)
 end
 
 local function _remote_priority(game, player, sim)
