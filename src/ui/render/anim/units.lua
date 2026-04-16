@@ -74,7 +74,8 @@ local function _resolve_mine_hit_position(board_scene, player_id, tile_index)
   return unit_position.read_unit_position(unit) or unit_position.read_scene_tile_position(board_scene, tile_index)
 end
 
-local function _play_mine_feedback(state, cue_name, player_id, tile_index, hit_pos)
+local function _play_mine_feedback(state, anim, player_id, tile_index, hit_pos)
+  local cue_name = anim and anim.cue_name or "mine_blast"
   if hit_pos ~= nil then
     board_feedback.play_player_cue(state, cue_name, player_id, { pos = hit_pos })
     return
@@ -100,7 +101,7 @@ function _play_demolish_feedback(state, tile_index, opts, use_building_tile_posi
   })
 end
 
-local function _clear_mine_overlay(state, opts, tile_index)
+local function _clear_mine_overlay(opts, state, tile_index)
   local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
   clear_overlay(state, "mine", tile_index)
 end
@@ -117,21 +118,20 @@ function units.play_mine_trigger(state, anim, duration, opts)
   local player_id = assert(anim.player_id, "missing player_id")
   local tile_index = assert(anim.tile_index, "missing tile_index")
   local to_index = assert(anim.to_index, "missing to_index")
-  local cue_name = anim.cue_name or "mine_blast"
   local hit_pos = _resolve_mine_hit_position(board_scene, player_id, tile_index)
 
   local schedule = opts and opts.schedule or nil
   if type(schedule) == "function" and mine_trigger_snap_delay_seconds > 0 then
-    _play_mine_feedback(state, cue_name, player_id, tile_index, hit_pos)
-    _clear_mine_overlay(state, opts, tile_index)
+    _play_mine_feedback(state, anim, player_id, tile_index, hit_pos)
+    _clear_mine_overlay(opts, state, tile_index)
     local snap_delay = mine_trigger_snap_delay_seconds
     _schedule_mine_trigger_snap(board_scene, player_id, anim, to_index, snap_delay, schedule)
     return _resolve_minimum_delay(snap_delay, duration)
   end
   -- Fallback: no scheduler - preserve original call order
   move_anim.prepare_player_for_snap(board_scene, player_id, anim, "mine_trigger")
-  _play_mine_feedback(state, cue_name, player_id, tile_index, hit_pos)
-  _clear_mine_overlay(state, opts, tile_index)
+  _play_mine_feedback(state, anim, player_id, tile_index, hit_pos)
+  _clear_mine_overlay(opts, state, tile_index)
   local snap_delay = move_anim.snap_player_to_index(board_scene, player_id, to_index, anim, "play_sequence_mine_trigger")
   return _resolve_minimum_delay(snap_delay, duration)
 end
