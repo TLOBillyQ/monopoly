@@ -152,35 +152,35 @@ local function _resolve_rent_response_context(game, player)
   if tile_ref == nil then
     return nil
   end
-  local owner, tile_state = property_query.resolve_rent_owner(game, tile_ref)
+  local owner, state = property_query.resolve_rent_owner(game, tile_ref)
   return {
     tile_ref = tile_ref,
+    player_id = player and player.id or nil,
     owner = owner,
-    tile_state = tile_state,
+    state = state,
+    total_value = property_value.total_invested(tile_ref, state and state.level or 0),
   }
 end
 
-local function _rent_response_available(ctx, player)
+local function _is_rent_response_available(ctx)
   local owner = ctx and ctx.owner or nil
-  return owner ~= nil and owner.id ~= player.id
+  return owner ~= nil and owner.id ~= ctx.player_id
 end
 
-local function _can_afford_strong_rent_response(game, player, ctx)
-  local tile_ref = assert(ctx and ctx.tile_ref, "missing rent response tile")
-  local tile_state = ctx and ctx.tile_state or nil
-  local total_value = property_value.total_invested(tile_ref, tile_state and tile_state.level or 0)
+local function _can_afford_strong_card(game, player, ctx)
+  local total_value = assert(ctx and ctx.total_value, "missing rent response total value")
   return game:player_balance(player, "金币") >= total_value
 end
 
 local function _can_offer_rent_response(game, player, item_id)
   local ctx = _resolve_rent_response_context(game, player)
-  if not _rent_response_available(ctx, player) then
+  if not _is_rent_response_available(ctx) then
     return false
   end
   if item_id ~= item_ids.strong then
     return true
   end
-  return _can_afford_strong_rent_response(game, player, ctx)
+  return _can_afford_strong_card(game, player, ctx)
 end
 
 local function _can_offer_special_item(game, player, item_id)
