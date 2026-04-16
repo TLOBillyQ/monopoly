@@ -20,13 +20,10 @@ function host_runtime_bridge.install(env)
   if env.GameAPI ~= nil then
     GameAPI = env.GameAPI
   end
-  LuaAPI = lua_api
-  SetTimeOut = lua_api.call_delay_time
-  RegisterCustomEvent = lua_api.global_register_custom_event
-  RegisterTriggerEvent = lua_api.global_register_trigger_event
-  UnitCustomEvent = lua_api.unit_register_custom_event
-  UnitTriggerEvent = lua_api.unit_register_trigger_event
-  TriggerCustomEvent = lua_api.global_send_custom_event
+   LuaAPI = lua_api
+   SetTimeOut = lua_api.call_delay_time
+   RegisterTriggerEvent = lua_api.global_register_trigger_event
+   TriggerCustomEvent = lua_api.global_send_custom_event
 
   return {
     GameAPI = GameAPI,

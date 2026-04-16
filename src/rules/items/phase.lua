@@ -5,13 +5,11 @@ local strategy = require("src.rules.items.strategy")
 local availability = require("src.rules.items.availability")
 local inventory = require("src.rules.items.inventory")
 local intent_output_port = require("src.rules.ports.intent_output")
+local item_config = require("src.rules.items.item_config")
 
 local phase_module = {}
 
-local cfg_by_id = {}
-for _, cfg in ipairs(items_cfg) do
-  cfg_by_id[cfg.id] = cfg
-end
+local cfg_by_id = item_config.cfg_by_id
 
 local phase_titles = {
   pre_action = "行动前：使用道具？",

@@ -2,13 +2,11 @@ local items_cfg = require("src.config.content.items")
 require "vendor.third_party.Utils"
 local logger = require("src.core.utils.logger")
 local intent_output_port = require("src.rules.ports.intent_output")
+local item_config = require("src.rules.items.item_config")
 
 local inventory = {}
 
-local cfg_by_id = {}
-for _, cfg in ipairs(items_cfg) do
-  cfg_by_id[cfg.id] = cfg
-end
+local cfg_by_id = item_config.cfg_by_id
 
 function inventory.cfg(item_id)
   return cfg_by_id[item_id]

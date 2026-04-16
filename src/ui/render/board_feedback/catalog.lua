@@ -2,19 +2,9 @@ local runtime_refs = require("src.config.content.runtime_refs")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
+local tables = require("src.core.utils.tables")
 
 local catalog = {}
-
-local function _copy_table(value)
-  if type(value) ~= "table" then
-    return value
-  end
-  local out = {}
-  for key, nested in pairs(value) do
-    out[key] = _copy_table(nested)
-  end
-  return out
-end
 
 local function _warn_invalid(cue_name, field, value, reason)
   logger.warn("board_feedback", "invalid cue config", "cue_name=" .. tostring(cue_name), "field=" .. tostring(field), "value=" .. tostring(value), "reason=" .. tostring(reason))
@@ -64,7 +54,7 @@ local function _resolve_followup_sounds(cue_name, entries)
 end
 
 local function _resolve_cue(cue_name, cue)
-  local resolved = _copy_table(cue)
+   local resolved = tables.copy(cue)
   if type(resolved) ~= "table" then
     return nil
   end

@@ -197,24 +197,16 @@ local function _copy_group_ports(base_group, override_group, required_keys)
   end
   return merged
 end
-local function _fill_clock_defaults(clock_ports, base_clock_ports)
-  for _, key in ipairs({ "wall_now_seconds", "wall_diff_seconds", "cpu_now_seconds", "cpu_diff_seconds" }) do
-    if clock_ports[key] == base_clock_ports[key] then
-      clock_ports[key] = base_clock_ports[key]
-    end
-  end
-end
 local base_ports = _resolve_base_ports()
 local function _build_resolved_ports(grouped_override)
   local resolved = {}
   for _, group_name in ipairs(group_names) do
     local base_group = base_ports[group_name]
     local override_group = grouped_override and grouped_override[group_name] or nil
-    resolved[group_name] = _copy_group_ports(base_group, override_group, port_groups[group_name])
-  end
-  ui_sync_defaults.fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
-  _fill_clock_defaults(resolved.clock, base_ports.clock)
-  return resolved
+   resolved[group_name] = _copy_group_ports(base_group, override_group, port_groups[group_name])
+   end
+   ui_sync_defaults.fill_ui_sync_defaults(resolved.ui_sync, base_ports.ui_sync)
+   return resolved
 end
 
 local function _copy_array(values)

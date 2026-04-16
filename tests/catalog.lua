@@ -22,6 +22,9 @@ local domain_behavior_modules = {
   "suites.domain.board_query_crap_coverage",
   "suites.domain.resolver_crap_coverage",
   "suites.domain.mine_effect_crap_coverage",
+  "suites.domain.item_availability_rent_response_crap_coverage",
+  "suites.domain.item_preconsume_crap_coverage",
+  "suites.domain.host_context_crap_coverage",
 }
 
 local runtime_behavior_modules = {
@@ -87,6 +90,7 @@ local presentation_behavior_modules = {
   "suites.presentation.status3d_roadblock_crap_coverage",
   "suites.presentation.effect_track_crap_coverage",
   "suites.presentation.anchors_sequence_crap_coverage",
+  "suites.presentation.mine_trigger_crap_coverage",
 }
 
 local behavior_modules = {}
