@@ -1,12 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$TargetPath,
-    [ValidateSet("auto", "win", "windows", "mac", "macos")]
-    [string]$Platform = "auto",
     [ValidateSet("release", "debug")]
     [string]$BuildMode = "release",
-    [string]$Profile,
-    [switch]$Help
+    [string]$Profile
 )
 
 $ErrorActionPreference = "Stop"
@@ -107,38 +103,21 @@ function Resolve-HomeDir {
 }
 
 function Resolve-PlatformName {
-    param([string]$RawPlatform)
-
-    $value = ([string]$RawPlatform).Trim().ToLowerInvariant()
-    if ([string]::IsNullOrWhiteSpace($value) -or $value -eq "auto") {
-        if (Test-IsWindowsHost) {
-            return "win"
-        }
-        if (Test-IsMacOSHost) {
-            return "mac"
-        }
-        Exit-WithError "Platform is not supported. Pass -Platform win or -Platform mac."
+    if (Test-IsWindowsHost) {
+        return "win"
     }
-
-    switch ($value) {
-        "win" { return "win" }
-        "windows" { return "win" }
-        "mac" { return "mac" }
-        "macos" { return "mac" }
-        default { Exit-WithError ("Unsupported platform '{0}'. Use win or mac." -f $RawPlatform) }
+    if (Test-IsMacOSHost) {
+        return "mac"
     }
+    Exit-WithError "Platform is not supported."
 }
 
 function Resolve-DefaultTargetPath {
     param([string]$ResolvedPlatform)
 
-    if (-not [string]::IsNullOrWhiteSpace($env:MONOPOLY_DEPLOY_TARGET)) {
-        return Resolve-NormalizedPath $env:MONOPOLY_DEPLOY_TARGET
-    }
-
     $home_dir = Resolve-HomeDir
     if ([string]::IsNullOrWhiteSpace($home_dir)) {
-        Exit-WithError "Deploy target is not configured; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath."
+        Exit-WithError "Cannot resolve home directory for default deploy target."
     }
 
     switch ($ResolvedPlatform) {
@@ -149,7 +128,7 @@ function Resolve-DefaultTargetPath {
             return Resolve-NormalizedPath (Join-Path (Join-Path (Join-Path $home_dir "Documents") "eggy") (Join-LuaSourceDirName))
         }
         default {
-            Exit-WithError "No default deploy target is configured for this platform; set MONOPOLY_DEPLOY_TARGET or pass -TargetPath."
+            Exit-WithError "No default deploy target is configured for this platform."
         }
     }
 }
@@ -333,17 +312,12 @@ function Get-LuaFileCount {
     return (Get-ChildItem -LiteralPath $PathText -Recurse -File -Filter "*.lua" -Force).Count
 }
 
-if ($Help) {
-    Write-Info "Usage: .\\tools\\ops\\deploy.ps1 [-TargetPath PATH] [-Platform auto|win|mac] [-BuildMode release|debug] [-Profile NAME]"
-    exit 0
-}
-
 try {
     $project_root = Resolve-ProjectRoot
-    $resolved_platform = Resolve-PlatformName $Platform
+    $resolved_platform = Resolve-PlatformName
     $build_mode_resolution = Resolve-EffectiveBuildMode -RequestedBuildMode $BuildMode
     $effective_build_mode = [string]$build_mode_resolution.mode
-    $target_source = if (-not [string]::IsNullOrWhiteSpace($TargetPath)) { $TargetPath } else { Resolve-DefaultTargetPath $resolved_platform }
+    $target_source = Resolve-DefaultTargetPath $resolved_platform
     $target_path = Resolve-NormalizedPath $target_source
 
     [System.IO.Directory]::CreateDirectory($target_path) | Out-Null
