@@ -5,20 +5,26 @@ function cash_handlers.register(handlers, common)
   local monopoly_event = deps.monopoly_event
   local number_utils = deps.number_utils
 
+  local function _apply_to_all_players(game, fn)
+    for _, p in ipairs(game.players) do
+      if not p.eliminated then
+        fn(p)
+      end
+    end
+  end
+
   handlers.add_cash = function(game, player, card)
     if card.target == "all" then
-      for _, p in ipairs(game.players) do
-        if not p.eliminated then
-          local delta = common.adjust_chance_delta(game, p, card.amount)
-          common.apply_cash_change(game, p, delta)
-          common.emit_event(monopoly_event.chance.applied, {
-            player = p,
-            card = card,
-            effect = card.effect,
-            text = p.name .. " 获得 " .. number_utils.format_integer_part(delta) .. " 金币",
-          })
-        end
-      end
+      _apply_to_all_players(game, function(p)
+        local delta = common.adjust_chance_delta(game, p, card.amount)
+        common.apply_cash_change(game, p, delta)
+        common.emit_event(monopoly_event.chance.applied, {
+          player = p,
+          card = card,
+          effect = card.effect,
+          text = p.name .. " 获得 " .. number_utils.format_integer_part(delta) .. " 金币",
+        })
+      end)
       return
     end
 
@@ -34,19 +40,17 @@ function cash_handlers.register(handlers, common)
 
   handlers.pay_cash = function(game, player, card)
     if card.target == "all" then
-      for _, p in ipairs(game.players) do
-        if not p.eliminated then
-          local delta = common.adjust_chance_delta(game, p, -card.amount)
-          local reason = p.name .. " 支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
-          common.apply_cash_and_maybe_bankrupt(game, p, delta, reason)
-          common.emit_event(monopoly_event.chance.applied, {
-            player = p,
-            card = card,
-            effect = card.effect,
-            text = p.name .. " 支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
-          })
-        end
-      end
+      _apply_to_all_players(game, function(p)
+        local delta = common.adjust_chance_delta(game, p, -card.amount)
+        local reason = p.name .. " 支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
+        common.apply_cash_and_maybe_bankrupt(game, p, delta, reason)
+        common.emit_event(monopoly_event.chance.applied, {
+          player = p,
+          card = card,
+          effect = card.effect,
+          text = p.name .. " 支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
+        })
+      end)
       return
     end
 
@@ -63,20 +67,18 @@ function cash_handlers.register(handlers, common)
 
   handlers.percent_pay_cash = function(game, player, card)
     if card.target == "all" then
-      for _, p in ipairs(game.players) do
-        if not p.eliminated then
-          local fee = math.floor(game:player_balance(p, "金币") * (card.percent / 100))
-          local delta = common.adjust_chance_delta(game, p, -fee)
-          local reason = p.name .. " 按比例支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
-          common.apply_cash_and_maybe_bankrupt(game, p, delta, reason)
-          common.emit_event(monopoly_event.chance.applied, {
-            player = p,
-            card = card,
-            effect = card.effect,
-            text = p.name .. " 按比例支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
-          })
-        end
-      end
+      _apply_to_all_players(game, function(p)
+        local fee = math.floor(game:player_balance(p, "金币") * (card.percent / 100))
+        local delta = common.adjust_chance_delta(game, p, -fee)
+        local reason = p.name .. " 按比例支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
+        common.apply_cash_and_maybe_bankrupt(game, p, delta, reason)
+        common.emit_event(monopoly_event.chance.applied, {
+          player = p,
+          card = card,
+          effect = card.effect,
+          text = p.name .. " 按比例支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
+        })
+      end)
       return
     end
 

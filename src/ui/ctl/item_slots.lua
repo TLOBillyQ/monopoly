@@ -227,6 +227,7 @@ local function _refresh_highlight_state(state, ctx, slot_pickable)
     and state._item_phase_ask_active == true
   local gate_store = _ensure_gate_store(state)
   local gate_key = _resolve_gate_key(ctx.choice_id, ctx.role_id, ctx.display_player_id)
+  local passive_gate_key = gate_key .. "|passive"
   if is_item_phase_ask then
     local gate = _refresh_item_phase_gate(state, gate_store, gate_key, ctx.choice_id, slot_pickable)
     _apply_outline_state(ctx.ui, ctx.outlines, slot_pickable, gate.ready == true)
@@ -235,8 +236,17 @@ local function _refresh_highlight_state(state, ctx, slot_pickable)
   gate_store[gate_key] = nil
   local suppress_slot_highlight_anim = ctx.suppress_flag and choice_support.uses_item_slots(ctx.choice)
   local skip_replay = _should_skip_highlight_replay(state, ctx.choice, ctx.choice_id)
-  if not suppress_slot_highlight_anim and not skip_replay then
+  local passive_signature = _build_pickable_signature(slot_pickable)
+  local passive_gate = gate_store[passive_gate_key]
+  local should_replay_passive = passive_gate == nil
+    or passive_gate.slot_signature ~= passive_signature
+    or passive_gate.choice_id ~= ctx.choice_id
+  if not suppress_slot_highlight_anim and not skip_replay and should_replay_passive then
     _emit_pickable_slot_animation(slot_pickable)
+    gate_store[passive_gate_key] = {
+      choice_id = ctx.choice_id,
+      slot_signature = passive_signature,
+    }
   end
   if not skip_replay then
     state._skip_item_slot_highlight_replay_choice_id = nil
@@ -258,11 +268,7 @@ function M.refresh_item_slots(state, ui_model, opts)
   local ctx = _build_refresh_context(state, ui_model, opts)
   ctx.image_refs = state.ui_refs and state.ui_refs.images or {}
   local slot_pickable = _sync_slot_images(ctx)
-  if ctx.choice and ctx.choice.kind == "item_phase_passive" then
-    _refresh_highlight_state(state, ctx, slot_pickable)
-  else
-    _refresh_highlight_state(state, ctx, slot_pickable)
-  end
+  _refresh_highlight_state(state, ctx, slot_pickable)
   _store_item_ids(ctx.ui, ctx.role_id, ctx.item_ids)
 end
 

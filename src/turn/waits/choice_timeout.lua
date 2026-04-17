@@ -1,15 +1,11 @@
 local constants = require("src.config.content.constants")
 local timing = require("src.config.gameplay.timing")
 local number_utils = require("src.core.utils.number_utils")
+local logger_utils = require("src.core.utils.logger_utils")
 local choice_contract = require("src.core.choice.contract")
 local output_state_adapter = require("src.turn.output.state_adapter")
-local wait_log_once = require("src.turn.waits.log_once")
 
 local tick_choice_timeout = {}
-
-local function _log_once(state, key, ...)
-  wait_log_once.warn(state, key, ...)
-end
 
 local function _resolve_output_ports(state)
   local resolved = state and (state._resolved_gameplay_loop_ports or state.gameplay_loop_ports) or nil
@@ -94,8 +90,9 @@ local function _maybe_warn_missing_ui(state, active_choice, should_warn_missing_
   if not should_warn_missing_ui then
     return
   end
-  _log_once(
+  logger_utils.log_once(
     state,
+    "warn",
     "choice_runtime_without_ui_" .. tostring(active_choice.id),
     "[Eggy]",
     "runtime pending choice active without ui.choice_active",

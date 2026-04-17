@@ -758,6 +758,92 @@ local function _test_passive_outlines_highlight_available_slots()
   _assert_eq(touch_state["基础_可出牌外框3"], true,  "passive: available outline 3 should be touchable")
 end
 
+local function _test_passive_highlight_dedupes_consecutive_refresh()
+  local ui_events = require("src.ui.ctl.ui_events")
+  local events = {}
+  local state = {
+    ui_refs = _wrap_ui_refs({
+      ["Empty"] = "EMPTY",
+      ["2001"] = "ICON2001",
+      ["2002"] = "ICON2002",
+    }),
+    ui = {
+      item_slots = { "基础_道具槽位1", "基础_道具槽位2" },
+      card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2" },
+      set_touch_enabled = function() end,
+      set_visible = function() end,
+      set_label = function() end,
+    },
+  }
+  local ui_model = {
+    current_player_id = 1,
+    item_choice_owner_id = 1,
+    item_slots = { 2001, 2002 },
+    item_slots_by_player = { [1] = { 2001, 2002 } },
+    choice = {
+      id = 333,
+      kind = "item_phase_passive",
+      route_key = "item_phase_passive",
+      uses_item_slots = true,
+      options = { { id = 2001 } },
+      slot_states = {
+        [1] = { available = true, alert = false },
+        [2] = { available = false, alert = false },
+      },
+    },
+  }
+
+  local function _count_event(event_name)
+    local count = 0
+    for _, value in ipairs(events) do
+      if value == event_name then
+        count = count + 1
+      end
+    end
+    return count
+  end
+
+  _with_patches({
+    {
+      key = "UIManager",
+      value = {
+        client_role = nil,
+        query_nodes_by_name = function()
+          return { { set_texture_keep_size = function() end } }
+        end,
+      },
+    },
+    {
+      target = ui_events,
+      key = "send_to_all",
+      value = function(event_name)
+        events[#events + 1] = event_name
+      end,
+    },
+    {
+      target = ui_events,
+      key = "send_to_role",
+      value = function(_, event_name)
+        events[#events + 1] = event_name
+      end,
+    },
+  }, function()
+    ui_view.refresh_item_slots(state, ui_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+    ui_view.refresh_item_slots(state, ui_model, {
+      display_player_id = 1,
+      allow_interact = true,
+    })
+  end)
+
+  _assert_eq(_count_event("重置高亮"), 1,
+    "passive highlight should emit global reset once for identical consecutive refreshes")
+  _assert_eq(_count_event("高亮道具槽位牌1"), 1,
+    "passive highlight should emit slot highlight once for identical consecutive refreshes")
+end
+
 local function _test_action_button_label_never_written()
   local label_state = {}
   local state = {
@@ -835,6 +921,7 @@ return {
     { name = "_test_item_slot_refresh_resets_highlight_without_client_role", run = _test_item_slot_refresh_resets_highlight_without_client_role },
     { name = "_test_passive_slot_three_state_rendering", run = _test_passive_slot_three_state_rendering },
     { name = "_test_passive_outlines_highlight_available_slots", run = _test_passive_outlines_highlight_available_slots },
+    { name = "_test_passive_highlight_dedupes_consecutive_refresh", run = _test_passive_highlight_dedupes_consecutive_refresh },
     { name = "_test_action_button_label_never_written", run = _test_action_button_label_never_written },
   },
 }

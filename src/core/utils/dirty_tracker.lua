@@ -8,6 +8,15 @@ local _dirty_keys = {
   "turn_countdown",
 }
 
+local valid_domains = {
+  any = true,
+  players = true,
+  board_tiles = true,
+  turn = true,
+  market = true,
+  turn_countdown = true,
+}
+
 function dirty_tracker.new()
   return {
     any = false,
@@ -31,6 +40,7 @@ function dirty_tracker.ensure_inventory_ids(d)
 end
 
 function dirty_tracker.mark(d, domain)
+  assert(valid_domains[domain], "unknown dirty domain: " .. tostring(domain))
   d.any = true
   d[domain] = true
 end

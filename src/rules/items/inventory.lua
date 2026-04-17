@@ -63,6 +63,9 @@ function inventory.remove_by_index(player, idx)
   assert(player ~= nil, "missing player")
   assert(player.inventory ~= nil, "missing player.inventory")
   assert(idx ~= nil, "missing index")
+  local items = inventory.items(player)
+  local index = idx
+  assert(index >= 1 and index <= #items, "remove_by_index: index out of bounds: " .. tostring(index))
   return player.inventory:remove_by_index(idx)
 end
 

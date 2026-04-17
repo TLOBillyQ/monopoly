@@ -1,17 +1,13 @@
-local function _copy_table(value)
-    if type(value) ~= "table" then
-        return value
-    end
+local function _deep_copy(t)
+    if type(t) ~= "table" then return t end
     local out = {}
-    for key, child in pairs(value) do
-        out[key] = _copy_table(child)
-    end
+    for k, v in pairs(t) do out[k] = _deep_copy(v) end
     return out
 end
 
 local function _profile(meta, bootstrap)
-    local out = _copy_table(meta or {})
-    out.bootstrap = _copy_table(bootstrap or {})
+    local out = _deep_copy(meta or {})
+    out.bootstrap = _deep_copy(bootstrap or {})
     return out
 end
 

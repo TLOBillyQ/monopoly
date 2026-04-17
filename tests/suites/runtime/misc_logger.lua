@@ -3,6 +3,18 @@ local _assert_eq = support.assert_eq
 local logger = require("src.core.utils.logger")
 local tip_queue = require("src.core.utils.tip_queue")
 
+local function _with_logger_capacity(capacity, fn)
+  local original_capacity = logger.max_entries
+  logger.max_entries = capacity
+  logger.clear()
+  local ok, err = pcall(fn)
+  logger.clear()
+  logger.max_entries = original_capacity
+  if not ok then
+    error(err)
+  end
+end
+
 local function _with_tip_runtime(fn)
   tip_queue.clear()
   tip_queue.configure_runtime({
@@ -302,6 +314,51 @@ local function _test_logger_set_test_mode_syncs_tip_queue_runtime()
   logger.clear()
 end
 
+local function _test_logger_ring_buffer_push_overflow_wraps()
+  _with_logger_capacity(3, function()
+    logger.info("q1")
+    logger.info("q2")
+    logger.info("q3")
+    logger.info("q4")
+
+    local entries = logger.get_entries()
+    _assert_eq(#entries, 3, "overflow should keep capacity-sized history")
+    _assert_eq(entries[1].text, "q2", "oldest entry should drop first when queue overflows")
+    _assert_eq(entries[2].text, "q3", "middle entry should preserve FIFO order")
+    _assert_eq(entries[3].text, "q4", "newest entry should be appended after wrap")
+  end)
+end
+
+local function _test_logger_ring_buffer_capacity_limit_respected()
+  _with_logger_capacity(2, function()
+    logger.warn("c1")
+    logger.warn("c2")
+    logger.warn("c3")
+    logger.warn("c4")
+
+    local entries = logger.get_entries()
+    _assert_eq(#entries, 2, "queue should never exceed configured capacity")
+    _assert_eq(entries[1].text, "c3", "queue should keep the latest N entries")
+    _assert_eq(entries[2].text, "c4", "queue should keep newest entry at tail")
+  end)
+end
+
+local function _test_logger_ring_buffer_iteration_order_oldest_first()
+  _with_logger_capacity(3, function()
+    logger.event("o1")
+    logger.event("o2")
+    logger.event("o3")
+    logger.event("o4")
+    logger.event("o5")
+
+    local entries = logger.get_entries()
+    _assert_eq(#entries, 3, "wrapped queue should still return full capacity entries")
+    _assert_eq(entries[1].text, "o3", "iteration should start from oldest retained entry")
+    _assert_eq(entries[2].text, "o4", "iteration should preserve chronological order")
+    _assert_eq(entries[3].text, "o5", "iteration should end at newest retained entry")
+  end)
+end
+
 return {
   { name = "logger_event_only_writes_event_feed_without_showing_tip", run = _test_logger_event_only_writes_event_feed_without_showing_tip },
   { name = "logger_event_no_tips_stays_in_event_feed_without_showing_tip", run = _test_logger_event_no_tips_stays_in_event_feed_without_showing_tip },
@@ -314,4 +371,7 @@ return {
   { name = "logger_flush_event_buffer_empty_buffer_returns_false", run = _test_logger_flush_event_buffer_empty_buffer_returns_false },
   { name = "logger_flush_event_buffer_invalid_buffer_returns_false", run = _test_logger_flush_event_buffer_invalid_buffer_returns_false },
   { name = "logger_set_test_mode_syncs_tip_queue_runtime", run = _test_logger_set_test_mode_syncs_tip_queue_runtime },
+  { name = "logger_ring_buffer_push_overflow_wraps", run = _test_logger_ring_buffer_push_overflow_wraps },
+  { name = "logger_ring_buffer_capacity_limit_respected", run = _test_logger_ring_buffer_capacity_limit_respected },
+  { name = "logger_ring_buffer_iteration_order_oldest_first", run = _test_logger_ring_buffer_iteration_order_oldest_first },
 }

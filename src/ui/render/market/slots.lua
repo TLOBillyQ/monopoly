@@ -8,6 +8,23 @@ local runtime_ui = require("src.ui.render.runtime_ui")
 
 local market_view_slots = {}
 
+local function _build_market_entry_by_id_map(entries)
+  local by_id = {}
+  for _, entry in ipairs(entries or {}) do
+    local product_id = entry and entry.product_id or nil
+    if product_id ~= nil then
+      by_id[product_id] = entry
+    end
+  end
+  return by_id
+end
+
+local market_entry_by_id = _build_market_entry_by_id_map(market_cfg)
+
+local function _sync_market_entry_by_id()
+  market_entry_by_id = _build_market_entry_by_id_map(market_cfg)
+end
+
 local function _resolve_runtime(deps)
   local resolved_deps = deps or {}
   return assert(resolved_deps.runtime or runtime_ui, "missing deps.runtime")
@@ -23,12 +40,7 @@ local function _item_cfg_by_id(product_id)
 end
 
 local function _market_entry_by_id(product_id)
-  for _, entry in ipairs(market_cfg) do
-    if entry.product_id == product_id then
-      return entry
-    end
-  end
-  return nil
+  return market_entry_by_id[product_id]
 end
 
 local function _resolve_market_entry(product_id)
@@ -135,7 +147,7 @@ local function _set_market_slot(ui, refs, slot, opt, deps)
   return _set_market_slot_visible(ui, refs, slot, opt, deps)
 end
 
-local function _contains_option_id(option_ids, option_id)
+local function _has_option_id(option_ids, option_id)
   for _, value in pairs(option_ids or {}) do
     if value == option_id then
       return option_id ~= nil
@@ -145,6 +157,7 @@ local function _contains_option_id(option_ids, option_id)
 end
 
 function market_view_slots.filter_market_options(options)
+  _sync_market_entry_by_id()
   local visible_options = {}
   for _, opt in ipairs(options or {}) do
     local opt_id = opt and (opt.id or opt) or nil
@@ -163,6 +176,7 @@ function market_view_slots.hide_market_slots(ui)
 end
 
 function market_view_slots.populate_market_slots(ui, refs, options, deps)
+  _sync_market_entry_by_id()
   local option_ids = {}
   local first_buyable = nil
   _for_each_market_slot(function(index, slot)
@@ -180,7 +194,7 @@ end
 
 function market_view_slots.resolve_selected_option(option_ids, selected_option_id, first_buyable)
   local selected = selected_option_id
-  if not _contains_option_id(option_ids, selected) then
+  if not _has_option_id(option_ids, selected) then
     selected = nil
   end
   if selected == nil then
@@ -190,6 +204,7 @@ function market_view_slots.resolve_selected_option(option_ids, selected_option_i
 end
 
 function market_view_slots.resolve_selection(option_id, image_refs, empty_ref_key)
+  _sync_market_entry_by_id()
   assert(option_id ~= nil, "missing market option_id")
   local entry, cfg = _resolve_market_entry(option_id)
   assert(entry ~= nil, "missing market entry")

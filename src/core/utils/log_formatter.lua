@@ -1,5 +1,31 @@
 local log_formatter = {}
 
+local function _list_entries(state)
+  local entries = state.entries or {}
+  local count = state.entries_count
+  local head = state.entries_head
+
+  if count == nil or head == nil then
+    return entries
+  end
+
+  if count <= 0 or #entries == 0 then
+    return {}
+  end
+
+  local capacity = state.max_entries or #entries
+  if capacity <= 0 then
+    return {}
+  end
+
+  local out = {}
+  for i = 1, count do
+    local slot = ((head + i - 2) % capacity) + 1
+    out[#out + 1] = entries[slot]
+  end
+  return out
+end
+
 function log_formatter.stringify(start_index, ...)
   local start = start_index or 1
   local parts = {}
@@ -35,7 +61,7 @@ local function _take_entries(entries, max_lines)
 end
 
 function log_formatter.get_entries(state, max_lines)
-  return _take_entries(state.entries, max_lines)
+  return _take_entries(_list_entries(state), max_lines)
 end
 
 function log_formatter.get_entries_by_level(state, level, max_lines)
@@ -43,7 +69,8 @@ function log_formatter.get_entries_by_level(state, level, max_lines)
     return log_formatter.get_entries(state, max_lines)
   end
   local matched = {}
-  for _, entry in ipairs(state.entries) do
+  local entries = _list_entries(state)
+  for _, entry in ipairs(entries) do
     if entry.level == level then
       matched[#matched + 1] = entry
     end

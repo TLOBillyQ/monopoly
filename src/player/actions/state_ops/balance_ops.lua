@@ -39,6 +39,8 @@ function balance_ops.set_player_cash(self, player, amount)
 end
 
 function balance_ops.deduct_player_cash(self, player, amount, opts)
+  local new_balance = self:player_balance(player, "金币") - amount
+  assert(new_balance >= 0, "negative balance: " .. tostring(new_balance))
   return self:add_player_cash(player, -amount, opts)
 end
 

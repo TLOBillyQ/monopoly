@@ -1,5 +1,6 @@
 local logger = require("src.core.utils.logger")
 local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
+local tables = require("src.core.utils.tables")
 
 local choice_resolver = {}
 
@@ -27,18 +28,6 @@ end
 local function _finish_choice(game, stay)
   _clear_choice(game)
   return { status = stay and "waiting" or "resolved", stay = stay }
-end
-
-local function _contains(list, value)
-  if type(list) ~= "table" then
-    return false
-  end
-  for _, current_value in ipairs(list) do
-    if current_value == value then
-      return true
-    end
-  end
-  return false
 end
 
 local function _option_exists(choice, target_option_id)
@@ -87,7 +76,7 @@ local base_helpers = {
   is_cancel = item_preconsume_policy.is_cancel_action,
   clear_choice = _clear_choice,
   finish_choice = _finish_choice,
-  contains = _contains,
+  contains = tables.contains,
 }
 
 function choice_resolver.helpers(overrides)
@@ -167,7 +156,7 @@ function choice_resolver.resolve(game, choice, action)
 end
 
 choice_resolver._M_test = {
-  _contains = _contains,
+  _contains = tables.contains,
 }
 
 return choice_resolver

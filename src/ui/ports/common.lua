@@ -1,6 +1,6 @@
 local logger = require("src.core.utils.logger")
 local number_utils = require("src.core.utils.number_utils")
-local runtime_state = require("src.ui.state")
+local logger_utils = require("src.core.utils.logger_utils")
 
 local common = {}
 
@@ -9,16 +9,7 @@ function common.build_log_prefix()
 end
 
 function common.log_once(state, level, key, ...)
-  local debug_runtime = runtime_state.ensure_debug_runtime(state)
-  if debug_runtime.log_once[key] then
-    return
-  end
-  debug_runtime.log_once[key] = true
-  if level == "warn" then
-    logger.warn(...)
-  else
-    logger.info(...)
-  end
+  logger_utils.log_once(state, level, key, ...)
 end
 
 function common.log_status(view)

@@ -1,10 +1,6 @@
 require "vendor.third_party.ClassUtils"
 local player = Class("Player")
-
-local function _normalize_currency(currency)
-  assert(currency ~= nil and currency ~= "", "missing currency")
-  return currency
-end
+local tables = require("src.core.utils.tables")
 
 function player:init(attrs)
   assert(attrs ~= nil, "Player.new(attrs) requires attrs")
@@ -14,7 +10,7 @@ function player:init(attrs)
   local balances = attrs.balances
   assert(balances ~= nil, "Player.new(attrs) requires attrs.balances")
   for currency, amount in pairs(balances) do
-    local key = _normalize_currency(currency)
+    local key = tables.normalize_currency(currency)
     balances[key] = amount
   end
 

@@ -1,4 +1,5 @@
 local constants = require("src.config.content.constants")
+local tables = require("src.core.utils.tables")
 
 local common = {}
 
@@ -10,8 +11,7 @@ function common.player_status_table(player)
 end
 
 function common.normalize_currency(currency)
-  assert(currency ~= nil and currency ~= "", "missing currency")
-  return currency
+  return tables.normalize_currency(currency)
 end
 
 function common.mark_players(game)

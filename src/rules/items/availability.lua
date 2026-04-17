@@ -7,6 +7,7 @@ local roadblock = require("src.rules.items.roadblock")
 local property_query = require("src.rules.board.property_query")
 local property_value = require("src.rules.commerce.property_value")
 local number_utils = require("src.core.utils.number_utils")
+local tables = require("src.core.utils.tables")
 
 local availability = {}
 local phase_timing = {
@@ -31,29 +32,6 @@ for _, target_item_id in ipairs(effects.target_item_ids()) do
   followup_choice_item_set[target_item_id] = true
 end
 
-local function copy_table(source)
-  local out = {}
-  if type(source) ~= "table" then
-    return out
-  end
-  for key, value in pairs(source) do
-    out[key] = value
-  end
-  return out
-end
-
-local function contains(list, value)
-  if type(list) ~= "table" then
-    return false
-  end
-  for _, current in ipairs(list) do
-    if current == value then
-      return true
-    end
-  end
-  return false
-end
-
 local function normalize_integer_field(target, key, choice_kind, field_prefix, required)
   local value = target[key]
   if value == nil then
@@ -69,8 +47,8 @@ local function normalize_integer_field(target, key, choice_kind, field_prefix, r
   return target[key]
 end
 
-availability.copy_table = copy_table
-availability.contains = contains
+availability.copy_table = tables.copy_table
+availability.contains = tables.contains
 availability.normalize_integer_field = normalize_integer_field
 
 local function _resolve_item_cfg(item_id)
@@ -94,7 +72,7 @@ local function _offer_phase_allowed(offer_in_phases, phase, allow_missing_phase)
   if not phase then
     return allow_missing_phase
   end
-  return contains(offer_in_phases, phase)
+  return tables.contains(offer_in_phases, phase)
 end
 
 local function _resolve_phase_timing(phase)

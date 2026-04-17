@@ -28,10 +28,12 @@ local domain_behavior_modules = {
   "suites.domain.host_context_crap_coverage",
   "suites.domain.remote_priority_crap_coverage",
   "suites.domain.ring_map_direction_crap_coverage",
+  "suites.domain.boundary_assertions_t36",
 }
 
 local runtime_behavior_modules = {
   "suites.runtime.startup_profile",
+  "suites.runtime.config_reset_isolation",
   "suites.runtime.test_profile_resolver",
   "suites.runtime.test_profile_bootstrap_core",
   "suites.runtime.test_profile_bootstrap_scenarios",

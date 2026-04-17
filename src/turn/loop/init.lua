@@ -2,6 +2,7 @@ local items_cfg = require("src.config.content.items")
 local debug_flags = require("src.config.gameplay.debug_flags")
 local timing = require("src.config.gameplay.timing")
 local logger = require("src.core.utils.logger")
+local logger_utils = require("src.core.utils.logger_utils")
 local auto_play_port = require("src.rules.ports.auto_play")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local gameplay_loop_ports = require("src.turn.loop.ports")
@@ -117,13 +118,10 @@ local function _log_missing_auto_choice_action(state, ctx)
   if state.auto_runner.waiting_for_interval == true then
     return
   end
-  local debug_runtime = runtime_state.ensure_debug_runtime(state)
-  local key = "auto_runner_choice_no_action_" .. tostring(ctx.pending_choice.id)
-  if debug_runtime.log_once[key] then
-    return
-  end
-  debug_runtime.log_once[key] = true
-  logger.warn(
+  logger_utils.log_once(
+    state,
+    "warn",
+    "auto_runner_choice_no_action_" .. tostring(ctx.pending_choice.id),
     "[Eggy]",
     "auto runner produced no action for runtime pending choice",
     "choice_id=" .. tostring(ctx.pending_choice.id),
@@ -161,9 +159,9 @@ local function _initialize_ports(state, game)
   _ensure_fallback_ports(game)
   return ports
 end
-local function _configure_tile_owner_notifier(state, game)
+local function _configure_tile_owner_notifier(game)
   game.tile_owner_notifier = {
-    notify_owner_changed = function(_, tile_id, owner_id)
+    notify_owner_changed = function(_, tile_id)
       return game.board_visual_feedback_port.sync_many(game, {
         tile_ids = { tile_id },
       })
@@ -178,7 +176,7 @@ local function _configure_environment(state, game, ports)
   turn_runtime.role_control_lock_active = false
   turn_runtime.role_control_lock_suppress = 0
   anim_ports.reset_status_3d(state)
-  _configure_tile_owner_notifier(state, game)
+  _configure_tile_owner_notifier(game)
   paid_currency_bridge.setup_for_game(game)
   market_purchase.setup_for_game(game)
   state_ports.install_event_handlers(game, logger, state)

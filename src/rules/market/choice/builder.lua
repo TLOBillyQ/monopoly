@@ -1,7 +1,7 @@
 local context = require("src.rules.market.query.context")
 local eligibility = require("src.rules.market.query.eligibility")
 local number_utils = require("src.core.utils.number_utils")
-local availability = require("src.rules.items.availability")
+local tables = require("src.core.utils.tables")
 
 local choice = {}
 local PAGE_SIZE = 10
@@ -10,7 +10,7 @@ local TAB_SKIN = "skin"
 local TABS = { TAB_ITEM, TAB_SKIN }
 
 local function _normalize_tab(tab)
-  if availability.contains(TABS, tab) then
+  if tables.contains(TABS, tab) then
     return tab
   end
   return TAB_ITEM

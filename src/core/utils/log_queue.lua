@@ -101,10 +101,36 @@ local function _create_entry(state, level, text)
 end
 
 local function _store_entry(state, entry)
-  table.insert(state.entries, entry)
-  if #state.entries > state.max_entries then
-    table.remove(state.entries, 1)
+  local entries = state.entries
+  if type(entries) ~= "table" then
+    entries = {}
+    state.entries = entries
   end
+
+  local max_entries = state.max_entries
+  local head = state.entries_head or 1
+  local count = state.entries_count
+
+  if count == nil or (#entries == 0 and count > 0) then
+    count = #entries
+    head = 1
+  end
+
+  if max_entries <= 0 then
+    return
+  end
+
+  if count < max_entries then
+    local tail_index = ((head + count - 1) % max_entries) + 1
+    entries[tail_index] = entry
+    state.entries_count = count + 1
+    state.entries_head = head
+    return
+  end
+
+  entries[head] = entry
+  state.entries_head = (head % max_entries) + 1
+  state.entries_count = max_entries
 end
 
 local function _notify_entry_sinks(state, entry)
