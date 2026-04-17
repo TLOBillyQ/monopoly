@@ -1282,6 +1282,33 @@ local function _generate_meta_file(text, meta_path)
   ))
 end
 
+local function _sync_to_eggitor(options)
+  if not common.is_windows() then
+    return
+  end
+
+  local target = "C:/Users/Lzx_8/Desktop/eggitor/0_工具环境/EggyAPI"
+  local list_cmd = "dir /b " .. common.shell_quote("*.md")
+  local result = common.run_command(list_cmd, { cwd = options.doc_dir })
+  if not result.ok then
+    return
+  end
+
+  for line in result.output:gmatch("[^\r\n]+") do
+    local filename = _trim(line)
+    if filename ~= "" and filename:match("%.md$") then
+      local src = common.join_path(options.doc_dir, filename)
+      local dst = common.join_path(target, filename)
+      local ok, err = common.copy_file(src, dst)
+      if ok then
+        print(_text("已同步文档: " .. filename, "Synced doc: " .. filename))
+      else
+        io.stderr:write(_text("同步失败: " .. filename .. " - " .. tostring(err), "Sync failed: " .. filename .. " - " .. tostring(err)) .. "\n")
+      end
+    end
+  end
+end
+
 local function main(args)
   local options = _parse_args(args or {})
 
@@ -1341,6 +1368,8 @@ local function main(args)
     _print_lines(check_lines)
     check_failed = #missing > 0 or #extra > 0
   end
+
+  _sync_to_eggitor(options)
 
   if diff_failed or check_failed then
     return 1
