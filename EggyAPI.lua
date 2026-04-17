@@ -5443,12 +5443,26 @@ function Unit.add_surround_motor(_follow_target, _ang_vel, _time, _follow_rotate
 ---@param _force Vector3 力
 function Unit.apply_force(_force) end
 
+---对单位施加外力（局部坐标）
+---@param _force Vector3 力
+---@param _local_point Vector3 局部坐标点
+function Unit.apply_force_at_local_point(_force, _local_point) end
+
+---对单位施加外力（世界坐标）
+---@param _force Vector3 力
+---@param _world_point Vector3 世界坐标点
+function Unit.apply_force_at_world_point(_force, _world_point) end
+
 ---施加冲击力
 ---@param _force Vector3 力
 ---@param _max_speed Fixed? 击飞最大速度
 ---@param _force_lost_control boolean? 是否击飞
 ---@param _lost_ctrl_time Fixed? 击飞失控时间
 function Unit.apply_impact_force(_force, _max_speed, _force_lost_control, _lost_ctrl_time) end
+
+---对单位施加扭矩
+---@param _torque Vector3 扭矩
+function Unit.apply_torque(_torque) end
 
 
 
@@ -5718,6 +5732,10 @@ function Unit.remove_surround_motor() end
 ---@param _index integer 索引
 ---@param _init_vel Vector3 初速度
 function Unit.set_acc_motor_init_velocity(_index, _init_vel) end
+
+---飞行器自定义
+---@param _handler function 飞行核心函数
+function Unit.set_aircraft_tick_handler(_handler) end
 
 ---改变单位角速度
 ---@param _vel Vector3 角速度

@@ -1,5 +1,18 @@
 # EggyAPI 变更记录
 
+## 2026-04-17
+
+新增 / Added: 4
+  - Unit.apply_force_at_local_point
+  - Unit.apply_force_at_world_point
+  - Unit.apply_torque
+  - Unit.set_aircraft_tick_handler
+删除 / Removed: 0
+签名变更 / Signature changed: 0
+类型变更 / Type changed: 0
+
+# EggyAPI 变更记录
+
 ## 2026-04-09
 
 新增 / Added: 35

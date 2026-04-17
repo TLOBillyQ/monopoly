@@ -432,7 +432,10 @@ Unit|add_circle_motor|_vel, _time, _is_local
 Unit|add_linear_motor|_vel, _time, _is_local
 Unit|add_surround_motor|_follow_target, _ang_vel, _time, _follow_rotate
 Unit|apply_force|_force
+Unit|apply_force_at_local_point|_force, _local_point
+Unit|apply_force_at_world_point|_force, _world_point
 Unit|apply_impact_force|_force, _max_speed, _force_lost_control, _lost_ctrl_time
+Unit|apply_torque|_torque
 Unit|disable_gravity
 Unit|disable_interact
 Unit|disable_motor|_index
@@ -484,6 +487,7 @@ Unit|recover_max_linear_velocity
 Unit|remove_from_parent
 Unit|remove_surround_motor
 Unit|set_acc_motor_init_velocity|_index, _init_vel
+Unit|set_aircraft_tick_handler|_handler
 Unit|set_angular_velocity|_vel
 Unit|set_current_mass|_mass
 Unit|set_current_mass_center|_center

@@ -1013,7 +1013,10 @@
 ---@field add_linear_motor fun(_vel: Vector3, _time: Fixed, _is_local: boolean?): integer
 ---@field add_surround_motor fun(_follow_target: Unit, _ang_vel: Vector3, _time: Fixed, _follow_rotate: boolean?)
 ---@field apply_force fun(_force: Vector3)
+---@field apply_force_at_local_point fun(_force: Vector3, _local_point: Vector3)
+---@field apply_force_at_world_point fun(_force: Vector3, _world_point: Vector3)
 ---@field apply_impact_force fun(_force: Vector3, _max_speed: Fixed?, _force_lost_control: boolean?, _lost_ctrl_time: Fixed?)
+---@field apply_torque fun(_torque: Vector3)
 ---@field disable_gravity fun()
 ---@field disable_interact fun()
 ---@field disable_motor fun(_index: integer)
@@ -1065,6 +1068,7 @@
 ---@field remove_from_parent fun()
 ---@field remove_surround_motor fun()
 ---@field set_acc_motor_init_velocity fun(_index: integer, _init_vel: Vector3)
+---@field set_aircraft_tick_handler fun(_handler: function)
 ---@field set_angular_velocity fun(_vel: Vector3)
 ---@field set_current_mass fun(_mass: Fixed)
 ---@field set_current_mass_center fun(_center: Vector3)
