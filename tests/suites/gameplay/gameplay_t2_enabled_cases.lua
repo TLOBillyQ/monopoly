@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.gameplay_support")
 local runtime_state = require("src.state.runtime_state")
 local tick_choice_timeout = require("src.turn.waits.choice_timeout")

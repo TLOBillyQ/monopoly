@@ -28,7 +28,7 @@ end
 
 local function _resolve_market_entry(product_id)
   local entry = _market_entry_by_id(product_id)
-  local cfg = nil
+  local cfg
   if entry and entry.kind == "vehicle" then
     cfg = vehicle_catalog.find(product_id)
   else

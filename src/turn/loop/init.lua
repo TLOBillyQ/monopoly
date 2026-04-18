@@ -140,8 +140,8 @@ local function _initialize_ports(state, game)
   game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
   game.bankruptcy_feedback_port = {
     on_tiles_cleared = function(arg1, arg2, arg3, arg4)
-      local game_ctx = nil
-      local owned_tile_ids = nil
+      local game_ctx
+      local owned_tile_ids
       if arg4 ~= nil then
         game_ctx = arg2
         owned_tile_ids = arg4

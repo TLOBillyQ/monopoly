@@ -1,4 +1,5 @@
 -- T6 characterization tests for remaining hotspots
+-- luacheck: ignore 211
 local market_slots = require("src.ui.render.market.slots")
 local placement = require("src.ui.render.board.placement")
 local status3d_status = require("src.ui.render.status3d.status")

@@ -1,5 +1,4 @@
 local modal_state = require("src.ui.stores.modal_state")
-local canvas = require("src.ui.ctl.canvas_coordinator")
 local common = require("src.ui.ctl.choice_screens.helpers")
 local ui_nodes = require("src.ui.render.node_ops")
 local ui_controls = require("src.ui.render.support.ui_controls")

@@ -98,9 +98,8 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
     board_scene, from_index, to_index, anim_ctx.visited, anim_ctx, self_ref.step_duration
   )
   local token = nil
-  local enter_delay = 0
   if #steps > 0 then
-    enter_delay = seq_builder.consume_enter_delay(anim_ctx, player_id)
+    local enter_delay = seq_builder.consume_enter_delay(anim_ctx, player_id)
     if enter_delay > 0 then
       total_time = total_time + enter_delay
       for _, step in ipairs(steps) do

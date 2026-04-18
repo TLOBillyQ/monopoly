@@ -94,7 +94,7 @@ end
 function choice.build(player, game, state)
   state = state or {}
   local active_tab = _normalize_tab(state.active_tab)
-  local visible, buyable = _build_tab_entries(player, game, active_tab)
+  local visible, _ = _build_tab_entries(player, game, active_tab)
   local page_count = _resolve_page_count(#visible, PAGE_SIZE)
   local page_index = _clamp_page(state.page_index, page_count)
   local body_lines, options = _build_options_for_page(visible, page_index, PAGE_SIZE)

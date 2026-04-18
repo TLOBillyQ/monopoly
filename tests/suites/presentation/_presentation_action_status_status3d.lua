@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -988,7 +989,6 @@ local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop
   local startup_render = require("src.ui.render.board.startup_render")
   local player_units = require("src.ui.render.board.player_units")
   local base_presenter = require("src.ui.wid.panel_presenter")
-  local turn_effects = require("src.ui.wid.turn_effects")
   local fixed_zero = { kind = "fixed_zero", value = 0 }
   local calls = {}
   local game = {

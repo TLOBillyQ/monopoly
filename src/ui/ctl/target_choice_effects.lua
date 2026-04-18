@@ -147,8 +147,8 @@ local function _resolve_picked_option_id(state, option_id, payload)
   if picked_unit_id == nil then
     return nil
   end
-  local target_pick = state.board_scene and state.board_scene.target_pick or nil
-  local tile_index_by_unit_id = target_pick and target_pick.tile_index_by_unit_id or nil
+  local scene_target_pick = state.board_scene and state.board_scene.target_pick or nil
+  local tile_index_by_unit_id = scene_target_pick and scene_target_pick.tile_index_by_unit_id or nil
   return tile_index_by_unit_id and tile_index_by_unit_id[picked_unit_id] or nil
 end
 local function _lock_option(state, runtime, option_id)

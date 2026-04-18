@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -208,7 +209,6 @@ local function _test_item_phase_ask_confirm_clears_highlight_suppress()
     },
     ui_model = {
       choice = { id = 66, kind = "item_phase_choice", route_key = "base_inline", uses_item_slots = true, pre_confirm_before_slot_pick = true },
-      
     },
     ui = ui_view.build_ui_state(),
   }
@@ -485,7 +485,7 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
     }
   end
 
-  local function _has_event(phase_name, event_name)
+  local function _local_has_event(phase_name, event_name)
     for _, entry in ipairs(events) do
       if entry.phase == phase_name and entry.event_name == event_name then
         return true
@@ -604,26 +604,26 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
     })
   end)
 
-  _assert_eq(_has_event("pre_action", "高亮道具槽位牌1"), true, "pre_action should highlight remote dice slot")
-  _assert_eq(_has_event("pre_action", "重置高亮"), true, "pre_action should issue global reset before highlighting")
-  _assert_eq(_has_event("suppressed_item_phase", "重置高亮"), false,
+  _assert_eq(_local_has_event("pre_action", "高亮道具槽位牌1"), true, "pre_action should highlight remote dice slot")
+  _assert_eq(_local_has_event("pre_action", "重置高亮"), true, "pre_action should issue global reset before highlighting")
+  _assert_eq(_local_has_event("suppressed_item_phase", "重置高亮"), false,
     "item_phase should suppress highlight animation while waiting for a pick")
-  _assert_eq(_has_event("suppressed_item_phase", "高亮道具槽位牌1"), false,
+  _assert_eq(_local_has_event("suppressed_item_phase", "高亮道具槽位牌1"), false,
     "item_phase suppression should block per-slot highlight events")
-  _assert_eq(_has_event("remote_choice", "重置高亮"), true, "remote choice should issue global reset before slot reorder")
-  _assert_eq(_has_event("remote_choice", "重置高亮道具槽位牌1"), true, "remote choice should reset slot1 highlight without client role")
-  _assert_eq(_has_event("pre_action_dice_multiplier", "重置高亮"), true,
+  _assert_eq(_local_has_event("remote_choice", "重置高亮"), true, "remote choice should issue global reset before slot reorder")
+  _assert_eq(_local_has_event("remote_choice", "重置高亮道具槽位牌1"), true, "remote choice should reset slot1 highlight without client role")
+  _assert_eq(_local_has_event("pre_action_dice_multiplier", "重置高亮"), true,
     "pre_action should issue global reset before highlighting dice multiplier slot")
-  _assert_eq(_has_event("pre_action_dice_multiplier", "高亮道具槽位牌4"), true,
+  _assert_eq(_local_has_event("pre_action_dice_multiplier", "高亮道具槽位牌4"), true,
     "pre_action should highlight dice multiplier slot")
-  _assert_eq(_has_event("pre_action_dice_multiplier", "重置高亮道具槽位牌1"), true,
+  _assert_eq(_local_has_event("pre_action_dice_multiplier", "重置高亮道具槽位牌1"), true,
     "pre_action should clear stale slot1 highlight")
 end
 
 local function _test_passive_slot_three_state_rendering()
   local touch_state = {}
-  local visible_state = {}
-  local label_state = {}
+  local visible_state = {} -- luacheck: ignore 241
+  local label_state = {} -- luacheck: ignore 241
   local events = {}
   local state = {
     ui_refs = _wrap_ui_refs({

@@ -155,7 +155,7 @@ end
     end)
   end
 
-  local ok, action_anim = pcall(require, "src.ui.render.action_anim")
+  pcall(require, "src.ui.render.action_anim")
 
   _register_handler(monopoly_event.movement.roadblock_hit, function(data)
     return _resolve_tile_index_from_payload(_event_data(data))

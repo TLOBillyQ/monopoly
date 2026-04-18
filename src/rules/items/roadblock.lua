@@ -1,5 +1,4 @@
 local logger = require("src.core.utils.logger")
-local tile = require("src.rules.board.tile")
 local board_query = require("src.rules.board.query")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")

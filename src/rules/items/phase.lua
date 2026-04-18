@@ -1,4 +1,3 @@
-local items_cfg = require("src.config.content.items")
 local timing = require("src.config.gameplay.timing")
 local auto_play_port = require("src.rules.ports.auto_play")
 local strategy = require("src.rules.items.strategy")

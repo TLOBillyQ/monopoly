@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -482,6 +483,7 @@ local function _test_ui_event_router_player_target_click_direct_submit()
     choice_visible_option_ids = nil,
   }
   _bind_ui_runtime(state)
+  local role = _build_role_with_events(101, {})
 
   _with_patches({
     { key = "all_roles", value = { role } },

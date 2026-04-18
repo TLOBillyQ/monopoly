@@ -2,10 +2,6 @@ local facing_policy = require("src.rules.board.facing_policy")
 
 local context_builder = {}
 
-local function _tile_label(tile)
-  return tile.name
-end
-
 local function _resolve_facing_mode(steps, opts)
   if opts.facing_mode then
     return opts.facing_mode

@@ -13,6 +13,7 @@ local domain_behavior_modules = {
   "suites.domain.market",
   "suites.domain.paid_currency",
   "suites.domain.config_sanity",
+  "suites.domain.global_aliases",
   "suites.domain.clear_obstacles_branch_walk",
   "suites.domain.vehicle_helper",
   "suites.domain.board_init_crap_coverage",

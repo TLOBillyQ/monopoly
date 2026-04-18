@@ -21,15 +21,15 @@ local function _test_profile_meta_deep_copy()
     nested = { key = "value" },
   }
   local result = _profile(original_meta, {})
-  
+
   _assert_eq(result.group, "test_group", "group should be copied")
   _assert_eq(result.covers[1], "item1", "covers[1] should be copied")
   _assert_eq(result.covers[2], "item2", "covers[2] should be copied")
-  
+
   original_meta.group = "MUTATED"
   original_meta.covers[1] = "MUTATED"
   original_meta.nested.key = "MUTATED"
-  
+
   _assert_eq(result.group, "test_group", "group should not reflect mutation")
   _assert_eq(result.covers[1], "item1", "covers[1] should not reflect mutation")
   _assert_eq(result.nested.key, "value", "nested.key should not reflect mutation")
@@ -44,23 +44,23 @@ local function _test_profile_bootstrap_deep_copy()
     tiles = { [1] = { owner_player_index = 1, level = 2 } },
   }
   local result = _profile({}, original_bootstrap)
-  
+
   _assert_eq(result.bootstrap.players[1].cash, 100000, "players[1].cash should be copied")
   _assert_eq(result.bootstrap.tiles[1].level, 2, "tiles[1].level should be copied")
-  
+
   original_bootstrap.players[1].cash = 999999
   original_bootstrap.tiles[1].level = 99
-  
+
   _assert_eq(result.bootstrap.players[1].cash, 100000, "players[1].cash should not reflect mutation")
   _assert_eq(result.bootstrap.tiles[1].level, 2, "tiles[1].level should not reflect mutation")
 end
 
 local function _test_profile_nil_meta_defaults_to_empty()
   local result = _profile(nil, { players = { [1] = { cash = 5000 } } })
-  
+
   _assert_not_nil(result.bootstrap, "bootstrap should exist")
   _assert_eq(result.bootstrap.players[1].cash, 5000, "bootstrap.players[1].cash should exist")
-  
+
   _assert_eq(result.group, nil, "group should be nil when meta is nil")
   _assert_eq(result.covers, nil, "covers should be nil when meta is nil")
 end
@@ -72,7 +72,7 @@ local function _test_profile_nil_bootstrap_defaults_to_empty()
     covers = { "x", "y" },
   }
   local result = _profile(meta, nil)
-  
+
   _assert_eq(result.group, "my_group", "group should be copied from meta")
   _assert_eq(result.value, "core", "value should be copied from meta")
   _assert_not_nil(result.bootstrap, "bootstrap should exist as empty table")
@@ -91,7 +91,7 @@ local function _test_profile_meta_and_bootstrap_combine()
     },
   }
   local result = _profile(meta, bootstrap)
-  
+
   _assert_eq(result.goal, "test_goal", "meta.goal should be in result")
   _assert_eq(result.owner_tests[1], "test1", "meta.owner_tests[1] should be in result")
   _assert_eq(result.bootstrap.players[1].cash, 120000, "bootstrap.players[1].cash should be in result")
@@ -107,7 +107,7 @@ local function _test_profile_bootstrap_separate_from_meta()
     players = { [1] = { cash = 2222 } },
   }
   local result = _profile(meta, bootstrap)
-  
+
   _assert_eq(result.players[1].cash, 1111, "result.players should come from meta")
   _assert_eq(result.bootstrap.players[1].cash, 2222, "result.bootstrap.players should come from bootstrap")
   _assert_true(result.players ~= result.bootstrap.players, "players and bootstrap.players should be different tables")

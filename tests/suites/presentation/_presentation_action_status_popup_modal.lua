@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -143,7 +144,6 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
 end
 
 local function _test_popup_defer_policy_queues_and_replays_in_order()
-  local modal_presenter = require("src.ui.ctl.modal")
   local popup_presenter = require("src.ui.ctl.popup")
   local canvas = require("src.ui.ctl.canvas_coordinator")
   local state = {

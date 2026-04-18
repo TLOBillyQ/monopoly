@@ -162,5 +162,5 @@ end
 function game:mark_board_dirty()
   _mark_board(self)
 end
- 
+
 return game

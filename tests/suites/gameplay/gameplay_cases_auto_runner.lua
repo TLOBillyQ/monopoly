@@ -1,6 +1,7 @@
 ---@diagnostic disable
 local function make_cases(helpers)
   local _ENV = helpers
+  local _ = _ENV._new_game
 
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.turn.policies.auto_runner")
@@ -78,7 +79,6 @@ local function _test_autorunner_runs_to_end()
   end
 
   local old_handle_pass_players = steal.handle_pass_players
-  local old_pick_roadblock_target = agent.pick_roadblock_target
   local old_can_pay_rent = land.executors.pay_rent.can_apply
   local game_api = GameAPI or {}
   local patches = {
@@ -409,6 +409,7 @@ local function _walk_expected_forward(board, start_index, facing, remaining_step
   local inner_state = entered_inner == true
   for step_index = 1, remaining_steps do
     local step_entered_inner
+    local _
     current, _, next_facing, step_entered_inner = board:step_forward_by_facing(current, next_facing, {
       parity = parity,
       entered_inner = inner_state,
@@ -498,9 +499,9 @@ local function _test_decision_engine_cancels_item_phase_passive()
   local g = _new_game()
   local player = g.players[1]
   player.is_ai = true
-  
+
   local decide = decision_engine.build(require("src.computer.core_agent"))
-  
+
   local choice = {
     id = 100,
     kind = "item_phase_passive",
@@ -508,9 +509,9 @@ local function _test_decision_engine_cancels_item_phase_passive()
     options = { { id = 2005, label = "物品选项" } },
     meta = { player_id = player.id },
   }
-  
+
   local result = decide(g, choice)
-  
+
   assert(result, "decide should return an action for item_phase_passive")
   assert(result.type == "choice_cancel", "item_phase_passive should result in choice_cancel")
   assert(result.choice_id == choice.id, "should preserve choice_id")

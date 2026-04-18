@@ -9,6 +9,7 @@ local move_anim = require("src.ui.render.move_anim")
 local unit_position = require("src.ui.render.unit_position")
 local runtime_port = require("src.ui.render.runtime_ui")
 local support = require("support.presentation_action_anim_support")
+local gameplay_rules = require("src.config.gameplay.debug_flags")
 
 local _with_patches = support.with_patches
 

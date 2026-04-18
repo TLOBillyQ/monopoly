@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -205,6 +206,7 @@ local function _test_ui_event_router_rejects_action_log_without_role()
   local node_map = {
     ["始终显示_行动日志图标"] = new_node(),
   }
+  local local_role = _build_role_with_events("101", {})
 
   _with_patches({
     { key = "all_roles", value = { local_role } },

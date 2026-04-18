@@ -90,7 +90,7 @@ function M.install(state, current_game_ref, opts)
   opts = opts or {}
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     -- UIManager modules cache role globals during require.
-    local roles = role_globals.install(runtime_ports.resolve_roles())
+    role_globals.install(runtime_ports.resolve_roles())
     require "vendor.third_party.UIManager.Utils"
     local ui_manager_nodes = require("Data.UIManagerNodes")
     UIManager.Builder:new(ui_manager_nodes)

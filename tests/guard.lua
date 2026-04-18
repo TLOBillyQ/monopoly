@@ -1,4 +1,3 @@
-local bootstrap = require("tests.bootstrap")
 local catalog = require("tests.catalog")
 local log_capture = require("tests.support.log_capture")
 

@@ -75,7 +75,7 @@ function choice_ui_state.resolve_gate_state(game, state, choice)
   local local_owner = _is_local_role(state, owner_role_id)
   local owner_auto = owner_player and (owner_player.is_ai == true or owner_player.auto == true) or false
   local expects_ui = route_key ~= "base_inline" and not _is_waiting_anim_phase(game) and local_owner and not owner_auto
-  local open = false
+  local open
 
   if route_key == "base_inline" then
     open = true

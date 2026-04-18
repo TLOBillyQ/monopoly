@@ -1,4 +1,5 @@
 ---@diagnostic disable
+-- luacheck: ignore 211
 local support = require("support.gameplay_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port

@@ -9,14 +9,14 @@ local function _module_dir()
 end
 
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
-local env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
+local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local common = require("shared.lib.common")
 local json_writer = require("shared.lib.json_writer")
 local package_path_helper = require("shared.package_path_helper")
 
 common.ensure_windows_utf8_console()
-local REPO_ROOT = env.repo_root
+local REPO_ROOT = bootstrap_env.repo_root
 local CRAP4LUA_ROOT = common.join_path(REPO_ROOT, "vendor/crap4lua")
 local DEFAULT_CONFIG_PATH = common.join_path(REPO_ROOT, "tools/quality/crap/config.lua")
 local DEFAULT_REPORT_JSON = "tmp/crap_report.json"

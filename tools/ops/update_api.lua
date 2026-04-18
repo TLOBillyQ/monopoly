@@ -206,7 +206,7 @@ local function _append_changelog(path, report_lines)
   entry_lines[#entry_lines + 1] = ""
   local entry_text = table.concat(entry_lines, "\n")
 
-  local content = nil
+  local content
   if common.path_exists(path) then
     content = common.read_file(path)
     if content == nil then
@@ -324,14 +324,6 @@ local function _parse_symbols(text)
   return symbols
 end
 
-local function _parse_path(path)
-  local text, err = common.read_file(path)
-  if text == nil then
-    _fail(err)
-  end
-  return _parse_symbols(text)
-end
-
 local function _format_list(title, items, limit)
   local lines = { title .. ": " .. tostring(#items) }
   if #items == 0 then
@@ -423,7 +415,7 @@ local function _load_source_entries(text)
 end
 
 local function _collect_markdown_files(doc_dir)
-  local paths, err = common.collect_files(doc_dir, ".md")
+  local paths, _ = common.collect_files(doc_dir, ".md")
   if paths == nil then
     return {}
   end
@@ -689,13 +681,11 @@ local function _generate_docs(text, options)
   end
   table.sort(component_modules)
 
-  local class_names = {}
   local class_set = {}
   for _, line in ipairs(_split_lines(text)) do
     local class_name = line:match("^%-%-%-@class%s+(.+)%s*$")
     if class_name ~= nil then
       local base_name = _class_base_name(class_name)
-      class_names[#class_names + 1] = base_name
       class_set[base_name] = true
     end
   end
@@ -982,7 +972,7 @@ local function _extract_api_info(text)
   }
 
   for i, line in ipairs(lines) do
-    local trimmed = _trim(line)
+    _trim(line)
 
     -- Parse @alias
     local alias_info = _parse_alias_line(line)
@@ -1056,7 +1046,7 @@ local function _extract_api_info(text)
     end
 
     -- Parse function definition
-    local func_full_name, func_params = _parse_function_line(line)
+    local func_full_name, _ = _parse_function_line(line)
     if func_full_name then
       -- Determine if this is a method (ClassName:methodName) or static (ClassName.methodName or just name)
       local class_part, func_part = func_full_name:match("^([^:]+):(.+)$")

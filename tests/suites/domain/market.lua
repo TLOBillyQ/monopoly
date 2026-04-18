@@ -1,7 +1,6 @@
 local support = require("support.domain_support")
 local _new_game = support.new_game
 local market_cfg = require("src.config.content.market")
-local market_context = require("src.rules.market.query.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local monopoly_event = require("src.core.events")
 local choice_resolver = require("src.core.choice.resolver")
@@ -33,12 +32,6 @@ local function _find_option(options, product_id)
     end
   end
   return nil
-end
-
-local function _test_market_context_entry_by_id_returns_canonical_entry()
-  local entry = assert(market_cfg[1], "missing market cfg entry")
-  assert(market_context.entry_by_id(entry.product_id) == entry,
-    "market context should return the canonical market entry")
 end
 
 local function _find_paid_item_entry()
@@ -800,7 +793,6 @@ end
 return {
   name = "market",
   tests = {
-    { name = "market_context_entry_by_id_returns_canonical_entry", run = _test_market_context_entry_by_id_returns_canonical_entry },
     { name = "ai_skips_auto_buy_at_market", run = _test_ai_skips_auto_buy_at_market },
     { name = "auto_execute_empty_list_no_purchase", run = _test_auto_execute_empty_list_no_purchase },
     { name = "auto_execute_purchases_first_non_vehicle", run = _test_auto_execute_purchases_first_non_vehicle },

@@ -251,8 +251,10 @@ local function _test_camera_sync_other_path_calls_set_camera_property_after_lock
     local result = camera_sync.follow_camera(state, 2)
 
     -- Assertions
+    assert(result == true, "follow_camera should succeed when presentation follow target exists")
+    assert(result == true, "follow_camera should succeed when presentation follow target exists")
     assert(set_camera_lock_position_called == true, "set_camera_lock_position should be called in OTHER path")
-    
+
     local has_dist = false
     local has_height = false
     local has_pitch = false
@@ -412,6 +414,8 @@ local function _test_camera_sync_self_path_does_not_call_set_camera_property()
     local result = camera_sync.follow_camera(state, 1)
 
     -- Assertions
+    assert(result == true, "follow_camera should succeed in SELF path")
+    assert(result == true, "follow_camera should succeed in SELF path")
     assert(reset_camera_called == true, "reset_camera should be called in SELF path")
     assert(#set_camera_property_calls == 0, "set_camera_property should NOT be called in SELF path")
   end)
@@ -491,7 +495,7 @@ local function _test_camera_sync_sync_camera_position_also_restores_props()
 
   local ok, err = pcall(function()
     -- Call sync_camera_position
-    local result = camera_sync.sync_camera_position(state)
+    camera_sync.sync_camera_position(state)
 
     -- Assertions
     local has_dist = false

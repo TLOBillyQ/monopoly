@@ -18,16 +18,6 @@ local function _assert_list_contains(list, expected, msg)
   error(msg or ("expected list to contain " .. tostring(expected)))
 end
 
-local function _assert_one_of(actual, expected_values, msg)
-  for _, expected in ipairs(expected_values or {}) do
-    if actual == expected then
-      return
-    end
-  end
-  error((msg or "unexpected value")
-    .. " expected one of {" .. table.concat(expected_values or {}, ",") .. "} actual=" .. tostring(actual))
-end
-
 local function _reset_runtime_contract_state()
   runtime_ports.reset_for_tests()
   runtime_context.set_current(nil)

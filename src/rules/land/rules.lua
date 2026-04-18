@@ -85,7 +85,7 @@ end
 
 function land_rules.execute_pay_rent(game, player_id, tile_id)
   local player, tile = _resolve_player_and_tile(game, player_id, tile_id)
-  local owner, st, skip = land_rules.resolve_rent_owner(game, tile)
+  local owner, _, skip = land_rules.resolve_rent_owner(game, tile)
   if skip and skip.reason == "mountain" then
     return {
       ok = false,

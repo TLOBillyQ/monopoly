@@ -11,9 +11,9 @@ local panel_presenter = {}
 function panel_presenter.apply_base_non_player_visibility(ui, visible)
   assert(ui ~= nil, "missing ui")
   local value = visible == true
-  local base_nodes = ui.base_hidden_nodes or {}
+  local hidden_nodes = ui.base_hidden_nodes or {}
   local base_labels = ui.base_hidden_labels or {}
-  for _, name in ipairs(base_nodes) do
+  for _, name in ipairs(hidden_nodes) do
     ui:set_visible(name, value)
   end
   for _, name in ipairs(base_labels) do

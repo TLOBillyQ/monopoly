@@ -6,7 +6,6 @@ local runtime_state = require("src.ui.state")
 local timing = require("src.config.gameplay.timing")
 local role_id_utils = require("src.core.utils.role_id")
 local choice_support = require("src.ui.pres.choice_support")
-local base_nodes = require("src.ui.schema.base")
 
 local M = {}
 

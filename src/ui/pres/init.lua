@@ -84,7 +84,7 @@ local function _should_update_slots(dirty, ui_dirty)
   if not dirty.inventory_ids then
     return false
   end
-  for _ in pairs(dirty.inventory_ids) do
+  if next(dirty.inventory_ids) ~= nil then
     return true
   end
   return false

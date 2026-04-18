@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -375,7 +376,6 @@ end
 
 local function _test_panel_cash_delta_shows_negative_and_auto_hides()
   local runtime_ports = require("src.core.ports.runtime_ports")
-  local timing = require("src.config.gameplay.timing")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 

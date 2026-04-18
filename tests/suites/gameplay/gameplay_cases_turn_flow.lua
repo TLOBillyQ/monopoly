@@ -1,4 +1,5 @@
 ---@diagnostic disable
+-- luacheck: ignore 211
 local function make_cases(helpers)
   local _ENV = helpers
 

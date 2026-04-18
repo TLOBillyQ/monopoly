@@ -30,24 +30,6 @@ local function _assert_eq(actual, expected, message)
   end
 end
 
-local function _assert_contains(list, expected, message)
-  for _, value in ipairs(list or {}) do
-    if value == expected then
-      return
-    end
-  end
-  error((message or "value missing") .. "\nmissing: " .. tostring(expected))
-end
-
-local function _contains(list, expected)
-  for _, value in ipairs(list or {}) do
-    if value == expected then
-      return true
-    end
-  end
-  return false
-end
-
 local function _read_file(path)
   local content, err = common.read_file(path)
   if content == nil then
@@ -56,28 +38,8 @@ local function _read_file(path)
   return content
 end
 
-local function _decode_arch_data_script(path)
-  local data_script = _read_file(path)
-  local payload = data_script:gsub("^%s*window%.ARCH_VIEW_DATA%s*=%s*", "", 1)
-  payload = payload:gsub(";%s*$", "", 1)
-  return json_reader.decode(payload), data_script
-end
-
-local function _find_node(view, node_id)
-  for _, node in ipairs((view and view.nodes) or {}) do
-    if node.id == node_id then
-      return node
-    end
-  end
-  return nil
-end
-
 local function _exists(path)
   return common.path_exists(path) == true
-end
-
-local function _snapshot_architecture()
-  return _scan_architecture_json().payload
 end
 
 function _scan_architecture_json()

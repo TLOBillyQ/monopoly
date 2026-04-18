@@ -12,14 +12,14 @@ local function _test_refresh_turn_label_visible_false_hides_label()
       ui_calls[#ui_calls + 1] = { method = "set_label", node = node, text = text }
     end,
   }
-  
+
   local base_nodes = {
     countdown = "countdown_node",
     countdown_line = "countdown_line_node",
   }
-  
+
   _refresh_turn_label_for_runtime_role(ui, base_nodes, "Turn: Player 1", false)
-  
+
   assert(#ui_calls == 3, "expected 3 ui calls, got " .. #ui_calls)
   assert(ui_calls[1].method == "set_visible", "first call should be set_visible")
   assert(ui_calls[1].visible == false, "countdown visibility should be false")
@@ -39,14 +39,14 @@ local function _test_refresh_turn_label_visible_nil_shows_label()
       ui_calls[#ui_calls + 1] = { method = "set_label", node = node, text = text }
     end,
   }
-  
+
   local base_nodes = {
     countdown = "countdown_node",
     countdown_line = "countdown_line_node",
   }
-  
+
   _refresh_turn_label_for_runtime_role(ui, base_nodes, "Turn: Player 2", nil)
-  
+
   assert(#ui_calls == 3, "expected 3 ui calls, got " .. #ui_calls)
   assert(ui_calls[1].method == "set_visible", "first call should be set_visible")
   assert(ui_calls[1].visible == true, "countdown visibility should be true (nil defaults to true)")
@@ -65,15 +65,15 @@ local function _test_refresh_turn_label_calls_set_label_with_expected_args()
       ui_calls[#ui_calls + 1] = { method = "set_label", node = node, text = text }
     end,
   }
-  
+
   local base_nodes = {
     countdown = "countdown_node",
     countdown_line = "countdown_line_node",
   }
-  
+
   local expected_text = "Time's running out!"
   _refresh_turn_label_for_runtime_role(ui, base_nodes, expected_text, true)
-  
+
   assert(#ui_calls == 3, "expected 3 ui calls, got " .. #ui_calls)
   assert(ui_calls[3].method == "set_label", "third call should be set_label")
   assert(ui_calls[3].node == "countdown_node", "should set label on countdown node")

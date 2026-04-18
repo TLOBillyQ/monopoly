@@ -6,12 +6,12 @@ local movement_handlers = require("src.rules.chance.handlers.movement")
 local handlers = {}
 
 function handlers.build()
-  local handlers = {}
-  cash_handlers.register(handlers, common)
-  asset_handlers.register(handlers, common)
-  movement_handlers.register(handlers, common)
-  handlers.handlers = handlers
-  return handlers
+  local built = {}
+  cash_handlers.register(built, common)
+  asset_handlers.register(built, common)
+  movement_handlers.register(built, common)
+  built.handlers = built
+  return built
 end
 
 return handlers

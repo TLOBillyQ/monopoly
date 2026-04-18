@@ -24,7 +24,7 @@ function strategy.has_obstacles_ahead(game, player, distance)
   local entered_inner = false
 
   for _ = 1, distance do
-    local next_index, _passed, next_facing, step_entered_inner = board:step_forward_by_facing(current, facing, {
+    local next_index, _, next_facing, step_entered_inner = board:step_forward_by_facing(current, facing, {
       parity = parity,
       entered_inner = entered_inner,
     })
@@ -60,12 +60,10 @@ end
 local function _try_use_item(game, player, item_id, phase, cond, auto_play)
   phase, cond, auto_play = _resolve_try_use_item_args(game, phase, cond, auto_play)
   if cond and cond() == false then return nil end
-  if _ai_can_use_item(item_id, phase) then
-  else
+  if not _ai_can_use_item(item_id, phase) then
     return nil
   end
-  if inventory.find_index(player, item_id) then
-  else
+  if not inventory.find_index(player, item_id) then
     return nil
   end
   local res = executor.use_item(game, player, item_id, { by_ai = true, auto_play = auto_play })

@@ -33,7 +33,7 @@ local function _setup_context(opts)
     runtime_context.set_current(nil)
     return
   end
-  local runtime_ctx = _install_context(opts.install_globals == true)
+  _install_context(opts.install_globals == true)
   runtime_ports.configure(default_ports.build(runtime_context))
 end
 

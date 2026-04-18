@@ -56,13 +56,6 @@ local function _read_file(path)
   return content
 end
 
-local function _decode_arch_data_script(path)
-  local data_script = _read_file(path)
-  local payload = data_script:gsub("^%s*window%.ARCH_VIEW_DATA%s*=%s*", "", 1)
-  payload = payload:gsub(";%s*$", "", 1)
-  return json_reader.decode(payload), data_script
-end
-
 local function _find_node(view, node_id)
   for _, node in ipairs((view and view.nodes) or {}) do
     if node.id == node_id then
@@ -70,10 +63,6 @@ local function _find_node(view, node_id)
     end
   end
   return nil
-end
-
-local function _exists(path)
-  return common.path_exists(path) == true
 end
 
 local function _snapshot_architecture()

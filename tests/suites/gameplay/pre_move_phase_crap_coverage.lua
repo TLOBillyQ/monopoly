@@ -56,6 +56,7 @@ local function _test_resolve_wait_action_anim_when_flag_set()
   local turn_mgr = _build_turn_mgr({ player = player })
   local captured_state
 
+  local _
   _with_item_phase_run(function(_, _, _)
     return { waiting = true, wait_action_anim = true, next_state = "pre_move", next_args = nil }
   end, function()
@@ -70,6 +71,7 @@ local function _test_default_next_args_built_from_player_total_raw_total()
   local turn_mgr = _build_turn_mgr({ player = player })
   local captured_args
 
+  local _
   _with_item_phase_run(function(_, _, _)
     return { waiting = true, next_state = "pre_move", next_args = nil }
   end, function()
@@ -87,6 +89,7 @@ local function _test_provided_next_args_used_as_is()
   local turn_mgr = _build_turn_mgr({ player = player })
   local captured_args
 
+  local _
   _with_item_phase_run(function(_, _, _)
     return { waiting = true, next_state = "move", next_args = custom_args }
   end, function()

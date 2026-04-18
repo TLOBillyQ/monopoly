@@ -65,8 +65,8 @@ end
 
 function market_view.select_market_option(state, option_id, deps)
   local resolved_deps = _resolve_deps(state, deps)
-  local modal_state = resolved_deps.modal_state or _fallback_modal_state()
-  modal_state.select_market_option(state, option_id)
+  local resolved_modal = resolved_deps.modal_state or _fallback_modal_state()
+  resolved_modal.select_market_option(state, option_id)
   market_view_controls.refresh_market_selection_frames(
     state.ui,
     runtime_state.ensure_ui_runtime(state).choice_visible_option_ids,
@@ -77,7 +77,7 @@ end
 
 function market_view.refresh_market(state, market, deps)
   local resolved_deps = _resolve_deps(state, deps)
-  local modal_state = resolved_deps.modal_state or _fallback_modal_state()
+  local resolved_modal = resolved_deps.modal_state or _fallback_modal_state()
   local ui = state.ui
   local was_market_active = ui and ui.market_active == true
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
@@ -87,7 +87,7 @@ function market_view.refresh_market(state, market, deps)
     market_view_slots.hide_market_slots(ui)
     market_view_controls.reset_market_preview(state, resolved_deps)
     market_view_controls.apply_market_common_controls(ui, market, false, VEHICLE_TAB_ENABLED)
-    modal_state.open_market(state, market.choice_id, {}, nil)
+    resolved_modal.open_market(state, market.choice_id, {}, nil)
     return true
   end
   local refs = state.ui_refs and state.ui_refs.images or {}
@@ -104,17 +104,17 @@ function market_view.refresh_market(state, market, deps)
     selected_option_id,
     rendered.first_buyable
   )
-  modal_state.open_market(state, market.choice_id, rendered.option_ids, selected)
+  resolved_modal.open_market(state, market.choice_id, rendered.option_ids, selected)
   market_view.select_market_option(state, selected, resolved_deps)
   return true
 end
 
 function market_view.close_market_panel(state, deps)
   local resolved_deps = _resolve_deps(state, deps)
-  local modal_state = resolved_deps.modal_state or _fallback_modal_state()
+  local resolved_modal = resolved_deps.modal_state or _fallback_modal_state()
   local ui = state.ui
   assert(ui ~= nil and ui.market_active == true, "market panel not active")
-  modal_state.close_choice(state)
+  resolved_modal.close_choice(state)
   market_view_controls.close_market_panel(state, resolved_deps)
 end
 

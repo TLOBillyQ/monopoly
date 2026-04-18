@@ -24,7 +24,7 @@ local function _test_build_wait_choice_args_returns_table_with_keys()
     resume_next_args = { arg1 = "value1" },
   }
   local result = build_wait_choice_args(meta)
-  
+
   _assert_table(result, "result should be table")
   _assert_not_nil(result.next_state, "result.next_state should exist")
   _assert_not_nil(result.next_args, "result.next_args should exist")
@@ -37,7 +37,7 @@ local function _test_build_wait_choice_args_next_state_from_meta()
     resume_next_args = nil,
   }
   local result = build_wait_choice_args(meta)
-  
+
   _assert_eq(result.next_state, "target_state_123", "next_state should equal resume_next_state")
 end
 
@@ -46,13 +46,11 @@ local function _test_build_wait_choice_args_missing_resume_next_state_asserts()
   local meta = {
     resume_next_args = { some = "args" },
   }
-  local caught_error = false
-  local error_msg = ""
-  
+
   local ok, err = pcall(function()
     build_wait_choice_args(meta)
   end)
-  
+
   assert(not ok, "should have raised an error")
   assert(err and string.find(err, "resume_next_state"), "error should mention resume_next_state")
 end
@@ -62,7 +60,7 @@ local function _test_build_wait_choice_args_nil_meta_asserts()
   local ok, err = pcall(function()
     build_wait_choice_args(nil)
   end)
-  
+
   assert(not ok, "nil meta should raise error")
   assert(err and string.find(err, "resume_next_state"), "error should mention resume_next_state")
 end
@@ -73,7 +71,7 @@ local function _test_build_wait_choice_args_next_args_nil_when_absent()
     resume_next_state = "some_state",
   }
   local result = build_wait_choice_args(meta)
-  
+
   _assert_eq(result.next_args, nil, "next_args should be nil when resume_next_args is nil")
 end
 
@@ -84,7 +82,7 @@ local function _test_build_wait_choice_args_next_args_nil_when_explicit()
     resume_next_args = nil,
   }
   local result = build_wait_choice_args(meta)
-  
+
   _assert_eq(result.next_args, nil, "next_args should be nil when resume_next_args is explicitly nil")
 end
 
@@ -96,7 +94,7 @@ local function _test_build_wait_choice_args_next_args_from_resume()
     resume_next_args = args_table,
   }
   local result = build_wait_choice_args(meta)
-  
+
   _assert_eq(result.next_args, args_table, "next_args should be resume_next_args")
   _assert_eq(result.next_args.player_id, 2, "next_args.player_id should be preserved")
   _assert_eq(result.next_args.amount, 5000, "next_args.amount should be preserved")
@@ -109,7 +107,7 @@ local function _test_build_wait_choice_args_resume_next_args_false()
     resume_next_args = false,
   }
   local result = build_wait_choice_args(meta)
-  
+
   _assert_eq(result.next_args, nil, "next_args should be nil when resume_next_args is false")
 end
 

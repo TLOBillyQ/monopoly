@@ -57,7 +57,7 @@ function M.ensure_layers_for_player(cache, player, deps)
   if cache.layers[player_id] ~= nil then
     return true
   end
-  local host_runtime = _resolve_host_runtime(deps)
+  _resolve_host_runtime(deps)
   local role = _resolve_role(player_id, deps)
   if role == nil then
     meta.warn_once(cache, "missing_role_" .. tostring(player_id), "status3d missing role:", tostring(player_id))

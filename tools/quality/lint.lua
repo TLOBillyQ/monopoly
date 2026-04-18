@@ -65,6 +65,14 @@ local function _parse_args(args)
   return options
 end
 
+local function _cli_args(raw_args)
+  local args = {}
+  for index = 1, #(raw_args or {}) do
+    args[#args + 1] = raw_args[index]
+  end
+  return args
+end
+
 local function _validate_targets(targets)
   for _, target in ipairs(targets or {}) do
     local resolved = common.resolve_path(REPO_ROOT, target)
@@ -79,7 +87,7 @@ local function _validate_targets(targets)
 end
 
 function M.run(args)
-  local options = _parse_args(args or arg or {})
+  local options = _parse_args(_cli_args(args or arg or {}))
   if options.help then
     io.stdout:write(_help_text((arg and arg[0]) or "tools/quality/lint.lua"))
     return 0

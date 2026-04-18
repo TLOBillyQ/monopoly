@@ -1,6 +1,7 @@
 ---@diagnostic disable
 local function make_cases(helpers)
   local _ENV = helpers
+  local _ = _ENV._new_game
 
 local function _test_find_player_by_id_accepts_mixed_representation()
   local g = _new_game()
@@ -50,18 +51,6 @@ local function _test_owner_mine_other_player_triggers_immediately_after_placemen
   assert(resumed_state == "end_turn", "mine trigger should end the turn after hospital followup")
   assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by the fresh mine")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
-end
-
-local function _has_mine_trigger_anim(turn)
-  if turn and turn.action_anim and turn.action_anim.kind == "mine_trigger" then
-    return true
-  end
-  for _, entry in ipairs(turn and turn.action_anim_queue or {}) do
-    if entry.kind == "mine_trigger" then
-      return true
-    end
-  end
-  return false
 end
 
 local function _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third()
@@ -162,7 +151,7 @@ local function _test_turn_start_emits_turn_started_feedback_event()
       end,
     },
   }, function()
-    local next_state, args = turn_start({ game = g })
+    local next_state, _ = turn_start({ game = g })
     assert(next_state ~= nil, "turn_start should return next state")
   end)
 

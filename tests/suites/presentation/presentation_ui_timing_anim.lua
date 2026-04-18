@@ -1,57 +1,20 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
-local _build_ui_port = support.build_ui_port
 local _open_choice = support.open_choice
 local _get_choice = support.get_choice
 local _assert_eq = support.assert_eq
-local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local turn_anim = support.turn_anim
 local tick_timeout = support.tick_timeout
 local constants = support.constants
 local choice_resolver = support.choice_resolver
-local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.ui.ctl.event_handlers")
-local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
 local runtime_port = require("src.ui.render.runtime_ui")
-local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.ctl.choice_screens.openers")
-local market_view = require("src.ui.render.market")
-local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.ctl.canvas_event_router")
-local ui_view = require("src.ui.ctl.ui_runtime")
-local ui_status_3d_layer = require("src.ui.render.status3d")
-local action_anim = require("src.ui.render.action_anim")
 local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.wid.turn_effects")
-local popup_renderer = require("src.ui.ctl.popup")
-local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.ui.ports.debug")
-local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
-local ui_touch_policy = require("src.ui.input.touch_policy")
-local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
-local logger = require("src.core.utils.logger")
-local market_cfg = require("src.config.content.market")
-local runtime_constants = require("src.config.gameplay.runtime_constants")
-local host_runtime = require("src.host")
-local runtime_state = require("src.state.runtime_state")
-local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local vec3 = require("fixtures.vec3")
-
-
-local function _ui_runtime(state)
-  return runtime_state.ensure_ui_runtime(state)
-end
-
-local _wrap_ui_refs = support.wrap_ui_refs
-local _build_popup_view_state = support.build_popup_view_state
-local _build_role_with_events = support.build_role_with_events
-local _has_event = support.has_event
-local _build_choice_modal_state = support.build_choice_modal_state
-local _build_target_pick_env = support.build_target_pick_env
 
 
 local function _test_move_anim_callback_and_delay()
@@ -88,7 +51,6 @@ local function _test_move_anim_callback_and_delay()
 end
 
 local function _test_popup_timeout_auto_confirm()
-  local g = _new_game()
   local layer = {}
   layer.ui_modal_elapsed = 0
   layer.ui_modal_ref = nil

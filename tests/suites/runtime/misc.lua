@@ -38,7 +38,6 @@ end
 
 local function _test_synthetic_actor_registry_spawns_from_first_path_tile()
   local registry_module = require("src.host.synthetic_actor_registry")
-  local runtime_constants = require("src.config.gameplay.runtime_constants")
   local created = {}
   local registry = registry_module.new({
     LuaAPI = {

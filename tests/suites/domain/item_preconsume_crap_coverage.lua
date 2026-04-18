@@ -19,7 +19,7 @@ end
 local function _test_empty_choice_spec_gets_meta_added()
   local choice_spec = {}
   local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec)
-  
+
   _assert_table(result, "result is table")
   _assert_table(result.meta, "meta added to spec")
   _assert_true(result.meta.item_preconsumed, "item_preconsumed set to true")
@@ -33,7 +33,7 @@ local function _test_existing_meta_not_overwritten()
     }
   }
   local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec)
-  
+
   _assert_table(result.meta, "meta preserved")
   _assert_true(result.meta.item_preconsumed, "item_preconsumed set to true")
   _assert_eq(result.meta.custom_field, "custom_value", "custom field preserved")
@@ -45,7 +45,7 @@ local function _test_cancel_disabled_when_function_runs()
     cancel_label = "Cancel Action"
   }
   local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec)
-  
+
   _assert_false(result.allow_cancel, "allow_cancel set to false")
   _assert_eq(result.cancel_label, nil, "cancel_label set to nil")
 end
@@ -54,7 +54,7 @@ local function _test_context_only_flag_set_correctly()
   local choice_spec = {}
   local context = { context_only = true }
   local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec, context)
-  
+
   _assert_table(result.meta, "meta created")
   _assert_true(result.meta.item_preconsumed, "item_preconsumed set despite extra context fields")
 end
@@ -66,7 +66,7 @@ local function _test_context_fields_merged_into_spec()
     player_id = "player_456"
   }
   local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec, context)
-  
+
   _assert_table(result.meta, "meta created")
   _assert_eq(result.meta.item_id, "item_123", "item_id merged from context")
   _assert_eq(result.meta.player_id, "player_456", "player_id merged from context")

@@ -1,5 +1,5 @@
 local function _normalize_path(path)
-  return tostring(path or ""):gsub("\\", "/")
+  return (tostring(path or ""):gsub("\\", "/"))
 end
 
 local function _module_dir()

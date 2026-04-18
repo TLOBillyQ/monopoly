@@ -1,6 +1,7 @@
 -- T5 characterization tests for remaining CRAP hotspots
 -- Targets: build_intent, on_bankruptcy_tiles_cleared, event_handlers anonymous functions,
 --          register_node_click, choice.build_choice_view
+-- luacheck: ignore 211
 
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches

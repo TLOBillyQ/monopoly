@@ -130,8 +130,8 @@ function runtime.build_board_visual_feedback_port(state)
 
   local port = {}
   port.sync_many = function(arg1, arg2, arg3)
-    local game = nil
-    local payload = nil
+    local game
+    local payload
     if arg3 ~= nil or (type(arg1) == "table" and arg1 == port) then
       game = arg2
       payload = arg3

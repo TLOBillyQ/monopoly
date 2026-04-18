@@ -80,7 +80,7 @@ end
 
 function mine_effect.apply(game, player, position)
   assert(game ~= nil, "missing game")
-  local board = assert(game.board, "missing board")
+  assert(game.board, "missing board")
   assert(player ~= nil, "missing player")
   assert(position ~= nil, "missing position")
 
@@ -116,7 +116,7 @@ function mine_effect.apply(game, player, position)
     move_dir_mode = "clear",
   })
   game:set_player_status(player, "pending_location_effect", "hospital")
-  local queued = action_anim_port.queue(game, {
+  action_anim_port.queue(game, {
     kind = "mine_trigger",
     player_id = player.id,
     tile_index = position,

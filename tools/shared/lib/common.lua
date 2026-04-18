@@ -425,7 +425,7 @@ function common.is_macos()
 end
 
 function common.normalize_path(path)
-  return tostring(path or ""):gsub("\\", "/")
+  return (tostring(path or ""):gsub("\\", "/"))
 end
 
 function common.split(text, delimiter)
@@ -556,7 +556,7 @@ function common.parent_dir(path)
 end
 
 function common.system_tmp_dir()
-  local env = nil
+  local env
   if common.is_windows() then
     env = os.getenv("TEMP") or os.getenv("TMP")
   else

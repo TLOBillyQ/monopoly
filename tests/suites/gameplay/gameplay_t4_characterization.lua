@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local bootstrap = require("tests.bootstrap")
 bootstrap.install_package_paths()
 
@@ -434,7 +435,7 @@ local function _test_asset_handlers_reset_tiles_on_path()
   local handlers = {}
   asset_handlers.register(handlers, common)
 
-  local owners = {}
+  local _owners = {} -- luacheck: ignore 241
   local reset_tiles = {}
   local game = {
     board = {
@@ -449,7 +450,7 @@ local function _test_asset_handlers_reset_tiles_on_path()
       return { id = id, properties = { t1 = true } }
     end,
     set_player_property = function(_, player, tile_id, owned)
-      owners[tile_id] = owned
+      _owners[tile_id] = owned
     end,
     reset_tile = function(_, tile)
       table.insert(reset_tiles, tile.id)

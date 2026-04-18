@@ -1,7 +1,7 @@
 local logger = require("src.core.utils.logger")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
-local tile = require("src.rules.board.tile")
+local tile_mod = require("src.rules.board.tile")
 local land_actions = require("src.rules.land.actions")
 local land_choice_specs = require("src.rules.land.choice_specs")
 local inventory = require("src.rules.items.inventory")
@@ -11,7 +11,7 @@ local monopoly_event = require("src.core.events")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number_utils")
 
-local tile_state = tile.get_state
+local tile_state = tile_mod.get_state
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local M = {}

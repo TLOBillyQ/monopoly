@@ -65,12 +65,12 @@ function M.resolve_choice_title(choice, screen_key, selected_option_id)
   return choice and choice.title or "请选择"
 end
 
-function M.resolve_secondary_confirm_title(choice, _game, _source_screen, option_id)
-  return choice_support.resolve_secondary_confirm_title(choice, _game, _source_screen, option_id)
+function M.resolve_secondary_confirm_title(choice, game, source_screen, option_id)
+  return choice_support.resolve_secondary_confirm_title(choice, game, source_screen, option_id)
 end
 
-function M.resolve_secondary_confirm_body(choice, _game, _source_screen, option_id, option_label)
-  return choice_support.resolve_secondary_confirm_body(choice, _game, _source_screen, option_id, option_label)
+function M.resolve_secondary_confirm_body(choice, game, source_screen, option_id, option_label)
+  return choice_support.resolve_secondary_confirm_body(choice, game, source_screen, option_id, option_label)
 end
 
 function M.build_secondary_confirm_body(choice, game, selected_option_id)

@@ -1,11 +1,11 @@
-local tile = require("src.rules.board.tile")
+local tile_mod = require("src.rules.board.tile")
 local pricing = require("src.rules.land.pricing")
 local timing = require("src.config.gameplay.timing")
 local monopoly_event = require("src.core.events")
 
 local game_victory = {}
 
-local tile_state = tile.get_state
+local tile_state = tile_mod.get_state
 
 local function _total_assets(game, player)
   local total = game:player_balance(player, "金币")

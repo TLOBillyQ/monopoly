@@ -1,8 +1,7 @@
 local logger = require("src.core.utils.logger")
-local tile = require("src.rules.board.tile")
+local tile_mod = require("src.rules.board.tile")
 local board_query = require("src.rules.board.query")
 local property_value = require("src.rules.commerce.property_value")
-local constants = require("src.config.content.constants")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number_utils")
@@ -24,7 +23,7 @@ local function _destroy_building(game, tile)
   game:set_tile_level(tile, 0)
 end
 
-local tile_state = tile.get_state
+local tile_state = tile_mod.get_state
 
 local function _collect_hospital_targets(game, idx)
   local occupants = assert(game.occupants[idx], "missing occupants: " .. tostring(idx))

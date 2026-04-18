@@ -34,7 +34,7 @@ local function build(deps)
     if not player then
       return { status = "rejected" }
     end
-    player.auto = not (player.auto == true)
+    player.auto = player.auto ~= true
     return { status = "applied" }
   end
 

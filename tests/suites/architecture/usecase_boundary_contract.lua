@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.runtime_support")
 local shared_support = require("support.shared_support")
 local _assert_eq = support.assert_eq

@@ -43,14 +43,6 @@ local function _suite_tests(suite)
   return {}
 end
 
-local function _silent_reporter()
-  return {
-    case_pass = function() end,
-    case_fail = function() end,
-    finish = function() end,
-  }
-end
-
 local function _clamp_worker_count(parsed, suite_count)
   local total = number_utils.to_integer(suite_count) or 0
   if total <= 0 then
@@ -219,7 +211,7 @@ local function _write_launcher(suite_module, paths)
 end
 
 local function _launch_worker(paths)
-  local command = nil
+  local command
   if common.is_windows() then
     command = 'start "" /b powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File '
       .. common.shell_quote(paths.launcher_file)

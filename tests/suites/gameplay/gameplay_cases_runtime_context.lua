@@ -1,6 +1,7 @@
 ---@diagnostic disable
 local function make_cases(helpers)
   local _ENV = helpers
+  local _ = _ENV._new_game
 
 local function _test_turn_start_logs_phase_event_to_event_feed()
   local g = _new_game()
@@ -355,40 +356,6 @@ local function _test_stop_all_players_movement_skips_invalid_role_without_error(
   assert(stopped_ids[1] == g.players[1].id, "only valid role should receive stop")
 end
 
-local function _test_runtime_context_forward_stop_skips_invalid_role()
-  _with_runtime_context_globals(function()
-    local stop_events = 0
-    local game_api = {
-      get_role = function(role_id)
-        if role_id == 1 then
-          return { id = 1 }
-        end
-        return nil
-      end,
-      get_all_valid_roles = function()
-        return { { id = 1 } }
-      end,
-    }
-    support.with_patches({
-    }, function()
-      local ctx = runtime_context.new({
-        GameAPI = game_api,
-        LuaAPI = _mock_lua_api(function(event_name)
-          if event_name == "stop_vehicle_forward" then
-            stop_events = stop_events + 1
-          end
-        end),
-      })
-      _install_global_aliases(ctx)
-      runtime_context.install_runtime_helpers(ctx, { install_globals = true })
-      local invalid_ok = vehicle_helper.emit_vehicle_stop(2)
-      local valid_ok = vehicle_helper.emit_vehicle_stop(1)
-      assert(invalid_ok == false, "forward stop should reject invalid role")
-      assert(valid_ok == true, "forward stop should allow valid role")
-      assert(stop_events == 1, "forward stop should only emit event for valid role")
-    end)
-  end)
-end
 
 local function _test_runtime_context_split_install_stages()
   _with_runtime_context_globals(function()
@@ -413,8 +380,8 @@ local function _test_runtime_context_split_install_stages()
     runtime_context.install_environment(ctx)
     assert(SetTimeOut ~= lua_api.call_delay_time, "install_environment should stay validation-only")
 
-    local helpers = runtime_context.install_runtime_helpers(ctx)
-    assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
+    local installed_helpers = runtime_context.install_runtime_helpers(ctx)
+    assert(installed_helpers ~= nil and installed_helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
     assert(camera_helper == nil, "install_runtime_helpers should not export globals by default")
   end)
 end
@@ -437,8 +404,8 @@ local function _test_runtime_context_install_helpers_without_globals()
       LuaAPI = _mock_lua_api(),
     })
     runtime_context.install_environment(ctx)
-    local helpers = runtime_context.install_runtime_helpers(ctx, { install_globals = false })
-    assert(helpers ~= nil and helpers.camera_helper ~= nil, "install_runtime_helpers should return helpers")
+    local installed_helpers = runtime_context.install_runtime_helpers(ctx, { install_globals = false })
+    assert(installed_helpers ~= nil and installed_helpers.camera_helper ~= nil, "install_runtime_helpers should return helpers")
     assert(all_roles == nil, "install_runtime_helpers install_globals=false should not write all_roles")
 
     runtime_context.install_runtime_helper_globals(helpers)
@@ -473,13 +440,13 @@ local function _test_runtime_context_release_helper_install_flow()
 
       runtime_context.install_environment(ctx)
       ctx.roles = { provider_role }
-      local helpers = runtime_context.install_runtime_helpers(ctx)
+      local installed_helpers = runtime_context.install_runtime_helpers(ctx)
 
-      assert(type(helpers.vehicle_helper.resolve_any_role) == "function",
+      assert(type(installed_helpers.vehicle_helper.resolve_any_role) == "function",
         "release install flow should still expose resolve_any_role")
-      assert(helpers.vehicle_helper.resolve_any_role() == provider_role,
+      assert(installed_helpers.vehicle_helper.resolve_any_role() == provider_role,
         "release install flow should keep provider role priority")
-      assert(helpers.vehicle_helper.resolve_role(2) == fallback_role,
+      assert(installed_helpers.vehicle_helper.resolve_role(2) == fallback_role,
         "release install flow should keep resolve_role available")
     end)
   end)

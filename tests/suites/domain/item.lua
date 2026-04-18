@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
 local function _new_game()
@@ -1830,10 +1831,10 @@ local function _test_try_deity_items_tries_rich_then_angel()
   p.inventory:add({ id = item_ids.angel })
 
   local used_items = {}
-  local executor = require("src.rules.items.executor")
+  local item_executor = require("src.rules.items.executor")
   support.with_patches({
     {
-      target = executor,
+      target = item_executor,
       key = "use_item",
       value = function(_, _, item_id)
         table.insert(used_items, item_id)

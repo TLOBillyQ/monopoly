@@ -139,7 +139,7 @@ local function _read_zip_entry(path, entry_name)
 end
 
 local function _load_shared_strings(path)
-  local xml, err = _read_zip_entry(path, "xl/sharedStrings.xml")
+  local xml, _ = _read_zip_entry(path, "xl/sharedStrings.xml")
   if xml == nil then
     return {}
   end
@@ -172,7 +172,7 @@ local function _extract_cells(row_xml)
       cells[#cells + 1] = open_tag
       cursor = open_end + 1
     else
-      local close_start, close_end = source:find("</c>", open_end + 1, true)
+      local _, close_end = source:find("</c>", open_end + 1, true)
       if close_end == nil then
         break
       end

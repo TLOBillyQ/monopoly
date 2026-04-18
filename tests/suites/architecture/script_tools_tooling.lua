@@ -1,4 +1,5 @@
 -- script_tools_tooling.lua - 重型 tooling 测试，在并行 tooling lane 中执行
+-- luacheck: ignore 211
 local bootstrap = require("tests.bootstrap")
 local common = require("shared.lib.common")
 local arch_common = require("arch_view.runtime.common")

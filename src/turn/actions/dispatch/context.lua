@@ -57,8 +57,6 @@ local function resolve_actor_player(game, action)
   local player = game:find_player_by_id(actor_role_id)
   if not player then
     logger.warn("ui_button actor_role_id not mapped:", tostring(action and action.id), tostring(actor_role_id))
-    if action and action.id == "auto" then
-    end
     return nil
   end
   return player

@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -23,6 +24,7 @@ local market_layout = require("src.ui.schema.market_layout")
 local canvas_event_router = require("src.ui.ctl.canvas_event_router")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local ui_status_3d_layer = require("src.ui.render.status3d")
+local gameplay_rules = require("src.config.gameplay.debug_flags")
 local action_anim = require("src.ui.render.action_anim")
 local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")

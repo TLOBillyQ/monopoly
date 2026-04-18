@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
 local number_utils = require("src.core.utils.number_utils")

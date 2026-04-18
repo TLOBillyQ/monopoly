@@ -9,7 +9,7 @@ local function _module_dir()
 end
 
 local bootstrap = dofile(_module_dir() .. "/../../../shared/bootstrap.lua")
-local env = bootstrap.install(debug.getinfo(1, "S").source)
+bootstrap.install(debug.getinfo(1, "S").source)
 
 local shared_common = require("shared.lib.common")
 local common = {}

@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -23,6 +24,7 @@ local market_layout = require("src.ui.schema.market_layout")
 local canvas_event_router = require("src.ui.ctl.canvas_event_router")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local modal_presenter = require("src.ui.ctl.modal")
+local gameplay_rules = require("src.config.gameplay.debug_flags")
 local ui_status_3d_layer = require("src.ui.render.status3d")
 local action_anim = require("src.ui.render.action_anim")
 local move_anim = require("src.ui.render.move_anim")
@@ -1038,7 +1040,6 @@ end
 
 local function _test_view_command_ports_toggle_action_log_warns_when_actor_role_id_missing()
   local view_command_ports = require("src.ui.ports.view_command")
-  local logger = require("src.core.utils.logger")
   local ports = view_command_ports.build()
   local warn_calls = {}
   local state = { ui = {} }

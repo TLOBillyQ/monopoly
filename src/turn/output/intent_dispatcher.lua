@@ -84,10 +84,9 @@ local function _validate_choice_meta(game, choice_spec)
   return descriptor
 end
 
-function intent_dispatcher.open_choice(game, choice_spec, opts)
+function intent_dispatcher.open_choice(game, choice_spec, _opts)
   assert(game and game.turn, "Choice.open requires game.turn")
   assert(choice_spec ~= nil, "missing choice_spec")
-  opts = opts or {}
   _validate_choice_meta(game, choice_spec)
 
   local seq = game.turn.choice_seq or 0

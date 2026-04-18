@@ -191,11 +191,8 @@ function availability.can_offer_in_phase(game, player, item_id, phase)
     return false, "offer_in_phases_not_allowed"
   end
   local special_offer = _can_offer_special_item(game, player, item_id)
-  if special_offer ~= nil then
-    if special_offer then
-    else
-      return false, "special_condition_failed"
-    end
+  if special_offer ~= nil and not special_offer then
+    return false, "special_condition_failed"
   end
   local used_effect_groups = game and game.turn and game.turn.used_effect_groups or nil
   if type(used_effect_groups) == "table" and cfg.effect_group ~= nil and used_effect_groups[cfg.effect_group] == true then

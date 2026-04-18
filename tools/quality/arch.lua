@@ -9,7 +9,7 @@ local function _module_dir()
 end
 
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
-local env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
+local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local common = require("shared.lib.common")
 local arch_view = require("arch_view")
@@ -17,7 +17,7 @@ local arch_filter = require("quality.arch.filter")
 
 common.ensure_windows_utf8_console()
 
-local REPO_ROOT = env.repo_root
+local REPO_ROOT = bootstrap_env.repo_root
 local ARCH_VIEW_DIR = common.join_path(REPO_ROOT, "vendor/arch_view")
 local ARCH_CONFIG_PATH = common.join_path(REPO_ROOT, "tools/quality/arch/config.json")
 

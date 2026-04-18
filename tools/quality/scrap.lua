@@ -9,12 +9,12 @@ local function _module_dir()
 end
 
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
-local env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
+local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local common = require("shared.lib.common")
 
 common.ensure_windows_utf8_console()
-local REPO_ROOT = env.repo_root
+local REPO_ROOT = bootstrap_env.repo_root
 local DEFAULT_CONFIG_PATH = common.join_path(REPO_ROOT, "tools/quality/scrap/config.lua")
 local DEFAULT_INDEX_JSON = "tmp/scrap_index.json"
 local DEFAULT_CLUSTER_JSON = "tmp/scrap_clusters.json"

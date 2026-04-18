@@ -1,3 +1,4 @@
+-- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches

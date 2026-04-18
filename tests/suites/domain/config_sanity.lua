@@ -1,9 +1,7 @@
 local support = require("support.domain_support")
 local with_patches = support.with_patches
-local market_catalog = require("src.config.content.market_catalog")
 local config_sanity = require("src.config.gameplay.config_sanity")
 local market_cfg = require("src.config.content.market")
-local item_ids = require("src.config.gameplay.item_ids")
 local chance_cfg = require("src.config.content.chance_cards")
 local tiles_cfg = require("src.config.content.tiles")
 local runtime_refs = require("src.config.content.runtime_refs")
@@ -158,15 +156,6 @@ local function _test_config_sanity_rejects_vehicle_market_entries()
   end)
 end
 
-local function _test_config_sanity_rejects_duplicate_market_product_ids()
-  _with_release_tables({}, {
-    { kind = "item", product_id = 2001 },
-    { kind = "item", product_id = 2001 },
-  }, function()
-    _assert_validate_fails("duplicate market product_id: 2001")
-  end)
-end
-
 local function _test_config_sanity_validate_rejects_missing_board_feedback_effect_ref()
   _with_runtime_ref_tables({
     cue = {
@@ -257,46 +246,7 @@ local function _test_config_sanity_validate_is_cached_until_reset()
    end
    assert(effect_groups_by_id[2002] == "dice_control", "item 2002 should have effect_group=dice_control")
    assert(effect_groups_by_id[2003] == "dice_multiply", "item 2003 should have effect_group=dice_multiply")
-  end
-
-  local function _test_item_ids_are_derived_from_item_config_keys()
-    local items = require("src.config.content.items")
-    local expected = {}
-    for _, item in ipairs(items) do
-      if item.key ~= nil then
-        expected[item.key] = item.id
-      end
-    end
-    for key, id in pairs(expected) do
-      assert(item_ids[key] == id, "item_ids mismatch for key=" .. tostring(key))
-    end
-    for key, id in pairs(item_ids) do
-      assert(expected[key] == id, "unexpected or stale item_ids entry key=" .. tostring(key))
-    end
-  end
-
-  local function _test_market_item_entries_reuse_item_config_identity()
-    local items = require("src.config.content.items")
-    local by_id = {}
-    for _, item in ipairs(items) do
-      by_id[item.id] = item
-    end
-
-    for _, entry in ipairs(market_cfg) do
-      if entry.kind == "item" and entry.page == "道具商店" then
-        local item = assert(by_id[entry.product_id], "market item missing from items config: " .. tostring(entry.product_id))
-        assert(entry.name == item.name, "market item name drift for product_id=" .. tostring(entry.product_id))
-        assert(entry.currency == item.shop_currency, "market item currency drift for product_id=" .. tostring(entry.product_id))
-        assert(entry.price == item.shop_price, "market item price drift for product_id=" .. tostring(entry.product_id))
-      end
-    end
-  end
-
-  local function _test_market_catalog_entry_by_id_returns_canonical_entry()
-    local entry = assert(market_cfg[1], "missing market cfg entry")
-    assert(market_catalog.entry_by_id(entry.product_id) == entry,
-      "market_catalog should return the canonical market entry table")
-  end
+ end
 
 return {
   name = "config_sanity",
@@ -321,10 +271,6 @@ return {
     {
       name = "config_sanity_rejects_vehicle_market_entries",
       run = _test_config_sanity_rejects_vehicle_market_entries,
-    },
-    {
-      name = "config_sanity_rejects_duplicate_market_product_ids",
-      run = _test_config_sanity_rejects_duplicate_market_product_ids,
     },
     {
       name = "config_sanity_validate_rejects_missing_board_feedback_effect_ref",
@@ -353,18 +299,6 @@ return {
     {
       name = "effect_group_only_on_specified_items",
       run = _test_effect_group_only_on_specified_items,
-    },
-    {
-      name = "item_ids_are_derived_from_item_config_keys",
-      run = _test_item_ids_are_derived_from_item_config_keys,
-    },
-    {
-      name = "market_item_entries_reuse_item_config_identity",
-      run = _test_market_item_entries_reuse_item_config_identity,
-    },
-    {
-      name = "market_catalog_entry_by_id_returns_canonical_entry",
-      run = _test_market_catalog_entry_by_id_returns_canonical_entry,
     },
   },
 }

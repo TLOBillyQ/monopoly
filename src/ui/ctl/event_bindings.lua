@@ -118,14 +118,12 @@ end
 
 function bindings.enable_action_log_toggle_touch(cache, ui)
   local targets = always_show_contract.action_log.toggle_targets or {}
-  local enabled_count = 0
   local main_path_ok = false
 
   if ui and ui.set_touch_enabled then
     local ok, err = pcall(ui_touch_policy.set_action_log_toggle_touch, ui, true)
     if ok then
       main_path_ok = true
-      enabled_count = #targets
     else
       for _, name in ipairs(targets) do
         logger.info(
@@ -138,7 +136,7 @@ function bindings.enable_action_log_toggle_touch(cache, ui)
   end
 
   if not main_path_ok then
-    enabled_count = _enable_action_log_targets(cache, targets)
+    _enable_action_log_targets(cache, targets)
   end
 
   pcall(runtime.set_client_role, nil)

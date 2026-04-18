@@ -25,9 +25,9 @@ function tile.from_config(cfg)
 end
 
 ---获取地块的游戏状态（所有者和等级）
-function tile.get_state(game, tile)
-  assert(tile and tile.type == "land", "Tile.GetState requires land tile")
-  return { owner_id = tile.owner_id, level = tile.level }
+function tile.get_state(game, land_tile)
+  assert(land_tile and land_tile.type == "land", "Tile.GetState requires land tile")
+  return { owner_id = land_tile.owner_id, level = land_tile.level }
 end
 
 return tile

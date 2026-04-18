@@ -1,4 +1,4 @@
-local support = require("support.test_profile_support")
+local _ = require("support.test_profile_support")
 local test_profiles_cfg = require("src.app.testing.config.test_profiles")
 local test_profile_resolver = require("src.app.testing.test_profile_resolver")
 local items_cfg = require("src.config.content.items")

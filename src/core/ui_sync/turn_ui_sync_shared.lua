@@ -7,10 +7,8 @@ function shared.is_only_turn_countdown(dirty)
   if dirty.players or dirty.board_tiles or dirty.turn or dirty.market or dirty.ui then
     return false
   end
-  if dirty.inventory_ids then
-    for _ in pairs(dirty.inventory_ids) do
-      return false
-    end
+  if dirty.inventory_ids and next(dirty.inventory_ids) ~= nil then
+    return false
   end
   return true
 end

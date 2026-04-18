@@ -186,7 +186,6 @@ local _dispatch_validator_tests = {
 
 local _log_missing_auto_tests = {
   function()
-    local g = _new_game()
     local state = _build_loop_state()
     runtime_state.ensure_debug_runtime(state)
     local ctx = {
@@ -198,7 +197,6 @@ local _log_missing_auto_tests = {
     assert(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == true, "should mark log_once key")
   end,
   function()
-    local g = _new_game()
     local state = _build_loop_state()
     runtime_state.ensure_debug_runtime(state)
     state.auto_runner.waiting_for_interval = true
@@ -210,7 +208,6 @@ local _log_missing_auto_tests = {
     assert(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == nil, "should not log when waiting for interval")
   end,
   function()
-    local g = _new_game()
     local state = _build_loop_state()
     runtime_state.ensure_debug_runtime(state)
     local ctx = {
@@ -255,7 +252,7 @@ local _roll_dice_tests = {
     assert(total == 15, "total should sum override values")
   end,
   function()
-    local results, total = roll._roll_dice(4, { 2, 3 }, { next_int = function() return 6 end })
+    local results = roll._roll_dice(4, { 2, 3 }, { next_int = function() return 6 end })
     assert(#results == 4, "should return 4 results")
     assert(results[1] == 2 and results[2] == 3, "should use provided overrides")
     assert(results[3] == 3 and results[4] == 3, "should repeat last override value")
@@ -281,7 +278,7 @@ local _resolve_wait_state_tests = {
       turn = {},
       dirty = {},
     }
-    local next_state, next_args = land._resolve_wait_state(game, "move", { player = { id = 1 } }, true)
+    local next_state = land._resolve_wait_state(game, "move", { player = { id = 1 } }, true)
     assert(next_state == "move", "should return next_state when no action anim and wait_action_anim is true")
   end,
   function()
@@ -300,7 +297,7 @@ local _resolve_wait_state_tests = {
     }
 local landing_visual_hold = require("src.state.landing_visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
-    local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
+    local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
     assert(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual hold is active")
     landing_visual_hold.release(game)
   end,
@@ -309,30 +306,12 @@ local landing_visual_hold = require("src.state.landing_visual_hold")
       turn = { action_anim_queue = { { kind = "move_effect" } } },
       dirty = {},
     }
-    local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
+    local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
     assert(next_state == "wait_action_anim", "should return wait_action_anim when action anim queue has items")
   end,
 }
 
 local tick_timeout = require("src.turn.waits.timeout")
-local _resolve_choice_ui_state_tests = {
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    local result = tick_timeout.resolve_choice_ui_state(game, state)
-    assert(result.route_key == nil, "should return nil route_key when no pending choice")
-    assert(result.should_warn == false, "should not warn when no pending choice")
-  end,
-  function()
-    local game = _new_game()
-    local state = _build_loop_state()
-    game.turn.pending_choice = { id = 1, route_key = "test_route" }
-    local result = tick_timeout.resolve_choice_ui_state(game, state)
-    assert(result.route_key == "test_route", "should return route_key from pending choice")
-    assert(result.should_warn == false, "should not warn when choice has route_key")
-  end,
-}
-
 local camera_policy = require("src.turn.policies.camera_policy")
 local _resolve_follow_player_id_tests = {
   function()
@@ -440,7 +419,6 @@ local _choice_auto_policy_tests = {
   end,
 }
 
-local move = require("src.turn.phases.move")
 local _apply_dice_multiplier_tests = {
   function()
     -- Test via _phase_move integration: when player has pending_dice_multiplier,
@@ -822,7 +800,7 @@ local _update_countdown_extended_tests = {
     game.turn.pending_choice = { id = 1, kind = "test" }
     tick_ui_sync.update_countdown(game, state)
     local first_countdown = game.turn.countdown_seconds
-    local first_dirty = game.dirty.turn_countdown
+    game.dirty.turn_countdown = nil
     -- Call again without changing conditions
     tick_ui_sync.update_countdown(game, state)
     -- dirty should not be set again if countdown hasn't changed
@@ -1070,7 +1048,7 @@ local _resolve_wait_state_extended_tests = {
     }
   local landing_visual_hold = require("src.state.landing_visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
-    local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
+    local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
     assert(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual is active")
     landing_visual_hold.release(game)
   end,
@@ -1455,8 +1433,7 @@ local _choice_auto_policy_coverage_tests = {
 -- Tests for resolve_choice_ui_state in tick_timeout.lua
 -- Note: resolve_choice_ui_state is an anonymous function inside step_default_choice
 -- We test it indirectly by checking the behavior of step_default_choice
-local tick_timeout = require("src.turn.waits.timeout")
-local _resolve_choice_ui_state_tests = {
+local _resolve_choice_ui_state_t2_tests = {
   function()
     -- Test that resolve_choice_timeout_seconds handles market_buy correctly
     local game = _new_game()
@@ -1487,7 +1464,6 @@ local _resolve_choice_ui_state_tests = {
     -- Test that resolve_choice_timeout_seconds handles pending_choice from runtime state
     local game = _new_game()
     local state = _build_loop_state()
-  local runtime_state = require("src.state.runtime_state")
     runtime_state.set_pending_choice(state, { id = 2, kind = "market_buy" })
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
     local constants = require("src.config.content.constants")
@@ -1521,7 +1497,7 @@ local _turn_script_tests = {
   end,
   function()
     -- Test that create requires a session
-    local ok, err = pcall(function()
+    local ok = pcall(function()
       turn_script.create(nil)
     end)
     assert(not ok, "should error with nil session")
@@ -1530,7 +1506,6 @@ local _turn_script_tests = {
 
 -- Tests for _build_ui_gate in loop_ui_sync_defaults.lua
 -- Note: _build_ui_gate is a local function, we test via the public resolve_ui_gate function
-local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local _build_ui_gate_tests = {
   function()
     -- Test resolve_ui_gate with empty state (nil ui)
@@ -1667,7 +1642,6 @@ local _update_countdown_more_tests = {
     state.countdown_active_last = nil
 
     -- Mock runtime_state functions
-  local runtime_state = require("src.state.runtime_state")
     local original_get_pending_choice = runtime_state.get_pending_choice
     local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
     runtime_state.get_pending_choice = function() return game.turn.pending_choice end
@@ -1797,7 +1771,6 @@ local _update_countdown_final_tests = {
 }
 
 -- T8 FINAL additional branches for _resolve_follow_player_id (targeting CRAP=8.01)
-local camera_policy = require("src.turn.policies.camera_policy")
 local _resolve_follow_player_id_final_tests = {
   function()
     -- Test with current player eliminated but others not
@@ -1863,7 +1836,6 @@ local _resolve_choice_ui_state_final_tests = {
     game.turn.pending_choice = { id = 1, kind = "test", route_key = "test_route" }
 
     -- Mock runtime_state
-  local runtime_state = require("src.state.runtime_state")
     local original_get_pending_choice = runtime_state.get_pending_choice
     local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
     runtime_state.get_pending_choice = function() return game.turn.pending_choice end
@@ -1894,7 +1866,6 @@ local _resolve_choice_ui_state_final_tests = {
     state.gameplay_loop_ports = ports
     game.turn.pending_choice = { id = 1, kind = "test" } -- no route_key
 
-  local runtime_state = require("src.state.runtime_state")
     local original_get_pending_choice = runtime_state.get_pending_choice
     local original_get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
     runtime_state.get_pending_choice = function() return game.turn.pending_choice end
@@ -1922,7 +1893,6 @@ local _resolve_choice_ui_state_final_tests = {
     state._resolved_gameplay_loop_ports = ports
     state.gameplay_loop_ports = ports
 
-  local runtime_state = require("src.state.runtime_state")
     local original_get_pending_choice = runtime_state.get_pending_choice
     runtime_state.get_pending_choice = function() return nil end
 
@@ -1940,7 +1910,6 @@ local _resolve_choice_ui_state_final_tests = {
 local _turn_script_final_tests = {
   function()
     -- Test that create returns a coroutine thread
-    local turn_script = require("src.turn.timing.session_script")
 
     local session = {
       current_state = "start",
@@ -1958,7 +1927,6 @@ local _turn_script_final_tests = {
   function()
     -- Test coroutine creation with various wait states
     -- Just verify that create() works for different wait states
-    local turn_script = require("src.turn.timing.session_script")
 
     for _, wait_state in ipairs({"wait_choice", "wait_move_anim", "wait_action_anim", "inter_turn_wait"}) do
       local session = {
@@ -1975,7 +1943,6 @@ local _turn_script_final_tests = {
   end,
   function()
     -- Test coroutine with different starting states
-    local turn_script = require("src.turn.timing.session_script")
 
     for _, start_state in ipairs({"start", "move", "action", "end_turn"}) do
       local session = {
@@ -2345,11 +2312,11 @@ return {
     { name = "_test_choice_auto_policy_negative_elapsed", run = _choice_auto_policy_coverage_tests[10] },
     { name = "_test_choice_auto_policy_negative_min_visible", run = _choice_auto_policy_coverage_tests[11] },
     -- T8 tests for resolve_choice_ui_state (via resolve_choice_timeout_seconds)
-    { name = "_test_resolve_choice_timeout_market_buy", run = _resolve_choice_ui_state_tests[1] },
-    { name = "_test_resolve_choice_timeout_normal_choice", run = _resolve_choice_ui_state_tests[2] },
-    { name = "_test_resolve_choice_timeout_nil_pending", run = _resolve_choice_ui_state_tests[3] },
-    { name = "_test_resolve_choice_timeout_runtime_pending", run = _resolve_choice_ui_state_tests[4] },
-    { name = "_test_resolve_choice_timeout_param_choice", run = _resolve_choice_ui_state_tests[5] },
+    { name = "_test_resolve_choice_timeout_market_buy", run = _resolve_choice_ui_state_t2_tests[1] },
+    { name = "_test_resolve_choice_timeout_normal_choice", run = _resolve_choice_ui_state_t2_tests[2] },
+    { name = "_test_resolve_choice_timeout_nil_pending", run = _resolve_choice_ui_state_t2_tests[3] },
+    { name = "_test_resolve_choice_timeout_runtime_pending", run = _resolve_choice_ui_state_t2_tests[4] },
+    { name = "_test_resolve_choice_timeout_param_choice", run = _resolve_choice_ui_state_t2_tests[5] },
     -- T8 tests for turn_script anonymous@88
     { name = "_test_turn_script_create_valid_session", run = _turn_script_tests[1] },
     { name = "_test_turn_script_nil_session", run = _turn_script_tests[2] },

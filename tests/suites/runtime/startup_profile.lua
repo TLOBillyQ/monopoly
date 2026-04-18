@@ -277,18 +277,18 @@ local function _test_raw_test_profiles_profile_factory_copies_nested_meta_and_bo
     },
     owner_tests = { "runtime.test_profiles" },
   }
-  local bootstrap = {
+  local bootstrap_data = {
     players = {
       [1] = {
         cash = 123,
       },
     },
   }
-  local profile = profile_factory(meta, bootstrap)
+  local profile = profile_factory(meta, bootstrap_data)
 
   meta.group = "mutated_group"
   meta.nested.marker = "beta"
-  bootstrap.players[1].cash = 456
+  bootstrap_data.players[1].cash = 456
 
   assert(profile.group == "custom_group", "profile factory should copy top-level meta fields")
   assert(profile.nested.marker == "alpha", "profile factory should copy nested meta tables")
@@ -584,9 +584,9 @@ local function _reload_app_init_with_stubs(startup, runner)
       end,
     },
   }, function()
-    local bootstrap = require("src.app")
+    local app_module = require("src.app")
     if type(runner) == "function" then
-      runner(capture, bootstrap, state)
+      runner(capture, app_module, state)
     end
   end, { skip_runtime_context_refresh = true })
 
@@ -599,14 +599,14 @@ local function _test_app_init_requires_explicit_init_and_runs_once()
   debug_flags.debug_log_enabled = true
   local capture = _reload_app_init_with_stubs({
     profile_name = "market",
-  }, function(capture, bootstrap)
-    assert(type(bootstrap) == "table", "bootstrap module should export a table")
-    assert(type(bootstrap.init) == "function", "bootstrap module should expose init")
+  }, function(capture, app_module)
+    assert(type(app_module) == "table", "bootstrap module should export a table")
+    assert(type(app_module.init) == "function", "bootstrap module should expose init")
     assert(capture.runtime_install_call_count == nil, "require should not auto-start bootstrap")
-    bootstrap.init()
+    app_module.init()
     assert(capture.runtime_install_call_count == 1, "first init should install runtime once")
     assert(capture.startup_state_factory_call_count == 1, "first init should build state once")
-    bootstrap.init()
+    app_module.init()
     assert(capture.runtime_install_call_count == 1, "second init should not reinstall runtime")
     assert(capture.startup_state_factory_call_count == 1, "second init should not rebuild state")
   end)
@@ -620,8 +620,8 @@ local function _test_app_init_wires_runtime_and_debug_providers()
   debug_flags.debug_log_enabled = true
   local capture = _reload_app_init_with_stubs({
     profile_name = "market",
-  }, function(capture, bootstrap)
-    bootstrap.init()
+  }, function(capture, app_module)
+    app_module.init()
   end)
 
   assert(capture.runtime_install_called == true, "app init should install runtime")
@@ -719,8 +719,8 @@ local function _test_app_init_keeps_scheduler_fallback()
     { key = "GlobalAPI", value = {} },
     { key = "SetTimeOut", value = nil },
   }, function()
-    local bootstrap = require("src.app")
-    bootstrap.init()
+    local app_module = require("src.app")
+    app_module.init()
   end, { skip_runtime_context_refresh = true })
 
   package.loaded["src.app"] = nil

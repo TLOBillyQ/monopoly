@@ -1,12 +1,10 @@
 local context = require("src.rules.market.query.context")
 local feedback = require("src.rules.market.choice.feedback")
-local purchase_policy = require("src.rules.market.purchase.policy")
 local fulfillment = require("src.rules.market.purchase.fulfillment")
 
 local local_purchase = {}
 
-function local_purchase.execute(game, player, entry, opts)
-  opts = opts or {}
+function local_purchase.execute(game, player, entry, _opts)
   local product_id = entry.product_id
   local price = context.entry_price(entry)
   local currency = context.entry_currency(entry)

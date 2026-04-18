@@ -1,6 +1,7 @@
 -- Contract tests for _handle_clear_obstacles_ahead.
 -- Payload must use branch-based walk data:
 -- { kind="clear_obstacles", branches=..., duration=... }.
+-- luacheck: ignore 211
 
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")

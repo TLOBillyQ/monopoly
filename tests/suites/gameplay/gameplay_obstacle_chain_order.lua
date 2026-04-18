@@ -162,7 +162,7 @@ local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_ord
 end
 
 local function _test_same_tile_obstacle_chain_emits_single_summary_tip()
-  local game, _, _, _, _, land_state, land_args = _run_same_tile_obstacle_chain(true)
+  local game, _, _, _, _, land_state, _ = _run_same_tile_obstacle_chain(true)
   local captured = {}
   local runtime_bundle = {
     host_runtime = {
@@ -217,7 +217,7 @@ end
 
 local function _test_same_tile_obstacle_chain_keeps_vehicle_log_text()
   logger.clear()
-  local game, player, _, _, _, land_state, land_args = _run_same_tile_obstacle_chain(false, {
+  local game, player, _, _, _, land_state, _ = _run_same_tile_obstacle_chain(false, {
     player_seat_id = 4001,
   })
 

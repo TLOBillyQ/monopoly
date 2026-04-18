@@ -1,4 +1,3 @@
-local number_utils = require("src.core.utils.number_utils")
 local role_id_utils = require("src.core.utils.role_id")
 local choice_contract = require("src.core.choice.contract")
 

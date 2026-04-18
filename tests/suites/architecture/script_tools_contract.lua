@@ -510,7 +510,7 @@ local function _test_cli_help_text_is_bilingual()
   -- 并行执行所有 help 命令以减少总耗时
   local results = {}
   local threads = {}
-  
+
   for i, args in ipairs(help_commands) do
     threads[i] = coroutine.create(function()
       results[i] = {
@@ -519,21 +519,21 @@ local function _test_cli_help_text_is_bilingual()
       }
     end)
   end
-  
+
   -- 轮询执行所有协程直到完成
   local running = #threads
   while running > 0 do
     running = 0
     for _, thread in ipairs(threads) do
       if coroutine.status(thread) ~= "dead" then
-        local ok = coroutine.resume(thread)
+        coroutine.resume(thread)
         if coroutine.status(thread) ~= "dead" then
           running = running + 1
         end
       end
     end
   end
-  
+
   -- 验证所有结果
   for _, item in ipairs(results) do
     assert(item.result.ok == true, "help command should exit successfully for " .. table.concat(item.args, " "))
@@ -662,24 +662,12 @@ local function _test_update_api_skips_all_writes_when_api_unchanged()
   end)
 end
 
-local function _expected_default_deploy_target(fake_home)
-  if common.is_windows() then
-    return common.join_path(fake_home, "Desktop/dev/LuaSource_大富翁")
-  end
-  if common.is_macos() then
-    return common.join_path(fake_home, "Documents/eggy/LuaSource_大富翁")
-  end
-  return nil
-end
-
-local function _test_deploy_script_matches_simplified_cli()
+local function _test_deploy_script_keeps_default_paths()
   local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
-  local param_block = assert(script_text:match("param%((.-)%)%s*%$ErrorActionPreference"),
-    "deploy.ps1 should keep a top-level param block")
   _assert_contains(
-    param_block,
-    "[string]$Profile",
-    "deploy.ps1 should expose the simplified profile parameter"
+    script_text,
+    "[string]$Platform = \"auto\"",
+    "deploy.ps1 should expose an auto platform parameter"
   )
   _assert_contains(
     script_text,
@@ -711,97 +699,120 @@ local function _test_deploy_script_matches_simplified_cli()
     "vehicle-runtime",
     "deploy.ps1 should not expose the retired vehicle runtime flag"
   )
-  _assert_not_contains(
-    param_block,
-    "$TargetPath",
-    "deploy.ps1 should no longer expose explicit target path override"
-  )
-  _assert_not_contains(
-    param_block,
-    "$StartupProfile",
-    "deploy.ps1 should no longer expose the retired startup profile parameter"
-  )
-  _assert_not_contains(
-    param_block,
-    "$Platform",
-    "deploy.ps1 should no longer expose explicit platform override"
-  )
-  _assert_not_contains(
-    param_block,
-    "$KeepTestStartup",
-    "deploy.ps1 should no longer expose KeepTestStartup"
-  )
-  _assert_not_contains(
-    param_block,
-    "$Help",
-    "deploy.ps1 should no longer expose help switch handling"
-  )
-  _assert_not_contains(
-    script_text,
-    "MONOPOLY_DEPLOY_TARGET",
-    "deploy.ps1 should no longer read MONOPOLY_DEPLOY_TARGET fallback"
-  )
 end
 
-local function _test_deploy_comprehensive()
-  _test_deploy_script_matches_simplified_cli()
-
-  _with_ascii_tmp("deploy_comprehensive", function(tmp_root)
+local function _test_deploy_resolves_default_target_for_windows_platform()
+  _with_ascii_tmp("deploy_default_target_win", function(tmp_root)
     local fake_home = common.join_path(tmp_root, "fake_home")
-    local publish_target = _expected_default_deploy_target(fake_home)
+    local expected_target = common.join_path(fake_home, "Desktop/dev/LuaSource_大富翁")
     local command = table.concat({
       "$env:HOME = " .. _powershell_single_quote(fake_home),
       "$env:USERPROFILE = " .. _powershell_single_quote(fake_home),
-      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -BuildMode debug -Profile missile",
+      "$env:MONOPOLY_DEPLOY_TARGET = ''",
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -Platform win",
     }, "; ")
     local result = _run_powershell_command(command)
 
     if result.skipped == true then
       return
     end
-    if publish_target == nil then
+
+    assert(result.ok == true, "deploy should resolve the Windows default target path when -Platform win is passed")
+    _assert_contains(result.output, common.normalize_path(expected_target),
+      "deploy should report the Windows default deploy target path")
+    assert(common.path_exists(common.join_path(expected_target, "main.lua")) == true,
+      "deploy should write main.lua into the Windows default deploy target")
+  end)
+end
+
+local function _test_deploy_resolves_default_target_for_macos_platform()
+  _with_ascii_tmp("deploy_default_target_mac", function(tmp_root)
+    local fake_home = common.join_path(tmp_root, "fake_home")
+    local expected_target = common.join_path(fake_home, "Documents/eggy/LuaSource_大富翁")
+    local command = table.concat({
+      "$env:HOME = " .. _powershell_single_quote(fake_home),
+      "$env:USERPROFILE = ''",
+      "$env:MONOPOLY_DEPLOY_TARGET = ''",
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -Platform mac",
+    }, "; ")
+    local result = _run_powershell_command(command)
+
+    if result.skipped == true then
       return
     end
 
-    assert(result.ok == true, "deploy should succeed with debug profile under the simplified CLI")
-    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
-      "deploy should write main.lua into the default target path")
-    assert(common.path_exists(common.join_path(publish_target, "src/config")) == true,
-      "deploy should copy src into the default target path")
-    assert(common.path_exists(common.join_path(publish_target, "Data/UIManagerNodes.lua")) == true,
-      "deploy should copy UIManagerNodes into the default target path")
-    assert(common.path_exists(common.join_path(publish_target, "Data/Prefab.lua")) == true,
-      "deploy should copy Prefab into the default target path")
+    assert(result.ok == true, "deploy should resolve the macOS default target path when -Platform mac is passed")
+    _assert_contains(result.output, common.normalize_path(expected_target),
+      "deploy should report the macOS default deploy target path")
+    assert(common.path_exists(common.join_path(expected_target, "main.lua")) == true,
+      "deploy should write main.lua into the macOS default deploy target")
+  end)
+end
 
+local function _test_deploy_comprehensive()
+  _test_deploy_script_keeps_default_paths()
+  _test_deploy_resolves_default_target_for_windows_platform()
+  _test_deploy_resolves_default_target_for_macos_platform()
+
+  _with_ascii_tmp("deploy_comprehensive", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-BuildMode", "debug",
+      "-TargetPath", publish_target,
+      "-StartupProfile", "missile",
+    })
+
+    if result.skipped == true then
+      return
+    end
+
+    -- 验证成功执行
+    assert(result.ok == true, "deploy should succeed with explicit target and startup profile")
+
+    -- 验证文件复制正确
+    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
+      "deploy should copy main.lua into the target path")
+    assert(common.path_exists(common.join_path(publish_target, "src/config")) == true,
+      "deploy should include src/config through the src directory copy")
+    assert(common.path_exists(common.join_path(publish_target, "Data/UIManagerNodes.lua")) == true,
+      "deploy should copy Data/UIManagerNodes.lua into the target path")
+    assert(common.path_exists(common.join_path(publish_target, "Data/Prefab.lua")) == true,
+      "deploy should copy Data/Prefab.lua into the target path")
+
+    -- 验证启动配置注入
     local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
     _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
       "deploy should inject debug build mode into main.lua")
     _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
-      "deploy should inject Profile into main.lua in debug mode")
+      "deploy should inject startup profile into main.lua when requested")
     _assert_contains(result.output, "Build mode: debug",
-      "deploy output should report debug mode")
-    _assert_contains(result.output, common.normalize_path(publish_target),
-      "deploy output should report the resolved default target path")
+      "deploy output should show debug mode when startup profile is present")
     _assert_contains(result.output, "Lua Files:",
       "deploy output should keep total lua file count")
     _assert_contains(result.output, "Effective LOC:",
       "deploy output should keep total effective loc")
+
+    local invalid_profile_result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-TargetPath", publish_target,
+      "-StartupProfile", "test_quick_3_rounds",
+    })
+    assert(invalid_profile_result.ok == false, "deploy should fail on unknown startup profiles")
+    _assert_contains(invalid_profile_result.output, "unknown test profile: test_quick_3_rounds",
+      "invalid startup profile output should keep the requested profile name")
+    _assert_contains(invalid_profile_result.output, "available profiles:",
+      "invalid startup profile output should list available startup profiles")
+    _assert_contains(invalid_profile_result.output, "missile",
+      "invalid startup profile output should include a valid startup profile example")
   end)
 
   _with_ascii_tmp("deploy_release_default", function(tmp_root)
-    local fake_home = common.join_path(tmp_root, "fake_home")
-    local publish_target = _expected_default_deploy_target(fake_home)
-    local command = table.concat({
-      "$env:HOME = " .. _powershell_single_quote(fake_home),
-      "$env:USERPROFILE = " .. _powershell_single_quote(fake_home),
-      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -BuildMode release",
-    }, "; ")
-    local result = _run_powershell_command(command)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-TargetPath", publish_target,
+    })
 
     if result.skipped == true then
-      return
-    end
-    if publish_target == nil then
       return
     end
 
@@ -813,10 +824,108 @@ local function _test_deploy_comprehensive()
       "deploy without startup profile should not inject STARTUP_TEST_PROFILE")
     _assert_contains(result.output, "Build mode: release",
       "deploy output should show release mode when no startup profile is present")
-    assert(common.path_exists(common.join_path(publish_target, "src/config/testing")) == false,
-      "release deploy should strip src/config/testing")
-    assert(common.path_exists(common.join_path(publish_target, "src/app/testing")) == false,
-      "release deploy should strip src/app/testing")
+  end)
+
+  _with_ascii_tmp("deploy_profile_forces_debug", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-TargetPath", publish_target,
+      "-StartupProfile", "missile",
+      "-BuildMode", "release",
+    })
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "deploy should force debug instead of failing when startup profile is present")
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
+      "deploy should force debug build mode when startup profile is present")
+    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
+      "deploy should keep startup profile injection when forcing debug")
+    _assert_contains(result.output, "自动切换为 debug 模式",
+      "deploy output should explain the automatic debug override in Chinese")
+    _assert_contains(result.output, "forcing debug build mode",
+      "deploy output should explain the automatic debug override in English")
+  end)
+
+  _with_ascii_tmp("deploy_powershell_style", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+    local result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-TargetPath", publish_target,
+      "-StartupProfile", "missile",
+    })
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "deploy PowerShell wrapper should succeed")
+    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
+      "deploy PowerShell wrapper should copy main.lua into the target path")
+    assert(common.path_exists(common.join_path(publish_target, "src/config")) == true,
+      "deploy PowerShell wrapper should include src/config through the src directory copy")
+    assert(common.path_exists(common.join_path(publish_target, "Data/UIManagerNodes.lua")) == true,
+      "deploy PowerShell wrapper should copy Data/UIManagerNodes.lua into the target path")
+    assert(common.path_exists(common.join_path(publish_target, "Data/Prefab.lua")) == true,
+      "deploy PowerShell wrapper should copy Data/Prefab.lua into the target path")
+
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
+      "deploy PowerShell wrapper should auto-select debug mode for startup profiles")
+    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
+      "deploy PowerShell wrapper should forward startup profile injection")
+  end)
+
+  _with_ascii_tmp("deploy_direct_invocation", function(tmp_root)
+    local publish_target = common.join_path(tmp_root, "deploy_target")
+    local command = table.concat({
+      "$env:MONOPOLY_DEPLOY_TARGET = " .. _powershell_single_quote(publish_target),
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -StartupProfile clear_obstacles",
+    }, "; ")
+    local result = _run_powershell_command(command)
+
+    if result.skipped == true then
+      return
+    end
+
+    assert(result.ok == true, "direct script invocation should succeed with StartupProfile only")
+    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
+      "direct script invocation should deploy to MONOPOLY_DEPLOY_TARGET instead of misbinding StartupProfile")
+    _assert_contains(result.output, common.normalize_path(publish_target),
+      "direct script invocation should report the resolved deploy target")
+  end)
+
+  _with_ascii_tmp("deploy_keep_test_startup", function(tmp_root)
+    local keep_target = common.join_path(tmp_root, "keep_target")
+    local keep_result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-TargetPath", keep_target,
+      "-StartupProfile", "missile",
+      "-KeepTestStartup",
+    })
+
+    if keep_result.skipped == true then
+      return
+    end
+
+    assert(keep_result.ok == true, "deploy should allow KeepTestStartup in debug mode")
+    assert(common.path_exists(common.join_path(keep_target, "src/config/testing")) == true,
+      "KeepTestStartup should preserve src/config/testing when StartupProfile forces debug mode")
+    assert(common.path_exists(common.join_path(keep_target, "src/app/testing")) == true,
+      "KeepTestStartup should preserve src/app/testing when StartupProfile forces debug mode")
+
+    local release_target = common.join_path(tmp_root, "release_target")
+    local release_result = _run_powershell_file("tools/ops/deploy.ps1", {
+      "-TargetPath", release_target,
+      "-BuildMode", "release",
+      "-KeepTestStartup",
+    })
+    assert(release_result.ok == true, "deploy release should still succeed with KeepTestStartup present")
+    assert(common.path_exists(common.join_path(release_target, "src/config/testing")) == false,
+      "release deploy should strip src/config/testing even when KeepTestStartup is set")
+    assert(common.path_exists(common.join_path(release_target, "src/app/testing")) == false,
+      "release deploy should strip src/app/testing even when KeepTestStartup is set")
   end)
 end
 
@@ -1136,7 +1245,21 @@ end
 
 local contract_tests = {
   { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
-  { name = "deploy_script_matches_simplified_cli", run = _test_deploy_script_matches_simplified_cli },
+  { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
+  { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
+  { name = "windows_utf8_console_switches_once_per_process", run = _test_windows_utf8_console_switches_once_per_process },
+  { name = "windows_utf8_console_skips_when_already_utf8", run = _test_windows_utf8_console_skips_when_already_utf8 },
+  { name = "windows_utf8_console_is_noop_off_windows", run = _test_windows_utf8_console_is_noop_off_windows },
+  { name = "windows_utf8_console_failure_is_non_throwing", run = _test_windows_utf8_console_failure_is_non_throwing },
+  { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
+  { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
+  { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
+  { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
+  { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
+  { name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
+  { name = "loc_scan_counts_worktree_with_go_engine", run = _test_loc_scan_counts_worktree_with_go_engine },
+  { name = "loc_scan_counts_history_across_git_diff_shapes", run = _test_loc_scan_counts_history_across_git_diff_shapes },
+  { name = "deploy_script_keeps_default_paths", run = _test_deploy_script_keeps_default_paths },
   { name = "update_api_writes_changelog_into_docs_eggy_api_dir", run = _test_update_api_writes_changelog_into_docs_eggy_api_dir },
   { name = "update_api_updates_docs_and_changelog_when_api_changes", run = _test_update_api_updates_docs_and_changelog_when_api_changes },
   { name = "update_api_reports_extra_doc_entries_when_check_fails", run = _test_update_api_reports_extra_doc_entries_when_check_fails },

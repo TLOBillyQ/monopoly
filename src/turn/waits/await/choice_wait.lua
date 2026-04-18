@@ -1,6 +1,5 @@
 local turn_decision = require("src.turn.waits.decision")
 local validator = require("src.turn.actions.validator")
-local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local M = {}
 
