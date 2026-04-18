@@ -1,6 +1,6 @@
 -- luacheck: ignore 211
 local support = require("support.gameplay_support")
-local runtime_state = require("src.state.runtime_state")
+local fixtures = require("support.gameplay_fixtures")
 local tick_choice_timeout = require("src.turn.waits.choice_timeout")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local turn_timer_policy = require("src.turn.policies.timer_policy")
@@ -9,85 +9,9 @@ local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local roll = require("src.turn.phases.roll")
 
 local _new_game = support.new_game
-local _build_ui_port = support.build_ui_port
-
-local function _build_test_ports(overrides)
-  overrides = overrides or {}
-  return {
-    ui_sync = {
-      get_ui_state = overrides.get_ui_state or function(state) return state and state.ui or nil end,
-      is_input_blocked = overrides.is_input_blocked or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.input_blocked == true or false
-      end,
-      is_popup_active = overrides.is_popup_active or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.popup_active == true or false
-      end,
-      is_choice_active = overrides.is_choice_active or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.choice_active == true or false
-      end,
-      is_market_active = overrides.is_market_active or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.market_active == true or false
-      end,
-    },
-  }
-end
-
-local function _build_loop_state()
-  local auto_runner = require("src.turn.policies.auto_runner")
-  local ui_port = _build_ui_port()
-  local state = {
-    gameplay_loop_ports = {
-      output = {},
-    },
-    ui = ui_port.ui,
-    ui_refs = ui_port.ui_refs,
-    ui_model = nil,
-    set_label = ui_port.set_label,
-    set_visible = ui_port.set_visible,
-    set_touch_enabled = ui_port.set_touch_enabled,
-    query_node = ui_port.query_node,
-    auto_runner = auto_runner:new({ interval = 0.01 }),
-    pending_choice = nil,
-    pending_choice_elapsed = 0,
-    pending_choice_id = nil,
-    turn_runtime = {
-      next_turn_locked = false,
-      next_turn_last_click = nil,
-      next_turn_lock_phase = nil,
-      role_control_lock_active = false,
-      role_control_lock_suppress = 0,
-    },
-    debug_runtime = {
-      log_once = {},
-    },
-  }
-  support.bind_ui_runtime(state)
-  state.auto_runner:set_enabled(true)
-  return state
-end
-
-local function _with_reloaded_move_module(movement_stub, followup_stub, fn)
-  local original_movement = package.loaded["src.rules.movement"]
-  local original_followup = package.loaded["src.turn.phases.move_followup"]
-  local original_move = package.loaded["src.turn.phases.move"]
-  package.loaded["src.rules.movement"] = movement_stub
-  package.loaded["src.turn.phases.move_followup"] = followup_stub
-  package.loaded["src.turn.phases.move"] = nil
-  local ok, result = pcall(function()
-    return fn(require("src.turn.phases.move"))
-  end)
-  package.loaded["src.rules.movement"] = original_movement
-  package.loaded["src.turn.phases.move_followup"] = original_followup
-  package.loaded["src.turn.phases.move"] = original_move
-  if not ok then
-    error(result)
-  end
-  return result
-end
+local _build_test_ports = fixtures.build_test_ports
+local _build_loop_state = fixtures.build_loop_state
+local _with_reloaded_move_module = fixtures.with_reloaded_move_module
 
 return {
   _test_roll_dice_with_rng_only = function()
