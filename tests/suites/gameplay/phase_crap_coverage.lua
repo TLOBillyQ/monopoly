@@ -112,12 +112,39 @@ local function _test_build_wait_choice_args_resume_next_args_false()
 end
 
 return {
-  _test_build_wait_choice_args_returns_table_with_keys,
-  _test_build_wait_choice_args_next_state_from_meta,
-  _test_build_wait_choice_args_missing_resume_next_state_asserts,
-  _test_build_wait_choice_args_nil_meta_asserts,
-  _test_build_wait_choice_args_next_args_nil_when_absent,
-  _test_build_wait_choice_args_next_args_nil_when_explicit,
-  _test_build_wait_choice_args_next_args_from_resume,
-  _test_build_wait_choice_args_resume_next_args_false,
+  name = "phase_crap_coverage",
+  tests = {
+    {
+      name = "build_wait_choice_args returns table with keys",
+      run = _test_build_wait_choice_args_returns_table_with_keys,
+    },
+    {
+      name = "build_wait_choice_args next_state from meta",
+      run = _test_build_wait_choice_args_next_state_from_meta,
+    },
+    {
+      name = "build_wait_choice_args missing resume_next_state asserts",
+      run = _test_build_wait_choice_args_missing_resume_next_state_asserts,
+    },
+    {
+      name = "build_wait_choice_args nil meta asserts",
+      run = _test_build_wait_choice_args_nil_meta_asserts,
+    },
+    {
+      name = "build_wait_choice_args next_args nil when absent",
+      run = _test_build_wait_choice_args_next_args_nil_when_absent,
+    },
+    {
+      name = "build_wait_choice_args next_args nil when explicit",
+      run = _test_build_wait_choice_args_next_args_nil_when_explicit,
+    },
+    {
+      name = "build_wait_choice_args next_args from resume",
+      run = _test_build_wait_choice_args_next_args_from_resume,
+    },
+    {
+      name = "build_wait_choice_args resume_next_args false",
+      run = _test_build_wait_choice_args_resume_next_args_false,
+    },
+  },
 }
