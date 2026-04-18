@@ -1,4 +1,5 @@
 local chance_cfg = require("src.config.content.chance_cards")
+local market_catalog = require("src.config.content.market_catalog")
 local market_cfg = require("src.config.content.market")
 local runtime_refs = require("src.config.content.runtime_refs")
 
@@ -29,6 +30,7 @@ end
 local function _validate_data_has_no_vehicle_content()
   _validate_rows(chance_cfg, _validate_chance_card)
   _validate_rows(market_cfg, _validate_market_entry)
+  market_catalog.assert_valid()
 end
 
 local function _validate_board_feedback_effect_ref(effect_refs, cue_name, cue)

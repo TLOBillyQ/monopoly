@@ -1,5 +1,6 @@
 local support = require("support.domain_support")
 local with_patches = support.with_patches
+local market_catalog = require("src.config.content.market_catalog")
 local config_sanity = require("src.config.gameplay.config_sanity")
 local market_cfg = require("src.config.content.market")
 local item_ids = require("src.config.gameplay.item_ids")
@@ -157,6 +158,15 @@ local function _test_config_sanity_rejects_vehicle_market_entries()
   end)
 end
 
+local function _test_config_sanity_rejects_duplicate_market_product_ids()
+  _with_release_tables({}, {
+    { kind = "item", product_id = 2001 },
+    { kind = "item", product_id = 2001 },
+  }, function()
+    _assert_validate_fails("duplicate market product_id: 2001")
+  end)
+end
+
 local function _test_config_sanity_validate_rejects_missing_board_feedback_effect_ref()
   _with_runtime_ref_tables({
     cue = {
@@ -282,6 +292,12 @@ local function _test_config_sanity_validate_is_cached_until_reset()
     end
   end
 
+  local function _test_market_catalog_entry_by_id_returns_canonical_entry()
+    local entry = assert(market_cfg[1], "missing market cfg entry")
+    assert(market_catalog.entry_by_id(entry.product_id) == entry,
+      "market_catalog should return the canonical market entry table")
+  end
+
 return {
   name = "config_sanity",
   tests = {
@@ -305,6 +321,10 @@ return {
     {
       name = "config_sanity_rejects_vehicle_market_entries",
       run = _test_config_sanity_rejects_vehicle_market_entries,
+    },
+    {
+      name = "config_sanity_rejects_duplicate_market_product_ids",
+      run = _test_config_sanity_rejects_duplicate_market_product_ids,
     },
     {
       name = "config_sanity_validate_rejects_missing_board_feedback_effect_ref",
@@ -341,6 +361,10 @@ return {
     {
       name = "market_item_entries_reuse_item_config_identity",
       run = _test_market_item_entries_reuse_item_config_identity,
+    },
+    {
+      name = "market_catalog_entry_by_id_returns_canonical_entry",
+      run = _test_market_catalog_entry_by_id_returns_canonical_entry,
     },
   },
 }

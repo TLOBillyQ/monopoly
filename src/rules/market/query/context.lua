@@ -1,4 +1,4 @@
-local market_cfg = require("src.config.content.market")
+local market_catalog = require("src.config.content.market_catalog")
 local items_cfg = require("src.config.content.items")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 
@@ -9,17 +9,12 @@ for _, cfg in ipairs(items_cfg) do
   items_by_id[cfg.id] = cfg
 end
 
-local entries_by_id = {}
-for _, entry in ipairs(market_cfg) do
-  entries_by_id[entry.product_id] = entry
-end
-
 function context.entries()
-  return market_cfg
+  return market_catalog.entries()
 end
 
 function context.entry_by_id(product_id)
-  return entries_by_id[product_id]
+  return market_catalog.entry_by_id(product_id)
 end
 
 function context.entry_name(entry)

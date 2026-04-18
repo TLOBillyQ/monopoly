@@ -1,29 +1,12 @@
 local market_layout = require("src.ui.schema.market_layout")
 local ui_controls = require("src.ui.render.support.ui_controls")
 local items_cfg = require("src.config.content.items")
-local market_cfg = require("src.config.content.market")
+local market_catalog = require("src.config.content.market_catalog")
 local number_utils = require("src.core.utils.number_utils")
 local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 local runtime_ui = require("src.ui.render.runtime_ui")
 
 local market_view_slots = {}
-
-local function _build_market_entry_by_id_map(entries)
-  local by_id = {}
-  for _, entry in ipairs(entries or {}) do
-    local product_id = entry and entry.product_id or nil
-    if product_id ~= nil then
-      by_id[product_id] = entry
-    end
-  end
-  return by_id
-end
-
-local market_entry_by_id = _build_market_entry_by_id_map(market_cfg)
-
-local function _sync_market_entry_by_id()
-  market_entry_by_id = _build_market_entry_by_id_map(market_cfg)
-end
 
 local function _resolve_runtime(deps)
   local resolved_deps = deps or {}
@@ -40,7 +23,7 @@ local function _item_cfg_by_id(product_id)
 end
 
 local function _market_entry_by_id(product_id)
-  return market_entry_by_id[product_id]
+  return market_catalog.entry_by_id(product_id)
 end
 
 local function _resolve_market_entry(product_id)
@@ -157,7 +140,6 @@ local function _has_option_id(option_ids, option_id)
 end
 
 function market_view_slots.filter_market_options(options)
-  _sync_market_entry_by_id()
   local visible_options = {}
   for _, opt in ipairs(options or {}) do
     local opt_id = opt and (opt.id or opt) or nil
@@ -176,7 +158,6 @@ function market_view_slots.hide_market_slots(ui)
 end
 
 function market_view_slots.populate_market_slots(ui, refs, options, deps)
-  _sync_market_entry_by_id()
   local option_ids = {}
   local first_buyable = nil
   _for_each_market_slot(function(index, slot)
@@ -204,7 +185,6 @@ function market_view_slots.resolve_selected_option(option_ids, selected_option_i
 end
 
 function market_view_slots.resolve_selection(option_id, image_refs, empty_ref_key)
-  _sync_market_entry_by_id()
   assert(option_id ~= nil, "missing market option_id")
   local entry, cfg = _resolve_market_entry(option_id)
   assert(entry ~= nil, "missing market entry")
