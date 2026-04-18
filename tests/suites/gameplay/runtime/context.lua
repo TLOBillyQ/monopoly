@@ -1,4 +1,4 @@
-local gameplay_cases = require("suites.gameplay.gameplay_cases")
+local gameplay_cases = require("suites.gameplay.shared.cases")
 local support = require("support.gameplay_support")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local gameplay_loop = support.gameplay_loop

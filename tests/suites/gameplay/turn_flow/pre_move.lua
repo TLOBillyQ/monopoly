@@ -114,7 +114,7 @@ local function _test_no_item_phase_continues_to_move()
 end
 
 return {
-  name = "pre_move_phase_crap_coverage",
+  name = "turn_flow_pre_move",
   tests = {
     { name = "_test_resolve_wait_choice_when_no_wait_action_anim", run = _test_resolve_wait_choice_when_no_wait_action_anim },
     { name = "_test_resolve_wait_action_anim_when_flag_set", run = _test_resolve_wait_action_anim_when_flag_set },

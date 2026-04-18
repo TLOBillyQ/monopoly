@@ -1,5 +1,5 @@
-local gameplay_cases = require("suites.gameplay.gameplay_cases")
-local t2_enabled_cases = require("suites.gameplay.gameplay_t2_enabled_cases")
+local gameplay_cases = require("suites.gameplay.shared.cases")
+local t2_enabled_cases = require("suites.gameplay.shared.enabled_cases")
 
 local function _case(name, overrides)
   local case = {

@@ -1,13 +1,13 @@
 ---@diagnostic disable
-local helpers = require("suites.gameplay.gameplay_cases_helpers")
+local helpers = require("suites.gameplay.shared.helpers")
 
 local _modules = {
-  "suites.gameplay.gameplay_cases_bankruptcy",
-  "suites.gameplay.gameplay_cases_runtime_context",
-  "suites.gameplay.gameplay_cases_auto_runner",
-  "suites.gameplay.gameplay_cases_turn_flow",
-  "suites.gameplay.gameplay_cases_loop_policies",
-  "suites.gameplay.gameplay_cases_misc",
+  "suites.gameplay.bankruptcy.cases",
+  "suites.gameplay.runtime.cases",
+  "suites.gameplay.auto_runner.cases",
+  "suites.gameplay.turn_flow.cases",
+  "suites.gameplay.turn_flow.loop_policies",
+  "suites.gameplay.shared.misc_cases",
 }
 
 local function _merge_cases(target, source)

@@ -1,4 +1,4 @@
-local gameplay_cases = require("suites.gameplay.gameplay_cases")
+local gameplay_cases = require("suites.gameplay.shared.cases")
 
 local function _case(name)
   return {

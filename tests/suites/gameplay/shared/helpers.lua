@@ -62,7 +62,7 @@ local turn_script = require("src.turn.timing.session_script")
 local roll = require("src.turn.phases.roll")
 local item_slot_data = require("src.turn.actions.item_slot_data")
 local default_ports = require("src.turn.output.default_ports")
-local _t2_cases_module = require("suites.gameplay.gameplay_t2_cases")
+local _t2_cases_module = require("suites.gameplay.shared.t2_cases")
 local _t2_case_groups = _t2_cases_module.case_groups
 local _with_reloaded_move_module = _t2_cases_module.with_reloaded_move_module
 local function _build_startup_state(get_current_game, profile_name)
