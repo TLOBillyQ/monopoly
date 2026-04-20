@@ -80,7 +80,7 @@ function market_view_controls.refresh_market_selection_frames(ui, option_ids, op
   for index, visible_option_id in pairs(option_ids or {}) do
     local name = market_layout.item_selection_frames and market_layout.item_selection_frames[index] or nil
     if visible_option_id == option_id and name then
-      ui_controls.set_control_state(ui, name, { visible = true, touch_enabled = false })
+      ui_controls.set_control_state(ui, name, { visible = true, touch_enabled = true })
       return
     end
   end
