@@ -73,14 +73,14 @@ function market_view_controls.reset_market_preview(state, deps)
 end
 
 function market_view_controls.refresh_market_selection_frames(ui, option_ids, option_id)
-  market_view_controls.clear_market_selection_frames(ui)
+  ui_controls.set_controls_state(ui, market_layout.item_selection_frames or {}, { visible = true, touch_enabled = false })
   if option_id == nil then
     return
   end
   for index, visible_option_id in pairs(option_ids or {}) do
     local name = market_layout.item_selection_frames and market_layout.item_selection_frames[index] or nil
     if visible_option_id == option_id and name then
-      ui_controls.set_control_state(ui, name, { visible = true, touch_enabled = true })
+      ui_controls.set_control_state(ui, name, { visible = false, touch_enabled = false })
       return
     end
   end
