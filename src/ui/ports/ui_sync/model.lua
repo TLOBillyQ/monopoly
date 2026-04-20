@@ -59,8 +59,23 @@ local function _should_open_choice_modal(game, state, next_model)
   return choice_ui_state.should_reconcile(game, state, next_model.choice)
 end
 
+local function _should_close_choice_modal(state, next_model)
+  local ui = state and state.ui or nil
+  if not ui then
+    return false
+  end
+  if not ui.choice_active then
+    return false
+  end
+  return not (next_model and next_model.choice)
+end
+
 local function _render_ui_model(game, state, next_model, common)
   main_view.render(state, next_model, common.log_once, common.build_log_prefix)
+  if _should_close_choice_modal(state, next_model) then
+    modal.close_choice_modal(state)
+    return
+  end
   if _should_open_choice_modal(game, state, next_model) then
     modal.open_choice_modal(state, next_model.choice, next_model.market)
   end
