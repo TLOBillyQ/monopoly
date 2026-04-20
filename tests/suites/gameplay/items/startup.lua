@@ -743,6 +743,9 @@ end
 
 local function _test_steal_startup_profile_multi_item_choice_resumes_to_chance()
   local g, _ = _new_profile_game("steal")
+  g.auto_play_port.is_auto_player = function()
+    return false
+  end
   local player = g.players[1]
   local target = g.players[2]
   local _, interrupt = _start_steal_interrupt(g, player)
@@ -775,6 +778,9 @@ end
 
 local function _test_steal_startup_profile_single_item_auto_steal_resumes_to_chance()
   local g, _ = _new_profile_game("steal_one")
+  g.auto_play_port.is_auto_player = function()
+    return false
+  end
   local player = g.players[1]
   local target = g.players[2]
   local _, interrupt = _start_steal_interrupt(g, player)
@@ -822,6 +828,9 @@ end
 
 local function _test_steal_startup_profile_cancel_item_picker_keeps_state_and_resumes()
   local g, _ = _new_profile_game("steal")
+  g.auto_play_port.is_auto_player = function()
+    return false
+  end
   local player = g.players[1]
   local target = g.players[2]
   local _, interrupt = _start_steal_interrupt(g, player)

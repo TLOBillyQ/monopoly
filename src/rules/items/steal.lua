@@ -5,6 +5,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
 local tip_output = require("src.rules.ports.tip_output")
+local auto_play_port = require("src.rules.ports.auto_play")
 
 local steal = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -90,6 +91,11 @@ function steal.handle_pass_players(game, player, encountered_ids)
   end
   if #queue == 0 then
     return
+  end
+
+  if auto_play_port.is_auto_player(game, player) then
+    local target = assert(game:find_player_by_id(queue[1]), "missing target player")
+    return steal.steal_item_at_index(game, player, target, 1)
   end
 
   local spec = steal.build_prompt_spec(game, player, queue, 1)
