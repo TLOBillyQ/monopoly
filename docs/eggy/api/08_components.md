@@ -47,8 +47,10 @@ BuffStateComp|remove_state|_state_id
 
 ## CharacterComp
 
+CharacterComp|get_character_creature_jump_speed_ratio
 CharacterComp|get_scale_ratio
 CharacterComp|is_forced_moving
+CharacterComp|set_character_creature_jump_speed_ratio|_jump_speed_ratio
 CharacterComp|start_forced_move|_vel, _duration, _enable_phy
 CharacterComp|stop_forced_move
 
@@ -99,9 +101,15 @@ JointAssistantComp|set_joint_assistant_visible|_visible
 
 ## JumpComp
 
+JumpComp|get_multi_jump_cooldown
+JumpComp|get_multi_jump_count
 JumpComp|get_multi_jump_remaining_cooldown
+JumpComp|get_multi_jump_remaining_count
 JumpComp|is_on_ground
+JumpComp|set_multi_jump_cooldown|_cd
+JumpComp|set_multi_jump_count|_count
 JumpComp|set_multi_jump_remaining_cooldown|_cd
+JumpComp|set_multi_jump_remaining_count|_count
 
 ## LevelComp
 

@@ -337,8 +337,10 @@
 ---@field start_move_to_pos fun(_target_pos: Vector3, _duration: Fixed)
 
 ---@class CharacterComp
+---@field get_character_creature_jump_speed_ratio fun(): Fixed
 ---@field get_scale_ratio fun(): Fixed
 ---@field is_forced_moving fun(): boolean
+---@field set_character_creature_jump_speed_ratio fun(_jump_speed_ratio: Fixed)
 ---@field start_forced_move fun(_vel: Vector3, _duration: Fixed, _enable_phy: boolean?)
 ---@field stop_forced_move fun()
 
@@ -433,6 +435,7 @@
 
 ---@class GameAPI
 ---@field ability_prefab_get_desc fun(_ability_id: AbilityKey): string
+---@field ability_prefab_get_kv_by_type fun(_value_type: Enums.ValueType, _key: AbilityKey, _prop: string): any
 ---@field ability_prefab_get_name fun(_ability_id: AbilityKey): string
 ---@field ability_prefab_get_prop_by_type fun(_value_type: Enums.ValueType, _key: AbilityKey, _prop: string): any
 ---@field ability_prefab_has_kv fun(_ability_key: AbilityKey, _prop: string): boolean
@@ -477,6 +480,8 @@
 ---@field customtriggerspace_prefab_get_prop_by_type fun(_value_type: Enums.ValueType, _key: CustomTriggerSpaceKey, _prop: string): any
 ---@field customtriggerspace_prefab_has_kv fun(_key: CustomTriggerSpaceKey, _prop: string): boolean
 ---@field deal_damage fun(_dst: LifeEntity, _dmg: Fixed, _src: Unit?, _schema: DamageSchema?, _data: table?)
+---@field decoration_prefab_get_kv_by_type fun(_value_type: Enums.ValueType, _key: DecorationKey, _prop: string): any
+---@field decoration_prefab_has_kv fun(_decoration_key: DecorationKey, _prop: string): boolean
 ---@field delay_destroy_vehicle fun(_unit: Vehicle)
 ---@field destroy_obstacle_with_anim fun(_anim_type: integer, _obstacle: Obstacle, _duration: Fixed, _intensity: Fixed)
 ---@field destroy_scene_ui fun(_layer: E3DLayer)
@@ -484,6 +489,7 @@
 ---@field destroy_unit_with_children fun(_unit: Unit, _destroy_children: boolean?)
 ---@field enable_collision_between_unit_and_prefab fun(_unit: Unit, _unit_eid: UnitKey, _enable: boolean)
 ---@field enable_collision_between_units fun(_unit_1: Unit, _unit_2: Unit, _enable: boolean)
+---@field equipment_prefab_get_kv_by_type fun(_value_type: Enums.ValueType, _key: EquipmentKey, _prop: string): any
 ---@field equipment_prefab_has_kv fun(_equipment_key: EquipmentKey, _prop: string): boolean
 ---@field game_end fun()
 ---@field get_achievement_target fun(_event_id: Achievement): integer
@@ -566,6 +572,7 @@
 ---@field is_role_friendship_type_match fun(_role_1: Role, _role_2: Role, _friendship_type: Enums.FriendshipType): boolean
 ---@field load_level fun(_level_key: LevelKey)
 ---@field modifier_prefab_get_desc fun(_modifier_key: ModifierKey): string
+---@field modifier_prefab_get_kv_by_type fun(_value_type: Enums.ValueType, _key: ModifierKey, _prop: string): any
 ---@field modifier_prefab_get_name fun(_modifier_key: ModifierKey): string
 ---@field modifier_prefab_get_prop_by_type fun(_value_type: Enums.ValueType, _key: ModifierKey, _prop: string): any
 ---@field modifier_prefab_has_kv fun(_modifier_key: ModifierKey, _prop: string): boolean
@@ -632,9 +639,15 @@
 ---@field set_joint_assistant_visible fun(_visible: boolean)
 
 ---@class JumpComp
+---@field get_multi_jump_cooldown fun(): Fixed
+---@field get_multi_jump_count fun(): integer
 ---@field get_multi_jump_remaining_cooldown fun(): Fixed
+---@field get_multi_jump_remaining_count fun(): integer
 ---@field is_on_ground fun(): boolean
+---@field set_multi_jump_cooldown fun(_cd: Fixed)
+---@field set_multi_jump_count fun(_count: integer)
 ---@field set_multi_jump_remaining_cooldown fun(_cd: Fixed)
+---@field set_multi_jump_remaining_count fun(_count: integer)
 
 ---@class KVBase
 ---@field add_tag fun(_tag: string)
@@ -884,8 +897,6 @@
 ---@field is_achievement_completed fun(_event_id: Achievement): boolean
 ---@field is_gallery_vip fun(): boolean
 ---@field is_lost fun(): boolean
----@field is_map_favorited fun(): boolean
----@field is_map_liked fun(): boolean
 ---@field is_online fun(): boolean
 ---@field is_pass_premium_vip fun(): boolean
 ---@field is_subscribed_map_author fun(): boolean

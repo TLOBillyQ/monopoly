@@ -311,8 +311,6 @@ Role|has_saved_archive
 Role|is_achievement_completed|_event_id
 Role|is_gallery_vip
 Role|is_lost
-Role|is_map_favorited
-Role|is_map_liked
 Role|is_online
 Role|is_pass_premium_vip
 Role|is_subscribed_map_author

@@ -1,5 +1,27 @@
 # EggyAPI 变更记录
 
+## 2026-04-25
+
+新增 / Added: 13
+  - CharacterComp.get_character_creature_jump_speed_ratio
+  - CharacterComp.set_character_creature_jump_speed_ratio
+  - GameAPI.ability_prefab_get_kv_by_type
+  - GameAPI.decoration_prefab_get_kv_by_type
+  - GameAPI.decoration_prefab_has_kv
+  - GameAPI.equipment_prefab_get_kv_by_type
+  - GameAPI.modifier_prefab_get_kv_by_type
+  - JumpComp.get_multi_jump_cooldown
+  - JumpComp.get_multi_jump_count
+  - JumpComp.get_multi_jump_remaining_count
+  - JumpComp.set_multi_jump_cooldown
+  - JumpComp.set_multi_jump_count
+  - JumpComp.set_multi_jump_remaining_count
+删除 / Removed: 2
+  - Role.is_map_favorited
+  - Role.is_map_liked
+签名变更 / Signature changed: 0
+类型变更 / Type changed: 0
+
 ## 2026-04-17
 
 新增 / Added: 4

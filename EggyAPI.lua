@@ -1979,6 +1979,10 @@ function Character.start_move_to_pos(_target_pos, _duration) end
 ---@class CharacterComp
 CharacterComp = {}
 
+---获取角色起跳速度
+---@return Fixed 起跳速度
+function CharacterComp.get_character_creature_jump_speed_ratio() end
+
 ---获取缩放倍率
 ---@return Fixed 缩放倍率
 function CharacterComp.get_scale_ratio() end
@@ -1986,6 +1990,10 @@ function CharacterComp.get_scale_ratio() end
 ---是否正在强制位移
 ---@return boolean 是否正在强制位移
 function CharacterComp.is_forced_moving() end
+
+---设置角色起跳速度
+---@param _jump_speed_ratio Fixed 起跳速度
+function CharacterComp.set_character_creature_jump_speed_ratio(_jump_speed_ratio) end
 
 
 ---开始强制位移
@@ -2387,6 +2395,13 @@ GameAPI = {}
 ---@return string 技能描述
 function GameAPI.ability_prefab_get_desc(_ability_id) end
 
+---获取技能预设的自定义值
+---@param _value_type Enums.ValueType 值类型
+---@param _key AbilityKey 技能编号
+---@param _prop string 名称
+---@return any 自定义值
+function GameAPI.ability_prefab_get_kv_by_type(_value_type, _key, _prop) end
+
 ---获取技能预设名称
 ---@param _ability_id AbilityKey 技能编号
 ---@return string 技能名称
@@ -2772,6 +2787,19 @@ function GameAPI.customtriggerspace_prefab_has_kv(_key, _prop) end
 ---@param _data table? 参数
 function GameAPI.deal_damage(_dst, _dmg, _src, _schema, _data) end
 
+---获取装饰物预设的自定义值
+---@param _value_type Enums.ValueType 值类型
+---@param _key DecorationKey 装饰物编号
+---@param _prop string 名称
+---@return any 自定义值
+function GameAPI.decoration_prefab_get_kv_by_type(_value_type, _key, _prop) end
+
+---装饰物预设是否存在自定义值
+---@param _decoration_key DecorationKey 装饰物编号
+---@param _prop string 名称
+---@return boolean 是否存在
+function GameAPI.decoration_prefab_has_kv(_decoration_key, _prop) end
+
 
 ---删除载具
 ---@param _unit Vehicle 载具
@@ -2810,6 +2838,13 @@ function GameAPI.enable_collision_between_unit_and_prefab(_unit, _unit_eid, _ena
 ---@param _unit_2 Unit 单位2
 ---@param _enable boolean 是否碰撞
 function GameAPI.enable_collision_between_units(_unit_1, _unit_2, _enable) end
+
+---获取物品预设的自定义值
+---@param _value_type Enums.ValueType 值类型
+---@param _key EquipmentKey 物品编号
+---@param _prop string 名称
+---@return any 自定义值
+function GameAPI.equipment_prefab_get_kv_by_type(_value_type, _key, _prop) end
 
 ---物品预设是否存在自定义值
 ---@param _equipment_key EquipmentKey 物品编号
@@ -3300,6 +3335,13 @@ function GameAPI.load_level(_level_key) end
 ---@return string 效果描述
 function GameAPI.modifier_prefab_get_desc(_modifier_key) end
 
+---获取效果预设的自定义值
+---@param _value_type Enums.ValueType 值类型
+---@param _key ModifierKey 效果编号
+---@param _prop string 名称
+---@return any 自定义值
+function GameAPI.modifier_prefab_get_kv_by_type(_value_type, _key, _prop) end
+
 ---获取效果预设名称
 ---@param _modifier_key ModifierKey 效果编号
 ---@return string 效果名称
@@ -3684,19 +3726,43 @@ function JointAssistantComp.set_joint_assistant_visible(_visible) end
 ---@class JumpComp
 JumpComp = {}
 
+---获取多段跳冷却
+---@return Fixed 冷却时间
+function JumpComp.get_multi_jump_cooldown() end
+
+---获取多段跳次数
+---@return integer 次数
+function JumpComp.get_multi_jump_count() end
+
 
 ---获取多段跳剩余冷却
 ---@return Fixed 冷却时间
 function JumpComp.get_multi_jump_remaining_cooldown() end
 
+---获取多段跳剩余次数
+---@return integer 次数
+function JumpComp.get_multi_jump_remaining_count() end
+
 ---是否位于地面
 ---@return boolean 是否位于地面
 function JumpComp.is_on_ground() end
+
+---设置多段跳冷却
+---@param _cd Fixed 冷却时间
+function JumpComp.set_multi_jump_cooldown(_cd) end
+
+---设置多段跳次数
+---@param _count integer 次数
+function JumpComp.set_multi_jump_count(_count) end
 
 
 ---设置多段跳剩余冷却
 ---@param _cd Fixed 冷却时间
 function JumpComp.set_multi_jump_remaining_cooldown(_cd) end
+
+---设置多段跳剩余次数
+---@param _count integer 次数
+function JumpComp.set_multi_jump_remaining_count(_count) end
 
 ---@class KVBase
 KVBase = {}
@@ -4797,14 +4863,6 @@ function Role.is_gallery_vip() end
 ---玩家是否失败
 ---@return boolean 玩家是否失败
 function Role.is_lost() end
-
----是否收藏本地图
----@return boolean 是否收藏
-function Role.is_map_favorited() end
-
----是否点赞本地图
----@return boolean 是否点赞
-function Role.is_map_liked() end
 
 ---玩家是否在线
 ---@return boolean 是否在线

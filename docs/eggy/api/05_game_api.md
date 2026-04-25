@@ -1,6 +1,7 @@
 ## GameAPI
 
 GameAPI|ability_prefab_get_desc|_ability_id
+GameAPI|ability_prefab_get_kv_by_type|_value_type, _key, _prop
 GameAPI|ability_prefab_get_name|_ability_id
 GameAPI|ability_prefab_get_prop_by_type|_value_type, _key, _prop
 GameAPI|ability_prefab_has_kv|_ability_key, _prop
@@ -45,6 +46,8 @@ GameAPI|customtriggerspace_prefab_get_kv_by_type|_value_type, _key, _prop
 GameAPI|customtriggerspace_prefab_get_prop_by_type|_value_type, _key, _prop
 GameAPI|customtriggerspace_prefab_has_kv|_key, _prop
 GameAPI|deal_damage|_dst, _dmg, _src, _schema, _data
+GameAPI|decoration_prefab_get_kv_by_type|_value_type, _key, _prop
+GameAPI|decoration_prefab_has_kv|_decoration_key, _prop
 GameAPI|delay_destroy_vehicle|_unit
 GameAPI|destroy_obstacle_with_anim|_anim_type, _obstacle, _duration, _intensity
 GameAPI|destroy_scene_ui|_layer
@@ -52,6 +55,7 @@ GameAPI|destroy_unit|_unit
 GameAPI|destroy_unit_with_children|_unit, _destroy_children
 GameAPI|enable_collision_between_unit_and_prefab|_unit, _unit_eid, _enable
 GameAPI|enable_collision_between_units|_unit_1, _unit_2, _enable
+GameAPI|equipment_prefab_get_kv_by_type|_value_type, _key, _prop
 GameAPI|equipment_prefab_has_kv|_equipment_key, _prop
 GameAPI|game_end
 GameAPI|get_achievement_target|_event_id
@@ -134,6 +138,7 @@ GameAPI|is_point_in_customtriggerspace|_point, _custom_trigger_space
 GameAPI|is_role_friendship_type_match|_role_1, _role_2, _friendship_type
 GameAPI|load_level|_level_key
 GameAPI|modifier_prefab_get_desc|_modifier_key
+GameAPI|modifier_prefab_get_kv_by_type|_value_type, _key, _prop
 GameAPI|modifier_prefab_get_name|_modifier_key
 GameAPI|modifier_prefab_get_prop_by_type|_value_type, _key, _prop
 GameAPI|modifier_prefab_has_kv|_modifier_key, _prop
