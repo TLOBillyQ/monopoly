@@ -108,6 +108,10 @@ function market_view_controls.refresh_market_controls(ui, market, vehicle_tab_en
     visible = paging_visible,
     touch_enabled = paging_visible and page_index < page_count,
   })
+  ui_controls.set_controls_state(ui, { market_layout.page_prev_label, market_layout.page_next_label }, {
+    visible = paging_visible,
+    touch_enabled = false,
+  })
   ui_controls.set_control_state(ui, market_layout.tab_item, { visible = true, touch_enabled = active_tab ~= "item" })
   _set_tab_tint(ui, market_layout.tab_item, active_tab == "item")
   ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = active_tab ~= "skin" })
@@ -138,6 +142,8 @@ function market_view_controls.close_market_panel(state, deps)
   ui_controls.set_controls_state(ui, {
     market_layout.page_prev,
     market_layout.page_next,
+    market_layout.page_prev_label,
+    market_layout.page_next_label,
     market_layout.tab_item,
     market_layout.tab_skin,
     market_layout.tab_vehicle,

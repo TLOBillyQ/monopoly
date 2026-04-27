@@ -692,6 +692,8 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
 
   _assert_eq(visible[market_layout.page_prev], false, "page_prev should be hidden when only one page")
   _assert_eq(visible[market_layout.page_next], false, "page_next should be hidden when only one page")
+  _assert_eq(visible[market_layout.page_prev_label], false, "page_prev_label should be hidden when only one page")
+  _assert_eq(visible[market_layout.page_next_label], false, "page_next_label should be hidden when only one page")
 
   market_view.refresh_market(state, {
     choice_id = 12,
@@ -708,6 +710,10 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
   _assert_eq(visible[market_layout.page_next], true, "page_next should be visible when multiple pages")
   _assert_eq(touch[market_layout.page_prev], false, "page_prev should be disabled on first page")
   _assert_eq(touch[market_layout.page_next], true, "page_next should be enabled when next page exists")
+  _assert_eq(visible[market_layout.page_prev_label], true, "page_prev_label should be visible when multiple pages")
+  _assert_eq(visible[market_layout.page_next_label], true, "page_next_label should be visible when multiple pages")
+  _assert_eq(touch[market_layout.page_prev_label], false, "page_prev_label touch should always be false")
+  _assert_eq(touch[market_layout.page_next_label], false, "page_next_label touch should always be false")
 end
 
 local function _test_ui_model_market_payload_prefers_explicit_choice_fields()
