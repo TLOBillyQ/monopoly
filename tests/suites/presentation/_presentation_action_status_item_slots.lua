@@ -89,7 +89,7 @@ local function _test_item_slot_uses_keep_size_path()
       ["2001"] = "ICON2001",
     }),
     ui = {
-      item_slots = { "基础_道具槽位1" },
+      item_slots = { "常驻_道具槽位1" },
       set_touch_enabled = function() end,
     },
   }
@@ -126,8 +126,8 @@ local function _test_item_slot_refresh_shows_only_playable_outlines()
       ["2003"] = "ICON2003",
     }),
     ui = {
-      item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3" },
-      card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3" },
+      item_slots = { "常驻_道具槽位1", "常驻_道具槽位2", "常驻_道具槽位3" },
+      card_outlines = { "常驻_可出牌外框1", "常驻_可出牌外框2", "常驻_可出牌外框3" },
       set_touch_enabled = function(_, name, enabled)
         touch_state[name] = enabled == true
       end,
@@ -159,20 +159,20 @@ local function _test_item_slot_refresh_shows_only_playable_outlines()
     })
   end)
 
-  _assert_eq(visible_state["基础_可出牌外框1"], true, "playable slot 1 outline should be visible")
-  _assert_eq(visible_state["基础_可出牌外框2"], false, "unplayable slot 2 outline should be hidden")
-  _assert_eq(visible_state["基础_可出牌外框3"], true, "playable slot 3 outline should be visible")
-  _assert_eq(touch_state["基础_道具槽位1"], true, "playable slot 1 should be clickable")
-  _assert_eq(touch_state["基础_道具槽位2"], false, "unplayable slot 2 should be locked")
-  _assert_eq(touch_state["基础_道具槽位3"], true, "playable slot 3 should be clickable")
+  _assert_eq(visible_state["常驻_可出牌外框1"], true, "playable slot 1 outline should be visible")
+  _assert_eq(visible_state["常驻_可出牌外框2"], false, "unplayable slot 2 outline should be hidden")
+  _assert_eq(visible_state["常驻_可出牌外框3"], true, "playable slot 3 outline should be visible")
+  _assert_eq(touch_state["常驻_道具槽位1"], true, "playable slot 1 should be clickable")
+  _assert_eq(touch_state["常驻_道具槽位2"], false, "unplayable slot 2 should be locked")
+  _assert_eq(touch_state["常驻_道具槽位3"], true, "playable slot 3 should be clickable")
 end
 
 local function _test_item_slot_intents_include_outline_nodes()
   local item_slot_intents = require("src.ui.input.canvas_route.item_slots")
   local state = {
     ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
+      item_slots = { "常驻_道具槽位1" },
+      card_outlines = { "常驻_可出牌外框1" },
     },
     ui_model = {
       choice = {
@@ -187,8 +187,8 @@ local function _test_item_slot_intents_include_outline_nodes()
 
   local specs = item_slot_intents.build(state)
   _assert_eq(#specs, 2, "item slot intents should include slot and outline")
-  _assert_eq(specs[1].name, "基础_道具槽位1", "slot intent node expected")
-  _assert_eq(specs[2].name, "基础_可出牌外框1", "outline intent node expected")
+  _assert_eq(specs[1].name, "常驻_道具槽位1", "slot intent node expected")
+  _assert_eq(specs[2].name, "常驻_可出牌外框1", "outline intent node expected")
   local intent = specs[2].build_intent()
   _assert_eq(intent and intent.id, "item_slot_1", "outline click should map to slot action")
 end
@@ -307,8 +307,8 @@ local function _test_item_phase_confirmed_skips_replay_before_slot_click()
       ["2002"] = "ICON2002",
     }),
     ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
+      item_slots = { "常驻_道具槽位1" },
+      card_outlines = { "常驻_可出牌外框1" },
       set_touch_enabled = function() end,
       set_visible = function() end,
     },
@@ -380,8 +380,8 @@ local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_rev
       ["2003"] = "ICON2003",
     }),
     ui = {
-      item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3" },
-      card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3" },
+      item_slots = { "常驻_道具槽位1", "常驻_道具槽位2", "常驻_道具槽位3" },
+      card_outlines = { "常驻_可出牌外框1", "常驻_可出牌外框2", "常驻_可出牌外框3" },
       set_touch_enabled = function() end,
       set_visible = function(_, name, visible)
         visible_state[name] = visible == true
@@ -454,8 +454,8 @@ local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_rev
     _assert_eq(_count_event("高亮道具槽位牌1"), 1, "item_phase_ask should emit highlight for slot1 once")
     _assert_eq(_count_event("高亮道具槽位牌3"), 1, "item_phase_ask should emit highlight for slot3 once")
     _assert_eq(_count_event("重置高亮"), 1, "item_phase_ask should emit global reset once")
-    _assert_eq(visible_state["基础_可出牌外框1"], false, "outline1 should stay hidden before delay")
-    _assert_eq(visible_state["基础_可出牌外框3"], false, "outline3 should stay hidden before delay")
+    _assert_eq(visible_state["常驻_可出牌外框1"], false, "outline1 should stay hidden before delay")
+    _assert_eq(visible_state["常驻_可出牌外框3"], false, "outline3 should stay hidden before delay")
     _assert_eq(#timers, 1, "item_phase_ask should schedule exactly one reveal timer")
 
     timers[1]()
@@ -466,9 +466,9 @@ local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_rev
 
     _assert_eq(_count_event("高亮道具槽位牌1"), 1, "highlight should not replay every refresh")
     _assert_eq(_count_event("高亮道具槽位牌3"), 1, "highlight should not replay every refresh")
-    _assert_eq(visible_state["基础_可出牌外框1"], true, "outline1 should show after delay")
-    _assert_eq(visible_state["基础_可出牌外框3"], true, "outline3 should show after delay")
-    _assert_eq(visible_state["基础_可出牌外框2"], false, "non-pickable outline should stay hidden")
+    _assert_eq(visible_state["常驻_可出牌外框1"], true, "outline1 should show after delay")
+    _assert_eq(visible_state["常驻_可出牌外框3"], true, "outline3 should show after delay")
+    _assert_eq(visible_state["常驻_可出牌外框2"], false, "non-pickable outline should stay hidden")
   end)
 end
 
@@ -504,8 +504,8 @@ local function _test_item_slot_refresh_resets_highlight_without_client_role()
       ["2008"] = "ICON2008",
     }),
     ui = {
-      item_slots = { "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3", "基础_道具槽位4", "基础_道具槽位5" },
-      card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3", "基础_可出牌外框4", "基础_可出牌外框5" },
+      item_slots = { "常驻_道具槽位1", "常驻_道具槽位2", "常驻_道具槽位3", "常驻_道具槽位4", "常驻_道具槽位5" },
+      card_outlines = { "常驻_可出牌外框1", "常驻_可出牌外框2", "常驻_可出牌外框3", "常驻_可出牌外框4", "常驻_可出牌外框5" },
       set_touch_enabled = function() end,
       set_visible = function() end,
     },
@@ -636,12 +636,12 @@ local function _test_passive_slot_three_state_rendering()
     }),
     ui = {
       item_slots = {
-        "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3",
-        "基础_道具槽位4", "基础_道具槽位5",
+        "常驻_道具槽位1", "常驻_道具槽位2", "常驻_道具槽位3",
+        "常驻_道具槽位4", "常驻_道具槽位5",
       },
       card_outlines = {
-        "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3",
-        "基础_可出牌外框4", "基础_可出牌外框5",
+        "常驻_可出牌外框1", "常驻_可出牌外框2", "常驻_可出牌外框3",
+        "常驻_可出牌外框4", "常驻_可出牌外框5",
       },
       set_touch_enabled = function(_, name, enabled)
         touch_state[name] = enabled == true
@@ -683,11 +683,11 @@ local function _test_passive_slot_three_state_rendering()
     })
   end)
 
-  _assert_eq(touch_state["基础_道具槽位1"], true,  "passive: available slot 1 should be touchable")
-  _assert_eq(touch_state["基础_道具槽位2"], false, "passive: unavailable slot 2 should not be touchable")
-  _assert_eq(touch_state["基础_道具槽位3"], true,  "passive: available slot 3 should be touchable")
-  _assert_eq(touch_state["基础_道具槽位4"], false, "passive: unavailable slot 4 should not be touchable")
-  _assert_eq(touch_state["基础_道具槽位5"], false, "passive: unavailable slot 5 should not be touchable")
+  _assert_eq(touch_state["常驻_道具槽位1"], true,  "passive: available slot 1 should be touchable")
+  _assert_eq(touch_state["常驻_道具槽位2"], false, "passive: unavailable slot 2 should not be touchable")
+  _assert_eq(touch_state["常驻_道具槽位3"], true,  "passive: available slot 3 should be touchable")
+  _assert_eq(touch_state["常驻_道具槽位4"], false, "passive: unavailable slot 4 should not be touchable")
+  _assert_eq(touch_state["常驻_道具槽位5"], false, "passive: unavailable slot 5 should not be touchable")
 end
 
 local function _test_passive_outlines_highlight_available_slots()
@@ -704,12 +704,12 @@ local function _test_passive_outlines_highlight_available_slots()
     }),
     ui = {
       item_slots = {
-        "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3",
-        "基础_道具槽位4", "基础_道具槽位5",
+        "常驻_道具槽位1", "常驻_道具槽位2", "常驻_道具槽位3",
+        "常驻_道具槽位4", "常驻_道具槽位5",
       },
       card_outlines = {
-        "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3",
-        "基础_可出牌外框4", "基础_可出牌外框5",
+        "常驻_可出牌外框1", "常驻_可出牌外框2", "常驻_可出牌外框3",
+        "常驻_可出牌外框4", "常驻_可出牌外框5",
       },
       set_touch_enabled = function(_, name, enabled)
         touch_state[name] = enabled == true
@@ -749,13 +749,13 @@ local function _test_passive_outlines_highlight_available_slots()
     })
   end)
 
-  _assert_eq(visible_state["基础_可出牌外框1"], true,  "passive: available outline 1 should be visible")
-  _assert_eq(visible_state["基础_可出牌外框2"], false, "passive: unavailable outline 2 should be hidden")
-  _assert_eq(visible_state["基础_可出牌外框3"], true,  "passive: available outline 3 should be visible")
-  _assert_eq(visible_state["基础_可出牌外框4"], false, "passive: unavailable outline 4 should be hidden")
-  _assert_eq(visible_state["基础_可出牌外框5"], false, "passive: unavailable outline 5 should be hidden")
-  _assert_eq(touch_state["基础_可出牌外框1"], true,  "passive: available outline 1 should be touchable")
-  _assert_eq(touch_state["基础_可出牌外框3"], true,  "passive: available outline 3 should be touchable")
+  _assert_eq(visible_state["常驻_可出牌外框1"], true,  "passive: available outline 1 should be visible")
+  _assert_eq(visible_state["常驻_可出牌外框2"], false, "passive: unavailable outline 2 should be hidden")
+  _assert_eq(visible_state["常驻_可出牌外框3"], true,  "passive: available outline 3 should be visible")
+  _assert_eq(visible_state["常驻_可出牌外框4"], false, "passive: unavailable outline 4 should be hidden")
+  _assert_eq(visible_state["常驻_可出牌外框5"], false, "passive: unavailable outline 5 should be hidden")
+  _assert_eq(touch_state["常驻_可出牌外框1"], true,  "passive: available outline 1 should be touchable")
+  _assert_eq(touch_state["常驻_可出牌外框3"], true,  "passive: available outline 3 should be touchable")
 end
 
 local function _test_passive_highlight_dedupes_consecutive_refresh()
@@ -768,8 +768,8 @@ local function _test_passive_highlight_dedupes_consecutive_refresh()
       ["2002"] = "ICON2002",
     }),
     ui = {
-      item_slots = { "基础_道具槽位1", "基础_道具槽位2" },
-      card_outlines = { "基础_可出牌外框1", "基础_可出牌外框2" },
+      item_slots = { "常驻_道具槽位1", "常驻_道具槽位2" },
+      card_outlines = { "常驻_可出牌外框1", "常驻_可出牌外框2" },
       set_touch_enabled = function() end,
       set_visible = function() end,
       set_label = function() end,
@@ -849,8 +849,8 @@ local function _test_action_button_label_never_written()
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
     ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
+      item_slots = { "常驻_道具槽位1" },
+      card_outlines = { "常驻_可出牌外框1" },
       set_touch_enabled = function() end,
       set_visible = function() end,
       set_label = function(_, name, text)

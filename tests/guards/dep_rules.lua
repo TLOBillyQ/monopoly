@@ -39,7 +39,7 @@ local rules = {
   {
     roots = { "src/ui/schema" },
     forbidden = {
-      "canvas.always_show", "canvas.market", "canvas.secondary_confirm",
+      "canvas.permanent", "canvas.market", "canvas.secondary_confirm",
       "canvas.remote_choice", "canvas.player_choice", "canvas.popup",
       "canvas.target_choice",
     },

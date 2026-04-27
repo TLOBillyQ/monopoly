@@ -1,7 +1,7 @@
 local ui_events = require("src.ui.ctl.ui_events")
 local runtime = require("src.ui.render.runtime_ui")
 local base_nodes = require("src.ui.schema.base")
-local always_show_nodes = require("src.ui.schema.always_show")
+local permanent_nodes = require("src.ui.schema.permanent")
 local player_choice_nodes = require("src.ui.schema.player_choice")
 local target_choice_nodes = require("src.ui.schema.target_choice")
 local remote_choice_nodes = require("src.ui.schema.remote_choice")
@@ -15,7 +15,7 @@ local role_id_utils = require("src.core.utils.role_id")
 local coordinator = {}
 
 coordinator.CANVAS_BASE = base_nodes.canvas
-coordinator.CANVAS_ALWAYS_SHOW = always_show_nodes.canvas
+coordinator.CANVAS_PERMANENT = permanent_nodes.canvas
 coordinator.CANVAS_PLAYER_CHOICE = player_choice_nodes.canvas
 coordinator.CANVAS_TARGET_CHOICE = target_choice_nodes.canvas
 coordinator.CANVAS_REMOTE_CHOICE = remote_choice_nodes.canvas
@@ -60,7 +60,7 @@ end
 local function _should_hide_canvas(name, target_name, keep_debug)
   local keep_debug_canvas = name == coordinator.CANVAS_DEBUG and keep_debug
   return name ~= coordinator.CANVAS_BASE
-    and name ~= coordinator.CANVAS_ALWAYS_SHOW
+    and name ~= coordinator.CANVAS_PERMANENT
     and name ~= target_name
     and not keep_debug_canvas
 end
@@ -81,9 +81,9 @@ local function _show_canvas_set(target_name, send_fn)
   if base_event then
     send_fn(base_event, {})
   end
-  local always_show_event = ui_events.show[coordinator.CANVAS_ALWAYS_SHOW]
-  if always_show_event then
-    send_fn(always_show_event, {})
+  local permanent_event = ui_events.show[coordinator.CANVAS_PERMANENT]
+  if permanent_event then
+    send_fn(permanent_event, {})
   end
   if target_name ~= coordinator.CANVAS_BASE then
     local target_event = ui_events.show[target_name]

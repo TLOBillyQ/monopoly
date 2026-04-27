@@ -5,14 +5,12 @@ local player_choice_intents = require("src.ui.input.canvas_route.player_choice")
 local target_choice_intents = require("src.ui.input.canvas_route.target_choice")
 local remote_choice_intents = require("src.ui.input.canvas_route.remote_choice")
 local market_intents = require("src.ui.input.canvas_route.market")
-local always_show_intents = require("src.ui.input.canvas_route.always_show")
 local secondary_confirm_intents = require("src.ui.input.canvas_route.secondary_confirm")
 
 local registry = {}
 
 local canvas_specs = {
   { key = "base", build = function(state) return base_intents.build(state) end },
-  { key = "always_show", build = function() return always_show_intents.build() end },
   { key = "popup", build = function(state) return popup_intents.build(state) end },
   { key = "item_slots", build = function(state) return item_slot_intents.build(state) end },
   { key = "player_choice", build = function(state) return player_choice_intents.build(state) end },

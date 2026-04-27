@@ -1,6 +1,5 @@
 local role_context = require("src.ui.pres.role_context")
 local base_nodes = require("src.ui.schema.base")
-local always_show_nodes = require("src.ui.schema.always_show")
 local role_id_utils = require("src.core.utils.role_id")
 local panel_cash_delta = require("src.ui.wid.panel_cash_delta")
 local panel_player_slots = require("src.ui.wid.panel_player_slots")
@@ -34,7 +33,7 @@ local function _apply_auto_label(ui, panel, display_player_id)
     auto_label = panel and panel.auto_label or nil
   end
   if auto_label and ui.set_label then
-    ui:set_label(always_show_nodes.auto_label, auto_label)
+    ui:set_label(base_nodes.auto_label, auto_label)
   end
 end
 
@@ -46,7 +45,7 @@ end
 
 function panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model, ui_touch_policy)
   assert(ui ~= nil, "missing ui")
-  local controls = ui.auto_control_nodes or { always_show_nodes.auto_button, always_show_nodes.auto_label }
+  local controls = ui.auto_control_nodes or { base_nodes.auto_button, base_nodes.auto_label }
   local auto_enabled = ctx and ctx.is_player_role == true or false
   local panel = ui_model and ui_model.panel or nil
   local display_player_id = ctx and ctx.display_player_id or nil
@@ -97,8 +96,8 @@ local function _apply_action_hint(ui, panel)
 end
 
 local function _apply_auto_effect(ui, ui_model, ctx)
-  ui:set_visible(always_show_nodes.auto_effect, _resolve_auto_effect_visible(ui_model, ctx))
-  ui:set_touch_enabled(always_show_nodes.auto_effect, false)
+  ui:set_visible(base_nodes.auto_effect, _resolve_auto_effect_visible(ui_model, ctx))
+  ui:set_touch_enabled(base_nodes.auto_effect, false)
 end
 
 local function _refresh_for_role(state, ui_model, runtime, role, panel, refresh_item_slots, ui_touch_policy)

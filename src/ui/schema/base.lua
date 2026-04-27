@@ -14,14 +14,11 @@ local nodes = {
   player_crown = "基础_玩家%s皇冠",
   player_avatar = "基础_玩家%s头像",
   player_color = "基础_玩家%s底板颜色",
-  item_slots = {
-    "基础_道具槽位1", "基础_道具槽位2", "基础_道具槽位3",
-    "基础_道具槽位4", "基础_道具槽位5",
-  },
-  card_outlines = {
-    "基础_可出牌外框1", "基础_可出牌外框2", "基础_可出牌外框3",
-    "基础_可出牌外框4", "基础_可出牌外框5",
-  },
+  auto_button = "基础_托管按钮",
+  auto_effect = "基础_托管按钮特效",
+  auto_label = "基础_托管文本",
+  action_log_button = "基础_行动日志图标",
+  action_log_label = "基础_行动日志文本",
   player_action_effects = {
     "基础_玩家1行动动效", "基础_玩家2行动动效",
     "基础_玩家3行动动效", "基础_玩家4行动动效",

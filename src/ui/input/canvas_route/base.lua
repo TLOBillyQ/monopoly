@@ -17,6 +17,18 @@ function intents.build(state)
         return { type = "ui_button", id = "next" }
       end,
     },
+    {
+      name = base_nodes.auto_button,
+      build_intent = function()
+        return { type = "ui_button", id = "auto" }
+      end,
+    },
+    {
+      name = base_nodes.action_log_button,
+      build_intent = function()
+        return { type = "toggle_action_log" }
+      end,
+    },
   }
 end
 

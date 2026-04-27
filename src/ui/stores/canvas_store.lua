@@ -1,6 +1,6 @@
 local canvas_store = {}
 local _allowed_dirty_keys = {
-  always_show = true,
+  permanent = true,
   base = true,
   board = true,
   choice = true,

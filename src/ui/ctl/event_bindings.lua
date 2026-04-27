@@ -1,7 +1,7 @@
 local logger = require("src.core.utils.logger")
 local runtime = require("src.ui.render.runtime_ui")
-local always_show_nodes = require("src.ui.schema.always_show")
-local always_show_contract = require("src.ui.schema.always_show_contract")
+local base_nodes = require("src.ui.schema.base")
+local base_contract = require("src.ui.schema.base_contract")
 local ui_touch_policy = require("src.ui.input.touch_policy")
 local host_runtime_ports = require("src.ui.host_bridge")
 
@@ -25,7 +25,7 @@ end
 
 local function _report_register_node_click_failure(name, reason)
   _show_missing_button_tip(name)
-  if name == always_show_nodes.action_log_button then
+  if name == base_nodes.action_log_button then
     logger.info("[调试屏] 行动日志按钮注册失败: " .. tostring(reason))
   end
 end
@@ -117,7 +117,7 @@ local function _enable_action_log_targets(cache, targets)
 end
 
 function bindings.enable_action_log_toggle_touch(cache, ui)
-  local targets = always_show_contract.action_log.toggle_targets or {}
+  local targets = base_contract.action_log.toggle_targets or {}
   local main_path_ok = false
 
   if ui and ui.set_touch_enabled then

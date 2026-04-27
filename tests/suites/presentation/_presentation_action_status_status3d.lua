@@ -223,7 +223,7 @@ local function _new_cash_delta_presenter_env(opts)
       item_slots = {},
       base_hidden_nodes = {},
       base_hidden_labels = {},
-      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+      auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       item_slot_item_ids_by_role = {},
       labels = {},
       visible = {},

@@ -28,7 +28,7 @@ end
 local function _should_refresh_panel(dirty)
   return dirty.any == true
     or dirty.base == true
-    or dirty.always_show == true
+    or dirty.permanent == true
     or dirty.choice == true
     or dirty.market == true
 end

@@ -25,10 +25,10 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
     },
     ui = {
       input_blocked = true,
-      item_slots = { "基础_道具槽位1" },
-      base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
+      item_slots = { "常驻_道具槽位1" },
+      base_hidden_nodes = { "基础_行动按钮", "常驻_道具槽位1" },
       base_hidden_labels = {},
-      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+      auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       choice_screens = {
         player = { option_buttons = {} },
         target = {},
@@ -55,9 +55,9 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
   end)
 
   assert(touch["基础_行动按钮"] == false, "action button should stay blocked")
-  assert(touch["始终显示_托管按钮"] == true, "auto button should stay enabled")
-  assert(touch["始终显示_文本"] == false, "auto label should stay non-clickable")
-  assert(visible["基础_道具槽位1"] == true, "item slot should stay visible when locked")
+  assert(touch["基础_托管按钮"] == true, "auto button should stay enabled")
+  assert(touch["基础_托管文本"] == false, "auto label should stay non-clickable")
+  assert(visible["常驻_道具槽位1"] == true, "item slot should stay visible when locked")
 end
 
 local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped()
@@ -72,10 +72,10 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
     },
     ui = {
       input_blocked = true,
-      item_slots = { "基础_道具槽位1" },
-      base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
+      item_slots = { "常驻_道具槽位1" },
+      base_hidden_nodes = { "基础_行动按钮", "常驻_道具槽位1" },
       base_hidden_labels = {},
-      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+      auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       choice_screens = {
         player = { option_buttons = {} },
         target = {},
@@ -99,8 +99,8 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
     ui_view.apply_input_lock(state)
   end)
 
-  assert(touch["始终显示_托管按钮"] == true, "auto button should stay enabled when role mapping is missing")
-  assert(touch["始终显示_文本"] == false, "auto label should stay non-clickable when role mapping is missing")
+  assert(touch["基础_托管按钮"] == true, "auto button should stay enabled when role mapping is missing")
+  assert(touch["基础_托管文本"] == false, "auto label should stay non-clickable when role mapping is missing")
 end
 
 local function _test_apply_input_lock_disables_always_show_controls_when_market_active()
@@ -116,10 +116,10 @@ local function _test_apply_input_lock_disables_always_show_controls_when_market_
     ui = {
       input_blocked = true,
       market_active = true,
-      item_slots = { "基础_道具槽位1" },
-      base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
+      item_slots = { "常驻_道具槽位1" },
+      base_hidden_nodes = { "基础_行动按钮", "常驻_道具槽位1" },
       base_hidden_labels = {},
-      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+      auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       choice_screens = {
         player = { option_buttons = {} },
         target = {},
@@ -143,9 +143,9 @@ local function _test_apply_input_lock_disables_always_show_controls_when_market_
     ui_view.apply_input_lock(state)
   end)
 
-  assert(touch["始终显示_托管按钮"] == false, "auto button should yield touch priority while market is active")
-  assert(touch["始终显示_文本"] == false, "auto label should stay non-clickable while market is active")
-  assert(touch["始终显示_行动日志图标"] == false, "action log toggle should yield touch priority while market is active")
+  assert(touch["基础_托管按钮"] == false, "auto button should yield touch priority while market is active")
+  assert(touch["基础_托管文本"] == false, "auto label should stay non-clickable while market is active")
+  assert(touch["基础_行动日志图标"] == false, "action log toggle should yield touch priority while market is active")
 end
 
 local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists()
@@ -153,10 +153,10 @@ local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
     ui = {
-      item_slots = { "基础_道具槽位1" },
-      base_hidden_nodes = { "基础_行动按钮", "基础_道具槽位1" },
+      item_slots = { "常驻_道具槽位1" },
+      base_hidden_nodes = { "基础_行动按钮", "常驻_道具槽位1" },
       base_hidden_labels = {},
-      auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+      auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       item_slot_item_ids_by_role = {},
       set_label = function() end,
       set_visible = function() end,
@@ -213,28 +213,28 @@ local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_
     ui_view.refresh_panel(state, ui_model)
   end)
 
-  assert(touch_logs[1] and touch_logs[1]["始终显示_托管按钮"] == true, "local role auto button should stay enabled")
-  assert(touch_logs[99] and touch_logs[99]["始终显示_托管按钮"] == false, "unmapped role auto button should stay disabled")
+  assert(touch_logs[1] and touch_logs[1]["基础_托管按钮"] == true, "local role auto button should stay enabled")
+  assert(touch_logs[99] and touch_logs[99]["基础_托管按钮"] == false, "unmapped role auto button should stay disabled")
 end
 
 local function _test_ui_touch_policy_auto_controls_touch()
   local touch = {}
   local ui = {
-    auto_control_nodes = { "始终显示_托管按钮", "始终显示_文本" },
+    auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
     set_touch_enabled = function(_, name, enabled)
       touch[name] = enabled
     end,
   }
 
   ui_touch_policy.set_auto_controls_touch(ui, true)
-  _assert_eq(touch["始终显示_托管按钮"], true, "auto button should be clickable when enabled")
-  _assert_eq(touch["始终显示_文本"], false, "auto label should stay non-clickable")
-  _assert_eq(touch["始终显示_托管按钮特效"], false, "auto effect should stay non-clickable")
+  _assert_eq(touch["基础_托管按钮"], true, "auto button should be clickable when enabled")
+  _assert_eq(touch["基础_托管文本"], false, "auto label should stay non-clickable")
+  _assert_eq(touch["基础_托管按钮特效"], false, "auto effect should stay non-clickable")
 
   ui_touch_policy.set_auto_controls_touch(ui, false)
-  _assert_eq(touch["始终显示_托管按钮"], false, "auto button should be non-clickable when disabled")
-  _assert_eq(touch["始终显示_文本"], false, "auto label should stay non-clickable when disabled")
-  _assert_eq(touch["始终显示_托管按钮特效"], false, "auto effect should stay non-clickable when disabled")
+  _assert_eq(touch["基础_托管按钮"], false, "auto button should be non-clickable when disabled")
+  _assert_eq(touch["基础_托管文本"], false, "auto label should stay non-clickable when disabled")
+  _assert_eq(touch["基础_托管按钮特效"], false, "auto effect should stay non-clickable when disabled")
 end
 
 local function _test_ui_touch_policy_runtime_nodes_touch_enabled()

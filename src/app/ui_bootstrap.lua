@@ -2,8 +2,8 @@ local board_scene = require("src.ui.render.board_scene")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local canvas_event_router = require("src.ui.ctl.canvas_event_router")
 local base_nodes = require("src.ui.schema.base")
-local always_show_nodes = require("src.ui.schema.always_show")
-local always_show_contract = require("src.ui.schema.always_show_contract")
+local permanent_nodes = require("src.ui.schema.permanent")
+local base_contract = require("src.ui.schema.base_contract")
 local player_choice_nodes = require("src.ui.schema.player_choice")
 local target_choice_nodes = require("src.ui.schema.target_choice")
 local remote_choice_nodes = require("src.ui.schema.remote_choice")
@@ -31,7 +31,7 @@ end
 local function _required_click_nodes(opts)
   local required = {
     base_nodes.action_button,
-    always_show_nodes.auto_button,
+    base_nodes.auto_button,
     target_choice_nodes.confirm,
     target_choice_nodes.cancel,
     secondary_confirm_nodes.confirm,
@@ -54,8 +54,8 @@ local function _build_required_click_nodes(opts)
   for _, name in ipairs(remote_choice_nodes.options) do
     required[#required + 1] = name
   end
-  _append_click_nodes(required, base_nodes.card_outlines)
-  _append_click_nodes(required, always_show_contract.action_log.toggle_targets)
+  _append_click_nodes(required, permanent_nodes.card_outlines)
+  _append_click_nodes(required, base_contract.action_log.toggle_targets)
 
   local extra = opts and opts.extra or nil
   _append_click_nodes(required, type(extra) == "table" and extra or nil)
@@ -126,9 +126,9 @@ function M.install(state, current_game_ref, opts)
     runtime_ports.schedule(1.0, function()
       ui_events.send_to_all(ui_events.hide["加载屏"], {})
       ui_events.send_to_all(ui_events.show["基础屏"], {})
-      local always_show_event = ui_events.show[always_show_nodes.canvas]
-      if always_show_event then
-        ui_events.send_to_all(always_show_event, {})
+      local permanent_event = ui_events.show[permanent_nodes.canvas]
+      if permanent_event then
+        ui_events.send_to_all(permanent_event, {})
       end
     end)
   end)

@@ -4,7 +4,7 @@ local player_choice_nodes = require("src.ui.schema.player_choice")
 local target_choice_nodes = require("src.ui.schema.target_choice")
 local remote_choice_nodes = require("src.ui.schema.remote_choice")
 local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
-local always_show_contract = require("src.ui.schema.always_show_contract")
+local base_contract = require("src.ui.schema.base_contract")
 
 local M = {}
 
@@ -98,7 +98,7 @@ local function sync_target_choice_buttons(state, locked)
 end
 
 local function set_debug_log(_, text)
-  set_text(nil, always_show_contract.action_log.label, text)
+  set_text(nil, base_contract.action_log.label, text)
 end
 
 local function set_debug_visible(ui, visible)

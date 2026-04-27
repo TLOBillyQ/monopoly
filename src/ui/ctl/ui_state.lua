@@ -1,16 +1,16 @@
 local base_nodes = require("src.ui.schema.base")
 local popup_nodes = require("src.ui.schema.popup")
 local bankruptcy_nodes = require("src.ui.schema.bankruptcy")
-local always_show_nodes = require("src.ui.schema.always_show")
+local permanent_nodes = require("src.ui.schema.permanent")
 local ui_nodes = require("src.ui.render.node_ops")
-local always_show_contract = require("src.ui.schema.always_show_contract")
+local base_contract = require("src.ui.schema.base_contract")
 local canvas_store = require("src.ui.stores.canvas_store")
 
 local M = {}
 
 function M.build_ui_state()
-  local item_slots = base_nodes.item_slots
-  local card_outlines = base_nodes.card_outlines
+  local item_slots = permanent_nodes.item_slots
+  local card_outlines = permanent_nodes.card_outlines
   local base_hidden_nodes = { base_nodes.action_button }
   for _, name in ipairs(item_slots) do
     table.insert(base_hidden_nodes, name)
@@ -27,19 +27,19 @@ function M.build_ui_state()
     text = bankruptcy_nodes.text,
     avatar = bankruptcy_nodes.avatar,
   }
-  local auto_control_nodes = { always_show_nodes.auto_button, always_show_nodes.auto_label }
+  local auto_control_nodes = { base_nodes.auto_button, base_nodes.auto_label }
   local canvas_state = {
     base = {
-      item_slots = item_slots,
-      card_outlines = card_outlines,
       hidden_nodes = base_hidden_nodes,
       hidden_labels = {},
-    },
-    always_show = {
       auto_control_nodes = auto_control_nodes,
       action_log = {
-        toggle_targets = always_show_contract.action_log.toggle_targets,
+        toggle_targets = base_contract.action_log.toggle_targets,
       },
+    },
+    permanent = {
+      item_slots = item_slots,
+      card_outlines = card_outlines,
     },
     choice = {
       screens = choice_screens,
@@ -61,11 +61,11 @@ function M.build_ui_state()
     role_control_lock_exempt_count_by_role = {},
     debug_visible_by_role = {},
     debug_log_enabled_by_role = {},
-    item_slots = canvas_state.base.item_slots,
-    card_outlines = canvas_state.base.card_outlines,
+    item_slots = canvas_state.permanent.item_slots,
+    card_outlines = canvas_state.permanent.card_outlines,
     base_hidden_nodes = canvas_state.base.hidden_nodes,
     base_hidden_labels = {},
-    auto_control_nodes = canvas_state.always_show.auto_control_nodes,
+    auto_control_nodes = canvas_state.base.auto_control_nodes,
     market_active = false,
     choice_active = false,
     active_choice_screen_key = nil,

@@ -11,7 +11,7 @@ local canvas_store = require("src.ui.stores.canvas_store")
 local canvas = require("src.ui.ctl.canvas_coordinator")
 local ui_events = require("src.ui.ctl.ui_events")
 local base_nodes = require("src.ui.schema.base")
-local always_show_nodes = require("src.ui.schema.always_show")
+local permanent_nodes = require("src.ui.schema.permanent")
 local remote_choice_intents = require("src.ui.input.canvas_route.remote_choice")
 local target_choice_intents = require("src.ui.input.canvas_route.target_choice")
 local market_intents = require("src.ui.input.canvas_route.market")
@@ -40,7 +40,7 @@ end
 local function _test_enable_action_log_toggle_touch_fallback_never_crash_on_bad_cached_nodes()
   logger.clear()
   local cache = {
-    [always_show_nodes.action_log_button] = { _build_crash_node() },
+    [base_nodes.action_log_button] = { _build_crash_node() },
   }
   local manager = { client_role = { any = true } }
 
@@ -76,7 +76,7 @@ local function _test_enable_action_log_toggle_touch_prefers_named_ui_touch_path(
   end)
 
   _assert_eq(#calls, 1, "ui path should touch one action-log toggle node")
-  _assert_eq(calls[1].name, always_show_nodes.action_log_button, "touch should target action-log button")
+  _assert_eq(calls[1].name, base_nodes.action_log_button, "touch should target action-log button")
   _assert_eq(calls[1].enabled, true, "toggle button should be enabled")
 end
 
@@ -207,8 +207,8 @@ end
 local function _test_canvas_registry_builds_canvas_first_route_specs()
   local state = {
     ui = {
-      item_slots = { "基础_道具槽位1" },
-      card_outlines = { "基础_可出牌外框1" },
+      item_slots = { "常驻_道具槽位1" },
+      card_outlines = { "常驻_可出牌外框1" },
       popup_screen = {
         dismiss_nodes = { "卡牌展示_图片" },
       },
@@ -228,8 +228,8 @@ local function _test_canvas_registry_builds_canvas_first_route_specs()
 
   local specs = canvas_registry.build_route_specs(state)
   assert(_find_spec(specs, base_nodes.action_button) ~= nil, "route specs should include base action button")
-  assert(_find_spec(specs, always_show_nodes.action_log_button) ~= nil, "route specs should include action log button")
-  local outline_spec = _find_spec(specs, "基础_可出牌外框1")
+  assert(_find_spec(specs, base_nodes.action_log_button) ~= nil, "route specs should include action log button")
+  local outline_spec = _find_spec(specs, "常驻_可出牌外框1")
   assert(outline_spec ~= nil, "route specs should include item outline node")
   local intent = outline_spec.build_intent and outline_spec.build_intent() or nil
   _assert_eq(intent and intent.id, "item_slot_1", "outline click should still map to item slot intent")
@@ -275,17 +275,17 @@ local function _test_canvas_switch_keeps_always_show_visible()
   local role = { id = "r1" }
   local canvas_names = {
     base_nodes.canvas,
-    always_show_nodes.canvas,
+    permanent_nodes.canvas,
     "其他屏",
   }
   local show = {
     [base_nodes.canvas] = "show_base",
-    [always_show_nodes.canvas] = "show_always",
+    [permanent_nodes.canvas] = "show_always",
     ["其他屏"] = "show_other",
   }
   local hide = {
     [base_nodes.canvas] = "hide_base",
-    [always_show_nodes.canvas] = "hide_always",
+    [permanent_nodes.canvas] = "hide_always",
     ["其他屏"] = "hide_other",
   }
   _with_patches({

@@ -131,7 +131,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
   end
 
   local node_map = {
-    ["始终显示_行动日志图标"] = new_node(),
+    ["基础_行动日志图标"] = new_node(),
   }
   local function query_nodes_by_name(name)
     local node = node_map[name]
@@ -174,14 +174,14 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
 
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
-    assert(type(node_map["始终显示_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
+    assert(type(node_map["基础_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
     local before = require("src.ui.ctl.event_state").resolve_debug_enabled(state, role_id)
-    node_map["始终显示_行动日志图标"]._listener_cb({ role = role })
+    node_map["基础_行动日志图标"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
     _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role")
 
-    node_map["始终显示_行动日志图标"]._listener_cb({ role = role })
+    node_map["基础_行动日志图标"]._listener_cb({ role = role })
     local second_value = state.ui.debug_visible_by_role[role_id]
     assert(second_value ~= first_value, "action_log toggle should flip role visibility after second click")
     _assert_eq(UIManager.client_role, nil, "action_log toggle should restore client role after second click")
@@ -204,7 +204,7 @@ local function _test_ui_event_router_rejects_action_log_without_role()
 
   local show_tip_calls = 0
   local node_map = {
-    ["始终显示_行动日志图标"] = new_node(),
+    ["基础_行动日志图标"] = new_node(),
   }
   local local_role = _build_role_with_events("101", {})
 
@@ -249,7 +249,7 @@ local function _test_ui_event_router_rejects_action_log_without_role()
     canvas_event_router.bind(state, function()
       return {}
     end)
-    node_map["始终显示_行动日志图标"]._listener_cb({})
+    node_map["基础_行动日志图标"]._listener_cb({})
     _assert_eq(state.ui.debug_visible_by_role[101], nil, "missing role click should not mutate role debug state")
   end)
 
@@ -272,7 +272,7 @@ local function _test_ui_event_router_action_log_uses_cached_local_role_when_even
 
   local show_tip_calls = 0
   local node_map = {
-    ["始终显示_行动日志图标"] = new_node(),
+    ["基础_行动日志图标"] = new_node(),
   }
   local local_role = _build_role_with_events("101", {})
 
@@ -309,9 +309,9 @@ local function _test_ui_event_router_action_log_uses_cached_local_role_when_even
     canvas_event_router.bind(state, function()
       return {}
     end)
-    node_map["始终显示_行动日志图标"]._listener_cb({ role = local_role })
+    node_map["基础_行动日志图标"]._listener_cb({ role = local_role })
     _assert_eq(state.ui.debug_visible_by_role[101], true, "first click should enable local debug")
-    node_map["始终显示_行动日志图标"]._listener_cb({})
+    node_map["基础_行动日志图标"]._listener_cb({})
     _assert_eq(state.ui.debug_visible_by_role[101], false, "second click without role should use cached local role")
     _assert_eq(state.ui.debug_visible_by_role[2], nil, "action_log should not fall back to current_player_id")
   end)
@@ -320,7 +320,7 @@ local function _test_ui_event_router_action_log_uses_cached_local_role_when_even
 end
 
 local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player()
-  local always_show_nodes = require("src.ui.schema.always_show")
+  local always_show_nodes = require("src.ui.schema.base")
 
   local function new_node()
     local node = {}
