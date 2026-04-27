@@ -1,78 +1,10 @@
--- luacheck: ignore 211
-local support = require("support.presentation_support")
-local _new_game = support.new_game
-local _build_ui_port = support.build_ui_port
-local _open_choice = support.open_choice
-local _get_choice = support.get_choice
-local _assert_eq = support.assert_eq
-local _bind_ui_runtime = support.bind_ui_runtime
-local _with_patches = support.with_patches
-local turn_anim = support.turn_anim
-local tick_timeout = support.tick_timeout
-local constants = support.constants
-local choice_resolver = support.choice_resolver
-local gameplay_loop = support.gameplay_loop
-local turn_move = support.turn_move
-local event_handlers = require("src.ui.ctl.event_handlers")
-local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
-local dispatch = require("src.turn.actions.action_dispatcher")
-local runtime_port = require("src.ui.render.runtime_ui")
-local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.ctl.choice_screens.openers")
-local market_view = require("src.ui.render.market")
-local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.ctl.canvas_event_router")
+local P = require("support.presentation_action_status_prelude")
+local _assert_eq = P.assert_eq
+local _bind_ui_runtime = P.bind_ui_runtime
+local _with_patches = P.with_patches
+local _wrap_ui_refs = P.wrap_ui_refs
+local _has_event = P.has_event
 local ui_view = require("src.ui.ctl.ui_runtime")
-local ui_status_3d_layer = require("src.ui.render.status3d")
-local action_anim = require("src.ui.render.action_anim")
-local move_anim = require("src.ui.render.move_anim")
-local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.wid.turn_effects")
-local popup_renderer = require("src.ui.ctl.popup")
-local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.ui.ports.debug")
-local role_control_lock_policy = require("src.ui.input.role_control_lock")
-local ui_touch_policy = require("src.ui.input.touch")
-local ui_choice_route_policy = require("src.ui.input.choice_route")
-local logger = require("src.core.utils.logger")
-local market_cfg = require("src.config.content.market")
-local runtime_constants = require("src.config.gameplay.runtime_constants")
-local timing = require("src.config.gameplay.timing")
-local host_runtime = require("src.host")
-local runtime_state = require("src.ui.state")
-local target_choice_effects = require("src.ui.ctl.target_choice_effects")
-local vec3 = require("fixtures.vec3")
-
-local function _ui_runtime(state)
-  return runtime_state.ensure_ui_runtime(state)
-end
-
-local _wrap_ui_refs = support.wrap_ui_refs
-local _build_popup_view_state = support.build_popup_view_state
-local _build_role_with_events = support.build_role_with_events
-local _has_event = support.has_event
-local _build_choice_modal_state = support.build_choice_modal_state
-local _build_target_pick_env = support.build_target_pick_env
-
-local function _make_unit(initial_count)
-  local unit = {
-    count = initial_count or 0,
-    add_calls = 0,
-    remove_calls = 0,
-  }
-  function unit.get_state_count()
-    return unit.count
-  end
-  function unit.add_state()
-    unit.add_calls = unit.add_calls + 1
-    unit.count = unit.count + 1
-  end
-  function unit.remove_state()
-    unit.remove_calls = unit.remove_calls + 1
-    unit.count = math.max(0, unit.count - 1)
-  end
-  return unit
-end
 
 local function _test_item_slot_uses_keep_size_path()
   local keep_size_calls = 0
@@ -622,9 +554,6 @@ end
 
 local function _test_passive_slot_three_state_rendering()
   local touch_state = {}
-  local visible_state = {} -- luacheck: ignore 241
-  local label_state = {} -- luacheck: ignore 241
-  local events = {}
   local state = {
     ui_refs = _wrap_ui_refs({
       ["Empty"] = "EMPTY",
@@ -646,12 +575,8 @@ local function _test_passive_slot_three_state_rendering()
       set_touch_enabled = function(_, name, enabled)
         touch_state[name] = enabled == true
       end,
-      set_visible = function(_, name, visible)
-        visible_state[name] = visible == true
-      end,
-      set_label = function(_, name, text)
-        label_state[name] = text
-      end,
+      set_visible = function() end,
+      set_label = function() end,
     },
   }
   local ui_model = {

@@ -1,58 +1,14 @@
--- luacheck: ignore 211
-local support = require("support.presentation_support")
-local _new_game = support.new_game
-local _build_ui_port = support.build_ui_port
-local _open_choice = support.open_choice
-local _get_choice = support.get_choice
-local _assert_eq = support.assert_eq
-local _bind_ui_runtime = support.bind_ui_runtime
-local _with_patches = support.with_patches
-local turn_anim = support.turn_anim
-local tick_timeout = support.tick_timeout
-local constants = support.constants
-local choice_resolver = support.choice_resolver
-local gameplay_loop = support.gameplay_loop
-local turn_move = support.turn_move
-local event_handlers = require("src.ui.ctl.event_handlers")
-local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
-local dispatch = require("src.turn.actions.action_dispatcher")
+local P = require("support.presentation_action_status_prelude")
+local _assert_eq = P.assert_eq
+local _bind_ui_runtime = P.bind_ui_runtime
+local _with_patches = P.with_patches
+local _wrap_ui_refs = P.wrap_ui_refs
+local gameplay_loop = P.gameplay_loop
 local runtime_port = require("src.ui.render.runtime_ui")
-local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.ctl.choice_screens.openers")
-local market_view = require("src.ui.render.market")
-local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.ctl.canvas_event_router")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local ui_status_3d_layer = require("src.ui.render.status3d")
-local action_anim = require("src.ui.render.action_anim")
-local move_anim = require("src.ui.render.move_anim")
-local runtime_cls = require("src.turn.loop.scheduler_runtime")
 local turn_effects = require("src.ui.wid.turn_effects")
-local popup_renderer = require("src.ui.ctl.popup")
-local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.ui.ports.debug")
-local role_control_lock_policy = require("src.ui.input.role_control_lock")
-local ui_touch_policy = require("src.ui.input.touch")
-local ui_choice_route_policy = require("src.ui.input.choice_route")
-local logger = require("src.core.utils.logger")
-local market_cfg = require("src.config.content.market")
-local runtime_constants = require("src.config.gameplay.runtime_constants")
-local timing = require("src.config.gameplay.timing")
-local host_runtime = require("src.host")
-local runtime_state = require("src.ui.state")
-local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local vec3 = require("fixtures.vec3")
-
-local function _ui_runtime(state)
-  return runtime_state.ensure_ui_runtime(state)
-end
-
-local _wrap_ui_refs = support.wrap_ui_refs
-local _build_popup_view_state = support.build_popup_view_state
-local _build_role_with_events = support.build_role_with_events
-local _has_event = support.has_event
-local _build_choice_modal_state = support.build_choice_modal_state
-local _build_target_pick_env = support.build_target_pick_env
 
 local function _build_status3d_test_env()
   local created_layers = {}
@@ -210,106 +166,6 @@ local function _build_turn_effect_runtime_env(role_ids)
       assert(node ~= nil, "missing role node: " .. tostring(name))
       return node
     end,
-  }
-end
-
-local function _new_cash_delta_presenter_env(opts)
-  opts = opts or {}
-  local presenter = require("src.ui.wid.panel_presenter")
-  local number_utils = require("src.core.utils.number")
-  local state = {
-    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
-    ui = {
-      item_slots = {},
-      base_hidden_nodes = {},
-      base_hidden_labels = {},
-      auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
-      item_slot_item_ids_by_role = {},
-      labels = {},
-      visible = {},
-      set_label = function(self, name, text)
-        if opts.missing_delta_node and string.match(name, "^基础%-玩家%d消耗金币显示$") then
-          error("missing node")
-        end
-        self.labels[name] = text
-      end,
-      set_visible = function(self, name, value)
-        if opts.missing_delta_node and string.match(name, "^基础%-玩家%d消耗金币显示$") then
-          error("missing node")
-        end
-        self.visible[name] = value
-      end,
-      set_touch_enabled = function() end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
-  local ui_model = {
-    current_player_id = 1,
-    auto_enabled_by_player = { [1] = false },
-    board = { players = {} },
-    item_slots_by_player = {},
-    panel = {
-      turn_label = "倒计时:0",
-      auto_label = "自动：关",
-      auto_label_by_player = { [1] = "自动：关" },
-      no_action_visible = false,
-      no_action_text = "",
-      player_rows = {
-        { name = "P1", avatar = nil, eliminated = false, cash_value = 0, total_assets_value = 0, cash = "现金: 0", land_count = "", total_assets = "总资产: 0" },
-        { name = "P2", avatar = nil, eliminated = false, cash_value = nil, total_assets_value = nil, cash = "", land_count = "", total_assets = "" },
-        { name = "P3", avatar = nil, eliminated = false, cash_value = nil, total_assets_value = nil, cash = "", land_count = "", total_assets = "" },
-        { name = "P4", avatar = nil, eliminated = false, cash_value = nil, total_assets_value = nil, cash = "", land_count = "", total_assets = "" },
-      },
-    },
-  }
-  local runtime = {
-    set_client_role = function() end,
-    resolve_role_id = function() return nil end,
-    for_each_role_or_global = function(fn)
-      fn(nil)
-    end,
-    query_node = function()
-      return {}
-    end,
-    set_node_texture_native_size = function() end,
-  }
-  local function set_cash(index, value)
-    local row = ui_model.panel.player_rows[index]
-    row.cash_value = value
-    if value == nil then
-      row.cash = ""
-    else
-      row.cash = "现金: " .. number_utils.format_integer_part(value)
-    end
-  end
-  local function set_total_assets(index, value)
-    local row = ui_model.panel.player_rows[index]
-    row.total_assets_value = value
-    if value == nil then
-      row.total_assets = ""
-    else
-      row.total_assets = "总资产: " .. number_utils.format_integer_part(value)
-    end
-  end
-  local function set_eliminated(index, value)
-    local row = ui_model.panel.player_rows[index]
-    row.eliminated = value == true
-  end
-  local function refresh()
-    presenter.refresh(state, ui_model, {
-      runtime = runtime,
-      refresh_item_slots = function() end,
-    })
-  end
-  return {
-    state = state,
-    ui_model = ui_model,
-    refresh = refresh,
-    set_cash = set_cash,
-    set_total_assets = set_total_assets,
-    set_eliminated = set_eliminated,
   }
 end
 
@@ -861,11 +717,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
   local helper = { target_role_id = nil }
   local follow_events = 0
   local game_api = GameAPI or {}
-  local name = "j4MHTwbxEfG+CjRaYHE42T"
-  local newenv = {}
   local function wrapped_trigger()
-    local _ = name
-    local __ = newenv
     follow_events = follow_events + 1
   end
   local patches = {

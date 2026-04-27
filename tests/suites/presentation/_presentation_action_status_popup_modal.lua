@@ -1,120 +1,15 @@
--- luacheck: ignore 211
-local support = require("support.presentation_support")
-local _new_game = support.new_game
-local _build_ui_port = support.build_ui_port
-local _open_choice = support.open_choice
-local _get_choice = support.get_choice
-local _assert_eq = support.assert_eq
-local _bind_ui_runtime = support.bind_ui_runtime
-local _with_patches = support.with_patches
-local turn_anim = support.turn_anim
-local tick_timeout = support.tick_timeout
-local constants = support.constants
-local choice_resolver = support.choice_resolver
-local gameplay_loop = support.gameplay_loop
-local turn_move = support.turn_move
-local event_handlers = require("src.ui.ctl.event_handlers")
-local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
-local dispatch = require("src.turn.actions.action_dispatcher")
+local P = require("support.presentation_action_status_prelude")
+local tick_timeout = P.tick_timeout
+local _assert_eq = P.assert_eq
+local _with_patches = P.with_patches
+local _build_popup_view_state = P.build_popup_view_state
 local runtime_port = require("src.ui.render.runtime_ui")
-local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.ctl.choice_screens.openers")
 local market_view = require("src.ui.render.market")
-local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.ctl.canvas_event_router")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local modal_presenter = require("src.ui.ctl.modal")
-local ui_status_3d_layer = require("src.ui.render.status3d")
-local action_anim = require("src.ui.render.action_anim")
-local move_anim = require("src.ui.render.move_anim")
-local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.wid.turn_effects")
 local popup_renderer = require("src.ui.ctl.popup")
 local market_modal_renderer = require("src.ui.ctl.market")
 local debug_ports_module = require("src.ui.ports.debug")
-local role_control_lock_policy = require("src.ui.input.role_control_lock")
-local ui_touch_policy = require("src.ui.input.touch")
-local ui_choice_route_policy = require("src.ui.input.choice_route")
-local logger = require("src.core.utils.logger")
-local market_cfg = require("src.config.content.market")
-local runtime_constants = require("src.config.gameplay.runtime_constants")
-local target_pick = require("src.config.gameplay.target_pick")
-local host_runtime = require("src.host")
-local host_runtime_bridge = require("src.ui.host_bridge")
-local runtime_state = require("src.ui.state")
-local target_choice_effects = require("src.ui.ctl.target_choice_effects")
-local vec3 = require("fixtures.vec3")
-
-local function _ui_runtime(state)
-  return runtime_state.ensure_ui_runtime(state)
-end
-
-local _wrap_ui_refs = support.wrap_ui_refs
-local _build_popup_view_state = support.build_popup_view_state
-local _build_role_with_events = support.build_role_with_events
-local _has_event = support.has_event
-local _build_choice_modal_state = support.build_choice_modal_state
-local _build_target_pick_env = support.build_target_pick_env
-
-local function _with_target_pick_runtime(env, fn)
-  local marker_seq = 0
-  local created_markers = {}
-  local current_hit = nil
-  local owner_role = {
-    get_ctrl_unit = function()
-      return {
-        get_position = function()
-          return vec3.with_sub_length(0, 0, 0)
-        end,
-      }
-    end,
-  }
-  _with_patches({
-    { key = "UIManager", value = { query_nodes_by_name = env.query_nodes, EVENT = { CLICK = "CLICK" } } },
-    { key = "all_roles", value = nil },
-    { target = host_runtime, key = "resolve_role", value = function()
-      return owner_role
-    end },
-    { target = host_runtime, key = "build_camera_ray", value = function()
-      return { start_pos = vec3.with_sub_length(0, 1, 0), end_pos = vec3.with_sub_length(0, 1, 20) }
-    end },
-    { target = host_runtime, key = "pick_first_hit_unit", value = function()
-      return current_hit
-    end },
-    { target = host_runtime, key = "create_unit_with_scale", value = function(_, pos)
-      marker_seq = marker_seq + 1
-      local marker = {
-        _unit_id = 3000 + marker_seq,
-        _position = pos,
-      }
-      created_markers[#created_markers + 1] = marker
-      return marker
-    end },
-    { target = host_runtime, key = "destroy_unit", value = function(marker)
-      marker._destroyed = true
-    end },
-    { target = host_runtime, key = "get_unit_id", value = function(unit)
-      return unit and unit._unit_id or nil
-    end },
-    { target = host_runtime, key = "resolve_hit_position", value = function(hit)
-      return hit and hit.hit_pos or nil
-    end },
-  }, function()
-    fn({
-      set_hit = function(unit_id, hit_pos)
-        if unit_id == nil then
-          current_hit = nil
-          return
-        end
-        current_hit = {
-          unit = { _unit_id = unit_id },
-          hit = { hit_pos = hit_pos },
-        }
-      end,
-      created_markers = created_markers,
-    })
-  end)
-end
 
 local function _test_popup_timeout_closes_even_when_input_blocked()
   local state, nodes, query_nodes = _build_popup_view_state({
