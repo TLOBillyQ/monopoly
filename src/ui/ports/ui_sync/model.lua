@@ -1,4 +1,4 @@
-local turn_ui_sync_shared = require("src.core.ui_sync.turn_ui_sync_shared")
+local turn_ui_sync_shared = require("src.core.ui_sync_shared")
 local runtime_state = require("src.ui.state")
 local landing_visual_hold = require("src.ui.landing_visual_hold")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")

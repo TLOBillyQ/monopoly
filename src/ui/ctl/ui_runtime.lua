@@ -1,8 +1,8 @@
 local panel_presenter = require("src.ui.wid.panel_presenter")
 local render_pipeline = require("src.ui.render.canvas_render_pipeline")
-local input_lock_policy = require("src.ui.input.lock_policy")
-local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
-local ui_touch_policy = require("src.ui.input.touch_policy")
+local input_lock_policy = require("src.ui.input.lock")
+local role_control_lock_policy = require("src.ui.input.role_control_lock")
+local ui_touch_policy = require("src.ui.input.touch")
 local runtime = require("src.ui.render.runtime_ui")
 
 local state = require("src.ui.ctl.ui_state")

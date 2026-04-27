@@ -41,7 +41,7 @@ function pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, opts)
 
   local refresh_item_slots = opts and opts.refresh_item_slots
   local runtime = opts and opts.runtime or require("src.ui.render.runtime_ui")
-  local ui_touch_policy = opts and opts.ui_touch_policy or require("src.ui.input.touch_policy")
+  local ui_touch_policy = opts and opts.ui_touch_policy or require("src.ui.input.touch")
   if _should_refresh_panel(dirty) then
     panel_presenter.refresh(state_ctx, ui_model, {
       runtime = runtime,

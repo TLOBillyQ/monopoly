@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local item_slot_data = require("src.turn.actions.item_slot_data")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local role_id_utils = require("src.core.utils.role_id")

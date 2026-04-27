@@ -1,4 +1,4 @@
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local gameplay_read_port = {}

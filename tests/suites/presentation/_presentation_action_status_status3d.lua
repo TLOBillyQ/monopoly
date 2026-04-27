@@ -31,9 +31,9 @@ local turn_effects = require("src.ui.wid.turn_effects")
 local popup_renderer = require("src.ui.ctl.popup")
 local market_modal_renderer = require("src.ui.ctl.market")
 local debug_ports_module = require("src.ui.ports.debug")
-local role_control_lock_policy = require("src.ui.input.role_control_lock_policy")
-local ui_touch_policy = require("src.ui.input.touch_policy")
-local ui_choice_route_policy = require("src.ui.input.choice_route_policy")
+local role_control_lock_policy = require("src.ui.input.role_control_lock")
+local ui_touch_policy = require("src.ui.input.touch")
+local ui_choice_route_policy = require("src.ui.input.choice_route")
 local logger = require("src.core.utils.logger")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
@@ -216,7 +216,7 @@ end
 local function _new_cash_delta_presenter_env(opts)
   opts = opts or {}
   local presenter = require("src.ui.wid.panel_presenter")
-  local number_utils = require("src.core.utils.number_utils")
+  local number_utils = require("src.core.utils.number")
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
     ui = {

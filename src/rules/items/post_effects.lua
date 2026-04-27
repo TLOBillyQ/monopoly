@@ -5,7 +5,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local action_anim_port = require("src.core.ports.action_anim")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local obstacle_clear = require("src.rules.items.obstacle_clear")
 
 local post_effects = {}

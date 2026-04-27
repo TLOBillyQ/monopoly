@@ -4,7 +4,7 @@ local board_query = require("src.rules.board.query")
 local property_value = require("src.rules.commerce.property_value")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local target_query = require("src.rules.items.target_query")
 
 local demolish = {}

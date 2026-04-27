@@ -102,7 +102,7 @@ local _asset_handlers_final_tests = {
        dependencies = function()
          return {
            monopoly_event = require("src.core.events"),
-           number_utils = require("src.core.utils.number_utils"),
+           number_utils = require("src.core.utils.number"),
          }
        end,
      }
@@ -142,7 +142,7 @@ local _asset_handlers_final_tests = {
        dependencies = function()
          return {
            monopoly_event = require("src.core.events"),
-           number_utils = require("src.core.utils.number_utils"),
+           number_utils = require("src.core.utils.number"),
          }
        end,
      }
@@ -179,7 +179,7 @@ local _asset_handlers_final_tests = {
        dependencies = function()
          return {
            monopoly_event = require("src.core.events"),
-           number_utils = require("src.core.utils.number_utils"),
+           number_utils = require("src.core.utils.number"),
          }
        end,
      }

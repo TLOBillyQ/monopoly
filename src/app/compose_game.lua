@@ -8,9 +8,9 @@ local turn_runtime = require("src.turn.loop.scheduler_runtime")
 local bootstrap = require("src.rules.bootstrap.registries")
 local game_factory = require("src.app.game_factory")
 local phase_registry = require("src.turn.phases.registry")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local role_id_utils = require("src.core.utils.role_id")
-local intent_output_adapter = require("src.turn.output.intent_output_adapter")
+local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 
 local composition_root = {}
 
@@ -118,7 +118,7 @@ local function _apply_game_defaults(game, opts, board, players, dirty)
       return false
     end,
   }
-  game.intent_output_port = game.intent_output_port or intent_output_adapter.build()
+  game.intent_output_port = game.intent_output_port or intent_dispatcher.build_port()
   function game:consume_dirty()
     return dirty_tracker.consume(self.dirty)
   end

@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local intent_output_port = require("src.rules.ports.intent_output")
-local intent_output_adapter = require("src.turn.output.intent_output_adapter")
+local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local gameplay_loop = require("src.turn.loop")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local market_purchase = require("src.rules.market.purchase.core")
@@ -24,7 +24,7 @@ local function _test_gameplay_loop_set_game_installs_intent_output_port()
   local installed_port = { open_choice = function() end, push_popup = function() return true end }
 
   _with_patches({
-    { target = intent_output_adapter, key = "build", value = function() return installed_port end },
+    { target = intent_dispatcher, key = "build_port", value = function() return installed_port end },
     { target = paid_currency_bridge, key = "setup_for_game", value = function() return true end },
     { target = market_purchase, key = "setup_for_game", value = function() return true end },
   }, function()

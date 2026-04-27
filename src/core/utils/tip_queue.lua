@@ -1,4 +1,4 @@
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local timing = require("src.config.gameplay.timing")
 
 local tip_queue = {

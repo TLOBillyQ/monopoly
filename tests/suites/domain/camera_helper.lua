@@ -1,5 +1,5 @@
 local support = require("support.domain_support")
-local camera_helper = require("src.host.camera_helper")
+local camera_helper = require("src.host.camera")
 
 local _assert_eq = support.assert_eq
 

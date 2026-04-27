@@ -1,6 +1,6 @@
 local constants = require("src.config.content.constants")
 local timing = require("src.config.gameplay.timing")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local logger_utils = require("src.core.utils.logger_utils")
 local choice_contract = require("src.core.choice.contract")
 local output_state_adapter = require("src.turn.output.state_adapter")

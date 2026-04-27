@@ -1,4 +1,4 @@
-local landing_defs = require("src.rules.land.specs.effects")
+local landing_defs = require("src.rules.land.landing_defs")
 local effect_pipeline = require("src.rules.effects.pipeline")
 local effect_runner = require("src.rules.effects.runner")
 local wait_callbacks = require("src.turn.waits.callback_registry")

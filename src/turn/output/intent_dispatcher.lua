@@ -135,4 +135,11 @@ function intent_dispatcher.dispatch(game, payload, opts)
   return nil
 end
 
+function intent_dispatcher.build_port()
+  return {
+    open_choice = intent_dispatcher.open_choice,
+    push_popup = intent_dispatcher.push_popup,
+  }
+end
+
 return intent_dispatcher

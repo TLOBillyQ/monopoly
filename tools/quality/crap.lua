@@ -333,7 +333,8 @@ local function _run_report(options, env)
   if binary_path == nil then
     return { ok = false, code = 1, err = build_err }
   end
-  local out_ok, out_err = common.ensure_parent_dir(options.out)
+  local ensure_parent_dir = env.ensure_parent_dir or common.ensure_parent_dir
+  local out_ok, out_err = ensure_parent_dir(options.out)
   if not out_ok then
     return { ok = false, code = 1, err = out_err }
   end
@@ -367,7 +368,8 @@ local function _run_viewer(options, env)
   if binary_path == nil then
     return { ok = false, code = 1, err = build_err }
   end
-  local out_ok, out_err = common.ensure_dir(options.out_dir)
+  local ensure_dir = env.ensure_dir or common.ensure_dir
+  local out_ok, out_err = ensure_dir(options.out_dir)
   if not out_ok then
     return { ok = false, code = 1, err = out_err }
   end

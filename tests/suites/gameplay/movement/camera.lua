@@ -1,6 +1,6 @@
 local support = require("support.gameplay_support")
 local _new_game = support.new_game
-local camera_policy = require("src.turn.policies.camera_policy")
+local camera_policy = require("src.turn.policies.camera")
 
 local _resolve_follow_player_id_tests = {
   function()

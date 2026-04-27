@@ -16,7 +16,7 @@
 | `src/ui/schema` | 展示 schema：canvas 节点名、contract 常量、布局清单 | 写状态、宿主调用、输入路由 |
 | `src/ui` | 展示适配：input 映射、UI model 查询、Canvas 渲染、UI 事件桥接 | 根据 `choice.kind`/`meta`/商品配置自行推断业务语义 |
 
-`src/turn/output/` 属于 `turn`，不是独立 runtime 目录。其中 `intent_output_adapter`、`state_adapter` 只服务 turn use case 输出，不承载宿主能力。
+`src/turn/output/` 属于 `turn`，不是独立 runtime 目录。其中 `intent_dispatcher`、`state_adapter` 只服务 turn use case 输出，不承载宿主能力。
 
 ## Port 命名规则
 
@@ -25,7 +25,7 @@
 | `*.lua`（目录内短名） | 单一窄接口契约 | `bankruptcy_feedback.lua` |
 | `ports.lua` | 包入口 bundle / grouped ports 装配 | `runtime/ports.lua` |
 | `ports/*.lua` | bundle 叶子模块，文件名用目录内短名 | `presentation/runtime/ports/anim.lua` |
-| `*_port_adapter.lua` | 外层对某契约的实现 | `auto_play_port_adapter.lua` |
+| `*_port_adapter.lua` | 外层对某契约的实现 | `paid_purchase_port_adapter.lua` |
 
 `*_ports.lua`、`*_port.lua` 旧命名不再作为 canonical 文件名；本轮为硬切，不保留旧兼容文件。
 

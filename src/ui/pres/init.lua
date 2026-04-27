@@ -2,7 +2,7 @@ local board_slice = require("src.ui.pres.board_slice")
 local item_slice = require("src.ui.pres.item_slice")
 local choice_slice = require("src.ui.pres.choice_slice")
 local panel_slice = require("src.ui.pres.panel_slice")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local role_id_utils = require("src.core.utils.role_id")
 
 local model_api = {}

@@ -1,4 +1,4 @@
-local test_profiles = require("src.app.testing.config.test_profiles")
+local test_profiles = require("src.app.testing.test_profiles")
 
 local resolver = {}
 local default_map_module = "src.config.content.maps.default_map"

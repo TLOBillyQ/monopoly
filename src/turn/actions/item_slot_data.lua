@@ -1,4 +1,4 @@
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local role_id_utils = require("src.core.utils.role_id")
 
 local item_slot_data = {}

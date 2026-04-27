@@ -342,7 +342,7 @@ end
 
 local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
   local auto_runner = require("src.turn.policies.auto_runner")
-  local auto_policy = require("src.turn.policies.choice_auto_policy")
+  local auto_policy = require("src.turn.policies.choice_auto")
   local runner = auto_runner:new({ interval = 0 })
   runner:set_enabled(true)
 

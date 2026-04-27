@@ -1,5 +1,5 @@
 local availability = require("src.rules.items.availability")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local market_service = require("src.rules.market")
 local choice_outcome = require("src.rules.market.choice.outcome")
 local market_context = require("src.rules.market.query.context")

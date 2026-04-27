@@ -1,4 +1,4 @@
-local path_planner = require("src.computer.agent.path_planner")
+local path_planner = require("src.computer.agent.path")
 
 local function _assert_eq(actual, expected, message)
   assert(actual == expected, string.format("%s: expected %s got %s", tostring(message), tostring(expected), tostring(actual)))

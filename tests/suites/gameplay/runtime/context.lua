@@ -4,7 +4,7 @@ local gameplay_loop_ports = require("src.turn.loop.ports")
 local gameplay_loop = support.gameplay_loop
 local landing_visual_hold = support.landing_visual_hold
 local wait_callbacks = require("src.turn.waits.callback_registry")
-local turn_camera_policy = require("src.turn.policies.camera_policy")
+local turn_camera_policy = require("src.turn.policies.camera")
 
 local function _case(name)
   return {

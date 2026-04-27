@@ -2,7 +2,7 @@ local logger = require("src.core.utils.logger")
 local runtime = require("src.ui.render.runtime_ui")
 local base_nodes = require("src.ui.schema.base")
 local base_contract = require("src.ui.schema.base_contract")
-local ui_touch_policy = require("src.ui.input.touch_policy")
+local ui_touch_policy = require("src.ui.input.touch")
 local host_runtime_ports = require("src.ui.host_bridge")
 
 local bindings = {}

@@ -21,7 +21,7 @@ local function _test_autorunner_runs_to_end()
   g.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
   g.popup_port = { push_popup = function() return false end }
   g.tile_feedback_port = { on_tile_upgraded = function() return false end }
-  g.intent_output_port = require("src.turn.output.intent_output_adapter").build()
+  g.intent_output_port = require("src.turn.output.intent_dispatcher").build_port()
 
   local state = {
     gameplay_loop_ports = _build_test_ports({
@@ -495,7 +495,7 @@ local function _test_steal_interrupt_resume_uses_interrupt_facing()
 end
 
 local function _test_decision_engine_cancels_item_phase_passive()
-  local decision_engine = require("src.computer.agent.decision_engine")
+  local decision_engine = require("src.computer.agent.decision")
   local g = _new_game()
   local player = g.players[1]
   player.is_ai = true

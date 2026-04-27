@@ -1,4 +1,4 @@
-local paid_goods_cfg = require("src.rules.commerce.specs.paid_goods")
+local paid_goods_cfg = require("src.rules.commerce.paid_goods")
 
 local bridge = {}
 

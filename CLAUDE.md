@@ -47,7 +47,7 @@
 ## 常驻规则
 
 - 命名 `snake_case`，类名 `CamelCase`。
-- `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.core.utils.number_utils`）。
+- `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.core.utils.number`）。
 - `src/` canonical 命名硬切，不保留 alias/shim。
 - `tools/` `tests/` 文件与进程操作统一用 `tools/shared/lib/common.lua`：
   - `common.run_command` / `common.ensure_dir`（禁 `os.execute` / `io.popen`）

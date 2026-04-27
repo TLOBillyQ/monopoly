@@ -1,4 +1,4 @@
-local debug_helpers = require("src.turn.waits.await.debug_helpers")
+local debug_helpers = require("src.turn.waits.await.debug")
 
 local M = {}
 

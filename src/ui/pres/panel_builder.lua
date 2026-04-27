@@ -1,5 +1,5 @@
 local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local role_avatar = require("src.ui.pres.role_avatar")
 local runtime_ports = require("src.core.ports.runtime_ports")
 

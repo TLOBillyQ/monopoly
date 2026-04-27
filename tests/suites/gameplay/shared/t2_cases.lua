@@ -6,9 +6,9 @@ local _build_loop_state = fixtures.build_loop_state
 local _with_reloaded_move_module = fixtures.with_reloaded_move_module
 local roll = require("src.turn.phases.roll")
 local tick_choice_timeout = require("src.turn.waits.choice_timeout")
-local turn_camera_policy = require("src.turn.policies.camera_policy")
+local turn_camera_policy = require("src.turn.policies.camera")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
-local turn_timer_policy = require("src.turn.policies.timer_policy")
+local turn_timer_policy = require("src.turn.policies.timer")
 
 local _t2_case_groups = {}
 

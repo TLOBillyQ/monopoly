@@ -1,5 +1,5 @@
 local timing = require("src.config.gameplay.timing")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 
 local tick_ui_gate = {}
 

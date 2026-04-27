@@ -1,6 +1,6 @@
-local path_planner = require("src.computer.agent.path_planner")
-local action_selector = require("src.computer.agent.action_selector")
-local decision_engine = require("src.computer.agent.decision_engine")
+local path_planner = require("src.computer.agent.path")
+local action_selector = require("src.computer.agent.action")
+local decision_engine = require("src.computer.agent.decision")
 
 local agent = {}
 

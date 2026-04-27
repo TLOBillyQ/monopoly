@@ -1,10 +1,10 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.core.utils.logger")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local logger_utils = require("src.core.utils.logger_utils")
 local tick_timeout = require("src.turn.waits.timeout")
 local runtime_state = require("src.state.runtime_state")
-local turn_ui_sync_shared = require("src.core.ui_sync.turn_ui_sync_shared")
+local turn_ui_sync_shared = require("src.core.ui_sync_shared")
 
 local tick_ui_sync = {}
 

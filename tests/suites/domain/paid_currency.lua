@@ -4,8 +4,8 @@ local _with_patches = support.with_patches
 local market_cfg = require("src.config.content.market")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local logger = require("src.core.utils.logger")
-local paid_goods_cfg = require("src.rules.commerce.specs.paid_goods")
-local paid_purchase_port = require("src.rules.market.ports.paid_purchase_port")
+local paid_goods_cfg = require("src.rules.commerce.paid_goods")
+local paid_purchase_port = require("src.rules.market.paid_purchase_port")
 
 local function _reload_bridge()
   package.loaded["src.rules.commerce.paid_currency_bridge"] = nil

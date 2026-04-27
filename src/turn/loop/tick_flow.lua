@@ -1,5 +1,5 @@
 local gameplay_loop_runtime = require("src.turn.loop.runtime")
-local turn_role_control_policy = require("src.turn.policies.role_control_policy")
+local turn_role_control_policy = require("src.turn.policies.role_control")
 local auto_context = require("src.turn.policies.auto_context")
 local tick_steps = require("src.turn.loop.tick_steps")
 local landing_visual_hold = require("src.state.landing_visual_hold")

@@ -108,8 +108,8 @@ local function _test_projection_builds_root_and_app_views()
     root_labels[#root_labels + 1] = node.label
   end
   _assert_contains(root_labels, "app", "root view should expose app subtree")
-  _assert_contains(root_labels, "infrastructure", "root view should expose infrastructure subtree")
-  _assert_contains(root_labels, "presentation", "root view should expose presentation subtree")
+  _assert_contains(root_labels, "host", "root view should expose host subtree")
+  _assert_contains(root_labels, "ui", "root view should expose ui subtree")
   assert(_contains(root_labels, "flow") or _contains(root_labels, "turn"),
     "root view should expose flow/turn subtree")
 
@@ -175,17 +175,17 @@ local function _test_projection_exposes_full_names_and_display_edges()
   local utils_view = architecture.views["core.utils"]
   assert(utils_view ~= nil, "core.utils view should exist")
 
-  local number_utils_node = nil
+  local number_node = nil
   for _, node in ipairs(utils_view.nodes or {}) do
-    if node.module_id == "src.core.utils.number_utils" then
-      number_utils_node = node
+    if node.module_id == "src.core.utils.number" then
+      number_node = node
       break
     end
   end
 
-  assert(number_utils_node ~= nil, "core.utils view should contain number_utils leaf")
-  _assert_eq(number_utils_node.display_label, "number_utils", "leaf display label should use source file basename")
-  _assert_eq(number_utils_node.full_name, "core.utils.number_utils", "leaf full name should strip top-level src prefix")
+  assert(number_node ~= nil, "core.utils view should contain number leaf")
+  _assert_eq(number_node.display_label, "number", "leaf display label should use source file basename")
+  _assert_eq(number_node.full_name, "core.utils.number", "leaf full name should strip top-level src prefix")
   assert(#(architecture.views.root.display_edges or {}) > 0, "root view should expose routed display edges")
 end
 
@@ -200,7 +200,7 @@ local function _test_json_modules_are_self_contained()
   local common_source = _read_file("vendor/arch_view/arch_view/runtime/common.lua")
   local host_source = _read_file("vendor/arch_view/arch_view/runtime/host.lua")
   assert(common_source:find('require("shared.lib.common")', 1, true) == nil, "arch_view common should not depend on monopoly lib.common")
-  assert(host_source:find('src.core.utils.number_utils', 1, true) == nil,
+  assert(host_source:find('src.core.utils.number', 1, true) == nil,
     "arch_view host runtime should not depend on monopoly src modules")
 end
 

@@ -7,7 +7,7 @@ local auto_play_port = require("src.rules.ports.auto_play")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local gameplay_loop_runtime = require("src.turn.loop.runtime")
-local intent_output_adapter = require("src.turn.output.intent_output_adapter")
+local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local auto_context = require("src.turn.policies.auto_context")
 local tick_flow = require("src.turn.loop.tick_flow")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
@@ -42,7 +42,7 @@ local function _ensure_runtime_ports(game)
     return
   end
   if type(game.intent_output_port) ~= "table" then
-    game.intent_output_port = intent_output_adapter.build()
+    game.intent_output_port = intent_dispatcher.build_port()
   end
   _ensure_fallback_ports(game)
 end
@@ -155,7 +155,7 @@ local function _initialize_ports(state, game)
     end,
   }
   game.anim_gate_port = gameplay_loop_runtime.build_anim_gate_port(state)
-  game.intent_output_port = intent_output_adapter.build()
+  game.intent_output_port = intent_dispatcher.build_port()
   _ensure_fallback_ports(game)
   return ports
 end

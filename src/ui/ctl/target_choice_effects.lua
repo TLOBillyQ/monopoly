@@ -1,11 +1,11 @@
 local logger = require("src.core.utils.logger")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local target_pick = require("src.config.gameplay.target_pick")
 local modal_state = require("src.ui.stores.modal_state")
 local host_runtime_ports = require("src.ui.host_bridge")
 local ui_nodes = require("src.ui.render.node_ops")
 local choice_contract = require("src.core.choice.contract")
-local choice_route_policy = require("src.ui.input.choice_route_policy")
+local choice_route_policy = require("src.ui.input.choice_route")
 local target_choice_effects = {}
 local _move_arrow
 local function _is_target_choice(choice)

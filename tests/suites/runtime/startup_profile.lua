@@ -307,7 +307,7 @@ end
 local function _test_test_profile_resolver_returns_fresh_profile_copies()
   local resolver = _reload_module("src.app.testing.test_profile_resolver", {
     "src.config.testing.test_profiles",
-    "src.app.testing.config.test_profiles",
+    "src.app.testing.test_profiles",
     "src.app.testing.test_profile_resolver",
   })
   local first = resolver.resolve_profile("bankruptcy")
@@ -325,7 +325,7 @@ end
 local function _test_test_profile_resolver_default_bootstrap_is_empty_and_not_shared()
   local resolver = _reload_module("src.app.testing.test_profile_resolver", {
     "src.config.testing.test_profiles",
-    "src.app.testing.config.test_profiles",
+    "src.app.testing.test_profiles",
     "src.app.testing.test_profile_resolver",
   })
   local first_bootstrap = resolver.resolve_bootstrap("default")

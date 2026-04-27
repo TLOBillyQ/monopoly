@@ -1,5 +1,5 @@
 local logger = require("src.core.utils.logger")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local logger_utils = require("src.core.utils.logger_utils")
 
 local common = {}

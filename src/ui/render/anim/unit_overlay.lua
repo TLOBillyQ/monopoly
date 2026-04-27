@@ -4,7 +4,7 @@ local compute = require("src.ui.render.anim.overlay_compute")
 local runtime = require("src.ui.render.anim.overlay_runtime")
 local host_runtime_bridge = require("src.ui.host_bridge")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 
 local overlay = {}
 local roadblock_scale = (function()

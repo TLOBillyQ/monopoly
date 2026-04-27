@@ -7,7 +7,7 @@ function runtime_deps.build()
     host_runtime = host_runtime_ports,
     ui_events = require("src.ui.ctl.ui_events"),
     modal_state = require("src.ui.stores.modal_state"),
-    ui_touch_policy = require("src.ui.input.touch_policy"),
+    ui_touch_policy = require("src.ui.input.touch"),
   }
 end
 

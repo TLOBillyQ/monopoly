@@ -4,7 +4,7 @@ local _new_game = support.new_game
 local _build_loop_state = fixtures.build_loop_state
 local runtime_state = require("src.state.runtime_state")
 local gameplay_loop = require("src.turn.loop")
-local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
+local choice_auto_policy = require("src.turn.policies.choice_auto")
 
 local _log_missing_auto_tests = {
   function()

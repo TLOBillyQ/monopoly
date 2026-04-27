@@ -5,7 +5,7 @@ local movement = require("src.rules.movement")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local timing = require("src.config.gameplay.timing")
 local vehicle_feature = require("src.rules.vehicle")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local action_anim_port = require("src.core.ports.action_anim")
 
 local common = {}

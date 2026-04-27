@@ -1,7 +1,7 @@
 local logger = require("src.core.utils.logger")
 local timing = require("src.config.gameplay.timing")
-local number_utils = require("src.core.utils.number_utils")
-local choice_auto_policy = require("src.turn.policies.choice_auto_policy")
+local number_utils = require("src.core.utils.number")
+local choice_auto_policy = require("src.turn.policies.choice_auto")
 
 local turn_decision = {}
 

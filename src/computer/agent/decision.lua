@@ -1,4 +1,4 @@
-local path_planner = require("src.computer.agent.path_planner")
+local path_planner = require("src.computer.agent.path")
 
 local decision_engine = {}
 

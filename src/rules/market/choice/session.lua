@@ -1,6 +1,6 @@
 local choice_builder = require("src.rules.market.choice.builder")
 local feedback = require("src.rules.market.choice.feedback")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local logger = require("src.core.utils.logger")
 local choice_contract = require("src.core.choice.contract")
 

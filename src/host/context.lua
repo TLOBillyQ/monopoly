@@ -181,7 +181,7 @@ function runtime_context.install_runtime_helpers(ctx, opts)
     end, _resolve_game_api)
   end
   if not ctx.camera_helper then
-    ctx.camera_helper = require("src.host.camera_helper").new(ctx.env)
+    ctx.camera_helper = require("src.host.camera").new(ctx.env)
   end
   if not ctx.synthetic_actor_registry then
     ctx.synthetic_actor_registry = synthetic_actor_registry.new(ctx.env)

@@ -3,7 +3,7 @@ local base_nodes = require("src.ui.schema.base")
 local role_id_utils = require("src.core.utils.role_id")
 local panel_cash_delta = require("src.ui.wid.panel_cash_delta")
 local panel_player_slots = require("src.ui.wid.panel_player_slots")
-local ui_touch_policy_runtime = require("src.ui.input.touch_policy")
+local ui_touch_policy_runtime = require("src.ui.input.touch")
 
 local panel_presenter = {}
 

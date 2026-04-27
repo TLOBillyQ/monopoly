@@ -1,6 +1,6 @@
 local context = require("src.rules.market.query.context")
 local eligibility = require("src.rules.market.query.eligibility")
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local tables = require("src.core.utils.tables")
 
 local choice = {}

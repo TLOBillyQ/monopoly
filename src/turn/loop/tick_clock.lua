@@ -1,4 +1,4 @@
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local tick_clock = {}

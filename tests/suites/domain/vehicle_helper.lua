@@ -1,5 +1,5 @@
 local support = require("support.domain_support")
-local vehicle_helper = require("src.host.vehicle_helper")
+local vehicle_helper = require("src.host.vehicle")
 local vehicle_feature = require("src.rules.vehicle")
 local monopoly_events = require("src.core.events")
 local runtime_ports = require("src.core.ports.runtime_ports")

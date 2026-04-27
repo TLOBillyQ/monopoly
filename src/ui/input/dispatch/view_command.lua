@@ -1,5 +1,5 @@
 local view_command_dispatcher = {}
-local number_utils = require("src.core.utils.number_utils")
+local number_utils = require("src.core.utils.number")
 local host_runtime_ports = require("src.ui.host_bridge")
 
 local function _resolve_loaded(name)

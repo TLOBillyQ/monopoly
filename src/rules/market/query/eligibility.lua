@@ -1,6 +1,6 @@
 local inventory = require("src.rules.items.inventory")
 local context = require("src.rules.market.query.context")
-local paid_purchase_port = require("src.rules.market.ports.paid_purchase_port")
+local paid_purchase_port = require("src.rules.market.paid_purchase_port")
 
 local eligibility = {}
 

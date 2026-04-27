@@ -1,8 +1,8 @@
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local turn_anim = require("src.turn.output.anim")
 local gameplay_loop_runtime = require("src.turn.loop.runtime")
-local turn_timer_policy = require("src.turn.policies.timer_policy")
-local turn_camera_policy = require("src.turn.policies.camera_policy")
+local turn_timer_policy = require("src.turn.policies.timer")
+local turn_camera_policy = require("src.turn.policies.camera")
 local runtime_state = require("src.state.runtime_state")
 local landing_visual_hold = require("src.state.landing_visual_hold")
 

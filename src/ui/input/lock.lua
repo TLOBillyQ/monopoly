@@ -1,6 +1,6 @@
 local market_ui = require("src.ui.schema.market_layout")
 local base_nodes = require("src.ui.schema.base")
-local ui_touch_policy = require("src.ui.input.touch_policy")
+local ui_touch_policy = require("src.ui.input.touch")
 
 local lock_policy = {}
 
