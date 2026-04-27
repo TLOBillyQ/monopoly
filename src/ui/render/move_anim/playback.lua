@@ -1,4 +1,5 @@
 local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 local board_feedback = require("src.ui.render.board_feedback.service")
 local debug_mod = require("src.ui.render.move_anim.debug")
 local rt = require("src.ui.render.move_anim.runtime")
@@ -105,6 +106,15 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
       for _, step in ipairs(steps) do
         step.delay = step.delay + enter_delay
       end
+    end
+  end
+  if total_time > 0
+    and not seq_builder.is_vehicle_anim(anim_ctx)
+    and not seq_builder.is_synthetic_actor(player_id) then
+    local unit = board_scene and board_scene.units_by_player_id
+      and board_scene.units_by_player_id[player_id] or nil
+    if unit and unit.add_modifier_by_key then
+      unit.add_modifier_by_key(runtime_constants.speed_boost_modifier_key, total_time + 0.5)
     end
   end
   if total_time > 0 then

@@ -28,7 +28,8 @@ local runtime_constants = {
   q_up = _quat(0.0, -90.0, 0.0),
   q_down = _quat(0.0, 90.0, 0.0),
 
-  walk_speed = 7.0,
+  walk_speed = 10.5,
+  speed_boost_modifier_key = 100000,
   robot_speed = 18.0,
 
   vehicle_speed = 20.0,
