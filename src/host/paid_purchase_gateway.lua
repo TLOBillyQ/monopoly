@@ -226,17 +226,6 @@ local function _on_purchase_goods_callback(game, rt, data)
     logger.warn("market paid callback ignored: market entry missing", "product_id=" .. tostring(pending.product_id))
     return
   end
-  logger.info(
-    "market paid callback matched",
-    "player_id=" .. tostring(callback_player.id),
-    "product_id=" .. tostring(pending.product_id),
-    "goods_id=" .. tostring(goods_id),
-    "role_id=" .. tostring(callback_role_id)
-  )
-  print("[Eggy] market paid callback matched: player_id=" .. tostring(callback_player.id)
-    .. " product_id=" .. tostring(pending.product_id)
-    .. " goods_id=" .. tostring(goods_id)
-    .. " role_id=" .. tostring(callback_role_id))
   if type(rt.on_purchase) == "function" then
     rt.on_purchase(game, callback_player, entry, pending)
   end
@@ -317,13 +306,6 @@ function gateway.start(game, player, entry)
   if role_id == nil then
     return false, "role_id_missing"
   end
-logger.info(
-    "market paid start",
-    "player_id=" .. tostring(player.id),
-    "product_id=" .. tostring(entry.product_id),
-    "goods_id=" .. tostring(goods_id),
-    "role_id=" .. tostring(role_id)
-  )
   local ok_call = pcall(role.show_goods_purchase_panel, goods_id, panel_show_seconds)
   if not ok_call then
     logger.warn(
@@ -340,13 +322,6 @@ logger.info(
     product_id = entry.product_id,
     goods_id = goods_id,
   })
-  logger.info(
-    "market paid pending queued",
-    "player_id=" .. tostring(player.id),
-    "product_id=" .. tostring(entry.product_id),
-    "goods_id=" .. tostring(goods_id),
-    "role_id=" .. tostring(role_id)
-  )
   return true, nil
 end
 

@@ -77,14 +77,7 @@ local function _try_apply_skin_to_unit(player_id, creature_key)
       or pcall(unit.set_model_by_creature_key, unit, creature_key, true, true, true)
       or pcall(unit.set_model_by_creature_key, creature_key)
       or pcall(unit.set_model_by_creature_key, unit, creature_key)
-    if ok_change then
-      logger.info(
-        "market skin fulfill applied",
-        "player_id=" .. tostring(player_id),
-        "product_id=N/A",
-        "creature_key=" .. tostring(creature_key)
-      )
-    else
+    if not ok_change then
       logger.warn("fulfill_skin: set_model_by_creature_key failed for player " .. tostring(player_id))
     end
   else
@@ -102,12 +95,6 @@ local function _fulfill_skin(game, player, entry, opts, price, currency, priced_
   if creature_key == nil then
     creature_key = number_utils.to_integer(entry.product_id)
   end
-  logger.info(
-    "market skin fulfill start",
-    "player_id=" .. tostring(player.id),
-    "product_id=" .. tostring(entry.product_id),
-    "creature_key=" .. tostring(creature_key)
-  )
   _try_apply_skin_to_unit(player.id, creature_key)
   _emit_event(monopoly_event.market.bought_item, {
     player = player,

@@ -83,15 +83,6 @@ function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, w
     _warn_skip("skip play_sfx_by_key: missing GameAPI.play_sfx_by_key")
     return nil
   end
-  _warn_skip(
-    "play_sfx_by_key args",
-    "cue_name=" .. tostring(cue_name),
-    "sfx_key=" .. tostring(resolved_sfx_key),
-    "scale=" .. tostring(resolved_scale),
-    "duration=" .. tostring(resolved_duration),
-    "rate=" .. tostring(resolved_rate),
-    "with_sound=" .. tostring(resolved_with_sound)
-  )
   local ok, sfx_id = pcall(
     game_api.play_sfx_by_key,
     resolved_sfx_key,
