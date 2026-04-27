@@ -4,6 +4,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 local ui_view = require("src.ui.ctl.ui_runtime")
 local ui_touch_policy = require("src.ui.input.touch")
+local ids = require("fixtures.item_slot_ids")
 
 local function _wrap_ui_refs(image_refs)
   return {
@@ -25,8 +26,8 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
     },
     ui = {
       input_blocked = true,
-      item_slots = { "常驻_道具槽位1" },
-      base_hidden_nodes = { "基础_行动按钮", "常驻_道具槽位1" },
+      item_slots = ids.slots(1),
+      base_hidden_nodes = { "基础_行动按钮", ids.slot[1] },
       base_hidden_labels = {},
       auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       choice_screens = {
@@ -57,7 +58,7 @@ local function _test_apply_input_lock_keeps_auto_controls_enabled()
   assert(touch["基础_行动按钮"] == false, "action button should stay blocked")
   assert(touch["基础_托管按钮"] == true, "auto button should stay enabled")
   assert(touch["基础_托管文本"] == false, "auto label should stay non-clickable")
-  assert(visible["常驻_道具槽位1"] == true, "item slot should stay visible when locked")
+  assert(visible[ids.slot[1]] == true, "item slot should stay visible when locked")
 end
 
 local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped()
@@ -72,8 +73,8 @@ local function _test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapp
     },
     ui = {
       input_blocked = true,
-      item_slots = { "常驻_道具槽位1" },
-      base_hidden_nodes = { "基础_行动按钮", "常驻_道具槽位1" },
+      item_slots = ids.slots(1),
+      base_hidden_nodes = { "基础_行动按钮", ids.slot[1] },
       base_hidden_labels = {},
       auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       choice_screens = {
@@ -116,8 +117,8 @@ local function _test_apply_input_lock_disables_always_show_controls_when_market_
     ui = {
       input_blocked = true,
       market_active = true,
-      item_slots = { "常驻_道具槽位1" },
-      base_hidden_nodes = { "基础_行动按钮", "常驻_道具槽位1" },
+      item_slots = ids.slots(1),
+      base_hidden_nodes = { "基础_行动按钮", ids.slot[1] },
       base_hidden_labels = {},
       auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       choice_screens = {
@@ -153,8 +154,8 @@ local function _test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
     ui = {
-      item_slots = { "常驻_道具槽位1" },
-      base_hidden_nodes = { "基础_行动按钮", "常驻_道具槽位1" },
+      item_slots = ids.slots(1),
+      base_hidden_nodes = { "基础_行动按钮", ids.slot[1] },
       base_hidden_labels = {},
       auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       item_slot_item_ids_by_role = {},

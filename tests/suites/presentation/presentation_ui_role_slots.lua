@@ -2,6 +2,7 @@
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
 local ui_view = require("src.ui.ctl.ui_runtime")
+local ids = require("fixtures.item_slot_ids")
 
 local function _wrap_ui_refs(image_refs)
   return {
@@ -43,7 +44,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   end
 
   for i = 1, 5 do
-    local node_name = "常驻_道具槽位" .. tostring(i)
+    local node_name = ids.slot[i]
     node_map[node_name] = new_texture_node(node_name)
   end
   for i = 1, 4 do
@@ -67,14 +68,14 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
       ["2002"] = "ICON2002",
     }),
     ui = {
-      item_slots = { "常驻_道具槽位1", "常驻_道具槽位2", "常驻_道具槽位3", "常驻_道具槽位4", "常驻_道具槽位5" },
+      item_slots = ids.slots(5),
       base_hidden_nodes = {
         "基础_行动按钮",
-        "常驻_道具槽位1",
-        "常驻_道具槽位2",
-        "常驻_道具槽位3",
-        "常驻_道具槽位4",
-        "常驻_道具槽位5",
+        ids.slot[1],
+        ids.slot[2],
+        ids.slot[3],
+        ids.slot[4],
+        ids.slot[5],
       },
       base_hidden_labels = {},
       auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
@@ -144,8 +145,8 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
     ui_view.refresh_panel(state, ui_model)
   end)
 
-  assert(image_logs[1] and image_logs[1]["常驻_道具槽位1"] == "ICON2001", "role1 slot icon expected")
-  assert(image_logs[2] and image_logs[2]["常驻_道具槽位1"] == "ICON2002", "role2 slot icon expected")
+  assert(image_logs[1] and image_logs[1][ids.slot[1]] == "ICON2001", "role1 slot icon expected")
+  assert(image_logs[2] and image_logs[2][ids.slot[1]] == "ICON2002", "role2 slot icon expected")
   assert(image_logs[0] and image_logs[0]["基础_玩家1头像"] == "AVATAR_1", "player1 avatar should use row avatar")
   assert(image_logs[0] and image_logs[0]["基础_玩家2头像"] == "EMPTY", "player2 avatar should fallback to empty key")
   assert(touch_logs[1] and touch_logs[1]["基础_行动按钮"] == true, "current role action button should be enabled")
@@ -159,7 +160,7 @@ local function _test_ui_view_render_by_role_slots_are_isolated()
   assert(label_logs[1] and label_logs[1]["基础_托管文本"] == "自动：关", "role1 auto label should show status")
   assert(label_logs[2] and label_logs[2]["基础_托管文本"] == "自动：开", "role2 auto label should show status")
   assert(visible_logs[2] and visible_logs[2]["基础_倒计时"] == true, "non-current role countdown should be visible")
-  assert(visible_logs[2] and visible_logs[2]["常驻_道具槽位1"] == true, "non-current role slot should be visible")
+  assert(visible_logs[2] and visible_logs[2][ids.slot[1]] == true, "non-current role slot should be visible")
   assert(visible_logs[2] and visible_logs[2]["基础_托管按钮"] == true, "auto button should stay visible")
   assert(visible_logs[2] and visible_logs[2]["基础_托管文本"] == true, "auto label should stay visible")
   assert(visible_logs[1] and visible_logs[1]["基础_托管按钮特效"] == false, "role1 auto effect should hide when auto off")

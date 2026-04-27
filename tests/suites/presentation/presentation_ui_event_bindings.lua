@@ -14,6 +14,7 @@ local base_nodes = require("src.ui.schema.base")
 local permanent_nodes = require("src.ui.schema.permanent")
 local remote_choice_intents = require("src.ui.input.canvas_route.remote_choice")
 local target_choice_intents = require("src.ui.input.canvas_route.target_choice")
+local ids = require("fixtures.item_slot_ids")
 local market_intents = require("src.ui.input.canvas_route.market")
 
 local function _find_spec(specs, node_name)
@@ -207,8 +208,8 @@ end
 local function _test_canvas_registry_builds_canvas_first_route_specs()
   local state = {
     ui = {
-      item_slots = { "常驻_道具槽位1" },
-      card_outlines = { "常驻_可出牌外框1" },
+      item_slots = ids.slots(1),
+      card_outlines = ids.outlines(1),
       popup_screen = {
         dismiss_nodes = { "卡牌展示_图片" },
       },
@@ -229,7 +230,7 @@ local function _test_canvas_registry_builds_canvas_first_route_specs()
   local specs = canvas_registry.build_route_specs(state)
   assert(_find_spec(specs, base_nodes.action_button) ~= nil, "route specs should include base action button")
   assert(_find_spec(specs, base_nodes.action_log_button) ~= nil, "route specs should include action log button")
-  local outline_spec = _find_spec(specs, "常驻_可出牌外框1")
+  local outline_spec = _find_spec(specs, ids.outline[1])
   assert(outline_spec ~= nil, "route specs should include item outline node")
   local intent = outline_spec.build_intent and outline_spec.build_intent() or nil
   _assert_eq(intent and intent.id, "item_slot_1", "outline click should still map to item slot intent")
