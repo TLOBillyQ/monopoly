@@ -1,15 +1,7 @@
 local shared = require("support.shared_support")
 local ui_fixture = require("support.presentation_ui_fixture_support")
 
-local function pick(source, keys)
-  local out = {}
-  for _, key in ipairs(keys) do
-    out[key] = source[key]
-  end
-  return out
-end
-
-local M = pick(shared, {
+local M = shared.namespace({
   "assert_eq",
   "bind_ui_runtime",
   "with_patches",

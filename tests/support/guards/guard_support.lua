@@ -169,4 +169,11 @@ function M.collect_line_violations(opts)
   return violations
 end
 
+function M.skip_fixture_path(path, relpath)
+  local normalized_path = M.normalize_path(path)
+  local normalized_relpath = M.normalize_path(relpath)
+  return normalized_path:find("tests/fixtures/guards/", 1, true) ~= nil
+    or normalized_relpath:find("tests/fixtures/guards/", 1, true) ~= nil
+end
+
 return M

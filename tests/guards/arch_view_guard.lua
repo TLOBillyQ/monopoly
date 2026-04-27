@@ -1,20 +1,11 @@
 require("tests.bootstrap").install_package_paths()
 
 local arch_view = require("arch_view")
-
-local function _path_exists(path)
-  local file = io.open(path, "r")
-  if file then
-    file:close()
-    return true
-  end
-  local ok = os.rename(path, path)
-  return ok == true
-end
+local guard_support = require("support.guards.guard_support")
 
 local function _first_existing(paths)
   for _, path in ipairs(paths or {}) do
-    if _path_exists(path) then
+    if guard_support.path_exists(path) then
       return path
     end
   end

@@ -1,5 +1,6 @@
 local catalog = require("tests.catalog")
 local log_capture = require("tests.support.log_capture")
+local timing_summary = require("tests.support.timing_summary")
 
 local M = {}
 local _timing_enabled = os.getenv("MONO_TEST_TIMING") == "1"
@@ -14,15 +15,10 @@ local function _sum_elapsed(script_times)
 end
 
 local function _print_timing_report(script_times)
-  local total_ms = _sum_elapsed(script_times)
   table.sort(script_times, function(left, right)
     return (left.elapsed_ms or 0) > (right.elapsed_ms or 0)
   end)
-  print(string.format("[guard] wall total=%dms", total_ms))
-  print("[guard] script timings:")
-  for _, entry in ipairs(script_times) do
-    print(string.format("  %6dms  %s", entry.elapsed_ms, entry.name))
-  end
+  timing_summary.print_script_summary("guard", _sum_elapsed(script_times), script_times)
 end
 
 local function _run_script(script, summary)

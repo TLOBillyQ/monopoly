@@ -40,8 +40,6 @@ local paid_purchase_port = require("src.rules.market.paid_purchase_port")
 local default_ports = require("src.turn.output.default_ports")
 local runtime_state_seam = require("src.ui.state")
 local landing_visual_hold_seam = require("src.ui.landing_visual_hold")
-local host_runtime_ports = require("src.ui.host_bridge")
-
 local function assert_eq(a, b, msg)
   if a ~= b then
     error((msg or "assert failed") .. " | expected=" .. tostring(b) .. " got=" .. tostring(a))
@@ -526,6 +524,13 @@ M.first_adjacent_land_pair = first_adjacent_land_pair
 M.tile_state = tile_state
 M.runtime_state = runtime_state_seam
 M.landing_visual_hold = landing_visual_hold_seam
-M.host_runtime_ports = host_runtime_ports
+
+function M.namespace(keys)
+  local out = {}
+  for _, key in ipairs(keys) do
+    out[key] = M[key]
+  end
+  return out
+end
 
 return M

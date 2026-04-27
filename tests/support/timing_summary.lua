@@ -20,6 +20,20 @@ local function _has_nonzero(entries)
   return false
 end
 
+function M.print_script_summary(prefix, total_ms, entries, opts)
+  print("")
+  local source = opts and opts.source
+  if source then
+    print(string.format("[%s] wall total=%dms source=%s", tostring(prefix), total_ms, tostring(source)))
+  else
+    print(string.format("[%s] wall total=%dms", tostring(prefix), total_ms))
+  end
+  print(string.format("[%s] script timings:", tostring(prefix)))
+  for _, entry in ipairs(entries or {}) do
+    print(string.format("  %6dms  %s", entry.elapsed_ms or 0, tostring(entry.name)))
+  end
+end
+
 function M.print_lane_summary(lane_name, result, opts)
   local timing_data = result and result.timing_data
   if type(timing_data) ~= "table" then

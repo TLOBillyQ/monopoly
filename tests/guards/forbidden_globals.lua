@@ -1,4 +1,4 @@
-package.path = package.path .. ";./tests/?.lua"
+require("tests.bootstrap").install_package_paths()
 
 local guard_support = require("support.guards.guard_support")
 
@@ -51,20 +51,13 @@ local forbidden = {
 
 local scan_roots = { "src", "tests", "tools" }
 
-local function _skip_fixture_path(path, relpath)
-  local normalized_path = guard_support.normalize_path(path)
-  local normalized_relpath = guard_support.normalize_path(relpath)
-  return normalized_path:find("tests/fixtures/guards/", 1, true) ~= nil
-    or normalized_relpath:find("tests/fixtures/guards/", 1, true) ~= nil
-end
-
 local M = {}
 
 function M.run(opts)
   opts = opts or {}
   local skip_path = opts.skip_path
   if skip_path == nil and opts.scan_roots == nil then
-    skip_path = _skip_fixture_path
+    skip_path = guard_support.skip_fixture_path
   end
   local violations, err = guard_support.collect_line_violations({
     roots = opts.scan_roots or scan_roots,

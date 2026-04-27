@@ -5,14 +5,6 @@ local config_reset = require("tests.support.config_reset")
 
 local M = {}
 
-local function _quiet_reporter()
-  return {
-    case_pass = function() end,
-    case_fail = function() end,
-    finish = function() end,
-  }
-end
-
 function M.run(opts)
   opts = opts or {}
   local before_case_hook = opts.before_case
@@ -32,7 +24,7 @@ function M.run(opts)
       end
     end,
     capture_logs = opts.capture_logs ~= false,
-    reporter = opts.reporter or _quiet_reporter(),
+    reporter = opts.reporter or harness.quiet_reporter(),
     summary_label = opts.summary_label or "behavior",
   })
   return result

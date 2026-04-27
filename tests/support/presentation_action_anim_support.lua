@@ -4,12 +4,6 @@ local support = require("support.presentation_support")
 
 local M = {}
 
-if not math.Vector3 then
-  function math.Vector3(x, y, z)
-    return { x = x, y = y, z = z }
-  end
-end
-
 function M.build_min_state(opts)
   opts = opts or {}
   local state = {

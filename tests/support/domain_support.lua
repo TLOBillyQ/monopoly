@@ -1,14 +1,6 @@
 local shared = require("support.shared_support")
 
-local function pick(source, keys)
-  local out = {}
-  for _, key in ipairs(keys) do
-    out[key] = source[key]
-  end
-  return out
-end
-
-return pick(shared, {
+return shared.namespace({
   "assert_eq",
   "assert_player_move_dir",
   "assert_tile_id_sequence",

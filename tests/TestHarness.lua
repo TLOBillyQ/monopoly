@@ -35,6 +35,14 @@ local function _default_reporter()
   }
 end
 
+local function _quiet_reporter()
+  return {
+    case_pass = function() end,
+    case_fail = function() end,
+    finish = function() end,
+  }
+end
+
 local function _run_hook(hook, ...)
   if type(hook) ~= "function" then
     return true
@@ -201,4 +209,4 @@ local function run_all(suites, opts)
   return result
 end
 
-return { run_all = run_all }
+return { run_all = run_all, quiet_reporter = _quiet_reporter }

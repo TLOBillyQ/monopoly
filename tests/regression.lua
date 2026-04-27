@@ -2,6 +2,7 @@ local bootstrap = require("tests.bootstrap")
 local behavior = require("tests.behavior")
 local contract = require("tests.contract")
 local guard = require("tests.guard")
+local timing_summary = require("tests.support.timing_summary")
 
 bootstrap.install_package_paths()
 
@@ -31,10 +32,5 @@ _run_lane("guard", guard.run, timings)
 
 if _timing_enabled then
   local total_timing = wall_clock.finish(total_timer)
-  print("")
-  print(string.format("[regression] wall total=%dms source=%s", total_timing.elapsed_ms, total_timing.source))
-  print("[regression] lane timings:")
-  for _, entry in ipairs(timings) do
-    print(string.format("  %6dms  %s", entry.elapsed_ms, tostring(entry.name)))
-  end
+  timing_summary.print_script_summary("regression", total_timing.elapsed_ms, timings, { source = total_timing.source })
 end
