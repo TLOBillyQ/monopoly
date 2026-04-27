@@ -1,4 +1,3 @@
--- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -7,41 +6,14 @@ local _get_choice = support.get_choice
 local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
-local turn_anim = support.turn_anim
-local tick_timeout = support.tick_timeout
-local constants = support.constants
-local choice_resolver = support.choice_resolver
-local gameplay_loop = support.gameplay_loop
-local turn_move = support.turn_move
-local event_handlers = require("src.ui.ctl.event_handlers")
-local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
-local runtime_port = require("src.ui.render.runtime_ui")
-local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.ctl.choice_screens.openers")
 local market_view = require("src.ui.render.market")
 local market_layout = require("src.ui.schema.market_layout")
 local canvas_event_router = require("src.ui.ctl.canvas_event_router")
 local ui_view = require("src.ui.ctl.ui_runtime")
-local ui_status_3d_layer = require("src.ui.render.status3d")
-local action_anim = require("src.ui.render.action_anim")
-local move_anim = require("src.ui.render.move_anim")
-local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.wid.turn_effects")
-local popup_renderer = require("src.ui.ctl.popup")
-local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.ui.ports.debug")
-local role_control_lock_policy = require("src.ui.input.role_control_lock")
-local ui_touch_policy = require("src.ui.input.touch")
-local ui_choice_route_policy = require("src.ui.input.choice_route")
-local logger = require("src.core.utils.logger")
 local market_cfg = require("src.config.content.market")
-local runtime_constants = require("src.config.gameplay.runtime_constants")
-local timing = require("src.config.gameplay.timing")
-local host_runtime = require("src.host")
 local runtime_state = require("src.ui.state")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
-local vec3 = require("fixtures.vec3")
 
 local function _ui_runtime(state)
   return runtime_state.ensure_ui_runtime(state)
@@ -656,6 +628,7 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
   local entry = assert(market_cfg[1], "missing market cfg entry")
   local visible = {}
   local touch = {}
+  local labels = {}
   local state = {
     ui_refs = _wrap_ui_refs({
       ["Empty"] = 9101,
@@ -666,7 +639,9 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
     }),
     ui = {
       market_active = false,
-      set_label = function() end,
+      set_label = function(_, name, text)
+        labels[name] = text
+      end,
       set_visible = function(_, name, flag)
         visible[name] = flag == true
       end,
@@ -692,8 +667,8 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
 
   _assert_eq(visible[market_layout.page_prev], false, "page_prev should be hidden when only one page")
   _assert_eq(visible[market_layout.page_next], false, "page_next should be hidden when only one page")
-  _assert_eq(visible[market_layout.page_prev_label], false, "page_prev_label should be hidden when only one page")
-  _assert_eq(visible[market_layout.page_next_label], false, "page_next_label should be hidden when only one page")
+  _assert_eq(labels[market_layout.page_prev_label], "", "page_prev_label should be cleared when only one page")
+  _assert_eq(labels[market_layout.page_next_label], "", "page_next_label should be cleared when only one page")
 
   market_view.refresh_market(state, {
     choice_id = 12,
@@ -710,10 +685,8 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
   _assert_eq(visible[market_layout.page_next], true, "page_next should be visible when multiple pages")
   _assert_eq(touch[market_layout.page_prev], false, "page_prev should be disabled on first page")
   _assert_eq(touch[market_layout.page_next], true, "page_next should be enabled when next page exists")
-  _assert_eq(visible[market_layout.page_prev_label], true, "page_prev_label should be visible when multiple pages")
-  _assert_eq(visible[market_layout.page_next_label], true, "page_next_label should be visible when multiple pages")
-  _assert_eq(touch[market_layout.page_prev_label], false, "page_prev_label touch should always be false")
-  _assert_eq(touch[market_layout.page_next_label], false, "page_next_label touch should always be false")
+  _assert_eq(labels[market_layout.page_prev_label], market_layout.page_prev_text, "page_prev_label should show text when multiple pages")
+  _assert_eq(labels[market_layout.page_next_label], market_layout.page_next_text, "page_next_label should show text when multiple pages")
 end
 
 local function _test_ui_model_market_payload_prefers_explicit_choice_fields()

@@ -114,14 +114,6 @@ local function _set_market_slot_visible(ui, refs, slot, opt, deps)
     button = { visible = true, touch_enabled = true },
     frame = { visible = true, touch_enabled = false },
   })
-  local can_buy = type(opt) == "table" and opt.can_buy == true
-  local slot_color = can_buy and 0xffffff or 0xcfcfcf
-  pcall(function()
-    local button_node = ui.query_node(slot.button)
-    if button_node then
-      button_node.image_color = slot_color
-    end
-  end)
   local level = _resolve_market_level(cfg)
   local rarity_key = _resolve_ref_key(refs, market_layout.rarity_ref_keys[level]) or _resolve_ref_key(refs, market_layout.empty_ref_key)
   if rarity_key ~= nil then
