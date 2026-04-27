@@ -11,6 +11,27 @@ local canvas_event_router = require("src.ui.ctl.canvas_event_router")
 local ui_view = require("src.ui.ctl.ui_runtime")
 local market_cfg = require("src.config.content.market")
 
+local function _build_market_state(product_ids)
+  local visible = {}
+  local labels = {}
+  local touch = {}
+  local refs = { ["Empty"] = 1, ["lv1"] = 2, ["lv2"] = 3, ["lv3"] = 4 }
+  for i, product_id in ipairs(product_ids or {}) do
+    refs[tostring(product_id)] = 4 + i
+  end
+  local state = {
+    ui_refs = _wrap_ui_refs(refs),
+    ui = {
+      market_active = false,
+      set_label = function(_, name, text) labels[name] = text end,
+      set_visible = function(_, name, flag) visible[name] = flag == true end,
+      set_touch_enabled = function(_, name, flag) touch[name] = flag == true end,
+      query_node = function() return {} end,
+    },
+  }
+  return state, visible, labels, touch
+end
+
 local function _test_market_selection_updates_icon_without_resize()
   local entry = assert(market_cfg[1], "missing market cfg entry")
   local option_id = entry.product_id
@@ -87,28 +108,7 @@ end
 local function _test_market_view_default_selection_shows_matching_selection_frame()
   local entry_a = assert(market_cfg[1], "missing market cfg entry a")
   local entry_b = assert(market_cfg[2], "missing market cfg entry b")
-  local visible = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9301,
-      ["lv1"] = 9302,
-      ["lv2"] = 9303,
-      ["lv3"] = 9304,
-      [tostring(entry_a.product_id)] = 9305,
-      [tostring(entry_b.product_id)] = 9306,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function() end,
-      set_visible = function(_, name, flag)
-        visible[name] = flag == true
-      end,
-      set_touch_enabled = function() end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
 
   local opened = market_view.refresh_market(state, {
     choice_id = 21,
@@ -132,28 +132,7 @@ end
 local function _test_market_select_switches_selection_frame()
   local entry_a = assert(market_cfg[1], "missing market cfg entry a")
   local entry_b = assert(market_cfg[2], "missing market cfg entry b")
-  local visible = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9401,
-      ["lv1"] = 9402,
-      ["lv2"] = 9403,
-      ["lv3"] = 9404,
-      [tostring(entry_a.product_id)] = 9405,
-      [tostring(entry_b.product_id)] = 9406,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function() end,
-      set_visible = function(_, name, flag)
-        visible[name] = flag == true
-      end,
-      set_touch_enabled = function() end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
 
   market_view.refresh_market(state, {
     choice_id = 22,
@@ -177,28 +156,7 @@ end
 local function _test_market_view_refresh_preserves_manual_selection_on_same_page()
   local entry_a = assert(market_cfg[1], "missing market cfg entry a")
   local entry_b = assert(market_cfg[2], "missing market cfg entry b")
-  local visible = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9411,
-      ["lv1"] = 9412,
-      ["lv2"] = 9413,
-      ["lv3"] = 9414,
-      [tostring(entry_a.product_id)] = 9415,
-      [tostring(entry_b.product_id)] = 9416,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function() end,
-      set_visible = function(_, name, flag)
-        visible[name] = flag == true
-      end,
-      set_touch_enabled = function() end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
 
   market_view.refresh_market(state, {
     choice_id = 22,
@@ -241,28 +199,7 @@ local function _test_market_view_empty_filtered_tab_hides_selection_frames()
     price = visible_entry.price,
   }
 
-  local visible = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9501,
-      ["lv1"] = 9502,
-      ["lv2"] = 9503,
-      ["lv3"] = 9504,
-      [tostring(visible_entry.product_id)] = 9505,
-      [tostring(hidden_entry.product_id)] = 9506,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function() end,
-      set_visible = function(_, name, flag)
-        visible[name] = flag == true
-      end,
-      set_touch_enabled = function() end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, visible = _build_market_state({ visible_entry.product_id, hidden_entry.product_id })
 
   local market_cfg_size = #market_cfg
   local old_market_view = package.loaded["src.ui.render.market"]
@@ -308,28 +245,7 @@ end
 local function _test_market_view_refresh_retargets_selection_frame_on_page_change()
   local entry_a = assert(market_cfg[1], "missing market cfg entry a")
   local entry_b = assert(market_cfg[2], "missing market cfg entry b")
-  local visible = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9601,
-      ["lv1"] = 9602,
-      ["lv2"] = 9603,
-      ["lv3"] = 9604,
-      [tostring(entry_a.product_id)] = 9605,
-      [tostring(entry_b.product_id)] = 9606,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function() end,
-      set_visible = function(_, name, flag)
-        visible[name] = flag == true
-      end,
-      set_touch_enabled = function() end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
 
   market_view.refresh_market(state, {
     choice_id = 25,
@@ -383,31 +299,7 @@ local function _test_market_view_hides_market_disabled_entries()
     price = visible_entry.price,
   }
 
-  local labels = {}
-  local visible = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9001,
-      ["lv1"] = 9002,
-      ["lv2"] = 9003,
-      ["lv3"] = 9004,
-      [tostring(hidden_entry.product_id)] = 9005,
-      [tostring(visible_entry.product_id)] = 9006,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function(_, name, text)
-        labels[name] = text
-      end,
-      set_visible = function(_, name, flag)
-        visible[name] = flag == true
-      end,
-      set_touch_enabled = function() end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, visible, labels = _build_market_state({ hidden_entry.product_id, visible_entry.product_id })
 
   local market_cfg_size = #market_cfg
   local old_market_view = package.loaded["src.ui.render.market"]
@@ -457,27 +349,7 @@ end
 
 local function _test_market_view_unbuyable_option_is_clickable()
   local entry = assert(market_cfg[1], "missing market cfg entry")
-  local touch = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9001,
-      ["lv1"] = 9002,
-      ["lv2"] = 9003,
-      ["lv3"] = 9004,
-      [tostring(entry.product_id)] = 9005,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function() end,
-      set_visible = function() end,
-      set_touch_enabled = function(_, name, flag)
-        touch[name] = flag == true
-      end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, _, _, touch = _build_market_state({ entry.product_id })
 
   local opened = market_view.refresh_market(state, {
     choice_id = 10,
@@ -494,30 +366,7 @@ end
 
 local function _test_market_view_hides_disabled_market_tab()
   local entry = assert(market_cfg[1], "missing market cfg entry")
-  local visible = {}
-  local touch = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9001,
-      ["lv1"] = 9002,
-      ["lv2"] = 9003,
-      ["lv3"] = 9004,
-      [tostring(entry.product_id)] = 9005,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function() end,
-      set_visible = function(_, name, flag)
-        visible[name] = flag == true
-      end,
-      set_touch_enabled = function(_, name, flag)
-        touch[name] = flag == true
-      end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, visible, _, touch = _build_market_state({ entry.product_id })
 
   local opened = market_view.refresh_market(state, {
     choice_id = 11,
@@ -553,26 +402,7 @@ local function _test_market_view_invalid_selected_option_falls_back_to_current_v
   end
   assert(entry_a ~= nil and entry_b ~= nil, "missing visible market entries for selected fallback test")
 
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9201,
-      ["lv1"] = 9202,
-      ["lv2"] = 9203,
-      ["lv3"] = 9204,
-      [tostring(entry_a.product_id)] = 9205,
-      [tostring(entry_b.product_id)] = 9206,
-    }),
-    pending_choice_selected_option_id = nil,
-    ui = {
-      market_active = false,
-      set_label = function() end,
-      set_visible = function() end,
-      set_touch_enabled = function() end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state = _build_market_state({ entry_a.product_id, entry_b.product_id })
 
   local opened = market_view.refresh_market(state, {
     choice_id = 13,
@@ -591,33 +421,7 @@ end
 
 local function _test_market_view_page_arrows_visibility_follows_page_count()
   local entry = assert(market_cfg[1], "missing market cfg entry")
-  local visible = {}
-  local touch = {}
-  local labels = {}
-  local state = {
-    ui_refs = _wrap_ui_refs({
-      ["Empty"] = 9101,
-      ["lv1"] = 9102,
-      ["lv2"] = 9103,
-      ["lv3"] = 9104,
-      [tostring(entry.product_id)] = 9105,
-    }),
-    ui = {
-      market_active = false,
-      set_label = function(_, name, text)
-        labels[name] = text
-      end,
-      set_visible = function(_, name, flag)
-        visible[name] = flag == true
-      end,
-      set_touch_enabled = function(_, name, flag)
-        touch[name] = flag == true
-      end,
-      query_node = function()
-        return {}
-      end,
-    },
-  }
+  local state, visible, labels, touch = _build_market_state({ entry.product_id })
 
   market_view.refresh_market(state, {
     choice_id = 11,
