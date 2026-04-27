@@ -90,7 +90,7 @@ local function _set_tab_tint(ui, name, active)
   pcall(function()
     local node = ui.query_node(name)
     if node then
-      node.image_color = active and 0xffffff or 0xcfcfcf
+      node.image_color = active and 0xcfcfcf or 0xffffff
     end
   end)
 end
