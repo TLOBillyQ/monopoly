@@ -64,9 +64,14 @@ local function _set_ui_port(game, overrides)
   _install_narrow_ports(game, support.build_ui_port(overrides))
 end
 
-local function _test_monster_card()
+local function _setup_world_with_anim()
   local g = _new_game()
   _set_ui_port(g, { wait_action_anim = true })
+  return g
+end
+
+local function _test_monster_card()
+  local g = _setup_world_with_anim()
   local p = g:current_player()
   local idx = 3
   local tile_ref = g.board:get_tile(idx)
@@ -89,8 +94,7 @@ local function _test_monster_card()
 end
 
 local function _test_missile_card()
-  local g = _new_game()
-  _set_ui_port(g, { wait_action_anim = true })
+  local g = _setup_world_with_anim()
   local p = g:current_player()
   local idx = 4
   local tile_ref = g.board:get_tile(idx)
@@ -468,8 +472,7 @@ local function _test_item_equalize_cash()
 end
 
 local function _test_target_item_manual_direct_exec_and_duration()
-  local g = _new_game()
-  _set_ui_port(g, { wait_action_anim = true })
+  local g = _setup_world_with_anim()
   local user = g.players[1]
   local target = g.players[2]
   g:set_player_cash(user, 1000)
@@ -495,8 +498,7 @@ local function _test_target_item_manual_direct_exec_and_duration()
 end
 
 local function _test_exile_item_defers_mountain_effect_until_move_followup()
-  local g = _new_game()
-  _set_ui_port(g, { wait_action_anim = true })
+  local g = _setup_world_with_anim()
   local user = g.players[1]
   local target = g.players[2]
   user.inventory:add({ id = item_ids.exile })
@@ -523,8 +525,7 @@ local function _test_exile_item_defers_mountain_effect_until_move_followup()
 end
 
 local function _test_item_executor_fallback_item_use_anim()
-  local g = _new_game()
-  _set_ui_port(g, { wait_action_anim = true })
+  local g = _setup_world_with_anim()
   local p = g:current_player()
   p.inventory:add({ id = 2003 })
 
@@ -539,8 +540,7 @@ local function _test_item_executor_fallback_item_use_anim()
 end
 
 local function _test_item_executor_keeps_specific_anim_without_fallback()
-  local g = _new_game()
-  _set_ui_port(g, { wait_action_anim = true })
+  local g = _setup_world_with_anim()
   local p = g:current_player()
   p.inventory:add({ id = 2005 })
 
