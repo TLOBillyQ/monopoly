@@ -186,9 +186,9 @@ local function _test_market_view_default_selection_shows_matching_selection_fram
   _assert_eq(opened, true, "market panel should open")
   _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_a.product_id,
     "market should still prefer first visible buyable option by default")
-  _assert_eq(visible[market_layout.item_selection_frames[1]], false,
+  _assert_eq(visible[market_layout.item_selection_frames[1]], true,
     "first selection frame should match default selected option")
-  _assert_eq(visible[market_layout.item_selection_frames[2]], true,
+  _assert_eq(visible[market_layout.item_selection_frames[2]], false,
     "non-selected frame should stay hidden")
 end
 
@@ -231,9 +231,9 @@ local function _test_market_select_switches_selection_frame()
   market_view.select_market_option(state, entry_b.product_id)
 
   _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id, "market select should update selected option")
-  _assert_eq(visible[market_layout.item_selection_frames[1]], true,
+  _assert_eq(visible[market_layout.item_selection_frames[1]], false,
     "old selection frame should hide after reselection")
-  _assert_eq(visible[market_layout.item_selection_frames[2]], false,
+  _assert_eq(visible[market_layout.item_selection_frames[2]], true,
     "new selection frame should show after reselection")
 end
 
@@ -288,9 +288,9 @@ local function _test_market_view_refresh_preserves_manual_selection_on_same_page
   _assert_eq(reopened, true, "market panel should refresh after manual selection")
   _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id,
     "same-page refresh should preserve the manually selected market option")
-  _assert_eq(visible[market_layout.item_selection_frames[1]], true,
+  _assert_eq(visible[market_layout.item_selection_frames[1]], false,
     "refresh should keep the previous slot unselected")
-  _assert_eq(visible[market_layout.item_selection_frames[2]], false,
+  _assert_eq(visible[market_layout.item_selection_frames[2]], true,
     "refresh should keep the manually selected slot highlighted")
 end
 
@@ -419,10 +419,10 @@ local function _test_market_view_refresh_retargets_selection_frame_on_page_chang
   _assert_eq(reopened, true, "market panel should refresh on page change")
   _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id,
     "page change should retarget selected option to current visible page")
-  _assert_eq(visible[market_layout.item_selection_frames[1]], false,
+  _assert_eq(visible[market_layout.item_selection_frames[1]], true,
     "current page selected option should show selection frame")
   for index = 2, #market_layout.item_selection_frames do
-    _assert_eq(visible[market_layout.item_selection_frames[index]], true,
+    _assert_eq(visible[market_layout.item_selection_frames[index]], false,
       "non-current page frames should remain hidden after refresh")
   end
 end

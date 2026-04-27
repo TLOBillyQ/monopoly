@@ -73,17 +73,26 @@ function market_view_controls.reset_market_preview(state, deps)
 end
 
 function market_view_controls.refresh_market_selection_frames(ui, option_ids, option_id)
-  ui_controls.set_controls_state(ui, market_layout.item_selection_frames or {}, { visible = true, touch_enabled = false })
+  market_view_controls.clear_market_selection_frames(ui)
   if option_id == nil then
     return
   end
   for index, visible_option_id in pairs(option_ids or {}) do
     local name = market_layout.item_selection_frames and market_layout.item_selection_frames[index] or nil
     if visible_option_id == option_id and name then
-      ui_controls.set_control_state(ui, name, { visible = false, touch_enabled = false })
+      ui_controls.set_control_state(ui, name, { visible = true, touch_enabled = false })
       return
     end
   end
+end
+
+local function _set_tab_tint(ui, name, active)
+  pcall(function()
+    local node = ui.query_node(name)
+    if node then
+      node.image_color = active and 0xffffff or 0xcfcfcf
+    end
+  end)
 end
 
 function market_view_controls.refresh_market_controls(ui, market, vehicle_tab_enabled)
@@ -100,11 +109,16 @@ function market_view_controls.refresh_market_controls(ui, market, vehicle_tab_en
     touch_enabled = paging_visible and page_index < page_count,
   })
   ui_controls.set_control_state(ui, market_layout.tab_item, { visible = true, touch_enabled = active_tab ~= "item" })
+  _set_tab_tint(ui, market_layout.tab_item, active_tab == "item")
   ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = active_tab ~= "skin" })
+  _set_tab_tint(ui, market_layout.tab_skin, active_tab == "skin")
   ui_controls.set_control_state(ui, market_layout.tab_vehicle, {
     visible = vehicle_tab_enabled == true,
     touch_enabled = vehicle_tab_enabled == true and active_tab ~= "vehicle",
   })
+  if vehicle_tab_enabled == true then
+    _set_tab_tint(ui, market_layout.tab_vehicle, active_tab == "vehicle")
+  end
 end
 
 function market_view_controls.apply_market_common_controls(ui, market, confirm_enabled, vehicle_tab_enabled)
