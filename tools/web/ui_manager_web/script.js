@@ -113,7 +113,7 @@ class UINodesMerger {
         }
 
         // 新增 length 字段
-        output += `\tlength = ${sortedIds.length}\n`;
+        output += `\t--length = ${sortedIds.length}\n`;
         output += '}';
         document.getElementById('outputText').value = output;
     }
