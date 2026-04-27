@@ -2,6 +2,7 @@ local bootstrap = require("tests.bootstrap")
 local catalog = require("tests.catalog")
 local harness = require("TestHarness")
 local common = require("shared.lib.common")
+local config_reset = require("tests.support.config_reset")
 
 bootstrap.install_package_paths()
 
@@ -387,10 +388,12 @@ function M.run(args, env)
         reporter = _silent_reporter(),
         raise_on_failure = false,
         before_case = function(context)
+          config_reset.reset_all()
           current_suite.key = context.suite_module or context.suite_name
         end,
         after_case = function()
           current_suite.key = nil
+          config_reset.reset_all()
         end,
       }
       return run_all(suites, run_opts)
@@ -426,6 +429,8 @@ function M.run(args, env)
   local run_ok, run_result = xpcall(function()
     local run_opts = {
       capture_logs = true,
+      before_case = function() config_reset.reset_all() end,
+      after_case = function() config_reset.reset_all() end,
     }
     if options.quiet then
       run_opts.reporter = _silent_reporter()
