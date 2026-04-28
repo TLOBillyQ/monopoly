@@ -101,7 +101,7 @@ end
 local function _looks_like_repo_root(path)
   local required_entries = {
     "src",
-    "tests",
+    "spec",
     "tools",
     "vendor",
   }

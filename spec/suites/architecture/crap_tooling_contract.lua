@@ -43,7 +43,7 @@ local function _test_install_monopoly_package_paths_only_installs_canonical_repo
       arch_view_root = "/repo/vendor/arch_view",
     })
     _assert_contains(package.path, "/repo/tools/?.lua", "helper should keep canonical repo tool paths")
-    _assert_contains(package.path, "/repo/tests/?.lua", "helper should keep canonical test paths")
+    _assert_contains(package.path, "/repo/spec/?.lua", "helper should keep canonical spec paths")
     _assert_not_contains(package.path, "/repo/vendor/arch_view/?.lua", "helper should not install arch_view compatibility paths")
     _assert_not_contains(package.path, "/repo/vendor/arch_view/?/?.lua", "helper should not install arch_view nested compatibility paths")
   end)

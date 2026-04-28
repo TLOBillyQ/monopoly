@@ -17,7 +17,7 @@ return {
     {
       name = "test",
       kind = "test",
-      roots = { "tests" },
+      roots = { "spec" },
       include = { ".lua" },
       exclude = { "tmp/", "vendor/", ".git/" },
       extract = {

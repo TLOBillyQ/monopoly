@@ -18,7 +18,7 @@ common.ensure_windows_utf8_console()
 local M = {}
 local REPO_ROOT = env.repo_root
 local CONFIG_PATH = common.join_path(REPO_ROOT, ".luacheckrc")
-local DEFAULT_TARGETS = { "src", "tests", "tools" }
+local DEFAULT_TARGETS = { "src", "spec", "tools" }
 
 local function _text(zh, en)
   return common.bilingual(zh, en)
