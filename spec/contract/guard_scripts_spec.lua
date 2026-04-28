@@ -3,7 +3,7 @@ local forbidden_globals = require("spec.guards.lib.forbidden_globals")
 local fixed_type_guard = require("spec.guards.lib.fixed_type_guard")
 local arch_common = require("arch_view.runtime.common")
 
-local fixture_root = arch_common.normalize_path("tests/fixtures/guards")
+local fixture_root = arch_common.normalize_path("spec/fixtures/guards")
 
 local function _fixture_path(relpath)
   return arch_common.join_path(fixture_root, relpath)

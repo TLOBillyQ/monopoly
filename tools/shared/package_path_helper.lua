@@ -39,6 +39,9 @@ function package_path_helper.install_monopoly_package_paths(opts)
     _join(repo_root, "tests/?/init.lua"),
     _join(repo_root, "tests/suites/?.lua"),
     _join(repo_root, "tests/fixtures/?.lua"),
+    _join(repo_root, "spec/?.lua"),
+    _join(repo_root, "spec/?/init.lua"),
+    _join(repo_root, "spec/fixtures/?.lua"),
     _join(repo_root, "?.lua"),
     _join(repo_root, "?/init.lua"),
   }

@@ -2,7 +2,7 @@ local bootstrap = require("spec.bootstrap")
 local catalog = require("tests.catalog")
 local harness = require("TestHarness")
 local common = require("shared.lib.common")
-local config_reset = require("tests.support.config_reset")
+local config_reset = require("spec.support.config_reset")
 
 bootstrap.install_package_paths()
 

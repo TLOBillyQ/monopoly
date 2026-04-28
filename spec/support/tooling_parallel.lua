@@ -173,7 +173,7 @@ local function _launcher_paths(suite_module)
 end
 
 local function _write_launcher(suite_module, paths)
-  local worker_path = common.resolve_path(common.current_dir(), "tests/support/tooling_worker.lua")
+  local worker_path = common.resolve_path(common.current_dir(), "spec/support/tooling_worker.lua")
   local cwd = common.current_dir()
   local lua_command = "lua"
 
