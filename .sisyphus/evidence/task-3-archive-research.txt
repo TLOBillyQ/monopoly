@@ -1,0 +1,2 @@
+R100	.agents/plan.md	.sisyphus/archive/plan.md
+R100	.agents/research.md	.sisyphus/archive/research.md
