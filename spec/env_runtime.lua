@@ -1,4 +1,4 @@
-require("tests.bootstrap")
+require("spec.bootstrap")
 
 local logger = require("src.core.utils.logger")
 local tip_queue = require("src.core.utils.tip_queue")
@@ -6,7 +6,7 @@ local runtime_context = require("src.host.context")
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_default_ports = require("src.host.default_ports")
 local paid_purchase_port = require("src.rules.market.paid_purchase_port")
-local test_env = require("support.test_env")
+local test_env = require("spec.support.test_env")
 
 local M = {}
 

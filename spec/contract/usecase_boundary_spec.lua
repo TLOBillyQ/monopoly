@@ -1,6 +1,6 @@
 -- luacheck: ignore 211
-local support = require("support.runtime_support")
-local shared_support = require("support.shared_support")
+local support = require("spec.support.runtime_support")
+local shared_support = require("spec.support.shared_support")
 
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
 local turn_action_port = require("src.ui.input.dispatch.turn_action_port")

@@ -1,7 +1,7 @@
 --- Busted helper auto-loaded via .busted; sets package.path, installs Eggy fakes,
---- hooks per-test refresh. See tests/bootstrap.lua and spec/env_runtime.lua.
+--- hooks per-test refresh. See spec/bootstrap.lua and spec/env_runtime.lua.
 
-require("tests.bootstrap")
+require("spec.bootstrap")
 
 local env_runtime = require("spec.env_runtime")
 env_runtime.refresh()

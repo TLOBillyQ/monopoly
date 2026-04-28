@@ -1,8 +1,8 @@
 ---@diagnostic disable: undefined-global, undefined-field
 
-require("tests.bootstrap").install_package_paths()
+require("spec.bootstrap").install_package_paths()
 
-local support = require("tests.support.tooling_parallel")._test_support
+local support = require("spec.support.tooling_parallel")._test_support
 
 local function suite(module_name, tests)
   return {

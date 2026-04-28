@@ -1,4 +1,4 @@
-local support = require("support.runtime_support")
+local support = require("spec.support.runtime_support")
 
 local intent_output_port = require("src.rules.ports.intent_output")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")

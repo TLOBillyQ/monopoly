@@ -1,4 +1,4 @@
-local support = require("support.runtime_support")
+local support = require("spec.support.runtime_support")
 
 local gameplay_loop = require("src.turn.loop")
 local gameplay_loop_ports = require("src.turn.loop.ports")

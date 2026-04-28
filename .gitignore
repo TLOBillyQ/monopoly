@@ -52,3 +52,9 @@ scripts/analysis/loc_data.json
 /tools/loc_engine/monopoly-loc.exe
 .sisyphus
 .worktrees/
+
+# Test artifacts (busted)
+/junit-output.xml
+/luacov.stats.out
+/luacov.report.out
+/contract

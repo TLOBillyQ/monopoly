@@ -1,4 +1,4 @@
-local support = require("support.presentation_support")
+local support = require("spec.support.presentation_support")
 
 local validator = require("src.turn.actions.validator")
 local tick_timeout = require("src.turn.waits.timeout")

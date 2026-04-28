@@ -2,7 +2,7 @@
 
 local common = require("shared.lib.common")
 local json_reader = require("arch_view.runtime.json_reader")
-require("tests.support.shared_support")
+require("spec.support.shared_support")
 
 local _original_arg0 = arg and arg[0] or nil
 if arg ~= nil then

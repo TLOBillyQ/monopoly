@@ -1,4 +1,4 @@
-local support = require("support.runtime_support")
+local support = require("spec.support.runtime_support")
 
 local monopoly_events = require("src.core.events")
 local runtime_ports = require("src.core.ports.runtime_ports")

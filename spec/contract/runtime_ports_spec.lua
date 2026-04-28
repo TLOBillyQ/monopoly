@@ -1,5 +1,5 @@
 ---@diagnostic disable: undefined-global, undefined-field, need-check-nil
-local shared = require("tests.support.shared_support")
+local shared = require("spec.support.shared_support")
 
 local runtime_ports = require("src.core.ports.runtime_ports")
 local runtime_context = require("src.host.context")

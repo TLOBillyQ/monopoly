@@ -14,4 +14,28 @@ return {
     ["Xoutput"] = "junit-output.xml",
     pattern = "_spec",
   },
+  behavior = {
+    ROOT = {"spec/behavior"},
+    helper = "spec/helper.lua",
+    output = "spec/log_warns_handler.lua",
+    pattern = "_spec",
+  },
+  guards = {
+    ROOT = {"spec/guards"},
+    helper = "spec/helper.lua",
+    output = "TAP",
+    pattern = "_spec",
+  },
+  tooling = {
+    ROOT = {"spec/tooling"},
+    helper = "spec/helper.lua",
+    output = "TAP",
+    pattern = "_spec",
+  },
+  regression = {
+    ROOT = {"spec/regression"},
+    helper = "spec/helper.lua",
+    output = "TAP",
+    pattern = "_spec",
+  },
 }
