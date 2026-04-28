@@ -55,12 +55,14 @@
 
 ## 变更验证
 
+> busted 2.x 用 `--run <profile>` 选 profile，`-c` 是 coverage 开关。
+
 | 变更类型 | 命令 |
 |---------|------|
 | 任意 Lua | `lua tools/quality/lint.lua` |
-| 游戏逻辑 / 运行时 / UI | `busted -c behavior` |
-| Port / 边界 / assembly | `busted -c contract` + `lua tools/quality/arch.lua check` |
-| Guardrail | `busted -c guards` |
-| 工具链 | 额外 `busted -c tooling` |
+| 游戏逻辑 / 运行时 / UI | `busted --run behavior` |
+| Port / 边界 / assembly | `busted --run contract` + `lua tools/quality/arch.lua check` |
+| Guardrail | `busted --run guards` |
+| 工具链 | 追加 `busted --run tooling` |
 
-跳过慢车道时说明：已跑什么、跳过什么、下一步命令。
+快速车道用 `/verify-fast`，完整车道用 `/verify-full`。跳过慢车道时说明：已跑什么、跳过什么、下一步命令。

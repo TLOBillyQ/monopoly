@@ -3,16 +3,19 @@ name: verify-fast
 description: Run the common fast local confidence lane for this repo: guard checks, static architecture check, and behavior regression.
 ---
 
-Run this repo's common fast verification lane in this order:
+按以下顺序跑快速验证车道，前一步失败就停下：
 
-1. `lua tools/quality/lint.lua` if `luacheck` is installed locally
-2. `busted -c guards`
+1. `lua tools/quality/lint.lua`（仅当本地装了 `luacheck`）
+2. `busted --run guards`
 3. `lua tools/quality/arch.lua check`
-4. `busted -c behavior`
+4. `busted --run behavior`
 
-Then summarize:
-- which commands passed or failed
-- any lane you stopped at because of a failure
-- the next command the user should run if they want broader coverage
+> busted 2.x 的 `-c` 是 coverage 开关，profile 选择必须用 `--run <profile>`。AGENTS.md 里写的 `busted -c <profile>` 是旧写法，按本 skill 为准。
 
-Use this skill when the user wants a quick confidence pass after normal gameplay, runtime-flow, UI, or mixed local changes.
+跑完后汇报：
+
+- 每条命令的通过/失败结果
+- 在哪一步因失败停下（如有）
+- 想要更宽覆盖时下一条该跑什么命令（通常是 `/verify-full`，或单独 `busted --run contract` / `busted --run regression`）
+
+适用场景：日常 gameplay、runtime-flow、UI 或混合改动后想要一次轻量信心扫。

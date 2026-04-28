@@ -3,24 +3,28 @@ name: verify-full
 description: Run the fuller Monopoly quality pass and include guidance about when the slow tooling lane is required.
 ---
 
-Run the fuller repo quality pass in this order:
+按以下顺序跑完整质量车道：
 
-1. `lua tools/quality/lint.lua` if `luacheck` is installed locally
-2. `busted -c behavior`
-3. `busted -c contract`
-4. `busted -c guards`
+1. `lua tools/quality/lint.lua`（仅当本地装了 `luacheck`）
+2. `busted --run behavior`
+3. `busted --run contract`
+4. `busted --run guards`
 5. `lua tools/quality/arch.lua check`
 6. `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json`
 
-Only add `busted -c tooling` when the change touches one of these areas:
-- `tools/quality/*`
-- arch/crap/mutate viewer or export flow
-- vendored quality-tool integrations such as `vendor/arch_view`, `vendor/crap4lua`, or `vendor/mutate4lua`
+> busted 2.x 的 `-c` 是 coverage 开关，profile 选择必须用 `--run <profile>`。AGENTS.md 里写的 `busted -c <profile>` 是旧写法，按本 skill 为准。
 
-In the summary:
-- list what ran
-- list what was intentionally skipped
-- state whether the slow tooling lane is recommended
-- if anything was skipped, include the exact next command to run
+满足以下任一条件再追加 `busted --run tooling`：
 
-Use this skill when the user asks for a broader verification pass, a pre-review quality check, or validation after boundary/tooling-heavy changes.
+- 改动涉及 `tools/quality/*`
+- 改动涉及 arch/crap/mutate 的 viewer 或导出流程
+- 改动涉及 `vendor/arch_view`、`vendor/crap4lua`、`vendor/mutate4lua` 等质量工具集成
+
+汇报时包含：
+
+- 实际跑了哪些命令
+- 主动跳过了哪些命令
+- 是否建议补跑慢速 tooling 车道
+- 任何跳过项对应的下一条精确命令
+
+适用场景：用户要求更广覆盖、提交前质量检查，或边界/工具链类改动的回归验证。
