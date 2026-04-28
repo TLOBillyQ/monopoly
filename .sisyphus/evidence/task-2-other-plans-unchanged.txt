@@ -1,0 +1,2 @@
+Snapshot comparison for .sisyphus/plans/ before vs after shows no reference changes outside eggy-busted-pilot.md.
+Result: diff /tmp/before_refs.txt /tmp/after_refs.txt | grep -v 'eggy-busted-pilot' produced no output ✅
