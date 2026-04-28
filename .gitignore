@@ -58,3 +58,5 @@ scripts/analysis/loc_data.json
 /luacov.stats.out
 /luacov.report.out
 /contract
+.agents/plan.md
+.agents/research.md
