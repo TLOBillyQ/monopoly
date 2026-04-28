@@ -6,6 +6,7 @@ return {
   },
   contract = {
     ROOT = {"spec/contract"},
+    helper = "spec/helper.lua",
     output = "TAP",
     pattern = "_spec",
   },
