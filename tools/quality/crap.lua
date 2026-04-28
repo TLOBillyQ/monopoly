@@ -59,15 +59,17 @@ end
 local function _help_text(command_name)
   return table.concat({
     "用法:",
-    "  lua " .. tostring(command_name) .. " report [--lane NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
-    "  lua " .. tostring(command_name) .. " collect [--lane NAME] --out FILE [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " report [--lane NAME] [--runner NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " collect [--lane NAME] [--runner NAME] --out FILE [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " dry-run [--lane NAME] [--runner NAME] [--config FILE]",
     "  lua " .. tostring(command_name) .. " viewer [--in-json FILE] [--out-dir DIR] [--open]",
     "  lua " .. tostring(command_name) .. " summary [--in-json FILE] [--tier-config FILE] [--lane NAME] [--out FILE] [--top N] [--gate]",
     "  lua " .. tostring(command_name),
     "",
     "Usage:",
-    "  lua " .. tostring(command_name) .. " report [--lane NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
-    "  lua " .. tostring(command_name) .. " collect [--lane NAME] --out FILE [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " report [--lane NAME] [--runner NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " collect [--lane NAME] [--runner NAME] --out FILE [--project-root DIR]",
+    "  lua " .. tostring(command_name) .. " dry-run [--lane NAME] [--runner NAME] [--config FILE]",
     "  lua " .. tostring(command_name) .. " viewer [--in-json FILE] [--out-dir DIR] [--open]",
     "  lua " .. tostring(command_name) .. " summary [--in-json FILE] [--tier-config FILE] [--lane NAME] [--out FILE] [--top N] [--gate]",
     "  lua " .. tostring(command_name),
@@ -97,6 +99,7 @@ local function _parse_report_args(args)
     strict_tests = false,
     project_root = nil,
     lanes = {},
+    runner = nil,
   }
 
   local index = 1
@@ -114,6 +117,9 @@ local function _parse_report_args(args)
     elseif token == "--project-root" then
       index = index + 1
       options.project_root = args[index]
+    elseif token == "--runner" then
+      index = index + 1
+      options.runner = args[index]
     elseif token == "--top" then
       index = index + 1
       options.top = common.to_integer(args[index]) or 20
@@ -139,6 +145,7 @@ local function _parse_collect_args(args)
     out = nil,
     project_root = nil,
     lanes = {},
+    runner = nil,
   }
 
   local index = 1
@@ -156,6 +163,9 @@ local function _parse_collect_args(args)
     elseif token == "--project-root" then
       index = index + 1
       options.project_root = args[index]
+    elseif token == "--runner" then
+      index = index + 1
+      options.runner = args[index]
     else
       error("unknown flag: " .. tostring(token))
     end
@@ -202,6 +212,33 @@ local function _parse_viewer_args(args)
   return options
 end
 
+local function _parse_dry_run_args(args)
+  local options = {
+    config = DEFAULT_CONFIG_PATH,
+    lane = "behavior",
+    runner = nil,
+  }
+  local index = 1
+  while index <= #args do
+    local token = args[index]
+    if token == "--config" then
+      index = index + 1
+      options.config = args[index]
+    elseif token == "--lane" then
+      index = index + 1
+      options.lane = args[index]
+    elseif token == "--runner" then
+      index = index + 1
+      options.runner = args[index]
+    else
+      error("unknown flag: " .. tostring(token))
+    end
+    index = index + 1
+  end
+  options.config = _resolve_cli_path(REPO_ROOT, options.config)
+  return options
+end
+
 local function _ensure_bridge_package_paths(repo_root)
   package_path_helper.install_monopoly_package_paths({
     repo_root = repo_root,
@@ -217,17 +254,133 @@ local function _ensure_bridge_package_paths(repo_root)
   end
 end
 
+local function _copy_array(values)
+  local copied = {}
+  for _, value in ipairs(values or {}) do
+    copied[#copied + 1] = value
+  end
+  return copied
+end
+
+local function _is_array_table(value)
+  return type(value) == "table" and #value > 0
+end
+
+local function _load_raw_crap_config(config_path)
+  local ok, loaded = pcall(dofile, config_path)
+  if not ok then
+    return nil, loaded
+  end
+  if type(loaded) ~= "table" then
+    return nil, "crap config must return a table"
+  end
+  return loaded, nil
+end
+
+local function _resolve_collect_lanes(raw_coverage, cli_lanes)
+  if _is_array_table(cli_lanes) then
+    return _copy_array(cli_lanes)
+  end
+  local lanes_cfg = raw_coverage and raw_coverage.lanes or nil
+  if _is_array_table(lanes_cfg) then
+    return _copy_array(lanes_cfg)
+  end
+  if type(lanes_cfg) == "table" then
+    if lanes_cfg.behavior ~= nil then
+      return { "behavior" }
+    end
+    local keys = common.sorted_keys(lanes_cfg)
+    if #keys > 0 then
+      return { keys[1] }
+    end
+  end
+  return { "default" }
+end
+
+local function _resolve_adapter_from_config(raw_coverage, config_dir, lane, runner)
+  local adapter_setting = nil
+  if runner ~= nil and runner ~= "" then
+    if runner == "busted" then
+      adapter_setting = "busted_adapter.lua"
+    else
+      return nil, "unsupported runner: " .. tostring(runner)
+    end
+  end
+
+  if adapter_setting == nil and type(raw_coverage and raw_coverage.lanes or nil) == "table"
+      and #raw_coverage.lanes == 0 and lane ~= nil and lane ~= "" then
+    adapter_setting = raw_coverage.lanes[lane]
+  end
+  if adapter_setting == nil then
+    adapter_setting = raw_coverage and raw_coverage.adapter or nil
+  end
+  if adapter_setting == nil then
+    return nil, "coverage adapter is required"
+  end
+
+  local adapter = adapter_setting
+  if type(adapter) == "string" then
+    local adapter_path = common.resolve_path(config_dir, adapter)
+    local ok, loaded = pcall(dofile, adapter_path)
+    if not ok then
+      return nil, loaded
+    end
+    adapter = loaded
+  elseif type(adapter) == "function" then
+    adapter = adapter()
+  end
+
+  if type(adapter) ~= "table" then
+    return nil, "coverage adapter must resolve to a table"
+  end
+  return adapter, nil
+end
+
+local function _collect_with_host_config(options)
+  _ensure_bridge_package_paths(REPO_ROOT)
+  local coverage = require("crap4lua.coverage")
+  local raw, load_err = _load_raw_crap_config(options.config)
+  if raw == nil then
+    return nil, load_err
+  end
+
+  local config_dir = common.parent_dir(options.config) or REPO_ROOT
+  local raw_coverage = raw.coverage or {}
+  local lanes = _resolve_collect_lanes(raw_coverage, options.lanes)
+  local selected_lane = lanes[1]
+  local adapter, adapter_err = _resolve_adapter_from_config(raw_coverage, config_dir, selected_lane, options.runner)
+  if adapter == nil then
+    return nil, adapter_err
+  end
+
+  local project_root = common.resolve_path(config_dir, raw.project_root or ".")
+  if options.project_root ~= nil and options.project_root ~= "" then
+    project_root = options.project_root
+  end
+
+  local source_roots = _copy_array(raw.source_roots or {})
+  local collect_result = coverage.collect({
+    project_root = project_root,
+    tracked_sources = _copy_array(raw_coverage.tracked_sources or {}),
+    source_roots = source_roots,
+    lanes = lanes,
+    mode = raw_coverage.mode,
+    adapter = adapter,
+  })
+
+  return {
+    project_root = project_root,
+    project_name = raw.project_name or "Monopoly",
+    source_roots = source_roots,
+    coverage_result = collect_result,
+  }, nil
+end
+
 local function _collect_bridge_result(options, env)
   if type(env.collect_bridge_result) == "function" then
     return env.collect_bridge_result(options)
   end
-  _ensure_bridge_package_paths(REPO_ROOT)
-  local bridge = require("crap4lua.bridge")
-  return bridge.collect({
-    config = options.config,
-    lanes = options.lanes,
-    project_root = options.project_root,
-  })
+  return _collect_with_host_config(options)
 end
 
 local function _write_collect_output(options, env)
@@ -364,6 +517,40 @@ local function _run_collect(options, env)
     return { ok = false, code = 1, err = err }
   end
   return { ok = true, code = 0, output = "" }
+end
+
+local function _run_dry_run(options, env)
+  env = env or {}
+  local stdout = env.stdout or io.stdout
+  local raw, load_err = _load_raw_crap_config(options.config)
+  if raw == nil then
+    return { ok = false, code = 1, err = load_err }
+  end
+
+  local config_dir = common.parent_dir(options.config) or REPO_ROOT
+  local raw_coverage = raw.coverage or {}
+  local adapter, adapter_err = _resolve_adapter_from_config(raw_coverage, config_dir, options.lane, options.runner)
+  if adapter == nil then
+    return { ok = false, code = 1, err = adapter_err }
+  end
+
+  if type(adapter.discover_specs) ~= "function" then
+    return {
+      ok = false,
+      code = 1,
+      err = "adapter does not support dry-run discover_specs(lane)",
+    }
+  end
+
+  local ok, spec_files_or_err = pcall(adapter.discover_specs, options.lane)
+  if not ok then
+    return { ok = false, code = 1, err = spec_files_or_err }
+  end
+  local spec_files = spec_files_or_err or {}
+  for _, spec_file in ipairs(spec_files) do
+    stdout:write(tostring(spec_file), "\n")
+  end
+  return { ok = true, code = 0 }
 end
 
 local function _run_viewer(options, env)
@@ -683,6 +870,24 @@ local function _run_internal(args, env)
       return { ok = false, code = 1 }
     end
     local result = _run_collect(options_or_err, env)
+    if result.ok ~= true then
+      stderr:write(tostring(result.err or result.output or ""), "\n")
+      return { ok = false, code = result.code or 1 }
+    end
+    if result.output and result.output ~= "" then
+      stdout:write(result.output)
+    end
+    return { ok = true, code = result.code or 0 }
+  end
+
+  if first == "dry-run" then
+    local ok, options_or_err = pcall(_parse_dry_run_args, { select(2, table.unpack(argv)) })
+    if not ok then
+      stderr:write(tostring(options_or_err), "\n")
+      stderr:write(_help_text(command_name))
+      return { ok = false, code = 1 }
+    end
+    local result = _run_dry_run(options_or_err, env)
     if result.ok ~= true then
       stderr:write(tostring(result.err or result.output or ""), "\n")
       return { ok = false, code = result.code or 1 }

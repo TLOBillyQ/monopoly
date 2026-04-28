@@ -1,7 +1,7 @@
 local bootstrap = require("tests.bootstrap")
 local behavior = require("tests.behavior")
-local contract = require("tests.contract")
 local guard = require("tests.guard")
+local common = require("tools.shared.lib.common")
 local timing_summary = require("tests.support.timing_summary")
 
 bootstrap.install_package_paths()
@@ -23,11 +23,22 @@ local function _run_lane(name, fn, timings)
   }
 end
 
+local function _run_contract_lane()
+  local ok, err = common.run_command({
+    os.getenv("HOME") .. "/.luarocks/bin/busted",
+    "--helper=spec/helper.lua",
+    "--run=contract",
+  })
+  if not ok then
+    error("contract lane failed: " .. tostring(err))
+  end
+end
+
 local timings = {}
 local total_timer = _timing_enabled and wall_clock.start() or nil
 
 _run_lane("behavior", behavior.run, timings)
-_run_lane("contract", contract.run, timings)
+_run_lane("contract", _run_contract_lane, timings)
 _run_lane("guard", guard.run, timings)
 
 if _timing_enabled then

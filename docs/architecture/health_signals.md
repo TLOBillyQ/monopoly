@@ -28,7 +28,7 @@ arch_view_guard ok
 **2. 架构与契约（必跑）**
 
 ```
-lua tests/contract.lua
+~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract
 ```
 
 验证 `output_adapters/`、gameplay loop output、choice contract、窄 Port 注入等边界稳定性。改过这些路径就先跑这条。

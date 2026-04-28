@@ -18,6 +18,7 @@ common.ensure_windows_utf8_console()
 local REPO_ROOT = bootstrap_env.repo_root
 local MUTATE4LUA_ROOT = common.join_path(REPO_ROOT, "vendor/mutate4lua")
 local DEFAULT_DRIVER_PATH = "tools/quality/mutate/driver.lua"
+local BUSTED_DRIVER_PATH = "tools/quality/mutate/busted_adapter.lua"
 
 local function _binary_path(repo_root)
   local name = "mutate4lua-engine"
@@ -29,11 +30,13 @@ end
 
 local function _help_text(command_name)
   return table.concat({
-    "用法: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--scan|--update-manifest|--since-last-run|--mutate-all|--lines N,N] [--max-workers N] [--timeout-factor N] [--test-command CMD] [--json]",
-    "Usage: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--scan|--update-manifest|--since-last-run|--mutate-all|--lines N,N] [--max-workers N] [--timeout-factor N] [--test-command CMD] [--json]",
+    "用法: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--runner harness|busted] [--dry-run] [--scan|--update-manifest|--since-last-run|--mutate-all|--lines N,N] [--max-workers N] [--timeout-factor N] [--test-command CMD] [--json]",
+    "Usage: lua " .. tostring(command_name) .. " <file.lua> [--lane behavior|contract] [--runner harness|busted] [--dry-run] [--scan|--update-manifest|--since-last-run|--mutate-all|--lines N,N] [--max-workers N] [--timeout-factor N] [--test-command CMD] [--json]",
     "",
     "Monopoly 选项 / Monopoly options:",
     "  --lane behavior|contract   默认 behavior",
+    "  --runner harness|busted   默认 harness",
+    "  --dry-run                 只打印将执行的 suite/spec 列表",
     "  --index-suites             显式预热 behavior suite index",
   }, "\n")
 end
@@ -44,6 +47,8 @@ local function _parse_args(args)
     index_suites = false,
     target = nil,
     lane = "behavior",
+    runner = "harness",
+    dry_run = false,
     passthrough = {},
   }
 
@@ -55,6 +60,15 @@ local function _parse_args(args)
     elseif token == "--index-suites" then
       options.index_suites = true
       options.passthrough[#options.passthrough + 1] = token
+    elseif token == "--dry-run" then
+      options.dry_run = true
+    elseif token == "--runner" then
+      index = index + 1
+      local value = args[index]
+      if value == nil or value == "" then
+        error("--runner requires a value")
+      end
+      options.runner = value
     elseif token == "--lane" or token == "--lines" or token == "--max-workers" or token == "--timeout-factor" or token == "--test-command" then
       options.passthrough[#options.passthrough + 1] = token
       index = index + 1
@@ -80,6 +94,9 @@ end
 local function _validate_args(options)
   if options.lane ~= "behavior" and options.lane ~= "contract" then
     error("unsupported lane: " .. tostring(options.lane))
+  end
+  if options.runner ~= "harness" and options.runner ~= "busted" then
+    error("unsupported runner: " .. tostring(options.runner))
   end
 end
 
@@ -111,11 +128,12 @@ function M.ensure_binary(repo_root, env)
 end
 
 function M.build_core_command(binary_path, options)
+  local driver_script = options.runner == "busted" and BUSTED_DRIVER_PATH or DEFAULT_DRIVER_PATH
   local args = { binary_path }
   if options.index_suites then
     args[#args + 1] = "index-suites"
     args[#args + 1] = "--driver-script"
-    args[#args + 1] = DEFAULT_DRIVER_PATH
+    args[#args + 1] = driver_script
     for _, value in ipairs(options.passthrough or {}) do
       if value ~= "--index-suites" then
         args[#args + 1] = value
@@ -140,13 +158,50 @@ function M.build_core_command(binary_path, options)
   args[#args + 1] = "--target"
   args[#args + 1] = options.target
   args[#args + 1] = "--driver-script"
-  args[#args + 1] = DEFAULT_DRIVER_PATH
+  args[#args + 1] = driver_script
   for _, value in ipairs(options.passthrough or {}) do
     if value ~= "--scan" and value ~= "--update-manifest" then
       args[#args + 1] = value
     end
   end
   return args
+end
+
+function M.run_dry_run(options, env)
+  local stdout = env.stdout or io.stdout
+  local stderr = env.stderr or io.stderr
+  local workspace_root = env.workspace_root or REPO_ROOT
+
+  if options.runner == "busted" then
+    local busted_adapter = require("quality.mutate.busted_adapter")
+    local specs, discover_err = busted_adapter.discover_specs(options.lane)
+    if specs == nil then
+      stderr:write(tostring(discover_err), "\n")
+      return 1
+    end
+    stdout:write(table.concat(specs, "\n"), "\n")
+    return 0
+  end
+
+  local driver_script = common.join_path(workspace_root, DEFAULT_DRIVER_PATH)
+  local command = {
+    "lua",
+    driver_script,
+    "--lane", options.lane,
+    "--emit-suite-file-map-json",
+  }
+  local result = (env.run_command or common.run_command)(command, {
+    cwd = workspace_root,
+  })
+  local output = tostring(result.output or "")
+  if output ~= "" then
+    if result.code == 0 then
+      stdout:write(output)
+    else
+      stderr:write(output)
+    end
+  end
+  return result.code or (result.ok and 0 or 1)
 end
 
 function M.run(args, env)
@@ -172,6 +227,9 @@ function M.run(args, env)
   if options.help then
     stdout:write(_help_text(command_name))
     return 0
+  end
+  if options.dry_run then
+    return M.run_dry_run(options, env)
   end
   local binary_path, build_err = M.ensure_binary(workspace_root, env)
   if binary_path == nil then

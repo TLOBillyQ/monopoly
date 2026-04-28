@@ -13,7 +13,7 @@
 | 入口 | 类型 | 主要回答的问题 | 当前本地耗时参考 |
 |------|------|----------------|------------------|
 | `lua tests/behavior.lua` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 约 `0.4s` |
-| `lua tests/contract.lua` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 目标 warm `<5s`，cold `<8s` |
+| `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 目标 warm `<5s`，cold `<8s` |
 | `lua tests/tooling.lua` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 本机实测：`--workers 1` 约 `111s`，默认 auto 约 `116s` |
 | `lua tests/guard.lua` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
 | `lua tools/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
@@ -155,7 +155,7 @@
 | 你现在想回答的问题 | 先跑什么 |
 |--------------------|----------|
 | 功能有没有坏 | `lua tests/behavior.lua` |
-| 跨层接口或读模型有没有漂移 | `lua tests/contract.lua` |
+| 跨层接口或读模型有没有漂移 | `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` |
 | 有没有出现明确禁用写法 | `lua tests/guard.lua` |
 | 依赖图有没有越界或成环 | `lua tools/quality/arch.lua check` |
 | 哪些函数最值得先补测/重构 | `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` |
@@ -176,7 +176,7 @@ lua tests/behavior.lua
 ### 架构/契约检查
 
 ```sh
-lua tests/contract.lua
+~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract
 lua tools/quality/arch.lua check
 ```
 
@@ -219,7 +219,7 @@ lua tools/quality/mutate.lua src/core/utils/role_id.lua --since-last-run
 
 ```sh
 lua tests/behavior.lua
-lua tests/contract.lua
+~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract
 lua tests/guard.lua
 lua tools/quality/arch.lua check
 lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json

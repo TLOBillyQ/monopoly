@@ -158,18 +158,8 @@ for _, module_name in ipairs(presentation_behavior_modules) do
 end
 
 local contract_modules = {
-  "suites.presentation.read_model_contract",
-  "suites.architecture.architecture_guard_contract",
+  -- kept as tooling-support stubs: required by tooling lane suites for tooling_tests field
   "suites.architecture.script_tools_contract",
-  "suites.architecture.guard_scripts_contract",
-  "suites.architecture.usecase_boundary_contract",
-  "suites.architecture.cross_module_contract",
-  "suites.architecture.intent_output_contract",
-  "suites.presentation.ui_gate_contract",
-  "suites.runtime.narrow_runtime_ports_contract",
-  "suites.runtime.runtime_ports_contract",
-  "suites.presentation.ui_runtime_state_contract",
-  "suites.architecture.tooling_parallel_contract",
   "suites.architecture.scrap4lua_contract",
 }
 
