@@ -1,0 +1,12 @@
+describe("smoke: busted infra", function()
+  it("GameAPI global exists", function()
+    assert.is_not_nil(GameAPI)
+    assert.equals("table", type(GameAPI))
+  end)
+
+  it("env_runtime.refresh is callable", function()
+    local env_runtime = require("spec.env_runtime")
+    assert.is_function(env_runtime.refresh)
+    env_runtime.refresh()
+  end)
+end)

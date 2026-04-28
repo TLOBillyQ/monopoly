@@ -184,6 +184,7 @@ local tooling_modules = {
   "suites.architecture.script_tools_process_tooling_contract",
   "suites.architecture.scrap4lua_tooling_contract",
   "suites.architecture.script_tools_tooling",  -- 从 script_tools_contract 分离出的重型 tooling 测试
+  "suites.architecture.busted_infra_tooling",  -- T8: meta-test 验证 busted infra 完整性
 }
 
 local guard_scripts = {

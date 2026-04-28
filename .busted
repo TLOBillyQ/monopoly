@@ -1,0 +1,17 @@
+return {
+  default = {
+    helper = "spec/helper.lua",
+    output = "spec/log_warns_handler.lua",
+    pattern = "_spec",
+  },
+  contract = {
+    ROOT = {"spec/contract"},
+    output = "TAP",
+    pattern = "_spec",
+  },
+  ci = {
+    output = "junit",
+    ["Xoutput"] = "junit-output.xml",
+    pattern = "_spec",
+  },
+}
