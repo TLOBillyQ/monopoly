@@ -50,8 +50,8 @@
 
 ### `contract`
 
-- 入口：`tests/contract.lua`
-- 来源：`tests/catalog.lua` 中的 `contract_suites`
+- 入口：`~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract`
+- 来源：`spec/contract/*_spec.lua`（13 个 BDD spec 文件）
 - 关注点：读模型、架构护栏、窄 Port、UI gate、runtime ports、快速脚本工具契约
 - 适用时机：改了跨层接口、装配、端口、架构脚本、展示契约，先跑它
 - 特点：不是业务玩法回归，而是“接口和边界别偷偷变形”；默认不再包含重型工具 smoke
