@@ -1,5 +1,5 @@
-local bootstrap = require("tests.bootstrap")
-local catalog = require("tests.catalog")
+local bootstrap = require("spec.bootstrap")
+local catalog = require("tools.quality.shared.test_catalog")
 local common = require("shared.lib.common")
 local mutate = require("quality.mutate")
 local driver = require("quality.mutate.driver")
@@ -258,7 +258,7 @@ local function _test_driver_suite_list_file_filters_suites()
       }
     end,
     run_all = function(suites, opts)
-      return require("TestHarness").run_all(suites, opts)
+      return require("tools.quality.shared.test_harness").run_all(suites, opts)
     end,
   })
 

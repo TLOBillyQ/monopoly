@@ -77,10 +77,10 @@ local function _generate_chart(data, output_path)
     "set title 'src/ Directory LOC Trend'",
     "set ylabel 'Lines of Code (LOC)'",
     "plot " .. common.shell_quote(data_path) .. " using 1:2 with linespoints linewidth 2 pointtype 7 title 'src/'",
-    "set title 'tests/ Directory LOC Trend'",
+    "set title 'spec/ Directory LOC Trend'",
     "set xlabel 'Commit Time'",
     "set ylabel 'Lines of Code (LOC)'",
-    "plot " .. common.shell_quote(data_path) .. " using 1:3 with linespoints linewidth 2 pointtype 5 title 'tests/'",
+    "plot " .. common.shell_quote(data_path) .. " using 1:3 with linespoints linewidth 2 pointtype 5 title 'spec/'",
     "unset multiplot",
     "",
   }, "\n")
@@ -133,8 +133,8 @@ local function main()
 
   _println(string.rep("=", 60))
   _println(_text(
-    "src/ 和 tests/ 目录有效代码行数变化分析（Lua 版）",
-    "Effective LOC trend for src/ and tests/ (Lua)"
+    "src/ 和 spec/ 目录有效代码行数变化分析（Lua 版）",
+    "Effective LOC trend for src/ and spec/ (Lua)"
   ))
   _println(_text("平台", "Platform") .. ": "
     .. (common.is_windows() and "Windows" or (common.is_macos() and "macOS" or "Linux/Unix"))
@@ -231,7 +231,7 @@ local function main()
     _println(string.format("  %s: %+d lines", _text("变化", "Change"), src_change))
   end
   _println("")
-  _println(_text("tests/ 目录", "tests/ Directory") .. ":")
+  _println(_text("spec/ 目录", "spec/ Directory") .. ":")
   local tests_change = last.tests_loc - first.tests_loc
   _println("  " .. _text("起始", "Start") .. ": " .. tostring(first.tests_loc) .. " lines  |  "
     .. _text("结束", "End") .. ": " .. tostring(last.tests_loc) .. " lines")
@@ -241,7 +241,7 @@ local function main()
     _println(string.format("  %s: %+d lines", _text("变化", "Change"), tests_change))
   end
   _println("")
-  _println(_text("总计（src + tests）", "Total (src + tests)") .. ": " .. tostring(last.total_loc) .. " lines")
+  _println(_text("总计（src + spec）", "Total (src + spec)") .. ": " .. tostring(last.total_loc) .. " lines")
   _println(string.format("%s: %.1fs", _text("耗时", "Elapsed time"), elapsed))
 
   return 0

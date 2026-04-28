@@ -1,7 +1,7 @@
 require("spec.bootstrap").install_package_paths()
 
-local catalog = require("tests.catalog")
-local harness = require("TestHarness")
+local catalog = require("tools.quality.shared.test_catalog")
+local harness = require("tools.quality.shared.test_harness")
 local common = require("shared.lib.common")
 local json_writer = require("arch_view.runtime.json_writer")
 

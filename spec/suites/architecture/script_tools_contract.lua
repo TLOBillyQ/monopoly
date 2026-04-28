@@ -1,6 +1,4 @@
--- script_tools_tooling.lua - 重型 tooling 测试，在并行 tooling lane 中执行
--- luacheck: ignore 211
-local bootstrap = require("tests.bootstrap")
+local bootstrap = require("spec.bootstrap")
 local common = require("shared.lib.common")
 local arch_common = require("arch_view.runtime.common")
 local arch_cli = require("quality.arch")
@@ -11,7 +9,7 @@ bootstrap.install_package_paths()
 
 local project_root = common.normalize_path(common.current_dir())
 
--- 缓存 PowerShell 命令检测结果
+-- 缓存 PowerShell 命令检测结果，避免每次调用都执行 command_exists
 local _cached_powershell_cmd = nil
 local _cached_powershell_checked = false
 
@@ -38,12 +36,18 @@ local function _first_existing(paths)
 end
 
 local function _make_tmp_root(tag)
-  return common.make_temp_path("script_tools_tooling_" .. tostring(tag or "tmp"), "") .. "_中文 English"
+  return common.make_temp_path("script_tools_contract_" .. tostring(tag or "tmp"), "") .. "_中文 English"
 end
 
 local function _assert_contains(text, expected, message)
   if tostring(text or ""):find(expected, 1, true) == nil then
     error((message or "missing expected text") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(text))
+  end
+end
+
+local function _assert_not_contains(text, unexpected, message)
+  if tostring(text or ""):find(unexpected, 1, true) ~= nil then
+    error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
   end
 end
 
@@ -67,7 +71,7 @@ local function _with_clean_tmp(tag, fn)
 end
 
 local function _with_ascii_tmp(tag, fn)
-  local tmp_root = common.make_temp_path("script_tools_tooling_" .. tostring(tag or "tmp"), "")
+  local tmp_root = common.make_temp_path("script_tools_contract_" .. tostring(tag or "tmp"), "")
   _cleanup_tmp(tmp_root)
   local ok, err = xpcall(function()
     fn(tmp_root)
@@ -110,7 +114,12 @@ local function _run_lua(args)
   })
 end
 
-local function _run_powershell_file(script_path, args)
+
+local function _powershell_single_quote(value)
+  return "'" .. tostring(value or ""):gsub("'", "''") .. "'"
+end
+
+local function _run_powershell_command(command_text)
   local cmd = _get_powershell_cmd()
   if cmd == nil then
     return {
@@ -119,12 +128,7 @@ local function _run_powershell_file(script_path, args)
     }
   end
 
-  local command = { cmd, "-File", script_path }
-  for _, value in ipairs(args or {}) do
-    command[#command + 1] = value
-  end
-
-  return common.run_command(command, {
+  return common.run_command({ cmd, "-Command", command_text }, {
     cwd = project_root,
   })
 end
@@ -161,7 +165,76 @@ local function _line_count(text)
   return loc_counter.count_effective_lines(text)
 end
 
--- Tooling 测试函数
+local function _test_encoding_check_accepts_utf8_chinese_strings()
+  _with_ascii_tmp("encoding_chinese_strings", function(tmp_root)
+    local src_dir = common.join_path(tmp_root, "src")
+    local fixture_path = common.join_path(src_dir, "ui/prompt.lua")
+    _write_fixture_file(fixture_path, table.concat({
+      'local prompt = "中文提示…继续"',
+      "return prompt",
+      "",
+    }, "\n"))
+
+    local result = _run_lua({
+      "tools/quality/encoding.lua",
+      "check",
+      "--root",
+      src_dir,
+    })
+
+    assert(result.ok == true, "encoding check should allow utf-8 Chinese business strings")
+    _assert_contains(result.output, "encoding check ok",
+      "encoding check should report success for Chinese business strings")
+  end)
+end
+
+local function _test_encoding_check_reports_suspicious_english_comment()
+  _with_ascii_tmp("encoding_english_comment", function(tmp_root)
+    local src_dir = common.join_path(tmp_root, "src")
+    local fixture_path = common.join_path(src_dir, "ui/anim.lua")
+    _write_fixture_file(fixture_path, table.concat({
+      "-- Fallback: no scheduler — preserve original call order",
+      "return true",
+      "",
+    }, "\n"))
+
+    local result = _run_lua({
+      "tools/quality/encoding.lua",
+      "check",
+      "--root",
+      src_dir,
+    })
+
+    assert(result.ok == false, "encoding check should fail on suspicious punctuation in English comments")
+    _assert_contains(result.output, "U+2014",
+      "encoding check should report the em dash codepoint")
+    _assert_contains(result.output, 'replace with "-"',
+      "encoding check should suggest the ASCII replacement")
+    _assert_contains(result.output, "comment",
+      "encoding check should classify the violation as a comment issue")
+  end)
+end
+
+local function _test_encoding_check_reports_invalid_utf8_bytes()
+  _with_ascii_tmp("encoding_invalid_utf8", function(tmp_root)
+    local src_dir = common.join_path(tmp_root, "src")
+    local fixture_path = common.join_path(src_dir, "broken.lua")
+    _write_fixture_file(fixture_path, "local broken = '" .. string.char(0xFF) .. "'\n")
+
+    local result = _run_lua({
+      "tools/quality/encoding.lua",
+      "check",
+      "--root",
+      src_dir,
+    })
+
+    assert(result.ok == false, "encoding check should fail on invalid utf-8 bytes")
+    _assert_contains(result.output, "invalid UTF-8 byte sequence",
+      "encoding check should report invalid utf-8 bytes")
+    _assert_contains(result.output, "broken.lua:1:",
+      "encoding check should include the file and line location")
+  end)
+end
 
 local function _test_common_handles_unicode_paths_for_file_ops()
   _with_clean_tmp("common_file_ops", function(tmp_root)
@@ -244,6 +317,12 @@ local function _test_arch_common_reuses_unicode_safe_file_ops()
     end
     assert(#files == 1, "arch_common should collect unicode lua files through shared utility")
   end)
+end
+
+local function _test_command_exists_reports_present_and_missing_commands()
+  assert(common.command_exists("lua") == true, "lua should exist in the test environment")
+  assert(common.command_exists("monopoly_command_that_should_not_exist_12345") == false,
+    "command_exists should return false for missing commands")
 end
 
 local function _test_windows_utf8_console_switches_once_per_process()
@@ -399,6 +478,370 @@ local function _test_windows_utf8_console_failure_is_non_throwing()
   end
 end
 
+local function _test_cli_help_text_is_bilingual()
+  local help_commands = {
+    { "tools/data/export_xlsx.lua", "--help" },
+    { "tools/ops/update_api.lua", "--help" },
+    { "tools/quality/arch.lua", "--help" },
+    { "tools/quality/crap.lua", "--help" },
+    { "tools/quality/encoding.lua", "--help" },
+    { "tools/quality/mutate.lua", "--help" },
+    { "tools/quality/scrap.lua", "--help" },
+  }
+
+  -- 并行执行所有 help 命令以减少总耗时
+  local results = {}
+  local threads = {}
+
+  for i, args in ipairs(help_commands) do
+    threads[i] = coroutine.create(function()
+      results[i] = {
+        args = args,
+        result = _run_lua(args),
+      }
+    end)
+  end
+
+  -- 轮询执行所有协程直到完成
+  local running = #threads
+  while running > 0 do
+    running = 0
+    for _, thread in ipairs(threads) do
+      if coroutine.status(thread) ~= "dead" then
+        coroutine.resume(thread)
+        if coroutine.status(thread) ~= "dead" then
+          running = running + 1
+        end
+      end
+    end
+  end
+
+  -- 验证所有结果
+  for _, item in ipairs(results) do
+    assert(item.result.ok == true, "help command should exit successfully for " .. table.concat(item.args, " "))
+    _assert_contains(item.result.output, "用法", "help output should include Chinese usage text")
+    _assert_contains(item.result.output, "Usage", "help output should include English usage text")
+  end
+end
+
+local function _test_update_api_writes_changelog_into_docs_eggy_api_dir()
+  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/update_api.lua")))
+  _assert_contains(
+    script_text,
+    'docs/eggy/api/changelog.md',
+    "update_api should keep the changelog under docs/eggy/api"
+  )
+  _assert_not_contains(
+    script_text,
+    'docs/eggy/api_changelog.md',
+    "update_api should not write changelog beside the api directory"
+  )
+end
+
+local function _write_update_api_fixture(path, function_name)
+  _write_fixture_file(path, table.concat({
+    "---@meta EggyAPI",
+    "",
+    "---@class GlobalAPI",
+    "GlobalAPI = {}",
+    "",
+    "function GlobalAPI." .. tostring(function_name) .. "() end",
+    "",
+  }, "\n"))
+end
+
+local function _run_update_api_git(new_path, doc_dir, changelog_path)
+  return _run_lua({
+    "tools/ops/update_api.lua",
+    "--new", new_path,
+    "--doc-dir", doc_dir,
+    "--changelog", changelog_path,
+    "--skip-meta",
+  })
+end
+
+local function _test_update_api_updates_docs_and_changelog_when_api_changes()
+  _with_ascii_tmp("update_api_api_changes", function(tmp_root)
+    local fixture_root = common.join_path(tmp_root, "update_api_api_changes")
+    local new_path = common.join_path(fixture_root, "EggyAPI.lua")
+    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local changelog_path = common.join_path(doc_dir, "changelog.md")
+
+    _init_git_repo(fixture_root)
+    _write_update_api_fixture(new_path, "legacy_call")
+    _commit_all(fixture_root, "init")
+    _write_update_api_fixture(new_path, "current_call")
+
+    local result = _run_update_api_git(new_path, doc_dir, changelog_path)
+
+    assert(result.ok == false, "update_api should exit non-zero when API diff exists")
+    assert(common.path_exists(common.join_path(doc_dir, "04_global_api.md")) == true,
+      "update_api should generate split docs")
+    assert(common.path_exists(changelog_path) == true,
+      "update_api should write changelog")
+    _assert_contains(result.output, "新增 / Added: 1",
+      "update_api should report the added API")
+    _assert_contains(result.output, "删除 / Removed: 1",
+      "update_api should report the removed API")
+    _assert_contains(result.output, "缺失项 / Missing: 0",
+      "update_api should keep doc entries aligned with source entries")
+    _assert_contains(result.output, "多余项 / Extra: 0",
+      "update_api should keep doc entries aligned with source entries")
+  end)
+end
+
+local function _test_update_api_reports_extra_doc_entries_when_check_fails()
+  _with_ascii_tmp("update_api_extra_doc", function(tmp_root)
+    local fixture_root = common.join_path(tmp_root, "update_api_extra_doc")
+    local new_path = common.join_path(fixture_root, "EggyAPI.lua")
+    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local changelog_path = common.join_path(doc_dir, "changelog.md")
+    local extra_doc_path = common.join_path(doc_dir, "zz_extra.md")
+
+    _init_git_repo(fixture_root)
+    _write_update_api_fixture(new_path, "old_call")
+    _commit_all(fixture_root, "init")
+    _write_update_api_fixture(new_path, "new_call")
+    _write_fixture_file(extra_doc_path, table.concat({
+      "# extra",
+      "",
+      "GhostAPI|ghost_call",
+      "",
+    }, "\n"))
+
+    local result = _run_update_api_git(new_path, doc_dir, changelog_path)
+
+    assert(result.ok == false,
+      "update_api should exit non-zero when doc check finds extra entries")
+    _assert_contains(result.output, "多余项 / Extra: 1",
+      "update_api should surface the extra doc entry count")
+    _assert_contains(result.output, "多余示例 / Extra sample: [GhostAPI|ghost_call]",
+      "update_api should surface the offending extra doc entry")
+  end)
+end
+
+local function _test_update_api_skips_all_writes_when_api_unchanged()
+  _with_ascii_tmp("update_api_no_change", function(tmp_root)
+    local fixture_root = common.join_path(tmp_root, "update_api_no_change")
+    local new_path = common.join_path(fixture_root, "EggyAPI.lua")
+    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local changelog_path = common.join_path(doc_dir, "changelog.md")
+
+    _init_git_repo(fixture_root)
+    _write_update_api_fixture(new_path, "stable_call")
+    _commit_all(fixture_root, "init")
+    -- 不覆盖文件，内容与 git HEAD 相同
+
+    local result = _run_update_api_git(new_path, doc_dir, changelog_path)
+
+    assert(result.ok == true, "update_api should exit 0 when API unchanged")
+    assert(common.path_exists(changelog_path) == false,
+      "update_api should not write changelog when API unchanged")
+    assert(common.path_exists(common.join_path(doc_dir, "04_global_api.md")) == false,
+      "update_api should not generate docs when API unchanged")
+    _assert_contains(result.output, "无 API 变化",
+      "update_api should report no-op reason when API unchanged")
+  end)
+end
+
+local function _expected_default_deploy_target(fake_home)
+  if common.is_windows() then
+    return common.join_path(fake_home, "Desktop/dev/LuaSource_大富翁")
+  end
+  if common.is_macos() then
+    return common.join_path(fake_home, "Documents/eggy/LuaSource_大富翁")
+  end
+  return nil
+end
+
+local function _test_deploy_script_matches_simplified_cli()
+  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/deploy.ps1")))
+  local param_block = assert(script_text:match("param%((.-)%)%s*%$ErrorActionPreference"),
+    "deploy.ps1 should keep a top-level param block")
+  _assert_contains(
+    param_block,
+    "[string]$Profile",
+    "deploy.ps1 should expose the simplified profile parameter"
+  )
+  _assert_contains(
+    script_text,
+    "function Join-LuaSourceDirName",
+    "deploy.ps1 should centralize the LuaSource directory name construction"
+  )
+  _assert_contains(
+    script_text,
+    "Join-Path (Join-Path (Join-Path $home_dir \"Desktop\") \"dev\") (Join-LuaSourceDirName)",
+    "deploy.ps1 should keep the windows default deploy path semantics"
+  )
+  _assert_contains(
+    script_text,
+    "Join-Path (Join-Path (Join-Path $home_dir \"Documents\") \"eggy\") (Join-LuaSourceDirName)",
+    "deploy.ps1 should keep the macOS default deploy path semantics"
+  )
+  _assert_not_contains(
+    script_text,
+    "LuaSource_大富翁-发布",
+    "deploy.ps1 should no longer keep suffix-based default deploy paths"
+  )
+  _assert_not_contains(
+    script_text,
+    "LuaSource_大富翁-备份",
+    "deploy.ps1 should no longer keep suffix-based backup deploy paths"
+  )
+  _assert_not_contains(
+    script_text,
+    "vehicle-runtime",
+    "deploy.ps1 should not expose the retired vehicle runtime flag"
+  )
+  _assert_not_contains(
+    param_block,
+    "$TargetPath",
+    "deploy.ps1 should no longer expose explicit target path override"
+  )
+  _assert_not_contains(
+    param_block,
+    "$StartupProfile",
+    "deploy.ps1 should no longer expose the retired startup profile parameter"
+  )
+  _assert_not_contains(
+    param_block,
+    "$Platform",
+    "deploy.ps1 should no longer expose explicit platform override"
+  )
+  _assert_not_contains(
+    param_block,
+    "$KeepTestStartup",
+    "deploy.ps1 should no longer expose KeepTestStartup"
+  )
+  _assert_not_contains(
+    param_block,
+    "$Help",
+    "deploy.ps1 should no longer expose help switch handling"
+  )
+  _assert_not_contains(
+    script_text,
+    "MONOPOLY_DEPLOY_TARGET",
+    "deploy.ps1 should no longer read MONOPOLY_DEPLOY_TARGET fallback"
+  )
+end
+
+local function _test_deploy_comprehensive()
+  _test_deploy_script_matches_simplified_cli()
+
+  _with_ascii_tmp("deploy_comprehensive", function(tmp_root)
+    local fake_home = common.join_path(tmp_root, "fake_home")
+    local publish_target = _expected_default_deploy_target(fake_home)
+    local command = table.concat({
+      "$env:HOME = " .. _powershell_single_quote(fake_home),
+      "$env:USERPROFILE = " .. _powershell_single_quote(fake_home),
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -BuildMode debug -Profile missile",
+    }, "; ")
+    local result = _run_powershell_command(command)
+
+    if result.skipped == true then
+      return
+    end
+    if publish_target == nil then
+      return
+    end
+
+    assert(result.ok == true, "deploy should succeed with debug profile under the simplified CLI")
+    assert(common.path_exists(common.join_path(publish_target, "main.lua")) == true,
+      "deploy should write main.lua into the default target path")
+    assert(common.path_exists(common.join_path(publish_target, "src/config")) == true,
+      "deploy should copy src into the default target path")
+    assert(common.path_exists(common.join_path(publish_target, "Data/UIManagerNodes.lua")) == true,
+      "deploy should copy UIManagerNodes into the default target path")
+    assert(common.path_exists(common.join_path(publish_target, "Data/Prefab.lua")) == true,
+      "deploy should copy Prefab into the default target path")
+
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
+      "deploy should inject debug build mode into main.lua")
+    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
+      "deploy should inject Profile into main.lua in debug mode")
+    _assert_contains(result.output, "Build mode: debug",
+      "deploy output should report debug mode")
+    _assert_contains(result.output, common.normalize_path(publish_target),
+      "deploy output should report the resolved default target path")
+    _assert_contains(result.output, "Lua Files:",
+      "deploy output should keep total lua file count")
+    _assert_contains(result.output, "Effective LOC:",
+      "deploy output should keep total effective loc")
+  end)
+
+  _with_ascii_tmp("deploy_release_default", function(tmp_root)
+    local fake_home = common.join_path(tmp_root, "fake_home")
+    local publish_target = _expected_default_deploy_target(fake_home)
+    local command = table.concat({
+      "$env:HOME = " .. _powershell_single_quote(fake_home),
+      "$env:USERPROFILE = " .. _powershell_single_quote(fake_home),
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -BuildMode release",
+    }, "; ")
+    local result = _run_powershell_command(command)
+
+    if result.skipped == true then
+      return
+    end
+    if publish_target == nil then
+      return
+    end
+
+    assert(result.ok == true, "deploy should succeed without startup profile")
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "release"',
+      "deploy without startup profile should inject release build mode")
+    _assert_not_contains(deployed_main, 'STARTUP_TEST_PROFILE = ',
+      "deploy without startup profile should not inject STARTUP_TEST_PROFILE")
+    _assert_contains(result.output, "Build mode: release",
+      "deploy output should show release mode when no startup profile is present")
+    assert(common.path_exists(common.join_path(publish_target, "src/config/testing")) == false,
+      "release deploy should strip src/config/testing")
+    assert(common.path_exists(common.join_path(publish_target, "src/app/testing")) == false,
+      "release deploy should strip src/app/testing")
+  end)
+end
+
+local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
+  _with_clean_tmp("run_command_stderr_capture", function(tmp_root)
+    local script_path = common.join_path(tmp_root, "capture_output.lua")
+    local stdin_path = common.join_path(tmp_root, "stdin.txt")
+    local ok, err = common.write_file(script_path, table.concat({
+      "local input = io.read('*a') or ''",
+      "if input ~= '' then",
+      "  io.write(input)",
+      "  if input:sub(-1) ~= '\\n' then",
+      "    io.write('\\n')",
+      "  end",
+      "end",
+      "io.stderr:write('未知参数 / Unknown flag: --bad-flag\\n')",
+      "os.exit(7)",
+      "",
+    }, "\n"))
+    if not ok then
+      error(err)
+    end
+
+    ok, err = common.write_file(stdin_path, "stdin 中文 / utf8 stdin")
+    if not ok then
+      error(err)
+    end
+
+    local result = common.run_command({ "lua", script_path }, {
+      cwd = project_root,
+      stdin_path = stdin_path,
+    })
+
+    assert(result.ok == false, "run_command should surface non-zero exit codes")
+    assert(result.code ~= 0, "run_command should preserve the child exit code")
+    _assert_contains(result.output, "stdin 中文 / utf8 stdin", "run_command should preserve utf8 stdin content")
+    _assert_contains(result.output, "未知参数", "run_command should preserve Chinese stderr text")
+    _assert_contains(result.output, "Unknown flag", "run_command should preserve English stderr text")
+    _assert_not_contains(result.output, "System.Management.Automation.RemoteException",
+      "run_command should not wrap native stderr as a PowerShell exception")
+  end)
+end
+
 local function _test_arch_view_viewer_supports_unicode_output_path()
   _with_clean_tmp("arch_view_unicode_output", function(tmp_root)
     local out_dir = common.join_path(tmp_root, "arch_view_目标/中文 English")
@@ -467,9 +910,9 @@ local function _test_mutate_wrapper_scan_json_output()
   })
 
   assert(result.ok == true, "mutate wrapper scan should succeed")
-  _assert_contains(result.output, '"relative_file":"src/core/utils/role_id.lua"',
+  _assert_contains(result.output, "\"relative_file\":\"src/core/utils/role_id.lua\"",
     "mutate scan should report the normalized target path")
-  _assert_contains(result.output, '"sites":[',
+  _assert_contains(result.output, "\"sites\":[",
     "mutate scan should emit discovered mutation sites in json output")
 end
 
@@ -483,9 +926,9 @@ local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
   })
 
   assert(result.ok == true, "mutate wrapper suite indexing should succeed")
-  _assert_contains(result.output, '"ok":true',
+  _assert_contains(result.output, "\"ok\":true",
     "suite indexing should report success in json output")
-  _assert_contains(result.output, '"suite_count":',
+  _assert_contains(result.output, "\"suite_count\":",
     "suite indexing should report indexed suite count")
 end
 
@@ -597,6 +1040,7 @@ local function _test_loc_scan_counts_worktree_with_go_engine()
   end)
 end
 
+-- 轻量版 git 历史测试，使用 2 次提交而非 3 次，减少执行时间
 local function _test_loc_scan_counts_history_across_git_diff_shapes()
   _with_ascii_tmp("loc_scan_history", function(tmp_root)
     local repo_root = common.join_path(tmp_root, "history_repo")
@@ -634,10 +1078,12 @@ local function _test_loc_scan_counts_history_across_git_diff_shapes()
       "",
     }, "\n")
 
+    -- 第一次提交：初始文件
     _write_fixture_file(common.join_path(src_dir, "a.lua"), src_v1)
     _write_fixture_file(common.join_path(tests_dir, "spec.lua"), test_v1)
     _commit_all(repo_root, "initial loc fixtures")
 
+    -- 第二次提交：合并修改、添加、重命名、删除操作（减少一次提交）
     _write_fixture_file(common.join_path(src_dir, "a.lua"), src_v2)
     _write_fixture_file(common.join_path(tests_dir, "extra.lua"), test_v2)
     _write_fixture_file(common.join_path(tests_dir, "empty.lua"), "")
@@ -647,7 +1093,7 @@ local function _test_loc_scan_counts_history_across_git_diff_shapes()
     loc_scan.reset_caches()
     local result, history_err = loc_scan.count_history({
       git_root = repo_root,
-      since = "1 day ago",
+      since = "1 day ago",  -- 缩短时间范围加快查询
     })
     if result == nil then
       error(history_err)
@@ -656,34 +1102,53 @@ local function _test_loc_scan_counts_history_across_git_diff_shapes()
     local rows = result.rows or {}
     assert(#rows == 2, "history scanner should return one row per commit in the time window")
 
+    -- 验证第一次提交
     assert(rows[1].src_loc == _line_count(src_v1), "first history row should use the initial src LOC")
     assert(rows[1].src_files == 1, "first history row should count the initial src file")
     assert(rows[1].tests_loc == _line_count(test_v1), "first history row should use the initial tests LOC")
     assert(rows[1].tests_files == 1, "first history row should count the initial tests file")
 
+    -- 验证第二次提交：包含修改、添加、重命名
     assert(rows[2].src_loc == _line_count(src_v2), "second history row should reflect the modified src LOC")
-    -- 第二次提交后：tests_loc = test_v1(重命名保留) + test_v2(新增) + empty.lua(空文件不计)
     assert(rows[2].tests_loc == _line_count(test_v1) + _line_count(test_v2),
-      "second history row should include renamed and added test LOC")
-    assert(rows[2].tests_files == 2, "second history row should count renamed and new files, ignoring empty")
+      "second history row should accumulate renamed and added tests LOC")
+    assert(rows[2].tests_files == 2, "second history row should count renamed and new files")
   end)
 end
 
+local contract_tests = {
+  { name = "command_exists_reports_present_and_missing_commands", run = _test_command_exists_reports_present_and_missing_commands },
+  { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
+  { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
+  { name = "windows_utf8_console_switches_once_per_process", run = _test_windows_utf8_console_switches_once_per_process },
+  { name = "windows_utf8_console_skips_when_already_utf8", run = _test_windows_utf8_console_skips_when_already_utf8 },
+  { name = "windows_utf8_console_is_noop_off_windows", run = _test_windows_utf8_console_is_noop_off_windows },
+  { name = "windows_utf8_console_failure_is_non_throwing", run = _test_windows_utf8_console_failure_is_non_throwing },
+  { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
+  { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
+  { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
+  { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
+  { name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
+  { name = "loc_scan_counts_worktree_with_go_engine", run = _test_loc_scan_counts_worktree_with_go_engine },
+  { name = "loc_scan_counts_history_across_git_diff_shapes", run = _test_loc_scan_counts_history_across_git_diff_shapes },
+  { name = "deploy_script_matches_simplified_cli", run = _test_deploy_script_matches_simplified_cli },
+  { name = "update_api_writes_changelog_into_docs_eggy_api_dir", run = _test_update_api_writes_changelog_into_docs_eggy_api_dir },
+  { name = "update_api_updates_docs_and_changelog_when_api_changes", run = _test_update_api_updates_docs_and_changelog_when_api_changes },
+  { name = "update_api_reports_extra_doc_entries_when_check_fails", run = _test_update_api_reports_extra_doc_entries_when_check_fails },
+  { name = "update_api_skips_all_writes_when_api_unchanged", run = _test_update_api_skips_all_writes_when_api_unchanged },
+}
+
+local tooling_tests = {
+  { name = "encoding_check_accepts_utf8_chinese_strings", run = _test_encoding_check_accepts_utf8_chinese_strings },
+  { name = "encoding_check_reports_suspicious_english_comment", run = _test_encoding_check_reports_suspicious_english_comment },
+  { name = "encoding_check_reports_invalid_utf8_bytes", run = _test_encoding_check_reports_invalid_utf8_bytes },
+  { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
+  { name = "deploy_comprehensive", run = _test_deploy_comprehensive },
+  { name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
+}
+
 return {
-  name = "script_tools_tooling",
-  tests = {
-    { name = "common_handles_unicode_paths_for_file_ops", run = _test_common_handles_unicode_paths_for_file_ops },
-    { name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
-    { name = "windows_utf8_console_switches_once_per_process", run = _test_windows_utf8_console_switches_once_per_process },
-    { name = "windows_utf8_console_skips_when_already_utf8", run = _test_windows_utf8_console_skips_when_already_utf8 },
-    { name = "windows_utf8_console_is_noop_off_windows", run = _test_windows_utf8_console_is_noop_off_windows },
-    { name = "windows_utf8_console_failure_is_non_throwing", run = _test_windows_utf8_console_failure_is_non_throwing },
-    { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
-    { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
-    { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
-    { name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
-    { name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
-    { name = "loc_scan_counts_worktree_with_go_engine", run = _test_loc_scan_counts_worktree_with_go_engine },
-    { name = "loc_scan_counts_history_across_git_diff_shapes", run = _test_loc_scan_counts_history_across_git_diff_shapes },
-  },
+  name = "script_tools_contract",
+  tests = contract_tests,
+  tooling_tests = tooling_tests,
 }

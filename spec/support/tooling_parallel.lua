@@ -1,6 +1,6 @@
 require("spec.bootstrap").install_package_paths()
 
-local harness = require("TestHarness")
+local harness = require("tools.quality.shared.test_harness")
 local log_capture = require("spec.support.log_capture")
 local common = require("shared.lib.common")
 local json_reader = require("arch_view.runtime.json_reader")

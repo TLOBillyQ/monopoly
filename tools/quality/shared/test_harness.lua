@@ -1,8 +1,8 @@
-require("tests.bootstrap")
+require("spec.bootstrap")
 
-local log_capture = require("tests.support.log_capture")
+local log_capture = require("spec.support.log_capture")
 local number_utils = require("src.core.utils.number")
-local wall_clock = require("tests.support.wall_clock")
+local wall_clock = require("spec.support.wall_clock")
 local unpack_args = table.unpack or unpack
 local _timing_enabled = os.getenv("MONO_TEST_TIMING") == "1"
 

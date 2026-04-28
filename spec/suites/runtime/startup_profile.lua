@@ -1,4 +1,4 @@
-local bootstrap = require("tests.bootstrap")
+local bootstrap = require("spec.bootstrap")
 bootstrap.install_package_paths()
 
 local support = require("support.runtime_support")

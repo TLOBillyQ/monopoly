@@ -1,4 +1,4 @@
-local bootstrap = require("tests.bootstrap")
+local bootstrap = require("spec.bootstrap")
 local common = require("shared.lib.common")
 local json_reader = require("arch_view.runtime.json_reader")
 local scrap = require("quality.scrap")

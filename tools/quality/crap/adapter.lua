@@ -1,6 +1,6 @@
 local bootstrap = require("spec.bootstrap")
-local catalog = require("tests.catalog")
-local harness = require("TestHarness")
+local catalog = require("tools.quality.shared.test_catalog")
+local harness = require("tools.quality.shared.test_harness")
 
 bootstrap.install_package_paths()
 

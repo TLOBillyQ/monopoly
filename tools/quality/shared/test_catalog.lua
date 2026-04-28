@@ -1,4 +1,4 @@
-local bootstrap = require("tests.bootstrap")
+local bootstrap = require("spec.bootstrap")
 
 local M = {}
 
@@ -177,15 +177,6 @@ local tooling_modules = {
   "suites.architecture.busted_infra_tooling",  -- T8: meta-test 验证 busted infra 完整性
 }
 
-local guard_scripts = {
-  { name = "dep_rules", module_name = "guards.dep_rules", path = "tests/guards/dep_rules.lua" },
-  { name = "gameplay_loop_no_ui", module_name = "guards.gameplay_loop_no_ui", path = "tests/guards/gameplay_loop_no_ui.lua" },
-  { name = "forbidden_globals", module_name = "guards.forbidden_globals", path = "tests/guards/forbidden_globals.lua" },
-  { name = "arch_view_guard", module_name = "guards.arch_view_guard", path = "tests/guards/arch_view_guard.lua" },
-  { name = "repo_hygiene", module_name = "guards.repo_hygiene", path = "tests/guards/repo_hygiene.lua" },
-  { name = "fixed_type", module_name = "guards.fixed_type_guard", path = "tests/guards/fixed_type_guard.lua" },
-}
-
 local function _clone_case(test)
   if type(test) == "function" then
     return {
@@ -230,7 +221,6 @@ end
 M.behavior_suites = behavior_modules
 M.contract_suites = contract_modules
 M.tooling_suites = tooling_modules
-M.guard_scripts = guard_scripts
 
 function M.load_behavior_suites()
   bootstrap.install_package_paths()

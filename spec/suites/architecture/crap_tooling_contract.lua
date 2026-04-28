@@ -1,4 +1,4 @@
-local bootstrap = require("tests.bootstrap")
+local bootstrap = require("spec.bootstrap")
 local crap = require("quality.crap")
 local adapter = require("quality.crap.adapter")
 local package_path_helper = require("shared.package_path_helper")
