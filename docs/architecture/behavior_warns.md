@@ -2,7 +2,7 @@
 
 这份文档只回答两个问题：
 
-1. `lua tests/behavior.lua` 打出来的哪些 `warn` 是预期内的测试噪音。
+1. `busted -c behavior` 打出来的哪些 `warn` 是预期内的测试噪音。
 2. 哪些 `warn` / 慢测信号值得继续追。
 
 > 基线日期：2026-03-21（Asia/Hong_Kong）。这里记录的是当前仓库已知、可解释的输出；如果 behavior lane 出现本文档没列到的新 warn，默认按“可疑”处理。

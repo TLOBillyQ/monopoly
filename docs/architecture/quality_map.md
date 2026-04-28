@@ -12,10 +12,10 @@
 
 | 入口 | 类型 | 主要回答的问题 | 当前本地耗时参考 |
 |------|------|----------------|------------------|
-| `lua tests/behavior.lua` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 约 `0.4s` |
+| `busted -c behavior` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 约 `0.4s` |
 | `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 目标 warm `<5s`，cold `<8s` |
-| `lua tests/tooling.lua` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 本机实测：`--workers 1` 约 `111s`，默认 auto 约 `116s` |
-| `lua tests/guard.lua` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
+| `busted -c tooling` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 本机实测：`111s-116s` |
+| `busted -c guards` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
 | `lua tools/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
 | `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构；`crap.lua summary` 输出 src/ 行覆盖率三层聚合（见 `crap_report.md#覆盖率聚合`） | 约 `9s-10s` |
 | `lua tools/quality/mutate.lua src/foo.lua --scan` | 单文件变异测试 | 这个文件现有测试是否真能杀掉简单错误 | 目标文件和 lane 差异很大；默认先按 `behavior` 估算 |
@@ -41,8 +41,8 @@
 
 ### `behavior`
 
-- 入口：`tests/behavior.lua`
-- 来源：`tests/catalog.lua` 中的 `behavior_suites`
+- 入口：`busted -c behavior`
+- 来源：`spec/behavior/*_spec.lua`
 - 覆盖面：`domain / runtime / gameplay / presentation`
 - 适用时机：改了玩法规则、UI 行为、回合推进、运行时胶水，先跑它
 - 不适合：证明架构边界没漂移；那是 `contract / guard / arch_view` 的工作
@@ -58,12 +58,12 @@
 
 ### `tooling`
 
-- 入口：`tests/tooling.lua`
-- 来源：`tests/catalog.lua` 中的 `tooling_suites`
+- 入口：`busted -c tooling`
+- 来源：`spec/tooling/*_spec.lua`
 - 关注点：真实 `mutate --index-suites`、`arch_view scan`、`arch_view viewer --in-json` 这类工具链导出
 - 适用时机：改了质量工具包装层、导出流程、viewer 产物或 suite indexing 逻辑，再显式跑它
 - 特点：故意和 `contract` 分开，避免慢工具 smoke 拖垮高频契约回归；真实 `arch_view analyze(...)` 常驻覆盖留在 `guard` 的 `arch_view_guard`
-- 运行方式：默认走 auto worker；当前 Windows 会解析为 `1`，非 Windows 仍按小并发 auto；可用 `lua tests/tooling.lua --workers 1` 强制串行，或用 `--workers N` 显式调并发度
+- 运行方式：`busted -c tooling`
 - 调度策略：显式并发时按 `suite.module_name` 命中的固定 cost hint 做 weighted LPT；未注册的新 suite 回退到 `#tests`
 - 当前拆分：
   - `arch_view_snapshot_tooling_contract`
@@ -75,7 +75,7 @@
 
 ### `guard`
 
-- 入口：`tests/guard.lua`
+- 入口：`busted -c guards`
 - 当前子项：
   - `dep_rules`：文本级硬边界、禁用旧路径、禁用少量跨子系统依赖
   - `gameplay_loop_no_ui`：`gameplay loop` 在最小 runtime 下不直接依赖 UI 对象
@@ -154,9 +154,9 @@
 
 | 你现在想回答的问题 | 先跑什么 |
 |--------------------|----------|
-| 功能有没有坏 | `lua tests/behavior.lua` |
+| 功能有没有坏 | `busted -c behavior` |
 | 跨层接口或读模型有没有漂移 | `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` |
-| 有没有出现明确禁用写法 | `lua tests/guard.lua` |
+| 有没有出现明确禁用写法 | `busted -c guards` |
 | 依赖图有没有越界或成环 | `lua tools/quality/arch.lua check` |
 | 哪些函数最值得先补测/重构 | `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` |
 | 某个文件的测试是不是只是“跑到了”而不是“断严了” | `lua tools/quality/mutate.lua src/foo.lua --scan` 然后再决定是否真正跑 mutation |
@@ -167,8 +167,8 @@
 
 ```sh
 lua tools/quality/arch.lua check
-lua tests/guard.lua
-lua tests/behavior.lua
+busted -c guards
+busted -c behavior
 ```
 
 适合高频本地回归，通常约 `2s`。
@@ -185,15 +185,14 @@ lua tools/quality/arch.lua check
 ### 工具链 smoke
 
 ```sh
-lua tests/tooling.lua
+busted -c tooling
 ```
 
 适合改 `tools/quality/*` 包装层、`vendor/arch_view` / `vendor/mutate4lua` 对接逻辑之后跑。它是慢车道，不建议日常每次都带。
 
 当前本机（Windows，2026-03-16）外层墙钟实测：
 
-- `lua tests/tooling.lua --workers 1`：约 `111s`
-- `lua tests/tooling.lua`：约 `116s`
+- `busted -c tooling`：约 `111s-116s`
 
 也就是说，“单进程 `index-suites` 快路径”已经把串行基线从原先约 `190s-210s` 压到了约 `111s`；继续尝试默认多 worker 后，这台机器上仍然存在明显争用，因此当前 auto 默认直接解析为 `1`，把 weighted LPT 调度保留给显式 `--workers N` 场景。
 
@@ -218,9 +217,9 @@ lua tools/quality/mutate.lua src/core/utils/role_id.lua --since-last-run
 ### 完整质量回归
 
 ```sh
-lua tests/behavior.lua
+busted -c behavior
 ~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract
-lua tests/guard.lua
+busted -c guards
 lua tools/quality/arch.lua check
 lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json
 ```

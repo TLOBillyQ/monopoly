@@ -2,11 +2,11 @@
 
 `arch_view` 是静态架构扫描器，分析 `src/**/*.lua` 的模块级 `require` 依赖。职责：生成依赖图、按层投影视图、校验声明式边界规则。
 
-文本护栏（宿主全局 API、`src/` 运行时禁用语法与少量文本级硬边界）仍由 `tests/guards/dep_rules.lua`、`tests/guards/forbidden_globals.lua` 负责，arch_view 不替代它们。
+文本护栏（宿主全局 API、`src/` 运行时禁用语法与少量文本级硬边界）仍由 `spec/guards/lib/dep_rules.lua`、`spec/guards/lib/forbidden_globals.lua` 负责，arch_view 不替代它们。
 
 如果你想先判断 `arch_view` 在整套测试/静态分析里的位置，以及本地常见耗时，先读 `docs/architecture/quality_map.md`。
 
-默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速的 in-process 结构契约；真实 `scan/viewer` CLI 导出 smoke 已挪到 `lua tests/tooling.lua`，并只保留 `scan` 与 `viewer --in-json` 两个慢路径检查。真实 `analyze(...)` 路径则由 `tests/guards/arch_view_guard.lua` 常驻覆盖，不再重复保留额外 tooling smoke。
+默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速的 in-process 结构契约；真实 `scan/viewer` CLI 导出 smoke 已挪到 `busted -c tooling`，并只保留 `scan` 与 `viewer --in-json` 两个慢路径检查。真实 `analyze(...)` 路径则由 `spec/guards/lib/arch_view_guard.lua` 常驻覆盖，不再重复保留额外 tooling smoke。
 
 ## 代码位置
 
@@ -19,7 +19,7 @@
 ## 真源与约束
 
 - 结构性依赖规则唯一真源：`tools/quality/arch/config.json`
-- `tests/guards/dep_rules.lua` 只保留文本级硬边界（宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路，以及少量跨子系统禁令）
+- `spec/guards/lib/dep_rules.lua` 只保留文本级硬边界（宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路，以及少量跨子系统禁令）
 - 零模块级循环依赖，无白名单，任意新循环直接让 `check` 失败
 - 根组件语义现为：`app`、`infrastructure`、`presentation`、`flow`、`ai`、`systems`、`runtime`、`core`、`config`
 - 当前 canonical 命名已切到 `src/ui/ports/*` 与 `src/ui/{state,landing_visual_hold,host_bridge}`；旧 `src/ui/ctl/ports/*`、`*_seam`、`*_ports` 只应作为历史说明出现，不再代表当前兼容入口或 canonical 文件名
@@ -29,7 +29,7 @@
 ```
 lua tools/quality/arch.lua check
 ```
-扫描 `src/`，执行边界校验，失败则非零退出。`tests/guards/arch_view_guard.lua` 与 `tests/regression.lua` 均使用此能力；跑全部护栏用 `lua tests/guard.lua`。配置默认来自 `tools/quality/arch/config.json`。
+扫描 `src/`，执行边界校验，失败则非零退出。`spec/guards/lib/arch_view_guard.lua` 与 `busted -c regression` 均使用此能力；跑全部护栏用 `busted -c guards`。配置默认来自 `tools/quality/arch/config.json`。
 
 `check` 同时校验两类循环：
 - 模块级 `require` 环

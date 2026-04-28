@@ -9,7 +9,7 @@
 **1. 全量回归（必跑）**
 
 ```
-lua tests/regression.lua
+busted -c regression
 ```
 
 覆盖 behavior / contract / guard 三条车道。健康输出：
@@ -36,7 +36,7 @@ arch_view_guard ok
 **3. UI 热点回归（改过 presentation 层时跑）**
 
 ```
-lua tests/behavior.lua
+busted -c behavior
 ```
 
 守住市场弹窗、玩家面板、choice 路由、target picker 等 UI 行为。

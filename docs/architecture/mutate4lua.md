@@ -4,7 +4,7 @@
 
 如果你想先看它在整套质量入口里的定位、耗时预估和与 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality_map.md`。
 
-默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速契约；涉及真实 `mutate --index-suites` 的完整 smoke 已挪到 `lua tests/tooling.lua`。
+默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速契约；涉及真实 `mutate --index-suites` 的完整 smoke 已挪到 `busted -c tooling`。
 
 ## 入口
 
@@ -29,7 +29,7 @@ lua tools/quality/mutate.lua src/core/utils/role_id.lua --since-last-run
 lua tools/quality/mutate.lua src/core/utils/role_id.lua --mutate-all
 lua tools/quality/mutate.lua src/core/utils/role_id.lua --lines 12,18
 lua tools/quality/mutate.lua src/core/utils/role_id.lua --lane contract
-lua tools/quality/mutate.lua src/core/utils/role_id.lua --test-command "lua tests/behavior.lua"
+lua tools/quality/mutate.lua src/core/utils/role_id.lua --test-command "busted -c behavior"
 ```
 
 ## Monopoly 适配层做了什么
@@ -37,7 +37,7 @@ lua tools/quality/mutate.lua src/core/utils/role_id.lua --test-command "lua test
 - `tools/quality/mutate.lua` 负责包装 `vendor/mutate4lua/bin/mutate4lua-engine`，缺失时自动从 `vendor/mutate4lua/` 构建
 - 默认把上游内置 test driver 替换成 Monopoly 专属 driver
 - project hash 改走 `git ls-files` 枚举仓库内 `.lua` / `.rockspec` 文件，避免把子模块内容逐文件扫进单次 mutation 启动成本
-- `tools/quality/mutate/driver.lua` 通过 `tests/catalog.lua` 装配 `behavior` 或 `contract` suites
+- `tools/quality/mutate/driver.lua` 通过 `spec/<lane>/*_spec.lua` 装配 `behavior` 或 `contract` suites（catalog 仍是 tools 流水线内部细节，将在后续 PR 迁到 `tools/quality/shared/`）
 - 常规 mutate 仍用 `debug.sethook(..., "l")` 记录运行时命中行，供上游过滤未覆盖变异点
 - `--index-suites` 改成单进程批量索引：driver 输出 `suite -> touched files` JSON，避免逐 suite 启进程和逐行 coverage 开销
 - suite index 以 `project_hash + lane` 命中缓存；热路径命中时只需读取已有 index 文件
