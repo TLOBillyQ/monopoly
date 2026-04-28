@@ -1,6 +1,6 @@
 # 导读
 
-**蛋仔派对大富翁** — Lua 5.5，清洁架构七层，Eggy 宿主。按任务查文档，不预读目录树。
+**蛋仔派对大富翁** — Lua 5.4，清洁架构十层，Eggy 宿主。按任务查文档，不预读目录树。
 
 ---
 
@@ -21,6 +21,9 @@
 | 宿主 API | `docs/eggy/api/00_index.md` |
 | 子系统归属 | `docs/architecture/subsystems.md` |
 | 记忆文件 | `docs/eggy/agent/memory.md` |
+| 可执行计划规范 | `.agents/harness/PLANS.md` |
+| 按需读代码（不预读目录树） | `.agents/harness/READING.md` |
+| 命名与新增文件规范 | `.agents/harness/CODING.md` |
 
 ---
 
@@ -36,27 +39,17 @@
 
 ---
 
-## Harness 指引
-
-- `.agents/harness/PLANS.md`：可执行计划规范
-- `.agents/harness/READING.md`：按需查代码，不预读目录树
-- `.agents/harness/CODING.md`：命名与结构规范，新增文件前先读
-
----
-
 ## 常驻规则
 
 - 命名 `snake_case`，类名 `CamelCase`。
-- `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.core.utils.number_utils`）。
-- `src/` canonical 命名硬切，不保留 alias/shim。
+- `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.core.utils.number`）。
 - `tools/` `tests/` 文件与进程操作统一用 `tools/shared/lib/common.lua`：
   - `common.run_command` / `common.ensure_dir`（禁 `os.execute` / `io.popen`）
   - `common.is_windows()` / `common.is_macos()`（禁解析 `package.config`）
   - `common.normalize_path()`（路径正斜杠，禁硬编码反斜杠）
   - `common.shell_quote()` + `common.build_command()`（禁手动拼接命令）
-- 新增脚本必须 Windows + macOS 双平台。
 - Eggy `Fixed` 参数用浮点（`30.0`），禁整数；API 参数写全，禁依赖默认值。
-- 小步提交；执行 `.agents/plan.md` 时跑完再停。
+- 合约/烟测写在 `spec/contract/*_spec.lua`（busted runner，见 `.busted` 与 `spec/helper.lua`）；`tests/` 保留 behavior/guard/regression/catalog/tooling 老 harness。**不要再写 `tests/contract.lua` 风格**。
 
 ---
 
@@ -66,7 +59,7 @@
 |---------|------|
 | 任意 Lua | `lua tools/quality/lint.lua` |
 | 游戏逻辑 / 运行时 / UI | `lua tests/behavior.lua` |
-| Port / 边界 / assembly | `lua tests/contract.lua` + `lua tools/quality/arch.lua check` |
+| Port / 边界 / assembly | `busted -c contract` + `lua tools/quality/arch.lua check` |
 | Guardrail | `lua tests/guard.lua` |
 | 工具链 | 额外 `lua tests/tooling.lua` |
 
