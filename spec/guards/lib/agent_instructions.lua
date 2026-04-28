@@ -1,4 +1,4 @@
-require("tests.bootstrap").install_package_paths()
+require("spec.bootstrap").install_package_paths()
 
 local common = require("shared.lib.common")
 

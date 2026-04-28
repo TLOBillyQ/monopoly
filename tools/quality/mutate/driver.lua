@@ -1,4 +1,4 @@
-local bootstrap = require("tests.bootstrap")
+local bootstrap = require("spec.bootstrap")
 local catalog = require("tests.catalog")
 local harness = require("TestHarness")
 local common = require("shared.lib.common")

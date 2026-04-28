@@ -1,4 +1,4 @@
-require("tests.bootstrap")
+require("spec.bootstrap")
 
 local resolver = require("src.app.testing.test_profile_resolver")
 
