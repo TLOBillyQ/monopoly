@@ -6,9 +6,9 @@ description: Run the common fast local confidence lane for this repo: guard chec
 Run this repo's common fast verification lane in this order:
 
 1. `lua tools/quality/lint.lua` if `luacheck` is installed locally
-2. `lua tests/guard.lua`
+2. `busted -c guards`
 3. `lua tools/quality/arch.lua check`
-4. `lua tests/behavior.lua`
+4. `busted -c behavior`
 
 Then summarize:
 - which commands passed or failed

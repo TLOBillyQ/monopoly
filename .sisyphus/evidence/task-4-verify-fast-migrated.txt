@@ -1,0 +1,5 @@
+Task 4 evidence: verify-fast skill migrated.
+
+Source: .claude/skills/verify-fast/SKILL.md -> .agents/skills/verify-fast/SKILL.md
+Legacy commands replaced: lua tests/guard.lua, lua tests/behavior.lua, lua tests/contract.lua, lua tests/tooling.lua
+Verification: no lua tests/ matches remain; busted -c commands are present; frontmatter kept intact.
