@@ -1,0 +1,4 @@
+Confirmed all legacy test command references removed from .agents/skills/verify-full/SKILL.md.
+grep -E 'lua tests/(behavior|guard|contract|tooling)\.lua' => 0 matches
+grep -c 'busted -c' => 4 matches
+frontmatter preserved
