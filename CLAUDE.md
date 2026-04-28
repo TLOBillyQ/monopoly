@@ -58,9 +58,9 @@
 | 变更类型 | 命令 |
 |---------|------|
 | 任意 Lua | `lua tools/quality/lint.lua` |
-| 游戏逻辑 / 运行时 / UI | `lua tests/behavior.lua` |
+| 游戏逻辑 / 运行时 / UI | `busted -c behavior` |
 | Port / 边界 / assembly | `busted -c contract` + `lua tools/quality/arch.lua check` |
-| Guardrail | `lua tests/guard.lua` |
-| 工具链 | 额外 `lua tests/tooling.lua` |
+| Guardrail | `busted -c guards` |
+| 工具链 | 额外 `busted -c tooling` |
 
 跳过慢车道时说明：已跑什么、跳过什么、下一步命令。
