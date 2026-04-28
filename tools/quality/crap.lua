@@ -62,18 +62,21 @@ local function _help_text(command_name)
     "  lua " .. tostring(command_name) .. " report [--lane NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
     "  lua " .. tostring(command_name) .. " collect [--lane NAME] --out FILE [--project-root DIR]",
     "  lua " .. tostring(command_name) .. " viewer [--in-json FILE] [--out-dir DIR] [--open]",
+    "  lua " .. tostring(command_name) .. " summary [--in-json FILE] [--tier-config FILE] [--lane NAME] [--out FILE] [--top N] [--gate]",
     "  lua " .. tostring(command_name),
     "",
     "Usage:",
     "  lua " .. tostring(command_name) .. " report [--lane NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]",
     "  lua " .. tostring(command_name) .. " collect [--lane NAME] --out FILE [--project-root DIR]",
     "  lua " .. tostring(command_name) .. " viewer [--in-json FILE] [--out-dir DIR] [--open]",
+    "  lua " .. tostring(command_name) .. " summary [--in-json FILE] [--tier-config FILE] [--lane NAME] [--out FILE] [--top N] [--gate]",
     "  lua " .. tostring(command_name),
     "",
     "Monopoly 默认值 / Monopoly defaults:",
     "  tmp/... 路径会映射到系统临时目录下的 monopoly_crap/ 子目录",
     "  report --out 会翻译成 vendor CLI 的 --response-json",
     "  report 先通过 Lua bridge 收集 coverage，再以 --request-json 调上游 CLI",
+    "  summary 从 crap_report.json 聚合 src/ 行覆盖率，按 tier 分层展示（见 tools/quality/crap/coverage_tiers.lua）",
     "  裸调用会先生成 tmp/crap_report.json，再打开 tmp/crap_view",
   }, "\n") .. "\n"
 end
@@ -387,6 +390,260 @@ local function _run_viewer(options, env)
   })
 end
 
+local function _parse_summary_args(args)
+  local options = {
+    in_json = nil,
+    tier_config = common.join_path(REPO_ROOT, "tools/quality/crap/coverage_tiers.lua"),
+    out = nil,
+    gate = false,
+    top = 10,
+    lanes = {},
+  }
+  local index = 1
+  while index <= #args do
+    local token = args[index]
+    if token == "--in-json" then
+      index = index + 1
+      options.in_json = args[index]
+    elseif token == "--tier-config" then
+      index = index + 1
+      options.tier_config = args[index]
+    elseif token == "--out" then
+      index = index + 1
+      options.out = args[index]
+    elseif token == "--gate" then
+      options.gate = true
+    elseif token == "--top" then
+      index = index + 1
+      options.top = common.to_integer(args[index]) or 10
+    elseif token == "--lane" then
+      index = index + 1
+      options.lanes[#options.lanes + 1] = args[index]
+    else
+      error("unknown flag: " .. tostring(token))
+    end
+    index = index + 1
+  end
+  if options.in_json ~= nil then
+    options.in_json = _resolve_cli_path(REPO_ROOT, options.in_json)
+  end
+  if options.tier_config ~= nil then
+    options.tier_config = _resolve_cli_path(REPO_ROOT, options.tier_config)
+  end
+  if options.out ~= nil then
+    options.out = _resolve_cli_path(REPO_ROOT, options.out)
+  end
+  return options
+end
+
+local function _load_tiers(tier_config_path)
+  local ok, result = pcall(dofile, tier_config_path)
+  if not ok then
+    return nil, common.bilingual("无法加载 tier 配置: ", "Cannot load tier config: ") .. tostring(result)
+  end
+  if type(result) ~= "table" or type(result.tiers) ~= "table" then
+    return nil, common.bilingual(
+      "tier 配置格式错误，期望 { tiers = { ... } }",
+      "tier config must return { tiers = { ... } }")
+  end
+  return result.tiers, nil
+end
+
+local function _file_tier_index(source_path, tiers)
+  for i, tier in ipairs(tiers) do
+    for _, prefix in ipairs(tier.includes or {}) do
+      local norm = prefix:gsub("/+$", "") .. "/"
+      if source_path:sub(1, #norm) == norm then
+        return i
+      end
+    end
+  end
+  return nil
+end
+
+local function _aggregate_from_report(report, tiers)
+  local tier_stats = {}
+  for i, tier in ipairs(tiers) do
+    tier_stats[i] = {
+      name = tier.name,
+      threshold = tier.threshold or 0,
+      exec_lines = 0,
+      hit_lines = 0,
+      file_stats = {},
+    }
+  end
+  local uncategorized = { exec_lines = 0, hit_lines = 0, file_stats = {} }
+  for _, func in ipairs(report.functions or {}) do
+    local sp = func.source_path or func.source_name
+    if sp ~= nil then
+      local exec = func.executable_line_count or 0
+      local hit = func.hit_line_count or 0
+      local ti = _file_tier_index(sp, tiers)
+      local bucket = ti ~= nil and tier_stats[ti] or uncategorized
+      bucket.exec_lines = bucket.exec_lines + exec
+      bucket.hit_lines = bucket.hit_lines + hit
+      if bucket.file_stats[sp] == nil then
+        bucket.file_stats[sp] = { exec = 0, hit = 0 }
+      end
+      bucket.file_stats[sp].exec = bucket.file_stats[sp].exec + exec
+      bucket.file_stats[sp].hit = bucket.file_stats[sp].hit + hit
+    end
+  end
+  return tier_stats, uncategorized
+end
+
+local function _cov_ratio(hit, exec)
+  if exec == 0 then return nil end
+  return hit / exec
+end
+
+local function _pct_str(hit, exec)
+  local r = _cov_ratio(hit, exec)
+  if r == nil then return "  N/A " end
+  return string.format("%5.1f%%", r * 100)
+end
+
+local function _print_coverage_table(tier_stats, uncategorized, options, stdout)
+  local lane_label = #(options.lanes or {}) > 0
+    and table.concat(options.lanes, "+")
+    or "behavior"
+  stdout:write("\n覆盖率摘要 (lane: " .. lane_label .. ")\n")
+  stdout:write(string.rep("=", 70) .. "\n")
+  stdout:write(string.format("%-16s %6s %9s %8s %7s %6s  %s\n",
+    "Tier", "文件数", "可执行行", "命中行", "覆盖率", "目标", "状态"))
+  stdout:write(string.rep("-", 70) .. "\n")
+  local all_pass = true
+  for _, ts in ipairs(tier_stats) do
+    local file_count = 0
+    for _ in pairs(ts.file_stats) do file_count = file_count + 1 end
+    local ratio = _cov_ratio(ts.hit_lines, ts.exec_lines)
+    local pass = ratio ~= nil and ratio >= ts.threshold
+    if not pass then all_pass = false end
+    stdout:write(string.format("%-16s %6d %9d %8d %7s %5.0f%%  %s\n",
+      ts.name, file_count, ts.exec_lines, ts.hit_lines,
+      _pct_str(ts.hit_lines, ts.exec_lines),
+      ts.threshold * 100, pass and "PASS" or "FAIL"))
+  end
+  if uncategorized.exec_lines > 0 then
+    local unc_files = 0
+    for _ in pairs(uncategorized.file_stats) do unc_files = unc_files + 1 end
+    stdout:write(string.format("%-16s %6d %9d %8d %7s   ---  ---\n",
+      "(other)", unc_files, uncategorized.exec_lines, uncategorized.hit_lines,
+      _pct_str(uncategorized.hit_lines, uncategorized.exec_lines)))
+  end
+  stdout:write(string.rep("=", 70) .. "\n")
+  local top_n = options.top or 10
+  if top_n > 0 then
+    for _, ts in ipairs(tier_stats) do
+      local ratio = _cov_ratio(ts.hit_lines, ts.exec_lines)
+      if ratio == nil or ratio < ts.threshold then
+        local files = {}
+        for path, fs in pairs(ts.file_stats) do
+          if fs.exec > 0 then
+            files[#files + 1] = { path = path, exec = fs.exec, hit = fs.hit }
+          end
+        end
+        table.sort(files, function(a, b)
+          return (a.exec - a.hit) > (b.exec - b.hit)
+        end)
+        local n = math.min(top_n, #files)
+        if n > 0 then
+          stdout:write("\n未达标 [" .. ts.name .. "] — 未覆盖行最多 top " .. tostring(n) .. ":\n")
+          for i = 1, n do
+            local f = files[i]
+            stdout:write(string.format("  %-52s %5d/%5d 行  %s\n",
+              f.path, f.hit, f.exec, _pct_str(f.hit, f.exec)))
+          end
+        end
+      end
+    end
+  end
+  stdout:write("\n")
+  return all_pass
+end
+
+local function _run_summary(options, env)
+  env = env or {}
+  local stdout = env.stdout or io.stdout
+  local stderr = env.stderr or io.stderr
+
+  local in_json = options.in_json
+  if in_json == nil then
+    in_json = _resolve_cli_path(REPO_ROOT, DEFAULT_REPORT_JSON)
+  end
+
+  if not common.path_exists(in_json) then
+    local rargs = { "--out", _resolve_cli_path(REPO_ROOT, DEFAULT_REPORT_JSON) }
+    for _, l in ipairs(options.lanes or {}) do
+      rargs[#rargs + 1] = "--lane"
+      rargs[#rargs + 1] = l
+    end
+    local report_opts = _parse_report_args(rargs)
+    local report_result = _run_report(report_opts, env)
+    if report_result.ok ~= true then
+      stderr:write(tostring(report_result.err or report_result.output or ""), "\n")
+      return { ok = false, code = report_result.code or 1 }
+    end
+    in_json = report_opts.out
+  end
+
+  local json_text, read_err = common.read_file(in_json)
+  if json_text == nil then
+    stderr:write(common.bilingual("无法读取报告: ", "Cannot read report: ") .. tostring(read_err) .. "\n")
+    return { ok = false, code = 1 }
+  end
+  local json_reader = require("shared.lib.json_reader")
+  local ok_parse, report = pcall(json_reader.decode, json_text)
+  if not ok_parse or type(report) ~= "table" then
+    stderr:write(common.bilingual("JSON 解析失败: ", "JSON parse error: ") .. tostring(report) .. "\n")
+    return { ok = false, code = 1 }
+  end
+  if type(report.functions) ~= "table" then
+    stderr:write(common.bilingual(
+      "crap_report.json 缺少 functions 字段，请先跑 crap.lua report\n",
+      "crap_report.json missing functions field, run crap.lua report first\n"))
+    return { ok = false, code = 1 }
+  end
+
+  local tier_config_path = options.tier_config
+    or common.join_path(REPO_ROOT, "tools/quality/crap/coverage_tiers.lua")
+  local tiers, tier_err = _load_tiers(tier_config_path)
+  if tiers == nil then
+    stderr:write(tostring(tier_err) .. "\n")
+    return { ok = false, code = 1 }
+  end
+
+  local tier_stats, uncategorized = _aggregate_from_report(report, tiers)
+  local all_pass = _print_coverage_table(tier_stats, uncategorized, options, stdout)
+
+  if options.out ~= nil then
+    local out_rows = {}
+    for _, ts in ipairs(tier_stats) do
+      local fc = 0
+      for _ in pairs(ts.file_stats) do fc = fc + 1 end
+      local ratio = _cov_ratio(ts.hit_lines, ts.exec_lines)
+      out_rows[#out_rows + 1] = {
+        name = ts.name,
+        threshold = ts.threshold,
+        file_count = fc,
+        exec_lines = ts.exec_lines,
+        hit_lines = ts.hit_lines,
+        coverage = ratio or 0,
+        pass = ratio ~= nil and ratio >= ts.threshold,
+      }
+    end
+    local ok_w, w_err = common.write_file(options.out, json_writer.encode({ tiers = out_rows }))
+    if not ok_w then
+      stderr:write(tostring(w_err) .. "\n")
+    end
+  end
+
+  if options.gate and not all_pass then
+    return { ok = false, code = 1 }
+  end
+  return { ok = true, code = 0 }
+end
+
 local function _run_internal(args, env)
   env = env or {}
   local stdout = env.stdout or io.stdout
@@ -478,6 +735,21 @@ local function _run_internal(args, env)
     end
     if result.output and result.output ~= "" then
       stdout:write(result.output)
+    end
+    return { ok = true, code = result.code or 0 }
+  end
+
+  if first == "summary" then
+    local ok, options_or_err = pcall(_parse_summary_args, { select(2, table.unpack(argv)) })
+    if not ok then
+      stderr:write(tostring(options_or_err), "\n")
+      stderr:write(_help_text(command_name))
+      return { ok = false, code = 1 }
+    end
+    local result = _run_summary(options_or_err, env)
+    if result.ok ~= true then
+      stderr:write(tostring(result.err or result.output or ""), "\n")
+      return { ok = false, code = result.code or 1 }
     end
     return { ok = true, code = result.code or 0 }
   end

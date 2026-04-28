@@ -28,6 +28,9 @@ Thumbs.db
 .opencode
 .sysyphus
 
+# Claude Code local overrides (may contain MCP tokens)
+.claude/settings.local.json
+
 # Local worktrees
 /.claude/worktrees/
 
