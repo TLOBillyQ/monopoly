@@ -3,11 +3,13 @@ local auto_play_port = require("src.rules.ports.auto_play")
 local effects = require("src.rules.items.post_effects")
 local inventory = require("src.rules.items.inventory")
 local number_utils = require("src.core.utils.number")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local roadblock = require("src.rules.items.roadblock")
 local remote_dice = require("src.rules.items.remote_dice")
 local demolish = require("src.rules.items.demolish")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
+local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.core.ports.action_anim")
 local board_query = require("src.rules.board.query")
 
@@ -166,7 +168,10 @@ function handlers.handle_remote_dice(game, player, item_id, context)
       assert(inventory.consume(inner_player, inner_item_id) == true, "consume remote dice failed")
       local ok = remote_dice.apply(inner_game, inner_player, dice_count, value)
       if ok and target_tile then
-        logger.event(inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. number_utils.format_integer_part(value))
+        event_feed.publish(inner_game, {
+          kind = event_kinds.remote_dice,
+          text = inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. number_utils.format_integer_part(value),
+        })
       end
       return ok
     end,
@@ -203,7 +208,8 @@ function handlers.handle_roadblock(game, player, item_id, context)
       return roadblock.manual_candidates(inner_game, inner_player, 3)
     end,
     on_empty = function(_, inner_player)
-      logger.warn(inner_player.name .. " 无可放置路障的位置")
+      -- migrated as DEV: internal candidate resolution failure, no player-visible state change occurred
+      logger.info(inner_player.name .. " 无可放置路障的位置")
     end,
     ai_select = function(inner_game, inner_player, inner_item_id, candidates)
       local best = roadblock.pick_best(candidates)

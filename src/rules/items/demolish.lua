@@ -1,8 +1,10 @@
 local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local tile_mod = require("src.rules.board.tile")
 local board_query = require("src.rules.board.query")
 local property_value = require("src.rules.commerce.property_value")
 local timing = require("src.config.gameplay.timing")
+local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number")
 local target_query = require("src.rules.items.target_query")
@@ -32,7 +34,10 @@ local function _collect_hospital_targets(game, idx)
   for _, pid in ipairs(snapshot) do
     local target = assert(game:find_player_by_id(pid), "missing target player: " .. tostring(pid))
     if game:player_is_vehicle_indestructible(target) then
-      logger.event(target.name .. " 座驾免疫导弹效果")
+      event_feed.publish(game, {
+        kind = event_kinds.item_immune,
+        text = target.name .. " 座驾免疫导弹效果",
+      })
     else
       targets[#targets + 1] = target
     end
@@ -166,11 +171,17 @@ function demolish.apply(game, player, idx, opts)
         after_action_anim = _build_hospital_followup(hospital_targets, log_entries),
       }
     end
-    logger.event(msg)
+    event_feed.publish(game, {
+      kind = event_kinds.demolish,
+      text = msg,
+    })
     _apply_hospital_effects(game, hospital_targets)
     return { ok = true, action_anim = queued }
   end
-  logger.event(msg)
+  event_feed.publish(game, {
+    kind = event_kinds.demolish,
+    text = msg,
+  })
   return { ok = true, action_anim = queued }
 end
 
@@ -178,7 +189,8 @@ function demolish.use(game, player, distance, consume_fn, opts)
   opts = opts or {}
   local best_idx = demolish.find_target(game, player, distance)
   if best_idx == nil then
-    logger.warn((opts.title or "拆除类道具") .. " 无可用目标")
+    -- migrated as DEV: internal target-selection failure, not player-facing game fact
+    logger.info((opts.title or "拆除类道具") .. " 无可用目标")
     return false
   end
 

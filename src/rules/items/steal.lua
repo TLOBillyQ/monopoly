@@ -1,30 +1,27 @@
-local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local inventory = require("src.rules.items.inventory")
 local use_skip_choice = require("src.core.choice.use_skip_choice")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
-local tip_output = require("src.rules.ports.tip_output")
+local event_feed = require("src.rules.ports.event_feed")
 local auto_play_port = require("src.rules.ports.auto_play")
 
 local steal = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
-local function _show_tip(game, text, dedupe_key)
-  return tip_output.enqueue(game, {
-    text = text,
-    duration = action_anim_duration,
-    dedupe_key = dedupe_key,
-    blocks_inter_turn = false,
-    source = "rules.items.steal",
-  })
-end
-
 local function _fail_popup(game, stealer, target)
   local msg = "很遗憾，" .. target.name .. " 没有任何道具。"
   local log_text = stealer.name .. " 使用偷窃卡失败：" .. msg
-  logger.event(log_text)
-  _show_tip(game, log_text, "steal_fail:" .. tostring(stealer.id) .. ":" .. tostring(target.id))
+  event_feed.publish(game, {
+    kind = event_kinds.steal,
+    text = log_text,
+    tip = true,
+    tip_duration = action_anim_duration,
+    tip_dedupe_key = "steal_fail:" .. tostring(stealer.id) .. ":" .. tostring(target.id),
+    blocks_inter_turn = false,
+    source = "rules.items.steal",
+  })
   return {
     ok = false,
   }
@@ -40,8 +37,15 @@ function steal.steal_item_at_index(game, player, target, item_idx)
   assert(inventory.add(player, stolen) == true, "add stolen item failed")
   local name = inventory.item_name(stolen.id)
   local log_text = player.name .. " 使用偷窃卡，从 " .. target.name .. " 偷走道具 " .. name
-  logger.event(log_text)
-  _show_tip(game, log_text, "steal_success:" .. tostring(player.id) .. ":" .. tostring(target.id) .. ":" .. tostring(stolen.id))
+  event_feed.publish(game, {
+    kind = event_kinds.steal,
+    text = log_text,
+    tip = true,
+    tip_duration = action_anim_duration,
+    tip_dedupe_key = "steal_success:" .. tostring(player.id) .. ":" .. tostring(target.id) .. ":" .. tostring(stolen.id),
+    blocks_inter_turn = false,
+    source = "rules.items.steal",
+  })
   local queued = action_anim_port.queue(game, {
     kind = "item_target_player",
     player_id = player.id,

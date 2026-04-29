@@ -1,7 +1,9 @@
 local items_cfg = require("src.config.content.items")
 require "vendor.third_party.Utils"
 local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local intent_output_port = require("src.rules.ports.intent_output")
+local event_feed = require("src.rules.ports.event_feed")
 local item_config = require("src.rules.items.item_config")
 
 local inventory = {}
@@ -102,14 +104,18 @@ end
 
 function inventory.give(player, item_id, context)
   if inventory.is_full(player) then
-    logger.warn(player.name .. " 的背包已满，无法获得道具 " .. item_id)
+    -- migrated as DEV: capacity constraint diagnostic, not player-visible event feed
+    logger.info(player.name .. " 的背包已满，无法获得道具 " .. item_id)
     if context and context.game then
       _notify_full(context.game, player, item_id)
     end
     return false
   end
   inventory.add(player, { id = item_id })
-  logger.event(player.name .. " 获得道具 " .. inventory.item_name(item_id))
+  event_feed.publish(context and context.game, {
+    kind = event_kinds.item_acquired,
+    text = player.name .. " 获得道具 " .. inventory.item_name(item_id),
+  })
   return true
 end
 

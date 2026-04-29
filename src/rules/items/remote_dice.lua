@@ -1,4 +1,5 @@
-local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local event_feed = require("src.rules.ports.event_feed")
 
 local remote_dice = {}
 
@@ -9,9 +10,11 @@ function remote_dice.apply(game, player, dice_count, value)
     values[i] = value
   end
   game:set_player_status(player, "pending_remote_dice", { values = values })
-  logger.event(player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","))
+  event_feed.publish(game, {
+    kind = event_kinds.remote_dice,
+    text = player.name .. " 使用遥控骰子，设定点数 " .. table.concat(values, ","),
+  })
   return true
 end
 
 return remote_dice
-

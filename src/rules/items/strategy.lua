@@ -84,6 +84,7 @@ end
 local function _try_clear_obstacles(game, player, phase, auto_play)
   return _try_use_item(game, player, item_ids.clear_obstacles, phase, function()
     local found = strategy.has_obstacles_ahead(game, player, 12)
+    -- migrated as DEV: AI internal planning diagnostic, not player-visible event
     if found then logger.info(player.name .. " 前方发现障碍，准备使用清障卡") end
     return found
   end, auto_play)

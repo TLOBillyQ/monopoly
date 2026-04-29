@@ -1,9 +1,10 @@
-local logger = require("src.core.utils.logger")
 local constants = require("src.config.content.constants")
 local inventory = require("src.rules.items.inventory")
 local item_ids = require("src.config.gameplay.item_ids")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local timing = require("src.config.gameplay.timing")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
+local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number")
 local obstacle_clear = require("src.rules.items.obstacle_clear")
@@ -54,7 +55,10 @@ local target_effects = {
         game:set_player_cash(user, half)
         game:set_player_cash(target, total - half)
       end
-      logger.event(user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金")
+      event_feed.publish(game, {
+        kind = event_kinds.equality_card,
+        text = user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金",
+      })
       return true
     end,
   },
@@ -93,7 +97,10 @@ local target_effects = {
           },
         }
       end
-      logger.event(log_entry)
+      event_feed.publish(game, {
+        kind = event_kinds.item_used,
+        text = log_entry,
+      })
       game:player_apply_mountain_effects(target)
       return true
     end,
@@ -101,18 +108,27 @@ local target_effects = {
   [item_ids.tax] = {
     apply = function(game, user, target, context)
       if game:player_has_deity(target, "angel") then
-        logger.event(target.name .. " 有天使，查税无效")
+        event_feed.publish(game, {
+          kind = event_kinds.item_immune,
+          text = target.name .. " 有天使，查税无效",
+        })
         return true
       end
       local tax_free_idx = inventory.find_index(target, item_ids.tax_free)
       if tax_free_idx then
         inventory.remove_by_index(target, tax_free_idx)
-        logger.event(target.name .. " 使用免税卡抵消查税")
+        event_feed.publish(game, {
+          kind = event_kinds.tax_immune,
+          text = target.name .. " 使用免税卡抵消查税",
+        })
         return true
       end
       local fee = math.floor(game:player_balance(target, "金币") * 0.5)
       game:deduct_player_cash(target, fee)
-      logger.event(user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. number_utils.format_integer_part(fee) .. " 税金")
+      event_feed.publish(game, {
+        kind = event_kinds.tax_card,
+        text = user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. number_utils.format_integer_part(fee) .. " 税金",
+      })
       if game:player_balance(target, "金币") <= 0 then
         bankruptcy_port.eliminate(game, target, { reason = target.name .. " 支付查税费用后破产" })
       end
@@ -127,7 +143,10 @@ local target_effects = {
       local deity = assert(target.status.deity, "missing target deity")
       game:clear_player_deity(target)
       game:set_player_deity(user, deity.type, deity.remaining)
-      logger.event(user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type)
+      event_feed.publish(game, {
+        kind = event_kinds.deity_evicted,
+        text = user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type,
+      })
       return true
     end,
   },
@@ -142,14 +161,20 @@ local target_effects = {
       local remaining = assert(user.status.deity, "missing user deity").remaining
       game:set_player_deity(target, "poor", remaining)
       game:clear_player_deity(user)
-      logger.event(user.name .. " 使用送神卡，将穷神送给 " .. target.name)
+      event_feed.publish(game, {
+        kind = event_kinds.deity_transferred,
+        text = user.name .. " 使用送神卡，将穷神送给 " .. target.name,
+      })
       return true
     end,
   },
   [item_ids.poor] = {
     apply = function(game, user, target, _context)
       game:set_player_deity(target, "poor")
-      logger.event(user.name .. " 使用穷神卡，" .. target.name .. " 穷神附身")
+      event_feed.publish(game, {
+        kind = event_kinds.deity_attached,
+        text = user.name .. " 使用穷神卡，" .. target.name .. " 穷神附身",
+      })
       return true
     end,
   },
@@ -180,7 +205,10 @@ local function _handle_set_status(game, player, cfg, _context)
   local value = assert(cfg.value, "missing status value")
   game:set_player_status(player, cfg.key, value)
   if cfg.message then
-    logger.event(player.name .. cfg.message)
+    event_feed.publish(game, {
+      kind = event_kinds.item_used,
+      text = player.name .. cfg.message,
+    })
   end
   return true
 end
@@ -188,14 +216,20 @@ end
 local function _handle_deity(game, player, cfg, context)
   game:set_player_deity(player, cfg.deity, constants.deity_duration_turns)
   if cfg.log then
-    logger.event(player.name .. cfg.log)
+    event_feed.publish(game, {
+      kind = event_kinds.deity_attached,
+      text = player.name .. cfg.log,
+    })
   end
   return true
 end
 
-local function _handle_log(_, player, cfg, _context)
+local function _handle_log(game, player, cfg, _context)
   assert(cfg.message ~= nil, "missing log message")
-  logger.event(player.name .. cfg.message)
+  event_feed.publish(game, {
+    kind = event_kinds.item_used,
+    text = player.name .. cfg.message,
+  })
   return true
 end
 
@@ -209,7 +243,10 @@ local function _handle_place_mine_here(game, player, _cfg, context)
       and player.status.own_turn_started_count
       or 0,
   })
-  logger.event(player.name .. " 在脚下埋设地雷")
+  event_feed.publish(game, {
+    kind = event_kinds.mine_placed,
+    text = player.name .. " 在脚下埋设地雷",
+  })
   local queued = action_anim_port.queue(game, {
     kind = "mine",
     player_id = player.id,

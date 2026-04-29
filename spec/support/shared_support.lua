@@ -40,6 +40,7 @@ local paid_purchase_port = require("src.rules.market.paid_purchase_port")
 local default_ports = require("src.turn.output.default_ports")
 local runtime_state_seam = require("src.ui.state")
 local landing_visual_hold_seam = require("src.ui.landing_visual_hold")
+local event_feed_adapter = require("src.turn.output.event_feed_adapter")
 local function assert_eq(a, b, msg)
   if a ~= b then
     error((msg or "assert failed") .. " | expected=" .. tostring(b) .. " got=" .. tostring(a))
@@ -261,7 +262,7 @@ local function build_ui_port(overrides)
     query_node = ui_state.query_node,
     wait_move_anim = false,
     wait_action_anim = false,
-    push_popup = function() end,
+    push_popup = function(_, _, _) end,
     show_tip = function(_, intent)
       if type(intent) ~= "table" then
         return false
@@ -437,7 +438,11 @@ local function new_game(opts)
     end,
   }
   game.tip_output_port = {
-    enqueue = function(_, intent)
+    enqueue = function(_, maybe_game, maybe_intent)
+      local intent = maybe_intent
+      if intent == nil and type(maybe_game) == "table" and maybe_game.text ~= nil then
+        intent = maybe_game
+      end
       local ui_port = game.ui_port
       if ui_port and type(ui_port.show_tip) == "function" then
         return ui_port:show_tip(intent) == true
@@ -448,6 +453,7 @@ local function new_game(opts)
       return false
     end,
   }
+  game.event_feed_port = event_feed_adapter.new(game)
   return game
 end
 

@@ -1,6 +1,7 @@
-local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local board_query = require("src.rules.board.query")
 local timing = require("src.config.gameplay.timing")
+local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.core.ports.action_anim")
 local number_utils = require("src.core.utils.number")
 local facing_policy = require("src.rules.board.facing_policy")
@@ -214,7 +215,10 @@ function roadblock.apply(game, player, idx)
   assert(game.board ~= nil, "missing board")
   game:place_roadblock(idx)
   local tile = game.board:get_tile(idx)
-  logger.event(player.name .. " 放置路障在 " .. tile.name)
+  event_feed.publish(game, {
+    kind = event_kinds.roadblock_placed,
+    text = player.name .. " 放置路障在 " .. tile.name,
+  })
   local queued = action_anim_port.queue(game, {
     kind = "roadblock",
     player_id = player.id,

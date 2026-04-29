@@ -1,9 +1,10 @@
-local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local action_anim_port = require("src.core.ports.action_anim")
 local facing_policy = require("src.rules.board.facing_policy")
 local direction_constants = require("src.rules.board.directions")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local timing = require("src.config.gameplay.timing")
+local event_feed = require("src.rules.ports.event_feed")
 
 local obstacle_clear = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -206,7 +207,10 @@ function obstacle_clear.handle(game, player, cfg, context)
   local state = _new_state(distance, context)
   _walk_and_clear(game, player, board, state, context)
   if state.cleared > 0 then
-    logger.event(player.name .. " 清除前方障碍数：" .. state.cleared)
+    event_feed.publish(game, {
+      kind = event_kinds.obstacle_cleared,
+      text = player.name .. " 清除前方障碍数：" .. state.cleared,
+    })
   end
   return _queue_anim(game, player, state)
 end

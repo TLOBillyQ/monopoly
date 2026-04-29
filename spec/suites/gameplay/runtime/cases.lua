@@ -2,6 +2,7 @@
 local function make_cases(helpers)
   local _ENV = helpers
   local _ = _ENV._new_game
+  local event_log = require("src.state.event_log")
 
 local function _test_turn_start_logs_phase_event_to_event_feed()
   local g = _new_game()
@@ -227,7 +228,7 @@ local function _test_clear_obstacles_zero_does_not_log_event_noise()
   local player = g.players[1]
   logger.clear()
   item_effects.apply_post(g, player, item_ids.clear_obstacles, { branch_parity = 12 })
-  local text = logger.get_text_by_level("event")
+  local text = event_log.get_text(g.state.event_log)
   assert(string.find(text, "清除前方障碍数：0", 1, true) == nil,
     "clear obstacles zero result should not enter event feed")
 end
@@ -244,7 +245,7 @@ local function _test_ai_obstacle_probe_does_not_enter_event_feed()
 
   logger.clear()
   item_strategy.auto_pre_action(g, player, "pre_action", { is_auto_player = true })
-  local text = logger.get_text_by_level("event")
+  local text = event_log.get_text(g.state.event_log)
   assert(string.find(text, "前方发现障碍，准备使用清障卡", 1, true) == nil,
     "AI obstacle probe should not enter event feed")
 end
