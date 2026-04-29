@@ -21,7 +21,12 @@ local logger = {
   event_collection_enabled_provider = nil,
   anim_debug_enabled_provider = nil,
   test_mode = false,
+  enabled = true,
 }
+
+function logger.set_enabled(b)
+  logger.enabled = b and true or false
+end
 
 function logger.set_timestamp_provider(provider)
   logger.timestamp_provider = provider
@@ -116,14 +121,23 @@ function logger.set_ui_sink(sink)
 end
 
 function logger.info(...)
+  if not logger.enabled then
+    return
+  end
   log_queue.push(logger, "info", nil, ...)
 end
 
 function logger.info_unlimited(...)
+  if not logger.enabled then
+    return
+  end
   log_queue.push(logger, "info", { unlimited = true }, ...)
 end
 
 function logger.warn(...)
+  if not logger.enabled then
+    return
+  end
   log_queue.push(logger, "warn", nil, ...)
 end
 

@@ -94,6 +94,15 @@ function M.init()
   _configure_game_time_logger(GameAPI)
 
   local startup = startup_policy.resolve(_G)
+  local is_release = startup_policy.is_release
+  if type(is_release) ~= "function" then
+    is_release = function(resolved)
+      return resolved ~= nil and resolved.build_mode == "release"
+    end
+  end
+  if type(logger.set_enabled) == "function" then
+    logger.set_enabled(not is_release(startup))
+  end
   logger.info(
     "[Eggy]",
     "startup policy:",

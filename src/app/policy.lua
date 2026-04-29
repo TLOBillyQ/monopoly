@@ -30,4 +30,8 @@ function startup_policy.resolve(globals)
   }
 end
 
+function startup_policy.is_release(resolved)
+  return resolved ~= nil and resolved.build_mode == "release"
+end
+
 return startup_policy
