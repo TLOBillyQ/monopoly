@@ -33,6 +33,10 @@ local function parse_args(args)
     if arg == "--quiet" then
       result.quiet = true
     end
+
+    if arg == "--reuse-stats" then
+      result.reuse_stats = true
+    end
   end
 
   return result
@@ -281,7 +285,7 @@ local function parse_luacov_report()
     return nil
   end
 
-  local files = {}
+  local by_path = {}
   local in_summary = false
   local past_header = false
 
@@ -319,17 +323,26 @@ local function parse_luacov_report()
           local dir = classify_directory(file_path)
 
           if dir then
-            table.insert(files, {
-              path = normalize_repo_path(file_path),
-              dir = dir,
-              hits = hits,
-              missed = missed,
-              coverage = coverage,
-            })
+            local norm_path = normalize_repo_path(file_path)
+            local existing = by_path[norm_path]
+            if (not existing) or hits > existing.hits then
+              by_path[norm_path] = {
+                path = norm_path,
+                dir = dir,
+                hits = hits,
+                missed = missed,
+                coverage = coverage,
+              }
+            end
           end
         end
       end
     end
+  end
+
+  local files = {}
+  for _, entry in pairs(by_path) do
+    files[#files + 1] = entry
   end
 
   return files
@@ -480,12 +493,14 @@ local function main(args)
     end
   end
 
-  delete_stale_files()
+  if not opts.reuse_stats then
+    delete_stale_files()
 
-  for _, profile in ipairs(opts.profiles) do
-    local ok = run_busted_profile(profile)
-    if not ok then
-      os.exit(1)
+    for _, profile in ipairs(opts.profiles) do
+      local ok = run_busted_profile(profile)
+      if not ok then
+        os.exit(1)
+      end
     end
   end
 

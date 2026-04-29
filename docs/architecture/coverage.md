@@ -26,6 +26,11 @@ lua5.5 tools/quality/coverage.lua --quiet
 ```
 抑制 busted/luacov 进度日志，只输出错误与最终报告。
 
+```
+lua5.5 tools/quality/coverage.lua --reuse-stats --out=tmp/coverage_replay.md
+```
+跳过 busted 重跑，直接用现有 `luacov.stats.out` 重新生成报告。用于诊断报告解析问题或调参 threshold/out 时避免重复 30s 测试开销。
+
 > **运行时绑定**：脚本必须在 Lua 5.5 下执行（项目主运行时）。busted/luacov shim 通过环境变量 `LUA55_BIN` / `BUSTED_BIN` / `LUACOV_BIN` 显式指定，未设置时按 `/opt/homebrew/bin/lua5.5` → `/usr/local/bin/lua5.5` → PATH 顺序探测，并通过 `luarocks --lua-version=5.5 list --porcelain` 解析 busted/luacov 安装位置。
 
 ## 输出
@@ -67,3 +72,4 @@ lua5.5 tools/quality/coverage.lua --quiet
 | `Cannot locate lua5.5 binary` | 项目运行时未安装 | `brew install lua@5.5` 或设置 `LUA55_BIN` |
 | `Cannot locate busted/luacov for Lua 5.5` | rocks-5.5 缺包 | `luarocks --lua-version=5.5 install busted luacov luafilesystem` |
 | Aggregate 显著低于预期 | profile 漏跑 / `.luacov` include pattern 不匹配 | 比对 `luacov.report.out` 末尾 Summary，排查 include/exclude |
+| 单文件出现两份不同覆盖率 | luacov 用 `./src/x.lua` 与 `src/x.lua` 两种 key 各记一份（不同 `package.path` 解析路径所致） | parser 已在 `parse_luacov_report` 内按归一化路径去重，保留 hits 较多的那份；用 `--reuse-stats` 重跑核对 |
