@@ -11,6 +11,7 @@ description: Run the fuller Monopoly quality pass and include guidance about whe
 4. `busted --run guards`
 5. `lua tools/quality/arch.lua check`
 6. `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json`
+7. `lua5.5 tools/quality/coverage.lua --out tmp/coverage.md`（line coverage 聚合 ≥90%；详见 `docs/architecture/coverage.md`）
 
 满足以下任一条件再追加 `busted --run tooling`：
 
