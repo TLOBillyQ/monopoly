@@ -1,3 +1,4 @@
+-- luacheck 1.2.0 不识别 lua55；5.5 是 5.4 的语法+stdlib 超集，lua54 std 检查仍准确。等 luacheck 升级后再切。
 std = "lua54"
 codes = true
 max_line_length = false
