@@ -6,9 +6,9 @@
 |------|------|-----------|
 | `src/turn/loop/` | 协程调度：创建、推进、超时 | 游戏规则、UI 通知 |
 | `src/computer/` | 中性 AI 策略：自动玩家判断、目标选择、自动 choice | 回合推进、宿主调用 |
-| `src/turn/output/` | turn use case 内部输出桥：接回 `intent_dispatcher` / `ui_runtime` | 宿主能力、跨用例共享 |
+| `src/turn/output/` | turn use case 内部输出桥：接回 `intent_dispatcher` / `ui_runtime`；`event_feed_adapter` 实现玩家事件 fan-out（写 `state.event_log` + `tip_output_port:enqueue`） | 宿主能力、跨用例共享 |
 | `src/player/` | 玩家状态：资金、道具、位置 | 业务规则（不引用 `src/rules`） |
-| `src/state/` | 运行时状态：game state、turn state、runtime namespace | 业务规则、UI 直接写入 |
+| `src/state/` | 运行时状态：game state、turn state、runtime namespace、`event_log` 玩家事件环形缓冲（含 landing animation 期间的 push/pop/flush buffer 语义） | 业务规则、UI 直接写入 |
 | `src/rules/board/` | 棋盘规则：格子布局与全局查询 | 业务规则触发以外的 UI 逻辑 |
 | `src/rules/effects/` | buff/debuff 施加与结算 | UI 渲染 |
 | `src/rules/land/` | 地块规则：落地触发、地块状态 | 宿主 API |
@@ -42,7 +42,8 @@
 - 宿主能力接入端口 → `src/app/`
 - 宿主能力实现 → `src/host/`
 - 宿主/运行时广义契约 → `src/core/ports/`
-- 玩法规则业务能力契约 → `src/rules/ports/`
+- 玩法规则业务能力契约 → `src/rules/ports/`（含 `event_feed.publish(game, event)` 玩家事件流端口）
+- 玩家可见事件文本与 kind → `src/config/gameplay/event_kinds.lua`（kind 常量）+ `event_feed.publish(...)` 调用点（rules / turn / player 层）
 - 协程创建/推进/超时 → `src/turn/loop/`
 - 自动玩家策略与目标选择 → `src/computer/`
 - 玩家资金/位置/道具字段 → `src/player/`
