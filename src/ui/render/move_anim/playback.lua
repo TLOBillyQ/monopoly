@@ -52,12 +52,6 @@ function playback.one_step(scene, player_id, from_index, to_index, anim_ctx)
   end
   local unit = scene.units_by_player_id[player_id]
   assert(unit ~= nil, "missing unit: " .. tostring(player_id))
-  if seq_builder.is_synthetic_actor(player_id) then
-    assert(unit.force_start_move ~= nil, "missing unit.force_start_move: " .. tostring(player_id))
-    unit.force_start_move(step_dir, time)
-    seq_builder.publish_follow_target(anim_ctx, player_id, scene.tiles[to_index].get_position(), "move_anim_synthetic_step")
-    return time
-  end
   assert(unit.start_move_by_direction ~= nil, "missing unit.start_move_by_direction: " .. tostring(player_id))
   unit.start_move_by_direction(step_dir, time)
   seq_builder.publish_follow_target(anim_ctx, player_id, scene.tiles[to_index].get_position(), "move_anim_step")
@@ -109,8 +103,7 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
     end
   end
   if total_time > 0
-    and not seq_builder.is_vehicle_anim(anim_ctx)
-    and not seq_builder.is_synthetic_actor(player_id) then
+    and not seq_builder.is_vehicle_anim(anim_ctx) then
     local unit = board_scene and board_scene.units_by_player_id
       and board_scene.units_by_player_id[player_id] or nil
     if unit and unit.add_modifier_by_key then

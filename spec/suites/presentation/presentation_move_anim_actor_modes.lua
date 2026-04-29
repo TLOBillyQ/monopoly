@@ -40,7 +40,9 @@ local function _test_move_anim_prefers_forced_move_stop_and_model_stop_for_local
   end)
 
   _assert_eq(#scheduled, 1, "move sequence should schedule a finish callback for local-player stop fallback")
-  scheduled[1].fn()
+  local finish_callback = scheduled[1]
+  assert(finish_callback ~= nil, "move sequence should provide a finish callback")
+  finish_callback.fn()
   _assert_eq(calls[2], "stop_forced_move", "finish callback should stop forced movement before ai fallback")
   _assert_eq(calls[3], "interrupt_multi_animation", "finish callback should interrupt multi animation first")
   _assert_eq(calls[4], "stop_anim", "finish callback should stop display anim")
@@ -50,13 +52,13 @@ local function _test_move_anim_prefers_forced_move_stop_and_model_stop_for_local
   _assert_eq(calls[8], nil, "finish callback should not fall through to ai stop when forced stop exists")
 end
 
-local function _test_move_anim_synthetic_actor_uses_forced_move_start_and_stop()
+local function _test_move_anim_synthetic_actor_uses_unified_move_start_and_stop()
   local calls = {}
   local scene = support.new_scene_with_linear_tiles(2, {
     units_by_player_id = {
       [-2] = {
-        force_start_move = function() calls[#calls + 1] = "force_start_move" end,
-        force_stop_move = function() calls[#calls + 1] = "force_stop_move" end,
+        start_move_by_direction = function() calls[#calls + 1] = "start_move_by_direction" end,
+        stop_move = function() calls[#calls + 1] = "stop_move" end,
         ai_command_stop_move = function() calls[#calls + 1] = "ai_command_stop_move" end,
         stop_anim = function() calls[#calls + 1] = "stop_anim" end,
       },
@@ -84,9 +86,11 @@ local function _test_move_anim_synthetic_actor_uses_forced_move_start_and_stop()
   end)
 
   _assert_eq(#scheduled, 1, "synthetic move should schedule one finish callback")
-  scheduled[1].fn()
-  _assert_eq(calls[1], "force_start_move", "synthetic actor should start moving via force_start_move")
-  _assert_eq(calls[2], "force_stop_move", "synthetic actor should stop via force_stop_move")
+  local finish_callback = scheduled[1]
+  assert(finish_callback ~= nil, "synthetic move should provide a finish callback")
+  finish_callback.fn()
+  _assert_eq(calls[1], "start_move_by_direction", "synthetic actor should start moving via start_move_by_direction")
+  _assert_eq(calls[2], "stop_move", "synthetic actor should stop via stop_move")
   assert(calls[3] == "ai_command_stop_move" or calls[3] == "stop_anim",
     "synthetic actor should either clear host movement state or stop anim next")
   assert(calls[#calls] == "stop_anim", "synthetic actor should still stop anim")
@@ -98,7 +102,7 @@ local function _test_move_anim_non_synthetic_actor_uses_regular_move_start()
     units_by_player_id = {
       [-2] = {
         start_move_by_direction = function() calls[#calls + 1] = "start_move_by_direction" end,
-        force_stop_move = function() calls[#calls + 1] = "force_stop_move" end,
+        stop_move = function() calls[#calls + 1] = "stop_move" end,
         stop_anim = function() calls[#calls + 1] = "stop_anim" end,
       },
     },
@@ -120,9 +124,11 @@ local function _test_move_anim_non_synthetic_actor_uses_regular_move_start()
   end)
 
   _assert_eq(#scheduled, 1, "non-synthetic move should schedule one finish callback")
-  scheduled[1].fn()
+  local finish_callback = scheduled[1]
+  assert(finish_callback ~= nil, "non-synthetic move should provide a finish callback")
+  finish_callback.fn()
   _assert_eq(calls[1], "start_move_by_direction", "non-synthetic actor should keep regular move start")
-  _assert_eq(calls[2], "force_stop_move", "non-synthetic actor should go straight to motion stop")
+  _assert_eq(calls[2], "stop_move", "non-synthetic actor should go straight to motion stop")
   _assert_eq(calls[3], "stop_anim", "non-synthetic actor should still stop anim")
   _assert_eq(calls[4], nil, "non-synthetic actor should not add extra stop calls")
 end
@@ -166,7 +172,7 @@ return {
   name = "presentation.move_anim_actor_modes",
   tests = {
     { name = "local_player_prefers_forced_move_stop_and_model_stop", run = _test_move_anim_prefers_forced_move_stop_and_model_stop_for_local_player_units },
-    { name = "synthetic_actor_uses_forced_move_start_and_stop", run = _test_move_anim_synthetic_actor_uses_forced_move_start_and_stop },
+    { name = "synthetic_actor_uses_unified_move_start_and_stop", run = _test_move_anim_synthetic_actor_uses_unified_move_start_and_stop },
     { name = "non_synthetic_actor_uses_regular_move_start", run = _test_move_anim_non_synthetic_actor_uses_regular_move_start },
     { name = "move_anim_debug_log_writes_when_enabled", run = _test_move_anim_debug_log_writes_when_enabled },
   },

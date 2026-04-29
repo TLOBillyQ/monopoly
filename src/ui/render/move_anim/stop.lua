@@ -26,6 +26,10 @@ local function _stop_unit_motion(unit)
   if unit == nil then
     return nil
   end
+  if type(unit.stop_move) == "function" then
+    unit.stop_move()
+    return "stop_move"
+  end
   if type(unit.force_stop_move) == "function" then
     unit.force_stop_move()
     return "force_stop_move"

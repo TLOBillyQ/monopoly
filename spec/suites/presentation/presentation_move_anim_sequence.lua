@@ -28,7 +28,7 @@ local function _test_move_anim_sequence_stops_unit_when_duration_finishes()
   _assert_eq(calls[1], "start_move_by_direction", "move sequence should start unit move immediately")
   _assert_eq(#scheduled, 1, "move sequence should schedule one explicit finish-stop callback")
   scheduled[1].fn()
-  _assert_eq(calls[2], "force_stop_move", "finish callback should stop movement")
+  _assert_eq(calls[2], "stop_move", "finish callback should stop movement via stop_move")
   _assert_eq(calls[3], "stop_anim", "finish callback should stop looping anim")
 end
 
@@ -59,7 +59,7 @@ local function _test_move_anim_stale_finish_callback_does_not_stop_new_sequence(
   scheduled[0 + 1].fn()
   _assert_eq(#calls, 2, "stale finish callback should not stop the new active sequence")
   scheduled[2].fn()
-  _assert_eq(calls[3], "force_stop_move", "active finish callback should stop movement")
+  _assert_eq(calls[3], "stop_move", "active finish callback should stop movement via stop_move")
   _assert_eq(calls[4], "stop_anim", "active finish callback should stop anim")
 end
 
@@ -68,7 +68,7 @@ local function _test_move_anim_sequence_lock_lifecycle_single_step()
     units_by_player_id = {
       [1] = {
         start_move_by_direction = function() end,
-        force_stop_move = function() end,
+        stop_move = function() end,
         stop_anim = function() end,
       },
     },
@@ -106,7 +106,7 @@ local function _test_move_anim_sequence_lock_releases_previous_sequence_only_onc
     units_by_player_id = {
       [1] = {
         start_move_by_direction = function() end,
-        force_stop_move = function() end,
+        stop_move = function() end,
         stop_anim = function() end,
       },
     },
@@ -151,7 +151,7 @@ local function _test_anim_ports_role_control_exempt_stays_until_sequence_finish(
       units_by_player_id = {
         [1] = {
           start_move_by_direction = function() end,
-          force_stop_move = function() end,
+           stop_move = function() end,
           stop_anim = function() end,
         },
       },

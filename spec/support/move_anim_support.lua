@@ -52,6 +52,9 @@ function M.new_unit_spy(overrides)
     force_stop_move = overrides.force_stop_move or function()
       calls[#calls + 1] = "force_stop_move"
     end,
+    stop_move = overrides.stop_move or function()
+      calls[#calls + 1] = "stop_move"
+    end,
     stop_forced_move = overrides.stop_forced_move or function()
       calls[#calls + 1] = "stop_forced_move"
     end,
