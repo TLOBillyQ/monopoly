@@ -54,7 +54,7 @@ local function _should_open_choice_modal(game, state, next_model)
     return true
   end
   if route_key == "market" and next_model.market ~= nil then
-    return true
+    return choice_ui_state.should_reconcile(game, state, next_model.choice)
   end
   return choice_ui_state.should_reconcile(game, state, next_model.choice)
 end
