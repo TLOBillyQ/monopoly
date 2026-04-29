@@ -654,12 +654,27 @@ local function _test_app_init_wires_runtime_and_debug_providers()
       "scheduler should forward to SetTimeOut when available")
   end)
   assert(type(capture.anim_provider) == "function", "anim debug provider should be installed")
-  assert(capture.anim_provider() == false, "empty debug role state should disable animation debug")
+  assert(capture.anim_provider() == false, "empty anim debug role state should disable animation debug")
+  -- Wave 6 decoupling: event_log toggle (debug_log_enabled_by_role) must NOT drive anim debug.
   capture.state.ui.debug_log_enabled_by_role = {
     p1 = false,
     p2 = true,
   }
-  assert(capture.anim_provider() == true, "anim provider should be installed and read debug log toggle")
+  assert(capture.anim_provider() == false,
+    "anim provider must be independent from event_log toggle (debug_log_enabled_by_role)")
+  -- Anim debug now reads its own per-role table.
+  capture.state.ui.anim_debug_enabled_by_role = {
+    p1 = false,
+    p2 = true,
+  }
+  assert(capture.anim_provider() == true,
+    "anim provider should read its own anim_debug_enabled_by_role flag")
+  capture.state.ui.anim_debug_enabled_by_role = {
+    p1 = false,
+    p2 = false,
+  }
+  assert(capture.anim_provider() == false,
+    "anim provider should disable when no role enables anim_debug_enabled_by_role")
 
   local new_game = { id = 99 }
   capture.state.on_game_replaced(new_game)

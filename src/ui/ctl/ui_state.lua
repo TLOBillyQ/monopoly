@@ -61,6 +61,7 @@ function M.build_ui_state()
     role_control_lock_exempt_count_by_role = {},
     debug_visible_by_role = {},
     debug_log_enabled_by_role = {},
+    anim_debug_enabled_by_role = {},
     item_slots = canvas_state.permanent.item_slots,
     card_outlines = canvas_state.permanent.card_outlines,
     base_hidden_nodes = canvas_state.base.hidden_nodes,

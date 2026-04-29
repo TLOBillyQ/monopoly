@@ -49,17 +49,17 @@ local function _has_enabled_debug_role(enabled_by_role)
   return false
 end
 
-local function _resolve_debug_log_roles(ctx_state)
+local function _resolve_anim_debug_roles(ctx_state)
   local ui = ctx_state and ctx_state.ui or nil
-  local enabled_by_role = ui and ui.debug_log_enabled_by_role or nil
+  local enabled_by_role = ui and ui.anim_debug_enabled_by_role or nil
   if type(enabled_by_role) ~= "table" then
     return nil
   end
   return enabled_by_role
 end
 
-local function _is_debug_log_enabled()
-  local enabled_by_role = _resolve_debug_log_roles(state)
+local function _is_anim_debug_enabled()
+  local enabled_by_role = _resolve_anim_debug_roles(state)
   if enabled_by_role == nil then
     return false
   end
@@ -130,7 +130,7 @@ function M.init()
     auto_runner = auto_runner,
   })
 
-  logger.set_anim_debug_enabled_provider(_is_debug_log_enabled)
+  logger.set_anim_debug_enabled_provider(_is_anim_debug_enabled)
   state.on_game_replaced = function(new_game)
     current_game_ref[1] = new_game
     gameplay_loop.set_game(state, new_game)
