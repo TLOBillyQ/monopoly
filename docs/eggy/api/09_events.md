@@ -660,6 +660,48 @@ end)
 --]]
 EVENT.SPEC_CHARACTER_CLIMB_END = "SPEC_CHARACTER_CLIMB_END"
 
+---指定角色获得物品后
+---事件主体 Character 角色
+---事件回调参数 unit Character 触发角色
+---事件回调参数 equipment Equipment 获得的物品
+---事件回调参数 count integer 获取数量
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_CHARACTER_GET_EQUIPMENT, }, function(event_name, actor, data)
+	print(data.unit)
+	print(data.equipment)
+	print(data.count)
+end)
+--]]
+EVENT.SPEC_CHARACTER_GET_EQUIPMENT = "SPEC_CHARACTER_GET_EQUIPMENT"
+
+---指定角色获得物品前
+---事件主体 Character 角色
+---事件回调参数 unit Character 触发角色
+---事件回调参数 equipment Equipment 获得的物品
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_CHARACTER_GET_EQUIPMENT_BEFORE, }, function(event_name, actor, data)
+	print(data.unit)
+	print(data.equipment)
+end)
+--]]
+EVENT.SPEC_CHARACTER_GET_EQUIPMENT_BEFORE = "SPEC_CHARACTER_GET_EQUIPMENT_BEFORE"
+
+---指定角色失去物品
+---事件主体 Character 角色
+---事件回调参数 unit Character 触发角色
+---事件回调参数 equipment Equipment 丢失的物品
+---事件回调参数 slot_type Enums.EquipmentSlotType 物品槽位类型
+---事件回调参数 slot_index integer 物品槽位索引
+--[[
+LuaAPI.unit_register_trigger_event(_unit, {EVENT.SPEC_CHARACTER_LOST_EQUIPMENT, }, function(event_name, actor, data)
+	print(data.unit)
+	print(data.equipment)
+	print(data.slot_type)
+	print(data.slot_index)
+end)
+--]]
+EVENT.SPEC_CHARACTER_LOST_EQUIPMENT = "SPEC_CHARACTER_LOST_EQUIPMENT"
+
 ---指定角色选中物品格
 ---事件主体 Character 角色
 ---注册参数 _slot_type Enums.EquipmentSlotType 物品格类型

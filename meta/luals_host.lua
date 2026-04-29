@@ -225,6 +225,7 @@
 ---@field get_charge_time fun(): Fixed
 ---@field get_cur_release_num fun(): integer
 ---@field get_desc fun(): string
+---@field get_icon fun(): ImageKey
 ---@field get_key fun(): AbilityKey
 ---@field get_left_cd_time fun(): Fixed
 ---@field get_left_charge_time fun(): Fixed

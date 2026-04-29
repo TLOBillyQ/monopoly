@@ -23,6 +23,7 @@ Ability|get_cd_time
 Ability|get_charge_time
 Ability|get_cur_release_num
 Ability|get_desc
+Ability|get_icon
 Ability|get_key
 Ability|get_left_cd_time
 Ability|get_left_charge_time

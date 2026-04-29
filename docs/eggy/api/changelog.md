@@ -1,5 +1,16 @@
 # EggyAPI 变更记录
 
+## 2026-04-29
+
+新增 / Added: 4
+  - Ability.get_icon
+  - EVENT.SPEC_CHARACTER_GET_EQUIPMENT
+  - EVENT.SPEC_CHARACTER_GET_EQUIPMENT_BEFORE
+  - EVENT.SPEC_CHARACTER_LOST_EQUIPMENT
+删除 / Removed: 0
+签名变更 / Signature changed: 0
+类型变更 / Type changed: 0
+
 ## 2026-04-25
 
 新增 / Added: 13
