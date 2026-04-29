@@ -1,5 +1,7 @@
 # 分层模型
 
+> **See also**：架构治理路线图 → [`governance_roadmap.md`](governance_roadmap.md)（10 层模型与三个真源的对齐债务及治理波次）
+
 ```
 app -> infrastructure -> presentation -> turn -> (state | computer) -> rules -> (state | config)
 ```

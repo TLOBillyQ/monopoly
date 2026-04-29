@@ -9,6 +9,7 @@
 | 任务 | 文档 |
 |------|------|
 | 架构边界与目录 | `docs/architecture/boundaries.md` + `layer-model.md` |
+| 架构治理路线图 | `docs/architecture/governance_roadmap.md` |
 | 测试车道与质量职责 | `docs/architecture/quality_map.md` |
 | 静态架构扫描 | `docs/architecture/arch_view.md` |
 | 风险热点（CRAP） | `docs/architecture/crap_report.md`、`health_signals.md` |

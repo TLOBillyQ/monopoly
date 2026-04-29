@@ -1,5 +1,7 @@
 # 目录边界约定
 
+> **See also**：架构治理路线图 → [`governance_roadmap.md`](governance_roadmap.md)（物理目录与逻辑层错位、6 条 exception 治理动作）
+
 ## 目录职责
 
 | 目录 | 职责 | 不允许 |

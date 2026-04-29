@@ -1,5 +1,7 @@
 # 健康信号与周检入口
 
+> **See also**：架构治理路线图 → [`governance_roadmap.md`](governance_roadmap.md)（治理波次完成后须更新本文档的复审锚点）
+
 每周按以下顺序跑，先判断"安全"，再看"优雅"。
 
 如果你想先判断“该跑哪条”或查看本地耗时基线，先读 `docs/architecture/quality_map.md`。
