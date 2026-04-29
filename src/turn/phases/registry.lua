@@ -1,7 +1,6 @@
 local item_phase = require("src.rules.items.phase")
 local item_auto_play_context = require("src.turn.policies.item_play_context")
 local dirty_tracker = require("src.core.utils.dirty_tracker")
-local logger = require("src.core.utils.logger")
 local landing_visual_hold = require("src.state.landing_visual_hold")
 local turn_start = require("src.turn.phases.start")
 local turn_roll = require("src.turn.phases.roll")
@@ -10,6 +9,8 @@ local turn_move = require("src.turn.phases.move")
 local turn_land = require("src.turn.phases.land")
 local move_followup = require("src.turn.phases.move_followup")
 local timing = require("src.config.gameplay.timing")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local event_feed = require("src.rules.ports.event_feed")
 
 local turn_phase_registry = {}
 
@@ -51,7 +52,11 @@ local function _phase_end(turn_mgr, args)
   local player = args.player
   local game = turn_mgr.game
   landing_visual_hold.clear_game(game)
-  logger.event_no_tips("回合结束：" .. tostring(player.name) .. " 停在 " .. _resolve_tile_name(game, player))
+  event_feed.publish(game, {
+    kind = event_kinds.turn_end,
+    text = "回合结束：" .. tostring(player.name) .. " 停在 " .. _resolve_tile_name(game, player),
+    tip = false,
+  })
   turn_mgr.game:tick_player_deity(player)
   turn_mgr.game:clear_player_temporal_flags(player)
   turn_mgr.game:stop_all_players_movement()

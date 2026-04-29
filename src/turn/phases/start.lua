@@ -3,6 +3,8 @@ local item_phase = require("src.rules.items.phase")
 local item_auto_play_context = require("src.turn.policies.item_play_context")
 local monopoly_event = require("src.core.events")
 local timing = require("src.config.gameplay.timing")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local event_feed = require("src.rules.ports.event_feed")
 
 local function _clear_no_action_notice(turn)
   if not turn then
@@ -56,7 +58,11 @@ end
 local function _configure_detained_wait(game, turn, player)
   local detained_wait_seconds = timing.detained_turn_wait_seconds or 5.0
   game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
-  logger.event(player.name .. " 被扣留，剩余回合:", player.status.stay_turns)
+  event_feed.publish(game, {
+    kind = event_kinds.detained,
+    text = player.name .. " 被扣留，剩余回合:" .. tostring(player.status.stay_turns),
+    tip = true,
+  })
   game.last_turn.note = "被扣留"
   game.last_turn.skipped = true
   game.last_turn.stay_turns = player.status.stay_turns

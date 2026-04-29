@@ -2,7 +2,8 @@ local steal = require("src.rules.items.steal")
 local market_service = require("src.rules.market")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local landing_visual_hold = require("src.state.landing_visual_hold")
-local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local event_feed = require("src.rules.ports.event_feed")
 
 local move_followup = {}
 
@@ -114,7 +115,11 @@ end
 local function _handle_apply_location_effects(game, args)
   local log_entries = args.log_entries or {}
   for _, entry in ipairs(log_entries) do
-    logger.event(entry)
+    event_feed.publish(game, {
+      kind = event_kinds.move_followup,
+      text = entry,
+      tip = true,
+    })
   end
   local effects = args.effects or {}
   for _, entry in ipairs(effects) do

@@ -1,10 +1,12 @@
 local monopoly_event = require("src.core.events")
 local choice_contract = require("src.core.choice.contract")
 local choice_route_policy = require("src.core.choice.route_policy")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local event_feed = require("src.rules.ports.event_feed")
 
 local intent_dispatcher = {}
 
-local function _build_choice_log_text(choice_spec, title, body_lines)
+local function _build_choice_log_text(title, body_lines)
   local text = "等待选择：" .. tostring(title or "请选择")
   if type(body_lines) == "table" then
     local first_line = body_lines[1]
@@ -84,7 +86,7 @@ local function _validate_choice_meta(game, choice_spec)
   return descriptor
 end
 
-function intent_dispatcher.open_choice(game, choice_spec, _opts)
+function intent_dispatcher.open_choice(game, choice_spec)
   assert(game and game.turn, "Choice.open requires game.turn")
   assert(choice_spec ~= nil, "missing choice_spec")
   _validate_choice_meta(game, choice_spec)
@@ -96,7 +98,11 @@ function intent_dispatcher.open_choice(game, choice_spec, _opts)
   local entry = _build_choice_entry(seq, choice_spec)
   game.turn.pending_choice = entry
   _mark_turn_dirty(game)
-  game.logger.event_no_tips(_build_choice_log_text(choice_spec, entry.title, entry.body_lines))
+  event_feed.publish(game, {
+    kind = event_kinds.choice_picked,
+    text = _build_choice_log_text(entry.title, entry.body_lines),
+    tip = false,
+  })
   monopoly_event.emit_intent("need_choice", { choice = entry, choice_spec = choice_spec })
   return entry
 end
@@ -115,16 +121,15 @@ function intent_dispatcher.push_popup(game, payload, opts)
   return true
 end
 
-function intent_dispatcher.dispatch(game, payload, opts)
+function intent_dispatcher.dispatch(game, payload)
   assert(payload ~= nil, "missing payload")
-  opts = opts or {}
   local intent = payload.intent or payload
   if not intent or type(intent) ~= "table" then
     return nil
   end
 
   if intent.kind == "need_choice" and intent.choice_spec then
-    return intent_dispatcher.open_choice(game, intent.choice_spec, opts)
+    return intent_dispatcher.open_choice(game, intent.choice_spec)
   end
 
   if intent.kind == "push_popup" and intent.payload then

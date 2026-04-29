@@ -1,6 +1,6 @@
-local logger = require("src.core.utils.logger")
-local number_utils = require("src.core.utils.number")
 local dice_multiplier = require("src.turn.phases.dice_multiplier")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local event_feed = require("src.rules.ports.event_feed")
 
 local function _roll_dice(count, override_values, rng)
   local results = {}
@@ -29,8 +29,12 @@ local function _resolve_dice_override(player)
   return nil
 end
 
-local function _log_roll_event(player, rolls, total)
-  logger.event(player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. number_utils.format_integer_part(total))
+local function _log_roll_event(game, player, rolls, total)
+  event_feed.publish(game, {
+    kind = event_kinds.dice_roll,
+    text = player.name .. " 投骰: [" .. table.concat(rolls, ",") .. "] => " .. tostring(total),
+    tip = true,
+  })
 end
 
 local function _store_roll_results(game, rolls, total, raw_total)
@@ -44,7 +48,7 @@ local function _perform_dice_roll(game, player)
   local override = _resolve_dice_override(player)
   local rolls, raw_total = _roll_dice(dice_count, override, game.rng)
   local total = dice_multiplier.apply_roll_total(raw_total, player)
-  _log_roll_event(player, rolls, total)
+  _log_roll_event(game, player, rolls, total)
   _store_roll_results(game, rolls, total, raw_total)
   return rolls, raw_total, total
 end
