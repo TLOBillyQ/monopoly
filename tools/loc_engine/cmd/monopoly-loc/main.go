@@ -350,7 +350,7 @@ func getCommits(gitRoot, since string) ([]commitInfo, error) {
 }
 
 func listCommitEntries(gitRoot, commitHash string) ([]treeEntry, error) {
-	output, err := runCommand("", nil, "git", "-C", gitRoot, "ls-tree", "-r", commitHash, "src", "tests")
+	output, err := runCommand("", nil, "git", "-C", gitRoot, "ls-tree", "-r", commitHash, "src", "tests", "spec")
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +378,7 @@ func listCommitEntries(gitRoot, commitHash string) ([]treeEntry, error) {
 }
 
 func listDiffEntries(gitRoot, previousHash, currentHash string) ([]diffEntry, error) {
-	output, err := runCommand("", nil, "git", "-C", gitRoot, "diff-tree", "-r", "--raw", "--no-commit-id", "-M", previousHash, currentHash, "--", "src", "tests")
+	output, err := runCommand("", nil, "git", "-C", gitRoot, "diff-tree", "-r", "--raw", "--no-commit-id", "-M", previousHash, currentHash, "--", "src", "tests", "spec")
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +636,7 @@ func classifyBucket(path string) string {
 	if strings.HasPrefix(normalized, "src/") {
 		return "src"
 	}
-	if strings.HasPrefix(normalized, "tests/") {
+	if strings.HasPrefix(normalized, "tests/") || strings.HasPrefix(normalized, "spec/") {
 		return "tests"
 	}
 	return ""
