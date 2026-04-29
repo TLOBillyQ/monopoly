@@ -22,8 +22,10 @@ local function _calc_step_vector(scene, from_index, to_index)
   if len <= 0 then
     return _zero_vector(), 0
   end
-  local dir = math.Vector3(dist.x / len, dist.y / len, dist.z / len)
-  return dir, len
+  if math and math.Vector3 then
+    return math.Vector3(dist.x / len, dist.y / len, dist.z / len), len
+  end
+  return { x = dist.x / len, y = dist.y / len, z = dist.z / len }, len
 end
 
 local function _calc_walk_step_time(len)
@@ -195,6 +197,65 @@ function sequence_builder.format_visited(visited)
     out[i] = tostring(value)
   end
   return table.concat(out, ",")
+end
+
+local function _dirs_collinear(d1, d2)
+  local dot = d1.x * d2.x + d1.y * d2.y + d1.z * d2.z
+  return (1 - dot) <= (runtime_constants.collinear_eps or 1e-3)
+end
+
+-- 把连续同向的格子合并为 segment，拐点 segment 的 duration 乘以 turn_slow_factor。
+-- 每个 segment 包含 anchors（{tile_index, t}），t 是相对 segment 起点的触发时刻，
+-- 用于在正确时机下发音效和跟随目标，不丢中间格子事件。
+-- 车辆模式不合并，退化为 1 格 1 segment。
+function sequence_builder.build_segments(board_scene, from_index, to_index, visited, anim_ctx, step_duration_fn)
+  local raw_steps = {}
+  local function _push_raw(sf, st)
+    if sf == st then return end
+    local dir, len = _calc_step_vector(board_scene, sf, st)
+    if len <= 0 then return end
+    local time = step_duration_fn(board_scene, sf, st, anim_ctx)
+    if time <= 0 then return end
+    raw_steps[#raw_steps + 1] = { from = sf, to = st, dir = dir, time = time }
+  end
+  if not visited or #visited <= 1 then
+    if from_index ~= to_index then _push_raw(from_index, to_index) end
+  else
+    local sf = from_index
+    for _, st in ipairs(visited) do
+      _push_raw(sf, st)
+      sf = st
+    end
+  end
+
+  local vehicle_mode = sequence_builder.is_vehicle_anim(anim_ctx)
+  local turn_slow = runtime_constants.turn_slow_factor or 1.3
+  local segments = {}
+  local total_time = 0
+
+  for _, step in ipairs(raw_steps) do
+    local last = segments[#segments]
+    local is_turn = last ~= nil and not _dirs_collinear(last.dir, step.dir)
+    local step_time = is_turn and (step.time * turn_slow) or step.time
+    if last ~= nil and not is_turn and not vehicle_mode then
+      last.anchors[#last.anchors + 1] = { tile_index = step.to, t = last.time }
+      last.time = last.time + step_time
+      last.to = step.to
+      total_time = total_time + step_time
+    else
+      segments[#segments + 1] = {
+        from = step.from,
+        to = step.to,
+        dir = step.dir,
+        time = step_time,
+        anchors = { { tile_index = step.to, t = 0 } },
+        delay = total_time,
+      }
+      total_time = total_time + step_time
+    end
+  end
+
+  return segments, total_time
 end
 
 function sequence_builder.publish_follow_target(anim_ctx, player_id, position, source)

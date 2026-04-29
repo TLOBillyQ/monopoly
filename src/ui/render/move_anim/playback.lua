@@ -58,6 +58,48 @@ function playback.one_step(scene, player_id, from_index, to_index, anim_ctx)
   return time
 end
 
+function playback.one_segment(scene, player_id, segment, anim_ctx)
+  if anim_ctx and type(anim_ctx.on_step_lock) == "function" then
+    local meta = { player_id = player_id, from = segment.from, to = segment.to }
+    anim_ctx.on_step_lock(false, segment.time, meta)
+    runtime_ports.schedule(segment.time, function()
+      anim_ctx.on_step_lock(true, segment.time, meta)
+    end)
+  end
+  if seq_builder.is_vehicle_jump_mode(anim_ctx) then
+    local target_pos = scene.tiles[segment.to].get_position()
+    seq_builder.vehicle_helper_method("emit_vehicle_set_position")(player_id, target_pos)
+    seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, "move_anim_vehicle_jump")
+    return segment.time
+  end
+  if seq_builder.is_vehicle_move_mode(anim_ctx) then
+    local target_pos = scene.tiles[segment.to].get_position()
+    seq_builder.vehicle_helper_method("emit_vehicle_move")(player_id, segment.dir, segment.time)
+    seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, "move_anim_vehicle_move")
+    return segment.time
+  end
+  local unit = scene.units_by_player_id[player_id]
+  assert(unit ~= nil, "missing unit: " .. tostring(player_id))
+  assert(unit.start_move_by_direction ~= nil, "missing unit.start_move_by_direction: " .. tostring(player_id))
+  unit.start_move_by_direction(segment.dir, segment.time)
+  for _, anchor in ipairs(segment.anchors) do
+    local tile_idx = anchor.tile_index
+    local anchor_t = anchor.t
+    local function _fire()
+      if anim_ctx and anim_ctx.state then
+        board_feedback.play_step_tile_sound(anim_ctx.state, player_id, tile_idx)
+      end
+      seq_builder.publish_follow_target(anim_ctx, player_id, scene.tiles[tile_idx].get_position(), "move_anim_step")
+    end
+    if anchor_t <= 0 then
+      _fire()
+    else
+      runtime_ports.schedule(anchor_t, _fire)
+    end
+  end
+  return segment.time
+end
+
 local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
   if _should_skip_stop_active_sequence(board_scene, player_id, anim_ctx, token) then
     return
@@ -89,16 +131,16 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
   local from_index = assert(anim_ctx.from_index, "missing from_index")
   local to_index = assert(anim_ctx.to_index, "missing to_index")
   assert(seq_builder.resolve_direction(anim_ctx), "missing anim.direction")
-  local steps, total_time = seq_builder.build_steps(
+  local segments, total_time = seq_builder.build_segments(
     board_scene, from_index, to_index, anim_ctx.visited, anim_ctx, self_ref.step_duration
   )
   local token = nil
-  if #steps > 0 then
+  if #segments > 0 then
     local enter_delay = seq_builder.consume_enter_delay(anim_ctx, player_id)
     if enter_delay > 0 then
       total_time = total_time + enter_delay
-      for _, step in ipairs(steps) do
-        step.delay = step.delay + enter_delay
+      for _, seg in ipairs(segments) do
+        seg.delay = seg.delay + enter_delay
       end
     end
   end
@@ -137,19 +179,19 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
     "seq=" .. tostring(anim_ctx.seq or "nil"),
     "from=" .. tostring(from_index),
     "to=" .. tostring(to_index),
-    "step_count=" .. tostring(#steps),
+    "segment_count=" .. tostring(#segments),
     "total_time=" .. tostring(total_time),
     "visited=" .. seq_builder.format_visited(anim_ctx.visited),
     "token=" .. tostring(token or "nil")
   )
-  local function _run_step(step)
+  local function _run_segment(seg)
     if token ~= nil and not rt.token_matches(board_scene, player_id, token) then
       debug_mod.debug_log(
         "step_skip_stale_token",
         "player_id=" .. tostring(player_id),
         "seq=" .. tostring(anim_ctx.seq or "nil"),
-        "from=" .. tostring(step.from),
-        "to=" .. tostring(step.to),
+        "from=" .. tostring(seg.from),
+        "to=" .. tostring(seg.to),
         "token=" .. tostring(token)
       )
       return
@@ -158,30 +200,27 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
       "step_execute",
       "player_id=" .. tostring(player_id),
       "seq=" .. tostring(anim_ctx.seq or "nil"),
-      "from=" .. tostring(step.from),
-      "to=" .. tostring(step.to),
-      "delay=" .. tostring(step.delay),
-      "step_time=" .. tostring(self_ref.step_duration(board_scene, step.from, step.to, anim_ctx)),
+      "from=" .. tostring(seg.from),
+      "to=" .. tostring(seg.to),
+      "delay=" .. tostring(seg.delay),
+      "segment_time=" .. tostring(seg.time),
       "vehicle=" .. tostring(seq_builder.is_vehicle_anim(anim_ctx))
     )
-    if anim_ctx and anim_ctx.state then
-      board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)
-    end
-    self_ref.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
+    self_ref.one_segment(board_scene, player_id, seg, anim_ctx)
   end
-  for _, step in ipairs(steps) do
+  for _, seg in ipairs(segments) do
     debug_mod.debug_log(
       "step_schedule",
       "player_id=" .. tostring(player_id),
       "seq=" .. tostring(anim_ctx.seq or "nil"),
-      "from=" .. tostring(step.from),
-      "to=" .. tostring(step.to),
-      "delay=" .. tostring(step.delay)
+      "from=" .. tostring(seg.from),
+      "to=" .. tostring(seg.to),
+      "delay=" .. tostring(seg.delay)
     )
-    if step.delay <= 0 then
-      _run_step(step)
+    if seg.delay <= 0 then
+      _run_segment(seg)
     else
-      runtime_ports.schedule(step.delay, function() _run_step(step) end)
+      runtime_ports.schedule(seg.delay, function() _run_segment(seg) end)
     end
   end
   if token ~= nil then
