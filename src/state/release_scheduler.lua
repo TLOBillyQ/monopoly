@@ -1,4 +1,5 @@
 local release_scheduler = {}
+local event_log = require("src.state.event_log")
 
 local release_priority = {
   board_visual_sync = 1,
@@ -39,8 +40,7 @@ local function _sort_callbacks(release_callbacks)
 end
 
 function release_scheduler.replay(hold)
-  local logger = require("src.core.utils.logger")
-  logger.flush_event_buffer(hold)
+  event_log.flush_buffer(hold)
   _sort_callbacks(hold.release_callbacks)
   for _, entry in ipairs(hold.release_callbacks) do
     if type(entry.fn) == "function" then

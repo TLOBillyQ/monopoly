@@ -8,6 +8,7 @@ local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local gameplay_loop_runtime = require("src.turn.loop.runtime")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
+local event_feed_adapter = require("src.turn.output.event_feed_adapter")
 local auto_context = require("src.turn.policies.auto_context")
 local tick_flow = require("src.turn.loop.tick_flow")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
@@ -132,10 +133,12 @@ end
 local function _initialize_ports(state, game)
   local ports = _resolve_ports(state)
   state.game = game
+  game.state = game.state or {}
   state.gameplay_loop_ports = ports
   game.board_scene_port = gameplay_loop_runtime.build_board_scene_port(state)
   game.popup_port = gameplay_loop_runtime.build_popup_port(state)
   game.tip_output_port = gameplay_loop_runtime.build_tip_output_port(state)
+  game.event_feed_port = event_feed_adapter.new(game)
   game.board_visual_feedback_port = gameplay_loop_runtime.build_board_visual_feedback_port(state)
   game.tile_feedback_port = gameplay_loop_runtime.build_tile_feedback_port(state)
   game.bankruptcy_feedback_port = {

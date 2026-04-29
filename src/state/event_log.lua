@@ -1,0 +1,109 @@
+local event_log = {}
+local DEFAULT_CAPACITY = 200
+
+function event_log.new(capacity)
+  return {
+    entries = {},
+    capacity = capacity or DEFAULT_CAPACITY,
+    seq = 0,
+    active_buffers = {},
+  }
+end
+
+local function _make_item(log, entry)
+  log.seq = log.seq + 1
+  return {
+    kind = entry.kind,
+    text = entry.text,
+    seq = log.seq,
+  }
+end
+
+local function _append_with_limit(log, item)
+  table.insert(log.entries, item)
+  while #log.entries > log.capacity do
+    table.remove(log.entries, 1)
+  end
+end
+
+local function _direct_append(log, entry)
+  local item = _make_item(log, entry)
+  _append_with_limit(log, item)
+  return item
+end
+
+function event_log.append(log, entry)
+  local top = log.active_buffers[#log.active_buffers]
+  if top then
+    top.pending = top.pending or {}
+    local item = _make_item(log, entry)
+    top.pending[#top.pending + 1] = item
+    return item
+  end
+  return _direct_append(log, entry)
+end
+
+function event_log.push_buffer(log, hold)
+  hold.pending = hold.pending or {}
+  hold._event_log_ref = log
+  log.active_buffers[#log.active_buffers + 1] = hold
+end
+
+function event_log.pop_buffer(hold)
+  local log = hold and hold._event_log_ref
+  if not log then
+    return
+  end
+  for i = #log.active_buffers, 1, -1 do
+    if log.active_buffers[i] == hold then
+      table.remove(log.active_buffers, i)
+      break
+    end
+  end
+  hold._event_log_ref = nil
+end
+
+function event_log.flush_buffer(hold)
+  local log = hold and hold._event_log_ref
+  if not log or not hold.pending then
+    event_log.pop_buffer(hold)
+    return
+  end
+  for _, item in ipairs(hold.pending) do
+    _append_with_limit(log, item)
+  end
+  hold.pending = nil
+  event_log.pop_buffer(hold)
+end
+
+function event_log.get_entries(log, limit)
+  local out = {}
+  local n = #log.entries
+  local read_limit = limit or n
+  local start = math.max(1, n - read_limit + 1)
+  for i = start, n do
+    out[#out + 1] = log.entries[i]
+  end
+  return out
+end
+
+function event_log.get_text(log, limit)
+  local entries = event_log.get_entries(log, limit)
+  local lines = {}
+  for i, e in ipairs(entries) do
+    lines[i] = e.text
+  end
+  return table.concat(lines, "\n")
+end
+
+function event_log.get_seq(log)
+  return log.seq
+end
+
+function event_log.clear(log)
+  log.entries = {}
+  log.seq = 0
+  log.active_buffers = {}
+end
+
+return event_log

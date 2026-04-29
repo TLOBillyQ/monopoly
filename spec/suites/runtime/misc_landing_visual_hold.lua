@@ -1,6 +1,6 @@
 local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
-local logger = require("src.core.utils.logger")
+local event_log = require("src.state.event_log")
 local runtime_state = require("src.state.runtime_state")
 local landing_visual_hold = require("src.state.landing_visual_hold")
 
@@ -22,9 +22,11 @@ local function _test_landing_visual_hold_defer_dirty_initializes_bucket_and_merg
 end
 
 local function _test_landing_visual_hold_release_flushes_event_buffer_and_replays_deferred()
-  logger.clear()
   local state = {}
   local game = {
+    state = {
+      event_log = event_log.new(),
+    },
     dirty = {},
     turn = {
       landing_visual_hold_active = false,
@@ -40,8 +42,10 @@ local function _test_landing_visual_hold_release_flushes_event_buffer_and_replay
   landing_visual_hold.mark_release_pending(game)
 
   local hold = landing_visual_hold.sync_state_from_game(state, game)
-  logger.push_event_buffer(hold)
-  logger.event("deferred event during hold")
+  event_log.append(game.state.event_log, {
+    kind = "test",
+    text = "deferred event during hold",
+  })
 
   landing_visual_hold.defer_board_visual_sync(state, { sync_data = true }, function(payload)
     replayed_visual_syncs[#replayed_visual_syncs + 1] = payload
@@ -70,10 +74,8 @@ local function _test_landing_visual_hold_release_flushes_event_buffer_and_replay
   _assert_eq(#replayed_popups, 1, "release should replay deferred popups")
   _assert_eq(replayed_popups[1].payload.popup_data, true, "popup payload should be preserved")
 
-  local text = logger.get_text_by_level("event")
+  local text = event_log.get_text(game.state.event_log)
   assert(string.find(text, "deferred event during hold", 1, true) ~= nil, "release should flush event buffer")
-
-  logger.clear()
 end
 
 local function _test_landing_visual_hold_release_orders_wrappers_by_priority()

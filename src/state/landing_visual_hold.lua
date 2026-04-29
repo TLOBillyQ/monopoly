@@ -1,6 +1,7 @@
 local runtime_state = require("src.state.runtime_state")
 local deferred_dirty = require("src.state.deferred_dirty")
 local release_scheduler = require("src.state.release_scheduler")
+local event_log = require("src.state.event_log")
 
 local landing_visual_hold = {}
 
@@ -31,6 +32,15 @@ local function _mark_turn_dirty(game)
   end
   game.dirty.turn = true
   game.dirty.any = true
+end
+
+local function _ensure_event_log_for_game(game)
+  if type(game) ~= "table" then
+    return nil
+  end
+  game.state = game.state or {}
+  game.state.event_log = game.state.event_log or event_log.new()
+  return game.state.event_log
 end
 
 local function _reset_deferred_buffers(hold)
@@ -85,8 +95,8 @@ function landing_visual_hold.start(game, opts)
       hold = _set_hold_state(state, true, false, "state")
       _project_hold_to_game(game, hold)
       if was_active ~= true then
-        local logger = require("src.core.utils.logger")
-        logger.push_event_buffer(hold)
+        _ensure_event_log_for_game(game)
+        event_log.push_buffer(game.state.event_log, hold)
       end
     end
     return false
@@ -94,8 +104,8 @@ function landing_visual_hold.start(game, opts)
   if type(state) == "table" then
     local hold = _set_hold_state(state, true, false, "state")
     _project_hold_to_game(game, hold)
-    local logger = require("src.core.utils.logger")
-    logger.push_event_buffer(hold)
+    _ensure_event_log_for_game(game)
+    event_log.push_buffer(game.state.event_log, hold)
   else
     game.turn.landing_visual_hold_active = true
     game.turn.landing_visual_release_pending = false
@@ -183,8 +193,8 @@ function landing_visual_hold.sync_state_from_game(state, game)
   if _hold_is_state_source(hold) then
     _project_hold_to_game(game, hold)
     if hold.active == true and was_active ~= true then
-      local logger = require("src.core.utils.logger")
-      logger.push_event_buffer(hold)
+      _ensure_event_log_for_game(game)
+      event_log.push_buffer(game.state.event_log, hold)
     end
     return hold
   end
@@ -192,8 +202,8 @@ function landing_visual_hold.sync_state_from_game(state, game)
   runtime_state.set_landing_visual_release_pending(state, _game_turn_release_pending(game))
   runtime_state.set_landing_visual_hold_source(state, "game")
   if hold.active == true and was_active ~= true then
-    local logger = require("src.core.utils.logger")
-    logger.push_event_buffer(hold)
+    _ensure_event_log_for_game(game)
+    event_log.push_buffer(game.state.event_log, hold)
   end
   return hold
 end
@@ -332,8 +342,7 @@ end
 
 function landing_visual_hold.reset_state(state)
   local hold = _ensure_hold(state)
-  local logger = require("src.core.utils.logger")
-  logger.pop_event_buffer(hold)
+  event_log.pop_buffer(hold)
   hold.active = false
   hold.release_pending = false
   hold.flushing = false
