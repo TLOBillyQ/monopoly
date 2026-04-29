@@ -114,7 +114,10 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
     local unit = board_scene and board_scene.units_by_player_id
       and board_scene.units_by_player_id[player_id] or nil
     if unit and unit.add_modifier_by_key then
-      unit.add_modifier_by_key(runtime_constants.speed_boost_modifier_key, total_time + 0.5)
+      local modifier = unit.add_modifier_by_key(runtime_constants.speed_boost_modifier_key, {})
+      if modifier and modifier.set_remain_duration then
+        modifier.set_remain_duration(total_time + 0.5)
+      end
     end
   end
   if total_time > 0 then
