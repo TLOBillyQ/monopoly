@@ -1,5 +1,4 @@
 local tip_queue = require("src.core.utils.tip_queue")
-local log_queue = require("src.core.utils.log_queue")
 local log_formatter = require("src.core.utils.log_formatter")
 
 local logger = {
@@ -17,8 +16,6 @@ local logger = {
   time_formatter = function(timestamp)
     return tostring(timestamp)
   end,
-  event_buffer_stack = {},
-  event_collection_enabled_provider = nil,
   anim_debug_enabled_provider = nil,
   test_mode = false,
   enabled = true,
@@ -43,13 +40,6 @@ function logger.reset_time_runtime()
   logger.set_time_formatter(function(timestamp)
     return tostring(timestamp)
   end)
-end
-
-function logger.set_event_collection_enabled_provider(provider)
-  if provider ~= nil then
-    assert(type(provider) == "function", "event collection provider must be function or nil")
-  end
-  logger.event_collection_enabled_provider = provider
 end
 
 function logger.set_anim_debug_enabled_provider(provider)
@@ -124,29 +114,21 @@ function logger.info(...)
   if not logger.enabled then
     return
   end
-  log_queue.push(logger, "info", nil, ...)
+  log_formatter.push(logger, "info", nil, ...)
 end
 
 function logger.info_unlimited(...)
   if not logger.enabled then
     return
   end
-  log_queue.push(logger, "info", { unlimited = true }, ...)
+  log_formatter.push(logger, "info", { unlimited = true }, ...)
 end
 
 function logger.warn(...)
   if not logger.enabled then
     return
   end
-  log_queue.push(logger, "warn", nil, ...)
-end
-
-function logger.event(...)
-  log_queue.push(logger, "event", nil, ...)
-end
-
-function logger.event_no_tips(...)
-  log_queue.push(logger, "event", { no_tip = true }, ...)
+  log_formatter.push(logger, "warn", nil, ...)
 end
 
 function logger.clear()
@@ -155,7 +137,6 @@ function logger.clear()
   logger.event_seq = (logger.event_seq or 0) + 1
   logger.info_turn = nil
   logger.info_turn_count = 0
-  logger.event_buffer_stack = {}
 end
 
 function logger.get_seq()
@@ -176,22 +157,6 @@ end
 
 function logger.get_text(max_lines)
   return log_formatter.get_text(logger, max_lines)
-end
-
-function logger.get_text_by_level(level, max_lines)
-  return log_formatter.get_text_by_level(logger, level, max_lines)
-end
-
-function logger.push_event_buffer(buffer)
-  return log_queue.push_event_buffer(logger, buffer)
-end
-
-function logger.pop_event_buffer(buffer)
-  return log_queue.pop_event_buffer(logger, buffer)
-end
-
-function logger.flush_event_buffer(buffer)
-  return log_queue.flush_event_buffer(logger, buffer)
 end
 
 return logger

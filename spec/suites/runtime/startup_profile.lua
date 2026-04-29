@@ -1,6 +1,8 @@
 local bootstrap = require("spec.bootstrap")
 bootstrap.install_package_paths()
 
+---@diagnostic disable: different-requires
+
 local support = require("support.runtime_support")
 local with_patches = support.with_patches
 local app = support.app
@@ -481,9 +483,6 @@ local function _reload_app_init_with_stubs(startup, runner)
     info = function(...)
       capture.info = { ... }
     end,
-    set_event_collection_enabled_provider = function(fn)
-      capture.event_provider = fn
-    end,
     set_anim_debug_enabled_provider = function(fn)
       capture.anim_provider = fn
     end,
@@ -620,7 +619,7 @@ local function _test_app_init_wires_runtime_and_debug_providers()
   debug_flags.debug_log_enabled = true
   local capture = _reload_app_init_with_stubs({
     profile_name = "market",
-  }, function(capture, app_module)
+  }, function(_, app_module)
     app_module.init()
   end)
 
@@ -654,15 +653,13 @@ local function _test_app_init_wires_runtime_and_debug_providers()
     assert(capture.tip_runtime.scheduler(0.25, function() end) == "timeout_scheduled",
       "scheduler should forward to SetTimeOut when available")
   end)
-  assert(type(capture.event_provider) == "function", "event debug provider should be installed")
   assert(type(capture.anim_provider) == "function", "anim debug provider should be installed")
-  assert(capture.event_provider() == false, "empty debug role state should disable event logging")
+  assert(capture.anim_provider() == false, "empty debug role state should disable animation debug")
   capture.state.ui.debug_log_enabled_by_role = {
     p1 = false,
     p2 = true,
   }
-  assert(capture.event_provider() == true, "any enabled role should enable event logging")
-  assert(capture.anim_provider() == true, "anim provider should share the same debug source")
+  assert(capture.anim_provider() == true, "anim provider should be installed and read debug log toggle")
 
   local new_game = { id = 99 }
   capture.state.on_game_replaced(new_game)
@@ -688,9 +685,6 @@ local function _test_app_init_keeps_scheduler_fallback()
   }
   local logger_stub = {
     info = function() end,
-    set_event_collection_enabled_provider = function(fn)
-      capture.event_provider = fn
-    end,
     set_anim_debug_enabled_provider = function(fn)
       capture.anim_provider = fn
     end,
@@ -730,8 +724,8 @@ local function _test_app_init_keeps_scheduler_fallback()
   assert(capture.tip_runtime.scheduler(0.5, function() called = true end) == true,
     "scheduler should execute callback inline when SetTimeOut is missing")
   assert(called == true, "scheduler fallback should invoke callback")
-  assert(capture.event_provider() == false and capture.anim_provider() == false,
-    "providers should stay disabled when ui debug flags are absent")
+  assert(capture.anim_provider() == false,
+    "anim provider should stay disabled when ui debug flags are absent")
 end
 
 local function _test_app_module_exposes_init_function()

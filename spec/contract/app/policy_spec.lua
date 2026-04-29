@@ -2,19 +2,21 @@
 
 local policy = require("src.app.policy")
 local logger = require("src.core.utils.logger")
+local event_feed = require("src.rules.ports.event_feed")
+local event_feed_adapter = require("src.turn.output.event_feed_adapter")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local event_log = require("src.state.event_log")
 
 describe("contract.app.policy", function()
   local original_print
   local original_io_write
   local original_enabled
-  local original_event_provider
   local outputs
 
   before_each(function()
     original_print = print
     original_io_write = io.write
     original_enabled = logger.enabled
-    original_event_provider = logger.event_collection_enabled_provider
     outputs = {}
 
     -- luacheck: push ignore 121 122
@@ -31,13 +33,11 @@ describe("contract.app.policy", function()
     -- luacheck: pop
 
     logger.clear()
-    logger.set_event_collection_enabled_provider(nil)
     logger.set_enabled(true)
   end)
 
   after_each(function()
     logger.set_enabled(true)
-    logger.set_event_collection_enabled_provider(original_event_provider)
     logger.enabled = original_enabled
     -- luacheck: push ignore 121 122
     rawset(_G, "print", original_print)
@@ -82,11 +82,20 @@ describe("contract.app.policy", function()
     assert.is_true(#outputs >= 3)
   end)
 
-  it("logger event is unaffected by set_enabled", function()
+  it("event_feed publish is unaffected by logger set_enabled", function()
     logger.set_enabled(false)
+    local game = {
+      state = {},
+    }
+    game.event_feed_port = event_feed_adapter.new(game)
 
-    logger.event("event still visible")
+    local published = event_feed.publish(game, {
+      kind = event_kinds.turn_start,
+      text = "event still visible",
+      tip = false,
+    })
 
-    assert.equals(1, #outputs)
+    assert.is_true(published)
+    assert.equals("event still visible", event_log.get_text(game.state.event_log))
   end)
 end)

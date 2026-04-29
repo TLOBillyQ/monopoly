@@ -1,6 +1,5 @@
 local debug_flags = require("src.config.gameplay.debug_flags")
 local with_client_role = require("src.core.utils.with_client_role")
-local logger = require("src.core.utils.logger")
 local event_log = require("src.state.event_log")
 local ui_event_state = require("src.ui.ctl.event_state")
 local runtime = require("src.ui.render.runtime_ui")
@@ -9,14 +8,10 @@ local role_id_utils = require("src.core.utils.role_id")
 local event_log_ports = {}
 
 local function _resolve_event_text(game, max_lines)
-  local logger_text = logger.get_text_by_level("event", max_lines)
   if game and game.state and game.state.event_log then
-    local feed_text = event_log.get_text(game.state.event_log, max_lines)
-    if feed_text and feed_text ~= "" then
-      return feed_text
-    end
+    return event_log.get_text(game.state.event_log, max_lines) or ""
   end
-  return logger_text or ""
+  return ""
 end
 
 function event_log_ports.build(common)
@@ -45,7 +40,10 @@ function event_log_ports.build(common)
             end
           end
           if event_log_enabled then
-            local seq = logger.get_event_seq()
+            local seq = 0
+            if state and state.game and state.game.state and state.game.state.event_log then
+              seq = event_log.get_seq(state.game.state.event_log)
+            end
             if seq ~= role_id_utils.read(state._debug_log_seq_by_role, role_id) then
               role_id_utils.write(state._debug_log_seq_by_role, role_id, seq)
               local max_lines = debug_flags.debug_log_max_lines or 50

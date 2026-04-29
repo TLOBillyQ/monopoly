@@ -40,7 +40,7 @@ local function _test_move_anim_prefers_forced_move_stop_and_model_stop_for_local
   end)
 
   _assert_eq(#scheduled, 1, "move sequence should schedule a finish callback for local-player stop fallback")
-  local finish_callback = scheduled[1]
+  local finish_callback = (scheduled or {})[1]
   assert(finish_callback ~= nil, "move sequence should provide a finish callback")
   finish_callback.fn()
   _assert_eq(calls[2], "stop_forced_move", "finish callback should stop forced movement before ai fallback")
@@ -86,7 +86,7 @@ local function _test_move_anim_synthetic_actor_uses_unified_move_start_and_stop(
   end)
 
   _assert_eq(#scheduled, 1, "synthetic move should schedule one finish callback")
-  local finish_callback = scheduled[1]
+  local finish_callback = (scheduled or {})[1]
   assert(finish_callback ~= nil, "synthetic move should provide a finish callback")
   finish_callback.fn()
   _assert_eq(calls[1], "start_move_by_direction", "synthetic actor should start moving via start_move_by_direction")
@@ -124,7 +124,7 @@ local function _test_move_anim_non_synthetic_actor_uses_regular_move_start()
   end)
 
   _assert_eq(#scheduled, 1, "non-synthetic move should schedule one finish callback")
-  local finish_callback = scheduled[1]
+  local finish_callback = (scheduled or {})[1]
   assert(finish_callback ~= nil, "non-synthetic move should provide a finish callback")
   finish_callback.fn()
   _assert_eq(calls[1], "start_move_by_direction", "non-synthetic actor should keep regular move start")
@@ -162,7 +162,7 @@ local function _test_move_anim_debug_log_writes_when_enabled()
     })
   end)
 
-  local text = logger.get_text_by_level("info")
+  local text = logger.get_text()
   assert(string.find(text, "[Eggy] consume per-turn info budget", 1, true) ~= nil, "regular info log should still be present")
   assert(string.find(text, "[MoveAnim] play_sequence_start", 1, true) ~= nil, "debug log should include sequence start")
   assert(string.find(text, "[MoveAnim] finish_stop", 1, true) ~= nil, "debug log should include finish stop")

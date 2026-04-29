@@ -130,7 +130,6 @@ function M.init()
     auto_runner = auto_runner,
   })
 
-  logger.set_event_collection_enabled_provider(_is_debug_log_enabled)
   logger.set_anim_debug_enabled_provider(_is_debug_log_enabled)
   state.on_game_replaced = function(new_game)
     current_game_ref[1] = new_game
