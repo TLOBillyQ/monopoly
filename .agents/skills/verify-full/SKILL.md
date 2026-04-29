@@ -12,8 +12,6 @@ description: Run the fuller Monopoly quality pass and include guidance about whe
 5. `lua tools/quality/arch.lua check`
 6. `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json`
 
-> busted 2.x 的 `-c` 是 coverage 开关，profile 选择必须用 `--run <profile>`。AGENTS.md 里写的 `busted -c <profile>` 是旧写法，按本 skill 为准。
-
 满足以下任一条件再追加 `busted --run tooling`：
 
 - 改动涉及 `tools/quality/*`

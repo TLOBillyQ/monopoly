@@ -10,8 +10,6 @@ description: Run the common fast local confidence lane for this repo: guard chec
 3. `lua tools/quality/arch.lua check`
 4. `busted --run behavior`
 
-> busted 2.x 的 `-c` 是 coverage 开关，profile 选择必须用 `--run <profile>`。AGENTS.md 里写的 `busted -c <profile>` 是旧写法，按本 skill 为准。
-
 跑完后汇报：
 
 - 每条命令的通过/失败结果
