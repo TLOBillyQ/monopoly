@@ -50,6 +50,7 @@ scripts/analysis/loc_data.json
 /tools/quality/arch/viewer/
 /tools/quality/scrap/viewer/
 /tools/loc_engine/monopoly-loc.exe
+/tools/loc_engine/cmd/monopoly-loc/monopoly-loc.exe
 .sisyphus
 .worktrees/
 
