@@ -32,7 +32,7 @@ local runtime_cls = require("src.turn.loop.scheduler_runtime")
 local turn_effects = require("src.ui.wid.turn_effects")
 local popup_renderer = require("src.ui.ctl.popup")
 local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.ui.ports.debug")
+local event_log_ports_module = require("src.ui.ports.event_log")
 local role_control_lock_policy = require("src.ui.input.role_control_lock")
 local ui_touch_policy = require("src.ui.input.touch")
 local ui_choice_route_policy = require("src.ui.input.choice_route")
@@ -808,8 +808,8 @@ local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
   _assert_eq(runtime_state_local.is_ui_dirty(state), true, "ui sync should mark ui dirty when pending choice arrives")
 end
 
-local function _test_debug_view_global_and_role_paths_preserve_state()
-  local debug_view = require("src.ui.ctl.debug_view")
+local function _test_event_log_view_global_and_role_paths_preserve_state()
+  local event_log_view = require("src.ui.ctl.event_log_view")
   local runtime_ui = require("src.ui.render.runtime_ui")
   local state = {
     ui = ui_view.build_ui_state(),
@@ -821,18 +821,18 @@ local function _test_debug_view_global_and_role_paths_preserve_state()
   }
   local calls = {}
 
-  state.ui.set_debug_log = function(_, text)
+  state.ui.set_event_log = function(_, text)
     calls[#calls + 1] = { kind = "log", text = text }
   end
-  state.ui.set_debug_visible = function(_, visible)
+  state.ui.set_event_log_visible = function(_, visible)
     calls[#calls + 1] = { kind = "visible", value = visible }
   end
 
   _with_patches({
     { target = runtime_ui, key = "get_client_role", value = function() return nil end },
   }, function()
-    debug_view.set_debug_log(state, "all")
-    _assert_eq(debug_view.set_debug_visible(state, true), true, "global debug path should succeed without role")
+    event_log_view.set_event_log(state, "all")
+    _assert_eq(event_log_view.set_event_log_visible(state, true), true, "global event log path should succeed without role")
   end)
 
   _with_patches({
@@ -840,14 +840,14 @@ local function _test_debug_view_global_and_role_paths_preserve_state()
       return 7
     end },
   }, function()
-    _assert_eq(debug_view.set_debug_visible_for_role(state, role, false), true,
-      "role debug path should persist visibility by role")
-    debug_view.set_debug_log_for_role(state, role, "role only")
+    _assert_eq(event_log_view.set_event_log_visible_for_role(state, role, false), true,
+      "role event log path should persist visibility by role")
+    event_log_view.set_event_log_for_role(state, role, "role only")
   end)
 
   _assert_eq(state.ui.debug_visible, true, "global path should keep ui.debug_visible in sync")
-  _assert_eq(state.ui.debug_visible_by_role[7], false, "role path should persist debug visibility by role")
-  _assert_eq(state.ui.debug_log_enabled_by_role[7], false, "role path should persist debug log flag by role")
+  _assert_eq(state.ui.debug_visible_by_role[7], false, "role path should persist event log visibility by role")
+  _assert_eq(state.ui.debug_log_enabled_by_role[7], false, "role path should persist event log flag by role")
   _assert_eq(calls[1].text, "all", "global log path should pass through text")
   _assert_eq(calls[#calls].text, "role only", "role log path should pass through text")
 end
@@ -1165,7 +1165,7 @@ return {
     { name = "_test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback", run = _test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback },
     { name = "_test_ui_event_state_base_screen_active_requires_modal_free_ui", run = _test_ui_event_state_base_screen_active_requires_modal_free_ui },
     { name = "_test_ui_sync_ports_rebuilds_model_before_reopening_choice", run = _test_ui_sync_ports_rebuilds_model_before_reopening_choice },
-    { name = "_test_debug_view_global_and_role_paths_preserve_state", run = _test_debug_view_global_and_role_paths_preserve_state },
+    { name = "_test_event_log_view_global_and_role_paths_preserve_state", run = _test_event_log_view_global_and_role_paths_preserve_state },
     { name = "_test_actor_context_and_host_runtime_fallbacks", run = _test_actor_context_and_host_runtime_fallbacks },
     { name = "_test_raycast_pick_with_tries_multiple_apis_in_order", run = _test_raycast_pick_with_tries_multiple_apis_in_order },
     { name = "_test_raycast_pick_with_returns_nil_when_all_apis_fail", run = _test_raycast_pick_with_returns_nil_when_all_apis_fail },

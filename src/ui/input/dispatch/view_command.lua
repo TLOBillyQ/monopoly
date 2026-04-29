@@ -83,9 +83,9 @@ local function _emit_toggle_event(active_role, next_enabled)
   return false
 end
 
-local function _handle_toggle_action_log(state, intent, debug_view)
+local function _handle_toggle_action_log(state, intent, event_log_view)
   local runtime = _resolve_loaded("src.ui.render.runtime_ui")
-  if runtime == nil or debug_view == nil then
+  if runtime == nil or event_log_view == nil then
     return false
   end
   local actor_role_id = intent.actor_role_id
@@ -95,7 +95,7 @@ local function _handle_toggle_action_log(state, intent, debug_view)
   local active_role = _resolve_role_by_id(runtime, actor_role_id)
   local visible_by_role = state.ui.debug_visible_by_role or {}
   local next_enabled = visible_by_role[actor_role_id] ~= true
-  debug_view.set_debug_visible_for_role(state, active_role, next_enabled)
+  event_log_view.set_event_log_visible_for_role(state, active_role, next_enabled)
   if not _emit_toggle_event(active_role, next_enabled) then
     _warn_missing_toggle_channel(actor_role_id)
   end
@@ -131,7 +131,7 @@ local function _fallback_dispatch(state, intent)
   end
   local market = _resolve_loaded("src.ui.ctl.market")
   local modal = _resolve_loaded("src.ui.ctl.modal")
-  local debug_view = _resolve_loaded("src.ui.ctl.debug_view")
+  local event_log_view = _resolve_loaded("src.ui.ctl.event_log_view")
   local target_choice_effects = _resolve_loaded("src.ui.ctl.target_choice_effects")
   local handlers = {
     market_select = function()
@@ -141,7 +141,7 @@ local function _fallback_dispatch(state, intent)
       return _handle_popup_confirm(state, modal)
     end,
     toggle_action_log = function()
-      return _handle_toggle_action_log(state, intent, debug_view)
+      return _handle_toggle_action_log(state, intent, event_log_view)
     end,
     target_unlock = function()
       return _handle_target_unlock(state, target_choice_effects)

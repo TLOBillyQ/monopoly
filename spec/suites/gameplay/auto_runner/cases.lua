@@ -31,7 +31,7 @@ local function _test_autorunner_runs_to_end()
       reset_status_3d = function() end,
       update_countdown = function() end,
       log_status = function() end,
-      sync_debug_log = function() end,
+      sync_event_log = function() end,
     }),
     ui = g.ui_port.ui,
     ui_refs = g.ui_port.ui_refs,

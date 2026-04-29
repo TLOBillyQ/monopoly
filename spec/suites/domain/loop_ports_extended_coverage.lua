@@ -66,12 +66,12 @@ local function test_resolve_full_override_merges_all_groups()
     "non-overridden output group should still be present")
 end
 
--- debug group has resolve_debug_enabled returning false by default
+-- debug group has resolve_event_log_enabled returning false by default
 
-local function test_debug_resolve_debug_enabled_returns_false_by_default()
+local function test_debug_resolve_event_log_enabled_returns_false_by_default()
   local ports = gameplay_loop_ports.resolve(nil)
-  _assert_eq(ports.debug.resolve_debug_enabled(), false,
-    "debug.resolve_debug_enabled should return false by default")
+  _assert_eq(ports.debug.resolve_event_log_enabled(), false,
+    "debug.resolve_event_log_enabled should return false by default")
 end
 
 -- describe_contract returns independent copies
@@ -118,7 +118,7 @@ return {
     { name = "resolve override extra keys included", run = test_resolve_override_extra_keys_included },
     { name = "resolve table without group keys uses base ports", run = test_resolve_table_without_group_keys_uses_base_ports },
     { name = "resolve full override merges all groups", run = test_resolve_full_override_merges_all_groups },
-    { name = "debug resolve_debug_enabled returns false by default", run = test_debug_resolve_debug_enabled_returns_false_by_default },
+    { name = "debug resolve_event_log_enabled defaults false", run = test_debug_resolve_event_log_enabled_returns_false_by_default },
     { name = "describe_contract clock group has expected keys", run = test_describe_contract_clock_group_has_expected_keys },
     { name = "resolve nil includes state and output groups", run = test_resolve_nil_includes_state_and_output_groups },
     { name = "build_noop_group empty keys with overrides", run = test_build_noop_group_empty_keys_with_overrides },

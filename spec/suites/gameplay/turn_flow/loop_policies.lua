@@ -156,7 +156,7 @@ local function _test_gameplay_loop_set_game_defers_visual_ports_during_landing_h
       return false
     end,
     sync_status_3d = function() end,
-    sync_debug_log = function() end,
+    sync_event_log = function() end,
   })
 
   gameplay_loop.set_game(state, g)
@@ -366,7 +366,7 @@ local function _test_gameplay_loop_refresh_drives_camera_follow_via_port()
     end,
     update_countdown = function() end,
     sync_status_3d = function() end,
-    sync_debug_log = function() end,
+    sync_event_log = function() end,
   })
 
   gameplay_loop.tick(g, state, 0.1)
@@ -394,7 +394,7 @@ local function _test_gameplay_loop_camera_follow_skips_eliminated_current_player
     end,
     update_countdown = function() end,
     sync_status_3d = function() end,
-    sync_debug_log = function() end,
+    sync_event_log = function() end,
   })
 
   gameplay_loop.tick(g, state, 0.1)

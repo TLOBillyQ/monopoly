@@ -548,8 +548,8 @@ local function _test_gameplay_loop_full_turn_lock_toggle()
     },
     debug = {
       log_status = function() end,
-      sync_debug_log = function() end,
-      resolve_debug_enabled = function() return false end,
+      sync_event_log = function() end,
+      resolve_event_log_enabled = function() return false end,
     },
   }
   local state = {

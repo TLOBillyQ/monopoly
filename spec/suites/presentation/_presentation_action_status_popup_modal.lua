@@ -9,7 +9,7 @@ local ui_view = require("src.ui.ctl.ui_runtime")
 local modal_presenter = require("src.ui.ctl.modal")
 local popup_renderer = require("src.ui.ctl.popup")
 local market_modal_renderer = require("src.ui.ctl.market")
-local debug_ports_module = require("src.ui.ports.debug")
+local event_log_ports_module = require("src.ui.ports.event_log")
 
 local function _test_popup_timeout_closes_even_when_input_blocked()
   local state, nodes, query_nodes = _build_popup_view_state({
@@ -163,13 +163,13 @@ local function _test_market_modal_renderer_open_restores_client_role_nil()
   _assert_eq(manager.client_role, nil, "market modal renderer should restore client_role to nil")
 end
 
-local function _test_debug_ports_sync_restores_client_role_nil()
+local function _test_event_log_ports_sync_restores_client_role_nil()
   local ui_event_state = require("src.ui.ctl.event_state")
   local ui_view_service = require("src.ui.ctl.ui_runtime")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }
-  local ports = debug_ports_module.build({
+  local ports = event_log_ports_module.build({
     log_status = function() end,
   })
 
@@ -194,21 +194,21 @@ local function _test_debug_ports_sync_restores_client_role_nil()
     { target = runtime_port, key = "resolve_role_id", value = function(role)
       return role and role.id or nil
     end },
-    { target = ui_event_state, key = "resolve_debug_enabled", value = function(_, role_id)
+    { target = ui_event_state, key = "resolve_event_log_enabled", value = function(_, role_id)
       return role_id == 1
     end },
-    { target = ui_view_service, key = "set_debug_visible_for_role", value = function() end },
-    { target = ui_view_service, key = "set_debug_log_for_role", value = function() end },
+    { target = ui_view_service, key = "set_event_log_visible_for_role", value = function() end },
+    { target = ui_view_service, key = "set_event_log_for_role", value = function() end },
   }, function()
     local state = {
       ui = ui_view.build_ui_state(),
       _debug_log_enabled_by_role = {},
       _debug_log_seq_by_role = {},
     }
-    ports.sync_debug_log(state)
+    ports.sync_event_log(state)
   end)
 
-  _assert_eq(manager.client_role, nil, "debug ports sync should restore client_role to nil")
+  _assert_eq(manager.client_role, nil, "event log ports sync should restore client_role to nil")
 end
 
 return {
@@ -218,6 +218,6 @@ return {
     { name = "_test_popup_defer_policy_queues_and_replays_in_order", run = _test_popup_defer_policy_queues_and_replays_in_order },
     { name = "_test_popup_renderer_switch_popup_canvas_restores_client_role_nil", run = _test_popup_renderer_switch_popup_canvas_restores_client_role_nil },
     { name = "_test_market_modal_renderer_open_restores_client_role_nil", run = _test_market_modal_renderer_open_restores_client_role_nil },
-    { name = "_test_debug_ports_sync_restores_client_role_nil", run = _test_debug_ports_sync_restores_client_role_nil },
+    { name = "_test_event_log_ports_sync_restores_client_role_nil", run = _test_event_log_ports_sync_restores_client_role_nil },
   },
 }

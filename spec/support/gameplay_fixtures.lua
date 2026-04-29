@@ -72,8 +72,8 @@ local function build_test_ports(overrides)
     },
     debug = {
       log_status = overrides.log_status or function() end,
-      sync_debug_log = overrides.sync_debug_log or function() end,
-      resolve_debug_enabled = overrides.resolve_debug_enabled or function() return false end,
+      sync_event_log = overrides.sync_event_log or function() end,
+      resolve_event_log_enabled = overrides.resolve_event_log_enabled or function() return false end,
     },
     clock = {
       wall_now_seconds = overrides.wall_now_seconds or function()
@@ -108,7 +108,7 @@ local function build_loop_state()
       reset_status_3d = function() end,
       update_countdown = function() end,
       log_status = function() end,
-      sync_debug_log = function() end,
+      sync_event_log = function() end,
     }),
     ui = ui_port.ui,
     ui_refs = ui_port.ui_refs,

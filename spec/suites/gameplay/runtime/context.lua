@@ -70,8 +70,8 @@ local function _build_test_ports(overrides)
     },
     debug = {
       log_status = function() end,
-      sync_debug_log = function() end,
-      resolve_debug_enabled = function() return false end,
+      sync_event_log = function() end,
+      resolve_event_log_enabled = function() return false end,
     },
     clock = {
       wall_now_seconds = function() return 0 end,

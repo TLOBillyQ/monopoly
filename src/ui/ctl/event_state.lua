@@ -18,7 +18,7 @@ function ui_event_state.is_base_screen_active(state)
   return true
 end
 
-function ui_event_state.resolve_debug_enabled(state, role_id)
+function ui_event_state.resolve_event_log_enabled(state, role_id)
   local ui = state and state.ui
   if role_id == nil then
     local role = runtime.get_client_role()

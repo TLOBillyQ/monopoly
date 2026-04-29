@@ -106,7 +106,7 @@ function tick_steps.refresh_tick_from_dirty(game, state, ports, input_blocked_ch
   end
 
   if not landing_visual_hold.is_active_state(state) then
-    debug_ports.sync_debug_log(state)
+    debug_ports.sync_event_log(state)
   end
 end
 

@@ -50,8 +50,8 @@ local function _test_tick_headless_ports_cover_anim_phases()
       sequence[#sequence + 1] = "refresh_from_dirty"
       return false
     end,
-    sync_debug_log = function()
-      sequence[#sequence + 1] = "sync_debug_log"
+    sync_event_log = function()
+      sequence[#sequence + 1] = "sync_event_log"
     end,
     log_status = function()
       sequence[#sequence + 1] = "log_status"
@@ -130,7 +130,7 @@ local function _test_tick_headless_ports_cover_anim_phases()
     "update_countdown",
     "refresh_from_dirty",
     "sync_follow",
-    "sync_debug_log",
+    "sync_event_log",
   }
   local search_start = 1
   for _, name in ipairs(expected_order) do
@@ -173,7 +173,7 @@ local function _test_action_button_timeout_auto_advances()
     refresh_from_dirty = function()
       return false
     end,
-    sync_debug_log = function() end,
+    sync_event_log = function() end,
     log_status = function() end,
     build_model = function()
       return { choice = nil, market = nil }
@@ -211,7 +211,7 @@ local function _test_action_button_timeout_manual_wait_action_auto_advances()
     refresh_from_dirty = function()
       return false
     end,
-    sync_debug_log = function() end,
+    sync_event_log = function() end,
     log_status = function() end,
     build_model = function()
       return { choice = nil, market = nil }
@@ -262,7 +262,7 @@ local function _test_action_button_timeout_manual_player_does_not_advance()
     refresh_from_dirty = function()
       return false
     end,
-    sync_debug_log = function() end,
+    sync_event_log = function() end,
     log_status = function() end,
     build_model = function()
       return { choice = nil, market = nil }
@@ -311,7 +311,7 @@ local function _test_action_button_timeout_blocked_when_input_locked()
     refresh_from_dirty = function()
       return false
     end,
-    sync_debug_log = function() end,
+    sync_event_log = function() end,
     log_status = function() end,
     build_model = function()
       return { choice = nil, market = nil }
@@ -359,7 +359,7 @@ local function _test_action_button_timeout_blocked_when_popup_active()
     refresh_from_dirty = function()
       return false
     end,
-    sync_debug_log = function() end,
+    sync_event_log = function() end,
     log_status = function() end,
     build_model = function()
       return { choice = nil, market = nil }

@@ -40,8 +40,8 @@ local function build_ports()
     },
     debug = {
       log_status = noop,
-      sync_debug_log = noop,
-      resolve_debug_enabled = function() return false end,
+      sync_event_log = noop,
+      resolve_event_log_enabled = function() return false end,
     },
     state = {
       apply_role_control_lock = noop,

@@ -97,11 +97,11 @@ local function sync_target_choice_buttons(state, locked)
   _sync_target_button(ui, screen, screen.cancel, active, locked)
 end
 
-local function set_debug_log(_, text)
+local function set_event_log(_, text)
   set_text(nil, base_contract.action_log.label, text)
 end
 
-local function set_debug_visible(ui, visible)
+local function set_event_log_visible(ui, visible)
   if ui then
     ui.debug_visible = visible == true
   end
@@ -168,8 +168,8 @@ M.query_node = query_node
 M.set_text = set_text
 M.set_visible = set_visible
 M.set_touch_enabled = set_touch_enabled
-M.set_debug_log = set_debug_log
-M.set_debug_visible = set_debug_visible
+M.set_event_log = set_event_log
+M.set_event_log_visible = set_event_log_visible
 M.set_item_slot_image = set_item_slot_image
 M.build_choice_screens = build_choice_screens
 M.sync_target_choice_buttons = sync_target_choice_buttons

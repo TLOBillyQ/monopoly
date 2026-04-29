@@ -81,8 +81,8 @@ function M.build_ui_state()
     set_button = ui_nodes.set_text,
     set_visible = ui_nodes.set_visible,
     set_touch_enabled = ui_nodes.set_touch_enabled,
-    set_debug_log = ui_nodes.set_debug_log,
-    set_debug_visible = ui_nodes.set_debug_visible,
+    set_event_log = ui_nodes.set_event_log,
+    set_event_log_visible = ui_nodes.set_event_log_visible,
   }
   canvas_store.ensure(ui_state)
   return ui_state

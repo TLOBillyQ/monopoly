@@ -67,7 +67,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
     assert(type(node_map["基础_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
-    local before = require("src.ui.ctl.event_state").resolve_debug_enabled(state, role_id)
+    local before = require("src.ui.ctl.event_state").resolve_event_log_enabled(state, role_id)
     node_map["基础_行动日志图标"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
@@ -285,7 +285,7 @@ local function _test_ui_event_router_auto_uses_cached_local_role_instead_of_curr
   _assert_eq(show_tip_calls, 0, "auto cached local role should avoid missing context tip")
 end
 
-local function _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id_keys()
+local function _test_ui_event_state_resolve_event_log_enabled_supports_mixed_role_id_keys()
   local state = {
     ui = {
       debug_log_enabled_by_role = {
@@ -294,11 +294,11 @@ local function _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id
     },
   }
 
-  local enabled_by_int = require("src.ui.ctl.event_state").resolve_debug_enabled(state, 1)
-  local enabled_by_string = require("src.ui.ctl.event_state").resolve_debug_enabled(state, "1")
+  local enabled_by_int = require("src.ui.ctl.event_state").resolve_event_log_enabled(state, 1)
+  local enabled_by_string = require("src.ui.ctl.event_state").resolve_event_log_enabled(state, "1")
 
-  _assert_eq(enabled_by_int, true, "debug_enabled should read string key by int role_id")
-  _assert_eq(enabled_by_string, true, "debug_enabled should read string key by string role_id")
+  _assert_eq(enabled_by_int, true, "event_log_enabled should read string key by int role_id")
+  _assert_eq(enabled_by_string, true, "event_log_enabled should read string key by string role_id")
 end
 
 return {
@@ -308,6 +308,6 @@ return {
     { name = "_test_ui_event_router_rejects_action_log_without_role", run = _test_ui_event_router_rejects_action_log_without_role },
     { name = "_test_ui_event_router_action_log_uses_cached_local_role_when_event_role_missing", run = _test_ui_event_router_action_log_uses_cached_local_role_when_event_role_missing },
     { name = "_test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player", run = _test_ui_event_router_auto_uses_cached_local_role_instead_of_current_player },
-    { name = "_test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id_keys", run = _test_ui_event_state_resolve_debug_enabled_supports_mixed_role_id_keys },
+    { name = "_test_ui_event_state_resolve_event_log_enabled_supports_mixed_role_id_keys", run = _test_ui_event_state_resolve_event_log_enabled_supports_mixed_role_id_keys },
   },
 }

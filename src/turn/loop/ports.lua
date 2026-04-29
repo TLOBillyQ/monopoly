@@ -55,8 +55,8 @@ local port_groups = {
   },
   debug = {
     "log_status",
-    "sync_debug_log",
-    "resolve_debug_enabled",
+    "sync_event_log",
+    "resolve_event_log_enabled",
   },
   clock = {
     "wall_now_seconds",
@@ -125,7 +125,7 @@ local base_port_builders = {
   ui_sync = _base_ui_sync_ports,
   debug = function()
     return _build_noop_group(port_groups.debug, {
-      resolve_debug_enabled = function()
+      resolve_event_log_enabled = function()
         return false
       end,
     })

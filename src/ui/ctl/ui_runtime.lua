@@ -8,7 +8,7 @@ local runtime = require("src.ui.render.runtime_ui")
 local state = require("src.ui.ctl.ui_state")
 local assets = require("src.ui.render.ui_assets")
 local item_slots = require("src.ui.ctl.item_slots")
-local debug = require("src.ui.ctl.debug_view")
+local event_log_view = require("src.ui.ctl.event_log_view")
 
 local service = {}
 local turn_label_refresh_context = {
@@ -104,20 +104,20 @@ function service.render(state_ctx, ui_model, log_once, build_log_prefix)
   })
 end
 
-function service.set_debug_log(state_ctx, text)
-  debug.set_debug_log(state_ctx, text)
+function service.set_event_log(state_ctx, text)
+  event_log_view.set_event_log(state_ctx, text)
 end
 
-function service.set_debug_visible(state_ctx, visible)
-  debug.set_debug_visible(state_ctx, visible)
+function service.set_event_log_visible(state_ctx, visible)
+  event_log_view.set_event_log_visible(state_ctx, visible)
 end
 
-function service.set_debug_visible_for_role(state_ctx, role, visible)
-  return debug.set_debug_visible_for_role(state_ctx, role, visible)
+function service.set_event_log_visible_for_role(state_ctx, role, visible)
+  return event_log_view.set_event_log_visible_for_role(state_ctx, role, visible)
 end
 
-function service.set_debug_log_for_role(state_ctx, role, text)
-  debug.set_debug_log_for_role(state_ctx, role, text)
+function service.set_event_log_for_role(state_ctx, role, text)
+  event_log_view.set_event_log_for_role(state_ctx, role, text)
 end
 
 return service

@@ -8,7 +8,7 @@ local actor_context = require("src.ui.ctl.actor_context")
 local target_choice_effects = require("src.ui.ctl.target_choice_effects")
 local market = require("src.ui.ctl.market")
 local modal = require("src.ui.ctl.modal")
-local debug_view = require("src.ui.ctl.debug_view")
+local event_log_view = require("src.ui.ctl.event_log_view")
 
 local view_command_ports = {}
 
@@ -19,7 +19,7 @@ local function _resolve_toggle_role(state, intent)
     return nil, nil, true
   end
   local active_role = actor_context.resolve_role_by_id(actor_role_id)
-  local next_enabled = not ui_event_state.resolve_debug_enabled(state, actor_role_id)
+  local next_enabled = not ui_event_state.resolve_event_log_enabled(state, actor_role_id)
   return actor_role_id, active_role, next_enabled
 end
 
@@ -65,7 +65,7 @@ local function _toggle_action_log(state, intent)
   if _should_abort_toggle(actor_role_id, next_enabled) then
     return true
   end
-  debug_view.set_debug_visible_for_role(state, active_role, next_enabled)
+  event_log_view.set_event_log_visible_for_role(state, active_role, next_enabled)
   _warn_missing_debug_channel(active_role, actor_role_id, next_enabled)
   _sync_debug_canvas(ui, active_role, next_enabled)
   runtime.set_client_role(nil)

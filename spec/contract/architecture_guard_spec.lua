@@ -112,7 +112,7 @@ local function _build_guard_ports(output_log, overrides)
     },
     debug = {
       log_status = function() end,
-      sync_debug_log = function() end,
+      sync_event_log = function() end,
     },
   })
 end
