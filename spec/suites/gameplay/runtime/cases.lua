@@ -1,4 +1,5 @@
 ---@diagnostic disable
+-- luacheck: ignore 113 122
 local function make_cases(helpers)
   local _ENV = helpers
   local _ = _ENV._new_game
@@ -14,9 +15,9 @@ local function _test_turn_start_logs_phase_event_to_event_feed()
   g:set_tile_level(tile_ref, 2)
   g:set_player_property(g.players[1], tile_ref.id, true)
   g:set_player_cash(g.players[1], 4321)
-  logger.clear()
+  event_log.clear(g.state.event_log)
   turn_decision.log_turn_start(g)
-  local text = logger.get_text_by_level("event")
+  local text = event_log.get_text(g.state.event_log)
   assert(string.find(text, "第1回合开始：", 1, true) ~= nil, "turn start should write phase event to event feed")
   assert(string.find(text, g.players[1].name, 1, true) ~= nil, "turn start event should mention current player")
   assert(string.find(text, "金币=", 1, true) == nil, "turn start event should not include player balance")
@@ -27,7 +28,7 @@ end
 
 local function _test_intent_dispatcher_logs_waiting_choice_event()
   local g = _new_game()
-  logger.clear()
+  event_log.clear(g.state.event_log)
   intent_dispatcher.open_choice(g, {
     kind = "remote_dice_value",
     route_key = "remote",
@@ -37,7 +38,7 @@ local function _test_intent_dispatcher_logs_waiting_choice_event()
     allow_cancel = true,
     meta = { player_id = g:current_player().id, item_id = 2001 },
   }, {})
-  local text = logger.get_text_by_level("event")
+  local text = event_log.get_text(g.state.event_log)
   assert(string.find(text, "等待选择：遥控骰子：选择点数", 1, true) ~= nil,
     "open_choice should log waiting-choice phase event")
 end
@@ -95,8 +96,9 @@ end
 
 local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
   local g = _new_game()
+  local event_feed = require("src.rules.ports.event_feed")
 
-  logger.clear()
+  event_log.clear(g.state.event_log)
   local normal_choice = {
     id = 10,
     kind = "landing_optional_effect",
@@ -109,12 +111,16 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
     type = "choice_cancel",
     choice_id = normal_choice.id,
     actor_role_id = g.players[1].id,
+  }, {
+    on_event = function(event)
+      event_feed.publish(g, event)
+    end,
   })
-  local skip_text = logger.get_text_by_level("event")
+  local skip_text = event_log.get_text(g.state.event_log)
   assert(string.find(skip_text, "跳过选择：可选效果", 1, true) ~= nil,
     "true cancel should log skip-choice event")
 
-  logger.clear()
+  event_log.clear(g.state.event_log)
   local tax_choice = {
     id = 11,
     kind = "tax_card_prompt",
@@ -127,8 +133,12 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
     type = "choice_cancel",
     choice_id = tax_choice.id,
     actor_role_id = g.players[1].id,
+  }, {
+    on_event = function(event)
+      event_feed.publish(g, event)
+    end,
   })
-  local tax_text = logger.get_text_by_level("event")
+  local tax_text = event_log.get_text(g.state.event_log)
   assert(string.find(tax_text, "跳过选择", 1, true) == nil,
     "tax cancel fallback should not log skip-choice event")
 end
@@ -213,11 +223,11 @@ end
 local function _test_end_turn_logs_phase_event_to_event_feed()
   local g = _new_game()
   local phases = phase_registry.build_default_phases()
-  logger.clear()
+  event_log.clear(g.state.event_log)
   phases.end_turn({ game = g, next_player = function()
     g.turn.current_player_index = 2
   end }, { player = g.players[1] })
-  local text = logger.get_text_by_level("event")
+  local text = event_log.get_text(g.state.event_log)
   assert(string.find(text, "回合结束：" .. g.players[1].name, 1, true) ~= nil,
     "end_turn should log phase end event")
   assert(string.find(text, "停在", 1, true) ~= nil, "end_turn event should include landing tile")

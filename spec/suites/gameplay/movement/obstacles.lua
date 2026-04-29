@@ -4,6 +4,7 @@ local move_followup = require("src.turn.phases.move_followup")
 local turn_land = require("src.turn.phases.land")
 local await = require("src.turn.waits.await")
 local logger = require("src.core.utils.logger")
+local event_log = require("src.state.event_log")
 local action_anim = require("src.ui.render.action_anim")
 local anim_handlers = require("src.ui.render.anim.handlers")
 local wait_callbacks = require("src.turn.waits.callback_registry")
@@ -99,7 +100,7 @@ local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_ord
   local game, player, target_index, move_result, next_state, land_state, land_args =
     _run_same_tile_obstacle_chain(true)
   local queue = game.turn.action_anim_queue or {}
-  local initial_event_seq = logger.get_event_seq()
+  local initial_event_seq = event_log.get_seq(game.state.event_log)
 
   assert(next_state == "landing", "roadblock followup should still enter landing before action anim wait")
   assert(move_result.stopped_on_roadblock == true, "roadblock should stop movement before queued mine followup")
@@ -137,7 +138,7 @@ local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_ord
   assert((player.status.stay_turns or 0) == 0, "hospital effect should not apply after only the roadblock animation")
   assert(player.status.pending_location_effect == "hospital",
     "mine followup should remain pending until the queued action animation finishes")
-  assert(logger.get_event_seq() == initial_event_seq,
+  assert(event_log.get_seq(game.state.event_log) == initial_event_seq,
     "hospital logs should not flush before the queued mine animation completes")
 
   local second_session = _new_await_session(game, {
@@ -154,9 +155,9 @@ local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_ord
   assert(resumed_state == "end_turn", "queued mine followup should still end the turn after both animations")
   assert((player.status.stay_turns or 0) > 0, "queued mine followup should still hospitalize the player")
   assert(player.status.pending_location_effect == nil, "hospital effect should resolve after move_followup runs")
-  assert(logger.get_event_seq() > initial_event_seq,
+  assert(event_log.get_seq(game.state.event_log) > initial_event_seq,
     "mine and hospital logs should appear only after the queued mine animation finishes")
-  local event_text = logger.get_text_by_level("event")
+  local event_text = event_log.get_text(game.state.event_log)
   assert(event_text:find("触发地雷", 1, true) ~= nil, "mine trigger log should appear after queued animation completion")
   assert(event_text:find("住院，需停留", 1, true) ~= nil, "hospital log should appear after queued animation completion")
 end
@@ -231,7 +232,7 @@ local function _test_same_tile_obstacle_chain_keeps_vehicle_log_text()
   assert(resumed_state == "end_turn", "vehicle obstacle chain should still end the turn")
   assert(player.seat_id == nil, "mine relocation should still clear seat after capture")
 
-  local event_text = logger.get_text_by_level("event")
+  local event_text = event_log.get_text(game.state.event_log)
   assert(event_text:find("座驾被摧毁并送医", 1, true) ~= nil,
     "vehicle obstacle chain log should preserve pre-relocation vehicle context")
 end

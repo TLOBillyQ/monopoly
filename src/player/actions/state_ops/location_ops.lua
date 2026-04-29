@@ -1,5 +1,7 @@
 local logger = require("src.core.utils.logger")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
+local event_feed = require("src.rules.ports.event_feed")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local facing_policy = require("src.rules.board.facing_policy")
 local common = require("src.player.actions.state_ops.common")
 local number_utils = require("src.core.utils.number")
@@ -44,25 +46,38 @@ function location_ops.player_apply_hospital_effects(self, player)
   self:set_player_status(player, "stay_turns", common.constants.hospital_stay_turns)
   local fee = common.constants.hospital_fee
   if self:player_balance(player, "金币") < fee then
-    logger.event(player.name .. " 资金不足，无法支付医药费 " .. number_utils.format_integer_part(fee))
+    -- migrated as DEV: financial constraint diagnostic, not a player-visible game event
+    logger.info(player.name .. " 资金不足，无法支付医药费 " .. number_utils.format_integer_part(fee))
     bankruptcy_port.eliminate(self, player, { reason = player.name .. " 医药费不足破产" })
     return
   end
   self:deduct_player_cash(player, fee)
-  logger.event(player.name .. " 支付医药费 " .. number_utils.format_integer_part(fee))
+  event_feed.publish(self, {
+    kind = event_kinds.medical_fee,
+    text = player.name .. " 支付医药费 " .. number_utils.format_integer_part(fee),
+    tip = true,
+  })
   if self:player_balance(player, "金币") <= 0 then
     bankruptcy_port.eliminate(self, player, { reason = player.name .. " 支付医药费后破产" })
     return
   end
   _emit_status_feedback(self, player, "hospital", "hospital_shock")
-  logger.event(player.name .. " 住院，需停留 " .. tostring(player.status.stay_turns) .. " 回合")
+  event_feed.publish(self, {
+    kind = event_kinds.hospital_stay,
+    text = player.name .. " 住院，需停留 " .. tostring(player.status.stay_turns) .. " 回合",
+    tip = true,
+  })
 end
 
 function location_ops.player_apply_mountain_effects(self, player)
   self:set_player_status(player, "pending_location_effect", nil)
   self:set_player_status(player, "stay_turns", common.constants.mountain_stay_turns)
   _emit_status_feedback(self, player, "mountain", "mountain_stun")
-  logger.event(player.name .. " 进入深山，停留 " .. tostring(player.status.stay_turns) .. " 回合")
+  event_feed.publish(self, {
+    kind = event_kinds.mountain_stay,
+    text = player.name .. " 进入深山，停留 " .. tostring(player.status.stay_turns) .. " 回合",
+    tip = true,
+  })
 end
 
 function location_ops.player_apply_location_effect(self, player, effect)

@@ -424,10 +424,12 @@ local function _test_post_effects_apply_log_emits_event()
   local g = _new_game()
   local p = g:current_player()
   local events = {}
+  local event_feed = require("src.rules.ports.event_feed")
 
   _with_patches({
-    { target = require("src.core.utils.logger"), key = "event", value = function(text)
-      events[#events + 1] = text
+    { target = event_feed, key = "publish", value = function(_, event)
+      events[#events + 1] = event and event.text or nil
+      return true
     end },
   }, function()
     post_effects.apply_post(g, p, item_ids.steal, {})

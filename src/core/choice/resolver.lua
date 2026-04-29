@@ -1,6 +1,7 @@
 local logger = require("src.core.utils.logger")
 local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
 local tables = require("src.core.utils.tables")
+local event_kinds = require("src.config.gameplay.event_kinds")
 
 local choice_resolver = {}
 
@@ -95,17 +96,23 @@ function choice_resolver.helpers(overrides)
   })
 end
 
-local function _handle_cancel_result(game, choice, cancel_result, descriptor)
+local function _handle_cancel_result(game, choice, cancel_result, descriptor, opts)
   if type(cancel_result) == "table" and cancel_result.stay then
     cancel_result.status = cancel_result.status or "waiting"
     return cancel_result
   end
-  logger.event_no_tips("跳过选择：" .. _choice_title(choice))
+  if opts and type(opts.on_event) == "function" then
+    opts.on_event({
+      kind = event_kinds.choice_skipped,
+      text = "跳过选择：" .. _choice_title(choice),
+      tip = false,
+    })
+  end
   _clear_choice(game)
   return { status = "resolved", stay = false }
 end
 
-local function _resolve_cancel_fallback(game, choice, action, descriptor)
+local function _resolve_cancel_fallback(game, choice, action, descriptor, opts)
   local fallback_option_id, cancel_result = _resolve_cancel_followup(game, choice, descriptor)
   if fallback_option_id ~= nil then
     action = _build_select_action(choice, fallback_option_id, action)
@@ -115,20 +122,21 @@ local function _resolve_cancel_fallback(game, choice, action, descriptor)
   if type(cancel_result) == "function" then
     cancel_result = cancel_result(game, choice)
   end
-  return _handle_cancel_result(game, choice, cancel_result, descriptor)
+  return _handle_cancel_result(game, choice, cancel_result, descriptor, opts)
 end
 
-function choice_resolver.resolve(game, choice, action)
+function choice_resolver.resolve(game, choice, action, opts)
   assert(game ~= nil, "missing game")
   assert(choice ~= nil, "missing choice")
   assert(action ~= nil, "missing action")
+  opts = opts or {}
 
   local descriptor = _resolve_descriptor(game, choice)
 
   action = item_preconsume_policy.normalize_cancel_action(choice, action)
 
   if item_preconsume_policy.is_cancel_action(action) then
-    local cancel_result, new_action = _resolve_cancel_fallback(game, choice, action, descriptor)
+    local cancel_result, new_action = _resolve_cancel_fallback(game, choice, action, descriptor, opts)
     if cancel_result ~= nil then
       return cancel_result
     end

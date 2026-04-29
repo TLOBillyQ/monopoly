@@ -28,7 +28,11 @@ function turn_decision.decide_choice_action(game, choice, pending_action, opts)
 end
 
 function turn_decision.resolve_choice(game, choice, action)
-  return require("src.core.choice.resolver").resolve(game, choice, action) or {}
+  return require("src.core.choice.resolver").resolve(game, choice, action, {
+    on_event = function(event)
+      event_feed.publish(game, event)
+    end,
+  }) or {}
 end
 
 function turn_decision.log_turn_start(game)
