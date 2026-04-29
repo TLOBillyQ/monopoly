@@ -1,9 +1,1 @@
-local suite = require("suites.gameplay.runtime.asset_handlers")
-local cases = suite.tests or suite
-local label = suite.name or "gameplay.runtime.asset_handlers"
-
-describe(label, function()
-  for _, case in ipairs(cases) do
-    it(case.name, case.run)
-  end
-end)
+require("spec.behavior._shim").bind(_ENV, "suites.gameplay.runtime.asset_handlers")

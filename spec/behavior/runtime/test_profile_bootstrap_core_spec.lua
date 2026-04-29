@@ -1,7 +1,1 @@
-local suite = require("suites.runtime.test_profile_bootstrap_core")
-
-describe(suite.name, function()
-  for _, case in ipairs(suite.tests) do
-    it(case.name, case.run)
-  end
-end)
+require("spec.behavior._shim").bind(_ENV, "suites.runtime.test_profile_bootstrap_core")

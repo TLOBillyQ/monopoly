@@ -1,13 +1,4 @@
 local logger = require("src.core.utils.logger")
-local suite = require("suites.domain.turn_timer_policy_coverage")
-local cases = suite.tests or suite
-local label = suite.name or "domain.turn_timer_policy_coverage"
-
-describe(label, function()
-  for _, case in ipairs(cases) do
-    it(case.name, function()
-      logger.set_test_mode(false)
-      case.run()
-    end)
-  end
-end)
+require("spec.behavior._shim").bind(_ENV, "suites.domain.turn_timer_policy_coverage", {
+  wrap = function(run) return function() logger.set_test_mode(false); run() end end,
+})
