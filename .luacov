@@ -1,0 +1,27 @@
+return {
+  -- File patterns are Lua patterns matched against the source path.
+  -- NOTE: luacov keys stats by the path used at load time (may be absolute
+  -- or relative with ./ prefix). Use UNANCHORED patterns so both
+  -- "src/core/..." and "./src/core/..." match. The coverage.lua driver
+  -- normalizes all paths to repo-relative before aggregation.
+  include = {
+    "src/core/", "src/rules/", "src/turn/",
+    "src/state/", "src/player/", "src/computer/",
+  },
+  exclude = {
+    "src/app/", "src/host/", "src/ui/", "src/config/",
+    "tests/", "spec/", "tools/", "vendor/",
+    "/usr/", "/%.luarocks/",
+  },
+  -- Ensure files in the 6 target dirs that have ZERO hits still appear in
+  -- the report (critical for an honest aggregate percentage).
+  includeuntestedfiles = {
+    "src/core", "src/rules", "src/turn",
+    "src/state", "src/player", "src/computer",
+  },
+  statsfile  = "luacov.stats.out",
+  reportfile = "luacov.report.out",
+  deletestats = false,    -- accumulate across busted profile runs
+  runreport   = false,    -- coverage.lua invokes luacov binary explicitly
+  codefromstrings = false,
+}
