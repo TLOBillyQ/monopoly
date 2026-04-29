@@ -1,6 +1,8 @@
 local logger = require("src.core.utils.logger")
 local runtime_ports = require("src.core.ports.runtime_ports")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
+local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
 local monopoly_event = require("src.core.events")
 
@@ -91,7 +93,7 @@ local function _collect_owned_tiles(game, player)
       table.insert(owned_tiles, tile)
       table.insert(names, tile.name)
     else
-      logger.warn("bankruptcy skip missing tile:", tostring(tile_id))
+      logger.info("bankruptcy skip missing tile:", tostring(tile_id))
     end
   end
 
@@ -106,11 +108,17 @@ function bankruptcy.eliminate(game, player, opts)
   if player.eliminated then
     return
   end
-  logger.event(player.name .. " 破产出局")
+  event_feed.publish(game, {
+    kind = event_kinds.bankruptcy,
+    text = player.name .. " 破产出局",
+  })
 
   local owned_tile_ids, owned_tiles, names = _collect_owned_tiles(game, player)
   if #owned_tile_ids > 0 then
-    logger.event(player.name .. " 破产，清空地块: " .. table.concat(names, "、"))
+    event_feed.publish(game, {
+      kind = event_kinds.bankruptcy_liquidation,
+      text = player.name .. " 破产，清空地块: " .. table.concat(names, "、"),
+    })
 
     for _, tile in ipairs(owned_tiles) do
       game:reset_tile(tile)
@@ -136,7 +144,7 @@ function bankruptcy.eliminate(game, player, opts)
     _notify_tiles_cleared(game, player, owned_tile_ids)
   end
 
-  for tile_idx, list in pairs(game.occupants) do
+  for _, list in pairs(game.occupants) do
     for i = #list, 1, -1 do
       if list[i] == player.id then
         table.remove(list, i)

@@ -1,9 +1,10 @@
-local logger = require("src.core.utils.logger")
 local item_ids = require("src.config.gameplay.item_ids")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local timing = require("src.config.gameplay.timing")
 local tile_mod = require("src.rules.board.tile")
 local land_actions = require("src.rules.land.actions")
 local land_choice_specs = require("src.rules.land.choice_specs")
+local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
 local pricing = require("src.rules.land.pricing")
 local board_utils = require("src.rules.land.board")
@@ -53,7 +54,10 @@ local function _apply_buy(ctx)
   ctx.game:deduct_player_cash(player, t.price)
   ctx.game:set_tile_owner(t, player.id)
   ctx.game:set_player_property(player, t.id, true)
-  logger.event(player.name .. " 购买 " .. t.name .. " 花费 " .. number_utils.format_integer_part(t.price))
+  event_feed.publish(ctx.game, {
+    kind = event_kinds.land_purchase,
+    text = player.name .. " 购买 " .. t.name .. " 花费 " .. number_utils.format_integer_part(t.price),
+  })
 end
 
 local function _can_upgrade(ctx)
@@ -92,7 +96,10 @@ local function _apply_upgrade(ctx)
       level = new_level,
     })
   end
-  logger.event(player.name .. " 为 " .. t.name .. " 加盖，花费 " .. number_utils.format_integer_part(cost))
+  event_feed.publish(ctx.game, {
+    kind = event_kinds.land_upgrade,
+    text = player.name .. " 为 " .. t.name .. " 加盖，花费 " .. number_utils.format_integer_part(cost),
+  })
   if tile_index then
     action_anim_port.queue(ctx.game, {
       kind = "upgrade_land",
@@ -159,7 +166,10 @@ local function _apply_pay_rent(ctx)
 
   if player.status.pending_free_rent then
     ctx.game:set_player_status(player, "pending_free_rent", false)
-    logger.event(player.name .. " 使用免费卡，免租 " .. t.name)
+    event_feed.publish(ctx.game, {
+      kind = event_kinds.rent_immune,
+      text = player.name .. " 使用免费卡，免租 " .. t.name,
+    })
     return
   end
 
@@ -186,7 +196,10 @@ local function _apply_tax(ctx)
   local player = ctx.player
 
   if player.status.pending_tax_free then
-    logger.event(player.name .. " 使用免税卡，本次免税")
+    event_feed.publish(ctx.game, {
+      kind = event_kinds.tax_immune,
+      text = player.name .. " 使用免税卡，本次免税",
+    })
     ctx.game:set_player_status(player, "pending_tax_free", false)
     return
   end

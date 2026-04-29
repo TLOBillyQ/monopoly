@@ -1,6 +1,7 @@
-local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.core.ports.action_anim")
+local event_feed = require("src.rules.ports.event_feed")
 
 local mine_effect = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -85,14 +86,20 @@ function mine_effect.apply(game, player, position)
   assert(position ~= nil, "missing position")
 
   if game:player_has_angel(player) then
-    logger.event(player.name .. " 天使保护，地雷无效")
+    event_feed.publish(game, {
+      kind = event_kinds.item_immune,
+      text = player.name .. " 天使保护，地雷无效",
+    })
     game:clear_mine(position)
     return { detonated = true, protected = true }
   end
 
   game:clear_mine(position)
   if game:player_is_vehicle_indestructible(player) then
-    logger.event(player.name .. " 座驾免疫地雷")
+    event_feed.publish(game, {
+      kind = event_kinds.item_immune,
+      text = player.name .. " 座驾免疫地雷",
+    })
     return { detonated = true, protected = true }
   end
   local from_index = position

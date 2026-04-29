@@ -1,7 +1,9 @@
 local tile_mod = require("src.rules.board.tile")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local pricing = require("src.rules.land.pricing")
 local timing = require("src.config.gameplay.timing")
 local monopoly_event = require("src.core.events")
+local event_feed = require("src.rules.ports.event_feed")
 
 local game_victory = {}
 
@@ -39,7 +41,10 @@ local function _apply_winners(game, winners, message)
   local names = _winner_names(winners)
   game.winner_names = names
   assert(message ~= nil, "missing victory message")
-  game.logger.event(message, game.winner_names)
+  event_feed.publish(game, {
+    kind = event_kinds.victory,
+    text = message .. game.winner_names,
+  })
   local winner_ids = {}
   for _, player in ipairs(winners) do
     winner_ids[player.id] = true

@@ -1,9 +1,10 @@
-local logger = require("src.core.utils.logger")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local timing = require("src.config.gameplay.timing")
 local constants = require("src.config.content.constants")
 local inventory = require("src.rules.items.inventory")
 local presenter = require("src.rules.land.presenter")
 local steal = require("src.rules.items.steal")
+local event_feed = require("src.rules.ports.event_feed")
 local number_utils = require("src.core.utils.number")
 
 local popup_show_seconds = timing.popup_auto_close_seconds or 1.0
@@ -38,9 +39,10 @@ M.executors = {
       local move_result = ctx.move_result or {}
       if move_result.passed_start and move_result.passed_start > 0 then return end
       ctx.game:add_player_cash(player, constants.pass_start_bonus)
-      logger.event(
-        player.name .. " 停在起点，获得 " .. number_utils.format_integer_part(constants.pass_start_bonus) .. " 金币"
-      )
+      event_feed.publish(ctx.game, {
+        kind = event_kinds.transit,
+        text = player.name .. " 停在起点，获得 " .. number_utils.format_integer_part(constants.pass_start_bonus) .. " 金币",
+      })
     end,
   },
   item_draw_and_give = {
