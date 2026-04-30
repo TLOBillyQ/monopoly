@@ -182,6 +182,9 @@ local function _setup_circle_market_bought_roadblock_and_mine()
   g.last_turn = {}
   g.anim_gate_port.wait_action_anim = false
   g.anim_gate_port.wait_move_anim = false
+  g.auto_play_port.is_auto_player = function()
+    return false
+  end
 
   local function _remote_roll_four()
     local use_result = support.executor.use_item(g, player, remote_dice_id, { by_ai = false })
@@ -895,6 +898,9 @@ local function _test_circle_startup_profile_second_remote_roll_reaches_chance45_
   g.last_turn = {}
   g.anim_gate_port.wait_action_anim = false
   g.anim_gate_port.wait_move_anim = false
+  g.auto_play_port.is_auto_player = function()
+    return false
+  end
 
   local first_use_result = support.executor.use_item(g, player, remote_dice_id, { by_ai = false })
   assert(type(first_use_result) == "table" and first_use_result.waiting == true,
