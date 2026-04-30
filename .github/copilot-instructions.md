@@ -61,7 +61,7 @@
 
 | 变更类型 | 命令 |
 |---------|------|
-| 任意 Lua | `lua tools/quality/lint.lua` |
+| 任意 Lua | `lua tools/quality/lint.lua` + `lua tools/quality/encoding.lua check` |
 | 游戏逻辑 / 运行时 / UI | `busted --run behavior` |
 | Port / 边界 / assembly | `busted --run contract` + `lua tools/quality/arch.lua check` |
 | Guardrail | `busted --run guards` |

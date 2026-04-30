@@ -78,7 +78,7 @@ function M.init()
       if not (GlobalAPI and type(GlobalAPI.show_tips) == "function") then
         if not _globalapi_missing_warned then
           _globalapi_missing_warned = true
-          logger.warn("[app]", "GlobalAPI.show_tips not available — tips will be dropped until host is ready")
+          logger.warn("[app]", "GlobalAPI.show_tips not available - tips will be dropped until host is ready")
         end
         return false
       end

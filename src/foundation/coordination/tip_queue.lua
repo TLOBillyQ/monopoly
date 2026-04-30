@@ -102,7 +102,7 @@ local function _present_tip(tip)
   if type(presenter) ~= "function" then
     if not _presenter_warned then
       _presenter_warned = true
-      _warn("[tip_queue]", "presenter not registered — tips will be dropped until configure_runtime is called")
+      _warn("[tip_queue]", "presenter not registered - tips will be dropped until configure_runtime is called")
     end
     return false
   end

@@ -6,9 +6,10 @@ description: Run the common fast local confidence lane for this repo: guard chec
 按以下顺序跑快速验证车道，前一步失败就停下：
 
 1. `lua tools/quality/lint.lua`（仅当本地装了 `luacheck`）
-2. `busted --run guards`
-3. `lua tools/quality/arch.lua check`
-4. `busted --run behavior`
+2. `lua tools/quality/encoding.lua check`
+3. `busted --run guards`
+4. `lua tools/quality/arch.lua check`
+5. `busted --run behavior`
 
 跑完后汇报：
 
