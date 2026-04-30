@@ -43,6 +43,23 @@ local function _resolve_market_page_value(market, key)
   return value
 end
 
+local function _has_ui_method(ui, method_name)
+  return ui ~= nil and type(ui[method_name]) == "function"
+end
+
+local function _set_control_text(ui, name, text)
+  if not name or ui == nil then
+    return
+  end
+  local resolved = text or ""
+  if _has_ui_method(ui, "set_label") then
+    ui:set_label(name, resolved)
+  end
+  if _has_ui_method(ui, "set_button") then
+    ui:set_button(name, resolved)
+  end
+end
+
 function market_view_controls.set_market_container_active(ui, active)
   ui_controls.set_control_state(ui, market_layout.container, { visible = active })
   ui.market_active = active == true
@@ -108,8 +125,12 @@ function market_view_controls.refresh_market_controls(ui, market, vehicle_tab_en
     visible = paging_visible,
     touch_enabled = paging_visible and page_index < page_count,
   })
-  ui:set_label(market_layout.page_prev_label, paging_visible and market_layout.page_prev_text or "")
-  ui:set_label(market_layout.page_next_label, paging_visible and market_layout.page_next_text or "")
+  ui_controls.set_controls_state(ui, { market_layout.page_prev_label, market_layout.page_next_label }, {
+    visible = paging_visible,
+    touch_enabled = false,
+  })
+  _set_control_text(ui, market_layout.page_prev_label, paging_visible and market_layout.page_prev_text or "")
+  _set_control_text(ui, market_layout.page_next_label, paging_visible and market_layout.page_next_text or "")
   ui_controls.set_control_state(ui, market_layout.tab_item, { visible = true, touch_enabled = active_tab ~= "item" })
   _set_tab_tint(ui, market_layout.tab_item, active_tab == "item")
   ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = active_tab ~= "skin" })
@@ -140,12 +161,14 @@ function market_view_controls.close_market_panel(state, deps)
   ui_controls.set_controls_state(ui, {
     market_layout.page_prev,
     market_layout.page_next,
+    market_layout.page_prev_label,
+    market_layout.page_next_label,
     market_layout.tab_item,
     market_layout.tab_skin,
     market_layout.tab_vehicle,
   }, { visible = false, touch_enabled = false })
-  ui:set_label(market_layout.page_prev_label, "")
-  ui:set_label(market_layout.page_next_label, "")
+  _set_control_text(ui, market_layout.page_prev_label, "")
+  _set_control_text(ui, market_layout.page_next_label, "")
   _set_cancel_controls(ui, false, false)
 end
 
