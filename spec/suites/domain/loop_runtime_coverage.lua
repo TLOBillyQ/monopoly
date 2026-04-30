@@ -1,5 +1,6 @@
 local loop_runtime = require("src.turn.loop.runtime")
 local runtime_state = require("src.state.runtime_state")
+local tip_queue = require("src.foundation.coordination.tip_queue")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
@@ -199,11 +200,13 @@ end
 
 -- build_tip_output_port
 
-local function test_build_tip_output_port_enqueue_returns_false_when_no_show_tip()
+local function test_build_tip_output_port_enqueue_falls_back_to_tip_queue_when_no_show_tip()
+  tip_queue.clear()
   local state = _make_state()
   local port = loop_runtime.build_tip_output_port(state)
   local result = port.enqueue(nil, { text = "hi" })
-  _assert_eq(result, false, "enqueue should return false when state has no show_tip function")
+  _assert_eq(result, true, "enqueue should fall back to tip_queue and return true for valid intent when show_tip is missing")
+  tip_queue.clear()
 end
 
 local function test_build_tip_output_port_enqueue_calls_show_tip()
@@ -325,7 +328,7 @@ return {
     { name = "build_popup_port returns table with push_popup", run = test_build_popup_port_returns_table_with_push_popup },
     { name = "build_popup_port push_popup returns false when no push_popup fn", run = test_build_popup_port_push_popup_returns_false_when_no_push_popup_fn },
     { name = "build_popup_port cached on second call", run = test_build_popup_port_cached_on_second_call },
-    { name = "build_tip_output_port enqueue returns false when no show_tip", run = test_build_tip_output_port_enqueue_returns_false_when_no_show_tip },
+    { name = "build_tip_output_port enqueue falls back to tip_queue when no show_tip", run = test_build_tip_output_port_enqueue_falls_back_to_tip_queue_when_no_show_tip },
     { name = "build_tip_output_port enqueue calls show_tip", run = test_build_tip_output_port_enqueue_calls_show_tip },
     { name = "build_tip_output_port cached on second call", run = test_build_tip_output_port_cached_on_second_call },
     { name = "build_tile_feedback_port returns table", run = test_build_tile_feedback_port_returns_table },

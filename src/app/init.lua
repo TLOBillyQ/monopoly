@@ -112,6 +112,33 @@ function M.init()
   if type(logger.set_enabled) == "function" then
     logger.set_enabled(not is_release(startup))
   end
+
+  if type(logger.set_ui_sink) == "function" then
+    logger.set_ui_sink(function(entry)
+      if entry == nil or entry.level ~= "warn" then
+        return
+      end
+      if type(GlobalAPI) ~= "table" then
+        return
+      end
+      local text = "[warn] " .. tostring(entry.text or "")
+      if type(GlobalAPI.show_message_marquee) == "function" then
+        pcall(GlobalAPI.show_message_marquee, text)
+      elseif type(GlobalAPI.show_tips) == "function" then
+        pcall(GlobalAPI.show_tips, text, 3.0)
+      end
+    end)
+  end
+
+  if not is_release(startup) and type(GlobalAPI) == "table" then
+    if type(GlobalAPI.show_tips) == "function" then
+      pcall(GlobalAPI.show_tips, "[ping] show_tips 自检", 3.0)
+    end
+    if type(GlobalAPI.show_message_marquee) == "function" then
+      pcall(GlobalAPI.show_message_marquee, "[ping] marquee 自检")
+    end
+  end
+
   logger.info(
     "[Eggy]",
     "startup policy:",

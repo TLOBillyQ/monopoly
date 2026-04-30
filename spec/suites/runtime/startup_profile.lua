@@ -483,6 +483,9 @@ local function _reload_app_init_with_stubs(startup, runner)
     info = function(...)
       capture.info = { ... }
     end,
+    warn = function() end,
+    set_enabled = function() end,
+    set_ui_sink = function() end,
     set_anim_debug_enabled_provider = function(fn)
       capture.anim_provider = fn
     end,
@@ -700,6 +703,9 @@ local function _test_app_init_keeps_scheduler_fallback()
   }
   local logger_stub = {
     info = function() end,
+    warn = function() end,
+    set_enabled = function() end,
+    set_ui_sink = function() end,
     set_anim_debug_enabled_provider = function(fn)
       capture.anim_provider = fn
     end,

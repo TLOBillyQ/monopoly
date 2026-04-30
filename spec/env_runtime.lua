@@ -35,6 +35,7 @@ local function refresh_runtime_services()
   runtime_ports.configure(runtime_default_ports.build(runtime_context))
   paid_purchase_port.reset_for_tests()
   paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
+  tip_queue.clear()
   tip_queue.configure_runtime({
     presenter = function(text, duration)
       if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
