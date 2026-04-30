@@ -206,6 +206,7 @@ local function _emit_tip_text(host_runtime, anim, tip_text, should_show_tip, sho
 end
 
 local function _build_handler_opts(state, runtime_bundle, host_runtime)
+  local camera_sync = runtime_bundle and runtime_bundle.camera_sync or nil
   return {
     runtime = runtime_bundle.runtime,
     ui_events = runtime_bundle.ui_events,
@@ -223,6 +224,8 @@ local function _build_handler_opts(state, runtime_bundle, host_runtime)
     end,
     hold_seconds = roll_face_hold_seconds,
     clear_overlay = action_anim.clear_overlay,
+    pan_camera_to_position = camera_sync and camera_sync.pan_camera_to_position or nil,
+    release_target_pan = camera_sync and camera_sync.release_target_pan or nil,
   }
 end
 

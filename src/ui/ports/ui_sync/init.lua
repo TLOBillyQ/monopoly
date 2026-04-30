@@ -54,6 +54,12 @@ function ui_sync_ports.build(common)
     sync_camera_position = function(state)
       return camera_sync.sync_camera_position(state)
     end,
+    pan_camera_to_position = function(state, pos)
+      return camera_sync.pan_camera_to_position(state, pos)
+    end,
+    release_target_pan = function(state)
+      return camera_sync.release_target_pan(state)
+    end,
     get_ui_state = function(state)
       return ui_gate_sync.get_ui_state(state, common)
     end,

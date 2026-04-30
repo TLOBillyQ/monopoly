@@ -2,6 +2,7 @@ local gameplay_loop = require("src.turn.loop")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local presentation_ports = require("src.ui.ports")
 local runtime_deps = require("src.ui.coord.deps")
+local camera_sync = require("src.ui.ports.ui_sync.camera")
 local tick_clock = require("src.turn.loop.tick_clock")
 
 local M = {}
@@ -56,7 +57,7 @@ function M.start(state, current_game_ref)
 
   state.turn_action_port = _build_turn_action_port()
   state.gameplay_loop_ports = _build_gameplay_loop_ports()
-  state.presentation_runtime = runtime_deps.build()
+  state.presentation_runtime = runtime_deps.build({ camera_sync = camera_sync })
   local current_game = gameplay_loop.new_game(state)
   current_game_ref[1] = current_game
   _prime_first_turn(current_game)

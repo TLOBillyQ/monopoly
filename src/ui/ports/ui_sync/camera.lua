@@ -172,4 +172,37 @@ function camera_sync.sync_camera_position(state)
   return _lock_camera_to_target_position(local_role, target_pos, ctx_info)
 end
 
+function camera_sync.pan_camera_to_position(state, target_pos)
+  if target_pos == nil then
+    return false
+  end
+  local local_role_id = state and runtime_state.get_local_actor_role_id(state) or nil
+  if local_role_id == nil then
+    return false
+  end
+  local local_role = runtime_ports.resolve_role(local_role_id)
+  if local_role == nil then
+    return false
+  end
+  local camera = runtime_ports.resolve_camera_helper()
+  if camera then
+    camera.target_role_id = nil
+  end
+  _reset_camera_to_self(local_role)
+  local ctx_info = "[pan] local=" .. tostring(local_role_id)
+  return _lock_camera_to_target_position(local_role, target_pos, ctx_info)
+end
+
+function camera_sync.release_target_pan(state)
+  if state == nil then
+    return false
+  end
+  local turn_runtime = runtime_state.ensure_turn_runtime(state)
+  if turn_runtime == nil then
+    return false
+  end
+  turn_runtime.last_follow_player_id = nil
+  return true
+end
+
 return camera_sync

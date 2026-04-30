@@ -5,6 +5,7 @@ local board_feedback = require("src.ui.render.board_feedback.service")
 local unit_position = require("src.ui.render.unit_position")
 local number_utils = require("src.foundation.lang.number")
 local timing = require("src.config.gameplay.timing")
+local compute = require("src.ui.render.anim.overlay_compute")
 
 local units = {}
 local mine_trigger_snap_delay_seconds = timing.mine_trigger_snap_delay_seconds or 0.6
@@ -15,17 +16,55 @@ function units.clear_overlay(state, kind, tile_index)
   overlay.clear_overlay(state, kind, tile_index)
 end
 
+local function _pan_camera_to_tile(state, tile_index, duration, opts)
+  if state == nil or tile_index == nil then
+    return
+  end
+  local pan_to_position = opts and opts.pan_camera_to_position
+  local release = opts and opts.release_target_pan
+  if type(pan_to_position) ~= "function" then
+    return
+  end
+  local pos = compute.resolve_tile_pos(state, tile_index)
+  if pos == nil then
+    return
+  end
+  if not pan_to_position(state, pos) then
+    return
+  end
+  if type(release) ~= "function" then
+    return
+  end
+  local schedule = opts and opts.schedule
+  if type(schedule) ~= "function" then
+    release(state)
+    return
+  end
+  local release_after = duration
+  if not number_utils.is_numeric(release_after) or release_after < 0 then
+    release_after = 0
+  end
+  schedule(release_after, function()
+    release(state)
+  end)
+end
+
 function units.play_overlay(state, anim, duration, opts)
+  if anim and anim.kind == "roadblock" and anim.tile_index ~= nil then
+    _pan_camera_to_tile(state, anim.tile_index, duration, opts)
+  end
   overlay.play_overlay(state, anim, duration, opts)
 end
 
 function units.play_missile(state, anim, duration, opts)
   local board_scene = assert(state.board_scene, "missing board_scene")
   local to_index = anim and anim.to_index or nil
+  local tile_index = assert(anim.tile_index, "missing missile tile_index")
+  _pan_camera_to_tile(state, tile_index, duration, opts)
   for _, player_id in ipairs(anim and anim.target_player_ids or {}) do
     move_anim.prepare_player_for_snap(board_scene, player_id, anim, "missile")
   end
-  _play_demolish_feedback(state, assert(anim.tile_index, "missing missile tile_index"), opts, false)
+  _play_demolish_feedback(state, tile_index, opts, false)
   overlay.play_missile(state, anim, duration, opts)
   if to_index ~= nil then
     for _, player_id in ipairs(anim and anim.target_player_ids or {}) do
@@ -35,11 +74,16 @@ function units.play_missile(state, anim, duration, opts)
 end
 
 function units.play_monster(state, anim, duration, opts)
-  _play_demolish_feedback(state, assert(anim.tile_index, "missing monster tile_index"), opts, true)
+  local tile_index = assert(anim.tile_index, "missing monster tile_index")
+  _pan_camera_to_tile(state, tile_index, duration, opts)
+  _play_demolish_feedback(state, tile_index, opts, true)
   overlay.play_monster(state, anim, duration, opts)
 end
 
 function units.play_clear_obstacles(state, anim, duration, opts)
+  if anim and anim.tile_index ~= nil then
+    _pan_camera_to_tile(state, anim.tile_index, duration, opts)
+  end
   overlay.play_clear_obstacles(state, anim, duration, opts)
 end
 
