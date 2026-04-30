@@ -9,6 +9,18 @@ local bindings = {}
 
 local missing_button_tips = {}
 
+local function _market_log(...)
+  if type(logger.info_unlimited) == "function" then
+    logger.info_unlimited("[MarketDebug]", ...)
+    return
+  end
+  logger.info("[MarketDebug]", ...)
+end
+
+local function _is_market_node(name)
+  return type(name) == "string" and string.match(name, "^黑市") ~= nil
+end
+
 local function _show_missing_button_tip(name)
   if missing_button_tips[name] then
     return
@@ -25,6 +37,9 @@ end
 
 local function _report_register_node_click_failure(name, reason)
   _show_missing_button_tip(name)
+  if _is_market_node(name) then
+    _market_log("register_node_click failed", "node=" .. tostring(name), "reason=" .. tostring(reason))
+  end
   if name == base_nodes.action_log_button then
     logger.info("[调试屏] 行动日志按钮注册失败: " .. tostring(reason))
   end
@@ -51,6 +66,9 @@ function bindings.register_node_click(cache, name, callback, registered, listene
   if not nodes or not nodes[1] then
     _report_register_node_click_failure(name, "未找到节点")
     return
+  end
+  if _is_market_node(name) then
+    _market_log("register_node_click ok", "node=" .. tostring(name), "count=" .. tostring(#nodes))
   end
   registered[name] = true
   for _, node in ipairs(nodes) do

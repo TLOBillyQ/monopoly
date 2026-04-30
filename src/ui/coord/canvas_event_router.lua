@@ -8,6 +8,43 @@ local logger = require("src.foundation.log.logger")
 
 local router = {}
 
+local function _market_log(...)
+  if type(logger.info_unlimited) == "function" then
+    logger.info_unlimited("[MarketDebug]", ...)
+    return
+  end
+  logger.info("[MarketDebug]", ...)
+end
+
+local function _is_market_route_name(name)
+  return type(name) == "string" and string.match(name, "^黑市") ~= nil
+end
+
+local function _is_market_intent(intent)
+  local intent_type = intent and intent.type or nil
+  return intent_type == "market_select"
+    or intent_type == "market_confirm"
+    or intent_type == "market_page_prev"
+    or intent_type == "market_page_next"
+    or intent_type == "market_tab_select"
+end
+
+local function _log_market_intent(stage, route_name, data, intent)
+  if not _is_market_route_name(route_name) and not _is_market_intent(intent) then
+    return
+  end
+  _market_log(
+    stage,
+    "node=" .. tostring(route_name),
+    "event_role=" .. tostring(data and data.role or nil),
+    "intent=" .. tostring(intent and intent.type or nil),
+    "choice_id=" .. tostring(intent and intent.choice_id or nil),
+    "option_id=" .. tostring(intent and intent.option_id or nil),
+    "tab=" .. tostring(intent and intent.tab or nil),
+    "actor_role_id=" .. tostring(intent and intent.actor_role_id or nil)
+  )
+end
+
 local function _is_actor_bound_ui_button(action_id)
   if action_id == "next" or action_id == "auto" then
     return true
@@ -58,7 +95,7 @@ function router.bind(state, resolve_game)
     return intent.type == "ui_button" and _is_actor_bound_ui_button(intent.id)
   end
 
-  local function _try_attach_event_actor(intent, data)
+  local function _try_attach_event_actor(intent, data, route_name)
     if not _requires_event_actor(intent) or intent.actor_role_id ~= nil then
       return true
     end
@@ -74,6 +111,7 @@ function router.bind(state, resolve_game)
       actor_role_id = local_actor_resolver.resolve_turn_bound(state, data)
     end
     if actor_role_id == nil then
+      _log_market_intent("attach_event_actor missing", route_name, data, intent)
       host_runtime_ports.enqueue_tip({
         text = "当前操作缺少玩家上下文，已忽略",
         duration = 2.0,
@@ -85,13 +123,15 @@ function router.bind(state, resolve_game)
       return false
     end
     intent.actor_role_id = actor_role_id
+    _log_market_intent("attach_event_actor ok", route_name, data, intent)
     return true
   end
 
-  local function dispatch_intent(intent, data)
-    if not _try_attach_event_actor(intent, data) then
+  local function dispatch_intent(intent, data, route_name)
+    if not _try_attach_event_actor(intent, data, route_name) then
       return
     end
+    _log_market_intent("dispatch_intent", route_name, data, intent)
     ui_intent_dispatcher.dispatch(state, resolve_game(), intent, dispatch_opts)
   end
 
@@ -104,9 +144,11 @@ function router.bind(state, resolve_game)
   local route_specs = canvas_registry.build_route_specs(state)
   for _, route in ipairs(route_specs) do
     ui_event_bindings.register_node_click(cache, route.name, function(data)
+      _log_market_intent("node_click", route.name, data, nil)
       local intent = route.build_intent(data)
+      _log_market_intent(intent and "build_intent ok" or "build_intent nil", route.name, data, intent)
       if intent then
-        dispatch_intent(intent, data)
+        dispatch_intent(intent, data, route.name)
       end
     end, registered, listeners)
   end

@@ -10,6 +10,61 @@ local function build(deps)
 
   local _dispatch_action
 
+  local function _market_log(...)
+    if type(logger.info_unlimited) == "function" then
+      logger.info_unlimited(...)
+      return
+    end
+    logger.info(...)
+  end
+
+  local function _is_market_choice(choice)
+    return choice ~= nil and choice.kind == "market_buy"
+  end
+
+  local function _is_market_navigation_action(action)
+    local action_type = action and action.type or nil
+    return action_type == "market_page_prev"
+      or action_type == "market_page_next"
+      or action_type == "market_tab_select"
+  end
+
+  local function _should_log_market_action(action, choice)
+    return _is_market_choice(choice) or _is_market_navigation_action(action)
+  end
+
+  local function _log_market_action(stage, action, choice, extra)
+    if not _should_log_market_action(action, choice) then
+      return
+    end
+    if extra ~= nil then
+      _market_log(
+        "[MarketDebug]",
+        stage,
+        "action_type=" .. tostring(action and action.type or nil),
+        "choice_id=" .. tostring(choice and choice.id or action and action.choice_id or nil),
+        "option_id=" .. tostring(action and action.option_id or nil),
+        "tab=" .. tostring(action and action.tab or nil),
+        "active_tab=" .. tostring(choice and choice.active_tab or nil),
+        "page_index=" .. tostring(choice and choice.page_index or nil),
+        "page_count=" .. tostring(choice and choice.page_count or nil),
+        extra
+      )
+      return
+    end
+    _market_log(
+      "[MarketDebug]",
+      stage,
+      "action_type=" .. tostring(action and action.type or nil),
+      "choice_id=" .. tostring(choice and choice.id or action and action.choice_id or nil),
+      "option_id=" .. tostring(action and action.option_id or nil),
+      "tab=" .. tostring(action and action.tab or nil),
+      "active_tab=" .. tostring(choice and choice.active_tab or nil),
+      "page_index=" .. tostring(choice and choice.page_index or nil),
+      "page_count=" .. tostring(choice and choice.page_count or nil)
+    )
+  end
+
   local function _should_invalidate_ui(action)
     return action.type == "ui_button"
       or action.type == "choice_select"
@@ -101,7 +156,9 @@ local function build(deps)
 
   local function _handle_choice_action(game, state, action, opts, ctx)
     local choice = _resolve_choice_action_choice(game, state, ctx)
+    _log_market_action("choice_action begin", action, choice)
     if not validator.validate_choice_action(game, action, choice) then
+      _log_market_action("choice_action rejected", action, choice, "reason=validate_choice_action")
       return { status = "rejected" }
     end
     if game then
@@ -112,6 +169,12 @@ local function build(deps)
     if choice and (not pending or not pending.id or pending.id ~= choice.id) then
       turn_dispatch_ref.clear_choice(state, opts)
     end
+    _log_market_action(
+      "choice_action applied",
+      action,
+      choice,
+      "next_pending_choice_id=" .. tostring(pending and pending.id or nil)
+    )
     return { status = "applied" }
   end
 
@@ -131,6 +194,16 @@ local function build(deps)
     return ctx.output_ports.get_pending_choice(state)
   end
 
+  local function _resolve_market_log_choice(game, state, action, ctx)
+    if action.type == "choice_select" or action.type == "choice_cancel" then
+      return _resolve_choice_action_choice(game, state, ctx)
+    end
+    if _is_market_navigation_action(action) then
+      return _resolve_market_choice(game, state, ctx)
+    end
+    return nil
+  end
+
   local function _resolve_market_navigation_failure(game, state, action, ctx, choice)
     if not choice or choice.kind ~= "market_buy" then
       return "[MarketDebug] dispatch_market_nav rejected: pending_choice missing or kind not market_buy"
@@ -147,11 +220,14 @@ local function build(deps)
 
   local function _handle_market_navigation(game, state, action, ctx)
     local choice = _resolve_market_choice(game, state, ctx)
+    _log_market_action("navigation begin", action, choice)
     local failure = _resolve_market_navigation_failure(game, state, action, ctx, choice)
     if failure ~= nil then
       logger.warn(failure)
+      _log_market_action("navigation rejected", action, choice, "reason=" .. tostring(failure))
       return { status = "rejected" }
     end
+    _log_market_action("navigation applied", action, choice)
     return { status = "applied" }
   end
 
@@ -163,6 +239,7 @@ local function build(deps)
     local ctx = ctx_mod.resolve_dispatch_context(state, dispatch_ctx)
     local gate_state = validator.resolve_gate_state(state, ctx.ui_sync_ports)
     if validator.should_block_action(gate_state, action) then
+      _log_market_action("dispatch blocked", action, _resolve_market_log_choice(game, state, action, ctx))
       return { status = "blocked" }
     end
     if _should_invalidate_ui(action) then
