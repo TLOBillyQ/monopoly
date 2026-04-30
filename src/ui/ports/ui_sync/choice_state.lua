@@ -33,9 +33,13 @@ local function _find_player(game, role_id)
   return nil
 end
 
-local function _is_waiting_anim_phase(game)
+local function _is_input_blocked_phase(game)
   local phase = game and game.turn and game.turn.phase or nil
-  return phase == "wait_action_anim" or phase == "wait_move_anim"
+  return phase == "wait_action_anim"
+    or phase == "wait_move_anim"
+    or phase == "wait_landing_visual"
+    or phase == "detained_wait"
+    or phase == "inter_turn_wait"
 end
 
 local function _is_local_role(state, owner_role_id)
@@ -74,7 +78,7 @@ function choice_ui_state.resolve_gate_state(game, state, choice)
   local owner_player = _find_player(game, owner_role_id)
   local local_owner = _is_local_role(state, owner_role_id)
   local owner_auto = owner_player and (owner_player.is_ai == true or owner_player.auto == true) or false
-  local expects_ui = route_key ~= "base_inline" and not _is_waiting_anim_phase(game) and local_owner and not owner_auto
+  local expects_ui = route_key ~= "base_inline" and not _is_input_blocked_phase(game) and local_owner and not owner_auto
   local open
 
   if route_key == "base_inline" then

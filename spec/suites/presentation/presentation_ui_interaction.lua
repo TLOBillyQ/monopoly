@@ -808,6 +808,53 @@ local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
   _assert_eq(runtime_state_local.is_ui_dirty(state), true, "ui sync should mark ui dirty when pending choice arrives")
 end
 
+local function _test_ui_sync_ports_defers_pending_choice_during_wait_landing_visual()
+  local ui_sync_ports = require("src.ui.ports.ui_sync")
+  local rebuilt = {
+    current_player_id = 1,
+    choice = { id = 43, kind = "market_buy", route_key = "market", owner_role_id = 1, options = { { id = 1, label = "A" } } },
+    market = { choice_id = 43 },
+  }
+  local state = {
+    ui = ui_view.build_ui_state(),
+    ui_model = rebuilt,
+    local_actor_role_id = 1,
+  }
+  local game = {
+    turn = {
+      phase = "wait_landing_visual",
+      current_player_index = 1,
+    },
+    players = {
+      [1] = { id = 1, name = "P1", auto = false, is_ai = false },
+    },
+  }
+  local opened = 0
+
+  function game:find_player_by_id(player_id)
+    return self.players[player_id]
+  end
+
+  _with_patches({
+    { target = require("src.ui.ports.ui_sync.model"), key = "build_model", value = function()
+      return rebuilt
+    end },
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function()
+      opened = opened + 1
+    end },
+  }, function()
+    ui_sync_ports.build({
+      get_ui_state = function(current_state)
+        return current_state.ui
+      end,
+      log_once = function() end,
+      build_log_prefix = function() return "[test]" end,
+    }).on_pending_choice(game, state, rebuilt.choice)
+  end)
+
+  _assert_eq(opened, 0, "on_pending_choice should defer market modal during wait_landing_visual")
+end
+
 local function _test_event_log_view_global_and_role_paths_preserve_state()
   local event_log_view = require("src.ui.coord.event_log_view")
   local runtime_ui = require("src.ui.render.runtime_ui")
@@ -1165,6 +1212,10 @@ return {
     { name = "_test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback", run = _test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback },
     { name = "_test_ui_event_state_base_screen_active_requires_modal_free_ui", run = _test_ui_event_state_base_screen_active_requires_modal_free_ui },
     { name = "_test_ui_sync_ports_rebuilds_model_before_reopening_choice", run = _test_ui_sync_ports_rebuilds_model_before_reopening_choice },
+    {
+      name = "_test_ui_sync_ports_defers_pending_choice_during_wait_landing_visual",
+      run = _test_ui_sync_ports_defers_pending_choice_during_wait_landing_visual,
+    },
     { name = "_test_event_log_view_global_and_role_paths_preserve_state", run = _test_event_log_view_global_and_role_paths_preserve_state },
     { name = "_test_actor_context_and_host_runtime_fallbacks", run = _test_actor_context_and_host_runtime_fallbacks },
     { name = "_test_raycast_pick_with_tries_multiple_apis_in_order", run = _test_raycast_pick_with_tries_multiple_apis_in_order },

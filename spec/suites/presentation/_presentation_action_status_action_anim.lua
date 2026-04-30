@@ -398,6 +398,67 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   _assert_eq(opened, 0, "wait_move_anim should defer opening choice modal")
 end
 
+local function _test_ui_sync_defers_choice_modal_during_wait_landing_visual()
+  local ui_view_service = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
+  local ui_model_sync = require("src.ui.ports.ui_sync.model")
+  local opened = 0
+  local game = {
+    turn = {
+      phase = "wait_landing_visual",
+      current_player_index = 1,
+      turn_count = 1,
+      pending_choice = {
+        id = 10,
+        kind = "market_buy",
+        route_key = "market",
+        title = "黑市",
+        body_lines = { "A" },
+        options = { { id = 1, label = "A" } },
+        allow_cancel = true,
+        cancel_label = "取消",
+      },
+    },
+    players = {
+      [1] = { id = 1, name = "P1", cash = 0, inventory = { items = {} }, eliminated = false },
+    },
+  }
+  local state = {
+    ui = ui_view_service.build_ui_state(),
+    ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
+    ui_dirty = true,
+    ui_model = nil,
+  }
+  _with_patches({
+    { target = ui_view_service, key = "render", value = function() end },
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function()
+      opened = opened + 1
+    end },
+    { target = ui_model, key = "build", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = { id = 10, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        market = { choice_id = 10, options = { { id = 1, label = "A" } }, allow_cancel = true },
+      }
+    end },
+    { target = ui_model, key = "update", value = function()
+      return {
+        panel = { turn_label = "" },
+        board = {},
+        choice = { id = 10, kind = "market_buy", route_key = "market", options = { { id = 1, label = "A" } }, allow_cancel = true },
+        market = { choice_id = 10, options = { { id = 1, label = "A" } }, allow_cancel = true },
+      }
+    end },
+  }, function()
+    ui_model_sync.refresh_from_dirty(game, state, { any = true, turn = true }, {
+      log_once = function() end,
+      build_log_prefix = function() return "[test]" end,
+    })
+  end)
+  _assert_eq(opened, 0, "wait_landing_visual should defer opening choice modal")
+end
+
 local function _make_unit(initial_count)
   local unit = {
     count = initial_count or 0,
@@ -614,6 +675,10 @@ return {
     { name = "_test_ui_sync_defers_choice_modal_during_wait_action_anim", run = _test_ui_sync_defers_choice_modal_during_wait_action_anim },
     { name = "_test_ui_sync_opens_choice_modal_after_wait_action_anim", run = _test_ui_sync_opens_choice_modal_after_wait_action_anim },
     { name = "_test_ui_sync_defers_choice_modal_during_wait_move_anim", run = _test_ui_sync_defers_choice_modal_during_wait_move_anim },
+    {
+      name = "_test_ui_sync_defers_choice_modal_during_wait_landing_visual",
+      run = _test_ui_sync_defers_choice_modal_during_wait_landing_visual,
+    },
     { name = "_test_role_control_lock_add_remove_owned_only", run = _test_role_control_lock_add_remove_owned_only },
     { name = "_test_role_control_lock_unit_swap_release_old_and_lock_new", run = _test_role_control_lock_unit_swap_release_old_and_lock_new },
     { name = "_test_gameplay_loop_full_turn_lock_toggle", run = _test_gameplay_loop_full_turn_lock_toggle },
