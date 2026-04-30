@@ -1,22 +1,29 @@
 # 目录边界约定
 
-> **See also**：架构治理路线图 → [`governance_roadmap.md`](governance_roadmap.md)（物理目录与逻辑层错位、6 条 exception 治理动作）
+> **See also**：架构治理路线图 → [`governance_roadmap.md`](governance_roadmap.md)（10 → 7 层 + foundation 基座的对齐债务）；架构决策 → [`adr/0001-seven-layer-with-foundation.md`](adr/0001-seven-layer-with-foundation.md)（七层模型与各层职责）；分层模型 → [`layer-model.md`](layer-model.md)。
 
 ## 目录职责
 
 | 目录 | 职责 | 不允许 |
 |------|------|--------|
-| `src/app` | 装配：拼接运行时端口、bootstrap | — |
-| `src/core` | 跨玩法共享：日志、数值工具、配置访问、runtime 广义契约 | 直读 Eggy 全局对象；UI 节点或支付面板逻辑 |
+| `src/app` | 装配：拼接运行时端口、bootstrap、game_state class-level mixin 安装 | — |
+| `src/foundation` | 横切基础设施基座：log、lang、identity、events、ports、coordination | 直读 Eggy 全局对象；UI 节点或支付面板逻辑；依赖任何上层 |
 | `src/turn` | 用例编排：回合推进、意图分发、输入校验、输出端口发射 | 操作 UI 细节或宿主运行时对象 |
-| `src/rules` | 玩法规则：黑市、道具、地块、机会卡、移动、破产、胜负 | UI 节点名、Canvas 切换、宿主 API 调用 |
+| `src/rules` | 玩法规则：黑市、道具、地块、机会卡、移动、破产、胜负、choice 注册与 resolve | UI 节点名、Canvas 切换、宿主 API 调用 |
 | `src/computer` | 中性 AI 策略：自动出牌、目标选择、自动 choice 决策 | 回合调度、宿主 API |
+| `src/state` | L7 状态层：游戏根对象、玩家持久数据、棋盘数据、回合状态、视觉冻结-释放打包（`visual_hold/`）、UI runtime 数据访问 | 依赖 player/rules/turn/ui/host/app（任何上层） |
+| `src/config` | L7 配置层：内容（地图/瓷砖/集市）、玩法常量（timing/event_kinds 等）、choice contract / route_policy | 依赖任何上层 |
 | `src/turn/output` | 回合输出适配：intent_dispatcher、state_adapter | 承接业务规则 |
-| `src/host` | 宿主细节：运行时上下文、事件桥、默认 runtime ports、显式 seam exception | — |
-| `src/ui` | 展示共享 seam：`state`、`landing_visual_hold`、`host_bridge` 这类窄桥接 | controller 装配、Canvas 渲染、输入路由 |
+| `src/host` | 宿主细节：运行时上下文、事件桥、默认 runtime ports、显式 seam exception（`global_aliases`） | — |
+| `src/ui` | 顶层 wrapper（`visual_hold`、`host_bridge`）+ 内部子视图（input/view/render/coord/state/ports/schema/utils） | controller 装配、Canvas 渲染、输入路由（这些下沉到各子视图） |
+| `src/ui/state` | 纯 UI 状态容器：runtime（runtime_state seam）、canvas_store、modal_state、visual_hold（顶层 wrapper） | 持有跨 render/coord/input 的反向引用 |
+| `src/ui/coord` | UI 协调器：actor_context / ui_state / ui_runtime / event_state / event_handlers / canvas_event_router 等 | — |
+| `src/ui/view` | 数据投影：role_context、各 slice、panel_builder | 写状态 |
+| `src/ui/render` | 渲染：board / market / move_anim / status3d / widgets / canvas_render_pipeline | 输入路由 |
 | `src/ui/ports` | 展示运行时装配：grouped ports、state callback、runtime event bridge、bootstrap | 游戏规则、宿主底层实现 |
 | `src/ui/schema` | 展示 schema：canvas 节点名、contract 常量、布局清单 | 写状态、宿主调用、输入路由 |
-| `src/ui` | 展示适配：input 映射、UI model 查询、Canvas 渲染、UI 事件桥接 | 根据 `choice.kind`/`meta`/商品配置自行推断业务语义 |
+| `src/ui/input` | 输入分发：canvas_route / dispatch / event_intents | 反向写状态（通过 ports 走） |
+| `src/ui/utils` | UI 内部工具：`with_client_role` 等 | — |
 
 `src/turn/output/` 属于 `turn`，不是独立 runtime 目录。其中 `intent_dispatcher`、`state_adapter` 只服务 turn use case 输出，不承载宿主能力。
 
@@ -33,7 +40,7 @@
 
 **三类 Port 目录：**
 
-- `src/core/ports/` — 宿主/运行时广义契约，gameplay 无关
+- `src/foundation/ports/` — 宿主/运行时广义契约，gameplay 无关（`runtime_ports`、`action_anim`）
 - `src/rules/ports/` — systems-facing 注入契约，允许业务名词
 - `src/turn/loop/ports.lua` — turn use case 局部 override，不是通用 Port 层
 
@@ -59,7 +66,7 @@
 - 展示共享 seam / UI runtime 窄桥接 → `src/ui`
 - 展示 runtime adapter / grouped ports 装配 → `src/ui/ports`
 - 宿主能力接入端口 → `src/app`；实现 → `src/host`
-- 宿主/运行时广义契约 → `src/core/ports/`
+- 宿主/运行时广义契约 → `src/foundation/ports/`
 - 玩法规则业务能力契约 → `src/rules/ports/`
 - 回合循环临时 override → `src/turn/loop/ports.lua`
 

@@ -1,6 +1,6 @@
 # 导读
 
-**蛋仔派对大富翁** — Lua 5.5，清洁架构十层，Eggy 宿主。按任务查文档，不预读目录树。
+**蛋仔派对大富翁** — Lua 5.5，清洁架构七层 + foundation 基座，Eggy 宿主。按任务查文档，不预读目录树。
 
 ---
 
@@ -9,6 +9,7 @@
 | 任务 | 文档 |
 |------|------|
 | 架构边界与目录 | `docs/architecture/boundaries.md` + `layer-model.md` |
+| 架构决策（七层 + foundation） | `docs/architecture/adr/0001-seven-layer-with-foundation.md` |
 | 架构治理路线图 | `docs/architecture/governance_roadmap.md` |
 | 测试车道与质量职责 | `docs/architecture/quality_map.md` |
 | 静态架构扫描 | `docs/architecture/arch_view.md` |
@@ -43,7 +44,7 @@
 ## 常驻规则
 
 - 命名 `snake_case`，类名 `CamelCase`。
-- `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.core.utils.number`）。
+- `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.foundation.lang.number`）。
 - `tools/` `tests/` 文件与进程操作统一用 `tools/shared/lib/common.lua`：
   - `common.run_command` / `common.ensure_dir`（禁 `os.execute` / `io.popen`）
   - `common.is_windows()` / `common.is_macos()`（禁解析 `package.config`）

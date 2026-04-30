@@ -1,8 +1,15 @@
 # 架构治理路线图
 
+> **Status (2026-04-30)**：本路线图的多项决策已被 [`adr/0001-seven-layer-with-foundation.md`](adr/0001-seven-layer-with-foundation.md) 取代。
+> 取代项：§3.2.1 / §3.2.2 / §3.2.3 / §3.3 / §3.4（state 文件去向）；W4（state 迁移大半作废）；Chapter 5 exception 处置（按七层方案重做）。
+> 仍有效：§3.1 D2 决策（保留物理名，进一步收紧为"物理名 = 层名 = 组件名"）；W1 决策结构。
+> ADR 落地后路线图执行进度由 [`plan.md`](../../plan.md) 跟踪；Phase 0-8 全部完成。
+
+> **See also**：架构决策 → [`adr/0001-seven-layer-with-foundation.md`](adr/0001-seven-layer-with-foundation.md)；分层模型 → [`layer-model.md`](layer-model.md)；目录边界 → [`boundaries.md`](boundaries.md)。
+
 本文档记录 10 层架构模型与三个真源（物理目录名、`tools/quality/arch/config.json`、架构文档）之间的对齐债务，并为后续治理决策提供事实基线。目标读者：架构守门人、执行跨层重构的开发者、新增模块前需确认层归属的人。本文档不规划具体的代码搬迁 diff，不替读者裁决尚未达成共识的架构决策。
 
-> **当前决议（2026-04-30）**：目录对齐以物理目录名为准。`src/host/`、`src/ui/`、`src/computer/` 继续作为物理真源；本路线图后续执行按 Chapter 3.1 的 **D2** 路径推进，重点对齐 `layer-model.md`、`tools/quality/arch/config.json` 与物理目录的映射，不把目录改名作为本轮交付物。
+> **当前决议（2026-04-30）**：架构对齐以"物理目录名 = 逻辑层名 = arch 组件名"三方一致为目标。`src/host/`、`src/ui/`、`src/computer/` 继续作为物理真源；arch component 同步重命名为 `host` / `ui` / `computer`（不再叫 `infrastructure` / `presentation` / `ai`）；`runtime` component 拆分为独立的 `player` 与 `state`；`core` 组件 + 物理目录改名为 `foundation`。详见 ADR-0001。
 
 配套阅读顺序：`docs/architecture/layer-model.md` → `docs/architecture/boundaries.md` → 本文档 → `docs/architecture/health_signals.md`。
 

@@ -155,8 +155,8 @@ local function _test_config_classifies_runtime_game_and_ports()
 
   _assert_eq(
     architecture.modules["src.state.game_state"].component,
-    "runtime",
-    "state.game_state should be classified as runtime"
+    "state",
+    "state.game_state should be classified as state (post seven-layer + foundation rewrite)"
   )
   _assert_eq(
     architecture.modules["src.app"].component,
@@ -164,28 +164,28 @@ local function _test_config_classifies_runtime_game_and_ports()
     "app package should be classified as app"
   )
   _assert_eq(
-    architecture.modules["src.core.ports.runtime_ports"].abstract,
+    architecture.modules["src.foundation.ports.runtime_ports"].abstract,
     true,
-    "core ports should be marked abstract"
+    "foundation ports should be marked abstract"
   )
 end
 
 local function _test_projection_exposes_full_names_and_display_edges()
   local architecture = _snapshot_architecture()
-  local utils_view = architecture.views["core.utils"]
-  assert(utils_view ~= nil, "core.utils view should exist")
+  local lang_view = architecture.views["foundation.lang"]
+  assert(lang_view ~= nil, "foundation.lang view should exist")
 
   local number_node = nil
-  for _, node in ipairs(utils_view.nodes or {}) do
-    if node.module_id == "src.core.utils.number" then
+  for _, node in ipairs(lang_view.nodes or {}) do
+    if node.module_id == "src.foundation.lang.number" then
       number_node = node
       break
     end
   end
 
-  assert(number_node ~= nil, "core.utils view should contain number leaf")
+  assert(number_node ~= nil, "foundation.lang view should contain number leaf")
   _assert_eq(number_node.display_label, "number", "leaf display label should use source file basename")
-  _assert_eq(number_node.full_name, "core.utils.number", "leaf full name should strip top-level src prefix")
+  _assert_eq(number_node.full_name, "foundation.lang.number", "leaf full name should strip top-level src prefix")
   assert(#(architecture.views.root.display_edges or {}) > 0, "root view should expose routed display edges")
 end
 
@@ -200,7 +200,7 @@ local function _test_json_modules_are_self_contained()
   local common_source = _read_file("vendor/arch_view/arch_view/runtime/common.lua")
   local host_source = _read_file("vendor/arch_view/arch_view/runtime/host.lua")
   assert(common_source:find('require("shared.lib.common")', 1, true) == nil, "arch_view common should not depend on monopoly lib.common")
-  assert(host_source:find('src.core.utils.number', 1, true) == nil,
+  assert(host_source:find('src.foundation.lang.number', 1, true) == nil,
     "arch_view host runtime should not depend on monopoly src modules")
 end
 
