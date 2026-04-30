@@ -118,6 +118,7 @@ local function _sync_owner_visual(state, tile_unit, tile_id, board)
   end
   local tile = board:get_tile_by_id(tile_id)
   local owner_id = tile and tile.owner_id or nil
+  local level = tile and tile.level or 0
   local owner_name = nil
   if owner_id then
     local game = state and state.game or nil
@@ -126,7 +127,7 @@ local function _sync_owner_visual(state, tile_unit, tile_id, board)
       owner_name = player and player.name or nil
     end
   end
-  tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name)
+  tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name, level)
 end
 
 local function _sync_building_visual(state, scene, idx, board, tile_id, tile_unit)
