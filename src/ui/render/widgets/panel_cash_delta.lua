@@ -41,18 +41,44 @@ local function _clear_cash_delta_label(ui, index)
   _set_cash_delta_label(ui, index, "", false)
 end
 
-local function _schedule_hide_cash_delta(ui, index)
+local function _bump_token(ui, index)
   local token = (ui.player_cash_delta_hide_token_by_index[index] or 0) + 1
   ui.player_cash_delta_hide_token_by_index[index] = token
+  return token
+end
+
+local function _token_is_current(ui, index, token)
+  if not ui.player_cash_delta_hide_token_by_index then
+    return false
+  end
+  return ui.player_cash_delta_hide_token_by_index[index] == token
+end
+
+local function _schedule_hide_cash_delta(ui, index, token)
   runtime_ports.schedule(timing.panel_cash_delta_visible_seconds or 3.0, function()
-    if not ui.player_cash_delta_hide_token_by_index then
-      return
-    end
-    if ui.player_cash_delta_hide_token_by_index[index] ~= token then
+    if not _token_is_current(ui, index, token) then
       return
     end
     _clear_cash_delta_label(ui, index)
   end)
+end
+
+local function _schedule_show_cash_delta(ui, index, text, token)
+  local show_delay = timing.panel_cash_delta_show_delay_seconds or 0.0
+  local function _do_show()
+    if not _token_is_current(ui, index, token) then
+      return
+    end
+    local shown = _set_cash_delta_label(ui, index, text, true)
+    if shown then
+      _schedule_hide_cash_delta(ui, index, token)
+    end
+  end
+  if show_delay <= 0 then
+    _do_show()
+    return
+  end
+  runtime_ports.schedule(show_delay, _do_show)
 end
 
 function panel_cash_delta.ensure_state(ui)
@@ -68,11 +94,13 @@ function panel_cash_delta.refresh_cash_delta_label(ui, index, row)
   local cash_value = _resolve_integer_field(row, "cash_value")
   local prev_cash_value = ui.player_cash_value_cache_by_index[index]
   if cash_value == nil then
+    _bump_token(ui, index)
     _clear_cash_delta_label(ui, index)
     ui.player_cash_value_cache_by_index[index] = nil
     return
   end
   if prev_cash_value == nil then
+    _bump_token(ui, index)
     _clear_cash_delta_label(ui, index)
     ui.player_cash_value_cache_by_index[index] = cash_value
     return
@@ -80,6 +108,7 @@ function panel_cash_delta.refresh_cash_delta_label(ui, index, row)
   local delta = cash_value - prev_cash_value
   ui.player_cash_value_cache_by_index[index] = cash_value
   if delta == 0 then
+    _bump_token(ui, index)
     _clear_cash_delta_label(ui, index)
     return
   end
@@ -89,10 +118,9 @@ function panel_cash_delta.refresh_cash_delta_label(ui, index, row)
     delta = -delta
   end
   local text = sign .. number_utils.format_integer_part(delta)
-  local shown = _set_cash_delta_label(ui, index, text, true)
-  if shown then
-    _schedule_hide_cash_delta(ui, index)
-  end
+  local token = _bump_token(ui, index)
+  _clear_cash_delta_label(ui, index)
+  _schedule_show_cash_delta(ui, index, text, token)
 end
 
 return panel_cash_delta
