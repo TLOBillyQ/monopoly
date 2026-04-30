@@ -39,13 +39,6 @@
       "name": "runtime_state_bridges"
     },
     {
-      "component": "systems",
-      "match": [
-        "^src%.player%.choices%..+"
-      ],
-      "name": "systems_choice_bridges"
-    },
-    {
       "component": "core",
       "match": [
         "^src%.state%.deferred_dirty$",
