@@ -1,5 +1,14 @@
 local number_utils = require("src.foundation.lang.number")
 
+local _presenter_warned = false
+
+local function _warn(...)
+  local ok, log = pcall(require, "src.foundation.log.logger")
+  if ok and type(log) == "table" and type(log.warn) == "function" then
+    log.warn(...)
+  end
+end
+
 local tip_queue = {
   pending = {},
   active_tip = nil,
@@ -91,9 +100,16 @@ end
 local function _present_tip(tip)
   local presenter = tip_queue.runtime.presenter
   if type(presenter) ~= "function" then
+    if not _presenter_warned then
+      _presenter_warned = true
+      _warn("[tip_queue]", "presenter not registered — tips will be dropped until configure_runtime is called")
+    end
     return false
   end
-  local ok = pcall(presenter, tip.text, tip.duration, tip)
+  local ok, err = pcall(presenter, tip.text, tip.duration, tip)
+  if not ok then
+    _warn("[tip_queue]", "presenter raised error:", tostring(err), "| text:", tostring(tip.text))
+  end
   return ok
 end
 
@@ -179,14 +195,17 @@ function tip_queue.configure_runtime(adapter)
   if adapter.presenter ~= nil then
     assert(type(adapter.presenter) == "function", "tip presenter must be function or nil")
     tip_queue.runtime.presenter = adapter.presenter
+    _presenter_warned = false
   end
   if adapter.show_tip ~= nil then
     assert(type(adapter.show_tip) == "function", "tip presenter must be function or nil")
     tip_queue.runtime.presenter = adapter.show_tip
+    _presenter_warned = false
   end
   if adapter.tip_presenter ~= nil then
     assert(type(adapter.tip_presenter) == "function", "tip presenter must be function or nil")
     tip_queue.runtime.presenter = adapter.tip_presenter
+    _presenter_warned = false
   end
   if adapter.clear_scheduler == true then
     tip_queue.runtime.scheduler = nil
@@ -246,6 +265,17 @@ function tip_queue.clear()
   tip_queue.pending = {}
   tip_queue.active_tip = nil
   tip_queue.epoch = tip_queue.epoch + 1
+end
+
+function tip_queue.snapshot()
+  return {
+    has_presenter = type(tip_queue.runtime.presenter) == "function",
+    has_scheduler = type(tip_queue.runtime.scheduler) == "function",
+    pending_count = #tip_queue.pending,
+    active_text = tip_queue.active_tip and tip_queue.active_tip.text or nil,
+    epoch = tip_queue.epoch,
+    test_mode = tip_queue.runtime.test_mode,
+  }
 end
 
 return tip_queue

@@ -14,6 +14,7 @@ local M = {}
 local initialized = false
 local current_game_ref = { nil }
 local state = nil
+local _globalapi_missing_warned = false
 
 local function _is_test_mode_enabled()
   if type(logger.is_test_mode) ~= "function" then
@@ -74,10 +75,15 @@ function M.init()
 
   tip_queue.configure_runtime({
     presenter = function(text, duration)
-      if GlobalAPI and type(GlobalAPI.show_tips) == "function" then
-        return GlobalAPI.show_tips(text, duration)
+      if not (GlobalAPI and type(GlobalAPI.show_tips) == "function") then
+        if not _globalapi_missing_warned then
+          _globalapi_missing_warned = true
+          logger.warn("[app]", "GlobalAPI.show_tips not available — tips will be dropped until host is ready")
+        end
+        return false
       end
-      return false
+      _globalapi_missing_warned = false
+      return GlobalAPI.show_tips(text, duration)
     end,
     scheduler = function(delay, fn)
       if type(SetTimeOut) == "function" then
