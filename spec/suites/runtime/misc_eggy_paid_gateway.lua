@@ -10,7 +10,7 @@ local function _test_eggy_paid_gateway_callback_missing_goods_id()
 
   with_patches({
     {
-      target = require("src.core.utils.logger"),
+      target = require("src.foundation.log.logger"),
       key = "warn",
       value = function(msg)
         warned = msg
@@ -31,7 +31,7 @@ local function _test_eggy_paid_gateway_callback_empty_goods_id()
 
   with_patches({
     {
-      target = require("src.core.utils.logger"),
+      target = require("src.foundation.log.logger"),
       key = "warn",
       value = function(msg)
         warned = msg
@@ -52,7 +52,7 @@ local function _test_eggy_paid_gateway_callback_missing_pending()
 
   with_patches({
     {
-      target = require("src.core.utils.logger"),
+      target = require("src.foundation.log.logger"),
       key = "warn",
       value = function(msg, ctx1, ctx2)
         warned = msg .. " " .. tostring(ctx1) .. " " .. tostring(ctx2)
@@ -79,7 +79,7 @@ local function _test_eggy_paid_gateway_callback_missing_player()
 
   with_patches({
     {
-      target = require("src.core.utils.logger"),
+      target = require("src.foundation.log.logger"),
       key = "warn",
       value = function(msg, ctx)
         warned = msg .. " " .. tostring(ctx)
@@ -114,7 +114,7 @@ local function _test_eggy_paid_gateway_callback_missing_entry()
       end,
     },
     {
-      target = require("src.core.utils.logger"),
+      target = require("src.foundation.log.logger"),
       key = "warn",
       value = function(msg, ctx)
         warned = msg .. " " .. tostring(ctx)
@@ -219,7 +219,7 @@ local function _test_eggy_paid_gateway_start_missing_purchase_api()
       },
     },
     {
-      target = require("src.core.ports.runtime_ports"),
+      target = require("src.foundation.ports.runtime_ports"),
       key = "resolve_role",
       value = function()
         return {
@@ -262,7 +262,7 @@ local function _test_eggy_paid_gateway_start_uses_zero_arity_role_id_and_dot_pan
       },
     },
     {
-      target = require("src.core.ports.runtime_ports"),
+      target = require("src.foundation.ports.runtime_ports"),
       key = "resolve_role",
       value = function(role_id)
         if role_id ~= player.id then

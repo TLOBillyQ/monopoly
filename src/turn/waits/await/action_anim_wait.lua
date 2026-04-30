@@ -1,5 +1,5 @@
 local wait_callbacks = require("src.turn.waits.callback_registry")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local M = {}
 

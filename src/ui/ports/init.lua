@@ -11,16 +11,16 @@ local actor_context_ports = require("src.ui.ports.actor_context")
 local presentation_ports = {}
 local boundary_contract = {
   state_seam_modules = {
-    runtime_state = "src.ui.state",
-    landing_visual_hold = "src.ui.landing_visual_hold",
+    runtime_state = "src.ui.state.runtime",
+    landing_visual_hold = "src.ui.visual_hold",
     host_runtime = "src.ui.host_bridge",
   },
   import_allowlists = {
     runtime_state = {
-      "src.ui.state",
+      "src.ui.state.runtime",
     },
     landing_visual_hold = {
-      "src.ui.landing_visual_hold",
+      "src.ui.visual_hold",
     },
     host_runtime = {
       "src.ui.host_bridge",
@@ -42,8 +42,8 @@ local boundary_contract = {
        "src.ui.render.market.controls",
       "src.ui.render.status3d",
        "src.ui.render.anim.unit_overlay",
-      "src.ui.wid.panel_presenter",
-      "src.ui.wid.turn_effects",
+      "src.ui.render.widgets.panel_presenter",
+      "src.ui.render.widgets.turn_effects",
       "src.ui.ports.anim",
     },
     gameplay_loop_ports = {
@@ -69,9 +69,9 @@ local boundary_contract = {
       "src.turn.loop",
       "src.turn.loop.runtime",
       "src.turn.actions.validator",
-      "src.ui.ctl.event_handlers",
-      "src.ui.ctl.modal",
-      "src.ui.ctl.target_choice_effects",
+      "src.ui.coord.event_handlers",
+      "src.ui.coord.modal",
+      "src.ui.coord.target_choice_effects",
        "src.ui.render.anim.overlay_compute",
        "src.ui.render.anim.tip_text",
       "src.ui.render.board.startup_render",

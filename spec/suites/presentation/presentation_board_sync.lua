@@ -208,8 +208,8 @@ end
 
 local function _test_board_refresh_stops_vehicle_before_vehicle_set_position()
   local board_view = require("src.ui.render.board")
-  local runtime_ports = require("src.core.ports.runtime_ports")
-  local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
+  local gameplay_read_port = require("src.ui.view.gameplay_read_port")
   local env = _build_board_refresh_test_env({ seat_id = 4001 })
   local vehicle_helper = {
     emit_vehicle_stop = function(role_id)
@@ -384,7 +384,7 @@ end
 
 local function _test_board_refresh_synthetic_actor_stops_force_move_before_snap()
   local board_view = require("src.ui.render.board")
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local env = _build_board_refresh_test_env({ position = 2 })
   env.state.board_scene._move_anim_runtime = {
     active_token_by_player_id = {},
@@ -423,7 +423,7 @@ end
 
 local function _test_board_refresh_synthetic_actor_matches_regular_stop_flow()
   local board_view = require("src.ui.render.board")
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local env = _build_board_refresh_test_env({ position = 2 })
   env.state.board_scene._move_anim_runtime = {
     active_token_by_player_id = {},
@@ -463,7 +463,7 @@ end
 
 local function _test_board_refresh_replays_pending_sync_with_synthetic_ai_stop_before_snap()
   local board_view = require("src.ui.render.board")
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local env = _build_board_refresh_test_env({
     phase = "wait_move_anim",
     move_anim = { seq = 1 },
@@ -513,7 +513,7 @@ end
 
 local function _test_board_scene_init_binds_units_and_target_pick_metadata()
   local board_scene = require("src.ui.render.board_scene")
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local state = {}
   local players = {
     { id = 1 },
@@ -637,7 +637,7 @@ local function _test_player_units_resolve_roles_by_name_and_role_id()
   local log_calls = {}
 
   _with_patches({
-    { target = require("src.core.ports.runtime_ports"), key = "resolve_roles", value = function()
+    { target = require("src.foundation.ports.runtime_ports"), key = "resolve_roles", value = function()
       return { resolved_role }
     end },
   }, function()
@@ -662,10 +662,10 @@ local function _test_player_units_falls_back_to_resolve_role_when_roles_list_mis
   }
 
   _with_patches({
-    { target = require("src.core.ports.runtime_ports"), key = "resolve_roles", value = function()
+    { target = require("src.foundation.ports.runtime_ports"), key = "resolve_roles", value = function()
       return {}
     end },
-    { target = require("src.core.ports.runtime_ports"), key = "resolve_role", value = function(player_id)
+    { target = require("src.foundation.ports.runtime_ports"), key = "resolve_role", value = function(player_id)
       if player_id == 2 then
         return {
           get_roleid = function()

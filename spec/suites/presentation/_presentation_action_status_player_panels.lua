@@ -6,8 +6,8 @@ local timing = require("src.config.gameplay.timing")
 
 local function _new_cash_delta_presenter_env(opts)
   opts = opts or {}
-  local presenter = require("src.ui.wid.panel_presenter")
-  local number_utils = require("src.core.utils.number")
+  local presenter = require("src.ui.render.widgets.panel_presenter")
+  local number_utils = require("src.foundation.lang.number")
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
     ui = {
@@ -105,7 +105,7 @@ local function _new_cash_delta_presenter_env(opts)
 end
 
 local function _test_panel_avatar_uses_native_size_path()
-  local presenter = require("src.ui.wid.panel_presenter")
+  local presenter = require("src.ui.render.widgets.panel_presenter")
   local native_size_calls = 0
   local client_role = { stale = true }
   local state = {
@@ -166,7 +166,7 @@ local function _test_panel_avatar_uses_native_size_path()
 end
 
 local function _test_panel_cash_delta_shows_negative_and_auto_hides()
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 
@@ -192,7 +192,7 @@ local function _test_panel_cash_delta_shows_negative_and_auto_hides()
 end
 
 local function _test_panel_cash_delta_shows_positive_and_auto_hides()
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 
@@ -216,7 +216,7 @@ local function _test_panel_cash_delta_shows_positive_and_auto_hides()
 end
 
 local function _test_panel_cash_delta_keeps_latest_when_changes_are_continuous()
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 
@@ -245,7 +245,7 @@ local function _test_panel_cash_delta_keeps_latest_when_changes_are_continuous()
 end
 
 local function _test_panel_cash_delta_hides_when_value_unchanged()
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local env = _new_cash_delta_presenter_env()
   local scheduled = {}
 
@@ -266,7 +266,7 @@ local function _test_panel_cash_delta_hides_when_value_unchanged()
 end
 
 local function _test_panel_cash_delta_missing_node_is_safe()
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   local env = _new_cash_delta_presenter_env({ missing_delta_node = true })
   local scheduled = {}
   local ok, err = pcall(function()
@@ -319,7 +319,7 @@ local function _test_panel_crown_excludes_eliminated_players()
 end
 
 local function _test_panel_apply_player_colors_updates_image_and_labels()
-  local panel_player_slots = require("src.ui.wid.panel_player_slots")
+  local panel_player_slots = require("src.ui.render.widgets.panel_player_slots")
   local image_calls = {}
   local label_calls = {}
 
@@ -350,7 +350,7 @@ local function _test_panel_apply_player_colors_updates_image_and_labels()
 end
 
 local function _test_panel_apply_player_colors_skips_when_role_has_no_color_hooks()
-  local panel_player_slots = require("src.ui.wid.panel_player_slots")
+  local panel_player_slots = require("src.ui.render.widgets.panel_player_slots")
   local queried = 0
 
   panel_player_slots.apply_player_colors({}, {

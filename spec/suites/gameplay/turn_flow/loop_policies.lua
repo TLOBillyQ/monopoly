@@ -786,7 +786,7 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
   local state = nil
   local resolve_calls = 0
   local created_opts = nil
-  local runtime_ports = require("src.core.ports.runtime_ports")
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
   support.with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function()
       resolve_calls = resolve_calls + 1

@@ -1,11 +1,11 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local context = require("src.rules.market.query.context")
 local market_feedback = require("src.rules.market.choice.feedback")
 local purchase_policy = require("src.rules.market.purchase.policy")
 local local_purchase = require("src.rules.market.purchase.local_purchase")
 local paid_purchase_callback = require("src.rules.market.purchase.paid_purchase_callback")
 local paid_purchase_gateway = require("src.rules.market.paid_purchase_port")
-local number_utils = require("src.core.utils.number")
+local number_utils = require("src.foundation.lang.number")
 
 local purchase = {}
 

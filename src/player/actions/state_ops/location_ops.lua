@@ -1,12 +1,12 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local facing_policy = require("src.rules.board.facing_policy")
 local common = require("src.player.actions.state_ops.common")
-local number_utils = require("src.core.utils.number")
-local role_id_utils = require("src.core.utils.role_id")
-local monopoly_event = require("src.core.events")
+local number_utils = require("src.foundation.lang.number")
+local role_id_utils = require("src.foundation.identity.role_id")
+local monopoly_event = require("src.foundation.events")
 
 local location_ops = {}
 

@@ -2,11 +2,11 @@ local facing_policy = require("src.rules.board.facing_policy")
 local constants = require("src.config.content.constants")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
-local monopoly_event = require("src.core.events")
-local number_utils = require("src.core.utils.number")
+local monopoly_event = require("src.foundation.events")
+local number_utils = require("src.foundation.lang.number")
 local inventory = require("src.rules.items.inventory")
 local mine_effect = require("src.rules.effects.mine")
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 
 local movement = {}
 

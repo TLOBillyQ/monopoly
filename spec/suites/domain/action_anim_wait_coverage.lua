@@ -1,5 +1,5 @@
 local action_anim_wait = require("src.turn.waits.await.action_anim_wait")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local _M = action_anim_wait._M_test
 

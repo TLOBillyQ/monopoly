@@ -1,10 +1,10 @@
 local inventory = require("src.rules.items.inventory")
 local context = require("src.rules.market.query.context")
-local monopoly_event = require("src.core.events")
-local number_utils = require("src.core.utils.number")
+local monopoly_event = require("src.foundation.events")
+local number_utils = require("src.foundation.lang.number")
 local runtime_refs = require("src.config.content.runtime_refs")
-local runtime_ports = require("src.core.ports.runtime_ports")
-local logger = require("src.core.utils.logger")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local logger = require("src.foundation.log.logger")
 
 local fulfillment = {}
 local _emit_event = monopoly_event.emit

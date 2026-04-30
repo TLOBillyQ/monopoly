@@ -5,7 +5,7 @@
 
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 local post_effects = require("src.rules.items.post_effects")
 local item_ids = require("src.config.gameplay.item_ids")
 

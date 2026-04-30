@@ -13,35 +13,35 @@ local constants = support.constants
 local choice_resolver = support.choice_resolver
 local gameplay_loop = support.gameplay_loop
 local turn_move = support.turn_move
-local event_handlers = require("src.ui.ctl.event_handlers")
+local event_handlers = require("src.ui.coord.event_handlers")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
 local runtime_port = require("src.ui.render.runtime_ui")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.ctl.choice_screens.openers")
+local choice_openers = require("src.ui.coord.choice_screens.openers")
 local market_view = require("src.ui.render.market")
 local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.ctl.canvas_event_router")
-local ui_view = require("src.ui.ctl.ui_runtime")
-local modal_presenter = require("src.ui.ctl.modal")
+local canvas_event_router = require("src.ui.coord.canvas_event_router")
+local ui_view = require("src.ui.coord.ui_runtime")
+local modal_presenter = require("src.ui.coord.modal")
 local gameplay_rules = require("src.config.gameplay.debug_flags")
 local ui_status_3d_layer = require("src.ui.render.status3d")
 local action_anim = require("src.ui.render.action_anim")
 local move_anim = require("src.ui.render.move_anim")
 local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.wid.turn_effects")
-local popup_renderer = require("src.ui.ctl.popup")
-local market_modal_renderer = require("src.ui.ctl.market")
+local turn_effects = require("src.ui.render.widgets.turn_effects")
+local popup_renderer = require("src.ui.coord.popup")
+local market_modal_renderer = require("src.ui.coord.market")
 local event_log_ports_module = require("src.ui.ports.event_log")
 local role_control_lock_policy = require("src.ui.input.role_control_lock")
 local ui_touch_policy = require("src.ui.input.touch")
 local ui_choice_route_policy = require("src.ui.input.choice_route")
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local host_runtime = require("src.host")
 local runtime_state = require("src.state.runtime_state")
-local target_choice_effects = require("src.ui.ctl.target_choice_effects")
+local target_choice_effects = require("src.ui.coord.target_choice_effects")
 local raycast = require("src.host.raycast")
 local vec3 = require("fixtures.vec3")
 
@@ -529,7 +529,7 @@ local function _test_ui_event_router_turn_bound_actor_prefers_current_player_ove
 end
 
 local function _test_local_actor_resolver_turn_bound_prefers_client_role_over_current_player()
-  local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
+  local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
   local client_role = {
     get_roleid = function()
       return 3
@@ -752,7 +752,7 @@ local function _test_raycast_get_unit_id_uses_lua_api_then_unit_method_fallback(
 end
 
 local function _test_ui_event_state_base_screen_active_requires_modal_free_ui()
-  local ui_event_state = require("src.ui.ctl.event_state")
+  local ui_event_state = require("src.ui.coord.event_state")
   _assert_eq(ui_event_state.is_base_screen_active({ ui = {} }), true,
     "base screen should be active when no modal flags are set")
   _assert_eq(ui_event_state.is_base_screen_active({ ui = { market_active = true } }), false,
@@ -788,7 +788,7 @@ local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
     { target = require("src.ui.ports.ui_sync.model"), key = "build_model", value = function()
       return rebuilt
     end },
-    { target = require("src.ui.ctl.modal"), key = "open_choice_modal", value = function(_, choice, market)
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function(_, choice, market)
       opened_choice = choice
       opened_market = market
     end },
@@ -809,7 +809,7 @@ local function _test_ui_sync_ports_rebuilds_model_before_reopening_choice()
 end
 
 local function _test_event_log_view_global_and_role_paths_preserve_state()
-  local event_log_view = require("src.ui.ctl.event_log_view")
+  local event_log_view = require("src.ui.coord.event_log_view")
   local runtime_ui = require("src.ui.render.runtime_ui")
   local state = {
     ui = ui_view.build_ui_state(),
@@ -853,7 +853,7 @@ local function _test_event_log_view_global_and_role_paths_preserve_state()
 end
 
 local function _test_actor_context_and_host_runtime_fallbacks()
-  local actor_context = require("src.ui.ctl.actor_context")
+  local actor_context = require("src.ui.coord.actor_context")
   local host_runtime_local = require("src.host")
   local runtime_ui = require("src.ui.render.runtime_ui")
   local runtime_context = require("src.host.context")

@@ -7,8 +7,8 @@ local _wrap_ui_refs = P.wrap_ui_refs
 local _ui_runtime = P.ui_runtime
 local market_view = require("src.ui.render.market")
 local market_layout = require("src.ui.schema.market_layout")
-local canvas_event_router = require("src.ui.ctl.canvas_event_router")
-local ui_view = require("src.ui.ctl.ui_runtime")
+local canvas_event_router = require("src.ui.coord.canvas_event_router")
+local ui_view = require("src.ui.coord.ui_runtime")
 local market_cfg = require("src.config.content.market")
 
 local function _build_market_state(product_ids)
@@ -459,7 +459,7 @@ local function _test_market_view_page_arrows_visibility_follows_page_count()
 end
 
 local function _test_ui_model_market_payload_prefers_explicit_choice_fields()
-  local ui_model = require("src.ui.pres")
+  local ui_model = require("src.ui.view")
   local g = _new_game()
   local current_player = g:current_player()
   g.turn.pending_choice = {
@@ -508,10 +508,10 @@ local function _test_ui_model_market_payload_prefers_explicit_choice_fields()
 end
 
 local function _test_modal_presenter_market_same_choice_id_still_refreshes_market_panel()
-  local modal_presenter = require("src.ui.ctl.modal")
-  local market_presenter = require("src.ui.ctl.market")
-  local target_choice_effects_local = require("src.ui.ctl.target_choice_effects")
-  local canvas_store = require("src.ui.stores.canvas_store")
+  local modal_presenter = require("src.ui.coord.modal")
+  local market_presenter = require("src.ui.coord.market")
+  local target_choice_effects_local = require("src.ui.coord.target_choice_effects")
+  local canvas_store = require("src.ui.state.canvas_store")
 
   local opened = 0
   local state = {

@@ -1,5 +1,5 @@
 local auto_play_port = require("src.rules.ports.auto_play")
-local monopoly_event = require("src.core.events")
+local monopoly_event = require("src.foundation.events")
 local query = require("src.rules.market.query.eligibility")
 local purchase = require("src.rules.market.purchase.core")
 local context = require("src.rules.market.query.context")

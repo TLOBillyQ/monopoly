@@ -1,7 +1,7 @@
 -- Tests for asset_handlers (CRAP hotspots with low coverage)
 local function _test_asset_handlers_destroy_buildings_on_path()
    local asset_handlers = require("src.rules.chance.handlers.asset")
-   local monopoly_event = require("src.core.events")
+   local monopoly_event = require("src.foundation.events")
   local events = {}
   local common = {
     emit_event = function(_, payload)
@@ -38,7 +38,7 @@ end
 
 local function _test_asset_handlers_reset_tiles_on_path()
    local asset_handlers = require("src.rules.chance.handlers.asset")
-   local monopoly_event = require("src.core.events")
+   local monopoly_event = require("src.foundation.events")
   local events = {}
   local tile_state_calls = {}
   local common = {
@@ -101,8 +101,8 @@ local _asset_handlers_final_tests = {
       end,
        dependencies = function()
          return {
-           monopoly_event = require("src.core.events"),
-           number_utils = require("src.core.utils.number"),
+           monopoly_event = require("src.foundation.events"),
+           number_utils = require("src.foundation.lang.number"),
          }
        end,
      }
@@ -141,8 +141,8 @@ local _asset_handlers_final_tests = {
       end,
        dependencies = function()
          return {
-           monopoly_event = require("src.core.events"),
-           number_utils = require("src.core.utils.number"),
+           monopoly_event = require("src.foundation.events"),
+           number_utils = require("src.foundation.lang.number"),
          }
        end,
      }
@@ -178,8 +178,8 @@ local _asset_handlers_final_tests = {
       end,
        dependencies = function()
          return {
-           monopoly_event = require("src.core.events"),
-           number_utils = require("src.core.utils.number"),
+           monopoly_event = require("src.foundation.events"),
+           number_utils = require("src.foundation.lang.number"),
          }
        end,
      }

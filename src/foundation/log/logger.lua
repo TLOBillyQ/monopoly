@@ -1,5 +1,5 @@
-local tip_queue = require("src.core.utils.tip_queue")
-local log_formatter = require("src.core.utils.log_formatter")
+local tip_queue = require("src.foundation.coordination.tip_queue")
+local log_formatter = require("src.foundation.log.formatter")
 
 local logger = {
   entries = {},

@@ -2,7 +2,7 @@ local market_layout = require("src.ui.schema.market_layout")
 local ui_controls = require("src.ui.render.support.ui_controls")
 local items_cfg = require("src.config.content.items")
 local market_catalog = require("src.config.content.market_catalog")
-local number_utils = require("src.core.utils.number")
+local number_utils = require("src.foundation.lang.number")
 local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 local runtime_ui = require("src.ui.render.runtime_ui")
 

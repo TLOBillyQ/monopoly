@@ -180,7 +180,7 @@ local function _test_choice_timeout_supports_explicit_timeout_strategy()
     { target = dispatch, key = "dispatch_action", value = function(_, _, action)
       dispatched = action
     end },
-    { target = require("src.ui.ctl.modal"), key = "close_choice_modal", value = function() end },
+    { target = require("src.ui.coord.modal"), key = "close_choice_modal", value = function() end },
   }, function()
     tick_timeout.step_choice_timeout(game, state, 0.11, {
       on_pending_choice = function() end,

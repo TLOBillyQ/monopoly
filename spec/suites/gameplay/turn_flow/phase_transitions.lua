@@ -66,7 +66,7 @@ local _resolve_wait_state_tests = {
       turn = {},
       dirty = {},
     }
-local landing_visual_hold = require("src.state.landing_visual_hold")
+local landing_visual_hold = require("src.state.visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
     assert(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual hold is active")
@@ -88,7 +88,7 @@ local _resolve_wait_state_extended_tests = {
       turn = { action_anim = { kind = "test" } },
       dirty = {},
     }
-  local landing_visual_hold = require("src.state.landing_visual_hold")
+  local landing_visual_hold = require("src.state.visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
     assert(next_state == "wait_landing_visual", "should route through landing_visual first when both hold and action_anim active")
@@ -110,7 +110,7 @@ local _resolve_wait_state_extended_tests = {
       turn = {},
       dirty = {},
     }
-  local landing_visual_hold = require("src.state.landing_visual_hold")
+  local landing_visual_hold = require("src.state.visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
     assert(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual is active")

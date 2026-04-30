@@ -1,5 +1,5 @@
 local view_command_dispatcher = {}
-local number_utils = require("src.core.utils.number")
+local number_utils = require("src.foundation.lang.number")
 local host_runtime_ports = require("src.ui.host_bridge")
 
 local function _resolve_loaded(name)
@@ -64,7 +64,7 @@ local function _handle_popup_confirm(state, modal)
 end
 
 local function _warn_missing_toggle_channel(actor_role_id)
-  local logger = _resolve_loaded("src.core.utils.logger")
+  local logger = _resolve_loaded("src.foundation.log.logger")
   if logger and type(logger.warn) == "function" then
     logger.warn("toggle_action_log missing role event channel:", tostring(actor_role_id))
   end
@@ -129,10 +129,10 @@ local function _fallback_dispatch(state, intent)
   if intent_type == nil then
     return false
   end
-  local market = _resolve_loaded("src.ui.ctl.market")
-  local modal = _resolve_loaded("src.ui.ctl.modal")
-  local event_log_view = _resolve_loaded("src.ui.ctl.event_log_view")
-  local target_choice_effects = _resolve_loaded("src.ui.ctl.target_choice_effects")
+  local market = _resolve_loaded("src.ui.coord.market")
+  local modal = _resolve_loaded("src.ui.coord.modal")
+  local event_log_view = _resolve_loaded("src.ui.coord.event_log_view")
+  local target_choice_effects = _resolve_loaded("src.ui.coord.target_choice_effects")
   local handlers = {
     market_select = function()
       return _handle_market_select(state, intent, market)

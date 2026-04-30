@@ -1,4 +1,4 @@
-local number_utils = require("src.core.utils.number")
+local number_utils = require("src.foundation.lang.number")
 
 local choice_contract = {}
 

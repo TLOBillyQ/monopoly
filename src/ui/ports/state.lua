@@ -3,11 +3,11 @@ local state_ports = {}
 function state_ports.build()
   return {
     apply_role_control_lock = function(state, enabled)
-      local ui_view = require("src.ui.ctl.ui_runtime")
+      local ui_view = require("src.ui.coord.ui_runtime")
       ui_view.apply_role_control_lock(state, enabled)
     end,
     install_event_handlers = function(game, log, state)
-      local event_handlers = require("src.ui.ctl.event_handlers")
+      local event_handlers = require("src.ui.coord.event_handlers")
       event_handlers.install(game, log, state)
     end,
     on_bankruptcy_tiles_cleared = function(game, _, owned_tile_ids)

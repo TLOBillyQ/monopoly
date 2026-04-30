@@ -1,5 +1,5 @@
 local deity_ops = require("src.player.actions.state_ops.deity_ops")
-local monopoly_event = require("src.core.events")
+local monopoly_event = require("src.foundation.events")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))

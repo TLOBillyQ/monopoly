@@ -53,12 +53,12 @@ local function _run_market_modal_race_case(game_opts, expect_open, case_name)
     options = { { id = 1, label = "购买" } },
   })
 
-  local modal = require("src.ui.ctl.modal")
+  local modal = require("src.ui.coord.modal")
   local called = false
 
   support.with_patches({
     {
-      target = require("src.ui.ctl.ui_runtime"),
+      target = require("src.ui.coord.ui_runtime"),
       key = "render",
       value = function()
       end,

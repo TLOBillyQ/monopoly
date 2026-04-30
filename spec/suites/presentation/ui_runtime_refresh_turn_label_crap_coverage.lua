@@ -1,4 +1,4 @@
-local ui_runtime = require("src.ui.ctl.ui_runtime")
+local ui_runtime = require("src.ui.coord.ui_runtime")
 
 local _refresh_turn_label_for_runtime_role = ui_runtime._M_test._refresh_turn_label_for_runtime_role
 

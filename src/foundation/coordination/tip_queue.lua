@@ -1,5 +1,4 @@
-local number_utils = require("src.core.utils.number")
-local timing = require("src.config.gameplay.timing")
+local number_utils = require("src.foundation.lang.number")
 
 local tip_queue = {
   pending = {},
@@ -8,6 +7,8 @@ local tip_queue = {
     presenter = nil,
     scheduler = nil,
     test_mode = false,
+    event_tip_fast_backlog_threshold = 2,
+    event_tip_fast_seconds = 0.5,
   },
   epoch = 0,
 }
@@ -20,11 +21,11 @@ local function _normalize_duration(duration)
 end
 
 local function _backlog_threshold()
-  return timing.event_tip_fast_backlog_threshold or 2
+  return tip_queue.runtime.event_tip_fast_backlog_threshold or 2
 end
 
 local function _fast_seconds()
-  return timing.event_tip_fast_seconds or 0.5
+  return tip_queue.runtime.event_tip_fast_seconds or 0.5
 end
 
 local function _apply_backlog_acceleration(duration)
@@ -200,6 +201,12 @@ function tip_queue.configure_runtime(adapter)
   end
   if adapter.test_mode ~= nil then
     tip_queue.runtime.test_mode = adapter.test_mode == true
+  end
+  if number_utils.is_numeric(adapter.event_tip_fast_backlog_threshold) then
+    tip_queue.runtime.event_tip_fast_backlog_threshold = adapter.event_tip_fast_backlog_threshold
+  end
+  if number_utils.is_numeric(adapter.event_tip_fast_seconds) then
+    tip_queue.runtime.event_tip_fast_seconds = adapter.event_tip_fast_seconds
   end
   _dispatch_next_tip()
 end

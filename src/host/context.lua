@@ -1,5 +1,5 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local synthetic_actor_registry = require("src.host.synthetic_actor_registry")
 require("src.config.content.runtime_refs")
 

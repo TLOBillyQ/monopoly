@@ -1,4 +1,4 @@
-local monopoly_event = require("src.core.events")
+local monopoly_event = require("src.foundation.events")
 
 local land_events = {}
 local emit = monopoly_event.emit

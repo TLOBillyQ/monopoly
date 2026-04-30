@@ -1,11 +1,11 @@
 local support = require("support.gameplay_support")
 local _new_game = support.new_game
-local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
+local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local choice_handler_factory = require("src.rules.choice_handler_factory")
 local validator = require("src.turn.actions.validator")
 local availability = require("src.rules.items.availability")
 local runtime_state = require("src.state.runtime_state")
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 
 local _validate = validator._validate_item_slot_action
 local _resolve = validator._resolve_item_slot_resolution

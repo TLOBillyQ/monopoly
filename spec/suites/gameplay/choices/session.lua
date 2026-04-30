@@ -44,7 +44,7 @@ local function _test_choice_session_apply_navigation_tab_select_and_empty_tab_fe
         feedback_calls[#feedback_calls + 1] = { player = player, reason = reason, body = body }
       end,
     },
-    ["src.core.choice.contract"] = {
+    ["src.config.choice.contract"] = {
       resolve_owner_role_id = function(choice) return choice.owner_role_id end,
     },
   }, function(choice_session)
@@ -95,7 +95,7 @@ local function _test_choice_session_apply_navigation_prev_next_and_rejects()
     ["src.rules.market.choice.feedback"] = {
       emit_buy_failed = function() end,
     },
-    ["src.core.choice.contract"] = {
+    ["src.config.choice.contract"] = {
       resolve_owner_role_id = function(choice) return choice.owner_role_id end,
     },
   }, function(choice_session)
@@ -149,7 +149,7 @@ local function _test_choice_session_refresh_after_paid_callback_rebuilds_pending
         }
       end,
     },
-    ["src.core.choice.contract"] = {
+    ["src.config.choice.contract"] = {
       resolve_owner_role_id = function(choice) return choice.owner_role_id end,
     },
   }, function(choice_session)
@@ -172,10 +172,10 @@ local function _test_choice_session_refresh_after_paid_callback_rejects_non_owne
         return nil
       end,
     },
-    ["src.core.choice.contract"] = {
+    ["src.config.choice.contract"] = {
       resolve_owner_role_id = function(choice) return choice.owner_role_id end,
     },
-    ["src.core.utils.logger"] = {
+    ["src.foundation.log.logger"] = {
       warn = function(...)
         warnings[#warnings + 1] = table.concat({ ... }, " ")
       end,

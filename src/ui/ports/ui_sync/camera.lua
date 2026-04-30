@@ -1,6 +1,6 @@
-local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_state = require("src.ui.state")
-local logger = require("src.core.utils.logger")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local runtime_state = require("src.ui.state.runtime")
+local logger = require("src.foundation.log.logger")
 local camera_follow = require("src.config.gameplay.camera_follow")
 
 local camera_sync = {}

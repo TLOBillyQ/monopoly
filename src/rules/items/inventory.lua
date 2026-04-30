@@ -1,6 +1,6 @@
 local items_cfg = require("src.config.content.items")
 require "vendor.third_party.Utils"
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local intent_output_port = require("src.rules.ports.intent_output")
 local event_feed = require("src.rules.ports.event_feed")

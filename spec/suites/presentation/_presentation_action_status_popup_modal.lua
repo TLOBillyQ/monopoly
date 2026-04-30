@@ -5,10 +5,10 @@ local _with_patches = P.with_patches
 local _build_popup_view_state = P.build_popup_view_state
 local runtime_port = require("src.ui.render.runtime_ui")
 local market_view = require("src.ui.render.market")
-local ui_view = require("src.ui.ctl.ui_runtime")
-local modal_presenter = require("src.ui.ctl.modal")
-local popup_renderer = require("src.ui.ctl.popup")
-local market_modal_renderer = require("src.ui.ctl.market")
+local ui_view = require("src.ui.coord.ui_runtime")
+local modal_presenter = require("src.ui.coord.modal")
+local popup_renderer = require("src.ui.coord.popup")
+local market_modal_renderer = require("src.ui.coord.market")
 local event_log_ports_module = require("src.ui.ports.event_log")
 
 local function _test_popup_timeout_closes_even_when_input_blocked()
@@ -39,8 +39,8 @@ local function _test_popup_timeout_closes_even_when_input_blocked()
 end
 
 local function _test_popup_defer_policy_queues_and_replays_in_order()
-  local popup_presenter = require("src.ui.ctl.popup")
-  local canvas = require("src.ui.ctl.canvas_coordinator")
+  local popup_presenter = require("src.ui.coord.popup")
+  local canvas = require("src.ui.coord.canvas_coordinator")
   local state = {
     ui = ui_view.build_ui_state(),
     ui_dirty = false,
@@ -76,8 +76,8 @@ local function _test_popup_defer_policy_queues_and_replays_in_order()
 end
 
 local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil()
-  local canvas = require("src.ui.ctl.canvas_coordinator")
-  local role_ctx = require("src.ui.pres.role_context")
+  local canvas = require("src.ui.coord.canvas_coordinator")
+  local role_ctx = require("src.ui.view.role_context")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }
@@ -116,8 +116,8 @@ local function _test_popup_renderer_switch_popup_canvas_restores_client_role_nil
 end
 
 local function _test_market_modal_renderer_open_restores_client_role_nil()
-  local canvas = require("src.ui.ctl.canvas_coordinator")
-  local role_ctx = require("src.ui.pres.role_context")
+  local canvas = require("src.ui.coord.canvas_coordinator")
+  local role_ctx = require("src.ui.view.role_context")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }
@@ -164,8 +164,8 @@ local function _test_market_modal_renderer_open_restores_client_role_nil()
 end
 
 local function _test_event_log_ports_sync_restores_client_role_nil()
-  local ui_event_state = require("src.ui.ctl.event_state")
-  local ui_view_service = require("src.ui.ctl.ui_runtime")
+  local ui_event_state = require("src.ui.coord.event_state")
+  local ui_view_service = require("src.ui.coord.ui_runtime")
   local manager = { client_role = { stale = true } }
   local role1 = { id = 1, get_roleid = function() return 1 end }
   local role2 = { id = 2, get_roleid = function() return 2 end }

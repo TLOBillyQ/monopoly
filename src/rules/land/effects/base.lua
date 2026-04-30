@@ -8,9 +8,9 @@ local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
 local pricing = require("src.rules.land.pricing")
 local board_utils = require("src.rules.land.board")
-local monopoly_event = require("src.core.events")
-local action_anim_port = require("src.core.ports.action_anim")
-local number_utils = require("src.core.utils.number")
+local monopoly_event = require("src.foundation.events")
+local action_anim_port = require("src.foundation.ports.action_anim")
+local number_utils = require("src.foundation.lang.number")
 
 local tile_state = tile_mod.get_state
 local action_anim_duration = timing.action_anim_default_seconds or 1.0

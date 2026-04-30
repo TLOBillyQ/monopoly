@@ -1,4 +1,4 @@
-local actor_context = require("src.ui.ctl.actor_context")
+local actor_context = require("src.ui.coord.actor_context")
 
 local actor_context_ports = {}
 

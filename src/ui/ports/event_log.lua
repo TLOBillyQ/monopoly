@@ -1,9 +1,9 @@
 local debug_flags = require("src.config.gameplay.debug_flags")
-local with_client_role = require("src.core.utils.with_client_role")
+local with_client_role = require("src.ui.utils.with_client_role")
 local event_log = require("src.state.event_log")
-local ui_event_state = require("src.ui.ctl.event_state")
+local ui_event_state = require("src.ui.coord.event_state")
 local runtime = require("src.ui.render.runtime_ui")
-local role_id_utils = require("src.core.utils.role_id")
+local role_id_utils = require("src.foundation.identity.role_id")
 
 local event_log_ports = {}
 
@@ -22,7 +22,7 @@ function event_log_ports.build(common)
     sync_event_log = function(state)
       state._debug_log_enabled_by_role = state._debug_log_enabled_by_role or {}
       state._debug_log_seq_by_role = state._debug_log_seq_by_role or {}
-      local ui_view = require("src.ui.ctl.ui_runtime")
+      local ui_view = require("src.ui.coord.ui_runtime")
       runtime.for_each_role_or_global(function(role)
         local role_id = role_id_utils.normalize(runtime.resolve_role_id(role))
         if role_id == nil then

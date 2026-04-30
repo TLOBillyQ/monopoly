@@ -5,9 +5,9 @@ local _with_patches = P.with_patches
 local _wrap_ui_refs = P.wrap_ui_refs
 local gameplay_loop = P.gameplay_loop
 local runtime_port = require("src.ui.render.runtime_ui")
-local ui_view = require("src.ui.ctl.ui_runtime")
+local ui_view = require("src.ui.coord.ui_runtime")
 local ui_status_3d_layer = require("src.ui.render.status3d")
-local turn_effects = require("src.ui.wid.turn_effects")
+local turn_effects = require("src.ui.render.widgets.turn_effects")
 local vec3 = require("fixtures.vec3")
 
 local function _build_status3d_test_env()
@@ -593,9 +593,9 @@ local function _test_turn_effects_sync_restores_client_role_nil()
 end
 
 local function _test_tick_ui_sync_turn_switch_still_follows()
-  local dirty_tracker = require("src.core.utils.dirty_tracker")
-  local main_view = require("src.ui.ctl.ui_runtime")
-  local ui_model = require("src.ui.pres")
+  local dirty_tracker = require("src.state.dirty_tracker")
+  local main_view = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
   local board_view_mod = require("src.ui.render.board")
   local status3d = require("src.ui.render.status3d")
   local helper = { target_role_id = nil }
@@ -604,7 +604,7 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
     { target = main_view, key = "apply_role_control_lock", value = function() end },
-    { target = require("src.ui.ctl.modal"), key = "open_choice_modal", value = function() end },
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function() end },
     { target = status3d, key = "sync", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       local _player_rows = {
@@ -709,9 +709,9 @@ local function _test_tick_ui_sync_turn_switch_still_follows()
 end
 
 local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailable()
-  local dirty_tracker = require("src.core.utils.dirty_tracker")
-  local main_view = require("src.ui.ctl.ui_runtime")
-  local ui_model = require("src.ui.pres")
+  local dirty_tracker = require("src.state.dirty_tracker")
+  local main_view = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
   local board_view_mod = require("src.ui.render.board")
   local status3d = require("src.ui.render.status3d")
   local helper = { target_role_id = nil }
@@ -724,7 +724,7 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
     { target = main_view, key = "apply_role_control_lock", value = function() end },
-    { target = require("src.ui.ctl.modal"), key = "open_choice_modal", value = function() end },
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function() end },
     { target = status3d, key = "sync", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       local _player_rows = {
@@ -834,13 +834,13 @@ local function _test_tick_ui_sync_turn_switch_skip_follow_when_trigger_unavailab
 end
 
 local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop()
-  local ui_view_service = require("src.ui.ctl.ui_runtime")
-  local ui_model = require("src.ui.pres")
+  local ui_view_service = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
   local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local anchors = require("src.ui.render.board.anchors")
   local startup_render = require("src.ui.render.board.startup_render")
   local player_units = require("src.ui.render.board.player_units")
-  local base_presenter = require("src.ui.wid.panel_presenter")
+  local base_presenter = require("src.ui.render.widgets.panel_presenter")
   local fixed_zero = { kind = "fixed_zero", value = 0 }
   local calls = {}
   local game = {
@@ -945,8 +945,8 @@ local function _test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop
 end
 
 local function _test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render()
-  local ui_view_service = require("src.ui.ctl.ui_runtime")
-  local ui_model = require("src.ui.pres")
+  local ui_view_service = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
   local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local render_calls = 0
   local refreshed_label = nil
@@ -1020,7 +1020,7 @@ local function _test_ui_runtime_refresh_turn_label_toggles_countdown_nodes_and_l
   }
 
   _with_patches({
-    { target = package.loaded, key = "src.ui.ctl.ui_runtime", value = nil },
+    { target = package.loaded, key = "src.ui.coord.ui_runtime", value = nil },
     { target = runtime_ui, key = "for_each_role_or_global", value = function(fn) fn() end },
     { target = runtime_ui, key = "set_client_role", value = function(role)
       if role == nil then
@@ -1028,7 +1028,7 @@ local function _test_ui_runtime_refresh_turn_label_toggles_countdown_nodes_and_l
       end
     end },
   }, function()
-    local ui_view_service = require("src.ui.ctl.ui_runtime")
+    local ui_view_service = require("src.ui.coord.ui_runtime")
     ui_view_service.refresh_turn_label(state, "倒计时 9", false)
   end)
 

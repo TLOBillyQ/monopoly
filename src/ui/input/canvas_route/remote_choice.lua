@@ -1,6 +1,6 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local ui_event_intents = require("src.ui.input.event_intents")
-local runtime_state = require("src.ui.state")
+local runtime_state = require("src.ui.state.runtime")
 local nodes = require("src.ui.schema.remote_choice")
 
 local intents = {}

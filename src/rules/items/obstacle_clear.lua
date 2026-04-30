@@ -1,5 +1,5 @@
 local event_kinds = require("src.config.gameplay.event_kinds")
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 local facing_policy = require("src.rules.board.facing_policy")
 local direction_constants = require("src.rules.board.directions")
 local runtime_constants = require("src.config.gameplay.runtime_constants")

@@ -160,22 +160,22 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
       },
     },
     {
-      target = require("src.ui.ctl.ui_events"),
+      target = require("src.ui.coord.ui_events"),
       key = "send_to_all",
       value = function() end,
     },
     {
-      target = require("src.ui.ctl.canvas_event_router"),
+      target = require("src.ui.coord.canvas_event_router"),
       key = "bind",
       value = function() end,
     },
     {
-      target = require("src.ui.ctl.ui_runtime"),
+      target = require("src.ui.coord.ui_runtime"),
       key = "init_ui_assets",
       value = function() end,
     },
     {
-      target = require("src.ui.ctl.ui_runtime"),
+      target = require("src.ui.coord.ui_runtime"),
       key = "capture_player_colors",
       value = function() end,
     },
@@ -192,14 +192,14 @@ local function _test_ui_bootstrap_required_click_nodes_appends_extras()
       end,
     },
     {
-      target = require("src.core.ports.runtime_ports"),
+      target = require("src.foundation.ports.runtime_ports"),
       key = "resolve_roles",
       value = function()
         return {}
       end,
     },
     {
-      target = require("src.core.ports.runtime_ports"),
+      target = require("src.foundation.ports.runtime_ports"),
       key = "schedule",
       value = function(_, fn)
         fn()

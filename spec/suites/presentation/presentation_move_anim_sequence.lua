@@ -1,7 +1,7 @@
 local move_anim = require("src.ui.render.move_anim")
-local runtime_state = require("src.ui.state")
+local runtime_state = require("src.ui.state.runtime")
 local anim_ports = require("src.ui.ports.anim")
-local ui_view = require("src.ui.ctl.ui_runtime")
+local ui_view = require("src.ui.coord.ui_runtime")
 local support = require("support.move_anim_support")
 
 local _assert_eq = support.assert_eq

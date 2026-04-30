@@ -1,6 +1,6 @@
-local modal = require("src.ui.ctl.modal")
-local runtime_state = require("src.ui.state")
-local choice_slice = require("src.ui.pres.choice_slice")
+local modal = require("src.ui.coord.modal")
+local runtime_state = require("src.ui.state.runtime")
+local choice_slice = require("src.ui.view.choice_slice")
 
 local runtime_event_ports = {}
 

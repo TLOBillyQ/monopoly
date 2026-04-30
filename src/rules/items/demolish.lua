@@ -1,12 +1,12 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local tile_mod = require("src.rules.board.tile")
 local board_query = require("src.rules.board.query")
 local property_value = require("src.rules.commerce.property_value")
 local timing = require("src.config.gameplay.timing")
 local event_feed = require("src.rules.ports.event_feed")
-local action_anim_port = require("src.core.ports.action_anim")
-local number_utils = require("src.core.utils.number")
+local action_anim_port = require("src.foundation.ports.action_anim")
+local number_utils = require("src.foundation.lang.number")
 local target_query = require("src.rules.items.target_query")
 
 local demolish = {}

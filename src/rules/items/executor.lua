@@ -2,7 +2,7 @@ local effects = require("src.rules.items.post_effects")
 local auto_play_port = require("src.rules.ports.auto_play")
 local inventory = require("src.rules.items.inventory")
 local timing = require("src.config.gameplay.timing")
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 local use_broadcast = require("src.rules.items.use_broadcast")
 
 local executor = {}

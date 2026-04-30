@@ -1,10 +1,10 @@
 local support = require("support.domain_support")
 local _new_game = support.new_game
 local market_cfg = require("src.config.content.market")
-local runtime_ports = require("src.core.ports.runtime_ports")
-local monopoly_event = require("src.core.events")
-local choice_resolver = require("src.core.choice.resolver")
-local number_utils = require("src.core.utils.number")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local monopoly_event = require("src.foundation.events")
+local choice_resolver = require("src.rules.choice.resolver")
+local number_utils = require("src.foundation.lang.number")
 local runtime_refs = require("src.config.content.runtime_refs")
 
 local function _contains_product(list, product_id)

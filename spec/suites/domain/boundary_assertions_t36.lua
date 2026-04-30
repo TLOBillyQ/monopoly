@@ -1,6 +1,6 @@
 local inventory = require("src.rules.items.inventory")
 local balance_ops = require("src.player.actions.state_ops.balance_ops")
-local dirty_tracker = require("src.core.utils.dirty_tracker")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local function _assert_contains(text, fragment, message)
   assert(type(text) == "string", (message or "expected string") .. ": non-string error")

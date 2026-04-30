@@ -4,7 +4,7 @@ local _bind_ui_runtime = P.bind_ui_runtime
 local _with_patches = P.with_patches
 local _wrap_ui_refs = P.wrap_ui_refs
 local _has_event = P.has_event
-local ui_view = require("src.ui.ctl.ui_runtime")
+local ui_view = require("src.ui.coord.ui_runtime")
 local ids = require("fixtures.item_slot_ids")
 
 local function _test_item_slot_uses_keep_size_path()
@@ -229,7 +229,7 @@ local function _test_item_phase_ask_single_option_pre_confirm_dispatches_choice_
 end
 
 local function _test_item_phase_confirmed_skips_replay_before_slot_click()
-  local ui_events = require("src.ui.ctl.ui_events")
+  local ui_events = require("src.ui.coord.ui_events")
   local events = {}
   local state = {
     _item_phase_ask_active = nil,
@@ -300,7 +300,7 @@ local function _test_item_phase_confirmed_skips_replay_before_slot_click()
 end
 
 local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines()
-  local ui_events = require("src.ui.ctl.ui_events")
+  local ui_events = require("src.ui.coord.ui_events")
   local events = {}
   local visible_state = {}
   local timers = {}
@@ -406,7 +406,7 @@ local function _test_item_slot_refresh_item_phase_ask_replays_highlight_then_rev
 end
 
 local function _test_item_slot_refresh_resets_highlight_without_client_role()
-  local ui_events = require("src.ui.ctl.ui_events")
+  local ui_events = require("src.ui.coord.ui_events")
   local events = {}
   local phase = ""
 
@@ -673,7 +673,7 @@ local function _test_passive_outlines_highlight_available_slots()
 end
 
 local function _test_passive_highlight_dedupes_consecutive_refresh()
-  local ui_events = require("src.ui.ctl.ui_events")
+  local ui_events = require("src.ui.coord.ui_events")
   local events = {}
   local state = {
     ui_refs = _wrap_ui_refs({

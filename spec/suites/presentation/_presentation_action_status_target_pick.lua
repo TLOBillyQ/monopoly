@@ -6,13 +6,13 @@ local _ui_runtime = P.ui_runtime
 local _build_role_with_events = P.build_role_with_events
 local _build_choice_modal_state = P.build_choice_modal_state
 local _build_target_pick_env = P.build_target_pick_env
-local canvas_event_router = require("src.ui.ctl.canvas_event_router")
-local ui_view = require("src.ui.ctl.ui_runtime")
-local modal_presenter = require("src.ui.ctl.modal")
+local canvas_event_router = require("src.ui.coord.canvas_event_router")
+local ui_view = require("src.ui.coord.ui_runtime")
+local modal_presenter = require("src.ui.coord.modal")
 local target_pick = require("src.config.gameplay.target_pick")
 local host_runtime = require("src.host")
 local host_runtime_bridge = require("src.ui.host_bridge")
-local target_choice_effects = require("src.ui.ctl.target_choice_effects")
+local target_choice_effects = require("src.ui.coord.target_choice_effects")
 local vec3 = require("fixtures.vec3")
 
 local function _with_target_pick_runtime(env, fn)
@@ -122,7 +122,7 @@ local function _test_target_screen_uses_labels_only_and_hides_projection_with_sl
     _assert_eq(nodes["位置-槽位7投影"].visible, true, "slot7 projection should be visible with populated slot")
     _assert_eq(nodes["位置-槽位7投影"].disabled, true, "slot7 projection should stay non-interactive")
 
-    local common = require("src.ui.ctl.choice_screens.helpers")
+    local common = require("src.ui.coord.choice_screens.helpers")
     common.hide_choice_screens(state.ui)
 
     _assert_eq(nodes["位置-槽位1文本"].visible, false, "hide_choice_screens should hide slot label")

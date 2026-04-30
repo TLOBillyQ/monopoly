@@ -1,6 +1,6 @@
-local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
+local gameplay_read_port = require("src.ui.view.gameplay_read_port")
 local land_pricing = require("src.rules.land.pricing")
-local choice_builder = require("src.ui.pres.choice_builder")
+local choice_builder = require("src.ui.view.choice_builder")
 
 describe("read_model_contract", function()
   it("total_land_invested_matches_domain_pricing", function()

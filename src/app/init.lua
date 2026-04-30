@@ -1,5 +1,6 @@
-local logger = require("src.core.utils.logger")
-local tip_queue = require("src.core.utils.tip_queue")
+local logger = require("src.foundation.log.logger")
+local tip_queue = require("src.foundation.coordination.tip_queue")
+local timing = require("src.config.gameplay.timing")
 local runtime_install = require("src.app.host_install")
 local startup_roster = require("src.app.roster")
 local state_factory = require("src.app.state_factory")
@@ -89,6 +90,8 @@ function M.init()
       return false
     end,
     test_mode = _is_test_mode_enabled(),
+    event_tip_fast_backlog_threshold = timing.event_tip_fast_backlog_threshold,
+    event_tip_fast_seconds = timing.event_tip_fast_seconds,
   })
 
   _configure_game_time_logger(GameAPI)

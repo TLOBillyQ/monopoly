@@ -9,7 +9,7 @@ local app = support.app
 local startup_policy = require("src.app.policy")
 local startup_roster = require("src.app.roster")
 local state_factory = require("src.app.state_factory")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local startup_bootstrap = require("src.app.profile_bootstrap")
 local startup_profile_source = require("src.app.profile_source")
 local runtime_refs = require("src.config.content.runtime_refs")
@@ -239,7 +239,7 @@ local function _test_gameplay_start_sets_current_game_before_priming_first_turn(
       end,
     },
     {
-      target = require("src.ui.ctl.deps"),
+      target = require("src.ui.coord.deps"),
       key = "build",
       value = function()
         return {}
@@ -490,8 +490,8 @@ local function _reload_app_init_with_stubs(startup, runner)
 
   with_patches({
     { target = package.loaded, key = "src.app", value = nil },
-    { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
-    { target = package.loaded, key = "src.core.utils.tip_queue", value = tip_queue_stub },
+    { target = package.loaded, key = "src.foundation.log.logger", value = logger_stub },
+    { target = package.loaded, key = "src.foundation.coordination.tip_queue", value = tip_queue_stub },
     {
       target = package.loaded,
       key = "src.app.host_install",
@@ -707,8 +707,8 @@ local function _test_app_init_keeps_scheduler_fallback()
 
   with_patches({
     { target = package.loaded, key = "src.app", value = nil },
-    { target = package.loaded, key = "src.core.utils.logger", value = logger_stub },
-    { target = package.loaded, key = "src.core.utils.tip_queue", value = tip_queue_stub },
+    { target = package.loaded, key = "src.foundation.log.logger", value = logger_stub },
+    { target = package.loaded, key = "src.foundation.coordination.tip_queue", value = tip_queue_stub },
     { target = package.loaded, key = "src.app.host_install", value = { install = function() end } },
     { target = package.loaded, key = "src.app.state_factory", value = { build_state = function() return state end } },
     { target = require("src.app.event_bridge"), key = "install", value = function() end },

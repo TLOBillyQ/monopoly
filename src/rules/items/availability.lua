@@ -6,8 +6,8 @@ local demolish = require("src.rules.items.demolish")
 local roadblock = require("src.rules.items.roadblock")
 local property_query = require("src.rules.board.property_query")
 local property_value = require("src.rules.commerce.property_value")
-local number_utils = require("src.core.utils.number")
-local tables = require("src.core.utils.tables")
+local number_utils = require("src.foundation.lang.number")
+local tables = require("src.foundation.lang.tables")
 
 local availability = {}
 local phase_timing = {

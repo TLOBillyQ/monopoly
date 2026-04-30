@@ -1,4 +1,4 @@
-local landing_visual_hold = require("src.state.landing_visual_hold")
+local landing_visual_hold = require("src.state.visual_hold")
 local runtime_state = require("src.state.runtime_state")
 
 local function _assert_eq(a, b, msg)

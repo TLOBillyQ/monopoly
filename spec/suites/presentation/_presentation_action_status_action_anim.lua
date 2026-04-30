@@ -4,7 +4,7 @@ local _with_patches = P.with_patches
 local _wrap_ui_refs = P.wrap_ui_refs
 local support = require("support.presentation_support")
 local gameplay_loop = support.gameplay_loop
-local event_handlers = require("src.ui.ctl.event_handlers")
+local event_handlers = require("src.ui.coord.event_handlers")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local gameplay_rules = require("src.config.gameplay.debug_flags")
 local action_anim = require("src.ui.render.action_anim")
@@ -13,16 +13,16 @@ local role_control_lock_policy = require("src.ui.input.role_control_lock")
 local timing = require("src.config.gameplay.timing")
 
 local function _test_tick_skips_anim_when_no_anim()
-  local dirty_tracker = require("src.core.utils.dirty_tracker")
-  local main_view = require("src.ui.ctl.ui_runtime")
-  local ui_model = require("src.ui.pres")
+  local dirty_tracker = require("src.state.dirty_tracker")
+  local main_view = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
   local board_view_mod = require("src.ui.render.board")
 
   local game_api = GameAPI or {}
   local patches = {
     { target = main_view, key = "refresh_panel", value = function() end },
     { target = board_view_mod, key = "refresh", value = function() end },
-    { target = require("src.ui.ctl.modal"), key = "open_choice_modal", value = function() end },
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function() end },
     { target = ui_model, key = "build", value = function(game_ctx)
       return {
         current_player_name = "P",
@@ -207,8 +207,8 @@ local function _test_action_anim_no_camera_focus_side_effect()
 end
 
 local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
-  local ui_view_service = require("src.ui.ctl.ui_runtime")
-  local ui_model = require("src.ui.pres")
+  local ui_view_service = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
   local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local opened = 0
   local game = {
@@ -239,7 +239,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = require("src.ui.ctl.modal"), key = "open_choice_modal", value = function()
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -268,8 +268,8 @@ local function _test_ui_sync_defers_choice_modal_during_wait_action_anim()
 end
 
 local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
-  local ui_view_service = require("src.ui.ctl.ui_runtime")
-  local ui_model = require("src.ui.pres")
+  local ui_view_service = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
   local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local opened = 0
   local game = {
@@ -300,7 +300,7 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = require("src.ui.ctl.modal"), key = "open_choice_modal", value = function()
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()
@@ -338,8 +338,8 @@ local function _test_ui_sync_opens_choice_modal_after_wait_action_anim()
 end
 
 local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
-  local ui_view_service = require("src.ui.ctl.ui_runtime")
-  local ui_model = require("src.ui.pres")
+  local ui_view_service = require("src.ui.coord.ui_runtime")
+  local ui_model = require("src.ui.view")
   local ui_model_sync = require("src.ui.ports.ui_sync.model")
   local opened = 0
   local game = {
@@ -370,7 +370,7 @@ local function _test_ui_sync_defers_choice_modal_during_wait_move_anim()
   }
   _with_patches({
     { target = ui_view_service, key = "render", value = function() end },
-    { target = require("src.ui.ctl.modal"), key = "open_choice_modal", value = function()
+    { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function()
       opened = opened + 1
     end },
     { target = ui_model, key = "build", value = function()

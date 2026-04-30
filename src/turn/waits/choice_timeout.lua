@@ -1,8 +1,8 @@
 local constants = require("src.config.content.constants")
 local timing = require("src.config.gameplay.timing")
-local number_utils = require("src.core.utils.number")
-local logger_utils = require("src.core.utils.logger_utils")
-local choice_contract = require("src.core.choice.contract")
+local number_utils = require("src.foundation.lang.number")
+local logger_utils = require("src.foundation.log.utils")
+local choice_contract = require("src.config.choice.contract")
 local output_state_adapter = require("src.turn.output.state_adapter")
 
 local tick_choice_timeout = {}

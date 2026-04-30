@@ -2,7 +2,7 @@
 local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
-local ui_view = require("src.ui.ctl.ui_runtime")
+local ui_view = require("src.ui.coord.ui_runtime")
 local ui_touch_policy = require("src.ui.input.touch")
 local ids = require("fixtures.item_slot_ids")
 

@@ -1,9 +1,9 @@
-local turn_ui_sync_shared = require("src.core.ui_sync_shared")
-local runtime_state = require("src.ui.state")
-local landing_visual_hold = require("src.ui.landing_visual_hold")
+local turn_ui_sync_shared = require("src.state.ui_sync_shared")
+local runtime_state = require("src.ui.state.runtime")
+local landing_visual_hold = require("src.ui.visual_hold")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
-local modal = require("src.ui.ctl.modal")
-local main_view = require("src.ui.ctl.ui_runtime")
+local modal = require("src.ui.coord.modal")
+local main_view = require("src.ui.coord.ui_runtime")
 
 local ui_model_sync = {}
 
@@ -25,7 +25,7 @@ local function _defer_refresh_for_landing_hold(state, dirty)
 end
 
 local function _update_runtime_ui_model(state, game, dirty)
-  local model = require("src.ui.pres")
+  local model = require("src.ui.view")
   local env = turn_ui_sync_shared.build_ui_env(state, game)
   local next_model = model.update(runtime_state.get_ui_model(state), game, env, dirty)
   runtime_state.set_ui_model(state, next_model)
@@ -86,7 +86,7 @@ function ui_model_sync.apply_input_lock(state)
 end
 
 function ui_model_sync.build_model(state, game)
-  local model = require("src.ui.pres")
+  local model = require("src.ui.view")
   local env = turn_ui_sync_shared.build_ui_env(state, game)
   return model.build(game, env)
 end

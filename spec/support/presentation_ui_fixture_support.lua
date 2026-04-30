@@ -1,5 +1,5 @@
 local shared = require("spec.support.shared_support")
-local ui_view = require("src.ui.ctl.ui_runtime")
+local ui_view = require("src.ui.coord.ui_runtime")
 local vec3 = require("fixtures.vec3")
 
 local _bind_ui_runtime = shared.bind_ui_runtime

@@ -1,7 +1,7 @@
 local board_runtime = require("src.ui.render.board")
-local panel_presenter = require("src.ui.wid.panel_presenter")
-local turn_effects = require("src.ui.wid.turn_effects")
-local canvas_store = require("src.ui.stores.canvas_store")
+local panel_presenter = require("src.ui.render.widgets.panel_presenter")
+local turn_effects = require("src.ui.render.widgets.turn_effects")
+local canvas_store = require("src.ui.state.canvas_store")
 
 local pipeline = {}
 

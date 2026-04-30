@@ -1,5 +1,5 @@
 local move_anim = require("src.ui.render.move_anim")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local support = require("support.move_anim_support")
 

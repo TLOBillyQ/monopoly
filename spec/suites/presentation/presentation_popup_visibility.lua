@@ -4,8 +4,8 @@ local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local runtime_port = require("src.ui.render.runtime_ui")
-local ui_view = require("src.ui.ctl.ui_runtime")
-local modal_presenter = require("src.ui.ctl.modal")
+local ui_view = require("src.ui.coord.ui_runtime")
+local modal_presenter = require("src.ui.coord.modal")
 
 local _build_popup_view_state = support.build_popup_view_state
 local _build_role_with_events = support.build_role_with_events
@@ -226,7 +226,7 @@ local function _test_bankruptcy_popup_avatar_uses_native_size_path()
 end
 
 local function _test_resolve_bankruptcy_text_prefers_payload_text()
-  local popup_controller = require("src.ui.ctl.popup")
+  local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -253,7 +253,7 @@ local function _test_resolve_bankruptcy_text_prefers_payload_text()
 end
 
 local function _test_resolve_bankruptcy_text_falls_back_to_reason()
-  local popup_controller = require("src.ui.ctl.popup")
+  local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -280,7 +280,7 @@ local function _test_resolve_bankruptcy_text_falls_back_to_reason()
 end
 
 local function _test_resolve_bankruptcy_text_falls_back_to_player_name()
-  local popup_controller = require("src.ui.ctl.popup")
+  local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -307,7 +307,7 @@ local function _test_resolve_bankruptcy_text_falls_back_to_player_name()
 end
 
 local function _test_resolve_bankruptcy_text_uses_default_when_all_missing()
-  local popup_controller = require("src.ui.ctl.popup")
+  local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {

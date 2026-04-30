@@ -1,4 +1,4 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local validator = require("src.turn.actions.validator")
 local runtime_state = require("src.state.runtime_state")
 local market_service = require("src.rules.market")

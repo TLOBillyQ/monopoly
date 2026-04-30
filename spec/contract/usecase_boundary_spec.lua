@@ -6,7 +6,7 @@ local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
 local turn_action_port = require("src.ui.input.dispatch.turn_action_port")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local gameplay_loop_runtime = require("src.turn.loop.runtime")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local turn_roll = require("src.turn.phases.roll")
 local turn_move = require("src.turn.phases.move")
 
@@ -115,7 +115,7 @@ describe("usecase_boundary_contract", function()
   end)
 
   it("choice_contract_copies_explicit_fields_once", function()
-    local choice_contract = require("src.core.choice.contract")
+    local choice_contract = require("src.config.choice.contract")
     local source = {
       route_key = "target",
       requires_confirm = true,

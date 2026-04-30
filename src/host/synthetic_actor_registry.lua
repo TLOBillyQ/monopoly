@@ -1,6 +1,6 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local role_id_utils = require("src.core.utils.role_id")
+local role_id_utils = require("src.foundation.identity.role_id")
 
 local synthetic_actor_registry = {}
 

@@ -1,5 +1,5 @@
 local intent_output_port = require("src.rules.ports.intent_output")
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 
 local presenter = {}
 

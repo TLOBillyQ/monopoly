@@ -4,8 +4,8 @@ local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
 local _build_role_with_events = P.build_role_with_events
 local dispatch = require("src.turn.actions.action_dispatcher")
-local canvas_event_router = require("src.ui.ctl.canvas_event_router")
-local ui_view = require("src.ui.ctl.ui_runtime")
+local canvas_event_router = require("src.ui.coord.canvas_event_router")
+local ui_view = require("src.ui.coord.ui_runtime")
 local host_runtime_bridge = require("src.ui.host_bridge")
 
 local function _test_ui_event_router_action_log_toggle_uses_role_context()
@@ -67,7 +67,7 @@ local function _test_ui_event_router_action_log_toggle_uses_role_context()
     local role_id = role.get_roleid()
     _assert_eq(state.ui.debug_visible_by_role[role_id], nil, "action_log role flag should start nil")
     assert(type(node_map["基础_行动日志图标"]._listener_cb) == "function", "action_log button should bind click listener")
-    local before = require("src.ui.ctl.event_state").resolve_event_log_enabled(state, role_id)
+    local before = require("src.ui.coord.event_state").resolve_event_log_enabled(state, role_id)
     node_map["基础_行动日志图标"]._listener_cb({ role = role })
     local first_value = state.ui.debug_visible_by_role[role_id]
     _assert_eq(first_value, not before, "action_log toggle should invert role visibility")
@@ -294,8 +294,8 @@ local function _test_ui_event_state_resolve_event_log_enabled_supports_mixed_rol
     },
   }
 
-  local enabled_by_int = require("src.ui.ctl.event_state").resolve_event_log_enabled(state, 1)
-  local enabled_by_string = require("src.ui.ctl.event_state").resolve_event_log_enabled(state, "1")
+  local enabled_by_int = require("src.ui.coord.event_state").resolve_event_log_enabled(state, 1)
+  local enabled_by_string = require("src.ui.coord.event_state").resolve_event_log_enabled(state, "1")
 
   _assert_eq(enabled_by_int, true, "event_log_enabled should read string key by int role_id")
   _assert_eq(enabled_by_string, true, "event_log_enabled should read string key by string role_id")

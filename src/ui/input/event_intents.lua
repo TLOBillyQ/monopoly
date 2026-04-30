@@ -1,5 +1,5 @@
-local logger = require("src.core.utils.logger")
-local runtime_state = require("src.ui.state")
+local logger = require("src.foundation.log.logger")
+local runtime_state = require("src.ui.state.runtime")
 
 local intents = {}
 

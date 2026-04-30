@@ -1,4 +1,4 @@
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 local common = require("src.player.actions.state_ops.common")
 
 local balance_ops = {}

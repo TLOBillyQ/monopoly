@@ -5,10 +5,10 @@ local tiles_cfg = require("src.config.content.tiles")
 local default_map = require("src.config.content.maps.default_map")
 local runtime_refs = require("src.config.content.runtime_refs")
 local timing = require("src.config.gameplay.timing")
-local runtime_ports = require("src.core.ports.runtime_ports")
-local role_id_utils = require("src.core.utils.role_id")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local role_id_utils = require("src.foundation.identity.role_id")
 local default_ports = require("src.turn.output.default_ports")
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 
 local max_player_count = 4
 local synthetic_unit_keys = { 9000601, 9000602, 9000603, 9000604, 9000605, 9000607 }

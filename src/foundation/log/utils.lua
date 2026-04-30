@@ -1,4 +1,4 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local runtime_state = require("src.state.runtime_state")
 
 local logger_utils = {}

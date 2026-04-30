@@ -1,6 +1,6 @@
-local number_utils = require("src.core.utils.number")
-local choice_contract = require("src.core.choice.contract")
-local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
+local number_utils = require("src.foundation.lang.number")
+local choice_contract = require("src.config.choice.contract")
+local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local auto_play_port = require("src.rules.ports.auto_play")
 
 local choice_auto_policy = {}

@@ -4,9 +4,9 @@ local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.ctl.choice_screens.openers")
-local ui_view = require("src.ui.ctl.ui_runtime")
-local modal_presenter = require("src.ui.ctl.modal")
+local choice_openers = require("src.ui.coord.choice_screens.openers")
+local ui_view = require("src.ui.coord.ui_runtime")
+local modal_presenter = require("src.ui.coord.modal")
 
 local function _test_ui_intent_dispatcher_market_confirm_skin_dispatches_directly()
   local dispatched = {}

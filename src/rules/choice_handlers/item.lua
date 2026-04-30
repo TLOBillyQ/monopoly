@@ -2,15 +2,15 @@ local inventory = require("src.rules.items.inventory")
 local demolish = require("src.rules.items.demolish")
 local steal = require("src.rules.items.steal")
 local roadblock = require("src.rules.items.roadblock")
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local remote_dice = require("src.rules.items.remote_dice")
 local item_phase = require("src.rules.items.phase")
 local availability = require("src.rules.items.availability")
 local item_ids = require("src.config.gameplay.item_ids")
-local number_utils = require("src.core.utils.number")
+local number_utils = require("src.foundation.lang.number")
 local intent_output_port = require("src.rules.ports.intent_output")
 local item_use_broadcast = require("src.rules.items.use_broadcast")
-local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
+local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 
 local M = {}
 

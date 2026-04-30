@@ -1,10 +1,10 @@
-local logger = require("src.core.utils.logger")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local logger = require("src.foundation.log.logger")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
 local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
-local monopoly_event = require("src.core.events")
+local monopoly_event = require("src.foundation.events")
 
 local bankruptcy = {}
 

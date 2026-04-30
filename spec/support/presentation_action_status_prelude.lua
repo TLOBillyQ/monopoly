@@ -1,5 +1,5 @@
 local support = require("spec.support.presentation_support")
-local runtime_state = require("src.ui.state")
+local runtime_state = require("src.ui.state.runtime")
 
 local M = {
   new_game = support.new_game,

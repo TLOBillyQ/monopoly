@@ -1,4 +1,4 @@
-local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
+local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))

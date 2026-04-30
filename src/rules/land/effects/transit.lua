@@ -5,7 +5,7 @@ local inventory = require("src.rules.items.inventory")
 local presenter = require("src.rules.land.presenter")
 local steal = require("src.rules.items.steal")
 local event_feed = require("src.rules.ports.event_feed")
-local number_utils = require("src.core.utils.number")
+local number_utils = require("src.foundation.lang.number")
 
 local popup_show_seconds = timing.popup_auto_close_seconds or 1.0
 

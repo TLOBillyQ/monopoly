@@ -1,4 +1,4 @@
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local effect_track = require("src.ui.render.support.effect_track")
 
 local function _assert_eq(a, b, msg)

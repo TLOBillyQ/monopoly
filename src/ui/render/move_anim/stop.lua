@@ -1,4 +1,4 @@
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local debug_mod = require("src.ui.render.move_anim.debug")
 local rt = require("src.ui.render.move_anim.runtime")
 local seq_builder = require("src.ui.render.move_anim.sequence_builder")

@@ -1,7 +1,7 @@
 ---@diagnostic disable: undefined-global, undefined-field
 
 local policy = require("src.app.policy")
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local event_feed = require("src.rules.ports.event_feed")
 local event_feed_adapter = require("src.turn.output.event_feed_adapter")
 local event_kinds = require("src.config.gameplay.event_kinds")

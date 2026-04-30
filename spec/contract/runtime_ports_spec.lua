@@ -1,7 +1,7 @@
 ---@diagnostic disable: undefined-global, undefined-field, need-check-nil
 local shared = require("spec.support.shared_support")
 
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_context = require("src.host.context")
 local runtime_install = require("src.app.host_install")
 local default_ports = require("src.host.default_ports")
@@ -356,9 +356,9 @@ describe("runtime_ports_contract", function()
 
   it("presentation_boundary_contract_describes_seams_and_state_allowlists", function()
     local contract = presentation_ports.describe_boundary_contract()
-    assert.equals("src.ui.state", contract.state_seam_modules.runtime_state,
+    assert.equals("src.ui.state.runtime", contract.state_seam_modules.runtime_state,
       "presentation contract should publish runtime state canonical seam")
-    assert.equals("src.ui.landing_visual_hold", contract.state_seam_modules.landing_visual_hold,
+    assert.equals("src.ui.visual_hold", contract.state_seam_modules.landing_visual_hold,
       "presentation contract should publish landing hold canonical seam")
     assert.equals("src.ui.host_bridge", contract.state_seam_modules.host_runtime,
       "presentation contract should publish host runtime canonical seam")

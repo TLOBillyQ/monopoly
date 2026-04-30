@@ -1,4 +1,4 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local specs = require("src.ui.render.status3d.specs")
 
 local M = {}

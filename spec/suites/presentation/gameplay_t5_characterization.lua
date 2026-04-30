@@ -5,10 +5,10 @@
 
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
-local monopoly_event = require("src.core.events")
+local monopoly_event = require("src.foundation.events")
 local host_runtime = require("src.host")
 local board_feedback = require("src.ui.render.board_feedback.service")
-local choice_support = require("src.ui.pres.choice_support")
+local choice_support = require("src.ui.view.choice_support")
 
 local function _load_fresh(module_path)
   package.loaded[module_path] = nil
@@ -126,8 +126,8 @@ end
 -- ============================================
 
 local function _load_fresh_handlers()
-  package.loaded["src.ui.ctl.event_handlers"] = nil
-  return require("src.ui.ctl.event_handlers")
+  package.loaded["src.ui.coord.event_handlers"] = nil
+  return require("src.ui.coord.event_handlers")
 end
 
 local function _test_rent_paid_handler_calls_board_feedback()
@@ -335,7 +335,7 @@ end
 -- ============================================
 
 local function _test_register_node_click_skips_when_already_registered()
-  local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
+  local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local registered = { test_node = true }
   local listeners = {}
   local cache = {}
@@ -346,7 +346,7 @@ local function _test_register_node_click_skips_when_already_registered()
 end
 
 local function _test_register_node_click_handles_missing_nodes()
-  local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
+  local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.runtime_ui")
   local registered = {}
   local listeners = {}
@@ -369,7 +369,7 @@ local function _test_register_node_click_handles_missing_nodes()
 end
 
 local function _test_register_node_click_caches_nodes()
-  local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
+  local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.runtime_ui")
   local registered = {}
   local listeners = {}
@@ -408,7 +408,7 @@ local function _test_register_node_click_caches_nodes()
 end
 
 local function _test_register_node_click_registers_multiple_nodes()
-  local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
+  local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.runtime_ui")
   local registered = {}
   local listeners = {}
@@ -452,7 +452,7 @@ local function _test_register_node_click_registers_multiple_nodes()
 end
 
 local function _test_register_node_click_handles_empty_nodes_result()
-  local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
+  local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.runtime_ui")
   local registered = {}
   local listeners = {}
@@ -473,7 +473,7 @@ local function _test_register_node_click_handles_empty_nodes_result()
 end
 
 local function _test_register_node_click_logs_action_log_button_query_failure()
-  local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
+  local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.runtime_ui")
   local always_show_nodes = require("src.ui.schema.base")
   local registered = {}
@@ -500,7 +500,7 @@ local function _test_register_node_click_logs_action_log_button_query_failure()
 end
 
 local function _test_register_node_click_logs_action_log_button_not_found()
-  local event_bindings = _load_fresh("src.ui.ctl.event_bindings")
+  local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.runtime_ui")
   local always_show_nodes = require("src.ui.schema.base")
   local registered = {}
@@ -530,7 +530,7 @@ end
 -- ============================================
 
 local function _test_build_choice_view_builds_basic_view()
-  local choice_builder = _load_fresh("src.ui.pres.choice_builder")
+  local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
     id = 123,
@@ -556,7 +556,7 @@ local function _test_build_choice_view_builds_basic_view()
 end
 
 local function _test_build_choice_view_uses_phase_title()
-  local choice_builder = _load_fresh("src.ui.pres.choice_builder")
+  local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
     id = 1,
@@ -575,7 +575,7 @@ local function _test_build_choice_view_uses_phase_title()
 end
 
 local function _test_build_choice_view_joins_body_lines()
-  local choice_builder = _load_fresh("src.ui.pres.choice_builder")
+  local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
     id = 1,
@@ -589,7 +589,7 @@ local function _test_build_choice_view_joins_body_lines()
 end
 
 local function _test_build_choice_view_prefers_body_lines_over_body()
-  local choice_builder = _load_fresh("src.ui.pres.choice_builder")
+  local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
     id = 1,
@@ -604,7 +604,7 @@ local function _test_build_choice_view_prefers_body_lines_over_body()
 end
 
 local function _test_build_choice_view_uses_default_option_label()
-  local choice_builder = _load_fresh("src.ui.pres.choice_builder")
+  local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
     id = 1,
@@ -617,7 +617,7 @@ local function _test_build_choice_view_uses_default_option_label()
 end
 
 local function _test_build_choice_view_copies_option_view_fields()
-  local choice_builder = _load_fresh("src.ui.pres.choice_builder")
+  local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
     id = 1,

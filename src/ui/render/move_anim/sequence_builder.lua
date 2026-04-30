@@ -1,7 +1,7 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
-local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_state = require("src.ui.state")
+local gameplay_read_port = require("src.ui.view.gameplay_read_port")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local runtime_state = require("src.ui.state.runtime")
 
 local sequence_builder = {}
 

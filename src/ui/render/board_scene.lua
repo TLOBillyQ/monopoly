@@ -1,5 +1,5 @@
 local board_scene = {}
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local function _new_scene()
   return {

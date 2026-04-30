@@ -1,6 +1,6 @@
 local base_nodes = require("src.ui.schema.base")
 local event_intents = require("src.ui.input.event_intents")
-local runtime_state = require("src.ui.state")
+local runtime_state = require("src.ui.state.runtime")
 
 local intents = {}
 

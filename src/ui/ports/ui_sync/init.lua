@@ -2,9 +2,9 @@ local ui_model_sync = require("src.ui.ports.ui_sync.model")
 local camera_sync = require("src.ui.ports.ui_sync.camera")
 local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
-local target_choice_effects = require("src.ui.ctl.target_choice_effects")
-local modal = require("src.ui.ctl.modal")
-local runtime_state = require("src.ui.state")
+local target_choice_effects = require("src.ui.coord.target_choice_effects")
+local modal = require("src.ui.coord.modal")
+local runtime_state = require("src.ui.state.runtime")
 
 local ui_sync_ports = {}
 

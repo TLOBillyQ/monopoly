@@ -5,7 +5,7 @@ local gameplay_loop_ports = require("src.turn.loop.ports")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local turn_roll = require("src.turn.phases.roll")
 local output_state_adapter = require("src.turn.output.state_adapter")
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 
 local function _merge_group(base_group, override_group)
   local merged = {}

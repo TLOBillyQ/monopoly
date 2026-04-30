@@ -1,8 +1,8 @@
-local logger = require("src.core.utils.logger")
-local tip_queue = require("src.core.utils.tip_queue")
+local logger = require("src.foundation.log.logger")
+local tip_queue = require("src.foundation.coordination.tip_queue")
 local runtime_context = require("src.host.context")
 local default_ports = require("src.host.default_ports")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local paid_purchase_port = require("src.rules.market.paid_purchase_port")
 
 local M = {}

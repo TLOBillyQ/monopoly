@@ -1,8 +1,8 @@
 local choice_builder = require("src.rules.market.choice.builder")
 local feedback = require("src.rules.market.choice.feedback")
-local number_utils = require("src.core.utils.number")
-local logger = require("src.core.utils.logger")
-local choice_contract = require("src.core.choice.contract")
+local number_utils = require("src.foundation.lang.number")
+local logger = require("src.foundation.log.logger")
+local choice_contract = require("src.config.choice.contract")
 
 local session = {}
 

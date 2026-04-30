@@ -1,9 +1,9 @@
-local gameplay_read_port = require("src.ui.pres.gameplay_read_port")
+local gameplay_read_port = require("src.ui.view.gameplay_read_port")
 local board_geometry = require("src.config.gameplay.board_geometry")
 local debug_flags = require("src.config.gameplay.debug_flags")
-local runtime_state = require("src.ui.state")
-local runtime_ports = require("src.core.ports.runtime_ports")
-local logger = require("src.core.utils.logger")
+local runtime_state = require("src.ui.state.runtime")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local logger = require("src.foundation.log.logger")
 local move_anim = require("src.ui.render.move_anim")
 
 local M = {}

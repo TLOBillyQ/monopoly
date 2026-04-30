@@ -1,6 +1,6 @@
-local logger = require("src.core.utils.logger")
-local number_utils = require("src.core.utils.number")
-local logger_utils = require("src.core.utils.logger_utils")
+local logger = require("src.foundation.log.logger")
+local number_utils = require("src.foundation.lang.number")
+local logger_utils = require("src.foundation.log.utils")
 
 local common = {}
 

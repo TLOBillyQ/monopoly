@@ -1,7 +1,7 @@
 -- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
-local ui_view = require("src.ui.ctl.ui_runtime")
+local ui_view = require("src.ui.coord.ui_runtime")
 local ids = require("fixtures.item_slot_ids")
 
 local function _wrap_ui_refs(image_refs)
@@ -229,7 +229,7 @@ local function _test_ui_view_hides_inactive_countdown()
 end
 
 local function _test_ui_events_send_without_roles_no_crash()
-  local ui_events = require("src.ui.ctl.ui_events")
+  local ui_events = require("src.ui.coord.ui_events")
   ui_events.set_roles(nil)
   ui_events.send_to_all("测试事件", { ok = true })
 end

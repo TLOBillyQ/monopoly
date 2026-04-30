@@ -1,6 +1,6 @@
 local meta = require("src.ui.render.status3d.meta")
 local specs = require("src.ui.render.status3d.specs")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local host_runtime_bridge = require("src.ui.host_bridge")
 
 local M = {}

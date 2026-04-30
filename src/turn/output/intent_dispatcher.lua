@@ -1,6 +1,6 @@
-local monopoly_event = require("src.core.events")
-local choice_contract = require("src.core.choice.contract")
-local choice_route_policy = require("src.core.choice.route_policy")
+local monopoly_event = require("src.foundation.events")
+local choice_contract = require("src.config.choice.contract")
+local choice_route_policy = require("src.config.choice.route_policy")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
 

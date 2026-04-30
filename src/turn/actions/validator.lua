@@ -1,9 +1,9 @@
-local logger = require("src.core.utils.logger")
-local number_utils = require("src.core.utils.number")
+local logger = require("src.foundation.log.logger")
+local number_utils = require("src.foundation.lang.number")
 local item_slot_data = require("src.turn.actions.item_slot_data")
 local turn_action_gate = require("src.turn.policies.action_gate")
-local role_id_utils = require("src.core.utils.role_id")
-local choice_contract = require("src.core.choice.contract")
+local role_id_utils = require("src.foundation.identity.role_id")
+local choice_contract = require("src.config.choice.contract")
 local runtime_state = require("src.state.runtime_state")
 local availability = require("src.rules.items.availability")
 

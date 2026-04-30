@@ -714,7 +714,7 @@ local function _test_pre_confirm_enter_choice_select()
         }
       end,
     },
-    ["src.ui.pres.choice_support"] = {
+    ["src.ui.view.choice_support"] = {
       resolve_option_label_by_id = function() return "Option 1" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -1033,7 +1033,7 @@ local function _test_pre_confirm_enter_missing_modal_function()
         }
       end,
     },
-    ["src.ui.pres.choice_support"] = {
+    ["src.ui.view.choice_support"] = {
       resolve_option_label_by_id = function() return "Option 1" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -1072,7 +1072,7 @@ local function _test_pre_confirm_enter_requires_local_owner()
         }
       end,
     },
-    ["src.ui.pres.choice_support"] = {
+    ["src.ui.view.choice_support"] = {
       resolve_option_label_by_id = function() return "Option 1" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,
@@ -1111,7 +1111,7 @@ local function _test_pre_confirm_enter_requires_resolved_local_role()
         }
       end,
     },
-    ["src.ui.pres.choice_support"] = {
+    ["src.ui.view.choice_support"] = {
       resolve_option_label_by_id = function() return "Option 1" end,
       resolve_secondary_confirm_title = function() return "Title" end,
       resolve_secondary_confirm_body = function() return "Body" end,

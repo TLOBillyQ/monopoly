@@ -2,8 +2,8 @@ local support = require("support.domain_support")
 local _new_game = support.new_game
 local _with_patches = support.with_patches
 local market_cfg = require("src.config.content.market")
-local runtime_ports = require("src.core.ports.runtime_ports")
-local logger = require("src.core.utils.logger")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local logger = require("src.foundation.log.logger")
 local paid_goods_cfg = require("src.rules.commerce.paid_goods")
 local paid_purchase_port = require("src.rules.market.paid_purchase_port")
 

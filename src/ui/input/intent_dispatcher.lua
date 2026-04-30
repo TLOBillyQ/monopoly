@@ -1,4 +1,4 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local turn_action_port = require("src.ui.input.dispatch.turn_action_port")
 local game_action_dispatcher = require("src.ui.input.dispatch.game_action")
 local view_command_dispatcher = require("src.ui.input.dispatch.view_command")

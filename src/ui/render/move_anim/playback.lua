@@ -1,4 +1,4 @@
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local board_feedback = require("src.ui.render.board_feedback.service")
 local debug_mod = require("src.ui.render.move_anim.debug")

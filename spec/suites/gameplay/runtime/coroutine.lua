@@ -1,10 +1,10 @@
 local support = require("support.gameplay_support")
 local turn_engine = require("src.turn.loop.scheduler_runtime")
-local landing_visual_hold = require("src.state.landing_visual_hold")
+local landing_visual_hold = require("src.state.visual_hold")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 local await = require("src.turn.waits.await")
-local logger = require("src.core.utils.logger")
-local tip_queue = require("src.core.utils.tip_queue")
+local logger = require("src.foundation.log.logger")
+local tip_queue = require("src.foundation.coordination.tip_queue")
 
 ---------------------------------------------------------------------------
 -- 1. coroutine mode default

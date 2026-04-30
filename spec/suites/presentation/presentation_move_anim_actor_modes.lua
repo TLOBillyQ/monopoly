@@ -1,6 +1,6 @@
-local logger = require("src.core.utils.logger")
+local logger = require("src.foundation.log.logger")
 local move_anim = require("src.ui.render.move_anim")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local support = require("support.move_anim_support")
 local gameplay_rules = require("src.config.gameplay.debug_flags")
 

@@ -1,10 +1,10 @@
 local market_layout = require("src.ui.schema.market_layout")
 local ui_controls = require("src.ui.render.support.ui_controls")
-local runtime_state = require("src.ui.state")
+local runtime_state = require("src.ui.state.runtime")
 local market_view_slots = require("src.ui.render.market.slots")
 local market_view_controls = require("src.ui.render.market.controls")
 local runtime_ui = require("src.ui.render.runtime_ui")
-local modal_state = require("src.ui.stores.modal_state")
+local modal_state = require("src.ui.state.modal_state")
 
 local market_view = {}
 local VEHICLE_TAB_ENABLED = false

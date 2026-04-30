@@ -1,4 +1,4 @@
-local runtime_ports = require("src.core.ports.runtime_ports")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local support = require("spec.support.presentation_support")
 local vec3 = require("fixtures.vec3")
 

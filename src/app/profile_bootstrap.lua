@@ -1,6 +1,6 @@
 local inventory = require("src.rules.items.inventory")
 local constants = require("src.config.content.constants")
-local number_utils = require("src.core.utils.number")
+local number_utils = require("src.foundation.lang.number")
 
 local bootstrap = {}
 local _is_render_called_flag_enabled

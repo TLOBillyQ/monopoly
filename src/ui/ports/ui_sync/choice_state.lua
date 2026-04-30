@@ -1,10 +1,10 @@
 local choice_route_policy = require("src.ui.input.choice_route")
-local choice_contract = require("src.core.choice.contract")
-local local_actor_resolver = require("src.ui.ctl.local_actor_resolver")
-local role_id_utils = require("src.core.utils.role_id")
+local choice_contract = require("src.config.choice.contract")
+local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
+local role_id_utils = require("src.foundation.identity.role_id")
 local runtime = require("src.ui.render.runtime_ui")
-local runtime_ports = require("src.core.ports.runtime_ports")
-local runtime_state = require("src.ui.state")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local runtime_state = require("src.ui.state.runtime")
 
 local choice_ui_state = {}
 

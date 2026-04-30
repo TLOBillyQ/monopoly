@@ -1,6 +1,6 @@
 local event_kinds = require("src.config.gameplay.event_kinds")
 local timing = require("src.config.gameplay.timing")
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
 
 local mine_effect = {}

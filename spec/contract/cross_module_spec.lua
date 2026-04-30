@@ -1,7 +1,7 @@
 local support = require("spec.support.runtime_support")
 
-local monopoly_events = require("src.core.events")
-local runtime_ports = require("src.core.ports.runtime_ports")
+local monopoly_events = require("src.foundation.events")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local land_events = require("src.rules.land.events")
 local land_rules = require("src.rules.land.rules")
 local land_rent_resolver = require("src.rules.land.rent_resolver")

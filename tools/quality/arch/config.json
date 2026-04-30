@@ -2,7 +2,7 @@
   "abstract_rules": [
     {
       "match": [
-        "^src%.core%.ports%..+"
+        "^src%.foundation%.ports%..+"
       ],
       "name": "core_ports"
     },
@@ -120,8 +120,8 @@
     {
       "component": "core",
       "match": [
-        "^src%.core$",
-        "^src%.core%..+"
+        "^src%.foundation$",
+        "^src%.foundation%..+"
       ],
       "name": "core"
     },

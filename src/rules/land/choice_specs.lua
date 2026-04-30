@@ -1,4 +1,4 @@
-local use_skip_choice = require("src.core.choice.use_skip_choice")
+local use_skip_choice = require("src.rules.choice.use_skip_choice")
 
 local land_choice_specs = {}
 

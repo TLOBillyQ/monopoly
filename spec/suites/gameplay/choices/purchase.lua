@@ -115,7 +115,7 @@ local function _test_handle_paid_purchase_logs_warning_on_failure()
         return false, "payment_gateway_error"
       end,
     },
-    ["src.core.utils.logger"] = {
+    ["src.foundation.log.logger"] = {
       warn = function(...)
         warn_calls[#warn_calls + 1] = table.concat({ ... }, " ")
       end,

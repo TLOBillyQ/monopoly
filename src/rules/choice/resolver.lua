@@ -1,6 +1,6 @@
-local logger = require("src.core.utils.logger")
-local item_preconsume_policy = require("src.core.choice.item_preconsume_policy")
-local tables = require("src.core.utils.tables")
+local logger = require("src.foundation.log.logger")
+local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
+local tables = require("src.foundation.lang.tables")
 local event_kinds = require("src.config.gameplay.event_kinds")
 
 local choice_resolver = {}

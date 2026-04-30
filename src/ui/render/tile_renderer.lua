@@ -1,5 +1,5 @@
 local tiles_cfg = require("src.config.content.tiles")
-local player_colors = require("src.ui.pres.player_colors")
+local player_colors = require("src.ui.view.player_colors")
 
 local tiles_by_id = {}
 for _, cfg in ipairs(tiles_cfg) do

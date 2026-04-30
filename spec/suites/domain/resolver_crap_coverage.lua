@@ -1,4 +1,4 @@
-local choice_resolver = require("src.core.choice.resolver")
+local choice_resolver = require("src.rules.choice.resolver")
 
 local _contains = choice_resolver._M_test._contains
 

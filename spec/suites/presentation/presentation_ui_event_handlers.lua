@@ -1,11 +1,11 @@
 -- luacheck: ignore 211
 local support = require("support.presentation_support")
 local _with_patches = support.with_patches
-local number_utils = require("src.core.utils.number")
-local monopoly_event = require("src.core.events")
+local number_utils = require("src.foundation.lang.number")
+local monopoly_event = require("src.foundation.events")
 local host_runtime = require("src.host")
 local board_feedback = require("src.ui.render.board_feedback.service")
-local landing_visual_hold = require("src.state.landing_visual_hold")
+local landing_visual_hold = require("src.state.visual_hold")
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -14,8 +14,8 @@ if not math.Vector3 then
 end
 
 local function _load_fresh_handlers()
-  package.loaded["src.ui.ctl.event_handlers"] = nil
-  return require("src.ui.ctl.event_handlers")
+  package.loaded["src.ui.coord.event_handlers"] = nil
+  return require("src.ui.coord.event_handlers")
 end
 
 local function _test_market_buy_failed_shows_tip_for_three_seconds_without_popup()
@@ -559,9 +559,9 @@ local function _test_mine_hit_tolerates_missing_state_and_lookup_api()
     assert(type(handler) == "function", "mine_hit handler should be registered")
     handler(nil, nil, { tile_id = 77 })
 
-    package.loaded["src.ui.ctl.event_handlers"] = nil
+    package.loaded["src.ui.coord.event_handlers"] = nil
     handlers = {}
-    event_handlers = require("src.ui.ctl.event_handlers")
+    event_handlers = require("src.ui.coord.event_handlers")
     event_handlers.install(nil, nil, {
       game = {
         board = {},
@@ -646,7 +646,7 @@ local function _test_game_result_feedback_routes_winner_and_loser_panels()
       end,
     },
     {
-      target = require("src.core.ports.runtime_ports"),
+      target = require("src.foundation.ports.runtime_ports"),
       key = "resolve_role",
       value = function(player_id)
         role_calls[player_id] = role_calls[player_id] or { wins = 0, loses = 0 }

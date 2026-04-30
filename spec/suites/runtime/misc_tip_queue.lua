@@ -1,6 +1,6 @@
 local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
-local tip_queue = require("src.core.utils.tip_queue")
+local tip_queue = require("src.foundation.coordination.tip_queue")
 
 local function _reset_tip_queue()
   tip_queue.clear()

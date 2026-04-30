@@ -1,7 +1,7 @@
 ---@diagnostic disable: undefined-global, undefined-field
 local support = require("spec.support.shared_support")
 
-local action_anim_port = require("src.core.ports.action_anim")
+local action_anim_port = require("src.foundation.ports.action_anim")
 local turn_roll = require("src.turn.phases.roll")
 local turn_move = require("src.turn.phases.move")
 

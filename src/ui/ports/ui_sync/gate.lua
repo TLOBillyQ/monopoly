@@ -1,4 +1,4 @@
-local canvas_store = require("src.ui.stores.canvas_store")
+local canvas_store = require("src.ui.state.canvas_store")
 
 local ui_gate_sync = {}
 

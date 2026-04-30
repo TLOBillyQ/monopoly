@@ -2,7 +2,7 @@ local tile_mod = require("src.rules.board.tile")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local pricing = require("src.rules.land.pricing")
 local timing = require("src.config.gameplay.timing")
-local monopoly_event = require("src.core.events")
+local monopoly_event = require("src.foundation.events")
 local event_feed = require("src.rules.ports.event_feed")
 
 local game_victory = {}

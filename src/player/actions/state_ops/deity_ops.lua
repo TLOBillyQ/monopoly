@@ -1,5 +1,5 @@
 local common = require("src.player.actions.state_ops.common")
-local monopoly_event = require("src.core.events")
+local monopoly_event = require("src.foundation.events")
 
 local deity_ops = {}
 

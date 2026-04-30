@@ -2,7 +2,7 @@ local P = require("support.presentation_action_status_prelude")
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
 local _build_choice_modal_state = P.build_choice_modal_state
-local modal_presenter = require("src.ui.ctl.modal")
+local modal_presenter = require("src.ui.coord.modal")
 local ui_choice_route_policy = require("src.ui.input.choice_route")
 
 local function _test_choice_modal_routes_to_new_screens()
@@ -336,7 +336,7 @@ local function _test_choice_route_policy_prefers_explicit_route_metadata()
 end
 
 local function _test_secondary_confirm_copy_item_phase_selected_option()
-  local common = require("src.ui.ctl.choice_screens.helpers")
+  local common = require("src.ui.coord.choice_screens.helpers")
   local choice = {
     kind = "item_phase_choice",
     route_key = "base_inline",
@@ -358,7 +358,7 @@ local function _test_secondary_confirm_copy_item_phase_selected_option()
 end
 
 local function _test_secondary_confirm_copy_land_actions()
-  local common = require("src.ui.ctl.choice_screens.helpers")
+  local common = require("src.ui.coord.choice_screens.helpers")
   local choice = {
     kind = "landing_optional_effect",
     options = {
@@ -400,7 +400,7 @@ local function _test_secondary_confirm_copy_land_actions()
 end
 
 local function _test_secondary_confirm_copy_generic_pre_confirm()
-  local common = require("src.ui.ctl.choice_screens.helpers")
+  local common = require("src.ui.coord.choice_screens.helpers")
   local choice = {
     kind = "remote_dice_value",
     title = "遥控骰子",
@@ -415,7 +415,7 @@ local function _test_secondary_confirm_copy_generic_pre_confirm()
 end
 
 local function _test_secondary_confirm_prefers_usecase_confirm_copy()
-  local common = require("src.ui.ctl.choice_screens.helpers")
+  local common = require("src.ui.coord.choice_screens.helpers")
   local choice = {
     kind = "landing_optional_effect",
     confirm_title = "不会被读取",
@@ -437,7 +437,7 @@ end
 
 local function _test_passive_kind_no_modal()
   local state, _, query_nodes = _build_choice_modal_state()
-  local choice_support = require("src.ui.pres.choice_support")
+  local choice_support = require("src.ui.view.choice_support")
   _with_patches({
     { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
     { key = "all_roles", value = nil },
@@ -466,7 +466,7 @@ local function _test_passive_kind_no_modal()
 end
 
 local function _test_pre_confirm_skipped_for_passive_kind()
-  local choice_support = require("src.ui.pres.choice_support")
+  local choice_support = require("src.ui.view.choice_support")
   local passive_choice = {
     id = 102,
     kind = "item_phase_passive",
