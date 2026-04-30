@@ -1,23 +1,9 @@
-local status_ops = require("src.player.actions.state_ops.status_ops")
-local balance_ops = require("src.player.actions.state_ops.balance_ops")
-local deity_ops = require("src.player.actions.state_ops.deity_ops")
-local vehicle_ops = require("src.player.actions.state_ops.vehicle_ops")
-local location_ops = require("src.player.actions.state_ops.location_ops")
-
-local game_state_players = {}
-
-local groups = {
-  status_ops,
-  balance_ops,
-  deity_ops,
-  vehicle_ops,
-  location_ops,
-}
-
-for _, group in ipairs(groups) do
-  for key, fn in pairs(group) do
-    game_state_players[key] = fn
-  end
-end
-
-return game_state_players
+-- Player state mixin source.
+-- The actual player_state methods (status/balance/deity/vehicle/location ops) are
+-- now installed onto the Game class by `src/app/compose_game.lua` to honour the
+-- Dependency Rule: state (L7) must not depend on player (L5).
+--
+-- This empty table is kept so `src/state/game_state.lua` can still `require` it
+-- and call `_install_mixin(...)` as a no-op, preserving the existing wiring.
+-- See ADR docs/architecture/adr/0001-seven-layer-with-foundation.md (D6).
+return {}

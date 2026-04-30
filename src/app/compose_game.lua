@@ -11,6 +11,33 @@ local phase_registry = require("src.turn.phases.registry")
 local number_utils = require("src.core.utils.number")
 local role_id_utils = require("src.core.utils.role_id")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
+local status_ops = require("src.player.actions.state_ops.status_ops")
+local balance_ops = require("src.player.actions.state_ops.balance_ops")
+local deity_ops = require("src.player.actions.state_ops.deity_ops")
+local vehicle_ops = require("src.player.actions.state_ops.vehicle_ops")
+local location_ops = require("src.player.actions.state_ops.location_ops")
+local game_victory = require("src.rules.endgame.game_victory")
+
+local function _install_class_mixin(target_class, source_table, source_name)
+  for key, fn in pairs(source_table) do
+    assert(target_class[key] == nil, "compose_game mixin collision: " .. tostring(source_name) .. "." .. tostring(key))
+    target_class[key] = fn
+  end
+end
+
+local _player_state_groups = {
+  { name = "status_ops", source = status_ops },
+  { name = "balance_ops", source = balance_ops },
+  { name = "deity_ops", source = deity_ops },
+  { name = "vehicle_ops", source = vehicle_ops },
+  { name = "location_ops", source = location_ops },
+}
+
+for _, group in ipairs(_player_state_groups) do
+  _install_class_mixin(game_state, group.source, group.name)
+end
+
+game_state.check_victory = game_victory.check_victory
 
 local composition_root = {}
 

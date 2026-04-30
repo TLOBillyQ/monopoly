@@ -1,7 +1,6 @@
 local game_state_players = require("src.state.player_state")
 local game_state_tiles = require("src.state.board_state")
 local game_state_turn = require("src.state.turn_state")
-local game_victory = require("src.rules.endgame.game_victory")
 require "vendor.third_party.ClassUtils"
 
 
@@ -17,8 +16,6 @@ end
 _install_mixin(game, game_state_players, "players")
 _install_mixin(game, game_state_tiles, "board")
 _install_mixin(game, game_state_turn, "turn")
-
-game.check_victory = game_victory.check_victory
 
 local function _mark_players(game_ctx)
   game_ctx.dirty.any = true
