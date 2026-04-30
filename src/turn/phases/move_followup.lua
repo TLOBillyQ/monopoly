@@ -1,5 +1,6 @@
 local steal = require("src.rules.items.steal")
 local market_service = require("src.rules.market")
+local auto_play_port = require("src.rules.ports.auto_play")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local landing_visual_hold = require("src.state.visual_hold")
 local event_kinds = require("src.config.gameplay.event_kinds")
@@ -58,6 +59,14 @@ local function _resolve_steal_interrupt_wait(game, player, raw_total, interrupt)
 end
 
 local function _resolve_market_interrupt_wait(game, player, raw_total, interrupt)
+  if auto_play_port.is_auto_player(game, player) then
+    market_service.auto.execute(game, player)
+    if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
+      return "move", _build_resume_move_args(player, raw_total, interrupt, "continue_from_market")
+    end
+    return nil
+  end
+
   local spec, intent = market_service.choice.build(player, game)
   if spec then
     intent_dispatcher.dispatch(game, { kind = "need_choice", choice_spec = spec })

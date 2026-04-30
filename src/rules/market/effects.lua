@@ -1,4 +1,5 @@
 local market_service = require("src.rules.market")
+local auto_play_port = require("src.rules.ports.auto_play")
 
 local module = {}
 
@@ -8,6 +9,11 @@ module.executors = {
       return ctx.tile and ctx.tile.type == "market"
     end,
     apply = function(ctx)
+      if auto_play_port.is_auto_player(ctx.game, ctx.player) then
+        market_service.auto.execute(ctx.game, ctx.player)
+        return nil
+      end
+
       local spec, intent = market_service.choice.build(ctx.player, ctx.game)
       if intent then
         return { intent = intent }
