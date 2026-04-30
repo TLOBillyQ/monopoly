@@ -11,8 +11,10 @@ local default_ports = require("src.turn.output.default_ports")
 local logger = require("src.foundation.log.logger")
 
 local max_player_count = 4
-local synthetic_unit_keys = { 9000601, 9000602, 9000603, 9000604, 9000605, 9000607 }
+local synthetic_ai_cfg = runtime_refs.synthetic_ai or {}
+local synthetic_unit_keys = synthetic_ai_cfg.unit_keys or {}
 local synthetic_avatar_refs = runtime_refs.images or {}
+local synthetic_ai_names = synthetic_ai_cfg.names or {}
 local M = {}
 
 local function _is_release_build(build_mode)
@@ -106,12 +108,6 @@ local function _add_real_roles_to_roster(roster, roles, max_players)
   end
   return roster
 end
-
-local synthetic_ai_names = {
-  [2] = "紫圈圈",
-  [3] = "红绒绒",
-  [4] = "蓝盖盖",
-}
 
 local function _build_synthetic_role(slot_index, unit_key)
   local avatar_ref_id = "AI" .. tostring(slot_index)
