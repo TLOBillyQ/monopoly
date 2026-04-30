@@ -801,7 +801,7 @@ local function _test_collect_from_others_caps_fee_and_rich_bonus()
     queue_action_anim = function(_, anim)
       anims[#anims + 1] = anim
     end,
-    emit_event = function(_, payload)
+    emit_event = function(_, _, payload)
       events[#events + 1] = payload
     end,
     apply_cash_change = function(_, target_player, delta)

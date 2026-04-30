@@ -7,10 +7,23 @@ local number_utils = require("src.foundation.lang.number")
 local inventory = require("src.rules.items.inventory")
 local mine_effect = require("src.rules.effects.mine")
 local action_anim_port = require("src.foundation.ports.action_anim")
+local event_feed = require("src.rules.ports.event_feed")
+local event_kinds = require("src.config.gameplay.event_kinds")
 
 local movement = {}
 
 local _emit_event = monopoly_event.emit
+
+local function _emit_text(game, mono_kind, ef_kind, payload)
+  _emit_event(mono_kind, payload)
+  if game and ef_kind and type(payload.text) == "string" then
+    event_feed.publish(game, {
+      kind = ef_kind,
+      text = payload.text,
+      tip = false,
+    })
+  end
+end
 
 local function _build_other_action_prompt_text()
   return "玩家正在行动"
@@ -111,7 +124,7 @@ local function _check_roadblock(game, board, current, player)
     tile_index = current,
     duration = timing.action_anim_default_seconds or 1.0,
   })
-  _emit_event(monopoly_event.movement.roadblock_hit, {
+  _emit_text(game, monopoly_event.movement.roadblock_hit, event_kinds.roadblock_triggered, {
     player = player,
     tile = tile,
     text = player.name .. " 触发路障，停在 " .. tile.name,
@@ -124,7 +137,7 @@ local function _check_mine(game, player, current)
   return mine_effect.can_trigger(game, player, current)
 end
 
-local function _check_steal(player, encountered_step, step, abs_steps, facing, branch_parity, opts)
+local function _check_steal(game, player, encountered_step, step, abs_steps, facing, branch_parity, opts)
   if opts.skip_steal_check or #encountered_step == 0 then
     return nil
   end
@@ -133,7 +146,7 @@ local function _check_steal(player, encountered_step, step, abs_steps, facing, b
   if not has_steal or remaining <= 0 then
     return nil
   end
-  _emit_event(monopoly_event.movement.steal_interrupt, {
+  _emit_text(game, monopoly_event.movement.steal_interrupt, event_kinds.steal, {
     player = player,
     encountered_ids = encountered_step,
     text = player.name .. " 经过玩家，触发偷窃中断",
@@ -149,7 +162,7 @@ local function _check_steal(player, encountered_step, step, abs_steps, facing, b
   }
 end
 
-local function _check_market(board, current, step, steps, abs_steps, facing, branch_parity, player, opts)
+local function _check_market(game, board, current, step, steps, abs_steps, facing, branch_parity, player, opts)
   if steps <= 0 or opts.skip_market_check then
     return nil
   end
@@ -159,7 +172,7 @@ local function _check_market(board, current, step, steps, abs_steps, facing, bra
     return nil
   end
   local remaining = abs_steps - step
-  _emit_event(monopoly_event.movement.market_interrupt, {
+  _emit_text(game, monopoly_event.movement.market_interrupt, event_kinds.market_entered, {
     player = player,
     remaining_steps = remaining,
     text = player.name .. " 经过黑市，剩余 " .. number_utils.format_integer_part(remaining) .. " 步",
@@ -183,6 +196,7 @@ local function _resolve_step_interrupt(ctx, encountered_step, step)
     return true
   end
   ctx.steal_interrupt = _check_steal(
+    ctx.game,
     ctx.player,
     encountered_step,
     step,
@@ -199,6 +213,7 @@ local function _resolve_step_interrupt(ctx, encountered_step, step)
     return true
   end
   ctx.market_interrupt = _check_market(
+    ctx.game,
     ctx.board,
     ctx.current,
     step,
@@ -311,7 +326,7 @@ local function _tile_label(tile)
 end
 
 local function _emit_move_events(ctx, landing_tile)
-  _emit_event(monopoly_event.movement.moved, {
+  _emit_text(ctx.game, monopoly_event.movement.moved, event_kinds.move_completed, {
     player = ctx.player,
     from_tile = ctx.start_tile,
     to_tile = landing_tile,
@@ -324,7 +339,7 @@ local function _emit_move_events(ctx, landing_tile)
   end
   local bonus = ctx.pass_start * constants.pass_start_bonus
   ctx.game:add_player_cash(ctx.player, bonus)
-  _emit_event(monopoly_event.movement.passed_start, {
+  _emit_text(ctx.game, monopoly_event.movement.passed_start, event_kinds.passed_start, {
     player = ctx.player,
     count = ctx.pass_start,
     bonus = bonus,

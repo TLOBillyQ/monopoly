@@ -35,5 +35,10 @@ M.deity_evicted = "deity_evicted"
 M.deity_transferred = "deity_transferred"
 M.deity_attached = "deity_attached"
 M.equality_card = "equality_card"
+M.move_completed = "move_completed"
+M.passed_start = "passed_start"
+M.roadblock_triggered = "roadblock_triggered"
+M.market_entered = "market_entered"
+M.tax_paid = "tax_paid"
 
 return M

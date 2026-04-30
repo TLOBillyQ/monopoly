@@ -1,14 +1,22 @@
 local monopoly_event = require("src.foundation.events")
+local event_feed = require("src.rules.ports.event_feed")
+local event_kinds = require("src.config.gameplay.event_kinds")
 
 local resolver = {}
 
 function resolver.resolve(game, player, card, context)
   if card.negative and game:player_has_angel(player) then
+    local text = player.name .. " 有天使附身，负面机会卡无效"
     monopoly_event.emit(monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
-      text = player.name .. " 有天使附身，负面机会卡无效",
+      text = text,
+    })
+    event_feed.publish(game, {
+      kind = event_kinds.chance_card,
+      text = text,
+      tip = false,
     })
     return nil
   end

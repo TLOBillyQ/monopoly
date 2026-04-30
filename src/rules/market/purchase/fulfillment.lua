@@ -5,9 +5,22 @@ local number_utils = require("src.foundation.lang.number")
 local runtime_refs = require("src.config.content.runtime_refs")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local logger = require("src.foundation.log.logger")
+local event_feed = require("src.rules.ports.event_feed")
+local event_kinds = require("src.config.gameplay.event_kinds")
 
 local fulfillment = {}
 local _emit_event = monopoly_event.emit
+
+local function _emit_bought_item(game, payload)
+  _emit_event(monopoly_event.market.bought_item, payload)
+  if game and type(payload.text) == "string" then
+    event_feed.publish(game, {
+      kind = event_kinds.item_acquired,
+      text = payload.text,
+      tip = false,
+    })
+  end
+end
 
 local function _success_text(player, entry, price, currency, priced)
   local name = context.entry_name(entry)
@@ -41,7 +54,7 @@ local function _fulfill_item(game, player, entry, opts, price, currency, priced_
   end
   inventory.give(player, entry.product_id)
   context.consume_global_limit(game, entry.product_id)
-  _emit_event(monopoly_event.market.bought_item, {
+  _emit_bought_item(game, {
     player = player,
     entry = entry,
     price = price,
@@ -96,7 +109,7 @@ local function _fulfill_skin(game, player, entry, opts, price, currency, priced_
     creature_key = number_utils.to_integer(entry.product_id)
   end
   _try_apply_skin_to_unit(player.id, creature_key)
-  _emit_event(monopoly_event.market.bought_item, {
+  _emit_bought_item(game, {
     player = player,
     entry = entry,
     price = price,

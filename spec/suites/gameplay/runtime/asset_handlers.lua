@@ -4,7 +4,7 @@ local function _test_asset_handlers_destroy_buildings_on_path()
    local monopoly_event = require("src.foundation.events")
   local events = {}
   local common = {
-    emit_event = function(_, payload)
+    emit_event = function(_, _, payload)
       table.insert(events, payload)
     end,
     dependencies = function()
@@ -42,7 +42,7 @@ local function _test_asset_handlers_reset_tiles_on_path()
   local events = {}
   local tile_state_calls = {}
   local common = {
-    emit_event = function(_, payload)
+    emit_event = function(_, _, payload)
       table.insert(events, payload)
     end,
     dependencies = function()
@@ -96,7 +96,7 @@ local _asset_handlers_final_tests = {
     -- Test discard_properties with card.count = 0 (should drop all properties)
     local events = {}
     local common = {
-      emit_event = function(_, payload)
+      emit_event = function(_, _, payload)
         table.insert(events, payload)
       end,
        dependencies = function()
@@ -136,7 +136,7 @@ local _asset_handlers_final_tests = {
     -- Test discard_properties with card.count > number of properties
     local events = {}
     local common = {
-      emit_event = function(_, payload)
+      emit_event = function(_, _, payload)
         table.insert(events, payload)
       end,
        dependencies = function()
@@ -173,7 +173,7 @@ local _asset_handlers_final_tests = {
     -- Test discard_properties with empty properties
     local events = {}
     local common = {
-      emit_event = function(_, payload)
+      emit_event = function(_, _, payload)
         table.insert(events, payload)
       end,
        dependencies = function()

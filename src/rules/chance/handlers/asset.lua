@@ -14,7 +14,7 @@ function asset_handlers.register(handlers, common)
       assert(t ~= nil, "missing tile: " .. tostring(idx))
       if t.type == "land" and (t.level or 0) > 0 then
         game:set_tile_level(t, 0)
-        common.emit_event(monopoly_event.chance.applied, {
+        common.emit_event(game, monopoly_event.chance.applied, {
           card = { effect = "destroy_buildings_on_path" },
           effect = "destroy_buildings_on_path",
           tile = t,
@@ -37,7 +37,7 @@ function asset_handlers.register(handlers, common)
           game:set_player_property(owner, t.id, false)
         end
         game:reset_tile(t)
-        common.emit_event(monopoly_event.chance.applied, {
+        common.emit_event(game, monopoly_event.chance.applied, {
           card = { effect = "reset_tiles_on_path" },
           effect = "reset_tiles_on_path",
           tile = t,
@@ -68,14 +68,14 @@ function asset_handlers.register(handlers, common)
       table.insert(dropped_names, inventory.item_name(item.id))
     end
     if #dropped_names > 0 then
-      common.emit_event(monopoly_event.chance.applied, {
+      common.emit_event(game, monopoly_event.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,
         text = player.name .. " 丢弃道具 " .. #dropped_names .. " 张: " .. table.concat(dropped_names, "、"),
       })
     else
-      common.emit_event(monopoly_event.chance.applied, {
+      common.emit_event(game, monopoly_event.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,
@@ -122,7 +122,7 @@ function asset_handlers.register(handlers, common)
       local tile = game.board:get_tile_by_id(tile_id)
       assert(tile ~= nil, "missing tile: " .. tostring(tile_id))
       game:reset_tile(tile)
-      common.emit_event(monopoly_event.chance.applied, {
+      common.emit_event(game, monopoly_event.chance.applied, {
         player = player,
         card = card,
         effect = card.effect,

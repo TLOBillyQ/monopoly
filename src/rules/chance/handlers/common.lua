@@ -7,13 +7,23 @@ local timing = require("src.config.gameplay.timing")
 local vehicle_feature = require("src.rules.vehicle")
 local number_utils = require("src.foundation.lang.number")
 local action_anim_port = require("src.foundation.ports.action_anim")
+local event_feed = require("src.rules.ports.event_feed")
+local event_kinds = require("src.config.gameplay.event_kinds")
 
 local common = {}
 
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
 local tile_state = tile.get_state
-function common.emit_event(kind, payload)
-  monopoly_event.emit(kind, payload or {})
+function common.emit_event(game, kind, payload)
+  payload = payload or {}
+  monopoly_event.emit(kind, payload)
+  if game and type(payload.text) == "string" then
+    event_feed.publish(game, {
+      kind = event_kinds.chance_card,
+      text = payload.text,
+      tip = false,
+    })
+  end
 end
 
 function common.abs_value(value)

@@ -18,7 +18,7 @@ function cash_handlers.register(handlers, common)
       _apply_to_all_players(game, function(p)
         local delta = common.adjust_chance_delta(game, p, card.amount)
         common.apply_cash_change(game, p, delta)
-        common.emit_event(monopoly_event.chance.applied, {
+        common.emit_event(game, monopoly_event.chance.applied, {
           player = p,
           card = card,
           effect = card.effect,
@@ -30,7 +30,7 @@ function cash_handlers.register(handlers, common)
 
     local delta = common.adjust_chance_delta(game, player, card.amount)
     common.apply_cash_change(game, player, delta)
-    common.emit_event(monopoly_event.chance.applied, {
+    common.emit_event(game, monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -44,7 +44,7 @@ function cash_handlers.register(handlers, common)
         local delta = common.adjust_chance_delta(game, p, -card.amount)
         local reason = p.name .. " 支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
         common.apply_cash_and_maybe_bankrupt(game, p, delta, reason)
-        common.emit_event(monopoly_event.chance.applied, {
+        common.emit_event(game, monopoly_event.chance.applied, {
           player = p,
           card = card,
           effect = card.effect,
@@ -57,7 +57,7 @@ function cash_handlers.register(handlers, common)
     local delta = common.adjust_chance_delta(game, player, -card.amount)
     local reason = player.name .. " 支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
     common.apply_cash_and_maybe_bankrupt(game, player, delta, reason)
-    common.emit_event(monopoly_event.chance.applied, {
+    common.emit_event(game, monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -72,7 +72,7 @@ function cash_handlers.register(handlers, common)
         local delta = common.adjust_chance_delta(game, p, -fee)
         local reason = p.name .. " 按比例支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
         common.apply_cash_and_maybe_bankrupt(game, p, delta, reason)
-        common.emit_event(monopoly_event.chance.applied, {
+        common.emit_event(game, monopoly_event.chance.applied, {
           player = p,
           card = card,
           effect = card.effect,
@@ -86,7 +86,7 @@ function cash_handlers.register(handlers, common)
     local delta = common.adjust_chance_delta(game, player, -fee)
     local reason = player.name .. " 按比例支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
     common.apply_cash_and_maybe_bankrupt(game, player, delta, reason)
-    common.emit_event(monopoly_event.chance.applied, {
+    common.emit_event(game, monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -112,7 +112,7 @@ function cash_handlers.register(handlers, common)
         end
       end
     end
-    common.emit_event(monopoly_event.chance.applied, {
+    common.emit_event(game, monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
@@ -146,7 +146,7 @@ function cash_handlers.register(handlers, common)
         amount = total_collected,
       })
     end
-    common.emit_event(monopoly_event.chance.applied, {
+    common.emit_event(game, monopoly_event.chance.applied, {
       player = player,
       card = card,
       effect = card.effect,
