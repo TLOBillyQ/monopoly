@@ -107,11 +107,17 @@ local function _add_real_roles_to_roster(roster, roles, max_players)
   return roster
 end
 
+local synthetic_ai_names = {
+  [2] = "紫圈圈",
+  [3] = "红绒绒",
+  [4] = "蓝盖盖",
+}
+
 local function _build_synthetic_role(slot_index, unit_key)
   local avatar_ref_id = "AI" .. tostring(slot_index)
   return {
     role_id = -slot_index,
-    name = "AI" .. tostring(slot_index),
+    name = synthetic_ai_names[slot_index] or ("AI" .. tostring(slot_index)),
     synthetic = true,
     unit_key = unit_key,
     avatar_image_key = synthetic_avatar_refs[avatar_ref_id],
