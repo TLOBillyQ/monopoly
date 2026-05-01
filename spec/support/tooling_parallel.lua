@@ -9,12 +9,12 @@ local number_utils = require("src.foundation.lang.number")
 local M = {}
 
 local SUITE_COST_HINTS = {
-  ["suites.architecture.arch_view_live_tooling_contract"] = 40,
-  ["suites.architecture.script_tools_io_tooling_contract"] = 28,
-  ["suites.architecture.script_tools_mutate_tooling_contract"] = 16,
-  ["suites.architecture.mutate4lua_tooling_contract"] = 10,
-  ["suites.architecture.arch_view_snapshot_tooling_contract"] = 5,
-  ["suites.architecture.crap_tooling_contract"] = 2,
+  ["spec.support.tooling_suites.architecture.arch_view_live_tooling_contract"] = 40,
+  ["spec.support.tooling_suites.architecture.script_tools_io_tooling_contract"] = 28,
+  ["spec.support.tooling_suites.architecture.script_tools_mutate_tooling_contract"] = 16,
+  ["spec.support.tooling_suites.architecture.mutate4lua_tooling_contract"] = 10,
+  ["spec.support.tooling_suites.architecture.arch_view_snapshot_tooling_contract"] = 5,
+  ["spec.support.tooling_suites.architecture.crap_tooling_contract"] = 2,
 }
 
 local function _ps_literal(value)
