@@ -5,26 +5,9 @@ local market_view_slots = require("src.ui.render.market.slots")
 local market_view_controls = require("src.ui.render.market.controls")
 local runtime_ui = require("src.ui.render.runtime_ui")
 local modal_state = require("src.ui.state.modal_state")
-local logger = require("src.foundation.log.logger")
 
 local market_view = {}
 local VEHICLE_TAB_ENABLED = false
-
-local function _market_log(...)
-  if type(logger.info_unlimited) == "function" then
-    logger.info_unlimited("[MarketDebug]", ...)
-    return
-  end
-  logger.info("[MarketDebug]", ...)
-end
-
-local function _format_option_ids(option_ids)
-  local parts = {}
-  for index, option_id in ipairs(option_ids or {}) do
-    parts[#parts + 1] = tostring(index) .. ":" .. tostring(option_id)
-  end
-  return table.concat(parts, ",")
-end
 
 local function _fallback_modal_state()
   return {
@@ -84,12 +67,6 @@ function market_view.select_market_option(state, option_id, deps)
   local resolved_deps = _resolve_deps(state, deps)
   local resolved_modal = resolved_deps.modal_state or _fallback_modal_state()
   resolved_modal.select_market_option(state, option_id)
-  _market_log(
-    "select_market_option",
-    "choice_id=" .. tostring(runtime_state.get_pending_choice_id(state)),
-    "option_id=" .. tostring(option_id),
-    "visible_option_ids=" .. _format_option_ids(runtime_state.ensure_ui_runtime(state).choice_visible_option_ids)
-  )
   market_view_controls.refresh_market_selection_frames(
     state.ui,
     runtime_state.ensure_ui_runtime(state).choice_visible_option_ids,
@@ -105,24 +82,12 @@ function market_view.refresh_market(state, market, deps)
   local was_market_active = ui and ui.market_active == true
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
   local options = market_view_slots.filter_market_options(market.options)
-  _market_log(
-    "refresh_market begin",
-    "choice_id=" .. tostring(market.choice_id),
-    "active_tab=" .. tostring(market.active_tab),
-    "page_index=" .. tostring(market.page_index),
-    "page_count=" .. tostring(market.page_count),
-    "allow_cancel=" .. tostring(market.allow_cancel),
-    "incoming_options=" .. tostring(#(market.options or {})),
-    "visible_options=" .. tostring(#options),
-    "was_market_active=" .. tostring(was_market_active)
-  )
   market_view_controls.set_market_container_active(ui, true)
   if #options == 0 then
     market_view_slots.hide_market_slots(ui)
     market_view_controls.reset_market_preview(state, resolved_deps)
     market_view_controls.apply_market_common_controls(ui, market, false, VEHICLE_TAB_ENABLED)
     resolved_modal.open_market(state, market.choice_id, {}, nil)
-    _market_log("refresh_market empty", "choice_id=" .. tostring(market.choice_id))
     return true
   end
   local refs = state.ui_refs and state.ui_refs.images or {}
@@ -140,14 +105,6 @@ function market_view.refresh_market(state, market, deps)
     rendered.first_buyable
   )
   resolved_modal.open_market(state, market.choice_id, rendered.option_ids, selected)
-  _market_log(
-    "refresh_market prepared",
-    "choice_id=" .. tostring(market.choice_id),
-    "rendered_option_ids=" .. _format_option_ids(rendered.option_ids),
-    "requested_selected=" .. tostring(selected_option_id),
-    "resolved_selected=" .. tostring(selected),
-    "first_buyable=" .. tostring(rendered.first_buyable)
-  )
   market_view.select_market_option(state, selected, resolved_deps)
   return true
 end
@@ -157,7 +114,6 @@ function market_view.close_market_panel(state, deps)
   local resolved_modal = resolved_deps.modal_state or _fallback_modal_state()
   local ui = state.ui
   assert(ui ~= nil and ui.market_active == true, "market panel not active")
-  _market_log("close_market_panel", "choice_id=" .. tostring(runtime_state.get_pending_choice_id(state)))
   resolved_modal.close_choice(state)
   market_view_controls.close_market_panel(state, resolved_deps)
 end
