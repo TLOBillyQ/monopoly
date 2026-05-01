@@ -571,7 +571,7 @@ local function _test_build_choice_view_uses_phase_title()
   }
 
   local view = choice_builder.build_choice_view(pending, { game = game })
-  assert(view.title == "[行动前] Use Item", "title should include phase label")
+  assert(view.title == "Use Item", "title should be base title without phase label")
 end
 
 local function _test_build_choice_view_joins_body_lines()

@@ -11,9 +11,9 @@ local phase_module = {}
 local cfg_by_id = item_config.cfg_by_id
 
 local phase_titles = {
-  pre_action = "行动前：使用道具？",
-  pre_move = "掷骰后：使用道具？",
-  post_action = "行动后：使用道具？",
+  pre_action = "出牌时间！",
+  pre_move = "出牌时间！",
+  post_action = "出牌时间！",
 }
 
 local phase_confirm_titles = {
@@ -172,7 +172,7 @@ function phase_module.reopen_or_finish(game, player, meta)
   assert(game ~= nil, "missing game")
   assert(player ~= nil, "missing player")
   assert(type(meta) == "table", "missing phase meta")
-  local spec = phase_module.build_choice_spec(game, player, meta.phase, {
+  local spec = phase_module.build_passive_choice_spec(game, player, meta.phase, {
     next_state = meta.resume_next_state,
     next_args = meta.resume_next_args,
   })
@@ -288,19 +288,22 @@ end
 function phase_module.build_passive_choice_spec(game, player, phase, args)
   assert(game ~= nil, "missing game")
   assert(player ~= nil, "missing player")
-  local _ = args
+  args = args or {}
 
   local slot_states = {}
-  local options = {}
   local item_slots = inventory.items(player)
   for slot_index = 1, 5 do
     local item = item_slots[slot_index]
     local available = false
     local alert = false
     local alert_text = nil
+    local item_id = nil
+    local deny_reason = nil
     if type(item) == "table" and item.id ~= nil then
-      local can_offer = availability.can_offer_in_phase(game, player, item.id, phase)
+      local can_offer, dr = availability.can_offer_in_phase(game, player, item.id, phase)
       available = can_offer == true
+      item_id = item.id
+      deny_reason = not available and dr or nil
       local cfg = inventory.cfg(item.id)
       local item_name = cfg and cfg.name or nil
       if available then
@@ -308,17 +311,45 @@ function phase_module.build_passive_choice_spec(game, player, phase, args)
           alert = true
           alert_text = (item_name or "") .. "可用！"
         end
-        options[#options + 1] = {
-          id = item.id,
-          label = item_name or tostring(item.id),
-        }
       end
     end
     slot_states[slot_index] = {
       available = available,
       alert = alert,
       alert_text = alert_text,
+      item_id = item_id,
+      deny_reason = deny_reason,
     }
+  end
+
+  local sorted = {}
+  for i = 1, 5 do
+    if slot_states[i].item_id ~= nil and slot_states[i].available then
+      sorted[#sorted + 1] = slot_states[i]
+    end
+  end
+  for i = 1, 5 do
+    if slot_states[i].item_id ~= nil and not slot_states[i].available then
+      sorted[#sorted + 1] = slot_states[i]
+    end
+  end
+  for i = 1, 5 do
+    if slot_states[i].item_id == nil then
+      sorted[#sorted + 1] = slot_states[i]
+    end
+  end
+  slot_states = sorted
+
+  local options = {}
+  for _, ss in ipairs(slot_states) do
+    if ss.available and ss.item_id ~= nil then
+      local cfg = inventory.cfg(ss.item_id)
+      local item_name = cfg and cfg.name or nil
+      options[#options + 1] = {
+        id = ss.item_id,
+        label = item_name or tostring(ss.item_id),
+      }
+    end
   end
 
   if #options == 0 then
@@ -334,8 +365,13 @@ function phase_module.build_passive_choice_spec(game, player, phase, args)
     slot_states = slot_states,
     options = options,
     allow_cancel = true,
-    cancel_label = "继续",
-    meta = { player_id = player.id, phase = phase },
+    cancel_label = "完成",
+    meta = {
+      player_id = player.id,
+      phase = phase,
+      resume_next_state = args.next_state,
+      resume_next_args = args.next_args,
+    },
   }
 end
 
@@ -386,7 +422,7 @@ function phase_module.build_choice_spec(game, player, phase, args)
     confirm_title = phase_confirm_titles[phase] or "本回合",
     confirm_body = #option_labels > 0 and ("可用道具：" .. table.concat(option_labels, "、")) or "请再确认一次",
     allow_cancel = true,
-    cancel_label = "结束阶段",
+    cancel_label = "完成",
     meta = {
       player_id = player.id,
       phase = phase,

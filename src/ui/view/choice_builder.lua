@@ -36,25 +36,10 @@ local function _default_option_label(opt)
   return tostring(opt)
 end
 
-local function _build_phase_label(phase)
-  if phase == "pre_action" then
-    return "行动前"
-  end
-  if phase == "post_action" then
-    return "行动后"
-  end
-  return phase
-end
-
 local function _build_phase_title(game, base_title)
   assert(game ~= nil, "missing game")
   assert(base_title ~= nil, "missing base title")
-  local phase_name = game.turn.item_phase_active
-  if not phase_name or phase_name == "" then
-    return base_title
-  end
-  local label = _build_phase_label(phase_name)
-  return "[" .. label .. "] " .. base_title
+  return base_title
 end
 
 local function _resolve_choice_body(pending, opts)

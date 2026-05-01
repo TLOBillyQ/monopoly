@@ -163,16 +163,21 @@ end
 
 local function _sync_slot_images(ctx)
   local slot_pickable = {}
+  local choice_slot_states = ctx.choice and ctx.choice.slot_states or nil
   for index, slot_name in ipairs(ctx.slots) do
-    local item_id = ctx.items[index]
+    local slot_state = choice_slot_states and choice_slot_states[index] or nil
+    local item_id = (slot_state and slot_state.item_id)
+      or ctx.items[index]
     local can_pick = false
     if item_id then
       local image_key = (ctx.image_refs and ctx.image_refs[tostring(item_id)])
         or (ctx.image_refs and ctx.image_refs[item_id])
         or ctx.empty_key
       ui_nodes.set_item_slot_image(slot_name, image_key)
-      can_pick = ctx.allow_slot_click and ctx.option_id_set[tostring(item_id)] == true
-      ctx.ui:set_touch_enabled(slot_name, can_pick)
+      local is_pickable = ctx.allow_slot_click and ctx.option_id_set[tostring(item_id)] == true
+      local has_deny_feedback = slot_state and slot_state.item_id ~= nil and not slot_state.available
+      ctx.ui:set_touch_enabled(slot_name, is_pickable or has_deny_feedback == true)
+      can_pick = is_pickable
       ctx.item_ids[index] = item_id
     else
       ui_nodes.set_item_slot_image(slot_name, ctx.empty_key)
