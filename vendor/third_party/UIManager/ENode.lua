@@ -23,53 +23,6 @@ local allroles = UIManager.allroles
 
 local event_handlers = UIManager.event_handlers
 
-local function _host_market_debug(...)
-    local text = "[MarketHostDebug] " .. table.concat({ ... }, " ")
-    if type(GlobalAPI) == "table" and type(GlobalAPI.warning) == "function" then
-        pcall(GlobalAPI.warning, text)
-        return
-    end
-    if type(print) == "function" then
-        pcall(print, text)
-    end
-end
-
-local function _safe_role_id(role)
-    if not role or type(role.get_roleid) ~= "function" then
-        return nil
-    end
-    local ok, role_id = pcall(role.get_roleid, role)
-    if not ok then
-        return nil
-    end
-    return role_id
-end
-
-local function _is_market_node_name(name)
-    return type(name) == "string" and string.match(name, "^黑市") ~= nil
-end
-
-local function _log_market_host_call(node, method_name, extra)
-    local name = node and node.__protected_name or nil
-    if not _is_market_node_name(name) then
-        return
-    end
-    if extra ~= nil then
-        _host_market_debug(
-            method_name,
-            "node=" .. tostring(name),
-            "id=" .. tostring(node and node.__protected_id or nil),
-            extra
-        )
-        return
-    end
-    _host_market_debug(
-        method_name,
-        "node=" .. tostring(name),
-        "id=" .. tostring(node and node.__protected_id or nil)
-    )
-end
-
 function ENode.__custom_index(tbl, key)
     if string.sub(key, 1, 12) == "__protected_" then
         local role = UIManager.client_role
@@ -186,11 +139,9 @@ end
 
 function ENode:__update_visible()
     if UIManager.client_role then
-        _log_market_host_call(self, "Role.set_node_visible", "visible=" .. tostring(self.__protected_visible) .. " role_id=" .. tostring(_safe_role_id(UIManager.client_role)))
         UIManager.client_role.set_node_visible(self.__protected_id, self.__protected_visible)
     else
         for _, role in ipairs(allroles) do
-            _log_market_host_call(self, "Role.set_node_visible", "visible=" .. tostring(self.__protected_visible) .. " role_id=" .. tostring(_safe_role_id(role)))
             role.set_node_visible(self.__protected_id, self.__protected_visible)
         end
     end
@@ -207,11 +158,9 @@ end
 
 function ENode:__update_disabled()
     if UIManager.client_role then
-        _log_market_host_call(self, "Role.set_node_touch_enabled", "touch_enabled=" .. tostring(not self.__protected_disabled) .. " role_id=" .. tostring(_safe_role_id(UIManager.client_role)))
         UIManager.client_role.set_node_touch_enabled(self.__protected_id, not self.__protected_disabled)
     else
         for _, role in ipairs(allroles) do
-            _log_market_host_call(self, "Role.set_node_touch_enabled", "touch_enabled=" .. tostring(not self.__protected_disabled) .. " role_id=" .. tostring(_safe_role_id(role)))
             role.set_node_touch_enabled(self.__protected_id, not self.__protected_disabled)
         end
     end
@@ -324,7 +273,6 @@ function ENode:listen(_event, _callback)
         trigger = RegisterCustomEvent(_event, function(_, _, data)
             local handler_data = event_handlers[_event][data.eui_node_id]
             if handler_data and handler_data.callbacks and not handler_data.node._disabled then
-                _log_market_host_call(handler_data.node, "RegisterCustomEvent:" .. tostring(_event), "role_id=" .. tostring(_safe_role_id(data.role)))
                 UIManager.client_role = data.role
                 for _, callback in ipairs(handler_data.callbacks) do
                     callback({
@@ -341,7 +289,6 @@ function ENode:listen(_event, _callback)
 
     local handler_data = handler[self.__protected_id]
     if not handler_data then
-        _log_market_host_call(self, "ENode.listen", "event=" .. tostring(_event))
         handler[self.__protected_id] = {
             callbacks = { _callback },
             node = self
