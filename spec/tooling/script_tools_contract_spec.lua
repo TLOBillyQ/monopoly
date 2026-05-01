@@ -1,5 +1,5 @@
 if arg then arg[0] = "spec/tooling/script_tools_contract_spec.lua" end
-local suite = require("suites.architecture.script_tools_contract")
+local suite = require("spec.support.tooling_suites.architecture.script_tools_contract")
 local label = suite.name or "script_tools_contract"
 
 describe(label, function()

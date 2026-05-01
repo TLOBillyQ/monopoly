@@ -1,1 +1,2 @@
-require("spec.behavior._shim").bind(_ENV, "suites.gameplay.shared.helpers")
+describe("suites.gameplay.shared.helpers", function()
+end)

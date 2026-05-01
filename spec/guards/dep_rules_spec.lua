@@ -153,7 +153,7 @@ local rules = {
     description = "retired shim require paths are forbidden; use canonical modules directly",
   },
   {
-    roots = { "src", "spec/suites/architecture" },
+    roots = { "src", "spec/support/tooling_suites/architecture" },
     forbidden_patterns = {
       "%f[%w_]invalidate_ui%f[^%w_]",
       "compatibility%s+alias",

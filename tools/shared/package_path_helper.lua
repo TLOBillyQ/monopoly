@@ -37,7 +37,6 @@ function package_path_helper.install_monopoly_package_paths(opts)
     _join(repo_root, "tools/bridge/?/init.lua"),
     _join(repo_root, "spec/?.lua"),
     _join(repo_root, "spec/?/init.lua"),
-    _join(repo_root, "spec/suites/?.lua"),
     _join(repo_root, "spec/fixtures/?.lua"),
     _join(repo_root, "?.lua"),
     _join(repo_root, "?/init.lua"),
