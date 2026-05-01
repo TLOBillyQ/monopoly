@@ -73,43 +73,6 @@ function M.capture_handler_duration(handler_key, payload)
   }
 end
 
-function M.stub_host_runtime(overrides)
-  overrides = overrides or {}
-  local unit_calls = {}
-  local group_calls = {}
-
-  return {
-    unit_calls = unit_calls,
-    group_calls = group_calls,
-    patches = {
-      {
-        target = host_runtime,
-        key = "create_unit_with_scale",
-        value = overrides.create_unit_with_scale or function(_, _, _, scale)
-          unit_calls[#unit_calls + 1] = { scale = scale }
-          return { _unit_id = 1 }
-        end,
-      },
-      {
-        target = host_runtime,
-        key = "create_unit_group",
-        value = overrides.create_unit_group or function(group_id, pos)
-          group_calls[#group_calls + 1] = { group_id = group_id, pos = pos }
-          return { _group_id = group_id }
-        end,
-      },
-      {
-        target = host_runtime,
-        key = "create_unit",
-        value = overrides.create_unit or function(unit_id, pos)
-          unit_calls[#unit_calls + 1] = { unit_id = unit_id, pos = pos }
-          return { _unit_id = unit_id }
-        end,
-      },
-    },
-  }
-end
-
 M.with_patches = support.with_patches
 
 return M
