@@ -591,7 +591,7 @@ describe("presentation_t5_characterization", function()
     }
 
     local view = choice_builder.build_choice_view(pending, { game = game })
-    assert(view.title == "[行动前] Use Item", "title should include phase label")
+    assert(view.title == "Use Item", "title should not include phase label (item-ui simplification removed phase prefix)")
   end)
 
   it("build_choice_view_joins_body_lines", function()

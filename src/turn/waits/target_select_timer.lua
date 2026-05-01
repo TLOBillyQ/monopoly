@@ -2,12 +2,13 @@
 -- 进入 `_item_phase_ask_active=true` 后注册 deadline，到点调 force_resolve.resolve_target_select。
 local timing = require("src.config.gameplay.timing")
 local DeadlineService = require("src.turn.deadlines.service")
+local NumberUtils = require("src.foundation.lang.number")
 
 local M = {}
 
 local function _resolve_target_select_timeout()
   local timeouts = timing.scope_timeouts
-  if type(timeouts) == "table" and type(timeouts.target_select) == "number" and timeouts.target_select > 0 then
+  if type(timeouts) == "table" and NumberUtils.is_numeric(timeouts.target_select) and timeouts.target_select > 0 then
     return timeouts.target_select
   end
   return 15
