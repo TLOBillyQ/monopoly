@@ -34,6 +34,9 @@ Thumbs.db
 # Local worktrees
 /.claude/worktrees/
 
+# Spec migration baseline (temporary, deleted at Step 7)
+/tools/refactor/baseline/
+
 # Logs
 *.log
 __pycache__/
