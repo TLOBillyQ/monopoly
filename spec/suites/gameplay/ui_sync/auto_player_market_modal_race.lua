@@ -88,6 +88,52 @@ local function _run_market_modal_race_case(game_opts, expect_open, case_name)
   end
 end
 
+local function _run_market_dirty_refresh_case()
+  local game = support.new_game({ players = { "P1", "P2" } })
+  local state = fixtures.build_loop_state()
+  state.local_actor_role_id = game.players[1].id
+  _prepare_board_scene(state, game)
+  support.bind_ui_runtime(state)
+
+  support.open_choice(game, {
+    kind = "market_buy",
+    route_key = "market",
+    title = "黑市",
+    options = { { id = 1, label = "购买" } },
+  })
+  state.ui.market_active = true
+
+  local modal = require("src.ui.coord.modal")
+  local call_count = 0
+
+  support.with_patches({
+    {
+      target = require("src.ui.coord.ui_runtime"),
+      key = "render",
+      value = function() end,
+    },
+    {
+      target = modal,
+      key = "open_choice_modal",
+      value = function() call_count = call_count + 1 end,
+    },
+  }, function()
+    local ui_model_sync = require("src.ui.ports.ui_sync.model")
+    local common = {
+      log_once = {},
+      build_log_prefix = function() return "" end,
+    }
+    -- 不带 dirty.market：market 已开 + should_reconcile 短路 → 不应再开
+    ui_model_sync.refresh_from_dirty(game, state, { any = true, ui = true }, common)
+    assert.equals(0, call_count,
+      "should NOT reopen market modal when market_active=true and dirty.market is unset")
+    -- 带 dirty.market：navigation 改写了 options，必须强制 reconcile
+    ui_model_sync.refresh_from_dirty(game, state, { any = true, ui = true, market = true }, common)
+    assert.equals(1, call_count,
+      "MUST reopen market modal when dirty.market=true even if market_active=true")
+  end)
+end
+
 return {
   name = "auto_player_market_modal_race",
   tests = {
@@ -108,6 +154,10 @@ return {
       run = function()
         _run_market_modal_race_case({ players = { "P1", "P2" } }, true, "modal MUST open for local human player")
       end,
+    },
+    {
+      name = "market_navigation_dirty_forces_modal_refresh",
+      run = _run_market_dirty_refresh_case,
     },
   },
 }

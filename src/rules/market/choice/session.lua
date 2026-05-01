@@ -11,6 +11,7 @@ local function _mark_choice_dirty(game)
     return
   end
   game.dirty.turn = true
+  game.dirty.market = true
   game.dirty.any = true
 end
 
