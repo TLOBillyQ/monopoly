@@ -2,6 +2,13 @@ local logger = require("src.foundation.log.logger")
 local nodes = require("src.ui.schema.permanent")
 local choice_support = require("src.ui.view.choice_support")
 local runtime_state = require("src.ui.state.runtime")
+local host_runtime_ports = require("src.ui.host_bridge")
+
+local _deny_text = {
+  offer_in_phases_not_allowed = "现在还不能用这张牌哦",
+  effect_group_used = "骰子效果已经用过了",
+  special_condition_failed = "条件不满足",
+}
 
 local intents = {}
 
@@ -18,6 +25,19 @@ function intents.build(state)
         local choice = current_model and current_model.choice or nil
         if not choice_support.uses_item_slots(choice) then
           logger.warn("item_slot click ignored:", tostring(index))
+          return nil
+        end
+        local slot_state = choice and choice.slot_states and choice.slot_states[index]
+        if slot_state and slot_state.item_id ~= nil and not slot_state.available then
+          local reason = slot_state.deny_reason
+          local text = (reason and _deny_text[reason]) or "现在不能用哦"
+          host_runtime_ports.enqueue_tip({
+            text = text,
+            duration = 1.5,
+            dedupe_key = "item_deny:" .. tostring(reason),
+            blocks_inter_turn = false,
+            source = "ui.item_deny",
+          })
           return nil
         end
         return { type = "ui_button", id = action_id }

@@ -225,12 +225,12 @@ local function _test_passive_spec_mixed_slots()
   _assert_eq(slot1.available, true, "send_poor should be available in post_action")
   _assert_eq(slot1.alert, true, "send_poor should mark alert bubble when available")
   _assert_eq(slot1.alert_text, "送神卡可用！", "send_poor alert text mismatch")
-  _assert_eq(slot2.available, false, "remote_dice should be unavailable in post_action")
-  _assert_eq(slot2.alert, false, "unavailable slot should not alert")
-  _assert_eq(slot2.alert_text, nil, "unavailable slot should not expose alert text")
-  _assert_eq(slot3.available, true, "mine should be available in post_action")
-  _assert_eq(slot3.alert, false, "passive available slot should not alert")
-  _assert_eq(slot3.alert_text, nil, "passive available slot should not expose alert text")
+  _assert_eq(slot2.available, true, "mine should be available in post_action")
+  _assert_eq(slot2.alert, false, "passive available slot should not alert")
+  _assert_eq(slot2.alert_text, nil, "passive available slot should not expose alert text")
+  _assert_eq(slot3.available, false, "remote_dice should be unavailable in post_action")
+  _assert_eq(slot3.alert, false, "unavailable slot should not alert")
+  _assert_eq(slot3.alert_text, nil, "unavailable slot should not expose alert text")
 end
 
 local function _test_passive_spec_auto_skip_empty_inventory()
@@ -895,7 +895,7 @@ local function _test_repeatable_phase_followup_cancel_reopens_item_phase_without
   assert(cancel_res and cancel_res.stay == true, "canceling repeatable follow-up should keep phase active")
 
   local reopened = _get_choice(g)
-  assert(reopened and reopened.kind == "item_phase_choice", "cancel should reopen item phase choice")
+  assert(reopened and reopened.kind == "item_phase_passive", "cancel should reopen item phase passive choice")
   _assert_eq(support.inventory.count(p), 1, "cancel should not consume remote dice")
   assert(_find_option_id_by_label(reopened, "遥控骰子卡") ~= nil, "reopened phase should still offer remote dice")
 end
@@ -931,7 +931,7 @@ local function _test_repeatable_phase_followup_confirm_consumes_and_reopens_item
     "confirming follow-up should apply selected remote dice value")
 
   local reopened = _get_choice(g)
-  assert(reopened and reopened.kind == "item_phase_choice", "confirming repeatable follow-up should reopen item phase")
+  assert(reopened and reopened.kind == "item_phase_passive", "confirming repeatable follow-up should reopen item phase")
   assert(_find_option_id_by_label(reopened, "地雷卡") ~= nil, "reopened phase should expose remaining pre_action item")
 end
 

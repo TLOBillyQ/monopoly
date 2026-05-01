@@ -77,7 +77,7 @@ describe("read_model_contract", function()
       },
     })
 
-    assert.equals("[行动前] 请选择", view.title, "choice view should prefix item phase label")
+    assert.equals("请选择", view.title, "choice view should return base title without phase label")
     assert.equals("第一行\n第二行", view.body, "choice view should join body_lines")
     assert.equals(false, view.allow_cancel, "choice view should preserve explicit allow_cancel")
     assert.equals("返回", view.cancel_label, "choice view should preserve cancel label")
