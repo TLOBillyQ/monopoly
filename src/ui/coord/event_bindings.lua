@@ -9,6 +9,17 @@ local bindings = {}
 
 local missing_button_tips = {}
 
+local function _host_market_debug(...)
+  local text = "[MarketHostDebug] " .. table.concat({ ... }, " ")
+  if type(GlobalAPI) == "table" and type(GlobalAPI.warning) == "function" then
+    pcall(GlobalAPI.warning, text)
+    return
+  end
+  if type(print) == "function" then
+    pcall(print, text)
+  end
+end
+
 local function _market_log(...)
   if type(logger.info_unlimited) == "function" then
     logger.info_unlimited("[MarketDebug]", ...)
@@ -39,6 +50,7 @@ local function _report_register_node_click_failure(name, reason)
   _show_missing_button_tip(name)
   if _is_market_node(name) then
     _market_log("register_node_click failed", "node=" .. tostring(name), "reason=" .. tostring(reason))
+    _host_market_debug("register_node_click failed", "node=" .. tostring(name), "reason=" .. tostring(reason))
   end
   if name == base_nodes.action_log_button then
     logger.info("[调试屏] 行动日志按钮注册失败: " .. tostring(reason))
@@ -69,10 +81,16 @@ function bindings.register_node_click(cache, name, callback, registered, listene
   end
   if _is_market_node(name) then
     _market_log("register_node_click ok", "node=" .. tostring(name), "count=" .. tostring(#nodes))
+    _host_market_debug("register_node_click ok", "node=" .. tostring(name), "count=" .. tostring(#nodes))
   end
   registered[name] = true
   for _, node in ipairs(nodes) do
     local listener = node:listen(UIManager.EVENT.CLICK, function(data)
+      if _is_market_node(name) then
+        local role = data and data.role or nil
+        local role_id = role and role.get_roleid and role:get_roleid() or nil
+        _host_market_debug("node_click", "node=" .. tostring(name), "role_id=" .. tostring(role_id))
+      end
       callback(data)
     end)
     table.insert(listeners, listener)
