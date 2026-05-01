@@ -15,35 +15,6 @@ local function _resolve_market(state, warn_label)
   return market
 end
 
-local function _format_visible_option_ids(state)
-  local ui_runtime = runtime_state.ensure_ui_runtime(state)
-  local visible = ui_runtime and ui_runtime.choice_visible_option_ids
-  if type(visible) ~= "table" then
-    return tostring(visible)
-  end
-  local ids = {}
-  for index = 1, 16 do
-    local value = visible[index]
-    if value == nil then
-      break
-    end
-    ids[#ids + 1] = tostring(value)
-  end
-  return "[" .. table.concat(ids, ",") .. "]"
-end
-
-local function _format_market_options(market)
-  local options = market and market.options
-  if type(options) ~= "table" then
-    return tostring(options)
-  end
-  local ids = {}
-  for _, opt in ipairs(options) do
-    ids[#ids + 1] = tostring(type(opt) == "table" and opt.id or opt)
-  end
-  return "[" .. table.concat(ids, ",") .. "]"
-end
-
 function intents.build_items(state)
   local specs = {}
   for index, name in ipairs(nodes.item_buttons or {}) do
@@ -53,15 +24,6 @@ function intents.build_items(state)
         local market = _resolve_market(state, "market_select")
         if not market then return nil end
         local option_id = ui_event_intents.resolve_option_id(market, { index = index }, state)
-        logger.warn(
-          "[MarketDebug] market_select click:",
-          "index=" .. tostring(index),
-          "resolved=" .. tostring(option_id),
-          "tab=" .. tostring(market.active_tab),
-          "page=" .. tostring(market.page_index),
-          "visible=" .. _format_visible_option_ids(state),
-          "market_options=" .. _format_market_options(market)
-        )
         if not option_id then
           logger.warn("[MarketDebug] market_select missing option:", tostring(index))
           return nil
@@ -86,15 +48,6 @@ function intents.build_controls(state)
         if not market then return nil end
         local ui_runtime = runtime_state.ensure_ui_runtime(state)
         local option_id = ui_runtime.pending_choice_selected_option_id
-        logger.warn(
-          "[MarketDebug] market_confirm click:",
-          "selected=" .. tostring(option_id),
-          "choice_id=" .. tostring(market.choice_id),
-          "tab=" .. tostring(market.active_tab),
-          "page=" .. tostring(market.page_index),
-          "visible=" .. _format_visible_option_ids(state),
-          "market_options=" .. _format_market_options(market)
-        )
         if not option_id then
           logger.warn("[MarketDebug] market_confirm missing selected option")
           return nil
@@ -115,9 +68,6 @@ function intents.build_controls(state)
       build_intent = function()
         local market = _resolve_market(state, "market_page_prev")
         if not market then return nil end
-        logger.warn("[MarketDebug] market_page_prev click:",
-          "tab=" .. tostring(market.active_tab),
-          "page=" .. tostring(market.page_index))
         return { type = "market_page_prev", choice_id = market.choice_id }
       end,
     },
@@ -126,9 +76,6 @@ function intents.build_controls(state)
       build_intent = function()
         local market = _resolve_market(state, "market_page_next")
         if not market then return nil end
-        logger.warn("[MarketDebug] market_page_next click:",
-          "tab=" .. tostring(market.active_tab),
-          "page=" .. tostring(market.page_index))
         return { type = "market_page_next", choice_id = market.choice_id }
       end,
     },
@@ -137,8 +84,6 @@ function intents.build_controls(state)
       build_intent = function()
         local market = _resolve_market(state, "market_tab_select")
         if not market then return nil end
-        logger.warn("[MarketDebug] market_tab_select click: tab=item",
-          "from_tab=" .. tostring(market.active_tab))
         return { type = "market_tab_select", choice_id = market.choice_id, tab = "item" }
       end,
     },
@@ -147,8 +92,6 @@ function intents.build_controls(state)
       build_intent = function()
         local market = _resolve_market(state, "market_tab_select")
         if not market then return nil end
-        logger.warn("[MarketDebug] market_tab_select click: tab=skin",
-          "from_tab=" .. tostring(market.active_tab))
         return { type = "market_tab_select", choice_id = market.choice_id, tab = "skin" }
       end,
     },

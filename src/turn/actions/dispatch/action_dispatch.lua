@@ -152,19 +152,6 @@ local function build(deps)
       logger.warn(failure)
       return { status = "rejected" }
     end
-    local ids = {}
-    if choice and type(choice.options) == "table" then
-      for _, opt in ipairs(choice.options) do
-        ids[#ids + 1] = tostring(type(opt) == "table" and opt.id or opt)
-      end
-    end
-    logger.warn(
-      "[MarketDebug] dispatch_market_nav applied:",
-      "type=" .. tostring(action.type),
-      "tab=" .. tostring(choice and choice.active_tab),
-      "page=" .. tostring(choice and choice.page_index),
-      "options=[" .. table.concat(ids, ",") .. "]"
-    )
     return { status = "applied" }
   end
 

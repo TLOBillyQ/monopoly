@@ -151,22 +151,7 @@ function choice_resolver.resolve(game, choice, action, opts)
   end
 
   if not _option_exists(choice, action.option_id) then
-    local ids = {}
-    if type(choice.options) == "table" then
-      for _, opt in ipairs(choice.options) do
-        ids[#ids + 1] = tostring(type(opt) == "table" and opt.id or opt)
-      end
-    end
-    logger.warn(
-      "invalid choice option:",
-      tostring(choice.kind),
-      tostring(action.option_id),
-      "choice_id=" .. tostring(choice.id),
-      "active_tab=" .. tostring(choice.active_tab),
-      "page_index=" .. tostring(choice.page_index),
-      "page_count=" .. tostring(choice.page_count),
-      "options=[" .. table.concat(ids, ",") .. "]"
-    )
+    logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
     return { status = "rejected", stay = true }
   end
 
