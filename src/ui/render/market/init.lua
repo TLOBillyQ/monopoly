@@ -82,6 +82,20 @@ function market_view.refresh_market(state, market, deps)
   local was_market_active = ui and ui.market_active == true
   assert(market ~= nil and market.options ~= nil and ui ~= nil, "missing market data/ui")
   local options = market_view_slots.filter_market_options(market.options)
+  do
+    local logger = require("src.foundation.log.logger")
+    local incoming_ids = {}
+    for _, opt in ipairs(market.options or {}) do
+      incoming_ids[#incoming_ids + 1] = tostring(type(opt) == "table" and opt.id or opt)
+    end
+    logger.warn(
+      "[MarketDebug] refresh_market called:",
+      "was_market_active=" .. tostring(was_market_active),
+      "tab=" .. tostring(market.active_tab),
+      "page=" .. tostring(market.page_index),
+      "incoming_options=[" .. table.concat(incoming_ids, ",") .. "]"
+    )
+  end
   market_view_controls.set_market_container_active(ui, true)
   if #options == 0 then
     market_view_slots.hide_market_slots(ui)
