@@ -11,12 +11,23 @@ local runtime_state = require("src.state.runtime_state")
 local tick_timeout = {}
 
 function tick_timeout.resolve_choice_timeout_seconds(game, state, choice)
-  local timeout = constants.action_timeout_seconds or 0
-  local pending_choice = choice or (game and game.turn and game.turn.pending_choice) or (state and runtime_state.get_pending_choice(state)) or nil
-  if pending_choice and pending_choice.kind == "market_buy" then
-    return timeout * 2
+  local pending_choice = choice
+    or (game and game.turn and game.turn.pending_choice)
+    or (state and runtime_state.get_pending_choice(state))
+    or nil
+  local kind = pending_choice and pending_choice.kind or nil
+  local scope_timeouts = timing.scope_timeouts
+  if type(scope_timeouts) == "table" then
+    local scoped = kind and scope_timeouts[kind] or nil
+    if number_utils.is_numeric(scoped) and scoped > 0 then
+      return scoped
+    end
+    local default_choice = scope_timeouts.choice
+    if number_utils.is_numeric(default_choice) and default_choice > 0 then
+      return default_choice
+    end
   end
-  return timeout
+  return constants.action_timeout_seconds or 0
 end
 
 local function _resolve_modal_ports(state)

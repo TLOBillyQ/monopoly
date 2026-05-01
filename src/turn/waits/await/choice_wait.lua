@@ -62,6 +62,13 @@ local function _resolve_choice_result(game, choice, session)
   if not _validate_choice_action(action, choice) then
     return nil, false
   end
+  if action.type == "choice_force_skip" then
+    if game and game.turn then
+      game.turn.pending_choice = nil
+      _mark_dirty(game)
+    end
+    return {}, true
+  end
   return turn_decision.resolve_choice(game, choice, action), true
 end
 
@@ -81,12 +88,19 @@ local function _finish_choice_wait(session, args, game, res)
 end
 
 _resolve_choice_action = function(choice, session, game)
+  if game and game.turn and game.turn._choice_force_skip_pending then
+    game.turn._choice_force_skip_pending = nil
+    return { type = "choice_force_skip", choice_id = choice and choice.id }
+  end
   return turn_decision.decide_choice_action(game, choice, session:take_pending_action(), {
     elapsed_seconds = session.choice_elapsed_seconds or 0,
   })
 end
 
 _validate_choice_action = function(action, choice)
+  if action.type == "choice_force_skip" then
+    return true
+  end
   if action.type ~= "choice_select" and action.type ~= "choice_cancel" then
     return true
   end

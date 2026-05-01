@@ -1,5 +1,5 @@
 local tick_timeout = require("src.turn.waits.timeout")
-local constants = require("src.config.content.constants")
+local timing = require("src.config.gameplay.timing")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
@@ -9,30 +9,30 @@ end
 
 local function test_resolve_choice_timeout_no_choice_returns_base()
   local timeout = tick_timeout.resolve_choice_timeout_seconds(nil, nil, nil)
-  local expected = constants.action_timeout_seconds or 0
-  _assert_eq(timeout, expected, "no choice should return base timeout")
+  local expected = timing.scope_timeouts.choice
+  _assert_eq(timeout, expected, "no choice should return scope_timeouts.choice")
 end
 
 local function test_resolve_choice_timeout_market_buy_doubles()
   local choice = { kind = "market_buy" }
   local timeout = tick_timeout.resolve_choice_timeout_seconds(nil, nil, choice)
-  local expected = (constants.action_timeout_seconds or 0) * 2
-  _assert_eq(timeout, expected, "market_buy should double timeout")
+  local expected = timing.scope_timeouts.market_buy
+  _assert_eq(timeout, expected, "market_buy should use scope_timeouts.market_buy")
 end
 
 local function test_resolve_choice_timeout_non_market_buy_returns_base()
   local choice = { kind = "item_phase_choice" }
   local timeout = tick_timeout.resolve_choice_timeout_seconds(nil, nil, choice)
-  local expected = constants.action_timeout_seconds or 0
-  _assert_eq(timeout, expected, "non-market_buy choice should return base timeout")
+  local expected = timing.scope_timeouts.choice
+  _assert_eq(timeout, expected, "non-market_buy choice should use scope_timeouts.choice")
 end
 
 local function test_resolve_choice_timeout_choice_from_game_turn()
   local choice = { kind = "market_buy" }
   local game = { turn = { pending_choice = choice } }
   local timeout = tick_timeout.resolve_choice_timeout_seconds(game, nil, nil)
-  local expected = (constants.action_timeout_seconds or 0) * 2
-  _assert_eq(timeout, expected, "choice from game.turn should be used")
+  local expected = timing.scope_timeouts.market_buy
+  _assert_eq(timeout, expected, "choice from game.turn should use scope_timeouts.market_buy")
 end
 
 -- default_policy returns clone

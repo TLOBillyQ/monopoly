@@ -16,6 +16,15 @@ local timing = {
   demolish_effect_followup_delay_seconds = 0.35,
   turn_limit = 1000,
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
+  scope_timeouts = {
+    choice          = 15,
+    market_buy      = 60,
+    target_select   = 15,
+    modal_popup     = 15,
+    action_button   = 15,
+  },
+  deadline_warning_thresholds = { 5, 3 },
+  deadline_min_visible_seconds = 1.5,
 }
 
 return timing

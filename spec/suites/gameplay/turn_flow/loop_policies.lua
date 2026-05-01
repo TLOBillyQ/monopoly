@@ -727,6 +727,7 @@ end
 local function _test_market_countdown_uses_double_action_timeout()
   local g = _new_game()
   local state = _build_loop_state()
+  local timing = require("src.config.gameplay.timing")
   g.turn.current_player_index = 2
   state.pending_choice = {
     id = 2001,
@@ -744,15 +745,15 @@ local function _test_market_countdown_uses_double_action_timeout()
   state.countdown_active_last = nil
   g.turn.pending_choice = state.pending_choice
 
-  support.with_patches({
-    { target = constants, key = "action_timeout_seconds", value = 15 },
-  }, function()
-    tick_ui_sync.update_countdown(g, state)
-    assert(tick_timeout.resolve_choice_timeout_seconds(g, state, state.pending_choice) == 30,
-      "market choice timeout should be doubled")
-  end)
+  tick_ui_sync.update_countdown(g, state)
+  local market_timeout = tick_timeout.resolve_choice_timeout_seconds(g, state, state.pending_choice)
+  assert(market_timeout == timing.scope_timeouts.market_buy,
+    "market choice timeout should use scope_timeouts.market_buy, got " .. tostring(market_timeout))
 
-  assert(g.turn.countdown_seconds == 18, "market countdown should use doubled timeout in UI")
+  -- countdown_seconds 由 ui_sync 计算（market_timeout - elapsed），向上取整
+  -- DeadlineService 优先：market_buy 60s，elapsed 12.2 → remaining 47.8 → ceil 48
+  -- 旧路径：60 - 12.2 = 47.8 → ceil 48
+  assert(g.turn.countdown_seconds == 48, "market countdown should be 60-12.2=47.8 ceil to 48, got " .. tostring(g.turn.countdown_seconds))
   assert(g.turn.countdown_active == true, "market countdown should stay active")
 end
 

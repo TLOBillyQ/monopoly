@@ -9,6 +9,24 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local role_id_utils = require("src.foundation.identity.role_id")
 local default_ports = require("src.turn.output.default_ports")
 local logger = require("src.foundation.log.logger")
+local fallback_registry = require("src.rules.choice.fallback_registry")
+
+local function _register_default_choice_fallbacks()
+  fallback_registry.register("market_buy", function(_, choice)
+    return { type = "choice_cancel", choice_id = choice and choice.id }
+  end)
+  fallback_registry.register("item_target_tile", function(_, choice)
+    return { type = "choice_cancel", choice_id = choice and choice.id }
+  end)
+  fallback_registry.register("item_target_player", function(_, choice)
+    return { type = "choice_cancel", choice_id = choice and choice.id }
+  end)
+  fallback_registry.register("steal_target", function(_, choice)
+    return { type = "choice_cancel", choice_id = choice and choice.id }
+  end)
+end
+
+_register_default_choice_fallbacks()
 
 local max_player_count = 4
 local synthetic_ai_cfg = runtime_refs.synthetic_ai or {}

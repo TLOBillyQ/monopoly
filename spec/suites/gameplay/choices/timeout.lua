@@ -86,38 +86,38 @@ local _resolve_choice_ui_state_t2_tests = {
     local state = _build_loop_state()
     game.turn.pending_choice = { id = 1, kind = "market_buy" }
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
-    local constants = require("src.config.content.constants")
-    assert(timeout == (constants.action_timeout_seconds or 0) * 2, "market_buy should double timeout")
+    local timing = require("src.config.gameplay.timing")
+    assert(timeout == timing.scope_timeouts.market_buy, "market_buy should use scope_timeouts.market_buy")
   end,
   function()
     local game = _new_game()
     local state = _build_loop_state()
     game.turn.pending_choice = { id = 1, kind = "normal_choice" }
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
-    local constants = require("src.config.content.constants")
-    assert(timeout == (constants.action_timeout_seconds or 0), "normal choice should use normal timeout")
+    local timing = require("src.config.gameplay.timing")
+    assert(timeout == timing.scope_timeouts.choice, "normal choice should use scope_timeouts.choice")
   end,
   function()
     local game = _new_game()
     local state = _build_loop_state()
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
-    local constants = require("src.config.content.constants")
-    assert(timeout == (constants.action_timeout_seconds or 0), "nil pending_choice should use normal timeout")
+    local timing = require("src.config.gameplay.timing")
+    assert(timeout == timing.scope_timeouts.choice, "nil pending_choice should use scope_timeouts.choice")
   end,
   function()
     local game = _new_game()
     local state = _build_loop_state()
     runtime_state.set_pending_choice(state, { id = 2, kind = "market_buy" })
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
-    local constants = require("src.config.content.constants")
-    assert(timeout == (constants.action_timeout_seconds or 0) * 2, "should get pending_choice from runtime state")
+    local timing = require("src.config.gameplay.timing")
+    assert(timeout == timing.scope_timeouts.market_buy, "should get pending_choice from runtime state")
   end,
   function()
     local game = _new_game()
     local state = _build_loop_state()
     local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state, { id = 3, kind = "market_buy" })
-    local constants = require("src.config.content.constants")
-    assert(timeout == (constants.action_timeout_seconds or 0) * 2, "should use passed choice parameter")
+    local timing = require("src.config.gameplay.timing")
+    assert(timeout == timing.scope_timeouts.market_buy, "should use passed choice parameter")
   end,
 }
 

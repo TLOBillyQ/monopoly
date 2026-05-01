@@ -177,6 +177,12 @@ local function build(deps)
     if action.type == "market_page_prev" or action.type == "market_page_next" or action.type == "market_tab_select" then
       return _handle_market_navigation(game, state, action, ctx)
     end
+    if action.type == "choice_force_skip" then
+      local force_resolve = require("src.turn.deadlines.force_resolve")
+      local choice = _resolve_choice_action_choice(game, state, ctx)
+      force_resolve.force_skip(game, state, choice, action.reason or "dispatch")
+      return { status = "applied" }
+    end
     return { status = "rejected" }
   end
 

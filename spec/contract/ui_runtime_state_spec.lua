@@ -84,7 +84,12 @@ describe("ui_runtime_state_contract", function()
 
     tick_ui_sync.update_countdown(game, state)
 
-    assert.equals(28, game.turn.countdown_seconds, "market choice countdown should use ui_runtime pending choice elapsed")
+    -- 现在 market_buy 走 timing.scope_timeouts.market_buy=60s（不再 action_timeout_seconds*2=30）。
+    -- 旧 elapsed=2.0 来自 ui_runtime.pending_choice_elapsed，但新链路下当 DeadlineService 还没注册
+    -- choice 时，ui_sync 回退到旧路径（旧 elapsed=2.0，新 timeout=60，countdown=ceil(60-2)=58）。
+    local timing = require("src.config.gameplay.timing")
+    local expected_remaining = math.ceil(timing.scope_timeouts.market_buy - 2.0)
+    assert.equals(expected_remaining, game.turn.countdown_seconds, "market choice countdown should reflect scope_timeouts.market_buy minus elapsed")
     assert.is_true(game.turn.countdown_active, "countdown should become active when ui_runtime has pending choice")
     assert.is_true(game.dirty.turn_countdown, "countdown change should mark turn_countdown dirty")
     assert.is_true(game.dirty.any, "countdown change should mark any dirty")
