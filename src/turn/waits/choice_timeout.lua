@@ -4,6 +4,7 @@ local number_utils = require("src.foundation.lang.number")
 local logger_utils = require("src.foundation.log.utils")
 local choice_contract = require("src.config.choice.contract")
 local output_state_adapter = require("src.turn.output.state_adapter")
+local DeadlineService = require("src.turn.deadlines.service")
 
 local tick_choice_timeout = {}
 
@@ -103,10 +104,38 @@ local function _maybe_warn_missing_ui(state, active_choice, should_warn_missing_
   )
 end
 
+local function _scope_for_choice(active_choice)
+  if active_choice and active_choice.kind == "market_buy" then
+    return "market_buy"
+  end
+  return "choice"
+end
+
+local function _sync_deadline_for_choice(state, active_choice, timeout)
+  local scope = _scope_for_choice(active_choice)
+  local other_scope = scope == "choice" and "market_buy" or "choice"
+  if DeadlineService.is_active(state, other_scope) then
+    DeadlineService.cancel(state, other_scope)
+  end
+  if not DeadlineService.is_active(state, scope) then
+    DeadlineService.start(state, scope, {
+      timeout_seconds = timeout,
+      priority = 100,
+    })
+  end
+end
+
+local function _cancel_deadline_when_no_choice(state)
+  DeadlineService.cancel(state, "choice")
+  DeadlineService.cancel(state, "market_buy")
+end
+
 local function _sync_elapsed_choice_id(state, output_ports, active_choice)
   if output_ports.get_pending_choice_id(state) ~= active_choice.id then
     output_ports.set_pending_choice_elapsed(state, 0)
     output_ports.set_pending_choice_id(state, active_choice.id)
+    DeadlineService.cancel(state, "choice")
+    DeadlineService.cancel(state, "market_buy")
   end
 end
 
@@ -138,6 +167,7 @@ function tick_choice_timeout.step(game, state, dt, opts)
   if timeout <= 0 then
     output_ports.set_pending_choice_elapsed(state, 0)
     output_ports.set_pending_choice_id(state, nil)
+    _cancel_deadline_when_no_choice(state)
     return
   end
   local pending, active_choice = _sync_pending_choice_ui(game, state, opts, output_ports)
@@ -149,9 +179,11 @@ function tick_choice_timeout.step(game, state, dt, opts)
   if not active or not active_choice then
     output_ports.set_pending_choice_elapsed(state, 0)
     output_ports.set_pending_choice_id(state, nil)
+    _cancel_deadline_when_no_choice(state)
     return
   end
   _sync_elapsed_choice_id(state, output_ports, active_choice)
+  _sync_deadline_for_choice(state, active_choice, timeout)
   local pending_choice_elapsed = output_ports.get_pending_choice_elapsed(state) + dt
   output_ports.set_pending_choice_elapsed(state, pending_choice_elapsed)
   local min_visible = _resolve_min_visible_seconds(game, state, active_choice, opts)
@@ -171,12 +203,15 @@ function tick_choice_timeout.step(game, state, dt, opts)
       timeout_seconds = timeout,
       min_visible_seconds = min_visible,
     })
-    if action == nil then
+    if action ~= nil and action.type ~= "choice_force_skip" then
+      _ensure_action_actor_role_id(game, active_choice, action)
+      output_ports.set_pending_choice_elapsed(state, 0)
+      opts.dispatch_action_with_close_choice(game, state, action)
       return
     end
-    _ensure_action_actor_role_id(game, active_choice, action)
     output_ports.set_pending_choice_elapsed(state, 0)
-    opts.dispatch_action_with_close_choice(game, state, action)
+    local force_resolve = require("src.turn.deadlines.force_resolve")
+    force_resolve.resolve_choice(game, state, active_choice, "tick_timeout")
   end
 end
 

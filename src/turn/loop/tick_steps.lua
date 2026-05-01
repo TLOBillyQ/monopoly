@@ -5,6 +5,8 @@ local turn_timer_policy = require("src.turn.policies.timer")
 local turn_camera_policy = require("src.turn.policies.camera")
 local runtime_state = require("src.state.runtime_state")
 local landing_visual_hold = require("src.state.visual_hold")
+local DeadlineService = require("src.turn.deadlines.service")
+local target_select_timer = require("src.turn.waits.target_select_timer")
 
 local tick_steps = {}
 
@@ -47,6 +49,8 @@ end
 
 function tick_steps.step_tick_timeouts(game, state, dt, ports, dispatch_action_with_close_choice)
   local ui_sync_ports = ports.ui_sync
+  DeadlineService.tick(state, dt)
+  target_select_timer.step(game, state, dt)
   ui_sync_ports.step_choice_timeout(game, state, dt)
   ui_sync_ports.step_modal_timeout(game, state, dt)
   ui_sync_ports.step_target_selection(game, state, dt)

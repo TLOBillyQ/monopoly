@@ -282,12 +282,22 @@ function runtime_state.ensure_debug_runtime(state)
   return debug_runtime
 end
 
+function runtime_state.ensure_deadlines(state)
+  assert(type(state) == "table", "missing state")
+  local deadlines = _ensure_table(state, "deadlines")
+  if deadlines.active == nil then
+    deadlines.active = {}
+  end
+  return deadlines
+end
+
 function runtime_state.ensure_all(state)
   runtime_state.ensure_ui_runtime(state)
   runtime_state.ensure_board_runtime(state)
   runtime_state.ensure_anim_runtime(state)
   runtime_state.ensure_turn_runtime(state)
   runtime_state.ensure_debug_runtime(state)
+  runtime_state.ensure_deadlines(state)
   return state
 end
 

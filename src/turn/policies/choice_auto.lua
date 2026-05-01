@@ -101,7 +101,11 @@ local function _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, el
     if choice.allow_cancel == true then
       return { type = "choice_cancel", choice_id = choice.id }
     end
-    return _build_auto_or_fallback_action(game, choice, true)
+    local fallback = _build_auto_or_fallback_action(game, choice, true)
+    if fallback ~= nil then
+      return fallback
+    end
+    return { type = "choice_force_skip", choice_id = choice.id }
   end
   return nil
 end

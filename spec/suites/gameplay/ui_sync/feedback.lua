@@ -181,7 +181,7 @@ local _is_action_button_wait_active_extended_tests = {
     local ports = _build_test_ports()
     state.ui = { market_active = true }
     local result = turn_timer_policy.is_action_button_wait_active(g, state, ports)
-    assert(result == false, "should not be active when market is active")
+    assert(result == true, "market active should NOT block action_button (gentle deadline lets timer keep running)")
   end,
   function()
     local g = _new_game()
@@ -437,7 +437,7 @@ local _is_action_button_wait_active_more_tests = {
     local ports = _build_test_ports()
     ports.ui_sync.is_market_active = function() return true end
     local result = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-    assert(result == false, "should not be active when market is active")
+    assert(result == true, "market active should NOT block action_button (gentle deadline lets timer keep running)")
   end,
   function()
     local game = _new_game()

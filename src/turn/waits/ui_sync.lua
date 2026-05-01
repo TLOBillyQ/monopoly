@@ -5,6 +5,7 @@ local logger_utils = require("src.foundation.log.utils")
 local tick_timeout = require("src.turn.waits.timeout")
 local runtime_state = require("src.state.runtime_state")
 local turn_ui_sync_shared = require("src.state.ui_sync_shared")
+local DeadlineService = require("src.turn.deadlines.service")
 
 local tick_ui_sync = {}
 
@@ -107,6 +108,14 @@ function tick_ui_sync.log_once(state, level, key, ...)
   logger_utils.log_once(state, level, key, ...)
 end
 
+local function _resolve_deadline_countdown(state)
+  local primary = DeadlineService.peek(state, "primary")
+  if primary == nil then
+    return nil, nil, nil
+  end
+  return true, math.ceil(primary.remaining_seconds or 0), primary.level
+end
+
 function tick_ui_sync.update_countdown(game, state)
   local turn = game and game.turn or nil
   if not turn then
@@ -114,7 +123,10 @@ function tick_ui_sync.update_countdown(game, state)
   end
   local timeout = tick_timeout.resolve_choice_timeout_seconds(game, state)
   local gate = tick_timeout.resolve_modal_gate(state)
-  local active, seconds = _resolve_countdown_state(game, state, turn, timeout, gate)
+  local active, seconds, level = _resolve_deadline_countdown(state)
+  if active == nil then
+    active, seconds = _resolve_countdown_state(game, state, turn, timeout, gate)
+  end
   if seconds ~= state.countdown_last then
     state.countdown_last = seconds
     turn.countdown_seconds = seconds
@@ -123,6 +135,11 @@ function tick_ui_sync.update_countdown(game, state)
   if active ~= state.countdown_active_last then
     state.countdown_active_last = active
     turn.countdown_active = active
+    _mark_countdown_dirty(game)
+  end
+  if level ~= state.countdown_warn_level_last then
+    state.countdown_warn_level_last = level
+    turn.countdown_warn_level = level
     _mark_countdown_dirty(game)
   end
 end
