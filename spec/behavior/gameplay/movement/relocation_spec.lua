@@ -1,1 +1,7 @@
-require("spec.behavior._shim").bind(_ENV, "suites.gameplay.movement.relocation")
+local suite = require("spec.support.gameplay_suites.movement.relocation")
+
+describe(suite.name, function()
+  for _, case in ipairs(suite.tests or suite) do
+    it(case.name, case.run)
+  end
+end)

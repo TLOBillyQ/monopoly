@@ -1,179 +1,249 @@
 local bootstrap = require("spec.bootstrap")
+local common = require("shared.lib.common")
 
 local M = {}
 
-local domain_behavior_modules = {
-  "suites.domain.camera_helper",
-  "suites.domain.chance",
-  "suites.domain.land",
-  "suites.domain.item",
-  "suites.domain.item_availability_matrix",
-  "suites.domain.movement",
-  "suites.domain.landing",
-  "suites.domain.market",
-  "suites.domain.paid_currency",
-  "suites.domain.config_sanity",
-  "suites.domain.global_aliases",
-  "suites.domain.clear_obstacles_branch_walk",
-  "suites.domain.vehicle_helper",
-  "suites.domain.board_init_crap_coverage",
-  "suites.domain.board_direction_utils_crap_coverage",
-  "suites.domain.board_direction_crap_coverage",
-  "suites.domain.board_direction_collect_crap_coverage",
-  "suites.domain.board_query_crap_coverage",
-  "suites.domain.resolver_crap_coverage",
-  "suites.domain.mine_effect_crap_coverage",
-  "suites.domain.item_availability_rent_response_crap_coverage",
-  "suites.domain.item_availability_trigger_timing_crap_coverage",
-  "suites.domain.item_preconsume_crap_coverage",
-  "suites.domain.host_context_crap_coverage",
-  "suites.domain.remote_priority_crap_coverage",
-  "suites.domain.ring_map_direction_crap_coverage",
-  "suites.domain.boundary_assertions_t36",
-  "suites.domain.state_adapter_coverage",
-  "suites.domain.loop_ports_coverage",
-  "suites.domain.runtime_ports_coverage",
-  "suites.domain.tick_clock_coverage",
-  "suites.domain.runtime_state_coverage",
-  "suites.domain.validator_coverage",
-  "suites.domain.tip_queue_coverage",
-  "suites.domain.direction_coverage",
-  "suites.domain.roll_coverage",
-  "suites.domain.game_state_coverage",
-  "suites.domain.loop_ports_extended_coverage",
-  "suites.domain.action_anim_wait_coverage",
-  "suites.domain.loop_runtime_coverage",
-  "suites.domain.items_phase_coverage",
-  "suites.domain.landing_visual_hold_coverage",
-  "suites.domain.land_resolve_coverage",
-  "suites.domain.deity_ops_coverage",
-  "suites.domain.contract_helper_coverage",
-  "suites.domain.log_formatter_coverage",
-  "suites.domain.decision_engine_coverage",
-  "suites.domain.action_selector_coverage",
-  "suites.domain.callback_registry_coverage",
-  "suites.domain.tick_timeout_coverage",
-  "suites.domain.turn_timer_policy_coverage",
-  "suites.domain.vehicle_runtime_source_coverage",
-  "suites.domain.inventory_coverage",
-  "suites.domain.availability_coverage",
-  "suites.domain.session_script_coverage",
+local BUSTED_GLOBALS = {
+  "describe",
+  "it",
+  "before_each",
+  "after_each",
+  "setup",
+  "teardown",
+  "pending",
 }
-
-local runtime_behavior_modules = {
-  "suites.runtime.startup_profile",
-  "suites.runtime.config_reset_isolation",
-  "suites.runtime.test_profile_resolver",
-  "suites.runtime.test_profile_bootstrap_core",
-  "suites.runtime.test_profile_bootstrap_scenarios",
-  "suites.runtime.misc_vehicle_runtime_source",
-  "suites.runtime.misc",
-}
-
-local gameplay_behavior_modules = {
-  "suites.gameplay.turn_flow.phase_transitions",
-  "suites.gameplay.turn_flow.pre_move",
-  "suites.gameplay.choices.timeout",
-  "suites.gameplay.choices.validation",
-  "suites.gameplay.choices.market",
-  "suites.gameplay.choices.session",
-  "suites.gameplay.choices.purchase",
-  "suites.gameplay.ui_sync.gates",
-  "suites.gameplay.ui_sync.feedback",
-  "suites.gameplay.auto_runner.policies",
-  "suites.gameplay.items.strategy",
-  "suites.gameplay.items.post_effects",
-  "suites.gameplay.bankruptcy.elimination",
-  "suites.gameplay.bankruptcy.session",
-  "suites.gameplay.bankruptcy.tile_owner",
-  "suites.gameplay.runtime.asset_handlers",
-  "suites.gameplay.runtime.game_factory",
-  "suites.gameplay.runtime.context",
-  "suites.gameplay.movement.dice",
-  "suites.gameplay.movement.camera",
-  "suites.gameplay.turn_flow.intent_dispatch",
-  "suites.gameplay.runtime.coroutine",
-  "suites.gameplay.turn_flow.interrupts",
-  "suites.gameplay.auto_runner.timeout",
-  "suites.gameplay.ui_sync.prompts",
-  "suites.gameplay.items.startup",
-  "suites.gameplay.items.passive",
-  "suites.gameplay.movement.relocation",
-  "suites.gameplay.movement.obstacles",
-  "suites.gameplay.movement.executor",
-}
-
-local presentation_behavior_modules = {
-  "suites.runtime.runtime_bootstrap",
-  "suites.presentation.presentation_ui_timing_anim",
-  "suites.presentation.presentation_ui_model_dispatch",
-  "suites.presentation.presentation_ui_interaction",
-  "suites.presentation.presentation_ui_role_slots",
-  "suites.presentation.presentation_ui_touch_policy",
-  "suites.presentation.presentation_market_confirm_flow",
-  "suites.presentation.presentation_popup_visibility",
-  "suites.presentation.presentation_action_anim_effect_routes",
-  "suites.presentation.presentation_action_anim_tip_text",
-  "suites.presentation.presentation_action_anim_overlay_units",
-  "suites.presentation.presentation_board_feedback",
-  "suites.presentation.presentation_move_anim_sequence",
-  "suites.presentation.presentation_move_anim_actor_modes",
-  "suites.presentation.presentation_move_anim_teleport_and_vehicle",
-  "suites.presentation.presentation_board_sync",
-  "suites.presentation.presentation_ui_event_handlers",
-  "suites.presentation.presentation_ui_event_bindings",
-  "suites.presentation.presentation_player_colors",
-  "suites.presentation._presentation_action_status_choice_routes",
-  "suites.presentation._presentation_action_status_target_pick",
-  "suites.presentation._presentation_action_status_action_log",
-  "suites.presentation._presentation_action_status_market_panel",
-  "suites.presentation._presentation_action_status_item_slots",
-  "suites.presentation._presentation_action_status_action_anim",
-  "suites.presentation._presentation_action_status_status3d",
-  "suites.presentation._presentation_action_status_popup_modal",
-  "suites.presentation._presentation_action_status_player_panels",
-  "suites.presentation.gameplay_t6_characterization",
-  "suites.presentation.gameplay_t5_characterization",
-  -- T8: Re-enabled T2 characterization tests for final CRAP cleanup
-  "suites.presentation.status3d_roadblock_crap_coverage",
-  "suites.presentation.effect_track_crap_coverage",
-  "suites.presentation.anchors_sequence_crap_coverage",
-  "suites.presentation.mine_trigger_crap_coverage",
-}
-
-local behavior_modules = {}
-for _, module_name in ipairs(domain_behavior_modules) do
-  behavior_modules[#behavior_modules + 1] = module_name
-end
-for _, module_name in ipairs(runtime_behavior_modules) do
-  behavior_modules[#behavior_modules + 1] = module_name
-end
-for _, module_name in ipairs(gameplay_behavior_modules) do
-  behavior_modules[#behavior_modules + 1] = module_name
-end
-for _, module_name in ipairs(presentation_behavior_modules) do
-  behavior_modules[#behavior_modules + 1] = module_name
-end
 
 local contract_modules = {
   -- kept as tooling-support stubs: required by tooling lane suites for tooling_tests field
-  "suites.architecture.script_tools_contract",
-  "suites.architecture.scrap4lua_contract",
+  "spec.support.tooling_suites.architecture.script_tools_contract",
+  "spec.support.tooling_suites.architecture.scrap4lua_contract",
 }
 
 local tooling_modules = {
-  "suites.architecture.arch_view_snapshot_tooling_contract",
-  "suites.architecture.arch_view_live_tooling_contract",
-  "suites.architecture.crap_tooling_contract",
-  "suites.architecture.mutate4lua_tooling_contract",
-  "suites.architecture.loc_scan_tooling_contract",
-  "suites.architecture.script_tools_io_tooling_contract",
-  "suites.architecture.script_tools_mutate_tooling_contract",
-  "suites.architecture.script_tools_process_tooling_contract",
-  "suites.architecture.scrap4lua_tooling_contract",
-  "suites.architecture.script_tools_tooling",  -- 从 script_tools_contract 分离出的重型 tooling 测试
-  "suites.architecture.busted_infra_tooling",  -- T8: meta-test 验证 busted infra 完整性
+  "spec.support.tooling_suites.architecture.arch_view_snapshot_tooling_contract",
+  "spec.support.tooling_suites.architecture.arch_view_live_tooling_contract",
+  "spec.support.tooling_suites.architecture.crap_tooling_contract",
+  "spec.support.tooling_suites.architecture.mutate4lua_tooling_contract",
+  "spec.support.tooling_suites.architecture.loc_scan_tooling_contract",
+  "spec.support.tooling_suites.architecture.script_tools_io_tooling_contract",
+  "spec.support.tooling_suites.architecture.script_tools_mutate_tooling_contract",
+  "spec.support.tooling_suites.architecture.script_tools_process_tooling_contract",
+  "spec.support.tooling_suites.architecture.scrap4lua_tooling_contract",
+  "spec.support.tooling_suites.architecture.script_tools_tooling",  -- 从 script_tools_contract 分离出的重型 tooling 测试
+  "spec.support.tooling_suites.architecture.busted_infra_tooling",  -- T8: meta-test 验证 busted infra 完整性
 }
+
+local function _normalize_path(path)
+  return tostring(path or ""):gsub("\\", "/")
+end
+
+local function _module_dir()
+  local source = debug.getinfo(1, "S").source or "@tools/quality/shared/test_catalog.lua"
+  local normalized = _normalize_path(source):gsub("^@", "")
+  return normalized:match("^(.*)/[^/]+$") or "tools/quality/shared"
+end
+
+local function _repo_root()
+  return common.resolve_path(_module_dir(), "../../..")
+end
+
+local function _to_repo_relative(path)
+  local normalized = _normalize_path(path)
+  local root = _normalize_path(_repo_root()):gsub("/+$", "")
+  local prefix = root .. "/"
+  if normalized:sub(1, #prefix) == prefix then
+    return normalized:sub(#prefix + 1)
+  end
+  return normalized
+end
+
+local function _discover_behavior_specs()
+  local spec_root = common.join_path(_repo_root(), "spec/behavior")
+  local files, err = common.collect_lua_files(spec_root)
+  if files == nil then
+    error(err)
+  end
+
+  local specs = {}
+  for _, path in ipairs(files) do
+    local normalized = _to_repo_relative(path)
+    if normalized:match("_spec%.lua$") ~= nil then
+      specs[#specs + 1] = normalized
+    end
+  end
+  table.sort(specs)
+  return specs
+end
+
+local function _copy_array(values)
+  local copied = {}
+  for _, value in ipairs(values or {}) do
+    copied[#copied + 1] = value
+  end
+  return copied
+end
+
+local function _run_case(before_hooks, case_fn, after_hooks)
+  local original_pending = _G.pending
+  _G.pending = function()
+    return nil
+  end
+
+  local ok, err = xpcall(function()
+    for _, hook in ipairs(before_hooks or {}) do
+      hook()
+    end
+    case_fn()
+  end, debug.traceback)
+
+  local after_ok, after_err = xpcall(function()
+    for index = #after_hooks or 0, 1, -1 do
+      after_hooks[index]()
+    end
+  end, debug.traceback)
+
+  _G.pending = original_pending
+
+  if not ok then
+    error(err, 0)
+  end
+  if not after_ok then
+    error(after_err, 0)
+  end
+end
+
+local function _install_capture_globals(spec_file, suites, stack)
+  local root_suite = {
+    name = spec_file,
+    layer = "behavior",
+    kind = "suite",
+    module_name = spec_file,
+    tests = {},
+  }
+  suites[#suites + 1] = root_suite
+
+  _G.describe = function(name, body)
+    local parent = stack[#stack]
+    local suite = {
+      name = tostring(name or spec_file),
+      layer = "behavior",
+      kind = "suite",
+      module_name = spec_file,
+      tests = {},
+    }
+    local context = {
+      suite = suite,
+      before_each = {},
+      after_each = {},
+    }
+    if parent ~= nil then
+      context.inherited_before_each = _copy_array(parent.inherited_before_each)
+      for _, hook in ipairs(parent.before_each) do
+        context.inherited_before_each[#context.inherited_before_each + 1] = hook
+      end
+      context.inherited_after_each = _copy_array(parent.inherited_after_each)
+      for _, hook in ipairs(parent.after_each) do
+        context.inherited_after_each[#context.inherited_after_each + 1] = hook
+      end
+    else
+      context.inherited_before_each = {}
+      context.inherited_after_each = {}
+    end
+
+    suites[#suites + 1] = suite
+    stack[#stack + 1] = context
+    body()
+    stack[#stack] = nil
+  end
+
+  _G.it = function(name, case_fn)
+    local context = stack[#stack]
+    local suite = context and context.suite or root_suite
+    local before_hooks = context and _copy_array(context.inherited_before_each) or {}
+    local after_hooks = context and _copy_array(context.inherited_after_each) or {}
+    if context ~= nil then
+      for _, hook in ipairs(context.before_each) do
+        before_hooks[#before_hooks + 1] = hook
+      end
+      for _, hook in ipairs(context.after_each) do
+        after_hooks[#after_hooks + 1] = hook
+      end
+    end
+
+    suite.tests[#suite.tests + 1] = {
+      name = tostring(name or ("case_" .. tostring(#suite.tests + 1))),
+      run = function()
+        return _run_case(before_hooks, case_fn, after_hooks)
+      end,
+      tags = {},
+    }
+  end
+
+  _G.before_each = function(hook)
+    local context = stack[#stack]
+    if context ~= nil then
+      context.before_each[#context.before_each + 1] = hook
+    end
+  end
+
+  _G.after_each = function(hook)
+    local context = stack[#stack]
+    if context ~= nil then
+      context.after_each[#context.after_each + 1] = hook
+    end
+  end
+
+  _G.setup = _G.before_each
+  _G.teardown = _G.after_each
+  _G.pending = function()
+    return nil
+  end
+end
+
+local function _load_behavior_spec(spec_file)
+  local suites = {}
+  local stack = {}
+  local original_globals = {}
+  for _, key in ipairs(BUSTED_GLOBALS) do
+    original_globals[key] = _G[key]
+  end
+
+  local ok, err = xpcall(function()
+    _install_capture_globals(spec_file, suites, stack)
+    local chunk, load_err = loadfile(common.join_path(_repo_root(), spec_file))
+    if chunk == nil then
+      error(load_err)
+    end
+    chunk()
+  end, debug.traceback)
+
+  for _, key in ipairs(BUSTED_GLOBALS) do
+    _G[key] = original_globals[key]
+  end
+
+  if not ok then
+    error(err, 0)
+  end
+
+  local loaded = {}
+  for _, suite in ipairs(suites) do
+    if #(suite.tests or {}) > 0 then
+      loaded[#loaded + 1] = suite
+    end
+  end
+  return loaded
+end
+
+local function _load_behavior_specs(spec_files)
+  local suites = {}
+  for _, spec_file in ipairs(spec_files or {}) do
+    local spec_suites = _load_behavior_spec(spec_file)
+    for _, suite in ipairs(spec_suites) do
+      suites[#suites + 1] = suite
+    end
+  end
+  return suites
+end
 
 local function _clone_case(test)
   if type(test) == "function" then
@@ -216,14 +286,13 @@ local function _load_modules(module_names, layer, kind)
   return suites
 end
 
-M.behavior_suites = behavior_modules
+M.behavior_suites = _discover_behavior_specs()
 M.contract_suites = contract_modules
 M.tooling_suites = tooling_modules
 
 function M.load_behavior_suites()
   bootstrap.install_package_paths()
-  local suites = _load_modules(M.behavior_suites, "behavior", "suite")
-  return suites
+  return _load_behavior_specs(M.behavior_suites)
 end
 
 function M.load_contract_suites()

@@ -1,4 +1,4 @@
-local suite = require("suites.architecture.arch_view_live_tooling_contract")
+local suite = require("spec.support.tooling_suites.architecture.arch_view_live_tooling_contract")
 local cases = suite.tests or {}
 describe(suite.name or "arch_view_live_tooling_contract", function()
   for _, case in ipairs(cases) do
