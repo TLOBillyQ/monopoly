@@ -19,6 +19,12 @@ local robot_scale = (function()
   end
   return { x = 0.86, y = 0.30, z = 0.17 }
 end)()
+local robot_rotation = (function()
+  if math and math.Quaternion then
+    return math.Quaternion(-90.0, 0.0, 0.0)
+  end
+  return { x = -90.0, y = 0.0, z = 0.0 }
+end)()
 
 local function _deps(state)
   return state and state.presentation_runtime or nil
@@ -48,7 +54,7 @@ local function _spawn_robot(hr, robot_id, pos)
   if type(hr.create_unit_with_scale) ~= "function" then
     return nil
   end
-  return hr.create_unit_with_scale(robot_id, pos, runtime_constants.q_zero, robot_scale)
+  return hr.create_unit_with_scale(robot_id, pos, robot_rotation, robot_scale)
 end
 
 local function _destroy_robot(hr, handle)
