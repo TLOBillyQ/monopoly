@@ -33,7 +33,7 @@ function entity_pool.acquire(unit_key, pos, rotation, scale)
     handle = table.remove(b.idle)
     _call_method(handle, "set_position", pos)
     _call_method(handle, "set_rotation", rotation)
-    _call_method(handle, "set_scale", scale, 0.0)
+    _call_method(handle, "set_world_scale", scale)
     _call_method(handle, "set_model_visible", true)
   else
     b.miss = b.miss + 1
