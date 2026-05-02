@@ -5,6 +5,7 @@ local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
 local host_runtime_ports = require("src.ui.host_bridge")
 local modal = require("src.ui.coord.modal")
 local logger = require("src.foundation.log.logger")
+local runtime_ui = require("src.ui.render.runtime_ui")
 
 local router = {}
 
@@ -118,6 +119,50 @@ function router.bind(state, resolve_game)
 
   ui_event_bindings.enable_action_log_toggle_touch(cache, state.ui)
   ui_event_bindings.register_missing_button_tip(cache, registered, listeners)
+
+  local function _diag_parent_chain(node)
+    local names = {}
+    local cur = node
+    for _ = 1, 8 do
+      if not cur then
+        break
+      end
+      names[#names + 1] = tostring(cur.name or cur.id or cur)
+      cur = cur.parent
+    end
+    return table.concat(names, " <- ")
+  end
+  local ok_data, all_nodes = pcall(require, "Data.UIManagerNodes")
+  if ok_data and type(all_nodes) == "table" then
+    for _, entry in pairs(all_nodes) do
+      if type(entry) == "table" then
+        local name = entry[1]
+        local kind = entry[2]
+        local ok, nodes = pcall(runtime_ui.query_nodes, name)
+        if ok and type(nodes) == "table" then
+          for _, node in ipairs(nodes) do
+            local listener_ok, listener = pcall(function()
+              return node:listen(UIManager.EVENT.CLICK, function(data)
+                logger.info(
+                  "[diag-firsttap-consumer]",
+                  "name=" .. tostring(node.name or name),
+                  "kind=" .. tostring(kind),
+                  "id=" .. tostring(node.id),
+                  "visible=" .. tostring(node.visible),
+                  "disabled=" .. tostring(node.disabled),
+                  "role=" .. tostring(data and data.role),
+                  "chain=" .. _diag_parent_chain(node)
+                )
+              end)
+            end)
+            if listener_ok and listener then
+              table.insert(listeners, listener)
+            end
+          end
+        end
+      end
+    end
+  end
 end
 
 return router
