@@ -121,6 +121,11 @@ local function _open_regular_choice(state, choice, market_state, screen_key)
     return
   end
   target_choice_effects.leave(state, "open_non_target")
+  logger.info_unlimited(
+    "[diag-firsttap-modal] _open_regular_choice done screen_key=", tostring(screen_key),
+    "ui.choice_active=", tostring(state.ui.choice_active),
+    "active_screen=", tostring(state.ui.active_choice_screen_key)
+  )
 end
 
 function modal_presenter.select_choice_option(state, option_id)
@@ -142,6 +147,13 @@ function modal_presenter.open_choice_modal(state, choice, market_state)
   end
   local screen_key = choice_common.resolve_screen_key(choice)
   local choice_id = choice.id
+  logger.info_unlimited(
+    "[diag-firsttap-modal] open_choice_modal screen_key=", tostring(screen_key),
+    "choice_id=", tostring(choice_id),
+    "skip_reopen=", tostring(_should_skip_reopen(state, screen_key, choice_id)),
+    "ui.choice_active=", tostring(state.ui and state.ui.choice_active),
+    "active_screen=", tostring(state.ui and state.ui.active_choice_screen_key)
+  )
   if _should_skip_reopen(state, screen_key, choice_id) then
     return
   end
