@@ -31,7 +31,7 @@ function role_context.resolve(role, ui_model, deps)
     }
   end
 
-  if role_id ~= nil and not warned_unmapped_role_ids[role_id] then
+  if role_id ~= nil and ui_model ~= nil and not warned_unmapped_role_ids[role_id] then
     warned_unmapped_role_ids[role_id] = true
     logger.warn(
       "role->player 映射失败，按观战回退:",

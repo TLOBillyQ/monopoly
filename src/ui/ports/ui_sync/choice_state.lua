@@ -81,7 +81,7 @@ function choice_ui_state.resolve_gate_state(game, state, choice)
   local expects_ui = route_key ~= "base_inline" and not _is_input_blocked_phase(game) and local_owner and not owner_auto
   local open
 
-  if route_key == "base_inline" then
+  if route_key == "base_inline" or route_key == "item_phase_passive" then
     open = true
   elseif route_key == "market" then
     open = ui and ui.market_active == true or false

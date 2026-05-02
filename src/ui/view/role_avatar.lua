@@ -45,7 +45,9 @@ function role_avatar.sanitize_image_key(value)
     return nil
   end
   if as_int <= 0 then
-    _warn_invalid_image_key(value)
+    if as_int < 0 then
+      _warn_invalid_image_key(value)
+    end
     return nil
   end
   return as_int

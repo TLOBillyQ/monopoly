@@ -58,7 +58,7 @@ local function _should_open_choice_modal(game, state, next_model, dirty)
     return false
   end
   local route_key = choice_ui_state.resolve_route_key(next_model.choice)
-  if route_key == "base_inline" then
+  if route_key == "base_inline" or route_key == "item_phase_passive" then
     return true
   end
   if route_key == "market" and next_model.market ~= nil then
