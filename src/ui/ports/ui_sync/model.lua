@@ -4,6 +4,7 @@ local landing_visual_hold = require("src.ui.visual_hold")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
 local modal = require("src.ui.coord.modal")
 local main_view = require("src.ui.coord.ui_runtime")
+local logger = require("src.foundation.log.logger")
 
 local ui_model_sync = {}
 
@@ -84,6 +85,16 @@ local function _should_close_choice_modal(state, next_model)
 end
 
 local function _render_ui_model(game, state, next_model, dirty, common)
+  logger.info_unlimited(
+    "[diag-firsttap-render] _render_ui_model choice.id=", tostring(next_model and next_model.choice and next_model.choice.id),
+    "kind=", tostring(next_model and next_model.choice and next_model.choice.kind),
+    "route_key=", tostring(next_model and next_model.choice and next_model.choice.route_key),
+    "ui.choice_active=", tostring(state.ui and state.ui.choice_active),
+    "active_screen=", tostring(state.ui and state.ui.active_choice_screen_key),
+    "dirty.any=", tostring(dirty and dirty.any),
+    "dirty.ui=", tostring(dirty and dirty.ui),
+    "game.pending.id=", tostring(game and game.turn and game.turn.pending_choice and game.turn.pending_choice.id)
+  )
   main_view.render(state, next_model, common.log_once, common.build_log_prefix)
   if _should_close_choice_modal(state, next_model) then
     modal.close_choice_modal(state)
