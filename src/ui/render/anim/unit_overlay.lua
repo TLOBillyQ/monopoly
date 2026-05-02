@@ -15,16 +15,16 @@ local roadblock_scale = (function()
 end)()
 local robot_scale = (function()
   if math and math.Vector3 then
-    return math.Vector3(0.86, 0.30, 0.17)
+    return math.Vector3(0.06, 0.94, 0.06)
   end
-  return { x = 0.86, y = 0.30, z = 0.17 }
+  return { x = 0.06, y = 0.94, z = 0.06 }
 end)()
 local robot_y_offset = 1.0
 local robot_rotation = (function()
   if math and math.Quaternion then
-    return math.Quaternion(-90.0, 0.0, 0.0)
+    return math.Quaternion(0.0, 0.0, 0.0)
   end
-  return { x = -90.0, y = 0.0, z = 0.0 }
+  return { x = 0.0, y = 0.0, z = 0.0 }
 end)()
 
 local function _deps(state)
