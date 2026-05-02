@@ -58,6 +58,12 @@ end
 local function _set_prompt_visible(nodes, visible)
   _set_node_visible(nodes.star, visible)
   _set_node_visible(nodes.label, visible)
+  if nodes.star then
+    nodes.star.disabled = true
+  end
+  if nodes.label then
+    nodes.label.disabled = true
+  end
 end
 
 local function _is_turn_prompt_phase(phase)
