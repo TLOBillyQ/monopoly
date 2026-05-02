@@ -23,7 +23,7 @@ end
 describe("choices_session", function()
   it("_test_choice_session_apply_navigation_tab_select_and_empty_tab_feedback", function()
     local feedback_calls = {}
-    local result = _reload_module("src.rules.market.choice.session", {
+    _reload_module("src.rules.market.choice.session", {
       ["src.rules.market.choice.builder"] = {
         build = function()
           return {

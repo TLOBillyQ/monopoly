@@ -1,5 +1,3 @@
-local support = require("spec.support.presentation_support")
-
 local validator = require("src.turn.actions.validator")
 local tick_timeout = require("src.turn.waits.timeout")
 local ui_gate_sync = require("src.ui.ports.ui_sync.gate")

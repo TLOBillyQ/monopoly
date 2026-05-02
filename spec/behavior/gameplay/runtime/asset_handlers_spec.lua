@@ -119,7 +119,6 @@ local _asset_handlers_final_tests = {
 
 describe("runtime_asset_handlers", function()
   it("_test_asset_handlers_destroy_buildings_on_path", function()
-     local asset_handlers = require("src.rules.chance.handlers.asset")
      local monopoly_event = require("src.foundation.events")
     local events = {}
     local common = {
@@ -156,7 +155,6 @@ describe("runtime_asset_handlers", function()
   end)
 
   it("_test_asset_handlers_reset_tiles_on_path", function()
-     local asset_handlers = require("src.rules.chance.handlers.asset")
      local monopoly_event = require("src.foundation.events")
     local events = {}
     local tile_state_calls = {}

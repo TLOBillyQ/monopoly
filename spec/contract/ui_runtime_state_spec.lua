@@ -1,5 +1,4 @@
 ---@diagnostic disable: undefined-global, undefined-field, duplicate-set-field, unused-local, need-check-nil
-local shared = require("spec.support.shared_support")
 
 local runtime_state = require("src.state.runtime_state")
 local output_port = require("src.turn.output.state_adapter")

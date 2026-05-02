@@ -139,3 +139,34 @@ files["tests/suites/gameplay/gameplay_cases_*.lua"] = {
 files["tools/quality/scrap/config.lua"] = {
   read_globals = { "REPO_ROOT" },
 }
+
+-- spec/** mirrors tests/**: busted specs and their support helpers stub host-injected
+-- globals (LuaAPI/GameAPI/Enums/SetFrameOut/TriggerCustomEvent/...) and rewrite `arg`
+-- before delegating to vendor CLIs. Treat these as writeable globals here so the
+-- read_globals defaults above don't flag legitimate test setup.
+files["spec/**/*.lua"] = {
+  globals = {
+    "arg",
+    "GameAPI",
+    "GlobalAPI",
+    "UIManager",
+    "LuaAPI",
+    "SetTimeOut",
+    "SetFrameOut",
+    "RegisterCustomEvent",
+    "UnregisterCustomEvent",
+    "RegisterTriggerEvent",
+    "TriggerCustomEvent",
+    "UnitCustomEvent",
+    "UnitTriggerEvent",
+    "EVENT",
+    "Enums",
+    "ALLROLES",
+    "all_roles",
+    "vehicle_helper",
+    "camera_helper",
+    "change_skin_helper",
+    "SceneUI",
+    "print",
+  },
+}

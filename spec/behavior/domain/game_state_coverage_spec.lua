@@ -4,11 +4,6 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
-local function _make_game(opts)
-  local g = Game:new(opts)
-  return g
-end
-
 -- _install_default_runtime_ports: skip-install paths (when ports already valid)
 
 

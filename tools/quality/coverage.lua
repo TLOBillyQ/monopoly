@@ -179,7 +179,7 @@ local function build_luacov_without_untested()
   local config_content = [[
 return {
   include = {
-    "src/core/", "src/rules/", "src/turn/",
+    "src/foundation/", "src/rules/", "src/turn/",
     "src/state/", "src/player/", "src/computer/",
   },
   exclude = {
@@ -261,7 +261,7 @@ end
 local function classify_directory(file_path)
   local normalized = normalize_repo_path(file_path)
   local dirs = {
-    "src/core/",
+    "src/foundation/",
     "src/rules/",
     "src/turn/",
     "src/state/",
@@ -350,7 +350,7 @@ end
 
 local function aggregate_by_directory(files)
   local dirs = {
-    "src/core/",
+    "src/foundation/",
     "src/rules/",
     "src/turn/",
     "src/state/",
@@ -403,7 +403,7 @@ local function generate_report(aggregates, threshold, profiles, quiet)
   table.insert(lines, "|-----------|------|------|-------|----------|")
 
   local dirs = {
-    "src/core/",
+    "src/foundation/",
     "src/rules/",
     "src/turn/",
     "src/state/",

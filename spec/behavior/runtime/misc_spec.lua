@@ -72,7 +72,6 @@ end
 
 -- merged preamble from suites.runtime.misc_landing_visual_hold
 local event_log = require("src.state.event_log")
-local runtime_state = require("src.state.runtime_state")
 local landing_visual_hold = require("src.state.visual_hold")
 
 describe("misc", function()

@@ -1,5 +1,4 @@
 local handlers = require("src.ui.render.anim.handlers")
-local host_runtime = require("src.host")
 local support = require("spec.support.presentation_support")
 
 local M = {}
