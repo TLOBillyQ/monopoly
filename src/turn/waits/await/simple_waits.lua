@@ -113,6 +113,12 @@ function M.action(session, args)
       next_args = args and args.next_args or { player = player },
     }
   end
+  local peeked = session:peek_pending_action()
+  if peeked and (peeked.type == "choice_select"
+              or peeked.type == "choice_cancel"
+              or peeked.type == "choice_force_skip") then
+    return { wait = true }
+  end
   local action = session:take_pending_action()
   if action then
     return {

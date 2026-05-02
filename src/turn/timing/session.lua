@@ -42,6 +42,13 @@ local function _build_session(opts)
     self._pending_action = action
   end
 
+  function s:peek_pending_action()
+    if self._peek_action then
+      return self._peek_action()
+    end
+    return self._pending_action
+  end
+
   function s:take_pending_action()
     if self._take_action then
       return self._take_action()
