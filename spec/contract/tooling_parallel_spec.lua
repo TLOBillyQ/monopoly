@@ -34,7 +34,6 @@ describe("tooling_parallel contract", function()
     local suites = {
       suite("spec.support.tooling_suites.architecture.arch_view_live_tooling_contract"),
       suite("spec.support.tooling_suites.architecture.script_tools_io_tooling_contract"),
-      suite("spec.support.tooling_suites.architecture.script_tools_mutate_tooling_contract"),
       suite("spec.support.tooling_suites.architecture.mutate4lua_tooling_contract"),
     }
     local plan = support.build_execution_plan(suites, 3)
