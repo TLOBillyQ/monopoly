@@ -13,11 +13,58 @@ local _bind_ui_runtime = support.bind_ui_runtime
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
 local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
 local choice_openers = require("src.ui.coord.choice_screens.openers")
+local item_slot_intents = require("src.ui.input.canvas_route.item_slots")
 local target_choice_intents = require("src.ui.input.canvas_route.target_choice")
 local market_intents = require("src.ui.input.canvas_route.market")
 local market_modal_renderer = require("src.ui.coord.market")
+local runtime_state = require("src.ui.state.runtime")
 
 describe("two_tap_flatten_e2e", function()
+  it("Scenario A0: item slot tap uses pending choice when ui_model is stale", function()
+    local choice = {
+      id = 554,
+      kind = "item_phase_passive",
+      route_key = "item_phase_passive",
+      owner_role_id = 7,
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = false,
+      slot_states = {
+        [1] = { item_id = 2002, available = true },
+      },
+      options = {
+        { id = 2002, label = "遥控骰子卡" },
+      },
+      allow_cancel = true,
+      cancel_label = "完成",
+      meta = { player_id = 7, phase = "pre_action" },
+    }
+    local state = {
+      ui_model = { choice = nil, current_player_id = 7 },
+      ui = {
+        item_slots = { "道具槽位_1" },
+        card_outlines = { "道具槽位_1_外框" },
+        item_slot_item_ids = { 2002 },
+        item_slot_item_ids_by_role = {},
+      },
+      game = {
+        turn = {
+          pending_choice = choice,
+        },
+      },
+    }
+    _bind_ui_runtime(state)
+    runtime_state.set_pending_choice(state, choice)
+    runtime_state.set_ui_model(state, { choice = nil, current_player_id = 7 })
+
+    local specs = item_slot_intents.build(state)
+    local intent = specs[1].build_intent()
+
+    _assert_eq(intent and intent.type, "ui_button",
+      "Scenario A0: stale ui_model should not swallow the first item slot tap")
+    _assert_eq(intent and intent.id, "item_slot_1",
+      "Scenario A0: first tap should still produce the item slot action")
+  end)
+
   it("Scenario A: item phase single tap directly dispatches choice_select", function()
     local enter_calls = 0
     local opened_pre_confirm = 0

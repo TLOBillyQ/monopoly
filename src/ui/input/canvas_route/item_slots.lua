@@ -12,6 +12,23 @@ local _deny_text = {
 
 local intents = {}
 
+local function _resolve_current_item_slot_choice(state)
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
+  if choice_support.uses_item_slots(choice) then
+    return choice
+  end
+  choice = runtime_state.get_pending_choice(state)
+  if choice_support.uses_item_slots(choice) then
+    return choice
+  end
+  local turn_choice = state and state.game and state.game.turn and state.game.turn.pending_choice or nil
+  if choice_support.uses_item_slots(turn_choice) then
+    return turn_choice
+  end
+  return nil
+end
+
 function intents.build(state)
   local specs = {}
   local item_slots = (state.ui and state.ui.item_slots) or nodes.item_slots or {}
@@ -21,9 +38,8 @@ function intents.build(state)
     specs[#specs + 1] = {
       name = node_name,
       build_intent = function()
-        local current_model = runtime_state.get_ui_model(state)
-        local choice = current_model and current_model.choice or nil
-        if not choice_support.uses_item_slots(choice) then
+        local choice = _resolve_current_item_slot_choice(state)
+        if not choice then
           logger.warn("item_slot click ignored:", tostring(index))
           return nil
         end
@@ -48,9 +64,8 @@ function intents.build(state)
       specs[#specs + 1] = {
         name = outline_name,
         build_intent = function()
-          local current_model = runtime_state.get_ui_model(state)
-        local choice = current_model and current_model.choice or nil
-          if not choice_support.uses_item_slots(choice) then
+          local choice = _resolve_current_item_slot_choice(state)
+          if not choice then
             logger.warn("item_slot outline click ignored:", tostring(index))
             return nil
           end
