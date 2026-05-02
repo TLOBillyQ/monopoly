@@ -31,7 +31,7 @@ local function _make_mock_lifecycle()
       handle.position_calls[#handle.position_calls + 1] = p
       handle._pos = p
     end
-    function handle.set_rotation(r)
+    function handle.set_orientation(r)
       handle.rotation_calls[#handle.rotation_calls + 1] = r
     end
     function handle.set_world_scale(s)
@@ -150,7 +150,7 @@ describe("host_entity_pool_contract", function()
       set_position = function(p)
         calls[#calls + 1] = { name = "position", value = p }
       end,
-      set_rotation = function(r)
+      set_orientation = function(r)
         calls[#calls + 1] = { name = "rotation", value = r }
       end,
       set_world_scale = function(s)
