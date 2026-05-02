@@ -37,6 +37,9 @@ local runtime_constants = {
   vehicle_move_api_enabled = false,
   vehicle_enter_delay = 1.2,
   fps = 30.0,
+
+  entity_pool_max_idle = 8,
+  entity_pool_park_pos = _vec3(0.0, -9999.0, 0.0),
 }
 
 return runtime_constants

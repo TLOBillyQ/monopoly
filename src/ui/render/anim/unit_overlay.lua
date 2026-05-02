@@ -52,14 +52,21 @@ local function _spawn_robot(hr, robot_id, pos)
   if robot_id == nil then
     return nil
   end
+  if type(hr.acquire_unit) == "function" then
+    return hr.acquire_unit(robot_id, pos, robot_rotation, robot_scale)
+  end
   if type(hr.create_unit_with_scale) ~= "function" then
     return nil
   end
   return hr.create_unit_with_scale(robot_id, pos, robot_rotation, robot_scale)
 end
 
-local function _destroy_robot(hr, handle)
+local function _destroy_robot(hr, robot_id, handle)
   if handle == nil then
+    return
+  end
+  if type(hr.release_unit) == "function" then
+    hr.release_unit(robot_id, handle)
     return
   end
   if type(hr.destroy_unit) == "function" then
@@ -79,7 +86,7 @@ local function _move_robot(hr, robot_id, handle, pos)
   if _call_handle_method(handle, "set_position", pos) then
     return handle
   end
-  _destroy_robot(hr, handle)
+  _destroy_robot(hr, robot_id, handle)
   return _spawn_robot(hr, robot_id, pos)
 end
 
@@ -147,7 +154,7 @@ local function _walk_branch_children(state, clear_overlay, schedule, hr, robot_i
   local children = node.children or {}
   if #children == 0 then
     return function(handle)
-      _destroy_robot(hr, handle)
+      _destroy_robot(hr, robot_id, handle)
     end
   end
 
@@ -240,6 +247,9 @@ function overlay.play_clear_obstacles(state, anim, duration, opts)
   local schedule = opts.schedule or hr.schedule
   local step_duration = _resolve_step_duration(branches, duration)
   local branch_tree = _build_branch_tree(branches)
+  if type(hr.prewarm_unit) == "function" then
+    hr.prewarm_unit(robot_id, 1 + #branches, robot_rotation, robot_scale, player_pos)
+  end
   local root_handle = _spawn_robot(hr, robot_id, player_pos)
   _walk_branch_children(state, clear_overlay, schedule, hr, robot_id, branch_tree, player_pos, step_duration)(root_handle)
 end

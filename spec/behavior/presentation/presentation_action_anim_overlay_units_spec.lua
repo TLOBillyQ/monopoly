@@ -164,15 +164,21 @@ describe("presentation.action_anim_overlay_units", function()
     local group_calls = 0
     local captured_scale = nil
 
+    local function _mock_unit(_, _, _, scale)
+      unit_calls = unit_calls + 1
+      captured_scale = scale
+      return { _unit_id = 1 }
+    end
     _with_patches({
       {
         target = host_runtime,
         key = "create_unit_with_scale",
-        value = function(_, _, _, scale)
-          unit_calls = unit_calls + 1
-          captured_scale = scale
-          return { _unit_id = 1 }
-        end,
+        value = _mock_unit,
+      },
+      {
+        target = host_runtime,
+        key = "acquire_unit",
+        value = _mock_unit,
       },
       {
         target = host_runtime,
@@ -216,15 +222,21 @@ describe("presentation.action_anim_overlay_units", function()
     local captured_scales = {}
     local scheduled_callbacks = {}
 
+    local function _mock_create(_, pos, _, scale)
+      captured_scales[#captured_scales + 1] = scale
+      local records = { spawn_pos = pos, moves = {} }
+      return _new_robot_handle(pos, records)
+    end
     _with_patches({
       {
         target = host_runtime,
         key = "create_unit_with_scale",
-        value = function(_, pos, _, scale)
-          captured_scales[#captured_scales + 1] = scale
-          local records = { spawn_pos = pos, moves = {} }
-          return _new_robot_handle(pos, records)
-        end,
+        value = _mock_create,
+      },
+      {
+        target = host_runtime,
+        key = "acquire_unit",
+        value = _mock_create,
       },
       {
         target = host_runtime,
@@ -239,6 +251,16 @@ describe("presentation.action_anim_overlay_units", function()
       {
         target = host_runtime,
         key = "destroy_unit",
+        value = function() end,
+      },
+      {
+        target = host_runtime,
+        key = "release_unit",
+        value = function() end,
+      },
+      {
+        target = host_runtime,
+        key = "prewarm_unit",
         value = function() end,
       },
     }, function()
@@ -301,21 +323,30 @@ describe("presentation.action_anim_overlay_units", function()
     local destroyed_handles = {}
     local robot_records = {}
 
+    local function _mock_robot_create(unit_id, pos)
+      local records = { spawn_pos = pos, moves = {} }
+      local handle = _new_robot_handle(pos, records)
+      robot_records[#robot_records + 1] = records
+      unit_calls[#unit_calls + 1] = {
+        unit_id = unit_id,
+        pos = pos,
+        handle = handle,
+      }
+      return handle
+    end
+    local function _mock_robot_destroy(handle)
+      destroyed_handles[#destroyed_handles + 1] = handle
+    end
     _with_patches({
       {
         target = host_runtime,
         key = "create_unit_with_scale",
-        value = function(unit_id, pos)
-          local records = { spawn_pos = pos, moves = {} }
-          local handle = _new_robot_handle(pos, records)
-          robot_records[#robot_records + 1] = records
-          unit_calls[#unit_calls + 1] = {
-            unit_id = unit_id,
-            pos = pos,
-            handle = handle,
-          }
-          return handle
-        end,
+        value = _mock_robot_create,
+      },
+      {
+        target = host_runtime,
+        key = "acquire_unit",
+        value = _mock_robot_create,
       },
       {
         target = host_runtime,
@@ -327,12 +358,22 @@ describe("presentation.action_anim_overlay_units", function()
           }
         end,
       },
-        {
-          target = host_runtime,
-          key = "destroy_unit",
-          value = function(handle)
-            destroyed_handles[#destroyed_handles + 1] = handle
-          end,
+      {
+        target = host_runtime,
+        key = "destroy_unit",
+        value = _mock_robot_destroy,
+      },
+      {
+        target = host_runtime,
+        key = "release_unit",
+        value = function(_, handle)
+          _mock_robot_destroy(handle)
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "prewarm_unit",
+        value = function() end,
       },
     }, function()
       overlay.play_clear_obstacles(state, {
@@ -406,21 +447,30 @@ describe("presentation.action_anim_overlay_units", function()
     local destroyed_handles = {}
     local robot_records = {}
 
+    local function _mock_fork_create(unit_id, pos)
+      local records = { spawn_pos = pos, moves = {} }
+      local handle = _new_robot_handle(pos, records)
+      robot_records[#robot_records + 1] = records
+      unit_calls[#unit_calls + 1] = {
+        unit_id = unit_id,
+        pos = pos,
+        handle = handle,
+      }
+      return handle
+    end
+    local function _mock_fork_destroy(handle)
+      destroyed_handles[#destroyed_handles + 1] = handle
+    end
     _with_patches({
       {
         target = host_runtime,
         key = "create_unit_with_scale",
-        value = function(unit_id, pos)
-          local records = { spawn_pos = pos, moves = {} }
-          local handle = _new_robot_handle(pos, records)
-          robot_records[#robot_records + 1] = records
-          unit_calls[#unit_calls + 1] = {
-            unit_id = unit_id,
-            pos = pos,
-            handle = handle,
-          }
-          return handle
-        end,
+        value = _mock_fork_create,
+      },
+      {
+        target = host_runtime,
+        key = "acquire_unit",
+        value = _mock_fork_create,
       },
       {
         target = host_runtime,
@@ -432,12 +482,22 @@ describe("presentation.action_anim_overlay_units", function()
           }
         end,
       },
-        {
-          target = host_runtime,
-          key = "destroy_unit",
-          value = function(handle)
-            destroyed_handles[#destroyed_handles + 1] = handle
-          end,
+      {
+        target = host_runtime,
+        key = "destroy_unit",
+        value = _mock_fork_destroy,
+      },
+      {
+        target = host_runtime,
+        key = "release_unit",
+        value = function(_, handle)
+          _mock_fork_destroy(handle)
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "prewarm_unit",
+        value = function() end,
       },
     }, function()
       overlay.play_clear_obstacles(state, {

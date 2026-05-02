@@ -5,6 +5,16 @@ local guard_support = require("spec.support.guards.guard_support")
 
 local rules = {
   {
+    roots = { "src/host/entity_pool.lua" },
+    forbidden_patterns = {
+      'require%("src%.ui%.',
+      "require%('src%.ui%.",
+      'require%("src%.rules%.',
+      "require%('src%.rules%.",
+    },
+    description = "src/host/entity_pool.lua must not depend on src.ui.* or src.rules.*",
+  },
+  {
     roots = { "src/ui" },
     forbidden = { "shared.UINodes" },
     description = "no module may depend on retired shared.UINodes",

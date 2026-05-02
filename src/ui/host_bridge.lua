@@ -64,6 +64,18 @@ function host_bridge.destroy_unit_with_children(...)
   return _host_runtime().destroy_unit_with_children(...)
 end
 
+function host_bridge.acquire_unit(unit_key, pos, rotation, scale)
+  return _host_runtime().acquire_unit(unit_key, pos, rotation, scale)
+end
+
+function host_bridge.release_unit(unit_key, handle)
+  return _host_runtime().release_unit(unit_key, handle)
+end
+
+function host_bridge.prewarm_unit(unit_key, count, rotation, scale, sample_pos)
+  return _host_runtime().prewarm_unit(unit_key, count, rotation, scale, sample_pos)
+end
+
 function host_bridge.destroy_scene_ui(...)
   return _host_runtime().destroy_scene_ui(...)
 end

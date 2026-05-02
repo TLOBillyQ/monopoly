@@ -3,6 +3,7 @@ local runtime_context = require("src.host.context")
 local tip_queue = require("src.foundation.coordination.tip_queue")
 local role_resolver = require("src.host.role_resolver")
 local unit_lifecycle = require("src.host.units")
+local entity_pool = require("src.host.entity_pool")
 local scene_ui = require("src.host.scene_ui")
 local raycast = require("src.host.raycast")
 local sfx_runtime = require("src.host.sound")
@@ -71,6 +72,26 @@ end
 
 function host_runtime.destroy_unit(handle)
   return unit_lifecycle.destroy_unit(handle)
+end
+
+function host_runtime.acquire_unit(unit_key, pos, rotation, scale)
+  return entity_pool.acquire(unit_key, pos, rotation, scale)
+end
+
+function host_runtime.release_unit(unit_key, handle)
+  return entity_pool.release(unit_key, handle)
+end
+
+function host_runtime.prewarm_unit(unit_key, count, rotation, scale, sample_pos)
+  return entity_pool.prewarm(unit_key, count, rotation, scale, sample_pos)
+end
+
+function host_runtime.entity_pool_stats()
+  return entity_pool.stats()
+end
+
+function host_runtime.entity_pool_reset()
+  return entity_pool.reset()
 end
 
 function host_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound, opts)

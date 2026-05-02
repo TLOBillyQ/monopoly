@@ -37,12 +37,16 @@ end
 local function _spawn_unit(host_runtime, unit_id, pos, scale)
   assert(unit_id ~= nil, "missing unit_id")
   assert(pos ~= nil, "missing pos")
+  if type(host_runtime.acquire_unit) == "function" then
+    local handle = host_runtime.acquire_unit(unit_id, pos, runtime_constants.q_zero, scale or runtime_constants.v3_one)
+    return handle, handle ~= nil
+  end
   return host_runtime.create_unit_with_scale(
     unit_id,
     pos,
     runtime_constants.q_zero,
     scale or runtime_constants.v3_one
-  )
+  ), false
 end
 
 local function _destroy_unit(host_runtime, entry)
@@ -51,6 +55,10 @@ local function _destroy_unit(host_runtime, entry)
   end
   if entry.kind == "group" then
     host_runtime.destroy_unit_with_children(entry.handle, true)
+    return
+  end
+  if entry.pooled and type(host_runtime.release_unit) == "function" then
+    host_runtime.release_unit(entry.unit_id, entry.handle)
     return
   end
   host_runtime.destroy_unit(entry.handle)
@@ -125,9 +133,9 @@ function runtime.spawn_overlay(scene, kind, tile_index, group_id, unit_id, pos, 
     return false
   end
   if unit_id then
-    local handle = _spawn_unit(host_runtime, unit_id, pos, scale)
+    local handle, pooled = _spawn_unit(host_runtime, unit_id, pos, scale)
     if handle then
-      bucket[tile_index] = { kind = "unit", handle = handle }
+      bucket[tile_index] = { kind = "unit", handle = handle, pooled = pooled, unit_id = unit_id }
       return true
     end
     return false
