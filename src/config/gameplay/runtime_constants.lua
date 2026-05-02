@@ -30,7 +30,7 @@ local runtime_constants = {
 
   walk_speed = 13.0,
   speed_boost_modifier_key = 100000,
-  robot_speed = 9.0,
+  robot_speed = 18.0,
 
   vehicle_speed = 20.0,
   vehicle_accel = 20.0,
