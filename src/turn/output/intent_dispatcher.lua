@@ -3,7 +3,6 @@ local choice_contract = require("src.config.choice.contract")
 local choice_route_policy = require("src.config.choice.route_policy")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
-local logger = require("src.foundation.log.logger")
 
 local intent_dispatcher = {}
 
@@ -91,11 +90,6 @@ function intent_dispatcher.open_choice(game, choice_spec)
   assert(game and game.turn, "Choice.open requires game.turn")
   assert(choice_spec ~= nil, "missing choice_spec")
   _validate_choice_meta(game, choice_spec)
-  logger.info_unlimited(
-    "[diag-firsttap-emit] open_choice entry spec_kind=", tostring(choice_spec and choice_spec.kind),
-    "current_pending_id=", tostring(game.turn and game.turn.pending_choice and game.turn.pending_choice.id),
-    "current_pending_kind=", tostring(game.turn and game.turn.pending_choice and game.turn.pending_choice.kind)
-  )
 
   local seq = game.turn.choice_seq or 0
   seq = seq + 1
@@ -103,11 +97,6 @@ function intent_dispatcher.open_choice(game, choice_spec)
 
   local entry = _build_choice_entry(seq, choice_spec)
   game.turn.pending_choice = entry
-  logger.info_unlimited(
-    "[diag-firsttap-pending] pending_choice written id=", tostring(entry.id),
-    "kind=", tostring(entry.kind),
-    "route_key=", tostring(entry.route_key)
-  )
   _mark_turn_dirty(game)
   event_feed.publish(game, {
     kind = event_kinds.choice_picked,

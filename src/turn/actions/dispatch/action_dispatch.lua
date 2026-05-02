@@ -71,10 +71,6 @@ local function build(deps)
   end
 
   local function _handle_ui_button(game, state, action, opts, ctx)
-    logger.info_unlimited(
-      "[diag-firsttap-button] _handle_ui_button enter id=", tostring(action and action.id),
-      " actor=", tostring(action and action.actor_role_id)
-    )
     if action.id == "auto" then
       return _handle_auto_toggle(game, state, action)
     end
@@ -82,12 +78,6 @@ local function build(deps)
       return { status = "rejected" }
     end
     local slot_result = validator.resolve_item_slot_action(ctx.item_slot_source, state, action, game)
-    logger.info_unlimited(
-      "[diag-firsttap-button] resolve_item_slot_action result=",
-      tostring(slot_result == nil and "nil" or (slot_result.ok and "ok" or "denied")),
-      " rewrite_kind=", tostring(slot_result and slot_result.action and slot_result.action.type),
-      " rewrite_option=", tostring(slot_result and slot_result.action and slot_result.action.option_id)
-    )
     if slot_result ~= nil then
       if not slot_result.ok then
         return { status = "rejected" }

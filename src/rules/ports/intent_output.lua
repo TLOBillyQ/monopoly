@@ -1,6 +1,5 @@
 local intent_output = {}
 local contract_helper = require("src.rules.ports.contract_helper")
-local logger = require("src.foundation.log.logger")
 
 local function _call_optional(game, method_name, default_result, ...)
   return contract_helper.call_optional_method(game, "intent_output_port", method_name, {
@@ -9,11 +8,6 @@ local function _call_optional(game, method_name, default_result, ...)
 end
 
 function intent_output.open_choice(game, choice_spec, opts)
-  logger.info_unlimited(
-    "[diag-firsttap-port] intent_output.open_choice enter spec_kind=", tostring(choice_spec and choice_spec.kind),
-    " port_table=", tostring(type(game and game.intent_output_port)),
-    " port.open_choice_fn=", tostring(type(game and game.intent_output_port and game.intent_output_port.open_choice))
-  )
   return _call_optional(game, "open_choice", nil, game, choice_spec, opts)
 end
 

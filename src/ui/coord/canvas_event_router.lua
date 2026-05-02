@@ -5,7 +5,6 @@ local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
 local host_runtime_ports = require("src.ui.host_bridge")
 local modal = require("src.ui.coord.modal")
 local logger = require("src.foundation.log.logger")
-local runtime_ui = require("src.ui.render.runtime_ui")
 
 local router = {}
 
@@ -90,9 +89,7 @@ function router.bind(state, resolve_game)
   end
 
   local function dispatch_intent(intent, data)
-    logger.info_unlimited("[diag-firsttap] router.dispatch_intent", tostring(intent and intent.type), tostring(intent and intent.id))
     if not _try_attach_event_actor(intent, data) then
-      logger.info_unlimited("[diag-firsttap] router.dispatch_intent rejected by actor")
       return
     end
     ui_intent_dispatcher.dispatch(state, resolve_game(), intent, dispatch_opts)
@@ -107,62 +104,15 @@ function router.bind(state, resolve_game)
   local route_specs = canvas_registry.build_route_specs(state)
   for _, route in ipairs(route_specs) do
     ui_event_bindings.register_node_click(cache, route.name, function(data)
-      logger.info_unlimited("[diag-firsttap] node clicked:", tostring(route.name))
       local intent = route.build_intent(data)
       if intent then
         dispatch_intent(intent, data)
-      else
-        logger.info_unlimited("[diag-firsttap] build_intent returned nil for", tostring(route.name))
       end
     end, registered, listeners)
   end
 
   ui_event_bindings.enable_action_log_toggle_touch(cache, state.ui)
   ui_event_bindings.register_missing_button_tip(cache, registered, listeners)
-
-  local function _diag_parent_chain(node)
-    local names = {}
-    local cur = node
-    for _ = 1, 8 do
-      if not cur then
-        break
-      end
-      names[#names + 1] = tostring(cur.name or cur.id or cur)
-      cur = cur.parent
-    end
-    return table.concat(names, " <- ")
-  end
-  local ok_data, all_nodes = pcall(require, "Data.UIManagerNodes")
-  if ok_data and type(all_nodes) == "table" then
-    for _, entry in pairs(all_nodes) do
-      if type(entry) == "table" then
-        local name = entry[1]
-        local kind = entry[2]
-        local ok, nodes = pcall(runtime_ui.query_nodes, name)
-        if ok and type(nodes) == "table" then
-          for _, node in ipairs(nodes) do
-            local listener_ok, listener = pcall(function()
-              return node:listen(UIManager.EVENT.CLICK, function(data)
-                logger.info_unlimited(
-                  "[diag-firsttap-consumer]",
-                  "name=" .. tostring(node.name or name),
-                  "kind=" .. tostring(kind),
-                  "id=" .. tostring(node.id),
-                  "visible=" .. tostring(node.visible),
-                  "disabled=" .. tostring(node.disabled),
-                  "role=" .. tostring(data and data.role),
-                  "chain=" .. _diag_parent_chain(node)
-                )
-              end)
-            end)
-            if listener_ok and listener then
-              table.insert(listeners, listener)
-            end
-          end
-        end
-      end
-    end
-  end
 end
 
 return router
