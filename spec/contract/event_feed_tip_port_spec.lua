@@ -41,7 +41,7 @@ describe("event_feed_adapter: tip routing", function()
   it("routes tip through tip_output_port when available", function()
     local enqueued = {}
     local port = {
-      enqueue = function(_, __, intent)
+      enqueue = function(_, intent)
         enqueued[#enqueued + 1] = intent
       end,
     }

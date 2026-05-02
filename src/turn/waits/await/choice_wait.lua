@@ -127,6 +127,9 @@ function M.choice(session, args)
   session:mark_phase("wait_choice")
   local choice = game.turn.pending_choice
   if not choice then
+    if game.turn._choice_force_skip_pending then
+      game.turn._choice_force_skip_pending = nil
+    end
     return _clear_choice_wait(session, args)
   end
 

@@ -69,4 +69,22 @@ describe("choice wait coroutine resume via force_skip", function()
     -- 标志被消费
     assert.is_nil(game.turn._choice_force_skip_pending)
   end)
+
+  it("clears stale force_skip flag when pending_choice was already cleared", function()
+    local game = _build_game(nil)
+    game.turn._choice_force_skip_pending = true
+    local session = _build_session(game)
+
+    local first = choice_wait.choice(session, { next_state = "after_force_skip" })
+
+    assert.equals("after_force_skip", first.next_state)
+    assert.is_nil(game.turn._choice_force_skip_pending)
+
+    game.turn.pending_choice = { id = "fresh", kind = "weird", options = {}, allow_cancel = false }
+    local second = choice_wait.choice(session, { next_state = "after_fresh" })
+
+    assert.is_table(second)
+    assert.is_true(second.wait == true)
+    assert.is_not_nil(game.turn.pending_choice)
+  end)
 end)

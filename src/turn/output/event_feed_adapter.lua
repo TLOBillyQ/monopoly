@@ -30,7 +30,7 @@ function Adapter:publish(game, event)
 
   local port = game.tip_output_port
   if port and type(port.enqueue) == "function" then
-    port:enqueue(game, intent)
+    port.enqueue(game, intent)
   else
     logger.warn("[event_feed_adapter]", "tip_output_port missing, falling back to tip_queue | event:", tostring(event.kind))
     require("src.foundation.coordination.tip_queue").enqueue(intent)

@@ -18,23 +18,40 @@ local landing_visual_hold = require("src.state.visual_hold")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 local gameplay_loop = {}
 
+local function _noop()
+  return nil
+end
+
 local function _ensure_fallback_ports(game)
   if type(game.auto_play_port) ~= "table" then
-    game.auto_play_port = {
-      is_auto_player = function(_, player)
-        return player and (player.auto == true or player.is_ai == true or player.ai == true) or false
-      end,
-      choose_action = function()
-        return nil
-      end,
-    }
+    game.auto_play_port = {}
+  end
+  local auto_play = game.auto_play_port
+  if type(auto_play.is_auto_player) ~= "function" then
+    auto_play.is_auto_player = function(_, player)
+      return player and (player.auto == true or player.is_ai == true or player.ai == true) or false
+    end
+  end
+  if type(auto_play.choose_action) ~= "function" then
+    auto_play.choose_action = _noop
+  end
+  if type(auto_play.auto_action_for_choice) ~= "function" then
+    auto_play.auto_action_for_choice = _noop
+  end
+  if type(auto_play.pick_target_player) ~= "function" then
+    auto_play.pick_target_player = _noop
+  end
+  if type(auto_play.pick_remote_dice_value) ~= "function" then
+    auto_play.pick_remote_dice_value = _noop
+  end
+  if type(auto_play.pick_roadblock_target) ~= "function" then
+    auto_play.pick_roadblock_target = _noop
   end
   if type(game.bankruptcy_port) ~= "table" then
-    game.bankruptcy_port = {
-      on_bankruptcy = function()
-        return nil
-      end,
-    }
+    game.bankruptcy_port = {}
+  end
+  if type(game.bankruptcy_port.eliminate) ~= "function" then
+    game.bankruptcy_port.eliminate = _noop
   end
 end
 
@@ -276,4 +293,7 @@ function gameplay_loop.tick(game, state, dt)
   })
 end
 gameplay_loop._log_missing_auto_choice_action = _log_missing_auto_choice_action
+gameplay_loop._M_test = {
+  ensure_fallback_ports = _ensure_fallback_ports,
+}
 return gameplay_loop

@@ -2,6 +2,7 @@
 
 local event_feed_adapter = require("src.turn.output.event_feed_adapter")
 local event_log = require("src.state.event_log")
+local loop_runtime = require("src.turn.loop.runtime")
 
 describe("turn.output.event_feed_adapter", function()
   it("publish writes to event_log", function()
@@ -31,7 +32,7 @@ describe("turn.output.event_feed_adapter", function()
     local game = {
       state = {},
       tip_output_port = {
-        enqueue = function(_, arg_game, intent)
+        enqueue = function(arg_game, intent)
           captured_game = arg_game
           captured_intent = intent
           return true
@@ -55,6 +56,29 @@ describe("turn.output.event_feed_adapter", function()
     assert.equals("rent:1", captured_intent.dedupe_key)
     assert.equals(true, captured_intent.blocks_inter_turn)
     assert.equals("spec", captured_intent.source)
+  end)
+
+  it("tip port built by loop runtime receives intent as second arg", function()
+    local captured_intent = nil
+    local state = {
+      show_tip = function(_, intent)
+        captured_intent = intent
+        return true
+      end,
+    }
+    local game = {
+      state = {},
+      tip_output_port = loop_runtime.build_tip_output_port(state),
+    }
+    local adapter = event_feed_adapter.new(game)
+
+    adapter:publish(game, {
+      kind = "rent_paid",
+      text = "支付租金",
+    })
+
+    assert.equals("支付租金", captured_intent and captured_intent.text)
+    assert.equals("event_feed:rent_paid", captured_intent and captured_intent.source)
   end)
 
   it("tip false skips enqueue", function()
