@@ -13,6 +13,12 @@ local roadblock_scale = (function()
   end
   return { x = 4.0, y = 4.0, z = 4.0 }
 end)()
+local robot_scale = (function()
+  if math and math.Vector3 then
+    return math.Vector3(4.0, 4.0, 4.0)
+  end
+  return { x = 4.0, y = 4.0, z = 4.0 }
+end)()
 
 local function _deps(state)
   return state and state.presentation_runtime or nil
@@ -42,7 +48,7 @@ local function _spawn_robot(hr, robot_id, pos)
   if type(hr.create_unit_with_scale) ~= "function" then
     return nil
   end
-  return hr.create_unit_with_scale(robot_id, pos, runtime_constants.q_zero, runtime_constants.v3_one)
+  return hr.create_unit_with_scale(robot_id, pos, runtime_constants.q_zero, robot_scale)
 end
 
 local function _destroy_robot(hr, handle)

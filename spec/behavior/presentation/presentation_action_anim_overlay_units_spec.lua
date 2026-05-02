@@ -192,6 +192,88 @@ describe("presentation.action_anim_overlay_units", function()
     assert(captured_scale.x == 4.0 and captured_scale.y == 4.0 and captured_scale.z == 4.0, "roadblock should use 4x scale")
   end)
 
+  it("action_anim_robot_overlay_uses_robot_scale_not_v3_one", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local state = support.build_min_state({
+      mutate = function(target)
+        target.board_scene.tiles[2] = {
+          get_position = function()
+            return math.Vector3(10.0, 0.0, 0.0)
+          end,
+        }
+        target.board_scene.tiles[3] = {
+          get_position = function()
+            return math.Vector3(20.0, 0.0, 0.0)
+          end,
+        }
+        target.board_scene.tiles[4] = {
+          get_position = function()
+            return math.Vector3(20.0, 10.0, 0.0)
+          end,
+        }
+      end,
+    })
+    local captured_scales = {}
+    local scheduled_callbacks = {}
+
+    _with_patches({
+      {
+        target = host_runtime,
+        key = "create_unit_with_scale",
+        value = function(_, pos, _, scale)
+          captured_scales[#captured_scales + 1] = scale
+          local records = { spawn_pos = pos, moves = {} }
+          return _new_robot_handle(pos, records)
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "schedule",
+        value = function(delay, callback)
+          scheduled_callbacks[#scheduled_callbacks + 1] = {
+            delay = delay,
+            callback = callback,
+          }
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "destroy_unit",
+        value = function() end,
+      },
+    }, function()
+      overlay.play_clear_obstacles(state, {
+        branches = {
+          {
+            { tile_index = 2, has_obstacle = false },
+            { tile_index = 3, has_obstacle = true },
+          },
+          {
+            { tile_index = 2, has_obstacle = false },
+            { tile_index = 4, has_obstacle = true },
+          },
+        },
+        player_id = 1,
+        duration = 0.4,
+      }, 0.4, {
+        clear_overlay = function() end,
+      })
+      _drain_scheduled(scheduled_callbacks)
+    end)
+
+    assert(#captured_scales >= 2, "root and fork robot should both be spawned via create_unit_with_scale")
+    for i, scale in ipairs(captured_scales) do
+      assert(
+        not (scale.x == 1.0 and scale.y == 1.0 and scale.z == 1.0),
+        "robot scale must not be v3_one (1,1,1) — regression guard for spawn #" .. i
+      )
+      assert(
+        scale.x == 4.0 and scale.y == 4.0 and scale.z == 4.0,
+        "robot scale must match robot_scale constant (4,4,4) for spawn #" .. i
+      )
+    end
+  end)
+
   it("anim_unit_overlay_clear_obstacles_walks_per_step_then_clears_and_destroys", function()
     local overlay = require("src.ui.render.anim.unit_overlay")
     local state = support.build_min_state({
