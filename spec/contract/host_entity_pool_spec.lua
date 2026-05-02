@@ -34,8 +34,10 @@ local function _make_mock_lifecycle()
     function handle.set_rotation(r)
       handle.rotation_calls[#handle.rotation_calls + 1] = r
     end
-    function handle.set_scale(s)
-      handle.scale_calls[#handle.scale_calls + 1] = s
+    function handle.set_scale(s, t)
+      assert.is_not_nil(t, "set_scale must receive _time as second arg (docs/eggy/api/07_unit_entities.md:504)")
+      assert.equals(0.0, t, "set_scale _time must be 0.0 for instant apply")
+      handle.scale_calls[#handle.scale_calls + 1] = { scale = s, time = t }
     end
     mock.created[#mock.created + 1] = handle
     return handle
@@ -153,8 +155,10 @@ describe("host_entity_pool_contract", function()
       set_rotation = function(r)
         calls[#calls + 1] = { name = "rotation", value = r }
       end,
-      set_scale = function(s)
-        calls[#calls + 1] = { name = "scale", value = s }
+      set_scale = function(s, t)
+        assert.is_not_nil(t, "set_scale must receive _time as second arg (docs/eggy/api/07_unit_entities.md:504)")
+        assert.equals(0.0, t, "set_scale _time must be 0.0 for instant apply")
+        calls[#calls + 1] = { name = "scale", value = s, time = t }
       end,
     })
     function mock.create_unit_with_scale(_unit_key, _pos, _rotation, _scale)
