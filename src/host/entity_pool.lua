@@ -16,11 +16,13 @@ local function _bucket(unit_key)
 end
 
 local function _call_method(handle, name, ...)
-  if type(handle) ~= "table" then return false end
-  local m = handle[name]
-  if type(m) ~= "function" then return false end
-  m(...)
-  return true
+  if handle == nil then return false end
+  local ok, method = pcall(function()
+    return handle[name]
+  end)
+  if not ok or type(method) ~= "function" then return false end
+  local called = pcall(method, ...)
+  return called == true
 end
 
 function entity_pool.acquire(unit_key, pos, rotation, scale)

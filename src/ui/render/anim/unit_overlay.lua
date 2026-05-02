@@ -37,15 +37,13 @@ local function _resolve_hr(deps)
 end
 
 local function _call_handle_method(handle, method_name, ...)
-  if type(handle) ~= "table" then
-    return false
-  end
-  local method = handle[method_name]
-  if type(method) ~= "function" then
-    return false
-  end
-  method(...)
-  return true
+  if handle == nil then return false end
+  local ok, method = pcall(function()
+    return handle[method_name]
+  end)
+  if not ok or type(method) ~= "function" then return false end
+  local called = pcall(method, ...)
+  return called == true
 end
 
 local function _spawn_robot(hr, robot_id, pos)

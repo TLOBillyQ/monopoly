@@ -79,6 +79,15 @@ local function _make_scale()
   return { x = 1.0, y = 1.0, z = 1.0 }
 end
 
+local function _make_non_table_handle(methods)
+  local handle = coroutine.create(function() end)
+  local original_mt = debug.getmetatable(handle)
+  debug.setmetatable(handle, {
+    __index = methods,
+  })
+  return handle, original_mt
+end
+
 describe("host_entity_pool_contract", function()
   it("acquire creates unit on cold miss", function()
     local mock = _make_mock_lifecycle()
@@ -129,6 +138,51 @@ describe("host_entity_pool_contract", function()
 
     local last_visible = h.visible_calls[#h.visible_calls]
     assert.equals(true, last_visible, "re-acquire must set_model_visible(true) on recycled handle")
+  end)
+
+  it("release and re-acquire call methods on non-table host handles", function()
+    local mock = _make_mock_lifecycle()
+    local calls = {}
+    local handle, original_mt = _make_non_table_handle({
+      set_model_visible = function(v)
+        calls[#calls + 1] = { name = "visible", value = v }
+      end,
+      set_position = function(p)
+        calls[#calls + 1] = { name = "position", value = p }
+      end,
+      set_rotation = function(r)
+        calls[#calls + 1] = { name = "rotation", value = r }
+      end,
+      set_scale = function(s)
+        calls[#calls + 1] = { name = "scale", value = s }
+      end,
+    })
+    function mock.create_unit_with_scale(_unit_key, _pos, _rotation, _scale)
+      mock.create_calls = mock.create_calls + 1
+      return handle
+    end
+    local pool = _load_pool_with_mock(mock)
+    local spawn_pos = _make_pos(0.0, 0.0, 0.0)
+    local reuse_pos = _make_pos(1.0, 2.0, 3.0)
+    local rotation = _make_rot()
+    local scale = _make_scale()
+
+    local h1 = pool.acquire("host_handle_id", spawn_pos, rotation, scale)
+    pool.release("host_handle_id", h1)
+    local h2 = pool.acquire("host_handle_id", reuse_pos, rotation, scale)
+    debug.setmetatable(handle, original_mt)
+
+    assert.equals(handle, h2, "pool should reuse the same non-table host handle")
+    assert.equals(1, mock.create_calls, "re-acquire should reuse the non-table host handle")
+    assert.equals("visible", calls[1].name, "release should hide pooled host handles")
+    assert.equals(false, calls[1].value, "release should call set_model_visible(false)")
+    assert.equals("position", calls[2].name, "release should park pooled host handles")
+    assert.equals("position", calls[3].name, "re-acquire should move pooled host handles")
+    assert.equals(reuse_pos, calls[3].value, "re-acquire should move to the requested position")
+    assert.equals("rotation", calls[4].name, "re-acquire should refresh rotation")
+    assert.equals("scale", calls[5].name, "re-acquire should refresh scale")
+    assert.equals("visible", calls[6].name, "re-acquire should show pooled host handles")
+    assert.equals(true, calls[6].value, "re-acquire should call set_model_visible(true)")
   end)
 
   it("overflow release destroys handle when idle bucket is full", function()

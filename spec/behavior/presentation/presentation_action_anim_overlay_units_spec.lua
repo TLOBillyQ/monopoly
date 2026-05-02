@@ -39,11 +39,21 @@ local function _new_robot_handle(pos, records)
   return handle
 end
 
-
-
-
-
-
+local function _new_non_table_robot_handle(_pos, records)
+  local handle = coroutine.create(function() end)
+  local original_mt = debug.getmetatable(handle)
+  debug.setmetatable(handle, {
+    __index = {
+      set_position_smooth = function(next_pos)
+        records.moves[#records.moves + 1] = next_pos
+      end,
+      set_position = function(next_pos)
+        records.fallback_moves[#records.fallback_moves + 1] = next_pos
+      end,
+    },
+  })
+  return handle, original_mt
+end
 
 if not math.Vector3 then
   function math.Vector3(x, y, z)
@@ -294,6 +304,82 @@ describe("presentation.action_anim_overlay_units", function()
         "robot scale must match robot_scale constant (0.86,0.30,0.17) for spawn #" .. i
       )
     end
+  end)
+
+  it("anim_unit_overlay_clear_obstacles_moves_non_table_host_robot_without_respawn", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local state = support.build_min_state({
+      mutate = function(target)
+        target.board_scene.tiles[2] = {
+          get_position = function()
+            return math.Vector3(10.0, 0.0, 0.0)
+          end,
+        }
+      end,
+    })
+    local acquire_calls = {}
+    local release_calls = {}
+    local scheduled_callbacks = {}
+    local robot_records = { moves = {}, fallback_moves = {} }
+    local handle, original_mt = _new_non_table_robot_handle(math.Vector3(0.0, 1.0, 0.0), robot_records)
+
+    _with_patches({
+      {
+        target = host_runtime,
+        key = "acquire_unit",
+        value = function(unit_id, pos)
+          acquire_calls[#acquire_calls + 1] = {
+            unit_id = unit_id,
+            pos = pos,
+          }
+          return handle
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "release_unit",
+        value = function(_, released_handle)
+          release_calls[#release_calls + 1] = released_handle
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "schedule",
+        value = function(delay, callback)
+          scheduled_callbacks[#scheduled_callbacks + 1] = {
+            delay = delay,
+            callback = callback,
+          }
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "prewarm_unit",
+        value = function() end,
+      },
+    }, function()
+      overlay.play_clear_obstacles(state, {
+        branches = {
+          {
+            { tile_index = 2, has_obstacle = false },
+          },
+        },
+        player_id = 1,
+        duration = 0.3,
+      }, 0.3, {
+        clear_overlay = function() end,
+      })
+      _drain_scheduled(scheduled_callbacks)
+    end)
+    debug.setmetatable(handle, original_mt)
+
+    assert(#acquire_calls == 1, "non-table robot handle should move in place without respawn")
+    assert(#release_calls == 1, "non-table robot handle should release only after finishing the path")
+    assert(release_calls[1] == handle, "release should receive the moved host handle")
+    assert(#robot_records.moves == 1, "non-table robot handle should use set_position_smooth")
+    assert(#robot_records.fallback_moves == 0, "set_position fallback should not run after smooth move succeeds")
+    assert(robot_records.moves[1].x == 10.0 and robot_records.moves[1].y == 1.0 and robot_records.moves[1].z == 0.0,
+      "non-table robot handle should move to the target tile overlay position")
   end)
 
   it("anim_unit_overlay_clear_obstacles_walks_per_step_then_clears_and_destroys", function()
