@@ -85,7 +85,7 @@ local function _sync_local_turn_prompt(runtime, _, ui_model)
       local show = role_id ~= nil and current_player_id ~= nil and role_id_utils.equals(role_id, current_player_id) and can_show
       local key = tostring(role_id or "<nil>")
       if _last_prompt_visible[key] ~= show then
-        logger.info("[diag-firsttap] turn_prompt visibility flip role=", key, "phase=", tostring(phase), "show=", tostring(show))
+        logger.info_unlimited("[diag-firsttap] turn_prompt visibility flip role=", key, "phase=", tostring(phase), "show=", tostring(show))
         _last_prompt_visible[key] = show
       end
       _set_prompt_visible(nodes, show)
