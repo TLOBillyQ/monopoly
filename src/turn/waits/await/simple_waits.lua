@@ -117,7 +117,11 @@ function M.action(session, args)
   if peeked and (peeked.type == "choice_select"
               or peeked.type == "choice_cancel"
               or peeked.type == "choice_force_skip") then
-    return { wait = true }
+    -- 不消费；由 wait_choice.M.choice 的 take_pending_action 取走处理
+    return {
+      next_state = args and args.next_state or "roll",
+      next_args = args and args.next_args or { player = player },
+    }
   end
   local action = session:take_pending_action()
   if action then
