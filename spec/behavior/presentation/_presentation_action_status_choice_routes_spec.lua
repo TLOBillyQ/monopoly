@@ -2,8 +2,12 @@ local P = require("support.presentation_action_status_prelude")
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
 local _build_choice_modal_state = P.build_choice_modal_state
+local _bind_ui_runtime = P.bind_ui_runtime
 local modal_presenter = require("src.ui.coord.modal")
 local ui_choice_route_policy = require("src.ui.input.choice_route")
+local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
+local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
+local choice_openers = require("src.ui.coord.choice_screens.openers")
 
 describe("presentation_choice_routes", function()
   it("_test_choice_modal_routes_to_new_screens", function()
@@ -485,5 +489,86 @@ describe("presentation_choice_routes", function()
     }
     _assert_eq(choice_support.requires_item_slot_pre_confirm(active_choice), true,
       "active item phase with pre_confirm_before_slot_pick=true must require pre-confirm")
+  end)
+
+  local function _build_active_item_phase_dispatch_env(phase)
+    local enter_calls = 0
+    local opened_pre_confirm = 0
+    local dispatched = {}
+    local choice = {
+      id = 555,
+      kind = "item_phase_choice",
+      route_key = "base_inline",
+      owner_role_id = 7,
+      uses_item_slots = true,
+      pre_confirm_before_slot_pick = false,
+      options = {
+        { id = 2001, label = "路障卡" },
+        { id = 2002, label = "遥控骰子卡" },
+      },
+      allow_cancel = true,
+      cancel_label = "完成",
+      meta = { player_id = 7, phase = phase },
+    }
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          dispatched[#dispatched + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui_model = { choice = choice, current_player_id = 7 },
+      ui = {
+        input_blocked = false,
+        active_choice_screen_key = nil,
+        item_slot_item_ids = { 2001, 2002 },
+        item_slot_item_ids_by_role = {},
+      },
+      game = {},
+      local_actor_role_id = 7,
+    }
+    _bind_ui_runtime(state)
+    return state, choice, dispatched, function() return enter_calls end, function() return opened_pre_confirm end,
+      function() enter_calls = enter_calls + 1; return true end,
+      function() opened_pre_confirm = opened_pre_confirm + 1 end
+  end
+
+  local function _run_active_item_phase_flat_dispatch(phase)
+    local state, choice, dispatched, enter_count, opened_count, enter_spy, opener_spy =
+      _build_active_item_phase_dispatch_env(phase)
+    _with_patches({
+      { key = "UIManager", value = { client_role = nil } },
+      { target = pre_confirm_flow, key = "enter", value = enter_spy },
+      { target = choice_openers, key = "open_pre_confirm_screen", value = opener_spy },
+    }, function()
+      ui_intent_dispatcher.dispatch(state, state.game, {
+        type = "choice_select",
+        choice_id = choice.id,
+        option_id = 2001,
+        actor_role_id = 7,
+      }, {})
+    end)
+    _assert_eq(#dispatched, 1, phase .. ": dispatch_action should receive exactly one intent")
+    _assert_eq(dispatched[1] and dispatched[1].type, "choice_select",
+      phase .. ": dispatch_action should receive choice_select intent")
+    _assert_eq(dispatched[1] and dispatched[1].option_id, 2001,
+      phase .. ": dispatch_action should keep selected option id")
+    _assert_eq(enter_count(), 0, phase .. ": pre_confirm_flow.enter must not be called")
+    _assert_eq(opened_count(), 0, phase .. ": modal.open_pre_confirm_screen must not be called")
+    _assert_eq(state._pre_confirm_active, nil, phase .. ": _pre_confirm_active must stay unset")
+  end
+
+  it("active item_phase choice flat-dispatches in pre_action phase", function()
+    _run_active_item_phase_flat_dispatch("pre_action")
+  end)
+
+  it("active item_phase choice flat-dispatches in pre_move phase", function()
+    _run_active_item_phase_flat_dispatch("pre_move")
+  end)
+
+  it("active item_phase choice flat-dispatches in post_action phase", function()
+    _run_active_item_phase_flat_dispatch("post_action")
   end)
 end)

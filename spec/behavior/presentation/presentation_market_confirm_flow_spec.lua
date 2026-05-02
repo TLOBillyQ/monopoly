@@ -5,8 +5,8 @@ local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
 local choice_openers = require("src.ui.coord.choice_screens.openers")
-local ui_view = require("src.ui.coord.ui_runtime")
-local modal_presenter = require("src.ui.coord.modal")
+local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
+local market_modal_renderer = require("src.ui.coord.market")
 
 describe("presentation.market_confirm_flow", function()
   it("_test_ui_intent_dispatcher_market_confirm_skin_dispatches_directly", function()
@@ -304,6 +304,147 @@ describe("presentation.market_confirm_flow", function()
     _assert_eq(#dispatched, 1, "non-owner market_confirm should dispatch directly")
     _assert_eq(dispatched[1] and dispatched[1].type, "choice_select", "non-owner market_confirm should dispatch choice_select")
     _assert_eq(opened_pre_confirm, 0, "non-owner market_confirm should not open pre-confirm")
+  end)
+
+  it("secondary_confirm flow opens its own confirm screen and dispatches choice_select on confirm", function()
+    local opened_pre_confirm = 0
+    local dispatched = {}
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          dispatched[#dispatched + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui_model = {
+        choice = {
+          id = 42,
+          kind = "tax_card_prompt",
+          route_key = "secondary_confirm",
+          requires_confirm = true,
+          owner_role_id = 7,
+          options = {
+            { id = "use", label = "使用" },
+            { id = "skip", label = "跳过" },
+          },
+        },
+      },
+      ui = {
+        input_blocked = false,
+        item_slot_item_ids = {},
+        item_slot_item_ids_by_role = {},
+        active_choice_screen_key = nil,
+        set_label = function() end,
+        set_button = function() end,
+        choice_screens = {
+          secondary_confirm = {
+            root = "通用二次确认屏",
+            title = "通用二次确认_标题",
+            body = "通用二次确认_文本",
+            confirm = "通用二次确认_确定按钮",
+            cancel = "通用二次确认_取消",
+          },
+        },
+      },
+      game = {},
+      local_actor_role_id = 7,
+    }
+    _bind_ui_runtime(state)
+
+    _with_patches({
+      { key = "UIManager", value = { client_role = nil } },
+      { target = pre_confirm_flow, key = "enter", value = function()
+        opened_pre_confirm = opened_pre_confirm + 1
+      end },
+    }, function()
+      choice_openers.open_secondary_confirm_screen(state, state.ui_model.choice, state.ui_model.choice.id)
+      _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "secondary_confirm should open its own confirm screen")
+
+      ui_intent_dispatcher.dispatch(state, {}, {
+        type = "choice_select",
+        choice_id = 42,
+        option_id = "use",
+        actor_role_id = 7,
+      }, {})
+    end)
+
+    _assert_eq(opened_pre_confirm, 0, "secondary_confirm should not enter pre_confirm_flow")
+    _assert_eq(#dispatched, 1, "secondary_confirm confirm should dispatch once")
+    _assert_eq(dispatched[1] and dispatched[1].type, "choice_select", "secondary_confirm confirm should dispatch choice_select")
+    _assert_eq(dispatched[1] and dispatched[1].option_id, "use", "secondary_confirm confirm should keep selected option id")
+  end)
+
+  it("market select still requires confirm after item flatten", function()
+    local dispatched = {}
+    local selected_option = nil
+    local state = {
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          dispatched[#dispatched + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui_model = {
+        choice = {
+          id = 88,
+          kind = "market_buy",
+          route_key = "market",
+          owner_role_id = 7,
+          options = {
+            { id = 5001, label = "海绵宝宝皮肤" },
+          },
+        },
+      },
+      ui = {
+        input_blocked = false,
+        item_slot_item_ids = {},
+        item_slot_item_ids_by_role = {},
+        active_choice_screen_key = "market",
+        set_label = function() end,
+        set_button = function() end,
+        choice_screens = {
+          market = {
+            root = "market",
+            title = "market_title",
+            body = "market_body",
+            confirm = "market_confirm",
+            cancel = "market_cancel",
+          },
+        },
+      },
+      game = {},
+      local_actor_role_id = 7,
+    }
+    _bind_ui_runtime(state)
+
+    _with_patches({
+      { key = "UIManager", value = { client_role = nil } },
+      { target = market_modal_renderer, key = "select_market_option", value = function(_, option_id)
+        selected_option = option_id
+      end },
+    }, function()
+      ui_intent_dispatcher.dispatch(state, {}, {
+        type = "market_select",
+        option_id = 5001,
+      }, {})
+
+      _assert_eq(selected_option, 5001, "market select should update selected option first")
+      _assert_eq(#dispatched, 0, "market select should not confirm immediately after item flatten")
+
+      ui_intent_dispatcher.dispatch(state, {}, {
+        type = "market_confirm",
+        choice_id = 88,
+        option_id = 5001,
+      }, {})
+    end)
+
+    _assert_eq(#dispatched, 1, "market confirm should dispatch once after selection")
+    _assert_eq(dispatched[1] and dispatched[1].type, "choice_select", "market confirm should dispatch choice_select")
+    _assert_eq(dispatched[1] and dispatched[1].option_id, 5001, "market confirm should keep selected option id")
   end)
 
   it("_test_ui_intent_dispatcher_item_slot_dispatches_directly_for_non_owner", function()

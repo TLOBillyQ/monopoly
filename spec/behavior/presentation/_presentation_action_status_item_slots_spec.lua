@@ -5,6 +5,7 @@ local _with_patches = P.with_patches
 local _wrap_ui_refs = P.wrap_ui_refs
 local _has_event = P.has_event
 local ui_view = require("src.ui.coord.ui_runtime")
+local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
 local ids = require("fixtures.item_slot_ids")
 
 describe("presentation_item_slots", function()
@@ -298,6 +299,80 @@ describe("presentation_item_slots", function()
       "confirmed item phase should not replay global highlight reset before click")
     _assert_eq(state._skip_item_slot_highlight_replay_choice_id, 77,
       "skip replay flag should remain until slot click")
+  end)
+
+  it("flat single-tap leaves no residual item_phase_ask state", function()
+    local dispatched = {}
+    local state = {
+      _item_phase_ask_active = nil,
+      _item_phase_confirmed = nil,
+      _suppress_item_slot_highlight_until_pick = nil,
+      _skip_item_slot_highlight_replay_choice_id = nil,
+      _pre_confirm_active = nil,
+      _pre_confirm_source_screen = nil,
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          dispatched[#dispatched + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui_refs = _wrap_ui_refs({
+        ["Empty"] = "EMPTY",
+        ["2002"] = "ICON2002",
+      }),
+      ui = {
+        item_slots = ids.slots(1),
+        card_outlines = ids.outlines(1),
+        item_slot_item_ids = { 2002 },
+        item_slot_item_ids_by_role = {},
+        active_choice_screen_key = "base_inline",
+        set_touch_enabled = function() end,
+        set_visible = function() end,
+      },
+      ui_model = {
+        current_player_id = 1,
+        item_choice_owner_id = 1,
+        item_slots_by_player = {
+          [1] = { 2002 },
+        },
+        choice = {
+          id = 66,
+          kind = "item_phase_choice",
+          route_key = "base_inline",
+          uses_item_slots = true,
+          pre_confirm_before_slot_pick = false,
+          options = { { id = 2002 } },
+        },
+      },
+    }
+    _bind_ui_runtime(state)
+
+    _with_patches({
+      { key = "UIManager", value = { client_role = nil } },
+    }, function()
+      ui_intent_dispatcher.dispatch(state, {}, {
+        type = "ui_button",
+        id = "item_slot_1",
+        actor_role_id = 1,
+      }, {})
+    end)
+
+    _assert_eq(#dispatched, 1, "flat single-tap should dispatch the original ui_button once")
+    _assert_eq(dispatched[1] and dispatched[1].type, "ui_button", "flat single-tap should keep the ui_button path")
+
+    local fields = {
+      "_item_phase_ask_active",
+      "_item_phase_confirmed",
+      "_suppress_item_slot_highlight_until_pick",
+      "_skip_item_slot_highlight_replay_choice_id",
+      "_pre_confirm_active",
+      "_pre_confirm_source_screen",
+    }
+    for _, field in ipairs(fields) do
+      _assert_eq(state[field], nil, field .. " should be nil after flat single-tap dispatch")
+    end
   end)
 
   it("_test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines", function()

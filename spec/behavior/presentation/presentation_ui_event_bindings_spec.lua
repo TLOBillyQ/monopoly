@@ -148,6 +148,7 @@ describe("presentation_ui.event_bindings", function()
           id = 9,
           options = {
             { id = 21, label = "A" },
+            { id = 22, label = "B" },
           },
         },
         market = {
@@ -158,7 +159,7 @@ describe("presentation_ui.event_bindings", function()
         },
       },
       target_choice_runtime = {
-        locked_option_id = 21,
+        locked_option_id = 22,
       },
     }
     _bind_ui_runtime(state)
@@ -179,6 +180,94 @@ describe("presentation_ui.event_bindings", function()
     _assert_eq(market_control_specs[1].build_intent().type, "market_confirm", "market confirm should use selected option")
     _assert_eq(market_control_specs[2].build_intent().type, "choice_cancel", "market cancel should map to choice cancel")
     _assert_eq(market_control_specs[8].build_intent(), nil, "vehicle tab should stay disabled")
+  end)
+
+  it("target slot button second tap on same locked option dispatches choice_select via confirm", function()
+    logger.clear()
+    local state = {
+      ui = {},
+      ui_model = {
+        choice = {
+          id = 7,
+          options = {
+            { id = "tile_5", label = "A" },
+            { id = "tile_8", label = "B" },
+          },
+        },
+      },
+      target_choice_runtime = {
+        locked_option_id = "tile_5",
+      },
+    }
+    _bind_ui_runtime(state)
+    state.ui_runtime.pending_choice_selected_option_id = "tile_5"
+
+    local target_specs = target_choice_intents.build(state)
+    local intent = target_specs[3].build_intent()
+    _assert_eq(intent.type, "choice_select", "second tap on locked slot should emit choice_select")
+    _assert_eq(intent.option_id, "tile_5", "second tap should resolve to locked option id")
+    _assert_eq(intent.choice_id, 7, "choice_select should carry choice id")
+  end)
+
+  it("target slot button single-option choice auto-dispatches choice_select on first tap", function()
+    logger.clear()
+    local state = {
+      ui = {},
+      ui_model = {
+        choice = {
+          id = 11,
+          options = {
+            { id = "tile_only", label = "A" },
+          },
+        },
+      },
+      target_choice_runtime = {
+        locked_option_id = nil,
+      },
+    }
+    _bind_ui_runtime(state)
+
+    local target_specs = target_choice_intents.build(state)
+    local intent = target_specs[3].build_intent()
+    _assert_eq(intent.type, "choice_select", "single-option slot tap should short-circuit to choice_select")
+    _assert_eq(intent.option_id, "tile_only", "single-option slot should resolve to that option id")
+    _assert_eq(intent.choice_id, 11, "choice_select should carry choice id")
+  end)
+
+  it("target slot button different option re-locks without confirming", function()
+    logger.clear()
+    local state = {
+      ui = {},
+      ui_model = {
+        choice = {
+          id = 13,
+          options = {
+            { id = "tile_5", label = "A" },
+            { id = "tile_8", label = "B" },
+          },
+        },
+      },
+      target_choice_runtime = {
+        locked_option_id = "tile_5",
+      },
+    }
+    _bind_ui_runtime(state)
+    state.ui_runtime.pending_choice_selected_option_id = "tile_5"
+
+    local dispatched = {}
+    state.turn_action_port = {
+      dispatch_action = function(_, _, action)
+        dispatched[#dispatched + 1] = action
+      end,
+    }
+
+    local target_specs = target_choice_intents.build(state)
+    local intent = target_specs[4].build_intent()
+    _assert_eq(intent.type, "target_lock", "tap on different option should re-lock not confirm")
+    _assert_eq(intent.option_id, "tile_8", "re-lock should carry the new option id")
+    for _, action in ipairs(dispatched) do
+      assert(action.type ~= "choice_select", "re-lock must not dispatch choice_select")
+    end
   end)
 
   it("canvas_intents_return_nil_when_choice_or_market_missing", function()
