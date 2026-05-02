@@ -39,10 +39,27 @@ function intents.build(state)
           logger.warn("target_lock without choice")
           return nil
         end
+        local options = choice.options
+        if type(options) == "table" and #options == 1 then
+          local option_id = ui_event_intents.resolve_option_id(choice, { index = 1 }, state)
+          if not option_id then
+            logger.warn("target_lock missing option:", "1")
+            return nil
+          end
+          return {
+            type = "choice_select",
+            choice_id = choice.id,
+            option_id = option_id,
+          }
+        end
         local option_id = ui_event_intents.resolve_option_id(choice, { index = index }, state)
         if not option_id then
           logger.warn("target_lock missing option:", tostring(index))
           return nil
+        end
+        local runtime = state and state.target_choice_runtime or nil
+        if runtime and runtime.locked_option_id == option_id then
+          return ui_event_intents.choice_confirm_intent(state, "target_confirm")
         end
         return { type = "target_lock", option_id = option_id }
       end,

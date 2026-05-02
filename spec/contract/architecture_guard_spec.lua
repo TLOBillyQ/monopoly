@@ -245,7 +245,7 @@ describe("architecture_guard_contract", function()
       kind = "item_phase_choice",
       route_key = "base_inline",
       uses_item_slots = true,
-      pre_confirm_before_slot_pick = true,
+      pre_confirm_before_slot_pick = false,
       options = {
         { id = "cancel" },
       },
@@ -307,7 +307,7 @@ describe("architecture_guard_contract", function()
       kind = "item_phase_choice",
       route_key = "base_inline",
       uses_item_slots = true,
-      pre_confirm_before_slot_pick = true,
+      pre_confirm_before_slot_pick = false,
       options = {
         { id = "cancel" },
       },

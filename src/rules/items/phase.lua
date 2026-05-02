@@ -80,16 +80,16 @@ local function _build_options(game, player, phase)
   local body_lines = {}
   local seen_item_ids = {}
   for _, it in ipairs(inventory.items(player)) do
-    local cfg = cfg_by_id[it.id]
-    if cfg and not seen_item_ids[it.id] and availability.can_offer_in_phase(game, player, it.id, phase) then
-      seen_item_ids[it.id] = true
-      table.insert(options, { id = it.id, label = cfg.name })
-      options[#options].confirm_title = phase_confirm_titles[phase] or "本回合"
-      options[#options].confirm_body = "将使用：" .. cfg.name
-      local line = cfg.name
-      if cfg.usage and #cfg.usage > 0 then
-        line = line .. "：" .. cfg.usage
-      end
+      local cfg = cfg_by_id[it.id]
+      if cfg and not seen_item_ids[it.id] and availability.can_offer_in_phase(game, player, it.id, phase) then
+        seen_item_ids[it.id] = true
+        table.insert(options, { id = it.id, label = cfg.name })
+        options[#options].confirm_title = phase_confirm_titles[phase] or "本回合"
+        options[#options].confirm_body = "将使用：" .. cfg.name
+        local line = cfg.name
+        if cfg.usage and #cfg.usage > 0 then
+          line = line .. "：" .. cfg.usage
+        end
       table.insert(body_lines, line)
     end
   end
@@ -404,23 +404,15 @@ function phase_module.build_choice_spec(game, player, phase, args)
   if #options == 0 then
     return nil
   end
-  local option_labels = {}
-  for _, option in ipairs(options) do
-    if option.label and option.label ~= "" then
-      option_labels[#option_labels + 1] = option.label
-    end
-  end
   return {
     kind = "item_phase_choice",
     route_key = "base_inline",
     owner_role_id = player.id,
     uses_item_slots = true,
-    pre_confirm_before_slot_pick = true,
+    pre_confirm_before_slot_pick = false,
     title = phase_titles[phase],
     body_lines = body_lines,
     options = options,
-    confirm_title = phase_confirm_titles[phase] or "本回合",
-    confirm_body = #option_labels > 0 and ("可用道具：" .. table.concat(option_labels, "、")) or "请再确认一次",
     allow_cancel = true,
     cancel_label = "完成",
     meta = {

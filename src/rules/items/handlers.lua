@@ -144,6 +144,7 @@ function handlers.handle_target_player_item(game, player, item_id, context)
       return {
         kind = "item_target_player",
         route_key = "player",
+        pre_confirm_on_select = false,
         owner_role_id = inner_player.id,
         title = inventory.item_name(inner_item_id) .. "：选择目标玩家",
         body_lines = body_lines,

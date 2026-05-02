@@ -1271,10 +1271,8 @@ describe("item", function()
 
     local spec = assert(item_phase.build_choice_spec(g, p, "pre_action"), "mine should be offered in pre_action")
     _assert_eq(spec.uses_item_slots, true, "item_phase choice should expose uses_item_slots flag")
-    _assert_eq(spec.pre_confirm_before_slot_pick, true,
+    _assert_eq(spec.pre_confirm_before_slot_pick, false,
       "item_phase choice should expose pre_confirm_before_slot_pick flag")
-    _assert_eq(spec.confirm_title, "行动前", "item_phase choice should expose confirm title from use-case output")
-    _assert_eq(spec.confirm_body, "可用道具：地雷卡", "item_phase choice should expose confirm body from use-case output")
     local found = nil
     for _, option in ipairs(spec.options) do
       if option.id == item_ids.mine then
@@ -1293,8 +1291,6 @@ describe("item", function()
     p.inventory:add({ id = item_ids.mine })
 
     local spec = assert(item_phase.build_choice_spec(g, p, "post_action"), "mine should be offered in post_action")
-    _assert_eq(spec.confirm_title, "行动后", "post_action choice should expose confirm title from use-case output")
-    _assert_eq(spec.confirm_body, "可用道具：地雷卡", "post_action choice should expose confirm body from use-case output")
     local found = nil
     for _, option in ipairs(spec.options) do
       if option.id == item_ids.mine then
@@ -1317,8 +1313,6 @@ describe("item", function()
     _assert_eq(pre_action, nil, "send_poor should not be offered in pre_action")
 
     local spec = assert(item_phase.build_choice_spec(g, p, "post_action"), "send_poor should be offered in post_action")
-    _assert_eq(spec.confirm_title, "行动后", "post_action choice should expose confirm title from use-case output")
-    _assert_eq(spec.confirm_body, "可用道具：送神卡", "post_action choice should expose confirm body from use-case output")
     local found = nil
     for _, option in ipairs(spec.options) do
       if option.id == item_ids.send_poor then
@@ -1341,7 +1335,6 @@ describe("item", function()
     _assert_eq(#spec.options, 1, "item_phase choice should collapse duplicate item ids into one option")
     _assert_eq(spec.options[1] and spec.options[1].id, item_ids.remote_dice,
       "deduped option should keep remote dice id")
-    _assert_eq(spec.confirm_body, "可用道具：遥控骰子卡", "deduped confirm body should not repeat card names")
   end)
 
   it("item_phase_run_loops_auto_repeatable_phase_until_no_action", function()
