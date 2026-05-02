@@ -376,6 +376,14 @@ local function _build(helpers)
 
     local result = use_item(game, player, item_id)
     assert(result ~= nil, "missing use_item result")
+    logger.info_unlimited(
+      "[diag-firsttap-passive] _handle_item_phase_passive item_id=", tostring(item_id),
+      " result.waiting=", tostring(type(result) == "table" and result.waiting),
+      " intent.kind=", tostring(type(result) == "table" and result.intent and result.intent.kind),
+      " intent.choice_spec.kind=", tostring(
+        type(result) == "table" and result.intent and result.intent.choice_spec and result.intent.choice_spec.kind
+      )
+    )
     if type(result) == "table" and result.waiting then
       local intent = result.intent or {}
       local choice_spec = intent.choice_spec
