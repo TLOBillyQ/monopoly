@@ -268,8 +268,8 @@ describe("presentation.action_anim_overlay_units", function()
         "robot scale must not be v3_one (1,1,1) — regression guard for spawn #" .. i
       )
       assert(
-        scale.x == 4.0 and scale.y == 4.0 and scale.z == 4.0,
-        "robot scale must match robot_scale constant (4,4,4) for spawn #" .. i
+        scale.x == 0.86 and scale.y == 0.30 and scale.z == 0.17,
+        "robot scale must match robot_scale constant (0.86,0.30,0.17) for spawn #" .. i
       )
     end
   end)

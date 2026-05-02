@@ -15,9 +15,9 @@ local roadblock_scale = (function()
 end)()
 local robot_scale = (function()
   if math and math.Vector3 then
-    return math.Vector3(4.0, 4.0, 4.0)
+    return math.Vector3(0.86, 0.30, 0.17)
   end
-  return { x = 4.0, y = 4.0, z = 4.0 }
+  return { x = 0.86, y = 0.30, z = 0.17 }
 end)()
 
 local function _deps(state)
