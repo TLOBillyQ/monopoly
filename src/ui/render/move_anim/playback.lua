@@ -1,3 +1,4 @@
+local timing = require("src.config.gameplay.timing")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local board_feedback = require("src.ui.render.board_feedback.service")
@@ -109,7 +110,7 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
     if unit and unit.add_modifier_by_key then
       local modifier = unit.add_modifier_by_key(runtime_constants.speed_boost_modifier_key, {})
       if modifier and modifier.set_remain_duration then
-        modifier.set_remain_duration(total_time + 0.5)
+        modifier.set_remain_duration(total_time + timing.move_anim_tail_padding_seconds)
       end
     end
   end

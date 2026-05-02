@@ -23,8 +23,8 @@ local start_delays = {
 }
 local user_tip_whitelist = {
 }
-local roll_spin_seconds = 1.0
-local roll_face_hold_seconds = 1.0
+local roll_spin_seconds = timing.dice_spin_seconds or 1.0
+local roll_face_hold_seconds = timing.dice_face_hold_seconds or 1.0
 
 local function _resolve_runtime_bundle(state, opts)
   if opts and opts.runtime_bundle then

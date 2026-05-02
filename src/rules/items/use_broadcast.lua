@@ -20,7 +20,7 @@ function use_broadcast.dispatch(game, player, item_id)
     body = player.name .. " 使用了 " .. inventory.item_name(item_id),
     kind = "item_card",
     image_ref = item_id,
-    auto_close_seconds = timing.action_anim_default_seconds,
+    auto_close_seconds = timing.popup_dwell_default_seconds,
   })
   return true
 end
