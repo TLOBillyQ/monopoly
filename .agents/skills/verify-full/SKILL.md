@@ -1,6 +1,6 @@
 ---
 name: verify-full
-description: Run the fuller Monopoly quality pass and include guidance about when the slow tooling lane is required.
+description: "Run the fuller Monopoly quality pass and include guidance about when the slow tooling lane is required."
 ---
 
 按以下顺序跑完整质量车道：

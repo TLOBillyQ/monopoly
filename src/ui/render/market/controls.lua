@@ -116,21 +116,26 @@ function market_view_controls.refresh_market_controls(ui, market, vehicle_tab_en
   local active_tab = _resolve_market_tab(market)
   local page_index = _resolve_market_page_value(market, "page_index")
   local page_count = _resolve_market_page_value(market, "page_count")
-  local paging_visible = page_count > 1
+  local prev_visible = page_count > 1 and page_index > 1
+  local next_visible = page_count > 1 and page_index < page_count
   ui_controls.set_control_state(ui, market_layout.page_prev, {
-    visible = paging_visible,
-    touch_enabled = paging_visible and page_index > 1,
+    visible = prev_visible,
+    touch_enabled = prev_visible,
   })
   ui_controls.set_control_state(ui, market_layout.page_next, {
-    visible = paging_visible,
-    touch_enabled = paging_visible and page_index < page_count,
+    visible = next_visible,
+    touch_enabled = next_visible,
   })
-  ui_controls.set_controls_state(ui, { market_layout.page_prev_label, market_layout.page_next_label }, {
-    visible = paging_visible,
+  ui_controls.set_control_state(ui, market_layout.page_prev_label, {
+    visible = prev_visible,
     touch_enabled = false,
   })
-  _set_control_text(ui, market_layout.page_prev_label, paging_visible and market_layout.page_prev_text or "")
-  _set_control_text(ui, market_layout.page_next_label, paging_visible and market_layout.page_next_text or "")
+  ui_controls.set_control_state(ui, market_layout.page_next_label, {
+    visible = next_visible,
+    touch_enabled = false,
+  })
+  _set_control_text(ui, market_layout.page_prev_label, prev_visible and market_layout.page_prev_text or "")
+  _set_control_text(ui, market_layout.page_next_label, next_visible and market_layout.page_next_text or "")
   ui_controls.set_control_state(ui, market_layout.tab_item, { visible = true, touch_enabled = active_tab ~= "item" })
   _set_tab_tint(ui, market_layout.tab_item, active_tab == "item")
   ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = active_tab ~= "skin" })

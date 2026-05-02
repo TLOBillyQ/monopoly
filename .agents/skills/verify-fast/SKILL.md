@@ -1,6 +1,6 @@
 ---
 name: verify-fast
-description: Run the common fast local confidence lane for this repo: guard checks, static architecture check, and behavior regression.
+description: "Run the common fast local confidence lane for this repo: guard checks, static architecture check, and behavior regression."
 ---
 
 按以下顺序跑快速验证车道，前一步失败就停下：

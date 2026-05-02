@@ -451,12 +451,48 @@ describe("presentation_market_panel", function()
       page_count = 2,
     })
 
-    _assert_eq(visible[market_layout.page_prev], true, "page_prev should be visible when multiple pages")
-    _assert_eq(visible[market_layout.page_next], true, "page_next should be visible when multiple pages")
+    _assert_eq(visible[market_layout.page_prev], false, "page_prev should be hidden on first page")
+    _assert_eq(visible[market_layout.page_next], true, "page_next should be visible when next page exists")
     _assert_eq(touch[market_layout.page_prev], false, "page_prev should be disabled on first page")
     _assert_eq(touch[market_layout.page_next], true, "page_next should be enabled when next page exists")
-    _assert_eq(labels[market_layout.page_prev_label], market_layout.page_prev_text, "page_prev_label should show text when multiple pages")
-    _assert_eq(labels[market_layout.page_next_label], market_layout.page_next_text, "page_next_label should show text when multiple pages")
+    _assert_eq(labels[market_layout.page_prev_label], "", "page_prev_label should be empty on first page")
+    _assert_eq(labels[market_layout.page_next_label], market_layout.page_next_text, "page_next_label should show text when next page exists")
+
+    market_view.refresh_market(state, {
+      choice_id = 13,
+      options = {
+        { id = entry.product_id, label = entry.name, can_buy = true },
+      },
+      allow_cancel = true,
+      selected_option_id = entry.product_id,
+      page_index = 2,
+      page_count = 2,
+    })
+
+    _assert_eq(visible[market_layout.page_prev], true, "page_prev should be visible when prev page exists")
+    _assert_eq(visible[market_layout.page_next], false, "page_next should be hidden on last page")
+    _assert_eq(touch[market_layout.page_prev], true, "page_prev should be enabled when prev page exists")
+    _assert_eq(touch[market_layout.page_next], false, "page_next should be disabled on last page")
+    _assert_eq(labels[market_layout.page_prev_label], market_layout.page_prev_text, "page_prev_label should show text when prev page exists")
+    _assert_eq(labels[market_layout.page_next_label], "", "page_next_label should be empty on last page")
+
+    market_view.refresh_market(state, {
+      choice_id = 14,
+      options = {
+        { id = entry.product_id, label = entry.name, can_buy = true },
+      },
+      allow_cancel = true,
+      selected_option_id = entry.product_id,
+      page_index = 2,
+      page_count = 3,
+    })
+
+    _assert_eq(visible[market_layout.page_prev], true, "page_prev should be visible on middle page")
+    _assert_eq(visible[market_layout.page_next], true, "page_next should be visible on middle page")
+    _assert_eq(touch[market_layout.page_prev], true, "page_prev should be enabled on middle page")
+    _assert_eq(touch[market_layout.page_next], true, "page_next should be enabled on middle page")
+    _assert_eq(labels[market_layout.page_prev_label], market_layout.page_prev_text, "page_prev_label should show text on middle page")
+    _assert_eq(labels[market_layout.page_next_label], market_layout.page_next_text, "page_next_label should show text on middle page")
   end)
 
   it("_test_ui_model_market_payload_prefers_explicit_choice_fields", function()
