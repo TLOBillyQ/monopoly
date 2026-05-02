@@ -19,6 +19,7 @@ local robot_scale = (function()
   end
   return { x = 0.86, y = 0.30, z = 0.17 }
 end)()
+local robot_y_offset = 1.0
 local robot_rotation = (function()
   if math and math.Quaternion then
     return math.Quaternion(-90.0, 0.0, 0.0)
@@ -157,7 +158,7 @@ local function _walk_branch_children(state, clear_overlay, schedule, hr, robot_i
         child_handle = _spawn_robot(hr, robot_id, current_pos)
       end
       _schedule_step(schedule, step_duration, function()
-        local child_pos = compute.overlay_pos_for_tile(state, child.tile_index)
+        local child_pos = compute.overlay_pos_for_tile(state, child.tile_index, robot_y_offset)
         local moved_handle = _move_robot(hr, robot_id, child_handle, child_pos)
         if child.has_obstacle then
           _clear_obstacle(state, clear_overlay, child.tile_index)
@@ -234,7 +235,7 @@ function overlay.play_clear_obstacles(state, anim, duration, opts)
     logger.warn("[Eggy]", "清障机器人 prefab 缺失，已跳过生成")
     return
   end
-  local player_pos = compute.overlay_pos_for_player(state, assert(anim.player_id, "missing player_id"))
+  local player_pos = compute.overlay_pos_for_player(state, assert(anim.player_id, "missing player_id"), robot_y_offset)
   local hr = _resolve_hr(_deps(state))
   local schedule = opts.schedule or hr.schedule
   local step_duration = _resolve_step_duration(branches, duration)
