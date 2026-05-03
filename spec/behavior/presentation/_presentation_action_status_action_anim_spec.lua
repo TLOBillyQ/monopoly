@@ -177,7 +177,7 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
     function g:player_balance(player)
       return player.cash
     end
-    local engine = runtime_cls:new(g, phases, { experimental_coroutine_turn = true })
+    local engine = runtime_cls:new(g, phases)
 
     local state = engine:run_turn()
     _assert_eq(state, "wait_action_anim", "should wait action anim")
@@ -510,7 +510,7 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
         return role.get_roleid()
       end,
     }
-    local state = { role_control_lock = { by_role = {}, warn_once = {} } }
+    local state = { role_control_lock = { by_role = {} } }
 
     _with_patches({
       { key = "Enums", value = { BuffState = { BUFF_FORBID_CONTROL = 32 } } },
@@ -541,7 +541,7 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
         return r.get_roleid()
       end,
     }
-    local state = { role_control_lock = { by_role = {}, warn_once = {} } }
+    local state = { role_control_lock = { by_role = {} } }
 
     _with_patches({
       { key = "Enums", value = { BuffState = { BUFF_FORBID_CONTROL = 32 } } },

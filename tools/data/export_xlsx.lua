@@ -478,22 +478,20 @@ local function main(args)
     if product_id ~= nil and product_id ~= 0 then
       local page = _value_by_headers(row, col_map, { "分页" }) or ""
       local kind = _infer_market_kind(page, product_id)
-      if kind ~= "vehicle" then
-        local record = {
-          order = order,
-          product_id = product_id,
-          name = _value_by_headers(row, col_map, { "商品名称" }) or "",
-          page = page,
-          kind = kind,
-          currency = _value_by_headers(row, col_map, { "支付类型" }) or "",
-          price = _parse_int(_value_by_headers(row, col_map, { "支付价格" })),
-          limit = _parse_int(_value_by_headers(row, col_map, { "全局限量" })),
-        }
-        if order == -1 then
-          record.market_enabled = false
-        end
-        market[#market + 1] = record
+      local record = {
+        order = order,
+        product_id = product_id,
+        name = _value_by_headers(row, col_map, { "商品名称" }) or "",
+        page = page,
+        kind = kind,
+        currency = _value_by_headers(row, col_map, { "支付类型" }) or "",
+        price = _parse_int(_value_by_headers(row, col_map, { "支付价格" })),
+        limit = _parse_int(_value_by_headers(row, col_map, { "全局限量" })),
+      }
+      if order == -1 then
+        record.market_enabled = false
       end
+      market[#market + 1] = record
     end
   end
   _write_lua_table(common.join_path(config_dir, "market.lua"), "market", market, {

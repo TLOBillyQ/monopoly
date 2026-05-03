@@ -105,7 +105,6 @@ local function _should_map_paid_entry(context_service, entry)
   local currency = context_service.entry_currency(entry)
   return context_service.is_paid_currency(currency)
     and context_service.entry_market_enabled(entry)
-    and context_service.entry_vehicle_enabled(entry)
 end
 
 local function _record_goods_mapping(rt, entry, market_name, goods_id, duplicate_name)

@@ -365,27 +365,6 @@ describe("presentation_market_panel", function()
     _assert_eq(touch[market_layout.item_buttons[1]], true, "unbuyable option button should still be clickable")
   end)
 
-  it("_test_market_view_hides_disabled_market_tab", function()
-    local entry = assert(market_cfg[1], "missing market cfg entry")
-    local state, visible, _, touch = _build_market_state({ entry.product_id })
-
-    local opened = market_view.refresh_market(state, {
-      choice_id = 11,
-      active_tab = "item",
-      page_index = 1,
-      page_count = 1,
-      options = {
-        { id = entry.product_id, label = entry.name, can_buy = true },
-      },
-      allow_cancel = true,
-      selected_option_id = entry.product_id,
-    })
-
-    _assert_eq(opened, true, "market panel should open for hidden tab check")
-    _assert_eq(visible[market_layout.tab_vehicle], false, "disabled market tab should stay hidden")
-    _assert_eq(touch[market_layout.tab_vehicle], false, "hidden market tab should not remain touch enabled")
-  end)
-
   it("_test_market_view_invalid_selected_option_falls_back_to_current_visible_option", function()
     local entry_a = nil
     local entry_b = nil

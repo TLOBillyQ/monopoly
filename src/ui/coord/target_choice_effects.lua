@@ -1,4 +1,3 @@
-local logger = require("src.foundation.log.logger")
 local number_utils = require("src.foundation.lang.number")
 local target_pick = require("src.config.gameplay.target_pick")
 local modal_state = require("src.ui.state.modal_state")
@@ -6,6 +5,7 @@ local host_runtime_ports = require("src.ui.host_bridge")
 local ui_nodes = require("src.ui.render.node_ops")
 local choice_contract = require("src.config.choice.contract")
 local choice_route_policy = require("src.ui.input.choice_route")
+local runtime_state = require("src.state.runtime_state")
 local target_choice_effects = {}
 local _move_arrow
 local function _is_target_choice(choice)
@@ -60,16 +60,6 @@ local function _offset_pos(base, y_offset)
     (_vec_component(base, "y", 2) or 0) + y_offset,
     _vec_component(base, "z", 3) or 0
   )
-end
-local function _warn_once(state, key, ...)
-  if type(state._target_pick_warn_once) ~= "table" then
-    state._target_pick_warn_once = {}
-  end
-  if state._target_pick_warn_once[key] then
-    return
-  end
-  state._target_pick_warn_once[key] = true
-  logger.warn("[TargetPick]", ...)
 end
 local function _sync_buttons(state, locked)
   ui_nodes.sync_target_choice_buttons(state, locked == true)
@@ -164,7 +154,7 @@ function target_choice_effects.enter(state, choice)
   end
   local scene = state and state.board_scene or nil
   if not scene then
-    _warn_once(state, "missing_board_scene", "board_scene missing, skip target effects")
+    runtime_state.log_once(state, "warn", "target_pick:missing_board_scene", "[TargetPick]", "board_scene missing, skip target effects")
     return false
   end
   target_choice_effects.leave(state, "reenter")

@@ -7,7 +7,6 @@ local nodes = {
   page_next = "黑市-下一页箭头",
   tab_item = "黑市-道具商店按钮",
   tab_skin = "黑市-皮肤商店按钮",
-  tab_vehicle = "黑市-坐骑商店按钮",
   price_label = "黑市_售价",
   selected_card = "黑市_选中卡牌",
   item_buttons = {},

@@ -77,7 +77,6 @@ function units.play_monster(state, anim, duration, opts)
   local tile_index = assert(anim.tile_index, "missing monster tile_index")
   _pan_camera_to_tile(state, tile_index, duration, opts)
   _play_demolish_feedback(state, tile_index, opts, true)
-  overlay.play_monster(state, anim, duration, opts)
 end
 
 function units.play_clear_obstacles(state, anim, duration, opts)

@@ -51,8 +51,7 @@ local function _handle_paid_purchase(game, player, entry, product_id)
   }
 end
 
-function purchase.execute(game, player, product_id, opts)
-  opts = opts or {}
+function purchase.execute(game, player, product_id, _opts)
   local resolved_product_id = _resolve_product_id(product_id)
   if resolved_product_id == nil then
     logger.warn("invalid market product id:", tostring(product_id))
@@ -72,7 +71,7 @@ function purchase.execute(game, player, product_id, opts)
   if context.is_paid_currency(currency) then
     return _handle_paid_purchase(game, player, entry, product_id)
   end
-  return local_purchase.execute(game, player, entry, opts)
+  return local_purchase.execute(game, player, entry)
 end
 
 return purchase

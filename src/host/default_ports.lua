@@ -139,7 +139,7 @@ end
     return nil
   end
 
-  function defaults.emit_event(event_name, payload, opts)
+  function defaults.emit_event(event_name, payload, _opts)
     if type(TriggerCustomEvent) ~= "function" then
       return false
     end

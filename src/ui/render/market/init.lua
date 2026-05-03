@@ -7,7 +7,6 @@ local runtime_ui = require("src.ui.render.runtime_ui")
 local modal_state = require("src.ui.state.modal_state")
 
 local market_view = {}
-local VEHICLE_TAB_ENABLED = false
 
 local function _fallback_modal_state()
   return {
@@ -86,7 +85,7 @@ function market_view.refresh_market(state, market, deps)
   if #options == 0 then
     market_view_slots.hide_market_slots(ui)
     market_view_controls.reset_market_preview(state, resolved_deps)
-    market_view_controls.apply_market_common_controls(ui, market, false, VEHICLE_TAB_ENABLED)
+    market_view_controls.apply_market_common_controls(ui, market, false)
     resolved_modal.open_market(state, market.choice_id, {}, nil)
     return true
   end
@@ -94,7 +93,7 @@ function market_view.refresh_market(state, market, deps)
   local rendered = market_view_slots.populate_market_slots(ui, refs, options, resolved_deps)
   ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
   market_view_controls.clear_market_selection_frames(ui)
-  market_view_controls.apply_market_common_controls(ui, market, true, VEHICLE_TAB_ENABLED)
+  market_view_controls.apply_market_common_controls(ui, market, true)
   local selected_option_id = nil
   if was_market_active then
     selected_option_id = market.selected_option_id

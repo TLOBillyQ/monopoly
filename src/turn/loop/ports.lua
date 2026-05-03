@@ -141,7 +141,7 @@ local base_port_builders = {
   state = function()
     return _build_noop_group(port_groups.state)
   end,
-  output = output_state_adapter.build_base_output_ports,
+  output = output_state_adapter.build_runtime_output_ports,
 }
 local function _resolve_base_ports()
   local resolved = {}

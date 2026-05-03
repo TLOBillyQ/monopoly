@@ -385,10 +385,6 @@ describe("land", function()
     _assert_eq(pricing.total_invested(tile, -3), 400, "negative level should keep purchase price only")
   end)
 
-  it("total_invested_caps_and_skips_sparse_upgrade_costs", function()
-    pending("sparse table {10,nil,40}: busted Lua 5.5 reports #t=3, tests/ harness Lua 5.5 reports #t=1; ambiguous Lua border")
-  end)
-
   it("rent_owner_missing_skips_payment", function()
     local land = require("src.rules.land.executors")
     local g = _new_game()

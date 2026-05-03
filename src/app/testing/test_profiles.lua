@@ -1,4 +1,5 @@
 local raw_profiles = require("src.config.testing.test_profiles")
+local tables = require("src.foundation.lang.tables")
 local M = {}
 local default_profile = {
   group = "startup_smoke",
@@ -21,17 +22,6 @@ local group_order = {
   property_control = 5,
   economy_core = 6,
 }
-
-local function _deep_copy(value)
-  if type(value) ~= "table" then
-    return value
-  end
-  local out = {}
-  for key, child in pairs(value) do
-    out[key] = _deep_copy(child)
-  end
-  return out
-end
 
 local function _validate_profiles(profiles)
   assert(type(profiles) == "table", "invalid test profiles root")
@@ -88,9 +78,9 @@ end
 
 function M.resolve(profile_name)
   if type(profile_name) ~= "string" or profile_name == "" or profile_name == "default" then
-    return _deep_copy(default_profile)
+    return tables.copy(default_profile)
   end
-  return _deep_copy(profiles[profile_name] or default_profile)
+  return tables.copy(profiles[profile_name] or default_profile)
 end
 
 function M.has(profile_name)
@@ -99,12 +89,12 @@ end
 
 function M.get(profile_name)
   if profile_name == "default" then
-    return _deep_copy(default_profile)
+    return tables.copy(default_profile)
   end
   if not M.has(profile_name) then
     return nil
   end
-  return _deep_copy(profiles[profile_name])
+  return tables.copy(profiles[profile_name])
 end
 
 function M.names()

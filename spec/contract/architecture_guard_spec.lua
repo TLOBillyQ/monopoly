@@ -19,7 +19,7 @@ local function _merge_group(base_group, override_group)
 end
 
 local function _build_output_ports(output_log)
-  local base = output_state_adapter.build_base_output_ports()
+  local base = output_state_adapter.build_runtime_output_ports()
   return {
     invalidate_ui_model = function(state)
       if output_log then

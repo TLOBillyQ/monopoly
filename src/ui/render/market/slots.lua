@@ -3,7 +3,6 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 local items_cfg = require("src.config.content.items")
 local market_catalog = require("src.config.content.market_catalog")
 local number_utils = require("src.foundation.lang.number")
-local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 local runtime_ui = require("src.ui.render.runtime_ui")
 
 local market_view_slots = {}
@@ -28,12 +27,7 @@ end
 
 local function _resolve_market_entry(product_id)
   local entry = _market_entry_by_id(product_id)
-  local cfg
-  if entry and entry.kind == "vehicle" then
-    cfg = vehicle_catalog.find(product_id)
-  else
-    cfg = _item_cfg_by_id(product_id)
-  end
+  local cfg = _item_cfg_by_id(product_id)
   return entry, cfg
 end
 

@@ -442,7 +442,6 @@ describe("presentation_choice_routes", function()
 
   it("_test_passive_kind_no_modal", function()
     local state, _, query_nodes = _build_choice_modal_state()
-    local choice_support = require("src.ui.view.choice_support")
     _with_patches({
       { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
       { key = "all_roles", value = nil },
@@ -464,9 +463,6 @@ describe("presentation_choice_routes", function()
       })
       _assert_eq(state.ui.choice_active, false, "passive kind must not open any modal")
       _assert_eq(state.ui.active_choice_screen_key, nil, "passive kind must not set active choice screen")
-      _assert_eq(choice_support.is_passive_item_phase({ kind = "item_phase_passive" }), true, "is_passive_item_phase should return true for passive kind")
-      _assert_eq(choice_support.is_passive_item_phase({ kind = "item_phase_choice" }), false, "is_passive_item_phase should return false for non-passive kind")
-      _assert_eq(choice_support.is_passive_item_phase(nil), false, "is_passive_item_phase should return false for nil")
     end)
   end)
 

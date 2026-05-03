@@ -4,7 +4,6 @@ local ui_event_intents = require("src.ui.input.event_intents")
 local nodes = require("src.ui.schema.market")
 
 local intents = {}
-local VEHICLE_TAB_ENABLED = false
 
 local function _resolve_market(state, warn_label)
   local current_model = runtime_state.get_ui_model(state)
@@ -93,17 +92,6 @@ function intents.build_controls(state)
         local market = _resolve_market(state, "market_tab_select")
         if not market then return nil end
         return { type = "market_tab_select", choice_id = market.choice_id, tab = "skin" }
-      end,
-    },
-    {
-      name = nodes.tab_vehicle,
-      build_intent = function()
-        if not VEHICLE_TAB_ENABLED then
-          return nil
-        end
-        local market = _resolve_market(state, "market_tab_select")
-        if not market then return nil end
-        return { type = "market_tab_select", choice_id = market.choice_id, tab = "vehicle" }
       end,
     },
   }

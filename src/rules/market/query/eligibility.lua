@@ -5,9 +5,6 @@ local paid_purchase_port = require("src.rules.market.paid_purchase_port")
 local eligibility = {}
 
 function eligibility.can_buy_entry(game, player, entry)
-  if not context.entry_vehicle_enabled(entry) then
-    return false
-  end
   if not context.entry_market_enabled(entry) then
     return false
   end

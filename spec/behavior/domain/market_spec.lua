@@ -114,36 +114,6 @@ describe("market", function()
     assert(p.cash < before_cash, "should have purchased an item")
   end)
 
-  it("auto_execute_skips_vehicles_when_has_seat", function()
-    local market_service = _reload_market_service()
-    local g = _new_game()
-    local p = g:current_player()
-
-    -- Give player enough cash and a vehicle seat
-    g:set_player_cash(p, 999999)
-    p.seat_id = 1001 -- assign a vehicle seat
-
-    -- Find first available non-vehicle item
-    local list = market_service.query.list_available(p, g)
-    local non_vehicle_entry = nil
-    for _, entry in ipairs(list) do
-      if entry.kind ~= "vehicle" then
-        non_vehicle_entry = entry
-        break
-      end
-    end
-
-    if not non_vehicle_entry then
-      return -- skip if no non-vehicle items available
-    end
-
-    local before_cash = p.cash
-    market_service.auto.execute(g, p)
-
-    -- Should have purchased a non-vehicle item (not vehicle)
-    assert(p.cash < before_cash, "should have purchased a non-vehicle item")
-  end)
-
   it("market_full_inventory_blocks_items", function()
     local market_service = require("src.rules.market")
     local g = _new_game()

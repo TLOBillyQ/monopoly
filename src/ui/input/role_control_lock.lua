@@ -1,20 +1,7 @@
-local logger = require("src.foundation.log.logger")
 local role_id_utils = require("src.foundation.identity.role_id")
+local runtime_state = require("src.state.runtime_state")
 
 local lock_policy = {}
-
-local function _warn_once(state, key, ...)
-  local warn_once = state.warn_once
-  if not warn_once then
-    warn_once = {}
-    state.warn_once = warn_once
-  end
-  if warn_once[key] then
-    return
-  end
-  warn_once[key] = true
-  logger.warn(...)
-end
 
 local function _resolve_lock_state(state)
   local lock_state = state.role_control_lock
@@ -23,7 +10,6 @@ local function _resolve_lock_state(state)
   end
   lock_state = {
     by_role = {},
-    warn_once = {},
   }
   state.role_control_lock = lock_state
   return lock_state
@@ -89,7 +75,7 @@ function lock_policy.sync(state, enabled, deps)
   local exempt_by_role = state.role_control_lock_exempt_by_role or {}
   local buff_id = Enums and Enums.BuffState and Enums.BuffState.BUFF_FORBID_CONTROL or nil
   if not buff_id then
-    _warn_once(lock_state, "missing_buff_enum", "missing Enums.BuffState.BUFF_FORBID_CONTROL")
+    runtime_state.log_once(state, "warn", "role_control_lock:missing_buff_enum", "missing Enums.BuffState.BUFF_FORBID_CONTROL")
     return
   end
 
@@ -101,7 +87,7 @@ function lock_policy.sync(state, enabled, deps)
   local seen_roles = {}
   runtime.for_each_role_or_global(function(role)
     if not role then
-      _warn_once(lock_state, "missing_roles", "role_control_lock missing role list")
+      runtime_state.log_once(state, "warn", "role_control_lock:missing_roles", "role_control_lock missing role list")
       return
     end
     local role_id = role_id_utils.normalize(runtime.resolve_role_id(role) or tostring(role))
@@ -120,7 +106,7 @@ function lock_policy.sync(state, enabled, deps)
       return
     end
     if not _can_apply(unit) then
-      _warn_once(lock_state, "missing_buff_api_" .. tostring(role_id), "ctrl_unit missing BuffStateComp:", tostring(role_id))
+      runtime_state.log_once(state, "warn", "role_control_lock:missing_buff_api_" .. tostring(role_id), "ctrl_unit missing BuffStateComp:", tostring(role_id))
       return
     end
     _sync_role_lock(lock_state, role_id, unit, buff_id)

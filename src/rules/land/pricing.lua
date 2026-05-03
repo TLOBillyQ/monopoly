@@ -1,3 +1,5 @@
+local number_utils = require("src.foundation.lang.number")
+
 local pricing = {}
 
 local function _max_level(tile)
@@ -34,23 +36,13 @@ function pricing.rent_for_level(tile, level)
   return rents[idx] or 0
 end
 
-local function _clamp_upgrade_level(level, max_level)
-  if level == nil or level <= 0 then
-    return 0
-  end
-  if level > max_level then
-    return max_level
-  end
-  return level
-end
-
 function pricing.total_invested(tile, level)
   local total = pricing.purchase_price(tile)
   local costs = tile.upgrade_costs
   if type(costs) ~= "table" then
     return total
   end
-  for i = 1, _clamp_upgrade_level(level, #costs) do
+  for i = 1, number_utils.clamp(level, 0, #costs) do
     total = total + (costs[i] or 0)
   end
   return total

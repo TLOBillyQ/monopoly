@@ -251,7 +251,7 @@ describe("presentation_ui.timing_anim", function()
         return nil
       end,
     }
-    g.turn_engine = runtime_cls:new(g, phases, { experimental_coroutine_turn = true })
+    g.turn_engine = runtime_cls:new(g, phases)
 
     local res = g.turn_engine:run_turn()
     assert(res == "wait_move_anim", "should wait for move anim")

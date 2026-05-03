@@ -45,10 +45,6 @@ function context.entry_market_enabled(entry)
   return entry.market_enabled ~= false
 end
 
-function context.entry_vehicle_enabled(entry)
-  return entry == nil or entry.kind ~= "vehicle"
-end
-
 function context.remaining_global_limit(game, product_id)
   assert(game ~= nil, "missing game")
   assert(product_id ~= nil, "missing product_id")

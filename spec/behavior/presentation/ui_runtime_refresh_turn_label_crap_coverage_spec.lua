@@ -1,5 +1,0 @@
-describe("suites.presentation.ui_runtime_refresh_turn_label_crap_coverage", function()
-  it("suite load failed: ...entation/ui_runtime_refresh_turn_label_crap_coverage.lua:3: attempt to index a nil value (field '_M_test')", function()
-    pending("suite load failed: src.ui.coord.ui_runtime._M_test is unavailable")
-  end)
-end)

@@ -113,6 +113,16 @@ function number_utils.to_integer(value)
   return nil
 end
 
+function number_utils.clamp(value, min, max)
+  if value == nil or value < min then
+    return min
+  end
+  if value > max then
+    return max
+  end
+  return value
+end
+
 function number_utils.format_integer_part(value)
   local truncated = _truncate_number(value)
   if truncated ~= nil then

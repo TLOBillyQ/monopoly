@@ -22,13 +22,7 @@ local function _clamp_page(page_index, page_count)
   if count < 1 then
     count = 1
   end
-  if page < 1 then
-    return 1
-  end
-  if page > count then
-    return count
-  end
-  return page
+  return number_utils.clamp(page, 1, count)
 end
 
 local function _build_tab_entries(player, game, active_tab)

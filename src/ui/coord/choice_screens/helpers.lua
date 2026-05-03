@@ -42,10 +42,6 @@ function M.resolve_option_label_by_id(choice, option_id)
   return choice_support.resolve_option_label_by_id(choice, option_id)
 end
 
-function M.is_under_option(option)
-  return choice_support.is_under_option(option)
-end
-
 function M.set_option_node(ui, node_name, option)
   local option_id = M.resolve_option_id(option)
   ui_controls.set_control_state(ui, node_name, {

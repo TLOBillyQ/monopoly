@@ -112,13 +112,4 @@ describe("domain state adapter coverage", function()
     end
   end)
 
-  it("build_base_output_ports matches runtime output ports", function()
-    local rt_ports = output_port.build_runtime_output_ports()
-    local base_ports = output_port.build_base_output_ports()
-    for key, fn in pairs(rt_ports) do
-      assert(type(base_ports[key]) == "function",
-        "build_base_output_ports should include " .. tostring(key))
-      _assert_eq(base_ports[key], fn, "build_base_output_ports." .. key .. " should be same fn as build_runtime_output_ports")
-    end
-  end)
 end)

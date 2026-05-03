@@ -22,12 +22,4 @@ function vehicle_feature.resolve_seat_id(seat_id)
   return seat_id
 end
 
-function vehicle_feature.is_vehicle_market_entry(entry)
-  return entry ~= nil and entry.kind == "vehicle"
-end
-
-function vehicle_feature.is_vehicle_chance_card(card)
-  return card ~= nil and card.effect == "set_vehicle"
-end
-
 return vehicle_feature

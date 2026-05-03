@@ -226,9 +226,6 @@ function overlay.play_missile(state, anim, duration, opts)
   runtime.spawn_transient(group_id, unit_id, compute.overlay_pos_for_tile(state, tile_index), duration, _deps(state))
 end
 
-function overlay.play_monster(_state, _anim, _duration, _opts)
-end
-
 function overlay.play_clear_obstacles(state, anim, duration, opts)
   local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
   local branches = anim.branches or {}

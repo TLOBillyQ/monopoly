@@ -4,13 +4,6 @@ local policy = {}
 
 function policy.validate_entry(game, player, entry)
   local product_id = entry.product_id
-  if not context.entry_vehicle_enabled(entry) then
-    return {
-      ok = false,
-      reason = "vehicle_disabled",
-      body = player.name .. " 当前对局已关闭载具功能",
-    }
-  end
   if not context.entry_market_enabled(entry) then
     return {
       ok = false,

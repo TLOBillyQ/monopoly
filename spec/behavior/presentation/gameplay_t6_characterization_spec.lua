@@ -462,7 +462,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
     }
     local mock_runtime = {
@@ -476,7 +475,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
     }
     local original_enums = _G.Enums
@@ -493,7 +491,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
       role_control_lock_exempt_by_role = { ["p1"] = true },
     }
@@ -514,7 +511,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
     }
     local mock_role = {
@@ -534,7 +530,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
     }
     local mock_unit = {}
@@ -548,8 +543,12 @@ describe("gameplay.t6_characterization", function()
       resolve_role_id = function(r) return "p1" end,
     }
     role_control_lock_policy.sync(state, true, { runtime = mock_runtime })
-    -- The warning should be recorded
-    assert(state.role_control_lock.warn_once ~= nil, "warn_once should exist")
+    assert(
+      state.debug_runtime ~= nil
+        and state.debug_runtime.log_once ~= nil
+        and state.debug_runtime.log_once["role_control_lock:missing_buff_api_p1"] == true,
+      "log_once should record missing buff api"
+    )
   end)
 
   it("role_control_lock_sync_applies_and_tracks_owned_lock", function()
@@ -567,7 +566,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
     }
     local ok, err = pcall(function()
@@ -607,7 +605,6 @@ describe("gameplay.t6_characterization", function()
         by_role = {
           stale = { owned = true, unit = stale_unit },
         },
-        warn_once = {},
       },
     }
     local ok, err = pcall(function()
@@ -1308,7 +1305,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
     }
     local ok, err = pcall(function()
@@ -1338,7 +1334,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
     }
     local ok, err = pcall(function()
@@ -1369,7 +1364,6 @@ describe("gameplay.t6_characterization", function()
     local state = {
       role_control_lock = {
         by_role = {},
-        warn_once = {},
       },
     }
     local ok, err = pcall(function()

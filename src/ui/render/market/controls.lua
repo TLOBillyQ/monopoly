@@ -29,7 +29,7 @@ end
 
 local function _resolve_market_tab(market)
   local tab = market and market.active_tab or nil
-  if tab == "item" or tab == "skin" or tab == "vehicle" then
+  if tab == "item" or tab == "skin" then
     return tab
   end
   return "item"
@@ -112,7 +112,7 @@ local function _set_tab_tint(ui, name, active)
   end)
 end
 
-function market_view_controls.refresh_market_controls(ui, market, vehicle_tab_enabled)
+function market_view_controls.refresh_market_controls(ui, market)
   local active_tab = _resolve_market_tab(market)
   local page_index = _resolve_market_page_value(market, "page_index")
   local page_count = _resolve_market_page_value(market, "page_count")
@@ -140,17 +140,10 @@ function market_view_controls.refresh_market_controls(ui, market, vehicle_tab_en
   _set_tab_tint(ui, market_layout.tab_item, active_tab == "item")
   ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = active_tab ~= "skin" })
   _set_tab_tint(ui, market_layout.tab_skin, active_tab == "skin")
-  ui_controls.set_control_state(ui, market_layout.tab_vehicle, {
-    visible = vehicle_tab_enabled == true,
-    touch_enabled = vehicle_tab_enabled == true and active_tab ~= "vehicle",
-  })
-  if vehicle_tab_enabled == true then
-    _set_tab_tint(ui, market_layout.tab_vehicle, active_tab == "vehicle")
-  end
 end
 
-function market_view_controls.apply_market_common_controls(ui, market, confirm_enabled, vehicle_tab_enabled)
-  market_view_controls.refresh_market_controls(ui, market, vehicle_tab_enabled)
+function market_view_controls.apply_market_common_controls(ui, market, confirm_enabled)
+  market_view_controls.refresh_market_controls(ui, market)
   market_view_controls.set_confirm_button_state(ui, confirm_enabled)
   _set_cancel_controls(ui, market.allow_cancel, market.allow_cancel)
 end
@@ -170,7 +163,6 @@ function market_view_controls.close_market_panel(state, deps)
     market_layout.page_next_label,
     market_layout.tab_item,
     market_layout.tab_skin,
-    market_layout.tab_vehicle,
   }, { visible = false, touch_enabled = false })
   _set_control_text(ui, market_layout.page_prev_label, "")
   _set_control_text(ui, market_layout.page_next_label, "")

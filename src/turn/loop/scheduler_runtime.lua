@@ -34,7 +34,7 @@ local function _build_turn_mgr(runtime)
   return mgr
 end
 
-function scheduler_turn_runtime:init(game, phases, _opts)
+function scheduler_turn_runtime:init(game, phases)
   assert(game ~= nil, "missing game")
   assert(phases ~= nil, "missing phases")
   self.game = game

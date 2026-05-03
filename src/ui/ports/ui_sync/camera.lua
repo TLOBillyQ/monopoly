@@ -1,26 +1,17 @@
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_state = require("src.ui.state.runtime")
-local logger = require("src.foundation.log.logger")
+local game_runtime_state = require("src.state.runtime_state")
 local camera_follow = require("src.config.gameplay.camera_follow")
 local unit_position = require("src.ui.render.unit_position")
 
 local camera_sync = {}
-local _warned = {}
 
 local CAMERA_PROP_DIST = 7
 local CAMERA_PROP_OBSERVER_HEIGHT = 11
 local CAMERA_PROP_PITCH = 15
 local CAMERA_PROP_YAW = 16
 
-local function _warn_once(key, ...)
-  if _warned[key] then
-    return
-  end
-  _warned[key] = true
-  logger.warn("camera_sync", ...)
-end
-
-local function _restore_camera_props(local_role)
+local function _restore_camera_props(state, local_role)
   local props = {
     { CAMERA_PROP_DIST, camera_follow.dist },
     { CAMERA_PROP_OBSERVER_HEIGHT, camera_follow.observer_height },
@@ -28,7 +19,7 @@ local function _restore_camera_props(local_role)
     { CAMERA_PROP_YAW, camera_follow.yaw },
   }
   if type(local_role.set_camera_property) ~= "function" then
-    _warn_once("set_camera_property_unavailable", "set_camera_property not available on role")
+    game_runtime_state.log_once(state, "warn", "camera_sync:set_camera_property_unavailable", "camera_sync", "set_camera_property not available on role")
     return
   end
   for _, entry in ipairs(props) do
@@ -37,12 +28,12 @@ local function _restore_camera_props(local_role)
       return local_role.set_camera_property(prop, value)
     end)
     if not ok then
-      _warn_once("set_camera_property_" .. tostring(prop), "set_camera_property(" .. tostring(prop) .. ") failed:", tostring(err))
+      game_runtime_state.log_once(state, "warn", "camera_sync:set_camera_property_" .. tostring(prop), "camera_sync", "set_camera_property(" .. tostring(prop) .. ") failed:", tostring(err))
     end
   end
 end
 
-local function _resolve_unit_position(role)
+local function _resolve_unit_position(state, role)
   if role == nil then
     return nil
   end
@@ -54,7 +45,7 @@ local function _resolve_unit_position(role)
   end)
   if not ok or unit == nil then
     if not ok then
-      _warn_once("get_ctrl_unit_failed", "resolve unit failed:", tostring(unit))
+      game_runtime_state.log_once(state, "warn", "camera_sync:get_ctrl_unit_failed", "camera_sync", "resolve unit failed:", tostring(unit))
     end
     return nil
   end
@@ -65,7 +56,7 @@ local function _resolve_unit_position(role)
     return unit.get_position()
   end)
   if not pos_ok then
-    _warn_once("get_position_failed", "resolve unit position failed:", tostring(pos))
+    game_runtime_state.log_once(state, "warn", "camera_sync:get_position_failed", "camera_sync", "resolve unit position failed:", tostring(pos))
     return nil
   end
   return pos
@@ -101,10 +92,10 @@ local function _resolve_follow_target_position(state, player_id)
   if target_role == nil then
     return nil
   end
-  return _resolve_unit_position(target_role)
+  return _resolve_unit_position(state, target_role)
 end
 
-local function _lock_camera_to_target_position(local_role, target_pos, ctx_info)
+local function _lock_camera_to_target_position(state, local_role, target_pos, _ctx_info)
    local pos = target_pos
    if pos == nil then
      return false
@@ -117,15 +108,15 @@ local function _lock_camera_to_target_position(local_role, target_pos, ctx_info)
     return local_role.set_camera_lock_position(pos)
   end)
   if not ok then
-     _warn_once("set_camera_lock_position_failed", "set_camera_lock_position failed:", tostring(err))
+     game_runtime_state.log_once(state, "warn", "camera_sync:set_camera_lock_position_failed", "camera_sync", "set_camera_lock_position failed:", tostring(err))
    else
-     _restore_camera_props(local_role)
+     _restore_camera_props(state, local_role)
    end
 
    return ok == true
 end
 
-local function _reset_camera_to_self(local_role)
+local function _reset_camera_to_self(state, local_role)
   if type(local_role.reset_camera) ~= "function" then
     return false
   end
@@ -133,7 +124,7 @@ local function _reset_camera_to_self(local_role)
     return local_role.reset_camera(true, true, true, true)
   end)
   if not ok then
-    _warn_once("reset_camera_failed", "reset_camera failed:", tostring(err))
+    game_runtime_state.log_once(state, "warn", "camera_sync:reset_camera_failed", "camera_sync", "reset_camera failed:", tostring(err))
   end
   return ok == true
 end
@@ -160,10 +151,10 @@ function camera_sync.follow_camera(state, player_id)
   end
 
   if player_id == local_role_id then
-    return _reset_camera_to_self(local_role)
+    return _reset_camera_to_self(state, local_role)
   end
 
-  _reset_camera_to_self(local_role)
+  _reset_camera_to_self(state, local_role)
 
   local target_pos = _resolve_follow_target_position(state, player_id)
   if target_pos == nil then
@@ -171,7 +162,7 @@ function camera_sync.follow_camera(state, player_id)
   end
 
   local ctx_info = "local=" .. tostring(local_role_id) .. " target=" .. tostring(player_id)
-  return _lock_camera_to_target_position(local_role, target_pos, ctx_info)
+  return _lock_camera_to_target_position(state, local_role, target_pos, ctx_info)
 end
 
 
@@ -191,7 +182,7 @@ function camera_sync.sync_camera_position(state)
   end
   local target_pos = _resolve_follow_target_position(state, target_id)
   local ctx_info = "[sync] local=" .. tostring(local_role_id) .. " target=" .. tostring(target_id)
-  return _lock_camera_to_target_position(local_role, target_pos, ctx_info)
+  return _lock_camera_to_target_position(state, local_role, target_pos, ctx_info)
 end
 
 function camera_sync.pan_camera_to_position(state, target_pos)
@@ -210,9 +201,9 @@ function camera_sync.pan_camera_to_position(state, target_pos)
   if camera then
     camera.target_role_id = nil
   end
-  _reset_camera_to_self(local_role)
+  _reset_camera_to_self(state, local_role)
   local ctx_info = "[pan] local=" .. tostring(local_role_id)
-  return _lock_camera_to_target_position(local_role, target_pos, ctx_info)
+  return _lock_camera_to_target_position(state, local_role, target_pos, ctx_info)
 end
 
 function camera_sync.release_target_pan(state)
