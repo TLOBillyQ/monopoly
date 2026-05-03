@@ -1,0 +1,34 @@
+| 来源类型 | id | name/key | angel_immune 或 negative 配置值 | 运行时angel检查? | 检查代码 file:line | 分类 |
+|---|---:|---|---|---|---|---|
+| item | 2001 | free_rent / 免费卡 | angel_immune=false | NO | — | N/A |
+| item | 2002 | remote_dice / 遥控骰子卡 | angel_immune=false | NO | — | N/A |
+| item | 2003 | dice_multiplier / 骰子加倍卡 | angel_immune=false | NO | — | N/A |
+| item | 2004 | roadblock / 路障卡 | angel_immune=true | NO | — | UNPROTECTED |
+| item | 2005 | mine / 地雷卡 | angel_immune=true | YES | src/rules/effects/mine.lua:88 | PROTECTED |
+| item | 2006 | clear_obstacles / 清障卡 | angel_immune=false | NO | — | N/A |
+| item | 2007 | steal / 偷窃卡 | angel_immune=true | YES | src/rules/items/steal.lua:92 | PROTECTED |
+| item | 2008 | monster / 怪兽卡 | angel_immune=false | NO | — | N/A |
+| item | 2009 | strong / 强征卡 | angel_immune=false | NO | — | N/A |
+| item | 2010 | tax_free / 免税卡 | angel_immune=false | NO | — | N/A |
+| item | 2011 | share_wealth / 均富卡 | angel_immune=true | NO | — | UNPROTECTED |
+| item | 2012 | exile / 流放卡 | angel_immune=true | NO | — | UNPROTECTED |
+| item | 2013 | missile / 导弹卡 | angel_immune=false | NO | — | N/A |
+| item | 2014 | tax / 查税卡 | angel_immune=true | YES | src/rules/items/post_effects.lua:110 | PROTECTED |
+| item | 2015 | invite_deity / 请神卡 | angel_immune=false | NO | — | N/A |
+| item | 2016 | send_poor / 送神卡 | angel_immune=false | NO | — | N/A |
+| item | 2017 | rich / 财神卡 | angel_immune=false | NO | — | N/A |
+| item | 2018 | poor / 穷神卡 | angel_immune=false | NO | — | N/A |
+| item | 2019 | angel / 天使卡 | angel_immune=false | NO | — | N/A |
+| chance | 3005 | 你投资失败，损失10000金币。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3006 | 你去游乐场，支付1000金币。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3007 | 你捐助失学儿童，捐出2000金币。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3008 | 你扶老人去医院，垫付5000金币。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3010 | 洪水无情人有情，每人向灾区捐献3000金币。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3011 | 股灾降临，每人损失20%金币。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3012 | 破财消灾，你给每个其他玩家3000金币。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3028 | 小偷光临，你随机丢失1张道具卡 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3029 | 强盗来袭，你丢失所有道具卡 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3030 | 你遭遇火灾，随机丢失1张地块持有证 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3031 | 你突然晕倒了，被送入医院。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3032 | 你迷路走进了深山。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
+| chance | 3033 | 你收到税务通知，立刻赶往税务局交代问题。 | negative=true | YES | src/rules/chance/resolver.lua:8 | PROTECTED |
