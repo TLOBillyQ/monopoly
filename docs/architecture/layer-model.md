@@ -1,6 +1,6 @@
 # 分层模型
 
-> **See also**：架构治理路线图 → [`governance_roadmap.md`](governance_roadmap.md)（10 → 7 层 + foundation 基座的对齐债务及治理波次）；架构决策 → [`adr/0001-seven-layer-with-foundation.md`](adr/0001-seven-layer-with-foundation.md)（D1-D7 决策记录）。
+> **See also**：架构治理路线图 → [`governance-roadmap.md`](governance-roadmap.md)（10 → 7 层 + foundation 基座的对齐债务及治理波次）；架构决策 → [`../decisions/0001-seven-layer-with-foundation.md`](../decisions/0001-seven-layer-with-foundation.md)（D1-D7 决策记录）。
 
 ## 七层 + Foundation 基座
 

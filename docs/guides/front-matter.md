@@ -32,7 +32,7 @@ last_verified: 2026-04-20
 ---
 ```
 
-ADR（`docs/architecture/adr/0001-seven-layer-with-foundation.md` 风格）：
+ADR（`docs/decisions/0001-seven-layer-with-foundation.md` 风格）：
 
 ```yaml
 ---

@@ -2,7 +2,7 @@
 
 `tools/quality/coverage.lua` 用 `busted -c` 触发 luacov instrumentation，统计 `src/{core,rules,turn,state,player,computer}` 6 个核心目录的 line coverage。它与 `tools/quality/crap.lua` 是两条独立流水线：crap 关注"复杂度 × 反测试"风险热点，coverage 关注"哪些行根本没跑过"。
 
-如果你想先看整个质量面里 `coverage` 和 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality_map.md`。
+如果你想先看整个质量面里 `coverage` 和 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality-map.md`。
 
 ## 命令
 
@@ -58,7 +58,7 @@ lua5.5 tools/quality/coverage.lua --reuse-stats --out=tmp/coverage_replay.md
 - **crap4lua** (`tools/quality/crap.lua`)：复杂度 × 测试覆盖度合成；coverage.lua 不替代 crap，二者并存。
 - **arch_view** (`tools/quality/arch.lua`)：架构边界静态扫描，与 line coverage 无关。
 - **mutate4lua** (`tools/quality/mutate.lua`)：变异测试，验证测试质量；coverage 通过不代表 mutation score 通过。
-- **behavior/contract/guards spec**：coverage 数据来源于这三条 lane 的合并执行；新增测试在哪个 lane 由测试性质决定（见 `docs/architecture/quality_map.md`）。
+- **behavior/contract/guards spec**：coverage 数据来源于这三条 lane 的合并执行；新增测试在哪个 lane 由测试性质决定（见 `docs/architecture/quality-map.md`）。
 
 ## 禁用范围
 

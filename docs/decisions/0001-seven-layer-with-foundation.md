@@ -1,7 +1,7 @@
 # ADR 0001 — 七层架构 + Foundation 基座
 
 **Status**: Accepted (2026-04-30)
-**Supersedes (partial)**: `docs/architecture/governance_roadmap.md` §3.2.1 / §3.2.2 / §3.2.3 / §3.3 / §3.4 / W3-W6
+**Supersedes (partial)**: `docs/architecture/governance-roadmap.md` §3.2.1 / §3.2.2 / §3.2.3 / §3.3 / §3.4 / W3-W6
 **Driver**: [`plan.md`](../../../plan.md)（执行中）
 
 > **Note**：本 ADR 固化在 `plan.md` 中已拍板的 D1-D7 决策。任何修改需另开 ADR 取代。
@@ -10,7 +10,7 @@
 
 ## 上下文（Why）
 
-`docs/architecture/governance_roadmap.md` 在 D2（保留物理目录名）之外仍留有大量歧义点：`src/state/` 11 个文件如何拆分（§3.2.1-§3.2.3）、`runtime` component 是否拆分（§3.3）、是否新建 `src/board/`（§3.4）、6 条 exception 如何处置（Chapter 5）。
+`docs/architecture/governance-roadmap.md` 在 D2（保留物理目录名）之外仍留有大量歧义点：`src/state/` 11 个文件如何拆分（§3.2.1-§3.2.3）、`runtime` component 是否拆分（§3.3）、是否新建 `src/board/`（§3.4）、6 条 exception 如何处置（Chapter 5）。
 
 执行人在落地前必须把这些组合决策一次性钉死，否则每个 phase 都会回到决策表反复对照。本 ADR 把决策变更写入正式 ADR 序列，让 plan.md 进入"按表执行"状态。
 
@@ -122,7 +122,7 @@ src/state/
 
 ---
 
-## 与 governance_roadmap.md 的取代关系
+## 与 governance-roadmap.md 的取代关系
 
 | roadmap 决策项 | 本 ADR 处置 |
 |--------------|----------|

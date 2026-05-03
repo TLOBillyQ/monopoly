@@ -4,7 +4,7 @@
 
 文本护栏（宿主全局 API、`src/` 运行时禁用语法与少量文本级硬边界）仍由 `spec/guards/lib/dep_rules.lua`、`spec/guards/lib/forbidden_globals.lua` 负责，arch_view 不替代它们。
 
-如果你想先判断 `arch_view` 在整套测试/静态分析里的位置，以及本地常见耗时，先读 `docs/architecture/quality_map.md`。
+如果你想先判断 `arch_view` 在整套测试/静态分析里的位置，以及本地常见耗时，先读 `docs/architecture/quality-map.md`。
 
 默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速的 in-process 结构契约；真实 `scan/viewer` CLI 导出 smoke 已挪到 `busted -c tooling`，并只保留 `scan` 与 `viewer --in-json` 两个慢路径检查。真实 `analyze(...)` 路径则由 `spec/guards/lib/arch_view_guard.lua` 常驻覆盖，不再重复保留额外 tooling smoke。
 

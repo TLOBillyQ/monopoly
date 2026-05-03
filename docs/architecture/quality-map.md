@@ -119,7 +119,7 @@
 ### `mutate4lua`
 
 - 入口：`lua tools/quality/mutate.lua <file.lua> ...`
-- 文档：`docs/architecture/mutate4lua.md`
+- 文档：`docs/guides/mutation-testing.md`
 - 性质：单文件变异测试；看“测试有没有真正卡住错误”，不是看“代码有没有被执行到”
 - 数据来源：
   - 变异点：`vendor/mutate4lua/` 的 Lua lexer / scanner

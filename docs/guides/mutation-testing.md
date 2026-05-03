@@ -2,7 +2,7 @@
 
 `mutate4lua` 是按文件运行的 Lua 变异测试工具。Monopoly 通过子模块 `vendor/mutate4lua/` 引入上游实现：现在 scan / mutate / manifest 主流程由上游 Go engine 提供，Monopoly 再用 `tools/quality/mutate.lua` 和 `tools/quality/mutate/driver.lua` 适配本仓库的测试车道。
 
-如果你想先看它在整套质量入口里的定位、耗时预估和与 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality_map.md`。
+如果你想先看它在整套质量入口里的定位、耗时预估和与 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality-map.md`。
 
 默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速契约；涉及真实 `mutate --index-suites` 的完整 smoke 已挪到 `busted -c tooling`。
 
