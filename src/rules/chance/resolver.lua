@@ -16,7 +16,6 @@ function resolver.resolve(game, player, card, context)
     event_feed.publish(game, {
       kind = event_kinds.chance_card,
       text = text,
-      tip = false,
     })
     return nil
   end

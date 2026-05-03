@@ -17,7 +17,6 @@ local function _emit_bought_item(game, payload)
     event_feed.publish(game, {
       kind = event_kinds.item_acquired,
       text = payload.text,
-      tip = false,
     })
   end
 end

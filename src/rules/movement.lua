@@ -14,14 +14,14 @@ local movement = {}
 
 local _emit_event = monopoly_event.emit
 
-local function _emit_text(game, mono_kind, ef_kind, payload)
+local function _emit_text(game, mono_kind, ef_kind, payload, opts)
   _emit_event(mono_kind, payload)
   if game and ef_kind and type(payload.text) == "string" then
-    event_feed.publish(game, {
-      kind = ef_kind,
-      text = payload.text,
-      tip = false,
-    })
+    local event = { kind = ef_kind, text = payload.text }
+    if not (opts and opts.show_tip == true) then
+      event.tip = false
+    end
+    event_feed.publish(game, event)
   end
 end
 
@@ -136,7 +136,7 @@ local function _check_roadblock(game, board, current, player)
     tile = tile,
     text = player.name .. " 触发路障，停在 " .. tile.name,
     prompt_text = _build_other_action_prompt_text(),
-  })
+  }, { show_tip = true })
   return true
 end
 
@@ -352,7 +352,7 @@ local function _emit_move_events(ctx, landing_tile)
     bonus = bonus,
     text = ctx.player.name .. " 经过起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
     prompt_text = _build_other_action_prompt_text(),
-  })
+  }, { show_tip = true })
 end
 
 -- public API
