@@ -1,7 +1,6 @@
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.foundation.log.logger")
 local number_utils = require("src.foundation.lang.number")
-local logger_utils = require("src.foundation.log.utils")
 local tick_timeout = require("src.turn.waits.timeout")
 local runtime_state = require("src.state.runtime_state")
 local turn_ui_sync_shared = require("src.state.ui_sync_shared")
@@ -27,7 +26,7 @@ local function _resolve_pending_choice_countdown(state, gate, timeout, pending_c
     pending_choice_elapsed = 0
   end
   if gate.choice_active ~= true and gate.market_active ~= true then
-    logger_utils.log_once(
+    runtime_state.log_once(
       state,
       "info",
       "countdown_runtime_choice_without_ui_" .. tostring(pending_choice.id),
@@ -105,7 +104,7 @@ function tick_ui_sync.log_prefix()
 end
 
 function tick_ui_sync.log_once(state, level, key, ...)
-  logger_utils.log_once(state, level, key, ...)
+  runtime_state.log_once(state, level, key, ...)
 end
 
 local function _resolve_deadline_countdown(state)

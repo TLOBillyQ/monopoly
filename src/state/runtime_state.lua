@@ -1,3 +1,5 @@
+local logger_utils = require("src.foundation.log.utils")
+
 local runtime_state = {}
 
 local function _ensure_table(root, key)
@@ -280,6 +282,11 @@ function runtime_state.ensure_debug_runtime(state)
     debug_runtime.log_once = state._log_once or {}
   end
   return debug_runtime
+end
+
+function runtime_state.log_once(state, level, key, ...)
+  local debug_runtime = runtime_state.ensure_debug_runtime(state)
+  return logger_utils.log_once(debug_runtime.log_once, level, key, ...)
 end
 
 function runtime_state.ensure_deadlines(state)

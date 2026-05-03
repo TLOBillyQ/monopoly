@@ -1,7 +1,7 @@
 local constants = require("src.config.content.constants")
 local timing = require("src.config.gameplay.timing")
 local number_utils = require("src.foundation.lang.number")
-local logger_utils = require("src.foundation.log.utils")
+local runtime_state = require("src.state.runtime_state")
 local choice_contract = require("src.config.choice.contract")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local DeadlineService = require("src.turn.deadlines.service")
@@ -91,7 +91,7 @@ local function _maybe_warn_missing_ui(state, active_choice, should_warn_missing_
   if not should_warn_missing_ui then
     return
   end
-  logger_utils.log_once(
+  runtime_state.log_once(
     state,
     "warn",
     "choice_runtime_without_ui_" .. tostring(active_choice.id),
