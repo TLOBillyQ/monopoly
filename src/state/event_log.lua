@@ -1,3 +1,5 @@
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+
 local event_log = {}
 local DEFAULT_CAPACITY = 200
 
@@ -10,13 +12,28 @@ function event_log.new(capacity)
   }
 end
 
+local function _now_hms()
+  local hms = runtime_ports.wall_now_hms()
+  if type(hms) == "string" and hms ~= "" then
+    return hms
+  end
+  local os_lib = _G and _G.os
+  if os_lib and type(os_lib.date) == "function" then
+    local ok, text = pcall(os_lib.date, "%H:%M:%S")
+    if ok and type(text) == "string" then
+      return text
+    end
+  end
+  return ""
+end
+
 local function _make_item(log, entry)
   log.seq = log.seq + 1
   return {
     kind = entry.kind,
     text = entry.text,
     seq = log.seq,
-    time_text = os.date("%H:%M:%S"),
+    time_text = _now_hms(),
   }
 end
 

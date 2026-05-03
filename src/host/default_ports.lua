@@ -162,6 +162,35 @@ end
     return ts or 0
   end
 
+  function defaults.wall_now_hms()
+    local game_api = _current_game_api(runtime_context)
+    if game_api == nil then
+      return ""
+    end
+    local ts = _try_timestamp_from_api(game_api)
+    if ts == nil then
+      return ""
+    end
+    local function _safe_part(fn_name)
+      local fn = game_api[fn_name]
+      if type(fn) ~= "function" then
+        return nil
+      end
+      local ok, val = pcall(fn, ts)
+      if not ok or not number_utils.is_numeric(val) then
+        return nil
+      end
+      return number_utils.to_integer(val)
+    end
+    local h = _safe_part("get_hour")
+    local m = _safe_part("get_minute")
+    local s = _safe_part("get_second")
+    if h == nil or m == nil or s == nil then
+      return ""
+    end
+    return string.format("%02d:%02d:%02d", h, m, s)
+  end
+
   function defaults.wall_diff_seconds(timestamp_1, timestamp_2)
     local game_api = _current_game_api(runtime_context)
     if game_api

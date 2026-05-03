@@ -86,6 +86,18 @@ function runtime_ports.wall_now_seconds()
   return fn()
 end
 
+function runtime_ports.wall_now_hms()
+  local fn = _resolve_port("wall_now_hms")
+  if type(fn) ~= "function" then
+    return nil
+  end
+  local ok, hms = pcall(fn)
+  if not ok or type(hms) ~= "string" or hms == "" then
+    return nil
+  end
+  return hms
+end
+
 function runtime_ports.wall_diff_seconds(timestamp_1, timestamp_2)
   local fn = _resolve_port("wall_diff_seconds")
   if type(fn) ~= "function" then
