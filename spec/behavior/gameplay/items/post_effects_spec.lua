@@ -23,6 +23,9 @@ describe("items_post_effects", function()
       set_player_cash = function(self, player, amount)
         player.cash = amount
       end,
+      angel_immune_to_item = function(self, player, item_id)
+        return false
+      end,
     }
     local user = { id = 1, name = "User" }
     local target = { id = 2, name = "Target" }
@@ -39,6 +42,11 @@ describe("items_post_effects", function()
       end,
       set_player_deity = function(self, player, deity_type, remaining)
         player.status.deity = { type = deity_type, remaining = remaining }
+      end,
+      transfer_deity = function(self, src, dst)
+        self:set_player_deity(dst, src.status.deity.type, src.status.deity.remaining)
+        self:clear_player_deity(src)
+        return true
       end,
     }
     local user = { id = 1, name = "User", status = {} }
@@ -62,11 +70,38 @@ describe("items_post_effects", function()
     assert(target.status.deity.type == "poor", "target should have poor deity")
   end)
 
+  it("apply_target rejects self", function()
+    local game = {}
+    local user = { id = 1, name = "User", status = {} }
+
+    local ok, err = pcall(function()
+      post_effects.apply_target(game, user, item_ids.share_wealth, user, {})
+    end)
+    assert(ok == false, "should reject self-target")
+    assert(tostring(err):find("apply_target: user and target must differ", 1, true) ~= nil, "should mention self-target guard")
+  end)
+
+  it("poor card explicit duration", function()
+    local constants = require("src.config.content.constants")
+    local game = {
+      set_player_deity = function(self, player, deity_type, remaining)
+        player.status.deity = { type = deity_type, remaining = remaining }
+      end,
+    }
+    local user = { id = 1, name = "User" }
+    local target = { id = 2, name = "Target", status = {}, deity_duration_turns = 99 }
+
+    local result = post_effects.apply_target(game, user, item_ids.poor, target, {})
+
+    assert(result == true, "should return true")
+    assert(target.status.deity.remaining == constants.deity_duration_turns, "poor card should use constants duration")
+  end)
+
   it("_test_apply_target_tax_normal", function()
     local constants = require("src.config.content.constants")
     local Inventory = require("src.player.actions.inventory")
     local game = {
-      player_has_deity = function() return false end,
+      angel_immune_to_item = function() return false end,
       player_balance = function() return 1000 end,
       deduct_player_cash = function(self, player, amount)
         player.cash = (player.cash or 1000) - amount
@@ -81,8 +116,8 @@ describe("items_post_effects", function()
 
   it("_test_apply_target_tax_with_angel", function()
     local game = {
-      player_has_deity = function(self, player, deity)
-        return deity == "angel"
+      angel_immune_to_item = function(self, player, item_id)
+        return item_id == item_ids.tax
       end,
     }
     local user = { id = 1, name = "User" }
@@ -96,7 +131,7 @@ describe("items_post_effects", function()
     local Inventory = require("src.player.actions.inventory")
     local inventory = require("src.rules.items.inventory")
     local game = {
-      player_has_deity = function() return false end,
+      angel_immune_to_item = function() return false end,
     }
     local user = { id = 1, name = "User" }
     local target = { id = 2, name = "Target", status = {}, inventory = Inventory:new({ constants = constants }) }
@@ -128,11 +163,20 @@ describe("items_post_effects", function()
 
   it("_test_apply_target_send_poor", function()
     local game = {
+      player_has_deity = function(self, player, deity)
+        return player.status.deity.type == deity and player.status.deity.remaining > 0
+      end,
       set_player_deity = function(self, player, deity_type, remaining)
         player.status.deity = { type = deity_type, remaining = remaining }
       end,
       clear_player_deity = function(self, player)
         player.status.deity = nil
+      end,
+      transfer_deity = function(self, src, dst)
+        local deity = src.status.deity
+        self:set_player_deity(dst, deity.type, deity.remaining)
+        self:clear_player_deity(src)
+        return true
       end,
     }
     local user = { id = 1, name = "User", status = { deity = { type = "poor", remaining = 3 } } }

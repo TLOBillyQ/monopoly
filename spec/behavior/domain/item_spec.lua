@@ -1510,6 +1510,15 @@ describe("item", function()
       apply_cash_change = function(_, target_player, delta)
         target_player.cash = target_player.cash + delta
       end,
+      adjust_chance_delta = function(game, player, delta)
+        if delta > 0 and game:player_has_deity(player, "rich") then
+          return delta * 2
+        end
+        if delta < 0 and game:player_has_deity(player, "poor") then
+          return delta * 2
+        end
+        return delta
+      end,
     }
     cash_handlers.register(handlers, common)
 

@@ -127,6 +127,7 @@ function bankruptcy.eliminate(game, player, opts)
   end
 
   inventory.clear(player)
+  game:clear_player_deity(player)
 
   game:set_player_eliminated(player, true)
   _push_bankruptcy_popup(game, player, opts)

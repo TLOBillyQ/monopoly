@@ -116,6 +116,13 @@ local function _check_roadblock(game, board, current, player)
   if not board:has_roadblock(current) then
     return false
   end
+  if game:angel_immune_to_item(player, item_ids.roadblock) then
+    event_feed.publish(game, {
+      kind = event_kinds.item_immune,
+      text = player.name .. " 有天使，路障无效（路障保留）",
+    })
+    return false
+  end
   game:clear_roadblock(current)
   local tile = board:get_tile(current)
   action_anim_port.queue(game, {

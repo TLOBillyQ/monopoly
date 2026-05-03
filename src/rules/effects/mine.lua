@@ -1,4 +1,5 @@
 local event_kinds = require("src.config.gameplay.event_kinds")
+local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
@@ -85,7 +86,7 @@ function mine_effect.apply(game, player, position)
   assert(player ~= nil, "missing player")
   assert(position ~= nil, "missing position")
 
-  if game:player_has_angel(player) then
+  if game:angel_immune_to_item(player, item_ids.mine) then
     event_feed.publish(game, {
       kind = event_kinds.item_immune,
       text = player.name .. " 天使保护，地雷无效",

@@ -41,6 +41,13 @@ end
 local target_effects = {
   [item_ids.share_wealth] = {
     apply = function(game, user, target, context)
+      if game:angel_immune_to_item(target, item_ids.share_wealth) then
+        event_feed.publish(game, {
+          kind = event_kinds.item_immune,
+          text = target.name .. " 有天使，均富无效",
+        })
+        return true
+      end
       local user_cash = game:player_balance(user, "金币")
       local target_cash = game:player_balance(target, "金币")
       local total = user_cash + target_cash
@@ -63,7 +70,14 @@ local target_effects = {
     end,
   },
   [item_ids.exile] = {
-    apply = function(game, user, target, context)
+    apply = function(game, user, target)
+      if game:angel_immune_to_item(target, item_ids.exile) then
+        event_feed.publish(game, {
+          kind = event_kinds.item_immune,
+          text = target.name .. " 有天使，流放无效",
+        })
+        return true
+      end
       local idx = game.board:find_first_by_type("mountain")
       local from_index = target.position
       local queued = false
@@ -106,8 +120,8 @@ local target_effects = {
     end,
   },
   [item_ids.tax] = {
-    apply = function(game, user, target, context)
-      if game:player_has_deity(target, "angel") then
+    apply = function(game, user, target)
+      if game:angel_immune_to_item(target, item_ids.tax) then
         event_feed.publish(game, {
           kind = event_kinds.item_immune,
           text = target.name .. " 有天使，查税无效",
@@ -136,16 +150,15 @@ local target_effects = {
     end,
   },
   [item_ids.invite_deity] = {
-    filter_target = function(_, _, target)
-      return target.status.deity and true or false
+    filter_target = function(game, _, target)
+      return game:player_has_any_deity(target)
     end,
-    apply = function(game, user, target, _context)
-      local deity = assert(target.status.deity, "missing target deity")
-      game:clear_player_deity(target)
-      game:set_player_deity(user, deity.type, deity.remaining)
+    apply = function(game, user, target)
+      local target_type = target.status.deity.type
+      game:transfer_deity(target, user)
       event_feed.publish(game, {
         kind = event_kinds.deity_evicted,
-        text = user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. deity.type,
+        text = user.name .. " 使用请神卡，从 " .. target.name .. " 请走 " .. target_type,
       })
       return true
     end,
@@ -157,10 +170,10 @@ local target_effects = {
       end
       return true
     end,
-    apply = function(game, user, target, _context)
-      local remaining = assert(user.status.deity, "missing user deity").remaining
-      game:set_player_deity(target, "poor", remaining)
-      game:clear_player_deity(user)
+    apply = function(game, user, target)
+      assert(game:player_has_deity(user, "poor"),
+        "send_poor.apply: user must have effective poor deity")
+      game:transfer_deity(user, target)
       event_feed.publish(game, {
         kind = event_kinds.deity_transferred,
         text = user.name .. " 使用送神卡，将穷神送给 " .. target.name,
@@ -169,8 +182,8 @@ local target_effects = {
     end,
   },
   [item_ids.poor] = {
-    apply = function(game, user, target, _context)
-      game:set_player_deity(target, "poor")
+    apply = function(game, user, target)
+      game:set_player_deity(target, "poor", constants.deity_duration_turns)
       event_feed.publish(game, {
         kind = event_kinds.deity_attached,
         text = user.name .. " 使用穷神卡，" .. target.name .. " 穷神附身",
@@ -201,7 +214,7 @@ local post_effects_cfg = {
 
 local handlers = {}
 
-local function _handle_set_status(game, player, cfg, _context)
+local function _handle_set_status(game, player, cfg)
   local value = assert(cfg.value, "missing status value")
   game:set_player_status(player, cfg.key, value)
   if cfg.message then
@@ -213,7 +226,7 @@ local function _handle_set_status(game, player, cfg, _context)
   return true
 end
 
-local function _handle_deity(game, player, cfg, context)
+local function _handle_deity(game, player, cfg)
   game:set_player_deity(player, cfg.deity, constants.deity_duration_turns)
   if cfg.log then
     event_feed.publish(game, {
@@ -224,7 +237,7 @@ local function _handle_deity(game, player, cfg, context)
   return true
 end
 
-local function _handle_log(game, player, cfg, _context)
+local function _handle_log(game, player, cfg)
   assert(cfg.message ~= nil, "missing log message")
   event_feed.publish(game, {
     kind = event_kinds.item_used,
@@ -233,7 +246,7 @@ local function _handle_log(game, player, cfg, _context)
   return true
 end
 
-local function _handle_place_mine_here(game, player, _cfg, context)
+local function _handle_place_mine_here(game, player)
   game:place_mine(player.position, {
     owner_id = player.id,
     armed = true,
@@ -278,6 +291,9 @@ function post_effects.target_item_ids()
 end
 
 function post_effects.apply_target(game, user, item_id, target, context)
+  assert(user ~= nil and target ~= nil, "missing user/target")
+  assert(user.id ~= target.id,
+         "apply_target: user and target must differ (item_id=" .. tostring(item_id) .. ")")
   local spec = target_effects[item_id]
   assert(spec ~= nil and spec.apply ~= nil, "missing target spec: " .. tostring(item_id))
   return spec.apply(game, user, target, context)

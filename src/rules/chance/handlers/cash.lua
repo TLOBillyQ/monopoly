@@ -100,10 +100,7 @@ function cash_handlers.register(handlers, common)
         break
       end
       if other.id ~= player.id and not other.eliminated then
-        local fee = card.amount
-        if game:player_has_deity(player, "poor") then
-          fee = fee * 2
-        end
+        local fee = math.abs(common.adjust_chance_delta(game, player, -card.amount))
         if not game:player_is_in_mountain(other) then
           local reason = player.name .. " 向他人支付后破产"
           common.apply_cash_change(game, player, -fee, { suppress_cash_receive_anim = true })
@@ -124,10 +121,7 @@ function cash_handlers.register(handlers, common)
     local total_collected = 0
     for _, other in ipairs(game.players) do
       if other.id ~= player.id and not other.eliminated then
-        local fee = card.amount
-        if game:player_has_deity(player, "rich") then
-          fee = fee * 2
-        end
+        local fee = common.adjust_chance_delta(game, player, card.amount)
         if not game:player_is_in_mountain(player) then
           local other_cash = game:player_balance(other, "金币")
           if other_cash < fee then
