@@ -2,6 +2,7 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_state = require("src.ui.state.runtime")
 local logger = require("src.foundation.log.logger")
 local camera_follow = require("src.config.gameplay.camera_follow")
+local unit_position = require("src.ui.render.unit_position")
 
 local camera_sync = {}
 local _warned = {}
@@ -70,7 +71,28 @@ local function _resolve_unit_position(role)
   return pos
 end
 
+local function _resolve_followed_unit_live_position(state, player_id)
+  -- Prefer the followed player's live (frame-interpolated) world position so
+  -- the camera follows the unit smoothly mid-walk, instead of snapping to the
+  -- next tile destination published by the move animation. The unit handle's
+  -- get_position() is updated continuously by the host during
+  -- start_move_by_direction, which gives the camera free smooth follow.
+  local board_scene = state and state.board_scene or nil
+  if board_scene == nil then
+    return nil
+  end
+  local units_by_player_id = board_scene.units_by_player_id
+  if type(units_by_player_id) ~= "table" then
+    return nil
+  end
+  return unit_position.read_unit_position(units_by_player_id[player_id])
+end
+
 local function _resolve_follow_target_position(state, player_id)
+  local live_pos = _resolve_followed_unit_live_position(state, player_id)
+  if live_pos ~= nil then
+    return live_pos
+  end
   local followed_pos = runtime_state.get_follow_target_position(state, player_id)
   if followed_pos ~= nil then
     return followed_pos

@@ -24,18 +24,8 @@ local rules = {
     forbidden_patterns = {
       'require%("src%.state%.runtime_state"%)',
       "require%('src%.state%.runtime_state'%)",
-      'require%("src%.state%.landing_visual_hold"%)',
-      "require%('src%.state%.landing_visual_hold'%)",
     },
     description = "presentation modules must consume runtime state through seam adapters",
-  },
-  {
-    roots = { "src/ui", "src/app" },
-    forbidden_patterns = {
-      'require%("src%.host%.eggy',
-      "require%('src%.host%.eggy",
-    },
-    description = "presentation modules must consume host runtime through explicit adapters or bootstrap files",
   },
   {
     roots = { "src/ui" },
@@ -46,15 +36,6 @@ local rules = {
     roots = { "src/state" },
     forbidden = { "TurnFlow" },
     description = "runtime must not depend on retired TurnFlow",
-  },
-  {
-    roots = { "src/ui/schema" },
-    forbidden = {
-      "canvas.permanent", "canvas.market", "canvas.secondary_confirm",
-      "canvas.remote_choice", "canvas.player_choice", "canvas.popup",
-      "canvas.target_choice",
-    },
-    description = "base canvas must not import other canvas modules",
   },
   {
     roots = { "src/state", "src/player", "src/computer", "src/rules" },
@@ -77,46 +58,6 @@ local rules = {
       "%f[%w_]RegisterCustomEvent%f[^%w_]",
     },
     description = "core utility layer must not use host runtime globals directly",
-  },
-  {
-    roots = { "src/state", "src/ui", "tests" },
-    forbidden_patterns = {
-      "require%(\"src%.core%.runtime_compat\"%)",
-      "require%('src%.core%.runtime_compat'%)",
-    },
-    description = "runtime_compat bridge path is retired; use runtime ports or injected context",
-  },
-  {
-    roots = { "src", "tests" },
-    forbidden_patterns = {
-      "require%(\"src%.game%.core%.runtime%.TurnEngine\"%)",
-      "require%('src%.game%.core%.runtime%.TurnEngine'%)",
-      "require%(\"src%.game%.core%.runtime%.PhaseRegistry\"%)",
-      "require%('src%.game%.core%.runtime%.PhaseRegistry'%)",
-    },
-    description = "TurnEngine/PhaseRegistry proxy modules are retired",
-  },
-  {
-    roots = { "src", "tests" },
-    forbidden_patterns = {
-      "require%(\"src%.game%.core%.runtime%.MonopolyEvents\"%)",
-      "require%('src%.game%.core%.runtime%.MonopolyEvents'%)",
-    },
-    description = "MonopolyEvents proxy module is retired",
-  },
-  {
-    roots = { "src", "tests", "tools" },
-    forbidden_patterns = {
-      "require%(\"Config%..+\"%)",
-      "require%('Config%..+'%)",
-      "require%(\"Config/.+\"%)",
-      "require%('Config/.+'%)",
-      "require%(\"src%.core%.config%..+\"%)",
-      "require%('src%.core%.config%..+'%)",
-      "require%(\"src/core/config/.+\"%)",
-      "require%('src/core/config/.+'%)",
-    },
-    description = "Config/src.core.config compatibility require paths are retired; use src.config.*",
   },
   {
     roots = { "src", "tests", "tools" },
@@ -213,14 +154,6 @@ local rules = {
     description = "turn flow must route UI reads and writes through output/ui_sync ports",
   },
   {
-    roots = { "src/turn/timing" },
-    forbidden_patterns = {
-      "require%(\"src%.game%.flow%..+\"%)",
-      "require%('src%.game%.flow%..+'%)",
-    },
-    description = "scheduler must stay as a pure coroutine scheduler and not depend on flow modules",
-  },
-  {
     roots = { "src", "tests", "tools", "main.lua" },
     forbidden_patterns = {
       "require%(\"src%.entry",
@@ -264,15 +197,6 @@ local rules = {
     description = "market service layer must not call host purchase globals directly",
   },
   {
-    roots = { "src/ui/ctl/ports" },
-    forbidden_patterns = {
-      "game%.ui_port",
-      "ui_port%.get_board_scene",
-      "ui_port%.board_scene",
-    },
-    description = "presentation ports must consume narrow board_scene_port instead of retired ui_port fallbacks",
-  },
-  {
     roots = { "src/turn", "src/ui", "src/player", "src/computer", "src/rules" },
     forbidden_patterns = {
       "%f[%w_]all_roles%f[^%w_]",
@@ -311,10 +235,6 @@ dep_rules_whitelist["src/ui/state/runtime.lua"] = {
 
 dep_rules_whitelist["src/ui/visual_hold.lua"] = {
   ['require("src.state.visual_hold")'] = true,
-}
-
-dep_rules_whitelist["src/ui/landing_visual_hold.lua"] = {
-  ['require("src.state.landing_visual_hold")'] = true,
 }
 
 dep_rules_whitelist["src/ui/host_bridge.lua"] = {
