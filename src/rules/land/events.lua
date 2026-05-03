@@ -29,7 +29,7 @@ local function _publish_to_feed(game, result, payload)
   end
   local text = payload.text
   if _CASH_RESULT_EVENTS[result.event] then
-    text = "💰 " .. text
+    text = "￥ " .. text
   end
   event_feed.publish(game, {
     kind = ef_kind,

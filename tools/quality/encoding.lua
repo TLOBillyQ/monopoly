@@ -242,6 +242,20 @@ local function _scan_file(file_path)
     return violations
   end
 
+  for byte_offset, codepoint in utf8.codes(content) do
+    if codepoint >= 0x10000 then
+      local line_number, column_number = _byte_offset_to_line_column(content, byte_offset)
+      violations[#violations + 1] = {
+        path = normalized_path,
+        line = line_number,
+        column = column_number,
+        kind = "non_bmp",
+        codepoint = codepoint,
+        char = utf8.char(codepoint),
+      }
+    end
+  end
+
   local line_number = 0
   for line in (content .. "\n"):gmatch("(.-)\n") do
     line_number = line_number + 1
@@ -294,6 +308,19 @@ local function _format_violation(violation)
       "检测到 UTF-8 BOM，Lua 源文件不允许携带 BOM",
       "UTF-8 BOM is not allowed for Lua source files"
     )
+  end
+
+  if violation.kind == "non_bmp" then
+    return prefix .. ": "
+      .. _text(
+        "检测到非 BMP 字符（Eggy Lua 加载器不接受 4 字节 UTF-8）",
+        "non-BMP character (Eggy Lua loader rejects 4-byte UTF-8)"
+      )
+      .. " U+"
+      .. string.format("%04X", violation.codepoint or 0)
+      .. ' "'
+      .. tostring(violation.char or "")
+      .. '"'
   end
 
   return prefix .. ": "

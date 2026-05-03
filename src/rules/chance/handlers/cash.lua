@@ -22,7 +22,7 @@ function cash_handlers.register(handlers, common)
           player = p,
           card = card,
           effect = card.effect,
-          text = "💰 " .. p.name .. " 获得 " .. number_utils.format_integer_part(delta) .. " 金币",
+          text = "￥ " .. p.name .. " 获得 " .. number_utils.format_integer_part(delta) .. " 金币",
         })
       end)
       return
@@ -34,7 +34,7 @@ function cash_handlers.register(handlers, common)
       player = player,
       card = card,
       effect = card.effect,
-      text = "💰 " .. player.name .. " 获得 " .. number_utils.format_integer_part(delta) .. " 金币",
+      text = "￥ " .. player.name .. " 获得 " .. number_utils.format_integer_part(delta) .. " 金币",
     })
   end
 
@@ -48,7 +48,7 @@ function cash_handlers.register(handlers, common)
           player = p,
           card = card,
           effect = card.effect,
-          text = "💰 " .. p.name .. " 支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
+          text = "￥ " .. p.name .. " 支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
         })
       end)
       return
@@ -61,7 +61,7 @@ function cash_handlers.register(handlers, common)
       player = player,
       card = card,
       effect = card.effect,
-      text = "💰 " .. player.name .. " 支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
+      text = "￥ " .. player.name .. " 支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
     })
   end
 
@@ -76,7 +76,7 @@ function cash_handlers.register(handlers, common)
           player = p,
           card = card,
           effect = card.effect,
-          text = "💰 " .. p.name .. " 按比例支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
+          text = "￥ " .. p.name .. " 按比例支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
         })
       end)
       return
@@ -90,7 +90,7 @@ function cash_handlers.register(handlers, common)
       player = player,
       card = card,
       effect = card.effect,
-      text = "💰 " .. player.name .. " 按比例支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
+      text = "￥ " .. player.name .. " 按比例支付 " .. number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
     })
   end
 
@@ -113,7 +113,7 @@ function cash_handlers.register(handlers, common)
       player = player,
       card = card,
       effect = card.effect,
-      text = "💰 " .. player.name .. " 向每位玩家支付 " .. number_utils.format_integer_part(card.amount),
+      text = "￥ " .. player.name .. " 向每位玩家支付 " .. number_utils.format_integer_part(card.amount),
     })
   end
 
@@ -144,7 +144,7 @@ function cash_handlers.register(handlers, common)
       player = player,
       card = card,
       effect = card.effect,
-      text = "💰 " .. player.name .. " 收取每位玩家 " .. number_utils.format_integer_part(card.amount),
+      text = "￥ " .. player.name .. " 收取每位玩家 " .. number_utils.format_integer_part(card.amount),
     })
   end
 end
