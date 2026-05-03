@@ -180,7 +180,7 @@ describe("scrap4lua_contract", function()
     assert.is_nil(expanded:find("src.rules", 1, true),
       "find should not expand retired historical aliases to current roots")
 
-    local doc = assert(common.read_file("docs/architecture/scrap4lua.md"))
+    local doc = assert(common.read_file("docs/guides/semantic-navigation.md"))
     assert.is_nil(doc:find("历史搜索词 `src.game.*`", 1, true),
       "scrap4lua doc should not advertise retired historical search terms")
   end)

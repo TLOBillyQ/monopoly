@@ -278,7 +278,7 @@ end
 
 local function main(args)
   local options = _parse_args(args or {})
-  local design_dir = common.join_path(env.repo_root, "docs/design")
+  local design_dir = common.join_path(env.repo_root, "docs/product/design-source")
   if not common.is_dir(design_dir) then
     design_dir = common.join_path(env.repo_root, "design")
   end

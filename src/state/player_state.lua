@@ -5,5 +5,5 @@
 --
 -- This empty table is kept so `src/state/game_state.lua` can still `require` it
 -- and call `_install_mixin(...)` as a no-op, preserving the existing wiring.
--- See ADR docs/architecture/adr/0001-seven-layer-with-foundation.md (D6).
+-- See ADR docs/decisions/0001-seven-layer-with-foundation.md (D6).
 return {}

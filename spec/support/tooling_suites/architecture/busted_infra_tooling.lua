@@ -28,7 +28,7 @@ local function _test_log_warns_handler_syntax_valid()
 end
 
 local function _test_behavior_warns_data_has_entries()
-  local chunk, err = loadfile("docs/architecture/behavior_warns_data.lua")
+  local chunk, err = loadfile("docs/reports/behavior_warns_data.lua")
   _assert(chunk ~= nil, "behavior_warns_data.lua should load: " .. tostring(err))
   local data = chunk()
   _assert(type(data) == "table", "behavior_warns_data should return a table")

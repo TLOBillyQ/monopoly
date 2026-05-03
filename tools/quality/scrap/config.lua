@@ -29,7 +29,7 @@ return {
     {
       name = "doc",
       kind = "doc",
-      roots = { "docs/architecture" },
+      roots = { "docs/architecture", "docs/decisions", "docs/guides", "docs/reports", "docs/reference" },
       include = { ".md" },
       exclude = { "tmp/", "vendor/", ".git/" },
       extract = {

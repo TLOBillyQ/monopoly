@@ -528,12 +528,12 @@ local function _test_update_api_writes_changelog_into_docs_eggy_api_dir()
   local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/update_api.lua")))
   _assert_contains(
     script_text,
-    'docs/eggy/api/changelog.md',
-    "update_api should keep the changelog under docs/eggy/api"
+    'docs/reference/eggy/api/changelog.md',
+    "update_api should keep the changelog under docs/reference/eggy/api"
   )
   _assert_not_contains(
     script_text,
-    'docs/eggy/api_changelog.md',
+    'docs/reference/eggy/api_changelog.md',
     "update_api should not write changelog beside the api directory"
   )
 end
@@ -564,7 +564,7 @@ local function _test_update_api_updates_docs_and_changelog_when_api_changes()
   _with_ascii_tmp("update_api_api_changes", function(tmp_root)
     local fixture_root = common.join_path(tmp_root, "update_api_api_changes")
     local new_path = common.join_path(fixture_root, "EggyAPI.lua")
-    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local doc_dir = common.join_path(fixture_root, "docs/reference/eggy/api")
     local changelog_path = common.join_path(doc_dir, "changelog.md")
 
     _init_git_repo(fixture_root)
@@ -594,7 +594,7 @@ local function _test_update_api_reports_extra_doc_entries_when_check_fails()
   _with_ascii_tmp("update_api_extra_doc", function(tmp_root)
     local fixture_root = common.join_path(tmp_root, "update_api_extra_doc")
     local new_path = common.join_path(fixture_root, "EggyAPI.lua")
-    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local doc_dir = common.join_path(fixture_root, "docs/reference/eggy/api")
     local changelog_path = common.join_path(doc_dir, "changelog.md")
     local extra_doc_path = common.join_path(doc_dir, "zz_extra.md")
 
@@ -624,7 +624,7 @@ local function _test_update_api_skips_all_writes_when_api_unchanged()
   _with_ascii_tmp("update_api_no_change", function(tmp_root)
     local fixture_root = common.join_path(tmp_root, "update_api_no_change")
     local new_path = common.join_path(fixture_root, "EggyAPI.lua")
-    local doc_dir = common.join_path(fixture_root, "docs/eggy/api")
+    local doc_dir = common.join_path(fixture_root, "docs/reference/eggy/api")
     local changelog_path = common.join_path(doc_dir, "changelog.md")
 
     _init_git_repo(fixture_root)

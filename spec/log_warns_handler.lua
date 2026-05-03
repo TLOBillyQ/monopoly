@@ -10,13 +10,13 @@
 --- threshold are flagged inline as `# SLOW <ms>ms <name>` and appear in the
 --- suite-end `# slow summary:` block sorted by duration desc.
 ---
---- Whitelist source: docs/architecture/behavior_warns_data.lua
+--- Whitelist source: docs/reports/behavior_warns_data.lua
 
 local log_capture_ok, log_capture = pcall(require, "spec.support.log_capture")
 if not log_capture_ok then
   log_capture = { replay = function(_, _) end }
 end
-local warn_data = require("docs.architecture.behavior_warns_data")
+local warn_data = require("docs.reports.behavior_warns_data")
 
 local _DEFAULT_SLOW_MS = 500
 

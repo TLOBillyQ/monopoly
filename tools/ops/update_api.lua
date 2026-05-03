@@ -24,8 +24,8 @@ local function _fail(message)
 end
 
 local DEFAULT_NEW = common.join_path(env.repo_root, "EggyAPI.lua")
-local DEFAULT_DOC_DIR = common.join_path(env.repo_root, "docs/eggy/api")
-local DEFAULT_CHANGELOG = common.join_path(env.repo_root, "docs/eggy/api/changelog.md")
+local DEFAULT_DOC_DIR = common.join_path(env.repo_root, "docs/reference/eggy/api")
+local DEFAULT_CHANGELOG = common.join_path(env.repo_root, "docs/reference/eggy/api/changelog.md")
 local DEFAULT_META_FILE = common.join_path(env.repo_root, "meta/luals_host.lua")
 
 local function _trim(text)
@@ -971,7 +971,7 @@ local function _extract_api_info(text)
     overloads = {},
   }
 
-  for i, line in ipairs(lines) do
+  for _, line in ipairs(lines) do
     _trim(line)
 
     -- Parse @alias

@@ -181,7 +181,7 @@ local function _test_find_keeps_query_without_historical_aliases()
   assert(expanded:find("src.rules", 1, true) == nil,
     "find should not expand retired historical aliases to current roots")
 
-  local doc = assert(common.read_file("docs/architecture/scrap4lua.md"))
+  local doc = assert(common.read_file("docs/guides/semantic-navigation.md"))
   assert(doc:find("历史搜索词 `src.game.*`", 1, true) == nil,
     "scrap4lua doc should not advertise retired historical search terms")
 end

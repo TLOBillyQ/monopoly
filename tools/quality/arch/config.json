@@ -16,7 +16,7 @@
   "component_rules": [
     {
       "_governance": {
-        "governance_anchor": "docs/architecture/adr/0001-seven-layer-with-foundation.md#d7",
+        "governance_anchor": "docs/decisions/0001-seven-layer-with-foundation.md#d7",
         "retain_reason": "host.global_aliases is the explicit cross-layer seam to Eggy host runtime aliases",
         "review_cadence": "per-milestone"
       },
@@ -28,7 +28,7 @@
     },
     {
       "_governance": {
-        "governance_anchor": "docs/architecture/adr/0001-seven-layer-with-foundation.md#d7",
+        "governance_anchor": "docs/decisions/0001-seven-layer-with-foundation.md#d7",
         "retain_reason": "config runtime refs/constants and rules.vehicle bridge to Eggy host runtime; classify as host for arch parity",
         "review_cadence": "per-milestone"
       },
