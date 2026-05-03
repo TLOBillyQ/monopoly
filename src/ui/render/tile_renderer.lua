@@ -45,12 +45,12 @@ local function _render_price(unit, cfg, tile_id, is_land, owner_name, level)
   if owner_name then
     local rent = _rent_for_level(cfg, level)
     if rent and rent > 0 then
-      text = owner_name .. "\n踩一次 " .. tostring(rent)
+      text = owner_name .. "\n租 " .. tostring(rent)
     else
       text = owner_name
     end
   else
-    text = "价格：" .. tostring(cfg.price)
+    text = "售 " .. tostring(cfg.price)
   end
   if _set_billboard_text(price_node, text) then
     return
