@@ -23,6 +23,13 @@ local function _assert_contains(text, expected, message)
   end
 end
 
+local function _captured_args(value)
+  if value == nil then
+    error("vendor CLI stub was not called")
+  end
+  return value
+end
+
 local function _temp_path(name)
   return common.make_temp_path(name, ".json")
 end
@@ -83,10 +90,11 @@ local function _test_index_forwards_resolved_out_path_to_vendor_cli()
     assert(exit_code == 0, "index wrapper should succeed")
   end)
 
-  assert(captured_args[1] == "index", "wrapper should forward index command")
-  assert(captured_args[2] == "--config", "wrapper should always forward config flag")
-  assert(captured_args[4] == "--out", "wrapper should forward out flag")
-  assert(captured_args[5] == scrap.default_tmp_root() .. "/demo.json",
+  local args = _captured_args(captured_args)
+  assert(args[1] == "index", "wrapper should forward index command")
+  assert(args[2] == "--config", "wrapper should always forward config flag")
+  assert(args[4] == "--out", "wrapper should forward out flag")
+  assert(args[5] == scrap.default_tmp_root() .. "/demo.json",
     "wrapper should resolve tmp alias before calling vendor cli")
 end
 
@@ -105,11 +113,12 @@ local function _test_find_forwards_query_and_limit_to_vendor_cli()
     assert(exit_code == 0, "find wrapper should succeed")
   end)
 
-  assert(captured_args[1] == "find", "wrapper should forward find command")
-  assert(captured_args[4] == "--query", "wrapper should forward query flag")
-  assert(captured_args[5] == "bankruptcy feedback", "wrapper should preserve query text")
-  assert(captured_args[6] == "--limit", "wrapper should forward limit flag")
-  assert(captured_args[7] == "7", "wrapper should preserve limit value")
+  local args = _captured_args(captured_args)
+  assert(args[1] == "find", "wrapper should forward find command")
+  assert(args[4] == "--query", "wrapper should forward query flag")
+  assert(args[5] == "bankruptcy feedback", "wrapper should preserve query text")
+  assert(args[6] == "--limit", "wrapper should forward limit flag")
+  assert(args[7] == "7", "wrapper should preserve limit value")
 end
 
 local function _test_bare_cli_defaults_to_viewer_contract()
@@ -132,11 +141,12 @@ local function _test_bare_cli_defaults_to_viewer_contract()
     assert(exit_code == 0, "bare cli wrapper should succeed")
   end)
 
-  assert(captured_args[1] == "viewer", "bare cli should default to viewer command")
-  assert(captured_args[4] == "--out-dir", "bare cli should forward viewer output dir")
-  assert(captured_args[5] == common.join_path(scrap.default_tmp_root(), "scrap_view"),
+  local args = _captured_args(captured_args)
+  assert(args[1] == "viewer", "bare cli should default to viewer command")
+  assert(args[4] == "--out-dir", "bare cli should forward viewer output dir")
+  assert(args[5] == common.join_path(scrap.default_tmp_root(), "scrap_view"),
     "bare cli should resolve default viewer dir under scrap tmp root")
-  assert(captured_args[6] == "--open", "bare cli should request viewer open by default")
+  assert(args[6] == "--open", "bare cli should request viewer open by default")
   assert(captured_has_open_path == true, "bare cli should pass open_path through to vendor cli")
 end
 
@@ -193,6 +203,14 @@ local function _test_find_hits_bankruptcy_feedback_port()
     end
   end
   assert(found == true, "bankruptcy feedback query should hit bankruptcy_feedback_port")
+end
+
+local function _test_json_reader_decodes_unicode_escapes()
+  local shared_json_reader = require("shared.lib.json_reader")
+  local decoded = shared_json_reader.decode('{"amp":"\\u0026","face":"\\uD83D\\uDE00"}')
+
+  assert(decoded.amp == "&", "json reader should decode BMP unicode escapes")
+  assert(decoded.face == "😀", "json reader should decode surrogate pair unicode escapes")
 end
 
 local function _test_viewer_exports_static_bundle_from_generated_index()
@@ -264,6 +282,7 @@ return {
     { name = "index_writes_json_contract", run = _test_index_writes_json_contract },
     { name = "find_keeps_query_without_historical_aliases", run = _test_find_keeps_query_without_historical_aliases },
     { name = "find_hits_bankruptcy_feedback_port", run = _test_find_hits_bankruptcy_feedback_port },
+    { name = "json_reader_decodes_unicode_escapes", run = _test_json_reader_decodes_unicode_escapes },
     { name = "viewer_exports_static_bundle_from_generated_index", run = _test_viewer_exports_static_bundle_from_generated_index },
     { name = "viewer_supports_in_json_input", run = _test_viewer_supports_in_json_input },
     { name = "bare_cli_defaults_to_viewer_bundle", run = _test_bare_cli_defaults_to_viewer_bundle },

@@ -68,12 +68,12 @@ end
 local function _parse_json_response(text)
   local ok, decoded = pcall(require("shared.lib.json_reader").decode, text)
   if not ok then
-    return nil
+    return nil, tostring(decoded)
   end
   if type(decoded) ~= "table" then
-    return nil
+    return nil, _text("LOC 引擎返回的 JSON 不是对象", "LOC engine returned non-object JSON")
   end
-  return decoded
+  return decoded, nil
 end
 
 local function _run_go_engine(command_name, payload, env)
