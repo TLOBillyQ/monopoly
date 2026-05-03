@@ -7,7 +7,7 @@ last_verified: 2026-05-04
 
 # docs/ 索引
 
-本 `docs/` 按四轴组织：**architecture**（架构契约）/ **decisions**（ADR）/ **guides**（工具指南）/ **reports**（生成报告）/ **reference**（第三方参考）/ **product**（产品规格）。
+本 `docs/` 按六轴组织：**architecture**（架构契约）/ **decisions**（ADR）/ **guides**（工具指南）/ **reports**（生成报告）/ **reference**（第三方参考）/ **product**（产品规格）。
 
 ## 任务 → 文档
 
