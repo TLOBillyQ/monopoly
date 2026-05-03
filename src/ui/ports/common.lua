@@ -1,6 +1,6 @@
 local logger = require("src.foundation.log.logger")
 local number_utils = require("src.foundation.lang.number")
-local logger_utils = require("src.foundation.log.utils")
+local ui_runtime_state = require("src.ui.state.runtime")
 
 local common = {}
 
@@ -9,7 +9,7 @@ function common.build_log_prefix()
 end
 
 function common.log_once(state, level, key, ...)
-  logger_utils.log_once(state, level, key, ...)
+  ui_runtime_state.log_once(state, level, key, ...)
 end
 
 function common.log_status(view)

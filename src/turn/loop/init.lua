@@ -2,7 +2,6 @@ local items_cfg = require("src.config.content.items")
 local debug_flags = require("src.config.gameplay.debug_flags")
 local timing = require("src.config.gameplay.timing")
 local logger = require("src.foundation.log.logger")
-local logger_utils = require("src.foundation.log.utils")
 local auto_play_port = require("src.rules.ports.auto_play")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local gameplay_loop_ports = require("src.turn.loop.ports")
@@ -136,7 +135,7 @@ local function _log_missing_auto_choice_action(state, ctx)
   if state.auto_runner.waiting_for_interval == true then
     return
   end
-  logger_utils.log_once(
+  runtime_state.log_once(
     state,
     "warn",
     "auto_runner_choice_no_action_" .. tostring(ctx.pending_choice.id),

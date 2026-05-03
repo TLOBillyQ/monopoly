@@ -28,6 +28,10 @@ function runtime_state.ensure_debug_runtime(state)
   return _runtime_state().ensure_debug_runtime(state)
 end
 
+function runtime_state.log_once(state, level, key, ...)
+  return _runtime_state().log_once(state, level, key, ...)
+end
+
 function runtime_state.is_ui_dirty(state)
   return _runtime_state().is_ui_dirty(state)
 end
