@@ -237,9 +237,7 @@ function Write-MainLua {
         [string]$SourcePath,
         [string]$TargetPath,
         [string]$BuildModeValue,
-        [string]$StartupProfileValue,
-        [string]$StartupProfileSource,
-        [string]$StartupProfileModule
+        [string]$StartupProfileValue
     )
 
     $prefix_lines = @()
@@ -248,12 +246,6 @@ function Write-MainLua {
     }
     if (-not [string]::IsNullOrWhiteSpace($StartupProfileValue)) {
         $prefix_lines += "STARTUP_TEST_PROFILE = ""$(Escape-LuaDoubleQuotedString $StartupProfileValue)"""
-    }
-    if (-not [string]::IsNullOrWhiteSpace($StartupProfileSource)) {
-        $prefix_lines += "STARTUP_PROFILE_SOURCE = ""$(Escape-LuaDoubleQuotedString $StartupProfileSource)"""
-    }
-    if (-not [string]::IsNullOrWhiteSpace($StartupProfileModule)) {
-        $prefix_lines += "STARTUP_PROFILE_MODULE = ""$(Escape-LuaDoubleQuotedString $StartupProfileModule)"""
     }
 
     $target_parent = Split-Path -Parent $TargetPath
