@@ -13,6 +13,11 @@ local BUSTED_GLOBALS = {
   "pending",
 }
 
+-- luassert is callable via __call, so `assert(cond, msg)` keeps working while
+-- specs that use `assert.is_true` / `assert.is_function` also resolve outside busted.
+local _luassert = require("luassert")
+_G.assert = _luassert
+
 local contract_modules = {
   -- kept as tooling-support stubs: required by tooling lane suites for tooling_tests field
   "spec.support.tooling_suites.architecture.script_tools_contract",
@@ -196,6 +201,7 @@ local function _install_capture_globals(spec_file, suites, stack)
   _G.pending = function()
     return nil
   end
+  _G.assert = _luassert
 end
 
 local function _load_behavior_spec(spec_file)
