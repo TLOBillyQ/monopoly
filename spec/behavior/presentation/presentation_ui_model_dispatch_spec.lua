@@ -41,8 +41,6 @@ local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local host_runtime = require("src.host")
 local runtime_state = require("src.state.runtime_state")
-local target_choice_effects = require("src.ui.coord.target_choice_effects")
-local vec3 = require("fixtures.vec3")
 
 
 local function _ui_runtime(state)
@@ -54,7 +52,6 @@ local _build_popup_view_state = support.build_popup_view_state
 local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
 local _build_choice_modal_state = support.build_choice_modal_state
-local _build_target_pick_env = support.build_target_pick_env
 
 
 

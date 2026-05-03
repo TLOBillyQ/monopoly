@@ -53,7 +53,6 @@ function tick_steps.step_tick_timeouts(game, state, dt, ports, dispatch_action_w
   target_select_timer.step(game, state, dt)
   ui_sync_ports.step_choice_timeout(game, state, dt)
   ui_sync_ports.step_modal_timeout(game, state, dt)
-  ui_sync_ports.step_target_selection(game, state, dt)
   turn_timer_policy.update_action_button_timer({
     game = game,
     state = state,

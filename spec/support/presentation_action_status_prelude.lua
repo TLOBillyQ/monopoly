@@ -14,7 +14,6 @@ local M = {
   build_role_with_events = support.build_role_with_events,
   has_event = support.has_event,
   build_choice_modal_state = support.build_choice_modal_state,
-  build_target_pick_env = support.build_target_pick_env,
   tick_timeout = support.tick_timeout,
   gameplay_loop = support.gameplay_loop,
 }

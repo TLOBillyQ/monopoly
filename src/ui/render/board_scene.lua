@@ -5,11 +5,6 @@ local function _new_scene()
   return {
     building_unit_groups = {},
     units_by_player_id = {},
-    target_pick = {
-      tile_index_by_unit_id = {},
-      marker_unit_id = nil,
-      arrow_unit = nil,
-    },
   }
 end
 
@@ -44,16 +39,6 @@ local function _build_unit_names(tile_ids)
   return tile_names, building_names
 end
 
-local function _bind_tile_target_index(scene, tile, index)
-  if not (LuaAPI and type(LuaAPI.get_unit_id) == "function") then
-    return
-  end
-  local ok_id, tile_unit_id = pcall(LuaAPI.get_unit_id, tile)
-  if ok_id and tile_unit_id ~= nil then
-    scene.target_pick.tile_index_by_unit_id[tile_unit_id] = index
-  end
-end
-
 local function _bind_building(scene, building, index)
   if building == nil then
     return
@@ -72,32 +57,8 @@ local function _bind_tiles_and_buildings(scene, tile_ids)
   for i = 1, #tile_ids do
     local tile = scene.tiles[i]
     tile.set_physics_active(false)
-    _bind_tile_target_index(scene, tile, i)
     _bind_building(scene, scene.buildings[i], i)
   end
-end
-
-local function _hide_unit(unit)
-  if unit ~= nil and type(unit.set_model_visible) == "function" then
-    unit.set_model_visible(false)
-  end
-end
-
-local function _bind_target_marker(scene)
-  if not (LuaAPI and type(LuaAPI.query_unit) == "function") then
-    return
-  end
-  local marker = LuaAPI.query_unit("可选择地块")
-  if marker ~= nil and type(LuaAPI.get_unit_id) == "function" then
-    local ok_marker_id, marker_unit_id = pcall(LuaAPI.get_unit_id, marker)
-    if ok_marker_id then
-      scene.target_pick.marker_unit_id = marker_unit_id
-    end
-  end
-  _hide_unit(marker)
-  local arrow = LuaAPI.query_unit("选择地块箭头")
-  scene.target_pick.arrow_unit = arrow
-  _hide_unit(arrow)
 end
 
 local function _bind_ground(scene)
@@ -115,7 +76,6 @@ function board_scene.init(state, map_cfg, game)
   local scene = _new_scene()
   _bind_player_units(scene, game.players)
   _bind_tiles_and_buildings(scene, _resolve_tile_ids(map_cfg))
-  _bind_target_marker(scene)
   _bind_ground(scene)
 
   state.board_scene = scene

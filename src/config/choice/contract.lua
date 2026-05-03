@@ -19,8 +19,6 @@ choice_contract.explicit_fields = {
   "confirm_body",
   "uses_item_slots",
   "pre_confirm_before_slot_pick",
-  "uses_target_picker",
-  "target_picker_owner_role_id",
   "target_slot_layout",
   "active_tab",
   "page_index",
@@ -56,18 +54,6 @@ function choice_contract.resolve_owner_or_meta_role_id(choice)
     return owner_role_id
   end
   return choice_contract.resolve_meta_player_role_id(choice)
-end
-
-function choice_contract.resolve_target_picker_owner_role_id(choice)
-  local owner_role_id = _resolve_role_id_field(choice, "target_picker_owner_role_id")
-  if owner_role_id ~= nil then
-    return owner_role_id
-  end
-  return choice_contract.resolve_owner_role_id(choice)
-end
-
-function choice_contract.uses_target_picker(choice)
-  return choice ~= nil and choice.uses_target_picker == true
 end
 
 return choice_contract

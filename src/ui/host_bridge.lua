@@ -28,14 +28,6 @@ function host_bridge.enqueue_tip(...)
   return _host_runtime().enqueue_tip(...)
 end
 
-function host_bridge.register_target_pick_listener(listener)
-  return _host_runtime().register_target_pick_listener(listener)
-end
-
-function host_bridge.unregister_target_pick_listener(token)
-  return _host_runtime().unregister_target_pick_listener(token)
-end
-
 function host_bridge.get_unit_id(unit)
   return _host_runtime().get_unit_id(unit)
 end

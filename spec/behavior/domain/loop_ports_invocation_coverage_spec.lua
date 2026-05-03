@@ -51,8 +51,7 @@ describe("domain loop ports base invocation coverage", function()
     local ports = gameplay_loop_ports.resolve(nil)
     local expected = {
       "apply_input_lock", "step_choice_timeout", "step_modal_timeout",
-      "step_target_selection", "update_countdown", "resolve_ui_gate",
-      "build_model", "refresh_from_dirty", "follow_camera",
+      "update_countdown", "resolve_ui_gate", "build_model", "refresh_from_dirty", "follow_camera",
       "sync_camera_position", "get_ui_state", "is_input_blocked",
       "is_popup_active", "is_choice_active", "is_market_active",
       "get_popup_owner_index", "set_input_blocked",

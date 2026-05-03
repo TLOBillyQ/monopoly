@@ -238,8 +238,6 @@ function handlers.handle_roadblock(game, player, item_id, context)
         kind = "roadblock_target",
         route_key = "target",
         owner_role_id = inner_player.id,
-        uses_target_picker = true,
-        target_picker_owner_role_id = inner_player.id,
         title = "路障卡：选择位置",
         body_lines = body_lines,
         options = options,

@@ -47,8 +47,6 @@ describe("presentation_choice_routes", function()
         kind = "roadblock_target",
         route_key = "target",
         owner_role_id = 1,
-        uses_target_picker = true,
-        target_picker_owner_role_id = 1,
         title = "选位置",
         body = "body",
         options = {

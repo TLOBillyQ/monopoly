@@ -125,8 +125,6 @@ describe("usecase_boundary_contract", function()
       confirm_body = "你选的是：A",
       uses_item_slots = false,
       pre_confirm_before_slot_pick = false,
-      uses_target_picker = true,
-      target_picker_owner_role_id = 9,
       active_tab = "skin",
       page_index = 2,
       page_count = 3,
@@ -140,7 +138,6 @@ describe("usecase_boundary_contract", function()
     assert.equals("target", target.route_key, "contract should copy route_key")
     assert.equals(false, target.pre_confirm_on_select, "contract should copy select pre-confirm flag")
     assert.equals(8, target.owner_role_id, "contract should copy owner_role_id")
-    assert.equals(9, target.target_picker_owner_role_id, "contract should copy target picker owner")
     assert.equals(3, target.page_count, "contract should copy market paging fields")
     assert.equals(nil, target.phase, "contract should keep phase in meta")
     assert.equals(nil, target.queue, "contract should keep queue in meta")

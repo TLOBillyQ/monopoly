@@ -1,6 +1,5 @@
 local shared = require("spec.support.shared_support")
 local ui_view = require("src.ui.coord.ui_runtime")
-local vec3 = require("fixtures.vec3")
 
 local _bind_ui_runtime = shared.bind_ui_runtime
 
@@ -117,100 +116,6 @@ function M.build_choice_modal_state()
     return { node }
   end
   return state, nodes, query_nodes_by_name
-end
-
-function M.build_target_pick_env()
-  local state, nodes, query_nodes = M.build_choice_modal_state()
-  local choice = {
-    id = 99,
-    kind = "roadblock_target",
-    route_key = "target",
-    owner_role_id = 1,
-    uses_target_picker = true,
-    target_picker_owner_role_id = 1,
-    title = "选位置",
-    body = "body",
-    options = {
-      { id = 101, label = "A" },
-      { id = 102, label = "B" },
-      { id = 103, label = "C" },
-    },
-    allow_cancel = true,
-    meta = { player_id = 1 },
-  }
-  local game = {
-    turn = { pending_choice = choice },
-    current_player = function()
-      return { id = 1 }
-    end,
-  }
-
-  local tile_positions = {
-    [101] = vec3.with_sub_length(10, 0, 0),
-    [102] = vec3.with_sub_length(20, 0, 0),
-    [103] = vec3.with_sub_length(30, 0, 0),
-  }
-  local tile_unit_ids = {
-    [101] = 1101,
-    [102] = 1102,
-    [103] = 1103,
-  }
-  local tiles = {}
-  local tile_index_by_unit_id = {}
-  for option_id, pos in pairs(tile_positions) do
-    tiles[option_id] = {
-      get_position = function()
-        return pos
-      end,
-    }
-    tile_index_by_unit_id[tile_unit_ids[option_id]] = option_id
-  end
-  local arrow = {
-    visible = false,
-    last_position = nil,
-  }
-  arrow.set_model_visible = function(visible)
-    arrow.visible = visible == true
-  end
-  arrow.set_position = function(pos)
-    arrow.last_position = pos
-  end
-
-  state.game = game
-  state.ui_model = { choice = choice, current_player_id = 1 }
-  _bind_ui_runtime(state)
-  state.ui.choice_active = true
-  state.ui.active_choice_screen_key = "target"
-  state.ui.choice_screens.target.confirm_label = "确定"
-  state.ui.choice_screens.target.cancel_label = choice.cancel_label or "取消"
-  state.board_scene = {
-    tiles = tiles,
-    target_pick = {
-      marker_unit_id = 9001,
-      tile_index_by_unit_id = tile_index_by_unit_id,
-      arrow_unit = arrow,
-    },
-  }
-  state.turn_action_port = {
-    dispatched = {},
-    dispatch_action = function(_, _, action)
-      state.turn_action_port.dispatched[#state.turn_action_port.dispatched + 1] = action
-    end,
-    should_block_action = function()
-      return false
-    end,
-  }
-
-  return {
-    state = state,
-    nodes = nodes,
-    query_nodes = query_nodes,
-    choice = choice,
-    game = game,
-    tile_positions = tile_positions,
-    tile_unit_ids = tile_unit_ids,
-    arrow = arrow,
-  }
 end
 
 return M

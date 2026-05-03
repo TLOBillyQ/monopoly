@@ -35,7 +35,7 @@ function M.build(helpers)
           return complete.followup_cancel(game, choice)
         end,
       },
-      normalize_meta = normalize.target_picker_meta,
+      normalize_meta = normalize.item_target_meta,
       meta_validator = normalize.validate_item_owner_meta,
       normalize_action = function(_, _, action)
         return normalize.choice_action_option_id("roadblock_target", action)

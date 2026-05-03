@@ -5,7 +5,6 @@ local popup = require("src.ui.coord.popup")
 local market_presenter = require("src.ui.coord.market")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local logger = require("src.foundation.log.logger")
-local target_choice_effects = require("src.ui.coord.target_choice_effects")
 local runtime_state = require("src.ui.state.runtime")
 local ui_controls = require("src.ui.render.support.ui_controls")
 
@@ -78,7 +77,6 @@ local function _should_skip_reopen(state, screen_key, choice_id)
 end
 
 local function _open_market_choice(state, choice, choice_id, market_state)
-  target_choice_effects.leave(state, "open_market")
   market_presenter.open(state, choice, choice_id, market_state)
 end
 
@@ -101,7 +99,6 @@ local function _close_or_reset_inline_choice(state)
 end
 
 local function _open_base_inline_choice(state, choice)
-  target_choice_effects.leave(state, "open_base_inline")
   if choice_common.requires_item_slot_pre_confirm(choice) and not state._item_phase_confirmed then
     _open_item_phase_pre_confirm(state, choice)
     return true
@@ -116,11 +113,6 @@ end
 local function _open_regular_choice(state, choice, market_state, screen_key)
   state._suppress_item_slot_highlight_until_pick = nil
   choice_openers.open_choice_modal(state, choice, market_state)
-  if screen_key == "target" then
-    target_choice_effects.enter(state, choice)
-    return
-  end
-  target_choice_effects.leave(state, "open_non_target")
 end
 
 function modal_presenter.select_choice_option(state, option_id)
@@ -172,7 +164,6 @@ function modal_presenter.open_choice_modal(state, choice, market_state)
 end
 
 function modal_presenter.close_choice_modal(state)
-  target_choice_effects.leave(state, "close_choice_modal")
   local ui = state.ui
   if ui.choice_active then
     _reset_active_choice_screen(ui)

@@ -526,7 +526,6 @@ describe("presentation_market_panel", function()
   it("_test_modal_presenter_market_same_choice_id_still_refreshes_market_panel", function()
     local modal_presenter = require("src.ui.coord.modal")
     local market_presenter = require("src.ui.coord.market")
-    local target_choice_effects_local = require("src.ui.coord.target_choice_effects")
     local canvas_store = require("src.ui.state.canvas_store")
 
     local opened = 0
@@ -563,7 +562,6 @@ describe("presentation_market_panel", function()
       { target = market_presenter, key = "open", value = function()
         opened = opened + 1
       end },
-      { target = target_choice_effects_local, key = "leave", value = function() end },
       { target = canvas_store, key = "mark_dirty", value = function() end },
     }, function()
       modal_presenter.open_choice_modal(state, choice, market)

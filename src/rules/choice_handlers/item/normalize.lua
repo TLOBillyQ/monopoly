@@ -69,13 +69,6 @@ function normalize.owner_meta(choice_kind, meta, choice_spec)
   return normalized_meta
 end
 
-function normalize.target_picker_meta(_, meta, choice_spec)
-  local normalized_meta = normalize.owner_meta(choice_spec.kind, meta, choice_spec)
-  normalize_integer_field(normalized_meta, "item_id", choice_spec.kind)
-  choice_spec.target_picker_owner_role_id = choice_spec.target_picker_owner_role_id or normalized_meta.player_id
-  return normalized_meta
-end
-
 function normalize.item_phase_meta(_, meta, choice_spec)
   local normalized_meta = normalize.owner_meta(choice_spec.kind, meta, choice_spec)
   assert(type(normalized_meta.phase) == "string" and normalized_meta.phase ~= "",

@@ -38,7 +38,6 @@ local port_groups = {
     "apply_input_lock",
     "step_choice_timeout",
     "step_modal_timeout",
-    "step_target_selection",
     "update_countdown",
     "resolve_ui_gate",
     "build_model",

@@ -2,7 +2,6 @@ local ui_model_sync = require("src.ui.ports.ui_sync.model")
 local camera_sync = require("src.ui.ports.ui_sync.camera")
 local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
-local target_choice_effects = require("src.ui.coord.target_choice_effects")
 local modal = require("src.ui.coord.modal")
 local runtime_state = require("src.ui.state.runtime")
 
@@ -40,9 +39,6 @@ function ui_sync_ports.build(common)
     end,
     resolve_choice_ui_state = function(game, state, choice)
       return choice_ui_state.resolve_gate_state(game, state, choice)
-    end,
-    step_target_selection = function(game, state, dt)
-      return target_choice_effects.step(game, state, dt)
     end,
     build_model = ui_model_sync.build_model,
     refresh_from_dirty = function(game, state, dirty)

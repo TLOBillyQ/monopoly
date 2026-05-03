@@ -436,7 +436,7 @@ local profiles = {
         group = "combat_obstacle",
         goal = "roadblock_manual_target_setup",
         value = "core",
-        covers = { "roadblock", "target_picker" },
+        covers = { "roadblock", "target_choice" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
         players = {

@@ -23,6 +23,5 @@ M.build_popup_view_state = ui_fixture.build_popup_view_state
 M.build_role_with_events = ui_fixture.build_role_with_events
 M.has_event = ui_fixture.has_event
 M.build_choice_modal_state = ui_fixture.build_choice_modal_state
-M.build_target_pick_env = ui_fixture.build_target_pick_env
 
 return M

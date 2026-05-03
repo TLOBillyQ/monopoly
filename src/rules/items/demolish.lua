@@ -231,8 +231,6 @@ function demolish.use(game, player, distance, consume_fn, opts)
             kind = "demolish_target",
             route_key = "target",
             owner_role_id = player.id,
-            uses_target_picker = true,
-            target_picker_owner_role_id = player.id,
             title = title .. "：选择目标格子",
             body_lines = body_lines,
             options = arranged,

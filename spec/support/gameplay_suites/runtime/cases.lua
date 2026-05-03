@@ -187,8 +187,6 @@ local function _test_choice_resolver_normalizes_roadblock_action_before_execute(
     kind = "roadblock_target",
     route_key = "target",
     owner_role_id = p.id,
-    uses_target_picker = true,
-    target_picker_owner_role_id = p.id,
     options = { { id = 3, label = "上海路" } },
     meta = {
       player_id = p.id,

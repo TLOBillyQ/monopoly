@@ -9,8 +9,6 @@ local raycast = require("src.host.raycast")
 local sfx_runtime = require("src.host.sound")
 
 local host_runtime = {}
-local target_pick_listener_seq = 0
-local target_pick_listeners = {}
 
 function host_runtime.schedule(delay, fn)
   return runtime_ports.schedule(delay or 0, fn)
@@ -140,30 +138,6 @@ end
 
 function host_runtime.resolve_hit_position(hit)
   return raycast.resolve_hit_position(hit)
-end
-
-function host_runtime.register_target_pick_listener(handler)
-  if type(handler) ~= "function" then
-    return nil
-  end
-  target_pick_listener_seq = target_pick_listener_seq + 1
-  local token = target_pick_listener_seq
-  target_pick_listeners[token] = handler
-  return token
-end
-
-function host_runtime.unregister_target_pick_listener(token)
-  if token == nil then
-    return false
-  end
-  target_pick_listeners[token] = nil
-  return true
-end
-
-function host_runtime.emit_target_pick(payload)
-  for _, listener in pairs(target_pick_listeners) do
-    listener(payload)
-  end
 end
 
 return host_runtime
