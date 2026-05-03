@@ -15,25 +15,14 @@ local _ef_kind_map = {
   tax_paid = event_kinds.tax_paid,
 }
 
-local _CASH_RESULT_EVENTS = {
-  rent_paid = true,
-  rent_bankrupt = true,
-  tax_paid = true,
-  strong_card_used = true,
-}
-
 local function _publish_to_feed(game, result, payload)
   local ef_kind = _ef_kind_map[result.event]
   if not ef_kind or type(payload.text) ~= "string" then
     return
   end
-  local text = payload.text
-  if _CASH_RESULT_EVENTS[result.event] then
-    text = "￥ " .. text
-  end
   event_feed.publish(game, {
     kind = ef_kind,
-    text = text,
+    text = payload.text,
   })
 end
 
