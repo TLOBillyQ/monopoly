@@ -180,20 +180,14 @@ describe("presentation_player_panels", function()
       env.refresh()
       env.set_cash(1, 80)
       env.refresh()
-      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"] or "", "",
-        "cash delta label should stay empty until show delay elapses")
-      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false,
-        "cash delta label should stay hidden until show delay elapses")
-      _assert_eq(#scheduled, 1, "cash delta should schedule show once")
-      _assert_eq(scheduled[1].delay, timing.panel_cash_delta_show_delay_seconds,
-        "cash delta show delay should follow dedicated gameplay rule")
-      scheduled[1].cb()
-      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "-20", "cash delta should render negative text after show delay")
-      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "cash delta label should be visible after show delay")
-      _assert_eq(#scheduled, 2, "cash delta should schedule hide after show")
-      _assert_eq(scheduled[2].delay, timing.panel_cash_delta_visible_seconds,
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "-20",
+        "cash delta should render negative text immediately when show_delay=0")
+      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
+        "cash delta label should be visible immediately")
+      _assert_eq(#scheduled, 1, "cash delta should schedule hide once after immediate show")
+      _assert_eq(scheduled[1].delay, timing.panel_cash_delta_visible_seconds,
         "cash delta hide duration should follow dedicated gameplay rule")
-      scheduled[2].cb()
+      scheduled[1].cb()
       _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "cash delta label should clear after timeout")
       _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false, "cash delta label should hide after timeout")
     end)
@@ -213,20 +207,20 @@ describe("presentation_player_panels", function()
       env.refresh()
       env.set_cash(1, 120)
       env.refresh()
-      _assert_eq(#scheduled, 1, "cash delta should schedule show once")
-      _assert_eq(scheduled[1].delay, timing.panel_cash_delta_show_delay_seconds,
-        "cash delta show delay should follow dedicated gameplay rule")
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+40",
+        "cash delta should render positive text immediately when show_delay=0")
+      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
+        "cash delta label should be visible immediately")
+      _assert_eq(#scheduled, 1, "cash delta should schedule hide once after immediate show")
+      _assert_eq(scheduled[1].delay, timing.panel_cash_delta_visible_seconds,
+        "cash delta hide duration should follow dedicated gameplay rule")
       scheduled[1].cb()
-      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+40", "cash delta should render positive text after show delay")
-      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "cash delta label should be visible after show delay")
-      _assert_eq(#scheduled, 2, "cash delta should schedule hide after show")
-      scheduled[2].cb()
       _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "cash delta label should clear after timeout")
       _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false, "cash delta label should hide after timeout")
     end)
   end)
 
-  it("_test_panel_cash_delta_keeps_latest_when_changes_are_continuous", function()
+  it("_test_panel_cash_delta_accumulates_when_changes_are_continuous", function()
     local runtime_ports = require("src.foundation.ports.runtime_ports")
     local env = _new_cash_delta_presenter_env()
     local scheduled = {}
@@ -240,28 +234,28 @@ describe("presentation_player_panels", function()
       env.refresh()
       env.set_cash(1, 80)
       env.refresh()
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "-20",
+        "first change should display delta from anchor=100")
+      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
+        "first change should be visible")
+      _assert_eq(#scheduled, 1, "first change should schedule a hide")
       env.set_cash(1, 120)
       env.refresh()
-      _assert_eq(#scheduled, 2, "continuous changes should schedule two shows (older shows are cancelled by token bump)")
-      _assert_eq(scheduled[1].delay, timing.panel_cash_delta_show_delay_seconds,
-        "first scheduled call should be the cash delta show delay")
-      _assert_eq(scheduled[2].delay, timing.panel_cash_delta_show_delay_seconds,
-        "second scheduled call should also be the cash delta show delay")
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+20",
+        "accumulated delta from anchor=100 should display +20 (not +40)")
+      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
+        "label should remain visible during accumulation")
+      _assert_eq(#scheduled, 2, "second change should schedule a fresh hide; old hide cb is invalidated by token bump")
       scheduled[1].cb()
-      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"] or "", "",
-        "stale show callback should not display old delta")
-      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false,
-        "stale show callback should not flip visibility")
-      _assert_eq(#scheduled, 2, "stale show callback should not schedule a hide")
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+20",
+        "stale hide callback should not clear current label")
+      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
+        "stale hide callback should not flip visibility")
       scheduled[2].cb()
-      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+40", "latest cash delta text should win")
-      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true, "latest cash delta should stay visible")
-      _assert_eq(#scheduled, 3, "latest show callback should schedule a hide")
-      _assert_eq(scheduled[3].delay, timing.panel_cash_delta_visible_seconds,
-        "third scheduled call should be the cash delta hide duration")
-      scheduled[3].cb()
-      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "", "latest timer should clear latest delta")
-      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false, "latest timer should hide latest delta")
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "",
+        "latest hide should clear the accumulated label")
+      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false,
+        "latest hide should flip visibility off")
     end)
   end)
 
@@ -300,9 +294,7 @@ describe("presentation_player_panels", function()
         env.refresh()
         env.set_cash(1, 80)
         env.refresh()
-        assert(#scheduled == 1, "missing cash delta node should still schedule the show step")
-        scheduled[1].cb()
-        assert(#scheduled == 1, "missing cash delta node should not schedule a hide after a failed show")
+        assert(#scheduled == 0, "missing cash delta node should not schedule a hide when set_label fails")
       end)
     end)
 

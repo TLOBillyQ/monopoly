@@ -21,7 +21,6 @@ function common.emit_event(game, kind, payload)
     event_feed.publish(game, {
       kind = event_kinds.chance_card,
       text = payload.text,
-      tip = false,
     })
   end
 end
