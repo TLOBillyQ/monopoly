@@ -328,19 +328,6 @@ describe("startup_profile", function()
     end)
   end)
 
-  it("startup_policy_accepts_generated_profile_module", function()
-    with_patches({
-      { key = "STARTUP_TEST_PROFILE", value = "missile" },
-      { key = "STARTUP_PROFILE_SOURCE", value = "generated" },
-      { key = "STARTUP_PROFILE_MODULE", value = "Data.StartupProfileGenerated" },
-    }, function()
-      local policy = startup_policy.resolve(_G)
-      assert(policy.profile_name == "missile", "startup should keep generated profile name for logging")
-      assert(policy.profile_source == "generated", "startup should keep generated profile source")
-      assert(policy.profile_module == "Data.StartupProfileGenerated", "startup should keep generated module path")
-    end)
-  end)
-
   it("raw_test_profiles_reload_copies_meta_into_profile_table", function()
     local profiles = _reload_module("src.config.testing.test_profiles", {
       "src.config.testing.test_profiles",

@@ -21,12 +21,6 @@ function startup_policy.resolve(globals)
       globals and globals.MONOPOLY_BUILD_MODE, "debug"
     ),
     profile_name = resolved_profile,
-    profile_source = _resolve_string_or(
-      globals and globals.STARTUP_PROFILE_SOURCE, "testing"
-    ),
-    profile_module = _resolve_string_or(
-      globals and globals.STARTUP_PROFILE_MODULE, nil
-    ),
   }
 end
 

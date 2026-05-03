@@ -43,7 +43,7 @@ local function _resolve_startup_map(startup)
   if _is_release_build(startup and startup.build_mode) then
     return default_map
   end
-  return require("src.app.profile_source").resolve_map(startup)
+  return require("src.app.profile_source").resolve_map()
 end
 
 local function _apply_startup_bootstrap(game, startup)
@@ -203,14 +203,10 @@ function M.build_game_factory(state, opts)
   opts = opts or {}
   local build_mode = opts.build_mode
   local profile_name = opts.profile_name
-  local profile_source = opts.profile_source
-  local profile_module = opts.profile_module
   return function()
     local startup = {
       build_mode = build_mode,
       profile_name = profile_name,
-      profile_source = profile_source,
-      profile_module = profile_module,
     }
     local map_cfg = _resolve_startup_map(startup)
     local role_roster = _build_startup_roster(max_player_count)
