@@ -11,8 +11,8 @@ local steal = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local function _fail_popup(game, stealer, target)
-  local msg = "很遗憾，" .. target.name .. " 没有任何道具。"
-  local log_text = stealer.name .. " 使用偷窃卡失败：" .. msg
+  local msg = target.name .. " 没有任何道具"
+  local log_text = stealer.name .. " 使用偷窃卡，" .. msg
   event_feed.publish(game, {
     kind = event_kinds.steal,
     text = log_text,

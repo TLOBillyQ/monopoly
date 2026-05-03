@@ -14,13 +14,23 @@ describe("state.event_log", function()
     assert.equals("three", entries[2].text)
   end)
 
-  it("increments seq and joins text by newline", function()
+  it("increments seq and joins text with time prefix", function()
     local log = event_log.new()
     event_log.append(log, { kind = "k1", text = "alpha" })
     event_log.append(log, { kind = "k2", text = "beta" })
 
     assert.equals(2, event_log.get_seq(log))
-    assert.equals("alpha\nbeta", event_log.get_text(log, 10))
+    local text = event_log.get_text(log, 10)
+    assert.is_truthy(text:match("^%d%d:%d%d:%d%d alpha\n%d%d:%d%d:%d%d beta$"))
+  end)
+
+  it("entry carries time_text in HH:MM:SS form", function()
+    local log = event_log.new()
+    event_log.append(log, { kind = "k", text = "x" })
+
+    local entries = event_log.get_entries(log)
+    assert.equals(1, #entries)
+    assert.is_truthy(entries[1].time_text:match("^%d%d:%d%d:%d%d$"))
   end)
 
   it("clear resets entries and seq", function()

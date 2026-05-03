@@ -5,7 +5,7 @@ local event_log = require("src.state.event_log")
 local loop_runtime = require("src.turn.loop.runtime")
 
 describe("turn.output.event_feed_adapter", function()
-  it("publish writes to event_log", function()
+  it("publish writes to event_log with HH:MM:SS time_text", function()
     local game = {
       state = {
         event_log = event_log.new(),
@@ -24,6 +24,7 @@ describe("turn.output.event_feed_adapter", function()
     assert.equals(1, #entries)
     assert.equals("turn_start", entries[1].kind)
     assert.equals("第一回合", entries[1].text)
+    assert.is_truthy(entries[1].time_text:match("^%d%d:%d%d:%d%d$"))
   end)
 
   it("tip not false enqueues tip intent with expected shape", function()

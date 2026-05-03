@@ -16,6 +16,7 @@ local function _make_item(log, entry)
     kind = entry.kind,
     text = entry.text,
     seq = log.seq,
+    time_text = os.date("%H:%M:%S"),
   }
 end
 
@@ -33,14 +34,13 @@ local function _direct_append(log, entry)
 end
 
 function event_log.append(log, entry)
+  local item = _direct_append(log, entry)
   local top = log.active_buffers[#log.active_buffers]
   if top then
     top.pending = top.pending or {}
-    local item = _make_item(log, entry)
     top.pending[#top.pending + 1] = item
-    return item
   end
-  return _direct_append(log, entry)
+  return item
 end
 
 function event_log.push_buffer(log, hold)
@@ -64,15 +64,9 @@ function event_log.pop_buffer(hold)
 end
 
 function event_log.flush_buffer(hold)
-  local log = hold and hold._event_log_ref
-  if not log or not hold.pending then
-    event_log.pop_buffer(hold)
-    return
+  if hold then
+    hold.pending = nil
   end
-  for _, item in ipairs(hold.pending) do
-    _append_with_limit(log, item)
-  end
-  hold.pending = nil
   event_log.pop_buffer(hold)
 end
 
@@ -91,7 +85,11 @@ function event_log.get_text(log, limit)
   local entries = event_log.get_entries(log, limit)
   local lines = {}
   for i, e in ipairs(entries) do
-    lines[i] = e.text
+    if e.time_text then
+      lines[i] = e.time_text .. " " .. e.text
+    else
+      lines[i] = e.text
+    end
   end
   return table.concat(lines, "\n")
 end
