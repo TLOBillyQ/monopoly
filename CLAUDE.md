@@ -45,13 +45,13 @@
 
 - 命名 `snake_case`，类名 `CamelCase`。
 - `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.foundation.lang.number`）。
-- `tools/` `tests/` 文件与进程操作统一用 `tools/shared/lib/common.lua`：
+- `tools/` `spec/` 文件与进程操作统一用 `tools/shared/lib/common.lua`：
   - `common.run_command` / `common.ensure_dir`（禁 `os.execute` / `io.popen`）
   - `common.is_windows()` / `common.is_macos()`（禁解析 `package.config`）
   - `common.normalize_path()`（路径正斜杠，禁硬编码反斜杠）
   - `common.shell_quote()` + `common.build_command()`（禁手动拼接命令）
 - Eggy `Fixed` 参数用浮点（`30.0`），禁整数；API 参数写全，禁依赖默认值。
-- behavior/contract/guards/tooling/regression 写在 `spec/**/*_spec.lua`（busted runner，见 `.busted` 与 `spec/helper.lua`）；`tests/` 仅保留历史 harness 兼容入口。**不要再写 `tests/contract.lua` 风格**。
+- behavior/contract/guards/tooling/regression 写在 `spec/**/*_spec.lua`（busted runner，见 `.busted` 与 `spec/helper.lua`）。
 
 ---
 
