@@ -7,6 +7,7 @@ local timing = {
   popup_auto_close_seconds = 2.0,
   popup_dwell_default_seconds = 1.0,
   action_anim_default_seconds = 1.0,
+  remote_dice_wait_seconds = 1.5,
   event_tip_default_seconds = 2.0,
   event_tip_fast_seconds = 0.5,
   event_tip_fast_backlog_threshold = 3,

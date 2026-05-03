@@ -167,14 +167,14 @@ function handlers.handle_remote_dice(game, player, item_id, context)
       local value, target_tile = auto_play_port.pick_remote_dice_value(inner_game, inner_player, dice_count)
       assert(value ~= nil, "missing remote dice value")
       assert(inventory.consume(inner_player, inner_item_id) == true, "consume remote dice failed")
-      local ok = remote_dice.apply(inner_game, inner_player, dice_count, value)
-      if ok and target_tile then
+      local apply_res = remote_dice.apply(inner_game, inner_player, dice_count, value)
+      if _resolve_apply_ok(apply_res) and target_tile then
         event_feed.publish(inner_game, {
           kind = event_kinds.remote_dice,
           text = inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. number_utils.format_integer_part(value),
         })
       end
-      return ok
+      return apply_res
     end,
     choice_spec = function(_, inner_player, inner_item_id, candidates)
       local options = {}

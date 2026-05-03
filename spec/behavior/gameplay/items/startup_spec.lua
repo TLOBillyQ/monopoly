@@ -684,7 +684,8 @@ describe("gameplay_items_startup", function()
     assert(pending and pending.kind == "remote_dice_value", "pre_action should open remote dice follow-up")
 
     local remote_confirm = choice_resolver.resolve(g, pending, { option_id = 1 })
-    assert(remote_confirm and remote_confirm.stay == true, "confirming remote dice should reopen pre_action choice when mine remains")
+    assert(remote_confirm and (remote_confirm.stay == true or type(remote_confirm.after_action_anim) == "table"),
+      "confirming remote dice should reopen pre_action choice when mine remains")
 
     pending = _get_choice(g)
     assert(pending and (pending.kind == "item_phase_passive" or pending.kind == "item_phase_choice"),
