@@ -179,7 +179,7 @@ describe("presentation_ui.event_bindings", function()
     _assert_eq(market_item_specs[1].build_intent().type, "market_select", "market item should build selection intent")
     _assert_eq(market_control_specs[1].build_intent().type, "market_confirm", "market confirm should use selected option")
     _assert_eq(market_control_specs[2].build_intent().type, "choice_cancel", "market cancel should map to choice cancel")
-    _assert_eq(market_control_specs[8].build_intent(), nil, "vehicle tab should stay disabled")
+    _assert_eq(#market_control_specs, 7, "market controls should expose 7 entries (vehicle tab removed)")
   end)
 
   it("target slot button second tap on same locked option dispatches choice_select via confirm", function()

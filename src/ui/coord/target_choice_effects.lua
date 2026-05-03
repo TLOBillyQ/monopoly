@@ -5,7 +5,7 @@ local host_runtime_ports = require("src.ui.host_bridge")
 local ui_nodes = require("src.ui.render.node_ops")
 local choice_contract = require("src.config.choice.contract")
 local choice_route_policy = require("src.ui.input.choice_route")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.ui.state.runtime")
 local target_choice_effects = {}
 local _move_arrow
 local function _is_target_choice(choice)

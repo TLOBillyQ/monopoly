@@ -1,5 +1,5 @@
 local role_id_utils = require("src.foundation.identity.role_id")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.ui.state.runtime")
 
 local lock_policy = {}
 

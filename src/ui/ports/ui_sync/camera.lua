@@ -1,6 +1,6 @@
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_state = require("src.ui.state.runtime")
-local game_runtime_state = require("src.state.runtime_state")
+local game_runtime_state = runtime_state
 local camera_follow = require("src.config.gameplay.camera_follow")
 local unit_position = require("src.ui.render.unit_position")
 
