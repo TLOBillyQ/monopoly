@@ -61,11 +61,8 @@ local function _offset_pos(base, y_offset)
     _vec_component(base, "z", 3) or 0
   )
 end
-local function _sync_buttons(state, locked)
-  ui_nodes.sync_target_choice_buttons(state, locked == true)
-end
-local function _sync_highlight_state(state, option_id, locked)
-  _sync_buttons(state, locked)
+local function _sync_highlight_state(state, option_id)
+  ui_nodes.sync_target_choice_buttons(state)
   _move_arrow(state and state.board_scene or nil, option_id)
 end
 local function _resolve_tile_position(scene, option_id)
@@ -110,7 +107,7 @@ local function _runtime(state)
   return type(state) == "table" and state.target_choice_runtime or nil
 end
 local function _reset_runtime_state(state, runtime)
-  _sync_highlight_state(state, nil, false)
+  _sync_highlight_state(state, nil)
   if runtime and runtime.scene_pick_listener_token ~= nil then
     host_runtime_ports.unregister_target_pick_listener(runtime.scene_pick_listener_token)
   end
@@ -145,7 +142,7 @@ local function _lock_option(state, runtime, option_id)
   runtime.locked_option_id = option_id
   runtime.hover_option_id = option_id
   modal_state.select_choice_option(state, option_id)
-  _sync_highlight_state(state, option_id, true)
+  _sync_highlight_state(state, option_id)
   return true
 end
 function target_choice_effects.enter(state, choice)
@@ -171,7 +168,7 @@ function target_choice_effects.enter(state, choice)
     scene_pick_listener_token = nil,
   }
   state.target_choice_runtime = runtime
-  _sync_highlight_state(state, nil, false)
+  _sync_highlight_state(state, nil)
   runtime.scene_pick_listener_token = host_runtime_ports.register_target_pick_listener(function(payload)
     local option_id = payload and (payload.option_id or payload.tile_index) or nil
     local actor_role_id = payload and payload.actor_role_id or nil
@@ -194,7 +191,7 @@ function target_choice_effects.step(game, state, _dt)
     target_choice_effects.leave(state, "choice_changed")
     return false
   end
-  _sync_highlight_state(state, runtime.locked_option_id, runtime.locked_option_id ~= nil)
+  _sync_highlight_state(state, runtime.locked_option_id)
   return runtime.locked_option_id ~= nil
 end
 function target_choice_effects.on_scene_pick(state, option_id, actor_role_id, payload)
@@ -211,20 +208,6 @@ function target_choice_effects.on_scene_pick(state, option_id, actor_role_id, pa
     return false
   end
   return _lock_option(state, runtime, resolved_option_id)
-end
-function target_choice_effects.on_unlock(state)
-  local runtime = _runtime(state)
-  if not runtime then
-    return false
-  end
-  if runtime.locked_option_id == nil then
-    _sync_buttons(state, false)
-    return false
-  end
-  runtime.locked_option_id = nil
-  runtime.hover_option_id = nil
-  _sync_highlight_state(state, nil, false)
-  return true
 end
 function target_choice_effects.leave(state, _)
   local runtime = _runtime(state)

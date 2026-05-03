@@ -5,7 +5,6 @@ local canvas = require("src.ui.coord.canvas_coordinator")
 local ui_events = require("src.ui.coord.ui_events")
 local ui_event_state = require("src.ui.coord.event_state")
 local actor_context = require("src.ui.coord.actor_context")
-local target_choice_effects = require("src.ui.coord.target_choice_effects")
 local market = require("src.ui.coord.market")
 local modal = require("src.ui.coord.modal")
 local event_log_view = require("src.ui.coord.event_log_view")
@@ -88,17 +87,6 @@ function view_command_ports.build()
       end
       if intent_type == "popup_confirm" then
         modal.close_popup(state)
-        return true
-      end
-      if intent_type == "target_unlock" then
-        target_choice_effects.on_unlock(state)
-        return true
-      end
-      if intent_type == "target_lock" then
-        target_choice_effects.on_scene_pick(state, intent.option_id, intent.actor_role_id, {
-          option_id = intent.option_id,
-          actor_role_id = intent.actor_role_id,
-        })
         return true
       end
       return false

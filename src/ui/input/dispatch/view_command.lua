@@ -105,25 +105,6 @@ local function _handle_toggle_action_log(state, intent, event_log_view)
   return true
 end
 
-local function _handle_target_unlock(state, target_choice_effects)
-  if target_choice_effects == nil then
-    return false
-  end
-  target_choice_effects.on_unlock(state)
-  return true
-end
-
-local function _handle_target_lock(state, intent, target_choice_effects)
-  if target_choice_effects == nil then
-    return false
-  end
-  target_choice_effects.on_scene_pick(state, intent.option_id, intent.actor_role_id, {
-    option_id = intent.option_id,
-    actor_role_id = intent.actor_role_id,
-  })
-  return true
-end
-
 local function _fallback_dispatch(state, intent)
   local intent_type = _resolve_intent_type(intent)
   if intent_type == nil then
@@ -132,7 +113,6 @@ local function _fallback_dispatch(state, intent)
   local market = _resolve_loaded("src.ui.coord.market")
   local modal = _resolve_loaded("src.ui.coord.modal")
   local event_log_view = _resolve_loaded("src.ui.coord.event_log_view")
-  local target_choice_effects = _resolve_loaded("src.ui.coord.target_choice_effects")
   local handlers = {
     market_select = function()
       return _handle_market_select(state, intent, market)
@@ -142,12 +122,6 @@ local function _fallback_dispatch(state, intent)
     end,
     toggle_action_log = function()
       return _handle_toggle_action_log(state, intent, event_log_view)
-    end,
-    target_unlock = function()
-      return _handle_target_unlock(state, target_choice_effects)
-    end,
-    target_lock = function()
-      return _handle_target_lock(state, intent, target_choice_effects)
     end,
   }
   local handler = handlers[intent_type]

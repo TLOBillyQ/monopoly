@@ -52,11 +52,7 @@ local function _resolve_target_screen(ui)
   return ui.choice_screens and ui.choice_screens.target or nil
 end
 
-local function _is_target_choice_active(ui)
-  return ui.choice_active == true and ui.active_choice_screen_key == "target"
-end
-
-local function _sync_target_button(ui, _screen, button_name, _active, _locked)
+local function _hide_target_button(ui, button_name)
   if not button_name then
     return
   end
@@ -65,15 +61,14 @@ local function _sync_target_button(ui, _screen, button_name, _active, _locked)
   ui:set_touch_enabled(button_name, false)
 end
 
-local function sync_target_choice_buttons(state, locked)
+local function sync_target_choice_buttons(state)
   local ui = state and state.ui or nil
   local screen = _resolve_target_screen(ui)
   if not screen then
     return
   end
-  local active = _is_target_choice_active(ui)
-  _sync_target_button(ui, screen, screen.confirm, active, locked)
-  _sync_target_button(ui, screen, screen.cancel, active, locked)
+  _hide_target_button(ui, screen.confirm)
+  _hide_target_button(ui, screen.cancel)
 end
 
 local function set_event_log(_, text)

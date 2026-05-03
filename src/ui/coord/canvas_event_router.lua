@@ -51,8 +51,7 @@ function router.bind(state, resolve_game)
         or intent.type == "market_confirm"
         or intent.type == "market_page_prev"
         or intent.type == "market_page_next"
-        or intent.type == "market_tab_select"
-        or intent.type == "target_lock" then
+        or intent.type == "market_tab_select" then
       return true
     end
     return intent.type == "ui_button" and _is_actor_bound_ui_button(intent.id)

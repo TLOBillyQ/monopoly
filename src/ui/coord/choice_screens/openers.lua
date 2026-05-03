@@ -159,7 +159,7 @@ function M.open_target_screen(state, choice, choice_id)
   })
   _store_target_button_labels(screen, choice)
   modal_state.open_choice(state, choice_id, option_ids, selected)
-  ui_nodes.sync_target_choice_buttons(state, false)
+  ui_nodes.sync_target_choice_buttons(state)
 end
 
 function M.open_secondary_confirm_screen(state, choice, choice_id)
