@@ -1,3 +1,9 @@
+---
+kind: contract
+status: stable
+owner: architecture
+last_verified: 2026-05-04
+---
 # 架构治理路线图
 
 > **Status (2026-04-30)**：本路线图的多项决策已被 [`../decisions/0001-seven-layer-with-foundation.md`](../decisions/0001-seven-layer-with-foundation.md) 取代。

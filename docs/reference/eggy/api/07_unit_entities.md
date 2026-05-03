@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 ## Ability
 
 Ability|add_state_to_target|_unit, _state_id

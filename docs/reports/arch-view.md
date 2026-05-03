@@ -1,3 +1,9 @@
+---
+kind: report
+status: generated
+owner: quality
+last_verified: 2026-05-04
+---
 # Arch View
 
 `arch_view` 是静态架构扫描器，分析 `src/**/*.lua` 的模块级 `require` 依赖。职责：生成依赖图、按层投影视图、校验声明式边界规则。

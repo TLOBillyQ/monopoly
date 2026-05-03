@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 # Lua环境
 
 ## 概述

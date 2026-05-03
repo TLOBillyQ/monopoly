@@ -1,3 +1,9 @@
+---
+kind: spec
+status: stable
+owner: product
+last_verified: 2026-05-04
+---
 # Backlog
 
 ## 试玩反馈（2026-04-20）

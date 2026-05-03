@@ -1,3 +1,9 @@
+---
+kind: report
+status: generated
+owner: quality
+last_verified: 2026-05-04
+---
 # CRAP Report
 
 `tools/quality/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `busted -c behavior`、`busted -c contract` 或 `busted -c guards`。

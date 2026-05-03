@@ -1,3 +1,9 @@
+---
+kind: contract
+status: stable
+owner: agents
+last_verified: 2026-05-04
+---
 # ReadingDiscipline
 
 核心立场：实现者，不是读者。

@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 # Lua 高级特性
 
 ## 并行计算（辅助线程）

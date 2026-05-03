@@ -1,3 +1,9 @@
+---
+kind: adr
+status: stable
+owner: architecture
+last_verified: 2026-05-04
+---
 # ADR 0002 — Foundation 与 State 边界（log_once 依赖反转）
 
 **Status**: Accepted (2026-05-03)

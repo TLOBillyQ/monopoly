@@ -1,3 +1,9 @@
+---
+kind: report
+status: generated
+owner: quality
+last_verified: 2026-05-04
+---
 # Behavior 回归中的 warn 与慢测判读
 
 这份文档只回答两个问题：

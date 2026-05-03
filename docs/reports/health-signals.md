@@ -1,3 +1,9 @@
+---
+kind: report
+status: generated
+owner: quality
+last_verified: 2026-05-04
+---
 # 健康信号与周检入口
 
 > **See also**：架构治理路线图 → [`../architecture/governance-roadmap.md`](../architecture/governance-roadmap.md)（治理波次完成后须更新本文档的复审锚点）

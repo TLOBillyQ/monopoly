@@ -1,3 +1,9 @@
+---
+kind: guide
+status: stable
+owner: quality
+last_verified: 2026-05-04
+---
 # mutate4lua
 
 `mutate4lua` 是按文件运行的 Lua 变异测试工具。Monopoly 通过子模块 `vendor/mutate4lua/` 引入上游实现：现在 scan / mutate / manifest 主流程由上游 Go engine 提供，Monopoly 再用 `tools/quality/mutate.lua` 和 `tools/quality/mutate/driver.lua` 适配本仓库的测试车道。

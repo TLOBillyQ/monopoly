@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 ## LuaAPI
 
 LuaAPI|ability_register_creation_handler|_ability_key, _callback

@@ -1,3 +1,9 @@
+---
+kind: report
+status: generated
+owner: quality
+last_verified: 2026-05-04
+---
 # Market 子系统架构依赖图
 
 > 生成日期：2026-05-01

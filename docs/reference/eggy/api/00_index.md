@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 # EggyAPI 拆分索引
 
 本目录用于按功能拆分 `EggyAPI.lua`，加速查询并保证 API 完整性。

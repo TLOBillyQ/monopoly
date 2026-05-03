@@ -1,3 +1,9 @@
+---
+kind: guide
+status: stable
+owner: quality
+last_verified: 2026-05-04
+---
 # scrap4lua
 
 `scrap4lua` 是面向 Monopoly 的语义导航工具：回答“概念 X 先看哪些代码、测试、文档”，不负责边界判罚，也不替代 `arch_view` / `crap4lua` / `mutate4lua`。

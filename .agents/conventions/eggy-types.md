@@ -1,3 +1,9 @@
+---
+kind: contract
+status: stable
+owner: agents
+last_verified: 2026-05-04
+---
 # Eggy Type Mapping
 
 Eggy 引擎的 Lua API 使用特定类型映射，写值时必须注意子类型：

@@ -1,3 +1,9 @@
+---
+kind: contract
+status: stable
+owner: architecture
+last_verified: 2026-05-04
+---
 # 目录边界约定
 
 > **See also**：架构治理路线图 → [`governance-roadmap.md`](governance-roadmap.md)（10 → 7 层 + foundation 基座的对齐债务）；架构决策 → [`../decisions/0001-seven-layer-with-foundation.md`](../decisions/0001-seven-layer-with-foundation.md)（七层模型与各层职责）；分层模型 → [`layer-model.md`](layer-model.md)。

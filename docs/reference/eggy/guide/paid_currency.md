@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 # 付费货币通道约束
 
 - `金豆/乐园币` 是外部维护的付费货币，不是 Eggy `commodity`，Lua 侧不查询余额，也不本地扣减。

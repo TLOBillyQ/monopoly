@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 ## GlobalAPI
 
 GlobalAPI|add_kill_broadcast|_kill_char, _dead_char, _duration

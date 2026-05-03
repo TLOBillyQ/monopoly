@@ -1,3 +1,9 @@
+---
+kind: report
+status: generated
+owner: quality
+last_verified: 2026-05-04
+---
 # Coverage Report
 
 `tools/quality/coverage.lua` 用 `busted -c` 触发 luacov instrumentation，统计 `src/{core,rules,turn,state,player,computer}` 6 个核心目录的 line coverage。它与 `tools/quality/crap.lua` 是两条独立流水线：crap 关注"复杂度 × 反测试"风险热点，coverage 关注"哪些行根本没跑过"。

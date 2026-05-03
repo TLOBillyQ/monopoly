@@ -1,3 +1,9 @@
+---
+kind: report
+status: generated
+owner: quality
+last_verified: 2026-05-04
+---
 # `src/rules/` 子目录健康度扫描（P2-1）
 
 **日期**：2026-05-03

@@ -1,3 +1,9 @@
+---
+kind: contract
+status: stable
+owner: architecture
+last_verified: 2026-05-04
+---
 # 测试与静态分析地图
 
 这份文档回答三个问题：

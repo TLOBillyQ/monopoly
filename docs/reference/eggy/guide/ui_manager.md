@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 # UIManager
 
 蛋仔派对 UI 节点管理库。将原始 EUI 节点封装为类型化对象，提供属性绑定、事件委托和异步链式调用。

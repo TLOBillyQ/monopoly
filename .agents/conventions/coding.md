@@ -1,3 +1,9 @@
+---
+kind: contract
+status: stable
+owner: agents
+last_verified: 2026-05-04
+---
 # Coding Discipline
 
 ## 1 命名

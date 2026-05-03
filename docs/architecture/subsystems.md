@@ -1,3 +1,9 @@
+---
+kind: contract
+status: stable
+owner: architecture
+last_verified: 2026-04-30
+---
 # 子系统速查
 
 ## 路径 → 职责

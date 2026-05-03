@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 # eggy 示例工程知识抽取（面向 LuaSource_大富翁）
 
 本文基于 knowledge/ 下 Eggy 官方示例工程源码，提炼可复用的机制、API用法与工程组织方式，方便在 LuaSource_大富翁 中落地。

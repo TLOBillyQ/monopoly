@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 # Eggy Lua · Agent Memory
 
 **用途**：Coding Agent 长期记忆，避免在 Eggy 编辑器环境踩运行时坑。

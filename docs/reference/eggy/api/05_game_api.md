@@ -1,3 +1,9 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
 ## GameAPI
 
 GameAPI|ability_prefab_get_desc|_ability_id

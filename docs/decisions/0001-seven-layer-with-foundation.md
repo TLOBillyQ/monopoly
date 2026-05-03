@@ -1,3 +1,9 @@
+---
+kind: adr
+status: stable
+owner: architecture
+last_verified: 2026-05-04
+---
 # ADR 0001 — 七层架构 + Foundation 基座
 
 **Status**: Accepted (2026-04-30)
