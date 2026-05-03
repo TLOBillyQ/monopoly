@@ -1207,6 +1207,52 @@ describe("item", function()
     )
   end)
 
+  it("item_target_player_choice_assigns_seat_aligned_slot_layout", function()
+    local g = support.new_game({
+      map = default_map,
+      players = { "P1", "P2", "P3", "P4" },
+      ai = { [2] = true, [3] = true, [4] = true },
+    })
+    -- 4 seats, current player is p1; equalize candidates exclude self → 3 candidates
+    -- in seat order [p2, p3, p4], so slot_layout must be {2, 3, 4}.
+    local user = g.players[1]
+    g:set_player_cash(user, 1000)
+    g:set_player_cash(g.players[2], 9000)
+    g:set_player_cash(g.players[3], 9000)
+    g:set_player_cash(g.players[4], 9000)
+    user.inventory:add({ id = 2011 })
+
+    local res = executor.use_item(g, user, 2011, {})
+    assert(type(res) == "table" and res.waiting, "equalize on p1 should open choice")
+    local pending = res.intent.choice_spec
+    assert(pending and pending.kind == "item_target_player", "should be item_target_player choice")
+    assert(pending.target_slot_layout ~= nil, "item_target_player must include target_slot_layout")
+    _assert_eq(#pending.options, 3, "p1 should see 3 candidate players")
+    _assert_eq(pending.target_slot_layout[1], 2, "candidate 1 (p2) → slot 2")
+    _assert_eq(pending.target_slot_layout[2], 3, "candidate 2 (p3) → slot 3")
+    _assert_eq(pending.target_slot_layout[3], 4, "candidate 3 (p4) → slot 4")
+
+    -- Seat-aware: when p2 is current, layout for [p1,p3,p4] is {1,3,4}.
+    local g2 = support.new_game({
+      map = default_map,
+      players = { "P1", "P2", "P3", "P4" },
+      ai = { [1] = true, [3] = true, [4] = true },
+    })
+    g2.turn.current_player_index = 2
+    local user2 = g2.players[2]
+    g2:set_player_cash(user2, 1000)
+    g2:set_player_cash(g2.players[1], 9000)
+    g2:set_player_cash(g2.players[3], 9000)
+    g2:set_player_cash(g2.players[4], 9000)
+    user2.inventory:add({ id = 2011 })
+    local res2 = executor.use_item(g2, user2, 2011, {})
+    assert(type(res2) == "table" and res2.waiting, "equalize on p2 should open choice")
+    local pending2 = res2.intent.choice_spec
+    _assert_eq(pending2.target_slot_layout[1], 1, "p1 → slot 1")
+    _assert_eq(pending2.target_slot_layout[2], 3, "p3 → slot 3")
+    _assert_eq(pending2.target_slot_layout[3], 4, "p4 → slot 4")
+  end)
+
   it("exile_item_defers_mountain_effect_until_move_followup", function()
     local g = _setup_world_with_anim()
     local user = g.players[1]

@@ -172,9 +172,11 @@ describe("presentation_ui.event_bindings", function()
 
     _assert_eq(remote_specs[1].build_intent().type, "choice_select", "remote choice should build select intent")
     _assert_eq(remote_specs[1].build_intent().option_id, 21, "remote choice should resolve option by index")
-    _assert_eq(target_specs[1].build_intent().type, "choice_select", "target confirm should emit choice select for locked option")
-    _assert_eq(target_specs[2].build_intent().type, "target_unlock", "target cancel should unlock locked target")
-    _assert_eq(target_specs[3].build_intent().type, "target_lock", "target slot should build target lock intent")
+    _assert_eq(target_specs[1].build_intent(), nil, "target confirm button must be inert")
+    _assert_eq(target_specs[2].build_intent(), nil, "target cancel button must be inert")
+    local slot_intent = target_specs[3].build_intent()
+    _assert_eq(slot_intent.type, "choice_select", "target slot tap should commit immediately")
+    _assert_eq(slot_intent.option_id, 21, "target slot tap should resolve option by index")
     state.ui_runtime.pending_choice_selected_option_id = 33
     _assert_eq(market_item_specs[1].build_intent().type, "market_select", "market item should build selection intent")
     _assert_eq(market_control_specs[1].build_intent().type, "market_confirm", "market confirm should use selected option")
@@ -182,7 +184,7 @@ describe("presentation_ui.event_bindings", function()
     _assert_eq(#market_control_specs, 7, "market controls should expose 7 entries (vehicle tab removed)")
   end)
 
-  it("target slot button second tap on same locked option dispatches choice_select via confirm", function()
+  it("target slot button first tap dispatches choice_select", function()
     logger.clear()
     local state = {
       ui = {},
@@ -196,16 +198,15 @@ describe("presentation_ui.event_bindings", function()
         },
       },
       target_choice_runtime = {
-        locked_option_id = "tile_5",
+        locked_option_id = nil,
       },
     }
     _bind_ui_runtime(state)
-    state.ui_runtime.pending_choice_selected_option_id = "tile_5"
 
     local target_specs = target_choice_intents.build(state)
     local intent = target_specs[3].build_intent()
-    _assert_eq(intent.type, "choice_select", "second tap on locked slot should emit choice_select")
-    _assert_eq(intent.option_id, "tile_5", "second tap should resolve to locked option id")
+    _assert_eq(intent.type, "choice_select", "first tap on slot should emit choice_select")
+    _assert_eq(intent.option_id, "tile_5", "first tap should resolve slot index to option id")
     _assert_eq(intent.choice_id, 7, "choice_select should carry choice id")
   end)
 
@@ -234,7 +235,7 @@ describe("presentation_ui.event_bindings", function()
     _assert_eq(intent.choice_id, 11, "choice_select should carry choice id")
   end)
 
-  it("target slot button different option re-locks without confirming", function()
+  it("target slot button tap on different option dispatches choice_select for new option", function()
     logger.clear()
     local state = {
       ui = {},
@@ -254,20 +255,11 @@ describe("presentation_ui.event_bindings", function()
     _bind_ui_runtime(state)
     state.ui_runtime.pending_choice_selected_option_id = "tile_5"
 
-    local dispatched = {}
-    state.turn_action_port = {
-      dispatch_action = function(_, _, action)
-        dispatched[#dispatched + 1] = action
-      end,
-    }
-
     local target_specs = target_choice_intents.build(state)
     local intent = target_specs[4].build_intent()
-    _assert_eq(intent.type, "target_lock", "tap on different option should re-lock not confirm")
-    _assert_eq(intent.option_id, "tile_8", "re-lock should carry the new option id")
-    for _, action in ipairs(dispatched) do
-      assert(action.type ~= "choice_select", "re-lock must not dispatch choice_select")
-    end
+    _assert_eq(intent.type, "choice_select", "tap on different slot should commit immediately")
+    _assert_eq(intent.option_id, "tile_8", "commit should carry the tapped option id")
+    _assert_eq(intent.choice_id, 13, "commit should carry choice id")
   end)
 
   it("canvas_intents_return_nil_when_choice_or_market_missing", function()

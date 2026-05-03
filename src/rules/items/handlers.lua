@@ -129,10 +129,15 @@ function handlers.handle_target_player_item(game, player, item_id, context)
       assert(target ~= nil, "missing target player")
       return _apply_target_player_item(inner_game, inner_player, inner_item_id, target, context)
     end,
-    choice_spec = function(_, inner_player, inner_item_id, candidates)
+    choice_spec = function(inner_game, inner_player, inner_item_id, candidates)
       local options = {}
       local body_lines = {}
-      for _, t in ipairs(candidates) do
+      local slot_layout = {}
+      local seat_by_role_id = {}
+      for seat, p in ipairs(inner_game.players or {}) do
+        seat_by_role_id[p.id] = seat
+      end
+      for i, t in ipairs(candidates) do
         local deity_text = ""
         if t.status.deity then
           deity_text = " 神:" .. t.status.deity.type
@@ -140,6 +145,7 @@ function handlers.handle_target_player_item(game, player, item_id, context)
         local cash_text = number_utils.format_integer_part(game:player_balance(t, "金币"))
         table.insert(body_lines, t.name .. " 现金:" .. cash_text .. deity_text)
         table.insert(options, { id = t.id, label = t.name })
+        slot_layout[i] = seat_by_role_id[t.id] or i
       end
       return {
         kind = "item_target_player",
@@ -149,6 +155,7 @@ function handlers.handle_target_player_item(game, player, item_id, context)
         title = inventory.item_name(inner_item_id) .. "：选择目标玩家",
         body_lines = body_lines,
         options = options,
+        target_slot_layout = slot_layout,
         allow_cancel = true,
         cancel_label = "取消",
         meta = { item_id = inner_item_id, player_id = inner_player.id },

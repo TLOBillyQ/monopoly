@@ -56,34 +56,13 @@ local function _is_target_choice_active(ui)
   return ui.choice_active == true and ui.active_choice_screen_key == "target"
 end
 
-local function _resolve_target_button_label(screen, button_name)
-  if not screen or not button_name then
-    return nil
-  end
-  if button_name == screen.confirm then
-    return screen.confirm_label
-  end
-  if button_name == screen.cancel then
-    return screen.cancel_label
-  end
-  return nil
-end
-
-local function _sync_target_button(ui, screen, button_name, active, locked)
+local function _sync_target_button(ui, _screen, button_name, _active, _locked)
   if not button_name then
     return
   end
-  local visible = active and locked == true
-  local label = _resolve_target_button_label(screen, button_name)
-  if visible then
-    if label ~= nil then
-      ui:set_button(button_name, label)
-    end
-  else
-    ui:set_button(button_name, "")
-  end
-  ui:set_visible(button_name, visible)
-  ui:set_touch_enabled(button_name, visible)
+  ui:set_button(button_name, "")
+  ui:set_visible(button_name, false)
+  ui:set_touch_enabled(button_name, false)
 end
 
 local function sync_target_choice_buttons(state, locked)
