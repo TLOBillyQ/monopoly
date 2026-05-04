@@ -319,7 +319,11 @@ describe("movement", function()
       _assert_eq(res.passed_start, 1, "passed_start in result stays immediate for transit dedup")
     end)
     _assert_eq(#scheduled, 1, "exactly one schedule call for pass_start hold")
-    _assert_eq(scheduled[1].delay, 1 * timing.pass_start_hold_seconds_per_step, "delay = first_pass_step * per_step")
+    _assert_eq(
+      scheduled[1].delay,
+      1 * timing.pass_start_hold_seconds_per_step + timing.pass_start_hold_tail_seconds,
+      "delay = first_pass_step * per_step + tail"
+    )
     _assert_eq(p.cash, cash_before, "cash held until scheduled callback runs")
     scheduled[1].fn()
     _assert_eq(p.cash, cash_before + constants.pass_start_bonus, "cash applied after callback runs")

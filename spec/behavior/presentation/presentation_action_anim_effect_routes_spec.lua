@@ -266,6 +266,9 @@ describe("presentation.action_anim_effect_routes", function()
   it("action_anim_roadblock_trigger_routes_clear_overlay", function()
     local state = support.build_min_state()
     local cleared = {}
+    local scheduled_delay = nil
+    local scheduled_fn = nil
+    local expected_delay = timing.roadblock_destroy_hold_seconds
 
     _with_patches({
       {
@@ -275,11 +278,22 @@ describe("presentation.action_anim_effect_routes", function()
           cleared[#cleared + 1] = kind .. ":" .. tostring(tile_index)
         end,
       },
+      {
+        target = host_runtime,
+        key = "schedule",
+        value = function(delay, fn)
+          scheduled_delay = delay
+          scheduled_fn = fn
+        end,
+      },
     }, function()
       action_anim.play(state, { kind = "roadblock_trigger", tile_index = 1, duration = 0.2 })
+      assert(scheduled_delay == expected_delay, "roadblock_trigger should hold destroy by config delay")
+      assert(type(scheduled_fn) == "function", "roadblock_trigger should enqueue destroy callback")
+      assert(#cleared == 0, "roadblock overlay should not clear before scheduled callback fires")
+      scheduled_fn()
+      assert(cleared[1] == "roadblock:1", "scheduled callback should clear the roadblock overlay")
     end)
-
-    assert(cleared[1] == "roadblock:1", "roadblock_trigger should clear the roadblock overlay")
   end)
 
   it("action_anim_upgrade_land_does_not_call_overlay_handler", function()

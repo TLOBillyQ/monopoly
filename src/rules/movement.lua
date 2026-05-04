@@ -369,9 +369,9 @@ local function _resolve_pass_start_hold(ctx)
   local hold = first_step * per
   local cap = timing.pass_start_hold_max_seconds
   if cap and hold > cap then
-    return cap
+    hold = cap
   end
-  return hold
+  return hold + (timing.pass_start_hold_tail_seconds or 0)
 end
 
 local function _schedule_pass_start_reward(ctx)

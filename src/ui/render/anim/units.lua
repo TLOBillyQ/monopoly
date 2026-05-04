@@ -11,6 +11,7 @@ local units = {}
 local mine_trigger_snap_delay_seconds = timing.mine_trigger_snap_delay_seconds or 0.6
 local demolish_effect_followup_delay_seconds = timing.demolish_effect_followup_delay_seconds or 0.35
 local teleport_camera_hold_seconds = timing.teleport_effect_camera_hold_seconds or 1.0
+local roadblock_destroy_hold_seconds = timing.roadblock_destroy_hold_seconds or 0
 local _play_demolish_feedback
 
 function units.clear_overlay(state, kind, tile_index)
@@ -196,6 +197,13 @@ end
 function units.play_roadblock_trigger(state, anim, duration, opts)
   local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
   local tile_index = assert(anim.tile_index, "missing tile_index")
+  local schedule = opts and opts.schedule or nil
+  if type(schedule) == "function" and roadblock_destroy_hold_seconds > 0 then
+    schedule(roadblock_destroy_hold_seconds, function()
+      clear_overlay(state, "roadblock", tile_index)
+    end)
+    return _resolve_minimum_delay(roadblock_destroy_hold_seconds, duration)
+  end
   clear_overlay(state, "roadblock", tile_index)
   return _resolve_minimum_delay(0, duration)
 end
