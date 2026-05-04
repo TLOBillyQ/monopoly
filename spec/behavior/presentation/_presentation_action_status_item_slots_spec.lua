@@ -392,6 +392,127 @@ describe("presentation_item_slots", function()
       "next refresh after slot click should emit global reset to stop slot animation")
   end)
 
+  it("_test_phase_advance_emits_global_reset", function()
+    local ui_events = require("src.ui.coord.ui_events")
+    local events = {}
+    local state = {
+      game = { turn = { phase = "roll", item_phase_active = "" } },
+      ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2002"] = "ICON2002" }),
+      ui = {
+        item_slots = ids.slots(1),
+        card_outlines = ids.outlines(1),
+        set_touch_enabled = function() end,
+        set_visible = function() end,
+      },
+    }
+    local ui_model = {
+      current_player_id = 1,
+      item_choice_owner_id = 1,
+      item_slots_by_player = { [1] = { 2002 } },
+      choice = nil,
+    }
+
+    _with_patches({
+      {
+        key = "UIManager",
+        value = {
+          client_role = nil,
+          query_nodes_by_name = function()
+            return { { set_texture_keep_size = function() end } }
+          end,
+        },
+      },
+      {
+        target = ui_events,
+        key = "send_to_all",
+        value = function(event_name)
+          events[#events + 1] = event_name
+        end,
+      },
+      {
+        target = ui_events,
+        key = "send_to_role",
+        value = function(_, event_name)
+          events[#events + 1] = event_name
+        end,
+      },
+    }, function()
+      ui_view.refresh_item_slots(state, ui_model, { display_player_id = 1, allow_interact = true })
+      local baseline_count = 0
+      for _, name in ipairs(events) do
+        if name == "重置高亮" then baseline_count = baseline_count + 1 end
+      end
+      state.game.turn.phase = "post_action"
+      ui_view.refresh_item_slots(state, ui_model, { display_player_id = 1, allow_interact = true })
+      local after_count = 0
+      for _, name in ipairs(events) do
+        if name == "重置高亮" then after_count = after_count + 1 end
+      end
+      _assert_eq(after_count > baseline_count, true,
+        "phase advance should emit a fresh 重置高亮 event")
+    end)
+  end)
+
+  it("_test_phase_unchanged_skips_extra_reset", function()
+    local ui_events = require("src.ui.coord.ui_events")
+    local events = {}
+    local state = {
+      game = { turn = { phase = "roll", item_phase_active = "" } },
+      ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY", ["2002"] = "ICON2002" }),
+      ui = {
+        item_slots = ids.slots(1),
+        card_outlines = ids.outlines(1),
+        set_touch_enabled = function() end,
+        set_visible = function() end,
+      },
+    }
+    local ui_model = {
+      current_player_id = 1,
+      item_choice_owner_id = 1,
+      item_slots_by_player = { [1] = { 2002 } },
+      choice = nil,
+    }
+
+    _with_patches({
+      {
+        key = "UIManager",
+        value = {
+          client_role = nil,
+          query_nodes_by_name = function()
+            return { { set_texture_keep_size = function() end } }
+          end,
+        },
+      },
+      {
+        target = ui_events,
+        key = "send_to_all",
+        value = function(event_name)
+          events[#events + 1] = event_name
+        end,
+      },
+      {
+        target = ui_events,
+        key = "send_to_role",
+        value = function(_, event_name)
+          events[#events + 1] = event_name
+        end,
+      },
+    }, function()
+      ui_view.refresh_item_slots(state, ui_model, { display_player_id = 1, allow_interact = true })
+      local baseline_count = 0
+      for _, name in ipairs(events) do
+        if name == "重置高亮" then baseline_count = baseline_count + 1 end
+      end
+      ui_view.refresh_item_slots(state, ui_model, { display_player_id = 1, allow_interact = true })
+      local after_count = 0
+      for _, name in ipairs(events) do
+        if name == "重置高亮" then after_count = after_count + 1 end
+      end
+      _assert_eq(after_count, baseline_count,
+        "unchanged phase should not emit additional 重置高亮 from phase-advance hook")
+    end)
+  end)
+
   it("flat single-tap leaves no residual item_phase_ask state", function()
     local dispatched = {}
     local state = {

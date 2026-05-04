@@ -268,7 +268,21 @@ local function _store_item_ids(ui, role_id, item_ids)
   ui.item_slot_item_ids = item_ids
 end
 
+local function _maybe_emit_phase_advance_reset(state)
+  local turn = state and state.game and state.game.turn or nil
+  if turn == nil then
+    return
+  end
+  local signature = tostring(turn.phase or "") .. "|" .. tostring(turn.item_phase_active or "")
+  if state._last_observed_turn_phase_signature == signature then
+    return
+  end
+  state._last_observed_turn_phase_signature = signature
+  _emit_global_reset_animation()
+end
+
 function M.refresh_item_slots(state, ui_model, opts)
+  _maybe_emit_phase_advance_reset(state)
   local ctx = _build_refresh_context(state, ui_model, opts)
   ctx.image_refs = state.ui_refs and state.ui_refs.images or {}
   local slot_pickable = _sync_slot_images(ctx)
