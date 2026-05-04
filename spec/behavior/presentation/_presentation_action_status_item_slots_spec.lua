@@ -301,6 +301,97 @@ describe("presentation_item_slots", function()
       "skip replay flag should remain until slot click")
   end)
 
+  it("_test_slot_click_clears_skip_and_emits_reset_on_next_refresh", function()
+    local ui_events = require("src.ui.coord.ui_events")
+    local events = {}
+    local dispatched = {}
+    local state = {
+      _item_phase_ask_active = nil,
+      _item_phase_confirmed = true,
+      _suppress_item_slot_highlight_until_pick = nil,
+      _skip_item_slot_highlight_replay_choice_id = 77,
+      _pre_confirm_active = nil,
+      _pre_confirm_source_screen = nil,
+      turn_action_port = {
+        dispatch_action = function(_, _, action)
+          dispatched[#dispatched + 1] = action
+        end,
+        should_block_action = function()
+          return false
+        end,
+      },
+      ui_refs = _wrap_ui_refs({
+        ["Empty"] = "EMPTY",
+        ["2002"] = "ICON2002",
+      }),
+      ui = {
+        item_slots = ids.slots(1),
+        card_outlines = ids.outlines(1),
+        item_slot_item_ids = { 2002 },
+        item_slot_item_ids_by_role = {},
+        active_choice_screen_key = "base_inline",
+        set_touch_enabled = function() end,
+        set_visible = function() end,
+      },
+      ui_model = {
+        current_player_id = 1,
+        item_choice_owner_id = 1,
+        item_slots_by_player = { [1] = { 2002 } },
+        choice = {
+          id = 77,
+          kind = "item_phase_choice",
+          route_key = "base_inline",
+          uses_item_slots = true,
+          pre_confirm_before_slot_pick = true,
+          options = { { id = 2002 } },
+        },
+      },
+    }
+    _bind_ui_runtime(state)
+
+    _with_patches({
+      {
+        key = "UIManager",
+        value = {
+          client_role = nil,
+          query_nodes_by_name = function()
+            return { { set_texture_keep_size = function() end } }
+          end,
+        },
+      },
+      {
+        target = ui_events,
+        key = "send_to_all",
+        value = function(event_name)
+          events[#events + 1] = event_name
+        end,
+      },
+      {
+        target = ui_events,
+        key = "send_to_role",
+        value = function(_, event_name)
+          events[#events + 1] = event_name
+        end,
+      },
+    }, function()
+      ui_intent_dispatcher.dispatch(state, {}, {
+        type = "ui_button",
+        id = "item_slot_1",
+        actor_role_id = 1,
+      }, {})
+
+      ui_view.refresh_item_slots(state, state.ui_model, {
+        display_player_id = 1,
+        allow_interact = true,
+      })
+    end)
+
+    _assert_eq(state._skip_item_slot_highlight_replay_choice_id, nil,
+      "slot click should clear skip flag so next refresh can emit reset")
+    _assert_eq(_has_event(events, "重置高亮"), true,
+      "next refresh after slot click should emit global reset to stop slot animation")
+  end)
+
   it("flat single-tap leaves no residual item_phase_ask state", function()
     local dispatched = {}
     local state = {
