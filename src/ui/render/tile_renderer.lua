@@ -46,7 +46,7 @@ local function _render_price(unit, cfg, tile_id, is_land, owner_name, level, con
     local rent = _rent_for_level(cfg, level)
     if rent and rent > 0 then
       if contiguous_count and contiguous_count > 1 then
-        text = owner_name .. "\n租 " .. tostring(rent) .. " ×" .. tostring(contiguous_count)
+        text = owner_name .. "\n租 " .. tostring(rent) .. string.rep("+", contiguous_count - 1)
       else
         text = owner_name .. "\n租 " .. tostring(rent)
       end
