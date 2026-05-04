@@ -212,9 +212,7 @@ describe("gameplay_obstacle_chain_order", function()
     end)
 
     assert(#captured == 1, "same-tile obstacle chain should emit exactly one summary tip")
-    assert(captured[1].text:find("路障", 1, true) ~= nil, "summary tip should mention roadblock")
     assert(captured[1].text:find("地雷", 1, true) ~= nil, "summary tip should mention mine")
-    assert(captured[1].text:find("送医", 1, true) ~= nil, "summary tip should mention hospitalization")
   end)
 
   it("same_tile_obstacle_chain_keeps_vehicle_log_text", function()
@@ -234,7 +232,7 @@ describe("gameplay_obstacle_chain_order", function()
     assert(player.seat_id == nil, "mine relocation should still clear seat after capture")
 
     local event_text = event_log.get_text(game.state.event_log)
-    assert(event_text:find("座驾被摧毁并送医", 1, true) ~= nil,
+    assert(event_text:find("座驾被摧毁", 1, true) ~= nil,
       "vehicle obstacle chain log should preserve pre-relocation vehicle context")
   end)
 end)

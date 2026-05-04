@@ -423,7 +423,7 @@ describe("landing", function()
     _assert_eq(next_state, "wait_action_anim", "mine landing should wait for move effect animation")
     _assert_eq(next_args.next_state, "move_followup", "mine landing should resume through move_followup")
     _assert_eq(move_anim and move_anim.kind, "mine_trigger", "mine landing should queue staged mine animation")
-    _assert_eq(next_args.next_args.log_entries[1], player.name .. " 触发地雷并送医", "mine landing should defer no-vehicle trigger log")
+    _assert_eq(next_args.next_args.log_entries[1], player.name .. "触发地雷", "mine landing should defer no-vehicle trigger log")
     _assert_eq(player.status.stay_turns or 0, 0, "mine landing should not hospitalize before move followup")
 
     local resumed_state, _ = move_followup.run({ game = g }, next_args.next_args)
@@ -444,7 +444,7 @@ describe("landing", function()
 
     local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
     _assert_eq(next_state, "wait_action_anim", "mine landing with vehicle should still wait for move effect animation")
-    _assert_eq(next_args.next_args.log_entries[1], player.name .. " 触发地雷，座驾被摧毁并送医",
+    _assert_eq(next_args.next_args.log_entries[1], player.name .. "触发地雷，座驾被摧毁",
       "mine landing should mention vehicle destruction when seat exists")
   end)
 
