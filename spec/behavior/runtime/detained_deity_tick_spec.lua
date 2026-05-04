@@ -3,7 +3,7 @@
 
 local support = require("support.test_profile_support")
 local phase_registry = require("src.turn.phases.registry")
-local waits = require("src.turn.waits.await.simple_waits")
+local waits = require("src.turn.waits.await.simple")
 
 local function _new_await_session(game)
   local session = { game = game }

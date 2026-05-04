@@ -1,9 +1,9 @@
 local debug_helpers = require("src.turn.waits.await.debug")
-local move_anim_wait = require("src.turn.waits.await.move_anim_wait")
-local action_anim_wait = require("src.turn.waits.await.action_anim_wait")
-local choice_wait = require("src.turn.waits.await.choice_wait")
-local seconds_wait = require("src.turn.waits.await.seconds_wait")
-local simple_waits = require("src.turn.waits.await.simple_waits")
+local move_anim_wait = require("src.turn.waits.await.move_anim")
+local action_anim_wait = require("src.turn.waits.await.action_anim")
+local choice_wait = require("src.turn.waits.await.choice")
+local seconds_wait = require("src.turn.waits.await.seconds")
+local simple_waits = require("src.turn.waits.await.simple")
 
 local await = {}
 
