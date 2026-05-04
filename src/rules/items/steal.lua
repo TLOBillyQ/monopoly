@@ -1,6 +1,6 @@
 local event_kinds = require("src.config.gameplay.event_kinds")
 local inventory = require("src.rules.items.inventory")
-local use_skip_choice = require("src.rules.choice.use_skip_choice")
+local use_skip_choice = require("src.rules.choice_specs.use_skip_choice")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.foundation.ports.action_anim")
