@@ -25,9 +25,9 @@ local function _success_text(player, entry, price, currency, priced)
   local name = context.entry_name(entry)
   if entry.kind == "skin" then
     if priced then
-      return player.name .. " 在黑市购买皮肤（占位） " .. name .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency
+      return player.name .. " 慷慨解囊 " .. number_utils.format_integer_part(price) .. " " .. currency .. "，喜提专属皮肤【" .. name .. "】，蛋仔闪耀登场～"
     end
-    return player.name .. " 在黑市购买皮肤（占位） " .. name .. " 成功"
+    return "恭喜 " .. player.name .. " 喜提专属皮肤【" .. name .. "】，蛋仔闪耀全场～"
   end
   if priced then
     return player.name .. " 在黑市购买 " .. name .. " 花费 " .. number_utils.format_integer_part(price) .. " " .. currency
