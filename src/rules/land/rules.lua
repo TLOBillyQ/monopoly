@@ -19,6 +19,14 @@ function land_rules.contiguous_rent(game, board, index, owner_id)
   return rent_resolver.contiguous_rent(game, board, index, owner_id)
 end
 
+function land_rules.contiguous_count(game, board, index, owner_id)
+  return rent_resolver.contiguous_count(game, board, index, owner_id)
+end
+
+function land_rules.contiguous_breakdown(game, board, index, owner_id)
+  return rent_resolver.contiguous_breakdown(game, board, index, owner_id)
+end
+
 local function _resolve_player_and_tile(game, player_id, tile_id)
   local player = game:find_player_by_id(player_id)
   local tile = game.board:get_tile_by_id(tile_id)
@@ -103,17 +111,48 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
 
   local board = game.board
   local idx = assert(board:index_of_tile_id(tile.id), "missing tile index: " .. tostring(tile.id))
-  local rent = land_rules.contiguous_rent(game, board, idx, owner.id)
+  local breakdown = land_rules.contiguous_breakdown(game, board, idx, owner.id)
+  local rent = breakdown.total_rent
 
-  if game:player_has_deity(player, "poor") then rent = rent * 2 end
-  if game:player_has_deity(owner, "rich") then rent = rent * 2 end
+  local poor_active = game:player_has_deity(player, "poor")
+  local rich_active = game:player_has_deity(owner, "rich")
+  local deity_multiplier = 1
+  if poor_active then
+    rent = rent * 2
+    deity_multiplier = deity_multiplier * 2
+  end
+  if rich_active then
+    rent = rent * 2
+    deity_multiplier = deity_multiplier * 2
+  end
+
+  local text = player.name .. " 向 " .. owner.name .. " 支付租金 " .. number_utils.format_integer_part(rent)
+  if breakdown.count > 1 then
+    text = text .. "（连片 ×" .. tostring(breakdown.count) .. "）"
+  end
+  if deity_multiplier > 1 then
+    local deity_label = nil
+    if poor_active and rich_active then
+      deity_label = "穷神/财神"
+    elseif poor_active then
+      deity_label = "穷神"
+    elseif rich_active then
+      deity_label = "财神"
+    end
+    if deity_label then
+      text = text .. "（" .. deity_label .. " ×" .. tostring(deity_multiplier) .. "）"
+    end
+  end
 
   local result = _build_land_event("rent_paid", {
     player = player,
     owner = owner,
     tile = tile,
     amount = rent,
-    text = player.name .. " 向 " .. owner.name .. " 支付租金 " .. number_utils.format_integer_part(rent),
+    single_rent = breakdown.single_rent,
+    contiguous_count = breakdown.count,
+    deity_multiplier = deity_multiplier,
+    text = text,
   })
 
   if game:player_balance(player, "金币") >= rent then

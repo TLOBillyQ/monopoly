@@ -4,6 +4,7 @@ local tile_renderer = require("src.ui.render.tile_renderer")
 local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 local overlay_compute = require("src.ui.render.anim.overlay_compute")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
+local contiguous_count = require("src.ui.render.board.contiguous_count")
 
 local visual_sync = {}
 
@@ -112,6 +113,17 @@ local function _spawn_mine_overlay(state, idx)
   )
 end
 
+local function _resolve_contiguous_count(_state, board, tile_id, owner_id)
+  if owner_id == nil or board == nil then
+    return nil
+  end
+  local count = contiguous_count.for_tile(board, tile_id, owner_id)
+  if count and count > 0 then
+    return count
+  end
+  return nil
+end
+
 local function _sync_owner_visual(state, tile_unit, tile_id, board)
   if tile_unit == nil then
     return
@@ -127,7 +139,8 @@ local function _sync_owner_visual(state, tile_unit, tile_id, board)
       owner_name = player and player.name or nil
     end
   end
-  tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name, level)
+  local count = _resolve_contiguous_count(state, board, tile_id, owner_id)
+  tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name, level, count)
 end
 
 local function _sync_building_visual(state, scene, idx, board, tile_id, tile_unit)
@@ -201,17 +214,51 @@ function visual_sync.normalize_payload(payload)
   return {
     tile_ids = _dedupe_list(payload.tile_ids),
     overlay_indices = _dedupe_list(payload.overlay_indices),
+    affected_owner_ids = _dedupe_list(payload.affected_owner_ids),
   }
+end
+
+local function _expand_affected_tiles(state, owner_ids)
+  if not owner_ids or #owner_ids == 0 then
+    return {}
+  end
+  local board = _resolve_board(state)
+  if not (board and type(board.path) == "table") then
+    return {}
+  end
+  local owner_set = {}
+  for _, owner_id in ipairs(owner_ids) do
+    owner_set[owner_id] = true
+  end
+  local tile_ids = {}
+  for _, tile in ipairs(board.path) do
+    if tile and tile.type == "land" and tile.owner_id and owner_set[tile.owner_id] then
+      tile_ids[#tile_ids + 1] = tile.id
+    end
+  end
+  return tile_ids
 end
 
 function visual_sync.sync_many(state, payload)
   local normalized = visual_sync.normalize_payload(payload)
   local handled = false
 
-  for _, tile_id in ipairs(normalized.tile_ids) do
+  local seen = {}
+  local function _refresh(tile_id)
+    if tile_id == nil or seen[tile_id] then
+      return
+    end
+    seen[tile_id] = true
     if visual_sync.sync_tile_visual(state, tile_id) then
       handled = true
     end
+  end
+
+  for _, tile_id in ipairs(normalized.tile_ids) do
+    _refresh(tile_id)
+  end
+  for _, tile_id in ipairs(_expand_affected_tiles(state, normalized.affected_owner_ids)) do
+    _refresh(tile_id)
   end
   for _, board_index in ipairs(normalized.overlay_indices) do
     if visual_sync.sync_overlay_visual(state, board_index) then

@@ -55,6 +55,16 @@ describe("cross_module_contract", function()
     local from_rules = land_rules.contiguous_rent(game, game.board, idx1, owner.id)
     local from_resolver = land_rent_resolver.contiguous_rent(game, game.board, idx1, owner.id)
     assert.equals(from_resolver, from_rules, "land rules contiguous rent should match resolver chain semantics")
+
+    local count_rules = land_rules.contiguous_count(game, game.board, idx1, owner.id)
+    local count_resolver = land_rent_resolver.contiguous_count(game, game.board, idx1, owner.id)
+    assert.equals(count_resolver, count_rules, "contiguous_count should match resolver chain semantics")
+    assert.equals(2, count_rules, "two adjacent tiles owned by same player report contiguous_count == 2")
+
+    local breakdown = land_rules.contiguous_breakdown(game, game.board, idx1, owner.id)
+    assert.equals(2, breakdown.count, "breakdown.count should equal contiguous_count")
+    assert.equals(from_rules, breakdown.total_rent, "breakdown.total_rent should equal contiguous_rent")
+    assert.is_true(breakdown.single_rent > 0, "breakdown.single_rent should be positive when owner has tiles")
   end)
 
   it("action_anim_bridge_contract_dispatches_by_kind", function()

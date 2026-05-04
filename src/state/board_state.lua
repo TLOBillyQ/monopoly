@@ -48,30 +48,54 @@ function game_state_tiles.update_tile(self, tile, updates)
   _mark_board(self)
 end
 
+local function _collect_affected_owner_ids(...)
+  local out = {}
+  local seen = {}
+  for i = 1, select("#", ...) do
+    local owner_id = select(i, ...)
+    if owner_id ~= nil and not seen[owner_id] then
+      seen[owner_id] = true
+      out[#out + 1] = owner_id
+    end
+  end
+  return out
+end
+
 function game_state_tiles.set_tile_owner(self, tile, owner_id)
   assert(tile ~= nil and tile.type == "land", "invalid tile for owner")
+  local previous_owner_id = tile.owner_id
   _bump_land_rent_version(self)
   game_state_tiles.update_tile(self, tile, { owner_id = owner_id })
   _notify_tile_owner_changed(self, tile.id, owner_id)
-  _sync_board_visual(self, { tile_ids = { tile.id } })
+  _sync_board_visual(self, {
+    tile_ids = { tile.id },
+    affected_owner_ids = _collect_affected_owner_ids(previous_owner_id, owner_id),
+  })
 end
 
 function game_state_tiles.set_tile_level(self, tile, level)
   _bump_land_rent_version(self)
   game_state_tiles.update_tile(self, tile, { level = level })
   if tile and tile.id ~= nil then
-    _sync_board_visual(self, { tile_ids = { tile.id } })
+    _sync_board_visual(self, {
+      tile_ids = { tile.id },
+      affected_owner_ids = _collect_affected_owner_ids(tile.owner_id),
+    })
   end
 end
 
 function game_state_tiles.reset_tile(self, tile)
   assert(tile ~= nil and tile.type == "land", "invalid tile for reset")
+  local previous_owner_id = tile.owner_id
   _bump_land_rent_version(self)
   tile.owner_id = nil
   tile.level = 0
   _mark_board(self)
   _notify_tile_owner_changed(self, tile.id, nil)
-  _sync_board_visual(self, { tile_ids = { tile.id } })
+  _sync_board_visual(self, {
+    tile_ids = { tile.id },
+    affected_owner_ids = _collect_affected_owner_ids(previous_owner_id),
+  })
 end
 
 function game_state_tiles.place_roadblock(self, index)

@@ -39,13 +39,17 @@ local function _rent_for_level(cfg, level)
   return rents[idx]
 end
 
-local function _render_price(unit, cfg, tile_id, is_land, owner_name, level)
+local function _render_price(unit, cfg, tile_id, is_land, owner_name, level, contiguous_count)
   local price_node = unit.get_child_by_name("price")
   local text
   if owner_name then
     local rent = _rent_for_level(cfg, level)
     if rent and rent > 0 then
-      text = owner_name .. "\n租 " .. tostring(rent)
+      if contiguous_count and contiguous_count > 1 then
+        text = owner_name .. "\n租 " .. tostring(rent) .. " ×" .. tostring(contiguous_count)
+      else
+        text = owner_name .. "\n租 " .. tostring(rent)
+      end
     else
       text = owner_name
     end
@@ -68,7 +72,7 @@ local function _render_color(unit, owner_id, is_land)
   _assert_land_node_present(is_land, "color")
 end
 
-function tile_renderer.render_tile(unit, tile_id, owner_id, owner_name, level)
+function tile_renderer.render_tile(unit, tile_id, owner_id, owner_name, level, contiguous_count)
   local cfg = tiles_by_id[tile_id]
   assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
   assert(unit ~= nil and unit.get_child_by_name ~= nil, "invalid tile unit")
@@ -78,7 +82,7 @@ function tile_renderer.render_tile(unit, tile_id, owner_id, owner_name, level)
     assert(cfg.price ~= nil, "missing tile price: " .. tostring(tile_id))
   end
   _render_name(unit, cfg, tile_id, is_land)
-  _render_price(unit, cfg, tile_id, is_land, owner_name, level)
+  _render_price(unit, cfg, tile_id, is_land, owner_name, level, contiguous_count)
   _render_color(unit, owner_id, is_land)
 end
 

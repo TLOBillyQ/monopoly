@@ -1,4 +1,5 @@
 local tiles_cfg = require("src.config.content.tiles")
+local contiguous_count = require("src.ui.render.board.contiguous_count")
 
 local board_slice = {}
 local cached_board_tiles = {}
@@ -7,6 +8,29 @@ local _tiles_by_id = {}
 
 for _, cfg in ipairs(tiles_cfg) do
   _tiles_by_id[cfg.id] = cfg
+end
+
+local function _project_tile_states(game)
+  local board = game and game.board or nil
+  if not board then
+    return {}
+  end
+  local lookup = board.tile_lookup or {}
+  local out = {}
+  for tile_id, raw in pairs(lookup) do
+    local entry = {
+      owner_id = raw.owner_id,
+      level = raw.level,
+    }
+    if raw.owner_id then
+      local count = contiguous_count.for_tile(board, tile_id, raw.owner_id)
+      if count and count > 0 then
+        entry.contiguous_count = count
+      end
+    end
+    out[tile_id] = entry
+  end
+  return out
 end
 
 local function _build_board_tiles(board_path)
@@ -48,7 +72,7 @@ function board_slice.build(game, env, turn)
   cached_board_tiles = board_tiles
   return {
     tiles = board_tiles,
-    tile_states = game.board and game.board.tile_lookup or {},
+    tile_states = _project_tile_states(game),
     overlays = _build_overlays(env),
     players = game.players,
     phase = turn.phase,
@@ -68,7 +92,7 @@ function board_slice.update(board, game, env, turn)
   cached_board_tiles = board_tiles
   board = board or {}
   board.tiles = board_tiles
-  board.tile_states = game.board and game.board.tile_lookup or {}
+  board.tile_states = _project_tile_states(game)
   board.overlays = _build_overlays(env)
   board.players = game.players
   board.phase = turn.phase

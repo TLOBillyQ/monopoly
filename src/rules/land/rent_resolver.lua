@@ -31,7 +31,7 @@ local function _ensure_land_neighbors(board)
   return land_neighbors
 end
 
-local function _get_rent_cache(game, owner_id)
+local function _get_owner_cache(game, owner_id)
   local version = game._land_rent_version or 0
   local cache = game._land_rent_cache
   if not cache or cache.version ~= version then
@@ -44,10 +44,13 @@ local function _get_rent_cache(game, owner_id)
 
   local owner_cache = cache.by_owner[owner_id]
   if not owner_cache then
-    owner_cache = { tile_sum = {} }
+    owner_cache = { tile_sum = {}, tile_count = {} }
     cache.by_owner[owner_id] = owner_cache
   end
-  return owner_cache.tile_sum
+  if not owner_cache.tile_count then
+    owner_cache.tile_count = {}
+  end
+  return owner_cache
 end
 
 function resolver.safe_tile_state(game, tile)
@@ -58,7 +61,7 @@ function resolver.resolve_rent_owner(game, tile, state_fn)
   return property_query.resolve_rent_owner(game, tile, state_fn)
 end
 
-function resolver.contiguous_rent(game, board, index, owner_id)
+local function _resolve_component(game, board, index, owner_id)
   assert(board ~= nil, "missing board")
   assert(board.map ~= nil, "missing board.map")
   local land_neighbors = _ensure_land_neighbors(board)
@@ -67,13 +70,14 @@ function resolver.contiguous_rent(game, board, index, owner_id)
   assert(start_tile.type == "land", "invalid start tile: " .. tostring(index))
   local start_state = resolver.safe_tile_state(game, start_tile)
   if start_state.owner_id ~= owner_id then
-    return 0
+    return start_tile, 0, 0, nil
   end
 
-  local tile_sum = _get_rent_cache(game, owner_id)
-  local cached = tile_sum[start_tile.id]
-  if cached then
-    return cached
+  local owner_cache = _get_owner_cache(game, owner_id)
+  local cached_sum = owner_cache.tile_sum[start_tile.id]
+  local cached_count = owner_cache.tile_count[start_tile.id]
+  if cached_sum and cached_count then
+    return start_tile, cached_sum, cached_count, nil
   end
 
   local rent_sum, component = rent_math.compute_contiguous_rent(
@@ -92,10 +96,36 @@ function resolver.contiguous_rent(game, board, index, owner_id)
     end
   )
 
-  for _, tile_id in ipairs(component) do
-    tile_sum[tile_id] = rent_sum
+  local count = component and #component or 0
+  for _, tile_id in ipairs(component or {}) do
+    owner_cache.tile_sum[tile_id] = rent_sum
+    owner_cache.tile_count[tile_id] = count
   end
+  return start_tile, rent_sum, count, component
+end
+
+function resolver.contiguous_rent(game, board, index, owner_id)
+  local _, rent_sum = _resolve_component(game, board, index, owner_id)
   return rent_sum
+end
+
+function resolver.contiguous_count(game, board, index, owner_id)
+  local _, _, count = _resolve_component(game, board, index, owner_id)
+  return count
+end
+
+function resolver.contiguous_breakdown(game, board, index, owner_id)
+  local start_tile, rent_sum, count = _resolve_component(game, board, index, owner_id)
+  if count == 0 then
+    return { count = 0, single_rent = 0, total_rent = 0 }
+  end
+  local start_state = resolver.safe_tile_state(game, start_tile)
+  local single_rent = pricing.rent_for_level(start_tile, start_state.level or 0)
+  return {
+    count = count,
+    single_rent = single_rent,
+    total_rent = rent_sum,
+  }
 end
 
 return resolver
