@@ -5,7 +5,7 @@ local tip_queue = require("src.foundation.coordination.tip_queue")
 local runtime_context = require("src.host.context")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_default_ports = require("src.host.default_ports")
-local paid_purchase_port = require("src.rules.market.paid_purchase_port")
+local paid_purchase_port = require("src.rules.ports.paid_purchase")
 local test_env = require("spec.support.test_env")
 
 local M = {}

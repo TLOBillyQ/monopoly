@@ -2,7 +2,7 @@ local runtime_context = require("src.host.context")
 local default_ports = require("src.host.default_ports")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local global_aliases = require("src.host.global_aliases")
-local paid_purchase_port = require("src.rules.market.paid_purchase_port")
+local paid_purchase_port = require("src.rules.ports.paid_purchase")
 local config_sanity = require("src.config.gameplay.config_sanity")
 
 local M = {}

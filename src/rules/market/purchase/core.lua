@@ -4,7 +4,7 @@ local market_feedback = require("src.rules.market.choice.feedback")
 local purchase_policy = require("src.rules.market.purchase.policy")
 local local_purchase = require("src.rules.market.purchase.local_purchase")
 local paid_purchase_callback = require("src.rules.market.purchase.paid_purchase_callback")
-local paid_purchase_gateway = require("src.rules.market.paid_purchase_port")
+local paid_purchase_gateway = require("src.rules.ports.paid_purchase")
 local number_utils = require("src.foundation.lang.number")
 
 local purchase = {}

@@ -56,7 +56,7 @@ describe("choices_purchase", function()
       ["src.rules.market.purchase.paid_purchase_callback"] = {
         handle = function() end,
       },
-      ["src.rules.market.paid_purchase_port"] = {
+      ["src.rules.ports.paid_purchase"] = {
         setup_for_game = function() end,
         start = function(_, _, entry)
           start_calls[#start_calls + 1] = { failed = false, product_id = entry.product_id }
@@ -112,7 +112,7 @@ describe("choices_purchase", function()
       ["src.rules.market.purchase.paid_purchase_callback"] = {
         handle = function() end,
       },
-      ["src.rules.market.paid_purchase_port"] = {
+      ["src.rules.ports.paid_purchase"] = {
         setup_for_game = function() end,
         start = function(_, _, entry)
           return false, "payment_gateway_error"
@@ -164,7 +164,7 @@ describe("choices_purchase", function()
       ["src.rules.market.purchase.paid_purchase_callback"] = {
         handle = function() end,
       },
-      ["src.rules.market.paid_purchase_port"] = {
+      ["src.rules.ports.paid_purchase"] = {
         setup_for_game = function() end,
         start = function(_, _, entry)
           start_calls[#start_calls + 1] = { product_id = entry.product_id }
