@@ -9,6 +9,7 @@ local mine_effect = require("src.rules.effects.mine")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local movement = {}
 
@@ -64,6 +65,7 @@ local function _new_move_state(game, player, steps, opts, abs_steps)
     encountered = {},
     visited = {},
     pass_start = 0,
+    pass_start_at_steps = {},
     stopped_on_roadblock = false,
     market_interrupt = nil,
     steal_interrupt = nil,
@@ -271,6 +273,9 @@ local function _step_move(ctx, step)
     })
   end
   ctx.pass_start = ctx.pass_start + passed
+  if passed > 0 then
+    ctx.pass_start_at_steps[#ctx.pass_start_at_steps + 1] = step
+  end
   ctx.facing = next_facing
   local previous_tile = ctx.board:get_tile(ctx.current)
   ctx.current = next_index
@@ -332,15 +337,7 @@ local function _tile_label(tile)
   return tile.name
 end
 
-local function _emit_move_events(ctx, landing_tile)
-  _emit_text(ctx.game, monopoly_event.movement.moved, event_kinds.move_completed, {
-    player = ctx.player,
-    from_tile = ctx.start_tile,
-    to_tile = landing_tile,
-    steps = ctx.steps,
-    text = ctx.player.name .. " 从 " .. _tile_label(ctx.start_tile) .. " 移动到 " .. _tile_label(landing_tile),
-    prompt_text = _build_other_action_prompt_text(),
-  })
+local function _emit_pass_start_reward(ctx)
   if ctx.pass_start <= 0 then
     return
   end
@@ -353,6 +350,54 @@ local function _emit_move_events(ctx, landing_tile)
     text = ctx.player.name .. " 经过起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
     prompt_text = _build_other_action_prompt_text(),
   }, { show_tip = true })
+end
+
+local function _resolve_pass_start_hold(ctx)
+  local opts = ctx.opts or {}
+  if opts.pass_start_hold_seconds ~= nil then
+    local override = opts.pass_start_hold_seconds
+    if override < 0 then
+      return 0
+    end
+    return override
+  end
+  local first_step = ctx.pass_start_at_steps[1]
+  if not first_step then
+    return 0
+  end
+  local per = timing.pass_start_hold_seconds_per_step or 0
+  local hold = first_step * per
+  local cap = timing.pass_start_hold_max_seconds
+  if cap and hold > cap then
+    return cap
+  end
+  return hold
+end
+
+local function _schedule_pass_start_reward(ctx)
+  if ctx.pass_start <= 0 then
+    return
+  end
+  local hold = _resolve_pass_start_hold(ctx)
+  if hold <= 0 then
+    _emit_pass_start_reward(ctx)
+    return
+  end
+  runtime_ports.schedule(hold, function()
+    _emit_pass_start_reward(ctx)
+  end)
+end
+
+local function _emit_move_events(ctx, landing_tile)
+  _emit_text(ctx.game, monopoly_event.movement.moved, event_kinds.move_completed, {
+    player = ctx.player,
+    from_tile = ctx.start_tile,
+    to_tile = landing_tile,
+    steps = ctx.steps,
+    text = ctx.player.name .. " 从 " .. _tile_label(ctx.start_tile) .. " 移动到 " .. _tile_label(landing_tile),
+    prompt_text = _build_other_action_prompt_text(),
+  })
+  _schedule_pass_start_reward(ctx)
 end
 
 -- public API

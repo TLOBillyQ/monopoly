@@ -2,6 +2,7 @@
 --   auto_decision_delay_seconds < scope_timeouts.choice  (AI 自动确认必须能赶上 timeout)
 --   deadline_warning_thresholds 必须降序：[1] > [2] > 0
 --   现金浮字总窗口 = panel_cash_delta_show_delay_seconds + panel_cash_delta_visible_seconds (加性)
+--   pass_start_hold_seconds_per_step 必须与 ui walk_speed × tile_length 节奏对齐
 local timing = {
   auto_decision_delay_seconds = 2.0,
   popup_auto_close_seconds = 2.0,
@@ -24,6 +25,8 @@ local timing = {
   dice_face_hold_seconds = 1.0,
   loading_to_game_transition_seconds = 1.0,
   move_anim_tail_padding_seconds = 0.5,
+  pass_start_hold_seconds_per_step = 0.30,
+  pass_start_hold_max_seconds = 6.0,
   turn_limit = 1000,
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
   scope_timeouts = {
