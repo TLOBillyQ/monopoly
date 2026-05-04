@@ -10,7 +10,7 @@ local renderer = {}
 local function _view_deps()
   return {
     runtime = runtime,
-    modal_state = require("src.ui.state.modal_state"),
+    modal_state = require("src.ui.state.modal"),
   }
 end
 

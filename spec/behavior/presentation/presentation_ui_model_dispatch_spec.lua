@@ -1064,7 +1064,7 @@ describe("presentation_ui.model_dispatch", function()
   end)
 
   it("_test_modal_state_select_choice_option_invalidates_ui_model_without_choice_canvas_dirty", function()
-    local modal_state = require("src.ui.state.modal_state")
+    local modal_state = require("src.ui.state.modal")
     local canvas_store = require("src.ui.state.canvas_store")
     local state = {}
     local choice_dirty_marks = 0
@@ -1119,7 +1119,7 @@ describe("presentation_ui.model_dispatch", function()
         end,
       },
       {
-        target = require("src.ui.state.modal_state"),
+        target = require("src.ui.state.modal"),
         key = "close_choice",
         value = function()
           modal_closed = modal_closed + 1

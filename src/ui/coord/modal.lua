@@ -1,4 +1,4 @@
-local modal_state = require("src.ui.state.modal_state")
+local modal_state = require("src.ui.state.modal")
 local choice_openers = require("src.ui.coord.choice_screens.openers")
 local choice_common = require("src.ui.coord.choice_screens.helpers")
 local popup = require("src.ui.coord.popup")
