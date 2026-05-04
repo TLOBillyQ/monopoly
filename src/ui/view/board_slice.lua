@@ -1,5 +1,5 @@
 local tiles_cfg = require("src.config.content.tiles")
-local contiguous_count = require("src.ui.render.board.contiguous_count")
+local contiguous_count = require("src.ui.view.contiguous_count")
 
 local board_slice = {}
 local cached_board_tiles = {}

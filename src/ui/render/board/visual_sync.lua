@@ -4,7 +4,7 @@ local tile_renderer = require("src.ui.render.tile_renderer")
 local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 local overlay_compute = require("src.ui.render.anim.overlay_compute")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local contiguous_count = require("src.ui.render.board.contiguous_count")
+local contiguous_count = require("src.ui.view.contiguous_count")
 
 local visual_sync = {}
 
