@@ -16,6 +16,7 @@ local function _project_tile_states(game)
     return {}
   end
   local lookup = board.tile_lookup or {}
+  local count_by_owner = {}
   local out = {}
   for tile_id, raw in pairs(lookup) do
     local entry = {
@@ -23,7 +24,12 @@ local function _project_tile_states(game)
       level = raw.level,
     }
     if raw.owner_id then
-      local count = contiguous_count.for_tile(board, tile_id, raw.owner_id)
+      local owner_counts = count_by_owner[raw.owner_id]
+      if owner_counts == nil then
+        owner_counts = contiguous_count.build_for_owner(board, raw.owner_id)
+        count_by_owner[raw.owner_id] = owner_counts
+      end
+      local count = owner_counts[tile_id]
       if count and count > 0 then
         entry.contiguous_count = count
       end

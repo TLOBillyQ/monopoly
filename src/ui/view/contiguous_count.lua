@@ -41,23 +41,16 @@ local function _owner_of(board, tile_id)
   return nil
 end
 
-function M.for_tile(board, tile_id, owner_id)
-  if not (board and tile_id ~= nil and owner_id ~= nil) then
-    return 0
-  end
-  if _owner_of(board, tile_id) ~= owner_id then
-    return 0
-  end
-  local neighbors = _ensure_land_neighbors(board)
-  local visited = { [tile_id] = true }
-  local queue = { tile_id }
+local function _bfs_component(neighbors, board, start_tile_id, owner_id)
+  local visited = { [start_tile_id] = true }
+  local queue = { start_tile_id }
   local head = 1
-  local count = 0
+  local component = {}
   while head <= #queue do
     local cur = queue[head]
     head = head + 1
     if _owner_of(board, cur) == owner_id then
-      count = count + 1
+      component[#component + 1] = cur
       for _, next_id in ipairs(neighbors[cur] or {}) do
         if not visited[next_id] then
           visited[next_id] = true
@@ -66,7 +59,39 @@ function M.for_tile(board, tile_id, owner_id)
       end
     end
   end
-  return count
+  return component
+end
+
+function M.for_tile(board, tile_id, owner_id)
+  if not (board and tile_id ~= nil and owner_id ~= nil) then
+    return 0
+  end
+  if _owner_of(board, tile_id) ~= owner_id then
+    return 0
+  end
+  local neighbors = _ensure_land_neighbors(board)
+  return #_bfs_component(neighbors, board, tile_id, owner_id)
+end
+
+-- Build a tile_id -> count map for every land tile owned by owner_id.
+-- One BFS per connected component (vs one per tile when calling for_tile in a loop).
+function M.build_for_owner(board, owner_id)
+  local out = {}
+  if not (board and owner_id ~= nil) then
+    return out
+  end
+  local lookup = board.tile_lookup or {}
+  local neighbors = _ensure_land_neighbors(board)
+  for tile_id, tile in pairs(lookup) do
+    if tile and tile.type == "land" and tile.owner_id == owner_id and out[tile_id] == nil then
+      local component = _bfs_component(neighbors, board, tile_id, owner_id)
+      local count = #component
+      for _, cid in ipairs(component) do
+        out[cid] = count
+      end
+    end
+  end
+  return out
 end
 
 return M
