@@ -6,7 +6,7 @@ local choice_auto_policy = require("src.turn.policies.choice_auto")
 local tick_ui_gate = require("src.turn.waits.ui_gate")
 local tick_choice_timeout = require("src.turn.waits.choice_timeout")
 local output_state_adapter = require("src.turn.output.state_adapter")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 
 local tick_timeout = {}
 

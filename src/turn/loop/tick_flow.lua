@@ -3,7 +3,7 @@ local turn_role_control_policy = require("src.turn.policies.role_control")
 local auto_context = require("src.turn.policies.auto_context")
 local tick_steps = require("src.turn.loop.tick_steps")
 local landing_visual_hold = require("src.state.visual_hold")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local tick_flow = {}

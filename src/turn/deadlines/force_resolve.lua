@@ -2,7 +2,7 @@
 -- 设计约束：本模块不 require turn.actions.action_dispatcher，避免 turn 子树内部循环。
 -- dispatch 入口由调用方传入 dispatcher 闭包，或经由 game:advance_turn 与 game:dispatch_action 直接驱动。
 local logger = require("src.foundation.log.logger")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local DeadlineService = require("src.turn.deadlines.service")

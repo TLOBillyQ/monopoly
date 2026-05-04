@@ -1,6 +1,6 @@
 local logger = require("src.foundation.log.logger")
 local validator = require("src.turn.actions.validator")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local market_service = require("src.rules.market")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local action_dispatch = require("src.turn.actions.dispatch.action_dispatch")

@@ -40,7 +40,7 @@ local logger = require("src.foundation.log.logger")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local host_runtime = require("src.host")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 
 
 local function _ui_runtime(state)

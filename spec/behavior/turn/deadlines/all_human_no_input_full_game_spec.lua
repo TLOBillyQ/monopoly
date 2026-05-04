@@ -2,7 +2,7 @@
 -- 这里用一个简化的多回合模拟：连续多次 force_skip + advance_turn
 local force_resolve = require("src.turn.deadlines.force_resolve")
 local fallback_registry = require("src.rules.choice.fallback_registry")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 
 local function _build_state()
   local state = {}

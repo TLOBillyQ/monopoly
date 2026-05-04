@@ -1,4 +1,4 @@
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local function _has_action_anim(game)

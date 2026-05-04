@@ -4,7 +4,7 @@ local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy"
 local choice_handler_factory = require("src.rules.choice_handler_factory")
 local validator = require("src.turn.actions.validator")
 local availability = require("src.rules.items.availability")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local logger = require("src.foundation.log.logger")
 
 local _validate = validator._validate_item_slot_action

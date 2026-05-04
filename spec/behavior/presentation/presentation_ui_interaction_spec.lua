@@ -40,7 +40,7 @@ local logger = require("src.foundation.log.logger")
 local market_cfg = require("src.config.content.market")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local host_runtime = require("src.host")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local raycast = require("src.host.raycast")
 
 
@@ -763,7 +763,7 @@ describe("presentation_ui.interaction", function()
 
   it("_test_ui_sync_ports_rebuilds_model_before_reopening_choice", function()
     local ui_sync_ports = require("src.ui.ports.ui_sync")
-    local runtime_state_local = require("src.state.runtime_state")
+    local runtime_state_local = require("src.state.runtime")
     local rebuilt = {
       choice = { id = 42, kind = "remote", route_key = "remote", options = { { id = 1, label = "A" } } },
       market = { choice_id = 42 },

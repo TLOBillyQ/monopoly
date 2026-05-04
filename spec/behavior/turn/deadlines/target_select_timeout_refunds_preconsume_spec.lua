@@ -1,7 +1,7 @@
 -- 验证：道具目标选择超时后清除 _item_phase_ask_active 标志，并清空 pending_choice
 local target_select_timer = require("src.turn.waits.target_select_timer")
 local DeadlineService = require("src.turn.deadlines.service")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 
 local function _build_state()
   local state = {}

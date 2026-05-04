@@ -1,4 +1,4 @@
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local deferred_dirty = require("src.state.visual_hold.deferred_dirty")
 local release_scheduler = require("src.state.visual_hold.release_scheduler")
 local event_log = require("src.state.event_log")

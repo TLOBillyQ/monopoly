@@ -1,7 +1,7 @@
 -- 验证：超时温柔跳过不扣资源（玩家 cash/inventory 在 force_skip 后保持不变）
 local force_resolve = require("src.turn.deadlines.force_resolve")
 local fallback_registry = require("src.rules.choice.fallback_registry")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 
 local function _build_state()
   local state = {}

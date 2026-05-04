@@ -1,5 +1,5 @@
 local loop_runtime = require("src.turn.loop.runtime")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local tip_queue = require("src.foundation.coordination.tip_queue")
 
 local function _assert_eq(a, b, msg)

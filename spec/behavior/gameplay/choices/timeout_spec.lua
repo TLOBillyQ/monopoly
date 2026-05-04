@@ -5,7 +5,7 @@ local _build_loop_state = fixtures.build_loop_state
 local _build_test_ports = fixtures.build_test_ports
 local tick_choice_timeout = require("src.turn.waits.choice_timeout")
 local tick_timeout = require("src.turn.waits.timeout")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 
 local _resolve_choice_owner_tests = {
   function()

@@ -230,7 +230,7 @@ local rules = {
 local dep_rules_whitelist = {}
 
 dep_rules_whitelist["src/ui/state/runtime.lua"] = {
-  ['require("src.state.runtime_state")'] = true,
+  ['require("src.state.runtime")'] = true,
 }
 
 dep_rules_whitelist["src/ui/visual_hold.lua"] = {

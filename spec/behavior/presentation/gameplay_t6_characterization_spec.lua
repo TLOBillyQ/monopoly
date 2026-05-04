@@ -877,7 +877,7 @@ describe("gameplay.t6_characterization", function()
       }
 
       local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.runtime_state"] = {
+    ["src.state.runtime"] = {
           get_ui_model = function()
             return {
               current_player_id = 7,
@@ -909,7 +909,7 @@ describe("gameplay.t6_characterization", function()
         game = {},
       }
       local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.runtime_state"] = {
+    ["src.state.runtime"] = {
           get_ui_model = function() return { choice = nil } end,
         },
       }, function(flow)
@@ -924,7 +924,7 @@ describe("gameplay.t6_characterization", function()
         game = {},
       }
       local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.runtime_state"] = {
+    ["src.state.runtime"] = {
           get_ui_model = function()
             return { choice = { id = "choice1" } }
           end,
@@ -1191,7 +1191,7 @@ describe("gameplay.t6_characterization", function()
       }
 
       local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.runtime_state"] = {
+    ["src.state.runtime"] = {
           get_ui_model = function()
             return {
               current_player_id = 7,
@@ -1230,7 +1230,7 @@ describe("gameplay.t6_characterization", function()
       }
 
       local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.runtime_state"] = {
+    ["src.state.runtime"] = {
           get_ui_model = function()
             return {
               current_player_id = 7,
@@ -1269,7 +1269,7 @@ describe("gameplay.t6_characterization", function()
       }
 
       local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
-    ["src.state.runtime_state"] = {
+    ["src.state.runtime"] = {
           get_ui_model = function()
             return {
               current_player_id = 7,

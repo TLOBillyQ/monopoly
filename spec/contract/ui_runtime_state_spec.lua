@@ -1,6 +1,6 @@
 ---@diagnostic disable: undefined-global, undefined-field, duplicate-set-field, unused-local, need-check-nil
 
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local output_port = require("src.turn.output.state_adapter")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local validator = require("src.turn.actions.validator")

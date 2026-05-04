@@ -2,7 +2,7 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.foundation.log.logger")
 local number_utils = require("src.foundation.lang.number")
 local tick_timeout = require("src.turn.waits.timeout")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local turn_ui_sync_shared = require("src.state.ui_sync_shared")
 local DeadlineService = require("src.turn.deadlines.service")
 

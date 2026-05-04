@@ -1,6 +1,6 @@
 local turn_anim = {}
 local runtime_ports = require("src.foundation.ports.runtime_ports")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 
 function turn_anim.step_anim(game, state, opts)
   assert(game ~= nil, "missing game")

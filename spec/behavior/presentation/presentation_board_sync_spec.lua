@@ -2,7 +2,7 @@ local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 local board_geometry = require("src.config.gameplay.board_geometry")
-local runtime_state = require("src.state.runtime_state")
+local runtime_state = require("src.state.runtime")
 local vec3 = require("fixtures.vec3")
 
 if not math.Vector3 then
