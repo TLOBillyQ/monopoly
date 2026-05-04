@@ -29,7 +29,7 @@ _t2_case_groups.roll_dice_tests = {
 
 _t2_case_groups.apply_dice_multiplier_tests = {
   function()
-    local player = { id = 1, position = 1, status = { pending_dice_multiplier = 4 } }
+    local player = { id = 1, name = "P1", position = 1, status = { pending_dice_multiplier = 4 } }
     local turn_mgr = {
       game = {
         turn = { move_anim_seq = 0 },

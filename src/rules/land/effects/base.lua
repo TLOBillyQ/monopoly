@@ -6,6 +6,7 @@ local land_actions = require("src.rules.land.actions")
 local land_choice_specs = require("src.rules.land.choice_specs")
 local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
+local use_broadcast = require("src.rules.items.use_broadcast")
 local pricing = require("src.rules.land.pricing")
 local board_utils = require("src.rules.land.board")
 local monopoly_event = require("src.foundation.events")
@@ -166,6 +167,7 @@ local function _apply_pay_rent(ctx)
 
   if player.status.pending_free_rent then
     ctx.game:set_player_status(player, "pending_free_rent", false)
+    use_broadcast.dispatch(ctx.game, player, item_ids.free_rent)
     event_feed.publish(ctx.game, {
       kind = event_kinds.rent_immune,
       text = player.name .. " 使用免费卡，免租 " .. t.name,
@@ -196,11 +198,12 @@ local function _apply_tax(ctx)
   local player = ctx.player
 
   if player.status.pending_tax_free then
+    ctx.game:set_player_status(player, "pending_tax_free", false)
+    use_broadcast.dispatch(ctx.game, player, item_ids.tax_free)
     event_feed.publish(ctx.game, {
       kind = event_kinds.tax_immune,
       text = player.name .. " 使用免税卡，本次免税",
     })
-    ctx.game:set_player_status(player, "pending_tax_free", false)
     return
   end
 

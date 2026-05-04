@@ -1,3 +1,9 @@
+local item_ids = require("src.config.gameplay.item_ids")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local event_feed = require("src.rules.ports.event_feed")
+local use_broadcast = require("src.rules.items.use_broadcast")
+local number_utils = require("src.foundation.lang.number")
+
 local dice_multiplier = {}
 
 local function _resolve_pending_multiplier(player)
@@ -31,6 +37,15 @@ function dice_multiplier.apply_move_total(game, player, total, raw_total)
   if game.last_turn then
     game.last_turn.total = new_total
   end
+  use_broadcast.dispatch(game, player, item_ids.dice_multiplier)
+  event_feed.publish(game, {
+    kind = event_kinds.item_used,
+    text = player.name
+      .. " 骰子加倍卡生效，步数 "
+      .. number_utils.format_integer_part(raw_total)
+      .. " → "
+      .. number_utils.format_integer_part(new_total),
+  })
   return new_total
 end
 

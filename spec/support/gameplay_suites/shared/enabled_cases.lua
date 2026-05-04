@@ -35,7 +35,7 @@ return {
     assert(total == 12, "exact overrides should sum correctly")
   end,
   _test_apply_dice_multiplier_applies_and_resets = function()
-    local player = { id = 1, position = 1, status = { pending_dice_multiplier = 4 } }
+    local player = { id = 1, name = "P1", position = 1, status = { pending_dice_multiplier = 4 } }
     local turn_mgr = {
       game = {
         turn = { move_anim_seq = 0 },

@@ -34,7 +34,7 @@ local _apply_dice_multiplier_tests = {
         board = { get_tile = function() return { type = "normal" } end },
         turn = { move_anim_seq = 0 },
         dirty = {},
-        players = { { id = 1, position = 1, status = { pending_dice_multiplier = 3 } } },
+        players = { { id = 1, name = "P1", position = 1, status = { pending_dice_multiplier = 3 } } },
         anim_gate_port = { wait_move_anim = false },
       },
     }
@@ -149,7 +149,7 @@ local _apply_dice_multiplier_tests = {
     assert(result == "test_result", "should complete move phase without multiplier")
   end,
   function()
-    local player = { id = 1, position = 1, status = { pending_dice_multiplier = 4 } }
+    local player = { id = 1, name = "P1", position = 1, status = { pending_dice_multiplier = 4 } }
     local turn_mgr = {
       game = {
         board = { get_tile = function() return { type = "normal" } end },
