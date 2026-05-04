@@ -10,7 +10,7 @@ local function _load_action_anim_player()
   if _action_anim_player then
     return _action_anim_player
   end
-  _action_anim_player = require("src.ui.render.action_anim")
+  _action_anim_player = require("src.ui.render.anim")
   return _action_anim_player
 end
 

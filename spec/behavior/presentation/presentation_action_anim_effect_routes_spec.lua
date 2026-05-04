@@ -1,4 +1,4 @@
-local action_anim = require("src.ui.render.action_anim")
+local action_anim = require("src.ui.render.anim")
 local handlers = require("src.ui.render.anim.handlers")
 local anim_units = require("src.ui.render.anim.units")
 local board_feedback = require("src.ui.render.board_feedback.service")

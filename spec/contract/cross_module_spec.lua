@@ -5,7 +5,7 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local land_events = require("src.rules.land.events")
 local land_rules = require("src.rules.land.landing_rules")
 local land_rent_resolver = require("src.rules.land.rent_resolver")
-local action_anim = require("src.ui.render.action_anim")
+local action_anim = require("src.ui.render.anim")
 local handlers = require("src.ui.render.anim.handlers")
 local timing = require("src.config.gameplay.timing")
 

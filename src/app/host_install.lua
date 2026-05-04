@@ -40,7 +40,7 @@ end
 local function _load_required_modules()
   paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
   require "src.rules.endgame.bankruptcy"
-  require "src.computer.core_agent"
+  require "src.computer.agent"
   require "src.rules.endgame.game_victory"
   require "src.app.compose_game"
 end

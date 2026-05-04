@@ -111,7 +111,7 @@ describe("presentation_ui.event_handlers", function()
         end,
       },
       {
-        target = require("src.ui.render.action_anim"),
+        target = require("src.ui.render.anim"),
         key = "clear_overlay",
         value = function()
           cleared = cleared + 1
@@ -194,7 +194,7 @@ describe("presentation_ui.event_handlers", function()
         end,
       },
       {
-        target = require("src.ui.render.action_anim"),
+        target = require("src.ui.render.anim"),
         key = "clear_overlay",
         value = function()
           cleared = cleared + 1

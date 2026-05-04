@@ -33,7 +33,7 @@ local boundary_contract = {
     presentation_runtime = {
       "src.app.gameplay_start",
       "src.turn.loop",
-      "src.ui.render.action_anim",
+      "src.ui.render.anim",
        "src.ui.render.anim.overlay_runtime",
       "src.ui.render.building_effects",
       "src.ui.render.board.visual_sync",

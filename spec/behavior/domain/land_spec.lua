@@ -36,8 +36,8 @@ local function _require_upvalue(fn, expected_name)
 end
 
 local function _reload_core_agent()
-  package.loaded["src.computer.core_agent"] = nil
-  return require("src.computer.core_agent")
+  package.loaded["src.computer.agent"] = nil
+  return require("src.computer.agent")
 end
 
 local function _remote_priority_for_tile_type()

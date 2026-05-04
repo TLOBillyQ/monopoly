@@ -452,7 +452,7 @@ local function _test_intent_dispatcher_dispatch_handles_popup_and_ignores_invali
 end
 
 local function _test_ai_board_target_choice_falls_back_to_first_option()
-  local agent = require("src.computer.core_agent")
+  local agent = require("src.computer.agent")
   local g = _new_game()
   local ai_player = g.players[2]
   ai_player.auto = true

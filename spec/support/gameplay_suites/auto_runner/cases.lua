@@ -6,7 +6,7 @@ local function make_cases(helpers)
 
 local function _test_autorunner_runs_to_end()
   local auto_runner = require("src.turn.policies.auto_runner")
-  local agent = require("src.computer.core_agent")
+  local agent = require("src.computer.agent")
   local land = require("src.rules.land.executors")
   local land_actions = require("src.rules.land.actions")
   local item_inventory = require("src.rules.items.inventory")
@@ -501,7 +501,7 @@ local function _test_decision_engine_cancels_item_phase_passive()
   local player = g.players[1]
   player.is_ai = true
 
-  local decide = decision_engine.build(require("src.computer.core_agent"))
+  local decide = decision_engine.build(require("src.computer.agent"))
 
   local choice = {
     id = 100,

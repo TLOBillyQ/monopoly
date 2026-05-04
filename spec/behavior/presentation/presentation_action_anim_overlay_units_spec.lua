@@ -1,4 +1,4 @@
-local action_anim = require("src.ui.render.action_anim")
+local action_anim = require("src.ui.render.anim")
 local host_runtime = require("src.host")
 local overlay_compute = require("src.ui.render.anim.overlay_compute")
 local visual_sync = require("src.ui.render.board.visual_sync")
