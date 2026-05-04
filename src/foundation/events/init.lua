@@ -24,6 +24,7 @@ local monopoly_events = {
     bought_vehicle = "mk.bought_vehicle",
     auto_skip = "mk.auto_skip",
     buy_failed = "mk.buy_failed",
+    inventory_full = "mk.inventory_full",
   },
   chance = {
     applied = "ch.applied",

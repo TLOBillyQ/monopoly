@@ -14,6 +14,14 @@ function feedback.emit_buy_failed(player, entry, reason, body)
   })
 end
 
+function feedback.emit_inventory_full(player, entry)
+  _emit_event(monopoly_event.market.inventory_full, {
+    player = player,
+    entry = entry,
+    body = "卡槽已满，无法继续购买",
+  })
+end
+
 function feedback.popup(title, body)
   return {
     title = title or popup_title,

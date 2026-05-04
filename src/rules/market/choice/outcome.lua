@@ -1,4 +1,5 @@
 local choice_session = require("src.rules.market.choice.session")
+local feedback = require("src.rules.market.choice.feedback")
 local intent_output_port = require("src.rules.ports.intent_output")
 
 local outcome = {}
@@ -38,11 +39,7 @@ function outcome.resolve_purchase(game, choice, player, entry, result, finish_ch
         and entry.kind == "item"
         and result.fulfilled_now == true
         and result.inventory_full_after == true then
-      _dispatch_intent(game, {
-        kind = "push_popup",
-        payload = { title = "黑市", body = "卡槽已满，自动退出黑市" },
-      })
-      return finish_choice(game, false)
+      feedback.emit_inventory_full(player, entry)
     end
     return { stay = true }
   end

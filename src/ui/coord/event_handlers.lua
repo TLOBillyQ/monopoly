@@ -6,7 +6,7 @@ local landing_visual_hold = require("src.ui.visual_hold")
 
 local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil, handlers_by_event = {} }
-local MARKET_BUY_FAILED_MIN_TIP_SECONDS = 3.0
+local MARKET_TIP_MIN_SECONDS = 3.0
 
 local function _enqueue_tip(intent)
   return host_runtime_ports.enqueue_tip(intent)
@@ -214,10 +214,22 @@ function event_handlers.install(_, logger, state)
     local tip_text = _resolve_market_buy_failed_tip(event_data)
     _enqueue_tip({
       text = tip_text,
-      duration = MARKET_BUY_FAILED_MIN_TIP_SECONDS,
+      duration = MARKET_TIP_MIN_SECONDS,
       dedupe_key = "market_buy_failed:" .. tostring(tip_text),
       blocks_inter_turn = false,
       source = "market.buy_failed",
+    })
+  end)
+
+  _register_handler(monopoly_event.market.inventory_full, function(data)
+    local event_data = _event_data(data)
+    local tip_text = (event_data and event_data.body) or "卡槽已满，无法继续购买"
+    _enqueue_tip({
+      text = tip_text,
+      duration = MARKET_TIP_MIN_SECONDS,
+      dedupe_key = "market_inventory_full",
+      blocks_inter_turn = false,
+      source = "market.inventory_full",
     })
   end)
 
