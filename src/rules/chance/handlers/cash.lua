@@ -124,12 +124,12 @@ function cash_handlers.register(handlers, common)
         local fee = common.adjust_chance_delta(game, player, card.amount)
         if not game:player_is_in_mountain(player) then
           local other_cash = game:player_balance(other, "金币")
-          if other_cash < fee then
-            fee = other_cash
-          end
+          local liquid = math.min(other_cash, fee)
           common.apply_cash_change(game, other, -fee, { suppress_cash_receive_anim = true })
-          common.apply_cash_change(game, player, fee, { suppress_cash_receive_anim = true })
-          total_collected = total_collected + fee
+          common.apply_cash_change(game, player, liquid, { suppress_cash_receive_anim = true })
+          total_collected = total_collected + liquid
+          local reason = other.name .. " 被收款资金不足破产"
+          common.handle_bankruptcy_if_non_positive(game, other, reason)
         end
       end
     end

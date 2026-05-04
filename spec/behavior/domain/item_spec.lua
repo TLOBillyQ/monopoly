@@ -1534,6 +1534,7 @@ describe("item", function()
     local handlers = {}
     local events = {}
     local anims = {}
+    local bankruptcy_calls = {}
     local common = {
       dependencies = function()
         return {
@@ -1565,6 +1566,12 @@ describe("item", function()
         end
         return delta
       end,
+      handle_bankruptcy_if_non_positive = function(_, target_player, reason)
+        if target_player.cash <= 0 then
+          target_player.eliminated = true
+          bankruptcy_calls[#bankruptcy_calls + 1] = { player_id = target_player.id, reason = reason }
+        end
+      end,
     }
     cash_handlers.register(handlers, common)
 
@@ -1590,9 +1597,13 @@ describe("item", function()
       effect = "collect_from_others",
     })
 
-    _assert_eq(game.players[1].cash, 1250, "collector should receive doubled fee from each payer up to their cash")
-    _assert_eq(game.players[2].cash, 0, "payer cash should floor at zero")
-    _assert_eq(game.players[3].cash, 100, "second payer should still contribute when collector is not in mountain")
+    _assert_eq(game.players[1].cash, 1250, "collector should receive each payer's actual liquid only")
+    _assert_eq(game.players[2].cash, -150, "broke payer cash should reflect debt as negative (50 - 200)")
+    _assert_eq(game.players[2].eliminated, true, "broke payer should be marked eliminated")
+    _assert_eq(game.players[3].cash, 100, "solvent payer should pay full doubled fee")
+    _assert_eq(game.players[3].eliminated, false, "solvent payer should not be eliminated")
+    _assert_eq(#bankruptcy_calls, 1, "exactly one bankruptcy should fire")
+    _assert_eq(bankruptcy_calls[1].player_id, 2, "bankruptcy should target the broke payer")
     _assert_eq(#anims, 1, "cash receive animation should collapse into one summary collection anim")
     _assert_eq(anims[1].amount, 250, "summary receive animation should use the total collected amount")
     _assert_eq(#events, 1, "collect_from_others should emit one summary event")

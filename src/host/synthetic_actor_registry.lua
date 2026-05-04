@@ -75,7 +75,17 @@ local function _destroy_actor(env, actor)
   pcall(destroy_unit, unit)
 end
 
-local function _build_adapter(actor)
+local function _retire_actor(registry, actor)
+  if actor == nil or actor.destroyed == true then
+    return false
+  end
+  actor.destroyed = true
+  _destroy_actor(registry.env, actor)
+  role_id_utils.write(registry.actors_by_player_id, actor.player_id, nil)
+  return true
+end
+
+local function _build_adapter(registry, actor)
   return {
     id = actor.player_id,
     is_synthetic_actor = true,
@@ -94,8 +104,11 @@ local function _build_adapter(actor)
     send_ui_custom_event = function()
       return false
     end,
+    die = function()
+      return _retire_actor(registry, actor)
+    end,
     lose = function()
-      return false
+      return _retire_actor(registry, actor)
     end,
     game_win_and_show_result_panel = function()
       return false
@@ -135,7 +148,7 @@ local function _spawn_actor(registry, spec, spawn_pos)
     unit_key = spec.unit_key,
     avatar_image_key = spec.avatar_image_key,
   }
-  actor.adapter = _build_adapter(actor)
+  actor.adapter = _build_adapter(registry, actor)
   role_id_utils.write(registry.actors_by_player_id, player_id, actor)
   if type(unit.start_ai) == "function" then
     local ok_start, err = pcall(unit.start_ai)
@@ -156,7 +169,10 @@ function synthetic_actor_registry.new(env)
 
   function registry.reset()
     for _, actor in pairs(registry.actors_by_player_id) do
-      _destroy_actor(registry.env, actor)
+      if actor.destroyed ~= true then
+        actor.destroyed = true
+        _destroy_actor(registry.env, actor)
+      end
     end
     registry.pending_specs = {}
     registry.actors_by_player_id = {}

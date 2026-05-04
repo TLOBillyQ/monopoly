@@ -126,6 +126,47 @@ local function _test_bankruptcy_calls_role_life_die_before_lose()
   assert(call_order[2] == "lose", "bankruptcy should call role lose")
 end
 
+local function _test_rent_bankruptcy_leaves_payer_cash_negative()
+  local g = _new_game({ install_ui_port = false })
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+
+  local idx, tile_ref = _first_land_tile(g.board)
+  g:set_tile_owner(tile_ref, p1.id)
+  g:set_tile_level(tile_ref, 3)
+  g:set_player_property(p1, tile_ref.id, true)
+
+  local p1_cash_before = g:player_balance(p1, "金币")
+  local p2_starting_cash = 10
+  g:set_player_cash(p2, p2_starting_cash)
+  g:update_player_position(p2, idx)
+  _resolve_landing(g, p2, tile_ref, {})
+
+  assert(p2.eliminated == true, "payer should be eliminated when rent unaffordable")
+  local p2_cash = g:player_balance(p2, "金币")
+  assert(p2_cash < 0,
+    "bankrupt rent payer cash must be negative (showing debt), got " .. tostring(p2_cash))
+  local p1_cash = g:player_balance(p1, "金币")
+  assert(p1_cash == p1_cash_before + p2_starting_cash,
+    "owner should receive only payer's liquid (" .. tostring(p1_cash_before + p2_starting_cash)
+      .. "), got " .. tostring(p1_cash))
+end
+
+local function _test_hospital_insufficient_funds_does_not_leave_positive_cash()
+  local g = _new_game({ install_ui_port = false })
+  local p1 = g.players[1]
+  local fee = constants.hospital_fee
+  local starting_cash = math.floor(fee / 2)
+
+  g:set_player_cash(p1, starting_cash)
+  g:set_player_status(p1, "pending_location_effect", "hospital")
+  g:player_apply_hospital_effects(p1)
+
+  assert(p1.eliminated == true, "player should be eliminated when hospital fee unpayable")
+  assert(g:player_balance(p1, "金币") <= 0,
+    "bankrupt cash must reflect the debt (<= 0), got " .. tostring(g:player_balance(p1, "金币")))
+end
+
 local function _test_chance_pay_others_stops_after_bankruptcy()
   local g = require("src.app.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
@@ -151,6 +192,38 @@ local function _test_chance_pay_others_stops_after_bankruptcy()
   assert(g:player_balance(p2, "金币") == 10, "first recipient should receive transfer")
   assert(g:player_balance(p3, "金币") == 10, "second recipient should receive transfer before bankruptcy stop")
   assert(g:player_balance(p4, "金币") == 0, "later recipients should not receive transfer after bankruptcy")
+end
+
+local function _test_chance_collect_from_others_bankrupts_unable_payer()
+  local g = require("src.app.compose_game").new_game(default_ports.resolve_game_opts({
+    players = { "P1", "P2", "P3", "P4" },
+    ai = {},
+    auto_all = false,
+    map = map_cfg,
+    tiles = tiles_cfg,
+  }))
+  local p1 = g.players[1]
+  local p2 = g.players[2]
+  local p3 = g.players[3]
+  local p4 = g.players[4]
+
+  g:set_player_cash(p1, 0)
+  g:set_player_cash(p2, 5)
+  g:set_player_cash(p3, 200)
+  g:set_player_cash(p4, 200)
+
+  local handler = assert(g.registries.chances.handlers.collect_from_others, "missing collect_from_others handler")
+  handler(g, p1, { effect = "collect_from_others", amount = 100 })
+
+  assert(p2.eliminated == true, "broke payer should be eliminated by collect_from_others")
+  local p2_cash = g:player_balance(p2, "金币")
+  assert(p2_cash < 0,
+    "bankrupt collect-from-others payer cash must be negative, got " .. tostring(p2_cash))
+  assert(g:player_balance(p3, "金币") == 100, "solvent payer should pay full amount")
+  assert(g:player_balance(p4, "金币") == 100, "solvent payer should pay full amount")
+  assert(g:player_balance(p1, "金币") == 5 + 100 + 100,
+    "collector should receive each payer's actual liquid only, got "
+      .. tostring(g:player_balance(p1, "金币")))
 end
 
 local function _test_set_tile_owner_without_ui_port_does_not_crash()
@@ -394,7 +467,10 @@ end
     _test_bankruptcy_notifier_reads_grouped_ports = _test_bankruptcy_notifier_reads_grouped_ports,
     _test_gameplay_loop_set_game_installs_bankruptcy_feedback_port = _test_gameplay_loop_set_game_installs_bankruptcy_feedback_port,
     _test_bankruptcy_calls_role_life_die_before_lose = _test_bankruptcy_calls_role_life_die_before_lose,
+    _test_rent_bankruptcy_leaves_payer_cash_negative = _test_rent_bankruptcy_leaves_payer_cash_negative,
+    _test_hospital_insufficient_funds_does_not_leave_positive_cash = _test_hospital_insufficient_funds_does_not_leave_positive_cash,
     _test_chance_pay_others_stops_after_bankruptcy = _test_chance_pay_others_stops_after_bankruptcy,
+    _test_chance_collect_from_others_bankrupts_unable_payer = _test_chance_collect_from_others_bankrupts_unable_payer,
     _test_set_tile_owner_without_ui_port_does_not_crash = _test_set_tile_owner_without_ui_port_does_not_crash,
     _test_tile_owner_notifier_receives_owner_changes = _test_tile_owner_notifier_receives_owner_changes,
     _test_dispatch_validator_accepts_ui_state_snapshot = _test_dispatch_validator_accepts_ui_state_snapshot,

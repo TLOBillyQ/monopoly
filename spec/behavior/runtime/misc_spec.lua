@@ -362,6 +362,88 @@ describe("misc", function()
     _assert_eq(registry.resolve_actor(-3), nil, "registry reset should clear actor lookup")
   end)
 
+  it("synthetic_actor_adapter_lose_destroys_unit_and_drops_from_registry", function()
+    local registry_module = require("src.host.synthetic_actor_registry")
+    local destroyed = {}
+    local spawned_unit = {
+      id = "synthetic_unit_lose",
+      start_ai = function() end,
+    }
+    local registry = registry_module.new({
+      LuaAPI = {
+        query_unit = function()
+          return {
+            get_position = function()
+              return { x = 0, y = 0, z = 0 }
+            end,
+          }
+        end,
+      },
+      GameAPI = {
+        create_creature_fixed_scale = function()
+          return spawned_unit
+        end,
+        destroy_unit = function(unit)
+          destroyed[#destroyed + 1] = unit
+        end,
+      },
+    })
+
+    registry.register_specs({
+      { player_id = -4, unit_key = "npc_4", avatar_image_key = 1004 },
+    })
+    registry.spawn_pending({ path = { 1 } })
+
+    local actor = assert(registry.resolve_actor(-4), "actor must exist before lose")
+    local adapter = assert(actor.adapter, "actor must expose adapter")
+
+    _assert_eq(adapter.lose(), true, "lose should report retirement happened")
+    _assert_eq(#destroyed, 1, "lose should destroy the synthetic unit")
+    _assert_eq(destroyed[1], spawned_unit, "lose should destroy the spawned unit")
+    _assert_eq(registry.resolve_actor(-4), nil, "lose should drop the actor from the registry")
+
+    _assert_eq(adapter.lose(), false, "second lose call should be a no-op")
+    _assert_eq(#destroyed, 1, "second lose call should not double-destroy the unit")
+  end)
+
+  it("synthetic_actor_adapter_die_retires_actor_like_lose", function()
+    local registry_module = require("src.host.synthetic_actor_registry")
+    local destroyed = {}
+    local spawned_unit = {
+      id = "synthetic_unit_die",
+      start_ai = function() end,
+    }
+    local registry = registry_module.new({
+      LuaAPI = {
+        query_unit = function()
+          return {
+            get_position = function()
+              return { x = 0, y = 0, z = 0 }
+            end,
+          }
+        end,
+      },
+      GameAPI = {
+        create_creature_fixed_scale = function()
+          return spawned_unit
+        end,
+        destroy_unit = function(unit)
+          destroyed[#destroyed + 1] = unit
+        end,
+      },
+    })
+
+    registry.register_specs({
+      { player_id = -5, unit_key = "npc_5", avatar_image_key = 1005 },
+    })
+    registry.spawn_pending({ path = { 1 } })
+
+    local adapter = assert(registry.resolve_actor(-5).adapter, "adapter required")
+    _assert_eq(adapter.die(), true, "die should retire the actor")
+    _assert_eq(#destroyed, 1, "die should destroy the unit")
+    _assert_eq(adapter.lose(), false, "lose after die should be a no-op")
+  end)
+
   it("ui_bootstrap_required_click_nodes_appends_extras", function()
     local ui_bootstrap = require("src.app.ui_bootstrap")
     local ui_manager_nodes = {

@@ -1,4 +1,3 @@
-local logger = require("src.foundation.log.logger")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
@@ -45,13 +44,7 @@ function location_ops.player_apply_hospital_effects(self, player)
   self:set_player_status(player, "pending_location_effect", nil)
   self:set_player_status(player, "stay_turns", common.constants.hospital_stay_turns)
   local fee = common.constants.hospital_fee
-  if self:player_balance(player, "金币") < fee then
-    -- migrated as DEV: financial constraint diagnostic, not a player-visible game event
-    logger.info(player.name .. " 资金不足，无法支付医药费 " .. number_utils.format_integer_part(fee))
-    bankruptcy_port.eliminate(self, player, { reason = player.name .. " 医药费不足破产" })
-    return
-  end
-  self:deduct_player_cash(player, fee)
+  self:add_player_cash(player, -fee)
   event_feed.publish(self, {
     kind = event_kinds.medical_fee,
     text = player.name .. " 支付医药费 " .. number_utils.format_integer_part(fee),

@@ -161,12 +161,12 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
     return result
   end
 
-  local paid = game:player_balance(player, "金币")
-  game:deduct_player_cash(player, paid)
-  game:add_player_cash(owner, paid)
-  local reason = player.name .. " 资金不足，支付(" .. owner.name .. ") " .. number_utils.format_integer_part(paid) .. " 后破产"
+  local liquid = game:player_balance(player, "金币")
+  game:add_player_cash(player, -rent)
+  game:add_player_cash(owner, liquid)
+  local reason = player.name .. " 资金不足，欠付(" .. owner.name .. ") " .. number_utils.format_integer_part(rent) .. " 破产"
   result.event = "rent_bankrupt"
-  result.payload.amount = paid
+  result.payload.amount = rent
   result.payload.text = reason
   result.bankrupt_reason = reason
   return result
