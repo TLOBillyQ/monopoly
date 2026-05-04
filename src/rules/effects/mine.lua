@@ -44,16 +44,16 @@ local function _build_chain_tip_text(game, player, position, had_vehicle)
   local tile = game and game.board and game.board.get_tile and game.board:get_tile(position) or nil
   local tile_name = tile and tile.name or tostring(position)
   if had_vehicle == true then
-    return player.name .. " 在 " .. tile_name .. " 先触发路障，随后地雷炸毁座驾并送医"
+    return player.name .. " 在 " .. tile_name .. "地雷炸毁座驾"
   end
-  return player.name .. " 在 " .. tile_name .. " 先触发路障，随后踩中地雷并送医"
+  return player.name .. " 在 " .. tile_name .. "踩中地雷"
 end
 
 local function _build_trigger_log_entry(player, had_vehicle)
   if had_vehicle == true then
-    return player.name .. " 触发地雷，座驾被摧毁并送医"
+    return player.name .. "触发地雷，座驾被摧毁"
   end
-  return player.name .. " 触发地雷并送医"
+  return player.name .. "触发地雷"
 end
 
 function mine_effect.can_trigger(game, player, position)
