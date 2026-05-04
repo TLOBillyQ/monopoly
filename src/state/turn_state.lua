@@ -23,6 +23,16 @@ function game_state_turn.queue_action_anim(self, payload)
   return payload
 end
 
+function game_state_turn.queue_move_anim(self, payload)
+  assert(payload ~= nil, "missing move anim payload")
+  local seq = (self.turn.move_anim_seq or 0) + 1
+  payload.seq = seq
+  self.turn.move_anim_seq = seq
+  self.turn.move_anim = payload
+  _mark_turn(self)
+  return payload
+end
+
 function game_state_turn.pending_choice(self)
   return self.turn.pending_choice
 end

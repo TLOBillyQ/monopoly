@@ -7,6 +7,7 @@ local timing = require("src.config.gameplay.timing")
 local vehicle_feature = require("src.rules.vehicle")
 local number_utils = require("src.foundation.lang.number")
 local action_anim_port = require("src.foundation.ports.action_anim")
+local move_anim_port = require("src.foundation.ports.move_anim")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
 
@@ -92,16 +93,32 @@ function common.queue_forced_relocation(game, player, from_index, to_index)
   return _queue_relocation_anim(game, "forced_relocation", player, from_index, to_index, nil)
 end
 
+local function _build_chance_move_anim_payload(player, from_index, move_result)
+  return {
+    player_id = player.id,
+    from_index = from_index,
+    to_index = player.position,
+    visited = move_result.visited,
+    steps = move_result.steps,
+    vehicle_id = vehicle_feature.resolve_seat_id(player.seat_id),
+    source = "chance_move",
+  }
+end
+
 function common.move_steps(game, player, steps, opts)
   local from_index = player.position
   local res = movement.move(game, player, steps, opts)
   assert(res ~= nil, "missing move result")
-  common.queue_move_effect(game, player, from_index, player.position, res.visited)
+  local queued = move_anim_port.queue(game, _build_chance_move_anim_payload(player, from_index, res))
+  if not queued then
+    common.queue_move_effect(game, player, from_index, player.position, res.visited)
+  end
   return {
     kind = "need_landing",
     player_id = player.id,
     board_index = player.position,
     move_result = res,
+    wait_move_anim = queued == true,
   }
 end
 

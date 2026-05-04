@@ -39,6 +39,19 @@ local function _wait_for_move_followup(game, target_player, out)
   }
 end
 
+local function _wait_for_move_anim_followup(game, target_player, out)
+  return {
+    waiting = true,
+    wait_move_anim = true,
+    next_state = "move_followup",
+    next_args = {
+      mode = "resolve_landing",
+      player_id = target_player.id,
+      move_result = out.move_result,
+    },
+  }
+end
+
 local function _register_action_anim_resume(game, next_state, next_args, callback)
   wait_callbacks.register(game, callback_keys.after_action_anim, callback)
   if next_state == "move_followup" then
@@ -90,11 +103,21 @@ local function _wait_for_choice_via_landing_visual_then_action_anim(game, next_s
   end)
 end
 
-local function _resolve_wait_state(game, next_state, next_args, wait_action_anim)
+local function _resolve_wait_state(game, next_state, next_args, wait_action_anim, wait_move_anim)
   local wait_choice_args = {
     next_state = next_state,
     next_args = next_args,
   }
+
+  if wait_move_anim == true then
+    if next_state == "move_followup" then
+      game.turn.move_followup_pending = true
+    end
+    return "wait_move_anim", {
+      next_state = next_state,
+      next_args = next_args,
+    }
+  end
 
   local has_anim = predicates.has_action_anim(game)
   local has_hold = predicates.is_landing_visual_hold_active(game)
@@ -167,7 +190,7 @@ end
 
 local function _resolve_waiting_landing_result(game, res, player, move_result)
   local next_state, next_args = _resolve_landing_wait_args(res, player, move_result)
-  return _resolve_wait_state(game, next_state, next_args, res.wait_action_anim)
+  return _resolve_wait_state(game, next_state, next_args, res.wait_action_anim, res.wait_move_anim)
 end
 
 local function _resolve_followup_landing(game, player, out, depth)
@@ -175,6 +198,9 @@ local function _resolve_followup_landing(game, player, out, depth)
   local next_tile = _resolve_next_tile(game, target_player, out)
   if not next_tile then
     return out
+  end
+  if out.wait_move_anim == true then
+    return _wait_for_move_anim_followup(game, target_player, out)
   end
   if predicates.has_pending_relocation_action_anim(game) then
     return _wait_for_move_followup(game, target_player, out)

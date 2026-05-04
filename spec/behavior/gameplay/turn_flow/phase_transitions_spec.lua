@@ -126,6 +126,29 @@ local _resolve_wait_state_extended_tests = {
     assert(next_state == "wait_action_anim", "should return wait_action_anim when queue has move_effect")
     assert(next_args.next_state == "wait_choice", "should wrap in wait_choice when wait_action_anim is false")
   end,
+  function()
+    -- wait_move_anim flag should route directly to wait_move_anim state regardless of action_anim queue
+    local game = {
+      turn = { move_anim = { kind = "chance_move", seq = 7, player_id = 1 } },
+      dirty = {},
+    }
+    local next_state, next_args = land._resolve_wait_state(
+      game, "move_followup", { mode = "resolve_landing", player_id = 1 }, false, true
+    )
+    assert(next_state == "wait_move_anim", "wait_move_anim flag should win over wait_action_anim/has_anim checks")
+    assert(next_args.next_state == "move_followup", "wait_move_anim should preserve next_state")
+    assert(game.turn.move_followup_pending == true, "wait_move_anim with move_followup should set move_followup_pending")
+  end,
+  function()
+    -- wait_move_anim with non-move_followup next_state should not flip move_followup_pending
+    local game = {
+      turn = { move_anim = { kind = "chance_move", seq = 8, player_id = 2 } },
+      dirty = {},
+    }
+    land._resolve_wait_state(game, "post_action", { player = { id = 2 } }, false, true)
+    assert(game.turn.move_followup_pending ~= true,
+      "wait_move_anim should not set move_followup_pending when next_state is not move_followup")
+  end,
 }
 
 -- Tests for anonymous@88 in script.lua (coroutine create function)
@@ -260,6 +283,12 @@ describe("turn_flow_phase_transitions", function()
   it("_test_resolve_wait_state_landing_visual", _resolve_wait_state_extended_tests[3])
 
   it("_test_resolve_wait_state_move_effect_queue", _resolve_wait_state_extended_tests[4])
+
+  it("_test_resolve_wait_state_wait_move_anim_routes_with_followup_pending",
+    _resolve_wait_state_extended_tests[5])
+
+  it("_test_resolve_wait_state_wait_move_anim_skips_followup_flag_for_non_followup",
+    _resolve_wait_state_extended_tests[6])
 
   it("_test_turn_script_create_valid_session", _turn_script_tests[1])
 
