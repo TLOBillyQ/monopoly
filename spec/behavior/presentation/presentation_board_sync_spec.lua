@@ -586,7 +586,7 @@ describe("presentation.board_sync", function()
   end)
 
   it("_test_tile_renderer_renders_land_metadata", function()
-    local tile_renderer = require("src.ui.render.tile_renderer")
+    local tile_renderer = require("src.ui.render.tile")
     local captured = {}
     local unit = {
       get_child_by_name = function(name)
@@ -724,7 +724,7 @@ describe("presentation.board_sync", function()
         end,
       },
       {
-        target = require("src.ui.render.tile_renderer"),
+        target = require("src.ui.render.tile"),
         key = "render_tile",
         value = function(unit, tile_id, owner_id)
           render_calls[#render_calls + 1] = {
@@ -780,7 +780,7 @@ describe("presentation.board_sync", function()
 
     _with_patches({
       {
-        target = require("src.ui.render.tile_renderer"),
+        target = require("src.ui.render.tile"),
         key = "render_tile",
         value = function()
           render_calls = render_calls + 1

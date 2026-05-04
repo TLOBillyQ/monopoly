@@ -1,4 +1,4 @@
-local tile_renderer = require("src.ui.render.tile_renderer")
+local tile_renderer = require("src.ui.render.tile")
 
 local M = {}
 

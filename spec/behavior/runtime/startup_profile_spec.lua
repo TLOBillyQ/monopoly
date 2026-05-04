@@ -804,7 +804,7 @@ describe("startup_profile", function()
 
   it("upgrade_build_marks_tile_render_called_for_startup_render", function()
     local game = profile_support.apply_profile("upgrade_build")
-    local tile_renderer = require("src.ui.render.tile_renderer")
+    local tile_renderer = require("src.ui.render.tile")
     local building_effects = require("src.ui.render.building_effects")
     local rendered_tile_ids = {}
     local rendered_building_tile_ids = {}
@@ -838,7 +838,7 @@ describe("startup_profile", function()
 
   it("strong_card_marks_tile_render_called_for_startup_render", function()
     local game = profile_support.apply_profile("strong_card")
-    local tile_renderer = require("src.ui.render.tile_renderer")
+    local tile_renderer = require("src.ui.render.tile")
     local building_effects = require("src.ui.render.building_effects")
     local rendered_tile_ids = {}
     local rendered_building_tile_ids = {}
@@ -874,7 +874,7 @@ describe("startup_profile", function()
   it("missile_marks_overlay_render_called_for_startup_render", function()
     local game = profile_support.apply_profile("missile")
     local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
-    local tile_renderer = require("src.ui.render.tile_renderer")
+    local tile_renderer = require("src.ui.render.tile")
     local building_effects = require("src.ui.render.building_effects")
     local overlay_calls = {}
     local rendered_tile_ids = {}

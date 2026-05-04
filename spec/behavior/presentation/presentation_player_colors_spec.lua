@@ -1,5 +1,5 @@
 local player_colors = require("src.ui.view.player_colors")
-local assets = require("src.ui.render.ui_assets")
+local assets = require("src.ui.render.assets")
 local runtime = require("src.ui.render.runtime_ui")
 local base_nodes = require("src.ui.schema.base")
 local support = require("support.presentation_support")

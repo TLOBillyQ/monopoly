@@ -191,7 +191,7 @@ local function _test_board_visual_feedback_port_reconciles_destroyed_tile_and_cl
   local cleared_buildings = {}
   local cleared_overlays = {}
   local board_view = require("src.ui.render.board")
-  local tile_renderer = require("src.ui.render.tile_renderer")
+  local tile_renderer = require("src.ui.render.tile")
   local building_effects = require("src.ui.render.building_effects")
   local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 
@@ -269,7 +269,7 @@ local function _test_board_visual_feedback_port_reconciles_spawned_tile_and_over
   local spawned_buildings = {}
   local spawned_overlays = {}
   local board_view = require("src.ui.render.board")
-  local tile_renderer = require("src.ui.render.tile_renderer")
+  local tile_renderer = require("src.ui.render.tile")
   local building_effects = require("src.ui.render.building_effects")
   local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 
