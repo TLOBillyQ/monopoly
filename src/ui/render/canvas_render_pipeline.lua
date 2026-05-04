@@ -1,5 +1,5 @@
 local board_runtime = require("src.ui.render.board")
-local panel_presenter = require("src.ui.render.widgets.panel_presenter")
+local panel_presenter = require("src.ui.render.widgets.presenter")
 local turn_effects = require("src.ui.render.widgets.turn_effects")
 local canvas_store = require("src.ui.state.canvas_store")
 

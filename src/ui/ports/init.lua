@@ -42,7 +42,7 @@ local boundary_contract = {
        "src.ui.render.market.controls",
       "src.ui.render.status3d",
        "src.ui.render.anim.unit_overlay",
-      "src.ui.render.widgets.panel_presenter",
+      "src.ui.render.widgets.presenter",
       "src.ui.render.widgets.turn_effects",
       "src.ui.ports.anim",
     },

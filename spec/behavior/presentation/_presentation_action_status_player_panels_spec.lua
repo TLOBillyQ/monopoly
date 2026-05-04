@@ -6,7 +6,7 @@ local timing = require("src.config.gameplay.timing")
 
 local function _new_cash_delta_presenter_env(opts)
   opts = opts or {}
-  local presenter = require("src.ui.render.widgets.panel_presenter")
+  local presenter = require("src.ui.render.widgets.presenter")
   local number_utils = require("src.foundation.lang.number")
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
@@ -106,7 +106,7 @@ end
 
 describe("presentation_player_panels", function()
   it("_test_panel_avatar_uses_native_size_path", function()
-    local presenter = require("src.ui.render.widgets.panel_presenter")
+    local presenter = require("src.ui.render.widgets.presenter")
     local native_size_calls = 0
     local client_role = { stale = true }
     local state = {
@@ -334,7 +334,7 @@ describe("presentation_player_panels", function()
   end)
 
   it("_test_panel_apply_player_colors_updates_image_and_labels", function()
-    local panel_player_slots = require("src.ui.render.widgets.panel_player_slots")
+    local panel_player_slots = require("src.ui.render.widgets.player_slots")
     local image_calls = {}
     local label_calls = {}
 
@@ -365,7 +365,7 @@ describe("presentation_player_panels", function()
   end)
 
   it("_test_panel_apply_player_colors_skips_when_role_has_no_color_hooks", function()
-    local panel_player_slots = require("src.ui.render.widgets.panel_player_slots")
+    local panel_player_slots = require("src.ui.render.widgets.player_slots")
     local queried = 0
 
     panel_player_slots.apply_player_colors({}, {

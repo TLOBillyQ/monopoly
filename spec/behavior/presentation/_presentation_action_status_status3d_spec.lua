@@ -843,7 +843,7 @@ describe("presentation_status3d_and_turn_effects", function()
     local anchors = require("src.ui.render.board.anchors")
     local startup_render = require("src.ui.render.board.startup_render")
     local player_units = require("src.ui.render.board.player_units")
-    local base_presenter = require("src.ui.render.widgets.panel_presenter")
+    local base_presenter = require("src.ui.render.widgets.presenter")
     local fixed_zero = { kind = "fixed_zero", value = 0 }
     local calls = {}
     local game = {
