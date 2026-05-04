@@ -1,6 +1,6 @@
 ---@diagnostic disable: undefined-field
 
-local deity_ops = require("src.player.actions.state_ops.deity_ops")
+local deity_ops = require("src.player.actions.state_ops.deity")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))

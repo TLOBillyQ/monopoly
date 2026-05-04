@@ -1,4 +1,4 @@
-local deity_ops = require("src.player.actions.state_ops.deity_ops")
+local deity_ops = require("src.player.actions.state_ops.deity")
 local item_ids = require("src.config.gameplay.item_ids")
 
 local function _assert_eq(a, b, msg)

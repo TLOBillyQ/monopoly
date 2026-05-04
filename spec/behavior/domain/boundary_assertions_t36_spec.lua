@@ -1,5 +1,5 @@
 local inventory = require("src.rules.items.inventory")
-local balance_ops = require("src.player.actions.state_ops.balance_ops")
+local balance_ops = require("src.player.actions.state_ops.balance")
 local dirty_tracker = require("src.state.dirty_tracker")
 
 local function _assert_contains(text, fragment, message)
