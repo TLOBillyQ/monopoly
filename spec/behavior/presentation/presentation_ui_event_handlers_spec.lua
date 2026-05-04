@@ -391,6 +391,149 @@ describe("presentation_ui.event_handlers", function()
     assert(found_cash_burst, "bought_item should play immediate cash_burst on buyer")
   end)
 
+  it("market_bought_item_paid_emits_success_tip_for_item", function()
+    local handlers = {}
+    local tips = {}
+
+    _with_patches({
+      {
+        target = host_runtime,
+        key = "register_custom_event",
+        value = function(event_name, handler)
+          handlers[event_name] = handler
+          return true
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "enqueue_tip",
+        value = function(intent)
+          tips[#tips + 1] = {
+            text = intent.text,
+            duration = intent.duration,
+            dedupe_key = intent.dedupe_key,
+            source = intent.source,
+          }
+          return true
+        end,
+      },
+      {
+        target = board_feedback,
+        key = "play_player_cue",
+        value = function() return true end,
+      },
+    }, function()
+      local event_handlers = _load_fresh_handlers()
+      event_handlers.install(nil, nil, { game = {} })
+      local handler = handlers[monopoly_event.market.bought_item]
+      assert(type(handler) == "function", "bought_item handler should be registered")
+      handler(nil, nil, {
+        player = { id = 3, name = "测试玩家" },
+        entry = { product_id = 2009, kind = "item", name = "强征卡" },
+        price = 5,
+        currency = "金豆",
+        is_paid = true,
+      })
+    end)
+
+    assert(#tips == 1, "paid item purchase should emit exactly one success tip")
+    assert(tips[1].text == "已收入卡槽：强征卡", "paid item tip text mismatch: " .. tostring(tips[1].text))
+    assert(tips[1].duration == 3.0, "paid success tip duration should be 3.0s")
+    assert(tips[1].dedupe_key == "market_paid_success:2009", "dedupe_key should embed product_id")
+    assert(tips[1].source == "market.paid_success", "tip source tag mismatch")
+  end)
+
+  it("market_bought_item_paid_emits_success_tip_for_skin", function()
+    local handlers = {}
+    local tips = {}
+
+    _with_patches({
+      {
+        target = host_runtime,
+        key = "register_custom_event",
+        value = function(event_name, handler)
+          handlers[event_name] = handler
+          return true
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "enqueue_tip",
+        value = function(intent)
+          tips[#tips + 1] = { text = intent.text }
+          return true
+        end,
+      },
+      {
+        target = board_feedback,
+        key = "play_player_cue",
+        value = function() return true end,
+      },
+    }, function()
+      local event_handlers = _load_fresh_handlers()
+      event_handlers.install(nil, nil, { game = {} })
+      local handler = handlers[monopoly_event.market.bought_item]
+      handler(nil, nil, {
+        player = { id = 4, name = "测试玩家" },
+        entry = { product_id = 5001, kind = "skin", name = "小猪佩奇" },
+        price = 198,
+        currency = "金豆",
+        is_paid = true,
+      })
+    end)
+
+    assert(#tips == 1, "paid skin purchase should emit exactly one success tip")
+    assert(tips[1].text == "新皮肤已上身：小猪佩奇", "paid skin tip text mismatch: " .. tostring(tips[1].text))
+  end)
+
+  it("market_bought_item_non_paid_does_not_emit_tip", function()
+    local handlers = {}
+    local tips = {}
+
+    _with_patches({
+      {
+        target = host_runtime,
+        key = "register_custom_event",
+        value = function(event_name, handler)
+          handlers[event_name] = handler
+          return true
+        end,
+      },
+      {
+        target = host_runtime,
+        key = "enqueue_tip",
+        value = function(intent)
+          tips[#tips + 1] = { text = intent.text }
+          return true
+        end,
+      },
+      {
+        target = board_feedback,
+        key = "play_player_cue",
+        value = function() return true end,
+      },
+    }, function()
+      local event_handlers = _load_fresh_handlers()
+      event_handlers.install(nil, nil, { game = {} })
+      local handler = handlers[monopoly_event.market.bought_item]
+      handler(nil, nil, {
+        player = { id = 3, name = "测试玩家" },
+        entry = { product_id = 2003, kind = "item", name = "路障卡" },
+        price = 500,
+        currency = "金币",
+        is_paid = false,
+      })
+      handler(nil, nil, {
+        player = { id = 3, name = "测试玩家" },
+        entry = { product_id = 2003, kind = "item", name = "路障卡" },
+        price = 500,
+        currency = "金币",
+      })
+    end)
+
+    assert(#tips == 0, "non-paid purchase should not emit success tip, got " .. tostring(#tips))
+  end)
+
   it("turn_started_feedback_routes_configured_audio_without_error", function()
     local handlers = {}
     local play_3d_sound_calls = {}
