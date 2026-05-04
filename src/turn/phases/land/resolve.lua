@@ -109,19 +109,37 @@ local function _resolve_wait_state(game, next_state, next_args, wait_action_anim
     next_args = next_args,
   }
 
+  local has_anim = predicates.has_action_anim(game)
+  local has_hold = predicates.is_landing_visual_hold_active(game)
+  local effects_pending = not predicates.is_effect_idle()
+
   if wait_move_anim == true then
     if next_state == "move_followup" then
       game.turn.move_followup_pending = true
     end
-    return "wait_move_anim", {
+    local move_anim_args = {
       next_state = next_state,
       next_args = next_args,
     }
+    local function _resume_wait_move_anim()
+      return "wait_move_anim", move_anim_args
+    end
+    if has_anim then
+      if has_hold or effects_pending then
+        return _register_landing_visual_resume(game, "wait_action_anim", {
+          next_state = "wait_move_anim",
+          next_args = move_anim_args,
+        }, function()
+          return _register_action_anim_resume(game, "wait_move_anim", move_anim_args, _resume_wait_move_anim)
+        end)
+      end
+      return _register_action_anim_resume(game, "wait_move_anim", move_anim_args, _resume_wait_move_anim)
+    end
+    if has_hold or effects_pending then
+      return _register_landing_visual_resume(game, "wait_move_anim", move_anim_args, _resume_wait_move_anim)
+    end
+    return "wait_move_anim", move_anim_args
   end
-
-  local has_anim = predicates.has_action_anim(game)
-  local has_hold = predicates.is_landing_visual_hold_active(game)
-  local effects_pending = not predicates.is_effect_idle()
 
   if wait_action_anim == true then
     if has_anim then

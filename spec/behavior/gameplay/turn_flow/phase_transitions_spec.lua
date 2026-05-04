@@ -149,6 +149,28 @@ local _resolve_wait_state_extended_tests = {
     assert(game.turn.move_followup_pending ~= true,
       "wait_move_anim should not set move_followup_pending when next_state is not move_followup")
   end,
+  function()
+    -- wait_move_anim should drain pending action_anim first so chance card popup
+    -- gets its dwell window before the stepwise move begins
+    local game = {
+      turn = {
+        action_anim = { kind = "chance", seq = 1, duration = 1.0 },
+        move_anim = { kind = "chance_move", seq = 9, player_id = 3 },
+      },
+      dirty = {},
+    }
+    local next_state, next_args = land._resolve_wait_state(
+      game, "move_followup", { mode = "resolve_landing", player_id = 3 }, false, true
+    )
+    assert(next_state == "wait_action_anim",
+      "wait_move_anim with pending action_anim should route through wait_action_anim first")
+    assert(next_args.next_state == "wait_move_anim",
+      "wait_action_anim wrapper should chain into wait_move_anim")
+    assert(next_args.next_args.next_state == "move_followup",
+      "wrapped wait_move_anim args should preserve original move_followup target")
+    assert(game.turn.move_followup_pending == true,
+      "wait_move_anim with move_followup target should set move_followup_pending eagerly")
+  end,
 }
 
 -- Tests for anonymous@88 in script.lua (coroutine create function)
@@ -289,6 +311,9 @@ describe("turn_flow_phase_transitions", function()
 
   it("_test_resolve_wait_state_wait_move_anim_skips_followup_flag_for_non_followup",
     _resolve_wait_state_extended_tests[6])
+
+  it("_test_resolve_wait_state_wait_move_anim_drains_pending_action_anim_first",
+    _resolve_wait_state_extended_tests[7])
 
   it("_test_turn_script_create_valid_session", _turn_script_tests[1])
 
