@@ -6,7 +6,28 @@
 local common = require("tools.shared.lib.common")
 
 local function _busted()
-  return os.getenv("HOME") .. "/.luarocks/bin/busted"
+  local override = os.getenv("BUSTED_BIN")
+  if override and override ~= "" then
+    return override
+  end
+  local candidates = {
+    os.getenv("HOME") .. "/.luarocks/bin/busted",
+    "/opt/homebrew/bin/busted",
+    "/usr/local/bin/busted",
+  }
+  for _, candidate in ipairs(candidates) do
+    if common.path_exists(candidate) then
+      return candidate
+    end
+  end
+  local resolved = common.run_command("command -v busted")
+  if type(resolved) == "table" and resolved.ok and resolved.output then
+    local trimmed = resolved.output:match("^%s*(.-)%s*$")
+    if trimmed and trimmed ~= "" then
+      return trimmed
+    end
+  end
+  error("busted not found: set BUSTED_BIN or install via luarocks/homebrew")
 end
 
 local function _run(label, command)
