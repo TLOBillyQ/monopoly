@@ -1,6 +1,6 @@
 local support = require("support.domain_support")
 local default_map = require("src.config.content.maps.default_map")
-local land_rules = require("src.rules.land.rules")
+local land_rules = require("src.rules.land.landing_rules")
 local rent_resolver = require("src.rules.land.rent_resolver")
 
 local _new_game = function()

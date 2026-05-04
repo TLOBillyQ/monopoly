@@ -4,7 +4,7 @@ local logger = require("src.foundation.log.logger")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local intent_output_port = require("src.rules.ports.intent_output")
 local event_feed = require("src.rules.ports.event_feed")
-local item_config = require("src.rules.items.item_config")
+local item_config = require("src.rules.items.config")
 
 local inventory = {}
 

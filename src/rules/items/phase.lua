@@ -4,7 +4,7 @@ local strategy = require("src.rules.items.strategy")
 local availability = require("src.rules.items.availability")
 local inventory = require("src.rules.items.inventory")
 local intent_output_port = require("src.rules.ports.intent_output")
-local item_config = require("src.rules.items.item_config")
+local item_config = require("src.rules.items.config")
 
 local phase_module = {}
 

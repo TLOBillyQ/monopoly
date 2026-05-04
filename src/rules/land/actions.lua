@@ -1,6 +1,6 @@
 local land_actions = {}
 local land_events = require("src.rules.land.events")
-local land_rules = require("src.rules.land.rules")
+local land_rules = require("src.rules.land.landing_rules")
 function land_actions.safe_tile_state(game, tile)
   return land_rules.safe_tile_state(game, tile)
 end

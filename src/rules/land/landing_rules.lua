@@ -1,4 +1,4 @@
-local board_utils = require("src.rules.land.board")
+local board_utils = require("src.rules.land.board_utils")
 local constants = require("src.config.content.constants")
 local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")

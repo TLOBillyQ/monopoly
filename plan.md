@@ -69,6 +69,11 @@
   理由：D2 单批触及 45 处调用，独立提交便于回滚定位；批 H 涉及 init.lua 入口调整，单独验证 require 图  
   日期/作者：2026-05-04 / 重构发起人
 
+- 决策：批 F 撤销 F4（`rules/choice_handler_factory.lua` → `rules/choice/handler_factory.lua`），仅执行 F1/F2/F3  
+  理由：实施时 arch 检查报 `projection_cycle rules`。原因是 `choice_handler_factory` 依赖 `rules.choice_handlers.*`，后者依赖 `rules.items.*`，items 内的 `steal.lua` 又反向 require `rules.choice.use_skip_choice`。把 handler_factory 挪进 `rules/choice/` 后，`rules/choice` 投影出现自环（choice → choice_handlers → items → choice）。保留 handler_factory 在顶级 `rules/` 不引入新违规。  
+  证据：执行 git revert 后 arch 由 fail 转 pass；逐次复算确认仅 F4 触发  
+  日期/作者：2026-05-04 / 重构执行人
+
 ## 结果与复盘
 
 （完成时填）
