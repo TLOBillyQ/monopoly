@@ -22,10 +22,10 @@ last_verified: 2026-05-04
 | `src/turn/output` | 回合输出适配：intent_dispatcher、state_adapter | 承接业务规则 |
 | `src/host` | 宿主细节：运行时上下文、事件桥、默认 runtime ports、显式 seam exception（`global_aliases`） | — |
 | `src/ui` | 顶层 wrapper（`visual_hold`、`host_bridge`）+ 内部子视图（input/view/render/coord/state/ports/schema/utils） | controller 装配、Canvas 渲染、输入路由（这些下沉到各子视图） |
-| `src/ui/state` | 纯 UI 状态容器：runtime（runtime_state seam）、canvas_store、modal_state、visual_hold（顶层 wrapper） | 持有跨 render/coord/input 的反向引用 |
+| `src/ui/state` | 纯 UI 状态容器：runtime（state.runtime seam）、canvas_store、modal、visual_hold（顶层 wrapper） | 持有跨 render/coord/input 的反向引用 |
 | `src/ui/coord` | UI 协调器：actor_context / ui_state / ui_runtime / event_state / event_handlers / canvas_event_router 等 | — |
 | `src/ui/view` | 数据投影：role_context、各 slice、panel_builder | 写状态 |
-| `src/ui/render` | 渲染：board / market / move_anim / status3d / widgets / canvas_render_pipeline | 输入路由 |
+| `src/ui/render` | 渲染：board / market / move_anim / status3d / widgets / render_pipeline | 输入路由 |
 | `src/ui/ports` | 展示运行时装配：grouped ports、state callback、runtime event bridge、bootstrap | 游戏规则、宿主底层实现 |
 | `src/ui/schema` | 展示 schema：canvas 节点名、contract 常量、布局清单 | 写状态、宿主调用、输入路由 |
 | `src/ui/input` | 输入分发：canvas_route / dispatch / event_intents | 反向写状态（通过 ports 走） |

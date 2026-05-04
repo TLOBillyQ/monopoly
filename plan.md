@@ -22,27 +22,37 @@
 
 ## 进度
 
-- [ ] (T0) 准备：建立 rename 助手脚本与 baseline（lint + busted + arch_view）
-- [ ] 批 A — ports 归位（`rules/market/paid_purchase_port` → `rules/ports/paid_purchase`）
-- [ ] 批 B — `player/actions/state_ops/*_ops.lua` 去 `_ops` 后缀
-- [ ] 批 C — `ui/render/widgets/panel_*.lua` 去 `panel_` 前缀
-- [ ] 批 D1 — `ui/state/modal_state.lua` → `ui/state/modal.lua`
-- [ ] 批 D2 — `state/runtime_state.lua` → `state/runtime.lua`（45 处调用，单独 PR）
-- [ ] 批 E — `turn/waits/await/*_wait.lua` 去 `_wait` 后缀
-- [ ] 批 F — rules 子目录命名碰撞修正（item_config / land/board / land/rules / choice_handler_factory）
-- [ ] 批 G — `ui/render/` 顶层去前缀（tile_renderer / ui_assets / canvas_render_pipeline）
-- [ ] 批 H — entry→init.lua 规范化（computer/core_agent + ui/render/action_anim）
-- [ ] 批 I — `ui/render/board_scene.lua` 归位到 `ui/render/board/scene.lua`
-- [ ] (T-end) 收尾：跑全质量车道、更新 `docs/architecture/boundaries.md`（如需）、补本计划「结果与复盘」
+- [x] (T0) 准备：建立 rename 助手脚本与 baseline（lint + busted + arch_view）
+- [x] 批 A — ports 归位（`rules/market/paid_purchase_port` → `rules/ports/paid_purchase`）
+- [x] 批 B — `player/actions/state_ops/*_ops.lua` 去 `_ops` 后缀
+- [x] 批 C — `ui/render/widgets/panel_*.lua` 去 `panel_` 前缀
+- [x] 批 D1 — `ui/state/modal_state.lua` → `ui/state/modal.lua`
+- [x] 批 D2 — `state/runtime_state.lua` → `state/runtime.lua`（47 处调用，单独 commit）
+- [x] 批 E — `turn/waits/await/*_wait.lua` 去 `_wait` 后缀
+- [x] 批 F — rules 子目录命名碰撞修正（F1/F2/F3 完成；**F4 撤销**，详见决策日志）
+- [x] 批 G — `ui/render/` 顶层去前缀（tile_renderer / ui_assets / canvas_render_pipeline）
+- [x] 批 H — entry→init.lua 规范化（computer/core_agent + ui/render/action_anim）
+- [x] 批 I — `ui/render/board_scene.lua` 归位到 `ui/render/board/scene.lua`
+- [x] (T-end) 收尾：全质量车道、活契约 doc 更新、本计划「结果与复盘」补完
 
 每批的颗粒度细分进度记在该批的「具体步骤」段下方的子复选框里（实施时新增）。
 
 ## 意外与发现
 
-（实施时填）
+- 观察：批 D2 触动 47 处而非计划估算的 45 处
+  证据：`git ls-files | xargs perl -i -pe '...runtime_state.../runtime/'` diff 统计 47 个 .lua 文件被修改
 
-- 观察：…
-  证据：…
+- 观察：批 H 的 `core_agent` 与 `action_anim` 路径分别是 `agent/*` 和 `anim/*` 子模块的字符串前缀，普通 `\bsrc\.computer\.core_agent\b` 会误伤 `src.computer.agent.action` 之类调用
+  证据：实施时改用 quote-anchored regex `(['\"])src\.computer\.core_agent\1` + `(['\"])src\.ui\.render\.action_anim\1`，反查 `git grep -F "src.computer.core_agent"` 和 `src.ui.render.action_anim` 均 0 命中（plan.md 自身除外），且 `src.computer.agent.action` / `src.ui.render.anim.handlers` 等子模块字符串完整保留
+
+- 观察：批 F 中 F4（`choice_handler_factory` → `choice/handler_factory`）触发 `arch_view check FAIL: projection_cycle rules`
+  证据：实施 `git mv` + perl 替换后 `lua tools/quality/arch.lua check` 报错；`git revert` 后立即转 pass。逐项排查确认仅 F4 单独触发，F1/F2/F3 三项各自不引入新违规
+
+- 观察：T-end `busted --run contract` / `busted --run tooling` 各 1 条失败，但与本轮重命名无关
+  证据：在 pre-refactor commit `0401d31` 的 worktree 上跑同 suite 同样失败（失败形态不同：`module 'arch_view.runtime.json_reader' not found`），且失败 spec 内 `git grep` 全部本轮重命名 term 0 命中
+
+- 观察：`docs/architecture/boundaries.md` 与 `layer-model.md` 中 `action_anim` 实际指向 `src/foundation/ports/action_anim.lua`（**未被本轮重命名**），与 `src/ui/render/action_anim.lua`（→ `anim/init.lua`，本轮批 H）同名但不同文件
+  证据：`ls src/foundation/ports/` 显示 `action_anim.lua` 仍在，arch_config 抽象模式 `^src%.foundation%.ports%..+` 保留它；改 doc 时差点改错，及时回滚
 
 ## 决策日志
 
@@ -76,7 +86,73 @@
 
 ## 结果与复盘
 
-（完成时填）
+**完成日期**：2026-05-04 / 重构执行人
+
+### Commit 序列（按时间倒序）
+
+```
+8e2bdb8 refactor(ui/render): move board_scene.lua into board/scene.lua          [批 I]
+e4cff3b refactor(packages): unify entry+subpackage pairs into init.lua          [批 H]
+aee4270 refactor(ui/render): drop redundant prefixes from tile/assets/render_pipeline  [批 G]
+c35945d refactor(rules): fix subdirectory naming collisions (F1/F2/F3)          [批 F 部分]
+f462478 refactor(turn/waits): drop _wait suffix from await/{...}                [批 E]
+7abd836 refactor(state): rename runtime_state.lua to runtime.lua                [批 D2]
+8dcfed5 refactor(ui/state): rename modal_state.lua to modal.lua                 [批 D1]
+9bdb35d refactor(ui/widgets): drop panel_ prefix from cash_delta/player_slots/presenter  [批 C]
+5963ccf refactor(player): drop _ops suffix from state_ops/{balance,deity,location,status,vehicle}  [批 B]
+c5b5094 refactor(rules): move paid_purchase_port to rules/ports/paid_purchase   [批 A]
+5e1e1f4 docs(plan): add src/ flatten + naming refactor plan                     [初始]
+```
+
+合计：10 个 refactor commit + 1 个 plan commit + 1 个 doc 收尾 commit。
+
+### 触动文件统计
+
+| 批 | 重命名/移动 | 调用点变更 |
+|---|---|---|
+| A | 1 | 9 文件 |
+| B | 5 | 11 文件 |
+| C | 3 | 8 文件 |
+| D1 | 1 | 7 文件 |
+| D2 | 1 | 47 文件（最大批） |
+| E | 5 | 10 文件 |
+| F1+F2+F3 | 3 | 14 文件 |
+| G | 3 | 10 文件 |
+| H | 2（→init.lua） | 18 文件 |
+| I | 1 | 4 文件 |
+
+### T-end 验证证据
+
+```
+lint:     0 warnings / 0 errors in 677 files (源码) → 702 (含 docs)
+encoding: 375 Lua files clean
+arch:     arch_view check ok（与 T0 baseline 持平，0 新增违规）
+guards:   27/27 pass
+behavior: 0 failures（893 非白名单 warn 与 baseline 相同）
+regression: clean
+```
+
+contract / tooling 各有 1 条失败（`bare_cli_defaults_to_viewer_bundle`、`json_reader_decodes_unicode_escapes`），属预存在工具链 infra 问题：
+- 在 pre-refactor commit `0401d31` worktree 上同 suite 同样失败（失败形态不同：`arch_view.runtime.json_reader` 模块加载失败）
+- 失败 spec 内 `git grep` 全部重命名 term 0 命中，证实与本轮无关
+
+### 未解决项 / 后续
+
+1. **F4 (`choice_handler_factory` → `choice/handler_factory`) 永久撤销**：`rules/choice/` 投影循环（choice → choice_handlers → items.steal → choice.use_skip_choice）。要解，需先打破 items 反向 require choice 的依赖。归入未来独立任务。
+2. **历史叙述类 doc 引用保留**：`docs/decisions/0002-foundation-state-boundary.md` 与 `docs/architecture/governance-roadmap.md` 中描述"曾经叫 X / 当前 D2 路径"等历史决策语境的旧名引用未改，符合计划政策"叙述性段落除外"。
+3. **`docs/reports/market-dependency-map.md` 未更新**：front-matter `status: generated`，下次再生成时会带上新名。
+
+### 与原计划差异
+
+- F4 撤销（决策日志已记录）
+- 其余 8 个完整批次 + F 的 3 个子批 100% 按计划落地
+- T-end 文档 grep 后实际只需更新 2 个活契约文件（boundaries.md / layer-model.md），其它命中均属历史叙述
+
+### 收获
+
+- **Lua-package init.lua 模式**（批 H）首次系统化应用：`foo.lua + foo/` 并存的目录被收敛为 `foo/init.lua`，require 字符串视觉缩短一段。前置 require-graph 检查（确认子模块不反向依赖父入口）使重命名零回滚。
+- **arch projection_cycle 是真约束，不是软警告**：F4 撤销证明 lint+arch 联动比单纯目录直觉更可靠；移动文件前若直觉文件名"应该归 X 子目录"，先在心里跑一遍"X 子目录现有依赖会不会绕回来"。
+- **quote-anchored regex（批 H）**：当旧路径是新子模块路径前缀时（`src.computer.core_agent` ⊂ `src.computer.agent.action`），普通 `\b` 边界不安全；用 `(['\"])src\.computer\.core_agent\1` 锚到引号是当前 Lua require 字符串场景下最稳替换法。
 
 ## 背景与导读
 

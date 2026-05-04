@@ -81,7 +81,7 @@ src/ui/
 ├── view/              数据投影（presenter / role_context）
 ├── render/            渲染 + render/widgets/
 ├── coord/             协调器（actor_context / ui_state / ui_runtime / event_state）
-├── state/             纯状态容器（runtime / canvas_store / modal_state）
+├── state/             纯状态容器（runtime / canvas_store / modal）
 ├── ports/             grouped ports / adapter 真源
 ├── schema/            UI 描述 schema
 ├── utils/             with_client_role 等
@@ -98,7 +98,7 @@ src/state/
 ├── player_state.lua   ← 占位空表（保留 require 兼容；mixin 由 compose_game 接管）
 ├── board_state.lua    ← 棋盘 mixin 源
 ├── turn_state.lua     ← 回合 mixin 源
-├── runtime_state.lua  ← UI runtime 状态访问
+├── runtime.lua        ← UI runtime 状态访问
 ├── dirty_tracker.lua  ← 脏标志追踪
 ├── ui_sync_shared.lua ← UI 同步共享数据
 ├── event_log.lua
@@ -119,6 +119,6 @@ app -> host -> ui -> turn -> state/computer -> rules -> state/config -> foundati
 
 - `main.lua` 从 `src.app` 启动。
 - `src/host/global_aliases.lua` 是显式 host 桥接 seam（exception #1）。
-- `state/game_state.lua` 的 mixin（status_ops / balance_ops / deity_ops / vehicle_ops / location_ops / check_victory）由 `src/app/compose_game.lua` 在模块加载时安装到 Game 类——这是 Phase 2 反转 state 逆向依赖的关键支点。
+- `state/game_state.lua` 的 mixin（status / balance / deity / vehicle / location / check_victory，源文件 `src/player/actions/state_ops/*.lua`）由 `src/app/compose_game.lua` 在模块加载时安装到 Game 类——这是 Phase 2 反转 state 逆向依赖的关键支点。
 - `src/ui/visual_hold.lua` 是顶层 wrapper，桥接 `src/ui/render/support/effect_track` 与 `src/state/visual_hold` 的 post-release hook。
 - 旧路径（`src.core.*`、`src.ui.pres.*`、`src.ui.ctl.*`、`src.ui.wid.*`、`src.ui.stores.*`、`src.state.landing_visual_hold`、`src.state.deferred_dirty`、`src.state.release_scheduler`）全部已迁移；`tools/quality/arch.lua check` 通过。
