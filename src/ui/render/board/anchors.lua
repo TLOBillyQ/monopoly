@@ -46,7 +46,8 @@ local function _render_board_tiles(board, tiles, tile_count)
     end
     local owner_id = tile_state and tile_state.owner_id or nil
     local owner_name = _find_owner_name(board.players, owner_id)
-    tile_renderer.render_tile(unit, tile_id, owner_id, owner_name)
+    local level = tile_state and tile_state.level or nil
+    tile_renderer.render_tile(unit, tile_id, owner_id, owner_name, level)
   end
 end
 
