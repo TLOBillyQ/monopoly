@@ -58,7 +58,6 @@ local function _fulfill_item(game, player, entry, opts, price, currency, priced_
     entry = entry,
     price = price,
     currency = currency,
-    is_paid = context.is_paid_currency(currency),
     text = _success_text(player, entry, price, currency, priced_text),
   })
   return {
@@ -114,7 +113,6 @@ local function _fulfill_skin(game, player, entry, opts, price, currency, priced_
     entry = entry,
     price = price,
     currency = currency,
-    is_paid = context.is_paid_currency(currency),
     text = _success_text(player, entry, price, currency, priced_text),
   })
   return { ok = true, fulfilled_now = true }

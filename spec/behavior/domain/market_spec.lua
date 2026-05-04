@@ -694,62 +694,6 @@ describe("market", function()
     assert(option.can_buy == false, "paid purchase callback should refresh sold out entry to unbuyable")
   end)
 
-  it("market_bought_item_payload_carries_is_paid_per_currency", function()
-    local fulfillment = require("src.rules.market.purchase.fulfillment")
-    local g = _new_game()
-    local p = g:current_player()
-    local paid_entry = assert(_find_paid_item_entry(), "test requires paid item market entry")
-    local cash_entry
-    for _, entry in ipairs(market_cfg) do
-      if entry.kind == "item" and entry.currency == "金币" and entry.market_enabled ~= false then
-        cash_entry = entry
-        break
-      end
-    end
-    assert(cash_entry ~= nil, "test requires non-paid item market entry")
-
-    local emitted = {}
-    support.with_patches({
-      {
-        target = runtime_ports,
-        key = "emit_event",
-        value = function(kind, payload)
-          emitted[#emitted + 1] = { kind = kind, payload = payload }
-        end,
-      },
-    }, function()
-      local paid_result = fulfillment.apply(g, p, paid_entry, {
-        skip_charge = true,
-        price = paid_entry.price,
-        currency = paid_entry.currency,
-        priced_text = false,
-      })
-      assert(paid_result.ok == true, "paid fulfillment should succeed")
-      local cash_result = fulfillment.apply(g, p, cash_entry, {
-        skip_charge = true,
-        price = cash_entry.price,
-        currency = cash_entry.currency,
-        priced_text = false,
-      })
-      assert(cash_result.ok == true, "cash fulfillment should succeed")
-    end)
-
-    local paid_event, cash_event
-    for _, e in ipairs(emitted) do
-      if e.kind == monopoly_event.market.bought_item and type(e.payload) == "table" and type(e.payload.entry) == "table" then
-        if e.payload.entry.product_id == paid_entry.product_id then
-          paid_event = e
-        elseif e.payload.entry.product_id == cash_entry.product_id then
-          cash_event = e
-        end
-      end
-    end
-    assert(paid_event ~= nil, "paid purchase should emit bought_item event")
-    assert(paid_event.payload.is_paid == true, "paid purchase payload.is_paid should be true")
-    assert(cash_event ~= nil, "cash purchase should emit bought_item event")
-    assert(cash_event.payload.is_paid == false, "cash purchase payload.is_paid should be false")
-  end)
-
   it("market_paid_purchase_same_goods_can_fulfill_multiple_times", function()
     local market_service = _reload_market_service()
     local g = _new_game()

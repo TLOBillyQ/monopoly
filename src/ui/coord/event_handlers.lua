@@ -240,23 +240,6 @@ function event_handlers.install(_, logger, state)
     if ctx and player and player.id ~= nil then
       board_feedback.play_player_cue(ctx, "cash_burst", player.id, event_data)
     end
-    if event_data and event_data.is_paid == true then
-      local entry = event_data.entry
-      local item_name = entry and entry.name or ""
-      local tip_text
-      if entry and entry.kind == "skin" then
-        tip_text = "新皮肤已上身：" .. item_name
-      else
-        tip_text = "已收入卡槽：" .. item_name
-      end
-      _enqueue_tip({
-        text = tip_text,
-        duration = MARKET_TIP_MIN_SECONDS,
-        dedupe_key = "market_paid_success:" .. tostring(entry and entry.product_id or ""),
-        blocks_inter_turn = false,
-        source = "market.paid_success",
-      })
-    end
   end)
 
   _register_handler(monopoly_event.game.finished, function(data)
