@@ -27,6 +27,7 @@ local timing = {
   move_anim_tail_padding_seconds = 0.5,
   pass_start_hold_seconds_per_step = 0.54,
   pass_start_hold_max_seconds = 6.0,
+  teleport_effect_camera_hold_seconds = 1.0,
   turn_limit = 1000,
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
   scope_timeouts = {

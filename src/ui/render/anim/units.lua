@@ -10,6 +10,7 @@ local compute = require("src.ui.render.anim.overlay_compute")
 local units = {}
 local mine_trigger_snap_delay_seconds = timing.mine_trigger_snap_delay_seconds or 0.6
 local demolish_effect_followup_delay_seconds = timing.demolish_effect_followup_delay_seconds or 0.35
+local teleport_camera_hold_seconds = timing.teleport_effect_camera_hold_seconds or 1.0
 local _play_demolish_feedback
 
 function units.clear_overlay(state, kind, tile_index)
@@ -90,11 +91,24 @@ function units.play_move_effect(state, anim)
   return move_anim.play_sequence(state.board_scene, anim)
 end
 
-function units.play_teleport_effect(state, anim)
+local function _pan_camera_to_teleport_destination(state, anim, duration, opts)
+  if anim == nil or anim.to_index == nil then
+    return
+  end
+  local hold = duration
+  if not number_utils.is_numeric(hold) or hold < teleport_camera_hold_seconds then
+    hold = teleport_camera_hold_seconds
+  end
+  _pan_camera_to_tile(state, anim.to_index, hold, opts)
+end
+
+function units.play_teleport_effect(state, anim, duration, opts)
+  _pan_camera_to_teleport_destination(state, anim, duration, opts)
   return move_anim.play_teleport(state.board_scene, anim)
 end
 
-function units.play_forced_relocation(state, anim)
+function units.play_forced_relocation(state, anim, duration, opts)
+  _pan_camera_to_teleport_destination(state, anim, duration, opts)
   return move_anim.play_teleport(state.board_scene, anim)
 end
 

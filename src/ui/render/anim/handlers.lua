@@ -27,12 +27,12 @@ function handlers.play_move_effect(state, anim)
   return units.play_move_effect(state, anim)
 end
 
-function handlers.play_teleport_effect(state, anim)
-  return units.play_teleport_effect(state, anim)
+function handlers.play_teleport_effect(state, anim, duration, opts)
+  return units.play_teleport_effect(state, anim, duration, opts)
 end
 
-function handlers.play_forced_relocation(state, anim)
-  return units.play_forced_relocation(state, anim)
+function handlers.play_forced_relocation(state, anim, duration, opts)
+  return units.play_forced_relocation(state, anim, duration, opts)
 end
 
 function handlers.play_mine_trigger(state, anim, duration, opts)
