@@ -138,9 +138,9 @@ contract / tooling 各有 1 条失败（`bare_cli_defaults_to_viewer_bundle`、`
 
 ### 未解决项 / 后续
 
-1. **F4 (`choice_handler_factory` → `choice/handler_factory`) 永久撤销**：`rules/choice/` 投影循环（choice → choice_handlers → items.steal → choice.use_skip_choice）。要解，需先打破 items 反向 require choice 的依赖。归入未来独立任务。
+1. ~~**F4 永久撤销**~~ — **已解决**（后续 commit）。最终方案：`choice_handler_factory.lua` 移入 `src/rules/choice_handlers/factory.lua`（语义归属：handler 工厂属于它所装配的 handler 包），同时把 `choice/use_skip_choice.lua` 抽到新的 `src/rules/choice_specs/`（打开 items.steal/land 反向引用 choice 的链）。Oracle Option C 路径，arch_view 0 违规。详见 [.claude/plans/think-plan-md-shimmying-stallman.md](../.claude/plans/think-plan-md-shimmying-stallman.md) 与对应 3 个 commit。
 2. **历史叙述类 doc 引用保留**：`docs/decisions/0002-foundation-state-boundary.md` 与 `docs/architecture/governance-roadmap.md` 中描述"曾经叫 X / 当前 D2 路径"等历史决策语境的旧名引用未改，符合计划政策"叙述性段落除外"。
-3. **`docs/reports/market-dependency-map.md` 未更新**：front-matter `status: generated`，下次再生成时会带上新名。
+3. ~~**`docs/reports/market-dependency-map.md` 未更新**~~ — **已解决**（后续 commit）。front-matter 改为 `status: manual`（grep 确认无生成器），内文旧名 `paid_purchase_port` / `runtime_state` 已替换为 `ports/paid_purchase` / `runtime`。
 
 ### 与原计划差异
 

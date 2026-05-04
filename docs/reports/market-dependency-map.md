@@ -1,6 +1,6 @@
 ---
 kind: report
-status: generated
+status: manual
 owner: quality
 last_verified: 2026-05-04
 ---
@@ -44,7 +44,7 @@ last_verified: 2026-05-04
                 │            │     │     core.lua ──► policy,       │                │
                 │            │     │              local_purchase,   │                │
                 │            │     │              paid_callback,    │                │
-                │            │     │              paid_purchase_port│                │
+                │            │     │              ports/paid_purchase│                │
                 │            │     │     local_purchase ─► fulfillm.│                │
                 │            │     │     paid_fulfillment ─► policy,│                │
                 │            │     │              fulfillment       │                │
@@ -53,7 +53,7 @@ last_verified: 2026-05-04
                 │            │     │                                │                │
                 │            │     ├─► auto.lua ──► query, purchase │                │
                 │            │     ├─► effects.lua  ──► (self)      │                │
-                │            │     └─► paid_purchase_port.lua (port)│                │
+                │            │     └─► ports/paid_purchase.lua (port)│                │
                 │            └──────────────────────────────────────┘                │
                 │                          ▲          ▲                              │
                 │       ┌──────────────────┘          └──────────────┐               │
@@ -76,7 +76,7 @@ last_verified: 2026-05-04
                 │                                                                    │
                 │           ┌─────────────────────────────────────────┐              │
                 │           │ host / app  (装配)                      │              │
-                │           │   app/host_install ─► paid_purchase_port│              │
+                │           │   app/host_install ─► ports/paid_purchase│              │
                 │           │   host/paid_purchase_gateway            │              │
                 │           │     (lazy ─► market.query.context)      │              │
                 │           └─────────────────────────────────────────┘              │
@@ -85,7 +85,7 @@ last_verified: 2026-05-04
    ┌───────────────────────────────────────────────────────────────────┐             │
    │  state  (跨层 — 不属于任何一层，被多方读写)                       │◄────────────┘
    │    dirty_tracker.lua    ← market 域（★ a54beb8 修复点）           │
-   │    runtime_state / ui_sync_shared                                 │
+   │    runtime / ui_sync_shared                                 │
    └───────────────────────────────────────────────────────────────────┘
                 ▲
                 │ 通过 dirty.market 标志位单向触达 UI
@@ -160,9 +160,9 @@ last_verified: 2026-05-04
 
 ## 边界要点
 
-- **rules/market 的对外门面只有 3 个**：`market.init`（聚合）、`market.purchase.core`（下单）、`market.paid_purchase_port`（付费端口）。其他文件都是内部实现。
+- **rules/market 的对外门面只有 3 个**：`market.init`（聚合）、`market.purchase.core`（下单）、`market.ports/paid_purchase`（付费端口）。其他文件都是内部实现。
 - **唯一的 server→UI 通道是 dirty 域**：`rules/market` 不直接 require 任何 `ui/`；耦合点全在 `state.dirty_tracker` 这一处共享状态。
-- **ui/render/market 不 require rules/market**：它读的是 `runtime_state` 与 `config/content/*`（已被 server 写好的快照）。这是 a54beb8 没破坏的清洁架构边界。
+- **ui/render/market 不 require rules/market**：它读的是 `runtime` 与 `config/content/*`（已被 server 写好的快照）。这是 a54beb8 没破坏的清洁架构边界。
 - **modal.lua + ui_sync/model.lua 是"是否重开 modal"的双闸门**：前者用 choice.id 去重（`_should_skip_reopen`），后者用 dirty 强制刷新（`_should_open_choice_modal`）。两者协作才让"原地改写 pending_choice"也能触发重渲。
 
 ## 关联文档

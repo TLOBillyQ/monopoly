@@ -121,7 +121,7 @@ lua tools/quality/crap.lua summary [--lane behavior] [--in-json tmp/crap_report.
 | `src/rules/choice_handlers/item.lua` | 346/391 | 88.5% |
 | `src/turn/output/state_adapter.lua` | 16/59 | 27.1% |
 | `src/rules/items/phase.lua` | 229/270 | 84.8% |
-| `src/state/runtime_state.lua` | 168/208 | 80.8% |
+| `src/state/runtime.lua` | 168/208 | 80.8% |
 | `src/turn/loop/tick_clock.lua` | 75/115 | 65.2% |
 
 刷新基线命令：
