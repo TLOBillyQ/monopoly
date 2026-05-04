@@ -513,7 +513,7 @@ describe("presentation.board_sync", function()
   end)
 
   it("_test_board_scene_init_binds_units", function()
-    local board_scene = require("src.ui.render.board_scene")
+    local board_scene = require("src.ui.render.board.scene")
     local runtime_ports = require("src.foundation.ports.runtime_ports")
     local state = {}
     local players = {

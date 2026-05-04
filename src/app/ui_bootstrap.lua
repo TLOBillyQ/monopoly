@@ -1,4 +1,4 @@
-local board_scene = require("src.ui.render.board_scene")
+local board_scene = require("src.ui.render.board.scene")
 local ui_view = require("src.ui.coord.ui_runtime")
 local canvas_event_router = require("src.ui.coord.canvas_event_router")
 local base_nodes = require("src.ui.schema.base")

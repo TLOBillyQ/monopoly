@@ -426,7 +426,7 @@ describe("misc", function()
         value = function() end,
       },
       {
-        target = require("src.ui.render.board_scene"),
+        target = require("src.ui.render.board.scene"),
         key = "init",
         value = function() end,
       },
