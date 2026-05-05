@@ -525,16 +525,28 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
     assert(type(events[monopoly_event.intent.need_choice]) == "function", "bridge should register need_choice")
 
     local opened = nil
-    local choice_payload = { id = 11, kind = "item_target_player", route_key = "player", options = { { id = 1, label = "A" } } }
+    -- gate（src/ui/ports/events.lua:48 _should_open_modal_for_event）需要 owner_role_id +
+    -- 本地 actor 才会放行；缺 fixture 会让 expects_ui=false，开屏路径不走。
+    -- 细分 owner=auto/AI/local human 的覆盖在
+    -- spec/behavior/gameplay/ui_sync/auto_player_landing_choice_event_path_spec.lua。
+    local owner_id = 1
+    local choice_payload = {
+      id = 11,
+      kind = "item_target_player",
+      route_key = "player",
+      owner_role_id = owner_id,
+      options = { { id = 1, label = "A" } },
+    }
     current_game = {
-      turn = { pending_choice = choice_payload },
+      turn = { pending_choice = choice_payload, current_player_index = 1 },
       winner = nil,
       winner_names = nil,
       last_turn = nil,
       finished = false,
-      players = {},
+      players = { { id = owner_id } },
       board = { get_overlays = function() return { roadblocks = {}, mines = {} } end, tile_lookup = {}, path = {} },
     }
+    runtime_state.set_local_actor_role_id(state, owner_id)
     support.with_patches({
       { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function(_, choice)
         opened = choice
