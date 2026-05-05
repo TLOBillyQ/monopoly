@@ -108,9 +108,9 @@ function tick_steps.refresh_tick_from_dirty(game, state, ports, input_blocked_ch
     debug_ports.log_status(ui_model)
   end
 
-  if not landing_visual_hold.is_active_state(state) then
-    debug_ports.sync_event_log(state)
-  end
+  -- 行动日志是 append-only 历史，与 UI 冻结策略解耦：HOLD 期间也照常推。
+  -- log_status 仍受 HOLD 守护（状态快照需要冻结），但 event_log 不能跟着冻。
+  debug_ports.sync_event_log(state)
 end
 
 return tick_steps
