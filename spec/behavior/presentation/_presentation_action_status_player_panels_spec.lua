@@ -220,7 +220,7 @@ describe("presentation_player_panels", function()
     end)
   end)
 
-  it("_test_panel_cash_delta_accumulates_when_changes_are_continuous", function()
+  it("_test_panel_cash_delta_shows_each_change_independently", function()
     local runtime_ports = require("src.foundation.ports.runtime_ports")
     local env = _new_cash_delta_presenter_env()
     local scheduled = {}
@@ -235,27 +235,53 @@ describe("presentation_player_panels", function()
       env.set_cash(1, 80)
       env.refresh()
       _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "-20",
-        "first change should display delta from anchor=100")
+        "first change should display its own delta")
       _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
         "first change should be visible")
       _assert_eq(#scheduled, 1, "first change should schedule a hide")
       env.set_cash(1, 120)
       env.refresh()
-      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+20",
-        "accumulated delta from anchor=100 should display +20 (not +40)")
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+40",
+        "second change should display its own instantaneous delta (not net vs. earlier anchor)")
       _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
-        "label should remain visible during accumulation")
-      _assert_eq(#scheduled, 2, "second change should schedule a fresh hide; old hide cb is invalidated by token bump")
+        "label should remain visible after second change")
+      _assert_eq(#scheduled, 2, "second change should schedule a fresh hide; earlier hide is invalidated by token bump")
       scheduled[1].cb()
-      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+20",
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+40",
         "stale hide callback should not clear current label")
       _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
         "stale hide callback should not flip visibility")
       scheduled[2].cb()
       _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "",
-        "latest hide should clear the accumulated label")
+        "latest hide should clear the label")
       _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], false,
         "latest hide should flip visibility off")
+    end)
+  end)
+
+  it("_test_panel_cash_delta_reverse_event_replaces_previous_delta", function()
+    local runtime_ports = require("src.foundation.ports.runtime_ports")
+    local env = _new_cash_delta_presenter_env()
+    local scheduled = {}
+
+    _with_patches({
+      { target = runtime_ports, key = "schedule", value = function(delay, cb)
+        scheduled[#scheduled + 1] = { delay = delay, cb = cb }
+      end },
+    }, function()
+      -- 模拟"经过起点 +2000，紧随其后买地 -1000"：两次变化在显示窗口内反向
+      env.set_cash(1, 10000)
+      env.refresh()
+      env.set_cash(1, 12000)
+      env.refresh()
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "+2000",
+        "pass-start reward shows its own delta")
+      env.set_cash(1, 11000)
+      env.refresh()
+      _assert_eq(env.state.ui.labels["基础-玩家1消耗金币显示"], "-1000",
+        "buy-land cost shows its own delta, not net (+2000 - 1000 = +1000)")
+      _assert_eq(env.state.ui.visible["基础-玩家1消耗金币显示"], true,
+        "buy-land delta should be visible")
     end)
   end)
 

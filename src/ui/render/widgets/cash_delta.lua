@@ -123,21 +123,14 @@ function panel_cash_delta.refresh_cash_delta_label(ui, index, row)
 
   ui.player_cash_value_cache_by_index[index] = cash_value
 
-  if not entry.visible then
-    if cash_value == prev_cash_value then
-      return
-    end
-    entry.anchor_cash = prev_cash_value
-  end
-
-  local display_delta = cash_value - entry.anchor_cash
-  if display_delta == 0 then
-    _bump_token(entry)
-    _clear_cash_delta_label(ui, index)
-    entry.visible = false
-    entry.anchor_cash = nil
+  if cash_value == prev_cash_value then
     return
   end
+
+  -- 每次变化独立显示：始终以本次变化前的值为锚点，旧的 hide 回调由 token bump 取消，
+  -- 显示窗口内的连续变化不再累加为净额。
+  entry.anchor_cash = prev_cash_value
+  local display_delta = cash_value - prev_cash_value
 
   local sign = "+"
   local magnitude = display_delta
