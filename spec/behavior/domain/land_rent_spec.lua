@@ -158,7 +158,7 @@ describe("domain land rent contiguous behavior", function()
     assert.equals(expected, payload.amount, "amount should equal contiguous sum without deity")
   end)
 
-  it("rent_paid text includes contiguous indicator when count > 1", function()
+  it("rent_paid multiplier_text includes contiguous indicator when count > 1", function()
     local g = _new_game()
     local payer = g.players[1]
     local owner = g.players[2]
@@ -169,14 +169,15 @@ describe("domain land rent contiguous behavior", function()
     local hit_tile = strip[1]
     payer.position = assert(g.board:index_of_tile_id(hit_tile.id), "hit index missing")
     local result = land_rules.execute_pay_rent(g, payer.id, hit_tile.id)
-    assert.is_truthy(result and result.payload and result.payload.text, "missing text")
-    local text = result.payload.text
+    assert.is_truthy(result and result.payload, "missing payload")
+    local multiplier_text = result.payload.multiplier_text
+    assert.is_truthy(multiplier_text, "multiplier_text should be present when count > 1")
     local needle = "连片 ×" .. tostring(#strip)
-    assert.is_true(text:find(needle, 1, true) ~= nil,
-      "text should mention contiguous multiplier when count > 1, got: " .. text)
+    assert.is_true(multiplier_text:find(needle, 1, true) ~= nil,
+      "multiplier_text should mention contiguous multiplier when count > 1, got: " .. multiplier_text)
   end)
 
-  it("rent_paid text does not include contiguous indicator when count == 1", function()
+  it("rent_paid multiplier_text is nil when count == 1 and no deity", function()
     local g = _new_game()
     local payer = g.players[1]
     local owner = g.players[2]
@@ -199,11 +200,12 @@ describe("domain land rent contiguous behavior", function()
 
     payer.position = assert(g.board:index_of_tile_id(isolated.id), "hit index missing")
     local result = land_rules.execute_pay_rent(g, payer.id, isolated.id)
-    local text = result.payload.text
     assert.equals(1, result.payload.contiguous_count,
       "isolated tile should report contiguous_count == 1")
-    assert.is_nil(text:find("连片", 1, true),
-      "text should NOT mention contiguous when count == 1, got: " .. text)
+    assert.is_nil(result.payload.multiplier_text,
+      "multiplier_text should be nil when no contiguous bonus and no deity")
+    assert.is_nil(result.payload.text:find("连片", 1, true),
+      "main text should NOT mention contiguous when count == 1, got: " .. result.payload.text)
   end)
 
   it("deity multiplier stacks on top of contiguous total", function()

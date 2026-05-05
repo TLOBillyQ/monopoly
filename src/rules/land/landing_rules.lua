@@ -127,8 +127,10 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
   end
 
   local text = player.name .. " 向 " .. owner.name .. " 支付租金 " .. number_utils.format_integer_part(rent)
+
+  local breakdown_parts = {}
   if breakdown.count > 1 then
-    text = text .. "（连片 ×" .. tostring(breakdown.count) .. "）"
+    breakdown_parts[#breakdown_parts + 1] = "连片 ×" .. tostring(breakdown.count)
   end
   if deity_multiplier > 1 then
     local deity_label = nil
@@ -140,8 +142,14 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
       deity_label = "财神"
     end
     if deity_label then
-      text = text .. "（" .. deity_label .. " ×" .. tostring(deity_multiplier) .. "）"
+      breakdown_parts[#breakdown_parts + 1] = deity_label .. " ×" .. tostring(deity_multiplier)
     end
+  end
+
+  local total_multiplier = breakdown.count * deity_multiplier
+  local multiplier_text = nil
+  if #breakdown_parts > 0 then
+    multiplier_text = tile.name .. " 租金 ×" .. tostring(total_multiplier) .. "（" .. table.concat(breakdown_parts, "，") .. "）"
   end
 
   local result = _build_land_event("rent_paid", {
@@ -153,6 +161,7 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
     contiguous_count = breakdown.count,
     deity_multiplier = deity_multiplier,
     text = text,
+    multiplier_text = multiplier_text,
   })
 
   if game:player_balance(player, "金币") >= rent then

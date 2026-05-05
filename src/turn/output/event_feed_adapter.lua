@@ -1,6 +1,7 @@
 local event_log = require("src.state.event_log")
 local timing = require("src.config.gameplay.timing")
 local logger = require("src.foundation.log.logger")
+local tip_policy = require("src.config.feedback.tip_policy")
 
 local Adapter = {}
 Adapter.__index = Adapter
@@ -13,10 +14,35 @@ function Adapter.new(game)
   return self
 end
 
-function Adapter:publish(game, event)
-  event_log.append(game.state.event_log, event)
+local function _resolve_policy(kind)
+  if kind == nil then
+    return nil
+  end
+  return tip_policy[kind]
+end
 
-  if event.tip == false then
+local function _should_log(policy)
+  if policy and policy.log == false then
+    return false
+  end
+  return true
+end
+
+local function _should_tip(event, policy)
+  if policy and policy.tip ~= nil then
+    return policy.tip == true
+  end
+  return event.tip ~= false
+end
+
+function Adapter:publish(game, event)
+  local policy = _resolve_policy(event.kind)
+
+  if _should_log(policy) then
+    event_log.append(game.state.event_log, event)
+  end
+
+  if not _should_tip(event, policy) then
     return true
   end
 

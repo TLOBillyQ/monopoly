@@ -24,6 +24,12 @@ local function _publish_to_feed(game, result, payload)
     kind = ef_kind,
     text = payload.text,
   })
+  if result.event == "rent_paid" and type(payload.multiplier_text) == "string" then
+    event_feed.publish(game, {
+      kind = event_kinds.rent_multiplier_breakdown,
+      text = payload.multiplier_text,
+    })
+  end
 end
 
 function land_events.apply(game, result)

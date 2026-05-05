@@ -22,6 +22,9 @@ local function _emit_text(game, mono_kind, ef_kind, payload, opts)
     if not (opts and opts.show_tip == true) then
       event.tip = false
     end
+    if opts and opts.tip_dedupe_key ~= nil then
+      event.tip_dedupe_key = opts.tip_dedupe_key
+    end
     event_feed.publish(game, event)
   end
 end
@@ -343,13 +346,17 @@ local function _emit_pass_start_reward(ctx)
   end
   local bonus = ctx.pass_start * constants.pass_start_bonus
   ctx.game:add_player_cash(ctx.player, bonus)
+  local turn_count = (ctx.game and ctx.game.turn and ctx.game.turn.turn_count) or 0
   _emit_text(ctx.game, monopoly_event.movement.passed_start, event_kinds.passed_start, {
     player = ctx.player,
     count = ctx.pass_start,
     bonus = bonus,
     text = ctx.player.name .. " 经过起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
     prompt_text = _build_other_action_prompt_text(),
-  }, { show_tip = true })
+  }, {
+    show_tip = true,
+    tip_dedupe_key = "passed_start:" .. tostring(ctx.player.id) .. ":" .. tostring(turn_count),
+  })
 end
 
 local function _resolve_pass_start_hold(ctx)

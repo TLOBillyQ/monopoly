@@ -96,9 +96,8 @@ end
 
 local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
   local g = _new_game()
-  local event_feed = require("src.rules.ports.event_feed")
 
-  event_log.clear(g.state.event_log)
+  local normal_events = {}
   local normal_choice = {
     id = 10,
     kind = "landing_optional_effect",
@@ -113,14 +112,19 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
     actor_role_id = g.players[1].id,
   }, {
     on_event = function(event)
-      event_feed.publish(g, event)
+      normal_events[#normal_events + 1] = event
     end,
   })
-  local skip_text = event_log.get_text(g.state.event_log)
-  assert(string.find(skip_text, "跳过选择：可选效果", 1, true) ~= nil,
-    "true cancel should log skip-choice event")
+  local found_normal_skip = false
+  for _, event in ipairs(normal_events) do
+    if event.text and string.find(event.text, "跳过选择：可选效果", 1, true) then
+      found_normal_skip = true
+      break
+    end
+  end
+  assert(found_normal_skip, "true cancel should emit skip-choice event")
 
-  event_log.clear(g.state.event_log)
+  local tax_events = {}
   local tax_choice = {
     id = 11,
     kind = "tax_card_prompt",
@@ -135,12 +139,13 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
     actor_role_id = g.players[1].id,
   }, {
     on_event = function(event)
-      event_feed.publish(g, event)
+      tax_events[#tax_events + 1] = event
     end,
   })
-  local tax_text = event_log.get_text(g.state.event_log)
-  assert(string.find(tax_text, "跳过选择", 1, true) == nil,
-    "tax cancel fallback should not log skip-choice event")
+  for _, event in ipairs(tax_events) do
+    assert(not (event.text and string.find(event.text, "跳过选择", 1, true)),
+      "tax cancel fallback should not emit skip-choice event")
+  end
 end
 
 local function _test_choice_resolver_normalizes_market_buy_action_before_execute()
@@ -221,14 +226,30 @@ end
 local function _test_end_turn_logs_phase_event_to_event_feed()
   local g = _new_game()
   local phases = phase_registry.build_default_phases()
-  event_log.clear(g.state.event_log)
+  local captured_events = {}
+  local original_publish = g.event_feed_port.publish
+  g.event_feed_port.publish = function(self, game, event)
+    captured_events[#captured_events + 1] = event
+    return original_publish(self, game, event)
+  end
+
   phases.end_turn({ game = g, next_player = function()
     g.turn.current_player_index = 2
   end }, { player = g.players[1] })
-  local text = event_log.get_text(g.state.event_log)
-  assert(string.find(text, "回合结束：" .. g.players[1].name, 1, true) ~= nil,
-    "end_turn should log phase end event")
-  assert(string.find(text, "停在", 1, true) ~= nil, "end_turn event should include landing tile")
+
+  g.event_feed_port.publish = original_publish
+
+  local found_end_turn = false
+  for _, event in ipairs(captured_events) do
+    if event.kind == "turn_end"
+      and event.text
+      and string.find(event.text, "回合结束：" .. g.players[1].name, 1, true)
+      and string.find(event.text, "停在", 1, true) then
+      found_end_turn = true
+      break
+    end
+  end
+  assert(found_end_turn, "end_turn should publish turn_end event with landing tile")
 end
 
 local function _test_clear_obstacles_zero_does_not_log_event_noise()
