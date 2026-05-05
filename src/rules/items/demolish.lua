@@ -168,6 +168,11 @@ function demolish.apply(game, player, idx, opts)
     hit = #hospital_targets
   end
 
+  -- 全部被天使挡住：免疫 tip 已发，跳过 anim + demolish 文案，避免抢镜
+  if not destroyed and (not opts.injure or hit == 0) then
+    return { ok = true }
+  end
+
   local msg, kind = _build_demolish_msg(player, tile, opts.injure, destroyed, hit)
   local log_entries = { msg }
   local queued = action_anim_port.queue(game, {
