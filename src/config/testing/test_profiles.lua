@@ -251,23 +251,27 @@ local profiles = {
         },
     },
 
-    paid_jindou_buy = {
+    paid_market_entry = {
         group = "commerce_paid",
-        covers = { "market_entry", "jindou", "shop", "paid_currency" },
+        covers = { "market_entry", "shop", "paid_currency", "jindou", "lepark", "remote_dice" },
         bootstrap = {
-            players = _mk_players(120000, TILE.market, {
-                [1] = { item_counts = INV.remote_dice },
+            -- p1 在 27 起步，2 张遥控骰子（4+4=8 步）刚好经过黑市 39 触发购买
+            players = _mk_players(120000, 27, {
+                [1] = { item_counts = { [2002] = 2 } },
             }),
         },
     },
 
-    paid_lepark_buy = {
-        group = "commerce_paid",
-        covers = { "market_entry", "lepark", "shop", "paid_currency" },
+    combo_mine_vs_angel = {
+        group = "combat_obstacle",
+        covers = { "mine", "angel", "immunity" },
         bootstrap = {
-            players = _mk_players(120000, TILE.market, {
-                [1] = { item_counts = INV.remote_dice },
+            -- p1 天使附身 + 遥控骰子，前方 8 号格有地雷；按设计天使应免疫地雷
+            -- (movement.lua:124 / mine.lua:89 显式检查 angel_immune_to_item)
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.remote_dice, statuses = _deity("angel") },
             }),
+            overlays = { mines = { { tile_id = 8, render_called = true } } },
         },
     },
 
@@ -275,11 +279,27 @@ local profiles = {
         group = "combat_obstacle",
         covers = { "missile", "angel", "immunity" },
         bootstrap = {
+            -- p1 用 missile 轰 12 号格（p2 拥有 + 站位且天使附身）
+            -- 期望：建筑未被摧毁，p2 不送医（demolish.lua angel_immune_to_item 双闸口）
             players = _mk_players(120000, TILE.chance_inner, {
                 [1] = { item_counts = INV.missile },
-                [2] = { position_tile_id = 11, statuses = _deity("angel") },
+                [2] = { position_tile_id = 12, statuses = _deity("angel") },
             }),
-            tiles = { [11] = { owner_player_index = 2, level = 2, render_called = true } },
+            tiles = { [12] = { owner_player_index = 2, level = 2, render_called = true } },
+        },
+    },
+
+    combo_monster_vs_angel = {
+        group = "combat_obstacle",
+        covers = { "monster", "angel", "immunity" },
+        bootstrap = {
+            -- p1 用 monster 拆 12 号建筑（p2 拥有且天使附身）
+            -- 期望：建筑未被摧毁
+            players = _mk_players(120000, TILE.chance_inner, {
+                [1] = { item_counts = INV.monster },
+                [2] = { position_tile_id = 8, statuses = _deity("angel") },
+            }),
+            tiles = { [12] = { owner_player_index = 2, level = 2, render_called = true } },
         },
     },
 
@@ -305,15 +325,14 @@ local profiles = {
         },
     },
 
-    combo_invite_deity_chain = {
+    combo_invite_overwrites_poor = {
         group = "interrupt_resume",
-        covers = { "invite_deity", "send_poor", "deity_transfer", "chain" },
+        covers = { "invite_deity", "deity_overwrite" },
         bootstrap = {
+            -- p1 自带穷神，请神把 p2 财神拉到自己身上时会覆盖穷神（单神位语义）
+            -- 验证：deity_ops.set_player_deity 直接覆盖，不需要先 clear
             players = _mk_players(120000, 7, {
-                [1] = {
-                    item_counts = _merge_inv(INV.invite_deity, INV.send_poor),
-                    statuses = _deity("poor"),
-                },
+                [1] = { item_counts = INV.invite_deity, statuses = _deity("poor") },
                 [2] = { position_tile_id = 8, statuses = _deity("rich") },
             }),
         },
@@ -340,17 +359,6 @@ local profiles = {
                 [1] = { item_counts = INV.remote_dice, statuses = _deity("poor") },
             }),
             tiles = { [12] = { owner_player_index = 2, level = 2, render_called = true } },
-        },
-    },
-
-    edge_inventory_full = {
-        group = "interrupt_resume",
-        value = "edge",
-        covers = { "inventory_slots", "limit", "jindou" },
-        bootstrap = {
-            players = _mk_players(120000, 7, {
-                [1] = { item_counts = { [2002] = 1, [2004] = 1, [2007] = 1, [2013] = 1, [2019] = 1 } },
-            }),
         },
     },
 

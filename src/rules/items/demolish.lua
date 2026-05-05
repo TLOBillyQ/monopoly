@@ -20,20 +20,39 @@ local function _clear_overlays(game, idx)
   game:clear_all_overlays(idx)
 end
 
-local function _destroy_building(game, tile)
-  assert(tile ~= nil and tile.type == "land", "invalid tile for demolish")
-  game:set_tile_level(tile, 0)
-end
-
 local tile_state = tile_mod.get_state
 
-local function _collect_hospital_targets(game, idx)
+local function _try_destroy_building(game, tile, item_id)
+  assert(tile ~= nil and tile.type == "land", "invalid tile for demolish")
+  local st = tile_state(game, tile)
+  if not st.owner_id or (st.level or 0) <= 0 then
+    game:set_tile_level(tile, 0)
+    return true
+  end
+  local owner = game:find_player_by_id(st.owner_id)
+  if owner and game:angel_immune_to_item(owner, item_id) then
+    event_feed.publish(game, {
+      kind = event_kinds.item_immune,
+      text = owner.name .. " 有天使，建筑免疫摧毁",
+    })
+    return false
+  end
+  game:set_tile_level(tile, 0)
+  return true
+end
+
+local function _collect_hospital_targets(game, idx, item_id)
   local occupants = assert(game.occupants[idx], "missing occupants: " .. tostring(idx))
   local targets = {}
   local snapshot = { list_unpack(occupants) }
   for _, pid in ipairs(snapshot) do
     local target = assert(game:find_player_by_id(pid), "missing target player: " .. tostring(pid))
-    if game:player_is_vehicle_indestructible(target) then
+    if game:angel_immune_to_item(target, item_id) then
+      event_feed.publish(game, {
+        kind = event_kinds.item_immune,
+        text = target.name .. " 有天使，免疫导弹效果",
+      })
+    elseif game:player_is_vehicle_indestructible(target) then
       event_feed.publish(game, {
         kind = event_kinds.item_immune,
         text = target.name .. " 座驾免疫导弹效果",
@@ -123,10 +142,10 @@ function demolish.find_target(game, player, distance)
   return idx
 end
 
-local function _build_demolish_msg(player, tile, injure, hit)
+local function _build_demolish_msg(player, tile, injure, destroyed, hit)
   if injure then
     local msg = player.name .. " 发射导弹轰炸 " .. tile.name
-    if tile.type == "land" then
+    if destroyed and tile.type == "land" then
        msg = msg .. "，建筑被摧毁"
     end
     if hit > 0 then
@@ -134,7 +153,10 @@ local function _build_demolish_msg(player, tile, injure, hit)
     end
     return msg, "missile"
   end
-  return player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑", "monster"
+  if destroyed then
+    return player.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑", "monster"
+  end
+  return player.name .. " 释放怪兽，但 " .. tile.name .. " 建筑未被摧毁", "monster"
 end
 
 function demolish.apply(game, player, idx, opts)
@@ -142,16 +164,16 @@ function demolish.apply(game, player, idx, opts)
   _clear_overlays(game, idx)
   local tile = assert(game.board:get_tile(idx), "missing tile: " .. tostring(idx))
 
-  _destroy_building(game, tile)
+  local destroyed = _try_destroy_building(game, tile, opts.item_id)
 
   local hit = 0
   local hospital_targets = nil
   if opts.injure then
-    hospital_targets = _collect_hospital_targets(game, idx)
+    hospital_targets = _collect_hospital_targets(game, idx, opts.item_id)
     hit = #hospital_targets
   end
 
-  local msg, kind = _build_demolish_msg(player, tile, opts.injure, hit)
+  local msg, kind = _build_demolish_msg(player, tile, opts.injure, destroyed, hit)
   local log_entries = { msg }
   local queued = action_anim_port.queue(game, {
     kind = kind,
