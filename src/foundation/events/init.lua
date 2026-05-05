@@ -33,6 +33,7 @@ local monopoly_events = {
     turn_started = "fb.turn_started",
     status_applied = "fb.status_applied",
     deity_applied = "fb.deity_applied",
+    angel_immune_blocked = "fb.angel_immune_blocked",
     bankruptcy = "fb.bankruptcy",
   },
   vehicle = {

@@ -6,6 +6,7 @@ local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
 local auto_play_port = require("src.rules.ports.auto_play")
+local angel_feedback = require("src.rules.items.angel_feedback")
 
 local steal = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -89,8 +90,12 @@ function steal.handle_pass_players(game, player, encountered_ids)
   local queue = {}
   for _, target_id in ipairs(encountered_ids) do
     local t = assert(game:find_player_by_id(target_id), "missing target player: " .. tostring(target_id))
-    if not t.eliminated and not game:angel_immune_to_item(t, item_ids.steal) then
-      table.insert(queue, t.id)
+    if not t.eliminated then
+      if game:angel_immune_to_item(t, item_ids.steal) then
+        angel_feedback.publish(game, t, "偷窃")
+      else
+        table.insert(queue, t.id)
+      end
     end
   end
   if #queue == 0 then

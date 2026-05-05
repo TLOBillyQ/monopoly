@@ -5,6 +5,7 @@ local timing = require("src.config.gameplay.timing")
 local monopoly_event = require("src.foundation.events")
 local number_utils = require("src.foundation.lang.number")
 local inventory = require("src.rules.items.inventory")
+local angel_feedback = require("src.rules.items.angel_feedback")
 local mine_effect = require("src.rules.effects.mine")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
@@ -122,10 +123,7 @@ local function _check_roadblock(game, board, current, player)
     return false
   end
   if game:angel_immune_to_item(player, item_ids.roadblock) then
-    event_feed.publish(game, {
-      kind = event_kinds.item_immune,
-      text = player.name .. " 有天使，路障无效（路障保留）",
-    })
+    angel_feedback.publish(game, player, "路障", { tile_index = current })
     return false
   end
   local tile = board:get_tile(current)

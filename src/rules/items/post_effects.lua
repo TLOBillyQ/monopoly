@@ -8,6 +8,7 @@ local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local number_utils = require("src.foundation.lang.number")
 local obstacle_clear = require("src.rules.items.obstacle_clear")
+local angel_feedback = require("src.rules.items.angel_feedback")
 
 local post_effects = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -42,10 +43,7 @@ local target_effects = {
   [item_ids.share_wealth] = {
     apply = function(game, user, target, context)
       if game:angel_immune_to_item(target, item_ids.share_wealth) then
-        event_feed.publish(game, {
-          kind = event_kinds.item_immune,
-          text = target.name .. " 有天使，均富无效",
-        })
+        angel_feedback.publish(game, target, "均富")
         return true
       end
       local user_cash = game:player_balance(user, "金币")
@@ -72,10 +70,7 @@ local target_effects = {
   [item_ids.exile] = {
     apply = function(game, user, target)
       if game:angel_immune_to_item(target, item_ids.exile) then
-        event_feed.publish(game, {
-          kind = event_kinds.item_immune,
-          text = target.name .. " 有天使，流放无效",
-        })
+        angel_feedback.publish(game, target, "流放")
         return true
       end
       local idx = game.board:find_first_by_type("mountain")
@@ -122,10 +117,7 @@ local target_effects = {
   [item_ids.tax] = {
     apply = function(game, user, target)
       if game:angel_immune_to_item(target, item_ids.tax) then
-        event_feed.publish(game, {
-          kind = event_kinds.item_immune,
-          text = target.name .. " 有天使，查税无效",
-        })
+        angel_feedback.publish(game, target, "查税")
         return true
       end
       local tax_free_idx = inventory.find_index(target, item_ids.tax_free)

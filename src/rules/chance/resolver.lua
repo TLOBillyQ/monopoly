@@ -6,7 +6,7 @@ local resolver = {}
 
 function resolver.resolve(game, player, card, context)
   if card.negative and game:player_has_angel(player) then
-    local text = player.name .. " 有天使附身，负面机会卡无效"
+    local text = player.name .. " 天使保护，负面机会卡无效"
     monopoly_event.emit(monopoly_event.chance.applied, {
       player = player,
       card = card,
@@ -16,6 +16,9 @@ function resolver.resolve(game, player, card, context)
     event_feed.publish(game, {
       kind = event_kinds.chance_card,
       text = text,
+    })
+    monopoly_event.emit(monopoly_event.feedback.angel_immune_blocked, {
+      player_id = player.id,
     })
     return nil
   end

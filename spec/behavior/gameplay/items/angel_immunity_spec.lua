@@ -62,7 +62,7 @@ describe("gameplay_angel_immunity", function()
     assert(game:player_balance(target, "金币") == before_target, "angel should keep target cash unchanged")
 
     local texts = _event_texts(game)
-    assert(#texts > 0 and texts[#texts] == "P2 有天使，均富无效", "item_immune event should be emitted")
+    assert(#texts > 0 and texts[#texts] == "P2 天使保护，均富无效", "item_immune event should be emitted")
   end)
 
   it("share_wealth non-angel shares wealth normally", function()
@@ -79,7 +79,7 @@ describe("gameplay_angel_immunity", function()
     assert(game:player_balance(target, "金币") == 2000, "wealth should be equalized")
 
     local texts = _event_texts(game)
-    assert(texts[#texts] ~= "P2 有天使，均富无效", "non-angel should not emit immunity event")
+    assert(texts[#texts] ~= "P2 天使保护，均富无效", "non-angel should not emit immunity event")
   end)
 
   it("exile angel blocks effect and emits immunity event", function()
@@ -97,7 +97,7 @@ describe("gameplay_angel_immunity", function()
     assert(target.position == before_position, "angel should not be relocated")
 
     local texts = _event_texts(game)
-    assert(#texts > 0 and texts[#texts] == "P2 有天使，流放无效", "item_immune event should be emitted")
+    assert(#texts > 0 and texts[#texts] == "P2 天使保护，流放无效", "item_immune event should be emitted")
     assert(game.board:find_first_by_type("mountain") == mountain_idx, "mountain tile should remain available")
   end)
 

@@ -200,6 +200,20 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
+  _register_handler(monopoly_event.feedback.angel_immune_blocked, function(data)
+    local event_data = _event_data(data)
+    local ctx = context.state
+    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    local tile_index = event_data and event_data.tile_index or nil
+    if ctx and tile_index ~= nil then
+      board_feedback.play_tile_cue(ctx, "angel_deity", tile_index, event_data)
+      return
+    end
+    if ctx and player_id ~= nil then
+      board_feedback.play_player_cue(ctx, "angel_deity", player_id, event_data)
+    end
+  end)
+
   _register_handler(monopoly_event.feedback.bankruptcy, function(data)
     local event_data = _event_data(data)
     local ctx = context.state

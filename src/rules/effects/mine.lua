@@ -3,6 +3,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
+local angel_feedback = require("src.rules.items.angel_feedback")
 
 local mine_effect = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -87,10 +88,7 @@ function mine_effect.apply(game, player, position)
   assert(position ~= nil, "missing position")
 
   if game:angel_immune_to_item(player, item_ids.mine) then
-    event_feed.publish(game, {
-      kind = event_kinds.item_immune,
-      text = player.name .. " 天使保护，地雷无效",
-    })
+    angel_feedback.publish(game, player, "地雷", { tile_index = position })
     game:clear_mine(position)
     return { detonated = true, protected = true }
   end

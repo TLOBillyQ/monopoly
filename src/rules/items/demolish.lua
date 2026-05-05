@@ -8,6 +8,7 @@ local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local number_utils = require("src.foundation.lang.number")
 local target_query = require("src.rules.items.target_query")
+local angel_feedback = require("src.rules.items.angel_feedback")
 
 local demolish = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -22,7 +23,7 @@ end
 
 local tile_state = tile_mod.get_state
 
-local function _try_destroy_building(game, tile, item_id)
+local function _try_destroy_building(game, tile, idx, item_id)
   assert(tile ~= nil and tile.type == "land", "invalid tile for demolish")
   local st = tile_state(game, tile)
   if not st.owner_id or (st.level or 0) <= 0 then
@@ -31,10 +32,7 @@ local function _try_destroy_building(game, tile, item_id)
   end
   local owner = game:find_player_by_id(st.owner_id)
   if owner and game:angel_immune_to_item(owner, item_id) then
-    event_feed.publish(game, {
-      kind = event_kinds.item_immune,
-      text = owner.name .. " 有天使，建筑免疫摧毁",
-    })
+    angel_feedback.publish(game, owner, "建筑摧毁", { tile_index = idx })
     return false
   end
   game:set_tile_level(tile, 0)
@@ -48,10 +46,7 @@ local function _collect_hospital_targets(game, idx, item_id)
   for _, pid in ipairs(snapshot) do
     local target = assert(game:find_player_by_id(pid), "missing target player: " .. tostring(pid))
     if game:angel_immune_to_item(target, item_id) then
-      event_feed.publish(game, {
-        kind = event_kinds.item_immune,
-        text = target.name .. " 有天使，免疫导弹效果",
-      })
+      angel_feedback.publish(game, target, "导弹", { tile_index = idx })
     elseif game:player_is_vehicle_indestructible(target) then
       event_feed.publish(game, {
         kind = event_kinds.item_immune,
@@ -164,7 +159,7 @@ function demolish.apply(game, player, idx, opts)
   _clear_overlays(game, idx)
   local tile = assert(game.board:get_tile(idx), "missing tile: " .. tostring(idx))
 
-  local destroyed = _try_destroy_building(game, tile, opts.item_id)
+  local destroyed = _try_destroy_building(game, tile, idx, opts.item_id)
 
   local hit = 0
   local hospital_targets = nil
