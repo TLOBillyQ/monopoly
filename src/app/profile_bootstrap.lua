@@ -5,6 +5,15 @@ local number_utils = require("src.foundation.lang.number")
 local bootstrap = {}
 local _is_render_called_flag_enabled
 
+local function _assert_integer_like(value, label)
+  local resolved = number_utils.to_integer(value)
+  assert(resolved ~= nil, tostring(label) .. " must be integer-like, got: " .. tostring(value))
+  if type(value) == "number" then
+    assert(resolved == value, tostring(label) .. " must be integer (no decimals), got: " .. tostring(value))
+  end
+  return resolved
+end
+
 local function _new_render_bootstrap()
   return {
     applied = false,
@@ -114,20 +123,24 @@ local function _apply_tile_bootstrap(game, tiles)
     return
   end
   local render_bootstrap = _ensure_render_bootstrap(game)
-  for tile_id, tile_cfg in pairs(tiles) do
+  for raw_tile_id, tile_cfg in pairs(tiles) do
+    assert(type(tile_cfg) == "table", "invalid profile tile config: " .. tostring(raw_tile_id))
+    local tile_id = _assert_integer_like(raw_tile_id, "tile id")
     local tile = game.board:get_tile_by_id(tile_id)
     assert(tile ~= nil, "invalid profile tile id: " .. tostring(tile_id))
 
     local owner_index = tile_cfg.owner_player_index
     if owner_index ~= nil then
-      local owner = game.players[owner_index]
-      assert(owner ~= nil, "invalid owner_player_index: " .. tostring(owner_index))
+      local resolved_owner_index = _assert_integer_like(owner_index, "owner_player_index")
+      local owner = game.players[resolved_owner_index]
+      assert(owner ~= nil, "invalid owner_player_index: " .. tostring(resolved_owner_index))
       game:set_tile_owner(tile, owner.id)
       game:set_player_property(owner, tile.id, true)
     end
 
     if tile_cfg.level ~= nil then
-      game:set_tile_level(tile, tile_cfg.level)
+      local level = _assert_integer_like(tile_cfg.level, "tile level")
+      game:set_tile_level(tile, level)
     end
 
     if _is_render_called_flag_enabled(tile_cfg.render_called) then

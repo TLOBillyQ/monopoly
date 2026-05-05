@@ -1,7 +1,76 @@
 local tables = require("src.foundation.lang.tables")
 
+local function _sorted_unique_strings(list)
+    if type(list) ~= "table" then
+        return {}
+    end
+    local seen = {}
+    local out = {}
+    for _, v in ipairs(list) do
+        if type(v) == "string" and v ~= "" and seen[v] ~= true then
+            seen[v] = true
+            out[#out + 1] = v
+        end
+    end
+    table.sort(out)
+    return out
+end
+
+local function _ensure_player_cash(players, default_cash)
+    if type(players) ~= "table" then
+        return
+    end
+    for index = 1, 4 do
+        local cfg = players[index]
+        if type(cfg) == "table" and cfg.cash == nil then
+            cfg.cash = default_cash
+        end
+    end
+end
+
+local function _mk_players(default_cash, positions, overrides)
+    local players = {}
+    for index = 1, 4 do
+        players[index] = {
+            cash = default_cash,
+            position_tile_id = type(positions) == "table" and positions[index] or nil,
+        }
+    end
+    if type(overrides) == "table" then
+        for index, override in pairs(overrides) do
+            if type(override) == "table" then
+                players[index] = players[index] or {}
+                for k, v in pairs(override) do
+                    players[index][k] = v
+                end
+            end
+        end
+    end
+    _ensure_player_cash(players, default_cash)
+    return players
+end
+
+local function _tiles_from_list(entries)
+    if type(entries) ~= "table" then
+        return nil
+    end
+    local out = {}
+    for _, entry in ipairs(entries) do
+        assert(type(entry) == "table", "tiles entry must be table")
+        local tile_id = entry.tile_id
+        assert(tile_id ~= nil, "tiles entry missing tile_id")
+        local cfg = tables.copy(entry)
+        cfg.tile_id = nil
+        out[tile_id] = cfg
+    end
+    return out
+end
+
 local function _profile(meta, bootstrap)
     local out = tables.copy(meta or {})
+    out.covers = _sorted_unique_strings(out.covers)
+    out.owner_tests = _sorted_unique_strings(out.owner_tests)
+
     out.bootstrap = tables.copy(bootstrap or {})
     return out
 end
@@ -14,23 +83,18 @@ local profiles = {
         covers = { "bankruptcy", "rent", "tile_owner" },
         owner_tests = { "runtime.test_profiles", "gameplay.timeout_and_auto_runner" },
     }, {
-        players = {
-            [1] = {
-                cash = 3000,
-                position_tile_id = 35,
-                item_counts = { [2002] = 1 },
-            },
-            [2] = { cash = 120000, position_tile_id = 39 },
-            [3] = { cash = 100000, position_tile_id = 44 },
-            [4] = { cash = 100000, position_tile_id = 40 },
-        },
-        tiles = {
-            [1] = {
+        players = _mk_players(100000, { [1] = 35, [2] = 39, [3] = 44, [4] = 40 }, {
+            [1] = { cash = 3000, item_counts = { [2002] = 1 } },
+            [2] = { cash = 120000 },
+        }),
+        tiles = _tiles_from_list({
+            {
+                tile_id = 1,
                 owner_player_index = 2,
                 level = 3,
                 render_called = true,
             },
-        },
+        }),
     }),
     circle = _profile({
         group = "interrupt_resume",
@@ -39,16 +103,9 @@ local profiles = {
         covers = { "market_resume", "remote_dice", "chance_reentry" },
         owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 100000,
-                position_tile_id = 15,
-                item_counts = { [2002] = 2 },
-            },
-            [2] = { cash = 100000, position_tile_id = 35 },
-            [3] = { cash = 100000, position_tile_id = 44 },
-            [4] = { cash = 100000, position_tile_id = 40 },
-        },
+        players = _mk_players(100000, { [1] = 15, [2] = 35, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2002] = 2 } },
+        }),
     }),
     clear_obstacles = _profile({
         group = "combat_obstacle",
@@ -57,19 +114,9 @@ local profiles = {
         covers = { "clear_obstacles", "overlay_cleanup", "fork_branch" },
         owner_tests = { "domain.chance", "gameplay.intent_dispatch" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 3,
-                item_counts = { [2006] = 1 },
-                statuses = {
-                    move_dir = "left",
-                },
-            },
-            [2] = { cash = 120000, position_tile_id = 35 },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 40 },
-        },
+        players = _mk_players(120000, { [1] = 3, [2] = 35, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2006] = 1 }, statuses = { move_dir = "left" } },
+        }),
         overlays = {
             roadblocks = {
                 { tile_id = 42, render_called = true },
@@ -88,23 +135,10 @@ local profiles = {
         covers = { "roadblock", "mine", "obstacle_combo" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = {
-                    [2004] = 1,
-                    [2005] = 1,
-                },
-            },
-            [2] = {
-                cash = 120000,
-                position_tile_id = 8,
-                item_counts = { [2002] = 1 },
-            },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2004] = 1, [2005] = 1 } },
+            [2] = { item_counts = { [2002] = 1 } },
+        }),
     }),
     deity_transfer = _profile({
         group = "interrupt_resume",
@@ -113,35 +147,13 @@ local profiles = {
         covers = { "invite_deity", "send_poor", "poor" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
-        players = {
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
             [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = {
-                    [2015] = 1,
-                    [2016] = 1,
-                    [2018] = 1,
-                },
-                statuses = {
-                    deity = {
-                        type = "poor",
-                        remaining = 5,
-                    },
-                },
+                item_counts = { [2015] = 1, [2016] = 1, [2018] = 1 },
+                statuses = { deity = { type = "poor", remaining = 5 } },
             },
-            [2] = {
-                cash = 120000,
-                position_tile_id = 8,
-                statuses = {
-                    deity = {
-                        type = "rich",
-                        remaining = 5,
-                    },
-                },
-            },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+            [2] = { statuses = { deity = { type = "rich", remaining = 5 } } },
+        }),
     }),
     dice_multiplier = _profile({
         group = "interrupt_resume",
@@ -150,19 +162,9 @@ local profiles = {
         covers = { "dice_multiplier", "pre_action_offer" },
         owner_tests = { "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 35,
-                item_counts = {
-                    [2002] = 1,
-                    [2003] = 1,
-                },
-            },
-            [2] = { cash = 120000, position_tile_id = 39 },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 40 },
-        },
+        players = _mk_players(120000, { [1] = 35, [2] = 39, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2002] = 1, [2003] = 1 } },
+        }),
     }),
     exile = _profile({
         group = "relocation_status",
@@ -171,16 +173,9 @@ local profiles = {
         covers = { "exile", "mountain_followup", "teleport" },
         owner_tests = { "domain.item" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2012] = 1 },
-            },
-            [2] = { cash = 120000, position_tile_id = 8 },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2012] = 1 } },
+        }),
     }),
     forced_move_hospital = _profile({
         group = "relocation_status",
@@ -189,16 +184,9 @@ local profiles = {
         covers = { "forced_move", "hospital_followup", "teleport" },
         owner_tests = { "domain.chance" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 44,
-                item_counts = { [2002] = 1 },
-            },
-            [2] = { cash = 120000, position_tile_id = 35 },
-            [3] = { cash = 120000, position_tile_id = 40 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 44, [2] = 35, [3] = 40, [4] = 37 }, {
+            [1] = { item_counts = { [2002] = 1 } },
+        }),
     }),
     forced_move_market = _profile({
         group = "relocation_status",
@@ -207,16 +195,9 @@ local profiles = {
         covers = { "forced_move", "market_landing", "teleport" },
         owner_tests = { "domain.chance" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 44,
-                item_counts = { [2002] = 1 },
-            },
-            [2] = { cash = 120000, position_tile_id = 35 },
-            [3] = { cash = 120000, position_tile_id = 40 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 44, [2] = 35, [3] = 40, [4] = 37 }, {
+            [1] = { item_counts = { [2002] = 1 } },
+        }),
     }),
     free_rent = _profile({
         group = "property_control",
@@ -225,16 +206,9 @@ local profiles = {
         covers = { "free_rent", "rent_response" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 11,
-                item_counts = { [2001] = 1 },
-            },
-            [2] = { cash = 120000, position_tile_id = 44 },
-            [3] = { cash = 120000, position_tile_id = 38 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 11, [2] = 44, [3] = 38, [4] = 37 }, {
+            [1] = { item_counts = { [2001] = 1 } },
+        }),
         tiles = {
             [12] = {
                 owner_player_index = 2,
@@ -250,16 +224,9 @@ local profiles = {
         covers = { "hospital_landing", "remote_dice" },
         owner_tests = { "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 100000,
-                position_tile_id = 6,
-                item_counts = { [2002] = 1 },
-            },
-            [2] = { cash = 100000, position_tile_id = 35 },
-            [3] = { cash = 100000, position_tile_id = 44 },
-            [4] = { cash = 100000, position_tile_id = 40 },
-        },
+        players = _mk_players(100000, { [1] = 6, [2] = 35, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2002] = 1 } },
+        }),
     }),
     market = _profile({
         group = "economy_core",
@@ -268,15 +235,9 @@ local profiles = {
         covers = { "market_entry", "remote_dice" },
         owner_tests = { "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                position_tile_id = 27,
-                item_counts = { [2002] = 2 },
-            },
-            [2] = { position_tile_id = 44 },
-            [3] = { position_tile_id = 35 },
-            [4] = { position_tile_id = 40 },
-        },
+        players = _mk_players(100000, { [1] = 27, [2] = 44, [3] = 35, [4] = 40 }, {
+            [1] = { item_counts = { [2002] = 2 } },
+        }),
     }),
     mine = _profile({
         group = "combat_obstacle",
@@ -285,20 +246,10 @@ local profiles = {
         covers = { "mine", "hospital_followup", "obstacle" },
         owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2005] = 1 },
-            },
-            [2] = {
-                cash = 120000,
-                position_tile_id = 6,
-                item_counts = { [2002] = 1 },
-            },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 6, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2005] = 1 } },
+            [2] = { item_counts = { [2002] = 1 } },
+        }),
     }),
     mine_relay = _profile({
         group = "combat_obstacle",
@@ -307,20 +258,10 @@ local profiles = {
         covers = { "mine", "trigger", "hospital_followup" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2005] = 1 },
-            },
-            [2] = {
-                cash = 120000,
-                position_tile_id = 8,
-                item_counts = { [2002] = 1 },
-            },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2005] = 1 } },
+            [2] = { item_counts = { [2002] = 1 } },
+        }),
         overlays = {
             mines = {
                 { tile_id = 8, render_called = true },
@@ -334,19 +275,9 @@ local profiles = {
         covers = { "missile", "hospital_followup", "overlay_cleanup", "building_destroy" },
         owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 40,
-                item_counts = {
-                    [2002] = 1,
-                    [2013] = 1,
-                },
-            },
-            [2] = { cash = 120000, position_tile_id = 11 },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 40, [2] = 11, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2002] = 1, [2013] = 1 } },
+        }),
         tiles = {
             [11] = {
                 owner_player_index = 2,
@@ -370,19 +301,9 @@ local profiles = {
         covers = { "monster", "building_destroy" },
         owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 40,
-                item_counts = {
-                    [2002] = 1,
-                    [2008] = 1,
-                },
-            },
-            [2] = { cash = 120000, position_tile_id = 44 },
-            [3] = { cash = 120000, position_tile_id = 38 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 40, [2] = 44, [3] = 38, [4] = 37 }, {
+            [1] = { item_counts = { [2002] = 1, [2008] = 1 } },
+        }),
         tiles = {
             [12] = {
                 owner_player_index = 2,
@@ -398,16 +319,9 @@ local profiles = {
         covers = { "mountain_landing", "remote_dice" },
         owner_tests = { "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 100000,
-                position_tile_id = 12,
-                item_counts = { [2002] = 1 },
-            },
-            [2] = { cash = 100000, position_tile_id = 35 },
-            [3] = { cash = 100000, position_tile_id = 44 },
-            [4] = { cash = 100000, position_tile_id = 40 },
-        },
+        players = _mk_players(100000, { [1] = 12, [2] = 35, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2002] = 1 } },
+        }),
     }),
     roadblock_hit = _profile({
         group = "combat_obstacle",
@@ -416,16 +330,9 @@ local profiles = {
         covers = { "roadblock_hit", "obstacle" },
         owner_tests = { "domain.movement" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2002] = 1 },
-            },
-            [2] = { cash = 120000, position_tile_id = 35 },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 40 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 35, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2002] = 1 } },
+        }),
         overlays = {
             roadblocks = {
                 { tile_id = 8, render_called = true },
@@ -439,16 +346,9 @@ local profiles = {
         covers = { "roadblock", "target_choice" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2004] = 1 },
-            },
-            [2] = { cash = 120000, position_tile_id = 35 },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 40 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 35, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2004] = 1 } },
+        }),
     }),
     rich_angel = _profile({
         group = "interrupt_resume",
@@ -457,19 +357,9 @@ local profiles = {
         covers = { "rich", "angel", "deity_apply" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = {
-                    [2017] = 1,
-                    [2019] = 1,
-                },
-            },
-            [2] = { cash = 120000, position_tile_id = 8 },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2017] = 1, [2019] = 1 } },
+        }),
     }),
     share_wealth = _profile({
         group = "interrupt_resume",
@@ -478,19 +368,10 @@ local profiles = {
         covers = { "share_wealth", "target_choice", "cash_rebalance" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
-        players = {
-            [1] = {
-                cash = 1000,
-                position_tile_id = 7,
-                item_counts = { [2011] = 1 },
-            },
-            [2] = {
-                cash = 9000,
-                position_tile_id = 8,
-            },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
+            [1] = { cash = 1000, item_counts = { [2011] = 1 } },
+            [2] = { cash = 9000 },
+        }),
     }),
     steal = _profile({
         group = "interrupt_resume",
@@ -499,23 +380,10 @@ local profiles = {
         covers = { "steal", "choice_resume" },
         owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2007] = 1 },
-            },
-            [2] = {
-                cash = 120000,
-                position_tile_id = 8,
-                item_counts = {
-                    [2001] = 1,
-                    [2010] = 1,
-                },
-            },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2007] = 1 } },
+            [2] = { item_counts = { [2001] = 1, [2010] = 1 } },
+        }),
     }),
     steal_one = _profile({
         group = "interrupt_resume",
@@ -524,20 +392,10 @@ local profiles = {
         covers = { "steal", "auto_resume" },
         owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2007] = 1 },
-            },
-            [2] = {
-                cash = 120000,
-                position_tile_id = 8,
-                item_counts = { [2001] = 1 },
-            },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2007] = 1 } },
+            [2] = { item_counts = { [2001] = 1 } },
+        }),
     }),
     steal_queue = _profile({
         group = "interrupt_resume",
@@ -546,24 +404,11 @@ local profiles = {
         covers = { "steal", "queue_resume" },
         owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2007] = 1 },
-            },
-            [2] = {
-                cash = 120000,
-                position_tile_id = 8,
-                item_counts = { [2001] = 1 },
-            },
-            [3] = {
-                cash = 120000,
-                position_tile_id = 9,
-                item_counts = { [2010] = 1 },
-            },
-            [4] = { cash = 120000, position_tile_id = 44 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 9, [4] = 44 }, {
+            [1] = { item_counts = { [2007] = 1 } },
+            [2] = { item_counts = { [2001] = 1 } },
+            [3] = { item_counts = { [2010] = 1 } },
+        }),
     }),
     strong_card = _profile({
         group = "property_control",
@@ -572,20 +417,9 @@ local profiles = {
         covers = { "strong_card", "rent_choice", "free_rent_fallback" },
         owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 11,
-                item_counts = {
-                    [2001] = 1,
-                    [2002] = 1,
-                    [2009] = 1,
-                },
-            },
-            [2] = { cash = 120000, position_tile_id = 44 },
-            [3] = { cash = 120000, position_tile_id = 38 },
-            [4] = { cash = 120000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 11, [2] = 44, [3] = 38, [4] = 37 }, {
+            [1] = { item_counts = { [2001] = 1, [2002] = 1, [2009] = 1 } },
+        }),
         tiles = {
             [12] = {
                 owner_player_index = 2,
@@ -601,19 +435,9 @@ local profiles = {
         covers = { "tax", "tax_free" },
         owner_tests = { "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 100000,
-                position_tile_id = 18,
-                item_counts = {
-                    [2010] = 1,
-                    [2002] = 1,
-                },
-            },
-            [2] = { cash = 100000, position_tile_id = 35 },
-            [3] = { cash = 100000, position_tile_id = 44 },
-            [4] = { cash = 100000, position_tile_id = 40 },
-        },
+        players = _mk_players(100000, { [1] = 18, [2] = 35, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2010] = 1, [2002] = 1 } },
+        }),
     }),
     tax_probe = _profile({
         group = "economy_core",
@@ -622,19 +446,12 @@ local profiles = {
         covers = { "tax", "target_choice", "cash_penalty" },
         owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 7,
-                item_counts = { [2014] = 1 },
-            },
-            [2] = {
-                cash = 60000,
-                position_tile_id = 8,
-            },
-            [3] = { cash = 30000, position_tile_id = 44 },
-            [4] = { cash = 45000, position_tile_id = 37 },
-        },
+        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
+            [1] = { item_counts = { [2014] = 1 } },
+            [2] = { cash = 60000 },
+            [3] = { cash = 30000 },
+            [4] = { cash = 45000 },
+        }),
     }),
     inner_exit_reentry = _profile({
         group = "relocation_status",
@@ -643,19 +460,9 @@ local profiles = {
         covers = { "inner_exit", "entry_skip", "movement" },
         owner_tests = { "domain.movement" },
     }, {
-        players = {
-            [1] = {
-                cash = 120000,
-                position_tile_id = 30,
-                item_counts = { [2002] = 2 },
-                statuses = {
-                    move_dir = "up",
-                },
-            },
-            [2] = { cash = 120000, position_tile_id = 35 },
-            [3] = { cash = 120000, position_tile_id = 44 },
-            [4] = { cash = 120000, position_tile_id = 40 },
-        },
+        players = _mk_players(120000, { [1] = 30, [2] = 35, [3] = 44, [4] = 40 }, {
+            [1] = { item_counts = { [2002] = 2 }, statuses = { move_dir = "up" } },
+        }),
     }),
     upgrade_build = _profile({
         group = "property_control",
@@ -664,23 +471,17 @@ local profiles = {
         covers = { "upgrade_build", "building_render" },
         owner_tests = { "runtime.test_profiles" },
     }, {
-        players = {
-            [1] = {
-                cash = 200000,
-                position_tile_id = 35,
-                item_counts = { [2002] = 1 },
-            },
-            [2] = { cash = 100000, position_tile_id = 39 },
-            [3] = { cash = 100000, position_tile_id = 44 },
-            [4] = { cash = 100000, position_tile_id = 40 },
-        },
-        tiles = {
-            [1] = {
+        players = _mk_players(100000, { [1] = 35, [2] = 39, [3] = 44, [4] = 40 }, {
+            [1] = { cash = 200000, item_counts = { [2002] = 1 } },
+        }),
+        tiles = _tiles_from_list({
+            {
+                tile_id = 1,
                 owner_player_index = 1,
                 level = 0,
                 render_called = true,
             },
-        },
+        }),
     }),
 }
 
