@@ -121,6 +121,13 @@ local function _order_target_options(choice)
   return slots
 end
 
+local function _resolve_player_or_remote_options(choice, screen_key)
+  if screen_key == "player" and choice.target_slot_layout then
+    return _order_target_options(choice)
+  end
+  return _compact_options(choice.options)
+end
+
 function M.open_choice_modal(state, choice, market)
   local screen_key = common.resolve_screen_key(choice)
   if screen_key == "base_inline" or screen_key == "market" then
@@ -144,7 +151,7 @@ end
 
 function M.open_player_or_remote_screen(state, choice, choice_id, screen_key)
   local ui, screen = _open_screen(state, screen_key, choice, choice_id)
-  local option_ids, selected = _fill_option_nodes(ui, screen, _compact_options(choice.options))
+  local option_ids, selected = _fill_option_nodes(ui, screen, _resolve_player_or_remote_options(choice, screen_key))
   _set_action_button(ui, screen.confirm, true, true, "确定")
 
   local allow_cancel = choice.allow_cancel ~= false

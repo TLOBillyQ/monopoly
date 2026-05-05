@@ -287,6 +287,44 @@ describe("presentation_choice_routes", function()
     end)
   end)
 
+  it("item_target_player applies seat aligned layout to player slots", function()
+    local state, nodes, query_nodes = _build_choice_modal_state()
+    local choice = {
+      id = 101,
+      kind = "item_target_player",
+      route_key = "player",
+      title = "选人",
+      body = "body",
+      options = {
+        { id = 22, label = "玩家2" },
+        { id = 33, label = "玩家3" },
+      },
+      target_slot_layout = { 2, 3 },
+      allow_cancel = true,
+      cancel_label = "取消",
+    }
+
+    _with_patches({
+      { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+      { key = "all_roles", value = nil },
+    }, function()
+      modal_presenter.open_choice_modal(state, choice)
+    end)
+
+    _assert_eq(nodes["玩家选择_槽位1"].visible, false, "slot 1 should stay hidden when player 1 is not selectable")
+    _assert_eq(nodes["玩家选择_槽位2"].visible, true, "slot 2 should show player 2")
+    _assert_eq(nodes["玩家选择_槽位2"].text, "玩家2", "slot 2 should render player 2")
+    _assert_eq(nodes["玩家选择_槽位3"].visible, true, "slot 3 should show player 3")
+    _assert_eq(nodes["玩家选择_槽位3"].text, "玩家3", "slot 3 should render player 3")
+    _assert_eq(nodes["玩家选择_槽位4"].visible, false, "slot 4 should stay hidden when player 4 is not selectable")
+
+    local ui_runtime = P.ui_runtime(state)
+    _assert_eq(ui_runtime.choice_visible_option_ids[1], nil, "slot 1 should not dispatch a player option")
+    _assert_eq(ui_runtime.choice_visible_option_ids[2], 22, "slot 2 should dispatch player 2")
+    _assert_eq(ui_runtime.choice_visible_option_ids[3], 33, "slot 3 should dispatch player 3")
+    _assert_eq(ui_runtime.choice_visible_option_ids[4], nil, "slot 4 should not dispatch a player option")
+  end)
+
   it("_test_choice_route_policy_prefers_explicit_route_metadata", function()
     local cases = {
       {
