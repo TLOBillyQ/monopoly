@@ -1,488 +1,378 @@
-local tables = require("src.foundation.lang.tables")
+local INV = {
+    free_rent     = { [2001] = 1 },
+    remote_dice   = { [2002] = 1 },
+    dice_mult     = { [2003] = 1 },
+    roadblock     = { [2004] = 1 },
+    mine          = { [2005] = 1 },
+    clear_obs     = { [2006] = 1 },
+    steal         = { [2007] = 1 },
+    monster       = { [2008] = 1 },
+    strong        = { [2009] = 1 },  -- 金豆
+    tax_free      = { [2010] = 1 },  -- 金豆
+    share_wealth  = { [2011] = 1 },  -- 金豆
+    exile         = { [2012] = 1 },
+    missile       = { [2013] = 1 },  -- 金豆
+    tax           = { [2014] = 1 },  -- 金豆
+    invite_deity  = { [2015] = 1 },  -- 金豆
+    send_poor     = { [2016] = 1 },  -- 金豆
+    rich          = { [2017] = 1 },  -- 金豆
+    poor          = { [2018] = 1 },  -- 金豆
+    angel         = { [2019] = 1 },  -- 金豆
+}
 
-local function _sorted_unique_strings(list)
-    if type(list) ~= "table" then
-        return {}
-    end
-    local seen = {}
+local TILE = {
+    start = 35, hospital = 36, market = 39, chance_inner = 40, item_inner = 44,
+}
+
+local function _merge_inv(...)
     local out = {}
-    for _, v in ipairs(list) do
-        if type(v) == "string" and v ~= "" and seen[v] ~= true then
-            seen[v] = true
-            out[#out + 1] = v
-        end
-    end
-    table.sort(out)
+    for _, src in ipairs({ ... }) do for k, v in pairs(src) do out[k] = (out[k] or 0) + v end end
     return out
 end
 
-local function _ensure_player_cash(players, default_cash)
-    if type(players) ~= "table" then
-        return
-    end
-    for index = 1, 4 do
-        local cfg = players[index]
-        if type(cfg) == "table" and cfg.cash == nil then
-            cfg.cash = default_cash
-        end
-    end
-end
+local function _deity(t, r) return { deity = { type = t, remaining = r or 5 } } end
 
-local function _mk_players(default_cash, positions, overrides)
-    local players = {}
-    for index = 1, 4 do
-        players[index] = {
-            cash = default_cash,
-            position_tile_id = type(positions) == "table" and positions[index] or nil,
-        }
+local function _mk_players(default_cash, p1_tile, overrides)
+    local players = {
+        [1] = { cash = default_cash, position_tile_id = p1_tile },
+        [2] = { cash = default_cash, position_tile_id = TILE.start },
+        [3] = { cash = default_cash, position_tile_id = TILE.item_inner },
+        [4] = { cash = default_cash, position_tile_id = TILE.chance_inner },
+    }
+    for index, override in pairs(overrides or {}) do
+        for k, v in pairs(override) do players[index][k] = v end
     end
-    if type(overrides) == "table" then
-        for index, override in pairs(overrides) do
-            if type(override) == "table" then
-                players[index] = players[index] or {}
-                for k, v in pairs(override) do
-                    players[index][k] = v
-                end
-            end
-        end
-    end
-    _ensure_player_cash(players, default_cash)
     return players
 end
 
-local function _tiles_from_list(entries)
-    if type(entries) ~= "table" then
-        return nil
-    end
-    local out = {}
-    for _, entry in ipairs(entries) do
-        assert(type(entry) == "table", "tiles entry must be table")
-        local tile_id = entry.tile_id
-        assert(tile_id ~= nil, "tiles entry missing tile_id")
-        local cfg = tables.copy(entry)
-        cfg.tile_id = nil
-        out[tile_id] = cfg
-    end
-    return out
-end
-
-local function _profile(meta, bootstrap)
-    local out = tables.copy(meta or {})
-    out.covers = _sorted_unique_strings(out.covers)
-    out.owner_tests = _sorted_unique_strings(out.owner_tests)
-
-    out.bootstrap = tables.copy(bootstrap or {})
-    return out
-end
-
 local profiles = {
-    bankruptcy = _profile({
-        group = "economy_core",
-        goal = "bankruptcy_rent_resolution",
-        value = "core",
-        covers = { "bankruptcy", "rent", "tile_owner" },
-        owner_tests = { "runtime.test_profiles", "gameplay.timeout_and_auto_runner" },
-    }, {
-        players = _mk_players(100000, { [1] = 35, [2] = 39, [3] = 44, [4] = 40 }, {
-            [1] = { cash = 3000, item_counts = { [2002] = 1 } },
-            [2] = { cash = 120000 },
-        }),
-        tiles = _tiles_from_list({
-            {
-                tile_id = 1,
-                owner_player_index = 2,
-                level = 3,
-                render_called = true,
-            },
-        }),
-    }),
-    circle = _profile({
-        group = "interrupt_resume",
-        goal = "market_resume_and_second_remote_roll",
-        value = "core",
-        covers = { "market_resume", "remote_dice", "chance_reentry" },
-        owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
-    }, {
-        players = _mk_players(100000, { [1] = 15, [2] = 35, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2002] = 2 } },
-        }),
-    }),
-    clear_obstacles = _profile({
-        group = "combat_obstacle",
-        goal = "clear_obstacles_branch_overlay_scan",
-        value = "edge",
-        covers = { "clear_obstacles", "overlay_cleanup", "fork_branch" },
-        owner_tests = { "domain.chance", "gameplay.intent_dispatch" },
-    }, {
-        players = _mk_players(120000, { [1] = 3, [2] = 35, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2006] = 1 }, statuses = { move_dir = "left" } },
-        }),
-        overlays = {
-            roadblocks = {
-                { tile_id = 42, render_called = true },
-                { tile_id = 8,  render_called = true },
-                { tile_id = 41, render_called = true },
-            },
-            mines = {
-                { tile_id = 41, render_called = true },
-            },
-        },
-    }),
-    combo_roadblock_mine = _profile({
-        group = "combat_obstacle",
-        goal = "roadblock_and_mine_combo_chain",
-        value = "core",
-        covers = { "roadblock", "mine", "obstacle_combo" },
-        owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2004] = 1, [2005] = 1 } },
-            [2] = { item_counts = { [2002] = 1 } },
-        }),
-    }),
-    deity_transfer = _profile({
-        group = "interrupt_resume",
-        goal = "invite_and_send_poor_chain",
-        value = "core",
-        covers = { "invite_deity", "send_poor", "poor" },
-        owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = {
-                item_counts = { [2015] = 1, [2016] = 1, [2018] = 1 },
-                statuses = { deity = { type = "poor", remaining = 5 } },
-            },
-            [2] = { statuses = { deity = { type = "rich", remaining = 5 } } },
-        }),
-    }),
-    dice_multiplier = _profile({
-        group = "interrupt_resume",
-        goal = "dice_multiplier_pre_action_offer",
-        value = "edge",
-        covers = { "dice_multiplier", "pre_action_offer" },
-        owner_tests = { "runtime.test_profiles" },
-    }, {
-        players = _mk_players(120000, { [1] = 35, [2] = 39, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2002] = 1, [2003] = 1 } },
-        }),
-    }),
-    exile = _profile({
-        group = "relocation_status",
-        goal = "targeted_exile_to_mountain",
-        value = "core",
-        covers = { "exile", "mountain_followup", "teleport" },
-        owner_tests = { "domain.item" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2012] = 1 } },
-        }),
-    }),
-    forced_move_hospital = _profile({
-        group = "relocation_status",
-        goal = "chance_forced_move_to_hospital",
-        value = "core",
-        covers = { "forced_move", "hospital_followup", "teleport" },
-        owner_tests = { "domain.chance" },
-    }, {
-        players = _mk_players(120000, { [1] = 44, [2] = 35, [3] = 40, [4] = 37 }, {
-            [1] = { item_counts = { [2002] = 1 } },
-        }),
-    }),
-    forced_move_market = _profile({
-        group = "relocation_status",
-        goal = "chance_forced_move_to_market",
-        value = "edge",
-        covers = { "forced_move", "market_landing", "teleport" },
-        owner_tests = { "domain.chance" },
-    }, {
-        players = _mk_players(120000, { [1] = 44, [2] = 35, [3] = 40, [4] = 37 }, {
-            [1] = { item_counts = { [2002] = 1 } },
-        }),
-    }),
-    free_rent = _profile({
+
+    solo_free_rent = {
         group = "property_control",
-        goal = "free_rent_prompt_on_rival_land",
-        value = "edge",
         covers = { "free_rent", "rent_response" },
-        owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
-    }, {
-        players = _mk_players(120000, { [1] = 11, [2] = 44, [3] = 38, [4] = 37 }, {
-            [1] = { item_counts = { [2001] = 1 } },
-        }),
-        tiles = {
-            [12] = {
-                owner_player_index = 2,
-                level = 2,
-                render_called = true,
-            },
+        bootstrap = {
+            players = _mk_players(120000, 11, {
+                [1] = { item_counts = _merge_inv(INV.free_rent, INV.remote_dice) },
+            }),
+            tiles = { [12] = { owner_player_index = 2, level = 2, render_called = true } },
         },
-    }),
-    hospital = _profile({
-        group = "relocation_status",
-        goal = "landing_before_hospital",
-        value = "edge",
-        covers = { "hospital_landing", "remote_dice" },
-        owner_tests = { "runtime.test_profiles" },
-    }, {
-        players = _mk_players(100000, { [1] = 6, [2] = 35, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2002] = 1 } },
-        }),
-    }),
-    market = _profile({
+    },
+
+    solo_remote_dice = {
         group = "economy_core",
-        goal = "market_entry_and_preload",
-        value = "core",
-        covers = { "market_entry", "remote_dice" },
-        owner_tests = { "runtime.test_profiles" },
-    }, {
-        players = _mk_players(100000, { [1] = 27, [2] = 44, [3] = 35, [4] = 40 }, {
-            [1] = { item_counts = { [2002] = 2 } },
-        }),
-    }),
-    mine = _profile({
+        covers = { "remote_dice", "dice_control" },
+        bootstrap = {
+            players = _mk_players(120000, TILE.start, {
+                [1] = { item_counts = INV.remote_dice },
+            }),
+        },
+    },
+
+    solo_dice_multiplier = {
+        group = "economy_core",
+        covers = { "dice_multiplier", "dice_multiply" },
+        bootstrap = {
+            players = _mk_players(120000, TILE.start, {
+                [1] = { item_counts = _merge_inv(INV.dice_mult, INV.remote_dice) },
+            }),
+        },
+    },
+
+    solo_roadblock = {
         group = "combat_obstacle",
-        goal = "mine_arm_and_trigger_followup",
-        value = "core",
-        covers = { "mine", "hospital_followup", "obstacle" },
-        owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 6, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2005] = 1 } },
-            [2] = { item_counts = { [2002] = 1 } },
-        }),
-    }),
-    mine_relay = _profile({
+        covers = { "roadblock", "manual_place" },
+        bootstrap = {
+            players = _mk_players(120000, 7, { [1] = { item_counts = INV.roadblock } }),
+        },
+    },
+
+    solo_mine = {
         group = "combat_obstacle",
-        goal = "mine_trigger_by_runner",
-        value = "edge",
-        covers = { "mine", "trigger", "hospital_followup" },
-        owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2005] = 1 } },
-            [2] = { item_counts = { [2002] = 1 } },
-        }),
-        overlays = {
-            mines = {
-                { tile_id = 8, render_called = true },
+        covers = { "mine", "manual_arm" },
+        bootstrap = {
+            players = _mk_players(120000, 7, { [1] = { item_counts = INV.mine } }),
+        },
+    },
+
+    solo_clear_obstacles = {
+        group = "combat_obstacle",
+        covers = { "clear_obstacles", "fork_branch", "overlay_cleanup" },
+        bootstrap = {
+            players = _mk_players(120000, 3, {
+                [1] = { item_counts = INV.clear_obs, statuses = { move_dir = "left" } },
+            }),
+            overlays = {
+                roadblocks = {
+                    { tile_id = 8,  render_called = true },
+                    { tile_id = 41, render_called = true },
+                    { tile_id = 42, render_called = true },
+                },
+                mines = { { tile_id = 41, render_called = true } },
             },
         },
-    }),
-    missile = _profile({
-        group = "combat_obstacle",
-        goal = "missile_multi_effect_followup",
-        value = "core",
-        covers = { "missile", "hospital_followup", "overlay_cleanup", "building_destroy" },
-        owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
-    }, {
-        players = _mk_players(120000, { [1] = 40, [2] = 11, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2002] = 1, [2013] = 1 } },
-        }),
-        tiles = {
-            [11] = {
-                owner_player_index = 2,
-                level = 2,
-                render_called = true,
-            },
+    },
+
+    solo_steal = {
+        group = "interrupt_resume",
+        covers = { "steal", "pass_player" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = _merge_inv(INV.steal, INV.remote_dice) },
+                [2] = { position_tile_id = 8, item_counts = _merge_inv(INV.free_rent, INV.tax_free) },
+            }),
         },
-        overlays = {
-            roadblocks = {
-                { tile_id = 11, render_called = true },
-            },
-            mines = {
-                { tile_id = 11, render_called = true },
-            },
-        },
-    }),
-    monster = _profile({
+    },
+
+    solo_monster = {
         group = "combat_obstacle",
-        goal = "monster_building_destroy",
-        value = "core",
         covers = { "monster", "building_destroy" },
-        owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
-    }, {
-        players = _mk_players(120000, { [1] = 40, [2] = 44, [3] = 38, [4] = 37 }, {
-            [1] = { item_counts = { [2002] = 1, [2008] = 1 } },
-        }),
-        tiles = {
-            [12] = {
-                owner_player_index = 2,
-                level = 2,
-                render_called = true,
-            },
+        bootstrap = {
+            players = _mk_players(120000, TILE.chance_inner, {
+                [1] = { item_counts = INV.monster },
+            }),
+            tiles = { [11] = { owner_player_index = 2, level = 2, render_called = true } },
         },
-    }),
-    mountain = _profile({
-        group = "relocation_status",
-        goal = "landing_before_mountain",
-        value = "edge",
-        covers = { "mountain_landing", "remote_dice" },
-        owner_tests = { "runtime.test_profiles" },
-    }, {
-        players = _mk_players(100000, { [1] = 12, [2] = 35, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2002] = 1 } },
-        }),
-    }),
-    roadblock_hit = _profile({
-        group = "combat_obstacle",
-        goal = "roadblock_trigger_and_clear",
-        value = "edge",
-        covers = { "roadblock_hit", "obstacle" },
-        owner_tests = { "domain.movement" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 35, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2002] = 1 } },
-        }),
-        overlays = {
-            roadblocks = {
-                { tile_id = 8, render_called = true },
-            },
-        },
-    }),
-    roadblock = _profile({
-        group = "combat_obstacle",
-        goal = "roadblock_manual_target_setup",
-        value = "core",
-        covers = { "roadblock", "target_choice" },
-        owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 35, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2004] = 1 } },
-        }),
-    }),
-    rich_angel = _profile({
-        group = "interrupt_resume",
-        goal = "rich_and_angel_status_apply",
-        value = "edge",
-        covers = { "rich", "angel", "deity_apply" },
-        owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2017] = 1, [2019] = 1 } },
-        }),
-    }),
-    share_wealth = _profile({
-        group = "interrupt_resume",
-        goal = "share_wealth_target_and_cash_split",
-        value = "core",
-        covers = { "share_wealth", "target_choice", "cash_rebalance" },
-        owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = { cash = 1000, item_counts = { [2011] = 1 } },
-            [2] = { cash = 9000 },
-        }),
-    }),
-    steal = _profile({
-        group = "interrupt_resume",
-        goal = "steal_multi_item_choice",
-        value = "core",
-        covers = { "steal", "choice_resume" },
-        owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2007] = 1 } },
-            [2] = { item_counts = { [2001] = 1, [2010] = 1 } },
-        }),
-    }),
-    steal_one = _profile({
-        group = "interrupt_resume",
-        goal = "steal_single_item_auto_resolve",
-        value = "edge",
-        covers = { "steal", "auto_resume" },
-        owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2007] = 1 } },
-            [2] = { item_counts = { [2001] = 1 } },
-        }),
-    }),
-    steal_queue = _profile({
-        group = "interrupt_resume",
-        goal = "steal_queue_skip_and_resume",
-        value = "edge",
-        covers = { "steal", "queue_resume" },
-        owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 9, [4] = 44 }, {
-            [1] = { item_counts = { [2007] = 1 } },
-            [2] = { item_counts = { [2001] = 1 } },
-            [3] = { item_counts = { [2010] = 1 } },
-        }),
-    }),
-    strong_card = _profile({
+    },
+
+    solo_strong = {
         group = "property_control",
-        goal = "strong_card_rent_branching",
-        value = "core",
-        covers = { "strong_card", "rent_choice", "free_rent_fallback" },
-        owner_tests = { "gameplay.gameplay_items_startup", "runtime.test_profiles" },
-    }, {
-        players = _mk_players(120000, { [1] = 11, [2] = 44, [3] = 38, [4] = 37 }, {
-            [1] = { item_counts = { [2001] = 1, [2002] = 1, [2009] = 1 } },
-        }),
-        tiles = {
-            [12] = {
-                owner_player_index = 2,
-                level = 2,
-                render_called = true,
-            },
+        covers = { "strong", "force_acquire" },
+        bootstrap = {
+            players = _mk_players(120000, 11, {
+                [1] = { item_counts = _merge_inv(INV.strong, INV.remote_dice) },
+            }),
+            tiles = { [12] = { owner_player_index = 2, level = 2, render_called = true } },
         },
-    }),
-    tax = _profile({
+    },
+
+    solo_tax_free = {
         group = "economy_core",
-        goal = "tax_choice_and_tax_free",
-        value = "core",
-        covers = { "tax", "tax_free" },
-        owner_tests = { "runtime.test_profiles" },
-    }, {
-        players = _mk_players(100000, { [1] = 18, [2] = 35, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2010] = 1, [2002] = 1 } },
-        }),
-    }),
-    tax_probe = _profile({
+        covers = { "tax_free", "tax_response" },
+        bootstrap = {
+            players = _mk_players(120000, 37, {
+                [1] = { item_counts = _merge_inv(INV.tax_free, INV.remote_dice) },
+            }),
+        },
+    },
+
+    solo_share_wealth = {
+        group = "interrupt_resume",
+        covers = { "share_wealth", "cash_rebalance" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { cash = 1000, item_counts = INV.share_wealth },
+                [2] = { position_tile_id = 8, cash = 9000 },
+            }),
+        },
+    },
+
+    solo_exile = {
+        group = "relocation_status",
+        covers = { "exile", "mountain_followup", "teleport" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.exile },
+                [2] = { position_tile_id = 8 },
+            }),
+        },
+    },
+
+    solo_missile = {
+        group = "combat_obstacle",
+        covers = { "missile", "hospital_followup", "building_destroy" },
+        bootstrap = {
+            players = _mk_players(120000, TILE.chance_inner, {
+                [1] = { item_counts = INV.missile },
+                [2] = { position_tile_id = 11 },
+            }),
+            tiles = { [11] = { owner_player_index = 2, level = 2, render_called = true } },
+        },
+    },
+
+    solo_tax = {
         group = "economy_core",
-        goal = "tax_target_and_half_cash_flow",
-        value = "edge",
         covers = { "tax", "target_choice", "cash_penalty" },
-        owner_tests = { "runtime.test_profiles", "gameplay.gameplay_items_startup" },
-    }, {
-        players = _mk_players(120000, { [1] = 7, [2] = 8, [3] = 44, [4] = 37 }, {
-            [1] = { item_counts = { [2014] = 1 } },
-            [2] = { cash = 60000 },
-            [3] = { cash = 30000 },
-            [4] = { cash = 45000 },
-        }),
-    }),
-    inner_exit_reentry = _profile({
-        group = "relocation_status",
-        goal = "inner_ring_exit_to_entry_tile_skip_reentry",
-        value = "edge",
-        covers = { "inner_exit", "entry_skip", "movement" },
-        owner_tests = { "domain.movement" },
-    }, {
-        players = _mk_players(120000, { [1] = 30, [2] = 35, [3] = 44, [4] = 40 }, {
-            [1] = { item_counts = { [2002] = 2 }, statuses = { move_dir = "up" } },
-        }),
-    }),
-    upgrade_build = _profile({
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.tax },
+                [2] = { position_tile_id = 8, cash = 60000 },
+                [3] = { cash = 30000 },
+                [4] = { cash = 45000 },
+            }),
+        },
+    },
+
+    solo_invite_deity = {
+        group = "interrupt_resume",
+        covers = { "invite_deity", "deity_transfer" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.invite_deity },
+                [2] = { position_tile_id = 8, statuses = _deity("rich") },
+            }),
+        },
+    },
+
+    solo_send_poor = {
+        group = "interrupt_resume",
+        covers = { "send_poor", "deity_transfer", "poor" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.send_poor, statuses = _deity("poor") },
+                [2] = { position_tile_id = 8 },
+            }),
+        },
+    },
+
+    solo_rich = {
+        group = "interrupt_resume",
+        covers = { "rich", "deity_apply", "self_buff" },
+        bootstrap = {
+            players = _mk_players(120000, 7, { [1] = { item_counts = INV.rich } }),
+        },
+    },
+
+    solo_poor = {
+        group = "interrupt_resume",
+        covers = { "poor", "deity_apply", "target_debuff" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.poor },
+                [2] = { position_tile_id = 8 },
+            }),
+        },
+    },
+
+    solo_angel = {
+        group = "interrupt_resume",
+        covers = { "angel", "deity_apply", "self_immune" },
+        bootstrap = {
+            players = _mk_players(120000, 7, { [1] = { item_counts = INV.angel } }),
+        },
+    },
+
+    paid_jindou_buy = {
+        group = "commerce_paid",
+        covers = { "market_entry", "jindou", "shop", "paid_currency" },
+        bootstrap = {
+            players = _mk_players(120000, TILE.market, {
+                [1] = { item_counts = INV.remote_dice },
+            }),
+        },
+    },
+
+    paid_lepark_buy = {
+        group = "commerce_paid",
+        covers = { "market_entry", "lepark", "shop", "paid_currency" },
+        bootstrap = {
+            players = _mk_players(120000, TILE.market, {
+                [1] = { item_counts = INV.remote_dice },
+            }),
+        },
+    },
+
+    combo_missile_vs_angel = {
+        group = "combat_obstacle",
+        covers = { "missile", "angel", "immunity" },
+        bootstrap = {
+            players = _mk_players(120000, TILE.chance_inner, {
+                [1] = { item_counts = INV.missile },
+                [2] = { position_tile_id = 11, statuses = _deity("angel") },
+            }),
+            tiles = { [11] = { owner_player_index = 2, level = 2, render_called = true } },
+        },
+    },
+
+    combo_tax_vs_taxfree = {
+        group = "economy_core",
+        covers = { "tax", "tax_free", "jindou_attack_defense" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.tax },
+                [2] = { position_tile_id = 8, cash = 60000, item_counts = INV.tax_free },
+            }),
+        },
+    },
+
+    combo_strong_vs_freerent = {
         group = "property_control",
-        goal = "upgrade_build_render_and_state",
-        value = "core",
-        covers = { "upgrade_build", "building_render" },
-        owner_tests = { "runtime.test_profiles" },
-    }, {
-        players = _mk_players(100000, { [1] = 35, [2] = 39, [3] = 44, [4] = 40 }, {
-            [1] = { cash = 200000, item_counts = { [2002] = 1 } },
-        }),
-        tiles = _tiles_from_list({
-            {
-                tile_id = 1,
-                owner_player_index = 1,
-                level = 0,
-                render_called = true,
-            },
-        }),
-    }),
+        covers = { "strong", "free_rent", "rent_choice" },
+        bootstrap = {
+            players = _mk_players(120000, 11, {
+                [1] = { item_counts = _merge_inv(INV.free_rent, INV.strong, INV.remote_dice) },
+            }),
+            tiles = { [12] = { owner_player_index = 2, level = 2, render_called = true } },
+        },
+    },
+
+    combo_invite_deity_chain = {
+        group = "interrupt_resume",
+        covers = { "invite_deity", "send_poor", "deity_transfer", "chain" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = {
+                    item_counts = _merge_inv(INV.invite_deity, INV.send_poor),
+                    statuses = _deity("poor"),
+                },
+                [2] = { position_tile_id = 8, statuses = _deity("rich") },
+            }),
+        },
+    },
+
+    combo_rich_double_rent = {
+        group = "property_control",
+        covers = { "rich", "rent_double", "deity_active" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.remote_dice, statuses = _deity("rich") },
+                [2] = { position_tile_id = 11, item_counts = INV.remote_dice },
+            }),
+            tiles = { [12] = { owner_player_index = 1, level = 2, render_called = true } },
+            current_turn_player_index = 2,
+        },
+    },
+
+    combo_poor_double_pay = {
+        group = "property_control",
+        covers = { "poor", "rent_double_pay", "deity_active" },
+        bootstrap = {
+            players = _mk_players(120000, 11, {
+                [1] = { item_counts = INV.remote_dice, statuses = _deity("poor") },
+            }),
+            tiles = { [12] = { owner_player_index = 2, level = 2, render_called = true } },
+        },
+    },
+
+    edge_inventory_full = {
+        group = "interrupt_resume",
+        value = "edge",
+        covers = { "inventory_slots", "limit", "jindou" },
+        bootstrap = {
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = { [2002] = 1, [2004] = 1, [2007] = 1, [2013] = 1, [2019] = 1 } },
+            }),
+        },
+    },
+
+    edge_bankruptcy_eliminated = {
+        group = "economy_core",
+        value = "edge",
+        covers = { "bankruptcy", "eliminated", "rent", "tile_owner" },
+        bootstrap = {
+            players = _mk_players(100000, TILE.start, {
+                [1] = { cash = 3000, item_counts = INV.remote_dice },
+                [2] = { cash = 120000 },
+                [4] = { eliminated = true, position_tile_id = TILE.hospital },
+            }),
+            tiles = { [1] = { owner_player_index = 2, level = 3, render_called = true } },
+        },
+    },
 }
+
+for name, p in pairs(profiles) do
+    p.goal = p.goal or name
+    p.value = p.value or "core"
+    p.owner_tests = p.owner_tests or { "runtime.test_profiles" }
+end
 
 return profiles

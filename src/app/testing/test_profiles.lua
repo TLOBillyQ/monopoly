@@ -21,6 +21,7 @@ local group_order = {
   interrupt_resume = 4,
   property_control = 5,
   economy_core = 6,
+  commerce_paid = 7,
 }
 
 local function _validate_profiles(profiles)

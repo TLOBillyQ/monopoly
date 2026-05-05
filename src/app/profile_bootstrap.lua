@@ -102,6 +102,15 @@ local function _apply_player_status_bootstrap(game, player, player_cfg)
   end
 end
 
+local function _apply_player_eliminated(player, player_cfg)
+  if player_cfg.eliminated == nil then
+    return
+  end
+  assert(type(player_cfg.eliminated) == "boolean",
+    "eliminated must be boolean, got: " .. tostring(player_cfg.eliminated))
+  player.eliminated = player_cfg.eliminated
+end
+
 local function _apply_player_bootstrap(game, players)
   if type(players) ~= "table" then
     return
@@ -115,6 +124,7 @@ local function _apply_player_bootstrap(game, players)
     _apply_player_position_bootstrap(game, player, player_cfg)
     _apply_item_count_bootstrap(game, player, player_cfg)
     _apply_player_status_bootstrap(game, player, player_cfg)
+    _apply_player_eliminated(player, player_cfg)
   end
 end
 
@@ -203,6 +213,20 @@ local function _apply_overlay_bootstrap(game, overlays)
   end
 end
 
+local function _apply_turn_bootstrap(game, cfg)
+  if cfg.current_turn_player_index == nil then
+    return
+  end
+  local resolved = number_utils.to_integer(cfg.current_turn_player_index)
+  assert(resolved ~= nil,
+    "invalid current_turn_player_index: " .. tostring(cfg.current_turn_player_index))
+  assert(game.players[resolved] ~= nil,
+    "current_turn_player_index points to missing player: " .. tostring(resolved))
+  assert(game.turn ~= nil,
+    "game.turn must exist before setting current_turn_player_index")
+  game.turn.current_player_index = resolved
+end
+
 function bootstrap.apply_bootstrap(game, cfg)
   assert(game ~= nil, "missing game")
   bootstrap.reset_render_bootstrap(game)
@@ -212,6 +236,7 @@ function bootstrap.apply_bootstrap(game, cfg)
   _apply_player_bootstrap(game, cfg.players)
   _apply_tile_bootstrap(game, cfg.tiles)
   _apply_overlay_bootstrap(game, cfg.overlays)
+  _apply_turn_bootstrap(game, cfg)
 end
 
 return bootstrap
