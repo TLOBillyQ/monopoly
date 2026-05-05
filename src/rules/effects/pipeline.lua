@@ -1,5 +1,6 @@
 local effect_runner = require("src.rules.effects.runner")
 local intent_output_port = require("src.rules.ports.intent_output")
+local number_utils = require("src.foundation.lang.number")
 
 local pipeline = {}
 
@@ -21,12 +22,13 @@ local function _release_list(list)
   list_pool[#list_pool + 1] = list
 end
 
-local function _build_optional_confirm_copy(effect_id, tile_name)
+local function _build_optional_confirm_copy(effect_id, tile_name, cost)
   if effect_id == "buy_land" then
     return "买地", "地块：" .. tostring(tile_name or "") .. "。要买吗？"
   end
   if effect_id == "upgrade_land" then
-    return "加盖", "地块：" .. tostring(tile_name or "") .. "。要加盖吗？"
+    local cost_text = number_utils.format_integer_part(cost or 0)
+    return "加盖", "为 " .. tostring(tile_name or "") .. " 加盖，花费 " .. cost_text
   end
   return nil, nil
 end
@@ -45,9 +47,11 @@ local function _build_optional_choice(optional, player, tile, game_ctx, opts)
   local body_lines = {}
   local options = {}
   local effect_ids = {}
+  local cost_resolver = opts.optional_cost_resolver
   for _, eff in ipairs(optional) do
     local label = eff.label or eff.id
-    local confirm_title, confirm_body = _build_optional_confirm_copy(eff.id, tile and tile.name or nil)
+    local cost = cost_resolver and cost_resolver(eff.id, tile, game_ctx.game) or nil
+    local confirm_title, confirm_body = _build_optional_confirm_copy(eff.id, tile and tile.name or nil, cost)
     table.insert(body_lines, label)
     table.insert(options, {
       id = eff.id,

@@ -1,8 +1,18 @@
 local landing_defs = require("src.rules.land.landing_defs")
 local effect_pipeline = require("src.rules.effects.pipeline")
 local effect_runner = require("src.rules.effects.runner")
+local land_actions = require("src.rules.land.actions")
+local pricing = require("src.rules.land.pricing")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 local predicates = require("src.turn.phases.land.predicates")
+
+local function _landing_optional_cost(effect_id, tile, game)
+  if effect_id ~= "upgrade_land" or tile == nil or game == nil then
+    return nil
+  end
+  local st = land_actions.safe_tile_state(game, tile)
+  return pricing.upgrade_cost(tile, (st and st.level) or 0)
+end
 
 local max_landing_depth = 10
 local callback_keys = wait_callbacks.callback_keys
@@ -247,6 +257,7 @@ function _resolve_landing(game, player, tile, move_result, depth)
     optional_reason = "landing_optional",
     optional_allow_cancel = true,
     optional_cancel_label = "跳过",
+    optional_cost_resolver = _landing_optional_cost,
     on_need_landing = handle_need_landing,
   })
 end
