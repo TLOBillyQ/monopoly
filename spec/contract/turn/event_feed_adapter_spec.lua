@@ -138,7 +138,7 @@ describe("turn.output.event_feed_adapter", function()
     }
     local adapter = event_feed_adapter.new(game)
 
-    adapter:publish(game, { kind = "steal", text = "经过玩家", tip = false })
+    adapter:publish(game, { kind = "rent_multiplier_breakdown", text = "南山广场 租金 ×3", tip = false })
 
     assert.equals(1, enqueue_calls, "policy tip=true should enqueue regardless of event.tip")
   end)

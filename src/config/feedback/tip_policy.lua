@@ -17,8 +17,6 @@ M[event_kinds.bankruptcy] = { tip = false }
 M[event_kinds.victory] = { tip = false }
 M[event_kinds.remote_dice] = { tip = false }
 
-M[event_kinds.steal] = { tip = true }
-M[event_kinds.market_entered] = { tip = true }
 M[event_kinds.rent_multiplier_breakdown] = { tip = true }
 
 M[event_kinds.choice_skipped] = { log = false }
