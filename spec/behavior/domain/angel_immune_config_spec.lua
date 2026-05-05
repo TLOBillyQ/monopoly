@@ -81,6 +81,18 @@ describe("domain angel immune config", function()
     _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.tax), true, "tax should be immune with angel")
   end)
 
+  it("missile is immune when player has angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.missile), true, "missile should be immune with angel")
+  end)
+
+  it("monster is immune when player has angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.monster), true, "monster should be immune with angel")
+  end)
+
   it("game exposes angel_immune_to_item mixin", function()
     local support = require("support.domain_support")
     local game = support.new_game({ players = { "P1" }, auto_all = true })
