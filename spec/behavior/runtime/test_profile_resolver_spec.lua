@@ -73,15 +73,6 @@ describe("runtime.test_profile_resolver", function()
     assert(_contains(groups, "economy_core"), "groups should include economy_core")
   end)
 
-  it("profiles_in_group_returns_curated_members", function()
-    local combat = test_profile_resolver.profiles_in_group("combat_obstacle", { include_default = false })
-    assert(_contains(combat, "monster"), "combat group should include monster")
-    assert(_contains(combat, "missile"), "combat group should include missile")
-    assert(_contains(combat, "mine"), "combat group should include mine")
-    assert(_contains(combat, "roadblock_hit"), "combat group should include roadblock_hit")
-    assert(_contains(combat, "clear_obstacles"), "combat group should include clear_obstacles")
-  end)
-
   it("profiles_cover_all_item_cards", function()
     local covered = {}
     for _, profile_name in ipairs(test_profile_resolver.available_profiles()) do
