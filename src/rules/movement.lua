@@ -128,7 +128,6 @@ local function _check_roadblock(game, board, current, player)
     })
     return false
   end
-  game:clear_roadblock(current)
   local tile = board:get_tile(current)
   action_anim_port.queue(game, {
     kind = "roadblock_trigger",
@@ -136,6 +135,7 @@ local function _check_roadblock(game, board, current, player)
     tile_index = current,
     duration = timing.action_anim_default_seconds or 1.0,
   })
+  game:clear_roadblock(current)
   _emit_text(game, monopoly_event.movement.roadblock_hit, event_kinds.roadblock_triggered, {
     player = player,
     tile = tile,
