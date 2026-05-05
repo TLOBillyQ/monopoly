@@ -385,6 +385,24 @@ describe("land", function()
     _assert_eq(pricing.total_invested(tile, -3), 400, "negative level should keep purchase price only")
   end)
 
+  it("property_value_total_invested_includes_owner_paid_upgrades", function()
+    -- 强征卡支付 = 地价 + owner 已支付的全部升级金币（src/rules/commerce/property_value.lua）
+    -- 必须读 tile.upgrade_costs，并与 land/pricing.total_invested 完全一致。
+    local property_value = require("src.rules.commerce.property_value")
+    local tile = { price = 1000, upgrade_costs = { 1000, 2000, 4000 } }
+    _assert_eq(property_value.total_invested(tile, 0), 1000, "level 0 should equal base price")
+    _assert_eq(property_value.total_invested(tile, 1), 2000, "level 1 should add first upgrade")
+    _assert_eq(property_value.total_invested(tile, 2), 4000, "level 2 should add first two upgrades")
+    _assert_eq(property_value.total_invested(tile, 3), 8000, "level 3 should add base + all three upgrades")
+    for level = 0, 3 do
+      _assert_eq(
+        property_value.total_invested(tile, level),
+        pricing.total_invested(tile, level),
+        "property_value must mirror pricing at level " .. tostring(level)
+      )
+    end
+  end)
+
   it("rent_owner_missing_skips_payment", function()
     local land = require("src.rules.land.executors")
     local g = _new_game()

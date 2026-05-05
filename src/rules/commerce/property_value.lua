@@ -7,7 +7,7 @@ end
 
 function property_value.upgrade_cost(tile, level)
   assert(tile ~= nil, "missing tile")
-  local costs = tile.level_costs or {}
+  local costs = tile.upgrade_costs or {}
   local next_level = (level or 0) + 1
   return costs[next_level] or 0
 end
