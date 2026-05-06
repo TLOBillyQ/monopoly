@@ -1,8 +1,0 @@
-.agents/conventions/coding.md
-.agents/conventions/eggy-types.md
-.agents/conventions/planning.md
-.agents/conventions/reading.md
-2 matches in 1 files:
-
-.agents/conventions/eggy-types.md:5:- `Fixed` —— 对应引擎 `Fix32`，Lua 端必须用 **浮点数字面量** (`30.0`)。...
-.agents/conventions/eggy-types.md:8:错误示例：`set_camera_property(7, 30)` → 报错：expected Fix32, got int

@@ -1,1 +1,0 @@
-PASS (T1 made zero src changes — pre-existing dirty state stashed)

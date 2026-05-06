@@ -12,7 +12,7 @@ last_verified: 2026-05-04
 
 如果你想先判断 `arch_view` 在整套测试/静态分析里的位置，以及本地常见耗时，先读 `docs/architecture/quality-map.md`。
 
-默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速的 in-process 结构契约；真实 `scan/viewer` CLI 导出 smoke 已挪到 `busted -c tooling`，并只保留 `scan` 与 `viewer --in-json` 两个慢路径检查。真实 `analyze(...)` 路径则由 `spec/guards/lib/arch_view_guard.lua` 常驻覆盖，不再重复保留额外 tooling smoke。
+默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速的 in-process 结构契约；真实 `scan/viewer` CLI 导出 smoke 已挪到 `busted --run tooling`，并只保留 `scan` 与 `viewer --in-json` 两个慢路径检查。真实 `analyze(...)` 路径则由 `spec/guards/lib/arch_view_guard.lua` 常驻覆盖，不再重复保留额外 tooling smoke。
 
 ## 代码位置
 
@@ -27,21 +27,21 @@ last_verified: 2026-05-04
 - 结构性依赖规则唯一真源：`tools/quality/arch/config.json`
 - `spec/guards/lib/dep_rules.lua` 只保留文本级硬边界（宿主全局 API、`state.ui_*` 直写、`ui_port` 旁路，以及少量跨子系统禁令）
 - 零模块级循环依赖，无白名单，任意新循环直接让 `check` 失败
-- 根组件语义现为：`app`、`infrastructure`、`presentation`、`flow`、`ai`、`systems`、`runtime`、`core`、`config`
-- 当前 canonical 命名已切到 `src/ui/ports/*` 与 `src/ui/{state,landing_visual_hold,host_bridge}`；旧 `src/ui/ctl/ports/*`、`*_seam`、`*_ports` 只应作为历史说明出现，不再代表当前兼容入口或 canonical 文件名
+- 根组件语义现为：`app`、`host`、`ui`、`turn`、`player`、`computer`、`rules`、`state`、`config`、`foundation`
+- 当前 canonical 命名为 `src/ui/ports/*`、`src/ui/state/*`、`src/ui/visual_hold.lua` 与 `src/ui/host_bridge.lua`
 
 ## 命令
 
 ```
 lua tools/quality/arch.lua check
 ```
-扫描 `src/`，执行边界校验，失败则非零退出。`spec/guards/lib/arch_view_guard.lua` 与 `busted -c regression` 均使用此能力；跑全部护栏用 `busted -c guards`。配置默认来自 `tools/quality/arch/config.json`。
+扫描 `src/`，执行边界校验，失败则非零退出。`spec/guards/lib/arch_view_guard.lua` 与 `busted --run regression` 均使用此能力；跑全部护栏用 `busted --run guards`。配置默认来自 `tools/quality/arch/config.json`。
 
 `check` 同时校验两类循环：
 - 模块级 `require` 环
 - projection/view 级反馈环（即模块图无环，但聚合到 viewer 视图后形成的往返依赖）
 
-Monopoly 当前只在 `tools/quality/arch/filter.lua` 里过滤 `root` 视图的纯命名空间折叠伪环。`ui` / `ui.ctl` 视图里的 presentation 命名空间投影环已经清零，不再保留额外特例。
+Monopoly 当前只在 `tools/quality/arch/filter.lua` 里过滤 `root` 视图的纯命名空间折叠伪环。`ui` 视图里的命名空间投影环已经清零，不再保留额外特例。
 
 ```
 lua tools/quality/arch.lua
@@ -70,14 +70,12 @@ lua tools/quality/arch.lua check --project-root /path/to/project --config /path/
 
 ## Viewer 读法
 
-根视图展示当前生效的顶层子树：`app`、`infrastructure`、`presentation`、`flow`、`ai`、`systems`、`runtime`、`config`，以及仍保留的 `core`。点击非叶节点下钻；点击叶节点在右侧看到源码、内外依赖、组件、层级、抽象标记与循环标记。
-
-当前目录迁移是“语义先行”：例如 `src/ui/**` 在 viewer 中投影为 `presentation`，`src/turn/**` 投影为 `flow`，`src/player/** + src/state/**` 投影为 `runtime`。因此根视图不再出现 `entry`，而是由 `src/app/**` 收口到 `app`。
+根视图展示当前生效的顶层子树：`app`、`host`、`ui`、`turn`、`player`、`computer`、`rules`、`state`、`config`、`foundation`。点击非叶节点下钻；点击叶节点在右侧看到源码、内外依赖、组件、层级、抽象标记与循环标记。
 
 如果某个 package 同时有 `init.lua` 和后代模块（例如 `src.rules.market`），viewer 交互上仍按非叶节点处理：主点击继续下钻，不把“有源码”误判成叶子。`views[*].nodes[*].leaf` 与 `drillable` 是 projection 输出给 viewer 的内部契约；viewer 只在旧 payload 缺字段时做最小兼容推断，不再重算业务语义。
 
 **节点颜色：**
 - 红色：子树或依赖条目涉及循环依赖
-- 绿色：含抽象契约（主要对应 `src.core.ports.*` 与 `src.rules.ports.*`）
+- 绿色：含抽象契约（主要对应 `src.foundation.ports.*` 与 `src.rules.ports.*`）
 
 **交互：** 节点顶/底有 incoming/outgoing 依赖三角，悬浮显示聚合依赖列表；视图中央绘制 `display_edges` 正交折线路由；breadcrumb 与 Back 恢复上一视图的滚动位置与选中状态。

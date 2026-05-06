@@ -6,7 +6,7 @@ last_verified: 2026-05-04
 ---
 # 目录边界约定
 
-> **See also**：架构治理路线图 → [`governance-roadmap.md`](governance-roadmap.md)（10 → 7 层 + foundation 基座的对齐债务）；架构决策 → [`../decisions/0001-seven-layer-with-foundation.md`](../decisions/0001-seven-layer-with-foundation.md)（七层模型与各层职责）；分层模型 → [`layer-model.md`](layer-model.md)。
+> **See also**：架构决策 → [`../decisions/0001-seven-layer-with-foundation.md`](../decisions/0001-seven-layer-with-foundation.md)（七层模型与各层职责）；分层模型 → [`layer-model.md`](layer-model.md)。
 
 ## 目录职责
 
@@ -33,13 +33,30 @@ last_verified: 2026-05-04
 
 `src/turn/output/` 属于 `turn`，不是独立 runtime 目录。其中 `intent_dispatcher`、`state_adapter` 只服务 turn use case 输出，不承载宿主能力。
 
+## Rules 子系统速查
+
+| 目录 | 职责 |
+|------|------|
+| `src/rules/board/` | 棋盘布局与全局查询 |
+| `src/rules/effects/` | buff/debuff 施加与结算 |
+| `src/rules/land/` | 地块规则：落地触发、地块状态 |
+| `src/rules/market/` | 黑市规则：商品配置、交易逻辑 |
+| `src/rules/items/` | 道具规则：使用条件、效果产出 |
+| `src/rules/chance/` | 机会卡规则：抽取、效果 |
+| `src/rules/choice/` | choice 注册、resolve 与共享语义 |
+| `src/rules/choice_handlers/` | choice action 到规则效果的分发 |
+| `src/rules/commerce/` | 收费规则：过路费、交易结算 |
+| `src/rules/vehicle/` | 载具规则：乘坐条件、移动变体 |
+| `src/rules/endgame/` | 破产、胜负判定与结算 |
+| `src/rules/ports/` | 玩法规则业务能力契约 |
+
 ## Port 命名规则
 
 | 后缀 | 含义 | 示例 |
 |------|------|------|
 | `*.lua`（目录内短名） | 单一窄接口契约 | `bankruptcy_feedback.lua` |
 | `ports.lua` | 包入口 bundle / grouped ports 装配 | `runtime/ports.lua` |
-| `ports/*.lua` | bundle 叶子模块，文件名用目录内短名 | `presentation/runtime/ports/anim.lua` |
+| `ports/*.lua` | bundle 叶子模块，文件名用目录内短名 | `src/ui/ports/anim.lua` |
 | `*_port_adapter.lua` | 外层对某契约的实现 | `paid_purchase_port_adapter.lua` |
 
 `*_ports.lua`、`*_port.lua` 旧命名不再作为 canonical 文件名；本轮为硬切，不保留旧兼容文件。
@@ -47,21 +64,21 @@ last_verified: 2026-05-04
 **三类 Port 目录：**
 
 - `src/foundation/ports/` — 宿主/运行时广义契约，gameplay 无关（`runtime_ports`、`action_anim`）
-- `src/rules/ports/` — systems-facing 注入契约，允许业务名词
+- `src/rules/ports/` — rules-facing 注入契约，允许业务名词
 - `src/turn/loop/ports.lua` — turn use case 局部 override，不是通用 Port 层
 
 ## 硬边界（不可违反）
 
-1. **choice 语义显式输出**：路由、确认文案、item slot、target picker、market 分页状态由用例层显式输出，presentation 只做通用 fallback。
+1. **choice 语义显式输出**：路由、确认文案、item slot、target picker、market 分页状态由用例层显式输出，UI 只做通用 fallback。
 2. **choice 归属显式传递**：通过 `owner_role_id` 等显式字段传递，不允许展示层反查 `meta.player_id`。
 3. **market session 状态**：`active_tab`、`page_index`、`page_count` 挂在 `ChoiceSession` 显式字段，不靠 `meta` 兜底。
 4. **宿主逻辑不回流内层**：Eggy API、支付面板、运行时上下文、事件桥只能在 `src/host` 或 `src/app`。
-5. **破产反馈通过端口**：systems 通过 `src/rules/ports/bankruptcy_feedback.lua` 发出语义，UI 更新由外层 adapter 决定。
+5. **破产反馈通过端口**：rules 通过 `src/rules/ports/bankruptcy_feedback.lua` 发出语义，UI 更新由外层 adapter 决定。
 6. **root-state 镜像已退休**：`legacy_output_mirror.lua` 已删除，UI 状态以 `state.ui_runtime` 为唯一真源。
 7. **loop_ports 拼装权限**：只有 `src/app/*`、`src/turn/loop/*` 与测试夹具可直接拼装 `loop_ports` override。
 8. **架构边界可执行真源**：`tools/quality/arch/config.json`。
 9. **零模块级循环依赖**：无白名单，任意新循环直接让 `arch_view` 护栏失败。
-10. **presentation schema 纯只读**：`src/ui/schema` 只能承载节点名、画布常量与布局定义；运行时编排与渲染留在 `ui`。
+10. **UI schema 纯只读**：`src/ui/schema` 只能承载节点名、画布常量与布局定义；运行时编排与渲染留在 `ui`。
 
 ## 放置速查
 

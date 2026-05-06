@@ -10,7 +10,7 @@ last_verified: 2026-05-04
 
 如果你想先看它在整套质量入口里的定位、耗时预估和与 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality-map.md`。
 
-默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速契约；涉及真实 `mutate --index-suites` 的完整 smoke 已挪到 `busted -c tooling`。
+默认 `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` 只保留快速契约；涉及真实 `mutate --index-suites` 的完整 smoke 已挪到 `busted --run tooling`。
 
 ## 入口
 
@@ -30,12 +30,12 @@ Monopoly 包装层额外支持两个参数：
 其余参数沿用上游 `mutate4lua`，例如：
 
 ```sh
-lua tools/quality/mutate.lua src/core/utils/role_id.lua --scan
-lua tools/quality/mutate.lua src/core/utils/role_id.lua --since-last-run
-lua tools/quality/mutate.lua src/core/utils/role_id.lua --mutate-all
-lua tools/quality/mutate.lua src/core/utils/role_id.lua --lines 12,18
-lua tools/quality/mutate.lua src/core/utils/role_id.lua --lane contract
-lua tools/quality/mutate.lua src/core/utils/role_id.lua --test-command "busted -c behavior"
+lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --scan
+lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --since-last-run
+lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --mutate-all
+lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --lines 12,18
+lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --lane contract
+lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --test-command "busted --run behavior"
 ```
 
 ## Monopoly 适配层做了什么

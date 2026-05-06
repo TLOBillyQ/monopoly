@@ -17,7 +17,7 @@ When invoked to check codebase quality, follow these steps:
 
 3. **Regression Tests:**
    If asked for full quality context, also run:
-   `busted -c regression`
+   `busted --run regression`
 
 4. **Summarize Results:**
    Review the terminal outputs.

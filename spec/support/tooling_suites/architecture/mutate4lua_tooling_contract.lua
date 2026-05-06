@@ -44,7 +44,7 @@ local function _test_wrapper_invokes_go_binary_for_mutate()
   local err = _buffer()
   local captured_command = nil
   local exit_code = mutate.run({
-    "src/core/utils/role_id.lua",
+    "src/foundation/identity/role_id.lua",
     "--lane",
     "behavior",
     "--since-last-run",
@@ -65,7 +65,7 @@ local function _test_wrapper_invokes_go_binary_for_mutate()
   assert(exit_code == 0, "wrapper should return command exit code")
   _assert_contains(captured_command[1], "mutate4lua-engine", "wrapper should target the new engine binary")
   assert(captured_command[2] == "mutate", "wrapper should default to mutate subcommand")
-  assert(captured_command[4] == "src/core/utils/role_id.lua", "wrapper should pass target via --target")
+  assert(captured_command[4] == "src/foundation/identity/role_id.lua", "wrapper should pass target via --target")
   _assert_contains(table.concat(captured_command, " "), "--lane behavior", "wrapper should keep lane option")
   _assert_contains(table.concat(captured_command, " "), "--since-last-run", "wrapper should keep mutation selection flags")
   _assert_contains(table.concat(captured_command, " "), "--json", "wrapper should pass json flag through")

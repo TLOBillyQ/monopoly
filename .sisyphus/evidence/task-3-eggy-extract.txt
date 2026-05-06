@@ -1,4 +1,0 @@
-14
-1 matches in 1 files:
-
-.agents/conventions/coding.md:63:> Eggy 类型映射见 `eggy-types.md`。

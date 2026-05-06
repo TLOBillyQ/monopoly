@@ -1,5 +1,0 @@
-Confirmed legacy reference removed from .agents/skills/verify-full/SKILL.md.
-Before: 25 lines
-After: 25 lines
-grep 'tests/contract\.lua' => 0 matches
-frontmatter preserved

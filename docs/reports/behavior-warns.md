@@ -8,7 +8,7 @@ last_verified: 2026-05-04
 
 这份文档只回答两个问题：
 
-1. `busted -c behavior` 打出来的哪些 `warn` 是预期内的测试噪音。
+1. `busted --run behavior` 打出来的哪些 `warn` 是预期内的测试噪音。
 2. 哪些 `warn` / 慢测信号值得继续追。
 
 > 基线日期：2026-03-21（Asia/Hong_Kong）。这里记录的是当前仓库已知、可解释的输出；如果 behavior lane 出现本文档没列到的新 warn，默认按“可疑”处理。
@@ -17,13 +17,13 @@ last_verified: 2026-05-04
 
 | warn 片段 | 含义 | 真实日志点 | 代表性覆盖 | 默认处理 |
 |----------|------|------------|------------|----------|
-| `[MarketDebug] apply_navigation rejected: invalid owner_role_id` | 黑市翻页/切页收到无 owner 的 pending choice，导航被拒绝 | `src/rules/market/choice/session.lua` | `tests/suites/presentation/presentation_ui_model_dispatch.lua` 中 market navigation reject 路径 | 预期内；只有数量异常增多才追 |
+| `[MarketDebug] apply_navigation rejected: invalid owner_role_id` | 黑市翻页/切页收到无 owner 的 pending choice，导航被拒绝 | `src/rules/market/choice/session.lua` | `spec/behavior/presentation/presentation_ui_model_dispatch_spec.lua` 中 market navigation reject 路径 | 预期内；只有数量异常增多才追 |
 | `[MarketDebug] apply_navigation rejected: player not found` | 黑市 pending choice 的 owner 找不到玩家实例，导航被拒绝 | `src/rules/market/choice/session.lua` | 同上，导航失败分支 | 预期内；负路径保护日志 |
 | `[MarketDebug] apply_navigation rejected: build returned nil` | 黑市导航重建 choice 失败 | `src/rules/market/choice/session.lua` | 同上，apply/build fail 分支 | 预期内；用于确保失败时不偷偷落地脏状态 |
-| `market paid purchase blocked:` | 付费购买网关返回失败 / 不可用，购买被拒绝 | `src/rules/market/purchase/core.lua` | `tests/suites/gameplay/gameplay_t4_characterization.lua` 中 `gateway_down` / `payment_gateway_error` 分支 | 预期内；这是付费失败语义的一部分 |
-| `choice action missing actor_role_id:` | choice 动作缺少 actor，上下文不完整，被校验器拒绝 | `src/turn/actions/validator.lua` | `tests/suites/gameplay/gameplay_cases.lua` 中 `_test_validate_choice_actor_no_actor_id` | 预期内；属于 actor 校验护栏 |
-| `choice action blocked by actor check:` | 非 owner actor 试图提交 choice，被校验器拒绝 | `src/turn/actions/validator.lua` | `tests/suites/presentation/presentation_ui_model_dispatch.lua` 中 non-owner `choice_select` reject 路径 | 预期内；权限保护日志 |
-| `auto runner produced no action for runtime pending choice` | 自动玩家遇到 pending choice，但 auto runner 当前没给出动作 | `src/turn/loop/init.lua` | `tests/suites/gameplay/gameplay_cases.lua` 中 `_test_log_missing_auto_choice_action_logs_once` | 预期内；用于暴露自动决策空转，不等于测试失败 |
+| `market paid purchase blocked:` | 付费购买网关返回失败 / 不可用，购买被拒绝 | `src/rules/market/purchase/core.lua` | `spec/behavior/gameplay/choices/purchase_spec.lua` 中 `gateway_down` 分支 | 预期内；这是付费失败语义的一部分 |
+| `choice action missing actor_role_id:` | choice 动作缺少 actor，上下文不完整，被校验器拒绝 | `src/turn/actions/validator.lua` | `spec/behavior/gameplay/turn_flow/phase_transitions_spec.lua` 中 no-actor reject 路径 | 预期内；属于 actor 校验护栏 |
+| `choice action blocked by actor check:` | 非 owner actor 试图提交 choice，被校验器拒绝 | `src/turn/actions/validator.lua` | `spec/behavior/presentation/presentation_ui_model_dispatch_spec.lua` 中 non-owner `choice_select` reject 路径 | 预期内；权限保护日志 |
+| `auto runner produced no action for runtime pending choice` | 自动玩家遇到 pending choice，但 auto runner 当前没给出动作 | `src/turn/loop/init.lua` | `spec/behavior/gameplay/turn_flow/phase_transitions_spec.lua` 中 auto pending choice 空转路径 | 预期内；用于暴露自动决策空转，不等于测试失败 |
 
 ## 哪些 warn 算可疑
 

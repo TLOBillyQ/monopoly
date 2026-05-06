@@ -79,7 +79,7 @@ refs.images = {
 }
 
 refs.audio = {
--- 音效资源 ID 来自 .sisyphus/archive/research.md
+-- 音效资源 ID 来自策划原稿抽取。
     cash_receive = 3814,
     mountain_stun = 5112,
     hospital_shock = 5112,
@@ -92,7 +92,7 @@ refs.audio = {
 }
 
 refs.effects = {
--- 特效资源 ID 来自 .sisyphus/archive/research.md
+-- 特效资源 ID 来自策划原稿抽取。
     item_stop_highlight = 2346,
     upgrade_land_smoke = 4286,
     cash_burst = 3414,

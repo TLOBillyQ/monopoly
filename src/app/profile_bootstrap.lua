@@ -8,7 +8,7 @@ local _is_render_called_flag_enabled
 local function _assert_integer_like(value, label)
   local resolved = number_utils.to_integer(value)
   assert(resolved ~= nil, tostring(label) .. " must be integer-like, got: " .. tostring(value))
-  if type(value) == "number" then
+  if number_utils.is_numeric(value) then
     assert(resolved == value, tostring(label) .. " must be integer (no decimals), got: " .. tostring(value))
   end
   return resolved

@@ -6,7 +6,7 @@ last_verified: 2026-05-04
 ---
 # 分层模型
 
-> **See also**：架构治理路线图 → [`governance-roadmap.md`](governance-roadmap.md)（10 → 7 层 + foundation 基座的对齐债务及治理波次）；架构决策 → [`../decisions/0001-seven-layer-with-foundation.md`](../decisions/0001-seven-layer-with-foundation.md)（D1-D7 决策记录）。
+> **See also**：架构决策 → [`../decisions/0001-seven-layer-with-foundation.md`](../decisions/0001-seven-layer-with-foundation.md)（D1-D7 决策记录）。
 
 ## 七层 + Foundation 基座
 
@@ -121,4 +121,4 @@ app -> host -> ui -> turn -> state/computer -> rules -> state/config -> foundati
 - `src/host/global_aliases.lua` 是显式 host 桥接 seam（exception #1）。
 - `state/game_state.lua` 的 mixin（status / balance / deity / vehicle / location / check_victory，源文件 `src/player/actions/state_ops/*.lua`）由 `src/app/compose_game.lua` 在模块加载时安装到 Game 类——这是 Phase 2 反转 state 逆向依赖的关键支点。
 - `src/ui/visual_hold.lua` 是顶层 wrapper，桥接 `src/ui/render/support/effect_track` 与 `src/state/visual_hold` 的 post-release hook。
-- 旧路径（`src.core.*`、`src.ui.pres.*`、`src.ui.ctl.*`、`src.ui.wid.*`、`src.ui.stores.*`、`src.state.landing_visual_hold`、`src.state.deferred_dirty`、`src.state.release_scheduler`）全部已迁移；`tools/quality/arch.lua check` 通过。
+- 当前目录迁移已完成；`tools/quality/arch.lua check` 通过。

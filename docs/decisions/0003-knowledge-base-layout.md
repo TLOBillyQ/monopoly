@@ -63,4 +63,4 @@ docs/
 
 ## 相关任务
 
-T1-T20（reorganization plan，参见 `.sisyphus/plans/`）。
+T1-T20 knowledge-base reorganization。

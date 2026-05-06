@@ -6,7 +6,7 @@ last_verified: 2026-05-04
 ---
 # Coverage Report
 
-`tools/quality/coverage.lua` 用 `busted -c` 触发 luacov instrumentation，统计 `src/{core,rules,turn,state,player,computer}` 6 个核心目录的 line coverage。它与 `tools/quality/crap.lua` 是两条独立流水线：crap 关注"复杂度 × 反测试"风险热点，coverage 关注"哪些行根本没跑过"。
+`tools/quality/coverage.lua` 用 `busted --run` 触发 luacov instrumentation，统计 `src/{foundation,rules,turn,state,player,computer}` 6 个核心目录的 line coverage。它与 `tools/quality/crap.lua` 是两条独立流水线：crap 关注"复杂度 × 反测试"风险热点，coverage 关注"哪些行根本没跑过"。
 
 如果你想先看整个质量面里 `coverage` 和 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality-map.md`。
 

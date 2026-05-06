@@ -6,7 +6,7 @@ last_verified: 2026-05-04
 ---
 # CRAP Report
 
-`tools/quality/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `busted -c behavior`、`busted -c contract` 或 `busted -c guards`。
+`tools/quality/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `busted --run behavior`、`busted --run contract` 或 `busted --run guards`。
 
 当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。Monopoly 的本地兼容层位于 `tools/bridge/crap4lua/_internal/`，再通过公开 Lua runtime `crap4lua.bridge` 加载 `tools/quality/crap/config.lua` 并执行 `tools/quality/crap/adapter.lua` 收集 coverage，最后把生成的 `ReportRequest` JSON 交给上游 CLI 完成报告分析与 viewer 导出。
 
@@ -93,7 +93,7 @@ lua tools/quality/crap.lua summary [--lane behavior] [--in-json tmp/crap_report.
 
 | Tier | 包含目录 | 目标阈值 |
 |---|---|---|
-| `core_logic` | `src/app/ src/computer/ src/config/ src/core/ src/player/ src/rules/ src/state/ src/turn/` | 90% |
+| `core_logic` | `src/app/ src/computer/ src/config/ src/foundation/ src/player/ src/rules/ src/state/ src/turn/` | 90% |
 | `host_bridge` | `src/host/` | 60% |
 | `ui_surface` | `src/ui/` | 70% |
 
@@ -114,7 +114,7 @@ lua tools/quality/crap.lua summary [--lane behavior] [--in-json tmp/crap_report.
 | 文件 | 命中/总行 | 覆盖率 |
 |---|---|---|
 | `src/turn/loop/ports.lua` | 59/124 | 47.6% |
-| `src/state/landing_visual_hold.lua` | 166/231 | 71.9% |
+| `src/state/visual_hold/init.lua` | 166/231 | 71.9% |
 | `src/turn/timing/session_script.lua` | 4/60 | 6.7% |
 | `src/turn/actions/validator.lua` | 137/185 | 74.1% |
 | `src/turn/phases/move.lua` | 41/88 | 46.6% |

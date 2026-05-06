@@ -1,7 +1,0 @@
-Moved .agents/plan.md -> .sisyphus/archive/plan.md with git mv.
-Updated .sisyphus/plans/eggy-busted-pilot.md references from .agents/plan.md to .sisyphus/archive/plan.md.
-Verification:
-- test -f .sisyphus/archive/plan.md ✅
-- test ! -e .agents/plan.md ✅
-- grep -c '\.agents/plan\.md' .sisyphus/plans/eggy-busted-pilot.md = 0 ✅
-- grep -c '\.sisyphus/archive/plan\.md' .sisyphus/plans/eggy-busted-pilot.md = 9 ✅

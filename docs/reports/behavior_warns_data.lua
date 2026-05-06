@@ -1,5 +1,5 @@
 -- 单源真值：behavior warn 白名单
--- 与 docs/architecture/behavior_warns.md 同步
+-- 与 docs/reports/behavior-warns.md 同步
 return {
   whitelist = {
     ["[MarketDebug] apply_navigation rejected: invalid owner_role_id"] = true,

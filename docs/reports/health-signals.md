@@ -6,8 +6,6 @@ last_verified: 2026-05-04
 ---
 # 健康信号与周检入口
 
-> **See also**：架构治理路线图 → [`../architecture/governance-roadmap.md`](../architecture/governance-roadmap.md)（治理波次完成后须更新本文档的复审锚点）
-
 每周按以下顺序跑，先判断"安全"，再看"优雅"。
 
 如果你想先判断“该跑哪条”或查看本地耗时基线，先读 `docs/architecture/quality-map.md`。
@@ -17,7 +15,7 @@ last_verified: 2026-05-04
 **1. 全量回归（必跑）**
 
 ```
-busted -c regression
+busted --run regression
 ```
 
 覆盖 behavior / contract / guard 三条车道。健康输出：
@@ -41,10 +39,10 @@ arch_view_guard ok
 
 验证 `output_adapters/`、gameplay loop output、choice contract、窄 Port 注入等边界稳定性。改过这些路径就先跑这条。
 
-**3. UI 热点回归（改过 presentation 层时跑）**
+**3. UI 热点回归（改过 ui 层时跑）**
 
 ```
-busted -c behavior
+busted --run behavior
 ```
 
 守住市场弹窗、玩家面板、choice 路由、target picker 等 UI 行为。
@@ -74,13 +72,13 @@ lua tools/quality/crap.lua
 
 实现上，`tools/quality/crap.lua` 会先通过公开 Lua bridge 加载 `tools/quality/crap/config.lua`、执行 `tools/quality/crap/adapter.lua` 收集 coverage，再把 request JSON 交给 `vendor/crap4lua/bin/crap4lua` 做分析与 viewer 导出。
 
-## `output_adapters/` 迁移条件
+## `src/turn/output/` 迁移条件
 
 默认不迁。出现以下任一情况再评估：
 
 - 文件开始承载宿主细节，不再只是 turn 本地输出桥
-- 调用面扩到多个非 turn 用例，`flow` 本地桥接语义不再成立
-- `runtime/*_port_adapter.lua` 与 `flow/output_adapters/*.lua` 出现稳定职责重叠
+- 调用面扩到多个非 turn 用例，`turn` 本地桥接语义不再成立
+- `src/ui/ports/*` 与 `src/turn/output/*` 出现稳定职责重叠
 - architecture suite 无法用当前目录语义自解释
 
 条件未出现前，优先补文档、补测试、补信号，不做目录手术。

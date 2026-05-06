@@ -15,7 +15,6 @@ last_verified: 2026-05-04
 |------|------|
 | 架构边界与目录 | `docs/architecture/boundaries.md` + `layer-model.md` |
 | 架构决策（七层 + foundation） | `docs/decisions/0001-seven-layer-with-foundation.md` |
-| 架构治理路线图 | `docs/architecture/governance-roadmap.md` |
 | 测试车道与质量职责 | `docs/architecture/quality-map.md` |
 | 静态架构扫描报告 | `docs/reports/arch-view.md` |
 | 风险热点（CRAP）报告 | `docs/reports/crap.md` |
@@ -26,7 +25,6 @@ last_verified: 2026-05-04
 | 健康信号 | `docs/reports/health-signals.md` |
 | UI 组件 | `docs/reference/eggy/guide/ui_manager.md` |
 | 宿主 API | `docs/reference/eggy/api/00_index.md` |
-| 子系统归属 | `docs/architecture/subsystems.md` |
 | 记忆文件 | `docs/reference/eggy/agent/memory.md` |
 | 可执行计划规范 | `.agents/conventions/planning.md` |
 | 按需读代码规范 | `.agents/conventions/reading.md` |

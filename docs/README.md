@@ -15,7 +15,6 @@ last_verified: 2026-05-04
 |------|------|------|
 | 了解架构边界与目录 | `architecture/boundaries.md` + `layer-model.md` | 七层 + foundation 物理映射 |
 | 查看架构决策 | `decisions/0001-seven-layer-with-foundation.md` | D1-D7 决策记录 |
-| 架构治理路线图 | `architecture/governance-roadmap.md` | 10→7 层对齐债务与治理波次 |
 | 测试车道与质量职责 | `architecture/quality-map.md` | behavior/contract/guard/arch/crap 分工 |
 | 静态架构扫描 | `reports/arch-view.md` | arch_view 工具报告 |
 | 风险热点（CRAP） | `reports/crap.md` | 复杂度×覆盖率热点 |
@@ -26,7 +25,6 @@ last_verified: 2026-05-04
 | 健康信号 | `reports/health-signals.md` | 架构健康指标 |
 | UI 组件 | `reference/eggy/guide/ui_manager.md` | Eggy 宿主 UI API |
 | 宿主 API | `reference/eggy/api/00_index.md` | Eggy 宿主接口索引 |
-| 子系统归属 | `architecture/subsystems.md` | 模块→层映射表 |
 | 产品 backlog | `product/backlog.md` | 功能待办列表 |
 | 地图设计 | `product/map.md` | 地图结构设计 |
 | 策划原稿 | `product/design-source/` | xlsx/docx 原稿（agent 不可读） |

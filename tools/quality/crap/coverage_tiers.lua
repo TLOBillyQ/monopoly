@@ -7,7 +7,7 @@ return {
         "src/app/",
         "src/computer/",
         "src/config/",
-        "src/core/",
+        "src/foundation/",
         "src/player/",
         "src/rules/",
         "src/state/",
