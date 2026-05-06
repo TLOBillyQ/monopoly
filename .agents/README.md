@@ -37,11 +37,8 @@ last_verified: 2026-05-04
 
 | 技能 | 路径 | 触发时机 |
 |------|------|---------|
-| `clean-architecture-reviewer` | `.agents/skills/clean-architecture-reviewer/` | 跨层重构或边界可疑 |
-| `uncle-bob-reviewer` | `.agents/skills/uncle-bob-reviewer/` | SRP/DIP 违反或结构混乱 |
 | `quality` | `.agents/skills/quality/` | 质量检查流水线 |
 | `debug` | `.agents/skills/debug/` | bug 或测试失败 |
-| `explain-code` | `.agents/skills/explain-code/` | 解释代码逻辑 |
 | `verify-fast` | `.agents/skills/verify-fast/` | 快速信心扫（encoding/guards/arch/behavior） |
 | `verify-full` | `.agents/skills/verify-full/` | 完整质量车道（含 contract/tooling/regression） |
 
