@@ -98,6 +98,32 @@ local function _set_page_arrow(ui, button, label, visible, text)
   _set_control_text(ui, label, visible and text or "")
 end
 
+local function _resolve_active_tab(market)
+  local tab = market and market.active_tab or nil
+  if tab == "item" or tab == "skin" then
+    return tab
+  end
+  return "item"
+end
+
+local function _set_tab_visual_active(ui, name, active)
+  local node = ui.query_node(name)
+  if not node then return end
+  local color = active and 0xffffff or 0xcfcfcf
+  local function apply(role)
+    if role and role.set_image_color then
+      pcall(role.set_image_color, role, node, color, 0)
+    end
+  end
+  if UIManager.client_role then
+    apply(UIManager.client_role)
+  elseif UIManager.allroles then
+    for _, role in ipairs(UIManager.allroles) do
+      apply(role)
+    end
+  end
+end
+
 function market_view_controls.refresh_market_controls(ui, market)
   local page_index = _resolve_market_page_value(market, "page_index")
   local page_count = _resolve_market_page_value(market, "page_count")
@@ -106,6 +132,9 @@ function market_view_controls.refresh_market_controls(ui, market)
   _set_page_arrow(ui, market_layout.page_prev, market_layout.page_prev_label, prev_visible, market_layout.page_prev_text)
   _set_page_arrow(ui, market_layout.page_next, market_layout.page_next_label, next_visible, market_layout.page_next_text)
   ui_controls.set_controls_state(ui, { market_layout.tab_item, market_layout.tab_skin }, { visible = true, touch_enabled = true })
+  local active_tab = _resolve_active_tab(market)
+  _set_tab_visual_active(ui, market_layout.tab_item, active_tab == "item")
+  _set_tab_visual_active(ui, market_layout.tab_skin, active_tab == "skin")
 end
 
 function market_view_controls.apply_market_common_controls(ui, market, confirm_enabled)
