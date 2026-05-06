@@ -29,7 +29,7 @@ end
 
 local function _resolve_market_page_value(market, key)
   local value = number_utils.to_integer(market and market[key]) or 1
-  return number_utils.clamp(value, 1, math.maxinteger)
+  return value < 1 and 1 or value
 end
 
 local function _has_ui_method(ui, method_name)
