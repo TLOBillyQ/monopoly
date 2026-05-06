@@ -73,6 +73,15 @@ local function _run_item_choice_flow(game, player, item_id, context, opts)
     if opts.on_empty then
       opts.on_empty(game, player, item_id, context)
     end
+    event_feed.publish(game, {
+      kind = event_kinds.item_used,
+      text = player.name .. " 使用 " .. inventory.item_name(item_id) .. "，没有合法目标",
+      tip = true,
+      tip_duration = action_anim_duration,
+      tip_dedupe_key = "item_no_target:" .. tostring(player.id) .. ":" .. tostring(item_id),
+      blocks_inter_turn = false,
+      source = "rules.items.handlers",
+    })
     return false
   end
 
@@ -112,6 +121,15 @@ function handlers.handle_target_player_item(game, player, item_id, context)
     end
     if not matched then
       logger.warn("目标玩家不在可选列表中:", tostring(context.target_id))
+      event_feed.publish(game, {
+        kind = event_kinds.item_used,
+        text = player.name .. " 使用 " .. inventory.item_name(item_id) .. "，没有合法目标",
+        tip = true,
+        tip_duration = action_anim_duration,
+        tip_dedupe_key = "item_no_target:" .. tostring(player.id) .. ":" .. tostring(item_id),
+        blocks_inter_turn = false,
+        source = "rules.items.handlers",
+      })
       return false
     end
     return _apply_target_player_item(game, player, item_id, target, context)
