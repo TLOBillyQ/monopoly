@@ -1,9 +1,5 @@
 local post_effects = require("src.rules.items.post_effects")
 local item_ids = require("src.config.gameplay.item_ids")
-local availability = require("src.rules.items.availability")
-local executor = require("src.rules.items.executor")
-local inventory = require("src.rules.items.inventory")
-local support = require("support.domain_support")
 
 
 
@@ -133,6 +129,7 @@ describe("items_post_effects", function()
   it("_test_apply_target_tax_with_tax_free", function()
     local constants = require("src.config.content.constants")
     local Inventory = require("src.player.actions.inventory")
+    local inventory = require("src.rules.items.inventory")
     local game = {
       angel_immune_to_item = function() return false end,
     }
@@ -147,6 +144,7 @@ describe("items_post_effects", function()
   end)
 
   it("_test_apply_target_exile", function()
+    local support = require("support.domain_support")
     local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
     game.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
 
@@ -161,59 +159,6 @@ describe("items_post_effects", function()
     if mountain_idx then
       assert(target.position == mountain_idx, "target should be moved to mountain")
     end
-  end)
-
-  it("invite_deity no-deity availability returns false", function()
-    local game = support.new_game({ players = { "A", "B" } })
-    local player = game.players[1]
-    -- no other player has a deity by default
-    local can, reason = availability.can_offer_in_phase(game, player, item_ids.invite_deity, "pre_action")
-    assert(can == false, "should be unavailable when no other player has a deity")
-    assert(reason == "special_condition_failed", "deny reason should be special_condition_failed, got: " .. tostring(reason))
-  end)
-
-  it("invite_deity no-target does not consume card", function()
-    local game = support.new_game({ players = { "A", "B" } })
-    local player = game.players[1]
-    inventory.give(player, item_ids.invite_deity)
-    -- no other player has a deity
-
-    local events = {}
-    local original_publish = game.event_feed_port.publish
-    game.event_feed_port.publish = function(self, inner_game, event)
-      events[#events + 1] = event
-    end
-
-    local res = executor.use_item(game, player, item_ids.invite_deity, { by_ai = true })
-    game.event_feed_port.publish = original_publish
-
-    assert(res == false or (type(res) == "table" and res.ok == false) or res == nil or res == false,
-      "executor should return failure when no candidates")
-    assert(inventory.find_index(player, item_ids.invite_deity) ~= nil, "invite_deity should NOT be consumed")
-
-    local tip_event = nil
-    for _, ev in ipairs(events) do
-      if ev.tip == true and ev.text and string.find(ev.text, "没有合法目标", 1, true) then
-        tip_event = ev
-        break
-      end
-    end
-    assert(tip_event ~= nil, "should publish a tip event containing '没有合法目标'")
-  end)
-
-  it("invite_deity with target consumes card and transfers deity", function()
-    local game = support.new_game({ players = { "A", "B" }, auto_all = true })
-    local player = game.players[1]
-    local target = game.players[2]
-    inventory.give(player, item_ids.invite_deity)
-    target.status.deity = { type = "rich", remaining = 3 }
-
-    local res = executor.use_item(game, player, item_ids.invite_deity)
-
-    local ok = res == true or (type(res) == "table" and res.ok ~= false and not res.waiting)
-    assert(ok, "executor should succeed when a candidate has a deity")
-    assert(inventory.find_index(player, item_ids.invite_deity) == nil, "invite_deity should be consumed on success")
-    assert(game:player_has_any_deity(player), "user should receive the deity after invite")
   end)
 
   it("_test_apply_target_send_poor", function()

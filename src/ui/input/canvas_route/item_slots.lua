@@ -7,7 +7,7 @@ local host_runtime_ports = require("src.ui.host_bridge")
 local _deny_text = {
   offer_in_phases_not_allowed = "现在还不能用这张牌哦",
   effect_group_used = "骰子效果已经用过了",
-  special_condition_failed = "没有合法目标",
+  special_condition_failed = "条件不满足",
 }
 
 local intents = {}
