@@ -27,20 +27,9 @@ local function _set_cancel_controls(ui, visible, enabled)
   ui_controls.set_control_state(ui, market_layout.cancel_button, { visible = visible, touch_enabled = enabled })
 end
 
-local function _resolve_market_tab(market)
-  local tab = market and market.active_tab or nil
-  if tab == "item" or tab == "skin" then
-    return tab
-  end
-  return "item"
-end
-
 local function _resolve_market_page_value(market, key)
   local value = number_utils.to_integer(market and market[key]) or 1
-  if value < 1 then
-    return 1
-  end
-  return value
+  return number_utils.clamp(value, 1, math.maxinteger)
 end
 
 local function _has_ui_method(ui, method_name)
@@ -103,53 +92,20 @@ function market_view_controls.refresh_market_selection_frames(ui, option_ids, op
   end
 end
 
-local function _set_tab_visual_active(ui, name, active)
-  pcall(function()
-    local node = ui.query_node(name)
-    if not node then return end
-    -- 绕过 EButton.disabled，用底层 set_button_enabled 单独控制视觉而不阻断 touch
-    if UIManager.client_role and UIManager.client_role.set_button_enabled then
-      UIManager.client_role.set_button_enabled(node.id, active == true)
-      return
-    end
-    if UIManager.allroles then
-      for _, role in ipairs(UIManager.allroles) do
-        if role.set_button_enabled then
-          role.set_button_enabled(node.id, active == true)
-        end
-      end
-    end
-  end)
+local function _set_page_arrow(ui, button, label, visible, text)
+  ui_controls.set_control_state(ui, button, { visible = visible, touch_enabled = visible })
+  ui_controls.set_control_state(ui, label, { visible = visible, touch_enabled = false })
+  _set_control_text(ui, label, visible and text or "")
 end
 
 function market_view_controls.refresh_market_controls(ui, market)
-  local active_tab = _resolve_market_tab(market)
   local page_index = _resolve_market_page_value(market, "page_index")
   local page_count = _resolve_market_page_value(market, "page_count")
   local prev_visible = page_count > 1 and page_index > 1
   local next_visible = page_count > 1 and page_index < page_count
-  ui_controls.set_control_state(ui, market_layout.page_prev, {
-    visible = prev_visible,
-    touch_enabled = prev_visible,
-  })
-  ui_controls.set_control_state(ui, market_layout.page_next, {
-    visible = next_visible,
-    touch_enabled = next_visible,
-  })
-  ui_controls.set_control_state(ui, market_layout.page_prev_label, {
-    visible = prev_visible,
-    touch_enabled = false,
-  })
-  ui_controls.set_control_state(ui, market_layout.page_next_label, {
-    visible = next_visible,
-    touch_enabled = false,
-  })
-  _set_control_text(ui, market_layout.page_prev_label, prev_visible and market_layout.page_prev_text or "")
-  _set_control_text(ui, market_layout.page_next_label, next_visible and market_layout.page_next_text or "")
-  ui_controls.set_control_state(ui, market_layout.tab_item, { visible = true, touch_enabled = true })
-  _set_tab_visual_active(ui, market_layout.tab_item, active_tab == "item")
-  ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = true })
-  _set_tab_visual_active(ui, market_layout.tab_skin, active_tab == "skin")
+  _set_page_arrow(ui, market_layout.page_prev, market_layout.page_prev_label, prev_visible, market_layout.page_prev_text)
+  _set_page_arrow(ui, market_layout.page_next, market_layout.page_next_label, next_visible, market_layout.page_next_text)
+  ui_controls.set_controls_state(ui, { market_layout.tab_item, market_layout.tab_skin }, { visible = true, touch_enabled = true })
 end
 
 function market_view_controls.apply_market_common_controls(ui, market, confirm_enabled)
@@ -158,22 +114,25 @@ function market_view_controls.apply_market_common_controls(ui, market, confirm_e
   _set_cancel_controls(ui, market.allow_cancel, market.allow_cancel)
 end
 
+local _CLOSE_PANEL_CONTROLS = {
+  market_layout.page_prev,
+  market_layout.page_next,
+  market_layout.page_prev_label,
+  market_layout.page_next_label,
+  market_layout.tab_item,
+  market_layout.tab_skin,
+}
+
 function market_view_controls.close_market_panel(state, deps)
   local ui = state.ui
   market_view_controls.set_market_container_active(ui, false)
-  runtime_state.ensure_ui_runtime(state).choice_visible_option_ids = nil
-  runtime_state.ensure_ui_runtime(state).pending_choice_selected_option_id = nil
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
+  ui_runtime.choice_visible_option_ids = nil
+  ui_runtime.pending_choice_selected_option_id = nil
   market_view_controls.reset_market_preview(state, deps)
   ui_controls.set_controls_state(ui, market_layout.item_labels, { touch_enabled = false })
   ui_controls.set_controls_state(ui, market_layout.item_frames, { touch_enabled = false })
-  ui_controls.set_controls_state(ui, {
-    market_layout.page_prev,
-    market_layout.page_next,
-    market_layout.page_prev_label,
-    market_layout.page_next_label,
-    market_layout.tab_item,
-    market_layout.tab_skin,
-  }, { visible = false, touch_enabled = false })
+  ui_controls.set_controls_state(ui, _CLOSE_PANEL_CONTROLS, { visible = false, touch_enabled = false })
   _set_control_text(ui, market_layout.page_prev_label, "")
   _set_control_text(ui, market_layout.page_next_label, "")
   _set_cancel_controls(ui, false, false)
