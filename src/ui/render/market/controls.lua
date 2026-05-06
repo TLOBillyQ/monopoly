@@ -103,11 +103,21 @@ function market_view_controls.refresh_market_selection_frames(ui, option_ids, op
   end
 end
 
-local function _set_tab_tint(ui, name, active)
+local function _set_tab_visual_active(ui, name, active)
   pcall(function()
     local node = ui.query_node(name)
-    if node then
-      node.image_color = active and 0xffffff or 0xcfcfcf
+    if not node then return end
+    -- 绕过 EButton.disabled，用底层 set_button_enabled 单独控制视觉而不阻断 touch
+    if UIManager.client_role and UIManager.client_role.set_button_enabled then
+      UIManager.client_role.set_button_enabled(node.id, active == true)
+      return
+    end
+    if UIManager.allroles then
+      for _, role in ipairs(UIManager.allroles) do
+        if role.set_button_enabled then
+          role.set_button_enabled(node.id, active == true)
+        end
+      end
     end
   end)
 end
@@ -136,10 +146,10 @@ function market_view_controls.refresh_market_controls(ui, market)
   })
   _set_control_text(ui, market_layout.page_prev_label, prev_visible and market_layout.page_prev_text or "")
   _set_control_text(ui, market_layout.page_next_label, next_visible and market_layout.page_next_text or "")
-  ui_controls.set_control_state(ui, market_layout.tab_item, { visible = true, touch_enabled = active_tab ~= "item" })
-  _set_tab_tint(ui, market_layout.tab_item, active_tab == "item")
-  ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = active_tab ~= "skin" })
-  _set_tab_tint(ui, market_layout.tab_skin, active_tab == "skin")
+  ui_controls.set_control_state(ui, market_layout.tab_item, { visible = true, touch_enabled = true })
+  _set_tab_visual_active(ui, market_layout.tab_item, active_tab == "item")
+  ui_controls.set_control_state(ui, market_layout.tab_skin, { visible = true, touch_enabled = true })
+  _set_tab_visual_active(ui, market_layout.tab_skin, active_tab == "skin")
 end
 
 function market_view_controls.apply_market_common_controls(ui, market, confirm_enabled)

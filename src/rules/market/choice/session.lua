@@ -79,6 +79,9 @@ function session.apply_navigation(game, pending_choice, action)
   local page_index = pending_choice.page_index
   local page_count = pending_choice.page_count
   if action.type == "market_tab_select" then
+    if active_tab == action.tab then
+      return true
+    end
     active_tab = action.tab
     page_index = 1
   elseif action.type == "market_page_prev" then
