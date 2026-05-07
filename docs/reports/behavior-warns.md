@@ -2,7 +2,7 @@
 kind: report
 status: generated
 owner: quality
-last_verified: 2026-05-04
+last_verified: 2026-05-08
 ---
 # Behavior 回归中的 warn 与慢测判读
 
@@ -11,7 +11,7 @@ last_verified: 2026-05-04
 1. `busted --run behavior` 打出来的哪些 `warn` 是预期内的测试噪音。
 2. 哪些 `warn` / 慢测信号值得继续追。
 
-> 基线日期：2026-03-21（Asia/Hong_Kong）。这里记录的是当前仓库已知、可解释的输出；如果 behavior lane 出现本文档没列到的新 warn，默认按“可疑”处理。
+> 基线日期：2026-05-08（Asia/Hong_Kong）。这里记录的是当前仓库已知、可解释的输出；如果 behavior lane 出现本文档没列到的新 warn，默认按“可疑”处理。
 
 ## 预期 warn 清单
 
@@ -38,29 +38,15 @@ last_verified: 2026-05-04
 
 ## 慢测怎么读
 
-当前 Windows 下，`MONO_TEST_TIMING=1` 的慢测结果要先看计时源，再决定是否真慢。
+`MONO_TEST_TIMING=1`（`tools/quality/shared/test_harness.lua`）与 busted handler（`spec/log_warns_handler.lua`）都用 `os.clock() * 1000` 取毫秒，计时源在 `case_times[].timer_source` 里固定为 `"os.clock"`。
 
-### 当前已确认的计时假象
+behavior 套件是纯 Lua 计算、没有真实 sleep / I/O 等待，CPU 时间约等于墙钟时间，慢测信号可以直接当业务时间读。慢测阈值默认 500ms（`MONO_TEST_SLOW_MS` 可调），Windows 下 `clock()` 量化粒度约 16ms，对 500ms 阈值不构成干扰。
 
-- 文件：`tests/support/wall_clock.lua`
-- 现状：Windows 分支每次 `start()` / `finish()` 都会起一次 PowerShell 取毫秒时间
-- 结果：即使是空测试，单 case 也会多出约 `1.2s-1.3s` 的墙钟成本
-
-本地验证结果：
-
-- `pre_confirm_enter_market_confirm_option_not_found` 单跑约 `1258ms`
-- 空测试单跑约 `1256ms`
-- 两者计时源都是 `powershell`
-
-因此：
-
-- 当慢测只有 1s 左右，且 `source=powershell` 时，默认先判定为计时开销，不是业务逻辑慢
-- 只有当同一 case 明显高于空测试基线，或者计时源不是 `powershell` 时，才值得继续分析 case 本身
+> 未来如果 spec 引入 `os.execute("ping ...")` / 真实 socket 等待，CPU 时间会少计入等待时间，慢测信号会偏低；届时再考虑加 `MONO_TEST_TIMING_PRECISE=1` 之类的 opt-in 墙钟开关，重新引入 `spec/support/wall_clock.lua` 的高精度路径。
 
 ## 建议的排查顺序
 
 1. 先看 warn 是否在“预期 warn 清单”里。
 2. 再看 warn 是否只出现在对应负路径 suite。
-3. 如果是慢测，先确认计时源是不是 `powershell`。
-4. 若是 `powershell`，先拿空测试做对照，再决定要不要优化业务逻辑。
-5. 若出现新 warn，把文案、来源文件、首个触发 suite 一起补到这份文档。
+3. 慢测先和同套件其他 case 横向对比；只有同 case 明显高于同套件中位数才值得继续分析 case 本身。
+4. 若出现新 warn，把文案、来源文件、首个触发 suite 一起补到这份文档，并同步 `docs/reports/behavior_warns_data.lua` 白名单。
