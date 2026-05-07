@@ -31,7 +31,13 @@ local function _make_status3d_ui_manager()
   }
 end
 
-local function _build_status3d_test_env()
+local function _build_status3d_test_env(opts)
+  opts = opts or {}
+  local synthetic_set = {}
+  for _, pid in ipairs(opts.synthetic_player_ids or {}) do
+    synthetic_set[pid] = true
+  end
+
   local created_layers = {}
   local destroyed_layers = {}
   local layer_visibility = {}
@@ -44,13 +50,9 @@ local function _build_status3d_test_env()
     layer_visibility[layer][observer_id] = visible == true
   end
 
-  local observers = {
-    { id = 1 },
-    { id = 2 },
-  }
-
   local function _make_role(player_id, layer_prefix)
-    return {
+    local role = {
+      id = player_id,
       get_ctrl_unit = function()
         return {
           create_scene_ui_bind_unit = function(layout_id, _, _, _, _, _)
@@ -60,17 +62,27 @@ local function _build_status3d_test_env()
           end,
         }
       end,
-      set_label_text = function(text_node, text)
+    }
+    if not synthetic_set[player_id] then
+      role.set_label_text = function(text_node, text)
         label_text[player_id] = label_text[player_id] or {}
         label_text[player_id][text_node] = text
-      end,
-    }
+      end
+    end
+    return role
   end
 
   local roles = {
     [1] = _make_role(1, "layer_1_"),
     [2] = _make_role(2, "layer_2_"),
   }
+
+  local observers = {}
+  for _, pid in ipairs({ 1, 2 }) do
+    if not synthetic_set[pid] then
+      observers[#observers + 1] = roles[pid]
+    end
+  end
 
   local game_api = {
     get_role = function(player_id)
@@ -524,8 +536,38 @@ describe("presentation_status3d_and_turn_effects", function()
     local rich_node_id = env.label_node_ids["财神状态-剩余回合"]
     local rich_text_handle = "text_" .. rich_layer .. "_" .. tostring(rich_node_id)
     _assert_eq(env.label_text[1] and env.label_text[1][rich_text_handle], "剩余回合：7",
-      "rich deity label should reflect remaining turns")
-    _assert_eq(env.label_text[2], nil, "non-affected player should not have any label set")
+      "observer 1 should see rich deity label for player 1")
+    _assert_eq(env.label_text[2] and env.label_text[2][rich_text_handle], "剩余回合：7",
+      "observer 2 should also see rich deity label (text replicates to all observers)")
+  end)
+
+  it("_test_status3d_text_uses_observer_roles_when_affected_player_is_synthetic", function()
+    local env = _build_status3d_test_env({ synthetic_player_ids = { 1 } })
+    local state = {}
+    local game = _build_status3d_game({
+      tile_type = "hospital",
+      player_status_1 = {
+        stay_turns = 3,
+        deity = { type = "", remaining = 0 },
+      },
+    })
+    local prefab = require("Data.Prefab")
+    local hospital_layout = prefab.scene_eui["医院状态"]
+    _with_patches({
+      { key = "GameAPI", value = env.game_api },
+      { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+      { key = "UIManager", value = env.ui_manager },
+    }, function()
+      ui_status_3d_layer.sync(game, state, { any = true, players = true })
+    end)
+
+    local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+    local hospital_node_id = env.label_node_ids["医院状态-剩余回合"]
+    local hospital_text_handle = "text_" .. hospital_layer .. "_" .. tostring(hospital_node_id)
+    _assert_eq(env.label_text[2] and env.label_text[2][hospital_text_handle], "剩余回合：3",
+      "observer should still receive set_label_text when affected player is a synthetic actor")
+    _assert_eq(env.label_text[1], nil,
+      "synthetic player's role lacks set_label_text and must not be invoked")
   end)
 
   it("_test_status3d_hospital_remaining_label_renders", function()

@@ -1,6 +1,5 @@
 local specs = require("src.ui.render.status3d.specs")
 local scene = require("src.ui.render.status3d.scene")
-local host_runtime_bridge = require("src.ui.host_bridge")
 
 local M = {}
 
@@ -26,14 +25,6 @@ local function _has_pending_roadblock_trigger(game, player)
     end
   end
   return false
-end
-
-local function _resolve_role(player_id, deps)
-  local host_runtime = deps and deps.host_runtime or host_runtime_bridge
-  assert(host_runtime ~= nil, "missing deps.host_runtime")
-  return host_runtime.resolve_role_with(player_id, function(role)
-    return role.set_label_text ~= nil
-  end)
 end
 
 local _deity_status_map = {
@@ -164,15 +155,16 @@ local function _resolve_text_status_context(cache, player, status_key)
   return remaining, text_node
 end
 
-local function _sync_text_status(cache, player, status_key, deps)
+local function _sync_text_status(cache, player, status_key, roles)
   local remaining, text_node = _resolve_text_status_context(cache, player, status_key)
   if remaining == nil then
     return
   end
-  local role = _resolve_role(player.id, deps)
-  if role and role.set_label_text then
-    local text = "剩余回合：" .. tostring(remaining)
-    pcall(role.set_label_text, text_node, text)
+  local text = "剩余回合：" .. tostring(remaining)
+  for _, role in ipairs(roles or {}) do
+    if role and role.set_label_text then
+      pcall(role.set_label_text, text_node, text)
+    end
   end
 end
 
@@ -182,21 +174,18 @@ function M.sync_layer_status(cache, player, status_key, deps)
   if not player_layers then
     return
   end
+  local roles = scene.resolve_observer_roles()
   if cache.last_status_key_by_player[player_id] == status_key then
-    _sync_text_status(cache, player, status_key, deps)
+    _sync_text_status(cache, player, status_key, roles)
     return
   end
-  local roles = scene.resolve_observer_roles()
   for _, key in ipairs(specs.status_priority) do
     local layer = player_layers[key]
     if layer then
-      scene.set_layer_visible_for_roles(layer, roles, status_key == key, deps, {
-        player_id = player_id,
-        status_key = key,
-      })
+      scene.set_layer_visible_for_roles(layer, roles, status_key == key, deps)
     end
   end
-  _sync_text_status(cache, player, status_key, deps)
+  _sync_text_status(cache, player, status_key, roles)
   cache.last_status_key_by_player[player_id] = status_key
 end
 
