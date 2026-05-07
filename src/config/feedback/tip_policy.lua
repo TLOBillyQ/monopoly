@@ -3,11 +3,11 @@ local event_kinds = require("src.config.gameplay.event_kinds")
 local M = {}
 
 M[event_kinds.dice_roll] = { tip = false }
-M[event_kinds.rent_paid] = { tip = false }
+M[event_kinds.rent_paid] = { tip = true }
 M[event_kinds.tax_paid] = { tip = false }
 M[event_kinds.medical_fee] = { tip = false }
-M[event_kinds.land_purchase] = { tip = false }
-M[event_kinds.land_upgrade] = { tip = false }
+M[event_kinds.land_purchase] = { tip = true }
+M[event_kinds.land_upgrade] = { tip = true }
 M[event_kinds.transit] = { tip = false }
 M[event_kinds.move_completed] = { tip = false }
 M[event_kinds.roadblock_placed] = { tip = false }
