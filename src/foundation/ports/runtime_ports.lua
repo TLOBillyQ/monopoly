@@ -54,14 +54,6 @@ function runtime_ports.mark_role_lose(role)
   return marker(role)
 end
 
-function runtime_ports.resolve_vehicle_helper()
-  local resolver = _resolve_port("resolve_vehicle_helper")
-  if type(resolver) ~= "function" then
-    return nil
-  end
-  return resolver()
-end
-
 function runtime_ports.resolve_camera_helper()
   local resolver = _resolve_port("resolve_camera_helper")
   if type(resolver) ~= "function" then

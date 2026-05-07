@@ -431,6 +431,24 @@ describe("landing", function()
     assert((player.status.stay_turns or 0) > 0, "mine move followup should apply hospital stay")
   end)
 
+  it("legacy_save_with_seat_id_runs_through_mine_landing", function()
+    local g = _new_game()
+    _set_ui_port(g, { wait_action_anim = true })
+    local player = g.players[1]
+    player.seat_id = 4001
+    _assert_eq(g:player_dice_count(player), 1, "legacy seat_id must not affect dice count after vehicle retirement")
+
+    local idx = player.position
+    g.board:place_mine(idx, { owner_id = g.players[2].id, armed = true })
+    local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
+    _assert_eq(next_state, "wait_action_anim", "legacy seat_id should not break mine landing flow")
+
+    local resumed_state, _ = move_followup.run({ game = g }, next_args.next_args)
+    _assert_eq(resumed_state, "end_turn", "legacy seat_id should not block move followup")
+    assert((player.status.stay_turns or 0) > 0, "hospital stay must still apply for legacy save")
+    _assert_eq(player.seat_id, 4001, "seat_id remains an orphan field; no logic path clears it")
+  end)
+
   it("inert_mine_does_not_trigger_on_landing", function()
     local g = _new_game()
     local player = g.players[1]
