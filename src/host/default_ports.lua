@@ -123,14 +123,6 @@ end
     end
   end
 
-  function defaults.resolve_vehicle_helper()
-    local ctx = runtime_context.current()
-    if ctx and type(ctx.vehicle_helper) == "table" then
-      return ctx.vehicle_helper
-    end
-    return nil
-  end
-
   function defaults.resolve_camera_helper()
     local ctx = runtime_context.current()
     if ctx and type(ctx.camera_helper) == "table" then

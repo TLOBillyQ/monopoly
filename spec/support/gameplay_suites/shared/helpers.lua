@@ -99,7 +99,6 @@ local function _with_runtime_context_globals(fn)
      { key = "UnitCustomEvent", value = nil },
      { key = "UnitTriggerEvent", value = nil },
      { key = "TriggerCustomEvent", value = nil },
-     { key = "vehicle_helper", value = nil },
      { key = "camera_helper", value = nil },
      { key = "all_roles", value = nil },
      { key = "ALLROLES", value = nil },
@@ -281,7 +280,6 @@ local function _extra_cases()
     _test_move_phase_wait_move_anim_records_anim_data_and_resume_args = function()
       local player = {
         id = 7,
-        seat_id = 3,
         position = 5,
         status = {},
       }
@@ -333,8 +331,6 @@ local function _extra_cases()
       assert(anim_data.to_index == 9, "move animation should use moved player position")
       assert(anim_data.visited == move_result.visited, "move animation should preserve visited path")
       assert(anim_data.steps == move_result.steps, "move animation should preserve steps")
-      assert(anim_data.vehicle_id == require("src.rules.vehicle").resolve_seat_id(3),
-        "move animation should resolve vehicle_id from seat_id")
       assert(anim_data.stopped_on_roadblock == true, "move animation should preserve roadblock flag")
       assert(anim_data.market_interrupt == true, "move animation should preserve market interrupt flag")
       assert(anim_data.steal_interrupt == false, "move animation should preserve steal interrupt flag")
@@ -343,7 +339,6 @@ local function _extra_cases()
     _test_move_phase_continue_interrupt_passes_direction_and_branch_parity = function()
       local player = {
         id = 8,
-        seat_id = 1,
         position = 12,
         status = {},
       }

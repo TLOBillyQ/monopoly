@@ -1,5 +1,4 @@
 local number_utils = require("src.foundation.lang.number")
-local vehicle_catalog = require("src.config.gameplay.vehicle_catalog")
 
 local gameplay_read_port = {}
 
@@ -20,16 +19,6 @@ local function _purchase_price(tile)
     return 0
   end
   return price
-end
-
-function gameplay_read_port.resolve_vehicle_seat_id(seat_id)
-  if seat_id == nil then
-    return nil
-  end
-  if not vehicle_catalog.has(seat_id) then
-    return nil
-  end
-  return seat_id
 end
 
 function gameplay_read_port.total_land_invested(tile, level)

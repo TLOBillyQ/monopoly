@@ -124,11 +124,6 @@ function M.refresh_runtime_context_for_tests(opts)
   elseif type(ALLROLES) == "table" then
     ctx.roles = ALLROLES
   end
-  if type(opts.vehicle_helper) == "table" then
-    ctx.vehicle_helper = opts.vehicle_helper
-  elseif type(vehicle_helper) == "table" then
-    ctx.vehicle_helper = vehicle_helper
-  end
   if type(opts.camera_helper) == "table" then
     ctx.camera_helper = opts.camera_helper
   elseif type(camera_helper) == "table" then

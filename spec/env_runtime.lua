@@ -20,7 +20,6 @@ local function refresh_runtime_context()
     TriggerCustomEvent = TriggerCustomEvent,
     all_roles = all_roles,
     ALLROLES = ALLROLES,
-    vehicle_helper = vehicle_helper,
     camera_helper = camera_helper,
   })
 end

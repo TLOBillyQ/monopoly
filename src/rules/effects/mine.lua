@@ -1,8 +1,6 @@
-local event_kinds = require("src.config.gameplay.event_kinds")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.foundation.ports.action_anim")
-local event_feed = require("src.rules.ports.event_feed")
 local angel_feedback = require("src.rules.items.angel_feedback")
 
 local mine_effect = {}
@@ -41,19 +39,13 @@ local function _find_pending_roadblock_trigger(game, player, position)
   return nil
 end
 
-local function _build_chain_tip_text(game, player, position, had_vehicle)
+local function _build_chain_tip_text(game, player, position)
   local tile = game and game.board and game.board.get_tile and game.board:get_tile(position) or nil
   local tile_name = tile and tile.name or tostring(position)
-  if had_vehicle == true then
-    return player.name .. " 在 " .. tile_name .. "地雷炸毁座驾"
-  end
   return player.name .. " 在 " .. tile_name .. "踩中地雷"
 end
 
-local function _build_trigger_log_entry(player, had_vehicle)
-  if had_vehicle == true then
-    return player.name .. "触发地雷，座驾被摧毁"
-  end
+local function _build_trigger_log_entry(player)
   return player.name .. "触发地雷"
 end
 
@@ -94,15 +86,7 @@ function mine_effect.apply(game, player, position)
   end
 
   game:clear_mine(position)
-  if game:player_is_vehicle_indestructible(player) then
-    event_feed.publish(game, {
-      kind = event_kinds.item_immune,
-      text = player.name .. " 座驾免疫地雷",
-    })
-    return { detonated = true, protected = true }
-  end
   local from_index = position
-  local had_vehicle = player.seat_id ~= nil
   local roadblock_trigger = _find_pending_roadblock_trigger(game, player, position)
   local chain_key = nil
   local focus_text = nil
@@ -111,14 +95,13 @@ function mine_effect.apply(game, player, position)
   local tip_source = nil
   if roadblock_trigger ~= nil then
     chain_key = _build_obstacle_chain_key(game, player, position)
-    focus_text = _build_chain_tip_text(game, player, position, had_vehicle)
+    focus_text = _build_chain_tip_text(game, player, position)
     tip_policy = "user"
     dedupe_key = "obstacle_chain:" .. chain_key
     tip_source = "obstacle_chain"
   end
   local hospital_index = game:player_relocate(player, {
     tile_type = "hospital",
-    clear_seat = true,
     move_dir_mode = "clear",
   })
   game:set_player_status(player, "pending_location_effect", "hospital")
@@ -145,7 +128,7 @@ function mine_effect.apply(game, player, position)
     next_args = {
       mode = "apply_location_effects",
       log_entries = {
-        _build_trigger_log_entry(player, had_vehicle),
+        _build_trigger_log_entry(player),
       },
       effects = {
         { player_id = player.id, effect = "hospital" },

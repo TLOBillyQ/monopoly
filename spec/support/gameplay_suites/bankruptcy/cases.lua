@@ -373,7 +373,7 @@ local function _test_intent_dispatcher_normalizes_market_choice_meta()
     options = { { id = 2001, label = "A" } },
     meta = {
       player_id = tostring(g:current_player().id),
-      active_tab = "vehicle",
+      active_tab = "unknown",
       page_index = "2",
       page_count = "3",
     },

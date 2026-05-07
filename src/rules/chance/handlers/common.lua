@@ -4,7 +4,6 @@ local monopoly_event = require("src.foundation.events")
 local movement = require("src.rules.movement")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local timing = require("src.config.gameplay.timing")
-local vehicle_feature = require("src.rules.vehicle")
 local number_utils = require("src.foundation.lang.number")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local move_anim_port = require("src.foundation.ports.move_anim")
@@ -100,7 +99,6 @@ local function _build_chance_move_anim_payload(player, from_index, move_result)
     to_index = player.position,
     visited = move_result.visited,
     steps = move_result.steps,
-    vehicle_id = vehicle_feature.resolve_seat_id(player.seat_id),
     source = "chance_move",
   }
 end
@@ -127,7 +125,6 @@ function common.dependencies()
     inventory = inventory,
     tile_state = tile_state,
     monopoly_event = monopoly_event,
-    vehicle_feature = vehicle_feature,
     number_utils = number_utils,
   }
 end

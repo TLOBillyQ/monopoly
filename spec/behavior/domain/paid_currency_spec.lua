@@ -317,7 +317,7 @@ describe("paid_currency", function()
           local market = _reload_market()
           local result = market.purchase.execute(game, p, hidden_entry.product_id, nil)
           assert(type(result) == "table" and result.ok == false, "hidden paid product should be rejected")
-          assert(result.reason == "disabled" or result.reason == "vehicle_disabled",
+          assert(result.reason == "disabled",
             "hidden paid product should fail via market policy, not goods mapping")
           assert(#env.panel_calls == 0, "hidden paid product should not open purchase panel")
         end)

@@ -8,9 +8,8 @@ function status_ops.set_player_status(self, player, key, value)
   common.mark_players(self)
 end
 
-function status_ops.set_player_seat(self, player, seat_id)
-  player.seat_id = seat_id
-  common.mark_players(self)
+function status_ops.player_dice_count(_self, _player)
+  return common.constants.default_dice_count
 end
 
 function status_ops.set_player_eliminated(self, player, eliminated)

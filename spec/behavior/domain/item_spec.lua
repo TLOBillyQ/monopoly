@@ -17,7 +17,6 @@ local land_choice_specs = require("src.rules.land.choice_specs")
 local item_phase = require("src.rules.items.phase")
 local item_strategy = require("src.rules.items.strategy")
 local steal = require("src.rules.items.steal")
-local status_ops = require("src.player.actions.state_ops.status")
 local cash_handlers = require("src.rules.chance.handlers.cash")
 local monopoly_event = require("src.foundation.events")
 local move_followup = require("src.turn.phases.move_followup")
@@ -1482,14 +1481,6 @@ describe("item", function()
     _assert_eq(res.next_args.mode, "resume_turn_move", "move_followup mode should be preserved")
     _assert_eq(res.next_args.next_state, "roll", "move_followup args should receive default next state")
     _assert_eq(res.next_args.next_args.player, player, "move_followup args should receive default next args")
-  end)
-
-  it("status_ops_set_player_seat_emits_exit_and_enter", function()
-    local g = _new_game()
-    local player = g.players[1]
-    player.seat_id = 4001
-    status_ops.set_player_seat(g, player, nil)
-    _assert_eq(player.seat_id, nil, "set_player_seat should stay nil after vehicle retirement")
   end)
 
   it("board_advance_tracks_branch_and_wrap", function()

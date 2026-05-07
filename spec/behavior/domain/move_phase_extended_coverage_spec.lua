@@ -18,7 +18,6 @@ local function _make_player(opts)
   return {
     id = opts.id or 1,
     position = opts.position or 5,
-    seat_id = opts.seat_id or 100,
     status = { pending_dice_multiplier = opts.multiplier or 1 },
   }
 end
@@ -43,7 +42,7 @@ describe("domain move phase extended coverage", function()
 
   it("returns wait_move_anim when anim_gate_port enabled", function()
     local game = _make_game({ wait_move_anim = true })
-    local player = _make_player({ id = 1, position = 3, seat_id = 7 })
+    local player = _make_player({ id = 1, position = 3 })
     local turn_mgr = { game = game }
     local move_result = {
       visited = { 3, 4, 5, 6, 7 },
@@ -55,13 +54,9 @@ describe("domain move phase extended coverage", function()
     local restore_movement = _stub("src.rules.movement", {
       move = function(_, _, _, _) player.position = 7; return move_result end,
     })
-    local restore_vehicle = _stub("src.rules.vehicle", {
-      resolve_seat_id = function(seat_id) return seat_id + 1000 end,
-    })
     local _phase_move = require("src.turn.phases.move")
     local state_name, args = _phase_move(turn_mgr, { player = player, raw_total = 4, total = 4 })
     restore_movement()
-    restore_vehicle()
     _assert_eq(state_name, "wait_move_anim", "should return wait_move_anim state")
     assert(type(args) == "table", "should return args table")
     _assert_eq(args.next_state, "move_followup", "next_state should be move_followup")
@@ -72,7 +67,6 @@ describe("domain move phase extended coverage", function()
     _assert_eq(game.turn.move_anim.from_index, 3, "from_index should be start position")
     _assert_eq(game.turn.move_anim.to_index, 7, "to_index should be player's new position")
     _assert_eq(game.turn.move_anim.steps, 4, "steps should be forwarded")
-    _assert_eq(game.turn.move_anim.vehicle_id, 1007, "vehicle_id should be from resolve_seat_id")
     _assert_eq(game.dirty.turn, true, "dirty.turn should be set")
     _assert_eq(game.dirty.any, true, "dirty.any should be set")
   end)
@@ -91,13 +85,9 @@ describe("domain move phase extended coverage", function()
     local restore_movement = _stub("src.rules.movement", {
       move = function() return move_result end,
     })
-    local restore_vehicle = _stub("src.rules.vehicle", {
-      resolve_seat_id = function() return 0 end,
-    })
     local _phase_move = require("src.turn.phases.move")
     _phase_move(turn_mgr, { player = player, raw_total = 1, total = 1 })
     restore_movement()
-    restore_vehicle()
     _assert_eq(game.turn.move_anim.stopped_on_roadblock, true, "roadblock flag forwarded")
     _assert_eq(game.turn.move_anim.market_interrupt, true, "market_interrupt forwarded")
     _assert_eq(game.turn.move_anim.steal_interrupt, true, "steal_interrupt forwarded")
@@ -111,9 +101,6 @@ describe("domain move phase extended coverage", function()
     local restore_movement = _stub("src.rules.movement", {
       move = function() return { visited = {}, steps = 0 } end,
     })
-    local restore_vehicle = _stub("src.rules.vehicle", {
-      resolve_seat_id = function() return 0 end,
-    })
     local restore_followup = _stub("src.turn.phases.move_followup", {
       run = function(mgr, args)
         followup_calls[#followup_calls + 1] = { mgr = mgr, args = args }
@@ -123,7 +110,6 @@ describe("domain move phase extended coverage", function()
     local _phase_move = require("src.turn.phases.move")
     local result = _phase_move(turn_mgr, { player = player, raw_total = 3, total = 3 })
     restore_movement()
-    restore_vehicle()
     restore_followup()
     _assert_eq(result, "followup_done", "should return followup result")
     _assert_eq(#followup_calls, 1, "move_followup.run should be called once")
@@ -143,7 +129,6 @@ describe("domain move phase extended coverage", function()
         return { visited = {}, steps = 0 }
       end,
     })
-    local restore_vehicle = _stub("src.rules.vehicle", { resolve_seat_id = function() return 0 end })
     local restore_followup = _stub("src.turn.phases.move_followup", { run = function() return "done" end })
     local _phase_move = require("src.turn.phases.move")
     _phase_move(turn_mgr, {
@@ -157,7 +142,6 @@ describe("domain move phase extended coverage", function()
       remaining_steps = 2,
     })
     restore_movement()
-    restore_vehicle()
     restore_followup()
     _assert_eq(captured_total, 2, "remaining_steps should override total")
     _assert_eq(captured_opts.direction, "forward", "facing should map to direction")
@@ -176,7 +160,6 @@ describe("domain move phase extended coverage", function()
         return { visited = {}, steps = 0 }
       end,
     })
-    local restore_vehicle = _stub("src.rules.vehicle", { resolve_seat_id = function() return 0 end })
     local restore_followup = _stub("src.turn.phases.move_followup", { run = function() return "done" end })
     local _phase_move = require("src.turn.phases.move")
     _phase_move(turn_mgr, {
@@ -189,7 +172,6 @@ describe("domain move phase extended coverage", function()
       remaining_steps = 4,
     })
     restore_movement()
-    restore_vehicle()
     restore_followup()
     _assert_eq(captured_total, 4, "remaining_steps should override total in steal resume")
   end)
@@ -206,12 +188,10 @@ describe("domain move phase extended coverage", function()
         return { visited = {}, steps = 0 }
       end,
     })
-    local restore_vehicle = _stub("src.rules.vehicle", { resolve_seat_id = function() return 0 end })
     local restore_followup = _stub("src.turn.phases.move_followup", { run = function() return "done" end })
     local _phase_move = require("src.turn.phases.move")
     _phase_move(turn_mgr, { player = player, raw_total = 8, total = 8 })
     restore_movement()
-    restore_vehicle()
     restore_followup()
     _assert_eq(captured_total, 8, "default branch uses total directly")
     _assert_eq(captured_opts.direction, nil, "default branch has no direction")
@@ -228,7 +208,6 @@ describe("domain move phase extended coverage", function()
     local restore_movement = _stub("src.rules.movement", {
       move = function() move_calls = move_calls + 1; return { visited = {}, steps = 0 } end,
     })
-    local restore_vehicle = _stub("src.rules.vehicle", { resolve_seat_id = function() return 0 end })
     local restore_followup = _stub("src.turn.phases.move_followup", {
       run = function() followup_calls = followup_calls + 1; return "ok" end,
     })
@@ -241,7 +220,6 @@ describe("domain move phase extended coverage", function()
       move_result = existing_result,
     })
     restore_movement()
-    restore_vehicle()
     restore_followup()
     _assert_eq(move_calls, 0, "movement.move should NOT be called when move_result provided")
     _assert_eq(followup_calls, 1, "move_followup.run should be called once")
@@ -254,13 +232,11 @@ describe("domain move phase extended coverage", function()
     local restore_movement = _stub("src.rules.movement", {
       move = function() return { visited = {}, steps = 0 } end,
     })
-    local restore_vehicle = _stub("src.rules.vehicle", { resolve_seat_id = function() return 0 end })
     local _phase_move = require("src.turn.phases.move")
     _phase_move(turn_mgr, { player = player, raw_total = 1, total = 1 })
     _assert_eq(game.turn.move_anim.seq, 6, "seq should bump from 5 to 6")
     _phase_move(turn_mgr, { player = player, raw_total = 1, total = 1 })
     restore_movement()
-    restore_vehicle()
     _assert_eq(game.turn.move_anim.seq, 7, "seq should bump again to 7")
   end)
 

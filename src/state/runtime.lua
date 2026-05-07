@@ -168,7 +168,6 @@ function runtime_state.ensure_board_runtime(state)
   end
   _ensure_field(board_runtime, "board_sync_pending", state.board_sync_pending == true)
   _ensure_field(board_runtime, "board_last_phase", state.board_last_phase)
-  _ensure_field(board_runtime, "board_last_vehicle_resync_seq", state.board_last_vehicle_resync_seq)
   return board_runtime
 end
 

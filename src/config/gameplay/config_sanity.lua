@@ -1,37 +1,8 @@
-local chance_cfg = require("src.config.content.chance_cards")
-local market_catalog = require("src.config.content.market_catalog")
-local market_cfg = require("src.config.content.market")
 local runtime_refs = require("src.config.content.runtime_refs")
 
 local config_sanity = {}
 
 local validated = false
-
-local function _validate_chance_card(card)
-  assert(
-    card.effect ~= "set_vehicle",
-    "config must not include chance set_vehicle cards (card_id=" .. tostring(card.id) .. ")"
-  )
-end
-
-local function _validate_market_entry(entry)
-  assert(
-    entry.kind ~= "vehicle",
-    "config must not include vehicle market entries (product_id=" .. tostring(entry.product_id) .. ")"
-  )
-end
-
-local function _validate_rows(rows, validator)
-  for _, row in ipairs(rows) do
-    validator(row)
-  end
-end
-
-local function _validate_data_has_no_vehicle_content()
-  _validate_rows(chance_cfg, _validate_chance_card)
-  _validate_rows(market_cfg, _validate_market_entry)
-  market_catalog.assert_valid()
-end
 
 local function _validate_board_feedback_effect_ref(effect_refs, cue_name, cue)
   local effect_id_ref = cue and cue.effect_id_ref or nil
@@ -108,7 +79,6 @@ function config_sanity.validate()
   if validated then
     return true
   end
-  _validate_data_has_no_vehicle_content()
   _validate_board_feedback_audio_refs()
   validated = true
   return true

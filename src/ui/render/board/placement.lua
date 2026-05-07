@@ -1,8 +1,6 @@
-local gameplay_read_port = require("src.ui.view.gameplay_read_port")
 local board_geometry = require("src.config.gameplay.board_geometry")
 local debug_flags = require("src.config.gameplay.debug_flags")
 local runtime_state = require("src.ui.state.runtime")
-local runtime_ports = require("src.foundation.ports.runtime_ports")
 local logger = require("src.foundation.log.logger")
 local move_anim = require("src.ui.render.move_anim")
 
@@ -19,10 +17,8 @@ local function _debug_log(...)
   logger.info_unlimited("[MoveAnim]", ...)
 end
 
-local function _stop_player_motion(pid, seat_id, unit, vehicle, stop_synthetic_ai)
+local function _stop_player_motion(pid, unit, stop_synthetic_ai)
   return move_anim.stop_player_presentation(pid, unit, {
-    stop_vehicle = seat_id ~= nil,
-    emit_vehicle_stop = vehicle and vehicle.emit_vehicle_stop or nil,
     stop_synthetic_ai = stop_synthetic_ai == true,
   })
 end
@@ -51,7 +47,7 @@ local function _build_snapshot(players)
   return snapshot
 end
 
-function M.compute_need_sync(state, snapshot, vehicle_resync_seq)
+function M.compute_need_sync(state, snapshot)
   local board_runtime = runtime_state.ensure_board_runtime(state)
   local need_sync = board_runtime.board_sync_pending or false
   local last_positions = assert(board_runtime.board_last_positions, "missing board_runtime.board_last_positions")
@@ -62,9 +58,6 @@ function M.compute_need_sync(state, snapshot, vehicle_resync_seq)
         break
       end
     end
-  end
-  if not need_sync and board_runtime.board_last_vehicle_resync_seq ~= vehicle_resync_seq then
-    need_sync = true
   end
   return need_sync
 end
@@ -140,32 +133,20 @@ local function _resolve_target_position(base, y_offset, ox, oz)
   return base + math.Vector3(ox, y_offset, oz)
 end
 
-local function _resolve_vehicle_emit_set_position(seat_id, vehicle)
-  if seat_id and vehicle and vehicle.emit_vehicle_set_position then
-    return vehicle.emit_vehicle_set_position
-  end
-  return nil
-end
-
 local function _publish_follow_target(state, pid, target_pos, source)
   runtime_state.set_follow_target_position(state, pid, target_pos, {
     source = source,
   })
 end
 
-local function _place_player_unit(pid, unit, target_pos, seat_id, vehicle)
-  local emit_set_position = _resolve_vehicle_emit_set_position(seat_id, vehicle)
-  if emit_set_position then
-    emit_set_position(pid, target_pos)
-  else
-    assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
-    unit.set_position(target_pos)
-  end
+local function _place_player_unit(pid, unit, target_pos)
+  assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(pid))
+  unit.set_position(target_pos)
 end
 
-local function _stop_and_log_player_motion(state, pid, seat_id, unit, vehicle)
+local function _stop_and_log_player_motion(state, pid, unit)
   move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
-  return _stop_player_motion(pid, seat_id, unit, vehicle, true)
+  return _stop_player_motion(pid, unit, true)
 end
 
 local function _place_single_player(state, player, i, occupants, spacing, min_player_y)
@@ -178,21 +159,17 @@ local function _place_single_player(state, player, i, occupants, spacing, min_pl
   local slot, count = _resolve_occupant_slot(list, pid)
   local ox, oz = _calc_slot_offset(slot, count, spacing)
   local target_pos = _resolve_target_position(base, y_offset, ox, oz)
-  local seat_id = gameplay_read_port.resolve_vehicle_seat_id(player.seat_id)
-  local vehicle = runtime_ports.resolve_vehicle_helper()
-  local stop_result = _stop_and_log_player_motion(state, pid, seat_id, unit, vehicle)
+  local stop_result = _stop_and_log_player_motion(state, pid, unit)
   _debug_log(
     "board_refresh_stop_and_snap",
     "player_id=" .. tostring(pid),
     "position=" .. tostring(idx),
-    "seat_id=" .. tostring(seat_id or "nil"),
-    "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
     "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
     "ai_stop=" .. tostring(stop_result.ai_stop_path or "none"),
     "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
     "target_pos=" .. tostring(target_pos)
   )
-  _place_player_unit(pid, unit, target_pos, seat_id, vehicle)
+  _place_player_unit(pid, unit, target_pos)
   _publish_follow_target(state, pid, target_pos, "board_sync_snap")
 end
 

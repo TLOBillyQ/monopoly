@@ -39,18 +39,6 @@ function playback.one_step(scene, player_id, from_index, to_index, anim_ctx)
       anim_ctx.on_step_lock(true, time, meta)
     end)
   end
-  if seq_builder.is_vehicle_jump_mode(anim_ctx) then
-    local target_pos = scene.tiles[to_index].get_position()
-    seq_builder.vehicle_helper_method("emit_vehicle_set_position")(player_id, target_pos)
-    seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, "move_anim_vehicle_jump")
-    return time
-  end
-  if seq_builder.is_vehicle_move_mode(anim_ctx) then
-    local target_pos = scene.tiles[to_index].get_position()
-    seq_builder.vehicle_helper_method("emit_vehicle_move")(player_id, step_dir, time)
-    seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, "move_anim_vehicle_move")
-    return time
-  end
   local unit = scene.units_by_player_id[player_id]
   assert(unit ~= nil, "missing unit: " .. tostring(player_id))
   assert(unit.start_move_by_direction ~= nil, "missing unit.start_move_by_direction: " .. tostring(player_id))
@@ -65,8 +53,6 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
   end
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
   local stop_result = stop.stop_player_presentation(player_id, unit, {
-    stop_vehicle = seq_builder.is_vehicle_anim(anim_ctx),
-    emit_vehicle_stop = seq_builder.vehicle_helper_method("emit_vehicle_stop"),
     stop_synthetic_ai = true,
   })
   local active_sequence = rt.get_active_sequence(board_scene, player_id)
@@ -75,7 +61,6 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     "player_id=" .. tostring(player_id),
     "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
     "token=" .. tostring(token),
-    "vehicle_stop=" .. tostring(stop_result.vehicle_stop_path or "none"),
     "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
     "anim_stop=" .. tostring(stop_result.anim_stop_path or "none")
   )
@@ -94,17 +79,7 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
     board_scene, from_index, to_index, anim_ctx.visited, anim_ctx, self_ref.step_duration
   )
   local token = nil
-  if #steps > 0 then
-    local enter_delay = seq_builder.consume_enter_delay(anim_ctx, player_id)
-    if enter_delay > 0 then
-      total_time = total_time + enter_delay
-      for _, step in ipairs(steps) do
-        step.delay = step.delay + enter_delay
-      end
-    end
-  end
-  if total_time > 0
-    and not seq_builder.is_vehicle_anim(anim_ctx) then
+  if total_time > 0 then
     local unit = board_scene and board_scene.units_by_player_id
       and board_scene.units_by_player_id[player_id] or nil
     if unit and unit.add_modifier_by_key then
@@ -162,8 +137,7 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
       "from=" .. tostring(step.from),
       "to=" .. tostring(step.to),
       "delay=" .. tostring(step.delay),
-      "step_time=" .. tostring(self_ref.step_duration(board_scene, step.from, step.to, anim_ctx)),
-      "vehicle=" .. tostring(seq_builder.is_vehicle_anim(anim_ctx))
+      "step_time=" .. tostring(self_ref.step_duration(board_scene, step.from, step.to, anim_ctx))
     )
     if anim_ctx and anim_ctx.state then
       board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)

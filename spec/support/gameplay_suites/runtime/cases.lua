@@ -279,72 +279,6 @@ local function _test_ai_obstacle_probe_does_not_enter_event_feed()
     "AI obstacle probe should not enter event feed")
 end
 
-local function _test_stop_all_players_movement_preserves_inner_move_dir_and_stop_event()
-  local g = _new_game()
-  g.players[1].seat_id = 4001
-  g.players[2].seat_id = nil
-  g:update_player_position(g.players[1], g.board:index_of_tile_id(1))
-  g:update_player_position(g.players[2], g.board:index_of_tile_id(28))
-  g:set_player_status(g.players[1], "move_dir", "left")
-  g:set_player_status(g.players[2], "move_dir", "right")
-  local before_seq = g.turn.vehicle_resync_seq or 0
-  local stopped_ids = {}
-  support.with_patches({
-    { key = "vehicle_helper", value = {
-      resolve_role = function(role_id)
-        if role_id == g.players[1].id then
-          return { id = role_id }
-        end
-        return nil
-      end,
-      emit_vehicle_stop = function(role_id)
-        table.insert(stopped_ids, role_id)
-      end,
-    } },
-  }, function()
-    g:stop_all_players_movement()
-  end)
-  assert(g.players[1].status.move_dir == nil, "outer player move_dir should be cleared")
-  assert(g.players[2].status.move_dir == "right", "inner player move_dir should be preserved")
-  assert(#stopped_ids == 1, "stop event should only be sent to players with vehicle and valid role")
-  assert(stopped_ids[1] == g.players[1].id, "stop event should target player with valid role")
-  assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "stop should bump vehicle_resync_seq")
-end
-
-local function _test_end_turn_stops_all_players_movement()
-  local g = _new_game()
-  g.players[1].seat_id = 4001
-  g.players[2].seat_id = nil
-  g:update_player_position(g.players[1], g.board:index_of_tile_id(1))
-  g:update_player_position(g.players[2], g.board:index_of_tile_id(28))
-  g:set_player_status(g.players[1], "move_dir", "left")
-  g:set_player_status(g.players[2], "move_dir", "right")
-  local before_seq = g.turn.vehicle_resync_seq or 0
-  local stopped_ids = {}
-  support.with_patches({
-    { key = "vehicle_helper", value = {
-      resolve_role = function(role_id)
-        if role_id == g.players[1].id then
-          return { id = role_id }
-        end
-        return nil
-      end,
-      emit_vehicle_stop = function(role_id)
-        table.insert(stopped_ids, role_id)
-      end,
-    } },
-  }, function()
-    local phase_end = g.turn_engine.phases and g.turn_engine.phases.end_turn
-    assert(type(phase_end) == "function", "end_turn phase should exist")
-    phase_end(g.turn_engine.turn_mgr, { player = g.players[1] })
-  end)
-  assert(g.players[1].status.move_dir == nil, "outer player move_dir should be cleared at end turn")
-  assert(g.players[2].status.move_dir == "right", "inner player move_dir should be preserved at end turn")
-  assert(#stopped_ids == 1, "end turn should only stop players with vehicle and valid role")
-  assert(stopped_ids[1] == g.players[1].id, "end turn stop should target valid vehicle player")
-  assert((g.turn.vehicle_resync_seq or 0) == before_seq + 1, "end turn should bump vehicle_resync_seq")
-end
-
 local function _test_location_transfers_clear_move_dir()
   local g = _new_game()
   local p = g:current_player()
@@ -359,33 +293,6 @@ local function _test_location_transfers_clear_move_dir()
   g:player_apply_location_effect(p, "mountain")
   assert(p.status.move_dir == nil, "mountain transfer should clear move_dir")
 end
-
-local function _test_stop_all_players_movement_skips_invalid_role_without_error()
-  local g = _new_game()
-  g.players[1].seat_id = 4001
-  g.players[2].seat_id = 4002
-  g:set_player_status(g.players[1], "move_dir", "left")
-  g:set_player_status(g.players[2], "move_dir", "right")
-  local stopped_ids = {}
-  support.with_patches({
-    { key = "vehicle_helper", value = {
-      resolve_role = function(role_id)
-        if role_id == g.players[1].id then
-          return { id = role_id }
-        end
-        return nil
-      end,
-      emit_vehicle_stop = function(role_id)
-        table.insert(stopped_ids, role_id)
-      end,
-    } },
-  }, function()
-    g:stop_all_players_movement()
-  end)
-  assert(#stopped_ids == 1, "invalid role should be skipped during stop")
-  assert(stopped_ids[1] == g.players[1].id, "only valid role should receive stop")
-end
-
 
 local function _test_runtime_context_split_install_stages()
   _with_runtime_context_globals(function()
@@ -440,45 +347,6 @@ local function _test_runtime_context_install_helpers_without_globals()
 
     runtime_context.install_runtime_helper_globals(helpers)
     assert(all_roles == helpers.roles, "install_runtime_helper_globals should expose roles")
-  end)
-end
-
-local function _test_runtime_context_release_helper_install_flow()
-  _with_runtime_context_globals(function()
-    support.with_patches({
-      { key = "MONOPOLY_BUILD_MODE", value = "release" },
-    }, function()
-      local provider_role = { id = 1, get_roleid = function() return 1 end }
-      local fallback_role = { id = 2, get_roleid = function() return 2 end }
-      local ctx = runtime_context.new({
-        GameAPI = {
-          get_role = function(role_id)
-            if role_id == 1 then
-              return provider_role
-            end
-            if role_id == 2 then
-              return fallback_role
-            end
-            return nil
-          end,
-          get_all_valid_roles = function()
-            return { fallback_role }
-          end,
-        },
-        LuaAPI = _mock_lua_api(),
-      })
-
-      runtime_context.install_environment(ctx)
-      ctx.roles = { provider_role }
-      local installed_helpers = runtime_context.install_runtime_helpers(ctx)
-
-      assert(type(installed_helpers.vehicle_helper.resolve_any_role) == "function",
-        "release install flow should still expose resolve_any_role")
-      assert(installed_helpers.vehicle_helper.resolve_any_role() == provider_role,
-        "release install flow should keep provider role priority")
-      assert(installed_helpers.vehicle_helper.resolve_role(2) == fallback_role,
-        "release install flow should keep resolve_role available")
-    end)
   end)
 end
 
@@ -613,13 +481,9 @@ end
     _test_end_turn_logs_phase_event_to_event_feed = _test_end_turn_logs_phase_event_to_event_feed,
     _test_clear_obstacles_zero_does_not_log_event_noise = _test_clear_obstacles_zero_does_not_log_event_noise,
     _test_ai_obstacle_probe_does_not_enter_event_feed = _test_ai_obstacle_probe_does_not_enter_event_feed,
-    _test_stop_all_players_movement_preserves_inner_move_dir_and_stop_event = _test_stop_all_players_movement_preserves_inner_move_dir_and_stop_event,
-    _test_end_turn_stops_all_players_movement = _test_end_turn_stops_all_players_movement,
     _test_location_transfers_clear_move_dir = _test_location_transfers_clear_move_dir,
-    _test_stop_all_players_movement_skips_invalid_role_without_error = _test_stop_all_players_movement_skips_invalid_role_without_error,
     _test_runtime_context_split_install_stages = _test_runtime_context_split_install_stages,
     _test_runtime_context_install_helpers_without_globals = _test_runtime_context_install_helpers_without_globals,
-    _test_runtime_context_release_helper_install_flow = _test_runtime_context_release_helper_install_flow,
     _test_camera_sync_follow_camera_keeps_role_id_event_chain = _test_camera_sync_follow_camera_keeps_role_id_event_chain,
     _test_game_startup_build_state_is_pure_and_bridge_installs_events = _test_game_startup_build_state_is_pure_and_bridge_installs_events,
     _test_runtime_context_install_environment_fails_fast = _test_runtime_context_install_environment_fails_fast,

@@ -46,7 +46,7 @@ local function _test_owner_mine_other_player_triggers_immediately_after_placemen
   assert(trigger_res and trigger_res.waiting == true, "other player should trigger the mine immediately")
   assert(trigger_res.next_state == "move_followup", "mine trigger should resume through move_followup")
   assert(trigger_res.next_args and trigger_res.next_args.log_entries and trigger_res.next_args.log_entries[1] == p2.name .. "触发地雷",
-    "mine trigger should defer no-vehicle trigger log through move_followup")
+    "mine trigger should defer trigger log through move_followup")
   assert((p2.status.stay_turns or 0) == 0, "hospital stay should be deferred until move followup")
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
   assert(resumed_state == "end_turn", "mine trigger should end the turn after hospital followup")

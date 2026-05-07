@@ -1,7 +1,6 @@
 local support = require("support.domain_support")
 local with_patches = support.with_patches
 local config_sanity = require("src.config.gameplay.config_sanity")
-local market_cfg = require("src.config.content.market")
 local chance_cfg = require("src.config.content.chance_cards")
 local tiles_cfg = require("src.config.content.tiles")
 local runtime_refs = require("src.config.content.runtime_refs")
@@ -16,39 +15,6 @@ local function _assert_validate_fails(message_fragment)
     tostring(err):find(message_fragment, 1, true) ~= nil,
     "config sanity error should mention: " .. tostring(message_fragment) .. ", got: " .. tostring(err)
   )
-end
-
-local function _replace_table_rows(target, rows)
-  for i = #target, 1, -1 do
-    target[i] = nil
-  end
-  for i, row in ipairs(rows or {}) do
-    target[i] = row
-  end
-end
-
-local function _with_release_tables(chance_rows, market_rows, fn)
-  local chance_backup = {}
-  local market_backup = {}
-  for i, row in ipairs(chance_cfg) do
-    chance_backup[i] = row
-  end
-  for i, row in ipairs(market_cfg) do
-    market_backup[i] = row
-  end
-
-  local function restore()
-    _replace_table_rows(chance_cfg, chance_backup)
-    _replace_table_rows(market_cfg, market_backup)
-  end
-
-  _replace_table_rows(chance_cfg, chance_rows)
-  _replace_table_rows(market_cfg, market_rows)
-  local ok, err = pcall(fn)
-  restore()
-  if not ok then
-    error(err)
-  end
 end
 
 local function _with_runtime_ref_tables(board_feedback, audio_refs, effect_refs, fn)
@@ -145,22 +111,6 @@ describe("config_sanity", function()
     assert(cue.bind_offset.y == 1.6, "cash_burst bind_offset should move effect above player head")
   end)
 
-  it("config_sanity_rejects_vehicle_chance_cards", function()
-    _with_release_tables({
-      { id = 99001, effect = "set_vehicle", vehicle_id = 4001 },
-    }, {}, function()
-      _assert_validate_fails("config must not include chance set_vehicle cards")
-    end)
-  end)
-
-  it("config_sanity_rejects_vehicle_market_entries", function()
-    _with_release_tables({}, {
-      { kind = "vehicle", product_id = 4001 },
-    }, function()
-      _assert_validate_fails("config must not include vehicle market entries")
-    end)
-  end)
-
   it("config_sanity_validate_rejects_missing_board_feedback_effect_ref", function()
     _with_runtime_ref_tables({
       cue = {
@@ -190,20 +140,6 @@ describe("config_sanity", function()
       },
     }, {}, {}, function()
       _assert_validate_fails("board feedback cue references unknown sound_id_ref")
-    end)
-  end)
-
-  it("config_sanity_validate_rejects_unknown_vehicle_refs", function()
-    _with_release_tables({
-      { id = 99002, effect = "set_vehicle", vehicle_id = "missing_vehicle" },
-    }, {}, function()
-      _assert_validate_fails("config must not include chance set_vehicle cards")
-    end)
-
-    _with_release_tables({}, {
-      { kind = "vehicle", product_id = "missing_product" },
-    }, function()
-      _assert_validate_fails("config must not include vehicle market entries")
     end)
   end)
 

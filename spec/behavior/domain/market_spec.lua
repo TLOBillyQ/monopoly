@@ -92,7 +92,7 @@ describe("market", function()
     assert(p.cash == before_cash, "should not spend money when no items available")
   end)
 
-  it("auto_execute_purchases_first_non_vehicle", function()
+  it("auto_execute_purchases_first_available_item", function()
     local market_service = _reload_market_service()
     local g = _new_game()
     local p = g:current_player()
@@ -100,7 +100,6 @@ describe("market", function()
     -- Give player enough cash to buy items
     g:set_player_cash(p, 999999)
 
-    -- Find first available item (non-vehicle)
     local list = market_service.query.list_available(p, g)
     if #list == 0 then
       return -- skip if no items available
@@ -235,11 +234,9 @@ describe("market", function()
     if blocked_product_id == nil then
       return
     end
-    local before_seat_id = p.seat_id
 
     local res = market_service.purchase.execute(g, p, blocked_product_id, nil)
     assert(type(res) == "table" and res.ok == false, "disabled market product should be rejected")
-    assert(p.seat_id == before_seat_id, "seat should not change when buying disabled product")
   end)
 
   it("skin_entry_can_buy_but_no_effect", function()
@@ -269,7 +266,6 @@ describe("market", function()
     local change_skin_inherit_capsule_size = nil
 
     local before_count = p.inventory:count()
-    local before_seat_id = p.seat_id
     local before_limit = g.market_limits[target.product_id]
     local panel_calls = {}
     local purchase_handlers = {}
@@ -349,7 +345,6 @@ describe("market", function()
 
     assert(g.market_limits[target.product_id] == before_limit - 1, "skin callback should consume global limit")
     assert(p.inventory:count() == before_count, "skin purchase should not change inventory")
-    assert(p.seat_id == before_seat_id, "skin purchase should not change seat")
     local expected_creature_key = runtime_refs.skins[tostring(target.product_id)] or number_utils.to_integer(target.product_id)
     assert(change_skin_creature_key == expected_creature_key,
       "skin purchase should call set_model_by_creature_key with creature_key")

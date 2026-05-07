@@ -89,21 +89,6 @@ describe("domain runtime ports coverage", function()
     runtime_ports.reset_for_tests()
   end)
 
-  it("resolve_vehicle_helper returns nil when not configured", function()
-    _before()
-    _assert_eq(runtime_ports.resolve_vehicle_helper(), nil, "resolve_vehicle_helper should return nil when not configured")
-  end)
-
-  it("resolve_vehicle_helper delegates to configured resolver", function()
-    _before()
-    local helper = { kind = "vehicle" }
-    runtime_ports.configure({
-      resolve_vehicle_helper = function() return helper end,
-    })
-    _assert_eq(runtime_ports.resolve_vehicle_helper(), helper, "resolve_vehicle_helper should return configured result")
-    runtime_ports.reset_for_tests()
-  end)
-
   it("resolve_camera_helper returns nil when not configured", function()
     _before()
     _assert_eq(runtime_ports.resolve_camera_helper(), nil, "resolve_camera_helper should return nil when not configured")

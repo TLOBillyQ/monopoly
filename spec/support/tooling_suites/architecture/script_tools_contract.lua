@@ -688,11 +688,6 @@ local function _test_deploy_script_matches_simplified_cli()
     "deploy.ps1 should no longer keep suffix-based backup deploy paths"
   )
   _assert_not_contains(
-    script_text,
-    "vehicle-runtime",
-    "deploy.ps1 should not expose the retired vehicle runtime flag"
-  )
-  _assert_not_contains(
     param_block,
     "$TargetPath",
     "deploy.ps1 should no longer expose explicit target path override"

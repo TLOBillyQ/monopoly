@@ -41,7 +41,6 @@ local function _build_board_refresh_test_env(opts)
       phase = opts.phase or "start",
       move_anim = opts.move_anim,
       move_followup_pending = opts.move_followup_pending == true,
-      vehicle_resync_seq = opts.vehicle_resync_seq or 0,
       tile_count = 2,
       tiles = {
         { id = 1 },
@@ -53,7 +52,6 @@ local function _build_board_refresh_test_env(opts)
           name = "P1",
           position = opts.position or 1,
           eliminated = false,
-          seat_id = opts.seat_id,
         },
       },
     },
@@ -205,46 +203,6 @@ describe("presentation.board_sync", function()
     _assert_eq(env.calls[5], nil, "refresh should not fall through to ai stop when forced stop exists")
     _assert_eq(env.target_pos.x, 10, "refresh should preserve tile x on forced stop path")
     _assert_eq(env.target_pos.y, 0.5, "refresh should preserve configured y offset on forced stop path")
-  end)
-
-  it("_test_board_refresh_stops_vehicle_before_vehicle_set_position", function()
-    local board_view = require("src.ui.render.board")
-    local runtime_ports = require("src.foundation.ports.runtime_ports")
-    local gameplay_read_port = require("src.ui.view.gameplay_read_port")
-    local env = _build_board_refresh_test_env({ seat_id = 4001 })
-    local vehicle_helper = {
-      emit_vehicle_stop = function(role_id)
-        env.calls[#env.calls + 1] = "emit_vehicle_stop:" .. tostring(role_id)
-      end,
-      emit_vehicle_set_position = function(role_id, pos)
-        env.calls[#env.calls + 1] = "emit_vehicle_set_position:" .. tostring(role_id)
-        env.target_pos = pos
-      end,
-    }
-    env.unit.force_stop_move = function()
-      env.calls[#env.calls + 1] = "force_stop_move"
-    end
-    env.unit.stop_anim = function()
-      env.calls[#env.calls + 1] = "stop_anim"
-    end
-    env.unit.set_position = function()
-      env.calls[#env.calls + 1] = "set_position"
-    end
-
-    _with_board_refresh_patches({
-      { target = runtime_ports, key = "resolve_vehicle_helper", value = function() return vehicle_helper end },
-      { target = gameplay_read_port, key = "resolve_vehicle_seat_id", value = function(seat_id) return seat_id end },
-    }, function()
-      board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
-    end)
-
-    _assert_eq(env.calls[1], "emit_vehicle_stop:1", "vehicle sync should stop vehicle first")
-    _assert_eq(env.calls[2], "force_stop_move", "vehicle sync should also stop the ctrl unit")
-    _assert_eq(env.calls[3], "stop_anim", "vehicle sync should stop anim before snap")
-    _assert_eq(env.calls[4], "emit_vehicle_set_position:1", "vehicle sync should snap vehicle after stop")
-    _assert_eq(env.calls[5], nil, "vehicle sync should not fall back to unit.set_position")
-    _assert_eq(env.target_pos.x, 10, "vehicle sync should target tile x")
-    _assert_eq(env.target_pos.y, 0.5, "vehicle sync should use configured y offset")
   end)
 
   it("_test_board_refresh_keeps_base_y_when_already_above_minimum", function()

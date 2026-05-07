@@ -519,7 +519,6 @@ return {
   tests = {
     _case("_test_runtime_context_split_install_stages"),
     _case("_test_runtime_context_install_helpers_without_globals"),
-    _case("_test_runtime_context_release_helper_install_flow"),
     _case("_test_runtime_context_install_environment_fails_fast"),
     _case("_test_game_startup_build_state_is_pure_and_bridge_installs_events"),
     _case("_test_turn_dispatch_uses_clock_ports_without_game_api"),

@@ -1,5 +1,5 @@
 -- Player state mixin source.
--- The actual player_state methods (status/balance/deity/vehicle/location ops) are
+-- The actual player_state methods (status/balance/deity/location ops) are
 -- now installed onto the Game class by `src/app/compose_game.lua` to honour the
 -- Dependency Rule: state (L7) must not depend on player (L5).
 --

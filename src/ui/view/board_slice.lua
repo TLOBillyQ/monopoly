@@ -87,7 +87,6 @@ function board_slice.build(game, env, turn)
     move_followup_pending = turn.move_followup_pending == true,
     turn_start_prompt_seq = turn.turn_start_prompt_seq or 0,
     turn_start_prompt_player_id = turn.turn_start_prompt_player_id,
-    vehicle_resync_seq = turn.vehicle_resync_seq or 0,
     tile_count = #board_tiles,
   }
 end
@@ -107,7 +106,6 @@ function board_slice.update(board, game, env, turn)
   board.move_followup_pending = turn.move_followup_pending == true
   board.turn_start_prompt_seq = turn.turn_start_prompt_seq or 0
   board.turn_start_prompt_player_id = turn.turn_start_prompt_player_id
-  board.vehicle_resync_seq = turn.vehicle_resync_seq or 0
   board.tile_count = #board_tiles
   return board
 end

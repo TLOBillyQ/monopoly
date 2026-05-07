@@ -14,7 +14,6 @@ local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local status_ops = require("src.player.actions.state_ops.status")
 local balance_ops = require("src.player.actions.state_ops.balance")
 local deity_ops = require("src.player.actions.state_ops.deity")
-local vehicle_ops = require("src.player.actions.state_ops.vehicle")
 local location_ops = require("src.player.actions.state_ops.location")
 local game_victory = require("src.rules.endgame.game_victory")
 
@@ -29,7 +28,6 @@ local _player_state_groups = {
   { name = "status_ops", source = status_ops },
   { name = "balance_ops", source = balance_ops },
   { name = "deity_ops", source = deity_ops },
-  { name = "vehicle_ops", source = vehicle_ops },
   { name = "location_ops", source = location_ops },
 }
 
@@ -85,7 +83,6 @@ local function _build_initial_turn()
     choice_seq = 0,
     move_anim_seq = 0,
     move_anim = nil,
-    vehicle_resync_seq = 0,
     action_anim_seq = 0,
     action_anim = nil,
     action_anim_queue = {},

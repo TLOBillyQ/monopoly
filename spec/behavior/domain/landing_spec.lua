@@ -423,29 +423,12 @@ describe("landing", function()
     _assert_eq(next_state, "wait_action_anim", "mine landing should wait for move effect animation")
     _assert_eq(next_args.next_state, "move_followup", "mine landing should resume through move_followup")
     _assert_eq(move_anim and move_anim.kind, "mine_trigger", "mine landing should queue staged mine animation")
-    _assert_eq(next_args.next_args.log_entries[1], player.name .. "触发地雷", "mine landing should defer no-vehicle trigger log")
+    _assert_eq(next_args.next_args.log_entries[1], player.name .. "触发地雷", "mine landing should defer trigger log")
     _assert_eq(player.status.stay_turns or 0, 0, "mine landing should not hospitalize before move followup")
 
     local resumed_state, _ = move_followup.run({ game = g }, next_args.next_args)
     _assert_eq(resumed_state, "end_turn", "mine move followup should end the turn after hospital followup")
     assert((player.status.stay_turns or 0) > 0, "mine move followup should apply hospital stay")
-  end)
-
-  it("mine_landing_log_mentions_vehicle_when_present", function()
-    local g = _new_game()
-    _set_ui_port(g, { wait_action_anim = true })
-    local player = g.players[1]
-    local idx = player.position
-    player.seat_id = 4001
-    g.board:place_mine(idx, {
-      owner_id = g.players[2].id,
-      armed = true,
-    })
-
-    local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
-    _assert_eq(next_state, "wait_action_anim", "mine landing with vehicle should still wait for move effect animation")
-    _assert_eq(next_args.next_args.log_entries[1], player.name .. "触发地雷，座驾被摧毁",
-      "mine landing should mention vehicle destruction when seat exists")
   end)
 
   it("inert_mine_does_not_trigger_on_landing", function()

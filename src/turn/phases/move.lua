@@ -1,5 +1,4 @@
 local movement = require("src.rules.movement")
-local vehicle_feature = require("src.rules.vehicle")
 local dice_multiplier = require("src.turn.phases.dice_multiplier")
 local move_followup = require("src.turn.phases.move_followup")
 
@@ -60,7 +59,6 @@ local function _build_move_anim_data(game, player, start_index, move_result)
     to_index = player.position,
     visited = move_result.visited,
     steps = move_result.steps,
-    vehicle_id = vehicle_feature.resolve_seat_id(player.seat_id),
     stopped_on_roadblock = flags.stopped_on_roadblock,
     market_interrupt = flags.market_interrupt,
     steal_interrupt = flags.steal_interrupt,

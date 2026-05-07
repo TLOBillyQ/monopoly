@@ -1,5 +1,3 @@
-local runtime_constants = require("src.config.gameplay.runtime_constants")
-local logger = require("src.foundation.log.logger")
 local synthetic_actor_registry = require("src.host.synthetic_actor_registry")
 require("src.config.content.runtime_refs")
 
@@ -15,48 +13,6 @@ local function _resolve_game_api_instance(get_game_api)
   return get_game_api()
 end
 
-local function _can_get_role(game_api)
-  return game_api and type(game_api.get_role) == "function"
-end
-
-local function _pcall_get_role(game_api, role_id)
-  local ok, role = pcall(game_api.get_role, role_id)
-  if not ok then
-    return nil
-  end
-  return role
-end
-
-local function _safe_get_role(get_game_api, role_id)
-  if role_id == nil then
-    return nil
-  end
-  local game_api = _resolve_game_api_instance(get_game_api)
-  if not _can_get_role(game_api) then
-    return nil
-  end
-  return _pcall_get_role(game_api, role_id)
-end
-
-local function _first_role_from_list(roles)
-  if type(roles) ~= "table" then
-    return nil
-  end
-  for _, role in ipairs(roles) do
-    if role ~= nil then
-      return role
-    end
-  end
-  return nil
-end
-
-local function _resolve_provider_roles(get_roles)
-  if type(get_roles) ~= "function" then
-    return nil
-  end
-  return _first_role_from_list(get_roles())
-end
-
 local function _resolve_game_api_roles(get_game_api)
   local game_api = _resolve_game_api_instance(get_game_api)
   if not (game_api and type(game_api.get_all_valid_roles) == "function") then
@@ -69,61 +25,10 @@ local function _resolve_game_api_roles(get_game_api)
   return valid_roles
 end
 
-local function _resolve_valid_roles_from_game_api(get_game_api)
-  return _first_role_from_list(_resolve_game_api_roles(get_game_api))
-end
-
-local function _resolve_any_role(get_roles, get_game_api)
-  local provider_role = _resolve_provider_roles(get_roles)
-  if provider_role ~= nil then
-    return provider_role
-  end
-  return _resolve_valid_roles_from_game_api(get_game_api)
-end
-
-local function _build_noop_vehicle_helper(get_roles, get_game_api)
-  return {
-    player_id = nil,
-    vehicle_id = nil,
-    move_direction = nil,
-    move_time = nil,
-    set_position = nil,
-    active_vehicle_by_player = {},
-    needs_enter_wait_by_player = {},
-    resolve_role = function(role_id)
-      return _safe_get_role(get_game_api, role_id)
-    end,
-    resolve_any_role = function()
-      return _resolve_any_role(get_roles, get_game_api)
-    end,
-    emit_vehicle_enter = function() return false end,
-    emit_vehicle_exit = function() return false end,
-    emit_vehicle_move = function() return false end,
-    emit_vehicle_stop = function() return false end,
-    emit_vehicle_set_position = function() return false end,
-    consume_enter_delay = function() return 0 end,
-  }
-end
-
-local function _resolve_vehicle_helper_builder()
-  if _G and _G.MONOPOLY_BUILD_MODE == "release" then
-    return function(get_roles, get_game_api)
-      return _build_noop_vehicle_helper(get_roles, get_game_api)
-    end
-  end
-  return function(get_roles, get_game_api)
-    return require("src.state.vehicle_runtime_source").build_helper(get_roles, get_game_api, {
-      logger = logger,
-      runtime_constants = runtime_constants,
-    }, _G)
-  end
-end
-
 function runtime_context.new(env)
   return {
     env = env or {},
     roles = nil,
-    vehicle_helper = nil,
     camera_helper = nil,
     synthetic_actor_registry = nil,
   }
@@ -172,14 +77,6 @@ function runtime_context.install_runtime_helpers(ctx, opts)
   if install_globals == nil then
     install_globals = false
   end
-  if not ctx.vehicle_helper then
-    local function _resolve_game_api()
-      return ctx.env and ctx.env[game_api_key] or nil
-    end
-    ctx.vehicle_helper = _resolve_vehicle_helper_builder()(function()
-      return ctx.roles
-    end, _resolve_game_api)
-  end
   if not ctx.camera_helper then
     ctx.camera_helper = require("src.host.camera").new(ctx.env)
   end
@@ -191,7 +88,6 @@ function runtime_context.install_runtime_helpers(ctx, opts)
     runtime_context.refresh_roles(ctx)
   end
   local helpers = {
-    vehicle_helper = ctx.vehicle_helper,
     camera_helper = ctx.camera_helper,
     roles = ctx.roles,
   }
@@ -203,7 +99,6 @@ end
 
 function runtime_context.install_runtime_helper_globals(helpers)
   assert(helpers ~= nil, "missing helpers")
-  vehicle_helper = helpers.vehicle_helper
   camera_helper = helpers.camera_helper
   all_roles = helpers.roles
   ALLROLES = helpers.roles

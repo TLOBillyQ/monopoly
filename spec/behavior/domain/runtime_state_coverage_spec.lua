@@ -53,13 +53,11 @@ describe("domain runtime state coverage", function()
       board_last_positions = { p1 = 5 },
       board_sync_pending = true,
       board_last_phase = "land",
-      board_last_vehicle_resync_seq = 3,
     }
     local board_runtime = runtime_state.ensure_board_runtime(state)
     _assert_eq(board_runtime.board_last_positions, state.board_last_positions, "board_last_positions should come from state")
     _assert_eq(board_runtime.board_sync_pending, true, "board_sync_pending should inherit from state")
     _assert_eq(board_runtime.board_last_phase, "land", "board_last_phase should inherit from state")
-    _assert_eq(board_runtime.board_last_vehicle_resync_seq, 3, "board_last_vehicle_resync_seq should inherit from state")
   end)
 
   it("set_follow_target_position basic", function()

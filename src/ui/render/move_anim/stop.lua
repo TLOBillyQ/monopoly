@@ -1,4 +1,3 @@
-local runtime_ports = require("src.foundation.ports.runtime_ports")
 local debug_mod = require("src.ui.render.move_anim.debug")
 local rt = require("src.ui.render.move_anim.runtime")
 local seq_builder = require("src.ui.render.move_anim.sequence_builder")
@@ -84,13 +83,7 @@ local function _stop_unit_anim(unit)
   return path
 end
 
-local function _set_player_position(scene, player_id, target_pos, anim_ctx)
-  local seat_id = seq_builder.resolve_vehicle_seat_id(anim_ctx)
-  local vehicle = runtime_ports.resolve_vehicle_helper()
-  if seat_id and vehicle and vehicle.emit_vehicle_set_position then
-    vehicle.emit_vehicle_set_position(player_id, target_pos)
-    return "emit_vehicle_set_position"
-  end
+local function _set_player_position(scene, player_id, target_pos)
   local unit = scene and scene.units_by_player_id and scene.units_by_player_id[player_id] or nil
   assert(unit ~= nil, "missing unit: " .. tostring(player_id))
   assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(player_id))
@@ -100,17 +93,11 @@ end
 
 function stop.stop_player_presentation(player_id, unit, opts)
   opts = opts or {}
-  local vehicle_stop_path = nil
-  if opts.stop_vehicle == true and type(opts.emit_vehicle_stop) == "function" and player_id ~= nil then
-    opts.emit_vehicle_stop(player_id)
-    vehicle_stop_path = "emit_vehicle_stop"
-  end
   local synthetic_actor = seq_builder.is_synthetic_actor(player_id) == true
   local motion_stop_path = _stop_unit_motion(unit)
   return {
     synthetic_actor = synthetic_actor,
     ai_stop_path = _stop_synthetic_ai_motion(unit, opts.stop_synthetic_ai == true and synthetic_actor),
-    vehicle_stop_path = vehicle_stop_path,
     motion_stop_path = motion_stop_path,
     anim_stop_path = _stop_unit_anim(unit),
   }
@@ -153,12 +140,10 @@ function stop.has_active_stop_context(board_scene, player_id)
   return false
 end
 
-function stop.prepare_player_for_snap(board_scene, player_id, anim_ctx, reason)
+function stop.prepare_player_for_snap(board_scene, player_id, _anim_ctx, reason)
   stop.clear_player_token(board_scene, player_id, reason or "teleport")
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
   return stop.stop_player_presentation(player_id, unit, {
-    stop_vehicle = seq_builder.resolve_vehicle_seat_id(anim_ctx) ~= nil,
-    emit_vehicle_stop = seq_builder.vehicle_helper_method("emit_vehicle_stop"),
     stop_synthetic_ai = true,
   })
 end
@@ -166,7 +151,7 @@ end
 function stop.snap_player_to_index(board_scene, player_id, to_index, anim_ctx, reason)
   local tile = assert(board_scene.tiles[to_index], "missing tile: " .. tostring(to_index))
   local target_pos = tile.get_position()
-  _set_player_position(board_scene, player_id, target_pos, anim_ctx)
+  _set_player_position(board_scene, player_id, target_pos)
   seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, reason or "play_sequence_teleport")
   debug_mod.debug_log(
     reason or "play_sequence_teleport",

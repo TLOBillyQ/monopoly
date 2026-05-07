@@ -853,7 +853,7 @@ describe("presentation_status3d_and_turn_effects", function()
         turn_count = 1,
       },
       players = {
-        [1] = { id = 1, name = "P1", position = 1, seat_id = nil, eliminated = false, inventory = { items = {} }, cash = 0 },
+        [1] = { id = 1, name = "P1", position = 1, eliminated = false, inventory = { items = {} }, cash = 0 },
       },
     }
     local state
@@ -907,11 +907,10 @@ describe("presentation_status3d_and_turn_effects", function()
             phase = "start",
             move_anim = nil,
             move_followup_pending = false,
-            vehicle_resync_seq = 0,
             tile_count = 1,
             tiles = { { id = 1 } },
             players = {
-              { id = 1, name = "P1", position = 1, seat_id = nil, eliminated = false },
+              { id = 1, name = "P1", position = 1, eliminated = false },
             },
           },
         }
@@ -923,11 +922,10 @@ describe("presentation_status3d_and_turn_effects", function()
             phase = "start",
             move_anim = nil,
             move_followup_pending = false,
-            vehicle_resync_seq = 0,
             tile_count = 1,
             tiles = { { id = 1 } },
             players = {
-              { id = 1, name = "P1", position = 1, seat_id = nil, eliminated = false },
+              { id = 1, name = "P1", position = 1, eliminated = false },
             },
           },
         }

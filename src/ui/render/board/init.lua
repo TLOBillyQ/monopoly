@@ -39,10 +39,9 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
   local anim = board.move_anim
   local suppress_sync = (phase == "wait_move_anim" and anim)
     or (phase == "wait_action_anim" and board.move_followup_pending == true)
-  local vehicle_resync_seq = board.vehicle_resync_seq or 0
 
   local snapshot = placement.build_snapshot(players)
-  local need_sync = placement.compute_need_sync(state, snapshot, vehicle_resync_seq)
+  local need_sync = placement.compute_need_sync(state, snapshot)
   local board_runtime = runtime_state.ensure_board_runtime(state)
 
   if suppress_sync then
@@ -57,15 +56,13 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
 
   if suppress_sync or not need_sync then
     board_runtime.board_last_positions = snapshot
-    board_runtime.board_last_vehicle_resync_seq = vehicle_resync_seq
     return
   end
 
   _debug_log(
     "board_refresh_apply_sync",
     "phase=" .. tostring(phase),
-    "board_sync_pending=" .. tostring(board_runtime.board_sync_pending == true),
-    "vehicle_resync_seq=" .. tostring(vehicle_resync_seq)
+    "board_sync_pending=" .. tostring(board_runtime.board_sync_pending == true)
   )
   local occupants = placement.build_occupants(state, players)
   local spacing = state.tile_spacing or 0
@@ -74,7 +71,6 @@ function M.refresh(state, ui_model, log_once, build_log_prefix)
 
   board_runtime.board_sync_pending = false
   board_runtime.board_last_positions = snapshot
-  board_runtime.board_last_vehicle_resync_seq = vehicle_resync_seq
 end
 
 M.refresh_board = M.refresh

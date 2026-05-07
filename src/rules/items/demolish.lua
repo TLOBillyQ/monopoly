@@ -47,11 +47,6 @@ local function _collect_hospital_targets(game, idx, item_id)
     local target = assert(game:find_player_by_id(pid), "missing target player: " .. tostring(pid))
     if game:angel_immune_to_item(target, item_id) then
       angel_feedback.publish(game, target, "导弹", { tile_index = idx })
-    elseif game:player_is_vehicle_indestructible(target) then
-      event_feed.publish(game, {
-        kind = event_kinds.item_immune,
-        text = target.name .. " 座驾免疫导弹效果",
-      })
     else
       targets[#targets + 1] = target
     end
@@ -64,7 +59,6 @@ local function _relocate_to_hospital(game, targets)
   for _, target in ipairs(targets) do
     game:player_relocate(target, {
       destination_index = hospital_index,
-      clear_seat = true,
       move_dir_mode = "clear",
     })
   end

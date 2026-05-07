@@ -86,9 +86,6 @@ end
 function location_ops.player_relocate(self, player, opts)
   opts = opts or {}
   local idx = _resolve_relocate_index(self, opts)
-  if opts.clear_seat == true and type(self.set_player_seat) == "function" then
-    self:set_player_seat(player, nil)
-  end
   self:update_player_position(player, idx)
   facing_policy.sync_move_dir_after_position_change(self, player, idx, opts.move_dir_mode or "forced_move")
   return idx, assert(self.board:get_tile(idx), "missing tile: " .. tostring(idx))

@@ -32,10 +32,6 @@ local runtime_constants = {
   speed_boost_modifier_key = 100000,
   robot_speed = 18.0,
 
-  vehicle_speed = 20.0,
-  vehicle_accel = 20.0,
-  vehicle_move_api_enabled = false,
-  vehicle_enter_delay = 1.2,
   fps = 30.0,
 
   entity_pool_max_idle = 8,

@@ -138,7 +138,6 @@ local function _refresh_runtime_context_for_tests()
     TriggerCustomEvent = TriggerCustomEvent,
     all_roles = all_roles,
     ALLROLES = ALLROLES,
-    vehicle_helper = vehicle_helper,
     camera_helper = camera_helper,
   })
 end
@@ -150,7 +149,6 @@ local _RUNTIME_CONTEXT_KEYS = {
   RegisterCustomEvent = true,
   RegisterTriggerEvent = true,
   TriggerCustomEvent = true,
-  vehicle_helper = true,
   camera_helper = true,
   all_roles = true,
   ALLROLES = true,

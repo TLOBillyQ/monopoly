@@ -116,7 +116,6 @@ function M.render_profile_startup(game)
       phase = game.turn and game.turn.phase or "start",
       move_anim = nil,
       move_followup_pending = false,
-      vehicle_resync_seq = 0,
     },
   }
   for index, tile in ipairs(game.board.path) do
@@ -129,7 +128,6 @@ function M.render_profile_startup(game)
   for _, player in ipairs(game.players) do
     board_runtime.board_last_positions[player.id] = tostring(player.position) .. ":" .. tostring(player.eliminated and 1 or 0)
   end
-  board_runtime.board_last_vehicle_resync_seq = ui_model.board.vehicle_resync_seq
   board_view.refresh(state, ui_model, function() end, function() return "test_profiles" end)
   return state
 end

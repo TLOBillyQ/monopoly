@@ -29,14 +29,13 @@
     {
       "_governance": {
         "governance_anchor": "docs/decisions/0001-seven-layer-with-foundation.md#d7",
-        "retain_reason": "config runtime refs/constants and rules.vehicle bridge to Eggy host runtime; classify as host for arch parity",
+        "retain_reason": "config runtime refs/constants bridge to Eggy host runtime; classify as host for arch parity",
         "review_cadence": "per-milestone"
       },
       "component": "host",
       "match": [
         "^src%.config%.content%.runtime_refs$",
-        "^src%.config%.gameplay%.runtime_constants$",
-        "^src%.rules%.vehicle$"
+        "^src%.config%.gameplay%.runtime_constants$"
       ],
       "name": "infrastructure_runtime_bridges"
     },

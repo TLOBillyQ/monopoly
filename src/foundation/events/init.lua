@@ -21,7 +21,6 @@ local monopoly_events = {
   },
   market = {
     bought_item = "mk.bought_item",
-    bought_vehicle = "mk.bought_vehicle",
     auto_skip = "mk.auto_skip",
     buy_failed = "mk.buy_failed",
     inventory_full = "mk.inventory_full",
@@ -35,16 +34,6 @@ local monopoly_events = {
     deity_applied = "fb.deity_applied",
     angel_immune_blocked = "fb.angel_immune_blocked",
     bankruptcy = "fb.bankruptcy",
-  },
-  vehicle = {
-    created = "vh.created",
-    copied = "vh.copied",
-    destroyed = "vh.destroyed",
-    entered = "vh.entered",
-    exited = "vh.exited",
-    moved = "vh.moved",
-    stopped = "vh.stopped",
-    reset = "vh.reset",
   },
   game = {
     finished = "gm.finished",
