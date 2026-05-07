@@ -1,0 +1,28 @@
+# Monopoly Constitution
+
+This file takes precedence over subordinate files.
+Read and obey the following subordinate documents in order:
+
+1. `swarmforge/constitution/project.prompt`
+2. `swarmforge/constitution/engineering.prompt`
+3. `swarmforge/constitution/workflow.prompt`
+
+If two subordinate files conflict, the earlier file wins.
+
+## Queueing
+
+Each agent processes one message at a time.
+
+If another message arrives while busy, append it to `pending-messages` in the agent's worktree. When the current message is complete, process the oldest queued message next and remove it from `pending-messages`. Do not silently discard queued messages.
+
+## Project Compass
+
+The project's living documentation is the source of truth, not this prompt.
+
+- Agent routing: `.agents/README.md`
+- Human index: `docs/README.md`
+- Daily conventions: `.agents/conventions/{coding,reading,planning,eggy-types}.md`
+- Quality map: `docs/architecture/quality-map.md`
+- Top-level guard rails: `CLAUDE.md` (root)
+
+When a rule here disagrees with a stable, owner-attributed document under `docs/architecture/` or `docs/decisions/`, the project document wins. Surface the conflict in the next handoff so the constitution can be updated.

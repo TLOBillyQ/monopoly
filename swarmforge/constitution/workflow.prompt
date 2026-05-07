@@ -1,0 +1,45 @@
+# Workflow Rules
+
+## Branch / Worktree Layout
+
+Configured in `swarmforge/swarmforge.conf`:
+
+| Role      | Backend | Worktree                | Branch                  |
+|-----------|---------|-------------------------|-------------------------|
+| architect | claude  | main working directory  | currently checked out (`main`) |
+| coder     | codex   | `.worktrees/coder`      | `swarmforge-coder`      |
+| reviewer  | codex   | `.worktrees/reviewer`   | `swarmforge-reviewer`   |
+| logger    | none    | main working directory  | (tail-only utility)     |
+
+At startup, every agent must:
+
+1. Discover its assigned worktree and branch by checking `.swarmforge/sessions.tsv` and `git rev-parse --abbrev-ref HEAD`.
+2. Remember that assignment for the rest of the session.
+3. Refuse to work in any other branch or worktree. If the layout is missing or wrong, stop and report — do not silently repair.
+
+## Handoff Chain
+
+`architect` → `coder` → `reviewer` → (`coder` for follow-up | `architect` for merge into main).
+
+Use `swarmtools/notify-agent.sh <role> "<message>"` for every handoff. Every notification must include:
+
+- The branch name and the latest commit hash on that branch.
+- A one-line summary of what changed.
+- Which quality gates ran and their result (e.g. `lint: pass; busted behavior: pass; busted guards: pass`).
+- Any open question or decision the next role must resolve.
+
+## Merge Direction
+
+- Coder merges from `swarmforge-architect` (or `main`, depending on what the architect committed) before starting work.
+- Reviewer merges from `swarmforge-coder` before reviewing.
+- Architect merges reviewer-accepted changes into `main` only after the reviewer's notification confirms all gates passed.
+
+Merge accepted changes only from the role that produced them. Do not pull arbitrary branches.
+
+## Discipline
+
+- One scenario or one small slice per coder iteration. Stop before scope grows.
+- The reviewer may refactor for testability but must preserve behavior; reviewer changes return to the coder for acknowledgement, not silent acceptance.
+- Do not commit unrelated local edits or generated artifacts.
+- Do not skip hooks (`--no-verify`) or signing (`--no-gpg-sign`) without explicit human approval.
+- The human user is the final authority and may override any rule in writing.

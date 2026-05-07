@@ -57,6 +57,12 @@ scripts/analysis/loc_data.json
 .sisyphus
 .worktrees/
 
+# swarm-forge runtime (state, helper scripts, agent context, message logs)
+.swarmforge/
+swarmtools/
+agent_context/
+logs/
+
 # Test artifacts (busted)
 /junit-output.xml
 /luacov.stats.out

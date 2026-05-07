@@ -1,0 +1,39 @@
+# Engineering Rules
+
+## Quality Gate
+
+Before any handoff, the agent's worktree must pass:
+
+1. **Lint** — `lua tools/quality/lint.lua` (zero warnings).
+2. **Tests** — `busted --run <profile>` for every profile relevant to the change. Profiles defined in `.busted`:
+   - `default` — full sweep (all spec roots).
+   - `behavior` — `spec/behavior/` (gameplay/domain/runtime/presentation).
+   - `contract` — `spec/contract/` (API/boundary contracts).
+   - `guards` — `spec/guards/` (architectural lint, dep rules).
+   - `tooling` — `spec/tooling/` (script_tools_contract etc.).
+   - `regression` — `spec/regression/` (replay-style cases).
+3. **Architecture scan**, when changing `src/` boundaries — see `docs/architecture/quality-map.md` for which profile owns which violation class.
+
+If a profile is irrelevant to the change, say so explicitly in the handoff. Do not skip silently.
+
+## Test Discipline
+
+- Three Laws of TDD apply: no production change without a failing test that justifies it, written first.
+- `spec/behavior/` is the acceptance layer. Each gameplay slice should have at least one behavior spec naming the user-visible outcome, not internal call sequence.
+- Determinism is mandatory: seed any randomness, use `os.time` only behind a clock port, and never assert wall-clock side effects.
+- Add focused unit tests for non-trivial logic alongside generated/behavior coverage — both layers must agree.
+
+## Architecture Discipline
+
+- Respect the seven layers + `foundation/`. New code goes into the layer matching its concern; if you cannot place it cleanly, stop and surface the question instead of forcing it.
+- `foundation/` is the only layer that may be required by every other layer. Do not introduce horizontal sibling-to-sibling deps.
+- `src/` must obey the number/Fixed rules in `project.prompt`. The `guards` profile enforces this — a green run is the proof.
+
+## Tooling Verification
+
+Before relying on `tmux`, `claude`, `codex`, `git`, `busted`, `luacheck`, `lua tools/quality/*`, or any helper, confirm its invocation contract from local `--help` output or the matching doc in `docs/guides/` or `.agents/skills/`. Do not invent flags.
+
+## Generated Artifacts
+
+- `docs/reports/*.md`, `luacov.*`, `*.arch_view`, `*.mutate4lua` — never hand-edit.
+- Do not commit unrelated local changes or generated artifacts unless they are required for the task and explicitly called out in the handoff.
