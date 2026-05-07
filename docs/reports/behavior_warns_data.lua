@@ -9,5 +9,6 @@ return {
     ["choice action missing actor_role_id:"] = true,
     ["choice action blocked by actor check:"] = true,
     ["auto runner produced no action for runtime pending choice"] = true,
+    ["status3d missing remaining-text node:"] = true,
   }
 }

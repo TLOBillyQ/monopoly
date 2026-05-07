@@ -36,6 +36,10 @@ function host_bridge.has_scene_ui_support()
   return _host_runtime().has_scene_ui_support()
 end
 
+function host_bridge.get_eui_node_at_scene_ui(...)
+  return _host_runtime().get_eui_node_at_scene_ui(...)
+end
+
 function host_bridge.schedule(...)
   return _host_runtime().schedule(...)
 end

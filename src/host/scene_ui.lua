@@ -23,4 +23,18 @@ function scene_ui.has_scene_ui_support()
     or false
 end
 
+function scene_ui.get_eui_node_at_scene_ui(layer, node_id)
+  if not (GameAPI and type(GameAPI.get_eui_node_at_scene_ui) == "function") then
+    return nil
+  end
+  if layer == nil or node_id == nil then
+    return nil
+  end
+  local ok, result = pcall(GameAPI.get_eui_node_at_scene_ui, layer, node_id)
+  if not ok then
+    return nil
+  end
+  return result
+end
+
 return scene_ui

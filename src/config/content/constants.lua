@@ -8,7 +8,7 @@ local defaults = {
   mountain_stay_turns = 2,
   tax_rate = 0.5,
   inventory_slots = 5,
-  deity_duration_turns = 5,
+  deity_duration_turns = 10,
 }
 
 local constants = {}

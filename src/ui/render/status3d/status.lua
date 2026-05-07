@@ -140,26 +140,38 @@ function M.resolve_player_status_key(game, player)
   return _resolve_deity_status(status)
 end
 
+local function _resolve_remaining_value(player, remaining_field)
+  if remaining_field == "stay_turns" then
+    return player.status and player.status.stay_turns or 0
+  end
+  if remaining_field == "deity_remaining" then
+    local deity = player.status and player.status.deity
+    return deity and deity.remaining or 0
+  end
+  return 0
+end
+
 local function _resolve_text_status_context(cache, player, status_key)
-  if not specs.text_statuses[status_key] then
+  local spec = specs.status_specs[status_key]
+  if not (spec and spec.text_node_name) then
     return nil, nil
   end
-  local stay_turns = player.status and player.status.stay_turns or 0
+  local remaining = _resolve_remaining_value(player, spec.remaining_field)
   local text_node = cache.text_nodes[player.id] and cache.text_nodes[player.id][status_key]
-  if stay_turns <= 0 or text_node == nil then
+  if remaining <= 0 or text_node == nil then
     return nil, nil
   end
-  return stay_turns, text_node
+  return remaining, text_node
 end
 
 local function _sync_text_status(cache, player, status_key, deps)
-  local stay_turns, text_node = _resolve_text_status_context(cache, player, status_key)
-  if stay_turns == nil then
+  local remaining, text_node = _resolve_text_status_context(cache, player, status_key)
+  if remaining == nil then
     return
   end
   local role = _resolve_role(player.id, deps)
   if role and role.set_label_text then
-    local text = "当前回合无法行动\n剩余停留回合数：" .. tostring(stay_turns)
+    local text = "剩余回合：" .. tostring(remaining)
     pcall(role.set_label_text, text_node, text)
   end
 end

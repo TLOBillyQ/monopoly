@@ -52,6 +52,36 @@ local function _can_create_scene_ui_bind_unit(ctrl_unit)
   return ctrl_unit and ctrl_unit.create_scene_ui_bind_unit ~= nil
 end
 
+local function _resolve_label_node_id(node_name)
+  if type(node_name) ~= "string" or node_name == "" then
+    return nil
+  end
+  if not (UIManager and type(UIManager.get_first_node_by_name) == "function") then
+    return nil
+  end
+  local ui_node = UIManager.get_first_node_by_name(node_name)
+  if ui_node == nil then
+    return nil
+  end
+  return ui_node.id
+end
+
+local function _resolve_text_node(layer, status_key, deps)
+  local spec = specs.status_specs[status_key]
+  if not (spec and spec.text_node_name) then
+    return nil
+  end
+  local node_id = _resolve_label_node_id(spec.text_node_name)
+  if node_id == nil then
+    return nil
+  end
+  local host_runtime = _resolve_host_runtime(deps)
+  if type(host_runtime.get_eui_node_at_scene_ui) ~= "function" then
+    return nil
+  end
+  return host_runtime.get_eui_node_at_scene_ui(layer, node_id)
+end
+
 function M.ensure_layers_for_player(cache, player, deps)
   local player_id = player.id
   if cache.layers[player_id] ~= nil then
@@ -85,6 +115,13 @@ function M.ensure_layers_for_player(cache, player, deps)
     else
       player_layers[status_key] = layer
       _set_layer_visible_for_roles(layer, roles, false, deps)
+      local text_node = _resolve_text_node(layer, status_key, deps)
+      if text_node ~= nil then
+        player_text_nodes[status_key] = text_node
+      else
+        meta.warn_once(cache, "missing_text_node_" .. tostring(status_key) .. "_" .. tostring(player_id),
+          "status3d missing remaining-text node:", tostring(status_key), tostring(player_id))
+      end
     end
   end
   cache.layers[player_id] = player_layers

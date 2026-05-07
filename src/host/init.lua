@@ -124,6 +124,10 @@ function host_runtime.has_scene_ui_support()
   return scene_ui.has_scene_ui_support()
 end
 
+function host_runtime.get_eui_node_at_scene_ui(layer, node_id)
+  return scene_ui.get_eui_node_at_scene_ui(layer, node_id)
+end
+
 function host_runtime.build_camera_ray(role, cfg)
   return raycast.build_camera_ray(role, cfg)
 end

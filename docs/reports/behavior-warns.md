@@ -24,6 +24,7 @@ last_verified: 2026-05-04
 | `choice action missing actor_role_id:` | choice 动作缺少 actor，上下文不完整，被校验器拒绝 | `src/turn/actions/validator.lua` | `spec/behavior/gameplay/turn_flow/phase_transitions_spec.lua` 中 no-actor reject 路径 | 预期内；属于 actor 校验护栏 |
 | `choice action blocked by actor check:` | 非 owner actor 试图提交 choice，被校验器拒绝 | `src/turn/actions/validator.lua` | `spec/behavior/presentation/presentation_ui_model_dispatch_spec.lua` 中 non-owner `choice_select` reject 路径 | 预期内；权限保护日志 |
 | `auto runner produced no action for runtime pending choice` | 自动玩家遇到 pending choice，但 auto runner 当前没给出动作 | `src/turn/loop/init.lua` | `spec/behavior/gameplay/turn_flow/phase_transitions_spec.lua` 中 auto pending choice 空转路径 | 预期内；用于暴露自动决策空转，不等于测试失败 |
+| `status3d missing remaining-text node:` | status3d 在测试中未注入 UIManager 时，剩余回合 ELabel 节点查不到，文本同步降级为不写入 | `src/ui/render/status3d/scene.lua` | `spec/behavior/presentation/_presentation_action_status_status3d_spec.lua` 大多数旧用例（不补 UIManager 桩）即触发 | 预期内；优雅降级日志，不影响可见性逻辑 |
 
 ## 哪些 warn 算可疑
 

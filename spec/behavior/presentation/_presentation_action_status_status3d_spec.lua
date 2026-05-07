@@ -10,10 +10,32 @@ local ui_status_3d_layer = require("src.ui.render.status3d")
 local turn_effects = require("src.ui.render.widgets.turn_effects")
 local vec3 = require("fixtures.vec3")
 
+local _STATUS_LABEL_NODE_IDS = {
+  ["医院状态-剩余回合"] = 90001,
+  ["深山状态-剩余回合"] = 90002,
+  ["路障状态-剩余回合"] = 90003,
+  ["财神状态-剩余回合"] = 90004,
+  ["穷神状态-剩余回合"] = 90005,
+  ["天使状态-剩余回合"] = 90006,
+}
+
+local function _make_status3d_ui_manager()
+  return {
+    get_first_node_by_name = function(name)
+      local id = _STATUS_LABEL_NODE_IDS[name]
+      if id == nil then
+        return nil
+      end
+      return { id = id }
+    end,
+  }
+end
+
 local function _build_status3d_test_env()
   local created_layers = {}
   local destroyed_layers = {}
   local layer_visibility = {}
+  local label_text = {}
 
   local function _set_layer_visible(layer, observer_id, visible)
     if not layer_visibility[layer] then
@@ -27,34 +49,27 @@ local function _build_status3d_test_env()
     { id = 2 },
   }
 
-  local layer_counter = { [1] = 0, [2] = 0 }
+  local function _make_role(player_id, layer_prefix)
+    return {
+      get_ctrl_unit = function()
+        return {
+          create_scene_ui_bind_unit = function(layout_id, _, _, _, _, _)
+            local layer = layer_prefix .. tostring(layout_id)
+            created_layers[#created_layers + 1] = layer
+            return layer
+          end,
+        }
+      end,
+      set_label_text = function(text_node, text)
+        label_text[player_id] = label_text[player_id] or {}
+        label_text[player_id][text_node] = text
+      end,
+    }
+  end
+
   local roles = {
-    [1] = {
-      get_ctrl_unit = function()
-        return {
-          create_scene_ui_bind_unit = function(layout_id, _, _, _, _, _)
-            layer_counter[1] = layer_counter[1] + 1
-            local layer = "layer_1_" .. tostring(layout_id)
-            created_layers[#created_layers + 1] = layer
-            return layer
-          end,
-        }
-      end,
-      set_label_text = function() end,
-    },
-    [2] = {
-      get_ctrl_unit = function()
-        return {
-          create_scene_ui_bind_unit = function(layout_id, _, _, _, _, _)
-            layer_counter[2] = layer_counter[2] + 1
-            local layer = "layer_2_" .. tostring(layout_id)
-            created_layers[#created_layers + 1] = layer
-            return layer
-          end,
-        }
-      end,
-      set_label_text = function() end,
-    },
+    [1] = _make_role(1, "layer_1_"),
+    [2] = _make_role(2, "layer_2_"),
   }
 
   local game_api = {
@@ -70,13 +85,19 @@ local function _build_status3d_test_env()
     destroy_scene_ui = function(layer)
       destroyed_layers[#destroyed_layers + 1] = layer
     end,
+    get_eui_node_at_scene_ui = function(layer, node_id)
+      return "text_" .. tostring(layer) .. "_" .. tostring(node_id)
+    end,
   }
 
   return {
     game_api = game_api,
+    ui_manager = _make_status3d_ui_manager(),
     created_layers = created_layers,
     destroyed_layers = destroyed_layers,
     layer_visibility = layer_visibility,
+    label_text = label_text,
+    label_node_ids = _STATUS_LABEL_NODE_IDS,
   }
 end
 
@@ -478,6 +499,76 @@ describe("presentation_status3d_and_turn_effects", function()
 
     _assert_eq(#env.destroyed_layers, 12, "reset should destroy all created layers (6 per player × 2)")
     assert(state.ui_status_3d == nil, "reset should clear state cache")
+  end)
+
+  it("_test_status3d_deity_remaining_label_renders", function()
+    local env = _build_status3d_test_env()
+    local state = {}
+    local game = _build_status3d_game({
+      player_status_1 = {
+        stay_turns = 0,
+        deity = { type = "rich", remaining = 7 },
+      },
+    })
+    local prefab = require("Data.Prefab")
+    local rich_layout = prefab.scene_eui["财神状态"]
+    _with_patches({
+      { key = "GameAPI", value = env.game_api },
+      { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+      { key = "UIManager", value = env.ui_manager },
+    }, function()
+      ui_status_3d_layer.sync(game, state, { any = true, players = true })
+    end)
+
+    local rich_layer = "layer_1_" .. tostring(rich_layout)
+    local rich_node_id = env.label_node_ids["财神状态-剩余回合"]
+    local rich_text_handle = "text_" .. rich_layer .. "_" .. tostring(rich_node_id)
+    _assert_eq(env.label_text[1] and env.label_text[1][rich_text_handle], "剩余回合：7",
+      "rich deity label should reflect remaining turns")
+    _assert_eq(env.label_text[2], nil, "non-affected player should not have any label set")
+  end)
+
+  it("_test_status3d_hospital_remaining_label_renders", function()
+    local env = _build_status3d_test_env()
+    local state = {}
+    local game = _build_status3d_game({
+      tile_type = "hospital",
+      player_status_1 = {
+        stay_turns = 3,
+        deity = { type = "", remaining = 0 },
+      },
+    })
+    local prefab = require("Data.Prefab")
+    local hospital_layout = prefab.scene_eui["医院状态"]
+    _with_patches({
+      { key = "GameAPI", value = env.game_api },
+      { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+      { key = "UIManager", value = env.ui_manager },
+    }, function()
+      ui_status_3d_layer.sync(game, state, { any = true, players = true })
+    end)
+
+    local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+    local hospital_node_id = env.label_node_ids["医院状态-剩余回合"]
+    local hospital_text_handle = "text_" .. hospital_layer .. "_" .. tostring(hospital_node_id)
+    _assert_eq(env.label_text[1] and env.label_text[1][hospital_text_handle], "剩余回合：3",
+      "hospital label should reflect remaining stay_turns")
+  end)
+
+  it("_test_status3d_no_active_status_skips_label_set", function()
+    local env = _build_status3d_test_env()
+    local state = {}
+    local game = _build_status3d_game()
+    _with_patches({
+      { key = "GameAPI", value = env.game_api },
+      { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+      { key = "UIManager", value = env.ui_manager },
+    }, function()
+      ui_status_3d_layer.sync(game, state, { any = true, players = true })
+    end)
+
+    _assert_eq(env.label_text[1], nil, "no active status should not write label text")
+    _assert_eq(env.label_text[2], nil, "no active status should not write label text")
   end)
 
   it("_test_turn_effects_prompt_visibility_follows_phase_and_role", function()
