@@ -673,6 +673,7 @@ describe("presentation_market_panel", function()
   it("_test_market_close_hides_all_sold_out_nodes", function()
     local state, visible = _build_market_state({})
     _bind_ui_runtime(state, {})
+    state.ui.market_active = true
 
     market_view.close_market_panel(state)
 
