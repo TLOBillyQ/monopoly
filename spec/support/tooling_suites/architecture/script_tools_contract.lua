@@ -480,7 +480,6 @@ end
 
 local function _test_cli_help_text_is_bilingual()
   local help_commands = {
-    { "tools/data/export_xlsx.lua", "--help" },
     { "tools/ops/update_api.lua", "--help" },
     { "tools/quality/arch.lua", "--help" },
     { "tools/quality/crap.lua", "--help" },

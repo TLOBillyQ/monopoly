@@ -26,4 +26,4 @@ last_verified: 2026-05-04
 
 ## 维护流程
 
-修改 xlsx 后跑 `lua tools/data/export_xlsx.lua` 生成 Lua 表。
+修改 xlsx 后手工同步策划改动至对应 Lua 表。
