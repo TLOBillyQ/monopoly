@@ -24,6 +24,10 @@ function eligibility.can_buy_entry(game, player, entry)
   return game:player_balance(player, currency) >= price
 end
 
+function eligibility.is_sold_out(game, entry)
+  return context.remaining_global_limit(game, entry.product_id) <= 0
+end
+
 function eligibility.sorted_entries()
   local entries = {}
   for _, entry in ipairs(context.entries()) do

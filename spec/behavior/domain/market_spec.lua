@@ -160,9 +160,35 @@ describe("market", function()
         if option.id == entry.product_id then
           found = true
           assert(option.can_buy == false, "sold out item should remain visible but not buyable in choice")
+          assert(option.sold_out == true, "sold out item should have sold_out = true in choice option")
         end
       end
       assert(found == true, "sold out item should remain visible in choice for explicit feedback")
+    end
+  end)
+
+  it("market_choice_sold_out_flag_false_when_in_stock", function()
+    local market_service = require("src.rules.market")
+    local g = _new_game()
+    local p = g:current_player()
+    local entry = nil
+    for _, cfg in ipairs(market_cfg) do
+      if cfg.kind == "item" and cfg.currency == "金币" then
+        entry = cfg
+        break
+      end
+    end
+    assert(entry, "should find a market item with coin currency")
+    g:set_player_cash(p, (entry.price or 0) + 1000)
+    g.market_limits[entry.product_id] = 2
+
+    local spec = market_service.choice.build(p, g)
+    if spec and spec.options then
+      for _, option in ipairs(spec.options) do
+        if option.id == entry.product_id then
+          assert(option.sold_out == false, "in-stock item should have sold_out = false")
+        end
+      end
     end
   end)
 

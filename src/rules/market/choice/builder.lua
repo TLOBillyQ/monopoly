@@ -40,10 +40,10 @@ local function _build_tab_entries(player, game, active_tab)
   end
   local merged = {}
   for _, entry in ipairs(buyable) do
-    merged[#merged + 1] = { entry = entry, can_buy = true }
+    merged[#merged + 1] = { entry = entry, can_buy = true, sold_out = eligibility.is_sold_out(game, entry) }
   end
   for _, entry in ipairs(unbuyable) do
-    merged[#merged + 1] = { entry = entry, can_buy = false }
+    merged[#merged + 1] = { entry = entry, can_buy = false, sold_out = eligibility.is_sold_out(game, entry) }
   end
   return merged, buyable
 end
@@ -68,6 +68,7 @@ local function _build_options_for_page(visible, page_index, page_size)
       id = entry.product_id,
       label = label,
       can_buy = slot.can_buy,
+      sold_out = slot.sold_out,
     }
   end
   return body_lines, options

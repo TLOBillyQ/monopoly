@@ -645,4 +645,42 @@ describe("presentation_market_panel", function()
     _assert_eq(captured[1] and captured[1].actor_role_id, 3, "market_cancel should inject actor_role_id")
     _assert_eq(show_tip_calls, 0, "market_cancel should not show unadapted tip")
   end)
+
+  it("_test_market_view_sets_sold_out_visibility_per_option", function()
+    local entry_a = assert(market_cfg[1], "missing market cfg entry a")
+    local entry_b = assert(market_cfg[2], "missing market cfg entry b")
+    local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
+
+    market_view.refresh_market(state, {
+      choice_id = 31,
+      options = {
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false, sold_out = true },
+        { id = entry_b.product_id, label = entry_b.name, can_buy = true,  sold_out = false },
+      },
+      allow_cancel = true,
+    })
+
+    _assert_eq(visible[market_layout.sold_out_badges[1]], true,
+      "slot 1 badge should be visible when sold_out = true")
+    _assert_eq(visible[market_layout.sold_out_labels[1]], true,
+      "slot 1 label should be visible when sold_out = true")
+    _assert_eq(visible[market_layout.sold_out_badges[2]], false,
+      "slot 2 badge should be hidden when sold_out = false")
+    _assert_eq(visible[market_layout.sold_out_labels[2]], false,
+      "slot 2 label should be hidden when sold_out = false")
+  end)
+
+  it("_test_market_close_hides_all_sold_out_nodes", function()
+    local state, visible = _build_market_state({})
+    _bind_ui_runtime(state, {})
+
+    market_view.close_market_panel(state)
+
+    for i = 1, #market_layout.sold_out_badges do
+      _assert_eq(visible[market_layout.sold_out_badges[i]], false,
+        "sold_out badge " .. i .. " should be hidden after close")
+      _assert_eq(visible[market_layout.sold_out_labels[i]], false,
+        "sold_out label " .. i .. " should be hidden after close")
+    end
+  end)
 end)

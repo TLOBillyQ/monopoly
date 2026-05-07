@@ -17,6 +17,8 @@ local market_layout = {
   item_labels = {},
   item_frames = {},
   item_selection_frames = {},
+  sold_out_badges = {},
+  sold_out_labels = {},
   title = "黑市",
   icon_placeholder = "黑市_选中卡牌",
   rarity_ref_keys = { [1] = "lv1", [2] = "lv2", [3] = "lv3" },
@@ -34,6 +36,8 @@ for i = 1, 10 do
   market_layout.item_labels[i] = "黑市_道具名称" .. idx
   market_layout.item_frames[i] = "黑市_底框" .. idx
   market_layout.item_selection_frames[i] = "黑市-选中边框" .. idx
+  market_layout.sold_out_badges[i] = "黑市-售罄" .. idx
+  market_layout.sold_out_labels[i] = "黑市-售罄" .. idx .. "文本"
 end
 
 function market_layout.is_ready()

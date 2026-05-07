@@ -80,6 +80,8 @@ local function _set_market_slot_hidden(ui, slot)
     button = { visible = false, touch_enabled = false },
     label = { visible = false, touch_enabled = false },
     frame = { visible = false, touch_enabled = false },
+    sold_out_badge = { visible = false, touch_enabled = false },
+    sold_out_label = { visible = false, touch_enabled = false },
   })
 end
 
@@ -92,7 +94,13 @@ local function _for_each_market_slot(callback)
     local label = labels[index]
     local frame = frames[index]
     if button and label and frame then
-      callback(index, { button = button, label = label, frame = frame })
+      callback(index, {
+        button = button,
+        label = label,
+        frame = frame,
+        sold_out_badge = market_layout.sold_out_badges[index],
+        sold_out_label = market_layout.sold_out_labels[index],
+      })
     end
   end
 end
@@ -107,6 +115,8 @@ local function _set_market_slot_visible(ui, refs, slot, opt, deps)
     label = { visible = true, touch_enabled = false },
     button = { visible = true, touch_enabled = true },
     frame = { visible = true, touch_enabled = false },
+    sold_out_badge = { visible = opt.sold_out == true, touch_enabled = false },
+    sold_out_label = { visible = opt.sold_out == true, touch_enabled = false },
   })
   local level = _resolve_market_level(cfg)
   local rarity_key = _resolve_ref_key(refs, market_layout.rarity_ref_keys[level]) or _resolve_ref_key(refs, market_layout.empty_ref_key)
