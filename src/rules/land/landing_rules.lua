@@ -130,7 +130,11 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
 
   local breakdown_parts = {}
   if breakdown.count > 1 then
-    breakdown_parts[#breakdown_parts + 1] = "连片 ×" .. tostring(breakdown.count)
+    local rent_strs = {}
+    for _, r in ipairs(breakdown.rents) do
+      rent_strs[#rent_strs + 1] = number_utils.format_integer_part(r)
+    end
+    breakdown_parts[#breakdown_parts + 1] = "连片 " .. table.concat(rent_strs, " + ")
   end
   if deity_multiplier > 1 then
     local deity_label = nil
@@ -146,10 +150,13 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
     end
   end
 
-  local total_multiplier = breakdown.count * deity_multiplier
   local multiplier_text = nil
   if #breakdown_parts > 0 then
-    multiplier_text = tile.name .. " 租金 ×" .. tostring(total_multiplier) .. "（" .. table.concat(breakdown_parts, "，") .. "）"
+    if deity_multiplier > 1 then
+      multiplier_text = tile.name .. " 租金 ×" .. tostring(deity_multiplier) .. "（" .. table.concat(breakdown_parts, "，") .. "）"
+    else
+      multiplier_text = tile.name .. " 租金（" .. table.concat(breakdown_parts, "，") .. "）"
+    end
   end
 
   local result = _build_land_event("rent_paid", {

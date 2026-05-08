@@ -172,9 +172,8 @@ describe("domain land rent contiguous behavior", function()
     assert.is_truthy(result and result.payload, "missing payload")
     local multiplier_text = result.payload.multiplier_text
     assert.is_truthy(multiplier_text, "multiplier_text should be present when count > 1")
-    local needle = "连片 ×" .. tostring(#strip)
-    assert.is_true(multiplier_text:find(needle, 1, true) ~= nil,
-      "multiplier_text should mention contiguous multiplier when count > 1, got: " .. multiplier_text)
+    assert.is_true(multiplier_text:find("连片 %d") ~= nil,
+      "multiplier_text should show contiguous rent breakdown when count > 1, got: " .. multiplier_text)
   end)
 
   it("rent_paid multiplier_text is nil when count == 1 and no deity", function()

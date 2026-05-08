@@ -11,6 +11,7 @@ function rent_math.compute_contiguous_rent(start_tile_id, owner_id, neighbors_by
   local queue = { start_tile_id }
   local head = 1
   local component = {}
+  local rents = {}
 
   while head <= #queue do
     local tile_id = queue[head]
@@ -18,8 +19,10 @@ function rent_math.compute_contiguous_rent(start_tile_id, owner_id, neighbors_by
 
     local current_owner, current_rent = resolve_owner_and_rent(tile_id)
     if current_owner == owner_id then
+      local r = current_rent or 0
       component[#component + 1] = tile_id
-      rent_sum = rent_sum + (current_rent or 0)
+      rents[#rents + 1] = r
+      rent_sum = rent_sum + r
       local neighbors = neighbors_by_id[tile_id]
       assert(neighbors ~= nil, "missing neighbors: " .. tostring(tile_id))
       for _, next_id in ipairs(neighbors) do
@@ -31,7 +34,7 @@ function rent_math.compute_contiguous_rent(start_tile_id, owner_id, neighbors_by
     end
   end
 
-  return rent_sum, component
+  return rent_sum, component, rents
 end
 
 return rent_math
