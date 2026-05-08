@@ -20,6 +20,8 @@ local INV = {
     angel         = { [2019] = 1 },  -- 金豆
 }
 
+local constants = require("src.config.content.constants")
+
 local TILE = {
     start = 35, hospital = 36, mountain = 37, market = 39, chance_inner = 40, item_inner = 44,
 }
@@ -30,7 +32,7 @@ local function _merge_inv(...)
     return out
 end
 
-local function _deity(t, r) return { deity = { type = t, remaining = r or 5 } } end
+local function _deity(t, r) return { deity = { type = t, remaining = r or constants.deity_duration_turns } } end
 
 local function _mk_players(default_cash, p1_tile, overrides)
     local players = {
