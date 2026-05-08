@@ -29,10 +29,10 @@ local function _fail_popup(game, stealer, target)
 end
 
 function steal.steal_item_at_index(game, player, target, item_idx)
-  inventory.consume(player, item_ids.steal)
   if inventory.count(target) == 0 then
     return _fail_popup(game, player, target)
   end
+  inventory.consume(player, item_ids.steal)
   local stolen = inventory.remove_by_index(target, item_idx or 1)
   assert(stolen ~= nil, "missing stolen item")
   assert(inventory.add(player, stolen) == true, "add stolen item failed")

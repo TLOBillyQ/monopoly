@@ -1931,7 +1931,7 @@ describe("item", function()
       _assert_eq(res and res.intent, nil, "steal failure should not return popup intent")
     end)
 
-    _assert_eq(stealer.inventory:count(), 0, "steal failure should still consume steal card")
+    _assert_eq(stealer.inventory:count(), 1, "steal failure should NOT consume steal card")
     _assert_eq(#popups, 0, "steal failure should not push popup")
     assert(#tips >= 1, "steal failure should show tip")
     assert(string.find(tips[1], stealer.name, 1, true), "steal failure tip should include stealer name")
