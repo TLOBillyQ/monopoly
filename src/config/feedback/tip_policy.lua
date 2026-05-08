@@ -4,8 +4,10 @@ local M = {}
 
 M[event_kinds.dice_roll] = { tip = false }
 M[event_kinds.rent_paid] = { tip = true }
-M[event_kinds.tax_paid] = { tip = false }
-M[event_kinds.medical_fee] = { tip = false }
+M[event_kinds.tax_paid] = { tip = true }
+M[event_kinds.medical_fee] = { tip = true }
+M[event_kinds.hospital_stay] = { tip = true }
+M[event_kinds.mountain_stay] = { tip = true }
 M[event_kinds.land_purchase] = { tip = true }
 M[event_kinds.land_upgrade] = { tip = true }
 M[event_kinds.transit] = { tip = false }
