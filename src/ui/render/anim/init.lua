@@ -22,6 +22,11 @@ local start_delays = {
   monster = timing.demolish_effect_start_delay_seconds or 0.2,
 }
 local user_tip_whitelist = {
+  monster = true,
+  missile = true,
+  item_target_player = true,
+  teleport_effect = true,
+  clear_obstacles = true,
 }
 local roll_spin_seconds = timing.dice_spin_seconds or 1.0
 local roll_face_hold_seconds = timing.dice_face_hold_seconds or 1.0
