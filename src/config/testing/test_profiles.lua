@@ -315,13 +315,25 @@ local profiles = {
         },
     },
 
+    combo_steal_vs_angel = {
+        group = "interrupt_resume",
+        covers = { "steal", "angel", "immunity", "target_filter" },
+        bootstrap = {
+            -- p1 持偷窃卡 + 遥控骰子，p2 天使附身；期望：p2 不出现在偷窃目标列表中
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = _merge_inv(INV.steal, INV.remote_dice) },
+                [2] = { position_tile_id = 8, statuses = _deity("angel") },
+            }),
+        },
+    },
+
     combo_angel_vs_hospital_landing = {
         group = "relocation_status",
         covers = { "angel", "immunity", "hospital_landing" },
         bootstrap = {
-            -- p1 天使附身 + 遥控骰子，从 35 出发走 1 步落在医院格 36
+            -- p1 天使附身 + 遥控骰子，从 6 出发走 1 步落在医院格 36
             -- 期望：不住院、不扣医药费，显示天使保护反馈
-            players = _mk_players(120000, TILE.start, {
+            players = _mk_players(120000, 6, {
                 [1] = { item_counts = INV.remote_dice, statuses = _deity("angel") },
             }),
         },
@@ -331,9 +343,9 @@ local profiles = {
         group = "relocation_status",
         covers = { "angel", "immunity", "mountain_landing" },
         bootstrap = {
-            -- p1 天使附身 + 遥控骰子，从 36 出发走 1 步落在深山格 37
+            -- p1 天使附身 + 遥控骰子，从 12 出发走 1 步落在深山格 37
             -- 期望：不迷路、不停留，显示天使保护反馈
-            players = _mk_players(120000, TILE.hospital, {
+            players = _mk_players(120000, 12, {
                 [1] = { item_counts = INV.remote_dice, statuses = _deity("angel") },
             }),
         },
