@@ -362,6 +362,23 @@ local profiles = {
         },
     },
 
+    market_sold_out = {
+        group = "commerce_paid",
+        covers = { "market_entry", "sold_out", "shop_tab" },
+        bootstrap = {
+            players = _mk_players(120000, 27, {
+                [1] = { item_counts = { [2002] = 2 } },
+            }),
+            market_limits = {
+                [2003] = 0,  -- 骰子加倍卡
+                [2002] = 0,  -- 遥控骰子卡
+                [2005] = 0,  -- 地雷卡
+                [2012] = 0,  -- 流放卡
+                [2004] = 0,  -- 路障卡
+            },
+        },
+    },
+
     edge_bankruptcy_eliminated = {
         group = "economy_core",
         value = "edge",

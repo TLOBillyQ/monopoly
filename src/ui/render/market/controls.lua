@@ -98,6 +98,20 @@ local function _set_page_arrow(ui, button, label, visible, text)
   _set_control_text(ui, label, visible and text or "")
 end
 
+local function _refresh_tab_gray(ui, active_tab)
+  local item_active = active_tab == "item"
+  local skin_active = active_tab == "skin"
+  ui_controls.set_controls_state(ui,
+    { market_layout.tab_item_gray, market_layout.tab_item_gray_label },
+    { visible = not item_active, touch_enabled = false })
+  ui_controls.set_controls_state(ui,
+    { market_layout.tab_skin_gray, market_layout.tab_skin_gray_label },
+    { visible = not skin_active, touch_enabled = false })
+  ui_controls.set_controls_state(ui,
+    { market_layout.tab_mount_gray, market_layout.tab_mount_gray_label },
+    { visible = true, touch_enabled = false })
+end
+
 function market_view_controls.refresh_market_controls(ui, market)
   local page_index = _resolve_market_page_value(market, "page_index")
   local page_count = _resolve_market_page_value(market, "page_count")
@@ -106,6 +120,8 @@ function market_view_controls.refresh_market_controls(ui, market)
   _set_page_arrow(ui, market_layout.page_prev, market_layout.page_prev_label, prev_visible, market_layout.page_prev_text)
   _set_page_arrow(ui, market_layout.page_next, market_layout.page_next_label, next_visible, market_layout.page_next_text)
   ui_controls.set_controls_state(ui, { market_layout.tab_item, market_layout.tab_skin }, { visible = true, touch_enabled = true })
+  ui_controls.set_control_state(ui, market_layout.tab_mount, { visible = true, touch_enabled = false })
+  _refresh_tab_gray(ui, market.active_tab)
 end
 
 function market_view_controls.apply_market_common_controls(ui, market, confirm_enabled)
@@ -121,6 +137,13 @@ local _CLOSE_PANEL_CONTROLS = {
   market_layout.page_next_label,
   market_layout.tab_item,
   market_layout.tab_skin,
+  market_layout.tab_mount,
+  market_layout.tab_item_gray,
+  market_layout.tab_item_gray_label,
+  market_layout.tab_skin_gray,
+  market_layout.tab_skin_gray_label,
+  market_layout.tab_mount_gray,
+  market_layout.tab_mount_gray_label,
 }
 
 function market_view_controls.close_market_panel(state, deps)

@@ -227,6 +227,23 @@ local function _apply_turn_bootstrap(game, cfg)
   game.turn.current_player_index = resolved
 end
 
+local function _apply_market_limits_bootstrap(game, cfg)
+  local limits = cfg.market_limits
+  if type(limits) ~= "table" then
+    return
+  end
+  for raw_product_id, raw_remaining in pairs(limits) do
+    local product_id = number_utils.to_integer(raw_product_id)
+    assert(product_id ~= nil, "invalid market_limits product_id: " .. tostring(raw_product_id))
+    assert(game.market_limits[product_id] ~= nil,
+      "market_limits product_id not in catalog: " .. tostring(product_id))
+    local remaining = number_utils.to_integer(raw_remaining)
+    assert(remaining ~= nil and remaining >= 0,
+      "market_limits remaining must be non-negative integer, got: " .. tostring(raw_remaining))
+    game.market_limits[product_id] = remaining
+  end
+end
+
 function bootstrap.apply_bootstrap(game, cfg)
   assert(game ~= nil, "missing game")
   bootstrap.reset_render_bootstrap(game)
@@ -237,6 +254,7 @@ function bootstrap.apply_bootstrap(game, cfg)
   _apply_tile_bootstrap(game, cfg.tiles)
   _apply_overlay_bootstrap(game, cfg.overlays)
   _apply_turn_bootstrap(game, cfg)
+  _apply_market_limits_bootstrap(game, cfg)
 end
 
 return bootstrap
