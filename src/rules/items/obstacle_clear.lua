@@ -13,6 +13,8 @@ local function _new_state(distance, context)
   assert(context ~= nil, "missing context")
   return {
     cleared = 0,
+    roadblock_cleared = 0,
+    mine_cleared = 0,
     cleared_map = {},
     obstacle_snapshot = {},
     branches = {},
@@ -51,11 +53,13 @@ local function _visit_tile(game, board, state, tile_id, tile_index)
         game:clear_roadblock(tile_index)
         state.cleared_map[tile_index] = true
         state.cleared = state.cleared + 1
+        state.roadblock_cleared = state.roadblock_cleared + 1
       end
       if had_mine then
         game:clear_mine(tile_index)
         state.cleared_map[tile_index] = true
         state.cleared = state.cleared + 1
+        state.mine_cleared = state.mine_cleared + 1
       end
     end
   end
@@ -74,8 +78,11 @@ local function _resolve_initial_dirs(start_neigh, facing)
   if facing == nil then
     return _get_sorted_forward_dirs(start_neigh, nil)
   end
-  local fwd = start_neigh[facing]
-  return fwd and { facing } or {}
+  if start_neigh[facing] then
+    return { facing }
+  end
+  local back_dir = direction_constants.opposite[facing]
+  return _get_sorted_forward_dirs(start_neigh, back_dir)
 end
 
 local function _push_branch_or_seed_to_stack(state, is_multi_start, stack, first_id, first_path, first_neigh, opposite, dir)
@@ -193,6 +200,8 @@ local function _queue_anim(game, player, state)
     kind = "clear_obstacles",
     player_id = player.id,
     branches = state.branches,
+    roadblock_cleared = state.roadblock_cleared,
+    mine_cleared = state.mine_cleared,
     duration = duration,
   })
   if queued then

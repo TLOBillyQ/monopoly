@@ -203,9 +203,6 @@ function overlay.play_overlay(state, anim, duration, opts)
     local group_id = prefab.group["地雷"]
     local unit_id = prefab.unit and prefab.unit["地雷"] or nil
     if not group_id and not unit_id then
-      if opts and opts.show_tip then
-        opts.show_tip("缺少地雷 prefab，跳过生成", 1.5)
-      end
       logger.warn("[Eggy]", "地雷 prefab 缺失，已跳过生成")
       return
     end
@@ -228,10 +225,6 @@ end
 
 function overlay.play_clear_obstacles(state, anim, duration, opts)
   local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
-  local branches = anim.branches or {}
-  if #branches == 0 then
-    return
-  end
   local robot_id = prefab.unit and prefab.unit["清障机器人"] or nil
   if robot_id == nil then
     logger.warn("[Eggy]", "清障机器人 prefab 缺失，已跳过生成")
@@ -240,6 +233,14 @@ function overlay.play_clear_obstacles(state, anim, duration, opts)
   local player_pos = compute.overlay_pos_for_player(state, assert(anim.player_id, "missing player_id"), robot_y_offset)
   local hr = _resolve_hr(_deps(state))
   local schedule = opts.schedule or hr.schedule
+  local branches = anim.branches or {}
+  if #branches == 0 then
+    local root_handle = _spawn_robot(hr, robot_id, player_pos)
+    _schedule_step(schedule, duration, function()
+      _destroy_robot(hr, robot_id, root_handle)
+    end)
+    return
+  end
   local step_duration = _resolve_step_duration(branches, duration)
   local branch_tree = _build_branch_tree(branches)
   if type(hr.prewarm_unit) == "function" then

@@ -7,11 +7,15 @@ describe("presentation.action_anim_tip_text", function()
 
     local target_copy = tip_text.build(state, {
       kind = "item_target_player",
+      player_id = 1,
       item_name = "导弹卡",
       target_player_id = 1,
     })
     local clear_copy = tip_text.build(state, {
       kind = "clear_obstacles",
+      player_id = 1,
+      roadblock_cleared = 1,
+      mine_cleared = 1,
       branches = {
         {
           { tile_index = 3, has_obstacle = true },
@@ -24,10 +28,10 @@ describe("presentation.action_anim_tip_text", function()
       },
     })
 
-    assert(target_copy == "目标道具：导弹卡 -> 玩家 测试玩家",
+    assert(target_copy == "测试玩家 对 测试玩家 使用了 导弹卡",
       "item_target_player tip should resolve runtime player name")
-    assert(clear_copy == "清障动画：清除数量 2",
-      "clear_obstacles tip should count unique obstacle tiles from branch payload")
+    assert(clear_copy == "测试玩家 的清障机器人出动，清除了 1 个路障、1 个地雷",
+      "clear_obstacles tip should list obstacle types from anim payload")
   end)
 
   it("anim_tip_text_covers_roll_tile_and_cash_variants", function()
@@ -50,11 +54,13 @@ describe("presentation.action_anim_tip_text", function()
     })
     local move_copy = tip_text.build(state, {
       kind = "move_effect",
+      player_id = 1,
       from_index = 1,
       to_index = 2,
     })
     local teleport_copy = tip_text.build(state, {
       kind = "teleport_effect",
+      player_id = 1,
       from_index = 1,
       to_index = 2,
     })
@@ -67,8 +73,8 @@ describe("presentation.action_anim_tip_text", function()
     assert(focus_copy == "直接使用焦点文案", "focus_text should override kind-specific copy")
     assert(roll_copy == "投骰动画：2,6 => 8", "roll tip should join rolls and total")
     assert(roadblock_copy == "路障动画：放置在 测试地块", "roadblock tip should resolve tile name")
-    assert(move_copy == "位移动画：从 测试地块 到 测试地块", "move_effect tip should resolve both tile names")
-    assert(teleport_copy == "位移动画：从 测试地块 到 测试地块", "teleport_effect tip should reuse move copy")
+    assert(move_copy == "测试玩家 被传送到 测试地块", "move_effect tip should resolve player and dest tile")
+    assert(teleport_copy == "测试玩家 被传送到 测试地块", "teleport_effect tip should reuse move copy")
     assert(cash_copy == "收钱动画：测试玩家 +500", "cash_receive tip should resolve player name and amount")
   end)
 
@@ -96,10 +102,12 @@ describe("presentation.action_anim_tip_text", function()
     })
     local missile_copy = tip_text.build(state, {
       kind = "missile",
+      player_id = 1,
       tile_index = 999,
     })
     local monster_copy = tip_text.build(state, {
       kind = "monster",
+      player_id = 1,
       tile_index = 999,
     })
     local upgrade_copy = tip_text.build(state, {
@@ -113,8 +121,8 @@ describe("presentation.action_anim_tip_text", function()
     assert(chance_copy == "机会卡展示：全员发钱", "chance tip should prefer card_desc")
     assert(item_use_copy == "道具生效：freeze_card", "item_use tip should fall back to item_id")
     assert(mine_copy == "地雷动画：埋设在 未知地块", "mine tip should fall back to unknown tile name")
-    assert(missile_copy == "导弹动画：轰炸 未知地块", "missile tip should fall back to unknown tile name")
-    assert(monster_copy == "怪兽动画：破坏 未知地块", "monster tip should fall back to unknown tile name")
+    assert(missile_copy == "测试玩家 发射导弹轰炸 未知地块", "missile tip should fall back to unknown tile name")
+    assert(monster_copy == "测试玩家 释放怪兽攻击 未知地块", "monster tip should fall back to unknown tile name")
     assert(upgrade_copy == "加盖动画：未知地块", "upgrade_land tip should fall back to unknown tile name")
     assert(missing_copy == nil, "unknown kind should not generate tip copy")
   end)

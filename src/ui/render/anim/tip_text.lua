@@ -44,23 +44,21 @@ local function _build_tile_text(prefix)
   end
 end
 
-local function _count_cleared_obstacle_tiles(anim)
-  local seen = {}
-  local count = 0
-  for _, branch in ipairs(anim.branches or {}) do
-    for _, entry in ipairs(branch or {}) do
-      if entry.has_obstacle == true and entry.tile_index ~= nil and not seen[entry.tile_index] then
-        seen[entry.tile_index] = true
-        count = count + 1
-      end
-    end
+local function _build_clear_obstacles_text(state, anim)
+  local player_name = _resolve_player_name(state, anim.player_id)
+  local rb = anim.roadblock_cleared or 0
+  local mn = anim.mine_cleared or 0
+  local parts = {}
+  if rb > 0 then
+    parts[#parts + 1] = tostring(rb) .. " 个路障"
   end
-  return count
-end
-
-local function _build_clear_obstacles_text(_, anim)
-  local count = _count_cleared_obstacle_tiles(anim)
-  return "清障动画：清除数量 " .. tostring(count)
+  if mn > 0 then
+    parts[#parts + 1] = tostring(mn) .. " 个地雷"
+  end
+  if #parts == 0 then
+    return player_name .. " 的清障机器人出动，前方没有障碍"
+  end
+  return player_name .. " 的清障机器人出动，清除了 " .. table.concat(parts, "、")
 end
 
 local function _build_chance_text(_, anim)
@@ -72,14 +70,14 @@ local function _build_item_use_text(_, anim)
 end
 
 local function _build_item_target_player_text(state, anim)
+  local player_name = _resolve_player_name(state, anim.player_id)
   local target_name = _resolve_player_name(state, anim.target_player_id)
-  return "目标道具：" .. _resolve_item_name(anim) .. " -> 玩家 " .. target_name
+  return player_name .. " 对 " .. target_name .. " 使用了 " .. _resolve_item_name(anim)
 end
 
 local function _build_move_effect_text(state, anim)
-  return "位移动画：从 "
-    .. _resolve_tile_name(state, anim.from_index)
-    .. " 到 "
+  local player_name = _resolve_player_name(state, anim.player_id)
+  return player_name .. " 被传送到 "
     .. _resolve_tile_name(state, anim.to_index)
 end
 
@@ -101,8 +99,14 @@ local TIP_BUILDERS = {
   roll = _build_roll_text,
   roadblock = _build_tile_text("路障动画：放置在 "),
   mine = _build_tile_text("地雷动画：埋设在 "),
-  missile = _build_tile_text("导弹动画：轰炸 "),
-  monster = _build_tile_text("怪兽动画：破坏 "),
+  missile = function(state, anim)
+    local player_name = _resolve_player_name(state, anim.player_id)
+    return player_name .. " 发射导弹轰炸 " .. _resolve_tile_name(state, anim.tile_index)
+  end,
+  monster = function(state, anim)
+    local player_name = _resolve_player_name(state, anim.player_id)
+    return player_name .. " 释放怪兽攻击 " .. _resolve_tile_name(state, anim.tile_index)
+  end,
   clear_obstacles = _build_clear_obstacles_text,
   upgrade_land = _build_tile_text("加盖动画："),
   chance = _build_chance_text,
