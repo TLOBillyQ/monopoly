@@ -137,7 +137,11 @@ local function _resolve_remaining_value(player, remaining_field)
   end
   if remaining_field == "deity_remaining" then
     local deity = player.status and player.status.deity
-    return deity and deity.remaining or 0
+    if not deity then return 0 end
+    local remaining = deity.remaining or 0
+    local cap = player.deity_duration_turns
+    if cap and remaining > cap then return cap end
+    return remaining
   end
   return 0
 end

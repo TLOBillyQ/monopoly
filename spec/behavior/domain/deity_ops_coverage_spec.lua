@@ -110,7 +110,7 @@ describe("domain deity ops coverage", function()
     local player = _make_player()
     deity_ops.set_player_deity(game, player, "angel", 5)
     _assert_eq(player.status.deity.type, "angel", "deity type should be angel")
-    _assert_eq(player.status.deity.remaining, 5, "deity remaining should be 5")
+    _assert_eq(player.status.deity.remaining, 6, "internal remaining is duration+1")
     _assert_eq(game.dirty.players, true, "dirty.players should be set")
   end)
 
@@ -118,7 +118,7 @@ describe("domain deity ops coverage", function()
     local game = _make_game()
     local player = _make_player({ deity_duration_turns = 4 })
     deity_ops.set_player_deity(game, player, "devil", nil)
-    _assert_eq(player.status.deity.remaining, 4, "should use player.deity_duration_turns when no duration provided")
+    _assert_eq(player.status.deity.remaining, 5, "internal remaining is deity_duration_turns+1")
   end)
 
   it("set_player_deity emits event", function()
@@ -172,5 +172,29 @@ describe("domain deity ops coverage", function()
     local player = _make_player({ status = { deity = { type = "angel", remaining = 2 } } })
     deity_ops.tick_player_deity(game, player)
     _assert_eq(game.dirty.players, true, "dirty.players should be set when remaining > 0 after tick")
+  end)
+
+  it("activation-turn tick brings remaining to nominal duration", function()
+    local game = _make_game()
+    game.clear_player_deity = function(self, p) deity_ops.clear_player_deity(self, p) end
+    local player = _make_player({ deity_duration_turns = 10 })
+    deity_ops.set_player_deity(game, player, "rich", nil)
+    deity_ops.tick_player_deity(game, player)
+    _assert_eq(player.status.deity.remaining, 10, "after activation-turn tick, remaining should equal duration")
+    _assert_eq(player.status.deity.type, "rich", "deity type should persist")
+  end)
+
+  it("deity lasts exactly N effective turns after activation", function()
+    local game = _make_game()
+    game.clear_player_deity = function(self, p) deity_ops.clear_player_deity(self, p) end
+    local duration = 5
+    local player = _make_player({ deity_duration_turns = duration })
+    deity_ops.set_player_deity(game, player, "angel", duration)
+    for _ = 1, duration do
+      deity_ops.tick_player_deity(game, player)
+    end
+    _assert_eq(player.status.deity.remaining, 1, "after N ticks (incl activation), remaining=1")
+    deity_ops.tick_player_deity(game, player)
+    _assert_eq(player.status.deity.type, "", "deity cleared after N+1 total ticks")
   end)
 end)

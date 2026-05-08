@@ -47,18 +47,19 @@ end
 
 function deity_ops.set_player_deity(self, player, name, duration)
   assert(type(name) == "string" and name ~= "", "deity name must be non-empty string")
+  if duration ~= nil then assert(duration > 0, "explicit duration must be positive") end
+  local actual_duration = duration or player.deity_duration_turns
   local status = common.player_status_table(player)
   status.deity = status.deity or { type = "", remaining = 0 }
   status.deity.type = name
-  status.deity.remaining = duration or player.deity_duration_turns
-  status.deity.skip_next_tick = true
-  if duration ~= nil then assert(duration > 0, "explicit duration must be positive") end
+  -- +1 so the activation-turn tick brings remaining to actual_duration.
+  status.deity.remaining = actual_duration + 1
   common.mark_players(self)
   monopoly_event.emit(monopoly_event.feedback.deity_applied, {
     player = player,
     player_id = player and player.id or nil,
     deity_type = name,
-    remaining = status.deity.remaining,
+    remaining = actual_duration,
   })
 end
 
@@ -74,7 +75,6 @@ function deity_ops.transfer_deity(self, src, dst)
     dst_status.deity = dst_status.deity or { type = "", remaining = 0 }
     dst_status.deity.type = src_deity.type
     dst_status.deity.remaining = src_deity.remaining
-    dst_status.deity.skip_next_tick = nil
     common.mark_players(self)
     monopoly_event.emit(monopoly_event.feedback.deity_applied, {
       player = dst,
@@ -97,10 +97,6 @@ function deity_ops.tick_player_deity(self, player)
   status.deity = status.deity or { type = "", remaining = 0 }
   local deity = status.deity
   if deity.remaining <= 0 then
-    return
-  end
-  if deity.skip_next_tick then
-    deity.skip_next_tick = nil
     return
   end
   deity.remaining = deity.remaining - 1
