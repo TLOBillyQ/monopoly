@@ -26,24 +26,21 @@ local function _clamp_page(page_index, page_count)
 end
 
 local function _build_tab_entries(player, game, active_tab)
+  local merged = {}
   local buyable = {}
-  local unbuyable = {}
   for _, entry in ipairs(eligibility.sorted_entries()) do
     if entry.kind == active_tab
         and context.entry_market_enabled(entry) then
-      if eligibility.can_buy_entry(game, player, entry) then
+      local can_buy = eligibility.can_buy_entry(game, player, entry)
+      if can_buy then
         buyable[#buyable + 1] = entry
-      else
-        unbuyable[#unbuyable + 1] = entry
       end
+      merged[#merged + 1] = {
+        entry = entry,
+        can_buy = can_buy,
+        sold_out = eligibility.is_sold_out(game, entry),
+      }
     end
-  end
-  local merged = {}
-  for _, entry in ipairs(buyable) do
-    merged[#merged + 1] = { entry = entry, can_buy = true, sold_out = eligibility.is_sold_out(game, entry) }
-  end
-  for _, entry in ipairs(unbuyable) do
-    merged[#merged + 1] = { entry = entry, can_buy = false, sold_out = eligibility.is_sold_out(game, entry) }
   end
   return merged, buyable
 end
