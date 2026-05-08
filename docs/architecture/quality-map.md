@@ -21,12 +21,13 @@ last_verified: 2026-05-04
 | `busted --run behavior` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 串行约 `5s`，并行约 `2.5s` |
 | `busted --run behavior-smoke` | 行为冒烟 | 核心回合流程有没有坏（turn/runtime/turn_flow） | 约 `0.9s` |
 | `lua spec/support/behavior_parallel.lua` | 行为回归（并行） | 同 behavior，3 worker LPT 调度 | 约 `2.5s` |
-| `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 目标 warm `<5s`，cold `<8s` |
-| `busted --run tooling` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 本机实测：`111s-116s` |
+| `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 约 `10s` |
+| `busted --run tooling` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 串行约 `45s`，并行约 `26s` |
 | `busted --run guards` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
 | `lua tools/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
 | `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构；`crap.lua summary` 输出 src/ 行覆盖率三层聚合（见 `crap_report.md#覆盖率聚合`） | 约 `9s-10s` |
 | `lua tools/quality/mutate.lua src/foo.lua --scan` | 单文件变异测试 | 这个文件现有测试是否真能杀掉简单错误 | 目标文件和 lane 差异很大；默认先按 `behavior` 估算 |
+| `lua tools/quality/verify_full.lua` | 管道编排 | 一条命令跑全套质量车道（lint→encoding→behavior→contract/guards/arch→crap→coverage） | 不含 tooling 约 `30s`，含 tooling 约 `40s` |
 
 建议把它们分成两层理解：
 
@@ -39,11 +40,11 @@ last_verified: 2026-05-04
 |------|----------|------|
 | `behavior` | `147` 个 suite，`2033` 个 case | 其中部分 case 在特定 mode 下禁用 |
 | `behavior-smoke` | `26` 个 suite，`217` 个 case | turn/runtime/turn_flow/endgame/contract |
-| `contract` | `13` 个 suite，`68` 个 case | 默认高频快车道，含 tooling 调度纯逻辑契约 |
-| `tooling` | `6` 个 suite，`31` 个 case | 默认 auto；可用 `--workers 1` 退回串行调试 |
-| `guard` | `4` 个 script | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard` |
+| `contract` | `23` 个 suite，`150` 个 case | 默认高频快车道，含 tooling 调度纯逻辑契约 |
+| `tooling` | `12` 个 suite，`80` 个 case | 并行 3 worker 约 `26s`；`MONO_BEHAVIOR_WORKERS=1` 退回串行 |
+| `guard` | `6` 个 script，`27` 个 case | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`、`fixed_type_guard`、`repo_hygiene` |
 | `arch_view` | 扫描 `src/**/*.lua` | 不扫 `tests/`、`tools/`、`vendor/` |
-| `crap` | 当前 behavior lane 分析 `2588` 个函数 | 只给 `src/**/*.lua` 打分 |
+| `crap` | 当前 behavior lane 分析 `3050` 个函数 | 只给 `src/**/*.lua` 打分 |
 | `mutate4lua` | 每次只盯 `1` 个 `src/**/*.lua` 文件 | 诊断工具，不进默认回归 |
 
 ## 每条入口具体看什么
@@ -81,7 +82,8 @@ last_verified: 2026-05-04
 - 关注点：真实 `mutate --index-suites`、`arch_view scan`、`arch_view viewer --in-json` 这类工具链导出
 - 适用时机：改了质量工具包装层、导出流程、viewer 产物或 suite indexing 逻辑，再显式跑它
 - 特点：故意和 `contract` 分开，避免慢工具 smoke 拖垮高频契约回归；真实 `arch_view analyze(...)` 常驻覆盖留在 `guard` 的 `arch_view_guard`
-- 运行方式：`busted --run tooling`
+- 运行方式：`busted --run tooling`（串行）或 `lua spec/support/behavior_parallel.lua --root spec/tooling`（并行）
+- 并行执行：复用 `behavior_parallel.lua` 基础设施，3 worker LPT 调度，约 `26s`（串行约 `45s`）
 - 调度策略：显式并发时按 `suite.module_name` 命中的固定 cost hint 做 weighted LPT；未注册的新 suite 回退到 `#tests`
 - 当前拆分：
   - `arch_view_snapshot_tooling_contract`
@@ -211,16 +213,10 @@ lua tools/quality/arch.lua check
 ### 工具链 smoke
 
 ```sh
-busted --run tooling
+lua spec/support/behavior_parallel.lua --root spec/tooling
 ```
 
-适合改 `tools/quality/*` 包装层、`vendor/arch_view` / `vendor/mutate4lua` 对接逻辑之后跑。它是慢车道，不建议日常每次都带。
-
-当前本机（Windows，2026-03-16）外层墙钟实测：
-
-- `busted --run tooling`：约 `111s-116s`
-
-也就是说，“单进程 `index-suites` 快路径”已经把串行基线从原先约 `190s-210s` 压到了约 `111s`；继续尝试默认多 worker 后，这台机器上仍然存在明显争用，因此当前 auto 默认直接解析为 `1`，把 weighted LPT 调度保留给显式 `--workers N` 场景。
+适合改 `tools/quality/*` 包装层、`vendor/arch_view` / `vendor/mutate4lua` 对接逻辑之后跑。并行约 `26s`（串行 `busted --run tooling` 约 `45s`）。
 
 ### 热点分析
 
@@ -243,14 +239,18 @@ lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --since-last-ru
 ### 完整质量回归
 
 ```sh
-lua spec/support/behavior_parallel.lua
-~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract
-busted --run guards
-lua tools/quality/arch.lua check
-lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json
+lua tools/quality/verify_full.lua
 ```
 
-当前机器按经验可按 `10s-12s` 预估（behavior 并行约 2.5s）；如果额外补跑 `tooling`，请按上面的 `~111s-116s` 另算，不再适合并入”日常默认整套回归”。
+管道编排器一条命令跑全套：lint → encoding → behavior（并行）→ contract/guards/arch（并行）→ crap → coverage。约 `30s`。
+
+如需追加工具链 smoke：
+
+```sh
+lua tools/quality/verify_full.lua --tooling
+```
+
+tooling 并入并行阶段，总时间约 `40s`。`--no-coverage` 可跳过 lua5.5 覆盖率收集。
 
 ## 使用上的默认建议
 

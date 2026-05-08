@@ -92,8 +92,8 @@ local function _resolve_workers(file_count)
   return math.min(parsed, file_count)
 end
 
-local function _worker_paths(lane_index)
-  local prefix = "behavior_w" .. tostring(lane_index)
+local function _worker_paths(label, lane_index)
+  local prefix = label .. "_w" .. tostring(lane_index)
   return {
     output_file = common.make_temp_path(prefix .. "_output", ".txt"),
     status_file = common.make_temp_path(prefix .. "_status", ".txt"),
@@ -204,7 +204,7 @@ local function _wait(workers)
   end
 end
 
-local function _print_summary(merged, elapsed, worker_count)
+local function _print_summary(merged, elapsed, worker_count, label)
   if next(merged.warn_counts) then
     io.write("# warn summary:\n")
     local rows = {}
@@ -232,8 +232,8 @@ local function _print_summary(merged, elapsed, worker_count)
 
   local status = merged.failed > 0 and "FAIL" or "PASS"
   io.write(string.format(
-    "\n[behavior-parallel] %s  %d passed / %d failed  workers=%d  %.1fs\n",
-    status, merged.passed, merged.failed, worker_count, elapsed
+    "\n[%s-parallel] %s  %d passed / %d failed  workers=%d  %.1fs\n",
+    label, status, merged.passed, merged.failed, worker_count, elapsed
   ))
   io.flush()
 end
@@ -241,25 +241,34 @@ end
 function M.run(opts)
   opts = opts or {}
   local root = opts.root or _BEHAVIOR_ROOT
+  local label = opts.label or root:match("([^/]+)$") or "parallel"
 
   local files = _discover_spec_files(root)
   if #files == 0 then
-    io.write("[behavior-parallel] no spec files found in " .. root .. "\n")
+    io.write("[" .. label .. "-parallel] no spec files found in " .. root .. "\n")
     return { passed = 0, failed = 0, ok = true }
   end
 
   local worker_count = _resolve_workers(#files)
   local env_label = os.getenv("MONO_BEHAVIOR_WORKERS") or "auto"
   io.write(string.format(
-    "[behavior-parallel] files=%d workers=%s resolved=%d scheduler=lpt\n",
-    #files, env_label, worker_count
+    "[%s-parallel] files=%d workers=%s resolved=%d scheduler=lpt\n",
+    label, #files, env_label, worker_count
   ))
   io.flush()
 
   if worker_count <= 1 then
-    io.write("[behavior-parallel] single worker, falling back to busted --run behavior\n")
+    io.write("[" .. label .. "-parallel] single worker, running serial\n")
     io.flush()
-    local ok, _, code = os.execute("busted --run behavior")
+    local file_args = {}
+    for _, f in ipairs(files) do
+      file_args[#file_args + 1] = common.shell_quote(f)
+    end
+    local cmd = "busted --helper=spec/helper.lua"
+      .. " --output=spec/log_warns_handler.lua"
+      .. " --pattern=_spec"
+      .. " -- " .. table.concat(file_args, " ")
+    local ok, _, code = os.execute(cmd)
     local success = ok == true and (code == nil or code == 0)
     if not success and number_utils.is_numeric(code) then
       success = code == 0
@@ -273,7 +282,7 @@ function M.run(opts)
   local workers = {}
   for _, lane in ipairs(lanes) do
     if #lane.files > 0 then
-      local paths = _worker_paths(lane.index)
+      local paths = _worker_paths(label, lane.index)
       local ok, err = _write_launcher(lane, paths)
       if not ok then
         _cleanup(workers)
@@ -333,13 +342,13 @@ function M.run(opts)
   local elapsed = math.max(0, os.time() - started_at)
 
   if #merged.failure_lines > 0 then
-    io.write("\n[behavior-parallel] failures:\n")
+    io.write("\n[" .. label .. "-parallel] failures:\n")
     for _, line in ipairs(merged.failure_lines) do
       io.write("  " .. line .. "\n")
     end
   end
 
-  _print_summary(merged, elapsed, #workers)
+  _print_summary(merged, elapsed, #workers, label)
 
   return {
     passed = merged.passed,
@@ -357,7 +366,15 @@ M._test_support = {
 }
 
 if arg and arg[0] and arg[0]:find("behavior_parallel", 1, true) then
-  local result = M.run()
+  local cli_opts = {}
+  for i = 1, #arg do
+    if arg[i] == "--root" and arg[i + 1] then
+      cli_opts.root = arg[i + 1]
+    elseif arg[i] == "--label" and arg[i + 1] then
+      cli_opts.label = arg[i + 1]
+    end
+  end
+  local result = M.run(cli_opts)
   os.exit(result.ok and 0 or 1)
 end
 
