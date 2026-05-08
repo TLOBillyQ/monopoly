@@ -52,6 +52,10 @@ end
 function market_view_controls.set_market_container_active(ui, active)
   ui_controls.set_control_state(ui, market_layout.container, { visible = active })
   ui.market_active = active == true
+  if not active then
+    ui_controls.set_controls_state(ui, market_layout.sold_out_badges, { visible = false, touch_enabled = false })
+    ui_controls.set_controls_state(ui, market_layout.sold_out_labels, { visible = false, touch_enabled = false })
+  end
 end
 
 function market_view_controls.set_confirm_button_state(ui, enabled)
@@ -155,8 +159,6 @@ function market_view_controls.close_market_panel(state, deps)
   market_view_controls.reset_market_preview(state, deps)
   ui_controls.set_controls_state(ui, market_layout.item_labels, { touch_enabled = false })
   ui_controls.set_controls_state(ui, market_layout.item_frames, { touch_enabled = false })
-  ui_controls.set_controls_state(ui, market_layout.sold_out_badges, { visible = false, touch_enabled = false })
-  ui_controls.set_controls_state(ui, market_layout.sold_out_labels, { visible = false, touch_enabled = false })
   ui_controls.set_controls_state(ui, _CLOSE_PANEL_CONTROLS, { visible = false, touch_enabled = false })
   _set_control_text(ui, market_layout.page_prev_label, "")
   _set_control_text(ui, market_layout.page_next_label, "")
