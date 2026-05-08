@@ -75,10 +75,16 @@ local function _build_item_target_player_text(state, anim)
   return player_name .. " 对 " .. target_name .. " 使用了 " .. _resolve_item_name(anim)
 end
 
-local function _build_move_effect_text(state, anim)
+local function _build_teleport_text(state, anim)
   local player_name = _resolve_player_name(state, anim.player_id)
   return player_name .. " 被传送到 "
     .. _resolve_tile_name(state, anim.to_index)
+end
+
+local function _build_debug_move_text(state, anim)
+  return "位移动画：" .. _resolve_player_name(state, anim.player_id)
+    .. " 从 " .. _resolve_tile_name(state, anim.from_index)
+    .. " 到 " .. _resolve_tile_name(state, anim.to_index)
 end
 
 local function _build_mine_trigger_text(state, anim)
@@ -112,9 +118,9 @@ local TIP_BUILDERS = {
   chance = _build_chance_text,
   item_use = _build_item_use_text,
   item_target_player = _build_item_target_player_text,
-  move_effect = _build_move_effect_text,
-  teleport_effect = _build_move_effect_text,
-  forced_relocation = _build_move_effect_text,
+  move_effect = _build_debug_move_text,
+  teleport_effect = _build_teleport_text,
+  forced_relocation = _build_debug_move_text,
    roadblock_trigger = _build_tile_text("路障触发："),
    mine_trigger = _build_mine_trigger_text,
    cash_receive = _build_cash_receive_text,

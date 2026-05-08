@@ -70,8 +70,18 @@ function deity_ops.transfer_deity(self, src, dst)
          "src has no effective deity")
   self._deity_transferring = true
   local ok, err = pcall(function()
-    self:set_player_deity(dst, src_deity.type, src_deity.remaining)
-    dst.status.deity.skip_next_tick = nil
+    local dst_status = common.player_status_table(dst)
+    dst_status.deity = dst_status.deity or { type = "", remaining = 0 }
+    dst_status.deity.type = src_deity.type
+    dst_status.deity.remaining = src_deity.remaining
+    dst_status.deity.skip_next_tick = nil
+    common.mark_players(self)
+    monopoly_event.emit(monopoly_event.feedback.deity_applied, {
+      player = dst,
+      player_id = dst and dst.id or nil,
+      deity_type = src_deity.type,
+      remaining = src_deity.remaining,
+    })
     self:clear_player_deity(src)
   end)
   self._deity_transferring = false

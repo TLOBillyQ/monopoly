@@ -112,11 +112,10 @@ describe("domain deity helpers", function()
   it("transfer_deity raises guard flag only during transfer", function()
     local saw_guard = false
     local game = { dirty = {} }
-    game.set_player_deity = function(self, player, name, duration)
+    game.clear_player_deity = function(self, player)
       saw_guard = self._deity_transferring == true
-      return deity_ops.set_player_deity(self, player, name, duration)
+      return deity_ops.clear_player_deity(self, player)
     end
-    game.clear_player_deity = deity_ops.clear_player_deity
     local src = _make_player({ id = "A", status = { deity = { type = "poor", remaining = 5 } } })
     local dst = _make_player({ id = "B" })
 
