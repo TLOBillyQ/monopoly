@@ -44,10 +44,14 @@ M.executors = {
       local player = ctx.player
       local move_result = ctx.move_result or {}
       if move_result.passed_start and move_result.passed_start > 0 then return end
-      ctx.game:add_player_cash(player, constants.pass_start_bonus)
+      local bonus = constants.pass_start_bonus
+      if ctx.game:player_has_deity(player, "rich") then
+        bonus = bonus * 2
+      end
+      ctx.game:add_player_cash(player, bonus)
       event_feed.publish(ctx.game, {
         kind = event_kinds.transit,
-        text = player.name .. " 停在起点，获得 " .. number_utils.format_integer_part(constants.pass_start_bonus) .. " 金币",
+        text = player.name .. " 停在起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
       })
     end,
   },

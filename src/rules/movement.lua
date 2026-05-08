@@ -343,6 +343,9 @@ local function _emit_pass_start_reward(ctx)
     return
   end
   local bonus = ctx.pass_start * constants.pass_start_bonus
+  if ctx.game:player_has_deity(ctx.player, "rich") then
+    bonus = bonus * 2
+  end
   ctx.game:add_player_cash(ctx.player, bonus)
   local turn_count = (ctx.game and ctx.game.turn and ctx.game.turn.turn_count) or 0
   _emit_text(ctx.game, monopoly_event.movement.passed_start, event_kinds.passed_start, {
