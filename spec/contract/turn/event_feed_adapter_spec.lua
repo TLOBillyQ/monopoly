@@ -118,7 +118,7 @@ describe("turn.output.event_feed_adapter", function()
     }
     local adapter = event_feed_adapter.new(game)
 
-    adapter:publish(game, { kind = "rent_paid", text = "支付租金" })
+    adapter:publish(game, { kind = "dice_roll", text = "掷骰子" })
 
     assert.equals(0, enqueue_calls)
     local entries = event_log.get_entries(game.state.event_log)

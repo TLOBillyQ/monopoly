@@ -74,12 +74,17 @@ describe("contract.app.policy", function()
 
   it("logger info, warn, info_unlimited emit output when enabled", function()
     logger.set_enabled(true)
+    local sink_entries = {}
+    logger.set_ui_sink(function(entry)
+      sink_entries[#sink_entries + 1] = entry
+    end)
 
     logger.info("test")
     logger.warn("test")
     logger.info_unlimited("test")
 
-    assert.is_true(#outputs >= 3)
+    logger.set_ui_sink(nil)
+    assert.is_true(#sink_entries >= 3)
   end)
 
   it("event_feed publish is unaffected by logger set_enabled", function()
