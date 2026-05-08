@@ -6,10 +6,13 @@ local _build_popup_view_state = P.build_popup_view_state
 local runtime_port = require("src.ui.render.runtime_ui")
 local market_view = require("src.ui.render.market")
 local ui_view = require("src.ui.coord.ui_runtime")
+local ui_events = require("src.ui.coord.ui_events")
 local modal_presenter = require("src.ui.coord.modal")
 local popup_renderer = require("src.ui.coord.popup")
 local market_modal_renderer = require("src.ui.coord.market")
 local event_log_ports_module = require("src.ui.ports.event_log")
+local dice_nodes = require("src.ui.schema.dice")
+local remote_choice_nodes = require("src.ui.schema.remote_choice")
 
 describe("presentation_popup_and_modal_renderers", function()
   it("_test_popup_timeout_closes_even_when_input_blocked", function()
@@ -74,6 +77,47 @@ describe("presentation_popup_and_modal_renderers", function()
     _assert_eq(#shown, 2, "queued popup should be shown after close")
     _assert_eq(shown[1], "A", "first popup title should be A")
     _assert_eq(shown[2], "B", "queued popup title should be B")
+  end)
+
+  it("_test_popup_close_keeps_roll_canvas_during_action_anim", function()
+    local canvas = require("src.ui.coord.canvas_coordinator")
+    local original_switch = canvas.switch
+    local state = {
+      ui = ui_view.build_ui_state(),
+      ui_model = { current_player_id = 1 },
+      game = {
+        turn = {
+          phase = "wait_action_anim",
+          action_anim = { kind = "roll", seq = 2 },
+        },
+      },
+    }
+    local events = {}
+    local switch_targets = {}
+    state.ui.popup_active = true
+    state.ui.popup_kind = "item_card"
+    state.ui.popup_payload = { kind = "item_card", title = "道具卡", body = "测试" }
+    state.ui.popup_return_canvas = remote_choice_nodes.canvas
+
+    _with_patches({
+      { target = popup_renderer, key = "hide", value = function() end },
+      { target = ui_events, key = "send_to_all", value = function(event_name)
+        events[#events + 1] = event_name
+      end },
+      { target = canvas, key = "switch", value = function(ui, target)
+        switch_targets[#switch_targets + 1] = target
+        return original_switch(ui, target)
+      end },
+    }, function()
+      modal_presenter.close_popup(state)
+    end)
+
+    _assert_eq(switch_targets[#switch_targets], dice_nodes.canvas,
+      "roll action anim should restore dice canvas after popup close")
+    for _, event_name in ipairs(events) do
+      assert(event_name ~= ui_events.hide[dice_nodes.canvas],
+        "popup close during roll action anim must not hide dice canvas")
+    end
   end)
 
   it("_test_popup_renderer_switch_popup_canvas_restores_client_role_nil", function()

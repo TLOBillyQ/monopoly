@@ -4,6 +4,7 @@ local choice_common = require("src.ui.coord.choice_screens.helpers")
 local popup = require("src.ui.coord.popup")
 local market_presenter = require("src.ui.coord.market")
 local canvas = require("src.ui.coord.canvas_coordinator")
+local dice_nodes = require("src.ui.schema.dice")
 local logger = require("src.foundation.log.logger")
 local runtime_state = require("src.ui.state.runtime")
 local ui_controls = require("src.ui.render.support.ui_controls")
@@ -195,6 +196,19 @@ function modal_presenter.push_popup(state, payload, opts)
   return true
 end
 
+local function _is_roll_action_anim_active(state)
+  local turn = state and state.game and state.game.turn or nil
+  local anim = turn and turn.action_anim or nil
+  return turn and turn.phase == "wait_action_anim" and anim and anim.kind == "roll"
+end
+
+local function _resolve_canvas_after_popup(state, ui, target)
+  if _is_roll_action_anim_active(state) then
+    return dice_nodes.canvas
+  end
+  return canvas.resolve_canvas_after_popup(ui, target)
+end
+
 function modal_presenter.close_popup(state)
   local ui = state.ui
   if not (ui and ui.popup_active) then
@@ -215,7 +229,7 @@ function modal_presenter.close_popup(state)
   end
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
-  local next_canvas = canvas.resolve_canvas_after_popup(ui, target)
+  local next_canvas = _resolve_canvas_after_popup(state, ui, target)
   popup.switch_canvas(state, kind, next_canvas, canvas.CANVAS_BASE)
 end
 
