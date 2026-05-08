@@ -703,6 +703,34 @@ describe("presentation_market_panel", function()
     end
   end)
 
+  it("_test_market_confirm_button_hidden_when_sold_out_item_selected", function()
+    local entry_a = assert(market_cfg[1], "missing market cfg entry a")
+    local entry_b = assert(market_cfg[2], "missing market cfg entry b")
+    local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
+
+    market_view.refresh_market(state, {
+      choice_id = 33,
+      options = {
+        { id = entry_a.product_id, label = entry_a.name, can_buy = false, sold_out = true },
+        { id = entry_b.product_id, label = entry_b.name, can_buy = true,  sold_out = false },
+      },
+      allow_cancel = true,
+    })
+
+    _assert_eq(visible[market_layout.confirm_button], true,
+      "confirm button should be visible when buyable item is auto-selected")
+
+    market_view.select_market_option(state, entry_a.product_id)
+
+    _assert_eq(visible[market_layout.confirm_button], false,
+      "confirm button should be hidden when sold_out item is selected")
+
+    market_view.select_market_option(state, entry_b.product_id)
+
+    _assert_eq(visible[market_layout.confirm_button], true,
+      "confirm button should be visible again when buyable item is re-selected")
+  end)
+
   it("_test_market_close_hides_all_sold_out_nodes", function()
     local state, visible = _build_market_state({})
     _bind_ui_runtime(state, {})

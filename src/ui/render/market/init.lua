@@ -66,12 +66,15 @@ function market_view.select_market_option(state, option_id, deps)
   local resolved_deps = _resolve_deps(state, deps)
   local resolved_modal = resolved_deps.modal_state or _fallback_modal_state()
   resolved_modal.select_market_option(state, option_id)
+  local ui_runtime = runtime_state.ensure_ui_runtime(state)
   market_view_controls.refresh_market_selection_frames(
     state.ui,
-    runtime_state.ensure_ui_runtime(state).choice_visible_option_ids,
+    ui_runtime.choice_visible_option_ids,
     option_id
   )
   market_view.refresh_market_selection(state, option_id, resolved_deps)
+  local can_buy_map = ui_runtime.choice_option_can_buy
+  market_view_controls.set_confirm_button_state(state.ui, can_buy_map and can_buy_map[option_id] == true)
 end
 
 function market_view.refresh_market(state, market, deps)
@@ -91,6 +94,7 @@ function market_view.refresh_market(state, market, deps)
   end
   local refs = state.ui_refs and state.ui_refs.images or {}
   local rendered = market_view_slots.populate_market_slots(ui, refs, options, resolved_deps)
+  runtime_state.ensure_ui_runtime(state).choice_option_can_buy = rendered.option_can_buy
   ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
   market_view_controls.clear_market_selection_frames(ui)
   market_view_controls.apply_market_common_controls(ui, market, true)
