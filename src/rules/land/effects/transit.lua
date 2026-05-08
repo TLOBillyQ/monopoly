@@ -27,7 +27,13 @@ M.executors = {
           table.insert(ids, p)
         end
       end
-      return steal.handle_pass_players(ctx.game, ctx.player, ids)
+      local result = steal.handle_pass_players(ctx.game, ctx.player, ids)
+      if result and result.waiting then
+        ctx.move_result.encountered_players = {}
+        result.next_state = "landing"
+        result.next_args = { player = ctx.player, move_result = ctx.move_result }
+      end
+      return result
     end,
   },
   start_reward = {

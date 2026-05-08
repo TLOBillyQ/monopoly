@@ -82,6 +82,28 @@ describe("landing", function()
     assert(_get_choice(g) == nil, "should not open choice without steal")
   end)
 
+  it("steal_fail_on_ai_owned_tile_still_pays_rent", function()
+    local g = _new_game({ ai = { [2] = true } })
+    local p1 = g.players[1]
+    local p2 = g.players[2]
+    p1.inventory:add({ id = item_ids.steal })
+    local idx, tile_ref = _first_land_tile(g.board)
+    g:set_tile_owner(tile_ref, p2.id)
+    g:set_player_property(p2, tile_ref.id, true)
+    g:update_player_position(p1, idx)
+    local before_cash = p1.cash
+    local move_result = { encountered_players = { p2.id } }
+
+    local res = _resolve_landing(g, p1, tile_ref, move_result)
+    assert(res and res.waiting, "steal should open choice for remote player")
+    local pending = _get_choice(g)
+    _assert_eq(pending.kind, "steal_prompt", "pending choice must be steal_prompt")
+    _resolve_choice_first(g, pending)
+
+    res = _resolve_landing(g, p1, tile_ref, move_result)
+    assert(p1.cash < before_cash, "rent must be paid after failed steal on AI-owned tile")
+  end)
+
   it("landing_optional_waits_with_ui", function()
     local g = _new_game()
     _set_ui_port(g)
