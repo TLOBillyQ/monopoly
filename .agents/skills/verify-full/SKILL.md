@@ -7,7 +7,7 @@ description: "Run the fuller Monopoly quality pass and include guidance about wh
 
 1. `lua tools/quality/lint.lua`（仅当本地装了 `luacheck`）
 2. `lua tools/quality/encoding.lua check`
-3. `busted --run behavior`
+3. `lua spec/support/behavior_parallel.lua`
 3. `busted --run contract`
 4. `busted --run guards`
 5. `lua tools/quality/arch.lua check`

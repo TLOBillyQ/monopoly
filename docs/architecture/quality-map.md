@@ -18,7 +18,9 @@ last_verified: 2026-05-04
 
 | 入口 | 类型 | 主要回答的问题 | 当前本地耗时参考 |
 |------|------|----------------|------------------|
-| `busted --run behavior` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 约 `0.4s` |
+| `busted --run behavior` | 行为回归 | 改动后真实玩法 / UI 行为有没有坏 | 串行约 `5s`，并行约 `2.5s` |
+| `busted --run behavior-smoke` | 行为冒烟 | 核心回合流程有没有坏（turn/runtime/turn_flow） | 约 `0.9s` |
+| `lua spec/support/behavior_parallel.lua` | 行为回归（并行） | 同 behavior，3 worker LPT 调度 | 约 `2.5s` |
 | `~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract` | 快速契约回归 | 端口、边界、读模型、快速架构契约有没有漂移 | 目标 warm `<5s`，cold `<8s` |
 | `busted --run tooling` | 工具 smoke / 慢契约 | `mutate --index-suites`、`arch_view viewer/scan` 这类真实工具链是否还能跑通 | 本机实测：`111s-116s` |
 | `busted --run guards` | 文本护栏 | 有没有出现明确禁用写法、旧路径、越界依赖文本痕迹 | 约 `1.3s` |
@@ -35,7 +37,8 @@ last_verified: 2026-05-04
 
 | 入口 | 当前规模 | 备注 |
 |------|----------|------|
-| `behavior` | `48` 个 suite，`976` 个 case | 其中 `8` 个 case 在特定 mode 下禁用 |
+| `behavior` | `147` 个 suite，`2033` 个 case | 其中部分 case 在特定 mode 下禁用 |
+| `behavior-smoke` | `26` 个 suite，`217` 个 case | turn/runtime/turn_flow/endgame/contract |
 | `contract` | `13` 个 suite，`68` 个 case | 默认高频快车道，含 tooling 调度纯逻辑契约 |
 | `tooling` | `6` 个 suite，`31` 个 case | 默认 auto；可用 `--workers 1` 退回串行调试 |
 | `guard` | `4` 个 script | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard` |
@@ -47,12 +50,21 @@ last_verified: 2026-05-04
 
 ### `behavior`
 
-- 入口：`busted --run behavior`
+- 入口：`busted --run behavior`（串行）或 `lua spec/support/behavior_parallel.lua`（并行）
 - 来源：`spec/behavior/*_spec.lua`
 - 覆盖面：`domain / runtime / gameplay / ui`
 - 适用时机：改了玩法规则、UI 行为、回合推进、运行时胶水，先跑它
 - 不适合：证明架构边界没漂移；那是 `contract / guard / arch_view` 的工作
 - warn 判读：常见预期 warn 与慢测基线见 `docs/reports/behavior-warns.md`
+- 并行执行：`MONO_BEHAVIOR_WORKERS` 环境变量控制 worker 数（默认 auto=3），`=1` 回退串行
+
+### `behavior-smoke`
+
+- 入口：`busted --run behavior-smoke`
+- 来源：`spec/behavior/{turn,runtime,gameplay/turn_flow,endgame,contract}/*_spec.lua`
+- 覆盖面：回合推进、运行时启动、阶段切换、破产、结构契约
+- 适用时机：开发迭代快反馈，改了玩法规则先跑 smoke 确认核心流程没坏
+- 不替代：完整 `behavior`；提交前仍应跑 full behavior
 
 ### `contract`
 
@@ -174,10 +186,18 @@ last_verified: 2026-05-04
 ```sh
 lua tools/quality/arch.lua check
 busted --run guards
-busted --run behavior
+busted --run behavior-smoke
 ```
 
-适合高频本地回归，通常约 `2s`。
+适合高频本地回归，通常约 `2.5s`。
+
+### 完整行为回归（并行）
+
+```sh
+lua spec/support/behavior_parallel.lua
+```
+
+适合提交前跑完整行为回归，约 `2.5s`（3 worker）。等价于 `busted --run behavior` 但并行执行。
 
 ### 架构/契约检查
 
@@ -223,18 +243,18 @@ lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --since-last-ru
 ### 完整质量回归
 
 ```sh
-busted --run behavior
+lua spec/support/behavior_parallel.lua
 ~/.luarocks/bin/busted --helper=spec/helper.lua --run=contract
 busted --run guards
 lua tools/quality/arch.lua check
 lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json
 ```
 
-当前机器按经验可按 `12s-15s` 预估；如果额外补跑 `tooling`，请按上面的 `~111s-116s` 另算，不再适合并入“日常默认整套回归”。
+当前机器按经验可按 `10s-12s` 预估（behavior 并行约 2.5s）；如果额外补跑 `tooling`，请按上面的 `~111s-116s` 另算，不再适合并入”日常默认整套回归”。
 
 ## 使用上的默认建议
 
-- 改业务逻辑或 UI，默认先跑 `behavior`。
+- 改业务逻辑或 UI，开发迭代先跑 `behavior-smoke`，提交前跑 `behavior`（并行）。
 - 改端口、契约、装配、边界，默认先跑 `contract + arch_view`。
 - 改 `tools/quality/*`、viewer 导出、mutation suite index，默认补跑 `tooling`。
 - 改目录结构或依赖方向，默认先跑 `guard + arch_view`。

@@ -9,7 +9,7 @@ description: "Run the common fast local confidence lane for this repo: guard che
 2. `lua tools/quality/encoding.lua check`
 3. `busted --run guards`
 4. `lua tools/quality/arch.lua check`
-5. `busted --run behavior`
+5. `busted --run behavior-smoke`
 
 跑完后汇报：
 

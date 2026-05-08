@@ -21,6 +21,18 @@ return {
     output = "spec/log_warns_handler.lua",
     pattern = "_spec",
   },
+  ["behavior-smoke"] = {
+    ROOT = {
+      "spec/behavior/turn",
+      "spec/behavior/runtime",
+      "spec/behavior/gameplay/turn_flow",
+      "spec/behavior/endgame",
+      "spec/behavior/contract",
+    },
+    helper = "spec/helper.lua",
+    output = "spec/log_warns_handler.lua",
+    pattern = "_spec",
+  },
   guards = {
     ROOT = {"spec/guards"},
     helper = "spec/helper.lua",
