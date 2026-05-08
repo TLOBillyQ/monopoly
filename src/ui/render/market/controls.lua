@@ -113,7 +113,7 @@ local function _refresh_tab_gray(ui, active_tab)
     { visible = not skin_active, touch_enabled = false })
   ui_controls.set_controls_state(ui,
     { market_layout.tab_mount_gray, market_layout.tab_mount_gray_label },
-    { visible = true, touch_enabled = false })
+    { visible = false, touch_enabled = false })
 end
 
 function market_view_controls.refresh_market_controls(ui, market)
@@ -124,7 +124,7 @@ function market_view_controls.refresh_market_controls(ui, market)
   _set_page_arrow(ui, market_layout.page_prev, market_layout.page_prev_label, prev_visible, market_layout.page_prev_text)
   _set_page_arrow(ui, market_layout.page_next, market_layout.page_next_label, next_visible, market_layout.page_next_text)
   ui_controls.set_controls_state(ui, { market_layout.tab_item, market_layout.tab_skin }, { visible = true, touch_enabled = true })
-  ui_controls.set_control_state(ui, market_layout.tab_mount, { visible = true, touch_enabled = false })
+  ui_controls.set_control_state(ui, market_layout.tab_mount, { visible = false, touch_enabled = false })
   _refresh_tab_gray(ui, market.active_tab)
 end
 
