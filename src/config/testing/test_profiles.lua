@@ -21,7 +21,7 @@ local INV = {
 }
 
 local TILE = {
-    start = 35, hospital = 36, market = 39, chance_inner = 40, item_inner = 44,
+    start = 35, hospital = 36, mountain = 37, market = 39, chance_inner = 40, item_inner = 44,
 }
 
 local function _merge_inv(...)
@@ -300,6 +300,42 @@ local profiles = {
                 [2] = { position_tile_id = 8, statuses = _deity("angel") },
             }),
             tiles = { [12] = { owner_player_index = 2, level = 2, render_called = true } },
+        },
+    },
+
+    combo_exile_vs_angel_target = {
+        group = "combat_obstacle",
+        covers = { "exile", "angel", "immunity", "target_filter" },
+        bootstrap = {
+            -- p1 持流放卡，p2 天使附身；期望：p2 不出现在目标列表中
+            players = _mk_players(120000, 7, {
+                [1] = { item_counts = INV.exile },
+                [2] = { position_tile_id = 8, statuses = _deity("angel") },
+            }),
+        },
+    },
+
+    combo_angel_vs_hospital_landing = {
+        group = "relocation_status",
+        covers = { "angel", "immunity", "hospital_landing" },
+        bootstrap = {
+            -- p1 天使附身 + 遥控骰子，从 35 出发走 1 步落在医院格 36
+            -- 期望：不住院、不扣医药费，显示天使保护反馈
+            players = _mk_players(120000, TILE.start, {
+                [1] = { item_counts = INV.remote_dice, statuses = _deity("angel") },
+            }),
+        },
+    },
+
+    combo_angel_vs_mountain_landing = {
+        group = "relocation_status",
+        covers = { "angel", "immunity", "mountain_landing" },
+        bootstrap = {
+            -- p1 天使附身 + 遥控骰子，从 36 出发走 1 步落在深山格 37
+            -- 期望：不迷路、不停留，显示天使保护反馈
+            players = _mk_players(120000, TILE.hospital, {
+                [1] = { item_counts = INV.remote_dice, statuses = _deity("angel") },
+            }),
         },
     },
 

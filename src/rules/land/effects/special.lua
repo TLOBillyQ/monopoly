@@ -1,4 +1,5 @@
 local mine_effect = require("src.rules.effects.mine")
+local angel_feedback = require("src.rules.items.angel_feedback")
 
 local M = {}
 
@@ -8,6 +9,10 @@ M.executors = {
       return ctx.tile and ctx.tile.type == "hospital"
     end,
     apply = function(ctx)
+      if ctx.game:player_has_angel(ctx.player) then
+        angel_feedback.publish(ctx.game, ctx.player, "住院", { tile_index = ctx.player.position })
+        return
+      end
       ctx.game:player_apply_hospital_effects(ctx.player)
     end,
   },
@@ -16,6 +21,10 @@ M.executors = {
       return ctx.tile and ctx.tile.type == "mountain"
     end,
     apply = function(ctx)
+      if ctx.game:player_has_angel(ctx.player) then
+        angel_feedback.publish(ctx.game, ctx.player, "深山迷路", { tile_index = ctx.player.position })
+        return
+      end
       ctx.game:player_apply_mountain_effects(ctx.player)
     end,
   },
