@@ -17,6 +17,10 @@ local function _dispatch_intent(game, intent)
   return false
 end
 
+local function _is_purchase_failure(result)
+  return type(result) == "table" and result.ok == false
+end
+
 local function _should_keep_market_open(entry, result)
   if type(result) ~= "table" or result.ok ~= true then
     return false
@@ -42,6 +46,13 @@ function outcome.resolve_purchase(game, choice, player, entry, result, finish_ch
       feedback.emit_inventory_full(player, entry)
     end
     return { stay = true }
+  end
+
+  if _is_purchase_failure(result) then
+    local rebuilt = choice_session.rebuild_pending(game, choice, player)
+    if rebuilt then
+      return { stay = true }
+    end
   end
 
   if type(result) == "table" then

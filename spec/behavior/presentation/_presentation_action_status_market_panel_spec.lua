@@ -10,6 +10,9 @@ local market_layout = require("src.ui.schema.market_layout")
 local canvas_event_router = require("src.ui.coord.canvas_event_router")
 local ui_view = require("src.ui.coord.ui_runtime")
 local market_cfg = require("src.config.content.market")
+local market_service = require("src.rules.market")
+local choice_slice = require("src.ui.view.choice_slice")
+local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 
 local function _build_market_state(product_ids)
   local visible = {}
@@ -668,6 +671,36 @@ describe("presentation_market_panel", function()
       "slot 2 badge should be hidden when sold_out = false")
     _assert_eq(visible[market_layout.sold_out_labels[2]], false,
       "slot 2 label should be hidden when sold_out = false")
+  end)
+
+  it("_test_market_sold_out_profile_projects_sold_out_to_badges", function()
+    local game = _new_game({
+      players = { "P1", "P2", "P3", "P4" },
+      ai = { [2] = true, [3] = true, [4] = true },
+    })
+    test_profile_bootstrap.apply(game, "market_sold_out")
+    local player = game:current_player()
+    local choice = market_service.choice.build(player, game, { active_tab = "item", page_index = 1 })
+    choice.id = 32
+    game.turn.pending_choice = choice
+
+    local _, market_model = choice_slice.build_choice_and_market(game, { game = game }, {})
+    local product_ids = {}
+    for index, option in ipairs(market_model.options or {}) do
+      product_ids[index] = option.id
+    end
+    local state, visible = _build_market_state(product_ids)
+
+    market_view.refresh_market(state, market_model)
+
+    for index = 1, 5 do
+      local option = assert(market_model.options[index], "missing sold out option at slot " .. tostring(index))
+      _assert_eq(option.sold_out, true, "market model should preserve sold_out for slot " .. tostring(index))
+      _assert_eq(visible[market_layout.sold_out_badges[index]], true,
+        "sold_out badge should be visible for slot " .. tostring(index))
+      _assert_eq(visible[market_layout.sold_out_labels[index]], true,
+        "sold_out label should be visible for slot " .. tostring(index))
+    end
   end)
 
   it("_test_market_close_hides_all_sold_out_nodes", function()

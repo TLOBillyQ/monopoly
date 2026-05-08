@@ -6,6 +6,7 @@ local monopoly_event = require("src.foundation.events")
 local choice_resolver = require("src.rules.choice.resolver")
 local number_utils = require("src.foundation.lang.number")
 local runtime_refs = require("src.config.content.runtime_refs")
+local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 
 local function _contains_product(list, product_id)
   for _, entry in ipairs(list) do
@@ -41,6 +42,13 @@ local function _find_paid_item_entry()
     end
   end
   return nil
+end
+
+local function _new_four_player_game()
+  return _new_game({
+    players = { "P1", "P2", "P3", "P4" },
+    ai = { [2] = true, [3] = true, [4] = true },
+  })
 end
 
 local function _reload_market_service()
@@ -532,7 +540,7 @@ describe("market", function()
     assert(last.payload and last.payload.reason == "empty_tab", "empty tab feedback reason should be empty_tab")
   end)
 
-  it("market_buy_failed_resolves_and_clears_pending_choice", function()
+  it("market_buy_failed_keeps_market_choice_open", function()
     local g = _new_game()
     local p = g:current_player()
     local choice = {
@@ -563,8 +571,39 @@ describe("market", function()
       })
     end)
 
-    assert(g.turn.pending_choice == nil, "market buy failed should clear pending choice")
-    assert(result and result.stay == false, "market buy failed should resolve without stay")
+    assert(result and result.stay == true, "market buy failed should keep waiting")
+    assert(result and result.status == "waiting", "market buy failed should report waiting status")
+    assert(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy",
+      "market buy failed should keep pending market choice")
+  end)
+
+  it("market_sold_out_buy_failed_keeps_choice_open_and_refreshes_sold_out_flag", function()
+    _reset_market_choice_runtime_modules()
+    local market_service = _reload_market_service()
+    local g = _new_four_player_game()
+    test_profile_bootstrap.apply(g, "market_sold_out")
+    local p = g:current_player()
+    local choice = market_service.choice.build(p, g, { active_tab = "item", page_index = 1 })
+    choice.id = 812
+    g.turn.pending_choice = choice
+
+    local before_limit = g.market_limits[2003]
+    local result = choice_resolver.resolve(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = 2003,
+      actor_role_id = p.id,
+    })
+
+    assert(result and result.stay == true, "sold out purchase should keep market choice open")
+    assert(result and result.status == "waiting", "sold out purchase should keep waiting status")
+    assert(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy",
+      "sold out purchase should keep pending market choice")
+    local option = _find_option(g.turn.pending_choice and g.turn.pending_choice.options, 2003)
+    assert(option ~= nil, "sold out option should remain visible after failed purchase")
+    assert(option.can_buy == false, "sold out option should stay unbuyable after failed purchase")
+    assert(option.sold_out == true, "sold out option should stay flagged after failed purchase")
+    assert(g.market_limits[2003] == before_limit, "sold out failed purchase should not consume limit")
   end)
 
   it("market_item_buy_keeps_choice_open_until_inventory_full", function()
