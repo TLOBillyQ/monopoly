@@ -7,6 +7,7 @@ local land_choice_specs = require("src.rules.land.choice_specs")
 local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
 local use_broadcast = require("src.rules.items.use_broadcast")
+local angel_feedback = require("src.rules.items.angel_feedback")
 local pricing = require("src.rules.land.pricing")
 local board_utils = require("src.rules.land.board_utils")
 local monopoly_event = require("src.foundation.events")
@@ -188,6 +189,11 @@ end
 
 local function _apply_tax(ctx)
   local player = ctx.player
+
+  if ctx.game:player_has_angel(player) then
+    angel_feedback.publish(ctx.game, player, "税务局查税", { tile_index = player.position })
+    return
+  end
 
   if player.status.pending_tax_free then
     ctx.game:set_player_status(player, "pending_tax_free", false)

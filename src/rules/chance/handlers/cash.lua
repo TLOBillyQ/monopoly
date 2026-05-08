@@ -1,3 +1,5 @@
+local angel_feedback = require("src.rules.items.angel_feedback")
+
 local cash_handlers = {}
 
 function cash_handlers.register(handlers, common)
@@ -41,6 +43,10 @@ function cash_handlers.register(handlers, common)
   handlers.pay_cash = function(game, player, card)
     if card.target == "all" then
       _apply_to_all_players(game, function(p)
+        if card.negative and game:player_has_angel(p) then
+          angel_feedback.publish(game, p, "机会卡扣费")
+          return
+        end
         local delta = common.adjust_chance_delta(game, p, -card.amount)
         local reason = p.name .. " 支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
         common.apply_cash_and_maybe_bankrupt(game, p, delta, reason)
@@ -68,6 +74,10 @@ function cash_handlers.register(handlers, common)
   handlers.percent_pay_cash = function(game, player, card)
     if card.target == "all" then
       _apply_to_all_players(game, function(p)
+        if card.negative and game:player_has_angel(p) then
+          angel_feedback.publish(game, p, "机会卡扣费")
+          return
+        end
         local fee = math.floor(game:player_balance(p, "金币") * (card.percent / 100))
         local delta = common.adjust_chance_delta(game, p, -fee)
         local reason = p.name .. " 按比例支付机会卡费用 " .. common.abs_value(delta) .. " 后破产"
