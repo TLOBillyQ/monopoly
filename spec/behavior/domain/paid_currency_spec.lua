@@ -56,6 +56,7 @@ local function _build_fake_env(game, opts)
     role.show_goods_purchase_panel = function(goods_id, show_time)
       table.insert(panel_calls, { role_id = role.role_id, goods_id = goods_id, show_time = show_time })
     end
+    role.set_goods_panel_visible = function() end
     return role
   end
 

@@ -693,6 +693,7 @@ describe("market", function()
       show_goods_purchase_panel = function(goods_id, show_time)
         panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
       end,
+      set_goods_panel_visible = function() end,
     }
 
     local spec = nil
@@ -771,6 +772,7 @@ describe("market", function()
       show_goods_purchase_panel = function(goods_id, show_time)
         panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
       end,
+      set_goods_panel_visible = function() end,
     }
 
     support.with_patches({
@@ -807,20 +809,173 @@ describe("market", function()
       },
     }, function()
       local first = market_service.purchase.execute(g, p, target.product_id, nil)
-      local second = market_service.purchase.execute(g, p, target.product_id, nil)
       assert(type(first) == "table" and first.ok == true and first.deferred_fulfillment == true,
         "first paid purchase should defer fulfillment")
-      assert(type(second) == "table" and second.ok == true and second.deferred_fulfillment == true,
-        "second paid purchase should also defer fulfillment")
-      assert(#panel_calls == 2, "same paid goods should be purchasable multiple times")
-
       local cb = purchase_handlers[p.id]
       assert(type(cb) == "function", "paid purchase callback should be registered")
       cb(nil, nil, { role = role, goods_id = "goods_paid_item_repeat" })
+
+      local second = market_service.purchase.execute(g, p, target.product_id, nil)
+      assert(type(second) == "table" and second.ok == true and second.deferred_fulfillment == true,
+        "second paid purchase should also defer fulfillment")
       cb(nil, nil, { role = role, goods_id = "goods_paid_item_repeat" })
+
+      assert(#panel_calls == 2, "same paid goods should be purchasable multiple times")
     end)
 
     assert(p.inventory:count() == before_count + 2, "repeated paid callback should grant the item twice")
     assert(g.market_limits[target.product_id] == before_limit - 2, "repeated paid callback should consume limit twice")
+  end)
+
+  it("market_paid_purchase_in_flight_blocks_duplicate", function()
+    local market_service = _reload_market_service()
+    local g = _new_game()
+    local p = g:current_player()
+    local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
+
+    local panel_calls = {}
+    local purchase_handlers = {}
+    local scheduled_fns = {}
+    local role = {
+      get_roleid = function()
+        return p.id
+      end,
+      show_goods_purchase_panel = function(goods_id, show_time)
+        panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
+      end,
+      set_goods_panel_visible = function() end,
+    }
+
+    support.with_patches({
+      {
+        key = "GameAPI",
+        value = {
+          random_int = function(min, max)
+            return min <= max and min or max
+          end,
+          get_goods_list = function()
+            return { { name = target.name, goods_id = "goods_in_flight_test" } }
+          end,
+        },
+      },
+      {
+        target = runtime_ports,
+        key = "resolve_role",
+        value = function(role_id)
+          if role_id == p.id then
+            return role
+          end
+          return nil
+        end,
+      },
+      {
+        target = runtime_ports,
+        key = "schedule",
+        value = function(_, fn)
+          scheduled_fns[#scheduled_fns + 1] = fn
+        end,
+      },
+      {
+        key = "EVENT",
+        value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
+      },
+      {
+        key = "RegisterTriggerEvent",
+        value = function(args, callback)
+          purchase_handlers[args[2]] = callback
+        end,
+      },
+    }, function()
+      local first = market_service.purchase.execute(g, p, target.product_id, nil)
+      assert(type(first) == "table" and first.ok == true and first.deferred_fulfillment == true,
+        "first paid purchase should succeed")
+      assert(#panel_calls == 1, "first purchase should open panel")
+
+      local second = market_service.purchase.execute(g, p, target.product_id, nil)
+      assert(type(second) == "table" and second.ok == false and second.reason == "purchase_in_flight",
+        "second purchase while in-flight should be blocked")
+      assert(#panel_calls == 1, "blocked purchase should not open another panel")
+
+      local cb = purchase_handlers[p.id]
+      cb(nil, nil, { role = role, goods_id = "goods_in_flight_test" })
+
+      local third = market_service.purchase.execute(g, p, target.product_id, nil)
+      assert(type(third) == "table" and third.ok == true and third.deferred_fulfillment == true,
+        "purchase after callback should succeed again")
+      assert(#panel_calls == 2, "purchase after callback should open panel")
+    end)
+  end)
+
+  it("market_paid_in_flight_timeout_restores_purchase_ability", function()
+    local market_service = _reload_market_service()
+    local g = _new_game()
+    local p = g:current_player()
+    local target = assert(_find_paid_item_entry(), "test requires paid item market entry")
+
+    local panel_calls = {}
+    local scheduled_fns = {}
+    local role = {
+      get_roleid = function()
+        return p.id
+      end,
+      show_goods_purchase_panel = function(goods_id, show_time)
+        panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
+      end,
+      set_goods_panel_visible = function() end,
+    }
+
+    support.with_patches({
+      {
+        key = "GameAPI",
+        value = {
+          random_int = function(min, max)
+            return min <= max and min or max
+          end,
+          get_goods_list = function()
+            return { { name = target.name, goods_id = "goods_timeout_test" } }
+          end,
+        },
+      },
+      {
+        target = runtime_ports,
+        key = "resolve_role",
+        value = function(role_id)
+          if role_id == p.id then
+            return role
+          end
+          return nil
+        end,
+      },
+      {
+        target = runtime_ports,
+        key = "schedule",
+        value = function(_, fn)
+          scheduled_fns[#scheduled_fns + 1] = fn
+        end,
+      },
+      {
+        key = "EVENT",
+        value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
+      },
+      {
+        key = "RegisterTriggerEvent",
+        value = function() end,
+      },
+    }, function()
+      local first = market_service.purchase.execute(g, p, target.product_id, nil)
+      assert(first.ok == true, "first purchase should succeed")
+
+      local blocked = market_service.purchase.execute(g, p, target.product_id, nil)
+      assert(blocked.ok == false and blocked.reason == "purchase_in_flight",
+        "should be blocked while in-flight")
+
+      assert(#scheduled_fns == 1, "should have scheduled one timeout")
+      scheduled_fns[1]()
+
+      local after_timeout = market_service.purchase.execute(g, p, target.product_id, nil)
+      assert(after_timeout.ok == true and after_timeout.deferred_fulfillment == true,
+        "purchase should succeed after timeout clears in-flight")
+      assert(#panel_calls == 2, "two successful purchases should open two panels")
+    end)
   end)
 end)

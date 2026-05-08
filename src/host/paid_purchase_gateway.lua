@@ -228,6 +228,10 @@ local function _on_purchase_goods_callback(game, rt, data)
   if type(rt.on_purchase) == "function" then
     rt.on_purchase(game, callback_player, entry, pending)
   end
+  local panel_role = _resolve_role(callback_player)
+  if panel_role and type(panel_role.set_goods_panel_visible) == "function" then
+    pcall(panel_role.set_goods_panel_visible, false)
+  end
 end
 
 local function _register_purchase_event_for_role(game, player)
