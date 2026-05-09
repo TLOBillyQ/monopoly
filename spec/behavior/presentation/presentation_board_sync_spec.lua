@@ -1,7 +1,7 @@
 local support = require("support.presentation_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
-local board_geometry = require("src.config.gameplay.board_geometry")
+local board_geometry = require("src.config.gameplay.camera_follow")
 local runtime_state = require("src.state.runtime")
 local vec3 = require("fixtures.vec3")
 

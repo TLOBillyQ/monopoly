@@ -292,7 +292,7 @@ describe("startup_profile", function()
 
   it("test_profile_resolver_default_bootstrap_is_empty_and_not_shared", function()
     local resolver = _reload_module("src.app.testing.test_profile_resolver", {
-      "src.config.testing.test_profiles",
+      "src.config.test_profiles",
       "src.app.testing.test_profiles",
       "src.app.testing.test_profile_resolver",
     })

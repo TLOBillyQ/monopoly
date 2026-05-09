@@ -1,4 +1,4 @@
-local raw_profiles = require("src.config.testing.test_profiles")
+local raw_profiles = require("src.config.test_profiles")
 local tables = require("src.foundation.lang.tables")
 local M = {}
 local default_profile = {

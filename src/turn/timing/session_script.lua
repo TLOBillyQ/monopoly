@@ -1,4 +1,4 @@
-local turn_logger = require("src.turn.timing.logger")
+local turn_decision = require("src.turn.waits.decision")
 local await = require("src.turn.waits.await")
 
 local turn_script = {}
@@ -39,7 +39,7 @@ local function _run_phase(session, state_name, args)
   local handler = _resolve_phase_handler(phases, state_name)
   assert(_is_callable(handler), "missing phase handler: " .. tostring(state_name))
   if state_name == "start" then
-    turn_logger.log_turn_start(session.game)
+    turn_decision.log_turn_start(session.game)
   end
   session:mark_phase(state_name)
   local turn_mgr = session.turn_mgr or session

@@ -1,4 +1,4 @@
-local board_geometry = require("src.config.gameplay.board_geometry")
+local board_geometry = require("src.config.gameplay.camera_follow")
 local debug_flags = require("src.config.gameplay.debug_flags")
 local runtime_state = require("src.ui.state.runtime")
 local logger = require("src.foundation.log.logger")

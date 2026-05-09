@@ -99,18 +99,18 @@ describe("domain session_script extended coverage", function()
     _assert_eq(session.finished, true, "session should finish")
   end)
 
-  it("start state triggers turn_logger.log_turn_start", function()
+  it("start state triggers turn_decision.log_turn_start", function()
     local turn_script = require("src.turn.timing.session_script")
-    local turn_logger = require("src.turn.timing.logger")
-    local saved = turn_logger.log_turn_start
+    local turn_decision = require("src.turn.waits.decision")
+    local saved = turn_decision.log_turn_start
     local logged_games = {}
-    turn_logger.log_turn_start = function(g) logged_games[#logged_games + 1] = g end
+    turn_decision.log_turn_start = function(g) logged_games[#logged_games + 1] = g end
     local session = _make_session({
       start = function(_, _) return nil end,
     })
     local co = turn_script.create(session)
     local ok = coroutine.resume(co)
-    turn_logger.log_turn_start = saved
+    turn_decision.log_turn_start = saved
     assert(ok, "coroutine should complete")
     _assert_eq(#logged_games, 1, "log_turn_start should be called once for 'start' state")
     _assert_eq(logged_games[1], session.game, "log_turn_start should receive session.game")
