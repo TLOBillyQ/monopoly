@@ -12,7 +12,6 @@ local function _open_screen(state, screen_key, choice, choice_id)
   assert(screen ~= nil, "missing choice screen: " .. tostring(screen_key))
 
   common.hide_choice_screens(ui)
-  common.switch_modal_canvas(state, common.resolve_canvas_for_screen(screen_key))
   ui_controls.set_control_state(ui, screen.root, { visible = true })
   if screen.title then
     ui:set_label(screen.title, choice.title or "请选择")
@@ -20,6 +19,7 @@ local function _open_screen(state, screen_key, choice, choice_id)
   if screen.body then
     ui:set_label(screen.body, choice.body or "")
   end
+  common.switch_modal_canvas(state, common.resolve_canvas_for_screen(screen_key))
   ui.choice_active = true
   ui.active_choice_screen_key = screen_key
   return ui, screen
