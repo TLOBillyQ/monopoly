@@ -156,7 +156,6 @@ function market_view_controls.close_market_panel(state, deps)
   local ui_runtime = runtime_state.ensure_ui_runtime(state)
   ui_runtime.choice_visible_option_ids = nil
   ui_runtime.pending_choice_selected_option_id = nil
-  ui_runtime.choice_option_can_buy = nil
   market_view_controls.reset_market_preview(state, deps)
   ui_controls.set_controls_state(ui, market_layout.item_labels, { touch_enabled = false })
   ui_controls.set_controls_state(ui, market_layout.item_frames, { touch_enabled = false })

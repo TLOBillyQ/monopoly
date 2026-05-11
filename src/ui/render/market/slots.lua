@@ -163,7 +163,6 @@ end
 
 function market_view_slots.populate_market_slots(ui, refs, options, deps)
   local option_ids = {}
-  local option_can_buy = {}
   local first_buyable = nil
   _for_each_market_slot(function(index, slot)
     local opt = options[index]
@@ -172,13 +171,9 @@ function market_view_slots.populate_market_slots(ui, refs, options, deps)
     end
     local opt_id = _set_market_slot(ui, refs, slot, opt, deps)
     option_ids[index] = opt_id
-    if opt_id and opt then
-      option_can_buy[opt_id] = opt.can_buy == true
-    end
   end)
   return {
     option_ids = option_ids,
-    option_can_buy = option_can_buy,
     first_buyable = first_buyable,
   }
 end
