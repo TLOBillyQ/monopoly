@@ -923,6 +923,7 @@ local function _test_tick_choice_timeout_warning_keeps_local_modal_choice()
   g.turn.pending_choice = choice
   runtime_state.set_pending_choice(state, choice, { choice_id = choice.id, elapsed_seconds = 0 })
   runtime_state.set_ui_model(state, { current_player_id = 1 })
+  runtime_state.set_local_actor_role_id(state, 1)
 
   support.with_patches({
     { target = logger, key = "warn", value = function(...)

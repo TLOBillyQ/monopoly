@@ -400,7 +400,7 @@ describe("presentation_ui.interaction", function()
     _assert_eq(g.players[2].auto, before_2, "auto click should not be rewritten to local role")
   end)
 
-  it("_test_ui_event_router_injects_actor_for_next_with_current_player_fallback", function()
+  it("_test_ui_event_router_rejects_next_without_trusted_actor", function()
     local base_nodes = require("src.ui.schema.base")
 
     local function new_node()
@@ -417,16 +417,14 @@ describe("presentation_ui.interaction", function()
     end
 
     local captured = {}
-    local show_tip_calls = 0
     local node_map = {
       [base_nodes.action_button] = new_node(),
     }
 
     _with_patches({
       { key = "all_roles", value = nil },
-      { key = "GlobalAPI", value = { show_tips = function()
-        show_tip_calls = show_tip_calls + 1
-      end } },
+      { key = "GlobalAPI", value = { show_tips = function() end } },
+      { target = logger, key = "warn", value = function() end },
       { key = "UIManager", value = {
         EVENT = { CLICK = "click" },
         query_nodes_by_name = function(name)
@@ -458,13 +456,10 @@ describe("presentation_ui.interaction", function()
       node_map[base_nodes.action_button]._listener_cb({})
     end)
 
-    _assert_eq(show_tip_calls, 0, "next click with current_player fallback should not show tip")
-    _assert_eq(captured[1] and captured[1].type, "ui_button", "next click should dispatch ui_button")
-    _assert_eq(captured[1] and captured[1].id, "next", "next click should keep action id")
-    _assert_eq(captured[1] and captured[1].actor_role_id, 2, "next click should inject normalized actor_role_id")
+    _assert_eq(#captured, 0, "next click without event/client/cached actor should not dispatch")
   end)
 
-  it("_test_ui_event_router_turn_bound_actor_prefers_current_player_over_stale_cache", function()
+  it("_test_ui_event_router_turn_bound_actor_uses_cached_actor_not_current_player", function()
     local base_nodes = require("src.ui.schema.base")
 
     local function new_node()
@@ -520,12 +515,13 @@ describe("presentation_ui.interaction", function()
       node_map[base_nodes.action_button]._listener_cb({})
     end)
 
-    _assert_eq(captured[1] and captured[1].actor_role_id, 2,
-      "turn-bound actor resolution should prefer current_player_id over stale cache")
+    _assert_eq(captured[1] and captured[1].actor_role_id, 1,
+      "turn-bound actor resolution should use trusted cached actor, not current_player_id fallback")
   end)
 
-  it("_test_local_actor_resolver_turn_bound_prefers_client_role_over_current_player", function()
+  it("_test_local_actor_resolver_client_role_does_not_overwrite_cached_actor", function()
     local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
+    local ui_runtime_state = require("src.ui.state.runtime")
     local client_role = {
       get_roleid = function()
         return 3
@@ -543,9 +539,65 @@ describe("presentation_ui.interaction", function()
         },
         local_actor_role_id = 1,
       }
+      _bind_ui_runtime(state)
       local resolved = local_actor_resolver.resolve_turn_bound(state)
       _assert_eq(resolved, 3, "turn-bound actor resolution should keep explicit client role ahead of current_player_id")
+      _assert_eq(ui_runtime_state.get_local_actor_role_id(state), 1,
+        "client_role lookup should not mutate cached local actor role")
     end)
+  end)
+
+  it("_test_camera_follow_uses_current_player_display_fallback_without_caching_actor", function()
+    local camera_sync = require("src.ui.ports.ui_sync.camera")
+    local runtime_ports = require("src.foundation.ports.runtime_ports")
+    local ui_runtime_state = require("src.ui.state.runtime")
+    local reset_calls = 0
+    local follow_target = nil
+    local role = {
+      reset_camera = function()
+        reset_calls = reset_calls + 1
+        return true
+      end,
+    }
+    local state = {
+      game = {
+        turn = { current_player_index = 2 },
+        players = {
+          { id = 1 },
+          { id = 2 },
+        },
+      },
+    }
+
+    runtime_ports.configure({
+      resolve_role = function(role_id)
+        if role_id == 2 then
+          return role
+        end
+        return nil
+      end,
+      resolve_camera_helper = function()
+        return {
+          follow = function(player_id)
+            follow_target = player_id
+            return true
+          end,
+        }
+      end,
+    })
+
+    local ok, err = pcall(function()
+      _assert_eq(camera_sync.follow_camera(state, 2), true,
+        "camera should use current player as display fallback when local actor is unknown")
+      _assert_eq(follow_target, 2, "camera helper should still follow current player")
+      _assert_eq(reset_calls, 1, "camera should reset current player's camera to self")
+      _assert_eq(ui_runtime_state.get_local_actor_role_id(state), nil,
+        "camera display fallback must not cache local actor role")
+    end)
+    runtime_ports.reset_for_tests()
+    if not ok then
+      error(err)
+    end
   end)
 
   it("_test_ui_event_router_injects_actor_for_market_confirm_and_cancel", function()
@@ -608,6 +660,7 @@ describe("presentation_ui.interaction", function()
           },
         },
         pending_choice_selected_option_id = 34,
+        local_actor_role_id = 3,
       }
       _bind_ui_runtime(state)
       canvas_event_router.bind(state, function()

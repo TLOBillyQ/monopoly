@@ -65,10 +65,7 @@ function router.bind(state, resolve_game)
       or (intent.type == "ui_button" and intent.id == "auto")
     local actor_role_id
     if local_only then
-      actor_role_id = local_actor_resolver.resolve_from_event(state, data, {
-        local_only = true,
-        trace_auto = false,
-      })
+      actor_role_id = local_actor_resolver.resolve_from_event(state, data)
     else
       actor_role_id = local_actor_resolver.resolve_turn_bound(state, data)
     end

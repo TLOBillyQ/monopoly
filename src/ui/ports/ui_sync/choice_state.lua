@@ -4,7 +4,6 @@ local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
 local role_id_utils = require("src.foundation.identity.role_id")
 local runtime = require("src.ui.render.runtime_ui")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
-local runtime_state = require("src.ui.state.runtime")
 
 local choice_ui_state = {}
 
@@ -53,18 +52,14 @@ local function _is_local_role(state, owner_role_id)
   end
 
   local roles = runtime_ports.resolve_roles()
-  if type(roles) == "table" and #roles > 0 then
-    for _, role in ipairs(roles) do
-      local role_id = role_id_utils.normalize(runtime.resolve_role_id(role))
-      if role_id_utils.equals(role_id, owner_role_id) then
-        return true
-      end
+  if type(roles) == "table" and #roles == 1 then
+    local role_id = role_id_utils.normalize(runtime.resolve_role_id(roles[1]))
+    if role_id ~= nil then
+      return role_id_utils.equals(role_id, owner_role_id)
     end
   end
 
-  local current_model = runtime_state.get_ui_model(state)
-  local current_player_id = role_id_utils.normalize(current_model and current_model.current_player_id or nil)
-  return current_player_id ~= nil and role_id_utils.equals(current_player_id, owner_role_id)
+  return false
 end
 
 function choice_ui_state.resolve_route_key(choice)

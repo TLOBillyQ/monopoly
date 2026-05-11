@@ -265,6 +265,9 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
       ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
       ui_dirty = true,
       ui_model = nil,
+      ui_runtime = {
+        local_actor_role_id = 1,
+      },
     }
     _with_patches({
       { target = ui_view_service, key = "render", value = function() end },
@@ -326,6 +329,9 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
       ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY" }),
       ui_dirty = true,
       ui_model = nil,
+      ui_runtime = {
+        local_actor_role_id = 1,
+      },
     }
     _with_patches({
       { target = ui_view_service, key = "render", value = function() end },
