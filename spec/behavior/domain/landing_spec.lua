@@ -100,7 +100,8 @@ describe("landing", function()
     _assert_eq(pending.kind, "steal_prompt", "pending choice must be steal_prompt")
     _resolve_choice_first(g, pending)
 
-    res = _resolve_landing(g, p1, tile_ref, move_result)
+    local rent_res = _resolve_landing(g, p1, tile_ref, move_result)
+    assert(not rent_res, "failed steal should fall through to rent without waiting")
     assert(p1.cash < before_cash, "rent must be paid after failed steal on AI-owned tile")
   end)
 

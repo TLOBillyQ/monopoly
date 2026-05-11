@@ -14,6 +14,11 @@ module.executors = {
         return nil
       end
 
+      local buyable = market_service.query.list_available(ctx.player, ctx.game)
+      if #buyable == 0 then
+        return nil
+      end
+
       local spec, intent = market_service.choice.build(ctx.player, ctx.game)
       if intent then
         return { intent = intent }

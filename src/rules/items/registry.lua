@@ -37,9 +37,8 @@ function registry:target_candidates(game, player, item_id)
   local candidates = {}
   for _, p in ipairs(game.players) do
     if p.id ~= player.id and not p.eliminated then
-      if game:angel_immune_to_item(p, item_id) then
-        -- skip: angel protection blocks targeting
-      elseif not spec.filter_target or spec.filter_target(game, player, p) then
+      if not game:angel_immune_to_item(p, item_id) and
+          (not spec.filter_target or spec.filter_target(game, player, p)) then
         table.insert(candidates, p)
       end
     end

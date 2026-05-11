@@ -431,7 +431,7 @@ describe("land", function()
     _assert_eq(tenant.cash, before2, "rent skipped when owner missing")
   end)
 
-  it("free_rent_only_inventory_opens_choice_prompt_instead_of_silent_use", function()
+  it("free_rent_only_inventory_auto_uses_card_without_choice_prompt", function()
     local land = require("src.rules.land.executors")
     local g = _new_game()
     local tenant = g.players[1]
@@ -448,23 +448,13 @@ describe("land", function()
     local owner_cash_before = g:player_balance(owner, "金币")
     local res = land.executors.pay_rent.apply({ game = g, player = tenant, tile = tile_ref })
 
-    assert(type(res) == "table", "pay_rent with only free_rent should return waiting intent, not execute silently")
-    assert(res.waiting == true, "pay_rent with only free_rent should mark waiting on the choice")
-    assert(res.intent and res.intent.kind == "need_choice",
-      "pay_rent with only free_rent should open a need_choice intent")
-    local spec = res.intent.choice_spec
-    assert(spec and spec.kind == "rent_card_prompt", "pay_rent with only free_rent should open rent_card_prompt")
-    assert(spec.title == "是否使用免费卡", "pay_rent with only free_rent should open the free rent prompt branch")
-    assert(spec.route_key == "secondary_confirm",
-      "free rent prompt opened from silent path should route to secondary_confirm")
-    assert(spec.requires_confirm == true,
-      "free rent prompt opened from silent path should require confirm")
+    assert(res == nil, "pay_rent with only free_rent should auto-use and keep turn flow moving")
     _assert_eq(g:player_balance(tenant, "金币"), tenant_cash_before,
-      "pay_rent with only free_rent should not change tenant cash before user confirms")
+      "pay_rent with only free_rent should not charge tenant cash")
     _assert_eq(g:player_balance(owner, "金币"), owner_cash_before,
-      "pay_rent with only free_rent should not change owner cash before user confirms")
-    _assert_eq(inventory.find_index(tenant, item_ids.free_rent) ~= nil, true,
-      "pay_rent with only free_rent should not consume the card before user confirms")
+      "pay_rent with only free_rent should not pay owner cash")
+    _assert_eq(inventory.find_index(tenant, item_ids.free_rent) == nil, true,
+      "pay_rent with only free_rent should consume the card immediately")
   end)
 
   it("tax_only_bankrupts_when_balance_depleted", function()

@@ -176,7 +176,8 @@ local function _apply_pay_rent(ctx)
   end
 
   if free_idx then
-    return _build_rent_choice_intent(player, t, "free")
+    land_actions.execute_free_card(ctx.game, player.id, t.id)
+    return
   end
 
   land_actions.execute_pay_rent(ctx.game, player.id, t.id)

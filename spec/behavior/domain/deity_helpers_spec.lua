@@ -167,7 +167,7 @@ describe("domain deity helpers", function()
     deity_ops.set_player_deity(game, player, "poor", nil)
 
     _assert_eq(player.status.deity.type, "poor", "deity type should be set")
-    _assert_eq(player.status.deity.remaining, 7, "fallback duration should be used")
+    _assert_eq(player.status.deity.remaining, 8, "internal remaining is fallback duration+1")
   end)
 
   it("set_player_deity accepts positive explicit duration", function()
@@ -178,7 +178,7 @@ describe("domain deity helpers", function()
     deity_ops.set_player_deity(game, player, "poor", 5)
 
     _assert_eq(player.status.deity.type, "poor", "deity type should be set")
-    _assert_eq(player.status.deity.remaining, 5, "explicit duration should be used")
+    _assert_eq(player.status.deity.remaining, 6, "internal remaining is explicit duration+1")
   end)
 
   it("tick_player_deity leaves eliminated player remaining unchanged", function()

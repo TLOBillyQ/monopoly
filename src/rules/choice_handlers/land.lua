@@ -1,7 +1,5 @@
 local inventory = require("src.rules.items.inventory")
 local item_ids = require("src.config.gameplay.item_ids")
-local intent_output_port = require("src.rules.ports.intent_output")
-local land_choice_specs = require("src.rules.land.choice_specs")
 local land_actions = require("src.rules.land.actions")
 
 local M = {}
@@ -24,8 +22,8 @@ local function _build(helpers)
       if card_kind == "strong" then
         local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
         if inventory.find_index(player, item_ids.free_rent) then
-          intent_output_port.open_choice(game, land_choice_specs.rent_prompt(player_id, tile_id, "free"))
-          return { stay = true }
+          land_actions.execute_free_card(game, player_id, tile_id)
+          return finish_choice(game, false)
         end
       end
       land_actions.execute_pay_rent(game, player_id, tile_id)
