@@ -81,8 +81,8 @@ function turn_camera_policy.sync_follow(game, state, ports, ui_refreshed)
     return
   end
 
-  ui_sync_ports.follow_camera(state, current_id)
-  if turn_runtime then
+  local ok = ui_sync_ports.follow_camera(state, current_id)
+  if ok and turn_runtime then
     turn_runtime.last_follow_player_id = current_id
   end
 end
