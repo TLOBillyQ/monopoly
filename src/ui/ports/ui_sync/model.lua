@@ -4,6 +4,7 @@ local landing_visual_hold = require("src.ui.visual_hold")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
 local modal = require("src.ui.coord.modal")
 local main_view = require("src.ui.coord.ui_runtime")
+local view_model = require("src.ui.view")
 
 local ui_model_sync = {}
 
@@ -25,9 +26,8 @@ local function _defer_refresh_for_landing_hold(state, dirty)
 end
 
 local function _update_runtime_ui_model(state, game, dirty)
-  local model = require("src.ui.view")
   local env = turn_ui_sync_shared.build_ui_env(state, game)
-  local next_model = model.update(runtime_state.get_ui_model(state), game, env, dirty)
+  local next_model = view_model.update(runtime_state.get_ui_model(state), game, env, dirty)
   runtime_state.set_ui_model(state, next_model)
   return next_model
 end
@@ -91,9 +91,8 @@ function ui_model_sync.apply_input_lock(state)
 end
 
 function ui_model_sync.build_model(state, game)
-  local model = require("src.ui.view")
   local env = turn_ui_sync_shared.build_ui_env(state, game)
-  return model.build(game, env)
+  return view_model.build(game, env)
 end
 
 function ui_model_sync.refresh_from_dirty(game, state, dirty, common)

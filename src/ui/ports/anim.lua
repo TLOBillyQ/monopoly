@@ -1,6 +1,7 @@
 local move_anim = require("src.ui.render.move_anim")
 local runtime_state = require("src.ui.state.runtime")
 local role_id_utils = require("src.foundation.identity.role_id")
+local status3d = require("src.ui.render.status3d")
 
 local anim_ports = {}
 
@@ -97,11 +98,9 @@ function anim_ports.build()
       return delay
     end,
     reset_status_3d = function(state)
-      local status3d = require("src.ui.render.status3d")
       status3d.reset(state, state and state.presentation_runtime or nil)
     end,
     sync_status_3d = function(game, state, dirty)
-      local status3d = require("src.ui.render.status3d")
       status3d.sync(game, state, dirty, state and state.presentation_runtime or nil)
     end,
   }
