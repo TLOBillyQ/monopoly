@@ -44,6 +44,12 @@ local function _build_tile_text(prefix)
   end
 end
 
+local function _build_player_tile_text(verb)
+  return function(state, anim)
+    return _resolve_player_name(state, anim.player_id) .. verb .. _resolve_tile_name(state, anim.tile_index)
+  end
+end
+
 local function _build_clear_obstacles_text(state, anim)
   local player_name = _resolve_player_name(state, anim.player_id)
   local rb = anim.roadblock_cleared or 0
@@ -105,14 +111,8 @@ local TIP_BUILDERS = {
   roll = _build_roll_text,
   roadblock = _build_tile_text("路障动画：放置在 "),
   mine = _build_tile_text("地雷动画：埋设在 "),
-  missile = function(state, anim)
-    local player_name = _resolve_player_name(state, anim.player_id)
-    return player_name .. " 发射导弹轰炸 " .. _resolve_tile_name(state, anim.tile_index)
-  end,
-  monster = function(state, anim)
-    local player_name = _resolve_player_name(state, anim.player_id)
-    return player_name .. " 释放怪兽攻击 " .. _resolve_tile_name(state, anim.tile_index)
-  end,
+  missile = _build_player_tile_text(" 发射导弹轰炸 "),
+  monster = _build_player_tile_text(" 释放怪兽攻击 "),
   clear_obstacles = _build_clear_obstacles_text,
   upgrade_land = _build_tile_text("加盖动画："),
   chance = _build_chance_text,

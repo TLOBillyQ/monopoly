@@ -68,42 +68,33 @@ function board_slice.tile_count()
   return #cached_board_tiles
 end
 
+local function _populate_board(target, board_tiles, game, env, turn)
+  target.tiles = board_tiles
+  target.tile_states = _project_tile_states(game)
+  target.overlays = _build_overlays(env)
+  target.players = game.players
+  target.phase = turn.phase
+  target.move_anim = turn.move_anim
+  target.action_anim = turn.action_anim
+  target.move_followup_pending = turn.move_followup_pending == true
+  target.turn_start_prompt_seq = turn.turn_start_prompt_seq or 0
+  target.turn_start_prompt_player_id = turn.turn_start_prompt_player_id
+  target.tile_count = #board_tiles
+  return target
+end
+
 function board_slice.build(game, env, turn)
   local board_path = assert(game and game.board and game.board.path, "missing game.board.path")
   local board_tiles = _build_board_tiles(board_path)
   cached_board_tiles = board_tiles
-  return {
-    tiles = board_tiles,
-    tile_states = _project_tile_states(game),
-    overlays = _build_overlays(env),
-    players = game.players,
-    phase = turn.phase,
-    move_anim = turn.move_anim,
-    action_anim = turn.action_anim,
-    move_followup_pending = turn.move_followup_pending == true,
-    turn_start_prompt_seq = turn.turn_start_prompt_seq or 0,
-    turn_start_prompt_player_id = turn.turn_start_prompt_player_id,
-    tile_count = #board_tiles,
-  }
+  return _populate_board({}, board_tiles, game, env, turn)
 end
 
 function board_slice.update(board, game, env, turn)
   local board_path = assert(game and game.board and game.board.path, "missing game.board.path")
   local board_tiles = _build_board_tiles(board_path)
   cached_board_tiles = board_tiles
-  board = board or {}
-  board.tiles = board_tiles
-  board.tile_states = _project_tile_states(game)
-  board.overlays = _build_overlays(env)
-  board.players = game.players
-  board.phase = turn.phase
-  board.move_anim = turn.move_anim
-  board.action_anim = turn.action_anim
-  board.move_followup_pending = turn.move_followup_pending == true
-  board.turn_start_prompt_seq = turn.turn_start_prompt_seq or 0
-  board.turn_start_prompt_player_id = turn.turn_start_prompt_player_id
-  board.tile_count = #board_tiles
-  return board
+  return _populate_board(board or {}, board_tiles, game, env, turn)
 end
 
 return board_slice

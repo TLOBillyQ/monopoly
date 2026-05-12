@@ -100,22 +100,13 @@ function decision_engine.build(agent_ref)
     if choice.kind == "steal_item" then
       return _handle_simple_pick_or_cancel(choice, actor)
     end
-    if choice.kind == "steal_prompt" then
+    if choice.kind == "steal_prompt" or choice.kind == "rent_card_prompt" or choice.kind == "tax_card_prompt" then
       return _build_choice_action(choice, actor, "use")
     end
     if choice.kind == "landing_optional_effect" then
       return _handle_landing_optional_effect(choice, actor)
     end
-    if choice.kind == "rent_card_prompt" or choice.kind == "tax_card_prompt" then
-      return _build_choice_action(choice, actor, "use")
-    end
-    if choice.kind == "item_phase_choice" then
-      return _build_choice_action(choice, actor, nil, "choice_cancel")
-    end
-    if choice.kind == "item_phase_passive" then
-      return _build_choice_action(choice, actor, nil, "choice_cancel")
-    end
-    if choice.kind == "market_buy" then
+    if choice.kind == "item_phase_choice" or choice.kind == "item_phase_passive" or choice.kind == "market_buy" then
       return _build_choice_action(choice, actor, nil, "choice_cancel")
     end
     return nil
