@@ -29,18 +29,6 @@ function role_avatar.sanitize_image_key(value)
   end
   local as_int = number_utils.to_integer(value)
   if as_int == nil then
-    if math and math.tointeger then
-      local ok, coerced = pcall(math.tointeger, value)
-      if ok then
-        as_int = coerced
-      end
-    end
-  end
-  if as_int == nil then
-    local text = _safe_tostring(value)
-    as_int = number_utils.to_integer(text)
-  end
-  if as_int == nil then
     _warn_invalid_image_key(value)
     return nil
   end

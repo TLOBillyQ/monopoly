@@ -44,17 +44,7 @@ function resolver.resolve_from_event(state, data)
 end
 
 function resolver.resolve_turn_bound(state, data)
-  local role_id = _resolve_role_id_from_event(state, data)
-  if role_id ~= nil then
-    return role_id
-  end
-
-  role_id = _resolve_client_role_id()
-  if role_id ~= nil then
-    return role_id
-  end
-
-  return _resolve_cached_role_id(state)
+  return resolver.resolve_from_event(state, data)
 end
 
 function resolver.resolve_local(state)

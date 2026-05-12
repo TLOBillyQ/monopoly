@@ -29,7 +29,7 @@ function M.spawn_startup_synthetic_actors(current_game)
   registry.spawn_pending(map_cfg)
 end
 
-local function _required_click_nodes(opts)
+local function _required_click_nodes()
   local required = {
     base_nodes.action_button,
     base_nodes.auto_button,
