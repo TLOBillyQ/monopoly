@@ -31,10 +31,6 @@ function tick_ui_gate.resolve_modal_timeout_seconds(state, ui_sync_ports)
   if auto_close_seconds ~= nil and number_utils.is_numeric(auto_close_seconds) and auto_close_seconds > 0 then
     return auto_close_seconds
   end
-  local timeout = timing.popup_auto_close_seconds
-  if number_utils.is_numeric(timeout) and timeout > 0 then
-    return timeout
-  end
   return timing.popup_auto_close_seconds
 end
 

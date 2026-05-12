@@ -12,13 +12,13 @@ local function _resolve_runtime(deps)
   return assert(resolved_deps.runtime or runtime_ui, "missing deps.runtime")
 end
 
+local _items_cfg_by_id = {}
+for _, cfg in ipairs(items_cfg) do
+  _items_cfg_by_id[cfg.id] = cfg
+end
+
 local function _item_cfg_by_id(product_id)
-  for _, cfg in ipairs(items_cfg) do
-    if cfg.id == product_id then
-      return cfg
-    end
-  end
-  return nil
+  return _items_cfg_by_id[product_id]
 end
 
 local _market_entry_by_id = market_catalog.entry_by_id

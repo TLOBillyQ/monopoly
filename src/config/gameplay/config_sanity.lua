@@ -4,62 +4,37 @@ local config_sanity = {}
 
 local validated = false
 
-local function _validate_board_feedback_effect_ref(effect_refs, cue_name, cue)
-  local effect_id_ref = cue and cue.effect_id_ref or nil
-  if effect_id_ref == nil then
-    return
-  end
+local function _assert_ref_exists(refs, ref_value, ref_field, cue_name, suffix)
   assert(
-    effect_refs[effect_id_ref] ~= nil,
-    "board feedback cue references unknown effect_id_ref: "
-      .. tostring(effect_id_ref)
+    refs[ref_value] ~= nil,
+    "board feedback " .. (suffix or "cue") .. " references unknown " .. ref_field .. ": "
+      .. tostring(ref_value)
       .. " (cue_name="
       .. tostring(cue_name)
       .. ")"
   )
 end
 
-local function _validate_board_feedback_sound_ref(audio_refs, cue_name, cue)
-  local sound_id_ref = cue and cue.sound_id_ref or nil
-  if sound_id_ref == nil then
-    return
-  end
-  assert(
-    audio_refs[sound_id_ref] ~= nil,
-    "board feedback cue references unknown sound_id_ref: "
-      .. tostring(sound_id_ref)
-      .. " (cue_name="
-      .. tostring(cue_name)
-      .. ")"
-  )
-end
-
-local function _validate_board_feedback_followup_sound_refs(audio_refs, cue_name, cue)
-  local followup_sounds = cue and cue.followup_sounds or nil
-  if type(followup_sounds) ~= "table" then
-    return
-  end
-  for index, entry in ipairs(followup_sounds) do
-    local followup_ref = entry and entry.sound_id_ref or nil
-    if followup_ref ~= nil then
-      assert(
-        audio_refs[followup_ref] ~= nil,
-        "board feedback followup references unknown sound_id_ref: "
-          .. tostring(followup_ref)
-          .. " (cue_name="
-          .. tostring(cue_name)
-          .. ", index="
-          .. tostring(index)
-          .. ")"
-      )
-    end
+local function _validate_cue_ref(refs, cue_name, cue, ref_field)
+  local ref_value = cue and cue[ref_field] or nil
+  if ref_value ~= nil then
+    _assert_ref_exists(refs, ref_value, ref_field, cue_name)
   end
 end
 
 local function _validate_board_feedback_cue(effect_refs, audio_refs, cue_name, cue)
-  _validate_board_feedback_effect_ref(effect_refs, cue_name, cue)
-  _validate_board_feedback_sound_ref(audio_refs, cue_name, cue)
-  _validate_board_feedback_followup_sound_refs(audio_refs, cue_name, cue)
+  _validate_cue_ref(effect_refs, cue_name, cue, "effect_id_ref")
+  _validate_cue_ref(audio_refs, cue_name, cue, "sound_id_ref")
+  local followup_sounds = cue and cue.followup_sounds or nil
+  if type(followup_sounds) ~= "table" then
+    return
+  end
+  for _, entry in ipairs(followup_sounds) do
+    local followup_ref = entry and entry.sound_id_ref or nil
+    if followup_ref ~= nil then
+      _assert_ref_exists(audio_refs, followup_ref, "sound_id_ref", cue_name, "followup")
+    end
+  end
 end
 
 local function _validate_board_feedback_cues(cues, effect_refs, audio_refs)

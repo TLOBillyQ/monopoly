@@ -77,9 +77,12 @@ function compute.offset_pos(pos, offset)
   return pos
 end
 
+local function _y_offset_vector(y_offset)
+  return math.Vector3(0.0, y_offset or 1.0, 0.0)
+end
+
 function compute.overlay_pos_for_tile(state, tile_index, y_offset)
-  local offset = y_offset ~= nil and math.Vector3(0.0, y_offset, 0.0) or math.Vector3(0.0, 1.0, 0.0)
-  return compute.offset_pos(compute.resolve_tile_pos(state, tile_index), offset)
+  return compute.offset_pos(compute.resolve_tile_pos(state, tile_index), _y_offset_vector(y_offset))
 end
 
 function compute.overlay_pos_for_player(state, player_id, y_offset)
@@ -87,8 +90,7 @@ function compute.overlay_pos_for_player(state, player_id, y_offset)
   assert(player_id ~= nil, "missing player_id")
   local game = assert(state.game, "missing state.game")
   local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
-  local offset = y_offset ~= nil and math.Vector3(0.0, y_offset, 0.0) or math.Vector3(0.0, 1.0, 0.0)
-  return compute.offset_pos(compute.resolve_tile_pos(state, player.position), offset)
+  return compute.offset_pos(compute.resolve_tile_pos(state, player.position), _y_offset_vector(y_offset))
 end
 
 return compute
