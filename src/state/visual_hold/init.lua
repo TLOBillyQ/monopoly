@@ -116,26 +116,23 @@ end
 
 landing_visual_hold.hold_state_for_game = landing_visual_hold.start
 
-function landing_visual_hold.is_active_game(game)
+local function _hold_field_or_game_fallback(game, field, fallback)
   local state = game and game.landing_visual_hold_state or nil
   if type(state) == "table" then
     local hold = _ensure_hold(state)
     if _hold_is_state_source(hold) then
-      return hold.active == true
+      return hold[field] == true
     end
   end
-  return _game_turn_active(game)
+  return fallback(game)
+end
+
+function landing_visual_hold.is_active_game(game)
+  return _hold_field_or_game_fallback(game, "active", _game_turn_active)
 end
 
 function landing_visual_hold.is_release_pending_game(game)
-  local state = game and game.landing_visual_hold_state or nil
-  if type(state) == "table" then
-    local hold = _ensure_hold(state)
-    if _hold_is_state_source(hold) then
-      return hold.release_pending == true
-    end
-  end
-  return _game_turn_release_pending(game)
+  return _hold_field_or_game_fallback(game, "release_pending", _game_turn_release_pending)
 end
 
 function landing_visual_hold.mark_release_pending(game)

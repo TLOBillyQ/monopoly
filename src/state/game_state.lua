@@ -27,6 +27,17 @@ local function _mark_board(game_ctx)
   game_ctx.dirty.board_tiles = true
 end
 
+local function _noop_false()
+  return false
+end
+
+local function _ensure_stub_port(ctx, port_name, method_name)
+  local port = ctx[port_name]
+  if type(port) ~= "table" or type(port[method_name]) ~= "function" then
+    ctx[port_name] = { [method_name] = _noop_false }
+  end
+end
+
 local function _install_default_runtime_ports(game_ctx)
   if type(game_ctx.anim_gate_port) ~= "table" then
     game_ctx.anim_gate_port = {
@@ -34,43 +45,11 @@ local function _install_default_runtime_ports(game_ctx)
       wait_action_anim = false,
     }
   end
-  if type(game_ctx.popup_port) ~= "table" or type(game_ctx.popup_port.push_popup) ~= "function" then
-    game_ctx.popup_port = {
-      push_popup = function()
-        return false
-      end,
-    }
-  end
-  if type(game_ctx.tip_output_port) ~= "table" or type(game_ctx.tip_output_port.enqueue) ~= "function" then
-    game_ctx.tip_output_port = {
-      enqueue = function()
-        return false
-      end,
-    }
-  end
-  if type(game_ctx.tile_feedback_port) ~= "table" or type(game_ctx.tile_feedback_port.on_tile_upgraded) ~= "function" then
-    game_ctx.tile_feedback_port = {
-      on_tile_upgraded = function()
-        return false
-      end,
-    }
-  end
-  if type(game_ctx.board_visual_feedback_port) ~= "table"
-      or type(game_ctx.board_visual_feedback_port.sync_many) ~= "function" then
-    game_ctx.board_visual_feedback_port = {
-      sync_many = function()
-        return false
-      end,
-    }
-  end
-  if type(game_ctx.bankruptcy_feedback_port) ~= "table"
-      or type(game_ctx.bankruptcy_feedback_port.on_tiles_cleared) ~= "function" then
-    game_ctx.bankruptcy_feedback_port = {
-      on_tiles_cleared = function()
-        return false
-      end,
-    }
-  end
+  _ensure_stub_port(game_ctx, "popup_port", "push_popup")
+  _ensure_stub_port(game_ctx, "tip_output_port", "enqueue")
+  _ensure_stub_port(game_ctx, "tile_feedback_port", "on_tile_upgraded")
+  _ensure_stub_port(game_ctx, "board_visual_feedback_port", "sync_many")
+  _ensure_stub_port(game_ctx, "bankruptcy_feedback_port", "on_tiles_cleared")
 end
 
 function game:init(opts)
@@ -83,36 +62,28 @@ local function _resolve_turn_runtime(self)
   return self.turn_engine or self.turn_runtime
 end
 
-function game:ensure_popup_port()
-  local popup_port = self.popup_port
-  if type(popup_port) == "table" and type(popup_port.push_popup) == "function" then
-    return popup_port
+local function _require_port(self, port_name, method_name)
+  local port = self[port_name]
+  if type(port) == "table" and type(port[method_name]) == "function" then
+    return port
   end
-  error("missing popup_port")
+  error("missing " .. port_name)
+end
+
+function game:ensure_popup_port()
+  return _require_port(self, "popup_port", "push_popup")
 end
 
 function game:ensure_tip_output_port()
-  local tip_output_port = self.tip_output_port
-  if type(tip_output_port) == "table" and type(tip_output_port.enqueue) == "function" then
-    return tip_output_port
-  end
-  error("missing tip_output_port")
+  return _require_port(self, "tip_output_port", "enqueue")
 end
 
 function game:ensure_tile_feedback_port()
-  local tile_feedback_port = self.tile_feedback_port
-  if type(tile_feedback_port) == "table" and type(tile_feedback_port.on_tile_upgraded) == "function" then
-    return tile_feedback_port
-  end
-  error("missing tile_feedback_port")
+  return _require_port(self, "tile_feedback_port", "on_tile_upgraded")
 end
 
 function game:ensure_board_visual_feedback_port()
-  local board_visual_feedback_port = self.board_visual_feedback_port
-  if type(board_visual_feedback_port) == "table" and type(board_visual_feedback_port.sync_many) == "function" then
-    return board_visual_feedback_port
-  end
-  error("missing board_visual_feedback_port")
+  return _require_port(self, "board_visual_feedback_port", "sync_many")
 end
 
 function game:advance_turn()
