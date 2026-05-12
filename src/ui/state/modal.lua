@@ -14,10 +14,7 @@ function modal_state.open_choice(state, choice_id, option_ids, selected_option_i
   ui_runtime.pending_choice_selected_option_id = selected_option_id
 end
 
-function modal_state.open_market(state, choice_id, option_ids, selected_option_id)
-  assert(state ~= nil, "missing state")
-  modal_state.open_choice(state, choice_id, option_ids, selected_option_id)
-end
+modal_state.open_market = modal_state.open_choice
 
 function modal_state.select_choice_option(state, option_id)
   assert(state ~= nil, "missing state")
@@ -26,9 +23,7 @@ function modal_state.select_choice_option(state, option_id)
   runtime_state.set_ui_dirty(state, true)
 end
 
-function modal_state.select_market_option(state, option_id)
-  modal_state.select_choice_option(state, option_id)
-end
+modal_state.select_market_option = modal_state.select_choice_option
 
 function modal_state.close_choice(state)
   assert(state ~= nil, "missing state")
