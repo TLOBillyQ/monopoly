@@ -78,4 +78,22 @@ function completions.build(helpers)
   }
 end
 
+function completions.item_target_handler(kind, execute_fn, complete, opts)
+  opts = opts or {}
+  return {
+    required_meta = { "player_id", "item_id" },
+    cancel = {
+      resolve = function(game, choice)
+        return complete.followup_cancel(game, choice)
+      end,
+    },
+    normalize_meta = opts.normalize_meta or normalize.item_target_meta,
+    meta_validator = opts.meta_validator or normalize.validate_item_owner_meta,
+    normalize_action = function(_, _, action)
+      return normalize.choice_action_option_id(kind, action)
+    end,
+    execute = execute_fn,
+  }
+end
+
 return completions

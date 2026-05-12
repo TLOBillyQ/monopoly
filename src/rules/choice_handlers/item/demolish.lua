@@ -28,20 +28,7 @@ function M.build(helpers)
   end
 
   return {
-    demolish_target = {
-      required_meta = { "player_id", "item_id" },
-      cancel = {
-        resolve = function(game, choice)
-          return complete.followup_cancel(game, choice)
-        end,
-      },
-      normalize_meta = normalize.item_target_meta,
-      meta_validator = normalize.validate_item_owner_meta,
-      normalize_action = function(_, _, action)
-        return normalize.choice_action_option_id("demolish_target", action)
-      end,
-      execute = _handle,
-    },
+    demolish_target = completions.item_target_handler("demolish_target", _handle, complete),
   }
 end
 

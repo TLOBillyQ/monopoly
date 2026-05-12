@@ -22,20 +22,10 @@ function M.build(helpers)
   end
 
   return {
-    remote_dice_value = {
-      required_meta = { "player_id", "item_id" },
-      cancel = {
-        resolve = function(game, choice)
-          return complete.followup_cancel(game, choice)
-        end,
-      },
+    remote_dice_value = completions.item_target_handler("remote_dice_value", _handle, complete, {
       normalize_meta = normalize.remote_dice_meta,
       meta_validator = normalize.validate_remote_dice_meta,
-      normalize_action = function(_, _, action)
-        return normalize.choice_action_option_id("remote_dice_value", action)
-      end,
-      execute = _handle,
-    },
+    }),
   }
 end
 

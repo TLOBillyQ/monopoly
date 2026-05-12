@@ -24,20 +24,7 @@ function M.build(helpers)
   end
 
   return {
-    item_target_player = {
-      required_meta = { "player_id", "item_id" },
-      cancel = {
-        resolve = function(game, choice)
-          return complete.followup_cancel(game, choice)
-        end,
-      },
-      normalize_meta = normalize.item_target_meta,
-      meta_validator = normalize.validate_item_owner_meta,
-      normalize_action = function(_, _, action)
-        return normalize.choice_action_option_id("item_target_player", action)
-      end,
-      execute = _handle,
-    },
+    item_target_player = completions.item_target_handler("item_target_player", _handle, complete),
   }
 end
 
