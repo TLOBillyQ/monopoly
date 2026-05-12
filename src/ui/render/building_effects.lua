@@ -27,10 +27,10 @@ function building_effects.clear_building_units(scene, building_index, deps)
   return true
 end
 
-local _offsets = {
-  [1] = math.Vector3(0.0, 1.5, 0.0),
-  [2] = math.Vector3(0.0, 1.5, 0.0),
-  [3] = math.Vector3(1.0, 1.5, 0.0),
+local _offset_coords = {
+  [1] = { x = 0.0, y = 1.5, z = 0.0 },
+  [2] = { x = 0.0, y = 1.5, z = 0.0 },
+  [3] = { x = 1.0, y = 1.5, z = 0.0 },
 }
 
 local _ref_keys = {
@@ -38,6 +38,14 @@ local _ref_keys = {
   [2] = "二级建筑",
   [3] = "三级建筑",
 }
+
+local function _offset_for_level(level)
+  local coords = _offset_coords[level]
+  if coords == nil then
+    return nil
+  end
+  return math.Vector3(coords.x, coords.y, coords.z)
+end
 
 function building_effects.spawn_upgrade_building_units(scene, root_quaternion, building_index, level, deps)
   assert(scene ~= nil, "missing scene")
@@ -58,7 +66,11 @@ function building_effects.spawn_upgrade_building_units(scene, root_quaternion, b
   if group_id == nil then
     return false
   end
-  local unit = host_runtime.create_unit_group(group_id, pos + _offsets[lv], root_quaternion)
+  local offset = _offset_for_level(lv)
+  if offset == nil then
+    return false
+  end
+  local unit = host_runtime.create_unit_group(group_id, pos + offset, root_quaternion)
   if unit == nil then
     return false
   end

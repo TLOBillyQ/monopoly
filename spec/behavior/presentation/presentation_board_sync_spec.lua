@@ -756,6 +756,22 @@ describe("presentation.board_sync", function()
     _assert_eq(log_calls, 0, "ensure_tile_anchors should skip logging when cache is already ready")
   end)
 
+  it("_test_building_effects_require_does_not_need_host_vector3", function()
+    local module_name = "src.ui.render.building_effects"
+    local original_vector3 = math.Vector3
+    local original_loaded = package.loaded[module_name]
+    math.Vector3 = nil
+    package.loaded[module_name] = nil
+
+    local ok, loaded_or_err = pcall(require, module_name)
+
+    package.loaded[module_name] = original_loaded
+    math.Vector3 = original_vector3
+    assert(ok, "building_effects require should not call math.Vector3: " .. tostring(loaded_or_err))
+    _assert_eq(type(loaded_or_err.spawn_upgrade_building_units), "function",
+      "building_effects should load its public API without host Vector3")
+  end)
+
   it("_test_building_effects_spawn_upgrade_building_units_creates_group_and_updates_billboard", function()
     local building_effects = require("src.ui.render.building_effects")
 
