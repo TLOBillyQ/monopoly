@@ -81,13 +81,7 @@ local function _should_update_slots(dirty, ui_dirty)
   if dirty.players or dirty.turn or ui_dirty then
     return true
   end
-  if not dirty.inventory_ids then
-    return false
-  end
-  if next(dirty.inventory_ids) ~= nil then
-    return true
-  end
-  return false
+  return dirty.inventory_ids ~= nil and next(dirty.inventory_ids) ~= nil
 end
 
 local function _update_slots(model, game, current, current_player_id, ui_runtime)
@@ -151,7 +145,7 @@ local function _refresh_panel_and_slots(model, game, env, turn, current, current
   return update_slots
 end
 
-local function _refresh_choice_and_meta(model, game, env, ui_state, ui_runtime, current_name, current_cash, current_player_id, turn, dirty, ui_dirty, update_slots)
+local function _refresh_choice_and_meta(model, game, env, ui_state, _, current_name, current_cash, current_player_id, turn, dirty, ui_dirty, update_slots)
   if _should_refresh_choice(dirty, ui_dirty) then
     _update_choice_and_market(model, game, env, ui_state, current_player_id)
   elseif dirty.players or update_slots then

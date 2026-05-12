@@ -160,9 +160,7 @@ local function _try_get_previous_tick(state, now)
   return previous, nil
 end
 
-function tick_clock.resolve_fallback_tick_seconds(interval)
-  return _resolve_fallback_tick_seconds(interval)
-end
+tick_clock.resolve_fallback_tick_seconds = _resolve_fallback_tick_seconds
 
 function tick_clock.resolve_tick_seconds(state, fallback_seconds)
   if not state then

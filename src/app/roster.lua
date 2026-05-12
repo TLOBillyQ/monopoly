@@ -11,19 +11,15 @@ local default_ports = require("src.turn.output.default_ports")
 local logger = require("src.foundation.log.logger")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 
+local function _cancel_fallback(_, choice)
+  return { type = "choice_cancel", choice_id = choice and choice.id }
+end
+
 local function _register_default_choice_fallbacks()
-  fallback_registry.register("market_buy", function(_, choice)
-    return { type = "choice_cancel", choice_id = choice and choice.id }
-  end)
-  fallback_registry.register("item_target_tile", function(_, choice)
-    return { type = "choice_cancel", choice_id = choice and choice.id }
-  end)
-  fallback_registry.register("item_target_player", function(_, choice)
-    return { type = "choice_cancel", choice_id = choice and choice.id }
-  end)
-  fallback_registry.register("steal_target", function(_, choice)
-    return { type = "choice_cancel", choice_id = choice and choice.id }
-  end)
+  fallback_registry.register("market_buy", _cancel_fallback)
+  fallback_registry.register("item_target_tile", _cancel_fallback)
+  fallback_registry.register("item_target_player", _cancel_fallback)
+  fallback_registry.register("steal_target", _cancel_fallback)
 end
 
 _register_default_choice_fallbacks()

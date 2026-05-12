@@ -78,7 +78,7 @@ local function _apply_upgrade(ctx)
   local player = ctx.player
   local st = land_actions.safe_tile_state(ctx.game, t)
   local old_level = st.level or 0
-  local cost = pricing.upgrade_cost(t, st.level or 0)
+  local cost = pricing.upgrade_cost(t, old_level)
   if ctx.game:player_balance(player, "金币") < cost then
     return {
       intent = {

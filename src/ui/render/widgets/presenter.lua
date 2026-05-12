@@ -43,7 +43,7 @@ local function _show_auto_controls(ui, controls)
   end
 end
 
-function panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model, ui_touch_policy)
+function panel_presenter.render_auto_controls_for_role(_, ui, ctx, ui_model, ui_touch_policy)
   assert(ui ~= nil, "missing ui")
   local controls = ui.auto_control_nodes or { base_nodes.auto_button, base_nodes.auto_label }
   local auto_enabled = ctx and ctx.is_player_role == true or false
@@ -149,11 +149,8 @@ end
 local function _sync_item_slot_ids_for_current_player(ui, ui_model)
   local current_player_id = role_id_utils.normalize(ui_model.current_player_id)
   local by_role = ui.item_slot_item_ids_by_role
-  if current_player_id and by_role and role_id_utils.read(by_role, current_player_id) then
-    ui.item_slot_item_ids = role_id_utils.read(by_role, current_player_id)
-  else
-    ui.item_slot_item_ids = {}
-  end
+  local cached = current_player_id and by_role and role_id_utils.read(by_role, current_player_id)
+  ui.item_slot_item_ids = cached or {}
 end
 
 local function _refresh_all_roles(state, ui_model, runtime, panel, refresh_item_slots, ui_touch_policy, players)

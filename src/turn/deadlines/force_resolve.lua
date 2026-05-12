@@ -144,7 +144,7 @@ function M.force_skip(game, state, choice, reason)
   end
 end
 
-local function _try_choice_auto(game, state, choice, reason)
+local function _try_choice_auto(game, state, choice)
   local elapsed = 0
   if type(state) == "table" then
     local entry = DeadlineService.peek(state, choice and choice.kind == "market_buy" and "market_buy" or "choice")
@@ -154,13 +154,12 @@ local function _try_choice_auto(game, state, choice, reason)
       elapsed = runtime_state.get_pending_choice_elapsed(state) or 0
     end
   end
-  local action = choice_auto_policy.decide(game, state, choice, {
+  return choice_auto_policy.decide(game, state, choice, {
     mode = "tick_timeout",
     elapsed_seconds = elapsed,
     min_visible_seconds = 0,
     allow_first_option_fallback = true,
   })
-  return action
 end
 
 function M.resolve_choice(game, state, choice, reason)
@@ -170,7 +169,7 @@ function M.resolve_choice(game, state, choice, reason)
     return
   end
   -- L1: 现有 choice_auto 逻辑
-  local action = _try_choice_auto(game, state, choice, reason)
+  local action = _try_choice_auto(game, state, choice)
   if _is_action_dispatchable(action) then
     _ensure_actor_role_id(game, choice, action)
     _dispatch_via_close_choice(game, state, action)

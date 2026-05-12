@@ -29,7 +29,7 @@ local function _resolve_action_anim_wait(game)
   return next_anim, next_anim ~= nil
 end
 
-local function _resolve_action_anim_idle(session, args, game, anim, queued_next_anim)
+local function _resolve_action_anim_idle(session, args, _, anim, queued_next_anim)
   if anim ~= nil then
     return nil
   end
@@ -131,22 +131,7 @@ function M.action_anim(session, args)
   end
 
   local action = session:take_pending_action()
-  if _is_anim_timed_out(anim) then
-    local completed = _complete_action_anim(session, args, game)
-    if completed and completed.wait == true then
-      return completed
-    end
-    local continuation = wait_callbacks.take(game, callback_keys.after_action_anim)
-    if continuation == nil then
-      return completed
-    end
-    local next_state, next_args = continuation()
-    return {
-      next_state = next_state,
-      next_args = next_args,
-    }
-  end
-  if not _is_matching_done_action(action, anim, "action_anim_done") then
+  if not _is_anim_timed_out(anim) and not _is_matching_done_action(action, anim, "action_anim_done") then
     return { wait = true }
   end
   local completed = _complete_action_anim(session, args, game)

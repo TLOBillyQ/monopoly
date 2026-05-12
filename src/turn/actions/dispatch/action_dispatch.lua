@@ -29,7 +29,7 @@ local function build(deps)
     return false
   end
 
-  local function _handle_auto_toggle(game, state, action)
+  local function _handle_auto_toggle(game, _, action)
     local player = ctx_mod.resolve_actor_player(game, action)
     if not player then
       return { status = "rejected" }
@@ -90,7 +90,7 @@ local function build(deps)
     return { status = "rejected" }
   end
 
-  local function _resolve_choice_action_choice(game, state, ctx)
+  local function _resolve_pending_choice(game, state, ctx)
     local turn = game and game.turn or nil
     local turn_choice = turn and turn.pending_choice or nil
     if turn_choice ~= nil then
@@ -100,7 +100,7 @@ local function build(deps)
   end
 
   local function _handle_choice_action(game, state, action, opts, ctx)
-    local choice = _resolve_choice_action_choice(game, state, ctx)
+    local choice = _resolve_pending_choice(game, state, ctx)
     if not validator.validate_choice_action(game, action, choice) then
       return { status = "rejected" }
     end
@@ -113,22 +113,6 @@ local function build(deps)
       turn_dispatch_ref.clear_choice(state, opts)
     end
     return { status = "applied" }
-  end
-
-  local function _resolve_turn_pending_choice(game)
-    local turn = game and game.turn or nil
-    if not turn then
-      return nil
-    end
-    return turn.pending_choice
-  end
-
-  local function _resolve_market_choice(game, state, ctx)
-    local turn_choice = _resolve_turn_pending_choice(game)
-    if turn_choice ~= nil then
-      return turn_choice
-    end
-    return ctx.output_ports.get_pending_choice(state)
   end
 
   local function _resolve_market_navigation_failure(game, state, action, ctx, choice)
@@ -146,7 +130,7 @@ local function build(deps)
   end
 
   local function _handle_market_navigation(game, state, action, ctx)
-    local choice = _resolve_market_choice(game, state, ctx)
+    local choice = _resolve_pending_choice(game, state, ctx)
     local failure = _resolve_market_navigation_failure(game, state, action, ctx, choice)
     if failure ~= nil then
       logger.warn(failure)
@@ -179,7 +163,7 @@ local function build(deps)
     end
     if action.type == "choice_force_skip" then
       local force_resolve = require("src.turn.deadlines.force_resolve")
-      local choice = _resolve_choice_action_choice(game, state, ctx)
+      local choice = _resolve_pending_choice(game, state, ctx)
       force_resolve.force_skip(game, state, choice, action.reason or "dispatch")
       return { status = "applied" }
     end

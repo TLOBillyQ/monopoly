@@ -22,12 +22,7 @@ local function _resolve_role_id_from_event(state, data)
 end
 
 local function _resolve_client_role_id()
-  local current_role = runtime.get_client_role()
-  local role_id = runtime.resolve_role_id(current_role)
-  if role_id ~= nil then
-    return role_id
-  end
-  return nil
+  return runtime.resolve_role_id(runtime.get_client_role())
 end
 
 local function _resolve_cached_role_id(state)
@@ -45,12 +40,7 @@ function resolver.resolve_from_event(state, data)
     return role_id
   end
 
-  local cached = _resolve_cached_role_id(state)
-  if cached ~= nil then
-    return cached
-  end
-
-  return nil
+  return _resolve_cached_role_id(state)
 end
 
 function resolver.resolve_turn_bound(state, data)

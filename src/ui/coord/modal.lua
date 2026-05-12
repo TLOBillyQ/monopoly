@@ -146,9 +146,7 @@ function modal_presenter.open_choice_modal(state, choice, market_state)
   end
 
   if screen_key == "base_inline" then
-    if _open_base_inline_choice(state, choice) then
-      return
-    end
+    _open_base_inline_choice(state, choice)
     return
   end
 
