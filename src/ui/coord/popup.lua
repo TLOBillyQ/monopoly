@@ -167,9 +167,7 @@ function renderer.show_popup(state, payload)
   _set_popup_dismiss_touch(ui, true)
 end
 
-function renderer.show(state, payload)
-  return renderer.show_popup(state, payload)
-end
+renderer.show = renderer.show_popup
 local function _hide_bankruptcy_popup(state)
   local ui = state.ui
   local screen = ui.bankruptcy_screen
@@ -195,8 +193,6 @@ function renderer.hide_popup(state)
   _set_popup_dismiss_touch(ui, false)
 end
 
-function renderer.hide(state)
-  return renderer.hide_popup(state)
-end
+renderer.hide = renderer.hide_popup
 
 return renderer

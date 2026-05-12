@@ -25,12 +25,7 @@ function common.emit_event(game, kind, payload)
   end
 end
 
-function common.abs_value(value)
-  if value < 0 then
-    return -value
-  end
-  return value
-end
+common.abs_value = math.abs
 
 function common.apply_cash_change(game, player, delta, opts)
   game:add_player_cash(player, delta, opts)
