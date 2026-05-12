@@ -3,31 +3,24 @@ local angel_feedback = require("src.rules.items.angel_feedback")
 
 local M = {}
 
+local function _detention_executor(tile_type, label, effect_method)
+  return {
+    can_apply = function(ctx)
+      return ctx.tile and ctx.tile.type == tile_type
+    end,
+    apply = function(ctx)
+      if ctx.game:player_has_angel(ctx.player) then
+        angel_feedback.publish(ctx.game, ctx.player, label, { tile_index = ctx.player.position })
+        return
+      end
+      ctx.game[effect_method](ctx.game, ctx.player)
+    end,
+  }
+end
+
 M.executors = {
-  hospital = {
-    can_apply = function(ctx)
-      return ctx.tile and ctx.tile.type == "hospital"
-    end,
-    apply = function(ctx)
-      if ctx.game:player_has_angel(ctx.player) then
-        angel_feedback.publish(ctx.game, ctx.player, "住院", { tile_index = ctx.player.position })
-        return
-      end
-      ctx.game:player_apply_hospital_effects(ctx.player)
-    end,
-  },
-  mountain = {
-    can_apply = function(ctx)
-      return ctx.tile and ctx.tile.type == "mountain"
-    end,
-    apply = function(ctx)
-      if ctx.game:player_has_angel(ctx.player) then
-        angel_feedback.publish(ctx.game, ctx.player, "深山迷路", { tile_index = ctx.player.position })
-        return
-      end
-      ctx.game:player_apply_mountain_effects(ctx.player)
-    end,
-  },
+  hospital = _detention_executor("hospital", "住院", "player_apply_hospital_effects"),
+  mountain = _detention_executor("mountain", "深山迷路", "player_apply_mountain_effects"),
   mine = {
     can_apply = function(ctx)
       local position = ctx.player and ctx.player.position

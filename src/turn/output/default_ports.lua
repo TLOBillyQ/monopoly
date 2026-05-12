@@ -38,20 +38,21 @@ local function _build_bankruptcy_port()
   }
 end
 
+local function _install_defaults(target)
+  target.auto_play_port = _build_missing_port(target.auto_play_port, _build_auto_play_port)
+  target.bankruptcy_port = _build_missing_port(target.bankruptcy_port, _build_bankruptcy_port)
+  return target
+end
+
 function default_ports.resolve_game_opts(opts)
-  opts = opts or {}
-  opts.auto_play_port = _build_missing_port(opts.auto_play_port, _build_auto_play_port)
-  opts.bankruptcy_port = _build_missing_port(opts.bankruptcy_port, _build_bankruptcy_port)
-  return opts
+  return _install_defaults(opts or {})
 end
 
 function default_ports.install(game)
   if type(game) ~= "table" then
     return game
   end
-  game.auto_play_port = _build_missing_port(game.auto_play_port, _build_auto_play_port)
-  game.bankruptcy_port = _build_missing_port(game.bankruptcy_port, _build_bankruptcy_port)
-  return game
+  return _install_defaults(game)
 end
 
 return default_ports

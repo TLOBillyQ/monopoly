@@ -19,31 +19,23 @@ end
 
 function item_slot_data.from_ui_state(ui_state)
   local state = type(ui_state) == "table" and ui_state or nil
+
+  local function _resolve_item_ids(actor_role_id)
+    if state and actor_role_id and type(state.item_slot_item_ids_by_role) == "table" then
+      local ids = role_id_utils.read(state.item_slot_item_ids_by_role, actor_role_id)
+      if ids then return ids end
+    end
+    return state and state.item_slot_item_ids or nil
+  end
+
   return {
-    get_item_ids = function(actor_role_id)
-      if not state then
-        return nil
-      end
-      if actor_role_id and type(state.item_slot_item_ids_by_role) == "table" then
-        local item_ids = role_id_utils.read(state.item_slot_item_ids_by_role, actor_role_id)
-        if item_ids then
-          return item_ids
-        end
-      end
-      return state.item_slot_item_ids
-    end,
+    get_item_ids = _resolve_item_ids,
     resolve_slot_action = function(actor_role_id, slot_index_or_id)
       local slot_index = _resolve_slot_index(slot_index_or_id)
       if not slot_index then
         return nil
       end
-      local item_ids = nil
-      if actor_role_id and type(state and state.item_slot_item_ids_by_role) == "table" then
-        item_ids = role_id_utils.read(state.item_slot_item_ids_by_role, actor_role_id)
-      end
-      if not item_ids then
-        item_ids = state and state.item_slot_item_ids or nil
-      end
+      local item_ids = _resolve_item_ids(actor_role_id)
       if not item_ids then
         return nil
       end
