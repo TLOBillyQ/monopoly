@@ -184,7 +184,6 @@ function tick_timeout.default_policy()
 end
 
 function tick_timeout.step_default_choice(game, state, dt)
-  local policy = tick_timeout.default_policy()
   local ui_sync_ports = _resolve_ui_sync_ports(state)
   tick_timeout.step_choice_timeout(game, state, dt, {
     on_pending_choice = function(state_ctx, pending)
@@ -208,14 +207,13 @@ function tick_timeout.step_default_choice(game, state, dt)
         should_warn = false,
       }
     end,
-    build_action = policy.choice.build_action,
-    get_timeout_seconds = policy.choice.get_timeout_seconds,
-    get_min_visible_seconds = policy.choice.get_min_visible_seconds,
+    build_action = default_policy.choice.build_action,
+    get_timeout_seconds = default_policy.choice.get_timeout_seconds,
+    get_min_visible_seconds = default_policy.choice.get_min_visible_seconds,
   })
 end
 
 function tick_timeout.step_default_modal(game, state, dt)
-  local policy = tick_timeout.default_policy()
   tick_timeout.step_modal_timeout(state, dt, {
     is_active = function(ctx)
       local gate = tick_ui_gate.resolve_ui_gate(ctx)
@@ -227,9 +225,9 @@ function tick_timeout.step_default_modal(game, state, dt)
       return assert(gate.popup_seq, "missing popup_seq")
     end,
     get_timeout_seconds = function(state_ctx)
-      return policy.modal.get_timeout_seconds(game, state_ctx, state_ctx and state_ctx.gameplay_loop_ports and state_ctx.gameplay_loop_ports.ui_sync or nil)
+      return default_policy.modal.get_timeout_seconds(game, state_ctx, state_ctx and state_ctx.gameplay_loop_ports and state_ctx.gameplay_loop_ports.ui_sync or nil)
     end,
-    on_timeout = policy.modal.on_timeout,
+    on_timeout = default_policy.modal.on_timeout,
   })
 end
 
