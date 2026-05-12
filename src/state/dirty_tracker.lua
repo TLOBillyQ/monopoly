@@ -18,15 +18,7 @@ local valid_domains = {
 }
 
 function dirty_tracker.new()
-  return {
-    any = false,
-    players = false,
-    board_tiles = false,
-    turn = false,
-    market = false,
-    turn_countdown = false,
-    inventory_ids = {},
-  }
+  return dirty_tracker.reset({})
 end
 
 function dirty_tracker.ensure_inventory_ids(d)

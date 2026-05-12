@@ -3,6 +3,12 @@ local monopoly_event = require("src.foundation.events")
 
 local deity_ops = {}
 
+local function _ensure_deity(player)
+  local status = common.player_status_table(player)
+  status.deity = status.deity or { type = "", remaining = 0 }
+  return status.deity
+end
+
 function deity_ops.player_has_deity(_, player, name)
   local deity = player.status and player.status.deity
   if not deity then
@@ -38,10 +44,9 @@ function deity_ops.angel_immune_to_item(self, player, item_id)
 end
 
 function deity_ops.clear_player_deity(self, player)
-  local status = common.player_status_table(player)
-  status.deity = status.deity or { type = "", remaining = 0 }
-  status.deity.type = ""
-  status.deity.remaining = 0
+  local deity = _ensure_deity(player)
+  deity.type = ""
+  deity.remaining = 0
   common.mark_players(self)
 end
 
@@ -49,11 +54,10 @@ function deity_ops.set_player_deity(self, player, name, duration)
   assert(type(name) == "string" and name ~= "", "deity name must be non-empty string")
   if duration ~= nil then assert(duration > 0, "explicit duration must be positive") end
   local actual_duration = duration or player.deity_duration_turns
-  local status = common.player_status_table(player)
-  status.deity = status.deity or { type = "", remaining = 0 }
-  status.deity.type = name
+  local deity = _ensure_deity(player)
+  deity.type = name
   -- +1 so the activation-turn tick brings remaining to actual_duration.
-  status.deity.remaining = actual_duration + 1
+  deity.remaining = actual_duration + 1
   common.mark_players(self)
   monopoly_event.emit(monopoly_event.feedback.deity_applied, {
     player = player,
@@ -71,10 +75,9 @@ function deity_ops.transfer_deity(self, src, dst)
          "src has no effective deity")
   self._deity_transferring = true
   local ok, err = pcall(function()
-    local dst_status = common.player_status_table(dst)
-    dst_status.deity = dst_status.deity or { type = "", remaining = 0 }
-    dst_status.deity.type = src_deity.type
-    dst_status.deity.remaining = src_deity.remaining
+    local dst_deity = _ensure_deity(dst)
+    dst_deity.type = src_deity.type
+    dst_deity.remaining = src_deity.remaining
     common.mark_players(self)
     monopoly_event.emit(monopoly_event.feedback.deity_applied, {
       player = dst,
@@ -93,9 +96,7 @@ end
 
 function deity_ops.tick_player_deity(self, player)
   if player.eliminated then return end
-  local status = common.player_status_table(player)
-  status.deity = status.deity or { type = "", remaining = 0 }
-  local deity = status.deity
+  local deity = _ensure_deity(player)
   if deity.remaining <= 0 then
     return
   end

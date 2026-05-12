@@ -68,35 +68,26 @@ function M.build(helpers)
     return reopened and { stay = true } or nil
   end
 
+  local function _item_phase_handler(kind, execute_fn)
+    return {
+      required_meta = { "player_id", "phase" },
+      cancel = {
+        resolve = function(game, choice)
+          item_phase.finish(game, choice.meta and choice.meta.phase or nil)
+        end,
+      },
+      normalize_meta = normalize.item_phase_meta,
+      meta_validator = normalize.validate_item_phase_meta,
+      normalize_action = function(_, _, action)
+        return normalize.choice_action_option_id(kind, action)
+      end,
+      execute = execute_fn,
+    }
+  end
+
   return {
-    item_phase_choice = {
-      required_meta = { "player_id", "phase" },
-      cancel = {
-        resolve = function(game, choice)
-          item_phase.finish(game, choice.meta and choice.meta.phase or nil)
-        end,
-      },
-      normalize_meta = normalize.item_phase_meta,
-      meta_validator = normalize.validate_item_phase_meta,
-      normalize_action = function(_, _, action)
-        return normalize.choice_action_option_id("item_phase_choice", action)
-      end,
-      execute = _handle_item_phase_choice,
-    },
-    item_phase_passive = {
-      required_meta = { "player_id", "phase" },
-      cancel = {
-        resolve = function(game, choice)
-          item_phase.finish(game, choice.meta and choice.meta.phase or nil)
-        end,
-      },
-      normalize_meta = normalize.item_phase_meta,
-      meta_validator = normalize.validate_item_phase_meta,
-      normalize_action = function(_, _, action)
-        return normalize.choice_action_option_id("item_phase_passive", action)
-      end,
-      execute = _handle_item_phase_passive,
-    },
+    item_phase_choice = _item_phase_handler("item_phase_choice", _handle_item_phase_choice),
+    item_phase_passive = _item_phase_handler("item_phase_passive", _handle_item_phase_passive),
   }
 end
 
