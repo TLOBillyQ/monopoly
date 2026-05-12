@@ -1,6 +1,7 @@
 local movement = require("src.rules.movement")
 local dice_multiplier = require("src.turn.phases.dice_multiplier")
 local move_followup = require("src.turn.phases.move_followup")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local function _merge_move_args(out, extra)
   if extra == nil then
@@ -58,8 +59,7 @@ end
 
 local function _queue_move_anim(game, anim_data)
   game.turn.move_anim = anim_data
-  game.dirty.turn = true
-  game.dirty.any = true
+  dirty_tracker.mark(game.dirty, "turn")
 end
 
 local function _build_wait_move_anim_result(player, raw_total, move_result)

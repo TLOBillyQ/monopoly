@@ -1,3 +1,5 @@
+local dirty_tracker = require("src.state.dirty_tracker")
+
 local session = {}
 
 local function _mark_phase_default(game, phase)
@@ -6,8 +8,7 @@ local function _mark_phase_default(game, phase)
   end
   game.turn.phase = phase
   if game.dirty then
-    game.dirty.turn = true
-    game.dirty.any = true
+    dirty_tracker.mark(game.dirty, "turn")
   end
 end
 

@@ -5,6 +5,7 @@ local monopoly_event = require("src.foundation.events")
 local timing = require("src.config.gameplay.timing")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local function _clear_no_action_notice(turn)
   if not turn then
@@ -50,10 +51,6 @@ local function _skip_eliminated_player(game, player)
   return "end_turn", { player = player }
 end
 
-local function _mark_turn_dirty(game)
-  game.dirty.turn = true
-  game.dirty.any = true
-end
 
 local function _configure_detained_wait(game, turn, player)
   local detained_wait_seconds = timing.detained_turn_wait_seconds or 5.0
@@ -119,7 +116,7 @@ local function _phase_start(turn_mgr)
   end
   tc = tc + 1
   turn_mgr.game.turn.turn_count = tc
-  _mark_turn_dirty(turn_mgr.game)
+  dirty_tracker.mark(turn_mgr.game.dirty, "turn")
   if player.status.stay_turns and player.status.stay_turns > 0 then
     return _configure_detained_wait(turn_mgr.game, turn, player)
   end

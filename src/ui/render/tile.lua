@@ -22,7 +22,7 @@ local function _assert_land_node_present(is_land, node_name)
   end
 end
 
-local function _render_name(unit, cfg, tile_id, is_land)
+local function _render_name(unit, cfg, is_land)
   local name_node = unit.get_child_by_name("name")
   if _set_billboard_text(name_node, cfg.name) then
     return
@@ -39,7 +39,7 @@ local function _rent_for_level(cfg, level)
   return rents[idx]
 end
 
-local function _render_price(unit, cfg, tile_id, is_land, owner_name, level, contiguous_count)
+local function _render_price(unit, cfg, is_land, owner_name, level, contiguous_count)
   local price_node = unit.get_child_by_name("price")
   local text
   if owner_name then
@@ -81,8 +81,8 @@ function tile_renderer.render_tile(unit, tile_id, owner_id, owner_name, level, c
   if is_land then
     assert(cfg.price ~= nil, "missing tile price: " .. tostring(tile_id))
   end
-  _render_name(unit, cfg, tile_id, is_land)
-  _render_price(unit, cfg, tile_id, is_land, owner_name, level, contiguous_count)
+  _render_name(unit, cfg, is_land)
+  _render_price(unit, cfg, is_land, owner_name, level, contiguous_count)
   _render_color(unit, owner_id, is_land)
 end
 

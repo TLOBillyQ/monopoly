@@ -2,6 +2,7 @@ local runtime_state = require("src.state.runtime")
 local deferred_dirty = require("src.state.visual_hold.deferred_dirty")
 local release_scheduler = require("src.state.visual_hold.release_scheduler")
 local event_log = require("src.state.event_log")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local landing_visual_hold = {}
 
@@ -30,8 +31,7 @@ local function _mark_turn_dirty(game)
   if not (game and game.dirty) then
     return
   end
-  game.dirty.turn = true
-  game.dirty.any = true
+  dirty_tracker.mark(game.dirty, "turn")
 end
 
 local function _ensure_event_log_for_game(game)

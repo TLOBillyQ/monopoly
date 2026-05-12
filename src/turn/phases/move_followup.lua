@@ -5,6 +5,7 @@ local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local landing_visual_hold = require("src.state.visual_hold")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local move_followup = {}
 
@@ -14,8 +15,7 @@ local function _clear_pending_flag(game)
   end
   if game.turn.move_followup_pending == true then
     game.turn.move_followup_pending = false
-    game.dirty.turn = true
-    game.dirty.any = true
+    dirty_tracker.mark(game.dirty, "turn")
   end
 end
 

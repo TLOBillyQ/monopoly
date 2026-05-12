@@ -27,16 +27,23 @@ function building_effects.clear_building_units(scene, building_index, deps)
   return true
 end
 
+local _offsets = {
+  [1] = math.Vector3(0.0, 1.5, 0.0),
+  [2] = math.Vector3(0.0, 1.5, 0.0),
+  [3] = math.Vector3(1.0, 1.5, 0.0),
+}
+
+local _ref_keys = {
+  [1] = "一级建筑",
+  [2] = "二级建筑",
+  [3] = "三级建筑",
+}
+
 function building_effects.spawn_upgrade_building_units(scene, root_quaternion, building_index, level, deps)
   assert(scene ~= nil, "missing scene")
   assert(building_index ~= nil, "missing building_index")
   assert(level ~= nil, "missing building level")
   local host_runtime = _resolve_host_runtime(scene, deps)
-  local offsets = {
-    [1] = math.Vector3(0.0, 1.5, 0.0),
-    [2] = math.Vector3(0.0, 1.5, 0.0),
-    [3] = math.Vector3(1.0, 1.5, 0.0),
-  }
   local buildings = assert(scene.buildings, "missing scene.buildings")
   local idx = building_index
   local lv = level
@@ -46,17 +53,12 @@ function building_effects.spawn_upgrade_building_units(scene, root_quaternion, b
     return false
   end
   local pos = buildings[idx].get_position()
-  local ref_keys = {
-    [1] = "一级建筑",
-    [2] = "二级建筑",
-    [3] = "三级建筑",
-  }
-  local ref_key = ref_keys[lv]
+  local ref_key = _ref_keys[lv]
   local group_id = prefab.group[ref_key]
   if group_id == nil then
     return false
   end
-  local unit = host_runtime.create_unit_group(group_id, pos + offsets[lv], root_quaternion)
+  local unit = host_runtime.create_unit_group(group_id, pos + _offsets[lv], root_quaternion)
   if unit == nil then
     return false
   end

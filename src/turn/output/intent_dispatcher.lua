@@ -3,6 +3,7 @@ local choice_contract = require("src.config.choice.contract")
 local choice_route_policy = require("src.config.choice.route_policy")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local intent_dispatcher = {}
 
@@ -17,10 +18,6 @@ local function _build_choice_log_text(title, body_lines)
   return text
 end
 
-local function _mark_turn_dirty(game)
-  game.dirty.turn = true
-  game.dirty.any = true
-end
 
 local function _build_choice_entry(choice_id, choice_spec)
   local route_key = choice_route_policy.resolve(choice_spec)
@@ -86,7 +83,7 @@ function intent_dispatcher.open_choice(game, choice_spec)
 
   local entry = _build_choice_entry(seq, choice_spec)
   game.turn.pending_choice = entry
-  _mark_turn_dirty(game)
+  dirty_tracker.mark(game.dirty, "turn")
   event_feed.publish(game, {
     kind = event_kinds.choice_picked,
     text = _build_choice_log_text(entry.title, entry.body_lines),

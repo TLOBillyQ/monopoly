@@ -2,6 +2,7 @@ local scheduler = require("src.turn.timing")
 local session_factory = require("src.turn.timing.session")
 local action_router = require("src.turn.timing.action_router")
 local turn_script = require("src.turn.timing.session_script")
+local dirty_tracker = require("src.state.dirty_tracker")
 require "vendor.third_party.ClassUtils"
 
 local scheduler_turn_runtime = Class("SchedulerTurnRuntime")
@@ -16,8 +17,7 @@ end
 
 local function _mark_dirty(game)
   if game and game.dirty then
-    game.dirty.turn = true
-    game.dirty.any = true
+    dirty_tracker.mark(game.dirty, "turn")
   end
 end
 

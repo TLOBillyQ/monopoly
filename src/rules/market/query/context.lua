@@ -1,6 +1,7 @@
 local market_catalog = require("src.config.content.market_catalog")
 local items_cfg = require("src.config.content.items")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local context = {}
 
@@ -62,8 +63,7 @@ function context.consume_global_limit(game, product_id)
     next_remaining = 0
   end
   game.market_limits[product_id] = next_remaining
-  game.dirty.market = true
-  game.dirty.any = true
+  dirty_tracker.mark(game.dirty, "market")
 end
 
 return context

@@ -3,6 +3,7 @@ local feedback = require("src.rules.market.choice.feedback")
 local number_utils = require("src.foundation.lang.number")
 local logger = require("src.foundation.log.logger")
 local choice_contract = require("src.config.choice.contract")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local session = {}
 
@@ -10,9 +11,8 @@ local function _mark_choice_dirty(game)
   if not game or not game.dirty then
     return
   end
-  game.dirty.turn = true
-  game.dirty.market = true
-  game.dirty.any = true
+  dirty_tracker.mark(game.dirty, "turn")
+  dirty_tracker.mark(game.dirty, "market")
 end
 
 local function _current_choice_state(pending_choice)

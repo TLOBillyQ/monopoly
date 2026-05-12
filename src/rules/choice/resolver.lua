@@ -2,6 +2,7 @@ local logger = require("src.foundation.log.logger")
 local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local tables = require("src.foundation.lang.tables")
 local event_kinds = require("src.config.gameplay.event_kinds")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local choice_resolver = {}
 
@@ -22,8 +23,7 @@ end
 
 local function _clear_choice(game)
   game.turn.pending_choice = nil
-  game.dirty.turn = true
-  game.dirty.any = true
+  dirty_tracker.mark(game.dirty, "turn")
 end
 
 local function _finish_choice(game, stay)

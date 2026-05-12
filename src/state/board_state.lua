@@ -1,3 +1,5 @@
+local dirty_tracker = require("src.state.dirty_tracker")
+
 local game_state_tiles = {}
 
 local function _bump_land_rent_version(self)
@@ -5,8 +7,7 @@ local function _bump_land_rent_version(self)
 end
 
 local function _mark_board(self)
-  self.dirty.any = true
-  self.dirty.board_tiles = true
+  dirty_tracker.mark(self.dirty, "board_tiles")
 end
 
 local function _sync_board_visual(self, payload)

@@ -1,6 +1,7 @@
 local tick_timeout = require("src.turn.waits.timeout")
 local runtime_state = require("src.state.runtime")
 local DeadlineService = require("src.turn.deadlines.service")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local tick_ui_sync = {}
 
@@ -77,10 +78,6 @@ local function _resolve_countdown_state(game, state, turn, timeout, gate)
   return false, 0
 end
 
-local function _mark_countdown_dirty(game)
-  game.dirty.turn_countdown = true
-  game.dirty.any = true
-end
 
 local function _resolve_deadline_countdown(state)
   local primary = DeadlineService.peek(state, "primary")
@@ -104,17 +101,17 @@ function tick_ui_sync.update_countdown(game, state)
   if seconds ~= state.countdown_last then
     state.countdown_last = seconds
     turn.countdown_seconds = seconds
-    _mark_countdown_dirty(game)
+    dirty_tracker.mark(game.dirty, "turn_countdown")
   end
   if active ~= state.countdown_active_last then
     state.countdown_active_last = active
     turn.countdown_active = active
-    _mark_countdown_dirty(game)
+    dirty_tracker.mark(game.dirty, "turn_countdown")
   end
   if level ~= state.countdown_warn_level_last then
     state.countdown_warn_level_last = level
     turn.countdown_warn_level = level
-    _mark_countdown_dirty(game)
+    dirty_tracker.mark(game.dirty, "turn_countdown")
   end
 end
 

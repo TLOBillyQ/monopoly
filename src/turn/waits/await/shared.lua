@@ -1,3 +1,5 @@
+local dirty_tracker = require("src.state.dirty_tracker")
+
 local M = {}
 
 function M.unpack_next(args)
@@ -7,8 +9,7 @@ end
 
 function M.mark_dirty(game)
   if game and game.dirty then
-    game.dirty.turn = true
-    game.dirty.any = true
+    dirty_tracker.mark(game.dirty, "turn")
   end
 end
 
