@@ -167,22 +167,20 @@ function log_formatter.get_entries_by_level(state, level, max_lines)
   return _take_entries(matched, max_lines)
 end
 
-function log_formatter.get_text(state, max_lines)
-  local list = log_formatter.get_entries(state, max_lines)
+local function _entries_to_text(entries)
   local lines = {}
-  for _, entry in ipairs(list) do
+  for _, entry in ipairs(entries) do
     lines[#lines + 1] = log_formatter.format_entry(entry)
   end
   return table.concat(lines, "\n")
 end
 
+function log_formatter.get_text(state, max_lines)
+  return _entries_to_text(log_formatter.get_entries(state, max_lines))
+end
+
 function log_formatter.get_text_by_level(state, level, max_lines)
-  local list = log_formatter.get_entries_by_level(state, level, max_lines)
-  local lines = {}
-  for _, entry in ipairs(list) do
-    lines[#lines + 1] = log_formatter.format_entry(entry)
-  end
-  return table.concat(lines, "\n")
+  return _entries_to_text(log_formatter.get_entries_by_level(state, level, max_lines))
 end
 
 return log_formatter

@@ -145,7 +145,7 @@ local function _refresh_panel_and_slots(model, game, env, turn, current, current
   return update_slots
 end
 
-local function _refresh_choice_and_meta(model, game, env, ui_state, _, current_name, current_cash, current_player_id, turn, dirty, ui_dirty, update_slots)
+local function _refresh_choice_and_meta(model, game, env, ui_state, current_name, current_cash, current_player_id, turn, dirty, ui_dirty, update_slots)
   if _should_refresh_choice(dirty, ui_dirty) then
     _update_choice_and_market(model, game, env, ui_state, current_player_id)
   elseif dirty.players or update_slots then
@@ -217,7 +217,6 @@ function model_api.update(prev, game, env, dirty)
     game,
     env,
     ui_state,
-    ui_runtime,
     current_name,
     current_cash,
     current_player_id,

@@ -64,11 +64,11 @@ local function _update_tick_state(state, now)
   return previous
 end
 
-local function _try_wall_diff(wall_diff_seconds, now, previous)
+local function _try_wall_diff(wall_diff_seconds, a, b)
   if type(wall_diff_seconds) ~= "function" then
     return nil, false
   end
-  local ok_diff, diff = pcall(wall_diff_seconds, now, previous)
+  local ok_diff, diff = pcall(wall_diff_seconds, a, b)
   local normalized = _normalize_positive_dt(diff)
   if ok_diff and normalized ~= nil then
     return normalized, true, diff
@@ -76,20 +76,8 @@ local function _try_wall_diff(wall_diff_seconds, now, previous)
   return nil, false, diff
 end
 
-local function _try_wall_diff_reversed(wall_diff_seconds, now, previous)
-  if type(wall_diff_seconds) ~= "function" then
-    return nil, false
-  end
-  local ok_reverse, reverse_diff = pcall(wall_diff_seconds, previous, now)
-  local normalized = _normalize_positive_dt(reverse_diff)
-  if ok_reverse and normalized ~= nil then
-    return normalized, true, reverse_diff
-  end
-  return nil, false, reverse_diff
-end
-
-local function _try_raw_diff(now, previous)
-  local raw_diff = now - previous
+local function _try_raw_diff(a, b)
+  local raw_diff = a - b
   local normalized = _normalize_positive_dt(raw_diff)
   if normalized ~= nil then
     return normalized, true, raw_diff
@@ -97,21 +85,12 @@ local function _try_raw_diff(now, previous)
   return nil, false, raw_diff
 end
 
-local function _try_raw_diff_reversed(now, previous)
-  local raw_reverse = previous - now
-  local normalized = _normalize_positive_dt(raw_reverse)
-  if normalized ~= nil then
-    return normalized, true, raw_reverse
-  end
-  return nil, false, raw_reverse
-end
-
 local function _try_resolve_wall_diff(wall_diff_seconds, now, previous)
   local diff_result, diff_ok, diff_raw = _try_wall_diff(wall_diff_seconds, now, previous)
   if diff_ok then
     return diff_result, "wall:diff", diff_raw
   end
-  local reverse_result, reverse_ok, reverse_raw = _try_wall_diff_reversed(wall_diff_seconds, now, previous)
+  local reverse_result, reverse_ok, reverse_raw = _try_wall_diff(wall_diff_seconds, previous, now)
   if reverse_ok then
     return reverse_result, "wall:diff_reversed", reverse_raw
   end
@@ -123,7 +102,7 @@ local function _try_resolve_raw_diff(now, previous)
   if raw_ok then
     return raw_result, "wall:raw_diff", raw_val
   end
-  local raw_rev_result, raw_rev_ok, raw_rev_val = _try_raw_diff_reversed(now, previous)
+  local raw_rev_result, raw_rev_ok, raw_rev_val = _try_raw_diff(previous, now)
   if raw_rev_ok then
     return raw_rev_result, "wall:raw_diff_reversed", raw_rev_val
   end
