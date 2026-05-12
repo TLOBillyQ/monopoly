@@ -18,18 +18,26 @@ local function _inventory_counts_by_id(player)
   return counts
 end
 
-function M.new_game()
-  return require("src.app.compose_game").new_game(default_ports.resolve_game_opts({
+function M.new_game(opts)
+  opts = opts or {}
+  local managed = opts.managed == true
+  local game = require("src.app.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
-    ai = { [2] = true, [3] = true, [4] = true },
+    ai = not managed and { [2] = true, [3] = true, [4] = true } or {},
     auto_all = false,
     map = map_cfg,
     tiles = tiles_cfg,
   }))
+  if managed then
+    for i = 2, #game.players do
+      game.players[i].auto = true
+    end
+  end
+  return game
 end
 
-function M.apply_profile(name)
-  local game = M.new_game()
+function M.apply_profile(name, opts)
+  local game = M.new_game(opts)
   test_profile_bootstrap.apply(game, name)
   return game
 end
