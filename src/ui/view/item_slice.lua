@@ -34,26 +34,27 @@ function item_slice.build_item_slots_for_player(player, slot_count)
   return item_slots
 end
 
-function item_slice.build_item_slots_by_player(players, slot_count)
+local function _map_by_player_id(players, fn)
   local out = {}
   for _, player in ipairs(players or {}) do
     local player_id = role_id_utils.normalize(player and player.id or nil)
     if player_id then
-      role_id_utils.write(out, player_id, item_slice.build_item_slots_for_player(player, slot_count))
+      role_id_utils.write(out, player_id, fn(player))
     end
   end
   return out
 end
 
+function item_slice.build_item_slots_by_player(players, slot_count)
+  return _map_by_player_id(players, function(player)
+    return item_slice.build_item_slots_for_player(player, slot_count)
+  end)
+end
+
 function item_slice.build_auto_enabled_by_player(players)
-  local out = {}
-  for _, player in ipairs(players or {}) do
-    local player_id = role_id_utils.normalize(player and player.id or nil)
-    if player_id then
-      role_id_utils.write(out, player_id, player.auto == true)
-    end
-  end
-  return out
+  return _map_by_player_id(players, function(player)
+    return player.auto == true
+  end)
 end
 
 function item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)
