@@ -143,6 +143,8 @@ local function _effective_duration(tip)
   return _apply_backlog_acceleration(tip.duration)
 end
 
+local _activate_next_pending
+
 local function _release_tip(epoch, tip)
   if tip_queue.epoch ~= epoch then
     return
@@ -151,40 +153,28 @@ local function _release_tip(epoch, tip)
     return
   end
   tip_queue.active_tip = nil
+  _activate_next_pending()
+end
+
+function _activate_next_pending()
   local pending = tip_queue.pending
-  if #pending > 0 then
-    local next_tip = table.remove(pending, 1)
-    tip_queue.active_tip = next_tip
-    local current_epoch = tip_queue.epoch
-    _present_tip(next_tip)
-
-    local function _release_next()
-      _release_tip(current_epoch, next_tip)
-    end
-
-    _schedule_release(_effective_duration(next_tip), _release_next)
+  if #pending <= 0 then
+    return
   end
+  local next_tip = table.remove(pending, 1)
+  tip_queue.active_tip = next_tip
+  local current_epoch = tip_queue.epoch
+  _present_tip(next_tip)
+  _schedule_release(_effective_duration(next_tip), function()
+    _release_tip(current_epoch, next_tip)
+  end)
 end
 
 local function _dispatch_next_tip()
   if tip_queue.active_tip ~= nil then
     return
   end
-  local pending = tip_queue.pending
-  if #pending <= 0 then
-    return
-  end
-
-  local next_tip = table.remove(pending, 1)
-  tip_queue.active_tip = next_tip
-  local current_epoch = tip_queue.epoch
-  _present_tip(next_tip)
-
-  local function _release_next()
-    _release_tip(current_epoch, next_tip)
-  end
-
-  _schedule_release(_effective_duration(next_tip), _release_next)
+  _activate_next_pending()
 end
 
 function tip_queue.configure_runtime(adapter)

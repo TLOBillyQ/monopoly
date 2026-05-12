@@ -106,6 +106,18 @@ function M.cancel(state, scope)
   return true
 end
 
+local function _build_peek_result(entry)
+  local remaining = entry.timeout - entry.elapsed
+  if remaining < 0 then remaining = 0 end
+  return {
+    scope = entry.scope,
+    remaining_seconds = remaining,
+    elapsed_seconds = entry.elapsed,
+    timeout_seconds = entry.timeout,
+    level = _level_from_remaining(remaining, _resolve_thresholds()),
+  }
+end
+
 function M.peek(state, scope)
   if type(state) ~= "table" then
     return nil
@@ -118,32 +130,10 @@ function M.peek(state, scope)
         primary = entry
       end
     end
-    if primary == nil then
-      return nil
-    end
-    local remaining = primary.timeout - primary.elapsed
-    if remaining < 0 then remaining = 0 end
-    return {
-      scope = primary.scope,
-      remaining_seconds = remaining,
-      elapsed_seconds = primary.elapsed,
-      timeout_seconds = primary.timeout,
-      level = _level_from_remaining(remaining, _resolve_thresholds()),
-    }
+    return primary and _build_peek_result(primary) or nil
   end
   local entry = active[scope]
-  if entry == nil then
-    return nil
-  end
-  local remaining = entry.timeout - entry.elapsed
-  if remaining < 0 then remaining = 0 end
-  return {
-    scope = entry.scope,
-    remaining_seconds = remaining,
-    elapsed_seconds = entry.elapsed,
-    timeout_seconds = entry.timeout,
-    level = _level_from_remaining(remaining, _resolve_thresholds()),
-  }
+  return entry and _build_peek_result(entry) or nil
 end
 
 function M.tick(state, dt)

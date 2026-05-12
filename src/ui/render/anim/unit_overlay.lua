@@ -216,8 +216,7 @@ end
 function overlay.play_missile(state, anim, duration, opts)
   local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
   local tile_index = assert(anim.tile_index, "missing missile tile_index")
-  clear_overlay(state, "roadblock", tile_index)
-  clear_overlay(state, "mine", tile_index)
+  _clear_obstacle(state, clear_overlay, tile_index)
   local unit_id = prefab.unit and prefab.unit["导弹"] or nil
   local group_id = prefab.group["导弹"]
   runtime.spawn_transient(group_id, unit_id, compute.overlay_pos_for_tile(state, tile_index), duration, _deps(state))

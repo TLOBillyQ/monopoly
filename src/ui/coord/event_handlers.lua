@@ -152,10 +152,14 @@ function event_handlers.install(_, logger, state)
     end
   end)
 
+  local function _event_player_id(event_data)
+    return event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+  end
+
   _register_handler(monopoly_event.feedback.turn_started, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
-    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    local player_id = _event_player_id(event_data)
     if ctx and player_id ~= nil then
       board_feedback.play_player_cue(ctx, "turn_started", player_id, event_data)
     end
@@ -165,12 +169,12 @@ function event_handlers.install(_, logger, state)
     local event_data = _event_data(data)
     local ctx = context.state
     local cue_name = event_data and event_data.cue_name or nil
-    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
     local tile_index = event_data and event_data.tile_index or nil
     if ctx and cue_name and tile_index ~= nil then
       board_feedback.play_tile_cue(ctx, cue_name, tile_index, event_data)
       return
     end
+    local player_id = _event_player_id(event_data)
     if ctx and cue_name and player_id ~= nil then
       board_feedback.play_player_cue(ctx, cue_name, player_id, event_data)
     end
@@ -180,7 +184,7 @@ function event_handlers.install(_, logger, state)
     local event_data = _event_data(data)
     local ctx = context.state
     local deity_type = event_data and event_data.deity_type or nil
-    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    local player_id = _event_player_id(event_data)
     local cue_name = nil
     if deity_type == "rich" then
       cue_name = "rich_deity"
@@ -195,7 +199,7 @@ function event_handlers.install(_, logger, state)
   _register_handler(monopoly_event.feedback.angel_immune_blocked, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
-    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    local player_id = _event_player_id(event_data)
     local tile_index = event_data and event_data.tile_index or nil
     if ctx and tile_index ~= nil then
       board_feedback.play_tile_cue(ctx, "angel_deity", tile_index, event_data)
@@ -209,7 +213,7 @@ function event_handlers.install(_, logger, state)
   _register_handler(monopoly_event.feedback.bankruptcy, function(data)
     local event_data = _event_data(data)
     local ctx = context.state
-    local player_id = event_data and (event_data.player_id or (event_data.player and event_data.player.id)) or nil
+    local player_id = _event_player_id(event_data)
     if ctx and player_id ~= nil then
       board_feedback.play_player_cue(ctx, "bankruptcy_slam", player_id, event_data)
     end

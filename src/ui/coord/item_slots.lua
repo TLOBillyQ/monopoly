@@ -38,8 +38,7 @@ local function _set_outline_touch_enabled(ui, outline_name, enabled)
   end
 end
 
-local function _emit_slot_animation(index, event_prefix)
-  local event_name = event_prefix .. tostring(index)
+local function _emit_ui_event(event_name)
   local role = runtime.get_client_role()
   if role then
     ui_events.send_to_role(role, event_name, {})
@@ -48,14 +47,12 @@ local function _emit_slot_animation(index, event_prefix)
   ui_events.send_to_all(event_name, {})
 end
 
+local function _emit_slot_animation(index, event_prefix)
+  _emit_ui_event(event_prefix .. tostring(index))
+end
+
 local function _emit_global_reset_animation()
-  local role = runtime.get_client_role()
-  local event_name = "重置高亮"
-  if role then
-    ui_events.send_to_role(role, event_name, {})
-    return
-  end
-  ui_events.send_to_all(event_name, {})
+  _emit_ui_event("重置高亮")
 end
 
 local function _build_pickable_signature(slot_pickable)

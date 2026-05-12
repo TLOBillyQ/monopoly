@@ -193,11 +193,8 @@ function market_view_slots.resolve_selection(option_id, image_refs, empty_ref_ke
   assert(entry ~= nil, "missing market entry")
   local price_text = tostring(entry.price) .. " "
       .. tostring(assert(entry.currency ~= nil and entry.currency ~= "" and entry.currency, "missing market currency"))
-  local icon_key = _resolve_ref_key(image_refs, empty_ref_key)
-  local resolved_icon_key = _resolve_market_icon_key(image_refs, option_id, entry, cfg)
-  if resolved_icon_key ~= nil then
-    icon_key = resolved_icon_key
-  end
+  local icon_key = _resolve_market_icon_key(image_refs, option_id, entry, cfg)
+    or _resolve_ref_key(image_refs, empty_ref_key)
   return {
     entry = entry,
     cfg = cfg,

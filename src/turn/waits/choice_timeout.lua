@@ -130,6 +130,12 @@ local function _cancel_deadline_when_no_choice(state)
   DeadlineService.cancel(state, "market_buy")
 end
 
+local function _reset_choice_tracking(state, output_ports)
+  output_ports.set_pending_choice_elapsed(state, 0)
+  output_ports.set_pending_choice_id(state, nil)
+  _cancel_deadline_when_no_choice(state)
+end
+
 local function _sync_elapsed_choice_id(state, output_ports, active_choice)
   if output_ports.get_pending_choice_id(state) ~= active_choice.id then
     output_ports.set_pending_choice_elapsed(state, 0)
@@ -165,9 +171,7 @@ function tick_choice_timeout.step(game, state, dt, opts)
   _assert_step_opts(game, opts)
   local output_ports, timeout = _resolve_timeout_seconds(game, state, opts)
   if timeout <= 0 then
-    output_ports.set_pending_choice_elapsed(state, 0)
-    output_ports.set_pending_choice_id(state, nil)
-    _cancel_deadline_when_no_choice(state)
+    _reset_choice_tracking(state, output_ports)
     return
   end
   local pending, active_choice = _sync_pending_choice_ui(game, state, opts, output_ports)
@@ -177,9 +181,7 @@ function tick_choice_timeout.step(game, state, dt, opts)
   )
   _maybe_warn_missing_ui(state, active_choice, should_warn_missing_ui)
   if not active or not active_choice then
-    output_ports.set_pending_choice_elapsed(state, 0)
-    output_ports.set_pending_choice_id(state, nil)
-    _cancel_deadline_when_no_choice(state)
+    _reset_choice_tracking(state, output_ports)
     return
   end
   _sync_elapsed_choice_id(state, output_ports, active_choice)

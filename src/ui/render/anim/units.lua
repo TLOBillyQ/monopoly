@@ -106,10 +106,7 @@ function units.play_teleport_effect(state, anim, duration, opts)
   return move_anim.play_teleport(state.board_scene, anim)
 end
 
-function units.play_forced_relocation(state, anim, duration, opts)
-  _pan_camera_to_teleport_destination(state, anim, duration, opts)
-  return move_anim.play_teleport(state.board_scene, anim)
-end
+units.play_forced_relocation = units.play_teleport_effect
 
 local function _resolve_minimum_delay(delay, minimum_delay)
   local resolved_delay = delay

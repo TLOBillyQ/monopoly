@@ -36,23 +36,10 @@ local function _resolve_next_tile(game, target_player, out)
   return game.board:get_tile(idx)
 end
 
-local function _wait_for_move_followup(game, target_player, out)
+local function _build_move_followup_result(target_player, out, wait_key)
   return {
     waiting = true,
-    wait_action_anim = true,
-    next_state = "move_followup",
-    next_args = {
-      mode = "resolve_landing",
-      player_id = target_player.id,
-      move_result = out.move_result,
-    },
-  }
-end
-
-local function _wait_for_move_anim_followup(game, target_player, out)
-  return {
-    waiting = true,
-    wait_move_anim = true,
+    [wait_key] = true,
     next_state = "move_followup",
     next_args = {
       mode = "resolve_landing",
@@ -228,10 +215,10 @@ local function _resolve_followup_landing(game, player, out, depth)
     return out
   end
   if out.wait_move_anim == true then
-    return _wait_for_move_anim_followup(game, target_player, out)
+    return _build_move_followup_result(target_player, out, "wait_move_anim")
   end
   if predicates.has_pending_relocation_action_anim(game) then
-    return _wait_for_move_followup(game, target_player, out)
+    return _build_move_followup_result(target_player, out, "wait_action_anim")
   end
   return _resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
 end

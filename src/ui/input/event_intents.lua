@@ -46,11 +46,18 @@ function intents.resolve_option_id(choice, payload, state)
   return nil
 end
 
-function intents.choice_cancel_intent(state, warn_label)
+local function _resolve_choice_or_warn(state, warn_label)
   local current_model = runtime_state.get_ui_model(state)
   local choice = current_model and current_model.choice or nil
   if not choice then
     logger.warn(warn_label .. " without choice")
+  end
+  return choice
+end
+
+function intents.choice_cancel_intent(state, warn_label)
+  local choice = _resolve_choice_or_warn(state, warn_label)
+  if not choice then
     return nil
   end
   if choice.allow_cancel == false then
@@ -60,10 +67,8 @@ function intents.choice_cancel_intent(state, warn_label)
 end
 
 function intents.choice_select_intent(state, index, warn_label)
-  local current_model = runtime_state.get_ui_model(state)
-  local choice = current_model and current_model.choice or nil
+  local choice = _resolve_choice_or_warn(state, warn_label)
   if not choice then
-    logger.warn(warn_label .. " without choice")
     return nil
   end
   local option_id = intents.resolve_option_id(choice, { index = index }, state)
@@ -79,10 +84,8 @@ function intents.choice_select_intent(state, index, warn_label)
 end
 
 function intents.choice_confirm_intent(state, warn_label)
-  local current_model = runtime_state.get_ui_model(state)
-  local choice = current_model and current_model.choice or nil
+  local choice = _resolve_choice_or_warn(state, warn_label)
   if not choice then
-    logger.warn(warn_label .. " without choice")
     return nil
   end
   local ui_runtime = runtime_state.ensure_ui_runtime(state)
