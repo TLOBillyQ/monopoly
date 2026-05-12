@@ -41,14 +41,11 @@ end
 
 function eligibility.list_available(player, game)
   local list = {}
-  for _, entry in ipairs(context.entries()) do
+  for _, entry in ipairs(eligibility.sorted_entries()) do
     if eligibility.can_buy_entry(game, player, entry) then
       list[#list + 1] = entry
     end
   end
-  table.sort(list, function(a, b)
-    return (a.order or 0) < (b.order or 0)
-  end)
   return list
 end
 

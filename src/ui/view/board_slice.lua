@@ -83,18 +83,15 @@ local function _populate_board(target, board_tiles, game, env, turn)
   return target
 end
 
-function board_slice.build(game, env, turn)
-  local board_path = assert(game and game.board and game.board.path, "missing game.board.path")
-  local board_tiles = _build_board_tiles(board_path)
-  cached_board_tiles = board_tiles
-  return _populate_board({}, board_tiles, game, env, turn)
-end
-
 function board_slice.update(board, game, env, turn)
   local board_path = assert(game and game.board and game.board.path, "missing game.board.path")
   local board_tiles = _build_board_tiles(board_path)
   cached_board_tiles = board_tiles
   return _populate_board(board or {}, board_tiles, game, env, turn)
+end
+
+function board_slice.build(game, env, turn)
+  return board_slice.update(nil, game, env, turn)
 end
 
 return board_slice

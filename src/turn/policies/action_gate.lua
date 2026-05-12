@@ -21,19 +21,9 @@ local function _normalize_action_type(action_or_type)
 end
 
 function turn_action_gate.resolve_gate_state(gate_state_or_flag)
-  if type(gate_state_or_flag) == "boolean" then
-    return {
-      input_blocked = gate_state_or_flag,
-      choice_active = false,
-      market_active = false,
-      popup_active = false,
-      detained_wait_active = false,
-      phase = nil,
-    }
-  end
   if type(gate_state_or_flag) ~= "table" then
     return {
-      input_blocked = false,
+      input_blocked = gate_state_or_flag == true,
       choice_active = false,
       market_active = false,
       popup_active = false,
