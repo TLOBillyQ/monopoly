@@ -20,11 +20,7 @@ end
 
 function auto_runner:set_enabled(on)
   self.enabled = on
-  self.timer = 0
-  self.waiting_for_interval = false
-  self.last_actor_role_id = nil
-  self.last_wait_kind = nil
-  self.last_choice_id = nil
+  self:reset_timer()
 end
 
 

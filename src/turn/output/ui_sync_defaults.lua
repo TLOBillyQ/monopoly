@@ -60,38 +60,15 @@ local function _default_get_ui_state(state)
   return state and state.ui or nil
 end
 
-local function _default_is_input_blocked(ui_sync_ports)
+local function _default_ui_bool(ui_sync_ports, field)
   return function(state)
-    local ui = ui_sync_ports.get_ui_state(state)
-    return ui and ui.input_blocked == true or false
+    return _bool_field(ui_sync_ports.get_ui_state(state), field)
   end
 end
 
-local function _default_is_popup_active(ui_sync_ports)
+local function _default_ui_opt(ui_sync_ports, field)
   return function(state)
-    local ui = ui_sync_ports.get_ui_state(state)
-    return ui and ui.popup_active == true or false
-  end
-end
-
-local function _default_is_choice_active(ui_sync_ports)
-  return function(state)
-    local ui = ui_sync_ports.get_ui_state(state)
-    return ui and ui.choice_active == true or false
-  end
-end
-
-local function _default_is_market_active(ui_sync_ports)
-  return function(state)
-    local ui = ui_sync_ports.get_ui_state(state)
-    return ui and ui.market_active == true or false
-  end
-end
-
-local function _default_get_popup_owner_index(ui_sync_ports)
-  return function(state)
-    local ui = ui_sync_ports.get_ui_state(state)
-    return ui and ui.popup_owner_index or nil
+    return _opt_field(ui_sync_ports.get_ui_state(state), field)
   end
 end
 
@@ -126,11 +103,11 @@ end
 local function _build_ui_sync_specs()
   return {
     { key = "get_ui_state", resolver = function() return _default_get_ui_state end },
-    { key = "is_input_blocked", resolver = _default_is_input_blocked },
-    { key = "is_popup_active", resolver = _default_is_popup_active },
-    { key = "is_choice_active", resolver = _default_is_choice_active },
-    { key = "is_market_active", resolver = _default_is_market_active },
-    { key = "get_popup_owner_index", resolver = _default_get_popup_owner_index },
+    { key = "is_input_blocked", resolver = function(ports) return _default_ui_bool(ports, "input_blocked") end },
+    { key = "is_popup_active", resolver = function(ports) return _default_ui_bool(ports, "popup_active") end },
+    { key = "is_choice_active", resolver = function(ports) return _default_ui_bool(ports, "choice_active") end },
+    { key = "is_market_active", resolver = function(ports) return _default_ui_bool(ports, "market_active") end },
+    { key = "get_popup_owner_index", resolver = function(ports) return _default_ui_opt(ports, "popup_owner_index") end },
     { key = "set_input_blocked", resolver = _default_set_input_blocked },
     { key = "resolve_ui_gate", resolver = _default_resolve_ui_gate },
   }
