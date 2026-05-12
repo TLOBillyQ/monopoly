@@ -1,4 +1,5 @@
 local logger_utils = require("src.foundation.log.utils")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local runtime_state = {}
 
@@ -27,15 +28,7 @@ local function _ensure_landing_visual_hold(turn_runtime)
       flushing = false,
       frozen_ui_model = nil,
       source = nil,
-      deferred_dirty = {
-        any = false,
-        players = false,
-        board_tiles = false,
-        turn = false,
-        market = false,
-        turn_countdown = false,
-        inventory_ids = {},
-      },
+      deferred_dirty = dirty_tracker.new(),
       release_callbacks = {},
     }
     turn_runtime.landing_visual_hold = hold
