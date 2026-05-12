@@ -1,5 +1,6 @@
 local wait_callbacks = require("src.turn.waits.callback_registry")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
+local shared = require("src.turn.waits.await.shared")
 
 local M = {}
 
@@ -8,17 +9,8 @@ local anim_done_timeout_seconds = 10.0
 
 local _next_action_anim
 
-local function _next(args)
-  args = args or {}
-  return args.next_state, args.next_args
-end
-
-local function _mark_dirty(game)
-  if game and game.dirty then
-    game.dirty.turn = true
-    game.dirty.any = true
-  end
-end
+local _next = shared.unpack_next
+local _mark_dirty = shared.mark_dirty
 
 local function _resolve_action_anim_wait(game)
   local anim = game.turn.action_anim

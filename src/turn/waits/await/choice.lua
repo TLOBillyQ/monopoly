@@ -1,5 +1,6 @@
 local turn_decision = require("src.turn.waits.decision")
 local validator = require("src.turn.actions.validator")
+local shared = require("src.turn.waits.await.shared")
 
 local M = {}
 
@@ -8,17 +9,8 @@ local _resolve_choice_action
 local _validate_choice_action
 local _wait_for_choice_action_anim
 
-local function _next(args)
-  args = args or {}
-  return args.next_state, args.next_args
-end
-
-local function _mark_dirty(game)
-  if game and game.dirty then
-    game.dirty.turn = true
-    game.dirty.any = true
-  end
-end
+local _next = shared.unpack_next
+local _mark_dirty = shared.mark_dirty
 
 local function _resolve_after_action_anim(args, res)
   local default_next_state, default_next_args = _next(args)

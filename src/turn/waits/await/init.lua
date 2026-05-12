@@ -4,20 +4,12 @@ local action_anim_wait = require("src.turn.waits.await.action_anim")
 local choice_wait = require("src.turn.waits.await.choice")
 local seconds_wait = require("src.turn.waits.await.seconds")
 local simple_waits = require("src.turn.waits.await.simple")
+local shared = require("src.turn.waits.await.shared")
 
 local await = {}
 
-local function _next(args)
-  args = args or {}
-  return args.next_state, args.next_args
-end
-
-local function _mark_dirty(game)
-  if game and game.dirty then
-    game.dirty.turn = true
-    game.dirty.any = true
-  end
-end
+local _next = shared.unpack_next
+local _mark_dirty = shared.mark_dirty
 
 local function _await_anim_done(session, args, opts)
   assert(session ~= nil and session.game ~= nil, "missing await session")

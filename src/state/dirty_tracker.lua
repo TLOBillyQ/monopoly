@@ -8,14 +8,10 @@ local _dirty_keys = {
   "turn_countdown",
 }
 
-local valid_domains = {
-  any = true,
-  players = true,
-  board_tiles = true,
-  turn = true,
-  market = true,
-  turn_countdown = true,
-}
+local valid_domains = {}
+for _, key in ipairs(_dirty_keys) do
+  valid_domains[key] = true
+end
 
 function dirty_tracker.new()
   return dirty_tracker.reset({})
@@ -62,26 +58,19 @@ function dirty_tracker.merge_into(target, dirty)
 end
 
 function dirty_tracker.reset(d)
-  d.any = false
-  d.players = false
-  d.board_tiles = false
-  d.turn = false
-  d.market = false
-  d.turn_countdown = false
+  for _, key in ipairs(_dirty_keys) do
+    d[key] = false
+  end
   d.inventory_ids = {}
   return d
 end
 
 function dirty_tracker.consume(d)
-  local snapshot = {
-    any = d.any,
-    players = d.players,
-    board_tiles = d.board_tiles,
-    turn = d.turn,
-    market = d.market,
-    turn_countdown = d.turn_countdown,
-    inventory_ids = d.inventory_ids,
-  }
+  local snapshot = {}
+  for _, key in ipairs(_dirty_keys) do
+    snapshot[key] = d[key]
+  end
+  snapshot.inventory_ids = d.inventory_ids
   dirty_tracker.reset(d)
   return snapshot
 end

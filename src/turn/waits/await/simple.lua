@@ -4,23 +4,15 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local landing_visual_hold = require("src.state.visual_hold")
 local auto_play_port = require("src.rules.ports.auto_play")
 local tip_queue = require("src.foundation.coordination.tip_queue")
+local shared = require("src.turn.waits.await.shared")
 
 local M = {}
 
 local callback_keys = wait_callbacks.callback_keys
 local wait_keys = wait_callbacks.wait_keys
 
-local function _next(args)
-  args = args or {}
-  return args.next_state, args.next_args
-end
-
-local function _mark_dirty(game)
-  if game and game.dirty then
-    game.dirty.turn = true
-    game.dirty.any = true
-  end
-end
+local _next = shared.unpack_next
+local _mark_dirty = shared.mark_dirty
 
 function M.landing_visual(session, args)
   assert(session ~= nil and session.game ~= nil, "missing await session")
