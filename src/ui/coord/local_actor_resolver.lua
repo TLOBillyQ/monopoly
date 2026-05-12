@@ -43,12 +43,8 @@ function resolver.resolve_from_event(state, data)
   return _resolve_cached_role_id(state)
 end
 
-function resolver.resolve_turn_bound(state, data)
-  return resolver.resolve_from_event(state, data)
-end
+resolver.resolve_turn_bound = resolver.resolve_from_event
 
-function resolver.resolve_local(state)
-  return resolver.resolve_from_event(state, nil)
-end
+resolver.resolve_local = resolver.resolve_from_event
 
 return resolver

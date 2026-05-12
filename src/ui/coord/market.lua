@@ -50,17 +50,13 @@ function renderer.open_market_panel(state, choice, choice_id, market)
   ui.market_active = opened
 end
 
-function renderer.open(state, choice, choice_id, market)
-  return renderer.open_market_panel(state, choice, choice_id, market)
-end
+renderer.open = renderer.open_market_panel
 
 function renderer.close_market_panel(state)
   market_view.close_market_panel(state, _view_deps())
 end
 
-function renderer.close(state)
-  return renderer.close_market_panel(state)
-end
+renderer.close = renderer.close_market_panel
 
 function renderer.select_market_option(state, option_id)
   market_view.select_market_option(state, option_id, _view_deps())
