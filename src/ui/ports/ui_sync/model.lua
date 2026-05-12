@@ -41,20 +41,12 @@ local function _refresh_turn_label(state, next_model)
   )
 end
 
-local function _is_input_blocked_phase(phase)
-  return phase == "wait_action_anim"
-    or phase == "wait_move_anim"
-    or phase == "wait_landing_visual"
-    or phase == "detained_wait"
-    or phase == "inter_turn_wait"
-end
-
 local function _should_open_choice_modal(game, state, next_model, dirty)
   local phase = game and game.turn and game.turn.phase or nil
   if not (next_model and next_model.choice) then
     return false
   end
-  if _is_input_blocked_phase(phase) then
+  if choice_ui_state.is_input_blocked_phase(phase) then
     return false
   end
   local route_key = choice_ui_state.resolve_route_key(next_model.choice)

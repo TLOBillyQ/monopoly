@@ -7,6 +7,18 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local choice_ui_state = {}
 
+local _input_blocked_phases = {
+  wait_action_anim = true,
+  wait_move_anim = true,
+  wait_landing_visual = true,
+  detained_wait = true,
+  inter_turn_wait = true,
+}
+
+function choice_ui_state.is_input_blocked_phase(phase)
+  return _input_blocked_phases[phase] == true
+end
+
 local function _resolve_choice_owner_role_id(game, choice)
   local owner_role_id = choice_contract.resolve_owner_or_meta_role_id(choice)
   if owner_role_id ~= nil then
@@ -34,11 +46,7 @@ end
 
 local function _is_input_blocked_phase(game)
   local phase = game and game.turn and game.turn.phase or nil
-  return phase == "wait_action_anim"
-    or phase == "wait_move_anim"
-    or phase == "wait_landing_visual"
-    or phase == "detained_wait"
-    or phase == "inter_turn_wait"
+  return choice_ui_state.is_input_blocked_phase(phase)
 end
 
 local function _is_local_role(state, owner_role_id)

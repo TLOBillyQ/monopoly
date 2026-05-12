@@ -1,6 +1,7 @@
 local game_state_players = require("src.state.player_state")
 local game_state_tiles = require("src.state.board_state")
 local game_state_turn = require("src.state.turn_state")
+local dirty_tracker = require("src.state.dirty_tracker")
 require "vendor.third_party.ClassUtils"
 
 
@@ -16,16 +17,6 @@ end
 _install_mixin(game, game_state_players, "players")
 _install_mixin(game, game_state_tiles, "board")
 _install_mixin(game, game_state_turn, "turn")
-
-local function _mark_players(game_ctx)
-  game_ctx.dirty.any = true
-  game_ctx.dirty.players = true
-end
-
-local function _mark_board(game_ctx)
-  game_ctx.dirty.any = true
-  game_ctx.dirty.board_tiles = true
-end
 
 local function _noop_false()
   return false
@@ -124,11 +115,11 @@ function game:rebuild()
 end
 
 function game:mark_players_dirty()
-  _mark_players(self)
+  dirty_tracker.mark(self.dirty, "players")
 end
 
 function game:mark_board_dirty()
-  _mark_board(self)
+  dirty_tracker.mark(self.dirty, "board_tiles")
 end
 
 return game

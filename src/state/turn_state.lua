@@ -1,9 +1,6 @@
-local game_state_turn = {}
+local dirty_tracker = require("src.state.dirty_tracker")
 
-local function _mark_turn(self)
-  self.dirty.any = true
-  self.dirty.turn = true
-end
+local game_state_turn = {}
 
 function game_state_turn.queue_action_anim(self, payload)
   assert(payload ~= nil, "missing action anim payload")
@@ -19,7 +16,7 @@ function game_state_turn.queue_action_anim(self, payload)
   if not self.turn.action_anim then
     self.turn.action_anim = table.remove(queue, 1)
   end
-  _mark_turn(self)
+  dirty_tracker.mark(self.dirty, "turn")
   return payload
 end
 
@@ -29,7 +26,7 @@ function game_state_turn.queue_move_anim(self, payload)
   payload.seq = seq
   self.turn.move_anim_seq = seq
   self.turn.move_anim = payload
-  _mark_turn(self)
+  dirty_tracker.mark(self.dirty, "turn")
   return payload
 end
 

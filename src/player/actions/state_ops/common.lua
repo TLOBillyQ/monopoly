@@ -1,5 +1,6 @@
 local constants = require("src.config.content.constants")
 local tables = require("src.foundation.lang.tables")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local common = {}
 
@@ -13,8 +14,7 @@ end
 common.normalize_currency = tables.normalize_currency
 
 function common.mark_players(game)
-  game.dirty.any = true
-  game.dirty.players = true
+  dirty_tracker.mark(game.dirty, "players")
 end
 
 return common

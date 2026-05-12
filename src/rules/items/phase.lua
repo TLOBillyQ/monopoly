@@ -5,6 +5,7 @@ local availability = require("src.rules.items.availability")
 local inventory = require("src.rules.items.inventory")
 local intent_output_port = require("src.rules.ports.intent_output")
 local item_config = require("src.rules.items.config")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local phase_module = {}
 
@@ -98,8 +99,7 @@ function phase_module.finish(game, phase)
   if active == phase then
     game.turn.item_phase_active = ""
   end
-  game.dirty.turn = true
-  game.dirty.any = true
+  dirty_tracker.mark(game.dirty, "turn")
 end
 
 local function _require_resume_next_state(meta)
@@ -116,8 +116,7 @@ end
 local function _clear_finished_phase(game, phase)
   game.turn.item_phase = game.turn.item_phase or {}
   game.turn.item_phase[phase] = nil
-  game.dirty.turn = true
-  game.dirty.any = true
+  dirty_tracker.mark(game.dirty, "turn")
 end
 
 local function _resolve_finished_phase(game, phase_state, phase)
@@ -130,8 +129,7 @@ end
 
 local function _mark_waiting_phase(game, phase)
   game.turn.item_phase_active = phase
-  game.dirty.turn = true
-  game.dirty.any = true
+  dirty_tracker.mark(game.dirty, "turn")
 end
 
 function phase_module.mark_active(game, phase)
@@ -191,8 +189,7 @@ local function _resolve_auto_phase_action_anim(game, phase, args, pre, should_fi
   end
   if next_state == "move_followup" then
     game.turn.move_followup_pending = true
-    game.dirty.turn = true
-    game.dirty.any = true
+    dirty_tracker.mark(game.dirty, "turn")
   end
   return { waiting = true, wait_action_anim = true, next_state = next_state, next_args = next_args }
 end

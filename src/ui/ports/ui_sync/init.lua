@@ -44,18 +44,10 @@ function ui_sync_ports.build(common)
     refresh_from_dirty = function(game, state, dirty)
       return ui_model_sync.refresh_from_dirty(game, state, dirty, common)
     end,
-    follow_camera = function(state, player_id)
-      return camera_sync.follow_camera(state, player_id)
-    end,
-    sync_camera_position = function(state)
-      return camera_sync.sync_camera_position(state)
-    end,
-    pan_camera_to_position = function(state, pos)
-      return camera_sync.pan_camera_to_position(state, pos)
-    end,
-    release_target_pan = function(state)
-      return camera_sync.release_target_pan(state)
-    end,
+    follow_camera = camera_sync.follow_camera,
+    sync_camera_position = camera_sync.sync_camera_position,
+    pan_camera_to_position = camera_sync.pan_camera_to_position,
+    release_target_pan = camera_sync.release_target_pan,
     get_ui_state = function(state)
       return ui_gate_sync.get_ui_state(state, common)
     end,
