@@ -9,10 +9,6 @@ local coalesce_policies = {
 }
 local timeout_seconds = 10.0
 
-local function _now()
-  return runtime_ports.wall_now_seconds()
-end
-
 local function _active_count()
   local count = 0
   for _ in pairs(active_tokens) do
@@ -30,7 +26,7 @@ function effect_track.spawn(id, kind, duration, on_complete)
     kind = kind,
     duration = duration or 0,
     on_complete = on_complete,
-    spawned_at = _now(),
+    spawned_at = runtime_ports.wall_now_seconds(),
     completed = false,
   }
   active_tokens[token_id] = token
@@ -124,10 +120,6 @@ function effect_track.scaled_duration(base)
   return base * scale
 end
 
-function effect_track.coalesce_policy(kind)
-  return coalesce_policies[kind]
-end
-
 function effect_track.coalesce_queue(queue)
   if type(queue) ~= "table" or #queue <= 1 then
     return queue
@@ -170,10 +162,6 @@ end
 function effect_track.reset()
   active_tokens = {}
   next_token_id = 1
-end
-
-function effect_track.active_count()
-  return _active_count()
 end
 
 return effect_track

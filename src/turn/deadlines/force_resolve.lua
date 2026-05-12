@@ -97,13 +97,6 @@ local function _refund_preconsume(state, choice)
   end
 end
 
-local function _reset_ui_flags(state)
-  if type(state) ~= "table" then
-    return
-  end
-  state._item_phase_ask_active = nil
-end
-
 local function _emit_force_skip_event(reason, choice)
   local ok, monopoly_events = pcall(require, "src.foundation.events")
   if ok and type(monopoly_events) == "table" and type(monopoly_events.emit) == "function" then
@@ -128,8 +121,8 @@ function M.force_skip(game, state, choice, reason)
     game.turn._choice_force_skip_pending = true
   end
   _refund_preconsume(state, choice)
-  _reset_ui_flags(state)
   if type(state) == "table" then
+    state._item_phase_ask_active = nil
     local output_ports = _resolve_output_ports(state)
     if output_ports and type(output_ports.clear_pending_choice) == "function" then
       pcall(output_ports.clear_pending_choice, state)
@@ -211,18 +204,6 @@ function M.resolve_target_select(game, state, target_ctx, reason)
     choice = game.turn.pending_choice
   end
   M.force_skip(game, state, choice, reason or "target_select_timeout")
-end
-
-function M.resolve_modal(game, state, modal_ctx, reason)
-  -- modal 超时复用 popup close：没有 pending_choice 则只发事件并复位 modal timer。
-  local modal_ports = _resolve_modal_ports(state)
-  if modal_ports and type(modal_ports.close_popup) == "function" then
-    pcall(modal_ports.close_popup, state)
-  end
-  if type(state) == "table" then
-    DeadlineService.cancel(state, "modal_popup")
-  end
-  logger.info("[Eggy]", "modal_force_resolved", "reason=" .. tostring(reason))
 end
 
 return M

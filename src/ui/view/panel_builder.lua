@@ -15,18 +15,7 @@ local function _normalize_display_amount(value)
   return value
 end
 
-local function _normalize_cash_value(value)
-  local normalized = number_utils.to_integer(value)
-  if normalized == nil then
-    return 0
-  end
-  if normalized < 0 then
-    return 0
-  end
-  return normalized
-end
-
-local function _normalize_total_assets_value(value)
+local function _normalize_integer_value(value)
   local normalized = number_utils.to_integer(value)
   if normalized == nil then
     return 0
@@ -58,16 +47,12 @@ local function _resolve_role_name(role)
   return role_name
 end
 
-local function _resolve_role_avatar(role)
-  return role_avatar.resolve_from_role(role)
-end
-
 local function _resolve_player_profile(player)
   local role = _resolve_role(player)
   local display_name = _resolve_role_name(role) or player.name
   return {
     name = panel.build_player_label(display_name, player.eliminated == true),
-    avatar = _resolve_role_avatar(role),
+    avatar = role_avatar.resolve_from_role(role),
   }
 end
 
@@ -85,7 +70,7 @@ local function _build_empty_player_status()
 end
 
 local function _accumulate_player_assets(player, board)
-  local cash = _normalize_cash_value(player.cash)
+  local cash = _normalize_integer_value(player.cash)
   local land_count = 0
   local total = cash
   for tile_id in pairs(player.properties or {}) do
@@ -107,7 +92,7 @@ local function _build_player_status(player, board)
     avatar = profile.avatar,
     eliminated = player.eliminated == true,
     cash_value = cash,
-    total_assets_value = _normalize_total_assets_value(total),
+    total_assets_value = _normalize_integer_value(total),
     cash = "现金: " .. number_utils.format_integer_part(_normalize_display_amount(cash)),
     land_count = "地块: " .. number_utils.format_integer_part(land_count),
     total_assets = "总资产: " .. number_utils.format_integer_part(_normalize_display_amount(total)),

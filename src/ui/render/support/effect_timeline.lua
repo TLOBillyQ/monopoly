@@ -47,14 +47,4 @@ function effect_timeline.play(spec)
   return true
 end
 
-function effect_timeline.finish(cleanup, follow_up)
-  if type(cleanup) == "function" then
-    cleanup()
-  end
-  if type(follow_up) == "function" then
-    follow_up()
-  end
-  return true
-end
-
 return effect_timeline

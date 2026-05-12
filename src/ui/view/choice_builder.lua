@@ -37,12 +37,6 @@ local function _default_option_label(opt)
   return tostring(opt)
 end
 
-local function _build_phase_title(game, base_title)
-  assert(game ~= nil, "missing game")
-  assert(base_title ~= nil, "missing base title")
-  return base_title
-end
-
 local function _resolve_choice_body(pending, opts)
   if pending.body_lines then
     return _join_lines(pending.body_lines)
@@ -57,7 +51,7 @@ function choice.build_choice_view(pending, opts)
   assert(pending ~= nil, "missing pending choice")
   opts = opts or {}
   local option_label = opts.option_label or _default_option_label
-  local title = _build_phase_title(opts.game, pending.title or "请选择")
+  local title = pending.title or "请选择"
   local body = _resolve_choice_body(pending, opts)
 
   local options = {}

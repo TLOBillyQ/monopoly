@@ -72,8 +72,6 @@ function completions.build(helpers)
   end
 
   return {
-    finish_followup_choice = _finish_followup_choice,
-    resume_pre_action_phase = _resume_pre_action_phase,
     phase_completion = _resolve_phase_completion,
     followup_completion = _resolve_followup_completion,
     followup_cancel = _resolve_followup_cancel,

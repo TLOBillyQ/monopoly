@@ -5,8 +5,6 @@ local runtime_state = require("src.state.runtime")
 
 local M = {}
 
-local _injected_clock = nil
-
 local function _resolve_thresholds()
   local cfg = timing.deadline_warning_thresholds
   if type(cfg) ~= "table" then
@@ -30,13 +28,6 @@ local function _resolve_timeout(opts)
   return 0
 end
 
-local function _now()
-  if type(_injected_clock) == "function" then
-    return _injected_clock()
-  end
-  return nil
-end
-
 local function _new_entry(scope, opts, timeout)
   return {
     scope = scope,
@@ -48,7 +39,7 @@ local function _new_entry(scope, opts, timeout)
     fired_warn_5s = false,
     fired_warn_3s = false,
     fired_timeout = false,
-    started_at = _now(),
+    started_at = nil,
   }
 end
 
@@ -187,50 +178,12 @@ function M.tick(state, dt)
   end
 end
 
-function M.set_clock(clock_fn)
-  _injected_clock = clock_fn
-end
-
-function M.snapshot(state)
-  if type(state) ~= "table" then
-    return {}
-  end
-  local active = _ensure_active(state)
-  local snap = {}
-  for scope, entry in pairs(active) do
-    snap[scope] = {
-      elapsed = entry.elapsed,
-      timeout = entry.timeout,
-      fired_warn_5s = entry.fired_warn_5s,
-      fired_warn_3s = entry.fired_warn_3s,
-      fired_timeout = entry.fired_timeout,
-      priority = entry.priority,
-    }
-  end
-  return snap
-end
-
 function M.is_active(state, scope)
   if type(state) ~= "table" or type(scope) ~= "string" then
     return false
   end
   local active = _ensure_active(state)
   return active[scope] ~= nil
-end
-
-function M.set_elapsed(state, scope, elapsed)
-  if type(state) ~= "table" or type(scope) ~= "string" then
-    return
-  end
-  local active = _ensure_active(state)
-  local entry = active[scope]
-  if entry == nil then
-    return
-  end
-  entry.elapsed = number_utils.is_numeric(elapsed) and elapsed or 0
-  if entry.elapsed < 0 then
-    entry.elapsed = 0
-  end
 end
 
 return M

@@ -8,17 +8,6 @@ function M.register(kind, fn)
   _registry[kind] = fn
 end
 
-function M.unregister(kind)
-  if type(kind) ~= "string" then
-    return false
-  end
-  if _registry[kind] == nil then
-    return false
-  end
-  _registry[kind] = nil
-  return true
-end
-
 function M.resolve(kind, game, choice)
   if type(kind) ~= "string" then
     return nil

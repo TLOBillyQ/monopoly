@@ -30,10 +30,7 @@ function bridge.is_channel_enforced()
   return false
 end
 
-function bridge.is_currency_channel_ready(_, currency)
-  if not bridge.is_paid_currency(currency) then
-    return true
-  end
+function bridge.is_currency_channel_ready(_, _currency)
   return true
 end
 

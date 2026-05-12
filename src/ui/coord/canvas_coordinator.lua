@@ -136,9 +136,6 @@ function coordinator.resolve_canvas_after_popup(ui, target)
   end
   local choice_canvas = _resolve_choice_canvas(ui)
   if choice_canvas then
-    if target == choice_canvas then
-      return choice_canvas
-    end
     return choice_canvas
   end
   return coordinator.CANVAS_BASE

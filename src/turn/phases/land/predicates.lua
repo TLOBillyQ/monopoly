@@ -52,15 +52,11 @@ local function _is_landing_visual_hold_active(game)
   return turn and turn.landing_visual_hold_active == true or false
 end
 
-local function _is_effect_idle()
-  return runtime_ports.is_effect_idle()
-end
-
 return {
   has_action_anim = _has_action_anim,
   is_relocation_action_anim = _is_relocation_action_anim,
   has_pending_relocation_action_anim = _has_pending_relocation_action_anim,
   landing_visual_hold_state = _landing_visual_hold_state,
   is_landing_visual_hold_active = _is_landing_visual_hold_active,
-  is_effect_idle = _is_effect_idle,
+  is_effect_idle = runtime_ports.is_effect_idle,
 }

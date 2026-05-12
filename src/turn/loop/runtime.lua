@@ -4,10 +4,6 @@ local logger = require("src.foundation.log.logger")
 
 local runtime = {}
 
-local function _run_or_defer(state, game, key, fn)
-  return landing_visual_hold.run_or_defer(state, game, key, fn)
-end
-
 function runtime.is_phase_input_blocked(phase)
   return phase == "wait_move_anim"
     or phase == "wait_action_anim"
@@ -72,7 +68,7 @@ function runtime.build_popup_port(state)
   local port = {}
   port.push_popup = function(_, payload, opts)
     local game = state.game
-    return _run_or_defer(state, game, "popup", function()
+    return landing_visual_hold.run_or_defer(state, game, "popup", function()
       if type(state.push_popup) == "function" then
         return state:push_popup(payload, opts)
       end
@@ -111,7 +107,7 @@ function runtime.build_tile_feedback_port(state)
   end
 
   local port = {}
-  port.on_tile_upgraded = function(_, tile_id, level)
+  port.on_tile_upgraded = function(_, tile_id, _level)
     local game = state.game
     if game == nil or game.board_visual_feedback_port == nil then
       return false
@@ -146,7 +142,7 @@ function runtime.build_board_visual_feedback_port(state)
     if current_game ~= nil then
       state.game = current_game
     end
-    return _run_or_defer(state, current_game, "board_visual_sync", function()
+    return landing_visual_hold.run_or_defer(state, current_game, "board_visual_sync", function()
       if type(state.on_board_visual_sync) == "function" then
         return state:on_board_visual_sync(payload) == true
       end

@@ -42,16 +42,8 @@ function resolver.resolve_bootstrap(profile_name)
   return profile.bootstrap
 end
 
-function resolver.available_profiles()
-  return test_profiles.names()
-end
-
-function resolver.available_groups()
-  return test_profiles.groups()
-end
-
-function resolver.profiles_in_group(group_name, opts)
-  return test_profiles.profiles_in_group(group_name, opts)
-end
+resolver.available_profiles = test_profiles.names
+resolver.available_groups = test_profiles.groups
+resolver.profiles_in_group = test_profiles.profiles_in_group
 
 return resolver

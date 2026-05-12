@@ -4,8 +4,6 @@ local with_client_role = require("src.ui.utils.with_client_role")
 
 local turn_effects = {}
 
-local _last_prompt_visible = {}
-
 local function _fallback_runtime()
   return require("src.ui.render" .. ".runtime_ui")
 end
@@ -82,22 +80,14 @@ local function _sync_local_turn_prompt(runtime, _, ui_model)
     with_client_role(runtime, role, function()
       local nodes = _get_prompt_nodes(runtime)
       local show = role_id ~= nil and current_player_id ~= nil and role_id_utils.equals(role_id, current_player_id) and can_show
-      local key = tostring(role_id or "<nil>")
-      if _last_prompt_visible[key] ~= show then
-        _last_prompt_visible[key] = show
-      end
       _set_prompt_visible(nodes, show)
     end)
   end)
 end
 
-local function _get_other_action_prompt_label_node(runtime)
-  return runtime.query_node(base_nodes.other_player_hint)
-end
-
 local function _set_other_action_prompt(runtime, role, text, visible)
   with_client_role(runtime, role, function()
-    local node = _get_other_action_prompt_label_node(runtime)
+    local node = runtime.query_node(base_nodes.other_player_hint)
     if node then
       node.text = text or ""
       node.visible = visible == true

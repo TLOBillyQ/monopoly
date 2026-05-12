@@ -5,7 +5,6 @@ local move_anim = {}
 
 move_anim.step_duration             = playback.step_duration
 move_anim.one_step                  = playback.one_step
-move_anim.one_segment               = playback.one_segment
 move_anim.play_sequence             = function(board_scene, anim_ctx)
   return playback.play_sequence(board_scene, anim_ctx, move_anim)
 end

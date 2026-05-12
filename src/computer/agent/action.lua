@@ -96,8 +96,6 @@ function action_selector.pick_roadblock_target(game, player)
   return best.idx
 end
 
-function action_selector.pick_demolish_target(game, player, distance)
-  return demolish.find_target(game, player, distance)
-end
+action_selector.pick_demolish_target = demolish.find_target
 
 return action_selector

@@ -157,8 +157,4 @@ function bindings.register_missing_button_tip(cache, registered, listeners)
   end
 end
 
-function bindings.show_missing_button_tip(name)
-  _show_missing_button_tip(name)
-end
-
 return bindings

@@ -64,7 +64,7 @@ function M.build(helpers)
     end
 
     availability.mark_effect_group_used(game, item_id)
-    local reopened = item_phase.reopen_passive_or_finish(game, player, meta)
+    local reopened = item_phase.reopen_or_finish(game, player, meta)
     return reopened and { stay = true } or nil
   end
 

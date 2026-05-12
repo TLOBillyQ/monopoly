@@ -26,21 +26,10 @@ function M.hide_choice_screens(ui)
   ui.active_choice_screen_key = nil
 end
 
-function M.resolve_option_id(option)
-  return choice_support.resolve_option_id(option)
-end
-
-function M.resolve_option_label(option)
-  return choice_support.resolve_option_label(option)
-end
-
-function M.resolve_option_by_id(choice, option_id)
-  return choice_support.resolve_option_by_id(choice, option_id)
-end
-
-function M.resolve_option_label_by_id(choice, option_id)
-  return choice_support.resolve_option_label_by_id(choice, option_id)
-end
+M.resolve_option_id = choice_support.resolve_option_id
+M.resolve_option_label = choice_support.resolve_option_label
+M.resolve_option_by_id = choice_support.resolve_option_by_id
+M.resolve_option_label_by_id = choice_support.resolve_option_label_by_id
 
 function M.set_option_node(ui, node_name, option)
   local option_id = M.resolve_option_id(option)
@@ -54,32 +43,11 @@ function M.set_option_node(ui, node_name, option)
   return option_id
 end
 
-function M.resolve_choice_title(choice, screen_key, selected_option_id)
-  if screen_key == "secondary_confirm" then
-    return M.resolve_secondary_confirm_title(choice, nil, screen_key, selected_option_id)
-  end
-  return choice and choice.title or "请选择"
-end
-
-function M.resolve_secondary_confirm_title(choice, game, source_screen, option_id)
-  return choice_support.resolve_secondary_confirm_title(choice, game, source_screen, option_id)
-end
-
-function M.resolve_secondary_confirm_body(choice, game, source_screen, option_id, option_label)
-  return choice_support.resolve_secondary_confirm_body(choice, game, source_screen, option_id, option_label)
-end
-
-function M.build_secondary_confirm_body(choice, game, selected_option_id)
-  return choice_support.build_secondary_confirm_body(choice, game, selected_option_id)
-end
-
-function M.uses_item_slots(choice)
-  return choice_support.uses_item_slots(choice)
-end
-
-function M.requires_item_slot_pre_confirm(choice)
-  return choice_support.requires_item_slot_pre_confirm(choice)
-end
+M.resolve_secondary_confirm_title = choice_support.resolve_secondary_confirm_title
+M.resolve_secondary_confirm_body = choice_support.resolve_secondary_confirm_body
+M.build_secondary_confirm_body = choice_support.build_secondary_confirm_body
+M.uses_item_slots = choice_support.uses_item_slots
+M.requires_item_slot_pre_confirm = choice_support.requires_item_slot_pre_confirm
 
 function M.switch_modal_canvas(state, target_canvas)
   local ui = state.ui
@@ -96,8 +64,6 @@ function M.switch_modal_canvas(state, target_canvas)
   runtime.set_client_role(nil)
 end
 
-function M.resolve_screen_key(choice)
-  return choice_support.resolve_screen_key(choice)
-end
+M.resolve_screen_key = choice_support.resolve_screen_key
 
 return M

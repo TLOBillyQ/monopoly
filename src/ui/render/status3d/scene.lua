@@ -48,10 +48,6 @@ local function _create_scene_ui_bind_unit(ctrl_unit, layout_id)
   return nil
 end
 
-local function _can_create_scene_ui_bind_unit(ctrl_unit)
-  return ctrl_unit and ctrl_unit.create_scene_ui_bind_unit ~= nil
-end
-
 local function _resolve_label_node_id(node_name)
   if type(node_name) ~= "string" or node_name == "" then
     return nil
@@ -87,14 +83,13 @@ function M.ensure_layers_for_player(cache, player, deps)
   if cache.layers[player_id] ~= nil then
     return true
   end
-  _resolve_host_runtime(deps)
   local role = _resolve_role(player_id, deps)
   if role == nil then
     meta.warn_once(cache, "missing_role_" .. tostring(player_id), "status3d missing role:", tostring(player_id))
     return false
   end
   local ctrl_unit = role.get_ctrl_unit and role.get_ctrl_unit()
-  if not _can_create_scene_ui_bind_unit(ctrl_unit) then
+  if not (ctrl_unit and ctrl_unit.create_scene_ui_bind_unit) then
     meta.warn_once(cache, "missing_ctrl_unit_" .. tostring(player_id), "status3d unit missing create_scene_ui_bind_unit:", tostring(player_id))
     return false
   end

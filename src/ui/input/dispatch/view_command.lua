@@ -43,10 +43,6 @@ local function _resolve_role_by_id(runtime, role_id)
   }
 end
 
-local function _resolve_intent_type(intent)
-  return intent and intent.type or nil
-end
-
 local function _handle_market_select(state, intent, market)
   if market == nil then
     return false
@@ -106,7 +102,7 @@ local function _handle_toggle_action_log(state, intent, event_log_view)
 end
 
 local function _fallback_dispatch(state, intent)
-  local intent_type = _resolve_intent_type(intent)
+  local intent_type = intent and intent.type or nil
   if intent_type == nil then
     return false
   end

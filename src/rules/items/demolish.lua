@@ -15,12 +15,6 @@ local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local list_unpack = table.unpack
 
-local function _clear_overlays(game, idx)
-  assert(game ~= nil, "missing game")
-  assert(game.clear_all_overlays ~= nil, "missing game.clear_all_overlays")
-  game:clear_all_overlays(idx)
-end
-
 local tile_state = tile_mod.get_state
 
 local function _try_destroy_building(game, tile, idx, item_id)
@@ -150,7 +144,7 @@ end
 
 function demolish.apply(game, player, idx, opts)
   opts = opts or {}
-  _clear_overlays(game, idx)
+  game:clear_all_overlays(idx)
   local tile = assert(game.board:get_tile(idx), "missing tile: " .. tostring(idx))
 
   local destroyed = _try_destroy_building(game, tile, idx, opts.item_id)

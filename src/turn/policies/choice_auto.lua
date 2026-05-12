@@ -110,11 +110,9 @@ local function _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, el
   return nil
 end
 
-function choice_auto_policy.resolve_choice_owner(game, choice)
-  return _resolve_choice_owner(game, choice)
-end
+choice_auto_policy.resolve_choice_owner = _resolve_choice_owner
 
-function choice_auto_policy.decide(game, state, choice, ctx)
+function choice_auto_policy.decide(game, _state, choice, ctx)
   if not (choice and choice.id) then
     return nil
   end

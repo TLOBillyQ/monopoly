@@ -59,16 +59,9 @@ local function _resolve_destroy_unit(game_api)
   return nil
 end
 
-local function _resolve_actor_unit(actor)
-  if actor == nil then
-    return nil
-  end
-  return actor.unit
-end
-
 local function _destroy_actor(env, actor)
   local destroy_unit = _resolve_destroy_unit(env and env.GameAPI or nil)
-  local unit = _resolve_actor_unit(actor)
+  local unit = actor and actor.unit or nil
   if destroy_unit == nil or unit == nil then
     return
   end

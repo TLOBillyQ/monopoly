@@ -1145,15 +1145,13 @@ describe("item", function()
 
   it("wait_choice_arg_helpers_split_state_and_args", function()
     local resume_next_args = { tile_id = 12, skip_anim = true }
-    local next_state = item_phase._build_wait_choice_next_state({
+    local result = item_phase.build_wait_choice_args({
       resume_next_state = "move_followup",
-    })
-    local next_args = item_phase._build_wait_choice_next_args({
       resume_next_args = resume_next_args,
     })
 
-    _assert_eq(next_state, "move_followup", "_build_wait_choice_next_state should forward resume_next_state")
-    assert(next_args == resume_next_args, "_build_wait_choice_next_args should forward the original next_args table")
+    _assert_eq(result.next_state, "move_followup", "build_wait_choice_args should forward resume_next_state")
+    assert(result.next_args == resume_next_args, "build_wait_choice_args should forward the original next_args table")
   end)
 
   it("item_equalize_cash", function()

@@ -10,9 +10,7 @@ local function _max_level(tile)
   return 0
 end
 
-function pricing.max_level(tile)
-  return _max_level(tile)
-end
+pricing.max_level = _max_level
 
 function pricing.purchase_price(tile)
   return tile.price

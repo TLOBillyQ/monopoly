@@ -22,11 +22,4 @@ function feedback.emit_inventory_full(player, entry)
   })
 end
 
-function feedback.popup(title, body)
-  return {
-    title = title or popup_title,
-    body = body,
-  }
-end
-
 return feedback

@@ -7,25 +7,11 @@ local rent_resolver = require("src.rules.land.rent_resolver")
 local number_utils = require("src.foundation.lang.number")
 
 local land_rules = {}
-function land_rules.safe_tile_state(game, tile)
-  return rent_resolver.safe_tile_state(game, tile)
-end
-
-function land_rules.resolve_rent_owner(game, tile, state_fn)
-  return rent_resolver.resolve_rent_owner(game, tile, state_fn)
-end
-
-function land_rules.contiguous_rent(game, board, index, owner_id)
-  return rent_resolver.contiguous_rent(game, board, index, owner_id)
-end
-
-function land_rules.contiguous_count(game, board, index, owner_id)
-  return rent_resolver.contiguous_count(game, board, index, owner_id)
-end
-
-function land_rules.contiguous_breakdown(game, board, index, owner_id)
-  return rent_resolver.contiguous_breakdown(game, board, index, owner_id)
-end
+land_rules.safe_tile_state = rent_resolver.safe_tile_state
+land_rules.resolve_rent_owner = rent_resolver.resolve_rent_owner
+land_rules.contiguous_rent = rent_resolver.contiguous_rent
+land_rules.contiguous_count = rent_resolver.contiguous_count
+land_rules.contiguous_breakdown = rent_resolver.contiguous_breakdown
 
 local function _resolve_player_and_tile(game, player_id, tile_id)
   local player = game:find_player_by_id(player_id)

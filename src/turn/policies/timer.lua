@@ -67,14 +67,6 @@ function turn_timer_policy.is_action_button_wait_active(game, state, ports)
 end
 
 
-local function _resolve_timeout_seconds()
-  return constants.action_timeout_seconds or 0
-end
-
-local function _should_activate_button(timeout)
-  return timeout > 0
-end
-
 local function _resolve_current_player(game)
   local current_index = game and game.turn and game.turn.current_player_index or nil
   return current_index and game.players and game.players[current_index] or nil
@@ -102,13 +94,7 @@ local function _should_track_action_button_for_player(game, player)
   return phase == "wait_action"
 end
 
-local function _dispatch_timeout(ctx, current_player)
-  if ctx.dispatch_next then
-    ctx.dispatch_next(current_player.id, "timeout")
-  end
-end
-
-local function _update_elapsed_timer(state, dt, timeout, game, ctx)
+local function _update_elapsed_timer(state, dt, timeout)
   local elapsed = _resolve_elapsed(state.action_button_elapsed, dt)
   if elapsed < timeout then
     state.action_button_elapsed = elapsed
@@ -123,7 +109,9 @@ local function _handle_timeout_elapsed(state, game, ctx)
   if not current_player then
     return
   end
-  _dispatch_timeout(ctx, current_player)
+  if ctx.dispatch_next then
+    ctx.dispatch_next(current_player.id, "timeout")
+  end
 end
 
 local function _resolve_action_timer_context(ctx)
@@ -136,8 +124,8 @@ local function _resolve_action_timer_context(ctx)
   if not turn_timer_policy.is_action_button_wait_active(game, state, ports) then
     return nil
   end
-  local timeout = _resolve_timeout_seconds()
-  if not _should_activate_button(timeout) then
+  local timeout = constants.action_timeout_seconds or 0
+  if timeout <= 0 then
     return nil
   end
   local current_player = _resolve_current_player(game)
@@ -170,7 +158,7 @@ function turn_timer_policy.update_action_button_timer(ctx)
 
   state.action_button_active = true
 
-  if _update_elapsed_timer(state, ctx.dt, resolved.timeout, resolved.game, ctx) then
+  if _update_elapsed_timer(state, ctx.dt, resolved.timeout) then
     return
   end
 

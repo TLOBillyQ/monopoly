@@ -34,9 +34,4 @@ function market_catalog.entry_by_id(product_id)
   return _build_entries_by_id()[product_id]
 end
 
-function market_catalog.assert_valid()
-  _build_entries_by_id()
-  return true
-end
-
 return market_catalog

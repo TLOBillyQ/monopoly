@@ -45,11 +45,6 @@ function dirty_tracker.mark(d, domain)
   d[domain] = true
 end
 
-function dirty_tracker.mark_countdown(d)
-  d.any = true
-  d.turn_countdown = true
-end
-
 function dirty_tracker.mark_inventory(d, pid)
   d.any = true
   d.players = true

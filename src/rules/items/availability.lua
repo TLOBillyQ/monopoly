@@ -51,11 +51,7 @@ availability.copy_table = tables.copy_table
 availability.contains = tables.contains
 availability.normalize_integer_field = normalize_integer_field
 
-local function _resolve_item_cfg(item_id)
-  return inventory.cfg(item_id)
-end
-
-function availability.resolve_offer_in_phases(item_id, cfg)
+function availability.resolve_offer_in_phases(_item_id, cfg)
   if type(cfg) ~= "table" then
     return nil
   end
@@ -75,18 +71,11 @@ local function _offer_phase_allowed(offer_in_phases, phase, allow_missing_phase)
   return tables.contains(offer_in_phases, phase)
 end
 
-local function _resolve_phase_timing(phase)
-  if not phase then
-    return nil
-  end
-  return phase_timing[phase]
-end
-
 function availability.trigger_timing_allowed(phase, timing, allow_missing_phase)
   if not phase then
     return allow_missing_phase
   end
-  local allowed = _resolve_phase_timing(phase)
+  local allowed = phase_timing[phase]
   if not allowed or not timing then
     return false
   end
@@ -183,7 +172,7 @@ local function _can_offer_special_item(game, player, item_id)
 end
 
 function availability.can_offer_in_phase(game, player, item_id, phase)
-  local cfg = _resolve_item_cfg(item_id)
+  local cfg = inventory.cfg(item_id)
   if not cfg then
     return false, "missing_item_cfg"
   end

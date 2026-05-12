@@ -92,12 +92,9 @@ end
 local function _resolve_tile_position(state, tile_index)
   return unit_position.read_scene_tile_position(state and state.board_scene or nil, tile_index)
 end
-local function _resolve_building_tile_position(state, tile_index)
-  return unit_position.read_scene_building_position(state and state.board_scene or nil, tile_index)
-end
 local function _resolve_tile_cue_position(state, tile_index, payload)
   if payload and payload.use_building_tile_position == true then
-    local building_pos = _resolve_building_tile_position(state, tile_index)
+    local building_pos = unit_position.read_scene_building_position(state and state.board_scene or nil, tile_index)
     if building_pos ~= nil then
       return building_pos
     end

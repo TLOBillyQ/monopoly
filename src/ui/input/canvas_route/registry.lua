@@ -32,8 +32,4 @@ function registry.build_route_specs(state)
   return specs
 end
 
-function registry.list_canvas_specs()
-  return canvas_specs
-end
-
 return registry

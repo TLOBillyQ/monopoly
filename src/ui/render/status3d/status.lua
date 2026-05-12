@@ -118,14 +118,15 @@ function M.resolve_player_status_key(game, player)
   end
   local status = player.status or {}
   local last_turn = game and game.last_turn or nil
-  if _check_roadblock_status(last_turn, player) and _has_pending_roadblock_trigger(game, player) then
+  local has_roadblock = _check_roadblock_status(last_turn, player)
+  if has_roadblock and _has_pending_roadblock_trigger(game, player) then
     return "roadblock"
   end
   local location = _resolve_location_status(game, player, status)
   if location then
     return location
   end
-  if _check_roadblock_status(last_turn, player) then
+  if has_roadblock then
     return "roadblock"
   end
   return _resolve_deity_status(status)

@@ -14,9 +14,7 @@ local teleport_camera_hold_seconds = timing.teleport_effect_camera_hold_seconds 
 local roadblock_destroy_hold_seconds = timing.roadblock_destroy_hold_seconds or 0
 local _play_demolish_feedback
 
-function units.clear_overlay(state, kind, tile_index)
-  overlay.clear_overlay(state, kind, tile_index)
-end
+units.clear_overlay = overlay.clear_overlay
 
 local function _pan_camera_to_tile(state, tile_index, duration, opts)
   if state == nil or tile_index == nil then
@@ -208,8 +206,6 @@ function units.play_roadblock_trigger(state, anim, duration, opts)
   return _resolve_minimum_delay(0, duration)
 end
 
-function units.build_tip(state, anim)
-  return tip_text.build(state, anim)
-end
+units.build_tip = tip_text.build
 
 return units

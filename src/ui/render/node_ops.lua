@@ -8,9 +8,7 @@ local base_contract = require("src.ui.schema.base_contract")
 
 local M = {}
 
-local function query_node(name)
-  return runtime.query_node(name)
-end
+local query_node = runtime.query_node
 
 local function mutate_node(name, mutator)
   assert(name ~= nil, "missing ui node name")

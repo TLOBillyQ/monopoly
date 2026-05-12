@@ -55,10 +55,6 @@ local function _resolve_pending_item_phase_choice(state, runtime_game)
   return choice
 end
 
-local function _resolve_item_phase_choice(state, runtime_game)
-  return _resolve_pending_item_phase_choice(state, runtime_game)
-end
-
 local function _choice_has_item_option(choice, item_id)
   local options = assert(choice.options, "missing choice options")
   for _, option in ipairs(options) do
@@ -137,7 +133,7 @@ local function _resolve_item_slot_resolution(item_slot_source, state, action, ga
   end
 
   local runtime_game = _resolve_runtime_game(state, game)
-  local choice = _resolve_item_phase_choice(state, runtime_game)
+  local choice = _resolve_pending_item_phase_choice(state, runtime_game)
   if not choice then
     return {
       ok = false,
@@ -188,9 +184,7 @@ function validator.resolve_gate_state(state, ui_sync_ports)
   }
 end
 
-function validator.should_block_action(gate_state_or_flag, action_or_type)
-  return turn_action_gate.should_block_action(gate_state_or_flag, action_or_type)
-end
+validator.should_block_action = turn_action_gate.should_block_action
 
 function validator.validate_actor_role(game, action)
   if not _is_turn_bound_ui_button(action and action.id) then

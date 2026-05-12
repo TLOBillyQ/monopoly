@@ -83,21 +83,4 @@ function entity_pool.prewarm(unit_key, count, rotation, scale, sample_pos)
   end
 end
 
-function entity_pool.stats()
-  local result = {}
-  for key, b in pairs(_buckets) do
-    result[key] = { idle = #b.idle, live = b.live, peak = b.peak, miss = b.miss }
-  end
-  return result
-end
-
-function entity_pool.reset()
-  for _, b in pairs(_buckets) do
-    for _, handle in ipairs(b.idle) do
-      unit_lifecycle.destroy_unit(handle)
-    end
-    b.idle = {}
-  end
-end
-
 return entity_pool

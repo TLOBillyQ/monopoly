@@ -114,9 +114,7 @@ function landing_visual_hold.start(game, opts)
   return true
 end
 
-function landing_visual_hold.hold_state_for_game(game, opts)
-  return landing_visual_hold.start(game, opts)
-end
+landing_visual_hold.hold_state_for_game = landing_visual_hold.start
 
 function landing_visual_hold.is_active_game(game)
   local state = game and game.landing_visual_hold_state or nil
@@ -178,9 +176,7 @@ function landing_visual_hold.clear_game(game)
   return changed
 end
 
-function landing_visual_hold.is_active_state(state)
-  return runtime_state.get_landing_visual_hold_active(state)
-end
+landing_visual_hold.is_active_state = runtime_state.get_landing_visual_hold_active
 
 function landing_visual_hold.is_flushing_state(state)
   local hold = _ensure_hold(state)
@@ -284,11 +280,6 @@ function landing_visual_hold.defer_bankruptcy_clear(state, game, player, owned_t
   return release_scheduler.register_deferred_replay(hold, "bankruptcy_clear", replay, game, player, owned_tile_ids)
 end
 
-local function _reset_release_state(hold)
-  hold.frozen_ui_model = nil
-  _reset_deferred_buffers(hold)
-end
-
 function landing_visual_hold.with_flushing(state, fn)
   local hold = _ensure_hold(state)
   local previous = hold.flushing == true
@@ -329,7 +320,8 @@ function landing_visual_hold.release(state, game)
   landing_visual_hold.with_flushing(state, function()
     release_scheduler.replay(hold)
   end)
-  _reset_release_state(hold)
+  hold.frozen_ui_model = nil
+  _reset_deferred_buffers(hold)
 
   if type(post_release_hook) == "function" then
     post_release_hook()

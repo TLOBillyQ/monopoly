@@ -62,9 +62,7 @@ local function _is_local_role(state, owner_role_id)
   return false
 end
 
-function choice_ui_state.resolve_route_key(choice)
-  return choice_route_policy.resolve(choice)
-end
+choice_ui_state.resolve_route_key = choice_route_policy.resolve
 
 function choice_ui_state.resolve_gate_state(game, state, choice)
   local route_key = choice_ui_state.resolve_route_key(choice)

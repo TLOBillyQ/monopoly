@@ -14,9 +14,7 @@ function host_runtime.schedule(delay, fn)
   return runtime_ports.schedule(delay or 0, fn)
 end
 
-function host_runtime.enqueue_tip(intent)
-  return tip_queue.enqueue(intent)
-end
+host_runtime.enqueue_tip = tip_queue.enqueue
 
 function host_runtime.show_tips(text, duration)
   return host_runtime.enqueue_tip({
@@ -56,92 +54,27 @@ function host_runtime.resolve_roles()
   return role_resolver.resolve_roles()
 end
 
-function host_runtime.create_unit_group(group_id, pos, rotation)
-  return unit_lifecycle.create_unit_group(group_id, pos, rotation)
-end
+host_runtime.create_unit_group = unit_lifecycle.create_unit_group
+host_runtime.create_unit_with_scale = unit_lifecycle.create_unit_with_scale
+host_runtime.destroy_unit_with_children = unit_lifecycle.destroy_unit_with_children
+host_runtime.destroy_unit = unit_lifecycle.destroy_unit
 
-function host_runtime.create_unit_with_scale(unit_id, pos, rotation, scale)
-  return unit_lifecycle.create_unit_with_scale(unit_id, pos, rotation, scale)
-end
+host_runtime.acquire_unit = entity_pool.acquire
+host_runtime.release_unit = entity_pool.release
+host_runtime.prewarm_unit = entity_pool.prewarm
 
-function host_runtime.destroy_unit_with_children(handle, include_children)
-  return unit_lifecycle.destroy_unit_with_children(handle, include_children)
-end
+host_runtime.play_sfx_by_key = sfx_runtime.play_sfx_by_key
+host_runtime.play_3d_sound = sfx_runtime.play_3d_sound
+host_runtime.bind_sfx_to_unit = sfx_runtime.bind_sfx_to_unit
 
-function host_runtime.destroy_unit(handle)
-  return unit_lifecycle.destroy_unit(handle)
-end
+host_runtime.set_scene_ui_visible = scene_ui.set_scene_ui_visible
+host_runtime.destroy_scene_ui = scene_ui.destroy_scene_ui
+host_runtime.has_scene_ui_support = scene_ui.has_scene_ui_support
+host_runtime.get_eui_node_at_scene_ui = scene_ui.get_eui_node_at_scene_ui
 
-function host_runtime.acquire_unit(unit_key, pos, rotation, scale)
-  return entity_pool.acquire(unit_key, pos, rotation, scale)
-end
-
-function host_runtime.release_unit(unit_key, handle)
-  return entity_pool.release(unit_key, handle)
-end
-
-function host_runtime.prewarm_unit(unit_key, count, rotation, scale, sample_pos)
-  return entity_pool.prewarm(unit_key, count, rotation, scale, sample_pos)
-end
-
-function host_runtime.entity_pool_stats()
-  return entity_pool.stats()
-end
-
-function host_runtime.entity_pool_reset()
-  return entity_pool.reset()
-end
-
-function host_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound, opts)
-  return sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound, opts)
-end
-
-function host_runtime.play_3d_sound(pos, sound_id, duration, volume)
-  return sfx_runtime.play_3d_sound(pos, sound_id, duration, volume)
-end
-
-function host_runtime.bind_sfx_to_unit(sfx_id, unit, socket_name, pos, bind_type)
-  return sfx_runtime.bind_sfx_to_unit(sfx_id, unit, socket_name, pos, bind_type)
-end
-
-function host_runtime.destroy_sfx(sfx_id, fade_out)
-  return sfx_runtime.destroy_sfx(sfx_id, fade_out)
-end
-
-function host_runtime.stop_sound(sound_id)
-  return sfx_runtime.stop_sound(sound_id)
-end
-
-function host_runtime.set_scene_ui_visible(layer, role, visible)
-  return scene_ui.set_scene_ui_visible(layer, role, visible)
-end
-
-function host_runtime.destroy_scene_ui(layer)
-  return scene_ui.destroy_scene_ui(layer)
-end
-
-function host_runtime.has_scene_ui_support()
-  return scene_ui.has_scene_ui_support()
-end
-
-function host_runtime.get_eui_node_at_scene_ui(layer, node_id)
-  return scene_ui.get_eui_node_at_scene_ui(layer, node_id)
-end
-
-function host_runtime.build_camera_ray(role, cfg)
-  return raycast.build_camera_ray(role, cfg)
-end
-
-function host_runtime.pick_first_hit_unit(start_pos, end_pos, cfg)
-  return raycast.pick_first_hit_unit(start_pos, end_pos, cfg)
-end
-
-function host_runtime.get_unit_id(unit)
-  return raycast.get_unit_id(unit)
-end
-
-function host_runtime.resolve_hit_position(hit)
-  return raycast.resolve_hit_position(hit)
-end
+host_runtime.build_camera_ray = raycast.build_camera_ray
+host_runtime.pick_first_hit_unit = raycast.pick_first_hit_unit
+host_runtime.get_unit_id = raycast.get_unit_id
+host_runtime.resolve_hit_position = raycast.resolve_hit_position
 
 return host_runtime

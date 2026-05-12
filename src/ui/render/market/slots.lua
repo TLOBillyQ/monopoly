@@ -21,9 +21,7 @@ local function _item_cfg_by_id(product_id)
   return nil
 end
 
-local function _market_entry_by_id(product_id)
-  return market_catalog.entry_by_id(product_id)
-end
+local _market_entry_by_id = market_catalog.entry_by_id
 
 local function _resolve_market_entry(product_id)
   local entry = _market_entry_by_id(product_id)
@@ -137,7 +135,7 @@ end
 local function _has_option_id(option_ids, option_id)
   for _, value in pairs(option_ids or {}) do
     if value == option_id then
-      return option_id ~= nil
+      return true
     end
   end
   return false

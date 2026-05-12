@@ -17,8 +17,6 @@ function presenter.push_popup(game, title, body, opts)
   }, opts.popup_opts) == true
 end
 
-function presenter.queue_action_anim(game, payload)
-  return action_anim_port.queue(game, payload)
-end
+presenter.queue_action_anim = action_anim_port.queue
 
 return presenter

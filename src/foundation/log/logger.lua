@@ -94,10 +94,6 @@ function logger.configure_game_time(game_api)
   end)
 end
 
-function logger.set_file_io_enabled(enabled)
-  logger.enable_file_io = enabled == true
-end
-
 function logger.set_info_per_turn_limit(limit)
   logger.info_per_turn_limit = limit
 end
@@ -141,10 +137,6 @@ end
 
 function logger.get_seq()
   return logger.seq
-end
-
-function logger.get_event_seq()
-  return logger.event_seq or 0
 end
 
 function logger.get_entries(max_lines)

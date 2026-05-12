@@ -143,9 +143,7 @@ local function _register_default_handlers()
   end)
 end
 
-function action_anim.clear_overlay(state, kind, tile_index)
-  handlers.clear_overlay(state, kind, tile_index)
-end
+action_anim.clear_overlay = handlers.clear_overlay
 
 local function _resolve_duration(anim)
   local default_duration = timing.action_anim_default_seconds or 1.0
@@ -182,10 +180,6 @@ local function _resolve_tip_text(state, anim)
   return tip_text, should_show_tip, should_debug_log
 end
 
-local function _has_tip_text(tip_text)
-  return tip_text ~= nil and tip_text ~= ""
-end
-
 local function _enqueue_tip_text(host_runtime, anim, tip_text, tip_duration)
   if not host_runtime then
     return
@@ -201,11 +195,11 @@ local function _enqueue_tip_text(host_runtime, anim, tip_text, tip_duration)
 end
 
 local function _emit_tip_text(host_runtime, anim, tip_text, should_show_tip, should_debug_log, tip_duration)
-  local has_tip_text = _has_tip_text(tip_text)
-  if should_debug_log and has_tip_text then
+  local has_tip = tip_text ~= nil and tip_text ~= ""
+  if should_debug_log and has_tip then
     logger.info_unlimited("[ActionAnim]", tip_text)
   end
-  if should_show_tip and has_tip_text then
+  if should_show_tip and has_tip then
     _enqueue_tip_text(host_runtime, anim, tip_text, tip_duration)
   end
 end

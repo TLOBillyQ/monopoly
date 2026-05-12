@@ -51,9 +51,7 @@ function tick_timeout.resolve_modal_timeout_seconds(_, state, ui_sync_ports)
   return tick_ui_gate.resolve_modal_timeout_seconds(state, ui_sync_ports)
 end
 
-function tick_timeout.resolve_modal_gate(state, ui_sync_ports)
-  return tick_ui_gate.resolve_ui_gate(state, ui_sync_ports)
-end
+tick_timeout.resolve_modal_gate = tick_ui_gate.resolve_ui_gate
 
 function tick_timeout.step_choice_timeout(game, state, dt, opts)
   return tick_choice_timeout.step(game, state, dt, {

@@ -105,30 +105,32 @@ describe("domain items phase coverage", function()
     _assert_eq(game.turn.item_phase_active, "pre_move", "item_phase_active should not be cleared when phase differs")
   end)
 
-  it("build_wait_choice_next_state returns meta value", function()
+  it("build_wait_choice_args extracts next_state from meta", function()
     local meta = { resume_next_state = "move", resume_next_args = { x = 1 } }
-    _assert_eq(phase_module._build_wait_choice_next_state(meta), "move", "should return resume_next_state")
+    local result = phase_module.build_wait_choice_args(meta)
+    _assert_eq(result.next_state, "move", "should return resume_next_state")
   end)
 
-  it("build_wait_choice_next_state errors on nil meta", function()
-    local ok = pcall(function() phase_module._build_wait_choice_next_state(nil) end)
+  it("build_wait_choice_args errors on nil meta", function()
+    local ok = pcall(function() phase_module.build_wait_choice_args(nil) end)
     _assert_eq(ok, false, "nil meta should error")
   end)
 
-  it("build_wait_choice_next_state errors on missing resume_next_state", function()
-    local ok = pcall(function() phase_module._build_wait_choice_next_state({}) end)
+  it("build_wait_choice_args errors on missing resume_next_state", function()
+    local ok = pcall(function() phase_module.build_wait_choice_args({}) end)
     _assert_eq(ok, false, "missing resume_next_state should error")
   end)
 
-  it("build_wait_choice_next_args returns meta value", function()
+  it("build_wait_choice_args extracts next_args from meta", function()
     local meta = { resume_next_state = "move", resume_next_args = { player = 1 } }
-    local args = phase_module._build_wait_choice_next_args(meta)
-    assert(args ~= nil and args.player == 1, "should return resume_next_args with player=1")
+    local result = phase_module.build_wait_choice_args(meta)
+    assert(result.next_args ~= nil and result.next_args.player == 1, "should return resume_next_args with player=1")
   end)
 
-  it("build_wait_choice_next_args returns nil for nil meta", function()
-    local args = phase_module._build_wait_choice_next_args(nil)
-    _assert_eq(args, nil, "nil meta should return nil")
+  it("build_wait_choice_args returns nil next_args for nil meta resume_next_args", function()
+    local meta = { resume_next_state = "move" }
+    local result = phase_module.build_wait_choice_args(meta)
+    _assert_eq(result.next_args, nil, "missing resume_next_args should return nil")
   end)
 
   it("build_wait_choice_args returns both", function()

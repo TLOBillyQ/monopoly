@@ -272,7 +272,7 @@ describe("presentation.action_anim_effect_routes", function()
 
     _with_patches({
       {
-        target = handlers,
+        target = action_anim,
         key = "clear_overlay",
         value = function(_, kind, tile_index)
           cleared[#cleared + 1] = kind .. ":" .. tostring(tile_index)

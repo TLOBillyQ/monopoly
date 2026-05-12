@@ -8,9 +8,7 @@ local event_handlers = {}
 local context = { installed = false, logger = nil, state = nil, handlers_by_event = {} }
 local MARKET_TIP_MIN_SECONDS = 3.0
 
-local function _enqueue_tip(intent)
-  return host_runtime_ports.enqueue_tip(intent)
-end
+local _enqueue_tip = host_runtime_ports.enqueue_tip
 
 local function _resolve_market_buy_failed_tip(event_data)
   local popup = event_data and event_data.popup or nil
@@ -123,23 +121,17 @@ function event_handlers.install(_, logger, state)
     return _resolve_tile_index_from_payload(_event_data(data))
   end)
 
-  _register_handler(monopoly_event.land.rent_paid, function(data)
+  local function _handle_rent_cue(data)
     local event_data = _event_data(data)
     local ctx = context.state
     local owner = event_data and event_data.owner or nil
     if ctx and owner and owner.id ~= nil then
       board_feedback.play_player_cue(ctx, "cash_burst", owner.id, event_data)
     end
-  end)
+  end
 
-  _register_handler(monopoly_event.land.rent_bankrupt, function(data)
-    local event_data = _event_data(data)
-    local ctx = context.state
-    local owner = event_data and event_data.owner or nil
-    if ctx and owner and owner.id ~= nil then
-      board_feedback.play_player_cue(ctx, "cash_burst", owner.id, event_data)
-    end
-  end)
+  _register_handler(monopoly_event.land.rent_paid, _handle_rent_cue)
+  _register_handler(monopoly_event.land.rent_bankrupt, _handle_rent_cue)
 
   _register_handler(monopoly_event.land.tax_paid, function(data)
     local event_data = _event_data(data)

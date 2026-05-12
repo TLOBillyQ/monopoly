@@ -13,10 +13,6 @@ local function _safe_ui_call(ui, method_name, ...)
   return ok
 end
 
-local function _set_label_safe(ui, name, value)
-  return _safe_ui_call(ui, "set_label", name, value)
-end
-
 local function _set_visible_safe(ui, name, visible)
   return _safe_ui_call(ui, "set_visible", name, visible)
 end
@@ -30,7 +26,7 @@ end
 
 local function _set_cash_delta_label(ui, index, text, visible)
   local label_name = string.format(base_nodes.player_cash_delta, index)
-  local shown = _set_label_safe(ui, label_name, text or "")
+  local shown = _safe_ui_call(ui, "set_label", label_name, text or "")
   if shown or visible ~= nil then
     _set_visible_safe(ui, label_name, visible == true)
   end

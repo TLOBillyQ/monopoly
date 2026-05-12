@@ -56,13 +56,8 @@ local function _get_owner_cache(game, owner_id)
   return owner_cache
 end
 
-function resolver.safe_tile_state(game, tile)
-  return property_query.safe_tile_state(game, tile)
-end
-
-function resolver.resolve_rent_owner(game, tile, state_fn)
-  return property_query.resolve_rent_owner(game, tile, state_fn)
-end
+resolver.safe_tile_state = property_query.safe_tile_state
+resolver.resolve_rent_owner = property_query.resolve_rent_owner
 
 local function _resolve_component(game, board, index, owner_id)
   assert(board ~= nil, "missing board")

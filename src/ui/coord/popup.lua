@@ -120,9 +120,6 @@ function renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canva
   runtime.set_client_role(nil)
 end
 
-function renderer.switch_canvas(state, kind, target_canvas, fallback_canvas)
-  return renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canvas)
-end
 local function _set_popup_card_image(state, payload)
   local popup = state and state.ui and state.ui.popup_screen or nil
   _apply_screen_image(state, popup, popup and popup.card or nil, _resolve_popup_image_key(state, payload), function(node, key)

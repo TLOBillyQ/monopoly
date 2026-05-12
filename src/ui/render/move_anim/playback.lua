@@ -22,9 +22,7 @@ local function _should_skip_stop_active_sequence(board_scene, player_id, anim_ct
   return true
 end
 
-function playback.step_duration(scene, from_index, to_index, anim_ctx)
-  return seq_builder.calc_step_time(scene, from_index, to_index, anim_ctx)
-end
+playback.step_duration = seq_builder.calc_step_time
 
 function playback.one_step(scene, player_id, from_index, to_index, anim_ctx)
   local step_dir, _ = seq_builder.calc_step_vector(scene, from_index, to_index)

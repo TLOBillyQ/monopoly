@@ -84,10 +84,6 @@ function common.queue_move_effect(game, player, from_index, to_index, visited)
   return _queue_relocation_anim(game, "move_effect", player, from_index, to_index, visited)
 end
 
-function common.queue_teleport_effect(game, player, from_index, to_index)
-  return _queue_relocation_anim(game, "teleport_effect", player, from_index, to_index, nil)
-end
-
 function common.queue_forced_relocation(game, player, from_index, to_index)
   return _queue_relocation_anim(game, "forced_relocation", player, from_index, to_index, nil)
 end

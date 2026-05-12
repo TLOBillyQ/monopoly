@@ -67,29 +67,24 @@ function phase_module.is_repeatable(phase)
   return repeatable_phases[phase] == true
 end
 
-local function _build_resume_meta(phase, args)
-  return {
-    phase = phase,
-    resume_next_state = args and args.next_state or nil,
-    resume_next_args = args and args.next_args or nil,
-  }
-end
-
 local function _build_options(game, player, phase)
   local options = {}
   local body_lines = {}
   local seen_item_ids = {}
   for _, it in ipairs(inventory.items(player)) do
-      local cfg = cfg_by_id[it.id]
-      if cfg and not seen_item_ids[it.id] and availability.can_offer_in_phase(game, player, it.id, phase) then
-        seen_item_ids[it.id] = true
-        table.insert(options, { id = it.id, label = cfg.name })
-        options[#options].confirm_title = phase_confirm_titles[phase] or "本回合"
-        options[#options].confirm_body = "将使用：" .. cfg.name
-        local line = cfg.name
-        if cfg.usage and #cfg.usage > 0 then
-          line = line .. "：" .. cfg.usage
-        end
+    local cfg = cfg_by_id[it.id]
+    if cfg and not seen_item_ids[it.id] and availability.can_offer_in_phase(game, player, it.id, phase) then
+      seen_item_ids[it.id] = true
+      table.insert(options, {
+        id = it.id,
+        label = cfg.name,
+        confirm_title = phase_confirm_titles[phase] or "本回合",
+        confirm_body = "将使用：" .. cfg.name,
+      })
+      local line = cfg.name
+      if cfg.usage and #cfg.usage > 0 then
+        line = line .. "：" .. cfg.usage
+      end
       table.insert(body_lines, line)
     end
   end
@@ -111,18 +106,10 @@ local function _require_resume_next_state(meta)
   return assert(meta and meta.resume_next_state, "missing meta.resume_next_state")
 end
 
-function phase_module._build_wait_choice_next_state(meta)
-  return _require_resume_next_state(meta)
-end
-
-function phase_module._build_wait_choice_next_args(meta)
-  return meta and meta.resume_next_args or nil
-end
-
 function phase_module.build_wait_choice_args(meta)
   return {
-    next_state = phase_module._build_wait_choice_next_state(meta),
-    next_args = phase_module._build_wait_choice_next_args(meta),
+    next_state = _require_resume_next_state(meta),
+    next_args = meta and meta.resume_next_args or nil,
   }
 end
 
@@ -185,22 +172,6 @@ function phase_module.reopen_or_finish(game, player, meta)
   return true
 end
 
-function phase_module.reopen_passive_or_finish(game, player, meta)
-  assert(game ~= nil, "missing game")
-  assert(player ~= nil, "missing player")
-  assert(type(meta) == "table", "missing phase meta")
-  local spec = phase_module.build_passive_choice_spec(game, player, meta.phase, {
-    next_state = meta.resume_next_state,
-    next_args = meta.resume_next_args,
-  })
-  if spec == nil then
-    phase_module.finish(game, meta.phase)
-    return false
-  end
-  intent_output_port.open_choice(game, spec)
-  phase_module.mark_active(game, meta.phase)
-  return true
-end
 
 local function _resolve_auto_phase_wait(game, phase, args, pre)
   if not (pre and pre.waiting) then
@@ -226,7 +197,7 @@ local function _resolve_auto_phase_action_anim(game, phase, args, pre, should_fi
   return { waiting = true, wait_action_anim = true, next_state = next_state, next_args = next_args }
 end
 
-local function _try_dispatch_animation(game, player, phase, args, pre, repeatable)
+local function _try_dispatch_animation(game, _player, phase, args, pre, repeatable)
   if type(pre) == "table" and type(pre.after_action_anim) == "table" then
     return _resolve_auto_phase_action_anim(game, phase, args, pre, phase ~= "post_action"), false
   end
@@ -399,7 +370,6 @@ end
 function phase_module.build_choice_spec(game, player, phase, args)
   assert(game ~= nil, "missing game")
   assert(player ~= nil, "missing player")
-  local resume_meta = _build_resume_meta(phase, args)
   local body_lines, options = _build_options(game, player, phase)
   if #options == 0 then
     return nil
@@ -418,8 +388,8 @@ function phase_module.build_choice_spec(game, player, phase, args)
     meta = {
       player_id = player.id,
       phase = phase,
-      resume_next_state = resume_meta.resume_next_state,
-      resume_next_args = availability.copy_table(resume_meta.resume_next_args),
+      resume_next_state = args and args.next_state or nil,
+      resume_next_args = availability.copy_table(args and args.next_args or nil),
     },
   }
 end

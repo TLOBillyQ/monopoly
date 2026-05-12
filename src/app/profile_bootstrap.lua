@@ -3,7 +3,6 @@ local constants = require("src.config.content.constants")
 local number_utils = require("src.foundation.lang.number")
 
 local bootstrap = {}
-local _is_render_called_flag_enabled
 
 local function _assert_integer_like(value, label)
   local resolved = number_utils.to_integer(value)
@@ -153,14 +152,10 @@ local function _apply_tile_bootstrap(game, tiles)
       game:set_tile_level(tile, level)
     end
 
-    if _is_render_called_flag_enabled(tile_cfg.render_called) then
+    if tile_cfg.render_called == true then
       render_bootstrap.tiles_by_id[tile.id] = true
     end
   end
-end
-
-function _is_render_called_flag_enabled(value)
-  return value == true
 end
 
 local function _resolve_overlay_entry(raw_entry)
@@ -168,7 +163,7 @@ local function _resolve_overlay_entry(raw_entry)
     return nil, false
   end
   if type(raw_entry) == "table" then
-    return raw_entry.tile_id, _is_render_called_flag_enabled(raw_entry.render_called)
+    return raw_entry.tile_id, raw_entry.render_called == true
   end
   return raw_entry, false
 end

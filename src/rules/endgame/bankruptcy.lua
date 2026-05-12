@@ -100,10 +100,6 @@ local function _collect_owned_tiles(game, player)
   return owned_tile_ids, owned_tiles, names
 end
 
-local function _notify_tiles_cleared(game, player, owned_tile_ids)
-  bankruptcy_feedback_port.on_tiles_cleared(game, player, owned_tile_ids)
-end
-
 function bankruptcy.eliminate(game, player, opts)
   if player.eliminated then
     return
@@ -142,7 +138,7 @@ function bankruptcy.eliminate(game, player, opts)
   runtime_ports.mark_role_lose(role)
 
   if #owned_tile_ids > 0 then
-    _notify_tiles_cleared(game, player, owned_tile_ids)
+    bankruptcy_feedback_port.on_tiles_cleared(game, player, owned_tile_ids)
   end
 
   for _, list in pairs(game.occupants) do

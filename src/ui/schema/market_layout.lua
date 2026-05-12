@@ -47,15 +47,4 @@ for i = 1, 10 do
   market_layout.sold_out_labels[i] = "黑市-售罄" .. idx .. "文本"
 end
 
-function market_layout.is_ready()
-  return type(market_layout.container) == "string" and market_layout.container ~= ""
-    and type(market_layout.confirm_button) == "string" and market_layout.confirm_button ~= ""
-end
-
-function market_layout.is_panel_ready()
-  return market_layout.is_ready()
-    and type(market_layout.item_buttons) == "table" and #market_layout.item_buttons > 0
-    and type(market_layout.item_labels) == "table" and #market_layout.item_labels > 0
-end
-
 return market_layout

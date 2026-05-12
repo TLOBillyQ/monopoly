@@ -58,10 +58,6 @@ local function _emit_global_reset_animation()
   ui_events.send_to_all(event_name, {})
 end
 
-local function _reset_slot_animation(index)
-  _emit_slot_animation(index, "重置高亮道具槽位牌")
-end
-
 local function _build_pickable_signature(slot_pickable)
   local out = {}
   for index, can_pick in ipairs(slot_pickable) do
@@ -93,7 +89,7 @@ local function _emit_pickable_slot_animation(slot_pickable)
   _emit_global_reset_animation()
   for index, can_pick in ipairs(slot_pickable) do
     if not can_pick then
-      _reset_slot_animation(index)
+      _emit_slot_animation(index, "重置高亮道具槽位牌")
     end
   end
   for index, can_pick in ipairs(slot_pickable) do
@@ -113,10 +109,6 @@ local function _apply_outline_state(ui, outlines, slot_pickable, visible_enabled
   end
 end
 
-local function _resolve_choice_owner_id(ui_model)
-  return role_id_utils.normalize(ui_model and ui_model.item_choice_owner_id or ui_model.current_player_id)
-end
-
 local function _allow_slot_click(choice, opts, ui_model, display_player_id)
   if not choice_support.uses_item_slots(choice) then
     return false
@@ -124,7 +116,8 @@ local function _allow_slot_click(choice, opts, ui_model, display_player_id)
   if opts.allow_interact == false or display_player_id == nil then
     return false
   end
-  return role_id_utils.equals(_resolve_choice_owner_id(ui_model), display_player_id)
+  local owner_id = role_id_utils.normalize(ui_model and ui_model.item_choice_owner_id or ui_model.current_player_id)
+  return role_id_utils.equals(owner_id, display_player_id)
 end
 
 local function _resolve_item_slot_items(ui_model, display_player_id)
@@ -170,8 +163,8 @@ local function _sync_slot_images(ctx)
       or ctx.items[index]
     local can_pick = false
     if item_id then
-      local image_key = (ctx.image_refs and ctx.image_refs[tostring(item_id)])
-        or (ctx.image_refs and ctx.image_refs[item_id])
+      local refs = ctx.image_refs
+      local image_key = (refs and (refs[tostring(item_id)] or refs[item_id]))
         or ctx.empty_key
       ui_nodes.set_item_slot_image(slot_name, image_key)
       local is_pickable = ctx.allow_slot_click and ctx.option_id_set[tostring(item_id)] == true

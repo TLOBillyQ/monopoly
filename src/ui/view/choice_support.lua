@@ -54,14 +54,6 @@ function M.resolve_option_label_by_id(choice, option_id)
   return type(option) == "table" and option.label or tostring(matched_option_id)
 end
 
-function M.is_under_option(option)
-  local label = M.resolve_option_label(option)
-  return label ~= nil and (
-    string.find(label, "脚下", 1, true) ~= nil
-    or string.find(label, "当前位置", 1, true) ~= nil
-  )
-end
-
 function M.resolve_secondary_confirm_title(choice, _game, _source_screen, option_id)
   local option = M.resolve_option_by_id(choice, option_id)
   if option and type(option.confirm_title) == "string" and option.confirm_title ~= "" then
@@ -106,8 +98,6 @@ function M.requires_item_slot_pre_confirm(choice)
   return choice ~= nil and choice.pre_confirm_before_slot_pick == true
 end
 
-function M.resolve_screen_key(choice)
-  return choice_route_policy.resolve(choice)
-end
+M.resolve_screen_key = choice_route_policy.resolve
 
 return M

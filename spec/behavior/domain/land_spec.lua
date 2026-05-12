@@ -49,7 +49,8 @@ end
 local function _remote_priority_for_land()
   local agent = _reload_core_agent()
   local remote_priority = _require_upvalue(agent.pick_remote_dice_value, "_remote_priority")
-  return _require_upvalue(remote_priority, "_remote_priority_for_land")
+  local rules = _require_upvalue(remote_priority, "remote_priority_rules")
+  return rules.land
 end
 
 local function _action_anim_count(game)

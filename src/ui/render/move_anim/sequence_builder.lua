@@ -36,9 +36,7 @@ local function _calc_walk_step_time(len)
   return len / walk_speed
 end
 
-function sequence_builder.calc_step_vector(scene, from_index, to_index)
-  return _calc_step_vector(scene, from_index, to_index)
-end
+sequence_builder.calc_step_vector = _calc_step_vector
 
 function sequence_builder.calc_step_time(scene, from_index, to_index, _anim_ctx)
   local _, len = _calc_step_vector(scene, from_index, to_index)

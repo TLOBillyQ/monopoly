@@ -30,9 +30,7 @@ local function _emit_text(game, mono_kind, ef_kind, payload, opts)
   end
 end
 
-local function _build_other_action_prompt_text()
-  return "玩家正在行动"
-end
+local _other_action_prompt_text = "玩家正在行动"
 
 -- context builder
 
@@ -138,62 +136,58 @@ local function _check_roadblock(game, board, current, player)
     player = player,
     tile = tile,
     text = player.name .. " 触发路障，停在 " .. tile.name,
-    prompt_text = _build_other_action_prompt_text(),
+    prompt_text = _other_action_prompt_text,
   }, { show_tip = true })
   return true
 end
 
-local function _check_mine(game, player, current)
-  return mine_effect.can_trigger(game, player, current)
-end
-
-local function _check_steal(game, player, encountered_step, step, abs_steps, facing, branch_parity, opts)
-  if opts.skip_steal_check or #encountered_step == 0 then
+local function _check_steal(ctx, encountered_step, step)
+  if ctx.opts.skip_steal_check or #encountered_step == 0 then
     return nil
   end
-  local has_steal = inventory.find_index(player, item_ids.steal)
-  local remaining = abs_steps - step
+  local has_steal = inventory.find_index(ctx.player, item_ids.steal)
+  local remaining = ctx.abs_steps - step
   if not has_steal or remaining <= 0 then
     return nil
   end
-  _emit_text(game, monopoly_event.movement.steal_interrupt, event_kinds.steal, {
-    player = player,
+  _emit_text(ctx.game, monopoly_event.movement.steal_interrupt, event_kinds.steal, {
+    player = ctx.player,
     encountered_ids = encountered_step,
-    text = player.name .. " 经过玩家，触发偷窃中断",
-    prompt_text = _build_other_action_prompt_text(),
+    text = ctx.player.name .. " 经过玩家，触发偷窃中断",
+    prompt_text = _other_action_prompt_text,
   })
   return {
     position = nil,
     remaining_steps = remaining,
-    facing = facing,
-    branch_parity = branch_parity,
-    entered_inner = opts.entered_inner == true,
+    facing = ctx.facing,
+    branch_parity = ctx.branch_parity,
+    entered_inner = ctx.entered_inner == true,
     encountered_ids = encountered_step,
   }
 end
 
-local function _check_market(game, board, current, step, steps, abs_steps, facing, branch_parity, player, opts)
-  if steps <= 0 or opts.skip_market_check then
+local function _check_market(ctx, step)
+  if ctx.steps <= 0 or ctx.opts.skip_market_check then
     return nil
   end
-  local tile = board:get_tile(current)
-  assert(tile ~= nil, "missing tile: " .. tostring(current))
-  if tile.type ~= "market" or step >= steps then
+  local tile = ctx.board:get_tile(ctx.current)
+  assert(tile ~= nil, "missing tile: " .. tostring(ctx.current))
+  if tile.type ~= "market" or step >= ctx.steps then
     return nil
   end
-  local remaining = abs_steps - step
-  _emit_text(game, monopoly_event.movement.market_interrupt, event_kinds.market_entered, {
-    player = player,
+  local remaining = ctx.abs_steps - step
+  _emit_text(ctx.game, monopoly_event.movement.market_interrupt, event_kinds.market_entered, {
+    player = ctx.player,
     remaining_steps = remaining,
-    text = player.name .. " 经过黑市，剩余 " .. number_utils.format_integer_part(remaining) .. " 步",
-    prompt_text = _build_other_action_prompt_text(),
+    text = ctx.player.name .. " 经过黑市，剩余 " .. number_utils.format_integer_part(remaining) .. " 步",
+    prompt_text = _other_action_prompt_text,
   })
   return {
     position = nil,
     remaining_steps = remaining,
-    facing = facing,
-    branch_parity = branch_parity,
-    entered_inner = opts.entered_inner == true,
+    facing = ctx.facing,
+    branch_parity = ctx.branch_parity,
+    entered_inner = ctx.entered_inner == true,
   }
 end
 
@@ -202,41 +196,15 @@ local function _resolve_step_interrupt(ctx, encountered_step, step)
     ctx.stopped_on_roadblock = true
     return true
   end
-  if _check_mine(ctx.game, ctx.player, ctx.current) then
+  if mine_effect.can_trigger(ctx.game, ctx.player, ctx.current) then
     return true
   end
-  ctx.steal_interrupt = _check_steal(
-    ctx.game,
-    ctx.player,
-    encountered_step,
-    step,
-    ctx.abs_steps,
-    ctx.facing,
-    ctx.branch_parity,
-    {
-      skip_steal_check = ctx.opts.skip_steal_check,
-      entered_inner = ctx.entered_inner,
-    }
-  )
+  ctx.steal_interrupt = _check_steal(ctx, encountered_step, step)
   if ctx.steal_interrupt then
     ctx.steal_interrupt.position = ctx.current
     return true
   end
-  ctx.market_interrupt = _check_market(
-    ctx.game,
-    ctx.board,
-    ctx.current,
-    step,
-    ctx.steps,
-    ctx.abs_steps,
-    ctx.facing,
-    ctx.branch_parity,
-    ctx.player,
-    {
-      skip_market_check = ctx.opts.skip_market_check,
-      entered_inner = ctx.entered_inner,
-    }
-  )
+  ctx.market_interrupt = _check_market(ctx, step)
   if ctx.market_interrupt then
     ctx.market_interrupt.position = ctx.current
     return true
@@ -334,10 +302,6 @@ end
 
 -- event emitter
 
-local function _tile_label(tile)
-  return tile.name
-end
-
 local function _emit_pass_start_reward(ctx)
   if ctx.pass_start <= 0 then
     return
@@ -353,7 +317,7 @@ local function _emit_pass_start_reward(ctx)
     count = ctx.pass_start,
     bonus = bonus,
     text = ctx.player.name .. " 经过起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
-    prompt_text = _build_other_action_prompt_text(),
+    prompt_text = _other_action_prompt_text,
   }, {
     show_tip = true,
     tip_dedupe_key = "passed_start:" .. tostring(ctx.player.id) .. ":" .. tostring(turn_count),
@@ -402,8 +366,8 @@ local function _emit_move_events(ctx, landing_tile)
     from_tile = ctx.start_tile,
     to_tile = landing_tile,
     steps = ctx.steps,
-    text = ctx.player.name .. " 从 " .. _tile_label(ctx.start_tile) .. " 移动到 " .. _tile_label(landing_tile),
-    prompt_text = _build_other_action_prompt_text(),
+    text = ctx.player.name .. " 从 " .. ctx.start_tile.name .. " 移动到 " .. landing_tile.name,
+    prompt_text = _other_action_prompt_text,
   })
   _schedule_pass_start_reward(ctx)
 end

@@ -5,9 +5,7 @@ local role_id_utils = require("src.foundation.identity.role_id")
 
 local actor_context = {}
 
-function actor_context.resolve_local_actor_role_id(state)
-  return local_actor_resolver.resolve_local(state)
-end
+actor_context.resolve_local_actor_role_id = local_actor_resolver.resolve_local
 
 function actor_context.resolve_role_by_id(role_id)
   role_id = role_id_utils.normalize(role_id)

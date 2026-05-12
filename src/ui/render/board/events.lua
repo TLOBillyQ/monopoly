@@ -20,8 +20,6 @@ function M.on_tile_owner_changed(state, tile_id, owner_id)
   })
 end
 
-function M.sync_many(state, payload)
-  return visual_sync.sync_many(state, payload)
-end
+M.sync_many = visual_sync.sync_many
 
 return M

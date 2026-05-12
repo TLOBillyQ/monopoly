@@ -18,21 +18,10 @@ function state_adapter.clear_ui_dirty(state)
   return true
 end
 
-function state_adapter.is_ui_dirty(state)
-  return runtime_state.is_ui_dirty(state)
-end
-
-function state_adapter.sync_ui_model(state, model)
-  return runtime_state.set_ui_model(state, model)
-end
-
-function state_adapter.get_ui_model(state)
-  return runtime_state.get_ui_model(state)
-end
-
-function state_adapter.sync_pending_choice(state, choice, opts)
-  return runtime_state.set_pending_choice(state, choice, opts)
-end
+state_adapter.is_ui_dirty = runtime_state.is_ui_dirty
+state_adapter.sync_ui_model = runtime_state.set_ui_model
+state_adapter.get_ui_model = runtime_state.get_ui_model
+state_adapter.sync_pending_choice = runtime_state.set_pending_choice
 
 function state_adapter.clear_pending_choice(state)
   return state_adapter.sync_pending_choice(state, nil, {
@@ -41,37 +30,14 @@ function state_adapter.clear_pending_choice(state)
   })
 end
 
-function state_adapter.get_pending_choice(state)
-  return runtime_state.get_pending_choice(state)
-end
-
-function state_adapter.get_pending_choice_id(state)
-  return runtime_state.get_pending_choice_id(state)
-end
-
-function state_adapter.get_pending_choice_elapsed(state)
-  return runtime_state.get_pending_choice_elapsed(state)
-end
-
-function state_adapter.set_pending_choice_elapsed(state, elapsed_seconds)
-  return runtime_state.set_pending_choice_elapsed(state, elapsed_seconds)
-end
-
-function state_adapter.set_pending_choice_id(state, choice_id)
-  return runtime_state.set_pending_choice_id(state, choice_id)
-end
-
-function state_adapter.sync_modal_timer(state, payload)
-  return runtime_state.set_modal_timer(state, payload)
-end
-
-function state_adapter.get_modal_elapsed(state)
-  return runtime_state.get_modal_elapsed(state)
-end
-
-function state_adapter.get_modal_ref(state)
-  return runtime_state.get_modal_ref(state)
-end
+state_adapter.get_pending_choice = runtime_state.get_pending_choice
+state_adapter.get_pending_choice_id = runtime_state.get_pending_choice_id
+state_adapter.get_pending_choice_elapsed = runtime_state.get_pending_choice_elapsed
+state_adapter.set_pending_choice_elapsed = runtime_state.set_pending_choice_elapsed
+state_adapter.set_pending_choice_id = runtime_state.set_pending_choice_id
+state_adapter.sync_modal_timer = runtime_state.set_modal_timer
+state_adapter.get_modal_elapsed = runtime_state.get_modal_elapsed
+state_adapter.get_modal_ref = runtime_state.get_modal_ref
 
 function state_adapter.build_runtime_output_ports()
   return {

@@ -22,9 +22,7 @@ local function _current_choice_state(pending_choice)
   }
 end
 
-local function _resolve_owner_role_id(pending_choice)
-  return choice_contract.resolve_owner_role_id(pending_choice)
-end
+local _resolve_owner_role_id = choice_contract.resolve_owner_role_id
 
 local function _apply_spec(game, pending_choice, spec)
   assert(pending_choice ~= nil, "missing pending_choice")

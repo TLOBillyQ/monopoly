@@ -75,16 +75,6 @@ local function _append_visible_entries(visible, entries, can_buy, limit)
   return false
 end
 
-function eligibility.build_visible_entries(player, game, limit)
-  local buyable, unbuyable = _split_entries_by_buyable(player, game)
-  local visible = {}
-  if _append_visible_entries(visible, buyable, true, limit) then
-    return visible, buyable
-  end
-  _append_visible_entries(visible, unbuyable, false, limit)
-  return visible, buyable
-end
-
 -- Export helpers for testability
 eligibility._split_entries_by_buyable = _split_entries_by_buyable
 eligibility._append_visible_entries = _append_visible_entries

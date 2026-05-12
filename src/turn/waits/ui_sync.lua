@@ -1,16 +1,10 @@
-local runtime_constants = require("src.config.gameplay.runtime_constants")
-local logger = require("src.foundation.log.logger")
-local number_utils = require("src.foundation.lang.number")
 local tick_timeout = require("src.turn.waits.timeout")
 local runtime_state = require("src.state.runtime")
-local turn_ui_sync_shared = require("src.state.ui_sync_shared")
 local DeadlineService = require("src.turn.deadlines.service")
 
 local tick_ui_sync = {}
 
-local function _build_log_prefix()
-  return "[Eggy]"
-end
+local _log_prefix = "[Eggy]"
 
 local function _resolve_detained_countdown(turn)
   local remaining = (turn.detained_wait_seconds or 0) - (turn.detained_wait_elapsed or 0)
@@ -30,7 +24,7 @@ local function _resolve_pending_choice_countdown(state, gate, timeout, pending_c
       state,
       "info",
       "countdown_runtime_choice_without_ui_" .. tostring(pending_choice.id),
-      _build_log_prefix(),
+      _log_prefix,
       "countdown driven by runtime pending choice without ui choice screen",
       "choice_id=" .. tostring(pending_choice.id),
       "kind=" .. tostring(pending_choice.kind)
@@ -88,25 +82,6 @@ local function _mark_countdown_dirty(game)
   game.dirty.any = true
 end
 
-function tick_ui_sync.log_status(view)
-  assert(view ~= nil, "missing view")
-  logger.info(
-    _build_log_prefix(),
-    "玩家:",
-    tostring(view.current_player_name),
-    "现金:",
-    number_utils.format_integer_part(view.current_player_cash)
-  )
-end
-
-function tick_ui_sync.log_prefix()
-  return _build_log_prefix()
-end
-
-function tick_ui_sync.log_once(state, level, key, ...)
-  runtime_state.log_once(state, level, key, ...)
-end
-
 local function _resolve_deadline_countdown(state)
   local primary = DeadlineService.peek(state, "primary")
   if primary == nil then
@@ -141,18 +116,6 @@ function tick_ui_sync.update_countdown(game, state)
     turn.countdown_warn_level = level
     _mark_countdown_dirty(game)
   end
-end
-
-function tick_ui_sync.build_ui_env(state, game)
-  return turn_ui_sync_shared.build_ui_env(state, game)
-end
-
-function tick_ui_sync.runtime_constants()
-  return runtime_constants
-end
-
-function tick_ui_sync.is_only_turn_countdown(dirty)
-  return turn_ui_sync_shared.is_only_turn_countdown(dirty)
 end
 
 return tick_ui_sync

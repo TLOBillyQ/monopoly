@@ -166,10 +166,6 @@ function roadblock.auto_candidates(game, player, distance)
   return list
 end
 
-function roadblock.candidates(game, player, distance)
-  return roadblock.auto_candidates(game, player, distance)
-end
-
 function roadblock.manual_candidates(game, player, distance)
   local board = game.board
   local list = {}
@@ -186,10 +182,6 @@ function roadblock.manual_candidates(game, player, distance)
   end
 
   return list
-end
-
-function roadblock.ui_candidates(game, player, distance)
-  return roadblock.manual_candidates(game, player, distance)
 end
 
 function roadblock.is_ui_candidate(game, player, idx, distance)

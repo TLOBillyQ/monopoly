@@ -64,10 +64,6 @@ local function _build_overlays(env)
   return env.game.board:get_overlays()
 end
 
-function board_slice.board_tiles()
-  return cached_board_tiles
-end
-
 function board_slice.tile_count()
   return #cached_board_tiles
 end

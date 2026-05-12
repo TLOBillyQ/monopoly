@@ -45,10 +45,6 @@ local function _build_chain_tip_text(game, player, position)
   return player.name .. " 在 " .. tile_name .. "踩中地雷"
 end
 
-local function _build_trigger_log_entry(player)
-  return player.name .. "触发地雷"
-end
-
 function mine_effect.can_trigger(game, player, position)
   local board = game and game.board or nil
   if not (board and position and board:has_mine(position)) then
@@ -128,7 +124,7 @@ function mine_effect.apply(game, player, position)
     next_args = {
       mode = "apply_location_effects",
       log_entries = {
-        _build_trigger_log_entry(player),
+        player.name .. "触发地雷",
       },
       effects = {
         { player_id = player.id, effect = "hospital" },

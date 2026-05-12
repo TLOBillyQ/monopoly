@@ -63,7 +63,7 @@ end
 
 local function _switch_canvas_after_choice_close(state, ui)
   if ui.popup_active then
-    popup.switch_canvas(state, ui.popup_kind or "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
+    popup.switch_popup_canvas(state, ui.popup_kind or "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE)
     return
   end
   choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
@@ -75,10 +75,6 @@ local function _should_skip_reopen(state, screen_key, choice_id)
   end
   return runtime_state.get_pending_choice_id(state) == choice_id
     and (state.ui.choice_active or state.ui.market_active)
-end
-
-local function _open_market_choice(state, choice, choice_id, market_state)
-  market_presenter.open(state, choice, choice_id, market_state)
 end
 
 local function _open_item_phase_pre_confirm(state, choice)
@@ -111,11 +107,6 @@ local function _open_base_inline_choice(state, choice)
   return true
 end
 
-local function _open_regular_choice(state, choice, market_state, screen_key)
-  state._suppress_item_slot_highlight_until_pick = nil
-  choice_openers.open_choice_modal(state, choice, market_state)
-end
-
 function modal_presenter.select_choice_option(state, option_id)
   if not option_id then
     return
@@ -141,7 +132,7 @@ function modal_presenter.open_choice_modal(state, choice, market_state)
   runtime_state.set_ui_dirty(state, true)
 
   if screen_key == "market" then
-    _open_market_choice(state, choice, choice_id, market_state)
+    market_presenter.open(state, choice, choice_id, market_state)
     return
   end
 
@@ -161,7 +152,8 @@ function modal_presenter.open_choice_modal(state, choice, market_state)
     return
   end
 
-  _open_regular_choice(state, choice, market_state, screen_key)
+  state._suppress_item_slot_highlight_until_pick = nil
+  choice_openers.open_choice_modal(state, choice, market_state)
 end
 
 function modal_presenter.close_choice_modal(state)
@@ -230,7 +222,7 @@ function modal_presenter.close_popup(state)
   local target = ui.popup_return_canvas
   ui.popup_return_canvas = nil
   local next_canvas = _resolve_canvas_after_popup(state, ui, target)
-  popup.switch_canvas(state, kind, next_canvas, canvas.CANVAS_BASE)
+  popup.switch_popup_canvas(state, kind, next_canvas, canvas.CANVAS_BASE)
 end
 
 return modal_presenter

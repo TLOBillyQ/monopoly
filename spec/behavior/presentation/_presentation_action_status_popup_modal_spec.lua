@@ -58,7 +58,7 @@ describe("presentation_popup_and_modal_renderers", function()
       { target = popup_presenter, key = "hide", value = function()
         hide_calls = hide_calls + 1
       end },
-      { target = popup_presenter, key = "switch_canvas", value = function() end },
+      { target = popup_presenter, key = "switch_popup_canvas", value = function() end },
       { target = canvas, key = "resolve_popup_return_canvas", value = function()
         return canvas.CANVAS_BASE
       end },

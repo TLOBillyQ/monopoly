@@ -17,19 +17,14 @@ local function _build_choice_log_text(title, body_lines)
   return text
 end
 
-local function _resolve_choice_route(choice_spec)
-  local route_key = choice_route_policy.resolve(choice_spec)
-  local requires_confirm = choice_route_policy.requires_confirm(choice_spec)
-  return route_key, requires_confirm
-end
-
 local function _mark_turn_dirty(game)
   game.dirty.turn = true
   game.dirty.any = true
 end
 
 local function _build_choice_entry(choice_id, choice_spec)
-  local route_key, requires_confirm = _resolve_choice_route(choice_spec)
+  local route_key = choice_route_policy.resolve(choice_spec)
+  local requires_confirm = choice_route_policy.requires_confirm(choice_spec)
   local entry = {
     id = choice_id,
     kind = choice_spec.kind,
@@ -39,19 +34,11 @@ local function _build_choice_entry(choice_id, choice_spec)
     allow_cancel = choice_spec.allow_cancel ~= false,
     cancel_label = choice_spec.cancel_label or "取消",
     meta = choice_spec.meta,
-    route_key = route_key,
-    requires_confirm = requires_confirm == true,
   }
   choice_contract.copy_explicit_fields(choice_spec, entry)
   entry.route_key = route_key
   entry.requires_confirm = requires_confirm == true
   return entry
-end
-
-local function _run_descriptor_meta_validator(descriptor, game, meta, choice_spec)
-  if descriptor and descriptor.meta_validator ~= nil then
-    descriptor.meta_validator(game, meta, choice_spec)
-  end
 end
 
 local function _validate_required_meta(choice_spec, required_meta)
@@ -82,7 +69,9 @@ local function _validate_choice_meta(game, choice_spec)
   end
   local required_meta = descriptor and descriptor.required_meta or nil
   local meta = _validate_required_meta(choice_spec, required_meta)
-  _run_descriptor_meta_validator(descriptor, game, meta, choice_spec)
+  if descriptor and descriptor.meta_validator ~= nil then
+    descriptor.meta_validator(game, meta, choice_spec)
+  end
   return descriptor
 end
 

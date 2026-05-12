@@ -60,8 +60,7 @@ local function _stop_player_movement(game, player)
   if not _is_outer_tile(game, player) then
     return false
   end
-  local dirty = _clear_player_move_dir(player)
-  return dirty
+  return _clear_player_move_dir(player)
 end
 
 local function _stop_all_players(game, players)

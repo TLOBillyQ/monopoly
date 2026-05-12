@@ -18,17 +18,9 @@ local turn_label_refresh_context = {
   countdown_visible = nil,
 }
 
-function service.build_ui_state()
-  return state.build_ui_state()
-end
-
-function service.init_ui_assets(ui_state)
-  assets.init_ui_assets(ui_state)
-end
-
-function service.capture_player_colors(ui_state, game)
-  assets.capture_player_colors(ui_state, game)
-end
+service.build_ui_state = state.build_ui_state
+service.init_ui_assets = assets.init_ui_assets
+service.capture_player_colors = assets.capture_player_colors
 
 function service.refresh_panel(state_ctx, ui_model)
   panel_presenter.refresh(state_ctx, ui_model, {
@@ -84,9 +76,7 @@ function service.refresh_turn_label(state_ctx, label_text, visible)
   runtime.set_client_role(nil)
 end
 
-function service.refresh_item_slots(state_ctx, ui_model, opts)
-  item_slots.refresh_item_slots(state_ctx, ui_model, opts)
-end
+service.refresh_item_slots = item_slots.refresh_item_slots
 
 function service.apply_input_lock(state_ctx)
   input_lock_policy.apply(state_ctx, { runtime = runtime })
@@ -104,20 +94,9 @@ function service.render(state_ctx, ui_model, log_once, build_log_prefix)
   })
 end
 
-function service.set_event_log(state_ctx, text)
-  event_log_view.set_event_log(state_ctx, text)
-end
-
-function service.set_event_log_visible(state_ctx, visible)
-  event_log_view.set_event_log_visible(state_ctx, visible)
-end
-
-function service.set_event_log_visible_for_role(state_ctx, role, visible)
-  return event_log_view.set_event_log_visible_for_role(state_ctx, role, visible)
-end
-
-function service.set_event_log_for_role(state_ctx, role, text)
-  event_log_view.set_event_log_for_role(state_ctx, role, text)
-end
+service.set_event_log = event_log_view.set_event_log
+service.set_event_log_visible = event_log_view.set_event_log_visible
+service.set_event_log_visible_for_role = event_log_view.set_event_log_visible_for_role
+service.set_event_log_for_role = event_log_view.set_event_log_for_role
 
 return service

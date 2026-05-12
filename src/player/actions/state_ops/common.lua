@@ -10,9 +10,7 @@ function common.player_status_table(player)
   return player.status
 end
 
-function common.normalize_currency(currency)
-  return tables.normalize_currency(currency)
-end
+common.normalize_currency = tables.normalize_currency
 
 function common.mark_players(game)
   game.dirty.any = true

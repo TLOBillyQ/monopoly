@@ -66,8 +66,4 @@ function renderer.select_market_option(state, option_id)
   market_view.select_market_option(state, option_id, _view_deps())
 end
 
-function renderer.select_option(state, option_id)
-  return renderer.select_market_option(state, option_id)
-end
-
 return renderer

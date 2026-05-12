@@ -67,21 +67,16 @@ function asset_handlers.register(handlers, common)
       local item = inventory.remove_by_index(player, rng:next_int(1, item_count))
       table.insert(dropped_names, inventory.item_name(item.id))
     end
+    local text = player.name .. " 丢弃道具 " .. #dropped_names .. " 张"
     if #dropped_names > 0 then
-      common.emit_event(game, monopoly_event.chance.applied, {
-        player = player,
-        card = card,
-        effect = card.effect,
-        text = player.name .. " 丢弃道具 " .. #dropped_names .. " 张: " .. table.concat(dropped_names, "、"),
-      })
-    else
-      common.emit_event(game, monopoly_event.chance.applied, {
-        player = player,
-        card = card,
-        effect = card.effect,
-        text = player.name .. " 丢弃道具 0 张",
-      })
+      text = text .. ": " .. table.concat(dropped_names, "、")
     end
+    common.emit_event(game, monopoly_event.chance.applied, {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = text,
+    })
   end
 
   handlers.discard_properties = function(game, player, card)

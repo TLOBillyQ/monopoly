@@ -81,13 +81,6 @@ local function _sync_projection_node(ui, projection_node, option)
   })
 end
 
-local function _capture_selected_option(selected, option_id)
-  if selected ~= nil then
-    return selected
-  end
-  return option_id
-end
-
 local function _fill_option_nodes(ui, screen, options, opts)
   local option_ids = {}
   local selected = nil
@@ -102,7 +95,7 @@ local function _fill_option_nodes(ui, screen, options, opts)
 
     _sync_slot_label(ui, screen.slot_labels and screen.slot_labels[index] or nil, option)
     _sync_projection_node(ui, screen.slot_projections and screen.slot_projections[index] or nil, option)
-    selected = _capture_selected_option(selected, option_id)
+    selected = selected or option_id
   end
   return option_ids, selected
 end

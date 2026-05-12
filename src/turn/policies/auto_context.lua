@@ -10,14 +10,6 @@ local function _resolve_current_player_index(game, ctx)
   return game.turn and game.turn.current_player_index or nil
 end
 
-local function _resolve_player_by_index(game, index)
-  return index and game.players and game.players[index] or nil
-end
-
-local function _resolve_current_player_id(player)
-  return player and player.id or nil
-end
-
 local function _is_player_auto(player, game)
   local is_player_auto = player and player.auto == true or false
   local is_ai_auto = player and auto_play_port.is_auto_player(game, player) == true or false
@@ -31,9 +23,9 @@ function auto_context.build(game, context)
   local current_player_index = _resolve_current_player_index(game, ctx)
   ctx.current_player_index = current_player_index
 
-  local player = _resolve_player_by_index(game, current_player_index)
+  local player = current_player_index and game.players and game.players[current_player_index] or nil
   if ctx.current_player_id == nil then
-    ctx.current_player_id = _resolve_current_player_id(player)
+    ctx.current_player_id = player and player.id or nil
   end
   if ctx.current_player_auto == nil then
     ctx.current_player_auto = _is_player_auto(player, game)

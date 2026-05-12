@@ -38,9 +38,7 @@ local function _resolve_explicit_requires_confirm(choice_or_screen)
   return nil
 end
 
-function policy.resolve_explicit_route(choice)
-  return _resolve_explicit_route(choice)
-end
+policy.resolve_explicit_route = _resolve_explicit_route
 
 function policy.is_secondary_confirm_choice(choice)
   return _resolve_explicit_route(choice) == "secondary_confirm"
@@ -58,9 +56,7 @@ function policy.resolve(choice)
   return "base_inline"
 end
 
-function policy.resolve_explicit_requires_confirm(choice_or_screen)
-  return _resolve_explicit_requires_confirm(choice_or_screen)
-end
+policy.resolve_explicit_requires_confirm = _resolve_explicit_requires_confirm
 
 function policy.requires_confirm(choice_or_screen)
   local explicit_requires_confirm = _resolve_explicit_requires_confirm(choice_or_screen)

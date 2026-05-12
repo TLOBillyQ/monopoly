@@ -201,9 +201,7 @@ local function _resolve_backward_from_neighbors(neigh, facing)
   return any_id
 end
 
-function direction.try_resolve_forward_next_id(map, current_id, neigh, facing, parity, can_enter_inner, skip_entry_on_tile_id)
-  return direction.resolve_forward_next_id(map, current_id, neigh, facing, parity, can_enter_inner, skip_entry_on_tile_id)
-end
+direction.try_resolve_forward_next_id = direction.resolve_forward_next_id
 
 function direction.collect_forward_indices(board, player, max_steps)
   local map = board.map

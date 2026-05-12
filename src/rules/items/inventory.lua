@@ -119,10 +119,4 @@ function inventory.give(player, item_id, context)
   return true
 end
 
-function inventory.draw_and_give(player, context)
-  local cfg = inventory.draw_random()
-  assert(cfg ~= nil, "missing drawn item cfg")
-  inventory.give(player, cfg.id, context)
-end
-
 return inventory

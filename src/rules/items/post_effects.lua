@@ -264,15 +264,11 @@ local function _handle_place_mine_here(game, player)
   return true
 end
 
-local function _handle_clear_obstacles_ahead(game, player, cfg, context)
-  return obstacle_clear.handle(game, player, cfg, context)
-end
-
 handlers.set_status = _handle_set_status
 handlers.deity = _handle_deity
 handlers.log = _handle_log
 handlers.place_mine_here = _handle_place_mine_here
-handlers.clear_obstacles_ahead = _handle_clear_obstacles_ahead
+handlers.clear_obstacles_ahead = obstacle_clear.handle
 
 function post_effects.get_target_spec(item_id)
   return target_effects[item_id]

@@ -32,8 +32,6 @@ function intent_dispatcher.dispatch_game_action(state, game, intent, opts, actio
   return game_action_dispatcher.dispatch(state, game, intent, opts, resolved_action_port, turn_action_port)
 end
 
-function intent_dispatcher.dispatch_view_command(state, intent)
-  return view_command_dispatcher.dispatch(state, intent)
-end
+intent_dispatcher.dispatch_view_command = view_command_dispatcher.dispatch
 
 return intent_dispatcher

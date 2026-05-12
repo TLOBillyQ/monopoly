@@ -41,9 +41,7 @@ local function _await_anim_done(session, args, opts)
   return { next_state = next_state, next_args = next_args }
 end
 
-function await.choice(session, args)
-  return choice_wait.choice(session, args)
-end
+await.choice = choice_wait.choice
 
 function await.move_anim(session, args, opts)
   if debug_helpers.should_log() then
@@ -52,28 +50,11 @@ function await.move_anim(session, args, opts)
   return _await_anim_done(session, args, move_anim_wait.resolve_wait_anim_opts(opts))
 end
 
-function await.action_anim(session, args)
-  return action_anim_wait.action_anim(session, args)
-end
-
-function await.landing_visual(session, args)
-  return simple_waits.landing_visual(session, args)
-end
-
-function await.detained(session, args)
-  return simple_waits.detained(session, args)
-end
-
-function await.inter_turn(session, args)
-  return simple_waits.inter_turn(session, args)
-end
-
-function await.seconds(session, sec, opts)
-  return seconds_wait.seconds(session, sec, opts)
-end
-
-function await.action(session, args)
-  return simple_waits.action(session, args)
-end
+await.action_anim = action_anim_wait.action_anim
+await.landing_visual = simple_waits.landing_visual
+await.detained = simple_waits.detained
+await.inter_turn = simple_waits.inter_turn
+await.seconds = seconds_wait.seconds
+await.action = simple_waits.action
 
 return await

@@ -37,15 +37,11 @@ local function _queue_target_player_anim(game, user, item_id, target)
   })
 end
 
-local function _mark_share_wealth_item_target_context(context)
-  context.share_wealth_cash_receive_mode = "item_target_player_only"
-  context.suppress_cash_receive_anim = true
-end
-
 local function _apply_target_player_item(game, user, item_id, target, context)
   context = context or {}
   if item_id == item_ids.share_wealth then
-    _mark_share_wealth_item_target_context(context)
+    context.share_wealth_cash_receive_mode = "item_target_player_only"
+    context.suppress_cash_receive_anim = true
   end
   local apply_res = effects.apply_target(game, user, item_id, target, context)
   local ok = _resolve_apply_ok(apply_res)
@@ -118,9 +114,7 @@ function handlers.handle_target_player_item(game, player, item_id, context)
   end
 
   return _run_item_choice_flow(game, player, item_id, context, {
-    candidates = function(inner_game, inner_player, inner_item_id)
-      return resolve_candidates(inner_game, inner_player, inner_item_id)
-    end,
+    candidates = resolve_candidates,
     on_empty = function()
       logger.warn("没有可选择的目标玩家")
     end,
@@ -255,13 +249,9 @@ local demolish_items = {
   [item_ids.missile] = { title = "导弹卡", injure = true },
 }
 
-local function _build_demolish_payload(item_id)
-  return assert(demolish_items[item_id], "missing demolish cfg: " .. tostring(item_id))
-end
-
 function handlers.handle_demolish(game, player, item_id, context)
   context = context or {}
-  local cfg = _build_demolish_payload(item_id)
+  local cfg = assert(demolish_items[item_id], "missing demolish cfg: " .. tostring(item_id))
   return demolish.use(game, player, 3, inventory.consume, {
     item_id = item_id,
     injure = cfg.injure,

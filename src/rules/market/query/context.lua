@@ -9,13 +9,8 @@ for _, cfg in ipairs(items_cfg) do
   items_by_id[cfg.id] = cfg
 end
 
-function context.entries()
-  return market_catalog.entries()
-end
-
-function context.entry_by_id(product_id)
-  return market_catalog.entry_by_id(product_id)
-end
+context.entries = market_catalog.entries
+context.entry_by_id = market_catalog.entry_by_id
 
 function context.entry_name(entry)
   local cfg = items_by_id[entry.product_id]
@@ -51,9 +46,7 @@ function context.remaining_global_limit(game, product_id)
   return game.market_limits[product_id]
 end
 
-function context.is_paid_currency(currency)
-  return paid_currency_bridge.is_paid_currency(currency)
-end
+context.is_paid_currency = paid_currency_bridge.is_paid_currency
 
 function context.try_charge_player(game, player, currency, price, opts)
   game:deduct_player_balance(player, currency, price, opts)

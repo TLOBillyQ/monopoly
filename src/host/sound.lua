@@ -142,28 +142,4 @@ function sfx_runtime.bind_sfx_to_unit(sfx_id, unit, socket_name, pos, bind_type)
   return ok
 end
 
-function sfx_runtime.destroy_sfx(sfx_id, fade_out)
-  if sfx_id == nil then
-    return false
-  end
-  local global_api = GlobalAPI
-  if not (global_api and type(global_api.destroy_sfx) == "function") then
-    return false
-  end
-  local ok = pcall(global_api.destroy_sfx, sfx_id, fade_out == true)
-  return ok
-end
-
-function sfx_runtime.stop_sound(sound_id)
-  if sound_id == nil then
-    return false
-  end
-  local game_api = GameAPI
-  if not (game_api and type(game_api.stop_sound) == "function") then
-    return false
-  end
-  local ok = pcall(game_api.stop_sound, sound_id)
-  return ok
-end
-
 return sfx_runtime

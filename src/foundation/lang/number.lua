@@ -89,11 +89,7 @@ end
 function number_utils.to_integer(value)
   local value_type = type(value)
   if value_type == "string" then
-    local parsed = _parse_integer_string(value)
-    if parsed ~= nil then
-      return parsed
-    end
-    return nil
+    return _parse_integer_string(value)
   end
   if number_utils.is_numeric(value) then
     local parsed = _to_integer_safe(value)
@@ -124,9 +120,8 @@ function number_utils.clamp(value, min, max)
 end
 
 function number_utils.format_integer_part(value)
-  local truncated = _truncate_number(value)
-  if truncated ~= nil then
-    local as_int = _to_integer_safe(truncated) or truncated
+  local as_int = _truncate_number(value)
+  if as_int ~= nil then
     return string.format("%d", as_int)
   end
   return tostring(value)

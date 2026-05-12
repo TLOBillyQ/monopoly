@@ -42,16 +42,7 @@ local function _next_move_anim_seq(turn)
   return seq
 end
 
-local function _build_move_anim_flags(move_result)
-  return {
-    stopped_on_roadblock = move_result.stopped_on_roadblock == true,
-    market_interrupt = move_result.market_interrupt == true,
-    steal_interrupt = move_result.steal_interrupt == true,
-  }
-end
-
 local function _build_move_anim_data(game, player, start_index, move_result)
-  local flags = _build_move_anim_flags(move_result)
   return {
     seq = _next_move_anim_seq(game.turn),
     player_id = player.id,
@@ -59,9 +50,9 @@ local function _build_move_anim_data(game, player, start_index, move_result)
     to_index = player.position,
     visited = move_result.visited,
     steps = move_result.steps,
-    stopped_on_roadblock = flags.stopped_on_roadblock,
-    market_interrupt = flags.market_interrupt,
-    steal_interrupt = flags.steal_interrupt,
+    stopped_on_roadblock = move_result.stopped_on_roadblock == true,
+    market_interrupt = move_result.market_interrupt == true,
+    steal_interrupt = move_result.steal_interrupt == true,
   }
 end
 
