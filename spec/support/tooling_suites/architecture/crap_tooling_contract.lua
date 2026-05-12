@@ -1,4 +1,5 @@
 local bootstrap = require("spec.bootstrap")
+local common = require("shared.lib.common")
 local crap = require("quality.crap")
 local adapter = require("quality.crap.adapter")
 local package_path_helper = require("shared.package_path_helper")
@@ -21,6 +22,21 @@ local function _assert_not_contains(text, unexpected, message)
   if tostring(text or ""):find(unexpected, 1, true) ~= nil then
     error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
   end
+end
+
+local function _buffer()
+  local parts = {}
+  return {
+    write = function(_, ...)
+      local count = select("#", ...)
+      for index = 1, count do
+        parts[#parts + 1] = tostring(select(index, ...))
+      end
+    end,
+    text = function()
+      return table.concat(parts)
+    end,
+  }
 end
 
 local function _test_default_tmp_root_preserves_monopoly_path_convention()
@@ -68,6 +84,7 @@ local function _test_cli_report_prepares_request_then_calls_vendor_cli()
   local captured_request = nil
   local captured_command = nil
   local ensured_report_dir = nil
+  local out = _buffer()
   local ok = crap.run({
     "report",
     "--out", "tmp/crap_report.json",
@@ -85,12 +102,13 @@ local function _test_cli_report_prepares_request_then_calls_vendor_cli()
     end,
     run_command = function(command)
       captured_command = command
-      return { ok = true, code = 0, output = "report ok\n" }
+      return { ok = true, code = 0, output = "report ok" }
     end,
     ensure_parent_dir = function(path)
       ensured_report_dir = path
       return true
     end,
+    stdout = out,
   })
 
   assert(ok == true, "cli report should return true")
@@ -105,10 +123,13 @@ local function _test_cli_report_prepares_request_then_calls_vendor_cli()
     "wrapper should pass prepared request json to vendor CLI")
   _assert_contains(table.concat(captured_command, " "), "--response-json " .. crap.default_tmp_root() .. "/crap_report.json",
     "wrapper should translate --out into vendor response json")
+  _assert_contains(out:text(), "report ok\ncrap report json: " .. crap.default_tmp_root() .. "/crap_report.json\n",
+    "report stdout should preserve vendor output and print resolved report path")
 end
 
 local function _test_cli_collect_uses_public_bridge_surface()
   local captured_collect = nil
+  local out = _buffer()
   local ok = crap.run({
     "collect",
     "--out", "tmp/crap_collect.json",
@@ -126,16 +147,20 @@ local function _test_cli_collect_uses_public_bridge_surface()
         },
       }
     end,
+    stdout = out,
   })
 
   assert(ok == true, "collect should return true")
   _assert_eq(captured_collect.out, crap.default_tmp_root() .. "/crap_collect.json", "collect should resolve tmp output path")
   _assert_eq(captured_collect.lanes[1], "contract", "collect should preserve lane list")
+  _assert_contains(out:text(), "crap collect json: " .. crap.default_tmp_root() .. "/crap_collect.json",
+    "collect stdout should print resolved collect path")
 end
 
 local function _test_cli_viewer_resolves_tmp_alias_before_vendor_call()
   local captured_command = nil
   local ensured_view_dir = nil
+  local out = _buffer()
   local ok = crap.run({
     "viewer",
     "--in-json", "tmp/crap_report.json",
@@ -148,12 +173,13 @@ local function _test_cli_viewer_resolves_tmp_alias_before_vendor_call()
     end,
     run_command = function(command)
       captured_command = command
-      return { ok = true, code = 0, output = "viewer ok\n" }
+      return { ok = true, code = 0, output = "viewer ok" }
     end,
     ensure_dir = function(path)
       ensured_view_dir = path
       return true
     end,
+    stdout = out,
   })
 
   assert(ok == true, "cli viewer should return true")
@@ -163,11 +189,14 @@ local function _test_cli_viewer_resolves_tmp_alias_before_vendor_call()
     "tmp input json should resolve under Monopoly tmp root")
   _assert_contains(table.concat(captured_command, " "), "--out-dir " .. crap.default_tmp_root() .. "/crap_view",
     "tmp output dir should resolve under Monopoly tmp root")
+  _assert_contains(out:text(), "viewer ok\ncrap viewer index: " .. crap.default_tmp_root() .. "/crap_view/index.html\n",
+    "viewer stdout should preserve vendor output and print resolved index path")
 end
 
 local function _test_cli_without_args_defaults_to_report_then_opened_viewer()
   local captured_request = nil
   local commands = {}
+  local out = _buffer()
   local ok = crap.run({}, {
     workspace_root = "/repo",
     ensure_binary = function(path)
@@ -181,6 +210,7 @@ local function _test_cli_without_args_defaults_to_report_then_opened_viewer()
       commands[#commands + 1] = command
       return { ok = true, code = 0, output = "" }
     end,
+    stdout = out,
   })
 
   assert(ok == true, "bare cli should return true")
@@ -199,12 +229,39 @@ local function _test_cli_without_args_defaults_to_report_then_opened_viewer()
     "viewer should write to the default tmp viewer dir")
   _assert_contains(table.concat(commands[2], " "), "--open",
     "bare cli should auto-open the viewer")
+  _assert_contains(out:text(), "crap report json: " .. crap.default_tmp_root() .. "/crap_report.json",
+    "bare cli should print resolved default report path")
+  _assert_contains(out:text(), "crap viewer index: " .. crap.default_tmp_root() .. "/crap_view/index.html",
+    "bare cli should print resolved default viewer index path")
 end
 
 local function _test_default_config_path_points_at_monopoly_wrapper_config()
   local path = crap.default_config_path()
   local matches_canonical = path:find("tools/quality/crap/config.lua", 1, true) ~= nil
   assert(matches_canonical, "wrapper should expose the canonical monopoly config path")
+end
+
+local function _test_cli_summary_out_prints_resolved_json_path()
+  local in_json = common.make_temp_path("crap_summary_input", ".json")
+  local ok_write, write_err = common.write_file(in_json, '{"functions":[]}')
+  if not ok_write then
+    error(write_err)
+  end
+
+  local out = _buffer()
+  local ok = crap.run({
+    "summary",
+    "--in-json", in_json,
+    "--out", "tmp/crap_summary.json",
+  }, {
+    stdout = out,
+    stderr = _buffer(),
+  })
+  common.remove_path(in_json)
+
+  assert(ok == true, "summary should return true")
+  _assert_contains(out:text(), "crap summary json: " .. crap.default_tmp_root() .. "/crap_summary.json",
+    "summary stdout should print resolved summary json path")
 end
 
 return {
@@ -217,6 +274,7 @@ return {
     { name = "cli_collect_uses_public_bridge_surface", run = _test_cli_collect_uses_public_bridge_surface },
     { name = "cli_viewer_resolves_tmp_alias_before_vendor_call", run = _test_cli_viewer_resolves_tmp_alias_before_vendor_call },
     { name = "cli_without_args_defaults_to_report_then_opened_viewer", run = _test_cli_without_args_defaults_to_report_then_opened_viewer },
+    { name = "cli_summary_out_prints_resolved_json_path", run = _test_cli_summary_out_prints_resolved_json_path },
     { name = "default_config_path_points_at_monopoly_wrapper_config", run = _test_default_config_path_points_at_monopoly_wrapper_config },
   },
 }

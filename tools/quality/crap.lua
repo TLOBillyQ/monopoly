@@ -262,6 +262,17 @@ local function _copy_array(values)
   return copied
 end
 
+local function _write_success_path(stdout, output, label, path)
+  local text = tostring(output or "")
+  if text ~= "" then
+    stdout:write(text)
+    if text:sub(-1) ~= "\n" then
+      stdout:write("\n")
+    end
+  end
+  stdout:write(tostring(label) .. ": " .. common.normalize_path(path) .. "\n")
+end
+
 local function _is_array_table(value)
   return type(value) == "table" and #value > 0
 end
@@ -802,6 +813,7 @@ local function _run_summary(options, env)
 
   local tier_stats, uncategorized = _aggregate_from_report(report, tiers)
   local all_pass = _print_coverage_table(tier_stats, uncategorized, options, stdout)
+  local summary_out = nil
 
   if options.out ~= nil then
     local out_rows = {}
@@ -822,13 +834,15 @@ local function _run_summary(options, env)
     local ok_w, w_err = common.write_file(options.out, json_writer.encode({ tiers = out_rows }))
     if not ok_w then
       stderr:write(tostring(w_err) .. "\n")
+    else
+      summary_out = options.out
     end
   end
 
   if options.gate and not all_pass then
     return { ok = false, code = 1 }
   end
-  return { ok = true, code = 0 }
+  return { ok = true, code = 0, summary_out = summary_out }
 end
 
 local function _run_internal(args, env)
@@ -845,14 +859,14 @@ local function _run_internal(args, env)
       stderr:write(tostring(report_result.err or report_result.output or ""), "\n")
       return { ok = false, code = report_result.code or 1 }
     end
+    _write_success_path(stdout, report_result.output, "crap report json", report_options.out)
     local viewer_result = _run_viewer(_parse_viewer_args({ "--in-json", DEFAULT_REPORT_JSON, "--out-dir", DEFAULT_VIEW_DIR, "--open" }), env)
     if viewer_result.ok ~= true then
       stderr:write(tostring(viewer_result.err or viewer_result.output or ""), "\n")
       return { ok = false, code = viewer_result.code or 1 }
     end
-    if viewer_result.output and viewer_result.output ~= "" then
-      stdout:write(viewer_result.output)
-    end
+    _write_success_path(stdout, viewer_result.output, "crap viewer index",
+      common.join_path(_resolve_cli_path(REPO_ROOT, DEFAULT_VIEW_DIR), "index.html"))
     return { ok = true, code = 0 }
   end
 
@@ -874,9 +888,7 @@ local function _run_internal(args, env)
       stderr:write(tostring(result.err or result.output or ""), "\n")
       return { ok = false, code = result.code or 1 }
     end
-    if result.output and result.output ~= "" then
-      stdout:write(result.output)
-    end
+    _write_success_path(stdout, result.output, "crap collect json", options_or_err.out)
     return { ok = true, code = result.code or 0 }
   end
 
@@ -910,9 +922,7 @@ local function _run_internal(args, env)
       stderr:write(tostring(result.err or result.output or ""), "\n")
       return { ok = false, code = result.code or 1 }
     end
-    if result.output and result.output ~= "" then
-      stdout:write(result.output)
-    end
+    _write_success_path(stdout, result.output, "crap report json", options_or_err.out)
     return { ok = true, code = result.code or 0 }
   end
 
@@ -938,9 +948,8 @@ local function _run_internal(args, env)
       stderr:write(tostring(result.err or result.output or ""), "\n")
       return { ok = false, code = result.code or 1 }
     end
-    if result.output and result.output ~= "" then
-      stdout:write(result.output)
-    end
+    _write_success_path(stdout, result.output, "crap viewer index",
+      common.join_path(options.out_dir, "index.html"))
     return { ok = true, code = result.code or 0 }
   end
 
@@ -955,6 +964,9 @@ local function _run_internal(args, env)
     if result.ok ~= true then
       stderr:write(tostring(result.err or result.output or ""), "\n")
       return { ok = false, code = result.code or 1 }
+    end
+    if result.summary_out ~= nil then
+      stdout:write("crap summary json: " .. common.normalize_path(result.summary_out) .. "\n")
     end
     return { ok = true, code = result.code or 0 }
   end
