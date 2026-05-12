@@ -51,4 +51,10 @@ return {
     output = "TAP",
     pattern = "_spec",
   },
+  e2e = {
+    ROOT = {"spec/e2e"},
+    helper = "spec/e2e/helper.lua",
+    output = "TAP",
+    pattern = "_spec",
+  },
 }
