@@ -2,6 +2,7 @@ local event_log = require("src.state.event_log")
 local timing = require("src.config.gameplay.timing")
 local logger = require("src.foundation.log.logger")
 local tip_policy = require("src.config.tip_policy")
+local tip_queue = require("src.foundation.coordination.tip_queue")
 
 local Adapter = {}
 Adapter.__index = Adapter
@@ -59,7 +60,7 @@ function Adapter:publish(game, event)
     port.enqueue(game, intent)
   else
     logger.warn("[event_feed_adapter]", "tip_output_port missing, falling back to tip_queue | event:", tostring(event.kind))
-    require("src.foundation.coordination.tip_queue").enqueue(intent)
+    tip_queue.enqueue(intent)
   end
   return true
 end

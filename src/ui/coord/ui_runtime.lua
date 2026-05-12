@@ -4,6 +4,7 @@ local input_lock_policy = require("src.ui.input.lock")
 local role_control_lock_policy = require("src.ui.input.role_control_lock")
 local ui_touch_policy = require("src.ui.input.touch")
 local runtime = require("src.ui.render.runtime_ui")
+local schema_base_nodes = require("src.ui.schema.base")
 
 local state = require("src.ui.coord.ui_state")
 local assets = require("src.ui.render.assets")
@@ -62,11 +63,10 @@ function service.refresh_turn_label(state_ctx, label_text, visible)
   if not ui then
     return
   end
-  local base_nodes = require("src.ui.schema.base")
   local countdown_visible = visible ~= false
 
   turn_label_refresh_context.ui = ui
-  turn_label_refresh_context.base_nodes = base_nodes
+  turn_label_refresh_context.base_nodes = schema_base_nodes
   turn_label_refresh_context.label_text = label_text
   turn_label_refresh_context.countdown_visible = countdown_visible
 

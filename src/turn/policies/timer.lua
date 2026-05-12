@@ -135,21 +135,18 @@ local function _resolve_action_timer_context(ctx)
   if not _should_track_action_button_for_player(game, current_player) then
     return nil
   end
-  return { state = state, game = game, timeout = timeout, player = current_player }
+  return state, game, timeout, current_player
 end
 
 function turn_timer_policy.update_action_button_timer(ctx)
-  local resolved = _resolve_action_timer_context(ctx)
-  if not resolved then
-    local state = ctx and ctx.state
-    if state then
-      _reset_action_button(state)
+  local state, game, timeout, current_player = _resolve_action_timer_context(ctx)
+  if not state then
+    local s = ctx and ctx.state
+    if s then
+      _reset_action_button(s)
     end
     return
   end
-
-  local state = resolved.state
-  local current_player = resolved.player
 
   if state.action_button_player_id ~= current_player.id then
     state.action_button_player_id = current_player.id
@@ -158,11 +155,11 @@ function turn_timer_policy.update_action_button_timer(ctx)
 
   state.action_button_active = true
 
-  if _update_elapsed_timer(state, ctx.dt, resolved.timeout) then
+  if _update_elapsed_timer(state, ctx.dt, timeout) then
     return
   end
 
-  _handle_timeout_elapsed(state, resolved.game, ctx)
+  _handle_timeout_elapsed(state, game, ctx)
 end
 
 function turn_timer_policy.update_detained_wait_timer(game, state, dt, step_turn)

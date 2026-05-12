@@ -1,5 +1,6 @@
 local ctx_mod = require("src.turn.actions.dispatch.context")
 local defaults = require("src.turn.actions.dispatch.defaults")
+local force_resolve = require("src.turn.deadlines.force_resolve")
 
 local function build(deps)
   local logger = deps.logger
@@ -162,7 +163,6 @@ local function build(deps)
       return _handle_market_navigation(game, state, action, ctx)
     end
     if action.type == "choice_force_skip" then
-      local force_resolve = require("src.turn.deadlines.force_resolve")
       local choice = _resolve_pending_choice(game, state, ctx)
       force_resolve.force_skip(game, state, choice, action.reason or "dispatch")
       return { status = "applied" }

@@ -39,16 +39,23 @@ function auto_context.build_tick(game, state, ui_sync_ports)
     gate = ui_sync_ports.resolve_ui_gate(state)
   end
   local pending_choice = game and game.turn and game.turn.pending_choice or runtime_state.get_pending_choice(state)
-  return auto_context.build(game, {
-    game = game,
-    state = state,
-    pending_choice = pending_choice,
-    choice_active = gate and gate.choice_active == true or false,
-    market_active = gate and gate.market_active == true or false,
-    popup_active = gate and gate.popup_active == true or false,
-    modal_active = gate and (gate.popup_active == true or gate.market_active == true or gate.choice_active == true) or false,
-    modal_buttons = nil,
-  })
+  local ctx = state._tick_context
+  if ctx == nil then
+    ctx = {}
+    state._tick_context = ctx
+  end
+  ctx.game = game
+  ctx.state = state
+  ctx.pending_choice = pending_choice
+  ctx.current_player_index = nil
+  ctx.current_player_id = nil
+  ctx.current_player_auto = nil
+  ctx.choice_active = gate and gate.choice_active == true or false
+  ctx.market_active = gate and gate.market_active == true or false
+  ctx.popup_active = gate and gate.popup_active == true or false
+  ctx.modal_active = gate and (gate.popup_active == true or gate.market_active == true or gate.choice_active == true) or false
+  ctx.modal_buttons = nil
+  return auto_context.build(game, ctx)
 end
 
 return auto_context

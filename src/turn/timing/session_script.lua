@@ -1,5 +1,6 @@
 local turn_decision = require("src.turn.waits.decision")
 local await = require("src.turn.waits.await")
+local move_followup = require("src.turn.phases.move_followup")
 
 local turn_script = {}
 local WAIT_HANDLERS = {
@@ -17,7 +18,7 @@ local function _resolve_phase_handler(phases, state_name)
   if handler ~= nil or state_name ~= "move_followup" then
     return handler
   end
-  return require("src.turn.phases.move_followup").run
+  return move_followup.run
 end
 
 local function _is_callable(v)

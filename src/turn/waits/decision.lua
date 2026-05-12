@@ -3,6 +3,7 @@ local number_utils = require("src.foundation.lang.number")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
+local choice_resolver = require("src.rules.choice.resolver")
 
 local turn_decision = {}
 
@@ -28,7 +29,7 @@ function turn_decision.decide_choice_action(game, choice, pending_action, opts)
 end
 
 function turn_decision.resolve_choice(game, choice, action)
-  return require("src.rules.choice.resolver").resolve(game, choice, action, {
+  return choice_resolver.resolve(game, choice, action, {
     on_event = function(event)
       event_feed.publish(game, event)
     end,

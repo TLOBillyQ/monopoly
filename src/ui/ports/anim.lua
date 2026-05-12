@@ -2,22 +2,13 @@ local move_anim = require("src.ui.render.move_anim")
 local runtime_state = require("src.ui.state.runtime")
 local role_id_utils = require("src.foundation.identity.role_id")
 local status3d = require("src.ui.render.status3d")
+local action_anim_player = require("src.ui.render.anim")
+local ui_runtime = require("src.ui.coord.ui_runtime")
 
 local anim_ports = {}
 
-local _action_anim_player = nil
-
-local function _load_action_anim_player()
-  if _action_anim_player then
-    return _action_anim_player
-  end
-  _action_anim_player = require("src.ui.render.anim")
-  return _action_anim_player
-end
-
 local function _apply_role_control_lock(state, enabled)
-  local ui_view = require("src.ui.coord.ui_runtime")
-  ui_view.apply_role_control_lock(state, enabled)
+  ui_runtime.apply_role_control_lock(state, enabled)
 end
 
 local function _update_role_control_lock_exempt(state, enabled, meta)
@@ -91,7 +82,7 @@ function anim_ports.build()
       return move_anim.play_sequence(state.board_scene, anim_ctx)
     end,
     play_action_anim = function(state, anim_ctx)
-      local player = _load_action_anim_player()
+      local player = action_anim_player
       local delay = player.play(state, anim_ctx, {
         runtime_bundle = state and state.presentation_runtime or nil,
       })

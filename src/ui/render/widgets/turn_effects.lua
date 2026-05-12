@@ -1,12 +1,9 @@
 local base_nodes = require("src.ui.schema.base")
 local role_id_utils = require("src.foundation.identity.role_id")
 local with_client_role = require("src.ui.utils.with_client_role")
+local runtime_ui = require("src.ui.render.runtime_ui")
 
 local turn_effects = {}
-
-local function _fallback_runtime()
-  return require("src.ui.render" .. ".runtime_ui")
-end
 
 local function _resolve_current_player_index(ui_model)
   local board = ui_model and ui_model.board or nil
@@ -121,7 +118,7 @@ end
 
 function turn_effects.sync(state, ui_model, deps)
   local runtime = deps and deps.runtime or state and state.presentation_runtime and state.presentation_runtime.runtime
-    or _fallback_runtime()
+    or runtime_ui
   assert(runtime, "missing deps.runtime")
   _sync_current_turn_highlight(runtime, state, ui_model)
   _sync_local_turn_prompt(runtime, state, ui_model)
