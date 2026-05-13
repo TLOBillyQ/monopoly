@@ -18,13 +18,17 @@ local function _log_move_anim_wait(session, opts)
   )
 end
 
+local _cached_anim_opts = {
+  state_name = nil,
+  anim_key = nil,
+  done_action_type = nil,
+}
+
 function M.resolve_wait_anim_opts(opts)
-  opts = opts or {}
-  return {
-    state_name = opts.state_name or "wait_move_anim",
-    anim_key = opts.anim_key or "move_anim",
-    done_action_type = opts.done_action_type or "move_anim_done",
-  }
+  _cached_anim_opts.state_name = opts and opts.state_name or "wait_move_anim"
+  _cached_anim_opts.anim_key = opts and opts.anim_key or "move_anim"
+  _cached_anim_opts.done_action_type = opts and opts.done_action_type or "move_anim_done"
+  return _cached_anim_opts
 end
 
 M.log_move_anim_wait = _log_move_anim_wait

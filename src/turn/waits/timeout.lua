@@ -38,13 +38,20 @@ local function _resolve_modal_ports(state)
   return (type(modal_ports.close_choice_modal) == "function" or type(modal_ports.close_popup) == "function") and modal_ports or nil
 end
 
+local _dispatch_close_opts = { on_close_choice = nil }
+local _cached_dispatch_modal_ref = nil
 local function _dispatch_action_with_close_choice(game, state, action)
   local modal_ports = _resolve_modal_ports(state)
-  return turn_dispatch.dispatch_action(game, state, action, modal_ports and {
-    on_close_choice = function(ctx)
+  if not modal_ports then
+    return turn_dispatch.dispatch_action(game, state, action, nil)
+  end
+  if _cached_dispatch_modal_ref ~= modal_ports then
+    _cached_dispatch_modal_ref = modal_ports
+    _dispatch_close_opts.on_close_choice = function(ctx)
       modal_ports.close_choice_modal(ctx)
-    end,
-  } or nil)
+    end
+  end
+  return turn_dispatch.dispatch_action(game, state, action, _dispatch_close_opts)
 end
 
 function tick_timeout.resolve_modal_timeout_seconds(_, state, ui_sync_ports)
@@ -88,22 +95,32 @@ local function _assert_modal_opts(opts)
   assert(opts.get_ref ~= nil, "missing opts.get_ref")
 end
 
+local _modal_timer_reset = { ref = nil, elapsed_seconds = 0 }
+local _modal_timer_update = { ref = nil, elapsed_seconds = 0 }
+local _modal_timer_empty = {}
+
 local function _resolve_modal_ref(output_ports, state, opts)
   local ref = assert(opts.get_ref(state), "missing modal ref")
   if output_ports.get_modal_ref(state) ~= ref then
-    output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = 0 })
+    _modal_timer_reset.ref = ref
+    _modal_timer_reset.elapsed_seconds = 0
+    output_ports.sync_modal_timer(state, _modal_timer_reset)
   end
   return ref
 end
 
 local function _update_modal_elapsed(output_ports, state, ref, dt)
   local next_elapsed = output_ports.get_modal_elapsed(state) + (dt or 0)
-  output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = next_elapsed })
+  _modal_timer_update.ref = ref
+  _modal_timer_update.elapsed_seconds = next_elapsed
+  output_ports.sync_modal_timer(state, _modal_timer_update)
   return next_elapsed
 end
 
 local function _handle_modal_timeout(output_ports, state, ref, on_timeout)
-  output_ports.sync_modal_timer(state, { ref = ref, elapsed_seconds = 0 })
+  _modal_timer_reset.ref = ref
+  _modal_timer_reset.elapsed_seconds = 0
+  output_ports.sync_modal_timer(state, _modal_timer_reset)
   on_timeout(state)
 end
 
@@ -111,12 +128,12 @@ function tick_timeout.step_modal_timeout(state, dt, opts)
   local output_ports = _resolve_modal_output_ports(state)
   local timeout = _resolve_modal_timeout(opts, state)
   if timeout <= 0 then
-    output_ports.sync_modal_timer(state, {})
+    output_ports.sync_modal_timer(state, _modal_timer_empty)
     return
   end
   _assert_modal_opts(opts)
   if not opts.is_active(state) then
-    output_ports.sync_modal_timer(state, {})
+    output_ports.sync_modal_timer(state, _modal_timer_empty)
     return
   end
   local ref = _resolve_modal_ref(output_ports, state, opts)
@@ -125,8 +142,6 @@ function tick_timeout.step_modal_timeout(state, dt, opts)
     _handle_modal_timeout(output_ports, state, ref, opts.on_timeout)
   end
 end
-
-local function _noop() end
 
 local function _resolve_ui_sync_ports(state)
   local resolved = state and (state._resolved_gameplay_loop_ports or state.gameplay_loop_ports) or nil
@@ -183,52 +198,77 @@ function tick_timeout.default_policy()
   return _clone_policy(default_policy)
 end
 
+local _choice_ui_fallback = { route_key = nil, should_warn = false }
+
+local _default_choice_opts = {
+  _game = nil,
+  _ui_sync_ports = nil,
+  dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
+  build_action = default_policy.choice.build_action,
+  get_timeout_seconds = default_policy.choice.get_timeout_seconds,
+  get_min_visible_seconds = default_policy.choice.get_min_visible_seconds,
+}
+
+_default_choice_opts.on_pending_choice = function(state_ctx, pending)
+  local ports = _default_choice_opts._ui_sync_ports
+  if ports and type(ports.on_pending_choice) == "function" then
+    return ports.on_pending_choice(_default_choice_opts._game, state_ctx, pending)
+  end
+end
+
+_default_choice_opts.is_choice_active = function(ctx)
+  local ports = _default_choice_opts._ui_sync_ports
+  if ports and type(ports.is_choice_active) == "function" then
+    return ports.is_choice_active(ctx)
+  end
+  return ctx.pending_choice ~= nil
+end
+
+_default_choice_opts.resolve_choice_ui_state = function(game_ctx, state_ctx, choice)
+  local ports = _default_choice_opts._ui_sync_ports
+  if ports and type(ports.resolve_choice_ui_state) == "function" then
+    return ports.resolve_choice_ui_state(game_ctx, state_ctx, choice)
+  end
+  _choice_ui_fallback.route_key = choice and choice.route_key or nil
+  _choice_ui_fallback.should_warn = false
+  return _choice_ui_fallback
+end
+
 function tick_timeout.step_default_choice(game, state, dt)
-  local ui_sync_ports = _resolve_ui_sync_ports(state)
-  tick_timeout.step_choice_timeout(game, state, dt, {
-    on_pending_choice = function(state_ctx, pending)
-      if ui_sync_ports and type(ui_sync_ports.on_pending_choice) == "function" then
-        return ui_sync_ports.on_pending_choice(game, state_ctx, pending)
-      end
-      return _noop()
-    end,
-    is_choice_active = function(ctx)
-      if ui_sync_ports and type(ui_sync_ports.is_choice_active) == "function" then
-        return ui_sync_ports.is_choice_active(ctx)
-      end
-      return ctx.pending_choice ~= nil
-    end,
-    resolve_choice_ui_state = function(game_ctx, state_ctx, choice)
-      if ui_sync_ports and type(ui_sync_ports.resolve_choice_ui_state) == "function" then
-        return ui_sync_ports.resolve_choice_ui_state(game_ctx, state_ctx, choice)
-      end
-      return {
-        route_key = choice and choice.route_key or nil,
-        should_warn = false,
-      }
-    end,
-    build_action = default_policy.choice.build_action,
-    get_timeout_seconds = default_policy.choice.get_timeout_seconds,
-    get_min_visible_seconds = default_policy.choice.get_min_visible_seconds,
-  })
+  _default_choice_opts._game = game
+  _default_choice_opts._ui_sync_ports = _resolve_ui_sync_ports(state)
+  tick_choice_timeout.step(game, state, dt, _default_choice_opts)
+  _default_choice_opts._game = nil
+  _default_choice_opts._ui_sync_ports = nil
+end
+
+local _default_modal_opts = {
+  _game = nil,
+  on_timeout = default_policy.modal.on_timeout,
+}
+
+_default_modal_opts.is_active = function(ctx)
+  local gate = tick_ui_gate.resolve_ui_gate(ctx)
+  return gate.popup_active == true
+end
+
+_default_modal_opts.get_ref = function(ctx)
+  local gate = tick_ui_gate.resolve_ui_gate(ctx)
+  assert(gate.popup_active, "popup not active")
+  return assert(gate.popup_seq, "missing popup_seq")
+end
+
+_default_modal_opts.get_timeout_seconds = function(state_ctx)
+  return default_policy.modal.get_timeout_seconds(
+    _default_modal_opts._game,
+    state_ctx
+  )
 end
 
 function tick_timeout.step_default_modal(game, state, dt)
-  tick_timeout.step_modal_timeout(state, dt, {
-    is_active = function(ctx)
-      local gate = tick_ui_gate.resolve_ui_gate(ctx)
-      return gate.popup_active == true
-    end,
-    get_ref = function(ctx)
-      local gate = tick_ui_gate.resolve_ui_gate(ctx)
-      assert(gate.popup_active, "popup not active")
-      return assert(gate.popup_seq, "missing popup_seq")
-    end,
-    get_timeout_seconds = function(state_ctx)
-      return default_policy.modal.get_timeout_seconds(game, state_ctx, state_ctx and state_ctx.gameplay_loop_ports and state_ctx.gameplay_loop_ports.ui_sync or nil)
-    end,
-    on_timeout = default_policy.modal.on_timeout,
-  })
+  _default_modal_opts._game = game
+  tick_timeout.step_modal_timeout(state, dt, _default_modal_opts)
+  _default_modal_opts._game = nil
 end
 
 return tick_timeout

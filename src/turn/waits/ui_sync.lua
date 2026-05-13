@@ -5,6 +5,8 @@ local dirty_tracker = require("src.state.dirty_tracker")
 
 local tick_ui_sync = {}
 
+local _ceil = math.ceil
+
 local _log_prefix = "[Eggy]"
 
 local function _resolve_detained_countdown(turn)
@@ -12,7 +14,7 @@ local function _resolve_detained_countdown(turn)
   if remaining < 0 then
     remaining = 0
   end
-  return true, math.ceil(remaining)
+  return true, _ceil(remaining)
 end
 
 local function _resolve_pending_choice_countdown(state, gate, timeout, pending_choice)
@@ -35,7 +37,7 @@ local function _resolve_pending_choice_countdown(state, gate, timeout, pending_c
   if remaining < 0 then
     remaining = 0
   end
-  return true, math.ceil(remaining)
+  return true, _ceil(remaining)
 end
 
 local function _resolve_popup_countdown(game, state)
@@ -47,7 +49,7 @@ local function _resolve_popup_countdown(game, state)
   if remaining < 0 then
     remaining = 0
   end
-  return true, math.ceil(remaining)
+  return true, _ceil(remaining)
 end
 
 local function _resolve_action_button_countdown(state, timeout)
@@ -55,7 +57,7 @@ local function _resolve_action_button_countdown(state, timeout)
   if remaining < 0 then
     remaining = 0
   end
-  return true, math.ceil(remaining)
+  return true, _ceil(remaining)
 end
 
 local function _resolve_countdown_state(game, state, turn, timeout, gate)
@@ -84,7 +86,7 @@ local function _resolve_deadline_countdown(state)
   if primary == nil then
     return nil, nil, nil
   end
-  return true, math.ceil(primary.remaining_seconds or 0), primary.level
+  return true, _ceil(primary.remaining_seconds or 0), primary.level
 end
 
 function tick_ui_sync.update_countdown(game, state)

@@ -3,6 +3,16 @@ local number_utils = require("src.foundation.lang.number")
 
 local tick_ui_gate = {}
 
+local _fallback_gate = {
+  input_blocked = false,
+  choice_active = false,
+  market_active = false,
+  popup_active = false,
+  popup_seq = nil,
+  popup_auto_close_seconds = nil,
+  popup_owner_index = nil,
+}
+
 function tick_ui_gate.resolve_ui_gate(state, ui_sync_ports)
   local resolver = ui_sync_ports
   if not resolver and state and state.gameplay_loop_ports and state.gameplay_loop_ports.ui_sync then
@@ -14,15 +24,7 @@ function tick_ui_gate.resolve_ui_gate(state, ui_sync_ports)
       return gate
     end
   end
-  return {
-    input_blocked = false,
-    choice_active = false,
-    market_active = false,
-    popup_active = false,
-    popup_seq = nil,
-    popup_auto_close_seconds = nil,
-    popup_owner_index = nil,
-  }
+  return _fallback_gate
 end
 
 function tick_ui_gate.resolve_modal_timeout_seconds(state, ui_sync_ports)

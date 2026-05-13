@@ -11,6 +11,7 @@ local _next_action_anim
 
 local _next = shared.unpack_next
 local _mark_dirty = shared.mark_dirty
+local _WAIT = shared.WAIT
 
 local function _resolve_action_anim_wait(game)
   local anim = game.turn.action_anim
@@ -26,7 +27,7 @@ local function _resolve_action_anim_idle(session, args, _, anim, queued_next_ani
     return nil
   end
   if queued_next_anim then
-    return { wait = true }
+    return _WAIT
   end
   session:clear_pending_action()
   local next_state, next_args = _next(args)
@@ -59,7 +60,7 @@ local function _complete_action_anim(session, args, game)
   game.turn.action_anim = nil
   _mark_dirty(game)
   if _next_action_anim(game) then
-    return { wait = true }
+    return _WAIT
   end
   session:clear_pending_action()
   local next_state, next_args = _next(args)
@@ -124,7 +125,7 @@ function M.action_anim(session, args)
 
   local action = session:take_pending_action()
   if not _is_anim_timed_out(anim) and not _is_matching_done_action(action, anim, "action_anim_done") then
-    return { wait = true }
+    return _WAIT
   end
   local completed = _complete_action_anim(session, args, game)
   if completed and completed.wait == true then

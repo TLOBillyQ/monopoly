@@ -2,6 +2,8 @@ local dirty_tracker = require("src.state.dirty_tracker")
 
 local M = {}
 
+M.WAIT = { wait = true }
+
 function M.unpack_next(args)
   args = args or {}
   return args.next_state, args.next_args

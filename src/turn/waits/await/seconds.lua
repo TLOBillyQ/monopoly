@@ -1,6 +1,10 @@
 local number_utils = require("src.foundation.lang.number")
+local shared = require("src.turn.waits.await.shared")
 
 local M = {}
+
+local _WAIT = shared.WAIT
+local _DONE = { done = true }
 
 local function _resolve_seconds_wait(key, session, now)
   local started = session._seconds_wait[key]
@@ -33,24 +37,24 @@ local function _await_seconds_step(session, wait_sec, opts)
   local key = _resolve_seconds_key(opts)
   local now = _resolve_seconds_now(opts and opts.now_fn)
   if now == nil then
-    return { done = true }
+    return _DONE
   end
   local started, started_now = _resolve_seconds_wait(key, session, now)
   if started_now then
-    return { wait = true }
+    return _WAIT
   end
   if (now - started) < wait_sec then
-    return { wait = true }
+    return _WAIT
   end
   session._seconds_wait[key] = nil
-  return { done = true }
+  return _DONE
 end
 
 function M.seconds(session, sec, opts)
   assert(session ~= nil, "missing await session")
   local wait_sec = sec or 0
   if wait_sec <= 0 then
-    return { done = true }
+    return _DONE
   end
   return _await_seconds_step(session, wait_sec, opts)
 end

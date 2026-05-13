@@ -5,8 +5,12 @@ local runtime_state = require("src.state.runtime")
 local choice_contract = require("src.config.choice.contract")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local DeadlineService = require("src.turn.deadlines.service")
+local force_resolve = require("src.turn.deadlines.force_resolve")
 
 local tick_choice_timeout = {}
+
+local _tick_min_visible_payload = { mode = "tick_min_visible", elapsed_seconds = 0, min_visible_seconds = 0 }
+local _tick_timeout_payload = { mode = "tick_timeout", elapsed_seconds = 0, timeout_seconds = 0, min_visible_seconds = 0 }
 
 local function _resolve_output_ports(state)
   local resolved = state and (state._resolved_gameplay_loop_ports or state.gameplay_loop_ports) or nil
@@ -190,21 +194,17 @@ function tick_choice_timeout.step(game, state, dt, opts)
   output_ports.set_pending_choice_elapsed(state, pending_choice_elapsed)
   local min_visible = _resolve_min_visible_seconds(game, state, active_choice, opts)
   if min_visible > 0 and pending_choice_elapsed >= min_visible then
-    if _dispatch_choice_tick_action(game, state, active_choice, output_ports, opts, {
-      mode = "tick_min_visible",
-      elapsed_seconds = pending_choice_elapsed,
-      min_visible_seconds = min_visible,
-    }) then
+    _tick_min_visible_payload.elapsed_seconds = pending_choice_elapsed
+    _tick_min_visible_payload.min_visible_seconds = min_visible
+    if _dispatch_choice_tick_action(game, state, active_choice, output_ports, opts, _tick_min_visible_payload) then
       return
     end
   end
   if pending_choice_elapsed >= timeout then
-    local action = opts.build_action(game, state, active_choice, {
-      mode = "tick_timeout",
-      elapsed_seconds = pending_choice_elapsed,
-      timeout_seconds = timeout,
-      min_visible_seconds = min_visible,
-    })
+    _tick_timeout_payload.elapsed_seconds = pending_choice_elapsed
+    _tick_timeout_payload.timeout_seconds = timeout
+    _tick_timeout_payload.min_visible_seconds = min_visible
+    local action = opts.build_action(game, state, active_choice, _tick_timeout_payload)
     if action ~= nil and action.type ~= "choice_force_skip" then
       _ensure_action_actor_role_id(game, active_choice, action)
       output_ports.set_pending_choice_elapsed(state, 0)
@@ -212,7 +212,6 @@ function tick_choice_timeout.step(game, state, dt, opts)
       return
     end
     output_ports.set_pending_choice_elapsed(state, 0)
-    local force_resolve = require("src.turn.deadlines.force_resolve")
     force_resolve.resolve_choice(game, state, active_choice, "tick_timeout")
   end
 end

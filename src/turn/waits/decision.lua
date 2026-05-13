@@ -7,21 +7,26 @@ local choice_resolver = require("src.rules.choice.resolver")
 
 local turn_decision = {}
 
+local _decide_ctx = {
+  mode = nil,
+  pending_action = nil,
+  min_visible_seconds = nil,
+  elapsed_seconds = nil,
+}
+
 function turn_decision.build_turn_log_line(game)
   local player = game:current_player()
   return "玩家 " .. tostring(player.name)
 end
 
 function turn_decision.decide_choice_action(game, choice, pending_action, opts)
-  opts = opts or {}
   local min_visible = timing.auto_decision_delay_seconds or 0
-  local elapsed = opts.elapsed_seconds or 0
-  local action = choice_auto_policy.decide(game, nil, choice, {
-    mode = "wait_choice",
-    pending_action = pending_action,
-    min_visible_seconds = min_visible,
-    elapsed_seconds = elapsed,
-  })
+  local elapsed = opts and opts.elapsed_seconds or 0
+  _decide_ctx.mode = "wait_choice"
+  _decide_ctx.pending_action = pending_action
+  _decide_ctx.min_visible_seconds = min_visible
+  _decide_ctx.elapsed_seconds = elapsed
+  local action = choice_auto_policy.decide(game, nil, choice, _decide_ctx)
   if action then
     return action
   end

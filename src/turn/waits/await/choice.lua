@@ -11,6 +11,9 @@ local _wait_for_choice_action_anim
 
 local _next = shared.unpack_next
 local _mark_dirty = shared.mark_dirty
+local _WAIT = shared.WAIT
+
+local _decide_opts = { elapsed_seconds = 0 }
 
 local function _resolve_after_action_anim(args, res)
   local default_next_state, default_next_args = _next(args)
@@ -66,7 +69,7 @@ end
 
 local function _finish_choice_wait(session, args, game, res)
   if res and res.stay then
-    return { wait = true }
+    return _WAIT
   end
   session.choice_elapsed_seconds = 0
   local next_state, next_args = _resolve_after_action_anim(args, res)
@@ -84,9 +87,8 @@ _resolve_choice_action = function(choice, session, game)
     game.turn._choice_force_skip_pending = nil
     return { type = "choice_force_skip", choice_id = choice and choice.id }
   end
-  return turn_decision.decide_choice_action(game, choice, session:take_pending_action(), {
-    elapsed_seconds = session.choice_elapsed_seconds or 0,
-  })
+  _decide_opts.elapsed_seconds = session.choice_elapsed_seconds or 0
+  return turn_decision.decide_choice_action(game, choice, session:take_pending_action(), _decide_opts)
 end
 
 _validate_choice_action = function(action, choice)
@@ -127,7 +129,7 @@ function M.choice(session, args)
 
   local res, resolved = _resolve_choice_result(game, choice, session)
   if not resolved then
-    return { wait = true }
+    return _WAIT
   end
   return _finish_choice_wait(session, args, game, res)
 end

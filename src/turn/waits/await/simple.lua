@@ -13,6 +13,7 @@ local wait_keys = wait_callbacks.wait_keys
 
 local _next = shared.unpack_next
 local _mark_dirty = shared.mark_dirty
+local _WAIT = shared.WAIT
 
 function M.landing_visual(session, args)
   assert(session ~= nil and session.game ~= nil, "missing await session")
@@ -37,11 +38,11 @@ function M.landing_visual(session, args)
         _mark_dirty(game)
       end
     end)
-    return { wait = true }
+    return _WAIT
   end
 
   if not wait_callbacks.is_wait_ready(game, wait_keys.landing_visual) then
-    return { wait = true }
+    return _WAIT
   end
 
   wait_callbacks.finish_wait(game, wait_keys.landing_visual, pending_seq)
@@ -65,7 +66,7 @@ function M.detained(session, args)
   session:mark_phase("detained_wait")
   if game.turn.detained_wait_active then
     session:clear_pending_action()
-    return { wait = true }
+    return _WAIT
   end
   return {
     next_state = "end_turn",
@@ -79,11 +80,11 @@ function M.inter_turn(session, args)
   session:mark_phase("inter_turn_wait")
   if game.turn.inter_turn_wait_active then
     session:clear_pending_action()
-    return { wait = true }
+    return _WAIT
   end
   if tip_queue.has_blocking_pending("inter_turn") then
     session:clear_pending_action()
-    return { wait = true }
+    return _WAIT
   end
   local turn_mgr = session.turn_mgr or session
   assert(type(turn_mgr.next_player) == "function", "missing turn_mgr.next_player")
@@ -122,7 +123,7 @@ function M.action(session, args)
       next_args = args and args.next_args or { player = player },
     }
   end
-  return { wait = true }
+  return _WAIT
 end
 
 return M

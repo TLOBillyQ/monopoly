@@ -10,6 +10,7 @@ local await = {}
 
 local _next = shared.unpack_next
 local _mark_dirty = shared.mark_dirty
+local _WAIT = shared.WAIT
 
 local function _await_anim_done(session, args, opts)
   assert(session ~= nil and session.game ~= nil, "missing await session")
@@ -22,10 +23,10 @@ local function _await_anim_done(session, args, opts)
   assert(anim ~= nil, "missing " .. tostring(opts.anim_key))
   local action = session:take_pending_action()
   if not action or action.type ~= opts.done_action_type then
-    return { wait = true }
+    return _WAIT
   end
   if action.seq and anim.seq and action.seq ~= anim.seq then
-    return { wait = true }
+    return _WAIT
   end
   game.turn[opts.anim_key] = nil
   _mark_dirty(game)
