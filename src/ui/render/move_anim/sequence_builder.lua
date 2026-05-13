@@ -115,15 +115,16 @@ function sequence_builder.format_visited(visited)
   return table.concat(out, ",")
 end
 
+local _follow_opts = {}
+
 function sequence_builder.publish_follow_target(anim_ctx, player_id, position, source)
   local state = anim_ctx and anim_ctx.state or nil
   if state == nil or player_id == nil or position == nil then
     return false
   end
-  return runtime_state.set_follow_target_position(state, player_id, position, {
-    source = source,
-    seq = anim_ctx and anim_ctx.seq or nil,
-  })
+  _follow_opts.source = source
+  _follow_opts.seq = anim_ctx and anim_ctx.seq or nil
+  return runtime_state.set_follow_target_position(state, player_id, position, _follow_opts)
 end
 
 return sequence_builder

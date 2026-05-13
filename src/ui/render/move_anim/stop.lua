@@ -140,12 +140,12 @@ function stop.has_active_stop_context(board_scene, player_id)
   return false
 end
 
+local _stop_synthetic_ai_opts = { stop_synthetic_ai = true }
+
 function stop.prepare_player_for_snap(board_scene, player_id, _anim_ctx, reason)
   stop.clear_player_token(board_scene, player_id, reason or "teleport")
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
-  return stop.stop_player_presentation(player_id, unit, {
-    stop_synthetic_ai = true,
-  })
+  return stop.stop_player_presentation(player_id, unit, _stop_synthetic_ai_opts)
 end
 
 function stop.snap_player_to_index(board_scene, player_id, to_index, anim_ctx, reason)

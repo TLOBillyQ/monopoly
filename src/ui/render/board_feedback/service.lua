@@ -269,10 +269,11 @@ function service.play_sound_only(state, cue_name, payload, deps)
     payload
   )
 end
+local _step_tile_sound_payload = {}
+
 function service.play_step_tile_sound(state, player_id, tile_index, deps)
-  return service.play_sound_only(state, "move_step_pounce", {
-    player_id = player_id,
-    tile_index = tile_index,
-  }, deps)
+  _step_tile_sound_payload.player_id = player_id
+  _step_tile_sound_payload.tile_index = tile_index
+  return service.play_sound_only(state, "move_step_pounce", _step_tile_sound_payload, deps)
 end
 return service

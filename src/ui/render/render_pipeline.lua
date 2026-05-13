@@ -6,15 +6,16 @@ local runtime_ui = require("src.ui.render.runtime_ui")
 local ui_touch_policy = require("src.ui.input.touch")
 
 local pipeline = {}
+local _panel_opts = {}
+local _effects_opts = {}
 
 local function _is_empty_dirty(dirty)
   if type(dirty) ~= "table" then
     return true
   end
-  for key, value in pairs(dirty) do
-    if key ~= "any" and value == true then
-      return false
-    end
+  if dirty.permanent == true or dirty.base == true or dirty.board == true
+    or dirty.choice == true or dirty.effects == true or dirty.market == true then
+    return false
   end
   return dirty.any ~= true
 end
@@ -45,19 +46,17 @@ function pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, opts)
   local runtime = opts and opts.runtime or runtime_ui
   local ui_touch = opts and opts.ui_touch_policy or ui_touch_policy
   if _should_refresh_panel(dirty) then
-    panel_presenter.refresh(state_ctx, ui_model, {
-      runtime = runtime,
-      refresh_item_slots = refresh_item_slots,
-      ui_touch_policy = ui_touch,
-    })
+    _panel_opts.runtime = runtime
+    _panel_opts.refresh_item_slots = refresh_item_slots
+    _panel_opts.ui_touch_policy = ui_touch
+    panel_presenter.refresh(state_ctx, ui_model, _panel_opts)
   end
   if dirty.any == true or dirty.board == true or dirty.base == true then
     board_runtime.refresh(state_ctx, ui_model, log_once, build_log_prefix)
   end
   if dirty.any == true or dirty.effects == true or dirty.base == true then
-    turn_effects.sync(state_ctx, ui_model, {
-      runtime = runtime,
-    })
+    _effects_opts.runtime = runtime
+    turn_effects.sync(state_ctx, ui_model, _effects_opts)
   end
 end
 

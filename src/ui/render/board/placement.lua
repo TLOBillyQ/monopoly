@@ -17,10 +17,11 @@ local function _debug_log(...)
   logger.info_unlimited("[MoveAnim]", ...)
 end
 
+local _stop_opts = {}
+
 local function _stop_player_motion(pid, unit, stop_synthetic_ai)
-  return move_anim.stop_player_presentation(pid, unit, {
-    stop_synthetic_ai = stop_synthetic_ai == true,
-  })
+  _stop_opts.stop_synthetic_ai = stop_synthetic_ai == true
+  return move_anim.stop_player_presentation(pid, unit, _stop_opts)
 end
 
 local function _resolve_player_id(player, i)
@@ -35,8 +36,16 @@ local function _resolve_active_player_base(state, player, i)
   return idx, base, pid
 end
 
+local _snapshot_a = {}
+local _snapshot_b = {}
+local _snapshot_current = _snapshot_a
+
 local function _build_snapshot(players)
-  local snapshot = {}
+  local snapshot = (_snapshot_current == _snapshot_a) and _snapshot_b or _snapshot_a
+  _snapshot_current = snapshot
+  for k in pairs(snapshot) do
+    snapshot[k] = nil
+  end
   for i, player in ipairs(players) do
     assert(player ~= nil, "missing player: " .. tostring(i))
     local pid = _resolve_player_id(player, i)
@@ -62,21 +71,29 @@ function M.compute_need_sync(state, snapshot)
   return need_sync
 end
 
+local _occupants = {}
+
 function M.build_occupants(state, players)
-  local occupants = {}
+  for k, v in pairs(_occupants) do
+    if type(v) == "table" then
+      for j = 1, #v do v[j] = nil end
+    else
+      _occupants[k] = nil
+    end
+  end
   for i, player in ipairs(players) do
     assert(player ~= nil, "missing player: " .. tostring(i))
     if not player.eliminated then
       local idx, _, pid = _resolve_active_player_base(state, player, i)
-      local list = occupants[idx]
+      local list = _occupants[idx]
       if not list then
         list = {}
-        occupants[idx] = list
+        _occupants[idx] = list
       end
       list[#list + 1] = pid
     end
   end
-  return occupants
+  return _occupants
 end
 
 function M.resolve_min_player_y(scene)
@@ -133,10 +150,12 @@ local function _resolve_target_position(base, y_offset, ox, oz)
   return base + math.Vector3(ox, y_offset, oz)
 end
 
+local _follow_opts = {}
+
 local function _publish_follow_target(state, pid, target_pos, source)
-  runtime_state.set_follow_target_position(state, pid, target_pos, {
-    source = source,
-  })
+  _follow_opts.source = source
+  _follow_opts.seq = nil
+  runtime_state.set_follow_target_position(state, pid, target_pos, _follow_opts)
 end
 
 local function _place_player_unit(pid, unit, target_pos)

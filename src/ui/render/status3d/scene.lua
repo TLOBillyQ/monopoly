@@ -5,10 +5,11 @@ local host_runtime_bridge = require("src.ui.host_bridge")
 
 local M = {}
 
+local _empty_roles = {}
+
 local function _resolve_host_runtime(deps)
-  local resolved_deps = deps or {}
-  if resolved_deps.host_runtime then
-    return resolved_deps.host_runtime
+  if deps and deps.host_runtime then
+    return deps.host_runtime
   end
   return host_runtime_bridge
 end
@@ -25,7 +26,7 @@ local function _resolve_observer_roles()
   if type(roles) == "table" then
     return roles
   end
-  return {}
+  return _empty_roles
 end
 
 local function _set_layer_visible_for_roles(layer, roles, visible, deps)

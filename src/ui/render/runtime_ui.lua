@@ -34,11 +34,11 @@ function runtime.resolve_role_id(role)
   return role_id_utils.normalize(raw_role_id)
 end
 
-function runtime.with_client_role(role, fn)
+function runtime.with_client_role(role, fn, ...)
   assert(type(fn) == "function", "missing fn")
   local previous_role = UIManager and UIManager.client_role or nil
   runtime.set_client_role(role)
-  local ok, result = xpcall(fn, _traceback)
+  local ok, result = xpcall(fn, _traceback, ...)
   runtime.set_client_role(previous_role)
   if not ok then
     error(result)
@@ -51,15 +51,11 @@ function runtime.for_each_role_or_global(fn)
   local roles = runtime_ports.resolve_roles()
   if type(roles) == "table" and #roles > 0 then
     for _, role in ipairs(roles) do
-      runtime.with_client_role(role, function()
-        fn(role)
-      end)
+      runtime.with_client_role(role, fn, role)
     end
     return
   end
-  runtime.with_client_role(nil, function()
-    fn(nil)
-  end)
+  runtime.with_client_role(nil, fn, nil)
 end
 
 function runtime.query_nodes(name)

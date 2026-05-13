@@ -5,6 +5,11 @@ local number_utils = require("src.foundation.lang.number")
 
 local panel_cash_delta = {}
 
+local _cash_delta_names = {}
+for _i = 1, 4 do
+  _cash_delta_names[_i] = string.format(base_nodes.player_cash_delta, _i)
+end
+
 local function _safe_ui_call(ui, method_name, ...)
   if not ui or type(ui[method_name]) ~= "function" then
     return false
@@ -25,7 +30,7 @@ local function _resolve_integer_field(row, key)
 end
 
 local function _set_cash_delta_label(ui, index, text, visible)
-  local label_name = string.format(base_nodes.player_cash_delta, index)
+  local label_name = _cash_delta_names[index]
   local shown = _safe_ui_call(ui, "set_label", label_name, text or "")
   if shown or visible ~= nil then
     _set_visible_safe(ui, label_name, visible == true)

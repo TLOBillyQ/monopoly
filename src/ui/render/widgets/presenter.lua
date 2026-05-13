@@ -6,6 +6,8 @@ local panel_player_slots = require("src.ui.render.widgets.player_slots")
 local ui_touch_policy_runtime = require("src.ui.input.touch")
 
 local panel_presenter = {}
+local _role_ctx_opts = {}
+local _item_slot_opts = {}
 
 function panel_presenter.apply_base_non_player_visibility(ui, visible)
   assert(ui ~= nil, "missing ui")
@@ -102,7 +104,8 @@ end
 
 local function _refresh_for_role(state, ui_model, runtime, role, panel, refresh_item_slots, ui_touch_policy)
   local ui = state.ui
-  local ctx = role_context.resolve(role, ui_model, { runtime = runtime })
+  _role_ctx_opts.runtime = runtime
+  local ctx = role_context.resolve(role, ui_model, _role_ctx_opts)
   local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
   panel_presenter.apply_base_non_player_visibility(ui, base_visible)
   panel_player_slots.force_item_slots_visible_for_player(ui, ctx)
@@ -110,11 +113,10 @@ local function _refresh_for_role(state, ui_model, runtime, role, panel, refresh_
   _apply_countdown(ui, panel)
   _apply_action_hint(ui, panel)
   ui:set_touch_enabled(base_nodes.action_button, base_visible)
-  refresh_item_slots(state, ui_model, {
-    role_id = ctx.role_id,
-    display_player_id = ctx.display_player_id,
-    allow_interact = base_visible,
-  })
+  _item_slot_opts.role_id = ctx.role_id
+  _item_slot_opts.display_player_id = ctx.display_player_id
+  _item_slot_opts.allow_interact = base_visible
+  refresh_item_slots(state, ui_model, _item_slot_opts)
   panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model, ui_touch_policy)
   return ctx
 end
@@ -153,13 +155,37 @@ local function _sync_item_slot_ids_for_current_player(ui, ui_model)
   ui.item_slot_item_ids = cached or {}
 end
 
+local _rar_state
+local _rar_ui_model
+local _rar_runtime
+local _rar_panel
+local _rar_refresh_item_slots
+local _rar_ui_touch
+local _rar_players
+
+local function _refresh_all_roles_callback(role)
+  _refresh_for_role(_rar_state, _rar_ui_model, _rar_runtime, role, _rar_panel, _rar_refresh_item_slots, _rar_ui_touch)
+  for i = 1, 4 do
+    panel_player_slots.apply_player_colors(role, _rar_runtime, _rar_players[i], i)
+  end
+end
+
 local function _refresh_all_roles(state, ui_model, runtime, panel, refresh_item_slots, ui_touch_policy, players)
-  runtime.for_each_role_or_global(function(role)
-    _refresh_for_role(state, ui_model, runtime, role, panel, refresh_item_slots, ui_touch_policy)
-    for i = 1, 4 do
-      panel_player_slots.apply_player_colors(role, runtime, players[i], i)
-    end
-  end)
+  _rar_state = state
+  _rar_ui_model = ui_model
+  _rar_runtime = runtime
+  _rar_panel = panel
+  _rar_refresh_item_slots = refresh_item_slots
+  _rar_ui_touch = ui_touch_policy
+  _rar_players = players
+  runtime.for_each_role_or_global(_refresh_all_roles_callback)
+  _rar_state = nil
+  _rar_ui_model = nil
+  _rar_runtime = nil
+  _rar_panel = nil
+  _rar_refresh_item_slots = nil
+  _rar_ui_touch = nil
+  _rar_players = nil
 end
 
 function panel_presenter.refresh(state, ui_model, deps)

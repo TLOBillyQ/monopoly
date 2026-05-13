@@ -8,8 +8,7 @@ local runtime_ui = require("src.ui.render.runtime_ui")
 local market_view_slots = {}
 
 local function _resolve_runtime(deps)
-  local resolved_deps = deps or {}
-  return assert(resolved_deps.runtime or runtime_ui, "missing deps.runtime")
+  return assert((deps and deps.runtime) or runtime_ui, "missing deps.runtime")
 end
 
 local _items_cfg_by_id = {}

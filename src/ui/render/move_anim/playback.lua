@@ -8,6 +8,7 @@ local seq_builder = require("src.ui.render.move_anim.sequence_builder")
 local stop = require("src.ui.render.move_anim.stop")
 
 local playback = {}
+local _stop_synthetic_ai_opts = { stop_synthetic_ai = true }
 
 local function _should_skip_stop_active_sequence(board_scene, player_id, anim_ctx, token)
   if rt.token_matches(board_scene, player_id, token) then
@@ -50,9 +51,7 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
     return
   end
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
-  local stop_result = stop.stop_player_presentation(player_id, unit, {
-    stop_synthetic_ai = true,
-  })
+  local stop_result = stop.stop_player_presentation(player_id, unit, _stop_synthetic_ai_opts)
   local active_sequence = rt.get_active_sequence(board_scene, player_id)
   debug_mod.debug_log(
     "finish_stop",

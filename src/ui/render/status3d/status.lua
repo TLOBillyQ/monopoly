@@ -3,6 +3,18 @@ local scene = require("src.ui.render.status3d.scene")
 
 local M = {}
 
+local _remaining_text_cache = {}
+local _remaining_text_prefix = "剩余回合："
+
+local function _get_remaining_text(remaining)
+  local text = _remaining_text_cache[remaining]
+  if text == nil then
+    text = _remaining_text_prefix .. tostring(remaining)
+    _remaining_text_cache[remaining] = text
+  end
+  return text
+end
+
 local function _has_pending_roadblock_trigger(game, player)
   if not (game and game.turn and player and player.id ~= nil) then
     return false
@@ -165,8 +177,8 @@ local function _sync_text_status(cache, player, status_key, roles)
   if remaining == nil then
     return
   end
-  local text = "剩余回合：" .. tostring(remaining)
-  for _, role in ipairs(roles or {}) do
+  local text = _get_remaining_text(remaining)
+  for _, role in ipairs(roles) do
     if role and role.set_label_text then
       pcall(role.set_label_text, text_node, text)
     end
