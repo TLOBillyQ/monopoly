@@ -290,36 +290,6 @@ describe("startup_profile", function()
     end)
   end)
 
-  it("startup_policy_defaults_managed_to_false", function()
-    with_patches({
-      { key = "MONOPOLY_STARTUP_MANAGED", value = nil },
-      { key = "MONOPOLY_BUILD_MODE", value = nil },
-    }, function()
-      local policy = startup_policy.resolve(_G)
-      assert(policy.managed == false, "startup managed should default to false")
-    end)
-  end)
-
-  it("startup_policy_accepts_managed_in_debug", function()
-    with_patches({
-      { key = "MONOPOLY_STARTUP_MANAGED", value = true },
-      { key = "MONOPOLY_BUILD_MODE", value = "debug" },
-    }, function()
-      local policy = startup_policy.resolve(_G)
-      assert(policy.managed == true, "startup managed should be true when global set in debug")
-    end)
-  end)
-
-  it("startup_policy_forces_managed_false_in_release", function()
-    with_patches({
-      { key = "MONOPOLY_STARTUP_MANAGED", value = true },
-      { key = "MONOPOLY_BUILD_MODE", value = "release" },
-    }, function()
-      local policy = startup_policy.resolve(_G)
-      assert(policy.managed == false, "startup managed must be forced false in release")
-    end)
-  end)
-
   it("test_profile_resolver_default_bootstrap_is_empty_and_not_shared", function()
     local resolver = _reload_module("src.app.testing.test_profile_resolver", {
       "src.config.test_profiles",
@@ -363,44 +333,6 @@ describe("startup_profile", function()
     _assert_synthetic_avatar_keys(created_opts.role_roster, { 1, 2, 3, 4 })
     assert(created_opts.ai[-1] == true and created_opts.ai[-2] == true and created_opts.ai[-3] == true and created_opts.ai[-4] == true,
       "synthetic entries should always be AI")
-  end)
-
-  it("game_startup_managed_mode_marks_synthetics_as_auto_not_ai", function()
-    local created_opts = nil
-    with_patches({
-      { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
-      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
-      { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
-      {
-        target = app,
-        key = "new",
-        value = function(_, opts)
-          created_opts = opts
-          return {}
-        end,
-      },
-      { target = startup_bootstrap, key = "apply_bootstrap", value = function() end },
-    }, function()
-      local state = state_factory.build_state({
-        profile_name = "default",
-        get_current_game = function() return nil end,
-        build_game_factory = function(child_state)
-          return startup_roster.build_game_factory(child_state, {
-            profile_name = "default",
-            managed = true,
-          })
-        end,
-        auto_runner = startup_roster.build_auto_runner(),
-      })
-      state.game_factory()
-    end)
-
-    assert(type(created_opts) == "table", "managed startup should still create game options")
-    assert(created_opts.ai == nil, "managed mode should not mark synthetics as AI")
-    assert(type(created_opts.auto) == "table", "managed mode should produce auto map")
-    assert(created_opts.auto[-1] == true and created_opts.auto[-2] == true
-      and created_opts.auto[-3] == true and created_opts.auto[-4] == true,
-      "synthetic ids should be in auto map under managed mode")
   end)
 
   it("game_startup_real_roles_stay_human_by_default", function()

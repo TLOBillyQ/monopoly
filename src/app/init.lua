@@ -143,8 +143,7 @@ function M.init()
     "[Eggy]",
     "startup policy:",
     "build_mode=" .. tostring(startup.build_mode),
-    "resolved_profile=" .. tostring(startup.profile_name),
-    "managed=" .. tostring(startup.managed)
+    "resolved_profile=" .. tostring(startup.profile_name)
   )
 
   runtime_install.install()
@@ -158,7 +157,6 @@ function M.init()
       return startup_roster.build_game_factory(child_state, {
         build_mode = startup.build_mode,
         profile_name = startup.profile_name,
-        managed = startup.managed,
       })
     end,
     auto_runner = auto_runner,

@@ -2,8 +2,7 @@
 param(
     [ValidateSet("release", "debug")]
     [string]$BuildMode = "release",
-    [string]$Profile,
-    [switch]$Managed
+    [string]$Profile
 )
 
 $ErrorActionPreference = "Stop"
@@ -238,8 +237,7 @@ function Write-MainLua {
         [string]$SourcePath,
         [string]$TargetPath,
         [string]$BuildModeValue,
-        [string]$StartupProfileValue,
-        [bool]$Managed = $false
+        [string]$StartupProfileValue
     )
 
     $prefix_lines = @()
@@ -248,9 +246,6 @@ function Write-MainLua {
     }
     if (-not [string]::IsNullOrWhiteSpace($StartupProfileValue)) {
         $prefix_lines += "STARTUP_TEST_PROFILE = ""$(Escape-LuaDoubleQuotedString $StartupProfileValue)"""
-    }
-    if ($Managed) {
-        $prefix_lines += "MONOPOLY_STARTUP_MANAGED = true"
     }
 
     $target_parent = Split-Path -Parent $TargetPath
@@ -314,9 +309,6 @@ try {
     $resolved_platform = Resolve-PlatformName
     $build_mode_resolution = Resolve-EffectiveBuildMode -RequestedBuildMode $BuildMode
     $effective_build_mode = [string]$build_mode_resolution.mode
-    if ($Managed.IsPresent -and $effective_build_mode -ne "debug") {
-        Exit-WithError "The -Managed switch requires -BuildMode debug."
-    }
     $target_source = Resolve-DefaultTargetPath $resolved_platform
     $target_path = Resolve-NormalizedPath $target_source
 
@@ -329,9 +321,6 @@ try {
     Write-Info ("Target path: " + $target_path)
     Write-Info ("Platform: " + $resolved_platform)
     Write-Info ("Build mode: " + $effective_build_mode)
-    if ($Managed.IsPresent) {
-        Write-Info "Managed synthetics: true"
-    }
     Write-Info ""
     Write-Info "--------------------------------------"
     Write-Info ("Deploy target: " + $target_path)
@@ -357,8 +346,7 @@ try {
             -SourcePath (Join-Path $project_root "main.lua") `
             -TargetPath (Join-Path $target_path "main.lua") `
             -BuildModeValue $effective_build_mode `
-            -StartupProfileValue $effective_profile `
-            -Managed $Managed.IsPresent
+            -StartupProfileValue $effective_profile
     }
     else {
         Write-MainLua `
