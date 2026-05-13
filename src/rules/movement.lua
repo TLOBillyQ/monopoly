@@ -258,12 +258,16 @@ local function _step_move(ctx, step)
   return step
 end
 
-local function _collect_encountered(ctx)
+-- pass_through=true: intermediate step, player is passing through.
+-- pass_through=false: final step (landing tile), encounters are not "passing".
+local function _collect_encountered(ctx, pass_through)
   local encountered_step = {}
   for _, pid in ipairs(ctx.game.occupants[ctx.current] or {}) do
     if pid ~= ctx.player.id then
       encountered_step[#encountered_step + 1] = pid
-      ctx.encountered[#ctx.encountered + 1] = pid
+      if pass_through then
+        ctx.encountered[#ctx.encountered + 1] = pid
+      end
     end
   end
   return encountered_step
@@ -272,7 +276,8 @@ end
 local function _run_move_steps(ctx)
   for step = 1, ctx.abs_steps do
     _step_move(ctx, step)
-    local encountered_step = _collect_encountered(ctx)
+    local pass_through = step < ctx.abs_steps
+    local encountered_step = _collect_encountered(ctx, pass_through)
     if _resolve_step_interrupt(ctx, encountered_step, step) then
       break
     end
