@@ -1,6 +1,7 @@
 local logger = require("src.foundation.log.logger")
 local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
 local item_phase_ask_flow = require("src.ui.input.dispatch.item_phase_ask")
+local item_slot_confirm = require("src.ui.input.dispatch.item_slot_confirm")
 
 local game_action_dispatcher = {}
 
@@ -103,6 +104,9 @@ function game_action_dispatcher.dispatch(state, game, intent, opts, action_port,
     return false
   end
   _normalize_item_slot_flags(state, intent)
+  if item_slot_confirm.dispatch(state, game, intent, opts, action_port) then
+    return true
+  end
   if item_phase_ask_flow.dispatch(state, game, intent, opts, action_port) then
     return true
   end
@@ -113,6 +117,9 @@ function game_action_dispatcher.dispatch(state, game, intent, opts, action_port,
     if pre_confirm_flow.enter(state, intent) then
       return true
     end
+  end
+  if _is_item_slot_click(intent) and item_slot_confirm.try_enter(state, intent) then
+    return true
   end
   if intent_type == "ui_button"
       or intent_type == "choice_select"

@@ -316,6 +316,8 @@ function phase_module.build_passive_choice_spec(game, player, phase, args)
       options[#options + 1] = {
         id = ss.item_id,
         label = item_name or tostring(ss.item_id),
+        confirm_title = cfg and cfg.name or nil,
+        confirm_body = cfg and cfg.description or nil,
       }
     end
   end
