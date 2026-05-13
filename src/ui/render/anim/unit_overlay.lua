@@ -36,11 +36,13 @@ local function _resolve_hr(deps)
   return host_runtime_bridge
 end
 
+local function _access_field(obj, key)
+  return obj[key]
+end
+
 local function _call_handle_method(handle, method_name, ...)
   if handle == nil then return false end
-  local ok, method = pcall(function()
-    return handle[method_name]
-  end)
+  local ok, method = pcall(_access_field, handle, method_name)
   if not ok or type(method) ~= "function" then return false end
   local called = pcall(method, ...)
   return called == true

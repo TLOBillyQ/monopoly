@@ -53,7 +53,7 @@ local function _dispatch_via_close_choice(game, state, action)
   -- 直接走 game:dispatch_action（reducer 会处理 choice_select/choice_cancel），
   -- 同时手动清空 pending_choice 避免 choice_wait 协程留态。
   if game and type(game.dispatch_action) == "function" then
-    pcall(function() game:dispatch_action(action) end)
+    pcall(game.dispatch_action, game, action)
   end
   if game and game.turn then
     local pending = game.turn.pending_choice
@@ -140,7 +140,7 @@ function M.force_skip(game, state, choice, reason)
   end
   _emit_force_skip_event(reason, choice)
   if game and not game.finished and type(game.advance_turn) == "function" then
-    pcall(function() game:advance_turn() end)
+    pcall(game.advance_turn, game)
   end
 end
 

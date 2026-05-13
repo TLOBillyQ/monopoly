@@ -20,10 +20,12 @@ local function _vec_new(x, y, z)
   return { x = x, y = y, z = z }
 end
 
+local function _native_add(a, b)
+  return a + b
+end
+
 local function _vec_add(a, b)
-  local ok, added = pcall(function()
-    return a + b
-  end)
+  local ok, added = pcall(_native_add, a, b)
   if ok and added ~= nil then
     return added
   end
@@ -34,10 +36,12 @@ local function _vec_add(a, b)
   )
 end
 
+local function _native_mul(a, b)
+  return a * b
+end
+
 local function _vec_scale(vec, factor)
-  local ok, scaled = pcall(function()
-    return vec * factor
-  end)
+  local ok, scaled = pcall(_native_mul, vec, factor)
   if ok and scaled ~= nil then
     return scaled
   end
@@ -71,26 +75,29 @@ local function _resolve_cfg_number(cfg, key, fallback)
   return fallback
 end
 
+local _hit_pos_keys = { "hit_pos", "hit_point", "point", "position", "pos" }
+
+local _role_camera_getters = {
+  "get_camera_dir",
+  "get_camera_direction",
+  "get_view_dir",
+  "get_look_dir",
+  "get_forward",
+}
+local _unit_camera_getters = {
+  "get_camera_dir",
+  "get_camera_direction",
+  "get_forward",
+}
+
 local function _resolve_camera_dir(role, ctrl_unit)
-  local role_getters = {
-    "get_camera_dir",
-    "get_camera_direction",
-    "get_view_dir",
-    "get_look_dir",
-    "get_forward",
-  }
-  for _, getter in ipairs(role_getters) do
+  for _, getter in ipairs(_role_camera_getters) do
     local vec = _call_method(role, getter)
     if vec ~= nil then
       return vec
     end
   end
-  local unit_getters = {
-    "get_camera_dir",
-    "get_camera_direction",
-    "get_forward",
-  }
-  for _, getter in ipairs(unit_getters) do
+  for _, getter in ipairs(_unit_camera_getters) do
     local vec = _call_method(ctrl_unit, getter)
     if vec ~= nil then
       return vec
@@ -168,8 +175,7 @@ function raycast.resolve_hit_position(hit)
         and _vec_component(hit, "z", 3) ~= nil then
       return hit
     end
-    local keys = { "hit_pos", "hit_point", "point", "position", "pos" }
-    for _, key in ipairs(keys) do
+    for _, key in ipairs(_hit_pos_keys) do
       local maybe = hit[key]
       if type(maybe) == "table"
           and _vec_component(maybe, "x", 1) ~= nil

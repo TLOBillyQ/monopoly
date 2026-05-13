@@ -1,12 +1,14 @@
 local unit_position = {}
 
+local function _access_get_position(unit)
+  return unit.get_position
+end
+
 local function _resolve_get_position(unit)
   if unit == nil then
     return nil
   end
-  local ok, getter = pcall(function()
-    return unit.get_position
-  end)
+  local ok, getter = pcall(_access_get_position, unit)
   if not ok or type(getter) ~= "function" then
     return nil
   end

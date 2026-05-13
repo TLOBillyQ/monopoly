@@ -15,11 +15,13 @@ local function _bucket(unit_key)
   return _buckets[unit_key]
 end
 
+local function _access_field(obj, key)
+  return obj[key]
+end
+
 local function _call_method(handle, name, ...)
   if handle == nil then return false end
-  local ok, method = pcall(function()
-    return handle[name]
-  end)
+  local ok, method = pcall(_access_field, handle, name)
   if not ok or type(method) ~= "function" then return false end
   local called = pcall(method, ...)
   return called == true

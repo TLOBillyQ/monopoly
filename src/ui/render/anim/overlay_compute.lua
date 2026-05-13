@@ -42,11 +42,12 @@ function compute.resolve_tile_pos(state, tile_index)
   return _zero_vector()
 end
 
+local function _native_add(a, b)
+  return a + b
+end
+
 local function _try_native_vector_add(pos, offset)
-  local ok, result = pcall(function()
-    return pos + offset
-  end)
-  return ok, result
+  return pcall(_native_add, pos, offset)
 end
 
 local function _resolve_vector_components(vec)
