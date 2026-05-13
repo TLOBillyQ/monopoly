@@ -69,12 +69,13 @@ local function _should_update_auto_labels(dirty, ui_dirty)
   return dirty.players or dirty.turn or ui_dirty
 end
 
+local _panel_flags = {}
+
 local function _build_panel_flags(dirty, ui_dirty)
-  return {
-    turn_label = dirty.turn or dirty.turn_countdown or ui_dirty,
-    player_rows = dirty.players or dirty.board_tiles or ui_dirty,
-    auto_label = dirty.players or dirty.turn or ui_dirty,
-  }
+  _panel_flags.turn_label = dirty.turn or dirty.turn_countdown or ui_dirty
+  _panel_flags.player_rows = dirty.players or dirty.board_tiles or ui_dirty
+  _panel_flags.auto_label = dirty.players or dirty.turn or ui_dirty
+  return _panel_flags
 end
 
 local function _should_update_slots(dirty, ui_dirty)

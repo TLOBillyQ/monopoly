@@ -12,16 +12,20 @@ local function _resolve_no_action_notice(turn)
   return visible, text
 end
 
+local _auto_labels = {}
+
 local function _build_auto_label_by_player(players, enabled_by_player)
-  local out = {}
+  for k in pairs(_auto_labels) do
+    _auto_labels[k] = nil
+  end
   for _, player in ipairs(players or {}) do
     local player_id = role_id_utils.normalize(player and player.id or nil)
     if player_id then
       local enabled = role_id_utils.read(enabled_by_player, player_id) == true
-      role_id_utils.write(out, player_id, panel_view.build_auto_label(enabled))
+      role_id_utils.write(_auto_labels, player_id, panel_view.build_auto_label(enabled))
     end
   end
-  return out
+  return _auto_labels
 end
 
 local function _resolve_countdown_visible(turn)

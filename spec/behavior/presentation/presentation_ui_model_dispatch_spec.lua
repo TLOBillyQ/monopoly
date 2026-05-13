@@ -958,7 +958,10 @@ describe("presentation_ui.model_dispatch", function()
       finished = g.finished,
     }
     local model = ui_model.build(g, env)
-    local before_item_slots = model.item_slots
+    local before_has_2001 = false
+    for _, id in ipairs(model.item_slots or {}) do
+      if id == 2001 then before_has_2001 = true end
+    end
 
     g.players[1].inventory:add({ id = 2001 })
 
@@ -966,7 +969,12 @@ describe("presentation_ui.model_dispatch", function()
       inventory_ids = { [1] = true },
     })
 
-    assert(updated.item_slots ~= before_item_slots, "inventory refresh should rebuild current item slots")
+    local after_has_2001 = false
+    for _, id in ipairs(updated.item_slots or {}) do
+      if id == 2001 then after_has_2001 = true end
+    end
+    assert(not before_has_2001, "item 2001 should not be present before inventory add")
+    assert(after_has_2001, "inventory refresh should include newly added item")
     assert(updated.item_slots_by_player ~= nil, "inventory refresh should keep per-player slots")
     assert(updated.item_choice_owner_id ~= nil or updated.choice == nil, "inventory refresh should recompute choice owner when needed")
   end)

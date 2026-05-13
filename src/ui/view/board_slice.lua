@@ -10,36 +10,54 @@ for _, cfg in ipairs(tiles_cfg) do
   _tiles_by_id[cfg.id] = cfg
 end
 
+local _tile_state_out = {}
+local _tile_state_entries = {}
+local _count_by_owner = {}
+
 local function _project_tile_states(game)
   local board = game and game.board or nil
   if not board then
-    return {}
+    return _tile_state_out
   end
   local lookup = board.tile_lookup or {}
-  local count_by_owner = {}
-  local out = {}
+  for k in pairs(_tile_state_out) do
+    _tile_state_out[k] = nil
+  end
+  for k in pairs(_count_by_owner) do
+    _count_by_owner[k] = nil
+  end
   for tile_id, raw in pairs(lookup) do
-    local entry = {
-      owner_id = raw.owner_id,
-      level = raw.level,
-    }
+    local entry = _tile_state_entries[tile_id]
+    if entry == nil then
+      entry = {}
+      _tile_state_entries[tile_id] = entry
+    end
+    entry.owner_id = raw.owner_id
+    entry.level = raw.level
+    entry.contiguous_count = nil
     if raw.owner_id then
-      local owner_counts = count_by_owner[raw.owner_id]
+      local owner_counts = _count_by_owner[raw.owner_id]
       if owner_counts == nil then
         owner_counts = contiguous_count.build_for_owner(board, raw.owner_id)
-        count_by_owner[raw.owner_id] = owner_counts
+        _count_by_owner[raw.owner_id] = owner_counts
       end
       local count = owner_counts[tile_id]
       if count and count > 0 then
         entry.contiguous_count = count
       end
     end
-    out[tile_id] = entry
+    _tile_state_out[tile_id] = entry
   end
-  return out
+  return _tile_state_out
 end
 
+local _cached_board_path_ref = nil
+
 local function _build_board_tiles(board_path)
+  if _cached_board_path_ref == board_path and #cached_board_tiles > 0 then
+    return cached_board_tiles
+  end
+  _cached_board_path_ref = board_path
   local out = {}
   assert(type(board_path) == "table", "missing board path")
   for i, tile in ipairs(board_path) do

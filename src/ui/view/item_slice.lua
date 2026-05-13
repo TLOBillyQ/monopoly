@@ -11,18 +11,15 @@ function item_slice.resolve_slot_count(ui_runtime)
   return slot_count
 end
 
-function item_slice.build_item_slots_for_player(player, slot_count)
-  local current_items = {}
-  if player and player.inventory and type(player.inventory.items) == "table" then
-    current_items = player.inventory.items
-  end
-  local item_slots = {}
+local _empty_items = {}
+
+local function _fill_item_slots(item_slots, items, slot_count)
   local pos = 1
-  for i = 1, #current_items do
+  for i = 1, #items do
     if pos > slot_count then
       break
     end
-    local item = current_items[i]
+    local item = items[i]
     if item and item.id then
       item_slots[pos] = item.id
       pos = pos + 1
@@ -34,27 +31,50 @@ function item_slice.build_item_slots_for_player(player, slot_count)
   return item_slots
 end
 
-local function _map_by_player_id(players, fn)
-  local out = {}
+local _standalone_item_slots = {}
+
+function item_slice.build_item_slots_for_player(player, slot_count)
+  local items = (player and player.inventory and type(player.inventory.items) == "table")
+    and player.inventory.items or _empty_items
+  return _fill_item_slots(_standalone_item_slots, items, slot_count)
+end
+
+local _slots_by_player = {}
+local _slots_pool = {}
+local _auto_by_player = {}
+
+function item_slice.build_item_slots_by_player(players, slot_count)
+  for k in pairs(_slots_by_player) do
+    _slots_by_player[k] = nil
+  end
   for _, player in ipairs(players or {}) do
     local player_id = role_id_utils.normalize(player and player.id or nil)
     if player_id then
-      role_id_utils.write(out, player_id, fn(player))
+      local items = (player and player.inventory and type(player.inventory.items) == "table")
+        and player.inventory.items or _empty_items
+      local slots = _slots_pool[player_id]
+      if slots == nil then
+        slots = {}
+        _slots_pool[player_id] = slots
+      end
+      _fill_item_slots(slots, items, slot_count)
+      role_id_utils.write(_slots_by_player, player_id, slots)
     end
   end
-  return out
-end
-
-function item_slice.build_item_slots_by_player(players, slot_count)
-  return _map_by_player_id(players, function(player)
-    return item_slice.build_item_slots_for_player(player, slot_count)
-  end)
+  return _slots_by_player
 end
 
 function item_slice.build_auto_enabled_by_player(players)
-  return _map_by_player_id(players, function(player)
-    return player.auto == true
-  end)
+  for k in pairs(_auto_by_player) do
+    _auto_by_player[k] = nil
+  end
+  for _, player in ipairs(players or {}) do
+    local player_id = role_id_utils.normalize(player and player.id or nil)
+    if player_id then
+      role_id_utils.write(_auto_by_player, player_id, player.auto == true)
+    end
+  end
+  return _auto_by_player
 end
 
 function item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)

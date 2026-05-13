@@ -58,7 +58,7 @@ function choice.build_choice_view(pending, opts)
   for _, opt in ipairs(pending.options or {}) do
     local label = option_label(opt)
     assert(label ~= nil, "missing option label")
-    table.insert(options, _copy_option_view(opt, label))
+    options[#options + 1] = _copy_option_view(opt, label)
   end
 
   local view = {

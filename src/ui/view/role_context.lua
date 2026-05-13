@@ -4,6 +4,7 @@ local role_id_utils = require("src.foundation.identity.role_id")
 local role_context = {}
 
 local warned_unmapped_role_ids = {}
+local _cached_ctx = {}
 
 function role_context.resolve(role, ui_model, deps)
   local runtime = deps and deps.runtime or nil
@@ -14,21 +15,19 @@ function role_context.resolve(role, ui_model, deps)
   local mapped = role_id ~= nil and role_id_utils.read(by_player, role_id) ~= nil
 
   if role_id == nil and role == nil then
-    return {
-      role_id = nil,
-      display_player_id = current_player_id,
-      can_operate = true,
-      is_player_role = true,
-    }
+    _cached_ctx.role_id = nil
+    _cached_ctx.display_player_id = current_player_id
+    _cached_ctx.can_operate = true
+    _cached_ctx.is_player_role = true
+    return _cached_ctx
   end
 
   if mapped then
-    return {
-      role_id = role_id,
-      display_player_id = role_id,
-      can_operate = role_id_utils.equals(role_id, current_player_id),
-      is_player_role = true,
-    }
+    _cached_ctx.role_id = role_id
+    _cached_ctx.display_player_id = role_id
+    _cached_ctx.can_operate = role_id_utils.equals(role_id, current_player_id)
+    _cached_ctx.is_player_role = true
+    return _cached_ctx
   end
 
   if role_id ~= nil and ui_model ~= nil and not warned_unmapped_role_ids[role_id] then
@@ -40,12 +39,11 @@ function role_context.resolve(role, ui_model, deps)
     )
   end
 
-  return {
-    role_id = role_id,
-    display_player_id = current_player_id,
-    can_operate = false,
-    is_player_role = false,
-  }
+  _cached_ctx.role_id = role_id
+  _cached_ctx.display_player_id = current_player_id
+  _cached_ctx.can_operate = false
+  _cached_ctx.is_player_role = false
+  return _cached_ctx
 end
 
 return role_context
