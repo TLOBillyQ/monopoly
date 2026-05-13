@@ -5,10 +5,12 @@ local runtime_state = require("src.state.runtime")
 
 local M = {}
 
+local _default_thresholds = { 5, 3 }
+
 local function _resolve_thresholds()
   local cfg = timing.deadline_warning_thresholds
   if type(cfg) ~= "table" then
-    return { 5, 3 }
+    return _default_thresholds
   end
   return cfg
 end
@@ -106,16 +108,17 @@ function M.cancel(state, scope)
   return true
 end
 
+local _peek_result = {}
+
 local function _build_peek_result(entry)
   local remaining = entry.timeout - entry.elapsed
   if remaining < 0 then remaining = 0 end
-  return {
-    scope = entry.scope,
-    remaining_seconds = remaining,
-    elapsed_seconds = entry.elapsed,
-    timeout_seconds = entry.timeout,
-    level = _level_from_remaining(remaining, _resolve_thresholds()),
-  }
+  _peek_result.scope = entry.scope
+  _peek_result.remaining_seconds = remaining
+  _peek_result.elapsed_seconds = entry.elapsed
+  _peek_result.timeout_seconds = entry.timeout
+  _peek_result.level = _level_from_remaining(remaining, _resolve_thresholds())
+  return _peek_result
 end
 
 function M.peek(state, scope)
@@ -136,6 +139,9 @@ function M.peek(state, scope)
   return entry and _build_peek_result(entry) or nil
 end
 
+local _expired_scopes = {}
+local _expired_entries = {}
+
 function M.tick(state, dt)
   if type(state) ~= "table" then
     return
@@ -145,7 +151,7 @@ function M.tick(state, dt)
   end
   local active = _ensure_active(state)
   local thresholds = _resolve_thresholds()
-  local expired_scopes = {}
+  local expired_n = 0
   for scope, entry in pairs(active) do
     if not entry.fired_timeout then
       entry.elapsed = (entry.elapsed or 0) + dt
@@ -153,16 +159,22 @@ function M.tick(state, dt)
       _maybe_fire_warns(entry, remaining, thresholds)
       if entry.elapsed >= entry.timeout then
         entry.fired_timeout = true
-        expired_scopes[#expired_scopes + 1] = { scope = scope, entry = entry }
+        expired_n = expired_n + 1
+        _expired_scopes[expired_n] = scope
+        _expired_entries[expired_n] = entry
       end
     end
   end
-  for _, item in ipairs(expired_scopes) do
-    active[item.scope] = nil
-    if type(item.entry.on_timeout) == "function" then
-      local ok, err = pcall(item.entry.on_timeout, item.scope)
+  for i = 1, expired_n do
+    local scope = _expired_scopes[i]
+    local entry = _expired_entries[i]
+    _expired_scopes[i] = nil
+    _expired_entries[i] = nil
+    active[scope] = nil
+    if type(entry.on_timeout) == "function" then
+      local ok, err = pcall(entry.on_timeout, scope)
       if not ok then
-        logger.warn("[Eggy]", "DeadlineService.on_timeout error", item.scope, tostring(err))
+        logger.warn("[Eggy]", "DeadlineService.on_timeout error", scope, tostring(err))
       end
     end
   end
