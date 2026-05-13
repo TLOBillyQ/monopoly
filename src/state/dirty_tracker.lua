@@ -69,6 +69,9 @@ local _consume_snapshot = {}
 
 function dirty_tracker.consume(d)
   local prev_inv = _consume_snapshot.inventory_ids
+  for k in pairs(_consume_snapshot) do
+    _consume_snapshot[k] = nil
+  end
   for _, key in ipairs(_dirty_keys) do
     _consume_snapshot[key] = d[key]
     d[key] = false
