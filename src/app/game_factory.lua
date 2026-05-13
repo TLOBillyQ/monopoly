@@ -44,7 +44,16 @@ end
 local function _create_players(opts)
   local players = {}
   local ai_map = opts.ai or {}
+  local auto_map = opts.auto or {}
   local role_roster = opts.role_roster
+
+  local function _resolve_auto(key)
+    local explicit = auto_map[key]
+    if explicit ~= nil then
+      return explicit
+    end
+    return opts.auto_all
+  end
 
   if type(role_roster) == "table" and #role_roster > 0 then
     for i, entry in ipairs(role_roster) do
@@ -60,7 +69,7 @@ local function _create_players(opts)
         name = name,
         role_id = role_id,
         is_ai = is_ai,
-        auto = opts.auto_all,
+        auto = _resolve_auto(role_id),
         start_index = 1,
         constants = constants,
         balances = {
@@ -86,7 +95,7 @@ local function _create_players(opts)
       name = name,
       role_id = role.id,
       is_ai = is_ai,
-      auto = opts.auto_all,
+      auto = _resolve_auto(i),
       start_index = 1,
       constants = constants,
       balances = {

@@ -179,6 +179,19 @@ local function _build_startup_ai_map(role_roster)
   return ai
 end
 
+local function _build_startup_auto_map(role_roster)
+  local auto = nil
+  for _, role in ipairs(role_roster or {}) do
+    if role and role.synthetic == true then
+      if auto == nil then
+        auto = {}
+      end
+      auto[role.role_id] = true
+    end
+  end
+  return auto
+end
+
 local function _build_synthetic_player_specs(role_roster)
   local specs = {}
   for _, role in ipairs(role_roster or {}) do
@@ -199,18 +212,32 @@ function M.build_game_factory(state, opts)
   opts = opts or {}
   local build_mode = opts.build_mode
   local profile_name = opts.profile_name
+  local managed = opts.managed == true
   return function()
     local startup = {
       build_mode = build_mode,
       profile_name = profile_name,
+      managed = managed,
     }
     local map_cfg = _resolve_startup_map(startup)
     local role_roster = _build_startup_roster(max_player_count)
-    local forced_ai = _build_startup_ai_map(role_roster)
-    logger.info("[Eggy]", "使用四槽角色驱动初始化，角色数量:", tostring(#role_roster))
+    local forced_ai = nil
+    local forced_auto = nil
+    if managed then
+      forced_auto = _build_startup_auto_map(role_roster)
+    else
+      forced_ai = _build_startup_ai_map(role_roster)
+    end
+    logger.info(
+      "[Eggy]",
+      "使用四槽角色驱动初始化，角色数量:",
+      tostring(#role_roster),
+      "managed=" .. tostring(managed)
+    )
     local created_game = composition_root.new_game(default_ports.resolve_game_opts({
       role_roster = role_roster,
       ai = forced_ai,
+      auto = forced_auto,
       auto_all = false,
       map = map_cfg,
       tiles = tiles_cfg,
