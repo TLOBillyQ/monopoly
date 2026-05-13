@@ -38,10 +38,12 @@ function runtime_ports.resolve_role(player_id)
   return resolver(player_id)
 end
 
+local _empty_roles = {}
+
 function runtime_ports.resolve_roles()
   local resolver = _resolve_port("resolve_roles")
   if type(resolver) ~= "function" then
-    return {}
+    return _empty_roles
   end
   return resolver()
 end

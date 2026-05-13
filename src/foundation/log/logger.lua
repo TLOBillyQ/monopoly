@@ -113,11 +113,13 @@ function logger.info(...)
   log_formatter.push(logger, "info", nil, ...)
 end
 
+local _info_unlimited_opts = { unlimited = true }
+
 function logger.info_unlimited(...)
   if not logger.enabled then
     return
   end
-  log_formatter.push(logger, "info", { unlimited = true }, ...)
+  log_formatter.push(logger, "info", _info_unlimited_opts, ...)
 end
 
 function logger.warn(...)

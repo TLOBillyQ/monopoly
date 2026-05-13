@@ -2,8 +2,16 @@ local market_cfg = require("src.config.content.market")
 
 local market_catalog = {}
 
-local function _build_entries_by_id()
-  local entries_by_id = {}
+local _entries_by_id
+local _entries_by_id_len
+
+local function _ensure_entries_by_id()
+  local cfg_len = #market_cfg
+  if _entries_by_id and _entries_by_id_len == cfg_len then
+    return _entries_by_id
+  end
+  _entries_by_id_len = cfg_len
+  _entries_by_id = {}
   local first_index_by_id = {}
   for index, entry in ipairs(market_cfg) do
     local product_id = entry and entry.product_id or nil
@@ -20,10 +28,10 @@ local function _build_entries_by_id()
           .. ")"
       )
       first_index_by_id[product_id] = index
-      entries_by_id[product_id] = entry
+      _entries_by_id[product_id] = entry
     end
   end
-  return entries_by_id
+  return _entries_by_id
 end
 
 function market_catalog.entries()
@@ -31,7 +39,7 @@ function market_catalog.entries()
 end
 
 function market_catalog.entry_by_id(product_id)
-  return _build_entries_by_id()[product_id]
+  return _ensure_entries_by_id()[product_id]
 end
 
 return market_catalog

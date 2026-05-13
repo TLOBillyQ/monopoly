@@ -115,15 +115,19 @@ local function _list_entries(state)
   return out
 end
 
+local _stringify_parts = {}
+
 function log_formatter.stringify(start_index, ...)
   local start = start_index or 1
-  local parts = {}
   local out_index = 1
   for i = start, select("#", ...) do
-    parts[out_index] = tostring(select(i, ...))
+    _stringify_parts[out_index] = tostring(select(i, ...))
     out_index = out_index + 1
   end
-  return table.concat(parts, " ")
+  for i = out_index, #_stringify_parts do
+    _stringify_parts[i] = nil
+  end
+  return table.concat(_stringify_parts, " ")
 end
 
 function log_formatter.format_entry(entry)
