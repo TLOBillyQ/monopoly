@@ -4,12 +4,13 @@ local ui_nodes = require("src.ui.render.node_ops")
 local base_nodes = require("src.ui.schema.base")
 local permanent_nodes = require("src.ui.schema.permanent")
 local number_utils = require("src.foundation.lang.number")
+local runtime_refs = require("src.config.content.runtime_refs")
 
 local M = {}
 
 function M.init_ui_assets(state)
   assert(state ~= nil, "missing state")
-  local refs = require("src.config.content.runtime_refs")
+  local refs = runtime_refs
   local image_refs = refs.images or {}
   state.ui_refs = refs
 

@@ -1,6 +1,7 @@
 local availability = require("src.rules.items.availability")
 local item_phase = require("src.rules.items.phase")
 local number_utils = require("src.foundation.lang.number")
+local inventory = require("src.rules.items.inventory")
 
 local copy_table = availability.copy_table
 local normalize_integer_field = availability.normalize_integer_field
@@ -40,7 +41,6 @@ function normalize.consume_if_needed(player, item_id, already_consumed)
   if not item_id or already_consumed == true then
     return
   end
-  local inventory = require("src.rules.items.inventory")
   assert(inventory.consume(player, item_id) == true, "consume committed item failed: " .. tostring(item_id))
 end
 

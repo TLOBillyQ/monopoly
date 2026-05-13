@@ -1,5 +1,6 @@
 local common = require("src.player.actions.state_ops.common")
 local monopoly_event = require("src.foundation.events")
+local item_config = require("src.rules.items.config")
 
 local deity_ops = {}
 
@@ -35,7 +36,6 @@ end
 
 function deity_ops.angel_immune_to_item(self, player, item_id)
   assert(item_id ~= nil, "missing item_id")
-  local item_config = require("src.rules.items.config")
   local cfg = item_config.cfg_by_id[item_id]
   if not (cfg and cfg.angel_immune) then
     return false

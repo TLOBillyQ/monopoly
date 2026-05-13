@@ -4,6 +4,7 @@ local base_nodes = require("src.ui.schema.base")
 local base_contract = require("src.ui.schema.base_contract")
 local ui_touch_policy = require("src.ui.input.touch")
 local host_runtime_ports = require("src.ui.host_bridge")
+local ui_manager_nodes = require("Data.UIManagerNodes")
 
 local bindings = {}
 
@@ -143,8 +144,7 @@ function bindings.enable_action_log_toggle_touch(cache, ui)
 end
 
 function bindings.register_missing_button_tip(cache, registered, listeners)
-  local nodes = require("Data.UIManagerNodes")
-  for _, entry in pairs(nodes) do
+  for _, entry in pairs(ui_manager_nodes) do
     if type(entry) == "table" then
       local name = entry[1]
       local kind = entry[2]

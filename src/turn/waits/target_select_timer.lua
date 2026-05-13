@@ -3,6 +3,7 @@
 local timing = require("src.config.gameplay.timing")
 local DeadlineService = require("src.turn.deadlines.service")
 local NumberUtils = require("src.foundation.lang.number")
+local force_resolve = require("src.turn.deadlines.force_resolve")
 
 local M = {}
 
@@ -33,7 +34,6 @@ function M.step(game, state, dt)
       timeout_seconds = _resolve_target_select_timeout(),
       priority = 80,
       on_timeout = function()
-        local force_resolve = require("src.turn.deadlines.force_resolve")
         local choice = game and game.turn and game.turn.pending_choice or nil
         force_resolve.resolve_target_select(game, state, { choice = choice }, "tick_timeout")
       end,
