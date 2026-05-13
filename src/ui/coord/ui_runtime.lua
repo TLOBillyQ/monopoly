@@ -12,6 +12,15 @@ local item_slots = require("src.ui.coord.item_slots")
 local event_log_view = require("src.ui.coord.event_log_view")
 
 local service = {}
+
+local _render_opts = {
+  runtime = runtime,
+  refresh_item_slots = nil,
+  ui_touch_policy = ui_touch_policy,
+}
+local _input_lock_opts = { runtime = runtime }
+local _role_control_opts = { runtime = runtime }
+
 local turn_label_refresh_context = {
   ui = nil,
   base_nodes = nil,
@@ -24,11 +33,8 @@ service.init_ui_assets = assets.init_ui_assets
 service.capture_player_colors = assets.capture_player_colors
 
 function service.refresh_panel(state_ctx, ui_model)
-  panel_presenter.refresh(state_ctx, ui_model, {
-    runtime = runtime,
-    refresh_item_slots = service.refresh_item_slots,
-    ui_touch_policy = ui_touch_policy,
-  })
+  _render_opts.refresh_item_slots = service.refresh_item_slots
+  panel_presenter.refresh(state_ctx, ui_model, _render_opts)
 end
 
 local function _refresh_turn_label_for_runtime_role(ui, base_nodes, label_text, countdown_visible)
@@ -79,19 +85,16 @@ end
 service.refresh_item_slots = item_slots.refresh_item_slots
 
 function service.apply_input_lock(state_ctx)
-  input_lock_policy.apply(state_ctx, { runtime = runtime })
+  input_lock_policy.apply(state_ctx, _input_lock_opts)
 end
 
 function service.apply_role_control_lock(state_ctx, enabled)
-  role_control_lock_policy.sync(state_ctx, enabled, { runtime = runtime })
+  role_control_lock_policy.sync(state_ctx, enabled, _role_control_opts)
 end
 
 function service.render(state_ctx, ui_model, log_once, build_log_prefix)
-  render_pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, {
-    runtime = runtime,
-    refresh_item_slots = service.refresh_item_slots,
-    ui_touch_policy = ui_touch_policy,
-  })
+  _render_opts.refresh_item_slots = service.refresh_item_slots
+  render_pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, _render_opts)
 end
 
 service.set_event_log = event_log_view.set_event_log

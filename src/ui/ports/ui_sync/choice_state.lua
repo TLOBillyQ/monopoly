@@ -72,6 +72,8 @@ end
 
 choice_ui_state.resolve_route_key = choice_route_policy.resolve
 
+local _cached_gate_state = {}
+
 function choice_ui_state.resolve_gate_state(game, state, choice)
   local route_key = choice_ui_state.resolve_route_key(choice)
   local ui = state and state.ui or nil
@@ -90,15 +92,14 @@ function choice_ui_state.resolve_gate_state(game, state, choice)
     open = ui and ui.choice_active == true and ui.active_choice_screen_key == route_key or false
   end
 
-  return {
-    route_key = route_key,
-    owner_role_id = owner_role_id,
-    local_owner = local_owner,
-    owner_auto = owner_auto,
-    expects_ui = expects_ui,
-    open = open,
-    should_warn = expects_ui and not open,
-  }
+  _cached_gate_state.route_key = route_key
+  _cached_gate_state.owner_role_id = owner_role_id
+  _cached_gate_state.local_owner = local_owner
+  _cached_gate_state.owner_auto = owner_auto
+  _cached_gate_state.expects_ui = expects_ui
+  _cached_gate_state.open = open
+  _cached_gate_state.should_warn = expects_ui and not open
+  return _cached_gate_state
 end
 
 function choice_ui_state.should_reconcile(game, state, choice)

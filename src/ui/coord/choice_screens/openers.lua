@@ -121,19 +121,15 @@ local function _resolve_player_or_remote_options(choice, screen_key)
   return _compact_options(choice.options)
 end
 
+local _screen_openers = {}
+
 function M.open_choice_modal(state, choice, market)
   local screen_key = common.resolve_screen_key(choice)
   if screen_key == "base_inline" or screen_key == "market" then
     return false
   end
 
-  local openers = {
-    player = M.open_player_or_remote_screen,
-    remote = M.open_player_or_remote_screen,
-    secondary_confirm = M.open_secondary_confirm_screen,
-    target = M.open_target_screen,
-  }
-  local open = openers[screen_key]
+  local open = _screen_openers[screen_key]
   if not open then
     logger.warn("unsupported choice screen key:", tostring(screen_key))
     return false
@@ -187,5 +183,10 @@ function M.open_pre_confirm_screen(state, choice, option_id, title, body)
   _set_action_button(ui, screen.cancel, true, true, "")
   modal_state.open_choice(state, choice.id, { option_id }, option_id)
 end
+
+_screen_openers.player = M.open_player_or_remote_screen
+_screen_openers.remote = M.open_player_or_remote_screen
+_screen_openers.secondary_confirm = M.open_secondary_confirm_screen
+_screen_openers.target = M.open_target_screen
 
 return M

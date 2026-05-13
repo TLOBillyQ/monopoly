@@ -67,6 +67,36 @@ local function _release_all(lock_state, buff_id)
   end
 end
 
+local _sync_state, _sync_lock_state, _sync_exempt_by_role, _sync_buff_id, _sync_runtime, _sync_seen_roles
+local _seen_roles = {}
+
+local function _sync_role_callback(role)
+  if not role then
+    runtime_state.log_once(_sync_state, "warn", "role_control_lock:missing_roles", "role_control_lock missing role list")
+    return
+  end
+  local role_id = role_id_utils.normalize(_sync_runtime.resolve_role_id(role) or tostring(role))
+  if role_id == nil then
+    return
+  end
+  _sync_seen_roles[role_id] = true
+
+  local unit = role.get_ctrl_unit and role.get_ctrl_unit() or nil
+  if role_id_utils.read(_sync_exempt_by_role, role_id) == true then
+    _sync_role_lock(_sync_lock_state, role_id, nil, _sync_buff_id)
+    return
+  end
+  if not unit then
+    _sync_role_lock(_sync_lock_state, role_id, nil, _sync_buff_id)
+    return
+  end
+  if not _can_apply(unit) then
+    runtime_state.log_once(_sync_state, "warn", "role_control_lock:missing_buff_api_" .. tostring(role_id), "ctrl_unit missing BuffStateComp:", tostring(role_id))
+    return
+  end
+  _sync_role_lock(_sync_lock_state, role_id, unit, _sync_buff_id)
+end
+
 function lock_policy.sync(state, enabled, deps)
   assert(state ~= nil, "missing state")
   assert(deps ~= nil and deps.runtime ~= nil, "missing deps.runtime")
@@ -84,36 +114,26 @@ function lock_policy.sync(state, enabled, deps)
     return
   end
 
-  local seen_roles = {}
-  runtime.for_each_role_or_global(function(role)
-    if not role then
-      runtime_state.log_once(state, "warn", "role_control_lock:missing_roles", "role_control_lock missing role list")
-      return
-    end
-    local role_id = role_id_utils.normalize(runtime.resolve_role_id(role) or tostring(role))
-    if role_id == nil then
-      return
-    end
-    seen_roles[role_id] = true
+  for k in pairs(_seen_roles) do
+    _seen_roles[k] = nil
+  end
+  _sync_state = state
+  _sync_lock_state = lock_state
+  _sync_exempt_by_role = exempt_by_role
+  _sync_buff_id = buff_id
+  _sync_runtime = runtime
+  _sync_seen_roles = _seen_roles
 
-    local unit = role.get_ctrl_unit and role.get_ctrl_unit() or nil
-    if role_id_utils.read(exempt_by_role, role_id) == true then
-      _sync_role_lock(lock_state, role_id, nil, buff_id)
-      return
-    end
-    if not unit then
-      _sync_role_lock(lock_state, role_id, nil, buff_id)
-      return
-    end
-    if not _can_apply(unit) then
-      runtime_state.log_once(state, "warn", "role_control_lock:missing_buff_api_" .. tostring(role_id), "ctrl_unit missing BuffStateComp:", tostring(role_id))
-      return
-    end
-    _sync_role_lock(lock_state, role_id, unit, buff_id)
-  end)
+  runtime.for_each_role_or_global(_sync_role_callback)
+
+  _sync_state = nil
+  _sync_lock_state = nil
+  _sync_exempt_by_role = nil
+  _sync_buff_id = nil
+  _sync_runtime = nil
 
   for role_id, entry in pairs(lock_state.by_role) do
-    if not seen_roles[role_id] then
+    if not _seen_roles[role_id] then
       if entry and entry.owned and entry.unit then
         _remove_lock(entry.unit, buff_id)
       end

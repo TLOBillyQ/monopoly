@@ -1,6 +1,7 @@
 local canvas_store = require("src.ui.state.canvas_store")
 
 local ui_gate_sync = {}
+local _cached_gate = {}
 
 local function _resolve_ui(state, common)
   return common.get_ui_state(state)
@@ -25,15 +26,14 @@ end
 
 function ui_gate_sync.resolve_ui_gate(state, common)
   local ui = _resolve_ui(state, common)
-  return {
-    input_blocked = _read_flag(ui, "input_blocked"),
-    choice_active = _read_flag(ui, "choice_active"),
-    market_active = _read_flag(ui, "market_active"),
-    popup_active = _read_flag(ui, "popup_active"),
-    popup_seq = _read_value(ui, "popup_seq"),
-    popup_auto_close_seconds = _resolve_popup_auto_close_seconds(ui),
-    popup_owner_index = _read_value(ui, "popup_owner_index"),
-  }
+  _cached_gate.input_blocked = _read_flag(ui, "input_blocked")
+  _cached_gate.choice_active = _read_flag(ui, "choice_active")
+  _cached_gate.market_active = _read_flag(ui, "market_active")
+  _cached_gate.popup_active = _read_flag(ui, "popup_active")
+  _cached_gate.popup_seq = _read_value(ui, "popup_seq")
+  _cached_gate.popup_auto_close_seconds = _resolve_popup_auto_close_seconds(ui)
+  _cached_gate.popup_owner_index = _read_value(ui, "popup_owner_index")
+  return _cached_gate
 end
 
 function ui_gate_sync.is_input_blocked(state, common)

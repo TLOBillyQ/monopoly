@@ -10,22 +10,26 @@ local CAMERA_PROP_OBSERVER_HEIGHT = 11
 local CAMERA_PROP_PITCH = 15
 local CAMERA_PROP_YAW = 16
 
+local _camera_props = {
+  { CAMERA_PROP_DIST, nil },
+  { CAMERA_PROP_OBSERVER_HEIGHT, nil },
+  { CAMERA_PROP_PITCH, nil },
+  { CAMERA_PROP_YAW, nil },
+}
+
 local function _restore_camera_props(state, local_role)
-  local props = {
-    { CAMERA_PROP_DIST, camera_follow.dist },
-    { CAMERA_PROP_OBSERVER_HEIGHT, camera_follow.observer_height },
-    { CAMERA_PROP_PITCH, camera_follow.pitch },
-    { CAMERA_PROP_YAW, camera_follow.yaw },
-  }
+  _camera_props[1][2] = camera_follow.dist
+  _camera_props[2][2] = camera_follow.observer_height
+  _camera_props[3][2] = camera_follow.pitch
+  _camera_props[4][2] = camera_follow.yaw
+  local props = _camera_props
   if type(local_role.set_camera_property) ~= "function" then
     runtime_state.log_once(state, "warn", "camera_sync:set_camera_property_unavailable", "camera_sync", "set_camera_property not available on role")
     return
   end
   for _, entry in ipairs(props) do
     local prop, value = entry[1], entry[2]
-    local ok, err = pcall(function()
-      return local_role.set_camera_property(prop, value)
-    end)
+    local ok, err = pcall(local_role.set_camera_property, prop, value)
     if not ok then
       runtime_state.log_once(state, "warn", "camera_sync:set_camera_property_" .. tostring(prop), "camera_sync", "set_camera_property(" .. tostring(prop) .. ") failed:", tostring(err))
     end
@@ -39,9 +43,7 @@ local function _resolve_unit_position(state, role)
   if type(role.get_ctrl_unit) ~= "function" then
     return nil
   end
-  local ok, unit = pcall(function()
-    return role.get_ctrl_unit()
-  end)
+  local ok, unit = pcall(role.get_ctrl_unit)
   if not ok or unit == nil then
     if not ok then
       runtime_state.log_once(state, "warn", "camera_sync:get_ctrl_unit_failed", "camera_sync", "resolve unit failed:", tostring(unit))
@@ -51,9 +53,7 @@ local function _resolve_unit_position(state, role)
   if type(unit.get_position) ~= "function" then
     return nil
   end
-  local pos_ok, pos = pcall(function()
-    return unit.get_position()
-  end)
+  local pos_ok, pos = pcall(unit.get_position)
   if not pos_ok then
     runtime_state.log_once(state, "warn", "camera_sync:get_position_failed", "camera_sync", "resolve unit position failed:", tostring(pos))
     return nil
@@ -116,9 +116,7 @@ local function _lock_camera_to_target_position(state, local_role, target_pos)
    if type(local_role.set_camera_lock_position) ~= "function" then
      return false
   end
-  local ok, err = pcall(function()
-    return local_role.set_camera_lock_position(target_pos)
-  end)
+  local ok, err = pcall(local_role.set_camera_lock_position, target_pos)
   if not ok then
      runtime_state.log_once(state, "warn", "camera_sync:set_camera_lock_position_failed", "camera_sync", "set_camera_lock_position failed:", tostring(err))
    else
@@ -132,9 +130,7 @@ local function _reset_camera_to_self(state, local_role)
   if type(local_role.reset_camera) ~= "function" then
     return false
   end
-  local ok, err = pcall(function()
-    return local_role.reset_camera(true, true, true, true)
-  end)
+  local ok, err = pcall(local_role.reset_camera, true, true, true, true)
   if not ok then
     runtime_state.log_once(state, "warn", "camera_sync:reset_camera_failed", "camera_sync", "reset_camera failed:", tostring(err))
   end

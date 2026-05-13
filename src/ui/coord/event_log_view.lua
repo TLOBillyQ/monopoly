@@ -28,14 +28,26 @@ function M.set_event_log(state, text)
   ui:set_event_log(text or "")
 end
 
+local _el_ui
+local _el_text
+local function _set_event_log_callback()
+  _el_ui:set_event_log(_el_text)
+end
+
 function M.set_event_log_for_role(state, role, text)
   local ui = _resolve_debug_log_ui(state)
   if ui == nil or role == nil then
     return
   end
-  runtime.with_client_role(role, function()
-    ui:set_event_log(text or "")
-  end)
+  _el_ui = ui
+  _el_text = text or ""
+  runtime.with_client_role(role, _set_event_log_callback)
+end
+
+local _elv_ui
+local _elv_visible
+local function _set_event_log_visible_callback()
+  _elv_ui:set_event_log_visible(_elv_visible)
 end
 
 function M.set_event_log_visible_for_role(state, role, visible)
@@ -48,9 +60,9 @@ function M.set_event_log_visible_for_role(state, role, visible)
     return false
   end
   local resolved = visible == true
-  runtime.with_client_role(role, function()
-    ui:set_event_log_visible(resolved)
-  end)
+  _elv_ui = ui
+  _elv_visible = resolved
+  runtime.with_client_role(role, _set_event_log_visible_callback)
   _ensure_debug_tables(ui)
   role_id_utils.write(ui.debug_visible_by_role, role_id, resolved)
   role_id_utils.write(ui.debug_log_enabled_by_role, role_id, resolved)

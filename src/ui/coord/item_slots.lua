@@ -9,10 +9,19 @@ local choice_support = require("src.ui.view.choice_support")
 
 local M = {}
 
+local _option_id_set = {}
+local _cached_option_choice_ref
+
 local function _build_option_id_set(choice)
-  local out = {}
   if not (choice and type(choice.options) == "table") then
-    return out
+    return _option_id_set
+  end
+  if choice.options == _cached_option_choice_ref then
+    return _option_id_set
+  end
+  _cached_option_choice_ref = choice.options
+  for k in pairs(_option_id_set) do
+    _option_id_set[k] = nil
   end
   for _, option in ipairs(choice.options) do
     local option_id = option
@@ -20,10 +29,10 @@ local function _build_option_id_set(choice)
       option_id = option.id
     end
     if option_id ~= nil then
-      out[tostring(option_id)] = true
+      _option_id_set[tostring(option_id)] = true
     end
   end
-  return out
+  return _option_id_set
 end
 
 local function _set_outline_visible(ui, outline_name, visible)
@@ -38,13 +47,15 @@ local function _set_outline_touch_enabled(ui, outline_name, enabled)
   end
 end
 
+local _empty_event_payload = {}
+
 local function _emit_ui_event(event_name)
   local role = runtime.get_client_role()
   if role then
-    ui_events.send_to_role(role, event_name, {})
+    ui_events.send_to_role(role, event_name, _empty_event_payload)
     return
   end
-  ui_events.send_to_all(event_name, {})
+  ui_events.send_to_all(event_name, _empty_event_payload)
 end
 
 local function _emit_slot_animation(index, event_prefix)
@@ -55,22 +66,24 @@ local function _emit_global_reset_animation()
   _emit_ui_event("重置高亮")
 end
 
+local _sig_parts = {}
+
 local function _build_pickable_signature(slot_pickable)
-  local out = {}
+  local n = 0
   for index, can_pick in ipairs(slot_pickable) do
     if can_pick then
-      out[#out + 1] = tostring(index)
+      n = n + 1
+      _sig_parts[n] = tostring(index)
     end
   end
-  return table.concat(out, ",")
+  for i = n + 1, #_sig_parts do
+    _sig_parts[i] = nil
+  end
+  return table.concat(_sig_parts, ",")
 end
 
 local function _resolve_gate_key(choice_id, role_id, display_player_id)
-  return table.concat({
-    tostring(choice_id or "none"),
-    tostring(role_id or "global"),
-    tostring(display_player_id or "none"),
-  }, "|")
+  return tostring(choice_id or "none") .. "|" .. tostring(role_id or "global") .. "|" .. tostring(display_player_id or "none")
 end
 
 local function _ensure_gate_store(state)
@@ -117,27 +130,46 @@ local function _allow_slot_click(choice, opts, ui_model, display_player_id)
   return role_id_utils.equals(owner_id, display_player_id)
 end
 
+local _empty_items_fallback = {}
+
 local function _resolve_item_slot_items(ui_model, display_player_id)
-  local by_player = ui_model.item_slots_by_player_id or ui_model.item_slots_by_player or {}
-  return role_id_utils.read(by_player, display_player_id) or ui_model.item_slots or {}
+  local by_player = ui_model.item_slots_by_player_id or ui_model.item_slots_by_player or _empty_items_fallback
+  return role_id_utils.read(by_player, display_player_id) or ui_model.item_slots or _empty_items_fallback
 end
 
-local function _new_refresh_context(ui, state, ui_model, opts, choice, display_player_id, image_refs)
-  return {
-    ui = ui,
-    slots = ui.item_slots,
-    outlines = ui.card_outlines or {},
-    item_ids = {},
-    role_id = role_id_utils.normalize(opts.role_id),
-    display_player_id = display_player_id,
-    items = _resolve_item_slot_items(ui_model, display_player_id),
-    choice = choice,
-    allow_slot_click = _allow_slot_click(choice, opts, ui_model, display_player_id),
-    option_id_set = _build_option_id_set(choice),
-    empty_key = image_refs["Empty"],
-    choice_id = choice and choice.id or nil,
-    suppress_flag = state._suppress_item_slot_highlight_until_pick == true,
-  }
+local _cached_ctx = {}
+local _empty_outlines = {}
+local _item_ids_pool = {}
+local _nil_role_key = {}
+
+local function _pool_item_ids(role_id)
+  local key = role_id ~= nil and role_id or _nil_role_key
+  local ids = _item_ids_pool[key]
+  if ids == nil then
+    ids = {}
+    _item_ids_pool[key] = ids
+  else
+    for k in pairs(ids) do ids[k] = nil end
+  end
+  return ids
+end
+
+local function _fill_refresh_context(ui, state, ui_model, opts, choice, display_player_id, image_refs)
+  local role_id = role_id_utils.normalize(opts.role_id)
+  _cached_ctx.ui = ui
+  _cached_ctx.slots = ui.item_slots
+  _cached_ctx.outlines = ui.card_outlines or _empty_outlines
+  _cached_ctx.item_ids = _pool_item_ids(role_id)
+  _cached_ctx.role_id = role_id
+  _cached_ctx.display_player_id = display_player_id
+  _cached_ctx.items = _resolve_item_slot_items(ui_model, display_player_id)
+  _cached_ctx.choice = choice
+  _cached_ctx.allow_slot_click = _allow_slot_click(choice, opts, ui_model, display_player_id)
+  _cached_ctx.option_id_set = _build_option_id_set(choice)
+  _cached_ctx.empty_key = image_refs["Empty"]
+  _cached_ctx.choice_id = choice and choice.id or nil
+  _cached_ctx.suppress_flag = state._suppress_item_slot_highlight_until_pick == true
+  return _cached_ctx
 end
 
 local function _build_refresh_context(state, ui_model, opts)
@@ -148,11 +180,16 @@ local function _build_refresh_context(state, ui_model, opts)
   local refs = state.ui_refs or {}
   local image_refs = refs.images or {}
   local display_player_id = role_id_utils.normalize(opts.display_player_id or ui_model.current_player_id)
-  return _new_refresh_context(ui, state, ui_model, opts, choice, display_player_id, image_refs)
+  return _fill_refresh_context(ui, state, ui_model, opts, choice, display_player_id, image_refs)
 end
 
+local _slot_pickable = {}
+
 local function _sync_slot_images(ctx)
-  local slot_pickable = {}
+  for i = 1, #_slot_pickable do
+    _slot_pickable[i] = nil
+  end
+  local slot_pickable = _slot_pickable
   local choice_slot_states = ctx.choice and ctx.choice.slot_states or nil
   for index, slot_name in ipairs(ctx.slots) do
     local slot_state = choice_slot_states and choice_slot_states[index] or nil
