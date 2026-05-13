@@ -1,0 +1,27 @@
+# Project Rules — Monopoly (蛋仔派对大富翁)
+
+## Identity
+
+- Lua 5.5 mini-game running on the Eggy (蛋仔派对) host runtime.
+- Clean Architecture, **seven layers + a `foundation/` cross-cutting layer**. Boundaries and physical mapping live in `docs/architecture/boundaries.md` and `docs/architecture/layer-model.md`. Decisions D1–D7 in `docs/decisions/0001-seven-layer-with-foundation.md`.
+- Default branch is `main`, not `master`. The `swarmforge.conf` keyword `master` here means "the architect runs in the main working directory on whatever branch is currently checked out" — do **not** rename `main` to `master`.
+
+## Hard Rules
+
+- Naming: files and identifiers `snake_case`; class-like tables `CamelCase`.
+- **Inside `src/`**, never call `tonumber` or compare `type(x) == "number"`. Use `NumberUtils` from `src.foundation.lang.number`. See `.agents/conventions/coding.md`.
+- Eggy `Fixed` parameters take floats — write `30.0`, not `30`. See `.agents/conventions/eggy-types.md`.
+- Do not edit anything under `docs/reference/eggy/` (third-party host docs) or `docs/product/design-source/` (xlsx/docx originals).
+- `docs/reports/` is generated; never hand-edit. Reports older than 30 days are advisory, not contract.
+
+## Layout (do not invent new top-level dirs)
+
+- `src/` — production code, organized by the seven layers + `foundation/`.
+- `spec/` — tests, split into the `behavior` / `contract` / `guards` / `tooling` / `regression` profiles defined in `.busted`.
+- `tools/` — quality and refactor tooling.
+- `docs/` — architecture / decisions / guides / reports / reference / product. Front-matter is required (`kind` / `status` / `owner` / `last_verified`).
+- `.agents/` — agent-only conventions and skills.
+
+## When in doubt
+
+Read the matching row in `.agents/README.md` and follow that document. Do not predict the codebase from this prompt — read the actual files.

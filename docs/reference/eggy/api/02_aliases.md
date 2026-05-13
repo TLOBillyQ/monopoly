@@ -1,0 +1,81 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
+# 类型别名
+
+Fixed number
+AbilityAnchorID string 技能锚点ID
+AbilityKey integer 技能编号
+AbilitySlot integer 技能槽位
+AbilityStyleKey integer 技能控件样式编号
+Achievement integer 自定义成就
+AnimKey integer 动画编号
+AnimationStyleKey integer 动效样式编号
+Archive integer 自定义存档
+BagSlotStyleKey integer 物品格样式编号
+BattleShopKey integer 商店
+BtnStyleKey integer 按钮样式编号
+CampID integer 阵营ID
+CharacterKey LifeEntityKey 角色编号
+ChessType integer 麻将/扑克花色
+Color integer 颜色
+CreatureKey LifeEntityKey 生物编号
+CustomTriggerSpaceID UnitID 触发区域ID
+CustomTriggerSpaceKey UnitKey 触发区域编号
+DamageSchema integer 伤害方案
+DecorationKey UnitKey 装饰物编号
+DynamicTextID integer 动态文字ID
+E3DLayer string 场景UI实例
+E3DLayerKey integer 场景UI预设
+EAnimationState integer UI动画状态
+EBagSlot ENode UI物品槽位节点
+EButton ENode UI按钮节点
+EEffectNode ENode UI动效节点
+EImage ENode UI图片节点
+EInputField ENode UI输入节点
+ELabel ENode UI文本节点
+ENode string UI节点
+ENodeTouchEventType integer 界面交互事件类型
+EProgressbar ENode UI进度条节点
+EmojiKey integer 气泡表情编号
+EquipmentID UnitID 物品ID
+EquipmentKey integer 物品编号
+EquipmentSlot integer 物品槽位
+FontKey integer 字体key
+ImageKey integer 图片编号
+InputStyleKey integer 输入框样式编号
+InteractBtnID integer 交互按钮编号
+JointAssistantType integer 关节类型
+LabelStyleKey integer 文本样式编号
+LevelKey string 关卡编号
+LifeEntityKey UnitKey 生命体编号
+ModifierKey integer 效果编号
+MontageKey string 剧情动画编号
+ObstacleID UnitID 组件ID
+ObstacleKey UnitKey 组件编号
+PaintArea integer 染色区域
+PathID UnitID 路径ID
+PathPointID UnitID 路点ID
+ProgressBarStyleKey integer 条形进度条样式编号
+ProgressTimerStyleKey integer 环形进度条样式编号
+RoleID integer 玩家ID
+SfxID integer 特效ID
+SfxKey integer 特效编号
+SheetID integer 表格
+Skeleton string 骨骼
+SkyBoxBackground integer 天空盒背景
+SoundID integer 音效ID
+SoundKey integer 音效编号
+Timestamp integer 时间戳
+TriggerSpaceKey UnitKey 逻辑体编号
+UIPreset string UIPreset
+UgcCommodity integer 道具
+UgcGoods string 商品
+UnitGroupKey UnitKey 组件组编号
+UnitID integer 单位ID
+UnitKey integer 单位编号
+VehicleKey UnitKey 单位编号(载具)
+CommodityInfo {[1]: UgcCommodity, [2]: integer}  {商品项目ID, 道具数量}

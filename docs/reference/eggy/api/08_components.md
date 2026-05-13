@@ -1,0 +1,215 @@
+---
+kind: reference
+status: stable
+owner: eggy-vendor
+last_verified: 2026-05-04
+---
+## AbilityComp
+
+AbilityComp|add_ability_to_slot|_ability_index, _ability_id, _kv_args, _kv_types
+AbilityComp|add_prop_ability|_ability_id, _kv_args, _kv_types
+AbilityComp|break_ability_accumulate
+AbilityComp|cast_ability_by_ability_slot_and_direction|_direction, _ability_slot, _duration
+AbilityComp|cast_ability_by_ability_slot_and_position|_position, _ability_slot, _duration
+AbilityComp|cast_ability_by_ability_slot_and_target|_target, _ability_slot, _duration
+AbilityComp|cast_ability_by_direction|_ability_key, _duration, _direction, _ability_slot
+AbilityComp|cast_ability_by_position|_ability_key, _duration, _position, _ability_slot
+AbilityComp|cast_ability_by_target|_ability_key, _duration, _target, _ability_slot
+AbilityComp|destroy_ability|_ability
+AbilityComp|get_abilities
+AbilityComp|get_ability_by_slot|_ability_slot
+AbilityComp|get_ability_list
+AbilityComp|get_prop_ability
+AbilityComp|interrupt_ability
+AbilityComp|remove_ability|_ability_slot
+AbilityComp|remove_ability_by_key|_ability_key
+AbilityComp|remove_prop_ability
+AbilityComp|reset_ability_cd|_ability_index
+AbilityComp|set_ability_enabled_on_vehicle|_enable
+AbilityComp|set_ability_to_slot|_ability, _ability_index
+
+## AttrComp
+
+AttrComp|change_attr_bonus_fixed|_key, _value
+AttrComp|change_attr_ratio_fixed|_key, _value
+AttrComp|change_attr_raw_fixed|_key, _value
+AttrComp|get_attr_base_extra_fixed|_key
+AttrComp|get_attr_bonus_fixed|_key
+AttrComp|get_attr_by_type|_value_type, _key
+AttrComp|get_attr_ratio_fixed|_key
+AttrComp|get_attr_raw_fixed|_key
+AttrComp|set_attr_bonus_fixed|_key, _value
+AttrComp|set_attr_by_type|_value_type, _key, _val
+AttrComp|set_attr_ratio_fixed|_key, _value
+AttrComp|set_attr_raw_fixed|_key, _value
+
+## BuffStateComp
+
+BuffStateComp|add_state|_state_id
+BuffStateComp|clear_state|_state_id
+BuffStateComp|get_state_count|_state_id
+BuffStateComp|get_state_list
+BuffStateComp|remove_state|_state_id
+
+## CharacterComp
+
+CharacterComp|get_character_creature_jump_speed_ratio
+CharacterComp|get_scale_ratio
+CharacterComp|is_forced_moving
+CharacterComp|set_character_creature_jump_speed_ratio|_jump_speed_ratio
+CharacterComp|start_forced_move|_vel, _duration, _enable_phy
+CharacterComp|stop_forced_move
+
+## DisplayComp
+
+DisplayComp|add_banned_anim|_anim_name
+DisplayComp|bind_model|_model_id, _socket, _offset, _rot, _scale
+DisplayComp|bind_model_by_unit|_unit, _socket, _offset, _rot
+DisplayComp|clear_banned_anim
+DisplayComp|force_play_animation_by_anim_key|_anim_key, _start_time, _play_time, _play_rate, _is_loop
+DisplayComp|play_body_anim_by_id|_anim_id, _start_time, _play_time, _is_loop
+DisplayComp|play_upper_anim_by_id|_anim_id, _start_time, _play_time, _is_loop
+DisplayComp|remove_banned_anim|_anim_name
+DisplayComp|set_anim_rate|_anim_rate
+DisplayComp|stop_anim
+DisplayComp|stop_play_body_anim
+DisplayComp|stop_play_body_anim_by_id|_anim_id
+DisplayComp|stop_play_upper_anim
+DisplayComp|stop_play_upper_anim_by_id|_anim_id
+DisplayComp|unbind_model|_bind_id
+
+## EquipmentComp
+
+EquipmentComp|clear_selected_equipment_slot
+EquipmentComp|consume_equipment|_equipment_key, _consume_num
+EquipmentComp|create_equipment_to_slot|_key, _slot_type
+EquipmentComp|get_equipment_by_slot|_slot_type, _slot_index
+EquipmentComp|get_equipment_list|_equipment_key, _exclude_equipped, _exclude_bag
+EquipmentComp|get_equipment_list_by_slot_type|_slot_type
+EquipmentComp|get_equipment_max_count|_slot_type
+EquipmentComp|get_selected_equipment
+EquipmentComp|select_equipment_slot|_slot_type, _slot_index
+EquipmentComp|set_equipment_max_count|_slot_type, _slot_num
+
+## ExprDeviceComp
+
+ExprDeviceComp|disable_expr_device_by_name|_name
+ExprDeviceComp|enable_expr_device_by_name|_name
+
+## JointAssistantComp
+
+JointAssistantComp|get_joint_assistant_primary_obstacle
+JointAssistantComp|get_joint_assistant_target_obstacle
+JointAssistantComp|get_joint_assistant_type
+JointAssistantComp|set_joint_assistant_enabled|_enable
+JointAssistantComp|set_joint_assistant_property|_property_type, _value
+JointAssistantComp|set_joint_assistant_visible|_visible
+
+## JumpComp
+
+JumpComp|get_multi_jump_cooldown
+JumpComp|get_multi_jump_count
+JumpComp|get_multi_jump_remaining_cooldown
+JumpComp|get_multi_jump_remaining_count
+JumpComp|is_on_ground
+JumpComp|set_multi_jump_cooldown|_cd
+JumpComp|set_multi_jump_count|_count
+JumpComp|set_multi_jump_remaining_cooldown|_cd
+JumpComp|set_multi_jump_remaining_count|_count
+
+## LevelComp
+
+LevelComp|gain_exp|_killed_exp
+LevelComp|get_exp
+LevelComp|get_killed_exp
+LevelComp|get_level
+LevelComp|level_up
+LevelComp|set_killed_exp|_killed_exp
+
+## LifeComp
+
+LifeComp|can_reborn
+LifeComp|change_hp|_value
+LifeComp|die|_dmg_unit
+LifeComp|get_hp
+LifeComp|get_hp_max
+LifeComp|get_life
+LifeComp|get_life_max
+LifeComp|is_die_status
+LifeComp|is_infinite_reborn
+LifeComp|reborn|_immediate
+LifeComp|set_auto_reborn_enabled|_auto_reborn
+LifeComp|set_hp_max|_value
+LifeComp|set_infinite_reborn_enabled|_enable_reborn
+LifeComp|set_life_count|_value
+LifeComp|set_life_max|_value
+LifeComp|set_reborn_in_place|_reborn_in_place, _reset_camera
+LifeComp|set_reborn_time|_reborn_time
+
+## LiftComp
+
+LiftComp|get_lift_cooldown
+LiftComp|get_lift_remaining_cooldown
+LiftComp|is_lift_status
+LiftComp|lift_unit|_unit
+LiftComp|set_lift_cooldown|_cd_time
+LiftComp|set_lift_remaining_cooldown|_time
+
+## LiftedComp
+
+LiftedComp|is_lifted_enabled
+LiftedComp|is_lifted_status
+LiftedComp|set_custom_thrown_force|_force
+LiftedComp|set_custom_thrown_force_enabled|_enable
+LiftedComp|set_lifted_enabled|_enable
+
+## ModifierComp
+
+ModifierComp|add_modifier|_modifier_id
+ModifierComp|add_modifier_by_key|_modifier_id, _params_dict
+ModifierComp|destroy_modifier|_modifier
+ModifierComp|get_modifier_by_modifier_key|_modifier_id
+ModifierComp|get_modifiers
+ModifierComp|has_modifier_by_key|_modifier_key
+ModifierComp|remove_modifier_by_key|_modifier_id
+
+## MoveStatusComp
+
+MoveStatusComp|is_fling_status
+MoveStatusComp|is_lost_control_status
+MoveStatusComp|start_face_lock_target|_target_unit, _time
+MoveStatusComp|stop_face_lock_target
+
+## OwnerComp
+
+OwnerComp|change_owner|_role
+OwnerComp|get_owner_role
+
+## RollComp
+
+RollComp|get_roll_cooldown
+RollComp|get_roll_remaining_cooldown
+RollComp|set_roll_cooldown|_time
+RollComp|set_roll_remaining_cooldown|_remaining_time
+
+## RushComp
+
+RushComp|get_rush_cooldown
+RushComp|get_rush_remaining_cooldown
+RushComp|set_rush_cooldown|_time
+RushComp|set_rush_remaining_cooldown|_time
+
+## UnitInteractVolumeComp
+
+UnitInteractVolumeComp|get_interact_id|_interact_index, _interact_btn_type
+UnitInteractVolumeComp|set_interact_button_icon|_interact_id, _icon
+UnitInteractVolumeComp|set_interact_button_text|_interact_id, _text
+UnitInteractVolumeComp|set_interact_button_text_by_index|_interact_index, _text
+UnitInteractVolumeComp|set_interact_enabled|_enable
+UnitInteractVolumeComp|set_interact_enabled_by_index|_interact_index, _enable
+
+## VehicleComp
+
+VehicleComp|reset
+VehicleComp|start_move_by_direction|_direction, _duration
+VehicleComp|stop_move

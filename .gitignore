@@ -1,0 +1,73 @@
+# Lua compiled files
+*.luac
+*.mutate4lua
+*.arch_view
+
+# LÖVE build artifacts
+*.love
+bin/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+.VSCodeCounter/
+
+# Temporary files
+/tmp/
+.loc/
+*.tmp
+*.bak
+.venv/
+.opencode
+.sysyphus
+
+# Claude Code local overrides (may contain MCP tokens)
+.claude/settings.local.json
+
+# Local worktrees
+/.claude/worktrees/
+
+# Spec migration baseline (temporary, deleted at Step 7)
+/tools/refactor/baseline/
+
+# Logs
+*.log
+__pycache__/
+.tmp_designation_full.js
+.tmp_designation_lean.js
+.tmp_designation.html
+
+# Node.js
+node_modules/
+
+# Analysis artifacts
+scripts/analysis/loc_trend.png
+scripts/analysis/loc_data.json
+/tools/quality/arch/viewer/
+/tools/quality/scrap/viewer/
+/tools/loc_engine/monopoly-loc.exe
+/tools/loc_engine/cmd/monopoly-loc/monopoly-loc.exe
+.sisyphus
+.worktrees/
+
+# swarm-forge runtime (state, helper scripts, agent context, message logs)
+.swarmforge/
+swarmtools/
+agent_context/
+logs/
+
+# Test artifacts (busted)
+/junit-output.xml
+/luacov.stats.out
+/luacov.report.out
+/contract
+.agents/plan.md
+.agents/research.md
+.deepseek

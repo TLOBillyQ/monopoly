@@ -1,0 +1,44 @@
+require "vendor.third_party.ClassUtils"
+local player = Class("Player")
+local tables = require("src.foundation.lang.tables")
+
+function player:init(attrs)
+  assert(attrs ~= nil, "Player.new(attrs) requires attrs")
+  local constants = attrs.constants
+  assert(constants ~= nil, "Player.new(attrs) requires attrs.constants")
+
+  local balances = attrs.balances
+  assert(balances ~= nil, "Player.new(attrs) requires attrs.balances")
+  for currency, amount in pairs(balances) do
+    local key = tables.normalize_currency(currency)
+    balances[key] = amount
+  end
+
+  local cash = balances["金币"]
+  assert(cash ~= nil, "balances missing 金币")
+  balances["金币"] = nil
+
+  self.id = attrs.id
+  assert(attrs.name ~= nil, "Player.new(attrs) requires attrs.name")
+  self.name = attrs.name
+  self.role_id = attrs.role_id
+  self.is_ai = attrs.is_ai
+  self.auto = attrs.auto
+  self.cash = cash
+  self.position = attrs.start_index
+  self.deity_duration_turns = attrs.deity_duration_turns
+  self.status = {
+    stay_turns = 0,
+    own_turn_started_count = 0,
+    deity = { type = "", remaining = 0 },
+    pending_remote_dice = nil,
+    pending_dice_multiplier = 1,
+    pending_free_rent = false,
+    pending_tax_free = false,
+  }
+  self.inventory = attrs.inventory
+  self.properties = {}
+  self.eliminated = false
+end
+
+return player

@@ -1,0 +1,297 @@
+{
+  "abstract_rules": [
+    {
+      "match": [
+        "^src%.foundation%.ports%..+"
+      ],
+      "name": "foundation_ports"
+    },
+    {
+      "match": [
+        "^src%.rules%.ports%..+"
+      ],
+      "name": "rules_ports"
+    }
+  ],
+  "component_rules": [
+    {
+      "_governance": {
+        "governance_anchor": "docs/decisions/0001-seven-layer-with-foundation.md#d7",
+        "retain_reason": "host.global_aliases is the explicit cross-layer seam to Eggy host runtime aliases",
+        "review_cadence": "per-milestone"
+      },
+      "component": "host",
+      "match": [
+        "^src%.host%.global_aliases$"
+      ],
+      "name": "host_bridge_exception"
+    },
+    {
+      "_governance": {
+        "governance_anchor": "docs/decisions/0001-seven-layer-with-foundation.md#d7",
+        "retain_reason": "config runtime refs/constants bridge to Eggy host runtime; classify as host for arch parity",
+        "review_cadence": "per-milestone"
+      },
+      "component": "host",
+      "match": [
+        "^src%.config%.content%.runtime_refs$",
+        "^src%.config%.gameplay%.runtime_constants$"
+      ],
+      "name": "infrastructure_runtime_bridges"
+    },
+    {
+      "component": "app",
+      "match": [
+        "^src%.entry$",
+        "^src%.entry%..+",
+        "^src%.app$",
+        "^src%.app%..+"
+      ],
+      "name": "app"
+    },
+    {
+      "component": "host",
+      "match": [
+        "^src%.host$",
+        "^src%.host%..+"
+      ],
+      "name": "host"
+    },
+    {
+      "component": "ui",
+      "match": [
+        "^src%.ui$",
+        "^src%.ui%..+"
+      ],
+      "name": "ui"
+    },
+    {
+      "component": "turn",
+      "match": [
+        "^src%.turn$",
+        "^src%.turn%..+"
+      ],
+      "name": "turn"
+    },
+    {
+      "component": "player",
+      "match": [
+        "^src%.player$",
+        "^src%.player%..+"
+      ],
+      "name": "player"
+    },
+    {
+      "component": "computer",
+      "match": [
+        "^src%.computer$",
+        "^src%.computer%..+"
+      ],
+      "name": "computer"
+    },
+    {
+      "component": "rules",
+      "match": [
+        "^src%.rules$",
+        "^src%.rules%..+"
+      ],
+      "name": "rules"
+    },
+    {
+      "component": "state",
+      "match": [
+        "^src%.state$",
+        "^src%.state%..+"
+      ],
+      "name": "state"
+    },
+    {
+      "component": "config",
+      "match": [
+        "^src%.config$",
+        "^src%.config%..+"
+      ],
+      "name": "config"
+    },
+    {
+      "component": "foundation",
+      "match": [
+        "^src%.foundation$",
+        "^src%.foundation%..+"
+      ],
+      "name": "foundation"
+    }
+  ],
+  "forbidden_dependency_rules": [
+    {
+      "description": "ui must not depend on player modules directly",
+      "from": [
+        "^src%.ui%..+"
+      ],
+      "name": "ui_no_player",
+      "to": [
+        "^src%.player%..+"
+      ]
+    },
+    {
+      "description": "ui must not depend on computer modules directly",
+      "from": [
+        "^src%.ui%..+"
+      ],
+      "name": "ui_no_computer",
+      "to": [
+        "^src%.computer%..+"
+      ]
+    },
+    {
+      "description": "ui must not depend on rules modules directly",
+      "from": [
+        "^src%.ui%..+"
+      ],
+      "name": "ui_no_rules",
+      "to": [
+        "^src%.rules%..+"
+      ]
+    },
+    {
+      "description": "turn must not depend on ui modules directly",
+      "from": [
+        "^src%.turn%..+"
+      ],
+      "name": "turn_no_ui",
+      "to": [
+        "^src%.ui%..+"
+      ]
+    },
+    {
+      "description": "player must not depend on turn modules directly",
+      "from": [
+        "^src%.player%..+"
+      ],
+      "name": "player_no_turn",
+      "to": [
+        "^src%.turn%..+"
+      ]
+    },
+    {
+      "description": "player must not depend on ui modules directly",
+      "from": [
+        "^src%.player%..+"
+      ],
+      "name": "player_no_ui",
+      "to": [
+        "^src%.ui%..+"
+      ]
+    },
+    {
+      "description": "player must not depend on host or app modules directly",
+      "from": [
+        "^src%.player%..+"
+      ],
+      "name": "player_no_host_app",
+      "to": [
+        "^src%.host%..+",
+        "^src%.app%..+"
+      ]
+    },
+    {
+      "description": "computer must not depend on turn modules directly",
+      "from": [
+        "^src%.computer%..+"
+      ],
+      "name": "computer_no_turn",
+      "to": [
+        "^src%.turn%..+"
+      ]
+    },
+    {
+      "description": "computer must not depend on ui modules directly",
+      "from": [
+        "^src%.computer%..+"
+      ],
+      "name": "computer_no_ui",
+      "to": [
+        "^src%.ui%..+"
+      ]
+    },
+    {
+      "description": "computer must not depend on host or app modules directly",
+      "from": [
+        "^src%.computer%..+"
+      ],
+      "name": "computer_no_host_app",
+      "to": [
+        "^src%.host%..+",
+        "^src%.app%..+"
+      ]
+    },
+    {
+      "description": "rules must stay inner and not depend on turn/ui/computer/host/app",
+      "from": [
+        "^src%.rules%..+"
+      ],
+      "name": "rules_no_outer",
+      "to": [
+        "^src%.turn%..+",
+        "^src%.ui%..+",
+        "^src%.computer%..+",
+        "^src%.host%..+",
+        "^src%.app%..+"
+      ]
+    },
+    {
+      "description": "L7 + foundation (state/config/foundation) must not depend on any upper layer (player/computer/rules/turn/ui/host/app)",
+      "from": [
+        "^src%.state%..+",
+        "^src%.config%..+",
+        "^src%.foundation%..+"
+      ],
+      "name": "foundation_no_upper",
+      "to": [
+        "^src%.player%..+",
+        "^src%.computer%..+",
+        "^src%.rules%..+",
+        "^src%.turn%..+",
+        "^src%.ui%..+",
+        "^src%.host%..+",
+        "^src%.app%..+"
+      ]
+    },
+    {
+      "description": "host must not depend on ui, turn, player, or computer modules",
+      "from": [
+        "^src%.host%..+"
+      ],
+      "name": "host_no_gameplay_chain",
+      "to": [
+        "^src%.ui%..+",
+        "^src%.turn%..+",
+        "^src%.player%..+",
+        "^src%.computer%..+"
+      ]
+    },
+    {
+      "description": "ui schema must stay pure and only depend on inner modules / shared seams",
+      "from": [
+        "^src%.ui%.schema%..+"
+      ],
+      "name": "ui_schema_pure",
+      "to": [
+        "^src%.ui%.input%..+",
+        "^src%.ui%.coord%..+",
+        "^src%.ui%.view%..+",
+        "^src%.ui%.render%..+",
+        "^src%.ui%.state%..+",
+        "^src%.turn%..+",
+        "^src%.player%..+",
+        "^src%.computer%..+",
+        "^src%.rules%..+",
+        "^src%.host%..+",
+        "^src%.app%..+"
+      ]
+    }
+  ],
+  "source_roots": [
+    "src"
+  ]
+}

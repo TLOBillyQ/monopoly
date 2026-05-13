@@ -1,0 +1,142 @@
+local item_ids = require("src.config.gameplay.item_ids")
+local timing = require("src.config.gameplay.timing")
+local action_anim_port = require("src.foundation.ports.action_anim")
+local angel_feedback = require("src.rules.items.angel_feedback")
+
+local mine_effect = {}
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
+
+local function _build_obstacle_chain_key(game, player, position)
+  local turn = game and game.turn or nil
+  local turn_count = turn and turn.turn_count or 0
+  return tostring(turn_count) .. ":" .. tostring(player.id) .. ":" .. tostring(position)
+end
+
+local function _is_matching_roadblock_trigger(entry, player, position)
+  return entry
+    and entry.kind == "roadblock_trigger"
+    and entry.player_id == player.id
+    and entry.tile_index == position
+end
+
+local function _find_pending_roadblock_trigger(game, player, position)
+  if not (game and game.turn) then
+    return nil
+  end
+  local current = game.turn.action_anim
+  if _is_matching_roadblock_trigger(current, player, position) then
+    return current
+  end
+  local queue = game.turn.action_anim_queue
+  if type(queue) ~= "table" then
+    return nil
+  end
+  for _, entry in ipairs(queue) do
+    if _is_matching_roadblock_trigger(entry, player, position) then
+      return entry
+    end
+  end
+  return nil
+end
+
+local function _build_chain_tip_text(game, player, position)
+  local tile = game and game.board and game.board.get_tile and game.board:get_tile(position) or nil
+  local tile_name = tile and tile.name or tostring(position)
+  return player.name .. " 在 " .. tile_name .. "踩中地雷"
+end
+
+function mine_effect.can_trigger(game, player, position)
+  local board = game and game.board or nil
+  if not (board and position and board:has_mine(position)) then
+    return false
+  end
+
+  local mine = board:get_mine(position)
+  if type(mine) ~= "table" then
+    return true
+  end
+  if mine.armed == false then
+    return false
+  end
+
+  if player and mine.owner_id == player.id then
+    local own_turn_started_count = player.status and player.status.own_turn_started_count or 0
+    local placement_turn_count = mine.owner_turn_started_count_at_placement
+    if placement_turn_count ~= nil then
+      return own_turn_started_count > placement_turn_count + 1
+    end
+  end
+  return true
+end
+
+function mine_effect.apply(game, player, position)
+  assert(game ~= nil, "missing game")
+  assert(game.board, "missing board")
+  assert(player ~= nil, "missing player")
+  assert(position ~= nil, "missing position")
+
+  if game:angel_immune_to_item(player, item_ids.mine) then
+    angel_feedback.publish(game, player, "地雷", { tile_index = position })
+    game:clear_mine(position)
+    return { detonated = true, protected = true }
+  end
+
+  game:clear_mine(position)
+  local from_index = position
+  local roadblock_trigger = _find_pending_roadblock_trigger(game, player, position)
+  local chain_key = nil
+  local focus_text = nil
+  local tip_policy = nil
+  local dedupe_key = nil
+  local tip_source = nil
+  if roadblock_trigger ~= nil then
+    chain_key = _build_obstacle_chain_key(game, player, position)
+    focus_text = _build_chain_tip_text(game, player, position)
+    tip_policy = "user"
+    dedupe_key = "obstacle_chain:" .. chain_key
+    tip_source = "obstacle_chain"
+  end
+  local hospital_index = game:player_relocate(player, {
+    tile_type = "hospital",
+    move_dir_mode = "clear",
+  })
+  game:set_player_status(player, "pending_location_effect", "hospital")
+  action_anim_port.queue(game, {
+    kind = "mine_trigger",
+    player_id = player.id,
+    tile_index = position,
+    from_index = from_index,
+    to_index = hospital_index,
+    duration = action_anim_duration,
+    cue_name = "mine_blast",
+    chain_key = chain_key,
+    focus_text = focus_text,
+    tip_policy = tip_policy,
+    dedupe_key = dedupe_key,
+    tip_source = tip_source,
+  })
+  return {
+    detonated = true,
+    hospitalized = true,
+    new_position = hospital_index,
+    wait_action_anim = true,
+    next_state = "move_followup",
+    next_args = {
+      mode = "apply_location_effects",
+      log_entries = {
+        player.name .. "触发地雷",
+      },
+      effects = {
+        { player_id = player.id, effect = "hospital" },
+      },
+      next_state = "end_turn",
+      next_args = { player = player },
+    },
+  }
+end
+
+mine_effect._M_test = {
+  _find_pending_roadblock_trigger = _find_pending_roadblock_trigger,
+}
+
+return mine_effect

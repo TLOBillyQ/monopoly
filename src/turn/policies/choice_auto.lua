@@ -1,0 +1,136 @@
+local number_utils = require("src.foundation.lang.number")
+local choice_contract = require("src.config.choice.contract")
+local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
+local auto_play_port = require("src.rules.ports.auto_play")
+
+local choice_auto_policy = {}
+
+local function _resolve_choice_owner(game, choice)
+  local owner_role_id = choice_contract.resolve_owner_role_id(choice)
+  if owner_role_id ~= nil and game and game.find_player_by_id then
+    local player = game:find_player_by_id(owner_role_id)
+    if player then
+      return player
+    end
+  end
+  if game and game.current_player then
+    return game:current_player()
+  end
+  return nil
+end
+
+local function _pick_first_choice_option(choice)
+  local options = choice and choice.options or nil
+  if type(options) ~= "table" then
+    return nil
+  end
+  local first = options[1]
+  if first == nil then
+    return nil
+  end
+  return first.id or first
+end
+
+local function _build_auto_or_fallback_action(game, choice, allow_first_option_fallback)
+  if item_preconsume_policy.is_preconsumed(choice) then
+    local option_id = item_preconsume_policy.first_option_id(choice)
+    if option_id == nil then
+      return nil
+    end
+    return {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = option_id,
+    }
+  end
+  local auto_action = auto_play_port.auto_action_for_choice(game, choice)
+  if auto_action then
+    return auto_action
+  end
+  if not allow_first_option_fallback then
+    return nil
+  end
+  local option_id = _pick_first_choice_option(choice)
+  if option_id == nil then
+    return nil
+  end
+  return {
+    type = "choice_select",
+    choice_id = choice.id,
+    option_id = option_id,
+  }
+end
+
+local function _normalize_visible_seconds(value)
+  if not number_utils.is_numeric(value) or value < 0 then
+    return 0
+  end
+  return value
+end
+
+local function _can_auto_actor_choose(is_auto_actor, min_visible, elapsed)
+  if not is_auto_actor then
+    return false
+  end
+  return min_visible <= 0 or elapsed >= min_visible
+end
+
+local function _resolve_auto_actor_flag(game, choice, ctx)
+  local is_auto_actor = ctx.is_auto_actor
+  if is_auto_actor == nil then
+    local actor = _resolve_choice_owner(game, choice)
+    is_auto_actor = actor and auto_play_port.is_auto_player(game, actor) or false
+  end
+  return is_auto_actor == true
+end
+
+local function _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, elapsed)
+  if mode == "wait_choice" then
+    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
+      return nil
+    end
+    return _build_auto_or_fallback_action(game, choice, false)
+  end
+  if mode == "tick_min_visible" then
+    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
+      return nil
+    end
+    return _build_auto_or_fallback_action(game, choice, true)
+  end
+  if mode == "tick_timeout" then
+    if choice.allow_cancel == true then
+      return { type = "choice_cancel", choice_id = choice.id }
+    end
+    local fallback = _build_auto_or_fallback_action(game, choice, true)
+    if fallback ~= nil then
+      return fallback
+    end
+    return { type = "choice_force_skip", choice_id = choice.id }
+  end
+  return nil
+end
+
+choice_auto_policy.resolve_choice_owner = _resolve_choice_owner
+
+function choice_auto_policy.decide(game, _state, choice, ctx)
+  if not (choice and choice.id) then
+    return nil
+  end
+  ctx = ctx or {}
+  if ctx.pending_action then
+    return ctx.pending_action
+  end
+
+  local mode = ctx.mode or "wait_choice"
+  local is_auto_actor = _resolve_auto_actor_flag(game, choice, ctx)
+  local min_visible = _normalize_visible_seconds(ctx.min_visible_seconds)
+  local elapsed = _normalize_visible_seconds(ctx.elapsed_seconds)
+
+  local result = _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, elapsed)
+  if result ~= nil then
+    return result
+  end
+  return _build_auto_or_fallback_action(game, choice, ctx.allow_first_option_fallback == true)
+end
+
+return choice_auto_policy
