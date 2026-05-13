@@ -40,13 +40,13 @@ local function _resolve_choice_actor_role_id(env)
   return env and (env.current_player_id or env.current_player_index) or nil
 end
 
+local _choice_ctx = { mode = "wait_choice" }
+
 local function _resolve_choice_action(env)
   if not (env and env.pending_choice and env.game) then
     return nil
   end
-  local action = choice_auto_policy.decide(env.game, env.state, env.pending_choice, {
-    mode = "wait_choice",
-  })
+  local action = choice_auto_policy.decide(env.game, env.state, env.pending_choice, _choice_ctx)
   if action and action.actor_role_id == nil then
     action.actor_role_id = _resolve_choice_actor_role_id(env)
   end
@@ -119,19 +119,23 @@ local function _reset_timer_state(self)
   self.waiting_for_interval = false
 end
 
+local _modal_button_action = { type = "modal_button", index = 1 }
+local _modal_confirm_action = { type = "modal_confirm" }
+local _next_button_action = { type = "ui_button", id = "next", actor_role_id = nil }
+
 local function _resolve_modal_action(env)
   if not env.modal_active then
     return nil
   end
   if env.modal_buttons and #env.modal_buttons > 0 then
-    return { type = "modal_button", index = 1 }
+    return _modal_button_action
   end
-  return { type = "modal_confirm" }
+  return _modal_confirm_action
 end
 
 local function _resolve_next_button_action(env)
-  local actor_role_id = env.current_player_id or env.current_player_index
-  return { type = "ui_button", id = "next", actor_role_id = actor_role_id }
+  _next_button_action.actor_role_id = env.current_player_id or env.current_player_index
+  return _next_button_action
 end
 
 function auto_runner:next_action(dt, env)

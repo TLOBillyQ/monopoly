@@ -8,16 +8,25 @@ local function _opt_field(obj, field)
   return obj and obj[field] or nil
 end
 
+local _cached_ui_gate = {
+  input_blocked = false,
+  choice_active = false,
+  market_active = false,
+  popup_active = false,
+  popup_seq = nil,
+  popup_auto_close_seconds = nil,
+  popup_owner_index = nil,
+}
+
 local function _build_ui_gate(ui, popup)
-  return {
-    input_blocked = _bool_field(ui, "input_blocked"),
-    choice_active = _bool_field(ui, "choice_active"),
-    market_active = _bool_field(ui, "market_active"),
-    popup_active = _bool_field(ui, "popup_active"),
-    popup_seq = _opt_field(ui, "popup_seq"),
-    popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
-    popup_owner_index = _opt_field(ui, "popup_owner_index"),
-  }
+  _cached_ui_gate.input_blocked = _bool_field(ui, "input_blocked")
+  _cached_ui_gate.choice_active = _bool_field(ui, "choice_active")
+  _cached_ui_gate.market_active = _bool_field(ui, "market_active")
+  _cached_ui_gate.popup_active = _bool_field(ui, "popup_active")
+  _cached_ui_gate.popup_seq = _opt_field(ui, "popup_seq")
+  _cached_ui_gate.popup_auto_close_seconds = popup and popup.auto_close_seconds or nil
+  _cached_ui_gate.popup_owner_index = _opt_field(ui, "popup_owner_index")
+  return _cached_ui_gate
 end
 
 local function _resolve_ui_gate_from_state(state)
@@ -119,9 +128,10 @@ local function _apply_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports, specs)
   end
 end
 
+local _ui_sync_specs = _build_ui_sync_specs()
+
 function M.fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
-  local specs = _build_ui_sync_specs()
-  _apply_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports, specs)
+  _apply_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports, _ui_sync_specs)
 end
 
 return M

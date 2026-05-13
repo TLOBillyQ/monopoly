@@ -92,15 +92,16 @@ local function _build_session(opts)
     self:clear_pending_action()
   end
 
+  local _snapshot = { wait_state = nil, current_state = nil, pending_choice_id = nil, choice_elapsed_seconds = 0 }
+
   function s:snapshot()
     local turn = self.game and self.game.turn or nil
     local pending_choice = turn and turn.pending_choice or nil
-    return {
-      wait_state = self.wait_state,
-      current_state = self.current_state,
-      pending_choice_id = pending_choice and pending_choice.id or nil,
-      choice_elapsed_seconds = self.choice_elapsed_seconds or 0,
-    }
+    _snapshot.wait_state = self.wait_state
+    _snapshot.current_state = self.current_state
+    _snapshot.pending_choice_id = pending_choice and pending_choice.id or nil
+    _snapshot.choice_elapsed_seconds = self.choice_elapsed_seconds or 0
+    return _snapshot
   end
 
   return s

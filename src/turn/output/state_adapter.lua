@@ -23,11 +23,10 @@ state_adapter.sync_ui_model = runtime_state.set_ui_model
 state_adapter.get_ui_model = runtime_state.get_ui_model
 state_adapter.sync_pending_choice = runtime_state.set_pending_choice
 
+local _clear_choice_opts = { choice_id = nil, elapsed_seconds = 0 }
+
 function state_adapter.clear_pending_choice(state)
-  return state_adapter.sync_pending_choice(state, nil, {
-    choice_id = nil,
-    elapsed_seconds = 0,
-  })
+  return state_adapter.sync_pending_choice(state, nil, _clear_choice_opts)
 end
 
 state_adapter.get_pending_choice = runtime_state.get_pending_choice

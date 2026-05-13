@@ -78,13 +78,17 @@ local function _resolve_ports(state)
   state.gameplay_loop_ports = resolved
   return resolved
 end
+local _dispatch_opts = { on_close_choice = nil }
+local _cached_modal_ports_ref = nil
 local function _dispatch_action_with_close_choice(game, state, action, ports)
   local modal_ports = ports.modal
-  turn_dispatch.dispatch_action(game, state, action, {
-    on_close_choice = function(ctx)
+  if _cached_modal_ports_ref ~= modal_ports then
+    _cached_modal_ports_ref = modal_ports
+    _dispatch_opts.on_close_choice = function(ctx)
       modal_ports.close_choice_modal(ctx)
-    end,
-  })
+    end
+  end
+  turn_dispatch.dispatch_action(game, state, action, _dispatch_opts)
 end
 local function _build_item_index(state)
   local ui_runtime = runtime_state.ensure_ui_runtime(state)
@@ -280,16 +284,18 @@ function gameplay_loop.step_auto_runner(game, state, dt, context)
   end
   return auto_action
 end
+local _tick_deps = {
+  step_auto_runner = nil,
+  dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
+}
 function gameplay_loop.tick(game, state, dt)
   if not game then
     return
   end
   _ensure_runtime_ports(game)
   local ports = _resolve_ports(state)
-  tick_flow.tick(game, state, dt, ports, {
-    step_auto_runner = gameplay_loop.step_auto_runner,
-    dispatch_action_with_close_choice = _dispatch_action_with_close_choice,
-  })
+  _tick_deps.step_auto_runner = gameplay_loop.step_auto_runner
+  tick_flow.tick(game, state, dt, ports, _tick_deps)
 end
 gameplay_loop._log_missing_auto_choice_action = _log_missing_auto_choice_action
 gameplay_loop._M_test = {

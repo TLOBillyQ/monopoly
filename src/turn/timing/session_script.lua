@@ -61,9 +61,12 @@ local function _set_current_state(session, state_name, state_args)
   session.current_args = state_args
 end
 
+local _yield_payload = { kind = "wait", wait_state = nil }
+
 local function _yield_wait(session, state_name)
   session.wait_state = state_name
-  coroutine.yield({ kind = "wait", wait_state = state_name })
+  _yield_payload.wait_state = state_name
+  coroutine.yield(_yield_payload)
 end
 
 local function _step_script(session, state_name, state_args)

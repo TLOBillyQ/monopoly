@@ -20,30 +20,39 @@ local function _sync_input_lock(ui_sync_ports, state, input_blocked_changed, ui_
   end
 end
 
+local _move_anim_call_opts = { on_move_anim = nil }
+local _action_anim_call_opts = { on_action_anim = nil }
+local _cached_anim_ports_ref = nil
+
+local function _ensure_anim_callbacks(anim_ports)
+  if _cached_anim_ports_ref == anim_ports then
+    return
+  end
+  _cached_anim_ports_ref = anim_ports
+  _move_anim_call_opts.on_move_anim = function(s, anim_ctx)
+    return anim_ports.play_move_anim(s, anim_ctx)
+  end
+  _action_anim_call_opts.on_action_anim = function(s, anim_ctx)
+    return anim_ports.play_action_anim(s, anim_ctx)
+  end
+end
+
 local function _step_phase_animation(game, state, phase, ports)
   local anim_ports = ports.anim
   if phase == "wait_move_anim" then
-    local anim_data = game.turn.move_anim
-    if not anim_data then
+    if not game.turn.move_anim then
       return
     end
-    turn_anim.step_move_anim(game, state, {
-      on_move_anim = function(_, anim_ctx)
-        return anim_ports.play_move_anim(state, anim_ctx)
-      end,
-    })
+    _ensure_anim_callbacks(anim_ports)
+    turn_anim.step_move_anim(game, state, _move_anim_call_opts)
     return
   end
   if phase == "wait_action_anim" then
-    local anim_data = game.turn.action_anim
-    if not anim_data then
+    if not game.turn.action_anim then
       return
     end
-    turn_anim.step_action_anim(game, state, {
-      on_action_anim = function(ctx, anim_ctx)
-        return anim_ports.play_action_anim(ctx, anim_ctx)
-      end,
-    })
+    _ensure_anim_callbacks(anim_ports)
+    turn_anim.step_action_anim(game, state, _action_anim_call_opts)
   end
 end
 
@@ -53,20 +62,27 @@ function tick_steps.step_tick_timeouts(game, state, dt, ports, dispatch_action_w
   target_select_timer.step(game, state, dt)
   ui_sync_ports.step_choice_timeout(game, state, dt)
   ui_sync_ports.step_modal_timeout(game, state, dt)
-  turn_timer_policy.update_action_button_timer({
-    game = game,
-    state = state,
-    dt = dt,
-    ports = ports,
-    dispatch_next = function(actor_role_id, input_source)
-      dispatch_action_with_close_choice(game, state, {
+  local timer_ctx = state._action_timer_ctx
+  if timer_ctx == nil then
+    timer_ctx = {}
+    state._action_timer_ctx = timer_ctx
+  end
+  timer_ctx.game = game
+  timer_ctx.state = state
+  timer_ctx.dt = dt
+  timer_ctx.ports = ports
+  if timer_ctx._dispatch_ref ~= dispatch_action_with_close_choice then
+    timer_ctx._dispatch_ref = dispatch_action_with_close_choice
+    timer_ctx.dispatch_next = function(actor_role_id, input_source)
+      timer_ctx._dispatch_ref(timer_ctx.game, timer_ctx.state, {
         type = "ui_button",
         id = "next",
         actor_role_id = actor_role_id,
         input_source = input_source,
-      }, ports)
-    end,
-  })
+      }, timer_ctx.ports)
+    end
+  end
+  turn_timer_policy.update_action_button_timer(timer_ctx)
   turn_timer_policy.update_detained_wait_timer(game, state, dt, turn_dispatch.step_turn)
   turn_timer_policy.update_inter_turn_wait_timer(game, state, dt, turn_dispatch.step_turn)
 end

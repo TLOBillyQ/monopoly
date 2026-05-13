@@ -4,6 +4,8 @@ local scheduler = {}
 local SIGNAL_ACTION = "action"
 local SIGNAL_TICK = "tick"
 
+local _step_result = { wait_state = nil, finished = false }
+
 local function _is_action(signal)
   return type(signal) == "table" and signal.type == SIGNAL_ACTION
 end
@@ -64,22 +66,25 @@ function scheduler.step(session, dt)
     if coroutine.status(co) == "dead" then
       session.finished = true
       session.wait_state = nil
-      return { finished = true }
+      _step_result.wait_state = nil
+      _step_result.finished = true
+      return _step_result
     end
     if type(yielded) == "table" and yielded.kind == "wait" then
       session.wait_state = yielded.wait_state
       if #queue == 0 then
-        return { wait_state = yielded.wait_state, finished = false }
+        _step_result.wait_state = yielded.wait_state
+        _step_result.finished = false
+        return _step_result
       end
     else
       session.wait_state = nil
     end
   end
 
-  return {
-    wait_state = session.wait_state,
-    finished = session.finished == true,
-  }
+  _step_result.wait_state = session.wait_state
+  _step_result.finished = session.finished == true
+  return _step_result
 end
 
 return scheduler

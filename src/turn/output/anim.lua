@@ -2,6 +2,24 @@ local turn_anim = {}
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_state = require("src.state.runtime")
 
+local _move_anim_opts = {
+  anim_key = "move_anim",
+  phase = "wait_move_anim",
+  phase_label = "move anim",
+  seq_key = "move_anim_seq",
+  done_action = "move_anim_done",
+  on_anim = nil,
+}
+
+local _action_anim_opts = {
+  anim_key = "action_anim",
+  phase = "wait_action_anim",
+  phase_label = "action anim",
+  seq_key = "action_anim_seq",
+  done_action = "action_anim_done",
+  on_anim = nil,
+}
+
 function turn_anim.step_anim(game, state, opts)
   assert(game ~= nil, "missing game")
   assert(opts ~= nil and opts.on_anim ~= nil, "missing opts.on_anim")
@@ -38,27 +56,15 @@ end
 function turn_anim.step_move_anim(game, state, opts)
   assert(state.wait_move_anim == true, "move anim disabled")
   assert(opts ~= nil and opts.on_move_anim ~= nil, "missing opts.on_move_anim")
-  turn_anim.step_anim(game, state, {
-    anim_key = "move_anim",
-    phase = "wait_move_anim",
-    phase_label = "move anim",
-    seq_key = "move_anim_seq",
-    done_action = "move_anim_done",
-    on_anim = opts.on_move_anim,
-  })
+  _move_anim_opts.on_anim = opts.on_move_anim
+  turn_anim.step_anim(game, state, _move_anim_opts)
 end
 
 function turn_anim.step_action_anim(game, state, opts)
   assert(state.wait_action_anim == true, "action anim disabled")
   assert(opts ~= nil and opts.on_action_anim ~= nil, "missing opts.on_action_anim")
-  turn_anim.step_anim(game, state, {
-    anim_key = "action_anim",
-    phase = "wait_action_anim",
-    phase_label = "action anim",
-    seq_key = "action_anim_seq",
-    done_action = "action_anim_done",
-    on_anim = opts.on_action_anim,
-  })
+  _action_anim_opts.on_anim = opts.on_action_anim
+  turn_anim.step_anim(game, state, _action_anim_opts)
 end
 
 return turn_anim
