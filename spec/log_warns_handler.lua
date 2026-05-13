@@ -1,14 +1,8 @@
---- Busted output handler: TAP format + behavior warn whitelist gate + slow case tracker.
+--- Busted output handler: TAP + warn whitelist + slow tracker + quiet mode.
 ---
---- Delegates display to busted.outputHandlers.TAP. Captures `print` output
---- per test, aggregates `[warn]` lines, tracks per-test wall-clock duration,
---- and emits a suite-end summary listing both warn aggregation and slow tests.
---- Non-whitelisted warns are surfaced as `# WARN ...` diagnostic lines so
---- TAP consumers still see them without breaking ok/not-ok grammar.
----
---- Slow threshold: env `MONO_TEST_SLOW_MS` (default 500). Tests exceeding the
---- threshold are flagged inline as `# SLOW <ms>ms <name>` and appear in the
---- suite-end `# slow summary:` block sorted by duration desc.
+--- Quiet mode (default): suppresses passing `ok N` lines and TAP plan,
+--- emits only failures, diagnostics (# WARN / # SLOW), and a one-line
+--- result summary. Set MONO_TEST_VERBOSE=1 for full TAP output.
 ---
 --- Whitelist source: docs/reports/behavior_warns_data.lua
 
@@ -68,6 +62,18 @@ end
 
 return function(options)
   local busted = require("busted")
+
+  local _verbose = os.getenv("MONO_TEST_VERBOSE") == "1"
+  local _raw_io_write = io.write
+  if not _verbose then
+    io.write = function(s, ...)
+      if type(s) == "string" then
+        if s:match("^ok %d+") or s:match("^%d+%.%.%d+\n?$") then return end
+      end
+      return _raw_io_write(s, ...)
+    end
+  end
+
   local handler = require("busted.outputHandlers.TAP")(options)
 
   local whitelist = _whitelist_set()
@@ -175,6 +181,18 @@ return function(options)
         io.write(string.format("#   [SLOW %dms] %s\n", math.floor(row.ms + 0.5), row.name))
       end
       io.write(string.format("# total slow tests: %d\n", #slow_cases))
+    end
+    if not _verbose then
+      local n_pass = handler.successes and #handler.successes or 0
+      local n_fail = handler.failures and #handler.failures or 0
+      local n_err  = handler.errors and #handler.errors or 0
+      local total  = n_pass + n_fail + n_err
+      if n_fail + n_err == 0 then
+        _raw_io_write(string.format("# RESULT: %d ok\n", total))
+      else
+        _raw_io_write(string.format("# RESULT: %d ok · %d FAIL · %d error\n", n_pass, n_fail, n_err))
+      end
+      io.write = _raw_io_write
     end
     io.flush()
     return nil, true
