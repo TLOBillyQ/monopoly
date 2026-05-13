@@ -102,7 +102,20 @@ function canvas_store.consume_dirty(state_or_ui)
     return { any = false }
   end
   local dirty = store.dirty
-  store.dirty = { any = false }
+  local spare = store._dirty_spare
+  if spare ~= nil then
+    spare.any = false
+    spare.permanent = nil
+    spare.base = nil
+    spare.board = nil
+    spare.choice = nil
+    spare.effects = nil
+    spare.market = nil
+  else
+    spare = { any = false }
+  end
+  store.dirty = spare
+  store._dirty_spare = dirty
   return dirty
 end
 

@@ -176,12 +176,13 @@ function runtime_state.set_follow_target_position(state, player_id, position, op
   if next_seq ~= nil and last_seq ~= nil and next_seq < last_seq then
     return false
   end
-  local new_entry = {
-    position = position,
-    source = opts.source,
-    seq = next_seq ~= nil and next_seq or (entry and entry.seq),
-  }
-  board_runtime.follow_targets[player_id] = new_entry
+  if entry == nil then
+    entry = {}
+    board_runtime.follow_targets[player_id] = entry
+  end
+  entry.position = position
+  entry.source = opts.source
+  entry.seq = next_seq ~= nil and next_seq or entry.seq
   return true
 end
 

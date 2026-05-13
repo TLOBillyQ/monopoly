@@ -65,14 +65,24 @@ function dirty_tracker.reset(d)
   return d
 end
 
+local _consume_snapshot = {}
+
 function dirty_tracker.consume(d)
-  local snapshot = {}
+  local prev_inv = _consume_snapshot.inventory_ids
   for _, key in ipairs(_dirty_keys) do
-    snapshot[key] = d[key]
+    _consume_snapshot[key] = d[key]
+    d[key] = false
   end
-  snapshot.inventory_ids = d.inventory_ids
-  dirty_tracker.reset(d)
-  return snapshot
+  _consume_snapshot.inventory_ids = d.inventory_ids
+  if type(prev_inv) == "table" then
+    for k in pairs(prev_inv) do
+      prev_inv[k] = nil
+    end
+    d.inventory_ids = prev_inv
+  else
+    d.inventory_ids = {}
+  end
+  return _consume_snapshot
 end
 
 return dirty_tracker
