@@ -2,7 +2,7 @@
 kind: report
 status: generated
 owner: quality
-last_verified: 2026-05-08
+last_verified: 2026-05-14
 ---
 # Behavior 回归中的 warn 与慢测判读
 
@@ -11,20 +11,62 @@ last_verified: 2026-05-08
 1. `busted --run behavior` 打出来的哪些 `warn` 是预期内的测试噪音。
 2. 哪些 `warn` / 慢测信号值得继续追。
 
-> 基线日期：2026-05-08（Asia/Hong_Kong）。这里记录的是当前仓库已知、可解释的输出；如果 behavior lane 出现本文档没列到的新 warn，默认按“可疑”处理。
+> 基线日期：2026-05-14（Asia/Hong_Kong）。这里记录的是当前仓库已知、可解释的输出；如果 behavior lane 出现本文档没列到的新 warn，默认按”可疑”处理。
+>
+> **匹配机制**：`spec/log_warns_handler.lua` 会先去掉日志时间与 `[warn]` 前缀，再做前缀匹配。白名单条目只需覆盖共同前缀。单源真值在 `docs/reports/behavior_warns_data.lua`。
 
 ## 预期 warn 清单
 
-| warn 片段 | 含义 | 真实日志点 | 代表性覆盖 | 默认处理 |
-|----------|------|------------|------------|----------|
-| `[MarketDebug] apply_navigation rejected: invalid owner_role_id` | 黑市翻页/切页收到无 owner 的 pending choice，导航被拒绝 | `src/rules/market/choice/session.lua` | `spec/behavior/presentation/presentation_ui_model_dispatch_spec.lua` 中 market navigation reject 路径 | 预期内；只有数量异常增多才追 |
-| `[MarketDebug] apply_navigation rejected: player not found` | 黑市 pending choice 的 owner 找不到玩家实例，导航被拒绝 | `src/rules/market/choice/session.lua` | 同上，导航失败分支 | 预期内；负路径保护日志 |
-| `[MarketDebug] apply_navigation rejected: build returned nil` | 黑市导航重建 choice 失败 | `src/rules/market/choice/session.lua` | 同上，apply/build fail 分支 | 预期内；用于确保失败时不偷偷落地脏状态 |
-| `market paid purchase blocked:` | 付费购买网关返回失败 / 不可用，购买被拒绝 | `src/rules/market/purchase/core.lua` | `spec/behavior/gameplay/choices/purchase_spec.lua` 中 `gateway_down` 分支 | 预期内；这是付费失败语义的一部分 |
-| `choice action missing actor_role_id:` | choice 动作缺少 actor，上下文不完整，被校验器拒绝 | `src/turn/actions/validator.lua` | `spec/behavior/gameplay/turn_flow/phase_transitions_spec.lua` 中 no-actor reject 路径 | 预期内；属于 actor 校验护栏 |
-| `choice action blocked by actor check:` | 非 owner actor 试图提交 choice，被校验器拒绝 | `src/turn/actions/validator.lua` | `spec/behavior/presentation/presentation_ui_model_dispatch_spec.lua` 中 non-owner `choice_select` reject 路径 | 预期内；权限保护日志 |
-| `auto runner produced no action for runtime pending choice` | 自动玩家遇到 pending choice，但 auto runner 当前没给出动作 | `src/turn/loop/init.lua` | `spec/behavior/gameplay/turn_flow/phase_transitions_spec.lua` 中 auto pending choice 空转路径 | 预期内；用于暴露自动决策空转，不等于测试失败 |
-| `status3d missing remaining-text node:` | status3d 在测试中未注入 UIManager 时，剩余回合 ELabel 节点查不到，文本同步降级为不写入 | `src/ui/render/status3d/scene.lua` | `spec/behavior/presentation/_presentation_action_status_status3d_spec.lua` 大多数旧用例（不补 UIManager 桩）即触发 | 预期内；优雅降级日志，不影响可见性逻辑 |
+### 测试环境：Eggy 宿主组件 / 运行时桩不可用
+
+| warn 片段 | 含义 | 默认处理 |
+|----------|------|----------|
+| `[Eggy]` | 自动玩家未给出动作、runtime pending choice 空转等 | 预期内 |
+| `[entity_pool]` | 测试环境无法创建 Eggy 单位 | 预期内 |
+| `[tip_output_port] state.show_tip not installed` | 测试未安装 tip presenter，回退到 tip_queue 直发 | 预期内 |
+| `[tip_queue] presenter not registered` | 同上 | 预期内 |
+| `ctrl_unit missing BuffStateComp:` | 测试桩不包含 Eggy BuffState 组件 | 预期内 |
+| `missing Enums.` | 测试环境缺少 Eggy 枚举 | 预期内 |
+| `status3d missing remaining-text node:` | 测试未注入 UIManager，ELabel 节点不可用 | 预期内 |
+| `status3d unit missing create_scene_ui_bind_unit:` | 同上 | 预期内 |
+
+### 测试环境：音效 / 反馈资源不可用
+
+| warn 片段 | 含义 | 默认处理 |
+|----------|------|----------|
+| `board_feedback skip play_3d_sound:` | 测试环境无音效资源 | 预期内 |
+| `board_feedback skip play_sfx_by_key:` | 同上 | 预期内 |
+
+### 测试环境：黑市购买桩
+
+| warn 片段 | 含义 | 默认处理 |
+|----------|------|----------|
+| `[MarketDebug]` | 黑市导航/购买负路径拒绝日志 | 预期内 |
+| `market paid goods mapping missing:` | 测试未配置商品映射 | 预期内 |
+| `market paid purchase blocked:` | 付费网关不可用，购买被拒 | 预期内 |
+
+### 反面测试：故意触发的权限 / 校验拒绝
+
+| warn 片段 | 含义 | 默认处理 |
+|----------|------|----------|
+| `auto intent missing actor_role_id` | 自动 intent 缺 actor | 预期内 |
+| `choice action blocked by actor check:` | 非 owner 提交 choice，校验拒绝 | 预期内 |
+| `choice action mismatch:` | choice ID 不匹配 | 预期内 |
+| `choice action missing actor_role_id:` | choice 缺 actor | 预期内 |
+| `choice action without pending choice:` | 无待决 choice 时提交动作 | 预期内 |
+| `choice route fallback to base_inline:` | 测试用 choice kind 无专用路由 | 预期内 |
+| `invalid choice option:` | 无效选项 ID | 预期内 |
+| `invalid item option:` | 无效道具选项 | 预期内 |
+| `item slot denied by availability:` | 道具不可用时被拒 | 预期内 |
+| `item_slot click ignored:` | 道具槽点击被忽略 | 预期内 |
+| `missing item_id:` | 缺少道具 ID | 预期内 |
+| `remote_select without choice` | 远程选择但无待决 choice | 预期内 |
+| `role->player 映射失败` | 无效 role_id 回退到观战 | 预期内 |
+| `ui intent rejected:` | UI intent 缺 actor 被拒 | 预期内 |
+| `ui_button actor_role_id not mapped:` | 按钮 actor 映射失败 | 预期内 |
+| `ui_button blocked by actor check:` | 按钮权限校验拒绝 | 预期内 |
+| `ui_button missing actor_role_id:` | 按钮缺 actor | 预期内 |
+| `ui_button missing current_role_id:` | 按钮缺 current role | 预期内 |
 
 ## 哪些 warn 算可疑
 

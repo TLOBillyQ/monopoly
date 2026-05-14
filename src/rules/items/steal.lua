@@ -1,12 +1,9 @@
 local event_kinds = require("src.config.gameplay.event_kinds")
 local inventory = require("src.rules.items.inventory")
-local use_skip_choice = require("src.rules.choice.use_skip_choice")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
-local auto_play_port = require("src.rules.ports.auto_play")
-local angel_feedback = require("src.rules.items.angel_feedback")
 
 local steal = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
@@ -59,63 +56,18 @@ function steal.steal_item_at_index(game, player, target, item_idx)
     ok = true,
     stolen = stolen,
     action_anim = queued,
+    item_consumed = true,
   }
 end
 
-function steal.build_prompt_spec(game, player, queue, index)
-  assert(queue ~= nil, "missing queue")
-  local target_id = assert(queue[index], "missing target id")
-  assert(player ~= nil, "missing player")
-  local target = assert(game:find_player_by_id(target_id), "missing target player: " .. tostring(target_id))
-  local choice = use_skip_choice.build(
-    "steal_prompt",
-    "是否使用偷窃卡",
-    { "目标：" .. target.name },
-    { player_id = player.id, target_id = target.id, queue = queue, index = index },
-    { skip = "跳过" }
-  )
-  choice.confirm_title = "偷窃卡"
-  choice.confirm_body = "目标：" .. target.name
-  return choice
-end
-
-function steal.handle_pass_players(game, player, encountered_ids)
-  if #encountered_ids == 0 then
-    return
+function steal.steal_random_item(game, player, target)
+  local count = inventory.count(target)
+  if count == 0 then
+    return _fail_popup(game, player, target)
   end
-  if inventory.find_index(player, item_ids.steal) == nil then
-    return
-  end
-
-  local queue = {}
-  for _, target_id in ipairs(encountered_ids) do
-    local t = assert(game:find_player_by_id(target_id), "missing target player: " .. tostring(target_id))
-    if not t.eliminated then
-      if game:angel_immune_to_item(t, item_ids.steal) then
-        angel_feedback.publish(game, t, "偷窃")
-      else
-        table.insert(queue, t.id)
-      end
-    end
-  end
-  if #queue == 0 then
-    return
-  end
-
-  if auto_play_port.is_auto_player(game, player) then
-    local target = assert(game:find_player_by_id(queue[1]), "missing target player")
-    return steal.steal_item_at_index(game, player, target, 1)
-  end
-
-  local spec = steal.build_prompt_spec(game, player, queue, 1)
-  assert(spec ~= nil, "missing steal prompt spec")
-  return {
-    waiting = true,
-    intent = {
-      kind = "need_choice",
-      choice_spec = spec,
-    },
-  }
+  local rng = assert(game and game.rng, "missing game.rng for steal")
+  assert(type(rng.next_int) == "function", "missing game.rng.next_int for steal")
+  return steal.steal_item_at_index(game, player, target, rng:next_int(1, count))
 end
 
 return steal

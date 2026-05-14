@@ -32,7 +32,7 @@ describe("choices_session", function()
             options = {},
             allow_cancel = true,
             cancel_label = "Cancel",
-            active_tab = "items",
+            active_tab = "item",
             page_index = 1,
             page_count = 2,
             owner_role_id = 2,
@@ -55,10 +55,10 @@ describe("choices_session", function()
           return { id = id, name = "P" .. tostring(id) }
         end,
       }
-      local pending_choice = { kind = "market_buy", owner_role_id = 2, active_tab = "skin", page_index = 3, page_count = 5 }
-      local ok = choice_session.apply_navigation(game, pending_choice, { type = "market_tab_select", tab = "items" })
+      local pending_choice = { kind = "market_buy", owner_role_id = 2, active_tab = "legacy", page_index = 3, page_count = 5 }
+      local ok = choice_session.apply_navigation(game, pending_choice, { type = "market_tab_select", tab = "item" })
       assert(ok == true, "tab select should succeed")
-      assert(pending_choice.active_tab == "items", "should switch active tab")
+      assert(pending_choice.active_tab == "item", "should switch active tab")
       assert(pending_choice.page_index == 1, "tab switch should reset page index")
       assert(game.dirty.turn == true and game.dirty.any == true, "should mark choice dirty")
     end)
@@ -109,7 +109,7 @@ describe("choices_session", function()
           return nil
         end,
       }
-      local pending_choice = { kind = "market_buy", owner_role_id = 2, active_tab = "items", page_index = 2, page_count = 5 }
+      local pending_choice = { kind = "market_buy", owner_role_id = 2, active_tab = "item", page_index = 2, page_count = 5 }
       assert(choice_session.apply_navigation(game, pending_choice, { type = "market_page_prev" }) == true,
         "prev page should rebuild")
       assert(build_calls[1].page_index == 1, "prev page should decrement page index")
@@ -142,7 +142,7 @@ describe("choices_session", function()
             options = { { id = 1 } },
             allow_cancel = true,
             cancel_label = "Cancel",
-            active_tab = "items",
+            active_tab = "item",
             page_index = 2,
             page_count = 4,
             owner_role_id = 7,
@@ -154,7 +154,7 @@ describe("choices_session", function()
         resolve_owner_role_id = function(choice) return choice.owner_role_id end,
       },
     }, function(choice_session)
-      local pending_choice = { kind = "market_buy", owner_role_id = 7, active_tab = "skin", page_index = 1, page_count = 1 }
+      local pending_choice = { kind = "market_buy", owner_role_id = 7, active_tab = "item", page_index = 1, page_count = 1 }
       local game = { dirty = {}, turn = { pending_choice = pending_choice } }
       local ok = choice_session.refresh_after_paid_callback(game, { id = 7, name = "P7" }, { product_id = 2001 })
       assert(ok == true, "refresh_after_paid_callback should rebuild pending choice")
@@ -182,7 +182,7 @@ describe("choices_session", function()
         end,
       },
     }, function(choice_session)
-      local pending_choice = { kind = "market_buy", owner_role_id = 7, active_tab = "skin", page_index = 1, page_count = 1 }
+      local pending_choice = { kind = "market_buy", owner_role_id = 7, active_tab = "item", page_index = 1, page_count = 1 }
       local game = { dirty = {}, turn = { pending_choice = pending_choice } }
       assert(choice_session.refresh_after_paid_callback(game, { id = 8, name = "P8" }, { product_id = 2001 }) == false,
         "other player callback should be ignored")

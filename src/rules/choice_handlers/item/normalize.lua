@@ -1,6 +1,5 @@
 local availability = require("src.rules.items.availability")
 local item_phase = require("src.rules.items.phase")
-local number_utils = require("src.foundation.lang.number")
 local inventory = require("src.rules.items.inventory")
 
 local copy_table = availability.copy_table
@@ -10,18 +9,6 @@ local normalize = {}
 
 normalize.copy_table = copy_table
 normalize.normalize_integer_field = normalize_integer_field
-
-local function _normalize_integer_list(values, field_name, choice_kind)
-  assert(type(values) == "table", tostring(choice_kind) .. " requires table meta." .. tostring(field_name))
-  local normalized = {}
-  for index, value in ipairs(values) do
-    normalized[index] = assert(
-      number_utils.to_integer(value),
-      tostring(choice_kind) .. " requires numeric meta." .. tostring(field_name) .. "[" .. tostring(index) .. "]"
-    )
-  end
-  return normalized
-end
 
 function normalize.choice_action_option_id(choice_kind, action)
   local normalized_action = copy_table(action)
@@ -83,29 +70,6 @@ end
 
 function normalize.validate_item_owner_meta(game, meta, choice_spec)
   normalize.validate_item_player(game, choice_spec.kind, meta)
-end
-
-function normalize.steal_meta(_, meta, choice_spec)
-  local normalized_meta = normalize.owner_meta(choice_spec.kind, meta, choice_spec)
-  normalize_integer_field(normalized_meta, "target_id", choice_spec.kind)
-  return normalized_meta
-end
-
-function normalize.validate_steal_meta(game, meta, choice_spec)
-  normalize.validate_item_player(game, choice_spec.kind, meta)
-  normalize.validate_item_target(game, "target_id", meta)
-end
-
-function normalize.steal_prompt_meta(_, meta, choice_spec)
-  local normalized_meta = normalize.steal_meta(nil, meta, choice_spec)
-  normalized_meta.queue = _normalize_integer_list(normalized_meta.queue, "queue", choice_spec.kind)
-  normalize_integer_field(normalized_meta, "index", choice_spec.kind)
-  return normalized_meta
-end
-
-function normalize.validate_steal_prompt_meta(game, meta, choice_spec)
-  normalize.validate_steal_meta(game, meta, choice_spec)
-  assert(meta.queue[meta.index] ~= nil, tostring(choice_spec.kind) .. " requires meta.queue[meta.index]")
 end
 
 function normalize.item_target_meta(_, meta, choice_spec)

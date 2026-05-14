@@ -527,11 +527,11 @@ describe("chance", function()
         return true
       end },
     }, function()
-      post_effects.apply_post(g, p, item_ids.steal, {})
+      post_effects.apply_post(g, p, item_ids.strong, {})
     end)
 
     assert(#events == 1, "post_effects log type should emit one event")
-    assert(events[1]:find("偷窃"), "post_effects log type should emit steal preparation message")
+    assert(events[1]:find("强征"), "post_effects log type should emit strong card preparation message")
   end)
 
   it("post_effects_apply_place_mine_here_places_mine", function()

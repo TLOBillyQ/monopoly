@@ -54,7 +54,6 @@ function registry:register_defaults()
   self:register(item_ids.remote_dice, handlers.handle_remote_dice)
   self:register(item_ids.roadblock, handlers.handle_roadblock)
   self:register(item_ids.monster, handlers.handle_demolish)
-  self:register(item_ids.missile, handlers.handle_demolish)
 
   for _, id in ipairs(effects.target_item_ids()) do
     self:register(id, function(game, player, item_id, context)

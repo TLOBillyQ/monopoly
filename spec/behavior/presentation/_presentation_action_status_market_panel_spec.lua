@@ -521,7 +521,7 @@ describe("presentation_market_panel", function()
       "choice view should preserve explicit option pre-confirm flag")
     _assert_eq(model.choice and model.choice.owner_role_id, current_player.id,
       "choice view should preserve explicit owner role id")
-    _assert_eq(model.market and model.market.active_tab, "skin", "market payload should prefer explicit active_tab")
+    _assert_eq(model.market and model.market.active_tab, "item", "market payload should normalize retired skin tab")
     _assert_eq(model.market and model.market.page_index, 2, "market payload should prefer explicit page_index")
     _assert_eq(model.market and model.market.page_count, 5, "market payload should prefer explicit page_count")
   end)
@@ -556,7 +556,7 @@ describe("presentation_market_panel", function()
       options = choice.options,
       allow_cancel = true,
       selected_option_id = 2001,
-      active_tab = "skin",
+      active_tab = "item",
       page_index = 1,
       page_count = 1,
     }

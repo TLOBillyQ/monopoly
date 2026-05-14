@@ -819,14 +819,15 @@ describe("item", function()
         _open_choice(g, res.intent.choice_spec)
       end
       local pending = _get_choice(g)
-      assert(pending and pending.kind == "demolish_target", "missile should open choice")
-      res = choice_resolver.resolve(g, pending, { option_id = pending.options[1].id })
+      assert(pending and pending.kind == "item_target_player", "missile should open player target choice")
+      res = choice_resolver.resolve(g, pending, { option_id = g.players[2].id })
     end
     _assert_eq(res.status, "resolved", "missile choice should resolve")
     _assert_eq(_tile_state(g, tile_ref).level, 0, "building destroyed by missile")
     _assert_eq(g.board:has_roadblock(idx), false, "roadblock cleared")
     _assert_eq(g.board:has_mine(idx), false, "mine cleared")
     assert(g.turn.action_anim and g.turn.action_anim.kind == "missile", "missile should queue missile action anim")
+    _assert_eq(#(g.turn.action_anim_queue or {}), 0, "missile should not queue a second target-player anim")
     assert(type(res.after_action_anim) == "table", "missile should expose move followup")
     _assert_eq(
       res.after_action_anim.next_args.log_entries[1],
@@ -1202,6 +1203,71 @@ describe("item", function()
       timing.action_anim_default_seconds or 1.0,
       "target item anim should use default duration"
     )
+  end)
+
+  it("steal_manual_uses_item_target_player_and_random_stolen_item", function()
+    local g = _setup_world_with_anim()
+    local user = g.players[1]
+    local target = g.players[2]
+    user.inventory:add({ id = item_ids.steal })
+    target.inventory:add({ id = item_ids.tax_free })
+    target.inventory:add({ id = item_ids.roadblock })
+
+    local res = executor.use_item(g, user, item_ids.steal, {})
+    assert(type(res) == "table" and res.waiting, "steal should open choice first")
+    local pending = res.intent.choice_spec
+    assert(pending and pending.kind == "item_target_player", "steal should use shared player target choice")
+    _assert_eq(#pending.options, 1, "only players with items should be selectable")
+    _assert_eq(pending.options[1].id, target.id, "target with items should be selectable")
+
+    res = choice_resolver.resolve(g, _open_choice(g, pending), { option_id = target.id })
+    _assert_eq(res.status, "resolved", "steal target choice should resolve")
+    _assert_eq(user.inventory:count(), 1, "stealer should spend steal card and receive one item")
+    _assert_eq(target.inventory:count(), 1, "target should lose one random item")
+    assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "steal should queue target player anim")
+    _assert_eq(#(g.turn.action_anim_queue or {}), 0, "steal should not queue duplicate target-player anim")
+  end)
+
+  it("steal_target_candidates_exclude_empty_and_angel_players", function()
+    local g = support.new_game({
+      map = default_map,
+      players = { "P1", "P2", "P3", "P4" },
+      ai = { [2] = true, [3] = true, [4] = true },
+    })
+    local user = g.players[1]
+    local empty = g.players[2]
+    local protected = g.players[3]
+    local valid = g.players[4]
+    user.inventory:add({ id = item_ids.steal })
+    protected.inventory:add({ id = item_ids.tax_free })
+    valid.inventory:add({ id = item_ids.roadblock })
+    g:set_player_deity(protected, "angel", 3)
+
+    local candidates = g.registries.items:target_candidates(g, user, item_ids.steal)
+    _assert_eq(#candidates, 1, "only valid steal target should remain")
+    _assert_eq(candidates[1].id, valid.id, "candidate should be player with items and no angel")
+    assert(empty.inventory:count() == 0, "empty target setup should be empty")
+  end)
+
+  it("missile_target_candidates_exclude_angel_players", function()
+    local g = support.new_game({
+      map = default_map,
+      players = { "P1", "P2", "P3", "P4" },
+      ai = { [2] = true, [3] = true, [4] = true },
+    })
+    local user = g.players[1]
+    local protected = g.players[2]
+    local valid = g.players[3]
+    user.inventory:add({ id = item_ids.missile })
+    g:set_player_deity(protected, "angel", 3)
+
+    local candidates = g.registries.items:target_candidates(g, user, item_ids.missile)
+    _assert_eq(#candidates, 2, "missile should target unprotected other players")
+    for _, candidate in ipairs(candidates) do
+      assert(candidate.id ~= user.id, "self should not be a missile target")
+      assert(candidate.id ~= protected.id, "angel player should not be a missile target")
+    end
+    assert(valid ~= nil, "valid player setup should exist")
   end)
 
   it("item_target_player_choice_assigns_seat_aligned_slot_layout", function()

@@ -1,4 +1,5 @@
 --- Busted output handler: TAP + warn whitelist + slow tracker + quiet mode.
+-- luacheck: ignore 122
 ---
 --- Quiet mode (default): suppresses passing `ok N` lines and TAP plan,
 --- emits only failures, diagnostics (# WARN / # SLOW), and a one-line
@@ -49,11 +50,9 @@ local function _whitelist_set()
 end
 
 local function _is_whitelisted(line, whitelist)
-  if whitelist[line] then
-    return true
-  end
-  for prefix in pairs(whitelist) do
-    if line:sub(1, #prefix) == prefix then
+  local normalized = tostring(line):match("%[warn%]%s*(.*)") or tostring(line)
+  for pattern in pairs(whitelist) do
+    if normalized:sub(1, #pattern) == pattern then
       return true
     end
   end

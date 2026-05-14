@@ -140,11 +140,6 @@ local function _auto_pre_action_probes(game, player, phase, auto_play)
       end, auto_play)
     end,
     function()
-      return _try_use_item(game, player, item_ids.missile, phase, function()
-        return _has_demolish_target(game, player)
-      end, auto_play)
-    end,
-    function()
       return _try_target_items(game, player, phase, auto_play)
     end,
     function()

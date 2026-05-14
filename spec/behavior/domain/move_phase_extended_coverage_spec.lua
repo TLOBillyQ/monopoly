@@ -49,7 +49,6 @@ describe("domain move phase extended coverage", function()
       steps = 4,
       stopped_on_roadblock = false,
       market_interrupt = false,
-      steal_interrupt = false,
     }
     local restore_movement = _stub("src.rules.movement", {
       move = function(_, _, _, _) player.position = 7; return move_result end,
@@ -80,7 +79,6 @@ describe("domain move phase extended coverage", function()
       steps = 1,
       stopped_on_roadblock = true,
       market_interrupt = true,
-      steal_interrupt = true,
     }
     local restore_movement = _stub("src.rules.movement", {
       move = function() return move_result end,
@@ -90,7 +88,6 @@ describe("domain move phase extended coverage", function()
     restore_movement()
     _assert_eq(game.turn.move_anim.stopped_on_roadblock, true, "roadblock flag forwarded")
     _assert_eq(game.turn.move_anim.market_interrupt, true, "market_interrupt forwarded")
-    _assert_eq(game.turn.move_anim.steal_interrupt, true, "steal_interrupt forwarded")
   end)
 
   it("delegates to move_followup when anim_gate_port disabled", function()
@@ -147,33 +144,6 @@ describe("domain move phase extended coverage", function()
     _assert_eq(captured_opts.direction, "forward", "facing should map to direction")
     _assert_eq(captured_opts.branch_parity, 5, "branch_parity preserved")
     _assert_eq(captured_opts.entered_inner, true, "entered_inner preserved")
-  end)
-
-  it("continue_from_steal also routes through resume path", function()
-    local game = _make_game({ wait_move_anim = false })
-    local player = _make_player()
-    local turn_mgr = { game = game }
-    local captured_total = nil
-    local restore_movement = _stub("src.rules.movement", {
-      move = function(_, _, total, _)
-        captured_total = total
-        return { visited = {}, steps = 0 }
-      end,
-    })
-    local restore_followup = _stub("src.turn.phases.move_followup", { run = function() return "done" end })
-    local _phase_move = require("src.turn.phases.move")
-    _phase_move(turn_mgr, {
-      player = player,
-      raw_total = 6,
-      total = 6,
-      continue_from_steal = true,
-      facing = "back",
-      branch_parity = 1,
-      remaining_steps = 4,
-    })
-    restore_movement()
-    restore_followup()
-    _assert_eq(captured_total, 4, "remaining_steps should override total in steal resume")
   end)
 
   it("default branch uses raw_total and no opt direction", function()

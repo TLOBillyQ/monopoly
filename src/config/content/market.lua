@@ -18,12 +18,6 @@ local market = {
   { order = 17, product_id = 2016, name = "送神卡",    page = "道具商店", kind = "item", currency = "金豆",  price = 50,   limit = 10 },
   { order = 18, product_id = 2011, name = "均富卡",    page = "道具商店", kind = "item", currency = "金豆",  price = 100,  limit = 10 },
   { order = 19, product_id = 2014, name = "查税卡",    page = "道具商店", kind = "item", currency = "金豆",  price = 100,  limit = 10 },
-  { order = 20, product_id = 5001, name = "小猪佩奇",  page = "皮肤商店", kind = "skin", currency = "金豆",  price = 198,  limit = 1  },
-  { order = 21, product_id = 5002, name = "小猪乔治",  page = "皮肤商店", kind = "skin", currency = "金豆",  price = 198,  limit = 1  },
-  { order = 22, product_id = 5003, name = "海绵宝宝",  page = "皮肤商店", kind = "skin", currency = "金豆",  price = 198,  limit = 1  },
-  { order = 23, product_id = 5004, name = "派大星",    page = "皮肤商店", kind = "skin", currency = "金豆",  price = 198,  limit = 1  },
-  { order = 24, product_id = 5005, name = "奶龙",      page = "皮肤商店", kind = "skin", currency = "金豆",  price = 198,  limit = 1  },
-  { order = 25, product_id = 5006, name = "水豚嘟嘟",  page = "皮肤商店", kind = "skin", currency = "金豆",  price = 198,  limit = 1  },
 }
 
 return market

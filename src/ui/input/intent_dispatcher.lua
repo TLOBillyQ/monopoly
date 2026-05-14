@@ -9,7 +9,11 @@ function intent_dispatcher.dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
   local action_port = turn_action_port.resolve(state, opts)
-  if intent_type == "toggle_action_log" and intent_dispatcher.dispatch_view_command(state, intent) then
+  if (intent_type == "toggle_action_log"
+      or intent_type == "open_skin_panel"
+      or intent_type == "open_gallery_panel"
+      or intent_type == "skin_gallery_action")
+      and intent_dispatcher.dispatch_view_command(state, intent) then
     return
   end
   if turn_action_port.should_block(state, intent, action_port) then

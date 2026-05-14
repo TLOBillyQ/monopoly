@@ -288,7 +288,6 @@ local function _extra_cases()
         steps = { "a", "b" },
         stopped_on_roadblock = true,
         market_interrupt = true,
-        steal_interrupt = false,
       }
       local turn_mgr = {
         game = {
@@ -333,7 +332,6 @@ local function _extra_cases()
       assert(anim_data.steps == move_result.steps, "move animation should preserve steps")
       assert(anim_data.stopped_on_roadblock == true, "move animation should preserve roadblock flag")
       assert(anim_data.market_interrupt == true, "move animation should preserve market interrupt flag")
-      assert(anim_data.steal_interrupt == false, "move animation should preserve steal interrupt flag")
       assert(turn_mgr.game.dirty.turn == true and turn_mgr.game.dirty.any == true, "queueing anim should mark game dirty")
     end,
     _test_move_phase_continue_interrupt_passes_direction_and_branch_parity = function()

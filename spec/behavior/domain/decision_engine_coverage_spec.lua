@@ -61,22 +61,10 @@ end
 -- demolish_target uses demolish resolver
 
 
--- missile_target uses demolish resolver (same handler)
-
-
 -- item_target_player: target found
 
 
 -- item_target_player: no target → cancel
-
-
--- steal_item: has option → select it
-
-
--- steal_item: no options → cancel
-
-
--- steal_prompt: always use
 
 
 -- landing_optional_effect: buy_land preferred
@@ -205,17 +193,6 @@ describe("domain decision engine coverage", function()
     _assert_eq(result.option_id, 99, "demolish_target should use pick_demolish_target")
   end)
 
-  it("missile_target uses demolish agent", function()
-    local fn = decision_engine.build(_make_agent_ref({
-      pick_demolish_target = function() return 88 end,
-    }))
-    local game = _make_game(_make_ai_player())
-    local choice = { id = 23, kind = "missile_target", options = {}, meta = {} }
-    local result = fn(game, choice)
-    assert(result ~= nil, "should have result for missile_target")
-    _assert_eq(result.option_id, 88, "missile_target should use pick_demolish_target")
-  end)
-
   it("item_target_player returns target id", function()
     local fn = decision_engine.build(_make_agent_ref({
       pick_target_player = function() return { id = "p3" } end,
@@ -237,34 +214,6 @@ describe("domain decision engine coverage", function()
     local result = fn(game, choice)
     assert(result ~= nil, "should have result for item_target_player cancel")
     _assert_eq(result.type, "choice_cancel", "no target should cancel")
-  end)
-
-  it("steal_item selects first option", function()
-    local fn = decision_engine.build(_make_agent_ref())
-    local game = _make_game(_make_ai_player())
-    local choice = { id = 40, kind = "steal_item", options = { { id = "item_a" } }, meta = {} }
-    local result = fn(game, choice)
-    assert(result ~= nil, "should have result for steal_item with option")
-    _assert_eq(result.option_id, "item_a", "steal_item should select first option")
-    _assert_eq(result.type, "choice_select", "type should be choice_select")
-  end)
-
-  it("steal_item cancels when no options", function()
-    local fn = decision_engine.build(_make_agent_ref())
-    local game = _make_game(_make_ai_player())
-    local choice = { id = 41, kind = "steal_item", options = {}, meta = {} }
-    local result = fn(game, choice)
-    assert(result ~= nil, "should have result for steal_item with no options")
-    _assert_eq(result.type, "choice_cancel", "steal_item with no options should cancel")
-  end)
-
-  it("steal_prompt uses", function()
-    local fn = decision_engine.build(_make_agent_ref())
-    local game = _make_game(_make_ai_player())
-    local choice = { id = 50, kind = "steal_prompt", options = {}, meta = {} }
-    local result = fn(game, choice)
-    assert(result ~= nil, "should have result for steal_prompt")
-    _assert_eq(result.option_id, "use", "steal_prompt should select use")
   end)
 
   it("landing_optional_effect prefers buy_land", function()
@@ -340,12 +289,4 @@ describe("domain decision engine coverage", function()
     _assert_eq(result, nil, "unknown choice kind should return nil")
   end)
 
-  it("first option id handles plain value", function()
-    local fn = decision_engine.build(_make_agent_ref())
-    local game = _make_game(_make_ai_player())
-    local choice = { id = 100, kind = "steal_item", options = { "plain_id" }, meta = {} }
-    local result = fn(game, choice)
-    assert(result ~= nil, "should have result for plain option value")
-    _assert_eq(result.option_id, "plain_id", "plain option values should be used as id")
-  end)
 end)

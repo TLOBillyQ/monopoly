@@ -4,7 +4,6 @@ local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local monopoly_event = require("src.foundation.events")
 local number_utils = require("src.foundation.lang.number")
-local inventory = require("src.rules.items.inventory")
 local angel_feedback = require("src.rules.items.angel_feedback")
 local mine_effect = require("src.rules.effects.mine")
 local action_anim_port = require("src.foundation.ports.action_anim")
@@ -70,7 +69,6 @@ local function _new_move_state(game, player, steps, opts, abs_steps)
     pass_start_at_steps = {},
     stopped_on_roadblock = false,
     market_interrupt = nil,
-    steal_interrupt = nil,
     current = player.position,
     backward = backward,
     entered_inner = opts.entered_inner == true,
@@ -141,31 +139,6 @@ local function _check_roadblock(game, board, current, player)
   return true
 end
 
-local function _check_steal(ctx, encountered_step, step)
-  if ctx.opts.skip_steal_check or #encountered_step == 0 then
-    return nil
-  end
-  local has_steal = inventory.find_index(ctx.player, item_ids.steal)
-  local remaining = ctx.abs_steps - step
-  if not has_steal or remaining <= 0 then
-    return nil
-  end
-  _emit_text(ctx.game, monopoly_event.movement.steal_interrupt, event_kinds.steal, {
-    player = ctx.player,
-    encountered_ids = encountered_step,
-    text = ctx.player.name .. " 经过玩家，触发偷窃中断",
-    prompt_text = _other_action_prompt_text,
-  })
-  return {
-    position = nil,
-    remaining_steps = remaining,
-    facing = ctx.facing,
-    branch_parity = ctx.branch_parity,
-    entered_inner = ctx.entered_inner == true,
-    encountered_ids = encountered_step,
-  }
-end
-
 local function _check_market(ctx, step)
   if ctx.steps <= 0 or ctx.opts.skip_market_check then
     return nil
@@ -197,11 +170,6 @@ local function _resolve_step_interrupt(ctx, encountered_step, step)
     return true
   end
   if mine_effect.can_trigger(ctx.game, ctx.player, ctx.current) then
-    return true
-  end
-  ctx.steal_interrupt = _check_steal(ctx, encountered_step, step)
-  if ctx.steal_interrupt then
-    ctx.steal_interrupt.position = ctx.current
     return true
   end
   ctx.market_interrupt = _check_market(ctx, step)
@@ -301,7 +269,6 @@ local function _build_move_result(ctx, landing_tile)
     landing_tile = landing_tile,
     steps = ctx.steps,
     market_interrupt = ctx.market_interrupt,
-    steal_interrupt = ctx.steal_interrupt,
   }
 end
 

@@ -6,11 +6,9 @@ local tables = require("src.foundation.lang.tables")
 local choice = {}
 local PAGE_SIZE = 10
 local TAB_ITEM = "item"
-local TAB_SKIN = "skin"
-local TABS = { TAB_ITEM, TAB_SKIN }
 
 local function _normalize_tab(tab)
-  if tables.contains(TABS, tab) then
+  if tables.contains({ TAB_ITEM }, tab) then
     return tab
   end
   return TAB_ITEM

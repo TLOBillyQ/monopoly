@@ -82,7 +82,7 @@ describe("landing", function()
     assert(_get_choice(g) == nil, "should not open choice without steal")
   end)
 
-  it("steal_fail_on_ai_owned_tile_still_pays_rent", function()
+  it("passive_steal_removed_on_ai_owned_tile_still_pays_rent", function()
     local g = _new_game({ ai = { [2] = true } })
     local p1 = g.players[1]
     local p2 = g.players[2]
@@ -95,13 +95,8 @@ describe("landing", function()
     local move_result = { encountered_players = { p2.id } }
 
     local res = _resolve_landing(g, p1, tile_ref, move_result)
-    assert(res and res.waiting, "steal should open choice for remote player")
-    local pending = _get_choice(g)
-    _assert_eq(pending.kind, "steal_prompt", "pending choice must be steal_prompt")
-    _resolve_choice_first(g, pending)
-
-    local rent_res = _resolve_landing(g, p1, tile_ref, move_result)
-    assert(not rent_res, "failed steal should fall through to rent without waiting")
+    assert(not res, "passive steal should not open a landing choice")
+    assert(_get_choice(g) == nil, "landing should not open steal prompt")
     assert(p1.cash < before_cash, "rent must be paid after failed steal on AI-owned tile")
   end)
 
@@ -528,7 +523,6 @@ describe("landing", function()
     local move_result = movement.move(g, player, 1, {
       branch_parity = 1,
       skip_market_check = true,
-      skip_steal_check = true,
     })
 
     _assert_eq(move_result.stopped_on_roadblock, true, "roadblock should stop movement on black market")

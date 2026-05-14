@@ -193,42 +193,20 @@ describe("presentation_choice_routes", function()
       _assert_eq(nodes["通用二次确认_取消"].visible, true, "free rent prompt should expose cancel as skip")
 
       modal_presenter.open_choice_modal(state, {
-        id = 9,
-        kind = "steal_prompt",
-        route_key = "secondary_confirm",
-        requires_confirm = true,
-        title = "是否使用偷窃卡",
-        body = "",
-        confirm_title = "偷窃卡",
-        confirm_body = "目标：玩家A",
-        options = {
-          { id = "use", label = "使用" },
-          { id = "skip", label = "跳过" },
-        },
-        allow_cancel = true,
-        cancel_label = "跳过",
-        meta = { player_id = 1, target_id = 11, queue = { 11 }, index = 1 },
-      })
-      _assert_eq(state.ui.active_choice_screen_key, "secondary_confirm", "steal prompt should route to secondary confirm")
-      _assert_eq(nodes["通用二次确认_标题"].text, "偷窃卡", "steal prompt should use explicit confirm title")
-      _assert_eq(nodes["通用二次确认_文本"].text, "目标：玩家A", "steal prompt should use explicit confirm body")
-
-      modal_presenter.open_choice_modal(state, {
         id = 10,
-        kind = "steal_item",
+        kind = "item_target_player",
         route_key = "player",
-        title = "选择要偷的道具",
+        title = "偷窃卡：选择目标玩家",
         body = "",
         options = {
-          { id = 2001, label = "免税卡" },
-          { id = 2010, label = "免费卡" },
+          { id = 2, label = "玩家A" },
         },
         allow_cancel = true,
         cancel_label = "取消",
-        meta = { player_id = 1, target_id = 2 },
+        meta = { player_id = 1, item_id = 2007 },
       })
-      _assert_eq(state.ui.active_choice_screen_key, "player", "steal item should route to player screen")
-      _assert_eq(nodes["玩家选择屏"].visible, true, "steal item should open player screen")
+      _assert_eq(state.ui.active_choice_screen_key, "player", "steal target should route to player screen")
+      _assert_eq(nodes["玩家选择屏"].visible, true, "steal target should open player screen")
 
       modal_presenter.open_choice_modal(state, {
         id = 11,

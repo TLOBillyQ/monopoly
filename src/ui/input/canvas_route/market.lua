@@ -82,14 +82,6 @@ function intents.build_controls(state)
         return { type = "market_tab_select", choice_id = market.choice_id, tab = "item" }
       end,
     },
-    {
-      name = nodes.tab_skin,
-      build_intent = function()
-        local market = _resolve_market(state)
-        if not market then return nil end
-        return { type = "market_tab_select", choice_id = market.choice_id, tab = "skin" }
-      end,
-    },
   }
   return specs
 end

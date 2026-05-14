@@ -22,7 +22,7 @@ end
 
 local function _build_move_opts(args, raw_total)
   local move_opts = { branch_parity = raw_total }
-  if args.continue_from_market or args.continue_from_steal then
+  if args.continue_from_market then
     move_opts.direction = args.facing
     move_opts.branch_parity = args.branch_parity
     move_opts.entered_inner = args.entered_inner
@@ -31,7 +31,7 @@ local function _build_move_opts(args, raw_total)
 end
 
 local function _resolve_move_total(args, raw_total)
-  if args.continue_from_market or args.continue_from_steal then
+  if args.continue_from_market then
     return args.remaining_steps
   end
   return raw_total
@@ -53,7 +53,6 @@ local function _build_move_anim_data(game, player, start_index, move_result)
     steps = move_result.steps,
     stopped_on_roadblock = move_result.stopped_on_roadblock == true,
     market_interrupt = move_result.market_interrupt == true,
-    steal_interrupt = move_result.steal_interrupt == true,
   }
 end
 

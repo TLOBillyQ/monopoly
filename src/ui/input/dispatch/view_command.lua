@@ -59,6 +59,26 @@ local function _handle_popup_confirm(state, modal)
   return true
 end
 
+local function _handle_skin_gallery(state, intent, skin_gallery)
+  if skin_gallery == nil then
+    return false
+  end
+  local intent_type = intent and intent.type
+  if intent_type == "open_skin_panel" then
+    skin_gallery.open_skin(state, intent.actor_role_id)
+    return true
+  end
+  if intent_type == "open_gallery_panel" then
+    skin_gallery.open_gallery(state, intent.actor_role_id)
+    return true
+  end
+  if intent_type == "skin_gallery_action" then
+    skin_gallery.handle_action(state, intent.action, intent.actor_role_id)
+    return true
+  end
+  return false
+end
+
 local function _warn_missing_toggle_channel(actor_role_id)
   local logger = _resolve_loaded("src.foundation.log.logger")
   if logger and type(logger.warn) == "function" then
@@ -109,6 +129,7 @@ local function _fallback_dispatch(state, intent)
   local market = _resolve_loaded("src.ui.coord.market")
   local modal = _resolve_loaded("src.ui.coord.modal")
   local event_log_view = _resolve_loaded("src.ui.coord.event_log_view")
+  local skin_gallery = _resolve_loaded("src.ui.coord.skin_gallery")
   local handlers = {
     market_select = function()
       return _handle_market_select(state, intent, market)
@@ -118,6 +139,15 @@ local function _fallback_dispatch(state, intent)
     end,
     toggle_action_log = function()
       return _handle_toggle_action_log(state, intent, event_log_view)
+    end,
+    open_skin_panel = function()
+      return _handle_skin_gallery(state, intent, skin_gallery)
+    end,
+    open_gallery_panel = function()
+      return _handle_skin_gallery(state, intent, skin_gallery)
+    end,
+    skin_gallery_action = function()
+      return _handle_skin_gallery(state, intent, skin_gallery)
     end,
   }
   local handler = handlers[intent_type]

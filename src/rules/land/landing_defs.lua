@@ -1,5 +1,4 @@
 return {
-  { id = "pass_players", label = "擦肩而过", mandatory = true },
   { id = "mine", label = "地雷", mandatory = true },
   { id = "start_reward", label = "起点奖励", mandatory = true },
   { id = "item_draw_and_give", label = "道具", mandatory = true },

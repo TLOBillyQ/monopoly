@@ -6,7 +6,6 @@ local monopoly_events = {
     passed_start = "mv.passed_start",
     roadblock_hit = "mv.roadblock_hit",
     market_interrupt = "mv.market_interrupt",
-    steal_interrupt = "mv.steal_interrupt",
   },
   land = {
     rent_skipped_mountain = "land.rent_skipped_mountain",

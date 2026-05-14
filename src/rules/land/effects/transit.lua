@@ -3,7 +3,6 @@ local timing = require("src.config.gameplay.timing")
 local constants = require("src.config.content.constants")
 local inventory = require("src.rules.items.inventory")
 local presenter = require("src.rules.land.presenter")
-local steal = require("src.rules.items.steal")
 local event_feed = require("src.rules.ports.event_feed")
 local number_utils = require("src.foundation.lang.number")
 
@@ -12,30 +11,6 @@ local popup_show_seconds = timing.popup_dwell_default_seconds or 1.0
 local M = {}
 
 M.executors = {
-  pass_players = {
-    can_apply = function(ctx)
-      local enc = ctx.move_result and ctx.move_result.encountered_players
-      return enc and #enc > 0
-    end,
-    apply = function(ctx)
-      local encountered = ctx.move_result.encountered_players
-      local ids = {}
-      for _, p in ipairs(encountered) do
-        if type(p) == "table" then
-          table.insert(ids, p.id)
-        else
-          table.insert(ids, p)
-        end
-      end
-      local result = steal.handle_pass_players(ctx.game, ctx.player, ids)
-      if result and result.waiting then
-        ctx.move_result.encountered_players = {}
-        result.next_state = "landing"
-        result.next_args = { player = ctx.player, move_result = ctx.move_result }
-      end
-      return result
-    end,
-  },
   start_reward = {
     can_apply = function(ctx)
       return ctx.tile and ctx.tile.type == "start" and ctx.on_landing

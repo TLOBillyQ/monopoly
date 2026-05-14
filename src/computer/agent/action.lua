@@ -71,6 +71,24 @@ function action_selector.pick_target_player(game, player, item_id, options)
   if item_id == item_ids.exile or item_id == item_ids.tax or item_id == item_ids.poor then
     return _richest_other(game, player, allowed)
   end
+  if item_id == item_ids.steal then
+    for _, p in ipairs(game.players) do
+      if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then
+        if p.inventory and p.inventory:count() > 0 then
+          return p
+        end
+      end
+    end
+    return nil
+  end
+  if item_id == item_ids.missile then
+    for _, p in ipairs(game.players) do
+      if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then
+        return p
+      end
+    end
+    return nil
+  end
   if item_id == item_ids.invite_deity then
     return _pick_deity_target(game, player, allowed)
   end

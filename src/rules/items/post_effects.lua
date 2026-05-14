@@ -9,11 +9,15 @@ local action_anim_port = require("src.foundation.ports.action_anim")
 local number_utils = require("src.foundation.lang.number")
 local obstacle_clear = require("src.rules.items.obstacle_clear")
 local angel_feedback = require("src.rules.items.angel_feedback")
+local steal = require("src.rules.items.steal")
+local demolish = require("src.rules.items.demolish")
 
 local post_effects = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local target_item_order = {
+  item_ids.steal,
+  item_ids.missile,
   item_ids.share_wealth,
   item_ids.exile,
   item_ids.tax,
@@ -40,6 +44,23 @@ local function _build_exile_log_entry(user, target)
 end
 
 local target_effects = {
+  [item_ids.steal] = {
+    filter_target = function(_, _, target)
+      return inventory.count(target) > 0
+    end,
+    apply = function(game, user, target)
+      return steal.steal_random_item(game, user, target)
+    end,
+  },
+  [item_ids.missile] = {
+    apply = function(game, user, target)
+      return demolish.apply(game, user, target.position, {
+        item_id = item_ids.missile,
+        injure = true,
+        title = "导弹卡",
+      })
+    end,
+  },
   [item_ids.share_wealth] = {
     apply = function(game, user, target, context)
       if game:angel_immune_to_item(target, item_ids.share_wealth) then
@@ -196,7 +217,6 @@ local post_effects_cfg = {
   [item_ids.clear_obstacles] = { type = "clear_obstacles_ahead", distance = 12 },
 
 
-  [item_ids.steal] = { type = "log", message = " 准备偷窃（将在经过玩家时触发）" },
   [item_ids.strong] = { type = "log", message = " 准备使用强征卡（踩他人地块时触发）" },
 
 

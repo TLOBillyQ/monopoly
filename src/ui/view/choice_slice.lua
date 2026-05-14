@@ -3,6 +3,13 @@ local runtime_state = require("src.ui.state.runtime")
 
 local choice_slice = {}
 
+local function _normalize_market_tab(active_tab)
+  if active_tab == "item" then
+    return active_tab
+  end
+  return "item"
+end
+
 function choice_slice.build_choice_and_market(game, env, ui_state)
   local choice = nil
   local pending = game.turn and game.turn.pending_choice
@@ -18,7 +25,7 @@ function choice_slice.build_choice_and_market(game, env, ui_state)
       allow_cancel = choice.allow_cancel,
       cancel_label = choice.cancel_label,
       selected_option_id = ui_runtime and ui_runtime.pending_choice_selected_option_id or nil,
-      active_tab = choice.active_tab,
+      active_tab = _normalize_market_tab(choice.active_tab),
       page_index = choice.page_index,
       page_count = choice.page_count,
     }

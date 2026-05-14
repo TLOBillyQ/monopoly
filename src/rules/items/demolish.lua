@@ -147,7 +147,10 @@ function demolish.apply(game, player, idx, opts)
   game:clear_all_overlays(idx)
   local tile = assert(game.board:get_tile(idx), "missing tile: " .. tostring(idx))
 
-  local destroyed = _try_destroy_building(game, tile, idx, opts.item_id)
+  local destroyed = false
+  if tile.type == "land" then
+    destroyed = _try_destroy_building(game, tile, idx, opts.item_id)
+  end
 
   local hit = 0
   local hospital_targets = nil

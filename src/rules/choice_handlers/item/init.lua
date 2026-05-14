@@ -4,7 +4,6 @@ local handler_module_paths = {
   "src.rules.choice_handlers.item.phase",
   "src.rules.choice_handlers.item.demolish",
   "src.rules.choice_handlers.item.roadblock",
-  "src.rules.choice_handlers.item.steal",
   "src.rules.choice_handlers.item.target_player",
   "src.rules.choice_handlers.item.remote_dice",
 }

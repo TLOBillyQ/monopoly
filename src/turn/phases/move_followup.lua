@@ -1,4 +1,3 @@
-local steal = require("src.rules.items.steal")
 local market_service = require("src.rules.market")
 local auto_play_port = require("src.rules.ports.auto_play")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
@@ -41,23 +40,6 @@ local function _build_resume_move_args(player, raw_total, interrupt, continue_ke
   }
 end
 
-local function _resolve_steal_interrupt_wait(game, player, raw_total, interrupt)
-  local res = steal.handle_pass_players(game, player, interrupt.encountered_ids or {})
-  if res and res.intent then
-    intent_dispatcher.dispatch(game, res.intent)
-  end
-  if res and res.waiting then
-    return "wait_choice", {
-      next_state = "move",
-      next_args = _build_resume_move_args(player, raw_total, interrupt, "continue_from_steal"),
-    }
-  end
-  if interrupt.remaining_steps and interrupt.remaining_steps > 0 then
-    return "move", _build_resume_move_args(player, raw_total, interrupt, "continue_from_steal")
-  end
-  return nil
-end
-
 local function _resolve_market_interrupt_wait(game, player, raw_total, interrupt)
   if auto_play_port.is_auto_player(game, player) then
     market_service.auto.execute(game, player)
@@ -86,15 +68,6 @@ local function _handle_resume_turn_move(game, args)
   local move_result = assert(args.move_result, "missing move followup move_result")
   local raw_total = args.raw_total
   game.last_turn.move_result = move_result
-
-  if move_result.steal_interrupt then
-    local interrupt = move_result.steal_interrupt
-    local next_state, next_args = _resolve_steal_interrupt_wait(game, player, raw_total, interrupt)
-    if next_state ~= nil then
-      return next_state, next_args
-    end
-    move_result.encountered_players = {}
-  end
 
   if move_result.market_interrupt then
     local interrupt = move_result.market_interrupt

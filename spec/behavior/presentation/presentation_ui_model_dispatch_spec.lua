@@ -738,7 +738,7 @@ describe("presentation_ui.model_dispatch", function()
         type = "market_tab_select",
         actor_role_id = 1,
         choice_id = state_choice.id,
-        tab = "items",
+        tab = "item",
       }, {})
       _assert_eq(res and res.status, "applied", "state fallback choice should still apply")
     end)

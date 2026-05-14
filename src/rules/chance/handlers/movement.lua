@@ -11,7 +11,6 @@ function movement_handlers.register(handlers, common)
   handlers.move_backward = function(game, player, card, context)
     local move_opts = {
       facing_mode = "relative_backward",
-      skip_steal_check = true,
       skip_market_check = true,
     }
     if context and context.arrival_direction ~= nil then

@@ -8,6 +8,7 @@ local actor_context = require("src.ui.coord.actor_context")
 local market = require("src.ui.coord.market")
 local modal = require("src.ui.coord.modal")
 local event_log_view = require("src.ui.coord.event_log_view")
+local skin_gallery = require("src.ui.coord.skin_gallery")
 
 local view_command_ports = {}
 
@@ -80,6 +81,18 @@ function view_command_ports.build()
       end
       if intent_type == "toggle_action_log" then
         return _toggle_action_log(state, intent)
+      end
+      if intent_type == "open_skin_panel" then
+        skin_gallery.open_skin(state, intent.actor_role_id)
+        return true
+      end
+      if intent_type == "open_gallery_panel" then
+        skin_gallery.open_gallery(state, intent.actor_role_id)
+        return true
+      end
+      if intent_type == "skin_gallery_action" then
+        skin_gallery.handle_action(state, intent.action, intent.actor_role_id)
+        return true
       end
       if intent_type == "market_select" then
         market.select_market_option(state, intent.option_id)

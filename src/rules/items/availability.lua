@@ -156,7 +156,7 @@ local function _can_offer_special_item(game, player, item_id)
     return type(candidates) == "table" and #candidates > 0
   end
 
-  if item_id == item_ids.monster or item_id == item_ids.missile then
+  if item_id == item_ids.monster then
     return demolish.find_target(game, player, 3) ~= nil
   end
 

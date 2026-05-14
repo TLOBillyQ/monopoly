@@ -2,10 +2,7 @@ local support = require("support.domain_support")
 local _new_game = support.new_game
 local market_cfg = require("src.config.content.market")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
-local monopoly_event = require("src.foundation.events")
 local choice_resolver = require("src.rules.choice.resolver")
-local number_utils = require("src.foundation.lang.number")
-local runtime_refs = require("src.config.content.runtime_refs")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 
 local function _contains_product(list, product_id)
@@ -247,168 +244,28 @@ describe("market", function()
     assert(type(res) == "table" and res.ok == false, "disabled market product should be rejected")
   end)
 
-  it("skin_entry_can_buy_but_no_effect", function()
-    local target = nil
+  it("market_catalog_contains_items_only", function()
     for _, entry in ipairs(market_cfg) do
-      if entry.kind == "skin" and entry.market_enabled ~= false then
-        target = entry
-        break
-      end
+      assert(entry.kind == "item", "black market should only expose item entries")
     end
-    assert(target ~= nil, "test requires at least one enabled skin market entry")
-
-    local market_service = _reload_market_service()
-    local g = _new_game()
-    local p = g:current_player()
-    g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
-
-    local price = target.price or 0
-    local currency = target.currency or "金币"
-    if currency == "金币" then
-      g:set_player_cash(p, price + 1000)
-    end
-
-    local change_skin_creature_key = nil
-    local change_skin_include_custom_model = nil
-    local change_skin_inherit_scale = nil
-    local change_skin_inherit_capsule_size = nil
-
-    local before_count = p.inventory:count()
-    local before_limit = g.market_limits[target.product_id]
-    local panel_calls = {}
-    local purchase_handlers = {}
-    local ctrl_unit = {
-      set_model_by_creature_key = function(...)
-        assert(select("#", ...) == 4, "set_model_by_creature_key should be called with creature_key and 3 flags")
-        change_skin_creature_key = select(1, ...)
-        change_skin_include_custom_model = select(2, ...)
-        change_skin_inherit_scale = select(3, ...)
-        change_skin_inherit_capsule_size = select(4, ...)
-      end,
-    }
-
-    local role = {
-      get_roleid = function(...)
-        assert(select("#", ...) == 0, "get_roleid should be called without implicit self")
-        return p.id
-      end,
-      show_goods_purchase_panel = function(goods_id, show_time)
-        panel_calls[#panel_calls + 1] = { goods_id = goods_id, show_time = show_time }
-      end,
-      get_ctrl_unit = function(...)
-        assert(select("#", ...) == 0, "get_ctrl_unit should be called without implicit self")
-        return ctrl_unit
-      end,
-    }
-    local res = nil
-    support.with_patches({
-      {
-        key = "GameAPI",
-        value = {
-          random_int = function(min, max)
-            return min <= max and min or max
-          end,
-          get_goods_list = function()
-            return { { name = target.name, goods_id = "goods_skin_test" } }
-          end,
-        },
-      },
-      {
-        target = runtime_ports,
-        key = "resolve_role",
-        value = function(role_id)
-          if role_id == p.id then
-            return {
-              get_roleid = role.get_roleid,
-              show_goods_purchase_panel = role.show_goods_purchase_panel,
-              get_ctrl_unit = role.get_ctrl_unit,
-            }
-          end
-          return nil
-        end,
-      },
-      {
-        key = "EVENT",
-        value = { SPEC_ROLE_PURCHASE_GOODS = "SPEC_ROLE_PURCHASE_GOODS" },
-      },
-      {
-        key = "RegisterTriggerEvent",
-        value = function(args, callback)
-          purchase_handlers[args[2]] = callback
-        end,
-      },
-    }, function()
-      local list = market_service.query.list_available(p, g)
-      assert(_contains_product(list, target.product_id), "skin entry should be available when goods mapping is ready")
-      res = market_service.purchase.execute(g, p, target.product_id, nil)
-      assert(type(res) == "table" and res.ok == true and res.deferred_fulfillment == true,
-        "skin entry purchase should start external goods flow")
-      assert(#panel_calls == 1, "skin entry should open purchase panel")
-      assert(g.market_limits[target.product_id] == before_limit, "skin purchase should not consume global limit before callback")
-
-      local cb = purchase_handlers[p.id]
-      assert(type(cb) == "function", "skin purchase callback should be registered")
-      cb(nil, nil, { role = role, goods_id = "goods_skin_test" })
-    end)
-
-    assert(g.market_limits[target.product_id] == before_limit - 1, "skin callback should consume global limit")
-    assert(p.inventory:count() == before_count, "skin purchase should not change inventory")
-    local expected_creature_key = runtime_refs.skins[tostring(target.product_id)] or number_utils.to_integer(target.product_id)
-    assert(change_skin_creature_key == expected_creature_key,
-      "skin purchase should call set_model_by_creature_key with creature_key")
-    assert(change_skin_include_custom_model == true, "skin purchase should keep custom model data")
-    assert(change_skin_inherit_scale == true, "skin purchase should inherit scale")
-    assert(change_skin_inherit_capsule_size == true, "skin purchase should inherit capsule size")
   end)
 
-  it("market_choice_marks_skin_options_for_pre_confirm", function()
-    local target = nil
-    for _, entry in ipairs(market_cfg) do
-      if entry.kind == "skin" and entry.market_enabled ~= false then
-        target = entry
-        break
-      end
-    end
-    assert(target ~= nil, "test requires at least one enabled skin market entry")
-
+  it("market_skin_tab_input_normalizes_to_item", function()
     local market_service = require("src.rules.market")
     local g = _new_game()
     local p = g:current_player()
 
     local spec = market_service.choice.build(p, g, { active_tab = "skin" })
-    assert(type(spec) == "table" and spec.kind == "market_buy", "skin tab should build market choice")
-
-    local target_option = _find_option(spec.options, target.product_id)
-    assert(target_option ~= nil, "skin tab should expose skin option")
-    assert(target_option.requires_pre_confirm == nil, "skin option should not request pre-confirm")
-    assert(target_option.pre_confirm_kind == nil, "skin option should not declare pre-confirm kind")
-    assert(target_option.confirm_title == nil, "skin option should not provide confirm title")
-    assert(target_option.confirm_body == nil, "skin option should not provide confirm body")
+    assert(type(spec) == "table" and spec.kind == "market_buy", "market choice should still build")
+    assert(spec.active_tab == "item", "old skin tab input should normalize to item")
+    assert(spec.meta.active_tab == "item", "market meta should normalize old skin tab to item")
+    assert(type(spec.options) == "table" and #spec.options > 0, "item tab should expose item options")
   end)
 
-  it("market_tab_all_unbuyable_still_builds_market_choice", function()
+  it("market_tab_select_skin_keeps_item_tab", function()
     local market_service = require("src.rules.market")
     local g = _new_game()
     local p = g:current_player()
-
-    g:set_player_cash(p, 0)
-
-    local spec = market_service.choice.build(p, g, { active_tab = "skin" })
-    assert(type(spec) == "table" and spec.kind == "market_buy",
-      "skin tab should still build market_buy choice when all options are unbuyable")
-    assert(type(spec.options) == "table" and #spec.options > 0, "skin tab should keep visible options")
-    for _, option in ipairs(spec.options) do
-      assert(option.can_buy == false, "all skin options should be marked unbuyable in this setup")
-    end
-  end)
-
-  it("market_tab_select_navigation_applies_with_unbuyable_tab", function()
-    local market_service = require("src.rules.market")
-    local g = _new_game()
-    local p = g:current_player()
-
-    g:set_player_cash(p, 0)
-
     local spec = market_service.choice.build(p, g, { active_tab = "item" })
     assert(type(spec) == "table" and spec.kind == "market_buy", "initial market choice should be built")
 
@@ -433,9 +290,9 @@ describe("market", function()
     })
 
     assert(applied == true, "market_tab_select should apply on unbuyable skin tab")
-    assert(pending_choice.active_tab == "skin", "navigation should switch active tab to skin")
+    assert(pending_choice.active_tab == "item", "navigation should normalize skin tab to item")
     assert(type(pending_choice.options) == "table" and #pending_choice.options > 0,
-      "navigation should keep visible options on skin tab")
+      "navigation should keep visible item options")
   end)
 
   it("market_choice_build_is_pure_and_session_marks_dirty", function()
@@ -466,78 +323,8 @@ describe("market", function()
 
     local rebuilt = market_service.choice.rebuild_pending(g, pending_choice, p, { active_tab = "skin", page_index = 1 })
     assert(rebuilt == true, "session should rebuild pending choice")
-    assert(pending_choice.active_tab == "skin", "session rebuild should apply requested active tab")
+    assert(pending_choice.active_tab == "item", "session rebuild should normalize requested skin tab")
     assert(g.dirty.any == true and g.dirty.turn == true, "session rebuild should mark choice dirty")
-  end)
-
-  it("market_tab_select_empty_tab_keeps_choice_and_emits_buy_failed_tip_event", function()
-    local market_service = require("src.rules.market")
-    local g = _new_game()
-    local p = g:current_player()
-
-    local skin_entries = {}
-    for _, entry in ipairs(market_cfg) do
-      if entry.kind == "skin" then
-        skin_entries[#skin_entries + 1] = {
-          entry = entry,
-          market_enabled = entry.market_enabled,
-        }
-        entry.market_enabled = false
-      end
-    end
-    assert(#skin_entries > 0, "test requires at least one skin market entry")
-
-    local emitted = {}
-    local ok, err = pcall(function()
-      local spec = market_service.choice.build(p, g, { active_tab = "item" })
-      assert(type(spec) == "table" and spec.kind == "market_buy", "initial market choice should be built")
-
-      local pending_choice = {
-        id = 1001,
-        kind = spec.kind,
-        owner_role_id = spec.owner_role_id,
-        title = spec.title,
-        body_lines = spec.body_lines,
-        options = spec.options,
-        allow_cancel = spec.allow_cancel,
-        cancel_label = spec.cancel_label,
-        active_tab = spec.active_tab,
-        page_index = spec.page_index,
-        page_count = spec.page_count,
-        meta = spec.meta,
-      }
-
-      support.with_patches({
-        {
-          target = runtime_ports,
-          key = "emit_event",
-          value = function(kind, payload)
-            emitted[#emitted + 1] = { kind = kind, payload = payload }
-          end,
-        },
-      }, function()
-        local applied = market_service.choice.apply_navigation(g, pending_choice, {
-          type = "market_tab_select",
-          tab = "skin",
-        })
-        assert(applied == true, "empty target tab should still apply navigation")
-        assert(pending_choice.active_tab == "skin", "empty target tab should still switch active tab")
-        assert(type(pending_choice.options) == "table" and #pending_choice.options == 0,
-          "empty target tab should refresh options to empty list")
-      end)
-    end)
-
-    for _, snapshot in ipairs(skin_entries) do
-      snapshot.entry.market_enabled = snapshot.market_enabled
-    end
-
-    if not ok then
-      error(err)
-    end
-    assert(#emitted >= 1, "empty tab navigation should emit feedback event")
-    local last = emitted[#emitted]
-    assert(last.kind == monopoly_event.market.buy_failed, "empty tab feedback should reuse market buy_failed event")
-    assert(last.payload and last.payload.reason == "empty_tab", "empty tab feedback reason should be empty_tab")
   end)
 
   it("market_buy_failed_keeps_market_choice_open", function()

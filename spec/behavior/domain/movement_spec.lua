@@ -557,12 +557,12 @@ describe("movement", function()
 
     g:update_player_position(p, g.board:index_of_tile_id(41))
     g:set_player_status(p, "move_dir", "right")
-    movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true, skip_steal_check = true })
+    movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true })
     _assert_eq(g.board:get_tile(p.position).id, 15, "tile 41 backward should follow outer heading")
 
     g:update_player_position(p, g.board:index_of_tile_id(43))
     g:set_player_status(p, "move_dir", "down")
-    movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true, skip_steal_check = true })
+    movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true })
     _assert_eq(g.board:get_tile(p.position).id, 21, "tile 43 backward should follow outer heading")
   end)
 
@@ -588,7 +588,7 @@ describe("movement", function()
     for _, case in ipairs(cases) do
       g:update_player_position(p, g.board:index_of_tile_id(case.start_tile_id))
       g:set_player_status(p, "move_dir", nil)
-      movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true, skip_steal_check = true })
+      movement.move(g, p, -1, { branch_parity = 1, skip_market_check = true })
       _assert_eq(g.board:get_tile(p.position).id, case.expected_tile_id,
         "inner nil move_dir backward fallback mismatch at tile " .. tostring(case.start_tile_id))
       _assert_player_move_dir(p, nil, "reverse fallback should not persist backward heading")

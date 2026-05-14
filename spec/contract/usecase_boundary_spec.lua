@@ -125,7 +125,7 @@ describe("usecase_boundary_contract", function()
       confirm_body = "你选的是：A",
       uses_item_slots = false,
       pre_confirm_before_slot_pick = false,
-      active_tab = "skin",
+      active_tab = "item",
       page_index = 2,
       page_count = 3,
       phase = "pre_action",

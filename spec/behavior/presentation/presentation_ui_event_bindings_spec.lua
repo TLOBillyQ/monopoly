@@ -181,7 +181,7 @@ describe("presentation_ui.event_bindings", function()
     _assert_eq(market_item_specs[1].build_intent().type, "market_select", "market item should build selection intent")
     _assert_eq(market_control_specs[1].build_intent().type, "market_confirm", "market confirm should use selected option")
     _assert_eq(market_control_specs[2].build_intent().type, "choice_cancel", "market cancel should map to choice cancel")
-    _assert_eq(#market_control_specs, 7, "market controls should expose 7 entries (vehicle tab removed)")
+    _assert_eq(#market_control_specs, 6, "market controls should expose item-only entries")
   end)
 
   it("target slot button first tap dispatches choice_select", function()
@@ -312,10 +312,39 @@ describe("presentation_ui.event_bindings", function()
     local specs = canvas_registry.build_route_specs(state)
     assert(_find_spec(specs, base_nodes.action_button) ~= nil, "route specs should include base action button")
     assert(_find_spec(specs, base_nodes.action_log_button) ~= nil, "route specs should include action log button")
+    assert(_find_spec(specs, base_nodes.skin_button) ~= nil, "route specs should include skin button")
+    assert(_find_spec(specs, base_nodes.gallery_button) ~= nil, "route specs should include gallery button")
     local outline_spec = _find_spec(specs, ids.outline[1])
     assert(outline_spec ~= nil, "route specs should include item outline node")
     local intent = outline_spec.build_intent and outline_spec.build_intent() or nil
     _assert_eq(intent and intent.id, "item_slot_1", "outline click should still map to item slot intent")
+  end)
+
+  it("skin_gallery_view_actions_update_local_state", function()
+    local skin_gallery = require("src.ui.coord.skin_gallery")
+    local host = require("src.host")
+    local state = { ui = {} }
+    local tips = {}
+
+    _with_patches({
+      { target = host, key = "enqueue_tip", value = function(payload)
+        tips[#tips + 1] = payload
+      end },
+    }, function()
+      skin_gallery.open_skin(state, 1)
+      _assert_eq(state.ui.skin_gallery.open, true, "skin panel should open")
+      _assert_eq(state.ui.skin_gallery.mode, "skin", "skin panel mode should be skin")
+      skin_gallery.handle_action(state, "buy", 1)
+      skin_gallery.handle_action(state, "equip", 1)
+      _assert_eq(state.ui.skin_gallery.selected_by_role["1"], skin_gallery.catalog[1].product_id,
+        "equip should select unlocked skin")
+      skin_gallery.open_gallery(state, 1)
+      _assert_eq(state.ui.skin_gallery.mode, "gallery", "gallery button should open gallery mode")
+      skin_gallery.handle_action(state, "close", 1)
+      _assert_eq(state.ui.skin_gallery.open, false, "close action should close panel")
+    end)
+
+    assert(#tips >= 4, "skin/gallery actions should emit safe local tips")
   end)
 
   it("canvas_store_patch_slice_marks_dirty", function()

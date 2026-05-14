@@ -1,14 +1,47 @@
 -- 单源真值：behavior warn 白名单
 -- 与 docs/reports/behavior-warns.md 同步
+--
+-- 匹配规则：去掉日志时间与 [warn] 前缀后做前缀匹配
+-- 条目按类别分组，每条只需覆盖共同前缀，不必列举完整消息
 return {
   whitelist = {
-    ["[MarketDebug] apply_navigation rejected: invalid owner_role_id"] = true,
-    ["[MarketDebug] apply_navigation rejected: player not found"] = true,
-    ["[MarketDebug] apply_navigation rejected: build returned nil"] = true,
-    ["market paid purchase blocked:"] = true,
-    ["choice action missing actor_role_id:"] = true,
-    ["choice action blocked by actor check:"] = true,
-    ["auto runner produced no action for runtime pending choice"] = true,
+    -- ── 测试环境：Eggy 宿主组件 / 运行时桩不可用 ──
+    ["[Eggy]"] = true,
+    ["[entity_pool]"] = true,
+    ["[tip_output_port]"] = true,
+    ["[tip_queue]"] = true,
+    ["ctrl_unit missing BuffStateComp:"] = true,
+    ["missing Enums."] = true,
     ["status3d missing remaining-text node:"] = true,
+    ["status3d unit missing create_scene_ui_bind_unit:"] = true,
+
+    -- ── 测试环境：音效 / 反馈资源不可用 ──
+    ["board_feedback skip play_3d_sound:"] = true,
+    ["board_feedback skip play_sfx_by_key:"] = true,
+
+    -- ── 测试环境：黑市购买桩 ──
+    ["[MarketDebug]"] = true,
+    ["market paid goods mapping missing:"] = true,
+    ["market paid purchase blocked:"] = true,
+
+    -- ── 反面测试：故意触发的权限 / 校验拒绝 ──
+    ["auto intent missing actor_role_id"] = true,
+    ["choice action blocked by actor check:"] = true,
+    ["choice action mismatch:"] = true,
+    ["choice action missing actor_role_id:"] = true,
+    ["choice action without pending choice:"] = true,
+    ["choice route fallback to base_inline:"] = true,
+    ["invalid choice option:"] = true,
+    ["invalid item option:"] = true,
+    ["item slot denied by availability:"] = true,
+    ["item_slot click ignored:"] = true,
+    ["missing item_id:"] = true,
+    ["remote_select without choice"] = true,
+    ["role->player 映射失败"] = true,
+    ["ui intent rejected:"] = true,
+    ["ui_button actor_role_id not mapped:"] = true,
+    ["ui_button blocked by actor check:"] = true,
+    ["ui_button missing actor_role_id:"] = true,
+    ["ui_button missing current_role_id:"] = true,
   }
 }

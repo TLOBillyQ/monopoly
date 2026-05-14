@@ -9,7 +9,6 @@ local function _test_autorunner_runs_to_end()
   local agent = require("src.computer.agent")
   local land = require("src.rules.land.executors")
   local land_actions = require("src.rules.land.actions")
-  local item_inventory = require("src.rules.items.inventory")
 
   local g = require("src.app.compose_game").new_game(default_ports.resolve_game_opts({
     players = { "P1", "P2", "P3", "P4" },
@@ -79,18 +78,11 @@ local function _test_autorunner_runs_to_end()
     end
   end
 
-  local old_handle_pass_players = steal.handle_pass_players
   local old_can_pay_rent = land.executors.pay_rent.can_apply
   local game_api = GameAPI or {}
   local patches = {
     { target = timing, key = "detained_turn_wait_seconds", value = 0 },
     { target = timing, key = "inter_turn_wait_seconds", value = 0 },
-    { target = steal, key = "handle_pass_players", value = function(game_ctx, player, encountered_ids)
-      if not item_inventory.find_index(player, item_ids.steal) then
-        return nil
-      end
-      return old_handle_pass_players(game_ctx, player, encountered_ids)
-    end },
     { target = agent, key = "pick_roadblock_target", value = function()
       return nil
     end },
@@ -255,23 +247,6 @@ local function _test_complex_consecutive_turn_settlement()
 
   local res1 = movement.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
   local first_res = res1
-  if res1.steal_interrupt then
-    local interrupt = res1.steal_interrupt
-    local steal_res = steal.handle_pass_players(g, p1, interrupt.encountered_ids or {})
-    if steal_res and steal_res.waiting then
-      local pending = _get_choice(g)
-      if pending then
-        _resolve_choice_first(g, pending)
-      end
-    end
-    res1 = movement.move(g, p1, interrupt.remaining_steps, {
-      branch_parity = interrupt.branch_parity,
-      direction = interrupt.facing,
-      entered_inner = interrupt.entered_inner,
-      skip_market_check = true,
-      skip_steal_check = true,
-    })
-  end
 
   assert(first_res.encountered_players and #first_res.encountered_players > 0, "应该经过其他玩家")
   assert(p1.position == chance_idx, "应该停在机会卡格子")
@@ -454,47 +429,6 @@ local function _test_market_interrupt_resume_uses_interrupt_facing()
   assert(p.status.move_dir == expected_facing, "market resume should persist the next heading after resume")
 end
 
-local function _test_steal_interrupt_resume_uses_interrupt_facing()
-  local g = _new_game()
-  local p1 = g.players[1]
-  local p2 = g.players[2]
-  local chance_idx = _first_tile_by_type(g.board, "chance")
-
-  if not inventory.find_index(p1, item_ids.steal) then
-    p1.inventory:add({ id = item_ids.steal })
-  end
-
-  g:update_player_position(p1, chance_idx - 3)
-  g:update_player_position(p2, chance_idx - 2)
-
-  local res = movement.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
-  local interrupt = assert(res.steal_interrupt, "expected steal interrupt")
-  assert(interrupt.remaining_steps > 0, "steal interrupt should leave resumable steps")
-
-  local expected_index, expected_facing = _walk_expected_forward(
-    g.board,
-    interrupt.position,
-    interrupt.facing,
-    interrupt.remaining_steps,
-    interrupt.branch_parity,
-    interrupt.entered_inner
-  )
-
-  g:set_player_status(p1, "move_dir", "up")
-  local resumed = movement.move(g, p1, interrupt.remaining_steps, {
-    branch_parity = interrupt.branch_parity,
-    direction = interrupt.facing,
-    entered_inner = interrupt.entered_inner,
-    facing_mode = "resume_forward",
-    skip_market_check = true,
-    skip_steal_check = true,
-  })
-
-  assert(resumed and resumed.landing_tile, "resumed steal move should complete")
-  assert(p1.position == expected_index, "steal resume should follow interrupt.facing instead of stale move_dir")
-  assert(p1.status.move_dir == expected_facing, "steal resume should persist the next heading after resume")
-end
-
 local function _test_decision_engine_cancels_item_phase_passive()
   local decision_engine = require("src.computer.agent.decision")
   local g = _new_game()
@@ -526,7 +460,6 @@ end
     _test_forced_move_landing_optional_preserves_owner_role_id_for_upgrade_land = _test_forced_move_landing_optional_preserves_owner_role_id_for_upgrade_land,
     _test_complex_market_interrupt_with_rent = _test_complex_market_interrupt_with_rent,
     _test_market_interrupt_resume_uses_interrupt_facing = _test_market_interrupt_resume_uses_interrupt_facing,
-    _test_steal_interrupt_resume_uses_interrupt_facing = _test_steal_interrupt_resume_uses_interrupt_facing,
     _test_decision_engine_cancels_item_phase_passive = _test_decision_engine_cancels_item_phase_passive,
   }
 end

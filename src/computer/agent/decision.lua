@@ -67,14 +67,6 @@ function decision_engine.build(agent_ref)
     return _build_choice_action(choice, actor, nil, "choice_cancel")
   end
 
-  local function _handle_simple_pick_or_cancel(choice, actor)
-    local option_id = _first_option_id(choice.options)
-    if option_id then
-      return _build_choice_action(choice, actor, option_id)
-    end
-    return _build_choice_action(choice, actor, nil, "choice_cancel")
-  end
-
   local function _handle_landing_optional_effect(choice, actor)
     local target = _resolve_target_option(choice.options or {}, { "buy_land", "upgrade_land" })
     if target then
@@ -91,16 +83,13 @@ function decision_engine.build(agent_ref)
     if choice.kind == "remote_dice_value" then
       return _handle_remote_dice_choice(game, actor, choice)
     end
-    if choice.kind == "roadblock_target" or choice.kind == "demolish_target" or choice.kind == "missile_target" then
+    if choice.kind == "roadblock_target" or choice.kind == "demolish_target" then
       return _handle_board_target_choice(game, actor, choice)
     end
     if choice.kind == "item_target_player" then
       return _handle_target_player_choice(game, actor, choice)
     end
-    if choice.kind == "steal_item" then
-      return _handle_simple_pick_or_cancel(choice, actor)
-    end
-    if choice.kind == "steal_prompt" or choice.kind == "rent_card_prompt" or choice.kind == "tax_card_prompt" then
+    if choice.kind == "rent_card_prompt" or choice.kind == "tax_card_prompt" then
       return _build_choice_action(choice, actor, "use")
     end
     if choice.kind == "landing_optional_effect" then

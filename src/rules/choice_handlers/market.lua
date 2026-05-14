@@ -7,10 +7,9 @@ local market_context = require("src.rules.market.query.context")
 local M = {}
 
 local TAB_ITEM = "item"
-local TAB_SKIN = "skin"
 
 local function _normalize_market_tab(active_tab)
-  if active_tab == TAB_ITEM or active_tab == TAB_SKIN then
+  if active_tab == TAB_ITEM then
     return active_tab
   end
   return TAB_ITEM

@@ -29,6 +29,18 @@ function intents.build(state)
         return { type = "toggle_action_log" }
       end,
     },
+    {
+      name = base_nodes.skin_button,
+      build_intent = function()
+        return { type = "open_skin_panel" }
+      end,
+    },
+    {
+      name = base_nodes.gallery_button,
+      build_intent = function()
+        return { type = "open_gallery_panel" }
+      end,
+    },
   }
 end
 

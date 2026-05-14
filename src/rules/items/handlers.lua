@@ -48,10 +48,11 @@ local function _apply_target_player_item(game, user, item_id, target, context)
   if not ok then
     return apply_res
   end
-  if context.item_preconsumed ~= true then
+  if context.item_preconsumed ~= true and not (type(apply_res) == "table" and apply_res.item_consumed == true) then
     assert(inventory.consume(user, item_id) == true, "consume target item failed: " .. tostring(item_id))
   end
-  local queued = _queue_target_player_anim(game, user, item_id, target)
+  local already_queued = type(apply_res) == "table" and apply_res.action_anim
+  local queued = (not already_queued) and _queue_target_player_anim(game, user, item_id, target)
   if type(apply_res) == "table" then
     apply_res.ok = true
     if queued then
