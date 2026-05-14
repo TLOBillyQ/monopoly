@@ -1,6 +1,7 @@
 local board_geometry = require("src.config.gameplay.camera_follow")
 local debug_flags = require("src.config.gameplay.debug_flags")
 local runtime_state = require("src.ui.state.runtime")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
 local logger = require("src.foundation.log.logger")
 local move_anim = require("src.ui.render.move_anim")
 
@@ -163,6 +164,22 @@ local function _place_player_unit(pid, unit, target_pos)
   unit.set_position(target_pos)
 end
 
+local _park_pos = runtime_constants.entity_pool_park_pos
+
+local function _hide_eliminated_player(state, player, i)
+  local pid = _resolve_player_id(player, i)
+  local unit = state.player_units and state.player_units[pid] or nil
+  if not unit then return end
+  move_anim.clear_player_token(state.board_scene, pid, "board_sync_eliminated")
+  _stop_player_motion(pid, unit, true)
+  if type(unit.set_model_visible) == "function" then
+    unit.set_model_visible(false)
+  end
+  if unit.set_position then
+    unit.set_position(_park_pos)
+  end
+end
+
 local function _stop_and_log_player_motion(state, pid, unit)
   move_anim.clear_player_token(state.board_scene, pid, "board_sync_place_players")
   return _stop_player_motion(pid, unit, true)
@@ -197,6 +214,8 @@ function M.place_players(state, players, occupants, spacing, min_player_y)
     assert(player ~= nil, "missing player: " .. tostring(i))
     if not player.eliminated then
       _place_single_player(state, player, i, occupants, spacing, min_player_y)
+    else
+      _hide_eliminated_player(state, player, i)
     end
   end
 end

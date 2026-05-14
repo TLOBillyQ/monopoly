@@ -894,4 +894,62 @@ describe("presentation.board_sync", function()
 
     _assert_eq(result, false, "spawn_upgrade_building_units should return false when create_unit_group returns nil")
   end)
+
+  it("_test_board_refresh_hides_eliminated_player_unit", function()
+    local board_view = require("src.ui.render.board")
+    local runtime_constants = require("src.config.gameplay.runtime_constants")
+    local p1_calls = {}
+    local p2_calls = {}
+    local p1_unit = {
+      force_stop_move = function() p1_calls[#p1_calls + 1] = "force_stop_move" end,
+      stop_anim = function() p1_calls[#p1_calls + 1] = "stop_anim" end,
+      set_position = function() p1_calls[#p1_calls + 1] = "set_position" end,
+    }
+    local p2_park_pos = nil
+    local p2_unit = {
+      force_stop_move = function() p2_calls[#p2_calls + 1] = "force_stop_move" end,
+      stop_anim = function() p2_calls[#p2_calls + 1] = "stop_anim" end,
+      set_position = function(pos) p2_calls[#p2_calls + 1] = "set_position"; p2_park_pos = pos end,
+      set_model_visible = function(v) p2_calls[#p2_calls + 1] = "set_model_visible:" .. tostring(v) end,
+    }
+    local state = {
+      board_scene = {
+        ground = { get_position = function() return { y = 0 } end },
+      },
+      tile_positions = {
+        [1] = vec3.with_add(10, 0, 20),
+        [2] = vec3.with_add(20, 0, 30),
+      },
+      tile_spacing = 0,
+      player_units = { [1] = p1_unit, [2] = p2_unit },
+      _log_once = {},
+    }
+    local ui_model = {
+      board = {
+        phase = "start",
+        tile_count = 2,
+        tiles = { { id = 1 }, { id = 2 } },
+        players = {
+          { id = 1, name = "P1", position = 1, eliminated = false },
+          { id = 2, name = "P2", position = 2, eliminated = true },
+        },
+      },
+    }
+
+    _with_board_refresh_patches(nil, function()
+      board_view.refresh(state, ui_model, function() end, function() return "board_sync_eliminated" end)
+    end)
+
+    assert(#p1_calls > 0, "non-eliminated player should be placed normally")
+    local found_hide = false
+    local found_park = false
+    for _, call in ipairs(p2_calls) do
+      if call == "set_model_visible:false" then found_hide = true end
+      if call == "set_position" then found_park = true end
+    end
+    assert(found_hide, "eliminated player unit should have set_model_visible(false) called")
+    assert(found_park, "eliminated player unit should be parked offscreen")
+    local park = runtime_constants.entity_pool_park_pos
+    _assert_eq(p2_park_pos.y, park.y, "eliminated player should be parked at entity_pool_park_pos.y")
+  end)
 end)
