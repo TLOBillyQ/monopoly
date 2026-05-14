@@ -5,6 +5,7 @@ local defaults = {
   debug_log_max_lines = 50,
   info_log_per_turn_limit = 1,
   role_control_lock_enabled = true,
+  debug_auto_non_primary = true,
 }
 
 local debug_flags = {}

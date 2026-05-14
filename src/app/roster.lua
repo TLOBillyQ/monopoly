@@ -5,6 +5,7 @@ local tiles_cfg = require("src.config.content.tiles")
 local default_map = require("src.config.content.maps.default_map")
 local runtime_refs = require("src.config.content.runtime_refs")
 local timing = require("src.config.gameplay.timing")
+local debug_flags = require("src.config.gameplay.debug_flags")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local role_id_utils = require("src.foundation.identity.role_id")
 local default_ports = require("src.turn.output.default_ports")
@@ -194,6 +195,26 @@ local function _build_synthetic_player_specs(role_roster)
   return specs
 end
 
+local function _build_debug_auto_players(role_roster, build_mode)
+  if _is_release_build(build_mode) then
+    return nil
+  end
+  if not debug_flags.debug_auto_non_primary then
+    return nil
+  end
+  local auto_players = nil
+  for i = 2, #role_roster do
+    local entry = role_roster[i]
+    if entry and entry.role_id ~= nil then
+      if auto_players == nil then
+        auto_players = {}
+      end
+      auto_players[entry.role_id] = true
+    end
+  end
+  return auto_players
+end
+
 function M.build_game_factory(state, opts)
   assert(state ~= nil, "missing state")
   opts = opts or {}
@@ -207,11 +228,13 @@ function M.build_game_factory(state, opts)
     local map_cfg = _resolve_startup_map(startup)
     local role_roster = _build_startup_roster(max_player_count)
     local forced_ai = _build_startup_ai_map(role_roster)
+    local auto_players = _build_debug_auto_players(role_roster, build_mode)
     logger.info("[Eggy]", "使用四槽角色驱动初始化，角色数量:", tostring(#role_roster))
     local created_game = composition_root.new_game(default_ports.resolve_game_opts({
       role_roster = role_roster,
       ai = forced_ai,
       auto_all = false,
+      auto_players = auto_players,
       map = map_cfg,
       tiles = tiles_cfg,
     }), app)

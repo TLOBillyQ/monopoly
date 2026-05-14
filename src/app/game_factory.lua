@@ -47,6 +47,7 @@ local function _create_players(opts)
   local role_roster = opts.role_roster
 
   if type(role_roster) == "table" and #role_roster > 0 then
+    local auto_players = opts.auto_players
     for i, entry in ipairs(role_roster) do
       local role_id = entry and (entry.role_id or entry.id) or nil
       assert(role_id ~= nil, "missing role_id in role_roster: " .. tostring(i))
@@ -55,12 +56,13 @@ local function _create_players(opts)
         name = "玩家" .. tostring(i)
       end
       local is_ai = ai_map[role_id]
+      local is_auto = opts.auto_all or (auto_players and auto_players[role_id]) or false
       local new_player = player:new({
         id = role_id,
         name = name,
         role_id = role_id,
         is_ai = is_ai,
-        auto = opts.auto_all,
+        auto = is_auto,
         start_index = 1,
         constants = constants,
         balances = {
