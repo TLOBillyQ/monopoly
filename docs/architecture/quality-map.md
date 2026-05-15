@@ -40,7 +40,7 @@ last_verified: 2026-05-04
 | 入口 | 当前规模 | 备注 |
 |------|----------|------|
 | `behavior` | `147` 个 suite，`2033` 个 case | 其中部分 case 在特定 mode 下禁用 |
-| `behavior-smoke` | `26` 个 suite，`217` 个 case | turn/runtime/turn_flow/endgame/contract |
+| `behavior-smoke` | `26` 个 suite，`217` 个 case | turn/foundation/host/state/scenarios |
 | `contract` | `23` 个 suite，`150` 个 case | 默认高频快车道，含 tooling 调度纯逻辑契约 |
 | `tooling` | `12` 个 suite，`80` 个 case | 并行 3 worker 约 `26s`；`MONO_BEHAVIOR_WORKERS=1` 退回串行 |
 | `guard` | `6` 个 script，`27` 个 case | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`、`fixed_type_guard`、`repo_hygiene` |
@@ -54,7 +54,7 @@ last_verified: 2026-05-04
 
 - 入口：`busted --run behavior`（串行）或 `lua spec/support/behavior_parallel.lua`（并行）
 - 来源：`spec/behavior/*_spec.lua`
-- 覆盖面：`domain / runtime / gameplay / ui`
+- 覆盖面：`rules / turn / state / host / foundation / ui / scenarios`
 - 适用时机：改了玩法规则、UI 行为、回合推进、运行时胶水，先跑它
 - 不适合：证明架构边界没漂移；那是 `contract / guard / arch_view` 的工作
 - warn 判读：常见预期 warn 与慢测基线见 `docs/reports/behavior-warns.md`
@@ -63,8 +63,8 @@ last_verified: 2026-05-04
 ### `behavior-smoke`
 
 - 入口：`busted --run behavior-smoke`
-- 来源：`spec/behavior/{turn,runtime,gameplay/turn_flow,endgame,contract}/*_spec.lua`
-- 覆盖面：回合推进、运行时启动、阶段切换、破产、结构契约
+- 来源：`spec/behavior/{turn,foundation,host,state,scenarios/turn_flow,scenarios/startup}/*_spec.lua`
+- 覆盖面：回合推进、基础设施、宿主层、状态层、核心场景流程
 - 适用时机：开发迭代快反馈，改了玩法规则先跑 smoke 确认核心流程没坏
 - 不替代：完整 `behavior`；提交前仍应跑 full behavior
 

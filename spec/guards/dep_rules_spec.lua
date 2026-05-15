@@ -222,6 +222,34 @@ local rules = {
     },
     description = "legacy runtime context fallback flags are retired",
   },
+  {
+    roots = { "spec" },
+    forbidden_patterns = {
+      'require%(%s*"support%.',
+      "require%(%s*'support%.",
+      'require%(%s*"fixtures%.',
+      "require%(%s*'fixtures%.",
+    },
+    description = "spec requires must use canonical spec.support.* / spec.fixtures.* paths",
+  },
+  {
+    roots = { "spec" },
+    forbidden_patterns = {
+      'require%(%s*"spec%.support%.domain_support"',
+      "require%(%s*'spec%.support%.domain_support'",
+      'require%(%s*"spec%.support%.presentation_support"',
+      "require%(%s*'spec%.support%.presentation_support'",
+      'require%(%s*"spec%.support%.presentation_action_anim_support"',
+      "require%(%s*'spec%.support%.presentation_action_anim_support'",
+      'require%(%s*"spec%.support%.presentation_action_status_prelude"',
+      "require%(%s*'spec%.support%.presentation_action_status_prelude'",
+      'require%(%s*"spec%.support%.presentation_ui_fixture_support"',
+      "require%(%s*'spec%.support%.presentation_ui_fixture_support'",
+      'require%(%s*"spec%.support%.gameplay_suites%.',
+      "require%(%s*'spec%.support%.gameplay_suites%.",
+    },
+    description = "spec requires must use renamed support modules (rules_support, ui_support, ui_*, scenario_suites)",
+  },
 }
 
 local dep_rules_whitelist = {}
@@ -244,6 +272,15 @@ dep_rules_whitelist["src/host/global_aliases.lua"] = {
 
 dep_rules_whitelist["src/app/ui_bootstrap.lua"] = {
   ['require("src.host.context")'] = true,
+}
+
+local forbidden_dirs = {
+  "spec/behavior/domain",
+  "spec/behavior/presentation",
+  "spec/behavior/runtime",
+  "spec/behavior/gameplay",
+  "spec/behavior/contract",
+  "spec/behavior/endgame",
 }
 
 local forbidden_files = {
@@ -402,5 +439,15 @@ describe("guard: dep_rules", function()
     local ok = hit == nil
     local full_report = ok and "dep_rules ok" or _build_violation_report(hit)
     assert.is_true(ok, full_report)
+  end)
+
+  it("legacy spec behavior directories are absent", function()
+    for _, dir in ipairs(forbidden_dirs) do
+      local ok_stat = os.execute("test -d " .. dir)
+      if ok_stat == true or ok_stat == 0 then
+        assert.is_true(false, "legacy directory still exists: " .. dir
+          .. " — migrate remaining specs to the new layout")
+      end
+    end
   end)
 end)

@@ -1,6 +1,6 @@
 local runtime_ports = require("src.foundation.ports.runtime_ports")
-local support = require("spec.support.presentation_support")
-local vec3 = require("fixtures.vec3")
+local support = require("spec.support.ui_support")
+local vec3 = require("spec.fixtures.vec3")
 
 local M = {}
 

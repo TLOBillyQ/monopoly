@@ -1,7 +1,7 @@
 require("spec.bootstrap").install_package_paths()
 
 local arch_view = require("arch_view")
-local guard_support = require("support.guards.guard_support")
+local guard_support = require("spec.support.guards.guard_support")
 
 local function _first_existing(paths)
   for _, path in ipairs(paths or {}) do

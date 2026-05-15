@@ -24,10 +24,11 @@ return {
   ["behavior-smoke"] = {
     ROOT = {
       "spec/behavior/turn",
-      "spec/behavior/runtime",
-      "spec/behavior/gameplay/turn_flow",
-      "spec/behavior/endgame",
-      "spec/behavior/contract",
+      "spec/behavior/foundation",
+      "spec/behavior/host",
+      "spec/behavior/state",
+      "spec/behavior/scenarios/turn_flow",
+      "spec/behavior/scenarios/startup",
     },
     helper = "spec/helper.lua",
     output = "spec/log_warns_handler.lua",
