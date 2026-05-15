@@ -1,4 +1,4 @@
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 

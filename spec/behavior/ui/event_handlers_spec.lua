@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.ui_support")
+local support = require("spec.support.shared_support")
 local _with_patches = support.with_patches
 local number_utils = require("src.foundation.number")
 local monopoly_event = require("src.foundation.events")

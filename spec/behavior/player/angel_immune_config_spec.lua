@@ -94,7 +94,7 @@ describe("domain angel immune config", function()
   end)
 
   it("game exposes angel_immune_to_item mixin", function()
-    local support = require("spec.support.rules_support")
+    local support = require("spec.support.shared_support")
     local game = support.new_game({ players = { "P1" }, auto_all = true })
     assert(type(game.angel_immune_to_item) == "function", "Expected angel_immune_to_item mixin")
   end)

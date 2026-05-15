@@ -1,4 +1,4 @@
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local turn_engine = require("src.turn.loop.scheduler_runtime")
 local landing_visual_hold = require("src.state.visual_hold")
 local wait_callbacks = require("src.turn.waits.callback_registry")

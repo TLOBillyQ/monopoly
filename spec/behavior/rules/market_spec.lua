@@ -1,4 +1,4 @@
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local _new_game = support.new_game
 local market_cfg = require("src.config.content.market")
 local runtime_ports = require("src.foundation.ports.runtime_ports")

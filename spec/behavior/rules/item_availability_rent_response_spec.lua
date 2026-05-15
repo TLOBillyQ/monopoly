@@ -1,4 +1,4 @@
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local item_ids = require("src.config.gameplay.item_ids")
 local availability = require("src.rules.items.availability")

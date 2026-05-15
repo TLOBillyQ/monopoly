@@ -144,7 +144,7 @@ describe("items_post_effects", function()
   end)
 
   it("_test_apply_target_exile", function()
-    local support = require("spec.support.rules_support")
+    local support = require("spec.support.shared_support")
     local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
     game.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
 

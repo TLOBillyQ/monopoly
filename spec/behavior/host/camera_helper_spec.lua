@@ -1,4 +1,4 @@
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local camera_helper = require("src.host.camera")
 
 local _assert_eq = support.assert_eq

@@ -2,7 +2,7 @@ local player_colors = require("src.ui.view.player_colors")
 local assets = require("src.ui.render.assets")
 local runtime = require("src.ui.render.runtime_ui")
 local base_nodes = require("src.ui.schema.base")
-local support = require("spec.support.ui_support")
+local support = require("spec.support.shared_support")
 local _with_patches = support.with_patches
 
 local function _assert_eq(actual, expected, msg)

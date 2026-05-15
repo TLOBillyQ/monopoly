@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local chance_handlers = require("src.rules.chance.handlers")
 

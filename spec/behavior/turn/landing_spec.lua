@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
 local _resolve_landing = support.resolve_landing
@@ -141,7 +141,7 @@ describe("landing", function()
 
     g:set_player_cash(p, 0)
 
-    local choice_resolver = support.choice_resolver
+    local choice_resolver = require("src.rules.choice.resolver")
     choice_resolver.resolve(g, pending, { option_id = "buy_land" })
     assert(_tile_state(g, tile_ref).owner_id == nil, "stale buy_land should be blocked")
   end)
@@ -314,7 +314,7 @@ describe("landing", function()
       assert(res and res.waiting, "upgrade path should open landing optional choice")
       local pending = _get_choice(g)
       assert(pending and pending.kind == "landing_optional_effect", "pending optional choice expected")
-      local choice_resolver = support.choice_resolver
+      local choice_resolver = require("src.rules.choice.resolver")
       choice_resolver.resolve(g, pending, { option_id = "upgrade_land" })
     end)
 
@@ -353,7 +353,7 @@ describe("landing", function()
       assert(res and res.waiting, "upgrade path should open landing optional choice")
       local pending = _get_choice(g)
       assert(pending and pending.kind == "landing_optional_effect", "pending optional choice expected")
-      local choice_resolver = support.choice_resolver
+      local choice_resolver = require("src.rules.choice.resolver")
       choice_resolver.resolve(g, pending, { option_id = "upgrade_land" })
     end)
 

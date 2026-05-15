@@ -252,7 +252,7 @@ local rules = {
       'require%(%s*"spec%.support%.ui_action_status_prelude"',
       "require%(%s*'spec%.support%.ui_action_status_prelude'",
     },
-    description = "spec requires must use renamed support modules (rules_support, ui_support, ui_*, scenario_suites); deleted modules: ui_fixture_support, ui_action_status_prelude",
+    description = "spec requires must use shared_support / ui_action_anim_support / scenario_suites; deleted modules: ui_fixture_support, ui_action_status_prelude, rules_support, ui_support, gameplay_support, runtime_support",
   },
 }
 

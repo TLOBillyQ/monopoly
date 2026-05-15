@@ -1,4 +1,4 @@
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 local _assert_eq = support.assert_eq
 local event_log = require("src.state.event_log")
 local runtime_state = require("src.state.runtime")

@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.ui_support")
+local support = require("spec.support.shared_support")
 local _with_patches = support.with_patches
 local ui_view = require("src.ui.coord.ui_runtime")
 local ids = require("spec.fixtures.item_slot_ids")

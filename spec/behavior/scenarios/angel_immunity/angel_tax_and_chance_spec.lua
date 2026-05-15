@@ -1,4 +1,4 @@
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local chance_resolver = require("src.rules.chance.resolver")
 local chance_cfg = require("src.config.content.chance_cards")
 

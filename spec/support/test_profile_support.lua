@@ -1,7 +1,7 @@
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 local bind_ui_runtime = support.bind_ui_runtime
-local map_cfg = support.map_cfg
-local tiles_cfg = support.tiles_cfg
+local map_cfg = require("src.config.content.default_map")
+local tiles_cfg = require("src.config.content.tiles")
 local build_ui_port = support.build_ui_port
 local runtime_state = require("src.state.runtime")
 local board_view = require("src.ui.render.board")
@@ -144,6 +144,6 @@ M.with_patches = support.with_patches
 M.tile_state = support.tile_state
 M.map_cfg = map_cfg
 M.tiles_cfg = tiles_cfg
-M.movement = support.movement
+M.movement = require("src.rules.movement")
 
 return M

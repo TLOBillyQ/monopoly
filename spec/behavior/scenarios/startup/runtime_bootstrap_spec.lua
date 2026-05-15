@@ -1,4 +1,4 @@
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 local with_patches = support.with_patches
 local game_runtime_bootstrap = require("src.app.gameplay_start")
 local gameplay_loop = require("src.turn.loop")

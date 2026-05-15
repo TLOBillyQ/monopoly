@@ -1,5 +1,5 @@
-local P = require("spec.support.ui_support")
-local tick_timeout = P.tick_timeout
+local P = require("spec.support.shared_support")
+local tick_timeout = require("src.turn.waits.timeout")
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
 local _build_popup_view_state = P.build_popup_view_state

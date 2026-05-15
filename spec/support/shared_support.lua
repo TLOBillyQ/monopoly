@@ -3,30 +3,14 @@ local M = {}
 
 require("spec.bootstrap")
 
-local app = require("src.state.game_state")
 local composition_root = require("src.app.compose_game")
-local movement = require("src.rules.movement")
-local turn_move = require("src.turn.phases.move")
-local inventory = require("src.rules.items.inventory")
-local executor = require("src.rules.items.executor")
-local pricing = require("src.rules.land.pricing")
-local land_actions = require("src.rules.land.actions")
-local steal = require("src.rules.items.steal")
-local chance_effects = require("src.rules.chance.resolver")
 local landing_defs = require("src.rules.land.landing_defs")
 local effect_pipeline = require("src.rules.effects.pipeline")
 local effect = require("src.rules.effects.runner")
 local choice_resolver = require("src.rules.choice.resolver")
 local choice_contract = require("src.config.choice.contract")
-local board_utils = require("src.rules.land.board_utils")
-local gameplay_loop = require("src.turn.loop")
-local turn_anim = require("src.turn.output.anim")
-local tick_timeout = require("src.turn.waits.timeout")
-local constants = require("src.config.content.constants")
-local bankruptcy = require("src.rules.endgame")
 local map_cfg = require("src.config.content.default_map")
 local tiles_cfg = require("src.config.content.tiles")
-local number_utils = require("src.foundation.number")
 local tile = require("src.rules.board.tile")
 local test_env = require("spec.support.test_env")
 local presentation_runtime_deps = require("src.ui.coord.deps")
@@ -486,25 +470,6 @@ local function tile_state(game, tile_ref)
   return state or { owner_id = nil, level = 0 }
 end
 
-M.app = app
-M.movement = movement
-M.turn_move = turn_move
-M.inventory = inventory
-M.executor = executor
-M.pricing = pricing
-M.land_actions = land_actions
-M.steal = steal
-M.chance_effects = chance_effects
-M.choice_resolver = choice_resolver
-M.board_utils = board_utils
-M.gameplay_loop = gameplay_loop
-M.turn_anim = turn_anim
-M.tick_timeout = tick_timeout
-M.constants = constants
-M.bankruptcy = bankruptcy
-M.map_cfg = map_cfg
-M.tiles_cfg = tiles_cfg
-M.number_utils = number_utils
 M.assert_eq = assert_eq
 M.assert_player_move_dir = assert_player_move_dir
 M.assert_tile_id_sequence = assert_tile_id_sequence

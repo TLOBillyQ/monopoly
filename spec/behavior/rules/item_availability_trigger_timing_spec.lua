@@ -1,4 +1,4 @@
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local availability = require("src.rules.items.availability")
 
 local _assert_eq = support.assert_eq

@@ -1,6 +1,6 @@
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 local with_patches = support.with_patches
 
 describe("ui_bootstrap", function()

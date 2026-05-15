@@ -1,4 +1,4 @@
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 
 local gameplay_loop = require("src.turn.loop")
 local gameplay_loop_ports = require("src.turn.loop.ports")
@@ -6,6 +6,7 @@ local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local turn_roll = require("src.turn.phases.roll")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local action_anim_port = require("src.foundation.ports.action_anim")
+local turn_move = require("src.turn.phases.move")
 
 local function _merge_group(base_group, override_group)
   local merged = {}
@@ -370,7 +371,7 @@ describe("architecture_guard_contract", function()
       wait_move_anim = true,
     }
 
-    local next_state, payload = support.turn_move({ game = game }, {
+    local next_state, payload = turn_move({ game = game }, {
       player = player,
       total = 1,
       raw_total = 1,

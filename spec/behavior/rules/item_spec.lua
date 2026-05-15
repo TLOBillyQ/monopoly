@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local function _new_game()
   return support.new_game({ map = default_map })
@@ -9,8 +9,9 @@ local _get_choice = support.get_choice
 local _resolve_choice_first = support.resolve_choice_first
 local _tile_state = support.tile_state
 local _assert_eq = support.assert_eq
-local executor = support.executor
-local choice_resolver = support.choice_resolver
+local executor = require("src.rules.items.executor")
+local choice_resolver = require("src.rules.choice.resolver")
+local inventory = require("src.rules.items.inventory")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local land_choice_specs = require("src.rules.land.choice_specs")
@@ -907,7 +908,7 @@ describe("item", function()
   it("passive_spec_mixed_slots", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     local idx = 3
     local tile_ref = g.board:get_tile(idx)
     g:update_player_position(p, idx)
@@ -946,7 +947,7 @@ describe("item", function()
   it("passive_spec_auto_skip_empty_inventory", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     local spec = item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -957,7 +958,7 @@ describe("item", function()
   it("passive_spec_has_options_for_validator", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     p.inventory:add({ id = item_ids.remote_dice })
     local spec = item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
@@ -974,7 +975,7 @@ describe("item", function()
   it("passive_handler_direct_execute", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     p.inventory:add({ id = item_ids.mine })
 
     local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
@@ -989,13 +990,13 @@ describe("item", function()
     })
 
     _assert_eq(res and res.stay, false, "direct execute should finish passive phase when no more options")
-    _assert_eq(support.inventory.count(p), 0, "mine should be consumed after direct passive execute")
+    _assert_eq(inventory.count(p), 0, "mine should be consumed after direct passive execute")
   end)
 
   it("passive_handler_cancel_finishes_phase", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     p.inventory:add({ id = item_ids.mine })
 
     local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
@@ -1018,7 +1019,7 @@ describe("item", function()
   it("passive_handler_marks_effect_group_after_use", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     p.inventory:add({ id = item_ids.dice_multiplier })
 
     local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_move", {
@@ -1040,7 +1041,7 @@ describe("item", function()
   it("passive_handler_no_effect_group_on_cancel", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     p.inventory:add({ id = item_ids.remote_dice })
 
     local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
@@ -1062,7 +1063,7 @@ describe("item", function()
   it("passive_handler_resolve_returns_table_when_reopened", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     p.inventory:add({ id = item_ids.mine })
     p.inventory:add({ id = item_ids.remote_dice })
 
@@ -1084,7 +1085,7 @@ describe("item", function()
   it("passive_followup_completion_marks_effect_group", function()
     local g = _new_game()
     local p = g:current_player()
-    support.inventory.clear(p)
+    inventory.clear(p)
     p.inventory:add({ id = item_ids.remote_dice })
 
     local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
@@ -1690,7 +1691,7 @@ describe("item", function()
       next_args = { player = p },
     }), "item_phase should open when remote dice exists")
     local pending = _open_choice(g, spec)
-    local before_count = support.inventory.count(p)
+    local before_count = inventory.count(p)
     _assert_eq(before_count, 1, "precondition inventory count")
 
     local res = choice_resolver.resolve(g, pending, {
@@ -1703,7 +1704,7 @@ describe("item", function()
 
     local after_pending = _get_choice(g)
     assert(after_pending and after_pending.kind == "remote_dice_value", "follow-up choice kind should be remote_dice_value")
-    _assert_eq(support.inventory.count(p), 1, "repeatable pre_action should defer consume until follow-up confirm")
+    _assert_eq(inventory.count(p), 1, "repeatable pre_action should defer consume until follow-up confirm")
     _assert_eq(after_pending.allow_cancel, true, "repeatable pre_action follow-up should still allow cancel")
     assert(after_pending.meta and after_pending.meta.phase == "pre_action", "follow-up choice should carry repeatable phase context")
     assert(after_pending.meta and after_pending.meta.item_preconsumed ~= true, "repeatable phase follow-up should not mark preconsumed")
@@ -1736,7 +1737,7 @@ describe("item", function()
 
     local reopened = _get_choice(g)
     assert(reopened and reopened.kind == "item_phase_passive", "cancel should reopen item phase passive choice")
-    _assert_eq(support.inventory.count(p), 1, "cancel should not consume remote dice")
+    _assert_eq(inventory.count(p), 1, "cancel should not consume remote dice")
     assert(_find_option_id_by_label(reopened, "遥控骰子卡") ~= nil, "reopened phase should still offer remote dice")
   end)
 
@@ -1766,7 +1767,7 @@ describe("item", function()
       actor_role_id = p.id,
     })
     assert(confirm_res and confirm_res.stay == true, "confirming repeatable pre_action follow-up should reopen item phase immediately when no anim waits")
-    _assert_eq(support.inventory.count(p), 1, "confirming follow-up should consume exactly one item")
+    _assert_eq(inventory.count(p), 1, "confirming follow-up should consume exactly one item")
     assert(p.status.pending_remote_dice and p.status.pending_remote_dice.values[1] == 4,
       "confirming follow-up should apply selected remote dice value")
 

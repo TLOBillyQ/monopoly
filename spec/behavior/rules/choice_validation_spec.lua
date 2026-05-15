@@ -1,4 +1,4 @@
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local _new_game = support.new_game
 local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local choice_handler_factory = require("src.rules.choice_handlers.factory")

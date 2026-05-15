@@ -1,5 +1,5 @@
-local support = require("spec.support.gameplay_support")
-local movement = support.movement
+local support = require("spec.support.shared_support")
+local movement = require("src.rules.movement")
 local move_followup = require("src.turn.phases.move_followup")
 local turn_land = require("src.turn.phases.land")
 local await = require("src.turn.waits.await")

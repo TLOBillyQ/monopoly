@@ -3,7 +3,7 @@
 -- { kind="clear_obstacles", branches=..., duration=... }.
 -- luacheck: ignore 211
 
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local post_effects = require("src.rules.items.post_effects")

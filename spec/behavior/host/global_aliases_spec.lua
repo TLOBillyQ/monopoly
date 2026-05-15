@@ -1,4 +1,4 @@
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local global_aliases = require("src.host.global_aliases")
 
 local _assert_eq = support.assert_eq

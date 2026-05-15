@@ -1,4 +1,4 @@
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local land_rules = require("src.rules.land.landing_rules")
 local rent_resolver = require("src.rules.land.rent_resolver")

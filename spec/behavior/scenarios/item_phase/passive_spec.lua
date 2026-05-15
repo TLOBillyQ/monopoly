@@ -1,13 +1,13 @@
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local compose_game = require("src.app.compose_game")
 local default_ports = require("src.turn.output.default_ports")
 local item_phase = require("src.rules.items.phase")
 local item_ids = require("src.config.gameplay.item_ids")
-local choice_resolver = support.choice_resolver
+local choice_resolver = require("src.rules.choice.resolver")
 local phase_registry = require("src.turn.phases.registry")
 
-local map_cfg = support.map_cfg
-local tiles_cfg = support.tiles_cfg
+local map_cfg = require("src.config.content.default_map")
+local tiles_cfg = require("src.config.content.tiles")
 
 local function _new_game(opts)
   opts = opts or {}

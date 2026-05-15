@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 local shared_support = require("spec.support.shared_support")
 
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")

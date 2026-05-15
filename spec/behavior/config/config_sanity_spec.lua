@@ -1,4 +1,4 @@
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local with_patches = support.with_patches
 local config_sanity = require("src.config.gameplay.config_sanity")
 local chance_cfg = require("src.config.content.chance_cards")

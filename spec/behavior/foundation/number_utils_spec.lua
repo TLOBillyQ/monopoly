@@ -1,8 +1,8 @@
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 local _assert_eq = support.assert_eq
-local number_utils = support.number_utils
+local number_utils = require("src.foundation.number")
 
 describe("number_utils", function()
   it("to_integer", function()

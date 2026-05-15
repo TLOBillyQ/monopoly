@@ -1,6 +1,6 @@
 local post_effects = require("src.rules.items.post_effects")
 local item_ids = require("src.config.gameplay.item_ids")
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 
 local function _invite_deity_candidates(game, user)
   local spec = assert(post_effects.get_target_spec(item_ids.invite_deity))

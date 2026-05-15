@@ -6,7 +6,7 @@
 --   C. target_choice with a single option auto-dispatches choice_select on first tap
 --      without going through _lock_option (locked_option_id stays nil).
 --   D. Market still requires the two-step (market_select then market_confirm).
-local support = require("spec.support.ui_support")
+local support = require("spec.support.shared_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 local _bind_ui_runtime = support.bind_ui_runtime

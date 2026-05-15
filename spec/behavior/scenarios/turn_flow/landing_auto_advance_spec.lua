@@ -1,4 +1,4 @@
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
 

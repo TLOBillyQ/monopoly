@@ -3,9 +3,9 @@ bootstrap.install_package_paths()
 
 ---@diagnostic disable: different-requires
 
-local support = require("spec.support.runtime_support")
+local support = require("spec.support.shared_support")
 local with_patches = support.with_patches
-local app = support.app
+local app = require("src.state.game_state")
 local startup_policy = require("src.app.policy")
 local startup_roster = require("src.app.roster")
 local state_factory = require("src.app.state_factory")

@@ -1,4 +1,4 @@
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local _new_game = support.new_game
 local dispatch_validator = require("src.turn.actions.validator")
 local land = require("src.turn.phases.land")

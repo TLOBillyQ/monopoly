@@ -1,4 +1,4 @@
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local fixtures = require("spec.support.gameplay_fixtures")
 local assert = require("luassert")
 

@@ -1,4 +1,4 @@
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local fixtures = require("spec.support.gameplay_fixtures")
 local _new_game = support.new_game
 local _build_loop_state = fixtures.build_loop_state

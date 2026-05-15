@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local facing_policy = require("src.rules.board.facing_policy")
 local function _new_game()
@@ -7,8 +7,8 @@ local function _new_game()
 end
 local _assert_eq = support.assert_eq
 local _assert_player_move_dir = support.assert_player_move_dir
-local movement = support.movement
-local board_utils = support.board_utils
+local movement = require("src.rules.movement")
+local board_utils = require("src.rules.land.board_utils")
 local move_anim = require("src.ui.render.move_anim")
 local board_feedback = require("src.ui.render.board_feedback.service")
 local runtime_ports = require("src.foundation.ports.runtime_ports")

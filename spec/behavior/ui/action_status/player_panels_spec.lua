@@ -1,4 +1,4 @@
-local P = require("spec.support.ui_support")
+local P = require("spec.support.shared_support")
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
 local _wrap_ui_refs = P.wrap_ui_refs

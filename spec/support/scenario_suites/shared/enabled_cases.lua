@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 local fixtures = require("spec.support.gameplay_fixtures")
 local tick_choice_timeout = require("src.turn.waits.choice_timeout")
 local tick_ui_sync = require("src.turn.waits.ui_sync")

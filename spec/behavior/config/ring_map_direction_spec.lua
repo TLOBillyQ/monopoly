@@ -1,4 +1,4 @@
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local ring_map_builder = require("src.config.content.ring_map_builder")
 
 local _assert_eq = support.assert_eq

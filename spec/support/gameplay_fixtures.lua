@@ -1,6 +1,6 @@
 require("spec.bootstrap")
 
-local support = require("spec.support.gameplay_support")
+local support = require("spec.support.shared_support")
 
 local function build_test_ports(overrides)
   overrides = overrides or {}

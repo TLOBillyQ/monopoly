@@ -1,5 +1,5 @@
-local support = require("spec.support.gameplay_support")
-local movement = support.movement
+local support = require("spec.support.shared_support")
+local movement = require("src.rules.movement")
 local post_effects = require("src.rules.items.post_effects")
 local item_ids = require("src.config.gameplay.item_ids")
 

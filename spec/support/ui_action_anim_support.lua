@@ -1,5 +1,5 @@
 local handlers = require("src.ui.render.anim.handlers")
-local support = require("spec.support.ui_support")
+local support = require("spec.support.shared_support")
 
 local M = {}
 

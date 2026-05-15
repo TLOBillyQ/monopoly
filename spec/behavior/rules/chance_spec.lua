@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local support = require("spec.support.rules_support")
+local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
@@ -12,7 +12,8 @@ local _list_contains = support.list_contains
 local _first_tile_by_type = support.first_tile_by_type
 local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
-local chance_effects = support.chance_effects
+local chance_effects = require("src.rules.chance.resolver")
+local movement = require("src.rules.movement")
 local _build_ui_port = support.build_ui_port
 local function _action_anim_count(game)
   local count = 0
@@ -231,7 +232,7 @@ describe("chance", function()
     g:update_player_position(p, g.board:index_of_tile_id(25))
     g:set_player_status(p, "move_dir", "right")
 
-    local landing_result = support.movement.move(g, p, -1, { skip_market_check = true })
+    local landing_result = movement.move(g, p, -1, { skip_market_check = true })
     _assert_eq(g.board:get_tile(p.position).id, 40, "setup should land on the outer chance tile")
     _assert_eq(p.status.move_dir, "right", "setup should preserve the recorded forward heading")
 
