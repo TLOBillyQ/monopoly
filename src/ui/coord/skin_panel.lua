@@ -1,10 +1,12 @@
 local skins = require("src.config.content.skins")
 local host_runtime_ports = require("src.ui.host_bridge")
 local number_utils = require("src.foundation.lang.number")
+local logger = require("src.foundation.log.logger")
 
 local skin_panel = {}
 
 local PAGE_SIZE = 6
+local equip_callback = nil
 
 local function _ensure_state(state)
   assert(state ~= nil, "missing state")
@@ -48,6 +50,48 @@ local function _notify(text, key)
     blocks_inter_turn = false,
     source = "ui.skin_panel",
   })
+end
+
+local function _action_type(action)
+  if type(action) == "table" then
+    return action.type or action.action
+  end
+  return action
+end
+
+local function _action_slot_index(action)
+  if type(action) == "table" then
+    return action.slot_index or action.index or action.slot or 1
+  end
+  return 1
+end
+
+local function _apply_equip_callback(role_id, skin)
+  if type(equip_callback) ~= "function" then
+    return false
+  end
+  local ok, applied = pcall(equip_callback, role_id, skin)
+  if not ok then
+    logger.warn(
+      "skin_panel: equip callback failed",
+      "role_id=" .. tostring(role_id),
+      "product_id=" .. tostring(skin and skin.product_id or nil),
+      tostring(applied)
+    )
+    return false
+  end
+  return applied == true
+end
+
+function skin_panel.configure_equip(callback)
+  if callback ~= nil then
+    assert(type(callback) == "function", "invalid skin equip callback")
+  end
+  equip_callback = callback
+end
+
+function skin_panel.reset_for_tests()
+  equip_callback = nil
 end
 
 function skin_panel.open(state, role_id)
@@ -103,6 +147,8 @@ function skin_panel.equip(state, role_id, slot_index)
     _notify("皮肤尚未解锁", "skin_panel:not_owned:" .. key .. ":" .. tostring(skin.product_id))
     return panel
   end
+  panel.last_equip_ok_by_role = panel.last_equip_ok_by_role or {}
+  panel.last_equip_ok_by_role[key] = _apply_equip_callback(role_id or panel.role_id, skin)
   panel.selected_by_role[key] = skin.product_id
   _notify("已换装 " .. skin.name, "skin_panel:equip:" .. key .. ":" .. tostring(skin.product_id))
   return panel
@@ -117,23 +163,28 @@ function skin_panel.unequip(state, role_id)
 end
 
 function skin_panel.handle_action(state, action, role_id)
-  if action == "close" then
+  local action_type = _action_type(action)
+  if action_type == "close" then
     return skin_panel.close(state)
   end
-  if action == "next" then
+  if action_type == "next" then
     return skin_panel.page_next(state)
   end
-  if action == "prev" then
+  if action_type == "prev" then
     return skin_panel.page_prev(state)
   end
-  if action == "buy" or action == "gift" then
-    return skin_panel.unlock(state, role_id, action, 1)
+  if action_type == "buy" or action_type == "gift" then
+    return skin_panel.unlock(state, role_id, action_type, _action_slot_index(action))
   end
-  if action == "equip" then
-    return skin_panel.equip(state, role_id, 1)
+  if action_type == "equip" then
+    return skin_panel.equip(state, role_id, _action_slot_index(action))
   end
-  if action == "unequip" then
+  if action_type == "unequip" then
     return skin_panel.unequip(state, role_id)
+  end
+  local slot_index = number_utils.to_integer(action)
+  if slot_index ~= nil then
+    return skin_panel.equip(state, role_id, slot_index)
   end
   return _ensure_state(state)
 end

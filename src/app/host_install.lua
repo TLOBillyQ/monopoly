@@ -4,6 +4,8 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local global_aliases = require("src.host.global_aliases")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
 local config_sanity = require("src.config.gameplay.config_sanity")
+local skin_panel = require("src.ui.coord.skin_panel")
+local skin_equip = require("src.rules.cosmetics.skin_equip")
 
 local M = {}
 
@@ -39,6 +41,9 @@ end
 
 local function _load_required_modules()
   paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
+  skin_panel.configure_equip(function(role_id, skin)
+    return skin_equip.equip(role_id, skin and skin.creature_key or nil)
+  end)
   require "src.rules.endgame.bankruptcy"
   require "src.computer.agent"
   require "src.rules.endgame.game_victory"

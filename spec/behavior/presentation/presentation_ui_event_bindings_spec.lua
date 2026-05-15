@@ -11,6 +11,8 @@ local canvas_store = require("src.ui.state.canvas_store")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local ui_events = require("src.ui.coord.ui_events")
 local base_nodes = require("src.ui.schema.base")
+local skin_nodes = require("src.ui.schema.skin")
+local item_atlas_nodes = require("src.ui.schema.item_atlas")
 local permanent_nodes = require("src.ui.schema.permanent")
 local remote_choice_intents = require("src.ui.input.canvas_route.remote_choice")
 local target_choice_intents = require("src.ui.input.canvas_route.target_choice")
@@ -314,6 +316,22 @@ describe("presentation_ui.event_bindings", function()
     assert(_find_spec(specs, base_nodes.action_log_button) ~= nil, "route specs should include action log button")
     assert(_find_spec(specs, base_nodes.skin_button) ~= nil, "route specs should include skin button")
     assert(_find_spec(specs, base_nodes.gallery_button) ~= nil, "route specs should include gallery button")
+    local skin_action_spec = _find_spec(specs, skin_nodes.action_buttons[2])
+    assert(skin_action_spec ~= nil, "route specs should include skin panel slot action")
+    local skin_intent = skin_action_spec.build_intent and skin_action_spec.build_intent() or nil
+    _assert_eq(skin_intent and skin_intent.type, "skin_panel_action", "skin panel slot should build skin action")
+    _assert_eq(skin_intent and skin_intent.action and skin_intent.action.type, "equip",
+      "skin panel slot should request equip action")
+    _assert_eq(skin_intent and skin_intent.action and skin_intent.action.slot_index, 2,
+      "skin panel slot should preserve clicked slot index")
+    local atlas_slot_spec = _find_spec(specs, item_atlas_nodes.image_buttons[3])
+    assert(atlas_slot_spec ~= nil, "route specs should include item atlas slot action")
+    local atlas_intent = atlas_slot_spec.build_intent and atlas_slot_spec.build_intent() or nil
+    _assert_eq(atlas_intent and atlas_intent.type, "item_atlas_action", "atlas slot should build atlas action")
+    _assert_eq(atlas_intent and atlas_intent.action and atlas_intent.action.type, "select",
+      "atlas slot should request select action")
+    _assert_eq(atlas_intent and atlas_intent.action and atlas_intent.action.slot_index, 3,
+      "atlas slot should preserve clicked slot index")
     local outline_spec = _find_spec(specs, ids.outline[1])
     assert(outline_spec ~= nil, "route specs should include item outline node")
     local intent = outline_spec.build_intent and outline_spec.build_intent() or nil

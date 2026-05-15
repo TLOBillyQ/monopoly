@@ -5,6 +5,8 @@ local player_choice_intents = require("src.ui.input.canvas_route.player_choice")
 local target_choice_intents = require("src.ui.input.canvas_route.target_choice")
 local remote_choice_intents = require("src.ui.input.canvas_route.remote_choice")
 local market_intents = require("src.ui.input.canvas_route.market")
+local skin_panel_intents = require("src.ui.input.canvas_route.skin_panel")
+local item_atlas_intents = require("src.ui.input.canvas_route.item_atlas")
 local secondary_confirm_intents = require("src.ui.input.canvas_route.secondary_confirm")
 
 local registry = {}
@@ -18,6 +20,8 @@ local canvas_specs = {
   { key = "remote_choice", build = function(state) return remote_choice_intents.build(state) end },
   { key = "market", build = function(state) return market_intents.build_items(state) end },
   { key = "market_controls", build = function(state) return market_intents.build_controls(state) end },
+  { key = "skin_panel", build = function(state) return skin_panel_intents.build(state) end },
+  { key = "item_atlas", build = function(state) return item_atlas_intents.build(state) end },
   { key = "secondary_confirm", build = function(state) return secondary_confirm_intents.build(state) end },
 }
 
