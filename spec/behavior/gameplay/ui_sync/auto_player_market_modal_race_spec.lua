@@ -71,7 +71,7 @@ local function _run_market_modal_race_case(game_opts, expect_open, case_name)
       end,
     },
   }, function()
-    local ui_model_sync = require("src.ui.ports.ui_sync.model")
+    local ui_model_sync = require("src.ui.ports.ui_sync")._model
     local common = {
       log_once = {},
       build_log_prefix = function()
@@ -134,7 +134,7 @@ describe("auto_player_market_modal_race", function()
         value = function() call_count = call_count + 1 end,
       },
     }, function()
-      local ui_model_sync = require("src.ui.ports.ui_sync.model")
+      local ui_model_sync = require("src.ui.ports.ui_sync")._model
       local common = {
         log_once = {},
         build_log_prefix = function() return "" end,

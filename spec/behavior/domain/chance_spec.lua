@@ -710,7 +710,7 @@ describe("chance", function()
   end)
 
   it("split_entries_by_buyable_separates_entries", function()
-    local eligibility = require("src.rules.market.query.eligibility")
+    local eligibility = require("src.rules.market.query").eligibility
     local g = _new_game()
     local p = g:current_player()
 
@@ -726,7 +726,7 @@ describe("chance", function()
   end)
 
   it("append_visible_entries_respects_limit", function()
-    local eligibility = require("src.rules.market.query.eligibility")
+    local eligibility = require("src.rules.market.query").eligibility
     local g = _new_game()
     local p = g:current_player()
 
@@ -743,7 +743,7 @@ describe("chance", function()
   end)
 
   it("append_visible_entries_without_limit_adds_all", function()
-    local eligibility = require("src.rules.market.query.eligibility")
+    local eligibility = require("src.rules.market.query").eligibility
     local g = _new_game()
 
     local entries = eligibility.sorted_entries()
@@ -756,7 +756,7 @@ describe("chance", function()
   end)
 
   it("context_entry_name_returns_name", function()
-    local context = require("src.rules.market.query.context")
+    local context = require("src.rules.market.query").context
     local market_cfg = require("src.config.content.market")
 
     if #market_cfg > 0 then

@@ -2,7 +2,7 @@ local gameplay_loop = require("src.turn.loop")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
 local presentation_ports = require("src.ui.ports")
 local runtime_deps = require("src.ui.coord.deps")
-local camera_sync = require("src.ui.ports.ui_sync.camera")
+local camera_sync = require("src.ui.ports.ui_sync")._camera
 local tick_clock = require("src.turn.loop.tick_clock")
 
 local M = {}

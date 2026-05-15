@@ -182,7 +182,7 @@ end
 local function _test_camera_sync_other_path_calls_set_camera_property_after_lock()
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local runtime_state = require("src.state.runtime")
-  local camera_sync = require("src.ui.ports.ui_sync.camera")
+  local camera_sync = require("src.ui.ports.ui_sync")._camera
 
   -- Track set_camera_property calls
   local set_camera_property_calls = {}
@@ -284,7 +284,7 @@ end
 local function _test_camera_sync_prefers_presentation_follow_target_over_ctrl_unit()
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local runtime_state = require("src.state.runtime")
-  local camera_sync = require("src.ui.ports.ui_sync.camera")
+  local camera_sync = require("src.ui.ports.ui_sync")._camera
 
   local locked_positions = {}
   local local_role = {
@@ -358,7 +358,7 @@ end
 local function _test_camera_sync_self_path_does_not_call_set_camera_property()
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local runtime_state = require("src.state.runtime")
-  local camera_sync = require("src.ui.ports.ui_sync.camera")
+  local camera_sync = require("src.ui.ports.ui_sync")._camera
 
   -- Track set_camera_property calls
   local set_camera_property_calls = {}
@@ -431,7 +431,7 @@ end
 local function _test_camera_sync_sync_camera_position_also_restores_props()
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local runtime_state = require("src.state.runtime")
-  local camera_sync = require("src.ui.ports.ui_sync.camera")
+  local camera_sync = require("src.ui.ports.ui_sync")._camera
 
   -- Track set_camera_property calls
   local set_camera_property_calls = {}

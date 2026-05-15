@@ -1,6 +1,6 @@
 local validator = require("src.turn.actions.validator")
 local tick_timeout = require("src.turn.waits.timeout")
-local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
+local ui_gate_sync = require("src.ui.ports.ui_sync")._gate
 local canvas_store = require("src.ui.state.canvas_store")
 
 describe("ui_gate_contract", function()

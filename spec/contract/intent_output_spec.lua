@@ -4,7 +4,7 @@ local intent_output_port = require("src.rules.ports.intent_output")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local gameplay_loop = require("src.turn.loop")
 local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
-local market_purchase = require("src.rules.market.purchase.core")
+local market_purchase = require("src.rules.market.purchase")
 local presenter = require("src.rules.land.presenter")
 
 local function build_state()

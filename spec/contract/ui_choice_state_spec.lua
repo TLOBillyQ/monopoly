@@ -1,4 +1,4 @@
-local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
+local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
 
 -- item_phase_passive is an inline choice (no choice modal opened). The gate state
 -- must treat it as open=true so that should_warn and should_reconcile stay false

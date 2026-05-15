@@ -548,7 +548,7 @@ describe("presentation_ui.interaction", function()
   end)
 
   it("_test_camera_follow_uses_current_player_display_fallback_without_caching_actor", function()
-    local camera_sync = require("src.ui.ports.ui_sync.camera")
+    local camera_sync = require("src.ui.ports.ui_sync")._camera
     local runtime_ports = require("src.foundation.ports.runtime_ports")
     local ui_runtime_state = require("src.ui.state.runtime")
     local reset_calls = 0
@@ -831,10 +831,10 @@ describe("presentation_ui.interaction", function()
     local opened_market = nil
 
     _with_patches({
-      { target = require("src.ui.ports.ui_sync.choice_state"), key = "should_reconcile", value = function()
+      { target = require("src.ui.ports.ui_sync")._choice_state, key = "should_reconcile", value = function()
         return true
       end },
-      { target = require("src.ui.ports.ui_sync.model"), key = "build_model", value = function()
+      { target = require("src.ui.ports.ui_sync")._model, key = "build_model", value = function()
         return rebuilt
       end },
       { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function(_, choice, market)
@@ -885,7 +885,7 @@ describe("presentation_ui.interaction", function()
     end
 
     _with_patches({
-      { target = require("src.ui.ports.ui_sync.model"), key = "build_model", value = function()
+      { target = require("src.ui.ports.ui_sync")._model, key = "build_model", value = function()
         return rebuilt
       end },
       { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function()
@@ -1125,7 +1125,7 @@ describe("presentation_ui.interaction", function()
   end)
 
   it("_test_choice_ui_state_rejects_current_player_fallback_when_local_role_stale", function()
-    local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
+    local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
     local players = {
       { id = 1, is_ai = false, auto = false },
       { id = 2, is_ai = false, auto = false },
@@ -1166,7 +1166,7 @@ describe("presentation_ui.interaction", function()
   end)
 
   it("_test_choice_ui_state_accepts_explicit_local_owner", function()
-    local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
+    local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
     local players = {
       { id = 1, is_ai = false, auto = false },
       { id = 2, is_ai = false, auto = false },

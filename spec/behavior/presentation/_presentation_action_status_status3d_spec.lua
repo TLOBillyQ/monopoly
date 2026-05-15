@@ -972,7 +972,7 @@ describe("presentation_status3d_and_turn_effects", function()
   it("_test_ui_sync_refresh_from_dirty_renders_board_with_fix32_ai_stop", function()
     local ui_view_service = require("src.ui.coord.ui_runtime")
     local ui_model = require("src.ui.view")
-    local ui_model_sync = require("src.ui.ports.ui_sync.model")
+    local ui_model_sync = require("src.ui.ports.ui_sync")._model
     local anchors = require("src.ui.render.board.anchors")
     local startup_render = require("src.ui.render.board.startup_render")
     local player_units = require("src.ui.render.board.player_units")
@@ -1081,7 +1081,7 @@ describe("presentation_status3d_and_turn_effects", function()
   it("_test_ui_sync_refresh_from_dirty_only_turn_countdown_updates_label_without_full_render", function()
     local ui_view_service = require("src.ui.coord.ui_runtime")
     local ui_model = require("src.ui.view")
-    local ui_model_sync = require("src.ui.ports.ui_sync.model")
+    local ui_model_sync = require("src.ui.ports.ui_sync")._model
     local render_calls = 0
     local refreshed_label = nil
     local refreshed_visible = nil

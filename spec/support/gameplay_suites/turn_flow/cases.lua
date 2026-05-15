@@ -837,7 +837,7 @@ local function _test_tick_ui_sync_countdown_hides_manual_pending_choice_timeout(
 end
 
 local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_choice()
-  local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
+  local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
   local warned = {}
 
   local function _run_case(choice, state, current_player_index)
@@ -906,7 +906,7 @@ local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_
 end
 
 local function _test_tick_choice_timeout_warning_keeps_local_modal_choice()
-  local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
+  local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
   local warned = {}
   local g = _new_game()
   local state = _build_loop_state()

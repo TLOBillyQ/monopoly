@@ -238,7 +238,7 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
   it("_test_ui_sync_defers_choice_modal_during_wait_action_anim", function()
     local ui_view_service = require("src.ui.coord.ui_runtime")
     local ui_model = require("src.ui.view")
-    local ui_model_sync = require("src.ui.ports.ui_sync.model")
+    local ui_model_sync = require("src.ui.ports.ui_sync")._model
     local opened = 0
     local game = {
         turn = {
@@ -302,7 +302,7 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
   it("_test_ui_sync_opens_choice_modal_after_wait_action_anim", function()
     local ui_view_service = require("src.ui.coord.ui_runtime")
     local ui_model = require("src.ui.view")
-    local ui_model_sync = require("src.ui.ports.ui_sync.model")
+    local ui_model_sync = require("src.ui.ports.ui_sync")._model
     local opened = 0
     local game = {
       turn = {
@@ -375,7 +375,7 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
   it("_test_ui_sync_defers_choice_modal_during_wait_move_anim", function()
     local ui_view_service = require("src.ui.coord.ui_runtime")
     local ui_model = require("src.ui.view")
-    local ui_model_sync = require("src.ui.ports.ui_sync.model")
+    local ui_model_sync = require("src.ui.ports.ui_sync")._model
     local opened = 0
     local game = {
       turn = {
@@ -436,7 +436,7 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
   it("_test_ui_sync_defers_choice_modal_during_wait_landing_visual", function()
     local ui_view_service = require("src.ui.coord.ui_runtime")
     local ui_model = require("src.ui.view")
-    local ui_model_sync = require("src.ui.ports.ui_sync.model")
+    local ui_model_sync = require("src.ui.ports.ui_sync")._model
     local opened = 0
     local game = {
       turn = {

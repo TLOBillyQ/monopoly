@@ -14,11 +14,10 @@ end
 
 local function _reload_market()
   package.loaded["src.rules.market"] = nil
-  package.loaded["src.rules.market.query.context"] = nil
-  package.loaded["src.rules.market.query.eligibility"] = nil
-  package.loaded["src.rules.market.purchase.core"] = nil
+  package.loaded["src.rules.market.query"] = nil
+  package.loaded["src.rules.market.purchase"] = nil
   package.loaded["src.rules.market.auto"] = nil
-  package.loaded["src.rules.market.choice.builder"] = nil
+  package.loaded["src.rules.market.choice"] = nil
   return require("src.rules.market")
 end
 

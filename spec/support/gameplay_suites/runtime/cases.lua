@@ -351,7 +351,7 @@ local function _test_runtime_context_install_helpers_without_globals()
 end
 
 local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
-  local camera_sync = require("src.ui.ports.ui_sync.camera")
+  local camera_sync = require("src.ui.ports.ui_sync")._camera
   local follow_calls = 0
   local helper = {
     target_role_id = nil,

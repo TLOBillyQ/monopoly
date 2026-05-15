@@ -1,4 +1,4 @@
-local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
+local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
 local modal = require("src.ui.coord.modal")
 local runtime_state = require("src.ui.state.runtime")
 local choice_slice = require("src.ui.view.choice_slice")

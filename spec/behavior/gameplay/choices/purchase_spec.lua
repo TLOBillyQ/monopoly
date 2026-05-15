@@ -20,42 +20,45 @@ local function _reload_module(module_name, overrides, fn)
   return result
 end
 
+local function _make_query_mock(overrides)
+  overrides = overrides or {}
+  return {
+    context = {
+      entry_by_id = overrides.entry_by_id or function(product_id)
+        return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
+      end,
+      entry_currency = overrides.entry_currency or function(entry)
+        return entry.currency
+      end,
+      is_paid_currency = overrides.is_paid_currency or function(currency)
+        return currency == "金豆"
+      end,
+      entry_market_enabled = function() return true end,
+      remaining_global_limit = function() return 99 end,
+    },
+    eligibility = {},
+  }
+end
 
--- T8 tests for _handle_paid_purchase in purchase.lua
+local function _make_choice_mock(feedback_fn)
+  return {
+    feedback = {
+      emit_buy_failed = feedback_fn or function() end,
+    },
+    session = { refresh_after_paid_callback = function() end },
+    builder = {},
+    outcome = {},
+  }
+end
 
 describe("choices_purchase", function()
   it("_test_purchase_execute_paid_purchase_success_and_failure", function()
     local start_calls = {}
-    _reload_module("src.rules.market.purchase.core", {
-      ["src.rules.market.query.context"] = {
-        entry_by_id = function(product_id)
-          return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
-        end,
-        entry_currency = function(entry)
-          return entry.currency
-        end,
-        is_paid_currency = function(currency)
-          return currency == "金豆"
-        end,
-      },
-      ["src.rules.market.purchase.policy"] = {
-        validate_entry = function()
-          return { ok = true }
-        end,
-      },
-      ["src.rules.market.purchase.local_purchase"] = {
-        execute = function()
-          error("local purchase should not run for paid currency")
-        end,
-      },
-      ["src.rules.market.choice.feedback"] = {
-        emit_buy_failed = function(player, entry, reason, body)
-          start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
-        end,
-      },
-      ["src.rules.market.purchase.paid_purchase_callback"] = {
-        handle = function() end,
-      },
+    _reload_module("src.rules.market.purchase", {
+      ["src.rules.market.query"] = _make_query_mock(),
+      ["src.rules.market.choice"] = _make_choice_mock(function(player, entry, reason, body)
+        start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
+      end),
       ["src.rules.ports.paid_purchase"] = {
         setup_for_game = function() end,
         start = function(_, _, entry)
@@ -82,36 +85,11 @@ describe("choices_purchase", function()
   it("_test_handle_paid_purchase_logs_warning_on_failure", function()
     local start_calls = {}
     local warn_calls = {}
-    _reload_module("src.rules.market.purchase.core", {
-      ["src.rules.market.query.context"] = {
-        entry_by_id = function(product_id)
-          return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
-        end,
-        entry_currency = function(entry)
-          return entry.currency
-        end,
-        is_paid_currency = function(currency)
-          return currency == "金豆"
-        end,
-      },
-      ["src.rules.market.purchase.policy"] = {
-        validate_entry = function()
-          return { ok = true }
-        end,
-      },
-      ["src.rules.market.purchase.local_purchase"] = {
-        execute = function()
-          error("local purchase should not run for paid currency")
-        end,
-      },
-      ["src.rules.market.choice.feedback"] = {
-        emit_buy_failed = function(player, entry, reason, body)
-          start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
-        end,
-      },
-      ["src.rules.market.purchase.paid_purchase_callback"] = {
-        handle = function() end,
-      },
+    _reload_module("src.rules.market.purchase", {
+      ["src.rules.market.query"] = _make_query_mock(),
+      ["src.rules.market.choice"] = _make_choice_mock(function(player, entry, reason, body)
+        start_calls[#start_calls + 1] = { failed = true, reason = reason, body = body }
+      end),
       ["src.rules.ports.paid_purchase"] = {
         setup_for_game = function() end,
         start = function(_, _, entry)
@@ -136,34 +114,9 @@ describe("choices_purchase", function()
 
   it("_test_handle_paid_purchase_success_path", function()
     local start_calls = {}
-    _reload_module("src.rules.market.purchase.core", {
-      ["src.rules.market.query.context"] = {
-        entry_by_id = function(product_id)
-          return { product_id = product_id, kind = "item", currency = "金豆", name = "Paid Item" }
-        end,
-        entry_currency = function(entry)
-          return entry.currency
-        end,
-        is_paid_currency = function(currency)
-          return currency == "金豆"
-        end,
-      },
-      ["src.rules.market.purchase.policy"] = {
-        validate_entry = function()
-          return { ok = true }
-        end,
-      },
-      ["src.rules.market.purchase.local_purchase"] = {
-        execute = function()
-          error("local purchase should not run for paid currency")
-        end,
-      },
-      ["src.rules.market.choice.feedback"] = {
-        emit_buy_failed = function() end,
-      },
-      ["src.rules.market.purchase.paid_purchase_callback"] = {
-        handle = function() end,
-      },
+    _reload_module("src.rules.market.purchase", {
+      ["src.rules.market.query"] = _make_query_mock(),
+      ["src.rules.market.choice"] = _make_choice_mock(),
       ["src.rules.ports.paid_purchase"] = {
         setup_for_game = function() end,
         start = function(_, _, entry)
