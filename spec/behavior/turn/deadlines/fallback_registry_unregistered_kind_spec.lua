@@ -1,6 +1,6 @@
 -- 验证：未注册的 choice.kind 走 force_skip，不抛异常
 local fallback_registry = require("src.rules.choice.fallback_registry")
-local force_resolve = require("src.turn.deadlines.force_resolve")
+local force_resolve = require("src.turn.deadlines")
 local runtime_state = require("src.state.runtime")
 
 local function _build_state()

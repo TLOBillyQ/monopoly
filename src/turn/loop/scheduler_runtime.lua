@@ -1,7 +1,4 @@
-local scheduler = require("src.turn.timing")
-local session_factory = require("src.turn.timing.session")
-local action_router = require("src.turn.timing.action_router")
-local turn_script = require("src.turn.timing.session_script")
+local timing = require("src.turn.timing")
 local dirty_tracker = require("src.state.dirty_tracker")
 require "vendor.third_party.ClassUtils"
 
@@ -40,11 +37,11 @@ function scheduler_turn_runtime:init(game, phases)
   self.game = game
   self.phases = phases
   self.turn_mgr = _build_turn_mgr(self)
-  self.session = session_factory.new({
+  self.session = timing.new({
     game = game,
     phases = phases,
     turn_mgr = self.turn_mgr,
-    script_factory = turn_script.create,
+    script_factory = timing.create,
   })
 end
 
@@ -77,14 +74,14 @@ local function _sync_snapshot(runtime)
 end
 
 function scheduler_turn_runtime:dispatch(action)
-  scheduler.dispatch(self.session, action_router.from_action(action))
-  local res = scheduler.step(self.session, 0)
+  timing.dispatch(self.session, timing.from_action(action))
+  local res = timing.step(self.session, 0)
   _sync_snapshot(self)
   return res and res.wait_state or nil
 end
 
 function scheduler_turn_runtime:run_turn()
-  local res = scheduler.step(self.session, 0)
+  local res = timing.step(self.session, 0)
   _sync_snapshot(self)
   return res and res.wait_state or nil
 end

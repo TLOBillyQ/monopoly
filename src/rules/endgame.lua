@@ -5,8 +5,11 @@ local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
 local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
 local monopoly_event = require("src.foundation.events")
+local tile_mod = require("src.rules.board.tile")
+local pricing = require("src.rules.land.pricing")
+local timing = require("src.config.gameplay.timing")
 
-local bankruptcy = {}
+local M = {}
 
 local function _try_pcall(fn, ...)
   if type(fn) ~= "function" then
@@ -100,7 +103,7 @@ local function _collect_owned_tiles(game, player)
   return owned_tile_ids, owned_tiles, names
 end
 
-function bankruptcy.eliminate(game, player, opts)
+function M.eliminate(game, player, opts)
   if player.eliminated then
     return
   end
@@ -150,10 +153,97 @@ function bankruptcy.eliminate(game, player, opts)
   end
 end
 
--- Export helpers for testability
-bankruptcy._call_life_die = _call_life_die
-bankruptcy._try_call_life_die = _try_call_life_die
-bankruptcy._resolve_life_component = _resolve_life_component
-bankruptcy._call_role_die = _call_role_die
+M._call_life_die = _call_life_die
+M._try_call_life_die = _try_call_life_die
+M._resolve_life_component = _resolve_life_component
+M._call_role_die = _call_role_die
 
-return bankruptcy
+local tile_state = tile_mod.get_state
+
+local function _total_assets(game, player)
+  local total = game:player_balance(player, "金币")
+  assert(total ~= nil, "missing player cash")
+  for tile_id in pairs(player.properties) do
+    local tile = game.board:get_tile_by_id(tile_id)
+    assert(tile ~= nil and tile.type == "land", "invalid property tile: " .. tostring(tile_id))
+    local st = tile_state(game, tile)
+    local level = st.level
+    total = total + pricing.total_invested(tile, level)
+  end
+  return total
+end
+
+local function _winner_names(list)
+  local names = {}
+  assert(list ~= nil, "missing winner list")
+  for _, player in ipairs(list) do
+    table.insert(names, player.name)
+  end
+  return table.concat(names, "、")
+end
+
+local function _apply_winners(game, winners, message)
+  game.winners = winners
+  if #winners == 1 then
+    game.winner = winners[1]
+  else
+    game.winner = nil
+  end
+  local names = _winner_names(winners)
+  game.winner_names = names
+  assert(message ~= nil, "missing victory message")
+  event_feed.publish(game, {
+    kind = event_kinds.victory,
+    text = message .. game.winner_names,
+  })
+  local winner_ids = {}
+  for _, player in ipairs(winners) do
+    winner_ids[player.id] = true
+  end
+  monopoly_event.emit(monopoly_event.game.finished, {
+    winners = winners,
+    winner_ids = winner_ids,
+    winner_names = names,
+    message = message,
+  })
+  game.finished = true
+  return true
+end
+
+function M.check_victory(self)
+  if self.finished then
+    return true
+  end
+  local alive = self:alive_players()
+  local turn_limit = timing.turn_limit
+  assert(turn_limit ~= nil, "missing turn_limit")
+  if turn_limit > 0 then
+    local turn_count = self.turn.turn_count
+    if turn_count >= turn_limit then
+      if #alive == 0 then
+        return _apply_winners(self, {}, "游戏结束，无人生还")
+      end
+      local winners = {}
+      local best = -math.huge
+      for _, player in ipairs(alive) do
+        local assets = _total_assets(self, player)
+        if assets > best then
+          best = assets
+          winners = { player }
+        elseif assets == best then
+          table.insert(winners, player)
+        end
+      end
+      return _apply_winners(self, winners, "游戏结束，时间到，胜者:")
+    end
+  end
+  if #alive <= 1 then
+    if #alive == 1 then
+      return _apply_winners(self, { alive[1] }, "游戏结束，胜者:")
+    end
+    return _apply_winners(self, {}, "游戏结束，无人生还")
+  end
+  return false
+end
+
+return M

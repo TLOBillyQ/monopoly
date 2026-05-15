@@ -1,6 +1,6 @@
-local ctx_mod = require("src.turn.actions.dispatch.context")
-local defaults = require("src.turn.actions.dispatch.defaults")
-local force_resolve = require("src.turn.deadlines.force_resolve")
+local ctx_mod = require("src.turn.actions.context")
+local defaults = require("src.turn.actions.defaults")
+local force_resolve = require("src.turn.deadlines")
 
 local function build(deps)
   local logger = deps.logger

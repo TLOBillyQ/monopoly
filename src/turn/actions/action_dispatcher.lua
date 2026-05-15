@@ -3,9 +3,9 @@ local validator = require("src.turn.actions.validator")
 local runtime_state = require("src.state.runtime")
 local market_service = require("src.rules.market")
 local output_state_adapter = require("src.turn.output.state_adapter")
-local action_dispatch = require("src.turn.actions.dispatch.action_dispatch")
-local ctx_mod = require("src.turn.actions.dispatch.context")
-local defaults = require("src.turn.actions.dispatch.defaults")
+local action_dispatch = require("src.turn.actions.action_dispatch")
+local ctx_mod = require("src.turn.actions.context")
+local defaults = require("src.turn.actions.defaults")
 
 local turn_dispatch = {}
 

@@ -1,6 +1,6 @@
 local tick_timeout = require("src.turn.waits.timeout")
 local runtime_state = require("src.state.runtime")
-local DeadlineService = require("src.turn.deadlines.service")
+local DeadlineService = require("src.turn.deadlines")
 local dirty_tracker = require("src.state.dirty_tracker")
 
 local tick_ui_sync = {}

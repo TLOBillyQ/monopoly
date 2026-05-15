@@ -1,4 +1,4 @@
-local turn_script = require("src.turn.timing.session_script")
+local turn_script = require("src.turn.timing")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))

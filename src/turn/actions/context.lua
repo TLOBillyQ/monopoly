@@ -3,7 +3,7 @@ local number_utils = require("src.foundation.number")
 local item_slot_data = require("src.turn.actions.item_slot_data")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local role_id_utils = require("src.foundation.identity")
-local defaults = require("src.turn.actions.dispatch.defaults")
+local defaults = require("src.turn.actions.defaults")
 
 local function resolve_dispatch_context(state, context)
   if context then

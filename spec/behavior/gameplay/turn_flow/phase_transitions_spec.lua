@@ -2,7 +2,7 @@ local support = require("support.gameplay_support")
 local _new_game = support.new_game
 local dispatch_validator = require("src.turn.actions.validator")
 local land = require("src.turn.phases.land")
-local turn_script = require("src.turn.timing.session_script")
+local turn_script = require("src.turn.timing")
 local phase = require("src.rules.items.phase")
 
 local build_wait_choice_args = phase.build_wait_choice_args

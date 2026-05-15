@@ -1,5 +1,5 @@
 local agent = require("src.computer.agent")
-local bankruptcy = require("src.rules.endgame.bankruptcy")
+local bankruptcy = require("src.rules.endgame")
 
 local default_ports = {}
 

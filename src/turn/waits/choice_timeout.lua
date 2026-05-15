@@ -4,8 +4,7 @@ local number_utils = require("src.foundation.number")
 local runtime_state = require("src.state.runtime")
 local choice_contract = require("src.config.choice.contract")
 local output_state_adapter = require("src.turn.output.state_adapter")
-local DeadlineService = require("src.turn.deadlines.service")
-local force_resolve = require("src.turn.deadlines.force_resolve")
+local deadlines = require("src.turn.deadlines")
 
 local tick_choice_timeout = {}
 
@@ -118,11 +117,11 @@ end
 local function _sync_deadline_for_choice(state, active_choice, timeout)
   local scope = _scope_for_choice(active_choice)
   local other_scope = scope == "choice" and "market_buy" or "choice"
-  if DeadlineService.is_active(state, other_scope) then
-    DeadlineService.cancel(state, other_scope)
+  if deadlines.is_active(state, other_scope) then
+    deadlines.cancel(state, other_scope)
   end
-  if not DeadlineService.is_active(state, scope) then
-    DeadlineService.start(state, scope, {
+  if not deadlines.is_active(state, scope) then
+    deadlines.start(state, scope, {
       timeout_seconds = timeout,
       priority = 100,
     })
@@ -130,8 +129,8 @@ local function _sync_deadline_for_choice(state, active_choice, timeout)
 end
 
 local function _cancel_deadline_when_no_choice(state)
-  DeadlineService.cancel(state, "choice")
-  DeadlineService.cancel(state, "market_buy")
+  deadlines.cancel(state, "choice")
+  deadlines.cancel(state, "market_buy")
 end
 
 local function _reset_choice_tracking(state, output_ports)
@@ -144,8 +143,8 @@ local function _sync_elapsed_choice_id(state, output_ports, active_choice)
   if output_ports.get_pending_choice_id(state) ~= active_choice.id then
     output_ports.set_pending_choice_elapsed(state, 0)
     output_ports.set_pending_choice_id(state, active_choice.id)
-    DeadlineService.cancel(state, "choice")
-    DeadlineService.cancel(state, "market_buy")
+    deadlines.cancel(state, "choice")
+    deadlines.cancel(state, "market_buy")
   end
 end
 
@@ -212,7 +211,7 @@ function tick_choice_timeout.step(game, state, dt, opts)
       return
     end
     output_ports.set_pending_choice_elapsed(state, 0)
-    force_resolve.resolve_choice(game, state, active_choice, "tick_timeout")
+    deadlines.resolve_choice(game, state, active_choice, "tick_timeout")
   end
 end
 

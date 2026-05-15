@@ -1,4 +1,4 @@
-local bankruptcy = require("src.rules.endgame.bankruptcy")
+local bankruptcy = require("src.rules.endgame")
 
 local function _make_player(name, deity)
   return {

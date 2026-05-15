@@ -5,7 +5,7 @@ local turn_timer_policy = require("src.turn.policies.timer")
 local turn_camera_policy = require("src.turn.policies.camera")
 local runtime_state = require("src.state.runtime")
 local landing_visual_hold = require("src.state.visual_hold")
-local DeadlineService = require("src.turn.deadlines.service")
+local DeadlineService = require("src.turn.deadlines")
 local target_select_timer = require("src.turn.waits.target_select_timer")
 
 local tick_steps = {}

@@ -2,7 +2,7 @@ local support = require("support.runtime_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
-local force_resolve = require("src.turn.deadlines.force_resolve")
+local force_resolve = require("src.turn.deadlines")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
 local runtime_state = require("src.state.runtime")
 

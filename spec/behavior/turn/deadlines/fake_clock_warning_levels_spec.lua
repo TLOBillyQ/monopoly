@@ -1,5 +1,5 @@
 -- 验证：DeadlineService 的 5s/3s 警告按顺序触发，level 从 normal -> warn_5s -> warn_3s -> expired
-local DeadlineService = require("src.turn.deadlines.service")
+local DeadlineService = require("src.turn.deadlines")
 local runtime_state = require("src.state.runtime")
 
 local function _build_state()

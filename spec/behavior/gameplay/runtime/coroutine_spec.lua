@@ -578,7 +578,7 @@ describe("gameplay.coroutine", function()
       end,
     }
 
-    local co = require("src.turn.timing.session_script").create(session)
+    local co = require("src.turn.timing").create(session)
     local ok1, yielded = coroutine.resume(co)
     assert(ok1 == true, "turn_script should enter wait_move_anim")
     assert(yielded and yielded.kind == "wait" and yielded.wait_state == "wait_move_anim",

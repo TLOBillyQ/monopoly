@@ -1,5 +1,5 @@
 -- 验证：choice 无 allow_cancel + 无 auto_action + 无注册 fallback → force_skip 必然推进
-local force_resolve = require("src.turn.deadlines.force_resolve")
+local force_resolve = require("src.turn.deadlines")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local runtime_state = require("src.state.runtime")
 

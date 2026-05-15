@@ -19,13 +19,13 @@ end
 
 local function _load_session_script_with_await(stub_await)
   package.loaded["src.turn.waits.await"] = stub_await
-  package.loaded["src.turn.timing.session_script"] = nil
-  return require("src.turn.timing.session_script")
+  package.loaded["src.turn.timing"] = nil
+  return require("src.turn.timing")
 end
 
 local function _restore_modules()
   package.loaded["src.turn.waits.await"] = nil
-  package.loaded["src.turn.timing.session_script"] = nil
+  package.loaded["src.turn.timing"] = nil
 end
 
 describe("domain session_script extended coverage", function()
@@ -85,7 +85,7 @@ describe("domain session_script extended coverage", function()
   end)
 
   it("_resolve_phase_handler falls back to require for move_followup when phases lack it", function()
-    local turn_script = require("src.turn.timing.session_script")
+    local turn_script = require("src.turn.timing")
     local move_followup = require("src.turn.phases.move_followup")
     local saved_run = move_followup.run
     local run_calls = 0
@@ -100,7 +100,7 @@ describe("domain session_script extended coverage", function()
   end)
 
   it("start state triggers turn_decision.log_turn_start", function()
-    local turn_script = require("src.turn.timing.session_script")
+    local turn_script = require("src.turn.timing")
     local turn_decision = require("src.turn.waits.decision")
     local saved = turn_decision.log_turn_start
     local logged_games = {}
@@ -145,7 +145,7 @@ describe("domain session_script extended coverage", function()
   end)
 
   it("missing phase handler raises assertion error", function()
-    local turn_script = require("src.turn.timing.session_script")
+    local turn_script = require("src.turn.timing")
     local session = _make_session({}, { current_state = "no_such_phase" })
     local co = turn_script.create(session)
     local ok, err = coroutine.resume(co)

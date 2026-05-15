@@ -1,4 +1,4 @@
-local session = require("src.turn.timing.session")
+local session = require("src.turn.timing")
 
 describe("bankruptcy_session", function()
   it("_test_mark_phase_default_sets_phase_and_dirty", function()

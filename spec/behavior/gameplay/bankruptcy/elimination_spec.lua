@@ -1,4 +1,4 @@
-local bankruptcy = require("src.rules.endgame.bankruptcy")
+local bankruptcy = require("src.rules.endgame")
 
 describe("bankruptcy_elimination", function()
   it("_test_call_life_die_with_role_param_succeeds", function()

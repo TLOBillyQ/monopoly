@@ -3,7 +3,7 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 
 local runtime_ports = require("src.foundation.ports.runtime_ports")
-local skin_equip = require("src.rules.cosmetics.skin_equip")
+local skin_equip = require("src.rules.cosmetics")
 
 describe("skin_equip runtime integration", function()
   it("applies creature key to resolved role unit", function()

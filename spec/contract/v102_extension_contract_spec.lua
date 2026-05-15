@@ -90,7 +90,7 @@ describe("v102_extension_contract", function()
   it("host_install_wires_skin_panel_to_skin_equip", function()
     local host_install = require("src.app.host_install")
     local skin_panel = require("src.ui.coord.skin_panel")
-    local skin_equip = require("src.rules.cosmetics.skin_equip")
+    local skin_equip = require("src.rules.cosmetics")
     local captured = nil
 
     skin_panel.reset_for_tests()
@@ -149,7 +149,7 @@ describe("v102_extension_contract", function()
   end)
 
   it("skin_equip_contract_loads_without_ui_dependency", function()
-    local skin_equip = require("src.rules.cosmetics.skin_equip")
+    local skin_equip = require("src.rules.cosmetics")
 
     _assert_eq(type(skin_equip.equip), "function", "skin equip should expose equip")
     _assert_eq(type(skin_equip.unequip), "function", "skin equip should expose unequip")
@@ -157,7 +157,7 @@ describe("v102_extension_contract", function()
 
   it("skin_equip_applies_creature_key_to_role_unit", function()
     local runtime_ports = require("src.foundation.ports.runtime_ports")
-    local skin_equip = require("src.rules.cosmetics.skin_equip")
+    local skin_equip = require("src.rules.cosmetics")
     local calls = {}
 
     _with_patches({

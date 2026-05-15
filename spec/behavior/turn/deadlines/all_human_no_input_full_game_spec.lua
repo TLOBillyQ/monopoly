@@ -1,6 +1,6 @@
 -- 验证：全人类玩家全程不操作，每个 scope 仍按 timeout 自动推进，不卡死
 -- 这里用一个简化的多回合模拟：连续多次 force_skip + advance_turn
-local force_resolve = require("src.turn.deadlines.force_resolve")
+local force_resolve = require("src.turn.deadlines")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local runtime_state = require("src.state.runtime")
 

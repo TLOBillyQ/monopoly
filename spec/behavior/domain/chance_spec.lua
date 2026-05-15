@@ -57,7 +57,7 @@ local post_effects = require("src.rules.items.post_effects")
 
 
 -- T8 characterization tests for 0% coverage hotspots
-local bankruptcy = require("src.rules.endgame.bankruptcy")
+local bankruptcy = require("src.rules.endgame")
 
 
 

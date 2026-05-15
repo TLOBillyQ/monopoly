@@ -46,7 +46,7 @@ last_verified: 2026-05-04
 | `src/rules/choice/` | choice 注册、resolve 与共享语义 |
 | `src/rules/choice_handlers/` | choice action 到规则效果的分发 |
 | `src/rules/commerce/` | 收费规则：过路费、交易结算 |
-| `src/rules/endgame/` | 破产、胜负判定与结算 |
+| `src/rules/endgame.lua` | 破产、胜负判定与结算 |
 | `src/rules/ports/` | 玩法规则业务能力契约 |
 
 ## Port 命名规则
