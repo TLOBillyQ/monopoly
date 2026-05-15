@@ -1,5 +1,5 @@
 -- 验证：协程层在 force_skip 标志置位后下一帧立即跳出 wait
-local choice_wait = require("src.turn.waits.await.choice")
+local choice_wait = require("src.turn.waits.await")
 
 local function _build_session(game)
   local s = {

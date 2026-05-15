@@ -7,7 +7,7 @@ local modal_presenter = require("src.ui.coord.modal")
 local ui_choice_route_policy = require("src.ui.input.choice_route")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
 local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
-local choice_openers = require("src.ui.coord.choice_screens.openers")
+local choice_openers = require("src.ui.coord.choice_openers")
 
 describe("presentation_choice_routes", function()
   it("_test_choice_modal_routes_to_new_screens", function()
@@ -355,7 +355,7 @@ describe("presentation_choice_routes", function()
   end)
 
   it("_test_secondary_confirm_copy_item_phase_selected_option", function()
-    local common = require("src.ui.coord.choice_screens.helpers")
+    local common = require("src.ui.coord.choice_helpers")
     local choice = {
       kind = "item_phase_choice",
       route_key = "base_inline",
@@ -377,7 +377,7 @@ describe("presentation_choice_routes", function()
   end)
 
   it("_test_secondary_confirm_copy_land_actions", function()
-    local common = require("src.ui.coord.choice_screens.helpers")
+    local common = require("src.ui.coord.choice_helpers")
     local choice = {
       kind = "landing_optional_effect",
       options = {
@@ -419,7 +419,7 @@ describe("presentation_choice_routes", function()
   end)
 
   it("_test_secondary_confirm_copy_generic_pre_confirm", function()
-    local common = require("src.ui.coord.choice_screens.helpers")
+    local common = require("src.ui.coord.choice_helpers")
     local choice = {
       kind = "remote_dice_value",
       title = "遥控骰子",
@@ -434,7 +434,7 @@ describe("presentation_choice_routes", function()
   end)
 
   it("_test_secondary_confirm_prefers_usecase_confirm_copy", function()
-    local common = require("src.ui.coord.choice_screens.helpers")
+    local common = require("src.ui.coord.choice_helpers")
     local choice = {
       kind = "landing_optional_effect",
       confirm_title = "不会被读取",

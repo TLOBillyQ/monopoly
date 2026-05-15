@@ -1,5 +1,5 @@
 local modal = require("src.ui.coord.modal")
-local choice_openers = require("src.ui.coord.choice_screens.openers")
+local choice_openers = require("src.ui.coord.choice_openers")
 
 local modal_ports = {}
 

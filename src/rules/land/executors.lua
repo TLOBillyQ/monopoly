@@ -1,7 +1,7 @@
-local base = require("src.rules.land.effects.base")
-local chance = require("src.rules.land.effects.chance")
-local transit = require("src.rules.land.effects.transit")
-local special = require("src.rules.land.effects.special")
+local base = require("src.rules.land.effect_base")
+local chance = require("src.rules.land.effect_chance")
+local transit = require("src.rules.land.effect_transit")
+local special = require("src.rules.land.effect_special")
 
 local module = {}
 

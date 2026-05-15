@@ -1,6 +1,6 @@
 -- luacheck: ignore 211
 local support = require("support.domain_support")
-local default_map = require("src.config.content.maps.default_map")
+local default_map = require("src.config.content.default_map")
 local chance_handlers = require("src.rules.chance.handlers")
 
 local function _new_game()

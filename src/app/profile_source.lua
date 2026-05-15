@@ -1,5 +1,5 @@
 local source = {}
-local default_map_module = "src.config.content.maps.default_map"
+local default_map_module = "src.config.content.default_map"
 
 local function _require_default_map()
   local ok, map_or_err = pcall(require, default_map_module)

@@ -808,7 +808,7 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
     {
       target = require("src.app.profile_source"),
       key = "resolve_map",
-      value = function() return require("src.config.content.maps.default_map") end,
+      value = function() return require("src.config.content.default_map") end,
     },
     {
       target = require("src.app.profile_source"),

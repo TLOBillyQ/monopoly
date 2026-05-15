@@ -1,6 +1,6 @@
 -- luacheck: ignore 211
 local support = require("support.domain_support")
-local default_map = require("src.config.content.maps.default_map")
+local default_map = require("src.config.content.default_map")
 local facing_policy = require("src.rules.board.facing_policy")
 local function _new_game()
   return support.new_game({ map = default_map })
@@ -1113,10 +1113,10 @@ describe("movement", function()
   end)
 
   it("default_map_reload_builds_bidirectional_neighbors", function()
-    local original = package.loaded["src.config.content.maps.default_map"]
-    package.loaded["src.config.content.maps.default_map"] = nil
-    local reloaded = require("src.config.content.maps.default_map")
-    package.loaded["src.config.content.maps.default_map"] = original or reloaded
+    local original = package.loaded["src.config.content.default_map"]
+    package.loaded["src.config.content.default_map"] = nil
+    local reloaded = require("src.config.content.default_map")
+    package.loaded["src.config.content.default_map"] = original or reloaded
 
     local start_neighbors = reloaded.neighbors[reloaded.start_id]
     assert(type(start_neighbors) == "table", "reloaded default map should expose neighbors for start tile")

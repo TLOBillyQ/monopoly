@@ -1,5 +1,5 @@
 local action_anim_port = require("src.foundation.ports.action_anim")
-local common = require("src.player.actions.state_ops.common")
+local common = require("src.player.actions.state_common")
 
 local balance_ops = {}
 

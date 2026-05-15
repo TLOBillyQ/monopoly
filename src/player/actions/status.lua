@@ -1,4 +1,4 @@
-local common = require("src.player.actions.state_ops.common")
+local common = require("src.player.actions.state_common")
 
 local status_ops = {}
 

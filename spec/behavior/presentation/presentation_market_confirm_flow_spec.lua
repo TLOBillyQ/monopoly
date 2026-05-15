@@ -4,7 +4,7 @@ local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.coord.choice_screens.openers")
+local choice_openers = require("src.ui.coord.choice_openers")
 local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
 local market_modal_renderer = require("src.ui.coord.market")
 

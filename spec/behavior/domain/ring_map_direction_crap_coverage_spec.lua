@@ -1,5 +1,5 @@
 local support = require("support.domain_support")
-local ring_map_builder = require("src.config.content.maps.ring_map_builder")
+local ring_map_builder = require("src.config.content.ring_map_builder")
 
 local _assert_eq = support.assert_eq
 

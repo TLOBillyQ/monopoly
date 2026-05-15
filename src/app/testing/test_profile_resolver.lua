@@ -1,7 +1,7 @@
 local test_profiles = require("src.app.testing.test_profiles")
 
 local resolver = {}
-local default_map_module = "src.config.content.maps.default_map"
+local default_map_module = "src.config.content.default_map"
 
 local function _join_profile_names(profile_names)
   if type(profile_names) ~= "table" or #profile_names == 0 then

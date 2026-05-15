@@ -1,4 +1,4 @@
-local common = require("src.player.actions.state_ops.common")
+local common = require("src.player.actions.state_common")
 local monopoly_event = require("src.foundation.events")
 local item_config = require("src.rules.items.config")
 

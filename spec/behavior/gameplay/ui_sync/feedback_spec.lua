@@ -8,7 +8,7 @@ local tick_ui_sync = require("src.turn.waits.ui_sync")
 local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local tick_timeout = require("src.turn.waits.timeout")
 local runtime_state = require("src.state.runtime")
-local action_anim_wait = require("src.turn.waits.await.action_anim")
+local action_anim_wait = require("src.turn.waits.await")
 
 local _update_countdown_tests = {
   function()

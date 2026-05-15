@@ -1,6 +1,6 @@
 -- luacheck: ignore 211
 local support = require("support.domain_support")
-local default_map = require("src.config.content.maps.default_map")
+local default_map = require("src.config.content.default_map")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
@@ -17,7 +17,7 @@ local land_choice_specs = require("src.rules.land.choice_specs")
 local item_phase = require("src.rules.items.phase")
 local item_strategy = require("src.rules.items.strategy")
 local steal = require("src.rules.items.steal")
-local cash_handlers = require("src.rules.chance.handlers.cash")
+local cash_handlers = require("src.rules.chance.handlers")._cash
 local monopoly_event = require("src.foundation.events")
 local move_followup = require("src.turn.phases.move_followup")
 local roadblock = require("src.rules.items.roadblock")

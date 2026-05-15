@@ -1,10 +1,60 @@
+local runtime_state = require("src.state.runtime")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local landing_defs = require("src.rules.land.landing_defs")
 local effect_pipeline = require("src.rules.effects.pipeline")
 local effect_runner = require("src.rules.effects.runner")
 local land_actions = require("src.rules.land.actions")
 local pricing = require("src.rules.land.pricing")
 local wait_callbacks = require("src.turn.waits.callback_registry")
-local predicates = require("src.turn.phases.land.predicates")
+
+local function _has_action_anim(game)
+  if not game or not game.turn then
+    return false
+  end
+  if game.turn.action_anim then
+    return true
+  end
+  local queue = game.turn.action_anim_queue
+  return type(queue) == "table" and #queue > 0
+end
+
+local function _is_relocation_action_anim(entry)
+  return entry and (entry.kind == "move_effect" or entry.kind == "teleport_effect" or entry.kind == "forced_relocation")
+end
+
+local function _has_pending_relocation_action_anim(game)
+  if not game or not game.turn then
+    return false
+  end
+  local current = game.turn.action_anim
+  if _is_relocation_action_anim(current) then
+    return true
+  end
+  local queue = game.turn.action_anim_queue
+  if type(queue) ~= "table" then
+    return false
+  end
+  for _, entry in ipairs(queue) do
+    if _is_relocation_action_anim(entry) then
+      return true
+    end
+  end
+  return false
+end
+
+local function _is_landing_visual_hold_active(game)
+  if not game then
+    return false
+  end
+  local state = game.landing_visual_hold_state
+  if state ~= nil and runtime_state.get_landing_visual_hold_source(state) ~= nil then
+    return runtime_state.get_landing_visual_hold_active(state)
+  end
+  local turn = game.turn or nil
+  return turn and turn.landing_visual_hold_active == true or false
+end
+
+local _is_effect_idle = runtime_ports.is_effect_idle
 
 local function _landing_optional_cost(effect_id, tile, game)
   if effect_id ~= "upgrade_land" or tile == nil or game == nil then
@@ -106,9 +156,9 @@ local function _resolve_wait_state(game, next_state, next_args, wait_action_anim
     next_args = next_args,
   }
 
-  local has_anim = predicates.has_action_anim(game)
-  local has_hold = predicates.is_landing_visual_hold_active(game)
-  local effects_pending = not predicates.is_effect_idle()
+  local has_anim = _has_action_anim(game)
+  local has_hold = _is_landing_visual_hold_active(game)
+  local effects_pending = not _is_effect_idle()
 
   if wait_move_anim == true then
     if next_state == "move_followup" then
@@ -178,9 +228,9 @@ local function _resolve_finished_landing_state(game, player)
     return "post_action", { player = player }
   end
 
-  local has_anim = predicates.has_action_anim(game)
-  local has_hold = predicates.is_landing_visual_hold_active(game)
-  local effects_pending = not predicates.is_effect_idle()
+  local has_anim = _has_action_anim(game)
+  local has_hold = _is_landing_visual_hold_active(game)
+  local effects_pending = not _is_effect_idle()
 
   if has_anim then
     if has_hold or effects_pending then
@@ -217,7 +267,7 @@ local function _resolve_followup_landing(game, player, out, depth)
   if out.wait_move_anim == true then
     return _build_move_followup_result(target_player, out, "wait_move_anim")
   end
-  if predicates.has_pending_relocation_action_anim(game) then
+  if _has_pending_relocation_action_anim(game) then
     return _build_move_followup_result(target_player, out, "wait_action_anim")
   end
   return _resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
@@ -263,6 +313,9 @@ local function _phase_land(turn_mgr, args)
 end
 
 return {
+  run = _phase_land,
+  _resolve_wait_state = _resolve_wait_state,
+  _phase_land = _phase_land,
   resolve_wait_state = _resolve_wait_state,
   phase_land = _phase_land,
 }

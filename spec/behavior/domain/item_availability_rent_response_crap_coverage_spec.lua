@@ -1,5 +1,5 @@
 local support = require("support.domain_support")
-local default_map = require("src.config.content.maps.default_map")
+local default_map = require("src.config.content.default_map")
 local item_ids = require("src.config.gameplay.item_ids")
 local availability = require("src.rules.items.availability")
 local inventory = require("src.rules.items.inventory")

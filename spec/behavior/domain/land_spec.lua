@@ -1,6 +1,6 @@
 -- luacheck: ignore 211
 local support = require("support.domain_support")
-local default_map = require("src.config.content.maps.default_map")
+local default_map = require("src.config.content.default_map")
 local inventory = require("src.rules.items.inventory")
 local item_ids = require("src.config.gameplay.item_ids")
 local _with_patches = support.with_patches

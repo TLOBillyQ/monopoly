@@ -1,4 +1,4 @@
-local ring_map_builder = require("src.config.content.maps.ring_map_builder")
+local ring_map_builder = require("src.config.content.ring_map_builder")
 
 describe("movement_executor", function()
   it("_test_merge_executor_groups_combines_multiple_groups", function()

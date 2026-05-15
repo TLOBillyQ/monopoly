@@ -310,7 +310,7 @@ describe("startup_profile", function()
     local created_opts = nil
     with_patches({
       { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
-      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
+      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.default_map") end },
       { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
       {
         target = app,
@@ -345,7 +345,7 @@ describe("startup_profile", function()
           return { _build_role(11), _build_role(22), _build_role(33), _build_role(44) }
         end,
       },
-      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
+      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.default_map") end },
       { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
       {
         target = app,
@@ -376,7 +376,7 @@ describe("startup_profile", function()
           return { _build_role(11) }
         end,
       },
-      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
+      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.default_map") end },
       { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
       {
         target = app,
@@ -412,7 +412,7 @@ describe("startup_profile", function()
           return { _build_role(2) }
         end,
       },
-      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.maps.default_map") end },
+      { target = startup_profile_source, key = "resolve_map", value = function() return require("src.config.content.default_map") end },
       { target = startup_profile_source, key = "resolve_bootstrap", value = function() return {} end },
       {
         target = app,

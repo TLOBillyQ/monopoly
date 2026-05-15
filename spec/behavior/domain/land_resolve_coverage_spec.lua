@@ -1,4 +1,4 @@
-local land_resolve = require("src.turn.phases.land.resolve")
+local land_resolve = require("src.turn.phases.land")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local function _assert_eq(a, b, msg)

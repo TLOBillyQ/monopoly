@@ -3,7 +3,7 @@
 
 -- T8 FINAL tests for anonymous@106 in asset_handlers.lua (discard_properties function)
 -- This is the anonymous function at line 106 which is the discard_properties handler
-local asset_handlers = require("src.rules.chance.handlers.asset")
+local asset_handlers = require("src.rules.chance.handlers")._asset
 local _asset_handlers_final_tests = {
   function()
     -- Test discard_properties with card.count = 0 (should drop all properties)

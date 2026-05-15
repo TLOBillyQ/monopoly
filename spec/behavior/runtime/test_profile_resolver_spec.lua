@@ -32,7 +32,7 @@ describe("runtime.test_profile_resolver", function()
   end)
 
   it("all_profiles_use_default_map", function()
-    local default_map = require("src.config.content.maps.default_map")
+    local default_map = require("src.config.content.default_map")
     local names = test_profile_resolver.available_profiles()
     for _, name in ipairs(names) do
       local map = _load_map_for_profile(name)
