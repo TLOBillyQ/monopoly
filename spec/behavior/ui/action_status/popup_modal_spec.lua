@@ -1,4 +1,4 @@
-local P = require("spec.support.ui_action_status_prelude")
+local P = require("spec.support.ui_support")
 local tick_timeout = P.tick_timeout
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches

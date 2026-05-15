@@ -1,4 +1,4 @@
-local P = require("spec.support.ui_action_status_prelude")
+local P = require("spec.support.ui_support")
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
 local _build_choice_modal_state = P.build_choice_modal_state

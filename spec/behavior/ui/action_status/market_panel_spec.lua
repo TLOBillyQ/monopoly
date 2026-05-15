@@ -1,4 +1,4 @@
-local P = require("spec.support.ui_action_status_prelude")
+local P = require("spec.support.ui_support")
 local _new_game = P.new_game
 local _assert_eq = P.assert_eq
 local _bind_ui_runtime = P.bind_ui_runtime

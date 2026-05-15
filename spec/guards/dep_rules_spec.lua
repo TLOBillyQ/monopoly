@@ -247,8 +247,12 @@ local rules = {
       "require%(%s*'spec%.support%.presentation_ui_fixture_support'",
       'require%(%s*"spec%.support%.gameplay_suites%.',
       "require%(%s*'spec%.support%.gameplay_suites%.",
+      'require%(%s*"spec%.support%.ui_fixture_support"',
+      "require%(%s*'spec%.support%.ui_fixture_support'",
+      'require%(%s*"spec%.support%.ui_action_status_prelude"',
+      "require%(%s*'spec%.support%.ui_action_status_prelude'",
     },
-    description = "spec requires must use renamed support modules (rules_support, ui_support, ui_*, scenario_suites)",
+    description = "spec requires must use renamed support modules (rules_support, ui_support, ui_*, scenario_suites); deleted modules: ui_fixture_support, ui_action_status_prelude",
   },
 }
 
