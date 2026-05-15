@@ -15,7 +15,6 @@ last_verified: 2026-05-04
 |------|---------|-----------|-------------|
 | 蛋仔--大富翁--地块表.xlsx | 地块属性与价格 | ✓ | `src/config/content/tiles.lua` |
 | 蛋仔--大富翁--常量表.xlsx | 游戏常量配置 | ✓ | `src/config/gameplay/runtime_constants.lua` |
-| 蛋仔--大富翁--座驾表.xlsx | 座驾属性列表 | ✓ | `src/config/content/vehicles.lua`、`src/config/gameplay/vehicle_catalog.lua` |
 | 蛋仔--大富翁--机会表.xlsx | 机会卡内容 | ✓ | `src/config/content/chance_cards.lua` |
 | 蛋仔--大富翁--皮肤表.xlsx | 皮肤配置 | 未导出 | — |
 | 蛋仔--大富翁--角色表.xlsx | 角色属性 | ✓ | `src/config/content/roles.lua` |

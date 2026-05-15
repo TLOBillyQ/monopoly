@@ -20,7 +20,7 @@ last_verified: 2026-05-04
 | `src/state` | L7 状态层：游戏根对象、玩家持久数据、棋盘数据、回合状态、视觉冻结-释放打包（`visual_hold/`）、UI runtime 数据访问 | 依赖 player/rules/turn/ui/host/app（任何上层） |
 | `src/config` | L7 配置层：内容（地图/瓷砖/集市）、玩法常量（timing/event_kinds 等）、choice contract / route_policy | 依赖任何上层 |
 | `src/turn/output` | 回合输出适配：intent_dispatcher、state_adapter | 承接业务规则 |
-| `src/host` | 宿主细节：运行时上下文、事件桥、默认 runtime ports、显式 seam exception（`global_aliases`） | — |
+| `src/host` | 宿主细节：运行时上下文、事件桥、默认 runtime ports、显式 seam exception（`global_aliases`） | 依赖 UI、回合编排、玩家/AI 或玩法规则模块 |
 | `src/ui` | 顶层 wrapper（`visual_hold`、`host_bridge`）+ 内部子视图（input/view/render/coord/state/ports/schema/utils） | controller 装配、Canvas 渲染、输入路由（这些下沉到各子视图） |
 | `src/ui/state` | 纯 UI 状态容器：runtime（state.runtime seam）、canvas_store、modal、visual_hold（顶层 wrapper） | 持有跨 render/coord/input 的反向引用 |
 | `src/ui/coord` | UI 协调器：actor_context / ui_state / ui_runtime / event_state / event_handlers / canvas_event_router 等 | — |
@@ -46,7 +46,6 @@ last_verified: 2026-05-04
 | `src/rules/choice/` | choice 注册、resolve 与共享语义 |
 | `src/rules/choice_handlers/` | choice action 到规则效果的分发 |
 | `src/rules/commerce/` | 收费规则：过路费、交易结算 |
-| `src/rules/vehicle/` | 载具规则：乘坐条件、移动变体 |
 | `src/rules/endgame/` | 破产、胜负判定与结算 |
 | `src/rules/ports/` | 玩法规则业务能力契约 |
 

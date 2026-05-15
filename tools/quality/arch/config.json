@@ -258,7 +258,7 @@
       ]
     },
     {
-      "description": "host must not depend on ui, turn, player, or computer modules",
+      "description": "host must not depend on ui, turn, player, computer, or rules modules",
       "from": [
         "^src%.host%..+"
       ],
@@ -267,7 +267,8 @@
         "^src%.ui%..+",
         "^src%.turn%..+",
         "^src%.player%..+",
-        "^src%.computer%..+"
+        "^src%.computer%..+",
+        "^src%.rules%..+"
       ]
     },
     {

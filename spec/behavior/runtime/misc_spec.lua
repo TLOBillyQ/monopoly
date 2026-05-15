@@ -909,13 +909,6 @@ describe("misc", function()
 
     with_patches({
       {
-        target = require("src.rules.market.query.context"),
-        key = "entry_by_id",
-        value = function()
-          return nil
-        end,
-      },
-      {
         target = require("src.foundation.log.logger"),
         key = "warn",
         value = function(msg, ctx)
@@ -948,20 +941,8 @@ describe("misc", function()
       _assert_eq(e, mock_entry, "entry should match")
       _assert_eq(pending.product_id, 1001, "pending product_id should match")
     end
-    gateway._push_pending(rt, 5, { player_id = 99, product_id = 1001, goods_id = "goods_123" })
-
-    with_patches({
-      {
-        target = require("src.rules.market.query.context"),
-        key = "entry_by_id",
-        value = function(id)
-          if id == 1001 then return mock_entry end
-          return nil
-        end,
-      },
-    }, function()
-      gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123", role = { get_roleid = function() return 5 end } })
-    end)
+    gateway._push_pending(rt, 5, { player_id = 99, product_id = 1001, entry = mock_entry, goods_id = "goods_123" })
+    gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123", role = { get_roleid = function() return 5 end } })
 
     _assert_eq(purchase_called, true, "on_purchase should be called")
   end)
@@ -977,20 +958,8 @@ describe("misc", function()
       end,
     }
     local rt = gateway._runtime(game)
-    gateway._push_pending(rt, 5, { player_id = 99, product_id = 1001, goods_id = "goods_123" })
-
-    with_patches({
-      {
-        target = require("src.rules.market.query.context"),
-        key = "entry_by_id",
-        value = function(id)
-          if id == 1001 then return mock_entry end
-          return nil
-        end,
-      },
-    }, function()
-      gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123", role = { get_roleid = function() return 5 end } })
-    end)
+    gateway._push_pending(rt, 5, { player_id = 99, product_id = 1001, entry = mock_entry, goods_id = "goods_123" })
+    gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123", role = { get_roleid = function() return 5 end } })
 
     -- No error means success - on_purchase is optional
   end)

@@ -63,7 +63,7 @@ src/foundation/
 | `player/computer` ↛ `turn/ui/host/app` | `player_no_*` / `computer_no_*` | 玩家、AI 只面向内层能力 |
 | `rules` ↛ `turn/ui/computer/host/app` | `rules_no_outer` | 玩法规则保持内核位置 |
 | `state/config/foundation` ↛ `player/computer/rules/turn/ui/host/app` | `foundation_no_upper` | L7 数据层与基座不回流依赖 |
-| `host` ↛ `ui/turn/player/computer` | `host_no_gameplay_chain` | 宿主实现不反向拥有玩法逻辑 |
+| `host` ↛ `ui/turn/player/computer/rules` | `host_no_gameplay_chain` | 宿主实现不反向拥有玩法逻辑 |
 | `ui.schema` ↛ 其他 ui 子视图与外层 | `ui_schema_pure` | 表现 schema 保持纯净 |
 
 ## Port 注入
@@ -103,7 +103,6 @@ src/state/
 ├── ui_sync_shared.lua ← UI 同步共享数据
 ├── event_log.lua
 ├── ui_role_globals.lua
-├── vehicle_runtime_source.lua
 └── ...
 ```
 
@@ -119,6 +118,6 @@ app -> host -> ui -> turn -> state/computer -> rules -> state/config -> foundati
 
 - `main.lua` 从 `src.app` 启动。
 - `src/host/global_aliases.lua` 是显式 host 桥接 seam（exception #1）。
-- `state/game_state.lua` 的 mixin（status / balance / deity / vehicle / location / check_victory，源文件 `src/player/actions/state_ops/*.lua`）由 `src/app/compose_game.lua` 在模块加载时安装到 Game 类——这是 Phase 2 反转 state 逆向依赖的关键支点。
+- `state/game_state.lua` 的 mixin（status / balance / deity / location / check_victory，源文件 `src/player/actions/state_ops/*.lua`）由 `src/app/compose_game.lua` 在模块加载时安装到 Game 类——这是 Phase 2 反转 state 逆向依赖的关键支点。
 - `src/ui/visual_hold.lua` 是顶层 wrapper，桥接 `src/ui/render/support/effect_track` 与 `src/state/visual_hold` 的 post-release hook。
 - 当前目录迁移已完成；`tools/quality/arch.lua check` 通过。

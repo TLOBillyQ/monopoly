@@ -116,7 +116,7 @@ local profiles = {
 
     solo_steal = {
         group = "interrupt_resume",
-        covers = { "steal", "pass_player" },
+        covers = { "steal" },
         bootstrap = {
             players = _mk_players(120000, 7, {
                 [1] = { item_counts = _merge_inv(INV.steal, INV.remote_dice) },

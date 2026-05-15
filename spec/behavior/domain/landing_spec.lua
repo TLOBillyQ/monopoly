@@ -454,7 +454,7 @@ describe("landing", function()
     _set_ui_port(g, { wait_action_anim = true })
     local player = g.players[1]
     player.seat_id = 4001
-    _assert_eq(g:player_dice_count(player), 1, "legacy seat_id must not affect dice count after vehicle retirement")
+    _assert_eq(g:player_dice_count(player), 1, "legacy seat_id must not affect dice count")
 
     local idx = player.position
     g.board:place_mine(idx, { owner_id = g.players[2].id, armed = true })

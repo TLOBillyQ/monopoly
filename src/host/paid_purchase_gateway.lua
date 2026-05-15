@@ -6,10 +6,6 @@ local gateway = {}
 local runtime_field = "__market_paid_runtime"
 local panel_show_seconds = 10.0
 
-local function _context()
-  return require("src.rules.market.query.context")
-end
-
 local function _new_runtime()
   return {
     goods_id_by_product_id = {},
@@ -101,12 +97,6 @@ local function _index_goods_by_name(goods_list)
   return goods_by_name, duplicate_name
 end
 
-local function _should_map_paid_entry(context_service, entry)
-  local currency = context_service.entry_currency(entry)
-  return context_service.is_paid_currency(currency)
-    and context_service.entry_market_enabled(entry)
-end
-
 local function _record_goods_mapping(rt, entry, market_name, goods_id, duplicate_name)
   rt.goods_id_by_product_id[entry.product_id] = goods_id
   local mapped_product_id = rt.product_id_by_goods_id[goods_id]
@@ -136,34 +126,37 @@ local function _resolve_missing_mapping_reason(goods_list)
   return "goods_list_unavailable"
 end
 
-local function _build_goods_mappings(game)
-  local rt = _runtime(game)
-  rt.goods_id_by_product_id = {}
-  rt.product_id_by_goods_id = {}
-  rt.warned_missing_by_product_id = {}
-
+local function _try_record_entry_mapping(rt, entry)
+  if not (entry and entry.product_id ~= nil) then
+    return nil, nil
+  end
   local goods_list = _load_goods_list()
   local goods_by_name, duplicate_name = _index_goods_by_name(goods_list)
-  local context_service = _context()
-  for _, entry in ipairs(context_service.entries()) do
-    if _should_map_paid_entry(context_service, entry) then
-      local market_name = entry and entry.name or nil
-      local goods = market_name and goods_by_name[market_name] or nil
-      local goods_id = goods and goods.goods_id or nil
-      if goods_id ~= nil and goods_id ~= "" then
-        _record_goods_mapping(rt, entry, market_name, goods_id, duplicate_name)
-      end
-    end
+  local market_name = entry.name
+  local goods = market_name and goods_by_name[market_name] or nil
+  local goods_id = goods and goods.goods_id or nil
+  if goods_id ~= nil and goods_id ~= "" then
+    _record_goods_mapping(rt, entry, market_name, goods_id, duplicate_name)
+    return goods_id, nil
   end
+  return nil, _resolve_missing_mapping_reason(goods_list)
 end
 
 local function _resolve_goods_id(game, entry, opts)
   opts = opts or {}
   local rt = _runtime(game)
-  local goods_id = rt.goods_id_by_product_id[entry.product_id]
+  local product_id = entry and entry.product_id or nil
+  if product_id == nil then
+    return nil, "missing_entry"
+  end
+  local goods_id = rt.goods_id_by_product_id[product_id]
+  local missing_reason = nil
+  if goods_id == nil or goods_id == "" then
+    goods_id, missing_reason = _try_record_entry_mapping(rt, entry)
+  end
   if goods_id == nil or goods_id == "" then
     if opts.warn_missing == true then
-      _warn_mapping_missing_once(rt, entry, _resolve_missing_mapping_reason(_load_goods_list()))
+      _warn_mapping_missing_once(rt, entry, missing_reason)
     end
     return nil, "goods_mapping_missing"
   end
@@ -220,7 +213,7 @@ local function _on_purchase_goods_callback(game, rt, data)
     logger.warn("market paid callback ignored: player missing", "player_id=" .. tostring(pending.player_id))
     return
   end
-  local entry = _context().entry_by_id(pending.product_id)
+  local entry = pending.entry
   if not entry then
     logger.warn("market paid callback ignored: market entry missing", "product_id=" .. tostring(pending.product_id))
     return
@@ -264,7 +257,6 @@ function gateway.setup_for_game(game, on_purchase)
   if rt.setup_done == true then
     return
   end
-  _build_goods_mappings(game)
   local players = game and game.players or nil
   if type(players) ~= "table" then
     rt.setup_done = true
@@ -323,6 +315,7 @@ function gateway.start(game, player, entry)
   _push_pending(rt, role_id, {
     player_id = player.id,
     product_id = entry.product_id,
+    entry = entry,
     goods_id = goods_id,
   })
   return true, nil
