@@ -1,45 +1,43 @@
-# Workflow Rules
+# 工作流规则
 
-## Branch / Worktree Layout
+## 分支和工作树布局
 
-Configured in `swarmforge/swarmforge.conf`:
+写在 `swarmforge/swarmforge.conf` 里：
 
-| Role      | Backend | Worktree                | Branch                  |
+| 角色      | 后端    | 工作树                  | 分支                    |
 |-----------|---------|-------------------------|-------------------------|
-| architect | claude  | main working directory  | currently checked out (`main`) |
+| architect | claude  | 主工作目录              | 当前检出分支（`main`）  |
 | coder     | codex   | `.worktrees/coder`      | `swarmforge-coder`      |
 | reviewer  | codex   | `.worktrees/reviewer`   | `swarmforge-reviewer`   |
-| logger    | none    | main working directory  | (tail-only utility)     |
+| logger    | none    | 主工作目录              | （只 tail 日志的工具角色） |
 
-At startup, every agent must:
+启动时每个 agent 要做三件事：
 
-1. Discover its assigned worktree and branch by checking `.swarmforge/sessions.tsv` and `git rev-parse --abbrev-ref HEAD`.
-2. Remember that assignment for the rest of the session.
-3. Refuse to work in any other branch or worktree. If the layout is missing or wrong, stop and report — do not silently repair.
+1. 查 `.swarmforge/sessions.tsv` 和 `git rev-parse --abbrev-ref HEAD`，确认自己被分到哪个工作树、哪个分支。
+2. 记住这个分配，整个会话不变。
+3. 拒绝在别的分支或工作树里干活。布局不对就停下来报告，不准自己悄悄修。
 
-## Handoff Chain
+## 交接链
 
-`architect` → `coder` → `reviewer` → (`coder` for follow-up | `architect` for merge into main).
+`architect` → `coder` → `reviewer` → （`coder` 跟进 | `architect` 合入 main）。
 
-Use `swarmtools/notify-agent.sh <role> "<message>"` for every handoff. Every notification must include:
+交接一律用 `swarmtools/notify-agent.sh <role> "<message>"`。每条通知必须带上：
 
-- The branch name and the latest commit hash on that branch.
-- A one-line summary of what changed.
-- Which quality gates ran and their result (e.g. `lint: pass; busted behavior: pass; busted guards: pass`).
-- Any open question or decision the next role must resolve.
+- 分支名和该分支最新的 commit hash。
+- 一行变更摘要。
+- 跑了哪些门禁、结果如何（比如 `lint: pass; busted behavior: pass; busted guards: pass`）。
+- 下一个角色需要拿主意的事。
 
-## Merge Direction
+## 合并方向
 
-- Coder merges from `swarmforge-architect` (or `main`, depending on what the architect committed) before starting work.
-- Reviewer merges from `swarmforge-coder` before reviewing.
-- Architect merges reviewer-accepted changes into `main` only after the reviewer's notification confirms all gates passed.
+Coder 开工前从 `swarmforge-architect`（或 `main`，看架构师提交在哪）合并。Reviewer 审查前从 `swarmforge-coder` 合并。Architect 只有收到 reviewer 通知说门禁全过了，才把变更合入 `main`。
 
-Merge accepted changes only from the role that produced them. Do not pull arbitrary branches.
+只从产出变更的那个角色的分支合并，别乱拉。
 
-## Discipline
+## 纪律
 
-- One scenario or one small slice per coder iteration. Stop before scope grows.
-- The reviewer may refactor for testability but must preserve behavior; reviewer changes return to the coder for acknowledgement, not silent acceptance.
-- Do not commit unrelated local edits or generated artifacts.
-- Do not skip hooks (`--no-verify`) or signing (`--no-gpg-sign`) without explicit human approval.
-- The human user is the final authority and may override any rule in writing.
+- 每轮 coder 迭代只做一个场景或一个小切片，范围要膨胀就停。
+- Reviewer 可以为可测试性重构，但行为不能变。Reviewer 的改动要回给 coder 确认，不准默认接受。
+- 无关的本地编辑和生成产物不要提交。
+- 没有人类点头，不准跳 hook（`--no-verify`）或签名（`--no-gpg-sign`）。
+- 人类用户说了算，可以书面覆盖任何规则。

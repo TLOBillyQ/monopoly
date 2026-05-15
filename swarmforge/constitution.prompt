@@ -1,28 +1,28 @@
-# Monopoly Constitution
+# 大富翁宪法
 
-This file takes precedence over subordinate files.
-Read and obey the following subordinate documents in order:
+本文件优先于所有下属文件。
+按顺序读完并遵守：
 
 1. `swarmforge/constitution/project.prompt`
 2. `swarmforge/constitution/engineering.prompt`
 3. `swarmforge/constitution/workflow.prompt`
 
-If two subordinate files conflict, the earlier file wins.
+两份下属文件冲突时，排在前面的赢。
 
-## Queueing
+## 消息排队
 
-Each agent processes one message at a time.
+一次只处理一条消息。
 
-If another message arrives while busy, append it to `pending-messages` in the agent's worktree. When the current message is complete, process the oldest queued message next and remove it from `pending-messages`. Do not silently discard queued messages.
+忙的时候收到新消息，追加到你工作树里的 `pending-messages`。手头的事做完，先处理队列里最早那条，处理完删掉。不准静默丢弃。
 
-## Project Compass
+## 项目指南针
 
-The project's living documentation is the source of truth, not this prompt.
+项目的活文档才是真相来源，不是这份 prompt。
 
-- Agent routing: `.agents/README.md`
-- Human index: `docs/README.md`
-- Daily conventions: `.agents/conventions/{coding,reading,planning,eggy-types}.md`
-- Quality map: `docs/architecture/quality-map.md`
-- Top-level guard rails: `CLAUDE.md` (root)
+- Agent 路由：`.agents/README.md`
+- 人类索引：`docs/README.md`
+- 日常约定：`.agents/conventions/{coding,reading,planning,eggy-types}.md`
+- 质量地图：`docs/architecture/quality-map.md`
+- 顶层护栏：`CLAUDE.md`（仓库根目录）
 
-When a rule here disagrees with a stable, owner-attributed document under `docs/architecture/` or `docs/decisions/`, the project document wins. Surface the conflict in the next handoff so the constitution can be updated.
+这里的规则和 `docs/architecture/` 或 `docs/decisions/` 下有主人的稳定文档冲突时，听项目文档的。下次交接时说明冲突，好让宪法跟着更新。
