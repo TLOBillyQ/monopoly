@@ -79,6 +79,48 @@ local function _handle_skin_gallery(state, intent, skin_gallery)
   return false
 end
 
+local function _handle_skin_panel(state, intent, skin_panel)
+  if skin_panel == nil then
+    return false
+  end
+  local intent_type = intent and intent.type
+  if intent_type == "open_skin_panel" then
+    local skin_gallery = _resolve_loaded("src.ui.coord.skin_gallery")
+    if skin_gallery then
+      skin_gallery.open_skin(state, intent.actor_role_id)
+      return true
+    end
+    skin_panel.open(state, intent.actor_role_id)
+    return true
+  end
+  if intent_type == "skin_panel_action" then
+    skin_panel.handle_action(state, intent.action, intent.actor_role_id)
+    return true
+  end
+  return false
+end
+
+local function _handle_item_atlas(state, intent, item_atlas)
+  if item_atlas == nil then
+    return false
+  end
+  local intent_type = intent and intent.type
+  if intent_type == "open_gallery_panel" then
+    local skin_gallery = _resolve_loaded("src.ui.coord.skin_gallery")
+    if skin_gallery then
+      skin_gallery.open_gallery(state, intent.actor_role_id)
+      return true
+    end
+    item_atlas.open(state, intent.actor_role_id)
+    return true
+  end
+  if intent_type == "item_atlas_action" then
+    item_atlas.handle_action(state, intent.action, intent.actor_role_id)
+    return true
+  end
+  return false
+end
+
 local function _warn_missing_toggle_channel(actor_role_id)
   local logger = _resolve_loaded("src.foundation.log.logger")
   if logger and type(logger.warn) == "function" then
@@ -129,6 +171,8 @@ local function _fallback_dispatch(state, intent)
   local market = _resolve_loaded("src.ui.coord.market")
   local modal = _resolve_loaded("src.ui.coord.modal")
   local event_log_view = _resolve_loaded("src.ui.coord.event_log_view")
+  local skin_panel = _resolve_loaded("src.ui.coord.skin_panel")
+  local item_atlas = _resolve_loaded("src.ui.coord.item_atlas")
   local skin_gallery = _resolve_loaded("src.ui.coord.skin_gallery")
   local handlers = {
     market_select = function()
@@ -141,10 +185,16 @@ local function _fallback_dispatch(state, intent)
       return _handle_toggle_action_log(state, intent, event_log_view)
     end,
     open_skin_panel = function()
-      return _handle_skin_gallery(state, intent, skin_gallery)
+      return _handle_skin_panel(state, intent, skin_panel)
     end,
     open_gallery_panel = function()
-      return _handle_skin_gallery(state, intent, skin_gallery)
+      return _handle_item_atlas(state, intent, item_atlas)
+    end,
+    skin_panel_action = function()
+      return _handle_skin_panel(state, intent, skin_panel)
+    end,
+    item_atlas_action = function()
+      return _handle_item_atlas(state, intent, item_atlas)
     end,
     skin_gallery_action = function()
       return _handle_skin_gallery(state, intent, skin_gallery)

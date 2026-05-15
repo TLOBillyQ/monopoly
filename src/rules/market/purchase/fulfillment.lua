@@ -2,9 +2,6 @@ local inventory = require("src.rules.items.inventory")
 local context = require("src.rules.market.query.context")
 local monopoly_event = require("src.foundation.events")
 local number_utils = require("src.foundation.lang.number")
-local runtime_refs = require("src.config.content.runtime_refs")
-local runtime_ports = require("src.foundation.ports.runtime_ports")
-local logger = require("src.foundation.log.logger")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
 
@@ -69,45 +66,11 @@ local function _fulfill_item(game, player, entry, opts, price, currency, priced_
   }
 end
 
-local function _try_apply_skin_to_unit(player_id, creature_key)
-  local role = runtime_ports.resolve_role(player_id)
-  if not (role and type(role.get_ctrl_unit) == "function") then
-    logger.warn("fulfill_skin: no role found for player " .. tostring(player_id))
-    return
-  end
-  local ok_unit, unit = pcall(role.get_ctrl_unit)
-  if not ok_unit then
-    logger.warn("fulfill_skin: role get_ctrl_unit failed for player " .. tostring(player_id))
-    unit = nil
-  end
-  if not (unit and type(unit.set_model_by_creature_key) == "function") then
-    logger.warn("fulfill_skin: unit missing set_model_by_creature_key for player " .. tostring(player_id))
-    return
-  end
-  if creature_key then
-    local ok_change = pcall(unit.set_model_by_creature_key, creature_key, true, true, true)
-      or pcall(unit.set_model_by_creature_key, unit, creature_key, true, true, true)
-      or pcall(unit.set_model_by_creature_key, creature_key)
-      or pcall(unit.set_model_by_creature_key, unit, creature_key)
-    if not ok_change then
-      logger.warn("fulfill_skin: set_model_by_creature_key failed for player " .. tostring(player_id))
-    end
-  else
-    logger.warn("fulfill_skin: invalid product_id for player " .. tostring(player_id))
-  end
-end
-
 local function _fulfill_skin(game, player, entry, opts, price, currency, priced_text)
   if not _charge_if_needed(game, player, currency, price, opts) then
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
   end
   context.consume_global_limit(game, entry.product_id)
-  local product_id_key = tostring(entry.product_id)
-  local creature_key = runtime_refs.skins[product_id_key]
-  if creature_key == nil then
-    creature_key = number_utils.to_integer(entry.product_id)
-  end
-  _try_apply_skin_to_unit(player.id, creature_key)
   _emit_bought_item(game, {
     player = player,
     entry = entry,
@@ -115,7 +78,13 @@ local function _fulfill_skin(game, player, entry, opts, price, currency, priced_
     currency = currency,
     text = _success_text(player, entry, price, currency, priced_text),
   })
-  return { ok = true, fulfilled_now = true }
+  return {
+    ok = true,
+    kind = "skin",
+    product_id = entry.product_id,
+    fulfilled_now = true,
+    equipped = false,
+  }
 end
 
 function fulfillment.apply(game, player, entry, opts)

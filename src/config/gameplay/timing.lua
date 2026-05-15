@@ -18,6 +18,7 @@ local timing = {
   panel_cash_delta_show_delay_seconds = 0.0,
   landing_visual_hold_seconds = 0.2,
   item_slot_highlight_anim_delay_seconds = 0.35,
+  item_get_reveal_seconds = 3.0,
   mine_trigger_snap_delay_seconds = 0.6,
   demolish_effect_start_delay_seconds = 0.2,
   demolish_effect_followup_delay_seconds = 0.35,

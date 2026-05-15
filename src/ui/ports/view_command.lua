@@ -8,6 +8,8 @@ local actor_context = require("src.ui.coord.actor_context")
 local market = require("src.ui.coord.market")
 local modal = require("src.ui.coord.modal")
 local event_log_view = require("src.ui.coord.event_log_view")
+local skin_panel = require("src.ui.coord.skin_panel")
+local item_atlas = require("src.ui.coord.item_atlas")
 local skin_gallery = require("src.ui.coord.skin_gallery")
 
 local view_command_ports = {}
@@ -73,36 +75,47 @@ local function _toggle_action_log(state, intent)
 end
 
 function view_command_ports.build()
+  local handlers = {
+    toggle_action_log = function(state, intent)
+      return _toggle_action_log(state, intent)
+    end,
+    open_skin_panel = function(state, intent)
+      skin_gallery.open_skin(state, intent.actor_role_id)
+      return true
+    end,
+    open_gallery_panel = function(state, intent)
+      skin_gallery.open_gallery(state, intent.actor_role_id)
+      return true
+    end,
+    skin_panel_action = function(state, intent)
+      skin_panel.handle_action(state, intent.action, intent.actor_role_id)
+      return true
+    end,
+    item_atlas_action = function(state, intent)
+      item_atlas.handle_action(state, intent.action, intent.actor_role_id)
+      return true
+    end,
+    skin_gallery_action = function(state, intent)
+      skin_gallery.handle_action(state, intent.action, intent.actor_role_id)
+      return true
+    end,
+    market_select = function(state, intent)
+      market.select_market_option(state, intent.option_id)
+      return true
+    end,
+    popup_confirm = function(state)
+      modal.close_popup(state)
+      return true
+    end,
+  }
   return {
     dispatch = function(state, intent)
       local intent_type = intent and intent.type or nil
       if intent_type == nil then
         return false
       end
-      if intent_type == "toggle_action_log" then
-        return _toggle_action_log(state, intent)
-      end
-      if intent_type == "open_skin_panel" then
-        skin_gallery.open_skin(state, intent.actor_role_id)
-        return true
-      end
-      if intent_type == "open_gallery_panel" then
-        skin_gallery.open_gallery(state, intent.actor_role_id)
-        return true
-      end
-      if intent_type == "skin_gallery_action" then
-        skin_gallery.handle_action(state, intent.action, intent.actor_role_id)
-        return true
-      end
-      if intent_type == "market_select" then
-        market.select_market_option(state, intent.option_id)
-        return true
-      end
-      if intent_type == "popup_confirm" then
-        modal.close_popup(state)
-        return true
-      end
-      return false
+      local handler = handlers[intent_type]
+      return handler and handler(state, intent) or false
     end,
   }
 end

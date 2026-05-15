@@ -1,0 +1,106 @@
+local item_catalog = require("src.config.content.item_atlas")
+local host_runtime_ports = require("src.ui.host_bridge")
+local number_utils = require("src.foundation.lang.number")
+
+local item_atlas = {}
+
+local PAGE_SIZE = 8
+
+local function _ensure_state(state)
+  assert(state ~= nil, "missing state")
+  local ui = assert(state.ui, "missing state.ui")
+  ui.item_atlas = ui.item_atlas or {
+    open = false,
+    page_index = 1,
+    selected_item_id = nil,
+  }
+  return ui.item_atlas
+end
+
+local function _page_count()
+  return math.max(1, math.floor((#item_catalog + PAGE_SIZE - 1) / PAGE_SIZE))
+end
+
+local function _clamp_page(page_index)
+  local page = number_utils.to_integer(page_index) or 1
+  return number_utils.clamp(page, 1, _page_count())
+end
+
+local function _item_at(atlas, slot_index)
+  local slot = number_utils.to_integer(slot_index) or 1
+  return item_catalog[(atlas.page_index - 1) * PAGE_SIZE + slot]
+end
+
+local function _notify(text, key)
+  host_runtime_ports.enqueue_tip({
+    text = text,
+    duration = 2.0,
+    dedupe_key = key,
+    blocks_inter_turn = false,
+    source = "ui.item_atlas",
+  })
+end
+
+function item_atlas.open(state, role_id)
+  local atlas = _ensure_state(state)
+  atlas.open = true
+  atlas.role_id = role_id
+  atlas.page_index = _clamp_page(atlas.page_index)
+  _notify("图鉴已打开", "item_atlas:open:" .. tostring(role_id))
+  return atlas
+end
+
+function item_atlas.close(state)
+  local atlas = _ensure_state(state)
+  atlas.open = false
+  _notify("已关闭", "item_atlas:close")
+  return atlas
+end
+
+function item_atlas.page_next(state)
+  local atlas = _ensure_state(state)
+  atlas.page_index = _clamp_page(atlas.page_index + 1)
+  return atlas
+end
+
+function item_atlas.page_prev(state)
+  local atlas = _ensure_state(state)
+  atlas.page_index = _clamp_page(atlas.page_index - 1)
+  return atlas
+end
+
+function item_atlas.select_slot(state, slot_index)
+  local atlas = _ensure_state(state)
+  local item = _item_at(atlas, slot_index)
+  if item then
+    atlas.selected_item_id = item.id
+  end
+  return atlas
+end
+
+function item_atlas.handle_action(state, action, role_id)
+  if action == "close" then
+    return item_atlas.close(state)
+  end
+  if action == "next" then
+    return item_atlas.page_next(state)
+  end
+  if action == "prev" then
+    return item_atlas.page_prev(state)
+  end
+  if type(action) == "table" and action.type == "select" then
+    return item_atlas.select_slot(state, action.slot_index)
+  end
+  local slot_index = number_utils.to_integer(action)
+  if slot_index ~= nil then
+    return item_atlas.select_slot(state, slot_index)
+  end
+  local atlas = _ensure_state(state)
+  atlas.role_id = role_id or atlas.role_id
+  return atlas
+end
+
+item_atlas.catalog = item_catalog
+item_atlas.page_size = PAGE_SIZE
+
+return item_atlas

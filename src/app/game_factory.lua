@@ -4,6 +4,7 @@ local player = require("src.player.actions.player")
 local inventory = require("src.player.actions.inventory")
 local constants = require("src.config.content.constants")
 local roles_cfg = require("src.config.content.roles")
+local fan_club = require("src.app.host_integrations.fan_club")
 require "vendor.third_party.Utils"
 
 local game_factory = {}
@@ -41,6 +42,10 @@ local function _create_board(opts)
   })
 end
 
+local function _starting_cash()
+  return constants.starting_cash + (fan_club.starting_cash_bonus() or 0)
+end
+
 local function _create_players(opts)
   local players = {}
   local ai_map = opts.ai or {}
@@ -66,7 +71,7 @@ local function _create_players(opts)
         start_index = 1,
         constants = constants,
         balances = {
-          ["金币"] = constants.starting_cash,
+          ["金币"] = _starting_cash(),
         },
         deity_duration_turns = constants.deity_duration_turns,
         inventory = inventory:new({ constants = constants }),
@@ -92,7 +97,7 @@ local function _create_players(opts)
       start_index = 1,
       constants = constants,
       balances = {
-        ["金币"] = constants.starting_cash,
+        ["金币"] = _starting_cash(),
       },
       deity_duration_turns = constants.deity_duration_turns,
       inventory = inventory:new({ constants = constants }),

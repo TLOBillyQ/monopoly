@@ -48,6 +48,8 @@ function router.bind(state, resolve_game)
     if intent.type == "toggle_action_log"
         or intent.type == "open_skin_panel"
         or intent.type == "open_gallery_panel"
+        or intent.type == "skin_panel_action"
+        or intent.type == "item_atlas_action"
         or intent.type == "skin_gallery_action"
         or intent.type == "choice_select"
         or intent.type == "choice_cancel"
@@ -67,6 +69,8 @@ function router.bind(state, resolve_game)
     local local_only = intent.type == "toggle_action_log"
       or intent.type == "open_skin_panel"
       or intent.type == "open_gallery_panel"
+      or intent.type == "skin_panel_action"
+      or intent.type == "item_atlas_action"
       or intent.type == "skin_gallery_action"
       or (intent.type == "ui_button" and intent.id == "auto")
     local actor_role_id

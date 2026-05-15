@@ -12,6 +12,8 @@ function intent_dispatcher.dispatch(state, game, intent, opts)
   if (intent_type == "toggle_action_log"
       or intent_type == "open_skin_panel"
       or intent_type == "open_gallery_panel"
+      or intent_type == "skin_panel_action"
+      or intent_type == "item_atlas_action"
       or intent_type == "skin_gallery_action")
       and intent_dispatcher.dispatch_view_command(state, intent) then
     return
