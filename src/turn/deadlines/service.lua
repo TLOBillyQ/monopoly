@@ -1,6 +1,6 @@
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local timing = require("src.config.gameplay.timing")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local runtime_state = require("src.state.runtime")
 
 local M = {}

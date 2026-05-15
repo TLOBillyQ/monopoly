@@ -37,6 +37,20 @@ local function _truncate_number(value)
   return _to_integer_safe(value)
 end
 
+function number_utils.is_numeric(value)
+  local value_type = type(value)
+  if value_type == "nil" then
+    return false
+  end
+  if _is_numeric_type_name(value_type) then
+    return true
+  end
+  if value_type == "string" then
+    return false
+  end
+  return _to_integer_safe(value) ~= nil
+end
+
 local function _parse_integer_string(value)
   if value == nil then
     return nil
@@ -70,20 +84,6 @@ local function _parse_integer_string(value)
     return _tointeger(sign * num)
   end
   return sign * num
-end
-
-function number_utils.is_numeric(value)
-  local value_type = type(value)
-  if value_type == "nil" then
-    return false
-  end
-  if _is_numeric_type_name(value_type) then
-    return true
-  end
-  if value_type == "string" then
-    return false
-  end
-  return _to_integer_safe(value) ~= nil
 end
 
 function number_utils.to_integer(value)

@@ -10,7 +10,7 @@ local market_nodes = require("src.ui.schema.market")
 local popup_nodes = require("src.ui.schema.popup")
 local bankruptcy_nodes = require("src.ui.schema.bankruptcy")
 local debug_nodes = require("src.ui.schema.debug")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 
 local coordinator = {}
 

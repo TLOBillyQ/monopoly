@@ -1,7 +1,7 @@
 require("spec.bootstrap").install_package_paths()
 
 local common = require("shared.lib.common")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local _PHASE_TIMEOUT = 600
 

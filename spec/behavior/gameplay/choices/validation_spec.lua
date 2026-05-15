@@ -5,7 +5,7 @@ local choice_handler_factory = require("src.rules.choice_handlers.factory")
 local validator = require("src.turn.actions.validator")
 local availability = require("src.rules.items.availability")
 local runtime_state = require("src.state.runtime")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 local _validate = validator._validate_item_slot_action
 local _resolve = validator._resolve_item_slot_resolution

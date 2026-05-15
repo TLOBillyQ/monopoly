@@ -1,5 +1,5 @@
-local number_utils = require("src.foundation.lang.number")
-local logger = require("src.foundation.log.logger")
+local number_utils = require("src.foundation.number")
+local logger = require("src.foundation.log")
 local runtime_refs = require("src.config.content.runtime_refs")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local catalog = require("src.ui.render.board_feedback.catalog")

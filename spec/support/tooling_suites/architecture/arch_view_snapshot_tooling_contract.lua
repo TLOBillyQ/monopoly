@@ -172,20 +172,20 @@ end
 
 local function _test_projection_exposes_full_names_and_display_edges()
   local architecture = _snapshot_architecture()
-  local lang_view = architecture.views["foundation.lang"]
-  assert(lang_view ~= nil, "foundation.lang view should exist")
+  local foundation_view = architecture.views["foundation"]
+  assert(foundation_view ~= nil, "foundation view should exist")
 
   local number_node = nil
-  for _, node in ipairs(lang_view.nodes or {}) do
-    if node.module_id == "src.foundation.lang.number" then
+  for _, node in ipairs(foundation_view.nodes or {}) do
+    if node.module_id == "src.foundation.number" then
       number_node = node
       break
     end
   end
 
-  assert(number_node ~= nil, "foundation.lang view should contain number leaf")
+  assert(number_node ~= nil, "foundation view should contain number leaf")
   _assert_eq(number_node.display_label, "number", "leaf display label should use source file basename")
-  _assert_eq(number_node.full_name, "foundation.lang.number", "leaf full name should strip top-level src prefix")
+  _assert_eq(number_node.full_name, "foundation.number", "leaf full name should strip top-level src prefix")
   assert(#(architecture.views.root.display_edges or {}) > 0, "root view should expose routed display edges")
 end
 
@@ -200,7 +200,7 @@ local function _test_json_modules_are_self_contained()
   local common_source = _read_file("vendor/arch_view/arch_view/runtime/common.lua")
   local host_source = _read_file("vendor/arch_view/arch_view/runtime/host.lua")
   assert(common_source:find('require("shared.lib.common")', 1, true) == nil, "arch_view common should not depend on monopoly lib.common")
-  assert(host_source:find('src.foundation.lang.number', 1, true) == nil,
+  assert(host_source:find('src.foundation.number', 1, true) == nil,
     "arch_view host runtime should not depend on monopoly src modules")
 end
 

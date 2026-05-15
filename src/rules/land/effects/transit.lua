@@ -4,7 +4,7 @@ local constants = require("src.config.content.constants")
 local inventory = require("src.rules.items.inventory")
 local presenter = require("src.rules.land.presenter")
 local event_feed = require("src.rules.ports.event_feed")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local popup_show_seconds = timing.popup_dwell_default_seconds or 1.0
 

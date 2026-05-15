@@ -1,7 +1,7 @@
 local skins = require("src.config.content.skins")
 local host_runtime_ports = require("src.ui.host_bridge")
-local number_utils = require("src.foundation.lang.number")
-local logger = require("src.foundation.log.logger")
+local number_utils = require("src.foundation.number")
+local logger = require("src.foundation.log")
 
 local skin_panel = {}
 

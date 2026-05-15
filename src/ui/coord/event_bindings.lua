@@ -1,4 +1,4 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local runtime = require("src.ui.render.runtime_ui")
 local base_nodes = require("src.ui.schema.base")
 local base_contract = require("src.ui.schema.base_contract")

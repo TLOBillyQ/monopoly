@@ -1,6 +1,6 @@
 local unit_lifecycle = require("src.host.units")
-local number_utils = require("src.foundation.lang.number")
-local logger = require("src.foundation.log.logger")
+local number_utils = require("src.foundation.number")
+local logger = require("src.foundation.log")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local entity_pool = {}

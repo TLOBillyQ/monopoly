@@ -1,5 +1,5 @@
-local number_utils = require("src.foundation.lang.number")
-local role_id_utils = require("src.foundation.identity.role_id")
+local number_utils = require("src.foundation.number")
+local role_id_utils = require("src.foundation.identity")
 
 local item_slot_data = {}
 

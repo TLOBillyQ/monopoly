@@ -1,4 +1,4 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")

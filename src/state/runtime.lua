@@ -1,4 +1,4 @@
-local logger_utils = require("src.foundation.log.utils")
+local logger = require("src.foundation.log")
 local dirty_tracker = require("src.state.dirty_tracker")
 
 local runtime_state = {}
@@ -279,7 +279,7 @@ end
 
 function runtime_state.log_once(state, level, key, ...)
   local debug_runtime = runtime_state.ensure_debug_runtime(state)
-  return logger_utils.log_once(debug_runtime.log_once, level, key, ...)
+  return logger.log_once(debug_runtime.log_once, level, key, ...)
 end
 
 function runtime_state.ensure_deadlines(state)

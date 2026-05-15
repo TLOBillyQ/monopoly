@@ -898,13 +898,13 @@ end
 local function _test_mutate_wrapper_scan_json_output()
   local result = _run_lua({
     "tools/quality/mutate.lua",
-    "src/foundation/identity/role_id.lua",
+    "src/foundation/identity.lua",
     "--scan",
     "--json",
   })
 
   assert(result.ok == true, "mutate wrapper scan should succeed")
-  _assert_contains(result.output, "\"relative_file\":\"src/foundation/identity/role_id.lua\"",
+  _assert_contains(result.output, "\"relative_file\":\"src/foundation/identity.lua\"",
     "mutate scan should report the normalized target path")
   _assert_contains(result.output, "\"sites\":[",
     "mutate scan should emit discovered mutation sites in json output")

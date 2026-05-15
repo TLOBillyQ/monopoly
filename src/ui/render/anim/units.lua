@@ -3,7 +3,7 @@ local move_anim = require("src.ui.render.move_anim")
 local tip_text = require("src.ui.render.anim.tip_text")
 local board_feedback = require("src.ui.render.board_feedback.service")
 local unit_position = require("src.ui.render.unit_position")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local timing = require("src.config.gameplay.timing")
 local compute = require("src.ui.render.anim.overlay_compute")
 

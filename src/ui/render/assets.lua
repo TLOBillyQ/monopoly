@@ -3,7 +3,7 @@ local player_colors = require("src.ui.view.player_colors")
 local ui_nodes = require("src.ui.render.node_ops")
 local base_nodes = require("src.ui.schema.base")
 local permanent_nodes = require("src.ui.schema.permanent")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local runtime_refs = require("src.config.content.runtime_refs")
 
 local M = {}

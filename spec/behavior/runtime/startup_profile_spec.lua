@@ -152,8 +152,8 @@ local function _reload_app_init_with_stubs(startup, runner)
 
   with_patches({
     { target = package.loaded, key = "src.app", value = nil },
-    { target = package.loaded, key = "src.foundation.log.logger", value = logger_stub },
-    { target = package.loaded, key = "src.foundation.coordination.tip_queue", value = tip_queue_stub },
+    { target = package.loaded, key = "src.foundation.log", value = logger_stub },
+    { target = package.loaded, key = "src.foundation.tips", value = tip_queue_stub },
     {
       target = package.loaded,
       key = "src.app.host_install",
@@ -551,8 +551,8 @@ describe("startup_profile", function()
 
     with_patches({
       { target = package.loaded, key = "src.app", value = nil },
-      { target = package.loaded, key = "src.foundation.log.logger", value = logger_stub },
-      { target = package.loaded, key = "src.foundation.coordination.tip_queue", value = tip_queue_stub },
+      { target = package.loaded, key = "src.foundation.log", value = logger_stub },
+      { target = package.loaded, key = "src.foundation.tips", value = tip_queue_stub },
       { target = package.loaded, key = "src.app.host_install", value = { install = function() end } },
       { target = package.loaded, key = "src.app.state_factory", value = { build_state = function() return state end } },
       { target = require("src.app.event_bridge"), key = "install", value = function() end },

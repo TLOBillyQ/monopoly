@@ -1,5 +1,5 @@
-local logger = require("src.foundation.log.logger")
-local role_id_utils = require("src.foundation.identity.role_id")
+local logger = require("src.foundation.log")
+local role_id_utils = require("src.foundation.identity")
 local runtime = require("src.ui.render.runtime_ui")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local ui_events = require("src.ui.coord.ui_events")

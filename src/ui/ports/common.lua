@@ -1,5 +1,5 @@
-local logger = require("src.foundation.log.logger")
-local number_utils = require("src.foundation.lang.number")
+local logger = require("src.foundation.log")
+local number_utils = require("src.foundation.number")
 local ui_runtime_state = require("src.ui.state.runtime")
 
 local common = {}

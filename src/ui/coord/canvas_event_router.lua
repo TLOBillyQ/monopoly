@@ -4,7 +4,7 @@ local canvas_registry = require("src.ui.input.canvas_route.registry")
 local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
 local host_runtime_ports = require("src.ui.host_bridge")
 local modal = require("src.ui.coord.modal")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 local router = {}
 

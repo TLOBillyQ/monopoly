@@ -1,5 +1,5 @@
 local event_feed_adapter = require("src.turn.output.event_feed_adapter")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local tip_queue = require("src.foundation.tips")
 
 local function _reset_tip_queue()
   tip_queue.clear()

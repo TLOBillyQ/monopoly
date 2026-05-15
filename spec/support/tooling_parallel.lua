@@ -4,7 +4,7 @@ local harness = require("tools.quality.shared.test_harness")
 local log_capture = require("spec.support.log_capture")
 local common = require("shared.lib.common")
 local json_reader = require("arch_view.runtime.json_reader")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local M = {}
 

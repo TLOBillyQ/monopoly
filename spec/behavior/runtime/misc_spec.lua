@@ -49,7 +49,7 @@ local function _with_game_state_mixins(player_mixin, board_mixin, turn_mixin, fn
 end
 
 -- merged preamble from suites.runtime.misc_tip_queue
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local tip_queue = require("src.foundation.tips")
 
 local function _reset_tip_queue()
   tip_queue.clear()
@@ -812,7 +812,7 @@ describe("misc", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg)
           warned = msg
@@ -833,7 +833,7 @@ describe("misc", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg)
           warned = msg
@@ -854,7 +854,7 @@ describe("misc", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg, ctx1, ctx2)
           warned = msg .. " " .. tostring(ctx1) .. " " .. tostring(ctx2)
@@ -881,7 +881,7 @@ describe("misc", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg, ctx)
           warned = msg .. " " .. tostring(ctx)
@@ -909,7 +909,7 @@ describe("misc", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg, ctx)
           warned = msg .. " " .. tostring(ctx)

@@ -2,7 +2,7 @@ local modal_state = require("src.ui.state.modal")
 local common = require("src.ui.coord.choice_screens.helpers")
 local ui_nodes = require("src.ui.render.node_ops")
 local ui_controls = require("src.ui.render.support.ui_controls")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 local M = {}
 

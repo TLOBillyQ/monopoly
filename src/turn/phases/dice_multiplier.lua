@@ -2,7 +2,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
 local use_broadcast = require("src.rules.items.use_broadcast")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local dice_multiplier = {}
 

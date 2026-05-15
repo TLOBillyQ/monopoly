@@ -1,5 +1,5 @@
 local panel_view = require("src.ui.view.panel_builder")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 
 local panel_slice = {}
 

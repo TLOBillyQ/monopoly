@@ -1,5 +1,5 @@
 local effect_runner = require("src.rules.effects.runner")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local intent_output_port = require("src.rules.ports.intent_output")
 local availability = require("src.rules.items.availability")
 

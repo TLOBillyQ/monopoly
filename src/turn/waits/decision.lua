@@ -1,5 +1,5 @@
 local timing = require("src.config.gameplay.timing")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")

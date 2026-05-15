@@ -1,6 +1,6 @@
 local intent_output_port = require("src.rules.ports.intent_output")
 local item_use_broadcast = require("src.rules.items.use_broadcast")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local roadblock = require("src.rules.items.roadblock")
 local normalize = require("src.rules.choice_handlers.item.normalize")
 local completions = require("src.rules.choice_handlers.item.completions")

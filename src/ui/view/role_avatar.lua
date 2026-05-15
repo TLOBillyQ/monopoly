@@ -1,5 +1,5 @@
-local number_utils = require("src.foundation.lang.number")
-local logger = require("src.foundation.log.logger")
+local number_utils = require("src.foundation.number")
+local logger = require("src.foundation.log")
 
 local role_avatar = {}
 local warned_values = {}

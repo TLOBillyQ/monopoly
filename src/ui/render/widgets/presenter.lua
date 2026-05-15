@@ -1,6 +1,6 @@
 local role_context = require("src.ui.view.role_context")
 local base_nodes = require("src.ui.schema.base")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 local panel_cash_delta = require("src.ui.render.widgets.cash_delta")
 local panel_player_slots = require("src.ui.render.widgets.player_slots")
 local ui_touch_policy_runtime = require("src.ui.input.touch")

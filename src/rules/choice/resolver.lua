@@ -1,6 +1,6 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
-local tables = require("src.foundation.lang.tables")
+local tables = require("src.foundation.tables")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local dirty_tracker = require("src.state.dirty_tracker")
 

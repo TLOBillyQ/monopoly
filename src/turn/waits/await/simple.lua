@@ -3,7 +3,7 @@ local timing = require("src.config.gameplay.timing")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local landing_visual_hold = require("src.state.visual_hold")
 local auto_play_port = require("src.rules.ports.auto_play")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local tip_queue = require("src.foundation.tips")
 local shared = require("src.turn.waits.await.shared")
 
 local M = {}

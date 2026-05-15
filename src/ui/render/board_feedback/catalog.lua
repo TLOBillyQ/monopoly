@@ -1,8 +1,8 @@
 local runtime_refs = require("src.config.content.runtime_refs")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
-local logger = require("src.foundation.log.logger")
-local number_utils = require("src.foundation.lang.number")
-local tables = require("src.foundation.lang.tables")
+local logger = require("src.foundation.log")
+local number_utils = require("src.foundation.number")
+local tables = require("src.foundation.tables")
 
 local catalog = {}
 

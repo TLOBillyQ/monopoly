@@ -1,6 +1,6 @@
 local player_colors = require("src.ui.view.player_colors")
 local base_nodes = require("src.ui.schema.base")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local panel_player_slots = {}
 

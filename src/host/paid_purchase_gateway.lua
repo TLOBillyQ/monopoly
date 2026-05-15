@@ -1,4 +1,4 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local gateway = {}

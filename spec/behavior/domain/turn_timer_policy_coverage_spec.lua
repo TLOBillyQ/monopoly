@@ -1,7 +1,7 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 local turn_timer_policy = require("src.turn.policies.timer")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local tip_queue = require("src.foundation.tips")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))

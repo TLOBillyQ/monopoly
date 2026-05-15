@@ -1,8 +1,8 @@
-local logger = require("src.foundation.log.logger")
-local number_utils = require("src.foundation.lang.number")
+local logger = require("src.foundation.log")
+local number_utils = require("src.foundation.number")
 local item_slot_data = require("src.turn.actions.item_slot_data")
 local output_state_adapter = require("src.turn.output.state_adapter")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 local defaults = require("src.turn.actions.dispatch.defaults")
 
 local function resolve_dispatch_context(state, context)

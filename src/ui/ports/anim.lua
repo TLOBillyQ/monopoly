@@ -1,6 +1,6 @@
 local move_anim = require("src.ui.render.move_anim")
 local runtime_state = require("src.ui.state.runtime")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 local status3d = require("src.ui.render.status3d")
 local action_anim_player = require("src.ui.render.anim")
 local ui_runtime = require("src.ui.coord.ui_runtime")

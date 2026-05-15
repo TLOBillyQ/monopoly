@@ -1,5 +1,5 @@
 local constants = require("src.config.content.constants")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local tip_queue = require("src.foundation.tips")
 
 local turn_timer_policy = {}
 

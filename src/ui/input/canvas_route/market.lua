@@ -1,4 +1,4 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local runtime_state = require("src.ui.state.runtime")
 local ui_event_intents = require("src.ui.input.event_intents")
 local nodes = require("src.ui.schema.market")

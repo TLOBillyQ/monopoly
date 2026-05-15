@@ -25,7 +25,7 @@ ADR-0001 §D1 写"foundation 不可依赖任何上层"，§D7 又写"state ↔ f
 
 ```lua
 -- src/foundation/log/utils.lua（修复前）
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local runtime_state = require("src.state.runtime_state")  -- ⚠ 灰区
 
 function logger_utils.log_once(state, level, key, ...)
@@ -54,7 +54,7 @@ end
 
 ```lua
 -- src/foundation/log/utils.lua（修复后）
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 local logger_utils = {}
 
@@ -81,7 +81,7 @@ return logger_utils
 
 ```lua
 -- src/state/runtime_state.lua（新增）
-local logger_utils = require("src.foundation.log.utils")
+local logger_utils = require("src.foundation.log")
 ...
 function runtime_state.log_once(state, level, key, ...)
   local debug_runtime = runtime_state.ensure_debug_runtime(state)

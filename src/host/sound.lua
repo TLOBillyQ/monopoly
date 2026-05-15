@@ -1,5 +1,5 @@
-local logger = require("src.foundation.log.logger")
-local number_utils = require("src.foundation.lang.number")
+local logger = require("src.foundation.log")
+local number_utils = require("src.foundation.number")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 
 local sfx_runtime = {}

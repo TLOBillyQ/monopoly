@@ -1,5 +1,5 @@
 local runtime = require("src.ui.render.runtime_ui")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 
 local M = {}
 

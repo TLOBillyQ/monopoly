@@ -15,7 +15,7 @@ local _asset_handlers_final_tests = {
        dependencies = function()
          return {
            monopoly_event = require("src.foundation.events"),
-           number_utils = require("src.foundation.lang.number"),
+           number_utils = require("src.foundation.number"),
          }
        end,
      }
@@ -55,7 +55,7 @@ local _asset_handlers_final_tests = {
        dependencies = function()
          return {
            monopoly_event = require("src.foundation.events"),
-           number_utils = require("src.foundation.lang.number"),
+           number_utils = require("src.foundation.number"),
          }
        end,
      }
@@ -92,7 +92,7 @@ local _asset_handlers_final_tests = {
        dependencies = function()
          return {
            monopoly_event = require("src.foundation.events"),
-           number_utils = require("src.foundation.lang.number"),
+           number_utils = require("src.foundation.number"),
          }
        end,
      }

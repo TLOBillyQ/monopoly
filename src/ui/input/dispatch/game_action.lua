@@ -1,4 +1,4 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
 local item_phase_ask_flow = require("src.ui.input.dispatch.item_phase_ask")
 local item_slot_confirm = require("src.ui.input.dispatch.item_slot_confirm")

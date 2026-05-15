@@ -1,4 +1,4 @@
-local log_formatter = require("src.foundation.log.formatter")
+local log_formatter = require("src.foundation.log").formatter
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))

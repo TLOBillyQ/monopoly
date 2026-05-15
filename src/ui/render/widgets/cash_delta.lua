@@ -1,7 +1,7 @@
 local base_nodes = require("src.ui.schema.base")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local timing = require("src.config.gameplay.timing")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local panel_cash_delta = {}
 

@@ -1,4 +1,4 @@
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 local choice_contract = require("src.config.choice.contract")
 
 local item_slice = {}

@@ -2,7 +2,7 @@
 -- 进入 `_item_phase_ask_active=true` 后注册 deadline，到点调 force_resolve.resolve_target_select。
 local timing = require("src.config.gameplay.timing")
 local DeadlineService = require("src.turn.deadlines.service")
-local NumberUtils = require("src.foundation.lang.number")
+local NumberUtils = require("src.foundation.number")
 local force_resolve = require("src.turn.deadlines.force_resolve")
 
 local M = {}

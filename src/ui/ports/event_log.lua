@@ -3,7 +3,7 @@ local with_client_role = require("src.ui.utils.with_client_role")
 local event_log = require("src.state.event_log")
 local ui_event_state = require("src.ui.coord.event_state")
 local runtime = require("src.ui.render.runtime_ui")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 local ui_view = require("src.ui.coord.ui_runtime")
 
 local event_log_ports = {}

@@ -282,7 +282,7 @@ describe("host_entity_pool_contract", function()
       return nil
     end
     local warn_count = 0
-    local real_logger = require("src.foundation.log.logger")
+    local real_logger = require("src.foundation.log")
     local real_warn = real_logger.warn
     real_logger.warn = function(...)
       warn_count = warn_count + 1

@@ -1,5 +1,5 @@
 local gameplay_loop_ports = {}
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local _tick_timeout = nil

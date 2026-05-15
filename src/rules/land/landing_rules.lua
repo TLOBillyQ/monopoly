@@ -4,7 +4,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
 local use_broadcast = require("src.rules.items.use_broadcast")
 local rent_resolver = require("src.rules.land.rent_resolver")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local land_rules = {}
 land_rules.safe_tile_state = rent_resolver.safe_tile_state

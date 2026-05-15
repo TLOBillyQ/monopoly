@@ -5,7 +5,7 @@ local placement = require("src.ui.render.board.placement")
 local events = require("src.ui.render.board.events")
 local runtime_state = require("src.ui.state.runtime")
 local debug_flags = require("src.config.gameplay.debug_flags")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 local M = {}
 

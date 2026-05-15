@@ -1,5 +1,5 @@
 local runtime_ports = require("src.foundation.ports.runtime_ports")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 
 local runtime = {}
 

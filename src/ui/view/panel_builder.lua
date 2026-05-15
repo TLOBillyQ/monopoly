@@ -1,5 +1,5 @@
 local gameplay_read_port = require("src.ui.view.gameplay_read_port")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local role_avatar = require("src.ui.view.role_avatar")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 

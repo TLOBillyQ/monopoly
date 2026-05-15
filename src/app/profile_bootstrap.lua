@@ -1,6 +1,6 @@
 local inventory = require("src.rules.items.inventory")
 local constants = require("src.config.content.constants")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local bootstrap = {}
 

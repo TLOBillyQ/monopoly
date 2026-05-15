@@ -253,8 +253,8 @@ lua tools/quality/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/c
 ### 单文件变异诊断
 
 ```sh
-lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --scan
-lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --since-last-run
+lua tools/quality/mutate.lua src/foundation/identity.lua --scan
+lua tools/quality/mutate.lua src/foundation/identity.lua --since-last-run
 ```
 
 适合先看一个文件值不值得做 mutation，再决定是否跑完整变异回合。耗时主要取决于目标文件的变异点数量和所选 lane。

@@ -1,7 +1,7 @@
 local context = require("src.rules.market.query.context")
 local eligibility = require("src.rules.market.query.eligibility")
-local number_utils = require("src.foundation.lang.number")
-local tables = require("src.foundation.lang.tables")
+local number_utils = require("src.foundation.number")
+local tables = require("src.foundation.tables")
 
 local choice = {}
 local PAGE_SIZE = 10

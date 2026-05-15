@@ -1,5 +1,5 @@
 local debug_flags = require("src.config.gameplay.debug_flags")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 local debug_mod = {}
 

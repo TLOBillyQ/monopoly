@@ -1,6 +1,6 @@
 local choice_support = require("src.ui.view.choice_support")
 local choice_contract = require("src.config.choice.contract")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 local runtime_state = require("src.ui.state.runtime")
 
 local pre_confirm_flow = {}

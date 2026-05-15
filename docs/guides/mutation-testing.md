@@ -30,12 +30,12 @@ Monopoly 包装层额外支持两个参数：
 其余参数沿用上游 `mutate4lua`，例如：
 
 ```sh
-lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --scan
-lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --since-last-run
-lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --mutate-all
-lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --lines 12,18
-lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --lane contract
-lua tools/quality/mutate.lua src/foundation/identity/role_id.lua --test-command "busted --run behavior"
+lua tools/quality/mutate.lua src/foundation/identity.lua --scan
+lua tools/quality/mutate.lua src/foundation/identity.lua --since-last-run
+lua tools/quality/mutate.lua src/foundation/identity.lua --mutate-all
+lua tools/quality/mutate.lua src/foundation/identity.lua --lines 12,18
+lua tools/quality/mutate.lua src/foundation/identity.lua --lane contract
+lua tools/quality/mutate.lua src/foundation/identity.lua --test-command "busted --run behavior"
 ```
 
 ## Monopoly 适配层做了什么

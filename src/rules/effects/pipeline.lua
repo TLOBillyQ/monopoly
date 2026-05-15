@@ -1,6 +1,6 @@
 local effect_runner = require("src.rules.effects.runner")
 local intent_output_port = require("src.rules.ports.intent_output")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local pipeline = {}
 

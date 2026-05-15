@@ -1,9 +1,9 @@
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local _presenter_warned = false
 
 local function _warn(...)
-  local ok, log = pcall(require, "src.foundation.log.logger")
+  local ok, log = pcall(require, "src.foundation.log")
   if ok and type(log) == "table" and type(log.warn) == "function" then
     log.warn(...)
   end

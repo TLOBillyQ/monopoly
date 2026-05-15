@@ -1,4 +1,4 @@
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local runtime_state = require("src.ui.state.runtime")
 local choice_support = require("src.ui.view.choice_support")
 

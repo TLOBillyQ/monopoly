@@ -176,7 +176,7 @@ describe("choices_session", function()
       ["src.config.choice.contract"] = {
         resolve_owner_role_id = function(choice) return choice.owner_role_id end,
       },
-      ["src.foundation.log.logger"] = {
+      ["src.foundation.log"] = {
         warn = function(...)
           warnings[#warnings + 1] = table.concat({ ... }, " ")
         end,

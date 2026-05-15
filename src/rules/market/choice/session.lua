@@ -1,7 +1,7 @@
 local choice_builder = require("src.rules.market.choice.builder")
 local feedback = require("src.rules.market.choice.feedback")
-local number_utils = require("src.foundation.lang.number")
-local logger = require("src.foundation.log.logger")
+local number_utils = require("src.foundation.number")
+local logger = require("src.foundation.log")
 local choice_contract = require("src.config.choice.contract")
 local dirty_tracker = require("src.state.dirty_tracker")
 

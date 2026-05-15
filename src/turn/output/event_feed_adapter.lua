@@ -1,8 +1,8 @@
 local event_log = require("src.state.event_log")
 local timing = require("src.config.gameplay.timing")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local tip_policy = require("src.config.tip_policy")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local tip_queue = require("src.foundation.tips")
 
 local Adapter = {}
 Adapter.__index = Adapter

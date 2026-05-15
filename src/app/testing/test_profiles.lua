@@ -1,5 +1,5 @@
 local raw_profiles = require("src.config.test_profiles")
-local tables = require("src.foundation.lang.tables")
+local tables = require("src.foundation.tables")
 local M = {}
 local default_profile = {
   group = "startup_smoke",

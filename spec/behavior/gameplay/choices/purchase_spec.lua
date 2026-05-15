@@ -118,7 +118,7 @@ describe("choices_purchase", function()
           return false, "payment_gateway_error"
         end,
       },
-      ["src.foundation.log.logger"] = {
+      ["src.foundation.log"] = {
         warn = function(...)
           warn_calls[#warn_calls + 1] = table.concat({ ... }, " ")
         end,

@@ -4,7 +4,7 @@ local ui_events = require("src.ui.coord.ui_events")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_state = require("src.ui.state.runtime")
 local timing = require("src.config.gameplay.timing")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 local choice_support = require("src.ui.view.choice_support")
 
 local M = {}

@@ -2,8 +2,8 @@ local board_slice = require("src.ui.view.board_slice")
 local item_slice = require("src.ui.view.item_slice")
 local choice_slice = require("src.ui.view.choice_slice")
 local panel_slice = require("src.ui.view.panel_slice")
-local number_utils = require("src.foundation.lang.number")
-local role_id_utils = require("src.foundation.identity.role_id")
+local number_utils = require("src.foundation.number")
+local role_id_utils = require("src.foundation.identity")
 
 local model_api = {}
 

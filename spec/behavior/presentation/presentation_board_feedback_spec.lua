@@ -1,8 +1,8 @@
 local host_runtime = require("src.host")
 local board_feedback = require("src.ui.render.board_feedback.service")
 local runtime_refs = require("src.config.content.runtime_refs")
-local logger = require("src.foundation.log.logger")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local logger = require("src.foundation.log")
+local tip_queue = require("src.foundation.tips")
 local runtime_context = require("src.host.context")
 
 if not math.Vector3 then

@@ -11,7 +11,7 @@ describe("suites.runtime.misc_eggy_paid_gateway", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg)
           warned = msg
@@ -32,7 +32,7 @@ describe("suites.runtime.misc_eggy_paid_gateway", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg)
           warned = msg
@@ -53,7 +53,7 @@ describe("suites.runtime.misc_eggy_paid_gateway", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg, ctx1, ctx2)
           warned = msg .. " " .. tostring(ctx1) .. " " .. tostring(ctx2)
@@ -80,7 +80,7 @@ describe("suites.runtime.misc_eggy_paid_gateway", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg, ctx)
           warned = msg .. " " .. tostring(ctx)
@@ -108,7 +108,7 @@ describe("suites.runtime.misc_eggy_paid_gateway", function()
 
     with_patches({
       {
-        target = require("src.foundation.log.logger"),
+        target = require("src.foundation.log"),
         key = "warn",
         value = function(msg, ctx)
           warned = msg .. " " .. tostring(ctx)

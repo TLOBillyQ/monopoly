@@ -1,5 +1,5 @@
-local logger = require("src.foundation.log.logger")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local logger = require("src.foundation.log")
+local tip_queue = require("src.foundation.tips")
 local timing = require("src.config.gameplay.timing")
 local runtime_install = require("src.app.host_install")
 local startup_roster = require("src.app.roster")

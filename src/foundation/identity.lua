@@ -1,4 +1,4 @@
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local role_id = {}
 
@@ -71,33 +71,3 @@ function role_id.write(map, key, value)
 end
 
 return role_id
-
---[[ mutate4lua-manifest
-version=1
-projectHash=287382956344d6b7
-scope.0.id=chunk:src/foundation/identity/role_id.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=74
-scope.0.semanticHash=236c9e81fe2eb0b8
-scope.1.id=function:role_id.normalize:5
-scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=22
-scope.1.semanticHash=4453ee020b8756fc
-scope.2.id=function:role_id.equals:24
-scope.2.kind=function
-scope.2.startLine=24
-scope.2.endLine=31
-scope.2.semanticHash=aa199046c8d6848a
-scope.3.id=function:role_id.read:33
-scope.3.kind=function
-scope.3.startLine=33
-scope.3.endLine=56
-scope.3.semanticHash=2424f2afff834c70
-scope.4.id=function:role_id.write:58
-scope.4.kind=function
-scope.4.startLine=58
-scope.4.endLine=71
-scope.4.semanticHash=311189619395d29d
-]]

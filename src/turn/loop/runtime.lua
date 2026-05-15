@@ -1,6 +1,6 @@
 local runtime_state = require("src.state.runtime")
 local landing_visual_hold = require("src.state.visual_hold")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 local runtime = {}
 
@@ -90,7 +90,7 @@ function runtime.build_tip_output_port(state)
   port.enqueue = function(_, intent)
     if type(state.show_tip) ~= "function" then
       logger.warn("[tip_output_port]", "state.show_tip not installed, falling back to tip_queue direct")
-      local tip_queue = require("src.foundation.coordination.tip_queue")
+      local tip_queue = require("src.foundation.tips")
       return tip_queue.enqueue(intent)
     end
     return state:show_tip(intent) == true

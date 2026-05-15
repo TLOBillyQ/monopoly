@@ -7,7 +7,7 @@ local timing = require("src.config.gameplay.timing")
 local function _new_cash_delta_presenter_env(opts)
   opts = opts or {}
   local presenter = require("src.ui.render.widgets.presenter")
-  local number_utils = require("src.foundation.lang.number")
+  local number_utils = require("src.foundation.number")
   local state = {
     ui_refs = _wrap_ui_refs({ ["Empty"] = "EMPTY_AVATAR" }),
     ui = {

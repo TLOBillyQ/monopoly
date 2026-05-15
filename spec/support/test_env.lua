@@ -1,5 +1,5 @@
-local logger = require("src.foundation.log.logger")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local logger = require("src.foundation.log")
+local tip_queue = require("src.foundation.tips")
 local runtime_context = require("src.host.context")
 local default_ports = require("src.host.default_ports")
 local runtime_ports = require("src.foundation.ports.runtime_ports")

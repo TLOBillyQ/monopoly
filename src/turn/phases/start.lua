@@ -1,4 +1,4 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local item_phase = require("src.rules.items.phase")
 local item_auto_play_context = require("src.turn.policies.item_play_context")
 local monopoly_event = require("src.foundation.events")

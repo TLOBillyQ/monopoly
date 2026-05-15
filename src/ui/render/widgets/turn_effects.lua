@@ -1,5 +1,5 @@
 local base_nodes = require("src.ui.schema.base")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 local with_client_role = require("src.ui.utils.with_client_role")
 local runtime_ui = require("src.ui.render.runtime_ui")
 

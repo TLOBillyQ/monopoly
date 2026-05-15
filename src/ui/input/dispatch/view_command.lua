@@ -1,5 +1,5 @@
 local view_command_dispatcher = {}
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local host_runtime_ports = require("src.ui.host_bridge")
 
 local function _resolve_loaded(name)
@@ -122,7 +122,7 @@ local function _handle_item_atlas(state, intent, item_atlas)
 end
 
 local function _warn_missing_toggle_channel(actor_role_id)
-  local logger = _resolve_loaded("src.foundation.log.logger")
+  local logger = _resolve_loaded("src.foundation.log")
   if logger and type(logger.warn) == "function" then
     logger.warn("toggle_action_log missing role event channel:", tostring(actor_role_id))
   end

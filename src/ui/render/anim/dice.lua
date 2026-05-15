@@ -1,4 +1,4 @@
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local effect_timeline = require("src.ui.render.support.effect_timeline")
 
 local dice = {}

@@ -1,4 +1,4 @@
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local move_anim = require("src.ui.render.move_anim")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local support = require("support.move_anim_support")

@@ -5,7 +5,7 @@ local popup = require("src.ui.coord.popup")
 local market_presenter = require("src.ui.coord.market")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local dice_nodes = require("src.ui.schema.dice")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 local runtime_state = require("src.ui.state.runtime")
 local ui_controls = require("src.ui.render.support.ui_controls")
 

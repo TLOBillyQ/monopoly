@@ -1,7 +1,7 @@
 local runtime = require("src.ui.render.runtime_ui")
 local host_runtime_ports = require("src.ui.host_bridge")
 local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
-local role_id_utils = require("src.foundation.identity.role_id")
+local role_id_utils = require("src.foundation.identity")
 
 local actor_context = {}
 

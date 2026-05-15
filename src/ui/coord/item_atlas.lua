@@ -1,6 +1,6 @@
 local item_catalog = require("src.config.content.item_atlas")
 local host_runtime_ports = require("src.ui.host_bridge")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 
 local item_atlas = {}
 

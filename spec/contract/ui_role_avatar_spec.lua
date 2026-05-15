@@ -1,5 +1,5 @@
 local role_avatar = require("src.ui.view.role_avatar")
-local logger = require("src.foundation.log.logger")
+local logger = require("src.foundation.log")
 
 -- 0 is the Eggy platform sentinel for "no avatar set" — it must return nil silently.
 -- Negative values are genuinely invalid and must still warn.

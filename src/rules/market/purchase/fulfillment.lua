@@ -1,7 +1,7 @@
 local inventory = require("src.rules.items.inventory")
 local context = require("src.rules.market.query.context")
 local monopoly_event = require("src.foundation.events")
-local number_utils = require("src.foundation.lang.number")
+local number_utils = require("src.foundation.number")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
 

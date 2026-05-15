@@ -1,6 +1,6 @@
 require "vendor.third_party.ClassUtils"
 local player = Class("Player")
-local tables = require("src.foundation.lang.tables")
+local tables = require("src.foundation.tables")
 
 function player:init(attrs)
   assert(attrs ~= nil, "Player.new(attrs) requires attrs")

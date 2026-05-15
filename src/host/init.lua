@@ -1,6 +1,6 @@
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_context = require("src.host.context")
-local tip_queue = require("src.foundation.coordination.tip_queue")
+local tip_queue = require("src.foundation.tips")
 local role_resolver = require("src.host.role_resolver")
 local unit_lifecycle = require("src.host.units")
 local entity_pool = require("src.host.entity_pool")

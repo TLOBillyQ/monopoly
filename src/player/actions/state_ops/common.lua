@@ -1,5 +1,5 @@
 local constants = require("src.config.content.constants")
-local tables = require("src.foundation.lang.tables")
+local tables = require("src.foundation.tables")
 local dirty_tracker = require("src.state.dirty_tracker")
 
 local common = {}
