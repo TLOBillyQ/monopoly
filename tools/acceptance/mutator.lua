@@ -30,6 +30,37 @@ local function _deep_copy(value)
   return copy
 end
 
+local function _source_path(ir)
+  return ((ir or {}).metadata or {}).source_path
+end
+
+local function _field_name(ir, key)
+  return (((ir or {}).metadata or {}).field_names or {})[key] or key
+end
+
+local function _field_line(ir, scenario, key)
+  local scenario_lines = ((scenario or {}).metadata or {}).example_field_lines or {}
+  local ir_lines = ((ir or {}).metadata or {}).field_lines or {}
+  return scenario_lines[key] or ir_lines[key]
+end
+
+local function _display_description(ir, scenario, key, original, mutated)
+  local field = _field_name(ir, key)
+  local path = _source_path(ir)
+  local line = _field_line(ir, scenario, key)
+  local location = ""
+  if path ~= nil and path ~= "" then
+    location = tostring(path)
+  end
+  if line ~= nil then
+    location = location .. ":第" .. tostring(line) .. "行"
+  end
+  if location ~= "" then
+    location = location .. " "
+  end
+  return location .. tostring(field) .. ": " .. tostring(original) .. " -> " .. tostring(mutated)
+end
+
 local function _stable_hash(text)
   local hash = 2166136261
   for index = 1, #text do
@@ -212,6 +243,10 @@ function mutator.build_mutations(ir)
             id = id,
             path = path,
             description = path .. ": " .. original .. " -> " .. mutated,
+            display_description = _display_description(ir, scenario, key, original, mutated),
+            source_path = _source_path(ir),
+            source_line = _field_line(ir, scenario, key),
+            source_field = _field_name(ir, key),
             original = original,
             mutated = mutated,
             scenario_index = scenario_index,
@@ -348,7 +383,11 @@ function mutator.format_text_report(report)
     .. tostring(summary.errors)
 
   for _, result in ipairs(report.results or {}) do
-    lines[#lines + 1] = string.format("%-8s %s", result.status, result.mutation.description)
+    lines[#lines + 1] = string.format(
+      "%-8s %s",
+      result.status,
+      result.mutation.display_description or result.mutation.description
+    )
     if result.status == "survived" or result.status == "error" then
       if result.error ~= "" then
         lines[#lines + 1] = "  error: " .. tostring(result.error)
@@ -378,9 +417,12 @@ function mutator.format_json_report(report)
       Mutation = {
         ID = result.mutation.id,
         Path = result.mutation.path,
-        Description = result.mutation.description,
+        Description = result.mutation.display_description or result.mutation.description,
         Original = result.mutation.original,
         Mutated = result.mutation.mutated,
+        SourcePath = result.mutation.source_path,
+        SourceLine = result.mutation.source_line,
+        SourceField = result.mutation.source_field,
       },
       Status = result.status,
       Output = result.output,

@@ -1,14 +1,16 @@
-Feature: Foundation integer parsing
+# language: zh-CN
 
-Background:
-  Given project acceptance step handlers are loaded
+功能: 基础整数解析
 
-Scenario Outline: Parse integer text
-  Given a text value <raw>
-  When the project converts it to an integer
-  Then the integer result is <result>
+背景:
+  假如 项目验收步骤已加载
 
-Examples:
-  | raw | result |
-  | 12  | 12     |
-  | -7  | -7     |
+场景大纲: 解析整数文本
+  假如 文本值为<原始文本>
+  当 项目将文本转换为整数
+  那么 整数结果为<整数结果>
+
+例子:
+  | 原始文本 | 整数结果 |
+  | 12       | 12       |
+  | -7       | -7       |
