@@ -161,7 +161,37 @@ function movement_steps.handlers()
     end,
 
     ["当前玩家位于起点"] = function(world)
+      if not world.board then
+        local board = _new_board(BOARD_SIZE)
+        local player = _new_player(1)
+        world.board = board
+        world.player = player
+        world.game = _new_game(board, player)
+      end
       world.player.position = world.board.start_tile
+      return true
+    end,
+
+    ["玩家掷出<p1>"] = function(world, example)
+      local roll = number_utils.to_integer(example.p1)
+      world.dice_roll = roll
+      local new_pos = _forward_position(world.player.position, roll, world.board.size)
+      world.player.position = new_pos
+      return true
+    end,
+
+    ["玩家前进<p1>步"] = function(world, example)
+      local expected_steps = number_utils.to_integer(example.p1)
+      if world.dice_roll ~= expected_steps then
+        return nil, "expected " .. tostring(expected_steps) .. " steps, got " .. tostring(world.dice_roll)
+      end
+      return true
+    end,
+
+    ["玩家不能超过终点"] = function(world)
+      if world.player.position > world.board.size then
+        return nil, "player exceeded board end"
+      end
       return true
     end,
 
