@@ -3,6 +3,7 @@
 .claude/
 .swarmforge/
 .worktrees/
-swarmtools/
+swarmtools/*
+!swarmtools/notify-agent.sh
 logs/
 agent_context/
