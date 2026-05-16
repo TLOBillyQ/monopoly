@@ -148,7 +148,7 @@ local function _apply_game_defaults(game, opts, board, players, dirty)
   end
 end
 
-function composition_root.assemble(opts, game_or_class)
+local function _assemble(opts, game_or_class)
   assert(opts ~= nil, "missing assemble opts")
 
   local board = game_factory.build_board(opts)
@@ -191,7 +191,7 @@ function composition_root.new_game(opts, game_class)
   if type(game) ~= "table" or type(game.rebuild) ~= "function" then
     return game
   end
-  return composition_root.assemble(opts, game)
+  return _assemble(opts, game)
 end
 
 return composition_root

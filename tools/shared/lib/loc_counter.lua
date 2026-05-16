@@ -1,5 +1,3 @@
-local common = require("shared.lib.common")
-
 local loc_counter = {}
 
 function loc_counter.count_effective_lines(content)
@@ -54,14 +52,6 @@ function loc_counter.count_effective_lines(content)
   end
 
   return effective_line_count
-end
-
-function loc_counter.count_file(path)
-  local content, err = common.read_file(path)
-  if content == nil then
-    return nil, err
-  end
-  return loc_counter.count_effective_lines(content)
 end
 
 return loc_counter

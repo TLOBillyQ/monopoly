@@ -17,6 +17,18 @@ local function _active_count()
   return count
 end
 
+local function _complete(token)
+  if token == nil or token.completed then
+    return false
+  end
+  token.completed = true
+  active_tokens[token.token_id] = nil
+  if type(token.on_complete) == "function" then
+    token.on_complete(token)
+  end
+  return true
+end
+
 function effect_track.spawn(id, kind, duration, on_complete)
   local token_id = next_token_id
   next_token_id = next_token_id + 1
@@ -34,23 +46,11 @@ function effect_track.spawn(id, kind, duration, on_complete)
   local effective_timeout = (duration or 0) + timeout_seconds
   runtime_ports.schedule(effective_timeout, function()
     if not token.completed then
-      effect_track.complete(token)
+      _complete(token)
     end
   end)
 
   return token
-end
-
-function effect_track.complete(token)
-  if token == nil or token.completed then
-    return false
-  end
-  token.completed = true
-  active_tokens[token.token_id] = nil
-  if type(token.on_complete) == "function" then
-    token.on_complete(token)
-  end
-  return true
 end
 
 function effect_track.cancel(token)
@@ -87,7 +87,7 @@ function effect_track.await_all(callback)
   return false
 end
 
-function effect_track.pressure()
+local function _pressure()
   local count = _active_count()
   if count <= 1 then
     return 0
@@ -109,7 +109,7 @@ local pressure_scale = {
 }
 
 function effect_track.scaled_duration(base)
-  local p = effect_track.pressure()
+  local p = _pressure()
   local scale = 1.0
   for i = #pressure_scale, 1, -1 do
     if p >= pressure_scale[i].threshold then
@@ -125,7 +125,7 @@ function effect_track.coalesce_queue(queue)
     return queue
   end
 
-  local p = effect_track.pressure()
+  local p = _pressure()
   if p < 0.6 then
     return queue
   end

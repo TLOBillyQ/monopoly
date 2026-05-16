@@ -40,7 +40,7 @@ function choice_contract.resolve_owner_role_id(choice)
   return _resolve_role_id_field(choice, "owner_role_id")
 end
 
-function choice_contract.resolve_meta_player_role_id(choice)
+local function _resolve_meta_player_role_id(choice)
   local meta = type(choice) == "table" and choice.meta or nil
   if type(meta) ~= "table" then
     return nil
@@ -53,7 +53,7 @@ function choice_contract.resolve_owner_or_meta_role_id(choice)
   if owner_role_id ~= nil then
     return owner_role_id
   end
-  return choice_contract.resolve_meta_player_role_id(choice)
+  return _resolve_meta_player_role_id(choice)
 end
 
 return choice_contract

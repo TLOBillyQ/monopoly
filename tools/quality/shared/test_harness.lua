@@ -2,9 +2,14 @@ require("spec.bootstrap")
 
 local log_capture = require("spec.support.log_capture")
 local number_utils = require("src.foundation.number")
-local wall_clock = require("spec.support.wall_clock")
 local unpack_args = table.unpack or unpack
 local _timing_enabled = os.getenv("MONO_TEST_TIMING") == "1"
+local _wall_clock_module = nil
+
+local function _wall_clock()
+  _wall_clock_module = _wall_clock_module or require("spec.support.wall_clock")
+  return _wall_clock_module
+end
 
 local function normalize_suite(suite, suite_index)
   if suite and suite.tests then
@@ -55,7 +60,7 @@ end
 
 local function _start_timer()
   if _timing_enabled then
-    return wall_clock.start()
+    return _wall_clock().start()
   end
   return {
     started = os.time(),
@@ -65,7 +70,7 @@ end
 
 local function _elapsed_ms(timer)
   if _timing_enabled then
-    return wall_clock.finish(timer).elapsed_ms
+    return _wall_clock().finish(timer).elapsed_ms
   end
   local elapsed = (os.time() - (timer and timer.started or 0)) * 1000
   if not number_utils.is_numeric(elapsed) or elapsed < 0 then

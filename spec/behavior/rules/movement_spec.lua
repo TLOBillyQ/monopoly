@@ -264,11 +264,6 @@ _resolve_backward_next_source = function(map, current_id, neigh, facing)
   }
 end
 
--- Characterization tests for board helper functions (T4)
-local Board = require("src.rules.board")
-
-
-
 
 
 

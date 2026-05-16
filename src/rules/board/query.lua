@@ -72,7 +72,7 @@ end
 local ui_slot_count = 7
 local center_slot = 4
 
-function board_query.center_out_order(board, player, candidate_indices)
+local function _center_out_order(board, player, candidate_indices)
   assert(board ~= nil, "missing board")
   assert(player ~= nil, "missing player")
   local player_position = player.position
@@ -193,7 +193,7 @@ function board_query.arrange_target_options(board, player, options)
     end
   end
 
-  local slots = board_query.center_out_order(board, player, candidate_indices)
+  local slots = _center_out_order(board, player, candidate_indices)
 
   local dense_options = {}
   local slot_layout = {}

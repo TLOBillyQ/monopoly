@@ -36,7 +36,7 @@ function auto.execute(game, player)
 
   local chosen = list[1]
   if chosen then
-    purchase.execute(game, player, chosen.product_id, nil)
+    purchase.execute(game, player, chosen.product_id)
   end
 end
 

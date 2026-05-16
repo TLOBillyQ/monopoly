@@ -19,7 +19,7 @@ function M.from_action(action)
   return _action_signal
 end
 
-function M.tick(dt)
+local function _tick(dt)
   _tick_signal.dt = dt or 0
   return _tick_signal
 end
@@ -279,7 +279,7 @@ function M.step(session, dt)
   local co = _ensure_script(session)
   local queue = _ensure_queue(session)
   if #queue == 0 then
-    queue[#queue + 1] = M.tick(dt)
+    queue[#queue + 1] = _tick(dt)
   end
 
   while #queue > 0 do

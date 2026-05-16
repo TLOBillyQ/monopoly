@@ -146,7 +146,7 @@ describe("market", function()
     g:set_player_cash(p, (entry.price or 0) + 1000)
     g.market_limits[entry.product_id] = 1
 
-    local res = market_service.purchase.execute(g, p, entry.product_id, nil)
+    local res = market_service.purchase.execute(g, p, entry.product_id)
     local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
     assert(ok, "first purchase should succeed")
 
@@ -238,7 +238,7 @@ describe("market", function()
       return
     end
 
-    local res = market_service.purchase.execute(g, p, blocked_product_id, nil)
+    local res = market_service.purchase.execute(g, p, blocked_product_id)
     assert(type(res) == "table" and res.ok == false, "disabled market product should be rejected")
   end)
 
@@ -593,14 +593,14 @@ describe("market", function()
         end,
       },
     }, function()
-      local first = market_service.purchase.execute(g, p, target.product_id, nil)
+      local first = market_service.purchase.execute(g, p, target.product_id)
       assert(type(first) == "table" and first.ok == true and first.deferred_fulfillment == true,
         "first paid purchase should defer fulfillment")
       local cb = purchase_handlers[p.id]
       assert(type(cb) == "function", "paid purchase callback should be registered")
       cb(nil, nil, { role = role, goods_id = "goods_paid_item_repeat" })
 
-      local second = market_service.purchase.execute(g, p, target.product_id, nil)
+      local second = market_service.purchase.execute(g, p, target.product_id)
       assert(type(second) == "table" and second.ok == true and second.deferred_fulfillment == true,
         "second paid purchase should also defer fulfillment")
       cb(nil, nil, { role = role, goods_id = "goods_paid_item_repeat" })
@@ -671,12 +671,12 @@ describe("market", function()
         end,
       },
     }, function()
-      local first = market_service.purchase.execute(g, p, target.product_id, nil)
+      local first = market_service.purchase.execute(g, p, target.product_id)
       assert(type(first) == "table" and first.ok == true and first.deferred_fulfillment == true,
         "first paid purchase should succeed")
       assert(#panel_calls == 1, "first purchase should open panel")
 
-      local second = market_service.purchase.execute(g, p, target.product_id, nil)
+      local second = market_service.purchase.execute(g, p, target.product_id)
       assert(type(second) == "table" and second.ok == false and second.reason == "purchase_in_flight",
         "second purchase while in-flight should be blocked")
       assert(#panel_calls == 1, "blocked purchase should not open another panel")
@@ -684,7 +684,7 @@ describe("market", function()
       local cb = purchase_handlers[p.id]
       cb(nil, nil, { role = role, goods_id = "goods_in_flight_test" })
 
-      local third = market_service.purchase.execute(g, p, target.product_id, nil)
+      local third = market_service.purchase.execute(g, p, target.product_id)
       assert(type(third) == "table" and third.ok == true and third.deferred_fulfillment == true,
         "purchase after callback should succeed again")
       assert(#panel_calls == 2, "purchase after callback should open panel")
@@ -747,17 +747,17 @@ describe("market", function()
         value = function() end,
       },
     }, function()
-      local first = market_service.purchase.execute(g, p, target.product_id, nil)
+      local first = market_service.purchase.execute(g, p, target.product_id)
       assert(first.ok == true, "first purchase should succeed")
 
-      local blocked = market_service.purchase.execute(g, p, target.product_id, nil)
+      local blocked = market_service.purchase.execute(g, p, target.product_id)
       assert(blocked.ok == false and blocked.reason == "purchase_in_flight",
         "should be blocked while in-flight")
 
       assert(#scheduled_fns == 1, "should have scheduled one timeout")
       scheduled_fns[1]()
 
-      local after_timeout = market_service.purchase.execute(g, p, target.product_id, nil)
+      local after_timeout = market_service.purchase.execute(g, p, target.product_id)
       assert(after_timeout.ok == true and after_timeout.deferred_fulfillment == true,
         "purchase should succeed after timeout clears in-flight")
       assert(#panel_calls == 2, "two successful purchases should open two panels")

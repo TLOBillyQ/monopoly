@@ -20,7 +20,7 @@ local _action_anim_opts = {
   on_anim = nil,
 }
 
-function turn_anim.step_anim(game, state, opts)
+local function _step_anim(game, state, opts)
   assert(game ~= nil, "missing game")
   assert(opts ~= nil and opts.on_anim ~= nil, "missing opts.on_anim")
   assert(opts.anim_key ~= nil, "missing opts.anim_key")
@@ -57,14 +57,14 @@ function turn_anim.step_move_anim(game, state, opts)
   assert(state.wait_move_anim == true, "move anim disabled")
   assert(opts ~= nil and opts.on_move_anim ~= nil, "missing opts.on_move_anim")
   _move_anim_opts.on_anim = opts.on_move_anim
-  turn_anim.step_anim(game, state, _move_anim_opts)
+  _step_anim(game, state, _move_anim_opts)
 end
 
 function turn_anim.step_action_anim(game, state, opts)
   assert(state.wait_action_anim == true, "action anim disabled")
   assert(opts ~= nil and opts.on_action_anim ~= nil, "missing opts.on_action_anim")
   _action_anim_opts.on_anim = opts.on_action_anim
-  turn_anim.step_anim(game, state, _action_anim_opts)
+  _step_anim(game, state, _action_anim_opts)
 end
 
 return turn_anim

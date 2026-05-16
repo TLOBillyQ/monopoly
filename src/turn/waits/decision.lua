@@ -14,11 +14,6 @@ local _decide_ctx = {
   elapsed_seconds = nil,
 }
 
-function turn_decision.build_turn_log_line(game)
-  local player = game:current_player()
-  return "玩家 " .. tostring(player.name)
-end
-
 function turn_decision.decide_choice_action(game, choice, pending_action, opts)
   local min_visible = timing.auto_decision_delay_seconds or 0
   local elapsed = opts and opts.elapsed_seconds or 0
@@ -26,11 +21,7 @@ function turn_decision.decide_choice_action(game, choice, pending_action, opts)
   _decide_ctx.pending_action = pending_action
   _decide_ctx.min_visible_seconds = min_visible
   _decide_ctx.elapsed_seconds = elapsed
-  local action = choice_auto_policy.decide(game, nil, choice, _decide_ctx)
-  if action then
-    return action
-  end
-  return nil
+  return choice_auto_policy.decide(game, nil, choice, _decide_ctx)
 end
 
 function turn_decision.resolve_choice(game, choice, action)
@@ -46,7 +37,7 @@ function turn_decision.log_turn_start(game)
   local next_turn_count = number_utils.format_integer_part((turn_count or 0) + 1)
   event_feed.publish(game, {
     kind = event_kinds.turn_start,
-    text = "第" .. next_turn_count .. "回合开始：" .. turn_decision.build_turn_log_line(game),
+    text = "第" .. next_turn_count .. "回合开始：玩家 " .. tostring(game:current_player().name),
     tip = false,
   })
 end

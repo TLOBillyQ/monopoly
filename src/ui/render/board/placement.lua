@@ -196,15 +196,17 @@ local function _place_single_player(state, player, i, occupants, spacing, min_pl
   local ox, oz = _calc_slot_offset(slot, count, spacing)
   local target_pos = _resolve_target_position(base, y_offset, ox, oz)
   local stop_result = _stop_and_log_player_motion(state, pid, unit)
-  _debug_log(
-    "board_refresh_stop_and_snap",
-    "player_id=" .. tostring(pid),
-    "position=" .. tostring(idx),
-    "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
-    "ai_stop=" .. tostring(stop_result.ai_stop_path or "none"),
-    "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
-    "target_pos=" .. tostring(target_pos)
-  )
+  if _should_debug_log() then
+    _debug_log(
+      "board_refresh_stop_and_snap",
+      "player_id=" .. tostring(pid),
+      "position=" .. tostring(idx),
+      "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
+      "ai_stop=" .. tostring(stop_result.ai_stop_path or "none"),
+      "anim_stop=" .. tostring(stop_result.anim_stop_path or "none"),
+      "target_pos=" .. tostring(target_pos)
+    )
+  end
   _place_player_unit(pid, unit, target_pos)
   _publish_follow_target(state, pid, target_pos, "board_sync_snap")
 end

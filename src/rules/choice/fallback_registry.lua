@@ -23,19 +23,6 @@ function M.resolve(kind, game, choice)
   return action
 end
 
-function M.has(kind)
-  return type(kind) == "string" and type(_registry[kind]) == "function"
-end
-
-function M.snapshot()
-  local kinds = {}
-  for kind in pairs(_registry) do
-    kinds[#kinds + 1] = kind
-  end
-  table.sort(kinds)
-  return kinds
-end
-
 function M.reset()
   _registry = {}
 end

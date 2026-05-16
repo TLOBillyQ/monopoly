@@ -183,7 +183,7 @@ local function _hide_card_popup(state)
   end
   _set_popup_card_image(state, nil)
 end
-function renderer.hide_popup(state)
+local function _hide_popup(state)
   local ui = state.ui
   if (ui.popup_kind or "card") == "bankruptcy" then
     _hide_bankruptcy_popup(state)
@@ -193,6 +193,6 @@ function renderer.hide_popup(state)
   _set_popup_dismiss_touch(ui, false)
 end
 
-renderer.hide = renderer.hide_popup
+renderer.hide = _hide_popup
 
 return renderer

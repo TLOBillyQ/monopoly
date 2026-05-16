@@ -138,7 +138,7 @@ function M.open_choice_modal(state, choice, market)
   return true
 end
 
-function M.open_player_or_remote_screen(state, choice, choice_id, screen_key)
+local function _open_player_or_remote_screen(state, choice, choice_id, screen_key)
   local ui, screen = _open_screen(state, screen_key, choice, choice_id)
   local option_ids, selected = _fill_option_nodes(ui, screen, _resolve_player_or_remote_options(choice, screen_key))
   _set_action_button(ui, screen.confirm, true, true, "确定")
@@ -148,7 +148,7 @@ function M.open_player_or_remote_screen(state, choice, choice_id, screen_key)
   modal_state.open_choice(state, choice_id, option_ids, selected)
 end
 
-function M.open_target_screen(state, choice, choice_id)
+local function _open_target_screen(state, choice, choice_id)
   local ui, screen = _open_screen(state, "target", choice, choice_id)
   local option_ids, selected = _fill_option_nodes(ui, screen, _order_target_options(choice), {
     clear_button_text = true,
@@ -184,9 +184,9 @@ function M.open_pre_confirm_screen(state, choice, option_id, title, body)
   modal_state.open_choice(state, choice.id, { option_id }, option_id)
 end
 
-_screen_openers.player = M.open_player_or_remote_screen
-_screen_openers.remote = M.open_player_or_remote_screen
+_screen_openers.player = _open_player_or_remote_screen
+_screen_openers.remote = _open_player_or_remote_screen
 _screen_openers.secondary_confirm = M.open_secondary_confirm_screen
-_screen_openers.target = M.open_target_screen
+_screen_openers.target = _open_target_screen
 
 return M

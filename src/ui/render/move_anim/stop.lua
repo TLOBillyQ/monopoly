@@ -118,12 +118,14 @@ function stop.clear_player_token(board_scene, player_id, reason)
     rt.release_sequence_lock(board_scene, player_id, active_sequence, reason or "clear_player_token")
     rt.clear_active_sequence(board_scene, player_id)
   end
-  debug_mod.debug_log(
-    "clear_token",
-    "player_id=" .. tostring(player_id),
-    "reason=" .. tostring(reason or "none"),
-    "token=" .. tostring(active_token or "nil")
-  )
+  if debug_mod.enabled() then
+    debug_mod.debug_log(
+      "clear_token",
+      "player_id=" .. tostring(player_id),
+      "reason=" .. tostring(reason or "none"),
+      "token=" .. tostring(active_token or "nil")
+    )
+  end
 end
 
 function stop.has_active_stop_context(board_scene, player_id)
@@ -153,12 +155,14 @@ function stop.snap_player_to_index(board_scene, player_id, to_index, anim_ctx, r
   local target_pos = tile.get_position()
   _set_player_position(board_scene, player_id, target_pos)
   seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, reason or "play_sequence_teleport")
-  debug_mod.debug_log(
-    reason or "play_sequence_teleport",
-    "player_id=" .. tostring(player_id),
-    "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
-    "to=" .. tostring(to_index)
-  )
+  if debug_mod.enabled() then
+    debug_mod.debug_log(
+      reason or "play_sequence_teleport",
+      "player_id=" .. tostring(player_id),
+      "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
+      "to=" .. tostring(to_index)
+    )
+  end
   return 0
 end
 

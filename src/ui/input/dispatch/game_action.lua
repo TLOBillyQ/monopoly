@@ -55,22 +55,18 @@ local function _dispatch_basic_action(state, game, intent, opts, action_port, tu
   return true
 end
 
-local function _dispatch_market_action(game, state, action_port, opts, action)
-  action_port.dispatch_action(game, state, action, opts)
-  return true
-end
-
 local function _dispatch_market_confirm(game, state, intent, opts, action_port)
   if not intent.choice_id or not intent.option_id then
     logger.warn("market_confirm missing ids:", tostring(intent.choice_id), tostring(intent.option_id))
     return true
   end
-  return _dispatch_market_action(game, state, action_port, opts, {
+  action_port.dispatch_action(game, state, {
     type = "choice_select",
     choice_id = intent.choice_id,
     option_id = intent.option_id,
     actor_role_id = intent.actor_role_id,
-  })
+  }, opts)
+  return true
 end
 
 local function _dispatch_market_page(intent_type, game, state, intent, opts, action_port)
@@ -78,11 +74,12 @@ local function _dispatch_market_page(intent_type, game, state, intent, opts, act
     logger.warn(intent_type .. " missing choice_id")
     return true
   end
-  return _dispatch_market_action(game, state, action_port, opts, {
+  action_port.dispatch_action(game, state, {
     type = intent_type,
     choice_id = intent.choice_id,
     actor_role_id = intent.actor_role_id,
-  })
+  }, opts)
+  return true
 end
 
 local function _dispatch_market_tab(game, state, intent, opts, action_port)
@@ -90,12 +87,13 @@ local function _dispatch_market_tab(game, state, intent, opts, action_port)
     logger.warn("market_tab_select missing payload:", tostring(intent.choice_id), tostring(intent.tab))
     return true
   end
-  return _dispatch_market_action(game, state, action_port, opts, {
+  action_port.dispatch_action(game, state, {
     type = "market_tab_select",
     choice_id = intent.choice_id,
     tab = intent.tab,
     actor_role_id = intent.actor_role_id,
-  })
+  }, opts)
+  return true
 end
 
 function game_action_dispatcher.dispatch(state, game, intent, opts, action_port, turn_action_helpers)

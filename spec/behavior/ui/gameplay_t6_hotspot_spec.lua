@@ -7,10 +7,8 @@ local board_feedback = require("src.ui.render.board_feedback.service")
 local role_control_lock_policy = require("src.ui.input.role_control_lock")
 local anim_overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 local status3d_scene = require("src.ui.render.status3d.scene")
-local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
 local status3d_init = require("src.ui.render.status3d")
 local startup_render = require("src.ui.render.board.startup_render")
-local runtime_refs = require("src.config.content.runtime_refs")
 
 local state_module_aliases = {}
 

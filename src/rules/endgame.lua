@@ -154,9 +154,6 @@ function M.eliminate(game, player, opts)
 end
 
 M._call_life_die = _call_life_die
-M._try_call_life_die = _try_call_life_die
-M._resolve_life_component = _resolve_life_component
-M._call_role_die = _call_role_die
 
 local tile_state = tile_mod.get_state
 

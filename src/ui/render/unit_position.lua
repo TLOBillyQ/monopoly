@@ -27,7 +27,7 @@ function unit_position.read_unit_position(unit)
   return pos
 end
 
-function unit_position.read_indexed_position(units, index)
+local function _read_indexed_position(units, index)
   if units == nil or index == nil then
     return nil
   end
@@ -35,11 +35,11 @@ function unit_position.read_indexed_position(units, index)
 end
 
 function unit_position.read_scene_tile_position(scene, tile_index)
-  return unit_position.read_indexed_position(scene and scene.tiles or nil, tile_index)
+  return _read_indexed_position(scene and scene.tiles or nil, tile_index)
 end
 
 function unit_position.read_scene_building_position(scene, tile_index)
-  return unit_position.read_indexed_position(scene and scene.buildings or nil, tile_index)
+  return _read_indexed_position(scene and scene.buildings or nil, tile_index)
 end
 
 return unit_position

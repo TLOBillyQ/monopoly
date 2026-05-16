@@ -41,7 +41,7 @@ local function _resolve_pos(pos)
   if pos ~= nil then
     return pos
   end
-  return runtime_constants.v3_zero or runtime_constants.v3_one
+  return runtime_constants.v3_zero
 end
 
 function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound, opts)

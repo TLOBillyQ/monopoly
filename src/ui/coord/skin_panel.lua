@@ -154,7 +154,7 @@ function skin_panel.equip(state, role_id, slot_index)
   return panel
 end
 
-function skin_panel.unequip(state, role_id)
+local function _unequip(state, role_id)
   local panel = _ensure_state(state)
   local key = _role_key(role_id or panel.role_id)
   panel.selected_by_role[key] = nil
@@ -180,7 +180,7 @@ function skin_panel.handle_action(state, action, role_id)
     return skin_panel.equip(state, role_id, _action_slot_index(action))
   end
   if action_type == "unequip" then
-    return skin_panel.unequip(state, role_id)
+    return _unequip(state, role_id)
   end
   local slot_index = number_utils.to_integer(action)
   if slot_index ~= nil then
@@ -190,6 +190,5 @@ function skin_panel.handle_action(state, action, role_id)
 end
 
 skin_panel.catalog = skins
-skin_panel.page_size = PAGE_SIZE
 
 return skin_panel

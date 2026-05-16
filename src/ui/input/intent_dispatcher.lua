@@ -5,6 +5,13 @@ local view_command_dispatcher = require("src.ui.input.dispatch.view_command")
 
 local intent_dispatcher = {}
 
+local function _dispatch_game_action(state, game, intent, opts, action_port)
+  local resolved_action_port = action_port or turn_action_port.resolve(state, opts)
+  return game_action_dispatcher.dispatch(state, game, intent, opts, resolved_action_port, turn_action_port)
+end
+
+intent_dispatcher.dispatch_view_command = view_command_dispatcher.dispatch
+
 function intent_dispatcher.dispatch(state, game, intent, opts)
   assert(intent ~= nil, "missing intent")
   local intent_type = intent.type
@@ -26,18 +33,11 @@ function intent_dispatcher.dispatch(state, game, intent, opts)
     return
   end
 
-  if intent_dispatcher.dispatch_game_action(state, game, intent, opts, action_port) then
+  if _dispatch_game_action(state, game, intent, opts, action_port) then
     return
   end
 
   intent_dispatcher.dispatch_view_command(state, intent)
 end
-
-function intent_dispatcher.dispatch_game_action(state, game, intent, opts, action_port)
-  local resolved_action_port = action_port or turn_action_port.resolve(state, opts)
-  return game_action_dispatcher.dispatch(state, game, intent, opts, resolved_action_port, turn_action_port)
-end
-
-intent_dispatcher.dispatch_view_command = view_command_dispatcher.dispatch
 
 return intent_dispatcher

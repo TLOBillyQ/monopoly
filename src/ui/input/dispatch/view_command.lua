@@ -19,8 +19,8 @@ local function _resolve_role_by_id(runtime, role_id)
       end
     end
   end
-  if host_runtime_ports and type(host_runtime_ports.resolve_role) == "function" then
-    local resolved = host_runtime_ports.resolve_role(normalized)
+  if host_runtime_ports and type(host_runtime_ports.resolve_role_with) == "function" then
+    local resolved = host_runtime_ports.resolve_role_with(normalized)
     if resolved ~= nil then
       return resolved
     end
@@ -168,40 +168,20 @@ local function _fallback_dispatch(state, intent)
   if intent_type == nil then
     return false
   end
-  local market = _resolve_loaded("src.ui.coord.market")
-  local modal = _resolve_loaded("src.ui.coord.modal")
-  local event_log_view = _resolve_loaded("src.ui.coord.event_log_view")
-  local skin_panel = _resolve_loaded("src.ui.coord.skin_panel")
-  local item_atlas = _resolve_loaded("src.ui.coord.item_atlas")
-  local skin_gallery = _resolve_loaded("src.ui.coord.skin_gallery")
-  local handlers = {
-    market_select = function()
-      return _handle_market_select(state, intent, market)
-    end,
-    popup_confirm = function()
-      return _handle_popup_confirm(state, modal)
-    end,
-    toggle_action_log = function()
-      return _handle_toggle_action_log(state, intent, event_log_view)
-    end,
-    open_skin_panel = function()
-      return _handle_skin_panel(state, intent, skin_panel)
-    end,
-    open_gallery_panel = function()
-      return _handle_item_atlas(state, intent, item_atlas)
-    end,
-    skin_panel_action = function()
-      return _handle_skin_panel(state, intent, skin_panel)
-    end,
-    item_atlas_action = function()
-      return _handle_item_atlas(state, intent, item_atlas)
-    end,
-    skin_gallery_action = function()
-      return _handle_skin_gallery(state, intent, skin_gallery)
-    end,
-  }
-  local handler = handlers[intent_type]
-  return handler and handler() or false
+  if intent_type == "market_select" then
+    return _handle_market_select(state, intent, _resolve_loaded("src.ui.coord.market"))
+  elseif intent_type == "popup_confirm" then
+    return _handle_popup_confirm(state, _resolve_loaded("src.ui.coord.modal"))
+  elseif intent_type == "toggle_action_log" then
+    return _handle_toggle_action_log(state, intent, _resolve_loaded("src.ui.coord.event_log_view"))
+  elseif intent_type == "open_skin_panel" or intent_type == "skin_panel_action" then
+    return _handle_skin_panel(state, intent, _resolve_loaded("src.ui.coord.skin_panel"))
+  elseif intent_type == "open_gallery_panel" or intent_type == "item_atlas_action" then
+    return _handle_item_atlas(state, intent, _resolve_loaded("src.ui.coord.item_atlas"))
+  elseif intent_type == "skin_gallery_action" then
+    return _handle_skin_gallery(state, intent, _resolve_loaded("src.ui.coord.skin_gallery"))
+  end
+  return false
 end
 
 function view_command_dispatcher.dispatch(state, intent)

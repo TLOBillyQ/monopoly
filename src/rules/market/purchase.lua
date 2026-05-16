@@ -71,11 +71,11 @@ local function _charge_if_needed(game, player, currency, price, opts)
   })
 end
 
-local function _fulfill_item(game, player, entry, opts, price, currency, priced_text)
+local function _fulfill_item(game, player, entry, opts)
   if inventory.is_full(player) then
     return { ok = false, reason = "inventory_full", body = player.name .. " 卡槽已满" }
   end
-  if not _charge_if_needed(game, player, currency, price, opts) then
+  if not _charge_if_needed(game, player, opts.currency, opts.price, opts) then
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
   end
   inventory.give(player, entry.product_id)
@@ -83,9 +83,9 @@ local function _fulfill_item(game, player, entry, opts, price, currency, priced_
   _emit_bought_item(game, {
     player = player,
     entry = entry,
-    price = price,
-    currency = currency,
-    text = _success_text(player, entry, price, currency, priced_text),
+    price = opts.price,
+    currency = opts.currency,
+    text = _success_text(player, entry, opts.price, opts.currency, opts.priced_text),
   })
   return {
     ok = true,
@@ -96,17 +96,17 @@ local function _fulfill_item(game, player, entry, opts, price, currency, priced_
   }
 end
 
-local function _fulfill_skin(game, player, entry, opts, price, currency, priced_text)
-  if not _charge_if_needed(game, player, currency, price, opts) then
+local function _fulfill_skin(game, player, entry, opts)
+  if not _charge_if_needed(game, player, opts.currency, opts.price, opts) then
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
   end
   query_context.consume_global_limit(game, entry.product_id)
   _emit_bought_item(game, {
     player = player,
     entry = entry,
-    price = price,
-    currency = currency,
-    text = _success_text(player, entry, price, currency, priced_text),
+    price = opts.price,
+    currency = opts.currency,
+    text = _success_text(player, entry, opts.price, opts.currency, opts.priced_text),
   })
   return {
     ok = true,
@@ -119,16 +119,19 @@ end
 
 function fulfillment.apply(game, player, entry, opts)
   opts = opts or {}
-  local price = opts.price or query_context.entry_price(entry)
-  local currency = opts.currency or query_context.entry_currency(entry)
-  local priced_text = opts.priced_text == true
+  local resolved_opts = {
+    skip_charge = opts.skip_charge == true,
+    price = opts.price ~= nil and opts.price or query_context.entry_price(entry),
+    currency = opts.currency ~= nil and opts.currency or query_context.entry_currency(entry),
+    priced_text = opts.priced_text == true,
+  }
 
   if entry.kind == "item" then
-    return _fulfill_item(game, player, entry, opts, price, currency, priced_text)
+    return _fulfill_item(game, player, entry, resolved_opts)
   end
 
   if entry.kind == "skin" then
-    return _fulfill_skin(game, player, entry, opts, price, currency, priced_text)
+    return _fulfill_skin(game, player, entry, resolved_opts)
   end
 
   return { ok = false, reason = "unsupported_kind", body = player.name .. " 该商品类型暂不支持购买" }
@@ -274,7 +277,7 @@ local function _handle_paid_purchase(game, player, entry, product_id)
   }
 end
 
-function purchase.execute(game, player, product_id, _opts)
+function purchase.execute(game, player, product_id)
   local resolved_product_id = _resolve_product_id(product_id)
   if resolved_product_id == nil then
     logger.warn("invalid market product id:", tostring(product_id))

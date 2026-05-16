@@ -9,7 +9,7 @@ local panel_presenter = {}
 local _role_ctx_opts = {}
 local _item_slot_opts = {}
 
-function panel_presenter.apply_base_non_player_visibility(ui, visible)
+local function _apply_base_non_player_visibility(ui, visible)
   assert(ui ~= nil, "missing ui")
   local value = visible == true
   local hidden_nodes = ui.base_hidden_nodes or {}
@@ -45,7 +45,7 @@ local function _show_auto_controls(ui, controls)
   end
 end
 
-function panel_presenter.render_auto_controls_for_role(_, ui, ctx, ui_model, ui_touch_policy)
+local function _render_auto_controls_for_role(_, ui, ctx, ui_model, ui_touch_policy)
   assert(ui ~= nil, "missing ui")
   local controls = ui.auto_control_nodes or { base_nodes.auto_button, base_nodes.auto_label }
   local auto_enabled = ctx and ctx.is_player_role == true or false
@@ -55,7 +55,7 @@ function panel_presenter.render_auto_controls_for_role(_, ui, ctx, ui_model, ui_
   _show_auto_controls(ui, controls)
   ui_touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
 end
-function panel_presenter.is_base_non_player_visible(ui, ctx)
+local function _is_base_non_player_visible(ui, ctx)
   if ui and ui.input_blocked then
     return false
   end
@@ -106,8 +106,8 @@ local function _refresh_for_role(state, ui_model, runtime, role, panel, refresh_
   local ui = state.ui
   _role_ctx_opts.runtime = runtime
   local ctx = role_context.resolve(role, ui_model, _role_ctx_opts)
-  local base_visible = panel_presenter.is_base_non_player_visible(ui, ctx)
-  panel_presenter.apply_base_non_player_visibility(ui, base_visible)
+  local base_visible = _is_base_non_player_visible(ui, ctx)
+  _apply_base_non_player_visibility(ui, base_visible)
   panel_player_slots.force_item_slots_visible_for_player(ui, ctx)
   _apply_auto_effect(ui, ui_model, ctx)
   _apply_countdown(ui, panel)
@@ -117,7 +117,7 @@ local function _refresh_for_role(state, ui_model, runtime, role, panel, refresh_
   _item_slot_opts.display_player_id = ctx.display_player_id
   _item_slot_opts.allow_interact = base_visible
   refresh_item_slots(state, ui_model, _item_slot_opts)
-  panel_presenter.render_auto_controls_for_role(state, ui, ctx, ui_model, ui_touch_policy)
+  _render_auto_controls_for_role(state, ui, ctx, ui_model, ui_touch_policy)
   return ctx
 end
 

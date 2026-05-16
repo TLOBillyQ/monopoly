@@ -32,7 +32,7 @@ local function _ensure_render_bootstrap(game)
   return game.test_profile_render_bootstrap
 end
 
-function bootstrap.reset_render_bootstrap(game)
+local function _reset_render_bootstrap(game)
   game.test_profile_render_bootstrap = _new_render_bootstrap()
   return game.test_profile_render_bootstrap
 end
@@ -241,7 +241,7 @@ end
 
 function bootstrap.apply_bootstrap(game, cfg)
   assert(game ~= nil, "missing game")
-  bootstrap.reset_render_bootstrap(game)
+  _reset_render_bootstrap(game)
   if type(cfg) ~= "table" then
     return
   end

@@ -49,16 +49,9 @@ local function _emit_event(kind, payload)
   })
 end
 
-function monopoly_events.resolve_intent(kind)
-  assert(kind ~= nil, "missing intent kind")
-  local intent = assert(monopoly_events.intent, "missing monopoly_events.intent")
-  local event_name = intent[kind]
-  assert(event_name ~= nil, "missing intent event: " .. tostring(kind))
-  return event_name
-end
-
 function monopoly_events.emit_intent(kind, payload)
-  local event_name = monopoly_events.resolve_intent(kind)
+  assert(kind ~= nil, "missing intent kind")
+  local event_name = assert(monopoly_events.intent[kind], "missing intent event: " .. tostring(kind))
   _emit_event(event_name, payload)
   return event_name
 end

@@ -4,7 +4,7 @@ function M.is_windows()
   return package.config:sub(1, 1) == "\\"
 end
 
-function M.build_list_command(root)
+local function _build_list_command(root)
   if M.is_windows() then
     local win_root = root:gsub("/", "\\")
     return 'cmd /c dir /b /s /a-d "' .. win_root .. '\\*.lua" 2>nul'
@@ -12,7 +12,7 @@ function M.build_list_command(root)
   return 'find "' .. root .. '" -type f -name "*.lua" 2>/dev/null'
 end
 
-function M.is_file_path(path)
+local function _is_file_path(path)
   local file = io.open(path, "r")
   if not file then
     return false
@@ -22,7 +22,7 @@ function M.is_file_path(path)
 end
 
 function M.path_exists(path)
-  if M.is_file_path(path) then
+  if _is_file_path(path) then
     return true
   end
   local ok = os.rename(path, path)
@@ -35,7 +35,7 @@ end
 function M.collect_lua_files(root)
   local normalized_root = M.normalize_path(root)
   if normalized_root:match("%.lua$") then
-    if M.is_file_path(root) then
+    if _is_file_path(root) then
       return { root }
     end
     return nil, "no lua files found under root: " .. tostring(root)
@@ -44,7 +44,7 @@ function M.collect_lua_files(root)
     return nil, "no lua files found under root: " .. tostring(root)
   end
 
-  local process = io.popen(M.build_list_command(root))
+  local process = io.popen(_build_list_command(root))
   if not process then
     return nil, "cannot run list command for root: " .. tostring(root)
   end
@@ -72,7 +72,7 @@ function M.normalize_path(path)
   return tostring(path or ""):gsub("\\", "/")
 end
 
-function M.to_repo_relpath(path)
+local function _to_repo_relpath(path)
   local normalized = M.normalize_path(path)
   return normalized:match(".*(src/.+)")
     or normalized:match(".*(tests/.+)")
@@ -87,7 +87,7 @@ function M.is_comment_line(line)
   return tostring(line or ""):match("^%s*%-%-") ~= nil
 end
 
-function M.list_lua_files(roots, opts)
+local function _list_lua_files(roots, opts)
   opts = opts or {}
   local files = {}
   for _, root in ipairs(roots or {}) do
@@ -98,7 +98,7 @@ function M.list_lua_files(roots, opts)
       end
     else
       for _, path in ipairs(root_files) do
-        local relpath = M.to_repo_relpath(path)
+        local relpath = _to_repo_relpath(path)
         if opts.skip_path == nil or opts.skip_path(path, relpath) ~= true then
           files[#files + 1] = {
             path = path,
@@ -113,7 +113,7 @@ end
 
 function M.find_line_violation(opts)
   opts = opts or {}
-  local files, err = M.list_lua_files(opts.roots or {}, opts)
+  local files, err = _list_lua_files(opts.roots or {}, opts)
   if not files then
     return nil, err
   end
@@ -142,7 +142,7 @@ end
 
 function M.collect_line_violations(opts)
   opts = opts or {}
-  local files, err = M.list_lua_files(opts.roots or {}, opts)
+  local files, err = _list_lua_files(opts.roots or {}, opts)
   if not files then
     return nil, err
   end

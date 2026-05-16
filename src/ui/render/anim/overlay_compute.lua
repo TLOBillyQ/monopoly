@@ -9,15 +9,10 @@ local function _resolve_vector_value(vec, key, index)
   return vec[key] or vec[index]
 end
 
+local _ZERO_VEC = (math and math.Vector3) and math.Vector3(0.0, 0.0, 0.0) or { x = 0.0, y = 0.0, z = 0.0 }
+
 local function _zero_vector()
-  if math and math.Vector3 then
-    return math.Vector3(0.0, 0.0, 0.0)
-  end
-  return {
-    x = 0.0,
-    y = 0.0,
-    z = 0.0,
-  }
+  return _ZERO_VEC
 end
 
 function compute.resolve_tile_pos(state, tile_index)
@@ -64,7 +59,7 @@ local function _create_offset_vector(pos_x, pos_y, pos_z, offset_x, offset_y, of
   return nil
 end
 
-function compute.offset_pos(pos, offset)
+local function _offset_pos(pos, offset)
   local ok, result = _try_native_vector_add(pos, offset)
   if ok then
     return result
@@ -78,12 +73,20 @@ function compute.offset_pos(pos, offset)
   return pos
 end
 
+local _y_offset_cache = {}
 local function _y_offset_vector(y_offset)
-  return math.Vector3(0.0, y_offset or 1.0, 0.0)
+  local key = y_offset or 1.0
+  local cached = _y_offset_cache[key]
+  if cached then
+    return cached
+  end
+  cached = math.Vector3(0.0, key, 0.0)
+  _y_offset_cache[key] = cached
+  return cached
 end
 
 function compute.overlay_pos_for_tile(state, tile_index, y_offset)
-  return compute.offset_pos(compute.resolve_tile_pos(state, tile_index), _y_offset_vector(y_offset))
+  return _offset_pos(compute.resolve_tile_pos(state, tile_index), _y_offset_vector(y_offset))
 end
 
 function compute.overlay_pos_for_player(state, player_id, y_offset)
@@ -91,7 +94,7 @@ function compute.overlay_pos_for_player(state, player_id, y_offset)
   assert(player_id ~= nil, "missing player_id")
   local game = assert(state.game, "missing state.game")
   local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
-  return compute.offset_pos(compute.resolve_tile_pos(state, player.position), _y_offset_vector(y_offset))
+  return _offset_pos(compute.resolve_tile_pos(state, player.position), _y_offset_vector(y_offset))
 end
 
 return compute

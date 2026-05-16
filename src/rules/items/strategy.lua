@@ -40,7 +40,7 @@ function strategy.has_obstacles_ahead(game, player, distance)
   return false
 end
 
-function strategy.can_offer_in_phase(game, player, item_id, phase, _auto_play)
+function strategy.can_offer_in_phase(game, player, item_id, phase)
   local ok = availability.can_offer_in_phase(game, player, item_id, phase)
   return ok == true
 end
@@ -117,45 +117,21 @@ local function _try_deity_items(game, player, phase, auto_play)
   return _try_use_item(game, player, item_ids.angel, phase, nil, auto_play)
 end
 
-local function _auto_pre_action_probes(game, player, phase, auto_play)
-  return {
-    function()
-      return _try_clear_obstacles(game, player, phase, auto_play)
-    end,
-    function()
-      return _try_remote_dice(game, player, phase, auto_play)
-    end,
-    function()
-      return _try_use_item(game, player, item_ids.mine, phase, nil, auto_play)
-    end,
-    function()
-      return _try_use_item(game, player, item_ids.dice_multiplier, phase, nil, auto_play)
-    end,
-    function()
-      return _try_roadblock(game, player, phase, auto_play)
-    end,
-    function()
-      return _try_use_item(game, player, item_ids.monster, phase, function()
-        return _has_demolish_target(game, player)
-      end, auto_play)
-    end,
-    function()
-      return _try_target_items(game, player, phase, auto_play)
-    end,
-    function()
-      return _try_deity_items(game, player, phase, auto_play)
-    end,
-  }
+local function _try_monster(game, player, phase, auto_play)
+  return _try_use_item(game, player, item_ids.monster, phase, function()
+    return _has_demolish_target(game, player)
+  end, auto_play)
 end
 
 local function _run_auto_pre_action_probes(game, player, phase, auto_play)
-  for _, probe in ipairs(_auto_pre_action_probes(game, player, phase, auto_play)) do
-    local result = probe()
-    if result then
-      return result
-    end
-  end
-  return nil
+  return _try_clear_obstacles(game, player, phase, auto_play)
+    or _try_remote_dice(game, player, phase, auto_play)
+    or _try_use_item(game, player, item_ids.mine, phase, nil, auto_play)
+    or _try_use_item(game, player, item_ids.dice_multiplier, phase, nil, auto_play)
+    or _try_roadblock(game, player, phase, auto_play)
+    or _try_monster(game, player, phase, auto_play)
+    or _try_target_items(game, player, phase, auto_play)
+    or _try_deity_items(game, player, phase, auto_play)
 end
 
 function strategy.auto_pre_action(game, player, phase)

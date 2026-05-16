@@ -134,6 +134,19 @@ local function _take_entries(entries, max_lines)
   return out
 end
 
+local function _filter_entries_by_level(entries, level)
+  if level == nil then
+    return entries
+  end
+  local matched = {}
+  for _, entry in ipairs(entries) do
+    if entry.level == level then
+      matched[#matched + 1] = entry
+    end
+  end
+  return matched
+end
+
 local function _entries_to_text(entries)
   local lines = {}
   for _, entry in ipairs(entries) do
@@ -166,19 +179,19 @@ function logger.set_enabled(b)
   logger.enabled = b and true or false
 end
 
-function logger.set_timestamp_provider(provider)
+local function _set_timestamp_provider(provider)
   logger.timestamp_provider = provider
 end
 
-function logger.set_time_formatter(formatter)
+local function _set_time_formatter(formatter)
   logger.time_formatter = formatter
 end
 
 function logger.reset_time_runtime()
-  logger.set_timestamp_provider(function()
+  _set_timestamp_provider(function()
     return 0
   end)
-  logger.set_time_formatter(function(timestamp)
+  _set_time_formatter(function(timestamp)
     return tostring(timestamp)
   end)
 end
@@ -215,7 +228,7 @@ end
 
 function logger.configure_game_time(game_api)
   assert(game_api ~= nil, "missing game api")
-  logger.set_timestamp_provider(function()
+  _set_timestamp_provider(function()
     return game_api.get_timestamp()
   end)
 
@@ -226,7 +239,7 @@ function logger.configure_game_time(game_api)
     return tostring(value)
   end
 
-  logger.set_time_formatter(function(timestamp)
+  _set_time_formatter(function(timestamp)
     assert(timestamp ~= nil, "missing timestamp")
     local hour = game_api.get_hour(timestamp)
     local minute = game_api.get_minute(timestamp)
@@ -293,34 +306,16 @@ function logger.clear()
   logger.info_turn_count = 0
 end
 
-function logger.get_seq()
-  return logger.seq
-end
-
-function logger.get_entries(max_lines)
+local function _get_entries(max_lines)
   return _take_entries(_list_entries(logger), max_lines)
 end
 
-function logger.get_entries_by_level(level, max_lines)
-  if level == nil then
-    return logger.get_entries(max_lines)
-  end
-  local matched = {}
-  local entries = _list_entries(logger)
-  for _, entry in ipairs(entries) do
-    if entry.level == level then
-      matched[#matched + 1] = entry
-    end
-  end
-  return _take_entries(matched, max_lines)
-end
-
 function logger.get_text(max_lines)
-  return _entries_to_text(logger.get_entries(max_lines))
+  return _entries_to_text(_get_entries(max_lines))
 end
 
 function logger.get_text_by_level(level, max_lines)
-  return _entries_to_text(logger.get_entries_by_level(level, max_lines))
+  return _entries_to_text(_take_entries(_filter_entries_by_level(_list_entries(logger), level), max_lines))
 end
 
 function logger.log_once(sink, level, key, ...)
@@ -347,31 +342,13 @@ logger.formatter = {
     return _take_entries(_list_entries(state), max_lines)
   end,
   get_entries_by_level = function(state, level, max_lines)
-    if level == nil then
-      return _take_entries(_list_entries(state), max_lines)
-    end
-    local matched = {}
-    for _, entry in ipairs(_list_entries(state)) do
-      if entry.level == level then
-        matched[#matched + 1] = entry
-      end
-    end
-    return _take_entries(matched, max_lines)
+    return _take_entries(_filter_entries_by_level(_list_entries(state), level), max_lines)
   end,
   get_text = function(state, max_lines)
     return _entries_to_text(_take_entries(_list_entries(state), max_lines))
   end,
   get_text_by_level = function(state, level, max_lines)
-    if level == nil then
-      return _entries_to_text(_take_entries(_list_entries(state), max_lines))
-    end
-    local matched = {}
-    for _, entry in ipairs(_list_entries(state)) do
-      if entry.level == level then
-        matched[#matched + 1] = entry
-      end
-    end
-    return _entries_to_text(_take_entries(matched, max_lines))
+    return _entries_to_text(_take_entries(_filter_entries_by_level(_list_entries(state), level), max_lines))
   end,
 }
 

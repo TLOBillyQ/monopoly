@@ -27,10 +27,6 @@ function normalize.validate_item_player(game, choice_kind, meta)
   return assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
 end
 
-function normalize.validate_item_target(game, field_name, meta)
-  return assert(game:find_player_by_id(meta[field_name]), "missing " .. tostring(field_name) .. ": " .. tostring(meta[field_name]))
-end
-
 function normalize.consume_if_needed(player, item_id, already_consumed)
   if not item_id or already_consumed == true then
     return

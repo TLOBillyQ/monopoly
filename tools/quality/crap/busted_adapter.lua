@@ -61,31 +61,6 @@ function M.discover_specs(lane)
   return specs
 end
 
-function M.run_with_coverage(spec_files, on_test)
-  local files = {}
-  for _, path in ipairs(spec_files or {}) do
-    files[#files + 1] = tostring(path)
-  end
-  table.sort(files)
-  local failures = {}
-  for _, spec_file in ipairs(files) do
-    if type(on_test) == "function" then
-      local ok, run_err = pcall(on_test, spec_file, {})
-      if not ok then
-        failures[#failures + 1] = {
-          name = spec_file,
-          message = tostring(run_err),
-        }
-      end
-    end
-  end
-  return {
-    total = #files,
-    failed = #failures > 0,
-    failures = failures,
-  }
-end
-
 function M.resolve_suites(lane)
   local specs = M.discover_specs(lane)
   local tests = {}

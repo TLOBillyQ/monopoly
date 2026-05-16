@@ -62,7 +62,7 @@ local function _build(helpers)
     local player = _validate_market_player(game, meta)
     local product_id = assert(number_utils.to_integer(action.option_id), "missing product_id")
     local entry = _validate_market_entry(product_id)
-    local result = market_service.purchase.execute(game, player, product_id, nil)
+    local result = market_service.purchase.execute(game, player, product_id)
     return choice_outcome.resolve_purchase(game, choice, player, entry, result, finish_choice)
   end
 

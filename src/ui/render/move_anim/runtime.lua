@@ -16,7 +16,7 @@ function runtime.ensure_runtime(board_scene)
 end
 
 function runtime.build_token(player_id, seq)
-  return tostring(player_id) .. ":" .. tostring(seq or "no_seq")
+  return string.format("%s:%s", player_id, seq or "no_seq")
 end
 
 function runtime.set_active_token(board_scene, player_id, token)
@@ -25,7 +25,7 @@ function runtime.set_active_token(board_scene, player_id, token)
   return token
 end
 
-function runtime.get_active_token(board_scene, player_id)
+local function _get_active_token(board_scene, player_id)
   local rt = runtime.ensure_runtime(board_scene)
   return rt.active_token_by_player_id[player_id]
 end
@@ -58,13 +58,15 @@ function runtime.release_sequence_lock(board_scene, player_id, entry, reason)
   if entry.anim_ctx and type(entry.anim_ctx.on_sequence_lock) == "function" then
     entry.anim_ctx.on_sequence_lock(true, entry.total_time, runtime.sequence_meta(entry))
   end
-  debug_mod.debug_log(
-    "sequence_lock_release",
-    "player_id=" .. tostring(player_id),
-    "seq=" .. tostring(entry.seq or "nil"),
-    "token=" .. tostring(entry.token or "nil"),
-    "reason=" .. tostring(reason or "none")
-  )
+  if debug_mod.enabled() then
+    debug_mod.debug_log(
+      "sequence_lock_release",
+      "player_id=" .. tostring(player_id),
+      "seq=" .. tostring(entry.seq or "nil"),
+      "token=" .. tostring(entry.token or "nil"),
+      "reason=" .. tostring(reason or "none")
+    )
+  end
 end
 
 function runtime.clear_active_sequence(board_scene, player_id)
@@ -82,7 +84,7 @@ function runtime.set_active_sequence(board_scene, player_id, entry)
 end
 
 function runtime.token_matches(board_scene, player_id, token)
-  return runtime.get_active_token(board_scene, player_id) == token
+  return _get_active_token(board_scene, player_id) == token
 end
 
 return runtime

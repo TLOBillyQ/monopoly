@@ -217,40 +217,40 @@ function runtime_state.ensure_turn_runtime(state)
   return turn_runtime
 end
 
-function runtime_state.get_landing_visual_hold(state)
+local function _get_landing_visual_hold(state)
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
   return _ensure_landing_visual_hold(turn_runtime)
 end
 
 function runtime_state.get_landing_visual_hold_active(state)
-  local hold = runtime_state.get_landing_visual_hold(state)
+  local hold = _get_landing_visual_hold(state)
   return hold.active == true
 end
 
 function runtime_state.set_landing_visual_hold_active(state, active)
-  local hold = runtime_state.get_landing_visual_hold(state)
+  local hold = _get_landing_visual_hold(state)
   hold.active = active == true
   return hold.active
 end
 
 function runtime_state.get_landing_visual_release_pending(state)
-  local hold = runtime_state.get_landing_visual_hold(state)
+  local hold = _get_landing_visual_hold(state)
   return hold.release_pending == true
 end
 
 function runtime_state.set_landing_visual_release_pending(state, release_pending)
-  local hold = runtime_state.get_landing_visual_hold(state)
+  local hold = _get_landing_visual_hold(state)
   hold.release_pending = release_pending == true
   return hold.release_pending
 end
 
 function runtime_state.get_landing_visual_hold_source(state)
-  local hold = runtime_state.get_landing_visual_hold(state)
+  local hold = _get_landing_visual_hold(state)
   return hold.source
 end
 
 function runtime_state.set_landing_visual_hold_source(state, source)
-  local hold = runtime_state.get_landing_visual_hold(state)
+  local hold = _get_landing_visual_hold(state)
   hold.source = source
   return source
 end

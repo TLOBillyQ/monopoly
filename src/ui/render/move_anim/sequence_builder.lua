@@ -4,11 +4,10 @@ local runtime_state = require("src.ui.state.runtime")
 
 local sequence_builder = {}
 
+local _ZERO_VEC = (math and math.Vector3) and math.Vector3(0.0, 0.0, 0.0) or { x = 0.0, y = 0.0, z = 0.0 }
+
 local function _zero_vector()
-  if math and math.Vector3 then
-    return math.Vector3(0.0, 0.0, 0.0)
-  end
-  return { x = 0.0, y = 0.0, z = 0.0 }
+  return _ZERO_VEC
 end
 
 local function _calc_step_vector(scene, from_index, to_index)

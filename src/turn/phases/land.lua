@@ -315,7 +315,5 @@ end
 return {
   run = _phase_land,
   _resolve_wait_state = _resolve_wait_state,
-  _phase_land = _phase_land,
   resolve_wait_state = _resolve_wait_state,
-  phase_land = _phase_land,
 }

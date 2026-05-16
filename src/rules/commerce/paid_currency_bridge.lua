@@ -26,24 +26,12 @@ function bridge.is_paid_currency(currency)
   return _currency_entry(currency) ~= nil
 end
 
-function bridge.is_channel_enforced()
-  return false
-end
-
 function bridge.is_currency_channel_ready(_, _currency)
   return true
 end
 
 function bridge.unavailable_reason(_, _currency)
   return nil
-end
-
-function bridge.sync_player_currency(_, _, _)
-  return false
-end
-
-function bridge.consume_currency(_, _, _, _)
-  return false
 end
 
 function bridge.setup_for_game(_)

@@ -57,19 +57,19 @@ function item_atlas.close(state)
   return atlas
 end
 
-function item_atlas.page_next(state)
+local function _page_next(state)
   local atlas = _ensure_state(state)
   atlas.page_index = _clamp_page(atlas.page_index + 1)
   return atlas
 end
 
-function item_atlas.page_prev(state)
+local function _page_prev(state)
   local atlas = _ensure_state(state)
   atlas.page_index = _clamp_page(atlas.page_index - 1)
   return atlas
 end
 
-function item_atlas.select_slot(state, slot_index)
+local function _select_slot(state, slot_index)
   local atlas = _ensure_state(state)
   local item = _item_at(atlas, slot_index)
   if item then
@@ -83,17 +83,17 @@ function item_atlas.handle_action(state, action, role_id)
     return item_atlas.close(state)
   end
   if action == "next" then
-    return item_atlas.page_next(state)
+    return _page_next(state)
   end
   if action == "prev" then
-    return item_atlas.page_prev(state)
+    return _page_prev(state)
   end
   if type(action) == "table" and action.type == "select" then
-    return item_atlas.select_slot(state, action.slot_index)
+    return _select_slot(state, action.slot_index)
   end
   local slot_index = number_utils.to_integer(action)
   if slot_index ~= nil then
-    return item_atlas.select_slot(state, slot_index)
+    return _select_slot(state, slot_index)
   end
   local atlas = _ensure_state(state)
   atlas.role_id = role_id or atlas.role_id
@@ -101,6 +101,5 @@ function item_atlas.handle_action(state, action, role_id)
 end
 
 item_atlas.catalog = item_catalog
-item_atlas.page_size = PAGE_SIZE
 
 return item_atlas

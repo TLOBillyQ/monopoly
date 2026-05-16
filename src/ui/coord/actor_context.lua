@@ -20,7 +20,7 @@ function actor_context.resolve_role_by_id(role_id)
       end
     end
   end
-  local resolved = host_runtime_ports.resolve_role(role_id)
+  local resolved = host_runtime_ports.resolve_role_with(role_id)
   if resolved ~= nil then
     return resolved
   end

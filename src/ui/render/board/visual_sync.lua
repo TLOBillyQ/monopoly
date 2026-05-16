@@ -48,19 +48,19 @@ local function _has_pending_trigger_anim(state, overlay_kind, tile_index)
   return _match_in_anim_queue(turn.action_anim_queue, target_kind, tile_index)
 end
 
-local function _dedupe_list(raw_list)
-  local list = {}
-  local seen = {}
+local function _dedupe_into(raw_list, out, seen)
+  for k in pairs(out) do out[k] = nil end
+  for k in pairs(seen) do seen[k] = nil end
   if type(raw_list) ~= "table" then
-    return list
+    return out
   end
   for _, value in ipairs(raw_list) do
     if value ~= nil and not seen[value] then
       seen[value] = true
-      list[#list + 1] = value
+      out[#out + 1] = value
     end
   end
-  return list
+  return out
 end
 
 local function _deps(state)
@@ -209,56 +209,62 @@ function visual_sync.sync_overlay_visual(state, board_index)
   return true
 end
 
-function visual_sync.normalize_payload(payload)
+local _norm_tiles = {}
+local _norm_tiles_seen = {}
+local _norm_overlays = {}
+local _norm_overlays_seen = {}
+local _norm_owners = {}
+local _norm_owners_seen = {}
+local _normalized = { tile_ids = _norm_tiles, overlay_indices = _norm_overlays, affected_owner_ids = _norm_owners }
+
+local function _normalize_payload(payload)
   payload = payload or {}
-  return {
-    tile_ids = _dedupe_list(payload.tile_ids),
-    overlay_indices = _dedupe_list(payload.overlay_indices),
-    affected_owner_ids = _dedupe_list(payload.affected_owner_ids),
-  }
+  _normalized.tile_ids = _dedupe_into(payload.tile_ids, _norm_tiles, _norm_tiles_seen)
+  _normalized.overlay_indices = _dedupe_into(payload.overlay_indices, _norm_overlays, _norm_overlays_seen)
+  _normalized.affected_owner_ids = _dedupe_into(payload.affected_owner_ids, _norm_owners, _norm_owners_seen)
+  return _normalized
 end
 
+local _expand_owner_set = {}
+local _expand_tile_ids = {}
 local function _expand_affected_tiles(state, owner_ids)
+  for k in pairs(_expand_tile_ids) do _expand_tile_ids[k] = nil end
   if not owner_ids or #owner_ids == 0 then
-    return {}
+    return _expand_tile_ids
   end
   local board = _resolve_board(state)
   if not (board and type(board.path) == "table") then
-    return {}
+    return _expand_tile_ids
   end
-  local owner_set = {}
+  for k in pairs(_expand_owner_set) do _expand_owner_set[k] = nil end
   for _, owner_id in ipairs(owner_ids) do
-    owner_set[owner_id] = true
+    _expand_owner_set[owner_id] = true
   end
-  local tile_ids = {}
   for _, tile in ipairs(board.path) do
-    if tile and tile.type == "land" and tile.owner_id and owner_set[tile.owner_id] then
-      tile_ids[#tile_ids + 1] = tile.id
+    if tile and tile.type == "land" and tile.owner_id and _expand_owner_set[tile.owner_id] then
+      _expand_tile_ids[#_expand_tile_ids + 1] = tile.id
     end
   end
-  return tile_ids
+  return _expand_tile_ids
 end
 
+local _sync_seen = {}
 function visual_sync.sync_many(state, payload)
-  local normalized = visual_sync.normalize_payload(payload)
+  local normalized = _normalize_payload(payload)
   local handled = false
-
-  local seen = {}
-  local function _refresh(tile_id)
-    if tile_id == nil or seen[tile_id] then
-      return
-    end
-    seen[tile_id] = true
-    if visual_sync.sync_tile_visual(state, tile_id) then
-      handled = true
-    end
-  end
+  for k in pairs(_sync_seen) do _sync_seen[k] = nil end
 
   for _, tile_id in ipairs(normalized.tile_ids) do
-    _refresh(tile_id)
+    if tile_id ~= nil and not _sync_seen[tile_id] then
+      _sync_seen[tile_id] = true
+      if visual_sync.sync_tile_visual(state, tile_id) then handled = true end
+    end
   end
   for _, tile_id in ipairs(_expand_affected_tiles(state, normalized.affected_owner_ids)) do
-    _refresh(tile_id)
+    if tile_id ~= nil and not _sync_seen[tile_id] then
+      _sync_seen[tile_id] = true
+      if visual_sync.sync_tile_visual(state, tile_id) then handled = true end
+    end
   end
   for _, board_index in ipairs(normalized.overlay_indices) do
     if visual_sync.sync_overlay_visual(state, board_index) then

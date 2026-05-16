@@ -14,12 +14,14 @@ local function _should_skip_stop_active_sequence(board_scene, player_id, anim_ct
   if rt.token_matches(board_scene, player_id, token) then
     return false
   end
-  debug_mod.debug_log(
-    "finish_skip_stale_token",
-    "player_id=" .. tostring(player_id),
-    "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
-    "token=" .. tostring(token)
-  )
+  if debug_mod.enabled() then
+    debug_mod.debug_log(
+      "finish_skip_stale_token",
+      "player_id=" .. tostring(player_id),
+      "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
+      "token=" .. tostring(token)
+    )
+  end
   return true
 end
 
@@ -53,14 +55,16 @@ local function _stop_active_sequence(board_scene, player_id, anim_ctx, token)
   local unit = board_scene and board_scene.units_by_player_id and board_scene.units_by_player_id[player_id] or nil
   local stop_result = stop.stop_player_presentation(player_id, unit, _stop_synthetic_ai_opts)
   local active_sequence = rt.get_active_sequence(board_scene, player_id)
-  debug_mod.debug_log(
-    "finish_stop",
-    "player_id=" .. tostring(player_id),
-    "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
-    "token=" .. tostring(token),
-    "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
-    "anim_stop=" .. tostring(stop_result.anim_stop_path or "none")
-  )
+  if debug_mod.enabled() then
+    debug_mod.debug_log(
+      "finish_stop",
+      "player_id=" .. tostring(player_id),
+      "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
+      "token=" .. tostring(token),
+      "motion_stop=" .. tostring(stop_result.motion_stop_path or "none"),
+      "anim_stop=" .. tostring(stop_result.anim_stop_path or "none")
+    )
+  end
   rt.release_sequence_lock(board_scene, player_id, active_sequence, "sequence_finished")
   stop.clear_player_token(board_scene, player_id, "sequence_finished")
 end
@@ -104,52 +108,60 @@ function playback.play_sequence(board_scene, anim_ctx, anim_ref)
       anim_ctx.on_sequence_lock(false, total_time, rt.sequence_meta(entry))
     end
   end
-  debug_mod.debug_log(
-    "play_sequence_start",
-    "player_id=" .. tostring(player_id),
-    "seq=" .. tostring(anim_ctx.seq or "nil"),
-    "from=" .. tostring(from_index),
-    "to=" .. tostring(to_index),
-    "step_count=" .. tostring(#steps),
-    "total_time=" .. tostring(total_time),
-    "visited=" .. seq_builder.format_visited(anim_ctx.visited),
-    "token=" .. tostring(token or "nil")
-  )
+  if debug_mod.enabled() then
+    debug_mod.debug_log(
+      "play_sequence_start",
+      "player_id=" .. tostring(player_id),
+      "seq=" .. tostring(anim_ctx.seq or "nil"),
+      "from=" .. tostring(from_index),
+      "to=" .. tostring(to_index),
+      "step_count=" .. tostring(#steps),
+      "total_time=" .. tostring(total_time),
+      "visited=" .. seq_builder.format_visited(anim_ctx.visited),
+      "token=" .. tostring(token or "nil")
+    )
+  end
   local function _run_step(step)
     if token ~= nil and not rt.token_matches(board_scene, player_id, token) then
+      if debug_mod.enabled() then
+        debug_mod.debug_log(
+          "step_skip_stale_token",
+          "player_id=" .. tostring(player_id),
+          "seq=" .. tostring(anim_ctx.seq or "nil"),
+          "from=" .. tostring(step.from),
+          "to=" .. tostring(step.to),
+          "token=" .. tostring(token)
+        )
+      end
+      return
+    end
+    if debug_mod.enabled() then
       debug_mod.debug_log(
-        "step_skip_stale_token",
+        "step_execute",
         "player_id=" .. tostring(player_id),
         "seq=" .. tostring(anim_ctx.seq or "nil"),
         "from=" .. tostring(step.from),
         "to=" .. tostring(step.to),
-        "token=" .. tostring(token)
+        "delay=" .. tostring(step.delay),
+        "step_time=" .. tostring(self_ref.step_duration(board_scene, step.from, step.to, anim_ctx))
       )
-      return
     end
-    debug_mod.debug_log(
-      "step_execute",
-      "player_id=" .. tostring(player_id),
-      "seq=" .. tostring(anim_ctx.seq or "nil"),
-      "from=" .. tostring(step.from),
-      "to=" .. tostring(step.to),
-      "delay=" .. tostring(step.delay),
-      "step_time=" .. tostring(self_ref.step_duration(board_scene, step.from, step.to, anim_ctx))
-    )
     if anim_ctx and anim_ctx.state then
       board_feedback.play_step_tile_sound(anim_ctx.state, player_id, step.to)
     end
     self_ref.one_step(board_scene, player_id, step.from, step.to, anim_ctx)
   end
   for _, step in ipairs(steps) do
-    debug_mod.debug_log(
-      "step_schedule",
-      "player_id=" .. tostring(player_id),
-      "seq=" .. tostring(anim_ctx.seq or "nil"),
-      "from=" .. tostring(step.from),
-      "to=" .. tostring(step.to),
-      "delay=" .. tostring(step.delay)
-    )
+    if debug_mod.enabled() then
+      debug_mod.debug_log(
+        "step_schedule",
+        "player_id=" .. tostring(player_id),
+        "seq=" .. tostring(anim_ctx.seq or "nil"),
+        "from=" .. tostring(step.from),
+        "to=" .. tostring(step.to),
+        "delay=" .. tostring(step.delay)
+      )
+    end
     if step.delay <= 0 then
       _run_step(step)
     else

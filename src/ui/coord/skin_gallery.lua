@@ -44,7 +44,7 @@ function skin_gallery.open_gallery(state, role_id)
   return compat
 end
 
-function skin_gallery.close(state)
+local function _close(state)
   skin_panel.close(state)
   item_atlas.close(state)
   local compat = _ensure_compat_state(state)
@@ -53,41 +53,41 @@ function skin_gallery.close(state)
   return compat
 end
 
-function skin_gallery.page_next(state)
+local function _page_next(state)
   skin_panel.page_next(state)
   return _sync_from_skin_panel(state)
 end
 
-function skin_gallery.page_prev(state)
+local function _page_prev(state)
   skin_panel.page_prev(state)
   return _sync_from_skin_panel(state)
 end
 
-function skin_gallery.unlock_current(state, role_id, source)
+local function _unlock_current(state, role_id, source)
   skin_panel.unlock(state, role_id, source, 1)
   return _sync_from_skin_panel(state, "skin")
 end
 
-function skin_gallery.equip_current(state, role_id)
+local function _equip_current(state, role_id)
   skin_panel.equip(state, role_id, 1)
   return _sync_from_skin_panel(state, "skin")
 end
 
 function skin_gallery.handle_action(state, action, role_id)
   if action == "close" then
-    return skin_gallery.close(state)
+    return _close(state)
   end
   if action == "next" then
-    return skin_gallery.page_next(state)
+    return _page_next(state)
   end
   if action == "prev" then
-    return skin_gallery.page_prev(state)
+    return _page_prev(state)
   end
   if action == "buy" or action == "gift" then
-    return skin_gallery.unlock_current(state, role_id, action)
+    return _unlock_current(state, role_id, action)
   end
   if action == "equip" then
-    return skin_gallery.equip_current(state, role_id)
+    return _equip_current(state, role_id)
   end
   return _ensure_compat_state(state)
 end

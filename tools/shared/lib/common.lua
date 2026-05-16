@@ -447,10 +447,6 @@ function common.split(text, delimiter)
   return parts
 end
 
-function common.join(parts, delimiter)
-  return table.concat(parts or {}, delimiter or "")
-end
-
 function common.simplify_path(path)
   local normalized = common.normalize_path(path)
   local prefix = ""

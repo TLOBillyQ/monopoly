@@ -15,7 +15,7 @@ local function _is_actor_bound_ui_button(action_id)
   return type(action_id) == "string" and string.match(action_id, "^item_slot_(%d+)$") ~= nil
 end
 
-function router.unbind(state)
+local function _unbind(state)
   if not state then
     return
   end
@@ -33,7 +33,7 @@ end
 
 function router.bind(state, resolve_game)
   assert(state ~= nil, "missing state")
-  router.unbind(state)
+  _unbind(state)
 
   local dispatch_opts = {
     on_close_choice = function(ctx)

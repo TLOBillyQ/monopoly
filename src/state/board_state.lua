@@ -41,7 +41,7 @@ local function _notify_tile_owner_changed(self, tile_id, owner_id)
   return false
 end
 
-function game_state_tiles.update_tile(self, tile, updates)
+local function _update_tile(self, tile, updates)
   assert(tile ~= nil and tile.type == "land", "invalid tile for update")
   for key, value in pairs(updates) do
     tile[key] = value
@@ -66,7 +66,7 @@ function game_state_tiles.set_tile_owner(self, tile, owner_id)
   assert(tile ~= nil and tile.type == "land", "invalid tile for owner")
   local previous_owner_id = tile.owner_id
   _bump_land_rent_version(self)
-  game_state_tiles.update_tile(self, tile, { owner_id = owner_id })
+  _update_tile(self, tile, { owner_id = owner_id })
   _notify_tile_owner_changed(self, tile.id, owner_id)
   _sync_board_visual(self, {
     tile_ids = { tile.id },
@@ -76,7 +76,7 @@ end
 
 function game_state_tiles.set_tile_level(self, tile, level)
   _bump_land_rent_version(self)
-  game_state_tiles.update_tile(self, tile, { level = level })
+  _update_tile(self, tile, { level = level })
   if tile and tile.id ~= nil then
     _sync_board_visual(self, {
       tile_ids = { tile.id },

@@ -20,8 +20,6 @@ local market_layout = {
   item_selection_frames = {},
   sold_out_badges = {},
   sold_out_labels = {},
-  title = "黑市",
-  icon_placeholder = "黑市_选中卡牌",
   rarity_ref_keys = { [1] = "lv1", [2] = "lv2", [3] = "lv3" },
   empty_ref_key = "Empty",
 }

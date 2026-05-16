@@ -43,7 +43,7 @@ function runtime_context.current()
   return current_context
 end
 
-function runtime_context.refresh_roles(ctx)
+local function _refresh_roles(ctx)
   assert(ctx ~= nil and ctx.env ~= nil, "missing runtime context")
   ctx.roles = _resolve_game_api_roles(function()
     return ctx.env and ctx.env[game_api_key] or nil
@@ -85,7 +85,7 @@ function runtime_context.install_runtime_helpers(ctx, opts)
   end
 
   if not ctx.roles then
-    runtime_context.refresh_roles(ctx)
+    _refresh_roles(ctx)
   end
   local helpers = {
     camera_helper = ctx.camera_helper,

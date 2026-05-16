@@ -12,7 +12,7 @@ for _, cfg in ipairs(items_cfg) do
   items_by_id[cfg.id] = cfg
 end
 
-context.entries = market_catalog.entries
+local _entries = market_catalog.entries
 context.entry_by_id = market_catalog.entry_by_id
 
 function context.entry_name(entry)
@@ -96,7 +96,7 @@ end
 
 function eligibility.sorted_entries()
   local entries = {}
-  for _, entry in ipairs(context.entries()) do
+  for _, entry in ipairs(_entries()) do
     entries[#entries + 1] = entry
   end
   table.sort(entries, function(a, b)

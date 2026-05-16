@@ -109,7 +109,7 @@ local function _refresh_tab_gray(ui, active_tab)
     { visible = not item_active, touch_enabled = false })
 end
 
-function market_view_controls.refresh_market_controls(ui, market)
+local function _refresh_market_controls(ui, market)
   local page_index = _resolve_market_page_value(market, "page_index")
   local page_count = _resolve_market_page_value(market, "page_count")
   local prev_visible = page_count > 1 and page_index > 1
@@ -121,7 +121,7 @@ function market_view_controls.refresh_market_controls(ui, market)
 end
 
 function market_view_controls.apply_market_common_controls(ui, market, confirm_enabled)
-  market_view_controls.refresh_market_controls(ui, market)
+  _refresh_market_controls(ui, market)
   market_view_controls.set_confirm_button_state(ui, confirm_enabled)
   _set_cancel_controls(ui, market.allow_cancel, market.allow_cancel)
 end

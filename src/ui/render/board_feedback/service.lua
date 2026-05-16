@@ -219,13 +219,13 @@ local function _play_followup_sounds(cue_name, pos, followup_sounds)
   return played
 end
 
-local function _play_cue(state, cue_name, pos, unit, payload)
+local function _play_cue(_state, cue_name, pos, unit, payload)
   local cue = type(cue_name) == "string" and cue_name ~= "" and catalog.get(cue_name) or nil
   if cue == nil then
     return false
   end
   if pos == nil then
-    pos = runtime_constants.v3_zero or runtime_constants.v3_one
+    pos = runtime_constants.v3_zero
   end
   local played = false
   if _play_effect(cue_name, cue, pos, unit, payload) then

@@ -115,21 +115,19 @@ local function _resolve_camera_local_role_id(state)
 end
 
 local function _lock_camera_to_target_position(state, local_role, target_pos)
-   if target_pos == nil then
-     return false
-   end
-
-   if type(local_role.set_camera_lock_position) ~= "function" then
-     return false
+  if target_pos == nil then
+    return false
+  end
+  if type(local_role.set_camera_lock_position) ~= "function" then
+    return false
   end
   local ok, err = pcall(local_role.set_camera_lock_position, target_pos)
   if not ok then
-     runtime_state.log_once(state, "warn", "camera_sync:set_camera_lock_position_failed", "camera_sync", "set_camera_lock_position failed:", tostring(err))
-   else
-     _restore_camera_props(state, local_role)
-   end
-
-   return ok == true
+    runtime_state.log_once(state, "warn", "camera_sync:set_camera_lock_position_failed", "camera_sync", "set_camera_lock_position failed:", tostring(err))
+  else
+    _restore_camera_props(state, local_role)
+  end
+  return ok == true
 end
 
 local function _reset_camera_to_self(state, local_role)
@@ -239,7 +237,7 @@ local _input_blocked_phases = {
   inter_turn_wait = true,
 }
 
-function choice_ui_state.is_input_blocked_phase(phase)
+local function _is_phase_input_blocked(phase)
   return _input_blocked_phases[phase] == true
 end
 
@@ -268,9 +266,9 @@ local function _find_player(game, role_id)
   return nil
 end
 
-local function _is_input_blocked_phase(game)
+local function _is_game_input_blocked_phase(game)
   local phase = game and game.turn and game.turn.phase or nil
-  return choice_ui_state.is_input_blocked_phase(phase)
+  return _is_phase_input_blocked(phase)
 end
 
 local function _is_local_role(state, owner_role_id)
@@ -305,7 +303,7 @@ function choice_ui_state.resolve_gate_state(game, state, choice)
   local owner_player = _find_player(game, owner_role_id)
   local local_owner = _is_local_role(state, owner_role_id)
   local owner_auto = owner_player and (owner_player.is_ai == true or owner_player.auto == true) or false
-  local expects_ui = route_key ~= "base_inline" and not _is_input_blocked_phase(game) and local_owner and not owner_auto
+  local expects_ui = route_key ~= "base_inline" and not _is_game_input_blocked_phase(game) and local_owner and not owner_auto
   local open
 
   if route_key == "base_inline" or route_key == "item_phase_passive" then
@@ -334,10 +332,6 @@ end
 local ui_gate_sync = {}
 local _cached_gate = {}
 
-local function _resolve_ui(state, common)
-  return common.get_ui_state(state)
-end
-
 local function _read_flag(ui, key)
   return ui and ui[key] == true or false
 end
@@ -356,7 +350,7 @@ function ui_gate_sync.get_ui_state(state, common)
 end
 
 function ui_gate_sync.resolve_ui_gate(state, common)
-  local ui = _resolve_ui(state, common)
+  local ui = common.get_ui_state(state)
   _cached_gate.input_blocked = _read_flag(ui, "input_blocked")
   _cached_gate.choice_active = _read_flag(ui, "choice_active")
   _cached_gate.market_active = _read_flag(ui, "market_active")
@@ -368,27 +362,27 @@ function ui_gate_sync.resolve_ui_gate(state, common)
 end
 
 function ui_gate_sync.is_input_blocked(state, common)
-  return _read_flag(_resolve_ui(state, common), "input_blocked")
+  return _read_flag(common.get_ui_state(state), "input_blocked")
 end
 
 function ui_gate_sync.is_popup_active(state, common)
-  return _read_flag(_resolve_ui(state, common), "popup_active")
+  return _read_flag(common.get_ui_state(state), "popup_active")
 end
 
 function ui_gate_sync.is_choice_active(state, common)
-  return _read_flag(_resolve_ui(state, common), "choice_active")
+  return _read_flag(common.get_ui_state(state), "choice_active")
 end
 
 function ui_gate_sync.is_market_active(state, common)
-  return _read_flag(_resolve_ui(state, common), "market_active")
+  return _read_flag(common.get_ui_state(state), "market_active")
 end
 
 function ui_gate_sync.get_popup_owner_index(state, common)
-  return _read_value(_resolve_ui(state, common), "popup_owner_index")
+  return _read_value(common.get_ui_state(state), "popup_owner_index")
 end
 
 function ui_gate_sync.set_input_blocked(state, blocked, common)
-  local ui = _resolve_ui(state, common)
+  local ui = common.get_ui_state(state)
   if not ui then
     return false
   end
@@ -441,7 +435,7 @@ local function _should_open_choice_modal(game, state, next_model, dirty)
   if not (next_model and next_model.choice) then
     return false
   end
-  if choice_ui_state.is_input_blocked_phase(phase) then
+  if _is_phase_input_blocked(phase) then
     return false
   end
   local route_key = choice_ui_state.resolve_route_key(next_model.choice)

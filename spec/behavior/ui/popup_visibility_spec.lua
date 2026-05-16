@@ -4,7 +4,6 @@ local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local runtime_port = require("src.ui.render.runtime_ui")
-local ui_view = require("src.ui.coord.ui_runtime")
 local modal_presenter = require("src.ui.coord.modal")
 
 local _build_popup_view_state = support.build_popup_view_state

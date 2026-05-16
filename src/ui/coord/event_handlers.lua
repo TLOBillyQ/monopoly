@@ -90,12 +90,9 @@ function event_handlers.install(_, logger, state)
       return handler(data)
     end
     local result = nil
-    local deferred = landing_visual_hold.run_or_defer(current_state, nil, "runtime_event", function()
+    landing_visual_hold.run_or_defer(current_state, nil, "runtime_event", function()
       result = handler(data)
     end)
-    if deferred == true then
-      return result
-    end
     return result
   end
 

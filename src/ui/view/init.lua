@@ -85,77 +85,8 @@ local function _should_update_slots(dirty, ui_dirty)
   return dirty.inventory_ids ~= nil and next(dirty.inventory_ids) ~= nil
 end
 
-local function _update_slots(model, game, current, current_player_id, ui_runtime)
-  local slot_count = item_slice.resolve_slot_count(ui_runtime)
-  local by_player = item_slice.build_item_slots_by_player(game.players, slot_count)
-  model.item_slots_by_player = by_player
-  model.item_slots = role_id_utils.read(by_player, current_player_id)
-    or item_slice.build_item_slots_for_player(current, slot_count)
-end
-
 local function _should_refresh_choice(dirty, ui_dirty)
   return dirty.turn or dirty.market or ui_dirty
-end
-
-local function _update_choice_and_market(model, game, env, ui_state, current_player_id)
-  local choice, market = choice_slice.build_choice_and_market(game, env, ui_state)
-  model.choice = choice
-  model.market = market
-  model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)
-end
-
-local function _update_current_player_meta(model, current_name, current_cash, current_player_id, turn)
-  model.current_player_name = current_name
-  model.current_player_cash = current_cash
-  model.turn_count = turn.turn_count
-  model.current_player_id = current_player_id
-end
-
-local function _fill_runtime_meta(model, env)
-  model.board_tile_count = board_slice.tile_count()
-  model.last_turn = env.last_turn
-  model.finished = env.finished
-  model.winner_name = env.winner_name
-end
-
-local function _refresh_board_and_auto_labels(model, game, env, turn, dirty, ui_dirty)
-  if _should_update_board(dirty) then
-    model.board = board_slice.update(model.board, game, env, turn)
-  end
-
-  if _should_update_auto_labels(dirty, ui_dirty) then
-    model.auto_enabled_by_player = item_slice.build_auto_enabled_by_player(game.players)
-  end
-end
-
-local function _refresh_panel_and_slots(model, game, env, turn, current, current_player_id, ui_runtime, dirty, ui_dirty)
-  model.panel = panel_slice.update(
-    model.panel,
-    game,
-    env,
-    turn,
-    current_player_id,
-    model.auto_enabled_by_player,
-    _build_panel_flags(dirty, ui_dirty)
-  )
-
-  local update_slots = _should_update_slots(dirty, ui_dirty)
-  if update_slots then
-    _update_slots(model, game, current, current_player_id, ui_runtime)
-  end
-  return update_slots
-end
-
-local function _refresh_choice_and_meta(model, game, env, ui_state, current_name, current_cash, current_player_id, turn, dirty, ui_dirty, update_slots)
-  if _should_refresh_choice(dirty, ui_dirty) then
-    _update_choice_and_market(model, game, env, ui_state, current_player_id)
-  elseif dirty.players or update_slots then
-    model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, model.choice, current_player_id)
-  end
-
-  if dirty.players or dirty.turn then
-    _update_current_player_meta(model, current_name, current_cash, current_player_id, turn)
-  end
 end
 
 function model_api.build(game, env)
@@ -201,33 +132,49 @@ function model_api.update(prev, game, env, dirty)
   local ui_dirty = dirty.ui == true
   local model = prev
 
-  _refresh_board_and_auto_labels(model, game, env, turn, dirty, ui_dirty)
-  local update_slots = _refresh_panel_and_slots(
-    model,
-    game,
-    env,
-    turn,
-    current,
-    current_player_id,
-    ui_runtime,
-    dirty,
-    ui_dirty
-  )
-  _refresh_choice_and_meta(
-    model,
-    game,
-    env,
-    ui_state,
-    current_name,
-    current_cash,
-    current_player_id,
-    turn,
-    dirty,
-    ui_dirty,
-    update_slots
+  if _should_update_board(dirty) then
+    model.board = board_slice.update(model.board, game, env, turn)
+  end
+  if _should_update_auto_labels(dirty, ui_dirty) then
+    model.auto_enabled_by_player = item_slice.build_auto_enabled_by_player(game.players)
+  end
+
+  model.panel = panel_slice.update(
+    model.panel, game, env, turn, current_player_id,
+    model.auto_enabled_by_player,
+    _build_panel_flags(dirty, ui_dirty)
   )
 
-  _fill_runtime_meta(model, env)
+  local update_slots = _should_update_slots(dirty, ui_dirty)
+  if update_slots then
+    local slot_count = item_slice.resolve_slot_count(ui_runtime)
+    local by_player = item_slice.build_item_slots_by_player(game.players, slot_count)
+    model.item_slots_by_player = by_player
+    model.item_slots = role_id_utils.read(by_player, current_player_id)
+      or item_slice.build_item_slots_for_player(current, slot_count)
+  end
+
+  if _should_refresh_choice(dirty, ui_dirty) then
+    local choice, market = choice_slice.build_choice_and_market(game, env, ui_state)
+    model.choice = choice
+    model.market = market
+    model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, choice, current_player_id)
+  elseif dirty.players or update_slots then
+    model.item_choice_owner_id = item_slice.resolve_item_choice_owner_id(game, model.choice, current_player_id)
+  end
+
+  if dirty.players or dirty.turn then
+    model.current_player_name = current_name
+    model.current_player_cash = current_cash
+    model.turn_count = turn.turn_count
+    model.current_player_id = current_player_id
+  end
+
+  model.board_tile_count = board_slice.tile_count()
+  model.last_turn = env.last_turn
+  model.finished = env.finished
+  model.winner_name = env.winner_name
+
   return model
 end
 

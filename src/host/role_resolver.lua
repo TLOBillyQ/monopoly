@@ -12,7 +12,7 @@ local function role_matches_predicate(role, predicate)
   return predicate(role) == true
 end
 
-function role_resolver.resolve_game_role(player_id)
+local function _resolve_game_role(player_id)
   if GameAPI and type(GameAPI.get_role) == "function" then
     local ok, fallback = pcall(GameAPI.get_role, player_id)
     if ok then
@@ -27,7 +27,7 @@ function role_resolver.resolve_role_with(player_id, predicate)
   if role_matches_predicate(role, predicate) then
     return role
   end
-  role = role_resolver.resolve_game_role(player_id)
+  role = _resolve_game_role(player_id)
   if role_matches_predicate(role, predicate) then
     return role
   end

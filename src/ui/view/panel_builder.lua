@@ -90,11 +90,19 @@ local function _accumulate_player_assets(player, board)
   return cash, land_count, total
 end
 
+local function _build_player_label(player_name, eliminated)
+  local display_name = player_name or ""
+  if eliminated then
+    return display_name .. " (出局)"
+  end
+  return display_name
+end
+
 local function _build_player_status(player, board, index)
   local status = _cached_statuses[index]
   local role = _resolve_role(player)
   local display_name = _resolve_role_name(role) or player.name
-  status.name = panel.build_player_label(display_name, player.eliminated == true)
+  status.name = _build_player_label(display_name, player.eliminated == true)
   status.avatar = role_avatar.resolve_from_role(role)
   status.eliminated = player.eliminated == true
   local cash, land_count, total = _accumulate_player_assets(player, board)
@@ -130,13 +138,6 @@ function panel.build_turn_label(_, countdown_seconds)
   return _cached_turn_label
 end
 
-function panel.build_player_label(player_name, eliminated)
-  local display_name = player_name or ""
-  if eliminated then
-    return display_name .. " (出局)"
-  end
-  return display_name
-end
 
 local _status_out = {}
 

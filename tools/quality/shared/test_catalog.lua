@@ -309,13 +309,4 @@ function M.load_tooling_suites()
   return _load_modules(M.tooling_suites, "tooling", "tooling")
 end
 
-function M.load_all_suites()
-  local suites = M.load_behavior_suites()
-  local contract_suites = M.load_contract_suites()
-  for _, suite in ipairs(contract_suites) do
-    suites[#suites + 1] = suite
-  end
-  return suites
-end
-
 return M

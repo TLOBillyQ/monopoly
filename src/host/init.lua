@@ -16,15 +16,6 @@ end
 
 host_runtime.enqueue_tip = tip_queue.enqueue
 
-function host_runtime.show_tips(text, duration)
-  return host_runtime.enqueue_tip({
-    text = text,
-    duration = duration,
-    blocks_inter_turn = false,
-    source = "host_runtime.show_tips",
-  })
-end
-
 function host_runtime.register_custom_event(event_name, handler)
   if type(event_name) ~= "string" or type(handler) ~= "function" then
     return false
@@ -38,16 +29,8 @@ function host_runtime.register_custom_event(event_name, handler)
   return true
 end
 
-function host_runtime.resolve_role(player_id)
-  return host_runtime.resolve_role_with(player_id)
-end
-
 function host_runtime.resolve_role_with(player_id, predicate)
   return role_resolver.resolve_role_with(player_id, predicate)
-end
-
-function host_runtime.resolve_game_role(player_id)
-  return role_resolver.resolve_game_role(player_id)
 end
 
 function host_runtime.resolve_roles()
