@@ -240,24 +240,6 @@ function turn_flow_steps.handlers()
       return true
     end,
 
-    ["落地结算执行"] = function(world)
-      if world.landing and world.landing.type == "market" and world.landing.sold_out then
-        world.landing.skip_choice = true
-        world.landing.end_phase = true
-      elseif world.landing and world.landing.type == "opponent_tile" then
-        if world.landing.has_seizure_card and world.landing.has_rent_free then
-          world.landing.seizure_prompt = true
-          world.landing.auto_rent_free = true
-          world.landing.rent_paid = false
-        elseif world.landing.has_rent_free then
-          world.landing.auto_rent_free = true
-          world.landing.rent_paid = false
-          world.landing.no_manual_choice = true
-        end
-      end
-      return true
-    end,
-
     ["不弹出购买选择"] = function(world)
       if not world.landing.skip_choice then
         return nil, "purchase choice should be skipped"
@@ -269,12 +251,6 @@ function turn_flow_steps.handlers()
       if not world.landing.end_phase then
         return nil, "should go directly to end phase"
       end
-      return true
-    end,
-
-    ["玩家落在对手拥有的地块"] = function(world)
-      _ensure_turn(world)
-      world.landing = { type = "opponent_tile", has_rent_free = false, has_seizure_card = false }
       return true
     end,
 
