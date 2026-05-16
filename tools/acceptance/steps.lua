@@ -6,6 +6,8 @@ local source = require("acceptance.source")
 local handoff_message = require("swarmforge.handoff_message")
 local common = require("shared.lib.common")
 local movement_steps = require("acceptance.steps.movement")
+local dice_steps = require("acceptance.steps.dice")
+local turn_flow_steps = require("acceptance.steps.turn_flow")
 
 local steps = {}
 
@@ -681,6 +683,8 @@ end
 function steps.handlers()
   local h = _handlers()
   _merge_handlers(h, movement_steps.handlers())
+  _merge_handlers(h, dice_steps.handlers())
+  _merge_handlers(h, turn_flow_steps.handlers())
   return h
 end
 
