@@ -4,6 +4,7 @@ local shared = require("acceptance.steps.shared")
 local items_steps = {}
 
 local _ensure_player = shared.ensure_player
+local _ensure_target = shared.ensure_target
 
 function items_steps.handlers()
   return {
@@ -293,13 +294,13 @@ function items_steps.handlers()
 
     ["玩家对目标使用偷窃卡"] = function(world)
       world.using_theft = true
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       return true
     end,
 
     ["目标持有<p4>张道具"] = function(world, example)
       local count = number_utils.to_integer(example.p4)
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       world.target.bag = {}
       for i = 1, count do
         world.target.bag[i] = { name = "target_item_" .. i }
@@ -353,7 +354,7 @@ function items_steps.handlers()
     end,
 
     ["目标持有0张道具"] = function(world)
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       world.target.bag = {}
       return true
     end,
@@ -374,7 +375,7 @@ function items_steps.handlers()
 
     ["目标持有<p6>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p6)
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       world.target.cash = amount
       return true
     end,
@@ -401,7 +402,7 @@ function items_steps.handlers()
 
     ["玩家对目标使用流放卡"] = function(world)
       world.using_exile = true
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       if world.target.deities and world.target.deities.angel then
         world.exile_blocked = true
         world.angel_protection_triggered = true
@@ -429,7 +430,7 @@ function items_steps.handlers()
     end,
 
     ["目标拥有天使守护"] = function(world)
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       world.target.deities = world.target.deities or {}
       world.target.deities.angel = true
       return true
@@ -444,7 +445,7 @@ function items_steps.handlers()
 
     ["目标持有<p9>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p9)
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       world.target.cash = amount
       return true
     end,
@@ -471,7 +472,7 @@ function items_steps.handlers()
     end,
 
     ["目标持有免税卡"] = function(world)
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       world.target.has_tax_free = true
       return true
     end,
@@ -569,7 +570,7 @@ function items_steps.handlers()
 
     ["目标身上附有<p11>"] = function(world, example)
       local deity_type = example.p11
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       world.target.deities = world.target.deities or {}
       world.target.deities[deity_type] = true
       world.target_deity_type = deity_type
@@ -604,7 +605,7 @@ function items_steps.handlers()
 
     ["玩家对目标使用送神卡"] = function(world)
       world.player.deities["穷神"] = nil
-      world.target = world.target or { bag = {}, deities = {} }
+      _ensure_target(world)
       world.target.deities = world.target.deities or {}
       world.target.deities["穷神"] = true
       world.poor_god_transferred = true

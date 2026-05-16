@@ -5,11 +5,18 @@ local endgame_steps = {}
 
 local _ensure_player = shared.ensure_player
 
+local function _ensure_game(world)
+  if not world.game then
+    world.game = {}
+  end
+  return world.game
+end
+
 function endgame_steps.handlers()
   return {
     ["游戏有<p1>名玩家"] = function(world, example)
       local count = number_utils.to_integer(example.p1)
-      world.game = world.game or {}
+      _ensure_game(world)
       world.game.player_count = count
       world.game.players = {}
       for i = 1, count do
@@ -82,21 +89,21 @@ function endgame_steps.handlers()
 
     ["回合上限为<p3>"] = function(world, example)
       local limit = number_utils.to_integer(example.p3)
-      world.game = world.game or {}
+      _ensure_game(world)
       world.game.turn_limit = limit
       return true
     end,
 
     ["当前回合数为<p3>"] = function(world, example)
       local turn = number_utils.to_integer(example.p3)
-      world.game = world.game or {}
+      _ensure_game(world)
       world.game.current_turn = turn
       return true
     end,
 
     ["存活玩家的总资产分别为<p4>"] = function(world, example)
       local assets = shared.parse_number_list(example.p4)
-      world.game = world.game or {}
+      _ensure_game(world)
       world.game.players = {}
       for i, asset in ipairs(assets) do
         world.game.players[i] = { alive = true, cash = asset, tile_investment = 0 }
@@ -112,14 +119,14 @@ function endgame_steps.handlers()
     end,
 
     ["回合上限到达"] = function(world)
-      world.game = world.game or {}
+      _ensure_game(world)
       world.game.turn_limit = 1000
       world.game.current_turn = 1000
       return true
     end,
 
     ["两名玩家总资产相同且为最高"] = function(world)
-      world.game = world.game or {}
+      _ensure_game(world)
       world.game.players = {
         { alive = true, cash = 50000, tile_investment = 0 },
         { alive = true, cash = 50000, tile_investment = 0 },
@@ -303,7 +310,7 @@ function endgame_steps.handlers()
     end,
 
     ["游戏已标记为结束"] = function(world)
-      world.game = world.game or {}
+      _ensure_game(world)
       world.game.ended = true
       world.game.players = { { alive = true, cash = 50000, tile_investment = 0 } }
       return true

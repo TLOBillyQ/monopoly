@@ -7,6 +7,13 @@ function shared.ensure_player(world)
   return world.player
 end
 
+function shared.ensure_target(world)
+  if not world.target then
+    world.target = { bag = {}, deities = {} }
+  end
+  return world.target
+end
+
 function shared.parse_number_list(text)
   local values = {}
   for v in tostring(text):gmatch("[^,]+") do
