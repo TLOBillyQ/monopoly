@@ -15,7 +15,7 @@
 例子:
   | 源文件路径 | 功能关键字 | 场景关键字 | 前置关键字 | 动作关键字 | 结果关键字 | 连接关键字 | 例子关键字 |
   | features/swarmforge/chinese_gherkin_acceptance.feature | 功能 | 场景大纲 | 假如 | 当 | 那么 | 并且 | 例子 |
-  | features/game/dice_roll.feature | 功能 | 场景 | 假如 | 当 | 那么 | 但是 | 例子 |
+  | features/game/dice_roll.feature | 功能 | 场景大纲 | 假如 | 当 | 那么 | 但是 | 例子 |
   | features/game/bankruptcy.feature | 功能 | 背景 | 假如 | 当 | 那么 | 并且 | 例子 |
 
 场景大纲: 不支持的关键字被拒绝并报告位置
