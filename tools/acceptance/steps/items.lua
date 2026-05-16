@@ -1,13 +1,14 @@
 local number_utils = require("src.foundation.number")
+local shared = require("acceptance.steps.shared")
 
 local items_steps = {}
+
+local _ensure_player = shared.ensure_player
 
 function items_steps.handlers()
   return {
     ["玩家背包上限为5格"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.bag_limit = 5
       world.player.bag = world.player.bag or {}
       return true
@@ -69,9 +70,7 @@ function items_steps.handlers()
     end,
 
     ["玩家背包已有5张道具"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.bag_limit = 5
       world.player.bag = {}
       for i = 1, 5 do
@@ -157,9 +156,7 @@ function items_steps.handlers()
 
     ["玩家位于格子<p2>"] = function(world, example)
       local pos = number_utils.to_integer(example.p2)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.position = pos
       return true
     end,
@@ -377,9 +374,7 @@ function items_steps.handlers()
 
     ["玩家持有<p5>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p5)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.cash = amount
       return true
     end,
@@ -634,9 +629,7 @@ function items_steps.handlers()
     end,
 
     ["玩家身上附有穷神"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.deities = world.player.deities or {}
       world.player.deities["穷神"] = true
       return true

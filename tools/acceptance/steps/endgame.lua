@@ -1,14 +1,9 @@
 local number_utils = require("src.foundation.number")
+local shared = require("acceptance.steps.shared")
 
 local endgame_steps = {}
 
-local function _parse_asset_list(text)
-  local values = {}
-  for v in tostring(text):gmatch("[^,]+") do
-    values[#values + 1] = tonumber(v)
-  end
-  return values
-end
+local _ensure_player = shared.ensure_player
 
 function endgame_steps.handlers()
   return {
@@ -100,7 +95,7 @@ function endgame_steps.handlers()
     end,
 
     ["存活玩家的总资产分别为<p4>"] = function(world, example)
-      local assets = _parse_asset_list(example.p4)
+      local assets = shared.parse_number_list(example.p4)
       world.game = world.game or {}
       world.game.players = {}
       for i, asset in ipairs(assets) do
@@ -142,9 +137,7 @@ function endgame_steps.handlers()
 
     ["玩家持有<p5>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p5)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.cash = amount
       world.asset_player = world.asset_player or {}
       world.asset_player.cash = amount
@@ -362,9 +355,7 @@ function endgame_steps.handlers()
     end,
 
     ["玩家拥有天使守护"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.deities = world.player.deities or {}
       world.player.deities.angel = true
       world.has_angel_protection = true

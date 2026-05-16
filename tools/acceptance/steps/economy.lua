@@ -1,14 +1,9 @@
 local number_utils = require("src.foundation.number")
+local shared = require("acceptance.steps.shared")
 
 local economy_steps = {}
 
-local function _parse_rent_table(text)
-  local values = {}
-  for v in tostring(text):gmatch("[^,]+") do
-    values[#values + 1] = tonumber(v)
-  end
-  return values
-end
+local _ensure_player = shared.ensure_player
 
 function economy_steps.handlers()
   return {
@@ -22,9 +17,7 @@ function economy_steps.handlers()
       if amount == nil then
         return nil, "invalid amount: " .. tostring(example.p1)
       end
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.cash = amount
       return true
     end,
@@ -75,9 +68,7 @@ function economy_steps.handlers()
     end,
 
     ["玩家持有1000金币"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.cash = 1000
       return true
     end,
@@ -96,9 +87,7 @@ function economy_steps.handlers()
 
     ["玩家拥有一块等级为<p3>的地块"] = function(world, example)
       local level = number_utils.to_integer(example.p3)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.owned_tile = { level = level, max_level = 3 }
       return true
     end,
@@ -148,9 +137,7 @@ function economy_steps.handlers()
     end,
 
     ["玩家拥有的地块已达最高等级"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.owned_tile = { level = 3, max_level = 3, upgrade_cost = 0 }
       return true
     end,
@@ -177,7 +164,7 @@ function economy_steps.handlers()
     end,
 
     ["地块的租金表为<p7>"] = function(world, example)
-      world.rent_tile.rent_table = _parse_rent_table(example.p7)
+      world.rent_tile.rent_table = shared.parse_number_list(example.p7)
       return true
     end,
 
@@ -210,7 +197,7 @@ function economy_steps.handlers()
     end,
 
     ["各块租金分别为<p10>"] = function(world, example)
-      world.adjacent_rents = _parse_rent_table(example.p10)
+      world.adjacent_rents = shared.parse_number_list(example.p10)
       return true
     end,
 
@@ -317,9 +304,7 @@ function economy_steps.handlers()
     end,
 
     ["玩家落在税务局格"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       local rate = world.tax_rate or 0.5
       local tax = math.floor(world.player.cash * rate)
       world.tax_amount = tax
@@ -344,9 +329,7 @@ function economy_steps.handlers()
     end,
 
     ["玩家拥有天使守护"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.deities = world.player.deities or {}
       world.player.deities.angel = true
       return true
@@ -360,9 +343,7 @@ function economy_steps.handlers()
     end,
 
     ["玩家持有免税卡"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.items.tax_free = true
       return true
     end,
@@ -440,9 +421,7 @@ function economy_steps.handlers()
     end,
 
     ["玩家持有3000金币"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.cash = 3000
       return true
     end,
@@ -486,9 +465,7 @@ function economy_steps.handlers()
     end,
 
     ["玩家持有0金币"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.cash = 0
       return true
     end,

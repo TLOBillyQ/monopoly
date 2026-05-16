@@ -1,6 +1,14 @@
 local number_utils = require("src.foundation.number")
+local shared = require("acceptance.steps.shared")
 
 local chance_steps = {}
+
+local _ensure_player = shared.ensure_player
+
+local function _ensure_chance_card(world)
+  world.chance_card = world.chance_card or {}
+  return world.chance_card
+end
 
 function chance_steps.handlers()
   return {
@@ -32,24 +40,20 @@ function chance_steps.handlers()
     end,
 
     ["玩家拥有天使守护"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.deities = world.player.deities or {}
       world.player.deities.angel = true
       return true
     end,
 
     ["抽到的机会卡标记为负面"] = function(world)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.negative = true
       return true
     end,
 
     ["机会卡效果结算"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
 
       if world.chance_card and world.chance_card.negative
         and world.player.deities and world.player.deities.angel then
@@ -193,10 +197,8 @@ function chance_steps.handlers()
 
     ["抽到的机会卡效果为获得<p1>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p1)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
-      world.chance_card = world.chance_card or {}
+      _ensure_player(world)
+      _ensure_chance_card(world)
       world.chance_card.gain_amount = amount
       return true
     end,
@@ -213,19 +215,15 @@ function chance_steps.handlers()
 
     ["抽到的机会卡效果为支付<p1>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p1)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
-      world.chance_card = world.chance_card or {}
+      _ensure_player(world)
+      _ensure_chance_card(world)
       world.chance_card.pay_amount = amount
       return true
     end,
 
     ["玩家持有<p2>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p2)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.cash = amount
       return true
     end,
@@ -239,18 +237,14 @@ function chance_steps.handlers()
     end,
 
     ["抽到的机会卡效果为支付5000金币"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
-      world.chance_card = world.chance_card or {}
+      _ensure_player(world)
+      _ensure_chance_card(world)
       world.chance_card.pay_amount = 5000
       return true
     end,
 
     ["玩家持有3000金币"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.cash = 3000
       return true
     end,
@@ -272,10 +266,8 @@ function chance_steps.handlers()
 
     ["抽到的机会卡效果为按<p3>%支付金币"] = function(world, example)
       local percent = number_utils.to_integer(example.p3)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
-      world.chance_card = world.chance_card or {}
+      _ensure_player(world)
+      _ensure_chance_card(world)
       world.chance_card.pay_percent = percent
       return true
     end,
@@ -298,9 +290,7 @@ function chance_steps.handlers()
     end,
 
     ["玩家持有财神守护"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.deities = world.player.deities or {}
       world.player.deities.fortune = true
       return true
@@ -308,7 +298,7 @@ function chance_steps.handlers()
 
     ["抽到获得<p5>金币的机会卡"] = function(world, example)
       local amount = number_utils.to_integer(example.p5)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.gain_amount = amount
       return true
     end,
@@ -322,9 +312,7 @@ function chance_steps.handlers()
     end,
 
     ["玩家持有穷神"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.deities = world.player.deities or {}
       world.player.deities.poor = true
       return true
@@ -332,7 +320,7 @@ function chance_steps.handlers()
 
     ["抽到支付<p5>金币的机会卡"] = function(world, example)
       local amount = number_utils.to_integer(example.p5)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.pay_amount = amount
       return true
     end,
@@ -347,7 +335,7 @@ function chance_steps.handlers()
 
     ["抽到的机会卡效果为向每位玩家支付<p1>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p1)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.pay_each = amount
       return true
     end,
@@ -370,7 +358,7 @@ function chance_steps.handlers()
     end,
 
     ["抽到向每位玩家支付500金币的机会卡"] = function(world)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.pay_each = 500
       return true
     end,
@@ -395,7 +383,7 @@ function chance_steps.handlers()
 
     ["抽到的机会卡效果为向每位玩家收取<p1>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p1)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.collect_each = amount
       return true
     end,
@@ -428,7 +416,7 @@ function chance_steps.handlers()
     ["抽到的机会卡效果为<p9><p10>步"] = function(world, example)
       local direction = example.p9
       local step_count = number_utils.to_integer(example.p10)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.move_direction = direction
       world.chance_card.move_steps = step_count
       return true
@@ -454,7 +442,7 @@ function chance_steps.handlers()
     end,
 
     ["抽到的机会卡效果为传送到指定格"] = function(world)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.teleport = true
       return true
     end,
@@ -467,15 +455,13 @@ function chance_steps.handlers()
     end,
 
     ["抽到的机会卡效果为获得指定道具"] = function(world)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.gain_item = "specified_item"
       return true
     end,
 
     ["玩家背包未满"] = function(world)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.bag = world.player.bag or {}
       world.player.bag_limit = 5
       return true
@@ -490,16 +476,14 @@ function chance_steps.handlers()
 
     ["抽到的机会卡效果为随机丢弃<p11>张道具"] = function(world, example)
       local count = number_utils.to_integer(example.p11)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.discard_items = count
       return true
     end,
 
     ["玩家持有<p12>张道具"] = function(world, example)
       local count = number_utils.to_integer(example.p12)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.bag = {}
       for i = 1, count do
         world.player.bag[i] = { name = "item_" .. i }
@@ -517,16 +501,14 @@ function chance_steps.handlers()
 
     ["抽到的机会卡效果为随机丢弃<p11>块地块"] = function(world, example)
       local count = number_utils.to_integer(example.p11)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.discard_tiles = count
       return true
     end,
 
     ["玩家拥有<p12>块地块"] = function(world, example)
       local count = number_utils.to_integer(example.p12)
-      if not world.player then
-        world.player = { cash = 0, tiles = {}, items = {}, deities = {} }
-      end
+      _ensure_player(world)
       world.player.owned_tiles = {}
       for i = 1, count do
         world.player.owned_tiles[i] = { level = 1, owner = "player" }
@@ -547,7 +529,7 @@ function chance_steps.handlers()
     end,
 
     ["抽到台风类机会卡"] = function(world)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.typhoon = true
       return true
     end,
@@ -567,13 +549,13 @@ function chance_steps.handlers()
     end,
 
     ["抽到的机会卡目标为全体"] = function(world)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.target_all = true
       return true
     end,
 
     ["效果为支付1000金币"] = function(world)
-      world.chance_card = world.chance_card or {}
+      _ensure_chance_card(world)
       world.chance_card.all_pay = 1000
       return true
     end,
