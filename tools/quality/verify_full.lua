@@ -181,33 +181,18 @@ local function _main(opts)
   local failed = {}
   local skipped = {}
 
-  if _check_command("luacheck") then
-    if _run_step("lint", "lua tools/quality/lint.lua") then
-      passed[#passed + 1] = "lint"
-    else
-      failed[#failed + 1] = "lint"
-    end
-  else
-    skipped[#skipped + 1] = "lint"
-  end
-
-  if _run_step("encoding", "lua tools/quality/encoding.lua check") then
-    passed[#passed + 1] = "encoding"
-  else
-    failed[#failed + 1] = "encoding"
-  end
-
-  if _run_step("behavior", "lua spec/support/behavior_parallel.lua") then
-    passed[#passed + 1] = "behavior"
-  else
-    failed[#failed + 1] = "behavior"
-  end
-
   local lanes = {
     { label = "contract", cmd = "busted --run contract" },
     { label = "guards", cmd = "busted --run guards" },
     { label = "arch", cmd = "lua tools/quality/arch.lua check" },
+    { label = "behavior", cmd = "lua spec/support/behavior_parallel.lua" },
   }
+  if _check_command("luacheck") then
+    lanes[#lanes + 1] = { label = "lint", cmd = "lua tools/quality/lint.lua" }
+  else
+    skipped[#skipped + 1] = "lint"
+  end
+  lanes[#lanes + 1] = { label = "encoding", cmd = "lua tools/quality/encoding.lua check" }
   if include_tooling then
     lanes[#lanes + 1] = {
       label = "tooling",

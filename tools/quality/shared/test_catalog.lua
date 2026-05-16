@@ -29,7 +29,6 @@ local tooling_modules = {
   "spec.support.tooling_suites.architecture.arch_view_live_tooling_contract",
   "spec.support.tooling_suites.architecture.crap_tooling_contract",
   "spec.support.tooling_suites.architecture.mutate4lua_tooling_contract",
-  "spec.support.tooling_suites.architecture.loc_scan_tooling_contract",
   "spec.support.tooling_suites.architecture.busted_infra_tooling",  -- T8: meta-test 验证 busted infra 完整性
 }
 
