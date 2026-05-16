@@ -8,6 +8,10 @@ local common = require("shared.lib.common")
 local movement_steps = require("acceptance.steps.movement")
 local dice_steps = require("acceptance.steps.dice")
 local turn_flow_steps = require("acceptance.steps.turn_flow")
+local economy_steps = require("acceptance.steps.economy")
+local items_steps = require("acceptance.steps.items")
+local chance_steps = require("acceptance.steps.chance")
+local endgame_steps = require("acceptance.steps.endgame")
 
 local steps = {}
 
@@ -685,6 +689,10 @@ function steps.handlers()
   _merge_handlers(h, movement_steps.handlers())
   _merge_handlers(h, dice_steps.handlers())
   _merge_handlers(h, turn_flow_steps.handlers())
+  _merge_handlers(h, economy_steps.handlers())
+  _merge_handlers(h, items_steps.handlers())
+  _merge_handlers(h, chance_steps.handlers())
+  _merge_handlers(h, endgame_steps.handlers())
   return h
 end
 
