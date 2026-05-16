@@ -42,6 +42,17 @@ local function _new_game(board, player)
   }
 end
 
+local function _ensure_world_board(world)
+  if not world.board then
+    local board = _new_board(BOARD_SIZE)
+    local player = _new_player(1)
+    world.board = board
+    world.player = player
+    world.game = _new_game(board, player)
+  end
+  return world.board
+end
+
 local function _forward_position(from, steps, board_size)
   return ((from - 1 + steps) % board_size) + 1
 end
@@ -152,22 +163,12 @@ end
 function movement_steps.handlers()
   return {
     ["游戏已初始化标准棋盘"] = function(world)
-      local board = _new_board(BOARD_SIZE)
-      local player = _new_player(1)
-      world.board = board
-      world.player = player
-      world.game = _new_game(board, player)
+      _ensure_world_board(world)
       return true
     end,
 
     ["当前玩家位于起点"] = function(world)
-      if not world.board then
-        local board = _new_board(BOARD_SIZE)
-        local player = _new_player(1)
-        world.board = board
-        world.player = player
-        world.game = _new_game(board, player)
-      end
+      _ensure_world_board(world)
       world.player.position = world.board.start_tile
       return true
     end,
