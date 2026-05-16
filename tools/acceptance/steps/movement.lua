@@ -200,12 +200,13 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["起点位于格子<p5>之间"] = function(world, example)
-      local start_pos = number_utils.to_integer(example.p5)
-      if start_pos == nil then
-        return nil, "invalid start position: " .. tostring(example.p5)
+    ["玩家位于起点前<p5>格"] = function(world, example)
+      local distance = number_utils.to_integer(example.p5)
+      if distance == nil then
+        return nil, "invalid distance: " .. tostring(example.p5)
       end
-      world.board.start_tile = start_pos
+      local start = world.board.start_tile
+      world.player.position = _backward_position(start, distance, world.board.size)
       return true
     end,
 
@@ -216,15 +217,16 @@ function movement_steps.handlers()
       end
       local from = world.player.position
       _move_forward(world.game, steps)
-      local passed = _passes_start(from, steps, world.board.start_tile, world.board.size)
-      if not passed then
-        local target = world.board.start_tile
-        if from < target and from + steps >= target then
-          passed = true
+      local pass_count = 0
+      for s = 1, steps do
+        local pos = _forward_position(from, s, world.board.size)
+        if pos == world.board.start_tile then
+          pass_count = pass_count + 1
         end
       end
-      if passed then
-        local bonus = PASS_START_BONUS
+      world.game.pass_start_count = pass_count
+      if pass_count > 0 then
+        local bonus = pass_count * PASS_START_BONUS
         if world.player.deities.rich then
           bonus = bonus * 2
         end
@@ -234,8 +236,17 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["玩家获得<p6>金币"] = function(world, example)
+    ["玩家经过起点<p6>次"] = function(world, example)
       local expected = number_utils.to_integer(example.p6)
+      local actual = world.game.pass_start_count or 0
+      if actual ~= expected then
+        return nil, "expected pass count " .. tostring(expected) .. ", got " .. tostring(actual)
+      end
+      return true
+    end,
+
+    ["玩家获得<p7>金币"] = function(world, example)
+      local expected = number_utils.to_integer(example.p7)
       if world.player.cash ~= expected then
         return nil, "expected " .. tostring(expected) .. " gold, got " .. tostring(world.player.cash)
       end
@@ -269,17 +280,17 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["格子<p7>放置了路障"] = function(world, example)
-      local pos = number_utils.to_integer(example.p7)
+    ["格子<p8>放置了路障"] = function(world, example)
+      local pos = number_utils.to_integer(example.p8)
       if pos == nil then
-        return nil, "invalid roadblock position: " .. tostring(example.p7)
+        return nil, "invalid roadblock position: " .. tostring(example.p8)
       end
       world.board.roadblocks[pos] = true
       return true
     end,
 
-    ["玩家停在格子<p7>"] = function(world, example)
-      local expected = number_utils.to_integer(example.p7)
+    ["玩家停在格子<p8>"] = function(world, example)
+      local expected = number_utils.to_integer(example.p8)
       if world.player.position ~= expected then
         return nil, "expected stop at " .. tostring(expected) .. ", got " .. tostring(world.player.position)
       end
@@ -335,10 +346,10 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["格子<p8>放置了对手的已激活地雷"] = function(world, example)
-      local pos = number_utils.to_integer(example.p8)
+    ["格子<p9>放置了对手的已激活地雷"] = function(world, example)
+      local pos = number_utils.to_integer(example.p9)
       if pos == nil then
-        return nil, "invalid mine position: " .. tostring(example.p8)
+        return nil, "invalid mine position: " .. tostring(example.p9)
       end
       world.board.mines[pos] = { owner_id = 999, armed = true, immune_expired = true }
       return true
@@ -367,8 +378,8 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["玩家需停留<p9>回合"] = function(world, example)
-      local expected = number_utils.to_integer(example.p9)
+    ["玩家需停留<p10>回合"] = function(world, example)
+      local expected = number_utils.to_integer(example.p10)
       local actual = world.player.status.hospital_turns
       if actual ~= expected then
         return nil, "expected " .. tostring(expected) .. " hospital turns, got " .. tostring(actual)
@@ -433,10 +444,10 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["格子<p10>是黑市格"] = function(world, example)
-      local pos = number_utils.to_integer(example.p10)
+    ["格子<p11>是黑市格"] = function(world, example)
+      local pos = number_utils.to_integer(example.p11)
       if pos == nil then
-        return nil, "invalid market position: " .. tostring(example.p10)
+        return nil, "invalid market position: " .. tostring(example.p11)
       end
       world.board.tiles[pos].type = "market"
       return true
@@ -467,8 +478,8 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["剩余<p11>步待消耗"] = function(world, example)
-      local expected = number_utils.to_integer(example.p11)
+    ["剩余<p12>步待消耗"] = function(world, example)
+      local expected = number_utils.to_integer(example.p12)
       local interrupt = world.game.last_move and world.game.last_move.market_interrupt
       if not interrupt then
         return nil, "no market interrupt"
@@ -497,8 +508,8 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["玩家移动且分支奇偶为<p12>"] = function(world, example)
-      local parity_value = example.p12
+    ["玩家移动且分支奇偶为<p13>"] = function(world, example)
+      local parity_value = example.p13
       if parity_value == "偶数" then
         world.game.branch_parity = "even"
         world.player.position = world.board.branch.inner_path_start
@@ -511,8 +522,8 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["玩家进入<p13>"] = function(world, example)
-      local expected_path = example.p13
+    ["玩家进入<p14>"] = function(world, example)
+      local expected_path = example.p14
       local branch = world.board.branch
       if expected_path == "内圈" then
         if world.player.position ~= branch.inner_path_start then
@@ -528,8 +539,8 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["玩家面朝<p14>"] = function(world, example)
-      world.player.facing = example.p14
+    ["玩家面朝<p15>"] = function(world, example)
+      world.player.facing = example.p15
       return true
     end,
 
