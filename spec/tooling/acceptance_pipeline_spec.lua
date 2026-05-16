@@ -1,6 +1,7 @@
 local common = require("shared.lib.common")
 local parser = require("acceptance.gherkin_parser")
 local generator = require("acceptance.generator")
+local json = require("acceptance.json")
 local mutator = require("acceptance.mutator")
 local normalizer = require("acceptance.chinese_normalizer")
 local runtime = require("acceptance.runtime")
@@ -110,6 +111,31 @@ describe("acceptance pipeline", function()
     assert.is_true(tostring(err):find("examples row has 1 cells, expected 2", 1, true) ~= nil)
   end)
 
+  it("rejects unsupported non-empty feature lines instead of dropping them", function()
+    local ir, err = parser.parse_text(table.concat({
+      "Feature: Broken",
+      "Scenario: Unsupported line",
+      "  Given project acceptance step handlers are loaded",
+      "  Eventually this line should not be ignored",
+    }, "\n"))
+
+    assert.is_nil(ir)
+    assert.is_true(tostring(err):find("unsupported line: Eventually this line should not be ignored", 1, true) ~= nil)
+  end)
+
+  it("round-trips JSON IR with deterministic array fields", function()
+    local ir = assert(parser.parse_text(_sample_feature()))
+    local encoded = json.encode(ir)
+    local decoded = json.decode(encoded)
+
+    assert.are.equal(ir.name, decoded.name)
+    assert.are.equal(1, #decoded.background)
+    assert.are.equal(1, #decoded.scenarios)
+    assert.are.equal(2, #decoded.scenarios[1].examples)
+    assert.is_true(encoded:find('"background": [', 1, true) ~= nil)
+    assert.is_true(encoded:find('"scenarios": [', 1, true) ~= nil)
+  end)
+
   it("executes parsed scenarios through exact step handlers", function()
     local ir = assert(parser.parse_text(_sample_feature()))
     local handlers = {
@@ -138,6 +164,34 @@ describe("acceptance pipeline", function()
     assert.is_true(result.ok, runtime.format_failures(result))
   end)
 
+  it("reports unsupported steps and missing example values as runtime failures", function()
+    local ir = assert(parser.parse_text(table.concat({
+      "Feature: Runtime failures",
+      "Scenario Outline: Missing value",
+      "  Then the integer result is <result>",
+      "",
+      "Examples:",
+      "  | raw |",
+      "  | 12  |",
+      "",
+      "Scenario: Unsupported step",
+      "  Then no handler exists",
+      "",
+    }, "\n")))
+
+    local handlers = {
+      ["the integer result is <result>"] = function()
+        return true
+      end,
+    }
+    local result = runtime.run_feature(ir, handlers)
+    local failures = runtime.format_failures(result)
+
+    assert.is_false(result.ok)
+    assert.is_true(failures:find("missing example value: result", 1, true) ~= nil)
+    assert.is_true(failures:find("unsupported step: no handler exists", 1, true) ~= nil)
+  end)
+
   it("generates deterministic busted specs from JSON IR without reading gherkin", function()
     local ir = assert(parser.parse_text(_sample_feature()))
     local first = generator.generate(ir)
@@ -160,6 +214,14 @@ describe("acceptance pipeline", function()
     assert.are_not.equal("12", mutations[1].mutated)
     assert.are.equal("m4", mutations[4].id)
     assert.are.equal("$.scenarios[0].examples[1].result", mutations[4].path)
+  end)
+
+  it("mutates portable value shapes without changing mutation identity rules", function()
+    assert.are.equal("false", mutator.mutate_value("true", "$.flag"))
+    assert.are.equal("value", mutator.mutate_value("nil", "$.none"))
+    assert.are_not.equal("3.14", mutator.mutate_value("3.14", "$.float"))
+    assert.are_not.equal("2026-05-13", mutator.mutate_value("2026-05-13", "$.date"))
+    assert.are_not.equal("2, 5, 8", mutator.mutate_value("2, 5, 8", "$.list"))
   end)
 
   it("runs the normal acceptance script against the sample project feature", function()
