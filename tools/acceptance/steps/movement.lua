@@ -227,7 +227,7 @@ function movement_steps.handlers()
       world.game.pass_start_count = pass_count
       if pass_count > 0 then
         local bonus = pass_count * PASS_START_BONUS
-        if world.player.deities.rich then
+        if world.player.deities.fortune then
           bonus = bonus * 2
         end
         world.player.cash = world.player.cash + bonus
@@ -256,11 +256,6 @@ function movement_steps.handlers()
     ["玩家当前位于起点前2格"] = function(world)
       local start = world.board.start_tile
       world.player.position = _backward_position(start, 2, world.board.size)
-      return true
-    end,
-
-    ["玩家持有财神守护"] = function(world)
-      world.player.deities.rich = true
       return true
     end,
 

@@ -125,17 +125,6 @@ function economy_steps.handlers()
       return true
     end,
 
-    ["玩家扣除<p4>金币"] = function(world, example)
-      local expected = number_utils.to_integer(example.p4)
-      if not world.upgraded then
-        return nil, "upgrade did not happen"
-      end
-      if world.owned_tile.upgrade_cost ~= expected then
-        return nil, "upgrade cost mismatch"
-      end
-      return true
-    end,
-
     ["玩家拥有的地块已达最高等级"] = function(world)
       _ensure_player(world)
       world.owned_tile = { level = 3, max_level = 3, upgrade_cost = 0 }
@@ -219,9 +208,13 @@ function economy_steps.handlers()
     end,
 
     ["玩家落在对手拥有的地块"] = function(world)
+      _ensure_player(world)
       world.rent_tile = world.rent_tile or {}
       world.rent_tile.owner = "opponent"
       world.landing = { type = "opponent_tile", has_rent_free = false, has_seizure_card = false }
+      if not world.turn then
+        world.turn = { current_player_index = 1, phase = "landing", players = {} }
+      end
       return true
     end,
 
@@ -328,13 +321,6 @@ function economy_steps.handlers()
       return true
     end,
 
-    ["玩家拥有天使守护"] = function(world)
-      _ensure_player(world)
-      world.player.deities = world.player.deities or {}
-      world.player.deities.angel = true
-      return true
-    end,
-
     ["玩家不被收税"] = function(world)
       if not world.tax_immune then
         return nil, "player should be immune to tax"
@@ -345,13 +331,6 @@ function economy_steps.handlers()
     ["玩家持有免税卡"] = function(world)
       _ensure_player(world)
       world.player.items.tax_free = true
-      return true
-    end,
-
-    ["落地结算执行"] = function(world)
-      if world.player and world.player.items and world.player.items.tax_free then
-        world.tax_free_prompt = true
-      end
       return true
     end,
 
@@ -420,12 +399,6 @@ function economy_steps.handlers()
       return true
     end,
 
-    ["玩家持有3000金币"] = function(world)
-      _ensure_player(world)
-      world.player.cash = 3000
-      return true
-    end,
-
     ["玩家尝试使用强夺卡"] = function(world)
       local tile = world.seizure_tile
       local total = tile.price + tile.cumulative_upgrade
@@ -453,13 +426,6 @@ function economy_steps.handlers()
       local received = world.rent_payment and world.rent_payment.received
       if received ~= expected then
         return nil, "expected landlord receives " .. tostring(expected) .. ", got " .. tostring(received)
-      end
-      return true
-    end,
-
-    ["玩家破产淘汰"] = function(world)
-      if not world.player.bankrupt then
-        return nil, "player should be bankrupt"
       end
       return true
     end,

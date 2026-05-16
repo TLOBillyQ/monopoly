@@ -178,7 +178,7 @@ function endgame_steps.handlers()
       return true
     end,
 
-    ["玩家破产淘汰"] = function(world)
+    ["执行破产淘汰清算"] = function(world)
       local p = world.bankrupt_player
       if p then
         if p.tiles then
@@ -243,6 +243,13 @@ function endgame_steps.handlers()
       if world.missile_target then
         if world.missile_target.level ~= 0 then
           return nil, "tile level should be 0"
+        end
+      end
+      if world.typhoon_path then
+        for _, tile in ipairs(world.typhoon_path) do
+          if tile.level ~= 0 then
+            return nil, "path tile level should be 0"
+          end
         end
       end
       return true

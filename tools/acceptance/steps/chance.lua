@@ -39,13 +39,6 @@ function chance_steps.handlers()
       return true
     end,
 
-    ["玩家拥有天使守护"] = function(world)
-      _ensure_player(world)
-      world.player.deities = world.player.deities or {}
-      world.player.deities.angel = true
-      return true
-    end,
-
     ["抽到的机会卡标记为负面"] = function(world)
       _ensure_chance_card(world)
       world.chance_card.negative = true
@@ -251,15 +244,7 @@ function chance_steps.handlers()
 
     ["玩家破产淘汰"] = function(world)
       if not world.player.bankrupt then
-        world.player.bankrupt = true
-        if world.player.owned_tiles then
-          for _, tile in ipairs(world.player.owned_tiles) do
-            tile.owner = nil
-            tile.level = 0
-          end
-        end
-        world.player.bag = {}
-        world.player.deities = {}
+        return nil, "player should be bankrupt"
       end
       return true
     end,

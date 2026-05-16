@@ -677,8 +677,11 @@ local function _handlers()
   }
 end
 
-local function _merge_handlers(base, extra)
+local function _merge_handlers(base, extra, module_name)
   for key, handler in pairs(extra) do
+    if base[key] ~= nil then
+      error("handler key collision in " .. tostring(module_name) .. ": \"" .. tostring(key) .. "\"")
+    end
     base[key] = handler
   end
   return base
@@ -686,13 +689,13 @@ end
 
 function steps.handlers()
   local h = _handlers()
-  _merge_handlers(h, movement_steps.handlers())
-  _merge_handlers(h, dice_steps.handlers())
-  _merge_handlers(h, turn_flow_steps.handlers())
-  _merge_handlers(h, economy_steps.handlers())
-  _merge_handlers(h, items_steps.handlers())
-  _merge_handlers(h, chance_steps.handlers())
-  _merge_handlers(h, endgame_steps.handlers())
+  _merge_handlers(h, movement_steps.handlers(), "movement")
+  _merge_handlers(h, dice_steps.handlers(), "dice")
+  _merge_handlers(h, turn_flow_steps.handlers(), "turn_flow")
+  _merge_handlers(h, economy_steps.handlers(), "economy")
+  _merge_handlers(h, items_steps.handlers(), "items")
+  _merge_handlers(h, chance_steps.handlers(), "chance")
+  _merge_handlers(h, endgame_steps.handlers(), "endgame")
   return h
 end
 

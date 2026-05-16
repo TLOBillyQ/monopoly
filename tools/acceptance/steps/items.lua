@@ -372,13 +372,6 @@ function items_steps.handlers()
       return true
     end,
 
-    ["玩家持有<p5>金币"] = function(world, example)
-      local amount = number_utils.to_integer(example.p5)
-      _ensure_player(world)
-      world.player.cash = amount
-      return true
-    end,
-
     ["目标持有<p6>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p6)
       world.target = world.target or { bag = {}, deities = {} }
@@ -449,13 +442,6 @@ function items_steps.handlers()
       return true
     end,
 
-    ["天使守护抵消提示"] = function(world)
-      if not world.angel_protection_triggered then
-        return nil, "angel protection prompt should appear"
-      end
-      return true
-    end,
-
     ["目标持有<p9>金币"] = function(world, example)
       local amount = number_utils.to_integer(example.p9)
       world.target = world.target or { bag = {}, deities = {} }
@@ -514,25 +500,6 @@ function items_steps.handlers()
       if world.monster_target then
         world.monster_target.level = 0
         world.monster_card_consumed = true
-      end
-      return true
-    end,
-
-    ["地块等级重置为0"] = function(world)
-      if world.monster_target then
-        if world.monster_target.level ~= 0 then
-          return nil, "tile level should be 0"
-        end
-      elseif world.missile_target then
-        if world.missile_target.level ~= 0 then
-          return nil, "tile level should be 0"
-        end
-      elseif world.typhoon_path then
-        for _, tile in ipairs(world.typhoon_path) do
-          if tile.level ~= 0 then
-            return nil, "path tile level should be 0"
-          end
-        end
       end
       return true
     end,
