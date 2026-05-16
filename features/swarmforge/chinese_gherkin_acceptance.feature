@@ -1,0 +1,84 @@
+# language: zh-CN
+
+功能: 中文 Gherkin 验收规格
+
+背景:
+  假如 仓库启用了 SwarmForge 迁移工作流
+
+场景大纲: 业务人员只维护中文功能文件
+  假如 业务功能文件位于<源文件路径>
+  当 规格工具读取该文件
+  那么 工具接受关键字<功能关键字>、<场景关键字>、<前置关键字>、<动作关键字>、<结果关键字>、<连接关键字>和<例子关键字>
+  并且 工具拒绝业务源文件中的英文结构关键字
+  并且 人工编辑源保持为中文
+
+例子:
+  | 源文件路径 | 功能关键字 | 场景关键字 | 前置关键字 | 动作关键字 | 结果关键字 | 连接关键字 | 例子关键字 |
+  | features/swarmforge/chinese_gherkin_acceptance.feature | 功能 | 场景大纲 | 假如 | 当 | 那么 | 并且 | 例子 |
+
+场景大纲: 中文参数名被稳定归一化
+  假如 步骤文本为<中文步骤文本>
+  并且 例子表头包含<中文表头>
+  当 规格工具生成 APS 兼容产物
+  那么 产物中的参数名为<规范参数名>
+  并且 产物保留中文表头到规范参数名的映射
+  并且 再次生成得到相同的规范参数名
+
+例子:
+  | 中文步骤文本 | 中文表头 | 规范参数名 |
+  | 玩家<玩家>已有<已有道具数>张道具 | 玩家, 已有道具数 | p1, p2 |
+  | 消息包含分支名<分支名>和提交<提交哈希> | 分支名, 提交哈希 | p1, p2 |
+
+场景大纲: 中文规格被编译为 APS 兼容中间格式
+  假如 中文功能文件声明<功能名称>
+  并且 中文场景声明<场景名称>
+  当 规格工具生成中间格式
+  那么 中间格式的功能名为<功能名称>
+  并且 中间格式的场景名为<场景名称>
+  并且 中间格式只使用 APS 支持的关键字
+  并且 中间格式不是人工编辑源
+
+例子:
+  | 功能名称 | 场景名称 |
+  | 中文 Gherkin 验收规格 | 中文规格被编译为 APS 兼容中间格式 |
+
+场景大纲: 诊断信息回指中文源文件
+  假如 中文功能文件第<行号>行存在<错误类型>
+  当 规格工具报告错误
+  那么 错误信息包含<源文件路径>
+  并且 错误信息包含第<行号>行
+  并且 错误信息使用中文表头<中文表头>
+  并且 错误信息不只显示规范参数名<规范参数名>
+
+例子:
+  | 源文件路径 | 行号 | 错误类型 | 中文表头 | 规范参数名 |
+  | features/swarmforge/chinese_gherkin_acceptance.feature | 18 | 例子列数不匹配 | 已有道具数 | p2 |
+  | features/swarmforge/chinese_gherkin_acceptance.feature | 27 | 缺少参数值 | 提交哈希 | p2 |
+
+场景大纲: 交接消息保持 SwarmForge 纪律
+  假如 <源角色>准备交接给<目标角色>
+  当 交接消息生成
+  那么 消息以<固定开头>开头
+  并且 消息包含分支名<分支名>
+  并且 消息包含提交哈希<提交哈希>
+  并且 消息描述变更内容<变更摘要>
+  并且 消息通过项目内通知脚本发送
+
+例子:
+  | 源角色 | 目标角色 | 固定开头 | 分支名 | 提交哈希 | 变更摘要 |
+  | specifier | coder | Review your rules. | main | abc1234 | 中文 Gherkin 规格已接受 |
+  | coder | refactorer | Review your rules. | swarmforge-coder | abc1234 | 已实现中文规格归一化 |
+  | refactorer | architect | Review your rules. | swarmforge-refactorer | abc1234 | 已完成保行为重构 |
+
+场景大纲: SwarmForge 迁移资产边界清晰
+  假如 仓库准备提交 SwarmForge 迁移
+  当 开发者查看 git 状态
+  那么 <应提交路径>应作为迁移资产提交
+  并且 <本地路径>应保持为本地运行状态
+
+例子:
+  | 应提交路径 | 本地路径 |
+  | swarmforge/ | .swarmforge/ |
+  | swarmtools/notify-agent.sh | logs/ |
+  | features/swarmforge/chinese_gherkin_acceptance.feature | .worktrees/ |
+  | docs/guides/chinese-gherkin.md | agent_context/ |
