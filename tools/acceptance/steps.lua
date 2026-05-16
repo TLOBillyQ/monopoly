@@ -4,6 +4,7 @@ local gherkin_parser = require("acceptance.gherkin_parser")
 local mutator = require("acceptance.mutator")
 local handoff_message = require("swarmforge.handoff_message")
 local common = require("shared.lib.common")
+local movement_steps = require("acceptance.steps.movement")
 
 local steps = {}
 
@@ -668,8 +669,17 @@ local function _handlers()
   }
 end
 
+local function _merge_handlers(base, extra)
+  for key, handler in pairs(extra) do
+    base[key] = handler
+  end
+  return base
+end
+
 function steps.handlers()
-  return _handlers()
+  local h = _handlers()
+  _merge_handlers(h, movement_steps.handlers())
+  return h
 end
 
 return steps
