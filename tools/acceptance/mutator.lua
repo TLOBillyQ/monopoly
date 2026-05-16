@@ -3,21 +3,12 @@ local generator = require("acceptance.generator")
 local gherkin_parser = require("acceptance.gherkin_parser")
 local json = require("acceptance.json")
 local runner = require("acceptance.runner")
+local source = require("acceptance.source")
+local table_shape = require("acceptance.table_shape")
 
 local mutator = {}
 
-local function _sorted_keys(map)
-  local keys = {}
-  for key in pairs(map or {}) do
-    keys[#keys + 1] = key
-  end
-  table.sort(keys)
-  return keys
-end
-
-local function _trim(text)
-  return tostring(text or ""):match("^%s*(.-)%s*$")
-end
+local _trim = source.trim
 
 local function _deep_copy(value)
   if type(value) ~= "table" then
@@ -28,37 +19,6 @@ local function _deep_copy(value)
     copy[_deep_copy(key)] = _deep_copy(item)
   end
   return copy
-end
-
-local function _source_path(ir)
-  return ((ir or {}).metadata or {}).source_path
-end
-
-local function _field_name(ir, key)
-  return (((ir or {}).metadata or {}).field_names or {})[key] or key
-end
-
-local function _field_line(ir, scenario, key)
-  local scenario_lines = ((scenario or {}).metadata or {}).example_field_lines or {}
-  local ir_lines = ((ir or {}).metadata or {}).field_lines or {}
-  return scenario_lines[key] or ir_lines[key]
-end
-
-local function _display_description(ir, scenario, key, original, mutated)
-  local field = _field_name(ir, key)
-  local path = _source_path(ir)
-  local line = _field_line(ir, scenario, key)
-  local location = ""
-  if path ~= nil and path ~= "" then
-    location = tostring(path)
-  end
-  if line ~= nil then
-    location = location .. ":第" .. tostring(line) .. "行"
-  end
-  if location ~= "" then
-    location = location .. " "
-  end
-  return location .. tostring(field) .. ": " .. tostring(original) .. " -> " .. tostring(mutated)
 end
 
 local function _stable_hash(text)
@@ -264,7 +224,7 @@ function mutator.build_mutations(ir)
   local mutations = {}
   for scenario_index, scenario in ipairs(ir.scenarios or {}) do
     for example_index, example in ipairs(scenario.examples or {}) do
-      for _, key in ipairs(_sorted_keys(example)) do
+      for _, key in ipairs(table_shape.sorted_keys(example)) do
         local path = "$.scenarios["
           .. tostring(scenario_index - 1)
           .. "].examples["
@@ -279,10 +239,10 @@ function mutator.build_mutations(ir)
             id = id,
             path = path,
             description = path .. ": " .. original .. " -> " .. mutated,
-            display_description = _display_description(ir, scenario, key, original, mutated),
-            source_path = _source_path(ir),
-            source_line = _field_line(ir, scenario, key),
-            source_field = _field_name(ir, key),
+            display_description = source.mutation_description(ir, scenario, key, original, mutated),
+            source_path = source.path_from_ir(ir),
+            source_line = source.field_line(ir, scenario, key),
+            source_field = source.field_name(ir, key),
             original = original,
             mutated = mutated,
             scenario_index = scenario_index,

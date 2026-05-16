@@ -1,81 +1,31 @@
 local common = require("shared.lib.common")
 local chinese_normalizer = require("acceptance.chinese_normalizer")
 local json = require("acceptance.json")
+local source = require("acceptance.source")
 
 local gherkin_parser = {}
 
-local function _trim(text)
-  return tostring(text or ""):match("^%s*(.-)%s*$")
-end
-
-local function _parameters(text)
-  local values = {}
-  for name in tostring(text or ""):gmatch("<([A-Za-z0-9_]+)>") do
-    values[#values + 1] = name
-  end
-  return values
-end
-
-local function _split_example_row(line)
-  local row = _trim(line)
-  if row:sub(1, 1) == "|" then
-    row = row:sub(2)
-  end
-  if row:sub(-1) == "|" then
-    row = row:sub(1, -2)
-  end
-
-  local cells = {}
-  local start_index = 1
-  while true do
-    local hit = row:find("|", start_index, true)
-    if hit == nil then
-      cells[#cells + 1] = _trim(row:sub(start_index))
-      break
-    end
-    cells[#cells + 1] = _trim(row:sub(start_index, hit - 1))
-    start_index = hit + 1
-  end
-  return cells
-end
-
-local function _source_line(source_map, line_number)
-  local lines = (source_map or {}).line_by_normalized_line or {}
-  return lines[line_number] or line_number
-end
-
-local function _source_path(source_map)
-  return (source_map or {}).path
-end
-
-local function _format_error(line_number, message, opts)
-  opts = opts or {}
-  local source_map = opts.source_map or {}
-  local source_line = _source_line(source_map, line_number)
-  local path = _source_path(source_map)
-  local prefix = path and (tostring(path) .. ":") or ""
-  return prefix .. "第" .. tostring(source_line) .. "行: " .. tostring(message)
-end
+local _trim = source.trim
 
 local function _step(keyword, text, line_number, source_map)
   return {
     keyword = keyword,
     text = _trim(text),
-    parameters = _parameters(text),
+    parameters = source.extract_parameters(text),
     metadata = {
-      source_path = _source_path(source_map),
-      source_line = _source_line(source_map, line_number),
-      original_text = ((source_map or {}).original_step_text_by_line or {})[_source_line(source_map, line_number)],
+      source_path = source.path_from_map(source_map),
+      source_line = source.line_from_map(source_map, line_number),
+      original_text = ((source_map or {}).original_step_text_by_line or {})[source.line_from_map(source_map, line_number)],
     },
   }
 end
 
 local function _error(line_number, message, opts)
-  return nil, _format_error(line_number, message, opts)
+  return nil, source.error_from_map((opts or {}).source_map or {}, line_number, message)
 end
 
 local function _example_header_message(source_map, header_line_number, base_message)
-  local source_header_line = _source_line(source_map, header_line_number)
+  local source_header_line = source.line_from_map(source_map, header_line_number)
   local headers = ((source_map or {}).example_headers_by_line or {})[source_header_line]
   if headers == nil or #headers == 0 then
     return base_message
@@ -112,7 +62,7 @@ function gherkin_parser.parse_text(text, opts)
         background = {},
         scenarios = {},
         metadata = {
-          source_path = _source_path(source_map),
+          source_path = source.path_from_map(source_map),
           language = source_map.language or "aps",
           field_names = source_map.field_names or {},
           field_lines = source_map.field_lines or {},
@@ -145,8 +95,8 @@ function gherkin_parser.parse_text(text, opts)
         steps = {},
         examples = {},
         metadata = {
-          source_path = _source_path(source_map),
-          source_line = _source_line(source_map, line_number),
+          source_path = source.path_from_map(source_map),
+          source_line = source.line_from_map(source_map, line_number),
           example_field_lines = {},
         },
       }
@@ -169,11 +119,11 @@ function gherkin_parser.parse_text(text, opts)
     end
 
     if section == "examples" and line:sub(1, 1) == "|" then
-      local cells = _split_example_row(line)
+      local cells = source.split_table_cells(line)
       if example_headers == nil then
         example_headers = cells
         example_header_line_number = line_number
-        local source_header_line = _source_line(source_map, line_number)
+        local source_header_line = source.line_from_map(source_map, line_number)
         current_scenario.metadata.example_field_lines =
           ((source_map.header_field_lines_by_line or {})[source_header_line]) or {}
       else

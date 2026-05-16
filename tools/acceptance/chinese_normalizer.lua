@@ -1,16 +1,8 @@
+local source = require("acceptance.source")
+
 local chinese_normalizer = {}
 
-local function _trim(text)
-  return tostring(text or ""):match("^%s*(.-)%s*$")
-end
-
-local function _source_error(path, line_number, message)
-  local prefix = ""
-  if path ~= nil and path ~= "" then
-    prefix = tostring(path) .. ":"
-  end
-  return prefix .. "第" .. tostring(line_number) .. "行: " .. tostring(message)
-end
+local _trim = source.trim
 
 local function _split_lines(text)
   local lines = {}
@@ -18,29 +10,6 @@ local function _split_lines(text)
     lines[#lines + 1] = line
   end
   return lines
-end
-
-local function _split_table_row(line)
-  local row = _trim(line)
-  if row:sub(1, 1) == "|" then
-    row = row:sub(2)
-  end
-  if row:sub(-1) == "|" then
-    row = row:sub(1, -2)
-  end
-
-  local cells = {}
-  local start_index = 1
-  while true do
-    local hit = row:find("|", start_index, true)
-    if hit == nil then
-      cells[#cells + 1] = _trim(row:sub(start_index))
-      break
-    end
-    cells[#cells + 1] = _trim(row:sub(start_index, hit - 1))
-    start_index = hit + 1
-  end
-  return cells
 end
 
 local function _is_features_path(path)
@@ -109,13 +78,13 @@ local function _normalize_parameters(text, context, line_number)
 end
 
 local function _normalize_header(line, context, line_number)
-  local cells = _split_table_row(line)
+  local cells = source.split_table_cells(line)
   local mapped_cells = {}
   local field_lines = {}
 
   for _, cell in ipairs(cells) do
     if cell == "" then
-      return nil, _source_error(context.path, line_number, "例子表头不能为空")
+      return nil, source.format_error(context.path, line_number, "例子表头不能为空")
     end
     local canonical = context.map_name(cell, line_number)
     mapped_cells[#mapped_cells + 1] = canonical
@@ -191,12 +160,12 @@ local function _normalize_chinese_lines(lines, context)
 
     local english = _english_keyword(line)
     if english ~= nil then
-      return nil, _source_error(context.path, line_number, "业务源文件不能使用英文结构关键字 " .. english)
+      return nil, source.format_error(context.path, line_number, "业务源文件不能使用英文结构关键字 " .. english)
     end
 
     local unsupported = _unsupported_chinese_keyword(line)
     if unsupported ~= nil then
-      return nil, _source_error(context.path, line_number, "不支持的中文关键字 " .. unsupported)
+      return nil, source.format_error(context.path, line_number, "不支持的中文关键字 " .. unsupported)
     end
 
     if section == "examples" and waiting_for_header and line:sub(1, 1) == "|" then
@@ -239,7 +208,7 @@ function chinese_normalizer.normalize_text(text, opts)
   local is_chinese = _trim(first_line) == "# language: zh-CN"
 
   if _is_features_path(path) and not is_chinese then
-    return nil, _source_error(path, 1, "features/ 下的业务源文件首行必须是 # language: zh-CN")
+    return nil, source.format_error(path, 1, "features/ 下的业务源文件首行必须是 # language: zh-CN")
   end
 
   if not is_chinese then
