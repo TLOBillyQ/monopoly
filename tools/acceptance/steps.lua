@@ -2,19 +2,27 @@ local number_utils = require("src.foundation.number")
 local normalizer = require("acceptance.chinese_normalizer")
 local gherkin_parser = require("acceptance.gherkin_parser")
 local mutator = require("acceptance.mutator")
+local source = require("acceptance.source")
 local handoff_message = require("swarmforge.handoff_message")
 local common = require("shared.lib.common")
 
 local steps = {}
 
 local function _project_root()
-  local source = debug.getinfo(1, "S").source or "@tools/acceptance/steps.lua"
-  local normalized = tostring(source):gsub("^@", ""):gsub("\\", "/")
+  local src_path = debug.getinfo(1, "S").source or "@tools/acceptance/steps.lua"
+  local normalized = tostring(src_path):gsub("^@", ""):gsub("\\", "/")
   local tools_dir = normalized:match("^(.*)/acceptance/steps%.lua$")
   if tools_dir == nil then
     return "."
   end
   return tools_dir:match("^(.*)/tools$") or "."
+end
+
+local function _build_outline_feature(step_text, headers)
+  return "# language: zh-CN\n功能: 测试\n场景大纲: 归一化测试\n  假如 "
+    .. step_text .. "\n例子:\n  | "
+    .. table.concat(headers, " | ") .. " |\n  | "
+    .. string.rep("值 | ", #headers):sub(1, -3) .. " |\n"
 end
 
 local function _read_feature_file(path)
@@ -247,16 +255,13 @@ local function _handlers()
     ["例子表头包含<p15>"] = function(world, example)
       world.example_headers = {}
       for header in tostring(example.p15):gmatch("[^,]+") do
-        world.example_headers[#world.example_headers + 1] = header:match("^%s*(.-)%s*$")
+        world.example_headers[#world.example_headers + 1] = source.trim(header)
       end
       return true
     end,
 
     ["规格工具生成 APS 兼容产物"] = function(world)
-      local feature_text = "# language: zh-CN\n功能: 测试\n场景大纲: 归一化测试\n  假如 "
-        .. world.step_text .. "\n例子:\n  | "
-        .. table.concat(world.example_headers, " | ") .. " |\n  | "
-        .. string.rep("值 | ", #world.example_headers):sub(1, -3) .. " |\n"
+      local feature_text = _build_outline_feature(world.step_text, world.example_headers)
       local result, err = normalizer.normalize_text(feature_text, { path = "features/test.feature" })
       if result == nil then
         return nil, "normalization failed: " .. tostring(err)
@@ -304,10 +309,7 @@ local function _handlers()
     end,
 
     ["再次生成得到相同的规范参数名"] = function(world)
-      local feature_text = "# language: zh-CN\n功能: 测试\n场景大纲: 归一化测试\n  假如 "
-        .. world.step_text .. "\n例子:\n  | "
-        .. table.concat(world.example_headers, " | ") .. " |\n  | "
-        .. string.rep("值 | ", #world.example_headers):sub(1, -3) .. " |\n"
+      local feature_text = _build_outline_feature(world.step_text, world.example_headers)
       local result, err = normalizer.normalize_text(feature_text, { path = "features/test.feature" })
       if result == nil then
         return nil, "second normalization failed: " .. tostring(err)
