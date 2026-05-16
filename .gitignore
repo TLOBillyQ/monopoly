@@ -68,6 +68,11 @@ logs/
 /luacov.stats.out
 /luacov.report.out
 /contract
+
+# Generated acceptance pipeline artifacts
+/acceptance/generated/
+/build/acceptance/
+/build/acceptance-mutation/
 .agents/plan.md
 .agents/research.md
 .deepseek
