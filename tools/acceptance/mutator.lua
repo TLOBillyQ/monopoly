@@ -55,6 +55,21 @@ local function _split_list(text)
   return values
 end
 
+local function _mutate_list_value(trimmed, seed, path)
+  if trimmed:find(",", 1, true) == nil then
+    return nil
+  end
+
+  local values = _split_list(trimmed)
+  if #values == 0 then
+    return nil
+  end
+
+  local index = (seed % #values) + 1
+  values[index] = mutator.mutate_value(values[index], tostring(path) .. "/" .. tostring(index))
+  return table.concat(values, ", ")
+end
+
 local function _dither_string(value, seed)
   local text = tostring(value or "")
   if text == "" then
@@ -132,20 +147,7 @@ local function _mutate_duration(trimmed, seed)
   return nil
 end
 
-function mutator.mutate_value(value, path)
-  local original = tostring(value or "")
-  local trimmed = _trim(original)
-  local seed = _stable_hash(tostring(path or "") .. "\0" .. original)
-
-  if trimmed:find(",", 1, true) ~= nil then
-    local values = _split_list(trimmed)
-    if #values > 0 then
-      local index = (seed % #values) + 1
-      values[index] = mutator.mutate_value(values[index], tostring(path) .. "/" .. tostring(index))
-      return table.concat(values, ", ")
-    end
-  end
-
+local function _mutate_keyword(trimmed)
   local lower = trimmed:lower()
   if lower == "true" then
     return "false"
@@ -156,6 +158,10 @@ function mutator.mutate_value(value, path)
   if lower == "null" or lower == "nil" or lower == "none" then
     return "value"
   end
+  return nil
+end
+
+local function _mutate_number(trimmed, seed)
   if trimmed:match("^%-?%d+$") ~= nil then
     return tostring(tonumber(trimmed) + _signed_delta(seed, 9))
   end
@@ -163,26 +169,56 @@ function mutator.mutate_value(value, path)
     local delta = _signed_delta(seed, 9) / 10
     return tostring(tonumber(trimmed) + delta)
   end
+  return nil
+end
 
-  local year, month, day, hour, minute, second, zulu = trimmed:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)[T ](%d%d):(%d%d):(%d%d)(Z?)$")
-  if year ~= nil then
-    local date = _mutate_date(year, month, day, seed)
-    local time = _mutate_time(hour, minute, second, seed)
+local function _mutate_datetime(trimmed, seed)
+  local dt_year, dt_month, dt_day, dt_hour, dt_minute, dt_second, zulu = trimmed:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)[T ](%d%d):(%d%d):(%d%d)(Z?)$")
+  if dt_year ~= nil then
+    local date = _mutate_date(dt_year, dt_month, dt_day, seed)
+    local time = _mutate_time(dt_hour, dt_minute, dt_second, seed)
     return date .. "T" .. time .. (zulu or "")
   end
 
-  year, month, day = trimmed:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)$")
+  local year, month, day = trimmed:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)$")
   if year ~= nil then
     return _mutate_date(year, month, day, seed)
   end
 
-  hour, minute, second = trimmed:match("^(%d%d):(%d%d):(%d%d)$")
+  local hour, minute, second = trimmed:match("^(%d%d):(%d%d):(%d%d)$")
   if hour ~= nil then
     return _mutate_time(hour, minute, second, seed)
   end
   hour, minute = trimmed:match("^(%d%d):(%d%d)$")
   if hour ~= nil then
     return _mutate_time(hour, minute, nil, seed)
+  end
+  return nil
+end
+
+function mutator.mutate_value(value, path)
+  local original = tostring(value or "")
+  local trimmed = _trim(original)
+  local seed = _stable_hash(tostring(path or "") .. "\0" .. original)
+
+  local mutated = _mutate_list_value(trimmed, seed, path)
+  if mutated ~= nil then
+    return mutated
+  end
+
+  mutated = _mutate_keyword(trimmed)
+  if mutated ~= nil then
+    return mutated
+  end
+
+  mutated = _mutate_number(trimmed, seed)
+  if mutated ~= nil then
+    return mutated
+  end
+
+  mutated = _mutate_datetime(trimmed, seed)
+  if mutated ~= nil then
+    return mutated
   end
 
   local duration = _mutate_duration(trimmed, seed)
