@@ -1,6 +1,7 @@
 local number_utils = require("src.foundation.number")
 local normalizer = require("acceptance.chinese_normalizer")
 local gherkin_parser = require("acceptance.gherkin_parser")
+local mutator = require("acceptance.mutator")
 local handoff_message = require("swarmforge.handoff_message")
 local common = require("shared.lib.common")
 
@@ -88,31 +89,38 @@ local function _handlers()
       return true
     end,
 
-    -- Background: SwarmForge workflow enabled
+    -- Background
     ["仓库启用了 SwarmForge 迁移工作流"] = function(world)
       world.swarmforge_enabled = true
       world.project_root = _project_root()
       return true
     end,
 
-    -- Scenario 1: Business users maintain only Chinese feature files
+    -- Scenario 1: 业务人员只维护中文功能文件
     ["业务功能文件位于<p1>"] = function(world, example)
       world.feature_path = example.p1
       return true
     end,
 
     ["规格工具读取该文件"] = function(world)
-      local content, err = _read_feature_file(world.feature_path)
-      if content == nil then
-        return nil, err
+      if world.feature_content == nil and world.feature_path ~= nil then
+        local content, err = _read_feature_file(world.feature_path)
+        if content == nil then
+          return nil, err
+        end
+        world.feature_content = content
       end
-      world.feature_content = content
-      local result, norm_err = normalizer.normalize_text(content, { path = world.feature_path })
+      if world.feature_content == nil then
+        return nil, "no feature content available"
+      end
+      local path = world.feature_path or "features/test.feature"
+      local result, norm_err = normalizer.normalize_text(world.feature_content, { path = path })
       if result == nil then
         world.normalize_error = norm_err
         return true
       end
       world.normalized = result
+      world.normalize_error = nil
       return true
     end,
 
@@ -129,7 +137,7 @@ local function _handlers()
       return true
     end,
 
-    ["工具拒绝业务源文件中的英文结构关键字"] = function(world)
+    ["工具拒绝业务源文件中的英文结构关键字"] = function()
       local english_feature = "# language: zh-CN\nFeature: Bad\n"
       local _, err = normalizer.normalize_text(english_feature, { path = "features/test.feature" })
       if err == nil then
@@ -154,15 +162,91 @@ local function _handlers()
       return true
     end,
 
-    -- Scenario 2: Chinese parameter names are stably normalized
-    ["步骤文本为<p9>"] = function(world, example)
-      world.step_text = example.p9
+    -- Scenario 2: 不支持的关键字被拒绝并报告位置
+    ["中文功能文件第<p9>行使用了<p10>"] = function(world, example)
+      local target_line = tonumber(example.p9)
+      local keyword = example.p10
+      local lines = { "# language: zh-CN" }
+      local structure_keywords = { ["剧本"] = true }
+      if structure_keywords[keyword] then
+        lines[#lines + 1] = "功能: 测试不支持关键字"
+        for _ = #lines + 1, target_line - 1 do
+          lines[#lines + 1] = ""
+        end
+        lines[#lines + 1] = keyword .. ": 某个场景"
+      else
+        lines[#lines + 1] = ""
+        lines[#lines + 1] = "功能: 测试不支持关键字"
+        lines[#lines + 1] = "场景: 测试"
+        for _ = #lines + 1, target_line - 1 do
+          lines[#lines + 1] = ""
+        end
+        lines[#lines + 1] = "  " .. keyword .. " 某个步骤"
+      end
+      world.feature_content = table.concat(lines, "\n") .. "\n"
+      world.feature_path = "features/test.feature"
       return true
     end,
 
-    ["例子表头包含<p10>"] = function(world, example)
+    ["工具拒绝该文件"] = function(world)
+      if world.normalize_error == nil then
+        return nil, "expected normalization to fail, but it succeeded"
+      end
+      return true
+    end,
+
+    ["错误信息包含第<p9>行"] = function(world, example)
+      local line_marker = "第" .. example.p9 .. "行"
+      local msg = tostring(world.normalize_error or world.error_message or "")
+      if not msg:find(line_marker, 1, true) then
+        return nil, "error does not contain line marker: " .. line_marker .. " in: " .. msg
+      end
+      return true
+    end,
+
+    ["错误信息说明<p10>不被接受"] = function(world, example)
+      local msg = tostring(world.normalize_error or world.error_message or "")
+      if not msg:find(example.p10, 1, true) then
+        return nil, "error does not mention keyword: " .. example.p10 .. " in: " .. msg
+      end
+      return true
+    end,
+
+    -- Scenario 3: features 路径下的文件必须声明中文语言标签
+    ["文件位于<p11>"] = function(world, example)
+      world.feature_path = example.p11
+      return true
+    end,
+
+    ["文件首行为<p12>"] = function(world, example)
+      world.feature_content = example.p12 .. "\n功能: 测试\n场景: 基础\n  假如 步骤一\n"
+      return true
+    end,
+
+    ["工具<p13>该文件"] = function(world, example)
+      if example.p13 == "接受" then
+        if world.normalize_error ~= nil then
+          return nil, "expected accept but got error: " .. world.normalize_error
+        end
+        return true
+      elseif example.p13 == "拒绝" then
+        if world.normalize_error == nil then
+          return nil, "expected reject but normalization succeeded"
+        end
+        return true
+      end
+      return nil, "unknown accept/reject value: " .. tostring(example.p13)
+    end,
+
+    -- Scenario 4: 中文参数名被稳定归一化
+    ["步骤文本为<p14>"] = function(world, example)
+      world.step_text = example.p14
+      return true
+    end,
+
+    ["例子表头包含<p15>"] = function(world, example)
       world.example_headers = {}
-      for header in tostring(example.p10):gmatch("[^,]+") do
+      for header in tostring(example.p15):gmatch("[^,]+") do
         world.example_headers[#world.example_headers + 1] = header:match("^%s*(.-)%s*$")
       end
       return true
@@ -181,9 +265,9 @@ local function _handlers()
       return true
     end,
 
-    ["产物中的参数名为<p11>"] = function(world, example)
+    ["产物中的参数名为<p16>"] = function(world, example)
       local expected_names = {}
-      for name in tostring(example.p11):gmatch("[^,]+") do
+      for name in tostring(example.p16):gmatch("[^,]+") do
         expected_names[#expected_names + 1] = name:match("^%s*(.-)%s*$")
       end
       for _, name in ipairs(expected_names) do
@@ -234,14 +318,14 @@ local function _handlers()
       return true
     end,
 
-    -- Scenario 3: Chinese spec compiled to APS-compatible IR
-    ["中文功能文件声明<p12>"] = function(world, example)
-      world.expected_feature_name = example.p12
+    -- Scenario 5: 中文规格被编译为 APS 兼容中间格式
+    ["中文功能文件声明<p17>"] = function(world, example)
+      world.expected_feature_name = example.p17
       return true
     end,
 
-    ["中文场景声明<p13>"] = function(world, example)
-      world.expected_scenario_name = example.p13
+    ["中文场景声明<p18>"] = function(world, example)
+      world.expected_scenario_name = example.p18
       return true
     end,
 
@@ -262,20 +346,20 @@ local function _handlers()
       return true
     end,
 
-    ["中间格式的功能名为<p12>"] = function(world, example)
-      if world.ir.name ~= example.p12 then
-        return nil, "feature name mismatch: expected " .. example.p12 .. ", got " .. tostring(world.ir.name)
+    ["中间格式的功能名为<p17>"] = function(world, example)
+      if world.ir.name ~= example.p17 then
+        return nil, "feature name mismatch: expected " .. example.p17 .. ", got " .. tostring(world.ir.name)
       end
       return true
     end,
 
-    ["中间格式的场景名为<p13>"] = function(world, example)
+    ["中间格式的场景名为<p18>"] = function(world, example)
       local scenario = (world.ir.scenarios or {})[1]
       if scenario == nil then
         return nil, "no scenarios in IR"
       end
-      if scenario.name ~= example.p13 then
-        return nil, "scenario name mismatch: expected " .. example.p13 .. ", got " .. tostring(scenario.name)
+      if scenario.name ~= example.p18 then
+        return nil, "scenario name mismatch: expected " .. example.p18 .. ", got " .. tostring(scenario.name)
       end
       return true
     end,
@@ -303,7 +387,7 @@ local function _handlers()
       end
       local text = world.normalized_text.text
       if text:find("功能:", 1, true) then
-        return nil, "IR source still contains Chinese 功能: keyword (should be normalized)"
+        return nil, "IR source still contains Chinese 功能: keyword"
       end
       if not text:find("Feature:", 1, true) then
         return nil, "normalized output should contain APS Feature: keyword"
@@ -311,16 +395,16 @@ local function _handlers()
       return true
     end,
 
-    -- Scenario 4: Diagnostics point back to Chinese source
-    ["中文功能文件第<p14>行存在<p15>"] = function(world, example)
-      world.error_line = tonumber(example.p14)
-      world.error_type = example.p15
+    -- Scenario 6: 诊断信息回指中文源文件
+    ["中文功能文件第<p9>行存在<p19>"] = function(world, example)
+      world.error_line = tonumber(example.p9)
+      world.error_type = example.p19
       return true
     end,
 
     ["规格工具报告错误"] = function(world, example)
       local file_path = example.p1 or world.feature_path
-      local target_line = tonumber(world.error_line)
+      local target_line = world.error_line
 
       local bad_feature
       if world.error_type == "例子列数不匹配" then
@@ -368,12 +452,8 @@ local function _handlers()
 
       local runtime = require("acceptance.runtime")
       local result = runtime.run_feature(ir, {
-        ["消息包含分支名<p1>和提交<p2>"] = function()
-          return true
-        end,
-        ["玩家<p1>已有<p2>张道具"] = function()
-          return true
-        end,
+        ["消息包含分支名<p1>和提交<p2>"] = function() return true end,
+        ["玩家<p1>已有<p2>张道具"] = function() return true end,
       })
       if not result.ok then
         world.error_message = runtime.format_failures(result)
@@ -394,46 +474,98 @@ local function _handlers()
       return true
     end,
 
-    ["错误信息包含第<p14>行"] = function(world, example)
-      local line_marker = "第" .. example.p14 .. "行"
-      if not tostring(world.error_message):find(line_marker, 1, true) then
-        return nil, "error does not contain line marker: " .. line_marker .. " in: " .. tostring(world.error_message)
+    ["错误信息使用中文表头<p15>"] = function(world, example)
+      if not tostring(world.error_message):find(example.p15, 1, true) then
+        return nil, "error does not contain Chinese header: " .. example.p15 .. " in: " .. tostring(world.error_message)
       end
       return true
     end,
 
-    ["错误信息使用中文表头<p10>"] = function(world, example)
-      if not tostring(world.error_message):find(example.p10, 1, true) then
-        return nil, "error does not contain Chinese header: " .. example.p10 .. " in: " .. tostring(world.error_message)
+    ["错误信息不只显示规范参数名<p16>"] = function(world, example)
+      if not example.p16:match("^p%d+$") then
+        return nil, "canonical param name should match pN format: " .. example.p16
       end
-      return true
-    end,
-
-    ["错误信息不只显示规范参数名<p11>"] = function(world, example)
       local msg = tostring(world.error_message)
-      if not example.p11:match("^p%d+$") then
-        return nil, "canonical param name should match pN format: " .. example.p11
-      end
-      if not msg:find(example.p10, 1, true) then
-        return nil, "error message should contain Chinese header " .. example.p10 .. " in: " .. msg
-      end
-      if msg:find(example.p11, 1, true) and not msg:find(example.p10, 1, true) then
-        return nil, "error only shows canonical name " .. example.p11 .. " without Chinese header"
+      if not msg:find(example.p15, 1, true) then
+        return nil, "error message should contain Chinese header " .. example.p15 .. " in: " .. msg
       end
       return true
     end,
 
-    -- Scenario 5: Handoff messages maintain SwarmForge discipline
-    ["<p16>准备交接给<p17>"] = function(world, example)
+    -- Scenario 7: 变异测试报告显示中文字段名
+    ["中文功能文件定义参数<p20>"] = function(world, example)
+      world.chinese_param_name = example.p20
+      return true
+    end,
+
+    ["参数被归一化为<p16>"] = function(world, example)
+      world.canonical_param_name = example.p16
+      return true
+    end,
+
+    ["变异测试生成报告"] = function(world)
+      local feature_text = "# language: zh-CN\n功能: 报告测试\n场景大纲: 变异\n  假如 玩家<"
+        .. world.chinese_param_name .. ">执行动作\n例子:\n  | "
+        .. world.chinese_param_name .. " |\n  | A |\n"
+      local normalized, norm_err = normalizer.normalize_text(feature_text, { path = "features/test.feature" })
+      if normalized == nil then
+        return nil, "normalization failed: " .. tostring(norm_err)
+      end
+      local ir, parse_err = gherkin_parser.parse_text(normalized.text, { source_map = normalized.source_map })
+      if ir == nil then
+        return nil, "parse failed: " .. tostring(parse_err)
+      end
+      local mutations = mutator.build_mutations(ir)
+      if #mutations == 0 then
+        return nil, "no mutations generated"
+      end
+      local report = {
+        summary = { total = 1, killed = 1, survived = 0, errors = 0 },
+        results = {
+          { mutation = mutations[1], status = "killed", output = "", error = "", duration = 0 },
+        },
+      }
+      world.mutation_report = mutator.format_text_report(report)
+      return true
+    end,
+
+    ["报告显示<p20>的变异"] = function(world, example)
+      if not world.mutation_report:find(example.p20, 1, true) then
+        return nil, "report does not contain Chinese param: " .. example.p20 .. " in: " .. world.mutation_report
+      end
+      return true
+    end,
+
+    ["报告格式为<p21>"] = function(world, example)
+      local name_part = example.p21:match("^([^:]+):")
+      if name_part and not world.mutation_report:find(name_part .. ":", 1, true) then
+        return nil, "report format mismatch, expected '" .. name_part .. ":' in: " .. world.mutation_report
+      end
+      return true
+    end,
+
+    ["报告不只显示<p16>"] = function(world, example)
+      if not example.p16:match("^p%d+$") then
+        return nil, "canonical param name should match pN format: " .. example.p16
+      end
+      if world.mutation_report:find(example.p16 .. ":", 1, true)
+        and not world.mutation_report:find(world.chinese_param_name, 1, true) then
+        return nil, "report only shows canonical name without Chinese"
+      end
+      return true
+    end,
+
+    -- Scenario 8: 交接消息保持 SwarmForge 纪律
+    ["<p22>准备交接给<p23>"] = function(world, example)
       local valid_roles = { specifier = true, coder = true, refactorer = true, architect = true }
-      if not valid_roles[example.p16] then
-        return nil, "unknown source role: " .. tostring(example.p16)
+      if not valid_roles[example.p22] then
+        return nil, "unknown source role: " .. tostring(example.p22)
       end
-      if not valid_roles[example.p17] then
-        return nil, "unknown target role: " .. tostring(example.p17)
+      if not valid_roles[example.p23] then
+        return nil, "unknown target role: " .. tostring(example.p23)
       end
-      world.handoff_source = example.p16
-      world.handoff_target = example.p17
+      world.handoff_source = example.p22
+      world.handoff_target = example.p23
       return true
     end,
 
@@ -441,44 +573,44 @@ local function _handlers()
       world.handoff_msg = handoff_message.build({
         source_role = world.handoff_source,
         target_role = world.handoff_target,
-        branch = example.p19 or "swarmforge-coder",
-        commit = example.p20 or "abc1234",
-        summary = example.p21 or "变更",
+        branch = example.p25 or "swarmforge-coder",
+        commit = example.p26 or "abc1234",
+        summary = example.p27 or "变更",
       })
       world.handoff_cmd = handoff_message.notify_command({
         source_role = world.handoff_source,
         target_role = world.handoff_target,
-        branch = example.p19 or "swarmforge-coder",
-        commit = example.p20 or "abc1234",
-        summary = example.p21 or "变更",
+        branch = example.p25 or "swarmforge-coder",
+        commit = example.p26 or "abc1234",
+        summary = example.p27 or "变更",
       })
       return true
     end,
 
-    ["消息以<p18>开头"] = function(world, example)
-      if world.handoff_msg:sub(1, #example.p18) ~= example.p18 then
-        return nil, "message does not start with: " .. example.p18 .. " got: " .. world.handoff_msg:sub(1, 30)
+    ["消息以<p24>开头"] = function(world, example)
+      if world.handoff_msg:sub(1, #example.p24) ~= example.p24 then
+        return nil, "message does not start with: " .. example.p24 .. " got: " .. world.handoff_msg:sub(1, 30)
       end
       return true
     end,
 
-    ["消息包含分支名<p19>"] = function(world, example)
-      if not world.handoff_msg:find(example.p19, 1, true) then
-        return nil, "message missing branch: " .. example.p19
+    ["消息包含分支名<p25>"] = function(world, example)
+      if not world.handoff_msg:find(example.p25, 1, true) then
+        return nil, "message missing branch: " .. example.p25
       end
       return true
     end,
 
-    ["消息包含提交哈希<p20>"] = function(world, example)
-      if not world.handoff_msg:find(example.p20, 1, true) then
-        return nil, "message missing commit: " .. example.p20
+    ["消息包含提交哈希<p26>"] = function(world, example)
+      if not world.handoff_msg:find(example.p26, 1, true) then
+        return nil, "message missing commit: " .. example.p26
       end
       return true
     end,
 
-    ["消息描述变更内容<p21>"] = function(world, example)
-      if not world.handoff_msg:find(example.p21, 1, true) then
-        return nil, "message missing summary: " .. example.p21
+    ["消息描述变更内容<p27>"] = function(world, example)
+      if not world.handoff_msg:find(example.p27, 1, true) then
+        return nil, "message missing summary: " .. example.p27
       end
       return true
     end,
@@ -490,7 +622,7 @@ local function _handlers()
       return true
     end,
 
-    -- Scenario 6: SwarmForge migration asset boundaries
+    -- Scenario 9: SwarmForge 迁移资产边界清晰
     ["仓库准备提交 SwarmForge 迁移"] = function(world)
       world.project_root = _project_root()
       return true
@@ -501,8 +633,8 @@ local function _handlers()
       return true
     end,
 
-    ["<p22>应作为迁移资产提交"] = function(world, example)
-      local path = example.p22
+    ["<p28>应作为迁移资产提交"] = function(world, example)
+      local path = example.p28
       local known_prefixes = { "swarmforge/", "swarmtools/", "features/", "docs/" }
       local valid = false
       for _, prefix in ipairs(known_prefixes) do
@@ -523,8 +655,8 @@ local function _handlers()
       return true
     end,
 
-    ["<p23>应保持为本地运行状态"] = function(world, example)
-      local path = example.p23
+    ["<p29>应保持为本地运行状态"] = function(world, example)
+      local path = example.p29
       local result = common.run_command({
         "git", "check-ignore", "--quiet", path,
       }, { cwd = world.project_root })
