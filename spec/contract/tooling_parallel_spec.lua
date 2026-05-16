@@ -26,14 +26,12 @@ describe("tooling_parallel contract", function()
 
   it("suite_cost_hints", function()
     assert.equals(40, support.suite_cost(suite("spec.support.tooling_suites.architecture.arch_view_live_tooling_contract")))
-    assert.equals(28, support.suite_cost(suite("spec.support.tooling_suites.architecture.script_tools_io_tooling_contract")))
     assert.equals(2, support.suite_cost(suite("unmapped", { { name = "one" }, { name = "two" } })))
   end)
 
   it("rounds_cover_all_suites", function()
     local suites = {
       suite("spec.support.tooling_suites.architecture.arch_view_live_tooling_contract"),
-      suite("spec.support.tooling_suites.architecture.script_tools_io_tooling_contract"),
       suite("spec.support.tooling_suites.architecture.mutate4lua_tooling_contract"),
     }
     local plan = support.build_execution_plan(suites, 3)
@@ -52,6 +50,6 @@ describe("tooling_parallel contract", function()
     end
 
     assert.is_true(#plan.rounds > 0)
-    assert.equals(3, plan.worker_total)
+    assert.equals(2, plan.worker_total)
   end)
 end)

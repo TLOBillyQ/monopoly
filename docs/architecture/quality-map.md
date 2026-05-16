@@ -91,7 +91,6 @@ last_verified: 2026-05-04
   - `arch_view_live_tooling_contract`
   - `crap_tooling_contract`
   - `mutate4lua_tooling_contract`
-  - `script_tools_io_tooling_contract`
   - `script_tools_mutate_tooling_contract`
 
 ### `guard`
