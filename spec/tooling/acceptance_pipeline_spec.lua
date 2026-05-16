@@ -77,6 +77,18 @@ describe("acceptance pipeline", function()
     assert.is_true(tostring(err):find("examples row has 1 cells, expected 2", 1, true) ~= nil)
   end)
 
+  it("rejects unsupported non-empty feature lines instead of dropping them", function()
+    local ir, err = parser.parse_text(table.concat({
+      "Feature: Broken",
+      "Scenario: Unsupported line",
+      "  Given project acceptance step handlers are loaded",
+      "  Eventually this line should not be ignored",
+    }, "\n"))
+
+    assert.is_nil(ir)
+    assert.is_true(tostring(err):find("unsupported line: Eventually this line should not be ignored", 1, true) ~= nil)
+  end)
+
   it("round-trips JSON IR with deterministic array fields", function()
     local ir = assert(parser.parse_text(_sample_feature()))
     local encoded = json.encode(ir)

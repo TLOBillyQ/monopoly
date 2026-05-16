@@ -146,15 +146,17 @@ function gherkin_parser.parse_text(text)
     if keyword == nil then
       keyword, step_text = line:match("^(And)%s+(.+)$")
     end
-    if keyword ~= nil then
-      if section == "background" then
-        feature.background[#feature.background + 1] = _step(keyword, step_text)
-      elseif current_scenario ~= nil then
-        current_scenario.steps[#current_scenario.steps + 1] = _step(keyword, step_text)
-        section = "scenario"
-      else
-        return _error(line_number, "step outside background or scenario")
-      end
+    if keyword == nil then
+      return _error(line_number, "unsupported line: " .. line)
+    end
+
+    if section == "background" then
+      feature.background[#feature.background + 1] = _step(keyword, step_text)
+    elseif current_scenario ~= nil then
+      current_scenario.steps[#current_scenario.steps + 1] = _step(keyword, step_text)
+      section = "scenario"
+    else
+      return _error(line_number, "step outside background or scenario")
     end
 
     ::continue::
