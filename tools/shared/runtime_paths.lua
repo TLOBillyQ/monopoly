@@ -115,6 +115,53 @@ local function _looks_like_repo_root(path)
   return true
 end
 
+local _SUBMODULE_PROBE = "crap4lua/bin"
+
+local function _read_file_first_line(path)
+  local file = io.open(path, "r")
+  if file == nil then
+    return nil
+  end
+  local line = file:read("*l")
+  file:close()
+  return line
+end
+
+local function _resolve_main_worktree_root(repo_root)
+  local dot_git = _join_path(repo_root, ".git")
+  local line = _read_file_first_line(dot_git)
+  if line == nil then
+    return nil
+  end
+  local gitdir = line:match("^gitdir:%s*(.+)$")
+  if gitdir == nil then
+    return nil
+  end
+  gitdir = _normalize_path(gitdir)
+  if not _is_absolute_path(gitdir) then
+    gitdir = _join_path(repo_root, gitdir)
+  end
+  local worktrees_dir = _parent_dir(gitdir)
+  local main_git_dir = _parent_dir(worktrees_dir)
+  return _parent_dir(main_git_dir)
+end
+
+local function _resolve_vendor_dir(repo_root)
+  local default_vendor = _join_path(repo_root, "vendor")
+  if _path_exists(_join_path(default_vendor, _SUBMODULE_PROBE)) then
+    return default_vendor
+  end
+  local main_root = _resolve_main_worktree_root(repo_root)
+  if main_root == nil then
+    return default_vendor
+  end
+  local main_vendor = _join_path(main_root, "vendor")
+  if _path_exists(_join_path(main_vendor, _SUBMODULE_PROBE)) then
+    return main_vendor
+  end
+  return default_vendor
+end
+
 function runtime_paths.resolve(opts)
   opts = opts or {}
 
@@ -136,7 +183,7 @@ function runtime_paths.resolve(opts)
         script_dir = script_dir,
         repo_root = probe,
         tools_dir = _join_path(probe, "tools"),
-        vendor_dir = _join_path(probe, "vendor"),
+        vendor_dir = _resolve_vendor_dir(probe),
       }
     end
 

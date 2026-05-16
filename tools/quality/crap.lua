@@ -17,7 +17,8 @@ local package_path_helper = require("shared.package_path_helper")
 
 common.ensure_windows_utf8_console()
 local REPO_ROOT = bootstrap_env.repo_root
-local CRAP4LUA_ROOT = common.join_path(REPO_ROOT, "vendor/crap4lua")
+local VENDOR_DIR = bootstrap_env.vendor_dir
+local CRAP4LUA_ROOT = common.join_path(VENDOR_DIR, "crap4lua")
 local DEFAULT_CONFIG_PATH = common.join_path(REPO_ROOT, "tools/quality/crap/config.lua")
 local DEFAULT_REPORT_JSON = "tmp/crap_report.json"
 local DEFAULT_VIEW_DIR = "tmp/crap_view"
@@ -32,8 +33,8 @@ local function _binary_name()
   return "crap4lua"
 end
 
-local function _binary_path(repo_root)
-  return common.join_path(common.join_path(repo_root, "vendor/crap4lua"), "bin/" .. _binary_name())
+local function _binary_path(_)
+  return common.join_path(CRAP4LUA_ROOT, "bin/" .. _binary_name())
 end
 
 local function _default_tmp_root()
@@ -244,8 +245,8 @@ local function _ensure_bridge_package_paths(repo_root)
     repo_root = repo_root,
   })
   local patterns = {
-    common.join_path(repo_root, "vendor/crap4lua/lib/?.lua"),
-    common.join_path(repo_root, "vendor/crap4lua/lib/?/?.lua"),
+    common.join_path(CRAP4LUA_ROOT, "lib/?.lua"),
+    common.join_path(CRAP4LUA_ROOT, "lib/?/?.lua"),
   }
   for _, pattern in ipairs(patterns) do
     if not tostring(package.path):find(pattern, 1, true) then

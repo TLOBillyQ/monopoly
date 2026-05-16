@@ -15,6 +15,7 @@ local common = require("shared.lib.common")
 
 common.ensure_windows_utf8_console()
 local REPO_ROOT = bootstrap_env.repo_root
+local VENDOR_DIR = bootstrap_env.vendor_dir
 local DEFAULT_CONFIG_PATH = common.join_path(REPO_ROOT, "tools/quality/scrap/config.lua")
 local DEFAULT_INDEX_JSON = "tmp/scrap_index.json"
 local DEFAULT_CLUSTER_JSON = "tmp/scrap_clusters.json"
@@ -42,10 +43,11 @@ local function _resolve_cli_path(base, path)
   return common.resolve_path(base, normalized)
 end
 
-local function _ensure_scrap_package_paths(repo_root)
+local function _ensure_scrap_package_paths(_)
+  local scrap_root = common.join_path(VENDOR_DIR, "scrap4lua")
   local patterns = {
-    common.join_path(repo_root, "vendor/scrap4lua/lib/?.lua"),
-    common.join_path(repo_root, "vendor/scrap4lua/lib/?/?.lua"),
+    common.join_path(scrap_root, "lib/?.lua"),
+    common.join_path(scrap_root, "lib/?/?.lua"),
   }
   for _, pattern in ipairs(patterns) do
     if not tostring(package.path):find(pattern, 1, true) then

@@ -16,16 +16,17 @@ local common = require("shared.lib.common")
 common.ensure_windows_utf8_console()
 
 local REPO_ROOT = bootstrap_env.repo_root
-local MUTATE4LUA_ROOT = common.join_path(REPO_ROOT, "vendor/mutate4lua")
+local VENDOR_DIR = bootstrap_env.vendor_dir
+local MUTATE4LUA_ROOT = common.join_path(VENDOR_DIR, "mutate4lua")
 local DEFAULT_DRIVER_PATH = "tools/quality/mutate/driver.lua"
 local BUSTED_DRIVER_PATH = "tools/quality/mutate/busted_adapter.lua"
 
-local function _binary_path(repo_root)
+local function _binary_path(_)
   local name = "mutate4lua-engine"
   if common.is_windows() then
     name = name .. ".exe"
   end
-  return common.join_path(common.join_path(repo_root, "vendor/mutate4lua"), "bin/" .. name)
+  return common.join_path(MUTATE4LUA_ROOT, "bin/" .. name)
 end
 
 local function _help_text(command_name)

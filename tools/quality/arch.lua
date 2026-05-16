@@ -18,7 +18,8 @@ local arch_filter = require("quality.arch.filter")
 common.ensure_windows_utf8_console()
 
 local REPO_ROOT = bootstrap_env.repo_root
-local ARCH_VIEW_DIR = common.join_path(REPO_ROOT, "vendor/arch_view")
+local VENDOR_DIR = bootstrap_env.vendor_dir
+local ARCH_VIEW_DIR = common.join_path(VENDOR_DIR, "arch_view")
 local ARCH_CONFIG_PATH = common.join_path(REPO_ROOT, "tools/quality/arch/config.json")
 
 local M = {}
