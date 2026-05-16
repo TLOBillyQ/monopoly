@@ -173,25 +173,34 @@ function movement_steps.handlers()
       return true
     end,
 
-    ["玩家掷出<p1>"] = function(world, example)
-      local roll = number_utils.to_integer(example.p1)
+    ["当前玩家位于位置<p1>"] = function(world, example)
+      local pos = number_utils.to_integer(example.p1)
+      _ensure_world_board(world)
+      world.player.position = pos
+      return true
+    end,
+
+    ["棋盘共有<p4>格"] = function(world, example)
+      local size = number_utils.to_integer(example.p4)
+      world.board.size = size
+      return true
+    end,
+
+    ["玩家掷出<p2>"] = function(world, example)
+      local roll = number_utils.to_integer(example.p2)
       world.dice_roll = roll
-      local new_pos = _forward_position(world.player.position, roll, world.board.size)
+      local new_pos = world.player.position + roll
+      if new_pos > world.board.size then
+        new_pos = world.board.size
+      end
       world.player.position = new_pos
       return true
     end,
 
-    ["玩家前进<p1>步"] = function(world, example)
-      local expected_steps = number_utils.to_integer(example.p1)
-      if world.dice_roll ~= expected_steps then
-        return nil, "expected " .. tostring(expected_steps) .. " steps, got " .. tostring(world.dice_roll)
-      end
-      return true
-    end,
-
-    ["玩家不能超过终点"] = function(world)
-      if world.player.position > world.board.size then
-        return nil, "player exceeded board end"
+    ["玩家位于位置<p3>"] = function(world, example)
+      local expected = number_utils.to_integer(example.p3)
+      if world.player.position ~= expected then
+        return nil, "expected position " .. tostring(expected) .. ", got " .. tostring(world.player.position)
       end
       return true
     end,
