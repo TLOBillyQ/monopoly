@@ -33,6 +33,36 @@ local function _handlers()
       end
       return true
     end,
+
+    ["项目验收步骤已加载"] = function(world)
+      world.handlers_loaded = true
+      return true
+    end,
+
+    ["文本值为<p1>"] = function(world, example)
+      world.raw_text = example.p1
+      return true
+    end,
+
+    ["项目将文本转换为整数"] = function(world)
+      world.integer_result = number_utils.to_integer(world.raw_text)
+      return true
+    end,
+
+    ["整数结果为<p2>"] = function(world, example)
+      if world.handlers_loaded ~= true then
+        return nil, "acceptance step handlers were not loaded"
+      end
+
+      local expected = number_utils.to_integer(example.p2)
+      if expected == nil then
+        return nil, "expected result is not an integer: " .. tostring(example.p2)
+      end
+      if world.integer_result ~= expected then
+        return nil, "expected " .. tostring(expected) .. ", got " .. tostring(world.integer_result)
+      end
+      return true
+    end,
   }
 end
 

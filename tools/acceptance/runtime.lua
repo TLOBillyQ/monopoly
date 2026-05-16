@@ -1,12 +1,6 @@
-local runtime = {}
+local source = require("acceptance.source")
 
-local function _parameters(text)
-  local values = {}
-  for name in tostring(text or ""):gmatch("<([A-Za-z0-9_]+)>") do
-    values[#values + 1] = name
-  end
-  return values
-end
+local runtime = {}
 
 local function _execution_examples(scenario)
   if #(scenario.examples or {}) == 0 then
@@ -19,10 +13,10 @@ local function _execution_name(scenario, example_index)
   return tostring(scenario.name or "scenario") .. "/example_" .. tostring(example_index)
 end
 
-local function _resolve_step(step, example)
-  for _, parameter in ipairs(_parameters(step.text)) do
+local function _resolve_step(ir, step, example)
+  for _, parameter in ipairs(source.extract_parameters(step.text)) do
     if example[parameter] == nil then
-      return nil, "missing example value: " .. tostring(parameter)
+      return nil, source.step_error(ir, step, "missing example value: " .. tostring(source.field_name(ir, parameter)))
     end
   end
 
@@ -32,13 +26,13 @@ local function _resolve_step(step, example)
   return resolved
 end
 
-local function _run_step(world, example, step, handlers)
+local function _run_step(ir, world, example, step, handlers)
   local handler = (handlers or {})[step.text]
   if handler == nil then
-    return nil, "unsupported step: " .. tostring(step.text)
+    return nil, source.step_error(ir, step, "unsupported step: " .. tostring(step.text))
   end
 
-  local resolved_text, resolve_err = _resolve_step(step, example)
+  local resolved_text, resolve_err = _resolve_step(ir, step, example)
   if resolved_text == nil then
     return nil, resolve_err
   end
@@ -64,7 +58,7 @@ function runtime.run_execution(ir, scenario, example, handlers)
   end
 
   for _, step in ipairs(steps) do
-    local ok, err = _run_step(world, example or {}, step, handlers)
+    local ok, err = _run_step(ir, world, example or {}, step, handlers)
     if not ok then
       return nil, err
     end

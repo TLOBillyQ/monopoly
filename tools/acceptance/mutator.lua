@@ -3,21 +3,12 @@ local generator = require("acceptance.generator")
 local gherkin_parser = require("acceptance.gherkin_parser")
 local json = require("acceptance.json")
 local runner = require("acceptance.runner")
+local source = require("acceptance.source")
+local table_shape = require("acceptance.table_shape")
 
 local mutator = {}
 
-local function _sorted_keys(map)
-  local keys = {}
-  for key in pairs(map or {}) do
-    keys[#keys + 1] = key
-  end
-  table.sort(keys)
-  return keys
-end
-
-local function _trim(text)
-  return tostring(text or ""):match("^%s*(.-)%s*$")
-end
+local _trim = source.trim
 
 local function _deep_copy(value)
   if type(value) ~= "table" then
@@ -233,7 +224,7 @@ function mutator.build_mutations(ir)
   local mutations = {}
   for scenario_index, scenario in ipairs(ir.scenarios or {}) do
     for example_index, example in ipairs(scenario.examples or {}) do
-      for _, key in ipairs(_sorted_keys(example)) do
+      for _, key in ipairs(table_shape.sorted_keys(example)) do
         local path = "$.scenarios["
           .. tostring(scenario_index - 1)
           .. "].examples["
@@ -248,6 +239,10 @@ function mutator.build_mutations(ir)
             id = id,
             path = path,
             description = path .. ": " .. original .. " -> " .. mutated,
+            display_description = source.mutation_description(ir, scenario, key, original, mutated),
+            source_path = source.path_from_ir(ir),
+            source_line = source.field_line(ir, scenario, key),
+            source_field = source.field_name(ir, key),
             original = original,
             mutated = mutated,
             scenario_index = scenario_index,
@@ -384,7 +379,11 @@ function mutator.format_text_report(report)
     .. tostring(summary.errors)
 
   for _, result in ipairs(report.results or {}) do
-    lines[#lines + 1] = string.format("%-8s %s", result.status, result.mutation.description)
+    lines[#lines + 1] = string.format(
+      "%-8s %s",
+      result.status,
+      result.mutation.display_description or result.mutation.description
+    )
     if result.status == "survived" or result.status == "error" then
       if result.error ~= "" then
         lines[#lines + 1] = "  error: " .. tostring(result.error)
@@ -414,9 +413,12 @@ function mutator.format_json_report(report)
       Mutation = {
         ID = result.mutation.id,
         Path = result.mutation.path,
-        Description = result.mutation.description,
+        Description = result.mutation.display_description or result.mutation.description,
         Original = result.mutation.original,
         Mutated = result.mutation.mutated,
+        SourcePath = result.mutation.source_path,
+        SourceLine = result.mutation.source_line,
+        SourceField = result.mutation.source_field,
       },
       Status = result.status,
       Output = result.output,
