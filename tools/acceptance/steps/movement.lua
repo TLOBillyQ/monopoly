@@ -188,12 +188,16 @@ function movement_steps.handlers()
 
     ["玩家掷出<p2>"] = function(world, example)
       local roll = number_utils.to_integer(example.p2)
-      world.dice_roll = roll
-      local new_pos = world.player.position + roll
-      if new_pos > world.board.size then
-        new_pos = world.board.size
+      local start = world.player.position
+      local size = world.board.size
+      local pass_count = 0
+      for s = 1, roll do
+        if (start + s) % size == 0 then
+          pass_count = pass_count + 1
+        end
       end
-      world.player.position = new_pos
+      world.player.position = (start + roll) % size
+      world.pass_start_count = pass_count
       return true
     end,
 
@@ -201,6 +205,14 @@ function movement_steps.handlers()
       local expected = number_utils.to_integer(example.p3)
       if world.player.position ~= expected then
         return nil, "expected position " .. tostring(expected) .. ", got " .. tostring(world.player.position)
+      end
+      return true
+    end,
+
+    ["玩家经过起点<p5>次"] = function(world, example)
+      local expected = number_utils.to_integer(example.p5)
+      if world.pass_start_count ~= expected then
+        return nil, "expected pass-start " .. tostring(expected) .. ", got " .. tostring(world.pass_start_count)
       end
       return true
     end,
