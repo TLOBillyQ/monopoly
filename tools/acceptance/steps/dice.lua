@@ -22,6 +22,32 @@ local function _sum(values)
   return total
 end
 
+local function _set_raw_roll(world, raw_total)
+  world.dice.results = { raw_total }
+  world.dice.total = raw_total
+  world.dice.actual_steps = raw_total * world.dice.multiplier
+  if world.dice.multiplier > 1 then
+    world.dice.consumed_multiplier = true
+    world.dice.multiplier = 1
+  end
+end
+
+local function _check_all_dice_equal(world, expected)
+  for i, result in ipairs(world.dice.results) do
+    if result ~= expected then
+      return nil, "die " .. tostring(i) .. " expected " .. tostring(expected) .. ", got " .. tostring(result)
+    end
+  end
+  return true
+end
+
+local function _check_actual_steps(world, expected)
+  if world.dice.actual_steps ~= expected then
+    return nil, "expected actual steps " .. tostring(expected) .. ", got " .. tostring(world.dice.actual_steps)
+  end
+  return true
+end
+
 function dice_steps.handlers()
   return {
     ["当前玩家准备掷骰"] = function(world)
@@ -141,21 +167,11 @@ function dice_steps.handlers()
     end,
 
     ["每颗骰子结果均为<p4>"] = function(world, example)
-      local expected = number_utils.to_integer(example.p4)
-      for i, result in ipairs(world.dice.results) do
-        if result ~= expected then
-          return nil, "die " .. tostring(i) .. " expected " .. tostring(expected) .. ", got " .. tostring(result)
-        end
-      end
-      return true
+      return _check_all_dice_equal(world, number_utils.to_integer(example.p4))
     end,
 
     ["移动步数为<p5>"] = function(world, example)
-      local expected = number_utils.to_integer(example.p5)
-      if world.dice.actual_steps ~= expected then
-        return nil, "expected steps " .. tostring(expected) .. ", got " .. tostring(world.dice.actual_steps)
-      end
-      return true
+      return _check_actual_steps(world, number_utils.to_integer(example.p5))
     end,
 
     ["玩家使用了遥控骰子设定点数为5"] = function(world)
@@ -191,22 +207,12 @@ function dice_steps.handlers()
       if raw == nil then
         return nil, "invalid raw total: " .. tostring(example.p7)
       end
-      world.dice.results = { raw }
-      world.dice.total = raw
-      world.dice.actual_steps = raw * world.dice.multiplier
-      if world.dice.multiplier > 1 then
-        world.dice.consumed_multiplier = true
-        world.dice.multiplier = 1
-      end
+      _set_raw_roll(world, raw)
       return true
     end,
 
     ["实际移动步数为<p8>"] = function(world, example)
-      local expected = number_utils.to_integer(example.p8)
-      if world.dice.actual_steps ~= expected then
-        return nil, "expected actual steps " .. tostring(expected) .. ", got " .. tostring(world.dice.actual_steps)
-      end
-      return true
+      return _check_actual_steps(world, number_utils.to_integer(example.p8))
     end,
 
     ["加倍卡效果消耗后倍率重置为1"] = function(world)
@@ -227,19 +233,11 @@ function dice_steps.handlers()
     end,
 
     ["每颗骰子结果为6"] = function(world)
-      for i, result in ipairs(world.dice.results) do
-        if result ~= 6 then
-          return nil, "die " .. tostring(i) .. " expected 6, got " .. tostring(result)
-        end
-      end
-      return true
+      return _check_all_dice_equal(world, 6)
     end,
 
     ["实际移动步数为24"] = function(world)
-      if world.dice.actual_steps ~= 24 then
-        return nil, "expected 24 steps, got " .. tostring(world.dice.actual_steps)
-      end
-      return true
+      return _check_actual_steps(world, 24)
     end,
 
     ["玩家没有骰子加倍卡"] = function(world)
@@ -248,17 +246,12 @@ function dice_steps.handlers()
     end,
 
     ["玩家掷骰得到原始点数7"] = function(world)
-      world.dice.results = { 7 }
-      world.dice.total = 7
-      world.dice.actual_steps = 7 * world.dice.multiplier
+      _set_raw_roll(world, 7)
       return true
     end,
 
     ["实际移动步数为7"] = function(world)
-      if world.dice.actual_steps ~= 7 then
-        return nil, "expected 7 steps, got " .. tostring(world.dice.actual_steps)
-      end
-      return true
+      return _check_actual_steps(world, 7)
     end,
   }
 end

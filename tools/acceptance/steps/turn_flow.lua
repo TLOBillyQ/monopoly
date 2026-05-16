@@ -22,6 +22,13 @@ local function _new_turn_state(player_count)
   }
 end
 
+local function _ensure_turn(world)
+  if not world.turn then
+    world.turn = _new_turn_state(4)
+  end
+  return world.turn
+end
+
 local function _next_active_player(turn, current_index)
   local count = #turn.players
   local index = current_index
@@ -70,18 +77,12 @@ function turn_flow_steps.handlers()
     end,
 
     ["玩家2已被淘汰"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
-      world.turn.players[2].eliminated = true
+      _ensure_turn(world).players[2].eliminated = true
       return true
     end,
 
     ["当前是玩家1的回合"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
-      world.turn.current_player_index = 1
+      _ensure_turn(world).current_player_index = 1
       return true
     end,
 
@@ -103,10 +104,7 @@ function turn_flow_steps.handlers()
       if turns == nil then
         return nil, "invalid detained turns: " .. tostring(example.p4)
       end
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
-      world.turn.players[1].detained_turns = turns
+      _ensure_turn(world).players[1].detained_turns = turns
       world.current_detained = world.turn.players[1]
       return true
     end,
@@ -148,11 +146,9 @@ function turn_flow_steps.handlers()
     end,
 
     ["玩家剩余停留回合为1"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
-      world.turn.players[1].detained_turns = 1
-      world.current_detained = world.turn.players[1]
+      local turn = _ensure_turn(world)
+      turn.players[1].detained_turns = 1
+      world.current_detained = turn.players[1]
       return true
     end,
 
@@ -178,10 +174,7 @@ function turn_flow_steps.handlers()
     end,
 
     ["玩家本回合使用了遥控骰子"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
-      world.turn.players[1].temp_state.remote_dice_active = true
+      _ensure_turn(world).players[1].temp_state.remote_dice_active = true
       return true
     end,
 
@@ -216,10 +209,7 @@ function turn_flow_steps.handlers()
     end,
 
     ["玩家未被扣留且未被淘汰"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
-      local player = world.turn.players[1]
+      local player = _ensure_turn(world).players[1]
       player.detained_turns = 0
       player.eliminated = false
       return true
@@ -240,9 +230,7 @@ function turn_flow_steps.handlers()
     end,
 
     ["玩家落在黑市格"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
+      _ensure_turn(world)
       world.landing = { type = "market", sold_out = false }
       return true
     end,
@@ -285,9 +273,7 @@ function turn_flow_steps.handlers()
     end,
 
     ["玩家落在对手拥有的地块"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
+      _ensure_turn(world)
       world.landing = { type = "opponent_tile", has_rent_free = false, has_seizure_card = false }
       return true
     end,
@@ -339,9 +325,7 @@ function turn_flow_steps.handlers()
     end,
 
     ["玩家面临<p7>选择"] = function(world, example)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
+      _ensure_turn(world)
       world.choice = {
         type = example.p7,
         timeout = nil,
@@ -382,10 +366,7 @@ function turn_flow_steps.handlers()
     end,
 
     ["回合间等待时间已配置"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
-      world.turn.wait_interval_configured = true
+      _ensure_turn(world).wait_interval_configured = true
       return true
     end,
 
@@ -403,10 +384,7 @@ function turn_flow_steps.handlers()
     end,
 
     ["玩家本回合因路障停止移动"] = function(world)
-      if not world.turn then
-        world.turn = _new_turn_state(4)
-      end
-      world.turn.players[1].stopped_by_roadblock = true
+      _ensure_turn(world).players[1].stopped_by_roadblock = true
       return true
     end,
 
