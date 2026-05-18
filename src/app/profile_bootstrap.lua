@@ -127,34 +127,35 @@ local function _apply_player_bootstrap(game, players)
   end
 end
 
-local function _apply_tile_bootstrap(game, tiles)
-  if type(tiles) ~= "table" then
-    return
+local function _apply_tile_owner(game, tile, owner_index)
+  local resolved = _assert_integer_like(owner_index, "owner_player_index")
+  local owner = game.players[resolved]
+  assert(owner ~= nil, "invalid owner_player_index: " .. tostring(resolved))
+  game:set_tile_owner(tile, owner.id)
+  game:set_player_property(owner, tile.id, true)
+end
+
+local function _apply_single_tile_cfg(game, raw_tile_id, tile_cfg, render_bootstrap)
+  assert(type(tile_cfg) == "table", "invalid profile tile config: " .. tostring(raw_tile_id))
+  local tile_id = _assert_integer_like(raw_tile_id, "tile id")
+  local tile = game.board:get_tile_by_id(tile_id)
+  assert(tile ~= nil, "invalid profile tile id: " .. tostring(tile_id))
+  if tile_cfg.owner_player_index ~= nil then
+    _apply_tile_owner(game, tile, tile_cfg.owner_player_index)
   end
+  if tile_cfg.level ~= nil then
+    game:set_tile_level(tile, _assert_integer_like(tile_cfg.level, "tile level"))
+  end
+  if tile_cfg.render_called == true then
+    render_bootstrap.tiles_by_id[tile.id] = true
+  end
+end
+
+local function _apply_tile_bootstrap(game, tiles)
+  if type(tiles) ~= "table" then return end
   local render_bootstrap = _ensure_render_bootstrap(game)
   for raw_tile_id, tile_cfg in pairs(tiles) do
-    assert(type(tile_cfg) == "table", "invalid profile tile config: " .. tostring(raw_tile_id))
-    local tile_id = _assert_integer_like(raw_tile_id, "tile id")
-    local tile = game.board:get_tile_by_id(tile_id)
-    assert(tile ~= nil, "invalid profile tile id: " .. tostring(tile_id))
-
-    local owner_index = tile_cfg.owner_player_index
-    if owner_index ~= nil then
-      local resolved_owner_index = _assert_integer_like(owner_index, "owner_player_index")
-      local owner = game.players[resolved_owner_index]
-      assert(owner ~= nil, "invalid owner_player_index: " .. tostring(resolved_owner_index))
-      game:set_tile_owner(tile, owner.id)
-      game:set_player_property(owner, tile.id, true)
-    end
-
-    if tile_cfg.level ~= nil then
-      local level = _assert_integer_like(tile_cfg.level, "tile level")
-      game:set_tile_level(tile, level)
-    end
-
-    if tile_cfg.render_called == true then
-      render_bootstrap.tiles_by_id[tile.id] = true
-    end
+    _apply_single_tile_cfg(game, raw_tile_id, tile_cfg, render_bootstrap)
   end
 end
 
@@ -176,35 +177,27 @@ local function _resolve_overlay_index(game, raw_tile_id, overlay_kind)
   return board_index
 end
 
+local function _apply_overlay_list(game, entries, kind, place_fn, render_table)
+  for _, entry in ipairs(entries) do
+    local raw_tile_id, render_called = _resolve_overlay_entry(entry)
+    local board_index = _resolve_overlay_index(game, raw_tile_id, kind)
+    place_fn(game, board_index)
+    if render_called then
+      render_table[board_index] = true
+    end
+  end
+end
+
 local function _apply_overlay_bootstrap(game, overlays)
-  if type(overlays) ~= "table" then
-    return
+  if type(overlays) ~= "table" then return end
+  local rb = _ensure_render_bootstrap(game)
+  if type(overlays.roadblocks) == "table" then
+    _apply_overlay_list(game, overlays.roadblocks, "roadblock",
+      function(g, idx) g:place_roadblock(idx) end, rb.overlays.roadblock)
   end
-
-  local render_bootstrap = _ensure_render_bootstrap(game)
-
-  local roadblocks = overlays.roadblocks
-  if type(roadblocks) == "table" then
-    for _, entry in ipairs(roadblocks) do
-      local raw_tile_id, render_called = _resolve_overlay_entry(entry)
-      local board_index = _resolve_overlay_index(game, raw_tile_id, "roadblock")
-      game:place_roadblock(board_index)
-      if render_called then
-        render_bootstrap.overlays.roadblock[board_index] = true
-      end
-    end
-  end
-
-  local mines = overlays.mines
-  if type(mines) == "table" then
-    for _, entry in ipairs(mines) do
-      local raw_tile_id, render_called = _resolve_overlay_entry(entry)
-      local board_index = _resolve_overlay_index(game, raw_tile_id, "mine")
-      game:place_mine(board_index)
-      if render_called then
-        render_bootstrap.overlays.mine[board_index] = true
-      end
-    end
+  if type(overlays.mines) == "table" then
+    _apply_overlay_list(game, overlays.mines, "mine",
+      function(g, idx) g:place_mine(idx) end, rb.overlays.mine)
   end
 end
 

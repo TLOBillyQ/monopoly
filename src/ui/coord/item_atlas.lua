@@ -78,23 +78,20 @@ local function _select_slot(state, slot_index)
   return atlas
 end
 
+local _STRING_ACTION_HANDLERS = {
+  close = function(state, _, _)    return item_atlas.close(state) end,
+  next  = function(state, _, _)    return _page_next(state) end,
+  prev  = function(state, _, _)    return _page_prev(state) end,
+}
+
 function item_atlas.handle_action(state, action, role_id)
-  if action == "close" then
-    return item_atlas.close(state)
-  end
-  if action == "next" then
-    return _page_next(state)
-  end
-  if action == "prev" then
-    return _page_prev(state)
-  end
+  local handler = _STRING_ACTION_HANDLERS[action]
+  if handler then return handler(state, role_id, action) end
   if type(action) == "table" and action.type == "select" then
     return _select_slot(state, action.slot_index)
   end
   local slot_index = number_utils.to_integer(action)
-  if slot_index ~= nil then
-    return _select_slot(state, slot_index)
-  end
+  if slot_index ~= nil then return _select_slot(state, slot_index) end
   local atlas = _ensure_state(state)
   atlas.role_id = role_id or atlas.role_id
   return atlas
