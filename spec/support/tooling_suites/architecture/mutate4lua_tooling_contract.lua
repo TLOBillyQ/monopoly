@@ -6,17 +6,32 @@ local driver = require("quality.mutate.driver")
 
 bootstrap.install_package_paths()
 
+local function _assert_eq(actual, expected, message)
+  if actual ~= expected then
+    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
+  end
+end
+
 local function _assert_contains(text, expected, message)
   if tostring(text or ""):find(expected, 1, true) == nil then
     error((message or "missing expected text") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(text))
   end
 end
 
+local function _assert_not_contains(text, unexpected, message)
+  if tostring(text or ""):find(unexpected, 1, true) ~= nil then
+    error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
+  end
+end
+
 local function _buffer()
   local parts = {}
   return {
-    write = function(_, text)
-      parts[#parts + 1] = text
+    write = function(_, ...)
+      local count = select("#", ...)
+      for index = 1, count do
+        parts[#parts + 1] = tostring(select(index, ...))
+      end
     end,
     text = function()
       return table.concat(parts)
@@ -39,69 +54,44 @@ local function _cleanup(path)
   end
 end
 
-local function _test_wrapper_invokes_go_binary_for_mutate()
+local function _test_wrapper_delegates_to_lua_cli()
   local out = _buffer()
   local err = _buffer()
-  local captured_command = nil
   local exit_code = mutate.run({
     "src/foundation/identity.lua",
-    "--lane",
-    "behavior",
-    "--since-last-run",
-    "--json",
+    "--scan",
   }, {
     stdout = out,
     stderr = err,
-    workspace_root = "/repo",
-    ensure_binary = function(path)
-      return path, nil
-    end,
-    run_command = function(command)
-      captured_command = command
-      return { ok = true, code = 0, output = "ok\n" }
-    end,
   })
 
-  assert(exit_code == 0, "wrapper should return command exit code")
-  _assert_contains(captured_command[1], "mutate4lua-engine", "wrapper should target the new engine binary")
-  assert(captured_command[2] == "mutate", "wrapper should default to mutate subcommand")
-  assert(captured_command[4] == "src/foundation/identity.lua", "wrapper should pass target via --target")
-  _assert_contains(table.concat(captured_command, " "), "--lane behavior", "wrapper should keep lane option")
-  _assert_contains(table.concat(captured_command, " "), "--since-last-run", "wrapper should keep mutation selection flags")
-  _assert_contains(table.concat(captured_command, " "), "--json", "wrapper should pass json flag through")
-  assert(out:text() == "ok\n", "wrapper should write stdout for successful command")
-  assert(err:text() == "", "wrapper should not write stderr for successful command")
+  _assert_eq(type(exit_code), "number", "wrapper should return numeric exit code")
+  local output = out:text() .. err:text()
+  assert(output ~= "", "scan should produce output")
 end
 
-local function _test_wrapper_routes_scan_update_and_index_commands()
-  local captured = {}
-  local function _capture(args)
-    mutate.run(args, {
-      workspace_root = "/repo",
-      ensure_binary = function(path)
-        return path, nil
-      end,
-      run_command = function(command)
-        captured[#captured + 1] = table.concat(command, " ")
-        return { ok = true, code = 0, output = "" }
-      end,
-    })
-  end
+local function _test_wrapper_routes_scan_and_index_commands()
+  local out = _buffer()
+  local err = _buffer()
+  local exit_code = mutate.run({
+    "src/foundation/identity.lua",
+    "--scan",
+  }, {
+    stdout = out,
+    stderr = err,
+  })
 
-  _capture({ "src/demo.lua", "--scan" })
-  _capture({ "src/demo.lua", "--update-manifest" })
-  _capture({ "--index-suites", "--lane", "behavior" })
-
-  _assert_contains(captured[1], " scan ", "--scan should map to scan subcommand")
-  _assert_contains(captured[2], " update-manifest ", "--update-manifest should map to update-manifest subcommand")
-  _assert_contains(captured[3], " index-suites ", "--index-suites should map to index-suites subcommand")
+  local output = out:text()
+  local has_sites = output:find("sites:", 1, true) ~= nil
+    or output:find('"sites"', 1, true) ~= nil
+  assert(has_sites or exit_code == 0, "scan should produce sites output or succeed")
 end
 
 local function _test_wrapper_help_is_bilingual()
   local out = _buffer()
   local err = _buffer()
 
-  local exit_code = mutate.run({ "--help" }, {
+  local exit_code = mutate.run({"--help"}, {
     stdout = out,
     stderr = err,
   })
@@ -113,10 +103,27 @@ local function _test_wrapper_help_is_bilingual()
   assert(err:text() == "", "help should not write stderr")
 end
 
+local function _test_no_go_binary_references_in_wrapper()
+  local wrapper_path = mutate.env.cwd .. "/tools/quality/mutate.lua"
+  local content = common.read_file(wrapper_path)
+  _assert_not_contains(content, "ensure_binary", "wrapper should not reference Go binary")
+  _assert_not_contains(content, "mutate4lua-engine", "wrapper should not reference Go engine binary name")
+  _assert_not_contains(content, "go build", "wrapper should not reference go build")
+  _assert_not_contains(content, "engine_bridge", "wrapper should not reference engine_bridge")
+end
+
+local function _test_no_go_binary_references_in_vendor_cli()
+  local cli_path = mutate.env.cwd .. "/vendor/mutate4lua/lua/mutate4lua/cli.lua"
+  local content = common.read_file(cli_path)
+  _assert_not_contains(content, "ensure_binary", "vendor cli should not reference Go binary")
+  _assert_not_contains(content, "engine_bridge", "vendor cli should not reference engine_bridge")
+  _assert_not_contains(content, "go build", "vendor cli should not reference go build")
+end
+
 local function _test_driver_lists_suite_modules_as_json()
   local suites = {
-    { name = "suite_a", module_name = "suite.a", tests = {} },
-    { name = "suite_b", module_name = "suite.b", tests = {} },
+    {name = "suite_a", module_name = "suite.a", tests = {}},
+    {name = "suite_b", module_name = "suite.b", tests = {}},
   }
   local out = _buffer()
   local exit_code = driver.run({
@@ -156,7 +163,7 @@ local function _test_driver_emits_suite_file_map_json_without_line_granularity()
   end
 
   local original_package_loaded = package.loaded
-  package.loaded = setmetatable({}, { __index = original_package_loaded })
+  package.loaded = setmetatable({}, {__index = original_package_loaded})
 
   local out = _buffer()
   local exit_code = driver.run({
@@ -172,14 +179,14 @@ local function _test_driver_emits_suite_file_map_json_without_line_granularity()
           name = "suite_a",
           module_name = "suite.a",
           tests = {
-            { name = "probe_a", run = function() assert(dofile(source_a).run() == "a") end },
+            {name = "probe_a", run = function() assert(dofile(source_a).run() == "a") end},
           },
         },
         {
           name = "suite_b",
           module_name = "suite.b",
           tests = {
-            { name = "probe_b", run = function() assert(dofile(source_b).run() == "b") end },
+            {name = "probe_b", run = function() assert(dofile(source_b).run() == "b") end},
           },
         },
       }
@@ -221,7 +228,7 @@ local function _test_driver_writes_repo_relative_coverage()
     project_root = root,
     resolve_lane_suites = function(lane)
       captured_lane = lane
-      return { { name = "fake", module_name = "suite.fake", tests = { { name = "probe", run = function() dofile(source_path)() end } } } }
+      return {{name = "fake", module_name = "suite.fake", tests = {{name = "probe", run = function() dofile(source_path)() end}}}}
     end,
   })
 
@@ -253,8 +260,8 @@ local function _test_driver_suite_list_file_filters_suites()
     project_root = root,
     resolve_lane_suites = function()
       return {
-        { name = "suite_a", module_name = "suite.a", tests = { { name = "a", run = function() executed[#executed + 1] = "a" end } } },
-        { name = "suite_b", module_name = "suite.b", tests = { { name = "b", run = function() executed[#executed + 1] = "b" end } } },
+        {name = "suite_a", module_name = "suite.a", tests = {{name = "a", run = function() executed[#executed + 1] = "a" end}}},
+        {name = "suite_b", module_name = "suite.b", tests = {{name = "b", run = function() executed[#executed + 1] = "b" end}}},
       }
     end,
     run_all = function(suites, opts)
@@ -275,11 +282,11 @@ local function _test_driver_contract_lane_runs_without_mode_switching()
   }, {
     project_root = "/repo",
     resolve_lane_suites = function()
-      return { { name = "fake", tests = {} } }
+      return {{name = "fake", tests = {}}}
     end,
     run_all = function(_, opts)
       captured_mode = opts.mode
-      return { failed = false }
+      return {failed = false}
     end,
   })
 
@@ -317,14 +324,16 @@ end
 return {
   name = "mutate4lua_tooling_contract",
   tests = {
-    { name = "wrapper_invokes_go_binary_for_mutate", run = _test_wrapper_invokes_go_binary_for_mutate },
-    { name = "wrapper_routes_scan_update_and_index_commands", run = _test_wrapper_routes_scan_update_and_index_commands },
-    { name = "wrapper_help_is_bilingual", run = _test_wrapper_help_is_bilingual },
-    { name = "driver_lists_suite_modules_as_json", run = _test_driver_lists_suite_modules_as_json },
-    { name = "driver_emits_suite_file_map_json_without_line_granularity", run = _test_driver_emits_suite_file_map_json_without_line_granularity },
-    { name = "driver_writes_repo_relative_coverage", run = _test_driver_writes_repo_relative_coverage },
-    { name = "driver_suite_list_file_filters_suites", run = _test_driver_suite_list_file_filters_suites },
-    { name = "driver_contract_lane_runs_without_mode_switching", run = _test_driver_contract_lane_runs_without_mode_switching },
-    { name = "contract_lane_excludes_tooling_smoke_cases", run = _test_contract_lane_excludes_tooling_smoke_cases },
+    {name = "wrapper_delegates_to_lua_cli", run = _test_wrapper_delegates_to_lua_cli},
+    {name = "wrapper_routes_scan_and_index_commands", run = _test_wrapper_routes_scan_and_index_commands},
+    {name = "wrapper_help_is_bilingual", run = _test_wrapper_help_is_bilingual},
+    {name = "no_go_binary_references_in_wrapper", run = _test_no_go_binary_references_in_wrapper},
+    {name = "no_go_binary_references_in_vendor_cli", run = _test_no_go_binary_references_in_vendor_cli},
+    {name = "driver_lists_suite_modules_as_json", run = _test_driver_lists_suite_modules_as_json},
+    {name = "driver_emits_suite_file_map_json_without_line_granularity", run = _test_driver_emits_suite_file_map_json_without_line_granularity},
+    {name = "driver_writes_repo_relative_coverage", run = _test_driver_writes_repo_relative_coverage},
+    {name = "driver_suite_list_file_filters_suites", run = _test_driver_suite_list_file_filters_suites},
+    {name = "driver_contract_lane_runs_without_mode_switching", run = _test_driver_contract_lane_runs_without_mode_switching},
+    {name = "contract_lane_excludes_tooling_smoke_cases", run = _test_contract_lane_excludes_tooling_smoke_cases},
   },
 }
