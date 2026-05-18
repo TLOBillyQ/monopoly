@@ -231,13 +231,7 @@ function movement_steps.handlers()
 
     ["玩家位于位置<p3>"] = function(world, example)
       local expected = number_utils.to_integer(example.p3)
-      local actual
-      if world.driver then
-        local player = game_driver.current_player(world.driver)
-        actual = game_driver.player_position(world.driver, player) - 1
-      else
-        actual = world.player.position
-      end
+      local actual = world.player.position
       if actual ~= expected then
         return nil, "expected position " .. tostring(expected) .. ", got " .. tostring(actual)
       end
