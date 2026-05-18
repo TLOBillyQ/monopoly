@@ -20,6 +20,9 @@ local function _entropy_token()
 end
 
 local function _os_execute_success(ok, _, code)
+  if type(ok) == "number" then
+    return ok == 0, ok
+  end
   if ok == true and (code == nil or (number_utils.is_numeric(code) and code == 0)) then
     return true, code or 0
   end
