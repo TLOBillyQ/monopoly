@@ -162,30 +162,22 @@ local function _unequip(state, role_id)
   return panel
 end
 
+local _ACTION_HANDLERS = {
+  close   = function(state, _, _)        return skin_panel.close(state) end,
+  next    = function(state, _, _)        return skin_panel.page_next(state) end,
+  prev    = function(state, _, _)        return skin_panel.page_prev(state) end,
+  buy     = function(state, role_id, a)  return skin_panel.unlock(state, role_id, "buy", _action_slot_index(a)) end,
+  gift    = function(state, role_id, a)  return skin_panel.unlock(state, role_id, "gift", _action_slot_index(a)) end,
+  equip   = function(state, role_id, a)  return skin_panel.equip(state, role_id, _action_slot_index(a)) end,
+  unequip = function(state, role_id, _)  return _unequip(state, role_id) end,
+}
+
 function skin_panel.handle_action(state, action, role_id)
   local action_type = _action_type(action)
-  if action_type == "close" then
-    return skin_panel.close(state)
-  end
-  if action_type == "next" then
-    return skin_panel.page_next(state)
-  end
-  if action_type == "prev" then
-    return skin_panel.page_prev(state)
-  end
-  if action_type == "buy" or action_type == "gift" then
-    return skin_panel.unlock(state, role_id, action_type, _action_slot_index(action))
-  end
-  if action_type == "equip" then
-    return skin_panel.equip(state, role_id, _action_slot_index(action))
-  end
-  if action_type == "unequip" then
-    return _unequip(state, role_id)
-  end
+  local handler = _ACTION_HANDLERS[action_type]
+  if handler then return handler(state, role_id, action) end
   local slot_index = number_utils.to_integer(action)
-  if slot_index ~= nil then
-    return skin_panel.equip(state, role_id, slot_index)
-  end
+  if slot_index ~= nil then return skin_panel.equip(state, role_id, slot_index) end
   return _ensure_state(state)
 end
 

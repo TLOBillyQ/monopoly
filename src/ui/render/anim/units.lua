@@ -16,25 +16,16 @@ local _play_demolish_feedback
 
 units.clear_overlay = overlay.clear_overlay
 
-local function _pan_camera_to_tile(state, tile_index, duration, opts)
-  if state == nil or tile_index == nil then
-    return
-  end
-  local pan_to_position = opts and opts.pan_camera_to_position
-  local release = opts and opts.release_target_pan
-  if type(pan_to_position) ~= "function" then
-    return
-  end
+local function _pan_to_position(state, tile_index, opts)
+  if state == nil or tile_index == nil then return false end
+  local pan_fn = opts and opts.pan_camera_to_position
+  if type(pan_fn) ~= "function" then return false end
   local pos = compute.resolve_tile_pos(state, tile_index)
-  if pos == nil then
-    return
-  end
-  if not pan_to_position(state, pos) then
-    return
-  end
-  if type(release) ~= "function" then
-    return
-  end
+  if pos == nil then return false end
+  return pan_fn(state, pos) == true
+end
+
+local function _schedule_pan_release(state, release, duration, opts)
   local schedule = opts and opts.schedule
   if type(schedule) ~= "function" then
     release(state)
@@ -47,6 +38,13 @@ local function _pan_camera_to_tile(state, tile_index, duration, opts)
   schedule(release_after, function()
     release(state)
   end)
+end
+
+local function _pan_camera_to_tile(state, tile_index, duration, opts)
+  if not _pan_to_position(state, tile_index, opts) then return end
+  local release = opts and opts.release_target_pan
+  if type(release) ~= "function" then return end
+  _schedule_pan_release(state, release, duration, opts)
 end
 
 function units.play_overlay(state, anim, duration, opts)
