@@ -61,6 +61,20 @@ local function _backward_position(from, steps, board_size)
   return ((from - 1 - steps) % board_size) + 1
 end
 
+local function _zero_based_position(start, roll, board_size)
+  return (start + roll) % board_size
+end
+
+local function _count_start_passes(start, roll, board_size)
+  local count = 0
+  for s = 1, roll do
+    if (start + s) % board_size == 0 then
+      count = count + 1
+    end
+  end
+  return count
+end
+
 local function _passes_start(from, steps, start_tile, board_size)
   for s = 1, steps do
     local pos = _forward_position(from, s, board_size)
@@ -190,14 +204,8 @@ function movement_steps.handlers()
       local roll = number_utils.to_integer(example.p2)
       local start = world.player.position
       local size = world.board.size
-      local pass_count = 0
-      for s = 1, roll do
-        if (start + s) % size == 0 then
-          pass_count = pass_count + 1
-        end
-      end
-      world.player.position = (start + roll) % size
-      world.pass_start_count = pass_count
+      world.player.position = _zero_based_position(start, roll, size)
+      world.pass_start_count = _count_start_passes(start, roll, size)
       return true
     end,
 
