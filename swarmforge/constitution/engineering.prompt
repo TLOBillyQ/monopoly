@@ -1,10 +1,10 @@
 # Engineering Rules
 
-- On startup, acquire all github tools and get them ready to run.
+- On startup, verify that `lua` and `busted` are available. Quality tools are pre-installed under `vendor/` (mutate4lua, crap4lua, dry4lua, arch_view, scrap4lua).
 - Work in small, reviewable increments.
 - Prefer the simplest design that supports the current behavior and leaves clear options for the next step.
 - Keep tests close to the behavior being changed.
-- Use github.com/unclebob/Acceptance-Pipeline-Specification for Gherkin acceptance tests.
-- Run the relevant local verification command before handoff whenever the project has one.
+- The Gherkin acceptance pipeline is in place under `tools/acceptance/`. Run it with `lua tools/acceptance/run_acceptance.lua`.
+- Run the relevant local verification command before handoff whenever the project has one. Use `lua tools/quality/verify_full.lua` for comprehensive quality checks.
 - Do not commit unrelated local changes or generated artifacts unless required for the task.
 - Before relying on an unfamiliar command, inspect local help or project documentation.
