@@ -1,5 +1,6 @@
 local number_utils = require("src.foundation.number")
 local shared = require("acceptance.steps.shared")
+local game_driver = require("tools.acceptance.game_driver")
 
 local chance_steps = {}
 
@@ -275,6 +276,10 @@ function chance_steps.handlers()
     end,
 
     ["玩家持有财神守护"] = function(world)
+      if world.driver then
+        local player = game_driver.current_player(world.driver)
+        game_driver.set_player_deity(world.driver, player, "rich")
+      end
       _ensure_player(world)
       world.player.deities = world.player.deities or {}
       world.player.deities.fortune = true
