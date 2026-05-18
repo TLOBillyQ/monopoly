@@ -80,7 +80,7 @@ local function _help_text(command_name)
     "  report --out 会翻译成 vendor CLI 的 --response-json",
     "  report 先通过 Lua bridge 收集 coverage，再以 --request-json 调上游 CLI",
     "  summary 从 crap_report.json 聚合 src/ 行覆盖率，按 tier 分层展示（见 tools/quality/crap/coverage_tiers.lua）",
-    "  裸调用会先生成 tmp/crap_report.json，再打开 tmp/crap_view",
+    "  裸调用只生成 tmp/crap_report.json（不打开 viewer）",
   }, "\n") .. "\n"
 end
 
@@ -861,13 +861,6 @@ local function _run_internal(args, env)
       return { ok = false, code = report_result.code or 1 }
     end
     _write_success_path(stdout, report_result.output, "crap report json", report_options.out)
-    local viewer_result = _run_viewer(_parse_viewer_args({ "--in-json", DEFAULT_REPORT_JSON, "--out-dir", DEFAULT_VIEW_DIR, "--open" }), env)
-    if viewer_result.ok ~= true then
-      stderr:write(tostring(viewer_result.err or viewer_result.output or ""), "\n")
-      return { ok = false, code = viewer_result.code or 1 }
-    end
-    _write_success_path(stdout, viewer_result.output, "crap viewer index",
-      common.join_path(_resolve_cli_path(REPO_ROOT, DEFAULT_VIEW_DIR), "index.html"))
     return { ok = true, code = 0 }
   end
 

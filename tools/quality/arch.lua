@@ -31,7 +31,7 @@ local function _is_check_command(args)
   return args[1] == "check"
 end
 
-local function _run_filtered_check(args, env)
+local function _run_filtered_check(_args, env)
   local architecture, err = arch_view.analyze({
     project_root = env.cwd or REPO_ROOT,
     config_path = env.default_config_path or ARCH_CONFIG_PATH,
@@ -71,10 +71,14 @@ end
 
 function M.run(args, env)
   env = env or {}
-  if _is_check_command(args or arg or {}) then
-    return _run_filtered_check(args or arg or {}, env)
+  local effective_args = args or arg or {}
+  if #effective_args == 0 then
+    return _run_filtered_check({ "check" }, env)
   end
-  return arch_view.run_cli(args or arg or {}, {
+  if _is_check_command(effective_args) then
+    return _run_filtered_check(effective_args, env)
+  end
+  return arch_view.run_cli(effective_args, {
     cwd = env.cwd or REPO_ROOT,
     asset_root = env.asset_root or _normalize_path(ARCH_VIEW_DIR .. "/viewer"),
     default_config_path = env.default_config_path or ARCH_CONFIG_PATH,
