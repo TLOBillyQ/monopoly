@@ -18,7 +18,6 @@ last_verified: 2026-05-04
 | 测试车道与质量职责 | `architecture/quality-map.md` | behavior/contract/guard/arch/crap 分工 |
 | 静态架构扫描 | `reports/arch-view.md` | arch_view 工具报告 |
 | 风险热点（CRAP） | `reports/crap.md` | 复杂度×覆盖率热点 |
-| 语义导航（SCRAP） | `guides/semantic-navigation.md` | scrap4lua 工具指南 |
 | 变异测试 | `guides/mutation-testing.md` | mutate4lua 工具指南 |
 | 行为测试 warn 判读 | `reports/behavior-warns.md` | warn 白名单说明 |
 | 覆盖率报告 | `reports/coverage.md` | 覆盖率基线与趋势 |

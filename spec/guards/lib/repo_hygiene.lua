@@ -58,7 +58,6 @@ function M.run()
   local tracked_pathspecs = {
     ".claude/worktrees",
     "tools/quality/arch/viewer",
-    "tools/quality/scrap/viewer",
     "tools/loc_engine/monopoly-loc.exe",
   }
   local violations = {}

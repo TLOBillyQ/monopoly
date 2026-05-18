@@ -10,7 +10,3 @@
 	path = vendor/mutate4lua
 	url = https://github.com/TLOBillyQ/mutate4lua.git
 	ignore = untracked
-[submodule "vendor/scrap4lua"]
-	path = vendor/scrap4lua
-	url = https://github.com/TLOBillyQ/scrap4lua.git
-	ignore = untracked

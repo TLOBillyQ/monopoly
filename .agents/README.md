@@ -18,7 +18,6 @@ last_verified: 2026-05-04
 | 测试车道与质量职责 | `docs/architecture/quality-map.md` |
 | 静态架构扫描报告 | `docs/reports/arch-view.md` |
 | 风险热点（CRAP）报告 | `docs/reports/crap.md` |
-| 语义导航（SCRAP） | `docs/guides/semantic-navigation.md` |
 | 变异测试 | `docs/guides/mutation-testing.md` |
 | 行为测试 warn 判读 | `docs/reports/behavior-warns.md` |
 | 覆盖率报告 | `docs/reports/coverage.md` |

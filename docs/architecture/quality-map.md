@@ -181,13 +181,11 @@ last_verified: 2026-05-04
 |------|-----------|------|---------|
 | `loc` | `lua tools/quality/loc.lua` | 分析最近3天 Git 历史代码行数变化 | **实时** — 每次从 Git 重新计算 |
 | `crap` | `lua tools/quality/crap.lua` | 等价于 `report` → `viewer --open` | **实时** — 重新运行测试收集覆盖率 |
-| `scrap` | `lua tools/quality/scrap.lua` | 默认执行 `viewer`（需先生成索引） | **用缓存** — 读取已有索引，不自动重新扫描 |
 | `mutate` | `lua tools/quality/mutate.lua` | ❌ 报错 — 必须指定 `<file.lua>` | N/A |
 | `arch` | `lua tools/quality/arch.lua` | 打开 viewer（需先有分析结果） | **用缓存** — 读取已生成的 JSON |
 
 **关键区别：**
 - `crap` 裸调用会**实时跑测试**，耗时约 9-10s，结果始终反映当前代码状态
-- `scrap` 裸调用**不自动重新索引**，如需更新需先跑 `scrap.lua index`
 - `arch` 裸调用**不自动重新分析**，如需更新需配合其他命令生成新 JSON
 - `mutate` **不支持裸调用**，必须指定目标文件
 

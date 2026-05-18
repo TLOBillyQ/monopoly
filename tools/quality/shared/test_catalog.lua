@@ -21,7 +21,6 @@ _G.assert = _luassert
 local contract_modules = {
   -- kept as tooling-support stubs: required by tooling lane suites for tooling_tests field
   "spec.support.tooling_suites.architecture.script_tools_contract",
-  "spec.support.tooling_suites.architecture.scrap4lua_contract",
 }
 
 local tooling_modules = {
