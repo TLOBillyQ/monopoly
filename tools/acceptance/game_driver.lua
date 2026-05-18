@@ -55,14 +55,8 @@ function driver.move(ctx, player, steps)
 end
 
 function driver.set_next_rolls(ctx, values)
-  local queue = ctx._rng_queue
-  for i = 1, #queue do
-    queue[i] = nil
-  end
-  for i, v in ipairs(values) do
-    queue[i] = v
-  end
-  ctx.game.rng = _build_queue_rng(queue)
+  ctx._rng_queue = values
+  ctx.game.rng = _build_queue_rng(values)
 end
 
 function driver.player_position(_, player)
