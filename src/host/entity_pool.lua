@@ -67,21 +67,24 @@ function entity_pool.release(unit_key, handle)
   end
 end
 
+local function _prewarm_one(unit_key, b, sample_pos, rotation, scale)
+  if #b.idle >= _max_idle then return false end
+  local park = runtime_constants.entity_pool_park_pos
+  local pos = sample_pos or park
+  local handle = unit_lifecycle.create_unit_with_scale(unit_key, pos, rotation, scale)
+  if not handle then return true end
+  _call_method(handle, "set_model_visible", false)
+  _call_method(handle, "set_position", park)
+  b.idle[#b.idle + 1] = handle
+  return true
+end
+
 function entity_pool.prewarm(unit_key, count, rotation, scale, sample_pos)
   if unit_key == nil then return end
   if not number_utils.is_numeric(count) or count <= 0 then return end
   local b = _bucket(unit_key)
-  local park = runtime_constants.entity_pool_park_pos
-  local pos = sample_pos or park
-  local to_create = count - #b.idle
-  for _ = 1, to_create do
-    if #b.idle >= _max_idle then break end
-    local handle = unit_lifecycle.create_unit_with_scale(unit_key, pos, rotation, scale)
-    if handle then
-      _call_method(handle, "set_model_visible", false)
-      _call_method(handle, "set_position", park)
-      b.idle[#b.idle + 1] = handle
-    end
+  for _ = 1, count - #b.idle do
+    if not _prewarm_one(unit_key, b, sample_pos, rotation, scale) then break end
   end
 end
 
