@@ -42,12 +42,37 @@ local function _new_game(board, player)
   }
 end
 
+local function _ensure_world_board(world)
+  if not world.board then
+    local board = _new_board(BOARD_SIZE)
+    local player = _new_player(1)
+    world.board = board
+    world.player = player
+    world.game = _new_game(board, player)
+  end
+  return world.board
+end
+
 local function _forward_position(from, steps, board_size)
   return ((from - 1 + steps) % board_size) + 1
 end
 
 local function _backward_position(from, steps, board_size)
   return ((from - 1 - steps) % board_size) + 1
+end
+
+local function _zero_based_position(start, roll, board_size)
+  return (start + roll) % board_size
+end
+
+local function _count_start_passes(start, roll, board_size)
+  local count = 0
+  for s = 1, roll do
+    if (start + s) % board_size == 0 then
+      count = count + 1
+    end
+  end
+  return count
 end
 
 local function _passes_start(from, steps, start_tile, board_size)
@@ -152,16 +177,51 @@ end
 function movement_steps.handlers()
   return {
     ["游戏已初始化标准棋盘"] = function(world)
-      local board = _new_board(BOARD_SIZE)
-      local player = _new_player(1)
-      world.board = board
-      world.player = player
-      world.game = _new_game(board, player)
+      _ensure_world_board(world)
       return true
     end,
 
     ["当前玩家位于起点"] = function(world)
+      _ensure_world_board(world)
       world.player.position = world.board.start_tile
+      return true
+    end,
+
+    ["当前玩家位于位置<p1>"] = function(world, example)
+      local pos = number_utils.to_integer(example.p1)
+      _ensure_world_board(world)
+      world.player.position = pos
+      return true
+    end,
+
+    ["棋盘共有<p4>格"] = function(world, example)
+      local size = number_utils.to_integer(example.p4)
+      world.board.size = size
+      return true
+    end,
+
+    ["玩家掷出<p2>"] = function(world, example)
+      local roll = number_utils.to_integer(example.p2)
+      local start = world.player.position
+      local size = world.board.size
+      world.player.position = _zero_based_position(start, roll, size)
+      world.pass_start_count = _count_start_passes(start, roll, size)
+      return true
+    end,
+
+    ["玩家位于位置<p3>"] = function(world, example)
+      local expected = number_utils.to_integer(example.p3)
+      if world.player.position ~= expected then
+        return nil, "expected position " .. tostring(expected) .. ", got " .. tostring(world.player.position)
+      end
+      return true
+    end,
+
+    ["玩家经过起点<p5>次"] = function(world, example)
+      local expected = number_utils.to_integer(example.p5)
+      if world.pass_start_count ~= expected then
+        return nil, "expected pass-start " .. tostring(expected) .. ", got " .. tostring(world.pass_start_count)
+      end
       return true
     end,
 

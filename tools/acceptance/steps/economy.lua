@@ -436,6 +436,50 @@ function economy_steps.handlers()
       return true
     end,
 
+    ["游戏已开始"] = function(world)
+      _ensure_player(world)
+      return true
+    end,
+
+    ["玩家持有初始资金"] = function(world)
+      _ensure_player(world)
+      world.player.cash = world.player.cash or 10000
+      return true
+    end,
+
+    ["玩家余额为<p1>"] = function(world, example)
+      local amount = number_utils.to_integer(example.p1)
+      _ensure_player(world)
+      world.player.cash = amount
+      return true
+    end,
+
+    ["玩家需要支付<p2>"] = function(world, example)
+      local amount = number_utils.to_integer(example.p2)
+      if world.player.cash < amount then
+        world.player.bankrupt = true
+      else
+        world.player.cash = world.player.cash - amount
+      end
+      return true
+    end,
+
+    ["玩家<p3>"] = function(world, example)
+      local result = example.p3
+      if result == "破产" then
+        if not world.player.bankrupt then
+          return nil, "player should be bankrupt"
+        end
+      elseif result == "存活" then
+        if world.player.bankrupt then
+          return nil, "player should survive"
+        end
+      else
+        return nil, "unknown result: " .. tostring(result)
+      end
+      return true
+    end,
+
     ["税金为0"] = function(world)
       if world.tax_amount ~= 0 then
         return nil, "expected tax 0, got " .. tostring(world.tax_amount)
