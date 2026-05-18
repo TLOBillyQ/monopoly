@@ -308,10 +308,6 @@ local function _test_contract_lane_excludes_tooling_smoke_cases()
     "contract lane should exclude arch_view scan tooling smoke")
   assert((cases_by_suite["architecture.arch_view_contract"] or ""):find("viewer_command_writes_static_bundle", 1, true) == nil,
     "contract lane should exclude arch_view viewer tooling smoke")
-  assert((cases_by_suite["architecture.scrap4lua_contract"] or ""):find("index_writes_json_contract", 1, true) == nil,
-    "contract lane should exclude scrap index tooling smoke")
-  assert((cases_by_suite["architecture.scrap4lua_contract"] or ""):find("viewer_exports_static_bundle_from_generated_index", 1, true) == nil,
-    "contract lane should exclude scrap viewer tooling smoke")
 end
 
 return {

@@ -27,7 +27,7 @@ last_verified: 2026-05-04
 docs/
   architecture/   # 架构契约（boundaries / layer-model / quality-map）
   decisions/      # ADR 序列
-  guides/         # 工具使用指南（mutate4lua / scrap4lua / front-matter）
+  guides/         # 工具使用指南（mutate4lua / front-matter）
   reports/        # 工具生成报告（arch-view / crap / behavior-warns / coverage / health-signals）
   reference/eggy/ # 第三方宿主文档（只读参考）
   product/        # 产品 backlog、地图、策划原稿

@@ -485,7 +485,6 @@ local function _test_cli_help_text_is_bilingual()
     { "tools/quality/crap.lua", "--help" },
     { "tools/quality/encoding.lua", "--help" },
     { "tools/quality/mutate.lua", "--help" },
-    { "tools/quality/scrap.lua", "--help" },
   }
 
   -- 并行执行所有 help 命令以减少总耗时
@@ -877,24 +876,6 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
   end)
 end
 
-local function _test_scrap_viewer_supports_unicode_output_path()
-  _with_clean_tmp("scrap_viewer_unicode_output", function(tmp_root)
-    local out_dir = common.join_path(tmp_root, "scrap_目标/中文 English")
-    local result = _run_lua({
-      "tools/quality/scrap.lua",
-      "viewer",
-      "--out-dir",
-      out_dir,
-    })
-
-    assert(result.ok == true, "scrap viewer should support unicode output paths")
-    _assert_contains(result.output, "scrap4lua viewer ok", "scrap viewer output should include English success text")
-    _assert_contains(result.output, "视图已生成", "scrap viewer output should include Chinese success text")
-    assert(common.path_exists(common.join_path(out_dir, "index.html")) == true, "scrap viewer should write index.html")
-    assert(common.path_exists(common.join_path(out_dir, "scrap_data.js")) == true, "scrap viewer should write scrap_data.js")
-  end)
-end
-
 local function _test_mutate_wrapper_scan_json_output()
   local result = _run_lua({
     "tools/quality/mutate.lua",
@@ -1120,7 +1101,6 @@ local contract_tests = {
   { name = "windows_utf8_console_failure_is_non_throwing", run = _test_windows_utf8_console_failure_is_non_throwing },
   { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
   { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
-  { name = "scrap_viewer_supports_unicode_output_path", run = _test_scrap_viewer_supports_unicode_output_path },
   { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
   { name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
   { name = "loc_scan_counts_worktree_with_go_engine", run = _test_loc_scan_counts_worktree_with_go_engine },

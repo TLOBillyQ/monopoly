@@ -9,8 +9,8 @@ owner: specifier
 ## 背景
 
 dry4lua 采用的 LuaJIT + filter 模式被确认为最优方案。
-本规格定义将 arch_view、scrap4lua、crap4lua、mutate4lua 四个工具
-统一到同一模式的目标行为。
+本规格定义将 arch_view、crap4lua、mutate4lua 三个工具
+统一到同一模式的目标行为。scrap4lua 已从仓库移除（功能被 AI agent 替代）。
 
 ## 模式定义
 
@@ -71,40 +71,7 @@ CLI: luajit tools/quality/dry.lua [--threshold N] [--min-lines N] [path...]
 
 ---
 
-## 工具二：scrap4lua
-
-### 现状
-
-- 纯 Lua，LuaJIT 兼容（`goto` 在 JIT 2.1 可用）
-- Lua 配置（`tools/quality/scrap/config.lua`）定义 collection — 语义必需，保留
-- Wrapper 230 行，含 arg parsing、path resolution、tmp 路径映射
-
-### 目标行为
-
-- `luajit tools/quality/scrap.lua index` 与 `lua` 版输出一致
-- 所有子命令（index / find / clusters / viewer）通过 LuaJIT 可运行
-- Wrapper ≤ 30 行有效代码
-- arg parsing、path resolution、help text 移入 vendor CLI
-
-### 变更范围
-
-1. Wrapper 精简：arg parsing + path resolution + help 移入 `vendor/scrap4lua/`
-2. `_default_tmp_root` / `_resolve_cli_path` 逻辑移入 vendor CLI，
-   wrapper 只传入 Monopoly-specific 默认值（config path、tmp env var name）
-3. 配置文件保留（Lua），不变
-
-### 验收标准
-
-| # | 标准 | 验证方式 |
-|---|------|----------|
-| S1 | `luajit tools/quality/scrap.lua index --out /tmp/test.json` 退出码 0 | 运行验证 |
-| S2 | 输出 JSON 与 `lua` 版结构一致 | diff 比较 |
-| S3 | Wrapper 有效代码行 ≤ 30 | grep 计数 |
-| S4 | `luajit tools/quality/scrap.lua --help` 正常显示 | 运行验证 |
-
----
-
-## 工具三：crap4lua
+## 工具二：crap4lua
 
 ### 现状
 
@@ -168,7 +135,7 @@ luajit tools/quality/crap.lua   （裸调用 = report + viewer --open）
 
 ---
 
-## 工具四：mutate4lua
+## 工具三：mutate4lua
 
 ### 现状
 
@@ -234,9 +201,8 @@ luajit tools/quality/mutate.lua <file.lua> --dry-run
 ## 执行顺序建议
 
 1. **arch_view** — 改动最小，验证 LuaJIT 兼容 + wrapper 精简模式
-2. **scrap4lua** — 同类改动，巩固模式
-3. **crap4lua** — 需新增 Lua 模块替代 Go 二进制
-4. **mutate4lua** — 需新增测试编排逻辑，复杂度最高
+2. **crap4lua** — 需新增 Lua 模块替代 Go 二进制
+3. **mutate4lua** — 需新增测试编排逻辑，复杂度最高
 
 ## 不在范围
 
