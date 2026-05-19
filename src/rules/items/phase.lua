@@ -242,6 +242,69 @@ local function _run_auto_phase(game, player, phase, args)
   return nil
 end
 
+local function _collect_if(slot_states, out, pred)
+  for i = 1, 5 do
+    if pred(slot_states[i]) then
+      out[#out + 1] = slot_states[i]
+    end
+  end
+end
+
+local function _sort_slot_states(slot_states)
+  local sorted = {}
+  _collect_if(slot_states, sorted, function(ss) return ss.item_id ~= nil and ss.available end)
+  _collect_if(slot_states, sorted, function(ss) return ss.item_id ~= nil and not ss.available end)
+  _collect_if(slot_states, sorted, function(ss) return ss.item_id == nil end)
+  return sorted
+end
+
+local function _build_item_alert(cfg, item_id, available)
+  if not available or not cfg or cfg.prompt_style ~= "alert" then
+    return false, nil
+  end
+  return true, (cfg.name or tostring(item_id)) .. "可用！"
+end
+
+local function _build_slot_state(game, player, item, phase)
+  if type(item) ~= "table" or item.id == nil then
+    return { available = false, alert = false, alert_text = nil, item_id = nil, deny_reason = nil }
+  end
+  local can_offer, dr = availability.can_offer_in_phase(game, player, item.id, phase)
+  local available = can_offer == true
+  local cfg = inventory.cfg(item.id)
+  local deny_reason = nil
+  if not available then deny_reason = dr end
+  local alert, alert_text = _build_item_alert(cfg, item.id, available)
+  return {
+    available = available,
+    alert = alert,
+    alert_text = alert_text,
+    item_id = item.id,
+    deny_reason = deny_reason,
+  }
+end
+
+local function _build_option_from_slot(ss)
+  local cfg = inventory.cfg(ss.item_id)
+  local name = cfg and cfg.name
+  return {
+    id = ss.item_id,
+    label = name or tostring(ss.item_id),
+    confirm_title = name,
+    confirm_body = cfg and cfg.description,
+  }
+end
+
+local function _build_slot_options(slot_states)
+  local options = {}
+  for _, ss in ipairs(slot_states) do
+    if ss.available and ss.item_id ~= nil then
+      options[#options + 1] = _build_option_from_slot(ss)
+    end
+  end
+  return options
+end
+
 local function _run_player_phase(game, player, phase, args)
   local spec = phase_module.build_passive_choice_spec(game, player, phase, args)
   if spec == nil then
@@ -261,67 +324,11 @@ function phase_module.build_passive_choice_spec(game, player, phase, args)
   local slot_states = {}
   local item_slots = inventory.items(player)
   for slot_index = 1, 5 do
-    local item = item_slots[slot_index]
-    local available = false
-    local alert = false
-    local alert_text = nil
-    local item_id = nil
-    local deny_reason = nil
-    if type(item) == "table" and item.id ~= nil then
-      local can_offer, dr = availability.can_offer_in_phase(game, player, item.id, phase)
-      available = can_offer == true
-      item_id = item.id
-      deny_reason = not available and dr or nil
-      local cfg = inventory.cfg(item.id)
-      local item_name = cfg and cfg.name or nil
-      if available then
-        if cfg and cfg.prompt_style == "alert" then
-          alert = true
-          alert_text = (item_name or "") .. "可用！"
-        end
-      end
-    end
-    slot_states[slot_index] = {
-      available = available,
-      alert = alert,
-      alert_text = alert_text,
-      item_id = item_id,
-      deny_reason = deny_reason,
-    }
+    slot_states[slot_index] = _build_slot_state(game, player, item_slots[slot_index], phase)
   end
+  slot_states = _sort_slot_states(slot_states)
 
-  local sorted = {}
-  for i = 1, 5 do
-    if slot_states[i].item_id ~= nil and slot_states[i].available then
-      sorted[#sorted + 1] = slot_states[i]
-    end
-  end
-  for i = 1, 5 do
-    if slot_states[i].item_id ~= nil and not slot_states[i].available then
-      sorted[#sorted + 1] = slot_states[i]
-    end
-  end
-  for i = 1, 5 do
-    if slot_states[i].item_id == nil then
-      sorted[#sorted + 1] = slot_states[i]
-    end
-  end
-  slot_states = sorted
-
-  local options = {}
-  for _, ss in ipairs(slot_states) do
-    if ss.available and ss.item_id ~= nil then
-      local cfg = inventory.cfg(ss.item_id)
-      local item_name = cfg and cfg.name or nil
-      options[#options + 1] = {
-        id = ss.item_id,
-        label = item_name or tostring(ss.item_id),
-        confirm_title = cfg and cfg.name or nil,
-        confirm_body = cfg and cfg.description or nil,
-      }
-    end
-  end
-
+  local options = _build_slot_options(slot_states)
   if #options == 0 then
     return nil
   end

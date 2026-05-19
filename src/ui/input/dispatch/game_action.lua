@@ -96,44 +96,50 @@ local function _dispatch_market_tab(game, state, intent, opts, action_port)
   return true
 end
 
+local _INTENT_HANDLERS = {
+  ui_button      = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
+  choice_select  = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
+  choice_cancel  = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
+  market_confirm    = function(s, g, i, o, ap) return _dispatch_market_confirm(g, s, i, o, ap) end,
+  market_page_prev  = function(s, g, i, o, ap) return _dispatch_market_page("market_page_prev", g, s, i, o, ap) end,
+  market_page_next  = function(s, g, i, o, ap) return _dispatch_market_page("market_page_next", g, s, i, o, ap) end,
+  market_tab_select = function(s, g, i, o, ap) return _dispatch_market_tab(g, s, i, o, ap) end,
+}
+
+local function _route_by_intent_type(intent_type, state, game, intent, opts, action_port, helpers)
+  local handler = _INTENT_HANDLERS[intent_type]
+  if handler then return handler(state, game, intent, opts, action_port, helpers) end
+  return false
+end
+
+local function _try_slot_dispatchers(state, game, intent, opts, ap)
+  if item_slot_confirm.dispatch(state, game, intent, opts, ap) then return true end
+  if item_phase_ask_flow.dispatch(state, game, intent, opts, ap) then return true end
+  return _handle_pre_confirm(state, game, intent, opts, ap)
+end
+
+local function _try_enter_pre_confirm(state, intent)
+  if state._pre_confirm_active then return false end
+  if not pre_confirm_flow.needs_pre_confirm(state, intent) then return false end
+  return pre_confirm_flow.enter(state, intent)
+end
+
+local function _try_item_slot(state, intent)
+  return _is_item_slot_click(intent) and item_slot_confirm.try_enter(state, intent)
+end
+
+local function _try_pipeline_early(state, game, intent, opts, ap)
+  if _try_slot_dispatchers(state, game, intent, opts, ap) then return true end
+  if _try_enter_pre_confirm(state, intent) then return true end
+  return _try_item_slot(state, intent) == true
+end
+
 function game_action_dispatcher.dispatch(state, game, intent, opts, action_port, turn_action_helpers)
   local intent_type = intent and intent.type
-  if not intent_type then
-    return false
-  end
+  if not intent_type then return false end
   _normalize_item_slot_flags(state, intent)
-  if item_slot_confirm.dispatch(state, game, intent, opts, action_port) then
-    return true
-  end
-  if item_phase_ask_flow.dispatch(state, game, intent, opts, action_port) then
-    return true
-  end
-  if _handle_pre_confirm(state, game, intent, opts, action_port) then
-    return true
-  end
-  if not state._pre_confirm_active and pre_confirm_flow.needs_pre_confirm(state, intent) then
-    if pre_confirm_flow.enter(state, intent) then
-      return true
-    end
-  end
-  if _is_item_slot_click(intent) and item_slot_confirm.try_enter(state, intent) then
-    return true
-  end
-  if intent_type == "ui_button"
-      or intent_type == "choice_select"
-      or intent_type == "choice_cancel" then
-    return _dispatch_basic_action(state, game, intent, opts, action_port, turn_action_helpers)
-  end
-  if intent_type == "market_confirm" then
-    return _dispatch_market_confirm(game, state, intent, opts, action_port)
-  end
-  if intent_type == "market_page_prev" or intent_type == "market_page_next" then
-    return _dispatch_market_page(intent_type, game, state, intent, opts, action_port)
-  end
-  if intent_type == "market_tab_select" then
-    return _dispatch_market_tab(game, state, intent, opts, action_port)
-  end
-  return false
+  if _try_pipeline_early(state, game, intent, opts, action_port) then return true end
+  return _route_by_intent_type(intent_type, state, game, intent, opts, action_port, turn_action_helpers)
 end
 
 return game_action_dispatcher

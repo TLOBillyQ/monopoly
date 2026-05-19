@@ -165,27 +165,26 @@ local function _resolve_hit_unit(hit)
   return nil
 end
 
-function raycast.resolve_hit_position(hit)
-  if hit == nil then
-    return nil
-  end
-  if type(hit) == "table" then
-    if _vec_component(hit, "x", 1) ~= nil
-        and _vec_component(hit, "y", 2) ~= nil
-        and _vec_component(hit, "z", 3) ~= nil then
-      return hit
-    end
-    for _, key in ipairs(_hit_pos_keys) do
-      local maybe = hit[key]
-      if type(maybe) == "table"
-          and _vec_component(maybe, "x", 1) ~= nil
-          and _vec_component(maybe, "y", 2) ~= nil
-          and _vec_component(maybe, "z", 3) ~= nil then
-        return maybe
-      end
+local function _is_vec3(t)
+  return _vec_component(t, "x", 1) ~= nil
+      and _vec_component(t, "y", 2) ~= nil
+      and _vec_component(t, "z", 3) ~= nil
+end
+
+local function _find_vec3_in_hit(hit)
+  for _, key in ipairs(_hit_pos_keys) do
+    local maybe = hit[key]
+    if type(maybe) == "table" and _is_vec3(maybe) then
+      return maybe
     end
   end
   return nil
+end
+
+function raycast.resolve_hit_position(hit)
+  if type(hit) ~= "table" then return nil end
+  if _is_vec3(hit) then return hit end
+  return _find_vec3_in_hit(hit)
 end
 
 local function _pick_with(api_name, start_pos, end_pos, cfg)

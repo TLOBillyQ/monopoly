@@ -27,13 +27,19 @@ local function _is_test_mode_enabled()
   return enabled == true
 end
 
+local _GAME_TIME_METHODS = { "get_timestamp", "get_hour", "get_minute", "get_second" }
+
+local function _has_game_time_api(game_api)
+  if type(game_api) ~= "table" then return false end
+  if type(logger.configure_game_time) ~= "function" then return false end
+  for _, name in ipairs(_GAME_TIME_METHODS) do
+    if type(game_api[name]) ~= "function" then return false end
+  end
+  return true
+end
+
 local function _configure_game_time_logger(game_api)
-  if game_api ~= nil
-      and type(game_api.get_timestamp) == "function"
-      and type(game_api.get_hour) == "function"
-      and type(game_api.get_minute) == "function"
-      and type(game_api.get_second) == "function"
-      and type(logger.configure_game_time) == "function" then
+  if _has_game_time_api(game_api) then
     logger.configure_game_time(game_api)
     return
   end
@@ -66,6 +72,20 @@ local function _is_anim_debug_enabled()
     return false
   end
   return _has_enabled_debug_role(enabled_by_role)
+end
+
+local function _show_warn_in_ui(text)
+  if type(GlobalAPI.show_message_marquee) == "function" then
+    pcall(GlobalAPI.show_message_marquee, text)
+  elseif type(GlobalAPI.show_tips) == "function" then
+    pcall(GlobalAPI.show_tips, text, 3.0)
+  end
+end
+
+local function _ui_warn_sink(entry)
+  if entry == nil or entry.level ~= "warn" then return end
+  if type(GlobalAPI) ~= "table" then return end
+  _show_warn_in_ui("[warn] " .. tostring(entry.text or ""))
 end
 
 function M.init()
@@ -114,20 +134,7 @@ function M.init()
   end
 
   if type(logger.set_ui_sink) == "function" then
-    logger.set_ui_sink(function(entry)
-      if entry == nil or entry.level ~= "warn" then
-        return
-      end
-      if type(GlobalAPI) ~= "table" then
-        return
-      end
-      local text = "[warn] " .. tostring(entry.text or "")
-      if type(GlobalAPI.show_message_marquee) == "function" then
-        pcall(GlobalAPI.show_message_marquee, text)
-      elseif type(GlobalAPI.show_tips) == "function" then
-        pcall(GlobalAPI.show_tips, text, 3.0)
-      end
-    end)
+    logger.set_ui_sink(_ui_warn_sink)
   end
 
   if not is_release(startup) and type(GlobalAPI) == "table" then

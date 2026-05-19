@@ -4,6 +4,7 @@ local default_ports = require("src.turn.output.default_ports")
 local compose_game = require("src.app.compose_game")
 local game_factory = require("src.app.game_factory")
 local movement = require("src.rules.movement")
+local mine_effect = require("src.rules.effects.mine")
 
 local driver = {}
 
@@ -85,6 +86,74 @@ function driver.tile_level(ctx, index)
     return tile.level
   end
   return nil
+end
+
+function driver.sync_outer_facing(ctx, player)
+  local tile = ctx.game.board:get_tile(player.position)
+  if not tile then return end
+  local map = ctx.game.board.map
+  local next_id = map.outer_next[tile.id]
+  if next_id then
+    ctx.game:set_player_status(player, "move_dir", map.direction(tile.id, next_id))
+  end
+end
+
+function driver.place_roadblock(ctx, tile_id)
+  local idx = ctx.game.board:index_of_tile_id(tile_id)
+  ctx.game:place_roadblock(idx)
+end
+
+function driver.has_roadblock(ctx, tile_id)
+  local idx = ctx.game.board:index_of_tile_id(tile_id)
+  return ctx.game.board:has_roadblock(idx)
+end
+
+function driver.place_mine(ctx, tile_id, data)
+  local idx = ctx.game.board:index_of_tile_id(tile_id)
+  ctx.game:place_mine(idx, data)
+end
+
+function driver.has_mine(ctx, tile_id)
+  local idx = ctx.game.board:index_of_tile_id(tile_id)
+  return ctx.game.board:has_mine(idx)
+end
+
+function driver.set_tile_type(ctx, tile_id, tile_type)
+  local idx = ctx.game.board:index_of_tile_id(tile_id)
+  ctx.game.board:get_tile(idx).type = tile_type
+end
+
+function driver.set_player_deity(ctx, player, name, duration)
+  ctx.game:set_player_deity(player, name, duration or 5)
+end
+
+function driver.tile_n_before_start(ctx, n)
+  local map = ctx.game.board.map
+  local id = map.start_id
+  for _ = 1, n do
+    id = map.outer_prev[id]
+  end
+  return ctx.game.board:index_of_tile_id(id)
+end
+
+function driver.set_player_facing(ctx, player, facing)
+  ctx.game:set_player_status(player, "move_dir", facing)
+end
+
+function driver.move_with_opts(ctx, player, steps, opts)
+  return movement.move(ctx.game, player, steps, opts)
+end
+
+function driver.try_trigger_mine(ctx, player)
+  local pos = player.position
+  if not mine_effect.can_trigger(ctx.game, player, pos) then
+    return nil
+  end
+  local result = mine_effect.apply(ctx.game, player, pos)
+  if result and result.hospitalized then
+    ctx.game:player_apply_hospital_effects(player)
+  end
+  return result
 end
 
 return driver

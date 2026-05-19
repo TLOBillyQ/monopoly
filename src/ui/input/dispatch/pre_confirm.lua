@@ -99,19 +99,7 @@ function pre_confirm_flow.enter(state, intent)
   return true
 end
 
-function pre_confirm_flow.cancel(state)
-  state._pre_confirm_active = nil
-  local source = state._pre_confirm_source_screen
-  state._pre_confirm_source_screen = nil
-  runtime_state.set_pending_choice_id(state, nil)
-
-  local current_model = runtime_state.get_ui_model(state)
-  local choice = current_model and current_model.choice or nil
-  if not choice then
-    return
-  end
-
-  local modal = _modal_ports(state)
+local function _restore_prior_screen(state, source, modal, choice)
   if source == "base_inline" or source == nil then
     if type(modal.close_choice_modal) == "function" then
       modal.close_choice_modal(state)
@@ -121,6 +109,19 @@ function pre_confirm_flow.cancel(state)
       modal.open_choice_modal(state, choice)
     end
   end
+end
+
+function pre_confirm_flow.cancel(state)
+  state._pre_confirm_active = nil
+  local source = state._pre_confirm_source_screen
+  state._pre_confirm_source_screen = nil
+  runtime_state.set_pending_choice_id(state, nil)
+
+  local current_model = runtime_state.get_ui_model(state)
+  local choice = current_model and current_model.choice or nil
+  if not choice then return end
+
+  _restore_prior_screen(state, source, _modal_ports(state), choice)
 end
 
 return pre_confirm_flow
