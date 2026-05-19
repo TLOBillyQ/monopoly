@@ -413,19 +413,7 @@ launch_role() {
   echo -e "  ${CYAN}[${display}]${RESET} started in session ${session}"
 }
 
-open_terminal_window() {
-  local session="$1"
-  local title="$2"
-  osascript <<EOF
-tell application "Terminal"
-  activate
-  set newTab to do script ""
-  do script "cd '$WORKING_DIR' && exec tmux attach-session -t '${session}'" in newTab
-  set custom title of newTab to "${title}"
-  return id of front window
-end tell
-EOF
-}
+KAKU_CLI="/Applications/Kaku.app/Contents/MacOS/kaku"
 
 choose_cleanup_owner() {
   CLEANUP_OWNER_INDEX=1
@@ -479,25 +467,47 @@ echo -e "${GREEN}Tip: Use $WORKING_DIR/swarmtools/notify-agent.sh <role-or-index
 echo -e "${GREEN}Tip: Reattach manually with 'tmux attach-session -t <session-name>' if needed.${RESET}"
 echo ""
 
-if has_command osascript; then
-  echo -e "Opening separate Terminal windows for each session..."
+if [[ -x "$KAKU_CLI" ]]; then
+  echo -e "Opening Kaku split panes for each session..."
   : > "$WINDOW_IDS_FILE"
   : > "$WINDOW_STATE_FILE"
+
+  kaku_pane_ids=()
+  kaku_pane_ids[1]="$("$KAKU_CLI" cli spawn --new-window --cwd "$WORKING_DIR" -- tmux attach-session -t "${SESSIONS[1]}" 2>/dev/null)"
+  sleep 0.3
+  osascript -e 'tell application "System Events" to tell process "Kaku"' \
+    -e 'set frontWindow to first window' \
+    -e 'set position of frontWindow to {0, 25}' \
+    -e 'set size of frontWindow to {1728, 1092}' \
+    -e 'end tell' 2>/dev/null
+  for (( i = 2; i <= ${#ROLES[@]}; i++ )); do
+    if (( i == 2 )); then
+      kaku_pane_ids[$i]="$("$KAKU_CLI" cli split-pane --pane-id "${kaku_pane_ids[1]}" --right --top-level --percent 50 --cwd "$WORKING_DIR" -- tmux attach-session -t "${SESSIONS[$i]}" 2>/dev/null)"
+    elif (( i == 3 )); then
+      kaku_pane_ids[$i]="$("$KAKU_CLI" cli split-pane --pane-id "${kaku_pane_ids[1]}" --bottom --percent 50 --cwd "$WORKING_DIR" -- tmux attach-session -t "${SESSIONS[$i]}" 2>/dev/null)"
+    else
+      kaku_pane_ids[$i]="$("$KAKU_CLI" cli split-pane --pane-id "${kaku_pane_ids[2]}" --bottom --percent 50 --cwd "$WORKING_DIR" -- tmux attach-session -t "${SESSIONS[$i]}" 2>/dev/null)"
+    fi
+  done
+
   for (( i = 1; i <= ${#ROLES[@]}; i++ )); do
-    window_id="$(open_terminal_window "${SESSIONS[$i]}" "SwarmForge ${DISPLAY_NAMES[$i]}")"
-    echo "$window_id" >> "$WINDOW_IDS_FILE"
+    echo "${kaku_pane_ids[$i]}" >> "$WINDOW_IDS_FILE"
     printf '%s\t%s\t%s\t%s\n' \
       "$i" \
-      "$window_id" \
+      "${kaku_pane_ids[$i]}" \
       "${SESSIONS[$i]}" \
       "SwarmForge ${DISPLAY_NAMES[$i]}" >> "$WINDOW_STATE_FILE"
   done
+
   nohup "$SCRIPT_DIR/swarm-window-watchdog.sh" \
     "$WINDOW_STATE_FILE" \
     "$WINDOW_IDS_FILE" \
     "$CLEANUP_OWNER_INDEX" \
     "$WORKING_DIR" > "$WINDOW_WATCHDOG_LOG" 2>&1 &
+elif has_command osascript; then
+  echo -e "${YELLOW}Kaku not found; falling back to Terminal.app...${RESET}"
+  tmux attach-session -t "${SESSIONS[$CLEANUP_OWNER_INDEX]}"
 else
-  echo -e "${YELLOW}osascript not found; attaching current shell to '${SESSIONS[$CLEANUP_OWNER_INDEX]}' instead.${RESET}"
+  echo -e "${YELLOW}No GUI terminal available; attaching current shell to '${SESSIONS[$CLEANUP_OWNER_INDEX]}'...${RESET}"
   tmux attach-session -t "${SESSIONS[$CLEANUP_OWNER_INDEX]}"
 fi
