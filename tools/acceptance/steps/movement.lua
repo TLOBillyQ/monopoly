@@ -372,6 +372,51 @@ function movement_steps.handlers()
       return true
     end,
 
+    ["下一己方回合玩家移动经过格子5"] = function(world)
+      local player = _player(world)
+      local turns = player.status and player.status.own_turn_started_count or 0
+      _game(world):set_player_status(player, "own_turn_started_count", turns + 1)
+      local tile4_idx = _tile_index(world, 4)
+      game_driver.set_player_position(_ctx(world), player, tile4_idx)
+      game_driver.sync_outer_facing(_ctx(world), player)
+      world.last_move_result = game_driver.move(_ctx(world), player, 2)
+      return true
+    end,
+
+    ["玩家在之前的回合布置了地雷于格子5"] = function(world)
+      local player = _player(world)
+      game_driver.place_mine(_ctx(world), 5, {
+        owner_id = player.id,
+        armed = true,
+        owner_turn_started_count_at_placement = 0,
+      })
+      _game(world):set_player_status(player, "own_turn_started_count", 0)
+      return true
+    end,
+
+    ["已过去2个己方回合"] = function(world)
+      local player = _player(world)
+      _game(world):set_player_status(player, "own_turn_started_count", 2)
+      return true
+    end,
+
+    ["玩家移动经过格子5"] = function(world)
+      local player = _player(world)
+      local tile4_idx = _tile_index(world, 4)
+      game_driver.set_player_position(_ctx(world), player, tile4_idx)
+      game_driver.sync_outer_facing(_ctx(world), player)
+      world.last_move_result = game_driver.move(_ctx(world), player, 2)
+      game_driver.try_trigger_mine(_ctx(world), player)
+      return true
+    end,
+
+    ["地雷正常触发"] = function(world)
+      if game_driver.has_mine(_ctx(world), 5) then
+        return nil, "mine at tile 5 should have triggered"
+      end
+      return true
+    end,
+
     ["格子3同时放置了路障和对手的已激活地雷"] = function(world)
       local opponent = _game(world).players[2]
       game_driver.place_roadblock(_ctx(world), 3)
