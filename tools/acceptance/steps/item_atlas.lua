@@ -21,8 +21,16 @@ local function _ensure_atlas_state(world)
   return world.atlas_state
 end
 
+local SLOTS_PER_PAGE = 8
+
 local function _atlas(world)
   return world.atlas_state.ui.item_atlas
+end
+
+local function _resolve_slot_item(world, slot)
+  local a = _atlas(world)
+  local idx = (a.page_index - 1) * SLOTS_PER_PAGE + slot
+  return item_atlas.catalog[idx], a
 end
 
 function item_atlas_steps.handlers()
@@ -69,11 +77,9 @@ function item_atlas_steps.handlers()
     ["当前页面展示<p3>个道具槽位"] = function(world, example)
       local expected = number_utils.to_integer(example.p3)
       if expected == nil then return nil, "invalid slot count: " .. tostring(example.p3) end
-      local atlas = _atlas(world)
       local count = 0
-      for i = 1, 8 do
-        local idx = (atlas.page_index - 1) * 8 + i
-        if item_atlas.catalog[idx] then count = count + 1 end
+      for i = 1, SLOTS_PER_PAGE do
+        if _resolve_slot_item(world, i) then count = count + 1 end
       end
       if count ~= expected then
         return nil, "expected " .. tostring(expected) .. " slots, got " .. tostring(count)
@@ -92,12 +98,10 @@ function item_atlas_steps.handlers()
     ["当前选中道具为第<p4>格对应道具"] = function(world, example)
       local slot = number_utils.to_integer(example.p4)
       if slot == nil then return nil, "invalid slot: " .. tostring(example.p4) end
-      local atlas = _atlas(world)
-      local idx = (atlas.page_index - 1) * 8 + slot
-      local item = item_atlas.catalog[idx]
+      local item, a = _resolve_slot_item(world, slot)
       if not item then return nil, "no item at slot " .. tostring(slot) end
-      if atlas.selected_item_id ~= item.id then
-        return nil, "selected item mismatch: expected " .. tostring(item.id) .. ", got " .. tostring(atlas.selected_item_id)
+      if a.selected_item_id ~= item.id then
+        return nil, "selected item mismatch: expected " .. tostring(item.id) .. ", got " .. tostring(a.selected_item_id)
       end
       return true
     end,
@@ -122,9 +126,7 @@ function item_atlas_steps.handlers()
     ["放大卡牌显示第<p4>格道具的名称"] = function(world, example)
       local slot = number_utils.to_integer(example.p4)
       if slot == nil then return nil, "invalid slot: " .. tostring(example.p4) end
-      local a = _atlas(world)
-      local idx = (a.page_index - 1) * 8 + slot
-      local item = item_atlas.catalog[idx]
+      local item, a = _resolve_slot_item(world, slot)
       if not item then return nil, "no item at slot " .. tostring(slot) end
       if a.selected_item_id ~= item.id then
         return nil, "selected item mismatch: expected " .. tostring(item.id) .. ", got " .. tostring(a.selected_item_id)
@@ -136,9 +138,7 @@ function item_atlas_steps.handlers()
     ["放大卡牌显示第<p4>格道具的描述"] = function(world, example)
       local slot = number_utils.to_integer(example.p4)
       if slot == nil then return nil, "invalid slot: " .. tostring(example.p4) end
-      local a = _atlas(world)
-      local idx = (a.page_index - 1) * 8 + slot
-      local item = item_atlas.catalog[idx]
+      local item, a = _resolve_slot_item(world, slot)
       if not item then return nil, "no item at slot " .. tostring(slot) end
       if a.selected_item_id ~= item.id then
         return nil, "selected item mismatch: expected " .. tostring(item.id) .. ", got " .. tostring(a.selected_item_id)
