@@ -341,45 +341,6 @@ describe("presentation.board_sync", function()
       "board sync clear should remove the stale sequence entry")
   end)
 
-  it("_test_board_refresh_synthetic_actor_stops_force_move_before_snap", function()
-    local board_view = require("src.ui.render.board")
-    local runtime_ports = require("src.foundation.ports.runtime_ports")
-    local env = _build_board_refresh_test_env({ position = 2 })
-    env.state.board_scene._move_anim_runtime = {
-      active_token_by_player_id = {},
-      active_sequence_by_player_id = {},
-    }
-    env.unit.force_stop_move = function()
-      env.calls[#env.calls + 1] = "force_stop_move"
-    end
-    env.unit.ai_command_stop_move = function()
-      env.calls[#env.calls + 1] = "ai_command_stop_move"
-    end
-    env.unit.stop_anim = function()
-      env.calls[#env.calls + 1] = "stop_anim"
-    end
-    env.unit.set_position = function(pos)
-      env.calls[#env.calls + 1] = "set_position"
-      env.target_pos = pos
-    end
-
-    _with_board_refresh_patches({
-      { target = runtime_ports, key = "resolve_role", value = function(player_id)
-        if player_id == 1 then
-          return { is_synthetic_actor = true }
-        end
-        return nil
-      end },
-    }, function()
-      board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
-    end)
-
-    _assert_eq(env.calls[1], "force_stop_move", "synthetic refresh should stop motion before snap")
-    _assert_eq(env.calls[2], "ai_command_stop_move", "synthetic refresh should also reset ai movement before snap")
-    _assert_eq(env.calls[3], "stop_anim", "synthetic refresh should still stop anim before snap")
-    _assert_eq(env.calls[4], "set_position", "synthetic refresh should snap after stopping motion")
-  end)
-
   it("_test_board_refresh_synthetic_actor_matches_regular_stop_flow", function()
     local board_view = require("src.ui.render.board")
     local runtime_ports = require("src.foundation.ports.runtime_ports")
