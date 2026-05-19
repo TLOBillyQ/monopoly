@@ -185,32 +185,28 @@ end
 
 local _slot_pickable = {}
 
-local function _sync_slot_images(ctx)
-  for i = 1, #_slot_pickable do
-    _slot_pickable[i] = nil
+local function _sync_one_slot(ctx, slot_name, item_id, slot_state, index, slot_pickable)
+  if item_id then
+    local image_key = (ctx.image_refs and (ctx.image_refs[tostring(item_id)] or ctx.image_refs[item_id])) or ctx.empty_key
+    ui_nodes.set_item_slot_image(slot_name, image_key)
+    local is_pickable = ctx.allow_slot_click and ctx.option_id_set[tostring(item_id)] == true
+    ctx.ui:set_touch_enabled(slot_name, is_pickable or (slot_state and slot_state.item_id ~= nil and not slot_state.available))
+    ctx.item_ids[index] = item_id
+    slot_pickable[index] = is_pickable
+  else
+    ui_nodes.set_item_slot_image(slot_name, ctx.empty_key)
+    ctx.ui:set_touch_enabled(slot_name, false)
+    slot_pickable[index] = false
   end
+end
+
+local function _sync_slot_images(ctx)
+  for i = 1, #_slot_pickable do _slot_pickable[i] = nil end
   local slot_pickable = _slot_pickable
-  local choice_slot_states = ctx.choice and ctx.choice.slot_states or nil
   for index, slot_name in ipairs(ctx.slots) do
-    local slot_state = choice_slot_states and choice_slot_states[index] or nil
-    local item_id = (slot_state and slot_state.item_id)
-      or ctx.items[index]
-    local can_pick = false
-    if item_id then
-      local refs = ctx.image_refs
-      local image_key = (refs and (refs[tostring(item_id)] or refs[item_id]))
-        or ctx.empty_key
-      ui_nodes.set_item_slot_image(slot_name, image_key)
-      local is_pickable = ctx.allow_slot_click and ctx.option_id_set[tostring(item_id)] == true
-      local has_deny_feedback = slot_state and slot_state.item_id ~= nil and not slot_state.available
-      ctx.ui:set_touch_enabled(slot_name, is_pickable or has_deny_feedback == true)
-      can_pick = is_pickable
-      ctx.item_ids[index] = item_id
-    else
-      ui_nodes.set_item_slot_image(slot_name, ctx.empty_key)
-      ctx.ui:set_touch_enabled(slot_name, false)
-    end
-    slot_pickable[index] = can_pick
+    local slot_state = ctx.choice and ctx.choice.slot_states and ctx.choice.slot_states[index]
+    local item_id = (slot_state and slot_state.item_id) or ctx.items[index]
+    _sync_one_slot(ctx, slot_name, item_id, slot_state, index, slot_pickable)
   end
   return slot_pickable
 end
