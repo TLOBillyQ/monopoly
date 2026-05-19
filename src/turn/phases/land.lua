@@ -150,77 +150,62 @@ local function _wait_for_choice_via_landing_visual_then_action_anim(game, next_s
   end)
 end
 
-local function _resolve_wait_state(game, next_state, next_args, wait_action_anim, wait_move_anim)
-  local wait_choice_args = {
-    next_state = next_state,
-    next_args = next_args,
-  }
-
-  local has_anim = _has_action_anim(game)
-  local has_hold = _is_landing_visual_hold_active(game)
-  local effects_pending = not _is_effect_idle()
-
-  if wait_move_anim == true then
-    if next_state == "move_followup" then
-      game.turn.move_followup_pending = true
-    end
-    local move_anim_args = {
-      next_state = next_state,
-      next_args = next_args,
-    }
-    local function _resume_wait_move_anim()
-      return "wait_move_anim", move_anim_args
-    end
-    if has_anim then
-      if has_hold or effects_pending then
-        return _register_landing_visual_resume(game, "wait_action_anim", {
-          next_state = "wait_move_anim",
-          next_args = move_anim_args,
-        }, function()
-          return _register_action_anim_resume(game, "wait_move_anim", move_anim_args, _resume_wait_move_anim)
-        end)
-      end
-      return _register_action_anim_resume(game, "wait_move_anim", move_anim_args, _resume_wait_move_anim)
-    end
-    if has_hold or effects_pending then
-      return _register_landing_visual_resume(game, "wait_move_anim", move_anim_args, _resume_wait_move_anim)
-    end
-    return "wait_move_anim", move_anim_args
-  end
-
-  if wait_action_anim == true then
-    if has_anim then
-      if has_hold or effects_pending then
-        return _register_landing_visual_resume(game, "wait_action_anim", {
-          next_state = next_state,
-          next_args = next_args,
-        }, function()
-          return _register_action_anim_resume(game, next_state, next_args, function()
-            return next_state, next_args
-          end)
-        end)
-      end
-      return _register_action_anim_resume(game, next_state, next_args, function()
-        return next_state, next_args
-      end)
-    end
-    if has_hold or effects_pending then
-      return _register_landing_visual_resume(game, next_state, next_args, function()
-        return next_state, next_args
-      end)
-    end
-    return next_state, next_args
-  end
+local function _resolve_wait_move_anim(game, next_state, next_args, has_anim, has_hold_or_pending)
+  if next_state == "move_followup" then game.turn.move_followup_pending = true end
+  local move_anim_args = { next_state = next_state, next_args = next_args }
+  local function _resume() return "wait_move_anim", move_anim_args end
   if has_anim then
-    if has_hold or effects_pending then
-      return _wait_for_choice_via_landing_visual_then_action_anim(game, next_state, next_args)
+    if has_hold_or_pending then
+      return _register_landing_visual_resume(game, "wait_action_anim", {
+        next_state = "wait_move_anim",
+        next_args = move_anim_args,
+      }, function()
+        return _register_action_anim_resume(game, "wait_move_anim", move_anim_args, _resume)
+      end)
     end
+    return _register_action_anim_resume(game, "wait_move_anim", move_anim_args, _resume)
+  end
+  if has_hold_or_pending then return _register_landing_visual_resume(game, "wait_move_anim", move_anim_args, _resume) end
+  return "wait_move_anim", move_anim_args
+end
+
+local function _resolve_wait_action_anim_state(game, next_state, next_args, has_anim, has_hold_or_pending)
+  if has_anim then
+    if has_hold_or_pending then
+      return _register_landing_visual_resume(game, "wait_action_anim", {
+        next_state = next_state,
+        next_args = next_args,
+      }, function()
+        return _register_action_anim_resume(game, next_state, next_args, function() return next_state, next_args end)
+      end)
+    end
+    return _register_action_anim_resume(game, next_state, next_args, function() return next_state, next_args end)
+  end
+  if has_hold_or_pending then
+    return _register_landing_visual_resume(game, next_state, next_args, function() return next_state, next_args end)
+  end
+  return next_state, next_args
+end
+
+local function _route_choice_wait_state(game, has_anim, has_hold_or_pending, next_state, next_args)
+  if has_anim then
+    if has_hold_or_pending then return _wait_for_choice_via_landing_visual_then_action_anim(game, next_state, next_args) end
     return _wait_for_choice_via_action_anim(game, next_state, next_args)
   end
-  if has_hold or effects_pending then
-    return _wait_for_choice_via_landing_visual(game, next_state, next_args)
+  if has_hold_or_pending then return _wait_for_choice_via_landing_visual(game, next_state, next_args) end
+  return "wait_choice", { next_state = next_state, next_args = next_args }
+end
+
+local function _resolve_wait_state(game, next_state, next_args, wait_action_anim, wait_move_anim)
+  local has_anim = _has_action_anim(game)
+  local has_hold_or_pending = _is_landing_visual_hold_active(game) or not _is_effect_idle()
+  if wait_move_anim == true then
+    return _resolve_wait_move_anim(game, next_state, next_args, has_anim, has_hold_or_pending)
   end
-  return "wait_choice", wait_choice_args
+  if wait_action_anim == true then
+    return _resolve_wait_action_anim_state(game, next_state, next_args, has_anim, has_hold_or_pending)
+  end
+  return _route_choice_wait_state(game, has_anim, has_hold_or_pending, next_state, next_args)
 end
 
 local function _resolve_finished_landing_state(game, player)
