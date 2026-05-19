@@ -63,42 +63,42 @@ local function _pick_deity_target(game, player, allowed)
   return best
 end
 
+local function _pick_steal_target(game, player, allowed)
+  for _, p in ipairs(game.players) do
+    if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then
+      if p.inventory and p.inventory:count() > 0 then return p end
+    end
+  end
+  return nil
+end
+
+local function _pick_missile_target(game, player, allowed)
+  for _, p in ipairs(game.players) do
+    if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then return p end
+  end
+  return nil
+end
+
+local function _pick_send_poor_target(game, player, allowed)
+  if not game:player_has_deity(player, "poor") then return nil end
+  return _richest_other(game, player, allowed)
+end
+
+local _target_pickers = {
+  [item_ids.share_wealth] = _pick_share_wealth_target,
+  [item_ids.exile] = _richest_other,
+  [item_ids.tax] = _richest_other,
+  [item_ids.poor] = _richest_other,
+  [item_ids.steal] = _pick_steal_target,
+  [item_ids.missile] = _pick_missile_target,
+  [item_ids.invite_deity] = _pick_deity_target,
+  [item_ids.send_poor] = _pick_send_poor_target,
+}
+
 function action_selector.pick_target_player(game, player, item_id, options)
   local allowed = _allow_from_options(options)
-  if item_id == item_ids.share_wealth then
-    return _pick_share_wealth_target(game, player, allowed)
-  end
-  if item_id == item_ids.exile or item_id == item_ids.tax or item_id == item_ids.poor then
-    return _richest_other(game, player, allowed)
-  end
-  if item_id == item_ids.steal then
-    for _, p in ipairs(game.players) do
-      if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then
-        if p.inventory and p.inventory:count() > 0 then
-          return p
-        end
-      end
-    end
-    return nil
-  end
-  if item_id == item_ids.missile then
-    for _, p in ipairs(game.players) do
-      if p.id ~= player.id and not p.eliminated and (not allowed or allowed[p.id]) then
-        return p
-      end
-    end
-    return nil
-  end
-  if item_id == item_ids.invite_deity then
-    return _pick_deity_target(game, player, allowed)
-  end
-  if item_id == item_ids.send_poor then
-    if not game:player_has_deity(player, "poor") then
-      return nil
-    end
-    return _richest_other(game, player, allowed)
-  end
-
+  local picker = _target_pickers[item_id]
+  if picker then return picker(game, player, allowed) end
   return nil
 end
 
