@@ -106,6 +106,12 @@ local function _resolve_camera_local_role_id(state)
     or _resolve_current_player_id(state)
 end
 
+local function _resolve_camera_local_role(state)
+  local role_id = _resolve_camera_local_role_id(state)
+  if role_id == nil then return nil, nil end
+  return runtime_ports.resolve_role(role_id), role_id
+end
+
 local function _lock_camera_to_target_position(state, local_role, target_pos)
   if target_pos == nil then
     return false
@@ -145,11 +151,7 @@ function camera_sync.follow_camera(state, player_id)
     camera.follow(player_id)
   end
 
-  local local_role_id = _resolve_camera_local_role_id(state)
-  if local_role_id == nil then
-    return false
-  end
-  local local_role = runtime_ports.resolve_role(local_role_id)
+  local local_role, local_role_id = _resolve_camera_local_role(state)
   if local_role == nil then
     return false
   end
@@ -175,12 +177,8 @@ function camera_sync.sync_camera_position(state)
   if target_id == nil then
     return false
   end
-  local local_role_id = _resolve_camera_local_role_id(state)
-  if local_role_id == nil or target_id == local_role_id then
-    return false
-  end
-  local local_role = runtime_ports.resolve_role(local_role_id)
-  if local_role == nil then
+  local local_role, local_role_id = _resolve_camera_local_role(state)
+  if local_role == nil or target_id == local_role_id then
     return false
   end
   local target_pos = _resolve_follow_target_position(state, target_id)
@@ -191,11 +189,7 @@ function camera_sync.pan_camera_to_position(state, target_pos)
   if target_pos == nil then
     return false
   end
-  local local_role_id = _resolve_camera_local_role_id(state)
-  if local_role_id == nil then
-    return false
-  end
-  local local_role = runtime_ports.resolve_role(local_role_id)
+  local local_role = _resolve_camera_local_role(state)
   if local_role == nil then
     return false
   end

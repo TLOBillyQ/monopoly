@@ -1,28 +1,34 @@
 local nodes = require("Data.UIManagerNodes")
 
-local ui_events = {
-  canvas_names = {},
-  show = {},
-  hide = {},
-  roles = nil,
-}
-
-for _, entry in pairs(nodes) do
-  if type(entry) == "table" then
-    local name = entry[1]
-    local kind = entry[2]
-    if kind == "ECanvas" then
-      table.insert(ui_events.canvas_names, name)
+local function _collect_canvas_names(node_entries)
+  local names = {}
+  for _, entry in pairs(node_entries) do
+    if type(entry) == "table" and entry[2] == "ECanvas" then
+      names[#names + 1] = entry[1]
     end
   end
+  table.sort(names)
+  return names
 end
 
-table.sort(ui_events.canvas_names)
-
-for _, name in ipairs(ui_events.canvas_names) do
-  ui_events.show[name] = "显示" .. name
-  ui_events.hide[name] = "隐藏" .. name
+local function _build_event_maps(canvas_names)
+  local show, hide = {}, {}
+  for _, name in ipairs(canvas_names) do
+    show[name] = "显示" .. name
+    hide[name] = "隐藏" .. name
+  end
+  return show, hide
 end
+
+local canvas_names = _collect_canvas_names(nodes)
+local show_events, hide_events = _build_event_maps(canvas_names)
+
+local ui_events = {
+  canvas_names = canvas_names,
+  show = show_events,
+  hide = hide_events,
+  roles = nil,
+}
 
 
 function ui_events.set_roles(roles)
