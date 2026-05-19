@@ -1,58 +1,21 @@
--- luacheck: ignore 211
 local support = require("spec.support.shared_support")
 local _new_game = support.new_game
-local _build_ui_port = support.build_ui_port
-local _open_choice = support.open_choice
-local _get_choice = support.get_choice
 local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
-local turn_anim = require("src.turn.output.anim")
-local tick_timeout = require("src.turn.waits.timeout")
-local constants = require("src.config.content.constants")
-local choice_resolver = require("src.rules.choice.resolver")
-local gameplay_loop = require("src.turn.loop")
-local turn_move = require("src.turn.phases.move")
-local event_handlers = require("src.ui.coord.event_handlers")
-local paid_currency_bridge = require("src.rules.commerce.paid_currency_bridge")
 local dispatch = require("src.turn.actions.action_dispatcher")
-local runtime_port = require("src.ui.render.runtime_ui")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local choice_openers = require("src.ui.coord.choice_openers")
-local market_view = require("src.ui.render.market")
-local market_layout = require("src.ui.schema.market_layout")
 local canvas_event_router = require("src.ui.coord.canvas_event_router")
 local ui_view = require("src.ui.coord.ui_runtime")
 local modal_presenter = require("src.ui.coord.modal")
 local gameplay_rules = require("src.config.gameplay.debug_flags")
-local ui_status_3d_layer = require("src.ui.render.status3d")
-local action_anim = require("src.ui.render.anim")
-local move_anim = require("src.ui.render.move_anim")
-local runtime_cls = require("src.turn.loop.scheduler_runtime")
-local turn_effects = require("src.ui.render.widgets.turn_effects")
-local popup_renderer = require("src.ui.coord.popup")
 local market_modal_renderer = require("src.ui.coord.market")
-local event_log_ports_module = require("src.ui.ports.event_log")
-local role_control_lock_policy = require("src.ui.input.role_control_lock")
-local ui_touch_policy = require("src.ui.input.touch")
-local ui_choice_route_policy = require("src.ui.input.choice_route")
 local logger = require("src.foundation.log")
-local market_cfg = require("src.config.content.market")
-local runtime_constants = require("src.config.gameplay.runtime_constants")
-local host_runtime = require("src.host")
 local runtime_state = require("src.state.runtime")
 local raycast = require("src.host.raycast")
 
-
-local function _ui_runtime(state)
-  return runtime_state.ensure_ui_runtime(state)
-end
-
-local _wrap_ui_refs = support.wrap_ui_refs
-local _build_popup_view_state = support.build_popup_view_state
 local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
-local _build_choice_modal_state = support.build_choice_modal_state
 
 describe("presentation_ui.interaction", function()
   it("_test_ui_intent_dispatcher_market_select_updates_ui_only", function()
