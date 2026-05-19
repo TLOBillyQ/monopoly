@@ -76,20 +76,4 @@ describe("item_preconsume_crap_coverage", function()
     _assert_eq(result.meta.player_id, "player_456", "player_id merged from context")
   end)
 
-  it("_resolve_tile_index_from_payload: direct tile_id in payload", function()
-    local payload = { tile_id = "tile_42" }
-    assert(payload.tile_id == "tile_42", "payload with direct tile_id structure")
-  end)
-
-  it("_resolve_tile_index_from_payload: nested tile object structure", function()
-    local payload = {
-      tile = { id = "tile_99" }
-    }
-    assert(payload.tile.id == "tile_99", "payload with nested tile.id structure")
-  end)
-
-  it("_resolve_tile_index_from_payload: direct tile_index in payload", function()
-    local payload = { tile_index = 5 }
-    assert(payload.tile_index == 5, "payload with direct tile_index returns it unchanged")
-  end)
 end)
