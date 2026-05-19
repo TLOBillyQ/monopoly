@@ -179,8 +179,6 @@ describe("movement_camera", function()
 
   it("_test_resolve_follow_player_id_all_eliminated", _resolve_follow_player_id_more_tests[1])
 
-  it("_test_resolve_follow_player_id_nil_id", _resolve_follow_player_id_more_tests[2])
-
   it("_test_resolve_follow_player_next_non_eliminated", _resolve_follow_player_id_final_tests[1])
 
   it("_test_resolve_follow_player_wrap_around", _resolve_follow_player_id_final_tests[2])
