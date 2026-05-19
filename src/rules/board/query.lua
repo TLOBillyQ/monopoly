@@ -72,80 +72,77 @@ end
 local ui_slot_count = 7
 local center_slot = 4
 
-local function _center_out_order(board, player, candidate_indices)
-  assert(board ~= nil, "missing board")
-  assert(player ~= nil, "missing player")
-  local player_position = player.position
-  assert(player_position ~= nil, "missing player.position")
+local function _max_key(t)
+  local max = 0
+  for k in pairs(t) do
+    if k > max then max = k end
+  end
+  return max
+end
 
-  local start_tile = assert(board:get_tile(player_position), "missing start tile")
-  local max_dist = 0
+local function _build_candidate_map(board, player_position, candidate_indices, start_tile)
   local by_dist = {}
   local has_self = false
-
   for _, idx in ipairs(candidate_indices) do
     if idx == player_position then
       has_self = true
     else
       local tile = board:get_tile(idx)
       local dist = _manhattan_distance(start_tile, tile)
-      if dist <= 0 then
-        dist = 1
-      end
-      if dist > max_dist then
-        max_dist = dist
-      end
+      if dist <= 0 then dist = 1 end
       by_dist[dist] = by_dist[dist] or {}
       table.insert(by_dist[dist], idx)
     end
   end
+  return by_dist, _max_key(by_dist), has_self
+end
 
-  local fwd = direction.collect_forward_indices(board, player, max_dist)
-  local bwd = direction.collect_backward_indices(board, player, max_dist)
+local function _sign_direction(value)
+  return value < 0 and "forward" or "backward"
+end
 
-  local function classify(idx)
-    if fwd.set[idx] then
-      return "forward"
-    end
-    if bwd.set[idx] then
-      return "backward"
-    end
-    local tile = board:get_tile(idx)
-    if start_tile and tile then
-      local dr = tile.row - start_tile.row
-      local dc = tile.col - start_tile.col
-      if math.abs(dr) > math.abs(dc) then
-        return dr < 0 and "forward" or "backward"
-      elseif math.abs(dc) > 0 then
-        return dc > 0 and "forward" or "backward"
-      end
-    end
-    return "forward"
+local function _direction_from_geometry(start_tile, tile)
+  local dr = tile.row - start_tile.row
+  local dc = tile.col - start_tile.col
+  if math.abs(dr) > math.abs(dc) then
+    return _sign_direction(dr)
+  elseif math.abs(dc) > 0 then
+    return _sign_direction(dc)
   end
+  return "forward"
+end
 
+local function _classify_by_direction(idx, fwd_set, bwd_set, start_tile, board)
+  if fwd_set[idx] then return "forward" end
+  if bwd_set[idx] then return "backward" end
+  local tile = board:get_tile(idx)
+  if start_tile == nil or tile == nil then return "forward" end
+  return _direction_from_geometry(start_tile, tile)
+end
+
+local function _build_dir_queues(by_dist, max_dist, board, fwd, bwd, start_tile)
   local backward_queue = {}
   local forward_queue = {}
-
   for dist = 1, max_dist do
     for _, idx in ipairs(by_dist[dist] or {}) do
-      local dir = classify(idx)
-      if dir == "backward" then
+      if _classify_by_direction(idx, fwd.set, bwd.set, start_tile, board) == "backward" then
         backward_queue[#backward_queue + 1] = idx
       else
         forward_queue[#forward_queue + 1] = idx
       end
     end
   end
+  return backward_queue, forward_queue
+end
 
+local function _make_slots(has_self, player_position)
   local slots = {}
-  for i = 1, ui_slot_count do
-    slots[i] = nil
-  end
+  for i = 1, ui_slot_count do slots[i] = nil end
+  if has_self then slots[center_slot] = player_position end
+  return slots
+end
 
-  if has_self then
-    slots[center_slot] = player_position
-  end
-
+local function _fill_primary_slots(slots, backward_queue, forward_queue)
   local bi = 1
   for slot = center_slot - 1, 1, -1 do
     if backward_queue[bi] then
@@ -153,7 +150,6 @@ local function _center_out_order(board, player, candidate_indices)
       bi = bi + 1
     end
   end
-
   local fi = 1
   for slot = center_slot + 1, ui_slot_count do
     if forward_queue[fi] then
@@ -161,20 +157,44 @@ local function _center_out_order(board, player, candidate_indices)
       fi = fi + 1
     end
   end
+  return bi, fi
+end
 
-  -- Overflow: if one side has fewer candidates, spill extras to the other side
+local function _fill_overflow_fwd(slots, queue, qi)
   for slot = center_slot + 1, ui_slot_count do
-    if slots[slot] == nil and backward_queue[bi] then
-      slots[slot] = backward_queue[bi]
-      bi = bi + 1
+    if slots[slot] == nil and queue[qi] then
+      slots[slot] = queue[qi]
+      qi = qi + 1
     end
   end
+end
+
+local function _fill_overflow_bwd(slots, queue, qi)
   for slot = center_slot - 1, 1, -1 do
-    if slots[slot] == nil and forward_queue[fi] then
-      slots[slot] = forward_queue[fi]
-      fi = fi + 1
+    if slots[slot] == nil and queue[qi] then
+      slots[slot] = queue[qi]
+      qi = qi + 1
     end
   end
+end
+
+local function _center_out_order(board, player, candidate_indices)
+  assert(board ~= nil, "missing board")
+  assert(player ~= nil, "missing player")
+  local player_position = player.position
+  assert(player_position ~= nil, "missing player.position")
+
+  local start_tile = assert(board:get_tile(player_position), "missing start tile")
+  local by_dist, max_dist, has_self = _build_candidate_map(board, player_position, candidate_indices, start_tile)
+
+  local fwd = direction.collect_forward_indices(board, player, max_dist)
+  local bwd = direction.collect_backward_indices(board, player, max_dist)
+  local backward_queue, forward_queue = _build_dir_queues(by_dist, max_dist, board, fwd, bwd, start_tile)
+
+  local slots = _make_slots(has_self, player_position)
+  local bi, fi = _fill_primary_slots(slots, backward_queue, forward_queue)
+  _fill_overflow_fwd(slots, backward_queue, bi)
+  _fill_overflow_bwd(slots, forward_queue, fi)
 
   return slots
 end

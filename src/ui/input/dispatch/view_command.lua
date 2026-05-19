@@ -59,66 +59,56 @@ local function _handle_popup_confirm(state, modal)
   return true
 end
 
+local _GALLERY_ACTIONS = {
+  open_skin_panel     = function(g, s, i) g.open_skin(s, i.actor_role_id) end,
+  open_gallery_panel  = function(g, s, i) g.open_gallery(s, i.actor_role_id) end,
+  skin_gallery_action = function(g, s, i) g.handle_action(s, i.action, i.actor_role_id) end,
+}
+
 local function _handle_skin_gallery(state, intent, skin_gallery)
-  if skin_gallery == nil then
-    return false
-  end
-  local intent_type = intent and intent.type
-  if intent_type == "open_skin_panel" then
-    skin_gallery.open_skin(state, intent.actor_role_id)
-    return true
-  end
-  if intent_type == "open_gallery_panel" then
-    skin_gallery.open_gallery(state, intent.actor_role_id)
-    return true
-  end
-  if intent_type == "skin_gallery_action" then
-    skin_gallery.handle_action(state, intent.action, intent.actor_role_id)
-    return true
-  end
-  return false
+  if skin_gallery == nil then return false end
+  local act = _GALLERY_ACTIONS[intent and intent.type]
+  if act == nil then return false end
+  act(skin_gallery, state, intent)
+  return true
 end
+
+local function _open_skin_with_fallback(state, intent, panel)
+  local gallery = _resolve_loaded("src.ui.coord.skin_gallery")
+  if gallery then gallery.open_skin(state, intent.actor_role_id)
+  else panel.open(state, intent.actor_role_id) end
+end
+
+local _SKIN_PANEL_ACTIONS = {
+  open_skin_panel   = _open_skin_with_fallback,
+  skin_panel_action = function(s, i, p) p.handle_action(s, i.action, i.actor_role_id) end,
+}
 
 local function _handle_skin_panel(state, intent, skin_panel)
-  if skin_panel == nil then
-    return false
-  end
-  local intent_type = intent and intent.type
-  if intent_type == "open_skin_panel" then
-    local skin_gallery = _resolve_loaded("src.ui.coord.skin_gallery")
-    if skin_gallery then
-      skin_gallery.open_skin(state, intent.actor_role_id)
-      return true
-    end
-    skin_panel.open(state, intent.actor_role_id)
-    return true
-  end
-  if intent_type == "skin_panel_action" then
-    skin_panel.handle_action(state, intent.action, intent.actor_role_id)
-    return true
-  end
-  return false
+  if skin_panel == nil then return false end
+  local act = _SKIN_PANEL_ACTIONS[intent and intent.type]
+  if act == nil then return false end
+  act(state, intent, skin_panel)
+  return true
 end
 
+local function _open_gallery_with_fallback(state, intent, atlas)
+  local gallery = _resolve_loaded("src.ui.coord.skin_gallery")
+  if gallery then gallery.open_gallery(state, intent.actor_role_id)
+  else atlas.open(state, intent.actor_role_id) end
+end
+
+local _ITEM_ATLAS_ACTIONS = {
+  open_gallery_panel = _open_gallery_with_fallback,
+  item_atlas_action  = function(s, i, a) a.handle_action(s, i.action, i.actor_role_id) end,
+}
+
 local function _handle_item_atlas(state, intent, item_atlas)
-  if item_atlas == nil then
-    return false
-  end
-  local intent_type = intent and intent.type
-  if intent_type == "open_gallery_panel" then
-    local skin_gallery = _resolve_loaded("src.ui.coord.skin_gallery")
-    if skin_gallery then
-      skin_gallery.open_gallery(state, intent.actor_role_id)
-      return true
-    end
-    item_atlas.open(state, intent.actor_role_id)
-    return true
-  end
-  if intent_type == "item_atlas_action" then
-    item_atlas.handle_action(state, intent.action, intent.actor_role_id)
-    return true
-  end
-  return false
+  if item_atlas == nil then return false end
+  local act = _ITEM_ATLAS_ACTIONS[intent and intent.type]
+  if act == nil then return false end
+  act(state, intent, item_atlas)
+  return true
 end
 
 local function _warn_missing_toggle_channel(actor_role_id)
@@ -163,24 +153,22 @@ local function _handle_toggle_action_log(state, intent, event_log_view)
   return true
 end
 
+local _FALLBACK_HANDLERS = {
+  market_select       = function(s, i) return _handle_market_select(s, i, _resolve_loaded("src.ui.coord.market")) end,
+  popup_confirm       = function(s, _) return _handle_popup_confirm(s, _resolve_loaded("src.ui.coord.modal")) end,
+  toggle_action_log   = function(s, i) return _handle_toggle_action_log(s, i, _resolve_loaded("src.ui.coord.event_log_view")) end,
+  open_skin_panel     = function(s, i) return _handle_skin_panel(s, i, _resolve_loaded("src.ui.coord.skin_panel")) end,
+  skin_panel_action   = function(s, i) return _handle_skin_panel(s, i, _resolve_loaded("src.ui.coord.skin_panel")) end,
+  open_gallery_panel  = function(s, i) return _handle_item_atlas(s, i, _resolve_loaded("src.ui.coord.item_atlas")) end,
+  item_atlas_action   = function(s, i) return _handle_item_atlas(s, i, _resolve_loaded("src.ui.coord.item_atlas")) end,
+  skin_gallery_action = function(s, i) return _handle_skin_gallery(s, i, _resolve_loaded("src.ui.coord.skin_gallery")) end,
+}
+
 local function _fallback_dispatch(state, intent)
-  local intent_type = intent and intent.type or nil
-  if intent_type == nil then
-    return false
-  end
-  if intent_type == "market_select" then
-    return _handle_market_select(state, intent, _resolve_loaded("src.ui.coord.market"))
-  elseif intent_type == "popup_confirm" then
-    return _handle_popup_confirm(state, _resolve_loaded("src.ui.coord.modal"))
-  elseif intent_type == "toggle_action_log" then
-    return _handle_toggle_action_log(state, intent, _resolve_loaded("src.ui.coord.event_log_view"))
-  elseif intent_type == "open_skin_panel" or intent_type == "skin_panel_action" then
-    return _handle_skin_panel(state, intent, _resolve_loaded("src.ui.coord.skin_panel"))
-  elseif intent_type == "open_gallery_panel" or intent_type == "item_atlas_action" then
-    return _handle_item_atlas(state, intent, _resolve_loaded("src.ui.coord.item_atlas"))
-  elseif intent_type == "skin_gallery_action" then
-    return _handle_skin_gallery(state, intent, _resolve_loaded("src.ui.coord.skin_gallery"))
-  end
+  local intent_type = intent and intent.type
+  if intent_type == nil then return false end
+  local handler = _FALLBACK_HANDLERS[intent_type]
+  if handler then return handler(state, intent) end
   return false
 end
 

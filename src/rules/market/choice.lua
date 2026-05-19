@@ -259,17 +259,22 @@ end
 
 local outcome = {}
 
-local function _dispatch_intent(game, intent)
-  if type(intent) ~= "table" then
-    return false
-  end
-  if intent.kind == "need_choice" and intent.choice_spec ~= nil then
+local _INTENT_HANDLERS = {
+  need_choice = function(game, intent)
+    if intent.choice_spec == nil then return false end
     return intent_output_port.open_choice(game, intent.choice_spec, intent.opts) ~= nil
-  end
-  if intent.kind == "push_popup" and intent.payload ~= nil then
+  end,
+  push_popup = function(game, intent)
+    if intent.payload == nil then return false end
     return intent_output_port.push_popup(game, intent.payload, intent.popup_opts or intent.opts) == true
-  end
-  return false
+  end,
+}
+
+local function _dispatch_intent(game, intent)
+  if type(intent) ~= "table" then return false end
+  local handler = _INTENT_HANDLERS[intent.kind]
+  if not handler then return false end
+  return handler(game, intent)
 end
 
 local function _is_purchase_failure(result)

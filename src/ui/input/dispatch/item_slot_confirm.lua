@@ -18,24 +18,24 @@ local function _close_confirm_state(state)
   end
 end
 
+local function _on_slot_choice_select(state, game, intent, opts, action_port)
+  local stored = state._item_slot_confirm_intent
+  _close_confirm_state(state)
+  if stored then action_port.dispatch_action(game, state, stored, opts) end
+end
+
+local _SLOT_CONFIRM_DISPATCH = {
+  choice_select = _on_slot_choice_select,
+  choice_cancel = function(state) _close_confirm_state(state) end,
+}
+
 function item_slot_confirm.dispatch(state, game, intent, opts, action_port)
-  if not state._item_slot_confirm_active then
-    return false
-  end
+  if not state._item_slot_confirm_active then return false end
   local intent_type = intent and intent.type
-  if intent_type == "choice_select" then
-    local stored = state._item_slot_confirm_intent
-    _close_confirm_state(state)
-    if stored then
-      action_port.dispatch_action(game, state, stored, opts)
-    end
-    return true
-  end
-  if intent_type == "choice_cancel" then
-    _close_confirm_state(state)
-    return true
-  end
-  return false
+  local handler = _SLOT_CONFIRM_DISPATCH[intent_type]
+  if not handler then return false end
+  handler(state, game, intent, opts, action_port)
+  return true
 end
 
 local function _resolve_slot_index(intent)
@@ -54,13 +54,23 @@ local function _find_confirmable_slot(state, index)
   return choice, slot
 end
 
+local function _resolve_slot_option(state, index)
+  local choice, slot = _find_confirmable_slot(state, index)
+  if not choice or not slot then return nil, nil, nil end
+  local option = choice_support.resolve_option_by_id(choice, slot.item_id)
+  if not option or not option.confirm_title then return nil, nil, nil end
+  return choice, slot, option
+end
+
+local function _open_slot_confirm_screen(state, modal, choice, slot, option)
+  modal.open_pre_confirm_screen(state, choice, slot.item_id, option.confirm_title, option.confirm_body or "")
+end
+
 function item_slot_confirm.try_enter(state, intent)
   local index = _resolve_slot_index(intent)
   if not index then return false end
-  local choice, slot = _find_confirmable_slot(state, index)
-  if not choice or not slot then return false end
-  local option = choice_support.resolve_option_by_id(choice, slot.item_id)
-  if not option or not option.confirm_title then return false end
+  local choice, slot, option = _resolve_slot_option(state, index)
+  if not choice then return false end
   state._item_slot_confirm_active = true
   state._item_slot_confirm_intent = intent
   local modal = _modal_ports(state)
@@ -69,7 +79,7 @@ function item_slot_confirm.try_enter(state, intent)
     state._item_slot_confirm_intent = nil
     return false
   end
-  modal.open_pre_confirm_screen(state, choice, slot.item_id, option.confirm_title, option.confirm_body or "")
+  _open_slot_confirm_screen(state, modal, choice, slot, option)
   return true
 end
 
