@@ -8,7 +8,6 @@ local function _new_game()
   return support.new_game({ map = default_map })
 end
 local _first_land_tile = support.first_land_tile
-local _first_adjacent_land_pair = support.first_adjacent_land_pair
 local _tile_state = support.tile_state
 local _assert_eq = support.assert_eq
 local _resolve_landing = support.resolve_landing
@@ -104,21 +103,6 @@ local function _build_choice_groups()
   }
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 local function _test_choice_registry_registers_descriptors_with_cancel_metadata()
   local registry = choice_registry:new()
   registry:register_defaults(_build_choice_groups())
@@ -144,18 +128,6 @@ local function _test_choice_registry_registers_descriptors_with_cancel_metadata(
   _assert_eq(item_phase_descriptor.required_meta[1], "player_id", "item phase should expose required meta")
   _assert_eq(item_phase_descriptor.required_meta[2], "phase", "item phase should require phase")
 end
-
-
--- T4 characterization tests for land actions
-
-
-
-
-
-
-
-
--- T4 characterization tests for _apply_tax
 
 describe("land", function()
   local _config_reset = require("spec.support.config_reset")

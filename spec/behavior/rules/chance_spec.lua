@@ -14,7 +14,6 @@ local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
 local chance_effects = require("src.rules.chance.resolver")
 local movement = require("src.rules.movement")
-local _build_ui_port = support.build_ui_port
 local function _action_anim_count(game)
   local count = 0
   if game.turn.action_anim then
@@ -23,53 +22,10 @@ local function _action_anim_count(game)
   return count + #(game.turn.action_anim_queue or {})
 end
 
-
-
-
-
-
-
-
-
-
-
--- Characterization tests for chance handlers (T4)
 local chance_handlers = require("src.rules.chance.handlers")
 local post_effects = require("src.rules.items.post_effects")
 
-
-
-
-
-
-
-
-
-
-
--- Characterization tests for post_effects (T4)
-
-
-
-
-
-
-
-
-
--- T8 characterization tests for 0% coverage hotspots
 local bankruptcy = require("src.rules.endgame")
-
-
-
-
--- T4 characterization tests for executors
-
--- T4 characterization tests for eligibility helpers
-
-
-
--- T4 characterization tests for market context
 
 describe("chance", function()
   local _config_reset = require("spec.support.config_reset")

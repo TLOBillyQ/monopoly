@@ -6,7 +6,6 @@ local function _new_game()
 end
 local _open_choice = support.open_choice
 local _get_choice = support.get_choice
-local _resolve_choice_first = support.resolve_choice_first
 local _tile_state = support.tile_state
 local _assert_eq = support.assert_eq
 local executor = require("src.rules.items.executor")
@@ -69,54 +68,6 @@ local function _setup_world_with_anim()
   _set_ui_port(g, { wait_action_anim = true })
   return g
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 -- Inlined from item_roadblock_and_demolish.lua
 local function _test_roadblock_manual_choice_shows_seven_tiles_with_tile_names_only()

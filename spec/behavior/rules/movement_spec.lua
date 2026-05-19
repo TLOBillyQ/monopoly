@@ -45,17 +45,6 @@ local function _simulate_path_result(board, start_index, facing, steps, backward
   return current, next_facing
 end
 
-
-
-
-
-
-
-
-
-
-
-
 local function _run_start_move_with_stale_dir(start_index, stale_dir)
   local g = _new_game()
   local p = g:current_player()
@@ -64,22 +53,6 @@ local function _run_start_move_with_stale_dir(start_index, stale_dir)
   local res = movement.move(g, p, 2, { branch_parity = 2, skip_market_check = true })
   return p.position, res
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 -- ============================================================
 -- Inlined board helpers (formerly exported via board._xxx = _xxx)
@@ -263,31 +236,6 @@ _resolve_backward_next_source = function(map, current_id, neigh, facing)
     source = nil,
   }
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 -- Characterization tests for board_query helper functions (T4)
 local board_query = require("src.rules.board.query")

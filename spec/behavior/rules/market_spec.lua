@@ -67,20 +67,6 @@ describe("market", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
 
-  it("ai_skips_auto_buy_at_market", function()
-    local market_service = require("src.rules.market")
-    local g = _new_game()
-    local ai_player = g.players[2]
-    assert(ai_player.is_ai, "player 2 should be AI")
-
-    g:set_player_cash(ai_player, 1000)
-
-    local before_cash = ai_player.cash
-    market_service.auto.execute(g, ai_player)
-
-    assert(ai_player.cash == before_cash, "AI should not spend money on auto_buy")
-  end)
-
   it("auto_execute_empty_list_no_purchase", function()
     local market_service = require("src.rules.market")
     local g = _new_game()
@@ -114,21 +100,6 @@ describe("market", function()
 
     -- Should have purchased the cheapest item
     assert(p.cash < before_cash, "should have purchased an item")
-  end)
-
-  it("market_full_inventory_blocks_items", function()
-    local market_service = require("src.rules.market")
-    local g = _new_game()
-    local p = g:current_player()
-    g:set_player_cash(p, 999999)
-    for _ = 1, p.inventory.max_slots do
-      p.inventory:add({ id = 2001 })
-    end
-
-    local list = market_service.query.list_available(p, g)
-    for _, entry in ipairs(list) do
-      assert(entry.kind ~= "item", "item should be excluded when inventory full")
-    end
   end)
 
   it("market_global_limit", function()

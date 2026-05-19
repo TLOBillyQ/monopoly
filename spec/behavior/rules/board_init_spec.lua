@@ -7,19 +7,6 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- Board instance tests (mine and roadblock methods)
 
 local function _make_board()
