@@ -23,8 +23,7 @@ local function _call_method(handle, name, ...)
   if handle == nil then return false end
   local ok, method = pcall(_access_field, handle, name)
   if not ok or type(method) ~= "function" then return false end
-  local called = pcall(method, ...)
-  return called == true
+  return (pcall(method, ...))
 end
 
 function entity_pool.acquire(unit_key, pos, rotation, scale)
@@ -52,40 +51,49 @@ function entity_pool.acquire(unit_key, pos, rotation, scale)
   return handle
 end
 
-function entity_pool.release(unit_key, handle)
-  if unit_key == nil or handle == nil then return end
-  local b = _bucket(unit_key)
-  _call_method(handle, "set_model_visible", false)
-  _call_method(handle, "set_position", runtime_constants.entity_pool_park_pos)
+local function _return_or_destroy(b, handle)
   if #b.idle < _max_idle then
     b.idle[#b.idle + 1] = handle
   else
     unit_lifecycle.destroy_unit(handle)
   end
+end
+
+function entity_pool.release(unit_key, handle)
+  if unit_key == nil or handle == nil then return end
+  local b = _bucket(unit_key)
+  _call_method(handle, "set_model_visible", false)
+  _call_method(handle, "set_position", runtime_constants.entity_pool_park_pos)
+  _return_or_destroy(b, handle)
   if number_utils.is_numeric(b.live) and b.live > 0 then
     b.live = b.live - 1
   end
 end
 
-local function _prewarm_one(unit_key, b, sample_pos, rotation, scale)
+local function _valid_prewarm_args(unit_key, count)
+  return unit_key ~= nil and number_utils.is_numeric(count) and count > 0
+end
+
+local function _prewarm_one(unit_key, b, pos, rotation, scale)
   if #b.idle >= _max_idle then return false end
-  local park = runtime_constants.entity_pool_park_pos
-  local pos = sample_pos or park
   local handle = unit_lifecycle.create_unit_with_scale(unit_key, pos, rotation, scale)
   if not handle then return true end
   _call_method(handle, "set_model_visible", false)
-  _call_method(handle, "set_position", park)
+  _call_method(handle, "set_position", runtime_constants.entity_pool_park_pos)
   b.idle[#b.idle + 1] = handle
   return true
 end
 
-function entity_pool.prewarm(unit_key, count, rotation, scale, sample_pos)
-  if unit_key == nil then return end
-  if not number_utils.is_numeric(count) or count <= 0 then return end
-  local b = _bucket(unit_key)
+local function _fill_prewarm(unit_key, b, count, pos, rotation, scale)
   for _ = 1, count - #b.idle do
-    if not _prewarm_one(unit_key, b, sample_pos, rotation, scale) then break end
+    if not _prewarm_one(unit_key, b, pos, rotation, scale) then break end
   end
+end
+
+function entity_pool.prewarm(unit_key, count, rotation, scale, sample_pos)
+  if not _valid_prewarm_args(unit_key, count) then return end
+  local b = _bucket(unit_key)
+  _fill_prewarm(unit_key, b, count, sample_pos or runtime_constants.entity_pool_park_pos, rotation, scale)
 end
 
 function entity_pool.stats()

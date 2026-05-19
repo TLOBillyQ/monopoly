@@ -1,4 +1,4 @@
-local skins = require("src.config.content.skins")
+local _default_catalog = require("src.config.content.skins")
 local host_runtime_ports = require("src.ui.host_bridge")
 local number_utils = require("src.foundation.number")
 local logger = require("src.foundation.log")
@@ -7,6 +7,7 @@ local skin_panel = {}
 
 local PAGE_SIZE = 6
 local equip_callback = nil
+local _catalog = _default_catalog
 
 local function _ensure_state(state)
   assert(state ~= nil, "missing state")
@@ -21,7 +22,7 @@ local function _ensure_state(state)
 end
 
 local function _page_count()
-  return math.max(1, math.floor((#skins + PAGE_SIZE - 1) / PAGE_SIZE))
+  return math.max(1, math.floor((#_catalog + PAGE_SIZE - 1) / PAGE_SIZE))
 end
 
 local function _clamp_page(page_index)
@@ -39,7 +40,7 @@ local function _slot_index(panel, slot_index)
 end
 
 local function _skin_at(panel, slot_index)
-  return skins[_slot_index(panel, slot_index)]
+  return _catalog[_slot_index(panel, slot_index)]
 end
 
 local function _notify(text, key)
@@ -90,8 +91,15 @@ function skin_panel.configure_equip(callback)
   equip_callback = callback
 end
 
+function skin_panel.configure_catalog_for_tests(catalog)
+  _catalog = catalog or _default_catalog
+  skin_panel.catalog = _catalog
+end
+
 function skin_panel.reset_for_tests()
   equip_callback = nil
+  _catalog = _default_catalog
+  skin_panel.catalog = _catalog
 end
 
 function skin_panel.open(state, role_id)
@@ -181,6 +189,6 @@ function skin_panel.handle_action(state, action, role_id)
   return _ensure_state(state)
 end
 
-skin_panel.catalog = skins
+skin_panel.catalog = _catalog
 
 return skin_panel
