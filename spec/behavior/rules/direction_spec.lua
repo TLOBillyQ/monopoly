@@ -6,17 +6,6 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
--- _sorted_dirs_comparator
-
-
--- _pick_any_dir
-
-
--- _pick_unique_dir
-
-
--- resolve_forward_next_id
-
 local function _make_simple_map(neighbors, outer_next_map)
   return {
     outer_next = outer_next_map or {},
@@ -27,15 +16,6 @@ local function _make_simple_map(neighbors, outer_next_map)
     direction = function(a, b) return "up" end,
   }
 end
-
-
--- normalize_forward_step_context
-
-
--- resolve_backward_next_source
-
-
--- _resolve_fallback_next
 
 describe("domain direction coverage", function()
   local _config_reset = require("spec.support.config_reset")

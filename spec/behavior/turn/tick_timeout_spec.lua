@@ -5,26 +5,6 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
--- resolve_choice_timeout_seconds
-
-
--- default_policy returns clone
-
-
--- step_modal_timeout: timeout <= 0 clears timer
-
-
--- step_modal_timeout: not active clears timer
-
-
--- step_modal_timeout: active, elapsed < timeout → updates elapsed
-
-
--- step_modal_timeout: timeout reached fires on_timeout
-
-
--- step_modal_timeout: new ref resets timer
-
 describe("domain tick timeout coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

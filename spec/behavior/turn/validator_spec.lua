@@ -17,38 +17,6 @@ local function _make_game_with_player(role_id, current_index)
   }
 end
 
--- validate_actor_role
-
-
--- validate_choice_actor
-
-
--- validate_choice_id
-
-
--- validate_choice_action
-
-
--- _resolve_item_slot_resolution
-
-
--- resolve_item_slot_action (public wrapper)
-
-
--- _resolve_item_slot_resolution: item allowed by availability (line 95 path)
-
-
--- _resolve_item_slot_resolution: item denied by availability
-
-
--- resolve_gate_state: without ui_sync_ports
-
-
--- resolve_gate_state: with ui_sync_ports providing gate data
-
-
--- should_block_action: input blocked → blocks turn-bound action
-
 describe("domain validator coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

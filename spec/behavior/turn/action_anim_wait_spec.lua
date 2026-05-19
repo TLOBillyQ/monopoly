@@ -34,38 +34,6 @@ local function _make_game(opts)
   return g
 end
 
--- _coalesce_head
-
-
--- action_anim: idle path (no anim, no queued)
-
-
--- action_anim: queued next anim (idle + queued returns wait=true)
-
-
--- action_anim: anim present, action does not match → wait
-
-
--- action_anim: anim timed out → complete and return next
-
-
--- action_anim: anim done action matches → complete
-
-
--- action_anim: done action with continuation callback
-
-
--- action_anim: timed-out with queued next → wait
-
-
--- _mark_dirty via action_anim
-
-
--- _is_anim_timed_out: no started_at returns false (anim with done action)
-
-
--- seq mismatch → _is_matching_done_action returns false → wait
-
 describe("domain action anim wait coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

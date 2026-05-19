@@ -29,47 +29,6 @@ local function _make_game(players, opts)
   return g
 end
 
--- pick_target_player: unknown item_id returns nil
-
-
--- share_wealth: player is not richest → returns richest other
-
-
--- share_wealth: player is richest → returns nil
-
-
--- exile: returns richest other
-
-
--- tax: returns richest other
-
-
--- poor: returns richest other
-
-
--- exile: skips eliminated player
-
-
--- exile with options (allow_ids filter)
-
-
--- invite_deity: prefers player with angel deity
-
-
--- invite_deity: falls back to rich when no angel
-
-
--- invite_deity: no deity targets → returns nil
-
-
--- send_poor: player has poor deity → returns richest other
-
-
--- send_poor: player does not have poor deity → returns nil
-
-
--- _richest_other: no eligible others → returns nil
-
 describe("domain action selector coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

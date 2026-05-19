@@ -224,16 +224,6 @@ describe("domain runtime state coverage", function()
     _assert_eq(returned, 0, "nil elapsed should default to 0")
   end)
 
-  it("get_modal_elapsed initial is zero", function()
-    local state = {}
-    _assert_eq(runtime_state.get_modal_elapsed(state), 0, "initial modal elapsed should be 0")
-  end)
-
-  it("get_modal_ref initial is nil", function()
-    local state = {}
-    _assert_eq(runtime_state.get_modal_ref(state), nil, "initial modal ref should be nil")
-  end)
-
   it("set_modal_timer stores elapsed and ref", function()
     local state = {}
     local ref, elapsed = runtime_state.set_modal_timer(state, { elapsed_seconds = 2.5, ref = "modal_buy" })

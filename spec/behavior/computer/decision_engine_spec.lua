@@ -34,65 +34,6 @@ local function _make_agent_ref(overrides)
   }
 end
 
--- non-auto player returns nil
-
-
--- auto player (via .auto flag)
-
-
--- _choice_owner: meta.player_id finds player
-
-
--- _choice_owner: meta.player_id not found → falls back to current_player
-
-
--- remote_dice_value: agent returns value
-
-
--- remote_dice_value: agent returns nil → falls back to first option
-
-
--- roadblock_target
-
-
--- roadblock_target falls back to first option when agent returns nil
-
-
--- demolish_target uses demolish resolver
-
-
--- item_target_player: target found
-
-
--- item_target_player: no target → cancel
-
-
--- landing_optional_effect: buy_land preferred
-
-
--- landing_optional_effect: upgrade_land preferred when no buy_land
-
-
--- landing_optional_effect: no preferred → cancel (empty options, not just no match)
-
-
--- rent_card_prompt: always use
-
-
--- tax_card_prompt: always use
-
-
--- item_phase_choice: cancel
-
-
--- item_phase_passive: cancel
-
-
--- unknown kind: returns nil
-
-
--- option as plain value (not table)
-
 describe("domain decision engine coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

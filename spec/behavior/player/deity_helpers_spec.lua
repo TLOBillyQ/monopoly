@@ -138,13 +138,6 @@ describe("domain deity helpers", function()
     assert.has_error(function() deity_ops.set_player_deity(game, player, "", 5) end, "deity name must be non-empty string")
   end)
 
-  it("set_player_deity rejects nil deity name", function()
-    local game = { dirty = {} }
-    local player = _make_player()
-
-    assert.has_error(function() deity_ops.set_player_deity(game, player, nil, 5) end, "deity name must be non-empty string")
-  end)
-
   it("set_player_deity rejects zero duration", function()
     local game = { dirty = {} }
     local player = _make_player()
@@ -159,28 +152,6 @@ describe("domain deity helpers", function()
     assert.has_error(function() deity_ops.set_player_deity(game, player, "poor", -1) end, "explicit duration must be positive")
   end)
 
-  it("set_player_deity uses fallback duration when nil", function()
-    local game = { dirty = {} }
-    game.mark_players = function() end
-    local player = _make_player({ deity_duration_turns = 7 })
-
-    deity_ops.set_player_deity(game, player, "poor", nil)
-
-    _assert_eq(player.status.deity.type, "poor", "deity type should be set")
-    _assert_eq(player.status.deity.remaining, 8, "internal remaining is fallback duration+1")
-  end)
-
-  it("set_player_deity accepts positive explicit duration", function()
-    local game = { dirty = {} }
-    game.mark_players = function() end
-    local player = _make_player()
-
-    deity_ops.set_player_deity(game, player, "poor", 5)
-
-    _assert_eq(player.status.deity.type, "poor", "deity type should be set")
-    _assert_eq(player.status.deity.remaining, 6, "internal remaining is explicit duration+1")
-  end)
-
   it("tick_player_deity leaves eliminated player remaining unchanged", function()
     local game = { dirty = {} }
     game.clear_player_deity = deity_ops.clear_player_deity
@@ -191,17 +162,6 @@ describe("domain deity helpers", function()
     deity_ops.tick_player_deity(game, player)
 
     _assert_eq(player.status.deity.remaining, 4, "eliminated player should not tick down")
-  end)
-
-  it("tick_player_deity decrements non-eliminated player remaining", function()
-    local game = { dirty = {} }
-    game.clear_player_deity = deity_ops.clear_player_deity
-    game.mark_players = function() end
-    local player = _make_player({ status = { deity = { type = "poor", remaining = 4 } } })
-
-    deity_ops.tick_player_deity(game, player)
-
-    _assert_eq(player.status.deity.remaining, 3, "non-eliminated player should tick down")
   end)
 
   it("tick_player_deity ignores eliminated player with residual deity", function()

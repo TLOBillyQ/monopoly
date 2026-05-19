@@ -7,8 +7,6 @@ describe("chance_draw_and_resolve executor", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
 
-  -- can_apply
-
   it("can_apply true for chance tile with game and player", function()
     local game = support.new_game({ players = { "P1" }, auto_all = true })
     local player = game.players[1]
@@ -41,8 +39,6 @@ describe("chance_draw_and_resolve executor", function()
     assert(not executor.can_apply({ game = game, player = nil, tile = { type = "chance" } }),
       "expected falsy when player is nil")
   end)
-
-  -- apply
 
   it("apply publishes a chance card event to the event log", function()
     local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })

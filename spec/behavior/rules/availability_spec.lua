@@ -5,26 +5,6 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
--- normalize_integer_field
-
-
--- requires_followup_choice
-
-
--- resolve_offer_in_phases
-
-
--- can_auto_consider_item
-
-
--- mark_effect_group_used
-
-
--- can_offer_in_phase: target item with no registry
-
-
--- analyze_offer
-
 describe("domain availability coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

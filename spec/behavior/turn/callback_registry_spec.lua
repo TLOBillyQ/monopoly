@@ -8,65 +8,6 @@ local function _make_game()
   return {}
 end
 
--- register and peek
-
-
--- register: invalid key errors
-
-
--- register: non-function callback errors
-
-
--- take: removes and returns callback
-
-
--- take: returns nil when no callback registered
-
-
--- clear: specific key
-
-
--- clear: nil key clears all callbacks
-
-
--- clear specific key also removes seq state
-
-
--- reset_runtime delegates to clear
-
-
--- begin_wait increments seq
-
-
--- begin_wait: invalid key errors
-
-
--- pending_wait_seq returns pending seq
-
-
--- mark_wait_ready: matching seq returns true
-
-
--- mark_wait_ready: mismatched seq returns false
-
-
--- is_wait_ready: true after mark_wait_ready
-
-
--- is_wait_ready: false when no pending wait
-
-
--- is_wait_ready: false when pending but not marked ready
-
-
--- finish_wait: matching seq clears pending and ready, returns true
-
-
--- finish_wait: mismatched seq returns false
-
-
--- _ensure_runtime: reuses existing runtime
-
 describe("domain callback registry coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

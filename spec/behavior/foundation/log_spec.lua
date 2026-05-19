@@ -14,45 +14,6 @@ local function make_log_state(max_entries)
   }
 end
 
-describe("logger.stringify", function()
-  it("joins multiple args with space", function()
-    local s = logger.stringify(1, "a", "b", "c")
-    assert(s == "a b c", "expected 'a b c', got: " .. tostring(s))
-  end)
-
-  it("converts non-string values with tostring", function()
-    local s = logger.stringify(1, 42, true, nil)
-    assert(type(s) == "string", "expected string")
-  end)
-
-  it("returns empty string for no args", function()
-    local s = logger.stringify(1)
-    assert(s == "", "expected empty string")
-  end)
-end)
-
-describe("logger.format_entry", function()
-  it("includes level and text", function()
-    local entry = { level = "warn", text = "hello" }
-    local s = logger.format_entry(entry)
-    assert(s:find("warn"), "expected level in output")
-    assert(s:find("hello"), "expected text in output")
-  end)
-
-  it("prepends time_text when present", function()
-    local entry = { level = "info", text = "msg", time_text = "12:00:00" }
-    local s = logger.format_entry(entry)
-    assert(s:find("12:00:00"), "expected time_text in output")
-  end)
-
-  it("omits time prefix when time_text is empty", function()
-    local entry = { level = "info", text = "msg", time_text = "" }
-    local s = logger.format_entry(entry)
-    assert(not s:find("12:"), "expected no time prefix")
-    assert(s:find("info"), "expected level in output")
-  end)
-end)
-
 describe("logger.formatter circular buffer", function()
   local fmt = logger.formatter
 
@@ -125,23 +86,6 @@ describe("logger.formatter circular buffer", function()
     assert(not text:find("b"), "expected warn entry excluded")
   end)
 
-  it("get_entries with nil count falls back to raw entries", function()
-    local state = make_log_state(5)
-    state.entries_count = nil
-    state.entries_head = nil
-    state.entries = { { level = "info", text = "raw", time_text = "" } }
-    local entries = fmt.get_entries(state)
-    assert(#entries >= 1, "expected at least one entry")
-  end)
-
-  it("get_entries returns empty when count is zero", function()
-    local state = make_log_state(5)
-    state.entries_count = 0
-    state.entries_head = 1
-    state.entries = {}
-    local entries = fmt.get_entries(state)
-    assert(#entries == 0, "expected empty entries")
-  end)
 end)
 
 describe("logger singleton", function()

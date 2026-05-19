@@ -4,14 +4,6 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
--- _roll_dice
-
-
--- _resolve_phase_wait_result
-
-
--- _phase_roll_with_pre_move / _phase_roll (anim gate paths)
-
 local function _make_game(wait_action_anim)
   local anim_queued = {}
   local game = {

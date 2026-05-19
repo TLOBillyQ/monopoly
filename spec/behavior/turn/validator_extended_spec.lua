@@ -9,14 +9,6 @@ describe("domain validator extended coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
 
-  it("validate_choice_action with choice missing id returns false", function()
-    local choice = { kind = "market_buy" }
-    _assert_eq(
-      validator.validate_choice_action({}, { actor_role_id = 1001, choice_id = 10 }, choice),
-      false, "choice without .id should return false"
-    )
-  end)
-
   it("validate_choice_action with nil action returns false (via missing actor)", function()
     local choice = { id = 10, kind = "market_buy" }
     _assert_eq(

@@ -4,26 +4,6 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
--- stringify
-
-
--- format_entry
-
-
--- get_entries: linear (no count/head)
-
-
--- get_entries: circular buffer (with count/head)
-
-
--- get_entries_by_level
-
-
--- get_text
-
-
--- get_text_by_level
-
 describe("domain log formatter coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

@@ -11,23 +11,6 @@ local function _make_game()
   }
 end
 
--- is_enabled
-
-
--- is_repeatable
-
-
--- finish
-
-
--- _build_wait_choice_next_state / _build_wait_choice_next_args
-
-
--- mark_active
-
-
--- decorate_followup_choice_spec
-
 describe("domain items phase coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

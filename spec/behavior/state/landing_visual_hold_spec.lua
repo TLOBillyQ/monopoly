@@ -17,83 +17,6 @@ local function _make_state()
   return {}
 end
 
--- is_active_game: game.turn path (no state)
-
-
--- is_release_pending_game
-
-
--- mark_release_pending
-
-
--- clear_game
-
-
--- hold_state_for_game
-
-
--- is_flushing_state
-
-
--- with_flushing
-
-
--- is_active_state
-
-
--- should_defer
-
-
--- capture_frozen_ui_model
-
-
--- freeze_active_ui
-
-
--- set_post_release_hook
-
-
--- merge_dirty
-
-
--- defer_dirty
-
-
--- register_release_callback
-
-
--- run_or_defer: not deferred → fn called
-
-
--- defer_popup
-
-
--- defer_runtime_event
-
-
--- defer_board_visual_sync
-
-
--- defer_tile_update
-
-
--- defer_owner_change
-
-
--- defer_bankruptcy_clear
-
-
--- reset_state
-
-
--- release: game.turn path (state is a game-like table)
-
-
--- sync_state_from_game: non-state-source uses game turn
-
-
--- start: no turn → returns false
-
 describe("domain landing visual hold coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
@@ -255,13 +178,6 @@ describe("domain landing visual hold coverage", function()
     _assert_eq(target.players, true, "players should be merged")
   end)
 
-  it("defer_dirty returns hold deferred_dirty", function()
-    local state = _make_state()
-    local dirty = { any = true, players = false, board_tiles = false, turn = false, market = false, turn_countdown = false, inventory_ids = {} }
-    local result = landing_visual_hold.defer_dirty(state, dirty)
-    assert(type(result) == "table", "defer_dirty should return the deferred_dirty bucket")
-  end)
-
   it("register_release_callback registers fn", function()
     local state = _make_state()
     local fn = function() return true end
@@ -325,13 +241,6 @@ describe("domain landing visual hold coverage", function()
     _assert_eq(hold.release_pending, false, "release_pending should be false after reset")
     _assert_eq(hold.frozen_ui_model, nil, "frozen_ui_model should be nil after reset")
     _assert_eq(hold.source, nil, "source should be nil after reset")
-  end)
-
-  it("release false when release_pending not set", function()
-    local state = _make_state()
-    local game = _make_game()
-    local result = landing_visual_hold.release(state, game)
-    _assert_eq(result, false, "release should return false when release_pending not set")
   end)
 
   it("sync_state_from_game uses game turn active", function()

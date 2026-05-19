@@ -33,44 +33,6 @@ local function _make_player(items_list, opts)
   }
 end
 
--- inventory.cfg
-
-
--- inventory.items
-
-
--- inventory.count
-
-
--- inventory.is_full
-
-
--- inventory.add
-
-
--- inventory.find_index
-
-
--- inventory.remove_by_index
-
-
--- inventory.consume
-
-
--- inventory.clear
-
-
--- inventory.give: not full → adds item
-
-
--- inventory.give: full → returns false
-
-
--- inventory.give: full with game.popup_port nil → notify skipped
-
-
--- inventory.give: full with AI player → notify skipped
-
 describe("domain inventory coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

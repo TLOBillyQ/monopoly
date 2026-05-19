@@ -22,41 +22,6 @@ local function _teardown()
   runtime_ports.reset_for_tests()
 end
 
--- resolve_wait_state: no anim, no hold, effects idle, wait_action_anim=false → wait_choice
-
-
--- resolve_wait_state: has anim, no hold, effects idle, wait_action_anim=false → wait_action_anim
-
-
--- resolve_wait_state: no anim, has hold, wait_action_anim=false → wait_landing_visual
-
-
--- resolve_wait_state: has anim, has hold, wait_action_anim=false → wait_landing_visual (via landing+anim chain)
-
-
--- resolve_wait_state: wait_action_anim=true, no anim, no hold → returns next_state directly
-
-
--- resolve_wait_state: wait_action_anim=true, has anim, no hold → wait_action_anim via callback
-
-
--- resolve_wait_state: wait_action_anim=true, no anim, has hold → wait_landing_visual
-
-
--- resolve_wait_state: wait_action_anim=true, has anim, has hold → wait_landing_visual then wait_action_anim
-
-
--- resolve_wait_state: effects_pending (not idle) + no anim → wait_landing_visual
-
-
--- resolve_wait_state: effects_pending + wait_action_anim=true, no anim → wait_landing_visual
-
-
--- action_anim queue also counts as has_anim
-
-
--- _register_action_anim_resume: move_followup sets pending flag
-
 describe("domain land resolve coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

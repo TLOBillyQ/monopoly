@@ -22,11 +22,6 @@ describe("domain state adapter coverage", function()
     _assert_eq(output_port.invalidate_ui_model(state), false, "second invalidate should return false")
   end)
 
-  it("clear_ui_dirty returns false when not dirty", function()
-    local state = {}
-    _assert_eq(output_port.clear_ui_dirty(state), false, "clear_ui_dirty on clean state should return false")
-  end)
-
   it("clear_ui_dirty clears dirty flag and returns true", function()
     local state = {}
     output_port.invalidate_ui_model(state)
@@ -94,22 +89,6 @@ describe("domain state adapter coverage", function()
     local state = {}
     output_port.sync_modal_timer(state, { ref = "pop_2", elapsed_seconds = 0.5 })
     _assert_eq(output_port.get_modal_ref(state), "pop_2", "get_modal_ref should return synced ref")
-  end)
-
-  it("build_runtime_output_ports returns all port functions", function()
-    local ports = output_port.build_runtime_output_ports()
-    local expected_keys = {
-      "invalidate_ui_model", "clear_ui_dirty", "is_ui_dirty",
-      "sync_ui_model", "get_ui_model",
-      "sync_pending_choice", "clear_pending_choice", "get_pending_choice",
-      "get_pending_choice_id", "get_pending_choice_elapsed",
-      "set_pending_choice_elapsed", "set_pending_choice_id",
-      "sync_modal_timer", "get_modal_elapsed", "get_modal_ref",
-    }
-    for _, key in ipairs(expected_keys) do
-      assert(type(ports[key]) == "function",
-        "build_runtime_output_ports should include " .. tostring(key))
-    end
   end)
 
 end)

@@ -22,20 +22,6 @@ local function _make_player(opts)
   }
 end
 
--- player_has_deity
-
-
--- player_has_angel
-
-
--- clear_player_deity
-
-
--- set_player_deity
-
-
--- tick_player_deity
-
 describe("domain deity ops coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

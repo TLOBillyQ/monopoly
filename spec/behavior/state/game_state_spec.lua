@@ -4,23 +4,6 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
--- _install_default_runtime_ports: skip-install paths (when ports already valid)
-
-
--- _install_default_runtime_ports: invalid function but valid table should re-install
-
-
--- ensure_* error paths
-
-
--- ensure_* happy paths
-
-
--- advance_turn and dispatch_action with finished=true (early return paths)
-
-
--- mark_players_dirty / mark_board_dirty
-
 describe("domain game state coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

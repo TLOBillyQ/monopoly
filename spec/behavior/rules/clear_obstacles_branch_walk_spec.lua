@@ -36,34 +36,6 @@ local function _capture_anim_payload(game, fn)
   return captured
 end
 
--- ============================================================
--- Test 1: linear path produces a single branch with 12 entries
--- Player at index 1, walking right along outer ring.
--- Place roadblocks at indices 3, 7, 10.
--- Expect branches = 1 branch with 12 entries, positions 3,7,10 have has_obstacle=true.
--- ============================================================
-
--- ============================================================
--- Test 2: forked path produces two branches
--- Player positioned just before a fork on the default map.
--- The tile at outer position index for (9,6) has a forward neighbor (9,5)
--- which itself connects both to (9,4) [outer] and (8,5) [inner vertical path].
--- So walking from (9,6) → (9,5) is a fork.
--- ============================================================
-
--- ============================================================
--- Test 3: dead-end path stops at board edge without padding
--- Build a minimal synthetic board with only 5 tiles ahead of player.
--- Call handler for distance=12.
--- Expect: single branch with exactly 5 entries (not 12).
--- ============================================================
-
--- ============================================================
--- Test 4: duration is a positive number in the payload
--- Build any board with at least 6 tiles, call handler for distance=6.
--- Expect: payload.duration is a number > 0 and in reasonable range.
--- ============================================================
-
 describe("domain.clear_obstacles_branch_walk", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

@@ -19,23 +19,6 @@ local function _make_session(phases, opts)
   }
 end
 
--- turn_script.create: simple run start → done → nil
-
-
--- turn_script.create: session with existing current_state skips 'start'
-
-
--- turn_script.create: callable table as phase handler (_is_callable table path)
-
-
--- turn_script.create: state_args forwarded to handler
-
-
--- turn_script.create: session.turn_mgr is passed to handlers (not session itself)
-
-
--- turn_script.create: session used as turn_mgr when turn_mgr is nil
-
 describe("domain session_script coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

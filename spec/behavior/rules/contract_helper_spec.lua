@@ -12,26 +12,6 @@ local function _make_game(opts)
   return g
 end
 
--- resolve_required_port
-
-
--- resolve_required_method
-
-
--- resolve_method
-
-
--- resolve_optional_port
-
-
--- resolve_optional_method
-
-
--- call_required_method
-
-
--- call_optional_method
-
 describe("domain contract helper coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
