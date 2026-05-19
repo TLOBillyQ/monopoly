@@ -7,33 +7,19 @@ end
 -- stringify
 
 
-
-
-
-
 -- format_entry
-
-
 
 
 -- get_entries: linear (no count/head)
 
 
-
 -- get_entries: circular buffer (with count/head)
-
-
-
 
 
 -- get_entries_by_level
 
 
-
-
-
 -- get_text
-
 
 
 -- get_text_by_level

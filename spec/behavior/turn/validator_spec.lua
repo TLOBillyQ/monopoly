@@ -20,40 +20,19 @@ end
 -- validate_actor_role
 
 
-
-
-
-
-
 -- validate_choice_actor
-
-
-
 
 
 -- validate_choice_id
 
 
-
-
-
-
 -- validate_choice_action
-
-
-
 
 
 -- _resolve_item_slot_resolution
 
 
-
-
-
-
-
 -- resolve_item_slot_action (public wrapper)
-
 
 
 -- _resolve_item_slot_resolution: item allowed by availability (line 95 path)

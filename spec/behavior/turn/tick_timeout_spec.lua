@@ -8,11 +8,7 @@ end
 -- resolve_choice_timeout_seconds
 
 
-
-
-
 -- default_policy returns clone
-
 
 
 -- step_modal_timeout: timeout <= 0 clears timer

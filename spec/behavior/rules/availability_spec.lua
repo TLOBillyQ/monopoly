@@ -8,27 +8,16 @@ end
 -- normalize_integer_field
 
 
-
-
 -- requires_followup_choice
-
-
 
 
 -- resolve_offer_in_phases
 
 
-
-
-
 -- can_auto_consider_item
 
 
-
-
 -- mark_effect_group_used
-
-
 
 
 -- can_offer_in_phase: target item with no registry

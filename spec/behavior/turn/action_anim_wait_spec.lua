@@ -37,13 +37,7 @@ end
 -- _coalesce_head
 
 
-
-
-
-
-
 -- action_anim: idle path (no anim, no queued)
-
 
 
 -- action_anim: queued next anim (idle + queued returns wait=true)

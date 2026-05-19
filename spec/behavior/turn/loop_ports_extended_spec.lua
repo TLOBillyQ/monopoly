@@ -7,8 +7,6 @@ end
 -- _clock_diff fallback: non-numeric args return 0
 
 
-
-
 -- _copy_group_ports: extra override keys not in required_keys are included
 
 

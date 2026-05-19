@@ -9,16 +9,10 @@ end
 -- _sorted_dirs_comparator
 
 
-
-
 -- _pick_any_dir
 
 
-
-
 -- _pick_unique_dir
-
-
 
 
 -- resolve_forward_next_id
@@ -35,21 +29,10 @@ local function _make_simple_map(neighbors, outer_next_map)
 end
 
 
-
-
-
-
-
 -- normalize_forward_step_context
 
 
-
 -- resolve_backward_next_source
-
-
-
-
-
 
 
 -- _resolve_fallback_next

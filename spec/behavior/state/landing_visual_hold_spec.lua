@@ -20,21 +20,13 @@ end
 -- is_active_game: game.turn path (no state)
 
 
-
-
 -- is_release_pending_game
-
 
 
 -- mark_release_pending
 
 
-
-
 -- clear_game
-
-
-
 
 
 -- hold_state_for_game
@@ -46,17 +38,13 @@ end
 -- with_flushing
 
 
-
-
 -- is_active_state
 
 
 -- should_defer
 
 
-
 -- capture_frozen_ui_model
-
 
 
 -- freeze_active_ui

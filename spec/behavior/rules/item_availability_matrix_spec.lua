@@ -12,10 +12,6 @@ end
 local _assert_eq = support.assert_eq
 
 
-
-
-
-
 local function _with_offer_phase_cfg(item_ids_to_patch, fn)
   local original_cfg = inventory.cfg
   support.with_patches({

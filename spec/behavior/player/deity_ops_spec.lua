@@ -25,22 +25,13 @@ end
 -- player_has_deity
 
 
-
-
-
-
 -- player_has_angel
-
 
 
 -- clear_player_deity
 
 
-
 -- set_player_deity
-
-
-
 
 
 -- tick_player_deity

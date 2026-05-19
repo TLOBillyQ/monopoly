@@ -12,13 +12,6 @@ local role_control_lock_policy = require("src.ui.input.role_control_lock")
 local timing = require("src.config.gameplay.timing")
 
 
-
-
-
-
-
-
-
 local function _make_unit(initial_count)
   local unit = {
     count = initial_count or 0,

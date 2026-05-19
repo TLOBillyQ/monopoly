@@ -42,16 +42,13 @@ end
 -- inventory.count
 
 
-
 -- inventory.is_full
-
 
 
 -- inventory.add
 
 
 -- inventory.find_index
-
 
 
 -- inventory.remove_by_index
@@ -61,7 +58,6 @@ end
 
 
 -- inventory.clear
-
 
 
 -- inventory.give: not full → adds item

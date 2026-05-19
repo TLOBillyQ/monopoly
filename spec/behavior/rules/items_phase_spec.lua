@@ -14,27 +14,13 @@ end
 -- is_enabled
 
 
-
-
-
-
 -- is_repeatable
-
-
-
 
 
 -- finish
 
 
-
-
 -- _build_wait_choice_next_state / _build_wait_choice_next_args
-
-
-
-
-
 
 
 -- mark_active
