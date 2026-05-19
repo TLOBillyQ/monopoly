@@ -1,10 +1,11 @@
-local item_catalog = require("src.config.content.item_atlas")
+local _default_catalog = require("src.config.content.item_atlas")
 local host_runtime_ports = require("src.ui.host_bridge")
 local number_utils = require("src.foundation.number")
 
 local item_atlas = {}
 
 local PAGE_SIZE = 8
+local _catalog = _default_catalog
 
 local function _ensure_state(state)
   assert(state ~= nil, "missing state")
@@ -18,7 +19,7 @@ local function _ensure_state(state)
 end
 
 local function _page_count()
-  return math.max(1, math.floor((#item_catalog + PAGE_SIZE - 1) / PAGE_SIZE))
+  return math.max(1, math.floor((#_catalog + PAGE_SIZE - 1) / PAGE_SIZE))
 end
 
 local function _clamp_page(page_index)
@@ -28,7 +29,7 @@ end
 
 local function _item_at(atlas, slot_index)
   local slot = number_utils.to_integer(slot_index) or 1
-  return item_catalog[(atlas.page_index - 1) * PAGE_SIZE + slot]
+  return _catalog[(atlas.page_index - 1) * PAGE_SIZE + slot]
 end
 
 local function _notify(text, key)
@@ -97,6 +98,16 @@ function item_atlas.handle_action(state, action, role_id)
   return atlas
 end
 
-item_atlas.catalog = item_catalog
+function item_atlas.configure_catalog_for_tests(catalog)
+  _catalog = catalog or _default_catalog
+  item_atlas.catalog = _catalog
+end
+
+function item_atlas.reset_for_tests()
+  _catalog = _default_catalog
+  item_atlas.catalog = _catalog
+end
+
+item_atlas.catalog = _catalog
 
 return item_atlas
