@@ -27,8 +27,8 @@ function bootstrap.install(script_path, opts)
   })
   local arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view")
   local arch_view_patterns = {
-    runtime_paths.join_path(arch_view_root, "?.lua"),
-    runtime_paths.join_path(arch_view_root, "?/?.lua"),
+    runtime_paths.join_path(arch_view_root, "lib/?.lua"),
+    runtime_paths.join_path(arch_view_root, "lib/?/init.lua"),
   }
   for _, pattern in ipairs(arch_view_patterns) do
     if not tostring(package.path):find(pattern, 1, true) then

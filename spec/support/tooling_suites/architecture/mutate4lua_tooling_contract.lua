@@ -106,18 +106,19 @@ end
 local function _test_no_go_binary_references_in_wrapper()
   local wrapper_path = mutate.env.cwd .. "/tools/quality/mutate.lua"
   local content = common.read_file(wrapper_path)
-  _assert_not_contains(content, "ensure_binary", "wrapper should not reference Go binary")
-  _assert_not_contains(content, "mutate4lua-engine", "wrapper should not reference Go engine binary name")
-  _assert_not_contains(content, "go build", "wrapper should not reference go build")
+  _assert_not_contains(content, "ensure_" .. "binary", "wrapper should not reference removed binary resolver")
+  _assert_not_contains(content, "mutate4lua-" .. "engine", "wrapper should not reference removed engine binary name")
+  _assert_not_contains(content, "go " .. "build", "wrapper should not reference removed build command")
   _assert_not_contains(content, "engine_bridge", "wrapper should not reference engine_bridge")
 end
 
 local function _test_no_go_binary_references_in_vendor_cli()
-  local cli_path = mutate.env.cwd .. "/vendor/mutate4lua/lua/mutate4lua/cli.lua"
+  local cli_path = mutate.env.cwd .. "/vendor/mutate4lua/lib/mutate4lua/cli.lua"
   local content = common.read_file(cli_path)
-  _assert_not_contains(content, "ensure_binary", "vendor cli should not reference Go binary")
+  assert(content ~= nil, "vendor cli should exist at lib layout")
+  _assert_not_contains(content, "ensure_" .. "binary", "vendor cli should not reference removed binary resolver")
   _assert_not_contains(content, "engine_bridge", "vendor cli should not reference engine_bridge")
-  _assert_not_contains(content, "go build", "vendor cli should not reference go build")
+  _assert_not_contains(content, "go " .. "build", "vendor cli should not reference removed build command")
 end
 
 local function _test_driver_lists_suite_modules_as_json()

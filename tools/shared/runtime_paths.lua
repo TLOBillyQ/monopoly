@@ -115,7 +115,7 @@ local function _looks_like_repo_root(path)
   return true
 end
 
-local _SUBMODULE_PROBE = "crap4lua/bin"
+local _SUBMODULE_PROBE = "crap4lua/lib/crap4lua"
 
 local function _read_file_first_line(path)
   local file = io.open(path, "r")
