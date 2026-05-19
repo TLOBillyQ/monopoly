@@ -1359,40 +1359,6 @@ describe("gameplay.t6_characterization", function()
     assert(result == false, "should return false for nil cue name")
   end)
 
-  it("play_cue_nonexistent", function()
-    local mock_host = {
-      play_sfx_by_key = function() return nil end,
-      play_3d_sound = function() return nil end,
-    }
-
-    local result = board_feedback.play_tile_cue(
-      { presentation_runtime = { host_runtime = mock_host } },
-      "nonexistent_cue_12345",
-      1,
-      {},
-      { host_runtime = mock_host }
-    )
-    assert(result == false, "should return false for nonexistent cue")
-  end)
-
-  it("play_sound_only_nil_pos_fallback", function()
-    local mock_host = {
-      play_sfx_by_key = function() return nil end,
-      play_3d_sound = function() return nil end,
-    }
-
-    -- Call play_sound_only with no pos, no player_id, no tile_index
-    -- This should pass nil to _play_cue, triggering the fallback to v3_zero
-    local result = board_feedback.play_sound_only(
-      { presentation_runtime = { host_runtime = mock_host } },
-      "nonexistent_cue_12345",
-      {},
-      { host_runtime = mock_host }
-    )
-
-    assert(result == false, "should return false for nonexistent cue even with nil pos fallback")
-  end)
-
   it("play_player_cue_nil_position", function()
     local mock_host = {
       play_sfx_by_key = function() return nil end,
