@@ -6,7 +6,7 @@ local item_atlas_steps = {}
 local function _make_catalog(n)
   local t = {}
   for i = 1, n do
-    t[i] = { id = "item_" .. i, name = "道具" .. i }
+    t[i] = { id = "item_" .. i, name = "道具" .. i, description = "描述" .. i }
   end
   return t
 end
@@ -102,9 +102,80 @@ function item_atlas_steps.handlers()
       return true
     end,
 
+    -- ── enlarged card ─────────────────────────────────────────────────────────
+    ["放大卡牌已展示"] = function(world)
+      local a = _atlas(world)
+      if not (a and a.selected_item_id ~= nil) then
+        return nil, "enlarged card is not visible (no item selected)"
+      end
+      return true
+    end,
+
+    ["放大卡牌已隐藏"] = function(world)
+      local a = _atlas(world)
+      if a and a.selected_item_id ~= nil then
+        return nil, "enlarged card is still visible (item selected: " .. tostring(a.selected_item_id) .. ")"
+      end
+      return true
+    end,
+
+    ["放大卡牌显示第<p4>格道具的名称"] = function(world, example)
+      local slot = number_utils.to_integer(example.p4)
+      if slot == nil then return nil, "invalid slot: " .. tostring(example.p4) end
+      local a = _atlas(world)
+      local idx = (a.page_index - 1) * 8 + slot
+      local item = item_atlas.catalog[idx]
+      if not item then return nil, "no item at slot " .. tostring(slot) end
+      if a.selected_item_id ~= item.id then
+        return nil, "selected item mismatch: expected " .. tostring(item.id) .. ", got " .. tostring(a.selected_item_id)
+      end
+      if not item.name then return nil, "item has no name" end
+      return true
+    end,
+
+    ["放大卡牌显示第<p4>格道具的描述"] = function(world, example)
+      local slot = number_utils.to_integer(example.p4)
+      if slot == nil then return nil, "invalid slot: " .. tostring(example.p4) end
+      local a = _atlas(world)
+      local idx = (a.page_index - 1) * 8 + slot
+      local item = item_atlas.catalog[idx]
+      if not item then return nil, "no item at slot " .. tostring(slot) end
+      if a.selected_item_id ~= item.id then
+        return nil, "selected item mismatch: expected " .. tostring(item.id) .. ", got " .. tostring(a.selected_item_id)
+      end
+      if not item.description then return nil, "item has no description" end
+      return true
+    end,
+
+    ["玩家点击空白区域关闭放大卡牌"] = function(world)
+      item_atlas.handle_action(world.atlas_state, "dismiss", world.ui_role_id or 1)
+      return true
+    end,
+
+    ["无道具被选中"] = function(world)
+      local a = _atlas(world)
+      if a and a.selected_item_id ~= nil then
+        return nil, "expected no item selected, got " .. tostring(a.selected_item_id)
+      end
+      return true
+    end,
+
     -- ── pagination ────────────────────────────────────────────────────────────
+    ["玩家翻到图鉴上一页"] = function(world)
+      item_atlas.handle_action(world.atlas_state, "prev", world.ui_role_id or 1)
+      return true
+    end,
+
     ["玩家翻到图鉴下一页"] = function(world)
       item_atlas.handle_action(world.atlas_state, "next", world.ui_role_id or 1)
+      return true
+    end,
+
+    ["当前图鉴页码为1"] = function(world)
+      local atlas = _atlas(world)
+      if atlas.page_index ~= 1 then
+        return nil, "expected page 1, got " .. tostring(atlas.page_index)
+      end
       return true
     end,
 

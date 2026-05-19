@@ -80,12 +80,20 @@ end
 local function _page_next(state)
   local atlas = _ensure_state(state)
   atlas.page_index = _clamp_page(atlas.page_index + 1)
+  atlas.selected_item_id = nil
   return atlas
 end
 
 local function _page_prev(state)
   local atlas = _ensure_state(state)
   atlas.page_index = _clamp_page(atlas.page_index - 1)
+  atlas.selected_item_id = nil
+  return atlas
+end
+
+local function _dismiss(state)
+  local atlas = _ensure_state(state)
+  atlas.selected_item_id = nil
   return atlas
 end
 
@@ -99,9 +107,10 @@ local function _select_slot(state, slot_index)
 end
 
 local _STRING_ACTION_HANDLERS = {
-  close = function(state, _, _)    return item_atlas.close(state) end,
-  next  = function(state, _, _)    return _page_next(state) end,
-  prev  = function(state, _, _)    return _page_prev(state) end,
+  close   = function(state, _, _)    return item_atlas.close(state) end,
+  next    = function(state, _, _)    return _page_next(state) end,
+  prev    = function(state, _, _)    return _page_prev(state) end,
+  dismiss = function(state, _, _)    return _dismiss(state) end,
 }
 
 function item_atlas.handle_action(state, action, role_id)
