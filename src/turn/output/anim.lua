@@ -21,16 +21,17 @@ local _action_anim_opts = {
 }
 
 local function _step_anim(game, state, opts)
-  assert(game ~= nil, "missing game")
-  assert(opts ~= nil and opts.on_anim ~= nil, "missing opts.on_anim")
-  assert(opts.anim_key ~= nil, "missing opts.anim_key")
-  assert(opts.phase ~= nil, "missing opts.phase")
-  assert(opts.seq_key ~= nil, "missing opts.seq_key")
-  assert(opts.done_action ~= nil, "missing opts.done_action")
+  assert(game, "missing game")
+  assert(opts, "missing opts")
+  assert(opts.on_anim, "missing opts.on_anim")
+  assert(opts.anim_key, "missing opts.anim_key")
+  assert(opts.phase, "missing opts.phase")
+  assert(opts.seq_key, "missing opts.seq_key")
+  assert(opts.done_action, "missing opts.done_action")
 
   local anim = game.turn[opts.anim_key]
   local phase = game.turn.phase
-  assert(anim ~= nil and anim.seq ~= nil, "missing " .. tostring(opts.anim_key))
+  assert(anim and anim.seq, "missing " .. tostring(opts.anim_key))
 
   local phase_label = opts.phase_label or "anim"
   assert(phase == opts.phase, "unexpected " .. phase_label .. " phase: " .. tostring(phase))
@@ -44,12 +45,12 @@ local function _step_anim(game, state, opts)
   local ok, delay = pcall(opts.on_anim, state, anim)
   if ok and delay and delay > 0 then
     runtime_ports.schedule(delay, function()
-      assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
+      assert(game.dispatch_action, "missing game.dispatch_action")
       game:dispatch_action({ type = opts.done_action, seq = anim.seq })
     end)
     return
   end
-  assert(game.dispatch_action ~= nil, "missing game.dispatch_action")
+  assert(game.dispatch_action, "missing game.dispatch_action")
   game:dispatch_action({ type = opts.done_action, seq = anim.seq })
 end
 

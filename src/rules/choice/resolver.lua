@@ -125,42 +125,49 @@ local function _resolve_cancel_fallback(game, choice, action, descriptor, opts)
   return _handle_cancel_result(game, choice, cancel_result, descriptor, opts)
 end
 
+local function _try_cancel_action(game, choice, action, descriptor, opts)
+  if not item_preconsume_policy.is_cancel_action(action) then return nil, action end
+  local cancel_result, new_action = _resolve_cancel_fallback(game, choice, action, descriptor, opts)
+  if cancel_result then return cancel_result, action end
+  return nil, new_action
+end
+
+local function _maybe_normalize_action(game, choice, action, descriptor)
+  if descriptor.normalize_action == nil then return action end
+  local normalized = descriptor.normalize_action(game, choice, action)
+  if normalized ~= nil then return normalized end
+  return action
+end
+
+local function _build_resolve_result(result)
+  if result and result.stay then
+    result.status = result.status or "waiting"
+    return result
+  end
+  return result or { status = "resolved", stay = false }
+end
+
 function choice_resolver.resolve(game, choice, action, opts)
-  assert(game ~= nil, "missing game")
-  assert(choice ~= nil, "missing choice")
-  assert(action ~= nil, "missing action")
+  assert(game, "missing game")
+  assert(choice, "missing choice")
+  assert(action, "missing action")
   opts = opts or {}
 
   local descriptor = _resolve_descriptor(game, choice)
-
   action = item_preconsume_policy.normalize_cancel_action(choice, action)
 
-  if item_preconsume_policy.is_cancel_action(action) then
-    local cancel_result, new_action = _resolve_cancel_fallback(game, choice, action, descriptor, opts)
-    if cancel_result ~= nil then
-      return cancel_result
-    end
-    action = new_action
-  end
+  local early_result, new_action = _try_cancel_action(game, choice, action, descriptor, opts)
+  if early_result then return early_result end
+  action = new_action
 
-  if descriptor.normalize_action ~= nil then
-    local normalized_action = descriptor.normalize_action(game, choice, action)
-    if normalized_action ~= nil then
-      action = normalized_action
-    end
-  end
+  action = _maybe_normalize_action(game, choice, action, descriptor)
 
   if not _option_exists(choice, action.option_id) then
     logger.warn("invalid choice option:", tostring(choice.kind), tostring(action.option_id))
     return { status = "rejected", stay = true }
   end
 
-  local result = descriptor.execute(game, choice, action)
-  if result and result.stay then
-    result.status = result.status or "waiting"
-    return result
-  end
-  return result or { status = "resolved", stay = false }
+  return _build_resolve_result(descriptor.execute(game, choice, action))
 end
 
 choice_resolver._M_test = {
