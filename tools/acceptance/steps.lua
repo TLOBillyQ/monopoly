@@ -15,6 +15,9 @@ local endgame_steps = require("acceptance.steps.endgame")
 local skin_shop_steps = require("acceptance.steps.skin_shop")
 local item_atlas_steps = require("acceptance.steps.item_atlas")
 local market_cash_steps = require("acceptance.steps.market_cash")
+local deities_steps = require("acceptance.steps.deities")
+local market_steps = require("acceptance.steps.market")
+local paid_currency_steps = require("acceptance.steps.paid_currency")
 
 local steps = {}
 
@@ -702,6 +705,9 @@ function steps.handlers()
   _merge_handlers(h, skin_shop_steps.handlers(), "skin_shop")
   _merge_handlers(h, item_atlas_steps.handlers(), "item_atlas")
   _merge_handlers(h, market_cash_steps.handlers(), "market_cash")
+  _merge_handlers(h, deities_steps.handlers(), "deities")
+  _merge_handlers(h, market_steps.handlers(), "market")
+  _merge_handlers(h, paid_currency_steps.handlers(), "paid_currency")
   return h
 end
 

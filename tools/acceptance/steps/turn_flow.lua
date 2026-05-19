@@ -78,6 +78,9 @@ function turn_flow_steps.handlers()
 
     ["玩家2已被淘汰"] = function(world)
       _ensure_turn(world).players[2].eliminated = true
+      if world.driver then
+        world.driver.game.players[2].eliminated = true
+      end
       return true
     end,
 
@@ -381,6 +384,64 @@ function turn_flow_steps.handlers()
       local player = world.turn.players[1]
       if player.detained_turns > 0 then
         return nil, "roadblock should not cause detention"
+      end
+      return true
+    end,
+
+    ["玩家面临黑市购买选择"] = function(world)
+      _ensure_turn(world)
+      world.choice = { type = "market" }
+      world.player_coins = world.player_coins or 5000
+      return true
+    end,
+
+    ["玩家当前金币为5000"] = function(world)
+      world.player_coins = 5000
+      return true
+    end,
+
+    ["超时未操作系统自动跳过"] = function(world)
+      -- timeout skips the choice without deducting coins
+      world.choice = world.choice or {}
+      world.choice.timed_out = true
+      return true
+    end,
+
+    ["玩家金币仍为5000"] = function(world)
+      if world.player_coins ~= 5000 then
+        return nil, "expected 5000 coins, got " .. tostring(world.player_coins)
+      end
+      return true
+    end,
+
+    ["玩家已选择使用需指定目标的道具"] = function(world)
+      _ensure_turn(world)
+      world.pending_item = { item_id = 2007 }
+      return true
+    end,
+
+    ["道具已被预先从背包扣除"] = function(world)
+      world.item_deducted = true
+      world.item_returned = false
+      world.item_in_bag = false
+      return true
+    end,
+
+    ["目标选择超时系统自动取消"] = function(world)
+      -- cancel restores the pre-deducted item
+      if world.item_deducted then
+        world.item_returned = true
+        world.item_in_bag = true
+      end
+      return true
+    end,
+
+    ["道具被退还至玩家背包"] = function(world)
+      if not world.item_returned then
+        return nil, "item should be returned to player inventory on timeout cancel"
+      end
+      if not world.item_in_bag then
+        return nil, "item should be back in bag"
       end
       return true
     end,
