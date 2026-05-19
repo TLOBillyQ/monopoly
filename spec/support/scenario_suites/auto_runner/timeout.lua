@@ -1,10 +1,9 @@
 local gameplay_cases = require("spec.support.scenario_suites.shared.cases")
-local t2_enabled_cases = require("spec.support.scenario_suites.shared.enabled_cases")
 
 local function _case(name, overrides)
   local case = {
     name = name,
-    run = assert(gameplay_cases[name] or t2_enabled_cases[name], "missing gameplay case: " .. tostring(name)),
+    run = assert(gameplay_cases[name], "missing gameplay case: " .. tostring(name)),
   }
   for key, value in pairs(overrides or {}) do
     case[key] = value

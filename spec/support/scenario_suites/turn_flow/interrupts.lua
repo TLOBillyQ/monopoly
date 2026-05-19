@@ -1,11 +1,9 @@
 local gameplay_cases = require("spec.support.scenario_suites.shared.cases")
-local t2_enabled_cases = require("spec.support.scenario_suites.shared.enabled_cases")
 
 local function _case(name)
-  local run = gameplay_cases[name] or t2_enabled_cases[name]
   return {
     name = name,
-    run = assert(run, "missing gameplay case: " .. tostring(name)),
+    run = assert(gameplay_cases[name], "missing gameplay case: " .. tostring(name)),
   }
 end
 
