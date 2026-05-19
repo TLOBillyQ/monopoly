@@ -1,14 +1,6 @@
 local post_effects = require("src.rules.items.post_effects")
 local item_ids = require("src.config.gameplay.item_ids")
 
-
--- Tests for post_effects.apply_target tax item effect (CRAP=12.00, coverage=0%)
-
-
--- Tests for post_effects.apply_target exile item effect
-
--- Tests for post_effects.apply_target send_poor item effect
-
 describe("items_post_effects", function()
   it("_test_apply_target_share_wealth", function()
     local game = {
