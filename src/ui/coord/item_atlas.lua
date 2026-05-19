@@ -1,7 +1,6 @@
 local _default_catalog = require("src.config.content.item_atlas")
 local host_runtime_ports = require("src.ui.host_bridge")
 local number_utils = require("src.foundation.number")
-local runtime_ports = require("src.foundation.ports.runtime_ports")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local base_nodes = require("src.ui.schema.base")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
@@ -46,25 +45,12 @@ local function _notify(text, key)
   })
 end
 
-local function _switch_canvas(state, role_id, target)
-  local ui = state and state.ui or nil
-  if not ui then
-    return
-  end
-  local role = runtime_ports.resolve_role(role_id)
-  if role then
-    canvas.switch_for_role(ui, target, role)
-  else
-    canvas.switch(ui, target)
-  end
-end
-
 function item_atlas.open(state, role_id)
   local atlas = _ensure_state(state)
   atlas.open = true
   atlas.role_id = role_id
   atlas.page_index = _clamp_page(atlas.page_index)
-  _switch_canvas(state, role_id, item_atlas_nodes.canvas)
+  canvas.switch_by_role_id(state and state.ui, item_atlas_nodes.canvas, role_id)
   _notify("图鉴已打开", "item_atlas:open:" .. tostring(role_id))
   return atlas
 end
@@ -72,7 +58,7 @@ end
 function item_atlas.close(state, role_id)
   local atlas = _ensure_state(state)
   atlas.open = false
-  _switch_canvas(state, role_id or atlas.role_id, base_nodes.canvas)
+  canvas.switch_by_role_id(state and state.ui, base_nodes.canvas, role_id or atlas.role_id)
   _notify("已关闭", "item_atlas:close")
   return atlas
 end
@@ -80,12 +66,20 @@ end
 local function _page_next(state)
   local atlas = _ensure_state(state)
   atlas.page_index = _clamp_page(atlas.page_index + 1)
+  atlas.selected_item_id = nil
   return atlas
 end
 
 local function _page_prev(state)
   local atlas = _ensure_state(state)
   atlas.page_index = _clamp_page(atlas.page_index - 1)
+  atlas.selected_item_id = nil
+  return atlas
+end
+
+local function _dismiss(state)
+  local atlas = _ensure_state(state)
+  atlas.selected_item_id = nil
   return atlas
 end
 
@@ -99,9 +93,10 @@ local function _select_slot(state, slot_index)
 end
 
 local _STRING_ACTION_HANDLERS = {
-  close = function(state, _, _)    return item_atlas.close(state) end,
-  next  = function(state, _, _)    return _page_next(state) end,
-  prev  = function(state, _, _)    return _page_prev(state) end,
+  close   = function(state, _, _)    return item_atlas.close(state) end,
+  next    = function(state, _, _)    return _page_next(state) end,
+  prev    = function(state, _, _)    return _page_prev(state) end,
+  dismiss = function(state, _, _)    return _dismiss(state) end,
 }
 
 function item_atlas.handle_action(state, action, role_id)
