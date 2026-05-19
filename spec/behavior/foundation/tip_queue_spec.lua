@@ -9,29 +9,6 @@ local function _reset()
   tip_queue.configure_runtime({ clear_presenter = true, clear_scheduler = true, test_mode = false })
 end
 
--- configure_runtime aliases and clear flags
-
-
-
-
-
-
-
-
-
--- enqueue: deduplication
-
-
-
-
--- has_blocking_pending
-
-
-
-
-
--- _schedule_release paths (via enqueue + presenter)
-
 describe("domain tip queue coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

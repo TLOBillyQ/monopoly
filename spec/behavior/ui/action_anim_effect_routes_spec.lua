@@ -13,25 +13,6 @@ local gameplay_rules = require("src.config.gameplay.debug_flags")
 
 local _with_patches = support.with_patches
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 local function _new_roll_nodes()
   local nodes = {}
   local node_names = {

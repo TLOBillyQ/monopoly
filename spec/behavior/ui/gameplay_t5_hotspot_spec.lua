@@ -15,49 +15,10 @@ local function _load_fresh(module_path)
   return require(module_path)
 end
 
--- ============================================
--- build_intent tests (item_slot_intents.lua)
--- ============================================
-
-
-
-
--- ============================================
--- on_bankruptcy_tiles_cleared tests (state_ports.lua)
--- ============================================
-
-
-
-
--- ============================================
--- event_handlers anonymous function tests
--- ============================================
-
 local function _load_fresh_handlers()
   package.loaded["src.ui.coord.event_handlers"] = nil
   return require("src.ui.coord.event_handlers")
 end
-
-
-
-
-
-
-
--- ============================================
--- register_node_click tests (event_bindings.lua)
--- ============================================
-
-
-
-
-
-
-
-
--- ============================================
--- choice.build_choice_view tests (choice_builder.lua)
--- ============================================
 
 describe("presentation_t5_characterization", function()
   it("build_intent_returns_nil_when_choice_does_not_use_item_slots", function()

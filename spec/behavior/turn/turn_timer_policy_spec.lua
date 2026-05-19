@@ -12,24 +12,6 @@ local function _reset_tip_queue()
   tip_queue.configure_runtime({ clear_presenter = true, clear_scheduler = true })
 end
 
--- is_action_button_wait_active
-
-
-
-
-
-
-
-
--- update_detained_wait_timer
-
-
-
-
-
-
--- update_inter_turn_wait_timer
-
 describe("domain turn timer policy coverage", function()
   it("is_action_button_wait_active no args returns false", function()
     -- migrated wrap: 见 commit 说明，原 wrap 在 it body 首行注入

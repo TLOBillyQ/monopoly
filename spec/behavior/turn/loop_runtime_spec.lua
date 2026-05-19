@@ -10,56 +10,6 @@ local function _make_state()
   return {}
 end
 
--- is_phase_input_blocked
-
-
-
-
-
-
-
--- sync_input_blocked
-
-
-
-
-
-
-
-
--- sync_phase_flags
-
-
-
-
-
--- build_board_scene_port
-
-
-
-
--- build_popup_port
-
-
-
-
--- build_tip_output_port
-
-
-
-
--- build_tile_feedback_port
-
-
-
-
--- build_anim_gate_port
-
-
-
-
--- build_board_visual_feedback_port
-
 describe("domain loop runtime coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)

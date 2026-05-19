@@ -53,19 +53,6 @@ local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
 local _build_choice_modal_state = support.build_choice_modal_state
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 local function _build_market_nav_dispatch_env()
   local game = _new_game()
   local state = {

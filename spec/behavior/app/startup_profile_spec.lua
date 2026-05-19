@@ -115,19 +115,6 @@ local function _assert_ai_map_has_no_positive_slot_keys(ai_map, max_slot)
   end
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 local function _reload_app_init_with_stubs(startup, runner)
   local capture = {}
   local state = {
