@@ -221,10 +221,10 @@ function M.check_victory(self)
         return _apply_winners(self, {}, "游戏结束，无人生还")
       end
       local winners = {}
-      local best = -math.huge
+      local best = nil
       for _, player in ipairs(alive) do
         local assets = _total_assets(self, player)
-        if assets > best then
+        if best == nil or assets > best then
           best = assets
           winners = { player }
         elseif assets == best then
