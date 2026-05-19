@@ -188,7 +188,7 @@ local function _main(opts)
     { label = "behavior", cmd = "lua spec/support/behavior_parallel.lua" },
   }
   if _check_command("luacheck") then
-    lanes[#lanes + 1] = { label = "lint", cmd = "lua tools/quality/lint.lua" }
+    lanes[#lanes + 1] = { label = "lint", cmd = "lua5.5 tools/quality/lint.lua" }
   else
     skipped[#skipped + 1] = "lint"
   end

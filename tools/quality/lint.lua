@@ -119,6 +119,7 @@ function M.run(args)
     "luacheck",
     "--config",
     common.normalize_path(CONFIG_PATH),
+    "-j", "4",
   }
   for _, target in ipairs(options.targets) do
     command[#command + 1] = target
