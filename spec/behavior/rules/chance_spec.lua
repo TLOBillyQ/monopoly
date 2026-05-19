@@ -31,38 +31,6 @@ describe("chance", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
 
-  it("chance_is_mandatory_effect_entrypoint", function()
-    local g = _new_game()
-    local p = g:current_player()
-    local idx, tile_ref = _first_tile_by_type(g.board, "chance")
-    g:update_player_position(p, idx)
-
-    g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
-    local called = { next_int = 0 }
-    local prev_lua_api = LuaAPI
-    local lua_api = prev_lua_api or {}
-    g.rng = {
-      next_int = function(_, min, max)
-        called.next_int = called.next_int + 1
-        _assert_eq(min, 1, "chance draw should start at 1")
-        assert(max > 0, "chance draw should use a positive upper bound")
-        return 1
-      end,
-    }
-    _with_patches({
-      { key = "LuaAPI", value = lua_api },
-      { target = lua_api, key = "rand", value = function()
-        error("chance draw should not call LuaAPI.rand")
-      end },
-    }, function()
-      _resolve_landing(g, p, tile_ref, {})
-    end)
-
-    assert(called.next_int > 0, "chance logic should use injected rng")
-    assert(g.turn.action_anim and g.turn.action_anim.kind == "chance", "chance logic should queue a chance anim")
-    _assert_eq(g.turn.action_anim.card_id, 3001, "chance logic should pick the first card with deterministic rng")
-  end)
-
   it("chance_draw_uses_injected_rng_and_ignores_lua_api_rand", function()
     local g = _new_game()
     local p = g:current_player()
