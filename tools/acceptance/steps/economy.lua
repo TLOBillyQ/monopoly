@@ -443,24 +443,6 @@ function economy_steps.handlers()
       return true
     end,
 
-    ["游戏已开始"] = function(world)
-      _ensure_player(world)
-      return true
-    end,
-
-    ["玩家持有初始资金"] = function(world)
-      _ensure_player(world)
-      world.player.cash = world.player.cash or 10000
-      return true
-    end,
-
-    ["玩家余额为<p1>"] = function(world, example)
-      local amount = number_utils.to_integer(example.p1)
-      _ensure_player(world)
-      world.player.cash = amount
-      return true
-    end,
-
     ["玩家需要支付<p2>"] = function(world, example)
       local amount = number_utils.to_integer(example.p2)
       if world.player.cash < amount then

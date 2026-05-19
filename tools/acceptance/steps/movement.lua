@@ -36,16 +36,6 @@ local function _place_player(world, idx)
   return player
 end
 
-local function _advance_turn_and_move_through_tile(world, tile_id, steps)
-  local player = _player(world)
-  local turns = player.status and player.status.own_turn_started_count or 0
-  _game(world):set_player_status(player, "own_turn_started_count", turns + 1)
-  local before_idx = _tile_index(world, tile_id - 1)
-  _place_player(world, before_idx)
-  world.last_move_result = game_driver.move(_ctx(world), player, steps)
-  return true
-end
-
 function movement_steps.handlers()
   return {
 
@@ -351,10 +341,6 @@ function movement_steps.handlers()
         owner_turn_started_count_at_placement = turn_count,
       })
       return true
-    end,
-
-    ["下一回合玩家移动经过格子5"] = function(world)
-      return _advance_turn_and_move_through_tile(world, 5, 2)
     end,
 
     ["地雷不触发"] = function(world)
