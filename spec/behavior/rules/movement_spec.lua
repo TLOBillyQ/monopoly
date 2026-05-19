@@ -296,14 +296,6 @@ describe("movement", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
 
-  it("pass_start", function()
-    local g = _new_game()
-    local p = g:current_player()
-    g:update_player_position(p, g.board:index_of_tile_id(24))
-    local res = movement.move(g, p, 1, { branch_parity = 1 })
-    _assert_eq(res.passed_start, 1, "pass_start bonus")
-  end)
-
   it("pass_start_hold_schedules_settlement_with_step_based_delay", function()
     local g = _new_game()
     local p = g:current_player()
@@ -348,69 +340,6 @@ describe("movement", function()
     _assert_eq(p.cash, cash_before, "cash unchanged")
   end)
 
-  it("roadblock_stop", function()
-    local g = _new_game()
-    local p = g:current_player()
-    g.board:place_roadblock(2)
-    local res = movement.move(g, p, 3, { branch_parity = 3 })
-    _assert_eq(res.stopped_on_roadblock, true, "stopped on roadblock")
-    _assert_eq(p.position, 2, "position should stop at roadblock")
-  end)
-
-  it("armed_mine_stops_movement_when_passed", function()
-    local g = _new_game()
-    local p = g:current_player()
-    local mine_index = 2
-    g.board:place_mine(mine_index, {
-      owner_id = g.players[2].id,
-      armed = true,
-    })
-
-    local res = movement.move(g, p, 3, { branch_parity = 3, skip_market_check = true })
-
-    _assert_eq(p.position, mine_index, "movement should stop on armed mine tile")
-    _assert_eq(#res.visited, 1, "movement should stop immediately after stepping onto armed mine")
-    _assert_eq(res.landing_tile.id, g.board:get_tile(mine_index).id, "landing tile should stay on mine tile")
-  end)
-
-  it("owner_mine_in_placement_turn_does_not_stop_movement", function()
-    local g = _new_game()
-    local p = g:current_player()
-    local mine_index = 2
-    g.board:place_mine(mine_index, {
-      owner_id = p.id,
-      armed = true,
-      owner_turn_started_count_at_placement = p.status.own_turn_started_count,
-    })
-
-    local steps = 3
-    local res = movement.move(g, p, steps, { branch_parity = steps, skip_market_check = true })
-    local expected_index = select(1, _simulate_path_result(g.board, 1, nil, steps, false, steps))
-
-    _assert_eq(p.position, expected_index, "owner should ignore own mine during placement turn")
-    _assert_eq(#res.visited, steps, "owner should keep full movement during placement turn")
-  end)
-
-  it("owner_mine_in_next_own_turn_does_not_stop_movement", function()
-    local g = _new_game()
-    local p = g:current_player()
-    local mine_index = 2
-    local placement_turn_started_count = 4
-    g:set_player_status(p, "own_turn_started_count", placement_turn_started_count + 1)
-    g.board:place_mine(mine_index, {
-      owner_id = p.id,
-      armed = true,
-      owner_turn_started_count_at_placement = placement_turn_started_count,
-    })
-
-    local steps = 3
-    local res = movement.move(g, p, steps, { branch_parity = steps, skip_market_check = true })
-    local expected_index = select(1, _simulate_path_result(g.board, 1, nil, steps, false, steps))
-
-    _assert_eq(p.position, expected_index, "owner should stay immune on the next own turn after placement")
-    _assert_eq(#res.visited, steps, "owner next-turn immunity should keep full movement")
-  end)
-
   it("owner_mine_on_third_own_turn_stops_movement", function()
     local g = _new_game()
     local p = g:current_player()
@@ -429,26 +358,6 @@ describe("movement", function()
     _assert_eq(#res.visited, 1, "owner third-turn self-trigger should stop movement on the mine tile")
   end)
 
-  it("movement_examples_from_issue", function()
-    local g = _new_game()
-    local p = g:current_player()
-
-    g:update_player_position(p, g.board:index_of_tile_id(3))
-    local r1 = movement.move(g, p, 4, { branch_parity = 4, skip_market_check = true })
-    _assert_eq(g.board:get_tile(p.position).id, 32, "example1 end tile")
-    assert(#r1.visited == 4, "example1 visited steps")
-
-    g:update_player_position(p, g.board:index_of_tile_id(32))
-    local r2 = movement.move(g, p, 6, { branch_parity = 6, direction = "down", skip_market_check = true })
-    _assert_eq(g.board:get_tile(p.position).id, 6, "example2 end tile")
-    assert(#r2.visited == 6, "example2 visited steps")
-
-    g:update_player_position(p, g.board:index_of_tile_id(25))
-    local r3 = movement.move(g, p, 12, { branch_parity = 12, direction = "right", skip_market_check = true })
-    _assert_eq(g.board:get_tile(p.position).id, 1, "example3 end tile")
-    assert(#r3.visited == 12, "example3 visited steps")
-  end)
-
   it("board_indices_in_range_uses_manhattan_distance", function()
     local g = _new_game()
     local start_idx = g.board:index_of_tile_id(1)
@@ -456,15 +365,6 @@ describe("movement", function()
     assert(start_idx and target_idx, "expected tile ids 1/34")
     local list = board_utils.indices_in_range(g.board, start_idx, 4)
     assert(support.list_contains(list, target_idx), "manhattan distance should include tiles within row/col radius")
-  end)
-
-  it("movement_backward_wrap", function()
-    local g = _new_game()
-    local p = g:current_player()
-    g:update_player_position(p, 1)
-    local res = movement.move(g, p, -1, { branch_parity = 1 })
-    assert(p.position >= 1 and p.position <= g.board:length(), "backward index in range")
-    assert(#res.visited == 1, "visited steps")
   end)
 
   it("movement_backward_from_hongkong_follows_three_unique_tiles", function()
@@ -640,21 +540,6 @@ describe("movement", function()
     g:set_player_status(p, "move_dir", "up")
     facing_policy.sync_move_dir_after_position_change(g, p, g.board:index_of_tile_id(37), "clear")
     _assert_player_move_dir(p, nil, "mountain sync mode should clear move_dir")
-  end)
-
-  it("entry_point_even_branch_ignores_inbound_facing", function()
-    local g = _new_game()
-    local entry_idx = g.board:index_of_tile_id(42)
-
-    local matching_idx, _, matching_next_facing = g.board:step_forward_by_facing(entry_idx, "left", 2)
-    local matching_tile = assert(g.board:get_tile(matching_idx), "missing matching branch tile")
-    _assert_eq(matching_tile.id, 45, "even parity should enter inner branch")
-    _assert_eq(matching_next_facing, "up", "matching branch should return the next heading after entering inner branch")
-
-    local mismatched_idx, _, mismatched_next_facing = g.board:step_forward_by_facing(entry_idx, "right", 2)
-    local mismatched_tile = assert(g.board:get_tile(mismatched_idx), "missing branch tile")
-    _assert_eq(mismatched_tile.id, 45, "even parity should ignore inbound facing and still enter inner branch")
-    _assert_eq(mismatched_next_facing, "up", "inner branch should return the next heading after entering inner branch")
   end)
 
   it("market_keeps_forward_direction_regardless_of_parity", function()

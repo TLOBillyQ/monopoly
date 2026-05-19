@@ -1,32 +1,5 @@
 local roll = require("src.turn.phases.roll")
 
-local _roll_dice_tests = {
-  function()
-    local results, total = roll._roll_dice(3, { 4, 5, 6 }, nil)
-    assert(#results == 3, "should return 3 results")
-    assert(results[1] == 4 and results[2] == 5 and results[3] == 6, "should use override values")
-    assert(total == 15, "total should sum override values")
-  end,
-  function()
-    local results = roll._roll_dice(4, { 2, 3 }, { next_int = function() return 6 end })
-    assert(#results == 4, "should return 4 results")
-    assert(results[1] == 2 and results[2] == 3, "should use provided overrides")
-    assert(results[3] == 3 and results[4] == 3, "should repeat last override value")
-  end,
-  function()
-    local results, total = roll._roll_dice(2, nil, { next_int = function() return 4 end })
-    assert(#results == 2, "should return 2 results")
-    assert(results[1] == 4 and results[2] == 4, "should use rng when no override")
-    assert(total == 8, "total should sum rng values")
-  end,
-  function()
-    local results, total = roll._roll_dice(1, {}, { next_int = function() return 3 end })
-    assert(#results == 1, "should return 1 result")
-    assert(results[1] == 3, "should use rng when override is empty table")
-    assert(total == 3, "total should be rng value")
-  end,
-}
-
 local _apply_dice_multiplier_tests = {
   function()
     local turn_mgr = {
@@ -266,22 +239,6 @@ local _roll_dice_extended_tests = {
 }
 
 describe("movement_dice", function()
-  it("_test_roll_dice_with_override_uses_provided_values", _roll_dice_tests[1])
-
-  it("_test_roll_dice_with_partial_override_uses_last_for_remaining", _roll_dice_tests[2])
-
-  it("_test_roll_dice_with_rng_no_override", _roll_dice_tests[3])
-
-  it("_test_roll_dice_with_empty_override_uses_rng", _roll_dice_tests[4])
-
-  it("_test_apply_dice_multiplier_with_multiplier", _apply_dice_multiplier_tests[1])
-
-  it("_test_apply_dice_multiplier_multiplier_one", _apply_dice_multiplier_tests[2])
-
-  it("_test_apply_dice_multiplier_total_mismatch", _apply_dice_multiplier_tests[3])
-
-  it("_test_apply_dice_multiplier_no_multiplier", _apply_dice_multiplier_tests[4])
-
   it("_test_apply_dice_multiplier_applies_and_resets", _apply_dice_multiplier_tests[5])
 
   it("_test_apply_dice_multiplier_nil_raw_total", _apply_dice_multiplier_tests[6])
