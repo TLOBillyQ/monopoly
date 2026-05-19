@@ -18,8 +18,8 @@ local nodes = {
   auto_effect = "基础_托管按钮特效",
   auto_label = "基础_托管文本",
   action_log_button = "基础_行动日志图标",
-  skin_button = "基础_皮肤按钮",
-  gallery_button = "基础_图鉴按钮",
+  skin_button = "基础_皮肤图标",
+  gallery_button = "基础_图鉴图标",
   player_action_effects = {
     "基础_玩家1行动动效", "基础_玩家2行动动效",
     "基础_玩家3行动动效", "基础_玩家4行动动效",

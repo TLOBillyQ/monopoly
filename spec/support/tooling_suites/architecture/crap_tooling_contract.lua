@@ -58,8 +58,10 @@ local function _test_install_monopoly_package_paths_only_installs_canonical_repo
     })
     _assert_contains(package.path, "/repo/tools/?.lua", "helper should keep canonical repo tool paths")
     _assert_contains(package.path, "/repo/spec/?.lua", "helper should keep canonical spec paths")
-    _assert_not_contains(package.path, "/repo/vendor/arch_view/?.lua", "helper should not install arch_view compatibility paths")
-    _assert_not_contains(package.path, "/repo/vendor/arch_view/?/?.lua", "helper should not install arch_view nested compatibility paths")
+    _assert_not_contains(package.path, "/repo/vendor/arch_view/" .. "?.lua",
+      "helper should not install arch_view compatibility paths")
+    _assert_not_contains(package.path, "/repo/vendor/arch_view/" .. "?/?.lua",
+      "helper should not install arch_view nested compatibility paths")
   end)
 
   package.path = original_package_path
@@ -176,9 +178,9 @@ end
 local function _test_no_go_binary_references_in_vendor_cli()
   local cli_path = crap.env.cwd .. "/vendor/crap4lua/lib/crap4lua/cli.lua"
   local content = common.read_file(cli_path)
-  _assert_not_contains(content, "ensure_binary", "vendor cli should not reference Go binary")
-  _assert_not_contains(content, "_launcher_source", "vendor cli should not reference Go launcher")
-  _assert_not_contains(content, "go build", "vendor cli should not reference go build")
+  _assert_not_contains(content, "ensure_" .. "binary", "vendor cli should not reference removed binary resolver")
+  _assert_not_contains(content, "_launcher_" .. "source", "vendor cli should not reference removed launcher")
+  _assert_not_contains(content, "go " .. "build", "vendor cli should not reference removed build command")
 end
 
 return {

@@ -1,4 +1,9 @@
+local support = require("spec.support.shared_support")
+local _with_patches = support.with_patches
+local _build_role_with_events = support.build_role_with_events
+local _has_event = support.has_event
 local skin_panel = require("src.ui.coord.skin_panel")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local function _make_state()
   return { ui = {} }
@@ -24,6 +29,25 @@ describe("skin_panel", function()
       assert(panel.open == true, "panel should be open")
     end)
 
+    it("opens the skin canvas for the active role", function()
+      local events = {}
+      local role = _build_role_with_events(1, events)
+      local s = _make_state()
+
+      _with_patches({
+        { target = runtime_ports, key = "resolve_role", value = function(role_id)
+          if role_id == 1 then
+            return role
+          end
+          return nil
+        end },
+      }, function()
+        skin_panel.open(s, 1)
+      end)
+
+      assert(_has_event(events, "显示皮肤商店"), "opening skin panel should show skin canvas")
+    end)
+
     it("stores role_id on open", function()
       local s = _make_state()
       local panel = skin_panel.open(s, 2)
@@ -35,6 +59,26 @@ describe("skin_panel", function()
       skin_panel.open(s, 1)
       local panel = skin_panel.close(s)
       assert(panel.open == false, "panel should be closed")
+    end)
+
+    it("closes the skin canvas for the active role", function()
+      local events = {}
+      local role = _build_role_with_events(1, events)
+      local s = _make_state()
+
+      _with_patches({
+        { target = runtime_ports, key = "resolve_role", value = function(role_id)
+          if role_id == 1 then
+            return role
+          end
+          return nil
+        end },
+      }, function()
+        skin_panel.open(s, 1)
+        skin_panel.handle_action(s, "close", 1)
+      end)
+
+      assert(_has_event(events, "隐藏皮肤商店"), "closing skin panel should hide skin canvas")
     end)
   end)
 

@@ -130,7 +130,7 @@ last_verified: 2026-05-04
 - 适用时机：需要给“先补测还是先重构”排序
 - 不适合：单独做合并 gate；它依赖测试 lane 质量
 
-现在的 CLI 入口由 `tools/quality/crap.lua` 负责兼容，核心实现来自子模块 `vendor/crap4lua/`。Monopoly 先通过公开 Lua bridge 加载默认项目配置 `tools/quality/crap/config.lua` 并执行 `tools/quality/crap/adapter.lua` 收集 coverage，再把生成的 request JSON 交给上游 Go CLI 完成 report / viewer：
+现在的 CLI 入口由 `tools/quality/crap.lua` 负责兼容，核心实现来自子模块 `vendor/crap4lua/`。Monopoly 先通过公开 Lua bridge 加载默认项目配置 `tools/quality/crap/config.lua` 并执行 `tools/quality/crap/adapter.lua` 收集 coverage，再由纯 Lua analyzer / viewer 完成 report / viewer：
 
 - `report`：生成 JSON 报告
 - `viewer`：导出静态页面

@@ -1,4 +1,9 @@
+local support = require("spec.support.shared_support")
+local _with_patches = support.with_patches
+local _build_role_with_events = support.build_role_with_events
+local _has_event = support.has_event
 local item_atlas = require("src.ui.coord.item_atlas")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local function _make_state()
   return { ui = {} }
@@ -7,7 +12,7 @@ end
 local function _make_catalog(n)
   local t = {}
   for i = 1, n do
-    t[i] = { id = "item_" .. i, name = "道具" .. i }
+    t[i] = { id = "item_" .. i, name = "道具" .. i, description = "描述" .. i }
   end
   return t
 end
@@ -24,6 +29,25 @@ describe("item_atlas", function()
       assert(atlas.open == true, "atlas should be open")
     end)
 
+    it("opens the atlas canvas for the active role", function()
+      local events = {}
+      local role = _build_role_with_events(1, events)
+      local s = _make_state()
+
+      _with_patches({
+        { target = runtime_ports, key = "resolve_role", value = function(role_id)
+          if role_id == 1 then
+            return role
+          end
+          return nil
+        end },
+      }, function()
+        item_atlas.open(s, 1)
+      end)
+
+      assert(_has_event(events, "显示道具图鉴"), "opening atlas should show atlas canvas")
+    end)
+
     it("stores role_id on open", function()
       local s = _make_state()
       local atlas = item_atlas.open(s, 2)
@@ -35,6 +59,26 @@ describe("item_atlas", function()
       item_atlas.open(s, 1)
       local atlas = item_atlas.close(s)
       assert(atlas.open == false, "atlas should be closed")
+    end)
+
+    it("closes the atlas canvas for the active role", function()
+      local events = {}
+      local role = _build_role_with_events(1, events)
+      local s = _make_state()
+
+      _with_patches({
+        { target = runtime_ports, key = "resolve_role", value = function(role_id)
+          if role_id == 1 then
+            return role
+          end
+          return nil
+        end },
+      }, function()
+        item_atlas.open(s, 1)
+        item_atlas.handle_action(s, "close", 1)
+      end)
+
+      assert(_has_event(events, "隐藏道具图鉴"), "closing atlas should hide atlas canvas")
     end)
   end)
 
@@ -94,6 +138,24 @@ describe("item_atlas", function()
       item_atlas.handle_action(s, { type = "select", slot_index = 5 }, 1)
       assert(s.ui.item_atlas.selected_item_id == "item_5", "slot 5 should select item_5")
     end)
+
+    it("selecting empty slot does not set selected_item_id", function()
+      item_atlas.configure_catalog_for_tests(_make_catalog(5))
+      local s = _make_state()
+      item_atlas.open(s, 1)
+      item_atlas.handle_action(s, { type = "select", slot_index = 7 }, 1)
+      assert(s.ui.item_atlas.selected_item_id == nil, "empty slot should leave selection nil")
+    end)
+
+    it("dismiss action clears selected_item_id", function()
+      item_atlas.configure_catalog_for_tests(_make_catalog(8))
+      local s = _make_state()
+      item_atlas.open(s, 1)
+      item_atlas.handle_action(s, { type = "select", slot_index = 1 }, 1)
+      assert(s.ui.item_atlas.selected_item_id == "item_1")
+      item_atlas.handle_action(s, "dismiss", 1)
+      assert(s.ui.item_atlas.selected_item_id == nil, "dismiss should clear selection")
+    end)
   end)
 
   describe("pagination", function()
@@ -112,6 +174,59 @@ describe("item_atlas", function()
       item_atlas.handle_action(s, "next", 1)
       item_atlas.handle_action(s, "next", 1)
       assert(s.ui.item_atlas.page_index == 1, "single-page atlas should clamp to page 1")
+    end)
+
+    it("page_prev goes to previous page", function()
+      item_atlas.configure_catalog_for_tests(_make_catalog(16))
+      local s = _make_state()
+      item_atlas.open(s, 1)
+      item_atlas.handle_action(s, "next", 1)
+      assert(s.ui.item_atlas.page_index == 2)
+      item_atlas.handle_action(s, "prev", 1)
+      assert(s.ui.item_atlas.page_index == 1, "prev should go back to page 1")
+    end)
+
+    it("page_prev does not go below page 1", function()
+      item_atlas.configure_catalog_for_tests(_make_catalog(16))
+      local s = _make_state()
+      item_atlas.open(s, 1)
+      item_atlas.handle_action(s, "prev", 1)
+      assert(s.ui.item_atlas.page_index == 1, "prev on page 1 should stay at page 1")
+    end)
+
+    it("page_next clears selected_item_id", function()
+      item_atlas.configure_catalog_for_tests(_make_catalog(16))
+      local s = _make_state()
+      item_atlas.open(s, 1)
+      item_atlas.handle_action(s, { type = "select", slot_index = 1 }, 1)
+      assert(s.ui.item_atlas.selected_item_id == "item_1")
+      item_atlas.handle_action(s, "next", 1)
+      assert(s.ui.item_atlas.selected_item_id == nil, "page_next should clear selection")
+    end)
+
+    it("page_prev clears selected_item_id", function()
+      item_atlas.configure_catalog_for_tests(_make_catalog(16))
+      local s = _make_state()
+      item_atlas.open(s, 1)
+      item_atlas.handle_action(s, "next", 1)
+      item_atlas.handle_action(s, { type = "select", slot_index = 1 }, 1)
+      assert(s.ui.item_atlas.selected_item_id == "item_9")
+      item_atlas.handle_action(s, "prev", 1)
+      assert(s.ui.item_atlas.selected_item_id == nil, "page_prev should clear selection")
+    end)
+
+    it("last page shows remaining items", function()
+      item_atlas.configure_catalog_for_tests(_make_catalog(10))
+      local s = _make_state()
+      item_atlas.open(s, 1)
+      item_atlas.handle_action(s, "next", 1)
+      assert(s.ui.item_atlas.page_index == 2)
+      local count = 0
+      for i = 1, 8 do
+        local idx = (s.ui.item_atlas.page_index - 1) * 8 + i
+        if item_atlas.catalog[idx] then count = count + 1 end
+      end
+      assert(count == 2, "last page of 10-item catalog should show 2 slots, got " .. tostring(count))
     end)
   end)
 

@@ -9,7 +9,7 @@ end
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 local REPO_ROOT = bootstrap_env.repo_root
-local mutate4lua_lib = _normalize_path(bootstrap_env.vendor_dir) .. "/mutate4lua/lua/?.lua"
+local mutate4lua_lib = _normalize_path(bootstrap_env.vendor_dir) .. "/mutate4lua/lib/?.lua"
 if not package.path:find(mutate4lua_lib, 1, true) then
   package.path = mutate4lua_lib .. ";" .. package.path
 end

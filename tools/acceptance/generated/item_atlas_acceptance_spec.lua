@@ -1,3 +1,4 @@
+-- luacheck: globals describe it
 local runtime = require("acceptance.runtime")
 local steps = require("acceptance.steps")
 
@@ -16,11 +17,11 @@ local ir = {
   },
   ["metadata"] = {
     ["field_lines"] = {
-      ["p1"] = 9,
-      ["p2"] = 19,
-      ["p3"] = 22,
-      ["p4"] = 33,
-      ["p5"] = 47,
+      ["p1"] = 11,
+      ["p2"] = 33,
+      ["p3"] = 36,
+      ["p4"] = 49,
+      ["p5"] = 102,
     },
     ["field_names"] = {
       ["p1"] = "角色ID",
@@ -45,9 +46,9 @@ local ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 14,
+          ["p1"] = 16,
         },
-        ["source_line"] = 8,
+        ["source_line"] = 10,
         ["source_path"] = "features/v102/item_atlas.feature",
       },
       ["name"] = "打开道具图鉴后图鉴开启",
@@ -56,7 +57,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 9,
+            ["source_line"] = 11,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -68,7 +69,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开道具图鉴",
-            ["source_line"] = 10,
+            ["source_line"] = 12,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -78,11 +79,70 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "道具图鉴屏幕已开启",
-            ["source_line"] = 11,
+            ["source_line"] = 13,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
           ["text"] = "道具图鉴屏幕已开启",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p1"] = "1",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p1"] = 27,
+        },
+        ["source_line"] = 20,
+        ["source_path"] = "features/v102/item_atlas.feature",
+      },
+      ["name"] = "关闭道具图鉴",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 21,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开道具图鉴",
+            ["source_line"] = 22,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开道具图鉴",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家关闭道具图鉴",
+            ["source_line"] = 23,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家关闭道具图鉴",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "道具图鉴屏幕已关闭",
+            ["source_line"] = 24,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "道具图鉴屏幕已关闭",
         },
       },
     },
@@ -101,11 +161,11 @@ local ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 25,
-          ["p2"] = 25,
-          ["p3"] = 25,
+          ["p1"] = 39,
+          ["p2"] = 39,
+          ["p3"] = 39,
         },
-        ["source_line"] = 18,
+        ["source_line"] = 32,
         ["source_path"] = "features/v102/item_atlas.feature",
       },
       ["name"] = "道具图鉴每页展示8个道具槽位",
@@ -114,7 +174,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "道具目录共有<道具数>种道具",
-            ["source_line"] = 19,
+            ["source_line"] = 33,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -126,7 +186,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 20,
+            ["source_line"] = 34,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -138,7 +198,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开道具图鉴",
-            ["source_line"] = 21,
+            ["source_line"] = 35,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -148,7 +208,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个道具槽位",
-            ["source_line"] = 22,
+            ["source_line"] = 36,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -163,33 +223,30 @@ local ir = {
         {
           ["p1"] = "1",
           ["p2"] = "8",
-          ["p3"] = "8",
           ["p4"] = "1",
         },
         {
           ["p1"] = "1",
           ["p2"] = "8",
-          ["p3"] = "8",
           ["p4"] = "5",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 38,
-          ["p2"] = 38,
-          ["p3"] = 38,
-          ["p4"] = 38,
+          ["p1"] = 54,
+          ["p2"] = 54,
+          ["p4"] = 54,
         },
-        ["source_line"] = 29,
+        ["source_line"] = 45,
         ["source_path"] = "features/v102/item_atlas.feature",
       },
-      ["name"] = "选中道具槽位记录选中道具",
+      ["name"] = "选中道具槽位展示放大卡牌",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "道具目录共有<道具数>种道具",
-            ["source_line"] = 30,
+            ["source_line"] = 46,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -201,7 +258,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 31,
+            ["source_line"] = 47,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -213,7 +270,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开道具图鉴",
-            ["source_line"] = 32,
+            ["source_line"] = 48,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -223,7 +280,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家选中第<槽位>格道具",
-            ["source_line"] = 33,
+            ["source_line"] = 49,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -235,7 +292,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前选中道具为第<槽位>格对应道具",
-            ["source_line"] = 34,
+            ["source_line"] = 50,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -246,14 +303,12 @@ local ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "当前页面展示<槽位数>个道具槽位",
-            ["source_line"] = 35,
+            ["original_text"] = "放大卡牌已展示",
+            ["source_line"] = 51,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
-          ["parameters"] = {
-            "p3",
-          },
-          ["text"] = "当前页面展示<p3>个道具槽位",
+          ["parameters"] = {},
+          ["text"] = "放大卡牌已展示",
         },
       },
     },
@@ -261,28 +316,26 @@ local ir = {
       ["examples"] = {
         {
           ["p1"] = "1",
-          ["p2"] = "16",
-          ["p3"] = "8",
-          ["p5"] = "2",
+          ["p2"] = "8",
+          ["p4"] = "3",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 51,
-          ["p2"] = 51,
-          ["p3"] = 51,
-          ["p5"] = 51,
+          ["p1"] = 67,
+          ["p2"] = 67,
+          ["p4"] = 67,
         },
-        ["source_line"] = 42,
+        ["source_line"] = 58,
         ["source_path"] = "features/v102/item_atlas.feature",
       },
-      ["name"] = "翻到下一页",
+      ["name"] = "放大卡牌展示道具名称与描述",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "道具目录共有<道具数>种道具",
-            ["source_line"] = 43,
+            ["source_line"] = 59,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -294,7 +347,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 44,
+            ["source_line"] = 60,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -306,7 +359,282 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开道具图鉴",
-            ["source_line"] = 45,
+            ["source_line"] = 61,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开道具图鉴",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家选中第<槽位>格道具",
+            ["source_line"] = 62,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "玩家选中第<p4>格道具",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "放大卡牌显示第<槽位>格道具的名称",
+            ["source_line"] = 63,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "放大卡牌显示第<p4>格道具的名称",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "放大卡牌显示第<槽位>格道具的描述",
+            ["source_line"] = 64,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "放大卡牌显示第<p4>格道具的描述",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p1"] = "1",
+          ["p2"] = "8",
+          ["p4"] = "1",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p1"] = 80,
+          ["p2"] = 80,
+          ["p4"] = 80,
+        },
+        ["source_line"] = 70,
+        ["source_path"] = "features/v102/item_atlas.feature",
+      },
+      ["name"] = "点击空白关闭放大卡牌",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "道具目录共有<道具数>种道具",
+            ["source_line"] = 71,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "道具目录共有<p2>种道具",
+        },
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 72,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开道具图鉴",
+            ["source_line"] = 73,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开道具图鉴",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家选中第<槽位>格道具",
+            ["source_line"] = 74,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "玩家选中第<p4>格道具",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家点击空白区域关闭放大卡牌",
+            ["source_line"] = 75,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家点击空白区域关闭放大卡牌",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "放大卡牌已隐藏",
+            ["source_line"] = 76,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "放大卡牌已隐藏",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "道具图鉴屏幕已开启",
+            ["source_line"] = 77,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "道具图鉴屏幕已开启",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p1"] = "1",
+          ["p2"] = "5",
+          ["p4"] = "7",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p1"] = 92,
+          ["p2"] = 92,
+          ["p4"] = 92,
+        },
+        ["source_line"] = 83,
+        ["source_path"] = "features/v102/item_atlas.feature",
+      },
+      ["name"] = "点击空槽位无反应",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "道具目录共有<道具数>种道具",
+            ["source_line"] = 84,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "道具目录共有<p2>种道具",
+        },
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 85,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开道具图鉴",
+            ["source_line"] = 86,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开道具图鉴",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家选中第<槽位>格道具",
+            ["source_line"] = 87,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "玩家选中第<p4>格道具",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "无道具被选中",
+            ["source_line"] = 88,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "无道具被选中",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "放大卡牌已隐藏",
+            ["source_line"] = 89,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "放大卡牌已隐藏",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p1"] = "1",
+          ["p2"] = "16",
+          ["p5"] = "2",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p1"] = 105,
+          ["p2"] = 105,
+          ["p5"] = 105,
+        },
+        ["source_line"] = 97,
+        ["source_path"] = "features/v102/item_atlas.feature",
+      },
+      ["name"] = "翻到下一页",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "道具目录共有<道具数>种道具",
+            ["source_line"] = 98,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "道具目录共有<p2>种道具",
+        },
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 99,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开道具图鉴",
+            ["source_line"] = 100,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -316,7 +644,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到图鉴下一页",
-            ["source_line"] = 46,
+            ["source_line"] = 101,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -326,7 +654,179 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前图鉴页码为<页码>",
-            ["source_line"] = 47,
+            ["source_line"] = 102,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p5",
+          },
+          ["text"] = "当前图鉴页码为<p5>",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p1"] = "1",
+          ["p2"] = "16",
+          ["p5"] = "1",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p1"] = 117,
+          ["p2"] = 117,
+          ["p5"] = 117,
+        },
+        ["source_line"] = 108,
+        ["source_path"] = "features/v102/item_atlas.feature",
+      },
+      ["name"] = "翻到上一页",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "道具目录共有<道具数>种道具",
+            ["source_line"] = 109,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "道具目录共有<p2>种道具",
+        },
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 110,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开道具图鉴",
+            ["source_line"] = 111,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开道具图鉴",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到图鉴下一页",
+            ["source_line"] = 112,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到图鉴下一页",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到图鉴上一页",
+            ["source_line"] = 113,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到图鉴上一页",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "当前图鉴页码为<页码>",
+            ["source_line"] = 114,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p5",
+          },
+          ["text"] = "当前图鉴页码为<p5>",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p1"] = "1",
+          ["p2"] = "10",
+          ["p3"] = "2",
+          ["p5"] = "2",
+        },
+        {
+          ["p1"] = "1",
+          ["p2"] = "16",
+          ["p3"] = "8",
+          ["p5"] = "2",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p1"] = 129,
+          ["p2"] = 129,
+          ["p3"] = 129,
+          ["p5"] = 129,
+        },
+        ["source_line"] = 120,
+        ["source_path"] = "features/v102/item_atlas.feature",
+      },
+      ["name"] = "最后一页展示剩余道具",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "道具目录共有<道具数>种道具",
+            ["source_line"] = 121,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "道具目录共有<p2>种道具",
+        },
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 122,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开道具图鉴",
+            ["source_line"] = 123,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开道具图鉴",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到图鉴下一页",
+            ["source_line"] = 124,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到图鉴下一页",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "当前图鉴页码为<页码>",
+            ["source_line"] = 125,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -338,7 +838,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个道具槽位",
-            ["source_line"] = 48,
+            ["source_line"] = 126,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -358,20 +858,20 @@ local ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 63,
-          ["p2"] = 63,
-          ["p5"] = 63,
+          ["p1"] = 142,
+          ["p2"] = 142,
+          ["p5"] = 142,
         },
-        ["source_line"] = 54,
+        ["source_line"] = 133,
         ["source_path"] = "features/v102/item_atlas.feature",
       },
-      ["name"] = "图鉴翻页不超出范围",
+      ["name"] = "下一页翻页不超出最大页",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "道具目录共有<道具数>种道具",
-            ["source_line"] = 55,
+            ["source_line"] = 134,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -383,7 +883,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 56,
+            ["source_line"] = 135,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -395,7 +895,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开道具图鉴",
-            ["source_line"] = 57,
+            ["source_line"] = 136,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -405,7 +905,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到图鉴下一页",
-            ["source_line"] = 58,
+            ["source_line"] = 137,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -415,7 +915,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家翻到图鉴下一页",
-            ["source_line"] = 59,
+            ["source_line"] = 138,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -425,7 +925,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前图鉴页码为<页码>",
-            ["source_line"] = 60,
+            ["source_line"] = 139,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -439,22 +939,36 @@ local ir = {
       ["examples"] = {
         {
           ["p1"] = "1",
+          ["p2"] = "16",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 73,
+          ["p1"] = 153,
+          ["p2"] = 153,
         },
-        ["source_line"] = 66,
+        ["source_line"] = 145,
         ["source_path"] = "features/v102/item_atlas.feature",
       },
-      ["name"] = "关闭道具图鉴",
+      ["name"] = "上一页翻页不低于第1页",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
+            ["original_text"] = "道具目录共有<道具数>种道具",
+            ["source_line"] = 146,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "道具目录共有<p2>种道具",
+        },
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 67,
+            ["source_line"] = 147,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {
@@ -466,7 +980,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开道具图鉴",
-            ["source_line"] = 68,
+            ["source_line"] = 148,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -475,22 +989,119 @@ local ir = {
         {
           ["keyword"] = "When",
           ["metadata"] = {
-            ["original_text"] = "玩家关闭道具图鉴",
-            ["source_line"] = 69,
+            ["original_text"] = "玩家翻到图鉴上一页",
+            ["source_line"] = 149,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
-          ["text"] = "玩家关闭道具图鉴",
+          ["text"] = "玩家翻到图鉴上一页",
         },
         {
           ["keyword"] = "Then",
           ["metadata"] = {
-            ["original_text"] = "道具图鉴屏幕已关闭",
-            ["source_line"] = 70,
+            ["original_text"] = "当前图鉴页码为1",
+            ["source_line"] = 150,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
-          ["text"] = "道具图鉴屏幕已关闭",
+          ["text"] = "当前图鉴页码为1",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p1"] = "1",
+          ["p2"] = "16",
+          ["p4"] = "1",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p1"] = 166,
+          ["p2"] = 166,
+          ["p4"] = 166,
+        },
+        ["source_line"] = 156,
+        ["source_path"] = "features/v102/item_atlas.feature",
+      },
+      ["name"] = "翻页后清除选中状态",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "道具目录共有<道具数>种道具",
+            ["source_line"] = 157,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "道具目录共有<p2>种道具",
+        },
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 158,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开道具图鉴",
+            ["source_line"] = 159,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开道具图鉴",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家选中第<槽位>格道具",
+            ["source_line"] = 160,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "玩家选中第<p4>格道具",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到图鉴下一页",
+            ["source_line"] = 161,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到图鉴下一页",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "无道具被选中",
+            ["source_line"] = 162,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "无道具被选中",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "放大卡牌已隐藏",
+            ["source_line"] = 163,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "放大卡牌已隐藏",
         },
       },
     },
