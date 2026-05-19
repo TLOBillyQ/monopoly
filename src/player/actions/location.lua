@@ -107,33 +107,29 @@ function location_ops.alive_players(self)
   return alive
 end
 
+local function _cache_put(by_id, player_id, normalized_id, player)
+  if type(by_id) ~= "table" then return end
+  if normalized_id ~= nil then by_id[normalized_id] = player end
+  by_id[player_id] = player
+end
+
+local function _cache_get(by_id, player_id, normalized_id)
+  if type(by_id) ~= "table" then return nil end
+  return by_id[player_id] or (normalized_id and (by_id[normalized_id] or by_id[tostring(normalized_id)]))
+end
+
 function location_ops.find_player_by_id(self, player_id)
-  if player_id == nil then
-    return nil
-  end
+  if player_id == nil then return nil end
   local normalized_id = role_id_utils.normalize(player_id)
   local by_id = self.player_by_id
-  if type(by_id) == "table" then
-    local cached = by_id[player_id]
-    if not cached and normalized_id ~= nil then
-      cached = by_id[normalized_id] or by_id[tostring(normalized_id)]
-    end
-    if cached then
-      if normalized_id ~= nil then
-        by_id[normalized_id] = cached
-      end
-      by_id[player_id] = cached
-      return cached
-    end
+  local cached = _cache_get(by_id, player_id, normalized_id)
+  if cached then
+    _cache_put(by_id, player_id, normalized_id, cached)
+    return cached
   end
   for _, player in ipairs(self.players or {}) do
     if player and role_id_utils.equals(player.id, normalized_id) then
-      if type(by_id) == "table" then
-        if normalized_id ~= nil then
-          by_id[normalized_id] = player
-        end
-        by_id[player_id] = player
-      end
+      _cache_put(by_id, player_id, normalized_id, player)
       return player
     end
   end

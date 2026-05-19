@@ -216,20 +216,18 @@ local function _is_action_dispatchable(action)
   return action.type == "choice_select" or action.type == "choice_cancel"
 end
 
+local function _resolve_owner_actor_id(choice)
+  return choice and choice.owner_role_id or nil
+end
+
+local function _resolve_current_player_actor_id(game)
+  local p = game and game.turn and game.turn.current_player_index and game.players and game.players[game.turn.current_player_index]
+  return p and p.id or nil
+end
+
 local function _ensure_actor_role_id(game, choice, action)
-  if action.actor_role_id ~= nil then
-    return
-  end
-  local owner = choice and choice.owner_role_id or nil
-  if owner ~= nil then
-    action.actor_role_id = owner
-    return
-  end
-  local current = game and game.turn and game.turn.current_player_index or nil
-  local player = current and game.players and game.players[current] or nil
-  if player then
-    action.actor_role_id = player.id
-  end
+  if action.actor_role_id ~= nil then return end
+  action.actor_role_id = _resolve_owner_actor_id(choice) or _resolve_current_player_actor_id(game)
 end
 
 local function _dispatch_via_close_choice(game, state, action)

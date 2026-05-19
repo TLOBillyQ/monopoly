@@ -14,40 +14,33 @@ local _tile_state_out = {}
 local _tile_state_entries = {}
 local _count_by_owner = {}
 
+local function _clear_table(t)
+  for k in pairs(t) do t[k] = nil end
+end
+
+local function _update_tile_entry(tile_id, raw, board)
+  _tile_state_entries[tile_id] = _tile_state_entries[tile_id] or {}
+  local entry = _tile_state_entries[tile_id]
+  entry.owner_id = raw.owner_id
+  entry.level = raw.level
+  entry.contiguous_count = nil
+  if raw.owner_id then _count_by_owner[raw.owner_id] = _count_by_owner[raw.owner_id] or contiguous_count.build_for_owner(board, raw.owner_id) end
+  local count = raw.owner_id and _count_by_owner[raw.owner_id] and _count_by_owner[raw.owner_id][tile_id]
+  if count and count > 0 then entry.contiguous_count = count end
+  _tile_state_out[tile_id] = entry
+end
+
+local function _fill_tile_states(board)
+  local lookup = board.tile_lookup or {}
+  _clear_table(_tile_state_out)
+  _clear_table(_count_by_owner)
+  for tile_id, raw in pairs(lookup) do _update_tile_entry(tile_id, raw, board) end
+end
+
 local function _project_tile_states(game)
   local board = game and game.board or nil
-  if not board then
-    return _tile_state_out
-  end
-  local lookup = board.tile_lookup or {}
-  for k in pairs(_tile_state_out) do
-    _tile_state_out[k] = nil
-  end
-  for k in pairs(_count_by_owner) do
-    _count_by_owner[k] = nil
-  end
-  for tile_id, raw in pairs(lookup) do
-    local entry = _tile_state_entries[tile_id]
-    if entry == nil then
-      entry = {}
-      _tile_state_entries[tile_id] = entry
-    end
-    entry.owner_id = raw.owner_id
-    entry.level = raw.level
-    entry.contiguous_count = nil
-    if raw.owner_id then
-      local owner_counts = _count_by_owner[raw.owner_id]
-      if owner_counts == nil then
-        owner_counts = contiguous_count.build_for_owner(board, raw.owner_id)
-        _count_by_owner[raw.owner_id] = owner_counts
-      end
-      local count = owner_counts[tile_id]
-      if count and count > 0 then
-        entry.contiguous_count = count
-      end
-    end
-    _tile_state_out[tile_id] = entry
-  end
+  if not board then return _tile_state_out end
+  _fill_tile_states(board)
   return _tile_state_out
 end
 
