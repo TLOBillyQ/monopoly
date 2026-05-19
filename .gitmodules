@@ -10,3 +10,7 @@
 	path = vendor/mutate4lua
 	url = https://github.com/TLOBillyQ/mutate4lua.git
 	ignore = untracked
+[submodule "vendor/dry4lua"]
+	path = vendor/dry4lua
+	url = https://github.com/TLOBillyQ/dry4lua.git
+	ignore = untracked
