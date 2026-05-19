@@ -169,6 +169,15 @@ describe("domain loop ports coverage", function()
     end
   end)
 
+  it("describe_contract returns independent copies", function()
+    local contract1 = gameplay_loop_ports.describe_contract()
+    local contract2 = gameplay_loop_ports.describe_contract()
+    assert(contract1.group_names ~= contract2.group_names,
+      "each describe_contract call should return fresh group_names")
+    assert(contract1.port_groups.modal ~= contract2.port_groups.modal,
+      "each describe_contract call should return fresh port_groups.modal")
+  end)
+
   it("describe_contract port_groups contain expected keys per group", function()
     local contract = gameplay_loop_ports.describe_contract()
     local function _keys_set(group_name)
