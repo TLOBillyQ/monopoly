@@ -47,29 +47,21 @@ local function _restore_camera_props(state, local_role)
   end
 end
 
+local function _safe_call_method(state, obj, key, log_key, log_prefix)
+  if type(obj[key]) ~= "function" then return nil end
+  local ok, result = pcall(obj[key])
+  if not ok then
+    runtime_state.log_once(state, "warn", log_key, "camera_sync", log_prefix, tostring(result))
+    return nil
+  end
+  return result
+end
+
 local function _resolve_unit_position(state, role)
-  if role == nil then
-    return nil
-  end
-  if type(role.get_ctrl_unit) ~= "function" then
-    return nil
-  end
-  local ok, unit = pcall(role.get_ctrl_unit)
-  if not ok or unit == nil then
-    if not ok then
-      runtime_state.log_once(state, "warn", "camera_sync:get_ctrl_unit_failed", "camera_sync", "resolve unit failed:", tostring(unit))
-    end
-    return nil
-  end
-  if type(unit.get_position) ~= "function" then
-    return nil
-  end
-  local pos_ok, pos = pcall(unit.get_position)
-  if not pos_ok then
-    runtime_state.log_once(state, "warn", "camera_sync:get_position_failed", "camera_sync", "resolve unit position failed:", tostring(pos))
-    return nil
-  end
-  return pos
+  if role == nil then return nil end
+  local unit = _safe_call_method(state, role, "get_ctrl_unit", "camera_sync:get_ctrl_unit_failed", "resolve unit failed:")
+  if unit == nil then return nil end
+  return _safe_call_method(state, unit, "get_position", "camera_sync:get_position_failed", "resolve unit position failed:")
 end
 
 local function _resolve_followed_unit_live_position(state, player_id)

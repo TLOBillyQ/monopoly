@@ -280,32 +280,36 @@ local function _inter_turn(session, args)
   }
 end
 
+local _CHOICE_ACTION_TYPES = { choice_select = true, choice_cancel = true, choice_force_skip = true }
+
+local function _is_choice_action(peeked)
+  if not peeked then return false end
+  return _CHOICE_ACTION_TYPES[peeked.type] == true
+end
+
+local function _build_action_next(args, player)
+  return {
+    next_state = args and args.next_state or "roll",
+    next_args = args and args.next_args or { player = player },
+  }
+end
+
 local function _action(session, args)
-  assert(session ~= nil and session.game ~= nil, "missing await session")
+  assert(session, "missing await session")
+  assert(session.game, "missing await session.game")
   local game = session.game
   session:mark_phase("wait_action")
   local player = game:current_player()
   if auto_play_port.is_auto_player(game, player) then
-    return {
-      next_state = args and args.next_state or "roll",
-      next_args = args and args.next_args or { player = player },
-    }
+    return _build_action_next(args, player)
   end
   local peeked = session:peek_pending_action()
-  if peeked and (peeked.type == "choice_select"
-              or peeked.type == "choice_cancel"
-              or peeked.type == "choice_force_skip") then
-    return {
-      next_state = args and args.next_state or "roll",
-      next_args = args and args.next_args or { player = player },
-    }
+  if _is_choice_action(peeked) then
+    return _build_action_next(args, player)
   end
   local action = session:take_pending_action()
   if action then
-    return {
-      next_state = args and args.next_state or "roll",
-      next_args = args and args.next_args or { player = player },
-    }
+    return _build_action_next(args, player)
   end
   return _WAIT
 end
