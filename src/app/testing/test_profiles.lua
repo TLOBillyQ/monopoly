@@ -131,9 +131,7 @@ function M.profiles_in_group(group_name, opts)
   local out = {}
   for _, name in ipairs(_all_profile_names(opts.include_default ~= false)) do
     local profile = _profile_for_name(name)
-    if profile
-        and profile.group == group_name
-        and (opts.value == nil or profile.value == opts.value) then
+    if profile and profile.group == group_name and (opts.value == nil or profile.value == opts.value) then
       out[#out + 1] = name
     end
   end
