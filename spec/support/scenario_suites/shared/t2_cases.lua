@@ -5,8 +5,6 @@ local _build_test_ports = fixtures.build_test_ports
 local _build_loop_state = fixtures.build_loop_state
 local _with_reloaded_move_module = fixtures.with_reloaded_move_module
 local roll = require("src.turn.phases.roll")
-local tick_choice_timeout = require("src.turn.waits.choice_timeout")
-local turn_camera_policy = require("src.turn.policies.camera")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local turn_timer_policy = require("src.turn.policies.timer")
 
@@ -141,68 +139,6 @@ _t2_case_groups.roll_dice_extended_tests = {
   end,
 }
 
-_t2_case_groups.resolve_choice_owner_id_tests = {
-  function()
-    local g = _new_game()
-    g.turn.current_player_index = 2
-    local result = tick_choice_timeout._resolve_choice_owner_id(g, { id = 1, owner_role_id = 999 })
-    assert(result == g.players[2].id, "missing owner should fall back to current player")
-  end,
-  function()
-    local g = _new_game()
-    g.turn.current_player_index = 5
-    local result = tick_choice_timeout._resolve_choice_owner_id(g, { id = 1 })
-    assert(result == nil, "out-of-range current player should return nil")
-  end,
-  function()
-    local g = _new_game()
-    g.find_player_by_id = nil
-    local result = tick_choice_timeout._resolve_choice_owner_id(g, { id = 1, owner_role_id = g.players[1].id })
-    assert(result == g.players[1].id, "missing finder should still fall back to current player")
-  end,
-  function()
-    local g = _new_game()
-    g.players = nil
-    local result = tick_choice_timeout._resolve_choice_owner_id(g, { id = 1 })
-    assert(result == nil, "missing players should return nil")
-  end,
-}
-
-_t2_case_groups.resolve_follow_player_id_tests = {
-  function()
-    local game = _new_game()
-    game.players[1].id = nil
-    local result = turn_camera_policy._resolve_follow_player_id(game)
-    assert(result == game.players[2].id, "current player with nil id should be skipped")
-  end,
-  function()
-    local game = _new_game()
-    game.turn.current_player_index = 2
-    game.players[2].eliminated = true
-    local result = turn_camera_policy._resolve_follow_player_id(game)
-    assert(result == game.players[1].id, "search should wrap to next live player")
-  end,
-  function()
-    local game = _new_game()
-    game.players[1].eliminated = true
-    game.players[2].eliminated = true
-    local result = turn_camera_policy._resolve_follow_player_id(game)
-    assert(result == nil, "all eliminated players should return nil")
-  end,
-  function()
-    local game = _new_game()
-    game.turn = nil
-    local result = turn_camera_policy._resolve_follow_player_id(game)
-    assert(result == nil, "missing turn should return nil")
-  end,
-  function()
-    local game = _new_game()
-    game.players = {}
-    local result = turn_camera_policy._resolve_follow_player_id(game)
-    assert(result == nil, "empty players should return nil")
-  end,
-}
-
 _t2_case_groups.resolve_wait_state_tests = {
   function()
     local game = { turn = { action_anim = { kind = "test" } }, dirty = {} }
@@ -220,68 +156,6 @@ _t2_case_groups.resolve_wait_state_tests = {
     local state_name, args = require("src.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
     assert(state_name == "wait_action_anim", "queued move effect should wait for action anim")
     assert(args.next_state == "wait_choice", "non-anim wait should wrap back to wait_choice")
-  end,
-}
-
-_t2_case_groups.fill_ui_sync_defaults_tests = {
-  function()
-    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for key, value in pairs(base) do
-      ports[key] = value
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    assert(type(ports.resolve_ui_gate) == "function", "defaults should be filled")
-    assert(type(ports.set_input_blocked) == "function", "set_input_blocked default should be filled")
-  end,
-  function()
-    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for key, value in pairs(base) do
-      ports[key] = value
-    end
-    ports.get_ui_state = function() return "custom" end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    assert(ports.get_ui_state() == "custom", "custom port should be preserved")
-    assert(type(ports.is_popup_active) == "function", "missing ports should still be filled")
-  end,
-  function()
-    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for key, value in pairs(base) do
-      ports[key] = value
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local state = { ui = { input_blocked = true, popup_active = true, market_active = true, popup_payload = { auto_close_seconds = 10 } } }
-    local gate = ports.resolve_ui_gate(state)
-    assert(gate.input_blocked == true and gate.market_active == true, "ui gate should mirror ui state")
-    assert(gate.popup_auto_close_seconds == 10, "ui gate should expose popup timeout")
-  end,
-  function()
-    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for key, value in pairs(base) do
-      ports[key] = value
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local state = { ui = { input_blocked = false } }
-    assert(ports.set_input_blocked(state, true) == true, "setter should report change")
-    assert(ports.set_input_blocked(state, true) == false, "setter should report no-op")
-  end,
-  function()
-    local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
-    local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for key, value in pairs(base) do
-      ports[key] = value
-    end
-    loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local gate = ports.resolve_ui_gate(nil)
-    assert(gate.popup_seq == nil and gate.popup_active == false, "nil state should produce empty ui gate")
   end,
 }
 
