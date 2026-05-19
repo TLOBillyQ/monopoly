@@ -1,6 +1,7 @@
 local number_utils = require("src.foundation.number")
 local shared = require("acceptance.steps.shared")
 local game_driver = require("tools.acceptance.game_driver")
+local inventory_module = require("src.rules.items.inventory")
 
 local chance_steps = {}
 
@@ -454,6 +455,9 @@ function chance_steps.handlers()
       _ensure_player(world)
       world.player.bag = world.player.bag or {}
       world.player.bag_limit = 5
+      if world.driver then
+        inventory_module.clear(game_driver.current_player(world.driver))
+      end
       return true
     end,
 

@@ -291,39 +291,35 @@ local function _should_keep_market_open(entry, result)
   return entry and entry.kind == "item" and result.fulfilled_now == true
 end
 
-function outcome.resolve_purchase(game, choice, player, entry, result, finish_choice)
-  assert(type(finish_choice) == "function", "missing finish_choice")
+local function _handle_keep_open(game, choice, player, entry, result, finish_choice)
+  local rebuilt = session.rebuild_pending(game, choice, player)
+  if not rebuilt then return finish_choice(game, false) end
+  local full_buy = entry and entry.kind == "item" and result.fulfilled_now == true and result.inventory_full_after == true
+  if full_buy then feedback.emit_inventory_full(player, entry) end
+  return { stay = true }
+end
 
-  if _should_keep_market_open(entry, result) then
-    local rebuilt = session.rebuild_pending(game, choice, player)
-    if not rebuilt then
-      return finish_choice(game, false)
-    end
-    if entry
-        and entry.kind == "item"
-        and result.fulfilled_now == true
-        and result.inventory_full_after == true then
-      feedback.emit_inventory_full(player, entry)
-    end
-    return { stay = true }
-  end
+local function _try_failure_stay(game, choice, player, result)
+  if not _is_purchase_failure(result) then return false end
+  return not not session.rebuild_pending(game, choice, player)
+end
 
-  if _is_purchase_failure(result) then
-    local rebuilt = session.rebuild_pending(game, choice, player)
-    if rebuilt then
-      return { stay = true }
-    end
-  end
-
+local function _dispatch_and_finish(game, result, finish_choice)
   if type(result) == "table" then
     local intent = result.intent or {}
     _dispatch_intent(game, intent)
-    if intent.kind == "need_choice" then
-      return { stay = true }
-    end
+    if intent.kind == "need_choice" then return { stay = true } end
   end
-
   return finish_choice(game, false)
+end
+
+function outcome.resolve_purchase(game, choice, player, entry, result, finish_choice)
+  assert(type(finish_choice) == "function", "missing finish_choice")
+  if _should_keep_market_open(entry, result) then
+    return _handle_keep_open(game, choice, player, entry, result, finish_choice)
+  end
+  if _try_failure_stay(game, choice, player, result) then return { stay = true } end
+  return _dispatch_and_finish(game, result, finish_choice)
 end
 
 return {

@@ -2,31 +2,26 @@ require "vendor.third_party.ClassUtils"
 
 local choice_registry = Class("ChoiceRegistry")
 
-local function _normalize_descriptor(kind, handler)
-  if type(handler) == "function" then
-    return kind, {
-      execute = handler,
-    }
-  end
+local _optional_field_types = {
+  required_meta = "table",
+  normalize_meta = "function",
+  meta_validator = "function",
+  normalize_action = "function",
+}
 
+local function _validate_descriptor_fields(kind, descriptor)
+  assert(type(descriptor.execute) == "function", "choice descriptor missing execute: " .. tostring(kind))
+  for field, expected in pairs(_optional_field_types) do
+    if descriptor[field] ~= nil then assert(type(descriptor[field]) == expected, "choice descriptor " .. field .. " must be " .. expected .. ": " .. tostring(kind)) end
+  end
+end
+
+local function _normalize_descriptor(kind, handler)
+  if type(handler) == "function" then return kind, { execute = handler } end
   assert(type(handler) == "table", "choice handler must be function or table")
   local descriptor = {}
-  for key, value in pairs(handler) do
-    descriptor[key] = value
-  end
-  assert(type(descriptor.execute) == "function", "choice descriptor missing execute: " .. tostring(kind))
-  if descriptor.required_meta ~= nil then
-    assert(type(descriptor.required_meta) == "table", "choice descriptor required_meta must be table: " .. tostring(kind))
-  end
-  if descriptor.normalize_meta ~= nil then
-    assert(type(descriptor.normalize_meta) == "function", "choice descriptor normalize_meta must be function: " .. tostring(kind))
-  end
-  if descriptor.meta_validator ~= nil then
-    assert(type(descriptor.meta_validator) == "function", "choice descriptor meta_validator must be function: " .. tostring(kind))
-  end
-  if descriptor.normalize_action ~= nil then
-    assert(type(descriptor.normalize_action) == "function", "choice descriptor normalize_action must be function: " .. tostring(kind))
-  end
+  for key, value in pairs(handler) do descriptor[key] = value end
+  _validate_descriptor_fields(kind, descriptor)
   return kind, descriptor
 end
 

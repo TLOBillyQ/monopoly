@@ -360,6 +360,12 @@ function movement_steps.handlers()
     end,
 
     ["地雷不触发"] = function(world)
+      if world.mine_result ~= nil then
+        if world.mine_result.hospitalized then
+          return nil, "mine should not hospitalize protected player"
+        end
+        return true
+      end
       if not game_driver.has_mine(_ctx(world), 5) then
         return nil, "mine at tile 5 should NOT have triggered"
       end

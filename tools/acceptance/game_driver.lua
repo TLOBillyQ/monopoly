@@ -5,6 +5,10 @@ local compose_game = require("src.app.compose_game")
 local game_factory = require("src.app.game_factory")
 local movement = require("src.rules.movement")
 local mine_effect = require("src.rules.effects.mine")
+local roll_module = require("src.turn.phases.roll")
+local dice_mult = require("src.turn.phases.dice_multiplier")
+local event_feed = require("src.rules.ports.event_feed")
+local event_kinds = require("src.config.gameplay.event_kinds")
 
 local driver = {}
 
@@ -12,18 +16,28 @@ local OUTER_RING_SIZE = 32
 
 local function _build_queue_rng(queue)
   local index = 0
-  return game_factory.build_rng(function()
+  return game_factory.build_rng(function(min, max)
     index = index + 1
     if index > #queue then
-      error("RNG queue exhausted at call " .. tostring(index))
+      return math.random(min, max)
     end
     return queue[index]
   end)
 end
 
+local function _build_event_capture_port(events)
+  return {
+    publish = function(_, _, event)
+      events[#events + 1] = event
+      return true
+    end,
+  }
+end
+
 function driver.new_game(opts)
   opts = opts or {}
   local rng_queue = {}
+  local captured_events = {}
   local game = compose_game.new_game(default_ports.resolve_game_opts({
     players = opts.players or {"P1", "P2", "P3", "P4"},
     ai = opts.ai or {[2] = true, [3] = true, [4] = true},
@@ -32,10 +46,12 @@ function driver.new_game(opts)
     tiles = tiles_cfg,
     rng = _build_queue_rng(rng_queue),
   }))
+  game.event_feed_port = _build_event_capture_port(captured_events)
   return {
     game = game,
     outer_ring_size = OUTER_RING_SIZE,
     _rng_queue = rng_queue,
+    _events = captured_events,
   }
 end
 
@@ -154,6 +170,56 @@ function driver.try_trigger_mine(ctx, player)
     ctx.game:player_apply_hospital_effects(player)
   end
   return result
+end
+
+function driver.events(ctx)
+  return ctx._events
+end
+
+function driver.roll_dice(ctx, player, dice_count)
+  local override = player.status and player.status.pending_remote_dice
+    and player.status.pending_remote_dice.values
+  local results, raw_total = roll_module._roll_dice(dice_count, override, ctx.game.rng)
+  local total = dice_mult.apply_roll_total(raw_total, player)
+  event_feed.publish(ctx.game, {
+    kind = event_kinds.dice_roll,
+    text = player.name .. " 投骰: [" .. table.concat(results, ",") .. "] => " .. tostring(total),
+    tip = true,
+  })
+  ctx.game.last_turn = ctx.game.last_turn or {}
+  ctx.game.last_turn.rolls = results
+  ctx.game.last_turn.total = total
+  ctx.game.last_turn.raw_total = raw_total
+  if override then
+    ctx.game:set_player_status(player, "pending_remote_dice", nil)
+  end
+  local mult = player.status and player.status.pending_dice_multiplier or 1
+  if mult > 1 then
+    ctx.game:set_player_status(player, "pending_dice_multiplier", 1)
+  end
+  return results, raw_total, total
+end
+
+function driver.apply_remote_dice(ctx, player, dice_count, value)
+  local values = {}
+  for i = 1, dice_count do values[i] = value end
+  ctx.game:set_player_status(player, "pending_remote_dice", { values = values })
+end
+
+function driver.set_dice_multiplier(ctx, player, mult)
+  ctx.game:set_player_status(player, "pending_dice_multiplier", mult)
+end
+
+function driver.last_rolls(ctx)
+  return ctx.game.last_turn and ctx.game.last_turn.rolls
+end
+
+function driver.last_total(ctx)
+  return ctx.game.last_turn and ctx.game.last_turn.total
+end
+
+function driver.last_raw_total(ctx)
+  return ctx.game.last_turn and ctx.game.last_turn.raw_total
 end
 
 return driver

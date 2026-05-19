@@ -15,6 +15,19 @@ local function _is_actor_bound_ui_button(action_id)
   return type(action_id) == "string" and string.match(action_id, "^item_slot_(%d+)$") ~= nil
 end
 
+local _ACTOR_BOUND_TYPES = {
+  toggle_action_log = true, open_skin_panel = true, open_gallery_panel = true,
+  skin_panel_action = true, item_atlas_action = true, skin_gallery_action = true,
+  choice_select = true, choice_cancel = true,
+  market_confirm = true, market_page_prev = true, market_page_next = true, market_tab_select = true,
+}
+
+local function _requires_event_actor(intent)
+  if type(intent) ~= "table" then return false end
+  if _ACTOR_BOUND_TYPES[intent.type] then return true end
+  return intent.type == "ui_button" and _is_actor_bound_ui_button(intent.id)
+end
+
 local function _unbind(state)
   if not state then
     return
@@ -40,27 +53,6 @@ function router.bind(state, resolve_game)
       modal.close_choice_modal(ctx)
     end,
   }
-
-  local function _requires_event_actor(intent)
-    if type(intent) ~= "table" then
-      return false
-    end
-    if intent.type == "toggle_action_log"
-        or intent.type == "open_skin_panel"
-        or intent.type == "open_gallery_panel"
-        or intent.type == "skin_panel_action"
-        or intent.type == "item_atlas_action"
-        or intent.type == "skin_gallery_action"
-        or intent.type == "choice_select"
-        or intent.type == "choice_cancel"
-        or intent.type == "market_confirm"
-        or intent.type == "market_page_prev"
-        or intent.type == "market_page_next"
-        or intent.type == "market_tab_select" then
-      return true
-    end
-    return intent.type == "ui_button" and _is_actor_bound_ui_button(intent.id)
-  end
 
   local function _try_attach_event_actor(intent, data)
     if not _requires_event_actor(intent) or intent.actor_role_id ~= nil then

@@ -29,11 +29,7 @@ local function _resolve_dirty(state_ctx, opts)
 end
 
 local function _should_refresh_panel(dirty)
-  return dirty.any == true
-    or dirty.base == true
-    or dirty.permanent == true
-    or dirty.choice == true
-    or dirty.market == true
+  return dirty.any == true or dirty.base == true or dirty.permanent == true or dirty.choice == true or dirty.market == true
 end
 
 function pipeline.render(state_ctx, ui_model, log_once, build_log_prefix, opts)
