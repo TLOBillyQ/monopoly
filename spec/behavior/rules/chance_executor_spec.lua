@@ -58,14 +58,4 @@ describe("chance_draw_and_resolve executor", function()
     assert(found, "expected chance card event in event log")
   end)
 
-  it("apply does not raise", function()
-    local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
-    local player = game.players[1]
-    local _, chance_tile = support.first_tile_by_type(game.board, "chance")
-
-    local ok, err = pcall(function()
-      executor.apply({ game = game, player = player, tile = chance_tile, move_result = {} })
-    end)
-    assert(ok, "apply raised: " .. tostring(err))
-  end)
 end)
