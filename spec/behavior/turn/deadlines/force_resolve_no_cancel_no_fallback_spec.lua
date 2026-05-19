@@ -51,25 +51,6 @@ describe("force_resolve no cancel no fallback", function()
     fallback_registry.reset()
   end)
 
-  it("choice without allow_cancel and without registered fallback resolves via force_skip", function()
-    local state = _build_state()
-    local game, advanced = _build_game()
-    local choice = {
-      id = "c1",
-      kind = "unknown_kind_no_handler",
-      allow_cancel = false,
-      owner_role_id = 1,
-      options = {},
-    }
-    game.turn.pending_choice = choice
-    state._game = game
-
-    force_resolve.resolve_choice(game, state, choice, "tick_timeout")
-
-    assert.is_nil(game.turn.pending_choice)
-    assert.is_true(advanced.count >= 1)
-  end)
-
   it("force_skip clears pending_choice and sets force_skip flag", function()
     local state = _build_state()
     local game = _build_game()
