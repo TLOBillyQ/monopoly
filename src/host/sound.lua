@@ -13,15 +13,7 @@ local function _warn_skip(...)
   logger.warn("board_feedback", ...)
 end
 
-local function _resolve_numeric(value, fallback)
-  if number_utils.is_numeric(value) then
-    return value + 0
-  end
-  if number_utils.is_numeric(fallback) then
-    return fallback + 0
-  end
-  return nil
-end
+local _resolve_numeric = number_utils.resolve_numeric
 
 local function _is_vector_like(value)
   if type(value) ~= "table" then

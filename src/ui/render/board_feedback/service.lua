@@ -44,15 +44,7 @@ local function _warn_missing_ref_once(kind, cue_name, ref_value, reason)
     "reason=" .. tostring(reason)
   )
 end
-local function _resolve_numeric(value, fallback)
-  if number_utils.is_numeric(value) then
-    return value + 0
-  end
-  if number_utils.is_numeric(fallback) then
-    return fallback + 0
-  end
-  return nil
-end
+local _resolve_numeric = number_utils.resolve_numeric
 local function _warn_invalid_cue_field(cue_name, field, value, fallback)
   _warn(
     "invalid cue field:",

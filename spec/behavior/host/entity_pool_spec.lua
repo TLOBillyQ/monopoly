@@ -1,0 +1,75 @@
+local entity_pool = require("src.host.entity_pool")
+
+describe("entity_pool (no GameAPI)", function()
+  after_each(function()
+    entity_pool.reset()
+  end)
+
+  describe("acquire", function()
+    it("returns nil when unit_key is nil", function()
+      local h = entity_pool.acquire(nil, {})
+      assert(h == nil, "expected nil with nil unit_key")
+    end)
+
+    it("returns nil when pos is nil", function()
+      local h = entity_pool.acquire("k", nil)
+      assert(h == nil, "expected nil with nil pos")
+    end)
+
+    it("returns nil when GameAPI absent and no idle handles", function()
+      local h = entity_pool.acquire("miss_key", { x = 0 })
+      assert(h == nil, "expected nil without GameAPI")
+    end)
+
+    it("returns handle from idle pool after release", function()
+      local mock = {}
+      entity_pool.release("pool_key", mock)
+      local h = entity_pool.acquire("pool_key", { x = 0 })
+      assert(h == mock, "expected reused handle from idle pool")
+    end)
+  end)
+
+  describe("release", function()
+    it("does nothing when unit_key is nil", function()
+      entity_pool.release(nil, {})
+    end)
+
+    it("does nothing when handle is nil", function()
+      entity_pool.release("k", nil)
+    end)
+
+    it("parks a handle-like table in idle without error", function()
+      entity_pool.release("park_key", {})
+      local s = entity_pool.stats()
+      assert(s["park_key"] ~= nil, "expected bucket entry after release")
+    end)
+  end)
+
+  describe("prewarm", function()
+    it("returns early when unit_key is nil", function()
+      entity_pool.prewarm(nil, 3)
+    end)
+
+    it("returns early when count is zero", function()
+      entity_pool.prewarm("k", 0)
+    end)
+
+    it("runs prewarm loop with valid args when GameAPI absent", function()
+      entity_pool.prewarm("warm_key", 2)
+    end)
+  end)
+
+  describe("stats", function()
+    it("returns a table when no acquisitions", function()
+      local s = entity_pool.stats()
+      assert(type(s) == "table", "expected table")
+    end)
+
+    it("records miss count after failed acquire", function()
+      entity_pool.acquire("stat_key", { x = 0 })
+      local s = entity_pool.stats()
+      assert(s["stat_key"] ~= nil, "expected stat entry")
+      assert(s["stat_key"].miss == 1, "expected 1 miss after failed acquire")
+    end)
+  end)
+end)

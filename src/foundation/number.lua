@@ -127,4 +127,14 @@ function number_utils.format_integer_part(value)
   return tostring(value)
 end
 
+function number_utils.resolve_numeric(value, fallback)
+  if number_utils.is_numeric(value) then
+    return value + 0
+  end
+  if number_utils.is_numeric(fallback) then
+    return fallback + 0
+  end
+  return nil
+end
+
 return number_utils
