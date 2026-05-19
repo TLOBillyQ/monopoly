@@ -1,5 +1,5 @@
 local nodes = {
-  canvas = "皮肤弹窗",
+  canvas = "皮肤商店",
   close_button = "皮肤_关闭",
   page_prev = "皮肤_上一页",
   page_next = "皮肤_下一页",

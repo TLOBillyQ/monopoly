@@ -70,7 +70,7 @@ lua tools/quality/crap.lua
 
 输出在逻辑临时目录 `tmp/crap_view/index.html`（实际会展开到系统临时目录下的 `monopoly_crap/crap_view/index.html`）。用于找"复杂度高且测试触达不足"的函数，是热点雷达，不是周检 gate。默认 lane 失败也产出报告；加 `--strict-tests` 才会把测试失败升级为命令失败。
 
-实现上，`tools/quality/crap.lua` 会先通过公开 Lua bridge 加载 `tools/quality/crap/config.lua`、执行 `tools/quality/crap/adapter.lua` 收集 coverage，再把 request JSON 交给 `vendor/crap4lua/bin/crap4lua` 做分析与 viewer 导出。
+实现上，`tools/quality/crap.lua` 会先通过公开 Lua bridge 加载 `tools/quality/crap/config.lua`、执行 `tools/quality/crap/adapter.lua` 收集 coverage，再委托纯 Lua `crap4lua.cli` 做分析与 viewer 导出。
 
 ## `src/turn/output/` 迁移条件
 

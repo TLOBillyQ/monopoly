@@ -43,7 +43,7 @@ lua tools/quality/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/c
 ```
 导出静态 viewer。命令完成后打印实际路径，打开 `index.html` 即可查看，不需要本地服务。
 
-`viewer --in-json` 直接渲染现有 JSON，不会加载 Monopoly 配置或测试 lane；`report` 会先 collect 再调用上游 CLI 的 `--request-json` 模式。缺少二进制时，包装层会在本地临时生成 launcher 并构建 `vendor/crap4lua/bin/crap4lua`，不会修改子模块提交态。
+`viewer --in-json` 直接渲染现有 JSON，不会加载 Monopoly 配置或测试 lane；`report` 会先 collect，再通过纯 Lua `crap4lua.cli` 生成分析结果和 viewer，不需要 vendor 二进制入口。
 
 ## 分数说明
 

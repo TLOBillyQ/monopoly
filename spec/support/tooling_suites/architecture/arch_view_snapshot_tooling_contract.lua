@@ -197,8 +197,8 @@ local function _test_build_includes_metadata_for_project_root_and_config_path()
 end
 
 local function _test_json_modules_are_self_contained()
-  local common_source = _read_file("vendor/arch_view/arch_view/runtime/common.lua")
-  local host_source = _read_file("vendor/arch_view/arch_view/runtime/host.lua")
+  local common_source = _read_file("vendor/arch_view/lib/arch_view/runtime/common.lua")
+  local host_source = _read_file("vendor/arch_view/lib/arch_view/runtime/host.lua")
   assert(common_source:find('require("shared.lib.common")', 1, true) == nil, "arch_view common should not depend on monopoly lib.common")
   assert(host_source:find('src.foundation.number', 1, true) == nil,
     "arch_view host runtime should not depend on monopoly src modules")

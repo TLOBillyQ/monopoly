@@ -1,5 +1,5 @@
 local nodes = {
-  canvas = "图鉴弹窗",
+  canvas = "道具图鉴",
   close_button = "图鉴_关闭",
   page_prev = "图鉴_上一页",
   page_next = "图鉴_下一页",

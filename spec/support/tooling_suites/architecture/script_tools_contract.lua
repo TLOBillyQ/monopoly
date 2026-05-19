@@ -891,6 +891,19 @@ local function _test_mutate_wrapper_scan_json_output()
     "mutate scan should emit discovered mutation sites in json output")
 end
 
+local function _test_vendor_tools_do_not_expose_bin_entrypoints()
+  local removed_paths = {
+    "vendor/arch_view/" .. "bin",
+    "vendor/crap4lua/" .. "bin",
+    "vendor/mutate4lua/" .. "bin",
+  }
+
+  for _, path in ipairs(removed_paths) do
+    assert(common.path_exists(common.join_path(project_root, path)) ~= true,
+      "vendor 4lua tools should not expose bin entrypoints: " .. path)
+  end
+end
+
 local function _test_mutate_wrapper_indexes_behavior_suites_as_json()
   local result = _run_lua({
     "tools/quality/mutate.lua",
@@ -1102,6 +1115,7 @@ local contract_tests = {
   { name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
   { name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
   { name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
+  { name = "vendor_tools_do_not_expose_bin_entrypoints", run = _test_vendor_tools_do_not_expose_bin_entrypoints },
   { name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
   { name = "loc_scan_counts_worktree_with_go_engine", run = _test_loc_scan_counts_worktree_with_go_engine },
   { name = "loc_scan_counts_history_across_git_diff_shapes", run = _test_loc_scan_counts_history_across_git_diff_shapes },

@@ -2,6 +2,10 @@ local _default_catalog = require("src.config.content.skins")
 local host_runtime_ports = require("src.ui.host_bridge")
 local number_utils = require("src.foundation.number")
 local logger = require("src.foundation.log")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local canvas = require("src.ui.coord.canvas_coordinator")
+local base_nodes = require("src.ui.schema.base")
+local skin_nodes = require("src.ui.schema.skin")
 
 local skin_panel = {}
 
@@ -51,6 +55,19 @@ local function _notify(text, key)
     blocks_inter_turn = false,
     source = "ui.skin_panel",
   })
+end
+
+local function _switch_canvas(state, role_id, target)
+  local ui = state and state.ui or nil
+  if not ui then
+    return
+  end
+  local role = runtime_ports.resolve_role(role_id)
+  if role then
+    canvas.switch_for_role(ui, target, role)
+  else
+    canvas.switch(ui, target)
+  end
 end
 
 local function _action_type(action)
@@ -107,13 +124,15 @@ function skin_panel.open(state, role_id)
   panel.open = true
   panel.role_id = role_id
   panel.page_index = _clamp_page(panel.page_index)
+  _switch_canvas(state, role_id, skin_nodes.canvas)
   _notify("皮肤已打开", "skin_panel:open:" .. tostring(role_id))
   return panel
 end
 
-function skin_panel.close(state)
+function skin_panel.close(state, role_id)
   local panel = _ensure_state(state)
   panel.open = false
+  _switch_canvas(state, role_id or panel.role_id, base_nodes.canvas)
   _notify("已关闭", "skin_panel:close")
   return panel
 end
@@ -171,7 +190,7 @@ local function _unequip(state, role_id)
 end
 
 local _ACTION_HANDLERS = {
-  close   = function(state, _, _)        return skin_panel.close(state) end,
+  close   = function(state, role_id, _)   return skin_panel.close(state, role_id) end,
   next    = function(state, _, _)        return skin_panel.page_next(state) end,
   prev    = function(state, _, _)        return skin_panel.page_prev(state) end,
   buy     = function(state, role_id, a)  return skin_panel.unlock(state, role_id, "buy", _action_slot_index(a)) end,

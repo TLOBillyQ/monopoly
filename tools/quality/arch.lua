@@ -11,20 +11,24 @@ end
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
-local common = require("shared.lib.common")
+local _env = {
+  cwd = bootstrap_env.repo_root,
+  command_name = "tools/quality/arch.lua",
+  default_config_path = require("shared.lib.common").join_path(bootstrap_env.repo_root, "tools/quality/arch/config.json"),
+  script_dir = require("shared.lib.common").join_path(bootstrap_env.vendor_dir, "arch_view"),
+}
 local cli = require("arch_view.cli")
+local function _merge(env)
+  local merged = {}
+  for key, value in pairs(_env) do merged[key] = value end
+  for key, value in pairs(env or {}) do merged[key] = value end
+  return merged
+end
 
-local REPO_ROOT = bootstrap_env.repo_root
-local VENDOR_DIR = bootstrap_env.vendor_dir
+if ... == "quality.arch" then
+  return { env = _env, run = function(args, env) return cli.run(args or {}, _merge(env)) end }
+end
 
 local effective_args = arg or {}
-if #effective_args == 0 then
-  effective_args = { "check" }
-end
-local exit_code = cli.run(effective_args, {
-  cwd = REPO_ROOT,
-  default_config_path = common.join_path(REPO_ROOT, "tools/quality/arch/config.json"),
-  default_engine = "auto",
-  script_dir = common.join_path(VENDOR_DIR, "arch_view"),
-})
-os.exit(exit_code)
+if #effective_args == 0 then effective_args = { "check" } end
+os.exit(cli.run(effective_args, _env) and 0 or 1)

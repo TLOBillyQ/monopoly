@@ -1,6 +1,3 @@
-local await = require("src.turn.waits.await")
-local auto_play_port = require("src.rules.ports.auto_play")
-
 local function _make_session(opts)
   opts = opts or {}
   local pending_actions = opts.pending_actions or {}
@@ -24,10 +21,6 @@ local function _make_session(opts)
     return pending_actions[idx]
   end
   return s
-end
-
-local function _call_action(session, args)
-  return await.action(session, args)
 end
 
 describe("await.action", function()
