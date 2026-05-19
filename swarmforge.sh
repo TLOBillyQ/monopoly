@@ -473,13 +473,7 @@ if [[ -x "$KAKU_CLI" ]]; then
   : > "$WINDOW_STATE_FILE"
 
   kaku_pane_ids=()
-  kaku_pane_ids[1]="$("$KAKU_CLI" cli spawn --new-window --cwd "$WORKING_DIR" -- tmux attach-session -t "${SESSIONS[1]}" 2>/dev/null)"
-  sleep 0.3
-  osascript -e 'tell application "System Events" to tell process "Kaku"' \
-    -e 'set frontWindow to first window' \
-    -e 'set position of frontWindow to {0, 25}' \
-    -e 'set size of frontWindow to {1728, 1092}' \
-    -e 'end tell' 2>/dev/null
+  kaku_pane_ids[1]="$("$KAKU_CLI" cli spawn --cwd "$WORKING_DIR" -- tmux attach-session -t "${SESSIONS[1]}" 2>/dev/null)"
   for (( i = 2; i <= ${#ROLES[@]}; i++ )); do
     if (( i == 2 )); then
       kaku_pane_ids[$i]="$("$KAKU_CLI" cli split-pane --pane-id "${kaku_pane_ids[1]}" --right --top-level --percent 50 --cwd "$WORKING_DIR" -- tmux attach-session -t "${SESSIONS[$i]}" 2>/dev/null)"

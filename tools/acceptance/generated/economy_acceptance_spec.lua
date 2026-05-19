@@ -1133,6 +1133,57 @@ local ir = {
         },
       },
     },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 153,
+        ["source_path"] = "features/game/economy.feature",
+      },
+      ["name"] = "房东已淘汰时租金不收取",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "对手拥有一块地块",
+            ["source_line"] = 154,
+            ["source_path"] = "features/game/economy.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "对手拥有一块地块",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "对手已被淘汰",
+            ["source_line"] = 155,
+            ["source_path"] = "features/game/economy.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "对手已被淘汰",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家落在该地块",
+            ["source_line"] = 156,
+            ["source_path"] = "features/game/economy.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家落在该地块",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "租金不收取",
+            ["source_line"] = 157,
+            ["source_path"] = "features/game/economy.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "租金不收取",
+        },
+      },
+    },
   },
 }
 

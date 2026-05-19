@@ -30,10 +30,10 @@ local ir = {
       ["p1"] = 10,
       ["p10"] = 61,
       ["p11"] = 65,
-      ["p12"] = 86,
-      ["p13"] = 99,
-      ["p14"] = 100,
-      ["p15"] = 109,
+      ["p12"] = 93,
+      ["p13"] = 106,
+      ["p14"] = 107,
+      ["p15"] = 116,
       ["p2"] = 11,
       ["p3"] = 12,
       ["p4"] = 13,
@@ -562,7 +562,7 @@ local ir = {
         ["source_line"] = 72,
         ["source_path"] = "features/game/movement.feature",
       },
-      ["name"] = "地雷布置者首回合免疫自己的地雷",
+      ["name"] = "地雷布置者在布置回合和下一己方回合免疫自己的地雷",
       ["steps"] = {
         {
           ["keyword"] = "Given",
@@ -577,12 +577,12 @@ local ir = {
         {
           ["keyword"] = "When",
           ["metadata"] = {
-            ["original_text"] = "下一回合玩家移动经过格子5",
+            ["original_text"] = "下一己方回合玩家移动经过格子5",
             ["source_line"] = 74,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
-          ["text"] = "下一回合玩家移动经过格子5",
+          ["text"] = "下一己方回合玩家移动经过格子5",
         },
         {
           ["keyword"] = "Then",
@@ -603,13 +603,74 @@ local ir = {
         ["source_line"] = 77,
         ["source_path"] = "features/game/movement.feature",
       },
+      ["name"] = "地雷布置者第三己方回合不再免疫",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家在之前的回合布置了地雷于格子5",
+            ["source_line"] = 78,
+            ["source_path"] = "features/game/movement.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家在之前的回合布置了地雷于格子5",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "已过去2个己方回合",
+            ["source_line"] = 79,
+            ["source_path"] = "features/game/movement.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "已过去2个己方回合",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家移动经过格子5",
+            ["source_line"] = 80,
+            ["source_path"] = "features/game/movement.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家移动经过格子5",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "地雷正常触发",
+            ["source_line"] = 81,
+            ["source_path"] = "features/game/movement.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "地雷正常触发",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家被送往医院",
+            ["source_line"] = 82,
+            ["source_path"] = "features/game/movement.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家被送往医院",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 84,
+        ["source_path"] = "features/game/movement.feature",
+      },
       ["name"] = "同格路障和地雷按顺序触发",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "格子3同时放置了路障和对手的已激活地雷",
-            ["source_line"] = 78,
+            ["source_line"] = 85,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -619,7 +680,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家移动到格子3",
-            ["source_line"] = 79,
+            ["source_line"] = 86,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -629,7 +690,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "路障先触发并清除",
-            ["source_line"] = 80,
+            ["source_line"] = 87,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -639,7 +700,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "然后地雷触发",
-            ["source_line"] = 81,
+            ["source_line"] = 88,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -649,7 +710,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家被送往医院",
-            ["source_line"] = 82,
+            ["source_line"] = 89,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -668,12 +729,12 @@ local ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 93,
-          ["p12"] = 93,
-          ["p2"] = 93,
-          ["p9"] = 93,
+          ["p1"] = 100,
+          ["p12"] = 100,
+          ["p2"] = 100,
+          ["p9"] = 100,
         },
-        ["source_line"] = 84,
+        ["source_line"] = 91,
         ["source_path"] = "features/game/movement.feature",
       },
       ["name"] = "经过黑市中断移动供玩家选择",
@@ -682,7 +743,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家当前位于格子<起始位置>",
-            ["source_line"] = 85,
+            ["source_line"] = 92,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -694,7 +755,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "格子<黑市位置>是黑市格",
-            ["source_line"] = 86,
+            ["source_line"] = 93,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -706,7 +767,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家移动<步数>步经过黑市",
-            ["source_line"] = 87,
+            ["source_line"] = 94,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -718,7 +779,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "移动暂停在黑市格",
-            ["source_line"] = 88,
+            ["source_line"] = 95,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -728,7 +789,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家可选择进入黑市或继续移动",
-            ["source_line"] = 89,
+            ["source_line"] = 96,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -738,7 +799,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "剩余<剩余步数>步待消耗",
-            ["source_line"] = 90,
+            ["source_line"] = 97,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -761,10 +822,10 @@ local ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p13"] = 103,
-          ["p14"] = 103,
+          ["p13"] = 110,
+          ["p14"] = 110,
         },
-        ["source_line"] = 96,
+        ["source_line"] = 103,
         ["source_path"] = "features/game/movement.feature",
       },
       ["name"] = "分支路口按奇偶选择路径",
@@ -773,7 +834,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家当前位于分支入口格",
-            ["source_line"] = 97,
+            ["source_line"] = 104,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -783,7 +844,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "分支入口连接外圈和内圈",
-            ["source_line"] = 98,
+            ["source_line"] = 105,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -793,7 +854,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家移动且分支奇偶为<奇偶值>",
-            ["source_line"] = 99,
+            ["source_line"] = 106,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -805,7 +866,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "玩家进入<选择路径>",
-            ["source_line"] = 100,
+            ["source_line"] = 107,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -826,12 +887,12 @@ local ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 115,
-          ["p15"] = 115,
-          ["p2"] = 115,
-          ["p3"] = 115,
+          ["p1"] = 122,
+          ["p15"] = 122,
+          ["p2"] = 122,
+          ["p3"] = 122,
         },
-        ["source_line"] = 107,
+        ["source_line"] = 114,
         ["source_path"] = "features/game/movement.feature",
       },
       ["name"] = "后退移动",
@@ -840,7 +901,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家当前位于格子<起始位置>",
-            ["source_line"] = 108,
+            ["source_line"] = 115,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -852,7 +913,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家面朝<面朝方向>",
-            ["source_line"] = 109,
+            ["source_line"] = 116,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -864,7 +925,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家后退<步数>步",
-            ["source_line"] = 110,
+            ["source_line"] = 117,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -876,7 +937,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "玩家到达格子<目标位置>",
-            ["source_line"] = 111,
+            ["source_line"] = 118,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {
@@ -888,7 +949,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "后退不改变玩家面朝方向",
-            ["source_line"] = 112,
+            ["source_line"] = 119,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
