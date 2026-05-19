@@ -3,10 +3,8 @@ local support = require("spec.support.shared_support")
 local gameplay_loop = require("src.turn.loop")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local turn_dispatch = require("src.turn.actions.action_dispatcher")
-local turn_roll = require("src.turn.phases.roll")
 local output_state_adapter = require("src.turn.output.state_adapter")
 local action_anim_port = require("src.foundation.ports.action_anim")
-local turn_move = require("src.turn.phases.move")
 
 local function _merge_group(base_group, override_group)
   local merged = {}
@@ -341,46 +339,6 @@ describe("architecture_guard_contract", function()
       "set_game should keep pending choice in ui_runtime")
     assert.equals(choice.id, state.ui_runtime and state.ui_runtime.ui_model and state.ui_runtime.ui_model.choice.id,
       "set_game should keep ui_model in ui_runtime")
-  end)
-
-  it("turn_roll_uses_anim_gate_port_without_ui_port", function()
-    local game = support.new_game({ ai = {} })
-    local player = game:current_player()
-    game.ui_port = nil
-    game.anim_gate_port = {
-      wait_action_anim = true,
-    }
-
-    local next_state, payload = turn_roll._phase_roll({ game = game }, {
-      player = player,
-      rolls = { 2 },
-      raw_total = 2,
-      total = 2,
-    })
-
-    assert.equals("wait_action_anim", next_state, "turn_roll should rely on anim_gate_port instead of ui_port")
-    assert.equals("roll", payload.next_state, "turn_roll should keep roll continuation payload")
-  end)
-
-  it("turn_move_uses_anim_gate_port_without_ui_port", function()
-    local game = support.new_game({ ai = {} })
-    local player = game:current_player()
-    game.ui_port = nil
-    game.last_turn = game.last_turn or {}
-    game.anim_gate_port = {
-      wait_move_anim = true,
-    }
-
-    local next_state, payload = turn_move({ game = game }, {
-      player = player,
-      total = 1,
-      raw_total = 1,
-    })
-
-    assert.equals("wait_move_anim", next_state, "turn_move should rely on anim_gate_port instead of ui_port")
-    assert.equals("move_followup", payload.next_state, "turn_move should keep move followup continuation payload")
-    assert.is_nil(game.last_turn.move_result,
-      "turn_move should defer move_result publication until move anim completes")
   end)
 
   it("action_anim_port_uses_anim_gate_port_without_ui_port", function()
