@@ -177,46 +177,49 @@ local function _dispatch_next_tip()
   _activate_next_pending()
 end
 
+local function _try_set_presenter_field(adapter, field)
+  local fn = adapter[field]
+  if fn == nil then return end
+  assert(type(fn) == "function", "tip presenter must be function or nil")
+  tip_queue.runtime.presenter = fn
+  _presenter_warned = false
+end
+
+local function _try_set_scheduler_field(adapter, field)
+  local fn = adapter[field]
+  if fn == nil then return end
+  assert(type(fn) == "function", "tip scheduler must be function or nil")
+  tip_queue.runtime.scheduler = fn
+end
+
+local function _apply_test_mode(adapter)
+  if adapter.test_mode ~= nil then
+    tip_queue.runtime.test_mode = adapter.test_mode == true
+  end
+end
+
+local function _apply_numeric_runtime_field(adapter, field)
+  if number_utils.is_numeric(adapter[field]) then
+    tip_queue.runtime[field] = adapter[field]
+  end
+end
+
 function tip_queue.configure_runtime(adapter)
   adapter = adapter or {}
   if adapter.clear_presenter == true then
     tip_queue.runtime.presenter = nil
   end
-  if adapter.presenter ~= nil then
-    assert(type(adapter.presenter) == "function", "tip presenter must be function or nil")
-    tip_queue.runtime.presenter = adapter.presenter
-    _presenter_warned = false
-  end
-  if adapter.show_tip ~= nil then
-    assert(type(adapter.show_tip) == "function", "tip presenter must be function or nil")
-    tip_queue.runtime.presenter = adapter.show_tip
-    _presenter_warned = false
-  end
-  if adapter.tip_presenter ~= nil then
-    assert(type(adapter.tip_presenter) == "function", "tip presenter must be function or nil")
-    tip_queue.runtime.presenter = adapter.tip_presenter
-    _presenter_warned = false
-  end
+  _try_set_presenter_field(adapter, "presenter")
+  _try_set_presenter_field(adapter, "show_tip")
+  _try_set_presenter_field(adapter, "tip_presenter")
   if adapter.clear_scheduler == true then
     tip_queue.runtime.scheduler = nil
   end
-  if adapter.scheduler ~= nil then
-    assert(type(adapter.scheduler) == "function", "tip scheduler must be function or nil")
-    tip_queue.runtime.scheduler = adapter.scheduler
-  end
-  if adapter.schedule ~= nil then
-    assert(type(adapter.schedule) == "function", "tip scheduler must be function or nil")
-    tip_queue.runtime.scheduler = adapter.schedule
-  end
-  if adapter.test_mode ~= nil then
-    tip_queue.runtime.test_mode = adapter.test_mode == true
-  end
-  if number_utils.is_numeric(adapter.event_tip_fast_backlog_threshold) then
-    tip_queue.runtime.event_tip_fast_backlog_threshold = adapter.event_tip_fast_backlog_threshold
-  end
-  if number_utils.is_numeric(adapter.event_tip_fast_seconds) then
-    tip_queue.runtime.event_tip_fast_seconds = adapter.event_tip_fast_seconds
-  end
+  _try_set_scheduler_field(adapter, "scheduler")
+  _try_set_scheduler_field(adapter, "schedule")
+  _apply_test_mode(adapter)
+  _apply_numeric_runtime_field(adapter, "event_tip_fast_backlog_threshold")
+  _apply_numeric_runtime_field(adapter, "event_tip_fast_seconds")
   _dispatch_next_tip()
 end
 

@@ -265,6 +265,43 @@ local function _ensure_script(session)
   return co
 end
 
+local function _apply_tick_to_session(session, signal)
+  local next_dt = signal.dt or 0
+  if session.wait_state == "wait_choice" then
+    session.choice_elapsed_seconds = (session.choice_elapsed_seconds or 0) + next_dt
+  end
+end
+
+local function _apply_signal_to_session(session, signal)
+  if _is_action(signal) then
+    session:set_pending_action(signal.action)
+  elseif _is_tick(signal) then
+    _apply_tick_to_session(session, signal)
+  end
+end
+
+local function _try_early_return(session, co, queue, ok, yielded)
+  if not ok then error(yielded) end
+  if coroutine.status(co) == "dead" then
+    session.finished = true
+    session.wait_state = nil
+    _step_result.wait_state = nil
+    _step_result.finished = true
+    return _step_result
+  end
+  if type(yielded) == "table" and yielded.kind == "wait" then
+    session.wait_state = yielded.wait_state
+    if #queue == 0 then
+      _step_result.wait_state = yielded.wait_state
+      _step_result.finished = false
+      return _step_result
+    end
+  else
+    session.wait_state = nil
+  end
+  return nil
+end
+
 function M.dispatch(session, signal)
   assert(session ~= nil, "missing scheduler session")
   if signal == nil then
@@ -278,45 +315,16 @@ function M.step(session, dt)
   assert(session ~= nil, "missing scheduler session")
   local co = _ensure_script(session)
   local queue = _ensure_queue(session)
-  if #queue == 0 then
-    queue[#queue + 1] = _tick(dt)
-  end
-
+  if #queue == 0 then queue[#queue + 1] = _tick(dt) end
   while #queue > 0 do
     local signal = table.remove(queue, 1)
-    if _is_action(signal) then
-      session:set_pending_action(signal.action)
-    elseif _is_tick(signal) then
-      local next_dt = signal.dt or 0
-      if session.wait_state == "wait_choice" then
-        session.choice_elapsed_seconds = (session.choice_elapsed_seconds or 0) + next_dt
-      end
-    end
+    _apply_signal_to_session(session, signal)
     local ok, yielded = coroutine.resume(co, signal)
-    if not ok then
-      error(yielded)
-    end
-    if coroutine.status(co) == "dead" then
-      session.finished = true
-      session.wait_state = nil
-      _step_result.wait_state = nil
-      _step_result.finished = true
-      return _step_result
-    end
-    if type(yielded) == "table" and yielded.kind == "wait" then
-      session.wait_state = yielded.wait_state
-      if #queue == 0 then
-        _step_result.wait_state = yielded.wait_state
-        _step_result.finished = false
-        return _step_result
-      end
-    else
-      session.wait_state = nil
-    end
+    local result = _try_early_return(session, co, queue, ok, yielded)
+    if result then return result end
   end
-
   _step_result.wait_state = session.wait_state
-  _step_result.finished = session.finished == true
+  _step_result.finished = not not session.finished
   return _step_result
 end
 

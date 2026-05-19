@@ -77,6 +77,58 @@ function land_rules.execute_free_card(game, player_id, tile_id)
   })
 end
 
+local function _compute_deity_rent(poor_active, rich_active, initial_rent)
+  local rent = initial_rent
+  local multiplier = 1
+  if poor_active then
+    rent = rent * 2
+    multiplier = multiplier * 2
+  end
+  if rich_active then
+    rent = rent * 2
+    multiplier = multiplier * 2
+  end
+  return rent, multiplier
+end
+
+local function _build_deity_label(poor_active, rich_active)
+  if poor_active and rich_active then
+    return "穷神/财神"
+  elseif poor_active then
+    return "穷神"
+  elseif rich_active then
+    return "财神"
+  end
+  return nil
+end
+
+local function _build_breakdown_parts(breakdown, poor_active, rich_active, deity_multiplier)
+  local parts = {}
+  if breakdown.count > 1 then
+    local rent_strs = {}
+    for _, r in ipairs(breakdown.rents) do
+      rent_strs[#rent_strs + 1] = number_utils.format_integer_part(r)
+    end
+    parts[#parts + 1] = "连片 " .. table.concat(rent_strs, " + ")
+  end
+  if deity_multiplier > 1 then
+    local label = _build_deity_label(poor_active, rich_active)
+    if label then
+      parts[#parts + 1] = label .. " ×" .. tostring(deity_multiplier)
+    end
+  end
+  return parts
+end
+
+local function _build_multiplier_text(breakdown_parts, deity_multiplier, tile_name)
+  if #breakdown_parts == 0 then return nil end
+  local joined = table.concat(breakdown_parts, "，")
+  if deity_multiplier > 1 then
+    return tile_name .. " 租金 ×" .. tostring(deity_multiplier) .. "（" .. joined .. "）"
+  end
+  return tile_name .. " 租金（" .. joined .. "）"
+end
+
 function land_rules.execute_pay_rent(game, player_id, tile_id)
   local player, tile = _resolve_player_and_tile(game, player_id, tile_id)
   local owner, _, skip = land_rules.resolve_rent_owner(game, tile)
@@ -98,52 +150,12 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
   local board = game.board
   local idx = assert(board:index_of_tile_id(tile.id), "missing tile index: " .. tostring(tile.id))
   local breakdown = land_rules.contiguous_breakdown(game, board, idx, owner.id)
-  local rent = breakdown.total_rent
-
   local poor_active = game:player_has_deity(player, "poor")
   local rich_active = game:player_has_deity(owner, "rich")
-  local deity_multiplier = 1
-  if poor_active then
-    rent = rent * 2
-    deity_multiplier = deity_multiplier * 2
-  end
-  if rich_active then
-    rent = rent * 2
-    deity_multiplier = deity_multiplier * 2
-  end
-
+  local rent, deity_multiplier = _compute_deity_rent(poor_active, rich_active, breakdown.total_rent)
+  local breakdown_parts = _build_breakdown_parts(breakdown, poor_active, rich_active, deity_multiplier)
+  local multiplier_text = _build_multiplier_text(breakdown_parts, deity_multiplier, tile.name)
   local text = player.name .. " 向 " .. owner.name .. " 支付租金 " .. number_utils.format_integer_part(rent)
-
-  local breakdown_parts = {}
-  if breakdown.count > 1 then
-    local rent_strs = {}
-    for _, r in ipairs(breakdown.rents) do
-      rent_strs[#rent_strs + 1] = number_utils.format_integer_part(r)
-    end
-    breakdown_parts[#breakdown_parts + 1] = "连片 " .. table.concat(rent_strs, " + ")
-  end
-  if deity_multiplier > 1 then
-    local deity_label = nil
-    if poor_active and rich_active then
-      deity_label = "穷神/财神"
-    elseif poor_active then
-      deity_label = "穷神"
-    elseif rich_active then
-      deity_label = "财神"
-    end
-    if deity_label then
-      breakdown_parts[#breakdown_parts + 1] = deity_label .. " ×" .. tostring(deity_multiplier)
-    end
-  end
-
-  local multiplier_text = nil
-  if #breakdown_parts > 0 then
-    if deity_multiplier > 1 then
-      multiplier_text = tile.name .. " 租金 ×" .. tostring(deity_multiplier) .. "（" .. table.concat(breakdown_parts, "，") .. "）"
-    else
-      multiplier_text = tile.name .. " 租金（" .. table.concat(breakdown_parts, "，") .. "）"
-    end
-  end
 
   local result = _build_land_event("rent_paid", {
     player = player,

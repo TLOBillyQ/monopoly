@@ -20,6 +20,30 @@ local function _normalize_action_type(action_or_type)
   return action_or_type
 end
 
+local function _is_always_permitted(action_type)
+  return not action_type or action_type == "popup_confirm"
+end
+
+local function _is_auto_button(action_or_type, action_type)
+  return action_type == "ui_button"
+    and type(action_or_type) == "table"
+    and action_or_type.id == "auto"
+end
+
+local function _has_active_modal_state(gate_state)
+  return gate_state.choice_active
+    or gate_state.market_active
+    or gate_state.popup_active
+    or gate_state.detained_wait_active
+end
+
+local function _is_next_button_in_active_state(action_or_type, action_type, gate_state)
+  if action_type ~= "ui_button" then return false end
+  if type(action_or_type) ~= "table" then return false end
+  if action_or_type.id ~= "next" then return false end
+  return _has_active_modal_state(gate_state)
+end
+
 function turn_action_gate.resolve_gate_state(gate_state_or_flag)
   if type(gate_state_or_flag) ~= "table" then
     return {
@@ -44,34 +68,11 @@ end
 function turn_action_gate.should_block_action(gate_state_or_flag, action_or_type)
   local gate_state = turn_action_gate.resolve_gate_state(gate_state_or_flag)
   local action_type = _normalize_action_type(action_or_type)
-  if not action_type then
-    return false
-  end
-  if action_type == "popup_confirm" then
-    return false
-  end
-  if action_type == "ui_button"
-      and type(action_or_type) == "table"
-      and action_or_type.id == "auto" then
-    return false
-  end
-
-  if action_type == "ui_button"
-      and type(action_or_type) == "table"
-      and action_or_type.id == "next"
-      and (
-        gate_state.choice_active
-        or gate_state.market_active
-        or gate_state.popup_active
-        or gate_state.detained_wait_active
-      ) then
-    return true
-  end
-
-  if not gate_state.input_blocked then
-    return false
-  end
-  return input_blocked_types[action_type] == true
+  if _is_always_permitted(action_type) then return false end
+  if _is_auto_button(action_or_type, action_type) then return false end
+  if _is_next_button_in_active_state(action_or_type, action_type, gate_state) then return true end
+  if not gate_state.input_blocked then return false end
+  return not not input_blocked_types[action_type]
 end
 
 return turn_action_gate
