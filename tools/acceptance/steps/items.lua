@@ -6,6 +6,29 @@ local items_steps = {}
 local _ensure_player = shared.ensure_player
 local _ensure_target = shared.ensure_target
 
+local function _try_steal_item(world)
+  local target_bag = world.target.bag or {}
+  if #target_bag > 0 then
+    local stolen = table.remove(target_bag, 1)
+    world.player.bag = world.player.bag or {}
+    world.player.bag[#world.player.bag + 1] = stolen
+    world.theft_success = true
+  else
+    world.theft_failed = true
+  end
+end
+
+local function _try_exile_target(world)
+  if world.target.deities and world.target.deities.angel then
+    world.exile_blocked = true
+    world.angel_protection_triggered = true
+  else
+    world.target.position = "mountain"
+    world.target.detained_turns = 2
+    world.exile_success = true
+  end
+end
+
 function items_steps.handlers()
   return {
     ["玩家背包上限为5格"] = function(world)
@@ -295,13 +318,7 @@ function items_steps.handlers()
     ["玩家对目标使用偷窃卡"] = function(world)
       world.using_theft = true
       _ensure_target(world)
-      local target_bag = world.target.bag or {}
-      if #target_bag > 0 then
-        local stolen = table.remove(target_bag, 1)
-        world.player.bag = world.player.bag or {}
-        world.player.bag[#world.player.bag + 1] = stolen
-        world.theft_success = true
-      end
+      _try_steal_item(world)
       return true
     end,
 
@@ -317,24 +334,9 @@ function items_steps.handlers()
 
     ["效果执行"] = function(world)
       if world.using_theft then
-        local target_bag = world.target.bag or {}
-        if #target_bag > 0 then
-          local stolen = table.remove(target_bag, 1)
-          world.player.bag = world.player.bag or {}
-          world.player.bag[#world.player.bag + 1] = stolen
-          world.theft_success = true
-        else
-          world.theft_failed = true
-        end
+        _try_steal_item(world)
       elseif world.using_exile then
-        if world.target.deities and world.target.deities.angel then
-          world.exile_blocked = true
-          world.angel_protection_triggered = true
-        else
-          world.target.position = "mountain"
-          world.target.detained_turns = 2
-          world.exile_success = true
-        end
+        _try_exile_target(world)
       end
       return true
     end,
@@ -410,14 +412,7 @@ function items_steps.handlers()
     ["玩家对目标使用流放卡"] = function(world)
       world.using_exile = true
       _ensure_target(world)
-      if world.target.deities and world.target.deities.angel then
-        world.exile_blocked = true
-        world.angel_protection_triggered = true
-      else
-        world.target.position = "mountain"
-        world.target.detained_turns = 2
-        world.exile_success = true
-      end
+      _try_exile_target(world)
       return true
     end,
 

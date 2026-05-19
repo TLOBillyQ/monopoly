@@ -29,6 +29,23 @@ local function _tile_id_at_player(world)
   return tile and tile.id
 end
 
+local function _place_player(world, idx)
+  local player = _player(world)
+  game_driver.set_player_position(_ctx(world), player, idx)
+  game_driver.sync_outer_facing(_ctx(world), player)
+  return player
+end
+
+local function _advance_turn_and_move_through_tile(world, tile_id, steps)
+  local player = _player(world)
+  local turns = player.status and player.status.own_turn_started_count or 0
+  _game(world):set_player_status(player, "own_turn_started_count", turns + 1)
+  local before_idx = _tile_index(world, tile_id - 1)
+  _place_player(world, before_idx)
+  world.last_move_result = game_driver.move(_ctx(world), player, steps)
+  return true
+end
+
 function movement_steps.handlers()
   return {
 
@@ -42,19 +59,15 @@ function movement_steps.handlers()
     end,
 
     ["当前玩家位于起点"] = function(world)
-      local player = _player(world)
       local start_idx = _game(world).board:index_of_tile_id(_game(world).board.map.start_id)
-      game_driver.set_player_position(_ctx(world), player, start_idx)
-      game_driver.sync_outer_facing(_ctx(world), player)
+      _place_player(world, start_idx)
       return true
     end,
 
     -- dice_roll feature: 0-based position (0 = start)
     ["当前玩家位于位置<p1>"] = function(world, example)
       local pos = number_utils.to_integer(example.p1)
-      local player = _player(world)
-      game_driver.set_player_position(_ctx(world), player, pos + 1)
-      game_driver.sync_outer_facing(_ctx(world), player)
+      _place_player(world, pos + 1)
       world.player = world.player or {}
       world.player.position = pos
       return true
@@ -105,13 +118,11 @@ function movement_steps.handlers()
 
     ["玩家当前位于格子<p1>"] = function(world, example)
       local tile_id = number_utils.to_integer(example.p1)
-      local player = _player(world)
       local idx = _tile_index(world, tile_id)
       if not idx then
         return nil, "unknown tile id: " .. tostring(tile_id)
       end
-      game_driver.set_player_position(_ctx(world), player, idx)
-      game_driver.sync_outer_facing(_ctx(world), player)
+      _place_player(world, idx)
       return true
     end,
 
@@ -142,10 +153,8 @@ function movement_steps.handlers()
 
     ["玩家位于起点前<p5>格"] = function(world, example)
       local n = number_utils.to_integer(example.p5)
-      local player = _player(world)
       local idx = game_driver.tile_n_before_start(_ctx(world), n)
-      game_driver.set_player_position(_ctx(world), player, idx)
-      game_driver.sync_outer_facing(_ctx(world), player)
+      _place_player(world, idx)
       return true
     end,
 
@@ -177,10 +186,8 @@ function movement_steps.handlers()
     end,
 
     ["玩家当前位于起点前2格"] = function(world)
-      local player = _player(world)
       local idx = game_driver.tile_n_before_start(_ctx(world), 2)
-      game_driver.set_player_position(_ctx(world), player, idx)
-      game_driver.sync_outer_facing(_ctx(world), player)
+      _place_player(world, idx)
       return true
     end,
 
@@ -251,9 +258,7 @@ function movement_steps.handlers()
     end,
 
     ["玩家当前位于格子1"] = function(world)
-      local player = _player(world)
-      game_driver.set_player_position(_ctx(world), player, _tile_index(world, 1))
-      game_driver.sync_outer_facing(_ctx(world), player)
+      _place_player(world, _tile_index(world, 1))
       return true
     end,
 
@@ -349,14 +354,7 @@ function movement_steps.handlers()
     end,
 
     ["下一回合玩家移动经过格子5"] = function(world)
-      local player = _player(world)
-      local turns = player.status and player.status.own_turn_started_count or 0
-      _game(world):set_player_status(player, "own_turn_started_count", turns + 1)
-      local tile4_idx = _tile_index(world, 4)
-      game_driver.set_player_position(_ctx(world), player, tile4_idx)
-      game_driver.sync_outer_facing(_ctx(world), player)
-      world.last_move_result = game_driver.move(_ctx(world), player, 2)
-      return true
+      return _advance_turn_and_move_through_tile(world, 5, 2)
     end,
 
     ["地雷不触发"] = function(world)
@@ -373,14 +371,7 @@ function movement_steps.handlers()
     end,
 
     ["下一己方回合玩家移动经过格子5"] = function(world)
-      local player = _player(world)
-      local turns = player.status and player.status.own_turn_started_count or 0
-      _game(world):set_player_status(player, "own_turn_started_count", turns + 1)
-      local tile4_idx = _tile_index(world, 4)
-      game_driver.set_player_position(_ctx(world), player, tile4_idx)
-      game_driver.sync_outer_facing(_ctx(world), player)
-      world.last_move_result = game_driver.move(_ctx(world), player, 2)
-      return true
+      return _advance_turn_and_move_through_tile(world, 5, 2)
     end,
 
     ["玩家在之前的回合布置了地雷于格子5"] = function(world)
@@ -402,9 +393,7 @@ function movement_steps.handlers()
 
     ["玩家移动经过格子5"] = function(world)
       local player = _player(world)
-      local tile4_idx = _tile_index(world, 4)
-      game_driver.set_player_position(_ctx(world), player, tile4_idx)
-      game_driver.sync_outer_facing(_ctx(world), player)
+      _place_player(world, _tile_index(world, 4))
       world.last_move_result = game_driver.move(_ctx(world), player, 2)
       game_driver.try_trigger_mine(_ctx(world), player)
       return true
@@ -501,10 +490,7 @@ function movement_steps.handlers()
     end,
 
     ["玩家当前位于分支入口格"] = function(world)
-      local player = _player(world)
-      local idx = _tile_index(world, 42)
-      game_driver.set_player_position(_ctx(world), player, idx)
-      game_driver.sync_outer_facing(_ctx(world), player)
+      _place_player(world, _tile_index(world, 42))
       return true
     end,
 
