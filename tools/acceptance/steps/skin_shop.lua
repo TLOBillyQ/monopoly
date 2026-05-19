@@ -21,6 +21,8 @@ local function _ensure_skin_state(world)
   return world.skin_state
 end
 
+local SLOTS_PER_PAGE = 6
+
 local function _panel(world)
   return world.skin_state.ui.skin_panel
 end
@@ -31,7 +33,7 @@ end
 
 local function _skin_at_slot(world, slot)
   local panel = _panel(world)
-  local idx = (panel.page_index - 1) * 6 + slot
+  local idx = (panel.page_index - 1) * SLOTS_PER_PAGE + slot
   return skin_panel.catalog[idx]
 end
 
@@ -100,11 +102,9 @@ function skin_shop_steps.handlers()
     ["当前页面展示<p3>个皮肤槽位"] = function(world, example)
       local expected = number_utils.to_integer(example.p3)
       if expected == nil then return nil, "invalid slot count: " .. tostring(example.p3) end
-      local panel = _panel(world)
       local count = 0
-      for i = 1, 6 do
-        local idx = (panel.page_index - 1) * 6 + i
-        if skin_panel.catalog[idx] then count = count + 1 end
+      for i = 1, SLOTS_PER_PAGE do
+        if _skin_at_slot(world, i) then count = count + 1 end
       end
       if count ~= expected then
         return nil, "expected " .. tostring(expected) .. " slots, got " .. tostring(count)
