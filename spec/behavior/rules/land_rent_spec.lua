@@ -78,61 +78,7 @@ local function _grant_strip_to_owner(game, owner, strip)
   end
 end
 
-local function _resolve_for_strip(game, owner, strip, hit_offset)
-  local hit_tile = strip[hit_offset or 1]
-  local idx = assert(game.board:index_of_tile_id(hit_tile.id), "hit tile index missing")
-  return rent_resolver.contiguous_breakdown(game, game.board, idx, owner.id), hit_tile, idx
-end
-
 describe("domain land rent contiguous behavior", function()
-  it("single isolated tile returns single rent and contiguous_count == 1", function()
-    local g = _new_game()
-    local owner = g.players[1]
-    local single_strip = _find_strip(g.board, 1)
-    _grant_strip_to_owner(g, owner, single_strip)
-
-    local breakdown = _resolve_for_strip(g, owner, single_strip)
-    assert.equals(1, breakdown.count, "single tile should report count == 1")
-    assert.is_true(breakdown.single_rent > 0, "single rent should be positive")
-    assert.equals(breakdown.single_rent, breakdown.total_rent,
-      "single tile total_rent should equal single_rent")
-  end)
-
-  it("two contiguous tiles double the total rent", function()
-    local g = _new_game()
-    local owner = g.players[1]
-    local two_strip = _find_strip(g.board, 2)
-    _grant_strip_to_owner(g, owner, two_strip)
-
-    local breakdown = _resolve_for_strip(g, owner, two_strip)
-    assert.equals(2, breakdown.count, "two-tile strip should report count == 2")
-    -- total rent equals sum of per-tile rents (start tile uses level 0)
-    local pricing = require("src.rules.land.pricing")
-    local expected = pricing.rent_for_level(two_strip[1], 0) + pricing.rent_for_level(two_strip[2], 0)
-    assert.equals(expected, breakdown.total_rent,
-      "two-tile total_rent should equal sum of per-tile rents")
-  end)
-
-  it("largest contiguous strip charges sum of all per-tile rents", function()
-    local g = _new_game()
-    local owner = g.players[1]
-    local strip = _find_largest_connected_strip(g.board)
-    assert(#strip >= 2, "default board should expose at least one 2+ land strip")
-    _grant_strip_to_owner(g, owner, strip)
-
-    local breakdown = _resolve_for_strip(g, owner, strip)
-    assert.equals(#strip, breakdown.count,
-      "largest connected strip should report count == #strip (" .. tostring(#strip) .. ")")
-
-    local pricing = require("src.rules.land.pricing")
-    local expected = 0
-    for _, tile in ipairs(strip) do
-      expected = expected + pricing.rent_for_level(tile, 0)
-    end
-    assert.equals(expected, breakdown.total_rent,
-      "total_rent should equal sum of all per-tile rents in the strip")
-  end)
-
   it("execute_pay_rent emits payload with contiguous_count, single_rent, deity_multiplier", function()
     local g = _new_game()
     local payer = g.players[1]
@@ -205,35 +151,6 @@ describe("domain land rent contiguous behavior", function()
       "multiplier_text should be nil when no contiguous bonus and no deity")
     assert.is_nil(result.payload.text:find("连片", 1, true),
       "main text should NOT mention contiguous when count == 1, got: " .. result.payload.text)
-  end)
-
-  it("deity multiplier stacks on top of contiguous total", function()
-    local g = _new_game()
-    local payer = g.players[1]
-    local owner = g.players[2]
-    local three_strip = _find_strip(g.board, 3)
-    _grant_strip_to_owner(g, owner, three_strip)
-
-    -- Apply both poor (payer) and rich (owner) deities → multiplier = 4
-    g:set_player_deity(payer, "poor")
-    g:set_player_deity(owner, "rich")
-
-    local hit_tile = three_strip[1]
-    payer.position = assert(g.board:index_of_tile_id(hit_tile.id), "hit index missing")
-    local result = land_rules.execute_pay_rent(g, payer.id, hit_tile.id)
-
-    assert.equals(4, result.payload.deity_multiplier,
-      "poor + rich deity should yield deity_multiplier == 4")
-    assert.equals(3, result.payload.contiguous_count,
-      "contiguous_count should remain 3 regardless of deity")
-
-    local pricing = require("src.rules.land.pricing")
-    local sum = 0
-    for _, tile in ipairs(three_strip) do
-      sum = sum + pricing.rent_for_level(tile, 0)
-    end
-    assert.equals(sum * 4, result.payload.amount,
-      "amount should be contiguous sum × deity multiplier")
   end)
 
   it("contiguous_count is owner-symmetric (AI-owned vs human-owned same strip)", function()

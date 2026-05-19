@@ -58,4 +58,10 @@ return {
     output = "TAP",
     pattern = "_spec",
   },
+  acceptance = {
+    ROOT = {"tools/acceptance/generated"},
+    helper = "spec/helper.lua",
+    output = "TAP",
+    pattern = "_spec",
+  },
 }
