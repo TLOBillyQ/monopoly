@@ -32,6 +32,9 @@ local ir = {
       ["p11"] = 132,
       ["p12"] = 133,
       ["p13"] = 135,
+      ["p14"] = 176,
+      ["p15"] = 177,
+      ["p16"] = 180,
       ["p2"] = 34,
       ["p3"] = 50,
       ["p4"] = 53,
@@ -47,6 +50,9 @@ local ir = {
       ["p11"] = "数量",
       ["p12"] = "持有数",
       ["p13"] = "实际丢弃",
+      ["p14"] = "神灵",
+      ["p15"] = "效果类型",
+      ["p16"] = "变化量",
       ["p2"] = "余额",
       ["p3"] = "百分比",
       ["p4"] = "扣除额",
@@ -1164,6 +1170,179 @@ local ir = {
           },
           ["parameters"] = {},
           ["text"] = "所有未淘汰玩家各扣除1000金币",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 166,
+        ["source_path"] = "features/game/chance.feature",
+      },
+      ["name"] = "全体负面支付机会卡跳过拥有天使守护的对手",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家抽到负面全体支付1000金币的机会卡",
+            ["source_line"] = 167,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家抽到负面全体支付1000金币的机会卡",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "游戏中有2名对手",
+            ["source_line"] = 168,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "游戏中有2名对手",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "对手B拥有天使守护",
+            ["source_line"] = 169,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "对手B拥有天使守护",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "各对手初始持有5000金币",
+            ["source_line"] = 170,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "各对手初始持有5000金币",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "机会卡效果结算",
+            ["source_line"] = 171,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "机会卡效果结算",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "拥有天使守护的对手金币不变",
+            ["source_line"] = 172,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "拥有天使守护的对手金币不变",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "无天使守护的对手被扣除1000金币",
+            ["source_line"] = 173,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "无天使守护的对手被扣除1000金币",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p14"] = "穷神",
+          ["p15"] = "向每位对手支付",
+          ["p16"] = "+6000",
+        },
+        {
+          ["p14"] = "财神",
+          ["p15"] = "从每位对手收取",
+          ["p16"] = "-6000",
+        },
+        {
+          ["p14"] = "穷神",
+          ["p15"] = "从每位对手收取",
+          ["p16"] = "-3000",
+        },
+        {
+          ["p14"] = "财神",
+          ["p15"] = "向每位对手支付",
+          ["p16"] = "+3000",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p14"] = 183,
+          ["p15"] = 183,
+          ["p16"] = 183,
+        },
+        ["source_line"] = 175,
+        ["source_path"] = "features/game/chance.feature",
+      },
+      ["name"] = "穷神和财神影响向他人支付和从他人收取效果",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家附有<神灵>",
+            ["source_line"] = 176,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {
+            "p14",
+          },
+          ["text"] = "玩家附有<p14>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "抽到<效果类型>3000金币的多人机会卡",
+            ["source_line"] = 177,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {
+            "p15",
+          },
+          ["text"] = "抽到<p15>3000金币的多人机会卡",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "游戏中有1名持有10000金币的对手",
+            ["source_line"] = 178,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "游戏中有1名持有10000金币的对手",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "机会卡效果结算",
+            ["source_line"] = 179,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "机会卡效果结算",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "对手的金币变化量为<变化量>",
+            ["source_line"] = 180,
+            ["source_path"] = "features/game/chance.feature",
+          },
+          ["parameters"] = {
+            "p16",
+          },
+          ["text"] = "对手的金币变化量为<p16>",
         },
       },
     },

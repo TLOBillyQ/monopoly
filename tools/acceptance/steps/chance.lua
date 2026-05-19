@@ -92,6 +92,9 @@ function chance_steps.handlers()
 
       if cc.pay_each then
         local per_player = cc.pay_each
+        if world.player.deities and world.player.deities.poor then
+          per_player = per_player * 2
+        end
         local opponents = world.opponents or {}
         local paid_count = 0
         for _, opp in ipairs(opponents) do
@@ -112,6 +115,9 @@ function chance_steps.handlers()
 
       if cc.collect_each then
         local per_player = cc.collect_each
+        if world.player.deities and world.player.deities.fortune then
+          per_player = per_player * 2
+        end
         local opponents = world.opponents or {}
         local total_collected = 0
         for _, opp in ipairs(opponents) do
@@ -184,6 +190,16 @@ function chance_steps.handlers()
           end
         end
         world.all_paid = cc.all_pay
+      end
+
+      if cc.target_all_negative_pay then
+        local amount = cc.target_all_negative_pay
+        for _, opp in ipairs(world.all_opponents or {}) do
+          if not opp.angel then
+            opp.cash = opp.cash - amount
+            opp.deducted = amount
+          end
+        end
       end
 
       return true
@@ -570,6 +586,106 @@ function chance_steps.handlers()
     ["所有未淘汰玩家各扣除1000金币"] = function(world)
       if world.all_paid ~= 1000 then
         return nil, "all players should each pay 1000"
+      end
+      return true
+    end,
+
+    ["玩家抽到负面全体支付1000金币的机会卡"] = function(world)
+      _ensure_player(world)
+      _ensure_chance_card(world)
+      world.chance_card.target_all_negative_pay = 1000
+      return true
+    end,
+
+    ["游戏中有2名对手"] = function(world)
+      world.all_opponents = {}
+      for i = 1, 2 do
+        world.all_opponents[i] = { cash = 0 }
+      end
+      return true
+    end,
+
+    ["对手B拥有天使守护"] = function(world)
+      world.all_opponents = world.all_opponents or {}
+      if not world.all_opponents[1] then
+        world.all_opponents[1] = { cash = 0 }
+      end
+      world.all_opponents[1].angel = true
+      return true
+    end,
+
+    ["各对手初始持有5000金币"] = function(world)
+      for _, opp in ipairs(world.all_opponents or {}) do
+        opp.cash = 5000
+      end
+      return true
+    end,
+
+    ["拥有天使守护的对手金币不变"] = function(world)
+      for _, opp in ipairs(world.all_opponents or {}) do
+        if opp.angel and opp.cash ~= 5000 then
+          return nil, "angel opponent cash should be 5000, got " .. tostring(opp.cash)
+        end
+      end
+      return true
+    end,
+
+    ["无天使守护的对手被扣除1000金币"] = function(world)
+      for _, opp in ipairs(world.all_opponents or {}) do
+        if not opp.angel and opp.cash ~= 4000 then
+          return nil, "non-angel opponent should have 4000, got " .. tostring(opp.cash)
+        end
+      end
+      return true
+    end,
+
+    ["玩家附有<p14>"] = function(world, example)
+      _ensure_player(world)
+      world.player.deities = world.player.deities or {}
+      local deity = example.p14
+      if deity == "穷神" then
+        world.player.deities.poor = true
+      elseif deity == "财神" then
+        world.player.deities.fortune = true
+      end
+      return true
+    end,
+
+    ["抽到<p15>3000金币的多人机会卡"] = function(world, example)
+      _ensure_player(world)
+      _ensure_chance_card(world)
+      if world.player.cash < 99999 then
+        world.player.cash = 99999
+      end
+      local effect_type = example.p15
+      if effect_type == "向每位对手支付" then
+        world.chance_card.pay_each = 3000
+      elseif effect_type == "从每位对手收取" then
+        world.chance_card.collect_each = 3000
+      end
+      return true
+    end,
+
+    ["游戏中有1名持有10000金币的对手"] = function(world)
+      world.opponents = { { cash = 10000, in_mountain = false } }
+      return true
+    end,
+
+    ["对手的金币变化量为<p16>"] = function(world, example)
+      local raw = example.p16
+      local sign = 1
+      local num_str = raw
+      if raw:sub(1, 1) == "+" then
+        num_str = raw:sub(2)
+      elseif raw:sub(1, 1) == "-" then
+        sign = -1
+        num_str = raw:sub(2)
+      end
+      local expected_delta = sign * number_utils.to_integer(num_str)
+      local opp = world.opponents[1]
+      local actual_delta = (opp.received or 0) + (opp.cash - 10000)
+      if actual_delta ~= expected_delta then
+        return nil, "expected delta " .. raw .. ", got " .. tostring(actual_delta)
       end
       return true
     end,
