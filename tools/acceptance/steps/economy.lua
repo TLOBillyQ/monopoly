@@ -164,7 +164,8 @@ function economy_steps.handlers()
 
     ["玩家落在该地块"] = function(world)
       local tile = world.rent_tile
-      if tile and tile.owner == "opponent" then
+      if tile and tile.owner == "opponent"
+        and not (world.opponent and (world.opponent.in_mountain or world.opponent.eliminated)) then
         local rent = tile.rent_table[tile.level + 1]
         world.rent_due = rent
       end
@@ -274,6 +275,12 @@ function economy_steps.handlers()
     ["对手当前在深山状态"] = function(world)
       world.opponent = world.opponent or {}
       world.opponent.in_mountain = true
+      return true
+    end,
+
+    ["对手已被淘汰"] = function(world)
+      world.opponent = world.opponent or {}
+      world.opponent.eliminated = true
       return true
     end,
 
@@ -490,97 +497,6 @@ function economy_steps.handlers()
     ["玩家因余额为零而破产淘汰"] = function(world)
       if not world.player.bankrupt then
         return nil, "player should be bankrupt due to zero balance"
-      end
-      return true
-    end,
-
-    ["对手已被淘汰"] = function(world)
-      world.opponent = world.opponent or {}
-      world.opponent.eliminated = true
-      return true
-    end,
-
-    ["玩家持有800金币"] = function(world)
-      _ensure_player(world)
-      world.player.cash = 800
-      return true
-    end,
-
-    ["抽到的机会卡效果为向每位玩家支付500金币"] = function(world)
-      world.chance_card = world.chance_card or {}
-      world.chance_card.pay_each = 500
-      return true
-    end,
-
-    ["游戏中有3名未淘汰对手"] = function(world)
-      world.opponents = {
-        { cash = 10000, bankrupt = false },
-        { cash = 10000, bankrupt = false },
-        { cash = 10000, bankrupt = false },
-      }
-      return true
-    end,
-
-    ["玩家向第一位对手支付500金币后破产"] = function(world)
-      if not world.player.bankrupt then
-        return nil, "player should be bankrupt after paying first opponent"
-      end
-      if world.chance_paid_count ~= 1 then
-        return nil, "expected 1 payment before bankruptcy, got " .. tostring(world.chance_paid_count)
-      end
-      return true
-    end,
-
-    ["后续对手不再收到支付"] = function(world)
-      local unpaid = 0
-      for i = 2, #(world.opponents or {}) do
-        if not world.opponents[i].received then
-          unpaid = unpaid + 1
-        end
-      end
-      if unpaid ~= #(world.opponents or {}) - 1 then
-        return nil, "subsequent opponents should not receive payment"
-      end
-      return true
-    end,
-
-    ["抽到的机会卡效果为向每位玩家收取1000金币"] = function(world)
-      _ensure_player(world)
-      world.chance_card = world.chance_card or {}
-      world.chance_card.collect_each = 1000
-      world.opponents = world.opponents or {}
-      return true
-    end,
-
-    ["对手A持有500金币"] = function(world)
-      world.opponents = world.opponents or {}
-      world.opponents[1] = { cash = 500, bankrupt = false }
-      return true
-    end,
-
-    ["对手A支付全部500金币后破产淘汰"] = function(world)
-      local opp = (world.opponents or {})[1]
-      if not opp or not opp.bankrupt then
-        return nil, "opponent A should be bankrupt"
-      end
-      if opp.paid ~= 500 then
-        return nil, "opponent A should have paid 500, paid " .. tostring(opp.paid)
-      end
-      return true
-    end,
-
-    ["玩家收到对手A的500金币"] = function(world)
-      local opp = (world.opponents or {})[1]
-      if not opp or opp.paid ~= 500 then
-        return nil, "player should have received 500 from opponent A"
-      end
-      return true
-    end,
-
-    ["玩家因效果被送往医院且需支付住院费"] = function(world)
-      _ensure_player(world)
-      if world.player.cash <= 0 then
-        world.player.bankrupt = true
       end
       return true
     end,

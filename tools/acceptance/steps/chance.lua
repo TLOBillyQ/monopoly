@@ -100,12 +100,13 @@ function chance_steps.handlers()
         for _, opp in ipairs(opponents) do
           if world.player.bankrupt then break end
           if not opp.in_mountain then
-            if world.player.cash < per_player then
-              world.player.bankrupt = true
-            else
+            if world.player.cash >= per_player then
               world.player.cash = world.player.cash - per_player
               opp.received = (opp.received or 0) + per_player
               paid_count = paid_count + 1
+            else
+              world.player.bankrupt = true
+              break
             end
           end
         end
@@ -126,6 +127,7 @@ function chance_steps.handlers()
           opp.paid = take
           if take < per_player then
             opp.bankrupt = true
+            opp.eliminated = true
           end
           total_collected = total_collected + take
         end
