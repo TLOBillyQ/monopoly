@@ -22,6 +22,8 @@ describe("v102_extension_contract", function()
 
     _assert_eq(#skin_schema.slots, 6, "skin schema should expose six slots")
     _assert_eq(#item_atlas_schema.slots, 8, "item atlas schema should expose eight slots")
+    _assert_eq(skin_schema.canvas, "皮肤商店", "skin schema canvas should match exported node")
+    _assert_eq(item_atlas_schema.canvas, "道具图鉴", "item atlas canvas should match exported node")
     assert(market_schema.tab_skin == nil, "market schema should not expose retired skin tab")
     assert(market_layout.tab_skin == nil, "market layout should not expose retired skin tab")
   end)

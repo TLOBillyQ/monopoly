@@ -1,4 +1,9 @@
+local support = require("spec.support.shared_support")
+local _with_patches = support.with_patches
+local _build_role_with_events = support.build_role_with_events
+local _has_event = support.has_event
 local item_atlas = require("src.ui.coord.item_atlas")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local function _make_state()
   return { ui = {} }
@@ -24,6 +29,25 @@ describe("item_atlas", function()
       assert(atlas.open == true, "atlas should be open")
     end)
 
+    it("opens the atlas canvas for the active role", function()
+      local events = {}
+      local role = _build_role_with_events(1, events)
+      local s = _make_state()
+
+      _with_patches({
+        { target = runtime_ports, key = "resolve_role", value = function(role_id)
+          if role_id == 1 then
+            return role
+          end
+          return nil
+        end },
+      }, function()
+        item_atlas.open(s, 1)
+      end)
+
+      assert(_has_event(events, "显示道具图鉴"), "opening atlas should show atlas canvas")
+    end)
+
     it("stores role_id on open", function()
       local s = _make_state()
       local atlas = item_atlas.open(s, 2)
@@ -35,6 +59,26 @@ describe("item_atlas", function()
       item_atlas.open(s, 1)
       local atlas = item_atlas.close(s)
       assert(atlas.open == false, "atlas should be closed")
+    end)
+
+    it("closes the atlas canvas for the active role", function()
+      local events = {}
+      local role = _build_role_with_events(1, events)
+      local s = _make_state()
+
+      _with_patches({
+        { target = runtime_ports, key = "resolve_role", value = function(role_id)
+          if role_id == 1 then
+            return role
+          end
+          return nil
+        end },
+      }, function()
+        item_atlas.open(s, 1)
+        item_atlas.handle_action(s, "close", 1)
+      end)
+
+      assert(_has_event(events, "隐藏道具图鉴"), "closing atlas should hide atlas canvas")
     end)
   end)
 
