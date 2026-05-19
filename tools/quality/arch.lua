@@ -17,7 +17,11 @@ local cli = require("arch_view.cli")
 local REPO_ROOT = bootstrap_env.repo_root
 local VENDOR_DIR = bootstrap_env.vendor_dir
 
-local exit_code = cli.run(arg or {}, {
+local effective_args = arg or {}
+if #effective_args == 0 then
+  effective_args = { "check" }
+end
+local exit_code = cli.run(effective_args, {
   cwd = REPO_ROOT,
   default_config_path = common.join_path(REPO_ROOT, "tools/quality/arch/config.json"),
   default_engine = "auto",

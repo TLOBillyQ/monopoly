@@ -29,4 +29,8 @@ if ... == "quality.crap" then
     return require("crap4lua.cli").run(args, m) == 0
   end }
 end
-os.exit(require("crap4lua.cli").run(arg or {}, _env))
+local _args = arg or {}
+if #_args == 0 then
+  _args = { "report" }
+end
+os.exit(require("crap4lua.cli").run(_args, _env))
