@@ -481,6 +481,57 @@ local ir = {
         },
       },
     },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 61,
+        ["source_path"] = "features/game/market.feature",
+      },
+      ["name"] = "当前选中商品不可购买时自动切到首个可购买商品",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家黑市选择窗口已打开",
+            ["source_line"] = 62,
+            ["source_path"] = "features/game/market.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家黑市选择窗口已打开",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前选中的商品变为不可购买",
+            ["source_line"] = 63,
+            ["source_path"] = "features/game/market.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "当前选中的商品变为不可购买",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "选择列表刷新",
+            ["source_line"] = 64,
+            ["source_path"] = "features/game/market.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "选择列表刷新",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "自动选中列表中首个可购买的商品",
+            ["source_line"] = 65,
+            ["source_path"] = "features/game/market.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "自动选中列表中首个可购买的商品",
+        },
+      },
+    },
   },
 }
 

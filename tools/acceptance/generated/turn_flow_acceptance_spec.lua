@@ -1117,6 +1117,210 @@ local ir = {
         },
       },
     },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 148,
+        ["source_path"] = "features/game/turn_flow.feature",
+      },
+      ["name"] = "电脑玩家自动购买可负担的无主地块",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "当前行动玩家是电脑",
+            ["source_line"] = 149,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "当前行动玩家是电脑",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "电脑玩家持有充足金币",
+            ["source_line"] = 150,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "电脑玩家持有充足金币",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "电脑玩家落在无主地块",
+            ["source_line"] = 151,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "电脑玩家落在无主地块",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "系统自动执行购买",
+            ["source_line"] = 152,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "系统自动执行购买",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 154,
+        ["source_path"] = "features/game/turn_flow.feature",
+      },
+      ["name"] = "电脑玩家自动升级可负担的自有地块",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "当前行动玩家是电脑",
+            ["source_line"] = 155,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "当前行动玩家是电脑",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "电脑玩家持有充足金币",
+            ["source_line"] = 156,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "电脑玩家持有充足金币",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "电脑玩家落在自有可升级地块",
+            ["source_line"] = 157,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "电脑玩家落在自有可升级地块",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "系统自动执行升级",
+            ["source_line"] = 158,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "系统自动执行升级",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 160,
+        ["source_path"] = "features/game/turn_flow.feature",
+      },
+      ["name"] = "电脑玩家落在对手地块时自动使用免租卡",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "当前行动玩家是电脑",
+            ["source_line"] = 161,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "当前行动玩家是电脑",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "电脑玩家持有免租卡",
+            ["source_line"] = 162,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "电脑玩家持有免租卡",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "电脑玩家落在需付租金的对手地块",
+            ["source_line"] = 163,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "电脑玩家落在需付租金的对手地块",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "系统自动消耗免租卡",
+            ["source_line"] = 164,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "系统自动消耗免租卡",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 166,
+        ["source_path"] = "features/game/turn_flow.feature",
+      },
+      ["name"] = "电脑玩家不主动使用背包中的主动道具",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "当前行动玩家是电脑",
+            ["source_line"] = 167,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "当前行动玩家是电脑",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "电脑玩家背包中有主动使用道具",
+            ["source_line"] = 168,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "电脑玩家背包中有主动使用道具",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "电脑玩家的道具使用阶段",
+            ["source_line"] = 169,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "电脑玩家的道具使用阶段",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "系统跳过道具使用阶段",
+            ["source_line"] = 170,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "系统跳过道具使用阶段",
+        },
+      },
+    },
   },
 }
 

@@ -1757,6 +1757,67 @@ local ir = {
         },
       },
     },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 242,
+        ["source_path"] = "features/game/items.feature",
+      },
+      ["name"] = "未激活的地雷不触发",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家当前位于格子2",
+            ["source_line"] = 243,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家当前位于格子2",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "格子3放置了未激活的地雷",
+            ["source_line"] = 244,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "格子3放置了未激活的地雷",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家移动1步到达格子3",
+            ["source_line"] = 245,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家移动1步到达格子3",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "地雷不触发",
+            ["source_line"] = 246,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "地雷不触发",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家不被送往医院",
+            ["source_line"] = 247,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家不被送往医院",
+        },
+      },
+    },
   },
 }
 

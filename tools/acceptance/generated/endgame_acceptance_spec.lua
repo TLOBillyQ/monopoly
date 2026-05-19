@@ -705,6 +705,108 @@ local ir = {
         },
       },
     },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 97,
+        ["source_path"] = "features/game/endgame.feature",
+      },
+      ["name"] = "获胜玩家看到胜利结算面板",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "游戏已结束",
+            ["source_line"] = 98,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "游戏已结束",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家是获胜者",
+            ["source_line"] = 99,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家是获胜者",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "结算画面显示",
+            ["source_line"] = 100,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "结算画面显示",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "玩家进入胜利结算面板",
+            ["source_line"] = 101,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家进入胜利结算面板",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 103,
+        ["source_path"] = "features/game/endgame.feature",
+      },
+      ["name"] = "落败玩家看到失败结算面板",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "游戏已结束",
+            ["source_line"] = 104,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "游戏已结束",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家不是获胜者",
+            ["source_line"] = 105,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家不是获胜者",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "结算画面显示",
+            ["source_line"] = 106,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "结算画面显示",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "玩家进入失败结算面板",
+            ["source_line"] = 107,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家进入失败结算面板",
+        },
+      },
+    },
   },
 }
 
