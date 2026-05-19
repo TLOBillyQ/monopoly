@@ -1,5 +1,6 @@
 local ui_events = require("src.ui.coord.ui_events")
 local runtime = require("src.ui.render.runtime_ui")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 local base_nodes = require("src.ui.schema.base")
 local permanent_nodes = require("src.ui.schema.permanent")
 local player_choice_nodes = require("src.ui.schema.player_choice")
@@ -109,6 +110,16 @@ function coordinator.switch_for_role(ui, target, role)
   _show_canvas_set(target_name, function(event_name, payload)
     ui_events.send_to_role(role, event_name, payload)
   end)
+end
+
+function coordinator.switch_by_role_id(ui, target, role_id)
+  if not ui then return end
+  local role = runtime_ports.resolve_role(role_id)
+  if role then
+    coordinator.switch_for_role(ui, target, role)
+  else
+    coordinator.switch(ui, target)
+  end
 end
 
 function coordinator.resolve_popup_return_canvas(ui)
