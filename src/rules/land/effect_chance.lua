@@ -9,12 +9,17 @@ local popup_show_seconds = timing.popup_dwell_default_seconds or 1.0
 
 local M = {}
 
-local chance_weights = {}
-for i, cfg in ipairs(chance_cfg) do
-  local weight = cfg.weight or 0
-  if weight < 0 then weight = 0 end
-  chance_weights[i] = weight
+local function _build_weights(config)
+  local weights = {}
+  for i, cfg in ipairs(config) do
+    local weight = cfg.weight or 0
+    if weight < 0 then weight = 0 end
+    weights[i] = weight
+  end
+  return weights
 end
+
+local chance_weights = _build_weights(chance_cfg)
 
 local function _collect_drawable_cards()
   local drawable = {}
