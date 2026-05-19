@@ -14,13 +14,6 @@ local _resolve_landing = support.resolve_landing
 local land_actions = require("src.rules.land.actions")
 local pricing = require("src.rules.land.pricing")
 local choice_resolver = require("src.rules.choice.resolver")
-local choice_registry = require("src.rules.choice.registry")
-local choice_optional_effect_handler = require("src.rules.bootstrap").optional_effect_handler
-local choice_handler_factory = require("src.rules.choice_handlers.factory")
-local item_executor = require("src.rules.items.executor")
-local item_phase = require("src.rules.items.phase")
-local landing_defs = require("src.rules.land.landing_defs")
-local effect_runner = require("src.rules.effects.runner")
 local function _require_upvalue(fn, expected_name)
   assert(debug and type(debug.getupvalue) == "function", "debug.getupvalue should be available for characterization tests")
   local index = 1
@@ -58,75 +51,6 @@ local function _action_anim_count(game)
     count = count + 1
   end
   return count + #(game.turn.action_anim_queue or {})
-end
-
-local function _build_choice_groups()
-  local helpers = choice_resolver.helpers({
-    use_item = item_executor.use_item,
-    build_game_ctx = function(game, move_result)
-      return effect_runner.build_game_ctx(game, move_result, {
-        phase_default = "wait_choice",
-        on_landing = true,
-      })
-    end,
-    finish_item_phase = function(game, choice)
-      item_phase.finish(game, choice and choice.meta and choice.meta.phase or nil)
-    end,
-    finish_active_item_phase = function(game)
-      local phase = game.turn.item_phase_active
-      if phase and phase ~= "" then
-        item_phase.finish(game, phase)
-      end
-    end,
-    get_container_defs_by_choice_kind = function(choice_kind)
-      if choice_kind == "landing_optional_effect" then
-        return landing_defs
-      end
-      return nil
-    end,
-    find_effect_by_id = function(effect_defs, effect_id)
-      assert(effect_defs ~= nil, "missing effect defs")
-      for _, effect_definition in ipairs(effect_defs) do
-        if effect_definition.id == effect_id then
-          return effect_definition
-        end
-      end
-      return nil
-    end,
-  })
-
-  return {
-    choice_optional_effect_handler.build(helpers),
-    choice_handler_factory.build_land_handlers(helpers),
-    choice_handler_factory.build_item_handlers(helpers),
-    choice_handler_factory.build_market_handlers(helpers),
-  }
-end
-
-local function _test_choice_registry_registers_descriptors_with_cancel_metadata()
-  local registry = choice_registry:new()
-  registry:register_defaults(_build_choice_groups())
-
-  local tax_descriptor = registry:descriptor_for("tax_card_prompt")
-  assert(type(tax_descriptor) == "table", "tax prompt should register as descriptor")
-  assert(type(tax_descriptor.execute) == "function", "tax descriptor should expose execute")
-  assert(tax_descriptor.cancel and tax_descriptor.cancel.mode == "select_option", "tax descriptor should expose cancel fallback")
-  assert(tax_descriptor.cancel.option_id == "skip", "tax cancel fallback should target skip option")
-
-  local item_phase_descriptor = registry:descriptor_for("item_phase_choice")
-  assert(item_phase_descriptor and item_phase_descriptor.cancel and item_phase_descriptor.cancel.mode == "finish_item_phase",
-    "item phase descriptor should delegate cancel cleanup to resolver")
-  local market_buy_descriptor = registry:descriptor_for("market_buy")
-  local optional_effect_descriptor = registry:descriptor_for("landing_optional_effect")
-  assert(type(market_buy_descriptor.normalize_meta) == "function", "market buy should expose meta normalizer")
-  assert(type(market_buy_descriptor.meta_validator) == "function", "market buy should expose meta validator")
-  assert(type(market_buy_descriptor.normalize_action) == "function", "market buy should expose action normalizer")
-  assert(type(optional_effect_descriptor.normalize_meta) == "function", "landing optional should expose meta normalizer")
-  assert(type(optional_effect_descriptor.meta_validator) == "function", "landing optional should expose meta validator")
-  assert(type(optional_effect_descriptor.normalize_action) == "function", "landing optional should expose action normalizer")
-  _assert_eq(tax_descriptor.required_meta[1], "player_id", "tax descriptor should expose required meta")
-  _assert_eq(item_phase_descriptor.required_meta[1], "player_id", "item phase should expose required meta")
-  _assert_eq(item_phase_descriptor.required_meta[2], "phase", "item phase should require phase")
 end
 
 describe("land", function()
