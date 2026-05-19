@@ -1,0 +1,25 @@
+local unit_lifecycle = require("src.host.units")
+
+describe("unit_lifecycle (no GameAPI)", function()
+  it("create_unit_group returns nil when GameAPI missing", function()
+    local result, err = unit_lifecycle.create_unit_group(1, {}, {})
+    assert(result == nil, "expected nil without GameAPI")
+    assert(type(err) == "string", "expected error string")
+  end)
+
+  it("create_unit_with_scale returns nil when GameAPI missing", function()
+    local result, err = unit_lifecycle.create_unit_with_scale(1, {}, {}, 1.0)
+    assert(result == nil, "expected nil without GameAPI")
+    assert(type(err) == "string", "expected error string")
+  end)
+
+  it("destroy_unit_with_children returns false when GameAPI missing", function()
+    local result = unit_lifecycle.destroy_unit_with_children({})
+    assert(result == false, "expected false without GameAPI")
+  end)
+
+  it("destroy_unit returns false when GameAPI missing", function()
+    local result = unit_lifecycle.destroy_unit({})
+    assert(result == false, "expected false without GameAPI")
+  end)
+end)

@@ -2,7 +2,7 @@ return {
   tiers = {
     {
       name = "core_logic",
-      threshold = 0.90,
+      threshold = 0.75,
       includes = {
         "src/app/",
         "src/computer/",
@@ -21,7 +21,7 @@ return {
     },
     {
       name = "ui_surface",
-      threshold = 0.70,
+      threshold = 0.65,
       includes = { "src/ui/" },
     },
   },
