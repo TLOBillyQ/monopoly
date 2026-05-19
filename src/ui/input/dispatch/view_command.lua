@@ -59,17 +59,11 @@ local function _handle_popup_confirm(state, modal)
   return true
 end
 
-local _GALLERY_ACTIONS = {
-  open_skin_panel     = function(g, s, i) g.open_skin(s, i.actor_role_id) end,
-  open_gallery_panel  = function(g, s, i) g.open_gallery(s, i.actor_role_id) end,
-  skin_gallery_action = function(g, s, i) g.handle_action(s, i.action, i.actor_role_id) end,
-}
-
-local function _handle_skin_gallery(state, intent, skin_gallery)
-  if skin_gallery == nil then return false end
-  local act = _GALLERY_ACTIONS[intent and intent.type]
+local function _dispatch_via_table(module, action_table, state, intent)
+  if module == nil then return false end
+  local act = action_table[intent and intent.type]
   if act == nil then return false end
-  act(skin_gallery, state, intent)
+  act(state, intent, module)
   return true
 end
 
@@ -79,37 +73,27 @@ local function _open_skin_with_fallback(state, intent, panel)
   else panel.open(state, intent.actor_role_id) end
 end
 
-local _SKIN_PANEL_ACTIONS = {
-  open_skin_panel   = _open_skin_with_fallback,
-  skin_panel_action = function(s, i, p) p.handle_action(s, i.action, i.actor_role_id) end,
-}
-
-local function _handle_skin_panel(state, intent, skin_panel)
-  if skin_panel == nil then return false end
-  local act = _SKIN_PANEL_ACTIONS[intent and intent.type]
-  if act == nil then return false end
-  act(state, intent, skin_panel)
-  return true
-end
-
 local function _open_gallery_with_fallback(state, intent, atlas)
   local gallery = _resolve_loaded("src.ui.coord.skin_gallery")
   if gallery then gallery.open_gallery(state, intent.actor_role_id)
   else atlas.open(state, intent.actor_role_id) end
 end
 
+local _GALLERY_ACTIONS = {
+  open_skin_panel     = function(s, i, g) g.open_skin(s, i.actor_role_id) end,
+  open_gallery_panel  = function(s, i, g) g.open_gallery(s, i.actor_role_id) end,
+  skin_gallery_action = function(s, i, g) g.handle_action(s, i.action, i.actor_role_id) end,
+}
+
+local _SKIN_PANEL_ACTIONS = {
+  open_skin_panel   = _open_skin_with_fallback,
+  skin_panel_action = function(s, i, p) p.handle_action(s, i.action, i.actor_role_id) end,
+}
+
 local _ITEM_ATLAS_ACTIONS = {
   open_gallery_panel = _open_gallery_with_fallback,
   item_atlas_action  = function(s, i, a) a.handle_action(s, i.action, i.actor_role_id) end,
 }
-
-local function _handle_item_atlas(state, intent, item_atlas)
-  if item_atlas == nil then return false end
-  local act = _ITEM_ATLAS_ACTIONS[intent and intent.type]
-  if act == nil then return false end
-  act(state, intent, item_atlas)
-  return true
-end
 
 local function _warn_missing_toggle_channel(actor_role_id)
   local logger = _resolve_loaded("src.foundation.log")
@@ -157,11 +141,11 @@ local _FALLBACK_HANDLERS = {
   market_select       = function(s, i) return _handle_market_select(s, i, _resolve_loaded("src.ui.coord.market")) end,
   popup_confirm       = function(s, _) return _handle_popup_confirm(s, _resolve_loaded("src.ui.coord.modal")) end,
   toggle_action_log   = function(s, i) return _handle_toggle_action_log(s, i, _resolve_loaded("src.ui.coord.event_log_view")) end,
-  open_skin_panel     = function(s, i) return _handle_skin_panel(s, i, _resolve_loaded("src.ui.coord.skin_panel")) end,
-  skin_panel_action   = function(s, i) return _handle_skin_panel(s, i, _resolve_loaded("src.ui.coord.skin_panel")) end,
-  open_gallery_panel  = function(s, i) return _handle_item_atlas(s, i, _resolve_loaded("src.ui.coord.item_atlas")) end,
-  item_atlas_action   = function(s, i) return _handle_item_atlas(s, i, _resolve_loaded("src.ui.coord.item_atlas")) end,
-  skin_gallery_action = function(s, i) return _handle_skin_gallery(s, i, _resolve_loaded("src.ui.coord.skin_gallery")) end,
+  open_skin_panel     = function(s, i) return _dispatch_via_table(_resolve_loaded("src.ui.coord.skin_panel"), _SKIN_PANEL_ACTIONS, s, i) end,
+  skin_panel_action   = function(s, i) return _dispatch_via_table(_resolve_loaded("src.ui.coord.skin_panel"), _SKIN_PANEL_ACTIONS, s, i) end,
+  open_gallery_panel  = function(s, i) return _dispatch_via_table(_resolve_loaded("src.ui.coord.item_atlas"), _ITEM_ATLAS_ACTIONS, s, i) end,
+  item_atlas_action   = function(s, i) return _dispatch_via_table(_resolve_loaded("src.ui.coord.item_atlas"), _ITEM_ATLAS_ACTIONS, s, i) end,
+  skin_gallery_action = function(s, i) return _dispatch_via_table(_resolve_loaded("src.ui.coord.skin_gallery"), _GALLERY_ACTIONS, s, i) end,
 }
 
 local function _fallback_dispatch(state, intent)
