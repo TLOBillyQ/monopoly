@@ -4,22 +4,22 @@ local market_handlers = require("src.rules.choice_handlers.market")
 
 local choice_handler_factory = {}
 
-function choice_handler_factory.build_item_handlers(helpers)
+local function _build(handler_module, helpers)
   local registry = {}
-  item_handlers.register(registry, helpers)
+  handler_module.register(registry, helpers)
   return registry
+end
+
+function choice_handler_factory.build_item_handlers(helpers)
+  return _build(item_handlers, helpers)
 end
 
 function choice_handler_factory.build_land_handlers(helpers)
-  local registry = {}
-  land_handlers.register(registry, helpers)
-  return registry
+  return _build(land_handlers, helpers)
 end
 
 function choice_handler_factory.build_market_handlers(helpers)
-  local registry = {}
-  market_handlers.register(registry, helpers)
-  return registry
+  return _build(market_handlers, helpers)
 end
 
 return choice_handler_factory

@@ -47,6 +47,24 @@ local forbidden = {
     replacement = "NumberUtils.is_numeric()/to_integer()",
     path_pattern = src_path_pattern,
   },
+  {
+    pattern = "math%.huge%f[^%w_]",
+    name = "math.huge",
+    replacement = "nil-check sentinel (best==nil or x>best) — math.huge is nil in Eggy runtime",
+    path_pattern = src_path_pattern,
+  },
+  {
+    pattern = "math%.maxinteger%f[^%w_]",
+    name = "math.maxinteger",
+    replacement = "explicit limit or nil-check — math.maxinteger is nil in Eggy runtime",
+    path_pattern = src_path_pattern,
+  },
+  {
+    pattern = "math%.mininteger%f[^%w_]",
+    name = "math.mininteger",
+    replacement = "explicit limit or nil-check — math.mininteger is nil in Eggy runtime",
+    path_pattern = src_path_pattern,
+  },
 }
 
 local scan_roots = { "src", "tests", "tools" }
