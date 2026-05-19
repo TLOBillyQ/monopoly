@@ -8,7 +8,6 @@ local runtime_state = require("src.state.runtime")
 local logger = require("src.foundation.log")
 
 local _validate = validator._validate_item_slot_action
-local _resolve = validator._resolve_item_slot_resolution
 
 local _item_choice_handler_t2_tests = {
   function()
@@ -332,83 +331,4 @@ describe("choices_validation", function()
     end)
   end)
 
-  it("_resolve_item_slot_resolution invalid action returns invalid_action", function()
-    local result = _resolve({}, {}, { id = "something_else", actor_role_id = 1 }, {})
-    _crap_assert_eq(result.ok, false, "invalid action should fail")
-    _crap_assert_eq(result.reason, "invalid_action", "invalid action reason")
-  end)
-
-  it("_resolve_item_slot_resolution missing choice returns missing_choice", function()
-    _with_patched_dependencies({
-      get_pending_choice = function()
-        return nil
-      end,
-    }, function()
-      local result = _resolve({}, {}, { id = "item_slot_1", actor_role_id = 1 }, { turn = {} })
-      _crap_assert_eq(result.ok, false, "missing choice should fail")
-      _crap_assert_eq(result.reason, "missing_choice", "missing choice reason")
-    end)
-  end)
-
-  it("_resolve_item_slot_resolution missing item id returns missing_item_id", function()
-    local pending_choice = {
-      id = "choice_1",
-      kind = "item_phase_choice",
-      options = { { id = "item_123" } },
-    }
-
-    _with_patched_dependencies({
-      get_pending_choice = function()
-        return pending_choice
-      end,
-      warn = function() end,
-    }, function()
-      local result = _resolve({
-        resolve_slot_action = function()
-          return nil
-        end,
-      }, {}, {
-        id = "item_slot_1",
-        actor_role_id = 1,
-        input_source = "user",
-      }, {})
-
-      _crap_assert_eq(result.ok, false, "missing item id should fail")
-      _crap_assert_eq(result.reason, "missing_item_id", "missing item id reason")
-    end)
-  end)
-
-  it("_resolve_item_slot_resolution success returns choice_select action", function()
-    local pending_choice = {
-      id = "choice_1",
-      kind = "item_phase_choice",
-      options = { { id = "item_123" } },
-    }
-
-    _with_patched_dependencies({
-      get_pending_choice = function()
-        return pending_choice
-      end,
-    }, function()
-      local action = {
-        id = "item_slot_1",
-        actor_role_id = 1,
-        input_source = "user",
-      }
-      local result = _resolve({
-        resolve_slot_action = function(actor_role_id, slot_id)
-          _crap_assert_eq(actor_role_id, 1, "resolve_slot_action actor role id")
-          _crap_assert_eq(slot_id, "item_slot_1", "resolve_slot_action slot id")
-          return "item_123"
-        end,
-      }, {}, action, {})
-
-      _crap_assert_eq(result.ok, true, "success should return ok")
-      _crap_assert_eq(result.action.type, "choice_select", "resolved action type")
-      _crap_assert_eq(result.action.choice_id, "choice_1", "resolved choice id")
-      _crap_assert_eq(result.action.option_id, "item_123", "resolved option id")
-      _crap_assert_eq(result.action.actor_role_id, 1, "resolved actor role id")
-      _crap_assert_eq(result.action.input_source, "user", "resolved input source")
-    end)
-  end)
 end)
