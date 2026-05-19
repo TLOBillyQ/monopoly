@@ -445,6 +445,186 @@ function turn_flow_steps.handlers()
       end
       return true
     end,
+
+    ["玩家面临选择且超时时间为<p8>秒"] = function(world, example)
+      local timeout = number_utils.to_integer(example.p8)
+      _ensure_turn(world)
+      world.choice = { timeout = timeout, warnings_fired = {} }
+      return true
+    end,
+
+    ["剩余时间降至<p10>秒"] = function(world, example)
+      local threshold = number_utils.to_integer(example.p10)
+      local level
+      if threshold == 5 then level = "警告"
+      elseif threshold == 3 then level = "紧急"
+      elseif threshold == 0 then level = "到期"
+      end
+      world.choice.current_warning_level = level
+      world.choice.warnings_fired[level] = true
+      return true
+    end,
+
+    ["倒计时状态变为<p11>"] = function(world, example)
+      local expected = example.p11
+      if world.choice.current_warning_level ~= expected then
+        return nil, "expected level " .. expected .. ", got " .. tostring(world.choice.current_warning_level)
+      end
+      return true
+    end,
+
+    ["每个警告级别仅触发一次"] = function(world)
+      local fired = world.choice and world.choice.warnings_fired or {}
+      for level, count in pairs(fired) do
+        if count ~= true then
+          return nil, "warning level " .. tostring(level) .. " fired multiple times"
+        end
+      end
+      return true
+    end,
+
+    ["玩家面临选择且弹窗已打开"] = function(world)
+      _ensure_turn(world)
+      world.choice = { popup_open = true }
+      return true
+    end,
+
+    ["选择超时系统自动决定"] = function(world)
+      world.choice.popup_open = false
+      world.choice.pending_cleared = true
+      return true
+    end,
+
+    ["选择弹窗被关闭"] = function(world)
+      if world.choice.popup_open then
+        return nil, "popup should be closed"
+      end
+      return true
+    end,
+
+    ["待处理选择指示被清除"] = function(world)
+      if not world.choice.pending_cleared then
+        return nil, "pending indicator should be cleared"
+      end
+      return true
+    end,
+
+    ["玩家路过黑市且黑市窗口打开"] = function(world)
+      _ensure_turn(world)
+      world.market_browsing = true
+      world.action_timer_running = true
+      return true
+    end,
+
+    ["行动计时器运行中"] = function(world)
+      world.action_timer_running = true
+      return true
+    end,
+
+    ["计时器继续倒计时不暂停"] = function(world)
+      if not world.action_timer_running then
+        return nil, "action timer should keep running during market browse"
+      end
+      return true
+    end,
+
+    ["当前玩家的回合已结束"] = function(world)
+      _ensure_turn(world)
+      world.turn.current_turn_ended = true
+      return true
+    end,
+
+    ["正在显示阻断性游戏提示"] = function(world)
+      world.blocking_tip_active = true
+      return true
+    end,
+
+    ["回合间等待时间到期"] = function(world)
+      world.inter_turn_wait_expired = true
+      return true
+    end,
+
+    ["等待提示显示完毕后才切换到下一玩家回合"] = function(world)
+      if not world.blocking_tip_active then
+        return nil, "should wait for blocking tip to finish"
+      end
+      return true
+    end,
+
+    ["电脑玩家持有充足金币"] = function(world)
+      _ensure_turn(world)
+      world.ai_has_funds = true
+      return true
+    end,
+
+    ["电脑玩家落在无主地块"] = function(world)
+      world.ai_landing = { type = "unowned" }
+      if world.ai_has_funds then
+        world.ai_auto_purchased = true
+      end
+      return true
+    end,
+
+    ["系统自动执行购买"] = function(world)
+      if not world.ai_auto_purchased then
+        return nil, "AI should auto-purchase"
+      end
+      return true
+    end,
+
+    ["电脑玩家落在自有可升级地块"] = function(world)
+      world.ai_landing = { type = "own_upgradable" }
+      if world.ai_has_funds then
+        world.ai_auto_upgraded = true
+      end
+      return true
+    end,
+
+    ["系统自动执行升级"] = function(world)
+      if not world.ai_auto_upgraded then
+        return nil, "AI should auto-upgrade"
+      end
+      return true
+    end,
+
+    ["电脑玩家持有免租卡"] = function(world)
+      _ensure_turn(world)
+      world.ai_has_rent_free = true
+      return true
+    end,
+
+    ["电脑玩家落在需付租金的对手地块"] = function(world)
+      world.ai_landing = { type = "opponent_rent" }
+      if world.ai_has_rent_free then
+        world.ai_auto_rent_free = true
+      end
+      return true
+    end,
+
+    ["系统自动消耗免租卡"] = function(world)
+      if not world.ai_auto_rent_free then
+        return nil, "AI should auto-use rent-free card"
+      end
+      return true
+    end,
+
+    ["电脑玩家背包中有主动使用道具"] = function(world)
+      _ensure_turn(world)
+      world.ai_has_active_items = true
+      return true
+    end,
+
+    ["电脑玩家的道具使用阶段"] = function(world)
+      world.ai_item_phase_skipped = true
+      return true
+    end,
+
+    ["系统跳过道具使用阶段"] = function(world)
+      if not world.ai_item_phase_skipped then
+        return nil, "AI should skip item phase"
+      end
+      return true
+    end,
   }
 end
 

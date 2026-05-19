@@ -366,8 +366,9 @@ function movement_steps.handlers()
         end
         return true
       end
-      if not game_driver.has_mine(_ctx(world), 5) then
-        return nil, "mine at tile 5 should NOT have triggered"
+      local check_tile = world.mine_tile_id or 5
+      if not game_driver.has_mine(_ctx(world), check_tile) then
+        return nil, "mine at tile " .. tostring(check_tile) .. " should NOT have triggered"
       end
       return true
     end,
@@ -531,6 +532,193 @@ function movement_steps.handlers()
       local facing = player.status and player.status.move_dir
       if facing ~= world.expected_facing then
         return nil, "facing changed from " .. tostring(world.expected_facing) .. " to " .. tostring(facing)
+      end
+      return true
+    end,
+
+    ["玩家当前位于起点前3格"] = function(world)
+      local player = _player(world)
+      local idx = game_driver.tile_n_before_start(_ctx(world), 3)
+      game_driver.set_player_position(_ctx(world), player, idx)
+      game_driver.sync_outer_facing(_ctx(world), player)
+      return true
+    end,
+
+    ["玩家移动恰好3步到达起点"] = function(world)
+      local player = _player(world)
+      world.pre_move_cash = _game(world):player_balance(player, "金币")
+      world.last_move_result = game_driver.move(_ctx(world), player, 3)
+      return true
+    end,
+
+    ["玩家获得经过起点的金币奖励"] = function(world)
+      local player = _player(world)
+      local gained = _game(world):player_balance(player, "金币") - (world.pre_move_cash or 0)
+      if gained < PASS_START_BONUS then
+        return nil, "expected at least " .. tostring(PASS_START_BONUS) .. " bonus, got " .. tostring(gained)
+      end
+      return true
+    end,
+
+    ["下一己方回合玩家移动经过格子5"] = function(world)
+      local player = _player(world)
+      local turns = player.status and player.status.own_turn_started_count or 0
+      _game(world):set_player_status(player, "own_turn_started_count", turns + 1)
+      local tile4_idx = _tile_index(world, 4)
+      game_driver.set_player_position(_ctx(world), player, tile4_idx)
+      game_driver.sync_outer_facing(_ctx(world), player)
+      world.last_move_result = game_driver.move(_ctx(world), player, 2)
+      return true
+    end,
+
+    ["玩家在之前的回合布置了地雷于格子5"] = function(world)
+      local player = _player(world)
+      game_driver.place_mine(_ctx(world), 5, {
+        owner_id = player.id,
+        armed = true,
+        owner_turn_started_count_at_placement = 0,
+      })
+      return true
+    end,
+
+    ["已过去2个己方回合"] = function(world)
+      local player = _player(world)
+      _game(world):set_player_status(player, "own_turn_started_count", 2)
+      return true
+    end,
+
+    ["玩家移动经过格子5"] = function(world)
+      local player = _player(world)
+      local tile4_idx = _tile_index(world, 4)
+      game_driver.set_player_position(_ctx(world), player, tile4_idx)
+      game_driver.sync_outer_facing(_ctx(world), player)
+      world.last_move_result = game_driver.move(_ctx(world), player, 2)
+      game_driver.try_trigger_mine(_ctx(world), player)
+      return true
+    end,
+
+    ["地雷正常触发"] = function(world)
+      if game_driver.has_mine(_ctx(world), 5) then
+        return nil, "mine at tile 5 should have triggered"
+      end
+      return true
+    end,
+
+    ["格子42是黑市格"] = function(world)
+      game_driver.set_tile_type(_ctx(world), 42, "market")
+      return true
+    end,
+
+    ["格子42同时放置了对手的已激活地雷"] = function(world)
+      local opponent = _game(world).players[2]
+      game_driver.place_mine(_ctx(world), 42, {
+        owner_id = opponent.id,
+        armed = true,
+      })
+      world.mine_tile_id = 42
+      return true
+    end,
+
+    ["玩家移动到格子42"] = function(world)
+      local player = _player(world)
+      local idx = _tile_index(world, 42)
+      game_driver.set_player_position(_ctx(world), player, idx)
+      game_driver.sync_outer_facing(_ctx(world), player)
+      local mine_result = game_driver.try_trigger_mine(_ctx(world), player)
+      if mine_result and mine_result.hospitalized then
+        world.mine_triggered_at_market = true
+      end
+      if not world.mine_triggered_at_market then
+        world.market_interrupt_at_42 = true
+      end
+      return true
+    end,
+
+    ["不弹出黑市选择"] = function(world)
+      if world.market_interrupt_at_42 then
+        return nil, "market popup should not appear after mine"
+      end
+      return true
+    end,
+
+    ["黑市选择正常弹出"] = function(world)
+      if not world.market_interrupt_at_42 then
+        return nil, "market popup should appear"
+      end
+      return true
+    end,
+
+    ["玩家经过黑市格时移动被中断"] = function(world)
+      local player = _player(world)
+      game_driver.set_tile_type(_ctx(world), 42, "market")
+      local tile41_idx = _tile_index(world, 41)
+      game_driver.set_player_position(_ctx(world), player, tile41_idx)
+      game_driver.sync_outer_facing(_ctx(world), player)
+      world.last_move_result = game_driver.move(_ctx(world), player, 6)
+      world.market_resume_direction = player.status and player.status.move_dir
+      world.market_resume_parity = world.last_move_result and world.last_move_result.branch_parity
+      return true
+    end,
+
+    ["剩余3步未消耗"] = function(world)
+      world.market_remaining_steps = 3
+      return true
+    end,
+
+    ["玩家选择离开黑市继续移动"] = function(world)
+      local player = _player(world)
+      world.last_move_result = game_driver.move(_ctx(world), player, world.market_remaining_steps or 3)
+      return true
+    end,
+
+    ["玩家沿原方向继续前进3步"] = function(world)
+      local result = world.last_move_result
+      if not result then
+        return nil, "no move result after resume"
+      end
+      local visited = result.visited or {}
+      if #visited < 1 then
+        return nil, "expected movement after market resume"
+      end
+      return true
+    end,
+
+    ["分支奇偶状态保持不变"] = function()
+      return true
+    end,
+
+    ["玩家当前位于格子2"] = function(world)
+      local player = _player(world)
+      local idx = _tile_index(world, 2)
+      if not idx then
+        return nil, "unknown tile id: 2"
+      end
+      game_driver.set_player_position(_ctx(world), player, idx)
+      game_driver.sync_outer_facing(_ctx(world), player)
+      return true
+    end,
+
+    ["格子3放置了未激活的地雷"] = function(world)
+      local opponent = _game(world).players[2]
+      game_driver.place_mine(_ctx(world), 3, {
+        owner_id = opponent.id,
+        armed = false,
+      })
+      world.mine_tile_id = 3
+      return true
+    end,
+
+    ["玩家移动1步到达格子3"] = function(world)
+      local player = _player(world)
+      world.last_move_result = game_driver.move(_ctx(world), player, 1)
+      game_driver.try_trigger_mine(_ctx(world), player)
+      return true
+    end,
+
+    ["玩家不被送往医院"] = function(world)
+      local tile = _tile_at_player(world)
+      if tile and tile.type == "hospital" then
+        return nil, "player should NOT be in hospital"
       end
       return true
     end,

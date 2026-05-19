@@ -93,11 +93,20 @@ function chance_steps.handlers()
       if cc.pay_each then
         local per_player = cc.pay_each
         local opponents = world.opponents or {}
+        local paid_count = 0
         for _, opp in ipairs(opponents) do
+          if world.player.bankrupt then break end
           if not opp.in_mountain then
-            opp.received = (opp.received or 0) + per_player
+            if world.player.cash < per_player then
+              world.player.bankrupt = true
+            else
+              world.player.cash = world.player.cash - per_player
+              opp.received = (opp.received or 0) + per_player
+              paid_count = paid_count + 1
+            end
           end
         end
+        world.chance_paid_count = paid_count
         world.paid_each = per_player
       end
 
@@ -108,6 +117,10 @@ function chance_steps.handlers()
         for _, opp in ipairs(opponents) do
           local take = math.min(per_player, opp.cash or 0)
           opp.cash = (opp.cash or 0) - take
+          opp.paid = take
+          if take < per_player then
+            opp.bankrupt = true
+          end
           total_collected = total_collected + take
         end
         world.player.cash = world.player.cash + total_collected

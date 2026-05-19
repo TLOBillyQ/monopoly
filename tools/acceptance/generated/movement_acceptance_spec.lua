@@ -1010,50 +1010,58 @@ local ir = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
-            ["original_text"] = "格子<黑市位置>是黑市格",
+            ["original_text"] = "玩家当前位于格子1",
             ["source_line"] = 131,
             ["source_path"] = "features/game/movement.feature",
           },
-          ["parameters"] = {
-            "p12",
-          },
-          ["text"] = "格子<p12>是黑市格",
+          ["parameters"] = {},
+          ["text"] = "玩家当前位于格子1",
         },
         {
           ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "黑市格同时放置了对手的已激活地雷",
+            ["original_text"] = "格子42是黑市格",
             ["source_line"] = 132,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
-          ["text"] = "黑市格同时放置了对手的已激活地雷",
+          ["text"] = "格子42是黑市格",
         },
         {
-          ["keyword"] = "When",
+          ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "玩家移动到黑市格",
+            ["original_text"] = "格子42同时放置了对手的已激活地雷",
             ["source_line"] = 133,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
-          ["text"] = "玩家移动到黑市格",
+          ["text"] = "格子42同时放置了对手的已激活地雷",
         },
         {
-          ["keyword"] = "Then",
+          ["keyword"] = "When",
           ["metadata"] = {
-            ["original_text"] = "地雷先触发",
+            ["original_text"] = "玩家移动到格子42",
             ["source_line"] = 134,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
-          ["text"] = "地雷先触发",
+          ["text"] = "玩家移动到格子42",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "地雷被触发并清除",
+            ["source_line"] = 135,
+            ["source_path"] = "features/game/movement.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "地雷被触发并清除",
         },
         {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家被送往医院",
-            ["source_line"] = 135,
+            ["source_line"] = 136,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -1063,7 +1071,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "不弹出黑市选择",
-            ["source_line"] = 136,
+            ["source_line"] = 137,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -1075,7 +1083,7 @@ local ir = {
       ["examples"] = {},
       ["metadata"] = {
         ["example_field_lines"] = {},
-        ["source_line"] = 138,
+        ["source_line"] = 139,
         ["source_path"] = "features/game/movement.feature",
       },
       ["name"] = "天使守护免疫黑市格地雷后正常进入黑市",
@@ -1083,50 +1091,58 @@ local ir = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
-            ["original_text"] = "格子<黑市位置>是黑市格",
-            ["source_line"] = 139,
-            ["source_path"] = "features/game/movement.feature",
-          },
-          ["parameters"] = {
-            "p12",
-          },
-          ["text"] = "格子<p12>是黑市格",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "黑市格同时放置了对手的已激活地雷",
+            ["original_text"] = "玩家当前位于格子1",
             ["source_line"] = 140,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
-          ["text"] = "黑市格同时放置了对手的已激活地雷",
+          ["text"] = "玩家当前位于格子1",
         },
         {
           ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "玩家拥有天使守护",
+            ["original_text"] = "格子42是黑市格",
             ["source_line"] = 141,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
-          ["text"] = "玩家拥有天使守护",
+          ["text"] = "格子42是黑市格",
         },
         {
-          ["keyword"] = "When",
+          ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "玩家移动到黑市格",
+            ["original_text"] = "格子42同时放置了对手的已激活地雷",
             ["source_line"] = 142,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
-          ["text"] = "玩家移动到黑市格",
+          ["text"] = "格子42同时放置了对手的已激活地雷",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家拥有天使守护且可抵御路障",
+            ["source_line"] = 143,
+            ["source_path"] = "features/game/movement.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家拥有天使守护且可抵御路障",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家移动到格子42",
+            ["source_line"] = 144,
+            ["source_path"] = "features/game/movement.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家移动到格子42",
         },
         {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "地雷不触发",
-            ["source_line"] = 143,
+            ["source_line"] = 145,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -1136,7 +1152,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "黑市选择正常弹出",
-            ["source_line"] = 144,
+            ["source_line"] = 146,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -1148,7 +1164,7 @@ local ir = {
       ["examples"] = {},
       ["metadata"] = {
         ["example_field_lines"] = {},
-        ["source_line"] = 146,
+        ["source_line"] = 148,
         ["source_path"] = "features/game/movement.feature",
       },
       ["name"] = "从黑市恢复移动时保持原方向和剩余步数",
@@ -1157,7 +1173,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家经过黑市格时移动被中断",
-            ["source_line"] = 147,
+            ["source_line"] = 149,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -1167,7 +1183,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "剩余3步未消耗",
-            ["source_line"] = 148,
+            ["source_line"] = 150,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -1177,7 +1193,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家选择离开黑市继续移动",
-            ["source_line"] = 149,
+            ["source_line"] = 151,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -1187,7 +1203,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "玩家沿原方向继续前进3步",
-            ["source_line"] = 150,
+            ["source_line"] = 152,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},
@@ -1197,7 +1213,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "分支奇偶状态保持不变",
-            ["source_line"] = 151,
+            ["source_line"] = 153,
             ["source_path"] = "features/game/movement.feature",
           },
           ["parameters"] = {},

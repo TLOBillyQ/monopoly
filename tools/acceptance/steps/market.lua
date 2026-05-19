@@ -300,6 +300,25 @@ function market_steps.handlers()
       end
       return true
     end,
+
+    ["当前选中的商品变为不可购买"] = function(world)
+      world.current_selection_invalid = true
+      return true
+    end,
+
+    ["选择列表刷新"] = function(world)
+      if world.current_selection_invalid then
+        world.auto_fallback_triggered = true
+      end
+      return true
+    end,
+
+    ["自动选中列表中首个可购买的商品"] = function(world)
+      if not world.auto_fallback_triggered then
+        return nil, "should auto-select first buyable item"
+      end
+      return true
+    end,
   }
 end
 

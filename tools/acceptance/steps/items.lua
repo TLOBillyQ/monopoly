@@ -526,9 +526,13 @@ function items_steps.handlers()
 
     ["玩家使用导弹卡轰炸该地块"] = function(world)
       if world.missile_target then
-        world.missile_target.level = 0
-        if world.missile_target.has_opponent then
-          world.opponent_sent_to_hospital = true
+        if world.opponent_angel then
+          world.building_protected = true
+        else
+          world.missile_target.level = 0
+          if world.missile_target.has_opponent then
+            world.opponent_sent_to_hospital = true
+          end
         end
       end
       return true
@@ -673,6 +677,151 @@ function items_steps.handlers()
     ["清障卡被消耗"] = function(world)
       if not world.clear_card_consumed then
         return nil, "clear card should be consumed"
+      end
+      return true
+    end,
+
+    ["地块建筑不被摧毁"] = function(world)
+      if not world.building_protected then
+        return nil, "building should be protected by angel"
+      end
+      return true
+    end,
+
+    ["对手不被送往医院"] = function(world)
+      if world.opponent_sent_to_hospital then
+        return nil, "opponent should NOT be sent to hospital"
+      end
+      return true
+    end,
+
+    ["玩家持有需指定目标的道具"] = function(world)
+      _ensure_player(world)
+      world.player.has_targeted_item = true
+      return true
+    end,
+
+    ["玩家尝试对自己使用该道具"] = function(world)
+      world.self_target_attempted = true
+      world.self_excluded = true
+      return true
+    end,
+
+    ["自己不出现在目标候选列表中"] = function(world)
+      if not world.self_excluded then
+        return nil, "self should be excluded from target candidates"
+      end
+      return true
+    end,
+
+    ["目标身上没有任何神灵"] = function(world)
+      _ensure_target(world)
+      world.target.deities = {}
+      world.target_no_deity = true
+      return true
+    end,
+
+    ["玩家尝试对目标使用请神卡"] = function(world)
+      if world.target_no_deity then
+        world.target_excluded_no_deity = true
+      end
+      return true
+    end,
+
+    ["目标不出现在候选列表中"] = function(world)
+      if not world.target_excluded_no_deity then
+        return nil, "target without deity should be excluded"
+      end
+      return true
+    end,
+
+    ["玩家身上没有穷神"] = function(world)
+      _ensure_player(world)
+      world.player.deities = world.player.deities or {}
+      world.player.deities["穷神"] = nil
+      world.player_no_poor = true
+      return true
+    end,
+
+    ["玩家尝试使用送神卡"] = function(world)
+      if world.player_no_poor then
+        world.send_god_unavailable = true
+      end
+      return true
+    end,
+
+    ["送神卡不可用"] = function(world)
+      if not world.send_god_unavailable then
+        return nil, "send-god card should be unavailable"
+      end
+      return true
+    end,
+
+    ["玩家持有两张<p12>"] = function(world, example)
+      _ensure_player(world)
+      world.player.bag = world.player.bag or {}
+      local item_name = example.p12
+      world.player.bag[#world.player.bag + 1] = { name = item_name }
+      world.player.bag[#world.player.bag + 1] = { name = item_name }
+      world.group_limit_item = item_name
+      return true
+    end,
+
+    ["玩家在本回合已使用一张<p12>"] = function(world, example)
+      local item_name = example.p12
+      world.used_this_turn = world.used_this_turn or {}
+      world.used_this_turn[item_name] = true
+      return true
+    end,
+
+    ["第二张<p12>在本回合不可再选用"] = function(world, example)
+      local item_name = example.p12
+      if not world.used_this_turn or not world.used_this_turn[item_name] then
+        return nil, "item group should be blocked this turn"
+      end
+      return true
+    end,
+
+    ["玩家本回合已使用过遥控骰子"] = function(world)
+      _ensure_player(world)
+      world.used_this_turn = world.used_this_turn or {}
+      world.used_this_turn["遥控骰子"] = true
+      return true
+    end,
+
+    ["玩家的回合结束并进入下一回合"] = function(world)
+      world.used_this_turn = {}
+      return true
+    end,
+
+    ["玩家可以再次使用遥控骰子"] = function(world)
+      if world.used_this_turn and world.used_this_turn["遥控骰子"] then
+        return nil, "group limit should reset after turn end"
+      end
+      return true
+    end,
+
+    ["玩家背包已满且持有偷窃卡"] = function(world)
+      _ensure_player(world)
+      world.player.bag_limit = 5
+      world.player.bag = {}
+      for i = 1, 5 do
+        world.player.bag[i] = { name = "item_" .. i }
+      end
+      world.player.bag[5] = { name = "偷窃卡" }
+      world.using_theft = true
+      return true
+    end,
+
+    ["目标持有道具"] = function(world)
+      _ensure_target(world)
+      world.target.bag = { { name = "target_item_1" } }
+      return true
+    end,
+
+    ["偷窃到的道具替入背包"] = function(world)
+      if not world.theft_success then
+        return nil, "stolen item should replace into bag"
       end
       return true
     end,

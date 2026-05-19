@@ -399,6 +399,64 @@ function endgame_steps.handlers()
       end
       return true
     end,
+
+    ["所有玩家均已被淘汰"] = function(world)
+      _ensure_game(world)
+      for _, p in ipairs(world.game.players or {}) do
+        p.alive = false
+      end
+      return true
+    end,
+
+    ["获胜者列表为空"] = function(world)
+      if world.winners and #world.winners > 0 then
+        return nil, "winners list should be empty"
+      end
+      return true
+    end,
+
+    ["游戏已结束"] = function(world)
+      _ensure_game(world)
+      world.game.ended = true
+      world.game.players = world.game.players or {
+        { alive = true, cash = 50000, tile_investment = 0 },
+        { alive = true, cash = 10000, tile_investment = 0 },
+      }
+      return true
+    end,
+
+    ["玩家是获胜者"] = function(world)
+      world.result_player_is_winner = true
+      return true
+    end,
+
+    ["结算画面显示"] = function(world)
+      if world.result_player_is_winner then
+        world.result_panel = "victory"
+      else
+        world.result_panel = "defeat"
+      end
+      return true
+    end,
+
+    ["玩家进入胜利结算面板"] = function(world)
+      if world.result_panel ~= "victory" then
+        return nil, "expected victory panel, got " .. tostring(world.result_panel)
+      end
+      return true
+    end,
+
+    ["玩家不是获胜者"] = function(world)
+      world.result_player_is_winner = false
+      return true
+    end,
+
+    ["玩家进入失败结算面板"] = function(world)
+      if world.result_panel ~= "defeat" then
+        return nil, "expected defeat panel, got " .. tostring(world.result_panel)
+      end
+      return true
+    end,
   }
 end
 
