@@ -164,7 +164,8 @@ function economy_steps.handlers()
 
     ["玩家落在该地块"] = function(world)
       local tile = world.rent_tile
-      if tile and tile.owner == "opponent" then
+      if tile and tile.owner == "opponent"
+        and not (world.opponent and (world.opponent.in_mountain or world.opponent.eliminated)) then
         local rent = tile.rent_table[tile.level + 1]
         world.rent_due = rent
       end
@@ -277,8 +278,14 @@ function economy_steps.handlers()
       return true
     end,
 
+    ["对手已被淘汰"] = function(world)
+      world.opponent = world.opponent or {}
+      world.opponent.eliminated = true
+      return true
+    end,
+
     ["租金不收取"] = function(world)
-      if world.opponent and world.opponent.in_mountain then
+      if world.opponent and (world.opponent.in_mountain or world.opponent.eliminated) then
         return true
       end
       return nil, "rent should not be collected"

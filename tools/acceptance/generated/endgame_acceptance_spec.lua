@@ -644,6 +644,67 @@ local ir = {
         },
       },
     },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 90,
+        ["source_path"] = "features/game/endgame.feature",
+      },
+      ["name"] = "回合上限时所有玩家均已淘汰则无人获胜",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "回合上限到达",
+            ["source_line"] = 91,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "回合上限到达",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "所有玩家均已被淘汰",
+            ["source_line"] = 92,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "所有玩家均已被淘汰",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "胜利条件检查执行",
+            ["source_line"] = 93,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "胜利条件检查执行",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "获胜者列表为空",
+            ["source_line"] = 94,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "获胜者列表为空",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "游戏标记为已结束",
+            ["source_line"] = 95,
+            ["source_path"] = "features/game/endgame.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "游戏标记为已结束",
+        },
+      },
+    },
   },
 }
 

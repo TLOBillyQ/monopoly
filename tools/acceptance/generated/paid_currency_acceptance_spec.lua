@@ -1,3 +1,4 @@
+-- luacheck: globals describe it
 local runtime = require("acceptance.runtime")
 local steps = require("acceptance.steps")
 

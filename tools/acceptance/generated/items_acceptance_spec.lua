@@ -1408,6 +1408,355 @@ local ir = {
         },
       },
     },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 198,
+        ["source_path"] = "features/game/items.feature",
+      },
+      ["name"] = "天使守护免疫导弹伤害",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "对手拥有天使守护",
+            ["source_line"] = 199,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "对手拥有天使守护",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "对手位于目标地块上",
+            ["source_line"] = 200,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "对手位于目标地块上",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家使用导弹卡轰炸该地块",
+            ["source_line"] = 201,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家使用导弹卡轰炸该地块",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "地块建筑不被摧毁",
+            ["source_line"] = 202,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "地块建筑不被摧毁",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "对手不被送往医院",
+            ["source_line"] = 203,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "对手不被送往医院",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "天使守护抵消提示",
+            ["source_line"] = 204,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "天使守护抵消提示",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 206,
+        ["source_path"] = "features/game/items.feature",
+      },
+      ["name"] = "针对玩家的道具不可对自己使用",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家持有需指定目标的道具",
+            ["source_line"] = 207,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家持有需指定目标的道具",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家尝试对自己使用该道具",
+            ["source_line"] = 208,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家尝试对自己使用该道具",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "自己不出现在目标候选列表中",
+            ["source_line"] = 209,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "自己不出现在目标候选列表中",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 211,
+        ["source_path"] = "features/game/items.feature",
+      },
+      ["name"] = "请神卡目标无神灵时不可使用",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "目标身上没有任何神灵",
+            ["source_line"] = 212,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "目标身上没有任何神灵",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家尝试对目标使用请神卡",
+            ["source_line"] = 213,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家尝试对目标使用请神卡",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "目标不出现在候选列表中",
+            ["source_line"] = 214,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "目标不出现在候选列表中",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 216,
+        ["source_path"] = "features/game/items.feature",
+      },
+      ["name"] = "送神卡使用者无穷神时不可使用",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家身上没有穷神",
+            ["source_line"] = 217,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家身上没有穷神",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家尝试使用送神卡",
+            ["source_line"] = 218,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家尝试使用送神卡",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "送神卡不可用",
+            ["source_line"] = 219,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "送神卡不可用",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p12"] = "遥控骰子",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p12"] = 227,
+        },
+        ["source_line"] = 221,
+        ["source_path"] = "features/game/items.feature",
+      },
+      ["name"] = "同组道具单回合内只能使用一次",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家持有两张<道具名>",
+            ["source_line"] = 222,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {
+            "p12",
+          },
+          ["text"] = "玩家持有两张<p12>",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家在本回合已使用一张<道具名>",
+            ["source_line"] = 223,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {
+            "p12",
+          },
+          ["text"] = "玩家在本回合已使用一张<p12>",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "第二张<道具名>在本回合不可再选用",
+            ["source_line"] = 224,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {
+            "p12",
+          },
+          ["text"] = "第二张<p12>在本回合不可再选用",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 230,
+        ["source_path"] = "features/game/items.feature",
+      },
+      ["name"] = "道具使用分组限制在回合结束时重置",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家本回合已使用过遥控骰子",
+            ["source_line"] = 231,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家本回合已使用过遥控骰子",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家的回合结束并进入下一回合",
+            ["source_line"] = 232,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家的回合结束并进入下一回合",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "玩家可以再次使用遥控骰子",
+            ["source_line"] = 233,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家可以再次使用遥控骰子",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 235,
+        ["source_path"] = "features/game/items.feature",
+      },
+      ["name"] = "偷窃时背包满仍消耗偷窃卡并获得道具",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家背包已满且持有偷窃卡",
+            ["source_line"] = 236,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家背包已满且持有偷窃卡",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "目标持有道具",
+            ["source_line"] = 237,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "目标持有道具",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家对目标使用偷窃卡",
+            ["source_line"] = 238,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家对目标使用偷窃卡",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "偷窃卡被消耗",
+            ["source_line"] = 239,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "偷窃卡被消耗",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "偷窃到的道具替入背包",
+            ["source_line"] = 240,
+            ["source_path"] = "features/game/items.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "偷窃到的道具替入背包",
+        },
+      },
+    },
   },
 }
 

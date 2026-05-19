@@ -445,6 +445,138 @@ function turn_flow_steps.handlers()
       end
       return true
     end,
+
+    ["玩家面临选择且超时时间为<p8>秒"] = function(world, example)
+      local timeout = number_utils.to_integer(example.p8)
+      if timeout == nil or timeout <= 0 then
+        return nil, "invalid timeout: " .. tostring(example.p8)
+      end
+      _ensure_turn(world)
+      world.countdown = {
+        timeout = timeout,
+        remaining = timeout,
+        warnings_fired = {},
+      }
+      return true
+    end,
+
+    ["剩余时间降至<p10>秒"] = function(world, example)
+      local threshold = number_utils.to_integer(example.p10)
+      local timeout = world.countdown.timeout
+      if threshold < 0 or threshold >= timeout then
+        return nil, "threshold " .. tostring(threshold) .. " out of range [0, " .. tostring(timeout) .. ")"
+      end
+      world.countdown.remaining = threshold
+      local level
+      if threshold == 0 then
+        level = "到期"
+      elseif threshold <= math.floor(timeout * 0.2) then
+        level = "紧急"
+      elseif threshold <= math.floor(timeout / 3) then
+        level = "警告"
+      else
+        return nil, "threshold " .. tostring(threshold) .. " outside warning range for timeout " .. tostring(timeout)
+      end
+      if not world.countdown.warnings_fired[level] then
+        world.countdown.warnings_fired[level] = true
+        world.countdown.current_level = level
+      end
+      return true
+    end,
+
+    ["倒计时状态变为<p11>"] = function(world, example)
+      local expected = example.p11
+      if world.countdown.current_level ~= expected then
+        return nil, "expected level " .. expected .. ", got " .. tostring(world.countdown.current_level)
+      end
+      return true
+    end,
+
+    ["每个警告级别仅触发一次"] = function(world)
+      for level, fired in pairs(world.countdown.warnings_fired) do
+        if fired ~= true then
+          return nil, "warning level " .. level .. " should fire exactly once"
+        end
+      end
+      return true
+    end,
+
+    ["玩家面临选择且弹窗已打开"] = function(world)
+      _ensure_turn(world)
+      world.choice = { type = "generic", popup_open = true, pending = true }
+      return true
+    end,
+
+    ["选择超时系统自动决定"] = function(world)
+      world.choice = world.choice or {}
+      world.choice.timed_out = true
+      world.choice.popup_open = false
+      world.choice.pending = false
+      return true
+    end,
+
+    ["选择弹窗被关闭"] = function(world)
+      if world.choice.popup_open then
+        return nil, "popup should be closed after timeout"
+      end
+      return true
+    end,
+
+    ["待处理选择指示被清除"] = function(world)
+      if world.choice.pending then
+        return nil, "pending choice indicator should be cleared"
+      end
+      return true
+    end,
+
+    ["玩家路过黑市且黑市窗口打开"] = function(world)
+      _ensure_turn(world)
+      world.market_browsing = true
+      world.action_timer = { running = true, paused = false }
+      return true
+    end,
+
+    ["行动计时器运行中"] = function(world)
+      if not world.action_timer or not world.action_timer.running then
+        return nil, "action timer should be running"
+      end
+      return true
+    end,
+
+    ["计时器继续倒计时不暂停"] = function(world)
+      if world.action_timer.paused then
+        return nil, "timer should not be paused during market browsing"
+      end
+      return true
+    end,
+
+    ["当前玩家的回合已结束"] = function(world)
+      _ensure_turn(world)
+      world.turn.turn_count = world.turn.turn_count + 1
+      world.turn.wait_started = true
+      world.turn.round_ended = true
+      return true
+    end,
+
+    ["正在显示阻断性游戏提示"] = function(world)
+      world.blocking_prompt = { visible = true }
+      return true
+    end,
+
+    ["回合间等待时间到期"] = function(world)
+      world.turn.wait_expired = true
+      return true
+    end,
+
+    ["等待提示显示完毕后才切换到下一玩家回合"] = function(world)
+      if not world.blocking_prompt or not world.blocking_prompt.visible then
+        return nil, "blocking prompt should still be visible"
+      end
+      if not world.turn.round_ended then
+        return nil, "round should be ended"
+      end
+      return true
+    end,
   }
 end
 

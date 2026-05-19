@@ -18,6 +18,8 @@ local ir = {
   ["metadata"] = {
     ["field_lines"] = {
       ["p1"] = 9,
+      ["p10"] = 121,
+      ["p11"] = 122,
       ["p2"] = 10,
       ["p3"] = 12,
       ["p4"] = 27,
@@ -29,6 +31,8 @@ local ir = {
     },
     ["field_names"] = {
       ["p1"] = "玩家人数",
+      ["p10"] = "警告阈值",
+      ["p11"] = "警告级别",
       ["p2"] = "当前玩家",
       ["p3"] = "下一玩家",
       ["p4"] = "剩余回合",
@@ -890,6 +894,226 @@ local ir = {
           },
           ["parameters"] = {},
           ["text"] = "道具被退还至玩家背包",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p10"] = "5",
+          ["p11"] = "警告",
+          ["p8"] = "15",
+        },
+        {
+          ["p10"] = "3",
+          ["p11"] = "紧急",
+          ["p8"] = "15",
+        },
+        {
+          ["p10"] = "0",
+          ["p11"] = "到期",
+          ["p8"] = "15",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p10"] = 126,
+          ["p11"] = 126,
+          ["p8"] = 126,
+        },
+        ["source_line"] = 119,
+        ["source_path"] = "features/game/turn_flow.feature",
+      },
+      ["name"] = "超时倒计时分阶段发出警告",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家面临选择且超时时间为<超时秒数>秒",
+            ["source_line"] = 120,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {
+            "p8",
+          },
+          ["text"] = "玩家面临选择且超时时间为<p8>秒",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "剩余时间降至<警告阈值>秒",
+            ["source_line"] = 121,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {
+            "p10",
+          },
+          ["text"] = "剩余时间降至<p10>秒",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "倒计时状态变为<警告级别>",
+            ["source_line"] = 122,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {
+            "p11",
+          },
+          ["text"] = "倒计时状态变为<p11>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "每个警告级别仅触发一次",
+            ["source_line"] = 123,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "每个警告级别仅触发一次",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 131,
+        ["source_path"] = "features/game/turn_flow.feature",
+      },
+      ["name"] = "超时自动结算后关闭选择弹窗",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家面临选择且弹窗已打开",
+            ["source_line"] = 132,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家面临选择且弹窗已打开",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "选择超时系统自动决定",
+            ["source_line"] = 133,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "选择超时系统自动决定",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "选择弹窗被关闭",
+            ["source_line"] = 134,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "选择弹窗被关闭",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "待处理选择指示被清除",
+            ["source_line"] = 135,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "待处理选择指示被清除",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 137,
+        ["source_path"] = "features/game/turn_flow.feature",
+      },
+      ["name"] = "黑市浏览期间行动计时器不暂停",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家路过黑市且黑市窗口打开",
+            ["source_line"] = 138,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家路过黑市且黑市窗口打开",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "行动计时器运行中",
+            ["source_line"] = 139,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "行动计时器运行中",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "计时器继续倒计时不暂停",
+            ["source_line"] = 140,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "计时器继续倒计时不暂停",
+        },
+      },
+    },
+    {
+      ["examples"] = {},
+      ["metadata"] = {
+        ["example_field_lines"] = {},
+        ["source_line"] = 142,
+        ["source_path"] = "features/game/turn_flow.feature",
+      },
+      ["name"] = "阻断性提示显示完毕前回合不切换",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "当前玩家的回合已结束",
+            ["source_line"] = 143,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "当前玩家的回合已结束",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "正在显示阻断性游戏提示",
+            ["source_line"] = 144,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "正在显示阻断性游戏提示",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "回合间等待时间到期",
+            ["source_line"] = 145,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "回合间等待时间到期",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "等待提示显示完毕后才切换到下一玩家回合",
+            ["source_line"] = 146,
+            ["source_path"] = "features/game/turn_flow.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "等待提示显示完毕后才切换到下一玩家回合",
         },
       },
     },

@@ -125,6 +125,28 @@ function endgame_steps.handlers()
       return true
     end,
 
+    ["所有玩家均已被淘汰"] = function(world)
+      _ensure_game(world)
+      if not world.game.players or #world.game.players == 0 then
+        world.game.players = {
+          { alive = false, cash = 0, tile_investment = 0 },
+          { alive = false, cash = 0, tile_investment = 0 },
+        }
+      else
+        for _, p in ipairs(world.game.players) do
+          p.alive = false
+        end
+      end
+      return true
+    end,
+
+    ["获胜者列表为空"] = function(world)
+      if world.winners and #world.winners > 0 then
+        return nil, "expected no winners, got " .. tostring(#world.winners)
+      end
+      return true
+    end,
+
     ["两名玩家总资产相同且为最高"] = function(world)
       _ensure_game(world)
       world.game.players = {

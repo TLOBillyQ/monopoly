@@ -95,7 +95,13 @@ function chance_steps.handlers()
         local opponents = world.opponents or {}
         for _, opp in ipairs(opponents) do
           if not opp.in_mountain then
-            opp.received = (opp.received or 0) + per_player
+            if world.player.cash >= per_player then
+              world.player.cash = world.player.cash - per_player
+              opp.received = (opp.received or 0) + per_player
+            else
+              world.player.bankrupt = true
+              break
+            end
           end
         end
         world.paid_each = per_player
@@ -106,9 +112,14 @@ function chance_steps.handlers()
         local opponents = world.opponents or {}
         local total_collected = 0
         for _, opp in ipairs(opponents) do
-          local take = math.min(per_player, opp.cash or 0)
-          opp.cash = (opp.cash or 0) - take
-          total_collected = total_collected + take
+          if not opp.eliminated then
+            local take = math.min(per_player, opp.cash or 0)
+            opp.cash = (opp.cash or 0) - take
+            total_collected = total_collected + take
+            if opp.cash <= 0 then
+              opp.eliminated = true
+            end
+          end
         end
         world.player.cash = world.player.cash + total_collected
         world.collected_total = total_collected
