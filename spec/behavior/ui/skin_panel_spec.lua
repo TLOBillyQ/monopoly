@@ -160,6 +160,77 @@ describe("skin_panel", function()
       local panel = s.ui.skin_panel
       assert(panel.selected_by_role["1"] == "skin_3", "slot 3 should equip skin_3")
     end)
+
+    it("gift unlock marks skin as owned", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(5))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "gift", 2)
+      local panel = s.ui.skin_panel
+      assert(panel.owned_by_role["1"]["skin_2"] == true, "gift unlock should own skin_2")
+    end)
+
+    it("unequip clears selected skin for role", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(5))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "buy", 1)
+      skin_panel.equip(s, 1, 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == "skin_1")
+      skin_panel.handle_action(s, "unequip", 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil, "unequip should clear selection")
+    end)
+  end)
+
+  describe("pagination", function()
+    it("page_next advances page", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(12))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "next", 1)
+      assert(s.ui.skin_panel.page_index == 2, "page should advance to 2")
+    end)
+
+    it("page_prev goes to previous page", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(12))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "next", 1)
+      assert(s.ui.skin_panel.page_index == 2)
+      skin_panel.handle_action(s, "prev", 1)
+      assert(s.ui.skin_panel.page_index == 1, "prev should go back to page 1")
+    end)
+
+    it("page_next does not exceed max page", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(6))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "next", 1)
+      skin_panel.handle_action(s, "next", 1)
+      assert(s.ui.skin_panel.page_index == 1, "single-page catalog should clamp to page 1")
+    end)
+
+    it("page_prev does not go below page 1", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(12))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "prev", 1)
+      assert(s.ui.skin_panel.page_index == 1, "prev on page 1 should stay at page 1")
+    end)
+
+    it("last page shows remaining skins", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(8))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "next", 1)
+      assert(s.ui.skin_panel.page_index == 2)
+      local count = 0
+      for i = 1, 6 do
+        local idx = (s.ui.skin_panel.page_index - 1) * 6 + i
+        if skin_panel.catalog[idx] then count = count + 1 end
+      end
+      assert(count == 2, "last page of 8-skin catalog should show 2 slots, got " .. tostring(count))
+    end)
   end)
 
   describe("handle_action", function()

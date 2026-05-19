@@ -21,6 +21,8 @@ local function _ensure_skin_state(world)
   return world.skin_state
 end
 
+local SLOTS_PER_PAGE = 6
+
 local function _panel(world)
   return world.skin_state.ui.skin_panel
 end
@@ -31,7 +33,7 @@ end
 
 local function _skin_at_slot(world, slot)
   local panel = _panel(world)
-  local idx = (panel.page_index - 1) * 6 + slot
+  local idx = (panel.page_index - 1) * SLOTS_PER_PAGE + slot
   return skin_panel.catalog[idx]
 end
 
@@ -100,11 +102,9 @@ function skin_shop_steps.handlers()
     ["当前页面展示<p3>个皮肤槽位"] = function(world, example)
       local expected = number_utils.to_integer(example.p3)
       if expected == nil then return nil, "invalid slot count: " .. tostring(example.p3) end
-      local panel = _panel(world)
       local count = 0
-      for i = 1, 6 do
-        local idx = (panel.page_index - 1) * 6 + i
-        if skin_panel.catalog[idx] then count = count + 1 end
+      for i = 1, SLOTS_PER_PAGE do
+        if _skin_at_slot(world, i) then count = count + 1 end
       end
       if count ~= expected then
         return nil, "expected " .. tostring(expected) .. " slots, got " .. tostring(count)
@@ -176,6 +176,58 @@ function skin_shop_steps.handlers()
       local panel = _panel(world)
       if panel.selected_by_role[key] ~= nil then
         return nil, "skin was equipped unexpectedly: " .. tostring(panel.selected_by_role[key])
+      end
+      return true
+    end,
+
+    -- ── gift unlock ──────────────────────────────────────────────────────────
+    ["玩家通过赠礼解锁槽位<p4>的皮肤"] = function(world, example)
+      local slot = number_utils.to_integer(example.p4)
+      if slot == nil then return nil, "invalid slot: " .. tostring(example.p4) end
+      skin_panel.unlock(world.skin_state, world.ui_role_id or 1, "gift", slot)
+      return true
+    end,
+
+    -- ── unequip ──────────────────────────────────────────────────────────────
+    ["玩家脱下当前皮肤"] = function(world)
+      skin_panel.handle_action(world.skin_state, "unequip", world.ui_role_id or 1)
+      return true
+    end,
+
+    ["无皮肤装备中"] = function(world)
+      local key = _role_key(world)
+      local panel = _panel(world)
+      if panel.selected_by_role[key] ~= nil then
+        return nil, "expected no skin equipped, got " .. tostring(panel.selected_by_role[key])
+      end
+      return true
+    end,
+
+    -- ── pagination ───────────────────────────────────────────────────────────
+    ["玩家翻到皮肤下一页"] = function(world)
+      skin_panel.handle_action(world.skin_state, "next", world.ui_role_id or 1)
+      return true
+    end,
+
+    ["玩家翻到皮肤上一页"] = function(world)
+      skin_panel.handle_action(world.skin_state, "prev", world.ui_role_id or 1)
+      return true
+    end,
+
+    ["当前皮肤页码为1"] = function(world)
+      local panel = _panel(world)
+      if panel.page_index ~= 1 then
+        return nil, "expected page 1, got " .. tostring(panel.page_index)
+      end
+      return true
+    end,
+
+    ["当前皮肤页码为<p5>"] = function(world, example)
+      local expected = number_utils.to_integer(example.p5)
+      if expected == nil then return nil, "invalid page: " .. tostring(example.p5) end
+      local panel = _panel(world)
+      if panel.page_index ~= expected then
+        return nil, "expected page " .. tostring(expected) .. ", got " .. tostring(panel.page_index)
       end
       return true
     end,
