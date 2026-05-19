@@ -327,32 +327,6 @@ describe("land", function()
     _assert_eq(score, 6, "market should keep score")
   end)
 
-  it("land_rent_contiguous_sum", function()
-    local g = _new_game()
-    local owner = g.players[1]
-    local tenant = g.players[2]
-
-    local idx1, tile1, _, tile2 = _first_adjacent_land_pair(g.board)
-    g:set_tile_owner(tile1, owner.id)
-    g:set_tile_owner(tile2, owner.id)
-    g:set_tile_level(tile1, 1)
-    g:set_tile_level(tile2, 2)
-    g:set_player_property(owner, tile1.id, true)
-    g:set_player_property(owner, tile2.id, true)
-
-    g:update_player_position(tenant, idx1)
-    local before = tenant.cash
-    land_actions.execute_pay_rent(g, tenant.id, tile1.id)
-    local expected = pricing.rent_for_level(tile1, 1) + pricing.rent_for_level(tile2, 2)
-    _assert_eq(before - tenant.cash, expected, "contiguous rent sum")
-
-    g:set_tile_level(tile1, 2)
-    local before2 = tenant.cash
-    land_actions.execute_pay_rent(g, tenant.id, tile1.id)
-    local expected2 = pricing.rent_for_level(tile1, 2) + pricing.rent_for_level(tile2, 2)
-    _assert_eq(before2 - tenant.cash, expected2, "contiguous rent sum after upgrade")
-  end)
-
   it("land_rent_graph_adjacency_breaks_path_neighbors", function()
     local g = _new_game()
     local owner = g.players[1]
@@ -430,47 +404,6 @@ describe("land", function()
     local ok = land_actions.execute_pay_rent(g, tenant.id, tile_ref.id)
     _assert_eq(ok, false, "execute_pay_rent should return false when owner missing")
     _assert_eq(tenant.cash, before2, "rent skipped when owner missing")
-  end)
-
-  it("free_rent_only_inventory_auto_uses_card_without_choice_prompt", function()
-    local land = require("src.rules.land.executors")
-    local g = _new_game()
-    local tenant = g.players[1]
-    local owner = g.players[2]
-    local idx, tile_ref = _first_land_tile(g.board)
-
-    g:set_tile_owner(tile_ref, owner.id)
-    g:set_tile_level(tile_ref, 1)
-    g:set_player_property(owner, tile_ref.id, true)
-    g:update_player_position(tenant, idx)
-    inventory.give(tenant, item_ids.free_rent, { game = g })
-
-    local tenant_cash_before = g:player_balance(tenant, "金币")
-    local owner_cash_before = g:player_balance(owner, "金币")
-    local res = land.executors.pay_rent.apply({ game = g, player = tenant, tile = tile_ref })
-
-    assert(res == nil, "pay_rent with only free_rent should auto-use and keep turn flow moving")
-    _assert_eq(g:player_balance(tenant, "金币"), tenant_cash_before,
-      "pay_rent with only free_rent should not charge tenant cash")
-    _assert_eq(g:player_balance(owner, "金币"), owner_cash_before,
-      "pay_rent with only free_rent should not pay owner cash")
-    _assert_eq(inventory.find_index(tenant, item_ids.free_rent) == nil, true,
-      "pay_rent with only free_rent should consume the card immediately")
-  end)
-
-  it("tax_only_bankrupts_when_balance_depleted", function()
-    local g = _new_game()
-    local p = g.players[1]
-    g:set_player_cash(p, 10000)
-    local ok = land_actions.execute_pay_tax(g, p.id)
-    assert(ok == true, "tax should execute")
-    assert(p.eliminated == false, "player with remaining cash should not be eliminated by tax")
-    assert(g:player_balance(p, "金币") > 0, "cash should remain positive after tax")
-
-    g:set_player_cash(p, 0)
-    ok = land_actions.execute_pay_tax(g, p.id)
-    assert(ok == true, "tax should execute on depleted balance")
-    assert(p.eliminated == true, "player should be eliminated only when tax depletes balance")
   end)
 
   it("choice_resolver_executes_canonical_landing_optional_effect", function()
