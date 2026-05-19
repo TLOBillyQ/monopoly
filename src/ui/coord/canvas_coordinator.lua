@@ -25,24 +25,16 @@ coordinator.CANVAS_POPUP = popup_nodes.canvas
 coordinator.CANVAS_BANKRUPTCY = bankruptcy_nodes.canvas
 coordinator.CANVAS_DEBUG = debug_nodes.canvas
 
+local _CHOICE_CANVAS_BY_KEY = {
+  player            = coordinator.CANVAS_PLAYER_CHOICE,
+  target            = coordinator.CANVAS_TARGET_CHOICE,
+  remote            = coordinator.CANVAS_REMOTE_CHOICE,
+  secondary_confirm = coordinator.CANVAS_SECONDARY_CONFIRM,
+}
+
 local function _resolve_choice_canvas(ui)
-  if not ui or not ui.choice_active then
-    return nil
-  end
-  local key = ui.active_choice_screen_key
-  if key == "player" then
-    return coordinator.CANVAS_PLAYER_CHOICE
-  end
-  if key == "target" then
-    return coordinator.CANVAS_TARGET_CHOICE
-  end
-  if key == "remote" then
-    return coordinator.CANVAS_REMOTE_CHOICE
-  end
-  if key == "secondary_confirm" then
-    return coordinator.CANVAS_SECONDARY_CONFIRM
-  end
-  return nil
+  if not ui or not ui.choice_active then return nil end
+  return _CHOICE_CANVAS_BY_KEY[ui.active_choice_screen_key]
 end
 
 local function _has_any_debug_canvas(ui)
