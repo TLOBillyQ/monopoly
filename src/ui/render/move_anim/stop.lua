@@ -85,8 +85,8 @@ end
 
 local function _set_player_position(scene, player_id, target_pos)
   local unit = scene and scene.units_by_player_id and scene.units_by_player_id[player_id] or nil
-  assert(unit ~= nil, "missing unit: " .. tostring(player_id))
-  assert(unit.set_position ~= nil, "missing unit.set_position: " .. tostring(player_id))
+  assert(unit, "missing unit: " .. tostring(player_id))
+  assert(unit.set_position, "missing unit.set_position: " .. tostring(player_id))
   unit.set_position(target_pos)
   return "set_position"
 end
@@ -128,18 +128,13 @@ function stop.clear_player_token(board_scene, player_id, reason)
   end
 end
 
+local function _has_stop_scope(rs, player_id)
+  return rs.active_token_by_player_id[player_id] ~= nil or rs.active_sequence_by_player_id[player_id] ~= nil
+end
+
 function stop.has_active_stop_context(board_scene, player_id)
-  if board_scene == nil or player_id == nil then
-    return false
-  end
-  local runtime_state = rt.ensure_runtime(board_scene)
-  if runtime_state.active_token_by_player_id[player_id] ~= nil then
-    return true
-  end
-  if runtime_state.active_sequence_by_player_id[player_id] ~= nil then
-    return true
-  end
-  return false
+  if board_scene == nil or player_id == nil then return false end
+  return _has_stop_scope(rt.ensure_runtime(board_scene), player_id)
 end
 
 local _stop_synthetic_ai_opts = { stop_synthetic_ai = true }
@@ -150,19 +145,26 @@ function stop.prepare_player_for_snap(board_scene, player_id, _anim_ctx, reason)
   return stop.stop_player_presentation(player_id, unit, _stop_synthetic_ai_opts)
 end
 
+local function _snap_reason(reason)
+  return reason or "play_sequence_teleport"
+end
+
+local function _log_snap(anim_ctx, player_id, to_index, r)
+  debug_mod.debug_log(
+    r,
+    "player_id=" .. tostring(player_id),
+    "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
+    "to=" .. tostring(to_index)
+  )
+end
+
 function stop.snap_player_to_index(board_scene, player_id, to_index, anim_ctx, reason)
   local tile = assert(board_scene.tiles[to_index], "missing tile: " .. tostring(to_index))
+  local r = _snap_reason(reason)
   local target_pos = tile.get_position()
   _set_player_position(board_scene, player_id, target_pos)
-  seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, reason or "play_sequence_teleport")
-  if debug_mod.enabled() then
-    debug_mod.debug_log(
-      reason or "play_sequence_teleport",
-      "player_id=" .. tostring(player_id),
-      "seq=" .. tostring(anim_ctx and anim_ctx.seq or "nil"),
-      "to=" .. tostring(to_index)
-    )
-  end
+  seq_builder.publish_follow_target(anim_ctx, player_id, target_pos, r)
+  if debug_mod.enabled() then _log_snap(anim_ctx, player_id, to_index, r) end
   return 0
 end
 
