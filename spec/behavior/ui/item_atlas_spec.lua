@@ -337,5 +337,32 @@ describe("item_atlas", function()
       item_atlas_view.show_enlarged(state, "no_such_item")
       assert(#calls == 0, "no calls when image ref missing")
     end)
+
+    it("page 2 shows correct items by offset", function()
+      local catalog = _make_catalog(12)
+      local state, calls = _make_render_state()
+      state.ui_refs = { images = {} }
+      for i = 1, 12 do
+        state.ui_refs.images["item_" .. i] = "tex_" .. i
+      end
+      local runtime = _stub_runtime()
+      item_atlas_view.refresh_page(state, catalog, 2, { runtime = runtime })
+      assert(runtime.textures[item_atlas_nodes.card_images[1]] == "tex_9",
+        "page 2 slot 1 should show item 9")
+      assert(runtime.textures[item_atlas_nodes.card_images[4]] == "tex_12",
+        "page 2 slot 4 should show item 12")
+      local vis5 = _find_call(calls, "set_visible", item_atlas_nodes.card_images[5])
+      assert(vis5 == false, "page 2 slot 5 should be hidden (only 12 items)")
+    end)
+  end)
+
+  describe("integer action routing", function()
+    it("integer action selects slot by index", function()
+      item_atlas.configure_catalog_for_tests(_make_catalog(8))
+      local s = _make_state()
+      item_atlas.open(s, 1)
+      item_atlas.handle_action(s, 3, 1)
+      assert(s.ui.item_atlas.selected_item_id == "item_3", "integer 3 should select item_3")
+    end)
   end)
 end)

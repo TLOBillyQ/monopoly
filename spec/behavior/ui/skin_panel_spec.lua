@@ -247,6 +247,32 @@ describe("skin_panel", function()
       skin_panel.handle_action(s, "close", 1)
       assert(s.ui.skin_panel.open == false, "close action should close panel")
     end)
+
+    it("gift action unlocks skin via handle_action", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(3))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, { type = "gift", slot_index = 1 }, 1)
+      assert(s.ui.skin_panel.owned_by_role["1"]["skin_1"] == true, "gift action should own skin")
+    end)
+
+    it("equip action equips owned skin via handle_action", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(3))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "buy", 2)
+      skin_panel.handle_action(s, { type = "equip", slot_index = 2 }, 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == "skin_2", "equip action should select skin")
+    end)
+
+    it("integer action equips owned skin as slot index", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(3))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "buy", 1)
+      skin_panel.handle_action(s, 1, 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == "skin_1", "integer action should equip slot")
+    end)
   end)
 
   describe("button rendering", function()
@@ -347,6 +373,34 @@ describe("skin_panel", function()
         local vis = _find_call(calls, "set_visible", skin_nodes.card_outlines[slot])
         assert(vis == false, "outline " .. slot .. " should be hidden when nothing equipped")
       end
+    end)
+
+    it("sets card texture when image ref exists", function()
+      local catalog = _make_rich_catalog()
+      local state, _ = _make_render_state()
+      state.ui_refs = { images = { ["5001"] = "tex_pig" } }
+      local textures = {}
+      local runtime = {
+        query_node = function(name) return { name = name } end,
+        set_node_texture_keep_size = function(node, key)
+          textures[node.name] = key
+        end,
+      }
+      skin_panel_view.refresh_slots(state, catalog, { runtime = runtime })
+      assert(textures[skin_nodes.card_images[1]] == "tex_pig",
+        "should set texture for skin with image ref")
+      assert(textures[skin_nodes.card_images[2]] == nil,
+        "should not set texture for skin without image ref")
+    end)
+
+    it("price icon visible for purchase skin, hidden for gift skin", function()
+      local catalog = _make_rich_catalog()
+      local state, calls = _make_render_state()
+      skin_panel_view.refresh_slots(state, catalog)
+      local purchase_icon = _find_call(calls, "set_visible", skin_nodes.price_icons[1])
+      local gift_icon = _find_call(calls, "set_visible", skin_nodes.price_icons[3])
+      assert(purchase_icon == true, "purchase skin should show price icon")
+      assert(gift_icon == false, "gift skin should hide price icon")
     end)
   end)
 
