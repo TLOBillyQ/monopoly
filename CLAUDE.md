@@ -8,7 +8,8 @@ Agent 路由：`.agents/README.md` | 人类索引：`docs/README.md`
 
 - 命名 `snake_case`，类名 `CamelCase`。
 - `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.foundation.number`）。
-- Eggy `Fixed` 参数用浮点（`30.0`），详见 `.agents/conventions/eggy-types.md`。
+- Eggy `Fixed` 参数用浮点（`30.0`），详见 `docs/reference/eggy/eggy-types.md`。
+- Eggy 沙盒 `math` 无 `maxinteger`/`mininteger`/`huge`，用 `math.maxval`/`math.minval`。
 
 ## 验证
 

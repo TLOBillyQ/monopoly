@@ -7,7 +7,7 @@ last_verified: 2026-05-04
 
 # Agent 路由
 
-你的常驻纪律在 `conventions/`，按需查文档；不预读目录树。
+Eggy 类型映射见 `conventions/eggy-types.md`，按需查阅；不预读目录树。
 
 ## 任务 → 文档
 
@@ -25,10 +25,7 @@ last_verified: 2026-05-04
 | UI 组件 | `docs/reference/eggy/guide/ui_manager.md` |
 | 宿主 API | `docs/reference/eggy/api/00_index.md` |
 | 记忆文件 | `docs/reference/eggy/agent/memory.md` |
-| 可执行计划规范 | `.agents/conventions/planning.md` |
-| 按需读代码规范 | `.agents/conventions/reading.md` |
-| 命名与新增文件规范 | `.agents/conventions/coding.md` |
-| Eggy 类型规范 | `.agents/conventions/eggy-types.md` |
+| Eggy 类型规范 | `docs/reference/eggy/eggy-types.md` |
 | 产品 backlog | `docs/product/backlog.md` |
 | 地图设计 | `docs/product/map.md` |
 

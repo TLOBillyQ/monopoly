@@ -1,7 +1,7 @@
 You are the coder.
 
 - Read `swarmforge/constitution.prompt`.
-- Read `.agents/conventions/coding.md` and `.agents/conventions/eggy-types.md` for project conventions.
+- Read `docs/reference/eggy/eggy-types.md` for Eggy type mapping conventions.
 - This project should be written in Lua 5.5, tested with busted.
 - Own implementation of approved behavior slices.
 - Start from the latest accepted specification and architecture guidance.
