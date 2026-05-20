@@ -1,7 +1,6 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-KAKU_CLI="/Applications/Kaku.app/Contents/MacOS/kaku"
 WINDOW_STATE_FILE="$1"
 WINDOW_IDS_FILE="$2"
 CLEANUP_OWNER_INDEX="$3"
@@ -10,31 +9,62 @@ MISSING_THRESHOLD=3
 
 typeset -A MISSING_COUNTS=()
 
-pane_exists() {
-  local pane_id="$1"
-  [[ -n "$pane_id" ]] || return 1
-  "$KAKU_CLI" cli list 2>/dev/null | awk -v pid="$pane_id" 'NR>1 && $3==pid {found=1} END {exit !found}'
+window_exists() {
+  local window_id="$1"
+  [[ -n "$window_id" ]] || return 1
+
+  local result
+  result="$(osascript - "$window_id" <<'APPLESCRIPT' 2>/dev/null || true
+on run argv
+  set targetId to item 1 of argv as integer
+  tell application "Terminal"
+    repeat with terminalWindow in windows
+      if id of terminalWindow is targetId then return "yes"
+    end repeat
+  end tell
+  return "no"
+end run
+APPLESCRIPT
+)"
+
+  [[ "$result" == "yes" ]]
 }
 
-reopen_kaku_pane() {
+open_terminal_window() {
   local session="$1"
   local title="$2"
-  local sibling_pane pane_id
 
-  sibling_pane="$("$KAKU_CLI" cli list 2>/dev/null | awk 'NR==2 {print $3}')"
-  if [[ -n "$sibling_pane" ]]; then
-    pane_id="$("$KAKU_CLI" cli split-pane --pane-id "$sibling_pane" --bottom --cwd "$WORKING_DIR" -- tmux attach-session -t "$session")"
-  else
-    pane_id="$("$KAKU_CLI" cli spawn --new-window --cwd "$WORKING_DIR" -- tmux attach-session -t "$session")"
-  fi
+  osascript - "$WORKING_DIR" "$session" "$title" <<'APPLESCRIPT'
+on run argv
+  set workingDir to item 1 of argv
+  set tmuxSession to item 2 of argv
+  set windowTitle to item 3 of argv
 
-  echo "$pane_id"
+  tell application "Terminal"
+    activate
+    set newTab to do script ""
+    do script "cd " & quoted form of workingDir & " && exec tmux attach-session -t " & quoted form of tmuxSession in newTab
+    set custom title of newTab to windowTitle
+    return id of front window
+  end tell
+end run
+APPLESCRIPT
 }
 
-close_kaku_pane() {
-  local pane_id="$1"
-  [[ -n "$pane_id" ]] || return 0
-  "$KAKU_CLI" cli kill-pane --pane-id "$pane_id" 2>/dev/null || true
+close_terminal_window() {
+  local window_id="$1"
+  [[ -n "$window_id" ]] || return 0
+
+  osascript - "$window_id" <<'APPLESCRIPT' >/dev/null 2>&1 || true
+on run argv
+  set targetId to item 1 of argv as integer
+  tell application "Terminal"
+    try
+      close (first window whose id is targetId) saving no
+    end try
+  end tell
+end run
+APPLESCRIPT
 }
 
 kill_all_sessions() {
@@ -47,7 +77,7 @@ kill_all_sessions() {
 
   while IFS=$'\t' read -r index window_id session title || [[ -n "${index:-}" ]]; do
     [[ -n "${window_id:-}" ]] || continue
-    close_kaku_pane "$window_id"
+    close_terminal_window "$window_id"
   done < "$WINDOW_STATE_FILE"
 }
 
@@ -84,7 +114,7 @@ while [[ -f "$WINDOW_STATE_FILE" ]]; do
     exit 0
   fi
 
-  if pane_exists "$cleanup_window_id"; then
+  if window_exists "$cleanup_window_id"; then
     MISSING_COUNTS[$CLEANUP_OWNER_INDEX]=0
   else
     MISSING_COUNTS[$CLEANUP_OWNER_INDEX]=$(( ${MISSING_COUNTS[$CLEANUP_OWNER_INDEX]:-0} + 1 ))
@@ -101,13 +131,13 @@ while [[ -f "$WINDOW_STATE_FILE" ]]; do
     [[ "$index" != "$CLEANUP_OWNER_INDEX" ]] || continue
     tmux has-session -t "$session" 2>/dev/null || continue
 
-    if pane_exists "$window_id"; then
+    if window_exists "$window_id"; then
       MISSING_COUNTS[$index]=0
     else
       MISSING_COUNTS[$index]=$(( ${MISSING_COUNTS[$index]:-0} + 1 ))
       (( MISSING_COUNTS[$index] >= MISSING_THRESHOLD )) || continue
-      new_pane_id="$(reopen_kaku_pane "$session" "$title")"
-      rewrite_window_id "$index" "$new_pane_id"
+      new_window_id="$(open_terminal_window "$session" "$title")"
+      rewrite_window_id "$index" "$new_window_id"
       MISSING_COUNTS[$index]=0
     fi
   done < "$WINDOW_STATE_FILE"
