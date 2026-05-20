@@ -112,6 +112,15 @@ local function _test_no_go_binary_references_in_wrapper()
   _assert_not_contains(content, "engine_bridge", "wrapper should not reference engine_bridge")
 end
 
+local function _test_wrapper_uses_vendor_lib_layout()
+  local wrapper_path = mutate.env.cwd .. "/tools/quality/mutate.lua"
+  local content = common.read_file(wrapper_path)
+  _assert_contains(content, "/mutate4lua/lib", "wrapper should load mutate4lua lib module layout")
+  _assert_contains(content, "/?.lua", "wrapper should load plain lua module pattern")
+  _assert_contains(content, "/?/init.lua", "wrapper should load init module pattern")
+  _assert_not_contains(content, "/mutate4lua/lua/?.lua", "wrapper should not use removed lua module layout")
+end
+
 local function _test_no_go_binary_references_in_vendor_cli()
   local cli_path = mutate.env.cwd .. "/vendor/mutate4lua/lib/mutate4lua/cli.lua"
   local content = common.read_file(cli_path)
@@ -325,6 +334,7 @@ return {
     {name = "wrapper_routes_scan_and_index_commands", run = _test_wrapper_routes_scan_and_index_commands},
     {name = "wrapper_help_is_bilingual", run = _test_wrapper_help_is_bilingual},
     {name = "no_go_binary_references_in_wrapper", run = _test_no_go_binary_references_in_wrapper},
+    {name = "wrapper_uses_vendor_lib_layout", run = _test_wrapper_uses_vendor_lib_layout},
     {name = "no_go_binary_references_in_vendor_cli", run = _test_no_go_binary_references_in_vendor_cli},
     {name = "driver_lists_suite_modules_as_json", run = _test_driver_lists_suite_modules_as_json},
     {name = "driver_emits_suite_file_map_json_without_line_granularity", run = _test_driver_emits_suite_file_map_json_without_line_granularity},
