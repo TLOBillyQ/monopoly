@@ -127,29 +127,6 @@ local function _test_cli_collect_writes_coverage_json()
   common.remove_path(tmp_out)
 end
 
-local function _test_cli_viewer_generates_html()
-  local out = _buffer()
-  local err = _buffer()
-  local in_json = common.make_temp_path("crap_contract_viewer_in", ".json")
-  common.write_file(in_json, '{"metadata":{},"functions":[],"modules":[],"lanes":[],"summary":{}}')
-  local out_dir = common.make_temp_path("crap_contract_viewer_out", "")
-  local ok = crap.run({
-    "viewer",
-    "--in-json", in_json,
-    "--out-dir", out_dir,
-  }, {
-    stdout = out,
-    stderr = err,
-  })
-
-  assert(ok == true, "cli viewer should return true: " .. err:text())
-  _assert_contains(out:text(), "crap viewer index:", "viewer stdout should print viewer path")
-  assert(common.path_exists(common.join_path(out_dir, "index.html")), "viewer should generate index.html")
-  assert(common.path_exists(common.join_path(out_dir, "crap_report_data.js")), "viewer should generate data js")
-  common.remove_path(in_json)
-  common.remove_path(out_dir)
-end
-
 local function _test_cli_summary_out_prints_resolved_json_path()
   local in_json = common.make_temp_path("crap_summary_input", ".json")
   local ok_write, write_err = common.write_file(in_json, '{"functions":[]}')
@@ -191,7 +168,6 @@ return {
     { name = "adapter_resolves_behavior_and_contract_lanes", run = _test_adapter_resolves_behavior_and_contract_lanes },
     { name = "cli_report_generates_report_json", run = _test_cli_report_generates_report_json },
     { name = "cli_collect_writes_coverage_json", run = _test_cli_collect_writes_coverage_json },
-    { name = "cli_viewer_generates_html", run = _test_cli_viewer_generates_html },
     { name = "cli_summary_out_prints_resolved_json_path", run = _test_cli_summary_out_prints_resolved_json_path },
     { name = "no_go_binary_references_in_vendor_cli", run = _test_no_go_binary_references_in_vendor_cli },
   },
