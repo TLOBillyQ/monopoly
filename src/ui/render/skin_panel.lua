@@ -41,33 +41,28 @@ local function _button_text_for_locked(skin)
   return ""
 end
 
+local function _button_props(skin, status)
+  if status == "locked" then
+    return _button_text_for_locked(skin), skin.unlock == "purchase"
+  elseif status == "owned" then
+    return "穿上", true
+  elseif status == "equipped" then
+    return "已穿戴", false
+  end
+  return nil, nil
+end
+
 local function _refresh_button(ui, slot, skin, status)
   local button_name = nodes.action_buttons[slot]
   if not button_name then
     return
   end
-  if status == "locked" then
-    if ui.set_button then
-      ui:set_button(button_name, _button_text_for_locked(skin))
-    end
-    local purchasable = skin.unlock == "purchase"
-    if ui.set_touch_enabled then
-      ui:set_touch_enabled(button_name, purchasable)
-    end
-  elseif status == "owned" then
-    if ui.set_button then
-      ui:set_button(button_name, "穿上")
-    end
-    if ui.set_touch_enabled then
-      ui:set_touch_enabled(button_name, true)
-    end
-  elseif status == "equipped" then
-    if ui.set_button then
-      ui:set_button(button_name, "已穿戴")
-    end
-    if ui.set_touch_enabled then
-      ui:set_touch_enabled(button_name, false)
-    end
+  local text, touch_enabled = _button_props(skin, status)
+  if text ~= nil and ui.set_button then
+    ui:set_button(button_name, text)
+  end
+  if touch_enabled ~= nil and ui.set_touch_enabled then
+    ui:set_touch_enabled(button_name, touch_enabled)
   end
 end
 

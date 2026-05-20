@@ -21,6 +21,23 @@ local function _page_count(catalog)
   return math.max(1, math.floor((#catalog + PAGE_SIZE - 1) / PAGE_SIZE))
 end
 
+local function _refresh_card(ui, runtime, refs, node_name, item)
+  if item then
+    local image_key = _image_ref_key(refs, item.id)
+    if image_key then
+      local node = runtime.query_node(node_name)
+      if node then
+        runtime.set_node_texture_keep_size(node, image_key)
+      end
+    end
+    if ui.set_visible then
+      ui:set_visible(node_name, true)
+    end
+  elseif ui.set_visible then
+    ui:set_visible(node_name, false)
+  end
+end
+
 function item_atlas_view.refresh_page(state, catalog, page_index, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(deps)
@@ -30,23 +47,7 @@ function item_atlas_view.refresh_page(state, catalog, page_index, deps)
   for slot = 1, PAGE_SIZE do
     local node_name = nodes.card_images[slot]
     if node_name then
-      local item = catalog[offset + slot]
-      if item then
-        local image_key = _image_ref_key(refs, item.id)
-        if image_key then
-          local node = runtime.query_node(node_name)
-          if node then
-            runtime.set_node_texture_keep_size(node, image_key)
-          end
-        end
-        if ui.set_visible then
-          ui:set_visible(node_name, true)
-        end
-      else
-        if ui.set_visible then
-          ui:set_visible(node_name, false)
-        end
-      end
+      _refresh_card(ui, runtime, refs, node_name, catalog[offset + slot])
     end
   end
 

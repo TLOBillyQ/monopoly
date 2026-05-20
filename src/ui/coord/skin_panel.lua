@@ -138,9 +138,11 @@ function skin_panel.unlock(state, role_id, source, slot_index)
   return panel
 end
 
-local function _initiate_purchase(state, role_id, panel, skin, slot_index)
+local function _initiate_purchase(state, role_id, slot_index)
+  local panel = _ensure_state(state)
+  local skin = _skin_at(panel, slot_index)
   if type(purchase_callback) ~= "function" then
-    _notify("皮肤尚未解锁", "skin_panel:not_owned:" .. _role_key(role_id) .. ":" .. tostring(skin.product_id))
+    _notify("皮肤尚未解锁", "skin_panel:not_owned:" .. _role_key(role_id) .. ":" .. tostring(skin and skin.product_id))
     return panel
   end
   local on_success = function()
@@ -156,21 +158,22 @@ end
 
 function skin_panel.equip(state, role_id, slot_index)
   local panel = _ensure_state(state)
+  role_id = role_id or panel.role_id
   local skin = _skin_at(panel, slot_index)
   if not skin then
     return panel
   end
-  local key = _role_key(role_id or panel.role_id)
+  local key = _role_key(role_id)
   local owned = panel.owned_by_role[key] and panel.owned_by_role[key][skin.product_id] == true
   if not owned then
     if skin.unlock == "purchase" then
-      return _initiate_purchase(state, role_id or panel.role_id, panel, skin, slot_index)
+      return _initiate_purchase(state, role_id, slot_index)
     end
     _notify("皮肤尚未解锁", "skin_panel:not_owned:" .. key .. ":" .. tostring(skin.product_id))
     return panel
   end
   panel.last_equip_ok_by_role = panel.last_equip_ok_by_role or {}
-  panel.last_equip_ok_by_role[key] = _apply_equip_callback(role_id or panel.role_id, skin)
+  panel.last_equip_ok_by_role[key] = _apply_equip_callback(role_id, skin)
   panel.selected_by_role[key] = skin.product_id
   skin_panel_view.refresh_slots(state, _catalog)
   _notify("已换装 " .. skin.name, "skin_panel:equip:" .. key .. ":" .. tostring(skin.product_id))
