@@ -9,7 +9,7 @@ end
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 local REPO_ROOT = bootstrap_env.repo_root
-local mutate4lua_root = _normalize_path(bootstrap_env.vendor_dir) .. "/mutate4lua/lua"
+local mutate4lua_root = _normalize_path(bootstrap_env.vendor_dir) .. "/mutate4lua/lib"
 local mutate4lua_patterns = {
   mutate4lua_root .. "/?.lua",
   mutate4lua_root .. "/?/init.lua",
