@@ -5,6 +5,7 @@ local logger = require("src.foundation.log")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local base_nodes = require("src.ui.schema.base")
 local skin_nodes = require("src.ui.schema.skin")
+local skin_panel_view = require("src.ui.render.skin_panel")
 
 local skin_panel = {}
 
@@ -111,6 +112,7 @@ function skin_panel.open(state, role_id)
   panel.role_id = role_id
   panel.page_index = _clamp_page(panel.page_index)
   canvas.switch_by_role_id(state and state.ui, skin_nodes.canvas, role_id)
+  skin_panel_view.refresh_slots(state, _catalog)
   _notify("皮肤已打开", "skin_panel:open:" .. tostring(role_id))
   return panel
 end

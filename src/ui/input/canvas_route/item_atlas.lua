@@ -17,20 +17,15 @@ local function _append(specs, name, action)
   }
 end
 
-local function _append_slot_selects(specs, names)
-  for slot_index, name in ipairs(names or {}) do
-    _append(specs, name, { type = "select", slot_index = slot_index })
-  end
-end
-
 function intents.build()
   local specs = {}
   _append(specs, nodes.close_button, "close")
+  _append(specs, nodes.close_blank, "dismiss")
   _append(specs, nodes.page_prev, "prev")
   _append(specs, nodes.page_next, "next")
-  _append_slot_selects(specs, nodes.slots)
-  _append_slot_selects(specs, nodes.image_buttons)
-  _append_slot_selects(specs, nodes.name_labels)
+  for slot_index, name in ipairs(nodes.card_images) do
+    _append(specs, name, { type = "select", slot_index = slot_index })
+  end
   return specs
 end
 

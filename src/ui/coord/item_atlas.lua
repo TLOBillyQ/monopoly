@@ -4,6 +4,7 @@ local number_utils = require("src.foundation.number")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local base_nodes = require("src.ui.schema.base")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
+local item_atlas_view = require("src.ui.render.item_atlas")
 
 local item_atlas = {}
 
@@ -50,7 +51,10 @@ function item_atlas.open(state, role_id)
   atlas.open = true
   atlas.role_id = role_id
   atlas.page_index = _clamp_page(atlas.page_index)
+  atlas.selected_item_id = nil
   canvas.switch_by_role_id(state and state.ui, item_atlas_nodes.canvas, role_id)
+  item_atlas_view.refresh_page(state, _catalog, atlas.page_index)
+  item_atlas_view.hide_enlarged(state)
   _notify("图鉴已打开", "item_atlas:open:" .. tostring(role_id))
   return atlas
 end
@@ -67,6 +71,8 @@ local function _page_next(state)
   local atlas = _ensure_state(state)
   atlas.page_index = _clamp_page(atlas.page_index + 1)
   atlas.selected_item_id = nil
+  item_atlas_view.refresh_page(state, _catalog, atlas.page_index)
+  item_atlas_view.hide_enlarged(state)
   return atlas
 end
 
@@ -74,20 +80,27 @@ local function _page_prev(state)
   local atlas = _ensure_state(state)
   atlas.page_index = _clamp_page(atlas.page_index - 1)
   atlas.selected_item_id = nil
+  item_atlas_view.refresh_page(state, _catalog, atlas.page_index)
+  item_atlas_view.hide_enlarged(state)
   return atlas
 end
 
 local function _dismiss(state)
   local atlas = _ensure_state(state)
   atlas.selected_item_id = nil
+  item_atlas_view.hide_enlarged(state)
   return atlas
 end
 
 local function _select_slot(state, slot_index)
   local atlas = _ensure_state(state)
   local item = _item_at(atlas, slot_index)
-  if item then
+  if item and atlas.selected_item_id == item.id then
+    atlas.selected_item_id = nil
+    item_atlas_view.hide_enlarged(state)
+  elseif item then
     atlas.selected_item_id = item.id
+    item_atlas_view.show_enlarged(state, item.id)
   end
   return atlas
 end
