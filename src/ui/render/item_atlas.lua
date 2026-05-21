@@ -72,6 +72,7 @@ function item_atlas_view.show_enlarged(state, item_id, deps)
   if ui.set_visible then
     ui:set_visible(nodes.enlarged_card, true)
     ui:set_visible(nodes.close_hint_label, true)
+    ui:set_visible(nodes.close_blank, true)
   end
 end
 
@@ -80,6 +81,7 @@ function item_atlas_view.hide_enlarged(state)
   if ui.set_visible then
     ui:set_visible(nodes.enlarged_card, false)
     ui:set_visible(nodes.close_hint_label, false)
+    ui:set_visible(nodes.close_blank, false)
   end
 end
 
