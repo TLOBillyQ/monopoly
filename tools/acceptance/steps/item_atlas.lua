@@ -1,5 +1,6 @@
 local number_utils = require("src.foundation.number")
 local item_atlas = require("src.ui.coord.item_atlas")
+local item_atlas_nodes = require("src.ui.schema.item_atlas")
 
 local item_atlas_steps = {}
 
@@ -11,12 +12,29 @@ local function _make_catalog(n)
   return t
 end
 
+local function _seed_image_refs(state)
+  for _, item in ipairs(item_atlas.catalog or {}) do
+    state.ui_refs.images[tostring(item.id)] = "tex_" .. tostring(item.id)
+  end
+end
+
 local function _ensure_atlas_state(world)
   if not world.atlas_state then
-    world.atlas_state = { ui = {} }
+    local visibility = {}
+    world.atlas_state = {
+      ui = {
+        set_visible = function(_, name, visible)
+          visibility[name] = visible == true
+        end,
+        set_label = function(_, _, _) end,
+      },
+      ui_refs = { images = {} },
+    }
+    world.atlas_visibility = visibility
     if not world.atlas_catalog_injected then
       item_atlas.reset_for_tests()
     end
+    _seed_image_refs(world.atlas_state)
   end
   return world.atlas_state
 end
@@ -149,6 +167,35 @@ function item_atlas_steps.handlers()
 
     ["玩家点击空白区域关闭放大卡牌"] = function(world)
       item_atlas.handle_action(world.atlas_state, "dismiss", world.ui_role_id or 1)
+      return true
+    end,
+
+    -- ── enlarged-card companion node visibility ───────────────────────────────
+    ["图鉴关闭提示已展示"] = function(world)
+      if world.atlas_visibility[item_atlas_nodes.close_hint_label] ~= true then
+        return nil, "图鉴_点击关闭提示 should be visible"
+      end
+      return true
+    end,
+
+    ["图鉴关闭提示已隐藏"] = function(world)
+      if world.atlas_visibility[item_atlas_nodes.close_hint_label] == true then
+        return nil, "图鉴_点击关闭提示 should be hidden"
+      end
+      return true
+    end,
+
+    ["图鉴空白关闭层已展示"] = function(world)
+      if world.atlas_visibility[item_atlas_nodes.close_blank] ~= true then
+        return nil, "图鉴_点击空白关闭 should be visible"
+      end
+      return true
+    end,
+
+    ["图鉴空白关闭层已隐藏"] = function(world)
+      if world.atlas_visibility[item_atlas_nodes.close_blank] == true then
+        return nil, "图鉴_点击空白关闭 should be hidden"
+      end
       return true
     end,
 
