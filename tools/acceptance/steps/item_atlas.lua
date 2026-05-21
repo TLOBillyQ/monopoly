@@ -1,6 +1,9 @@
 local number_utils = require("src.foundation.number")
 local item_atlas = require("src.ui.coord.item_atlas")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
+local view_command = require("src.ui.input.dispatch.view_command")
+local base_intents = require("src.ui.input.canvas_route.base")
+local base_nodes = require("src.ui.schema.base")
 
 local item_atlas_steps = {}
 
@@ -46,6 +49,7 @@ end
 local SLOTS_PER_PAGE = 8
 
 local function _atlas(world)
+  if not world.atlas_state then return nil end
   return world.atlas_state.ui.item_atlas
 end
 
@@ -299,6 +303,20 @@ function item_atlas_steps.handlers()
         return nil, "expected page " .. tostring(expected) .. ", got " .. tostring(atlas.page_index)
       end
       return true
+    end,
+
+    -- ── 基础屏入口：模拟点击 -> 意图 -> dispatch -> 图鉴开启 ─────────────────
+    ["触发基础屏图鉴按钮"] = function(world)
+      _ensure_atlas_state(world)
+      for _, spec in ipairs(base_intents.build(world.atlas_state)) do
+        if spec.name == base_nodes.gallery_button then
+          local intent = spec.build_intent()
+          intent.actor_role_id = world.ui_role_id or 1
+          view_command.dispatch(world.atlas_state, intent)
+          return true
+        end
+      end
+      return nil, "base canvas 未注册 gallery_button 路由"
     end,
   }
 end

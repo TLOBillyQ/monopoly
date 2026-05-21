@@ -1,6 +1,9 @@
 local number_utils = require("src.foundation.number")
 local skin_panel = require("src.ui.coord.skin_panel")
 local skin_nodes = require("src.ui.schema.skin")
+local view_command = require("src.ui.input.dispatch.view_command")
+local base_intents = require("src.ui.input.canvas_route.base")
+local base_nodes = require("src.ui.schema.base")
 
 local skin_shop_steps = {}
 
@@ -54,6 +57,7 @@ end
 local SLOTS_PER_PAGE = 6
 
 local function _panel(world)
+  if not world.skin_state then return nil end
   return world.skin_state.ui.skin_panel
 end
 
@@ -286,6 +290,20 @@ function skin_shop_steps.handlers()
         end
       end
       return true
+    end,
+
+    -- ── 基础屏入口：模拟点击 -> 意图 -> dispatch -> 商店开启 ─────────────────
+    ["触发基础屏皮肤按钮"] = function(world)
+      _ensure_skin_state(world)
+      for _, spec in ipairs(base_intents.build(world.skin_state)) do
+        if spec.name == base_nodes.skin_button then
+          local intent = spec.build_intent()
+          intent.actor_role_id = world.ui_role_id or 1
+          view_command.dispatch(world.skin_state, intent)
+          return true
+        end
+      end
+      return nil, "base canvas 未注册 skin_button 路由"
     end,
   }
 end
