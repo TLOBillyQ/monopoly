@@ -124,8 +124,8 @@ function item_atlas_steps.handlers()
       return true
     end,
 
-    ["当前选中道具ID为<p6>"] = function(world, example)
-      local expected_id = tostring(example.p6 or "")
+    ["当前选中道具ID为<p5>"] = function(world, example)
+      local expected_id = tostring(example.p5 or "")
       local a = _atlas(world)
       if a.selected_item_id ~= expected_id then
         return nil, "selected item id mismatch: expected " .. expected_id
@@ -217,6 +217,17 @@ function item_atlas_steps.handlers()
       return true
     end,
 
+    ["图鉴总页数为<p6>"] = function(world, example)
+      local expected = number_utils.to_integer(example.p6)
+      if expected == nil then return nil, "invalid total pages: " .. tostring(example.p6) end
+      local catalog_size = #item_atlas.catalog
+      local actual = math.max(1, math.floor((catalog_size + SLOTS_PER_PAGE - 1) / SLOTS_PER_PAGE))
+      if actual ~= expected then
+        return nil, "total pages mismatch: expected " .. tostring(expected) .. ", got " .. tostring(actual)
+      end
+      return true
+    end,
+
     -- ── pagination ────────────────────────────────────────────────────────────
     ["玩家翻到图鉴上一页"] = function(world)
       item_atlas.handle_action(world.atlas_state, "prev", world.ui_role_id or 1)
@@ -236,9 +247,9 @@ function item_atlas_steps.handlers()
       return true
     end,
 
-    ["当前图鉴页码为<p5>"] = function(world, example)
-      local expected = number_utils.to_integer(example.p5)
-      if expected == nil then return nil, "invalid page: " .. tostring(example.p5) end
+    ["当前图鉴页码为<p7>"] = function(world, example)
+      local expected = number_utils.to_integer(example.p7)
+      if expected == nil then return nil, "invalid page: " .. tostring(example.p7) end
       local atlas = _atlas(world)
       if atlas.page_index ~= expected then
         return nil, "expected page " .. tostring(expected) .. ", got " .. tostring(atlas.page_index)
