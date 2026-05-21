@@ -59,25 +59,15 @@ local function _parse_integer_string(value)
     return nil
   end
   local len = #value
-  if len == 0 then
-    return nil
-  end
   local i = 1
   local sign = 1
   if string.sub(value, 1, 1) == "-" then
     sign = -1
     i = 2
-    if i > len then
-      return nil
-    end
   end
   local num = 0
   for idx = i, len do
-    local byte = string.byte(value, idx)
-    local digit = byte - 48
-    if digit < 0 or digit > 9 then
-      return nil
-    end
+    local digit = string.byte(value, idx) - 48
     num = num * 10 + digit
   end
   if _tointeger then
