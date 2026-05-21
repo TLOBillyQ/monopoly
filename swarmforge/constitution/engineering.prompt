@@ -1,6 +1,6 @@
 # Engineering Rules
 
-- On startup, verify that `lua` and `busted` are available. Quality tools are pre-installed under `vendor/` (mutate4lua, crap4lua, dry4lua, arch_view, scrap4lua).
+- On startup, verify that `lua` and `busted` are available. Quality tools are pre-installed under `vendor/` (mutate4lua, crap4lua, dry4lua, arch_view).
 - Work in small, reviewable increments.
 - Prefer the simplest design that supports the current behavior and leaves clear options for the next step.
 - Keep tests close to the behavior being changed.
