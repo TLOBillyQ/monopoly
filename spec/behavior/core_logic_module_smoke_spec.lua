@@ -12,68 +12,40 @@ local function _refire(name)
   return m
 end
 
+-- Each entry is { module_path[, override_label] }. The default label is
+-- "<rel> — fires all function definitions under hook" where <rel> is the
+-- module path with the "src." prefix stripped. Two cases use override labels
+-- to keep wording the coder fix established.
+local _DEFAULT_HOOK_SUBJECT = "fires all function definitions under hook"
+local _CASES = {
+  { "src.state.runtime" },
+  { "src.state.visual_hold" },
+  { "src.rules.items.post_effects" },
+  { "src.turn.waits.timeout" },
+  { "src.rules.choice_handlers.item" },
+  { "src.rules.items.phase" },
+  { "src.turn.phases.land" },
+  { "src.turn.deadlines" },
+  { "src.turn.loop.ports", "turn.loop.ports — fires module-level base_ports construction" },
+  { "src.foundation.log" },
+  { "src.turn.loop", "turn.loop (init) — fires module-level setup under hook" },
+  { "src.app.roster" },
+  { "src.rules.items.availability" },
+  { "src.rules.land.landing_rules" },
+  { "src.rules.land.effect_base" },
+  { "src.rules.board.direction" },
+}
+
+local function _label(case)
+  if case[2] then return case[2] end
+  local rel = case[1]:gsub("^src%.", "")
+  return rel .. " — " .. _DEFAULT_HOOK_SUBJECT
+end
+
 describe("core_logic module-level coverage (re-require sweep)", function()
-  it("state.runtime — fires all function definitions under hook", function()
-    _refire("src.state.runtime")
-  end)
-
-  it("state.visual_hold — fires all function definitions under hook", function()
-    _refire("src.state.visual_hold")
-  end)
-
-  it("rules.items.post_effects — fires all function definitions under hook", function()
-    _refire("src.rules.items.post_effects")
-  end)
-
-  it("turn.waits.timeout — fires all function definitions under hook", function()
-    _refire("src.turn.waits.timeout")
-  end)
-
-  it("rules.choice_handlers.item — fires all function definitions under hook", function()
-    _refire("src.rules.choice_handlers.item")
-  end)
-
-  it("rules.items.phase — fires all function definitions under hook", function()
-    _refire("src.rules.items.phase")
-  end)
-
-  it("turn.phases.land — fires all function definitions under hook", function()
-    _refire("src.turn.phases.land")
-  end)
-
-  it("turn.deadlines — fires all function definitions under hook", function()
-    _refire("src.turn.deadlines")
-  end)
-
-  it("turn.loop.ports — fires module-level base_ports construction", function()
-    _refire("src.turn.loop.ports")
-  end)
-
-  it("foundation.log — fires all function definitions under hook", function()
-    _refire("src.foundation.log")
-  end)
-
-  it("turn.loop (init) — fires module-level setup under hook", function()
-    _refire("src.turn.loop")
-  end)
-
-  it("app.roster — fires all function definitions under hook", function()
-    _refire("src.app.roster")
-  end)
-
-  it("rules.items.availability — fires all function definitions under hook", function()
-    _refire("src.rules.items.availability")
-  end)
-
-  it("rules.land.landing_rules — fires all function definitions under hook", function()
-    _refire("src.rules.land.landing_rules")
-  end)
-
-  it("rules.land.effect_base — fires all function definitions under hook", function()
-    _refire("src.rules.land.effect_base")
-  end)
-
-  it("rules.board.direction — fires all function definitions under hook", function()
-    _refire("src.rules.board.direction")
-  end)
+  for _, case in ipairs(_CASES) do
+    it(_label(case), function()
+      _refire(case[1])
+    end)
+  end
 end)
