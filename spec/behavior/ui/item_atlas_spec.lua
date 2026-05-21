@@ -342,6 +342,36 @@ describe("item_atlas", function()
         "next arrow should be hidden on last page")
     end)
 
+    it("single-page catalog with out-of-range page_index still hides both arrows", function()
+      local catalog = _make_catalog(8)
+      local state, calls = _make_render_state()
+      item_atlas_view.refresh_page(state, catalog, 5)
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
+        "single-page catalog must keep prev arrow hidden regardless of page_index")
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
+        "single-page catalog must keep next arrow hidden regardless of page_index")
+    end)
+
+    it("refresh_page queries exactly PAGE_SIZE card nodes on a full page", function()
+      local catalog = _make_catalog(8)
+      local state, _ = _make_render_state()
+      state.ui_refs = { images = {} }
+      for i = 1, 8 do
+        state.ui_refs.images["item_" .. i] = "tex_" .. i
+      end
+      local query_count = 0
+      local runtime = {
+        query_node = function(name)
+          query_count = query_count + 1
+          return { name = name }
+        end,
+        set_node_texture_keep_size = function(_, _) end,
+      }
+      item_atlas_view.refresh_page(state, catalog, 1, { runtime = runtime })
+      assert(query_count == 8,
+        "refresh_page should query exactly 8 card nodes for a full page, got " .. tostring(query_count))
+    end)
+
     it("sets texture when image refs are provided", function()
       local catalog = { { id = "item_A", name = "A" } }
       local state, _ = _make_render_state()

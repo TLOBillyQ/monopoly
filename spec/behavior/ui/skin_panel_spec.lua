@@ -31,6 +31,7 @@ local function _make_render_state(panel_overrides)
   local calls = {}
   local panel = {
     role_id = 1,
+    page_index = 1,
     owned_by_role = {},
     selected_by_role = {},
   }
@@ -231,6 +232,43 @@ describe("skin_panel", function()
     end)
   end)
 
+  describe("pagination", function()
+    it("next action advances page_index when multiple pages exist", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(12))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "next", 1)
+      assert(s.ui.skin_panel.page_index == 2, "next should advance to page 2")
+    end)
+
+    it("next action clamps to max page on single-page catalog", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(6))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "next", 1)
+      skin_panel.handle_action(s, "next", 1)
+      assert(s.ui.skin_panel.page_index == 1, "single-page catalog should clamp to page 1")
+    end)
+
+    it("prev action goes to previous page", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(12))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "next", 1)
+      assert(s.ui.skin_panel.page_index == 2)
+      skin_panel.handle_action(s, "prev", 1)
+      assert(s.ui.skin_panel.page_index == 1, "prev should return to page 1")
+    end)
+
+    it("prev action does not go below page 1", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(12))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.handle_action(s, "prev", 1)
+      assert(s.ui.skin_panel.page_index == 1, "prev on page 1 should stay at 1")
+    end)
+  end)
+
   describe("handle_action", function()
     it("buy action directly unlocks skin", function()
       skin_panel.configure_catalog_for_tests(_make_catalog(3))
@@ -401,6 +439,65 @@ describe("skin_panel", function()
       local gift_icon = _find_call(calls, "set_visible", skin_nodes.price_icons[3])
       assert(purchase_icon == true, "purchase skin should show price icon")
       assert(gift_icon == false, "gift skin should hide price icon")
+    end)
+
+    it("shows all 6 card images for a full first page", function()
+      local catalog = _make_catalog(6)
+      local state, calls = _make_render_state()
+      skin_panel_view.refresh_slots(state, catalog)
+      for slot = 1, 6 do
+        local vis = _find_call(calls, "set_visible", skin_nodes.card_images[slot])
+        assert(vis == true, "slot " .. slot .. " card image should be visible")
+      end
+    end)
+
+    it("hides trailing empty card slots when catalog smaller than page size", function()
+      local catalog = _make_catalog(3)
+      local state, calls = _make_render_state()
+      skin_panel_view.refresh_slots(state, catalog)
+      for slot = 1, 3 do
+        local vis = _find_call(calls, "set_visible", skin_nodes.card_images[slot])
+        assert(vis == true, "slot " .. slot .. " card image should be visible")
+      end
+      for slot = 4, 6 do
+        local vis = _find_call(calls, "set_visible", skin_nodes.card_images[slot])
+        assert(vis == false, "slot " .. slot .. " card image should be hidden (no skin)")
+      end
+    end)
+
+    it("page 2 renders offset card slots from full catalog", function()
+      local catalog = _make_catalog(12)
+      local state, _ = _make_render_state({ page_index = 2 })
+      state.ui_refs = { images = {} }
+      for i = 1, 12 do
+        state.ui_refs.images["skin_" .. i] = "tex_" .. i
+      end
+      local textures = {}
+      local runtime = {
+        query_node = function(name) return { name = name } end,
+        set_node_texture_keep_size = function(node, key)
+          textures[node.name] = key
+        end,
+      }
+      skin_panel_view.refresh_slots(state, catalog, { runtime = runtime })
+      assert(textures[skin_nodes.card_images[1]] == "tex_7",
+        "page 2 slot 1 should render skin_7 texture, got " .. tostring(textures[skin_nodes.card_images[1]]))
+      assert(textures[skin_nodes.card_images[6]] == "tex_12",
+        "page 2 slot 6 should render skin_12 texture, got " .. tostring(textures[skin_nodes.card_images[6]]))
+    end)
+
+    it("page 2 hides trailing empty slots when last page partially fills", function()
+      local catalog = _make_catalog(8)
+      local state, calls = _make_render_state({ page_index = 2 })
+      skin_panel_view.refresh_slots(state, catalog)
+      for slot = 1, 2 do
+        local vis = _find_call(calls, "set_visible", skin_nodes.card_images[slot])
+        assert(vis == true, "page 2 slot " .. slot .. " card image should be visible")
+      end
+      for slot = 3, 6 do
+        local vis = _find_call(calls, "set_visible", skin_nodes.card_images[slot])
+        assert(vis == false, "page 2 slot " .. slot .. " card image should be hidden")
+      end
     end)
   end)
 
