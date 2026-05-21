@@ -214,7 +214,8 @@ function item_atlas_steps.handlers()
     end,
 
     ["图鉴静态文本未被改写"] = function(world)
-      local guarded = { "图鉴_图鉴文本", "图鉴_图鉴底框_1", "图鉴_图鉴底框_2" }
+      -- 节点名以 Data/UIManagerNodes.lua 为准: 底框_1 带下划线，底框2 不带
+      local guarded = { "图鉴_图鉴文本", "图鉴_图鉴底框_1", "图鉴_图鉴底框2" }
       for _, node in ipairs(guarded) do
         if world.atlas_labels[node] ~= nil then
           return nil, node .. " 文字被改写为: " .. tostring(world.atlas_labels[node])
