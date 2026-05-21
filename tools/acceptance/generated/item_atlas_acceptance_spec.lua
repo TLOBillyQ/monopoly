@@ -1680,6 +1680,103 @@ local ir = {
         },
       },
     },
+    {
+      ["examples"] = {
+        {
+          ["p1"] = "1",
+          ["p2"] = "16",
+          ["p4"] = "1",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p1"] = 240,
+          ["p2"] = 240,
+          ["p4"] = 240,
+        },
+        ["source_line"] = 230,
+        ["source_path"] = "features/v102/item_atlas.feature",
+      },
+      ["name"] = "打开/翻页/选中/关闭都不改写图鉴静态文本",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "道具目录共有<道具数>种道具",
+            ["source_line"] = 231,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "道具目录共有<p2>种道具",
+        },
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 232,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开道具图鉴",
+            ["source_line"] = 233,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开道具图鉴",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到图鉴下一页",
+            ["source_line"] = 234,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到图鉴下一页",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家选中第<槽位>格道具",
+            ["source_line"] = 235,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "玩家选中第<p4>格道具",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家点击空白区域关闭放大卡牌",
+            ["source_line"] = 236,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家点击空白区域关闭放大卡牌",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "图鉴静态文本未被改写",
+            ["source_line"] = 237,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "图鉴静态文本未被改写",
+        },
+      },
+    },
   },
 }
 

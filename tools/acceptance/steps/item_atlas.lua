@@ -21,16 +21,20 @@ end
 local function _ensure_atlas_state(world)
   if not world.atlas_state then
     local visibility = {}
+    local labels = {}
     world.atlas_state = {
       ui = {
         set_visible = function(_, name, visible)
           visibility[name] = visible == true
         end,
-        set_label = function(_, _, _) end,
+        set_label = function(_, name, text)
+          labels[name] = text
+        end,
       },
       ui_refs = { images = {} },
     }
     world.atlas_visibility = visibility
+    world.atlas_labels = labels
     if not world.atlas_catalog_injected then
       item_atlas.reset_for_tests()
     end
@@ -205,6 +209,16 @@ function item_atlas_steps.handlers()
     ["图鉴空白关闭层已隐藏"] = function(world)
       if world.atlas_visibility[item_atlas_nodes.close_blank] == true then
         return nil, "图鉴_点击空白关闭 should be hidden"
+      end
+      return true
+    end,
+
+    ["图鉴静态文本未被改写"] = function(world)
+      local guarded = { "图鉴_图鉴文本", "图鉴_图鉴底框_1", "图鉴_图鉴底框_2" }
+      for _, node in ipairs(guarded) do
+        if world.atlas_labels[node] ~= nil then
+          return nil, node .. " 文字被改写为: " .. tostring(world.atlas_labels[node])
+        end
       end
       return true
     end,
