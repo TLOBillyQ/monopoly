@@ -53,6 +53,15 @@ local function _refresh_card(ui, runtime, refs, node_name, item)
   end
 end
 
+local function _refresh_page_arrows(ui, page_index, page_count)
+  if not ui.set_visible then
+    return
+  end
+  local has_multiple_pages = page_count > 1
+  ui:set_visible(nodes.page_prev, has_multiple_pages and page_index > 1)
+  ui:set_visible(nodes.page_next, has_multiple_pages and page_index < page_count)
+end
+
 function item_atlas_view.refresh_page(state, catalog, page_index, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(deps)
@@ -66,11 +75,7 @@ function item_atlas_view.refresh_page(state, catalog, page_index, deps)
     end
   end
 
-  if ui.set_visible then
-    local page_count = _page_count(catalog)
-    ui:set_visible(nodes.page_prev, page_count > 1 and page_index > 1)
-    ui:set_visible(nodes.page_next, page_count > 1 and page_index < page_count)
-  end
+  _refresh_page_arrows(ui, page_index, _page_count(catalog))
 end
 
 function item_atlas_view.show_enlarged(state, item_id, deps)
