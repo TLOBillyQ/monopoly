@@ -66,8 +66,10 @@ function item_atlas_view.refresh_page(state, catalog, page_index, deps)
     end
   end
 
-  if ui.set_label then
-    ui:set_label(nodes.title_label, tostring(page_index) .. "/" .. tostring(_page_count(catalog)))
+  if ui.set_visible then
+    local page_count = _page_count(catalog)
+    ui:set_visible(nodes.page_prev, page_count > 1 and page_index > 1)
+    ui:set_visible(nodes.page_next, page_count > 1 and page_index < page_count)
   end
 end
 

@@ -4,7 +4,6 @@ local nodes = {
   close_blank = "图鉴_点击空白关闭",
   page_prev = "图鉴_上一页",
   page_next = "图鉴_下一页",
-  title_label = "图鉴_图鉴文本",
   close_hint_label = "图鉴_点击关闭提示",
   enlarged_card = "图鉴_放大卡牌",
   card_images = {},

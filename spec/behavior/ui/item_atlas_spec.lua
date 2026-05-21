@@ -292,12 +292,54 @@ describe("item_atlas", function()
       end
     end)
 
-    it("updates page label with current/total", function()
+    it("never writes the static title label on refresh_page", function()
       local catalog = _make_catalog(16)
       local state, calls = _make_render_state()
       item_atlas_view.refresh_page(state, catalog, 2)
-      local label = _find_call(calls, "set_label", item_atlas_nodes.title_label)
-      assert(label == "2/2", "page label should show 2/2, got: " .. tostring(label))
+      for _, c in ipairs(calls) do
+        assert(not (c[1] == "set_label" and c[2] == "图鉴_图鉴文本"),
+          "refresh_page must not write to 图鉴_图鉴文本")
+      end
+    end)
+
+    it("single-page catalog hides both prev and next arrows", function()
+      local catalog = _make_catalog(8)
+      local state, calls = _make_render_state()
+      item_atlas_view.refresh_page(state, catalog, 1)
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
+        "prev arrow should be hidden on single-page catalog")
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
+        "next arrow should be hidden on single-page catalog")
+    end)
+
+    it("multi-page first page shows only next arrow", function()
+      local catalog = _make_catalog(16)
+      local state, calls = _make_render_state()
+      item_atlas_view.refresh_page(state, catalog, 1)
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
+        "prev arrow should be hidden on first page")
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == true,
+        "next arrow should be visible on first page of multi-page catalog")
+    end)
+
+    it("multi-page middle page shows both arrows", function()
+      local catalog = _make_catalog(24)
+      local state, calls = _make_render_state()
+      item_atlas_view.refresh_page(state, catalog, 2)
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == true,
+        "prev arrow should be visible on middle page")
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == true,
+        "next arrow should be visible on middle page")
+    end)
+
+    it("multi-page last page shows only prev arrow", function()
+      local catalog = _make_catalog(16)
+      local state, calls = _make_render_state()
+      item_atlas_view.refresh_page(state, catalog, 2)
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == true,
+        "prev arrow should be visible on last page")
+      assert(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
+        "next arrow should be hidden on last page")
     end)
 
     it("sets texture when image refs are provided", function()
