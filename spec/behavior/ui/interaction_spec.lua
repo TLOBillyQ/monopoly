@@ -422,6 +422,71 @@ describe("presentation_ui.interaction", function()
     _assert_eq(#captured, 0, "next click without event/client/cached actor should not dispatch")
   end)
 
+  it("_test_ui_event_router_opens_skin_panel_without_event_actor", function()
+    local base_nodes = require("src.ui.schema.base")
+    local skin_panel = require("src.ui.coord.skin_panel")
+    local ui_events = require("src.ui.coord.ui_events")
+
+    local function new_node()
+      local node = {}
+      function node:listen(_, cb)
+        self._listener_cb = cb
+        return {
+          destroy = function()
+            self._listener_cb = nil
+          end,
+        }
+      end
+      return node
+    end
+
+    local tips = {}
+    local events = {}
+    local role = _build_role_with_events(1, events)
+    local node_map = {
+      [base_nodes.skin_button] = new_node(),
+    }
+
+    _with_patches({
+      { key = "all_roles", value = nil },
+      { key = "GlobalAPI", value = { show_tips = function() end } },
+      { target = logger, key = "warn", value = function() end },
+      { target = ui_events, key = "roles", value = { role } },
+      { target = require("src.host"), key = "enqueue_tip", value = function(payload)
+        tips[#tips + 1] = payload and payload.text or ""
+      end },
+      { key = "UIManager", value = {
+        EVENT = { CLICK = "click" },
+        query_nodes_by_name = function(name)
+          local node = node_map[name] or new_node()
+          node_map[name] = node
+          return { node }
+        end,
+        client_role = nil,
+      } },
+    }, function()
+      skin_panel.reset_for_tests()
+      local state = {
+        ui = ui_view.build_ui_state(),
+      }
+      _bind_ui_runtime(state)
+      canvas_event_router.bind(state, function()
+        return {}
+      end)
+      node_map[base_nodes.skin_button]._listener_cb({})
+
+      _assert_eq(state.ui.skin_panel and state.ui.skin_panel.open, true,
+        "skin button should open panel even when click payload lacks actor role")
+      _assert_eq(_has_event(events, "显示皮肤商店"), true,
+        "skin button should show the skin shop canvas when actor role is unavailable")
+    end)
+
+    for _, text in ipairs(tips) do
+      _assert_eq(text ~= "当前操作缺少玩家上下文，已忽略", true,
+        "skin panel open should not be rejected for missing actor")
+    end
+  end)
+
   it("_test_ui_event_router_turn_bound_actor_uses_cached_actor_not_current_player", function()
     local base_nodes = require("src.ui.schema.base")
 

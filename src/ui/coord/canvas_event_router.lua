@@ -22,6 +22,10 @@ local _ACTOR_BOUND_TYPES = {
   market_confirm = true, market_page_prev = true, market_page_next = true, market_tab_select = true,
 }
 
+local _OPTIONAL_EVENT_ACTOR_TYPES = {
+  open_skin_panel = true,
+}
+
 local function _requires_event_actor(intent)
   if type(intent) ~= "table" then return false end
   if _ACTOR_BOUND_TYPES[intent.type] then return true end
@@ -72,6 +76,9 @@ function router.bind(state, resolve_game)
       actor_role_id = local_actor_resolver.resolve_turn_bound(state, data)
     end
     if actor_role_id == nil then
+      if _OPTIONAL_EVENT_ACTOR_TYPES[intent.type] then
+        return true
+      end
       host_runtime_ports.enqueue_tip({
         text = "当前操作缺少玩家上下文，已忽略",
         duration = 2.0,
