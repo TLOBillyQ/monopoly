@@ -305,6 +305,22 @@ function item_atlas_steps.handlers()
       return true
     end,
 
+    -- ── render-layer card visibility (类比 skin shop 卡片渲染数) ─────────────
+    ["图鉴卡片渲染数为<p8>个"] = function(world, example)
+      local expected = number_utils.to_integer(example.p8)
+      if expected == nil then return nil, "invalid render count: " .. tostring(example.p8) end
+      local count = 0
+      for slot = 1, SLOTS_PER_PAGE do
+        if world.atlas_visibility[item_atlas_nodes.card_images[slot]] == true then
+          count = count + 1
+        end
+      end
+      if count ~= expected then
+        return nil, "expected " .. tostring(expected) .. " visible cards, got " .. tostring(count)
+      end
+      return true
+    end,
+
     -- ── 基础屏入口：模拟点击 -> 意图 -> dispatch -> 图鉴开启 ─────────────────
     ["触发基础屏图鉴按钮"] = function(world)
       _ensure_atlas_state(world)
