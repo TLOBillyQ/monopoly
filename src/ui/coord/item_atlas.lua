@@ -22,13 +22,9 @@ local function _ensure_state(state)
   return ui.item_atlas
 end
 
-local function _page_count()
-  return math.max(1, math.floor((#_catalog + PAGE_SIZE - 1) / PAGE_SIZE))
-end
-
 local function _clamp_page(page_index)
   local page = number_utils.to_integer(page_index) or 1
-  return number_utils.clamp(page, 1, _page_count())
+  return number_utils.clamp(page, 1, number_utils.page_count(#_catalog, PAGE_SIZE))
 end
 
 local function _item_at(atlas, slot_index)

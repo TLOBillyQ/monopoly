@@ -119,6 +119,10 @@ function number_utils.clamp(value, min, max)
   return value
 end
 
+function number_utils.page_count(item_count, page_size)
+  return math.max(1, math.floor((item_count + page_size - 1) / page_size))
+end
+
 function number_utils.format_integer_part(value)
   local as_int = _truncate_number(value)
   if as_int ~= nil then

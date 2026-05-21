@@ -1,4 +1,5 @@
 local nodes = require("src.ui.schema.item_atlas")
+local number_utils = require("src.foundation.number")
 local runtime_ui = require("src.ui.render.runtime_ui")
 
 local item_atlas_view = {}
@@ -30,10 +31,6 @@ local function _image_ref_key(refs, item_id)
   end
   local key = tostring(item_id)
   return refs[key]
-end
-
-local function _page_count(catalog)
-  return math.max(1, math.floor((#catalog + PAGE_SIZE - 1) / PAGE_SIZE))
 end
 
 local function _refresh_card(ui, runtime, refs, node_name, item)
@@ -75,7 +72,7 @@ function item_atlas_view.refresh_page(state, catalog, page_index, deps)
     end
   end
 
-  _refresh_page_arrows(ui, page_index, _page_count(catalog))
+  _refresh_page_arrows(ui, page_index, number_utils.page_count(#catalog, PAGE_SIZE))
 end
 
 function item_atlas_view.show_enlarged(state, item_id, deps)
