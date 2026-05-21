@@ -37,6 +37,29 @@ function Test-IsMacOSHost {
     }
 }
 
+function Test-IsLinuxHost {
+    if (Test-IsWindowsHost) {
+        return $false
+    }
+
+    $runtime_info_type = [System.Type]::GetType("System.Runtime.InteropServices.RuntimeInformation")
+    $os_platform_type = [System.Type]::GetType("System.Runtime.InteropServices.OSPlatform")
+    if ($runtime_info_type -ne $null -and $os_platform_type -ne $null) {
+        $linux_field = $os_platform_type.GetField("Linux")
+        $is_os_platform = $runtime_info_type.GetMethod("IsOSPlatform")
+        if ($linux_field -ne $null -and $is_os_platform -ne $null) {
+            return $is_os_platform.Invoke($null, @($linux_field.GetValue($null))) -eq $true
+        }
+    }
+
+    try {
+        $uname = & uname 2>$null
+        return ([string]$uname).Trim() -eq "Linux"
+    } catch {
+        return $false
+    }
+}
+
 if (Test-IsWindowsHost) {
     try {
         chcp 65001 | Out-Null
@@ -109,6 +132,9 @@ function Resolve-PlatformName {
     if (Test-IsMacOSHost) {
         return "mac"
     }
+    if (Test-IsLinuxHost) {
+        return "linux"
+    }
     Exit-WithError "Platform is not supported."
 }
 
@@ -125,6 +151,9 @@ function Resolve-DefaultTargetPath {
             return Resolve-NormalizedPath (Join-Path (Join-Path (Join-Path $home_dir "Desktop") "dev") (Join-LuaSourceDirName))
         }
         "mac" {
+            return Resolve-NormalizedPath (Join-Path (Join-Path (Join-Path $home_dir "Documents") "eggy") (Join-LuaSourceDirName))
+        }
+        "linux" {
             return Resolve-NormalizedPath (Join-Path (Join-Path (Join-Path $home_dir "Documents") "eggy") (Join-LuaSourceDirName))
         }
         default {

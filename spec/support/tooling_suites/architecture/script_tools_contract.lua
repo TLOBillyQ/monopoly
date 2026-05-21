@@ -649,7 +649,7 @@ local function _expected_default_deploy_target(fake_home)
   if common.is_macos() then
     return common.join_path(fake_home, "Documents/eggy/LuaSource_大富翁")
   end
-  return nil
+  return common.join_path(fake_home, "Documents/eggy/LuaSource_大富翁")
 end
 
 local function _test_deploy_script_matches_simplified_cli()
