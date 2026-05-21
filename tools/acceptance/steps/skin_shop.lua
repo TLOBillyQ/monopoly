@@ -267,9 +267,9 @@ function skin_shop_steps.handlers()
     end,
 
     -- ── render-layer card visibility (参考 图鉴 _refresh_card) ─────────────────
-    ["皮肤卡片渲染数为<p6>个"] = function(world, example)
-      local expected = number_utils.to_integer(example.p6)
-      if expected == nil then return nil, "invalid render count: " .. tostring(example.p6) end
+    ["皮肤卡片渲染数为<p7>个"] = function(world, example)
+      local expected = number_utils.to_integer(example.p7)
+      if expected == nil then return nil, "invalid render count: " .. tostring(example.p7) end
       local count = 0
       for slot = 1, SLOTS_PER_PAGE do
         if world.skin_visibility[skin_nodes.card_images[slot]] == true then
@@ -278,6 +278,16 @@ function skin_shop_steps.handlers()
       end
       if count ~= expected then
         return nil, "expected " .. tostring(expected) .. " visible cards, got " .. tostring(count)
+      end
+      return true
+    end,
+
+    ["皮肤总页数为<p6>"] = function(world, example)
+      local expected = number_utils.to_integer(example.p6)
+      if expected == nil then return nil, "invalid total pages: " .. tostring(example.p6) end
+      local actual = number_utils.page_count(#skin_panel.catalog, SLOTS_PER_PAGE)
+      if actual ~= expected then
+        return nil, "total pages mismatch: expected " .. tostring(expected) .. ", got " .. tostring(actual)
       end
       return true
     end,
