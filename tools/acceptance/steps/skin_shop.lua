@@ -1,22 +1,52 @@
 local number_utils = require("src.foundation.number")
 local skin_panel = require("src.ui.coord.skin_panel")
+local skin_nodes = require("src.ui.schema.skin")
 
 local skin_shop_steps = {}
 
 local function _make_catalog(n)
   local t = {}
   for i = 1, n do
-    t[i] = { product_id = "skin_" .. i, name = "皮肤" .. i }
+    t[i] = {
+      product_id = "skin_" .. i,
+      name = "皮肤" .. i,
+      unlock = "purchase",
+      currency = "金豆",
+      price = 100,
+    }
   end
   return t
 end
 
+local function _seed_image_refs(state)
+  for _, skin in ipairs(skin_panel.catalog or {}) do
+    state.ui_refs.images[tostring(skin.product_id)] = "tex_" .. tostring(skin.product_id)
+  end
+end
+
 local function _ensure_skin_state(world)
   if not world.skin_state then
-    world.skin_state = { ui = {} }
+    local visibility = {}
+    local labels = {}
+    world.skin_state = {
+      ui = {
+        set_visible = function(_, name, visible)
+          visibility[name] = visible == true
+        end,
+        set_label = function(_, name, text)
+          labels[name] = text
+        end,
+        set_button = function(_, _, _) end,
+        set_touch_enabled = function(_, _, _) end,
+      },
+      ui_refs = { images = {} },
+    }
+    world.skin_visibility = visibility
+    world.skin_labels = labels
     if not world.skin_catalog_injected then
       skin_panel.reset_for_tests()
     end
+    _seed_image_refs(world.skin_state)
   end
   return world.skin_state
 end
@@ -228,6 +258,32 @@ function skin_shop_steps.handlers()
       local panel = _panel(world)
       if panel.page_index ~= expected then
         return nil, "expected page " .. tostring(expected) .. ", got " .. tostring(panel.page_index)
+      end
+      return true
+    end,
+
+    -- ── render-layer card visibility (参考 图鉴 _refresh_card) ─────────────────
+    ["皮肤卡片渲染数为<p6>个"] = function(world, example)
+      local expected = number_utils.to_integer(example.p6)
+      if expected == nil then return nil, "invalid render count: " .. tostring(example.p6) end
+      local count = 0
+      for slot = 1, SLOTS_PER_PAGE do
+        if world.skin_visibility[skin_nodes.card_images[slot]] == true then
+          count = count + 1
+        end
+      end
+      if count ~= expected then
+        return nil, "expected " .. tostring(expected) .. " visible cards, got " .. tostring(count)
+      end
+      return true
+    end,
+
+    ["皮肤静态文本未被改写"] = function(world)
+      local guarded = { "皮肤_皮肤商店文本", "皮肤_皮肤商店底框", "皮肤_皮肤商店底框2" }
+      for _, node in ipairs(guarded) do
+        if world.skin_labels[node] ~= nil then
+          return nil, node .. " 文字被改写为: " .. tostring(world.skin_labels[node])
+        end
       end
       return true
     end,
