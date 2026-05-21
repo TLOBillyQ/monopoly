@@ -121,6 +121,50 @@ describe("ui_bootstrap", function()
     assert(tostring(missing):find("UI 节点缺失", 1, true) ~= nil, "ui bootstrap should report missing required nodes")
   end)
 
+  it("scheduled callback switches canvas to base to hide non-base canvases", function()
+    local ui_bootstrap = require("src.app.ui_bootstrap")
+    local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
+    local base_nodes = require("src.ui.schema.base")
+
+    local ui_manager_nodes = { validate = function() return {} end }
+    local switch_calls = {}
+
+    with_patches({
+      { target = _G, key = "RegisterTriggerEvent", value = function(_, cb) cb() end },
+      { target = _G, key = "EVENT", value = { GAME_INIT = "GAME_INIT" } },
+      { target = package.loaded, key = "vendor.third_party.UIManager.Utils", value = true },
+      { target = package.loaded, key = "Data.UIManagerNodes", value = ui_manager_nodes },
+      { target = _G, key = "UIManager", value = { Builder = { new = function() return {} end } } },
+      { target = require("src.ui.coord.ui_events"), key = "send_to_all", value = function() end },
+      { target = canvas_coordinator, key = "switch", value = function(ui, target)
+        switch_calls[#switch_calls + 1] = { ui = ui, target = target }
+      end },
+      { target = require("src.ui.coord.canvas_event_router"), key = "bind", value = function() end },
+      { target = require("src.ui.coord.ui_runtime"), key = "init_ui_assets", value = function() end },
+      { target = require("src.ui.coord.ui_runtime"), key = "capture_player_colors", value = function() end },
+      { target = require("src.ui.render.board.scene"), key = "init", value = function() end },
+      { target = require("src.host.context"), key = "current", value = function() return nil end },
+      { target = require("src.foundation.ports.runtime_ports"), key = "resolve_roles", value = function() return {} end },
+      { target = require("src.foundation.ports.runtime_ports"), key = "schedule", value = function(_, fn) fn() end },
+      { target = require("src.state.ui_role_globals"), key = "install", value = function() return {} end },
+    }, function()
+      local state = { ui = {} }
+      ui_bootstrap.install(state, { { board = { map = {} } } }, {
+        start_runtime = function() return { board = { map = {} } } end,
+      })
+    end)
+
+    local switched_to_base = false
+    for _, call in ipairs(switch_calls) do
+      if call.target == base_nodes.canvas then
+        switched_to_base = true
+        break
+      end
+    end
+    assert(switched_to_base,
+      "bootstrap should switch canvas to base to hide non-base canvases at startup")
+  end)
+
   it("spawns_startup_synthetic_actors", function()
     local ui_bootstrap = require("src.app.ui_bootstrap")
     local capture = {
