@@ -22,6 +22,7 @@ local ir = {
       ["p3"] = 36,
       ["p4"] = 49,
       ["p5"] = 141,
+      ["p6"] = 200,
     },
     ["field_names"] = {
       ["p1"] = "角色ID",
@@ -29,6 +30,7 @@ local ir = {
       ["p3"] = "槽位数",
       ["p4"] = "槽位",
       ["p5"] = "页码",
+      ["p6"] = "选中道具",
     },
     ["language"] = "zh-CN",
     ["source_path"] = "features/v102/item_atlas.feature",
@@ -1299,15 +1301,19 @@ local ir = {
       ["examples"] = {
         {
           ["p1"] = "1",
-          ["p2"] = "16",
+          ["p2"] = "9",
+          ["p3"] = "1",
           ["p4"] = "1",
+          ["p6"] = "item_1",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 205,
-          ["p2"] = 205,
-          ["p4"] = 205,
+          ["p1"] = 207,
+          ["p2"] = 207,
+          ["p3"] = 207,
+          ["p4"] = 207,
+          ["p6"] = 207,
         },
         ["source_line"] = 195,
         ["source_path"] = "features/v102/item_atlas.feature",
@@ -1361,10 +1367,22 @@ local ir = {
           ["text"] = "玩家选中第<p4>格道具",
         },
         {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前选中道具ID为<选中道具>",
+            ["source_line"] = 200,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p6",
+          },
+          ["text"] = "当前选中道具ID为<p6>",
+        },
+        {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到图鉴下一页",
-            ["source_line"] = 200,
+            ["source_line"] = 201,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -1374,7 +1392,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "无道具被选中",
-            ["source_line"] = 201,
+            ["source_line"] = 202,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
@@ -1384,11 +1402,23 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "放大卡牌已隐藏",
-            ["source_line"] = 202,
+            ["source_line"] = 203,
             ["source_path"] = "features/v102/item_atlas.feature",
           },
           ["parameters"] = {},
           ["text"] = "放大卡牌已隐藏",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个道具槽位",
+            ["source_line"] = 204,
+            ["source_path"] = "features/v102/item_atlas.feature",
+          },
+          ["parameters"] = {
+            "p3",
+          },
+          ["text"] = "当前页面展示<p3>个道具槽位",
         },
       },
     },

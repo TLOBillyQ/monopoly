@@ -124,6 +124,16 @@ function item_atlas_steps.handlers()
       return true
     end,
 
+    ["当前选中道具ID为<p6>"] = function(world, example)
+      local expected_id = tostring(example.p6 or "")
+      local a = _atlas(world)
+      if a.selected_item_id ~= expected_id then
+        return nil, "selected item id mismatch: expected " .. expected_id
+          .. ", got " .. tostring(a.selected_item_id)
+      end
+      return true
+    end,
+
     -- ── enlarged card ─────────────────────────────────────────────────────────
     ["放大卡牌已展示"] = function(world)
       local a = _atlas(world)

@@ -342,6 +342,30 @@ describe("item_atlas", function()
       assert(#calls == 0, "no calls when image ref missing")
     end)
 
+    it("show_enlarged falls back to module-level runtime_ui when deps omitted", function()
+      local state, calls = _make_render_state()
+      state.ui_refs = { images = { item_X = "texture_X" } }
+      local queried = {}
+      local prev_query = UIManager.query_nodes_by_name
+      UIManager.query_nodes_by_name = function(name)
+        queried[name] = (queried[name] or 0) + 1
+        return {
+          {
+            name = name,
+            set_texture_keep_size = function(_, _) end,
+            set_texture_native_size = function(_, _) end,
+          },
+        }
+      end
+      local ok, err = pcall(item_atlas_view.show_enlarged, state, "item_X")
+      UIManager.query_nodes_by_name = prev_query
+      assert(ok, "show_enlarged should succeed without deps: " .. tostring(err))
+      assert(queried[item_atlas_nodes.enlarged_card] == 1,
+        "fallback runtime should query enlarged_card via UIManager exactly once")
+      local card_vis = _find_call(calls, "set_visible", item_atlas_nodes.enlarged_card)
+      assert(card_vis == true, "enlarged card should be visible via fallback path")
+    end)
+
     it("page 2 shows correct items by offset", function()
       local catalog = _make_catalog(12)
       local state, calls = _make_render_state()
