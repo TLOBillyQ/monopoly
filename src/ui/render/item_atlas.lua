@@ -5,8 +5,23 @@ local item_atlas_view = {}
 
 local PAGE_SIZE = 8
 
+local _enlarged_overlay_nodes = {
+  nodes.enlarged_card,
+  nodes.close_hint_label,
+  nodes.close_blank,
+}
+
 local function _resolve_runtime(deps)
   return (deps and deps.runtime) or runtime_ui
+end
+
+local function _set_enlarged_overlay_visible(ui, visible)
+  if not ui.set_visible then
+    return
+  end
+  for _, node_name in ipairs(_enlarged_overlay_nodes) do
+    ui:set_visible(node_name, visible)
+  end
 end
 
 local function _image_ref_key(refs, item_id)
@@ -69,20 +84,12 @@ function item_atlas_view.show_enlarged(state, item_id, deps)
   if node then
     runtime.set_node_texture_keep_size(node, image_key)
   end
-  if ui.set_visible then
-    ui:set_visible(nodes.enlarged_card, true)
-    ui:set_visible(nodes.close_hint_label, true)
-    ui:set_visible(nodes.close_blank, true)
-  end
+  _set_enlarged_overlay_visible(ui, true)
 end
 
 function item_atlas_view.hide_enlarged(state)
   local ui = assert(state.ui, "missing ui")
-  if ui.set_visible then
-    ui:set_visible(nodes.enlarged_card, false)
-    ui:set_visible(nodes.close_hint_label, false)
-    ui:set_visible(nodes.close_blank, false)
-  end
+  _set_enlarged_overlay_visible(ui, false)
 end
 
 return item_atlas_view
