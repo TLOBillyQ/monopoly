@@ -1,6 +1,7 @@
 local board_scene = require("src.ui.render.board.scene")
 local ui_view = require("src.ui.coord.ui_runtime")
 local canvas_event_router = require("src.ui.coord.canvas_event_router")
+local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
 local base_nodes = require("src.ui.schema.base")
 local permanent_nodes = require("src.ui.schema.permanent")
 local base_contract = require("src.ui.schema.base_contract")
@@ -126,11 +127,7 @@ function M.install(state, current_game_ref, opts)
 
     runtime_ports.schedule(timing.loading_to_game_transition_seconds, function()
       ui_events.send_to_all(ui_events.hide["加载屏"], {})
-      ui_events.send_to_all(ui_events.show["基础屏"], {})
-      local permanent_event = ui_events.show[permanent_nodes.canvas]
-      if permanent_event then
-        ui_events.send_to_all(permanent_event, {})
-      end
+      canvas_coordinator.switch(state.ui, base_nodes.canvas)
     end)
   end)
 end
