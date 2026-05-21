@@ -223,6 +223,35 @@ function item_atlas_steps.handlers()
       return true
     end,
 
+    -- ── prev/next arrow visibility (参考黑市 controls) ────────────────────────
+    ["图鉴上一页箭头已展示"] = function(world)
+      if world.atlas_visibility[item_atlas_nodes.page_prev] ~= true then
+        return nil, "图鉴_上一页 should be visible"
+      end
+      return true
+    end,
+
+    ["图鉴上一页箭头已隐藏"] = function(world)
+      if world.atlas_visibility[item_atlas_nodes.page_prev] == true then
+        return nil, "图鉴_上一页 should be hidden"
+      end
+      return true
+    end,
+
+    ["图鉴下一页箭头已展示"] = function(world)
+      if world.atlas_visibility[item_atlas_nodes.page_next] ~= true then
+        return nil, "图鉴_下一页 should be visible"
+      end
+      return true
+    end,
+
+    ["图鉴下一页箭头已隐藏"] = function(world)
+      if world.atlas_visibility[item_atlas_nodes.page_next] == true then
+        return nil, "图鉴_下一页 should be hidden"
+      end
+      return true
+    end,
+
     ["无道具被选中"] = function(world)
       local a = _atlas(world)
       if a and a.selected_item_id ~= nil then
