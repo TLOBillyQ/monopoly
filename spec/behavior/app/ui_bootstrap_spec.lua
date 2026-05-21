@@ -3,117 +3,50 @@
 local support = require("spec.support.shared_support")
 local with_patches = support.with_patches
 
+local function _shared_install_patches()
+  return {
+    { target = _G, key = "RegisterTriggerEvent", value = function(_, cb) cb() end },
+    { target = _G, key = "EVENT", value = { GAME_INIT = "GAME_INIT" } },
+    { target = package.loaded, key = "vendor.third_party.UIManager.Utils", value = true },
+    { target = _G, key = "UIManager", value = { Builder = { new = function() return {} end } } },
+    { target = require("src.ui.coord.ui_events"), key = "send_to_all", value = function() end },
+    { target = require("src.ui.coord.canvas_event_router"), key = "bind", value = function() end },
+    { target = require("src.ui.coord.ui_runtime"), key = "init_ui_assets", value = function() end },
+    { target = require("src.ui.coord.ui_runtime"), key = "capture_player_colors", value = function() end },
+    { target = require("src.ui.render.board.scene"), key = "init", value = function() end },
+    { target = require("src.host.context"), key = "current", value = function() return nil end },
+    { target = require("src.foundation.ports.runtime_ports"), key = "resolve_roles", value = function() return {} end },
+    { target = require("src.foundation.ports.runtime_ports"), key = "schedule", value = function(_, fn) fn() end },
+    { target = require("src.state.ui_role_globals"), key = "install", value = function() return {} end },
+  }
+end
+
+local function _with_install_patches(extras, fn)
+  local patches = _shared_install_patches()
+  for _, extra in ipairs(extras or {}) do
+    patches[#patches + 1] = extra
+  end
+  return with_patches(patches, fn)
+end
+
+local function _install_with_runtime(state, opts)
+  local ui_bootstrap = require("src.app.ui_bootstrap")
+  return ui_bootstrap.install(state, { { board = { map = {} } } }, opts or {
+    start_runtime = function() return { board = { map = {} } } end,
+  })
+end
+
 describe("ui_bootstrap", function()
   it("required_click_nodes_appends_extras", function()
-    local ui_bootstrap = require("src.app.ui_bootstrap")
     local ui_manager_nodes = {
       { "基础屏_行动按钮" },
     }
     local missing = nil
 
-    with_patches({
-      {
-        target = _G,
-        key = "RegisterTriggerEvent",
-        value = function(_, cb)
-          cb()
-        end,
-      },
-      {
-        target = _G,
-        key = "EVENT",
-        value = {
-          GAME_INIT = "GAME_INIT",
-        },
-      },
-      {
-        target = package.loaded,
-        key = "vendor.third_party.UIManager.Utils",
-        value = true,
-      },
-      {
-        target = package.loaded,
-        key = "Data.UIManagerNodes",
-        value = ui_manager_nodes,
-      },
-      {
-        target = _G,
-        key = "UIManager",
-        value = {
-          Builder = {
-            new = function()
-              return {}
-            end,
-          },
-        },
-      },
-      {
-        target = require("src.ui.coord.ui_events"),
-        key = "send_to_all",
-        value = function() end,
-      },
-      {
-        target = require("src.ui.coord.canvas_event_router"),
-        key = "bind",
-        value = function() end,
-      },
-      {
-        target = require("src.ui.coord.ui_runtime"),
-        key = "init_ui_assets",
-        value = function() end,
-      },
-      {
-        target = require("src.ui.coord.ui_runtime"),
-        key = "capture_player_colors",
-        value = function() end,
-      },
-      {
-        target = require("src.ui.render.board.scene"),
-        key = "init",
-        value = function() end,
-      },
-      {
-        target = require("src.host.context"),
-        key = "current",
-        value = function()
-          return nil
-        end,
-      },
-      {
-        target = require("src.foundation.ports.runtime_ports"),
-        key = "resolve_roles",
-        value = function()
-          return {}
-        end,
-      },
-      {
-        target = require("src.foundation.ports.runtime_ports"),
-        key = "schedule",
-        value = function(_, fn)
-          fn()
-        end,
-      },
-      {
-      target = require("src.state.ui_role_globals"),
-        key = "install",
-        value = function()
-          return {}
-        end,
-      },
+    _with_install_patches({
+      { target = package.loaded, key = "Data.UIManagerNodes", value = ui_manager_nodes },
     }, function()
-      local ok, err = pcall(function()
-        ui_bootstrap.install({}, {
-          {
-            board = { map = {} },
-          },
-        }, {
-          start_runtime = function()
-            return {
-              board = { map = {} },
-            }
-          end,
-        })
-      end)
+      local ok, err = pcall(_install_with_runtime, {})
       missing = err
       assert(ok == false, "ui bootstrap should validate missing UI nodes")
     end)
@@ -122,36 +55,19 @@ describe("ui_bootstrap", function()
   end)
 
   it("scheduled callback switches canvas to base to hide non-base canvases", function()
-    local ui_bootstrap = require("src.app.ui_bootstrap")
     local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
     local base_nodes = require("src.ui.schema.base")
 
     local ui_manager_nodes = { validate = function() return {} end }
     local switch_calls = {}
 
-    with_patches({
-      { target = _G, key = "RegisterTriggerEvent", value = function(_, cb) cb() end },
-      { target = _G, key = "EVENT", value = { GAME_INIT = "GAME_INIT" } },
-      { target = package.loaded, key = "vendor.third_party.UIManager.Utils", value = true },
+    _with_install_patches({
       { target = package.loaded, key = "Data.UIManagerNodes", value = ui_manager_nodes },
-      { target = _G, key = "UIManager", value = { Builder = { new = function() return {} end } } },
-      { target = require("src.ui.coord.ui_events"), key = "send_to_all", value = function() end },
       { target = canvas_coordinator, key = "switch", value = function(ui, target)
         switch_calls[#switch_calls + 1] = { ui = ui, target = target }
       end },
-      { target = require("src.ui.coord.canvas_event_router"), key = "bind", value = function() end },
-      { target = require("src.ui.coord.ui_runtime"), key = "init_ui_assets", value = function() end },
-      { target = require("src.ui.coord.ui_runtime"), key = "capture_player_colors", value = function() end },
-      { target = require("src.ui.render.board.scene"), key = "init", value = function() end },
-      { target = require("src.host.context"), key = "current", value = function() return nil end },
-      { target = require("src.foundation.ports.runtime_ports"), key = "resolve_roles", value = function() return {} end },
-      { target = require("src.foundation.ports.runtime_ports"), key = "schedule", value = function(_, fn) fn() end },
-      { target = require("src.state.ui_role_globals"), key = "install", value = function() return {} end },
     }, function()
-      local state = { ui = {} }
-      ui_bootstrap.install(state, { { board = { map = {} } } }, {
-        start_runtime = function() return { board = { map = {} } } end,
-      })
+      _install_with_runtime({ ui = {} })
     end)
 
     local switched_to_base = false
