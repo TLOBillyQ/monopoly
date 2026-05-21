@@ -188,12 +188,37 @@ local function _unequip(state, role_id)
   return panel
 end
 
+local function _page_count()
+  return math.max(1, math.floor((#_catalog + PAGE_SIZE - 1) / PAGE_SIZE))
+end
+
+local function _clamp_page(page_index)
+  local page = number_utils.to_integer(page_index) or 1
+  return number_utils.clamp(page, 1, _page_count())
+end
+
+local function _page_next(state)
+  local panel = _ensure_state(state)
+  panel.page_index = _clamp_page(panel.page_index + 1)
+  skin_panel_view.refresh_slots(state, _catalog)
+  return panel
+end
+
+local function _page_prev(state)
+  local panel = _ensure_state(state)
+  panel.page_index = _clamp_page(panel.page_index - 1)
+  skin_panel_view.refresh_slots(state, _catalog)
+  return panel
+end
+
 local _ACTION_HANDLERS = {
   close   = function(state, role_id, _)  return skin_panel.close(state, role_id) end,
   buy     = function(state, role_id, a)  return skin_panel.unlock(state, role_id, "buy", _action_slot_index(a)) end,
   gift    = function(state, role_id, a)  return skin_panel.unlock(state, role_id, "gift", _action_slot_index(a)) end,
   equip   = function(state, role_id, a)  return skin_panel.equip(state, role_id, _action_slot_index(a)) end,
   unequip = function(state, role_id, _)  return _unequip(state, role_id) end,
+  next    = function(state, _, _)        return _page_next(state) end,
+  prev    = function(state, _, _)        return _page_prev(state) end,
 }
 
 function skin_panel.handle_action(state, action, role_id)

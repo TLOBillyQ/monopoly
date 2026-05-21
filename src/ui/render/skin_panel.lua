@@ -76,22 +76,31 @@ local function _refresh_outline(ui, slot, is_equipped)
   end
 end
 
+local PAGE_SIZE = 6
+
 function skin_panel_view.refresh_slots(state, catalog, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(deps)
   local image_refs = state.ui_refs and state.ui_refs.images or {}
   local panel = ui.skin_panel
+  local page_index = (panel and panel.page_index) or 1
+  local offset = (page_index - 1) * PAGE_SIZE
 
-  for slot = 1, 6 do
-    local skin = catalog[slot]
+  for slot = 1, PAGE_SIZE do
+    local skin = catalog[offset + slot]
     local card_name = nodes.card_images[slot]
-    if card_name and skin then
-      local image_key = _skin_image_ref(image_refs, skin.product_id)
-      if image_key then
-        local node = runtime.query_node(card_name)
-        if node then
-          runtime.set_node_texture_keep_size(node, image_key)
+    if card_name then
+      if skin then
+        local image_key = _skin_image_ref(image_refs, skin.product_id)
+        if image_key then
+          local node = runtime.query_node(card_name)
+          if node then
+            runtime.set_node_texture_keep_size(node, image_key)
+          end
         end
+      end
+      if ui.set_visible then
+        ui:set_visible(card_name, skin ~= nil)
       end
     end
 
