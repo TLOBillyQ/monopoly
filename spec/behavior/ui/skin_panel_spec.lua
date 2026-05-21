@@ -629,6 +629,93 @@ describe("skin_panel", function()
     end)
   end)
 
+  describe("equip branches", function()
+    -- Each branch in skin_panel.equip lands here once for explicit
+    -- branch-coverage attribution; some paths are also exercised in
+    -- other describes (purchase flow, equip callback outcomes).
+
+    it("branch 1: out-of-range slot returns panel without changing selection", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(3))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      local before_selected = s.ui.skin_panel.selected_by_role["1"]
+      local panel = skin_panel.equip(s, 1, 5)
+      assert(panel == s.ui.skin_panel, "equip should still return the panel state")
+      assert(s.ui.skin_panel.selected_by_role["1"] == before_selected,
+        "out-of-range equip must not touch selection (was " .. tostring(before_selected) .. ")")
+      assert(s.ui.skin_panel.last_equip_ok_by_role == nil,
+        "out-of-range equip must short-circuit before last_equip_ok bookkeeping")
+    end)
+
+    it("branch 1b: slot beyond PAGE_SIZE returns panel without changing selection", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(3))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      local panel = skin_panel.equip(s, 1, 99)
+      assert(panel == s.ui.skin_panel, "equip on slot 99 should still return the panel state")
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil,
+        "slot-99 equip must not touch selection")
+    end)
+
+    it("branch 2: not-owned purchase skin without callback leaves selection nil", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      -- skin slot 1 (5001) is unlock=purchase, no purchase_callback configured
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.equip(s, 1, 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil,
+        "without purchase callback, not-owned purchase skin equip leaves selection nil")
+      assert(s.ui.skin_panel.owned_by_role["1"] == nil or
+        s.ui.skin_panel.owned_by_role["1"][5001] ~= true,
+        "without purchase callback, skin should not become owned")
+    end)
+
+    it("branch 3: not-owned non-purchase (gift) skin notifies and returns", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      -- skin slot 3 (5003) is unlock=gift
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.equip(s, 1, 3)
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil,
+        "equip on not-owned gift skin must not select it")
+      assert(s.ui.skin_panel.owned_by_role["1"] == nil or
+        s.ui.skin_panel.owned_by_role["1"][5003] ~= true,
+        "equip on not-owned gift skin must not mark it owned")
+    end)
+
+    it("branch 4: owned skin success sets selection and last_equip_ok", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      skin_panel.configure_equip(function() return true end)
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "buy", 2)
+      skin_panel.equip(s, 1, 2)
+      assert(s.ui.skin_panel.selected_by_role["1"] == 5002,
+        "owned equip success must set selected_by_role to product_id")
+      assert(s.ui.skin_panel.last_equip_ok_by_role["1"] == true,
+        "owned equip success must record callback outcome in last_equip_ok_by_role")
+    end)
+
+    it("equip with role_id=nil falls back to panel.role_id", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(3))
+      local s = _make_state()
+      skin_panel.open(s, 7)  -- panel.role_id = 7
+      skin_panel.unlock(s, 7, "buy", 1)
+      skin_panel.equip(s, nil, 1)  -- role_id=nil → should use panel.role_id (7)
+      assert(s.ui.skin_panel.selected_by_role["7"] == "skin_1",
+        "equip with role_id=nil should use panel.role_id (7) for the key")
+    end)
+
+    it("unlock with nil skin (slot out of range) is no-op", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(3))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "buy", 99)
+      assert(s.ui.skin_panel.owned_by_role["1"] == nil,
+        "unlock on out-of-range slot must not initialize owned_by_role bucket")
+    end)
+  end)
+
   describe("equip refreshes button state", function()
     it("coord equip calls refresh_slots to update buttons", function()
       local catalog = _make_rich_catalog()
