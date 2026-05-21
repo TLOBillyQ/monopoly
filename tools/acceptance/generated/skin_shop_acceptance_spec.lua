@@ -22,7 +22,8 @@ local ir = {
       ["p3"] = 51,
       ["p4"] = 64,
       ["p5"] = 133,
-      ["p6"] = 189,
+      ["p6"] = 161,
+      ["p7"] = 224,
     },
     ["field_names"] = {
       ["p1"] = "角色ID",
@@ -30,7 +31,8 @@ local ir = {
       ["p3"] = "槽位数",
       ["p4"] = "槽位",
       ["p5"] = "页码",
-      ["p6"] = "卡片渲染数",
+      ["p6"] = "总页数",
+      ["p7"] = "卡片渲染数",
     },
     ["language"] = "zh-CN",
     ["source_path"] = "features/v102/skin_shop.feature",
@@ -667,20 +669,22 @@ local ir = {
       ["examples"] = {
         {
           ["p1"] = "1",
-          ["p2"] = "5",
-          ["p4"] = "1",
+          ["p2"] = "3",
+          ["p3"] = "3",
+          ["p4"] = "5",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 124,
-          ["p2"] = 124,
-          ["p4"] = 124,
+          ["p1"] = 122,
+          ["p2"] = 122,
+          ["p3"] = 122,
+          ["p4"] = 122,
         },
         ["source_line"] = 113,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
-      ["name"] = "脱下已装备皮肤",
+      ["name"] = "装备越界槽位不生效",
       ["steps"] = {
         {
           ["keyword"] = "Given",
@@ -717,22 +721,10 @@ local ir = {
           ["text"] = "玩家打开皮肤商店",
         },
         {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 117,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "p4",
-          },
-          ["text"] = "槽位<p4>的皮肤已归玩家持有",
-        },
-        {
-          ["keyword"] = "And",
+          ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 118,
+            ["source_line"] = 117,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -741,59 +733,55 @@ local ir = {
           ["text"] = "玩家穿上槽位<p4>的皮肤",
         },
         {
-          ["keyword"] = "When",
-          ["metadata"] = {
-            ["original_text"] = "玩家脱下当前皮肤",
-            ["source_line"] = 119,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {},
-          ["text"] = "玩家脱下当前皮肤",
-        },
-        {
           ["keyword"] = "Then",
           ["metadata"] = {
-            ["original_text"] = "无皮肤装备中",
-            ["source_line"] = 120,
+            ["original_text"] = "皮肤未成功装备",
+            ["source_line"] = 118,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
-          ["text"] = "无皮肤装备中",
+          ["text"] = "皮肤未成功装备",
         },
         {
           ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "皮肤商店屏幕已开启",
-            ["source_line"] = 121,
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 119,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
-          ["parameters"] = {},
-          ["text"] = "皮肤商店屏幕已开启",
+          ["parameters"] = {
+            "p3",
+          },
+          ["text"] = "当前页面展示<p3>个皮肤槽位",
         },
       },
     },
     {
       ["examples"] = {
         {
+          ["p1"] = "1",
           ["p2"] = "12",
+          ["p4"] = "1",
           ["p5"] = "2",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
+          ["p1"] = 136,
           ["p2"] = 136,
+          ["p4"] = 136,
           ["p5"] = 136,
         },
-        ["source_line"] = 129,
+        ["source_line"] = 125,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
-      ["name"] = "翻到下一页",
+      ["name"] = "翻页后装备第二页的皮肤",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 130,
+            ["source_line"] = 126,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -804,25 +792,73 @@ local ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 127,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 131,
+            ["source_line"] = 128,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
           ["text"] = "玩家打开皮肤商店",
         },
         {
-          ["keyword"] = "When",
+          ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 132,
+            ["source_line"] = 129,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
           ["text"] = "玩家翻到皮肤下一页",
         },
         {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
+            ["source_line"] = 130,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "槽位<p4>的皮肤已归玩家持有",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
+            ["source_line"] = 131,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "玩家穿上槽位<p4>的皮肤",
+        },
+        {
           ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "槽位<槽位>的皮肤已装备成功",
+            ["source_line"] = 132,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "槽位<p4>的皮肤已装备成功",
+        },
+        {
+          ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
             ["source_line"] = 133,
@@ -838,19 +874,21 @@ local ir = {
     {
       ["examples"] = {
         {
-          ["p2"] = "12",
-          ["p5"] = "1",
+          ["p1"] = "1",
+          ["p2"] = "5",
+          ["p4"] = "1",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p2"] = 147,
-          ["p5"] = 147,
+          ["p1"] = 150,
+          ["p2"] = 150,
+          ["p4"] = 150,
         },
         ["source_line"] = 139,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
-      ["name"] = "翻到上一页",
+      ["name"] = "脱下已装备皮肤",
       ["steps"] = {
         {
           ["keyword"] = "Given",
@@ -867,8 +905,20 @@ local ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "玩家打开皮肤商店",
+            ["original_text"] = "玩家角色ID为<角色ID>",
             ["source_line"] = 141,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p1",
+          },
+          ["text"] = "玩家角色ID为<p1>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 142,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -877,66 +927,85 @@ local ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 142,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {},
-          ["text"] = "玩家翻到皮肤下一页",
-        },
-        {
-          ["keyword"] = "When",
-          ["metadata"] = {
-            ["original_text"] = "玩家翻到皮肤上一页",
+            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
             ["source_line"] = 143,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
-          ["parameters"] = {},
-          ["text"] = "玩家翻到皮肤上一页",
+          ["parameters"] = {
+            "p4",
+          },
+          ["text"] = "槽位<p4>的皮肤已归玩家持有",
         },
         {
-          ["keyword"] = "Then",
+          ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "当前皮肤页码为<页码>",
+            ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
             ["source_line"] = 144,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
-            "p5",
+            "p4",
           },
-          ["text"] = "当前皮肤页码为<p5>",
+          ["text"] = "玩家穿上槽位<p4>的皮肤",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家脱下当前皮肤",
+            ["source_line"] = 145,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家脱下当前皮肤",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "无皮肤装备中",
+            ["source_line"] = 146,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "无皮肤装备中",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤商店屏幕已开启",
+            ["source_line"] = 147,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "皮肤商店屏幕已开启",
         },
       },
     },
     {
       ["examples"] = {
         {
-          ["p2"] = "8",
-          ["p3"] = "2",
-          ["p5"] = "2",
-        },
-        {
           ["p2"] = "12",
           ["p3"] = "6",
           ["p5"] = "2",
+          ["p6"] = "2",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p2"] = 158,
-          ["p3"] = 158,
-          ["p5"] = 158,
+          ["p2"] = 164,
+          ["p3"] = 164,
+          ["p5"] = 164,
+          ["p6"] = 164,
         },
-        ["source_line"] = 150,
+        ["source_line"] = 155,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
-      ["name"] = "最后一页展示剩余皮肤",
+      ["name"] = "翻到下一页",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 151,
+            ["source_line"] = 156,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -948,7 +1017,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 152,
+            ["source_line"] = 157,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -958,7 +1027,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 153,
+            ["source_line"] = 158,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -968,7 +1037,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 154,
+            ["source_line"] = 159,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -980,7 +1049,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 155,
+            ["source_line"] = 160,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -988,30 +1057,46 @@ local ir = {
           },
           ["text"] = "当前页面展示<p3>个皮肤槽位",
         },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 161,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p6",
+          },
+          ["text"] = "皮肤总页数为<p6>",
+        },
       },
     },
     {
       ["examples"] = {
         {
-          ["p2"] = "6",
+          ["p2"] = "12",
+          ["p3"] = "6",
           ["p5"] = "1",
+          ["p6"] = "2",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p2"] = 170,
-          ["p5"] = 170,
+          ["p2"] = 177,
+          ["p3"] = 177,
+          ["p5"] = 177,
+          ["p6"] = 177,
         },
-        ["source_line"] = 162,
+        ["source_line"] = 167,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
-      ["name"] = "下一页翻页不超出最大页",
+      ["name"] = "翻到上一页",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 163,
+            ["source_line"] = 168,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1023,7 +1108,114 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 164,
+            ["source_line"] = 169,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到皮肤下一页",
+            ["source_line"] = 170,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到皮肤下一页",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到皮肤上一页",
+            ["source_line"] = 171,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到皮肤上一页",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "当前皮肤页码为<页码>",
+            ["source_line"] = 172,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p5",
+          },
+          ["text"] = "当前皮肤页码为<p5>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 173,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p3",
+          },
+          ["text"] = "当前页面展示<p3>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 174,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p6",
+          },
+          ["text"] = "皮肤总页数为<p6>",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p2"] = "8",
+          ["p3"] = "2",
+          ["p5"] = "2",
+          ["p6"] = "2",
+        },
+        {
+          ["p2"] = "12",
+          ["p3"] = "6",
+          ["p5"] = "2",
+          ["p6"] = "2",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p2"] = 189,
+          ["p3"] = 189,
+          ["p5"] = 189,
+          ["p6"] = 189,
+        },
+        ["source_line"] = 180,
+        ["source_path"] = "features/v102/skin_shop.feature",
+      },
+      ["name"] = "最后一页展示剩余皮肤",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
+            ["source_line"] = 181,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "皮肤目录共有<p2>款皮肤",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 182,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1033,17 +1225,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 165,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {},
-          ["text"] = "玩家翻到皮肤下一页",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 166,
+            ["source_line"] = 183,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1053,7 +1235,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 167,
+            ["source_line"] = 184,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1061,28 +1243,58 @@ local ir = {
           },
           ["text"] = "当前皮肤页码为<p5>",
         },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 185,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p3",
+          },
+          ["text"] = "当前页面展示<p3>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 186,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p6",
+          },
+          ["text"] = "皮肤总页数为<p6>",
+        },
       },
     },
     {
       ["examples"] = {
         {
-          ["p2"] = "12",
+          ["p2"] = "6",
+          ["p3"] = "6",
+          ["p5"] = "1",
+          ["p6"] = "1",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p2"] = 180,
+          ["p2"] = 203,
+          ["p3"] = 203,
+          ["p5"] = 203,
+          ["p6"] = 203,
         },
-        ["source_line"] = 173,
+        ["source_line"] = 193,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
-      ["name"] = "上一页翻页不低于第1页",
+      ["name"] = "下一页翻页不超出最大页",
       ["steps"] = {
         {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 174,
+            ["source_line"] = 194,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1094,7 +1306,106 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 175,
+            ["source_line"] = 195,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到皮肤下一页",
+            ["source_line"] = 196,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到皮肤下一页",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家翻到皮肤下一页",
+            ["source_line"] = 197,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家翻到皮肤下一页",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "当前皮肤页码为<页码>",
+            ["source_line"] = 198,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p5",
+          },
+          ["text"] = "当前皮肤页码为<p5>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 199,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p3",
+          },
+          ["text"] = "当前页面展示<p3>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 200,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p6",
+          },
+          ["text"] = "皮肤总页数为<p6>",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["p2"] = "7",
+          ["p3"] = "6",
+          ["p6"] = "2",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["p2"] = 215,
+          ["p3"] = 215,
+          ["p6"] = 215,
+        },
+        ["source_line"] = 206,
+        ["source_path"] = "features/v102/skin_shop.feature",
+      },
+      ["name"] = "上一页翻页不低于第1页",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
+            ["source_line"] = 207,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p2",
+          },
+          ["text"] = "皮肤目录共有<p2>款皮肤",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 208,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1104,7 +1415,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤上一页",
-            ["source_line"] = 176,
+            ["source_line"] = 209,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1114,11 +1425,35 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为1",
-            ["source_line"] = 177,
+            ["source_line"] = 210,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
           ["text"] = "当前皮肤页码为1",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 211,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p3",
+          },
+          ["text"] = "当前页面展示<p3>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 212,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "p6",
+          },
+          ["text"] = "皮肤总页数为<p6>",
         },
       },
     },
@@ -1128,23 +1463,23 @@ local ir = {
           ["p1"] = "1",
           ["p2"] = "6",
           ["p3"] = "6",
-          ["p6"] = "6",
+          ["p7"] = "6",
         },
         {
           ["p1"] = "1",
           ["p2"] = "3",
           ["p3"] = "3",
-          ["p6"] = "3",
+          ["p7"] = "3",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 193,
-          ["p2"] = 193,
-          ["p3"] = 193,
-          ["p6"] = 193,
+          ["p1"] = 228,
+          ["p2"] = 228,
+          ["p3"] = 228,
+          ["p7"] = 228,
         },
-        ["source_line"] = 185,
+        ["source_line"] = 220,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "打开皮肤商店应渲染当前页全部卡片",
@@ -1153,7 +1488,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 186,
+            ["source_line"] = 221,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1165,7 +1500,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 187,
+            ["source_line"] = 222,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1177,7 +1512,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 188,
+            ["source_line"] = 223,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1187,19 +1522,19 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡片渲染数为<卡片渲染数>个",
-            ["source_line"] = 189,
+            ["source_line"] = 224,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
-            "p6",
+            "p7",
           },
-          ["text"] = "皮肤卡片渲染数为<p6>个",
+          ["text"] = "皮肤卡片渲染数为<p7>个",
         },
         {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 190,
+            ["source_line"] = 225,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1216,25 +1551,25 @@ local ir = {
           ["p2"] = "12",
           ["p3"] = "6",
           ["p5"] = "2",
-          ["p6"] = "6",
+          ["p7"] = "6",
         },
         {
           ["p1"] = "1",
           ["p2"] = "8",
           ["p3"] = "2",
           ["p5"] = "2",
-          ["p6"] = "2",
+          ["p7"] = "2",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 207,
-          ["p2"] = 207,
-          ["p3"] = 207,
-          ["p5"] = 207,
-          ["p6"] = 207,
+          ["p1"] = 242,
+          ["p2"] = 242,
+          ["p3"] = 242,
+          ["p5"] = 242,
+          ["p7"] = 242,
         },
-        ["source_line"] = 197,
+        ["source_line"] = 232,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "翻页后渲染新页全部卡片",
@@ -1243,7 +1578,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 198,
+            ["source_line"] = 233,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1255,7 +1590,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 199,
+            ["source_line"] = 234,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1267,7 +1602,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 200,
+            ["source_line"] = 235,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1277,7 +1612,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 201,
+            ["source_line"] = 236,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1287,19 +1622,19 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡片渲染数为<卡片渲染数>个",
-            ["source_line"] = 202,
+            ["source_line"] = 237,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
-            "p6",
+            "p7",
           },
-          ["text"] = "皮肤卡片渲染数为<p6>个",
+          ["text"] = "皮肤卡片渲染数为<p7>个",
         },
         {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 203,
+            ["source_line"] = 238,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1311,7 +1646,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 204,
+            ["source_line"] = 239,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1331,11 +1666,11 @@ local ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["p1"] = 224,
-          ["p2"] = 224,
-          ["p4"] = 224,
+          ["p1"] = 259,
+          ["p2"] = 259,
+          ["p4"] = 259,
         },
-        ["source_line"] = 213,
+        ["source_line"] = 248,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "打开/翻页/购买/装备/关闭都不改写皮肤静态文本",
@@ -1344,7 +1679,7 @@ local ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 214,
+            ["source_line"] = 249,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1356,7 +1691,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 215,
+            ["source_line"] = 250,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1368,7 +1703,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 216,
+            ["source_line"] = 251,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1378,7 +1713,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 217,
+            ["source_line"] = 252,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1388,7 +1723,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家购买槽位<槽位>的皮肤",
-            ["source_line"] = 218,
+            ["source_line"] = 253,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1400,7 +1735,7 @@ local ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 219,
+            ["source_line"] = 254,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1412,7 +1747,7 @@ local ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家关闭皮肤商店",
-            ["source_line"] = 220,
+            ["source_line"] = 255,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1422,7 +1757,7 @@ local ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤静态文本未被改写",
-            ["source_line"] = 221,
+            ["source_line"] = 256,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
