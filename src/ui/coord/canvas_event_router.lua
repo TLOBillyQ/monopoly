@@ -24,6 +24,7 @@ local _ACTOR_BOUND_TYPES = {
 
 local _OPTIONAL_EVENT_ACTOR_TYPES = {
   open_skin_panel = true,
+  open_gallery_panel = true,
 }
 
 local function _requires_event_actor(intent)

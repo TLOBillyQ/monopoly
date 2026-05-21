@@ -487,6 +487,71 @@ describe("presentation_ui.interaction", function()
     end
   end)
 
+  it("_test_ui_event_router_opens_gallery_panel_without_event_actor", function()
+    local base_nodes = require("src.ui.schema.base")
+    local item_atlas = require("src.ui.coord.item_atlas")
+    local ui_events = require("src.ui.coord.ui_events")
+
+    local function new_node()
+      local node = {}
+      function node:listen(_, cb)
+        self._listener_cb = cb
+        return {
+          destroy = function()
+            self._listener_cb = nil
+          end,
+        }
+      end
+      return node
+    end
+
+    local tips = {}
+    local events = {}
+    local role = _build_role_with_events(1, events)
+    local node_map = {
+      [base_nodes.gallery_button] = new_node(),
+    }
+
+    _with_patches({
+      { key = "all_roles", value = nil },
+      { key = "GlobalAPI", value = { show_tips = function() end } },
+      { target = logger, key = "warn", value = function() end },
+      { target = ui_events, key = "roles", value = { role } },
+      { target = require("src.host"), key = "enqueue_tip", value = function(payload)
+        tips[#tips + 1] = payload and payload.text or ""
+      end },
+      { key = "UIManager", value = {
+        EVENT = { CLICK = "click" },
+        query_nodes_by_name = function(name)
+          local node = node_map[name] or new_node()
+          node_map[name] = node
+          return { node }
+        end,
+        client_role = nil,
+      } },
+    }, function()
+      item_atlas.reset_for_tests()
+      local state = {
+        ui = ui_view.build_ui_state(),
+      }
+      _bind_ui_runtime(state)
+      canvas_event_router.bind(state, function()
+        return {}
+      end)
+      node_map[base_nodes.gallery_button]._listener_cb({})
+
+      _assert_eq(state.ui.item_atlas and state.ui.item_atlas.open, true,
+        "gallery button should open atlas even when click payload lacks actor role")
+      _assert_eq(_has_event(events, "显示道具图鉴"), true,
+        "gallery button should show the atlas canvas when actor role is unavailable")
+    end)
+
+    for _, text in ipairs(tips) do
+      _assert_eq(text ~= "当前操作缺少玩家上下文，已忽略", true,
+        "gallery panel open should not be rejected for missing actor")
+    end
+  end)
+
   it("_test_ui_event_router_turn_bound_actor_uses_cached_actor_not_current_player", function()
     local base_nodes = require("src.ui.schema.base")
 
