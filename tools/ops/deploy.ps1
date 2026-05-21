@@ -341,6 +341,19 @@ try {
     $target_source = Resolve-DefaultTargetPath $resolved_platform
     $target_path = Resolve-NormalizedPath $target_source
 
+    if ($resolved_platform -eq "linux") {
+        Write-Info "======================================"
+        Write-Info "Linux platform: cleaning deploy target only"
+        Write-Info "======================================"
+        Write-Info ("Project root: " + $project_root)
+        Write-Info ("Target path: " + $target_path)
+        Write-Info ""
+        Reset-Directory $target_path
+        Write-Info "Deploy target cleaned. No files copied."
+        Write-Info "======================================"
+        exit 0
+    }
+
     [System.IO.Directory]::CreateDirectory($target_path) | Out-Null
 
     Write-Info "======================================"
