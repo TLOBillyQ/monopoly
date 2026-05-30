@@ -1,0 +1,11 @@
+if arg then rawset(arg, 0, "tools/shared/lib/common/spec/script_tools_contract_spec.lua") end
+local suite = require("spec.support.tooling_suites.architecture.script_tools_contract")
+
+describe("script_tools_contract common", function()
+  for _, case in ipairs(suite.cases_for_owner(suite.tests, "common")) do
+    it(case.name, case.run)
+  end
+  for _, case in ipairs(suite.cases_for_owner(suite.tooling_tests, "common")) do
+    it(case.name, case.run)
+  end
+end)

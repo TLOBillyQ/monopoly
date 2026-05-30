@@ -1,0 +1,29 @@
+return {
+  canvas = "位置选择屏",
+  title = "位置_副标题",
+  body = "位置_放置文本",
+  confirm = "位置_确认按钮",
+  cancel = "位置_取消按钮",
+  slot_buttons = {
+    "位置-槽位1按钮", "位置-槽位2按钮", "位置-槽位3按钮", "位置-槽位4按钮",
+    "位置-槽位5按钮", "位置-槽位6按钮", "位置-槽位7按钮",
+  },
+  slot_labels = {
+    "位置-槽位1文本", "位置-槽位2文本", "位置-槽位3文本", "位置-槽位4文本",
+    "位置-槽位5文本", "位置-槽位6文本", "位置-槽位7文本",
+  },
+  slot_projections = {
+    "位置-槽位1投影", "位置-槽位2投影", "位置-槽位3投影", "位置-槽位4投影",
+    "位置-槽位5投影", "位置-槽位6投影", "位置-槽位7投影",
+  },
+}
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=c48b9bcc26228a84
+scope.0.id=chunk:src/ui/schema/target_choice.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=20
+scope.0.semanticHash=bdeabe4086254407
+]]

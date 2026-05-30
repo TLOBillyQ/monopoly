@@ -1,0 +1,55 @@
+local M = {}
+
+M.dice_roll = "dice_roll"
+M.land_purchase = "land_purchase"
+M.land_upgrade = "land_upgrade"
+M.rent_paid = "rent_paid"
+M.rent_multiplier_breakdown = "rent_multiplier_breakdown"
+M.rent_immune = "rent_immune"
+M.tax_immune = "tax_immune"
+M.bankruptcy = "bankruptcy"
+M.bankruptcy_liquidation = "bankruptcy_liquidation"
+M.medical_fee = "medical_fee"
+M.hospital_stay = "hospital_stay"
+M.mountain_stay = "mountain_stay"
+M.detained = "detained"
+M.turn_start = "turn_start"
+M.turn_end = "turn_end"
+M.move_followup = "move_followup"
+M.choice_skipped = "choice_skipped"
+M.choice_picked = "choice_picked"
+M.transit = "transit"
+M.victory = "victory"
+M.chance_card = "chance_card"
+M.item_acquired = "item_acquired"
+M.item_get_reveal = "item_get_reveal"
+M.item_used = "item_used"
+M.item_immune = "item_immune"
+M.steal = "steal"
+M.demolish = "demolish"
+M.remote_dice = "remote_dice"
+M.mine_placed = "mine_placed"
+M.roadblock_placed = "roadblock_placed"
+M.obstacle_cleared = "obstacle_cleared"
+M.tax_card = "tax_card"
+M.deity_evicted = "deity_evicted"
+M.deity_transferred = "deity_transferred"
+M.deity_attached = "deity_attached"
+M.equality_card = "equality_card"
+M.move_completed = "move_completed"
+M.passed_start = "passed_start"
+M.roadblock_triggered = "roadblock_triggered"
+M.market_entered = "market_entered"
+M.tax_paid = "tax_paid"
+
+return M
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=f25476c602037d6f
+scope.0.id=chunk:src/config/gameplay/event_kinds.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=46
+scope.0.semanticHash=dbb3fe61f295efb1
+]]

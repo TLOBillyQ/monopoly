@@ -1,0 +1,35 @@
+local pricing = require("src.rules.land.pricing")
+local tile_mod = require("src.rules.board.tile")
+
+local asset_total = {}
+
+-- Remaining total assets for a player: cash plus the invested value of every
+-- land tile they own (purchase price plus per-level upgrade costs).
+function asset_total.player_total(game, player)
+  local total = game:player_balance(player, "金币")
+  assert(total ~= nil, "missing player cash")
+  for tile_id in pairs(player.properties or {}) do
+    local tile = game.board:get_tile_by_id(tile_id)
+    assert(tile ~= nil and tile.type == "land", "invalid property tile: " .. tostring(tile_id))
+    local st = tile_mod.get_state(game, tile)
+    total = total + pricing.total_invested(tile, st.level)
+  end
+  return total
+end
+
+return asset_total
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=9ff83cea4eeaf465
+scope.0.id=chunk:src/rules/land/asset_total.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=21
+scope.0.semanticHash=f113a2ad9454dca6
+scope.0.lastMutatedAt=2026-05-29T14:57:36Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=10
+scope.0.lastMutationKilled=10
+]]

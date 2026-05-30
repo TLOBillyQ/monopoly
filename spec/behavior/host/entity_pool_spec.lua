@@ -1,0 +1,33 @@
+local entity_pool = require("src.host.entity_pool")
+
+describe("entity_pool (no GameAPI)", function()
+  after_each(function()
+    entity_pool.reset()
+  end)
+
+  describe("acquire", function()
+    it("returns nil when unit_key is nil", function()
+      local h = entity_pool.acquire(nil, {})
+      assert(h == nil, "expected nil with nil unit_key")
+    end)
+
+    it("returns nil when pos is nil", function()
+      local h = entity_pool.acquire("k", nil)
+      assert(h == nil, "expected nil with nil pos")
+    end)
+
+    it("returns nil when GameAPI absent and no idle handles", function()
+      local h = entity_pool.acquire("miss_key", { x = 0 })
+      assert(h == nil, "expected nil without GameAPI")
+    end)
+  end)
+
+  describe("release", function()
+    it("parks a handle-like table in idle without error", function()
+      entity_pool.release("park_key", {})
+      local s = entity_pool.stats()
+      assert(s["park_key"] ~= nil, "expected bucket entry after release")
+    end)
+  end)
+
+end)

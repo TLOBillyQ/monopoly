@@ -1,0 +1,372 @@
+local direction_constants = require("src.rules.board.directions")
+local opposite = direction_constants.opposite
+
+local direction = {}
+
+local dir_priority = {
+  up = 1,
+  right = 2,
+  down = 3,
+  left = 4,
+}
+
+local function _sorted_dirs_comparator(a, b)
+  local pa = dir_priority[a] or 100
+  local pb = dir_priority[b] or 100
+  if pa ~= pb then
+    return pa < pb
+  end
+  return tostring(a) < tostring(b)
+end
+
+local function _sorted_dirs(neigh)
+  local keys = {}
+  for dir in pairs(neigh) do
+    table.insert(keys, dir)
+  end
+  table.sort(keys, _sorted_dirs_comparator)
+  return keys
+end
+
+local function _pick_any_dir(neigh, avoid_dir)
+  assert(neigh ~= nil, "missing neighbors")
+  for _, dir in ipairs(_sorted_dirs(neigh)) do
+    if dir ~= avoid_dir then
+      return dir, neigh[dir]
+    end
+  end
+  return nil, nil
+end
+
+local function _pick_unique_dir(neigh, avoid_dir)
+  assert(neigh ~= nil, "missing neighbors")
+  local picked_dir = nil
+  local picked_id = nil
+  for _, dir in ipairs(_sorted_dirs(neigh)) do
+    if dir ~= avoid_dir then
+      if picked_dir ~= nil then
+        return nil, nil
+      end
+      picked_dir = dir
+      picked_id = neigh[dir]
+    end
+  end
+  return picked_dir, picked_id
+end
+
+local function _resolve_outer_next(map, current_id, step_context)
+  local parity = step_context.parity
+  local can_enter_inner = not step_context.entered_inner
+  local skip_entry_on_tile_id = step_context.skip_entry_on_tile_id
+  if not map.outer_next[current_id] then
+    return nil, false
+  end
+  local next_id = map.outer_next[current_id]
+  local entry = map.entry_points[current_id]
+  if entry
+    and can_enter_inner
+    and skip_entry_on_tile_id ~= current_id
+    and parity
+    and (parity % 2 == 0) then
+    next_id = entry.inner_id
+    return next_id, true
+  end
+  return next_id, false
+end
+
+local function _resolve_fresh_forward_next(map, current_id, facing)
+  if facing ~= nil then
+    return nil
+  end
+  local fresh_forward_next = map.fresh_forward_next or nil
+  return fresh_forward_next and fresh_forward_next[current_id] or nil
+end
+
+local function _resolve_facing_next(neigh, facing)
+  if facing and neigh[facing] then
+    return neigh[facing]
+  end
+  return nil
+end
+
+local function _resolve_fallback_next(neigh, facing)
+  local back_dir = opposite[facing]
+  local _, next_id = _pick_unique_dir(neigh, back_dir)
+  if next_id then
+    return next_id
+  end
+
+  local _, fallback_id = _pick_any_dir(neigh, back_dir)
+  if fallback_id then
+    return fallback_id
+  end
+
+  local _, any_id = _pick_any_dir(neigh, nil)
+  return any_id
+end
+
+function direction.resolve_forward_next_id(map, current_id, neigh, facing, parity, can_enter_inner, skip_entry_on_tile_id)
+  local outer_next, entered_inner = _resolve_outer_next(
+    map,
+    current_id,
+    {
+      parity = parity,
+      entered_inner = not can_enter_inner,
+      skip_entry_on_tile_id = skip_entry_on_tile_id,
+    }
+  )
+  if outer_next then
+    return outer_next, entered_inner
+  end
+
+  local fresh_next = _resolve_fresh_forward_next(map, current_id, facing)
+  if fresh_next ~= nil then
+    return fresh_next, false
+  end
+
+  local facing_next = _resolve_facing_next(neigh, facing)
+  if facing_next then
+    return facing_next, false
+  end
+
+  return _resolve_fallback_next(neigh, facing), false
+end
+
+function direction.resolve_forward_facing(map, current_id, facing, step_context)
+  local neigh = map.neighbors[current_id]
+  if neigh == nil then
+    return facing
+  end
+
+  local next_id = direction.resolve_forward_next_id(
+    map,
+    current_id,
+    neigh,
+    facing,
+    step_context.parity,
+    not step_context.entered_inner,
+    step_context.skip_entry_on_tile_id
+  )
+  if next_id == nil then
+    return facing
+  end
+  return map.direction(current_id, next_id)
+end
+
+function direction.normalize_forward_step_context(parity_or_context)
+  if type(parity_or_context) == "table" then
+    return parity_or_context
+  end
+  return {
+    parity = parity_or_context,
+    entered_inner = false,
+    skip_entry_on_tile_id = nil,
+  }
+end
+
+local function _resolve_backward_by_facing(neigh, facing)
+  if not facing then
+    return nil
+  end
+  local back_dir = opposite[facing]
+  if not back_dir then
+    return nil
+  end
+  return neigh[back_dir]
+end
+
+local function _resolve_backward_from_map(map, current_id)
+  if map.outer_prev[current_id] then
+    return map.outer_prev[current_id]
+  end
+  local backward_fallback = map.backward_fallback or nil
+  if backward_fallback and backward_fallback[current_id] then
+    return backward_fallback[current_id]
+  end
+  return nil
+end
+
+local function _resolve_backward_from_neighbors(neigh, facing)
+  local _, next_id = _pick_unique_dir(neigh, facing)
+  if next_id then
+    return next_id
+  end
+
+  local _, fallback_id = _pick_any_dir(neigh, facing)
+  if fallback_id then
+    return fallback_id
+  end
+
+  local _, any_id = _pick_any_dir(neigh, nil)
+  return any_id
+end
+
+direction.try_resolve_forward_next_id = direction.resolve_forward_next_id
+
+function direction.collect_forward_indices(board, player, max_steps)
+  local map = board.map
+  local facing = player.status and player.status.move_dir or nil
+  local set = {}
+  local list = {}
+  local current_id = board:get_tile(player.position).id
+  for step = 1, max_steps do
+    local neigh = map.neighbors[current_id]
+    local next_id = direction.try_resolve_forward_next_id(map, current_id, neigh, facing, nil, true, nil)
+    if next_id == nil then
+      break
+    end
+    local next_index = board:index_of_tile_id(next_id)
+    if next_index == nil then
+      break
+    end
+    set[next_index] = true
+    list[#list + 1] = { index = next_index, step = step }
+    local travel_dir = map.direction(current_id, next_id)
+    facing = direction.resolve_forward_facing(map, next_id, travel_dir, { parity = nil, entered_inner = false })
+    current_id = next_id
+  end
+  return { set = set, list = list }
+end
+
+function direction.collect_backward_indices(board, player, max_steps)
+  local map = board.map
+  local facing = player.status and player.status.move_dir or nil
+  local set = {}
+  local list = {}
+  local current_id = board:get_tile(player.position).id
+  for step = 1, max_steps do
+    local neigh = map.neighbors[current_id]
+    local result = direction.resolve_backward_next_source(map, current_id, neigh, facing)
+    local next_id = result.next_id
+    if next_id == nil then
+      break
+    end
+    local next_index = board:index_of_tile_id(next_id)
+    if next_index == nil then
+      break
+    end
+    set[next_index] = true
+    list[#list + 1] = { index = next_index, step = step }
+    facing = map.direction(next_id, current_id)
+    current_id = next_id
+  end
+  return { set = set, list = list }
+end
+
+function direction.resolve_backward_next_source(map, current_id, neigh, facing)
+  local reverse_facing_next_id = _resolve_backward_by_facing(neigh, facing)
+  if reverse_facing_next_id then
+    return {
+      next_id = reverse_facing_next_id,
+      source = "facing_reverse_neighbor",
+    }
+  end
+
+  local mapped_next_id = _resolve_backward_from_map(map, current_id)
+  if mapped_next_id then
+    local outer_prev = map.outer_prev or nil
+    if outer_prev and outer_prev[current_id] then
+      return {
+        next_id = mapped_next_id,
+        source = "outer_prev",
+      }
+    end
+    return {
+      next_id = mapped_next_id,
+      source = "backward_fallback",
+    }
+  end
+
+  local fallback_next_id = _resolve_backward_from_neighbors(neigh, facing)
+  if fallback_next_id then
+    return {
+      next_id = fallback_next_id,
+      source = "neighbor_fallback",
+    }
+  end
+
+  return {
+    next_id = nil,
+    source = nil,
+  }
+end
+
+direction._M_test = {
+  _sorted_dirs_comparator = _sorted_dirs_comparator,
+  _pick_any_dir = _pick_any_dir,
+  _pick_unique_dir = _pick_unique_dir,
+  _resolve_fallback_next = _resolve_fallback_next,
+  _resolve_backward_from_neighbors = _resolve_backward_from_neighbors,
+}
+
+return direction
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=87ddc13d304dda8f
+scope.0.id=chunk:src/rules/board/direction.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=303
+scope.0.semanticHash=1b8fac911d3af499
+scope.1.id=function:_sorted_dirs_comparator:13
+scope.1.kind=function
+scope.1.startLine=13
+scope.1.endLine=20
+scope.1.semanticHash=a586b94bcc9eb785
+scope.2.id=function:_resolve_outer_next:57
+scope.2.kind=function
+scope.2.startLine=57
+scope.2.endLine=75
+scope.2.semanticHash=d9b42de0711fa373
+scope.3.id=function:_resolve_fresh_forward_next:77
+scope.3.kind=function
+scope.3.startLine=77
+scope.3.endLine=83
+scope.3.semanticHash=11454c455fa29312
+scope.4.id=function:_resolve_facing_next:85
+scope.4.kind=function
+scope.4.startLine=85
+scope.4.endLine=90
+scope.4.semanticHash=8c0df3a8e505d41d
+scope.5.id=function:_resolve_fallback_next:92
+scope.5.kind=function
+scope.5.startLine=92
+scope.5.endLine=106
+scope.5.semanticHash=24cdc0e9117780a7
+scope.6.id=function:direction.resolve_forward_next_id:108
+scope.6.kind=function
+scope.6.startLine=108
+scope.6.endLine=133
+scope.6.semanticHash=c932d6ed971cedd0
+scope.7.id=function:direction.resolve_forward_facing:135
+scope.7.kind=function
+scope.7.startLine=135
+scope.7.endLine=154
+scope.7.semanticHash=6ed750c0630d1385
+scope.8.id=function:direction.normalize_forward_step_context:156
+scope.8.kind=function
+scope.8.startLine=156
+scope.8.endLine=165
+scope.8.semanticHash=883f1cd5e778c467
+scope.9.id=function:_resolve_backward_by_facing:167
+scope.9.kind=function
+scope.9.startLine=167
+scope.9.endLine=176
+scope.9.semanticHash=2d663cb2042255b9
+scope.10.id=function:_resolve_backward_from_map:178
+scope.10.kind=function
+scope.10.startLine=178
+scope.10.endLine=187
+scope.10.semanticHash=e6c3e278e9b30533
+scope.11.id=function:_resolve_backward_from_neighbors:189
+scope.11.kind=function
+scope.11.startLine=189
+scope.11.endLine=202
+scope.11.semanticHash=c488a54191d88785
+scope.12.id=function:direction.resolve_backward_next_source:256
+scope.12.kind=function
+scope.12.startLine=256
+scope.12.endLine=292
+scope.12.semanticHash=929dc4fff9bc06d6
+]]

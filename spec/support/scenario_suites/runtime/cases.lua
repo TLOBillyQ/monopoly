@@ -1,0 +1,493 @@
+---@diagnostic disable
+-- luacheck: ignore 113 122
+local function make_cases(helpers)
+  local _ENV = helpers
+  local _ = _ENV._new_game
+  local event_log = require("src.state.event_log")
+
+local function _test_turn_start_logs_phase_event_to_event_feed()
+  local g = _new_game()
+  g.players[1].status.stay_turns = 2
+  g.players[1].status.deity = { type = "poor", remaining = 3 }
+  inventory.give(g.players[1], item_ids.remote_dice)
+  local _, tile_ref = _first_land_tile(g.board)
+  g:set_tile_owner(tile_ref, g.players[1].id)
+  g:set_tile_level(tile_ref, 2)
+  g:set_player_property(g.players[1], tile_ref.id, true)
+  g:set_player_cash(g.players[1], 4321)
+  event_log.clear(g.state.event_log)
+  turn_decision.log_turn_start(g)
+  local text = event_log.get_text(g.state.event_log)
+  assert(string.find(text, "第1回合开始：", 1, true) ~= nil, "turn start should write phase event to event feed")
+  assert(string.find(text, g.players[1].name, 1, true) ~= nil, "turn start event should mention current player")
+  assert(string.find(text, "金币=", 1, true) == nil, "turn start event should not include player balance")
+  assert(string.find(text, "状态:", 1, true) == nil, "turn start event should not include player status details")
+  assert(string.find(text, "背包:", 1, true) == nil, "turn start event should not include player items")
+  assert(string.find(text, "地产:", 1, true) == nil, "turn start event should not include player properties")
+end
+
+local function _test_intent_dispatcher_logs_waiting_choice_event()
+  local g = _new_game()
+  event_log.clear(g.state.event_log)
+  intent_dispatcher.open_choice(g, {
+    kind = "remote_dice_value",
+    route_key = "remote",
+    title = "遥控骰子",
+    body_lines = { "选择点数" },
+    options = { { id = 1, label = "1" } },
+    allow_cancel = true,
+    meta = { player_id = g:current_player().id, item_id = 2001 },
+  }, {})
+  local text = event_log.get_text(g.state.event_log)
+  assert(string.find(text, "等待选择：遥控骰子：选择点数", 1, true) ~= nil,
+    "open_choice should log waiting-choice phase event")
+end
+
+local function _test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys()
+  local g = _new_game()
+  local validated = false
+  g.registries = {
+    choices = {
+      descriptor_for = function(_, kind)
+        if kind ~= "custom_probe" then
+          return nil
+        end
+        return {
+          normalize_meta = function(_, meta)
+            meta = meta or {}
+            meta.normalized = true
+            return meta
+          end,
+          meta_validator = function(_, meta, choice_spec)
+            validated = true
+            assert(meta.normalized == true, "descriptor meta_validator should receive normalized meta")
+            assert(choice_spec.kind == "custom_probe", "descriptor meta_validator should receive choice spec")
+          end,
+        }
+      end,
+    },
+  }
+
+  local entry = intent_dispatcher.open_choice(g, {
+    kind = "custom_probe",
+    title = "自定义流程",
+    options = { { id = 1, label = "A" } },
+    meta = {},
+  }, {})
+
+  assert(validated == true, "dispatcher should run descriptor meta_validator even without required_meta")
+  assert(entry.meta and entry.meta.normalized == true, "dispatcher should keep normalized meta on custom descriptor choices")
+end
+
+local function _test_intent_dispatcher_allows_missing_choice_registry()
+  local g = _new_game()
+  g.registries = {}
+
+  local entry = intent_dispatcher.open_choice(g, {
+    kind = "custom_probe_without_registry",
+    title = "无注册表",
+    options = { { id = 1, label = "A" } },
+    meta = { probe = true },
+  }, {})
+
+  assert(entry.kind == "custom_probe_without_registry", "dispatcher should still open choices without registry descriptors")
+  assert(entry.meta and entry.meta.probe == true, "dispatcher should preserve original meta when registry is missing")
+end
+
+local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
+  local g = _new_game()
+
+  local normal_events = {}
+  local normal_choice = {
+    id = 10,
+    kind = "landing_optional_effect",
+    title = "可选效果",
+    options = { { id = "buy_land", label = "购买地块" } },
+    allow_cancel = true,
+    meta = { player_id = g.players[1].id, tile_id = 1, effect_ids = { "buy_land" } },
+  }
+  choice_resolver.resolve(g, normal_choice, {
+    type = "choice_cancel",
+    choice_id = normal_choice.id,
+    actor_role_id = g.players[1].id,
+  }, {
+    on_event = function(event)
+      normal_events[#normal_events + 1] = event
+    end,
+  })
+  local found_normal_skip = false
+  for _, event in ipairs(normal_events) do
+    if event.text and string.find(event.text, "跳过选择：可选效果", 1, true) then
+      found_normal_skip = true
+      break
+    end
+  end
+  assert(found_normal_skip, "true cancel should emit skip-choice event")
+
+  local tax_events = {}
+  local tax_choice = {
+    id = 11,
+    kind = "tax_card_prompt",
+    title = "是否使用免税卡",
+    options = { { id = "use", label = "使用" }, { id = "skip", label = "跳过" } },
+    allow_cancel = true,
+    meta = { player_id = g.players[1].id },
+  }
+  choice_resolver.resolve(g, tax_choice, {
+    type = "choice_cancel",
+    choice_id = tax_choice.id,
+    actor_role_id = g.players[1].id,
+  }, {
+    on_event = function(event)
+      tax_events[#tax_events + 1] = event
+    end,
+  })
+  for _, event in ipairs(tax_events) do
+    assert(not (event.text and string.find(event.text, "跳过选择", 1, true)),
+      "tax cancel fallback should not emit skip-choice event")
+  end
+end
+
+local function _test_choice_resolver_normalizes_market_buy_action_before_execute()
+  local g = _new_game()
+  local p = g:current_player()
+  local choice = {
+    id = 901,
+    kind = "market_buy",
+    route_key = "market",
+    owner_role_id = p.id,
+    options = { { id = 2001, label = "免费卡" } },
+    meta = { player_id = p.id },
+  }
+  g.turn.pending_choice = choice
+
+  local called_product_id = nil
+  local descriptor = g.registries.choices:descriptor_for("market_buy")
+  support.with_patches({
+    {
+      target = descriptor,
+      key = "execute",
+      value = function(_, _, action)
+        called_product_id = action and action.option_id or nil
+        return { status = "resolved", stay = false }
+      end,
+    },
+  }, function()
+    choice_resolver.resolve(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = "2001",
+      actor_role_id = p.id,
+    })
+  end)
+
+  assert(called_product_id == 2001, "market buy should normalize string option_id before execute")
+end
+
+local function _test_choice_resolver_normalizes_roadblock_action_before_execute()
+  local g = _new_game()
+  local p = g:current_player()
+  local choice = {
+    id = 902,
+    kind = "roadblock_target",
+    route_key = "target",
+    owner_role_id = p.id,
+    options = { { id = 3, label = "上海路" } },
+    meta = {
+      player_id = p.id,
+      item_id = item_ids.roadblock,
+    },
+  }
+  g.turn.pending_choice = choice
+
+  local called_target_index = nil
+  local descriptor = g.registries.choices:descriptor_for("roadblock_target")
+  support.with_patches({
+    {
+      target = descriptor,
+      key = "execute",
+      value = function(_, _, action)
+        called_target_index = action and action.option_id or nil
+        return { status = "resolved", stay = false }
+      end,
+    },
+  }, function()
+    choice_resolver.resolve(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = "3",
+      actor_role_id = p.id,
+    })
+  end)
+
+  assert(called_target_index == 3, "roadblock target should normalize string option_id before execute")
+end
+
+local function _test_end_turn_logs_phase_event_to_event_feed()
+  local g = _new_game()
+  local phases = phase_registry.build_default_phases()
+  local captured_events = {}
+  local original_publish = g.event_feed_port.publish
+  g.event_feed_port.publish = function(self, game, event)
+    captured_events[#captured_events + 1] = event
+    return original_publish(self, game, event)
+  end
+
+  phases.end_turn({ game = g, next_player = function()
+    g.turn.current_player_index = 2
+  end }, { player = g.players[1] })
+
+  g.event_feed_port.publish = original_publish
+
+  local found_end_turn = false
+  for _, event in ipairs(captured_events) do
+    if event.kind == "turn_end"
+      and event.text
+      and string.find(event.text, "回合结束：" .. g.players[1].name, 1, true)
+      and string.find(event.text, "停在", 1, true) then
+      found_end_turn = true
+      break
+    end
+  end
+  assert(found_end_turn, "end_turn should publish turn_end event with landing tile")
+end
+
+local function _test_clear_obstacles_zero_does_not_log_event_noise()
+  local g = _new_game()
+  local player = g.players[1]
+  logger.clear()
+  item_effects.apply_post(g, player, item_ids.clear_obstacles, { branch_parity = 12 })
+  local text = event_log.get_text(g.state.event_log)
+  assert(string.find(text, "清除前方障碍数：0", 1, true) == nil,
+    "clear obstacles zero result should not enter event feed")
+end
+
+local function _test_ai_obstacle_probe_does_not_enter_event_feed()
+  local g = _new_game()
+  local player = g.players[1]
+  player.auto = true
+  inventory.give(player, item_ids.clear_obstacles)
+  local current = player.position
+  local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
+  local next_index = select(1, g.board:step_forward_by_facing(current, facing, 12))
+  g.board:place_roadblock(next_index)
+
+  logger.clear()
+  item_strategy.auto_pre_action(g, player, "pre_action", { is_auto_player = true })
+  local text = event_log.get_text(g.state.event_log)
+  assert(string.find(text, "前方发现障碍，准备使用清障卡", 1, true) == nil,
+    "AI obstacle probe should not enter event feed")
+end
+
+local function _test_location_transfers_clear_move_dir()
+  local g = _new_game()
+  local p = g:current_player()
+
+  g:set_player_status(p, "move_dir", "left")
+  g:player_relocate(p, { tile_type = "hospital", move_dir_mode = "clear" })
+  g:player_apply_location_effect(p, "hospital")
+  assert(p.status.move_dir == nil, "hospital transfer should clear move_dir")
+
+  g:set_player_status(p, "move_dir", "right")
+  g:player_relocate(p, { tile_type = "mountain", move_dir_mode = "clear" })
+  g:player_apply_location_effect(p, "mountain")
+  assert(p.status.move_dir == nil, "mountain transfer should clear move_dir")
+end
+
+local function _test_runtime_context_split_install_stages()
+  _with_runtime_context_globals(function()
+    local role1 = { id = 1, get_roleid = function() return 1 end }
+    local game_api = {
+      get_role = function(role_id)
+        if role_id == 1 then
+          return role1
+        end
+        return nil
+      end,
+      get_all_valid_roles = function()
+        return { role1 }
+      end,
+    }
+    local lua_api = _mock_lua_api()
+    local ctx = runtime_context.new({
+      GameAPI = game_api,
+      LuaAPI = lua_api,
+    })
+
+    runtime_context.install_environment(ctx)
+    assert(SetTimeOut ~= lua_api.call_delay_time, "install_environment should stay validation-only")
+
+    local installed_helpers = runtime_context.install_runtime_helpers(ctx)
+    assert(installed_helpers ~= nil and installed_helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
+    assert(camera_helper == nil, "install_runtime_helpers should not export globals by default")
+  end)
+end
+
+local function _test_runtime_context_install_helpers_without_globals()
+  _with_runtime_context_globals(function()
+    local role1 = { id = 1, get_roleid = function() return 1 end }
+    local ctx = runtime_context.new({
+      GameAPI = {
+        get_role = function(role_id)
+          if role_id == 1 then
+            return role1
+          end
+          return nil
+        end,
+        get_all_valid_roles = function()
+          return { role1 }
+        end,
+      },
+      LuaAPI = _mock_lua_api(),
+    })
+    runtime_context.install_environment(ctx)
+    local installed_helpers = runtime_context.install_runtime_helpers(ctx, { install_globals = false })
+    assert(installed_helpers ~= nil and installed_helpers.camera_helper ~= nil, "install_runtime_helpers should return helpers")
+    assert(all_roles == nil, "install_runtime_helpers install_globals=false should not write all_roles")
+
+    runtime_context.install_runtime_helper_globals(helpers)
+    assert(all_roles == helpers.roles, "install_runtime_helper_globals should expose roles")
+  end)
+end
+
+local function _test_camera_sync_follow_camera_keeps_role_id_event_chain()
+  local camera_sync = require("src.ui.ports.ui_sync")._camera
+  local follow_calls = 0
+  local helper = {
+    target_role_id = nil,
+    follow = function(role_id)
+      follow_calls = follow_calls + 1
+      return role_id == 9
+    end,
+  }
+
+  support.with_patches({
+    {
+      target = runtime_ports,
+      key = "resolve_camera_helper",
+      value = function()
+        return helper
+      end,
+    },
+  }, function()
+    local ok = camera_sync.follow_camera(9)
+    assert(ok == true, "camera_sync.follow_camera should call helper.follow")
+  end)
+
+  assert(helper.target_role_id == 9, "camera sync should still write target_role_id")
+  assert(follow_calls == 1, "camera sync should call helper.follow once")
+end
+
+local function _test_game_startup_build_state_is_pure_and_bridge_installs_events()
+  local events = {}
+  local state = nil
+  local current_game = nil
+  support.with_patches({
+    { key = "LuaAPI", value = _mock_lua_api() },
+    { key = "RegisterCustomEvent", value = function(event_name, handler)
+      events[event_name] = handler
+    end },
+    { key = "RegisterTriggerEvent", value = function() end },
+    { key = "all_roles", value = {} },
+    { key = "GameAPI", value = {
+      get_all_valid_roles = function()
+        return {}
+      end,
+    } },
+  }, function()
+    LuaAPI.global_register_custom_event = function(event_name, handler)
+      events[event_name] = handler
+    end
+    local runtime_ctx = runtime_context.current()
+    if runtime_ctx and runtime_ctx.env and runtime_ctx.env.LuaAPI then
+      runtime_ctx.env.LuaAPI.global_register_custom_event = LuaAPI.global_register_custom_event
+    end
+    state = _build_startup_state(function()
+      return current_game
+    end)
+    assert(next(events) == nil, "build_state should not register custom events")
+
+    game_startup_event_bridge.install(state, function()
+      return current_game
+    end)
+    assert(type(events[monopoly_event.land.tile_upgraded]) == "function", "bridge should register tile_upgraded")
+    assert(type(events[monopoly_event.intent.need_choice]) == "function", "bridge should register need_choice")
+
+    local opened = nil
+    -- gate（src/ui/ports/events.lua:48 _should_open_modal_for_event）需要 owner_role_id +
+    -- 本地 actor 才会放行；缺 fixture 会让 expects_ui=false，开屏路径不走。
+    -- 细分 owner=auto/AI/local human 的覆盖在
+    -- spec/behavior/gameplay/ui_sync/auto_player_landing_choice_event_path_spec.lua。
+    local owner_id = 1
+    local choice_payload = {
+      id = 11,
+      kind = "item_target_player",
+      route_key = "player",
+      owner_role_id = owner_id,
+      options = { { id = 1, label = "A" } },
+    }
+    current_game = {
+      turn = { pending_choice = choice_payload, current_player_index = 1 },
+      winner = nil,
+      winner_names = nil,
+      last_turn = nil,
+      finished = false,
+      players = { { id = owner_id } },
+      board = { get_overlays = function() return { roadblocks = {}, mines = {} } end, tile_lookup = {}, path = {} },
+    }
+    runtime_state.set_local_actor_role_id(state, owner_id)
+    support.with_patches({
+      { target = require("src.ui.coord.modal"), key = "open_choice_modal", value = function(_, choice)
+        opened = choice
+      end },
+    }, function()
+      events[monopoly_event.intent.need_choice](nil, nil, { choice = choice_payload })
+    end)
+    assert(runtime_state.get_pending_choice_id(state) == 11, "bridge should sync pending_choice_id from event")
+    assert(opened ~= nil and opened.id == 11, "bridge should open choice modal from event")
+  end)
+end
+
+
+local function _test_runtime_context_install_environment_fails_fast()
+  _with_runtime_context_globals(function()
+    local ctx = runtime_context.new({
+      GameAPI = {},
+      LuaAPI = {
+        call_delay_time = function() end,
+        global_register_custom_event = function() end,
+        global_register_trigger_event = function() end,
+        unit_register_custom_event = function() end,
+        unit_register_trigger_event = function() end,
+      },
+    })
+    local ok, err = pcall(function()
+      runtime_context.install_environment(ctx)
+    end)
+    assert(ok == false, "install_environment should fail when LuaAPI is incomplete")
+    assert(tostring(err):find("missing LuaAPI.global_send_custom_event") ~= nil,
+      "install_environment should report missing LuaAPI.global_send_custom_event")
+  end)
+end
+
+  return {
+    _test_turn_start_logs_phase_event_to_event_feed = _test_turn_start_logs_phase_event_to_event_feed,
+    _test_intent_dispatcher_logs_waiting_choice_event = _test_intent_dispatcher_logs_waiting_choice_event,
+    _test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys = _test_intent_dispatcher_dispatches_descriptor_meta_validator_without_required_keys,
+    _test_intent_dispatcher_allows_missing_choice_registry = _test_intent_dispatcher_allows_missing_choice_registry,
+    _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not = _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not,
+    _test_choice_resolver_normalizes_market_buy_action_before_execute = _test_choice_resolver_normalizes_market_buy_action_before_execute,
+    _test_choice_resolver_normalizes_roadblock_action_before_execute = _test_choice_resolver_normalizes_roadblock_action_before_execute,
+    _test_end_turn_logs_phase_event_to_event_feed = _test_end_turn_logs_phase_event_to_event_feed,
+    _test_clear_obstacles_zero_does_not_log_event_noise = _test_clear_obstacles_zero_does_not_log_event_noise,
+    _test_ai_obstacle_probe_does_not_enter_event_feed = _test_ai_obstacle_probe_does_not_enter_event_feed,
+    _test_location_transfers_clear_move_dir = _test_location_transfers_clear_move_dir,
+    _test_runtime_context_split_install_stages = _test_runtime_context_split_install_stages,
+    _test_runtime_context_install_helpers_without_globals = _test_runtime_context_install_helpers_without_globals,
+    _test_camera_sync_follow_camera_keeps_role_id_event_chain = _test_camera_sync_follow_camera_keeps_role_id_event_chain,
+    _test_game_startup_build_state_is_pure_and_bridge_installs_events = _test_game_startup_build_state_is_pure_and_bridge_installs_events,
+    _test_runtime_context_install_environment_fails_fast = _test_runtime_context_install_environment_fails_fast,
+  }
+end
+
+return { make_cases = make_cases }

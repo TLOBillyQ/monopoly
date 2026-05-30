@@ -1,0 +1,20 @@
+[submodule "vendor/crap4lua"]
+	path = vendor/crap4lua
+	url = https://github.com/TLOBillyQ/crap4lua.git
+	ignore = untracked
+[submodule "vendor/arch_view"]
+	path = vendor/arch_view
+	url = https://github.com/TLOBillyQ/arch_view.git
+	ignore = untracked
+[submodule "vendor/mutate4lua"]
+	path = vendor/mutate4lua
+	url = https://github.com/TLOBillyQ/mutate4lua.git
+	ignore = untracked
+[submodule "vendor/dry4lua"]
+	path = vendor/dry4lua
+	url = https://github.com/TLOBillyQ/dry4lua.git
+	ignore = untracked
+[submodule "vendor/acceptance4lua"]
+	path = vendor/acceptance4lua
+	url = https://github.com/TLOBillyQ/acceptance4lua.git
+	ignore = untracked

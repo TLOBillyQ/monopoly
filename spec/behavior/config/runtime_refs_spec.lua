@@ -1,0 +1,13 @@
+describe("runtime_refs (config data)", function()
+  it("loads all reference tables under debug hook", function()
+    package.loaded["src.config.content.runtime_refs"] = nil
+    local refs = require("src.config.content.runtime_refs")
+    assert(type(refs) == "table", "expected table")
+    assert(type(refs.images) == "table", "expected images table")
+    assert(type(refs.audio) == "table", "expected audio table")
+    assert(type(refs.effects) == "table", "expected effects table")
+    assert(type(refs.board_feedback) == "table", "expected board_feedback table")
+    assert(type(refs.skins) == "table", "expected skins table")
+    assert(type(refs.synthetic_ai) == "table", "expected synthetic_ai table")
+  end)
+end)

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "Lua 5.4",
+  "runtime.path": [
+    "?.lua",
+    "?/init.lua"
+  ],
+  "workspace.checkThirdParty": false,
+  "workspace.ignoreDir": [
+    "EggyAPI.lua"
+  ],
+  "workspace.library": [
+    "../meta",
+    "../vendor/third_party"
+  ],
+  "diagnostics.globals": [
+    "EVENT",
+    "Enums",
+    "GameAPI",
+    "GlobalAPI",
+    "LuaAPI",
+    "RegisterTriggerEvent",
+    "SceneUI",
+    "traceback"
+  ]
+}

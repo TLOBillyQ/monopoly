@@ -1,0 +1,337 @@
+local prefab = require("Data.Prefab")
+local logger = require("src.foundation.log")
+local compute = require("src.ui.render.anim.overlay_compute")
+local runtime = require("src.ui.render.anim.overlay_runtime")
+local runtime_constants = require("src.config.gameplay.runtime_constants")
+local number_utils = require("src.foundation.number")
+
+local host_types = require("src.foundation.host_types")
+
+local overlay = {}
+local roadblock_scale = host_types.vec3(4.0, 4.0, 4.0)
+local robot_scale = host_types.vec3(0.06, 0.94, 0.06)
+local robot_y_offset = 1.0
+local robot_rotation = host_types.quat(0.0, 0.0, 0.0)
+
+local function _deps(state)
+  return state and state.presentation_runtime or nil
+end
+
+local _resolve_hr = require("src.ui.render.host_runtime_resolver").from_deps
+
+local function _access_field(obj, key)
+  return obj[key]
+end
+
+local function _call_handle_method(handle, method_name, ...)
+  if handle == nil then return false end
+  local ok, method = pcall(_access_field, handle, method_name)
+  if not ok or type(method) ~= "function" then return false end
+  local called = pcall(method, ...)
+  return called == true
+end
+
+local function _spawn_robot(hr, robot_id, pos)
+  if robot_id == nil then
+    return nil
+  end
+  if type(hr.acquire_unit) == "function" then
+    return hr.acquire_unit(robot_id, pos, robot_rotation, robot_scale)
+  end
+  if type(hr.create_unit_with_scale) ~= "function" then
+    return nil
+  end
+  return hr.create_unit_with_scale(robot_id, pos, robot_rotation, robot_scale)
+end
+
+local function _destroy_robot(hr, robot_id, handle)
+  if handle == nil then
+    return
+  end
+  if type(hr.release_unit) == "function" then
+    hr.release_unit(robot_id, handle)
+    return
+  end
+  if type(hr.destroy_unit) == "function" then
+    hr.destroy_unit(handle)
+    return
+  end
+  if type(hr.destroy_unit_with_children) == "function" then
+    hr.destroy_unit_with_children(handle, true)
+    return
+  end
+end
+
+local function _move_robot(hr, robot_id, handle, pos)
+  if _call_handle_method(handle, "set_position_smooth", pos) then
+    return handle
+  end
+  if _call_handle_method(handle, "set_position", pos) then
+    return handle
+  end
+  _destroy_robot(hr, robot_id, handle)
+  return _spawn_robot(hr, robot_id, pos)
+end
+
+local function _new_branch_node(tile_index, has_obstacle)
+  return {
+    tile_index = tile_index,
+    has_obstacle = has_obstacle == true,
+    children = {},
+    child_map = {},
+  }
+end
+
+local function _build_branch_tree(branches)
+  local root = _new_branch_node(nil, false)
+  for _, branch in ipairs(branches or {}) do
+    local cursor = root
+    for _, entry in ipairs(branch or {}) do
+      local key = tostring(entry.tile_index)
+      local child = cursor.child_map[key]
+      if child == nil then
+        child = _new_branch_node(entry.tile_index, entry.has_obstacle)
+        cursor.child_map[key] = child
+        cursor.children[#cursor.children + 1] = child
+      elseif entry.has_obstacle then
+        child.has_obstacle = true
+      end
+      cursor = child
+    end
+  end
+  return root
+end
+
+local function _resolve_longest_branch(branches)
+  local longest = 0
+  for _, branch in ipairs(branches or {}) do
+    if #branch > longest then
+      longest = #branch
+    end
+  end
+  return longest
+end
+
+local function _resolve_step_duration(branches, duration)
+  local longest = _resolve_longest_branch(branches)
+  if longest > 0 and number_utils.is_numeric(duration) and duration > 0 then
+    return duration / longest
+  end
+  return 3.0 / runtime_constants.robot_speed
+end
+
+local function _schedule_step(schedule, delay, callback)
+  if type(schedule) == "function" then
+    schedule(delay, callback)
+    return
+  end
+  callback()
+end
+
+local function _clear_obstacle(state, clear_overlay, tile_index)
+  clear_overlay(state, "roadblock", tile_index)
+  clear_overlay(state, "mine", tile_index)
+end
+
+local function _walk_branch_children(state, clear_overlay, schedule, hr, robot_id, node, current_pos, step_duration)
+  local children = node.children or {}
+  if #children == 0 then
+    return function(handle)
+      _destroy_robot(hr, robot_id, handle)
+    end
+  end
+
+  return function(handle)
+    for child_index, child in ipairs(children) do
+      local child_handle = handle
+      if child_index > 1 then
+        child_handle = _spawn_robot(hr, robot_id, current_pos)
+      end
+      _schedule_step(schedule, step_duration, function()
+        local child_pos = compute.overlay_pos_for_tile(state, child.tile_index, robot_y_offset)
+        local moved_handle = _move_robot(hr, robot_id, child_handle, child_pos)
+        if child.has_obstacle then
+          _clear_obstacle(state, clear_overlay, child.tile_index)
+        end
+        _walk_branch_children(state, clear_overlay, schedule, hr, robot_id, child, child_pos, step_duration)(moved_handle)
+      end)
+    end
+  end
+end
+
+function overlay.clear_overlay(state, kind, tile_index)
+  assert(state ~= nil, "missing state")
+  assert(kind ~= nil, "missing kind")
+  assert(tile_index ~= nil, "missing tile_index")
+  runtime.clear_overlay(assert(state.board_scene, "missing board_scene"), kind, tile_index, _deps(state))
+end
+
+function overlay.play_overlay(state, anim, duration, opts)
+  local kind = anim.kind
+  local tile_index = assert(anim.tile_index, "missing tile_index")
+  local overlay_kind = kind
+  if kind == "roadblock" then
+    local unit_id = prefab.unit and prefab.unit["路障"] or nil
+    runtime.spawn_overlay(
+      assert(state.board_scene, "missing board_scene"),
+      overlay_kind,
+      tile_index,
+      nil,
+      unit_id,
+      compute.overlay_pos_for_tile(state, tile_index),
+      roadblock_scale,
+      _deps(state)
+    )
+    return
+  end
+  if kind == "mine" then
+    local group_id = prefab.group["地雷"]
+    local unit_id = prefab.unit and prefab.unit["地雷"] or nil
+    if not group_id and not unit_id then
+      logger.warn("[Eggy]", "地雷 prefab 缺失，已跳过生成")
+      return
+    end
+    -- 地雷贴近地面生成 (y_offset = 0.05)
+    runtime.spawn_overlay(assert(state.board_scene, "missing board_scene"), overlay_kind, tile_index, group_id, unit_id,
+      compute.overlay_pos_for_tile(state, tile_index, 0.05), nil, _deps(state))
+    return
+  end
+end
+
+function overlay.play_missile(state, anim, duration, opts)
+  local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
+  local tile_index = assert(anim.tile_index, "missing missile tile_index")
+  _clear_obstacle(state, clear_overlay, tile_index)
+  local unit_id = prefab.unit and prefab.unit["导弹"] or nil
+  local group_id = prefab.group["导弹"]
+  runtime.spawn_transient(group_id, unit_id, compute.overlay_pos_for_tile(state, tile_index), duration, _deps(state))
+end
+
+function overlay.play_clear_obstacles(state, anim, duration, opts)
+  local clear_overlay = assert(opts and opts.clear_overlay, "missing clear_overlay")
+  local robot_id = prefab.unit and prefab.unit["清障机器人"] or nil
+  if robot_id == nil then
+    logger.warn("[Eggy]", "清障机器人 prefab 缺失，已跳过生成")
+    return
+  end
+  local player_pos = compute.overlay_pos_for_player(state, assert(anim.player_id, "missing player_id"), robot_y_offset)
+  local hr = _resolve_hr(_deps(state))
+  local schedule = opts.schedule or hr.schedule
+  local branches = anim.branches or {}
+  if #branches == 0 then
+    local root_handle = _spawn_robot(hr, robot_id, player_pos)
+    _schedule_step(schedule, duration, function()
+      _destroy_robot(hr, robot_id, root_handle)
+    end)
+    return
+  end
+  local step_duration = _resolve_step_duration(branches, duration)
+  local branch_tree = _build_branch_tree(branches)
+  if type(hr.prewarm_unit) == "function" then
+    hr.prewarm_unit(robot_id, 1 + #branches, robot_rotation, robot_scale, player_pos)
+  end
+  local root_handle = _spawn_robot(hr, robot_id, player_pos)
+  _walk_branch_children(state, clear_overlay, schedule, hr, robot_id, branch_tree, player_pos, step_duration)(root_handle)
+end
+
+return overlay
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=b6dcae2f1f1f9ff0
+scope.0.id=chunk:src/ui/render/anim/unit_overlay.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=238
+scope.0.semanticHash=2ce72e474174b29e
+scope.1.id=function:_deps:16
+scope.1.kind=function
+scope.1.startLine=16
+scope.1.endLine=18
+scope.1.semanticHash=8972a7f932e00b0f
+scope.2.id=function:_access_field:22
+scope.2.kind=function
+scope.2.startLine=22
+scope.2.endLine=24
+scope.2.semanticHash=e28a6b558e3f7cfb
+scope.3.id=function:_call_handle_method:26
+scope.3.kind=function
+scope.3.startLine=26
+scope.3.endLine=32
+scope.3.semanticHash=f4fb084bfabb06c1
+scope.4.id=function:_spawn_robot:34
+scope.4.kind=function
+scope.4.startLine=34
+scope.4.endLine=45
+scope.4.semanticHash=0ef3b36e8ab6d5f7
+scope.5.id=function:_destroy_robot:47
+scope.5.kind=function
+scope.5.startLine=47
+scope.5.endLine=63
+scope.5.semanticHash=e2d231ab1f76c4d4
+scope.6.id=function:_move_robot:65
+scope.6.kind=function
+scope.6.startLine=65
+scope.6.endLine=74
+scope.6.semanticHash=9e53c4fb6e3a411a
+scope.7.id=function:_new_branch_node:76
+scope.7.kind=function
+scope.7.startLine=76
+scope.7.endLine=83
+scope.7.semanticHash=4e6ef1c4034ff4d9
+scope.8.id=function:_resolve_step_duration:115
+scope.8.kind=function
+scope.8.startLine=115
+scope.8.endLine=121
+scope.8.semanticHash=91cb4ac4e1685b76
+scope.9.id=function:_schedule_step:123
+scope.9.kind=function
+scope.9.startLine=123
+scope.9.endLine=129
+scope.9.semanticHash=f7c71eaa0a3e9c36
+scope.10.id=function:_clear_obstacle:131
+scope.10.kind=function
+scope.10.startLine=131
+scope.10.endLine=134
+scope.10.semanticHash=282cebccec07a3cf
+scope.11.id=function:anonymous@139:139
+scope.11.kind=function
+scope.11.startLine=139
+scope.11.endLine=141
+scope.11.semanticHash=cedd51eae67c7396
+scope.12.id=function:anonymous@150:150
+scope.12.kind=function
+scope.12.startLine=150
+scope.12.endLine=157
+scope.12.semanticHash=722c1e89fe34e6d9
+scope.13.id=function:anonymous@144:144
+scope.13.kind=function
+scope.13.startLine=144
+scope.13.endLine=160
+scope.13.semanticHash=76e40c95d1f39e01
+scope.14.id=function:overlay.clear_overlay:162
+scope.14.kind=function
+scope.14.startLine=162
+scope.14.endLine=167
+scope.14.semanticHash=79e023776af2956f
+scope.15.id=function:overlay.play_overlay:169
+scope.15.kind=function
+scope.15.startLine=169
+scope.15.endLine=199
+scope.15.semanticHash=e92a3b3b8520b3aa
+scope.16.id=function:overlay.play_missile:201
+scope.16.kind=function
+scope.16.startLine=201
+scope.16.endLine=208
+scope.16.semanticHash=2960504c10b812de
+scope.17.id=function:anonymous@223:223
+scope.17.kind=function
+scope.17.startLine=223
+scope.17.endLine=225
+scope.17.semanticHash=0aba74b0651c453b
+scope.18.id=function:overlay.play_clear_obstacles:210
+scope.18.kind=function
+scope.18.startLine=210
+scope.18.endLine=235
+scope.18.semanticHash=8395a38f4e5b23ad
+]]

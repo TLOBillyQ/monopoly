@@ -1,0 +1,793 @@
+local action_anim = require("src.ui.render.anim")
+local anim_units = require("src.ui.render.anim.units")
+local unit_overlay = require("src.ui.render.anim.unit_overlay")
+local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
+local host_runtime = require("src.host")
+local raycast = require("src.host.raycast")
+local board_feedback = require("src.ui.render.board_feedback.service")
+local event_names = require("src.foundation.events")
+local landing_visual_hold = require("src.ui.visual_hold")
+local pre_confirm = require("src.ui.input.dispatch.pre_confirm")
+local item_slot_confirm = require("src.ui.input.dispatch.item_slot_confirm")
+local runtime_state = require("src.ui.state.runtime")
+local assets = require("src.ui.render.assets")
+local runtime_ui = require("src.ui.render.runtime_ui")
+local node_ops = require("src.ui.render.node_ops")
+local permanent_nodes = require("src.ui.schema.permanent")
+local player_colors = require("src.ui.view.player_colors")
+local item_slice = require("src.ui.view.item_slice")
+local effect_track = require("src.ui.render.support.effect_track")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
+local sound = require("src.host.sound")
+local entity_pool = require("src.host.entity_pool")
+local unit_lifecycle = require("src.host.units")
+local view_command = require("src.ui.ports.view_command")
+local actor_context = require("src.ui.coord.actor_context")
+local ui_event_state = require("src.ui.coord.event_state")
+local event_log_view = require("src.ui.coord.event_log_view")
+local canvas = require("src.ui.coord.canvas_coordinator")
+local logger = require("src.foundation.log")
+local support = require("spec.support.ui_action_anim_support")
+
+local _with_patches = support.with_patches
+
+local function _assert_eq(actual, expected, message)
+  assert(actual == expected, (message or "assertion failed")
+    .. " expected=" .. tostring(expected)
+    .. " actual=" .. tostring(actual))
+end
+
+local function _ensure_vector3()
+  if not math.Vector3 then
+    function math.Vector3(x, y, z)
+      return { x = x, y = y, z = z }
+    end
+  end
+end
+
+local function _reload_with(module_name, overrides, fn)
+  local original_module = package.loaded[module_name]
+  local originals = {}
+  for key, value in pairs(overrides or {}) do
+    originals[key] = package.loaded[key]
+    package.loaded[key] = value
+  end
+  package.loaded[module_name] = nil
+
+  local ok, result = pcall(function()
+    return fn(require(module_name))
+  end)
+
+  package.loaded[module_name] = original_module
+  for key, value in pairs(originals) do
+    package.loaded[key] = value
+  end
+  if not ok then
+    error(result)
+  end
+  return result
+end
+
+describe("refactorer_crap_coverage", function()
+  before_each(function()
+    _ensure_vector3()
+  end)
+
+  it("action anim zero timing config is preserved when module loads", function()
+    local fake_registry = {
+      register = function() end,
+      resolve = function(kind)
+        if kind == "roll" then
+          return nil
+        end
+        return nil
+      end,
+    }
+
+    _reload_with("src.ui.render.anim", {
+      ["src.config.gameplay.timing"] = {
+        action_anim_default_seconds = 1.0,
+        demolish_effect_start_delay_seconds = 0,
+        dice_spin_seconds = 1.0,
+        dice_face_hold_seconds = 1.0,
+      },
+      ["src.ui.render.anim.registry"] = fake_registry,
+    }, function(reloaded_action_anim)
+      local duration = reloaded_action_anim.play(support.build_min_state(), {
+        kind = "missile",
+      }, {
+        runtime_bundle = {
+          runtime = {},
+          ui_events = { show = {}, hide = {}, send_to_all = function() end },
+          host_runtime = {
+            enqueue_tip = function() end,
+            schedule = function() error("zero start delay should not schedule") end,
+          },
+        },
+      })
+
+      _assert_eq(duration, 1.2, "zero demolish start delay should not fall back to 0.2")
+    end)
+  end)
+
+  it("action anim zero roll timing is preserved in registered roll handler", function()
+    local registered = {}
+    local fake_registry = {
+      register = function(kind, handler)
+        registered[kind] = handler
+      end,
+      resolve = function(kind)
+        return registered[kind]
+      end,
+    }
+    local captured_spin = nil
+    local captured_hold = nil
+
+    _reload_with("src.ui.render.anim", {
+      ["src.config.gameplay.timing"] = {
+        action_anim_default_seconds = 1.0,
+        demolish_effect_start_delay_seconds = 0.2,
+        dice_spin_seconds = 0,
+        dice_face_hold_seconds = 0,
+      },
+      ["src.ui.render.anim.registry"] = fake_registry,
+    }, function(reloaded_action_anim)
+      _with_patches({
+        { target = require("src.ui.render.anim.handlers"), key = "play_roll_dice_screen", value = function(_, _, spin, hold)
+          captured_spin = spin
+          captured_hold = hold
+        end },
+      }, function()
+        local duration = reloaded_action_anim.play(support.build_min_state(), {
+          kind = "roll",
+        }, {
+          runtime_bundle = {
+            runtime = {},
+            ui_events = { show = {}, hide = {}, send_to_all = function() end },
+            host_runtime = {},
+          },
+        })
+
+        _assert_eq(duration, 0, "zero roll timings should make roll handler return zero duration")
+      end)
+    end)
+
+    _assert_eq(captured_spin, 0, "zero dice spin should not fall back to 1.0")
+    _assert_eq(captured_hold, 0, "zero dice hold should not fall back to 1.0")
+  end)
+
+  it("anim units zero mine snap delay uses immediate fallback path", function()
+    _reload_with("src.ui.render.anim.units", {
+      ["src.config.gameplay.timing"] = {
+        mine_trigger_snap_delay_seconds = 0,
+        demolish_effect_followup_delay_seconds = 0.35,
+        teleport_effect_camera_hold_seconds = 1.0,
+        roadblock_destroy_hold_seconds = 0,
+      },
+    }, function(reloaded_units)
+      local scheduled = 0
+      local snapped = 0
+      local state = support.build_min_state()
+
+      _with_patches({
+        { target = board_feedback, key = "play_tile_cue", value = function() end },
+        { target = board_feedback, key = "play_player_cue", value = function() end },
+        { target = require("src.ui.render.move_anim"), key = "prepare_player_for_snap", value = function() end },
+        { target = require("src.ui.render.move_anim"), key = "snap_player_to_index", value = function()
+          snapped = snapped + 1
+          return 0
+        end },
+      }, function()
+        local duration = reloaded_units.play_mine_trigger(state, {
+          player_id = 1,
+          tile_index = 1,
+          to_index = 1,
+        }, 0.2, {
+          clear_overlay = function() end,
+          schedule = function()
+            scheduled = scheduled + 1
+          end,
+        })
+
+        _assert_eq(duration, 0.2, "zero snap delay should keep supplied duration")
+      end)
+
+      _assert_eq(scheduled, 0, "zero mine snap delay should not schedule")
+      _assert_eq(snapped, 1, "zero mine snap delay should snap immediately")
+    end)
+  end)
+
+  it("anim units roadblock destroy hold uses configured nonzero delay", function()
+    _reload_with("src.ui.render.anim.units", {
+      ["src.config.gameplay.timing"] = {
+        mine_trigger_snap_delay_seconds = 0.6,
+        demolish_effect_followup_delay_seconds = 0.35,
+        teleport_effect_camera_hold_seconds = 1.0,
+        roadblock_destroy_hold_seconds = 0.4,
+      },
+    }, function(reloaded_units)
+      local scheduled_delay = nil
+      local cleared = 0
+      local state = support.build_min_state()
+
+      local duration = reloaded_units.play_roadblock_trigger(state, {
+        tile_index = 1,
+      }, 0.1, {
+        clear_overlay = function()
+          cleared = cleared + 1
+        end,
+        schedule = function(delay, fn)
+          scheduled_delay = delay
+          fn()
+        end,
+      })
+
+      _assert_eq(duration, 0.4, "roadblock hold should extend shorter duration")
+      _assert_eq(scheduled_delay, 0.4, "roadblock hold should preserve configured delay")
+      _assert_eq(cleared, 1, "scheduled roadblock clear should run")
+    end)
+  end)
+
+  it("anim overlay clear delegates to runtime with board scene deps", function()
+    local state = support.build_min_state()
+    local calls = {}
+
+    _with_patches({
+      { target = overlay_runtime, key = "clear_overlay", value = function(board_scene, kind, tile_index, deps)
+        calls[#calls + 1] = {
+          board_scene = board_scene,
+          kind = kind,
+          tile_index = tile_index,
+          deps = deps,
+        }
+      end },
+    }, function()
+      unit_overlay.clear_overlay(state, "mine", 1)
+    end)
+
+    _assert_eq(#calls, 1, "clear_overlay should call runtime once")
+    _assert_eq(calls[1].board_scene, state.board_scene, "clear_overlay should pass board scene")
+    _assert_eq(calls[1].kind, "mine", "clear_overlay should pass kind")
+    _assert_eq(calls[1].tile_index, 1, "clear_overlay should pass tile index")
+  end)
+
+  it("anim units pan camera releases immediately without scheduler", function()
+    local state = support.build_min_state()
+    local pan_calls = 0
+    local release_calls = 0
+    local overlay_calls = 0
+
+    _with_patches({
+      { target = unit_overlay, key = "play_overlay", value = function()
+        overlay_calls = overlay_calls + 1
+      end },
+    }, function()
+      anim_units.play_overlay(state, { kind = "roadblock", tile_index = 1 }, 0.4, {
+        pan_camera_to_position = function(_, pos)
+          pan_calls = pan_calls + 1
+          _assert_eq(pos.x, 0.0, "pan should receive resolved tile position")
+          return true
+        end,
+        release_target_pan = function(release_state)
+          release_calls = release_calls + 1
+          _assert_eq(release_state, state, "release should receive state")
+        end,
+      })
+    end)
+
+    _assert_eq(pan_calls, 1, "roadblock should pan to tile")
+    _assert_eq(release_calls, 1, "missing scheduler should release immediately")
+    _assert_eq(overlay_calls, 1, "overlay handler should still run")
+  end)
+
+  it("anim units pan release normalizes invalid scheduled duration", function()
+    local state = support.build_min_state()
+    local scheduled_delay = nil
+    local scheduled_fn = nil
+    local release_calls = 0
+
+    _with_patches({
+      { target = unit_overlay, key = "play_overlay", value = function() end },
+    }, function()
+      anim_units.play_overlay(state, { kind = "roadblock", tile_index = 1 }, -1, {
+        pan_camera_to_position = function()
+          return true
+        end,
+        release_target_pan = function()
+          release_calls = release_calls + 1
+        end,
+        schedule = function(delay, fn)
+          scheduled_delay = delay
+          scheduled_fn = fn
+        end,
+      })
+    end)
+
+    _assert_eq(scheduled_delay, 0, "negative release duration should clamp to zero")
+    _assert_eq(release_calls, 0, "release should wait for scheduler callback")
+    scheduled_fn()
+    _assert_eq(release_calls, 1, "scheduled release callback should release pan")
+  end)
+
+  it("anim overlay destroy falls back to host destroy methods", function()
+    local state = support.build_min_state()
+    local destroy_unit_calls = 0
+    local destroy_children_calls = 0
+
+    _with_patches({
+      { target = host_runtime, key = "acquire_unit", value = function()
+        return { id = "robot" }
+      end },
+      { target = host_runtime, key = "release_unit", value = nil },
+      { target = host_runtime, key = "destroy_unit", value = function()
+        destroy_unit_calls = destroy_unit_calls + 1
+      end },
+      { target = host_runtime, key = "destroy_unit_with_children", value = function()
+        destroy_children_calls = destroy_children_calls + 1
+      end },
+    }, function()
+      unit_overlay.play_clear_obstacles(state, {
+        player_id = 1,
+        branches = {},
+      }, 0.1, {
+        clear_overlay = function() end,
+      })
+    end)
+
+    _assert_eq(destroy_unit_calls, 1, "destroy_unit should be the first fallback")
+    _assert_eq(destroy_children_calls, 0, "destroy_unit_with_children should not run after destroy_unit")
+
+    _with_patches({
+      { target = host_runtime, key = "acquire_unit", value = function()
+        return { id = "robot" }
+      end },
+      { target = host_runtime, key = "release_unit", value = nil },
+      { target = host_runtime, key = "destroy_unit", value = nil },
+      { target = host_runtime, key = "destroy_unit_with_children", value = function(_, include_children)
+        destroy_children_calls = destroy_children_calls + 1
+        _assert_eq(include_children, true, "children fallback should request recursive destroy")
+      end },
+    }, function()
+      unit_overlay.play_clear_obstacles(state, {
+        player_id = 1,
+        branches = {},
+      }, 0.1, {
+        clear_overlay = function() end,
+      })
+    end)
+
+    _assert_eq(destroy_children_calls, 1, "destroy_unit_with_children should run when other fallbacks are missing")
+  end)
+
+  it("action anim default bundle and unknown kind still resolve duration", function()
+    local state = support.build_min_state()
+    local duration = action_anim.play(state, {
+      kind = "unknown_kind",
+      duration = -1,
+    })
+
+    _assert_eq(duration, 1.0, "invalid duration should fall back to default action duration")
+  end)
+
+  it("raycast camera ray falls back to controlled unit direction", function()
+    local direction = { x = 0, y = 0, z = 1 }
+    local ctrl_unit = {
+      get_position = function()
+        return { x = 1, y = 2, z = 3 }
+      end,
+      get_forward = function()
+        return direction
+      end,
+    }
+    local role = {
+      get_ctrl_unit = function()
+        return ctrl_unit
+      end,
+    }
+
+    local ray = assert(raycast.build_camera_ray(role, {
+      eye_offset_y = 2.0,
+      ray_distance = 5.0,
+    }))
+
+    _assert_eq(ray.direction, direction, "raycast should use unit direction fallback")
+    _assert_eq(ray.start_pos.x, 1, "ray start x should preserve unit position")
+    _assert_eq(ray.start_pos.y, 4.0, "ray start y should include eye offset")
+    _assert_eq(ray.end_pos.z, 8.0, "ray end should include scaled direction")
+  end)
+
+  it("anim units teleport pans to destination for at least hold duration", function()
+    local state = support.build_min_state({
+      mutate = function(target)
+        target.board_scene.tiles[2] = {
+          get_position = function()
+            return math.Vector3(20.0, 0.0, 0.0)
+          end,
+        }
+      end,
+    })
+    local scheduled_delay = nil
+    local played = 0
+
+    _with_patches({
+      { target = require("src.ui.render.move_anim"), key = "play_teleport", value = function()
+        played = played + 1
+        return 0.25
+      end },
+    }, function()
+      local duration = anim_units.play_teleport_effect(state, {
+        player_id = 1,
+        from_index = 1,
+        to_index = 2,
+      }, 0.1, {
+        pan_camera_to_position = function(_, pos)
+          _assert_eq(pos.x, 20.0, "teleport pan should target destination tile")
+          return true
+        end,
+        release_target_pan = function() end,
+        schedule = function(delay)
+          scheduled_delay = delay
+        end,
+      })
+
+      _assert_eq(duration, 0.25, "teleport should return move animation duration")
+    end)
+
+    _assert_eq(played, 1, "teleport move animation should play")
+    _assert_eq(scheduled_delay, 1.0, "teleport pan should hold for configured minimum")
+  end)
+
+  it("event handler angel immune routes tile and player cues", function()
+    local captured = {}
+    local tile_calls = {}
+    local player_calls = {}
+    local state = { game = {} }
+
+    _reload_with("src.ui.coord.event_handlers", {}, function(event_handlers)
+      _with_patches({
+        { target = host_runtime, key = "register_custom_event", value = function(event_name, handler)
+          captured[event_name] = handler
+        end },
+        { target = landing_visual_hold, key = "run_or_defer", value = function(_, _, _, fn)
+          return fn()
+        end },
+        { target = board_feedback, key = "play_tile_cue", value = function(_, cue_name, tile_index)
+          tile_calls[#tile_calls + 1] = cue_name .. ":" .. tostring(tile_index)
+        end },
+        { target = board_feedback, key = "play_player_cue", value = function(_, cue_name, player_id)
+          player_calls[#player_calls + 1] = cue_name .. ":" .. tostring(player_id)
+        end },
+      }, function()
+        event_handlers.install(nil, {}, state)
+        local handler = assert(captured[event_names.feedback.angel_immune_blocked])
+        handler(nil, nil, { tile_index = 3, player_id = 4 })
+        handler(nil, nil, { player_id = 4 })
+      end)
+    end)
+
+    _assert_eq(tile_calls[1], "angel_deity:3", "tile event should prefer tile cue")
+    _assert_eq(player_calls[1], "angel_deity:4", "player event should fall back to player cue")
+  end)
+
+  it("pre confirm cancel restores non-inline source screen", function()
+    local state = {
+      _pre_confirm_active = true,
+      _pre_confirm_source_screen = "market",
+      gameplay_loop_ports = {
+        modal = {},
+      },
+    }
+    local open_calls = 0
+    local close_calls = 0
+    state.gameplay_loop_ports.modal.open_choice_modal = function(_, choice)
+      open_calls = open_calls + 1
+      _assert_eq(choice.id, "choice1", "cancel should restore current choice")
+    end
+    state.gameplay_loop_ports.modal.close_choice_modal = function()
+      close_calls = close_calls + 1
+    end
+    runtime_state.set_ui_model(state, {
+      choice = { id = "choice1" },
+    })
+    runtime_state.set_pending_choice_id(state, "choice1")
+
+    pre_confirm.cancel(state)
+
+    _assert_eq(state._pre_confirm_active, nil, "cancel should clear active flag")
+    _assert_eq(state._pre_confirm_source_screen, nil, "cancel should clear source")
+    _assert_eq(runtime_state.get_pending_choice_id(state), nil, "cancel should clear pending choice id")
+    _assert_eq(open_calls, 1, "non-inline cancel should reopen prior modal")
+    _assert_eq(close_calls, 0, "non-inline cancel should not close modal")
+  end)
+
+  it("item slot confirm dispatches stored intent and closes confirm state", function()
+    local stored_intent = { type = "ui_button", id = "item_slot_1" }
+    local state = {
+      _item_slot_confirm_active = true,
+      _item_slot_confirm_intent = stored_intent,
+      gameplay_loop_ports = {
+        modal = {},
+      },
+    }
+    state.gameplay_loop_ports.modal.close_choice_modal = function(close_state)
+      _assert_eq(close_state, state, "close should receive state")
+    end
+    local dispatched = {}
+    local action_port = {
+      dispatch_action = function(game, dispatch_state, intent, opts)
+        dispatched[#dispatched + 1] = {
+          game = game,
+          state = dispatch_state,
+          intent = intent,
+          opts = opts,
+        }
+      end,
+    }
+    local game = {}
+    local opts = { source = "test" }
+
+    local handled = item_slot_confirm.dispatch(state, game, { type = "choice_select" }, opts, action_port)
+
+    _assert_eq(handled, true, "active slot confirm should handle choice_select")
+    _assert_eq(state._item_slot_confirm_active, nil, "dispatch should clear active flag")
+    _assert_eq(state._item_slot_confirm_intent, nil, "dispatch should clear stored intent")
+    _assert_eq(#dispatched, 1, "dispatch should replay stored intent")
+    _assert_eq(dispatched[1].intent, stored_intent, "dispatch should replay original slot intent")
+  end)
+
+  it("assets init assigns all configured item slot icons", function()
+    local slot_images = {}
+    local role_iterations = 0
+    local state = {}
+
+    _with_patches({
+      { target = runtime_ui, key = "for_each_role_or_global", value = function(fn)
+        role_iterations = role_iterations + 1
+        fn(nil)
+      end },
+      { target = runtime_ui, key = "set_client_role", value = function(role)
+        _assert_eq(role, nil, "asset init should reset client role")
+      end },
+      { target = node_ops, key = "set_item_slot_image", value = function(node_name, image_key)
+        slot_images[#slot_images + 1] = {
+          node_name = node_name,
+          image_key = image_key,
+        }
+      end },
+    }, function()
+      assets.init_ui_assets(state)
+    end)
+
+    _assert_eq(role_iterations, 1, "asset init should run for global role scope")
+    _assert_eq(#slot_images, 5, "asset init should set five item slot images")
+    _assert_eq(slot_images[1].node_name, permanent_nodes.item_slots[1], "first slot node should match schema")
+    assert(state.ui_refs ~= nil, "asset init should store ui refs on state")
+  end)
+
+  it("player colors setter copies supplied owner colors", function()
+    player_colors.set_owner_colors("invalid")
+    player_colors.set_owner_colors({
+      p1 = 101,
+      p2 = 202,
+    })
+
+    _assert_eq(player_colors.resolve_owner_color("p1"), 101, "setter should keep p1 color")
+    _assert_eq(player_colors.resolve_owner_color("p2"), 202, "setter should keep p2 color")
+    _assert_eq(player_colors.resolve_owner_color("missing"), 0xcfcfcf, "missing owner should use default")
+  end)
+
+  it("ui events builds sorted canvas maps from UIManager nodes", function()
+    _reload_with("src.ui.coord.ui_events", {
+      ["Data.UIManagerNodes"] = {
+        ignored = { "Ignored", "EText" },
+        z_canvas = { "ZCanvas", "ECanvas" },
+        a_canvas = { "ACanvas", "ECanvas" },
+      },
+    }, function(ui_events)
+      _assert_eq(ui_events.canvas_names[1], "ACanvas", "canvas names should sort ascending")
+      _assert_eq(ui_events.canvas_names[2], "ZCanvas", "canvas names should include second canvas")
+      _assert_eq(ui_events.show.ACanvas, "显示ACanvas", "show event should be generated")
+      _assert_eq(ui_events.hide.ZCanvas, "隐藏ZCanvas", "hide event should be generated")
+    end)
+  end)
+
+  it("entity pool prewarm fills idle bucket and respects max idle", function()
+    entity_pool.reset()
+    local created = 0
+    local hidden = 0
+    local parked = 0
+
+    _with_patches({
+      { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
+        created = created + 1
+        return {
+          set_model_visible = function(visible)
+            if visible == false then
+              hidden = hidden + 1
+            end
+          end,
+          set_position = function()
+            parked = parked + 1
+          end,
+        }
+      end },
+    }, function()
+      entity_pool.prewarm("unit-a", 2, nil, nil, { x = 1, y = 2, z = 3 })
+      entity_pool.prewarm(nil, 2)
+      entity_pool.prewarm("unit-a", -1)
+    end)
+
+    local stats = entity_pool.stats()
+    _assert_eq(created, 2, "prewarm should create requested idle units")
+    _assert_eq(hidden, 2, "prewarm should hide created units")
+    _assert_eq(parked, 2, "prewarm should park created units")
+    _assert_eq(stats["unit-a"].idle, 2, "prewarm should fill idle bucket")
+    entity_pool.reset()
+  end)
+
+  it("view command warns when enabling action log without role event channel", function()
+    local warnings = {}
+    local state = { ui = { debug_log_enabled_by_role = {} } }
+    local ports = view_command.build()
+
+    _with_patches({
+      { target = actor_context, key = "resolve_role_by_id", value = function()
+        return {}
+      end },
+      { target = ui_event_state, key = "resolve_event_log_enabled", value = function()
+        return false
+      end },
+      { target = event_log_view, key = "set_event_log_visible_for_role", value = function(_, _, visible)
+        _assert_eq(visible, true, "toggle should enable hidden action log")
+      end },
+      { target = canvas, key = "switch_for_role", value = function() end },
+      { target = runtime_ui, key = "set_client_role", value = function() end },
+      { target = logger, key = "warn", value = function(...)
+        warnings[#warnings + 1] = table.concat({ ... }, " ")
+      end },
+    }, function()
+      _assert_eq(ports.dispatch(state, { type = "toggle_action_log", actor_role_id = 9 }), true,
+        "toggle action log command should be handled")
+    end)
+
+    assert((warnings[1] or ""):find("toggle_action_log missing role event channel", 1, true),
+      "toggle should warn when active role cannot receive UI events")
+  end)
+
+  it("item slice standalone slots filters empty inventory entries", function()
+    local slots = item_slice.build_item_slots_for_player({
+      inventory = {
+        items = {
+          { id = 11 },
+          {},
+          { id = 22 },
+          { id = 33 },
+        },
+      },
+    }, 2)
+
+    _assert_eq(slots[1], 11, "first valid item should fill first slot")
+    _assert_eq(slots[2], 22, "second valid item should fill second slot")
+    _assert_eq(slots[3], nil, "slot builder should trim beyond slot count")
+  end)
+
+  it("effect track pending await polls until idle then calls callback", function()
+    local callbacks = {}
+    local scheduled = {}
+    effect_track.reset()
+
+    _with_patches({
+      { target = runtime_ports, key = "schedule", value = function(delay, fn)
+        scheduled[#scheduled + 1] = {
+          delay = delay,
+          fn = fn,
+        }
+      end },
+    }, function()
+      effect_track.spawn("cue1", "kind", 0.1)
+      local idle = effect_track.await_all(function()
+        callbacks[#callbacks + 1] = "done"
+      end)
+
+      _assert_eq(idle, false, "await_all should report pending effects")
+      _assert_eq(#callbacks, 0, "callback should wait while effects are active")
+      assert(#scheduled >= 2, "spawn and await should schedule callbacks")
+
+      scheduled[1].fn()
+      scheduled[#scheduled].fn()
+    end)
+
+    _assert_eq(callbacks[1], "done", "await callback should run after effects drain")
+    effect_track.reset()
+  end)
+
+  it("sound binding reports success and missing host function", function()
+    local calls = 0
+    local unit = {}
+
+    _with_patches({
+      { key = "GlobalAPI", value = {
+        bind_sfx_to_unit = function(sfx_id, target_unit, socket_name, pos, bind_type)
+          calls = calls + 1
+          _assert_eq(sfx_id, 7, "sfx id should pass through")
+          _assert_eq(target_unit, unit, "unit should pass through")
+          _assert_eq(socket_name, "body", "socket should pass through")
+          _assert_eq(pos.x, 1, "position should pass through")
+          _assert_eq(bind_type, "follow", "bind type should pass through")
+        end,
+      } },
+    }, function()
+      _assert_eq(sound.bind_sfx_to_unit(7, unit, "body", { x = 1 }, "follow"), true,
+        "bind should return true when host call succeeds")
+    end)
+
+    _assert_eq(calls, 1, "host bind should be called once")
+    _with_patches({
+      { key = "GlobalAPI", value = {} },
+    }, function()
+      _assert_eq(sound.bind_sfx_to_unit(7, unit), false, "missing host bind should return false")
+    end)
+  end)
+
+  it("sound sfx key validates rate and routes valid host call", function()
+    local calls = {}
+
+    _with_patches({
+      { key = "GameAPI", value = {
+        play_sfx_by_key = function(sfx_key, pos, rot, scale, duration, rate, with_sound)
+          calls[#calls + 1] = {
+            sfx_key = sfx_key,
+            pos = pos,
+            rot = rot,
+            scale = scale,
+            duration = duration,
+            rate = rate,
+            with_sound = with_sound,
+          }
+          return 77
+        end,
+      } },
+    }, function()
+      _assert_eq(sound.play_sfx_by_key(100, nil, nil, 2.0, nil, nil, true), 77,
+        "valid sfx should return host id")
+      _assert_eq(sound.play_sfx_by_key(101, nil, nil, 2.0, nil, "bad", false), 77,
+        "invalid rate input should fall back to default rate")
+    end)
+
+    _assert_eq(#calls, 2, "valid sfx calls should reach host")
+    _assert_eq(calls[1].sfx_key, 100, "sfx key should be integer")
+    _assert_eq(calls[1].scale, 2.0, "scale should pass through")
+    _assert_eq(calls[1].duration, 1.0, "duration should use default")
+    _assert_eq(calls[1].rate, 1.0, "rate should use default")
+    _assert_eq(calls[1].with_sound, true, "with_sound should pass true")
+    _assert_eq(calls[2].rate, 1.0, "invalid rate input should use default")
+  end)
+
+  it("ui event state resolves explicit and current role action-log flags", function()
+    local role = { id = "role-a" }
+    local state = {
+      ui = {
+        debug_log_enabled_by_role = {
+          ["role-a"] = true,
+          ["9"] = false,
+        },
+      },
+    }
+
+    _with_patches({
+      { target = runtime_ui, key = "get_client_role", value = function()
+        return role
+      end },
+      { target = runtime_ui, key = "resolve_role_id", value = function(value)
+        return value and value.id or nil
+      end },
+    }, function()
+      _assert_eq(ui_event_state.resolve_event_log_enabled(state, nil), true,
+        "nil role should resolve current client role")
+      _assert_eq(ui_event_state.resolve_event_log_enabled(state, 9), false,
+        "explicit role should read by normalized id")
+      _assert_eq(ui_event_state.resolve_event_log_enabled(state, nil), true,
+        "current role should remain enabled")
+    end)
+  end)
+end)

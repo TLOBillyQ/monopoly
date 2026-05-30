@@ -1,0 +1,57 @@
+local market_layout = {
+  container = "黑市屏",
+  confirm_button = "黑市_购买按钮",
+  cancel_button = "黑市_关闭",
+  cancel_button_alt = "黑市_取消按钮",
+  page_prev = "黑市-上一页箭头",
+  page_next = "黑市-下一页箭头",
+  page_prev_label = "黑市-上一页按钮",
+  page_next_label = "黑市-下一页按钮",
+  page_prev_text = "上一页",
+  page_next_text = "下一页",
+  tab_item = "黑市-道具商店按钮",
+  tab_item_gray = "黑市-道具商店灰底",
+  tab_item_gray_label = "黑市-道具商店灰底文本",
+  price_label = "黑市_售价",
+  selected_card = "黑市_选中卡牌",
+  cash_amount_label = "黑市_现金数额",
+  cash_text_label = "黑市_现金文本",
+  cash_icon = "黑市_现金图标",
+  cash_background = "黑市_现金显示底框",
+  cash_shadow = "黑市_现金显示底框投影",
+  item_buttons = {},
+  item_labels = {},
+  item_frames = {},
+  item_selection_frames = {},
+  sold_out_badges = {},
+  sold_out_labels = {},
+  rarity_ref_keys = { [1] = "lv1", [2] = "lv2", [3] = "lv3" },
+  empty_ref_key = "Empty",
+}
+
+market_layout.cancel_buttons = {
+  market_layout.cancel_button,
+  market_layout.cancel_button_alt,
+}
+
+for i = 1, 10 do
+  local idx = tostring(i)
+  market_layout.item_buttons[i] = "黑市_购买项" .. idx
+  market_layout.item_labels[i] = "黑市_道具名称" .. idx
+  market_layout.item_frames[i] = "黑市_底框" .. idx
+  market_layout.item_selection_frames[i] = "黑市-选中边框" .. idx
+  market_layout.sold_out_badges[i] = "黑市-售罄" .. idx
+  market_layout.sold_out_labels[i] = "黑市-售罄" .. idx .. "文本"
+end
+
+return market_layout
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=d10ae65f65285004
+scope.0.id=chunk:src/ui/schema/market_layout.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=43
+scope.0.semanticHash=8c246cf223d38ed5
+]]

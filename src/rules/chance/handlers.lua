@@ -1,0 +1,597 @@
+local inventory = require("src.rules.items.inventory")
+local tile = require("src.rules.board.tile")
+local monopoly_event = require("src.foundation.events")
+local movement = require("src.rules.movement")
+local bankruptcy_port = require("src.rules.ports.bankruptcy")
+local timing = require("src.config.gameplay.timing")
+local number_utils = require("src.foundation.number")
+local action_anim_port = require("src.foundation.ports.action_anim")
+local move_anim_port = require("src.foundation.ports.move_anim")
+local event_feed = require("src.rules.ports.event_feed")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local angel_feedback = require("src.rules.items.angel_feedback")
+
+local shared = {}
+
+local action_anim_duration = timing.action_anim_default_seconds or 1.0
+local tile_state = tile.get_state
+
+function shared.emit_event(game, kind, payload)
+  payload = payload or {}
+  monopoly_event.emit(kind, payload)
+  if game and type(payload.text) == "string" then
+    event_feed.publish(game, {
+      kind = event_kinds.chance_card,
+      text = payload.text,
+    })
+  end
+end
+
+shared.abs_value = math.abs
+
+function shared.apply_cash_change(game, player, delta, opts)
+  game:add_player_cash(player, delta, opts)
+end
+
+function shared.adjust_chance_delta(game, player, delta)
+  if delta > 0 and game:player_has_deity(player, "rich") then
+    return delta * 2
+  end
+  if delta < 0 and game:player_has_deity(player, "poor") then
+    return delta * 2
+  end
+  return delta
+end
+
+function shared.handle_bankruptcy_if_non_positive(game, player, reason)
+  if game:player_balance(player, "金币") > 0 then
+    return
+  end
+  bankruptcy_port.eliminate(game, player, { reason = reason })
+end
+
+function shared.apply_cash_and_maybe_bankrupt(game, player, delta, reason)
+  shared.apply_cash_change(game, player, delta)
+  shared.handle_bankruptcy_if_non_positive(game, player, reason)
+end
+
+function shared.queue_action_anim(game, payload)
+  if not payload then
+    return false
+  end
+  return action_anim_port.queue(game, payload)
+end
+
+local function _queue_relocation_anim(game, kind, player, from_index, to_index, visited)
+  if not player then
+    return false
+  end
+  local payload = {
+    kind = kind,
+    player_id = player.id,
+    from_index = from_index,
+    to_index = to_index,
+    visited = visited,
+    duration = action_anim_duration,
+  }
+  return shared.queue_action_anim(game, payload)
+end
+
+function shared.queue_move_effect(game, player, from_index, to_index, visited)
+  return _queue_relocation_anim(game, "move_effect", player, from_index, to_index, visited)
+end
+
+function shared.queue_forced_relocation(game, player, from_index, to_index)
+  return _queue_relocation_anim(game, "forced_relocation", player, from_index, to_index, nil)
+end
+
+local function _build_chance_move_anim_payload(player, from_index, move_result)
+  return {
+    player_id = player.id,
+    from_index = from_index,
+    to_index = player.position,
+    visited = move_result.visited,
+    steps = move_result.steps,
+    source = "chance_move",
+  }
+end
+
+function shared.move_steps(game, player, steps, opts)
+  local from_index = player.position
+  local res = movement.move(game, player, steps, opts)
+  assert(res ~= nil, "missing move result")
+  local queued = move_anim_port.queue(game, _build_chance_move_anim_payload(player, from_index, res))
+  if not queued then
+    shared.queue_move_effect(game, player, from_index, player.position, res.visited)
+  end
+  return {
+    kind = "need_landing",
+    player_id = player.id,
+    board_index = player.position,
+    move_result = res,
+    wait_move_anim = queued == true,
+  }
+end
+
+function shared.dependencies()
+  return {
+    inventory = inventory,
+    tile_state = tile_state,
+    monopoly_event = monopoly_event,
+    number_utils = number_utils,
+  }
+end
+
+local function _register_cash_handlers(handlers, common)
+  local deps = common.dependencies()
+
+  local function _apply_to_all_players(game, fn)
+    for _, p in ipairs(game.players) do
+      if not p.eliminated then
+        fn(p)
+      end
+    end
+  end
+
+  handlers.add_cash = function(game, player, card)
+    if card.target == "all" then
+      _apply_to_all_players(game, function(p)
+        local delta = common.adjust_chance_delta(game, p, card.amount)
+        common.apply_cash_change(game, p, delta)
+        common.emit_event(game, deps.monopoly_event.chance.applied, {
+          player = p,
+          card = card,
+          effect = card.effect,
+          text = "￥ " .. p.name .. " 获得 " .. deps.number_utils.format_integer_part(delta) .. " 金币",
+        })
+      end)
+      return
+    end
+
+    local delta = common.adjust_chance_delta(game, player, card.amount)
+    common.apply_cash_change(game, player, delta)
+    common.emit_event(game, deps.monopoly_event.chance.applied, {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = "￥ " .. player.name .. " 获得 " .. deps.number_utils.format_integer_part(delta) .. " 金币",
+    })
+  end
+
+  local function _apply_payment(game, target, card, compute_fee, reason_label, text_label)
+    local fee = compute_fee(game, target, card)
+    local delta = common.adjust_chance_delta(game, target, -fee)
+    local reason = target.name .. " " .. reason_label .. " " .. common.abs_value(delta) .. " 后破产"
+    common.apply_cash_and_maybe_bankrupt(game, target, delta, reason)
+    common.emit_event(game, deps.monopoly_event.chance.applied, {
+      player = target,
+      card = card,
+      effect = card.effect,
+      text = "￥ " .. target.name .. " " .. text_label .. " " .. deps.number_utils.format_integer_part(common.abs_value(delta)) .. " 金币",
+    })
+  end
+
+  local function _dispatch_payment(game, player, card, compute_fee, reason_label, text_label)
+    if card.target == "all" then
+      _apply_to_all_players(game, function(p)
+        if card.negative and game:player_has_angel(p) then
+          angel_feedback.publish(game, p, "机会卡扣费")
+          return
+        end
+        _apply_payment(game, p, card, compute_fee, reason_label, text_label)
+      end)
+      return
+    end
+    _apply_payment(game, player, card, compute_fee, reason_label, text_label)
+  end
+
+  local function _fee_flat(_, _, card) return card.amount end
+  local function _fee_percent(game, target, card)
+    return math.floor(game:player_balance(target, "金币") * (card.percent / 100))
+  end
+
+  handlers.pay_cash = function(game, player, card)
+    _dispatch_payment(game, player, card, _fee_flat, "支付机会卡费用", "支付")
+  end
+
+  handlers.percent_pay_cash = function(game, player, card)
+    _dispatch_payment(game, player, card, _fee_percent, "按比例支付机会卡费用", "按比例支付")
+  end
+
+  handlers.pay_others = function(game, player, card)
+    for _, other in ipairs(game.players) do
+      if player.eliminated then
+        break
+      end
+      if other.id ~= player.id and not other.eliminated then
+        local fee = math.abs(common.adjust_chance_delta(game, player, -card.amount))
+        if not game:player_is_in_mountain(other) then
+          local reason = player.name .. " 向他人支付后破产"
+          common.apply_cash_change(game, player, -fee, { suppress_cash_receive_anim = true })
+          common.handle_bankruptcy_if_non_positive(game, player, reason)
+          common.apply_cash_change(game, other, fee, { suppress_cash_receive_anim = true })
+        end
+      end
+    end
+    common.emit_event(game, deps.monopoly_event.chance.applied, {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = "￥ " .. player.name .. " 向每位玩家支付 " .. deps.number_utils.format_integer_part(card.amount),
+    })
+  end
+
+  handlers.collect_from_others = function(game, player, card)
+    local total_collected = 0
+    for _, other in ipairs(game.players) do
+      if other.id ~= player.id and not other.eliminated then
+        local fee = common.adjust_chance_delta(game, player, card.amount)
+        if not game:player_is_in_mountain(player) then
+          local other_cash = game:player_balance(other, "金币")
+          local liquid = math.min(other_cash, fee)
+          common.apply_cash_change(game, other, -fee, { suppress_cash_receive_anim = true })
+          common.apply_cash_change(game, player, liquid, { suppress_cash_receive_anim = true })
+          total_collected = total_collected + liquid
+          local reason = other.name .. " 被收款资金不足破产"
+          common.handle_bankruptcy_if_non_positive(game, other, reason)
+        end
+      end
+    end
+    if total_collected > 0 then
+      common.queue_action_anim(game, {
+        kind = "cash_receive",
+        player_id = player.id,
+        amount = total_collected,
+      })
+    end
+    common.emit_event(game, deps.monopoly_event.chance.applied, {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = "￥ " .. player.name .. " 收取每位玩家 " .. deps.number_utils.format_integer_part(card.amount),
+    })
+  end
+end
+
+local function _register_asset_handlers(handlers, common)
+  local deps = common.dependencies()
+
+  handlers.destroy_buildings_on_path = function(game, _, _, context)
+    assert(context ~= nil and context.visited ~= nil, "missing context.visited")
+    for _, idx in ipairs(context.visited) do
+      local t = game.board:get_tile(idx)
+      assert(t ~= nil, "missing tile: " .. tostring(idx))
+      if t.type == "land" and (t.level or 0) > 0 then
+        game:set_tile_level(t, 0)
+        common.emit_event(game, deps.monopoly_event.chance.applied, {
+          card = { effect = "destroy_buildings_on_path" },
+          effect = "destroy_buildings_on_path",
+          tile = t,
+          text = "台风摧毁 " .. t.name .. " 上的建筑",
+        })
+      end
+    end
+  end
+
+  handlers.reset_tiles_on_path = function(game, _, _, context)
+    assert(context ~= nil and context.visited ~= nil, "missing context.visited")
+    for _, idx in ipairs(context.visited) do
+      local t = game.board:get_tile(idx)
+      assert(t ~= nil, "missing tile: " .. tostring(idx))
+      if t.type == "land" then
+        local st = deps.tile_state(game, t)
+        assert(st ~= nil, "missing tile state: " .. tostring(t.id))
+        if st.owner_id then
+          local owner = assert(game:find_player_by_id(st.owner_id), "missing owner: " .. tostring(st.owner_id))
+          game:set_player_property(owner, t.id, false)
+        end
+        game:reset_tile(t)
+        common.emit_event(game, deps.monopoly_event.chance.applied, {
+          card = { effect = "reset_tiles_on_path" },
+          effect = "reset_tiles_on_path",
+          tile = t,
+          text = "强制征地重置 " .. t.name,
+        })
+      end
+    end
+  end
+
+  handlers.grant_item = function(game, player, card)
+    deps.inventory.give(player, card.item_id, { game = game })
+  end
+
+  handlers.discard_items = function(game, player, card)
+    local to_drop = card.count
+    if to_drop == 0 then
+      to_drop = deps.inventory.count(player)
+    end
+    local dropped_names = {}
+    local rng = assert(game and game.rng, "missing game.rng for discard_items")
+    assert(type(rng.next_int) == "function", "missing game.rng.next_int for discard_items")
+    for _ = 1, to_drop do
+      local item_count = deps.inventory.count(player)
+      if item_count == 0 then
+        break
+      end
+      local item = deps.inventory.remove_by_index(player, rng:next_int(1, item_count))
+      table.insert(dropped_names, deps.inventory.item_name(item.id))
+    end
+    local text = player.name .. " 丢弃道具 " .. #dropped_names .. " 张"
+    if #dropped_names > 0 then
+      text = text .. ": " .. table.concat(dropped_names, "、")
+    end
+    common.emit_event(game, deps.monopoly_event.chance.applied, {
+      player = player,
+      card = card,
+      effect = card.effect,
+      text = text,
+    })
+  end
+
+  handlers.discard_properties = function(game, player, card)
+    local to_drop = card.count
+    local property_ids = {}
+    for tile_id in pairs(player.properties or {}) do
+      property_ids[#property_ids + 1] = tile_id
+    end
+    table.sort(property_ids, function(a, b)
+      local ai = deps.number_utils.to_integer(a)
+      local bi = deps.number_utils.to_integer(b)
+      if ai ~= nil and bi ~= nil then
+        return ai < bi
+      end
+      return tostring(a) < tostring(b)
+    end)
+
+    if to_drop == 0 then
+      to_drop = #property_ids
+    end
+
+    local rng = nil
+    local needs_random_pick = to_drop > 0 and to_drop < #property_ids and #property_ids > 1
+    if needs_random_pick then
+      rng = assert(game and game.rng, "missing game.rng for discard_properties")
+      assert(type(rng.next_int) == "function", "missing game.rng.next_int for discard_properties")
+    end
+
+    for _ = 1, to_drop do
+      if #property_ids == 0 then
+        break
+      end
+      local pick_index = 1
+      if rng then
+        pick_index = rng:next_int(1, #property_ids)
+      end
+      local tile_id = table.remove(property_ids, pick_index)
+      local t = game.board:get_tile_by_id(tile_id)
+      assert(t ~= nil, "missing tile: " .. tostring(tile_id))
+      game:reset_tile(t)
+      common.emit_event(game, deps.monopoly_event.chance.applied, {
+        player = player,
+        card = card,
+        effect = card.effect,
+        tile = t,
+        text = player.name .. " 丢失地块 " .. t.name,
+      })
+      game:set_player_property(player, tile_id, false)
+    end
+  end
+end
+
+local teleport_tile_types = {
+  hospital = true,
+  mountain = true,
+  tax = true,
+  market = true,
+}
+
+local function _register_movement_handlers(handlers, common)
+  handlers.move_backward = function(game, player, card, context)
+    local move_opts = {
+      facing_mode = "relative_backward",
+      skip_market_check = true,
+    }
+    if context and context.arrival_direction ~= nil then
+      move_opts.direction = context.arrival_direction
+    end
+    local res = common.move_steps(game, player, -(card.steps or 0), move_opts)
+    if res and res.move_result then
+      res.move_result.allow_optional = true
+    end
+    return res
+  end
+
+  handlers.move_forward = function(game, player, card)
+    return common.move_steps(game, player, card.steps or 0)
+  end
+
+  handlers.forced_move = function(game, player, card, context)
+    local from_index = player.position
+    local idx, t = game:player_relocate(player, {
+      destination_tile_id = assert(card.destination_tile_id, "forced_move requires destination_tile_id"),
+      move_dir_mode = "forced_move",
+    })
+    if teleport_tile_types[t.type] == true then
+      common.queue_forced_relocation(game, player, from_index, idx)
+    else
+      common.queue_move_effect(game, player, from_index, idx, nil)
+    end
+    return {
+      kind = "need_landing",
+      player_id = player.id,
+      board_index = idx,
+      move_result = context,
+    }
+  end
+end
+
+local handlers = {}
+
+function handlers.build()
+  local built = {}
+  _register_cash_handlers(built, shared)
+  _register_asset_handlers(built, shared)
+  _register_movement_handlers(built, shared)
+  built.handlers = built
+  return built
+end
+
+handlers._cash = { register = _register_cash_handlers }
+handlers._asset = { register = _register_asset_handlers }
+
+return handlers
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=7ac165ab90103555
+scope.0.id=chunk:src/rules/chance/handlers.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=443
+scope.0.semanticHash=66f37c12700e6435
+scope.1.id=function:shared.emit_event:19
+scope.1.kind=function
+scope.1.startLine=19
+scope.1.endLine=28
+scope.1.semanticHash=93b00a792d15b855
+scope.2.id=function:shared.apply_cash_change:32
+scope.2.kind=function
+scope.2.startLine=32
+scope.2.endLine=34
+scope.2.semanticHash=6f946c54fefb76e5
+scope.3.id=function:shared.adjust_chance_delta:36
+scope.3.kind=function
+scope.3.startLine=36
+scope.3.endLine=44
+scope.3.semanticHash=8bfbb9f8a46c2cc4
+scope.4.id=function:shared.handle_bankruptcy_if_non_positive:46
+scope.4.kind=function
+scope.4.startLine=46
+scope.4.endLine=51
+scope.4.semanticHash=107a94b630a14373
+scope.5.id=function:shared.apply_cash_and_maybe_bankrupt:53
+scope.5.kind=function
+scope.5.startLine=53
+scope.5.endLine=56
+scope.5.semanticHash=748f524ba83eecab
+scope.6.id=function:shared.queue_action_anim:58
+scope.6.kind=function
+scope.6.startLine=58
+scope.6.endLine=63
+scope.6.semanticHash=4f32cbf0112d879d
+scope.7.id=function:_queue_relocation_anim:65
+scope.7.kind=function
+scope.7.startLine=65
+scope.7.endLine=78
+scope.7.semanticHash=8a32e710d5eccab0
+scope.8.id=function:shared.queue_move_effect:80
+scope.8.kind=function
+scope.8.startLine=80
+scope.8.endLine=82
+scope.8.semanticHash=0a42cb662d828fbe
+scope.9.id=function:shared.queue_forced_relocation:84
+scope.9.kind=function
+scope.9.startLine=84
+scope.9.endLine=86
+scope.9.semanticHash=20de6b46ef8d9085
+scope.10.id=function:_build_chance_move_anim_payload:88
+scope.10.kind=function
+scope.10.startLine=88
+scope.10.endLine=97
+scope.10.semanticHash=7a1a1710b6260cd5
+scope.11.id=function:shared.move_steps:99
+scope.11.kind=function
+scope.11.startLine=99
+scope.11.endLine=114
+scope.11.semanticHash=d0342d17aef38778
+scope.12.id=function:shared.dependencies:116
+scope.12.kind=function
+scope.12.startLine=116
+scope.12.endLine=123
+scope.12.semanticHash=13d59334abf08103
+scope.13.id=function:anonymous@138:138
+scope.13.kind=function
+scope.13.startLine=138
+scope.13.endLine=147
+scope.13.semanticHash=f18e213474a32a26
+scope.14.id=function:anonymous@136:136
+scope.14.kind=function
+scope.14.startLine=136
+scope.14.endLine=159
+scope.14.semanticHash=f12db4f60c3f3e66
+scope.15.id=function:_apply_payment:161
+scope.15.kind=function
+scope.15.startLine=161
+scope.15.endLine=172
+scope.15.semanticHash=1f9cd53d983d4b6a
+scope.16.id=function:anonymous@176:176
+scope.16.kind=function
+scope.16.startLine=176
+scope.16.endLine=182
+scope.16.semanticHash=745724e933b18a5e
+scope.17.id=function:_dispatch_payment:174
+scope.17.kind=function
+scope.17.startLine=174
+scope.17.endLine=186
+scope.17.semanticHash=b8b611aabfb71c6f
+scope.18.id=function:_fee_flat:188
+scope.18.kind=function
+scope.18.startLine=188
+scope.18.endLine=188
+scope.18.semanticHash=a95c7c89770a8336
+scope.19.id=function:_fee_percent:189
+scope.19.kind=function
+scope.19.startLine=189
+scope.19.endLine=191
+scope.19.semanticHash=f4806f818e79518d
+scope.20.id=function:anonymous@193:193
+scope.20.kind=function
+scope.20.startLine=193
+scope.20.endLine=195
+scope.20.semanticHash=a010c205852f6a60
+scope.21.id=function:anonymous@197:197
+scope.21.kind=function
+scope.21.startLine=197
+scope.21.endLine=199
+scope.21.semanticHash=c28ee76cc0bffb56
+scope.22.id=function:anonymous@224:224
+scope.22.kind=function
+scope.22.startLine=224
+scope.22.endLine=254
+scope.22.semanticHash=eb1a362cff4bae8b
+scope.23.id=function:anonymous@299:299
+scope.23.kind=function
+scope.23.startLine=299
+scope.23.endLine=301
+scope.23.semanticHash=12895306c12a287b
+scope.24.id=function:anonymous@337:337
+scope.24.kind=function
+scope.24.startLine=337
+scope.24.endLine=344
+scope.24.semanticHash=3cb10b96dddc41c7
+scope.25.id=function:anonymous@389:389
+scope.25.kind=function
+scope.25.startLine=389
+scope.25.endLine=402
+scope.25.semanticHash=5686b4eb5564e41e
+scope.26.id=function:anonymous@404:404
+scope.26.kind=function
+scope.26.startLine=404
+scope.26.endLine=406
+scope.26.semanticHash=d80139c1d7cab276
+scope.27.id=function:anonymous@408:408
+scope.27.kind=function
+scope.27.startLine=408
+scope.27.endLine=425
+scope.27.semanticHash=3bb6d85e8910f848
+scope.28.id=function:_register_movement_handlers:388
+scope.28.kind=function
+scope.28.startLine=388
+scope.28.endLine=426
+scope.28.semanticHash=d3db4d3cafcd9507
+scope.29.id=function:handlers.build:430
+scope.29.kind=function
+scope.29.startLine=430
+scope.29.endLine=437
+scope.29.semanticHash=d9658e8261da808b
+]]
