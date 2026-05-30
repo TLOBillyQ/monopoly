@@ -105,4 +105,4 @@
   | 应提交路径 | 本地路径 |
   | swarmforge/ | .swarmforge/ |
   | features/swarmforge/chinese_gherkin_acceptance.feature | .worktrees/ |
-  | docs/guides/chinese-gherkin.md | agent_context/ |
+  | docs/guides/chinese-gherkin.md | tmp/ |

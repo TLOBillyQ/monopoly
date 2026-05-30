@@ -744,7 +744,7 @@ local embedded_ir = {
         },
         {
           ["应提交路径"] = "docs/guides/chinese-gherkin.md",
-          ["本地路径"] = "agent_context/",
+          ["本地路径"] = "tmp/",
         },
       },
       ["metadata"] = {
