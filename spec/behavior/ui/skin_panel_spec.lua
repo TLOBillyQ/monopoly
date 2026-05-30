@@ -68,6 +68,34 @@ local function _find_call(calls, method, name)
   return nil
 end
 
+-- In-memory stand-in for the host skin archive port. Records mark/save calls so
+-- tests can assert what was persisted, and serves load_* back for seeding.
+local function _make_fake_archive()
+  local store = { owned = {}, equipped = {}, mark_calls = {}, save_calls = {} }
+  return {
+    store = store,
+    mark_owned = function(role, product_id)
+      store.mark_calls[#store.mark_calls + 1] = { role = role, product_id = product_id }
+      store.owned[tostring(role)] = store.owned[tostring(role)] or {}
+      store.owned[tostring(role)][product_id] = true
+    end,
+    load_owned = function(role)
+      local out = {}
+      for product_id in pairs(store.owned[tostring(role)] or {}) do
+        out[#out + 1] = product_id
+      end
+      return out
+    end,
+    save_equipped = function(role, product_id)
+      store.save_calls[#store.save_calls + 1] = { role = role, product_id = product_id }
+      store.equipped[tostring(role)] = product_id
+    end,
+    load_equipped = function(role)
+      return store.equipped[tostring(role)]
+    end,
+  }
+end
+
 describe("skin_panel", function()
   before_each(function()
     skin_panel.reset_for_tests()
@@ -260,6 +288,181 @@ describe("skin_panel", function()
       assert(s.ui.skin_panel.selected_by_role["1"] == "skin_1")
       skin_panel.handle_action(s, "unequip", 1)
       assert(s.ui.skin_panel.selected_by_role["1"] == nil, "unequip should clear selection")
+    end)
+
+    it("unequip invokes the restore callback with the role id", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(5))
+      local received = "unset"
+      skin_panel.configure_unequip(function(role_id) received = role_id end)
+      local s = _make_state()
+      skin_panel.open(s, 2)
+      skin_panel.unlock(s, 2, "buy", 1)
+      skin_panel.equip(s, 2, 1)
+      skin_panel.handle_action(s, "unequip", 2)
+      assert(received == 2,
+        "unequip should pass the role id to the restore callback, got " .. tostring(received))
+    end)
+
+    it("unequip without a restore callback still clears the selection", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(5))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "buy", 1)
+      skin_panel.equip(s, 1, 1)
+      skin_panel.handle_action(s, "unequip", 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil,
+        "unequip must clear selection even when no restore callback is configured")
+    end)
+
+    it("unequip warns and still clears selection when the restore callback throws", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(5))
+      skin_panel.configure_unequip(function() error("boom") end)
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "buy", 1)
+      skin_panel.equip(s, 1, 1)
+      local warned = false
+      _with_patches({
+        { target = logger, key = "warn", value = function(message)
+          if tostring(message):match("unequip callback failed") then
+            warned = true
+          end
+        end },
+      }, function()
+        skin_panel.handle_action(s, "unequip", 1)
+      end)
+      assert(warned, "a throwing restore callback must hit the warn failure path")
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil,
+        "a throwing restore callback must not block selection clearing")
+    end)
+
+    it("unequip clears the explicitly passed role, not the panel's open role", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(5))
+      local s = _make_state()
+      skin_panel.open(s, 1) -- panel.role_id stays 1
+      skin_panel.unlock(s, 2, "buy", 1)
+      skin_panel.equip(s, 2, 1)
+      assert(s.ui.skin_panel.selected_by_role["2"] == "skin_1", "role 2 should be equipped")
+      skin_panel.handle_action(s, "unequip", 2)
+      assert(s.ui.skin_panel.selected_by_role["2"] == nil,
+        "unequip must act on the passed role id (role_id or panel.role_id), not panel.role_id")
+    end)
+  end)
+
+  describe("archive persistence", function()
+    it("purchase unlock marks ownership and persists the auto-equipped skin", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      local archive = _make_fake_archive()
+      skin_panel.configure_archive(archive)
+      skin_panel.configure_purchase(function(_, _, on_success) on_success() end)
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.equip(s, 1, 1) -- slot 1 is a locked purchase skin -> initiates purchase
+      assert(archive.store.owned["1"][5001] == true, "purchase should persist ownership")
+      assert(archive.store.equipped["1"] == 5001, "purchase auto-equip should persist equipped product")
+    end)
+
+    it("does not persist gift-unlocked ownership", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      local archive = _make_fake_archive()
+      skin_panel.configure_archive(archive)
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "gift", 3)
+      assert(archive.store.owned["1"] == nil or archive.store.owned["1"][5003] == nil,
+        "gift unlock must not write to the archive")
+    end)
+
+    it("unequip clears the persisted equipped product", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      local archive = _make_fake_archive()
+      skin_panel.configure_archive(archive)
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "purchase", 1)
+      skin_panel.equip(s, 1, 1)
+      assert(archive.store.equipped["1"] == 5001, "equip should persist equipped product")
+      skin_panel.handle_action(s, "unequip", 1)
+      assert(archive.store.equipped["1"] == nil, "unequip should clear the persisted equipped product")
+    end)
+
+    it("open seeds ownership from the archive on a fresh state", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      local archive = _make_fake_archive()
+      archive.store.owned["1"] = { [5001] = true }
+      skin_panel.configure_archive(archive)
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      assert(s.ui.skin_panel.owned_by_role["1"][5001] == true,
+        "open should seed ownership from the archive")
+    end)
+
+    it("open auto-equips the persisted skin, fires the equip callback, and stays open", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      local archive = _make_fake_archive()
+      archive.store.owned["1"] = { [5001] = true }
+      archive.store.equipped["1"] = 5001
+      local equipped_product
+      skin_panel.configure_equip(function(_, skin)
+        equipped_product = skin and skin.product_id
+        return true
+      end)
+      skin_panel.configure_archive(archive)
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == 5001, "open should auto-equip the persisted skin")
+      assert(equipped_product == 5001, "auto-equip should fire the equip callback with the product id")
+      assert(s.ui.skin_panel.open == true, "panel must stay open after seeding auto-equip")
+    end)
+
+    it("no archive configured leaves persistence paths inert", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      skin_panel.unlock(s, 1, "purchase", 1)
+      skin_panel.equip(s, 1, 1)
+      skin_panel.handle_action(s, "unequip", 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil,
+        "without an archive the equip/unequip flow behaves as before")
+    end)
+
+    -- configure_archive only asserts nil-or-table, so a partial port (a table
+    -- missing some methods) is a contract-allowed input. Seeding must degrade
+    -- gracefully rather than call a nil method.
+    it("open skips ownership seeding when the archive lacks load_owned", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      skin_panel.configure_archive({}) -- partial port: no load_owned
+      local s = _make_state()
+      skin_panel.open(s, 1) -- must not call a nil load_owned
+      local owned = s.ui.skin_panel.owned_by_role["1"]
+      assert(owned == nil or next(owned) == nil,
+        "a missing load_owned must leave ownership unseeded, not error")
+    end)
+
+    it("open skips equipped restore when the archive lacks load_equipped", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      skin_panel.configure_archive({
+        load_owned = function() return { 5001 } end,
+        -- no load_equipped
+      })
+      local s = _make_state()
+      skin_panel.open(s, 1) -- must not call a nil load_equipped
+      assert(s.ui.skin_panel.owned_by_role["1"][5001] == true,
+        "ownership is still seeded when only load_equipped is absent")
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil,
+        "a missing load_equipped must skip equipped restore, not error")
+    end)
+
+    it("open does not auto-equip a persisted skin the player does not own", function()
+      skin_panel.configure_catalog_for_tests(_make_rich_catalog())
+      skin_panel.configure_archive({
+        load_owned = function() return {} end, -- owns nothing
+        load_equipped = function() return 5001 end, -- archive claims 5001 equipped
+      })
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      assert(s.ui.skin_panel.selected_by_role["1"] == nil,
+        "must not auto-equip a persisted skin that is not owned")
     end)
   end)
 
@@ -628,6 +831,37 @@ describe("skin_panel", function()
       skin_panel_view.refresh_slots(state, catalog)
       local vis = _find_call(calls, "set_visible", skin_nodes.price_icons[1])
       assert(vis == false, "purchase unlock with nil currency should hide price icon")
+    end)
+
+    it("price icon hidden for an owned but unequipped purchase skin (穿上 state)", function()
+      local catalog = _make_rich_catalog()
+      local state, calls = _make_render_state({
+        owned_by_role = { ["1"] = { [5001] = true } },
+      })
+      skin_panel_view.refresh_slots(state, catalog)
+      local vis = _find_call(calls, "set_visible", skin_nodes.price_icons[1])
+      assert(vis == false, "owned purchase skin should hide its price icon")
+    end)
+
+    it("price icon hidden for an equipped purchase skin (脱下 state)", function()
+      local catalog = _make_rich_catalog()
+      local state, calls = _make_render_state({
+        owned_by_role = { ["1"] = { [5001] = true } },
+        selected_by_role = { ["1"] = 5001 },
+      })
+      skin_panel_view.refresh_slots(state, catalog)
+      local vis = _find_call(calls, "set_visible", skin_nodes.price_icons[1])
+      assert(vis == false, "equipped purchase skin should hide its price icon")
+    end)
+
+    it("price icon still visible for an unowned purchase skin beside an owned one", function()
+      local catalog = _make_rich_catalog()
+      local state, calls = _make_render_state({
+        owned_by_role = { ["1"] = { [5001] = true } },
+      })
+      skin_panel_view.refresh_slots(state, catalog)
+      local vis = _find_call(calls, "set_visible", skin_nodes.price_icons[2])
+      assert(vis == true, "an unowned purchase skin should still show its price icon")
     end)
 
     it("shows all 6 card images for a full first page", function()

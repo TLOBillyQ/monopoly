@@ -9,7 +9,7 @@ local embedded_ir = {
       ["keyword"] = "Given",
       ["metadata"] = {
         ["original_text"] = "游戏已初始化标准棋盘",
-        ["source_line"] = 486,
+        ["source_line"] = 6,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["parameters"] = {},
@@ -18,25 +18,24 @@ local embedded_ir = {
   },
   ["metadata"] = {
     ["field_lines"] = {
-      ["产品ID"] = 992,
-      ["卡片渲染数"] = 733,
-      ["容器数"] = 734,
-      ["总页数"] = 545,
-      ["按钮文本"] = 858,
-      ["新槽位"] = 836,
-      ["旧槽位"] = 835,
-      ["末页槽位数"] = 737,
-      ["槽位"] = 558,
-      ["槽位数"] = 544,
-      ["皮肤ID"] = 767,
-      ["皮肤数"] = 542,
-      ["角色ID"] = 496,
-      ["购买槽位"] = 930,
-      ["赠礼名"] = 873,
-      ["面板"] = 530,
-      ["页码"] = 638,
-      ["验证槽位"] = 561,
-      ["验证角色ID"] = 731,
+      ["产品ID"] = 127,
+      ["卡片渲染数"] = 276,
+      ["容器数"] = 277,
+      ["总页数"] = 65,
+      ["按钮文本"] = 404,
+      ["新槽位"] = 382,
+      ["末页槽位数"] = 262,
+      ["槽位"] = 78,
+      ["槽位数"] = 64,
+      ["皮肤ID"] = 311,
+      ["皮肤数"] = 62,
+      ["角色ID"] = 16,
+      ["购买槽位"] = 479,
+      ["赠礼名"] = 419,
+      ["面板"] = 50,
+      ["页码"] = 159,
+      ["验证槽位"] = 81,
+      ["验证角色ID"] = 274,
     },
     ["field_names"] = {
       ["产品ID"] = "产品ID",
@@ -45,7 +44,6 @@ local embedded_ir = {
       ["总页数"] = "总页数",
       ["按钮文本"] = "按钮文本",
       ["新槽位"] = "新槽位",
-      ["旧槽位"] = "旧槽位",
       ["末页槽位数"] = "末页槽位数",
       ["槽位"] = "槽位",
       ["槽位数"] = "槽位数",
@@ -68,7 +66,7 @@ local embedded_ir = {
       ["examples"] = {},
       ["metadata"] = {
         ["example_field_lines"] = {},
-        ["source_line"] = 490,
+        ["source_line"] = 10,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "游戏初始化后皮肤商店默认关闭",
@@ -77,7 +75,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已关闭",
-            ["source_line"] = 491,
+            ["source_line"] = 11,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -93,9 +91,9 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["角色ID"] = 501,
+          ["角色ID"] = 21,
         },
-        ["source_line"] = 495,
+        ["source_line"] = 15,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "点击基础屏皮肤图标打开皮肤商店",
@@ -104,7 +102,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 496,
+            ["source_line"] = 16,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -116,7 +114,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "触发基础屏皮肤按钮",
-            ["source_line"] = 497,
+            ["source_line"] = 17,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -126,7 +124,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已开启",
-            ["source_line"] = 498,
+            ["source_line"] = 18,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -145,9 +143,9 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["角色ID"] = 512,
+          ["角色ID"] = 32,
         },
-        ["source_line"] = 506,
+        ["source_line"] = 26,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "打开皮肤商店后商店开启",
@@ -156,7 +154,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 507,
+            ["source_line"] = 27,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -168,7 +166,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 508,
+            ["source_line"] = 28,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -178,7 +176,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已开启",
-            ["source_line"] = 509,
+            ["source_line"] = 29,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -194,9 +192,9 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["角色ID"] = 523,
+          ["角色ID"] = 43,
         },
-        ["source_line"] = 516,
+        ["source_line"] = 36,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "关闭皮肤商店",
@@ -205,7 +203,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 517,
+            ["source_line"] = 37,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -217,7 +215,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 518,
+            ["source_line"] = 38,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -227,7 +225,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家关闭皮肤商店",
-            ["source_line"] = 519,
+            ["source_line"] = 39,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -237,7 +235,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已关闭",
-            ["source_line"] = 520,
+            ["source_line"] = 40,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -254,10 +252,10 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["角色ID"] = 536,
-          ["面板"] = 536,
+          ["角色ID"] = 56,
+          ["面板"] = 56,
         },
-        ["source_line"] = 528,
+        ["source_line"] = 48,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "回合外打开皮肤商店后轮到玩家行动自动关闭并提示",
@@ -266,7 +264,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 529,
+            ["source_line"] = 49,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -278,7 +276,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开<面板>",
-            ["source_line"] = 530,
+            ["source_line"] = 50,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -290,7 +288,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "轮到玩家行动",
-            ["source_line"] = 531,
+            ["source_line"] = 51,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -300,7 +298,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "<面板>屏幕已关闭",
-            ["source_line"] = 532,
+            ["source_line"] = 52,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -312,7 +310,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "提示\"轮到你行动了\"已显示",
-            ["source_line"] = 533,
+            ["source_line"] = 53,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -335,11 +333,11 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 548,
-          ["槽位数"] = 548,
-          ["皮肤数"] = 548,
+          ["总页数"] = 68,
+          ["槽位数"] = 68,
+          ["皮肤数"] = 68,
         },
-        ["source_line"] = 541,
+        ["source_line"] = 61,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "皮肤商店每页展示6个槽位",
@@ -348,7 +346,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 542,
+            ["source_line"] = 62,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -360,7 +358,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 543,
+            ["source_line"] = 63,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -370,7 +368,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 544,
+            ["source_line"] = 64,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -382,7 +380,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 545,
+            ["source_line"] = 65,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -413,14 +411,14 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 566,
-          ["槽位"] = 566,
-          ["槽位数"] = 566,
-          ["皮肤数"] = 566,
-          ["角色ID"] = 566,
-          ["验证槽位"] = 566,
+          ["总页数"] = 86,
+          ["槽位"] = 86,
+          ["槽位数"] = 86,
+          ["皮肤数"] = 86,
+          ["角色ID"] = 86,
+          ["验证槽位"] = 86,
         },
-        ["source_line"] = 554,
+        ["source_line"] = 74,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "购买解锁皮肤槽位",
@@ -429,7 +427,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 555,
+            ["source_line"] = 75,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -441,7 +439,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 556,
+            ["source_line"] = 76,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -453,7 +451,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 557,
+            ["source_line"] = 77,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -463,7 +461,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤尚未解锁",
-            ["source_line"] = 558,
+            ["source_line"] = 78,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -475,7 +473,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家购买槽位<槽位>的皮肤",
-            ["source_line"] = 559,
+            ["source_line"] = 79,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -487,7 +485,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 560,
+            ["source_line"] = 80,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -499,7 +497,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<验证槽位>的皮肤已归玩家持有",
-            ["source_line"] = 561,
+            ["source_line"] = 81,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -511,7 +509,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 562,
+            ["source_line"] = 82,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -523,7 +521,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 563,
+            ["source_line"] = 83,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -545,13 +543,13 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 581,
-          ["槽位"] = 581,
-          ["皮肤数"] = 581,
-          ["角色ID"] = 581,
-          ["验证槽位"] = 581,
+          ["总页数"] = 101,
+          ["槽位"] = 101,
+          ["皮肤数"] = 101,
+          ["角色ID"] = 101,
+          ["验证槽位"] = 101,
         },
-        ["source_line"] = 570,
+        ["source_line"] = 90,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "赠礼解锁皮肤槽位",
@@ -560,7 +558,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 571,
+            ["source_line"] = 91,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -572,7 +570,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 572,
+            ["source_line"] = 92,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -584,7 +582,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 573,
+            ["source_line"] = 93,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -594,7 +592,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤尚未解锁",
-            ["source_line"] = 574,
+            ["source_line"] = 94,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -606,7 +604,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家通过赠礼解锁槽位<槽位>的皮肤",
-            ["source_line"] = 575,
+            ["source_line"] = 95,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -618,7 +616,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 576,
+            ["source_line"] = 96,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -630,7 +628,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<验证槽位>的皮肤已归玩家持有",
-            ["source_line"] = 577,
+            ["source_line"] = 97,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -642,7 +640,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 578,
+            ["source_line"] = 98,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -673,14 +671,14 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 599,
-          ["槽位"] = 599,
-          ["槽位数"] = 599,
-          ["皮肤数"] = 599,
-          ["角色ID"] = 599,
-          ["验证槽位"] = 599,
+          ["总页数"] = 119,
+          ["槽位"] = 119,
+          ["槽位数"] = 119,
+          ["皮肤数"] = 119,
+          ["角色ID"] = 119,
+          ["验证槽位"] = 119,
         },
-        ["source_line"] = 586,
+        ["source_line"] = 106,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "穿上已解锁的皮肤",
@@ -689,7 +687,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 587,
+            ["source_line"] = 107,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -701,7 +699,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 588,
+            ["source_line"] = 108,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -713,7 +711,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 589,
+            ["source_line"] = 109,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -723,7 +721,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 590,
+            ["source_line"] = 110,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -735,7 +733,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 591,
+            ["source_line"] = 111,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -747,7 +745,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已装备成功",
-            ["source_line"] = 592,
+            ["source_line"] = 112,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -759,7 +757,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<验证槽位>的皮肤已装备成功",
-            ["source_line"] = 593,
+            ["source_line"] = 113,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -771,7 +769,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已关闭",
-            ["source_line"] = 594,
+            ["source_line"] = 114,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -781,7 +779,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 595,
+            ["source_line"] = 115,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -793,7 +791,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 596,
+            ["source_line"] = 116,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -806,16 +804,18 @@ local embedded_ir = {
     {
       ["examples"] = {
         {
+          ["产品ID"] = "5001",
           ["槽位"] = "1",
           ["角色ID"] = "1",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["槽位"] = 611,
-          ["角色ID"] = 611,
+          ["产品ID"] = 132,
+          ["槽位"] = 132,
+          ["角色ID"] = 132,
         },
-        ["source_line"] = 603,
+        ["source_line"] = 123,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "穿上未解锁的皮肤失败",
@@ -824,7 +824,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 604,
+            ["source_line"] = 124,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -836,7 +836,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 605,
+            ["source_line"] = 125,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -846,7 +846,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤尚未解锁",
-            ["source_line"] = 606,
+            ["source_line"] = 126,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -855,10 +855,23 @@ local embedded_ir = {
           ["text"] = "槽位<槽位>的皮肤尚未解锁",
         },
         {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "槽位<槽位>对应皮肤产品ID为<产品ID>",
+            ["source_line"] = 127,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+            "产品ID",
+          },
+          ["text"] = "槽位<槽位>对应皮肤产品ID为<产品ID>",
+        },
+        {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 607,
+            ["source_line"] = 128,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -870,7 +883,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤未成功装备",
-            ["source_line"] = 608,
+            ["source_line"] = 129,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -890,13 +903,13 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 625,
-          ["槽位"] = 625,
-          ["槽位数"] = 625,
-          ["皮肤数"] = 625,
-          ["角色ID"] = 625,
+          ["总页数"] = 146,
+          ["槽位"] = 146,
+          ["槽位数"] = 146,
+          ["皮肤数"] = 146,
+          ["角色ID"] = 146,
         },
-        ["source_line"] = 614,
+        ["source_line"] = 135,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "装备越界槽位不生效",
@@ -905,7 +918,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 615,
+            ["source_line"] = 136,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -917,7 +930,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 616,
+            ["source_line"] = 137,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -929,7 +942,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 617,
+            ["source_line"] = 138,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -939,7 +952,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>在皮肤卡牌可见槽位范围内",
-            ["source_line"] = 618,
+            ["source_line"] = 139,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -951,7 +964,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 619,
+            ["source_line"] = 140,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -963,7 +976,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤未成功装备",
-            ["source_line"] = 620,
+            ["source_line"] = 141,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -973,7 +986,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 621,
+            ["source_line"] = 142,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -985,7 +998,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 622,
+            ["source_line"] = 143,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1008,14 +1021,14 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 642,
-          ["槽位"] = 642,
-          ["皮肤数"] = 642,
-          ["角色ID"] = 642,
-          ["页码"] = 642,
-          ["验证槽位"] = 642,
+          ["总页数"] = 163,
+          ["槽位"] = 163,
+          ["皮肤数"] = 163,
+          ["角色ID"] = 163,
+          ["页码"] = 163,
+          ["验证槽位"] = 163,
         },
-        ["source_line"] = 628,
+        ["source_line"] = 149,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "翻页后装备第二页的皮肤",
@@ -1024,7 +1037,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 629,
+            ["source_line"] = 150,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1036,7 +1049,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 630,
+            ["source_line"] = 151,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1048,7 +1061,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 631,
+            ["source_line"] = 152,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1058,7 +1071,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 632,
+            ["source_line"] = 153,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1068,7 +1081,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 633,
+            ["source_line"] = 154,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1080,7 +1093,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 634,
+            ["source_line"] = 155,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1092,7 +1105,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已装备成功",
-            ["source_line"] = 635,
+            ["source_line"] = 156,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1104,7 +1117,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<验证槽位>的皮肤已装备成功",
-            ["source_line"] = 636,
+            ["source_line"] = 157,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1116,7 +1129,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已关闭",
-            ["source_line"] = 637,
+            ["source_line"] = 158,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1126,7 +1139,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 638,
+            ["source_line"] = 159,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1138,7 +1151,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 639,
+            ["source_line"] = 160,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1159,12 +1172,12 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 658,
-          ["槽位"] = 658,
-          ["皮肤数"] = 658,
-          ["角色ID"] = 658,
+          ["总页数"] = 179,
+          ["槽位"] = 179,
+          ["皮肤数"] = 179,
+          ["角色ID"] = 179,
         },
-        ["source_line"] = 645,
+        ["source_line"] = 166,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "脱下已装备皮肤",
@@ -1173,7 +1186,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 646,
+            ["source_line"] = 167,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1185,7 +1198,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 647,
+            ["source_line"] = 168,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1197,7 +1210,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 648,
+            ["source_line"] = 169,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1207,7 +1220,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 649,
+            ["source_line"] = 170,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1219,7 +1232,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 650,
+            ["source_line"] = 171,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1231,7 +1244,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 651,
+            ["source_line"] = 172,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1241,7 +1254,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家脱下当前皮肤",
-            ["source_line"] = 652,
+            ["source_line"] = 173,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1251,7 +1264,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "无皮肤装备中",
-            ["source_line"] = 653,
+            ["source_line"] = 174,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1261,7 +1274,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已开启",
-            ["source_line"] = 654,
+            ["source_line"] = 175,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1271,7 +1284,168 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 655,
+            ["source_line"] = 176,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "总页数",
+          },
+          ["text"] = "皮肤总页数为<总页数>",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["总页数"] = "1",
+          ["槽位"] = "1",
+          ["皮肤数"] = "6",
+          ["角色ID"] = "1",
+        },
+        {
+          ["总页数"] = "1",
+          ["槽位"] = "3",
+          ["皮肤数"] = "6",
+          ["角色ID"] = "2",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["总页数"] = 199,
+          ["槽位"] = 199,
+          ["皮肤数"] = 199,
+          ["角色ID"] = 199,
+        },
+        ["source_line"] = 184,
+        ["source_path"] = "features/v102/skin_shop.feature",
+      },
+      ["name"] = "脱下当前皮肤触发还原回调，参数为角色",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
+            ["source_line"] = 185,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "皮肤数",
+          },
+          ["text"] = "皮肤目录共有<皮肤数>款皮肤",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 186,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "角色ID",
+          },
+          ["text"] = "玩家角色ID为<角色ID>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 187,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
+            ["source_line"] = 188,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "槽位<槽位>的皮肤已归玩家持有",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
+            ["source_line"] = 189,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "玩家穿上槽位<槽位>的皮肤",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 190,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "脱下回调已注册",
+            ["source_line"] = 191,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "脱下回调已注册",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家脱下当前皮肤",
+            ["source_line"] = 192,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家脱下当前皮肤",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "脱下回调收到的角色ID为<角色ID>",
+            ["source_line"] = 193,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "角色ID",
+          },
+          ["text"] = "脱下回调收到的角色ID为<角色ID>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "无皮肤装备中",
+            ["source_line"] = 194,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "无皮肤装备中",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤商店屏幕已开启",
+            ["source_line"] = 195,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "皮肤商店屏幕已开启",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 196,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1292,12 +1466,12 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 672,
-          ["槽位数"] = 672,
-          ["皮肤数"] = 672,
-          ["页码"] = 672,
+          ["总页数"] = 214,
+          ["槽位数"] = 214,
+          ["皮肤数"] = 214,
+          ["页码"] = 214,
         },
-        ["source_line"] = 663,
+        ["source_line"] = 205,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "翻到下一页",
@@ -1306,7 +1480,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 664,
+            ["source_line"] = 206,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1318,7 +1492,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 665,
+            ["source_line"] = 207,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1328,7 +1502,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 666,
+            ["source_line"] = 208,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1338,7 +1512,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 667,
+            ["source_line"] = 209,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1350,7 +1524,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 668,
+            ["source_line"] = 210,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1362,7 +1536,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 669,
+            ["source_line"] = 211,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1383,12 +1557,12 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 685,
-          ["槽位数"] = 685,
-          ["皮肤数"] = 685,
-          ["页码"] = 685,
+          ["总页数"] = 227,
+          ["槽位数"] = 227,
+          ["皮肤数"] = 227,
+          ["页码"] = 227,
         },
-        ["source_line"] = 675,
+        ["source_line"] = 217,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "翻到上一页",
@@ -1397,7 +1571,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 676,
+            ["source_line"] = 218,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1409,7 +1583,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 677,
+            ["source_line"] = 219,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1419,7 +1593,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 678,
+            ["source_line"] = 220,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1429,7 +1603,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤上一页",
-            ["source_line"] = 679,
+            ["source_line"] = 221,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1439,7 +1613,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 680,
+            ["source_line"] = 222,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1451,7 +1625,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 681,
+            ["source_line"] = 223,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1463,7 +1637,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 682,
+            ["source_line"] = 224,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1490,12 +1664,12 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 697,
-          ["槽位数"] = 697,
-          ["皮肤数"] = 697,
-          ["页码"] = 697,
+          ["总页数"] = 239,
+          ["槽位数"] = 239,
+          ["皮肤数"] = 239,
+          ["页码"] = 239,
         },
-        ["source_line"] = 688,
+        ["source_line"] = 230,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "最后一页展示剩余皮肤",
@@ -1504,7 +1678,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 689,
+            ["source_line"] = 231,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1516,7 +1690,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 690,
+            ["source_line"] = 232,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1526,7 +1700,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 691,
+            ["source_line"] = 233,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1536,7 +1710,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 692,
+            ["source_line"] = 234,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1548,7 +1722,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 693,
+            ["source_line"] = 235,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1560,7 +1734,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 694,
+            ["source_line"] = 236,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1581,12 +1755,12 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 711,
-          ["槽位数"] = 711,
-          ["皮肤数"] = 711,
-          ["页码"] = 711,
+          ["总页数"] = 253,
+          ["槽位数"] = 253,
+          ["皮肤数"] = 253,
+          ["页码"] = 253,
         },
-        ["source_line"] = 701,
+        ["source_line"] = 243,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "下一页翻页不超出最大页",
@@ -1595,7 +1769,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 702,
+            ["source_line"] = 244,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1607,7 +1781,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 703,
+            ["source_line"] = 245,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1617,7 +1791,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 704,
+            ["source_line"] = 246,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1627,7 +1801,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 705,
+            ["source_line"] = 247,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1637,7 +1811,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 706,
+            ["source_line"] = 248,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1649,7 +1823,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 707,
+            ["source_line"] = 249,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1661,7 +1835,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 708,
+            ["source_line"] = 250,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1675,17 +1849,19 @@ local embedded_ir = {
       ["examples"] = {
         {
           ["总页数"] = "2",
+          ["末页槽位数"] = "1",
           ["槽位数"] = "6",
           ["皮肤数"] = "7",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 723,
-          ["槽位数"] = 723,
-          ["皮肤数"] = 723,
+          ["总页数"] = 266,
+          ["末页槽位数"] = 266,
+          ["槽位数"] = 266,
+          ["皮肤数"] = 266,
         },
-        ["source_line"] = 714,
+        ["source_line"] = 256,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "上一页翻页不低于第1页",
@@ -1694,7 +1870,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 715,
+            ["source_line"] = 257,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1706,7 +1882,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 716,
+            ["source_line"] = 258,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1716,7 +1892,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤上一页",
-            ["source_line"] = 717,
+            ["source_line"] = 259,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1726,7 +1902,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为1",
-            ["source_line"] = 718,
+            ["source_line"] = 260,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1736,7 +1912,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 719,
+            ["source_line"] = 261,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1747,8 +1923,20 @@ local embedded_ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
+            ["original_text"] = "皮肤目录末页展示<末页槽位数>个皮肤槽位",
+            ["source_line"] = 262,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "末页槽位数",
+          },
+          ["text"] = "皮肤目录末页展示<末页槽位数>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 720,
+            ["source_line"] = 263,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1783,16 +1971,16 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["卡片渲染数"] = 741,
-          ["容器数"] = 741,
-          ["总页数"] = 741,
-          ["末页槽位数"] = 741,
-          ["槽位数"] = 741,
-          ["皮肤数"] = 741,
-          ["角色ID"] = 741,
-          ["验证角色ID"] = 741,
+          ["卡片渲染数"] = 284,
+          ["容器数"] = 284,
+          ["总页数"] = 284,
+          ["末页槽位数"] = 284,
+          ["槽位数"] = 284,
+          ["皮肤数"] = 284,
+          ["角色ID"] = 284,
+          ["验证角色ID"] = 284,
         },
-        ["source_line"] = 728,
+        ["source_line"] = 271,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "打开皮肤商店应渲染当前页全部卡片",
@@ -1801,7 +1989,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 729,
+            ["source_line"] = 272,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1813,7 +2001,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 730,
+            ["source_line"] = 273,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1825,7 +2013,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前角色ID为<验证角色ID>",
-            ["source_line"] = 731,
+            ["source_line"] = 274,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1837,7 +2025,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 732,
+            ["source_line"] = 275,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1847,7 +2035,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡片渲染数为<卡片渲染数>个",
-            ["source_line"] = 733,
+            ["source_line"] = 276,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1859,7 +2047,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位容器展示数为<容器数>个",
-            ["source_line"] = 734,
+            ["source_line"] = 277,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1871,7 +2059,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤商店打开角色ID为<验证角色ID>",
-            ["source_line"] = 735,
+            ["source_line"] = 278,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1883,7 +2071,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 736,
+            ["source_line"] = 279,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1895,7 +2083,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤目录末页展示<末页槽位数>个皮肤槽位",
-            ["source_line"] = 737,
+            ["source_line"] = 280,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1907,7 +2095,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 738,
+            ["source_line"] = 281,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1940,15 +2128,15 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["卡片渲染数"] = 757,
-          ["容器数"] = 757,
-          ["总页数"] = 757,
-          ["槽位数"] = 757,
-          ["皮肤数"] = 757,
-          ["角色ID"] = 757,
-          ["页码"] = 757,
+          ["卡片渲染数"] = 300,
+          ["容器数"] = 300,
+          ["总页数"] = 300,
+          ["槽位数"] = 300,
+          ["皮肤数"] = 300,
+          ["角色ID"] = 300,
+          ["页码"] = 300,
         },
-        ["source_line"] = 745,
+        ["source_line"] = 288,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "翻页后渲染新页全部卡片",
@@ -1957,7 +2145,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 746,
+            ["source_line"] = 289,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1969,7 +2157,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 747,
+            ["source_line"] = 290,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -1981,7 +2169,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 748,
+            ["source_line"] = 291,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -1991,7 +2179,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 749,
+            ["source_line"] = 292,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2001,7 +2189,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡片渲染数为<卡片渲染数>个",
-            ["source_line"] = 750,
+            ["source_line"] = 293,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2013,7 +2201,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位容器展示数为<容器数>个",
-            ["source_line"] = 751,
+            ["source_line"] = 294,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2025,7 +2213,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 752,
+            ["source_line"] = 295,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2037,7 +2225,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 753,
+            ["source_line"] = 296,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2049,7 +2237,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 754,
+            ["source_line"] = 297,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2068,6 +2256,7 @@ local embedded_ir = {
           ["皮肤ID"] = "skin_1",
           ["皮肤数"] = "6",
           ["角色ID"] = "1",
+          ["验证角色ID"] = "1",
         },
         {
           ["总页数"] = "1",
@@ -2076,6 +2265,7 @@ local embedded_ir = {
           ["皮肤ID"] = "skin_6",
           ["皮肤数"] = "6",
           ["角色ID"] = "1",
+          ["验证角色ID"] = "1",
         },
         {
           ["总页数"] = "2",
@@ -2084,6 +2274,7 @@ local embedded_ir = {
           ["皮肤ID"] = "skin_1",
           ["皮肤数"] = "12",
           ["角色ID"] = "1",
+          ["验证角色ID"] = "1",
         },
         {
           ["总页数"] = "2",
@@ -2092,18 +2283,20 @@ local embedded_ir = {
           ["皮肤ID"] = "skin_3",
           ["皮肤数"] = "12",
           ["角色ID"] = "1",
+          ["验证角色ID"] = "1",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 772,
-          ["末页槽位数"] = 772,
-          ["槽位"] = 772,
-          ["皮肤ID"] = 772,
-          ["皮肤数"] = 772,
-          ["角色ID"] = 772,
+          ["总页数"] = 316,
+          ["末页槽位数"] = 316,
+          ["槽位"] = 316,
+          ["皮肤ID"] = 316,
+          ["皮肤数"] = 316,
+          ["角色ID"] = 316,
+          ["验证角色ID"] = 316,
         },
-        ["source_line"] = 763,
+        ["source_line"] = 306,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "打开皮肤商店后卡牌槽位贴对应皮肤的图",
@@ -2112,7 +2305,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 764,
+            ["source_line"] = 307,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2124,7 +2317,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 765,
+            ["source_line"] = 308,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2133,10 +2326,22 @@ local embedded_ir = {
           ["text"] = "玩家角色ID为<角色ID>",
         },
         {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前角色ID为<验证角色ID>",
+            ["source_line"] = 309,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "验证角色ID",
+          },
+          ["text"] = "当前角色ID为<验证角色ID>",
+        },
+        {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 766,
+            ["source_line"] = 310,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2146,7 +2351,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>当前贴图为皮肤<皮肤ID>的图",
-            ["source_line"] = 767,
+            ["source_line"] = 311,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2159,7 +2364,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤目录末页展示<末页槽位数>个皮肤槽位",
-            ["source_line"] = 768,
+            ["source_line"] = 312,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2171,7 +2376,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 769,
+            ["source_line"] = 313,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2226,16 +2431,16 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["卡片渲染数"] = 791,
-          ["总页数"] = 791,
-          ["槽位"] = 791,
-          ["皮肤ID"] = 791,
-          ["皮肤数"] = 791,
-          ["角色ID"] = 791,
-          ["页码"] = 791,
-          ["验证角色ID"] = 791,
+          ["卡片渲染数"] = 335,
+          ["总页数"] = 335,
+          ["槽位"] = 335,
+          ["皮肤ID"] = 335,
+          ["皮肤数"] = 335,
+          ["角色ID"] = 335,
+          ["页码"] = 335,
+          ["验证角色ID"] = 335,
         },
-        ["source_line"] = 778,
+        ["source_line"] = 322,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "翻到下一页后卡牌槽位贴图刷新为新页皮肤",
@@ -2244,7 +2449,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 779,
+            ["source_line"] = 323,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2256,7 +2461,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 780,
+            ["source_line"] = 324,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2268,7 +2473,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前角色ID为<验证角色ID>",
-            ["source_line"] = 781,
+            ["source_line"] = 325,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2280,7 +2485,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 782,
+            ["source_line"] = 326,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2290,7 +2495,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 783,
+            ["source_line"] = 327,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2300,7 +2505,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>当前贴图为皮肤<皮肤ID>的图",
-            ["source_line"] = 784,
+            ["source_line"] = 328,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2313,7 +2518,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤商店打开角色ID为<验证角色ID>",
-            ["source_line"] = 785,
+            ["source_line"] = 329,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2325,7 +2530,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡片渲染数为<卡片渲染数>个",
-            ["source_line"] = 786,
+            ["source_line"] = 330,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2337,7 +2542,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 787,
+            ["source_line"] = 331,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2349,7 +2554,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 788,
+            ["source_line"] = 332,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2363,6 +2568,7 @@ local embedded_ir = {
       ["examples"] = {
         {
           ["总页数"] = "2",
+          ["末页槽位数"] = "6",
           ["槽位"] = "1",
           ["皮肤ID"] = "skin_1",
           ["皮肤数"] = "12",
@@ -2371,6 +2577,7 @@ local embedded_ir = {
         },
         {
           ["总页数"] = "2",
+          ["末页槽位数"] = "6",
           ["槽位"] = "6",
           ["皮肤ID"] = "skin_6",
           ["皮肤数"] = "12",
@@ -2380,14 +2587,15 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 808,
-          ["槽位"] = 808,
-          ["皮肤ID"] = 808,
-          ["皮肤数"] = 808,
-          ["角色ID"] = 808,
-          ["页码"] = 808,
+          ["总页数"] = 353,
+          ["末页槽位数"] = 353,
+          ["槽位"] = 353,
+          ["皮肤ID"] = 353,
+          ["皮肤数"] = 353,
+          ["角色ID"] = 353,
+          ["页码"] = 353,
         },
-        ["source_line"] = 797,
+        ["source_line"] = 341,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "翻回上一页后卡牌槽位贴图恢复为前页皮肤",
@@ -2396,7 +2604,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 798,
+            ["source_line"] = 342,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2408,7 +2616,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 799,
+            ["source_line"] = 343,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2420,7 +2628,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 800,
+            ["source_line"] = 344,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2430,7 +2638,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 801,
+            ["source_line"] = 345,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2440,7 +2648,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤上一页",
-            ["source_line"] = 802,
+            ["source_line"] = 346,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2450,7 +2658,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>当前贴图为皮肤<皮肤ID>的图",
-            ["source_line"] = 803,
+            ["source_line"] = 347,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2463,7 +2671,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前皮肤页码为<页码>",
-            ["source_line"] = 804,
+            ["source_line"] = 348,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2474,8 +2682,20 @@ local embedded_ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
+            ["original_text"] = "皮肤目录末页展示<末页槽位数>个皮肤槽位",
+            ["source_line"] = 349,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "末页槽位数",
+          },
+          ["text"] = "皮肤目录末页展示<末页槽位数>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 805,
+            ["source_line"] = 350,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2517,15 +2737,15 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["容器数"] = 826,
-          ["总页数"] = 826,
-          ["槽位"] = 826,
-          ["槽位数"] = 826,
-          ["皮肤数"] = 826,
-          ["角色ID"] = 826,
-          ["验证槽位"] = 826,
+          ["容器数"] = 371,
+          ["总页数"] = 371,
+          ["槽位"] = 371,
+          ["槽位数"] = 371,
+          ["皮肤数"] = 371,
+          ["角色ID"] = 371,
+          ["验证槽位"] = 371,
         },
-        ["source_line"] = 814,
+        ["source_line"] = 359,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "装备完成后槽位容器仍保持展示",
@@ -2534,7 +2754,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 815,
+            ["source_line"] = 360,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2546,7 +2766,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 816,
+            ["source_line"] = 361,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2558,7 +2778,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 817,
+            ["source_line"] = 362,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2568,7 +2788,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 818,
+            ["source_line"] = 363,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2580,7 +2800,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 819,
+            ["source_line"] = 364,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2592,7 +2812,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位容器展示数为<容器数>个",
-            ["source_line"] = 820,
+            ["source_line"] = 365,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2604,7 +2824,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<验证槽位>的皮肤已装备成功",
-            ["source_line"] = 821,
+            ["source_line"] = 366,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2616,7 +2836,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 822,
+            ["source_line"] = 367,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2628,7 +2848,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 823,
+            ["source_line"] = 368,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2641,19 +2861,21 @@ local embedded_ir = {
     {
       ["examples"] = {
         {
+          ["产品ID"] = "skin_1",
           ["容器数"] = "6",
           ["总页数"] = "1",
           ["新槽位"] = "2",
-          ["旧槽位"] = "1",
+          ["槽位"] = "1",
           ["皮肤数"] = "6",
           ["角色ID"] = "1",
           ["验证槽位"] = "2",
         },
         {
+          ["产品ID"] = "skin_3",
           ["容器数"] = "6",
           ["总页数"] = "1",
           ["新槽位"] = "5",
-          ["旧槽位"] = "3",
+          ["槽位"] = "3",
           ["皮肤数"] = "6",
           ["角色ID"] = "1",
           ["验证槽位"] = "5",
@@ -2661,15 +2883,16 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["容器数"] = 846,
-          ["总页数"] = 846,
-          ["新槽位"] = 846,
-          ["旧槽位"] = 846,
-          ["皮肤数"] = 846,
-          ["角色ID"] = 846,
-          ["验证槽位"] = 846,
+          ["产品ID"] = 392,
+          ["容器数"] = 392,
+          ["总页数"] = 392,
+          ["新槽位"] = 392,
+          ["槽位"] = 392,
+          ["皮肤数"] = 392,
+          ["角色ID"] = 392,
+          ["验证槽位"] = 392,
         },
-        ["source_line"] = 831,
+        ["source_line"] = 376,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "切换装备后槽位容器仍保持展示",
@@ -2678,7 +2901,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 832,
+            ["source_line"] = 377,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2690,7 +2913,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 833,
+            ["source_line"] = 378,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2702,7 +2925,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 834,
+            ["source_line"] = 379,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2711,20 +2934,33 @@ local embedded_ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "槽位<旧槽位>的皮肤已归玩家持有",
-            ["source_line"] = 835,
+            ["original_text"] = "槽位<槽位>对应皮肤产品ID为<产品ID>",
+            ["source_line"] = 380,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
-            "旧槽位",
+            "槽位",
+            "产品ID",
           },
-          ["text"] = "槽位<旧槽位>的皮肤已归玩家持有",
+          ["text"] = "槽位<槽位>对应皮肤产品ID为<产品ID>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
+            ["source_line"] = 381,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "槽位<槽位>的皮肤已归玩家持有",
         },
         {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<新槽位>的皮肤已归玩家持有",
-            ["source_line"] = 836,
+            ["source_line"] = 382,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2735,20 +2971,20 @@ local embedded_ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
-            ["original_text"] = "玩家穿上槽位<旧槽位>的皮肤",
-            ["source_line"] = 837,
+            ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
+            ["source_line"] = 383,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
-            "旧槽位",
+            "槽位",
           },
-          ["text"] = "玩家穿上槽位<旧槽位>的皮肤",
+          ["text"] = "玩家穿上槽位<槽位>的皮肤",
         },
         {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 838,
+            ["source_line"] = 384,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2758,7 +2994,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<新槽位>的皮肤",
-            ["source_line"] = 839,
+            ["source_line"] = 385,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2770,7 +3006,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位容器展示数为<容器数>个",
-            ["source_line"] = 840,
+            ["source_line"] = 386,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2782,7 +3018,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<验证槽位>的皮肤已装备成功",
-            ["source_line"] = 841,
+            ["source_line"] = 387,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2794,7 +3030,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已关闭",
-            ["source_line"] = 842,
+            ["source_line"] = 388,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2804,7 +3040,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 843,
+            ["source_line"] = 389,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2837,15 +3073,15 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 866,
-          ["按钮文本"] = 866,
-          ["槽位"] = 866,
-          ["槽位数"] = 866,
-          ["皮肤数"] = 866,
-          ["角色ID"] = 866,
-          ["验证槽位"] = 866,
+          ["总页数"] = 412,
+          ["按钮文本"] = 412,
+          ["槽位"] = 412,
+          ["槽位数"] = 412,
+          ["皮肤数"] = 412,
+          ["角色ID"] = 412,
+          ["验证槽位"] = 412,
         },
-        ["source_line"] = 852,
+        ["source_line"] = 398,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "未解锁的购买类槽位按钮显示价格并可点",
@@ -2854,7 +3090,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 853,
+            ["source_line"] = 399,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2866,7 +3102,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 854,
+            ["source_line"] = 400,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2878,7 +3114,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位3的皮肤改为赠礼解锁并设赠礼名为\"占位赠礼\"",
-            ["source_line"] = 855,
+            ["source_line"] = 401,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2888,7 +3124,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位4的皮肤改为赠礼解锁并设赠礼名为\"占位赠礼\"",
-            ["source_line"] = 856,
+            ["source_line"] = 402,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2898,7 +3134,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 857,
+            ["source_line"] = 403,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -2908,7 +3144,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 858,
+            ["source_line"] = 404,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2921,7 +3157,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮可点",
-            ["source_line"] = 859,
+            ["source_line"] = 405,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2933,7 +3169,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<验证槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 860,
+            ["source_line"] = 406,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2946,7 +3182,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<验证槽位>按钮可点",
-            ["source_line"] = 861,
+            ["source_line"] = 407,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2958,7 +3194,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 862,
+            ["source_line"] = 408,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -2970,7 +3206,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 863,
+            ["source_line"] = 409,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3003,15 +3239,15 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 884,
-          ["按钮文本"] = 884,
-          ["槽位"] = 884,
-          ["皮肤数"] = 884,
-          ["角色ID"] = 884,
-          ["赠礼名"] = 884,
-          ["验证槽位"] = 884,
+          ["总页数"] = 430,
+          ["按钮文本"] = 430,
+          ["槽位"] = 430,
+          ["皮肤数"] = 430,
+          ["角色ID"] = 430,
+          ["赠礼名"] = 430,
+          ["验证槽位"] = 430,
         },
-        ["source_line"] = 870,
+        ["source_line"] = 416,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "未解锁的赠礼类槽位按钮显示赠礼名并不可点",
@@ -3020,7 +3256,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 871,
+            ["source_line"] = 417,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3032,7 +3268,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 872,
+            ["source_line"] = 418,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3044,7 +3280,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤改为赠礼解锁并设赠礼名为\"<赠礼名>\"",
-            ["source_line"] = 873,
+            ["source_line"] = 419,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3057,7 +3293,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 874,
+            ["source_line"] = 420,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -3067,7 +3303,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<赠礼名>\"",
-            ["source_line"] = 875,
+            ["source_line"] = 421,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3080,7 +3316,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 876,
+            ["source_line"] = 422,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3093,7 +3329,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮不可点",
-            ["source_line"] = 877,
+            ["source_line"] = 423,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3105,7 +3341,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<验证槽位>按钮文本为\"<赠礼名>\"",
-            ["source_line"] = 878,
+            ["source_line"] = 424,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3118,7 +3354,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<验证槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 879,
+            ["source_line"] = 425,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3131,7 +3367,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<验证槽位>按钮不可点",
-            ["source_line"] = 880,
+            ["source_line"] = 426,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3143,7 +3379,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 881,
+            ["source_line"] = 427,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3162,6 +3398,7 @@ local embedded_ir = {
           ["槽位数"] = "6",
           ["皮肤数"] = "6",
           ["角色ID"] = "1",
+          ["验证槽位"] = "1",
         },
         {
           ["总页数"] = "1",
@@ -3170,18 +3407,20 @@ local embedded_ir = {
           ["槽位数"] = "6",
           ["皮肤数"] = "6",
           ["角色ID"] = "1",
+          ["验证槽位"] = "3",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 901,
-          ["按钮文本"] = 901,
-          ["槽位"] = 901,
-          ["槽位数"] = 901,
-          ["皮肤数"] = 901,
-          ["角色ID"] = 901,
+          ["总页数"] = 449,
+          ["按钮文本"] = 449,
+          ["槽位"] = 449,
+          ["槽位数"] = 449,
+          ["皮肤数"] = 449,
+          ["角色ID"] = 449,
+          ["验证槽位"] = 449,
         },
-        ["source_line"] = 888,
+        ["source_line"] = 434,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "装备完成后槽位按钮显示脱下并可点",
@@ -3190,7 +3429,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 889,
+            ["source_line"] = 435,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3202,7 +3441,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 890,
+            ["source_line"] = 436,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3214,7 +3453,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 891,
+            ["source_line"] = 437,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -3224,7 +3463,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 892,
+            ["source_line"] = 438,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3236,7 +3475,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 893,
+            ["source_line"] = 439,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3248,7 +3487,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 894,
+            ["source_line"] = 440,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3261,179 +3500,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮可点",
-            ["source_line"] = 895,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "槽位",
-          },
-          ["text"] = "皮肤卡牌槽位<槽位>按钮可点",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "皮肤商店屏幕已关闭",
-            ["source_line"] = 896,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {},
-          ["text"] = "皮肤商店屏幕已关闭",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 897,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "槽位数",
-          },
-          ["text"] = "当前页面展示<槽位数>个皮肤槽位",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 898,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "总页数",
-          },
-          ["text"] = "皮肤总页数为<总页数>",
-        },
-      },
-    },
-    {
-      ["examples"] = {
-        {
-          ["总页数"] = "1",
-          ["按钮文本"] = "穿上",
-          ["槽位"] = "1",
-          ["皮肤数"] = "6",
-          ["角色ID"] = "1",
-          ["验证槽位"] = "1",
-        },
-        {
-          ["总页数"] = "1",
-          ["按钮文本"] = "穿上",
-          ["槽位"] = "3",
-          ["皮肤数"] = "6",
-          ["角色ID"] = "1",
-          ["验证槽位"] = "3",
-        },
-      },
-      ["metadata"] = {
-        ["example_field_lines"] = {
-          ["总页数"] = 919,
-          ["按钮文本"] = 919,
-          ["槽位"] = 919,
-          ["皮肤数"] = 919,
-          ["角色ID"] = 919,
-          ["验证槽位"] = 919,
-        },
-        ["source_line"] = 905,
-        ["source_path"] = "features/v102/skin_shop.feature",
-      },
-      ["name"] = "脱下装备后槽位按钮恢复为穿上并可点",
-      ["steps"] = {
-        {
-          ["keyword"] = "Given",
-          ["metadata"] = {
-            ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 906,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "皮肤数",
-          },
-          ["text"] = "皮肤目录共有<皮肤数>款皮肤",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 907,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "角色ID",
-          },
-          ["text"] = "玩家角色ID为<角色ID>",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 908,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {},
-          ["text"] = "玩家打开皮肤商店",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 909,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "槽位",
-          },
-          ["text"] = "槽位<槽位>的皮肤已归玩家持有",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 910,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "槽位",
-          },
-          ["text"] = "玩家穿上槽位<槽位>的皮肤",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 911,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {},
-          ["text"] = "玩家打开皮肤商店",
-        },
-        {
-          ["keyword"] = "When",
-          ["metadata"] = {
-            ["original_text"] = "玩家脱下当前皮肤",
-            ["source_line"] = 912,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {},
-          ["text"] = "玩家脱下当前皮肤",
-        },
-        {
-          ["keyword"] = "Then",
-          ["metadata"] = {
-            ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 913,
-            ["source_path"] = "features/v102/skin_shop.feature",
-          },
-          ["parameters"] = {
-            "槽位",
-            "按钮文本",
-          },
-          ["text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
-        },
-        {
-          ["keyword"] = "And",
-          ["metadata"] = {
-            ["original_text"] = "皮肤卡牌槽位<槽位>按钮可点",
-            ["source_line"] = 914,
+            ["source_line"] = 441,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3445,7 +3512,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<验证槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 915,
+            ["source_line"] = 442,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3457,8 +3524,220 @@ local embedded_ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<验证槽位>按钮可点",
+            ["source_line"] = 443,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "验证槽位",
+          },
+          ["text"] = "皮肤卡牌槽位<验证槽位>按钮可点",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤商店屏幕已关闭",
+            ["source_line"] = 444,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "皮肤商店屏幕已关闭",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 445,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位数",
+          },
+          ["text"] = "当前页面展示<槽位数>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 916,
+            ["source_line"] = 446,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "总页数",
+          },
+          ["text"] = "皮肤总页数为<总页数>",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["总页数"] = "1",
+          ["按钮文本"] = "穿上",
+          ["槽位"] = "1",
+          ["槽位数"] = "6",
+          ["皮肤数"] = "6",
+          ["角色ID"] = "1",
+          ["验证槽位"] = "1",
+        },
+        {
+          ["总页数"] = "1",
+          ["按钮文本"] = "穿上",
+          ["槽位"] = "3",
+          ["槽位数"] = "6",
+          ["皮肤数"] = "6",
+          ["角色ID"] = "1",
+          ["验证槽位"] = "3",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["总页数"] = 468,
+          ["按钮文本"] = 468,
+          ["槽位"] = 468,
+          ["槽位数"] = 468,
+          ["皮肤数"] = 468,
+          ["角色ID"] = 468,
+          ["验证槽位"] = 468,
+        },
+        ["source_line"] = 453,
+        ["source_path"] = "features/v102/skin_shop.feature",
+      },
+      ["name"] = "脱下装备后槽位按钮恢复为穿上并可点",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
+            ["source_line"] = 454,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "皮肤数",
+          },
+          ["text"] = "皮肤目录共有<皮肤数>款皮肤",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 455,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "角色ID",
+          },
+          ["text"] = "玩家角色ID为<角色ID>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 456,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
+            ["source_line"] = 457,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "槽位<槽位>的皮肤已归玩家持有",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
+            ["source_line"] = 458,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "玩家穿上槽位<槽位>的皮肤",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 459,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家脱下当前皮肤",
+            ["source_line"] = 460,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家脱下当前皮肤",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
+            ["source_line"] = 461,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+            "按钮文本",
+          },
+          ["text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<槽位>按钮可点",
+            ["source_line"] = 462,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "皮肤卡牌槽位<槽位>按钮可点",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<验证槽位>按钮文本为\"<按钮文本>\"",
+            ["source_line"] = 463,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "验证槽位",
+            "按钮文本",
+          },
+          ["text"] = "皮肤卡牌槽位<验证槽位>按钮文本为\"<按钮文本>\"",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 464,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位数",
+          },
+          ["text"] = "当前页面展示<槽位数>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 465,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3493,16 +3772,16 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 937,
-          ["按钮文本"] = 937,
-          ["槽位"] = 937,
-          ["槽位数"] = 937,
-          ["皮肤数"] = 937,
-          ["角色ID"] = 937,
-          ["购买槽位"] = 937,
-          ["赠礼名"] = 937,
+          ["总页数"] = 486,
+          ["按钮文本"] = 486,
+          ["槽位"] = 486,
+          ["槽位数"] = 486,
+          ["皮肤数"] = 486,
+          ["角色ID"] = 486,
+          ["购买槽位"] = 486,
+          ["赠礼名"] = 486,
         },
-        ["source_line"] = 925,
+        ["source_line"] = 474,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "购买类槽位显示价格图标，赠礼类槽位隐藏价格图标",
@@ -3511,7 +3790,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 926,
+            ["source_line"] = 475,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3523,7 +3802,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 927,
+            ["source_line"] = 476,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3535,7 +3814,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤改为赠礼解锁并清空价格设赠礼名为\"<赠礼名>\"",
-            ["source_line"] = 928,
+            ["source_line"] = 477,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3548,7 +3827,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 929,
+            ["source_line"] = 478,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -3558,7 +3837,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<购买槽位>价格图标已展示",
-            ["source_line"] = 930,
+            ["source_line"] = 479,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3570,7 +3849,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>价格图标已隐藏",
-            ["source_line"] = 931,
+            ["source_line"] = 480,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3582,7 +3861,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 932,
+            ["source_line"] = 481,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3595,7 +3874,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
-            ["source_line"] = 933,
+            ["source_line"] = 482,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3607,7 +3886,311 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 934,
+            ["source_line"] = 483,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "总页数",
+          },
+          ["text"] = "皮肤总页数为<总页数>",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["总页数"] = "1",
+          ["按钮文本"] = "穿上",
+          ["槽位"] = "1",
+          ["槽位数"] = "6",
+          ["皮肤数"] = "6",
+          ["角色ID"] = "1",
+          ["购买槽位"] = "2",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["总页数"] = 505,
+          ["按钮文本"] = 505,
+          ["槽位"] = 505,
+          ["槽位数"] = 505,
+          ["皮肤数"] = 505,
+          ["角色ID"] = 505,
+          ["购买槽位"] = 505,
+        },
+        ["source_line"] = 492,
+        ["source_path"] = "features/v102/skin_shop.feature",
+      },
+      ["name"] = "持有未装备的购买类皮肤价格图标隐藏",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
+            ["source_line"] = 493,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "皮肤数",
+          },
+          ["text"] = "皮肤目录共有<皮肤数>款皮肤",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 494,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "角色ID",
+          },
+          ["text"] = "玩家角色ID为<角色ID>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 495,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
+            ["source_line"] = 496,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "槽位<槽位>的皮肤已归玩家持有",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 497,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<槽位>价格图标已隐藏",
+            ["source_line"] = 498,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "皮肤卡牌槽位<槽位>价格图标已隐藏",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
+            ["source_line"] = 499,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+            "按钮文本",
+          },
+          ["text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<购买槽位>价格图标已展示",
+            ["source_line"] = 500,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "购买槽位",
+          },
+          ["text"] = "皮肤卡牌槽位<购买槽位>价格图标已展示",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 501,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位数",
+          },
+          ["text"] = "当前页面展示<槽位数>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 502,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "总页数",
+          },
+          ["text"] = "皮肤总页数为<总页数>",
+        },
+      },
+    },
+    {
+      ["examples"] = {
+        {
+          ["总页数"] = "1",
+          ["按钮文本"] = "脱下",
+          ["槽位"] = "1",
+          ["槽位数"] = "6",
+          ["皮肤数"] = "6",
+          ["角色ID"] = "1",
+          ["购买槽位"] = "2",
+        },
+      },
+      ["metadata"] = {
+        ["example_field_lines"] = {
+          ["总页数"] = 522,
+          ["按钮文本"] = 522,
+          ["槽位"] = 522,
+          ["槽位数"] = 522,
+          ["皮肤数"] = 522,
+          ["角色ID"] = 522,
+          ["购买槽位"] = 522,
+        },
+        ["source_line"] = 508,
+        ["source_path"] = "features/v102/skin_shop.feature",
+      },
+      ["name"] = "已装备的购买类皮肤价格图标隐藏",
+      ["steps"] = {
+        {
+          ["keyword"] = "Given",
+          ["metadata"] = {
+            ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
+            ["source_line"] = 509,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "皮肤数",
+          },
+          ["text"] = "皮肤目录共有<皮肤数>款皮肤",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家角色ID为<角色ID>",
+            ["source_line"] = 510,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "角色ID",
+          },
+          ["text"] = "玩家角色ID为<角色ID>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 511,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
+            ["source_line"] = 512,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "槽位<槽位>的皮肤已归玩家持有",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
+            ["source_line"] = 513,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "玩家穿上槽位<槽位>的皮肤",
+        },
+        {
+          ["keyword"] = "When",
+          ["metadata"] = {
+            ["original_text"] = "玩家打开皮肤商店",
+            ["source_line"] = 514,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {},
+          ["text"] = "玩家打开皮肤商店",
+        },
+        {
+          ["keyword"] = "Then",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<槽位>价格图标已隐藏",
+            ["source_line"] = 515,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+          },
+          ["text"] = "皮肤卡牌槽位<槽位>价格图标已隐藏",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
+            ["source_line"] = 516,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+            "按钮文本",
+          },
+          ["text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤卡牌槽位<购买槽位>价格图标已展示",
+            ["source_line"] = 517,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "购买槽位",
+          },
+          ["text"] = "皮肤卡牌槽位<购买槽位>价格图标已展示",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 518,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位数",
+          },
+          ["text"] = "当前页面展示<槽位数>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
+            ["original_text"] = "皮肤总页数为<总页数>",
+            ["source_line"] = 519,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3631,15 +4214,15 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 954,
-          ["按钮文本"] = 954,
-          ["槽位"] = 954,
-          ["皮肤数"] = 954,
-          ["角色ID"] = 954,
-          ["赠礼名"] = 954,
-          ["验证槽位"] = 954,
+          ["总页数"] = 538,
+          ["按钮文本"] = 538,
+          ["槽位"] = 538,
+          ["皮肤数"] = 538,
+          ["角色ID"] = 538,
+          ["赠礼名"] = 538,
+          ["验证槽位"] = 538,
         },
-        ["source_line"] = 943,
+        ["source_line"] = 527,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "赠礼解锁但保留价格的槽位价格图标仍隐藏",
@@ -3648,7 +4231,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 944,
+            ["source_line"] = 528,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3660,7 +4243,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 945,
+            ["source_line"] = 529,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3672,7 +4255,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤改为赠礼解锁但保留价格设赠礼名为\"<赠礼名>\"",
-            ["source_line"] = 946,
+            ["source_line"] = 530,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3685,7 +4268,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 947,
+            ["source_line"] = 531,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -3695,7 +4278,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>价格图标已隐藏",
-            ["source_line"] = 948,
+            ["source_line"] = 532,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3707,7 +4290,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<验证槽位>价格图标已隐藏",
-            ["source_line"] = 949,
+            ["source_line"] = 533,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3719,7 +4302,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>按钮文本为\"<按钮文本>\"",
-            ["source_line"] = 950,
+            ["source_line"] = 534,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3732,7 +4315,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 951,
+            ["source_line"] = 535,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3745,6 +4328,7 @@ local embedded_ir = {
     {
       ["examples"] = {
         {
+          ["产品ID"] = "skin_4",
           ["总页数"] = "1",
           ["槽位"] = "4",
           ["皮肤数"] = "6",
@@ -3753,12 +4337,13 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 966,
-          ["槽位"] = 966,
-          ["皮肤数"] = 966,
-          ["角色ID"] = 966,
+          ["产品ID"] = 551,
+          ["总页数"] = 551,
+          ["槽位"] = 551,
+          ["皮肤数"] = 551,
+          ["角色ID"] = 551,
         },
-        ["source_line"] = 957,
+        ["source_line"] = 541,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "购买类槽位但价格字段缺失时价格图标隐藏",
@@ -3767,7 +4352,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 958,
+            ["source_line"] = 542,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3779,7 +4364,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 959,
+            ["source_line"] = 543,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3791,7 +4376,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤保持购买解锁但清空价格字段",
-            ["source_line"] = 960,
+            ["source_line"] = 544,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3803,7 +4388,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 961,
+            ["source_line"] = 545,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -3812,8 +4397,21 @@ local embedded_ir = {
         {
           ["keyword"] = "Then",
           ["metadata"] = {
+            ["original_text"] = "槽位<槽位>对应皮肤产品ID为<产品ID>",
+            ["source_line"] = 546,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位",
+            "产品ID",
+          },
+          ["text"] = "槽位<槽位>对应皮肤产品ID为<产品ID>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>价格图标已隐藏",
-            ["source_line"] = 962,
+            ["source_line"] = 547,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3825,7 +4423,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 963,
+            ["source_line"] = 548,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3847,13 +4445,13 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 979,
-          ["槽位"] = 979,
-          ["皮肤数"] = 979,
-          ["角色ID"] = 979,
-          ["验证槽位"] = 979,
+          ["总页数"] = 564,
+          ["槽位"] = 564,
+          ["皮肤数"] = 564,
+          ["角色ID"] = 564,
+          ["验证槽位"] = 564,
         },
-        ["source_line"] = 969,
+        ["source_line"] = 554,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "购买类槽位但货币字段缺失时价格图标隐藏",
@@ -3862,7 +4460,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 970,
+            ["source_line"] = 555,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3874,7 +4472,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 971,
+            ["source_line"] = 556,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3886,7 +4484,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤保持购买解锁但清空货币字段",
-            ["source_line"] = 972,
+            ["source_line"] = 557,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3898,7 +4496,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 973,
+            ["source_line"] = 558,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -3908,7 +4506,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<槽位>价格图标已隐藏",
-            ["source_line"] = 974,
+            ["source_line"] = 559,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3920,7 +4518,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤卡牌槽位<验证槽位>价格图标已隐藏",
-            ["source_line"] = 975,
+            ["source_line"] = 560,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3932,7 +4530,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 976,
+            ["source_line"] = 561,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3948,6 +4546,7 @@ local embedded_ir = {
           ["产品ID"] = "skin_1",
           ["总页数"] = "1",
           ["槽位"] = "1",
+          ["槽位数"] = "6",
           ["皮肤数"] = "6",
           ["角色ID"] = "1",
         },
@@ -3955,19 +4554,21 @@ local embedded_ir = {
           ["产品ID"] = "skin_3",
           ["总页数"] = "1",
           ["槽位"] = "3",
+          ["槽位数"] = "6",
           ["皮肤数"] = "6",
           ["角色ID"] = "2",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["产品ID"] = 996,
-          ["总页数"] = 996,
-          ["槽位"] = 996,
-          ["皮肤数"] = 996,
-          ["角色ID"] = 996,
+          ["产品ID"] = 582,
+          ["总页数"] = 582,
+          ["槽位"] = 582,
+          ["槽位数"] = 582,
+          ["皮肤数"] = 582,
+          ["角色ID"] = 582,
         },
-        ["source_line"] = 984,
+        ["source_line"] = 569,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "装备未解锁的购买类皮肤触发购买回调，参数为角色与皮肤产品",
@@ -3976,7 +4577,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 985,
+            ["source_line"] = 570,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -3988,7 +4589,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 986,
+            ["source_line"] = 571,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4000,7 +4601,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 987,
+            ["source_line"] = 572,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4010,7 +4611,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤尚未解锁",
-            ["source_line"] = 988,
+            ["source_line"] = 573,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4022,7 +4623,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "购买回调已注册",
-            ["source_line"] = 989,
+            ["source_line"] = 574,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4032,7 +4633,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 990,
+            ["source_line"] = 575,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4044,7 +4645,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "购买回调收到的角色ID为<角色ID>",
-            ["source_line"] = 991,
+            ["source_line"] = 576,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4056,7 +4657,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "购买回调收到的皮肤产品ID为<产品ID>",
-            ["source_line"] = 992,
+            ["source_line"] = 577,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4067,8 +4668,20 @@ local embedded_ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
+            ["original_text"] = "当前页面展示<槽位数>个皮肤槽位",
+            ["source_line"] = 578,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "槽位数",
+          },
+          ["text"] = "当前页面展示<槽位数>个皮肤槽位",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 993,
+            ["source_line"] = 579,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4095,12 +4708,12 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 1013,
-          ["槽位"] = 1013,
-          ["皮肤数"] = 1013,
-          ["角色ID"] = 1013,
+          ["总页数"] = 599,
+          ["槽位"] = 599,
+          ["皮肤数"] = 599,
+          ["角色ID"] = 599,
         },
-        ["source_line"] = 1000,
+        ["source_line"] = 586,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "购买回调成功后槽位解锁并自动装备",
@@ -4109,7 +4722,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 1001,
+            ["source_line"] = 587,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4121,7 +4734,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 1002,
+            ["source_line"] = 588,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4133,7 +4746,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 1003,
+            ["source_line"] = 589,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4143,7 +4756,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤尚未解锁",
-            ["source_line"] = 1004,
+            ["source_line"] = 590,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4155,7 +4768,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "购买回调注册为成功回调",
-            ["source_line"] = 1005,
+            ["source_line"] = 591,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4165,7 +4778,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 1006,
+            ["source_line"] = 592,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4177,7 +4790,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已归玩家持有",
-            ["source_line"] = 1007,
+            ["source_line"] = 593,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4189,7 +4802,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤已装备成功",
-            ["source_line"] = 1008,
+            ["source_line"] = 594,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4201,7 +4814,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤商店屏幕已关闭",
-            ["source_line"] = 1009,
+            ["source_line"] = 595,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4211,7 +4824,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 1010,
+            ["source_line"] = 596,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4240,13 +4853,13 @@ local embedded_ir = {
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["产品ID"] = 1029,
-          ["总页数"] = 1029,
-          ["槽位"] = 1029,
-          ["皮肤数"] = 1029,
-          ["角色ID"] = 1029,
+          ["产品ID"] = 615,
+          ["总页数"] = 615,
+          ["槽位"] = 615,
+          ["皮肤数"] = 615,
+          ["角色ID"] = 615,
         },
-        ["source_line"] = 1017,
+        ["source_line"] = 603,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "未注册购买回调时装备未解锁皮肤失败且不改变面板",
@@ -4255,7 +4868,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 1018,
+            ["source_line"] = 604,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4267,7 +4880,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 1019,
+            ["source_line"] = 605,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4279,7 +4892,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 1020,
+            ["source_line"] = 606,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4289,7 +4902,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤尚未解锁",
-            ["source_line"] = 1021,
+            ["source_line"] = 607,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4301,7 +4914,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>对应皮肤产品ID为<产品ID>",
-            ["source_line"] = 1022,
+            ["source_line"] = 608,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4314,7 +4927,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 1023,
+            ["source_line"] = 609,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4326,7 +4939,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>的皮肤尚未解锁",
-            ["source_line"] = 1024,
+            ["source_line"] = 610,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4338,7 +4951,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤未成功装备",
-            ["source_line"] = 1025,
+            ["source_line"] = 611,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4348,7 +4961,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 1026,
+            ["source_line"] = 612,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4365,16 +4978,18 @@ local embedded_ir = {
           ["槽位"] = "1",
           ["皮肤数"] = "12",
           ["角色ID"] = "1",
+          ["验证角色ID"] = "1",
         },
       },
       ["metadata"] = {
         ["example_field_lines"] = {
-          ["总页数"] = 1048,
-          ["槽位"] = 1048,
-          ["皮肤数"] = 1048,
-          ["角色ID"] = 1048,
+          ["总页数"] = 635,
+          ["槽位"] = 635,
+          ["皮肤数"] = 635,
+          ["角色ID"] = 635,
+          ["验证角色ID"] = 635,
         },
-        ["source_line"] = 1035,
+        ["source_line"] = 621,
         ["source_path"] = "features/v102/skin_shop.feature",
       },
       ["name"] = "打开/翻页/购买/装备/关闭都不改写皮肤静态文本",
@@ -4383,7 +4998,7 @@ local embedded_ir = {
           ["keyword"] = "Given",
           ["metadata"] = {
             ["original_text"] = "皮肤目录共有<皮肤数>款皮肤",
-            ["source_line"] = 1036,
+            ["source_line"] = 622,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4395,7 +5010,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家角色ID为<角色ID>",
-            ["source_line"] = 1037,
+            ["source_line"] = 623,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4406,8 +5021,20 @@ local embedded_ir = {
         {
           ["keyword"] = "And",
           ["metadata"] = {
+            ["original_text"] = "当前角色ID为<验证角色ID>",
+            ["source_line"] = 624,
+            ["source_path"] = "features/v102/skin_shop.feature",
+          },
+          ["parameters"] = {
+            "验证角色ID",
+          },
+          ["text"] = "当前角色ID为<验证角色ID>",
+        },
+        {
+          ["keyword"] = "And",
+          ["metadata"] = {
             ["original_text"] = "玩家打开皮肤商店",
-            ["source_line"] = 1038,
+            ["source_line"] = 625,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4417,7 +5044,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家翻到皮肤下一页",
-            ["source_line"] = 1039,
+            ["source_line"] = 626,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4427,7 +5054,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "槽位<槽位>在皮肤卡牌可见槽位范围内",
-            ["source_line"] = 1040,
+            ["source_line"] = 627,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4439,7 +5066,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家购买槽位<槽位>的皮肤",
-            ["source_line"] = 1041,
+            ["source_line"] = 628,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4451,7 +5078,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "玩家穿上槽位<槽位>的皮肤",
-            ["source_line"] = 1042,
+            ["source_line"] = 629,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {
@@ -4463,7 +5090,7 @@ local embedded_ir = {
           ["keyword"] = "When",
           ["metadata"] = {
             ["original_text"] = "玩家关闭皮肤商店",
-            ["source_line"] = 1043,
+            ["source_line"] = 630,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4473,7 +5100,7 @@ local embedded_ir = {
           ["keyword"] = "Then",
           ["metadata"] = {
             ["original_text"] = "皮肤静态文本未被改写",
-            ["source_line"] = 1044,
+            ["source_line"] = 631,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {},
@@ -4483,7 +5110,7 @@ local embedded_ir = {
           ["keyword"] = "And",
           ["metadata"] = {
             ["original_text"] = "皮肤总页数为<总页数>",
-            ["source_line"] = 1045,
+            ["source_line"] = 632,
             ["source_path"] = "features/v102/skin_shop.feature",
           },
           ["parameters"] = {

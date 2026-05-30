@@ -117,4 +117,48 @@ describe("ui slot render properties", function()
       end
     end)
   end)
+
+  -- The price icon is shown only for a present purchase skin that still carries a
+  -- price/currency AND that the role does not yet own; owning it (whether equipped
+  -- or not) hides the icon, and non-purchase skins never show it. Random ownership
+  -- and equip configurations exercise the owned/equipped/unowned mix per slot.
+  it("price icon shows only for unowned priced purchase skins", function()
+    local SLOTS = #skin_nodes.card_images
+    property.for_all(function(rng)
+      local size = rng:int(1, SLOTS)
+      local owned = {}
+      local owned_ids = {}
+      for product_id = 1, size do
+        if rng:bool() then
+          owned[product_id] = true
+          owned_ids[#owned_ids + 1] = product_id
+        end
+      end
+      local equipped = nil
+      if #owned_ids > 0 and rng:bool() then
+        equipped = owned_ids[rng:int(1, #owned_ids)]
+      end
+      return { size = size, owned = owned, equipped = equipped }
+    end, function(case)
+      local catalog = _make_skin_catalog(case.size)
+      local panel = {
+        page_index = 1,
+        role_id = 1,
+        owned_by_role = { ["1"] = case.owned },
+        selected_by_role = { ["1"] = case.equipped },
+      }
+      local state, calls = _make_render_state(panel)
+      skin_panel_view.refresh_slots(state, catalog)
+
+      for slot = 1, case.size do
+        local skin = catalog[slot]
+        local is_owned = case.owned[skin.product_id] == true
+        local is_priced_purchase = skin.unlock == "purchase"
+          and skin.price ~= nil and skin.currency ~= nil
+        local expected_visible = is_priced_purchase and not is_owned
+        assert(_find_call(calls, "set_visible", skin_nodes.price_icons[slot]) == expected_visible,
+          "slot " .. tostring(slot) .. " price icon visibility must be (priced purchase AND not owned)")
+      end
+    end)
+  end)
 end)

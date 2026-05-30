@@ -47,6 +47,7 @@ local function _ensure_skin_state(world)
       -- clean callback slate while preserving the freshly-configured catalog.
       skin_panel.configure_purchase(nil)
       skin_panel.configure_equip(nil)
+      skin_panel.configure_archive(nil)
     end
     _seed_image_refs(world.skin_state)
   end
@@ -255,6 +256,57 @@ local function _handler_fixed_gift_name(slot, gift_name)
   end)
 end
 
+-- In-memory stand-in for the host skin archive. The backing store lives on the
+-- world so it survives the panel/render-state rebuild done by 玩家重新开局, which
+-- is what lets a second open() read purchased skins back.
+local function _make_world_archive(world)
+  world.skin_archive_store = world.skin_archive_store or { owned = {}, equipped = {} }
+  local store = world.skin_archive_store
+  return {
+    mark_owned = function(role, product_id)
+      store.owned[tostring(role)] = store.owned[tostring(role)] or {}
+      store.owned[tostring(role)][product_id] = true
+    end,
+    load_owned = function(role)
+      local out = {}
+      for product_id in pairs(store.owned[tostring(role)] or {}) do
+        out[#out + 1] = product_id
+      end
+      return out
+    end,
+    save_equipped = function(role, product_id)
+      store.equipped[tostring(role)] = product_id
+    end,
+    load_equipped = function(role)
+      return store.equipped[tostring(role)]
+    end,
+  }
+end
+
+-- Rebuild the render/panel state from scratch (a fresh game session) while
+-- keeping the world-backed archive store, so seeding on open reads it back.
+local function _rebuild_skin_state(world)
+  local state, captures = ui_mock.build_render_state({ with_buttons = true })
+  world.skin_state = state
+  world.skin_visibility = captures.visibility
+  world.skin_labels = captures.labels
+  world.skin_button_text = captures.button_text
+  world.skin_button_touch = captures.button_touch
+  world.skin_textures = captures.textures
+  _seed_image_refs(world.skin_state)
+end
+
+local function _handler_paid_purchase(field)
+  return function(world, example)
+    local slot, err = _parse_slot(example, field)
+    if slot == nil then return nil, err end
+    skin_panel.configure_archive(_make_world_archive(world))
+    skin_panel.configure_purchase(function(_, _, on_success) on_success() end)
+    skin_panel.equip(world.skin_state, world.ui_role_id or 1, slot)
+    return true
+  end
+end
+
 local function _register_purchase_spy(world, invoke_on_success)
   _ensure_skin_state(world)
   world.purchase_call_args = nil
@@ -404,7 +456,58 @@ function skin_shop_steps.handlers()
       return true
     end,
 
+    -- ── purchase archive / persistence ────────────────────────────────────────
+    -- Real paid path: a purchase callback that "succeeds" immediately drives
+    -- _initiate_purchase -> on_success -> _unlock_skin(.,"purchase") (mark_owned)
+    -- and the auto-equip that persists the equipped product. Registered for both
+    -- 槽位 and 占用槽位 phrasings used in the persistence scenarios.
+    ["玩家付费购买槽位<槽位>的皮肤"] = _handler_paid_purchase("槽位"),
+    ["玩家付费购买槽位<占用槽位>的皮肤"] = _handler_paid_purchase("占用槽位"),
+
+    ["玩家重新开局并打开皮肤商店"] = function(world)
+      _rebuild_skin_state(world)
+      skin_panel.configure_archive(_make_world_archive(world))
+      skin_panel.open(world.skin_state, world.ui_role_id or 1)
+      return true
+    end,
+
+    ["换装回调已注册"] = function(world)
+      world.equip_callback_product = nil
+      skin_panel.configure_equip(function(_, skin)
+        world.equip_callback_product = skin and skin.product_id
+        return true
+      end)
+      return true
+    end,
+
+    ["换装回调收到的皮肤产品ID为<产品ID>"] = function(world, example)
+      local expected = example["产品ID"]
+      if world.equip_callback_product ~= expected then
+        return nil, "expected equip callback product " .. tostring(expected) ..
+          ", got " .. tostring(world.equip_callback_product)
+      end
+      return true
+    end,
+
     -- ── unequip ──────────────────────────────────────────────────────────────
+    ["脱下回调已注册"] = function(world)
+      world.unequip_callback_role = nil
+      skin_panel.configure_unequip(function(role_id)
+        world.unequip_callback_role = role_id
+      end)
+      return true
+    end,
+
+    ["脱下回调收到的角色ID为<角色ID>"] = function(world, example)
+      local expected = number_utils.to_integer(example["角色ID"])
+      if expected == nil then return nil, "invalid role id: " .. tostring(example["角色ID"]) end
+      if world.unequip_callback_role ~= expected then
+        return nil, "expected unequip callback role " .. tostring(expected) ..
+          ", got " .. tostring(world.unequip_callback_role)
+      end
+      return true
+    end,
+
     ["玩家脱下当前皮肤"] = function(world)
       skin_panel.handle_action(world.skin_state, "unequip", world.ui_role_id or 1)
       return true

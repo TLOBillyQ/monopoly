@@ -13,6 +13,8 @@ local skin_panel = {}
 local PAGE_SIZE = skin_nodes.page_size
 local equip_callback = nil
 local purchase_callback = nil
+local unequip_callback = nil
+local skin_archive = nil
 local _catalog = _default_catalog
 
 local function _ensure_state(state)
@@ -70,6 +72,48 @@ local function _action_slot_index(action)
   return 1
 end
 
+-- ── persistence boundary ───────────────────────────────────────────────────
+-- The host skin archive is an injected port (configure_archive); when absent
+-- every persistence call is a no-op so the in-memory behaviour is unchanged.
+local function _mark_owned(role_id, product_id)
+  if type(skin_archive) == "table" and skin_archive.mark_owned then
+    skin_archive.mark_owned(role_id, product_id)
+  end
+end
+
+local function _save_equipped(role_id, product_id)
+  if type(skin_archive) == "table" and skin_archive.save_equipped then
+    skin_archive.save_equipped(role_id, product_id)
+  end
+end
+
+local function _catalog_skin_by_product(product_id)
+  for _, skin in ipairs(_catalog) do
+    if skin.product_id == product_id then
+      return skin
+    end
+  end
+  return nil
+end
+
+local function _seed_owned_from_archive(panel, key, role_id)
+  if not (type(skin_archive) == "table" and skin_archive.load_owned) then
+    return
+  end
+  local owned = skin_archive.load_owned(role_id)
+  if type(owned) ~= "table" then
+    return
+  end
+  panel.owned_by_role[key] = panel.owned_by_role[key] or {}
+  for _, product_id in ipairs(owned) do
+    panel.owned_by_role[key][product_id] = true
+  end
+end
+
+-- Assigned after the equip helpers below so it can reuse them; forward-declared
+-- here because skin_panel.open (defined earlier) closes over it.
+local _seed_from_archive
+
 local function _apply_equip_callback(role_id, skin)
   if type(equip_callback) ~= "function" then
     return false
@@ -87,6 +131,20 @@ local function _apply_equip_callback(role_id, skin)
   return applied == true
 end
 
+local function _apply_unequip_callback(role_id)
+  if type(unequip_callback) ~= "function" then
+    return
+  end
+  local ok, err = pcall(unequip_callback, role_id)
+  if not ok then
+    logger.warn(
+      "skin_panel: unequip callback failed",
+      "role_id=" .. tostring(role_id),
+      tostring(err)
+    )
+  end
+end
+
 local function _configure_callback(callback, label)
   if callback ~= nil then
     assert(type(callback) == "function", "invalid skin " .. label .. " callback")
@@ -102,6 +160,15 @@ function skin_panel.configure_purchase(callback)
   purchase_callback = _configure_callback(callback, "purchase")
 end
 
+function skin_panel.configure_unequip(callback)
+  unequip_callback = _configure_callback(callback, "unequip")
+end
+
+function skin_panel.configure_archive(archive)
+  assert(archive == nil or type(archive) == "table", "invalid skin archive")
+  skin_archive = archive
+end
+
 function skin_panel.configure_catalog_for_tests(catalog)
   _catalog = catalog or _default_catalog
   skin_panel.catalog = _catalog
@@ -110,6 +177,8 @@ end
 function skin_panel.reset_for_tests()
   equip_callback = nil
   purchase_callback = nil
+  unequip_callback = nil
+  skin_archive = nil
   _catalog = _default_catalog
   skin_panel.catalog = _catalog
 end
@@ -119,6 +188,7 @@ function skin_panel.open(state, role_id)
   panel.open = true
   panel.role_id = role_id
   panel.page_index = 1
+  _seed_from_archive(state, panel, role_id)
   canvas.switch_by_role_id(state and state.ui, skin_nodes.canvas, role_id)
   _refresh_slots_for_owner(state, panel)
   _notify("皮肤已打开", "skin_panel:open:" .. tostring(role_id))
@@ -139,6 +209,9 @@ local function _unlock_skin(panel, role_id, skin, source)
   local key = _role_key(role_id or panel.role_id)
   panel.owned_by_role[key] = panel.owned_by_role[key] or {}
   panel.owned_by_role[key][skin.product_id] = true
+  if source == "purchase" then
+    _mark_owned(role_id or panel.role_id, skin.product_id)
+  end
   _notify(skin.name .. " 已解锁", "skin_panel:unlock:" .. key .. ":" .. tostring(skin.product_id) .. ":" .. tostring(source))
   return panel
 end
@@ -152,13 +225,21 @@ function skin_panel.unlock(state, role_id, source, slot_index)
   return _unlock_skin(panel, role_id, skin, source)
 end
 
-local function _equip_owned_skin(state, panel, role_id, skin)
+-- Apply an equip without closing the panel: fire the host callback, record the
+-- selection, and persist it. Manual equips close afterwards; archive seeding
+-- (auto-equip on open) reuses this so the panel stays open.
+local function _apply_equip(state, panel, role_id, skin)
   local key = _role_key(role_id)
   panel.last_equip_ok_by_role = panel.last_equip_ok_by_role or {}
   panel.last_equip_ok_by_role[key] = _apply_equip_callback(role_id, skin)
   panel.selected_by_role[key] = skin.product_id
+  _save_equipped(role_id, skin.product_id)
   _refresh_slots_for_owner(state, panel)
   _notify("已换装 " .. skin.name, "skin_panel:equip:" .. key .. ":" .. tostring(skin.product_id))
+end
+
+local function _equip_owned_skin(state, panel, role_id, skin)
+  _apply_equip(state, panel, role_id, skin)
   return skin_panel.close(state, role_id, { silent = true })
 end
 
@@ -185,6 +266,28 @@ local function _owns_skin(panel, key, skin)
   return panel.owned_by_role[key] and panel.owned_by_role[key][skin.product_id] == true
 end
 
+-- On open, replay the persisted state: seed owned skins, then auto-equip the
+-- last equipped one (which fires the equip callback so the host restores the
+-- model). Uses _apply_equip so the shop stays open after seeding.
+_seed_from_archive = function(state, panel, role_id)
+  if type(skin_archive) ~= "table" then
+    return
+  end
+  local key = _role_key(role_id)
+  _seed_owned_from_archive(panel, key, role_id)
+  if panel.selected_by_role[key] ~= nil or not skin_archive.load_equipped then
+    return
+  end
+  local equipped = skin_archive.load_equipped(role_id)
+  if equipped == nil then
+    return
+  end
+  local skin = _catalog_skin_by_product(equipped)
+  if skin and _owns_skin(panel, key, skin) then
+    _apply_equip(state, panel, role_id, skin)
+  end
+end
+
 local function _handle_locked_skin(state, role_id, slot_index, key, skin)
   if skin.unlock == "purchase" then
     return _initiate_purchase(state, role_id, slot_index)
@@ -209,8 +312,11 @@ end
 
 local function _unequip(state, role_id)
   local panel = _ensure_state(state)
-  local key = _role_key(role_id or panel.role_id)
+  local effective_role = role_id or panel.role_id
+  local key = _role_key(effective_role)
   panel.selected_by_role[key] = nil
+  _save_equipped(effective_role, nil)
+  _apply_unequip_callback(effective_role)
   _refresh_slots_for_owner(state, panel)
   _notify("已脱下皮肤", "skin_panel:unequip:" .. key)
   return panel
@@ -260,385 +366,445 @@ return skin_panel
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=6d0586a376e3cfad
+projectHash=893637017aa7523e
 scope.0.id=chunk:src/ui/coord/skin_panel.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=260
-scope.0.semanticHash=cedb72a9272df74d
-scope.0.lastMutatedAt=2026-05-29T06:47:15Z
+scope.0.endLine=366
+scope.0.semanticHash=fc376a454c5961b4
+scope.0.lastMutatedAt=2026-05-30T08:09:57Z
 scope.0.lastMutationLane=behavior
 scope.0.lastMutationStatus=passed
-scope.0.lastMutationSites=9
-scope.0.lastMutationKilled=9
-scope.1.id=function:_ensure_state:18
+scope.0.lastMutationSites=23
+scope.0.lastMutationKilled=23
+scope.1.id=function:_ensure_state:20
 scope.1.kind=function
-scope.1.startLine=18
-scope.1.endLine=28
+scope.1.startLine=20
+scope.1.endLine=30
 scope.1.semanticHash=5c9e7cc6f3b42add
-scope.1.lastMutatedAt=2026-05-26T12:23:49Z
+scope.1.lastMutatedAt=2026-05-30T08:09:57Z
 scope.1.lastMutationLane=behavior
 scope.1.lastMutationStatus=passed
 scope.1.lastMutationSites=5
 scope.1.lastMutationKilled=5
-scope.2.id=function:_role_key:30
+scope.2.id=function:_role_key:32
 scope.2.kind=function
-scope.2.startLine=30
-scope.2.endLine=32
+scope.2.startLine=32
+scope.2.endLine=34
 scope.2.semanticHash=f99005f60b9085b8
-scope.2.lastMutatedAt=2026-05-26T12:23:49Z
+scope.2.lastMutatedAt=2026-05-30T08:09:57Z
 scope.2.lastMutationLane=behavior
 scope.2.lastMutationStatus=passed
 scope.2.lastMutationSites=1
 scope.2.lastMutationKilled=1
-scope.3.id=function:_slot_index:34
+scope.3.id=function:_slot_index:36
 scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=37
+scope.3.startLine=36
+scope.3.endLine=39
 scope.3.semanticHash=e54d9f514712c02a
-scope.3.lastMutatedAt=2026-05-26T12:23:49Z
+scope.3.lastMutatedAt=2026-05-30T08:09:57Z
 scope.3.lastMutationLane=behavior
 scope.3.lastMutationStatus=passed
 scope.3.lastMutationSites=7
 scope.3.lastMutationKilled=7
-scope.4.id=function:_skin_at:39
+scope.4.id=function:_skin_at:41
 scope.4.kind=function
-scope.4.startLine=39
-scope.4.endLine=41
+scope.4.startLine=41
+scope.4.endLine=43
 scope.4.semanticHash=492ec49d5d888ee2
-scope.4.lastMutatedAt=2026-05-26T12:23:49Z
+scope.4.lastMutatedAt=2026-05-30T08:09:57Z
 scope.4.lastMutationLane=behavior
 scope.4.lastMutationStatus=passed
 scope.4.lastMutationSites=1
 scope.4.lastMutationKilled=1
-scope.5.id=function:_notify:43
+scope.5.id=function:_notify:45
 scope.5.kind=function
-scope.5.startLine=43
-scope.5.endLine=51
+scope.5.startLine=45
+scope.5.endLine=53
 scope.5.semanticHash=4954ead30edb0436
-scope.5.lastMutatedAt=2026-05-26T12:23:49Z
+scope.5.lastMutatedAt=2026-05-30T08:09:57Z
 scope.5.lastMutationLane=behavior
 scope.5.lastMutationStatus=passed
 scope.5.lastMutationSites=1
 scope.5.lastMutationKilled=1
-scope.6.id=function:anonymous@54:54
+scope.6.id=function:anonymous@56:56
 scope.6.kind=function
-scope.6.startLine=54
-scope.6.endLine=56
+scope.6.startLine=56
+scope.6.endLine=58
 scope.6.semanticHash=496b82e8d3606200
-scope.6.lastMutatedAt=2026-05-26T12:23:49Z
-scope.6.lastMutationLane=behavior
-scope.6.lastMutationStatus=no_sites
-scope.6.lastMutationSites=0
-scope.6.lastMutationKilled=0
-scope.7.id=function:_refresh_slots_for_owner:53
+scope.7.id=function:_refresh_slots_for_owner:55
 scope.7.kind=function
-scope.7.startLine=53
-scope.7.endLine=57
+scope.7.startLine=55
+scope.7.endLine=59
 scope.7.semanticHash=1a7c6ecd7c3404fe
-scope.7.lastMutatedAt=2026-05-26T12:23:49Z
+scope.7.lastMutatedAt=2026-05-30T08:09:57Z
 scope.7.lastMutationLane=behavior
 scope.7.lastMutationStatus=passed
 scope.7.lastMutationSites=1
 scope.7.lastMutationKilled=1
-scope.8.id=function:_action_type:59
+scope.8.id=function:_action_type:61
 scope.8.kind=function
-scope.8.startLine=59
-scope.8.endLine=64
+scope.8.startLine=61
+scope.8.endLine=66
 scope.8.semanticHash=b61a5fc534a67702
-scope.8.lastMutatedAt=2026-05-26T12:23:49Z
+scope.8.lastMutatedAt=2026-05-30T08:09:57Z
 scope.8.lastMutationLane=behavior
 scope.8.lastMutationStatus=passed
 scope.8.lastMutationSites=4
 scope.8.lastMutationKilled=4
-scope.9.id=function:_action_slot_index:66
+scope.9.id=function:_action_slot_index:68
 scope.9.kind=function
-scope.9.startLine=66
-scope.9.endLine=71
+scope.9.startLine=68
+scope.9.endLine=73
 scope.9.semanticHash=ca80299c341a2e06
-scope.9.lastMutatedAt=2026-05-26T12:23:49Z
+scope.9.lastMutatedAt=2026-05-30T08:09:57Z
 scope.9.lastMutationLane=behavior
 scope.9.lastMutationStatus=passed
 scope.9.lastMutationSites=8
 scope.9.lastMutationKilled=8
-scope.10.id=function:_apply_equip_callback:73
+scope.10.id=function:_mark_owned:78
 scope.10.kind=function
-scope.10.startLine=73
-scope.10.endLine=88
-scope.10.semanticHash=abb16920602659f9
-scope.10.lastMutatedAt=2026-05-26T12:23:49Z
+scope.10.startLine=78
+scope.10.endLine=82
+scope.10.semanticHash=b34ebd6e482cffdd
+scope.10.lastMutatedAt=2026-05-30T08:09:57Z
 scope.10.lastMutationLane=behavior
 scope.10.lastMutationStatus=passed
-scope.10.lastMutationSites=10
-scope.10.lastMutationKilled=10
-scope.11.id=function:_configure_callback:90
+scope.10.lastMutationSites=5
+scope.10.lastMutationKilled=5
+scope.11.id=function:_save_equipped:84
 scope.11.kind=function
-scope.11.startLine=90
-scope.11.endLine=95
-scope.11.semanticHash=3ec1c8dfc6a142bc
-scope.11.lastMutatedAt=2026-05-26T12:23:49Z
+scope.11.startLine=84
+scope.11.endLine=88
+scope.11.semanticHash=66c2b54999d68f0d
+scope.11.lastMutatedAt=2026-05-30T08:09:57Z
 scope.11.lastMutationLane=behavior
 scope.11.lastMutationStatus=passed
-scope.11.lastMutationSites=2
-scope.11.lastMutationKilled=2
-scope.12.id=function:skin_panel.configure_equip:97
+scope.11.lastMutationSites=5
+scope.11.lastMutationKilled=5
+scope.12.id=function:_apply_equip_callback:117
 scope.12.kind=function
-scope.12.startLine=97
-scope.12.endLine=99
-scope.12.semanticHash=e1c6026b6e2e9d4d
-scope.12.lastMutatedAt=2026-05-26T12:23:49Z
+scope.12.startLine=117
+scope.12.endLine=132
+scope.12.semanticHash=abb16920602659f9
+scope.12.lastMutatedAt=2026-05-30T08:09:57Z
 scope.12.lastMutationLane=behavior
 scope.12.lastMutationStatus=passed
-scope.12.lastMutationSites=1
-scope.12.lastMutationKilled=1
-scope.13.id=function:skin_panel.configure_purchase:101
+scope.12.lastMutationSites=10
+scope.12.lastMutationKilled=10
+scope.13.id=function:_apply_unequip_callback:134
 scope.13.kind=function
-scope.13.startLine=101
-scope.13.endLine=103
-scope.13.semanticHash=460f64b28e33642e
-scope.13.lastMutatedAt=2026-05-26T12:23:49Z
+scope.13.startLine=134
+scope.13.endLine=146
+scope.13.semanticHash=e2fd16b195b581e7
+scope.13.lastMutatedAt=2026-05-30T08:09:57Z
 scope.13.lastMutationLane=behavior
 scope.13.lastMutationStatus=passed
-scope.13.lastMutationSites=1
-scope.13.lastMutationKilled=1
-scope.14.id=function:skin_panel.configure_catalog_for_tests:105
+scope.13.lastMutationSites=6
+scope.13.lastMutationKilled=6
+scope.14.id=function:_configure_callback:148
 scope.14.kind=function
-scope.14.startLine=105
-scope.14.endLine=108
-scope.14.semanticHash=6f58c3f6346e7bfb
-scope.14.lastMutatedAt=2026-05-26T12:23:49Z
+scope.14.startLine=148
+scope.14.endLine=153
+scope.14.semanticHash=3ec1c8dfc6a142bc
+scope.14.lastMutatedAt=2026-05-30T08:09:57Z
 scope.14.lastMutationLane=behavior
 scope.14.lastMutationStatus=passed
-scope.14.lastMutationSites=1
-scope.14.lastMutationKilled=1
-scope.15.id=function:skin_panel.reset_for_tests:110
+scope.14.lastMutationSites=2
+scope.14.lastMutationKilled=2
+scope.15.id=function:skin_panel.configure_equip:155
 scope.15.kind=function
-scope.15.startLine=110
-scope.15.endLine=115
-scope.15.semanticHash=c68211e0fe3c8c04
-scope.15.lastMutatedAt=2026-05-26T12:23:49Z
+scope.15.startLine=155
+scope.15.endLine=157
+scope.15.semanticHash=e1c6026b6e2e9d4d
+scope.15.lastMutatedAt=2026-05-30T08:09:57Z
 scope.15.lastMutationLane=behavior
-scope.15.lastMutationStatus=no_sites
-scope.15.lastMutationSites=0
-scope.15.lastMutationKilled=0
-scope.16.id=function:skin_panel.open:117
+scope.15.lastMutationStatus=passed
+scope.15.lastMutationSites=1
+scope.15.lastMutationKilled=1
+scope.16.id=function:skin_panel.configure_purchase:159
 scope.16.kind=function
-scope.16.startLine=117
-scope.16.endLine=126
-scope.16.semanticHash=f35cbcdbe265e22d
-scope.16.lastMutatedAt=2026-05-26T12:23:49Z
+scope.16.startLine=159
+scope.16.endLine=161
+scope.16.semanticHash=460f64b28e33642e
+scope.16.lastMutatedAt=2026-05-30T08:09:57Z
 scope.16.lastMutationLane=behavior
 scope.16.lastMutationStatus=passed
-scope.16.lastMutationSites=6
-scope.16.lastMutationKilled=6
-scope.17.id=function:skin_panel.close:128
+scope.16.lastMutationSites=1
+scope.16.lastMutationKilled=1
+scope.17.id=function:skin_panel.configure_unequip:163
 scope.17.kind=function
-scope.17.startLine=128
-scope.17.endLine=136
-scope.17.semanticHash=87857f70fc9ec344
-scope.17.lastMutatedAt=2026-05-26T12:23:49Z
+scope.17.startLine=163
+scope.17.endLine=165
+scope.17.semanticHash=8101f8b018cede28
+scope.17.lastMutatedAt=2026-05-30T08:09:57Z
 scope.17.lastMutationLane=behavior
 scope.17.lastMutationStatus=passed
-scope.17.lastMutationSites=8
-scope.17.lastMutationKilled=8
-scope.18.id=function:_unlock_skin:138
+scope.17.lastMutationSites=1
+scope.17.lastMutationKilled=1
+scope.18.id=function:skin_panel.configure_archive:167
 scope.18.kind=function
-scope.18.startLine=138
-scope.18.endLine=144
-scope.18.semanticHash=c9633468fff4f065
-scope.18.lastMutatedAt=2026-05-29T06:47:15Z
+scope.18.startLine=167
+scope.18.endLine=170
+scope.18.semanticHash=a1284333e6bcf76f
+scope.18.lastMutatedAt=2026-05-30T08:09:57Z
 scope.18.lastMutationLane=behavior
 scope.18.lastMutationStatus=passed
-scope.18.lastMutationSites=4
-scope.18.lastMutationKilled=4
-scope.19.id=function:skin_panel.unlock:146
+scope.18.lastMutationSites=1
+scope.18.lastMutationKilled=1
+scope.19.id=function:skin_panel.configure_catalog_for_tests:172
 scope.19.kind=function
-scope.19.startLine=146
-scope.19.endLine=153
-scope.19.semanticHash=e4c225f6e64fc679
-scope.19.lastMutatedAt=2026-05-29T06:47:15Z
+scope.19.startLine=172
+scope.19.endLine=175
+scope.19.semanticHash=6f58c3f6346e7bfb
+scope.19.lastMutatedAt=2026-05-30T08:09:57Z
 scope.19.lastMutationLane=behavior
 scope.19.lastMutationStatus=passed
-scope.19.lastMutationSites=4
-scope.19.lastMutationKilled=4
-scope.20.id=function:_equip_owned_skin:155
+scope.19.lastMutationSites=1
+scope.19.lastMutationKilled=1
+scope.20.id=function:skin_panel.reset_for_tests:177
 scope.20.kind=function
-scope.20.startLine=155
-scope.20.endLine=163
-scope.20.semanticHash=68e6a26516403b14
-scope.20.lastMutatedAt=2026-05-29T06:47:15Z
-scope.20.lastMutationLane=behavior
-scope.20.lastMutationStatus=passed
-scope.20.lastMutationSites=6
-scope.20.lastMutationKilled=6
-scope.21.id=function:anonymous@172:172
+scope.20.startLine=177
+scope.20.endLine=184
+scope.20.semanticHash=0ada91e5710b167f
+scope.21.id=function:skin_panel.open:186
 scope.21.kind=function
-scope.21.startLine=172
-scope.21.endLine=176
-scope.21.semanticHash=63efaecd778d1d52
-scope.21.lastMutatedAt=2026-05-29T06:47:15Z
+scope.21.startLine=186
+scope.21.endLine=196
+scope.21.semanticHash=79ba8129770188f1
+scope.21.lastMutatedAt=2026-05-30T08:09:57Z
 scope.21.lastMutationLane=behavior
 scope.21.lastMutationStatus=passed
-scope.21.lastMutationSites=3
-scope.21.lastMutationKilled=3
-scope.22.id=function:_initiate_purchase:165
+scope.21.lastMutationSites=7
+scope.21.lastMutationKilled=7
+scope.22.id=function:skin_panel.close:198
 scope.22.kind=function
-scope.22.startLine=165
-scope.22.endLine=182
-scope.22.semanticHash=fc4e35318378a74c
-scope.22.lastMutatedAt=2026-05-29T06:47:15Z
+scope.22.startLine=198
+scope.22.endLine=206
+scope.22.semanticHash=87857f70fc9ec344
+scope.22.lastMutatedAt=2026-05-30T08:09:57Z
 scope.22.lastMutationLane=behavior
 scope.22.lastMutationStatus=passed
-scope.22.lastMutationSites=9
-scope.22.lastMutationKilled=9
-scope.23.id=function:_owns_skin:184
+scope.22.lastMutationSites=8
+scope.22.lastMutationKilled=8
+scope.23.id=function:_unlock_skin:208
 scope.23.kind=function
-scope.23.startLine=184
-scope.23.endLine=186
-scope.23.semanticHash=339bfcb93cd84272
-scope.23.lastMutatedAt=2026-05-29T06:47:15Z
+scope.23.startLine=208
+scope.23.endLine=217
+scope.23.semanticHash=36baa51f66ac884e
+scope.23.lastMutatedAt=2026-05-30T08:09:57Z
 scope.23.lastMutationLane=behavior
 scope.23.lastMutationStatus=passed
-scope.23.lastMutationSites=3
-scope.23.lastMutationKilled=3
-scope.24.id=function:_handle_locked_skin:188
+scope.23.lastMutationSites=7
+scope.23.lastMutationKilled=7
+scope.24.id=function:skin_panel.unlock:219
 scope.24.kind=function
-scope.24.startLine=188
-scope.24.endLine=194
-scope.24.semanticHash=e142e772cf120ecc
-scope.24.lastMutatedAt=2026-05-29T06:47:15Z
+scope.24.startLine=219
+scope.24.endLine=226
+scope.24.semanticHash=e4c225f6e64fc679
+scope.24.lastMutatedAt=2026-05-30T08:09:57Z
 scope.24.lastMutationLane=behavior
 scope.24.lastMutationStatus=passed
-scope.24.lastMutationSites=5
-scope.24.lastMutationKilled=5
-scope.25.id=function:skin_panel.equip:196
+scope.24.lastMutationSites=4
+scope.24.lastMutationKilled=4
+scope.25.id=function:_apply_equip:231
 scope.25.kind=function
-scope.25.startLine=196
-scope.25.endLine=208
-scope.25.semanticHash=698ed35cca86596f
-scope.25.lastMutatedAt=2026-05-29T06:47:15Z
+scope.25.startLine=231
+scope.25.endLine=239
+scope.25.semanticHash=4f067a470d8285e8
+scope.25.lastMutatedAt=2026-05-30T08:09:57Z
 scope.25.lastMutationLane=behavior
 scope.25.lastMutationStatus=passed
-scope.25.lastMutationSites=9
-scope.25.lastMutationKilled=9
-scope.26.id=function:_unequip:210
+scope.25.lastMutationSites=6
+scope.25.lastMutationKilled=6
+scope.26.id=function:_equip_owned_skin:241
 scope.26.kind=function
-scope.26.startLine=210
-scope.26.endLine=217
-scope.26.semanticHash=a2ef83a0be5c50aa
-scope.26.lastMutatedAt=2026-05-29T06:47:15Z
+scope.26.startLine=241
+scope.26.endLine=244
+scope.26.semanticHash=4205d89ade4ed45d
+scope.26.lastMutatedAt=2026-05-30T08:09:57Z
 scope.26.lastMutationLane=behavior
 scope.26.lastMutationStatus=passed
-scope.26.lastMutationSites=4
-scope.26.lastMutationKilled=4
-scope.27.id=function:_clamp_page:219
+scope.26.lastMutationSites=2
+scope.26.lastMutationKilled=2
+scope.27.id=function:anonymous@253:253
 scope.27.kind=function
-scope.27.startLine=219
-scope.27.endLine=222
-scope.27.semanticHash=a796bea73bf03774
-scope.27.lastMutatedAt=2026-05-29T06:47:15Z
+scope.27.startLine=253
+scope.27.endLine=257
+scope.27.semanticHash=63efaecd778d1d52
+scope.27.lastMutatedAt=2026-05-30T08:09:57Z
 scope.27.lastMutationLane=behavior
 scope.27.lastMutationStatus=passed
-scope.27.lastMutationSites=2
-scope.27.lastMutationKilled=2
-scope.28.id=function:_page_next:224
+scope.27.lastMutationSites=3
+scope.27.lastMutationKilled=3
+scope.28.id=function:_initiate_purchase:246
 scope.28.kind=function
-scope.28.startLine=224
-scope.28.endLine=229
-scope.28.semanticHash=ca90719558e5265b
-scope.28.lastMutatedAt=2026-05-29T06:47:15Z
+scope.28.startLine=246
+scope.28.endLine=263
+scope.28.semanticHash=fc4e35318378a74c
+scope.28.lastMutatedAt=2026-05-30T08:09:57Z
 scope.28.lastMutationLane=behavior
 scope.28.lastMutationStatus=passed
-scope.28.lastMutationSites=3
-scope.28.lastMutationKilled=3
-scope.29.id=function:_page_prev:231
+scope.28.lastMutationSites=9
+scope.28.lastMutationKilled=9
+scope.29.id=function:_owns_skin:265
 scope.29.kind=function
-scope.29.startLine=231
-scope.29.endLine=236
-scope.29.semanticHash=f1916d9096086a95
-scope.29.lastMutatedAt=2026-05-29T06:47:15Z
+scope.29.startLine=265
+scope.29.endLine=267
+scope.29.semanticHash=339bfcb93cd84272
+scope.29.lastMutatedAt=2026-05-30T08:09:57Z
 scope.29.lastMutationLane=behavior
 scope.29.lastMutationStatus=passed
 scope.29.lastMutationSites=3
 scope.29.lastMutationKilled=3
-scope.30.id=function:anonymous@239:239
+scope.30.id=function:anonymous@272:272
 scope.30.kind=function
-scope.30.startLine=239
-scope.30.endLine=239
-scope.30.semanticHash=2b8509b5927576b5
-scope.30.lastMutatedAt=2026-05-29T06:47:15Z
+scope.30.startLine=272
+scope.30.endLine=289
+scope.30.semanticHash=a17f0523e5930213
+scope.30.lastMutatedAt=2026-05-30T08:09:57Z
 scope.30.lastMutationLane=behavior
 scope.30.lastMutationStatus=passed
-scope.30.lastMutationSites=1
-scope.30.lastMutationKilled=1
-scope.31.id=function:anonymous@240:240
+scope.30.lastMutationSites=14
+scope.30.lastMutationKilled=14
+scope.31.id=function:_handle_locked_skin:291
 scope.31.kind=function
-scope.31.startLine=240
-scope.31.endLine=240
-scope.31.semanticHash=a674fc45ebbf533a
-scope.31.lastMutatedAt=2026-05-29T06:47:15Z
+scope.31.startLine=291
+scope.31.endLine=297
+scope.31.semanticHash=e142e772cf120ecc
+scope.31.lastMutatedAt=2026-05-30T08:09:57Z
 scope.31.lastMutationLane=behavior
 scope.31.lastMutationStatus=passed
-scope.31.lastMutationSites=1
-scope.31.lastMutationKilled=1
-scope.32.id=function:anonymous@241:241
+scope.31.lastMutationSites=5
+scope.31.lastMutationKilled=5
+scope.32.id=function:skin_panel.equip:299
 scope.32.kind=function
-scope.32.startLine=241
-scope.32.endLine=241
-scope.32.semanticHash=a007a0d48e3f57ae
-scope.32.lastMutatedAt=2026-05-29T06:47:15Z
+scope.32.startLine=299
+scope.32.endLine=311
+scope.32.semanticHash=698ed35cca86596f
+scope.32.lastMutatedAt=2026-05-30T08:09:57Z
 scope.32.lastMutationLane=behavior
 scope.32.lastMutationStatus=passed
-scope.32.lastMutationSites=1
-scope.32.lastMutationKilled=1
-scope.33.id=function:anonymous@242:242
+scope.32.lastMutationSites=9
+scope.32.lastMutationKilled=9
+scope.33.id=function:_unequip:313
 scope.33.kind=function
-scope.33.startLine=242
-scope.33.endLine=242
-scope.33.semanticHash=467dbf0841655a5e
-scope.33.lastMutatedAt=2026-05-29T06:47:15Z
+scope.33.startLine=313
+scope.33.endLine=323
+scope.33.semanticHash=b4f8d0597c1da200
+scope.33.lastMutatedAt=2026-05-30T08:09:57Z
 scope.33.lastMutationLane=behavior
 scope.33.lastMutationStatus=passed
-scope.33.lastMutationSites=1
-scope.33.lastMutationKilled=1
-scope.34.id=function:anonymous@243:243
+scope.33.lastMutationSites=7
+scope.33.lastMutationKilled=7
+scope.34.id=function:_clamp_page:325
 scope.34.kind=function
-scope.34.startLine=243
-scope.34.endLine=243
-scope.34.semanticHash=3dc0150394e77abd
-scope.34.lastMutatedAt=2026-05-29T06:47:15Z
+scope.34.startLine=325
+scope.34.endLine=328
+scope.34.semanticHash=a796bea73bf03774
+scope.34.lastMutatedAt=2026-05-30T08:09:57Z
 scope.34.lastMutationLane=behavior
 scope.34.lastMutationStatus=passed
-scope.34.lastMutationSites=1
-scope.34.lastMutationKilled=1
-scope.35.id=function:anonymous@244:244
+scope.34.lastMutationSites=2
+scope.34.lastMutationKilled=2
+scope.35.id=function:_page_next:330
 scope.35.kind=function
-scope.35.startLine=244
-scope.35.endLine=244
-scope.35.semanticHash=becb3627b205cbd4
-scope.35.lastMutatedAt=2026-05-29T06:47:15Z
+scope.35.startLine=330
+scope.35.endLine=335
+scope.35.semanticHash=ca90719558e5265b
+scope.35.lastMutatedAt=2026-05-30T08:09:57Z
 scope.35.lastMutationLane=behavior
 scope.35.lastMutationStatus=passed
-scope.35.lastMutationSites=1
-scope.35.lastMutationKilled=1
-scope.36.id=function:anonymous@245:245
+scope.35.lastMutationSites=3
+scope.35.lastMutationKilled=3
+scope.36.id=function:_page_prev:337
 scope.36.kind=function
-scope.36.startLine=245
-scope.36.endLine=245
-scope.36.semanticHash=d566a0b2dd069614
-scope.36.lastMutatedAt=2026-05-29T06:47:15Z
+scope.36.startLine=337
+scope.36.endLine=342
+scope.36.semanticHash=f1916d9096086a95
+scope.36.lastMutatedAt=2026-05-30T08:09:57Z
 scope.36.lastMutationLane=behavior
 scope.36.lastMutationStatus=passed
-scope.36.lastMutationSites=1
-scope.36.lastMutationKilled=1
-scope.37.id=function:skin_panel.handle_action:248
+scope.36.lastMutationSites=3
+scope.36.lastMutationKilled=3
+scope.37.id=function:anonymous@345:345
 scope.37.kind=function
-scope.37.startLine=248
-scope.37.endLine=255
-scope.37.semanticHash=642eaf3b12a609d9
-scope.37.lastMutatedAt=2026-05-29T06:47:15Z
+scope.37.startLine=345
+scope.37.endLine=345
+scope.37.semanticHash=2b8509b5927576b5
+scope.37.lastMutatedAt=2026-05-30T08:09:57Z
 scope.37.lastMutationLane=behavior
 scope.37.lastMutationStatus=passed
-scope.37.lastMutationSites=6
-scope.37.lastMutationKilled=6
+scope.37.lastMutationSites=1
+scope.37.lastMutationKilled=1
+scope.38.id=function:anonymous@346:346
+scope.38.kind=function
+scope.38.startLine=346
+scope.38.endLine=346
+scope.38.semanticHash=a674fc45ebbf533a
+scope.38.lastMutatedAt=2026-05-30T08:09:57Z
+scope.38.lastMutationLane=behavior
+scope.38.lastMutationStatus=passed
+scope.38.lastMutationSites=1
+scope.38.lastMutationKilled=1
+scope.39.id=function:anonymous@347:347
+scope.39.kind=function
+scope.39.startLine=347
+scope.39.endLine=347
+scope.39.semanticHash=a007a0d48e3f57ae
+scope.39.lastMutatedAt=2026-05-30T08:09:57Z
+scope.39.lastMutationLane=behavior
+scope.39.lastMutationStatus=passed
+scope.39.lastMutationSites=1
+scope.39.lastMutationKilled=1
+scope.40.id=function:anonymous@348:348
+scope.40.kind=function
+scope.40.startLine=348
+scope.40.endLine=348
+scope.40.semanticHash=467dbf0841655a5e
+scope.40.lastMutatedAt=2026-05-30T08:09:57Z
+scope.40.lastMutationLane=behavior
+scope.40.lastMutationStatus=passed
+scope.40.lastMutationSites=1
+scope.40.lastMutationKilled=1
+scope.41.id=function:anonymous@349:349
+scope.41.kind=function
+scope.41.startLine=349
+scope.41.endLine=349
+scope.41.semanticHash=3dc0150394e77abd
+scope.41.lastMutatedAt=2026-05-30T08:09:57Z
+scope.41.lastMutationLane=behavior
+scope.41.lastMutationStatus=passed
+scope.41.lastMutationSites=1
+scope.41.lastMutationKilled=1
+scope.42.id=function:anonymous@350:350
+scope.42.kind=function
+scope.42.startLine=350
+scope.42.endLine=350
+scope.42.semanticHash=becb3627b205cbd4
+scope.42.lastMutatedAt=2026-05-30T08:09:57Z
+scope.42.lastMutationLane=behavior
+scope.42.lastMutationStatus=passed
+scope.42.lastMutationSites=1
+scope.42.lastMutationKilled=1
+scope.43.id=function:anonymous@351:351
+scope.43.kind=function
+scope.43.startLine=351
+scope.43.endLine=351
+scope.43.semanticHash=d566a0b2dd069614
+scope.43.lastMutatedAt=2026-05-30T08:09:57Z
+scope.43.lastMutationLane=behavior
+scope.43.lastMutationStatus=passed
+scope.43.lastMutationSites=1
+scope.43.lastMutationKilled=1
+scope.44.id=function:skin_panel.handle_action:354
+scope.44.kind=function
+scope.44.startLine=354
+scope.44.endLine=361
+scope.44.semanticHash=642eaf3b12a609d9
+scope.44.lastMutatedAt=2026-05-30T08:09:57Z
+scope.44.lastMutationLane=behavior
+scope.44.lastMutationStatus=passed
+scope.44.lastMutationSites=6
+scope.44.lastMutationKilled=6
 ]]
