@@ -21,7 +21,7 @@ Agent 路由：`.agents/README.md` | 人类索引：`docs/README.md`
 
 ## 边界
 
-- 不要手改 `tools/acceptance/generated/*`；从 feature / generator 源头更新。
+- `tools/acceptance/generated/*` 是 gitignored 生成物（ADR 0015）；不手改、不提交，跑 `make acceptance` 从 feature 重生成。新 feature 入验收套件要在 `tools/acceptance/acceptance_features.lua` 加一行。
 - `EggyAPI.lua` 是宿主 API 参考面，按第三方边界处理。
 - 大型规则 spec 由对应 `src/rules` 行为覆盖；改规则先补或调整 behavior spec。
 
@@ -62,3 +62,5 @@ Agent 路由：`.agents/README.md` | 人类索引：`docs/README.md`
 ## 验证
 
 迭代默认 `verify --smoke`（~8s，覆盖 src 全部七层 + foundation 行为 spec）；handoff / PR / commit 前跑 `verify`（~30s，含 crap + coverage）。`tools/{quality,acceptance,shared,ops}/**` 改动另外跑 `busted --run tooling` 单测工具模块（不在 verify 管线内）。profile 见 `.agents/skills/verify/SKILL.md`。
+
+验收套件用 `make acceptance`（先从 feature 重生成 gitignored 生成物再跑），**不要**裸跑 `busted --run acceptance`——fresh checkout 生成物为空会假绿（ADR 0015）。

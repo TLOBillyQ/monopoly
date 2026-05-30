@@ -220,3 +220,7 @@ Stage 1（本 ADR）→ Stage 2 hash 原语 → Stage 3 `--level` CLI → Stage 
 - `vendor/acceptance4lua/`：parser、中文 normalizer、JSON IR、generator、runtime、Gherkin example mutator、stamp/manifest、report/status。
 - `tools/acceptance/steps*.lua`、`tools/acceptance/game_driver.lua`、`tools/acceptance/run_acceptance.lua`、`tools/acceptance/runner_worker.lua`：Monopoly 项目适配层，不进入子模块。
 - `tools/acceptance/cli/*.lua`：项目 wrapper，只负责 bootstrap package path 并委托 `acceptance4lua.cli.*`。
+
+## Addendum 2026-05-30 — 与 ADR 0015 的边界（stamp/manifest ≠ 生成物漂移守卫）
+
+[ADR 0015](0015-acceptance-generated-specs-not-versioned.md) 把 `tools/acceptance/generated/*` 改为 gitignore + 入口重生成。澄清：本 ADR 的 `# mutation-stamp:` + `# acceptance-mutation-manifest` 是**规约层差分突变**机制，内嵌在 `.feature` 文件（仍 track），供 `gherkin-mutator` 跳过未变 feature。它**不是**「生成物 vs feature」漂移守卫，与生成物是否版本控制正交，ADR 0015 不触及本 ADR 任何机制。详见 ADR 0015 D4。

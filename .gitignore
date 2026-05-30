@@ -74,9 +74,10 @@ pending-messages/
 /luacov.report.out
 /contract
 
-# Generated acceptance pipeline artifacts
+# Generated acceptance pipeline artifacts (ADR 0015): build outputs regenerated
+# from features/ at the `make acceptance` entrypoint; not version-controlled.
 /acceptance/generated/
-/tools/acceptance/generated/metadata/
+/tools/acceptance/generated/
 /build/acceptance/
 /build/acceptance-mutation/
 .agents/plan.md

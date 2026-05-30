@@ -55,6 +55,7 @@ return {
       "spec/support/log_warns_handler/spec",
       "tools/acceptance/feature_stamp/spec",
       "tools/acceptance/mutator/spec",
+      "tools/acceptance/regenerate/spec",
       "tools/acceptance/run_acceptance/spec",
       "tools/acceptance/scenario_manifest/spec",
       "tools/acceptance/spec_hash/spec",
