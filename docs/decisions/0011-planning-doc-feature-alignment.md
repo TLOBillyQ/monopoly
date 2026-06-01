@@ -51,3 +51,21 @@ last_verified: 2026-05-23
 ## 后续
 
 用户 review 接受后，specifier 通知 coder 按本轮 feature 更新 step handler 与生产实现。coder 需要优先处理当前会失败的新 step 文案，再实现生产行为。
+
+---
+
+## 修订 (2026-05-30, 用户裁定)
+
+### D1 操作倒计时 — 10 秒改为分场景值（已落 feature）
+
+用户裁定操作倒计时权威值为 **15 秒**，黑市购买单独 **60 秒**。`features/game/turn_flow.feature` 的超时 Examples 由 10 改为：操作选择 / 道具目标选择 = 15，黑市购买 = 60。生产 `src/config/gameplay/timing.lua` `scope_timeouts`（choice=15 / target_select=15 / market_buy=60）本就如此，本次仅消除 feature 与生产的漂移；code 不需改。
+
+> D1 原文「操作选择统一 10 秒超时」作废，以本修订为准。
+
+### D1 座驾相关项 — 撤回（座驾系统整体拆除）
+
+用户裁定**整体拆除座驾功能**。本轮 specifier 删除 `features/game/vehicles.feature`，D1 中「座驾骰子数、付费座驾购买、地雷与不可摧毁座驾关系」一项随之撤回。拆除后：基础骰子数固定为 1（道具 2002 遥控 / 2003 加倍 不受影响仍保留），地雷不再有「不可摧毁座驾」免疫、黑市不再售付费座驾。
+
+F2（机会表 3014-3016 / 3035-3037「更换座驾」卡）随之裁定为**不实现**；`features/game/chance.feature` 目录本就只锁 31 张，无需改动。`agent_context/draft-F2-vehicle-gift-chance-cards.md` 作废。
+
+座驾**代码**拆除（`src/rules/dice.lua` 等）由 coder 实施；其架构级拆除 ADR 由 architect 在下游补记。详见 `agent_context/vehicle-teardown-context.md`。

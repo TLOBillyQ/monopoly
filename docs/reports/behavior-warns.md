@@ -59,6 +59,9 @@ last_verified: 2026-05-14
 | `item slot denied by availability:` | 道具不可用时被拒 | 预期内 |
 | `item_slot click ignored:` | 道具槽点击被忽略 | 预期内 |
 | `missing item_id:` | 缺少道具 ID | 预期内 |
+| `没有可选择的目标玩家` | 目标玩家道具无候选目标 | 预期内 |
+| `目标玩家不在可选列表中:` | 指定 target_id 不在候选列表 | 预期内 |
+| `目标玩家无效:` | 指定 target_id 无效 / 自指 / 已淘汰 | 预期内 |
 | `remote_select without choice` | 远程选择但无待决 choice | 预期内 |
 | `role->player 映射失败` | 无效 role_id 回退到观战 | 预期内 |
 | `ui intent rejected:` | UI intent 缺 actor 被拒 | 预期内 |
