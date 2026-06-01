@@ -33,30 +33,37 @@ local function _image_ref_key(refs, item_id)
   return refs[key]
 end
 
+local function _apply_card_texture(runtime, refs, node_name, item)
+  local image_key = _image_ref_key(refs, item.id)
+  if not image_key then
+    return
+  end
+  if type(runtime.query_nodes) == "function" then
+    local matched_nodes = runtime.query_nodes(node_name)
+    for _, node in ipairs(matched_nodes) do
+      runtime.set_node_texture_keep_size(node, image_key)
+    end
+  else
+    local node = runtime.query_node(node_name)
+    if node then
+      runtime.set_node_texture_keep_size(node, image_key)
+    end
+  end
+end
+
+local function _set_card_visibility(ui, node_name, visible)
+  if ui.set_visible then
+    ui:set_visible(node_name, visible)
+  end
+end
+
 local function _refresh_card(ui, runtime, refs, node_name, item)
   local has_item = item ~= nil
   if item then
-    local image_key = _image_ref_key(refs, item.id)
-    if image_key then
-      if type(runtime.query_nodes) == "function" then
-        local matched_nodes = runtime.query_nodes(node_name)
-        for _, node in ipairs(matched_nodes) do
-          runtime.set_node_texture_keep_size(node, image_key)
-        end
-      else
-        local node = runtime.query_node(node_name)
-        if node then
-          runtime.set_node_texture_keep_size(node, image_key)
-        end
-      end
-    end
-    if ui.set_visible then
-      ui:set_visible(node_name, true)
-    end
+    _apply_card_texture(runtime, refs, node_name, item)
+    _set_card_visibility(ui, node_name, true)
   else
-    if ui.set_visible then
-      ui:set_visible(node_name, false)
-    end
+    _set_card_visibility(ui, node_name, false)
   end
   if ui.set_touch_enabled then
     ui:set_touch_enabled(node_name, has_item)
@@ -122,63 +129,63 @@ return item_atlas_view
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=f10413a3df21755b
+projectHash=c3593c86af00b345
 scope.0.id=chunk:src/ui/render/item_atlas.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=108
-scope.0.semanticHash=63ed6dcc41e794c9
-scope.0.lastMutatedAt=2026-05-26T02:33:26Z
+scope.0.endLine=129
+scope.0.semanticHash=245908ac98830be6
+scope.0.lastMutatedAt=2026-06-01T12:41:06Z
 scope.0.lastMutationLane=behavior
 scope.0.lastMutationStatus=passed
-scope.0.lastMutationSites=13
-scope.0.lastMutationKilled=13
+scope.0.lastMutationSites=41
+scope.0.lastMutationKilled=41
 scope.1.id=function:_image_ref_key:28
 scope.1.kind=function
 scope.1.startLine=28
 scope.1.endLine=34
 scope.1.semanticHash=207fe5b70dc77502
-scope.1.lastMutatedAt=2026-05-25T14:13:58Z
+scope.1.lastMutatedAt=2026-06-01T12:41:06Z
 scope.1.lastMutationLane=behavior
 scope.1.lastMutationStatus=passed
 scope.1.lastMutationSites=2
 scope.1.lastMutationKilled=2
-scope.2.id=function:_refresh_card:36
+scope.2.id=function:_set_card_visibility:54
 scope.2.kind=function
-scope.2.startLine=36
-scope.2.endLine=57
-scope.2.semanticHash=24acf97b4db665ec
-scope.2.lastMutatedAt=2026-05-26T02:33:26Z
+scope.2.startLine=54
+scope.2.endLine=58
+scope.2.semanticHash=578d71adb368abe2
+scope.2.lastMutatedAt=2026-06-01T12:41:06Z
 scope.2.lastMutationLane=behavior
 scope.2.lastMutationStatus=passed
-scope.2.lastMutationSites=7
-scope.2.lastMutationKilled=7
-scope.3.id=function:_refresh_page_arrows:59
+scope.2.lastMutationSites=1
+scope.2.lastMutationKilled=1
+scope.3.id=function:_refresh_card:60
 scope.3.kind=function
-scope.3.startLine=59
+scope.3.startLine=60
 scope.3.endLine=71
-scope.3.semanticHash=2a9381c8568b718a
-scope.3.lastMutatedAt=2026-05-26T02:33:26Z
+scope.3.semanticHash=86f26eb0605b244a
+scope.3.lastMutatedAt=2026-06-01T12:41:06Z
 scope.3.lastMutationLane=behavior
 scope.3.lastMutationStatus=passed
-scope.3.lastMutationSites=11
-scope.3.lastMutationKilled=11
-scope.4.id=function:item_atlas_view.show_enlarged:86
+scope.3.lastMutationSites=5
+scope.3.lastMutationKilled=5
+scope.4.id=function:_refresh_page_arrows:73
 scope.4.kind=function
-scope.4.startLine=86
-scope.4.endLine=100
-scope.4.semanticHash=4fe34d9b92a88553
-scope.4.lastMutatedAt=2026-05-26T02:33:26Z
+scope.4.startLine=73
+scope.4.endLine=85
+scope.4.semanticHash=2a9381c8568b718a
+scope.4.lastMutatedAt=2026-06-01T12:41:06Z
 scope.4.lastMutationLane=behavior
 scope.4.lastMutationStatus=passed
-scope.4.lastMutationSites=9
-scope.4.lastMutationKilled=9
-scope.5.id=function:item_atlas_view.hide_enlarged:102
+scope.4.lastMutationSites=11
+scope.4.lastMutationKilled=11
+scope.5.id=function:item_atlas_view.hide_enlarged:123
 scope.5.kind=function
-scope.5.startLine=102
-scope.5.endLine=105
+scope.5.startLine=123
+scope.5.endLine=126
 scope.5.semanticHash=f995e0c09d178218
-scope.5.lastMutatedAt=2026-05-26T02:33:26Z
+scope.5.lastMutatedAt=2026-06-01T12:41:06Z
 scope.5.lastMutationLane=behavior
 scope.5.lastMutationStatus=passed
 scope.5.lastMutationSites=2

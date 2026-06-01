@@ -116,13 +116,17 @@ local function _normalize_pending_spec(spec)
   }
 end
 
-local function _spawn_actor(registry, spec, spawn_pos)
+local function _validate_spawn_preconditions(registry, spec)
   local game_api = registry.env and registry.env.GameAPI or nil
   local player_id = role_id_utils.normalize(spec.player_id)
   assert(player_id ~= nil, "missing synthetic player_id")
   assert(spec.unit_key ~= nil, "missing synthetic unit_key")
   assert(game_api and type(game_api.create_creature_fixed_scale) == "function",
     "missing GameAPI.create_creature_fixed_scale")
+  return game_api, player_id
+end
+
+local function _spawn_unit(game_api, spec, spawn_pos, player_id)
   local ok_spawn, unit = pcall(
     game_api.create_creature_fixed_scale,
     spec.unit_key,
@@ -132,6 +136,23 @@ local function _spawn_actor(registry, spec, spawn_pos)
     nil
   )
   assert(ok_spawn and unit ~= nil, "failed to spawn synthetic actor: " .. tostring(player_id))
+  return unit
+end
+
+local function _start_actor_ai(unit, player_id, unit_key)
+  if type(unit.start_ai) == "function" then
+    local ok_start, err = pcall(unit.start_ai)
+    if not ok_start then
+      logger.warn("[Eggy]", "synthetic actor start_ai failed", tostring(player_id), tostring(err))
+    end
+    return
+  end
+  logger.warn("[Eggy]", "synthetic actor missing start_ai", tostring(player_id), tostring(unit_key))
+end
+
+local function _spawn_actor(registry, spec, spawn_pos)
+  local game_api, player_id = _validate_spawn_preconditions(registry, spec)
+  local unit = _spawn_unit(game_api, spec, spawn_pos, player_id)
   local actor = {
     player_id = player_id,
     name = spec.name or ("AI" .. tostring(player_id)),
@@ -141,14 +162,7 @@ local function _spawn_actor(registry, spec, spawn_pos)
   }
   actor.adapter = _build_adapter(registry, actor)
   role_id_utils.write(registry.actors_by_player_id, player_id, actor)
-  if type(unit.start_ai) == "function" then
-    local ok_start, err = pcall(unit.start_ai)
-    if not ok_start then
-      logger.warn("[Eggy]", "synthetic actor start_ai failed", tostring(player_id), tostring(err))
-    end
-    return
-  end
-  logger.warn("[Eggy]", "synthetic actor missing start_ai", tostring(player_id), tostring(spec.unit_key))
+  _start_actor_ai(unit, player_id, spec.unit_key)
 end
 
 function synthetic_actor_registry.new(env)

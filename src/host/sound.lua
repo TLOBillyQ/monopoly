@@ -36,9 +36,7 @@ local function _resolve_pos(pos)
   return runtime_constants.v3_zero
 end
 
-function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound, opts)
-  opts = opts or {}
-  local cue_name = opts.cue_name
+local function _resolve_sfx_params(sfx_key, scale, duration, rate, pos, rot, cue_name)
   local resolved_sfx_key = number_utils.to_integer(sfx_key)
   if resolved_sfx_key == nil or resolved_sfx_key <= 0 then
     _warn_skip("skip play_sfx_by_key: invalid sfx_key", "cue_name=" .. tostring(cue_name), "sfx_key=" .. tostring(sfx_key))
@@ -55,7 +53,6 @@ function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, w
     )
     return nil
   end
-  local resolved_duration = _resolve_numeric(duration, default_sfx_duration)
   local resolved_rate = _resolve_numeric(rate, default_sfx_rate)
   if resolved_rate == nil then
     _warn_skip(
@@ -67,8 +64,22 @@ function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, w
     )
     return nil
   end
-  local resolved_pos = _resolve_pos(pos)
-  local resolved_rot = _resolve_rotation(rot)
+  return {
+    sfx_key = resolved_sfx_key,
+    scale = resolved_scale,
+    duration = _resolve_numeric(duration, default_sfx_duration),
+    rate = resolved_rate,
+    pos = _resolve_pos(pos),
+    rot = _resolve_rotation(rot),
+  }
+end
+
+function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, with_sound, opts)
+  opts = opts or {}
+  local params = _resolve_sfx_params(sfx_key, scale, duration, rate, pos, rot, opts.cue_name)
+  if not params then
+    return nil
+  end
   local resolved_with_sound = with_sound == true or default_with_sound
   local game_api = GameAPI
   if not (game_api and type(game_api.play_sfx_by_key) == "function") then
@@ -77,22 +88,22 @@ function sfx_runtime.play_sfx_by_key(sfx_key, pos, rot, scale, duration, rate, w
   end
   local ok, sfx_id = pcall(
     game_api.play_sfx_by_key,
-    resolved_sfx_key,
-    resolved_pos,
-    resolved_rot,
-    resolved_scale,
-    resolved_duration,
-    resolved_rate,
+    params.sfx_key,
+    params.pos,
+    params.rot,
+    params.scale,
+    params.duration,
+    params.rate,
     resolved_with_sound
   )
   if not ok then
     _warn_skip(
       "play_sfx_by_key failed:",
-      "cue_name=" .. tostring(cue_name),
-      "sfx_key=" .. tostring(resolved_sfx_key),
-      "scale=" .. tostring(resolved_scale),
-      "duration=" .. tostring(resolved_duration),
-      "rate=" .. tostring(resolved_rate),
+      "cue_name=" .. tostring(opts.cue_name),
+      "sfx_key=" .. tostring(params.sfx_key),
+      "scale=" .. tostring(params.scale),
+      "duration=" .. tostring(params.duration),
+      "rate=" .. tostring(params.rate),
       "with_sound=" .. tostring(resolved_with_sound)
     )
     return nil

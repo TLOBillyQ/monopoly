@@ -41,38 +41,53 @@ local function _offset_for_level(level)
   return math.Vector3(coords.x, coords.y, coords.z)
 end
 
-function building_effects.spawn_upgrade_building_units(scene, root_quaternion, building_index, level, deps)
+local function _validate_spawn_args(scene, building_index, level)
   assert(scene ~= nil, "missing scene")
   assert(building_index ~= nil, "missing building_index")
   assert(level ~= nil, "missing building level")
+end
+
+local function _resolve_spawn_context(scene, building_index, level, deps)
   local host_runtime = _resolve_host_runtime(scene, deps)
   local buildings = assert(scene.buildings, "missing scene.buildings")
-  local idx = building_index
-  local lv = level
   local groups = assert(scene.building_unit_groups, "missing scene.building_unit_groups")
-  building_effects.clear_building_units(scene, idx, deps)
-  if buildings[idx] == nil then
-    return false
+  building_effects.clear_building_units(scene, building_index, deps)
+  if buildings[building_index] == nil then
+    return nil
   end
-  local pos = buildings[idx].get_position()
-  local ref_key = _ref_keys[lv]
+  local pos = buildings[building_index].get_position()
+  local ref_key = _ref_keys[level]
   local group_id = prefab.group[ref_key]
   if group_id == nil then
-    return false
+    return nil
   end
-  local offset = _offset_for_level(lv)
+  local offset = _offset_for_level(level)
   if offset == nil then
-    return false
+    return nil
   end
-  local unit = host_runtime.create_unit_group(group_id, pos + offset, root_quaternion)
-  if unit == nil then
-    return false
-  end
-  groups[idx] = unit
+  return { host_runtime = host_runtime, groups = groups, idx = building_index,
+           pos = pos, ref_key = ref_key, group_id = group_id, offset = offset }
+end
+
+local function _apply_building_text(scene, idx, ref_key)
   local txt = scene.building_txt and scene.building_txt[idx] or nil
   if txt and txt.set_billboard_text then
     txt.set_billboard_text(ref_key)
   end
+end
+
+function building_effects.spawn_upgrade_building_units(scene, root_quaternion, building_index, level, deps)
+  _validate_spawn_args(scene, building_index, level)
+  local ctx = _resolve_spawn_context(scene, building_index, level, deps)
+  if ctx == nil then
+    return false
+  end
+  local unit = ctx.host_runtime.create_unit_group(ctx.group_id, ctx.pos + ctx.offset, root_quaternion)
+  if unit == nil then
+    return false
+  end
+  ctx.groups[ctx.idx] = unit
+  _apply_building_text(scene, ctx.idx, ctx.ref_key)
   return true
 end
 

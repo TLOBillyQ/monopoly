@@ -48,35 +48,50 @@ local function _build_role_units(roles)
   return name_to_unit, role_units
 end
 
-function M.ensure_player_units(state, players, log_once, build_log_prefix)
-  if state.player_units and not state.player_units_missing then
-    return
-  end
-
+local function _resolve_available_roles(players)
   local roles = runtime_ports.resolve_roles()
   if type(roles) ~= "table" or #roles == 0 then
     roles = _resolve_roles_from_players(players)
   end
   assert(type(roles) == "table" and #roles > 0, "missing runtime roles")
-  local name_to_unit, role_units = _build_role_units(roles)
+  return roles
+end
 
+local function _resolve_unit_for_player(name_to_unit, role_units, player, i)
+  assert(player ~= nil, "missing player: " .. tostring(i))
+  local pid = _resolve_player_id(player, i)
+  local name = assert(player.name, "missing player name: " .. tostring(i))
+  local unit = name_to_unit[name] or role_units[pid]
+  if unit ~= nil then
+    return pid, unit
+  end
+  local role = runtime_ports.resolve_role(pid)
+  if role and type(role.get_ctrl_unit) == "function" then
+    unit = role.get_ctrl_unit()
+  end
+  assert(unit ~= nil, "missing player unit: " .. tostring(pid))
+  return pid, unit
+end
+
+local function _map_players_to_units(players, name_to_unit, role_units)
   local mapped = {}
   local mapped_count = 0
   for i, player in ipairs(players) do
-    assert(player ~= nil, "missing player: " .. tostring(i))
-    local pid = _resolve_player_id(player, i)
-    local name = assert(player.name, "missing player name: " .. tostring(i))
-    local unit = name_to_unit[name] or role_units[pid]
-    if unit == nil then
-      local role = runtime_ports.resolve_role(pid)
-      if role and type(role.get_ctrl_unit) == "function" then
-        unit = role.get_ctrl_unit()
-      end
-    end
-    assert(unit ~= nil, "missing player unit: " .. tostring(pid))
+    local pid, unit = _resolve_unit_for_player(name_to_unit, role_units, player, i)
     mapped[pid] = unit
     mapped_count = mapped_count + 1
   end
+  return mapped, mapped_count
+end
+
+function M.ensure_player_units(state, players, log_once, build_log_prefix)
+  if state.player_units and not state.player_units_missing then
+    return
+  end
+
+  local roles = _resolve_available_roles(players)
+  local name_to_unit, role_units = _build_role_units(roles)
+  local mapped, mapped_count = _map_players_to_units(players, name_to_unit, role_units)
 
   state.player_units = mapped
   state.player_units_missing = false

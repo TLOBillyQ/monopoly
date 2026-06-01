@@ -11,18 +11,27 @@ local _default_turn_action_port = {
   end,
 }
 
-function turn_action_port.resolve(state, opts)
+local function _resolve_raw_port(state, opts)
   local override_port = opts and opts.turn_action_port or nil
   local state_port = state and state.turn_action_port or nil
-  local raw = override_port or state_port
+  return override_port or state_port
+end
+
+local function _resolve_port_method(raw, method_name)
+  if type(raw) == "table" and type(raw[method_name]) == "function" then
+    return raw[method_name]
+  end
+  return _default_turn_action_port[method_name]
+end
+
+function turn_action_port.resolve(state, opts)
+  local raw = _resolve_raw_port(state, opts)
   if type(raw) ~= "table" then
     return _default_turn_action_port
   end
   return {
-    dispatch_action = type(raw.dispatch_action) == "function" and raw.dispatch_action
-      or _default_turn_action_port.dispatch_action,
-    should_block_action = type(raw.should_block_action) == "function" and raw.should_block_action
-      or _default_turn_action_port.should_block_action,
+    dispatch_action = _resolve_port_method(raw, "dispatch_action"),
+    should_block_action = _resolve_port_method(raw, "should_block_action"),
   }
 end
 

@@ -9,6 +9,7 @@ local event_names = require("src.foundation.events")
 local landing_visual_hold = require("src.ui.visual_hold")
 local pre_confirm = require("src.ui.input.dispatch.pre_confirm")
 local item_slot_confirm = require("src.ui.input.dispatch.item_slot_confirm")
+local choice_support = require("src.ui.view.choice_support")
 local runtime_state = require("src.ui.state.runtime")
 local assets = require("src.ui.render.assets")
 local runtime_ui = require("src.ui.render.runtime_ui")
@@ -761,6 +762,117 @@ describe("refactorer_crap_coverage", function()
     _assert_eq(calls[1].rate, 1.0, "rate should use default")
     _assert_eq(calls[1].with_sound, true, "with_sound should pass true")
     _assert_eq(calls[2].rate, 1.0, "invalid rate input should use default")
+  end)
+
+  it("entity pool acquire reuses a parked idle handle and refreshes its transform", function()
+    entity_pool.reset()
+    local created = 0
+    local calls = { position = 0, orientation = 0, scale = 0, visible = nil }
+    local handle = {
+      set_position = function()
+        calls.position = calls.position + 1
+      end,
+      set_orientation = function()
+        calls.orientation = calls.orientation + 1
+      end,
+      set_world_scale = function()
+        calls.scale = calls.scale + 1
+      end,
+      set_model_visible = function(visible)
+        calls.visible = visible
+      end,
+    }
+
+    _with_patches({
+      { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
+        created = created + 1
+        return handle
+      end },
+    }, function()
+      entity_pool.prewarm("unit-reuse", 1, nil, nil, { x = 0, y = 0, z = 0 })
+      local acquired = entity_pool.acquire("unit-reuse", { x = 1, y = 2, z = 3 }, nil, nil)
+      _assert_eq(acquired, handle, "acquire should reuse the parked idle handle")
+    end)
+
+    _assert_eq(created, 1, "reuse path must not create a second unit")
+    _assert_eq(calls.orientation, 1, "reused handle should be reoriented on acquire")
+    _assert_eq(calls.scale, 1, "reused handle should be rescaled on acquire")
+    _assert_eq(calls.visible, true, "reused handle should be made visible on acquire")
+    local stats = entity_pool.stats()
+    _assert_eq(stats["unit-reuse"].idle, 0, "acquire should drain the idle bucket")
+    entity_pool.reset()
+  end)
+
+  it("play_sfx_by_key returns nil when the host call is missing or errors", function()
+    _with_patches({
+      { key = "GameAPI", value = {} },
+    }, function()
+      _assert_eq(sound.play_sfx_by_key(100, nil, nil, 2.0), nil,
+        "missing GameAPI.play_sfx_by_key should skip and return nil")
+    end)
+
+    local raised = 0
+    local warned = 0
+    _with_patches({
+      { key = "GameAPI", value = {
+        play_sfx_by_key = function()
+          raised = raised + 1
+          error("host sfx boom")
+        end,
+      } },
+      { target = logger, key = "warn", value = function()
+        warned = warned + 1
+      end },
+    }, function()
+      _assert_eq(sound.play_sfx_by_key(100, nil, nil, 2.0), nil,
+        "a throwing host call should be swallowed and return nil")
+    end)
+
+    _assert_eq(raised, 1, "the host sfx call should have been attempted once")
+    _assert_eq(warned, 1, "a swallowed host error should emit a skip warning")
+  end)
+
+  it("item slot confirm try_enter opens the pre-confirm screen only for a confirmable slot", function()
+    _assert_eq(item_slot_confirm.try_enter({}, { type = "ui_button", id = "auto" }), false,
+      "a non-slot button id should not enter slot confirm")
+    _assert_eq(item_slot_confirm.try_enter({}, { type = "ui_button", id = "item_slot_9" }), false,
+      "a slot index with no confirmable option should not enter")
+
+    local choice = { slot_states = { [2] = { available = true, item_id = 55 } } }
+    local opened = nil
+    local modal = {
+      open_pre_confirm_screen = function(_, _, item_id, title, body)
+        opened = { item_id = item_id, title = title, body = body }
+      end,
+    }
+    local state = { gameplay_loop_ports = { modal = modal } }
+    runtime_state.set_ui_model(state, { choice = choice })
+
+    _with_patches({
+      { target = choice_support, key = "resolve_option_by_id", value = function(_, item_id)
+        _assert_eq(item_id, 55, "option lookup should use the confirmable slot item id")
+        return { confirm_title = "使用？", confirm_body = "确认使用" }
+      end },
+    }, function()
+      _assert_eq(item_slot_confirm.try_enter(state, { type = "ui_button", id = "item_slot_2" }), true,
+        "a confirmable slot should enter pre-confirm")
+    end)
+
+    _assert_eq(state._item_slot_confirm_active, true, "try_enter should mark slot confirm active")
+    _assert_eq(opened.item_id, 55, "pre-confirm should open for the slot item")
+    _assert_eq(opened.title, "使用？", "pre-confirm should pass the resolved confirm title")
+
+    local state2 = { gameplay_loop_ports = { modal = {} } }
+    runtime_state.set_ui_model(state2, { choice = choice })
+    _with_patches({
+      { target = choice_support, key = "resolve_option_by_id", value = function()
+        return { confirm_title = "使用？" }
+      end },
+    }, function()
+      _assert_eq(item_slot_confirm.try_enter(state2, { type = "ui_button", id = "item_slot_2" }), false,
+        "a host without open_pre_confirm_screen should abort the entry")
+    end)
+    _assert_eq(state2._item_slot_confirm_active, nil, "an aborted try_enter should roll back the active flag")
   end)
 
   it("ui event state resolves explicit and current role action-log flags", function()

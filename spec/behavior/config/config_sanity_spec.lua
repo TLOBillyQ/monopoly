@@ -167,6 +167,24 @@ describe("config_sanity", function()
     end
   end)
 
+  it("no_item_description_references_removed_vehicle_subsystem", function()
+    -- 座驾 (vehicle) subsystem was torn out (handoff: vehicle-teardown). Mine card 2005
+    -- previously promised "摧毁座驾"; mine now uniformly hospitalizes. Pin that no item
+    -- copy reintroduces the removed subsystem.
+    local items = require("src.config.content.items")
+    for _, item in ipairs(items) do
+      for _, field in ipairs({ "name", "usage", "description" }) do
+        local text = item[field]
+        if type(text) == "string" then
+          assert(
+            text:find("座驾", 1, true) == nil,
+            "item " .. tostring(item.id) .. " " .. field .. " must not reference the removed vehicle subsystem: " .. text
+          )
+        end
+      end
+    end
+  end)
+
   it("effect_group_only_on_specified_items", function()
     local items = require("src.config.content.items")
     local items_with_effect_group = {}

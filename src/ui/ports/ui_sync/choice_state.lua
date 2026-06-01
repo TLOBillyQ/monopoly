@@ -74,24 +74,30 @@ choice_ui_state.resolve_route_key = choice_route_policy.resolve
 
 local _cached_gate_state = {}
 
-function choice_ui_state.resolve_gate_state(game, state, choice)
-  local route_key = choice_ui_state.resolve_route_key(choice)
-  local ui = state and state.ui or nil
+local function _resolve_choice_open_state(route_key, ui, game)
+  if route_key == "base_inline" or route_key == "item_phase_passive" then
+    return true
+  end
+  if route_key == "market" then
+    return ui and ui.market_active == true or false
+  end
+  return ui and ui.choice_active == true and ui.active_choice_screen_key == route_key or false
+end
+
+local function _resolve_owner_state(game, state, choice, route_key)
   local owner_role_id = _resolve_choice_owner_role_id(game, choice)
   local owner_player = _find_player(game, owner_role_id)
   local local_owner = _is_local_role(state, owner_role_id)
   local owner_auto = owner_player and (owner_player.is_ai == true or owner_player.auto == true) or false
   local expects_ui = route_key ~= "base_inline" and not _is_game_input_blocked_phase(game) and local_owner and not owner_auto
-  local open
+  return owner_role_id, local_owner, owner_auto, expects_ui
+end
 
-  if route_key == "base_inline" or route_key == "item_phase_passive" then
-    open = true
-  elseif route_key == "market" then
-    open = ui and ui.market_active == true or false
-  else
-    open = ui and ui.choice_active == true and ui.active_choice_screen_key == route_key or false
-  end
-
+function choice_ui_state.resolve_gate_state(game, state, choice)
+  local route_key = choice_ui_state.resolve_route_key(choice)
+  local ui = state and state.ui or nil
+  local owner_role_id, local_owner, owner_auto, expects_ui = _resolve_owner_state(game, state, choice, route_key)
+  local open = _resolve_choice_open_state(route_key, ui, game)
   _cached_gate_state.route_key = route_key
   _cached_gate_state.owner_role_id = owner_role_id
   _cached_gate_state.local_owner = local_owner
@@ -111,23 +117,23 @@ return choice_ui_state
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=2b11baa95a51f54b
+projectHash=933e1656fec2fcf4
 scope.0.id=chunk:src/ui/ports/ui_sync/choice_state.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=111
-scope.0.semanticHash=1311e4da0bcc4b8a
-scope.0.lastMutatedAt=2026-05-23T08:56:24Z
+scope.0.endLine=117
+scope.0.semanticHash=1379c54498c76e01
+scope.0.lastMutatedAt=2026-06-01T12:38:17Z
 scope.0.lastMutationLane=behavior
-scope.0.lastMutationStatus=passed
-scope.0.lastMutationSites=9
-scope.0.lastMutationKilled=9
+scope.0.lastMutationStatus=survived
+scope.0.lastMutationSites=20
+scope.0.lastMutationKilled=17
 scope.1.id=function:choice_ui_state.is_phase_input_blocked:18
 scope.1.kind=function
 scope.1.startLine=18
 scope.1.endLine=20
 scope.1.semanticHash=57a79dd0afdc3f2a
-scope.1.lastMutatedAt=2026-05-23T08:56:24Z
+scope.1.lastMutatedAt=2026-06-01T12:38:17Z
 scope.1.lastMutationLane=behavior
 scope.1.lastMutationStatus=passed
 scope.1.lastMutationSites=2
@@ -137,7 +143,7 @@ scope.2.kind=function
 scope.2.startLine=22
 scope.2.endLine=30
 scope.2.semanticHash=c99e53b9602e45ac
-scope.2.lastMutatedAt=2026-05-23T08:56:24Z
+scope.2.lastMutatedAt=2026-06-01T12:38:17Z
 scope.2.lastMutationLane=behavior
 scope.2.lastMutationStatus=passed
 scope.2.lastMutationSites=10
@@ -147,7 +153,7 @@ scope.3.kind=function
 scope.3.startLine=47
 scope.3.endLine=50
 scope.3.semanticHash=9356df00a1ef2135
-scope.3.lastMutatedAt=2026-05-23T08:56:24Z
+scope.3.lastMutatedAt=2026-06-01T12:38:17Z
 scope.3.lastMutationLane=behavior
 scope.3.lastMutationStatus=passed
 scope.3.lastMutationSites=4
@@ -157,29 +163,49 @@ scope.4.kind=function
 scope.4.startLine=52
 scope.4.endLine=71
 scope.4.semanticHash=4a3bee89da4fc499
-scope.4.lastMutatedAt=2026-05-23T08:56:24Z
+scope.4.lastMutatedAt=2026-06-01T12:38:17Z
 scope.4.lastMutationLane=behavior
-scope.4.lastMutationStatus=passed
-scope.4.lastMutationSites=15
+scope.4.lastMutationStatus=survived
+scope.4.lastMutationSites=16
 scope.4.lastMutationKilled=15
-scope.5.id=function:choice_ui_state.resolve_gate_state:77
+scope.5.id=function:_resolve_choice_open_state:77
 scope.5.kind=function
 scope.5.startLine=77
-scope.5.endLine=103
-scope.5.semanticHash=2a7cdf2c59e658f0
-scope.5.lastMutatedAt=2026-05-23T08:56:24Z
+scope.5.endLine=85
+scope.5.semanticHash=c1c9b2f4af98ab8c
+scope.5.lastMutatedAt=2026-06-01T12:38:17Z
 scope.5.lastMutationLane=behavior
 scope.5.lastMutationStatus=passed
-scope.5.lastMutationSites=44
-scope.5.lastMutationKilled=44
-scope.6.id=function:choice_ui_state.should_reconcile:105
+scope.5.lastMutationSites=20
+scope.5.lastMutationKilled=20
+scope.6.id=function:_resolve_owner_state:87
 scope.6.kind=function
-scope.6.startLine=105
-scope.6.endLine=108
-scope.6.semanticHash=9bef8c068fe1cc2a
-scope.6.lastMutatedAt=2026-05-23T08:56:24Z
+scope.6.startLine=87
+scope.6.endLine=94
+scope.6.semanticHash=e07d408d2e8702a0
+scope.6.lastMutatedAt=2026-06-01T12:38:17Z
 scope.6.lastMutationLane=behavior
 scope.6.lastMutationStatus=passed
-scope.6.lastMutationSites=3
-scope.6.lastMutationKilled=3
+scope.6.lastMutationSites=19
+scope.6.lastMutationKilled=19
+scope.7.id=function:choice_ui_state.resolve_gate_state:96
+scope.7.kind=function
+scope.7.startLine=96
+scope.7.endLine=109
+scope.7.semanticHash=3b4253a7c192e4cf
+scope.7.lastMutatedAt=2026-06-01T12:38:17Z
+scope.7.lastMutationLane=behavior
+scope.7.lastMutationStatus=passed
+scope.7.lastMutationSites=7
+scope.7.lastMutationKilled=7
+scope.8.id=function:choice_ui_state.should_reconcile:111
+scope.8.kind=function
+scope.8.startLine=111
+scope.8.endLine=114
+scope.8.semanticHash=9bef8c068fe1cc2a
+scope.8.lastMutatedAt=2026-06-01T12:38:17Z
+scope.8.lastMutationLane=behavior
+scope.8.lastMutationStatus=passed
+scope.8.lastMutationSites=3
+scope.8.lastMutationKilled=3
 ]]

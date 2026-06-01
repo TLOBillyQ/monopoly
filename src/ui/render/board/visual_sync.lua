@@ -249,29 +249,38 @@ local function _expand_affected_tiles(state, owner_ids)
 end
 
 local _sync_seen = {}
-function visual_sync.sync_many(state, payload)
-  local normalized = _normalize_payload(payload)
-  local handled = false
-  for k in pairs(_sync_seen) do _sync_seen[k] = nil end
 
-  for _, tile_id in ipairs(normalized.tile_ids) do
+local function _sync_tile_dedup(state, tile_ids)
+  local handled = false
+  for _, tile_id in ipairs(tile_ids) do
     if tile_id ~= nil and not _sync_seen[tile_id] then
       _sync_seen[tile_id] = true
       if visual_sync.sync_tile_visual(state, tile_id) then handled = true end
     end
   end
-  for _, tile_id in ipairs(_expand_affected_tiles(state, normalized.affected_owner_ids)) do
-    if tile_id ~= nil and not _sync_seen[tile_id] then
-      _sync_seen[tile_id] = true
-      if visual_sync.sync_tile_visual(state, tile_id) then handled = true end
-    end
-  end
-  for _, board_index in ipairs(normalized.overlay_indices) do
+  return handled
+end
+
+local function _sync_overlays(state, indices)
+  local handled = false
+  for _, board_index in ipairs(indices) do
     if visual_sync.sync_overlay_visual(state, board_index) then
       handled = true
     end
   end
+  return handled
+end
 
+function visual_sync.sync_many(state, payload)
+  local normalized = _normalize_payload(payload)
+  for k in pairs(_sync_seen) do _sync_seen[k] = nil end
+  local handled = _sync_tile_dedup(state, normalized.tile_ids)
+  if _sync_tile_dedup(state, _expand_affected_tiles(state, normalized.affected_owner_ids)) then
+    handled = true
+  end
+  if _sync_overlays(state, normalized.overlay_indices) then
+    handled = true
+  end
   return handled
 end
 

@@ -46,6 +46,55 @@ describe("presentation contiguous visual sync", function()
     _assert_eq(counts[39], nil, "non-land tile should not receive a contiguous count")
   end)
 
+  it("contiguous_count falls back to the get_tile_by_id seam when no tile_lookup exists", function()
+    local board = _build_board({
+      { id = 1, type = "land", owner_id = 10 },
+      { id = 2, type = "land", owner_id = 10 },
+      { id = 3, type = "land", owner_id = 20 },
+    }, {
+      [1] = { right = 2 },
+      [2] = { left = 1, right = 3 },
+      [3] = { left = 2 },
+    })
+    board.tile_lookup = nil -- force _owner_of through the function seam
+
+    _assert_eq(contiguous_count.for_tile(board, 1, 10), 2, "connected owner land tiles should count via get_tile_by_id")
+    _assert_eq(contiguous_count.for_tile(board, 3, 20), 1, "isolated owner tile should count itself via the seam")
+  end)
+
+  it("contiguous_count returns zero for nil inputs and owner mismatches", function()
+    local board = _build_board({
+      { id = 1, type = "land", owner_id = 10 },
+    }, { [1] = {} })
+
+    _assert_eq(contiguous_count.for_tile(nil, 1, 10), 0, "nil board should yield zero")
+    _assert_eq(contiguous_count.for_tile(board, nil, 10), 0, "nil tile id should yield zero")
+    _assert_eq(contiguous_count.for_tile(board, 1, nil), 0, "nil owner id should yield zero")
+    _assert_eq(contiguous_count.for_tile(board, 1, 99), 0, "owner mismatch should yield zero")
+    _assert_eq(next(contiguous_count.build_for_owner(nil, 10)), nil, "nil board should produce no owner counts")
+    _assert_eq(next(contiguous_count.build_for_owner(board, nil)), nil, "nil owner id should produce no counts")
+  end)
+
+  it("contiguous_count treats a board without a neighbour map as fully disconnected", function()
+    local board = _build_board({
+      { id = 1, type = "land", owner_id = 10 },
+      { id = 2, type = "land", owner_id = 10 },
+    })
+    board.map = nil -- no neighbour map: land tiles cannot connect
+
+    _assert_eq(contiguous_count.for_tile(board, 1, 10), 1, "without a neighbour map each owned tile counts only itself")
+    local counts = contiguous_count.build_for_owner(board, 10)
+    _assert_eq(counts[1], 1, "first tile is its own singleton component")
+    _assert_eq(counts[2], 1, "second tile is its own singleton component")
+  end)
+
+  it("contiguous_count yields zero when neither read seam can resolve an owner", function()
+    local board = { path = {}, map = { neighbors = {} } } -- no tile_lookup, no get_tile_by_id
+
+    _assert_eq(contiguous_count.for_tile(board, 1, 10), 0, "unresolvable owner should yield zero")
+    _assert_eq(next(contiguous_count.build_for_owner(board, 10)), nil, "empty board should produce no counts")
+  end)
+
   it("visual_sync expands affected owners, dedupes explicit tiles, and renders contiguous counts", function()
     local board = _build_board({
       { id = 1, type = "land", owner_id = 10, level = 1 },

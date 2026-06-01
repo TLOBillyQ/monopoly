@@ -24,14 +24,22 @@ local group_order = {
   commerce_paid = 7,
 }
 
-local function _validate_profile_fields(profile_name, profile)
+local function _validate_required_fields(profile_name, profile)
   assert(type(profile) == "table", "invalid test profile payload: " .. tostring(profile_name))
   assert(type(profile.group) == "string" and profile.group ~= "", "missing profile group: " .. tostring(profile_name))
   assert(type(profile.goal) == "string" and profile.goal ~= "", "missing profile goal: " .. tostring(profile_name))
   assert(valid_values[profile.value] == true, "invalid profile value: " .. tostring(profile_name))
+end
+
+local function _validate_collection_fields(profile_name, profile)
   assert(type(profile.covers) == "table" and #profile.covers > 0, "missing profile covers: " .. tostring(profile_name))
   assert(type(profile.owner_tests) == "table" and #profile.owner_tests > 0,
     "missing profile owner_tests: " .. tostring(profile_name))
+end
+
+local function _validate_profile_fields(profile_name, profile)
+  _validate_required_fields(profile_name, profile)
+  _validate_collection_fields(profile_name, profile)
   if profile.bootstrap ~= nil then
     assert(type(profile.bootstrap) == "table", "invalid bootstrap payload: " .. tostring(profile_name))
   end

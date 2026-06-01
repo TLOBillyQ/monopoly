@@ -605,6 +605,89 @@ describe("presentation.board_sync", function()
       "player_units should fall back to resolve_role when resolve_roles is empty")
   end)
 
+  it("_test_player_units_resolve_role_fallback_for_player_absent_from_roster", function()
+    local player_units = require("src.ui.render.board.player_units")
+    local listed_role = {
+      get_roleid = function()
+        return 1
+      end,
+      get_name = function()
+        return "P1"
+      end,
+      get_ctrl_unit = function()
+        return { unit = "unit_1" }
+      end,
+    }
+    local state = {}
+    -- P1 maps from the resolved roster; P9 is absent from it, so its unit must
+    -- come from the per-player resolve_role fallback inside _resolve_unit_for_player.
+    local players = {
+      { id = 1, name = "P1" },
+      { id = 9, name = "P9" },
+    }
+
+    _with_patches({
+      { target = require("src.foundation.ports.runtime_ports"), key = "resolve_roles", value = function()
+        return { listed_role }
+      end },
+      { target = require("src.foundation.ports.runtime_ports"), key = "resolve_role", value = function(player_id)
+        if player_id == 9 then
+          return {
+            get_ctrl_unit = function()
+              return { unit = "unit_9" }
+            end,
+          }
+        end
+        return nil
+      end },
+    }, function()
+      player_units.ensure_player_units(state, players, function() end, function()
+        return "presentation_board_sync"
+      end)
+    end)
+
+    _assert_eq(state.player_units[1] and state.player_units[1].unit, "unit_1",
+      "rostered player should map from the resolved roster")
+    _assert_eq(state.player_units[9] and state.player_units[9].unit, "unit_9",
+      "unrostered player should resolve its unit via the resolve_role fallback")
+  end)
+
+  it("_test_player_units_errors_when_player_unit_unresolvable", function()
+    local player_units = require("src.ui.render.board.player_units")
+    local listed_role = {
+      get_roleid = function()
+        return 1
+      end,
+      get_name = function()
+        return "P1"
+      end,
+      get_ctrl_unit = function()
+        return { unit = "unit_1" }
+      end,
+    }
+    local state = {}
+    local players = {
+      { id = 1, name = "P1" },
+      { id = 9, name = "P9" },
+    }
+    local ok = nil
+
+    _with_patches({
+      { target = require("src.foundation.ports.runtime_ports"), key = "resolve_roles", value = function()
+        return { listed_role }
+      end },
+      { target = require("src.foundation.ports.runtime_ports"), key = "resolve_role", value = function()
+        return nil
+      end },
+    }, function()
+      ok = pcall(player_units.ensure_player_units, state, players, function() end, function()
+        return "presentation_board_sync"
+      end)
+    end)
+
+    _assert_eq(ok, false, "an unresolvable player unit must assert rather than map silently")
+  end)
+
   it("_test_tile_anchors_collect_positions_render_tiles_and_spacing", function()
     local anchors = require("src.ui.render.board.anchors")
     local render_calls = {}

@@ -62,6 +62,23 @@ local function _apply_player_position_bootstrap(game, player, player_cfg)
   game:update_player_position(player, board_index)
 end
 
+local function _validate_and_parse_item_entry(raw_item_id, raw_count)
+  local item_id = number_utils.to_integer(raw_item_id)
+  assert(item_id ~= nil, "invalid item_counts item id: " .. tostring(raw_item_id))
+  assert(inventory.cfg(item_id) ~= nil, "unknown item id in item_counts: " .. tostring(item_id))
+  local count = number_utils.to_integer(raw_count)
+  assert(number_utils.is_numeric(raw_count) and count ~= nil and count == raw_count and count > 0,
+    "item_counts count must be positive integer, got: " .. tostring(raw_count))
+  return item_id, count
+end
+
+local function _grant_item_copies(game, player, item_id, count)
+  for _ = 1, count do
+    local ok = inventory.give(player, item_id, { game = game })
+    assert(ok == true, "failed to grant profile item: " .. tostring(item_id))
+  end
+end
+
 local function _apply_item_count_bootstrap(game, player, player_cfg)
   local item_counts = player_cfg.item_counts
   if item_counts == nil then
@@ -72,21 +89,11 @@ local function _apply_item_count_bootstrap(game, player, player_cfg)
   inventory.clear(player)
   local total = 0
   for raw_item_id, raw_count in pairs(item_counts) do
-    local item_id = number_utils.to_integer(raw_item_id)
-    assert(item_id ~= nil, "invalid item_counts item id: " .. tostring(raw_item_id))
-    assert(inventory.cfg(item_id) ~= nil, "unknown item id in item_counts: " .. tostring(item_id))
-
-    local count = number_utils.to_integer(raw_count)
-    assert(number_utils.is_numeric(raw_count) and count ~= nil and count == raw_count and count > 0,
-      "item_counts count must be positive integer, got: " .. tostring(raw_count))
+    local item_id, count = _validate_and_parse_item_entry(raw_item_id, raw_count)
     total = total + count
     assert(total <= constants.inventory_slots,
       "item_counts exceeds inventory limit " .. tostring(constants.inventory_slots))
-
-    for _ = 1, count do
-      local ok = inventory.give(player, item_id, { game = game })
-      assert(ok == true, "failed to grant profile item: " .. tostring(item_id))
-    end
+    _grant_item_copies(game, player, item_id, count)
   end
 end
 

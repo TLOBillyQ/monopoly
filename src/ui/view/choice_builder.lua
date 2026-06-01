@@ -47,20 +47,17 @@ local function _resolve_choice_body(pending, opts)
   return ""
 end
 
-function choice.build_choice_view(pending, opts)
-  assert(pending ~= nil, "missing pending choice")
-  opts = opts or {}
-  local option_label = opts.option_label or _default_option_label
-  local title = pending.title or "请选择"
-  local body = _resolve_choice_body(pending, opts)
-
+local function _build_options(pending, option_label)
   local options = {}
   for _, opt in ipairs(pending.options or {}) do
     local label = option_label(opt)
     assert(label ~= nil, "missing option label")
     options[#options + 1] = _copy_option_view(opt, label)
   end
+  return options
+end
 
+local function _assemble_view(pending, title, body, options)
   local view = {
     id = pending.id,
     kind = pending.kind,
@@ -73,6 +70,16 @@ function choice.build_choice_view(pending, opts)
   }
   choice_contract.copy_explicit_fields(pending, view)
   return view
+end
+
+function choice.build_choice_view(pending, opts)
+  assert(pending ~= nil, "missing pending choice")
+  opts = opts or {}
+  local option_label = opts.option_label or _default_option_label
+  local title = pending.title or "请选择"
+  local body = _resolve_choice_body(pending, opts)
+  local options = _build_options(pending, option_label)
+  return _assemble_view(pending, title, body, options)
 end
 
 return choice

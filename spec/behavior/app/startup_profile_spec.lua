@@ -131,7 +131,15 @@ local function _reload_app_init_with_stubs(startup, runner)
     end,
     warn = function() end,
     set_enabled = function() end,
-    set_ui_sink = function() end,
+    set_ui_sink = function(sink)
+      capture.ui_sink = sink
+    end,
+    configure_game_time = function(api)
+      capture.game_time_configured = api
+    end,
+    reset_time_runtime = function()
+      capture.game_time_reset = (capture.game_time_reset or 0) + 1
+    end,
     set_anim_debug_enabled_provider = function(fn)
       capture.anim_provider = fn
     end,
@@ -441,6 +449,87 @@ describe("startup_profile", function()
     assert(capture.runtime_install_called == true, "init should install runtime")
     assert(capture.startup_opts.profile_name == "market", "init should pass resolved startup profile")
     assert(debug_flags.debug_log_enabled == true, "startup should keep gameplay debug log config unchanged")
+  end)
+
+  it("app_init_ui_warn_sink_routes_only_warn_entries_to_host", function()
+    local capture = _reload_app_init_with_stubs({
+      profile_name = "market",
+    }, function(_, app_module)
+      app_module.init()
+    end)
+
+    local sink = capture.ui_sink
+    assert(type(sink) == "function", "init should register a logger ui warn sink")
+
+    with_patches({
+      {
+        key = "GlobalAPI",
+        value = {
+          show_tips = function(text, duration)
+            capture.tip_text = text
+            capture.tip_duration = duration
+            return "tip_called"
+          end,
+        },
+      },
+    }, function()
+      -- nil and non-warn entries are dropped before reaching the host presenter
+      capture.tip_text = nil
+      sink(nil)
+      sink({ level = "info", text = "ignored" })
+      assert(capture.tip_text == nil, "non-warn entries must not reach the host")
+
+      -- a warn entry routes the prefixed text through to the host presenter
+      sink({ level = "warn", text = "disk full" })
+      assert(capture.tip_text == "[warn] disk full",
+        "warn entry should route prefixed text to host, got " .. tostring(capture.tip_text))
+    end)
+
+    -- a warn entry with no host table must early-return without error or routing
+    with_patches({
+      { key = "GlobalAPI", value = false },
+    }, function()
+      capture.tip_text = nil
+      local ok = pcall(sink, { level = "warn", text = "no host" })
+      assert(ok, "warn entry without a GlobalAPI table must not error")
+      assert(capture.tip_text == nil, "warn entry without a host table must not route")
+    end)
+  end)
+
+  it("app_init_configures_game_time_logger_from_host_clock_api", function()
+    local time_api = {
+      get_timestamp = function() return 0 end,
+      get_hour = function() return 0 end,
+      get_minute = function() return 0 end,
+      get_second = function() return 0 end,
+    }
+    local capture
+    with_patches({
+      { key = "GameAPI", value = time_api },
+    }, function()
+      capture = _reload_app_init_with_stubs({ profile_name = "market" }, function(_, app_module)
+        app_module.init()
+      end)
+    end, { skip_runtime_context_refresh = true })
+
+    assert(capture.game_time_configured == time_api,
+      "a host clock api should configure the game-time logger")
+  end)
+
+  it("app_init_resets_time_runtime_when_host_lacks_clock_api", function()
+    local capture
+    with_patches({
+      { key = "GameAPI", value = { get_timestamp = function() return 0 end } },
+    }, function()
+      capture = _reload_app_init_with_stubs({ profile_name = "market" }, function(_, app_module)
+        app_module.init()
+      end)
+    end, { skip_runtime_context_refresh = true })
+
+    assert(capture.game_time_configured == nil,
+      "an incomplete host clock api should not configure the game-time logger")
+    assert((capture.game_time_reset or 0) >= 1,
+      "an incomplete host clock api should reset the time runtime")
   end)
 
   it("app_init_wires_runtime_and_debug_providers", function()

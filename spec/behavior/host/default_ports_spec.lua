@@ -28,6 +28,32 @@ describe("default_ports", function()
     _assert_eq(ports.wall_diff_seconds("x", 7), 0, "wall diff should return 0 for non-numeric fallback inputs")
   end)
 
+  it("rng_next_int routes to the host random_int and guards its inputs", function()
+    local seen = nil
+    local function _ports_with_game_api(game_api)
+      return default_ports.build({ current = function()
+        return { env = { GameAPI = game_api } }
+      end })
+    end
+
+    local ports = _ports_with_game_api({
+      random_int = function(min, max)
+        seen = { min = min, max = max }
+        return 5
+      end,
+    })
+
+    _assert_eq(ports.rng_next_int(1, 10), 5, "rng_next_int should return the host random value")
+    _assert_eq(seen.min, 1, "rng_next_int should pass the min bound through")
+    _assert_eq(seen.max, 10, "rng_next_int should pass the max bound through")
+
+    assert(not pcall(ports.rng_next_int, nil, 10), "rng_next_int should assert on a missing min bound")
+
+    local ports_no_api = _ports_with_game_api({})
+    assert(not pcall(ports_no_api.rng_next_int, 1, 10),
+      "rng_next_int should assert when the host lacks random_int")
+  end)
+
   describe("custom archive access", function()
     local original_enums
 

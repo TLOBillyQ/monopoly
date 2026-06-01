@@ -25,34 +25,30 @@ function M.init_ui_assets(state)
   runtime.set_client_role(nil)
 end
 
-function M.capture_player_colors(state, game)
-  assert(state ~= nil, "missing state")
-  local players = game and game.players or nil
-  if type(players) ~= "table" then
-    return
-  end
-  local colors_by_index = {}
-  local function capture_base_panel_colors()
-    for index = 1, 4 do
-      local node_name = string.format(base_nodes.player_color, index)
-      local ok, node = pcall(runtime.query_node, node_name)
-      if ok and node then
-        local color = number_utils.to_integer(node.image_color)
-        if color ~= nil then
-          colors_by_index[index] = color
-        end
+local function _capture_base_panel_colors(colors_by_index)
+  for index = 1, 4 do
+    local node_name = string.format(base_nodes.player_color, index)
+    local ok, node = pcall(runtime.query_node, node_name)
+    if ok and node then
+      local color = number_utils.to_integer(node.image_color)
+      if color ~= nil then
+        colors_by_index[index] = color
       end
     end
   end
+end
 
+local function _run_color_capture(capture_fn)
   if type(runtime.with_client_role) == "function" then
-    runtime.with_client_role(nil, capture_base_panel_colors)
+    runtime.with_client_role(nil, capture_fn)
   else
     runtime.set_client_role(nil)
-    capture_base_panel_colors()
+    capture_fn()
   end
   runtime.set_client_role(nil)
+end
 
+local function _map_player_colors(players, colors_by_index)
   local owner_colors = {}
   local mapped_count = 0
   local unique_colors = {}
@@ -65,17 +61,30 @@ function M.capture_player_colors(state, game)
       unique_colors[color] = true
     end
   end
+  return owner_colors, mapped_count, unique_colors
+end
 
-  local unique_count = 0
+local function _count_unique(unique_colors)
+  local count = 0
   for _ in pairs(unique_colors) do
-    unique_count = unique_count + 1
+    count = count + 1
   end
+  return count
+end
 
-  if mapped_count > 0 and (mapped_count == 1 or unique_count > 1) then
+function M.capture_player_colors(state, game)
+  assert(state ~= nil, "missing state")
+  local players = game and game.players or nil
+  if type(players) ~= "table" then
+    return
+  end
+  local colors_by_index = {}
+  _run_color_capture(function() _capture_base_panel_colors(colors_by_index) end)
+  local owner_colors, mapped_count, unique_colors = _map_player_colors(players, colors_by_index)
+  if mapped_count > 0 and (mapped_count == 1 or _count_unique(unique_colors) > 1) then
     player_colors.set_owner_colors(owner_colors)
     return
   end
-
   player_colors.remap_by_index(players)
 end
 
