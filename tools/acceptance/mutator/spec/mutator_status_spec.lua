@@ -100,7 +100,7 @@ describe("gherkin-mutator status reporting", function()
     assert.is_truthy(status_line:find("total=2", 1, true))
     assert.is_truthy(status_line:find("completed=2", 1, true))
     assert.is_truthy(status_line:find("running=0", 1, true))
-    assert.is_truthy(status_line:find("interval=30s", 1, true))
+    assert.is_truthy(status_line:find("elapsed=", 1, true))
   end)
 
   it("splits runner-worker jobs across requested workers", function()

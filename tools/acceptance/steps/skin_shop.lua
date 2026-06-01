@@ -3,6 +3,7 @@ local skin_panel = require("src.ui.coord.skin_panel")
 local skin_nodes = require("src.ui.schema.skin")
 local view_command = require("src.ui.input.dispatch.view_command")
 local base_intents = require("src.ui.input.canvas_route.base")
+local skin_intents = require("src.ui.input.canvas_route.skin_panel")
 local base_nodes = require("src.ui.schema.base")
 local ui_mock = require("tools.acceptance.support.ui_mock")
 
@@ -511,6 +512,25 @@ function skin_shop_steps.handlers()
     ["玩家脱下当前皮肤"] = function(world)
       skin_panel.handle_action(world.skin_state, "unequip", world.ui_role_id or 1)
       return true
+    end,
+
+    -- 真实点击路径：模拟点击槽位动作按钮 -> 皮肤面板路由意图 -> dispatch。
+    -- 与 _handler_equip_at 的 coord 直调不同，这里走 canvas_route -> view_command，
+    -- 反映玩家在已装备槽位上点"脱下"按钮时实际派发的意图。
+    ["玩家点击槽位<槽位>的皮肤动作按钮"] = function(world, example)
+      local slot, err = _parse_slot(example, "槽位")
+      if slot == nil then return nil, err end
+      local button_name = skin_nodes.action_buttons[slot]
+      if not button_name then return nil, "no action button node for slot " .. tostring(slot) end
+      for _, spec in ipairs(skin_intents.build(world.skin_state)) do
+        if spec.name == button_name then
+          local intent = spec.build_intent()
+          intent.actor_role_id = world.ui_role_id or 1
+          view_command.dispatch(world.skin_state, intent)
+          return true
+        end
+      end
+      return nil, "skin canvas 未注册槽位动作按钮路由: " .. tostring(button_name)
     end,
 
     ["无皮肤装备中"] = function(world)

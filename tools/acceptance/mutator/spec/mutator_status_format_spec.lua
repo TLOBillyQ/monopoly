@@ -8,12 +8,12 @@ describe("acceptance4lua.mutator.status", function()
       errors = 1,
       skipped_scenarios = 3,
       skipped_mutations = 4,
-    }, 0, "30s")
+    }, 0, "12s")
 
     assert.are.equal(8, snapshot.total)
     assert.are.equal(8, snapshot.completed)
     assert.are.equal(0, snapshot.running)
-    assert.are.equal("30s", snapshot.interval)
+    assert.are.equal("12s", snapshot.elapsed)
     assert.are.equal(2, snapshot.killed)
     assert.are.equal(1, snapshot.survived)
     assert.are.equal(1, snapshot.errors)
@@ -27,7 +27,7 @@ describe("acceptance4lua.mutator.status", function()
     assert.are.equal(0, snapshot.total)
     assert.are.equal(0, snapshot.completed)
     assert.are.equal(0, snapshot.running)
-    assert.are.equal("", snapshot.interval)
+    assert.are.equal("", snapshot.elapsed)
     assert.are.equal(0, snapshot.killed)
     assert.are.equal(0, snapshot.survived)
     assert.are.equal(0, snapshot.errors)
@@ -40,7 +40,7 @@ describe("acceptance4lua.mutator.status", function()
       total = 8,
       completed = 8,
       running = 0,
-      interval = "30s",
+      elapsed = "12s",
       killed = 2,
       survived = 1,
       errors = 1,
@@ -49,7 +49,7 @@ describe("acceptance4lua.mutator.status", function()
     })
 
     assert.are.equal(
-      "status total=8 completed=8 running=0 interval=30s killed=2 survived=1 errors=1 skipped_scenarios=3 skipped_mutations=4",
+      "status elapsed=12s total=8 completed=8 running=0 killed=2 survived=1 errors=1 skipped_scenarios=3 skipped_mutations=4",
       line
     )
   end)

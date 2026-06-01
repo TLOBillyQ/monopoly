@@ -139,10 +139,10 @@ function mutator_status_steps.handlers()
       return true
     end,
 
-    ["执行 Gherkin mutator 时启用<状态间隔>状态间隔并请求<报告格式>报告"] = function(world, example)
+    ["执行 Gherkin mutator 时启用30s状态间隔并请求<报告格式>报告"] = function(world, example)
       world.requested_report_format = example["报告格式"]
       return _run_gherkin_mutator(world, {
-        status_interval = example["状态间隔"],
+        status_interval = "30s",
         report_format = example["报告格式"],
       })
     end,
@@ -180,9 +180,15 @@ function mutator_status_steps.handlers()
       { name = "skipped_mutations", example_key = "跳过变异数" },
     }),
 
-    ["状态行包含状态间隔<期望状态间隔>"] = _status_tokens_handler({
-      { name = "interval", example_key = "期望状态间隔" },
-    }),
+    ["状态行包含已耗时"] = function(world)
+      local line = _status_line(world)
+      if not line:find("elapsed=%d+s")
+        and not line:find("elapsed=%d+%.%d+s")
+      then
+        return nil, "status line missing elapsed duration: " .. line
+      end
+      return true
+    end,
 
     ["标准输出保持为<报告格式>报告"] = function(world, example)
       if example["报告格式"] == "JSON" then

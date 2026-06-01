@@ -59,6 +59,7 @@ return {
       "tools/acceptance/run_acceptance/spec",
       "tools/acceptance/scenario_manifest/spec",
       "tools/acceptance/spec_hash/spec",
+      "tools/acceptance/turn_driver/spec",
       "tools/ops/deploy/spec",
       "tools/ops/update_api/spec",
       "tools/quality/arch/spec",

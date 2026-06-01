@@ -25,6 +25,8 @@ local canvas_events_steps = require("acceptance.steps.canvas_events")
 local quality_steps = require("acceptance.steps.quality")
 local leaderboard_steps = require("acceptance.steps.leaderboard")
 local sign_in_steps = require("acceptance.steps.sign_in")
+local setup_steps = require("acceptance.steps.setup")
+local share_task_steps = require("acceptance.steps.share_task")
 
 local steps = {}
 
@@ -657,6 +659,8 @@ function steps.handlers()
   _merge_handlers(h, quality_steps.handlers(), "quality")
   _merge_handlers(h, leaderboard_steps.handlers(), "leaderboard")
   _merge_handlers(h, sign_in_steps.handlers(), "sign_in")
+  _merge_handlers(h, setup_steps.handlers(), "setup")
+  _merge_handlers(h, share_task_steps.handlers(), "share_task")
   return h
 end
 
