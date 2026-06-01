@@ -72,6 +72,7 @@ Eggy 类型映射见 `docs/reference/eggy/eggy-types.md`，按需查阅；不预
 | `arch-view` | `.agents/skills/arch-view/` | 架构边界 check / viewer / scan；循环依赖排查 |
 | `crap` | `.agents/skills/crap/` | CRAP 风险热点 + 三层覆盖率聚合 |
 | `debug` | `.agents/skills/debug/` | bug 或测试失败；运行时日志分析 |
+| `promote-dev-to-main` | `.agents/skills/promote-dev-to-main/` | 将 noisy dev / origin/dev 文件树整理成 main / origin/main 的线性功能提交；去掉 swarm-forge merge 噪声 |
 
 > **报告警告**：`docs/reports/` 是生成产物（`status: generated`）；`last_verified` 超过 30 天降级为"仅参考"，不作契约。
 
