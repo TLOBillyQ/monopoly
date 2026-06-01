@@ -91,9 +91,9 @@ describe("market.choice _handle_keep_open full_buy quadruple AND middle-arm pinn
   -- mid-arm closures: entry.kind != "item" path is never reached because _should_keep_market_open
   -- requires entry.kind == "item" for the fulfilled_now branch; deferred_fulfillment is the alternate path.
 
-  it("deferred_fulfillment=true with entry.kind='vehicle': handle_keep_open runs but full_buy=false → no emit", function()
+  it("deferred_fulfillment=true with entry.kind='other': handle_keep_open runs but full_buy=false → no emit", function()
     -- _should_keep_market_open returns true via deferred_fulfillment arm regardless of entry.kind.
-    -- _handle_keep_open's full_buy requires entry.kind == "item" → false for "vehicle" → no inventory_full emit.
+    -- _handle_keep_open's full_buy requires entry.kind == "item" → false for "other" → no inventory_full emit.
     local cap = {}
     local fresh = _reload_with_emit_stub(cap)
     local game = { dirty = { any = false } }
@@ -101,7 +101,7 @@ describe("market.choice _handle_keep_open full_buy quadruple AND middle-arm pinn
     local res
     _with_patches(_patch_market_query(_make_entries(2)), function()
       res = fresh.outcome.resolve_purchase(game, pc, _stub_player(1),
-        { kind = "vehicle" }, { ok = true, deferred_fulfillment = true, fulfilled_now = true, inventory_full_after = true },
+        { kind = "other" }, { ok = true, deferred_fulfillment = true, fulfilled_now = true, inventory_full_after = true },
         function() return { finished = true } end)
     end)
     _assert_eq(res.stay, true, "deferred_fulfillment=true must yield stay")

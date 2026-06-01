@@ -37,30 +37,38 @@ local function _queue_target_player_anim(game, user, item_id, target)
   })
 end
 
-local function _apply_target_player_item(game, user, item_id, target, context)
-  context = context or {}
-  if item_id == item_ids.share_wealth then
-    context.share_wealth_cash_receive_mode = "item_target_player_only"
-    context.suppress_cash_receive_anim = true
-  end
-  local apply_res = effects.apply_target(game, user, item_id, target, context)
-  local ok = _resolve_apply_ok(apply_res)
-  if not ok then
-    return apply_res
-  end
-  if context.item_preconsumed ~= true and not (type(apply_res) == "table" and apply_res.item_consumed == true) then
-    assert(inventory.consume(user, item_id) == true, "consume target item failed: " .. tostring(item_id))
-  end
-  local already_queued = type(apply_res) == "table" and apply_res.action_anim
-  local queued = (not already_queued) and _queue_target_player_anim(game, user, item_id, target)
+local function _apply_share_wealth_context(context, item_id)
+  if item_id ~= item_ids.share_wealth then return end
+  context.share_wealth_cash_receive_mode = "item_target_player_only"
+  context.suppress_cash_receive_anim = true
+end
+
+local function _maybe_consume_item(user, item_id, context, apply_res)
+  if context.item_preconsumed == true then return end
+  if type(apply_res) == "table" and apply_res.item_consumed == true then return end
+  assert(inventory.consume(user, item_id) == true, "consume target item failed: " .. tostring(item_id))
+end
+
+local function _finalize_apply(apply_res, queued)
   if type(apply_res) == "table" then
     apply_res.ok = true
-    if queued then
-      apply_res.action_anim = true
-    end
+    if queued then apply_res.action_anim = true end
     return apply_res
   end
   return { ok = true, action_anim = queued }
+end
+
+local function _apply_target_player_item(game, user, item_id, target, context)
+  context = context or {}
+  _apply_share_wealth_context(context, item_id)
+  local apply_res = effects.apply_target(game, user, item_id, target, context)
+  if not _resolve_apply_ok(apply_res) then
+    return apply_res
+  end
+  _maybe_consume_item(user, item_id, context, apply_res)
+  local already_queued = type(apply_res) == "table" and apply_res.action_anim
+  local queued = (not already_queued) and _queue_target_player_anim(game, user, item_id, target)
+  return _finalize_apply(apply_res, queued)
 end
 
 local function _run_item_choice_flow(game, player, item_id, context, opts)
@@ -265,80 +273,185 @@ return handlers
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=cc2959f7227d433f
+projectHash=af3cb71cb093ad56
 scope.0.id=chunk:src/rules/items/handlers.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=265
-scope.0.semanticHash=ae7a1da0bce37fa4
+scope.0.endLine=273
+scope.0.semanticHash=57106742c686b6d8
+scope.0.lastMutatedAt=2026-06-01T04:45:13Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=survived
+scope.0.lastMutationSites=42
+scope.0.lastMutationKilled=41
 scope.1.id=function:_resolve_apply_ok:19
 scope.1.kind=function
 scope.1.startLine=19
 scope.1.endLine=27
 scope.1.semanticHash=2cc394890489e66e
+scope.1.lastMutatedAt=2026-06-01T04:45:13Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=9
+scope.1.lastMutationKilled=9
 scope.2.id=function:_queue_target_player_anim:29
 scope.2.kind=function
 scope.2.startLine=29
 scope.2.endLine=38
 scope.2.semanticHash=2f0d5f311c2b0876
-scope.3.id=function:_apply_target_player_item:40
+scope.2.lastMutatedAt=2026-06-01T04:45:13Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=1
+scope.2.lastMutationKilled=1
+scope.3.id=function:_apply_share_wealth_context:40
 scope.3.kind=function
 scope.3.startLine=40
-scope.3.endLine=64
-scope.3.semanticHash=8c817c7efb021bd0
-scope.4.id=function:_run_item_choice_flow:66
+scope.3.endLine=44
+scope.3.semanticHash=ace56f5687b2dee6
+scope.3.lastMutatedAt=2026-06-01T04:45:13Z
+scope.3.lastMutationLane=behavior
+scope.3.lastMutationStatus=passed
+scope.3.lastMutationSites=3
+scope.3.lastMutationKilled=3
+scope.4.id=function:_maybe_consume_item:46
 scope.4.kind=function
-scope.4.startLine=66
-scope.4.endLine=90
-scope.4.semanticHash=6cd113763d727da6
-scope.5.id=function:anonymous@119:119
+scope.4.startLine=46
+scope.4.endLine=50
+scope.4.semanticHash=b4d058514a734788
+scope.4.lastMutatedAt=2026-06-01T04:45:13Z
+scope.4.lastMutationLane=behavior
+scope.4.lastMutationStatus=passed
+scope.4.lastMutationSites=9
+scope.4.lastMutationKilled=9
+scope.5.id=function:_finalize_apply:52
 scope.5.kind=function
-scope.5.startLine=119
-scope.5.endLine=121
-scope.5.semanticHash=feeb6324f9439c8c
-scope.6.id=function:anonymous@122:122
+scope.5.startLine=52
+scope.5.endLine=59
+scope.5.semanticHash=fdbd9d754c104e00
+scope.5.lastMutatedAt=2026-06-01T04:45:13Z
+scope.5.lastMutationLane=behavior
+scope.5.lastMutationStatus=passed
+scope.5.lastMutationSites=6
+scope.5.lastMutationKilled=6
+scope.6.id=function:_apply_target_player_item:61
 scope.6.kind=function
-scope.6.startLine=122
-scope.6.endLine=126
-scope.6.semanticHash=4a9abe9b8f49acd1
-scope.7.id=function:anonymous@165:165
+scope.6.startLine=61
+scope.6.endLine=72
+scope.6.semanticHash=675c11fb5a961416
+scope.6.lastMutatedAt=2026-06-01T04:45:13Z
+scope.6.lastMutationLane=behavior
+scope.6.lastMutationStatus=passed
+scope.6.lastMutationSites=14
+scope.6.lastMutationKilled=14
+scope.7.id=function:_run_item_choice_flow:74
 scope.7.kind=function
-scope.7.startLine=165
-scope.7.endLine=167
-scope.7.semanticHash=56d6b7cdaf3befce
-scope.8.id=function:anonymous@168:168
+scope.7.startLine=74
+scope.7.endLine=98
+scope.7.semanticHash=6cd113763d727da6
+scope.7.lastMutatedAt=2026-06-01T04:45:13Z
+scope.7.lastMutationLane=behavior
+scope.7.lastMutationStatus=passed
+scope.7.lastMutationSites=12
+scope.7.lastMutationKilled=12
+scope.8.id=function:anonymous@127:127
 scope.8.kind=function
-scope.8.startLine=168
-scope.8.endLine=180
-scope.8.semanticHash=2b5e1e77a47e7534
-scope.9.id=function:anonymous@181:181
+scope.8.startLine=127
+scope.8.endLine=129
+scope.8.semanticHash=feeb6324f9439c8c
+scope.8.lastMutatedAt=2026-06-01T04:43:37Z
+scope.8.lastMutationLane=behavior
+scope.8.lastMutationStatus=no_sites
+scope.8.lastMutationSites=0
+scope.8.lastMutationKilled=0
+scope.9.id=function:anonymous@130:130
 scope.9.kind=function
-scope.9.startLine=181
-scope.9.endLine=202
-scope.9.semanticHash=9fa047b05de17b69
-scope.10.id=function:anonymous@207:207
+scope.9.startLine=130
+scope.9.endLine=134
+scope.9.semanticHash=4a9abe9b8f49acd1
+scope.9.lastMutatedAt=2026-06-01T04:43:37Z
+scope.9.lastMutationLane=behavior
+scope.9.lastMutationStatus=no_sites
+scope.9.lastMutationSites=0
+scope.9.lastMutationKilled=0
+scope.10.id=function:anonymous@173:173
 scope.10.kind=function
-scope.10.startLine=207
-scope.10.endLine=212
-scope.10.semanticHash=dde1543641e898c3
-scope.11.id=function:anonymous@213:213
+scope.10.startLine=173
+scope.10.endLine=175
+scope.10.semanticHash=56d6b7cdaf3befce
+scope.10.lastMutatedAt=2026-06-01T04:43:37Z
+scope.10.lastMutationLane=behavior
+scope.10.lastMutationStatus=no_sites
+scope.10.lastMutationSites=0
+scope.10.lastMutationKilled=0
+scope.11.id=function:anonymous@176:176
 scope.11.kind=function
-scope.11.startLine=213
-scope.11.endLine=216
-scope.11.semanticHash=06acd6cb99daa648
-scope.12.id=function:anonymous@217:217
+scope.11.startLine=176
+scope.11.endLine=188
+scope.11.semanticHash=2b5e1e77a47e7534
+scope.11.lastMutatedAt=2026-06-01T04:43:37Z
+scope.11.lastMutationLane=behavior
+scope.11.lastMutationStatus=no_sites
+scope.11.lastMutationSites=0
+scope.11.lastMutationKilled=0
+scope.12.id=function:anonymous@189:189
 scope.12.kind=function
-scope.12.startLine=217
-scope.12.endLine=223
-scope.12.semanticHash=e582cdaae2408b75
-scope.13.id=function:anonymous@224:224
+scope.12.startLine=189
+scope.12.endLine=210
+scope.12.semanticHash=9fa047b05de17b69
+scope.12.lastMutatedAt=2026-06-01T04:43:37Z
+scope.12.lastMutationLane=behavior
+scope.12.lastMutationStatus=no_sites
+scope.12.lastMutationSites=0
+scope.12.lastMutationKilled=0
+scope.13.id=function:anonymous@215:215
 scope.13.kind=function
-scope.13.startLine=224
-scope.13.endLine=246
-scope.13.semanticHash=fa7cc696e99b4cb0
-scope.14.id=function:handlers.handle_demolish:253
+scope.13.startLine=215
+scope.13.endLine=220
+scope.13.semanticHash=dde1543641e898c3
+scope.13.lastMutatedAt=2026-06-01T04:43:37Z
+scope.13.lastMutationLane=behavior
+scope.13.lastMutationStatus=no_sites
+scope.13.lastMutationSites=0
+scope.13.lastMutationKilled=0
+scope.14.id=function:anonymous@221:221
 scope.14.kind=function
-scope.14.startLine=253
-scope.14.endLine=262
-scope.14.semanticHash=6bb67340908cdc5e
+scope.14.startLine=221
+scope.14.endLine=224
+scope.14.semanticHash=06acd6cb99daa648
+scope.14.lastMutatedAt=2026-06-01T04:43:37Z
+scope.14.lastMutationLane=behavior
+scope.14.lastMutationStatus=no_sites
+scope.14.lastMutationSites=0
+scope.14.lastMutationKilled=0
+scope.15.id=function:anonymous@225:225
+scope.15.kind=function
+scope.15.startLine=225
+scope.15.endLine=231
+scope.15.semanticHash=e582cdaae2408b75
+scope.15.lastMutatedAt=2026-06-01T04:43:37Z
+scope.15.lastMutationLane=behavior
+scope.15.lastMutationStatus=no_sites
+scope.15.lastMutationSites=0
+scope.15.lastMutationKilled=0
+scope.16.id=function:anonymous@232:232
+scope.16.kind=function
+scope.16.startLine=232
+scope.16.endLine=254
+scope.16.semanticHash=fa7cc696e99b4cb0
+scope.16.lastMutatedAt=2026-06-01T04:43:37Z
+scope.16.lastMutationLane=behavior
+scope.16.lastMutationStatus=no_sites
+scope.16.lastMutationSites=0
+scope.16.lastMutationKilled=0
+scope.17.id=function:handlers.handle_demolish:261
+scope.17.kind=function
+scope.17.startLine=261
+scope.17.endLine=270
+scope.17.semanticHash=6bb67340908cdc5e
+scope.17.lastMutatedAt=2026-06-01T04:45:13Z
+scope.17.lastMutationLane=behavior
+scope.17.lastMutationStatus=passed
+scope.17.lastMutationSites=3
+scope.17.lastMutationKilled=3
 ]]

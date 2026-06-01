@@ -45,28 +45,23 @@ local function _build_chain_tip_text(game, player, position)
   return player.name .. " 在 " .. tile_name .. "踩中地雷"
 end
 
+local function _is_mine_grace_expired(player, mine)
+  if not (player and mine.owner_id == player.id) then return true end
+  local placement_turn_count = mine.owner_turn_started_count_at_placement
+  if placement_turn_count == nil then return true end
+  local own_count = player.status and player.status.own_turn_started_count or 0
+  return own_count > placement_turn_count + 1
+end
+
 function mine_effect.can_trigger(game, player, position)
   local board = game and game.board or nil
   if not (board and position and board:has_mine(position)) then
     return false
   end
-
   local mine = board:get_mine(position)
-  if type(mine) ~= "table" then
-    return true
-  end
-  if mine.armed == false then
-    return false
-  end
-
-  if player and mine.owner_id == player.id then
-    local own_turn_started_count = player.status and player.status.own_turn_started_count or 0
-    local placement_turn_count = mine.owner_turn_started_count_at_placement
-    if placement_turn_count ~= nil then
-      return own_turn_started_count > placement_turn_count + 1
-    end
-  end
-  return true
+  if type(mine) ~= "table" then return true end
+  if mine.armed == false then return false end
+  return _is_mine_grace_expired(player, mine)
 end
 
 function mine_effect.apply(game, player, position)
@@ -143,35 +138,75 @@ return mine_effect
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=39012bc41439b655
+projectHash=455533d324ee9169
 scope.0.id=chunk:src/rules/effects/mine.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=143
-scope.0.semanticHash=b749edc857d077e0
+scope.0.endLine=138
+scope.0.semanticHash=02ac3b4b99599853
+scope.0.lastMutatedAt=2026-06-01T04:28:24Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=survived
+scope.0.lastMutationSites=13
+scope.0.lastMutationKilled=12
 scope.1.id=function:_build_obstacle_chain_key:9
 scope.1.kind=function
 scope.1.startLine=9
 scope.1.endLine=13
 scope.1.semanticHash=06884cbc4c4c8d4c
+scope.1.lastMutatedAt=2026-06-01T04:28:24Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=10
+scope.1.lastMutationKilled=10
 scope.2.id=function:_is_matching_roadblock_trigger:15
 scope.2.kind=function
 scope.2.startLine=15
 scope.2.endLine=20
 scope.2.semanticHash=3d3f4ee742b14b13
+scope.2.lastMutatedAt=2026-06-01T04:28:24Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=7
+scope.2.lastMutationKilled=7
 scope.3.id=function:_build_chain_tip_text:42
 scope.3.kind=function
 scope.3.startLine=42
 scope.3.endLine=46
 scope.3.semanticHash=017444b38b9141f9
-scope.4.id=function:mine_effect.can_trigger:48
+scope.3.lastMutatedAt=2026-06-01T04:28:24Z
+scope.3.lastMutationLane=behavior
+scope.3.lastMutationStatus=survived
+scope.3.lastMutationSites=10
+scope.3.lastMutationKilled=9
+scope.4.id=function:_is_mine_grace_expired:48
 scope.4.kind=function
 scope.4.startLine=48
-scope.4.endLine=70
-scope.4.semanticHash=12849eeb75978b6a
-scope.5.id=function:mine_effect.apply:72
+scope.4.endLine=54
+scope.4.semanticHash=525f532b77860fed
+scope.4.lastMutatedAt=2026-06-01T04:28:24Z
+scope.4.lastMutationLane=behavior
+scope.4.lastMutationStatus=survived
+scope.4.lastMutationSites=12
+scope.4.lastMutationKilled=11
+scope.5.id=function:mine_effect.can_trigger:56
 scope.5.kind=function
-scope.5.startLine=72
-scope.5.endLine=136
-scope.5.semanticHash=88a44173fa89398b
+scope.5.startLine=56
+scope.5.endLine=65
+scope.5.semanticHash=c2f79b18459b72a4
+scope.5.lastMutatedAt=2026-06-01T04:28:24Z
+scope.5.lastMutationLane=behavior
+scope.5.lastMutationStatus=passed
+scope.5.lastMutationSites=16
+scope.5.lastMutationKilled=16
+scope.6.id=function:mine_effect.apply:67
+scope.6.kind=function
+scope.6.startLine=67
+scope.6.endLine=131
+scope.6.semanticHash=88a44173fa89398b
+scope.6.lastMutatedAt=2026-06-01T04:28:24Z
+scope.6.lastMutationLane=behavior
+scope.6.lastMutationStatus=passed
+scope.6.lastMutationSites=28
+scope.6.lastMutationKilled=28
 ]]

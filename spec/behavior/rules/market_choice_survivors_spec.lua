@@ -293,7 +293,7 @@ describe("market.choice _build_tab_entries L59-60 `and` combinator (kills `and�
   it("entry with wrong kind but market_enabled=true is EXCLUDED (kind-mismatch arm of AND)", function()
     local entries = {
       { product_id = "right_kind",  name = "rk",  price = 100, currency = "金币", kind = "item",  market_enabled = true },
-      { product_id = "wrong_kind",  name = "wk",  price = 200, currency = "金币", kind = "vehicle", market_enabled = true },
+      { product_id = "wrong_kind",  name = "wk",  price = 200, currency = "金币", kind = "other", market_enabled = true },
     }
     _with_patches({
       { target = market_query.eligibility, key = "sorted_entries",     value = function() return entries end },

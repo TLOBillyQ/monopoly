@@ -206,7 +206,7 @@ describe("market.choice outcome._should_keep_market_open L290-298", function()
     local finish_calls = 0
     _with_patches(_patch_market_query(_make_entries(2), mark_calls), function()
       choice.outcome.resolve_purchase(game, pc, _stub_player(1),
-        { kind = "vehicle" }, { ok = true, fulfilled_now = true },
+        { kind = "other" }, { ok = true, fulfilled_now = true },
         function() finish_calls = finish_calls + 1; return {} end)
     end)
     _assert_eq(finish_calls, 1, "non-item kind blocks keep_open even with fulfilled_now=true")

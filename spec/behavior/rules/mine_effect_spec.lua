@@ -90,3 +90,6 @@ describe("mine_effect_crap_coverage", function()
     _assert_eq(_find(game, { id = 1 }, 5), nil, "no current and no queue returns nil")
   end)
 end)
+
+-- can_trigger / _is_mine_grace_expired / apply closures live in
+-- mine_closure_spec.lua (coder superset; see rules-mutation-bootstrap-debt.md).

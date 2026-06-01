@@ -42,26 +42,28 @@ local function _copy_path(src)
   return dst
 end
 
+local function _clear_obstacles_on_tile(game, state, tile_index, had_rb, had_mine)
+  if state.cleared_map[tile_index] then return end
+  if had_rb then
+    game:clear_roadblock(tile_index)
+    state.roadblock_cleared = state.roadblock_cleared + 1
+  end
+  if had_mine then
+    game:clear_mine(tile_index)
+    state.mine_cleared = state.mine_cleared + 1
+  end
+  if had_rb or had_mine then
+    state.cleared_map[tile_index] = true
+    state.cleared = state.cleared + 1
+  end
+end
+
 local function _visit_tile(game, board, state, tile_id, tile_index)
   if not state.obstacle_snapshot[tile_id] then
     local had_rb = board:has_roadblock(tile_index)
     local had_mine = board:has_mine(tile_index)
-    local had = had_rb or had_mine
-    state.obstacle_snapshot[tile_id] = had and "yes" or "no"
-    if not state.cleared_map[tile_index] then
-      if had_rb then
-        game:clear_roadblock(tile_index)
-        state.cleared_map[tile_index] = true
-        state.cleared = state.cleared + 1
-        state.roadblock_cleared = state.roadblock_cleared + 1
-      end
-      if had_mine then
-        game:clear_mine(tile_index)
-        state.cleared_map[tile_index] = true
-        state.cleared = state.cleared + 1
-        state.mine_cleared = state.mine_cleared + 1
-      end
-    end
+    state.obstacle_snapshot[tile_id] = (had_rb or had_mine) and "yes" or "no"
+    _clear_obstacles_on_tile(game, state, tile_index, had_rb, had_mine)
   end
   return state.obstacle_snapshot[tile_id] == "yes"
 end
@@ -123,18 +125,17 @@ local function _seed_stack(game, board, state, start_neigh, initial_dirs, neighb
   return stack
 end
 
+local function _push_stack_entry(stack, board, branching, frame, dir, next_id, next_index, had_obstacle)
+  local entry = { tile_index = next_index, has_obstacle = had_obstacle }
+  local new_path = branching and _copy_path(frame.path) or frame.path
+  new_path[#new_path + 1] = entry
+  stack[#stack + 1] = { id = next_id, facing = dir, depth = frame.depth + 1, path = new_path }
+end
+
 local function _process_stack_frame(game, board, frame, state, neighbors, opposite, stack)
-  if frame.depth >= state.distance then
-    state.branches[#state.branches + 1] = frame.path
-    return
-  end
-  local neigh = neighbors[frame.id]
-  if not neigh then
-    state.branches[#state.branches + 1] = frame.path
-    return
-  end
-  local dirs = _next_strict_or_turn(neigh, frame.facing, opposite)
-  if #dirs == 0 then
+  local neigh = frame.depth < state.distance and neighbors[frame.id] or nil
+  local dirs = neigh and _next_strict_or_turn(neigh, frame.facing, opposite) or nil
+  if not dirs or #dirs == 0 then
     state.branches[#state.branches + 1] = frame.path
     return
   end
@@ -145,10 +146,7 @@ local function _process_stack_frame(game, board, frame, state, neighbors, opposi
     local next_index = next_id and board:index_of_tile_id(next_id) or nil
     if next_index then
       local had_obstacle = _visit_tile(game, board, state, next_id, next_index)
-      local entry = { tile_index = next_index, has_obstacle = had_obstacle }
-      local new_path = branching and _copy_path(frame.path) or frame.path
-      new_path[#new_path + 1] = entry
-      stack[#stack + 1] = { id = next_id, facing = dir, depth = frame.depth + 1, path = new_path }
+      _push_stack_entry(stack, board, branching, frame, dir, next_id, next_index, had_obstacle)
     else
       state.branches[#state.branches + 1] = frame.path
     end

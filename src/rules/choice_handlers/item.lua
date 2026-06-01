@@ -192,6 +192,35 @@ local function _build_phase_handlers(helpers)
   local complete = completions.build(helpers)
   local use_item = helpers.use_item
 
+  local function _decorate_repeatable_followup(choice_spec, meta, item_id, player, phase)
+    choice_spec.meta = choice_spec.meta or {}
+    choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
+    choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
+    item_phase.decorate_followup_choice_spec(choice_spec, meta)
+  end
+
+  local function _decorate_non_repeatable_followup(choice_spec, player, item_id)
+    assert(inventory.consume(player, item_id) == true, "consume committed item failed: " .. tostring(item_id))
+    item_preconsume_policy.decorate_followup_choice_spec(choice_spec, {
+      item_id = item_id,
+      player_id = player.id,
+    })
+  end
+
+  local function _handle_waiting_result(game, result, meta, player, item_id, phase)
+    local intent = result.intent or {}
+    local choice_spec = intent.choice_spec
+    if type(choice_spec) == "table" then
+      if item_phase.is_repeatable(phase) then
+        _decorate_repeatable_followup(choice_spec, meta, item_id, player, phase)
+      else
+        _decorate_non_repeatable_followup(choice_spec, player, item_id)
+      end
+    end
+    intent_output_port.dispatch(game, intent)
+    return { stay = true }
+  end
+
   local function _handle_item_phase_choice(game, choice, action)
     local meta = choice.meta
     local player = normalize.validate_item_player(game, choice.kind, meta)
@@ -200,26 +229,27 @@ local function _build_phase_handlers(helpers)
 
     local result = use_item(game, player, item_id)
     if type(result) == "table" and result.waiting then
-      local intent = result.intent or {}
-      local choice_spec = intent.choice_spec
-      if type(choice_spec) == "table" then
-        if item_phase.is_repeatable(phase) then
-          choice_spec.meta = choice_spec.meta or {}
-          choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
-          choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
-          item_phase.decorate_followup_choice_spec(choice_spec, meta)
-        else
-          assert(inventory.consume(player, item_id) == true, "consume committed item failed: " .. tostring(item_id))
-          item_preconsume_policy.decorate_followup_choice_spec(choice_spec, {
-            item_id = item_id,
-            player_id = player.id,
-          })
-        end
-      end
-      intent_output_port.dispatch(game, intent)
-      return { stay = true }
+      return _handle_waiting_result(game, result, meta, player, item_id, phase)
     end
     return complete.phase_completion(game, player, meta, result)
+  end
+
+  local function _decorate_passive_followup(choice_spec, meta, item_id, player)
+    choice_spec.meta = choice_spec.meta or {}
+    choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
+    choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
+    choice_spec.meta.passive_origin = true
+    item_phase.decorate_followup_choice_spec(choice_spec, meta)
+  end
+
+  local function _handle_passive_waiting_result(game, result, meta, player, item_id)
+    local intent = result.intent or {}
+    local choice_spec = intent.choice_spec
+    if type(choice_spec) == "table" then
+      _decorate_passive_followup(choice_spec, meta, item_id, player)
+    end
+    intent_output_port.dispatch(game, intent)
+    return { stay = true }
   end
 
   local function _handle_item_phase_passive(game, choice, action)
@@ -230,17 +260,7 @@ local function _build_phase_handlers(helpers)
     local result = use_item(game, player, item_id)
     assert(result ~= nil, "missing use_item result")
     if type(result) == "table" and result.waiting then
-      local intent = result.intent or {}
-      local choice_spec = intent.choice_spec
-      if type(choice_spec) == "table" then
-        choice_spec.meta = choice_spec.meta or {}
-        choice_spec.meta.item_id = choice_spec.meta.item_id or item_id
-        choice_spec.meta.player_id = choice_spec.meta.player_id or player.id
-        choice_spec.meta.passive_origin = true
-        item_phase.decorate_followup_choice_spec(choice_spec, meta)
-      end
-      intent_output_port.dispatch(game, intent)
-      return { stay = true }
+      return _handle_passive_waiting_result(game, result, meta, player, item_id)
     end
 
     availability.mark_effect_group_used(game, item_id)
