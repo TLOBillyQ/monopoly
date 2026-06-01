@@ -6,6 +6,48 @@ local runtime_state = require("src.state.runtime")
 local gameplay_loop = require("src.turn.loop")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
 
+local _new_game_tests = {
+  -- Happy path: factory builds the game, auto runner is enabled and its timer reset, item index is built.
+  function()
+    local enabled_value = "unset"
+    local reset_count = 0
+    local fake_game = {
+      logger = { info = function() end },
+      players = { {}, {} },
+    }
+    local state = {
+      game_factory = function() return fake_game end,
+      auto_runner = {
+        set_enabled = function(_, enabled) enabled_value = enabled end,
+        reset_timer = function() reset_count = reset_count + 1 end,
+      },
+    }
+    local game = gameplay_loop.new_game(state)
+    assert(game == fake_game, "new_game should return the factory-built game")
+    assert(enabled_value == true, "new_game should enable the auto runner")
+    assert(reset_count == 1, "new_game should reset the auto runner timer once")
+    assert(type(state.ui_runtime) == "table", "new_game should build the ui runtime")
+    assert(state.ui_runtime.item_name_by_id ~= nil, "new_game should populate the item name index")
+  end,
+  -- Auto runner without set_enabled: optional branch is skipped, timer is still reset.
+  function()
+    local reset_count = 0
+    local fake_game = {
+      logger = { info = function() end },
+      players = {},
+    }
+    local state = {
+      game_factory = function() return fake_game end,
+      auto_runner = {
+        reset_timer = function() reset_count = reset_count + 1 end,
+      },
+    }
+    local game = gameplay_loop.new_game(state)
+    assert(game == fake_game, "new_game should return game when set_enabled is absent")
+    assert(reset_count == 1, "new_game should still reset timer without set_enabled")
+  end,
+}
+
 local _log_missing_auto_tests = {
   function()
     local state = _build_loop_state()
@@ -345,4 +387,8 @@ describe("auto_runner_policies", function()
   it("_test_choice_auto_policy_negative_elapsed", _choice_auto_policy_coverage_tests[10])
 
   it("_test_choice_auto_policy_negative_min_visible", _choice_auto_policy_coverage_tests[11])
+
+  it("_test_new_game_enables_auto_runner_and_builds_item_index", _new_game_tests[1])
+
+  it("_test_new_game_without_set_enabled_still_resets_timer", _new_game_tests[2])
 end)

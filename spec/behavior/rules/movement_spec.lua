@@ -276,6 +276,19 @@ describe("movement", function()
     _assert_eq(p.cash, cash_before + constants.pass_start_bonus, "cash applied immediately on override")
   end)
 
+  it("pass_start_hold_negative_override_settles_immediately", function()
+    local g = _new_game()
+    local p = g:current_player()
+    g:update_player_position(p, g.board:index_of_tile_id(24))
+    local cash_before = p.cash
+    local scheduled = move_anim_support.capture_scheduled_callbacks(function()
+      movement.move(g, p, 1, { branch_parity = 1, pass_start_hold_seconds = -5 })
+    end)
+    _assert_eq(#scheduled, 0, "a negative hold override should clamp to zero and skip scheduling")
+    _assert_eq(p.cash, cash_before + constants.pass_start_bonus,
+      "a negative override should settle the pass-start bonus immediately")
+  end)
+
   it("pass_start_hold_skips_when_no_pass", function()
     local g = _new_game()
     local p = g:current_player()
