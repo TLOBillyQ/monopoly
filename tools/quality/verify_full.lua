@@ -282,6 +282,12 @@ local function _main(opts)
       "crap",
       "lua tools/quality/crap_analyze.lua --in tmp/crap_collect.json --out tmp/crap_report.json"
     )
+    -- Complexity-aware CRAP ratchet: fails only on new violations beyond the
+    -- committed baseline (tools/quality/crap/crap_gate_baseline.lua).
+    all_results[#all_results + 1] = _run_step(
+      "crap_gate",
+      "lua tools/quality/crap_gate.lua --in tmp/crap_collect.json"
+    )
   end
 
   local elapsed = math.max(0, os.time() - started)
