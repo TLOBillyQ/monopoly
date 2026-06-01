@@ -3,7 +3,7 @@ local items = {
   { id = 2002, key = "remote_dice",     name = "遥控骰子卡", tier = 1, weight = 1000, angel_immune = false, timing = "pre_action",      offer_in_phases = { "pre_action" }, usage = "投骰子前点击骰子依次改变骰子上的点数，点击确认后投出这些点数", description = "在你行动前可以使用遥控骰子卡，可以遥控骰子投出的点数。", prompt_style = "passive", effect_group = "dice_control" },
   { id = 2003, key = "dice_multiplier", name = "骰子加倍卡", tier = 1, weight = 1000, angel_immune = false, timing = "pre_move",        offer_in_phases = { "pre_move" }, usage = "确认使用，增加N个同点数的骰子，共同计算行动步数。", description = "在投出骰子后你可以使用加倍骰子卡，可以使当前投出的点数加倍。", prompt_style = "passive", effect_group = "dice_multiply" },
   { id = 2004, key = "roadblock",       name = "路障卡",    tier = 1, weight = 1000, angel_immune = false, timing = "manual",          offer_in_phases = { "pre_action", "post_action" }, usage = "使用后视角拉高，可放置格子高亮闪烁，其他压暗，点击任意一格放下路障，恢复视角", description = "使用路障卡，在你前后3格内放置一个路障，任何玩家经过此地时强制停留。", prompt_style = "passive" },
-  { id = 2005, key = "mine",            name = "地雷卡",    tier = 1, weight = 1000, angel_immune = true,  timing = "manual",          offer_in_phases = { "pre_action", "post_action" }, usage = "使用后在脚下安装一个地雷", description = "使用地雷卡，在你脚下放置地雷，任何玩家经过此地时触发地雷，摧毁该玩家的座驾并让他强制住院。", prompt_style = "passive" },
+  { id = 2005, key = "mine",            name = "地雷卡",    tier = 1, weight = 1000, angel_immune = true,  timing = "manual",          offer_in_phases = { "pre_action", "post_action" }, usage = "使用后在脚下安装一个地雷", description = "使用地雷卡，在你脚下放置地雷，任何玩家经过此地时触发地雷，被强制送进医院住院。", prompt_style = "passive" },
   { id = 2006, key = "clear_obstacles", name = "清障卡",    tier = 1, weight = 1000, angel_immune = false, timing = "pre_action",      offer_in_phases = { "pre_action" }, usage = "使用后放出一个机器人自动前进，清除12格以内路障地雷等障碍物。", description = "在你行动前可以使用清障卡，放出机器人清除前方障碍物。", prompt_style = "passive" },
   { id = 2007, key = "steal",           name = "偷窃卡",    tier = 2, weight = 500,  angel_immune = true,  timing = "manual",          offer_in_phases = { "pre_action", "post_action" }, usage = "使用后选择一名有道具且未受天使保护的其他玩家，随机偷取其一张道具。", description = "主动使用偷窃卡，选择其他玩家并随机获得他的一张道具。", prompt_style = "passive" },
   { id = 2008, key = "monster",         name = "怪兽卡",    tier = 2, weight = 500,  angel_immune = true,  timing = "manual",          offer_in_phases = { "pre_action", "post_action" }, usage = "使用后视角拉高，可拆除建筑高亮闪烁，其他压暗，点击任意一栋建筑释放怪兽，恢复视角", description = "使用怪兽卡，你可以选择前后3格内的其他玩家建筑，释放怪兽拆除该建筑。", prompt_style = "passive" },
@@ -25,10 +25,10 @@ return items
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=6fa61d9c72be5da5
+projectHash=c3a5739f8b136164
 scope.0.id=chunk:src/config/content/items.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=25
-scope.0.semanticHash=24c1b2eb193a8a83
+scope.0.semanticHash=0c8b70884762d92d
 ]]

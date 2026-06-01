@@ -1,15 +1,27 @@
+local tasks = require("src.config.content.share_tasks")
+
 local share_task = {
-  host_pending = true,
-  reward = { currency = "金币", amount = 1000 },
+  tasks = tasks,
 }
 
--- TODO_HOST_INTEGRATION: connect host share callback and completion state.
-function share_task.is_available()
-  return false
+function share_task.find_task(period, name)
+  for _, task in ipairs(tasks) do
+    if task.period == period and task.name == name then
+      return task
+    end
+  end
+  return nil
 end
 
+function share_task.reward_for(period, name)
+  local task = share_task.find_task(period, name)
+  return task and task.reward_amount or nil
+end
+
+-- The host task system tracks progress and pays rewards. Lua exposes the
+-- mirrored config but must not grant extra currency for a share-task claim.
 function share_task.claim()
-  return { ok = false, reason = "host_pending" }
+  return { ok = false, reason = "host_managed" }
 end
 
 return share_task

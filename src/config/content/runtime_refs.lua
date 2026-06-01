@@ -223,6 +223,9 @@ refs.skins = {
     ["5006"] = 1073901580,
 }
 
+-- 兼容兜底：宿主没有 reset_model 时，脱下皮肤才退回这个默认 creature key。
+refs.default_creature = 1
+
 refs.synthetic_ai = {
     names = {
         [1] = "红绒绒",

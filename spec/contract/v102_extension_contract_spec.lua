@@ -182,7 +182,7 @@ describe("v102_extension_contract", function()
 
   it("host_integrations_are_explicit_noops", function()
     local integrations = require("src.app.host_integrations")
-    local names = { "share_task", "fan_club", "gift", "achievement" }
+    local names = { "fan_club", "gift", "achievement" }
 
     for _, name in ipairs(names) do
       local module = integrations[name]
@@ -190,6 +190,18 @@ describe("v102_extension_contract", function()
       _assert_eq(module.host_pending, true, name .. " should be marked as host pending")
     end
     _assert_eq(integrations.fan_club.starting_cash_bonus(), 0, "fan club should not change cash before host integration")
+  end)
+
+  it("share_task_integration_is_host_managed", function()
+    local share_task = require("src.app.host_integrations.share_task")
+    local task = share_task.find_task("永久", "邀请10人")
+
+    assert(share_task.host_pending ~= true, "share_task should no longer be a host-pending noop")
+    _assert_eq(type(share_task.find_task), "function", "share_task should expose task lookup")
+    _assert_eq(task.progress_source, "首次进入地图的人数", "share_task should mirror host progress source")
+    _assert_eq(task.target_progress, 10, "share_task should mirror host target progress")
+    _assert_eq(task.reward_amount, 36800, "share_task should mirror host reward amount")
+    _assert_eq(share_task.claim().reason, "host_managed", "share_task claims should stay host-managed")
   end)
 
   it("sign_in_integration_is_implemented", function()
@@ -213,7 +225,6 @@ describe("v102_extension_contract", function()
 
   it("host_integration_stubs_keep_todo_markers", function()
     local paths = {
-      "src/app/host_integrations/share_task.lua",
       "src/app/host_integrations/fan_club.lua",
       "src/app/host_integrations/gift.lua",
       "src/app/host_integrations/achievement.lua",

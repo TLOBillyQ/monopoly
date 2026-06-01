@@ -4,7 +4,6 @@ local runtime_state = require("src.ui.state.runtime")
 local market_view_slots = require("src.ui.render.market.slots")
 local market_view_controls = require("src.ui.render.market.controls")
 local runtime_ui = require("src.ui.render.runtime_ui")
-local modal_state = require("src.ui.state.modal")
 
 local market_view = {}
 
@@ -36,7 +35,6 @@ local function _resolve_deps(state, deps)
   end
   return {
     runtime = runtime_ui,
-    modal_state = modal_state,
   }
 end
 
@@ -76,36 +74,29 @@ function market_view.select_market_option(state, option_id, deps)
   market_view_controls.set_confirm_button_state(state.ui, true)
 end
 
-local function _resolve_current_player_cash(state)
+local function _resolve_cash_display(state)
   local ui = state and state.ui or nil
-  local game = state and state.game or nil
-  if not ui or not game then
+  if not ui then
     return nil, nil
   end
   local ui_model = runtime_state.get_ui_model(state)
-  local player_id = ui_model and ui_model.current_player_id or nil
-  local player = player_id and game.find_player_by_id and game:find_player_by_id(player_id) or nil
-  local amount = player and game:player_balance(player, "金币") or 0
+  local amount = ui_model and ui_model.current_player_cash or 0
   return ui, amount
 end
 
 function market_view.refresh_cash_display(state)
-  local ui, amount = _resolve_current_player_cash(state)
+  local ui, amount = _resolve_cash_display(state)
   if not ui then
     return
   end
   local text = tostring(amount)
   if ui.set_label then
-    ui:set_label(market_layout.cash_text_label, text)
-    ui:set_label(market_layout.cash_amount_label, "")
+    ui:set_label(market_layout.cash_text_label, "现金")
+    ui:set_label(market_layout.cash_amount_label, text)
   end
-  ui_controls.set_control_state(
-    ui,
-    market_layout.cash_amount_label,
-    { visible = false, touch_enabled = false }
-  )
   ui_controls.set_controls_state(ui, {
     market_layout.cash_text_label,
+    market_layout.cash_amount_label,
     market_layout.cash_icon,
     market_layout.cash_background,
   }, { visible = true, touch_enabled = false })
@@ -165,80 +156,155 @@ return market_view
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=d417741dd521f61b
+projectHash=58fc4be6f102bccf
 scope.0.id=chunk:src/ui/render/market/init.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=161
-scope.0.semanticHash=5e414c4e3a425138
-scope.1.id=function:anonymous@13:13
+scope.0.endLine=156
+scope.0.semanticHash=2965ea90eecc3df4
+scope.0.lastMutatedAt=2026-05-31T13:03:23Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=6
+scope.0.lastMutationKilled=6
+scope.1.id=function:anonymous@12:12
 scope.1.kind=function
-scope.1.startLine=13
-scope.1.endLine=18
+scope.1.startLine=12
+scope.1.endLine=17
 scope.1.semanticHash=422bc2daec2eb55b
-scope.2.id=function:anonymous@19:19
+scope.1.lastMutatedAt=2026-05-31T13:03:23Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=2
+scope.1.lastMutationKilled=2
+scope.2.id=function:anonymous@18:18
 scope.2.kind=function
-scope.2.startLine=19
-scope.2.endLine=21
+scope.2.startLine=18
+scope.2.endLine=20
 scope.2.semanticHash=76d869723d99fbda
-scope.3.id=function:anonymous@22:22
+scope.2.lastMutatedAt=2026-05-31T13:03:23Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=1
+scope.2.lastMutationKilled=1
+scope.3.id=function:anonymous@21:21
 scope.3.kind=function
-scope.3.startLine=22
-scope.3.endLine=26
+scope.3.startLine=21
+scope.3.endLine=25
 scope.3.semanticHash=18f8ebedab49ea39
-scope.4.id=function:_fallback_modal_state:11
+scope.3.lastMutatedAt=2026-05-31T13:03:23Z
+scope.3.lastMutationLane=behavior
+scope.3.lastMutationStatus=passed
+scope.3.lastMutationSites=1
+scope.3.lastMutationKilled=1
+scope.4.id=function:_fallback_modal_state:10
 scope.4.kind=function
-scope.4.startLine=11
-scope.4.endLine=28
+scope.4.startLine=10
+scope.4.endLine=27
 scope.4.semanticHash=680c12d60695113a
-scope.5.id=function:_resolve_deps:30
+scope.4.lastMutatedAt=2026-05-31T13:03:23Z
+scope.4.lastMutationLane=behavior
+scope.4.lastMutationStatus=no_sites
+scope.4.lastMutationSites=0
+scope.4.lastMutationKilled=0
+scope.5.id=function:_resolve_deps:29
 scope.5.kind=function
-scope.5.startLine=30
-scope.5.endLine=41
-scope.5.semanticHash=fbb9ba61dc32efa7
-scope.6.id=function:_set_market_preview_icon:43
+scope.5.startLine=29
+scope.5.endLine=39
+scope.5.semanticHash=965fc9270a798048
+scope.5.lastMutatedAt=2026-05-31T13:03:23Z
+scope.5.lastMutationLane=behavior
+scope.5.lastMutationStatus=passed
+scope.5.lastMutationSites=1
+scope.5.lastMutationKilled=1
+scope.6.id=function:_set_market_preview_icon:41
 scope.6.kind=function
-scope.6.startLine=43
-scope.6.endLine=51
+scope.6.startLine=41
+scope.6.endLine=49
 scope.6.semanticHash=823c2c1c4bff5237
-scope.7.id=function:market_view.refresh_market_selection:53
+scope.6.lastMutatedAt=2026-05-31T13:03:23Z
+scope.6.lastMutationLane=behavior
+scope.6.lastMutationStatus=passed
+scope.6.lastMutationSites=4
+scope.6.lastMutationKilled=4
+scope.7.id=function:market_view.refresh_market_selection:51
 scope.7.kind=function
-scope.7.startLine=53
-scope.7.endLine=63
+scope.7.startLine=51
+scope.7.endLine=61
 scope.7.semanticHash=8e69ec56b9b8a9bd
-scope.8.id=function:market_view.select_market_option:65
+scope.7.lastMutatedAt=2026-05-31T13:03:23Z
+scope.7.lastMutationLane=behavior
+scope.7.lastMutationStatus=passed
+scope.7.lastMutationSites=4
+scope.7.lastMutationKilled=4
+scope.8.id=function:market_view.select_market_option:63
 scope.8.kind=function
-scope.8.startLine=65
-scope.8.endLine=77
+scope.8.startLine=63
+scope.8.endLine=75
 scope.8.semanticHash=4611ac56235dcf55
-scope.9.id=function:_resolve_current_player_cash:79
+scope.8.lastMutatedAt=2026-05-31T13:03:23Z
+scope.8.lastMutationLane=behavior
+scope.8.lastMutationStatus=passed
+scope.8.lastMutationSites=8
+scope.8.lastMutationKilled=8
+scope.9.id=function:_resolve_cash_display:77
 scope.9.kind=function
-scope.9.startLine=79
-scope.9.endLine=90
-scope.9.semanticHash=9dbdbc7e6214027f
-scope.10.id=function:market_view.refresh_cash_display:92
+scope.9.startLine=77
+scope.9.endLine=85
+scope.9.semanticHash=712425b284d3a0bb
+scope.9.lastMutatedAt=2026-05-31T13:03:23Z
+scope.9.lastMutationLane=behavior
+scope.9.lastMutationStatus=passed
+scope.9.lastMutationSites=7
+scope.9.lastMutationKilled=7
+scope.10.id=function:market_view.refresh_cash_display:87
 scope.10.kind=function
-scope.10.startLine=92
-scope.10.endLine=108
-scope.10.semanticHash=97dae5a0845619bb
-scope.11.id=function:_refresh_empty_market:110
+scope.10.startLine=87
+scope.10.endLine=103
+scope.10.semanticHash=cf9d214414c2e1e5
+scope.10.lastMutatedAt=2026-05-31T13:03:23Z
+scope.10.lastMutationLane=behavior
+scope.10.lastMutationStatus=passed
+scope.10.lastMutationSites=6
+scope.10.lastMutationKilled=6
+scope.11.id=function:_refresh_empty_market:105
 scope.11.kind=function
-scope.11.startLine=110
-scope.11.endLine=116
+scope.11.startLine=105
+scope.11.endLine=111
 scope.11.semanticHash=26801a40fd25e24b
-scope.12.id=function:_refresh_populated_market:118
+scope.11.lastMutatedAt=2026-05-31T13:03:23Z
+scope.11.lastMutationLane=behavior
+scope.11.lastMutationStatus=passed
+scope.11.lastMutationSites=5
+scope.11.lastMutationKilled=5
+scope.12.id=function:_refresh_populated_market:113
 scope.12.kind=function
-scope.12.startLine=118
-scope.12.endLine=133
+scope.12.startLine=113
+scope.12.endLine=128
 scope.12.semanticHash=21fb71e7c302f567
-scope.13.id=function:market_view.refresh_market:135
+scope.12.lastMutatedAt=2026-05-31T13:03:23Z
+scope.12.lastMutationLane=behavior
+scope.12.lastMutationStatus=passed
+scope.12.lastMutationSites=12
+scope.12.lastMutationKilled=12
+scope.13.id=function:market_view.refresh_market:130
 scope.13.kind=function
-scope.13.startLine=135
-scope.13.endLine=149
+scope.13.startLine=130
+scope.13.endLine=144
 scope.13.semanticHash=1ef6d3e7d464c583
-scope.14.id=function:market_view.close_market_panel:151
+scope.13.lastMutatedAt=2026-05-31T13:03:23Z
+scope.13.lastMutationLane=behavior
+scope.13.lastMutationStatus=passed
+scope.13.lastMutationSites=13
+scope.13.lastMutationKilled=13
+scope.14.id=function:market_view.close_market_panel:146
 scope.14.kind=function
-scope.14.startLine=151
-scope.14.endLine=158
+scope.14.startLine=146
+scope.14.endLine=153
 scope.14.semanticHash=5200b8c3fa80b2df
+scope.14.lastMutatedAt=2026-05-31T13:03:23Z
+scope.14.lastMutationLane=behavior
+scope.14.lastMutationStatus=passed
+scope.14.lastMutationSites=6
+scope.14.lastMutationKilled=6
 ]]

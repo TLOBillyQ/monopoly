@@ -75,3 +75,76 @@ describe("sign_in", function()
     _assert_eq(player.cash, 500, "rejected claims should leave cash unchanged")
   end)
 end)
+
+describe("sign_in.install", function()
+  local function _fake_game(players)
+    return {
+      find_player_by_id = function(_, role_id)
+        return players[role_id]
+      end,
+      add_player_cash = function(_, player, amount)
+        player.cash = (player.cash or 0) + amount
+      end,
+    }
+  end
+
+  local function _capturing_register()
+    local handlers = {}
+    local function register(name, handler)
+      handlers[name] = handler
+    end
+    return register, handlers
+  end
+
+  it("registers_a_host_event_for_each_configured_reward_day", function()
+    local register, handlers = _capturing_register()
+    sign_in.install({
+      register_event = register,
+      get_game = function() return _fake_game({}) end,
+      resolve_role_id = function() return nil end,
+    })
+    for day = 1, 7 do
+      _assert_eq(type(handlers["RewardDay" .. day]), "function",
+        "RewardDay" .. day .. " must be subscribed")
+    end
+    _assert_eq(handlers["RewardDay8"], nil, "only configured days are wired — no RewardDay8")
+    _assert_eq(handlers["RewardDay0"], nil, "subscription starts at day 1 — no RewardDay0")
+  end)
+
+  it("grants_the_resolved_player_the_day_reward_when_an_event_fires", function()
+    local register, handlers = _capturing_register()
+    local player = { id = 7, cash = 0 }
+    local game = _fake_game({ [7] = player })
+    sign_in.install({
+      register_event = register,
+      get_game = function() return game end,
+      resolve_role_id = function(data) return data and data.role or nil end,
+    })
+    -- host fires the handler as handler(_, _, data); payload carries the role.
+    handlers["RewardDay2"](nil, nil, { role = 7 })
+    _assert_eq(player.cash, 1000, "RewardDay2 must credit the resolved player the day-2 reward")
+  end)
+
+  it("does_nothing_when_no_game_is_active", function()
+    local register, handlers = _capturing_register()
+    sign_in.install({
+      register_event = register,
+      get_game = function() return nil end,
+      resolve_role_id = function() return 7 end,
+    })
+    -- firing before a game exists must be a safe no-op, not an error.
+    handlers["RewardDay1"](nil, nil, { role = 7 })
+  end)
+
+  it("does_nothing_when_the_claiming_player_cannot_be_resolved", function()
+    local register, handlers = _capturing_register()
+    local game = _fake_game({})
+    sign_in.install({
+      register_event = register,
+      get_game = function() return game end,
+      resolve_role_id = function() return 999 end,
+    })
+    -- unknown role → find_player_by_id returns nil → grant is a no-op, no error.
+    handlers["RewardDay3"](nil, nil, {})
+  end)
+end)

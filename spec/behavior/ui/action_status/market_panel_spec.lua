@@ -36,6 +36,53 @@ local function _build_market_state(product_ids)
   return state, visible, labels, touch
 end
 
+local function _build_cash_display_state(opts)
+  opts = opts or {}
+  local labels = {}
+  local visible = {}
+  local state = {
+    ui = {
+      set_label = function(_, name, text) labels[name] = text end,
+      set_visible = function(_, name, flag) visible[name] = flag == true end,
+      set_touch_enabled = function() end,
+      query_node = function() return {} end,
+    },
+  }
+  _bind_ui_runtime(state)
+  if opts.bind_model ~= false then
+    runtime_state.set_ui_model(state, { current_player_cash = opts.current_player_cash })
+  end
+  return state, labels, visible
+end
+
+local function _first_two_market_entries()
+  return assert(market_cfg[1], "missing market cfg entry a"),
+    assert(market_cfg[2], "missing market cfg entry b")
+end
+
+local function _two_entry_options(entry_a, entry_b)
+  return {
+    { id = entry_a.product_id, label = entry_a.name, can_buy = true },
+    { id = entry_b.product_id, label = entry_b.name, can_buy = true },
+  }
+end
+
+local function _refresh_two_entry_market(state, choice_id, entry_a, entry_b, selected_option_id)
+  return market_view.refresh_market(state, {
+    choice_id = choice_id,
+    options = _two_entry_options(entry_a, entry_b),
+    allow_cancel = true,
+    selected_option_id = selected_option_id,
+  })
+end
+
+local function _assert_first_two_selection_frames(visible, first_visible, second_visible, context)
+  _assert_eq(visible[market_layout.item_selection_frames[1]], first_visible,
+    context .. ": first selection frame")
+  _assert_eq(visible[market_layout.item_selection_frames[2]], second_visible,
+    context .. ": second selection frame")
+end
+
 describe("presentation_market_panel", function()
   it("_test_market_selection_updates_icon_without_resize", function()
     local entry = assert(market_cfg[1], "missing market cfg entry")
@@ -111,87 +158,65 @@ describe("presentation_market_panel", function()
   end)
 
   it("_test_market_view_default_selection_shows_matching_selection_frame", function()
-    local entry_a = assert(market_cfg[1], "missing market cfg entry a")
-    local entry_b = assert(market_cfg[2], "missing market cfg entry b")
+    local entry_a, entry_b = _first_two_market_entries()
     local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
 
-    local opened = market_view.refresh_market(state, {
-      choice_id = 21,
-      options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = true },
-        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
-      },
-      allow_cancel = true,
-      selected_option_id = entry_b.product_id,
-    })
+    local opened = _refresh_two_entry_market(state, 21, entry_a, entry_b, entry_b.product_id)
 
     _assert_eq(opened, true, "market panel should open")
     _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_a.product_id,
       "market should still prefer first visible buyable option by default")
-    _assert_eq(visible[market_layout.item_selection_frames[1]], true,
-      "first selection frame should match default selected option")
-    _assert_eq(visible[market_layout.item_selection_frames[2]], false,
-      "non-selected frame should stay hidden")
+    _assert_first_two_selection_frames(visible, true, false, "default selection")
+  end)
+
+  it("_test_market_view_populated_market_tolerates_missing_ui_refs", function()
+    local entry = assert(market_cfg[1], "missing market cfg entry")
+    local state, visible, labels = _build_market_state({})
+    state.ui_refs = nil
+
+    local opened = market_view.refresh_market(state, {
+      choice_id = 21,
+      options = {
+        { id = entry.product_id, label = entry.name, can_buy = true },
+      },
+      allow_cancel = true,
+    })
+
+    _assert_eq(opened, true, "market panel should open without ui refs")
+    _assert_eq(labels[market_layout.item_labels[1]], entry.name,
+      "market item label should still render without ui refs")
+    _assert_eq(visible[market_layout.item_buttons[1]], true,
+      "market item button should still render without ui refs")
   end)
 
   it("_test_market_select_switches_selection_frame", function()
-    local entry_a = assert(market_cfg[1], "missing market cfg entry a")
-    local entry_b = assert(market_cfg[2], "missing market cfg entry b")
+    local entry_a, entry_b = _first_two_market_entries()
     local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
 
-    market_view.refresh_market(state, {
-      choice_id = 22,
-      options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = true },
-        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
-      },
-      allow_cancel = true,
-      selected_option_id = entry_a.product_id,
-    })
+    _refresh_two_entry_market(state, 22, entry_a, entry_b, entry_a.product_id)
 
     market_view.select_market_option(state, entry_b.product_id)
 
     _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id, "market select should update selected option")
-    _assert_eq(visible[market_layout.item_selection_frames[1]], false,
-      "old selection frame should hide after reselection")
-    _assert_eq(visible[market_layout.item_selection_frames[2]], true,
-      "new selection frame should show after reselection")
+    _assert_first_two_selection_frames(visible, false, true, "reselection")
   end)
 
   it("_test_market_view_refresh_preserves_manual_selection_on_same_page", function()
-    local entry_a = assert(market_cfg[1], "missing market cfg entry a")
-    local entry_b = assert(market_cfg[2], "missing market cfg entry b")
+    local entry_a, entry_b = _first_two_market_entries()
     local state, visible = _build_market_state({ entry_a.product_id, entry_b.product_id })
 
-    market_view.refresh_market(state, {
-      choice_id = 22,
-      options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = true },
-        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
-      },
-      allow_cancel = true,
-      selected_option_id = entry_a.product_id,
-    })
+    _refresh_two_entry_market(state, 22, entry_a, entry_b, entry_a.product_id)
 
     market_view.select_market_option(state, entry_b.product_id)
 
-    local reopened = market_view.refresh_market(state, {
-      choice_id = 22,
-      options = {
-        { id = entry_a.product_id, label = entry_a.name, can_buy = true },
-        { id = entry_b.product_id, label = entry_b.name, can_buy = true },
-      },
-      allow_cancel = true,
-      selected_option_id = _ui_runtime(state).pending_choice_selected_option_id,
-    })
+    local reopened = _refresh_two_entry_market(
+      state, 22, entry_a, entry_b, _ui_runtime(state).pending_choice_selected_option_id
+    )
 
     _assert_eq(reopened, true, "market panel should refresh after manual selection")
     _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, entry_b.product_id,
       "same-page refresh should preserve the manually selected market option")
-    _assert_eq(visible[market_layout.item_selection_frames[1]], false,
-      "refresh should keep the previous slot unselected")
-    _assert_eq(visible[market_layout.item_selection_frames[2]], true,
-      "refresh should keep the manually selected slot highlighted")
+    _assert_first_two_selection_frames(visible, false, true, "same-page refresh")
   end)
 
   it("_test_market_view_empty_filtered_tab_hides_selection_frames", function()
@@ -749,142 +774,53 @@ describe("presentation_market_panel", function()
   end)
 
   it("_test_market_cash_display_shows_current_player_balance", function()
-    local labels = {}
-    local visible = {}
-    local player = { id = 1 }
-    local state = {
-      ui = {
-        set_label = function(_, name, text) labels[name] = text end,
-        set_visible = function(_, name, flag) visible[name] = flag == true end,
-        set_touch_enabled = function() end,
-        query_node = function() return {} end,
-      },
-      game = {
-        find_player_by_id = function(_, pid) return pid == 1 and player or nil end,
-        player_balance = function(_, p, currency) return currency == "金币" and 1500 or 0 end,
-      },
-    }
-    _bind_ui_runtime(state)
-    runtime_state.set_ui_model(state, { current_player_id = 1 })
+    local state, labels, visible = _build_cash_display_state({
+      current_player_cash = 1500,
+    })
 
     market_view.refresh_cash_display(state)
 
-    _assert_eq(labels[market_layout.cash_text_label], "1500",
-      "cash text label should show player balance")
-    _assert_eq(labels[market_layout.cash_amount_label], "",
-      "legacy cash amount label should be cleared to avoid duplicated balance text")
+    _assert_eq(labels[market_layout.cash_text_label], "现金",
+      "cash text label should keep the static caption")
+    _assert_eq(labels[market_layout.cash_amount_label], "1500",
+      "cash amount label should show player balance")
     _assert_eq(visible[market_layout.cash_text_label], true,
       "cash text label should be visible")
-    _assert_eq(visible[market_layout.cash_amount_label], false,
-      "legacy cash amount label should stay hidden")
+    _assert_eq(visible[market_layout.cash_amount_label], true,
+      "cash amount label should be visible")
     _assert_eq(visible[market_layout.cash_icon], true,
       "cash icon should be visible")
   end)
 
-  it("_test_market_cash_display_skips_when_game_missing", function()
+  it("_test_market_cash_display_skips_when_ui_missing", function()
+    local state = {}
     local labels = {}
-    local state = {
-      ui = {
-        set_label = function(_, name, text) labels[name] = text end,
-        set_visible = function() end,
-        set_touch_enabled = function() end,
-      },
-    }
-    _bind_ui_runtime(state)
 
     market_view.refresh_cash_display(state)
 
-    _assert_eq(labels[market_layout.cash_text_label], nil,
-      "cash amount label should not be set when game is missing")
+    _assert_eq(labels[market_layout.cash_amount_label], nil,
+      "cash amount label should not be set when ui is missing")
   end)
 
-  it("_test_market_cash_display_defaults_to_zero_when_player_not_found", function()
-    local labels = {}
-    local state = {
-      ui = {
-        set_label = function(_, name, text) labels[name] = text end,
-        set_visible = function() end,
-        set_touch_enabled = function() end,
-      },
-      game = {
-        find_player_by_id = function() return nil end,
-        player_balance = function() return 999 end,
-      },
-    }
-    _bind_ui_runtime(state)
-    runtime_state.set_ui_model(state, { current_player_id = 1 })
+  it("_test_market_cash_display_defaults_to_zero_when_model_cash_nil", function()
+    local state, labels = _build_cash_display_state({
+      current_player_cash = nil,
+    })
 
     market_view.refresh_cash_display(state)
 
-    _assert_eq(labels[market_layout.cash_text_label], "0",
-      "cash text label should default to 0 when player not found")
-  end)
-
-  it("_test_market_cash_display_defaults_to_zero_when_balance_nil", function()
-    local labels = {}
-    local player = { id = 1 }
-    local state = {
-      ui = {
-        set_label = function(_, name, text) labels[name] = text end,
-        set_visible = function() end,
-        set_touch_enabled = function() end,
-      },
-      game = {
-        find_player_by_id = function(_, pid) return pid == 1 and player or nil end,
-        player_balance = function() return nil end,
-      },
-    }
-    _bind_ui_runtime(state)
-    runtime_state.set_ui_model(state, { current_player_id = 1 })
-
-    market_view.refresh_cash_display(state)
-
-    _assert_eq(labels[market_layout.cash_text_label], "0",
-      "cash text label should default to 0 when balance is nil")
+    _assert_eq(labels[market_layout.cash_amount_label], "0",
+      "cash amount label should default to 0 when balance is nil")
   end)
 
   it("_test_market_cash_display_defaults_to_zero_when_ui_model_nil", function()
-    local labels = {}
-    local player = { id = 1 }
-    local state = {
-      ui = {
-        set_label = function(_, name, text) labels[name] = text end,
-        set_visible = function() end,
-        set_touch_enabled = function() end,
-      },
-      game = {
-        find_player_by_id = function(_, pid) return pid == 1 and player or nil end,
-        player_balance = function() return 2000 end,
-      },
-    }
-    _bind_ui_runtime(state)
+    local state, labels = _build_cash_display_state({
+      bind_model = false,
+    })
 
     market_view.refresh_cash_display(state)
 
-    _assert_eq(labels[market_layout.cash_text_label], "0",
-      "cash text label should default to 0 when ui_model is nil")
-  end)
-
-  it("_test_market_cash_display_defaults_to_zero_when_player_id_nil", function()
-    local labels = {}
-    local player = { id = 1 }
-    local state = {
-      ui = {
-        set_label = function(_, name, text) labels[name] = text end,
-        set_visible = function() end,
-        set_touch_enabled = function() end,
-      },
-      game = {
-        find_player_by_id = function(_, pid) return pid == 1 and player or nil end,
-        player_balance = function() return 2000 end,
-      },
-    }
-    _bind_ui_runtime(state)
-    runtime_state.set_ui_model(state, { current_player_id = nil })
-
-    market_view.refresh_cash_display(state)
-
-    _assert_eq(labels[market_layout.cash_text_label], "0",
-      "cash text label should default to 0 when player_id is nil")
+    _assert_eq(labels[market_layout.cash_amount_label], "0",
+      "cash amount label should default to 0 when ui_model is nil")
   end)
 end)

@@ -153,11 +153,16 @@ function M.init()
     "resolved_profile=" .. tostring(startup.profile_name)
   )
 
-  runtime_install.install()
-  local auto_runner = startup_roster.build_auto_runner()
   local function _get_current_game()
     return current_game_ref[1]
   end
+  -- Sign-in RewardDay events are global host events resolved at fire time, so the
+  -- install hands host_install lazy accessors for the (not-yet-built) game and state.
+  runtime_install.install({
+    get_current_game = _get_current_game,
+    get_app_state = function() return state end,
+  })
+  local auto_runner = startup_roster.build_auto_runner()
   state = state_factory.build_state(_get_current_game, {
     profile_name = startup.profile_name,
     build_game_factory = function(child_state)
