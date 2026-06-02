@@ -20,8 +20,8 @@ local function _build_move_args(player, raw_total, extra)
   }, extra)
 end
 
-local function _build_move_opts(args, raw_total)
-  local move_opts = { branch_parity = raw_total }
+local function _build_move_opts(args, branch_parity)
+  local move_opts = { branch_parity = branch_parity }
   if args.continue_from_market then
     move_opts.direction = args.facing
     move_opts.branch_parity = args.branch_parity
@@ -52,7 +52,7 @@ local function _build_move_anim_data(game, player, start_index, move_result)
     visited = move_result.visited,
     steps = move_result.steps,
     stopped_on_roadblock = move_result.stopped_on_roadblock == true,
-    market_interrupt = move_result.market_interrupt == true,
+    market_interrupt = move_result.market_interrupt ~= nil and move_result.market_interrupt ~= false,
   }
 end
 
@@ -101,7 +101,7 @@ local function _phase_move(turn_mgr, args)
   local game = turn_mgr.game
 
   local total = dice_multiplier.apply_move_total(game, player, args.total, raw_total)
-  local move_opts = _build_move_opts(args, raw_total)
+  local move_opts = _build_move_opts(args, total)
   total = _resolve_move_total(args, total)
 
   if not move_result then
@@ -115,22 +115,32 @@ return _phase_move
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=53ddbede0184ed0e
+projectHash=3bbdb0a74af6ddda
 scope.0.id=chunk:src/turn/phases/move.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=115
-scope.0.semanticHash=d66fc2640589b424
+scope.0.semanticHash=dce7e620a23a9b25
+scope.0.lastMutatedAt=2026-06-02T03:07:13Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=6
+scope.0.lastMutationKilled=6
 scope.1.id=function:_build_move_args:16
 scope.1.kind=function
 scope.1.startLine=16
 scope.1.endLine=21
 scope.1.semanticHash=3604bc5e58804120
+scope.1.lastMutatedAt=2026-06-02T03:07:13Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=1
+scope.1.lastMutationKilled=1
 scope.2.id=function:_build_move_opts:23
 scope.2.kind=function
 scope.2.startLine=23
 scope.2.endLine=31
-scope.2.semanticHash=aae7a4a6f6592d07
+scope.2.semanticHash=c2f5e094d632a71f
 scope.3.id=function:_resolve_move_total:33
 scope.3.kind=function
 scope.3.startLine=33
@@ -141,34 +151,69 @@ scope.4.kind=function
 scope.4.startLine=40
 scope.4.endLine=44
 scope.4.semanticHash=f4a6c4b2434f5790
+scope.4.lastMutatedAt=2026-06-02T03:07:13Z
+scope.4.lastMutationLane=behavior
+scope.4.lastMutationStatus=passed
+scope.4.lastMutationSites=4
+scope.4.lastMutationKilled=4
 scope.5.id=function:_build_move_anim_data:46
 scope.5.kind=function
 scope.5.startLine=46
 scope.5.endLine=57
-scope.5.semanticHash=6ac5c76546a75016
+scope.5.semanticHash=33d9e2b95de95184
+scope.5.lastMutatedAt=2026-06-02T03:07:13Z
+scope.5.lastMutationLane=behavior
+scope.5.lastMutationStatus=passed
+scope.5.lastMutationSites=7
+scope.5.lastMutationKilled=7
 scope.6.id=function:_queue_move_anim:59
 scope.6.kind=function
 scope.6.startLine=59
 scope.6.endLine=62
 scope.6.semanticHash=094b9d43b65516f7
+scope.6.lastMutatedAt=2026-06-02T03:07:13Z
+scope.6.lastMutationLane=behavior
+scope.6.lastMutationStatus=passed
+scope.6.lastMutationSites=1
+scope.6.lastMutationKilled=1
 scope.7.id=function:_build_wait_move_anim_result:64
 scope.7.kind=function
 scope.7.startLine=64
 scope.7.endLine=73
 scope.7.semanticHash=3199035e040453d3
+scope.7.lastMutatedAt=2026-06-02T03:07:13Z
+scope.7.lastMutationLane=behavior
+scope.7.lastMutationStatus=passed
+scope.7.lastMutationSites=3
+scope.7.lastMutationKilled=3
 scope.8.id=function:_run_move_followup:75
 scope.8.kind=function
 scope.8.startLine=75
 scope.8.endLine=82
 scope.8.semanticHash=412e0c7a81d6def7
+scope.8.lastMutatedAt=2026-06-02T03:07:13Z
+scope.8.lastMutationLane=behavior
+scope.8.lastMutationStatus=passed
+scope.8.lastMutationSites=1
+scope.8.lastMutationKilled=1
 scope.9.id=function:_perform_move:84
 scope.9.kind=function
 scope.9.startLine=84
 scope.9.endLine=94
 scope.9.semanticHash=5dba89093d360ff6
+scope.9.lastMutatedAt=2026-06-02T03:07:13Z
+scope.9.lastMutationLane=behavior
+scope.9.lastMutationStatus=passed
+scope.9.lastMutationSites=8
+scope.9.lastMutationKilled=8
 scope.10.id=function:_phase_move:96
 scope.10.kind=function
 scope.10.startLine=96
 scope.10.endLine=112
-scope.10.semanticHash=255572dee68a9416
+scope.10.semanticHash=5f0beb521169f505
+scope.10.lastMutatedAt=2026-06-02T03:07:13Z
+scope.10.lastMutationLane=behavior
+scope.10.lastMutationStatus=passed
+scope.10.lastMutationSites=7
+scope.10.lastMutationKilled=7
 ]]
