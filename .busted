@@ -77,6 +77,7 @@ return {
       "tools/shared/lib/busted_sharding/spec",
       "tools/shared/lib/common/spec",
       "tools/shared/lib/loc_history/spec",
+      "tools/swarmforge/spec",
     },
     helper = "spec/helper.lua",
     output = "TAP",

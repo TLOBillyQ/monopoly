@@ -30,6 +30,8 @@ local entries = {
   { feature = "features/game/turn_flow.feature",                   generated = "turn_flow_acceptance_spec.lua" },
   { feature = "features/swarmforge/acceptance_mutator_status.feature", generated = "acceptance_mutator_status_acceptance_spec.lua" },
   { feature = "features/swarmforge/chinese_gherkin_acceptance.feature", generated = "chinese_gherkin_acceptance_spec.lua" },
+  { feature = "features/swarmforge/upstream_terminal_backend.feature", generated = "upstream_terminal_backend_acceptance_spec.lua" },
+  { feature = "features/swarmforge/upstream_topology.feature", generated = "upstream_topology_acceptance_spec.lua" },
   { feature = "features/v102/base_screen.feature",                 generated = "base_screen_acceptance_spec.lua" },
   { feature = "features/v102/item_atlas.feature",                  generated = "item_atlas_acceptance_spec.lua" },
   { feature = "features/v102/leaderboard.feature",                 generated = "leaderboard_acceptance_spec.lua" },
