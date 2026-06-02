@@ -1,11 +1,11 @@
 # language: zh-CN
-# mutation-stamp: sha256=a836a8e69915dda7802f803868026cb8e9a0430038c43d623542728bff77aacb
+# mutation-stamp: sha256=639e5d61d4e10392c87e8eba328e984bbf8c6adf03062e4bb347835437668529
 # acceptance-mutation-manifest-begin
 # {
 #   "background_hash": "313adb4543f85e8047d998cbff303f23887755734cac80fe8cfbf12576f148ba",
 #   "feature_name": "棋盘移动",
 #   "feature_path": "features/game/movement.feature",
-#   "implementation_hash": "sha256:d062d65338eb8b372916d7af938568df21cf72a44c6b47382024af5cff42f986",
+#   "implementation_hash": "sha256:af18655e710a679bdd94c3c87747f2a15225cbb5e29b628a6ef046a5a537190a",
 #   "scenarios": [
 #     {
 #       "index": 0,
@@ -152,6 +152,32 @@
 #     },
 #     {
 #       "index": 11,
+#       "mutation_count": 5,
+#       "name": "棋盘移动-016 点数修改后再判定分支奇偶",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 5,
+#         "Survived": 0,
+#         "Total": 5
+#       },
+#       "scenario_hash": "12d6d7f764575db4547be2a98b2972359c6e8731c4ed00e594c984c5784548f4",
+#       "tested_at": "2026-06-02T03:26:46Z"
+#     },
+#     {
+#       "index": 12,
+#       "mutation_count": 20,
+#       "name": "棋盘移动-017 无点数修改时按原始点数判定分支奇偶",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 20,
+#         "Survived": 0,
+#         "Total": 20
+#       },
+#       "scenario_hash": "eadeb86b4df673b55fdfc5b31acef7f6b787b0e793db8ea464290173e0c33562",
+#       "tested_at": "2026-06-02T03:26:50Z"
+#     },
+#     {
+#       "index": 13,
 #       "mutation_count": 4,
 #       "name": "后退移动",
 #       "result": {
@@ -161,10 +187,10 @@
 #         "Total": 4
 #       },
 #       "scenario_hash": "37b57d1315977cb7e4ddf32a72a2f29155dacbb9db8b005c17f9f2806b88a30c",
-#       "tested_at": "2026-05-27T16:00:54Z"
+#       "tested_at": "2026-06-02T03:26:09Z"
 #     },
 #     {
-#       "index": 12,
+#       "index": 14,
 #       "mutation_count": 0,
 #       "name": "落在起点格也获得经过起点奖励",
 #       "result": {
@@ -174,10 +200,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "73515cad82c1b1ac3356c5825a6a0f26925c78345c18de6224f15d3a9a3b79a2",
-#       "tested_at": "2026-05-27T16:00:54Z"
+#       "tested_at": "2026-06-02T03:26:09Z"
 #     },
 #     {
-#       "index": 13,
+#       "index": 15,
 #       "mutation_count": 0,
 #       "name": "黑市格有地雷时先触发地雷后跳过黑市",
 #       "result": {
@@ -187,10 +213,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "fda31c325e5ba8e897bb33ecf4cfdd3ab819cde096441e2a9211be0c50c41241",
-#       "tested_at": "2026-05-27T16:00:54Z"
+#       "tested_at": "2026-06-02T03:26:09Z"
 #     },
 #     {
-#       "index": 14,
+#       "index": 16,
 #       "mutation_count": 0,
 #       "name": "天使守护免疫黑市格地雷后正常进入黑市",
 #       "result": {
@@ -200,10 +226,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "e8a007d620dc1cd9d599a2b1186e35c8e36a8e9a75a7e0269d3ef0c210b67110",
-#       "tested_at": "2026-05-27T16:00:54Z"
+#       "tested_at": "2026-06-02T03:26:09Z"
 #     },
 #     {
-#       "index": 15,
+#       "index": 17,
 #       "mutation_count": 0,
 #       "name": "从黑市恢复移动时保持原方向和剩余步数",
 #       "result": {
@@ -213,10 +239,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "fbc79b6bc1914579804d63019205ca762369f8fe57a7ce2cb5dda1ec923dd248",
-#       "tested_at": "2026-05-27T16:00:54Z"
+#       "tested_at": "2026-06-02T03:26:09Z"
 #     }
 #   ],
-#   "tested_at": "2026-05-27T16:00:54Z",
+#   "tested_at": "2026-06-02T03:26:50Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end
@@ -331,6 +357,39 @@
   | 奇偶值 | 选择路径 |
   | 偶数   | 内圈     |
   | 奇数   | 外圈     |
+
+# 棋盘移动-016 点数修改后再判定分支奇偶
+场景大纲: 棋盘移动-016 点数修改后再判定分支奇偶
+  假如 玩家回合开始时位于固定入口格40
+  并且 该格连接外圈和内圈
+  并且 玩家持有骰子加倍卡且倍率为<倍率>
+  当 玩家掷出原始点数<原始点数>并结算移动点数效果
+  并且 玩家执行本回合移动
+  那么 分支按最终移动步数<最终步数>判定
+  并且 玩家进入<选择路径>
+  并且 玩家到达格子<目标位置>
+
+例子:
+  | 倍率 | 原始点数 | 最终步数 | 选择路径 | 目标位置 |
+  | 2    | 3        | 6        | 内圈     | 39   |
+
+# 棋盘移动-017 无点数修改时按原始点数判定分支奇偶
+场景大纲: 棋盘移动-017 无点数修改时按原始点数判定分支奇偶
+  假如 玩家回合开始时位于格子<入口格>
+  并且 该格连接外圈和内圈
+  并且 玩家没有骰子加倍卡
+  当 玩家掷出原始点数<原始点数>并结算移动点数效果
+  并且 玩家执行本回合移动
+  那么 分支按最终移动步数<最终步数>判定
+  并且 玩家进入<选择路径>
+  并且 玩家到达格子<目标位置>
+
+例子:
+  | 入口格 | 原始点数 | 最终步数 | 选择路径 | 目标位置 |
+  | 40     | 2        | 2        | 内圈     | 26   |
+  | 41     | 2        | 2        | 内圈     | 29   |
+  | 43     | 2        | 2        | 内圈     | 33   |
+  | 44     | 2        | 2        | 内圈     | 39   |
 
 场景大纲: 后退移动
   假如 玩家当前位于格子<起始位置>

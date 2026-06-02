@@ -66,6 +66,7 @@ describe("domain move phase extended coverage", function()
     _assert_eq(game.turn.move_anim.from_index, 3, "from_index should be start position")
     _assert_eq(game.turn.move_anim.to_index, 7, "to_index should be player's new position")
     _assert_eq(game.turn.move_anim.steps, 4, "steps should be forwarded")
+    _assert_eq(game.turn.move_anim.market_interrupt, false, "false market_interrupt should stay false")
     _assert_eq(game.dirty.turn, true, "dirty.turn should be set")
     _assert_eq(game.dirty.any, true, "dirty.any should be set")
   end)
@@ -88,6 +89,43 @@ describe("domain move phase extended coverage", function()
     restore_movement()
     _assert_eq(game.turn.move_anim.stopped_on_roadblock, true, "roadblock flag forwarded")
     _assert_eq(game.turn.move_anim.market_interrupt, true, "market_interrupt forwarded")
+  end)
+
+  it("table market_interrupt from movement result is treated as an animation interrupt flag", function()
+    local game = _make_game({ wait_move_anim = true })
+    local player = _make_player()
+    local turn_mgr = { game = game }
+    local move_result = {
+      visited = { 5, 6 },
+      steps = 1,
+      stopped_on_roadblock = false,
+      market_interrupt = { remaining_steps = 2, facing = "east" },
+    }
+    local restore_movement = _stub("src.rules.movement", {
+      move = function() return move_result end,
+    })
+    local _phase_move = require("src.turn.phases.move")
+    _phase_move(turn_mgr, { player = player, raw_total = 1, total = 1 })
+    restore_movement()
+    _assert_eq(game.turn.move_anim.market_interrupt, true, "table market_interrupt should be forwarded as true")
+  end)
+
+  it("nil market_interrupt from movement result stays false in move_anim data", function()
+    local game = _make_game({ wait_move_anim = true })
+    local player = _make_player()
+    local turn_mgr = { game = game }
+    local move_result = {
+      visited = { 5, 6 },
+      steps = 1,
+      stopped_on_roadblock = false,
+    }
+    local restore_movement = _stub("src.rules.movement", {
+      move = function() return move_result end,
+    })
+    local _phase_move = require("src.turn.phases.move")
+    _phase_move(turn_mgr, { player = player, raw_total = 1, total = 1 })
+    restore_movement()
+    _assert_eq(game.turn.move_anim.market_interrupt, false, "nil market_interrupt should be false")
   end)
 
   it("delegates to move_followup when anim_gate_port disabled", function()
@@ -169,6 +207,27 @@ describe("domain move phase extended coverage", function()
     _assert_eq(captured_opts.entered_inner, nil, "entered_inner not set in default branch")
   end)
 
+  it("default branch parity uses final move total after dice effects", function()
+    local game = _make_game({ wait_move_anim = false })
+    local player = _make_player()
+    local turn_mgr = { game = game }
+    local captured_opts, captured_total = nil, nil
+    local restore_movement = _stub("src.rules.movement", {
+      move = function(_, _, total, opts)
+        captured_total = total
+        captured_opts = opts
+        return { visited = {}, steps = 0 }
+      end,
+    })
+    local restore_followup = _stub("src.turn.phases.move_followup", { run = function() return "done" end })
+    local _phase_move = require("src.turn.phases.move")
+    _phase_move(turn_mgr, { player = player, raw_total = 3, total = 6 })
+    restore_movement()
+    restore_followup()
+    _assert_eq(captured_total, 6, "default branch uses final total directly")
+    _assert_eq(captured_opts.branch_parity, 6, "branch_parity should use final total after dice effects")
+  end)
+
   it("with provided move_result skips _perform_move and runs move_followup directly", function()
     local game = _make_game({ wait_move_anim = true })
     local player = _make_player()
@@ -208,6 +267,19 @@ describe("domain move phase extended coverage", function()
     _phase_move(turn_mgr, { player = player, raw_total = 1, total = 1 })
     restore_movement()
     _assert_eq(game.turn.move_anim.seq, 7, "seq should bump again to 7")
+  end)
+
+  it("move_anim_seq starts at 1 when no prior sequence exists", function()
+    local game = _make_game({ wait_move_anim = true })
+    local player = _make_player()
+    local turn_mgr = { game = game }
+    local restore_movement = _stub("src.rules.movement", {
+      move = function() return { visited = {}, steps = 0 } end,
+    })
+    local _phase_move = require("src.turn.phases.move")
+    _phase_move(turn_mgr, { player = player, raw_total = 1, total = 1 })
+    restore_movement()
+    _assert_eq(game.turn.move_anim.seq, 1, "first move_anim seq should start at 1")
   end)
 
   it("missing anim_gate_port asserts", function()

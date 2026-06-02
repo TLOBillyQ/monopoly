@@ -1,5 +1,6 @@
 local number_utils = require("src.foundation.number")
 local game_driver = require("tools.acceptance.game_driver")
+local phase_move = require("src.turn.phases.move")
 
 local movement_steps = {}
 
@@ -492,12 +493,43 @@ function movement_steps.handlers()
       return true
     end,
 
+    ["玩家回合开始时位于格子<入口格>"] = function(world, example)
+      local tile_id = number_utils.to_integer(example["入口格"])
+      local idx = _tile_index(world, tile_id)
+      if not idx then
+        return nil, "unknown tile id: " .. tostring(tile_id)
+      end
+      _place_player(world, idx)
+      return true
+    end,
+
+    ["玩家回合开始时位于固定入口格40"] = function(world)
+      local idx = _tile_index(world, 40)
+      if not idx then
+        return nil, "unknown tile id: 40"
+      end
+      _place_player(world, idx)
+      return true
+    end,
+
     ["分支入口连接外圈和内圈"] = function(world)
       local player = _player(world)
       local tile = _game(world).board:get_tile(player.position)
       local entry = tile and _game(world).board.map.entry_points[tile.id]
       if not entry then
         return nil, "player not at entry point (tile " .. tostring(tile and tile.id) .. ")"
+      end
+      return true
+    end,
+
+    ["该格连接外圈和内圈"] = function(world)
+      local player = _player(world)
+      local tile = _game(world).board:get_tile(player.position)
+      local map = _game(world).board.map
+      local entry = tile and map.entry_points[tile.id]
+      local on_inner_link = tile and map.outer_next[tile.id] == nil and map.neighbors[tile.id] ~= nil
+      if not (entry or on_inner_link) then
+        return nil, "player not at branch connector (tile " .. tostring(tile and tile.id) .. ")"
       end
       return true
     end,
@@ -514,6 +546,54 @@ function movement_steps.handlers()
         return nil, "unknown parity value: " .. tostring(parity_value)
       end
       world.last_move_result = game_driver.move_with_opts(_ctx(world), player, 1, { branch_parity = parity })
+      return true
+    end,
+
+    ["玩家掷出原始点数<原始点数>并结算移动点数效果"] = function(world, example)
+      local raw_total = number_utils.to_integer(example["原始点数"])
+      if raw_total == nil then
+        return nil, "invalid raw total: " .. tostring(example["原始点数"])
+      end
+      local player = _player(world)
+      game_driver.set_next_rolls(_ctx(world), { raw_total })
+      local _, rolled_raw_total, final_total = game_driver.roll_dice(_ctx(world), player, 1)
+      world.raw_total = rolled_raw_total
+      world.final_move_steps = final_total
+      return true
+    end,
+
+    ["玩家执行本回合移动"] = function(world)
+      local player = _player(world)
+      local state, args = phase_move({ game = _game(world) }, {
+        player = player,
+        raw_total = world.raw_total,
+        total = world.final_move_steps,
+      })
+      world.last_move_state = state
+      world.last_move_args = args
+      world.last_move_result = args and (args.move_result or (args.next_args and args.next_args.move_result))
+        or (_game(world).last_turn and _game(world).last_turn.move_result)
+      if not world.last_move_result then
+        return nil, "move phase did not return a move result"
+      end
+      return true
+    end,
+
+    ["分支按最终移动步数<最终步数>判定"] = function(world, example)
+      local expected = number_utils.to_integer(example["最终步数"])
+      if expected == nil then
+        return nil, "invalid final steps: " .. tostring(example["最终步数"])
+      end
+      if world.final_move_steps ~= expected then
+        return nil, "expected final move steps " .. tostring(expected) .. ", got " .. tostring(world.final_move_steps)
+      end
+      local result = world.last_move_result
+      if not result then
+        return nil, "no move result"
+      end
+      if result.branch_parity ~= expected then
+        return nil, "expected branch parity " .. tostring(expected) .. ", got " .. tostring(result.branch_parity)
+      end
       return true
     end,
 
