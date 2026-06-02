@@ -28,6 +28,10 @@ local ui_event_state = require("src.ui.coord.event_state")
 local event_log_view = require("src.ui.coord.event_log_view")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local logger = require("src.foundation.log")
+local canvas_store = require("src.ui.state.canvas_store")
+local role_avatar = require("src.ui.view.role_avatar")
+local placement = require("src.ui.render.board.placement")
+local move_anim = require("src.ui.render.move_anim")
 local support = require("spec.support.ui_action_anim_support")
 
 local _with_patches = support.with_patches
@@ -901,5 +905,212 @@ describe("refactorer_crap_coverage", function()
       _assert_eq(ui_event_state.resolve_event_log_enabled(state, nil), true,
         "current role should remain enabled")
     end)
+  end)
+
+  it("canvas store patch_slice handles nil, table, function, and invalid patches", function()
+    local state = { ui = {} }
+
+    -- nil patch: marks dirty and returns the slice without mutation.
+    local slice = canvas_store.patch_slice(state, "board", nil)
+    assert(type(slice) == "table", "patch_slice should return the slice table")
+    _assert_eq(state.ui.canvas_store.dirty.board, true, "nil patch should still mark the key dirty")
+
+    -- table patch: shallow-copies keys onto the slice.
+    canvas_store.patch_slice(state, "board", { zoom = 3, mode = "fit" })
+    local board = canvas_store.get_slice(state, "board")
+    _assert_eq(board.zoom, 3, "table patch should copy numeric field")
+    _assert_eq(board.mode, "fit", "table patch should copy string field")
+
+    -- function patch: receives (slice, ui, state_or_ui) and mutates in place.
+    local seen_ui, seen_state = nil, nil
+    canvas_store.patch_slice(state, "board", function(target, ui, raw)
+      target.flag = true
+      seen_ui, seen_state = ui, raw
+    end)
+    _assert_eq(canvas_store.get_slice(state, "board").flag, true, "function patch should mutate the slice")
+    _assert_eq(seen_ui, state.ui, "function patch should receive the resolved ui")
+    _assert_eq(seen_state, state, "function patch should receive the original state arg")
+
+    -- invalid patch type: raises a descriptive error.
+    local ok, err = pcall(canvas_store.patch_slice, state, "board", 42)
+    _assert_eq(ok, false, "a non-table/function patch must raise")
+    assert(tostring(err):find("expects table/function patch", 1, true),
+      "invalid patch error should name the contract")
+  end)
+
+  it("role avatar sanitize_image_key covers nil, invalid, non-positive, and valid keys", function()
+    local warns = 0
+    _with_patches({
+      { target = logger, key = "warn", value = function() warns = warns + 1 end },
+    }, function()
+      _assert_eq(role_avatar.sanitize_image_key(nil), nil, "nil key resolves to nil without warning")
+      _assert_eq(role_avatar.sanitize_image_key({}), nil, "non-integer key resolves to nil")
+      _assert_eq(role_avatar.sanitize_image_key(-3), nil, "negative key resolves to nil")
+      _assert_eq(role_avatar.sanitize_image_key(0), nil, "zero key resolves to nil without warning")
+      _assert_eq(role_avatar.sanitize_image_key(5), 5, "positive integer key passes through")
+    end)
+    assert(warns >= 2, "non-integer and negative keys should each warn (got " .. warns .. ")")
+  end)
+
+  it("role avatar resolve_from_role guards missing role, missing getter, and getter errors", function()
+    _assert_eq(role_avatar.resolve_from_role(nil), nil, "nil role resolves to nil")
+    _assert_eq(role_avatar.resolve_from_role({}), nil, "role without get_head_icon resolves to nil")
+    _assert_eq(role_avatar.resolve_from_role({ get_head_icon = function() error("boom") end }), nil,
+      "a throwing getter is swallowed to nil")
+    _assert_eq(role_avatar.resolve_from_role({ get_head_icon = function() return 9 end }), 9,
+      "a valid getter resolves the sanitized key")
+  end)
+
+  it("board feedback catalog resolves numeric cue fields and rejects non-numeric ones", function()
+    local warns = 0
+    _reload_with("src.ui.render.board_feedback.catalog", {
+      ["src.config.content.runtime_refs"] = {
+        board_feedback = {
+          my_cue = {
+            scale = 2,
+            rate = { x = 1 },          -- vector-like: rejected with a warning
+            duration = "abc",          -- non-numeric: rejected with a warning
+            volume = nil,              -- absent: stays nil, no warning
+            delay = 3,
+            followup_sounds = { { delay = "nope" } }, -- nested non-numeric: warns
+          },
+        },
+      },
+      ["src.foundation.log"] = {
+        warn = function() warns = warns + 1 end,
+        info = function() end,
+        error = function() end,
+      },
+    }, function(reloaded_catalog)
+      _assert_eq(reloaded_catalog.get(nil), nil, "nil cue name resolves to nil")
+      _assert_eq(reloaded_catalog.get("unknown"), nil, "an unknown cue resolves to nil")
+
+      local cue = reloaded_catalog.get("my_cue")
+      _assert_eq(cue.scale, 2, "numeric field passes through")
+      _assert_eq(cue.delay, 3, "numeric field passes through")
+      _assert_eq(cue.rate, nil, "vector-like field is rejected")
+      _assert_eq(cue.duration, nil, "non-numeric string field is rejected")
+    end)
+    assert(warns >= 3, "vector, non-numeric, and nested non-numeric fields should warn (got " .. warns .. ")")
+  end)
+
+  it("choice support resolves option ids, labels, and lookups across shapes", function()
+    _assert_eq(choice_support.resolve_option_id({ id = 5 }), 5, "table option resolves its id")
+    _assert_eq(choice_support.resolve_option_id("scalar"), "scalar", "scalar option resolves to itself")
+
+    _assert_eq(choice_support.resolve_option_label({ label = "L" }), "L", "table label wins")
+    _assert_eq(choice_support.resolve_option_label({ id = 7 }), "7", "id falls back to its string")
+    _assert_eq(choice_support.resolve_option_label("z"), "z", "scalar label is its string")
+
+    local choice = { options = { { id = 1, label = "one" }, { id = 2, label = "two" } } }
+    _assert_eq(choice_support.resolve_option_by_id(nil, 1), nil, "nil choice resolves to nil")
+    _assert_eq(choice_support.resolve_option_by_id(choice, nil), nil, "nil id resolves to nil")
+    _assert_eq(choice_support.resolve_option_by_id({ options = "bad" }, 1), nil, "non-table options resolve to nil")
+    _assert_eq(choice_support.resolve_option_by_id(choice, 2).label, "two", "matching id returns its option")
+    _assert_eq(choice_support.resolve_option_by_id(choice, 9), nil, "missing id resolves to nil")
+
+    _assert_eq(choice_support.resolve_option_label_by_id(choice, 1), "one", "label-by-id returns table label")
+    _assert_eq(choice_support.resolve_option_label_by_id(choice, 9), nil, "missing id label resolves to nil")
+    _assert_eq(choice_support.resolve_option_label_by_id({ options = { 3 } }, 3), "3",
+      "scalar option falls back to the matched id string")
+  end)
+
+  it("choice support secondary confirm body falls back through option and choice text", function()
+    _assert_eq(choice_support.resolve_secondary_confirm_body(nil, nil, nil, nil, ""),
+      "请再确认一次", "no choice and empty label uses the generic fallback")
+    _assert_eq(choice_support.resolve_secondary_confirm_body(nil, nil, nil, nil, "金牌"),
+      "你选的是：金牌", "no choice with a label echoes the label")
+
+    local choice = { options = { { id = 1, confirm_body = "确认买入" } }, confirm_body = "通用确认" }
+    _assert_eq(choice_support.resolve_secondary_confirm_body(choice, nil, nil, 1), "确认买入",
+      "option confirm_body wins when present")
+    _assert_eq(choice_support.resolve_secondary_confirm_body({ confirm_body = "通用确认" }, nil, nil, 1),
+      "通用确认", "choice confirm_body is the next fallback")
+  end)
+
+  it("board placement offsets cover grid, single-slot, zero-spacing, and y-lift paths", function()
+    local saved_vector3 = math.Vector3
+    -- Give the base position an __add so the real placement path can offset it
+    -- with a plain math.Vector3 delta without depending on a host vector type.
+    local function based(x, y, z)
+      return setmetatable({ x = x, y = y, z = z }, {
+        __add = function(a, b) return { x = a.x + b.x, y = a.y + b.y, z = a.z + b.z } end,
+      })
+    end
+    function math.Vector3(x, y, z) return { x = x, y = y, z = z } end
+
+    local placed = {}
+    local function unit_for(pid)
+      return { set_position = function(pos) placed[pid] = pos end }
+    end
+
+    _with_patches({
+      { target = runtime_state, key = "set_follow_target_position", value = function() end },
+      { target = move_anim, key = "stop_player_presentation", value = function() return {} end },
+    }, function()
+      -- Two players sharing one tile: count=2, spacing>0 -> grid offsets diverge;
+      -- base_y >= min_player_y -> y_offset 0.
+      local state = {
+        tile_positions = { [3] = based(0.0, 5.0, 0.0) },
+        player_units = { [1] = unit_for(1), [2] = unit_for(2) },
+      }
+      placement.place_players(state,
+        { { id = 1, position = 3 }, { id = 2, position = 3 } },
+        { [3] = { 1, 2 } }, 2.0, 0.0)
+      assert(placed[1].x ~= placed[2].x, "two-occupant grid should separate slot x")
+      _assert_eq(placed[1].y, 5.0, "y_offset 0 should keep base y when base is above the floor")
+
+      -- Single occupant: count<=1 -> zero offset; base_y < min -> y lifted.
+      local state2 = {
+        tile_positions = { [4] = based(1.0, 1.0, 1.0) },
+        player_units = { [1] = unit_for(1) },
+      }
+      placed = {}
+      placement.place_players(state2, { { id = 1, position = 4 } }, { [4] = { 1 } }, 2.0, 10.0)
+      _assert_eq(placed[1].x, 1.0, "single occupant should not be offset on x")
+      _assert_eq(placed[1].y, 10.0, "y_offset should lift base up to the floor (1 + 9)")
+
+      -- Zero spacing with multiple occupants: spacing<=0 -> zero offset.
+      local state3 = {
+        tile_positions = { [5] = based(2.0, 8.0, 2.0) },
+        player_units = { [1] = unit_for(1), [2] = unit_for(2) },
+      }
+      placed = {}
+      placement.place_players(state3,
+        { { id = 1, position = 5 }, { id = 2, position = 5 } },
+        { [5] = { 1, 2 } }, 0.0, 0.0)
+      _assert_eq(placed[1].x, 2.0, "zero spacing should collapse offsets to base x")
+      _assert_eq(placed[2].x, 2.0, "zero spacing should collapse both occupants to base x")
+    end)
+    math.Vector3 = saved_vector3
+  end)
+
+  it("event log view open/close/is_open guard ui, role id, and visibility recording", function()
+    local recorded = {}
+    local ui = { set_event_log_visible = function(_, value) recorded[#recorded + 1] = value end }
+    local state = { ui = ui }
+
+    -- open: records role visibility and drives the host setter to true.
+    _assert_eq(event_log_view.open(state, 7), true, "open should record and return true")
+    _assert_eq(recorded[1], true, "open should drive the host visibility setter to true")
+    _assert_eq(event_log_view.is_open(state, 7), true, "an opened role reads back as open")
+
+    -- close: records false; the role no longer reads as open.
+    _assert_eq(event_log_view.close(state, 7), true, "close should record and return true")
+    _assert_eq(recorded[2], false, "close should drive the host visibility setter to false")
+    _assert_eq(event_log_view.is_open(state, 7), false, "a closed role reads back as not open")
+
+    -- guards: missing state/ui and an un-normalizable role id all short-circuit.
+    _assert_eq(event_log_view.open(nil, 7), false, "nil state cannot open")
+    _assert_eq(event_log_view.open({}, 7), false, "state without ui cannot open")
+    _assert_eq(event_log_view.open(state, nil), false, "an un-normalizable role id cannot open")
+
+    -- ui without the host setter still records visibility and returns true.
+    local bare_state = { ui = {} }
+    _assert_eq(event_log_view.open(bare_state, 3), true, "open should succeed without a host setter")
+    _assert_eq(event_log_view.is_open(bare_state, 3), true, "recorded role reads as open without a setter")
+
+    -- is_open guards a missing visibility table.
+    _assert_eq(event_log_view.is_open({ ui = {} }, 9), false, "no visibility table reads as not open")
   end)
 end)
