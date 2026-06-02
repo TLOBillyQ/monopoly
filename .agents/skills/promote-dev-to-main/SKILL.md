@@ -11,6 +11,8 @@ description: 将 noisy 的 dev / origin/dev 工作树整理成 main / origin/mai
 
 不要 `git merge dev`。不要用 dev 的 merge 历史决定范围。范围以 `origin/main..origin/dev` 的 tree diff 为准，`git log` 只作辅助理解。
 
+如果当前本地 `dev` 领先 `origin/dev`，先把本地 `dev` 推到 `origin/dev`，再 promote。不要在未推送的本地 tree 和远端 tree 之间猜目标。
+
 ## 前置
 
 先读 repo 指令：
@@ -26,11 +28,24 @@ description: 将 noisy 的 dev / origin/dev 工作树整理成 main / origin/mai
 ```bash
 rtk git fetch origin --prune
 rtk git status --short --branch -uall
+rtk git rev-parse --abbrev-ref HEAD
+rtk git rev-list --left-right --count origin/dev...dev
 rtk git rev-parse origin/main origin/dev origin/main^{tree} origin/dev^{tree}
 rtk git diff --exit-code --stat origin/main..origin/dev
 ```
 
 如果工作树不干净，停止。不要 stash、reset、clean、checkout 来隐藏用户工作。
+
+如果当前分支是 `dev`，且 `rtk git rev-list --left-right --count origin/dev...dev` 显示右侧非 0、左侧为 0，说明本地 `dev` 只领先远端。先推送本地 `dev`：
+
+```bash
+old_dev="$(rtk git rev-parse origin/dev)"
+rtk git push --force-with-lease=dev:"$old_dev" origin dev
+rtk git fetch origin --prune
+rtk git diff --exit-code dev..origin/dev
+```
+
+如果左右两侧都非 0，说明 `dev` 与 `origin/dev` 已分叉，停止并要求用户决定是否先整理 `dev`。如果当前不在 `dev`，但本地 `dev` 领先 `origin/dev`，也停止并要求用户确认是否切到 `dev` 推送。
 
 ## No-op
 
