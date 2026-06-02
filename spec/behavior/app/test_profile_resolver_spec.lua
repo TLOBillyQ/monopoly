@@ -73,6 +73,31 @@ describe("runtime.test_profile_resolver", function()
     assert(_contains(groups, "economy_core"), "groups should include economy_core")
   end)
 
+  it("expect_for_returns_the_profile_expectation_when_present", function()
+    local expect = test_profile_resolver.expect_for("solo_missile")
+    assert(type(expect) == "table", "solo_missile carries an expect table")
+    assert(expect.tiles[11].level == 0, "expect_for exposes the demolish invariant")
+  end)
+
+  it("expect_for_returns_nil_for_profiles_without_expectation", function()
+    assert(test_profile_resolver.expect_for("solo_remote_dice") == nil,
+      "a profile without expect resolves to nil")
+    assert(test_profile_resolver.expect_for("default") == nil,
+      "default has no expect")
+  end)
+
+  it("resolve_bootstrap_treats_empty_string_like_default", function()
+    -- pins the `profile_name == ""` branch of _resolve_name: "" must resolve to
+    -- the default profile's (empty) bootstrap, not fall through to the
+    -- unknown-profile assert. (architect mutation audit, section A)
+    assert.same({}, test_profile_resolver.resolve_bootstrap(""))
+  end)
+
+  it("expect_for_raises_on_unknown_profile", function()
+    local ok = pcall(test_profile_resolver.expect_for, "no_such_profile")
+    assert(ok == false, "unknown profile should fail fast like other resolver accessors")
+  end)
+
   it("profiles_cover_all_item_cards", function()
     local covered = {}
     for _, profile_name in ipairs(test_profile_resolver.available_profiles()) do

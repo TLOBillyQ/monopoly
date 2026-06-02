@@ -4,6 +4,7 @@ local presentation_ports = require("src.ui.ports")
 local runtime_deps = require("src.ui.coord.deps")
 local camera_sync = require("src.ui.ports.ui_sync")._camera
 local tick_clock = require("src.turn.loop.tick_clock")
+local live_handle = require("src.app.testing.live_handle")
 
 local M = {}
 
@@ -60,6 +61,10 @@ function M.start(state, current_game_ref)
   state.presentation_runtime = runtime_deps.build({ camera_sync = camera_sync })
   local current_game = gameplay_loop.new_game(state)
   current_game_ref[1] = current_game
+  -- Expose the running game + state to the e2e profile lane's editor seam.
+  -- Inert in every headless/production path (nothing reads it unless an e2e
+  -- snippet does); the lane needs state to pump gameplay_loop.tick.
+  live_handle.set(current_game, state)
   _prime_first_turn(current_game)
   gameplay_loop.set_game(state, current_game)
 
@@ -75,55 +80,55 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=45824b3af1764582
+projectHash=016f7d79b2082a69
 scope.0.id=chunk:src/app/gameplay_start.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=75
-scope.0.semanticHash=189017eb8f2aade9
-scope.1.id=function:anonymous@14:14
+scope.0.endLine=80
+scope.0.semanticHash=9a8c66336898eb89
+scope.1.id=function:anonymous@15:15
 scope.1.kind=function
-scope.1.startLine=14
-scope.1.endLine=17
+scope.1.startLine=15
+scope.1.endLine=18
 scope.1.semanticHash=a42c25e7eb0028d2
-scope.2.id=function:_start_tick_loop:10
+scope.2.id=function:_start_tick_loop:11
 scope.2.kind=function
-scope.2.startLine=10
-scope.2.endLine=18
+scope.2.startLine=11
+scope.2.endLine=19
 scope.2.semanticHash=c894b8629863dc3c
-scope.3.id=function:_build_gameplay_loop_ports:20
+scope.3.id=function:_build_gameplay_loop_ports:21
 scope.3.kind=function
-scope.3.startLine=20
-scope.3.endLine=22
+scope.3.startLine=21
+scope.3.endLine=23
 scope.3.semanticHash=756b2bf75843a40d
-scope.4.id=function:anonymous@26:26
+scope.4.id=function:anonymous@27:27
 scope.4.kind=function
-scope.4.startLine=26
-scope.4.endLine=28
+scope.4.startLine=27
+scope.4.endLine=29
 scope.4.semanticHash=2b8db4f111b80d33
-scope.5.id=function:anonymous@29:29
+scope.5.id=function:anonymous@30:30
 scope.5.kind=function
-scope.5.startLine=29
-scope.5.endLine=31
+scope.5.startLine=30
+scope.5.endLine=32
 scope.5.semanticHash=ab6752f430f38aac
-scope.6.id=function:_build_turn_action_port:24
+scope.6.id=function:_build_turn_action_port:25
 scope.6.kind=function
-scope.6.startLine=24
-scope.6.endLine=33
+scope.6.startLine=25
+scope.6.endLine=34
 scope.6.semanticHash=3bbf4229630177d5
-scope.7.id=function:_should_prime_first_turn:35
+scope.7.id=function:_should_prime_first_turn:36
 scope.7.kind=function
-scope.7.startLine=35
-scope.7.endLine=41
+scope.7.startLine=36
+scope.7.endLine=42
 scope.7.semanticHash=a0d3f3c3212a5fb6
-scope.8.id=function:_prime_first_turn:43
+scope.8.id=function:_prime_first_turn:44
 scope.8.kind=function
-scope.8.startLine=43
-scope.8.endLine=49
+scope.8.startLine=44
+scope.8.endLine=50
 scope.8.semanticHash=10f31c361988fe44
-scope.9.id=function:M.start:51
+scope.9.id=function:M.start:52
 scope.9.kind=function
-scope.9.startLine=51
-scope.9.endLine=72
-scope.9.semanticHash=16ef6208b31cf53a
+scope.9.startLine=52
+scope.9.endLine=77
+scope.9.semanticHash=69076c28d212da39
 ]]

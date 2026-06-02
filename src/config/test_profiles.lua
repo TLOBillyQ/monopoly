@@ -189,6 +189,18 @@ local profiles = {
             }),
             tiles = { [11] = { owner_player_index = 2, level = 2, render_called = true } },
         },
+        -- Live-editor expectation, mirroring the missile branch of
+        -- spec/behavior/rules/demolish_closure_spec.lua: firing the missile at
+        -- the occupied level-2 enemy building destroys it (level 2 -> 0),
+        -- relocates the occupant (p2) to hospital, and publishes a demolish
+        -- event. Minimal sufficient set -- enough to tell "rule ran correctly"
+        -- from "did not run", no golden snapshot of unrelated state.
+        expect = {
+            source_spec = "spec/behavior/rules/demolish_closure_spec.lua",
+            tiles   = { [11] = { level = 0 } },
+            players = { [2] = { in_hospital = true } },
+            events  = { { kind = "demolish" } },
+        },
     },
 
     solo_tax = {
@@ -454,12 +466,12 @@ return profiles
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=60a48c7defcb1ade
+projectHash=842ef047f8ba415b
 scope.0.id=chunk:src/config/test_profiles.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=454
-scope.0.semanticHash=257d2abf796dcfb1
+scope.0.endLine=466
+scope.0.semanticHash=04f450b46b158d84
 scope.1.id=function:_deity:35
 scope.1.kind=function
 scope.1.startLine=35
