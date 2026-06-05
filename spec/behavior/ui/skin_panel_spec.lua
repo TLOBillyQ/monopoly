@@ -260,6 +260,13 @@ describe("skin_panel", function()
       assert(panel.selected_by_role["1"] == nil, "equip should fail for unowned skin")
     end)
 
+    it("is_slot_equipped returns false for an empty slot", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(1))
+      local s = _make_state()
+      skin_panel.open(s, 1)
+      assert.equals(false, skin_panel.is_slot_equipped(s, 2))
+    end)
+
     it("equip at slot 3 selects skin_3", function()
       skin_panel.configure_catalog_for_tests(_make_catalog(3))
       local s = _make_state()
