@@ -15,10 +15,13 @@
   并且 该角色在<启动目录>中启动
 
 例子:
-  | 角色      | 后端   | 工作树 | 提示文件                     | 会话                    | 启动目录              |
-  | specifier | codex  | master | swarmforge/specifier.prompt  | swarmforge-specifier    | 主工作目录            |
-  | coder     | codex  | coder  | swarmforge/coder.prompt      | swarmforge-coder        | .worktrees/coder      |
-  | reviewer  | claude | none   | swarmforge/reviewer.prompt   | swarmforge-reviewer     | 主工作目录            |
+  | 角色      | 后端   | 工作树    | 提示文件                       | 会话                    | 启动目录              |
+  | specifier | codex  | master    | swarmforge/specifier.prompt    | swarmforge-specifier    | 主工作目录            |
+  | coder     | codex  | coder     | swarmforge/coder.prompt        | swarmforge-coder        | .worktrees/coder      |
+  | cleaner   | codex  | cleaner   | swarmforge/cleaner.prompt      | swarmforge-cleaner      | .worktrees/cleaner    |
+  | architect | codex  | architect | swarmforge/architect.prompt    | swarmforge-architect    | .worktrees/architect  |
+  | hardender | codex  | hardender | swarmforge/hardender.prompt    | swarmforge-hardender    | .worktrees/hardender  |
+  | QA        | codex  | QA        | swarmforge/QA.prompt           | swarmforge-QA           | .worktrees/QA         |
 
 # SwarmForge 上游拓扑一致性 002 任意角色由本地提示文件约束
 场景大纲: SwarmForge 上游拓扑一致性 002 任意角色由本地提示文件约束
@@ -76,6 +79,8 @@
   | 目标角色 | 目标 | 目标会话             | 消息文件                  |
   | coder    | coder | swarmforge-coder     | tmp/coder-handoff.txt     |
   | coder    | 2     | swarmforge-coder     | tmp/coder-handoff.txt     |
+  | QA       | QA    | swarmforge-QA        | tmp/QA-handoff.txt        |
+  | QA       | 6     | swarmforge-QA        | tmp/QA-handoff.txt        |
 
 # SwarmForge 上游拓扑一致性 006 tmux 状态隔离并尊重索引设置
 场景大纲: SwarmForge 上游拓扑一致性 006 tmux 状态隔离并尊重索引设置
@@ -89,3 +94,4 @@
   | 项目路径      | 窗口索引 | pane索引 | 角色  | 目标地址                  |
   | /repo/game    | 0        | 0        | coder | swarmforge-coder:0.0      |
   | /repo/game    | 1        | 1        | coder | swarmforge-coder:1.1      |
+  | /repo/game    | 1        | 1        | QA    | swarmforge-QA:1.1         |

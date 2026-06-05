@@ -1,5 +1,12 @@
 local parity = require("swarmforge.lib.upstream_parity")
 
+local function read_file(path)
+  local handle = assert(io.open(path, "r"))
+  local contents = handle:read("*a")
+  handle:close()
+  return contents
+end
+
 describe("swarmforge upstream parity", function()
   it("selects terminal backend from environment before host capabilities", function()
     assert.are.equal("ghostty", parity.select_terminal_backend({
@@ -101,6 +108,30 @@ describe("swarmforge upstream parity", function()
     assert.is_true(research.allows_custom_role)
   end)
 
+  it("models the six-pack starter topology", function()
+    local roles = {
+      { role = "specifier", worktree = "master", startup_dir = "主工作目录" },
+      { role = "coder", worktree = "coder", startup_dir = ".worktrees/coder" },
+      { role = "cleaner", worktree = "cleaner", startup_dir = ".worktrees/cleaner" },
+      { role = "architect", worktree = "architect", startup_dir = ".worktrees/architect" },
+      { role = "hardender", worktree = "hardender", startup_dir = ".worktrees/hardender" },
+      { role = "QA", worktree = "QA", startup_dir = ".worktrees/QA" },
+    }
+
+    for _, expected in ipairs(roles) do
+      local plan = parity.plan_role({
+        role = expected.role,
+        backend = "codex",
+        worktree = expected.worktree,
+        prompt_exists = true,
+      })
+
+      assert.are.equal("swarmforge/" .. expected.role .. ".prompt", plan.prompt_file)
+      assert.are.equal("swarmforge-" .. expected.role, plan.session)
+      assert.are.equal(expected.startup_dir, plan.startup_dir)
+    end
+  end)
+
   it("plans first startup repository initialization", function()
     local plan = parity.plan_initial_repository({
       is_git_repo = false,
@@ -147,5 +178,47 @@ describe("swarmforge upstream parity", function()
     assert.are.equal("tmp/coder-handoff.txt", plan.message_file)
     assert.are.equal(".swarmforge/tmux.sock", plan.tmux_socket)
     assert.is_true(plan.uses_project_local_socket)
+  end)
+
+  it("resolves six-pack notification targets by role and index", function()
+    local sessions = {
+      { index = 1, role = "specifier", session = "swarmforge-specifier" },
+      { index = 2, role = "coder", session = "swarmforge-coder" },
+      { index = 3, role = "cleaner", session = "swarmforge-cleaner" },
+      { index = 4, role = "architect", session = "swarmforge-architect" },
+      { index = 5, role = "hardender", session = "swarmforge-hardender" },
+      { index = 6, role = "QA", session = "swarmforge-QA" },
+    }
+
+    local by_role = parity.plan_notification({
+      sessions = sessions,
+      target = "QA",
+      message_file = "tmp/QA-handoff.txt",
+      tmux_socket = ".swarmforge/tmux.sock",
+      window_index = 1,
+      pane_index = 1,
+    })
+    assert.are.equal("swarmforge-QA", by_role.target_session)
+    assert.are.equal("swarmforge-QA:1.1", by_role.target_address)
+
+    local by_index = parity.plan_notification({
+      sessions = sessions,
+      target = "6",
+      message_file = "tmp/QA-handoff.txt",
+      tmux_socket = ".swarmforge/tmux.sock",
+      window_index = 1,
+      pane_index = 1,
+    })
+    assert.are.equal("swarmforge-QA", by_index.target_session)
+  end)
+
+  it("keeps QA completion handoffs from blocking specifier closure", function()
+    local workflow = read_file("swarmforge/constitution/workflow.prompt")
+    local specifier = read_file("swarmforge/specifier.prompt")
+    local qa = read_file("swarmforge/QA.prompt")
+
+    assert.truthy(workflow:find("other than the specifier receives a QA completion handoff", 1, true))
+    assert.truthy(specifier:find("When QA notifies you that the job is complete", 1, true))
+    assert.truthy(qa:find("notify the specifier, coder, cleaner, architect, and hardender", 1, true))
   end)
 end)

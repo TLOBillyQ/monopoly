@@ -46,6 +46,7 @@ TERMINAL_BACKEND=""
 typeset -a ROLES=()
 typeset -a AGENTS=()
 typeset -a SESSIONS=()
+typeset -a PREVIOUS_SESSIONS=()
 typeset -a DISPLAY_NAMES=()
 typeset -a WORKTREE_NAMES=()
 typeset -a WORKTREE_PATHS=()
@@ -185,7 +186,7 @@ remove_nonessential_clone_files() {
     return
   fi
 
-  rm -rf "$WORKING_DIR/README.md" "$WORKING_DIR/SwarmForgeInitSpec.md" "$WORKING_DIR/examples"
+  rm -rf "$WORKING_DIR/SwarmForgeInitSpec.md" "$WORKING_DIR/examples"
 }
 
 display_name_for_role() {
@@ -314,6 +315,19 @@ write_sessions_file() {
       "${DISPLAY_NAMES[$i]}" \
       "${AGENTS[$i]}" >> "$SESSIONS_FILE"
   done
+}
+
+load_previous_sessions() {
+  PREVIOUS_SESSIONS=()
+  if [[ ! -f "$SESSIONS_FILE" ]]; then
+    return
+  fi
+
+  local index role session display agent
+  while IFS=$'\t' read -r index role session display agent; do
+    [[ -n "$session" ]] || continue
+    PREVIOUS_SESSIONS+=("$session")
+  done < "$SESSIONS_FILE"
 }
 
 check_helper_scripts() {
@@ -569,6 +583,24 @@ choose_cleanup_owner() {
   CLEANUP_OWNER_INDEX=1
 }
 
+kill_existing_sessions() {
+  local local_session
+  local -A seen=()
+
+  for local_session in "${PREVIOUS_SESSIONS[@]}" "${SESSIONS[@]}"; do
+    [[ -n "$local_session" ]] || continue
+    if [[ -n "${seen[$local_session]:-}" ]]; then
+      continue
+    fi
+    seen[$local_session]=1
+
+    if tmux -S "$TMUX_SOCKET" has-session -t "$local_session" 2>/dev/null; then
+      echo -e "${YELLOW}Existing SwarmForge session found: ${local_session}. Killing it...${RESET}"
+      tmux -S "$TMUX_SOCKET" kill-session -t "$local_session"
+    fi
+  done
+}
+
 check_dependency tmux
 check_dependency git
 detect_tmux_base_indexes
@@ -577,20 +609,14 @@ initialize_git_repo
 ensure_runtime_git_excludes
 parse_config
 check_backend_dependencies
+load_previous_sessions
 prepare_workspace
 prepare_worktrees
 choose_cleanup_owner
 TERMINAL_BACKEND="$(detect_terminal_backend)"
 load_terminal_backend "$TERMINAL_BACKEND"
 
-local_session=""
-for local_session in "${SESSIONS[@]}"; do
-  [[ -n "$local_session" ]] || continue
-  if tmux -S "$TMUX_SOCKET" has-session -t "$local_session" 2>/dev/null; then
-    echo -e "${YELLOW}Existing SwarmForge session found: ${local_session}. Killing it...${RESET}"
-    tmux -S "$TMUX_SOCKET" kill-session -t "$local_session"
-  fi
-done
+kill_existing_sessions
 
 echo -e "${CYAN}${BOLD}"
 echo "  ╔═══════════════════════════════════════════════╗"

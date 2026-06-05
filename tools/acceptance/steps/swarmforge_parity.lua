@@ -6,8 +6,10 @@ local swarmforge_parity_steps = {}
 local ROLE_INDEXES = {
   specifier = 1,
   coder = 2,
-  refactorer = 3,
+  cleaner = 3,
   architect = 4,
+  hardender = 5,
+  QA = 6,
 }
 
 local function _bool(value)
