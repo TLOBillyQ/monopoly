@@ -1,7 +1,7 @@
 local number_utils = require("src.foundation.number")
 local runtime_state = require("src.ui.state.runtime")
 local choice_support = require("src.ui.view.choice_support")
-local modal_ports = require("src.ui.input.dispatch.modal_ports")
+local modal_ports = require("src.ui.input.modal_ports")
 
 local item_slot_confirm = {}
 
@@ -85,12 +85,12 @@ return item_slot_confirm
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=f5e27dd07d2ac16e
-scope.0.id=chunk:src/ui/input/dispatch/item_slot_confirm.lua
+projectHash=38e79dcc301250e6
+scope.0.id=chunk:src/ui/input/item_slot_confirm.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=85
-scope.0.semanticHash=fe73231e2f0a5f9b
+scope.0.semanticHash=25b2ac56f56dedd9
 scope.1.id=function:_close_confirm_state:10
 scope.1.kind=function
 scope.1.startLine=10

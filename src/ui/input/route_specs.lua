@@ -21,8 +21,8 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=ff1540e5d8331d27
-scope.0.id=chunk:src/ui/input/canvas_route/append_intent_spec.lua
+projectHash=8df61d8d6e0bcde3
+scope.0.id=chunk:src/ui/input/route_specs.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=21

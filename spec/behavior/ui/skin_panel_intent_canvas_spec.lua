@@ -2,11 +2,11 @@ local support = require("spec.support.shared_support")
 local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
-local view_command = require("src.ui.input.dispatch.view_command")
+local view_command = require("src.ui.input.view_command")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local ui_events = require("src.ui.coord.ui_events")
 local skin_panel = require("src.ui.coord.skin_panel")
-local skin_intents = require("src.ui.input.canvas_route.skin_panel")
+local skin_intents = require("src.ui.input.route_skin_panel")
 local skin_nodes = require("src.ui.schema.skin")
 
 local function _no_op() end

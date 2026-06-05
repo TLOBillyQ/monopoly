@@ -920,7 +920,7 @@ describe("gameplay rendering hotspots", function()
         },
       }
 
-      local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
+      local result = _reload_module("src.ui.input.pre_confirm", {
     ["src.state.runtime"] = {
           get_ui_model = function()
             return {
@@ -952,7 +952,7 @@ describe("gameplay rendering hotspots", function()
         ui = {},
         game = {},
       }
-      local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
+      local result = _reload_module("src.ui.input.pre_confirm", {
     ["src.state.runtime"] = {
           get_ui_model = function() return { choice = nil } end,
         },
@@ -967,7 +967,7 @@ describe("gameplay rendering hotspots", function()
         ui = {},
         game = {},
       }
-      local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
+      local result = _reload_module("src.ui.input.pre_confirm", {
     ["src.state.runtime"] = {
           get_ui_model = function()
             return { choice = { id = "choice1" } }
@@ -1235,7 +1235,7 @@ describe("gameplay rendering hotspots", function()
         },
       }
 
-      local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
+      local result = _reload_module("src.ui.input.pre_confirm", {
     ["src.state.runtime"] = {
           get_ui_model = function()
             return {
@@ -1274,7 +1274,7 @@ describe("gameplay rendering hotspots", function()
         },
       }
 
-      local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
+      local result = _reload_module("src.ui.input.pre_confirm", {
     ["src.state.runtime"] = {
           get_ui_model = function()
             return {
@@ -1313,7 +1313,7 @@ describe("gameplay rendering hotspots", function()
         },
       }
 
-      local result = _reload_module("src.ui.input.dispatch.pre_confirm", {
+      local result = _reload_module("src.ui.input.pre_confirm", {
     ["src.state.runtime"] = {
           get_ui_model = function()
             return {

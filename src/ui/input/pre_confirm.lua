@@ -2,7 +2,7 @@ local choice_support = require("src.ui.view.choice_support")
 local choice_contract = require("src.config.choice.contract")
 local role_id_utils = require("src.foundation.identity")
 local runtime_state = require("src.ui.state.runtime")
-local modal_ports = require("src.ui.input.dispatch.modal_ports")
+local modal_ports = require("src.ui.input.modal_ports")
 
 local pre_confirm_flow = {}
 
@@ -126,12 +126,12 @@ return pre_confirm_flow
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=a5c0d16a472e053c
-scope.0.id=chunk:src/ui/input/dispatch/pre_confirm.lua
+projectHash=d9c58683ed55c6f7
+scope.0.id=chunk:src/ui/input/pre_confirm.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=126
-scope.0.semanticHash=11ffb54b9adf3ea6
+scope.0.semanticHash=f999292e31395572
 scope.1.id=function:_resolve_choice_owner_role_id:13
 scope.1.kind=function
 scope.1.startLine=13

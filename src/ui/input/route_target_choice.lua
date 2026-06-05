@@ -52,8 +52,8 @@ return intents
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=74a7b1e6f0197fb0
-scope.0.id=chunk:src/ui/input/canvas_route/target_choice.lua
+projectHash=544b0d52d9ef90cf
+scope.0.id=chunk:src/ui/input/route_target_choice.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=52

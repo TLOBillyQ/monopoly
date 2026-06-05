@@ -19,7 +19,7 @@ end
 
 describe("ui presentation hotspots", function()
   it("build_intent_returns_nil_when_choice_does_not_use_item_slots", function()
-    local item_slot_intents = _load_fresh("src.ui.input.canvas_route.item_slots")
+    local item_slot_intents = _load_fresh("src.ui.input.route_item_slots")
     local state = {
       ui = { item_slots = { "slot1", "slot2" } }
     }
@@ -38,7 +38,7 @@ describe("ui presentation hotspots", function()
   end)
 
   it("build_intent_returns_ui_button_when_choice_uses_item_slots", function()
-    local item_slot_intents = _load_fresh("src.ui.input.canvas_route.item_slots")
+    local item_slot_intents = _load_fresh("src.ui.input.route_item_slots")
     local state = {
       ui = { item_slots = { "slot1" } },
       ui_runtime = { ui_model = { choice = { id = 1, uses_item_slots = true } } },
@@ -60,7 +60,7 @@ describe("ui presentation hotspots", function()
   end)
 
   it("build_intent_handles_missing_ui_state", function()
-    local item_slot_intents = _load_fresh("src.ui.input.canvas_route.item_slots")
+    local item_slot_intents = _load_fresh("src.ui.input.route_item_slots")
     local nodes = require("src.ui.schema.permanent")
 
     -- State with nil ui, should fall back to nodes

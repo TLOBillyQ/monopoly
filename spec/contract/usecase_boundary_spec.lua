@@ -3,7 +3,7 @@ local support = require("spec.support.shared_support")
 local shared_support = require("spec.support.shared_support")
 
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
-local turn_action_port = require("src.ui.input.dispatch.turn_action_port")
+local turn_action_port = require("src.ui.input.turn_action")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local gameplay_loop_runtime = require("src.turn.loop.runtime")
 local runtime_ports = require("src.foundation.ports.runtime_ports")

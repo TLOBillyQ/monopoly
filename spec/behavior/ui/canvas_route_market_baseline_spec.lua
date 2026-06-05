@@ -2,7 +2,7 @@ local P = require("spec.support.shared_support")
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
 
-local market_route = require("src.ui.input.canvas_route.market")
+local market_route = require("src.ui.input.route_market")
 local runtime_state = require("src.ui.state.runtime")
 local ui_event_intents = require("src.ui.input.event_intents")
 

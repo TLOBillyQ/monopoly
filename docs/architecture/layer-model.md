@@ -80,7 +80,7 @@ src/foundation/
 
 ```
 src/ui/
-├── input/             用户输入分发
+├── input/             用户输入分发（route_* / view_command / game_action）
 ├── view/              数据投影（presenter / role_context）
 ├── render/            渲染 + render/widgets/
 ├── coord/             协调器（actor_context / ui_state / ui_runtime / event_state）

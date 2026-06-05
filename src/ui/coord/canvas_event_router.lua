@@ -1,6 +1,6 @@
 local ui_event_bindings = require("src.ui.coord.event_bindings")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local canvas_registry = require("src.ui.input.canvas_route.registry")
+local canvas_registry = require("src.ui.input.routes")
 local event_actor_policy = require("src.ui.coord.event_actor_policy")
 local modal = require("src.ui.coord.modal")
 local base_nodes = require("src.ui.schema.base")

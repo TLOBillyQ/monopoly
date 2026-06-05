@@ -20,8 +20,8 @@ describe("ui_surface module-level coverage (re-require sweep)", function()
   end)
 
   it("ui.input.dispatch.view_command — fires all function definitions under hook", function()
-    package.loaded["src.ui.input.dispatch.view_command"] = nil
-    local m = require("src.ui.input.dispatch.view_command")
+    package.loaded["src.ui.input.view_command"] = nil
+    local m = require("src.ui.input.view_command")
     assert(type(m) == "table", "expected table")
   end)
 

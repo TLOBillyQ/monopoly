@@ -12,14 +12,14 @@ local presentation_ports = {}
 local boundary_contract = {
   state_seam_modules = {
     runtime_state = "src.ui.state.runtime",
-    landing_visual_hold = "src.ui.visual_hold",
+    visual_hold = "src.ui.visual_hold",
     host_runtime = "src.ui.host_bridge",
   },
   import_allowlists = {
     runtime_state = {
       "src.ui.state.runtime",
     },
-    landing_visual_hold = {
+    visual_hold = {
       "src.ui.visual_hold",
     },
     host_runtime = {
@@ -53,10 +53,10 @@ local boundary_contract = {
       "src.turn.waits.choice_timeout",
       "src.turn.waits.timeout",
       "src.turn.waits.ui_gate",
-      "src.ui.input.dispatch.item_phase_ask",
-      "src.ui.input.dispatch.pre_confirm",
-      "src.ui.input.dispatch.turn_action_port",
-      "src.ui.input.dispatch.view_command",
+      "src.ui.input.item_phase_ask",
+      "src.ui.input.pre_confirm",
+      "src.ui.input.turn_action",
+      "src.ui.input.view_command",
     },
     resolved_gameplay_loop_ports = {
       "src.turn.loop",
@@ -74,7 +74,7 @@ local boundary_contract = {
       "src.ui.render.anim.overlay_compute",
       "src.ui.render.anim.tip_text",
       "src.ui.render.board.startup_render",
-      "src.ui.render.board_feedback_service",
+      "src.ui.render.board_feedback.service",
       "src.ui.render.board.visual_sync",
     },
   },
@@ -101,12 +101,12 @@ return presentation_ports
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=dbfc192c0e4067a0
+projectHash=e20b82b081a5362f
 scope.0.id=chunk:src/ui/ports/init.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=101
-scope.0.semanticHash=471b8cd954a7e41c
+scope.0.semanticHash=941506c6da2e64d1
 scope.1.id=function:presentation_ports.build:83
 scope.1.kind=function
 scope.1.startLine=83

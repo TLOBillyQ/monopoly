@@ -20,8 +20,8 @@ return intents
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=f67a6254a9fcbd99
-scope.0.id=chunk:src/ui/input/canvas_route/player_choice.lua
+projectHash=82a81cb2ec35bb8f
+scope.0.id=chunk:src/ui/input/route_player_choice.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=20

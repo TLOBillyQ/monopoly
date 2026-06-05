@@ -1,9 +1,9 @@
 local number_utils = require("src.foundation.number")
 local skin_panel = require("src.ui.coord.skin_panel")
 local skin_nodes = require("src.ui.schema.skin")
-local view_command = require("src.ui.input.dispatch.view_command")
-local base_intents = require("src.ui.input.canvas_route.base")
-local skin_intents = require("src.ui.input.canvas_route.skin_panel")
+local view_command = require("src.ui.input.view_command")
+local base_intents = require("src.ui.input.route_base")
+local skin_intents = require("src.ui.input.route_skin_panel")
 local base_nodes = require("src.ui.schema.base")
 local ui_mock = require("tools.acceptance.support.ui_mock")
 

@@ -28,7 +28,7 @@ last_verified: 2026-05-22
 | `src/ui/render` | 渲染：board / market / move_anim / status3d / widgets / render_pipeline | 输入路由 |
 | `src/ui/ports` | 展示运行时装配：grouped ports、state callback、runtime event bridge、bootstrap | 游戏规则、宿主底层实现 |
 | `src/ui/schema` | 展示 schema：canvas 节点名、contract 常量、布局清单 | 写状态、宿主调用、输入路由 |
-| `src/ui/input` | 输入分发：canvas_route / dispatch / event_intents | 反向写状态（通过 ports 走） |
+| `src/ui/input` | 输入分发：route_* / view_command / game_action / event_intents | 反向写状态（通过 ports 走） |
 | `src/ui/utils` | UI 内部工具：`with_client_role` 等 | — |
 
 `src/turn/output/` 属于 `turn`，不是独立 runtime 目录。其中 `intent_dispatcher`、`state_adapter` 只服务 turn use case 输出，不承载宿主能力。

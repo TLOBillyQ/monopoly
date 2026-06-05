@@ -3,7 +3,7 @@
 -- shared helpers — nil vs explicit fields are the discrimination contract.
 -- Per [[reference_mutate4lua_test_corpus]]: closure via busted spec, not Gherkin.
 
-local view_command = require("src.ui.input.dispatch.view_command")
+local view_command = require("src.ui.input.view_command")
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- Helpers for mocking _resolve_loaded targets via package.preload swap.

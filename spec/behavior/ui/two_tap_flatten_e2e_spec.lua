@@ -11,11 +11,11 @@ local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
 local _bind_ui_runtime = support.bind_ui_runtime
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
+local pre_confirm_flow = require("src.ui.input.pre_confirm")
 local choice_openers = require("src.ui.coord.choice_openers")
-local item_slot_intents = require("src.ui.input.canvas_route.item_slots")
-local target_choice_intents = require("src.ui.input.canvas_route.target_choice")
-local market_intents = require("src.ui.input.canvas_route.market")
+local item_slot_intents = require("src.ui.input.route_item_slots")
+local target_choice_intents = require("src.ui.input.route_target_choice")
+local market_intents = require("src.ui.input.route_market")
 local market_modal_renderer = require("src.ui.coord.market")
 local runtime_state = require("src.ui.state.runtime")
 

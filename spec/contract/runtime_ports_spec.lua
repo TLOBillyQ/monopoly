@@ -358,8 +358,8 @@ describe("runtime_ports_contract", function()
     local contract = presentation_ports.describe_boundary_contract()
     assert.equals("src.ui.state.runtime", contract.state_seam_modules.runtime_state,
       "presentation contract should publish runtime state canonical seam")
-    assert.equals("src.ui.visual_hold", contract.state_seam_modules.landing_visual_hold,
-      "presentation contract should publish landing hold canonical seam")
+    assert.equals("src.ui.visual_hold", contract.state_seam_modules.visual_hold,
+      "presentation contract should publish visual hold canonical seam")
     assert.equals("src.ui.host_bridge", contract.state_seam_modules.host_runtime,
       "presentation contract should publish host runtime canonical seam")
     assert.is_true(list_contains(contract.import_allowlists.host_runtime, "src.ui.host_bridge"),

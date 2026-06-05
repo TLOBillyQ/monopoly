@@ -9,8 +9,8 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=49808f49db945507
-scope.0.id=chunk:src/ui/input/dispatch/modal_ports.lua
+projectHash=d5cafe54efff9f88
+scope.0.id=chunk:src/ui/input/modal_ports.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=9

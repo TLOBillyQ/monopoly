@@ -103,7 +103,7 @@ describe("presentation_item_slots", function()
   end)
 
   it("_test_item_slot_intents_include_outline_nodes", function()
-    local item_slot_intents = require("src.ui.input.canvas_route.item_slots")
+    local item_slot_intents = require("src.ui.input.route_item_slots")
     local state = {
       ui = {
         item_slots = ids.slots(1),
@@ -129,7 +129,7 @@ describe("presentation_item_slots", function()
   end)
 
   it("_test_item_phase_ask_confirm_clears_highlight_suppress", function()
-     local item_phase_ask_flow = require("src.ui.input.dispatch.item_phase_ask")
+     local item_phase_ask_flow = require("src.ui.input.item_phase_ask")
     local closed = 0
     local state = {
       _item_phase_ask_active = true,
@@ -169,7 +169,7 @@ describe("presentation_item_slots", function()
   end)
 
   it("_test_item_phase_ask_single_option_pre_confirm_dispatches_choice_select", function()
-     local item_phase_ask_flow = require("src.ui.input.dispatch.item_phase_ask")
+     local item_phase_ask_flow = require("src.ui.input.item_phase_ask")
     local dispatched = {}
     local closed = 0
     local state = {

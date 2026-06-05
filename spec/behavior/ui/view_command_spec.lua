@@ -1,4 +1,4 @@
-local view_command = require("src.ui.input.dispatch.view_command")
+local view_command = require("src.ui.input.view_command")
 
 describe("view_command_dispatcher", function()
   it("dispatch returns false with no state ports and nil intent", function()

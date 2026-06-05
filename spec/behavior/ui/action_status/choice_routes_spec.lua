@@ -6,7 +6,7 @@ local _bind_ui_runtime = P.bind_ui_runtime
 local modal_presenter = require("src.ui.coord.modal")
 local ui_choice_route_policy = require("src.config.choice.route_policy")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
-local pre_confirm_flow = require("src.ui.input.dispatch.pre_confirm")
+local pre_confirm_flow = require("src.ui.input.pre_confirm")
 local choice_openers = require("src.ui.coord.choice_openers")
 
 describe("presentation_choice_routes", function()

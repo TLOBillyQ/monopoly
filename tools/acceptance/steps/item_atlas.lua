@@ -1,8 +1,8 @@
 local number_utils = require("src.foundation.number")
 local item_atlas = require("src.ui.coord.item_atlas")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
-local view_command = require("src.ui.input.dispatch.view_command")
-local base_intents = require("src.ui.input.canvas_route.base")
+local view_command = require("src.ui.input.view_command")
+local base_intents = require("src.ui.input.route_base")
 local base_nodes = require("src.ui.schema.base")
 local ui_mock = require("tools.acceptance.support.ui_mock")
 

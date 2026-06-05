@@ -1,7 +1,7 @@
 local logger = require("src.foundation.log")
-local turn_action_port = require("src.ui.input.dispatch.turn_action_port")
-local game_action_dispatcher = require("src.ui.input.dispatch.game_action")
-local view_command_dispatcher = require("src.ui.input.dispatch.view_command")
+local turn_action_port = require("src.ui.input.turn_action")
+local game_action_dispatcher = require("src.ui.input.game_action")
+local view_command_dispatcher = require("src.ui.input.view_command")
 
 local intent_dispatcher = {}
 

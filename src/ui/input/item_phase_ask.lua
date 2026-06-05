@@ -1,6 +1,6 @@
 local choice_support = require("src.ui.view.choice_support")
 local runtime_state = require("src.ui.state.runtime")
-local modal_ports = require("src.ui.input.dispatch.modal_ports")
+local modal_ports = require("src.ui.input.modal_ports")
 
 local item_phase_ask_flow = {}
 
@@ -99,12 +99,12 @@ return item_phase_ask_flow
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=79bf69632c08cf7d
-scope.0.id=chunk:src/ui/input/dispatch/item_phase_ask.lua
+projectHash=44770739b5687995
+scope.0.id=chunk:src/ui/input/item_phase_ask.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=99
-scope.0.semanticHash=4f5d391cb62c1a29
+scope.0.semanticHash=af41a11a941d1add
 scope.1.id=function:_current_choice:9
 scope.1.kind=function
 scope.1.startLine=9
