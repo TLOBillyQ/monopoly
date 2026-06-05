@@ -325,6 +325,21 @@ commit hash: 0bbb111ceb7db12512fab66fd430435c54fbe3a2
 
 Action taken: re-read specifier role and constitution, confirmed the target commit exists on `swarmforge-architect`, merged the identified architect state into `dev`, and resolved the logbook conflict by preserving all role handoff records.
 
+## 2026-06-02 13:55:00 +0800 — sent handoffs (e2e-profile-lane complete)
+
+Complete handoff message sent (to coder, refactorer, and specifier):
+
+```text
+Re-read your role and constitution.
+sender role: architect
+specifier handoff name: e2e-profile-lane
+branch name: swarmforge-architect
+commit hash: 2b933a78d402790831bbc27fb182e35d09920068
+Apply your own role rules to this state.
+```
+
+Summary: e2e-profile-lane complete. Routed survivors closed (coder spec-only 1ff59c82, reviewed by refactorer): test_profile_resolver 100% (19/19), e2e_profile_lane 98.5% (64/65; the 1 remaining is an equivalent mutation — stay_turns>0→>1 with hospital_stay_turns fixed at 2, unreachable at the reducer's observe point). All 5 changed src carry honest manifests; data/wiring files structure-only. verify PASS 10/0/0; property 76/76; e2e lane pends off-Windows. Notifying coder+refactorer to converge branches and specifier that the job is complete.
+
 ## 2026-06-02 15:41:02 +0800 sent handoff to coder
 
 Complete handoff message sent:
@@ -353,3 +368,18 @@ commit hash: 2b933a78d402790831bbc27fb182e35d09920068
 ```
 
 Action taken: re-read specifier role and constitution, confirmed commit 2b933a78 reachable, merged the identified architect state into `dev` with --no-ff, and resolved the logbook conflict by taking the architect superset of role records plus the two specifier-only entries (e2e-profile-lane spec handoff + prior dev-merge note).
+
+## 2026-06-05 15:45:34 +0800 received handoff
+
+Complete handoff message received:
+
+```text
+Re-read your role and constitution.
+sender role: architect
+specifier handoff name: src-ui-architecture-flattening
+branch name: swarmforge-architect
+commit hash: 72c8b9398c77e5671542ba9259c61de98914338c
+Apply your own role rules to this state.
+```
+
+Action taken: re-read specifier role and constitution, confirmed commit 72c8b9398c77e5671542ba9259c61de98914338c is reachable on `swarmforge-architect`, merged the identified architect state into `dev`, and resolved the logbook conflict by preserving both dev and architect handoff records.

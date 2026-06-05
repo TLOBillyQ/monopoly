@@ -60,12 +60,11 @@ scripts/analysis/loc_data.json
 .worktrees/
 
 # swarm-forge runtime (local state, locally-created helper scripts, message logs)
-# NOTE: agent_context/ is intentionally NOT ignored — it is *shared* agent context
-# (constitution project.prompt) and must travel between role branches via git merge.
 .swarmforge/
 swarmtools/
 logs/*
 !logs/gherkin-survivors-*.txt
+agent_context/
 pending-messages/
 
 # Test artifacts (busted)
