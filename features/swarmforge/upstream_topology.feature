@@ -15,13 +15,11 @@
   并且 该角色在<启动目录>中启动
 
 例子:
-  | 角色      | 后端   | 工作树    | 提示文件                       | 会话                    | 启动目录              |
-  | specifier | codex  | master    | swarmforge/specifier.prompt    | swarmforge-specifier    | 主工作目录            |
-  | coder     | codex  | coder     | swarmforge/coder.prompt        | swarmforge-coder        | .worktrees/coder      |
-  | cleaner   | codex  | cleaner   | swarmforge/cleaner.prompt      | swarmforge-cleaner      | .worktrees/cleaner    |
-  | architect | codex  | architect | swarmforge/architect.prompt    | swarmforge-architect    | .worktrees/architect  |
-  | hardender | codex  | hardender | swarmforge/hardender.prompt    | swarmforge-hardender    | .worktrees/hardender  |
-  | QA        | codex  | QA        | swarmforge/QA.prompt           | swarmforge-QA           | .worktrees/QA         |
+  | 角色       | 后端   | 工作树     | 提示文件                              | 会话                    | 启动目录              |
+  | specifier  | codex  | master     | swarmforge/roles/specifier.prompt     | swarmforge-specifier    | 主工作目录            |
+  | coder      | codex  | coder      | swarmforge/roles/coder.prompt         | swarmforge-coder        | .worktrees/coder      |
+  | refactorer | codex  | refactorer | swarmforge/roles/refactorer.prompt    | swarmforge-refactorer   | .worktrees/refactorer |
+  | architect  | codex  | architect  | swarmforge/roles/architect.prompt     | swarmforge-architect    | .worktrees/architect  |
 
 # SwarmForge 上游拓扑一致性 002 任意角色由本地提示文件约束
 场景大纲: SwarmForge 上游拓扑一致性 002 任意角色由本地提示文件约束
@@ -31,10 +29,10 @@
   并且 角色集合不限制为固定内置角色
 
 例子:
-  | 角色        | 后端   | 工作树     | 提示文件                       |
-  | architect   | codex  | architect  | swarmforge/architect.prompt    |
-  | research    | grok   | research   | swarmforge/research.prompt     |
-  | release     | claude | release    | swarmforge/release.prompt      |
+  | 角色        | 后端   | 工作树     | 提示文件                         |
+  | architect   | codex  | architect  | swarmforge/roles/architect.prompt |
+  | research    | grok   | research   | swarmforge/roles/research.prompt  |
+  | release     | claude | release    | swarmforge/roles/release.prompt   |
 
 # SwarmForge 上游拓扑一致性 003 新目录首次启动会初始化仓库
 场景大纲: SwarmForge 上游拓扑一致性 003 新目录首次启动会初始化仓库
@@ -49,9 +47,6 @@
   | 本地运行路径    |
   | .swarmforge/    |
   | .worktrees/     |
-  | swarmtools/     |
-  | logs/           |
-  | agent_context/  |
 
 # SwarmForge 上游拓扑一致性 004 工作树只为命名工作树创建
 场景大纲: SwarmForge 上游拓扑一致性 004 工作树只为命名工作树创建
@@ -66,21 +61,21 @@
   | specifier   | master     | 不创建.worktrees/master     | 主工作目录            |
   | observer    | none       | 不创建.worktrees/none       | 主工作目录            |
 
-# SwarmForge 上游拓扑一致性 005 通知助手使用项目本地状态
-场景大纲: SwarmForge 上游拓扑一致性 005 通知助手使用项目本地状态
+# SwarmForge 上游拓扑一致性 005 handoff daemon 使用项目本地状态
+场景大纲: SwarmForge 上游拓扑一致性 005 handoff daemon 使用项目本地状态
   假如 SwarmForge 已为角色<目标角色>记录会话<目标会话>
   并且 handoff 消息保存在<消息文件>
   当 发送通知到<目标>
-  那么 notify-agent 从项目本地 tmux socket 发送消息
+  那么 handoff daemon 从项目本地 tmux socket 唤醒角色
   并且 消息内容来自<消息文件>
   并且 目标解析为<目标会话>
 
 例子:
-  | 目标角色 | 目标 | 目标会话             | 消息文件                  |
-  | coder    | coder | swarmforge-coder     | tmp/coder-handoff.txt     |
-  | coder    | 2     | swarmforge-coder     | tmp/coder-handoff.txt     |
-  | QA       | QA    | swarmforge-QA        | tmp/QA-handoff.txt        |
-  | QA       | 6     | swarmforge-QA        | tmp/QA-handoff.txt        |
+  | 目标角色  | 目标      | 目标会话              | 消息文件                   |
+  | coder     | coder     | swarmforge-coder      | tmp/coder-handoff.txt      |
+  | coder     | 2         | swarmforge-coder      | tmp/coder-handoff.txt      |
+  | architect | architect | swarmforge-architect  | tmp/architect-handoff.txt  |
+  | architect | 4         | swarmforge-architect  | tmp/architect-handoff.txt  |
 
 # SwarmForge 上游拓扑一致性 006 tmux 状态隔离并尊重索引设置
 场景大纲: SwarmForge 上游拓扑一致性 006 tmux 状态隔离并尊重索引设置
@@ -91,7 +86,7 @@
   并且 tmux 目标地址为<目标地址>
 
 例子:
-  | 项目路径      | 窗口索引 | pane索引 | 角色  | 目标地址                  |
-  | /repo/game    | 0        | 0        | coder | swarmforge-coder:0.0      |
-  | /repo/game    | 1        | 1        | coder | swarmforge-coder:1.1      |
-  | /repo/game    | 1        | 1        | QA    | swarmforge-QA:1.1         |
+  | 项目路径      | 窗口索引 | pane索引 | 角色       | 目标地址                    |
+  | /repo/game    | 0        | 0        | coder      | swarmforge-coder:0.0        |
+  | /repo/game    | 1        | 1        | coder      | swarmforge-coder:1.1        |
+  | /repo/game    | 1        | 1        | architect  | swarmforge-architect:1.1    |

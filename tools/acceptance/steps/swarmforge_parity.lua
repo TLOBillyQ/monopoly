@@ -6,10 +6,8 @@ local swarmforge_parity_steps = {}
 local ROLE_INDEXES = {
   specifier = 1,
   coder = 2,
-  cleaner = 3,
+  refactorer = 3,
   architect = 4,
-  hardender = 5,
-  QA = 6,
 }
 
 local function _bool(value)
@@ -174,6 +172,7 @@ function swarmforge_parity_steps.handlers()
         role = config.role,
         backend = config.backend,
         worktree = config.worktree,
+        receive_mode = config.receive_mode,
         prompt_exists = true,
       })
       if plan == nil then
@@ -205,6 +204,7 @@ function swarmforge_parity_steps.handlers()
         role = config.role,
         backend = config.backend,
         worktree = config.worktree,
+        receive_mode = config.receive_mode,
         prompt_exists = true,
       })
       if plan == nil then
@@ -298,10 +298,10 @@ function swarmforge_parity_steps.handlers()
     end,
 
     ["发送通知到<目标>"] = function(world, example)
-      local plan, err = parity.plan_notification({
+      local plan, err = parity.plan_handoff_delivery({
         sessions = world.swarmforge_parity.sessions,
         target = example["目标"],
-        message_file = world.swarmforge_parity.message_file,
+        draft_file = world.swarmforge_parity.message_file,
         tmux_socket = ".swarmforge/tmux-socket",
         window_index = world.swarmforge_parity.window_index or 0,
         pane_index = world.swarmforge_parity.pane_index or 0,
@@ -313,15 +313,15 @@ function swarmforge_parity_steps.handlers()
       return true
     end,
 
-    ["notify-agent 从项目本地 tmux socket 发送消息"] = function(world)
+    ["handoff daemon 从项目本地 tmux socket 唤醒角色"] = function(world)
       if world.swarmforge_parity.notification_plan.uses_project_local_socket ~= true then
-        return nil, "notify-agent did not use project local socket"
+        return nil, "handoff daemon did not use project local socket"
       end
       return true
     end,
 
     ["消息内容来自<消息文件>"] = function(world, example)
-      return _assert_equal(world.swarmforge_parity.notification_plan.message_file, example["消息文件"], "message file")
+      return _assert_equal(world.swarmforge_parity.notification_plan.draft_file, example["消息文件"], "message file")
     end,
 
     ["目标解析为<目标会话>"] = function(world, example)

@@ -67,6 +67,6 @@ Monopoly 专属的 step handlers、`game_driver.lua`、runner adapter、`run_acc
 
 ## SwarmForge 迁移边界
 
-SwarmForge 的可提交资产和本地运行状态必须分开。`swarmforge/` 存放角色 prompt、constitution 和 `swarmforge.conf`，属于可提交迁移资产。`swarmtools/notify-agent.sh` 由 SwarmForge 启动时生成，属于本地运行状态，不提交。
+SwarmForge 的可提交资产和本地运行状态必须分开。`swarmforge/` 存放 `roles/`、`constitution/` 和 `swarmforge.conf`，属于可提交迁移资产。`swarmforge/scripts/` 由 SwarmForge 启动时按上游 `main` 下载，属于本地运行状态，不提交。
 
-`.swarmforge/`、`.worktrees/`、`swarmtools/`、`agent_context/` 是本地运行状态，不应提交。`logs/` 默认本地（`logs/agent_messages.log` 等），但 architect 的跨周期 Gherkin survivor 基线（`logs/gherkin-survivors-*.txt`）通过 `.gitignore` 反向白名单可提交。交接消息必须按 `swarmforge/constitution/workflow.prompt` 的文件式 handoff 规则发送。
+`.swarmforge/`、`.worktrees/`、`swarmforge/scripts/`、`agent_context/` 是本地运行状态，不应提交。`logs/` 默认本地（`logs/agent_messages.log` 等），但 architect 的跨周期 Gherkin survivor 基线（`logs/gherkin-survivors-*.txt`）通过 `.gitignore` 反向白名单可提交。交接消息必须按 `swarmforge/constitution/articles/handoffs.prompt` 的 daemon handoff 规则发送。

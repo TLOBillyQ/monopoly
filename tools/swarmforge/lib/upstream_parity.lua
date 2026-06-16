@@ -91,7 +91,8 @@ function M.plan_role(opts)
   opts = opts or {}
   local role = tostring(opts.role or "")
   local worktree = tostring(opts.worktree or "none")
-  local prompt_file = "swarmforge/" .. role .. ".prompt"
+  local receive_mode = tostring(opts.receive_mode or "task")
+  local prompt_file = "swarmforge/roles/" .. role .. ".prompt"
 
   if opts.prompt_exists == false then
     return nil, "missing role prompt " .. prompt_file
@@ -101,6 +102,7 @@ function M.plan_role(opts)
     role = role,
     backend = opts.backend,
     worktree = worktree,
+    receive_mode = receive_mode,
     prompt_file = prompt_file,
     session = _session_name(role),
     startup_dir = _main_dir_for_worktree(worktree),
@@ -158,6 +160,24 @@ function M.plan_notification(opts)
     message_file = opts.message_file,
     tmux_socket = opts.tmux_socket,
     uses_project_local_socket = opts.tmux_socket ~= nil and tostring(opts.tmux_socket) ~= "",
+  }
+end
+
+function M.plan_handoff_delivery(opts)
+  opts = opts or {}
+  local notification, err = M.plan_notification(opts)
+  if notification == nil then
+    return nil, err
+  end
+
+  return {
+    daemon_owns_tmux_socket = true,
+    draft_file = opts.draft_file,
+    inbox_state_dir = ".swarmforge/handoffs",
+    target_session = notification.target_session,
+    target_address = notification.target_address,
+    tmux_socket = notification.tmux_socket,
+    uses_project_local_socket = notification.uses_project_local_socket,
   }
 end
 

@@ -86,7 +86,8 @@ describe("swarmforge upstream parity", function()
       role = "coder",
       backend = "codex",
       worktree = "coder",
-      prompt_file = "swarmforge/coder.prompt",
+      receive_mode = "task",
+      prompt_file = "swarmforge/roles/coder.prompt",
       session = "swarmforge-coder",
       startup_dir = ".worktrees/coder",
       reads_layered_constitution = true,
@@ -104,18 +105,16 @@ describe("swarmforge upstream parity", function()
       worktree = "research",
       prompt_exists = true,
     })
-    assert.are.equal("swarmforge/research.prompt", research.prompt_file)
+    assert.are.equal("swarmforge/roles/research.prompt", research.prompt_file)
     assert.is_true(research.allows_custom_role)
   end)
 
-  it("models the six-pack starter topology", function()
+  it("models the four-pack starter topology", function()
     local roles = {
       { role = "specifier", worktree = "master", startup_dir = "主工作目录" },
       { role = "coder", worktree = "coder", startup_dir = ".worktrees/coder" },
-      { role = "cleaner", worktree = "cleaner", startup_dir = ".worktrees/cleaner" },
-      { role = "architect", worktree = "architect", startup_dir = ".worktrees/architect" },
-      { role = "hardender", worktree = "hardender", startup_dir = ".worktrees/hardender" },
-      { role = "QA", worktree = "QA", startup_dir = ".worktrees/QA" },
+      { role = "refactorer", worktree = "refactorer", startup_dir = ".worktrees/refactorer" },
+      { role = "architect", worktree = "architect", startup_dir = ".worktrees/architect", receive_mode = "batch" },
     }
 
     for _, expected in ipairs(roles) do
@@ -123,24 +122,26 @@ describe("swarmforge upstream parity", function()
         role = expected.role,
         backend = "codex",
         worktree = expected.worktree,
+        receive_mode = expected.receive_mode,
         prompt_exists = true,
       })
 
-      assert.are.equal("swarmforge/" .. expected.role .. ".prompt", plan.prompt_file)
+      assert.are.equal("swarmforge/roles/" .. expected.role .. ".prompt", plan.prompt_file)
       assert.are.equal("swarmforge-" .. expected.role, plan.session)
       assert.are.equal(expected.startup_dir, plan.startup_dir)
+      assert.are.equal(expected.receive_mode or "task", plan.receive_mode)
     end
   end)
 
   it("plans first startup repository initialization", function()
     local plan = parity.plan_initial_repository({
       is_git_repo = false,
-      local_paths = { ".swarmforge/", ".worktrees/", "swarmtools/" },
+      local_paths = { ".swarmforge/", ".worktrees/" },
     })
     assert.is_true(plan.init_git_repo)
     assert.are.equal("master", plan.initial_branch)
     assert.is_true(plan.create_initial_commit)
-    assert.are.same({ ".swarmforge/", ".worktrees/", "swarmtools/" }, plan.gitignore_paths)
+    assert.are.same({ ".swarmforge/", ".worktrees/" }, plan.gitignore_paths)
   end)
 
   it("creates worktrees only for named worktree roles", function()
@@ -160,65 +161,67 @@ describe("swarmforge upstream parity", function()
     }, parity.plan_worktree("none"))
   end)
 
-  it("uses project-local tmux state for notification targets", function()
-    local plan = parity.plan_notification({
+  it("uses daemon-owned project-local tmux state for handoff wakeups", function()
+    local plan = parity.plan_handoff_delivery({
       sessions = {
         { index = 1, role = "specifier", session = "swarmforge-specifier" },
         { index = 2, role = "coder", session = "swarmforge-coder" },
       },
       target = "2",
-      message_file = "tmp/coder-handoff.txt",
+      draft_file = "tmp/coder-handoff.txt",
       tmux_socket = ".swarmforge/tmux.sock",
       window_index = 1,
       pane_index = 1,
     })
 
+    assert.is_true(plan.daemon_owns_tmux_socket)
     assert.are.equal("swarmforge-coder", plan.target_session)
     assert.are.equal("swarmforge-coder:1.1", plan.target_address)
-    assert.are.equal("tmp/coder-handoff.txt", plan.message_file)
+    assert.are.equal("tmp/coder-handoff.txt", plan.draft_file)
+    assert.are.equal(".swarmforge/handoffs", plan.inbox_state_dir)
     assert.are.equal(".swarmforge/tmux.sock", plan.tmux_socket)
     assert.is_true(plan.uses_project_local_socket)
   end)
 
-  it("resolves six-pack notification targets by role and index", function()
+  it("resolves four-pack handoff wakeup targets by role and index", function()
     local sessions = {
       { index = 1, role = "specifier", session = "swarmforge-specifier" },
       { index = 2, role = "coder", session = "swarmforge-coder" },
-      { index = 3, role = "cleaner", session = "swarmforge-cleaner" },
+      { index = 3, role = "refactorer", session = "swarmforge-refactorer" },
       { index = 4, role = "architect", session = "swarmforge-architect" },
-      { index = 5, role = "hardender", session = "swarmforge-hardender" },
-      { index = 6, role = "QA", session = "swarmforge-QA" },
     }
 
     local by_role = parity.plan_notification({
       sessions = sessions,
-      target = "QA",
-      message_file = "tmp/QA-handoff.txt",
+      target = "architect",
+      message_file = "tmp/architect-handoff.txt",
       tmux_socket = ".swarmforge/tmux.sock",
       window_index = 1,
       pane_index = 1,
     })
-    assert.are.equal("swarmforge-QA", by_role.target_session)
-    assert.are.equal("swarmforge-QA:1.1", by_role.target_address)
+    assert.are.equal("swarmforge-architect", by_role.target_session)
+    assert.are.equal("swarmforge-architect:1.1", by_role.target_address)
 
     local by_index = parity.plan_notification({
       sessions = sessions,
-      target = "6",
-      message_file = "tmp/QA-handoff.txt",
+      target = "4",
+      message_file = "tmp/architect-handoff.txt",
       tmux_socket = ".swarmforge/tmux.sock",
       window_index = 1,
       pane_index = 1,
     })
-    assert.are.equal("swarmforge-QA", by_index.target_session)
+    assert.are.equal("swarmforge-architect", by_index.target_session)
   end)
 
-  it("keeps QA completion handoffs from blocking specifier closure", function()
-    local workflow = read_file("swarmforge/constitution/workflow.prompt")
-    local specifier = read_file("swarmforge/specifier.prompt")
-    local qa = read_file("swarmforge/QA.prompt")
+  it("uses four-pack daemon handoffs and architect batch mode", function()
+    local config = read_file("swarmforge/swarmforge.conf")
+    local handoffs = read_file("swarmforge/constitution/articles/handoffs.prompt")
+    local specifier = read_file("swarmforge/roles/specifier.prompt")
+    local architect = read_file("swarmforge/roles/architect.prompt")
 
-    assert.truthy(workflow:find("other than the specifier receives a QA completion handoff", 1, true))
-    assert.truthy(specifier:find("When QA notifies you that the job is complete", 1, true))
-    assert.truthy(qa:find("notify the specifier, coder, cleaner, architect, and hardender", 1, true))
+    assert.truthy(config:find("window architect codex architect batch", 1, true))
+    assert.truthy(handoffs:find("swarm_handoff.sh <draft-file>", 1, true))
+    assert.truthy(specifier:find("When the architect notifies you that the job is complete", 1, true))
+    assert.truthy(architect:find("If `ready_for_next.sh` prints `BATCH`", 1, true))
   end)
 end)

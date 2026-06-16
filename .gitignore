@@ -59,8 +59,9 @@ scripts/analysis/loc_data.json
 .sisyphus
 .worktrees/
 
-# swarm-forge runtime (local state, locally-created helper scripts, message logs)
+# swarm-forge runtime (local state, downloaded helper scripts, message logs)
 .swarmforge/
+swarmforge/scripts/
 swarmtools/
 logs/*
 !logs/gherkin-survivors-*.txt
