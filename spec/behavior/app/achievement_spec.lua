@@ -1,0 +1,41 @@
+local support = require("spec.support.shared_support")
+local _assert_eq = support.assert_eq
+local achievement = require("src.app.host_integrations.achievement")
+
+describe("achievement catalog", function()
+  it("exposes the full editor achievement catalog", function()
+    _assert_eq(achievement.count(), 45, "achievement count")
+    _assert_eq(achievement.ids_are_contiguous(1, 45), true, "achievement ids should be contiguous")
+
+    local counts = achievement.category_counts()
+    _assert_eq(counts["简单"], 11, "simple achievement count")
+    _assert_eq(counts["普通"], 6, "normal achievement count")
+    _assert_eq(counts["困难"], 8, "hard achievement count")
+    _assert_eq(counts["传奇"], 12, "legend achievement count")
+    _assert_eq(counts["隐藏"], 8, "hidden achievement count")
+  end)
+
+  it("finds achievements by editor id", function()
+    local first = achievement.find(1)
+    assert(first ~= nil, "achievement 1 should exist")
+    _assert_eq(first.name, "最强大富翁I", "achievement 1 name")
+    _assert_eq(first.category, "简单", "achievement 1 category")
+    _assert_eq(first.condition, "获得1场游戏的胜利", "achievement 1 condition")
+    _assert_eq(first.target_progress, 1, "achievement 1 target progress")
+
+    local hidden = achievement.find("40")
+    assert(hidden ~= nil, "achievement 40 should exist")
+    _assert_eq(hidden.name, "小猪佩奇！", "achievement 40 name")
+    _assert_eq(hidden.category, "传奇", "achievement 40 category")
+    _assert_eq(hidden.condition, "使用小猪佩奇皮肤1次", "achievement 40 condition")
+    _assert_eq(hidden.target_progress, 1, "achievement 40 target progress")
+
+    _assert_eq(achievement.find(0), nil, "unknown achievement should not resolve")
+  end)
+
+  it("keeps progress host-owned until host APIs are connected", function()
+    _assert_eq(achievement.host_pending, true, "achievement integration should be host pending")
+    _assert_eq(achievement.add_progress(1, 1), false, "Lua should not fake achievement progress")
+    _assert_eq(next(achievement.snapshot()), nil, "achievement snapshot should stay empty")
+  end)
+end)

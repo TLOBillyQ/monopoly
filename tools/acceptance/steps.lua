@@ -27,6 +27,7 @@ local leaderboard_steps = require("acceptance.steps.leaderboard")
 local sign_in_steps = require("acceptance.steps.sign_in")
 local setup_steps = require("acceptance.steps.setup")
 local share_task_steps = require("acceptance.steps.share_task")
+local achievements_steps = require("acceptance.steps.achievements")
 local swarmforge_parity_steps = require("acceptance.steps.swarmforge_parity")
 
 local steps = {}
@@ -662,6 +663,7 @@ function steps.handlers()
   _merge_handlers(h, sign_in_steps.handlers(), "sign_in")
   _merge_handlers(h, setup_steps.handlers(), "setup")
   _merge_handlers(h, share_task_steps.handlers(), "share_task")
+  _merge_handlers(h, achievements_steps.handlers(), "achievements")
   _merge_handlers(h, swarmforge_parity_steps.handlers(), "swarmforge_parity")
   return h
 end
