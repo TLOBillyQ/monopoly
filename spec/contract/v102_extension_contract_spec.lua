@@ -182,7 +182,7 @@ describe("v102_extension_contract", function()
 
   it("host_integrations_are_explicit_noops", function()
     local integrations = require("src.app.host_integrations")
-    local names = { "fan_club", "gift", "achievement" }
+    local names = { "fan_club", "gift" }
 
     for _, name in ipairs(names) do
       local module = integrations[name]
@@ -190,6 +190,16 @@ describe("v102_extension_contract", function()
       _assert_eq(module.host_pending, true, name .. " should be marked as host pending")
     end
     _assert_eq(integrations.fan_club.starting_cash_bonus(), 0, "fan club should not change cash before host integration")
+  end)
+
+  it("achievement_integration_is_implemented", function()
+    local achievement = require("src.app.host_integrations.achievement")
+
+    assert(achievement.host_pending ~= true, "achievement should no longer be a host-pending noop")
+    _assert_eq(type(achievement.record_gameplay_event), "function", "achievement should expose gameplay event routing")
+    _assert_eq(type(achievement.add_progress), "function", "achievement should expose progress routing")
+    _assert_eq(type(achievement.current_progress), "function", "achievement should expose host progress reads")
+    _assert_eq(achievement.mapped_ids_for_event("游戏胜利")[1], 1, "win event should map to the win achievements")
   end)
 
   it("share_task_integration_is_host_managed", function()
@@ -227,7 +237,6 @@ describe("v102_extension_contract", function()
     local paths = {
       "src/app/host_integrations/fan_club.lua",
       "src/app/host_integrations/gift.lua",
-      "src/app/host_integrations/achievement.lua",
     }
 
     for _, path in ipairs(paths) do
