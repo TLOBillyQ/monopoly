@@ -284,6 +284,21 @@ function achievements_steps.handlers()
       return true
     end,
 
+    ["玩家成就编号1当前进度为2"] = function(world)
+      _set_progress_for_ids(world, { 1 }, 2)
+      return true
+    end,
+
+    ["玩家成就编号25当前进度为1"] = function(world)
+      _set_progress_for_ids(world, { 25 }, 1)
+      return true
+    end,
+
+    ["玩家成就编号40当前进度为0"] = function(world)
+      _set_progress_for_ids(world, { 40 }, 0)
+      return true
+    end,
+
     ["玩家完成<玩法事件>，事件数值为<事件数值>"] = function(world, example)
       local value, err = _to_integer(example, "事件数值")
       if value == nil then
@@ -295,6 +310,21 @@ function achievements_steps.handlers()
 
     ["玩家完成<玩法事件>"] = function(world, example)
       world.achievement_event_result = achievement.record_gameplay_event(example["玩法事件"])
+      return true
+    end,
+
+    ["玩家完成未映射事件"] = function(world)
+      world.achievement_event_result = achievement.record_gameplay_event("未映射事件")
+      return true
+    end,
+
+    ["玩家完成黑市购买失败"] = function(world)
+      world.achievement_event_result = achievement.record_gameplay_event("黑市购买失败")
+      return true
+    end,
+
+    ["玩家完成皮肤装备失败"] = function(world)
+      world.achievement_event_result = achievement.record_gameplay_event("皮肤装备失败")
       return true
     end,
 
@@ -330,6 +360,18 @@ function achievements_steps.handlers()
       return _assert_added_for_ids(world, { id }, 0)
     end,
 
+    ["玩家成就编号1没有增加进度"] = function(world)
+      return _assert_added_for_ids(world, { 1 }, 0)
+    end,
+
+    ["玩家成就编号25没有增加进度"] = function(world)
+      return _assert_added_for_ids(world, { 25 }, 0)
+    end,
+
+    ["玩家成就编号40没有增加进度"] = function(world)
+      return _assert_added_for_ids(world, { 40 }, 0)
+    end,
+
     ["玩家成就编号<成就编号列表>当前进度均为<之后进度>"] = function(world, example)
       local ids, ids_err = _to_id_list(example, "成就编号列表")
       if ids == nil then
@@ -352,6 +394,18 @@ function achievements_steps.handlers()
         return nil, expected_err
       end
       return _assert_progress_for_ids(world, { id }, expected)
+    end,
+
+    ["玩家成就编号1当前进度仍为2"] = function(world)
+      return _assert_progress_for_ids(world, { 1 }, 2)
+    end,
+
+    ["玩家成就编号25当前进度仍为1"] = function(world)
+      return _assert_progress_for_ids(world, { 25 }, 1)
+    end,
+
+    ["玩家成就编号40当前进度仍为0"] = function(world)
+      return _assert_progress_for_ids(world, { 40 }, 0)
     end,
   }
 end

@@ -1,4 +1,82 @@
 # language: zh-CN
+# mutation-stamp: sha256=d24d9a2688ae2a65a075b05268bd3a6cd81af1701dd2f21b1fd2387c68d2a969
+# acceptance-mutation-manifest-begin
+# {
+#   "background_hash": "1ea7a313797c0ba629204430ac0a2d468e2baff2ecf68e279e58d33bbb029f58",
+#   "feature_name": "成就进度接入",
+#   "feature_path": "features/v102/achievement_progress.feature",
+#   "implementation_hash": "sha256:03569b525693da366f6970eb22bb45d2d963dfe375ea1a1e2fc8d8e324e664a4",
+#   "scenarios": [
+#     {
+#       "index": 0,
+#       "mutation_count": 42,
+#       "name": "成就进度接入 P01 累计型玩法事件推进对应成就组",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 42,
+#         "Survived": 0,
+#         "Total": 42
+#       },
+#       "scenario_hash": "c6548878db5658028e4f6b464067fd0d69d52f1d877fb6537b0415cb6f989d8d",
+#       "tested_at": "2026-06-20T07:45:03Z"
+#     },
+#     {
+#       "index": 1,
+#       "mutation_count": 85,
+#       "name": "成就进度接入 P02 单次玩法事件推进对应隐藏和皮肤成就",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 85,
+#         "Survived": 0,
+#         "Total": 85
+#       },
+#       "scenario_hash": "20ba4da61cc826df2745258e4e949b1925a6a94204b9a166d2edd38c87aecb83",
+#       "tested_at": "2026-06-20T07:45:06Z"
+#     },
+#     {
+#       "index": 2,
+#       "mutation_count": 0,
+#       "name": "成就进度接入 P03 不可识别玩法事件不推进成就",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "40074fa9ef775a8b635032d6a4d760bb951987e97671aa1267db8390c7e9b532",
+#       "tested_at": "2026-06-20T07:45:06Z"
+#     },
+#     {
+#       "index": 3,
+#       "mutation_count": 0,
+#       "name": "成就进度接入 P03 黑市购买失败不推进成就",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "aa1c54a15fef57b7a2d21f320f8dc706b44fd4cebb76afeb32a4a033db552e30",
+#       "tested_at": "2026-06-20T07:45:06Z"
+#     },
+#     {
+#       "index": 4,
+#       "mutation_count": 0,
+#       "name": "成就进度接入 P03 皮肤装备失败不推进成就",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "d9f78c8776250d73598482af1da5f989a4f47bdcaab835b3604d5be15c46bd3c",
+#       "tested_at": "2026-06-20T07:45:06Z"
+#     }
+#   ],
+#   "tested_at": "2026-06-20T07:45:06Z",
+#   "version": 1
+# }
+# acceptance-mutation-manifest-end
 
 功能: 成就进度接入
 
@@ -54,14 +132,20 @@
   | 使用水豚嘟嘟皮肤     | 45       | 0        | 1        | 1        |
 
 # 成就进度接入 P03
-场景大纲: 成就进度接入 P03 不可识别或失败的玩法事件不推进成就
-  假如 玩家成就编号<成就编号>当前进度为<之前进度>
-  当 玩家完成<玩法事件>
-  那么 玩家成就编号<成就编号>没有增加进度
-  并且 玩家成就编号<成就编号>当前进度为<之后进度>
+场景: 成就进度接入 P03 不可识别玩法事件不推进成就
+  假如 玩家成就编号1当前进度为2
+  当 玩家完成未映射事件
+  那么 玩家成就编号1没有增加进度
+  并且 玩家成就编号1当前进度仍为2
 
-例子:
-  | 玩法事件       | 成就编号 | 之前进度 | 之后进度 |
-  | 未映射事件     | 1        | 2        | 2        |
-  | 黑市购买失败   | 25       | 1        | 1        |
-  | 皮肤装备失败   | 40       | 0        | 0        |
+场景: 成就进度接入 P03 黑市购买失败不推进成就
+  假如 玩家成就编号25当前进度为1
+  当 玩家完成黑市购买失败
+  那么 玩家成就编号25没有增加进度
+  并且 玩家成就编号25当前进度仍为1
+
+场景: 成就进度接入 P03 皮肤装备失败不推进成就
+  假如 玩家成就编号40当前进度为0
+  当 玩家完成皮肤装备失败
+  那么 玩家成就编号40没有增加进度
+  并且 玩家成就编号40当前进度仍为0

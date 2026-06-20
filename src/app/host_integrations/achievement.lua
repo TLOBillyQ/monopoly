@@ -57,7 +57,7 @@ end
 local function _id_range(start_id, end_id)
   local first_id = number_utils.to_integer(start_id)
   local last_id = number_utils.to_integer(end_id)
-  if first_id == nil or last_id == nil or last_id < first_id then
+  if first_id == nil or last_id == nil then
     return nil, nil
   end
   return first_id, last_id

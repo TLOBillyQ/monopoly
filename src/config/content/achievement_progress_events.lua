@@ -24,3 +24,18 @@ return {
   ["使用奶龙皮肤"] = { ids = { 44 }, default_amount = 1 },
   ["使用水豚嘟嘟皮肤"] = { ids = { 45 }, default_amount = 1 },
 }
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=934bbff83374f51d
+scope.0.id=chunk:src/config/content/achievement_progress_events.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=27
+scope.0.semanticHash=551033401d50462d
+scope.0.lastMutatedAt=2026-06-20T07:41:06Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=49
+scope.0.lastMutationKilled=49
+]]
