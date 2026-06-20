@@ -1,32 +1,14 @@
 local property = require("spec.support.property")
 local achievement = require("src.app.host_integrations.achievement")
+local event_progress = require("src.config.content.achievement_progress_events")
 
-local EVENTS = {
-  { name = "游戏胜利", amount = 1 },
-  { name = "买下地块", amount = 1 },
-  { name = "收取金币", amount = 500 },
-  { name = "支付税金", amount = 3000 },
-  { name = "使用道具卡", amount = 1 },
-  { name = "抽到机会卡", amount = 1 },
-  { name = "黑市购买道具", amount = 1 },
-  { name = "加盖1级建筑" },
-  { name = "加盖2级建筑" },
-  { name = "加盖3级建筑" },
-  { name = "被福神附身" },
-  { name = "被财神附身" },
-  { name = "被穷神附身" },
-  { name = "被送进医院" },
-  { name = "被送进深山" },
-  { name = "获得三个连续地块" },
-  { name = "被怪兽拆除房屋" },
-  { name = "被台风拆除房屋" },
-  { name = "使用小猪佩奇皮肤" },
-  { name = "使用小猪乔治皮肤" },
-  { name = "使用海绵宝宝皮肤" },
-  { name = "使用派大星皮肤" },
-  { name = "使用奶龙皮肤" },
-  { name = "使用水豚嘟嘟皮肤" },
-}
+local EVENTS = {}
+for name, mapped in pairs(event_progress) do
+  EVENTS[#EVENTS + 1] = { name = name, default_amount = mapped.default_amount }
+end
+table.sort(EVENTS, function(left, right)
+  return left.name < right.name
+end)
 
 local function _assert_eq(actual, expected, message)
   assert(actual == expected, (message or "assertion failed")
@@ -85,7 +67,7 @@ describe("achievement progress properties", function()
     end)
   end)
 
-  it("gameplay event routing adds exactly one event delta to every mapped achievement", function()
+  it("gameplay event routing adds exactly one explicit event delta to every mapped achievement", function()
     property.for_all(function(rng)
       local event = rng:pick(EVENTS)
       return {
@@ -97,21 +79,47 @@ describe("achievement progress properties", function()
       local progress = {}
       local added = {}
       local ids = achievement.mapped_ids_for_event(case.event.name)
-      local amount = case.event.amount or case.generated_amount
       for _, id in ipairs(ids) do
         progress[id] = case.base_progress
       end
 
       achievement.configure_progress_adapter(_progress_adapter(progress, added))
 
-      local event_value = case.event.amount and case.event.amount or amount
-      _assert_eq(achievement.record_gameplay_event(case.event.name, event_value), true,
+      _assert_eq(achievement.record_gameplay_event(case.event.name, case.generated_amount), true,
         "known event should route progress")
 
       for _, id in ipairs(ids) do
-        _assert_eq(added[id], amount, "event should add exactly one delta")
-        _assert_eq(achievement.current_progress(id), case.base_progress + amount,
+        _assert_eq(added[id], case.generated_amount, "event should add exactly one delta")
+        _assert_eq(achievement.current_progress(id), case.base_progress + case.generated_amount,
           "current progress should include exactly one delta")
+      end
+    end)
+  end)
+
+  it("gameplay event routing uses the configured default when no event value is supplied", function()
+    property.for_all(function(rng)
+      local event = rng:pick(EVENTS)
+      return {
+        event = event,
+        base_progress = rng:int(0, 100000),
+      }
+    end, function(case)
+      local progress = {}
+      local added = {}
+      local ids = achievement.mapped_ids_for_event(case.event.name)
+      for _, id in ipairs(ids) do
+        progress[id] = case.base_progress
+      end
+
+      achievement.configure_progress_adapter(_progress_adapter(progress, added))
+
+      _assert_eq(achievement.record_gameplay_event(case.event.name), true,
+        "known event should route default progress")
+
+      for _, id in ipairs(ids) do
+        _assert_eq(added[id], case.event.default_amount, "event should add the configured default")
+        _assert_eq(achievement.current_progress(id), case.base_progress + case.event.default_amount,
+          "current progress should include the configured default")
       end
     end)
   end)
