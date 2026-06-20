@@ -6,6 +6,7 @@ local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 
 local events = {}
 
@@ -68,6 +69,7 @@ local function _emit_pass_start_reward(ctx)
     bonus = bonus * 2
   end
   ctx.game:add_player_cash(ctx.player, bonus)
+  achievement_progress.cash_received(ctx.game, ctx.player, bonus)
   local turn_count = (ctx.game and ctx.game.turn and ctx.game.turn.turn_count) or 0
   _emit_text(ctx.game, monopoly_event.movement.passed_start, event_kinds.passed_start, {
     player = ctx.player,

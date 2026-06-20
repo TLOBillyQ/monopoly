@@ -1,11 +1,14 @@
 local support = require("spec.support.shared_support")
 local _assert_eq = support.assert_eq
 local achievement = require("src.app.host_integrations.achievement")
+local achievement_runtime = require("src.app.host_integrations.achievement_runtime")
+local achievement_progress_port = require("src.rules.ports.achievement_progress")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 describe("achievement catalog", function()
   after_each(function()
     achievement.reset_for_tests()
+    achievement_progress_port.reset_for_tests()
     runtime_ports.reset_for_tests()
   end)
 
@@ -208,5 +211,77 @@ describe("achievement catalog", function()
   it("rejects progress when no host adapter is available", function()
     _assert_eq(achievement.add_progress(1, 1), false, "Lua should not fake achievement progress")
     _assert_eq(next(achievement.snapshot()), nil, "achievement snapshot should stay empty")
+  end)
+
+  it("routes runtime gameplay events to the matching host role", function()
+    local calls = {}
+    local role = {
+      add_achievement_progress = function(id, amount)
+        calls[#calls + 1] = { id = id, amount = amount }
+        return true
+      end,
+    }
+    runtime_ports.configure({
+      resolve_role = function(player_id)
+        if player_id == 2 then
+          return role
+        end
+        return nil
+      end,
+    })
+    achievement_progress_port.configure(achievement_runtime.build_port())
+
+    _assert_eq(achievement_progress_port.cash_received(nil, { id = 2 }, 500), true,
+      "runtime cash event should advance the matched role")
+    _assert_eq(#calls, 4, "cash event should fan out to four achievements")
+    _assert_eq(calls[1].id, 9, "cash achievement id")
+    _assert_eq(calls[1].amount, 500, "cash achievement amount")
+  end)
+
+  it("does not fall back to another role for player-specific runtime events", function()
+    local calls = 0
+    runtime_ports.configure({
+      resolve_roles = function()
+        return {
+          {
+            add_achievement_progress = function()
+              calls = calls + 1
+              return true
+            end,
+          },
+        }
+      end,
+      resolve_role = function()
+        return nil
+      end,
+    })
+    achievement_progress_port.configure(achievement_runtime.build_port())
+
+    _assert_eq(achievement_progress_port.item_used(nil, { id = 99 }), false,
+      "unresolved player event should not advance another role")
+    _assert_eq(calls, 0, "fallback role should not receive player-specific progress")
+  end)
+
+  it("maps runtime skin equips by configured skin name", function()
+    local calls = {}
+    local role = {
+      add_achievement_progress = function(id, amount)
+        calls[#calls + 1] = { id = id, amount = amount }
+        return true
+      end,
+    }
+    runtime_ports.configure({
+      resolve_role = function(player_id)
+        if player_id == 7 then return role end
+        return nil
+      end,
+    })
+    achievement_progress_port.configure(achievement_runtime.build_port())
+
+    _assert_eq(achievement_progress_port.skin_equipped(nil, 7, { name = "小猪佩奇" }), true,
+      "skin equip should map by skin name")
+    _assert_eq(#calls, 1, "skin equip should update one achievement")
+    _assert_eq(calls[1].id, 40, "peppa skin achievement id")
+    _assert_eq(calls[1].amount, 1, "skin equip amount")
   end)
 end)

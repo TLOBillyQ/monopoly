@@ -5,6 +5,7 @@ local intent_output_port = require("src.rules.ports.intent_output")
 local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local demolish = require("src.rules.items.demolish")
 local item_use_broadcast = require("src.rules.items.use_broadcast")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local logger = require("src.foundation.log")
 local roadblock = require("src.rules.items.roadblock")
 local remote_dice = require("src.rules.items.remote_dice")
@@ -305,6 +306,7 @@ local function _build_demolish_handlers(helpers)
       item_id = meta.item_id,
     })
     if result then
+      achievement_progress.item_used(game, player)
       item_use_broadcast.dispatch(game, player, meta.item_id)
     end
     local intent = result.intent or {}
@@ -331,6 +333,7 @@ local function _build_roadblock_handlers(helpers)
     normalize.consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     local result = roadblock.apply(game, player, index)
     if result then
+      achievement_progress.item_used(game, player)
       item_use_broadcast.dispatch(game, player, meta.item_id)
       intent_output_port.dispatch(game, result)
     end
@@ -378,6 +381,7 @@ local function _build_remote_dice_handlers(helpers)
     normalize.consume_if_needed(player, meta.item_id, meta.item_preconsumed)
     local result = remote_dice.apply(game, player, dice_count, value)
     if result then
+      achievement_progress.item_used(game, player)
       item_use_broadcast.dispatch(game, player, meta.item_id)
     end
     return complete.followup_completion(game, choice, player, result)

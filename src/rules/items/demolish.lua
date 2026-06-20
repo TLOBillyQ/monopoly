@@ -7,6 +7,7 @@ local timing = require("src.config.gameplay.timing")
 local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local number_utils = require("src.foundation.number")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local target_query = require("src.rules.items.target_query")
 local angel_feedback = require("src.rules.items.angel_feedback")
 
@@ -22,15 +23,15 @@ local function _try_destroy_building(game, tile, idx, item_id)
   local st = tile_state(game, tile)
   if not st.owner_id or (st.level or 0) <= 0 then
     game:set_tile_level(tile, 0)
-    return true
+    return true, nil
   end
   local owner = game:find_player_by_id(st.owner_id)
   if owner and game:angel_immune_to_item(owner, item_id) then
     angel_feedback.publish(game, owner, "建筑摧毁", { tile_index = idx })
-    return false
+    return false, nil
   end
   game:set_tile_level(tile, 0)
-  return true
+  return true, owner
 end
 
 local function _collect_hospital_targets(game, idx, item_id)
@@ -146,8 +147,9 @@ local function _apply_demolish_effects(game, idx, opts)
   game:clear_all_overlays(idx)
   local tile = assert(game.board:get_tile(idx), "missing tile: " .. tostring(idx))
   local destroyed = false
+  local destroyed_owner = nil
   if tile.type == "land" then
-    destroyed = _try_destroy_building(game, tile, idx, opts.item_id)
+    destroyed, destroyed_owner = _try_destroy_building(game, tile, idx, opts.item_id)
   end
   local hospital_targets = nil
   local hit = 0
@@ -155,7 +157,7 @@ local function _apply_demolish_effects(game, idx, opts)
     hospital_targets = _collect_hospital_targets(game, idx, opts.item_id)
     hit = #hospital_targets
   end
-  return tile, destroyed, hospital_targets, hit
+  return tile, destroyed, destroyed_owner, hospital_targets, hit
 end
 
 local function _queue_demolish_anim(game, player, idx, opts, kind, hospital_targets)
@@ -186,11 +188,14 @@ end
 
 function demolish.apply(game, player, idx, opts)
   opts = opts or {}
-  local tile, destroyed, hospital_targets, hit = _apply_demolish_effects(game, idx, opts)
+  local tile, destroyed, destroyed_owner, hospital_targets, hit = _apply_demolish_effects(game, idx, opts)
   local fully_blocked = (not destroyed) and (not opts.injure or hit == 0)
   local msg, kind = _build_demolish_msg(player, tile, opts.injure, destroyed, hit)
   local log_entries = { msg }
   local queued = _queue_demolish_anim(game, player, idx, opts, kind, hospital_targets)
+  if destroyed_owner and kind == "monster" then
+    achievement_progress.monster_demolished_building(game, destroyed_owner)
+  end
   if opts.injure and hit > 0 then
     return _handle_injure_result(game, player, idx, kind, hospital_targets, hit, queued, msg, log_entries)
   end

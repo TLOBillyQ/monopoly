@@ -6,6 +6,7 @@ local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local paid_purchase_gateway = require("src.rules.ports.paid_purchase")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local market_query = require("src.rules.market.query")
 local market_choice = require("src.rules.market.choice")
 
@@ -86,6 +87,7 @@ local function _fulfill_item(game, player, entry, opts)
     currency = opts.currency,
     text = _success_text(player, entry, opts.price, opts.currency, opts.priced_text),
   })
+  achievement_progress.market_item_bought(game, player)
   return {
     ok = true,
     kind = "item",

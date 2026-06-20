@@ -4,6 +4,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
 local use_broadcast = require("src.rules.items.use_broadcast")
 local rent_resolver = require("src.rules.land.rent_resolver")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local number_utils = require("src.foundation.number")
 
 local land_rules = {}
@@ -24,6 +25,21 @@ local function _resolve_owner(game, owner_id)
     return nil
   end
   return game:find_player_by_id(owner_id)
+end
+
+local function _record_contiguous_if_reached(game, player, tile)
+  local board = game and game.board or nil
+  if not (board and tile and tile.id ~= nil) then
+    return
+  end
+  local tile_index = board:index_of_tile_id(tile.id)
+  if tile_index == nil then
+    return
+  end
+  local count = land_rules.contiguous_count(game, board, tile_index, player.id)
+  if count >= 3 then
+    achievement_progress.contiguous_lands(game, player)
+  end
 end
 
 local function _build_land_event(event_key, payload, extra)
@@ -57,6 +73,10 @@ function land_rules.execute_strong_card(game, player_id, tile_id)
   game:set_tile_owner(tile, player.id)
   game:set_player_property(owner, tile.id, false)
   game:set_player_property(player, tile.id, true)
+  achievement_progress.item_used(game, player)
+  achievement_progress.cash_received(game, owner, total_value)
+  achievement_progress.land_purchased(game, player)
+  _record_contiguous_if_reached(game, player, tile)
   return _build_land_event("strong_card_used", {
     player = player,
     owner = owner,
@@ -69,6 +89,7 @@ end
 function land_rules.execute_free_card(game, player_id, tile_id)
   local player, tile = _resolve_player_and_tile(game, player_id, tile_id)
   assert(inventory.consume(player, item_ids.free_rent) == true, "consume free rent failed")
+  achievement_progress.item_used(game, player)
   use_broadcast.dispatch(game, player, item_ids.free_rent)
   return _build_land_event("free_rent_used", {
     player = player,
@@ -172,12 +193,14 @@ function land_rules.execute_pay_rent(game, player_id, tile_id)
   if game:player_balance(player, "金币") >= rent then
     game:deduct_player_cash(player, rent)
     game:add_player_cash(owner, rent)
+    achievement_progress.cash_received(game, owner, rent)
     return result
   end
 
   local liquid = game:player_balance(player, "金币")
   game:add_player_cash(player, -rent)
   game:add_player_cash(owner, liquid)
+  achievement_progress.cash_received(game, owner, liquid)
   local reason = player.name .. " 资金不足，欠付(" .. owner.name .. ") " .. number_utils.format_integer_part(rent) .. " 破产"
   result.event = "rent_bankrupt"
   result.payload.amount = rent
@@ -189,6 +212,7 @@ end
 function land_rules.execute_tax_free_card(game, player_id)
   local player = game:find_player_by_id(player_id)
   assert(inventory.consume(player, item_ids.tax_free) == true, "consume tax_free failed")
+  achievement_progress.item_used(game, player)
   use_broadcast.dispatch(game, player, item_ids.tax_free)
   return _build_land_event("tax_free", {
     player = player,
@@ -203,6 +227,7 @@ function land_rules.execute_pay_tax(game, player_id)
   if cash < fee then fee = cash end
 
   game:deduct_player_cash(player, fee)
+  achievement_progress.tax_paid(game, player, fee)
   local result = _build_land_event("tax_paid", {
     player = player,
     amount = fee,

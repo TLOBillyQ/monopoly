@@ -3,6 +3,7 @@ local timing = require("src.config.gameplay.timing")
 local constants = require("src.config.content.constants")
 local inventory = require("src.rules.items.inventory")
 local presenter = require("src.rules.land.presenter")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 local number_utils = require("src.foundation.number")
 
@@ -24,6 +25,7 @@ M.executors = {
         bonus = bonus * 2
       end
       ctx.game:add_player_cash(player, bonus)
+      achievement_progress.cash_received(ctx.game, player, bonus)
       event_feed.publish(ctx.game, {
         kind = event_kinds.transit,
         text = player.name .. " 停在起点，获得 " .. number_utils.format_integer_part(bonus) .. " 金币",
