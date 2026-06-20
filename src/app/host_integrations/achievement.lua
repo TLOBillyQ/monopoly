@@ -1,5 +1,6 @@
 local number_utils = require("src.foundation.number")
 local catalog = require("src.config.content.achievements")
+local event_progress = require("src.config.content.achievement_progress_events")
 local role_resolver = require("src.host.role_resolver")
 
 local achievement = {
@@ -8,33 +9,6 @@ local achievement = {
 }
 
 local progress_adapter = nil
-
-local EVENT_PROGRESS = {
-  ["游戏胜利"] = { ids = { 1, 2, 3, 4 }, default_amount = 1 },
-  ["买下地块"] = { ids = { 5, 6, 7, 8 }, default_amount = 1 },
-  ["收取金币"] = { ids = { 9, 10, 11, 12 }, default_amount = 1 },
-  ["支付税金"] = { ids = { 13, 14, 15, 16 }, default_amount = 1 },
-  ["使用道具卡"] = { ids = { 17, 18, 19, 20 }, default_amount = 1 },
-  ["抽到机会卡"] = { ids = { 21, 22, 23, 24 }, default_amount = 1 },
-  ["黑市购买道具"] = { ids = { 25, 26, 27, 28 }, default_amount = 1 },
-  ["加盖1级建筑"] = { ids = { 29 }, default_amount = 1 },
-  ["加盖2级建筑"] = { ids = { 30 }, default_amount = 1 },
-  ["加盖3级建筑"] = { ids = { 31 }, default_amount = 1 },
-  ["被福神附身"] = { ids = { 32 }, default_amount = 1 },
-  ["被财神附身"] = { ids = { 33 }, default_amount = 1 },
-  ["被穷神附身"] = { ids = { 34 }, default_amount = 1 },
-  ["被送进医院"] = { ids = { 35 }, default_amount = 1 },
-  ["被送进深山"] = { ids = { 36 }, default_amount = 1 },
-  ["获得三个连续地块"] = { ids = { 37 }, default_amount = 1 },
-  ["被怪兽拆除房屋"] = { ids = { 38 }, default_amount = 1 },
-  ["被台风拆除房屋"] = { ids = { 39 }, default_amount = 1 },
-  ["使用小猪佩奇皮肤"] = { ids = { 40 }, default_amount = 1 },
-  ["使用小猪乔治皮肤"] = { ids = { 41 }, default_amount = 1 },
-  ["使用海绵宝宝皮肤"] = { ids = { 42 }, default_amount = 1 },
-  ["使用派大星皮肤"] = { ids = { 43 }, default_amount = 1 },
-  ["使用奶龙皮肤"] = { ids = { 44 }, default_amount = 1 },
-  ["使用水豚嘟嘟皮肤"] = { ids = { 45 }, default_amount = 1 },
-}
 
 local function _copy_ids(ids)
   local copy = {}
@@ -70,6 +44,34 @@ local function _call_host(adapter, method_name, ...)
   return true, result
 end
 
+local function _apply_progress(id, amount, method_name, role)
+  local achievement_id = number_utils.to_integer(id)
+  local progress_count = number_utils.to_integer(amount)
+  if not _valid_progress_args(achievement_id, progress_count) then
+    return false
+  end
+  local ok = _call_host(_resolve_adapter(role), method_name, achievement_id, progress_count)
+  return ok == true
+end
+
+local function _id_range(start_id, end_id)
+  local first_id = number_utils.to_integer(start_id)
+  local last_id = number_utils.to_integer(end_id)
+  if first_id == nil or last_id == nil or last_id < first_id then
+    return nil, nil
+  end
+  return first_id, last_id
+end
+
+local function _has_every_id(first_id, last_id)
+  for expected_id = first_id, last_id do
+    if achievement.find(expected_id) == nil then
+      return false
+    end
+  end
+  return true
+end
+
 function achievement.list()
   return catalog
 end
@@ -102,9 +104,8 @@ function achievement.category_counts()
 end
 
 function achievement.ids_are_contiguous(start_id, end_id)
-  local first_id = number_utils.to_integer(start_id)
-  local last_id = number_utils.to_integer(end_id)
-  if first_id == nil or last_id == nil or last_id < first_id then
+  local first_id, last_id = _id_range(start_id, end_id)
+  if first_id == nil then
     return false
   end
 
@@ -112,12 +113,7 @@ function achievement.ids_are_contiguous(start_id, end_id)
     return false
   end
 
-  for expected_id = first_id, last_id do
-    if achievement.find(expected_id) == nil then
-      return false
-    end
-  end
-  return true
+  return _has_every_id(first_id, last_id)
 end
 
 function achievement.configure_progress_adapter(adapter)
@@ -129,7 +125,7 @@ function achievement.reset_for_tests()
 end
 
 function achievement.mapped_ids_for_event(event_name)
-  local mapped = EVENT_PROGRESS[event_name]
+  local mapped = event_progress[event_name]
   if mapped == nil then
     return {}
   end
@@ -137,13 +133,7 @@ function achievement.mapped_ids_for_event(event_name)
 end
 
 function achievement.add_progress(id, amount, role)
-  local achievement_id = number_utils.to_integer(id)
-  local add_count = number_utils.to_integer(amount)
-  if not _valid_progress_args(achievement_id, add_count) then
-    return false
-  end
-  local ok = _call_host(_resolve_adapter(role), "add_achievement_progress", achievement_id, add_count)
-  return ok == true
+  return _apply_progress(id, amount, "add_achievement_progress", role)
 end
 
 function achievement.current_progress(id, role)
@@ -159,17 +149,11 @@ function achievement.current_progress(id, role)
 end
 
 function achievement.set_progress(id, count, role)
-  local achievement_id = number_utils.to_integer(id)
-  local progress_count = number_utils.to_integer(count)
-  if not _valid_progress_args(achievement_id, progress_count) then
-    return false
-  end
-  local ok = _call_host(_resolve_adapter(role), "set_achievement_progress", achievement_id, progress_count)
-  return ok == true
+  return _apply_progress(id, count, "set_achievement_progress", role)
 end
 
 function achievement.record_gameplay_event(event_name, event_value, role)
-  local mapped = EVENT_PROGRESS[event_name]
+  local mapped = event_progress[event_name]
   if mapped == nil then
     return false
   end
