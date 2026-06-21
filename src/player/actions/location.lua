@@ -23,20 +23,24 @@ local function _emit_status_feedback(self, player, status_type, cue_name)
   })
 end
 
+local function _resolve_required_index(value, resolve_fn, missing_label)
+  return assert(resolve_fn(value), missing_label .. tostring(value))
+end
+
 local function _resolve_relocate_index(self, opts)
   opts = opts or {}
   if opts.destination_index ~= nil then
     return opts.destination_index
   end
   if opts.destination_tile_id ~= nil then
-    local idx = self.board:index_of_tile_id(opts.destination_tile_id)
-    assert(idx ~= nil, "missing destination tile index: " .. tostring(opts.destination_tile_id))
-    return idx
+    return _resolve_required_index(opts.destination_tile_id, function(tile_id)
+      return self.board:index_of_tile_id(tile_id)
+    end, "missing destination tile index: ")
   end
   if opts.tile_type ~= nil then
-    local idx = self.board:find_first_by_type(opts.tile_type)
-    assert(idx ~= nil, "missing tile type: " .. tostring(opts.tile_type))
-    return idx
+    return _resolve_required_index(opts.tile_type, function(tile_type)
+      return self.board:find_first_by_type(tile_type)
+    end, "missing tile type: ")
   end
   error("missing relocation destination")
 end

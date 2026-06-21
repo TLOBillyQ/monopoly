@@ -49,6 +49,11 @@ local function _pick_weighted_card(drawable, total_weight, rng)
   return nil
 end
 
+local function _fallback_chance_card(first_drawable)
+  if #chance_cfg == 0 then return nil end
+  return first_drawable
+end
+
 local function _pick_chance_card(game)
   local drawable, first_drawable = _collect_drawable_cards()
 
@@ -60,8 +65,7 @@ local function _pick_chance_card(game)
   local picked = _pick_weighted_card(drawable, total_weight, game and game.rng)
   if picked then return picked end
 
-  if #chance_cfg == 0 then return nil end
-  return first_drawable
+  return _fallback_chance_card(first_drawable)
 end
 
 M.executors = {

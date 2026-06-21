@@ -1,9 +1,11 @@
 local board_utils = require("src.rules.land.board_utils")
-local constants = require("src.config.content.constants")
+local achievement_hooks = require("src.rules.land.achievement_hooks")
 local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
 local use_broadcast = require("src.rules.items.use_broadcast")
 local rent_resolver = require("src.rules.land.rent_resolver")
+local rent_payment = require("src.rules.land.rent_payment")
+local tax_rules = require("src.rules.land.tax_rules")
 local achievement_progress = require("src.rules.ports.achievement_progress")
 local number_utils = require("src.foundation.number")
 
@@ -25,21 +27,6 @@ local function _resolve_owner(game, owner_id)
     return nil
   end
   return game:find_player_by_id(owner_id)
-end
-
-local function _record_contiguous_if_reached(game, player, tile)
-  local board = game and game.board or nil
-  if not (board and tile and tile.id ~= nil) then
-    return
-  end
-  local tile_index = board:index_of_tile_id(tile.id)
-  if tile_index == nil then
-    return
-  end
-  local count = land_rules.contiguous_count(game, board, tile_index, player.id)
-  if count >= 3 then
-    achievement_progress.contiguous_lands(game, player)
-  end
 end
 
 local function _build_land_event(event_key, payload, extra)
@@ -76,7 +63,7 @@ function land_rules.execute_strong_card(game, player_id, tile_id)
   achievement_progress.item_used(game, player)
   achievement_progress.cash_received(game, owner, total_value)
   achievement_progress.land_purchased(game, player)
-  _record_contiguous_if_reached(game, player, tile)
+  achievement_hooks.record_contiguous_if_reached(game, player, tile)
   return _build_land_event("strong_card_used", {
     player = player,
     owner = owner,
@@ -98,146 +85,9 @@ function land_rules.execute_free_card(game, player_id, tile_id)
   })
 end
 
-local function _compute_deity_rent(poor_active, rich_active, initial_rent)
-  local rent = initial_rent
-  local multiplier = 1
-  if poor_active then
-    rent = rent * 2
-    multiplier = multiplier * 2
-  end
-  if rich_active then
-    rent = rent * 2
-    multiplier = multiplier * 2
-  end
-  return rent, multiplier
-end
-
-local function _build_deity_label(poor_active, rich_active)
-  if poor_active and rich_active then
-    return "穷神/财神"
-  elseif poor_active then
-    return "穷神"
-  elseif rich_active then
-    return "财神"
-  end
-  return nil
-end
-
-local function _build_breakdown_parts(breakdown, poor_active, rich_active, deity_multiplier)
-  local parts = {}
-  if breakdown.count > 1 then
-    local rent_strs = {}
-    for _, r in ipairs(breakdown.rents) do
-      rent_strs[#rent_strs + 1] = number_utils.format_integer_part(r)
-    end
-    parts[#parts + 1] = "连片 " .. table.concat(rent_strs, " + ")
-  end
-  if deity_multiplier > 1 then
-    local label = _build_deity_label(poor_active, rich_active)
-    if label then
-      parts[#parts + 1] = label .. " ×" .. tostring(deity_multiplier)
-    end
-  end
-  return parts
-end
-
-local function _build_multiplier_text(breakdown_parts, deity_multiplier, tile_name)
-  if #breakdown_parts == 0 then return nil end
-  local joined = table.concat(breakdown_parts, "，")
-  if deity_multiplier > 1 then
-    return tile_name .. " 租金 ×" .. tostring(deity_multiplier) .. "（" .. joined .. "）"
-  end
-  return tile_name .. " 租金（" .. joined .. "）"
-end
-
-function land_rules.execute_pay_rent(game, player_id, tile_id)
-  local player, tile = _resolve_player_and_tile(game, player_id, tile_id)
-  local owner, _, skip = land_rules.resolve_rent_owner(game, tile)
-  if skip and skip.reason == "mountain" then
-    return {
-      ok = false,
-      event = "rent_skipped_mountain",
-      payload = {
-        owner = skip.owner,
-        tile = tile,
-        text = skip.owner.name .. " 在深山，租金不收取",
-      },
-    }
-  end
-  if not owner then
-    return { ok = false, reason = "no_owner" }
-  end
-
-  local board = game.board
-  local idx = assert(board:index_of_tile_id(tile.id), "missing tile index: " .. tostring(tile.id))
-  local breakdown = land_rules.contiguous_breakdown(game, board, idx, owner.id)
-  local poor_active = game:player_has_deity(player, "poor")
-  local rich_active = game:player_has_deity(owner, "rich")
-  local rent, deity_multiplier = _compute_deity_rent(poor_active, rich_active, breakdown.total_rent)
-  local breakdown_parts = _build_breakdown_parts(breakdown, poor_active, rich_active, deity_multiplier)
-  local multiplier_text = _build_multiplier_text(breakdown_parts, deity_multiplier, tile.name)
-  local text = player.name .. " 向 " .. owner.name .. " 支付租金 " .. number_utils.format_integer_part(rent)
-
-  local result = _build_land_event("rent_paid", {
-    player = player,
-    owner = owner,
-    tile = tile,
-    amount = rent,
-    single_rent = breakdown.single_rent,
-    contiguous_count = breakdown.count,
-    deity_multiplier = deity_multiplier,
-    text = text,
-    multiplier_text = multiplier_text,
-  })
-
-  if game:player_balance(player, "金币") >= rent then
-    game:deduct_player_cash(player, rent)
-    game:add_player_cash(owner, rent)
-    achievement_progress.cash_received(game, owner, rent)
-    return result
-  end
-
-  local liquid = game:player_balance(player, "金币")
-  game:add_player_cash(player, -rent)
-  game:add_player_cash(owner, liquid)
-  achievement_progress.cash_received(game, owner, liquid)
-  local reason = player.name .. " 资金不足，欠付(" .. owner.name .. ") " .. number_utils.format_integer_part(rent) .. " 破产"
-  result.event = "rent_bankrupt"
-  result.payload.amount = rent
-  result.payload.text = reason
-  result.bankrupt_reason = reason
-  return result
-end
-
-function land_rules.execute_tax_free_card(game, player_id)
-  local player = game:find_player_by_id(player_id)
-  assert(inventory.consume(player, item_ids.tax_free) == true, "consume tax_free failed")
-  achievement_progress.item_used(game, player)
-  use_broadcast.dispatch(game, player, item_ids.tax_free)
-  return _build_land_event("tax_free", {
-    player = player,
-    text = player.name .. " 出示免税卡，本次免税",
-  })
-end
-
-function land_rules.execute_pay_tax(game, player_id)
-  local player = game:find_player_by_id(player_id)
-  local cash = game:player_balance(player, "金币")
-  local fee = math.floor(cash * constants.tax_rate)
-  if cash < fee then fee = cash end
-
-  game:deduct_player_cash(player, fee)
-  achievement_progress.tax_paid(game, player, fee)
-  local result = _build_land_event("tax_paid", {
-    player = player,
-    amount = fee,
-    text = player.name .. " 在税务局支付税金 " .. number_utils.format_integer_part(fee),
-  })
-  if game:player_balance(player, "金币") <= 0 then
-    result.bankrupt_reason = player.name .. " 支付税金后破产"
-  end
-  return result
-end
+land_rules.execute_pay_rent = rent_payment.execute_pay_rent
+land_rules.execute_tax_free_card = tax_rules.execute_tax_free_card
+land_rules.execute_pay_tax = tax_rules.execute_pay_tax
 
 return land_rules
 

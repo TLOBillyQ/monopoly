@@ -9,33 +9,35 @@ local use_broadcast = require("src.rules.items.use_broadcast")
 local executor = {}
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
+local function _table_success_result(res)
+  if res.waiting then
+    return false
+  end
+  if type(res.ok) == "boolean" then
+    return res.ok
+  end
+  return true
+end
+
 local function _is_success_result(res)
   if type(res) == "table" then
-    if res.waiting then
-      return false
-    end
-    if type(res.ok) == "boolean" then
-      return res.ok
-    end
-    return true
+    return _table_success_result(res)
   end
   return res == true
 end
 
-local function _with_fallback_item_anim(game, player, item_id, item_name, before_seq, res)
-  if not _is_success_result(res) then
-    return res
-  end
+local function _should_queue_fallback_item_anim(game, before_seq, res)
   if not action_anim_port.is_enabled(game) then
-    return res
+    return false
   end
   if type(res) == "table" and res.action_anim then
-    return res
+    return false
   end
   local current_seq = game.turn and game.turn.action_anim_seq or 0
-  if current_seq > before_seq then
-    return res
-  end
+  return current_seq <= before_seq
+end
+
+local function _queue_fallback_item_anim(game, player, item_id, item_name)
   action_anim_port.queue(game, {
     kind = "item_use",
     player_id = player.id,
@@ -43,11 +45,25 @@ local function _with_fallback_item_anim(game, player, item_id, item_name, before
     item_name = item_name,
     duration = action_anim_duration,
   })
+end
+
+local function _mark_action_anim_result(res)
   if type(res) == "table" then
     res.action_anim = true
     return res
   end
   return { ok = true, action_anim = true }
+end
+
+local function _with_fallback_item_anim(game, player, item_id, item_name, before_seq, res)
+  if not _is_success_result(res) then
+    return res
+  end
+  if not _should_queue_fallback_item_anim(game, before_seq, res) then
+    return res
+  end
+  _queue_fallback_item_anim(game, player, item_id, item_name)
+  return _mark_action_anim_result(res)
 end
 
 local function _finalize_use_item(game, player, item_id, item_name, before_seq, res)
@@ -59,28 +75,42 @@ local function _finalize_use_item(game, player, item_id, item_name, before_seq, 
   return final_res
 end
 
-function executor.use_item(game, player, item_id, context)
+local function _resolve_context(game, player, context)
   context = context or {}
   if type(context.by_ai) == "nil" then
     context.by_ai = auto_play_port.is_auto_player(game, player)
   end
-  local cfg = inventory.cfg(item_id)
-  assert(cfg ~= nil, "missing item cfg: " .. tostring(item_id))
-  local before_anim_seq = game.turn and game.turn.action_anim_seq or 0
+  return context
+end
 
+local function _resolve_handler(game, item_id)
   local registries = assert(game.registries, "missing game.registries")
   local registry = assert(registries.items, "missing item registry")
-  local handler = registry.handlers[item_id]
-  if handler then
-    local res = handler(game, player, item_id, context)
-    return _finalize_use_item(game, player, item_id, cfg.name, before_anim_seq, res)
-  end
+  return registry.handlers[item_id]
+end
 
+local function _apply_post_effect(game, player, item_id, context)
   local consumed = inventory.consume(player, item_id)
   assert(consumed == true, "item consume failed: " .. tostring(item_id))
 
   local res = effects.apply_post(game, player, item_id, context)
   assert(res ~= nil, "missing item post effect result: " .. tostring(item_id))
+  return res
+end
+
+function executor.use_item(game, player, item_id, context)
+  context = _resolve_context(game, player, context)
+  local cfg = inventory.cfg(item_id)
+  assert(cfg ~= nil, "missing item cfg: " .. tostring(item_id))
+  local before_anim_seq = game.turn and game.turn.action_anim_seq or 0
+
+  local handler = _resolve_handler(game, item_id)
+  if handler then
+    local res = handler(game, player, item_id, context)
+    return _finalize_use_item(game, player, item_id, cfg.name, before_anim_seq, res)
+  end
+
+  local res = _apply_post_effect(game, player, item_id, context)
   return _finalize_use_item(game, player, item_id, cfg.name, before_anim_seq, res)
 end
 

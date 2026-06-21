@@ -72,6 +72,14 @@ local function _record(subject, event_name, amount)
   return achievement.record_gameplay_event(event_name, amount, role)
 end
 
+local function _record_positive_amount(player, event_name, amount)
+  local value = _positive_amount(amount)
+  if value == nil then
+    return false
+  end
+  return _record(player, event_name, value)
+end
+
 function achievement_runtime.record_event(subject, event_name, amount)
   return _record(subject, event_name, amount)
 end
@@ -85,19 +93,11 @@ function achievement_runtime.land_purchased(_, player)
 end
 
 function achievement_runtime.cash_received(_, player, amount)
-  local value = _positive_amount(amount)
-  if value == nil then
-    return false
-  end
-  return _record(player, events.cash_received, value)
+  return _record_positive_amount(player, events.cash_received, amount)
 end
 
 function achievement_runtime.tax_paid(_, player, amount)
-  local value = _positive_amount(amount)
-  if value == nil then
-    return false
-  end
-  return _record(player, events.tax_paid, value)
+  return _record_positive_amount(player, events.tax_paid, amount)
 end
 
 function achievement_runtime.item_used(_, player)

@@ -69,27 +69,38 @@ function deity_ops.set_player_deity(self, player, name, duration)
   })
 end
 
-function deity_ops.transfer_deity(self, src, dst)
-  assert(src ~= nil and dst ~= nil, "missing src/dst")
-  assert(src.id ~= dst.id, "cannot transfer to self")
+local function _effective_source_deity(src)
   local src_deity = src.status and src.status.deity
   assert(src_deity and src_deity.type ~= "" and (src_deity.remaining or 0) > 0,
          "src has no effective deity")
+  return src_deity
+end
+
+local function _copy_deity_to_player(self, dst, src_deity)
+  local dst_deity = _ensure_deity(dst)
+  dst_deity.type = src_deity.type
+  dst_deity.remaining = src_deity.remaining
+  common.mark_players(self)
+  achievement_progress.deity_attached(self, dst, src_deity.type)
+  monopoly_event.emit(monopoly_event.feedback.deity_applied, {
+    player = dst,
+    player_id = dst and dst.id or nil,
+    deity_type = src_deity.type,
+    remaining = src_deity.remaining,
+  })
+end
+
+local function _complete_deity_transfer(self, src, dst, src_deity)
+  _copy_deity_to_player(self, dst, src_deity)
+  self:clear_player_deity(src)
+end
+
+function deity_ops.transfer_deity(self, src, dst)
+  assert(src ~= nil and dst ~= nil, "missing src/dst")
+  assert(src.id ~= dst.id, "cannot transfer to self")
+  local src_deity = _effective_source_deity(src)
   self._deity_transferring = true
-  local ok, err = pcall(function()
-    local dst_deity = _ensure_deity(dst)
-    dst_deity.type = src_deity.type
-    dst_deity.remaining = src_deity.remaining
-    common.mark_players(self)
-    achievement_progress.deity_attached(self, dst, src_deity.type)
-    monopoly_event.emit(monopoly_event.feedback.deity_applied, {
-      player = dst,
-      player_id = dst and dst.id or nil,
-      deity_type = src_deity.type,
-      remaining = src_deity.remaining,
-    })
-    self:clear_player_deity(src)
-  end)
+  local ok, err = pcall(_complete_deity_transfer, self, src, dst, src_deity)
   self._deity_transferring = false
   if not ok then
     error("transfer_deity failed mid-flight: " .. tostring(err))
