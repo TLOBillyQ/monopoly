@@ -1,11 +1,11 @@
 # language: zh-CN
-# mutation-stamp: sha256=d24d9a2688ae2a65a075b05268bd3a6cd81af1701dd2f21b1fd2387c68d2a969
+# mutation-stamp: sha256=92a4cf6969af74f758704a3fb1c5e8002a1bee6c22c6d2cfe0606ab479249273
 # acceptance-mutation-manifest-begin
 # {
 #   "background_hash": "1ea7a313797c0ba629204430ac0a2d468e2baff2ecf68e279e58d33bbb029f58",
 #   "feature_name": "成就进度接入",
 #   "feature_path": "features/v102/achievement_progress.feature",
-#   "implementation_hash": "sha256:03569b525693da366f6970eb22bb45d2d963dfe375ea1a1e2fc8d8e324e664a4",
+#   "implementation_hash": "sha256:5ecb4d31c8ce4280c0148264005e03af55b795c548b58b42ec6a3d5dd38eaeb1",
 #   "scenarios": [
 #     {
 #       "index": 0,
@@ -71,9 +71,22 @@
 #       },
 #       "scenario_hash": "d9f78c8776250d73598482af1da5f989a4f47bdcaab835b3604d5be15c46bd3c",
 #       "tested_at": "2026-06-20T07:45:06Z"
+#     },
+#     {
+#       "index": 5,
+#       "mutation_count": 360,
+#       "name": "成就进度接入 P04 达成条件对应玩法事件推进目标成就",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 360,
+#         "Survived": 0,
+#         "Total": 360
+#       },
+#       "scenario_hash": "e4dc8168410d54aa12c71dd89ce7cabf9bc4d47570512ce2695022ed0246b700",
+#       "tested_at": "2026-06-21T06:25:54Z"
 #     }
 #   ],
-#   "tested_at": "2026-06-20T07:45:06Z",
+#   "tested_at": "2026-06-21T06:25:54Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end
@@ -132,17 +145,23 @@
   | 使用水豚嘟嘟皮肤     | 45       | 0        | 1        | 1        |
 
 # 成就进度接入 P03
-场景大纲: 成就进度接入 P03 不可推进事件不改变成就进度
-  假如 玩家成就编号<成就编号>当前进度为<之前进度>
-  当 玩家完成<玩法事件>
-  那么 玩家成就编号<成就编号>没有增加进度
-  并且 玩家成就编号<成就编号>当前进度为<之后进度>
+场景: 成就进度接入 P03 不可识别玩法事件不推进成就
+  假如 玩家成就编号1当前进度为2
+  当 玩家完成未映射事件
+  那么 玩家成就编号1没有增加进度
+  并且 玩家成就编号1当前进度仍为2
 
-例子:
-  | 玩法事件       | 成就编号 | 之前进度 | 之后进度 |
-  | 未映射事件     | 1        | 2        | 2        |
-  | 黑市购买失败   | 25       | 1        | 1        |
-  | 皮肤装备失败   | 40       | 0        | 0        |
+场景: 成就进度接入 P03 黑市购买失败不推进成就
+  假如 玩家成就编号25当前进度为1
+  当 玩家完成黑市购买失败
+  那么 玩家成就编号25没有增加进度
+  并且 玩家成就编号25当前进度仍为1
+
+场景: 成就进度接入 P03 皮肤装备失败不推进成就
+  假如 玩家成就编号40当前进度为0
+  当 玩家完成皮肤装备失败
+  那么 玩家成就编号40没有增加进度
+  并且 玩家成就编号40当前进度仍为0
 
 # 成就进度接入 P04
 场景大纲: 成就进度接入 P04 达成条件对应玩法事件推进目标成就

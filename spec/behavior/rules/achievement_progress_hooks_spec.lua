@@ -3,6 +3,7 @@ local _assert_eq = support.assert_eq
 local achievement_progress_port = require("src.rules.ports.achievement_progress")
 local effect_base = require("src.rules.land.effect_base")
 local effect_chance = require("src.rules.land.effect_chance")
+local achievement_hooks = require("src.rules.land.achievement_hooks")
 local land_rules = require("src.rules.land.landing_rules")
 local chance_handlers = require("src.rules.chance.handlers")
 local item_ids = require("src.config.gameplay.item_ids")
@@ -113,6 +114,50 @@ describe("achievement_progress gameplay hooks", function()
     achievement_progress_port.reset_for_tests()
   end)
 
+  it("uses a game-local achievement progress port before the configured default", function()
+    local player = { id = 1 }
+    local local_calls = 0
+    local global_calls = 0
+    achievement_progress_port.configure({
+      game_won = function()
+        global_calls = global_calls + 1
+        return false
+      end,
+    })
+    local game = {
+      achievement_progress_port = {
+        game_won = function(_, actual_player)
+          local_calls = local_calls + 1
+          _assert_eq(actual_player, player, "game-local port should receive player")
+          return true
+        end,
+      },
+    }
+
+    _assert_eq(achievement_progress_port.game_won(game, player), true,
+      "game-local port should handle achievement progress")
+    _assert_eq(local_calls, 1, "local port call count")
+    _assert_eq(global_calls, 0, "configured port should not be called")
+  end)
+
+  it("fails closed when the resolved achievement progress port lacks a handler", function()
+    achievement_progress_port.configure({})
+
+    _assert_eq(achievement_progress_port.game_won({}, { id = 1 }), false,
+      "missing achievement handler should not report success")
+  end)
+
+  it("fails closed when an achievement progress handler raises", function()
+    achievement_progress_port.configure({
+      game_won = function()
+        error("host progress unavailable")
+      end,
+    })
+
+    _assert_eq(achievement_progress_port.game_won({}, { id = 1 }), false,
+      "raising achievement handler should not report success")
+  end)
+
   it("emits land purchase, rent income, tax, and upgrade gameplay facts", function()
     local game = support.new_game()
     local player = game.players[1]
@@ -155,6 +200,29 @@ describe("achievement_progress gameplay hooks", function()
 
     assert(_find_event(events, "contiguous_lands", player),
       "third connected land purchase should emit contiguous achievement fact")
+  end)
+
+  it("ignores contiguous-land hook calls with incomplete board or tile context", function()
+    local calls = 0
+    achievement_progress_port.configure({
+      contiguous_lands = function()
+        calls = calls + 1
+        return true
+      end,
+    })
+
+    local cases = {
+      { nil, { id = 1 }, { id = 1 } },
+      { {}, { id = 1 }, { id = 1 } },
+      { { board = {} }, { id = 1 }, nil },
+      { { board = {} }, { id = 1 }, {} },
+    }
+
+    for _, case in ipairs(cases) do
+      local ok, err = pcall(achievement_hooks.record_contiguous_if_reached, case[1], case[2], case[3])
+      assert(ok, "incomplete contiguous hook context should not throw: " .. tostring(err))
+    end
+    _assert_eq(calls, 0, "incomplete contiguous hook context should not emit progress")
   end)
 
   it("emits chance draw, chance cash, and typhoon demolition gameplay facts", function()

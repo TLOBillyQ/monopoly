@@ -5,6 +5,29 @@ local achievement_runtime = require("src.app.host_integrations.achievement_runti
 local achievement_progress_port = require("src.rules.ports.achievement_progress")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
+local function _make_progress_role(calls)
+  return {
+    add_achievement_progress = function(id, amount)
+      calls[#calls + 1] = { id = id, amount = amount }
+      return true
+    end,
+  }
+end
+
+local function _clear(list)
+  for index = #list, 1, -1 do
+    list[index] = nil
+  end
+end
+
+local function _assert_progress_calls(calls, expected_ids, expected_amount, label)
+  _assert_eq(#calls, #expected_ids, label .. " call count")
+  for index, id in ipairs(expected_ids) do
+    _assert_eq(calls[index].id, id, label .. " id " .. tostring(index))
+    _assert_eq(calls[index].amount, expected_amount, label .. " amount " .. tostring(index))
+  end
+end
+
 describe("achievement catalog", function()
   after_each(function()
     achievement.reset_for_tests()
@@ -236,6 +259,190 @@ describe("achievement catalog", function()
     _assert_eq(#calls, 4, "cash event should fan out to four achievements")
     _assert_eq(calls[1].id, 9, "cash achievement id")
     _assert_eq(calls[1].amount, 500, "cash achievement amount")
+  end)
+
+  it("maps every runtime achievement fact to the configured gameplay event", function()
+    local calls = {}
+    local role = _make_progress_role(calls)
+    local player = { id = 7 }
+    local port = achievement_runtime.build_port()
+    runtime_ports.configure({
+      resolve_role = function(player_id)
+        if player_id == player.id then
+          return role
+        end
+        return nil
+      end,
+    })
+
+    local cases = {
+      {
+        label = "game win",
+        expected_ids = { 1, 2, 3, 4 },
+        expected_amount = 1,
+        run = function() return port.game_won(nil, player) end,
+      },
+      {
+        label = "land purchase",
+        expected_ids = { 5, 6, 7, 8 },
+        expected_amount = 1,
+        run = function() return port.land_purchased(nil, player) end,
+      },
+      {
+        label = "cash received",
+        expected_ids = { 9, 10, 11, 12 },
+        expected_amount = 1,
+        run = function() return port.cash_received(nil, player, 1) end,
+      },
+      {
+        label = "tax paid",
+        expected_ids = { 13, 14, 15, 16 },
+        expected_amount = 2500,
+        run = function() return port.tax_paid(nil, player, 2500) end,
+      },
+      {
+        label = "item used",
+        expected_ids = { 17, 18, 19, 20 },
+        expected_amount = 1,
+        run = function() return port.item_used(nil, player) end,
+      },
+      {
+        label = "chance card",
+        expected_ids = { 21, 22, 23, 24 },
+        expected_amount = 1,
+        run = function() return port.chance_card_drawn(nil, player) end,
+      },
+      {
+        label = "market item bought",
+        expected_ids = { 25, 26, 27, 28 },
+        expected_amount = 1,
+        run = function() return port.market_item_bought(nil, player) end,
+      },
+      {
+        label = "level one upgrade",
+        expected_ids = { 29 },
+        expected_amount = 1,
+        run = function() return port.building_upgraded(nil, player, 1) end,
+      },
+      {
+        label = "level two upgrade",
+        expected_ids = { 30 },
+        expected_amount = 1,
+        run = function() return port.building_upgraded(nil, player, 2) end,
+      },
+      {
+        label = "level three upgrade",
+        expected_ids = { 31 },
+        expected_amount = 1,
+        run = function() return port.building_upgraded(nil, player, 3) end,
+      },
+      {
+        label = "angel attached",
+        expected_ids = { 32 },
+        expected_amount = 1,
+        run = function() return port.deity_attached(nil, player, "angel") end,
+      },
+      {
+        label = "rich attached",
+        expected_ids = { 33 },
+        expected_amount = 1,
+        run = function() return port.deity_attached(nil, player, "rich") end,
+      },
+      {
+        label = "poor attached",
+        expected_ids = { 34 },
+        expected_amount = 1,
+        run = function() return port.deity_attached(nil, player, "poor") end,
+      },
+      {
+        label = "hospital",
+        expected_ids = { 35 },
+        expected_amount = 1,
+        run = function() return port.location_effect(nil, player, "hospital") end,
+      },
+      {
+        label = "mountain",
+        expected_ids = { 36 },
+        expected_amount = 1,
+        run = function() return port.location_effect(nil, player, "mountain") end,
+      },
+      {
+        label = "contiguous lands",
+        expected_ids = { 37 },
+        expected_amount = 1,
+        run = function() return port.contiguous_lands(nil, player) end,
+      },
+      {
+        label = "monster demolish",
+        expected_ids = { 38 },
+        expected_amount = 1,
+        run = function() return port.monster_demolished_building(nil, player) end,
+      },
+      {
+        label = "typhoon demolish",
+        expected_ids = { 39 },
+        expected_amount = 1,
+        run = function() return port.typhoon_demolished_building(nil, player) end,
+      },
+    }
+
+    for _, case in ipairs(cases) do
+      _clear(calls)
+      _assert_eq(case.run(), true, case.label .. " should advance achievement progress")
+      _assert_progress_calls(calls, case.expected_ids, case.expected_amount, case.label)
+    end
+  end)
+
+  it("records direct runtime events through host-capable role subjects", function()
+    local calls = {}
+    local role = _make_progress_role(calls)
+
+    _assert_eq(achievement_runtime.record_event(role, "游戏胜利"), true,
+      "direct host role subject should receive runtime achievement progress")
+    _assert_progress_calls(calls, { 1, 2, 3, 4 }, 1, "direct role game win")
+  end)
+
+  it("rejects runtime facts with invalid amounts or unknown event variants", function()
+    local calls = {}
+    local role = _make_progress_role(calls)
+    local player = { id = 7 }
+    local port = achievement_runtime.build_port()
+    runtime_ports.configure({
+      resolve_role = function(player_id)
+        if player_id == player.id then
+          return role
+        end
+        return nil
+      end,
+    })
+
+    _assert_eq(port.cash_received(nil, player, 0), false, "zero cash should not advance")
+    _assert_eq(port.cash_received(nil, player, nil), false, "missing cash amount should not advance")
+    _assert_eq(port.tax_paid(nil, player, -1), false, "negative tax should not advance")
+    _assert_eq(port.building_upgraded(nil, player, 4), false, "unknown building level should not advance")
+    _assert_eq(port.deity_attached(nil, player, "unknown"), false, "unknown deity should not advance")
+    _assert_eq(port.location_effect(nil, player, "unknown"), false, "unknown location effect should not advance")
+    _assert_eq(achievement_runtime.record_event(player, nil), false, "missing runtime event should not advance")
+    _assert_eq(#calls, 0, "invalid runtime facts should not call the role")
+  end)
+
+  it("rejects malformed runtime skin equip facts before resolving a role", function()
+    local calls = {}
+    local resolve_calls = 0
+    local role = _make_progress_role(calls)
+    local port = achievement_runtime.build_port()
+    runtime_ports.configure({
+      resolve_role = function()
+        resolve_calls = resolve_calls + 1
+        return role
+      end,
+    })
+
+    _assert_eq(port.skin_equipped(nil, 7, nil), false, "missing skin should be rejected")
+    _assert_eq(port.skin_equipped(nil, 7, {}), false, "skin without a name should be rejected")
+    _assert_eq(port.skin_equipped(nil, 7, { name = "" }), false, "blank skin name should be rejected")
+    _assert_eq(resolve_calls, 0, "malformed skin facts should not resolve a role")
+    _assert_eq(#calls, 0, "malformed skin facts should not call the role")
   end)
 
   it("does not fall back to another role for player-specific runtime events", function()
