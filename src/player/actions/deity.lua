@@ -1,4 +1,5 @@
 local common = require("src.player.actions.state_common")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local monopoly_event = require("src.foundation.events")
 local item_config = require("src.rules.items.config")
 
@@ -59,6 +60,7 @@ function deity_ops.set_player_deity(self, player, name, duration)
   -- +1 so the activation-turn tick brings remaining to actual_duration.
   deity.remaining = actual_duration + 1
   common.mark_players(self)
+  achievement_progress.deity_attached(self, player, name)
   monopoly_event.emit(monopoly_event.feedback.deity_applied, {
     player = player,
     player_id = player and player.id or nil,
@@ -79,6 +81,7 @@ function deity_ops.transfer_deity(self, src, dst)
     dst_deity.type = src_deity.type
     dst_deity.remaining = src_deity.remaining
     common.mark_players(self)
+    achievement_progress.deity_attached(self, dst, src_deity.type)
     monopoly_event.emit(monopoly_event.feedback.deity_applied, {
       player = dst,
       player_id = dst and dst.id or nil,

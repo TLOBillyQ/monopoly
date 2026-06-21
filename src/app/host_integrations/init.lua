@@ -4,6 +4,7 @@ return {
   fan_club = require("src.app.host_integrations.fan_club"),
   gift = require("src.app.host_integrations.gift"),
   achievement = require("src.app.host_integrations.achievement"),
+  achievement_runtime = require("src.app.host_integrations.achievement_runtime"),
   leaderboard = require("src.app.host_integrations.leaderboard"),
 }
 

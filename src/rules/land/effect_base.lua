@@ -4,6 +4,8 @@ local timing = require("src.config.gameplay.timing")
 local tile_mod = require("src.rules.board.tile")
 local land_actions = require("src.rules.land.actions")
 local land_choice_specs = require("src.rules.land.choice_specs")
+local rent_resolver = require("src.rules.land.rent_resolver")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
 local use_broadcast = require("src.rules.items.use_broadcast")
@@ -17,6 +19,21 @@ local tile_state = tile_mod.get_state
 local action_anim_duration = timing.action_anim_default_seconds or 1.0
 
 local M = {}
+
+local function _record_contiguous_if_reached(game, player, tile)
+  local board = game and game.board or nil
+  if not (board and tile and tile.id ~= nil) then
+    return
+  end
+  local tile_index = board:index_of_tile_id(tile.id)
+  if tile_index == nil then
+    return
+  end
+  local count = rent_resolver.contiguous_count(game, board, tile_index, player.id)
+  if count >= 3 then
+    achievement_progress.contiguous_lands(game, player)
+  end
+end
 
 local function _notify_tile_upgraded_direct(game, tile_id, level)
   local tile_feedback_port = game and game.tile_feedback_port or nil
@@ -55,6 +72,8 @@ local function _apply_buy(ctx)
   ctx.game:deduct_player_cash(player, t.price)
   ctx.game:set_tile_owner(t, player.id)
   ctx.game:set_player_property(player, t.id, true)
+  achievement_progress.land_purchased(ctx.game, player)
+  _record_contiguous_if_reached(ctx.game, player, t)
   event_feed.publish(ctx.game, {
     kind = event_kinds.land_purchase,
     text = player.name .. " 购买 " .. t.name .. " 花费 " .. number_utils.format_integer_part(t.price),
@@ -89,6 +108,7 @@ local function _apply_upgrade(ctx)
   ctx.game:deduct_player_cash(player, cost)
   local new_level = old_level + 1
   ctx.game:set_tile_level(t, new_level)
+  achievement_progress.building_upgraded(ctx.game, player, new_level)
   local tile_index = ctx.game.board:index_of_tile_id(t.id)
   local direct_notified = _notify_tile_upgraded_direct(ctx.game, t.id, new_level)
   if not direct_notified then

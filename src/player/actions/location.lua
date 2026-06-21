@@ -1,4 +1,5 @@
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local facing_policy = require("src.rules.board.facing_policy")
@@ -43,6 +44,7 @@ end
 function location_ops.player_apply_hospital_effects(self, player)
   self:set_player_status(player, "pending_location_effect", nil)
   self:set_player_status(player, "stay_turns", common.constants.hospital_stay_turns)
+  achievement_progress.location_effect(self, player, "hospital")
   local fee = common.constants.hospital_fee
   self:add_player_cash(player, -fee)
   event_feed.publish(self, {
@@ -65,6 +67,7 @@ end
 function location_ops.player_apply_mountain_effects(self, player)
   self:set_player_status(player, "pending_location_effect", nil)
   self:set_player_status(player, "stay_turns", common.constants.mountain_stay_turns)
+  achievement_progress.location_effect(self, player, "mountain")
   _emit_status_feedback(self, player, "mountain", "mountain_stun")
   event_feed.publish(self, {
     kind = event_kinds.mountain_stay,

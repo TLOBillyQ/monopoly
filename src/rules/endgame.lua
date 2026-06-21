@@ -2,6 +2,7 @@ local logger = require("src.foundation.log")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local bankruptcy_feedback_port = require("src.rules.ports.bankruptcy_feedback")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 local inventory = require("src.rules.items.inventory")
 local monopoly_event = require("src.foundation.events")
@@ -187,6 +188,7 @@ local function _apply_winners(game, winners, message)
   local winner_ids = {}
   for _, player in ipairs(winners) do
     winner_ids[player.id] = true
+    achievement_progress.game_won(game, player)
   end
   monopoly_event.emit(monopoly_event.game.finished, {
     winners = winners,

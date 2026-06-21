@@ -3,11 +3,13 @@ local default_ports = require("src.host.default_ports")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local global_aliases = require("src.host.global_aliases")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
+local achievement_progress_port = require("src.rules.ports.achievement_progress")
 local config_sanity = require("src.config.gameplay.config_sanity")
 local skin_panel = require("src.ui.coord.skin_panel")
 local skin_equip = require("src.rules.cosmetics")
 local runtime_refs = require("src.config.content.runtime_refs")
 local skin_purchase = require("src.app.host_integrations.skin_purchase")
+local achievement_runtime = require("src.app.host_integrations.achievement_runtime")
 local host_runtime = require("src.host.init")
 local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
 local sign_in = require("src.app.host_integrations.sign_in")
@@ -66,12 +68,17 @@ end
 
 local function _load_required_modules(opts)
   paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
+  achievement_progress_port.configure(achievement_runtime.build_port())
   skin_panel.configure_equip(function(role_id, skin)
     -- The host model setter keys off the numeric resource id in refs.skins, not
     -- the human-readable creature_key string in skins.lua; passing the string is
     -- silently ignored by the host ("付了钱没换").
     local resource_id = skin and runtime_refs.skins[tostring(skin.product_id)] or nil
-    return skin_equip.equip(role_id, resource_id)
+    local equipped = skin_equip.equip(role_id, resource_id)
+    if equipped then
+      achievement_progress_port.skin_equipped(nil, role_id, skin)
+    end
+    return equipped
   end)
   skin_panel.configure_unequip(function(role_id)
     -- Eggy's runtime exposes reset_model for restoring the player's original
@@ -91,6 +98,7 @@ function M.install(opts)
   _reject_removed_options(opts)
   runtime_ports.reset_for_tests()
   paid_purchase_port.reset_for_tests()
+  achievement_progress_port.reset_for_tests()
   _setup_context(opts)
   _load_required_modules(opts)
 end

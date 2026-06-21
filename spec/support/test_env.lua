@@ -4,6 +4,7 @@ local runtime_context = require("src.host.context")
 local default_ports = require("src.host.default_ports")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
+local achievement_progress_port = require("src.rules.ports.achievement_progress")
 
 local M = {}
 
@@ -136,6 +137,7 @@ function M.refresh_runtime_context_for_tests(opts)
   runtime_ports.configure(default_ports.build(runtime_context))
   paid_purchase_port.reset_for_tests()
   paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
+  achievement_progress_port.reset_for_tests()
   tip_queue.configure_runtime({
     presenter = function(text, duration)
       local global_api = opts.GlobalAPI or GlobalAPI

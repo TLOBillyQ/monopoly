@@ -3,6 +3,7 @@ local timing = require("src.config.gameplay.timing")
 local chance_cfg = require("src.config.content.chance_cards")
 local chance_resolver = require("src.rules.chance.resolver")
 local presenter = require("src.rules.land.presenter")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 
 local popup_show_seconds = timing.popup_dwell_default_seconds or 1.0
@@ -75,6 +76,7 @@ M.executors = {
         kind = event_kinds.chance_card,
         text = ctx.player.name .. " 抽到机会卡 " .. card.description,
       })
+      achievement_progress.chance_card_drawn(ctx.game, ctx.player)
       presenter.push_popup(ctx.game, "机会卡", ctx.player.name .. " 抽到机会卡：" .. card.description, {
         kind = "chance_card",
         image_ref = card.id,

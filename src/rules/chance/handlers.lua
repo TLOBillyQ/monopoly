@@ -10,6 +10,7 @@ local move_anim_port = require("src.foundation.ports.move_anim")
 local event_feed = require("src.rules.ports.event_feed")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local angel_feedback = require("src.rules.items.angel_feedback")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 
 local shared = {}
 
@@ -31,6 +32,10 @@ shared.abs_value = math.abs
 
 function shared.apply_cash_change(game, player, delta, opts)
   game:add_player_cash(player, delta, opts)
+  local amount = number_utils.to_integer(delta)
+  if amount and amount > 0 then
+    achievement_progress.cash_received(game, player, amount)
+  end
 end
 
 function shared.adjust_chance_delta(game, player, delta)
@@ -262,7 +267,12 @@ local function _register_asset_handlers(handlers, common)
       local t = game.board:get_tile(idx)
       assert(t ~= nil, "missing tile: " .. tostring(idx))
       if t.type == "land" and (t.level or 0) > 0 then
+        local st = deps.tile_state and deps.tile_state(game, t) or t
+        local owner = st and st.owner_id and game:find_player_by_id(st.owner_id) or nil
         game:set_tile_level(t, 0)
+        if owner then
+          achievement_progress.typhoon_demolished_building(game, owner)
+        end
         common.emit_event(game, deps.monopoly_event.chance.applied, {
           card = { effect = "destroy_buildings_on_path" },
           effect = "destroy_buildings_on_path",

@@ -3,6 +3,7 @@ local auto_play_port = require("src.rules.ports.auto_play")
 local inventory = require("src.rules.items.inventory")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.foundation.ports.action_anim")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local use_broadcast = require("src.rules.items.use_broadcast")
 
 local executor = {}
@@ -52,6 +53,7 @@ end
 local function _finalize_use_item(game, player, item_id, item_name, before_seq, res)
   local final_res = _with_fallback_item_anim(game, player, item_id, item_name, before_seq, res)
   if _is_success_result(final_res) then
+    achievement_progress.item_used(game, player)
     use_broadcast.dispatch(game, player, item_id)
   end
   return final_res

@@ -7,6 +7,7 @@ local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local number_utils = require("src.foundation.number")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 local obstacle_clear = require("src.rules.items.obstacle_clear")
 local angel_feedback = require("src.rules.items.angel_feedback")
 local steal = require("src.rules.items.steal")
@@ -81,6 +82,12 @@ local target_effects = {
         game:set_player_cash(user, half)
         game:set_player_cash(target, total - half)
       end
+      if user_delta > 0 then
+        achievement_progress.cash_received(game, user, user_delta)
+      end
+      if target_delta > 0 then
+        achievement_progress.cash_received(game, target, target_delta)
+      end
       event_feed.publish(game, {
         kind = event_kinds.equality_card,
         text = user.name .. " 使用均富卡，与 " .. target.name .. " 平分资金",
@@ -152,6 +159,7 @@ local target_effects = {
       end
       local fee = math.floor(game:player_balance(target, "金币") * 0.5)
       game:deduct_player_cash(target, fee)
+      achievement_progress.tax_paid(game, target, fee)
       event_feed.publish(game, {
         kind = event_kinds.tax_card,
         text = user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. number_utils.format_integer_part(fee) .. " 税金",
