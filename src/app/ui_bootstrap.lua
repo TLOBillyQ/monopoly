@@ -87,6 +87,40 @@ local function _validate_required_nodes(ui_manager_nodes, required_nodes)
   return missing
 end
 
+local function _node_label(id, entry)
+  local name = type(entry) == "table" and entry[1] or nil
+  if type(name) == "string" and name ~= "" then
+    return name .. "(" .. tostring(id) .. ")"
+  end
+  return tostring(id)
+end
+
+local function _validate_configured_child_nodes(ui_manager_nodes)
+  if not (GameAPI and type(GameAPI.get_eui_children) == "function") then
+    return {}
+  end
+
+  local missing = {}
+  local seen = {}
+  for id, entry in pairs(ui_manager_nodes or {}) do
+    if type(entry) == "table" then
+      local ok, children = pcall(GameAPI.get_eui_children, id)
+      if not ok then
+        error("UI 节点子节点读取失败: " .. _node_label(id, entry) .. ": " .. tostring(children))
+      end
+      if type(children) == "table" then
+        for _, child_id in ipairs(children) do
+          if child_id ~= nil and ui_manager_nodes[child_id] == nil and not seen[child_id] then
+            missing[#missing + 1] = _node_label(id, entry) .. " -> " .. tostring(child_id)
+            seen[child_id] = true
+          end
+        end
+      end
+    end
+  end
+  return missing
+end
+
 -- current_game_ref 是一个单元素数组 { nil }，供 set/get 当前 game 使用
 function M.install(state, current_game_ref, opts)
   opts = opts or {}
@@ -95,6 +129,10 @@ function M.install(state, current_game_ref, opts)
     role_globals.install(runtime_ports.resolve_roles())
     require "vendor.third_party.UIManager.Utils"
     local ui_manager_nodes = require("Data.UIManagerNodes")
+    local missing_child_nodes = _validate_configured_child_nodes(ui_manager_nodes)
+    if #missing_child_nodes > 0 then
+      error("UI 节点配置缺失: " .. table.concat(missing_child_nodes, ", "))
+    end
     UIManager.Builder:new(ui_manager_nodes)
     local current_game = current_game_ref[1]
     if not current_game and type(opts.start_runtime) == "function" then
