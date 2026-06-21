@@ -14,6 +14,7 @@ local verify_full = require("quality.verify_full")
 --       lua54_bin          = string|nil,
 --       busted_bin         = string|nil,
 --       luacheck_available = boolean,
+--       coverage_available = boolean,
 --     },
 --   }
 --   returns { lanes = { {label=..., cmd=...}, ... },
@@ -44,6 +45,7 @@ local function _env(over)
     lua54_bin = "/opt/homebrew/bin/lua5.4",
     busted_bin = "/opt/homebrew/bin/busted",
     luacheck_available = true,
+    coverage_available = true,
   }
   for k, v in pairs(over or {}) do
     if v == ABSENT then e[k] = nil else e[k] = v end
@@ -84,6 +86,12 @@ describe("verify_full._resolve_lanes — default (parity with pre-cycle)", funct
     assert.is_true(_has(plan.skipped, "coverage"))
   end)
 
+  it("skips coverage when luacov toolchain is unavailable and reports it", function()
+    local plan = verify_full._resolve_lanes({ env = _env({ coverage_available = false }) })
+    assert.is_false(_has(_labels(plan.lanes), "coverage"))
+    assert.is_true(_has(plan.skipped, "coverage"))
+  end)
+
   it("appends tooling lane only when opts.tooling is true", function()
     local plan = verify_full._resolve_lanes({ tooling = true, env = _env() })
     local tooling_lane
@@ -95,6 +103,21 @@ describe("verify_full._resolve_lanes — default (parity with pre-cycle)", funct
     end
     assert.is_not_nil(tooling_lane)
     assert.is_truthy(tooling_lane.cmd:find("--profile tooling", 1, true))
+  end)
+
+  it("passes busted path through --busted-bin instead of shell env assignment", function()
+    local plan = verify_full._resolve_lanes({ env = _env({ busted_bin = "custom-busted" }) })
+    local contract_lane
+    for _, lane in ipairs(plan.lanes) do
+      if lane.label == "contract" then
+        contract_lane = lane
+        break
+      end
+    end
+    assert.is_not_nil(contract_lane)
+    assert.is_truthy(contract_lane.cmd:find("--busted-bin", 1, true))
+    assert.is_truthy(contract_lane.cmd:find("custom%-busted"))
+    assert.is_nil(contract_lane.cmd:find("BUSTED_BIN=", 1, true))
   end)
 
   it("excludes coverage when opts.coverage == false", function()
@@ -163,5 +186,27 @@ describe("verify_full._resolve_lanes — conflict-flag rules", function()
       assert.is_false(w:find("coverage", 1, true) ~= nil,
         "smoke + no-coverage must not warn, got: " .. w)
     end
+  end)
+end)
+
+describe("verify_full module loading", function()
+  it("does not require HOME to be set", function()
+    local previous_module = package.loaded["quality.verify_full"]
+    local original_getenv = os.getenv
+    package.loaded["quality.verify_full"] = nil
+    -- luacheck: push ignore 122
+    os.getenv = function(name)
+      if name == "HOME" then
+        return nil
+      end
+      return original_getenv(name)
+    end
+
+    local ok, loaded = pcall(require, "quality.verify_full")
+
+    os.getenv = original_getenv
+    -- luacheck: pop
+    package.loaded["quality.verify_full"] = previous_module
+    assert.is_true(ok, tostring(loaded))
   end)
 end)

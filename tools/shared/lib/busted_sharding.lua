@@ -22,19 +22,16 @@ function M.discover_spec_files(root)
   if root == nil or root == "" then
     return {}
   end
-  local command = "find " .. common.shell_quote(root) .. " -name '*_spec.lua' -type f 2>/dev/null"
-  local handle = io.popen(command)
-  if handle == nil then
+  local discovered = common.collect_files(root, ".lua")
+  if discovered == nil then
     return {}
   end
   local files = {}
-  for line in handle:lines() do
-    local trimmed = line:match("^%s*(.-)%s*$")
-    if trimmed ~= nil and trimmed ~= "" and _file_has_it(trimmed) then
-      files[#files + 1] = trimmed
+  for _, path in ipairs(discovered) do
+    if path:match("_spec%.lua$") and _file_has_it(path) then
+      files[#files + 1] = path
     end
   end
-  handle:close()
   table.sort(files)
   return files
 end

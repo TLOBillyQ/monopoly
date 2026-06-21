@@ -20,13 +20,10 @@ local BUSTED_GLOBALS = {
 -- if the initial require fails.
 local _luassert_ok, _luassert = pcall(require, "luassert")
 if not _luassert_ok then
-  local handle = io.popen("luarocks path --lr-path 2>/dev/null")
-  if handle ~= nil then
-    local extra = handle:read("*l")
-    handle:close()
-    if extra ~= nil and extra ~= "" and package.path:find(extra, 1, true) == nil then
-      package.path = extra .. ";" .. package.path
-    end
+  local result = common.run_command({ "luarocks", "path", "--lr-path" })
+  local extra = result.ok and tostring(result.output or ""):match("^%s*(.-)%s*$") or nil
+  if extra ~= nil and extra ~= "" and package.path:find(extra, 1, true) == nil then
+    package.path = extra .. ";" .. package.path
   end
   _luassert = require("luassert")
 end

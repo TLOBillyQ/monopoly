@@ -6,34 +6,32 @@ local parallel_lanes = require("shared.lib.parallel_lanes")
 
 local _PHASE_TIMEOUT = 600
 
-local function _which(name)
-  local handle = io.popen("command -v " .. common.shell_quote(name) .. " 2>/dev/null")
-  if handle == nil then
+local function _env_value(name)
+  local value = os.getenv(name)
+  if value == nil or value == "" then
     return nil
   end
-  local result = handle:read("*a")
-  handle:close()
-  if result == nil or result == "" then
-    return nil
-  end
-  return (result:gsub("%s+$", ""))
+  return value
 end
 
 local function _check_command(name)
-  return _which(name) ~= nil
+  return common.command_exists(name)
 end
 
-local function _resolve_binary(env_var, candidates, fallback_fn)
-  local override = os.getenv(env_var)
-  if override ~= nil and override ~= "" then
-    return override
+local function _path_or_command_available(value)
+  local text = tostring(value or "")
+  if text == "" then
+    return false
   end
-  for _, candidate in ipairs(candidates) do
-    if common.path_exists(candidate) then
-      return candidate
-    end
+  if text:find("[/\\]") ~= nil or text:match("^%a:") ~= nil then
+    return common.path_exists(text)
   end
-  return fallback_fn()
+  return common.command_exists(text)
+end
+
+local function _lua_reports_54(candidate)
+  local result = common.run_command({ candidate, "-v" })
+  return result.ok == true and tostring(result.output or ""):find("Lua 5%.4") ~= nil
 end
 
 local _LUA54_BIN_CANDIDATES = {
@@ -41,23 +39,72 @@ local _LUA54_BIN_CANDIDATES = {
   "/usr/local/bin/lua5.4",
   "/opt/homebrew/opt/lua@5.4/bin/lua5.4",
   "/usr/local/opt/lua@5.4/bin/lua5.4",
+  "lua5.4",
+  "lua54",
+  "lua",
 }
 
 local function _resolve_lua54()
-  return _resolve_binary("LUA54_BIN", _LUA54_BIN_CANDIDATES, function()
-    return _which("lua5.4")
-  end)
+  local override = _env_value("LUA54_BIN")
+  if override ~= nil then
+    return override
+  end
+  for _, candidate in ipairs(_LUA54_BIN_CANDIDATES) do
+    if _path_or_command_available(candidate) and _lua_reports_54(candidate) then
+      return candidate
+    end
+  end
+  return nil
 end
 
-local _BUSTED54_BIN_CANDIDATES = {
-  os.getenv("HOME") .. "/.luarocks/bin/busted",
-  "/opt/homebrew/bin/busted",
-}
+local function _home_busted_candidates()
+  local candidates = {}
+  for _, env_name in ipairs({ "HOME", "USERPROFILE" }) do
+    local home = _env_value(env_name)
+    if home ~= nil then
+      candidates[#candidates + 1] = common.join_path(home, ".luarocks/bin/busted")
+    end
+  end
+  candidates[#candidates + 1] = "/opt/homebrew/bin/busted"
+  return candidates
+end
 
 local function _resolve_busted54()
-  return _resolve_binary("BUSTED54_BIN", _BUSTED54_BIN_CANDIDATES, function()
+  local override = _env_value("BUSTED54_BIN") or _env_value("BUSTED_BIN")
+  if override ~= nil then
+    return override
+  end
+  for _, candidate in ipairs(_home_busted_candidates()) do
+    if common.path_exists(candidate) then
+      return candidate
+    end
+  end
+  if common.command_exists("busted") then
     return "busted"
-  end)
+  end
+  return "busted"
+end
+
+local function _rock_installed(name)
+  if not common.command_exists("luarocks") then
+    return false
+  end
+  local result = common.run_command({ "luarocks", "--lua-version=5.4", "list", "--porcelain", name })
+  return result.ok == true and tostring(result.output or ""):find("^" .. name .. "%s") ~= nil
+end
+
+local function _coverage_toolchain_available(lua54_bin, busted_bin)
+  if lua54_bin == nil then
+    return false
+  end
+  local busted_available = _path_or_command_available(busted_bin)
+    or _env_value("BUSTED54_BIN") ~= nil
+    or _env_value("BUSTED_BIN") ~= nil
+    or _rock_installed("busted")
+  local luacov_available = _path_or_command_available(_env_value("LUACOV_BIN"))
+    or common.command_exists("luacov")
+    or _rock_installed("luacov")
+  return busted_available and luacov_available
 end
 
 local function _run_step(label, cmd)
@@ -153,15 +200,21 @@ local function _build_output(input)
 end
 
 local function _busted_lane_cmd(busted_bin, profile)
-  return "BUSTED_BIN=" .. common.shell_quote(busted_bin)
-    .. " lua tools/quality/busted_lane.lua --profile " .. common.shell_quote(profile)
+  return common.build_command({
+    "lua",
+    "tools/quality/busted_lane.lua",
+    "--busted-bin",
+    busted_bin or "busted",
+    "--profile",
+    profile,
+  })
 end
 
 local function _add_lint_or_skip(lanes, skipped, env)
   if env.luacheck_available == true and env.lua54_bin then
     lanes[#lanes + 1] = {
       label = "lint",
-      cmd = common.shell_quote(env.lua54_bin) .. " tools/quality/lint.lua",
+      cmd = common.build_command({ env.lua54_bin, "tools/quality/lint.lua" }),
     }
   else
     skipped[#skipped + 1] = "lint"
@@ -211,11 +264,16 @@ local function _default_lanes(env, include_tooling, include_coverage)
   -- so it shares no mutable state with the non-coverage lanes. Wall time is
   -- bounded by the slower of (parallel lanes, coverage), not their sum.
   if include_coverage then
-    if env.lua54_bin then
+    if env.lua54_bin and env.coverage_available ~= false then
       lanes[#lanes + 1] = {
         label = "coverage",
-        cmd = common.shell_quote(env.lua54_bin)
-          .. " tools/quality/coverage.lua --quiet --out tmp/coverage.md",
+        cmd = common.build_command({
+          env.lua54_bin,
+          "tools/quality/coverage.lua",
+          "--quiet",
+          "--out",
+          "tmp/coverage.md",
+        }),
       }
     else
       skipped[#skipped + 1] = "coverage"
@@ -257,6 +315,7 @@ local function _main(opts)
     busted_bin = _resolve_busted54(),
     luacheck_available = _check_command("luacheck"),
   }
+  env.coverage_available = _coverage_toolchain_available(env.lua54_bin, env.busted_bin)
 
   local plan = _resolve_lanes({
     smoke = opts.smoke,
@@ -313,7 +372,12 @@ local function _main(opts)
   return { ok = output.exit_code == 0, passed = passed, failed = failed, skipped = plan.skipped }
 end
 
-local M = { run = _main, build_output = _build_output, _resolve_lanes = _resolve_lanes }
+local M = {
+  run = _main,
+  build_output = _build_output,
+  _resolve_lanes = _resolve_lanes,
+  _coverage_toolchain_available = _coverage_toolchain_available,
+}
 
 if ... == "quality.verify_full" then
   return M

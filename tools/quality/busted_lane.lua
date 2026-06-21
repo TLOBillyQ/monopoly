@@ -15,7 +15,7 @@ local common = require("shared.lib.common")
 local M = {}
 
 local function _usage()
-  return "usage: lua tools/quality/busted_lane.lua --profile <name> [--verbose]\n"
+  return "usage: lua tools/quality/busted_lane.lua --profile <name> [--busted-bin <path>] [--verbose]\n"
 end
 
 function M.parse_args(args)
@@ -25,6 +25,9 @@ function M.parse_args(args)
     local token = args[i]
     if token == "--profile" then
       options.profile = args[i + 1]
+      i = i + 2
+    elseif token == "--busted-bin" then
+      options.busted_bin = args[i + 1]
       i = i + 2
     elseif token == "--verbose" then
       options.verbose = true
@@ -63,11 +66,16 @@ function M.compress_tap(output)
 end
 
 function M.run(options)
-  local busted_bin = os.getenv("BUSTED_BIN") or "busted"
-  local cmd = common.shell_quote(busted_bin)
-    .. " --output=TAP --run " .. common.shell_quote(options.profile)
+  options = options or {}
+  local busted_bin = options.busted_bin or os.getenv("BUSTED_BIN") or "busted"
+  local run_command = options.run_command or common.run_command
 
-  local result = common.run_command(cmd)
+  local result = run_command({
+    busted_bin,
+    "--output=TAP",
+    "--run",
+    options.profile,
+  })
   local raw = tostring(result.output or "")
 
   if options.verbose then

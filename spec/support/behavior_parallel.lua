@@ -1,7 +1,6 @@
 require("spec.bootstrap").install_package_paths()
 
 local common = require("shared.lib.common")
-local number_utils = require("src.foundation.number")
 local parallel_lanes = require("shared.lib.parallel_lanes")
 local sharding = require("shared.lib.busted_sharding")
 
@@ -75,16 +74,22 @@ local function _resolve_workers(file_count)
   return sharding.resolve_workers("MONO_BEHAVIOR_WORKERS", file_count, _default_workers())
 end
 
-local function _build_lane_cmd(files)
-  local file_args = {}
+local function _build_lane_args(files)
+  local args = {
+    "busted",
+    "--helper=spec/helper.lua",
+    "--output=spec/log_warns_handler.lua",
+    "--pattern=_spec",
+    "--",
+  }
   for _, f in ipairs(files) do
-    file_args[#file_args + 1] = common.shell_quote(f)
+    args[#args + 1] = f
   end
-  return "busted"
-    .. " --helper=spec/helper.lua"
-    .. " --output=spec/log_warns_handler.lua"
-    .. " --pattern=_spec"
-    .. " -- " .. table.concat(file_args, " ")
+  return args
+end
+
+local function _build_lane_cmd(files)
+  return common.build_command(_build_lane_args(files))
 end
 
 local function _parse_output(content)
@@ -198,11 +203,13 @@ function M.run(opts)
   if worker_count <= 1 then
     io.write("[" .. label .. "-parallel] single worker, running serial\n")
     io.flush()
-    local ok, _, code = os.execute(_build_lane_cmd(files))
-    local success = ok == true and (code == nil or code == 0)
-    if not success and number_utils.is_numeric(code) then
-      success = code == 0
+    local result = common.run_command(_build_lane_args(roots))
+    if result.output and result.output ~= "" then
+      io.write(result.output)
+      if result.output:sub(-1) ~= "\n" then io.write("\n") end
+      io.flush()
     end
+    local success = result.ok == true
     return { passed = 0, failed = success and 0 or 1, ok = success }
   end
 

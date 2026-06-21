@@ -651,12 +651,12 @@ end
 
 function common.read_file(path)
   local normalized = common.normalize_path(path)
-  if not common.is_windows() then
-    local content = _read_raw_file(normalized)
-    if content == nil then
-      return nil, _bilingual_with_suffix("无法打开文件: ", "Cannot open file: ", path)
-    end
+  local content = _read_raw_file(normalized)
+  if content ~= nil then
     return content
+  end
+  if not common.is_windows() then
+    return nil, _bilingual_with_suffix("无法打开文件: ", "Cannot open file: ", path)
   end
 
   local output_path = common.make_temp_path("read_file", ".txt")
@@ -667,12 +667,12 @@ function common.read_file(path)
     return nil, _bilingual_with_suffix("无法打开文件: ", "Cannot open file: ", path)
   end
 
-  local content = _read_raw_file(output_path)
+  local copied_content = _read_raw_file(output_path)
   common.remove_path(output_path)
-  if content == nil then
+  if copied_content == nil then
     return nil, _bilingual_with_suffix("无法读取临时输出: ", "Cannot read temporary output: ", path)
   end
-  return content
+  return copied_content
 end
 
 function common.ensure_dir(path)
