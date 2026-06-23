@@ -1,0 +1,45 @@
+local P = require("spec.support.shared_support")
+local _assert_eq = P.assert_eq
+
+describe("ui.schema.base", function()
+  it("pins base screen host node names", function()
+    package.loaded["src.ui.schema.base"] = nil
+    local base_nodes = require("src.ui.schema.base")
+
+    _assert_eq(base_nodes.canvas, "基础屏", "canvas node name")
+    _assert_eq(base_nodes.action_button, "基础_行动按钮", "action button node name")
+    _assert_eq(base_nodes.end_button, "基础_结束按钮", "end button node name")
+    _assert_eq(base_nodes.countdown, "基础_倒计时", "countdown node name")
+    _assert_eq(base_nodes.countdown_line, "基础_倒计时横线", "countdown line node name")
+    _assert_eq(base_nodes.action_hint, "基础_行动提示", "action hint node name")
+    _assert_eq(base_nodes.action_hint_effect, "基础_行动提示特效", "action hint effect node name")
+    _assert_eq(base_nodes.other_player_hint, "基础_其他玩家行动提示", "other player hint node name")
+
+    _assert_eq(base_nodes.player_name, "基础_玩家%s名字", "player name template")
+    _assert_eq(base_nodes.player_cash, "基础_玩家%s现金", "player cash template")
+    _assert_eq(base_nodes.player_cash_delta, "基础-玩家%s消耗金币显示", "player cash delta template")
+    _assert_eq(base_nodes.player_land_count, "基础_玩家%s地块数量", "player land count template")
+    _assert_eq(base_nodes.player_total_assets, "基础_玩家%s总资产", "player total assets template")
+    _assert_eq(base_nodes.player_crown, "基础_玩家%s皇冠", "player crown template")
+    _assert_eq(base_nodes.player_avatar, "基础_玩家%s头像", "player avatar template")
+    _assert_eq(base_nodes.player_color, "基础_玩家%s底板颜色", "player color template")
+
+    _assert_eq(base_nodes.auto_button, "基础_托管按钮", "auto button node name")
+    _assert_eq(base_nodes.auto_effect, "基础_托管按钮特效", "auto effect node name")
+    _assert_eq(base_nodes.auto_label, "基础_托管文本", "auto label node name")
+    _assert_eq(base_nodes.action_log_button, "基础_行动日志图标", "action log button node name")
+    _assert_eq(base_nodes.skin_button, "基础_皮肤图标", "skin button node name")
+    _assert_eq(base_nodes.skin_label, "基础_皮肤文本", "skin label node name")
+    _assert_eq(base_nodes.gallery_button, "基础_图鉴图标", "gallery button node name")
+
+    _assert_eq(#base_nodes.skin_effect_nodes, 2, "skin effect node count")
+    _assert_eq(base_nodes.skin_effect_nodes[1], "基础_皮肤动效1", "skin effect node 1")
+    _assert_eq(base_nodes.skin_effect_nodes[2], "基础_皮肤动效2", "skin effect node 2")
+
+    _assert_eq(#base_nodes.player_action_effects, 4, "player action effect count")
+    _assert_eq(base_nodes.player_action_effects[1], "基础_玩家1行动动效", "player action effect 1")
+    _assert_eq(base_nodes.player_action_effects[2], "基础_玩家2行动动效", "player action effect 2")
+    _assert_eq(base_nodes.player_action_effects[3], "基础_玩家3行动动效", "player action effect 3")
+    _assert_eq(base_nodes.player_action_effects[4], "基础_玩家4行动动效", "player action effect 4")
+  end)
+end)
