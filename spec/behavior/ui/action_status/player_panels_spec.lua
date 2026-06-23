@@ -126,6 +126,26 @@ local function _new_cash_delta_presenter_env(opts)
 end
 
 describe("presentation_player_panels", function()
+  it("_test_panel_controls_base_non_player_visibility_tracks_boolean_input", function()
+    local panel_controls = require("src.ui.render.widgets.panel_controls")
+    local visible = {}
+    local ui = {
+      base_hidden_nodes = { "node_a" },
+      base_hidden_labels = { "label_a" },
+      set_visible = function(_, name, value)
+        visible[name] = value
+      end,
+    }
+
+    panel_controls.apply_base_non_player_visibility(ui, false)
+    _assert_eq(visible.node_a, false, "false visibility should hide base hidden nodes")
+    _assert_eq(visible.label_a, false, "false visibility should hide base hidden labels")
+
+    panel_controls.apply_base_non_player_visibility(ui, true)
+    _assert_eq(visible.node_a, true, "true visibility should show base hidden nodes")
+    _assert_eq(visible.label_a, true, "true visibility should show base hidden labels")
+  end)
+
   it("_test_panel_avatar_uses_native_size_path", function()
     local presenter = require("src.ui.render.widgets.presenter")
     local native_size_calls = 0
@@ -245,12 +265,95 @@ describe("presentation_player_panels", function()
       "input lock should hide base action controls even for the current player")
     _assert_eq(env.state.ui.touch_enabled[base_nodes.action_button], false,
       "input lock should disable base action touch")
+    _assert_eq(env.state.ui.visible[base_nodes.end_button], false,
+      "input lock should also hide the optional end button")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], false,
+      "input lock should disable the optional end button touch")
     _assert_eq(type(env.state.ui.item_slot_item_ids_by_role), "table",
       "presenter should recover a malformed item-slot cache")
     _assert_eq(type(env.state.ui.item_slot_item_ids), "table",
       "presenter should publish an empty current item-slot list after cache recovery")
     assert(next(env.state.ui.item_slot_item_ids) == nil,
       "recovered item-slot list should be empty without cached current-player ids")
+  end)
+
+  it("_test_panel_presenter_optional_action_shows_end_button_instead_of_action_button", function()
+    local env = _new_cash_delta_presenter_env()
+    env.state.ui.base_hidden_nodes = { base_nodes.action_button, base_nodes.end_button }
+    env.ui_model.choice = {
+      id = 11,
+      kind = "item_phase_passive",
+      route_key = "item_phase_passive",
+      allow_cancel = true,
+    }
+
+    env.refresh()
+
+    _assert_eq(env.state.ui.visible[base_nodes.action_button], false,
+      "optional action should hide the normal action button")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.action_button], false,
+      "optional action should disable the normal action button")
+    _assert_eq(env.state.ui.visible[base_nodes.end_button], true,
+      "optional action should show the end button for the current player")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], true,
+      "optional action should let the current player end the optional phase")
+    _assert_eq(env.state.ui.labels[base_nodes.end_button], "结束",
+      "optional action end button should use fixed label")
+  end)
+
+  it("_test_panel_presenter_optional_landing_choice_shows_end_button", function()
+    local env = _new_cash_delta_presenter_env()
+    env.state.ui.base_hidden_nodes = { base_nodes.action_button, base_nodes.end_button }
+    env.ui_model.choice = {
+      id = 12,
+      kind = "landing_optional_effect",
+      allow_cancel = true,
+    }
+
+    env.refresh()
+
+    _assert_eq(env.state.ui.visible[base_nodes.action_button], false,
+      "optional landing choice should hide the normal action button")
+    _assert_eq(env.state.ui.visible[base_nodes.end_button], true,
+      "optional landing choice should show the end button")
+  end)
+
+  it("_test_panel_presenter_non_cancelable_optional_choice_hides_base_progression_buttons", function()
+    local env = _new_cash_delta_presenter_env()
+    env.state.ui.base_hidden_nodes = { base_nodes.action_button, base_nodes.end_button }
+    env.ui_model.choice = {
+      id = 13,
+      kind = "item_phase_passive",
+      route_key = "item_phase_passive",
+      allow_cancel = false,
+    }
+
+    env.refresh()
+
+    _assert_eq(env.state.ui.visible[base_nodes.action_button], false,
+      "non-cancelable optional choice should not expose the normal action button")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.action_button], false,
+      "non-cancelable optional choice should not route through the normal action button")
+    _assert_eq(env.state.ui.visible[base_nodes.end_button], false,
+      "non-cancelable optional choice should hide the optional end button")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], false,
+      "non-cancelable optional choice should not build cancel affordance touch")
+  end)
+
+  it("_test_panel_presenter_wait_action_hides_optional_end_button", function()
+    local env = _new_cash_delta_presenter_env()
+    env.state.ui.base_hidden_nodes = { base_nodes.action_button, base_nodes.end_button }
+
+    env.refresh()
+
+    _assert_eq(env.state.ui.visible[base_nodes.action_button], true,
+      "wait action should keep the normal action button visible")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.action_button], true,
+      "wait action should keep the normal action button touchable")
+    _assert_eq(env.state.ui.visible[base_nodes.end_button], false,
+      "wait action should hide the optional end button")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], false,
+      "hidden optional end button should not be touchable")
   end)
 
   it("_test_panel_presenter_syncs_current_player_cached_item_ids", function()

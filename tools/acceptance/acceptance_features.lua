@@ -38,6 +38,7 @@ local entries = {
   { feature = "features/v102/item_atlas.feature",                  generated = "item_atlas_acceptance_spec.lua" },
   { feature = "features/v102/leaderboard.feature",                 generated = "leaderboard_acceptance_spec.lua" },
   { feature = "features/v102/market_cash.feature",                 generated = "market_cash_acceptance_spec.lua" },
+  { feature = "features/v102/optional_action_end_button.feature",   generated = "optional_action_end_button_acceptance_spec.lua" },
   { feature = "features/v102/panel_interrupt.feature",             generated = "panel_interrupt_acceptance_spec.lua" },
   { feature = "features/v102/share_task.feature",                  generated = "share_task_acceptance_spec.lua" },
   { feature = "features/v102/sign_in.feature",                     generated = "sign_in_acceptance_spec.lua" },
