@@ -433,6 +433,41 @@ describe("presentation_choice_routes", function()
     _assert_eq(body, "你选的是：点数3", "generic pre-confirm body should show selected option")
   end)
 
+  it("_test_choice_support_falls_back_for_missing_and_blank_confirm_copy", function()
+    local choice_support = require("src.ui.view.choice_support")
+    local unlabeled_option = {}
+    local choice = {
+      confirm_title = "",
+      confirm_body = "",
+      options = {
+        {
+          id = 1,
+          label = "空文案选项",
+          confirm_title = "",
+          confirm_body = "",
+        },
+        unlabeled_option,
+      },
+    }
+
+    local fallback_label = choice_support.resolve_option_label(unlabeled_option)
+
+    assert(type(fallback_label) == "string" and fallback_label:find("table:", 1, true),
+      "unlabeled table option should fall back to Lua table identity text")
+    _assert_eq(choice_support.resolve_option_by_id(nil, 1), nil,
+      "nil choice should resolve to nil through the shared scanner")
+    _assert_eq(
+      choice_support.resolve_secondary_confirm_title(choice, nil, "secondary_confirm", 1),
+      "请确认",
+      "blank option and choice confirm titles should fall back to default title"
+    )
+    _assert_eq(
+      choice_support.resolve_secondary_confirm_body(choice, nil, "secondary_confirm", 1, "空文案选项"),
+      "你选的是：空文案选项",
+      "blank option and choice confirm bodies should fall back to selected option text"
+    )
+  end)
+
   it("_test_secondary_confirm_prefers_usecase_confirm_copy", function()
     local common = require("src.ui.coord.choice_helpers")
     local choice = {
