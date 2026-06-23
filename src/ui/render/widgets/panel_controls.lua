@@ -119,13 +119,19 @@ local function _set_button_label(ui, name, text)
   end
 end
 
-function panel_controls.apply_base_action_controls(ui, ui_model, base_visible)
+local function _resolve_base_action_visibility(ui_model, base_visible)
+  if base_visible ~= true then
+    return false, false
+  end
   local choice = ui_model and ui_model.choice
-  local optional_visible = base_visible == true
-    and choice_support.is_optional_action_choice(choice) == true
-  local end_visible = optional_visible
-    and choice_support.is_cancelable_optional_action_choice(choice) == true
-  local action_visible = base_visible == true and not optional_visible
+  if not choice_support.is_optional_action_choice(choice) then
+    return true, false
+  end
+  return false, choice_support.is_cancelable_optional_action_choice(choice) == true
+end
+
+function panel_controls.apply_base_action_controls(ui, ui_model, base_visible)
+  local action_visible, end_visible = _resolve_base_action_visibility(ui_model, base_visible)
   ui:set_visible(base_nodes.action_button, action_visible)
   ui:set_touch_enabled(base_nodes.action_button, action_visible)
   ui:set_visible(base_nodes.end_button, end_visible)
