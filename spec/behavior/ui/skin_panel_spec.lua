@@ -5,6 +5,7 @@ local _has_event = support.has_event
 local skin_panel = require("src.ui.coord.skin_panel")
 local skin_panel_view = require("src.ui.render.skin_panel")
 local skin_nodes = require("src.ui.schema.skin")
+local default_skins = require("src.config.content.skins")
 local logger = require("src.foundation.log")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
@@ -202,6 +203,14 @@ describe("skin_panel", function()
       skin_panel.configure_catalog_for_tests(_make_catalog(2))
       skin_panel.reset_for_tests()
       assert(#skin_panel.catalog == 6, "default catalog has 6 skins")
+    end)
+
+    it("default catalog prices every locked skin as a 198 jindou purchase", function()
+      for _, skin in ipairs(default_skins) do
+        assert(skin.unlock == "purchase", "default skin should be purchase: " .. tostring(skin.product_id))
+        assert(skin.currency == "金豆", "default skin currency should be 金豆: " .. tostring(skin.product_id))
+        assert(skin.price == 198, "default skin price should be 198: " .. tostring(skin.product_id))
+      end
     end)
 
     it("page shows correct slot count with injected 3-skin catalog", function()
@@ -597,6 +606,19 @@ describe("skin_panel", function()
       skin_panel_view.refresh_slots(state, catalog)
       local enabled = _find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[1])
       assert(enabled == true, "locked purchase button should be touch-enabled")
+    end)
+
+    it("default locked skin slots 5 and 6 render as 198 jindou purchases", function()
+      local state, calls = _make_render_state()
+      skin_panel_view.refresh_slots(state, default_skins)
+      for _, slot in ipairs({ 5, 6 }) do
+        local text = _find_call(calls, "set_button", skin_nodes.action_buttons[slot])
+        local enabled = _find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[slot])
+        local price_visible = _find_call(calls, "set_visible", skin_nodes.price_icons[slot])
+        assert(text == "198", "default slot " .. tostring(slot) .. " should show price 198")
+        assert(enabled == true, "default slot " .. tostring(slot) .. " should be touch-enabled")
+        assert(price_visible == true, "default slot " .. tostring(slot) .. " should show price icon")
+      end
     end)
 
     it("locked gift skin button is not touch-enabled", function()

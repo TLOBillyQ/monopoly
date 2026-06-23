@@ -98,6 +98,43 @@ local function _item_by_name(name)
   return nil
 end
 
+local function _acceptance_bag_count(actor)
+  if actor == nil then
+    return 0
+  end
+  local bag = actor.bag or {}
+  return #bag
+end
+
+local function _apply_missile_to_target_tile(world)
+  world.missile_bombed_target_tile = true
+  if world.src_missile_target then
+    local target = world.src_missile_target
+    demolish.apply(target.ctx.game, target.player, target.index, {
+      item_id = item_ids.missile,
+      injure = true,
+      title = "导弹卡",
+    })
+    world.missile_target.level = target.ctx.game.board:get_tile(target.index).level
+    if target.opponent then
+      local hospital_idx = target.ctx.game.board:find_first_by_type("hospital")
+      world.opponent_sent_to_hospital = target.opponent.position == hospital_idx
+    end
+    return true
+  end
+  if world.missile_target then
+    if world.opponent_angel then
+      world.building_protected = true
+    else
+      world.missile_target.level = 0
+      if world.missile_target.has_opponent then
+        world.opponent_sent_to_hospital = true
+      end
+    end
+  end
+  return true
+end
+
 function items_steps.handlers()
   return {
     ["策划案道具卡目录包含<道具名>"] = function(world, example)
@@ -147,6 +184,7 @@ function items_steps.handlers()
     end,
 
     ["背包未满"] = function(world)
+      _ensure_player(world)
       world.player.bag = world.player.bag or {}
       return true
     end,
@@ -676,6 +714,20 @@ function items_steps.handlers()
       return true
     end,
 
+    ["偷窃获得展示使用已有卡牌展示屏展示该道具卡图"] = function(world)
+      if not (world.gained_item_display and world.gained_item_display.screen == "item_atlas_enlarged_card") then
+        return nil, "stolen item reveal should use item atlas enlarged card screen"
+      end
+      return true
+    end,
+
+    ["偷窃获得展示只出现在玩家视角"] = function(world)
+      if not (world.gained_item_display and world.gained_item_display.owner_only == true) then
+        return nil, "stolen item reveal should be player-view only"
+      end
+      return true
+    end,
+
     ["未提前关闭时道具获得展示持续3秒后自动结束"] = function(world)
       if world.gained_item_show_seconds ~= 3 then
         return nil, "expected 3 second item reveal, got " .. tostring(world.gained_item_show_seconds)
@@ -790,6 +842,12 @@ function items_steps.handlers()
           local stolen = table.remove(target_bag, 1)
           world.player.bag = current_bag
           world.player.bag[#world.player.bag + 1] = stolen
+          world.pending_gained_item = stolen
+          world.gained_item_display = {
+            item = stolen,
+            owner_only = true,
+            screen = "item_atlas_enlarged_card",
+          }
           world.theft_success = true
           world.theft_card_consumed = true
         end
@@ -1134,34 +1192,28 @@ function items_steps.handlers()
     end,
 
     ["玩家使用导弹卡轰炸该地块"] = function(world)
-      if world.src_missile_target then
-        local target = world.src_missile_target
-        demolish.apply(target.ctx.game, target.player, target.index, {
-          item_id = item_ids.missile,
-          injure = true,
-          title = "导弹卡",
-        })
-        world.missile_target.level = target.ctx.game.board:get_tile(target.index).level
-        if target.opponent then
-          local hospital_idx = target.ctx.game.board:find_first_by_type("hospital")
-          world.opponent_sent_to_hospital = target.opponent.position == hospital_idx
-        end
-        return true
-      end
-      if world.missile_target then
-        if world.opponent_angel then
-          world.building_protected = true
-        else
-          world.missile_target.level = 0
-          if world.missile_target.has_opponent then
-            world.opponent_sent_to_hospital = true
-          end
-        end
+      return _apply_missile_to_target_tile(world)
+    end,
+
+    ["玩家使用导弹卡选择该对手"] = function(world)
+      return _apply_missile_to_target_tile(world)
+    end,
+
+    ["导弹轰炸该对手所在地块"] = function(world)
+      if not world.missile_bombed_target_tile then
+        return nil, "missile should bomb the selected opponent tile"
       end
       return true
     end,
 
     ["地块上的对手被送往医院"] = function(world)
+      if not world.opponent_sent_to_hospital then
+        return nil, "opponent should be sent to hospital"
+      end
+      return true
+    end,
+
+    ["该对手被送往医院"] = function(world)
       if not world.opponent_sent_to_hospital then
         return nil, "opponent should be sent to hospital"
       end
@@ -1431,6 +1483,9 @@ function items_steps.handlers()
       if item == nil then
         return nil, "missing item in catalog: " .. tostring(example["道具"])
       end
+      if item.key == "steal" and _acceptance_bag_count(world.target) == 0 then
+        world.target_excluded_no_items = true
+      end
       if item.angel_immune and _target_has_angel(world.target) then
         world.target_excluded_by_angel = true
       end
@@ -1438,7 +1493,7 @@ function items_steps.handlers()
     end,
 
     ["目标不出现在候选列表中"] = function(world)
-      if world.target_excluded_no_deity or world.target_excluded_by_angel then
+      if world.target_excluded_no_deity or world.target_excluded_by_angel or world.target_excluded_no_items then
         return true
       end
       return nil, "target should be excluded from candidate list"

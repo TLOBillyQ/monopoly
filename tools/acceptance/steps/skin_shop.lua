@@ -17,7 +17,7 @@ local function _make_catalog(n)
       name = "皮肤" .. i,
       unlock = "purchase",
       currency = "金豆",
-      price = 100,
+      price = 198,
     }
   end
   return t

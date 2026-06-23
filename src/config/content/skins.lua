@@ -3,8 +3,8 @@ local skins = {
   { order = 2, product_id = 5002, name = "小猪乔治", creature_key = "george_pig", unlock = "purchase", currency = "金豆", price = 198 },
   { order = 3, product_id = 5003, name = "海绵宝宝", creature_key = "spongebob", unlock = "purchase", currency = "金豆", price = 198 },
   { order = 4, product_id = 5004, name = "派大星", creature_key = "patrick_star", unlock = "purchase", currency = "金豆", price = 198 },
-  { order = 5, product_id = 5005, name = "奶龙", creature_key = "nailong", unlock = "gift", gift_name = "谢礼" },
-  { order = 6, product_id = 5006, name = "水豚嘟嘟", creature_key = "capybara_dudu", unlock = "gift", gift_name = "谢礼" },
+  { order = 5, product_id = 5005, name = "奶龙", creature_key = "nailong", unlock = "purchase", currency = "金豆", price = 198 },
+  { order = 6, product_id = 5006, name = "水豚嘟嘟", creature_key = "capybara_dudu", unlock = "purchase", currency = "金豆", price = 198 },
 }
 
 return skins
