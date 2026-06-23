@@ -1,11 +1,11 @@
 # language: zh-CN
-# mutation-stamp: sha256=58b83a8c51120398cf0cfca93e8961c95d6a618f6393c9ecd2ee314ebe8a6734
+# mutation-stamp: sha256=44968d3ac3f4d5186f4f1cb528b787e5e1041169dbba5718bee135d56c176467
 # acceptance-mutation-manifest-begin
 # {
 #   "background_hash": "6a8ef34a5d2d49a20d2efc9a75b6bc342098dfdd95ddb20380e230dcb4e718e3",
 #   "feature_name": "道具系统",
 #   "feature_path": "features/game/items.feature",
-#   "implementation_hash": "sha256:4ee278ae634e16b6ee7a6451c41a233ba45c1de1d577b2bc61475a495dbbb4e2",
+#   "implementation_hash": "sha256:05489e998a1763f1287b16b8f8899aa15ffa9e046bf84ad27277d9c67a908784",
 #   "scenarios": [
 #     {
 #       "index": 0,
@@ -251,11 +251,24 @@
 #         "Survived": 0,
 #         "Total": 4
 #       },
-#       "scenario_hash": "532aa042b53434e70dafd3cde420cbaa8930ca751161f562a9faa902c59d2fea",
-#       "tested_at": "2026-05-27T16:00:31Z"
+#       "scenario_hash": "42ab1f0d554b0166971e80e527b9dfdaee084ba89a837c3466af5625c6e52133",
+#       "tested_at": "2026-06-23T14:44:17Z"
 #     },
 #     {
 #       "index": 19,
+#       "mutation_count": 1,
+#       "name": "偷窃卡目标无道具时不出现在候选列表",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 1,
+#         "Survived": 0,
+#         "Total": 1
+#       },
+#       "scenario_hash": "e84c2a563f594b552066e95352cc1799cf2b0d679f22942fe86cdb285e58bc7b",
+#       "tested_at": "2026-06-23T14:44:17Z"
+#     },
+#     {
+#       "index": 20,
 #       "mutation_count": 0,
 #       "name": "偷窃卡目标无道具时失败",
 #       "result": {
@@ -265,10 +278,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "e3984a2d170b889bbd0a1e040f05e31875305291503db6a114c97631bfb68d75",
-#       "tested_at": "2026-05-27T16:00:31Z"
+#       "tested_at": "2026-06-23T14:44:17Z"
 #     },
 #     {
-#       "index": 20,
+#       "index": 21,
 #       "mutation_count": 0,
 #       "name": "路过其他玩家不会被动触发偷窃卡",
 #       "result": {
@@ -278,10 +291,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "a1ca514c31eea3857f1309d7eb17f4d7aef48fa6404bbe4af4475057b5e6e014",
-#       "tested_at": "2026-05-27T16:00:31Z"
+#       "tested_at": "2026-06-23T14:44:17Z"
 #     },
 #     {
-#       "index": 21,
+#       "index": 22,
 #       "mutation_count": 12,
 #       "name": "均富卡平分双方资金",
 #       "result": {
@@ -291,10 +304,10 @@
 #         "Total": 12
 #       },
 #       "scenario_hash": "327f3a0083e39082a4aab53924b6801c7bab607c9c0f22c5e045e33eb5c8a784",
-#       "tested_at": "2026-05-27T16:00:34Z"
+#       "tested_at": "2026-06-23T14:44:21Z"
 #     },
 #     {
-#       "index": 22,
+#       "index": 23,
 #       "mutation_count": 0,
 #       "name": "天使守护免疫均富卡",
 #       "result": {
@@ -304,10 +317,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "6834cba0c1ceed273e3669905f0184707adb211868a58e0cd5ecd6b5a436c5e0",
-#       "tested_at": "2026-05-27T16:00:34Z"
+#       "tested_at": "2026-06-23T14:44:21Z"
 #     },
 #     {
-#       "index": 23,
+#       "index": 24,
 #       "mutation_count": 1,
 #       "name": "流放卡将目标送往深山",
 #       "result": {
@@ -317,10 +330,10 @@
 #         "Total": 1
 #       },
 #       "scenario_hash": "bbfab5d460aaa666c5fb421afbd9f047471165121eb1842801f04bf3358fe88e",
-#       "tested_at": "2026-05-27T16:00:35Z"
+#       "tested_at": "2026-06-23T14:44:21Z"
 #     },
 #     {
-#       "index": 24,
+#       "index": 25,
 #       "mutation_count": 0,
 #       "name": "天使守护免疫流放卡",
 #       "result": {
@@ -330,10 +343,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "f4373e3defe2984e615ba01ec6d8cbb45ac25dcb3bf41c9b4da96bff9833ae85",
-#       "tested_at": "2026-05-27T16:00:35Z"
+#       "tested_at": "2026-06-23T14:44:21Z"
 #     },
 #     {
-#       "index": 25,
+#       "index": 26,
 #       "mutation_count": 4,
 #       "name": "查税卡对目标收取50%税金",
 #       "result": {
@@ -343,10 +356,10 @@
 #         "Total": 4
 #       },
 #       "scenario_hash": "bf2b99c3401daa3097b978e6fcdce90c728f80e6ef22d934dc76fd364d983a37",
-#       "tested_at": "2026-05-27T16:00:36Z"
+#       "tested_at": "2026-06-23T14:44:23Z"
 #     },
 #     {
-#       "index": 26,
+#       "index": 27,
 #       "mutation_count": 0,
 #       "name": "查税卡目标持有免税卡时自动抵消",
 #       "result": {
@@ -356,10 +369,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "126c70bc7dfcc66804a615588e2ee08fb49b8b0360a1a129c7978dd720d1d8f9",
-#       "tested_at": "2026-05-27T16:00:36Z"
+#       "tested_at": "2026-06-23T14:44:23Z"
 #     },
 #     {
-#       "index": 27,
+#       "index": 28,
 #       "mutation_count": 0,
 #       "name": "天使守护免疫查税卡",
 #       "result": {
@@ -369,10 +382,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "fbd4097b9fa447e7ff23a2d440bd36076916e963a5e270ce1177d83fbc0f9966",
-#       "tested_at": "2026-05-27T16:00:36Z"
+#       "tested_at": "2026-06-23T14:44:23Z"
 #     },
 #     {
-#       "index": 28,
+#       "index": 29,
 #       "mutation_count": 2,
 #       "name": "怪兽卡摧毁对手建筑",
 #       "result": {
@@ -382,36 +395,36 @@
 #         "Total": 2
 #       },
 #       "scenario_hash": "31bcb47e962ab71a15b049a74dc608322141c64b482fb515edff44885d6bee1b",
-#       "tested_at": "2026-05-27T16:00:37Z"
-#     },
-#     {
-#       "index": 29,
-#       "mutation_count": 0,
-#       "name": "导弹卡摧毁建筑并送伤者住院",
-#       "result": {
-#         "Errors": 0,
-#         "Killed": 0,
-#         "Survived": 0,
-#         "Total": 0
-#       },
-#       "scenario_hash": "8aba75c68a0a893bef424eb3192faf1c779348cdb28da94b3f773dc104d550e5",
-#       "tested_at": "2026-05-27T16:00:37Z"
+#       "tested_at": "2026-06-23T14:44:24Z"
 #     },
 #     {
 #       "index": 30,
 #       "mutation_count": 0,
-#       "name": "导弹卡轰炸自己地块也摧毁建筑",
+#       "name": "导弹卡选择目标玩家并轰炸其所在地块",
 #       "result": {
 #         "Errors": 0,
 #         "Killed": 0,
 #         "Survived": 0,
 #         "Total": 0
 #       },
-#       "scenario_hash": "82f09a2b599927138719c6b572b5cc6d5c9860ce4e823626a3bf65f488a60c24",
-#       "tested_at": "2026-05-27T16:00:37Z"
+#       "scenario_hash": "aa232fa87c5965f66ae8c4ec9583b699878203ecc3289f7ff8f5b4200271b674",
+#       "tested_at": "2026-06-23T14:44:24Z"
 #     },
 #     {
 #       "index": 31,
+#       "mutation_count": 0,
+#       "name": "导弹卡选择站在自己地块上的目标玩家也摧毁该地块",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "2ebd26093043ab2870bdcdfb792e9a719fed25345698d770fba01abbad130d13",
+#       "tested_at": "2026-06-23T14:44:24Z"
+#     },
+#     {
+#       "index": 32,
 #       "mutation_count": 0,
 #       "name": "天使守护免疫建筑摧毁",
 #       "result": {
@@ -421,10 +434,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "f78c438a39d3375b9fca57fcc91ed9d2b58d9f2d400d57d45425c6ae3c74729c",
-#       "tested_at": "2026-05-27T16:00:37Z"
+#       "tested_at": "2026-06-23T14:44:24Z"
 #     },
 #     {
-#       "index": 32,
+#       "index": 33,
 #       "mutation_count": 3,
 #       "name": "请神卡夺取目标的神灵",
 #       "result": {
@@ -434,10 +447,10 @@
 #         "Total": 3
 #       },
 #       "scenario_hash": "93af79155cbe19764c4e5573e0a29c8798afa6fed649a6dfb5b4d1aba3ef454c",
-#       "tested_at": "2026-05-27T16:00:38Z"
+#       "tested_at": "2026-06-23T14:44:25Z"
 #     },
 #     {
-#       "index": 33,
+#       "index": 34,
 #       "mutation_count": 0,
 #       "name": "送神卡将穷神转给目标",
 #       "result": {
@@ -447,10 +460,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "7252103a76812deced90eefbf228259059b98a868167c4fcee2557fb4bc000c3",
-#       "tested_at": "2026-05-27T16:00:38Z"
+#       "tested_at": "2026-06-23T14:44:25Z"
 #     },
 #     {
-#       "index": 34,
+#       "index": 35,
 #       "mutation_count": 0,
 #       "name": "送神卡可覆盖目标的天使附身",
 #       "result": {
@@ -460,10 +473,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "ce476234b536e2242fc24d6c67795772b5f86201dc9c116fb6141087f7d9dcba",
-#       "tested_at": "2026-05-27T16:00:38Z"
+#       "tested_at": "2026-06-23T14:44:25Z"
 #     },
 #     {
-#       "index": 35,
+#       "index": 36,
 #       "mutation_count": 0,
 #       "name": "穷神卡令目标附体",
 #       "result": {
@@ -473,10 +486,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "6491baccf9b2999233d2377a106fa35d3931d9c73d47be67c2d8beb4952d6fe4",
-#       "tested_at": "2026-05-27T16:00:38Z"
+#       "tested_at": "2026-06-23T14:44:25Z"
 #     },
 #     {
-#       "index": 36,
+#       "index": 37,
 #       "mutation_count": 0,
 #       "name": "穷神卡可覆盖目标的天使附身",
 #       "result": {
@@ -486,10 +499,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "d48a9ecca2496af4414c330c08e98c0dbdb9758fffab76bc1c1f2c8574a78730",
-#       "tested_at": "2026-05-27T16:00:38Z"
+#       "tested_at": "2026-06-23T14:44:25Z"
 #     },
 #     {
-#       "index": 37,
+#       "index": 38,
 #       "mutation_count": 6,
 #       "name": "财神卡和天使卡自身附体",
 #       "result": {
@@ -499,10 +512,10 @@
 #         "Total": 6
 #       },
 #       "scenario_hash": "aeca0eb95d43d8878444b6b5b0d0e868382b18d5c59995d0e81ef12373fcf905",
-#       "tested_at": "2026-05-27T16:00:40Z"
+#       "tested_at": "2026-06-23T14:44:27Z"
 #     },
 #     {
-#       "index": 38,
+#       "index": 39,
 #       "mutation_count": 0,
 #       "name": "清障卡清除前方障碍物",
 #       "result": {
@@ -512,10 +525,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "38d95e28a7d72c962becca2fbb2719b785803780ac5d708a3d2227d19a4eb7d6",
-#       "tested_at": "2026-05-27T16:00:40Z"
+#       "tested_at": "2026-06-23T14:44:27Z"
 #     },
 #     {
-#       "index": 39,
+#       "index": 40,
 #       "mutation_count": 8,
 #       "name": "清障卡清除任意玩家布置的障碍",
 #       "result": {
@@ -525,23 +538,23 @@
 #         "Total": 8
 #       },
 #       "scenario_hash": "9c8a891e0e71cb36b82d709dde21003bcdfe98783d8d83544701e4ef030953ef",
-#       "tested_at": "2026-05-27T16:00:42Z"
-#     },
-#     {
-#       "index": 40,
-#       "mutation_count": 0,
-#       "name": "天使守护免疫导弹伤害",
-#       "result": {
-#         "Errors": 0,
-#         "Killed": 0,
-#         "Survived": 0,
-#         "Total": 0
-#       },
-#       "scenario_hash": "a0f61652be700f0a3e7ac6e4abfaf26954828d2aaadde0aa73c99d1ea9dda8c5",
-#       "tested_at": "2026-05-27T16:00:42Z"
+#       "tested_at": "2026-06-23T14:44:30Z"
 #     },
 #     {
 #       "index": 41,
+#       "mutation_count": 1,
+#       "name": "天使守护让导弹目标玩家退出候选列表",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 1,
+#         "Survived": 0,
+#         "Total": 1
+#       },
+#       "scenario_hash": "d50dce3c545a88cac3d5094d3ae56bb6e77cfbeb8cdc980a2618975f3d78bd2b",
+#       "tested_at": "2026-06-23T14:44:30Z"
+#     },
+#     {
+#       "index": 42,
 #       "mutation_count": 0,
 #       "name": "针对玩家的道具不可对自己使用",
 #       "result": {
@@ -551,10 +564,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "8421662dd9bafc0c8857a9a3ec4ca9f81e2a4241f9cbc5364a58c356a943563a",
-#       "tested_at": "2026-05-27T16:00:42Z"
+#       "tested_at": "2026-06-23T14:44:30Z"
 #     },
 #     {
-#       "index": 42,
+#       "index": 43,
 #       "mutation_count": 0,
 #       "name": "请神卡目标无神灵时不可使用",
 #       "result": {
@@ -564,23 +577,23 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "780378ae07ff7c3741c6beb155392b05b67b54cf86e927ef58b0f31c462a4a7a",
-#       "tested_at": "2026-05-27T16:00:42Z"
-#     },
-#     {
-#       "index": 43,
-#       "mutation_count": 5,
-#       "name": "天使守护让目标退出可选玩家列表",
-#       "result": {
-#         "Errors": 0,
-#         "Killed": 5,
-#         "Survived": 0,
-#         "Total": 5
-#       },
-#       "scenario_hash": "f592616d873f04fdd3f0e563d7814f3690fee3a205e509d1f890445a1dc451c8",
-#       "tested_at": "2026-05-27T16:00:44Z"
+#       "tested_at": "2026-06-23T14:44:30Z"
 #     },
 #     {
 #       "index": 44,
+#       "mutation_count": 4,
+#       "name": "天使守护让目标退出可选玩家列表",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 4,
+#         "Survived": 0,
+#         "Total": 4
+#       },
+#       "scenario_hash": "d1f24cff82060c8118da3a72db591635ce77bd4802d8008c034f069199d4a63a",
+#       "tested_at": "2026-06-23T14:44:31Z"
+#     },
+#     {
+#       "index": 45,
 #       "mutation_count": 0,
 #       "name": "送神卡使用者无穷神时不可使用",
 #       "result": {
@@ -590,10 +603,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "eba1a6894982f5f64930f19dd7e836382162ef80d24a07c2ab8697dff24f26d3",
-#       "tested_at": "2026-05-27T16:00:44Z"
+#       "tested_at": "2026-06-23T14:44:31Z"
 #     },
 #     {
-#       "index": 45,
+#       "index": 46,
 #       "mutation_count": 1,
 #       "name": "同组道具单回合内只能使用一次",
 #       "result": {
@@ -603,10 +616,10 @@
 #         "Total": 1
 #       },
 #       "scenario_hash": "398d27322147eaff7afc0a80c720da04f8f9baa922c8aa9ed46510991e64fb0b",
-#       "tested_at": "2026-05-27T16:00:44Z"
+#       "tested_at": "2026-06-23T14:44:32Z"
 #     },
 #     {
-#       "index": 46,
+#       "index": 47,
 #       "mutation_count": 0,
 #       "name": "道具使用分组限制在回合结束时重置",
 #       "result": {
@@ -616,10 +629,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "43514308bdb1244a6b96884451e3e2ea0ee36515d96b92fca7007ea392cf0252",
-#       "tested_at": "2026-05-27T16:00:44Z"
+#       "tested_at": "2026-06-23T14:44:32Z"
 #     },
 #     {
-#       "index": 47,
+#       "index": 48,
 #       "mutation_count": 0,
 #       "name": "偷窃时背包已满则失败且不消耗偷窃卡",
 #       "result": {
@@ -629,10 +642,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "6ce31407fbe643ad0b437151c992c7bd92062fcbd9548a309025bc879e41dee7",
-#       "tested_at": "2026-05-27T16:00:44Z"
+#       "tested_at": "2026-06-23T14:44:32Z"
 #     },
 #     {
-#       "index": 48,
+#       "index": 49,
 #       "mutation_count": 0,
 #       "name": "未激活的地雷不触发",
 #       "result": {
@@ -642,10 +655,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "d9bdbaa23c0086e19e64dd87738aa964151955b87f1070102611cc2b73daf512",
-#       "tested_at": "2026-05-27T16:00:44Z"
+#       "tested_at": "2026-06-23T14:44:32Z"
 #     }
 #   ],
-#   "tested_at": "2026-06-23T14:00:17Z",
+#   "tested_at": "2026-06-23T14:44:32Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end

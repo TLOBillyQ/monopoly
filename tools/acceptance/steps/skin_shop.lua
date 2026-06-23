@@ -17,7 +17,7 @@ local function _make_catalog(n)
       name = "皮肤" .. i,
       unlock = "purchase",
       currency = "金豆",
-      price = 100,
+      price = 198,
     }
   end
   return t
@@ -196,6 +196,19 @@ local function _handler_price_icon_visible(field, expect_visible)
       local want = expect_visible and "visible" or "hidden"
       return nil, "expected price icon at slot " .. tostring(slot) .. " to be " .. want ..
         ", got " .. tostring(world.skin_visibility[icon])
+    end
+    return true
+  end
+end
+
+local function _handler_product_id(field, expected_field)
+  return function(world, example)
+    local skin, slot, err = _resolve_skin(world, example, field)
+    if not skin then return nil, err end
+    local expected = tostring(example[expected_field] or "")
+    if tostring(skin.product_id) ~= expected then
+      return nil, "slot " .. tostring(slot) .. " product mismatch: expected "
+        .. expected .. ", got " .. tostring(skin.product_id)
     end
     return true
   end
@@ -649,16 +662,9 @@ function skin_shop_steps.handlers()
       return true
     end,
 
-    ["槽位<槽位>对应皮肤产品ID为<产品ID>"] = function(world, example)
-      local skin, slot, err = _resolve_skin(world, example, "槽位")
-      if not skin then return nil, err end
-      local expected = tostring(example["产品ID"] or "")
-      if tostring(skin.product_id) ~= expected then
-        return nil, "slot " .. tostring(slot) .. " product mismatch: expected "
-          .. expected .. ", got " .. tostring(skin.product_id)
-      end
-      return true
-    end,
+    ["槽位<槽位>对应皮肤产品ID为<产品ID>"] = _handler_product_id("槽位", "产品ID"),
+
+    ["槽位<购买槽位>对应皮肤产品ID为<购买产品ID>"] = _handler_product_id("购买槽位", "购买产品ID"),
 
     -- ── dual-role variants for 旧槽位/新槽位 ─────────────────────────────────
     ["槽位<旧槽位>的皮肤已归玩家持有"] = _handler_owned_by("旧槽位"),
