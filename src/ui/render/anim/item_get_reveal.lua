@@ -9,19 +9,18 @@ local function _owner_role_id(anim)
   return anim and (anim.owner_role_id or anim.player_id) or nil
 end
 
+local function _same_sequence(current, anim)
+  if anim == nil or anim.seq == nil then
+    return true
+  end
+  return current.seq == anim.seq
+end
+
 local function _is_current_reveal(state, anim)
-  local current = state
-    and state.game
-    and state.game.turn
-    and state.game.turn.action_anim
-    or nil
-  if current == nil or current.kind ~= event_kinds.item_get_reveal then
-    return false
-  end
-  if anim and anim.seq ~= nil and current.seq ~= anim.seq then
-    return false
-  end
-  return true
+  local current = panel_helpers.current_action_anim(state)
+  return current ~= nil
+    and current.kind == event_kinds.item_get_reveal
+    and _same_sequence(current, anim)
 end
 
 local function _hide_for_owner(state, anim)

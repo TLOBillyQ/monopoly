@@ -60,11 +60,7 @@ local function _show_enlarged_for_owner(state, atlas, item_id)
 end
 
 local function _current_item_get_reveal(state)
-  local anim = state
-    and state.game
-    and state.game.turn
-    and state.game.turn.action_anim
-    or nil
+  local anim = panel_helpers.current_action_anim(state)
   if anim and anim.kind == "item_get_reveal" then
     return anim
   end
