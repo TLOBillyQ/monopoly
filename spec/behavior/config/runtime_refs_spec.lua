@@ -1,9 +1,11 @@
 describe("runtime_refs (config data)", function()
   it("loads all reference tables under debug hook", function()
+    package.loaded["src.config.content.runtime_ref_images"] = nil
     package.loaded["src.config.content.runtime_refs"] = nil
     local refs = require("src.config.content.runtime_refs")
     assert(type(refs) == "table", "expected table")
     assert(type(refs.images) == "table", "expected images table")
+    assert(refs.images["2007"] == 1767508539, "expected action-universal item art id")
     assert(type(refs.audio) == "table", "expected audio table")
     assert(type(refs.effects) == "table", "expected effects table")
     assert(type(refs.board_feedback) == "table", "expected board_feedback table")

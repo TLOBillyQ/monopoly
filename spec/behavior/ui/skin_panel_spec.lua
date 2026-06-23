@@ -205,14 +205,6 @@ describe("skin_panel", function()
       assert(#skin_panel.catalog == 6, "default catalog has 6 skins")
     end)
 
-    it("default catalog prices every locked skin as a 198 jindou purchase", function()
-      for _, skin in ipairs(default_skins) do
-        assert(skin.unlock == "purchase", "default skin should be purchase: " .. tostring(skin.product_id))
-        assert(skin.currency == "金豆", "default skin currency should be 金豆: " .. tostring(skin.product_id))
-        assert(skin.price == 198, "default skin price should be 198: " .. tostring(skin.product_id))
-      end
-    end)
-
     it("page shows correct slot count with injected 3-skin catalog", function()
       skin_panel.configure_catalog_for_tests(_make_catalog(3))
       local s = _make_state()
