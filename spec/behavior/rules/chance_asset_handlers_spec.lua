@@ -1,6 +1,7 @@
 local asset_handlers = require("src.rules.chance.handlers")._asset
 local monopoly_event = require("src.foundation.events")
 local number_utils = require("src.foundation.number")
+local achievement_progress = require("src.rules.ports.achievement_progress")
 
 local function _common_with_collectors(events, reset_tiles)
   return {
@@ -70,6 +71,53 @@ describe("chance asset handlers", function()
 
     assert(#events == 1, "only the land tile with buildings should emit")
     assert(events[1].effect == "destroy_buildings_on_path", "event effect mismatch")
+  end)
+
+  it("destroy_buildings_on_path credits owner resolved from tile_state", function()
+    local events = {}
+    local credited_owner = nil
+    local common = {
+      emit_event = function(_, _, payload)
+        events[#events + 1] = payload
+      end,
+      dependencies = function()
+        return {
+          monopoly_event = monopoly_event,
+          tile_state = function(_, tile)
+            return { owner_id = tile.owner_from_state }
+          end,
+        }
+      end,
+    }
+    local handlers = _new_handlers(common)
+    local owner = { id = "p1" }
+    local game = {
+      board = {
+        get_tile = function()
+          return { type = "land", level = 2, name = "Tile1", owner_from_state = "p1" }
+        end,
+      },
+      find_player_by_id = function(_, id)
+        if id == "p1" then return owner end
+        return nil
+      end,
+      set_tile_level = function(_, tile, level)
+        tile.level = level
+      end,
+    }
+
+    local original = achievement_progress.typhoon_demolished_building
+    achievement_progress.typhoon_demolished_building = function(_, resolved_owner)
+      credited_owner = resolved_owner
+    end
+    local ok, err = pcall(function()
+      handlers.destroy_buildings_on_path(game, {}, {}, { visited = { 1 } })
+    end)
+    achievement_progress.typhoon_demolished_building = original
+
+    assert(ok, err)
+    assert(credited_owner == owner, "destroyed building should credit owner from tile_state")
+    assert(#events == 1, "destroying owned building should still emit event")
   end)
 
   it("reset_tiles_on_path resets owned and unowned land tiles, skips non-land", function()

@@ -6,6 +6,7 @@ local item_atlas_nodes = require("src.ui.schema.item_atlas")
 local item_atlas_view = require("src.ui.render.item_atlas")
 local panel_helpers = require("src.ui.coord.panel_helpers")
 local panel_tip = require("src.ui.coord.panel_tip")
+local role_id_utils = require("src.foundation.identity")
 
 local item_atlas = {}
 
@@ -58,6 +59,29 @@ local function _show_enlarged_for_owner(state, atlas, item_id)
   end)
 end
 
+local function _current_item_get_reveal(state)
+  local anim = panel_helpers.current_action_anim(state)
+  if anim and anim.kind == "item_get_reveal" then
+    return anim
+  end
+  return nil
+end
+
+local function _complete_reveal_if_owner(state, actor_role_id)
+  local anim = _current_item_get_reveal(state)
+  if anim == nil then
+    return
+  end
+  local owner_role_id = anim.owner_role_id or anim.player_id
+  if not role_id_utils.equals(actor_role_id, owner_role_id) then
+    return
+  end
+  local game = state and state.game or nil
+  if game and type(game.dispatch_action) == "function" then
+    game:dispatch_action({ type = "action_anim_done", seq = anim.seq })
+  end
+end
+
 function item_atlas.open(state, role_id)
   local atlas = _ensure_state(state)
   atlas.open = true
@@ -102,6 +126,7 @@ local function _dismiss(state, role_id)
   atlas.role_id = role_id or atlas.role_id
   atlas.selected_item_id = nil
   _hide_enlarged_for_owner(state, atlas)
+  _complete_reveal_if_owner(state, atlas.role_id)
   return atlas
 end
 

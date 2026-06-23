@@ -1,13 +1,10 @@
 local event_kinds = require("src.config.gameplay.event_kinds")
-local timing = require("src.config.gameplay.timing")
 local constants = require("src.config.content.constants")
 local inventory = require("src.rules.items.inventory")
-local presenter = require("src.rules.land.presenter")
+local gain_reveal = require("src.rules.items.gain_reveal")
 local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 local number_utils = require("src.foundation.number")
-
-local popup_show_seconds = timing.popup_dwell_default_seconds or 1.0
 
 local M = {}
 
@@ -42,20 +39,7 @@ M.executors = {
       assert(cfg ~= nil, "missing drawn item cfg")
       local ok = inventory.give(player, cfg.id, { game = ctx.game })
       if ok then
-        local item_name = inventory.item_name(cfg.id)
-        presenter.push_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. item_name, {
-          kind = "item_card",
-          image_ref = cfg.id,
-          auto_close_seconds = popup_show_seconds,
-          popup_opts = { policy = "defer" },
-        })
-        presenter.queue_action_anim(ctx.game, {
-          kind = "item_use",
-          player_id = player.id,
-          item_id = cfg.id,
-          item_name = item_name,
-          duration = popup_show_seconds,
-        })
+        gain_reveal.queue(ctx.game, player, cfg.id, { source = "item_tile" })
       end
     end,
   },
@@ -65,30 +49,55 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=a3e7afc722d12e30
+projectHash=d92937ab771e6261
 scope.0.id=chunk:src/rules/land/effect_transit.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=63
-scope.0.semanticHash=8bfbfe84be9b510f
-scope.1.id=function:anonymous@15:15
+scope.0.endLine=49
+scope.0.semanticHash=1a478c2b7719182d
+scope.0.lastMutatedAt=2026-06-23T13:52:52Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=7
+scope.0.lastMutationKilled=7
+scope.1.id=function:anonymous@13:13
 scope.1.kind=function
-scope.1.startLine=15
-scope.1.endLine=17
+scope.1.startLine=13
+scope.1.endLine=15
 scope.1.semanticHash=b7a346cfbcbacc44
-scope.2.id=function:anonymous@18:18
+scope.1.lastMutatedAt=2026-06-23T13:52:52Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=4
+scope.1.lastMutationKilled=4
+scope.2.id=function:anonymous@16:16
 scope.2.kind=function
-scope.2.startLine=18
-scope.2.endLine=31
-scope.2.semanticHash=cf06c928dbdd597a
-scope.3.id=function:anonymous@34:34
+scope.2.startLine=16
+scope.2.endLine=30
+scope.2.semanticHash=7d74b5865f21c5e4
+scope.2.lastMutatedAt=2026-06-23T13:52:52Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=9
+scope.2.lastMutationKilled=9
+scope.3.id=function:anonymous@33:33
 scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=36
+scope.3.startLine=33
+scope.3.endLine=35
 scope.3.semanticHash=2681f6a394f2baaf
-scope.4.id=function:anonymous@37:37
+scope.3.lastMutatedAt=2026-06-23T13:52:52Z
+scope.3.lastMutationLane=behavior
+scope.3.lastMutationStatus=passed
+scope.3.lastMutationSites=5
+scope.3.lastMutationKilled=5
+scope.4.id=function:anonymous@36:36
 scope.4.kind=function
-scope.4.startLine=37
-scope.4.endLine=58
-scope.4.semanticHash=7d9edbe7962e7e98
+scope.4.startLine=36
+scope.4.endLine=44
+scope.4.semanticHash=3c489050c149c33f
+scope.4.lastMutatedAt=2026-06-23T13:52:52Z
+scope.4.lastMutationLane=behavior
+scope.4.lastMutationStatus=passed
+scope.4.lastMutationSites=4
+scope.4.lastMutationKilled=4
 ]]

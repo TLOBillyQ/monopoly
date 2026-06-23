@@ -340,6 +340,24 @@ describe("chance", function()
     assert(#inventory.items(p) > item_count_before, "grant_item should increase player item count")
   end)
 
+  it("chance_handler_grant_item_queues_reveal_after_chance_card_anim", function()
+    local g = _new_game()
+    local handlers = chance_handlers.build()
+    local p = g:current_player()
+    g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+    g.turn.action_anim = { seq = 5, kind = "chance", player_id = p.id }
+    g.turn.action_anim_seq = 5
+
+    handlers.grant_item(g, p, { effect = "grant_item", item_id = item_ids.free_rent })
+
+    local queue = g.turn.action_anim_queue or {}
+    _assert_eq(#queue, 1, "grant item should queue reveal behind chance anim")
+    _assert_eq(queue[1].kind, "item_get_reveal", "grant item reveal kind mismatch")
+    _assert_eq(queue[1].item_id, item_ids.free_rent, "grant item reveal item mismatch")
+    _assert_eq(queue[1].player_id, p.id, "grant item reveal player mismatch")
+    _assert_eq(queue[1].source, "chance", "grant item reveal source mismatch")
+  end)
+
   it("chance_handler_discard_items_removes_items", function()
     local g = _new_game()
     local handlers = chance_handlers.build()

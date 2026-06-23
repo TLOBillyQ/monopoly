@@ -224,6 +224,39 @@ describe("item_atlas", function()
       assert(s.ui.item_atlas.selected_item_id == nil, "dismiss should clear selection")
     end)
 
+    it("dismiss action completes current item get reveal for owner only", function()
+      local s = _make_state()
+      local dispatched = {}
+      s.game = {
+        turn = {
+          action_anim = { seq = 33, kind = "item_get_reveal", player_id = 7 },
+        },
+        dispatch_action = function(_, action)
+          dispatched[#dispatched + 1] = action
+        end,
+      }
+
+      item_atlas.handle_action(s, "dismiss", 8)
+      assert(#dispatched == 0, "non-owner dismiss should not complete reveal")
+
+      item_atlas.handle_action(s, "dismiss", 7)
+      assert(#dispatched == 1, "owner dismiss should complete current reveal")
+      assert(dispatched[1].type == "action_anim_done", "dismiss should dispatch action_anim_done")
+      assert(dispatched[1].seq == 33, "dismiss should only complete current reveal seq")
+    end)
+
+    it("dismiss action tolerates reveal state without dispatch_action", function()
+      local s = _make_state()
+      s.game = {
+        turn = {
+          action_anim = { seq = 33, kind = "item_get_reveal", player_id = 7 },
+        },
+      }
+
+      item_atlas.handle_action(s, "dismiss", 7)
+      assert(s.ui.item_atlas ~= nil, "dismiss should leave atlas state valid")
+    end)
+
     it("select and reselect refresh enlarged-card visibility", function()
       item_atlas.configure_catalog_for_tests(_make_catalog(8))
       local s = _make_state()

@@ -17,6 +17,12 @@ function M.with_owner_role(state, role_id, fn)
   return with_client_role(M.resolve_runtime(state), role, fn)
 end
 
+function M.current_action_anim(state)
+  local game = state and state.game or nil
+  local turn = game and game.turn or nil
+  return turn and turn.action_anim or nil
+end
+
 return M
 
 --[[ mutate4lua-manifest
