@@ -99,13 +99,13 @@ return defaults
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=09cf81d15c9c5fa7
+projectHash=cd9b7bf721f43804
 scope.0.id=chunk:src/ui/render/anim/defaults.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=98
-scope.0.semanticHash=bfda4198bd14dd44
-scope.0.lastMutatedAt=2026-06-05T07:31:23Z
+scope.0.endLine=99
+scope.0.semanticHash=667d7ce9da3d7e18
+scope.0.lastMutatedAt=2026-06-23T13:59:23Z
 scope.0.lastMutationLane=behavior
 scope.0.lastMutationStatus=passed
 scope.0.lastMutationSites=6
@@ -193,11 +193,11 @@ scope.12.semanticHash=058f383d2478b35c
 scope.13.id=function:defaults.register:52
 scope.13.kind=function
 scope.13.startLine=52
-scope.13.endLine=95
-scope.13.semanticHash=ca3ed59ba140d228
-scope.13.lastMutatedAt=2026-06-05T07:31:23Z
+scope.13.endLine=96
+scope.13.semanticHash=43c138d9f1162b8c
+scope.13.lastMutatedAt=2026-06-23T13:59:23Z
 scope.13.lastMutationLane=behavior
 scope.13.lastMutationStatus=passed
-scope.13.lastMutationSites=15
-scope.13.lastMutationKilled=15
+scope.13.lastMutationSites=16
+scope.13.lastMutationKilled=16
 ]]

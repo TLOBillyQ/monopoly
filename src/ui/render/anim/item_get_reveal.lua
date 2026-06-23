@@ -10,8 +10,11 @@ local function _owner_role_id(anim)
 end
 
 local function _same_sequence(current, anim)
-  if anim == nil or anim.seq == nil then
-    return true
+  if anim == nil then
+    return false
+  end
+  if anim.seq == nil then
+    return current.seq == nil
   end
   return current.seq == anim.seq
 end

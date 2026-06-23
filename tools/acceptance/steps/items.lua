@@ -31,6 +31,13 @@ local gain_sources = {
   ["偷窃"] = true,
 }
 
+local gain_source_presentations = {
+  ["购买结果"] = true,
+  ["道具格结算"] = true,
+  ["机会卡展示"] = true,
+  ["偷窃结果提示"] = true,
+}
+
 local timing_items = {
   ["遥控骰子卡"] = true,
   ["偷窃卡"] = true,
@@ -633,6 +640,8 @@ function items_steps.handlers()
     end,
 
     ["来源表现<来源表现>完成"] = function(world, example)
+      local ok, err = _require_allowed(example["来源表现"], gain_source_presentations, "item gain source presentation")
+      if not ok then return nil, err end
       if not world.pending_gained_item then
         return nil, "no gained item after source presentation " .. tostring(example["来源表现"])
       end

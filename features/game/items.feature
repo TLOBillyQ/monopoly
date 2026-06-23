@@ -1,11 +1,11 @@
 # language: zh-CN
-# mutation-stamp: sha256=7901b84c66349198187b7cd36c14a75df65f2eb14041f807f7ca46357156eddf
+# mutation-stamp: sha256=58b83a8c51120398cf0cfca93e8961c95d6a618f6393c9ecd2ee314ebe8a6734
 # acceptance-mutation-manifest-begin
 # {
 #   "background_hash": "6a8ef34a5d2d49a20d2efc9a75b6bc342098dfdd95ddb20380e230dcb4e718e3",
 #   "feature_name": "道具系统",
 #   "feature_path": "features/game/items.feature",
-#   "implementation_hash": "sha256:c53d0b982b1e512378071576fd7339d0c7d6b9c7245fb0aa169a55c41ca7ab94",
+#   "implementation_hash": "sha256:4ee278ae634e16b6ee7a6451c41a233ba45c1de1d577b2bc61475a495dbbb4e2",
 #   "scenarios": [
 #     {
 #       "index": 0,
@@ -48,16 +48,16 @@
 #     },
 #     {
 #       "index": 3,
-#       "mutation_count": 4,
-#       "name": "获得道具时先展示放大卡牌再收入卡槽",
+#       "mutation_count": 8,
+#       "name": "道具系统-004 获得道具时先展示放大卡牌再收入卡槽",
 #       "result": {
 #         "Errors": 0,
-#         "Killed": 4,
+#         "Killed": 8,
 #         "Survived": 0,
-#         "Total": 4
+#         "Total": 8
 #       },
-#       "scenario_hash": "8b3d5b56866d781b5fc30d3cade3641a03893fea46d1ecfb509424f32e76360c",
-#       "tested_at": "2026-05-27T16:00:20Z"
+#       "scenario_hash": "332d050b5b4e7042bae4abc7ec3aa8b5a19afd3709672381ad70efba3ce2df3d",
+#       "tested_at": "2026-06-23T14:00:17Z"
 #     },
 #     {
 #       "index": 4,
@@ -645,7 +645,7 @@
 #       "tested_at": "2026-05-27T16:00:44Z"
 #     }
 #   ],
-#   "tested_at": "2026-05-27T16:00:44Z",
+#   "tested_at": "2026-06-23T14:00:17Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end

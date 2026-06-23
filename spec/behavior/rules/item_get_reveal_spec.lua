@@ -61,6 +61,17 @@ describe("item_get_reveal", function()
     _assert_eq(#(g.turn.action_anim_queue or {}), 0, "disabled gate should not append queue")
   end)
 
+  it("does_not_queue_when_required_context_is_missing", function()
+    local g = _new_game()
+    local player = g.players[1]
+
+    _assert_eq(gain_reveal.queue(nil, player, item_ids.free_rent), false, "missing game should skip reveal")
+    _assert_eq(gain_reveal.queue(g, nil, item_ids.free_rent), false, "missing player should skip reveal")
+    _assert_eq(gain_reveal.queue(g, player, nil), false, "missing item should skip reveal")
+    _assert_eq(g.turn.action_anim, nil, "invalid reveal context should not queue current anim")
+    _assert_eq(#(g.turn.action_anim_queue or {}), 0, "invalid reveal context should not append queue")
+  end)
+
   it("plain_inventory_give_with_game_context_does_not_trigger_reveal", function()
     local g = _new_game()
     local player = g.players[1]

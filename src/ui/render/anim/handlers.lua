@@ -25,15 +25,25 @@ return handlers
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=e2f5f23dc304dee7
+projectHash=479dcf85a6a88d28
 scope.0.id=chunk:src/ui/render/anim/handlers.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=23
-scope.0.semanticHash=418a7ff0246e1074
-scope.1.id=function:handlers.play_roll_dice_screen:6
+scope.0.endLine=25
+scope.0.semanticHash=2b637bd3cf4b6bc8
+scope.0.lastMutatedAt=2026-06-23T13:59:05Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=3
+scope.0.lastMutationKilled=3
+scope.1.id=function:handlers.play_roll_dice_screen:7
 scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=8
+scope.1.startLine=7
+scope.1.endLine=9
 scope.1.semanticHash=f3fd6228725b23f3
+scope.1.lastMutatedAt=2026-06-23T13:59:05Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=1
+scope.1.lastMutationKilled=1
 ]]

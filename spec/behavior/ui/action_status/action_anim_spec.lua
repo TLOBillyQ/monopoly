@@ -319,6 +319,49 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
     end)
   end)
 
+  it("_test_item_get_reveal_auto_hide_ignores_unsequenced_stale_callback", function()
+    local item_atlas_view = require("src.ui.render.item_atlas")
+    local hidden = 0
+    local scheduled = {}
+    local state = {
+      game = {
+        turn = {
+          current_player_index = 1,
+          action_anim = { seq = 21, kind = "item_get_reveal", player_id = 2 },
+        },
+        players = { [1] = { id = 2 } },
+      },
+      ui = {},
+    }
+
+    _with_patches({
+      { target = item_atlas_view, key = "show_enlarged", value = function() end },
+      { target = item_atlas_view, key = "hide_enlarged", value = function()
+        hidden = hidden + 1
+      end },
+    }, function()
+      action_anim.play(state, {
+        kind = "item_get_reveal",
+        player_id = 2,
+        item_id = 2001,
+      }, {
+        runtime_bundle = {
+          runtime = {},
+          host_runtime = {
+            enqueue_tip = function() end,
+            schedule = function(_, fn)
+              scheduled[#scheduled + 1] = fn
+            end,
+          },
+          ui_events = { show = {}, hide = {}, send_to_all = function() end },
+        },
+      })
+
+      scheduled[1]()
+      _assert_eq(hidden, 0, "unsequenced stale callback should not hide active sequenced reveal")
+    end)
+  end)
+
   it("_test_action_anim_no_camera_focus_side_effect", function()
     local follow_events = 0
     local state = {
