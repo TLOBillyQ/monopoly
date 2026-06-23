@@ -1,13 +1,8 @@
 local base_nodes = require("src.ui.schema.base")
 local event_intents = require("src.ui.input.event_intents")
-local runtime_state = require("src.ui.state.runtime")
+local route_model = require("src.ui.input.route_model")
 
 local intents = {}
-
-local function _current_choice(state)
-  local current_model = runtime_state.get_ui_model(state)
-  return current_model and current_model.choice or nil
-end
 
 local function _is_optional_action_choice(choice)
   local kind = choice and choice.kind or nil
@@ -23,7 +18,7 @@ function intents.build(state)
     {
       name = base_nodes.action_button,
       build_intent = function()
-        if _is_optional_action_choice(_current_choice(state)) then
+        if _is_optional_action_choice(route_model.choice(state)) then
           return nil
         end
         return { type = "ui_button", id = "next" }
@@ -35,7 +30,7 @@ function intents.build(state)
         if _input_blocked(state) then
           return nil
         end
-        if not _is_optional_action_choice(_current_choice(state)) then
+        if not _is_optional_action_choice(route_model.choice(state)) then
           return nil
         end
         return event_intents.choice_cancel_intent(state, "optional_action_end")

@@ -3,12 +3,7 @@ local ui_view = require("src.ui.coord.ui_runtime")
 local canvas_event_router = require("src.ui.coord.canvas_event_router")
 local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
 local base_nodes = require("src.ui.schema.base")
-local permanent_nodes = require("src.ui.schema.permanent")
-local base_contract = require("src.ui.schema.base_contract")
-local player_choice_nodes = require("src.ui.schema.player_choice")
-local target_choice_nodes = require("src.ui.schema.target_choice")
-local remote_choice_nodes = require("src.ui.schema.remote_choice")
-local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
+local bootstrap_nodes = require("src.app.ui_bootstrap_nodes")
 local market_ui = require("src.ui.schema.market_layout")
 local ui_events = require("src.ui.coord.ui_events")
 local timing = require("src.config.gameplay.timing")
@@ -30,62 +25,58 @@ function M.spawn_startup_synthetic_actors(current_game)
   registry.spawn_pending(map_cfg)
 end
 
-local function _required_click_nodes()
-  local required = {
-    base_nodes.action_button,
-    base_nodes.end_button,
-    base_nodes.auto_button,
-    target_choice_nodes.confirm,
-    target_choice_nodes.cancel,
-    secondary_confirm_nodes.confirm,
-    secondary_confirm_nodes.cancel,
-  }
-  return required
+local function _install_role_globals()
+  role_globals.install(runtime_ports.resolve_roles())
 end
 
-local function _append_click_nodes(required, names)
-  for _, name in ipairs(names or {}) do
-    required[#required + 1] = name
+local function _build_ui_manager_nodes()
+  require "vendor.third_party.UIManager.Utils"
+  local ui_manager_nodes = require("Data.UIManagerNodes")
+  UIManager.Builder:new(ui_manager_nodes)
+  return ui_manager_nodes
+end
+
+local function _resolve_current_game(state, current_game_ref, opts)
+  local current_game = current_game_ref[1]
+  if not current_game and type(opts.start_runtime) == "function" then
+    current_game = opts.start_runtime(state, current_game_ref)
+  end
+  assert(current_game ~= nil, "missing current_game")
+  return current_game
+end
+
+local function _bind_current_game(state, current_game_ref)
+  canvas_event_router.bind(state, function()
+    return current_game_ref[1]
+  end)
+end
+
+local function _sync_ui_event_roles()
+  if ui_events.set_roles then
+    ui_events.set_roles(runtime_ports.resolve_roles())
   end
 end
 
-local function _build_required_click_nodes(opts)
-  local required = _required_click_nodes()
-  for _, name in ipairs(player_choice_nodes.slots) do
-    required[#required + 1] = name
-  end
-  for _, name in ipairs(remote_choice_nodes.options) do
-    required[#required + 1] = name
-  end
-  _append_click_nodes(required, permanent_nodes.card_outlines)
-  _append_click_nodes(required, base_contract.action_log.toggle_targets)
-
-  local extra = opts and opts.extra or nil
-  _append_click_nodes(required, type(extra) == "table" and extra or nil)
-  return required
+local function _assert_required_ui_nodes(ui_manager_nodes)
+  bootstrap_nodes.assert_required_nodes(ui_manager_nodes, {
+    extra = market_ui.item_buttons or {},
+  })
 end
 
-local function _validate_required_nodes(ui_manager_nodes, required_nodes)
-  if type(ui_manager_nodes.validate) == "function" then
-    return ui_manager_nodes.validate(required_nodes)
-  end
+local function _initialize_game_ui(state, current_game)
+  ui_events.send_to_all(ui_events.show["加载屏"], {})
+  local board_map = current_game and current_game.board and current_game.board.map or nil
+  M.spawn_startup_synthetic_actors(current_game)
+  board_scene.init(state, board_map, current_game)
+  ui_view.init_ui_assets(state)
+  ui_view.capture_player_colors(state, current_game)
+end
 
-  local known = {}
-  for _, entry in pairs(ui_manager_nodes) do
-    if type(entry) == "table" and type(entry[1]) == "string" and entry[1] ~= "" then
-      known[entry[1]] = true
-    end
-  end
-
-  local missing = {}
-  local seen = {}
-  for _, name in ipairs(required_nodes or {}) do
-    if type(name) == "string" and name ~= "" and not known[name] and not seen[name] then
-      missing[#missing + 1] = name
-      seen[name] = true
-    end
-  end
-  return missing
+local function _schedule_loading_transition(state)
+  runtime_ports.schedule(timing.loading_to_game_transition_seconds, function()
+    ui_events.send_to_all(ui_events.hide["加载屏"], {})
+    canvas_coordinator.switch(state.ui, base_nodes.canvas)
+  end)
 end
 
 -- current_game_ref 是一个单元素数组 { nil }，供 set/get 当前 game 使用
@@ -93,43 +84,14 @@ function M.install(state, current_game_ref, opts)
   opts = opts or {}
   RegisterTriggerEvent({ EVENT.GAME_INIT }, function()
     -- UIManager modules cache role globals during require.
-    role_globals.install(runtime_ports.resolve_roles())
-    require "vendor.third_party.UIManager.Utils"
-    local ui_manager_nodes = require("Data.UIManagerNodes")
-    UIManager.Builder:new(ui_manager_nodes)
-    local current_game = current_game_ref[1]
-    if not current_game and type(opts.start_runtime) == "function" then
-      current_game = opts.start_runtime(state, current_game_ref)
-    end
-    assert(current_game ~= nil, "missing current_game")
-
-    canvas_event_router.bind(state, function()
-      return current_game_ref[1]
-    end)
-
-    if ui_events.set_roles then
-      ui_events.set_roles(runtime_ports.resolve_roles())
-    end
-
-    local required_nodes = _build_required_click_nodes({
-      extra = market_ui.item_buttons or {},
-    })
-    local missing = _validate_required_nodes(ui_manager_nodes, required_nodes)
-    if #missing > 0 then
-      error("UI 节点缺失: " .. table.concat(missing, ", "))
-    end
-
-    ui_events.send_to_all(ui_events.show["加载屏"], {})
-    local board_map = current_game and current_game.board and current_game.board.map or nil
-    M.spawn_startup_synthetic_actors(current_game)
-    board_scene.init(state, board_map, current_game)
-    ui_view.init_ui_assets(state)
-    ui_view.capture_player_colors(state, current_game)
-
-    runtime_ports.schedule(timing.loading_to_game_transition_seconds, function()
-      ui_events.send_to_all(ui_events.hide["加载屏"], {})
-      canvas_coordinator.switch(state.ui, base_nodes.canvas)
-    end)
+    _install_role_globals()
+    local ui_manager_nodes = _build_ui_manager_nodes()
+    local current_game = _resolve_current_game(state, current_game_ref, opts)
+    _bind_current_game(state, current_game_ref)
+    _sync_ui_event_roles()
+    _assert_required_ui_nodes(ui_manager_nodes)
+    _initialize_game_ui(state, current_game)
+    _schedule_loading_transition(state)
   end)
 end
 

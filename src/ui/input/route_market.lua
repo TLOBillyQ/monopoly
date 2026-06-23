@@ -1,13 +1,9 @@
-local runtime_state = require("src.ui.state.runtime")
 local ui_event_intents = require("src.ui.input.event_intents")
+local route_model = require("src.ui.input.route_model")
+local runtime_state = require("src.ui.state.runtime")
 local nodes = require("src.ui.schema.market")
 
 local intents = {}
-
-local function _resolve_market(state)
-  local current_model = runtime_state.get_ui_model(state)
-  return current_model and current_model.market or nil
-end
 
 function intents.build_items(state)
   local specs = {}
@@ -15,7 +11,7 @@ function intents.build_items(state)
     specs[#specs + 1] = {
       name = name,
       build_intent = function()
-        local market = _resolve_market(state)
+        local market = route_model.market(state)
         if not market then return nil end
         local option_id = ui_event_intents.resolve_option_id(market, { index = index }, state)
         if not option_id then
@@ -35,7 +31,7 @@ function intents.build_controls(state)
 
   local function _build_choice_intent(intent_type)
     return function()
-      local market = _resolve_market(state)
+      local market = route_model.market(state)
       if not market then return nil end
       return { type = intent_type, choice_id = market.choice_id }
     end
@@ -45,7 +41,7 @@ function intents.build_controls(state)
     {
       name = nodes.confirm,
       build_intent = function()
-        local market = _resolve_market(state)
+        local market = route_model.market(state)
         if not market then return nil end
         local ui_runtime = runtime_state.ensure_ui_runtime(state)
         local option_id = ui_runtime.pending_choice_selected_option_id
@@ -74,7 +70,7 @@ function intents.build_controls(state)
     {
       name = nodes.tab_item,
       build_intent = function()
-        local market = _resolve_market(state)
+        local market = route_model.market(state)
         if not market then return nil end
         return { type = "market_tab_select", choice_id = market.choice_id, tab = "item" }
       end,

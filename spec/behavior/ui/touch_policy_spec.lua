@@ -63,7 +63,70 @@ describe("presentation_ui.touch_policy", function()
     assert(touch[base_nodes.skin_button] == true, "skin button should stay enabled")
     assert(touch[base_nodes.gallery_button] == true, "gallery button should stay enabled")
     assert(touch[base_nodes.action_log_button] == true, "action log button should stay enabled")
+    assert(touch[base_nodes.end_button] == false, "optional end button should stay blocked")
     assert(visible[ids.slot[1]] == true, "item slot should stay visible when locked")
+  end)
+
+  it("_test_apply_input_lock_leaves_auxiliary_controls_enabled_when_unlocked", function()
+    local touch = {}
+    local state = {
+      ui = {
+        input_blocked = false,
+        auto_control_nodes = { base_nodes.auto_button, base_nodes.auto_label },
+        set_touch_enabled = function(_, name, enabled)
+          touch[name] = enabled
+        end,
+      },
+    }
+
+    ui_view.apply_input_lock(state)
+
+    assert(touch[base_nodes.auto_button] == true, "unlocked auto button should remain touchable")
+    assert(touch[base_nodes.auto_label] == false, "auto label should stay non-clickable")
+    assert(touch[base_nodes.action_log_button] == true, "unlocked action log should remain touchable")
+    assert(touch[base_nodes.skin_button] == true, "unlocked skin button should remain touchable")
+    assert(touch[base_nodes.gallery_button] == true, "unlocked gallery button should remain touchable")
+  end)
+
+  it("_test_apply_input_lock_noops_without_touch_hook", function()
+    local visible_called = false
+    local state = {
+      ui = {
+        input_blocked = true,
+        set_visible = function()
+          visible_called = true
+        end,
+      },
+    }
+
+    ui_view.apply_input_lock(state)
+
+    assert(visible_called == false, "input lock should not mutate visibility without touch hook")
+  end)
+
+  it("_test_apply_input_lock_tolerates_missing_visible_hook", function()
+    local touch = {}
+    local state = {
+      ui = {
+        input_blocked = true,
+        item_slots = {},
+        base_hidden_nodes = { base_nodes.action_button, base_nodes.end_button },
+        choice_screens = {
+          player = { option_buttons = {} },
+          target = {},
+          remote = { option_buttons = {} },
+          building = {},
+        },
+        set_touch_enabled = function(_, name, enabled)
+          touch[name] = enabled
+        end,
+      },
+    }
+
+    ui_view.apply_input_lock(state)
+
+    assert(touch[base_nodes.action_button] == false, "action button should still be blocked")
+    assert(touch[base_nodes.end_button] == false, "end button should still be blocked")
   end)
 
   it("_test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped", function()
