@@ -100,15 +100,15 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=a12f9a017ac1d45f
+projectHash=e0bcab1847c8e6e1
 scope.0.id=chunk:src/ui/coord/ui_state.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=99
-scope.0.semanticHash=a04c0e563533c055
-scope.0.lastMutatedAt=2026-05-24T05:09:40Z
+scope.0.endLine=100
+scope.0.semanticHash=c0e31d38d01c1e72
+scope.0.lastMutatedAt=2026-06-23T03:22:59Z
 scope.0.lastMutationLane=behavior
 scope.0.lastMutationStatus=passed
-scope.0.lastMutationSites=18
-scope.0.lastMutationKilled=18
+scope.0.lastMutationSites=11
+scope.0.lastMutationKilled=11
 ]]

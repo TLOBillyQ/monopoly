@@ -1,4 +1,121 @@
 # language: zh-CN
+# mutation-stamp: sha256=dfee27469abb39f686f339954a9062984317f231ed40ff8c7cd57185aa24afc0
+# acceptance-mutation-manifest-begin
+# {
+#   "background_hash": "10c39f71faa0d8d861ad59cadc227a6488b69c0ceff8d5de53357199bca9d95c",
+#   "feature_name": "可选行动阶段结束按钮",
+#   "feature_path": "features/v102/optional_action_end_button.feature",
+#   "implementation_hash": "sha256:a8c9066467815e049906c38e174c21988c0be82c772d47ab7dc52ec7a2839712",
+#   "scenarios": [
+#     {
+#       "index": 0,
+#       "mutation_count": 1,
+#       "name": "optional_action_end_button_001 行动等待只展示行动按钮",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 1,
+#         "Survived": 0,
+#         "Total": 1
+#       },
+#       "scenario_hash": "ef9847a88fa5f87d5c900a3d5f4a9e7a982d71e83b0b324cfe8479603950cd06",
+#       "tested_at": "2026-06-23T03:28:07Z"
+#     },
+#     {
+#       "index": 1,
+#       "mutation_count": 6,
+#       "name": "optional_action_end_button_002 可选行动阶段只展示结束按钮作为推进入口",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 6,
+#         "Survived": 0,
+#         "Total": 6
+#       },
+#       "scenario_hash": "e0bf722dad14e0e48a21731c10c6fe412525ac0be40f30b05cc4b6d86bdb20f1",
+#       "tested_at": "2026-06-23T03:28:07Z"
+#     },
+#     {
+#       "index": 2,
+#       "mutation_count": 6,
+#       "name": "optional_action_end_button_003 点击结束按钮完成可选行动阶段",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 6,
+#         "Survived": 0,
+#         "Total": 6
+#       },
+#       "scenario_hash": "ccf798f1cb0c4f5234258b2105e738863812134c76d86002d4cdeec95cac8e9e",
+#       "tested_at": "2026-06-23T03:28:08Z"
+#     },
+#     {
+#       "index": 3,
+#       "mutation_count": 3,
+#       "name": "optional_action_end_button_004 可选行动超时等价于完成可选行动阶段",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 3,
+#         "Survived": 0,
+#         "Total": 3
+#       },
+#       "scenario_hash": "1374fd0c799eca8b6a083cbf638e3b93baf19244cbbd16c99e5c0e6971f95baf",
+#       "tested_at": "2026-06-23T03:28:08Z"
+#     },
+#     {
+#       "index": 4,
+#       "mutation_count": 24,
+#       "name": "optional_action_end_button_005 阻断状态隐藏结束按钮",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 24,
+#         "Survived": 0,
+#         "Total": 24
+#       },
+#       "scenario_hash": "489387795878d41ea3cf8d1cf0ce90d039db29eee2ee59498a33a2f362679a0a",
+#       "tested_at": "2026-06-23T03:28:10Z"
+#     },
+#     {
+#       "index": 5,
+#       "mutation_count": 15,
+#       "name": "optional_action_end_button_006 非手动当前玩家隐藏结束按钮",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 15,
+#         "Survived": 0,
+#         "Total": 15
+#       },
+#       "scenario_hash": "56ffac24e451181ccab7c2e88b24d0f3598210c05b0fdc4dc61538374a851943",
+#       "tested_at": "2026-06-23T03:28:11Z"
+#     },
+#     {
+#       "index": 6,
+#       "mutation_count": 12,
+#       "name": "optional_action_end_button_007 系统等待和空可选阶段不展示结束按钮",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 12,
+#         "Survived": 0,
+#         "Total": 12
+#       },
+#       "scenario_hash": "f944427dc43eaffab39943bd6ec076bac9fc3a5cb39ee505028ef1ef8e9fcfd6",
+#       "tested_at": "2026-06-23T03:28:12Z"
+#     },
+#     {
+#       "index": 7,
+#       "mutation_count": 3,
+#       "name": "optional_action_end_button_008 旁观身份只展示被动提示",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 3,
+#         "Survived": 0,
+#         "Total": 3
+#       },
+#       "scenario_hash": "baa19587bcac56a120620dff920badbc5189fefe8b64f313ff69a80d6c5fc4d0",
+#       "tested_at": "2026-06-23T03:28:13Z"
+#     }
+#   ],
+#   "tested_at": "2026-06-23T03:28:13Z",
+#   "version": 1
+# }
+# acceptance-mutation-manifest-end
 
 功能: 可选行动阶段结束按钮
 
@@ -104,15 +221,16 @@
     并且 行动角色处于包含<可选行动>的可选行动阶段
     并且 当前行动控制为<行动控制>
     当 基础屏为观察玩家刷新
-    那么 基础屏结束按钮已隐藏
+    那么 基础屏当前行动角色ID为<预期行动角色ID>
+    并且 基础屏结束按钮已隐藏
     并且 基础屏结束按钮不可派发完成可选行动阶段
     并且 基础屏只展示被动当前回合提示
 
   例子:
-    | 观察角色ID | 行动角色ID | 可选行动 | 行动控制 |
-    | 2          | 1          | 道具槽位 | 人类     |
-    | 1          | 1          | 道具槽位 | AI       |
-    | 1          | 1          | 道具槽位 | 托管     |
+    | 观察角色ID | 行动角色ID | 预期行动角色ID | 可选行动 | 行动控制 |
+    | 4          | 1          | 1              | 道具槽位 | 人类     |
+    | 1          | 1          | 1              | 道具槽位 | AI       |
+    | 1          | 1          | 1              | 道具槽位 | 托管     |
 
   # optional_action_end_button_007 系统等待和空可选阶段不展示结束按钮
   场景大纲: optional_action_end_button_007 系统等待和空可选阶段不展示结束按钮

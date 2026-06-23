@@ -84,6 +84,26 @@ local FOLLOWUP_BY_OPTIONAL_ACTION = {
   ["落地选择"] = "回合清理流程",
 }
 
+local BLOCKING_STATE_BY_NAME = {
+  ["选择弹窗"] = true,
+  ["二次确认弹窗"] = true,
+  ["目标选择"] = true,
+  ["黑市界面"] = true,
+  ["弹窗提示"] = true,
+  ["行动动画"] = true,
+  ["移动动画"] = true,
+  ["落地视觉等待"] = true,
+}
+
+local STAGE_STATE_BY_NAME = {
+  ["扣留等待"] = true,
+  ["医院等待"] = true,
+  ["山路等待"] = true,
+  ["回合间等待"] = true,
+  ["游戏结束"] = true,
+  ["空可选行动阶段"] = true,
+}
+
 local function _resolve_followup_flow(world)
   local action_name = tostring(world.base_screen_optional_action or "")
   return FOLLOWUP_BY_OPTIONAL_ACTION[action_name] or "必经流程"
@@ -119,6 +139,30 @@ local function _set_optional_action_phase(world, action_name)
   end
   world.base_screen_optional_action = text
   world.base_screen_empty_optional_phase = false
+  return true
+end
+
+local function _set_blocking_state(world, state_name)
+  local text = tostring(state_name or "")
+  if BLOCKING_STATE_BY_NAME[text] ~= true then
+    return nil, "unknown blocking state: " .. text
+  end
+  world.base_screen_blocking_state = text
+  world.base_screen_input_blocked = true
+  return true
+end
+
+local function _set_stage_state(world, stage_name)
+  local text = tostring(stage_name or "")
+  if STAGE_STATE_BY_NAME[text] ~= true then
+    return nil, "unknown stage state: " .. text
+  end
+  world.base_screen_stage_state = text
+  world.base_screen_optional_action = nil
+  world.base_screen_empty_optional_phase = text == "空可选行动阶段"
+  if text ~= "空可选行动阶段" then
+    world.base_screen_input_blocked = true
+  end
   return true
 end
 
@@ -391,20 +435,11 @@ function base_screen_steps.handlers()
     end,
 
     ["<阻断状态>正在生效"] = function(world, example)
-      world.base_screen_blocking_state = tostring(example["阻断状态"] or "")
-      world.base_screen_input_blocked = true
-      return true
+      return _set_blocking_state(world, example["阻断状态"])
     end,
 
     ["玩家处于<阶段状态>"] = function(world, example)
-      local stage = tostring(example["阶段状态"] or "")
-      world.base_screen_stage_state = stage
-      world.base_screen_optional_action = nil
-      world.base_screen_empty_optional_phase = stage == "空可选行动阶段"
-      if stage ~= "空可选行动阶段" then
-        world.base_screen_input_blocked = true
-      end
-      return true
+      return _set_stage_state(world, example["阶段状态"])
     end,
 
     ["基础屏为该玩家刷新"] = function(world)

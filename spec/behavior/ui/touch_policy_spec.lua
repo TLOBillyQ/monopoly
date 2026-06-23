@@ -278,8 +278,31 @@ describe("presentation_ui.touch_policy", function()
       "input lock must not hide the gallery entry")
     assert(visible[base_nodes.auto_button] == true,
       "input lock must not hide the auto entry")
+    assert(visible[base_nodes.auto_label] == true,
+      "input lock must not hide the auto label")
     assert(visible[base_nodes.action_log_button] == true,
       "input lock must not hide the action log entry")
+  end)
+
+  it("_test_apply_input_lock_tolerates_false_choice_screens", function()
+    local touch = {}
+    local state = {
+      ui = {
+        input_blocked = true,
+        item_slots = {},
+        base_hidden_nodes = {},
+        choice_screens = false,
+        set_touch_enabled = function(_, name, enabled)
+          touch[name] = enabled
+        end,
+        set_visible = function() end,
+      },
+    }
+
+    ui_view.apply_input_lock(state)
+
+    assert(touch[base_nodes.action_button] == false, "locked action button should still be blocked")
+    assert(touch[base_nodes.end_button] == false, "locked end button should still be blocked")
   end)
 
   it("_test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists", function()

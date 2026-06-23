@@ -982,6 +982,64 @@ describe("presentation_ui.interaction", function()
       "landing optional end button should preserve choice id")
   end)
 
+  it("_test_route_base_non_cancelable_optional_choice_routes_no_base_progression", function()
+    local route_base = require("src.ui.input.route_base")
+    local base_nodes = require("src.ui.schema.base")
+    local state = {
+      ui_runtime = {
+        ui_model = {
+          choice = {
+            id = 13,
+            kind = "item_phase_passive",
+            allow_cancel = false,
+          },
+        },
+      },
+      ui = {
+        input_blocked = false,
+      },
+    }
+    local action_spec = nil
+    local end_spec = nil
+    for _, spec in ipairs(route_base.build(state)) do
+      if spec.name == base_nodes.action_button then action_spec = spec end
+      if spec.name == base_nodes.end_button then end_spec = spec end
+    end
+
+    _assert_eq(action_spec and action_spec.build_intent(), nil,
+      "non-cancelable optional choice should not route through action button")
+    _assert_eq(end_spec and end_spec.build_intent(), nil,
+      "non-cancelable optional choice should not dispatch choice_cancel")
+  end)
+
+  it("_test_route_base_input_lock_blocks_optional_end_intent", function()
+    local route_base = require("src.ui.input.route_base")
+    local base_nodes = require("src.ui.schema.base")
+    local state = {
+      ui_runtime = {
+        ui_model = {
+          choice = {
+            id = 14,
+            kind = "item_phase_passive",
+            allow_cancel = true,
+          },
+        },
+      },
+      ui = {
+        input_blocked = true,
+      },
+    }
+    local end_spec = nil
+    for _, spec in ipairs(route_base.build(state)) do
+      if spec.name == base_nodes.end_button then
+        end_spec = spec
+      end
+    end
+
+    _assert_eq(end_spec and end_spec.build_intent(), nil,
+      "input lock should block optional end button dispatch")
+  end)
+
   it("_test_raycast_build_camera_ray_supports_table_vectors", function()
     local role = {
       get_ctrl_unit = function()

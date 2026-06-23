@@ -48,10 +48,22 @@ function bootstrap_nodes.validate_required_nodes(ui_manager_nodes, required_node
     return ui_manager_nodes.validate(required_nodes)
   end
 
+  local function _node_name_from_entry(entry)
+    if type(entry) ~= "table" then
+      return nil
+    end
+    local name = entry[1]
+    if type(name) ~= "string" then
+      return nil
+    end
+    return name
+  end
+
   local known = {}
   for _, entry in pairs(ui_manager_nodes) do
-    if type(entry) == "table" and type(entry[1]) == "string" and entry[1] ~= "" then
-      known[entry[1]] = true
+    local name = _node_name_from_entry(entry)
+    if name ~= nil then
+      known[name] = true
     end
   end
 
@@ -75,3 +87,48 @@ function bootstrap_nodes.assert_required_nodes(ui_manager_nodes, opts)
 end
 
 return bootstrap_nodes
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=63185adeeba729ea
+scope.0.id=chunk:src/app/ui_bootstrap_nodes.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=90
+scope.0.semanticHash=9e34e2806fb2f75a
+scope.0.lastMutatedAt=2026-06-23T03:19:07Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=44
+scope.0.lastMutationKilled=44
+scope.1.id=function:_required_click_nodes:11
+scope.1.kind=function
+scope.1.startLine=11
+scope.1.endLine=22
+scope.1.semanticHash=c6df1bc6a2948436
+scope.1.lastMutatedAt=2026-06-23T03:17:32Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=no_sites
+scope.1.lastMutationSites=0
+scope.1.lastMutationKilled=0
+scope.2.id=function:_node_name_from_entry:51
+scope.2.kind=function
+scope.2.startLine=51
+scope.2.endLine=60
+scope.2.semanticHash=2ddf7c92ee666f99
+scope.2.lastMutatedAt=2026-06-23T03:19:07Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=7
+scope.2.lastMutationKilled=7
+scope.3.id=function:bootstrap_nodes.assert_required_nodes:81
+scope.3.kind=function
+scope.3.startLine=81
+scope.3.endLine=87
+scope.3.semanticHash=bef3d9984ddf06a7
+scope.3.lastMutatedAt=2026-06-23T03:19:07Z
+scope.3.lastMutationLane=behavior
+scope.3.lastMutationStatus=passed
+scope.3.lastMutationSites=5
+scope.3.lastMutationKilled=5
+]]
