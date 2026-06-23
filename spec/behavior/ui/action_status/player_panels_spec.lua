@@ -265,6 +265,10 @@ describe("presentation_player_panels", function()
       "input lock should hide base action controls even for the current player")
     _assert_eq(env.state.ui.touch_enabled[base_nodes.action_button], false,
       "input lock should disable base action touch")
+    _assert_eq(env.state.ui.visible[base_nodes.end_button], false,
+      "input lock should also hide the optional end button")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], false,
+      "input lock should disable the optional end button touch")
     _assert_eq(type(env.state.ui.item_slot_item_ids_by_role), "table",
       "presenter should recover a malformed item-slot cache")
     _assert_eq(type(env.state.ui.item_slot_item_ids), "table",

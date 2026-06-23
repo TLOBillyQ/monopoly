@@ -36,15 +36,15 @@ return nodes
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=0c0cc9a1aba28e80
+projectHash=77ee5ea088313fd5
 scope.0.id=chunk:src/ui/schema/base.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=31
-scope.0.semanticHash=d876c1692b423afa
-scope.0.lastMutatedAt=2026-05-24T05:10:59Z
+scope.0.endLine=36
+scope.0.semanticHash=188432fcbf617118
+scope.0.lastMutatedAt=2026-06-23T04:19:46Z
 scope.0.lastMutationLane=behavior
 scope.0.lastMutationStatus=passed
-scope.0.lastMutationSites=26
-scope.0.lastMutationKilled=26
+scope.0.lastMutationSites=28
+scope.0.lastMutationKilled=28
 ]]
