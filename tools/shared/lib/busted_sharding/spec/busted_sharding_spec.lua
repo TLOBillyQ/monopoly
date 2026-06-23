@@ -2,22 +2,24 @@
 if arg then rawset(arg, 0, "tools/shared/lib/busted_sharding/spec/busted_sharding_spec.lua") end
 require("spec.bootstrap").install_package_paths()
 
+local common = require("shared.lib.common")
 local sharding = require("shared.lib.busted_sharding")
 
 local _TMP_ROOT = "./tmp/busted_sharding_spec"
 
 local function _rm_rf(path)
-  os.execute("rm -rf " .. path)
+  common.remove_path(path)
 end
 
 local function _write_file(path, content)
-  local dir = path:match("^(.*)/[^/]+$")
-  if dir then
-    os.execute("mkdir -p " .. dir)
+  assert(common.write_file(path, content or ""))
+end
+
+local function _expected_discovered_path(path)
+  if common.is_windows() then
+    return common.resolve_path(common.current_dir(), path)
   end
-  local f = assert(io.open(path, "w"))
-  f:write(content or "")
-  f:close()
+  return path
 end
 
 describe("busted_sharding.discover_spec_files", function()
@@ -43,9 +45,9 @@ describe("busted_sharding.discover_spec_files", function()
     local files = sharding.discover_spec_files(_TMP_ROOT)
 
     assert.are.equal(3, #files, "expected 3 *_spec.lua entries, got " .. tostring(#files))
-    assert.are.equal(_TMP_ROOT .. "/a_spec.lua", files[1])
-    assert.are.equal(_TMP_ROOT .. "/b_spec.lua", files[2])
-    assert.are.equal(_TMP_ROOT .. "/nested/c_spec.lua", files[3])
+    assert.are.equal(_expected_discovered_path(_TMP_ROOT .. "/a_spec.lua"), files[1])
+    assert.are.equal(_expected_discovered_path(_TMP_ROOT .. "/b_spec.lua"), files[2])
+    assert.are.equal(_expected_discovered_path(_TMP_ROOT .. "/nested/c_spec.lua"), files[3])
   end)
 end)
 

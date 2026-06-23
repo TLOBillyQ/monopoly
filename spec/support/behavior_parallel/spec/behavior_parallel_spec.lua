@@ -1,6 +1,12 @@
 require("spec.bootstrap").install_package_paths()
 
+local common = require("shared.lib.common")
 local behavior_parallel = require("spec.support.behavior_parallel")
+
+local function _seen_path(seen, path)
+  return seen[path] == true
+    or seen[common.resolve_path(common.current_dir(), path)] == true
+end
 
 describe("behavior_parallel profile roots", function()
   it("resolves the tooling profile from .busted", function()
@@ -20,8 +26,8 @@ describe("behavior_parallel profile roots", function()
     for _, path in ipairs(files) do
       seen[path] = true
     end
-    assert.is_true(seen["tools/shared/lib/busted_sharding/spec/busted_sharding_spec.lua"])
-    assert.is_true(seen["spec/support/busted/spec/busted_infra_tooling_spec.lua"])
+    assert.is_true(_seen_path(seen, "tools/shared/lib/busted_sharding/spec/busted_sharding_spec.lua"))
+    assert.is_true(_seen_path(seen, "spec/support/busted/spec/busted_infra_tooling_spec.lua"))
   end)
 
   it("parses quiet result summaries from the shared output handler", function()

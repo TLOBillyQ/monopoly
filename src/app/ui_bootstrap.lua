@@ -29,9 +29,47 @@ local function _install_role_globals()
   role_globals.install(runtime_ports.resolve_roles())
 end
 
+local function _node_label(id, entry)
+  local name = type(entry) == "table" and entry[1] or nil
+  if type(name) == "string" and name ~= "" then
+    return name .. "(" .. tostring(id) .. ")"
+  end
+  return tostring(id)
+end
+
+local function _validate_configured_child_nodes(ui_manager_nodes)
+  if not (GameAPI and type(GameAPI.get_eui_children) == "function") then
+    return {}
+  end
+
+  local missing = {}
+  local seen = {}
+  for id, entry in pairs(ui_manager_nodes or {}) do
+    if type(entry) == "table" then
+      local ok, children = pcall(GameAPI.get_eui_children, id)
+      if not ok then
+        error("UI 节点子节点读取失败: " .. _node_label(id, entry) .. ": " .. tostring(children))
+      end
+      if type(children) == "table" then
+        for _, child_id in ipairs(children) do
+          if child_id ~= nil and ui_manager_nodes[child_id] == nil and not seen[child_id] then
+            missing[#missing + 1] = _node_label(id, entry) .. " -> " .. tostring(child_id)
+            seen[child_id] = true
+          end
+        end
+      end
+    end
+  end
+  return missing
+end
+
 local function _build_ui_manager_nodes()
   require "vendor.third_party.UIManager.Utils"
   local ui_manager_nodes = require("Data.UIManagerNodes")
+  local missing_child_nodes = _validate_configured_child_nodes(ui_manager_nodes)
+  if #missing_child_nodes > 0 then
+    error("UI 节点配置缺失: " .. table.concat(missing_child_nodes, ", "))
+  end
   UIManager.Builder:new(ui_manager_nodes)
   return ui_manager_nodes
 end

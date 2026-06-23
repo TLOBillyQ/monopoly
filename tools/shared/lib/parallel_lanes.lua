@@ -59,11 +59,38 @@ local function _cleanup_lane(paths)
   common.remove_path(paths.launcher)
 end
 
+local function _run_sequential(lanes, stream)
+  local all_ok = true
+  local results = {}
+  for _, lane in ipairs(lanes or {}) do
+    local result = common.run_command(lane.cmd)
+    local output = result.output or ""
+    local success = result.ok == true
+    if stream and output ~= "" then
+      io.write(output)
+      if output:sub(-1) ~= "\n" then io.write("\n") end
+    end
+    results[#results + 1] = {
+      label = lane.label,
+      ok = success,
+      output = output,
+      exit_code = result.code,
+    }
+    if not success then all_ok = false end
+  end
+  if stream then io.flush() end
+  return all_ok, results
+end
+
 function M.run(lanes, opts)
   opts = opts or {}
   local timeout = opts.timeout or _DEFAULT_TIMEOUT_SECONDS
   local stream = opts.stream
   if stream == nil then stream = true end
+
+  if common.is_windows() then
+    return _run_sequential(lanes, stream)
+  end
 
   local active = {}
   for _, lane in ipairs(lanes) do

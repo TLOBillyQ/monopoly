@@ -110,7 +110,7 @@ function M.run(args)
   local command = {
     "luacheck",
     "--config",
-    common.normalize_path(CONFIG_PATH),
+    ".luacheckrc",
     "-j", "4",
   }
   for _, target in ipairs(options.targets) do

@@ -41,6 +41,12 @@ describe("busted_lane.parse_args", function()
     assert.are.equal("guards", opts.profile)
     assert.is_true(opts.verbose)
   end)
+
+  it("parses --busted-bin", function()
+    local opts = busted_lane.parse_args({ "--profile", "contract", "--busted-bin", "custom-busted" })
+    assert.are.equal("contract", opts.profile)
+    assert.are.equal("custom-busted", opts.busted_bin)
+  end)
 end)
 
 describe("busted_lane.compress_tap", function()
@@ -82,5 +88,28 @@ describe("busted_lane.compress_tap", function()
     assert.are.equal("0 passed\n", out)
     assert.are.equal(0, passed)
     assert.are.equal(0, failed)
+  end)
+end)
+
+describe("busted_lane.run", function()
+  it("starts busted through argv with --busted-bin taking priority", function()
+    local captured
+    local result = busted_lane.run({
+      profile = "contract",
+      busted_bin = "custom-busted",
+      run_command = function(command)
+        captured = command
+        return { ok = true, code = 0, output = _all_pass_tap() }
+      end,
+    })
+
+    assert.are.same({
+      "custom-busted",
+      "--output=TAP",
+      "--run",
+      "contract",
+    }, captured)
+    assert.are.equal(0, result.code)
+    assert.are.equal("3 passed\n", result.stdout)
   end)
 end)

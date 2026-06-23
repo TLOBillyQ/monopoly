@@ -133,6 +133,48 @@ describe("ui_bootstrap", function()
     assert(tostring(missing):find("UI 节点缺失", 1, true) ~= nil, "ui bootstrap should report missing required nodes")
   end)
 
+  it("reports_missing_host_child_nodes_before_building_ui_manager", function()
+    local ui_manager_nodes = {
+      ["1519736575|2147314485"] = { "基础屏", "ECanvas" },
+    }
+    local builder_called = false
+    local err = nil
+
+    _with_install_patches({
+      { target = package.loaded, key = "Data.UIManagerNodes", value = ui_manager_nodes },
+      { target = _G, key = "GameAPI", value = {
+        get_eui_children = function(id)
+          if id == "1519736575|2147314485" then
+            return { "1519736575|1397686248" }
+          end
+          return {}
+        end,
+      } },
+      { target = _G, key = "UIManager", value = {
+        Builder = {
+          new = function()
+            builder_called = true
+            error("builder should not run when host child nodes are missing")
+          end,
+        },
+      } },
+    }, function()
+      local ok, install_err = pcall(_install_with_runtime, {})
+      err = install_err
+      assert(ok == false, "ui bootstrap should fail fast for missing host child nodes")
+    end)
+
+    local text = tostring(err)
+    assert(text:find("UI 节点配置缺失", 1, true) ~= nil,
+      "ui bootstrap should report missing node configuration")
+    assert(text:find("基础屏", 1, true) ~= nil,
+      "ui bootstrap should include the parent node name")
+    assert(text:find("1519736575|1397686248", 1, true) ~= nil,
+      "ui bootstrap should include the missing host child id")
+    assert(builder_called == false,
+      "ui bootstrap should validate host children before creating UIManager nodes")
+  end)
+
   it("scheduled callback switches canvas to base to hide non-base canvases", function()
     local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
     local base_nodes = require("src.ui.schema.base")
