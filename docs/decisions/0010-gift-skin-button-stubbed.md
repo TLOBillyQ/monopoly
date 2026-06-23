@@ -1,16 +1,22 @@
 ---
 kind: adr
-status: stable
+status: superseded
 owner: specification
-last_verified: 2026-05-23
+last_verified: 2026-06-23
 ---
-# ADR 0010 — 谢礼皮肤按钮按 stub 现状钉为不可点
+# ADR 0010 — 谢礼皮肤按钮按 stub 现状钉为不可点（已废止）
 
-**Status**: Stable (2026-05-23, 锁定当前 host gift 集成 stub 现状)
+**Status**: Superseded (2026-06-23, 用户裁定删除谢礼相关功能；所有皮肤统一 198 金豆购买)
 **Trigger**: 完备性审计 `docs/product/design-source/蛋仔策划案--大富翁.docx` 与 `features/v102/skin_shop.feature` 发现冲突项 C1
-**Related**: `src/app/host_integrations/gift.lua`, `src/ui/render/skin_panel.lua:41-49`, `features/v102/skin_shop.feature`（"未解锁的赠礼类槽位按钮显示赠礼名并不可点" 场景）
+**Related**: `features/v102/skin_shop.feature`, `src/config/content/skins.lua`, `src/ui/render/skin_panel.lua`
 
 ---
+
+## 2026-06-23 修订
+
+用户裁定删除原谢礼/赠礼/赞助皮肤功能。奶龙、水豚嘟嘟等旧赠礼皮肤不再走 `unlock = "gift"`、谢礼按钮或赞助弹窗路径；皮肤商店所有皮肤统一作为 198 金豆购买皮肤。
+
+因此，本 ADR 下方记录的 stub 现状只保留为历史背景，不再是当前规格契约。
 
 ## 上下文（Why）
 
