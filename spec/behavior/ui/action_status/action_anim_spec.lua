@@ -205,6 +205,75 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
     _assert_eq(#durations, 0, "default action anim should not consume tip queue")
   end)
 
+  it("_test_item_get_reveal_uses_atlas_enlarged_card_for_owner_role", function()
+    local item_atlas_view = require("src.ui.render.item_atlas")
+    local runtime_ports = require("src.foundation.ports.runtime_ports")
+    local role = { id = 2 }
+    local active_role = nil
+    local shown = nil
+    local hidden = nil
+    local scheduled = {}
+    local state = {
+      game = {
+        turn = {
+          current_player_index = 1,
+          action_anim = { seq = 12, kind = "item_get_reveal", player_id = 2 },
+        },
+        players = { [1] = { id = 2 } },
+      },
+      presentation_runtime = {
+        runtime = {
+          with_client_role = function(next_role, fn)
+            active_role = next_role
+            local result = fn()
+            active_role = nil
+            return result
+          end,
+        },
+      },
+      ui = {},
+    }
+    local bundle = {
+      runtime = state.presentation_runtime.runtime,
+      host_runtime = {
+        enqueue_tip = function() end,
+        schedule = function(delay, fn)
+          scheduled[#scheduled + 1] = { delay = delay, fn = fn }
+        end,
+      },
+      ui_events = { show = {}, hide = {}, send_to_all = function() end },
+    }
+
+    _with_patches({
+      { target = runtime_ports, key = "resolve_role", value = function(role_id)
+        if role_id == 2 then
+          return role
+        end
+        return nil
+      end },
+      { target = item_atlas_view, key = "show_enlarged", value = function(_, item_id)
+        shown = { item_id = item_id, role = active_role }
+      end },
+      { target = item_atlas_view, key = "hide_enlarged", value = function()
+        hidden = { role = active_role }
+      end },
+    }, function()
+      local duration = action_anim.play(state, {
+        seq = 12,
+        kind = "item_get_reveal",
+        player_id = 2,
+        item_id = 2001,
+      }, { runtime_bundle = bundle })
+      _assert_eq(duration, timing.item_get_reveal_seconds, "item reveal duration mismatch")
+      _assert_eq(shown and shown.item_id, 2001, "item reveal should show gained item")
+      _assert_eq(shown and shown.role, role, "item reveal should render for owner role")
+      _assert_eq(#scheduled, 1, "item reveal should schedule auto hide")
+      _assert_eq(scheduled[1].delay, timing.item_get_reveal_seconds, "item reveal hide delay mismatch")
+      scheduled[1].fn()
+      _assert_eq(hidden and hidden.role, role, "item reveal auto hide should target owner role")
+    end)
+  end)
+
   it("_test_action_anim_no_camera_focus_side_effect", function()
     local follow_events = 0
     local state = {

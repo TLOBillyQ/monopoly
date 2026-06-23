@@ -4,6 +4,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local event_feed = require("src.rules.ports.event_feed")
+local gain_reveal = require("src.rules.items.gain_reveal")
 
 local steal = {}
 local action_anim_duration = timing.action_anim_default_seconds
@@ -72,6 +73,7 @@ function steal.steal_item_at_index(game, player, target, item_idx)
     item_name = "偷窃卡",
     duration = action_anim_duration,
   })
+  gain_reveal.queue(game, player, stolen.id, { source = "steal" })
   return {
     ok = true,
     stolen = stolen,

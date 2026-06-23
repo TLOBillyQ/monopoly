@@ -610,11 +610,39 @@ function items_steps.handlers()
       return true
     end,
 
+    ["玩家通过<来源>实时成功获得道具卡"] = function(world, example)
+      local ok, err = _require_allowed(example["来源"], gain_sources, "item gain source")
+      if not ok then return nil, err end
+      _ensure_player(world)
+      world.item_gain_source = example["来源"]
+      world.pending_gained_items = {
+        { name = "new_item", source = world.item_gain_source },
+        { name = "queued_item", source = world.item_gain_source },
+      }
+      world.pending_gained_item = world.pending_gained_items[1]
+      world.item_gain_realtime = true
+      return true
+    end,
+
     ["道具获得表现播放"] = function(world)
       if not world.pending_gained_item then
         return nil, "no gained item to show"
       end
       world.gained_item_show_seconds = 3
+      return true
+    end,
+
+    ["来源表现<来源表现>完成"] = function(world, example)
+      if not world.pending_gained_item then
+        return nil, "no gained item after source presentation " .. tostring(example["来源表现"])
+      end
+      world.item_gain_source_presentation = example["来源表现"]
+      world.gained_item_show_seconds = 3
+      world.gained_item_display = {
+        item = world.pending_gained_item,
+        owner_only = true,
+        screen = "item_atlas_enlarged_card",
+      }
       return true
     end,
 
@@ -625,11 +653,66 @@ function items_steps.handlers()
       return true
     end,
 
+    ["道具获得展示使用已有卡牌展示屏展示新获得的道具卡图"] = function(world)
+      if not (world.gained_item_display and world.gained_item_display.screen == "item_atlas_enlarged_card") then
+        return nil, "item reveal should use item atlas enlarged card screen"
+      end
+      return true
+    end,
+
+    ["道具获得展示只出现在获得者视角"] = function(world)
+      if not (world.gained_item_display and world.gained_item_display.owner_only == true) then
+        return nil, "item reveal should be owner-only"
+      end
+      return true
+    end,
+
+    ["未提前关闭时道具获得展示持续3秒后自动结束"] = function(world)
+      if world.gained_item_show_seconds ~= 3 then
+        return nil, "expected 3 second item reveal, got " .. tostring(world.gained_item_show_seconds)
+      end
+      world.current_reveal_closed = true
+      return true
+    end,
+
+    ["玩家提前关闭时只结束当前道具获得展示"] = function(world)
+      local queue = world.pending_gained_items or {}
+      if #queue < 2 then
+        return nil, "expected queued item reveals for early close"
+      end
+      table.remove(queue, 1)
+      world.pending_gained_items = queue
+      world.pending_gained_item = queue[1]
+      if world.pending_gained_item == nil then
+        return nil, "early close should leave next reveal queued"
+      end
+      return true
+    end,
+
+    ["多张新道具卡按获得顺序逐张继续展示"] = function(world)
+      local current = world.pending_gained_item
+      if current == nil or current.name ~= "queued_item" then
+        return nil, "next reveal should continue in gain order"
+      end
+      return true
+    end,
+
     ["展示结束后道具卡收入玩家卡槽"] = function(world)
       local bag = world.player.bag or {}
       bag[#bag + 1] = world.pending_gained_item
       world.player.bag = bag
       world.pending_gained_item = nil
+      return true
+    end,
+
+    ["每张展示结束后道具卡视觉收入玩家卡槽"] = function(world)
+      local bag = world.player.bag or {}
+      for _, item in ipairs(world.pending_gained_items or { world.pending_gained_item }) do
+        bag[#bag + 1] = item
+      end
+      world.player.bag = bag
+      world.pending_gained_item = nil
+      world.pending_gained_items = nil
       return true
     end,
 

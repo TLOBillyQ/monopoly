@@ -1,13 +1,10 @@
 local event_kinds = require("src.config.gameplay.event_kinds")
-local timing = require("src.config.gameplay.timing")
 local constants = require("src.config.content.constants")
 local inventory = require("src.rules.items.inventory")
-local presenter = require("src.rules.land.presenter")
+local gain_reveal = require("src.rules.items.gain_reveal")
 local achievement_progress = require("src.rules.ports.achievement_progress")
 local event_feed = require("src.rules.ports.event_feed")
 local number_utils = require("src.foundation.number")
-
-local popup_show_seconds = timing.popup_dwell_default_seconds or 1.0
 
 local M = {}
 
@@ -42,20 +39,7 @@ M.executors = {
       assert(cfg ~= nil, "missing drawn item cfg")
       local ok = inventory.give(player, cfg.id, { game = ctx.game })
       if ok then
-        local item_name = inventory.item_name(cfg.id)
-        presenter.push_popup(ctx.game, "道具卡", player.name .. " 获得道具 " .. item_name, {
-          kind = "item_card",
-          image_ref = cfg.id,
-          auto_close_seconds = popup_show_seconds,
-          popup_opts = { policy = "defer" },
-        })
-        presenter.queue_action_anim(ctx.game, {
-          kind = "item_use",
-          player_id = player.id,
-          item_id = cfg.id,
-          item_name = item_name,
-          duration = popup_show_seconds,
-        })
+        gain_reveal.queue(ctx.game, player, cfg.id, { source = "item_tile" })
       end
     end,
   },

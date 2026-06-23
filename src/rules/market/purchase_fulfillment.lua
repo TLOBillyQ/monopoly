@@ -44,7 +44,10 @@ local function _fulfill_item(game, player, entry, opts)
   if not _charge_if_needed(game, player, opts.currency, opts.price, opts) then
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
   end
-  inventory.give(player, entry.product_id)
+  local given = inventory.give(player, entry.product_id, { game = game })
+  if given == true then
+    require("src.rules.items.gain_reveal").queue(game, player, entry.product_id, { source = "market" })
+  end
   query_context.consume_global_limit(game, entry.product_id)
   _emit_bought_item(game, {
     player = player,

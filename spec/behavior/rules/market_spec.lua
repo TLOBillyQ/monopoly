@@ -564,6 +564,9 @@ describe("market", function()
     end
     assert(not has_cash_receive,
       "market item purchase should suppress cash_receive action anim for immediate effect")
+    assert(anim and anim.kind == "item_get_reveal", "market item purchase should queue item reveal anim")
+    assert(anim.item_id == 2003, "market reveal item mismatch")
+    assert(anim.player_id == p.id, "market reveal player mismatch")
   end)
 
   it("market_paid_buy_keeps_choice_open_and_refreshes_after_callback", function()

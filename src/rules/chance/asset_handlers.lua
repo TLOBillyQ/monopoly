@@ -1,4 +1,5 @@
 local achievement_progress = require("src.rules.ports.achievement_progress")
+local gain_reveal = require("src.rules.items.gain_reveal")
 
 local asset_handlers = {}
 
@@ -61,7 +62,10 @@ function asset_handlers.register(handlers, common)
   end
 
   handlers.grant_item = function(game, player, card)
-    deps.inventory.give(player, card.item_id, { game = game })
+    local ok = deps.inventory.give(player, card.item_id, { game = game })
+    if ok == true then
+      gain_reveal.queue(game, player, card.item_id, { source = "chance" })
+    end
   end
 
   local function _discard_count(player, card)

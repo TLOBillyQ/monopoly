@@ -92,6 +92,7 @@ function defaults.register()
   registry.register("missile", _void_delegate("play_missile"))
   registry.register("monster", _void_delegate("play_monster"))
   registry.register("clear_obstacles", _void_delegate("play_clear_obstacles"))
+  registry.register("item_get_reveal", _return_delegate("play_item_get_reveal"))
 end
 
 return defaults

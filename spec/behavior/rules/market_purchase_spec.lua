@@ -199,6 +199,7 @@ describe("choices_purchase", function()
   it("purchase_execute_local_item_success_keeps_payload_and_exact_balance_boundary", function()
     local entry = { product_id = 1, kind = "item", currency = "金币", price = 7, name = "路障卡" }
     local give_calls = {}
+    local give_contexts = {}
     local limit_consumed = {}
     local emitted = {}
     local published = {}
@@ -221,8 +222,9 @@ describe("choices_purchase", function()
           is_full_calls = is_full_calls + 1
           return is_full_calls > 1
         end,
-        give = function(_, product_id)
+        give = function(_, product_id, context)
           give_calls[#give_calls + 1] = product_id
+          give_contexts[#give_contexts + 1] = context
         end,
       },
       ["src.foundation.events"] = {
@@ -252,6 +254,7 @@ describe("choices_purchase", function()
     end)
 
     assert(give_calls[1] == 1, "purchase should give the item")
+    assert(give_contexts[1] and give_contexts[1].game ~= nil, "purchase should pass game context to inventory give")
     assert(limit_consumed[1] == 1, "purchase should consume global market limit")
     assert(emitted[1].kind == "mk.bought_item", "purchase should emit bought item event")
     assert(emitted[1].payload.price == 7, "bought item payload should keep price")

@@ -199,15 +199,16 @@ describe("landing", function()
       assert(next_state == "wait_landing_visual", "item landing should defer visual release before action anim")
       assert(next_args and next_args.next_state == "wait_action_anim",
         "item landing should resume into wait_action_anim after visual hold")
-      assert(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "item action anim should be queued")
+      assert(g.turn.action_anim and g.turn.action_anim.kind == "item_get_reveal", "item reveal anim should be queued")
       assert(g.turn.action_anim and g.turn.action_anim.item_id == 2001, "item action anim item_id mismatch")
     end)
   end)
 
-  it("item_landing_pushes_popup_on_success", function()
+  it("item_landing_queues_reveal_on_success", function()
     local g = _new_game()
     local popups = {}
     _set_ui_port(g, {
+      wait_action_anim = true,
       push_popup = function(_, payload)
         popups[#popups + 1] = payload
       end,
@@ -223,12 +224,10 @@ describe("landing", function()
       local res = _resolve_landing(g, p, tile_ref, {})
       assert(not res, "item landing should not wait")
     end)
-    assert(#popups == 1, "item landing should push one popup")
-    assert(popups[1].title == "道具卡", "item landing popup title mismatch")
-    assert(string.find(popups[1].body, p.name, 1, true), "item landing popup should include player name")
-    assert(string.find(popups[1].body, "免费卡", 1, true), "item landing popup should include item name")
-    assert(popups[1].image_ref == 2001, "item landing popup image_ref mismatch")
-    assert(popups[1].auto_close_seconds == timing.action_anim_default_seconds, "item popup auto close mismatch")
+    assert(#popups == 0, "successful item landing should not push legacy item popup")
+    assert(g.turn.action_anim and g.turn.action_anim.kind == "item_get_reveal", "item landing should queue reveal")
+    assert(g.turn.action_anim.item_id == 2001, "item landing reveal item mismatch")
+    assert(g.turn.action_anim.player_id == p.id, "item landing reveal player mismatch")
   end)
 
   it("item_landing_full_inventory_no_duplicate_success_popup", function()
