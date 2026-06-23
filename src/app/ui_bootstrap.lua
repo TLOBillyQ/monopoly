@@ -33,6 +33,7 @@ end
 local function _required_click_nodes()
   local required = {
     base_nodes.action_button,
+    base_nodes.end_button,
     base_nodes.auto_button,
     target_choice_nodes.confirm,
     target_choice_nodes.cancel,

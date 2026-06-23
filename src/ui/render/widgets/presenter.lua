@@ -106,6 +106,35 @@ local function _apply_action_hint(ui, panel)
   end
 end
 
+local function _is_optional_action_choice(choice)
+  local kind = choice and choice.kind or nil
+  return (kind == "item_phase_passive" or kind == "landing_optional_effect")
+    and choice.allow_cancel ~= false
+end
+
+local function _set_button_label(ui, name, text)
+  if ui.set_button then
+    ui:set_button(name, text)
+    return
+  end
+  if ui.set_label then
+    ui:set_label(name, text)
+  end
+end
+
+local function _apply_base_action_controls(ui, ui_model, base_visible)
+  local end_visible = base_visible == true
+    and _is_optional_action_choice(ui_model and ui_model.choice) == true
+  local action_visible = base_visible == true and not end_visible
+  ui:set_visible(base_nodes.action_button, action_visible)
+  ui:set_touch_enabled(base_nodes.action_button, action_visible)
+  ui:set_visible(base_nodes.end_button, end_visible)
+  ui:set_touch_enabled(base_nodes.end_button, end_visible)
+  if end_visible then
+    _set_button_label(ui, base_nodes.end_button, "结束")
+  end
+end
+
 local function _apply_auto_effect(ui, ui_model, ctx)
   ui:set_visible(base_nodes.auto_effect, _resolve_auto_effect_visible(ui_model, ctx))
   ui:set_touch_enabled(base_nodes.auto_effect, false)
@@ -140,7 +169,7 @@ local function _refresh_for_role(state, ui_model, runtime, role, panel, refresh_
   _apply_auto_effect(ui, ui_model, ctx)
   _apply_countdown(ui, panel)
   _apply_action_hint(ui, panel)
-  ui:set_touch_enabled(base_nodes.action_button, base_visible)
+  _apply_base_action_controls(ui, ui_model, base_visible)
   _item_slot_opts.role_id = ctx.role_id
   _item_slot_opts.display_player_id = ctx.display_player_id
   _item_slot_opts.allow_interact = base_visible

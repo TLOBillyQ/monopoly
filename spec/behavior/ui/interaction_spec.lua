@@ -882,13 +882,14 @@ describe("presentation_ui.interaction", function()
     _assert_eq(destroyed, 1, "rebind should destroy existing listeners with destroy hooks")
   end)
 
-  it("_test_ui_event_router_passive_action_button_closes_choice_modal", function()
+  it("_test_ui_event_router_optional_end_button_closes_choice_modal", function()
     local base_nodes = require("src.ui.schema.base")
     local modal = require("src.ui.coord.modal")
     local role = { get_roleid = function() return 5 end }
     local action_node = _new_listenable_node()
+    local end_node = _new_listenable_node()
     local closed = 0
-    local dispatched = nil
+    local dispatched = {}
 
     _with_patches({
       { key = "all_roles", value = nil },
@@ -902,6 +903,9 @@ describe("presentation_ui.interaction", function()
         query_nodes_by_name = function(name)
           if name == base_nodes.action_button then
             return { action_node }
+          end
+          if name == base_nodes.end_button then
+            return { end_node }
           end
           return { _new_listenable_node() }
         end,
@@ -921,7 +925,7 @@ describe("presentation_ui.interaction", function()
             return false
           end,
           dispatch_action = function(_, state_arg, action, opts)
-            dispatched = action
+            dispatched[#dispatched + 1] = action
             _assert_eq(type(opts.on_close_choice), "function",
               "router should pass close-choice dispatch option")
             opts.on_close_choice(state_arg)
@@ -935,11 +939,47 @@ describe("presentation_ui.interaction", function()
         return {}
       end)
       action_node._listener_cb({ role = role })
+      end_node._listener_cb({ role = role })
     end)
 
-    _assert_eq(dispatched and dispatched.type, "choice_cancel", "passive action button should dispatch choice_cancel")
-    _assert_eq(dispatched and dispatched.actor_role_id, 5, "passive choice_cancel should carry event actor")
+    _assert_eq(#dispatched, 1, "only optional end button should dispatch optional completion")
+    _assert_eq(dispatched[1] and dispatched[1].type, "choice_cancel",
+      "optional end button should dispatch choice_cancel")
+    _assert_eq(dispatched[1] and dispatched[1].actor_role_id, 5,
+      "optional choice_cancel should carry event actor")
     _assert_eq(closed, 1, "choice_cancel dispatch should close the choice modal")
+  end)
+
+  it("_test_ui_event_router_optional_landing_end_button_dispatches_choice_cancel", function()
+    local route_base = require("src.ui.input.route_base")
+    local base_nodes = require("src.ui.schema.base")
+    local state = {
+      ui_runtime = {
+        ui_model = {
+          choice = {
+            id = 12,
+            kind = "landing_optional_effect",
+            allow_cancel = true,
+          },
+        },
+      },
+    }
+    local specs = route_base.build(state)
+    local end_spec = nil
+    local action_spec = nil
+    for _, spec in ipairs(specs) do
+      if spec.name == base_nodes.end_button then end_spec = spec end
+      if spec.name == base_nodes.action_button then action_spec = spec end
+    end
+
+    local action_intent = action_spec and action_spec.build_intent()
+    local end_intent = end_spec and end_spec.build_intent()
+
+    _assert_eq(action_intent, nil, "landing optional phase should not route through action button")
+    _assert_eq(end_intent and end_intent.type, "choice_cancel",
+      "landing optional end button should dispatch choice_cancel")
+    _assert_eq(end_intent and end_intent.choice_id, 12,
+      "landing optional end button should preserve choice id")
   end)
 
   it("_test_raycast_build_camera_ray_supports_table_vectors", function()

@@ -65,6 +65,7 @@ local function _apply_locked_state(ui, allow_always_show_touch)
     ui:set_visible(slot_name, true)
   end
   ui:set_touch_enabled(base_nodes.action_button, false)
+  ui:set_touch_enabled(base_nodes.end_button, false)
   _lock_choice_screens(ui)
   _lock_market_buttons(ui)
   _set_base_auxiliary_touch(ui, allow_always_show_touch)

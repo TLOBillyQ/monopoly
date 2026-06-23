@@ -4,17 +4,41 @@ local runtime_state = require("src.ui.state.runtime")
 
 local intents = {}
 
+local function _current_choice(state)
+  local current_model = runtime_state.get_ui_model(state)
+  return current_model and current_model.choice or nil
+end
+
+local function _is_optional_action_choice(choice)
+  local kind = choice and choice.kind or nil
+  return kind == "item_phase_passive" or kind == "landing_optional_effect"
+end
+
+local function _input_blocked(state)
+  return state and state.ui and state.ui.input_blocked == true
+end
+
 function intents.build(state)
   return {
     {
       name = base_nodes.action_button,
       build_intent = function()
-        local current_model = runtime_state.get_ui_model(state)
-        local choice = current_model and current_model.choice or nil
-        if choice and choice.kind == "item_phase_passive" then
-          return event_intents.choice_cancel_intent(state, "action_button_passive")
+        if _is_optional_action_choice(_current_choice(state)) then
+          return nil
         end
         return { type = "ui_button", id = "next" }
+      end,
+    },
+    {
+      name = base_nodes.end_button,
+      build_intent = function()
+        if _input_blocked(state) then
+          return nil
+        end
+        if not _is_optional_action_choice(_current_choice(state)) then
+          return nil
+        end
+        return event_intents.choice_cancel_intent(state, "optional_action_end")
       end,
     },
     {

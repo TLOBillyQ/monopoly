@@ -13,6 +13,7 @@ function M.build_ui_state()
   local card_outlines = permanent_nodes.card_outlines
   local base_hidden_nodes = {
     base_nodes.action_button,
+    base_nodes.end_button,
     base_nodes.skin_button,
     base_nodes.skin_label,
   }
