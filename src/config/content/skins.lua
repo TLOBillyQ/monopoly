@@ -11,10 +11,15 @@ return skins
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=503405a9552ff9d1
+projectHash=7635e3a518a9e728
 scope.0.id=chunk:src/config/content/skins.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=11
 scope.0.semanticHash=15c5929941ca19c6
+scope.0.lastMutatedAt=2026-06-23T14:43:35Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=25
+scope.0.lastMutationKilled=25
 ]]

@@ -1,11 +1,11 @@
 # language: zh-CN
-# mutation-stamp: sha256=12169029ebacc1e0874b496bb1d662aca0aabd8a38a0acd068d5f335ee124aae
+# mutation-stamp: sha256=ee06b901097d4b44d5c458d1d2aeda2aa1fcdcaeab744fa4f212d91fabf5093c
 # acceptance-mutation-manifest-begin
 # {
 #   "background_hash": "10c39f71faa0d8d861ad59cadc227a6488b69c0ceff8d5de53357199bca9d95c",
 #   "feature_name": "皮肤商店",
 #   "feature_path": "features/v102/skin_shop.feature",
-#   "implementation_hash": "sha256:c03f4d3badc6ea7baea23f698c216f7c1396e2f588e5a9c27a7331282919682e",
+#   "implementation_hash": "sha256:87f120404190e4435a268082c4efa938a5cc03be3634d7c8656aa8a2e06ef52a",
 #   "scenarios": [
 #     {
 #       "index": 0,
@@ -87,45 +87,32 @@
 #     },
 #     {
 #       "index": 6,
-#       "mutation_count": 12,
+#       "mutation_count": 24,
 #       "name": "购买解锁皮肤槽位",
 #       "result": {
 #         "Errors": 0,
-#         "Killed": 12,
+#         "Killed": 24,
 #         "Survived": 0,
-#         "Total": 12
+#         "Total": 24
 #       },
-#       "scenario_hash": "db89e24468e70354e6cbfc95a24e50b3809a02de51cf86aa9c036ebc19b5a6da",
-#       "tested_at": "2026-05-29T07:25:04Z"
+#       "scenario_hash": "f70d4f6530d068d7c661542624da77870d603f12e7b8f158b48da1813b5e9cae",
+#       "tested_at": "2026-06-23T14:53:02Z"
 #     },
 #     {
 #       "index": 7,
-#       "mutation_count": 5,
-#       "name": "赠礼解锁皮肤槽位",
-#       "result": {
-#         "Errors": 0,
-#         "Killed": 5,
-#         "Survived": 0,
-#         "Total": 5
-#       },
-#       "scenario_hash": "dc6c4772bc5c5d354d81cdb6ed35e846716d3088edbde656da52aae844bb0305",
-#       "tested_at": "2026-05-29T07:25:04Z"
-#     },
-#     {
-#       "index": 8,
-#       "mutation_count": 12,
+#       "mutation_count": 14,
 #       "name": "穿上已解锁的皮肤",
 #       "result": {
 #         "Errors": 0,
-#         "Killed": 12,
+#         "Killed": 14,
 #         "Survived": 0,
-#         "Total": 12
+#         "Total": 14
 #       },
-#       "scenario_hash": "20ad93240cf7cf53cb61edfebc95a5cce57e1b0ce6e3b278856545dc9ce875c8",
-#       "tested_at": "2026-05-29T07:25:06Z"
+#       "scenario_hash": "2b2202400ca8cf124327dd2cc20883bfd8427c59cefd3b10a7e8a38d67048bd9",
+#       "tested_at": "2026-06-23T14:53:06Z"
 #     },
 #     {
-#       "index": 9,
+#       "index": 8,
 #       "mutation_count": 3,
 #       "name": "穿上未解锁的皮肤失败",
 #       "result": {
@@ -135,10 +122,10 @@
 #         "Total": 3
 #       },
 #       "scenario_hash": "b0a3564f8f0ec7363ac9a444b97aba1b32b3c85caa6754886e4441346ce3f513",
-#       "tested_at": "2026-05-29T07:25:06Z"
+#       "tested_at": "2026-06-23T14:53:07Z"
 #     },
 #     {
-#       "index": 10,
+#       "index": 9,
 #       "mutation_count": 5,
 #       "name": "装备越界槽位不生效",
 #       "result": {
@@ -148,10 +135,10 @@
 #         "Total": 5
 #       },
 #       "scenario_hash": "d70096fee86ec389f10c4890a5674881e3c5dccb632365c16b5f73c17f4157ef",
-#       "tested_at": "2026-05-29T07:25:07Z"
+#       "tested_at": "2026-06-23T14:53:09Z"
 #     },
 #     {
-#       "index": 11,
+#       "index": 10,
 #       "mutation_count": 6,
 #       "name": "翻页后装备第二页的皮肤",
 #       "result": {
@@ -161,10 +148,10 @@
 #         "Total": 6
 #       },
 #       "scenario_hash": "29f22cab9fa3e5cd958363f21bc484d3c48762fe52b0f639f0af821ecf7d3615",
-#       "tested_at": "2026-05-29T07:25:07Z"
+#       "tested_at": "2026-06-23T14:53:10Z"
 #     },
 #     {
-#       "index": 12,
+#       "index": 11,
 #       "mutation_count": 4,
 #       "name": "脱下已装备皮肤",
 #       "result": {
@@ -174,10 +161,36 @@
 #         "Total": 4
 #       },
 #       "scenario_hash": "3ce5d43b0b04f5dbfc9a773a7ceb206ba7357611d4b3c85375a544e764acf6ec",
-#       "tested_at": "2026-05-29T07:25:08Z"
+#       "tested_at": "2026-06-23T14:53:12Z"
+#     },
+#     {
+#       "index": 12,
+#       "mutation_count": 8,
+#       "name": "脱下当前皮肤触发还原回调，参数为角色",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 8,
+#         "Survived": 0,
+#         "Total": 8
+#       },
+#       "scenario_hash": "60c9c89d9f3eee4063b20486f52ad62d7c24225ef56e1d5699ea12dd6c0bb5e0",
+#       "tested_at": "2026-06-23T14:53:14Z"
 #     },
 #     {
 #       "index": 13,
+#       "mutation_count": 14,
+#       "name": "点击已装备槽位的皮肤动作按钮触发脱下",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 14,
+#         "Survived": 0,
+#         "Total": 14
+#       },
+#       "scenario_hash": "f1b9532aff1e6b0725e7e26f302aa9b20f9394805871cde2cbf298085b27aad0",
+#       "tested_at": "2026-06-23T14:53:19Z"
+#     },
+#     {
+#       "index": 14,
 #       "mutation_count": 4,
 #       "name": "翻到下一页",
 #       "result": {
@@ -187,10 +200,10 @@
 #         "Total": 4
 #       },
 #       "scenario_hash": "b8ac9311bd9516e19ec165191ec8065ad65cb557cb81f18d5249f19fced552a7",
-#       "tested_at": "2026-05-29T07:25:08Z"
+#       "tested_at": "2026-06-23T14:53:20Z"
 #     },
 #     {
-#       "index": 14,
+#       "index": 15,
 #       "mutation_count": 4,
 #       "name": "翻到上一页",
 #       "result": {
@@ -200,10 +213,10 @@
 #         "Total": 4
 #       },
 #       "scenario_hash": "a2cfc87b8fb7d2dcc12d4ba628080a8ad71a43d4c6ef82ce55eb4b4ed406f98b",
-#       "tested_at": "2026-05-29T07:25:09Z"
+#       "tested_at": "2026-06-23T14:53:21Z"
 #     },
 #     {
-#       "index": 15,
+#       "index": 16,
 #       "mutation_count": 8,
 #       "name": "最后一页展示剩余皮肤",
 #       "result": {
@@ -213,10 +226,10 @@
 #         "Total": 8
 #       },
 #       "scenario_hash": "f2c3bf3fedc7a1299fad147505fda9c4d609827a9ab12e5f1de2e5df8ae2f99f",
-#       "tested_at": "2026-05-29T07:25:10Z"
+#       "tested_at": "2026-06-23T14:53:24Z"
 #     },
 #     {
-#       "index": 16,
+#       "index": 17,
 #       "mutation_count": 4,
 #       "name": "下一页翻页不超出最大页",
 #       "result": {
@@ -226,10 +239,10 @@
 #         "Total": 4
 #       },
 #       "scenario_hash": "6ff4865080fc61d30e507fb4b4862b1a1be922fef5dd19f7d546159d3887dae3",
-#       "tested_at": "2026-05-29T07:25:11Z"
+#       "tested_at": "2026-06-23T14:53:25Z"
 #     },
 #     {
-#       "index": 17,
+#       "index": 18,
 #       "mutation_count": 4,
 #       "name": "上一页翻页不低于第1页",
 #       "result": {
@@ -239,10 +252,10 @@
 #         "Total": 4
 #       },
 #       "scenario_hash": "6e81aaf3e1e9048a31fc285221644e894ca29104dc8d2a276ff72e9697efed1d",
-#       "tested_at": "2026-05-29T07:25:11Z"
+#       "tested_at": "2026-06-23T14:53:26Z"
 #     },
 #     {
-#       "index": 18,
+#       "index": 19,
 #       "mutation_count": 16,
 #       "name": "打开皮肤商店应渲染当前页全部卡片",
 #       "result": {
@@ -252,10 +265,10 @@
 #         "Total": 16
 #       },
 #       "scenario_hash": "e76df022aed76a94e83f71a331069c1793df3d2836ffe24c1ed750113c55852d",
-#       "tested_at": "2026-05-29T07:25:13Z"
+#       "tested_at": "2026-06-23T14:53:31Z"
 #     },
 #     {
-#       "index": 19,
+#       "index": 20,
 #       "mutation_count": 14,
 #       "name": "翻页后渲染新页全部卡片",
 #       "result": {
@@ -265,10 +278,10 @@
 #         "Total": 14
 #       },
 #       "scenario_hash": "5d2822da33051872d72f2efa668af4c67aeb37c254e07d1a4a62fed40742e4b2",
-#       "tested_at": "2026-05-29T07:25:14Z"
+#       "tested_at": "2026-06-23T14:53:35Z"
 #     },
 #     {
-#       "index": 20,
+#       "index": 21,
 #       "mutation_count": 28,
 #       "name": "打开皮肤商店后卡牌槽位贴对应皮肤的图",
 #       "result": {
@@ -278,10 +291,10 @@
 #         "Total": 28
 #       },
 #       "scenario_hash": "2b90f9dc177e745ba70017c804b32fc4420b3161bbcd3d5d161e4c4e074fd9d5",
-#       "tested_at": "2026-05-29T07:25:16Z"
+#       "tested_at": "2026-06-23T14:53:44Z"
 #     },
 #     {
-#       "index": 21,
+#       "index": 22,
 #       "mutation_count": 32,
 #       "name": "翻到下一页后卡牌槽位贴图刷新为新页皮肤",
 #       "result": {
@@ -291,10 +304,10 @@
 #         "Total": 32
 #       },
 #       "scenario_hash": "67620cf2db393398f89bf79450eba2c479b5ca9cb2780875b1b098fafe4821de",
-#       "tested_at": "2026-05-29T07:25:19Z"
+#       "tested_at": "2026-06-23T14:53:54Z"
 #     },
 #     {
-#       "index": 22,
+#       "index": 23,
 #       "mutation_count": 14,
 #       "name": "翻回上一页后卡牌槽位贴图恢复为前页皮肤",
 #       "result": {
@@ -304,10 +317,10 @@
 #         "Total": 14
 #       },
 #       "scenario_hash": "bc1c33f51bc66f49895c6cb453bb82fe101e0c37f6e1946762587e6b0e3ca0d7",
-#       "tested_at": "2026-05-29T07:25:20Z"
+#       "tested_at": "2026-06-23T14:53:58Z"
 #     },
 #     {
-#       "index": 23,
+#       "index": 24,
 #       "mutation_count": 21,
 #       "name": "装备完成后槽位容器仍保持展示",
 #       "result": {
@@ -317,10 +330,10 @@
 #         "Total": 21
 #       },
 #       "scenario_hash": "0b8ddaab837d89d74517339e3ce6de38066433790f0357e86dcd6fcfd926a087",
-#       "tested_at": "2026-05-29T07:25:22Z"
+#       "tested_at": "2026-06-23T14:54:05Z"
 #     },
 #     {
-#       "index": 24,
+#       "index": 25,
 #       "mutation_count": 16,
 #       "name": "切换装备后槽位容器仍保持展示",
 #       "result": {
@@ -330,33 +343,20 @@
 #         "Total": 16
 #       },
 #       "scenario_hash": "5b1ea7a37d8da33ba6fd562e105876346936d40d8d55a651a0739fe789fcab38",
-#       "tested_at": "2026-05-29T07:25:23Z"
-#     },
-#     {
-#       "index": 25,
-#       "mutation_count": 14,
-#       "name": "未解锁的购买类槽位按钮显示价格并可点",
-#       "result": {
-#         "Errors": 0,
-#         "Killed": 14,
-#         "Survived": 0,
-#         "Total": 14
-#       },
-#       "scenario_hash": "dfb4f91708b265b8537f729176a5b29193c2a13f3ff2c874e5480fc39a202120",
-#       "tested_at": "2026-05-29T07:25:25Z"
+#       "tested_at": "2026-06-23T14:54:10Z"
 #     },
 #     {
 #       "index": 26,
-#       "mutation_count": 14,
-#       "name": "未解锁的赠礼类槽位按钮显示赠礼名并不可点",
+#       "mutation_count": 21,
+#       "name": "未解锁的皮肤槽位统一显示198金豆价格并可点",
 #       "result": {
 #         "Errors": 0,
-#         "Killed": 14,
+#         "Killed": 21,
 #         "Survived": 0,
-#         "Total": 14
+#         "Total": 21
 #       },
-#       "scenario_hash": "62459c4beab1f116e95dbb7cbea5b466a65f1047806e6c9aa61d9b886412b892",
-#       "tested_at": "2026-05-29T07:25:26Z"
+#       "scenario_hash": "6cf627ee4ad87efe86a38cb96ab1cb48aec0c6bdb3ed795e001a07c52841825a",
+#       "tested_at": "2026-06-23T14:54:16Z"
 #     },
 #     {
 #       "index": 27,
@@ -386,32 +386,45 @@
 #     },
 #     {
 #       "index": 29,
-#       "mutation_count": 16,
-#       "name": "购买类槽位显示价格图标，赠礼类槽位隐藏价格图标",
+#       "mutation_count": 27,
+#       "name": "未解锁皮肤槽位显示价格图标和198金豆价格",
 #       "result": {
 #         "Errors": 0,
-#         "Killed": 16,
+#         "Killed": 27,
 #         "Survived": 0,
-#         "Total": 16
+#         "Total": 27
 #       },
-#       "scenario_hash": "79a59fcbbeab2780bbc6ef5c65e71ffc57dafa9bcb80d22ab1b47163c76f14b5",
-#       "tested_at": "2026-05-29T07:25:31Z"
+#       "scenario_hash": "03d47408c36f2f8187a1f5a14805cda48147819ff4d0f7dde652206c709242e5",
+#       "tested_at": "2026-06-23T14:54:25Z"
 #     },
 #     {
 #       "index": 30,
-#       "mutation_count": 7,
-#       "name": "赠礼解锁但保留价格的槽位价格图标仍隐藏",
+#       "mutation_count": 9,
+#       "name": "持有未装备的购买类皮肤价格图标隐藏",
 #       "result": {
 #         "Errors": 0,
-#         "Killed": 7,
+#         "Killed": 9,
 #         "Survived": 0,
-#         "Total": 7
+#         "Total": 9
 #       },
-#       "scenario_hash": "07fa2c15cfc24fffb6e5adf52c04a77974fd99d361ea0f4351601e0e2a46847c",
-#       "tested_at": "2026-05-29T07:25:32Z"
+#       "scenario_hash": "7837e9d90d2e04752cac00ef4d5d15582548ba6a37729d6aa86f6d1d0c30fbf9",
+#       "tested_at": "2026-06-23T14:54:28Z"
 #     },
 #     {
 #       "index": 31,
+#       "mutation_count": 9,
+#       "name": "已装备的购买类皮肤价格图标隐藏",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 9,
+#         "Survived": 0,
+#         "Total": 9
+#       },
+#       "scenario_hash": "47d8811fa16a3b8dfcff99048d5e9e4a86ac0f49d8e1861d3f7738efb0bd0967",
+#       "tested_at": "2026-06-23T14:54:30Z"
+#     },
+#     {
+#       "index": 32,
 #       "mutation_count": 5,
 #       "name": "购买类槽位但价格字段缺失时价格图标隐藏",
 #       "result": {
@@ -421,10 +434,10 @@
 #         "Total": 5
 #       },
 #       "scenario_hash": "d1df72b7f71dad4f5705d7ab021fd072804103885d4474aa99b15fda7d560329",
-#       "tested_at": "2026-05-29T07:25:33Z"
+#       "tested_at": "2026-06-23T14:54:32Z"
 #     },
 #     {
-#       "index": 32,
+#       "index": 33,
 #       "mutation_count": 5,
 #       "name": "购买类槽位但货币字段缺失时价格图标隐藏",
 #       "result": {
@@ -434,10 +447,10 @@
 #         "Total": 5
 #       },
 #       "scenario_hash": "e0e0cb8980ff0994545a7bc7a5ccb98bbe71225b73141548727f5f691f69e7e8",
-#       "tested_at": "2026-05-29T07:25:33Z"
+#       "tested_at": "2026-06-23T14:54:34Z"
 #     },
 #     {
-#       "index": 33,
+#       "index": 34,
 #       "mutation_count": 12,
 #       "name": "装备未解锁的购买类皮肤触发购买回调，参数为角色与皮肤产品",
 #       "result": {
@@ -447,49 +460,49 @@
 #         "Total": 12
 #       },
 #       "scenario_hash": "332f090c17a44b55a1abcca9a6d81aeac306bb9f10056e5355399848e3870e3d",
-#       "tested_at": "2026-05-29T07:25:35Z"
-#     },
-#     {
-#       "index": 34,
-#       "mutation_count": 8,
-#       "name": "购买回调成功后槽位解锁并自动装备",
-#       "result": {
-#         "Errors": 0,
-#         "Killed": 8,
-#         "Survived": 0,
-#         "Total": 8
-#       },
-#       "scenario_hash": "e8200e1ce7477da59d04fd80498dbfb77e8f83c516b8b5cec42d85e0d220fb9b",
-#       "tested_at": "2026-05-29T07:25:36Z"
+#       "tested_at": "2026-06-23T14:54:37Z"
 #     },
 #     {
 #       "index": 35,
 #       "mutation_count": 10,
-#       "name": "未注册购买回调时装备未解锁皮肤失败且不改变面板",
+#       "name": "购买回调成功后槽位解锁并自动装备",
 #       "result": {
 #         "Errors": 0,
 #         "Killed": 10,
 #         "Survived": 0,
 #         "Total": 10
 #       },
-#       "scenario_hash": "9f01723566700cc7000807ff39ad488fe955fa4d6c24b5442883602e709d1151",
-#       "tested_at": "2026-05-29T07:25:37Z"
+#       "scenario_hash": "f7c5ae07d876a90da93bdf8f43a4255a72a1a7245a470ca6d04415817f81ecf6",
+#       "tested_at": "2026-06-23T14:54:40Z"
 #     },
 #     {
 #       "index": 36,
-#       "mutation_count": 5,
+#       "mutation_count": 12,
+#       "name": "未注册购买回调时装备未解锁皮肤失败且不改变面板",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 12,
+#         "Survived": 0,
+#         "Total": 12
+#       },
+#       "scenario_hash": "cbabefcccd366555f9b0d37ca23b4bb688f38baa0ec484b438d50a3bf4ec391e",
+#       "tested_at": "2026-06-23T14:54:44Z"
+#     },
+#     {
+#       "index": 37,
+#       "mutation_count": 7,
 #       "name": "打开/翻页/购买/装备/关闭都不改写皮肤静态文本",
 #       "result": {
 #         "Errors": 0,
-#         "Killed": 5,
+#         "Killed": 7,
 #         "Survived": 0,
-#         "Total": 5
+#         "Total": 7
 #       },
-#       "scenario_hash": "5870683bf43d5c2136b5fbb2517a68b41c7df102eda167bd24485a25044bbcba",
-#       "tested_at": "2026-05-29T07:25:37Z"
+#       "scenario_hash": "106235011c98e8eada1b5641867cb65294cd2b209fc1b61ace2615a648579cbb",
+#       "tested_at": "2026-06-23T14:54:46Z"
 #     }
 #   ],
-#   "tested_at": "2026-05-29T07:25:37Z",
+#   "tested_at": "2026-06-23T14:54:46Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end
@@ -589,6 +602,7 @@
     假如 皮肤目录共有<皮肤数>款皮肤
     并且 玩家角色ID为<角色ID>
     并且 玩家打开皮肤商店
+    并且 皮肤商店打开角色ID为<验证角色ID>
     并且 槽位<槽位>的皮肤已归玩家持有
     当 玩家穿上槽位<槽位>的皮肤
     那么 槽位<槽位>的皮肤已装备成功
@@ -598,9 +612,9 @@
     并且 皮肤总页数为<总页数>
 
   例子:
-    | 皮肤数 | 角色ID | 槽位 | 验证槽位 | 槽位数 | 总页数 |
-    | 5      | 1      | 1    | 1        | 5      | 1      |
-    | 5      | 2      | 2    | 2        | 5      | 1      |
+    | 皮肤数 | 角色ID | 验证角色ID | 槽位 | 验证槽位 | 槽位数 | 总页数 |
+    | 5      | 1      | 1          | 1    | 1        | 5      | 1      |
+    | 5      | 2      | 2          | 2    | 2        | 5      | 1      |
 
   场景大纲: 穿上未解锁的皮肤失败
     假如 玩家角色ID为<角色ID>
@@ -964,17 +978,19 @@
     假如 皮肤目录共有<皮肤数>款皮肤
     并且 玩家角色ID为<角色ID>
     当 玩家打开皮肤商店
-    那么 皮肤卡牌槽位<购买槽位>价格图标已展示
+    那么 槽位<槽位>对应皮肤产品ID为<产品ID>
+    并且 槽位<购买槽位>对应皮肤产品ID为<购买产品ID>
+    并且 皮肤卡牌槽位<购买槽位>价格图标已展示
     并且 皮肤卡牌槽位<槽位>按钮文本为"<按钮文本>"
     并且 皮肤卡牌槽位<槽位>按钮可点
     并且 当前页面展示<槽位数>个皮肤槽位
     并且 皮肤总页数为<总页数>
 
   例子:
-    | 角色ID | 皮肤数 | 槽位 | 购买槽位 | 按钮文本 | 槽位数 | 总页数 |
-    | 1      | 6      | 1    | 1        | 198      | 6      | 1      |
-    | 1      | 6      | 5    | 5        | 198      | 6      | 1      |
-    | 1      | 6      | 6    | 6        | 198      | 6      | 1      |
+    | 角色ID | 皮肤数 | 槽位 | 产品ID | 购买槽位 | 购买产品ID | 按钮文本 | 槽位数 | 总页数 |
+    | 1      | 6      | 1    | skin_1 | 1        | skin_1     | 198      | 6      | 1      |
+    | 1      | 6      | 5    | skin_5 | 5        | skin_5     | 198      | 6      | 1      |
+    | 1      | 6      | 6    | skin_6 | 6        | skin_6     | 198      | 6      | 1      |
 
   # ── 已持有皮肤隐藏价格图标（穿上态 / 脱下态） ───────────────
 
@@ -982,6 +998,8 @@
     假如 皮肤目录共有<皮肤数>款皮肤
     并且 玩家角色ID为<角色ID>
     并且 玩家打开皮肤商店
+    并且 槽位<槽位>对应皮肤产品ID为<产品ID>
+    并且 槽位<购买槽位>对应皮肤产品ID为<购买产品ID>
     并且 槽位<槽位>的皮肤已归玩家持有
     当 玩家打开皮肤商店
     那么 皮肤卡牌槽位<槽位>价格图标已隐藏
@@ -991,13 +1009,15 @@
     并且 皮肤总页数为<总页数>
 
   例子:
-    | 角色ID | 皮肤数 | 槽位 | 购买槽位 | 按钮文本 | 槽位数 | 总页数 |
-    | 1      | 6      | 1    | 2        | 穿上     | 6      | 1      |
+    | 角色ID | 皮肤数 | 槽位 | 产品ID | 购买槽位 | 购买产品ID | 按钮文本 | 槽位数 | 总页数 |
+    | 1      | 6      | 1    | skin_1 | 2        | skin_2     | 穿上     | 6      | 1      |
 
   场景大纲: 已装备的购买类皮肤价格图标隐藏
     假如 皮肤目录共有<皮肤数>款皮肤
     并且 玩家角色ID为<角色ID>
     并且 玩家打开皮肤商店
+    并且 槽位<槽位>对应皮肤产品ID为<产品ID>
+    并且 槽位<购买槽位>对应皮肤产品ID为<购买产品ID>
     并且 槽位<槽位>的皮肤已归玩家持有
     并且 玩家穿上槽位<槽位>的皮肤
     当 玩家打开皮肤商店
@@ -1008,8 +1028,8 @@
     并且 皮肤总页数为<总页数>
 
   例子:
-    | 角色ID | 皮肤数 | 槽位 | 购买槽位 | 按钮文本 | 槽位数 | 总页数 |
-    | 1      | 6      | 1    | 2        | 脱下     | 6      | 1      |
+    | 角色ID | 皮肤数 | 槽位 | 产品ID | 购买槽位 | 购买产品ID | 按钮文本 | 槽位数 | 总页数 |
+    | 1      | 6      | 1    | skin_1 | 2        | skin_2     | 脱下     | 6      | 1      |
 
   # ── 价格图标边界：购买字段缺失仍隐藏（杀 L111 mutation） ─────
 
@@ -1063,6 +1083,7 @@
     并且 玩家角色ID为<角色ID>
     并且 玩家打开皮肤商店
     并且 槽位<槽位>的皮肤尚未解锁
+    并且 槽位<槽位>对应皮肤产品ID为<产品ID>
     并且 购买回调注册为成功回调
     当 玩家穿上槽位<槽位>的皮肤
     那么 槽位<槽位>的皮肤已归玩家持有
@@ -1071,14 +1092,15 @@
     并且 皮肤总页数为<总页数>
 
   例子:
-    | 角色ID | 皮肤数 | 槽位 | 总页数 |
-    | 1      | 6      | 1    | 1      |
-    | 1      | 6      | 5    | 1      |
+    | 角色ID | 皮肤数 | 槽位 | 产品ID | 总页数 |
+    | 1      | 6      | 1    | skin_1 | 1      |
+    | 1      | 6      | 5    | skin_5 | 1      |
 
   场景大纲: 未注册购买回调时装备未解锁皮肤失败且不改变面板
     假如 皮肤目录共有<皮肤数>款皮肤
     并且 玩家角色ID为<角色ID>
     并且 玩家打开皮肤商店
+    并且 皮肤商店打开角色ID为<验证角色ID>
     并且 槽位<槽位>的皮肤尚未解锁
     并且 槽位<槽位>对应皮肤产品ID为<产品ID>
     当 玩家穿上槽位<槽位>的皮肤
@@ -1087,9 +1109,9 @@
     并且 皮肤总页数为<总页数>
 
   例子:
-    | 角色ID | 皮肤数 | 槽位 | 产品ID | 总页数 |
-    | 1      | 6      | 1    | skin_1 | 1      |
-    | 1      | 6      | 4    | skin_4 | 1      |
+    | 角色ID | 验证角色ID | 皮肤数 | 槽位 | 产品ID | 总页数 |
+    | 1      | 1          | 6      | 1    | skin_1 | 1      |
+    | 1      | 1          | 6      | 4    | skin_4 | 1      |
 
   # ── 静态文本 ──────────────────────────────────────────────
 
@@ -1098,8 +1120,11 @@
     并且 玩家角色ID为<角色ID>
     并且 当前角色ID为<验证角色ID>
     并且 玩家打开皮肤商店
+    并且 皮肤商店打开角色ID为<验证角色ID>
+    并且 皮肤目录末页展示<末页槽位数>个皮肤槽位
     并且 玩家翻到皮肤下一页
     并且 槽位<槽位>在皮肤卡牌可见槽位范围内
+    并且 槽位<槽位>对应皮肤产品ID为<产品ID>
     并且 玩家购买槽位<槽位>的皮肤
     并且 玩家穿上槽位<槽位>的皮肤
     当 玩家关闭皮肤商店
@@ -1107,5 +1132,5 @@
     并且 皮肤总页数为<总页数>
 
   例子:
-    | 角色ID | 验证角色ID | 皮肤数 | 槽位 | 总页数 |
-    | 1      | 1          | 12     | 1    | 2      |
+    | 角色ID | 验证角色ID | 皮肤数 | 槽位 | 产品ID | 末页槽位数 | 总页数 |
+    | 1      | 1          | 12     | 1    | skin_7 | 6          | 2      |

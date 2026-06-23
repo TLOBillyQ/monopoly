@@ -164,10 +164,15 @@ return refs
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=ef8056c8d82361e0
+projectHash=0ed9a1ecbee39a05
 scope.0.id=chunk:src/config/content/runtime_refs.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=164
 scope.0.semanticHash=b1b46aa3c84e7b01
+scope.0.lastMutatedAt=2026-06-23T14:42:31Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=56
+scope.0.lastMutationKilled=56
 ]]

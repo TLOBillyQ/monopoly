@@ -78,10 +78,15 @@ return {
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=8602276166468b6f
+projectHash=66c2349e5c65c15e
 scope.0.id=chunk:src/config/content/runtime_ref_images.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=78
 scope.0.semanticHash=0600740abd78101b
+scope.0.lastMutatedAt=2026-06-23T14:41:09Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=67
+scope.0.lastMutationKilled=67
 ]]
