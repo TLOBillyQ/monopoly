@@ -39,3 +39,18 @@ function context.count_item(player, item_id)
 end
 
 return context
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=1ee7b5dbab1ba4c4
+scope.0.id=chunk:src/rules/items/use_flow_context.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=42
+scope.0.semanticHash=f1d95412f305c7ba
+scope.0.lastMutatedAt=2026-06-24T08:43:07Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=20
+scope.0.lastMutationKilled=20
+]]

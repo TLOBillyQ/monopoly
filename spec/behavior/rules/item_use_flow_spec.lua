@@ -1,7 +1,14 @@
 local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local item_ids = require("src.config.gameplay.item_ids")
+local demolish = require("src.rules.items.demolish")
 local inventory = require("src.rules.items.inventory")
+local intent_output_port = require("src.rules.ports.intent_output")
+local flow_context = require("src.rules.items.use_flow_context")
+local flow_result = require("src.rules.items.use_flow_result")
+local remote_dice = require("src.rules.items.remote_dice")
+local resolvers = require("src.rules.items.use_flow_resolvers")
+local roadblock = require("src.rules.items.roadblock")
 local use_flow = require("src.rules.items.use_flow")
 
 local function _new_game()
@@ -35,6 +42,24 @@ local function _with_item_handler(game, item_id, handler, fn)
   return result
 end
 
+local function _with_patches(patches, fn)
+  local previous = {}
+  for index, patch in ipairs(patches) do
+    previous[index] = patch.target[patch.key]
+    patch.target[patch.key] = patch.value
+  end
+
+  local ok, result = pcall(fn)
+  for index = #patches, 1, -1 do
+    local patch = patches[index]
+    patch.target[patch.key] = previous[index]
+  end
+  if not ok then
+    error(result, 0)
+  end
+  return result
+end
+
 describe("item_use_flow", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
@@ -59,8 +84,10 @@ describe("item_use_flow", function()
   it("begin rejects missing item config and absent inventory before executing effect", function()
     local g = _new_game()
     local player = g:current_player()
+    local missing_item_id = 999999
+    player.inventory:add({ id = missing_item_id })
 
-    local missing_cfg = use_flow.begin_item_use(g, player.id, 999999, { phase = "pre_action" })
+    local missing_cfg = use_flow.begin_item_use(g, player.id, missing_item_id, {})
     local missing_inventory = use_flow.begin_item_use(g, player.id, item_ids.mine, { phase = "pre_action" })
 
     _assert_eq(missing_cfg.ok, false, "missing cfg should reject")
@@ -102,6 +129,36 @@ describe("item_use_flow", function()
       _assert_eq(table_actor.ok, true, "table actor should apply")
       _assert_eq(fallback_actor.ok, true, "fallback player scan should apply")
     end)
+  end)
+
+  it("context resolves actors through finder before players fallback", function()
+    local finder_player = { id = 7 }
+    local fallback_player = { id = 7 }
+    local calls = 0
+    local game = {
+      players = { fallback_player },
+      find_player_by_id = function(_, actor_id)
+        calls = calls + 1
+        _assert_eq(actor_id, 7, "finder actor id")
+        return finder_player
+      end,
+    }
+
+    local resolved = flow_context.resolve_actor(game, 7)
+
+    _assert_eq(resolved, finder_player, "finder player should win")
+    _assert_eq(calls, 1, "finder should be called once")
+  end)
+
+  it("context counts zero matching items without offset", function()
+    local g = _new_game()
+    local player = g.players[1]
+    inventory.clear(player)
+    player.inventory:add({ id = item_ids.roadblock })
+
+    _assert_eq(flow_context.count_item(player, item_ids.mine), 0, "absent item count")
+    player.inventory:add({ id = item_ids.mine })
+    _assert_eq(flow_context.count_item(player, item_ids.mine), 1, "single item count")
   end)
 
   it("begin preserves failed effect reasons and bag-full fallback", function()
@@ -165,6 +222,54 @@ describe("item_use_flow", function()
       _assert_eq(table_without_ok.ok, true, "table without ok should apply")
       _assert_eq(table_without_ok.status, "applied", "table without ok status")
     end)
+  end)
+
+  it("normalizes waiting and applied effect metadata", function()
+    local g = _new_game()
+    local player = g.players[1]
+    player.inventory:add({ id = item_ids.mine })
+    local choice_spec = {
+      kind = "item_target_player",
+      options = { { id = player.id, label = player.name } },
+    }
+
+    local waiting = flow_result.normalize_effect({
+      waiting = true,
+      ok = false,
+      intent = { choice_spec = choice_spec },
+    }, player, item_ids.mine, _count_item(player, item_ids.mine), {}, "fallback")
+    local anim = { marker = "anim" }
+    local applied = flow_result.normalize_effect({
+      ok = true,
+      action_anim = anim,
+    }, player, item_ids.mine, _count_item(player, item_ids.mine), {}, "fallback")
+
+    _assert_eq(flow_result.raw_result_ok({ waiting = true, ok = false }), true, "waiting raw result should be ok")
+    _assert_eq(waiting.status, "waiting_choice", "waiting result status")
+    _assert_eq(waiting.actor_id, player.id, "waiting result actor id")
+    _assert_eq(waiting.choice_spec, choice_spec, "waiting result choice spec")
+    _assert_eq(waiting.item_consumed, false, "waiting result should not consume")
+    _assert_eq(applied.actor_id, player.id, "applied result actor id")
+    _assert_eq(applied.action_anim, anim, "applied result action anim")
+    _assert_eq(applied.item_consumed, false, "unchanged inventory should not count as consumed")
+  end)
+
+  it("normalizes preconsumed failed effect results as consumed", function()
+    local g = _new_game()
+    local player = g.players[1]
+    player.inventory:add({ id = item_ids.mine })
+
+    local rejected = flow_result.normalize_effect({
+      ok = false,
+      reason = "blocked",
+    }, player, item_ids.mine, _count_item(player, item_ids.mine), {
+      item_preconsumed = true,
+    }, "fallback")
+
+    _assert_eq(rejected.ok, false, "failed preconsumed result should reject")
+    _assert_eq(rejected.reason, "blocked", "failed preconsumed result reason")
+    _assert_eq(rejected.actor_id, player.id, "failed preconsumed actor id")
+    _assert_eq(rejected.item_consumed, true, "preconsumed failure should stay consumed")
   end)
 
   it("begin returns structured waiting choice for manual target item", function()
@@ -234,6 +339,210 @@ describe("item_use_flow", function()
     _assert_eq(result.ok, false, "wrong item metadata should reject")
     _assert_eq(result.reason, "item_mismatch", "wrong item reason")
     _assert_eq(_count_item(user, item_ids.remote_dice), 1, "rejected choice should not consume item")
+  end)
+
+  it("resolve accepts numeric submissions for string-like option ids", function()
+    local g = _new_game()
+    local user = g.players[1]
+    user.inventory:add({ id = item_ids.remote_dice })
+    local choice = support.open_choice(g, {
+      kind = "remote_dice_value",
+      options = { "4" },
+      meta = {
+        player_id = user.id,
+        item_id = item_ids.remote_dice,
+        dice_count = 1,
+      },
+    })
+
+    local result = use_flow.resolve_item_use_choice(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = 4,
+      actor_role_id = user.id,
+    })
+
+    _assert_eq(result.ok, true, "string option should accept numeric submission")
+    _assert_eq(result.status, "applied", "string option numeric submission status")
+    _assert_eq(_count_item(user, item_ids.remote_dice), 0, "accepted string option should consume item")
+  end)
+
+  it("resolve accepts numeric submissions for table options with string ids", function()
+    local g = _new_game()
+    local user = g.players[1]
+    user.inventory:add({ id = item_ids.remote_dice })
+    local choice = support.open_choice(g, {
+      kind = "remote_dice_value",
+      options = { { id = "4", label = "4" } },
+      meta = {
+        player_id = user.id,
+        item_id = item_ids.remote_dice,
+        dice_count = 1,
+      },
+    })
+
+    local result = use_flow.resolve_item_use_choice(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = 4,
+      actor_role_id = user.id,
+    })
+
+    _assert_eq(result.ok, true, "table string option id should accept numeric submission")
+    _assert_eq(result.status, "applied", "table string option numeric submission status")
+    _assert_eq(_count_item(user, item_ids.remote_dice), 0, "accepted table string option should consume item")
+  end)
+
+  it("resolve accepts string item ids in caller context when choice metadata is numeric", function()
+    local g = _new_game()
+    local user = g.players[1]
+    user.inventory:add({ id = item_ids.remote_dice })
+    local choice = support.open_choice(g, {
+      kind = "remote_dice_value",
+      options = { { id = 4, label = "4" } },
+      meta = {
+        player_id = user.id,
+        item_id = item_ids.remote_dice,
+        dice_count = 1,
+      },
+    })
+
+    local result = use_flow.resolve_item_use_choice(g, choice, {
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = 4,
+      actor_role_id = user.id,
+    }, {
+      item_id = tostring(item_ids.remote_dice),
+    })
+
+    _assert_eq(result.ok, true, "string context item id should match numeric choice metadata")
+    _assert_eq(result.status, "applied", "string context item id status")
+    _assert_eq(_count_item(user, item_ids.remote_dice), 0, "matched string context item id should consume item")
+  end)
+
+  it("resolver falls back to game dice count for remote dice choices", function()
+    local g = _new_game()
+    local user = g.players[1]
+    user.inventory:add({ id = item_ids.remote_dice })
+    local captured = {}
+    g.player_dice_count = function(_, player)
+      captured.dice_player = player
+      return 2
+    end
+
+    _with_patches({
+      {
+        target = remote_dice,
+        key = "apply",
+        value = function(game, player, dice_count, option_id)
+          captured.game = game
+          captured.player = player
+          captured.dice_count = dice_count
+          captured.option_id = option_id
+          return { ok = true }
+        end,
+      },
+    }, function()
+      local result = resolvers.resolve(g, {
+        kind = "remote_dice_value",
+      }, {
+        option_id = 5,
+      }, {}, {
+        item_id = item_ids.remote_dice,
+      }, user, item_ids.remote_dice)
+
+      _assert_eq(result.ok, true, "remote dice resolver should apply")
+      _assert_eq(captured.game, g, "remote dice game")
+      _assert_eq(captured.player, user, "remote dice player")
+      _assert_eq(captured.dice_player, user, "remote dice count player")
+      _assert_eq(captured.dice_count, 2, "remote dice count fallback")
+      _assert_eq(captured.option_id, 5, "remote dice selected value")
+      _assert_eq(_count_item(user, item_ids.remote_dice), 0, "remote dice should consume item")
+    end)
+  end)
+
+  it("resolver rejects invalid roadblock choices before consuming item", function()
+    local g = _new_game()
+    local user = g.players[1]
+    user.inventory:add({ id = item_ids.roadblock })
+
+    _with_patches({
+      {
+        target = roadblock,
+        key = "is_ui_candidate",
+        value = function()
+          return false
+        end,
+      },
+      {
+        target = roadblock,
+        key = "apply",
+        value = function()
+          error("roadblock apply should not run")
+        end,
+      },
+    }, function()
+      local result = resolvers.resolve(g, {
+        kind = "roadblock_target",
+      }, {
+        option_id = 9999,
+      }, {}, {
+        item_id = item_ids.roadblock,
+      }, user, item_ids.roadblock)
+
+      _assert_eq(result.ok, false, "invalid roadblock target should reject")
+      _assert_eq(result.reason, "invalid_target", "invalid roadblock reason")
+      _assert_eq(_count_item(user, item_ids.roadblock), 1, "invalid roadblock should not consume item")
+    end)
+  end)
+
+  it("resolver dispatches demolish raw result intent", function()
+    local g = _new_game()
+    local user = g.players[1]
+    user.inventory:add({ id = item_ids.monster })
+    local raw_intent = { kind = "push_popup", payload = { title = "done" } }
+    local dispatches = {}
+    local captured = {}
+
+    _with_patches({
+      {
+        target = demolish,
+        key = "apply",
+        value = function(game, player, option_id, opts)
+          captured.game = game
+          captured.player = player
+          captured.option_id = option_id
+          captured.item_id = opts and opts.item_id or nil
+          return { ok = true, intent = raw_intent }
+        end,
+      },
+      {
+        target = intent_output_port,
+        key = "dispatch",
+        value = function(game, payload)
+          dispatches[#dispatches + 1] = { game = game, payload = payload }
+        end,
+      },
+    }, function()
+      local result = resolvers.resolve(g, {
+        kind = "demolish_target",
+      }, {
+        option_id = 12,
+      }, {}, {
+        item_id = item_ids.monster,
+      }, user, item_ids.monster)
+
+      _assert_eq(result.ok, true, "demolish resolver should apply")
+      _assert_eq(captured.game, g, "demolish game")
+      _assert_eq(captured.player, user, "demolish player")
+      _assert_eq(captured.option_id, 12, "demolish target")
+      _assert_eq(captured.item_id, item_ids.monster, "demolish item id")
+      _assert_eq(#dispatches, 1, "demolish should dispatch one intent")
+      _assert_eq(dispatches[1].game, g, "demolish dispatch game")
+      _assert_eq(dispatches[1].payload, raw_intent, "demolish dispatch intent")
+      _assert_eq(_count_item(user, item_ids.monster), 0, "demolish should consume item")
+    end)
   end)
 
   it("resolve rejects malformed choice submissions before applying effects", function()
