@@ -1,34 +1,25 @@
-local intent_output_port = require("src.rules.ports.intent_output")
-local demolish = require("src.rules.items.demolish")
-local item_use_broadcast = require("src.rules.items.use_broadcast")
-local achievement_progress = require("src.rules.ports.achievement_progress")
-local logger = require("src.foundation.log")
-local roadblock = require("src.rules.items.roadblock")
-local remote_dice = require("src.rules.items.remote_dice")
 local completions = require("src.rules.choice_handlers.item_completions")
 local normalize = require("src.rules.choice_handlers.item_normalize")
 local phase_handlers = require("src.rules.choice_handlers.item_phase_handlers")
 
+local function _handle_flow_choice(game, choice, action, complete, resolve_item_use_choice, context)
+  local result = resolve_item_use_choice(game, choice, action, context)
+  local player = result.actor or normalize.validate_item_player(game, choice.kind, choice.meta)
+  if result.ok ~= true then
+    return { stay = true, reason = result.reason }
+  end
+  if result.waiting then
+    return { stay = true }
+  end
+  return complete.followup_completion(game, choice, player, result)
+end
+
 local function _build_demolish_handlers(helpers)
   local complete = completions.build(helpers)
+  local resolve_item_use_choice = helpers.resolve_item_use_choice
 
   local function _handle(game, choice, action)
-    local index = action.option_id
-    local meta = choice.meta
-    local player = normalize.validate_item_player(game, choice.kind, meta)
-    normalize.consume_if_needed(player, meta.item_id, meta.item_preconsumed)
-    local result = demolish.apply(game, player, index, {
-      injure = meta.injure,
-      title = meta.title,
-      item_id = meta.item_id,
-    })
-    if result then
-      achievement_progress.item_used(game, player)
-      item_use_broadcast.dispatch(game, player, meta.item_id)
-    end
-    local intent = result.intent or {}
-    intent_output_port.dispatch(game, intent)
-    return complete.followup_completion(game, choice, player, result)
+    return _handle_flow_choice(game, choice, action, complete, resolve_item_use_choice)
   end
 
   return {
@@ -38,23 +29,10 @@ end
 
 local function _build_roadblock_handlers(helpers)
   local complete = completions.build(helpers)
+  local resolve_item_use_choice = helpers.resolve_item_use_choice
 
   local function _handle(game, choice, action)
-    local index = action.option_id
-    local meta = choice.meta
-    local player = normalize.validate_item_player(game, choice.kind, meta)
-    if not roadblock.is_ui_candidate(game, player, index) then
-      logger.warn(player.name .. " 选择了无效的路障位置: " .. tostring(index))
-      return { stay = true }
-    end
-    normalize.consume_if_needed(player, meta.item_id, meta.item_preconsumed)
-    local result = roadblock.apply(game, player, index)
-    if result then
-      achievement_progress.item_used(game, player)
-      item_use_broadcast.dispatch(game, player, meta.item_id)
-      intent_output_port.dispatch(game, result)
-    end
-    return complete.followup_completion(game, choice, player, result)
+    return _handle_flow_choice(game, choice, action, complete, resolve_item_use_choice)
   end
 
   return {
@@ -64,22 +42,10 @@ end
 
 local function _build_target_player_handlers(helpers)
   local complete = completions.build(helpers)
-  local use_item = helpers.use_item
+  local resolve_item_use_choice = helpers.resolve_item_use_choice
 
   local function _handle(game, choice, action)
-    local target_id = action.option_id
-    local meta = choice.meta
-    local player = normalize.validate_item_player(game, choice.kind, meta)
-    local item_id = meta.item_id
-    local result = use_item(game, player, item_id, {
-      target_id = target_id,
-      item_preconsumed = meta.item_preconsumed == true,
-    })
-    assert(result ~= nil, "missing use_item result")
-    if result.waiting then
-      return { stay = true }
-    end
-    return complete.followup_completion(game, choice, player, result)
+    return _handle_flow_choice(game, choice, action, complete, resolve_item_use_choice)
   end
 
   return {
@@ -89,19 +55,10 @@ end
 
 local function _build_remote_dice_handlers(helpers)
   local complete = completions.build(helpers)
+  local resolve_item_use_choice = helpers.resolve_item_use_choice
 
   local function _handle(game, choice, action)
-    local value = action.option_id
-    local meta = choice.meta
-    local player = normalize.validate_item_player(game, choice.kind, meta)
-    local dice_count = meta.dice_count or game:player_dice_count(player)
-    normalize.consume_if_needed(player, meta.item_id, meta.item_preconsumed)
-    local result = remote_dice.apply(game, player, dice_count, value)
-    if result then
-      achievement_progress.item_used(game, player)
-      item_use_broadcast.dispatch(game, player, meta.item_id)
-    end
-    return complete.followup_completion(game, choice, player, result)
+    return _handle_flow_choice(game, choice, action, complete, resolve_item_use_choice)
   end
 
   return {

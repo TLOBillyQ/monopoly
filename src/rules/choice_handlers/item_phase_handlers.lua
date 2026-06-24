@@ -69,7 +69,9 @@ end
 
 function phase_handlers.build(helpers)
   local complete = completions.build(helpers)
-  local use_item = helpers.use_item
+  local begin_item_use = helpers.begin_item_use or function(game, player, item_id, context)
+    return helpers.use_item(game, player, item_id, context)
+  end
 
   local function _handle_item_phase_choice(game, choice, action)
     local meta = choice.meta
@@ -77,7 +79,7 @@ function phase_handlers.build(helpers)
     local phase = meta.phase
     local item_id = action.option_id
 
-    local result = use_item(game, player, item_id)
+    local result = begin_item_use(game, player, item_id, { phase = phase })
     if type(result) == "table" and result.waiting then
       return _handle_waiting_result(game, result, meta, player, item_id, phase)
     end
@@ -89,13 +91,15 @@ function phase_handlers.build(helpers)
     local player = normalize.validate_item_player(game, choice.kind, meta)
     local item_id = action.option_id
 
-    local result = use_item(game, player, item_id)
+    local result = begin_item_use(game, player, item_id, { phase = meta.phase })
     assert(result ~= nil, "missing use_item result")
     if type(result) == "table" and result.waiting then
       return _handle_passive_waiting_result(game, result, meta, player, item_id)
     end
 
-    availability.mark_effect_group_used(game, item_id)
+    if not (type(result) == "table" and result.ok == false) then
+      availability.mark_effect_group_used(game, item_id)
+    end
     local reopened = item_phase.reopen_or_finish(game, player, meta)
     return reopened and { stay = true } or nil
   end
