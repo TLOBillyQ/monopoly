@@ -14,7 +14,7 @@ local function _handle_flow_choice(game, choice, action, complete, resolve_item_
   return complete.followup_completion(game, choice, player, result)
 end
 
-local function _build_demolish_handlers(helpers)
+local function _build_flow_handlers(helpers, kind, handler_opts)
   local complete = completions.build(helpers)
   local resolve_item_use_choice = helpers.resolve_item_use_choice
 
@@ -23,50 +23,27 @@ local function _build_demolish_handlers(helpers)
   end
 
   return {
-    demolish_target = completions.item_target_handler("demolish_target", _handle, complete),
+    [kind] = completions.item_target_handler(kind, _handle, complete, handler_opts),
   }
+end
+
+local function _build_demolish_handlers(helpers)
+  return _build_flow_handlers(helpers, "demolish_target")
 end
 
 local function _build_roadblock_handlers(helpers)
-  local complete = completions.build(helpers)
-  local resolve_item_use_choice = helpers.resolve_item_use_choice
-
-  local function _handle(game, choice, action)
-    return _handle_flow_choice(game, choice, action, complete, resolve_item_use_choice)
-  end
-
-  return {
-    roadblock_target = completions.item_target_handler("roadblock_target", _handle, complete),
-  }
+  return _build_flow_handlers(helpers, "roadblock_target")
 end
 
 local function _build_target_player_handlers(helpers)
-  local complete = completions.build(helpers)
-  local resolve_item_use_choice = helpers.resolve_item_use_choice
-
-  local function _handle(game, choice, action)
-    return _handle_flow_choice(game, choice, action, complete, resolve_item_use_choice)
-  end
-
-  return {
-    item_target_player = completions.item_target_handler("item_target_player", _handle, complete),
-  }
+  return _build_flow_handlers(helpers, "item_target_player")
 end
 
 local function _build_remote_dice_handlers(helpers)
-  local complete = completions.build(helpers)
-  local resolve_item_use_choice = helpers.resolve_item_use_choice
-
-  local function _handle(game, choice, action)
-    return _handle_flow_choice(game, choice, action, complete, resolve_item_use_choice)
-  end
-
-  return {
-    remote_dice_value = completions.item_target_handler("remote_dice_value", _handle, complete, {
-      normalize_meta = normalize.remote_dice_meta,
-      meta_validator = normalize.validate_remote_dice_meta,
-    }),
-  }
+  return _build_flow_handlers(helpers, "remote_dice_value", {
+    normalize_meta = normalize.remote_dice_meta,
+    meta_validator = normalize.validate_remote_dice_meta,
+  })
 end
 
 local M = {}
