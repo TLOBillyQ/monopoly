@@ -6,6 +6,7 @@ local runtime_state = require("src.ui.state.runtime")
 local timing = require("src.config.gameplay.timing")
 local role_id_utils = require("src.foundation.identity")
 local choice_support = require("src.ui.view.choice_support")
+local runtime_assets = require("src.config.runtime_assets")
 
 local M = {}
 
@@ -153,7 +154,7 @@ local function _pool_item_ids(role_id)
   return ids
 end
 
-local function _fill_refresh_context(ui, state, ui_model, opts, choice, display_player_id, image_refs)
+local function _fill_refresh_context(ui, state, ui_model, opts, choice, display_player_id, asset_refs)
   local role_id = role_id_utils.normalize(opts.role_id)
   _cached_ctx.ui = ui
   _cached_ctx.slots = ui.item_slots
@@ -165,7 +166,9 @@ local function _fill_refresh_context(ui, state, ui_model, opts, choice, display_
   _cached_ctx.choice = choice
   _cached_ctx.allow_slot_click = _allow_slot_click(choice, opts, ui_model, display_player_id)
   _cached_ctx.option_id_set = _build_option_id_set(choice)
-  _cached_ctx.empty_key = image_refs["Empty"]
+  local empty_image = runtime_assets.empty_image({ refs = asset_refs })
+  _cached_ctx.asset_refs = asset_refs
+  _cached_ctx.empty_key = empty_image.image_key
   _cached_ctx.choice_id = choice and choice.id or nil
   _cached_ctx.suppress_flag = state._suppress_item_slot_highlight_until_pick == true
   return _cached_ctx
@@ -176,17 +179,17 @@ local function _build_refresh_context(state, ui_model, opts)
   assert(ui ~= nil and ui.item_slots ~= nil, "missing ui item slots")
   opts = opts or {}
   local choice = ui_model and ui_model.choice or nil
-  local refs = state.ui_refs or {}
-  local image_refs = refs.images or {}
+  local asset_refs = state.ui_refs or {}
   local display_player_id = role_id_utils.normalize(opts.display_player_id or ui_model.current_player_id)
-  return _fill_refresh_context(ui, state, ui_model, opts, choice, display_player_id, image_refs)
+  return _fill_refresh_context(ui, state, ui_model, opts, choice, display_player_id, asset_refs)
 end
 
 local _slot_pickable = {}
 
 local function _sync_one_slot(ctx, slot_name, item_id, slot_state, index, slot_pickable)
   if item_id then
-    local image_key = (ctx.image_refs and (ctx.image_refs[tostring(item_id)] or ctx.image_refs[item_id])) or ctx.empty_key
+    local image = runtime_assets.image_for_item(item_id, { refs = ctx.asset_refs })
+    local image_key = image.ok == true and image.image_key or ctx.empty_key
     ui_nodes.set_item_slot_image(slot_name, image_key)
     local is_pickable = ctx.allow_slot_click and ctx.option_id_set[tostring(item_id)] == true
     ctx.ui:set_touch_enabled(slot_name, is_pickable or (slot_state and slot_state.item_id ~= nil and not slot_state.available))
@@ -322,7 +325,6 @@ end
 function M.refresh_item_slots(state, ui_model, opts)
   _maybe_emit_phase_advance_reset(state)
   local ctx = _build_refresh_context(state, ui_model, opts)
-  ctx.image_refs = state.ui_refs and state.ui_refs.images or {}
   local slot_pickable = _sync_slot_images(ctx)
   _refresh_highlight_state(state, ctx, slot_pickable)
   _store_item_ids(ctx.ui, ctx.role_id, ctx.item_ids)

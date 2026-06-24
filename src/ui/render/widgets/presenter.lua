@@ -4,6 +4,7 @@ local panel_cash_delta = require("src.ui.render.widgets.cash_delta")
 local panel_player_slots = require("src.ui.render.widgets.player_slots")
 local panel_controls = require("src.ui.render.widgets.panel_controls")
 local ui_touch_policy_runtime = require("src.ui.input.touch")
+local runtime_assets = require("src.config.runtime_assets")
 
 local panel_presenter = {}
 local _role_ctx_opts = {}
@@ -45,9 +46,10 @@ local function _resolve_refresh_deps(state, deps)
 end
 
 local function _empty_avatar_key(state)
-  local refs = state.ui_refs or {}
-  local image_refs = refs.images or {}
-  return image_refs["Empty"]
+  local image = runtime_assets.empty_image({
+    refs = state and state.ui_refs or nil,
+  })
+  return image.image_key
 end
 
 local function _panel_players(ui_model)

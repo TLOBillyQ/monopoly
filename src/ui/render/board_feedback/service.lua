@@ -1,6 +1,5 @@
 local number_utils = require("src.foundation.number")
 local logger = require("src.foundation.log")
-local runtime_refs = require("src.config.content.runtime_refs")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local catalog = require("src.ui.render.board_feedback.catalog")
 local effect_timeline = require("src.ui.render.support.effect_timeline")
@@ -56,24 +55,24 @@ local function _resolve_sfx_scale(cue_name, value, fallback)
   _warn_invalid_cue_field(cue_name, "scale", value, default_sfx_scale)
   return default_sfx_scale
 end
-local function _resolve_cue_ref_id(cue_name, cue, payload, kind, refs)
+local function _resolve_cue_ref_id(cue_name, cue, payload, kind)
   local resolved_id = number_utils.to_integer(payload and payload[kind .. "_id"] or nil)
   if resolved_id ~= nil then
     return resolved_id
   end
-  local ref_name = payload and payload[kind .. "_id_ref"] or cue[kind .. "_id_ref"]
-  if type(ref_name) ~= "string" or ref_name == "" then
-    if cue.allow_missing_resource ~= true then
+  resolved_id = number_utils.to_integer(cue[kind .. "_id"])
+  if resolved_id ~= nil then
+    return resolved_id
+  end
+  local lookup_key = payload and payload[kind .. "_id_ref"] or cue[kind .. "_lookup_key"]
+  if type(lookup_key) ~= "string" or lookup_key == "" then
+    if cue.allow_missing ~= true then
       _warn("skip cue " .. kind .. " with missing " .. kind .. "_id_ref:", tostring(cue_name))
     end
     return nil
   end
-  resolved_id = number_utils.to_integer((refs or {})[ref_name])
-  if resolved_id == nil or resolved_id <= 0 then
-    _warn_missing_ref_once(kind, cue_name, ref_name, "missing_or_unconfigured")
-    return nil
-  end
-  return resolved_id
+  _warn_missing_ref_once(kind, cue_name, lookup_key, "missing_or_unconfigured")
+  return nil
 end
 local function _resolve_tile_position(state, tile_index)
   return unit_position.read_scene_tile_position(state and state.board_scene or nil, tile_index)
@@ -117,11 +116,9 @@ local function _schedule_followup_sound(cue_name, pos, entry)
   end
   local delay = _resolve_numeric(entry.delay, 0) or 0
   effect_timeline.run_step(delay, function()
-    local sound_id_ref = entry.sound_id_ref
-    local audio_refs = runtime_refs.audio or {}
-    local sound_id = number_utils.to_integer(audio_refs[sound_id_ref])
+    local sound_id = number_utils.to_integer(entry.sound_id)
     if sound_id == nil or sound_id <= 0 then
-      _warn_missing_ref_once("sound", cue_name, sound_id_ref, "missing_or_unconfigured")
+      _warn_missing_ref_once("sound", cue_name, entry.sound_id_ref, "missing_or_unconfigured")
       return
     end
     host_runtime.play_3d_sound(pos, sound_id, _resolve_numeric(entry.duration, default_sound_duration), _resolve_numeric(entry.volume, default_sound_volume))
@@ -142,7 +139,7 @@ local function _resolve_with_sound(cue, payload)
 end
 
 local function _resolve_effect_params(cue_name, cue, payload)
-  local effect_id = _resolve_cue_ref_id(cue_name, cue, payload, "effect", runtime_refs.effects)
+  local effect_id = _resolve_cue_ref_id(cue_name, cue, payload, "effect")
   if effect_id == nil then
     return nil
   end
@@ -205,7 +202,7 @@ local function _play_effect(cue_name, cue, pos, unit, payload)
   return true
 end
 local function _play_sound(cue_name, cue, pos, payload)
-  local sound_id = _resolve_cue_ref_id(cue_name, cue, payload, "sound", runtime_refs.audio)
+  local sound_id = _resolve_cue_ref_id(cue_name, cue, payload, "sound")
   if sound_id == nil then
     return false
   end
@@ -233,7 +230,7 @@ local function _play_followup_sounds(cue_name, pos, followup_sounds)
 end
 
 local function _play_cue(_state, cue_name, pos, unit, payload)
-  local cue = type(cue_name) == "string" and cue_name ~= "" and catalog.get(cue_name) or nil
+  local cue = type(cue_name) == "string" and cue_name ~= "" and catalog.get(cue_name, payload) or nil
   if cue == nil then
     return false
   end
@@ -247,8 +244,7 @@ local function _play_cue(_state, cue_name, pos, unit, payload)
   if _play_sound(cue_name, cue, pos, payload) then
     played = true
   end
-  local followup_sounds = payload and payload.followup_sounds or cue.followup_sounds
-  if _play_followup_sounds(cue_name, pos, followup_sounds) then
+  if _play_followup_sounds(cue_name, pos, cue.followup_sounds) then
     played = true
   end
   return played

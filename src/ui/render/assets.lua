@@ -4,22 +4,20 @@ local ui_nodes = require("src.ui.render.node_ops")
 local base_nodes = require("src.ui.schema.base")
 local permanent_nodes = require("src.ui.schema.permanent")
 local number_utils = require("src.foundation.number")
-local runtime_refs = require("src.config.content.runtime_refs")
+local runtime_assets = require("src.config.runtime_assets")
 
 local M = {}
 
 function M.init_ui_assets(state)
   assert(state ~= nil, "missing state")
-  local refs = runtime_refs
-  local image_refs = refs.images or {}
-  state.ui_refs = refs
+  state.runtime_assets = runtime_assets
+  state.ui_refs = runtime_assets.compat_refs()
 
   runtime.for_each_role_or_global(function()
     for index = 1, 5 do
-      local ref_id = tostring(3000 + index)
-      local image_key = image_refs[ref_id]
-      assert(image_key ~= nil, "missing item icon: " .. tostring(ref_id))
-      ui_nodes.set_item_slot_image(permanent_nodes.item_slots[index], image_key)
+      local icon = runtime_assets.startup_item_slot_icon(index)
+      assert(icon.ok == true, "missing item icon: " .. tostring(icon.lookup_key))
+      ui_nodes.set_item_slot_image(permanent_nodes.item_slots[index], icon.image_key)
     end
   end)
   runtime.set_client_role(nil)

@@ -3,7 +3,7 @@ local composition_root = require("src.app.compose_game")
 local app = require("src.state.game_state")
 local tiles_cfg = require("src.config.content.tiles")
 local default_map = require("src.config.content.default_map")
-local runtime_refs = require("src.config.content.runtime_refs")
+local runtime_assets = require("src.config.runtime_assets")
 local timing = require("src.config.gameplay.timing")
 local debug_flags = require("src.config.gameplay.debug_flags")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -26,10 +26,6 @@ end
 _register_default_choice_fallbacks()
 
 local max_player_count = 4
-local synthetic_ai_cfg = runtime_refs.synthetic_ai or {}
-local synthetic_unit_keys = synthetic_ai_cfg.unit_keys or {}
-local synthetic_avatar_refs = runtime_refs.images or {}
-local synthetic_ai_names = synthetic_ai_cfg.names or {}
 local M = {}
 
 local function _is_release_build(build_mode)
@@ -71,7 +67,7 @@ local function _pick_synthetic_unit_keys(count)
     return selected
   end
   local pool = {}
-  for index, unit_key in ipairs(synthetic_unit_keys) do
+  for index, unit_key in ipairs(runtime_assets.synthetic_ai_unit_key_pool()) do
     pool[index] = unit_key
   end
   local limit = count
@@ -125,13 +121,15 @@ local function _add_real_roles_to_roster(roster, roles, max_players)
 end
 
 local function _build_synthetic_role(slot_index, unit_key)
-  local avatar_ref_id = "AI" .. tostring(slot_index)
+  local profile = runtime_assets.synthetic_ai_profile(slot_index, {
+    unit_key = unit_key,
+  })
   return {
     role_id = -slot_index,
-    name = synthetic_ai_names[slot_index] or ("AI" .. tostring(slot_index)),
+    name = profile.name,
     synthetic = true,
-    unit_key = unit_key,
-    avatar_image_key = synthetic_avatar_refs[avatar_ref_id],
+    unit_key = profile.unit_key,
+    avatar_image_key = profile.avatar_image_key,
   }
 end
 

@@ -5,9 +5,9 @@ local global_aliases = require("src.host.global_aliases")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
 local achievement_progress_port = require("src.rules.ports.achievement_progress")
 local config_sanity = require("src.config.gameplay.config_sanity")
+local runtime_assets = require("src.config.runtime_assets")
 local skin_panel = require("src.ui.coord.skin_panel")
 local skin_equip = require("src.rules.cosmetics")
-local runtime_refs = require("src.config.content.runtime_refs")
 local skin_purchase = require("src.app.host_integrations.skin_purchase")
 local achievement_runtime = require("src.app.host_integrations.achievement_runtime")
 local host_runtime = require("src.host.init")
@@ -70,10 +70,8 @@ local function _load_required_modules(opts)
   paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
   achievement_progress_port.configure(achievement_runtime.build_port())
   skin_panel.configure_equip(function(role_id, skin)
-    -- The host model setter keys off the numeric resource id in refs.skins, not
-    -- the human-readable creature_key string in skins.lua; passing the string is
-    -- silently ignored by the host ("付了钱没换").
-    local resource_id = skin and runtime_refs.skins[tostring(skin.product_id)] or nil
+    local model = skin and runtime_assets.skin_model_for_product(skin.product_id) or nil
+    local resource_id = model and model.asset_id or nil
     local equipped = skin_equip.equip(role_id, resource_id)
     if equipped then
       achievement_progress_port.skin_equipped(nil, role_id, skin)
@@ -81,9 +79,7 @@ local function _load_required_modules(opts)
     return equipped
   end)
   skin_panel.configure_unequip(function(role_id)
-    -- Eggy's runtime exposes reset_model for restoring the player's original
-    -- appearance; refs.default_creature is kept only as a compatibility fallback.
-    return skin_equip.unequip(role_id, runtime_refs.default_creature)
+    return skin_equip.unequip(role_id, runtime_assets.default_skin_model().asset_id)
   end)
   skin_purchase.configure(skin_panel)
   _wire_sign_in_rewards(opts)
