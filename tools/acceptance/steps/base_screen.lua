@@ -3,6 +3,7 @@ local panel_slice = require("src.ui.view.panel_slice")
 local panel_presenter = require("src.ui.render.widgets.presenter")
 local route_base = require("src.ui.input.route_base")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
+local optional_action_completion = require("src.turn.optional_action_completion")
 local ui_runtime = require("src.ui.coord.ui_runtime")
 local ui_state = require("src.ui.coord.ui_state")
 local base_nodes = require("src.ui.schema.base")
@@ -43,7 +44,17 @@ local function _make_game()
       properties = {},
     }
   end
-  return { players = players }
+  return {
+    players = players,
+    auto_play_port = {
+      is_auto_player = function()
+        return false
+      end,
+      auto_action_for_choice = function()
+        return nil
+      end,
+    },
+  }
 end
 
 local function _make_auto_enabled_by_player(world)
@@ -296,11 +307,41 @@ local function _mark_optional_completed(world, intent)
   end
 end
 
+local function _make_completion_game(world)
+  local game = _make_game()
+  local current_role_id = _current_action_role_id(world) or _role_id(world)
+  game.turn = {
+    current_player_index = current_role_id,
+    pending_choice = world.base_screen_ui_model and world.base_screen_ui_model.choice or nil,
+  }
+  game.current_player = function(self)
+    return self.players[self.turn.current_player_index]
+  end
+  return game
+end
+
+local function _complete_optional_action(world, intent, input_source)
+  local state = world.base_screen_render_state
+  local game = _make_completion_game(world)
+  local result = optional_action_completion.complete_optional_action_phase(game, _role_id(world), state, {
+    input_source = input_source,
+    dispatch_choice_action = function(action)
+      world.base_screen_completion_action = action
+      return { status = "applied" }
+    end,
+  })
+  world.base_screen_completion_result = result
+  if result.ok == true then
+    _mark_optional_completed(world, intent)
+  end
+  return result
+end
+
 local function _trigger_end_button(world)
   local intent = _build_base_intent(world, base_nodes.end_button)
   world.base_screen_end_button_intent = intent
-  if intent and intent.type == "choice_cancel" then
-    _mark_optional_completed(world, intent)
+  if intent and intent.type == "complete_optional_action_phase" then
+    _complete_optional_action(world, intent, "user")
   end
   return intent
 end
@@ -660,11 +701,12 @@ function base_screen_steps.handlers()
       if world.base_screen_render_state == nil then
         _refresh_base_screen_for_player(world)
       end
-      local choice = world.base_screen_ui_model and world.base_screen_ui_model.choice or nil
-      local intent = choice_auto_policy.decide({}, {}, choice, { mode = "tick_timeout" })
+      local intent = choice_auto_policy.decide(_make_completion_game(world), world.base_screen_render_state,
+        world.base_screen_ui_model and world.base_screen_ui_model.choice or nil,
+        { mode = "tick_timeout" })
       world.base_screen_timeout_intent = intent
-      if intent and intent.type == "choice_cancel" then
-        _mark_optional_completed(world, intent)
+      if intent and intent.type == "complete_optional_action_phase" then
+        _complete_optional_action(world, intent, "timer")
       end
       return true
     end,

@@ -223,7 +223,9 @@ local function _is_action_dispatchable(action)
   if type(action) ~= "table" then
     return false
   end
-  return action.type == "choice_select" or action.type == "choice_cancel"
+  return action.type == "choice_select"
+    or action.type == "choice_cancel"
+    or action.type == "complete_optional_action_phase"
 end
 
 local function _resolve_owner_actor_id(choice)

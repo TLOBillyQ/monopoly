@@ -1,5 +1,6 @@
 local choice_route_policy = require("src.config.choice.route_policy")
 local choice_options = require("src.ui.view.choice_options")
+local optional_action_completion = require("src.turn.optional_action_completion")
 
 local M = {}
 
@@ -60,12 +61,11 @@ function M.requires_item_slot_pre_confirm(choice)
 end
 
 function M.is_optional_action_choice(choice)
-  local kind = choice and choice.kind or nil
-  return kind == "item_phase_passive" or kind == "landing_optional_effect"
+  return optional_action_completion.is_optional_action_choice(choice)
 end
 
 function M.is_cancelable_optional_action_choice(choice)
-  return M.is_optional_action_choice(choice) and choice.allow_cancel ~= false
+  return optional_action_completion.is_cancelable_optional_action_choice(choice)
 end
 
 M.resolve_screen_key = choice_route_policy.resolve

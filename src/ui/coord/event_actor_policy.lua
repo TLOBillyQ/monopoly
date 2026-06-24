@@ -8,6 +8,7 @@ local ACTOR_BOUND_TYPES = {
   toggle_action_log = true, open_skin_panel = true, open_gallery_panel = true,
   skin_panel_action = true, item_atlas_action = true, skin_gallery_action = true,
   choice_select = true, choice_cancel = true,
+  complete_optional_action_phase = true,
   market_confirm = true, market_page_prev = true, market_page_next = true, market_tab_select = true,
 }
 

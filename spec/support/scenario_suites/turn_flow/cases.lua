@@ -766,9 +766,11 @@ local function _test_tick_choice_timeout_manual_player_keeps_waiting()
     end,
   })
 
-  assert(dispatched ~= nil, "manual player timeout should dispatch cancel action")
-  assert(dispatched.type == "choice_cancel", "manual player timeout should dispatch choice_cancel")
-  assert(dispatched.choice_id == 721, "cancel action should have correct choice_id")
+  assert(dispatched ~= nil, "manual player timeout should dispatch optional completion action")
+  assert(dispatched.type == "complete_optional_action_phase",
+    "manual player timeout should dispatch optional completion")
+  assert(dispatched.choice_id == nil, "optional completion action should not expose choice_id")
+  assert(dispatched.actor_role_id == player.id, "optional completion should carry the choice owner actor")
 end
 
 local function _test_tick_ui_sync_countdown_uses_runtime_pending_choice_without_ui_choice_screen()

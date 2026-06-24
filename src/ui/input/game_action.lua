@@ -84,6 +84,7 @@ local _INTENT_HANDLERS = {
   ui_button      = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
   choice_select  = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
   choice_cancel  = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
+  complete_optional_action_phase = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
   market_confirm    = function(s, g, i, o, ap) return _dispatch_market_intent("choice_select", _MARKET_CONFIRM_KEYS, g, s, i, o, ap) end,
   market_page_prev  = function(s, g, i, o, ap) return _dispatch_market_intent("market_page_prev", _MARKET_PAGE_KEYS, g, s, i, o, ap) end,
   market_page_next  = function(s, g, i, o, ap) return _dispatch_market_intent("market_page_next", _MARKET_PAGE_KEYS, g, s, i, o, ap) end,

@@ -1,12 +1,23 @@
 local base_nodes = require("src.ui.schema.base")
-local event_intents = require("src.ui.input.event_intents")
 local route_model = require("src.ui.input.route_model")
 local choice_support = require("src.ui.view.choice_support")
+local optional_action_completion = require("src.turn.optional_action_completion")
 
 local intents = {}
 
 local function _input_blocked(state)
   return state and state.ui and state.ui.input_blocked == true
+end
+
+local function _can_build_optional_completion_intent(state)
+  local result = optional_action_completion.can_complete_optional_action_phase(nil, nil, state, {
+    choice = route_model.choice(state),
+    require_actor = false,
+    gate_state = {
+      input_blocked = _input_blocked(state),
+    },
+  })
+  return result.ok == true
 end
 
 function intents.build(state)
@@ -23,13 +34,10 @@ function intents.build(state)
     {
       name = base_nodes.end_button,
       build_intent = function()
-        if _input_blocked(state) then
+        if not _can_build_optional_completion_intent(state) then
           return nil
         end
-        if not choice_support.is_cancelable_optional_action_choice(route_model.choice(state)) then
-          return nil
-        end
-        return event_intents.choice_cancel_intent(state, "optional_action_end")
+        return { type = "complete_optional_action_phase" }
       end,
     },
     {

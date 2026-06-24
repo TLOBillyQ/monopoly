@@ -1,11 +1,13 @@
 local ctx_mod = require("src.turn.actions.context")
 local defaults = require("src.turn.actions.defaults")
 local force_resolve = require("src.turn.deadlines")
+local optional_action_completion = require("src.turn.optional_action_completion")
 
 local INVALIDATING_ACTION_TYPES = {
   ui_button = true,
   choice_select = true,
   choice_cancel = true,
+  complete_optional_action_phase = true,
   market_page_prev = true,
   market_page_next = true,
   market_tab_select = true,
@@ -143,10 +145,29 @@ local function build(deps)
     return { status = "applied" }
   end
 
+  local function _handle_optional_action_completion(game, state, action, opts, ctx)
+    local gate_state = validator.resolve_gate_state(state, ctx.ui_sync_ports)
+    local result = optional_action_completion.complete_optional_action_phase(game, action.actor_role_id, state, {
+      gate_state = gate_state,
+      input_source = action.input_source,
+      dispatch_choice_action = function(choice_action)
+        return _dispatch_action(game, state, choice_action, opts, ctx)
+      end,
+    })
+    if result.ok == true then
+      return { status = "applied" }
+    end
+    if result.reason == "blocked" then
+      return { status = "blocked", reason = result.reason }
+    end
+    return { status = "rejected", reason = result.reason }
+  end
+
   local _ACTION_HANDLERS = {
     ui_button = _handle_ui_button,
     choice_select = _handle_choice_action,
     choice_cancel = _handle_choice_action,
+    complete_optional_action_phase = _handle_optional_action_completion,
     market_page_prev = _handle_market_navigation,
     market_page_next = _handle_market_navigation,
     market_tab_select = _handle_market_navigation,

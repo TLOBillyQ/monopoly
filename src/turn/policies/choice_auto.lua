@@ -2,6 +2,7 @@ local number_utils = require("src.foundation.number")
 local choice_contract = require("src.config.choice.contract")
 local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local auto_play_port = require("src.rules.ports.auto_play")
+local optional_action_completion = require("src.turn.optional_action_completion")
 
 local choice_auto_policy = {}
 
@@ -98,6 +99,9 @@ local function _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, el
     return _build_auto_or_fallback_action(game, choice, true)
   end
   if mode == "tick_timeout" then
+    if optional_action_completion.is_cancelable_optional_action_choice(choice) then
+      return { type = "complete_optional_action_phase" }
+    end
     if choice.allow_cancel == true then
       return { type = "choice_cancel", choice_id = choice.id }
     end
