@@ -1,6 +1,7 @@
 local nodes = require("src.ui.schema.item_atlas")
 local number_utils = require("src.foundation.number")
 local panel_runtime = require("src.ui.render.panel_runtime")
+local runtime_assets = require("src.config.runtime_assets")
 
 local item_atlas_view = {}
 
@@ -25,16 +26,13 @@ local function _set_enlarged_overlay_visible(ui, visible)
   end
 end
 
-local function _image_ref_key(refs, item_id)
-  if item_id == nil then
-    return nil
-  end
-  local key = tostring(item_id)
-  return refs[key]
+local function _item_image_key(refs, item_id)
+  local image = runtime_assets.image_for_item(item_id, { refs = refs })
+  return image.ok == true and image.image_key or nil
 end
 
 local function _apply_card_texture(runtime, refs, node_name, item)
-  local image_key = _image_ref_key(refs, item.id)
+  local image_key = _item_image_key(refs, item.id)
   if not image_key then
     return
   end
@@ -87,7 +85,7 @@ end
 function item_atlas_view.refresh_page(state, catalog, page_index, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local refs = state.ui_refs and state.ui_refs.images or {}
+  local refs = state.ui_refs or {}
   local offset = (page_index - 1) * PAGE_SIZE
 
   for slot, node_name in ipairs(nodes.card_images) do
@@ -100,9 +98,9 @@ end
 function item_atlas_view.show_enlarged(state, item_id, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local refs = state.ui_refs and state.ui_refs.images or {}
+  local refs = state.ui_refs or {}
 
-  local image_key = _image_ref_key(refs, item_id)
+  local image_key = _item_image_key(refs, item_id)
   if image_key == nil then
     return
   end

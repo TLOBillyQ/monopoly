@@ -3,6 +3,7 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 local items_cfg = require("src.config.content.items")
 local market_catalog = require("src.config.content.market_catalog")
 local runtime_ui = require("src.ui.render.runtime_ui")
+local runtime_assets = require("src.config.runtime_assets")
 
 local market_view_slots = {}
 
@@ -51,19 +52,47 @@ local function _resolve_market_level(cfg)
   return 2
 end
 
-local _resolve_ref_key = require("src.ui.render.market.ref_key").resolve
+local function _asset_opts(refs)
+  if type(refs) == "table" and type(refs.images) ~= "table" then
+    return { refs = { images = refs } }
+  end
+  return { refs = refs }
+end
 
 local function _resolve_market_icon_key(refs, product_id, entry, cfg)
-  local key = tostring(product_id)
-  local ref = refs[key]
-  if ref then
-    return ref
-  end
   local name = (cfg and cfg.name) or (entry and entry.name)
-  if name == nil or name == "" then
-    return nil
+  local image = runtime_assets.image_for_market_item(product_id, name, _asset_opts(refs))
+  return image.ok == true and image.image_key or nil
+end
+
+local function _market_price_text(entry)
+  local currency = assert(
+    entry.currency ~= nil and entry.currency ~= "" and entry.currency,
+    "missing market currency"
+  )
+  return tostring(entry.price) .. " " .. tostring(currency)
+end
+
+local function _market_fallback_icon_key(refs, empty_ref_key)
+  local rarity = runtime_assets.image_for_market_rarity(empty_ref_key, _asset_opts(refs))
+  if rarity.image_key ~= nil then
+    return rarity.image_key
   end
-  return refs[name]
+  return runtime_assets.empty_image(_asset_opts(refs)).image_key
+end
+
+local function _market_selection_icon_key(refs, option_id, entry, cfg, empty_ref_key)
+  return _resolve_market_icon_key(refs, option_id, entry, cfg)
+    or _market_fallback_icon_key(refs, empty_ref_key)
+end
+
+local function _resolve_market_rarity_key(refs, level)
+  local image = runtime_assets.image_for_market_rarity(market_layout.rarity_ref_keys[level], _asset_opts(refs))
+  if image.ok == true then
+    return image.image_key
+  end
+  local empty = runtime_assets.empty_image(_asset_opts(refs))
+  return empty.image_key
 end
 
 local function _set_market_slot_hidden(ui, slot)
@@ -110,7 +139,7 @@ local function _set_market_slot_visible(ui, refs, slot, opt, deps)
     sold_out_label = { visible = opt.sold_out == true, touch_enabled = false },
   })
   local level = _resolve_market_level(cfg)
-  local rarity_key = _resolve_ref_key(refs, market_layout.rarity_ref_keys[level]) or _resolve_ref_key(refs, market_layout.empty_ref_key)
+  local rarity_key = _resolve_market_rarity_key(refs, level)
   if rarity_key ~= nil then
     runtime.set_node_texture_keep_size(ui.query_node(slot.frame), rarity_key)
   end
@@ -184,15 +213,11 @@ function market_view_slots.resolve_selection(option_id, image_refs, empty_ref_ke
   assert(option_id ~= nil, "missing market option_id")
   local entry, cfg = _resolve_market_entry(option_id)
   assert(entry ~= nil, "missing market entry")
-  local price_text = tostring(entry.price) .. " "
-      .. tostring(assert(entry.currency ~= nil and entry.currency ~= "" and entry.currency, "missing market currency"))
-  local icon_key = _resolve_market_icon_key(image_refs, option_id, entry, cfg)
-    or _resolve_ref_key(image_refs, empty_ref_key)
   return {
     entry = entry,
     cfg = cfg,
-    price_text = price_text,
-    icon_key = icon_key,
+    price_text = _market_price_text(entry),
+    icon_key = _market_selection_icon_key(image_refs, option_id, entry, cfg, empty_ref_key),
   }
 end
 

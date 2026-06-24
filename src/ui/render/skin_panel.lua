@@ -1,150 +1,16 @@
 local nodes = require("src.ui.schema.skin")
 local panel_runtime = require("src.ui.render.panel_runtime")
 local ui_controls = require("src.ui.render.support.ui_controls")
+local skin_buttons = require("src.ui.render.skin_panel_buttons")
+local skin_cards = require("src.ui.render.skin_panel_cards")
 
 local skin_panel_view = {}
 
 local _resolve_runtime = panel_runtime.resolve
 
-local function _skin_image_ref(refs, product_id)
-  if product_id == nil then
-    return nil
-  end
-  return refs[tostring(product_id)]
-end
-
 local function _refresh_static_nodes(ui)
   ui_controls.set_controls_state(ui, nodes.static_visual_nodes, { visible = true, touch_enabled = false })
   ui_controls.set_control_state(ui, nodes.close_button, { visible = true, touch_enabled = true })
-end
-
-local function _slot_state(panel, skin)
-  if not panel or not skin then
-    return "empty"
-  end
-  local role_key = tostring(panel.role_id)
-  local owned_map = panel.owned_by_role[role_key]
-  local is_owned = owned_map and owned_map[skin.product_id] == true
-  if not is_owned then
-    return "locked"
-  end
-  local equipped_id = panel.selected_by_role[role_key]
-  if equipped_id == skin.product_id then
-    return "equipped"
-  end
-  return "owned"
-end
-
-local function _button_text_for_locked(skin)
-  if skin.unlock == "gift" and skin.gift_name then
-    return skin.gift_name
-  end
-  if skin.price ~= nil then
-    return tostring(skin.price)
-  end
-  return ""
-end
-
-local function _button_props(skin, status)
-  if status == "locked" then
-    return _button_text_for_locked(skin), skin.unlock == "purchase"
-  elseif status == "owned" then
-    return "穿上", true
-  elseif status == "equipped" then
-    return "脱下", true
-  elseif status == "empty" then
-    return "", false
-  end
-  return nil, nil
-end
-
-local function _refresh_button(ui, slot, skin, status)
-  local button_name = nodes.action_buttons[slot]
-  if not button_name then
-    return
-  end
-  local text, touch_enabled = _button_props(skin, status)
-  local visible = skin ~= nil
-  if text ~= nil and ui.set_button then
-    ui:set_button(button_name, text)
-  end
-  if ui.set_visible then
-    ui:set_visible(button_name, visible)
-  end
-  if touch_enabled ~= nil and ui.set_touch_enabled then
-    ui:set_touch_enabled(button_name, touch_enabled)
-  end
-end
-
-local function _refresh_card_frame(ui, slot, visible)
-  local frame_name = nodes.card_frames[slot]
-  if not frame_name then
-    return
-  end
-  ui_controls.set_control_state(ui, frame_name, { visible = visible, touch_enabled = false })
-end
-
-local function _refresh_card_outline_container(ui, slot, visible)
-  local outline_name = nodes.card_outlines[slot]
-  if not outline_name then
-    return
-  end
-  if ui.set_visible then
-    ui:set_visible(outline_name, visible)
-  end
-  if ui.set_touch_enabled then
-    ui:set_touch_enabled(outline_name, false)
-  end
-end
-
-local function _set_card_texture(runtime, card_name, image_key)
-  if type(runtime.query_nodes) == "function" then
-    local ok_qn, matched_nodes = pcall(runtime.query_nodes, card_name)
-    if ok_qn and type(matched_nodes) == "table" then
-      for _, node in ipairs(matched_nodes) do
-        runtime.set_node_texture_keep_size(node, image_key)
-      end
-    end
-  else
-    local node = runtime.query_node(card_name)
-    if node then
-      runtime.set_node_texture_keep_size(node, image_key)
-    end
-  end
-end
-
-local function _refresh_card_image(ui, runtime, image_refs, slot, skin)
-  local card_name = nodes.card_images[slot]
-  if not card_name then
-    return
-  end
-  if skin then
-    local product_id = skin.product_id
-    local image_key = _skin_image_ref(image_refs, product_id)
-    if image_key then
-      _set_card_texture(runtime, card_name, image_key)
-    end
-  end
-  if ui.set_visible then
-    ui:set_visible(card_name, skin ~= nil)
-  end
-  if ui.set_touch_enabled then
-    ui:set_touch_enabled(card_name, skin ~= nil)
-  end
-end
-
-local function _refresh_price_icon(ui, slot, skin, status)
-  local price_icon = nodes.price_icons[slot]
-  if not price_icon or not ui.set_visible then
-    return
-  end
-  local is_purchase = skin ~= nil and skin.unlock == "purchase"
-  local has_price = is_purchase and skin.price ~= nil and skin.currency ~= nil
-  local is_owned = status == "owned" or status == "equipped"
-  ui:set_visible(price_icon, has_price and not is_owned)
-  if ui.set_touch_enabled then
-    ui:set_touch_enabled(price_icon, false)
-  end
 end
 
 local PAGE_SIZE = #nodes.card_images
@@ -152,7 +18,6 @@ local PAGE_SIZE = #nodes.card_images
 function skin_panel_view.refresh_slots(state, catalog, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local image_refs = state.ui_refs and state.ui_refs.images or {}
   local panel = ui.skin_panel
   local page_index = (panel and panel.page_index) or 1
   local offset = (page_index - 1) * PAGE_SIZE
@@ -161,13 +26,9 @@ function skin_panel_view.refresh_slots(state, catalog, deps)
 
   for slot in ipairs(nodes.card_images) do
     local skin = catalog[offset + slot]
-    local has_skin = skin ~= nil
-    local status = _slot_state(panel, skin)
-    _refresh_card_frame(ui, slot, has_skin)
-    _refresh_card_image(ui, runtime, image_refs, slot, skin)
-    _refresh_price_icon(ui, slot, skin, status)
-    _refresh_button(ui, slot, skin, status)
-    _refresh_card_outline_container(ui, slot, has_skin)
+    local status = skin_buttons.slot_state(panel, skin)
+    skin_cards.refresh_slot_visuals(state, ui, runtime, slot, skin, status)
+    skin_buttons.refresh_button(ui, slot, skin, status)
   end
 end
 
