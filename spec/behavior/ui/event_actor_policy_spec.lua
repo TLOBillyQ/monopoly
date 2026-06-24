@@ -12,7 +12,7 @@ describe("presentation_ui.event_actor_policy", function()
     local actor_types = {
       "toggle_action_log", "open_skin_panel", "open_gallery_panel",
       "skin_panel_action", "item_atlas_action", "skin_gallery_action",
-      "choice_select", "choice_cancel",
+      "choice_select", "choice_cancel", "complete_optional_action_phase",
       "market_confirm", "market_page_prev", "market_page_next", "market_tab_select",
     }
 

@@ -105,6 +105,43 @@ describe("force_resolve dispatch path", function()
     _assert_eq(dispatched.actor_role_id, 42, "missing auto action actor should still be filled")
   end)
 
+  it("auto choice action fills actor from current player when choice has no owner", function()
+    local state = {}
+    runtime_state.ensure_all(state)
+    local dispatched = nil
+    local game = {
+      players = { { id = 7 } },
+      turn = {
+        current_player_index = 1,
+        pending_choice = nil,
+      },
+    }
+    function game:dispatch_action(action)
+      dispatched = action
+    end
+
+    local choice = {
+      id = "choice_current_player",
+      kind = "market_buy",
+      options = {},
+    }
+
+    _with_patches({
+      {
+        target = choice_auto_policy,
+        key = "decide",
+        value = function()
+          return { type = "choice_select" }
+        end,
+      },
+    }, function()
+      force_resolve.resolve_choice(game, state, choice, "tick_timeout")
+    end)
+
+    _assert_eq(dispatched.choice_id, "choice_current_player", "missing auto action choice_id should be filled")
+    _assert_eq(dispatched.actor_role_id, 7, "missing actor should fall back to current player")
+  end)
+
   it("force skip auto action can dispatch registered fallback choice action", function()
     local state = {}
     runtime_state.ensure_all(state)
