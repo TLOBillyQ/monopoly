@@ -1,17 +1,11 @@
 local nodes = require("src.ui.schema.skin")
+local runtime_assets = require("src.config.runtime_assets")
 local panel_runtime = require("src.ui.render.panel_runtime")
 local ui_controls = require("src.ui.render.support.ui_controls")
 
 local skin_panel_view = {}
 
 local _resolve_runtime = panel_runtime.resolve
-
-local function _skin_image_ref(refs, product_id)
-  if product_id == nil then
-    return nil
-  end
-  return refs[tostring(product_id)]
-end
 
 local function _refresh_static_nodes(ui)
   ui_controls.set_controls_state(ui, nodes.static_visual_nodes, { visible = true, touch_enabled = false })
@@ -105,7 +99,7 @@ local function _set_card_texture(runtime, card_name, image_key)
         runtime.set_node_texture_keep_size(node, image_key)
       end
     end
-  else
+  elseif type(runtime.query_node) == "function" then
     local node = runtime.query_node(card_name)
     if node then
       runtime.set_node_texture_keep_size(node, image_key)
@@ -113,16 +107,17 @@ local function _set_card_texture(runtime, card_name, image_key)
   end
 end
 
-local function _refresh_card_image(ui, runtime, image_refs, slot, skin)
+local function _refresh_card_image(state, ui, runtime, slot, skin)
   local card_name = nodes.card_images[slot]
   if not card_name then
     return
   end
   if skin then
-    local product_id = skin.product_id
-    local image_key = _skin_image_ref(image_refs, product_id)
-    if image_key then
-      _set_card_texture(runtime, card_name, image_key)
+    local image = runtime_assets.image_for_skin_card(skin.product_id, {
+      refs = state.ui_refs,
+    })
+    if image.ok == true then
+      _set_card_texture(runtime, card_name, image.image_key)
     end
   end
   if ui.set_visible then
@@ -152,7 +147,6 @@ local PAGE_SIZE = #nodes.card_images
 function skin_panel_view.refresh_slots(state, catalog, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local image_refs = state.ui_refs and state.ui_refs.images or {}
   local panel = ui.skin_panel
   local page_index = (panel and panel.page_index) or 1
   local offset = (page_index - 1) * PAGE_SIZE
@@ -164,7 +158,7 @@ function skin_panel_view.refresh_slots(state, catalog, deps)
     local has_skin = skin ~= nil
     local status = _slot_state(panel, skin)
     _refresh_card_frame(ui, slot, has_skin)
-    _refresh_card_image(ui, runtime, image_refs, slot, skin)
+    _refresh_card_image(state, ui, runtime, slot, skin)
     _refresh_price_icon(ui, slot, skin, status)
     _refresh_button(ui, slot, skin, status)
     _refresh_card_outline_container(ui, slot, has_skin)

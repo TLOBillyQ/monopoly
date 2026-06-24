@@ -3,6 +3,7 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 local runtime_state = require("src.ui.state.runtime")
 local number_utils = require("src.foundation.number")
 local runtime_ui = require("src.ui.render.runtime_ui")
+local runtime_assets = require("src.config.runtime_assets")
 
 local market_view_controls = {}
 
@@ -10,8 +11,6 @@ local function _resolve_runtime(state, deps)
   local resolved_deps = deps or (state and state.presentation_runtime) or {}
   return assert(resolved_deps.runtime or runtime_ui, "missing deps.runtime")
 end
-
-local _resolve_ref_key = require("src.ui.render.market.ref_key").resolve
 
 local function _set_cancel_controls(ui, visible, enabled)
   local names = market_layout.cancel_buttons
@@ -70,10 +69,9 @@ function market_view_controls.reset_market_preview(state, deps)
   ui:set_label(market_layout.price_label, "")
   market_view_controls.clear_market_selection_frames(ui)
   ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
-  local image_refs = state.ui_refs and state.ui_refs.images or {}
-  local empty_key = _resolve_ref_key(image_refs, market_layout.empty_ref_key)
-  if empty_key ~= nil then
-    runtime.set_node_texture_keep_size(ui.query_node(market_layout.selected_card), empty_key)
+  local empty_image = runtime_assets.empty_image({ refs = state.ui_refs })
+  if empty_image.image_key ~= nil then
+    runtime.set_node_texture_keep_size(ui.query_node(market_layout.selected_card), empty_image.image_key)
   end
 end
 
