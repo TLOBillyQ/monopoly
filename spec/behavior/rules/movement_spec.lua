@@ -248,7 +248,7 @@ describe("movement", function()
     local g = _new_game()
     local p = g:current_player()
     g:update_player_position(p, g.board:index_of_tile_id(24))
-    local cash_before = p.cash
+    local cash_before = g:player_balance(p, "金币")
     local scheduled = move_anim_support.capture_scheduled_callbacks(function()
       local res = movement.move(g, p, 1, { branch_parity = 1 })
       _assert_eq(res.passed_start, 1, "passed_start in result stays immediate for transit dedup")
@@ -259,46 +259,46 @@ describe("movement", function()
       1 * timing.pass_start_hold_seconds_per_step + timing.pass_start_hold_tail_seconds,
       "delay = first_pass_step * per_step + tail"
     )
-    _assert_eq(p.cash, cash_before, "cash held until scheduled callback runs")
+    _assert_eq(g:player_balance(p, "金币"), cash_before, "cash held until scheduled callback runs")
     scheduled[1].fn()
-    _assert_eq(p.cash, cash_before + constants.pass_start_bonus, "cash applied after callback runs")
+    _assert_eq(g:player_balance(p, "金币"), cash_before + constants.pass_start_bonus, "cash applied after callback runs")
   end)
 
   it("pass_start_hold_opts_override_skips_schedule", function()
     local g = _new_game()
     local p = g:current_player()
     g:update_player_position(p, g.board:index_of_tile_id(24))
-    local cash_before = p.cash
+    local cash_before = g:player_balance(p, "金币")
     local scheduled = move_anim_support.capture_scheduled_callbacks(function()
       movement.move(g, p, 1, { branch_parity = 1, pass_start_hold_seconds = 0 })
     end)
     _assert_eq(#scheduled, 0, "no schedule call when override is 0")
-    _assert_eq(p.cash, cash_before + constants.pass_start_bonus, "cash applied immediately on override")
+    _assert_eq(g:player_balance(p, "金币"), cash_before + constants.pass_start_bonus, "cash applied immediately on override")
   end)
 
   it("pass_start_hold_negative_override_settles_immediately", function()
     local g = _new_game()
     local p = g:current_player()
     g:update_player_position(p, g.board:index_of_tile_id(24))
-    local cash_before = p.cash
+    local cash_before = g:player_balance(p, "金币")
     local scheduled = move_anim_support.capture_scheduled_callbacks(function()
       movement.move(g, p, 1, { branch_parity = 1, pass_start_hold_seconds = -5 })
     end)
     _assert_eq(#scheduled, 0, "a negative hold override should clamp to zero and skip scheduling")
-    _assert_eq(p.cash, cash_before + constants.pass_start_bonus,
+    _assert_eq(g:player_balance(p, "金币"), cash_before + constants.pass_start_bonus,
       "a negative override should settle the pass-start bonus immediately")
   end)
 
   it("pass_start_hold_skips_when_no_pass", function()
     local g = _new_game()
     local p = g:current_player()
-    local cash_before = p.cash
+    local cash_before = g:player_balance(p, "金币")
     local scheduled = move_anim_support.capture_scheduled_callbacks(function()
       local res = movement.move(g, p, 1, { branch_parity = 1 })
       _assert_eq(res.passed_start, 0, "no pass_start when not crossing start")
     end)
     _assert_eq(#scheduled, 0, "no schedule call when nothing to settle")
-    _assert_eq(p.cash, cash_before, "cash unchanged")
+    _assert_eq(g:player_balance(p, "金币"), cash_before, "cash unchanged")
   end)
 
   it("owner_mine_on_third_own_turn_stops_movement", function()

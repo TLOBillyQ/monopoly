@@ -68,7 +68,7 @@ local function _add_real_roles_to_roster(roster, roles, max_players)
     local role_id = _resolve_role_id_from_role(role)
     if role_id ~= nil then
       local role_name = _resolve_role_name(role)
-      roster[#roster + 1] = { role_id = role_id, name = role_name }
+      roster[#roster + 1] = { role_id = role_id, name = role_name, role = role }
     end
     if max_players and #roster >= max_players then
       break

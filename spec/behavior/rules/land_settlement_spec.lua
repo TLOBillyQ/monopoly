@@ -43,14 +43,14 @@ describe("rules.land.settlement", function()
 
     settlement.begin_landing_settlement(game, player.id, { tile = tile, move_result = {} })
     local pending = assert(game.turn.pending_choice, "missing landing choice")
-    local before_cash = player.cash
+    local before_cash = game:player_balance(player, "金币")
 
     local result = settlement.resolve_landing_settlement_choice(game, pending, {
       option_id = "buy_land",
     })
 
     assert(result and result.ok == true, "buy_land choice should resolve through settlement seam")
-    _assert_eq(player.cash, before_cash - tile.price, "buy_land should deduct tile price")
+    _assert_eq(game:player_balance(player, "金币"), before_cash - tile.price, "buy_land should deduct tile price")
     _assert_eq(_tile_state(game, tile).owner_id, player.id, "buy_land should set owner")
   end)
 
