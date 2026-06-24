@@ -63,6 +63,50 @@ describe("turn_optional_action_completion", function()
 
     _assert_eq(result.ok, true, "explicit optional choice should override pending required choice")
     _assert_eq(result.choice, explicit_choice, "result should use the explicit optional choice")
+
+    local wrong_actor = optional_completion.can_complete_optional_action_phase(game, 2, nil, {
+      choice = explicit_choice,
+    })
+    _assert_eq(wrong_actor.ok, false, "indexed current-player lookup should reject other actors")
+    _assert_eq(wrong_actor.reason, "not_current_player", "indexed current-player rejection reason")
+  end)
+
+  it("prefers an explicit current_player method over indexed fallback", function()
+    local choice = {
+      id = "optional_method_actor",
+      kind = "item_phase_passive",
+      allow_cancel = true,
+    }
+    local game = _new_game(choice)
+    game.turn.current_player_index = 1
+    function game:current_player()
+      return self.players[2]
+    end
+
+    local indexed_actor = optional_completion.can_complete_optional_action_phase(game, 1)
+    _assert_eq(indexed_actor.ok, false, "current_player method should override stale index")
+    _assert_eq(indexed_actor.reason, "not_current_player", "method current-player rejection reason")
+
+    local method_actor = optional_completion.can_complete_optional_action_phase(game, 2)
+    _assert_eq(method_actor.ok, true, "method current player should be allowed")
+  end)
+
+  it("does not reject actors when the current player cannot be resolved", function()
+    local choice = {
+      id = "optional_missing_current",
+      kind = "item_phase_passive",
+      allow_cancel = true,
+    }
+    local game = {
+      turn = {
+        current_player_index = 1,
+        pending_choice = choice,
+      },
+    }
+
+    local result = optional_completion.can_complete_optional_action_phase(game, 1)
+    _assert_eq(result.ok, true, "missing player list should leave actor ownership to caller")
+    _assert_eq(result.choice, choice, "missing player list should preserve the optional choice")
   end)
 
   it("returns stable reasons for actors and non optional choices", function()
@@ -85,6 +129,7 @@ describe("turn_optional_action_completion", function()
     }), 1)
     _assert_eq(required_choice_result.ok, false, "required choices should not use optional completion")
     _assert_eq(required_choice_result.reason, "no_optional_action", "required choice reason")
+    _assert_eq(required_choice_result.choice, nil, "required choices should not leak through no-optional results")
   end)
 
   it("handles missing actors and caller-owned actor checks distinctly", function()
@@ -144,6 +189,7 @@ describe("turn_optional_action_completion", function()
 
     _assert_eq(result.ok, true, "completion should report success")
     _assert_eq(result.status, "applied", "completion should expose dispatch status")
+    _assert_eq(result.reason, nil, "successful completion should not report a rejection reason")
     _assert_eq(dispatched.type, "choice_cancel", "completion should cancel the pending optional choice")
     _assert_eq(dispatched.choice_id, "optional_5", "completion should target the pending choice")
     _assert_eq(dispatched.actor_role_id, 1, "completion should carry the current actor")
@@ -165,6 +211,7 @@ describe("turn_optional_action_completion", function()
 
     _assert_eq(result.ok, true, "game dispatcher fallback should apply completion")
     _assert_eq(result.status, "applied", "game dispatcher fallback should report applied")
+    _assert_eq(result.reason, nil, "game dispatcher fallback should not report a rejection reason")
     _assert_eq(game.dispatched.type, "choice_cancel", "fallback dispatcher should receive choice cancel")
     _assert_eq(game.dispatched.choice_id, "optional_dispatch", "fallback dispatcher should target the choice")
   end)
