@@ -3,6 +3,8 @@ local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
 local skin_panel = require("src.ui.coord.skin_panel")
+local transaction = require("src.app.cosmetics.transaction")
+local host_runtime_ports = require("src.ui.host_bridge")
 local skin_panel_view = require("src.ui.render.skin_panel")
 local skin_nodes = require("src.ui.schema.skin")
 local default_skins = require("src.config.content.skins")
@@ -189,6 +191,109 @@ describe("skin_panel", function()
         "owner refresh should run under the resolved role via with_client_role")
       assert(fn_called,
         "refresh function should be invoked inside with_client_role")
+    end)
+
+    it("falls back to ensured panel when transaction returns nil", function()
+      local s = _make_state()
+      local tips = 0
+
+      _with_patches({
+        { target = transaction, key = "handle_skin_transaction", value = function()
+          return nil
+        end },
+        { target = host_runtime_ports, key = "enqueue_tip", value = function()
+          tips = tips + 1
+        end },
+      }, function()
+        local unlock_panel = skin_panel.unlock(s, 1, "buy", 1)
+        local next_panel = skin_panel.handle_action(s, "next", 1)
+        local prev_panel = skin_panel.handle_action(s, "prev", 1)
+        local unequip_panel = skin_panel.handle_action(s, "unequip", 1)
+
+        assert(unlock_panel == s.ui.skin_panel, "nil transaction result should return ensured panel")
+        assert(next_panel == s.ui.skin_panel, "nil next result should return ensured panel")
+        assert(prev_panel == s.ui.skin_panel, "nil prev result should return ensured panel")
+        assert(unequip_panel == s.ui.skin_panel, "nil unequip result should return ensured panel")
+      end)
+
+      assert(tips == 0, "nil transaction result should not enqueue notifications")
+    end)
+
+    it("uses stable notification keys and honors silent close", function()
+      local s = _make_state()
+      local tips = {}
+
+      _with_patches({
+        { target = host_runtime_ports, key = "enqueue_tip", value = function(tip)
+          tips[#tips + 1] = tip
+        end },
+      }, function()
+        skin_panel.open(s, 1)
+        skin_panel.close(s, 1, { silent = true })
+        skin_panel.open(s, 1)
+        skin_panel.close(s)
+      end)
+
+      assert(#tips == 3, "silent close should not enqueue a notification")
+      assert(tips[1].dedupe_key == "skin_panel:open:1:",
+        "open notification key should include empty product suffix")
+      assert(tips[2].dedupe_key == "skin_panel:open:1:",
+        "second open notification key should remain stable")
+      assert(tips[3].dedupe_key == "skin_panel:close:1:",
+        "close notification key should include empty product suffix")
+    end)
+
+    it("uses equipped product in equip notification key", function()
+      skin_panel.configure_catalog_for_tests(_make_catalog(1))
+      local s = _make_state()
+      local tips = {}
+
+      _with_patches({
+        { target = host_runtime_ports, key = "enqueue_tip", value = function(tip)
+          tips[#tips + 1] = tip
+        end },
+      }, function()
+        skin_panel.open(s, 1)
+        skin_panel.unlock(s, 1, "buy", 1)
+        skin_panel.equip(s, 1, 1)
+      end)
+
+      assert(tips[#tips].dedupe_key == "skin_panel:equip:1:skin_1",
+        "equip notification key should use equipped_product")
+    end)
+
+    it("does not close canvas when result does not request close", function()
+      local events = {}
+      local role = _build_role_with_events(1, events)
+      local s = _make_state()
+      s.ui.skin_panel = {
+        open = true,
+        role_id = 1,
+        page_index = 1,
+        owned_by_role = {},
+        selected_by_role = {},
+      }
+
+      _with_patches({
+        { target = transaction, key = "handle_skin_transaction", value = function()
+          return {
+            accepted = true,
+            ok = true,
+            action = "close",
+            panel = s.ui.skin_panel,
+            panel_should_close = false,
+          }
+        end },
+        { target = runtime_ports, key = "resolve_role", value = function(role_id)
+          if role_id == 1 then return role end
+          return nil
+        end },
+      }, function()
+        skin_panel.close(s, 1)
+      end)
+
+      assert(not _has_event(events, "隐藏皮肤商店"),
+        "close result without panel_should_close must not hide the skin canvas")
     end)
   end)
 
