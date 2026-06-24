@@ -85,51 +85,53 @@ local function _resolve_auto_actor_flag(game, choice, ctx)
   return is_auto_actor == true
 end
 
+local function _dispatch_auto_actor_mode(game, choice, allow_first_option_fallback, is_auto_actor, min_visible, elapsed)
+  if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
+    return nil
+  end
+  return _build_auto_or_fallback_action(game, choice, allow_first_option_fallback)
+end
+
+local function _dispatch_timeout_mode(game, choice)
+  if optional_action_completion.is_cancelable_optional_action_choice(choice) then
+    return { type = "complete_optional_action_phase" }
+  end
+  if choice.allow_cancel == true then
+    return { type = "choice_cancel", choice_id = choice.id }
+  end
+  local fallback = _build_auto_or_fallback_action(game, choice, true)
+  if fallback ~= nil then
+    return fallback
+  end
+  return { type = "choice_force_skip", choice_id = choice.id }
+end
+
 local function _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, elapsed)
   if mode == "wait_choice" then
-    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
-      return nil
-    end
-    return _build_auto_or_fallback_action(game, choice, false)
+    return _dispatch_auto_actor_mode(game, choice, false, is_auto_actor, min_visible, elapsed)
   end
   if mode == "tick_min_visible" then
-    if not _can_auto_actor_choose(is_auto_actor, min_visible, elapsed) then
-      return nil
-    end
-    return _build_auto_or_fallback_action(game, choice, true)
+    return _dispatch_auto_actor_mode(game, choice, true, is_auto_actor, min_visible, elapsed)
   end
   if mode == "tick_timeout" then
-    if optional_action_completion.is_cancelable_optional_action_choice(choice) then
-      return { type = "complete_optional_action_phase" }
-    end
-    if choice.allow_cancel == true then
-      return { type = "choice_cancel", choice_id = choice.id }
-    end
-    local fallback = _build_auto_or_fallback_action(game, choice, true)
-    if fallback ~= nil then
-      return fallback
-    end
-    return { type = "choice_force_skip", choice_id = choice.id }
+    return _dispatch_timeout_mode(game, choice)
   end
   return nil
 end
 
 choice_auto_policy.resolve_choice_owner = _resolve_choice_owner
 
-function choice_auto_policy.decide(game, _state, choice, ctx)
+local function _decide_before_mode(choice, ctx)
   if not (choice and choice.id) then
-    return nil
+    return true, nil
   end
-  ctx = ctx or {}
   if ctx.pending_action then
-    return ctx.pending_action
+    return true, ctx.pending_action
   end
+  return false, nil
+end
 
-  local mode = ctx.mode or "wait_choice"
-  local is_auto_actor = _resolve_auto_actor_flag(game, choice, ctx)
-  local min_visible = _normalize_visible_seconds(ctx.min_visible_seconds)
-  local elapsed = _normalize_visible_seconds(ctx.elapsed_seconds)
-
+local function _dispatch_mode_or_fallback(game, choice, ctx, mode, is_auto_actor, min_visible, elapsed)
   local result = _dispatch_mode(game, choice, mode, is_auto_actor, min_visible, elapsed)
   if result ~= nil then
     return result
@@ -137,54 +139,88 @@ function choice_auto_policy.decide(game, _state, choice, ctx)
   return _build_auto_or_fallback_action(game, choice, ctx.allow_first_option_fallback == true)
 end
 
+function choice_auto_policy.decide(game, _state, choice, ctx)
+  ctx = ctx or {}
+  local handled, action = _decide_before_mode(choice, ctx)
+  if handled then
+    return action
+  end
+
+  local mode = ctx.mode or "wait_choice"
+  local is_auto_actor = _resolve_auto_actor_flag(game, choice, ctx)
+  local min_visible = _normalize_visible_seconds(ctx.min_visible_seconds)
+  local elapsed = _normalize_visible_seconds(ctx.elapsed_seconds)
+  return _dispatch_mode_or_fallback(game, choice, ctx, mode, is_auto_actor, min_visible, elapsed)
+end
+
 return choice_auto_policy
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=d5a3932c13c0c697
+projectHash=c3a8a302db63a6b3
 scope.0.id=chunk:src/turn/policies/choice_auto.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=137
-scope.0.semanticHash=a1701cd7e4af4084
-scope.1.id=function:_resolve_choice_owner:8
+scope.0.endLine=157
+scope.0.semanticHash=0daffa807a34ffe5
+scope.1.id=function:_resolve_choice_owner:9
 scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=20
+scope.1.startLine=9
+scope.1.endLine=21
 scope.1.semanticHash=9a64ffe944066964
-scope.2.id=function:_pick_first_choice_option:22
+scope.2.id=function:_pick_first_choice_option:23
 scope.2.kind=function
-scope.2.startLine=22
-scope.2.endLine=32
+scope.2.startLine=23
+scope.2.endLine=33
 scope.2.semanticHash=31a4a25726108120
-scope.3.id=function:_build_auto_or_fallback_action:34
+scope.3.id=function:_build_auto_or_fallback_action:35
 scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=62
+scope.3.startLine=35
+scope.3.endLine=63
 scope.3.semanticHash=04e15064d27bd973
-scope.4.id=function:_normalize_visible_seconds:64
+scope.4.id=function:_normalize_visible_seconds:65
 scope.4.kind=function
-scope.4.startLine=64
-scope.4.endLine=69
+scope.4.startLine=65
+scope.4.endLine=70
 scope.4.semanticHash=0fb92c54b5fdc015
-scope.5.id=function:_can_auto_actor_choose:71
+scope.5.id=function:_can_auto_actor_choose:72
 scope.5.kind=function
-scope.5.startLine=71
-scope.5.endLine=76
+scope.5.startLine=72
+scope.5.endLine=77
 scope.5.semanticHash=00bdaaaf623adcdf
-scope.6.id=function:_resolve_auto_actor_flag:78
+scope.6.id=function:_resolve_auto_actor_flag:79
 scope.6.kind=function
-scope.6.startLine=78
-scope.6.endLine=85
+scope.6.startLine=79
+scope.6.endLine=86
 scope.6.semanticHash=635cd85c9fad982f
-scope.7.id=function:_dispatch_mode:87
+scope.7.id=function:_dispatch_auto_actor_mode:88
 scope.7.kind=function
-scope.7.startLine=87
-scope.7.endLine=111
-scope.7.semanticHash=486c130e4c7929d1
-scope.8.id=function:choice_auto_policy.decide:115
+scope.7.startLine=88
+scope.7.endLine=93
+scope.7.semanticHash=e7fadf43d6edee01
+scope.8.id=function:_dispatch_timeout_mode:95
 scope.8.kind=function
-scope.8.startLine=115
-scope.8.endLine=134
-scope.8.semanticHash=91ed2f16fbb3af64
+scope.8.startLine=95
+scope.8.endLine=107
+scope.8.semanticHash=0e908792b7900328
+scope.9.id=function:_dispatch_mode:109
+scope.9.kind=function
+scope.9.startLine=109
+scope.9.endLine=120
+scope.9.semanticHash=3e0a0e8ac4b185cf
+scope.10.id=function:_decide_before_mode:124
+scope.10.kind=function
+scope.10.startLine=124
+scope.10.endLine=132
+scope.10.semanticHash=0fa151e82fd08d0f
+scope.11.id=function:_dispatch_mode_or_fallback:134
+scope.11.kind=function
+scope.11.startLine=134
+scope.11.endLine=140
+scope.11.semanticHash=2ad3cc3614339123
+scope.12.id=function:choice_auto_policy.decide:142
+scope.12.kind=function
+scope.12.startLine=142
+scope.12.endLine=154
+scope.12.semanticHash=1c39283a98db0c31
 ]]

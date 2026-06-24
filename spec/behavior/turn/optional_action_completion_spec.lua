@@ -43,6 +43,28 @@ describe("turn_optional_action_completion", function()
     _assert_eq(result.reason, nil, "allowed result should not carry a rejection reason")
   end)
 
+  it("uses explicit choices and indexed current-player lookup when completing optional phases", function()
+    local pending_choice = {
+      id = "required_choice",
+      kind = "market_buy",
+      allow_cancel = true,
+    }
+    local explicit_choice = {
+      id = "optional_override",
+      kind = "landing_optional_effect",
+      allow_cancel = true,
+    }
+    local game = _new_game(pending_choice)
+    game.current_player = nil
+
+    local result = optional_completion.can_complete_optional_action_phase(game, 1, nil, {
+      choice = explicit_choice,
+    })
+
+    _assert_eq(result.ok, true, "explicit optional choice should override pending required choice")
+    _assert_eq(result.choice, explicit_choice, "result should use the explicit optional choice")
+  end)
+
   it("returns stable reasons for actors and non optional choices", function()
     local actor_result = optional_completion.can_complete_optional_action_phase(_new_game({
       id = "optional_2",
@@ -63,6 +85,24 @@ describe("turn_optional_action_completion", function()
     }), 1)
     _assert_eq(required_choice_result.ok, false, "required choices should not use optional completion")
     _assert_eq(required_choice_result.reason, "no_optional_action", "required choice reason")
+  end)
+
+  it("handles missing actors and caller-owned actor checks distinctly", function()
+    local choice = {
+      id = "optional_actor",
+      kind = "item_phase_passive",
+      allow_cancel = true,
+    }
+    local missing_actor = optional_completion.can_complete_optional_action_phase(_new_game(choice), nil)
+    _assert_eq(missing_actor.ok, false, "missing actor should be rejected by default")
+    _assert_eq(missing_actor.reason, "missing_actor", "missing actor reason")
+    _assert_eq(missing_actor.choice, choice, "missing actor result should keep the optional choice")
+
+    local unchecked_actor = optional_completion.can_complete_optional_action_phase(_new_game(choice), nil, nil, {
+      require_actor = false,
+    })
+    _assert_eq(unchecked_actor.ok, true, "callers can take ownership of actor validation")
+    _assert_eq(unchecked_actor.choice, choice, "unchecked actor result should keep the optional choice")
   end)
 
   it("rejects non-cancelable optional choices and blocked gates with stable reasons", function()
@@ -108,6 +148,39 @@ describe("turn_optional_action_completion", function()
     _assert_eq(dispatched.choice_id, "optional_5", "completion should target the pending choice")
     _assert_eq(dispatched.actor_role_id, 1, "completion should carry the current actor")
     _assert_eq(dispatched.input_source, "timer", "completion should preserve the input source")
+  end)
+
+  it("falls back to the game dispatcher when no direct completion dispatcher is supplied", function()
+    local choice = {
+      id = "optional_dispatch",
+      kind = "item_phase_passive",
+      allow_cancel = true,
+    }
+    local game = _new_game(choice)
+    function game:dispatch_action(action)
+      self.dispatched = action
+    end
+
+    local result = optional_completion.complete_optional_action_phase(game, 1)
+
+    _assert_eq(result.ok, true, "game dispatcher fallback should apply completion")
+    _assert_eq(result.status, "applied", "game dispatcher fallback should report applied")
+    _assert_eq(game.dispatched.type, "choice_cancel", "fallback dispatcher should receive choice cancel")
+    _assert_eq(game.dispatched.choice_id, "optional_dispatch", "fallback dispatcher should target the choice")
+  end)
+
+  it("reports dispatch rejection when no completion dispatcher is available", function()
+    local choice = {
+      id = "optional_rejected",
+      kind = "item_phase_passive",
+      allow_cancel = true,
+    }
+    local result = optional_completion.complete_optional_action_phase(_new_game(choice), 1)
+
+    _assert_eq(result.ok, false, "missing dispatcher should reject completion")
+    _assert_eq(result.status, "rejected", "missing dispatcher status")
+    _assert_eq(result.reason, "dispatch_rejected", "missing dispatcher reason")
+    _assert_eq(result.action.choice_id, "optional_rejected", "rejected completion should expose attempted action")
   end)
 
   it("turn dispatcher owns the completion action and converts it to choice cancel", function()
