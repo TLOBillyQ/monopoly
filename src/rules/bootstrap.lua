@@ -9,6 +9,7 @@ local land_executors = require("src.rules.land.executors")
 local landing_defs = require("src.rules.land.landing_defs")
 local item_executor = require("src.rules.items.executor")
 local item_phase = require("src.rules.items.phase")
+local item_use_flow = require("src.rules.items.use_flow")
 local market_effects = require("src.rules.market.effects")
 local logger = require("src.foundation.log")
 local intent_output_port = require("src.rules.ports.intent_output")
@@ -112,6 +113,10 @@ local function _build_choice_helpers()
 
   return choice_resolver.helpers({
     use_item = item_executor.use_item,
+    begin_item_use = function(game, player, item_id, context)
+      return item_use_flow.begin_item_use(game, player and player.id or nil, item_id, context)
+    end,
+    resolve_item_use_choice = item_use_flow.resolve_item_use_choice,
     build_game_ctx = _build_game_ctx,
     finish_item_phase = function(game, choice)
       item_phase.finish(game, choice and choice.meta and choice.meta.phase or nil)
