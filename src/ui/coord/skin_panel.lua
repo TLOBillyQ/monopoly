@@ -60,18 +60,30 @@ local function _notify_result(result, role_id, opts)
   _notify(result.notification, _result_key(result, role_id))
 end
 
-local function _apply_transaction_result(state, role_id, result, opts)
-  local panel = _panel_from_result(state, result)
-  local effective_role = role_id or panel.role_id
+local function _switch_open_result(state, effective_role, result)
   if result and result.action == "open" then
     canvas.switch_by_role_id(state and state.ui, skin_nodes.canvas, effective_role)
   end
+end
+
+local function _refresh_result_slots(state, panel, result)
   if result and result.slot_view_dirty == true then
     _refresh_slots_for_owner(state, panel)
   end
+end
+
+local function _switch_close_result(state, effective_role, result)
   if result and result.panel_should_close == true then
     canvas.switch_by_role_id(state and state.ui, base_nodes.canvas, result.role_id or effective_role)
   end
+end
+
+local function _apply_transaction_result(state, role_id, result, opts)
+  local panel = _panel_from_result(state, result)
+  local effective_role = role_id or panel.role_id
+  _switch_open_result(state, effective_role, result)
+  _refresh_result_slots(state, panel, result)
+  _switch_close_result(state, effective_role, result)
   _notify_result(result, effective_role, opts)
   return panel
 end
