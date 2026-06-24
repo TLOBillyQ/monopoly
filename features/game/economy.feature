@@ -1,4 +1,225 @@
 # language: zh-CN
+# mutation-stamp: sha256=5dfb3654f5da89e34b13cd0e24ed60bce2b2b53bf806ed4a16ce78c2c67f83a5
+# acceptance-mutation-manifest-begin
+# {
+#   "background_hash": "5b037c24216528d6c466d0a0abe521596cd4d2f826832e04aee6f4ffcf1ae241",
+#   "feature_name": "经济系统",
+#   "feature_path": "features/game/economy.feature",
+#   "implementation_hash": "sha256:090a3272b504ed76b59f1d357b236bffa69be56cf22e2af9813d459407792c85",
+#   "scenarios": [
+#     {
+#       "index": 0,
+#       "mutation_count": 8,
+#       "name": "购买无主地块",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 8,
+#         "Survived": 0,
+#         "Total": 8
+#       },
+#       "scenario_hash": "bfd80994986d75570add1c339c6a1b579fdae8853c9c9e60c234795a5c56e267",
+#       "tested_at": "2026-06-24T16:00:49Z"
+#     },
+#     {
+#       "index": 1,
+#       "mutation_count": 0,
+#       "name": "余额不足时无法购买地块",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "12944c011f16b9418eb71434a5fbcaad5448164297dbfccf2e011438320f6e22",
+#       "tested_at": "2026-06-24T16:00:49Z"
+#     },
+#     {
+#       "index": 2,
+#       "mutation_count": 18,
+#       "name": "升级自有地块",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 18,
+#         "Survived": 0,
+#         "Total": 18
+#       },
+#       "scenario_hash": "6546f15d2301e54dbfb9ff167e506f616aba0fd8a9b249c0cd69513b2a057b96",
+#       "tested_at": "2026-06-24T16:00:53Z"
+#     },
+#     {
+#       "index": 3,
+#       "mutation_count": 0,
+#       "name": "地块已达最高等级时无法升级",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "f56c49188ea0fdae10fec8bdf5b0be05418cd8a51fe4441a3b55e5659d8ed75e",
+#       "tested_at": "2026-06-24T16:00:53Z"
+#     },
+#     {
+#       "index": 4,
+#       "mutation_count": 12,
+#       "name": "单块地块按地价和加盖次数计算租金",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 12,
+#         "Survived": 0,
+#         "Total": 12
+#       },
+#       "scenario_hash": "964f9adb8cf9120defac31f41e2de187f8c3f4607144304bea62ab1503832cc5",
+#       "tested_at": "2026-06-24T16:00:55Z"
+#     },
+#     {
+#       "index": 5,
+#       "mutation_count": 8,
+#       "name": "连片地块租金为各块租金之和",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 8,
+#         "Survived": 0,
+#         "Total": 8
+#       },
+#       "scenario_hash": "7444c9cbb36d6347fbead9e1eedf35f478df5c0ddeb296400b5ce8b9b9eaaf30",
+#       "tested_at": "2026-06-24T16:00:57Z"
+#     },
+#     {
+#       "index": 6,
+#       "mutation_count": 9,
+#       "name": "神灵倍增租金",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 9,
+#         "Survived": 0,
+#         "Total": 9
+#       },
+#       "scenario_hash": "db1ea2cec764123fd94eb39379f654da5d215381dbce8c84130b1c9e75bd2b8b",
+#       "tested_at": "2026-06-24T16:00:59Z"
+#     },
+#     {
+#       "index": 7,
+#       "mutation_count": 0,
+#       "name": "房东在深山时租金不收取",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "0fbe76bc8a70000517e8c06fc29c583075e04e279fc11cbeaf24a83d6c919f7f",
+#       "tested_at": "2026-06-24T16:00:59Z"
+#     },
+#     {
+#       "index": 8,
+#       "mutation_count": 6,
+#       "name": "税务局按比例收税",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 6,
+#         "Survived": 0,
+#         "Total": 6
+#       },
+#       "scenario_hash": "02449a1a0fd64f3bd428d0b9ba9d5ea0bee0a19f565d081042521928f76f83b8",
+#       "tested_at": "2026-06-24T16:01:00Z"
+#     },
+#     {
+#       "index": 9,
+#       "mutation_count": 0,
+#       "name": "天使守护不免疫税务局",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "0c39d06c292d8ca79623d814e54eb63bb99eebc7d9fb5fe95a90873a2b6d4cad",
+#       "tested_at": "2026-06-24T16:01:00Z"
+#     },
+#     {
+#       "index": 10,
+#       "mutation_count": 0,
+#       "name": "持有免税卡时弹出使用提示",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "5017b50e9166b668c678d06874980c97e7083a87ca35a29c9d41be22f326c7b7",
+#       "tested_at": "2026-06-24T16:01:00Z"
+#     },
+#     {
+#       "index": 11,
+#       "mutation_count": 14,
+#       "name": "强夺卡支付总投入获得对手地块",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 14,
+#         "Survived": 0,
+#         "Total": 14
+#       },
+#       "scenario_hash": "b55734b8c9eda22f20d548005fcadb218994606da9be9cca114951782ca142c8",
+#       "tested_at": "2026-06-24T16:01:03Z"
+#     },
+#     {
+#       "index": 12,
+#       "mutation_count": 0,
+#       "name": "强夺卡余额不足时无法使用",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "4e97a665fc1536d85fd763c27b8cf27616782d0221631749e1b41bb30c7126a7",
+#       "tested_at": "2026-06-24T16:01:03Z"
+#     },
+#     {
+#       "index": 13,
+#       "mutation_count": 8,
+#       "name": "支付租金后资金不足触发破产",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 8,
+#         "Survived": 0,
+#         "Total": 8
+#       },
+#       "scenario_hash": "7b8006eaa11e9e600e77d0298e08ca45c64e0f1cde2b37003aef465506131c0a",
+#       "tested_at": "2026-06-24T16:01:05Z"
+#     },
+#     {
+#       "index": 14,
+#       "mutation_count": 0,
+#       "name": "余额为零时落在税务局触发破产",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "c33ed33fe75b9bdf87f961ef256c3139fce36aa5c464187c070a4ebdcca1d347",
+#       "tested_at": "2026-06-24T16:01:05Z"
+#     },
+#     {
+#       "index": 15,
+#       "mutation_count": 0,
+#       "name": "房东已淘汰时租金不收取",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "e93d43949650b09f5bc100a7dd34226eb0f76e505ea728fc334313212373a0be",
+#       "tested_at": "2026-06-24T16:01:05Z"
+#     }
+#   ],
+#   "tested_at": "2026-06-24T16:01:05Z",
+#   "version": 1
+# }
+# acceptance-mutation-manifest-end
 
 功能: 经济系统
 
