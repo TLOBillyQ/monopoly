@@ -4,9 +4,7 @@ local M = {}
 require("spec.bootstrap")
 
 local composition_root = require("src.app.compose_game")
-local landing_defs = require("src.rules.land.landing_defs")
-local effect_pipeline = require("src.rules.effects.pipeline")
-local effect = require("src.rules.effects.runner")
+local land_settlement = require("src.rules.land.settlement")
 local choice_resolver = require("src.rules.choice.resolver")
 local choice_contract = require("src.config.choice.contract")
 local map_cfg = require("src.config.content.default_map")
@@ -327,44 +325,16 @@ local function resolve_choice_first(game, pending)
   return false
 end
 
-local max_landing_depth = 10
-
-local function build_landing_ctx(game, move_result)
-  return effect.build_game_ctx(game, move_result, {
-    phase_default = "landing",
-    on_landing = true,
-  })
-end
-
 local function resolve_landing(game, player, tile_ref, move_result, depth)
-  depth = depth or 0
-  local ctx = build_landing_ctx(game, move_result)
-
-  local function handle_need_landing(out)
-    if depth >= max_landing_depth then
-      return out
-    end
-    local target_player = (out.player_id and game and game.players and game.players[out.player_id]) or player
-    local next_tile = nil
-    if target_player then
-      local idx = out.board_index or target_player.position
-      next_tile = idx and game and game.board and game.board:get_tile(idx) or nil
-    end
-    if next_tile then
-      return resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
-    end
-    return out
-  end
-
-  return effect_pipeline.run(landing_defs, player, tile_ref, ctx, {
-    next_state = "post_action",
-    next_args = { player = player },
-    optional_choice_kind = "landing_optional_effect",
-    optional_reason = "landing_optional",
-    optional_allow_cancel = true,
-    optional_cancel_label = "跳过",
-    on_need_landing = handle_need_landing,
+  local res = land_settlement.begin_landing_settlement(game, player and player.id or nil, {
+    tile = tile_ref,
+    move_result = move_result,
+    depth = depth or 0,
   })
+  if res and res.settled == true then
+    return nil
+  end
+  return res
 end
 
 local function resolve_landing_with_choices(game, player, tile_ref, move_result, max_iterations)

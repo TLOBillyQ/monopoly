@@ -3,16 +3,14 @@ local chance_handlers = require("src.rules.chance.handlers")
 local item_registry_module = require("src.rules.items.registry")
 local choice_handler_factory = require("src.rules.choice_handlers.factory")
 local effect_registry_module = require("src.rules.effects.registry")
-local effect_runner = require("src.rules.effects.runner")
 local choice_resolver = require("src.rules.choice.resolver")
 local land_executors = require("src.rules.land.executors")
-local landing_defs = require("src.rules.land.landing_defs")
+local land_settlement = require("src.rules.land.settlement")
 local item_executor = require("src.rules.items.executor")
 local item_phase = require("src.rules.items.phase")
 local item_use_flow = require("src.rules.items.use_flow")
 local market_effects = require("src.rules.market.effects")
 local logger = require("src.foundation.log")
-local intent_output_port = require("src.rules.ports.intent_output")
 local availability = require("src.rules.items.availability")
 
 local bootstrap = {}
@@ -20,9 +18,6 @@ local bootstrap = {}
 local optional_effect_handler = {}
 
 function optional_effect_handler.build(helpers)
-  local build_game_ctx = helpers.build_game_ctx
-  local get_container_defs_by_choice_kind = helpers.get_container_defs_by_choice_kind
-  local find_effect_by_id = helpers.find_effect_by_id
   local finish_choice = helpers.finish_choice
 
   local function _normalize_optional_meta(game, meta, choice_spec)
@@ -49,26 +44,12 @@ function optional_effect_handler.build(helpers)
   end
 
   local function _handle_optional_landing_effect(game, choice, action)
-    local effect_id = assert(action.option_id, "missing effect_id")
-    local meta = choice.meta
-
-    if meta.effect_ids and not availability.contains(meta.effect_ids, effect_id) then
-      logger.warn("landing_optional_effect: effect not in offered list:", tostring(effect_id))
-      return finish_choice(game, false)
+    local result = land_settlement.resolve_landing_settlement_choice(game, choice, action)
+    if result and result.ok == false then
+      logger.warn("landing_optional_effect execute blocked:", tostring(result.reason))
     end
-
-    local effect_defs = get_container_defs_by_choice_kind(choice.kind)
-    local target_effect = assert(find_effect_by_id(effect_defs, effect_id), "missing target effect: " .. tostring(effect_id))
-
-    local player = assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
-    local tile = assert(game.board:get_tile_by_id(meta.tile_id), "missing tile: " .. tostring(meta.tile_id))
-    local move_result = meta.move_result
-    local game_ctx = build_game_ctx(game, move_result)
-
-    local result = effect_runner.execute(target_effect, player, tile, game_ctx)
-    intent_output_port.dispatch(game, result.result or result)
-    if result.ok ~= true then
-      logger.warn("landing_optional_effect execute blocked:", tostring(result and result.reason))
+    if result and result.stay then
+      return result
     end
     return finish_choice(game, false)
   end
@@ -87,37 +68,12 @@ end
 bootstrap.optional_effect_handler = optional_effect_handler
 
 local function _build_choice_helpers()
-  local function _build_game_ctx(game, move_result)
-    return effect_runner.build_game_ctx(game, move_result, {
-      phase_default = "wait_choice",
-      on_landing = true,
-    })
-  end
-
-  local function _get_container_defs_by_choice_kind(choice_kind)
-    if choice_kind == "landing_optional_effect" then
-      return landing_defs
-    end
-    return nil
-  end
-
-  local function _find_effect_by_id(effect_defs, effect_id)
-    assert(effect_defs ~= nil, "missing effect defs")
-    for _, effect_definition in ipairs(effect_defs) do
-      if effect_definition.id == effect_id then
-        return effect_definition
-      end
-    end
-    return nil
-  end
-
   return choice_resolver.helpers({
     use_item = item_executor.use_item,
     begin_item_use = function(game, player, item_id, context)
       return item_use_flow.begin_item_use(game, player and player.id or nil, item_id, context)
     end,
     resolve_item_use_choice = item_use_flow.resolve_item_use_choice,
-    build_game_ctx = _build_game_ctx,
     finish_item_phase = function(game, choice)
       item_phase.finish(game, choice and choice.meta and choice.meta.phase or nil)
     end,
@@ -127,8 +83,6 @@ local function _build_choice_helpers()
         item_phase.finish(game, phase)
       end
     end,
-    get_container_defs_by_choice_kind = _get_container_defs_by_choice_kind,
-    find_effect_by_id = _find_effect_by_id,
   })
 end
 
