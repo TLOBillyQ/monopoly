@@ -1,10 +1,6 @@
 local runtime_state = require("src.state.runtime")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
-local landing_defs = require("src.rules.land.landing_defs")
-local effect_pipeline = require("src.rules.effects.pipeline")
-local effect_runner = require("src.rules.effects.runner")
-local land_actions = require("src.rules.land.actions")
-local pricing = require("src.rules.land.pricing")
+local settlement = require("src.rules.land.settlement")
 local wait_callbacks = require("src.turn.waits.callback_registry")
 
 local function _has_action_anim(game)
@@ -16,30 +12,6 @@ local function _has_action_anim(game)
   end
   local queue = game.turn.action_anim_queue
   return type(queue) == "table" and #queue > 0
-end
-
-local function _is_relocation_action_anim(entry)
-  return entry and (entry.kind == "move_effect" or entry.kind == "teleport_effect" or entry.kind == "forced_relocation")
-end
-
-local function _has_pending_relocation_action_anim(game)
-  if not game or not game.turn then
-    return false
-  end
-  local current = game.turn.action_anim
-  if _is_relocation_action_anim(current) then
-    return true
-  end
-  local queue = game.turn.action_anim_queue
-  if type(queue) ~= "table" then
-    return false
-  end
-  for _, entry in ipairs(queue) do
-    if _is_relocation_action_anim(entry) then
-      return true
-    end
-  end
-  return false
 end
 
 local function _is_landing_visual_hold_active(game)
@@ -56,48 +28,7 @@ end
 
 local _is_effect_idle = runtime_ports.is_effect_idle
 
-local function _landing_optional_cost(effect_id, tile, game)
-  if effect_id ~= "upgrade_land" or tile == nil or game == nil then
-    return nil
-  end
-  local st = land_actions.safe_tile_state(game, tile)
-  return pricing.upgrade_cost(tile, (st and st.level) or 0)
-end
-
-local max_landing_depth = 10
 local callback_keys = wait_callbacks.callback_keys
-local _resolve_landing
-
-local function _resolve_target_player(game, player, out)
-  if not out.player_id then
-    return player
-  end
-  return game:find_player_by_id(out.player_id)
-end
-
-local function _resolve_next_tile(game, target_player, out)
-  if not target_player then
-    return nil
-  end
-  local idx = out.board_index or target_player.position
-  if not idx then
-    return nil
-  end
-  return game.board:get_tile(idx)
-end
-
-local function _build_move_followup_result(target_player, out, wait_key)
-  return {
-    waiting = true,
-    [wait_key] = true,
-    next_state = "move_followup",
-    next_args = {
-      mode = "resolve_landing",
-      player_id = target_player.id,
-      move_result = out.move_result,
-    },
-  }
-end
 
 local function _register_action_anim_resume(game, next_state, next_args, callback)
   wait_callbacks.register(game, callback_keys.after_action_anim, callback)
@@ -239,54 +170,16 @@ local function _resolve_waiting_landing_result(game, res, player, move_result)
   return _resolve_wait_state(game, next_state, next_args, res.wait_action_anim, res.wait_move_anim)
 end
 
-local function _resolve_followup_landing(game, player, out, depth)
-  local target_player = _resolve_target_player(game, player, out)
-  local next_tile = _resolve_next_tile(game, target_player, out)
-  if not next_tile then
-    return out
-  end
-  if out.wait_move_anim == true then
-    return _build_move_followup_result(target_player, out, "wait_move_anim")
-  end
-  if _has_pending_relocation_action_anim(game) then
-    return _build_move_followup_result(target_player, out, "wait_action_anim")
-  end
-  return _resolve_landing(game, target_player, next_tile, out.move_result, depth + 1)
-end
-
-function _resolve_landing(game, player, tile, move_result, depth)
-  depth = depth or 0
-  local game_ctx = effect_runner.build_game_ctx(game, move_result, {
-    phase_default = "landing",
-    on_landing = true,
-  })
-
-  local function handle_need_landing(out)
-    if depth >= max_landing_depth then
-      return out
-    end
-    return _resolve_followup_landing(game, player, out, depth)
-  end
-
-  return effect_pipeline.run(landing_defs, player, tile, game_ctx, {
-    next_state = "post_action",
-    next_args = { player = player },
-    optional_choice_kind = "landing_optional_effect",
-    optional_reason = "landing_optional",
-    optional_allow_cancel = true,
-    optional_cancel_label = "跳过",
-    optional_cost_resolver = _landing_optional_cost,
-    on_need_landing = handle_need_landing,
-  })
-end
-
 local function _phase_land(turn_mgr, args)
   local player = args.player
   local move_result = args.move_result
   local game = turn_mgr.game
   local tile = game.board:get_tile(player.position)
 
-  local res = _resolve_landing(game, player, tile, move_result)
+  local res = settlement.begin_landing_settlement(game, player.id, {
+    tile = tile,
+    move_result = move_result,
+  })
   if res and res.waiting then
     return _resolve_waiting_landing_result(game, res, player, move_result)
   end
