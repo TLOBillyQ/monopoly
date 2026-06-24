@@ -1,79 +1,13 @@
-local number_utils = require("src.foundation.number")
-local logger = require("src.foundation.log")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local catalog = require("src.ui.render.board_feedback.catalog")
-local effect_timeline = require("src.ui.render.support.effect_timeline")
-local effect_track = require("src.ui.render.support.effect_track")
 local unit_position = require("src.ui.render.unit_position")
 local host_runtime_resolver = require("src.ui.render.host_runtime_resolver")
+local effect_player = require("src.ui.render.board_feedback.effect_player")
+local sound_player = require("src.ui.render.board_feedback.sound_player")
 local service = {}
 local active_host_runtime = nil
-local warned_missing_refs = {
-  effect = {},
-  sound = {},
-}
-local default_sfx_scale = 1.0
-local default_sfx_rate = 1.0
-local default_sfx_duration = 1.0
-local default_sound_duration = 1.0
-local default_sound_volume = 1.0
-local default_with_sound = false
 
 local _resolve_host_runtime = host_runtime_resolver.from_state
-local function _warn(...)
-  logger.warn("board_feedback", ...)
-end
-local function _warn_missing_ref_once(kind, cue_name, ref_value, reason)
-  local warned = warned_missing_refs[kind]
-  local key = tostring(cue_name) .. "|" .. tostring(ref_value) .. "|" .. tostring(reason)
-  if warned[key] then
-    return
-  end
-  warned[key] = true
-  _warn(
-    kind == "effect" and "skip play_sfx_by_key:" or "skip play_3d_sound:",
-    "cue_name=" .. tostring(cue_name),
-    (kind == "effect" and "effect_id_ref=" or "sound_id_ref=") .. tostring(ref_value),
-    "reason=" .. tostring(reason)
-  )
-end
-local _resolve_numeric = number_utils.resolve_numeric
-local function _warn_invalid_cue_field(cue_name, field, value, fallback)
-  _warn(
-    "invalid cue field:",
-    "cue_name=" .. tostring(cue_name),
-    "field=" .. tostring(field),
-    "value=" .. tostring(value),
-    "fallback=" .. tostring(fallback)
-  )
-end
-local function _resolve_sfx_scale(cue_name, value, fallback)
-  local resolved = _resolve_numeric(value, fallback)
-  if resolved ~= nil then
-    return resolved
-  end
-  _warn_invalid_cue_field(cue_name, "scale", value, default_sfx_scale)
-  return default_sfx_scale
-end
-local function _resolve_cue_ref_id(cue_name, cue, payload, kind)
-  local resolved_id = number_utils.to_integer(payload and payload[kind .. "_id"] or nil)
-  if resolved_id ~= nil then
-    return resolved_id
-  end
-  resolved_id = number_utils.to_integer(cue[kind .. "_id"])
-  if resolved_id ~= nil then
-    return resolved_id
-  end
-  local lookup_key = payload and payload[kind .. "_id_ref"] or cue[kind .. "_lookup_key"]
-  if type(lookup_key) ~= "string" or lookup_key == "" then
-    if cue.allow_missing ~= true then
-      _warn("skip cue " .. kind .. " with missing " .. kind .. "_id_ref:", tostring(cue_name))
-    end
-    return nil
-  end
-  _warn_missing_ref_once(kind, cue_name, lookup_key, "missing_or_unconfigured")
-  return nil
-end
 local function _resolve_tile_position(state, tile_index)
   return unit_position.read_scene_tile_position(state and state.board_scene or nil, tile_index)
 end
@@ -106,129 +40,6 @@ local function _resolve_player_position(state, player_id)
   local player = state and state.game and state.game.find_player_by_id and state.game:find_player_by_id(player_id) or nil
   return _resolve_tile_position(state, player and player.position or nil)
 end
-local function _schedule_followup_sound(cue_name, pos, entry)
-  if type(entry) ~= "table" then
-    return false
-  end
-  local host_runtime = active_host_runtime
-  if not (host_runtime and type(host_runtime.play_3d_sound) == "function" and type(host_runtime.schedule) == "function") then
-    return false
-  end
-  local delay = _resolve_numeric(entry.delay, 0) or 0
-  effect_timeline.run_step(delay, function()
-    local sound_id = number_utils.to_integer(entry.sound_id)
-    if sound_id == nil or sound_id <= 0 then
-      _warn_missing_ref_once("sound", cue_name, entry.sound_id_ref, "missing_or_unconfigured")
-      return
-    end
-    host_runtime.play_3d_sound(pos, sound_id, _resolve_numeric(entry.duration, default_sound_duration), _resolve_numeric(entry.volume, default_sound_volume))
-  end, {
-    schedule = host_runtime.schedule,
-  })
-  return true
-end
-local function _resolve_with_sound(cue, payload)
-  local with_sound = payload and payload.with_sound
-  if with_sound == nil then
-    with_sound = cue.with_sound
-  end
-  if with_sound == nil then
-    with_sound = default_with_sound
-  end
-  return with_sound
-end
-
-local function _resolve_effect_params(cue_name, cue, payload)
-  local effect_id = _resolve_cue_ref_id(cue_name, cue, payload, "effect")
-  if effect_id == nil then
-    return nil
-  end
-  local raw_duration = _resolve_numeric(payload and payload.duration or cue.duration, default_sfx_duration)
-  return {
-    effect_id = effect_id,
-    duration = effect_track.scaled_duration(raw_duration),
-    scale = _resolve_sfx_scale(cue_name, payload and payload.scale or cue.scale, default_sfx_scale),
-    rot = payload and payload.rot or cue.rot or runtime_constants.q_zero,
-    rate = _resolve_numeric(payload and payload.rate or cue.rate, default_sfx_rate),
-    with_sound = _resolve_with_sound(cue, payload),
-  }
-end
-
-local function _resolve_effect_host_runtime()
-  local host_runtime = active_host_runtime
-  if not (host_runtime and type(host_runtime.play_sfx_by_key) == "function") then
-    return nil
-  end
-  return host_runtime
-end
-
-local function _play_sfx(host_runtime, cue_name, pos, params)
-  return host_runtime.play_sfx_by_key(params.effect_id, pos, params.rot, params.scale, params.duration, params.rate, params.with_sound, {
-    cue_name = cue_name,
-  })
-end
-
-local function _bind_sfx_to_player(host_runtime, cue, sfx_id, unit)
-  if cue.bind_to_player ~= true or unit == nil then
-    return
-  end
-  if type(host_runtime.bind_sfx_to_unit) ~= "function" then
-    return
-  end
-  host_runtime.bind_sfx_to_unit(
-    sfx_id,
-    unit,
-    cue.socket_name,
-    cue.bind_offset or runtime_constants.v3_one,
-    cue.bind_type
-  )
-end
-
-local function _play_effect(cue_name, cue, pos, unit, payload)
-  local params = _resolve_effect_params(cue_name, cue, payload)
-  if params == nil then
-    return false
-  end
-  local host_runtime = _resolve_effect_host_runtime()
-  if host_runtime == nil then
-    return false
-  end
-  local sfx_id = _play_sfx(host_runtime, cue_name, pos, params)
-  if sfx_id == nil then
-    return false
-  end
-  effect_track.spawn(cue_name, "effect", params.duration)
-  _bind_sfx_to_player(host_runtime, cue, sfx_id, unit)
-  return true
-end
-local function _play_sound(cue_name, cue, pos, payload)
-  local sound_id = _resolve_cue_ref_id(cue_name, cue, payload, "sound")
-  if sound_id == nil then
-    return false
-  end
-  local duration = _resolve_numeric(payload and payload.sound_duration or cue.sound_duration or cue.duration, default_sound_duration)
-  local volume = _resolve_numeric(payload and payload.volume or cue.volume, default_sound_volume)
-  local host_runtime = active_host_runtime
-  if not (host_runtime and type(host_runtime.play_3d_sound) == "function") then
-    return false
-  end
-  local sound_handle = host_runtime.play_3d_sound(pos, sound_id, duration, volume)
-  return sound_handle ~= nil
-end
-
-local function _play_followup_sounds(cue_name, pos, followup_sounds)
-  local played = false
-  if type(followup_sounds) ~= "table" then
-    return played
-  end
-  for _, entry in ipairs(followup_sounds) do
-    if _schedule_followup_sound(cue_name, pos, entry) then
-      played = true
-    end
-  end
-  return played
-end
-
 local function _play_cue(_state, cue_name, pos, unit, payload)
   local cue = type(cue_name) == "string" and cue_name ~= "" and catalog.get(cue_name, payload) or nil
   if cue == nil then
@@ -237,17 +48,10 @@ local function _play_cue(_state, cue_name, pos, unit, payload)
   if pos == nil then
     pos = runtime_constants.v3_zero
   end
-  local played = false
-  if _play_effect(cue_name, cue, pos, unit, payload) then
-    played = true
-  end
-  if _play_sound(cue_name, cue, pos, payload) then
-    played = true
-  end
-  if _play_followup_sounds(cue_name, pos, cue.followup_sounds) then
-    played = true
-  end
-  return played
+  local effect_played = effect_player.play(cue_name, cue, pos, unit, payload, active_host_runtime)
+  local sound_played = sound_player.play(cue_name, cue, pos, payload, active_host_runtime)
+  local followup_played = sound_player.play_followups(cue_name, pos, cue.followup_sounds, active_host_runtime)
+  return effect_played or sound_played or followup_played
 end
 function service.play_tile_cue(state, cue_name, tile_index, payload, deps)
   active_host_runtime = _resolve_host_runtime(state, deps)

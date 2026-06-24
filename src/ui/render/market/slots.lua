@@ -65,6 +65,27 @@ local function _resolve_market_icon_key(refs, product_id, entry, cfg)
   return image.ok == true and image.image_key or nil
 end
 
+local function _market_price_text(entry)
+  local currency = assert(
+    entry.currency ~= nil and entry.currency ~= "" and entry.currency,
+    "missing market currency"
+  )
+  return tostring(entry.price) .. " " .. tostring(currency)
+end
+
+local function _market_fallback_icon_key(refs, empty_ref_key)
+  local rarity = runtime_assets.image_for_market_rarity(empty_ref_key, _asset_opts(refs))
+  if rarity.image_key ~= nil then
+    return rarity.image_key
+  end
+  return runtime_assets.empty_image(_asset_opts(refs)).image_key
+end
+
+local function _market_selection_icon_key(refs, option_id, entry, cfg, empty_ref_key)
+  return _resolve_market_icon_key(refs, option_id, entry, cfg)
+    or _market_fallback_icon_key(refs, empty_ref_key)
+end
+
 local function _resolve_market_rarity_key(refs, level)
   local image = runtime_assets.image_for_market_rarity(market_layout.rarity_ref_keys[level], _asset_opts(refs))
   if image.ok == true then
@@ -192,16 +213,11 @@ function market_view_slots.resolve_selection(option_id, image_refs, empty_ref_ke
   assert(option_id ~= nil, "missing market option_id")
   local entry, cfg = _resolve_market_entry(option_id)
   assert(entry ~= nil, "missing market entry")
-  local price_text = tostring(entry.price) .. " "
-      .. tostring(assert(entry.currency ~= nil and entry.currency ~= "" and entry.currency, "missing market currency"))
-  local icon_key = _resolve_market_icon_key(image_refs, option_id, entry, cfg)
-    or runtime_assets.image_for_market_rarity(empty_ref_key, _asset_opts(image_refs)).image_key
-    or runtime_assets.empty_image(_asset_opts(image_refs)).image_key
   return {
     entry = entry,
     cfg = cfg,
-    price_text = price_text,
-    icon_key = icon_key,
+    price_text = _market_price_text(entry),
+    icon_key = _market_selection_icon_key(image_refs, option_id, entry, cfg, empty_ref_key),
   }
 end
 
