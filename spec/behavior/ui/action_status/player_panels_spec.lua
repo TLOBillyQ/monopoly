@@ -18,6 +18,7 @@ local function _new_cash_delta_presenter_env(opts)
       auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
       item_slot_item_ids_by_role = {},
       labels = {},
+      buttons = {},
       visible = {},
       touch_enabled = {},
       set_label = function(self, name, text)
@@ -25,6 +26,9 @@ local function _new_cash_delta_presenter_env(opts)
           error("missing node")
         end
         self.labels[name] = text
+      end,
+      set_button = function(self, name, text)
+        self.buttons[name] = text
       end,
       set_visible = function(self, name, value)
         if opts.missing_delta_node and string.match(name, "^基础%-玩家%d消耗金币显示$") then
@@ -297,8 +301,10 @@ describe("presentation_player_panels", function()
       "optional action should show the end button for the current player")
     _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], true,
       "optional action should let the current player end the optional phase")
-    _assert_eq(env.state.ui.labels[base_nodes.end_button], "结束",
-      "optional action end button should use fixed label")
+    _assert_eq(env.state.ui.buttons[base_nodes.end_button], nil,
+      "optional action end button should not write button text")
+    _assert_eq(env.state.ui.labels[base_nodes.end_button], nil,
+      "optional action end button should not write label text")
   end)
 
   it("_test_panel_presenter_optional_landing_choice_shows_end_button", function()

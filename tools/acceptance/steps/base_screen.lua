@@ -550,6 +550,18 @@ function base_screen_steps.handlers()
       return true
     end,
 
+    ["基础屏结束按钮不额外写入文字"] = function(world)
+      local state = world.base_screen_render_state
+      local ui = state and state.ui or {}
+      local button_text = ui.buttons and ui.buttons[base_nodes.end_button]
+      local label_text = ui.labels and ui.labels[base_nodes.end_button]
+      if button_text ~= nil or label_text ~= nil then
+        return nil, "expected end button to skip extra text, button="
+          .. tostring(button_text) .. " label=" .. tostring(label_text)
+      end
+      return true
+    end,
+
     ["基础屏行动按钮未作为可点击推进入口"] = function(world)
       local state = world.base_screen_render_state
       local touch = state and state.ui and state.ui.touch and state.ui.touch[base_nodes.action_button]

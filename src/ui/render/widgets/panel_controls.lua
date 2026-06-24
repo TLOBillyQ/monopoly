@@ -109,16 +109,6 @@ function panel_controls.apply_action_hint(ui, panel)
   end
 end
 
-local function _set_button_label(ui, name, text)
-  if ui.set_button then
-    ui:set_button(name, text)
-    return
-  end
-  if ui.set_label then
-    ui:set_label(name, text)
-  end
-end
-
 local function _resolve_base_action_visibility(ui_model, base_visible)
   if base_visible ~= true then
     return false, false
@@ -136,9 +126,6 @@ function panel_controls.apply_base_action_controls(ui, ui_model, base_visible)
   ui:set_touch_enabled(base_nodes.action_button, action_visible)
   ui:set_visible(base_nodes.end_button, end_visible)
   ui:set_touch_enabled(base_nodes.end_button, end_visible)
-  if end_visible then
-    _set_button_label(ui, base_nodes.end_button, "结束")
-  end
 end
 
 function panel_controls.resolve_skin_entry_visible(ui_model, ctx)
