@@ -40,6 +40,7 @@ local entries = {
   { feature = "features/v102/market_cash.feature",                 generated = "market_cash_acceptance_spec.lua" },
   { feature = "features/v102/optional_action_end_button.feature",   generated = "optional_action_end_button_acceptance_spec.lua" },
   { feature = "features/v102/panel_interrupt.feature",             generated = "panel_interrupt_acceptance_spec.lua" },
+  { feature = "features/v102/role_attribute_coins.feature",         generated = "role_attribute_coins_acceptance_spec.lua" },
   { feature = "features/v102/share_task.feature",                  generated = "share_task_acceptance_spec.lua" },
   { feature = "features/v102/sign_in.feature",                     generated = "sign_in_acceptance_spec.lua" },
   { feature = "features/v102/skin_persistence.feature",            generated = "skin_persistence_acceptance_spec.lua" },

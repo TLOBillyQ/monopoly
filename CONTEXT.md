@@ -4,6 +4,10 @@ This context defines the shared game language for the Eggy Monopoly project. It 
 
 ## Language
 
+**角色属性金币**:
+大富翁对局中用于买地、升级、租金、机会卡和起点奖励等局内经济结算的唯一金币余额。它由角色 Fixed 属性提供但业务语义仍是整数金币，取代 Lua 侧自维护的 `player.cash` 金币；它不是蛋仔 commodity、金豆、乐园币或外部商品货币。
+_Avoid_: Lua 金币, player.cash 金币, 蛋仔 commodity 金币, 金豆, 乐园币, 外部商品货币
+
 **可选行动阶段**:
 当前玩家可以选择是否继续使用可用道具或其他可选效果的阶段。玩家完成该阶段后，回合继续进入后续必经流程。
 _Avoid_: 行动, 任意操作阶段
