@@ -56,8 +56,15 @@ local _cached_cash_values = {}
 local _cached_land_values = {}
 local _cached_total_values = {}
 
-local function _accumulate_player_assets(player, board)
-  local cash = _normalize_integer_value(player.cash)
+local function _read_player_cash(game, player)
+  if game == nil or type(game.player_balance) ~= "function" then
+    return _ZERO
+  end
+  return _normalize_integer_value(game:player_balance(player, "金币"))
+end
+
+local function _accumulate_player_assets(game, player, board)
+  local cash = _read_player_cash(game, player)
   local land_count = 0
   local total = cash
   for tile_id in pairs(player.properties or {}) do
@@ -87,14 +94,14 @@ local function _sync_cached_label(cache, index, value, prefix, current_label)
   return prefix .. number_utils.format_integer_part(value)
 end
 
-local function _build_player_status(player, board, index)
+local function _build_player_status(game, player, board, index)
   local status = _cached_statuses[index]
   local role = _resolve_role(player)
   local display_name = _resolve_role_name(role) or player.name
   status.name = _build_player_label(display_name, player.eliminated == true)
   status.avatar = role_avatar.resolve_from_role(role)
   status.eliminated = player.eliminated == true
-  local cash, land_count, total = _accumulate_player_assets(player, board)
+  local cash, land_count, total = _accumulate_player_assets(game, player, board)
   status.cash_value = cash
   local normalized_total = _normalize_integer_value(total)
   status.total_assets_value = normalized_total
@@ -121,16 +128,16 @@ end
 
 local _status_out = {}
 
-local function _build_status_row(player, board, index)
+local function _build_status_row(game, player, board, index)
   if player then
-    return _build_player_status(player, board, index)
+    return _build_player_status(game, player, board, index)
   end
   return _empty_status
 end
 
-local function _fill_status_rows(players, board, count)
+local function _fill_status_rows(game, players, board, count)
   for i = 1, count do
-    _status_out[i] = _build_status_row(players[i], board, i)
+    _status_out[i] = _build_status_row(game, players[i], board, i)
   end
 end
 
@@ -144,7 +151,7 @@ function panel.build_player_statuses(game, game_obj, max_players)
   local players = game and game.players or {}
   local count = max_players or #players
   local board = game_obj and game_obj.board or nil
-  _fill_status_rows(players, board, count)
+  _fill_status_rows(game, players, board, count)
   _trim_status_rows(count)
   return _status_out
 end

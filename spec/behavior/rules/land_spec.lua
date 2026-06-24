@@ -90,9 +90,9 @@ describe("land", function()
     assert(action.type == "choice_select", "AI should select land purchase")
     assert(action.option_id == "buy_land", "AI should pick buy_land")
 
-    local before_cash = ai_player.cash
+    local before_cash = g:player_balance(ai_player, "金币")
     choice_resolver.resolve(g, pending, action)
-    assert(ai_player.cash == before_cash - tile_ref.price, "AI cash should decrease by land price")
+    assert(g:player_balance(ai_player, "金币") == before_cash - tile_ref.price, "AI cash should decrease by land price")
     assert(_tile_state(g, tile_ref).owner_id == ai_player.id, "land should be purchased")
   end)
 
@@ -243,10 +243,10 @@ describe("land", function()
     g:set_player_property(owner, tile_b.id, true)
 
     g:update_player_position(tenant, idx_a)
-    local before = tenant.cash
+    local before = g:player_balance(tenant, "金币")
     land_actions.execute_pay_rent(g, tenant.id, tile_a.id)
     local expected = pricing.rent_for_level(tile_a, 1)
-    _assert_eq(before - tenant.cash, expected, "graph adjacency rent excludes non-neighbors")
+    _assert_eq(before - g:player_balance(tenant, "金币"), expected, "graph adjacency rent excludes non-neighbors")
   end)
 
   it("total_invested_returns_purchase_price_for_negative_level", function()
@@ -298,17 +298,17 @@ describe("land", function()
     g:set_player_status(tenant, "pending_free_rent", true)
     g:player_relocate(owner, { tile_type = "mountain", move_dir_mode = "clear" })
     g:player_apply_location_effect(owner, "mountain")
-    local before = tenant.cash
+    local before = g:player_balance(tenant, "金币")
     land.executors.pay_rent.apply({ game = g, player = tenant, tile = tile_ref })
-    _assert_eq(tenant.cash, before, "rent skipped when owner in mountain")
+    _assert_eq(g:player_balance(tenant, "金币"), before, "rent skipped when owner in mountain")
     assert(tenant.status.pending_free_rent == true, "pending_free_rent should remain when owner missing")
 
     g:set_player_status(tenant, "pending_free_rent", false)
     owner.eliminated = true
-    local before2 = tenant.cash
+    local before2 = g:player_balance(tenant, "金币")
     local ok = land_actions.execute_pay_rent(g, tenant.id, tile_ref.id)
     _assert_eq(ok, false, "execute_pay_rent should return false when owner missing")
-    _assert_eq(tenant.cash, before2, "rent skipped when owner missing")
+    _assert_eq(g:player_balance(tenant, "金币"), before2, "rent skipped when owner missing")
   end)
 
   it("choice_resolver_executes_canonical_landing_optional_effect", function()
@@ -323,7 +323,7 @@ describe("land", function()
     local pending = g.turn.pending_choice
     assert(pending and pending.kind == "landing_optional_effect", "expected canonical optional choice")
 
-    local before_cash = p.cash
+    local before_cash = g:player_balance(p, "金币")
     local action = {
       type = "choice_select",
       choice_id = pending.id,
@@ -332,7 +332,7 @@ describe("land", function()
 
     local resolved = choice_resolver.resolve(g, pending, action)
     assert(resolved and resolved.status == "resolved", "canonical optional choice should resolve successfully")
-    assert(p.cash < before_cash, "canonical optional choice should still execute buy_land")
+    assert(g:player_balance(p, "金币") < before_cash, "canonical optional choice should still execute buy_land")
     assert(_tile_state(g, tile_ref).owner_id == p.id, "canonical optional choice should still purchase land")
   end)
 
@@ -500,7 +500,7 @@ describe("land", function()
     g:set_player_cash(p, 10000)
     g:set_player_status(p, "pending_tax_free", true)
 
-    local before_cash = p.cash
+    local before_cash = g:player_balance(p, "金币")
     -- Find tax tile
     local tax_idx = nil
     for i = 1, g.board:length() do
@@ -515,7 +515,7 @@ describe("land", function()
       g:update_player_position(p, tax_idx)
       local tile = g.board:get_tile(tax_idx)
       land.executors.tax.apply({ game = g, player = p, tile = tile })
-      assert(p.cash == before_cash, "_apply_tax should skip payment when pending_tax_free is set")
+      assert(g:player_balance(p, "金币") == before_cash, "_apply_tax should skip payment when pending_tax_free is set")
       assert(p.status.pending_tax_free == false, "_apply_tax should clear pending_tax_free after use")
     end
   end)
@@ -560,7 +560,7 @@ describe("land", function()
     local tile = g.board:get_tile(tax_idx)
     land.executors.tax.apply({ game = g, player = p, tile = tile })
 
-    _assert_eq(p.cash, 10000 - math.floor(10000 * constants.tax_rate), "angel should not block tax office")
+    _assert_eq(g:player_balance(p, "金币"), 10000 - math.floor(10000 * constants.tax_rate), "angel should not block tax office")
   end)
 
   it("hospital_and_mountain_detain_player_even_with_angel", function()

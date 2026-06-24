@@ -1,10 +1,12 @@
 local board = require("src.rules.board")
 local tile = require("src.rules.board.tile")
 local player = require("src.player.actions.player")
+local balance_ops = require("src.player.actions.balance")
 local inventory = require("src.player.actions.inventory")
 local constants = require("src.config.content.constants")
 local roles_cfg = require("src.config.content.roles")
 local fan_club = require("src.app.host_integrations.fan_club")
+local runtime_ports = require("src.foundation.ports.runtime_ports")
 require "vendor.third_party.Utils"
 
 local game_factory = {}
@@ -46,8 +48,19 @@ local function _starting_cash()
   return constants.starting_cash + (fan_club.starting_cash_bonus() or 0)
 end
 
-local function _new_player_entry(id, name, role_id, is_ai, is_auto)
-  return player:new({
+local function _resolve_coin_role(entry, player_id)
+  if entry and entry.role ~= nil then
+    return entry.role
+  end
+  local runtime_role = runtime_ports.resolve_role(player_id)
+  if runtime_role ~= nil then
+    return runtime_role
+  end
+  return balance_ops.new_memory_coin_role()
+end
+
+local function _new_player_entry(id, name, role_id, is_ai, is_auto, coin_role)
+  local created = player:new({
     id = id,
     name = name,
     role_id = role_id,
@@ -55,12 +68,12 @@ local function _new_player_entry(id, name, role_id, is_ai, is_auto)
     auto = is_auto,
     start_index = 1,
     constants = constants,
-    balances = {
-      ["金币"] = _starting_cash(),
-    },
+    coin_role = coin_role,
     deity_duration_turns = constants.deity_duration_turns,
     inventory = inventory:new({ constants = constants }),
   })
+  balance_ops.initialize_player_coins(created, _starting_cash())
+  return created
 end
 
 local function _resolve_roster_name(entry, index)
@@ -84,7 +97,7 @@ local function _create_players_from_roster(opts, role_roster, ai_map)
     local name = _resolve_roster_name(entry, i)
     local is_ai = ai_map[role_id]
     local is_auto = _resolve_auto_flag(opts, auto_players, role_id)
-    table.insert(players, _new_player_entry(role_id, name, role_id, is_ai, is_auto))
+    table.insert(players, _new_player_entry(role_id, name, role_id, is_ai, is_auto, _resolve_coin_role(entry, role_id)))
   end
   return players
 end
@@ -98,7 +111,7 @@ local function _create_players_from_names(opts, ai_map)
   for i, name in ipairs(names) do
     local role = roles_cfg[((i - 1) % #roles_cfg) + 1]
     local is_ai = ai_map[i]
-    table.insert(players, _new_player_entry(i, name, role.id, is_ai, opts.auto_all))
+    table.insert(players, _new_player_entry(i, name, role.id, is_ai, opts.auto_all, _resolve_coin_role(nil, i)))
   end
   return players
 end

@@ -40,16 +40,20 @@ local function _build_ui_env(state, game)
   }
 end
 
-local function _resolve_current_player_meta(current)
+local function _resolve_current_player_meta(game, current)
   if current == nil then
     return FALLBACK_CURRENT_PLAYER_NAME, FALLBACK_CURRENT_PLAYER_CASH, FALLBACK_CURRENT_PLAYER_ID
   end
-  return current.name or FALLBACK_CURRENT_PLAYER_NAME, current.cash or FALLBACK_CURRENT_PLAYER_CASH,
+  local current_cash = FALLBACK_CURRENT_PLAYER_CASH
+  if game ~= nil and type(game.player_balance) == "function" then
+    current_cash = game:player_balance(current, "金币")
+  end
+  return current.name or FALLBACK_CURRENT_PLAYER_NAME, current_cash,
     role_id_utils.normalize(current.id)
 end
 
 local function _fill_meta(model, env, current, turn)
-  local current_name, current_cash, current_player_id = _resolve_current_player_meta(current)
+  local current_name, current_cash, current_player_id = _resolve_current_player_meta(env.game, current)
   model.current_player_name = current_name
   model.current_player_cash = current_cash
   model.turn_count = turn.turn_count
@@ -95,7 +99,7 @@ function model_api.build(game, env)
   local ui_state = env.ui_state
   local ui_runtime = ui_state and ui_state.ui
   local current, turn = _resolve_current_player(game)
-  local _, _, current_player_id = _resolve_current_player_meta(current)
+  local _, _, current_player_id = _resolve_current_player_meta(game, current)
   local slot_count = item_slice.resolve_slot_count(ui_runtime)
   local item_slots_by_player = item_slice.build_item_slots_by_player(game.players, slot_count)
   local auto_enabled_by_player = item_slice.build_auto_enabled_by_player(game.players)
@@ -159,7 +163,7 @@ function model_api.update(prev, game, env, dirty)
   end
   local r_env, r_dirty, ui_runtime, ui_dirty = _resolve_update_ctx(env, dirty, game)
   local current, turn = _resolve_current_player(game)
-  local current_name, current_cash, current_player_id = _resolve_current_player_meta(current)
+  local current_name, current_cash, current_player_id = _resolve_current_player_meta(game, current)
   local model = prev
 
   if _should_update_board(r_dirty) then
