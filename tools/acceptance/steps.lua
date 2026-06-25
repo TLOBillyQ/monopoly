@@ -30,6 +30,7 @@ local share_task_steps = require("acceptance.steps.share_task")
 local achievements_steps = require("acceptance.steps.achievements")
 local swarmforge_parity_steps = require("acceptance.steps.swarmforge_parity")
 local role_attribute_coins_steps = require("acceptance.steps.role_attribute_coins")
+local action_log_toggle_steps = require("acceptance.steps.action_log_toggle")
 
 local steps = {}
 
@@ -667,6 +668,7 @@ function steps.handlers()
   _merge_handlers(h, achievements_steps.handlers(), "achievements")
   _merge_handlers(h, swarmforge_parity_steps.handlers(), "swarmforge_parity")
   _merge_handlers(h, role_attribute_coins_steps.handlers(), "role_attribute_coins")
+  _merge_handlers(h, action_log_toggle_steps.handlers(), "action_log_toggle")
   return h
 end
 
