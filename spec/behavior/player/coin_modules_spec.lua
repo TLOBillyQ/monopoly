@@ -79,6 +79,32 @@ describe("coin_store role resolution", function()
     _assert_eq(role:get_attr_raw_fixed(ATTR), 750, "role attr updated")
   end)
 
+  it("calls role attr functions with the Eggy raw attr signature", function()
+    local calls = {}
+    local attrs = { [ATTR] = 100 }
+    local role = {
+      get_attr_raw_fixed = function(attr_id)
+        calls[#calls + 1] = { op = "get", attr_id = attr_id }
+        return attrs[attr_id]
+      end,
+      set_attr_raw_fixed = function(attr_id, value)
+        calls[#calls + 1] = { op = "set", attr_id = attr_id, value = value }
+        attrs[attr_id] = value
+        return true
+      end,
+    }
+    local player = _player_with_role(role)
+
+    _assert_eq(coin_store.read_count(player), 100, "dot-signature read")
+    local ok, written = coin_store.try_write(player, 250)
+
+    assert(ok == true, "write should succeed")
+    _assert_eq(written, 250, "write returns amount")
+    _assert_eq(calls[1].attr_id, ATTR, "getter receives attr id as first arg")
+    _assert_eq(calls[2].attr_id, ATTR, "setter receives attr id as first arg")
+    _assert_eq(calls[2].value, 250, "setter receives value as second arg")
+  end)
+
   it("returns nil raw and fails read_count when uninitialized", function()
     local player = _player_with_role(coin_store.new_memory_coin_role(nil))
     _assert_eq(coin_store.read_raw(player), nil, "uninitialized raw is nil")

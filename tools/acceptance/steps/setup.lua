@@ -21,15 +21,20 @@ local function _mock_roles(count)
   for i = 1, count do
     local role_id = 100 + i
     local attrs = {}
-    roles[i] = {
-      get_roleid = function() return role_id end,
-      get_name = function() return "真人" .. tostring(i) end,
-      get_attr_raw_fixed = function(_, attr_id) return attrs[attr_id] end,
-      set_attr_raw_fixed = function(_, attr_id, value)
-        attrs[attr_id] = value
-        return attr_id == balance.COIN_COUNT_ATTR_ID
-      end,
-    }
+    local role = {}
+    role.get_roleid = function() return role_id end
+    role.get_name = function() return "真人" .. tostring(i) end
+    role.get_attr_raw_fixed = function(first, second)
+      local attr_id = first == role and second or first
+      return attrs[attr_id]
+    end
+    role.set_attr_raw_fixed = function(first, second, third)
+      local attr_id = first == role and second or first
+      local value = first == role and third or second
+      attrs[attr_id] = value
+      return attr_id == balance.COIN_COUNT_ATTR_ID
+    end
+    roles[i] = role
   end
   return roles
 end
