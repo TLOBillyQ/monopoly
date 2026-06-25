@@ -156,6 +156,12 @@ local _ACTION_HANDLERS = {
   buy     = function(state, role_id, a)  return skin_panel.unlock(state, role_id, "buy", panel_actions.slot_index(a)) end,
   gift    = function(state, role_id, a)  return skin_panel.unlock(state, role_id, "gift", panel_actions.slot_index(a)) end,
   equip   = function(state, role_id, a)  return skin_panel.equip(state, role_id, panel_actions.slot_index(a)) end,
+  activate_slot = function(state, role_id, a)
+    return _handle_transaction(state, role_id, {
+      type = "activate_slot",
+      slot_index = panel_actions.slot_index(a),
+    })
+  end,
   unequip = function(state, role_id, _)  return _unequip(state, role_id) end,
   next    = function(state, _, _)        return _page(state, "page_next") end,
   prev    = function(state, _, _)        return _page(state, "page_prev") end,

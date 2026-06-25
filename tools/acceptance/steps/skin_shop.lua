@@ -1,4 +1,5 @@
 local number_utils = require("src.foundation.number")
+local transaction = require("src.app.cosmetics.transaction")
 local skin_panel = require("src.ui.coord.skin_panel")
 local skin_nodes = require("src.ui.schema.skin")
 local view_command = require("src.ui.input.view_command")
@@ -68,8 +69,28 @@ end
 
 local function _skin_at_slot(world, slot)
   local panel = _panel(world)
-  local idx = (panel.page_index - 1) * SLOTS_PER_PAGE + slot
+  local view = world.skin_state and transaction.slot_view_model(world.skin_state, slot) or nil
+  if view and view.skin then
+    return view.skin
+  end
+  local page_index = (panel and panel.page_index) or 1
+  local idx = (page_index - 1) * SLOTS_PER_PAGE + slot
   return skin_panel.catalog[idx]
+end
+
+local function _slot_view(world, slot)
+  if not world.skin_state then
+    return nil
+  end
+  return transaction.slot_view_model(world.skin_state, slot)
+end
+
+local function _is_owned_slot(view)
+  return view ~= nil and (view.status == "owned" or view.status == "equipped")
+end
+
+local function _equipped_product(world)
+  return transaction.equipped_product(world.skin_state, world.ui_role_id or 1)
 end
 
 local function _assert_outline_container_count(world, raw_count)
@@ -133,11 +154,10 @@ local function _handler_owned_by(field)
     local skin, slot, err = _resolve_skin(world, example, field)
     if not skin then return nil, err end
     local key = _role_key(world)
-    local panel = _panel(world)
     if not (step and step.keyword == "Then") then
       skin_panel.unlock(world.skin_state, world.ui_role_id or 1, "given", slot)
     end
-    if not (panel.owned_by_role[key] and panel.owned_by_role[key][skin.product_id]) then
+    if not _is_owned_slot(_slot_view(world, slot)) then
       return nil, "skin at slot " .. tostring(slot) .. " is not owned by role " .. key
     end
     return true
@@ -153,8 +173,7 @@ local function _handler_assert_owned_by(field)
     local skin, slot, err = _resolve_skin(world, example, field)
     if not skin then return nil, err end
     local key = _role_key(world)
-    local panel = _panel(world)
-    if not (panel.owned_by_role[key] and panel.owned_by_role[key][skin.product_id]) then
+    if not _is_owned_slot(_slot_view(world, slot)) then
       return nil, "skin at slot " .. tostring(slot) .. " is not owned by role " .. key
     end
     return true
@@ -423,8 +442,8 @@ function skin_shop_steps.handlers()
       local skin, slot, err = _resolve_skin(world, example, "槽位")
       if not skin then return nil, err end
       local key = _role_key(world)
-      local panel = _panel(world)
-      if panel.owned_by_role[key] and panel.owned_by_role[key][skin.product_id] then
+      local view = _slot_view(world, slot)
+      if view and view.status ~= "locked" then
         return nil, "skin at slot " .. tostring(slot) .. " is already owned by role " .. key
       end
       return true
@@ -445,19 +464,17 @@ function skin_shop_steps.handlers()
     ["槽位<槽位>的皮肤已装备成功"] = function(world, example)
       local skin, slot, err = _resolve_skin(world, example, "槽位")
       if not skin then return nil, err end
-      local key = _role_key(world)
-      local panel = _panel(world)
-      if panel.selected_by_role[key] ~= skin.product_id then
-        return nil, "slot " .. tostring(slot) .. " skin not equipped; selected=" .. tostring(panel.selected_by_role[key])
+      local view = _slot_view(world, slot)
+      if not (view and view.status == "equipped") then
+        return nil, "slot " .. tostring(slot) .. " skin not equipped; selected=" .. tostring(_equipped_product(world))
       end
       return true
     end,
 
     ["皮肤未成功装备"] = function(world)
-      local key = _role_key(world)
-      local panel = _panel(world)
-      if panel.selected_by_role[key] ~= nil then
-        return nil, "skin was equipped unexpectedly: " .. tostring(panel.selected_by_role[key])
+      local selected = _equipped_product(world)
+      if selected ~= nil then
+        return nil, "skin was equipped unexpectedly: " .. tostring(selected)
       end
       return true
     end,
@@ -547,10 +564,9 @@ function skin_shop_steps.handlers()
     end,
 
     ["无皮肤装备中"] = function(world)
-      local key = _role_key(world)
-      local panel = _panel(world)
-      if panel.selected_by_role[key] ~= nil then
-        return nil, "expected no skin equipped, got " .. tostring(panel.selected_by_role[key])
+      local selected = _equipped_product(world)
+      if selected ~= nil then
+        return nil, "expected no skin equipped, got " .. tostring(selected)
       end
       return true
     end,
@@ -685,10 +701,9 @@ function skin_shop_steps.handlers()
     ["槽位<验证槽位>的皮肤已装备成功"] = function(world, example)
       local skin, slot, err = _resolve_skin(world, example, "验证槽位")
       if not skin then return nil, err end
-      local key = _role_key(world)
-      local panel = _panel(world)
-      if panel.selected_by_role[key] ~= skin.product_id then
-        return nil, "slot " .. tostring(slot) .. " skin not equipped; selected=" .. tostring(panel.selected_by_role[key])
+      local view = _slot_view(world, slot)
+      if not (view and view.status == "equipped") then
+        return nil, "slot " .. tostring(slot) .. " skin not equipped; selected=" .. tostring(_equipped_product(world))
       end
       return true
     end,
@@ -697,8 +712,8 @@ function skin_shop_steps.handlers()
       local skin, slot, err = _resolve_skin(world, example, "验证槽位")
       if not skin then return nil, err end
       local key = _role_key(world)
-      local panel = _panel(world)
-      if panel.owned_by_role[key] and panel.owned_by_role[key][skin.product_id] then
+      local view = _slot_view(world, slot)
+      if view and view.status ~= "locked" then
         return nil, "skin at slot " .. tostring(slot) .. " is already owned by role " .. key
       end
       return true

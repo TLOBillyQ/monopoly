@@ -1,6 +1,7 @@
 local nodes = require("src.ui.schema.skin")
 local panel_runtime = require("src.ui.render.panel_runtime")
 local ui_controls = require("src.ui.render.support.ui_controls")
+local transaction = require("src.app.cosmetics.transaction")
 local skin_buttons = require("src.ui.render.skin_panel_buttons")
 local skin_cards = require("src.ui.render.skin_panel_cards")
 
@@ -13,22 +14,17 @@ local function _refresh_static_nodes(ui)
   ui_controls.set_control_state(ui, nodes.close_button, { visible = true, touch_enabled = true })
 end
 
-local PAGE_SIZE = #nodes.card_images
-
 function skin_panel_view.refresh_slots(state, catalog, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local panel = ui.skin_panel
-  local page_index = (panel and panel.page_index) or 1
-  local offset = (page_index - 1) * PAGE_SIZE
+  local slot_views = transaction.slot_view_models(state, catalog)
 
   _refresh_static_nodes(ui)
 
   for slot in ipairs(nodes.card_images) do
-    local skin = catalog[offset + slot]
-    local status = skin_buttons.slot_state(panel, skin)
-    skin_cards.refresh_slot_visuals(state, ui, runtime, slot, skin, status)
-    skin_buttons.refresh_button(ui, slot, skin, status)
+    local view = slot_views[slot]
+    skin_cards.refresh_slot_visuals(state, ui, runtime, slot, view)
+    skin_buttons.refresh_button(ui, slot, view)
   end
 end
 
