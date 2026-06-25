@@ -13,6 +13,23 @@ function cash_handlers.register(handlers, common)
     end
   end
 
+  local function _record_cash_received(game, player, amount)
+    if type(common.record_cash_received) == "function" then
+      common.record_cash_received(game, player, amount)
+    end
+  end
+
+  local function _transfer_cash_capped(game, payer, receiver, amount, opts)
+    if type(game.transfer_player_cash) == "function" then
+      local payer_after, receiver_after, moved = game:transfer_player_cash(payer, receiver, amount, opts)
+      return payer_after, receiver_after, moved, true
+    end
+    local liquid = math.min(game:player_balance(payer, "金币"), amount)
+    common.apply_cash_change(game, payer, -amount, opts)
+    common.apply_cash_change(game, receiver, liquid, opts)
+    return game:player_balance(payer, "金币"), game:player_balance(receiver, "金币"), liquid, false
+  end
+
   handlers.add_cash = function(game, player, card)
     if card.target == "all" then
       _apply_to_all_players(game, function(p)
@@ -107,10 +124,16 @@ function cash_handlers.register(handlers, common)
       if other.id ~= player.id and not other.eliminated then
         local fee = common.adjust_chance_delta(game, player, card.amount)
         if not game:player_is_in_mountain(player) then
-          local other_cash = game:player_balance(other, "金币")
-          local liquid = math.min(other_cash, fee)
-          common.apply_cash_change(game, other, -fee, { suppress_cash_receive_anim = true })
-          common.apply_cash_change(game, player, liquid, { suppress_cash_receive_anim = true })
+          local _, _, liquid, used_settlement = _transfer_cash_capped(
+            game,
+            other,
+            player,
+            fee,
+            { suppress_cash_receive_anim = true, allow_partial = true }
+          )
+          if used_settlement then
+            _record_cash_received(game, player, liquid)
+          end
           total_collected = total_collected + liquid
           local reason = other.name .. " 被收款资金不足破产"
           common.handle_bankruptcy_if_non_positive(game, other, reason)
