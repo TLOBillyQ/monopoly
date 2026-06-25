@@ -2,17 +2,12 @@ local logger = require("src.foundation.log")
 local pre_confirm_flow = require("src.ui.input.pre_confirm")
 local item_phase_ask_flow = require("src.ui.input.item_phase_ask")
 local item_slot_confirm = require("src.ui.input.item_slot_confirm")
+local command_policy = require("src.ui.input.command_policy")
 
 local game_action_dispatcher = {}
 
 local function _is_item_slot_click(intent)
-  if not intent or intent.type ~= "ui_button" then
-    return false
-  end
-  if type(intent.id) ~= "string" then
-    return false
-  end
-  return string.match(intent.id, "^item_slot_%d+$") ~= nil
+  return command_policy.is_item_slot_command(intent)
 end
 
 local function _normalize_item_slot_flags(state, intent)
@@ -87,19 +82,16 @@ local _MARKET_CONFIRM_KEYS = { "choice_id", "option_id" }
 local _MARKET_TAB_KEYS = { "choice_id", "tab" }
 local _MARKET_PAGE_KEYS = { "choice_id" }
 
-local _INTENT_HANDLERS = {
-  ui_button      = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
-  choice_select  = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
-  choice_cancel  = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
-  complete_optional_action_phase = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
+local _COMMAND_HANDLERS = {
+  basic = function(s, g, i, o, ap, h) return _dispatch_basic_action(s, g, i, o, ap, h) end,
   market_confirm    = function(s, g, i, o, ap) return _dispatch_market_intent("choice_select", _MARKET_CONFIRM_KEYS, g, s, i, o, ap) end,
   market_page_prev  = function(s, g, i, o, ap) return _dispatch_market_intent("market_page_prev", _MARKET_PAGE_KEYS, g, s, i, o, ap) end,
   market_page_next  = function(s, g, i, o, ap) return _dispatch_market_intent("market_page_next", _MARKET_PAGE_KEYS, g, s, i, o, ap) end,
   market_tab_select = function(s, g, i, o, ap) return _dispatch_market_intent("market_tab_select", _MARKET_TAB_KEYS, g, s, i, o, ap) end,
 }
 
-local function _route_by_intent_type(intent_type, state, game, intent, opts, action_port, helpers)
-  local handler = _INTENT_HANDLERS[intent_type]
+local function _route_by_policy(state, game, intent, opts, action_port, helpers)
+  local handler = _COMMAND_HANDLERS[command_policy.game_handler(intent)]
   if handler then return handler(state, game, intent, opts, action_port, helpers) end
   return false
 end
@@ -131,7 +123,7 @@ function game_action_dispatcher.dispatch(state, game, intent, opts, action_port,
   if not intent_type then return false end
   _normalize_item_slot_flags(state, intent)
   if _try_pipeline_early(state, game, intent, opts, action_port) then return true end
-  return _route_by_intent_type(intent_type, state, game, intent, opts, action_port, turn_action_helpers)
+  return _route_by_policy(state, game, intent, opts, action_port, turn_action_helpers)
 end
 
 return game_action_dispatcher
