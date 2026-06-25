@@ -129,9 +129,10 @@ local _item_choice_handler_t2_tests = {
         return { stay = stay == true }
       end,
       finish_active_item_phase = function() end,
-      use_item = function(_, _, item_id)
+      begin_item_use = function(_, _, item_id)
         assert(item_id == 2005, "item_phase_choice should forward selected item_id")
         return {
+          ok = true,
           waiting = true,
           intent = {
             choice_spec = {
@@ -187,9 +188,10 @@ local _item_choice_handler_t2_tests = {
         return { stay = stay == true }
       end,
       finish_active_item_phase = function() end,
-      use_item = function(_, _, item_id)
+      begin_item_use = function(_, _, item_id)
         assert(item_id == 2005, "item_phase_choice should forward selected item_id")
         return {
+          ok = true,
           waiting = true,
           intent = {
             choice_spec = {

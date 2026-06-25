@@ -69,9 +69,7 @@ end
 
 function phase_handlers.build(helpers)
   local complete = completions.build(helpers)
-  local begin_item_use = helpers.begin_item_use or function(game, player, item_id, context)
-    return helpers.use_item(game, player, item_id, context)
-  end
+  local begin_item_use = assert(helpers.begin_item_use, "missing begin_item_use helper")
 
   local function _handle_item_phase_choice(game, choice, action)
     local meta = choice.meta
