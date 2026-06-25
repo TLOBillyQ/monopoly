@@ -13,10 +13,13 @@ local function _new_memory_coin_role(initial)
     attrs[_COIN_COUNT_ATTR_ID] = initial
   end
   local role = {}
-  function role:get_attr_raw_fixed(attr_id)
+  function role.get_attr_raw_fixed(first, second)
+    local attr_id = first == role and second or first
     return attrs[attr_id]
   end
-  function role:set_attr_raw_fixed(attr_id, value)
+  function role.set_attr_raw_fixed(first, second, third)
+    local attr_id = first == role and second or first
+    local value = first == role and third or second
     attrs[attr_id] = value
     return true
   end
@@ -67,8 +70,8 @@ local function _resolve_coin_role(player)
 end
 
 local function _read_coin_raw(player)
-  local role, getter = _resolve_coin_role(player)
-  local ok, value = pcall(getter, role, _COIN_COUNT_ATTR_ID)
+  local _, getter = _resolve_coin_role(player)
+  local ok, value = pcall(getter, _COIN_COUNT_ATTR_ID)
   if not ok then
     _fail(player, "读取失败: " .. tostring(value))
   end
@@ -85,8 +88,8 @@ end
 
 local function _try_write_coin_count(player, amount)
   amount = _validate_coin_amount(player, amount, "写入值")
-  local role, _, setter = _resolve_coin_role(player)
-  local ok, result = pcall(setter, role, _COIN_COUNT_ATTR_ID, amount)
+  local _, _, setter = _resolve_coin_role(player)
+  local ok, result = pcall(setter, _COIN_COUNT_ATTR_ID, amount)
   if not ok then
     return false, tostring(result)
   end

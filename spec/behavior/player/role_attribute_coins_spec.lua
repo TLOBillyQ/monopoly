@@ -17,22 +17,25 @@ local function _role(initial)
     fail_next_set = false,
     fail_values = nil,
   }
-  function role:get_attr_raw_fixed(attr_id)
+  function role.get_attr_raw_fixed(first, second)
+    local attr_id = first == role and second or first
     return attrs[attr_id]
   end
   function role:force_attr_raw_fixed(attr_id, value)
     attrs[attr_id] = value
   end
-  function role:set_attr_raw_fixed(attr_id, value)
-    if self.fail_next_set == true then
-      self.fail_next_set = false
+  function role.set_attr_raw_fixed(first, second, third)
+    local attr_id = first == role and second or first
+    local value = first == role and third or second
+    if role.fail_next_set == true then
+      role.fail_next_set = false
       return false
     end
-    if self.fail_values and self.fail_values[value] == true then
+    if role.fail_values and role.fail_values[value] == true then
       return false
     end
     attrs[attr_id] = value
-    self.writes[#self.writes + 1] = {
+    role.writes[#role.writes + 1] = {
       attr_id = attr_id,
       value = value,
     }
