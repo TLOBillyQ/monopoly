@@ -14,95 +14,13 @@ local util = require("mutate4lua.util")
 local manifest = require("mutate4lua.internal.manifest")
 local scanner = require("mutate4lua.internal.scanner")
 local project = require("mutate4lua.driver.project")
+local policy = require("quality.mutation_manifest_policy")
 
 local M = {}
 
-local _END_MARKER = "]]"
-
-function M.classify_source(source)
-  if source == nil or source == "" then
-    return { state = "no_manifest" }
-  end
-  source = util.normalize_newlines(source)
-  local start_at = source:match("()" .. "%-%-%[%[ mutate4lua%-manifest\n")
-  if not start_at then
-    return { state = "no_manifest" }
-  end
-  local tail = source:sub(start_at)
-  if util.trim(tail):sub(-2) ~= _END_MARKER then
-    return { state = "corrupt", reason = "missing end marker" }
-  end
-  return { state = "has_manifest" }
-end
-
-function M.is_bootstrap_only(manifest_data)
-  if manifest_data == nil then
-    return false
-  end
-  local scopes = manifest_data.scopes
-  if scopes == nil or #scopes == 0 then
-    return false
-  end
-  for _, scope in ipairs(scopes) do
-    if scope.last_mutation_status ~= nil then
-      return false
-    end
-  end
-  return true
-end
-
-function M.detect_drift(existing_scopes, current_scopes)
-  if existing_scopes == nil or current_scopes == nil then
-    return true
-  end
-  if #existing_scopes ~= #current_scopes then
-    return true
-  end
-  for i = 1, #existing_scopes do
-    local a = existing_scopes[i] or {}
-    local b = current_scopes[i] or {}
-    if a.id ~= b.id then return true end
-    if a.semantic_hash ~= b.semantic_hash then return true end
-  end
-  return false
-end
-
-local function _categorize(file_path, runtime)
-  local source, read_err = runtime.read_source(file_path)
-  if source == nil then
-    return { path = file_path, action = "skipped", reason = read_err or "cannot read" }
-  end
-
-  local classification = M.classify_source(source)
-  if classification.state == "corrupt" then
-    return { path = file_path, action = "skipped", reason = classification.reason }
-  end
-
-  local data, scan_err = runtime.scan_file(file_path)
-  if data == nil then
-    return { path = file_path, action = "skipped", reason = scan_err or "scan failed" }
-  end
-
-  if classification.state == "no_manifest" then
-    return { path = file_path, action = "written", data = data }
-  end
-
-  local existing = runtime.read_manifest(file_path)
-  if existing == nil then
-    return { path = file_path, action = "written", data = data }
-  end
-
-  local version = tonumber(existing.version) or 1
-  if version < 2 then
-    return { path = file_path, action = "migrated", data = data }
-  end
-
-  if M.detect_drift(existing.scopes, data.scopes) then
-    return { path = file_path, action = "written", data = data }
-  end
-
-  return { path = file_path, action = "unchanged" }
-end
+M.classify_source = policy.classify_source
+M.is_bootstrap_only = policy.is_bootstrap_only
+M.detect_drift = policy.detect_drift
 
 function M.run(opts, runtime)
   opts = opts or {}
@@ -114,7 +32,7 @@ function M.run(opts, runtime)
 
   local buckets = { written = {}, migrated = {}, unchanged = {}, skipped = {} }
   for _, file_path in ipairs(files) do
-    local outcome = _categorize(file_path, runtime)
+    local outcome = policy.categorize_bootstrap(file_path, runtime)
     if outcome.action == "skipped" then
       runtime.err_write(string.format(
         "[mutate-bootstrap] skip %s: %s\n", outcome.path, tostring(outcome.reason or "unknown")

@@ -1,5 +1,6 @@
 local common = require("shared.lib.common")
 local number_utils = require("src.foundation.number")
+local manifest_policy = require("quality.mutation_manifest_policy")
 
 local quality_steps = {}
 
@@ -70,6 +71,14 @@ end
 local function _run_mutate(world, opts)
   local state = _state(world)
   opts = opts or {}
+  local write_decision = manifest_policy.manifest_write_decision({
+    update_manifest = opts.update_manifest == true,
+    lines_mode = opts.lines_mode == true,
+  }, {
+    survived = state.expected_survived or 0,
+    timeout = state.expected_timeout or 0,
+  })
+  state.manifest_write_decision = write_decision
   state.run = {
     mutation_points = 0,
     all_scopes = false,
@@ -87,16 +96,22 @@ local function _run_mutate(world, opts)
 
   if opts.full_pass then
     state.run.mutation_points = 1
-    _mark_manifest_written(state)
+    if write_decision.write then
+      _mark_manifest_written(state)
+    end
   elseif opts.update_manifest then
     state.manifest_version = state.new_version or 2
     state.manifest_has_last_status = false
-    _mark_manifest_written(state)
+    if write_decision.write then
+      _mark_manifest_written(state)
+    end
   elseif opts.mutate_all then
     state.run.mutation_points = 1
     state.run.all_scopes = true
     state.run.skipped_logic_called = false
-    _mark_manifest_written(state)
+    if write_decision.write then
+      _mark_manifest_written(state)
+    end
   elseif opts.lines_mode then
     state.manifest_after = state.manifest_before
   elseif state.corrupt_manifest then
@@ -105,12 +120,16 @@ local function _run_mutate(world, opts)
     state.run.baseline_missing = true
   elseif state.deleted_scope then
     state.removed_scope_id = state.old_scope_id
-    _mark_manifest_written(state)
+    if write_decision.write then
+      _mark_manifest_written(state)
+    end
   elseif state.added_scope then
     state.run.function_scope = state.new_scope_id
     state.run.mutation_points = 1
     state.written_scope_id = state.new_scope_id
-    _mark_manifest_written(state)
+    if write_decision.write then
+      _mark_manifest_written(state)
+    end
   elseif state.dirty_scope_id then
     state.run.function_scope = state.dirty_scope_id
     state.run.chunk_scope = state.chunk_scope_id or "chunk:" .. tostring(state.source or "")
@@ -118,7 +137,9 @@ local function _run_mutate(world, opts)
     state.skipped_semantic_hash_unchanged = true
     state.chunk_hash_changed = true
     state.run.mutation_points = 1
-    _mark_manifest_written(state)
+    if write_decision.write then
+      _mark_manifest_written(state)
+    end
   elseif state.expected_survived or state.expected_timeout then
     state.manifest_after = state.manifest_before
     state.output_has_failure_info = true
@@ -126,7 +147,9 @@ local function _run_mutate(world, opts)
     state.manifest_after = state.manifest_before
   else
     state.run.mutation_points = 1
-    _mark_manifest_written(state)
+    if write_decision.write then
+      _mark_manifest_written(state)
+    end
   end
 
   return true
@@ -134,6 +157,49 @@ end
 
 local function _processes_src_lua(path)
   return tostring(path or ""):match("^src/.+%.lua$") ~= nil
+end
+
+local function _manifest_data_from_state(state)
+  if state.has_manifest == false then
+    return nil
+  end
+  return {
+    version = state.manifest_version or 2,
+    scopes = {
+      {
+        id = state.scope_id or "chunk:" .. tostring(state.source or "src/file.lua"),
+        semantic_hash = state.semantic_hash or "hash-current",
+        last_mutation_status = state.manifest_has_last_status and "passed" or nil,
+      },
+    },
+  }
+end
+
+local function _bootstrap_policy_runtime(state)
+  return {
+    read_source = function()
+      if state.bootstrap.corrupt_form then
+        return "local M = {}\n" .. "--[[ mutate4lua-manifest\nversion=2\n"
+      end
+      if state.has_manifest == false then
+        return "local M = {}\nreturn M\n"
+      end
+      return "local M = {}\nreturn M\n" .. _manifest_text(state)
+    end,
+    read_manifest = function()
+      return _manifest_data_from_state(state)
+    end,
+    scan_file = function()
+      return {
+        scopes = {
+          {
+            id = state.scope_id or "chunk:" .. tostring(state.source or "src/file.lua"),
+            semantic_hash = state.semantic_hash or "hash-current",
+          },
+        },
+      }
+    end,
+  }
 end
 
 local function _run_bootstrap(world, opts)
@@ -180,30 +246,25 @@ local function _run_bootstrap(world, opts)
   end
 
   local source_path = state.source
-  if state.bootstrap.corrupt_form then
-    state.bootstrap.summary = { skipped = 1 }
-    state.bootstrap.stderr = tostring(source_path) .. " " .. tostring(state.bootstrap.corrupt_form)
-    state.bootstrap.status = "skipped"
-  elseif state.bootstrap.no_manifest then
-    state.bootstrap.status = opts.dry_run and "will-write" or "written"
-    state.has_manifest = opts.dry_run ~= true
+  local outcome = manifest_policy.categorize_bootstrap(
+    source_path,
+    _bootstrap_policy_runtime(state)
+  )
+  state.bootstrap.policy_outcome = outcome
+  state.bootstrap.status = opts.dry_run and ("will-" .. outcome.action) or outcome.action
+  state.bootstrap.summary = { [outcome.action] = 1 }
+  if outcome.action == manifest_policy.BOOTSTRAP_SKIPPED then
+    state.bootstrap.stderr = tostring(source_path) .. " " ..
+      tostring(state.bootstrap.corrupt_form or outcome.reason or "skipped")
+  elseif outcome.action == manifest_policy.BOOTSTRAP_WRITTEN
+      or outcome.action == manifest_policy.BOOTSTRAP_MIGRATED then
     state.bootstrap.did_write = opts.dry_run ~= true
     if not opts.dry_run then
+      state.has_manifest = true
+      state.manifest_version = 2
       _mark_manifest_written(state)
     end
-  elseif state.bootstrap.v1 then
-    state.bootstrap.status = opts.dry_run and "will-migrate" or "migrated"
-    state.manifest_version = opts.dry_run and 1 or 2
-    state.bootstrap.did_write = opts.dry_run ~= true
-    if not opts.dry_run then
-      _mark_manifest_written(state)
-    end
-  elseif state.bootstrap.v2 then
-    state.bootstrap.status = opts.dry_run and "will-unchanged" or "unchanged"
-  else
-    state.bootstrap.status = opts.dry_run and "will-skip" or "skipped"
   end
-  state.bootstrap.summary = { [state.bootstrap.status] = 1 }
   if opts.dry_run then
     state.bootstrap.plan = "will-write will-migrate will-unchanged will-skip"
   end

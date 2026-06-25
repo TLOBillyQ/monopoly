@@ -12,6 +12,7 @@ require("shared.mutate4lua_paths").activate(bootstrap_env.vendor_dir)
 
 local common = require("shared.lib.common")
 local util = require("mutate4lua.util")
+local manifest_policy = require("quality.mutation_manifest_policy")
 
 local M = {}
 
@@ -102,18 +103,18 @@ function M.run(opts, runtime)
       return { exit_code = 1, processed = processed }
     end
 
-    local json = result.json or {}
+    local summary = manifest_policy.summarize_mutation_result(file, result.json or {})
     processed[#processed + 1] = {
-      file = file,
-      total_sites = json.total_sites or 0,
-      killed = json.killed or 0,
-      survived = json.survived or 0,
-      timeout = json.timeout or 0,
-      score = json.score or 100,
+      file = summary.file,
+      total_sites = summary.total_sites,
+      killed = summary.killed,
+      survived = summary.survived,
+      timeout = summary.timeout,
+      score = summary.score,
     }
-    if (json.survived or 0) > 0 then
+    if summary.has_survived then
       survived_count = survived_count + 1
-      runtime.err_write(_format_warning(file, json))
+      runtime.err_write(_format_warning(file, summary))
     end
   end
 

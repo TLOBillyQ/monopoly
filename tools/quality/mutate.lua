@@ -63,13 +63,18 @@ local function _default_stderr_writer(text)
 end
 
 local function _check_bootstrap_only(target, stderr_writer)
-  if target == nil or target:sub(-4) ~= ".lua" then return true end
+  local policy = require("quality.mutation_manifest_policy")
+  if target == nil or target:sub(-4) ~= ".lua" then
+    return policy.preflight_differential(target, nil).allowed
+  end
   local manifest_mod = require("mutate4lua.internal.manifest")
   local ok, data = pcall(manifest_mod.read, target)
-  if not ok or data == nil then return true end
-  local bootstrap_mod = require("quality.mutate_bootstrap")
-  if not bootstrap_mod.is_bootstrap_only(data) then return true end
-  (stderr_writer or _default_stderr_writer)(_bootstrap_only_message(target))
+  if not ok then data = nil end
+  local decision = policy.preflight_differential(target, data)
+  if decision.allowed then return true end
+  if decision.reason == policy.REASON_BOOTSTRAP_ONLY then
+    (stderr_writer or _default_stderr_writer)(_bootstrap_only_message(target))
+  end
   return false
 end
 
