@@ -1,11 +1,11 @@
 # language: zh-CN
-# mutation-stamp: sha256=dfee27469abb39f686f339954a9062984317f231ed40ff8c7cd57185aa24afc0
+# mutation-stamp: sha256=b3ebd8cc4b70d48dcb91b08cd72ae28653e10770a442134125a74d82f854f197
 # acceptance-mutation-manifest-begin
 # {
 #   "background_hash": "10c39f71faa0d8d861ad59cadc227a6488b69c0ceff8d5de53357199bca9d95c",
 #   "feature_name": "可选行动阶段结束按钮",
 #   "feature_path": "features/v102/optional_action_end_button.feature",
-#   "implementation_hash": "sha256:a8c9066467815e049906c38e174c21988c0be82c772d47ab7dc52ec7a2839712",
+#   "implementation_hash": "sha256:0c0dbd260162a84d0dd3a5112c2b30bee43c9ec9f2d29e13a28bc544dc10e1df",
 #   "scenarios": [
 #     {
 #       "index": 0,
@@ -30,8 +30,8 @@
 #         "Survived": 0,
 #         "Total": 6
 #       },
-#       "scenario_hash": "e0bf722dad14e0e48a21731c10c6fe412525ac0be40f30b05cc4b6d86bdb20f1",
-#       "tested_at": "2026-06-23T03:28:07Z"
+#       "scenario_hash": "bbf25eb35672f718101711607fba310eb17343acec2d6c57c4dbc79c4f9cf20d",
+#       "tested_at": "2026-06-24T08:08:00Z"
 #     },
 #     {
 #       "index": 2,
@@ -112,7 +112,7 @@
 #       "tested_at": "2026-06-23T03:28:13Z"
 #     }
 #   ],
-#   "tested_at": "2026-06-23T03:28:13Z",
+#   "tested_at": "2026-06-24T08:08:00Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end

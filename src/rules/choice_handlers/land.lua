@@ -1,61 +1,31 @@
-local inventory = require("src.rules.items.inventory")
-local item_ids = require("src.config.gameplay.item_ids")
-local land_actions = require("src.rules.land.actions")
+local land_settlement = require("src.rules.land.settlement")
 
 local M = {}
 
 local function _build(helpers)
   local finish_choice = helpers.finish_choice
 
-  local function _handle_rent_prompt(game, choice, action)
-    local meta = choice.meta
-    local player_id = meta.player_id
-    local tile_id = meta.tile_id
-    local card_kind = meta.card_kind
-    local use_card = action.option_id == "use"
-
-    if use_card and card_kind == "strong" then
-      land_actions.execute_strong_card(game, player_id, tile_id)
-    elseif use_card and card_kind == "free" then
-      land_actions.execute_free_card(game, player_id, tile_id)
-    else
-      if card_kind == "strong" then
-        local player = assert(game:find_player_by_id(player_id), "missing player: " .. tostring(player_id))
-        if inventory.find_index(player, item_ids.free_rent) then
-          land_actions.execute_free_card(game, player_id, tile_id)
-          return finish_choice(game, false)
-        end
-      end
-      land_actions.execute_pay_rent(game, player_id, tile_id)
+  local function _finish_landing_choice(game, result)
+    if result and result.stay then
+      return result
     end
-
     return finish_choice(game, false)
   end
 
-  local function _handle_tax_prompt(game, choice, action)
-    local meta = choice.meta
-    local player_id = meta.player_id
-    local use_card = action.option_id == "use"
-
-    if use_card then
-      land_actions.execute_tax_free_card(game, player_id)
-    else
-      land_actions.execute_pay_tax(game, player_id)
-    end
-
-    return finish_choice(game, false)
+  local function _handle_landing_choice(game, choice, action)
+    return _finish_landing_choice(game, land_settlement.resolve_landing_settlement_choice(game, choice, action))
   end
 
   return {
     rent_card_prompt = {
       required_meta = { "player_id", "tile_id" },
       cancel = { mode = "select_option", option_id = "skip" },
-      execute = _handle_rent_prompt,
+      execute = _handle_landing_choice,
     },
     tax_card_prompt = {
       required_meta = { "player_id" },
       cancel = { mode = "select_option", option_id = "skip" },
-      execute = _handle_tax_prompt,
+      execute = _handle_landing_choice,
     },
   }
 end

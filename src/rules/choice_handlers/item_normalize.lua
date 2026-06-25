@@ -1,6 +1,5 @@
 local availability = require("src.rules.items.availability")
 local item_phase = require("src.rules.items.phase")
-local inventory = require("src.rules.items.inventory")
 
 local copy_table = availability.copy_table
 local normalize_integer_field = availability.normalize_integer_field
@@ -18,13 +17,6 @@ end
 
 function normalize.validate_item_player(game, choice_kind, meta)
   return assert(game:find_player_by_id(meta.player_id), "missing player: " .. tostring(meta.player_id))
-end
-
-function normalize.consume_if_needed(player, item_id, already_consumed)
-  if not item_id or already_consumed == true then
-    return
-  end
-  assert(inventory.consume(player, item_id) == true, "consume committed item failed: " .. tostring(item_id))
 end
 
 function normalize.is_repeatable_phase_meta(meta)

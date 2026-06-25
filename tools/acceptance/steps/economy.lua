@@ -275,6 +275,10 @@ function economy_steps.handlers()
         return nil, "invalid 加盖次数: " .. tostring(example["加盖次数"])
       end
       world.rent_tile = world.rent_tile or {}
+      local max_level = pricing.max_level(world.rent_tile)
+      if level < 0 or level > max_level then
+        return nil, "加盖次数 out of range: " .. tostring(level) .. " max=" .. tostring(max_level)
+      end
       world.rent_tile.level = level
       return true
     end,
@@ -349,14 +353,14 @@ function economy_steps.handlers()
     ["<神灵条件>"] = function(world, example)
       local condition = example["神灵条件"]
       world.deity_condition = condition
-      if condition:find("租户持有穷神") and condition:find("房东持有财神") then
+      if condition == "租户持有穷神且房东持有财神" then
         world.rent_multiplier = 4
-      elseif condition:find("租户持有穷神") then
+      elseif condition == "租户持有穷神" then
         world.rent_multiplier = 2
-      elseif condition:find("房东持有财神") then
+      elseif condition == "房东持有财神" then
         world.rent_multiplier = 2
       else
-        world.rent_multiplier = 1
+        return nil, "invalid 神灵条件: " .. tostring(condition)
       end
       return true
     end,

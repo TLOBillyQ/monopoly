@@ -943,14 +943,14 @@ describe("presentation_ui.interaction", function()
     end)
 
     _assert_eq(#dispatched, 1, "only optional end button should dispatch optional completion")
-    _assert_eq(dispatched[1] and dispatched[1].type, "choice_cancel",
-      "optional end button should dispatch choice_cancel")
+    _assert_eq(dispatched[1] and dispatched[1].type, "complete_optional_action_phase",
+      "optional end button should dispatch optional completion intent")
     _assert_eq(dispatched[1] and dispatched[1].actor_role_id, 5,
-      "optional choice_cancel should carry event actor")
-    _assert_eq(closed, 1, "choice_cancel dispatch should close the choice modal")
+      "optional completion should carry event actor")
+    _assert_eq(closed, 1, "optional completion dispatch should close the choice modal")
   end)
 
-  it("_test_ui_event_router_optional_landing_end_button_dispatches_choice_cancel", function()
+  it("_test_ui_event_router_optional_landing_end_button_dispatches_completion_intent", function()
     local route_base = require("src.ui.input.route_base")
     local base_nodes = require("src.ui.schema.base")
     local state = {
@@ -976,10 +976,10 @@ describe("presentation_ui.interaction", function()
     local end_intent = end_spec and end_spec.build_intent()
 
     _assert_eq(action_intent, nil, "landing optional phase should not route through action button")
-    _assert_eq(end_intent and end_intent.type, "choice_cancel",
-      "landing optional end button should dispatch choice_cancel")
-    _assert_eq(end_intent and end_intent.choice_id, 12,
-      "landing optional end button should preserve choice id")
+    _assert_eq(end_intent and end_intent.type, "complete_optional_action_phase",
+      "landing optional end button should dispatch completion intent")
+    _assert_eq(end_intent and end_intent.choice_id, nil,
+      "landing optional end button should not expose choice id")
   end)
 
   it("_test_route_base_non_cancelable_optional_choice_routes_no_base_progression", function()
@@ -1009,7 +1009,7 @@ describe("presentation_ui.interaction", function()
     _assert_eq(action_spec and action_spec.build_intent(), nil,
       "non-cancelable optional choice should not route through action button")
     _assert_eq(end_spec and end_spec.build_intent(), nil,
-      "non-cancelable optional choice should not dispatch choice_cancel")
+      "non-cancelable optional choice should not dispatch optional completion")
   end)
 
   it("_test_route_base_input_lock_blocks_optional_end_intent", function()

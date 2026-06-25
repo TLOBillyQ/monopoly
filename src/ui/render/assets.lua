@@ -4,22 +4,20 @@ local ui_nodes = require("src.ui.render.node_ops")
 local base_nodes = require("src.ui.schema.base")
 local permanent_nodes = require("src.ui.schema.permanent")
 local number_utils = require("src.foundation.number")
-local runtime_refs = require("src.config.content.runtime_refs")
+local runtime_assets = require("src.config.runtime_assets")
 
 local M = {}
 
 function M.init_ui_assets(state)
   assert(state ~= nil, "missing state")
-  local refs = runtime_refs
-  local image_refs = refs.images or {}
-  state.ui_refs = refs
+  state.runtime_assets = runtime_assets
+  state.ui_refs = runtime_assets.compat_refs()
 
   runtime.for_each_role_or_global(function()
     for index = 1, 5 do
-      local ref_id = tostring(3000 + index)
-      local image_key = image_refs[ref_id]
-      assert(image_key ~= nil, "missing item icon: " .. tostring(ref_id))
-      ui_nodes.set_item_slot_image(permanent_nodes.item_slots[index], image_key)
+      local icon = runtime_assets.startup_item_slot_icon(index)
+      assert(icon.ok == true, "missing item icon: " .. tostring(icon.lookup_key))
+      ui_nodes.set_item_slot_image(permanent_nodes.item_slots[index], icon.image_key)
     end
   end)
   runtime.set_client_role(nil)
@@ -92,15 +90,30 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=5ab71b85453c56a3
+projectHash=1b7d71868127391b
 scope.0.id=chunk:src/ui/render/assets.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=83
-scope.0.semanticHash=aff852d82c19f518
-scope.1.id=function:anonymous@17:17
+scope.0.endLine=90
+scope.0.semanticHash=128645c727759298
+scope.1.id=function:anonymous@16:16
 scope.1.kind=function
-scope.1.startLine=17
-scope.1.endLine=26
-scope.1.semanticHash=1d44d7f3ddb6aa34
+scope.1.startLine=16
+scope.1.endLine=24
+scope.1.semanticHash=fb38035fe075d561
+scope.2.id=function:_run_color_capture:39
+scope.2.kind=function
+scope.2.startLine=39
+scope.2.endLine=47
+scope.2.semanticHash=ff72762e769b2685
+scope.3.id=function:anonymous@80:80
+scope.3.kind=function
+scope.3.startLine=80
+scope.3.endLine=80
+scope.3.semanticHash=152211f20b23538c
+scope.4.id=function:M.capture_player_colors:73
+scope.4.kind=function
+scope.4.startLine=73
+scope.4.endLine=87
+scope.4.semanticHash=1e54a6f2b99df7e2
 ]]

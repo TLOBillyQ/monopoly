@@ -1,6 +1,7 @@
 local nodes = require("src.ui.schema.item_atlas")
 local number_utils = require("src.foundation.number")
 local panel_runtime = require("src.ui.render.panel_runtime")
+local runtime_assets = require("src.config.runtime_assets")
 
 local item_atlas_view = {}
 
@@ -25,16 +26,13 @@ local function _set_enlarged_overlay_visible(ui, visible)
   end
 end
 
-local function _image_ref_key(refs, item_id)
-  if item_id == nil then
-    return nil
-  end
-  local key = tostring(item_id)
-  return refs[key]
+local function _item_image_key(refs, item_id)
+  local image = runtime_assets.image_for_item(item_id, { refs = refs })
+  return image.ok == true and image.image_key or nil
 end
 
 local function _apply_card_texture(runtime, refs, node_name, item)
-  local image_key = _image_ref_key(refs, item.id)
+  local image_key = _item_image_key(refs, item.id)
   if not image_key then
     return
   end
@@ -87,7 +85,7 @@ end
 function item_atlas_view.refresh_page(state, catalog, page_index, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local refs = state.ui_refs and state.ui_refs.images or {}
+  local refs = state.ui_refs or {}
   local offset = (page_index - 1) * PAGE_SIZE
 
   for slot, node_name in ipairs(nodes.card_images) do
@@ -100,9 +98,9 @@ end
 function item_atlas_view.show_enlarged(state, item_id, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local refs = state.ui_refs and state.ui_refs.images or {}
+  local refs = state.ui_refs or {}
 
-  local image_key = _image_ref_key(refs, item_id)
+  local image_key = _item_image_key(refs, item_id)
   if image_key == nil then
     return
   end
@@ -129,63 +127,63 @@ return item_atlas_view
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=c3593c86af00b345
+projectHash=98b7610914e0c0fb
 scope.0.id=chunk:src/ui/render/item_atlas.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=129
-scope.0.semanticHash=245908ac98830be6
-scope.0.lastMutatedAt=2026-06-01T12:41:06Z
+scope.0.endLine=127
+scope.0.semanticHash=a7229512d1e03ff1
+scope.0.lastMutatedAt=2026-06-24T20:13:16Z
 scope.0.lastMutationLane=behavior
 scope.0.lastMutationStatus=passed
-scope.0.lastMutationSites=41
-scope.0.lastMutationKilled=41
-scope.1.id=function:_image_ref_key:28
+scope.0.lastMutationSites=40
+scope.0.lastMutationKilled=40
+scope.1.id=function:_item_image_key:29
 scope.1.kind=function
-scope.1.startLine=28
-scope.1.endLine=34
-scope.1.semanticHash=207fe5b70dc77502
-scope.1.lastMutatedAt=2026-06-01T12:41:06Z
+scope.1.startLine=29
+scope.1.endLine=32
+scope.1.semanticHash=280ab47a3feeb71f
+scope.1.lastMutatedAt=2026-06-24T20:13:16Z
 scope.1.lastMutationLane=behavior
 scope.1.lastMutationStatus=passed
-scope.1.lastMutationSites=2
-scope.1.lastMutationKilled=2
-scope.2.id=function:_set_card_visibility:54
+scope.1.lastMutationSites=5
+scope.1.lastMutationKilled=5
+scope.2.id=function:_set_card_visibility:52
 scope.2.kind=function
-scope.2.startLine=54
-scope.2.endLine=58
+scope.2.startLine=52
+scope.2.endLine=56
 scope.2.semanticHash=578d71adb368abe2
-scope.2.lastMutatedAt=2026-06-01T12:41:06Z
+scope.2.lastMutatedAt=2026-06-24T20:13:16Z
 scope.2.lastMutationLane=behavior
 scope.2.lastMutationStatus=passed
 scope.2.lastMutationSites=1
 scope.2.lastMutationKilled=1
-scope.3.id=function:_refresh_card:60
+scope.3.id=function:_refresh_card:58
 scope.3.kind=function
-scope.3.startLine=60
-scope.3.endLine=71
+scope.3.startLine=58
+scope.3.endLine=69
 scope.3.semanticHash=86f26eb0605b244a
-scope.3.lastMutatedAt=2026-06-01T12:41:06Z
+scope.3.lastMutatedAt=2026-06-24T20:13:16Z
 scope.3.lastMutationLane=behavior
 scope.3.lastMutationStatus=passed
 scope.3.lastMutationSites=5
 scope.3.lastMutationKilled=5
-scope.4.id=function:_refresh_page_arrows:73
+scope.4.id=function:_refresh_page_arrows:71
 scope.4.kind=function
-scope.4.startLine=73
-scope.4.endLine=85
+scope.4.startLine=71
+scope.4.endLine=83
 scope.4.semanticHash=2a9381c8568b718a
-scope.4.lastMutatedAt=2026-06-01T12:41:06Z
+scope.4.lastMutatedAt=2026-06-24T20:13:16Z
 scope.4.lastMutationLane=behavior
 scope.4.lastMutationStatus=passed
 scope.4.lastMutationSites=11
 scope.4.lastMutationKilled=11
-scope.5.id=function:item_atlas_view.hide_enlarged:123
+scope.5.id=function:item_atlas_view.hide_enlarged:121
 scope.5.kind=function
-scope.5.startLine=123
-scope.5.endLine=126
+scope.5.startLine=121
+scope.5.endLine=124
 scope.5.semanticHash=f995e0c09d178218
-scope.5.lastMutatedAt=2026-06-01T12:41:06Z
+scope.5.lastMutatedAt=2026-06-24T20:13:16Z
 scope.5.lastMutationLane=behavior
 scope.5.lastMutationStatus=passed
 scope.5.lastMutationSites=2

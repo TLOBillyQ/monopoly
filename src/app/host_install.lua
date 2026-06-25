@@ -5,9 +5,9 @@ local global_aliases = require("src.host.global_aliases")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
 local achievement_progress_port = require("src.rules.ports.achievement_progress")
 local config_sanity = require("src.config.gameplay.config_sanity")
+local runtime_assets = require("src.config.runtime_assets")
 local skin_panel = require("src.ui.coord.skin_panel")
 local skin_equip = require("src.rules.cosmetics")
-local runtime_refs = require("src.config.content.runtime_refs")
 local skin_purchase = require("src.app.host_integrations.skin_purchase")
 local achievement_runtime = require("src.app.host_integrations.achievement_runtime")
 local host_runtime = require("src.host.init")
@@ -70,10 +70,8 @@ local function _load_required_modules(opts)
   paid_purchase_port.configure(require("src.host.paid_purchase_gateway"))
   achievement_progress_port.configure(achievement_runtime.build_port())
   skin_panel.configure_equip(function(role_id, skin)
-    -- The host model setter keys off the numeric resource id in refs.skins, not
-    -- the human-readable creature_key string in skins.lua; passing the string is
-    -- silently ignored by the host ("付了钱没换").
-    local resource_id = skin and runtime_refs.skins[tostring(skin.product_id)] or nil
+    local model = skin and runtime_assets.skin_model_for_product(skin.product_id) or nil
+    local resource_id = model and model.asset_id or nil
     local equipped = skin_equip.equip(role_id, resource_id)
     if equipped then
       achievement_progress_port.skin_equipped(nil, role_id, skin)
@@ -81,9 +79,7 @@ local function _load_required_modules(opts)
     return equipped
   end)
   skin_panel.configure_unequip(function(role_id)
-    -- Eggy's runtime exposes reset_model for restoring the player's original
-    -- appearance; refs.default_creature is kept only as a compatibility fallback.
-    return skin_equip.unequip(role_id, runtime_refs.default_creature)
+    return skin_equip.unequip(role_id, runtime_assets.default_skin_model().asset_id)
   end)
   skin_purchase.configure(skin_panel)
   _wire_sign_in_rewards(opts)
@@ -107,13 +103,13 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=5943895241f4ae08
+projectHash=97f163a815f54bde
 scope.0.id=chunk:src/app/host_install.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=107
-scope.0.semanticHash=5f3feb4e1be7ed28
-scope.0.lastMutatedAt=2026-06-21T06:24:10Z
+scope.0.endLine=103
+scope.0.semanticHash=1e6b54f0165416a3
+scope.0.lastMutatedAt=2026-06-24T20:06:55Z
 scope.0.lastMutationLane=behavior
 scope.0.lastMutationStatus=passed
 scope.0.lastMutationSites=15
@@ -123,7 +119,7 @@ scope.1.kind=function
 scope.1.startLine=19
 scope.1.endLine=26
 scope.1.semanticHash=b31081e96ea26d15
-scope.1.lastMutatedAt=2026-06-21T06:24:10Z
+scope.1.lastMutatedAt=2026-06-24T20:06:55Z
 scope.1.lastMutationLane=behavior
 scope.1.lastMutationStatus=passed
 scope.1.lastMutationSites=4
@@ -133,7 +129,7 @@ scope.2.kind=function
 scope.2.startLine=28
 scope.2.endLine=38
 scope.2.semanticHash=6b7b072b72a9395c
-scope.2.lastMutatedAt=2026-06-21T06:24:10Z
+scope.2.lastMutatedAt=2026-06-24T20:06:55Z
 scope.2.lastMutationLane=behavior
 scope.2.lastMutationStatus=passed
 scope.2.lastMutationSites=5
@@ -143,7 +139,7 @@ scope.3.kind=function
 scope.3.startLine=40
 scope.3.endLine=47
 scope.3.semanticHash=b9ec207b26d00b67
-scope.3.lastMutatedAt=2026-06-21T06:24:10Z
+scope.3.lastMutatedAt=2026-06-24T20:06:55Z
 scope.3.lastMutationLane=behavior
 scope.3.lastMutationStatus=passed
 scope.3.lastMutationSites=5
@@ -153,17 +149,12 @@ scope.4.kind=function
 scope.4.startLine=63
 scope.4.endLine=65
 scope.4.semanticHash=792efb48e5525723
-scope.4.lastMutatedAt=2026-06-21T06:24:10Z
-scope.4.lastMutationLane=behavior
-scope.4.lastMutationStatus=no_sites
-scope.4.lastMutationSites=0
-scope.4.lastMutationKilled=0
 scope.5.id=function:_wire_sign_in_rewards:54
 scope.5.kind=function
 scope.5.startLine=54
 scope.5.endLine=67
 scope.5.semanticHash=78d94fd5e75025d7
-scope.5.lastMutatedAt=2026-06-21T06:24:10Z
+scope.5.lastMutatedAt=2026-06-24T20:06:55Z
 scope.5.lastMutationLane=behavior
 scope.5.lastMutationStatus=passed
 scope.5.lastMutationSites=8
@@ -171,39 +162,29 @@ scope.5.lastMutationKilled=8
 scope.6.id=function:anonymous@72:72
 scope.6.kind=function
 scope.6.startLine=72
-scope.6.endLine=82
-scope.6.semanticHash=fc767ac312e1f064
-scope.6.lastMutatedAt=2026-06-21T06:24:10Z
-scope.6.lastMutationLane=behavior
-scope.6.lastMutationStatus=no_sites
-scope.6.lastMutationSites=0
-scope.6.lastMutationKilled=0
-scope.7.id=function:anonymous@83:83
+scope.6.endLine=80
+scope.6.semanticHash=06bdecb7c351271c
+scope.7.id=function:anonymous@81:81
 scope.7.kind=function
-scope.7.startLine=83
-scope.7.endLine=87
-scope.7.semanticHash=f7fca92f268d55c7
-scope.7.lastMutatedAt=2026-06-21T06:24:10Z
-scope.7.lastMutationLane=behavior
-scope.7.lastMutationStatus=no_sites
-scope.7.lastMutationSites=0
-scope.7.lastMutationKilled=0
+scope.7.startLine=81
+scope.7.endLine=83
+scope.7.semanticHash=da02a876b9e3c6bf
 scope.8.id=function:_load_required_modules:69
 scope.8.kind=function
 scope.8.startLine=69
-scope.8.endLine=93
-scope.8.semanticHash=7280de75ed16cdb8
-scope.8.lastMutatedAt=2026-06-21T06:24:10Z
+scope.8.endLine=89
+scope.8.semanticHash=db6aa869d0dde430
+scope.8.lastMutatedAt=2026-06-24T20:06:55Z
 scope.8.lastMutationLane=behavior
 scope.8.lastMutationStatus=passed
 scope.8.lastMutationSites=9
 scope.8.lastMutationKilled=9
-scope.9.id=function:M.install:95
+scope.9.id=function:M.install:91
 scope.9.kind=function
-scope.9.startLine=95
-scope.9.endLine=104
+scope.9.startLine=91
+scope.9.endLine=100
 scope.9.semanticHash=f22621e541bce19b
-scope.9.lastMutatedAt=2026-06-21T06:24:10Z
+scope.9.lastMutatedAt=2026-06-24T20:06:55Z
 scope.9.lastMutationLane=behavior
 scope.9.lastMutationStatus=passed
 scope.9.lastMutationSites=8

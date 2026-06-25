@@ -15,6 +15,16 @@ end
 
 local _build_choice_modal_state = support.build_choice_modal_state
 
+local function _panel_game(players, coins_by_key)
+  return {
+    players = players,
+    player_balance = function(_, player)
+      local key = player and (player.id or player.name) or nil
+      return coins_by_key and coins_by_key[key] or 0
+    end,
+  }
+end
+
 local function _build_market_nav_dispatch_env()
   local game = _new_game()
   local state = {
@@ -106,17 +116,15 @@ describe("presentation_ui.model_dispatch", function()
 
   it("_test_ui_panel_clamps_negative_assets_to_zero", function()
     local ui_panel = require("src.ui.view.panel_builder")
-    local statuses = ui_panel.build_player_statuses({
-      players = {
+    local statuses = ui_panel.build_player_statuses(
+      _panel_game({
         {
           id = 1,
           name = "P1",
-          cash = -123,
           eliminated = false,
           properties = {},
         },
-      },
-    }, {
+      }, { [1] = -123 }), {
       board = {
         get_tile_by_id = function()
           return nil
@@ -153,23 +161,20 @@ describe("presentation_ui.model_dispatch", function()
         }
       end },
     }, function()
-      local statuses = ui_panel.build_player_statuses({
-        players = {
+      local statuses = ui_panel.build_player_statuses(
+        _panel_game({
           {
             name = "NoId",
-            cash = 7,
             eliminated = false,
             properties = {},
           },
           {
             id = 2,
             name = "Local",
-            cash = "not-a-number",
             eliminated = true,
             properties = { [20] = true },
           },
-        },
-      }, {
+        }, { NoId = 7, [2] = "not-a-number" }), {
         board = {
           get_tile_by_id = function(_, tile_id)
             if tile_id == 20 then
@@ -204,16 +209,14 @@ describe("presentation_ui.model_dispatch", function()
 
   it("_test_ui_panel_missing_player_name_renders_blank_label", function()
     local ui_panel = require("src.ui.view.panel_builder")
-    local statuses = ui_panel.build_player_statuses({
-      players = {
+    local statuses = ui_panel.build_player_statuses(
+      _panel_game({
         {
           id = 1,
-          cash = 0,
           eliminated = false,
           properties = {},
         },
-      },
-    }, nil, 1)
+      }, { [1] = 0 }), nil, 1)
 
     local row = statuses and statuses[1] or nil
     assert(row ~= nil, "panel row should exist")
@@ -245,20 +248,18 @@ describe("presentation_ui.model_dispatch", function()
 
   it("_test_ui_panel_builds_empty_rows_and_counts_land_assets_only", function()
     local ui_panel = require("src.ui.view.panel_builder")
-    local statuses = ui_panel.build_player_statuses({
-      players = {
+    local statuses = ui_panel.build_player_statuses(
+      _panel_game({
         {
           id = 1,
           name = "P1",
-          cash = 120,
           eliminated = false,
           properties = {
             [10] = true,
             [11] = true,
           },
         },
-      },
-    }, {
+      }, { [1] = 120 }), {
       board = {
         get_tile_by_id = function(_, tile_id)
           if tile_id == 10 then
@@ -436,20 +437,20 @@ describe("presentation_ui.model_dispatch", function()
     g.players[3] = g.players[3] or {
       id = 3,
       name = "AI3",
-      cash = 0,
       eliminated = false,
       inventory = { items = {} },
       properties = {},
       status = { stay_turns = 0, deity = nil },
+      _coin_role = require("src.player.actions.balance").new_memory_coin_role(0),
     }
     g.players[4] = g.players[4] or {
       id = 4,
       name = "AI4",
-      cash = 0,
       eliminated = false,
       inventory = { items = {} },
       properties = {},
       status = { stay_turns = 0, deity = nil },
+      _coin_role = require("src.player.actions.balance").new_memory_coin_role(0),
     }
     g.players[1].name = "本地玩家1"
     g.players[2].name = "AI2"
@@ -996,7 +997,7 @@ describe("presentation_ui.model_dispatch", function()
     local original_choice_owner_id = model.item_choice_owner_id
     local original_popup = model.popup
 
-    g.players[1].cash = 4321
+    g:set_player_cash(g.players[1], 4321)
     g.players[1].auto = true
     g.turn.turn_count = 7
     g.turn.countdown_seconds = 12
