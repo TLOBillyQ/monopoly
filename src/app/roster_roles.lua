@@ -154,12 +154,12 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=5a956ef9772132de
+projectHash=f447d9975058796a
 scope.0.id=chunk:src/app/roster_roles.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=154
-scope.0.semanticHash=d02068e5835c526d
+scope.0.semanticHash=f7c525ae98dcf062
 scope.1.id=function:_resolve_roles:8
 scope.1.kind=function
 scope.1.startLine=8

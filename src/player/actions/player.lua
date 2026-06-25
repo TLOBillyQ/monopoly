@@ -33,10 +33,15 @@ return player
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=060b34a240ce3270
+projectHash=ca715b55b99a58d4
 scope.0.id=chunk:src/player/actions/player.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=45
-scope.0.semanticHash=766922b212e45bcb
+scope.0.endLine=33
+scope.0.semanticHash=b4678ca55874bb49
+scope.1.id=function:player:init:4
+scope.1.kind=function
+scope.1.startLine=4
+scope.1.endLine=30
+scope.1.semanticHash=1880ef31c3f23de7
 ]]

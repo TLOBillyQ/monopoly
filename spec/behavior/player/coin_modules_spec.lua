@@ -32,6 +32,7 @@ describe("coin_validation labels", function()
     _assert_eq(coin_validation.coin_error({ id = 5, name = "" }, "x"),
       "玩家5 " .. ATTR .. " x", "empty name falls back to id")
     _assert_eq(coin_validation.coin_error({ name = "Bob" }, "x"), "Bob " .. ATTR .. " x", "name only")
+    _assert_eq(coin_validation.coin_error({ name = "" }, "x"), "玩家? " .. ATTR .. " x", "empty name only falls back")
     _assert_eq(coin_validation.coin_error({}, "x"), "玩家? " .. ATTR .. " x", "no identity")
   end)
 end)
@@ -116,6 +117,22 @@ describe("coin_store role resolution", function()
     _assert_error_contains(function()
       coin_store.read_raw(_player_with_role({}))
     end, { ATTR, "get_attr_raw_fixed", "set_attr_raw_fixed" })
+  end)
+
+  it("fails when the role exposes only a getter without a setter", function()
+    _assert_error_contains(function()
+      coin_store.read_raw(_player_with_role({ get_attr_raw_fixed = function() return 5 end }))
+    end, { ATTR, "get_attr_raw_fixed", "set_attr_raw_fixed" })
+  end)
+
+  it("reports a throwing setter as a write failure", function()
+    local role = {
+      get_attr_raw_fixed = function() return 0 end,
+      set_attr_raw_fixed = function() error("boom") end,
+    }
+    local ok, err = coin_store.try_write(_player_with_role(role), 10)
+    assert(ok == false, "write should fail")
+    assert(string.find(tostring(err), "boom", 1, true) ~= nil, "failure should surface the setter error")
   end)
 
   it("resolves the runtime role for players with an id", function()
