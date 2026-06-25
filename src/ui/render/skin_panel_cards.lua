@@ -45,9 +45,7 @@ local function _skin_card_image_key(state, skin)
   if skin == nil then
     return nil
   end
-  local image = runtime_assets.image_for_skin_card(skin.product_id, {
-    refs = state.ui_refs,
-  })
+  local image = runtime_assets.image_for_skin_card(skin.product_id, runtime_assets.asset_context(state))
   if image.ok == true then
     return image.image_key
   end

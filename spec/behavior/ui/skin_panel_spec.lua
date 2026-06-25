@@ -10,6 +10,7 @@ local skin_nodes = require("src.ui.schema.skin")
 local default_skins = require("src.config.content.skins")
 local logger = require("src.foundation.log")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
+local runtime_assets = require("src.config.runtime_assets")
 
 local function _make_state()
   return { ui = {} }
@@ -813,6 +814,33 @@ describe("skin_panel", function()
         "should set texture for skin with image ref")
       assert(textures[skin_nodes.card_images[2]] == nil,
         "should not set texture for skin without image ref")
+    end)
+
+    it("sets card texture from resolver asset context without ui_refs", function()
+      local catalog = _make_rich_catalog()
+      local state, _ = _make_render_state()
+      state.ui_refs = nil
+      state.runtime_asset_context = {
+        refs = {
+          images = {
+            ["5001"] = "tex_pig",
+          },
+        },
+      }
+      local textures = {}
+      local runtime = {
+        query_node = function(name) return { name = name } end,
+        set_node_texture_keep_size = function(node, key)
+          textures[node.name] = key
+        end,
+      }
+
+      skin_panel_view.refresh_slots(state, catalog, { runtime = runtime })
+
+      assert(runtime_assets.asset_context(state) == state.runtime_asset_context,
+        "state asset context should be the adapter-facing resolver fixture")
+      assert(textures[skin_nodes.card_images[1]] == "tex_pig",
+        "skin card renderer should consume resolver asset context without ui_refs")
     end)
 
     it("uses card image refs instead of skin prefab refs for card textures", function()
