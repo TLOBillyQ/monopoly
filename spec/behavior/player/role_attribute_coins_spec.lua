@@ -95,6 +95,76 @@ describe("role attribute coins", function()
     assert(game.turn.action_anim and game.turn.action_anim.kind == "cash_receive", "cash delta animation should remain")
   end)
 
+  it("allows spending down to exactly zero but rejects overspending", function()
+    local roles = { [1] = _role(500), [2] = _role(500) }
+    local game = _game_with_roles(roles)
+    game:set_player_cash(game.players[1], 500)
+
+    _assert_eq(game:deduct_player_cash(game.players[1], 500), 0, "deducting the full balance lands on zero")
+    _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 0, "role attr reaches zero")
+
+    _assert_error_contains(function()
+      game:deduct_player_cash(game.players[1], 1)
+    end, { "玩家1", "余额不足" })
+  end)
+
+  it("clamps coin_count to zero when an add drives the balance negative", function()
+    local roles = { [1] = _role(100), [2] = _role(0) }
+    local game = _game_with_roles(roles)
+    game:set_player_cash(game.players[1], 100)
+
+    _assert_eq(game:add_player_cash(game.players[1], -500), 0, "an over-large negative add clamps to zero, not an error")
+    _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 0, "role attr is clamped to zero")
+  end)
+
+  it("transfers coin_count between players and can move the entire balance", function()
+    local roles = { [1] = _role(10000), [2] = _role(2000) }
+    local game = _game_with_roles(roles)
+    game:set_player_cash(game.players[1], 10000)
+    game:set_player_cash(game.players[2], 2000)
+
+    local payer_after, receiver_after = game:transfer_player_cash(game.players[1], game.players[2], 3000)
+    _assert_eq(payer_after, 7000, "payer is debited by the transfer amount")
+    _assert_eq(receiver_after, 5000, "receiver is credited by the transfer amount")
+    _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 7000, "payer role attr reflects the debit")
+    _assert_eq(roles[2]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 5000, "receiver role attr reflects the credit")
+
+    local emptied, filled = game:transfer_player_cash(game.players[1], game.players[2], 7000)
+    _assert_eq(emptied, 0, "a player may transfer their entire balance")
+    _assert_eq(filled, 12000, "receiver collects the full transfer")
+
+    -- a zero-amount transfer is a no-op, not a rejection
+    local same_payer, same_receiver = game:transfer_player_cash(game.players[1], game.players[2], 0)
+    _assert_eq(same_payer, 0, "a zero transfer leaves the payer unchanged")
+    _assert_eq(same_receiver, 12000, "a zero transfer leaves the receiver unchanged")
+
+    _assert_error_contains(function()
+      game:transfer_player_cash(game.players[1], game.players[2], 1)
+    end, { "玩家1", "余额不足" })
+  end)
+
+  it("rejects a negative transfer amount", function()
+    local roles = { [1] = _role(100), [2] = _role(100) }
+    local game = _game_with_roles(roles)
+    game:set_player_cash(game.players[1], 100)
+    game:set_player_cash(game.players[2], 100)
+
+    _assert_error_contains(function()
+      game:transfer_player_cash(game.players[1], game.players[2], -5)
+    end, { "玩家1", "支付金额不能为负数" })
+  end)
+
+  it("initialize_player_coins preserves an already-seeded balance instead of overwriting", function()
+    local role = _role(777)
+    local player = { id = 1, _coin_role = role }
+    _with_patches({
+      { target = runtime_ports, key = "resolve_role", value = function() return nil end },
+    }, function()
+      _assert_eq(balance.initialize_player_coins(player, 100), 777, "an existing balance is returned, not replaced")
+      _assert_eq(role:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 777, "the seeded role attr is untouched")
+    end)
+  end)
+
   it("transfers coin_count atomically and rolls back first write on recipient failure", function()
     local roles = {
       [1] = _role(10000),
@@ -110,7 +180,7 @@ describe("role attribute coins", function()
 
     _assert_error_contains(function()
       game:transfer_player_cash(payer, receiver, 3000)
-    end, { "玩家2", balance.COIN_COUNT_ATTR_ID, "回滚结果" })
+    end, { "玩家2", balance.COIN_COUNT_ATTR_ID, "回滚结果=成功" })
 
     _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 10000, "payer rollback")
     _assert_eq(roles[2]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 2000, "receiver unchanged")
