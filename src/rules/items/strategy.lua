@@ -127,15 +127,34 @@ local function _try_monster(game, player, phase, auto_play)
   end, auto_play)
 end
 
+local function _try_mine(game, player, phase, auto_play)
+  return _try_use_item(game, player, item_ids.mine, phase, nil, auto_play)
+end
+
+local function _try_dice_multiplier(game, player, phase, auto_play)
+  return _try_use_item(game, player, item_ids.dice_multiplier, phase, nil, auto_play)
+end
+
+-- AI auto-play probes, attempted in priority order; first success short-circuits.
+local _AUTO_PRE_ACTION_PROBES = {
+  _try_clear_obstacles,
+  _try_remote_dice,
+  _try_mine,
+  _try_dice_multiplier,
+  _try_roadblock,
+  _try_monster,
+  _try_target_items,
+  _try_deity_items,
+}
+
 local function _run_auto_pre_action_probes(game, player, phase, auto_play)
-  return _try_clear_obstacles(game, player, phase, auto_play)
-    or _try_remote_dice(game, player, phase, auto_play)
-    or _try_use_item(game, player, item_ids.mine, phase, nil, auto_play)
-    or _try_use_item(game, player, item_ids.dice_multiplier, phase, nil, auto_play)
-    or _try_roadblock(game, player, phase, auto_play)
-    or _try_monster(game, player, phase, auto_play)
-    or _try_target_items(game, player, phase, auto_play)
-    or _try_deity_items(game, player, phase, auto_play)
+  for _, probe in ipairs(_AUTO_PRE_ACTION_PROBES) do
+    local res = probe(game, player, phase, auto_play)
+    if res then
+      return res
+    end
+  end
+  return nil
 end
 
 function strategy.auto_pre_action(game, player, phase)
