@@ -3,6 +3,7 @@ local completion = require("src.app.cosmetics.transaction_completion")
 local transaction_context = require("src.app.cosmetics.transaction_context")
 local transaction_result = require("src.app.cosmetics.transaction_result")
 local transaction_state = require("src.app.cosmetics.transaction_state")
+local queries = require("src.app.cosmetics.transaction_queries")
 
 local actions = {}
 
@@ -205,32 +206,12 @@ function actions.complete_skin_purchase(root_state, role_id, product_id)
   return completion.complete_skin_purchase(root_state, role_id, product_id)
 end
 
-function actions.is_slot_equipped(root_state, slot_index)
-  local panel = root_state and root_state.ui and root_state.ui.skin_panel or nil
-  if panel == nil or panel.role_id == nil then
-    return false
-  end
-  local skin = transaction_state.skin_at(panel, slot_index)
-  if skin == nil then
-    return false
-  end
-  return transaction_state.equipped_product(panel, panel.role_id) == skin.product_id
-end
-
-function actions.slot_view_model(root_state, slot_index, catalog)
-  local panel = root_state and root_state.ui and root_state.ui.skin_panel or nil
-  return transaction_state.slot_view_model(panel, panel and panel.role_id or nil, slot_index, catalog)
-end
-
-function actions.slot_view_models(root_state, catalog)
-  local panel = root_state and root_state.ui and root_state.ui.skin_panel or nil
-  return transaction_state.slot_view_models(panel, panel and panel.role_id or nil, catalog)
-end
-
-function actions.equipped_product(root_state, role_id)
-  local panel = root_state and root_state.ui and root_state.ui.skin_panel or nil
-  return transaction_state.equipped_product(panel, role_id)
-end
+-- Read-only slot/equip queries live in transaction_queries; re-exported here so
+-- the transaction_actions API stays unchanged for the transaction facade.
+actions.is_slot_equipped = queries.is_slot_equipped
+actions.slot_view_model = queries.slot_view_model
+actions.slot_view_models = queries.slot_view_models
+actions.equipped_product = queries.equipped_product
 
 return actions
 
