@@ -29,6 +29,10 @@ function runtime_path_ops.is_windows()
   return package.config:sub(1, 1) == "\\"
 end
 
+local function _posix_shell_quote(value)
+  return "'" .. tostring(value or ""):gsub("'", "'\\''") .. "'"
+end
+
 function runtime_path_ops.current_dir()
   local env_cwd = os.getenv("PWD")
   if env_cwd ~= nil and env_cwd ~= "" then
@@ -54,12 +58,13 @@ function runtime_path_ops.path_exists(path)
     return true
   end
 
-  local escaped = runtime_path_ops.normalize(path):gsub('"', '\\"')
+  local normalized = runtime_path_ops.normalize(path)
   local command
   if runtime_path_ops.is_windows() then
+    local escaped = normalized:gsub('"', '""')
     command = string.format('if exist "%s" (exit 0) else (exit 1)', escaped)
   else
-    command = string.format('[ -e "%s" ]', escaped)
+    command = "[ -e " .. _posix_shell_quote(normalized) .. " ]"
   end
 
   local ok = os.execute(command)

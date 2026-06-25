@@ -9,7 +9,10 @@ local runtime_paths = dofile("tools/shared/runtime_paths.lua")
 
 describe("shared.runtime_paths", function()
   it("resolves a repo root from the lockfile-based tool layout", function()
-    local root = common.make_temp_path("runtime_paths_spec", "")
+    local root = common.join_path(
+      "tmp",
+      "runtime_paths_spec_$__monopoly_runtime_paths_unset__ path"
+    )
     common.remove_path(root)
 
     assert.is_true(common.ensure_dir(common.join_path(root, "src")))
