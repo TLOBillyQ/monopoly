@@ -6,26 +6,14 @@ local intents = {}
 local INTENT_TYPE = "skin_panel_action"
 local _append = append_intent_spec.builder(INTENT_TYPE)
 
--- Lazily resolve the coord panel so this input-layer route can query live
--- equipped state without a load-time require cycle (coord registers the routes).
-local _coord_skin_panel
-local function _is_slot_equipped(state, slot_index)
-  _coord_skin_panel = _coord_skin_panel or require("src.ui.coord.skin_panel")
-  return _coord_skin_panel.is_slot_equipped(state, slot_index)
-end
-
--- An equipped slot's action button is rendered as "脱下"; clicking it must
--- unequip. build() runs once at canvas-bind time, so the equip/unequip decision
--- is deferred into build_intent (per click) where it reads the live panel state.
-local function _append_action_button(specs, name, slot_index, state)
+local function _append_action_button(specs, name, slot_index)
   if not name then
     return
   end
   specs[#specs + 1] = {
     name = name,
     build_intent = function()
-      local action_type = _is_slot_equipped(state, slot_index) and "unequip" or "equip"
-      return { type = INTENT_TYPE, action = { type = action_type, slot_index = slot_index } }
+      return { type = INTENT_TYPE, action = { type = "activate_slot", slot_index = slot_index } }
     end,
   }
 end
@@ -34,7 +22,7 @@ function intents.build(state)
   local specs = {}
   _append(specs, nodes.close_button, "close")
   for slot_index, name in ipairs(nodes.action_buttons) do
-    _append_action_button(specs, name, slot_index, state)
+    _append_action_button(specs, name, slot_index)
   end
   for slot_index, name in ipairs(nodes.card_images) do
     _append(specs, name, { type = "equip", slot_index = slot_index })

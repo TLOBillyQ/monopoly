@@ -75,29 +75,23 @@ local function _refresh_card_image(state, ui, runtime, slot, skin)
   _set_card_image_state(ui, card_name, skin ~= nil)
 end
 
-local function _price_icon_visible(skin, status)
-  local is_purchase = skin ~= nil and skin.unlock == "purchase"
-  local has_price = is_purchase and skin.price ~= nil and skin.currency ~= nil
-  local is_owned = status == "owned" or status == "equipped"
-  return has_price and not is_owned
-end
-
-local function _refresh_price_icon(ui, slot, skin, status)
+local function _refresh_price_icon(ui, slot, view)
   local price_icon = nodes.price_icons[slot]
   if not price_icon or not ui.set_visible then
     return
   end
-  ui:set_visible(price_icon, _price_icon_visible(skin, status))
+  ui:set_visible(price_icon, view and view.price_icon_visible == true)
   if ui.set_touch_enabled then
     ui:set_touch_enabled(price_icon, false)
   end
 end
 
-function M.refresh_slot_visuals(state, ui, runtime, slot, skin, status)
-  local has_skin = skin ~= nil
+function M.refresh_slot_visuals(state, ui, runtime, slot, view)
+  local skin = view and view.skin or nil
+  local has_skin = view and view.has_skin == true
   _refresh_card_frame(ui, slot, has_skin)
   _refresh_card_image(state, ui, runtime, slot, skin)
-  _refresh_price_icon(ui, slot, skin, status)
+  _refresh_price_icon(ui, slot, view)
   _refresh_card_outline_container(ui, slot, has_skin)
 end
 

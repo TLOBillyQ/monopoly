@@ -499,6 +499,69 @@ describe("app.cosmetics.transaction", function()
     assert(transaction.is_slot_equipped(state, 1) == false, "selection should be scoped to panel role")
   end)
 
+  it("slot_view_models_expose_transaction_owned_slot_state", function()
+    transaction.configure_catalog_for_tests({
+      { product_id = "skin_1", name = "购买皮肤", unlock = "purchase", currency = "金豆", price = 198 },
+      { product_id = "skin_2", name = "已装备皮肤", unlock = "purchase", currency = "金豆", price = 198 },
+      { product_id = "skin_3", name = "赠礼皮肤", unlock = "gift", gift_name = "谢礼" },
+    })
+    transaction.configure_archive(_archive({ ["1"] = { "skin_2", "skin_3" } }, { ["1"] = "skin_2" }))
+    transaction.configure_equip(function()
+      return true
+    end)
+    local state = _state()
+
+    transaction.handle_skin_transaction(state, 1, { type = "open" })
+
+    local views = transaction.slot_view_models(state)
+    _assert_eq(views[1].product_id, "skin_1", "view should expose the first product id")
+    _assert_eq(views[1].status, "locked", "unowned purchase skin should be locked")
+    _assert_eq(views[1].button_text, "198", "locked purchase should expose price button text")
+    _assert_eq(views[1].button_touch_enabled, true, "locked purchase should be touchable")
+    _assert_eq(views[1].price_icon_visible, true, "locked priced purchase should show price icon")
+
+    _assert_eq(views[2].status, "equipped", "archived equipped skin should render as equipped")
+    _assert_eq(views[2].button_text, "脱下", "equipped skin should expose unequip text")
+    _assert_eq(views[2].price_icon_visible, false, "equipped skin should hide price icon")
+
+    _assert_eq(views[3].status, "owned", "archived gift skin should render as owned")
+    _assert_eq(views[3].button_text, "穿上", "owned skin should expose equip text")
+    _assert_eq(views[3].button_touch_enabled, true, "owned skin should be touchable")
+
+    _assert_eq(views[4].status, "empty", "missing catalog entries should render empty slots")
+    _assert_eq(views[4].has_skin, false, "empty slot should report no skin")
+    _assert_eq(views[4].button_text, "", "empty slot should have no button text")
+    _assert_eq(views[4].button_touch_enabled, false, "empty slot should not be touchable")
+    _assert_eq(views[4].price_icon_visible, false, "empty slot should hide price icon")
+
+    _assert_eq(transaction.slot_view_model(state, 2).status, "equipped",
+      "single-slot view should use the same transaction-owned status")
+    _assert_eq(transaction.equipped_product(state), "skin_2",
+      "transaction should expose the currently equipped product")
+  end)
+
+  it("activate_slot_owns_equip_or_unequip_decision", function()
+    local state = _state()
+    transaction.configure_equip(function()
+      return true
+    end)
+    transaction.configure_unequip(function()
+      return true
+    end)
+    transaction.handle_skin_transaction(state, 1, { type = "open" })
+    transaction.handle_skin_transaction(state, 1, { type = "unlock_slot", slot_index = 1 })
+
+    local equip = transaction.handle_skin_transaction(state, 1, { type = "activate_slot", slot_index = 1 })
+    assert(equip.accepted == true, "activate_slot should equip an owned inactive slot")
+    _assert_eq(equip.action, "equip", "activate_slot should return the equip result when inactive")
+    _assert_eq(transaction.equipped_product(state), "skin_1", "activate_slot equip should select the skin")
+
+    local unequip = transaction.handle_skin_transaction(state, 1, { type = "activate_slot", slot_index = 1 })
+    assert(unequip.accepted == true, "activate_slot should unequip the active slot")
+    _assert_eq(unequip.action, "unequip", "activate_slot should return the unequip result when active")
+    _assert_eq(transaction.equipped_product(state), nil, "activate_slot unequip should clear the selection")
+  end)
+
   it("state_module_pins_panel_result_defaults_and_role_guards", function()
     local missing_panel, missing_reason = transaction_state.ensure_panel(nil)
     _assert_eq(missing_panel, nil, "missing state should not create a panel")
