@@ -33,14 +33,17 @@ describe("boundary_assertions_t36", function()
 
   it("deduct_player_cash_asserts_negative_balance", function()
     local game = setmetatable({}, { __index = balance_ops })
-    local player = { cash = 5 }
+    local player = {
+      id = 1,
+      _coin_role = balance_ops.new_memory_coin_role(5),
+    }
 
     local ok, err = pcall(function()
       game:deduct_player_cash(player, 6)
     end)
 
     assert(ok == false, "deduct_player_cash should assert on negative balance")
-    _assert_contains(err, "negative balance: -1", "unexpected negative balance assertion message")
+    _assert_contains(err, "余额不足: -1", "unexpected negative balance assertion message")
   end)
 
   it("dirty_tracker_mark_asserts_unknown_domain", function()
