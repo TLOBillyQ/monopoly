@@ -35,9 +35,7 @@ local function _resolve_popup_image_key(state, payload)
   if image_ref == nil then
     return nil
   end
-  local image = runtime_assets.image_for_popup_card(payload.kind, image_ref, {
-    refs = state and state.ui_refs or nil,
-  })
+  local image = runtime_assets.image_for_popup_card(payload.kind, image_ref, runtime_assets.asset_context(state))
   return _image_result_key(image)
 end
 
@@ -128,9 +126,7 @@ local function _apply_screen_image(state, screen, node_name, image_key, set_text
   if not ui or not screen or not node_name then
     return
   end
-  local empty_image = runtime_assets.empty_image({
-    refs = state and state.ui_refs or nil,
-  })
+  local empty_image = runtime_assets.empty_image(runtime_assets.asset_context(state))
   _apply_node_image(ui, node_name, ui.query_node(node_name), image_key, empty_image.image_key, set_texture, show_when_empty)
 end
 

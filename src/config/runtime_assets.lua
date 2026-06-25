@@ -33,6 +33,7 @@ _copy_exports(synthetic, {
 runtime_assets.board_feedback_cue = board_feedback.board_feedback_cue
 runtime_assets.validate_catalog = validation.validate_catalog
 runtime_assets.compat_refs = state.compat_refs
+runtime_assets.asset_context = state.asset_context
 runtime_assets.configure_for_tests = state.configure_for_tests
 runtime_assets.reset_for_tests = state.reset_for_tests
 

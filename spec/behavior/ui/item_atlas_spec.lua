@@ -692,6 +692,19 @@ describe("item_atlas", function()
         "should set texture for item with image ref")
     end)
 
+    it("sets texture from resolver asset context without ui_refs", function()
+      local catalog = { { id = "item_A", name = "A" } }
+      local state, _ = _make_render_state()
+      state.ui_refs = nil
+      state.runtime_asset_context = { refs = { images = { item_A = "texture_A" } } }
+      local runtime = _stub_runtime()
+
+      item_atlas_view.refresh_page(state, catalog, 1, { runtime = runtime })
+
+      assert(runtime.textures[item_atlas_nodes.card_images[1]] == "texture_A",
+        "item atlas renderer should consume resolver asset context without ui_refs")
+    end)
+
     it("sets texture on all matched card nodes when runtime exposes query_nodes", function()
       local catalog = { { id = "item_A", name = "A" } }
       local state, _ = _make_render_state()
