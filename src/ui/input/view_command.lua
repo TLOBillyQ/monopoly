@@ -1,15 +1,10 @@
 local view_command_dispatcher = {}
 local panel_interrupt = require("src.ui.coord.panel_interrupt")
 local fallback = require("src.ui.input.view_command_fallback")
-
-local _PANEL_ID_BY_INTENT = {
-  toggle_action_log = "action_log",
-  open_skin_panel = "skin",
-  open_gallery_panel = "gallery",
-}
+local command_policy = require("src.ui.input.command_policy")
 
 local function _intent_panel_id(intent)
-  return _PANEL_ID_BY_INTENT[intent and intent.type]
+  return command_policy.panel_id(intent)
 end
 
 local function _dispatch_via_ports(state, intent)

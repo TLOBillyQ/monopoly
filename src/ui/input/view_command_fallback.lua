@@ -1,4 +1,5 @@
 local roles = require("src.ui.input.view_command_roles")
+local command_policy = require("src.ui.input.command_policy")
 
 local fallback = {}
 
@@ -126,9 +127,9 @@ local _FALLBACK_HANDLERS = {
 }
 
 function fallback.dispatch(state, intent)
-  local intent_type = intent and intent.type
-  if intent_type == nil then return false end
-  local handler = _FALLBACK_HANDLERS[intent_type]
+  local handler_key = command_policy.fallback_handler(intent)
+  if handler_key == nil then return false end
+  local handler = _FALLBACK_HANDLERS[handler_key]
   if handler then return handler(state, intent) end
   return false
 end
