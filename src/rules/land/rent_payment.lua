@@ -111,15 +111,12 @@ function rent_payment.execute_pay_rent(game, player_id, tile_id)
   })
 
   if game:player_balance(player, "金币") >= rent then
-    game:deduct_player_cash(player, rent)
-    game:add_player_cash(owner, rent)
+    game:transfer_player_cash(player, owner, rent)
     achievement_progress.cash_received(game, owner, rent)
     return result
   end
 
-  local liquid = game:player_balance(player, "金币")
-  game:add_player_cash(player, -rent)
-  game:add_player_cash(owner, liquid)
+  local _, _, liquid = game:transfer_player_cash(player, owner, rent, { allow_partial = true })
   achievement_progress.cash_received(game, owner, liquid)
   local reason = player.name .. " 资金不足，欠付(" .. owner.name .. ") " .. number_utils.format_integer_part(rent) .. " 破产"
   result.event = "rent_bankrupt"

@@ -3,6 +3,7 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local constants = require("src.config.content.constants")
 local balance = require("src.player.actions.balance")
 local Player = require("src.player.actions.player")
+local land_rules = require("src.rules.land.landing_rules")
 
 local _with_patches = support.with_patches
 local _assert_eq = support.assert_eq
@@ -14,6 +15,7 @@ local function _role(initial)
   local role = {
     writes = {},
     fail_next_set = false,
+    fail_values = nil,
   }
   function role:get_attr_raw_fixed(attr_id)
     return attrs[attr_id]
@@ -26,6 +28,9 @@ local function _role(initial)
       self.fail_next_set = false
       return false
     end
+    if self.fail_values and self.fail_values[value] == true then
+      return false
+    end
     attrs[attr_id] = value
     self.writes[#self.writes + 1] = {
       attr_id = attr_id,
@@ -34,6 +39,14 @@ local function _role(initial)
     return true
   end
   return role
+end
+
+local function _action_anim_count(game)
+  local count = 0
+  if game.turn.action_anim then
+    count = count + 1
+  end
+  return count + #(game.turn.action_anim_queue or {})
 end
 
 local function _game_with_roles(roles_by_id)
@@ -154,6 +167,28 @@ describe("role attribute coins", function()
     end, { "玩家1", "支付金额不能为负数" })
   end)
 
+  it("supports capped transfer settlement for rule-owned bankruptcy decisions", function()
+    local roles = { [1] = _role(500), [2] = _role(2000) }
+    local game = _game_with_roles(roles)
+    game.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+    game:set_player_cash(game.players[1], 500)
+    game:set_player_cash(game.players[2], 2000)
+
+    local payer_after, receiver_after, moved = game:transfer_player_cash(
+      game.players[1],
+      game.players[2],
+      3000,
+      { allow_partial = true }
+    )
+
+    _assert_eq(moved, 500, "capped transfer moves only the payer's liquid balance")
+    _assert_eq(payer_after, 0, "payer is capped at zero")
+    _assert_eq(receiver_after, 2500, "receiver gets only the actual moved amount")
+    _assert_eq(_action_anim_count(game), 2, "capped transfer keeps visible deltas for both players")
+    _assert_eq(game.turn.action_anim.amount, -500, "payer delta is the actual debit")
+    _assert_eq(game.turn.action_anim_queue[1].amount, 500, "receiver delta is the actual credit")
+  end)
+
   it("initialize_player_coins preserves an already-seeded balance instead of overwriting", function()
     local role = _role(777)
     local player = { id = 1, _coin_role = role }
@@ -184,6 +219,58 @@ describe("role attribute coins", function()
 
     _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 10000, "payer rollback")
     _assert_eq(roles[2]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), 2000, "receiver unchanged")
+    _assert_eq(_action_anim_count(game), 0, "failed transfer must not queue partial cash animations")
+  end)
+
+  it("reports fatal rollback failure when the original payer write cannot be restored", function()
+    local roles = {
+      [1] = _role(10000),
+      [2] = _role(2000),
+    }
+    local game = _game_with_roles(roles)
+    local payer = game.players[1]
+    local receiver = game.players[2]
+
+    game:set_player_cash(payer, 10000)
+    game:set_player_cash(receiver, 2000)
+    roles[1].fail_values = { [10000] = true }
+    roles[2].fail_next_set = true
+
+    _assert_error_contains(function()
+      game:transfer_player_cash(payer, receiver, 3000)
+    end, { "玩家2", balance.COIN_COUNT_ATTR_ID, "回滚结果=fatal" })
+  end)
+
+  it("routes rent through atomic coin settlement before emitting receiver progress", function()
+    local roles = {
+      [1] = _role(10000),
+      [2] = _role(0),
+    }
+    local game = _game_with_roles(roles)
+    local payer = game.players[1]
+    local owner = game.players[2]
+    local _, tile = support.first_land_tile(game.board)
+    local progress_events = {}
+    game.achievement_progress_port = {
+      cash_received = function(_, player, amount)
+        progress_events[#progress_events + 1] = { player = player, amount = amount }
+        return true
+      end,
+    }
+
+    game:set_player_cash(payer, 10000)
+    game:set_player_cash(owner, 0)
+    game:set_tile_owner(tile, owner.id)
+    game:set_player_property(owner, tile.id, true)
+    roles[2].fail_next_set = true
+
+    _assert_error_contains(function()
+      land_rules.execute_pay_rent(game, payer.id, tile.id)
+    end, { "玩家2", balance.COIN_COUNT_ATTR_ID, "回滚结果=成功" })
+
+    _assert_eq(game:player_balance(payer, "金币"), 10000, "payer debit is rolled back")
+    _assert_eq(game:player_balance(owner, "金币"), 0, "owner receives no partial rent")
+    _assert_eq(#progress_events, 0, "failed settlement must not report receiver progress")
   end)
 
   it("hard fails on invalid coin_count values and missing role attr methods", function()
