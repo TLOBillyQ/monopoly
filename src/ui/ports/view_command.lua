@@ -11,6 +11,7 @@ local event_log_view = require("src.ui.coord.event_log_view")
 local skin_panel = require("src.ui.coord.skin_panel")
 local item_atlas = require("src.ui.coord.item_atlas")
 local skin_gallery = require("src.ui.coord.skin_gallery")
+local command_policy = require("src.ui.input.command_policy")
 
 local view_command_ports = {}
 
@@ -108,11 +109,11 @@ function view_command_ports.build()
   }
   return {
     dispatch = function(state, intent)
-      local intent_type = intent and intent.type or nil
-      if intent_type == nil then
+      local handler_key = command_policy.port_handler(intent)
+      if handler_key == nil then
         return false
       end
-      local handler = handlers[intent_type]
+      local handler = handlers[handler_key]
       return handler and handler(state, intent) or false
     end,
   }

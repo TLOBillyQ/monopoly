@@ -1,56 +1,24 @@
 local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
 local host_runtime_ports = require("src.ui.host_bridge")
 local logger = require("src.foundation.log")
+local command_policy = require("src.ui.input.command_policy")
 
 local policy = {}
 
-local ACTOR_BOUND_TYPES = {
-  toggle_action_log = true, open_skin_panel = true, open_gallery_panel = true,
-  skin_panel_action = true, item_atlas_action = true, skin_gallery_action = true,
-  choice_select = true, choice_cancel = true,
-  complete_optional_action_phase = true,
-  market_confirm = true, market_page_prev = true, market_page_next = true, market_tab_select = true,
-}
-
-local OPTIONAL_EVENT_ACTOR_TYPES = {
-  open_skin_panel = true,
-  open_gallery_panel = true,
-}
-
-local LOCAL_ONLY_ACTOR_TYPES = {
-  toggle_action_log = true,
-  open_skin_panel = true,
-  open_gallery_panel = true,
-  skin_panel_action = true,
-  item_atlas_action = true,
-  skin_gallery_action = true,
-}
-
 function policy.is_actor_bound_ui_button(action_id)
-  if action_id == "next" or action_id == "auto" then
-    return true
-  end
-  return type(action_id) == "string" and string.match(action_id, "^item_slot_(%d+)$") ~= nil
+  return command_policy.requires_event_actor({ type = "ui_button", id = action_id })
 end
 
 function policy.requires_event_actor(intent)
-  if type(intent) ~= "table" then return false end
-  if ACTOR_BOUND_TYPES[intent.type] then return true end
-  return intent.type == "ui_button" and policy.is_actor_bound_ui_button(intent.id)
+  return command_policy.requires_event_actor(intent)
 end
 
 function policy.uses_local_actor(intent)
-  if type(intent) ~= "table" then
-    return false
-  end
-  if LOCAL_ONLY_ACTOR_TYPES[intent.type] then
-    return true
-  end
-  return intent.type == "ui_button" and intent.id == "auto"
+  return command_policy.uses_local_actor(intent)
 end
 
 function policy.is_optional_event_actor(intent)
-  return type(intent) == "table" and OPTIONAL_EVENT_ACTOR_TYPES[intent.type] == true
+  return command_policy.is_optional_event_actor(intent)
 end
 
 function policy.resolve_actor_role_id(state, intent, data)

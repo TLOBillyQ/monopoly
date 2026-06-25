@@ -2,6 +2,7 @@ local logger = require("src.foundation.log")
 local turn_action_port = require("src.ui.input.turn_action")
 local game_action_dispatcher = require("src.ui.input.game_action")
 local view_command_dispatcher = require("src.ui.input.view_command")
+local command_policy = require("src.ui.input.command_policy")
 
 local intent_dispatcher = {}
 
@@ -12,16 +13,11 @@ end
 
 intent_dispatcher.dispatch_view_command = view_command_dispatcher.dispatch
 
-local _view_command_types = {
-  toggle_action_log = true, open_skin_panel = true, open_gallery_panel = true,
-  skin_panel_action = true, item_atlas_action = true, skin_gallery_action = true,
-}
-
 function intent_dispatcher.dispatch(state, game, intent, opts)
   assert(intent, "missing intent")
   local intent_type = intent.type
   local action_port = turn_action_port.resolve(state, opts)
-  if _view_command_types[intent_type] and intent_dispatcher.dispatch_view_command(state, intent) then return end
+  if command_policy.dispatches_before_game(intent) and intent_dispatcher.dispatch_view_command(state, intent) then return end
   if turn_action_port.should_block(state, intent, action_port) then return end
   if not game then
     logger.warn("ui intent without game:", tostring(intent_type))
