@@ -114,40 +114,37 @@ describe("skin_panel canvas action-button routing", function()
     skin_panel.reset_for_tests()
   end)
 
-  it("_test_action_button_on_equipped_slot_routes_unequip", function()
-    -- slot 1 (skin s1) is the equipped skin; its action button renders "脱下",
-    -- so the per-click intent must be an unequip, not a re-equip of the same skin.
+  it("_test_action_button_routes_activate_slot_for_equipped_slot", function()
+    -- The input route should report the clicked slot. The transaction flow owns
+    -- whether that activation equips or unequips.
     local state = _state_with("s1")
     local spec = _spec_named(skin_intents.build(state), skin_nodes.action_buttons[1])
     assert(spec ~= nil, "slot 1 action button must have a canvas route")
     local intent = spec.build_intent()
     assert(intent.type == "skin_panel_action", "route must dispatch a skin_panel_action intent")
-    assert(intent.action.type == "unequip",
-      "equipped slot's action button must emit unequip, not equip — the v102 skin-unequip-route bug")
+    assert(intent.action.type == "activate_slot",
+      "action button route should leave equip/unequip selection to the transaction flow")
+    assert(intent.action.slot_index == 1, "activate_slot intent must carry the clicked slot index")
   end)
 
-  it("_test_action_button_on_unequipped_slot_routes_equip", function()
-    -- slot 2 (skin s2) is owned but not equipped; its button renders "穿上",
-    -- so clicking it must still emit an equip intent for that slot.
+  it("_test_action_button_routes_activate_slot_for_unequipped_slot", function()
     local state = _state_with("s1")
     local spec = _spec_named(skin_intents.build(state), skin_nodes.action_buttons[2])
     assert(spec ~= nil, "slot 2 action button must have a canvas route")
     local intent = spec.build_intent()
-    assert(intent.action.type == "equip", "non-equipped slot's button must emit equip")
-    assert(intent.action.slot_index == 2, "equip intent must carry the clicked slot index")
+    assert(intent.action.type == "activate_slot", "non-equipped slot's button should emit activate_slot")
+    assert(intent.action.slot_index == 2, "activate_slot intent must carry the clicked slot index")
   end)
 
-  it("_test_action_intent_reads_live_state_at_click_time", function()
-    -- build() runs once at canvas-bind time, but build_intent() runs per click;
-    -- the equipped check must read the live panel state, not the bind-time state.
+  it("_test_action_intent_does_not_read_live_equipped_state", function()
     local state = _state_with(nil)
     local specs = skin_intents.build(state)
     local spec = _spec_named(specs, skin_nodes.action_buttons[1])
     assert(spec ~= nil, "slot 1 action button must have a canvas route")
-    assert(spec.build_intent().action.type == "equip",
-      "nothing equipped at build time → equip")
+    assert(spec.build_intent().action.type == "activate_slot",
+      "nothing equipped should still route through activate_slot")
     state.ui.skin_panel.selected_by_role["1"] = "s1"
-    assert(spec.build_intent().action.type == "unequip",
-      "after equipping s1, the same route must now emit unequip")
+    assert(spec.build_intent().action.type == "activate_slot",
+      "equipped state changes should not alter the input-layer action")
   end)
 end)

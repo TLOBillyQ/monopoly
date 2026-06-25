@@ -1,19 +1,14 @@
+local transaction_state = require("src.app.cosmetics.transaction_state")
+
 local state = {}
 
 function state.ensure(root_state)
-  assert(root_state ~= nil, "missing state")
-  local ui = assert(root_state.ui, "missing state.ui")
-  ui.skin_panel = ui.skin_panel or {
-    open = false,
-    page_index = 1,
-    owned_by_role = {},
-    selected_by_role = {},
-  }
-  return ui.skin_panel
+  local panel, err = transaction_state.ensure_panel(root_state)
+  return assert(panel, err or "missing_state")
 end
 
 function state.role_key(role_id)
-  return tostring(assert(role_id, "missing role_id"))
+  return assert(transaction_state.role_key(role_id), "missing role_id")
 end
 
 return state

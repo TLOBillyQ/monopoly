@@ -143,6 +143,20 @@ local function _equip_handler(root_state, role_id, request)
   return _equip_slot(root_state, role_id, _request_slot(request))
 end
 
+local function _activate_slot(root_state, role_id, request)
+  local panel, rejected = transaction_result.panel_or_rejection(root_state)
+  if rejected ~= nil then
+    return rejected
+  end
+  role_id = role_id or panel.role_id
+  local slot_index = _request_slot(request)
+  local view = transaction_state.slot_view_model(panel, role_id, slot_index)
+  if view.status == "equipped" then
+    return _unequip(root_state, role_id)
+  end
+  return _equip_slot(root_state, role_id, slot_index)
+end
+
 local function _unknown_transaction(root_state)
   local panel = transaction_state.ensure_panel(root_state)
   return transaction_state.rejected(panel, "unknown_skin_transaction")
@@ -172,7 +186,8 @@ local REQUEST_HANDLERS = {
   gift = _unlock_handler("gift"),
   equip_slot = _equip_handler,
   equip = _equip_handler,
-  activate_slot = _equip_handler,
+  activate_slot = _activate_slot,
+  activate = _activate_slot,
   unequip = function(root_state, role_id)
     return _unequip(root_state, role_id)
   end,
@@ -199,8 +214,22 @@ function actions.is_slot_equipped(root_state, slot_index)
   if skin == nil then
     return false
   end
-  local key = transaction_state.role_key(panel.role_id)
-  return key ~= nil and panel.selected_by_role[key] == skin.product_id
+  return transaction_state.equipped_product(panel, panel.role_id) == skin.product_id
+end
+
+function actions.slot_view_model(root_state, slot_index, catalog)
+  local panel = root_state and root_state.ui and root_state.ui.skin_panel or nil
+  return transaction_state.slot_view_model(panel, panel and panel.role_id or nil, slot_index, catalog)
+end
+
+function actions.slot_view_models(root_state, catalog)
+  local panel = root_state and root_state.ui and root_state.ui.skin_panel or nil
+  return transaction_state.slot_view_models(panel, panel and panel.role_id or nil, catalog)
+end
+
+function actions.equipped_product(root_state, role_id)
+  local panel = root_state and root_state.ui and root_state.ui.skin_panel or nil
+  return transaction_state.equipped_product(panel, role_id)
 end
 
 return actions
