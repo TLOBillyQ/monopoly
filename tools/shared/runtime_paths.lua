@@ -34,7 +34,7 @@ local function _looks_like_repo_root(path)
     "src",
     "spec",
     "tools",
-    "vendor",
+    "swarmforge/tools.lock",
   }
 
   for _, entry in ipairs(required_entries) do
