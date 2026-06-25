@@ -71,3 +71,33 @@ function M.play_followups(cue_name, pos, followup_sounds, host_runtime)
 end
 
 return M
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=8b02d91d9a33a942
+scope.0.id=chunk:src/ui/render/board_feedback/sound_player.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=74
+scope.0.semanticHash=83cdb201cbb87cac
+scope.1.id=function:anonymous@20:20
+scope.1.kind=function
+scope.1.startLine=20
+scope.1.endLine=32
+scope.1.semanticHash=e3a5587be5e0166b
+scope.2.id=function:_schedule_followup_sound:11
+scope.2.kind=function
+scope.2.startLine=11
+scope.2.endLine=36
+scope.2.semanticHash=895629ad3c978cd9
+scope.3.id=function:_resolve_sound_params:38
+scope.3.kind=function
+scope.3.startLine=38
+scope.3.endLine=48
+scope.3.semanticHash=66702786d92693bd
+scope.4.id=function:M.play:50
+scope.4.kind=function
+scope.4.startLine=50
+scope.4.endLine=58
+scope.4.semanticHash=31cfee3e20894200
+]]

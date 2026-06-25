@@ -151,3 +151,43 @@ function M.build_synthetic_player_specs(role_roster)
 end
 
 return M
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=5a956ef9772132de
+scope.0.id=chunk:src/app/roster_roles.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=154
+scope.0.semanticHash=d02068e5835c526d
+scope.1.id=function:_resolve_roles:8
+scope.1.kind=function
+scope.1.startLine=8
+scope.1.endLine=19
+scope.1.semanticHash=03c325872a09863b
+scope.2.id=function:_resolve_role_id_from_role:44
+scope.2.kind=function
+scope.2.startLine=44
+scope.2.endLine=53
+scope.2.semanticHash=72691274297ca755
+scope.3.id=function:_resolve_role_name:55
+scope.3.kind=function
+scope.3.startLine=55
+scope.3.endLine=64
+scope.3.semanticHash=f6fb9c5baf5759b1
+scope.4.id=function:_build_synthetic_role:80
+scope.4.kind=function
+scope.4.startLine=80
+scope.4.endLine=91
+scope.4.semanticHash=56981974bbe67fdf
+scope.5.id=function:_warn_if_roles_truncated:102
+scope.5.kind=function
+scope.5.startLine=102
+scope.5.endLine=112
+scope.5.semanticHash=bec44c9209eabe17
+scope.6.id=function:M.build_startup_roster:114
+scope.6.kind=function
+scope.6.startLine=114
+scope.6.endLine=123
+scope.6.semanticHash=1abce8f0a5951d9f
+]]
