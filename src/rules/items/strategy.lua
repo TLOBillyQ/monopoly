@@ -2,11 +2,10 @@ local auto_play_port = require("src.rules.ports.auto_play")
 local effects = require("src.rules.items.post_effects")
 local item_ids = require("src.config.gameplay.item_ids")
 local logger = require("src.foundation.log")
-local inventory = require("src.rules.items.inventory")
-local executor = require("src.rules.items.executor")
 local availability = require("src.rules.items.availability")
 local demolish = require("src.rules.items.demolish")
 local facing_policy = require("src.rules.board.facing_policy")
+local use_flow = require("src.rules.items.use_flow")
 
 local strategy = {}
 function strategy.target_candidates(game, player, item_id)
@@ -57,20 +56,25 @@ local function _resolve_try_use_item_args(game, phase_or_cond, cond_or_auto_play
   return phase, phase_or_cond, cond_or_auto_play
 end
 
+local function _successful_flow_result(res)
+  if type(res) ~= "table" or res.ok ~= true then
+    return nil
+  end
+  return res
+end
+
 local function _try_use_item(game, player, item_id, phase, cond, auto_play)
   phase, cond, auto_play = _resolve_try_use_item_args(game, phase, cond, auto_play)
   if cond and cond() == false then return nil end
   if not _ai_can_use_item(item_id, phase) then
     return nil
   end
-  if not inventory.find_index(player, item_id) then
-    return nil
-  end
-  local res = executor.use_item(game, player, item_id, { by_ai = true, auto_play = auto_play })
-  if type(res) == "table" and (res.waiting or res.intent or res.kind or res.action_anim) then
-    return res
-  end
-  return nil
+  local res = use_flow.begin_item_use(game, player and player.id or nil, item_id, {
+    phase = phase,
+    by_ai = true,
+    auto_play = auto_play,
+  })
+  return _successful_flow_result(res)
 end
 
 local function _has_target_player(game, player, item_id)
