@@ -21,7 +21,7 @@ Eggy 类型映射见 `docs/reference/eggy/eggy-types.md`，按需查阅；不预
 | `src/rules/**` | `verify --smoke` | `verify` | `mutate`, `crap` |
 | `src/turn/**` | `verify --smoke` | `verify` | `mutate` |
 | `src/ui/**` | `verify --smoke` | `verify` | `dry` |
-| `src/host/**` | `verify --smoke` | `verify`（+ Win 上 `busted --run e2e`，若触发 ADR 0013 D3） | `arch-view` |
+| `src/host/**` | `verify --smoke` | `verify` | `arch-view` |
 | `tools/{quality,acceptance,shared,ops}/**` | `verify --smoke`* | `verify` + `busted --run tooling` | — |
 | `features/**`（Gherkin） | `lua tools/acceptance/run_acceptance.lua <feature>` | `verify` | — |
 | `spec/**`（改测试本身） | `busted --run <对应 lane>` | `verify` | — |
@@ -30,8 +30,7 @@ Eggy 类型映射见 `docs/reference/eggy/eggy-types.md`，按需查阅；不预
 > 1. 只动 docs/markdown → 不跑测试
 > 2. 动 `src/**` 迭代 → `verify --smoke`（~8s）；handoff / PR / commit 前 → `verify`
 > 3. 动 `tools/{quality,acceptance,shared,ops}/**` → 迭代 `verify --smoke`*（轻；不覆盖工具模块本身）；handoff `verify` + `busted --run tooling`（前者跑 shell-out 端到端，后者跑工具模块单测）
-> 4. 动 `src/host/**` 触发 ADR 0013 D3 → handoff 时加 Windows 上 `busted --run e2e`
-> 5. 提交前不确定 → `verify`（默认含 crap + coverage）
+> 4. 提交前不确定 → `verify`（默认含 crap + coverage）
 >
 > *若 `tools/{quality,acceptance,shared,ops}/**` 改动牵涉 binary / PATH / env / subprocess 路径，iter 也应直接 `verify`（默认含 coverage lane，触发 luarocks 等子进程；memory: 工具链 shell-out 端到端是最低验证线）。
 

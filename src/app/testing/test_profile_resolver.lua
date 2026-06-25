@@ -40,9 +40,9 @@ function resolver.resolve_bootstrap(profile_name)
   return profile.bootstrap
 end
 
--- Returns the live-editor expectation table for a profile, or nil when the
+-- Returns the expectation table for a profile, or nil when the
 -- profile carries no `expect`. Raises on an unknown profile, like the other
--- resolver accessors. Drives the e2e profile lane's runnable/skipped split.
+-- resolver accessors.
 function resolver.expect_for(profile_name)
   local profile = _resolve_profile(profile_name)
   return profile.expect

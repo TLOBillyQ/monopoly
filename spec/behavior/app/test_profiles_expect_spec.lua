@@ -1,7 +1,7 @@
--- Pins the `expect` data contract for the e2e profile lane (handoff
--- e2e-profile-lane). `expect` mirrors a profile's existing spec/behavior
--- design-truth invariant so the live editor lane asserts the same thing the
--- headless lane already proves -- it is NOT a new invariant.
+-- Pins the `expect` data contract for test_profiles. `expect` mirrors a
+-- profile's existing spec/behavior design-truth invariant so behavior specs
+-- assert the same thing the headless lane already proves -- it is NOT a new
+-- invariant.
 --
 -- Phase 1 carries exactly one expect: `solo_missile`, mirroring the missile
 -- branch of spec/behavior/rules/demolish_closure_spec.lua (a missile hitting

@@ -30,7 +30,6 @@ last_verified: 2026-05-22
 | `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构；`crap.lua summary` 输出 src/ 行覆盖率三层聚合（见 `crap_report.md#覆盖率聚合`） | 约 `9s-10s` |
 | `lua tools/quality/mutate.lua src/foo.lua --scan` | 单文件变异测试 | 这个文件现有测试是否真能杀掉简单错误 | 目标文件和 lane 差异很大；默认先按 `behavior` 估算 |
 | `lua tools/quality/verify_full.lua` | 管道编排 | 一条命令跑全套质量车道（lint→encoding→behavior→contract/guards/arch→crap→coverage） | 不含 tooling 约 `30s`，含 tooling 约 `40s` |
-| `busted --run e2e` | 真实编辑器 e2e | host 层胶水（场景实体、试玩生命周期、UI 射线、事件广播）在真实 Eggy 编辑器里有没有坏 | 取决于编辑器启动状态，单 spec 通常几秒；**仅 Windows + 编辑器在线时可跑** |
 
 建议把它们分成两层理解：
 
@@ -138,28 +137,6 @@ last_verified: 2026-05-22
 - `viewer`：导出静态页面
 - 无参数：默认等价于 `viewer --out-dir tmp/crap_view --open`
 
-### `e2e`
-
-- 入口：`busted --run e2e`
-- 来源：`spec/e2e/*/*_spec.lua`
-- 边界契约：`docs/decisions/0013-e2e-host-integration-smoke.md`（必要/禁止条件、增长触发；"e2e" 在本仓库特指宿主集成 smoke，不是端到端业务流）
-- Bridge：`tools/bridge/editor_cli/`（`client.lua` / `escape.lua` / `result_capture.lua`）
-- 关注点：host 层胶水代码（`src/host/*`）在真实 Eggy 编辑器里是否还能跑通
-  - 场景 CRUD：实体池、属性赋值、删除
-  - 试玩生命周期：`run_game` / `stop_game` 状态机
-  - 事件广播：自定义事件触发与副作用
-  - Marker round-trip：`EditorAPI.log("__E2E_RESULT__:" .. json)` 结构化结果采集
-- 前提条件：
-  - **必须在 Windows 上跑**（macOS 端 fixture 会 `pending(...)` 整组跳过）
-  - **Eggy 编辑器必须启动并可被 `editor-cli.exe` 探测到**（fixture 用 `--json status` 做 pre-flight）
-- 适用时机：改了 `src/host/*` 胶水、`EditorAPI` / `GameAPI` 包装、试玩启动路径之后跑
-- 不适合：业务规则回归（用 `behavior`）、跨层契约（用 `contract`）
-- 工作流：Mac 写代码 → git push → Windows pull → 启动编辑器 → `busted --run e2e`
-- 调参环境变量：
-  - `EDITOR_CLI_BIN`：覆盖默认 `editor-cli.exe` 路径
-  - `EDITOR_CLI_FORCE=1`：在非 Windows 平台也尝试执行（调试 bridge 本身用）
-- 不进 `verify_full`：依赖外部状态、串行执行、与现有 hermetic 车道反馈速度差一个量级
-
 ### `mutate4lua`
 
 - 入口：`lua tools/quality/mutate.lua <file.lua> ...`
@@ -203,7 +180,6 @@ last_verified: 2026-05-22
 | 依赖图有没有越界或成环 | `lua tools/quality/arch.lua check` |
 | 哪些函数最值得先补测/重构 | `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` |
 | 某个文件的测试是不是只是“跑到了”而不是“断严了” | `lua tools/quality/mutate.lua src/foo.lua --scan` 然后再决定是否真正跑 mutation |
-| host 层在真实编辑器里还能跑通吗 | `busted --run e2e`（Windows + 编辑器在线） |
 
 ## 常用命令套餐
 
