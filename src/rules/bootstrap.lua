@@ -6,7 +6,6 @@ local effect_registry_module = require("src.rules.effects.registry")
 local choice_resolver = require("src.rules.choice.resolver")
 local land_executors = require("src.rules.land.executors")
 local land_settlement = require("src.rules.land.settlement")
-local item_executor = require("src.rules.items.executor")
 local item_phase = require("src.rules.items.phase")
 local item_use_flow = require("src.rules.items.use_flow")
 local market_effects = require("src.rules.market.effects")
@@ -69,7 +68,6 @@ bootstrap.optional_effect_handler = optional_effect_handler
 
 local function _build_choice_helpers()
   return choice_resolver.helpers({
-    use_item = item_executor.use_item,
     begin_item_use = function(game, player, item_id, context)
       return item_use_flow.begin_item_use(game, player and player.id or nil, item_id, context)
     end,
