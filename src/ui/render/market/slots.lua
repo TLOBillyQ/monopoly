@@ -53,10 +53,13 @@ local function _resolve_market_level(cfg)
 end
 
 local function _asset_opts(refs)
-  if type(refs) == "table" and type(refs.images) ~= "table" then
-    return { refs = { images = refs } }
+  if type(refs) ~= "table" then
+    return nil
   end
-  return { refs = refs }
+  if type(refs.refs) == "table" or type(refs.images) == "table" then
+    return refs
+  end
+  return { refs = { images = refs } }
 end
 
 local function _resolve_market_icon_key(refs, product_id, entry, cfg)

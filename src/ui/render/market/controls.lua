@@ -69,7 +69,7 @@ function market_view_controls.reset_market_preview(state, deps)
   ui:set_label(market_layout.price_label, "")
   market_view_controls.clear_market_selection_frames(ui)
   ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
-  local empty_image = runtime_assets.empty_image({ refs = state.ui_refs })
+  local empty_image = runtime_assets.empty_image(runtime_assets.asset_context(state))
   if empty_image.image_key ~= nil then
     runtime.set_node_texture_keep_size(ui.query_node(market_layout.selected_card), empty_image.image_key)
   end

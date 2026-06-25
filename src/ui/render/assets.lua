@@ -12,6 +12,7 @@ function M.init_ui_assets(state)
   assert(state ~= nil, "missing state")
   state.runtime_assets = runtime_assets
   state.ui_refs = runtime_assets.compat_refs()
+  state.runtime_asset_context = { refs = state.ui_refs }
 
   runtime.for_each_role_or_global(function()
     for index = 1, 5 do

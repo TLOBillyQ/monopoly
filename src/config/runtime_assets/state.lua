@@ -45,6 +45,19 @@ function M.compat_refs()
   return active_refs
 end
 
+function M.asset_context(root_state)
+  if type(root_state) ~= "table" then
+    return nil
+  end
+  if type(root_state.runtime_asset_context) == "table" then
+    return root_state.runtime_asset_context
+  end
+  if type(root_state.ui_refs) == "table" then
+    return { refs = root_state.ui_refs }
+  end
+  return nil
+end
+
 function M.configure_for_tests(opts)
   opts = opts or {}
   active_refs = opts.refs or default_refs
