@@ -110,6 +110,11 @@ function context.expect(condition, message)
   return nil, message
 end
 
+function context.expect_known_value(value, known, label)
+  return context.expect(known[tostring(value or "")] ~= nil,
+    "unknown " .. tostring(label) .. " fixture value: " .. tostring(value))
+end
+
 function context.expect_manifest_unchanged(world, message)
   local state = context.state(world)
   return context.expect(state.manifest_after == state.manifest_before, message)

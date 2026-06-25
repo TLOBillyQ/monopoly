@@ -12,29 +12,11 @@ local common = require("shared.lib.common")
 local REPO_ROOT = bootstrap_env.repo_root
 assert(bootstrap.ensure_tool("crap4lua", bootstrap_env))
 
-local json_reader = require("shared.lib.json_reader")
-local analyzer = require("crap4lua.analyzer")
+local report_io = require("quality.crap.report_io")
 local gate = require("quality.crap.gate")
 
-local _CRAP_TMP_ENV = "MONOPOLY_CRAP_TMP"
-local _DEFAULT_TMP_ROOT = common.join_path(common.system_tmp_dir(), "monopoly_crap")
 local _CONFIG_PATH = common.join_path(REPO_ROOT, "tools/quality/crap/config.lua")
 local _BASELINE_PATH = common.join_path(REPO_ROOT, "tools/quality/crap/crap_gate_baseline.lua")
-
-local function _resolve_tmp_root()
-  local val = os.getenv(_CRAP_TMP_ENV)
-  if val and val ~= "" then return _normalize_path(val) end
-  return _DEFAULT_TMP_ROOT
-end
-
-local function _resolve_path(path)
-  local normalized = _normalize_path(path)
-  if normalized == "tmp" or normalized:match("^tmp/") then
-    local suffix = normalized == "tmp" and "" or normalized:sub(5)
-    return common.resolve_path(_resolve_tmp_root(), suffix)
-  end
-  return common.resolve_path(REPO_ROOT, normalized)
-end
 
 local function _parse_args(args)
   local opts = { in_path = "tmp/crap_collect.json" }
@@ -88,47 +70,6 @@ local function _load_baseline(path)
   return { files = {} }
 end
 
-local function _build_full_report(in_path)
-  local content, read_err = common.read_file(in_path)
-  if not content then
-    io.stderr:write("cannot read collect JSON: " .. tostring(read_err) .. "\n")
-    os.exit(1)
-  end
-  local ok_parse, collected = pcall(json_reader.decode, content)
-  if not ok_parse or type(collected) ~= "table" then
-    io.stderr:write("collect JSON parse error: " .. tostring(collected) .. "\n")
-    os.exit(1)
-  end
-  -- JSON encodes line-number keys as strings; coerce back to integers so
-  -- analyzer.build_report can look up file_hits[line_no].
-  if collected.coverage_result and type(collected.coverage_result.line_hits) == "table" then
-    local coerced = {}
-    for path, hits in pairs(collected.coverage_result.line_hits) do
-      if type(hits) == "table" then
-        local inner = {}
-        for k, v in pairs(hits) do
-          local n = tonumber(k)
-          if n then inner[n] = v end
-        end
-        coerced[path] = inner
-      end
-    end
-    collected.coverage_result.line_hits = coerced
-  end
-  local report, build_err = analyzer.build_report({
-    project_root = collected.project_root,
-    project_name = collected.project_name,
-    source_roots = collected.source_roots,
-    coverage_result = collected.coverage_result,
-    top = 0, -- all functions, never truncated
-  })
-  if not report then
-    io.stderr:write("build_report failed: " .. tostring(build_err) .. "\n")
-    os.exit(1)
-  end
-  return report
-end
-
 local opts = _parse_args(arg or {})
 if opts.help then
   io.write(_usage())
@@ -136,8 +77,12 @@ if opts.help then
 end
 
 local base_threshold = _load_base_threshold()
-local baseline_path = opts.baseline_path and _resolve_path(opts.baseline_path) or _BASELINE_PATH
-local report = _build_full_report(_resolve_path(opts.in_path))
+local baseline_path = opts.baseline_path and report_io.resolve_path(REPO_ROOT, opts.baseline_path) or _BASELINE_PATH
+local report, report_err = report_io.build_report(report_io.resolve_path(REPO_ROOT, opts.in_path), { top = 0 })
+if report == nil then
+  io.stderr:write(tostring(report_err) .. "\n")
+  os.exit(1)
+end
 local by_file = gate.violations_by_file(report.functions, base_threshold)
 local total = gate.total_violations(by_file)
 

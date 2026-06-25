@@ -1,101 +1,32 @@
 local runtime_paths = {}
+local path_ops = dofile((debug.getinfo(1, "S").source:gsub("^@", "")):match("^(.*)/[^/]+$") .. "/runtime_path_ops.lua")
 
 local function _normalize_path(path)
-  return tostring(path or ""):gsub("\\", "/")
-end
-
-local function _strip_source_prefix(path)
-  return _normalize_path(path):gsub("^@", "")
+  return path_ops.normalize(path)
 end
 
 local function _join_path(base, child)
-  local normalized_base = _normalize_path(base):gsub("/+$", "")
-  local normalized_child = _normalize_path(child):gsub("^/+", "")
-  if normalized_base == "" then
-    return normalized_child
-  end
-  if normalized_child == "" then
-    return normalized_base
-  end
-  return normalized_base .. "/" .. normalized_child
+  return path_ops.join(base, child)
 end
 
 local function _dirname(path)
-  local normalized = _normalize_path(path)
-  return normalized:match("^(.*)/[^/]+$") or "."
-end
-
-local function _is_windows()
-  return package.config:sub(1, 1) == "\\"
+  return path_ops.dirname(path)
 end
 
 local function _current_dir()
-  local env_cwd = os.getenv("PWD")
-  if env_cwd ~= nil and env_cwd ~= "" then
-    return _normalize_path(env_cwd)
-  end
-
-  local command = _is_windows() and "cd" or "pwd"
-  local process = io.popen(command)
-  if process == nil then
-    return "."
-  end
-
-  local output = process:read("*a") or ""
-  process:close()
-  local normalized = _normalize_path(output):gsub("%s+$", "")
-  if normalized == "" then
-    return "."
-  end
-  return normalized
+  return path_ops.current_dir()
 end
 
 local function _path_exists(path)
-  local file = io.open(path, "rb")
-  if file ~= nil then
-    file:close()
-    return true
-  end
-
-  local normalized = _normalize_path(path)
-  local escaped = normalized:gsub('"', '\\"')
-  local command
-  if _is_windows() then
-    command = string.format('if exist "%s" (exit 0) else (exit 1)', escaped)
-  else
-    command = string.format('[ -e "%s" ]', escaped)
-  end
-
-  local ok = os.execute(command)
-  if type(ok) == "number" then
-    return ok == 0
-  end
-  return ok == true
-end
-
-local function _is_absolute_path(path)
-  local normalized = _normalize_path(path)
-  return normalized:sub(1, 1) == "/" or normalized:match("^%a:[/]")
+  return path_ops.path_exists(path)
 end
 
 local function _resolve_source_path(source_path, cwd)
-  local normalized_source = _strip_source_prefix(source_path)
-  if normalized_source == "" then
-    return _normalize_path(cwd or ".")
-  end
-  if _is_absolute_path(normalized_source) then
-    return normalized_source
-  end
-  return _join_path(cwd or ".", normalized_source)
+  return path_ops.resolve_source_path(source_path, cwd)
 end
 
 local function _parent_dir(path)
-  local normalized = _normalize_path(path):gsub("/+$", "")
-  local parent = normalized:match("^(.*)/[^/]+$")
-  if parent == nil or parent == "" then
-    return normalized
-  end
-  return parent
+  return path_ops.parent_dir(path)
 end
 
 local function _looks_like_repo_root(path)

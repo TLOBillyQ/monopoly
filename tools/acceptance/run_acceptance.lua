@@ -3,6 +3,7 @@ local env = bootstrap.install(debug.getinfo(1, "S").source)
 assert(bootstrap.ensure_tool("acceptance4lua", env))
 
 local common = require("shared.lib.common")
+local tap_summary = require("shared.tap_summary")
 local generator = require("acceptance4lua.generator")
 local gherkin_parser = require("acceptance4lua.gherkin_parser")
 local runner = require("acceptance4lua.runner")
@@ -79,23 +80,7 @@ function run_acceptance.run(options)
 end
 
 local function _compress_tap(output)
-  local passed, failed = 0, 0
-  local kept = {}
-  for line in (tostring(output or "") .. "\n"):gmatch("([^\n]*)\n") do
-    if line:match("^ok%s+%d") then
-      passed = passed + 1
-    elseif line:match("^not ok%s+%d") then
-      failed = failed + 1
-      kept[#kept + 1] = line
-    elseif not line:match("^%d+%.%.%d+%s*$") then
-      kept[#kept + 1] = line
-    end
-  end
-  if failed == 0 then
-    return string.format("%d passed\n", passed)
-  end
-  kept[#kept + 1] = string.format("%d passed, %d failed", passed, failed)
-  return table.concat(kept, "\n") .. "\n"
+  return tap_summary.compress(output)
 end
 
 function run_acceptance.main(args)
