@@ -1,6 +1,7 @@
 local bootstrap = require("spec.bootstrap")
 
 bootstrap.install_package_paths()
+local arch_tool = assert(bootstrap.ensure_tool("arch_view"))
 
 local arch_view = require("arch_view")
 local common = require("arch_view.runtime.common")
@@ -8,7 +9,7 @@ local json_reader = require("arch_view.runtime.json_reader")
 
 local cached_scan_result = nil
 local tmp_root = common.make_temp_path("arch_view_test_output", "")
-local arch_view_root = "vendor/arch_view"
+local arch_view_root = arch_tool.root
 local _scan_architecture_json
 
 local function _first_existing(paths)
@@ -197,8 +198,8 @@ local function _test_build_includes_metadata_for_project_root_and_config_path()
 end
 
 local function _test_json_modules_are_self_contained()
-  local common_source = _read_file("vendor/arch_view/lib/arch_view/runtime/common.lua")
-  local host_source = _read_file("vendor/arch_view/lib/arch_view/runtime/host.lua")
+  local common_source = _read_file(common.join_path(arch_view_root, "lib/arch_view/runtime/common.lua"))
+  local host_source = _read_file(common.join_path(arch_view_root, "lib/arch_view/runtime/host.lua"))
   assert(common_source:find('require("shared.lib.common")', 1, true) == nil, "arch_view common should not depend on monopoly lib.common")
   assert(host_source:find('src.foundation.number', 1, true) == nil,
     "arch_view host runtime should not depend on monopoly src modules")

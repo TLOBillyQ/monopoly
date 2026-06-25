@@ -1,0 +1,22 @@
+# arch_view Tool Spec
+
+Purpose: static module dependency analysis and architecture viewer export.
+
+Reference implementation: `arch_view` entry in `swarmforge/tools.lock`.
+Project wrapper: `lua tools/quality/arch.lua`.
+
+CLI contract:
+- `lua tools/quality/arch.lua check`
+- `lua tools/quality/arch.lua scan --out <path>`
+- `lua tools/quality/arch.lua viewer --out-dir <dir> [--in-json <path>] [--open]`
+- No arguments default to the project check lane.
+
+Data contract:
+- Default project rules live at `tools/quality/arch/config.json`.
+- Viewer exports are generated artifacts and should go under `tmp/`, `.arch_view/`, or outside the repo.
+
+Algorithm requirements:
+- Scan `src/**/*.lua` module-level `require` dependencies.
+- Classify modules by configured architecture boundaries.
+- Report forbidden dependencies, unclassified modules, and projection cycles.
+- Keep text guards separate; arch_view does not replace guard specs.

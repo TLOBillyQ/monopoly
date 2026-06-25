@@ -10,13 +10,11 @@ local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 local common = require("shared.lib.common")
 local REPO_ROOT = bootstrap_env.repo_root
-local crap4lua_lib = _normalize_path(bootstrap_env.vendor_dir) .. "/crap4lua/lib/?.lua"
-if not package.path:find(crap4lua_lib, 1, true) then
-  package.path = crap4lua_lib .. ";" .. package.path
-end
+local crap_tool = assert(bootstrap.ensure_tool("crap4lua", bootstrap_env))
 
 local _env = {
   cwd = REPO_ROOT, command_name = "tools/quality/crap.lua", open_path = common.open_path,
+  tool_root = crap_tool.root,
   default_config = common.join_path(REPO_ROOT, "tools/quality/crap/config.lua"),
   default_tier_config = common.join_path(REPO_ROOT, "tools/quality/crap/coverage_tiers.lua"),
   default_report_out = "tmp/crap_report.json", default_view_dir = "tmp/crap_view", default_top = 20,

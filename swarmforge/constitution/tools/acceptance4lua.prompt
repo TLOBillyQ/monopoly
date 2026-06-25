@@ -1,0 +1,22 @@
+# acceptance4lua Tool Spec
+
+Purpose: portable Gherkin acceptance pipeline support for this Lua project.
+
+Reference implementation: `acceptance4lua` entry in `swarmforge/tools.lock`.
+Project wrappers: `gherkin-parser`, `acceptance-entrypoint-generator`, and `gherkin-mutator`.
+
+CLI contract:
+- `gherkin-parser <feature-file> <json-output>`
+- `acceptance-entrypoint-generator <json-ir> <generated-test-output>`
+- `gherkin-mutator [options] --runner-worker <command>`
+- Acceptance tests for this repo are run through `make acceptance`, not bare `busted --run acceptance`.
+
+APS contract:
+- Follow github.com/unclebob/Acceptance-Pipeline-Specification.
+- The parser writes canonical JSON IR for the supported deterministic Gherkin subset.
+- The generator writes deterministic thin busted entrypoints and metadata whose implementation hash covers generated files only.
+- The mutator changes Gherkin example values, runs mutated IR through a persistent runner adapter, emits periodic status to stderr, and reports killed/survived/error results.
+
+Project boundary:
+- Chinese normalization, generated-spec location, step handlers, runtime fixtures, runner adapter, and convenience scripts remain project-specific.
+- Gherkin acceptance mutation manifests live in feature files and must not be hand-edited.

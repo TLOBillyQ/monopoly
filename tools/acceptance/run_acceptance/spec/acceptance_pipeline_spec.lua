@@ -84,7 +84,8 @@ end
 describe("acceptance pipeline", function()
   it("loads the portable framework directly from acceptance4lua", function()
     assert.is_truthy(parser.parse_text)
-    assert.is_truthy(package.path:find("vendor/acceptance4lua/lib/?.lua", 1, true))
+    assert.is_truthy(package.path:find(".swarmforge/tools/acceptance4lua@", 1, true))
+    assert.is_truthy(package.path:find("/lib/?.lua", 1, true))
   end)
 
   it("parses the supported gherkin subset into canonical IR", function()

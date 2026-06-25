@@ -6,7 +6,8 @@
 -- the `make acceptance` entrypoint and runs before `busted --run acceptance`.
 
 local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", "")):match("^(.*)/[^/]+$") .. "/../shared/bootstrap.lua")
-bootstrap.install(debug.getinfo(1, "S").source)
+local env = bootstrap.install(debug.getinfo(1, "S").source)
+assert(bootstrap.ensure_tool("acceptance4lua", env))
 
 local common = require("shared.lib.common")
 local generator = require("acceptance4lua.generator")

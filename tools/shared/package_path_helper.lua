@@ -31,8 +31,6 @@ function package_path_helper.install_monopoly_package_paths(opts)
   local repo_root = _normalize_path(opts.repo_root or ".")
 
   local canonical_patterns = {
-    _join(repo_root, "vendor/acceptance4lua/lib/?.lua"),
-    _join(repo_root, "vendor/acceptance4lua/lib/?/init.lua"),
     _join(repo_root, "tools/?.lua"),
     _join(repo_root, "tools/?/init.lua"),
     _join(repo_root, "tools/bridge/?.lua"),

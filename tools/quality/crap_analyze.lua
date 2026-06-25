@@ -10,10 +10,7 @@ local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 local common = require("shared.lib.common")
 local REPO_ROOT = bootstrap_env.repo_root
-local crap4lua_lib = _normalize_path(bootstrap_env.vendor_dir) .. "/crap4lua/lib/?.lua"
-if not package.path:find(crap4lua_lib, 1, true) then
-  package.path = crap4lua_lib .. ";" .. package.path
-end
+assert(bootstrap.ensure_tool("crap4lua", bootstrap_env))
 
 local json_reader = require("shared.lib.json_reader")
 local crap_common = require("crap4lua._internal.common")

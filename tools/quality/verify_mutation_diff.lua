@@ -8,7 +8,8 @@ end
 
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
-require("shared.mutate4lua_paths").activate(bootstrap_env.vendor_dir)
+local mutate_tool = assert(bootstrap.ensure_tool("mutate4lua", bootstrap_env))
+require("shared.mutate4lua_paths").activate(mutate_tool.root)
 
 local core = require("quality.mutate.diff_core")
 local runtime_builder = require("quality.mutate.diff_runtime")

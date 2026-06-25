@@ -55,14 +55,12 @@ local function _test_install_monopoly_package_paths_only_installs_canonical_repo
   local ok, err = pcall(function()
     package_path_helper.install_monopoly_package_paths({
       repo_root = "/repo",
-      arch_view_root = "/repo/vendor/arch_view",
+      arch_view_root = "/repo/.swarmforge/tools/arch_view@abc",
     })
     _assert_contains(package.path, "/repo/tools/?.lua", "helper should keep canonical repo tool paths")
     _assert_contains(package.path, "/repo/spec/?.lua", "helper should keep canonical spec paths")
-    _assert_not_contains(package.path, "/repo/vendor/arch_view/" .. "?.lua",
-      "helper should not install arch_view compatibility paths")
-    _assert_not_contains(package.path, "/repo/vendor/arch_view/" .. "?/?.lua",
-      "helper should not install arch_view nested compatibility paths")
+    _assert_not_contains(package.path, "/repo/.swarmforge/tools/arch_view@abc",
+      "package helper should not install tool cache paths")
   end)
 
   package.path = original_package_path
@@ -153,12 +151,12 @@ local function _test_cli_summary_out_prints_resolved_json_path()
   common.remove_path(summary_out)
 end
 
-local function _test_no_go_binary_references_in_vendor_cli()
-  local cli_path = crap.env.cwd .. "/vendor/crap4lua/lib/crap4lua/cli.lua"
+local function _test_no_go_binary_references_in_reference_cli()
+  local cli_path = common.join_path(crap.env.tool_root, "lib/crap4lua/cli.lua")
   local content = common.read_file(cli_path)
-  _assert_not_contains(content, "ensure_" .. "binary", "vendor cli should not reference removed binary resolver")
-  _assert_not_contains(content, "_launcher_" .. "source", "vendor cli should not reference removed launcher")
-  _assert_not_contains(content, "go " .. "build", "vendor cli should not reference removed build command")
+  _assert_not_contains(content, "ensure_" .. "binary", "reference cli should not reference removed binary resolver")
+  _assert_not_contains(content, "_launcher_" .. "source", "reference cli should not reference removed launcher")
+  _assert_not_contains(content, "go " .. "build", "reference cli should not reference removed build command")
 end
 
 local function _test_gate_ceiling_is_complexity_aware()
@@ -235,7 +233,7 @@ return {
     { name = "cli_report_generates_report_json", run = _test_cli_report_generates_report_json },
     { name = "cli_collect_writes_coverage_json", run = _test_cli_collect_writes_coverage_json },
     { name = "cli_summary_out_prints_resolved_json_path", run = _test_cli_summary_out_prints_resolved_json_path },
-    { name = "no_go_binary_references_in_vendor_cli", run = _test_no_go_binary_references_in_vendor_cli },
+    { name = "no_go_binary_references_in_reference_cli", run = _test_no_go_binary_references_in_reference_cli },
     { name = "gate_ceiling_is_complexity_aware", run = _test_gate_ceiling_is_complexity_aware },
     { name = "gate_is_violation_accepts_high_complexity_floor", run = _test_gate_is_violation_accepts_high_complexity_floor },
     { name = "gate_violations_group_by_file", run = _test_gate_violations_group_by_file },

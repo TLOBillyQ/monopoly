@@ -20,6 +20,22 @@ function context.require_path(world, path)
   return true
 end
 
+function context.require_tool(world, name, relative_path)
+  local bootstrap = require("shared.bootstrap")
+  local env = bootstrap.install(debug.getinfo(1, "S").source)
+  local tool, err = bootstrap.ensure_tool(name, env)
+  if tool == nil then
+    return nil, err
+  end
+  if relative_path ~= nil and relative_path ~= "" then
+    local full_path = common.join_path(tool.root, relative_path)
+    if not common.path_exists(full_path) then
+      return nil, "missing required tool path: " .. tostring(name) .. "/" .. tostring(relative_path)
+    end
+  end
+  return true
+end
+
 function context.state(world)
   world.quality_state = world.quality_state or {}
   return world.quality_state

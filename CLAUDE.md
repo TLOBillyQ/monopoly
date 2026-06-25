@@ -10,7 +10,7 @@ Agent 路由：`.agents/README.md` | 人类索引：`docs/README.md`
 - `src/` 禁用 `tonumber` / `type == "number"`，用 `NumberUtils`（`src.foundation.number`）。
 - Eggy `Fixed` 参数用浮点（`30.0`），详见 `docs/reference/eggy/eggy-types.md`。
 - Eggy 沙盒 `math` 无 `maxinteger`/`mininteger`/`huge`，用 `math.maxval`/`math.minval`。
-- 新 swarmforge worktree 第一次进入要确认 `git submodule status` 全部前缀非 `-`；缺的跑 `git -C <worktree> submodule update --init --recursive`。
+- 新 swarmforge worktree 第一次进入要确认 `swarmforge/tools.lock` 存在；质量工具由 wrapper 按需 bootstrap 到 `.swarmforge/tools/`。
 
 ## 仓库结构
 

@@ -112,26 +112,26 @@ local function _test_no_go_binary_references_in_wrapper()
   _assert_not_contains(content, "engine_bridge", "wrapper should not reference engine_bridge")
 end
 
-local function _test_wrapper_uses_vendor_lib_layout()
+local function _test_wrapper_uses_reference_lib_layout()
   local wrapper_path = mutate.env.cwd .. "/tools/quality/mutate.lua"
   local wrapper = common.read_file(wrapper_path)
-  _assert_contains(wrapper, "shared.mutate4lua_paths", "wrapper should delegate vendor path setup to shared helper")
+  _assert_contains(wrapper, "shared.mutate4lua_paths", "wrapper should delegate reference path setup to shared helper")
   _assert_not_contains(wrapper, "/mutate4lua/lua/?.lua", "wrapper should not use removed lua module layout")
 
   local helper_path = mutate.env.cwd .. "/tools/shared/mutate4lua_paths.lua"
   local helper = common.read_file(helper_path)
-  _assert_contains(helper, "/mutate4lua/lib", "shared helper should load mutate4lua lib module layout")
+  _assert_contains(helper, "/lib", "shared helper should load mutate4lua lib module layout")
   _assert_contains(helper, "/?.lua", "shared helper should load plain lua module pattern")
   _assert_contains(helper, "/?/init.lua", "shared helper should load init module pattern")
 end
 
-local function _test_no_go_binary_references_in_vendor_cli()
-  local cli_path = mutate.env.cwd .. "/vendor/mutate4lua/lib/mutate4lua/cli.lua"
+local function _test_no_go_binary_references_in_reference_cli()
+  local cli_path = common.join_path(mutate.env.tool_root, "lib/mutate4lua/cli.lua")
   local content = common.read_file(cli_path)
-  assert(content ~= nil, "vendor cli should exist at lib layout")
-  _assert_not_contains(content, "ensure_" .. "binary", "vendor cli should not reference removed binary resolver")
-  _assert_not_contains(content, "engine_bridge", "vendor cli should not reference engine_bridge")
-  _assert_not_contains(content, "go " .. "build", "vendor cli should not reference removed build command")
+  assert(content ~= nil, "reference cli should exist at lib layout")
+  _assert_not_contains(content, "ensure_" .. "binary", "reference cli should not reference removed binary resolver")
+  _assert_not_contains(content, "engine_bridge", "reference cli should not reference engine_bridge")
+  _assert_not_contains(content, "go " .. "build", "reference cli should not reference removed build command")
 end
 
 local function _test_driver_lists_suite_modules_as_json()
@@ -338,8 +338,8 @@ return {
     {name = "wrapper_routes_scan_and_index_commands", run = _test_wrapper_routes_scan_and_index_commands},
     {name = "wrapper_help_is_bilingual", run = _test_wrapper_help_is_bilingual},
     {name = "no_go_binary_references_in_wrapper", run = _test_no_go_binary_references_in_wrapper},
-    {name = "wrapper_uses_vendor_lib_layout", run = _test_wrapper_uses_vendor_lib_layout},
-    {name = "no_go_binary_references_in_vendor_cli", run = _test_no_go_binary_references_in_vendor_cli},
+    {name = "wrapper_uses_reference_lib_layout", run = _test_wrapper_uses_reference_lib_layout},
+    {name = "no_go_binary_references_in_reference_cli", run = _test_no_go_binary_references_in_reference_cli},
     {name = "driver_lists_suite_modules_as_json", run = _test_driver_lists_suite_modules_as_json},
     {name = "driver_emits_suite_file_map_json_without_line_granularity", run = _test_driver_emits_suite_file_map_json_without_line_granularity},
     {name = "driver_writes_repo_relative_coverage", run = _test_driver_writes_repo_relative_coverage},

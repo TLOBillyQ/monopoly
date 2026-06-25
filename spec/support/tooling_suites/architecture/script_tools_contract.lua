@@ -1,4 +1,5 @@
 local bootstrap = require("spec.bootstrap")
+local arch_tool = assert(bootstrap.ensure_tool("arch_view"))
 local common = require("shared.lib.common")
 local arch_common = require("arch_view.runtime.common")
 local arch_cli = require("quality.arch")
@@ -94,7 +95,7 @@ local function _generate_arch_view_input_json(tmp_root)
       out_path,
     }, {
       cwd = project_root,
-      asset_root = common.join_path(project_root, "vendor/arch_view/viewer"),
+      asset_root = common.join_path(arch_tool.root, "viewer"),
       default_config_path = default_config_path,
     })
   end, debug.traceback)
@@ -821,7 +822,7 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
       input_json,
       }, {
         cwd = project_root,
-        asset_root = common.join_path(project_root, "vendor/arch_view/viewer"),
+        asset_root = common.join_path(arch_tool.root, "viewer"),
         default_config_path = default_config_path,
       })
     end, debug.traceback)
@@ -854,16 +855,14 @@ local function _test_mutate_wrapper_scan_json_output()
     "mutate scan should emit discovered mutation sites in json output")
 end
 
-local function _test_vendor_tools_do_not_expose_bin_entrypoints()
+local function _test_reference_tools_do_not_expose_bin_entrypoints()
   local removed_paths = {
-    "vendor/arch_view/" .. "bin",
-    "vendor/crap4lua/" .. "bin",
-    "vendor/mutate4lua/" .. "bin",
+    common.join_path(arch_tool.root, "bin"),
   }
 
   for _, path in ipairs(removed_paths) do
-    assert(common.path_exists(common.join_path(project_root, path)) ~= true,
-      "vendor 4lua tools should not expose bin entrypoints: " .. path)
+    assert(common.path_exists(path) ~= true,
+      "reference 4lua tools should not expose bin entrypoints: " .. path)
   end
 end
 
@@ -1002,7 +1001,7 @@ local contract_tests = {
   { group = "shared", owner = "tooling_policy", name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
   { group = "quality", owner = "arch", name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
   { group = "quality", owner = "mutate", name = "mutate_wrapper_scan_json_output", run = _test_mutate_wrapper_scan_json_output },
-  { group = "quality", owner = "tooling_policy", name = "vendor_tools_do_not_expose_bin_entrypoints", run = _test_vendor_tools_do_not_expose_bin_entrypoints },
+  { group = "quality", owner = "tooling_policy", name = "reference_tools_do_not_expose_bin_entrypoints", run = _test_reference_tools_do_not_expose_bin_entrypoints },
   { group = "shared", owner = "bootstrap", name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
   { group = "shared", owner = "loc_history", name = "loc_history_returns_daily_snapshots", run = _test_loc_history_returns_daily_snapshots },
   { group = "ops", owner = "deploy", name = "deploy_script_matches_simplified_cli", run = _test_deploy_script_matches_simplified_cli },

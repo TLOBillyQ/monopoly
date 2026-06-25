@@ -36,7 +36,7 @@ CRAP 分数 = `复杂度² × (1 - 覆盖率)³ + 复杂度`。给 `src/**/*.lua
 
 - 工具机制、子命令、tier 阈值、公式：`docs/reports/crap.md`
 - tier 配置：`tools/quality/crap/coverage_tiers.lua`
-- 上游：子模块 `vendor/crap4lua/`
+- 上游：`swarmforge/tools.lock` 钉定的 `crap4lua`，按需缓存到 `.swarmforge/tools/crap4lua@<sha>/`
 
 ## 输出汇报
 

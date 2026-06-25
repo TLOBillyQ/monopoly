@@ -1,0 +1,17 @@
+# dry4lua Tool Spec
+
+Purpose: structural duplication detection for Lua source functions.
+
+Reference implementation: `dry4lua` entry in `swarmforge/tools.lock`.
+Project wrapper: `lua tools/quality/dry.lua`.
+
+CLI contract:
+- `lua tools/quality/dry.lua [options] [file-or-directory ...]`
+- Supports `--threshold N`, `--min-lines N`, `--min-nodes N`, `--limit N`, `--json`, `--text`, and `--help`.
+
+Algorithm requirements:
+- Tokenize Lua source.
+- Extract function scopes.
+- Normalize identifiers and literals while retaining structural tokens.
+- Compare structural fingerprints and report high-similarity functions.
+- Reports are advisory; refactor only when the duplication represents real shared behavior.

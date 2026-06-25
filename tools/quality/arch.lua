@@ -10,12 +10,13 @@ end
 
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
+local arch_tool = assert(bootstrap.ensure_tool("arch_view", bootstrap_env))
 
 local _env = {
   cwd = bootstrap_env.repo_root,
   command_name = "tools/quality/arch.lua",
   default_config_path = require("shared.lib.common").join_path(bootstrap_env.repo_root, "tools/quality/arch/config.json"),
-  script_dir = require("shared.lib.common").join_path(bootstrap_env.vendor_dir, "arch_view"),
+  script_dir = arch_tool.root,
 }
 local cli = require("arch_view.cli")
 local function _merge(env)

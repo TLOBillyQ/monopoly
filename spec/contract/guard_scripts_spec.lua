@@ -1,3 +1,5 @@
+assert(require("spec.bootstrap").ensure_tool("arch_view"))
+
 local dep_rules = require("spec.guards.lib.dep_rules")
 local forbidden_globals = require("spec.guards.lib.forbidden_globals")
 local fixed_type_guard = require("spec.guards.lib.fixed_type_guard")

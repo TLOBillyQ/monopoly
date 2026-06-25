@@ -9,10 +9,12 @@ end
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 local REPO_ROOT = bootstrap_env.repo_root
-require("shared.mutate4lua_paths").activate(bootstrap_env.vendor_dir)
+local mutate_tool = assert(bootstrap.ensure_tool("mutate4lua", bootstrap_env))
+require("shared.mutate4lua_paths").activate(mutate_tool.root)
 
 local _env = {
   cwd = REPO_ROOT, command_name = "tools/quality/mutate.lua",
+  tool_root = mutate_tool.root,
   default_driver = "tools/quality/mutate/driver.lua",
   busted_driver = "tools/quality/mutate/busted_adapter.lua",
   busted_discover = function(lane)

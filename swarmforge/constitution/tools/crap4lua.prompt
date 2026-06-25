@@ -1,0 +1,20 @@
+# crap4lua Tool Spec
+
+Purpose: combine Lua complexity and coverage gaps into CRAP risk reports.
+
+Reference implementation: `crap4lua` entry in `swarmforge/tools.lock`.
+Project wrappers: `lua tools/quality/crap.lua`, `lua tools/quality/crap_analyze.lua`, and `lua tools/quality/crap_gate.lua`.
+
+CLI contract:
+- `lua tools/quality/crap.lua collect|report|summary|viewer [options]`
+- Project config lives under `tools/quality/crap/`.
+- `crap_gate` enforces the committed complexity-aware baseline.
+
+Data contract:
+- Coverage collection emits JSON consumed by analysis and the gate.
+- Viewer/export artifacts are generated outputs and must not be committed unless explicitly requested.
+
+Algorithm requirements:
+- Load project coverage and tier config through public project adapters.
+- Compute complexity, hit executable lines, CRAP score, and tier summaries.
+- Keep CRAP analysis out of normal unit tests except through the project verification lane.

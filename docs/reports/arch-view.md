@@ -16,10 +16,10 @@ last_verified: 2026-05-22
 
 ## 代码位置
 
-- 通用工具源码与静态 viewer 资产在子模块 `vendor/arch_view/`
+- 通用工具源码与静态 viewer 资产由 `swarmforge/tools.lock` 的 `arch_view` 记录钉定，wrapper 按需 bootstrap 到 `.swarmforge/tools/arch_view@<sha>/`
 - Monopoly 专属规则真源仍在 `tools/quality/arch/config.json`
 - Monopoly viewer bundle 默认导出到临时或本地工作目录，不再把提交态快照入库
-- Monopoly 宿主入口在 `tools/quality/arch.lua`，内部通过 `require("arch_view")` 调用 vendored 工具
+- Monopoly 宿主入口在 `tools/quality/arch.lua`，内部先确保 lockfile 工具缓存，再通过 `require("arch_view")` 调用参考实现
 - 默认分析引擎为 `auto`：优先走 Go 核心，不可用时回退 Lua
 
 ## 真源与约束
@@ -55,7 +55,7 @@ lua tools/quality/arch.lua viewer --in-json <file> --out-dir <dir> [--open]
 ```
 导出静态 viewer（`index.html`、`script.js`、`styles.css`、`architecture.json`、`architecture_data.js`）。有已导出 JSON 时可用 `--in-json` 跳过重扫。默认输出目录 `./.arch_view/viewer`。
 
-复制的静态资产来自子模块 `vendor/arch_view/viewer/`，导出产物不依赖 Google Fonts 或其他外网资源。若要保留某次导出结果，请写到 `tmp/`、`.arch_view/` 或仓库外目录，而不是重新提交到仓库。
+复制的静态资产来自当前钉定参考实现的 `viewer/` 目录，导出产物不依赖 Google Fonts 或其他外网资源。若要保留某次导出结果，请写到 `tmp/`、`.arch_view/` 或仓库外目录，而不是重新提交到仓库。
 
 ```
 lua tools/quality/arch.lua scan --out /tmp/monopoly_architecture.json

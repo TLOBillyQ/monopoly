@@ -46,7 +46,7 @@ last_verified: 2026-05-22
 | `contract` | `23` 个 suite，`150` 个 case | 默认高频快车道，含 tooling 调度纯逻辑契约 |
 | `tooling` | `34` 个 spec 文件，`275` 个 case | 并行 3 worker 约 `30s`；`MONO_BEHAVIOR_WORKERS=1` 退回串行 |
 | `guard` | `6` 个 script，`27` 个 case | `dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`、`fixed_type_guard`、`repo_hygiene` |
-| `arch_view` | 扫描 `src/**/*.lua` | 不扫 `tests/`、`tools/`、`vendor/` |
+| `arch_view` | 扫描 `src/**/*.lua` | 不扫 `tests/`、`tools/`、`vendor/`、`.swarmforge/tools/` |
 | `crap` | 当前 behavior lane 分析 `3050` 个函数 | 只给 `src/**/*.lua` 打分 |
 | `mutate4lua` | 每次只盯 `1` 个 `src/**/*.lua` 文件 | 诊断工具，不进默认回归 |
 
@@ -109,7 +109,7 @@ last_verified: 2026-05-22
 
 - 入口：`lua tools/quality/arch.lua check`
 - 文档：`docs/reports/arch-view.md`
-- 工具代码：`vendor/arch_view/`
+- 工具代码：`swarmforge/tools.lock` 钉定的 `arch_view` 参考实现，按需缓存到 `.swarmforge/tools/arch_view@<sha>/`
 - Monopoly 规则真源：`tools/quality/arch/config.json`
 - Monopoly viewer bundle：本地或 CI 临时导出，不再提交到仓库
 - 检查内容：
@@ -132,7 +132,7 @@ last_verified: 2026-05-22
 - 适用时机：需要给“先补测还是先重构”排序
 - 不适合：单独做合并 gate；它依赖测试 lane 质量
 
-现在的 CLI 入口由 `tools/quality/crap.lua` 负责兼容，核心实现来自子模块 `vendor/crap4lua/`。Monopoly 先通过公开 Lua bridge 加载默认项目配置 `tools/quality/crap/config.lua` 并执行 `tools/quality/crap/adapter.lua` 收集 coverage，再由纯 Lua analyzer / viewer 完成 report / viewer：
+现在的 CLI 入口由 `tools/quality/crap.lua` 负责兼容，核心实现来自 `swarmforge/tools.lock` 钉定的 `crap4lua` 参考实现。Monopoly 先通过公开 Lua bridge 加载默认项目配置 `tools/quality/crap/config.lua` 并执行 `tools/quality/crap/adapter.lua` 收集 coverage，再由纯 Lua analyzer / viewer 完成 report / viewer：
 
 - `report`：生成 JSON 报告
 - `viewer`：导出静态页面
@@ -166,13 +166,13 @@ last_verified: 2026-05-22
 - 文档：`docs/guides/mutation-testing.md`
 - 性质：单文件变异测试；看“测试有没有真正卡住错误”，不是看“代码有没有被执行到”
 - 数据来源：
-  - 变异点：`vendor/mutate4lua/` 的 Lua lexer / scanner
+  - 变异点：`swarmforge/tools.lock` 钉定的 `mutate4lua` Lua lexer / scanner
   - 覆盖率：常规 mutate 仍用 `tools/quality/mutate/driver.lua` 的 `debug.sethook(..., "l")`
   - suite index：`--index-suites` 改为单进程文件级触达映射，不再逐 suite 采行覆盖
 - 适用时机：怀疑某个文件 assertion 太松、准备做高风险重构、想验证 characterization tests 是否够硬
 - 不适合：日常全量 gate；它本来就是按文件诊断
 
-现在的 CLI 入口由 `tools/quality/mutate.lua` 负责兼容，核心实现来自子模块 `vendor/mutate4lua/`，Monopoly 的默认 lane 适配在 `tools/quality/mutate/driver.lua`：
+现在的 CLI 入口由 `tools/quality/mutate.lua` 负责兼容，核心实现来自 `swarmforge/tools.lock` 钉定的 `mutate4lua` 参考实现，Monopoly 的默认 lane 适配在 `tools/quality/mutate/driver.lua`：
 
 - 默认 lane：`behavior`
 - 显式可选：`--lane contract`
@@ -240,7 +240,7 @@ lua tools/quality/arch.lua check
 lua spec/support/behavior_parallel.lua --profile tooling
 ```
 
-适合改 `tools/quality/*`、`tools/acceptance/*`、`tools/shared/*`、`tools/ops/*` 包装层，或 `vendor/arch_view` / `vendor/mutate4lua` 对接逻辑之后跑。并行约 `30s`（串行 `busted --run tooling` 约 `45s`）。
+适合改 `tools/quality/*`、`tools/acceptance/*`、`tools/shared/*`、`tools/ops/*` 包装层，或 lockfile 工具 bootstrap / `arch_view` / `mutate4lua` 对接逻辑之后跑。并行约 `30s`（串行 `busted --run tooling` 约 `45s`）。
 
 ### 热点分析
 

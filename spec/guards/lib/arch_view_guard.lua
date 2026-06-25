@@ -1,4 +1,5 @@
 require("spec.bootstrap").install_package_paths()
+assert(require("spec.bootstrap").ensure_tool("arch_view"))
 
 local arch_view = require("arch_view")
 local guard_support = require("spec.support.guards.guard_support")

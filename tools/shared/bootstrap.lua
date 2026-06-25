@@ -25,18 +25,17 @@ function bootstrap.install(script_path, opts)
   dofile(runtime_paths.join_path(env.tools_dir, "shared/package_path_helper.lua")).install_monopoly_package_paths({
     repo_root = env.repo_root,
   })
-  local arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view")
-  local arch_view_patterns = {
-    runtime_paths.join_path(arch_view_root, "lib/?.lua"),
-    runtime_paths.join_path(arch_view_root, "lib/?/init.lua"),
-  }
-  for _, pattern in ipairs(arch_view_patterns) do
-    if not tostring(package.path):find(pattern, 1, true) then
-      package.path = pattern .. ";" .. package.path
-    end
-  end
+  require("shared.tool_cache").install_locked_tool_paths(env)
   require("shared.lib.common").ensure_windows_utf8_console()
   return env
+end
+
+function bootstrap.ensure_tool(name, env_or_opts)
+  local env = env_or_opts
+  if env == nil or env.repo_root == nil then
+    env = bootstrap.resolve(nil, env_or_opts or {})
+  end
+  return require("shared.tool_cache").ensure_tool(name, env)
 end
 
 return bootstrap

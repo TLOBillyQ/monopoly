@@ -22,18 +22,16 @@ function M.install_package_paths()
   dofile(runtime_paths.join_path(env.tools_dir, "shared/package_path_helper.lua")).install_monopoly_package_paths({
     repo_root = env.repo_root,
   })
-  local arch_view_root = runtime_paths.join_path(env.vendor_dir, "arch_view")
-  local arch_view_patterns = {
-    runtime_paths.join_path(arch_view_root, "lib/?.lua"),
-    runtime_paths.join_path(arch_view_root, "lib/?/init.lua"),
-  }
-  for _, pattern in ipairs(arch_view_patterns) do
-    if not tostring(package.path):find(pattern, 1, true) then
-      package.path = pattern .. ";" .. package.path
-    end
-  end
+  require("shared.tool_cache").install_locked_tool_paths(env)
 
   _package_paths_installed = true
+end
+
+function M.ensure_tool(name)
+  M.install_package_paths()
+  local runtime_paths = dofile(_module_dir() .. "/../tools/shared/runtime_paths.lua")
+  local env = runtime_paths.resolve({ source_path = debug.getinfo(1, "S").source })
+  return require("shared.tool_cache").ensure_tool(name, env)
 end
 
 function M.dofile_first(paths)

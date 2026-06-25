@@ -1,11 +1,154 @@
 # language: zh-CN
+# mutation-stamp: sha256=8d39192b0b4fd490538297adf9c4e19e49aa3ab8a5b0aa267e334b4e1aa4debf
+# acceptance-mutation-manifest-begin
+# {
+#   "background_hash": "a0f74d8330fc037bc985ed90066364bc1ede0f4445cabc3cf950e7bcdf9f7292",
+#   "feature_name": "src/ 树差分变异 manifest 一键 bootstrap",
+#   "feature_path": "features/quality/mutate_bootstrap.feature",
+#   "implementation_hash": "sha256:60e58474c8510e786be1c74f89bd41f64e1afa56cb6be41cce0f3d285fe6e5c5",
+#   "scenarios": [
+#     {
+#       "index": 0,
+#       "mutation_count": 16,
+#       "name": "仅枚举 src 下追踪的 Lua 文件",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 16,
+#         "Survived": 0,
+#         "Total": 16
+#       },
+#       "scenario_hash": "a5fb374296e420baed6b36a485b766f3a70359abedd3ebfb45fa18e05db16809",
+#       "tested_at": "2026-06-25T12:35:26Z"
+#     },
+#     {
+#       "index": 1,
+#       "mutation_count": 2,
+#       "name": "无 manifest 的文件首次写入 v2",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 2,
+#         "Survived": 0,
+#         "Total": 2
+#       },
+#       "scenario_hash": "62faeb0a442bb447a8fc7c5c0f2e2569d7534b9a35e5e8ac98369180c772b687",
+#       "tested_at": "2026-06-25T12:35:30Z"
+#     },
+#     {
+#       "index": 2,
+#       "mutation_count": 1,
+#       "name": "已有 v2 manifest 且匹配当前源码的文件保持幂等",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 1,
+#         "Survived": 0,
+#         "Total": 1
+#       },
+#       "scenario_hash": "5deee648bed108578ec170ab2550a69387d0a46f9354d83326fd4c4e9805ecb0",
+#       "tested_at": "2026-06-25T12:35:32Z"
+#     },
+#     {
+#       "index": 3,
+#       "mutation_count": 1,
+#       "name": "v1 manifest 升级到 v2",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 1,
+#         "Survived": 0,
+#         "Total": 1
+#       },
+#       "scenario_hash": "5893d85a36bf49496dba399db4123db0ae467f0509ee26dc350fc1f6ce1bfaf6",
+#       "tested_at": "2026-06-25T12:35:35Z"
+#     },
+#     {
+#       "index": 4,
+#       "mutation_count": 4,
+#       "name": "manifest 尾块损坏的文件被跳过并报告",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 4,
+#         "Survived": 0,
+#         "Total": 4
+#       },
+#       "scenario_hash": "ff46d0770014fe7f0aafd40e51caa1df3e62cf9fb91676d625bd6b4efb676d53",
+#       "tested_at": "2026-06-25T12:35:44Z"
+#     },
+#     {
+#       "index": 5,
+#       "mutation_count": 3,
+#       "name": "工具结束时输出 summary 且各类计数之和等于总文件数",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 3,
+#         "Survived": 0,
+#         "Total": 3
+#       },
+#       "scenario_hash": "d6ba05e25ee9adc80da66c73f4b101d9607a974c8caa94fe8dbd9f23df832b5f",
+#       "tested_at": "2026-06-25T12:35:50Z"
+#     },
+#     {
+#       "index": 6,
+#       "mutation_count": 0,
+#       "name": "无 skipped 项时退出码为 0",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "d9ca3d64906566b8948b38b78b53868a59631ded60479078593ecb6a11a08cab",
+#       "tested_at": "2026-06-25T12:35:50Z"
+#     },
+#     {
+#       "index": 7,
+#       "mutation_count": 2,
+#       "name": "有 skipped 项时退出码仍为 0",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 2,
+#         "Survived": 0,
+#         "Total": 2
+#       },
+#       "scenario_hash": "2974c9e40d69d5bb66a567cfaf0095e6009243c109b52fe1ec6fbd7b68e8cccd",
+#       "tested_at": "2026-06-25T12:35:54Z"
+#     },
+#     {
+#       "index": 8,
+#       "mutation_count": 0,
+#       "name": "空 src 树时直接退出",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "491d97c2fd5aff8653b5596d558d7719acd838c2632a83be6ae46c4d917a3351",
+#       "tested_at": "2026-06-25T12:35:54Z"
+#     },
+#     {
+#       "index": 9,
+#       "mutation_count": 2,
+#       "name": "--dry-run 预览不写入",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 2,
+#         "Survived": 0,
+#         "Total": 2
+#       },
+#       "scenario_hash": "05a5d8b80ca2e3ba63cdee0a3a05f2303e4680c31178e91e43df6255ae57f1ae",
+#       "tested_at": "2026-06-25T12:35:58Z"
+#     }
+#   ],
+#   "tested_at": "2026-06-25T12:35:58Z",
+#   "version": 1
+# }
+# acceptance-mutation-manifest-end
 
 功能: src/ 树差分变异 manifest 一键 bootstrap
 
 背景:
   假如 tools/quality/mutate_bootstrap.lua 已落地
   并且 该工具通过 git ls-files 枚举 src/**/*.lua
-  并且 每个待写文件由 mutate4lua engine.update_manifest 写入 v2 manifest
+  并且 每个待写文件由 lockfile 中 mutate4lua engine.update_manifest 写入 v2 manifest
   并且 工具不调用 git commit；commit 由操作者完成
 
 场景大纲: 仅枚举 src 下追踪的 Lua 文件
@@ -21,7 +164,7 @@
   | docs/architecture/boundaries.md | 不处理  |
   | spec/contract/state/x.lua      | 不处理   |
   | tools/quality/lint.lua         | 不处理   |
-  | vendor/mutate4lua/lib/x.lua    | 不处理   |
+  | swarmforge/tools.lock          | 不处理   |
   | tests/legacy_runner.lua        | 不处理   |
 
 场景大纲: 无 manifest 的文件首次写入 v2
@@ -87,16 +230,20 @@
   | 50   |
   | 350  |
 
-场景大纲: 退出码反映是否存在 skipped 项
-  假如 工具运行后 summary 显示 skipped 计数为<skipped 计数>
+场景: 无 skipped 项时退出码为 0
+  假如 工具运行后 summary 显示 skipped 计数为0
   当 mutate_bootstrap.lua 结束
-  那么 工具退出码为<退出码>
+  那么 工具退出码为 0
+
+场景大纲: 有 skipped 项时退出码仍为 0
+  假如 工具运行后 summary 显示正 skipped 计数为<skipped 计数>
+  当 mutate_bootstrap.lua 结束
+  那么 工具退出码为 0
 
 例子:
-  | skipped 计数 | 退出码 |
-  | 0            | 0      |
-  | 1            | 0      |
-  | 5            | 0      |
+  | skipped 计数 |
+  | 1            |
+  | 5            |
 
 场景: 空 src 树时直接退出
   假如 git ls-files 输出不含 src/**/*.lua

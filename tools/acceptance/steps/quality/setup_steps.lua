@@ -19,8 +19,8 @@ end
 
 function setup_steps.handlers()
   return {
-    ["mutate4lua 已通过子模块 vendor/mutate4lua 安装"] = function(world)
-      return context.require_path(world, "vendor/mutate4lua/lib/mutate4lua/cli.lua")
+    ["mutate4lua 已按 swarmforge/tools.lock bootstrap 到位"] = function(world)
+      return context.require_tool(world, "mutate4lua", "lib/mutate4lua/cli.lua")
     end,
 
     ["项目通过 tools/quality/mutate.lua 暴露 CLI"] = function(world)

@@ -6,7 +6,7 @@ last_verified: 2026-05-22
 ---
 # mutate4lua
 
-`mutate4lua` 是按文件运行的 Lua 变异测试工具。Monopoly 通过子模块 `vendor/mutate4lua/` 引入纯 Lua 实现，再用 `tools/quality/mutate.lua` 和 `tools/quality/mutate/driver.lua` 适配本仓库的测试车道。
+`mutate4lua` 是按文件运行的 Lua 变异测试工具。Monopoly 通过 `swarmforge/tools.lock` 钉定纯 Lua 参考实现，wrapper 按需 bootstrap 到 `.swarmforge/tools/mutate4lua@<sha>/`，再用 `tools/quality/mutate.lua` 和 `tools/quality/mutate/driver.lua` 适配本仓库的测试车道。
 
 如果你想先看它在整套质量入口里的定位、耗时预估和与 `behavior / contract / guard / arch_view / crap` 的分工，先读 `docs/architecture/quality-map.md`。
 
@@ -40,7 +40,7 @@ lua tools/quality/mutate.lua src/foundation/identity.lua --test-command "busted 
 
 ## 差分变异（默认）
 
-自 `vendor/mutate4lua@aaea942` 起，`mutate <file>` 默认按 manifest 做差分变异——
+自 `mutate4lua` 参考实现 `aaea942` 起，`mutate <file>` 默认按 manifest 做差分变异——
 只测 scope hash 与 manifest 不匹配的位点；hash 全匹配的 scope 直接跳过。差分
 基线以 **manifest 尾块** 形式存在源文件末尾：
 
@@ -102,9 +102,9 @@ behavior 测试的同进程顺序污染，产生静默错判。
 
 ## Monopoly 适配层做了什么
 
-- `tools/quality/mutate.lua` 负责 bootstrap `vendor/mutate4lua/lib/` 并委托 `mutate4lua.cli`
+- `tools/quality/mutate.lua` 负责按 `swarmforge/tools.lock` bootstrap `mutate4lua` 并委托 `mutate4lua.cli`
 - 默认把上游内置 test driver 替换成 Monopoly 专属 driver
-- project hash 改走 `git ls-files` 枚举仓库内 `.lua` / `.rockspec` 文件，避免把子模块内容逐文件扫进单次 mutation 启动成本
+- project hash 改走 `git ls-files` 枚举仓库内 `.lua` / `.rockspec` 文件，避免把外置工具缓存内容逐文件扫进单次 mutation 启动成本
 - `tools/quality/mutate/driver.lua` 通过 `spec/<lane>/*_spec.lua` 装配 `behavior` 或 `contract` suites（catalog 仍是 tools 流水线内部细节，将在后续 PR 迁到 `tools/quality/shared/`）
 - 常规 mutate 仍用 `debug.sethook(..., "l")` 记录运行时命中行，供上游过滤未覆盖变异点
 - `--index-suites` 改成单进程批量索引：driver 输出 `suite -> touched files` JSON，避免逐 suite 启进程和逐行 coverage 开销

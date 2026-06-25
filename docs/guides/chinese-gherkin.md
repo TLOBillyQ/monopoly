@@ -49,7 +49,7 @@ last_verified: 2026-05-16
 | `并且` | `And` |
 | `但是` | `And` |
 
-本仓库的 `acceptance4lua` 子模块把中文参数名保留为规范名。中文源文件里的 `<玩家>`、`<已有道具数>` 会在 IR 中继续表示为 `玩家`、`已有道具数`，并在 source metadata 中保留字段名与行号。这样 step handler、诊断信息和变异报告都直接使用业务可读字段，不再生成 `p1`、`p2` 这类中间名。
+本仓库按 `swarmforge/tools.lock` 钉定的 `acceptance4lua` 参考实现把中文参数名保留为规范名。中文源文件里的 `<玩家>`、`<已有道具数>` 会在 IR 中继续表示为 `玩家`、`已有道具数`，并在 source metadata 中保留字段名与行号。这样 step handler、诊断信息和变异报告都直接使用业务可读字段，不再生成 `p1`、`p2` 这类中间名。
 
 例子表头也按同一套字段名处理。若步骤里出现 `<已有道具数>`，例子表中必须存在 `已有道具数` 列，且再次解析应得到相同字段名。
 
@@ -61,7 +61,7 @@ last_verified: 2026-05-16
 
 ## 工具边界
 
-通用框架位于子模块 `vendor/acceptance4lua/`，由 `acceptance4lua.*` 模块直接提供。本仓库不再保留 `tools/acceptance/*` 通用 facade；`acceptance.*` 仅作为 Monopoly 业务 step 命名空间。
+通用框架由 `swarmforge/tools.lock` 钉定的 `acceptance4lua` 参考实现提供，wrapper 按需 bootstrap 到 `.swarmforge/tools/acceptance4lua@<sha>/` 后直接加载 `acceptance4lua.*` 模块。本仓库不再保留 `tools/acceptance/*` 通用 facade；`acceptance.*` 仅作为 Monopoly 业务 step 命名空间。
 
 Monopoly 专属的 step handlers、`game_driver.lua`、runner adapter、`run_acceptance.lua` 和根部命令 wrapper 仍留在本仓库。项目对外暴露的 APS 命令入口是 `gherkin-parser`、`acceptance-entrypoint-generator` 和 `gherkin-mutator`；`acceptance-run` 与 `acceptance-mutate` 是项目便捷入口。
 

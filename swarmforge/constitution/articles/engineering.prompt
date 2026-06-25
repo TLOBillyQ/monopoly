@@ -2,9 +2,10 @@
 
 ## Startup Tools
 - Project language: Lua 5.4, tested with busted.
-- Language tools are project-local: mutation `vendor/mutate4lua`, CRAP `vendor/crap4lua`, DRY `vendor/dry4lua`, and `vendor/arch_view`.
+- Language tools are specified under `swarmforge/constitution/tools/` and pinned in `swarmforge/tools.lock`.
+- Reference implementations are fetched on demand into the gitignored `.swarmforge/tools/<tool>@<sha>/` cache by project-local wrappers.
 - Use the project wrappers under `tools/quality/` and root acceptance wrappers unless the task explicitly asks to upgrade a tool vendor.
-- Do not replace vendored Lua tools during normal feature, cleanup, hardening, or verification work.
+- Do not change `swarmforge/tools.lock` during normal feature, cleanup, hardening, or verification work unless the task explicitly asks to upgrade a tool reference implementation.
 
 ## Design And Testability
 - Work in small, reviewable increments.

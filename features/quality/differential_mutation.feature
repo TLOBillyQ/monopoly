@@ -3,7 +3,7 @@
 功能: 差分变异测试契约
 
 背景:
-  假如 mutate4lua 已通过子模块 vendor/mutate4lua 安装
+  假如 mutate4lua 已按 swarmforge/tools.lock bootstrap 到位
   并且 项目通过 tools/quality/mutate.lua 暴露 CLI
   并且 manifest 以 --[[ mutate4lua-manifest ]] 块写在源文件尾
 

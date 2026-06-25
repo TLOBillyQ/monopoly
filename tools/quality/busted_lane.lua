@@ -8,7 +8,7 @@ local function _module_dir()
 end
 
 local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
-bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
+local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local common = require("shared.lib.common")
 
@@ -67,6 +67,19 @@ end
 
 function M.run(options)
   options = options or {}
+  local tool_sets = {
+    acceptance = { "acceptance4lua" },
+    contract = { "arch_view" },
+    guards = { "arch_view" },
+    tooling = { "acceptance4lua", "arch_view", "crap4lua", "dry4lua", "mutate4lua" },
+  }
+  for _, tool_name in ipairs(tool_sets[options.profile] or {}) do
+    local _, err = bootstrap.ensure_tool(tool_name, bootstrap_env)
+    if err ~= nil then
+      return { stdout = "tool bootstrap failed: " .. tostring(err) .. "\n", code = 1, passed = 0, failed = 1 }
+    end
+  end
+
   local busted_bin = options.busted_bin or os.getenv("BUSTED_BIN") or "busted"
   local run_command = options.run_command or common.run_command
 

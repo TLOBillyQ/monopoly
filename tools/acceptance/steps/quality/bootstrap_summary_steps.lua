@@ -3,16 +3,42 @@ local bootstrap_runtime = require("acceptance.steps.quality.bootstrap_runtime")
 
 local summary_steps = {}
 
-local function _set_bootstrap_count(field, example_key)
+local _KNOWN_TOTALS = {
+  ["1"] = true,
+  ["50"] = true,
+  ["350"] = true,
+}
+
+local _KNOWN_SKIPPED_COUNTS = {
+  ["0"] = true,
+  ["1"] = true,
+  ["5"] = true,
+}
+
+local _KNOWN_POSITIVE_SKIPPED_COUNTS = {
+  ["1"] = true,
+  ["5"] = true,
+}
+
+local _KNOWN_DRY_RUN_SOURCES = {
+  ["src/foundation/log.lua"] = true,
+  ["src/rules/market/effects.lua"] = true,
+}
+
+local function _set_bootstrap_count(field, example_key, known_values)
   return function(world, example)
-    context.state(world).bootstrap = { [field] = context.to_integer(example[example_key]) or 0 }
+    local raw = tostring(example[example_key] or "")
+    if known_values ~= nil and known_values[raw] ~= true then
+      return nil, "unknown " .. tostring(example_key) .. " fixture value: " .. raw
+    end
+    context.state(world).bootstrap = { [field] = context.to_integer(raw) or 0 }
     return true
   end
 end
 
 function summary_steps.handlers()
   return {
-    ["git ls-files src/ 输出<总数>个 Lua 文件"] = _set_bootstrap_count("total", "总数"),
+    ["git ls-files src/ 输出<总数>个 Lua 文件"] = _set_bootstrap_count("total", "总数", _KNOWN_TOTALS),
 
     ["stdout 包含字面量<总数>"] = function(world, example)
       return context.expect(((context.state(world).bootstrap or {}).stdout or ""):find(example["总数"], 1, true) ~= nil,
@@ -37,7 +63,15 @@ function summary_steps.handlers()
     end,
 
     ["工具运行后 summary 显示 skipped 计数为<skipped 计数>"] =
-      _set_bootstrap_count("skipped", "skipped 计数"),
+      _set_bootstrap_count("skipped", "skipped 计数", _KNOWN_SKIPPED_COUNTS),
+
+    ["工具运行后 summary 显示 skipped 计数为0"] = function(world)
+      context.state(world).bootstrap = { skipped = 0 }
+      return true
+    end,
+
+    ["工具运行后 summary 显示正 skipped 计数为<skipped 计数>"] =
+      _set_bootstrap_count("skipped", "skipped 计数", _KNOWN_POSITIVE_SKIPPED_COUNTS),
 
     ["mutate_bootstrap.lua 结束"] = function(world)
       return bootstrap_runtime.run_bootstrap(world)
@@ -69,6 +103,10 @@ function summary_steps.handlers()
     end,
 
     ["git ls-files 输出含<源文件>"] = function(world, example)
+      local source = tostring(example["源文件"] or "")
+      if _KNOWN_DRY_RUN_SOURCES[source] ~= true then
+        return nil, "unknown dry-run source fixture value: " .. source
+      end
       local state = context.prepare_manifest(world, example["源文件"])
       state.bootstrap = { v2 = true }
       return true

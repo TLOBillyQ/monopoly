@@ -1,6 +1,7 @@
 local bootstrap = require("spec.bootstrap")
 
 bootstrap.install_package_paths()
+local arch_tool = assert(bootstrap.ensure_tool("arch_view"))
 
 local arch_view = require("arch_view")
 local common = require("arch_view.runtime.common")
@@ -8,7 +9,7 @@ local json_reader = require("arch_view.runtime.json_reader")
 
 local cached_scan_result = nil
 local tmp_root = common.make_temp_path("arch_view_test_output", "")
-local arch_view_root = "vendor/arch_view"
+local arch_view_root = arch_tool.root
 local _scan_architecture_json
 
 local function _first_existing(paths)

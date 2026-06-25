@@ -12,6 +12,7 @@ local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local common = require("shared.lib.common")
+local tool_cache = require("shared.tool_cache")
 
 local vendor_submodules = {}
 
@@ -19,139 +20,65 @@ local function _trim(text)
   return tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-local function _git(cwd, args)
-  local command = { "git", "-C", cwd }
+local function _short(hash)
+  local text = tostring(hash or "")
+  if text == "" then
+    return "-"
+  end
+  return text:sub(1, 10)
+end
+
+local function _git(args)
+  local command = { "git" }
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value
   end
   return common.run_command(command)
 end
 
-local function _short(hash)
-  local text = tostring(hash or "")
-  if text == "" then
-    return "-"
-  end
-  return text:sub(1, 8)
-end
-
 local function _append_issue(issues, row, message)
   issues[#issues + 1] = {
-    worktree = row.worktree,
+    tool = row.tool,
     path = row.path,
     message = message,
-    recorded = row.recorded,
+    expected = row.expected,
     actual = row.actual,
-    origin_main = row.origin_main,
   }
 end
 
 function vendor_submodules.repo_root(cwd)
-  local result = _git(cwd or common.current_dir(), { "rev-parse", "--show-toplevel" })
-  if not result.ok then
+  local result = common.run_command({ "git", "-C", cwd or common.current_dir(), "rev-parse", "--show-toplevel" })
+  if result.ok ~= true then
     return nil, result.output
   end
   return _trim(result.output)
 end
 
-function vendor_submodules.submodule_paths(root)
-  local result = _git(root, {
-    "config",
-    "--file",
-    common.join_path(root, ".gitmodules"),
-    "--get-regexp",
-    "^submodule\\..*\\.path$",
-  })
-  if not result.ok then
-    return nil, result.output
-  end
-
-  local paths = {}
-  for line in tostring(result.output or ""):gmatch("[^\n]+") do
-    local path = line:match("%s([^%s]+)%s*$")
-    if path ~= nil and path:match("^vendor/") then
-      paths[#paths + 1] = path
-    end
-  end
-  table.sort(paths)
-  return paths
-end
-
-function vendor_submodules.worktrees(root)
-  local result = _git(root, { "worktree", "list", "--porcelain" })
-  if not result.ok then
-    return nil, result.output
-  end
-
-  local worktrees = {}
-  for line in tostring(result.output or ""):gmatch("[^\n]+") do
-    local path = line:match("^worktree%s+(.+)$")
-    if path ~= nil then
-      worktrees[#worktrees + 1] = _normalize_path(path)
-    end
-  end
-  table.sort(worktrees)
-  return worktrees
-end
-
-function vendor_submodules.inspect(root, worktree, submodule_path, opts)
+function vendor_submodules.inspect_tool(root, name, entry)
   local row = {
-    worktree = worktree,
-    path = submodule_path,
-    recorded = nil,
+    tool = name,
+    path = tool_cache.tool_dir({ repo_root = root }, name, entry.commit),
+    expected = entry.commit,
     actual = nil,
-    origin_main = nil,
-    dirty = false,
-    fetch_ok = true,
+    cached = false,
   }
-
   local issues = {}
-  local tree = _git(worktree, { "ls-tree", "HEAD", submodule_path })
-  if tree.ok then
-    row.recorded = tree.output:match("commit%s+([0-9a-f]+)")
-  end
-  if row.recorded == nil then
-    _append_issue(issues, row, "missing gitlink in superproject")
+
+  if common.is_dir(row.path) ~= true then
+    _append_issue(issues, row, "tool cache missing")
     return row, issues
   end
+  row.cached = true
 
-  local submodule_dir = common.join_path(worktree, submodule_path)
-  local actual = _git(submodule_dir, { "rev-parse", "HEAD" })
-  if actual.ok then
-    row.actual = _trim(actual.output)
-  else
-    _append_issue(issues, row, "cannot read submodule HEAD: " .. _trim(actual.output))
+  local rev = _git({ "-C", row.path, "rev-parse", "HEAD" })
+  if rev.ok ~= true then
+    _append_issue(issues, row, "cannot read cached tool HEAD: " .. _trim(rev.output))
     return row, issues
   end
+  row.actual = _trim(rev.output)
 
-  if opts ~= nil and opts.fetch == true then
-    local fetch = _git(submodule_dir, { "fetch", "--quiet", "origin", "main" })
-    row.fetch_ok = fetch.ok
-    if not fetch.ok then
-      _append_issue(issues, row, "cannot fetch origin/main: " .. _trim(fetch.output))
-    end
-  end
-
-  local origin_main = _git(submodule_dir, { "rev-parse", "origin/main" })
-  if origin_main.ok then
-    row.origin_main = _trim(origin_main.output)
-  else
-    _append_issue(issues, row, "cannot read origin/main: " .. _trim(origin_main.output))
-  end
-
-  local status = _git(submodule_dir, { "status", "--porcelain", "-uall" })
-  if not status.ok then
-    _append_issue(issues, row, "cannot read submodule status: " .. _trim(status.output))
-  elseif _trim(status.output) ~= "" then
-    row.dirty = true
-    _append_issue(issues, row, "submodule working tree is dirty")
-  end
-
-  if row.actual ~= row.recorded then
-    _append_issue(issues, row, "submodule HEAD differs from recorded gitlink")
-  end
-  if row.origin_main ~= nil and row.origin_main ~= row.recorded then
-    _append_issue(issues, row, "origin/main differs from recorded gitlink")
+  if row.actual ~= row.expected then
+    _append_issue(issues, row, "cached tool HEAD differs from tools.lock")
   end
 
   return row, issues
@@ -172,34 +99,37 @@ function vendor_submodules.check(opts)
     end
   end
   root = common.normalize_path(root)
+  local env = { repo_root = root }
 
-  local paths, path_err = vendor_submodules.submodule_paths(root)
-  if paths == nil then
+  local lock, lock_err = tool_cache.read_lock(env)
+  if lock == nil then
     return {
       ok = false,
-      issues = { { message = "cannot read .gitmodules: " .. tostring(path_err) } },
+      issues = { { message = "cannot read tools.lock: " .. tostring(lock_err) } },
       rows = {},
     }
   end
 
-  local worktrees, worktree_err = vendor_submodules.worktrees(root)
-  if worktrees == nil then
-    return {
-      ok = false,
-      issues = { { message = "cannot list worktrees: " .. tostring(worktree_err) } },
-      rows = {},
-    }
+  if opts.ensure == true or opts.fetch == true then
+    for _, name in ipairs(lock.ordered or {}) do
+      local _, err = bootstrap.ensure_tool(name, env)
+      if err ~= nil then
+        return {
+          ok = false,
+          issues = { { tool = name, message = "cannot bootstrap tool: " .. tostring(err) } },
+          rows = {},
+        }
+      end
+    end
   end
 
   local rows = {}
   local issues = {}
-  for _, worktree in ipairs(worktrees) do
-    for _, path in ipairs(paths) do
-      local row, row_issues = vendor_submodules.inspect(root, worktree, path, opts)
-      rows[#rows + 1] = row
-      for _, issue in ipairs(row_issues) do
-        issues[#issues + 1] = issue
-      end
+  for _, name in ipairs(lock.ordered or {}) do
+    local row, row_issues = vendor_submodules.inspect_tool(root, name, lock.tools[name])
+    rows[#rows + 1] = row
+    for _, issue in ipairs(row_issues) do
+      issues[#issues + 1] = issue
     end
   end
 
@@ -208,15 +138,15 @@ function vendor_submodules.check(opts)
     root = root,
     rows = rows,
     issues = issues,
-    submodule_count = #paths,
-    worktree_count = #worktrees,
+    tool_count = #rows,
   }
 end
 
 local function _usage()
   return table.concat({
-    "usage: lua tools/quality/vendor_submodules.lua [--root <path>] [--fetch]",
-    "Checks vendor submodules across all git worktrees.",
+    "usage: lua tools/quality/vendor_submodules.lua [--root <path>] [--ensure]",
+    "Checks swarm quality tool lockfile/cache health.",
+    "--fetch is accepted as a compatibility alias for --ensure.",
   }, "\n")
 end
 
@@ -231,8 +161,8 @@ local function _parse_args(args)
         return nil, "missing value for --root"
       end
       index = index + 2
-    elseif value == "--fetch" then
-      opts.fetch = true
+    elseif value == "--ensure" or value == "--fetch" then
+      opts.ensure = true
       index = index + 1
     elseif value == "--help" or value == "-h" then
       opts.help = true
@@ -257,22 +187,17 @@ function vendor_submodules.main(args)
 
   local result = vendor_submodules.check(opts)
   if result.ok then
-    io.write(string.format(
-      "vendor submodules clean: %d worktrees, %d submodules\n",
-      result.worktree_count or 0,
-      result.submodule_count or 0
-    ))
+    io.write(string.format("tool cache clean: %d tools\n", result.tool_count or 0))
     return 0
   end
 
   for _, issue in ipairs(result.issues or {}) do
     io.stderr:write(string.format(
-      "vendor submodule issue: worktree=%s path=%s recorded=%s actual=%s origin/main=%s message=%s\n",
-      tostring(issue.worktree or "-"),
+      "tool cache issue: tool=%s path=%s expected=%s actual=%s message=%s\n",
+      tostring(issue.tool or "-"),
       tostring(issue.path or "-"),
-      _short(issue.recorded),
+      _short(issue.expected),
       _short(issue.actual),
-      _short(issue.origin_main),
       tostring(issue.message or "unknown")
     ))
   end

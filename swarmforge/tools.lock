@@ -1,0 +1,7 @@
+# ADR 0023: pinned reference implementations for swarm quality tools.
+# Format: <name> <git-url> <commit-sha>
+acceptance4lua https://github.com/TLOBillyQ/acceptance4lua.git 7e140ea3e9d7299ae7193ae30edfae88a25e8d80
+arch_view https://github.com/TLOBillyQ/arch_view.git daa231a3ad3a13ae375c885d9d25c6ae6a9d8c3e
+crap4lua https://github.com/TLOBillyQ/crap4lua.git cb77f29e1c778cac9f8ab1adc184bfd8c07f46cc
+dry4lua https://github.com/TLOBillyQ/dry4lua.git ce6f63ff8e2c144da5178f826890e3f6ca729148
+mutate4lua https://github.com/TLOBillyQ/mutate4lua.git 4b3073bd4479d5eca39567e83f964e6183643d15

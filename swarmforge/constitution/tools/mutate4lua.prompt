@@ -1,0 +1,25 @@
+# mutate4lua Tool Spec
+
+Purpose: source-level mutation testing for Lua 5.4 files.
+
+Reference implementation: `mutate4lua` entry in `swarmforge/tools.lock`.
+Project wrapper: `lua tools/quality/mutate.lua`.
+
+CLI contract:
+- `lua tools/quality/mutate.lua <file.lua> [options]`
+- Supports `--scan`, `--update-manifest`, `--index-suites`, `--dry-run`, `--mutate-all`, `--lines N,N`, `--lane behavior|contract`, `--runner harness|busted`, `--max-workers N`, `--poll-interval N`, `--timeout-factor N`, `--test-command CMD`, `--mutation-warning N`, `--json`, `--verbose`, and `--help`.
+- Run one source file at a time.
+- Default mode is differential mutation against the embedded manifest.
+- When worker limits are available, architects use `--max-workers 8`.
+
+Manifest contract:
+- The source manifest is an embedded Lua block beginning `--[[ mutate4lua-manifest`.
+- The manifest records scope identity, semantic hashes, and prior mutation status.
+- Agents must not edit manifest blocks by hand.
+- Changing the authoritative implementation in `swarmforge/tools.lock` is a re-baseline event.
+
+Algorithm requirements:
+- Discover Lua mutation sites with a Lua-aware lexer/scanner.
+- Isolate mutation execution from the working tree.
+- Report killed, survived, timed-out/error, and uncovered sites.
+- Preserve stable scope identity and deterministic reports for a fixed implementation.

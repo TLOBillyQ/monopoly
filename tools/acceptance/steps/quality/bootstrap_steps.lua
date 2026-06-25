@@ -3,6 +3,33 @@ local bootstrap_runtime = require("acceptance.steps.quality.bootstrap_runtime")
 
 local bootstrap_steps = {}
 
+local _KNOWN_CANDIDATES = {
+  ["src/foundation/log.lua"] = true,
+  ["src/rules/market/effects.lua"] = true,
+  ["src/turn/loop/init.lua"] = true,
+  ["docs/architecture/boundaries.md"] = false,
+  ["spec/contract/state/x.lua"] = false,
+  ["tools/quality/lint.lua"] = false,
+  ["swarmforge/tools.lock"] = false,
+  ["tests/legacy_runner.lua"] = false,
+}
+
+local _KNOWN_BOOTSTRAP_SOURCES = {
+  ["src/foundation/log.lua"] = true,
+  ["src/rules/market/effects.lua"] = true,
+  ["src/turn/loop/init.lua"] = true,
+}
+
+local _KNOWN_CORRUPT_FORMS = {
+  ["缺失结尾 ]] 标记"] = true,
+  ["起始标记后内容截断"] = true,
+}
+
+local function _expect_known_value(value, known, label)
+  return context.expect(known[tostring(value or "")] ~= nil,
+    "unknown " .. tostring(label) .. " fixture value: " .. tostring(value))
+end
+
 local function _require_path(path)
   return function(world)
     return context.require_path(world, path)
@@ -18,6 +45,10 @@ end
 
 local function _prepare_bootstrap_manifest(opts, bootstrap_state)
   return function(world, example)
+    local known, known_err = _expect_known_value(example["源文件"], _KNOWN_BOOTSTRAP_SOURCES, "source")
+    if not known then
+      return nil, known_err
+    end
     local state = context.prepare_manifest(world, example["源文件"], opts)
     state.bootstrap = bootstrap_state
     return true
@@ -30,8 +61,10 @@ function bootstrap_steps.handlers()
 
     ["该工具通过 git ls-files 枚举 src/**/*.lua"] = _require_path("tools/quality/mutate_bootstrap.lua"),
 
-    ["每个待写文件由 mutate4lua engine.update_manifest 写入 v2 manifest"] =
-      _require_path("vendor/mutate4lua/lib/mutate4lua/engine.lua"),
+    ["每个待写文件由 lockfile 中 mutate4lua engine.update_manifest 写入 v2 manifest"] =
+      function(world)
+        return context.require_tool(world, "mutate4lua", "lib/mutate4lua/engine.lua")
+      end,
 
     ["工具不调用 git commit；commit 由操作者完成"] = function(world)
       local common = require("shared.lib.common")
@@ -46,7 +79,12 @@ function bootstrap_steps.handlers()
     end,
 
     ["git ls-files 输出包含<候选路径>"] = function(world, example)
-      context.state(world).bootstrap = { candidate = example["候选路径"] }
+      local candidate = example["候选路径"]
+      local known, known_err = _expect_known_value(candidate, _KNOWN_CANDIDATES, "candidate path")
+      if not known then
+        return nil, known_err
+      end
+      context.state(world).bootstrap = { candidate = candidate }
       return true
     end,
 
@@ -59,9 +97,15 @@ function bootstrap_steps.handlers()
     end,
 
     ["工具<是否处理><候选路径>"] = function(world, example)
-      local expected = example["是否处理"] == "处理"
-      return context.expect((context.state(world).bootstrap or {}).processed == expected,
-        "candidate processing mismatch for " .. tostring(example["候选路径"]))
+      local status = example["是否处理"]
+      if status ~= "处理" and status ~= "不处理" then
+        return nil, "unknown processing expectation: " .. tostring(status)
+      end
+      local candidate = example["候选路径"]
+      local expected = status == "处理"
+      local canonical = _KNOWN_CANDIDATES[tostring(candidate or "")]
+      return context.expect((context.state(world).bootstrap or {}).processed == expected and canonical == expected,
+        "candidate processing mismatch for " .. tostring(candidate))
     end,
 
     ["源文件<源文件>当前不含 mutate4lua manifest 尾块"] =
@@ -97,6 +141,9 @@ function bootstrap_steps.handlers()
     ["工具 summary 标记<源文件>为 migrated"] = _expect_status("migrated"),
 
     ["源文件<源文件>的 manifest 尾块呈现<损坏形式>"] = function(world, example)
+      if _KNOWN_CORRUPT_FORMS[tostring(example["损坏形式"] or "")] ~= true then
+        return nil, "unknown corrupt manifest fixture value: " .. tostring(example["损坏形式"])
+      end
       return _prepare_bootstrap_manifest(nil, { corrupt_form = example["损坏形式"] })(world, example)
     end,
 

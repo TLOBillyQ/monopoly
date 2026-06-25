@@ -8,7 +8,7 @@ last_verified: 2026-05-22
 
 `tools/quality/crap.lua` 把函数复杂度与动态测试覆盖率合成 CRAP 分数，排出"最该先重构/补测"的函数热点。它不替代 `busted --run behavior`、`busted --run contract` 或 `busted --run guards`。
 
-当前 Monopoly 只保留兼容入口壳；核心实现位于子模块 `vendor/crap4lua/`。Monopoly 的本地兼容层位于 `tools/bridge/crap4lua/_internal/`，再通过公开 Lua runtime `crap4lua.bridge` 加载 `tools/quality/crap/config.lua` 并执行 `tools/quality/crap/adapter.lua` 收集 coverage，最后把生成的 `ReportRequest` JSON 交给上游 CLI 完成报告分析与 viewer 导出。
+当前 Monopoly 只保留兼容入口壳；核心实现由 `swarmforge/tools.lock` 的 `crap4lua` 记录钉定，wrapper 按需 bootstrap 到 `.swarmforge/tools/crap4lua@<sha>/`。Monopoly 的本地兼容层位于 `tools/bridge/crap4lua/_internal/`，再通过公开 Lua runtime `crap4lua.bridge` 加载 `tools/quality/crap/config.lua` 并执行 `tools/quality/crap/adapter.lua` 收集 coverage，最后把生成的 `ReportRequest` JSON 交给上游 CLI 完成报告分析与 viewer 导出。
 
 如果你想先看整个质量面里 `crap` 和 `behavior / contract / guard / arch_view` 的分工，先读 `docs/architecture/quality-map.md`。
 

@@ -1,10 +1,14 @@
 ---
 kind: adr
-status: proposed
+status: implemented
 owner: architecture
 last_verified: 2026-06-25
 ---
 # ADR 0023 - 将 swarm 质量工具从 vendored 子模块外置为「提示词规范 + 钉定参考实现」
+
+## 实现状态
+
+已实现。五个 swarm 质量工具由 `swarmforge/tools.lock` 钉定，wrapper 通过 `tools/shared/tool_cache.lua` 按需 bootstrap 到 gitignored `.swarmforge/tools/<tool>@<sha>/`；五个 `vendor/*` gitlink 与 `.gitmodules` 条目已移除，`vendor/third_party/` 保持不动。
 
 ## 背景
 

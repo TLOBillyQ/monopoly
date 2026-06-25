@@ -4,8 +4,21 @@ local function _normalize_path(path)
   return tostring(path or ""):gsub("\\", "/")
 end
 
-function mutate4lua_paths.activate(vendor_dir)
-  local root = _normalize_path(vendor_dir) .. "/mutate4lua/lib"
+local function _path_exists(path)
+  local file = io.open(path, "rb")
+  if file ~= nil then
+    file:close()
+    return true
+  end
+  return false
+end
+
+function mutate4lua_paths.activate(tool_root)
+  local normalized = _normalize_path(tool_root)
+  local root = normalized .. "/lib"
+  if not _path_exists(root .. "/mutate4lua/cli.lua") then
+    root = normalized .. "/mutate4lua/lib"
+  end
   local patterns = {
     root .. "/?.lua",
     root .. "/?/init.lua",

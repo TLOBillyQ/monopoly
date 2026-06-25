@@ -95,7 +95,7 @@
 
 背景:
   假如 tools/quality/crap/coverage_tiers.lua 是 tier 配置真源
-  并且 tools/quality/crap.lua 通过 vendor/crap4lua 的 _file_tier_index 做归属判定
+  并且 tools/quality/crap.lua 通过 lockfile 中 crap4lua 的 _file_tier_index 做归属判定
   并且 现行匹配按目录前缀（prefix + 结尾"/"）执行
 
 场景: 引入 excludes 字段
