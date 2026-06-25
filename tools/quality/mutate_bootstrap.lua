@@ -10,10 +10,7 @@ local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 require("shared.mutate4lua_paths").activate(bootstrap_env.vendor_dir)
 
-local util = require("mutate4lua.util")
-local manifest = require("mutate4lua.internal.manifest")
-local scanner = require("mutate4lua.internal.scanner")
-local project = require("mutate4lua.driver.project")
+local runtime_builder = require("quality.mutate.bootstrap_runtime")
 local policy = require("quality.mutation_manifest_policy")
 
 local M = {}
@@ -21,6 +18,11 @@ local M = {}
 M.classify_source = policy.classify_source
 M.is_bootstrap_only = policy.is_bootstrap_only
 M.detect_drift = policy.detect_drift
+
+local function _should_write_manifest(action)
+  return action == policy.BOOTSTRAP_WRITTEN
+      or action == policy.BOOTSTRAP_MIGRATED
+end
 
 function M.run(opts, runtime)
   opts = opts or {}
@@ -33,11 +35,11 @@ function M.run(opts, runtime)
   local buckets = { written = {}, migrated = {}, unchanged = {}, skipped = {} }
   for _, file_path in ipairs(files) do
     local outcome = policy.categorize_bootstrap(file_path, runtime)
-    if outcome.action == "skipped" then
+    if outcome.action == policy.BOOTSTRAP_SKIPPED then
       runtime.err_write(string.format(
         "[mutate-bootstrap] skip %s: %s\n", outcome.path, tostring(outcome.reason or "unknown")
       ))
-    elseif not opts.dry_run and (outcome.action == "written" or outcome.action == "migrated") then
+    elseif not opts.dry_run and _should_write_manifest(outcome.action) then
       runtime.write_manifest(outcome.path, outcome.data)
     end
     table.insert(buckets[outcome.action], outcome.path)
@@ -61,67 +63,6 @@ function M.run(opts, runtime)
     unchanged = buckets.unchanged,
     skipped = buckets.skipped,
   }
-end
-
-local function _read_command(cmd)
-  local handle = io.popen(cmd .. " 2>/dev/null")
-  if handle == nil then return nil, "popen failed" end
-  local out = handle:read("*a")
-  handle:close()
-  return out or ""
-end
-
-local function _default_list_src_lua_files()
-  local out = _read_command("git ls-files -- 'src/*.lua'")
-  if out == nil then return {} end
-  local files = {}
-  for line in out:gmatch("([^\n]+)") do
-    if line:match("%.lua$") and line:sub(1, 4) == "src/" then
-      files[#files + 1] = line
-    end
-  end
-  table.sort(files)
-  return files
-end
-
-local function _default_read_source(path)
-  local f = io.open(path, "r")
-  if not f then return nil, "cannot open " .. path end
-  local body = f:read("*a")
-  f:close()
-  return body
-end
-
-local function _default_read_manifest(path)
-  local ok, data = pcall(manifest.read, path)
-  if not ok then return nil end
-  return data
-end
-
-local function _default_scan_file(path)
-  local source, read_err = _default_read_source(path)
-  if source == nil then return nil, read_err end
-  local stripped = manifest.strip(source)
-  local abs = util.absolute_path(util.join_path(bootstrap_env.repo_root, path))
-  local relative = project.relative_file(bootstrap_env.repo_root, abs)
-  local ok, data = pcall(scanner.analyze, abs, relative, stripped)
-  if not ok then return nil, tostring(data) end
-  data._abs = abs
-  data._stripped = stripped
-  return data
-end
-
-local function _default_write_manifest(_, data)
-  local proj_hash = project.project_hash(
-    project.find_root(bootstrap_env.repo_root, data._abs),
-    data._abs,
-    data._stripped
-  )
-  manifest.write(data._abs, data._stripped, {
-    version = 2,
-    project_hash = proj_hash,
-    scopes = data.scopes,
-  })
 end
 
 function M.main(argv)
@@ -148,15 +89,7 @@ Bootstrap mutate4lua v2 manifest tails across src/**/*.lua.
     end
   end
 
-  local runtime = {
-    list_src_lua_files = _default_list_src_lua_files,
-    read_source = _default_read_source,
-    read_manifest = _default_read_manifest,
-    scan_file = _default_scan_file,
-    write_manifest = _default_write_manifest,
-    out_write = function(s) io.stdout:write(s) end,
-    err_write = function(s) io.stderr:write(s) end,
-  }
+  local runtime = runtime_builder.build(bootstrap_env)
   local result = M.run(opts, runtime)
   return result.exit_code
 end

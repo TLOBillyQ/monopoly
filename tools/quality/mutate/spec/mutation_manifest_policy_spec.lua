@@ -18,6 +18,27 @@ local function _manifest_block(version)
     _MANIFEST_TAIL
 end
 
+local function _scope(hash, status)
+  return {
+    id = "x",
+    semantic_hash = hash or "h",
+    last_mutation_status = status,
+  }
+end
+
+local function _manifest_data(version, hash, status)
+  return {
+    version = version or 2,
+    scopes = { _scope(hash, status) },
+  }
+end
+
+local function _current_data(hash)
+  return {
+    scopes = { _scope(hash) },
+  }
+end
+
 describe("mutation_manifest_policy.classify_source", function()
   it("classifies a file without a manifest marker as missing", function()
     local result = policy.classify_source(_source())
@@ -29,43 +50,42 @@ describe("mutation_manifest_policy.classify_source", function()
     assert.are.equal(policy.STATE_CORRUPT, result.state)
   end)
 
-  it("classifies v1 manifests as migration candidates", function()
-    local result = policy.classify_source(_source() .. "\n" .. _manifest_block(1), {
+  for _, case in ipairs({
+    {
+      name = "classifies v1 manifests as migration candidates",
       version = 1,
-      scopes = { { id = "x", semantic_hash = "h" } },
-    })
-    assert.are.equal(policy.STATE_V1, result.state)
-  end)
-
-  it("classifies v2 manifests without mutation status as bootstrap-only", function()
-    local result = policy.classify_source(_source() .. "\n" .. _manifest_block(2), {
+      expected = policy.STATE_V1,
+    },
+    {
+      name = "classifies v2 manifests without mutation status as bootstrap-only",
       version = 2,
-      scopes = { { id = "x", semantic_hash = "h" } },
-    }, {
-      scopes = { { id = "x", semantic_hash = "h" } },
-    })
-    assert.are.equal(policy.STATE_BOOTSTRAP_ONLY, result.state)
-  end)
-
-  it("classifies v2 manifests with matching scope hashes as current", function()
-    local result = policy.classify_source(_source() .. "\n" .. _manifest_block(2), {
+      expected = policy.STATE_BOOTSTRAP_ONLY,
+      current_hash = "h",
+    },
+    {
+      name = "classifies v2 manifests with matching scope hashes as current",
       version = 2,
-      scopes = { { id = "x", semantic_hash = "h", last_mutation_status = "passed" } },
-    }, {
-      scopes = { { id = "x", semantic_hash = "h" } },
-    })
-    assert.are.equal(policy.STATE_CURRENT, result.state)
-  end)
-
-  it("classifies v2 manifests with changed scope hashes as drifted", function()
-    local result = policy.classify_source(_source() .. "\n" .. _manifest_block(2), {
+      status = "passed",
+      expected = policy.STATE_CURRENT,
+      current_hash = "h",
+    },
+    {
+      name = "classifies v2 manifests with changed scope hashes as drifted",
       version = 2,
-      scopes = { { id = "x", semantic_hash = "old", last_mutation_status = "passed" } },
-    }, {
-      scopes = { { id = "x", semantic_hash = "new" } },
-    })
-    assert.are.equal(policy.STATE_DRIFTED, result.state)
-  end)
+      hash = "old",
+      status = "passed",
+      expected = policy.STATE_DRIFTED,
+      current_hash = "new",
+    },
+  }) do
+    it(case.name, function()
+      local current = case.current_hash and _current_data(case.current_hash) or nil
+      local result = policy.classify_source(_source() .. "\n" .. _manifest_block(case.version),
+        _manifest_data(case.version, case.hash, case.status),
+        current)
+      assert.are.equal(case.expected, result.state)
+    end)
+  end
 end)
 
 local function _runtime(overrides)
@@ -96,35 +116,39 @@ describe("mutation_manifest_policy.categorize_bootstrap", function()
     assert.are.equal(policy.BOOTSTRAP_WRITTEN, result.action)
   end)
 
-  it("marks v1 manifests as migrated", function()
-    local result = policy.categorize_bootstrap("src/old.lua", _runtime({
-      read_source = function() return _source() .. "\n" .. _manifest_block(1) end,
-      read_manifest = function()
-        return { version = 1, scopes = { { id = "x", semantic_hash = "h" } } }
-      end,
-    }))
-    assert.are.equal(policy.BOOTSTRAP_MIGRATED, result.action)
-  end)
-
-  it("marks current v2 manifests as unchanged", function()
-    local result = policy.categorize_bootstrap("src/current.lua", _runtime({
-      read_source = function() return _source() .. "\n" .. _manifest_block(2) end,
-      read_manifest = function()
-        return { version = 2, scopes = { { id = "x", semantic_hash = "h", last_mutation_status = "passed" } } }
-      end,
-    }))
-    assert.are.equal(policy.BOOTSTRAP_UNCHANGED, result.action)
-  end)
-
-  it("marks drifted v2 manifests as written", function()
-    local result = policy.categorize_bootstrap("src/drift.lua", _runtime({
-      read_source = function() return _source() .. "\n" .. _manifest_block(2) end,
-      read_manifest = function()
-        return { version = 2, scopes = { { id = "x", semantic_hash = "old", last_mutation_status = "passed" } } }
-      end,
-    }))
-    assert.are.equal(policy.BOOTSTRAP_WRITTEN, result.action)
-  end)
+  for _, case in ipairs({
+    {
+      name = "marks v1 manifests as migrated",
+      path = "src/old.lua",
+      version = 1,
+      expected = policy.BOOTSTRAP_MIGRATED,
+    },
+    {
+      name = "marks current v2 manifests as unchanged",
+      path = "src/current.lua",
+      version = 2,
+      status = "passed",
+      expected = policy.BOOTSTRAP_UNCHANGED,
+    },
+    {
+      name = "marks drifted v2 manifests as written",
+      path = "src/drift.lua",
+      version = 2,
+      hash = "old",
+      status = "passed",
+      expected = policy.BOOTSTRAP_WRITTEN,
+    },
+  }) do
+    it(case.name, function()
+      local result = policy.categorize_bootstrap(case.path, _runtime({
+        read_source = function() return _source() .. "\n" .. _manifest_block(case.version) end,
+        read_manifest = function()
+          return _manifest_data(case.version, case.hash, case.status)
+        end,
+      }))
+      assert.are.equal(case.expected, result.action)
+    end)
+  end
 
   it("marks corrupt source manifest tails as skipped", function()
     local result = policy.categorize_bootstrap("src/corrupt.lua", _runtime({
@@ -159,50 +183,46 @@ describe("mutation_manifest_policy.preflight_differential", function()
 end)
 
 describe("mutation_manifest_policy.manifest_write_decision", function()
-  it("allows explicit update-manifest writes", function()
-    local result = policy.manifest_write_decision({ update_manifest = true }, {
-      survived = 12,
-      timeout = 3,
-    })
-    assert.is_true(result.write)
-    assert.are.equal(policy.REASON_EXPLICIT_UPDATE, result.reason)
-  end)
-
-  it("does not write manifests in lines mode", function()
-    local result = policy.manifest_write_decision({ lines_mode = true }, {
-      survived = 0,
-      timeout = 0,
-    })
-    assert.is_false(result.write)
-    assert.are.equal(policy.REASON_LINES_MODE, result.reason)
-  end)
-
-  it("does not write pass manifests when mutants survive", function()
-    local result = policy.manifest_write_decision({}, {
-      survived = 1,
-      timeout = 0,
-    })
-    assert.is_false(result.write)
-    assert.are.equal(policy.REASON_SURVIVED, result.reason)
-  end)
-
-  it("does not write pass manifests when mutants time out", function()
-    local result = policy.manifest_write_decision({}, {
-      survived = 0,
-      timeout = 1,
-    })
-    assert.is_false(result.write)
-    assert.are.equal(policy.REASON_TIMEOUT, result.reason)
-  end)
-
-  it("allows pass-record writes when no mutants survive or time out", function()
-    local result = policy.manifest_write_decision({}, {
-      survived = 0,
-      timeout = 0,
-    })
-    assert.is_true(result.write)
-    assert.are.equal(policy.REASON_PASS, result.reason)
-  end)
+  for _, case in ipairs({
+    {
+      name = "allows explicit update-manifest writes",
+      opts = { update_manifest = true },
+      result = { survived = 12, timeout = 3 },
+      write = true,
+      reason = policy.REASON_EXPLICIT_UPDATE,
+    },
+    {
+      name = "does not write manifests in lines mode",
+      opts = { lines_mode = true },
+      result = { survived = 0, timeout = 0 },
+      write = false,
+      reason = policy.REASON_LINES_MODE,
+    },
+    {
+      name = "does not write pass manifests when mutants survive",
+      result = { survived = 1, timeout = 0 },
+      write = false,
+      reason = policy.REASON_SURVIVED,
+    },
+    {
+      name = "does not write pass manifests when mutants time out",
+      result = { survived = 0, timeout = 1 },
+      write = false,
+      reason = policy.REASON_TIMEOUT,
+    },
+    {
+      name = "allows pass-record writes when no mutants survive or time out",
+      result = { survived = 0, timeout = 0 },
+      write = true,
+      reason = policy.REASON_PASS,
+    },
+  }) do
+    it(case.name, function()
+      local result = policy.manifest_write_decision(case.opts or {}, case.result)
+      assert.are.equal(case.write, result.write)
+      assert.are.equal(case.reason, result.reason)
+    end)
+  end
 end)
 
 describe("mutation_manifest_policy.summarize_mutation_result", function()
