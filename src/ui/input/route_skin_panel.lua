@@ -34,25 +34,20 @@ return intents
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=6fa9d8c933e4d202
+projectHash=f70ca5b6f8cefe36
 scope.0.id=chunk:src/ui/input/route_skin_panel.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=46
-scope.0.semanticHash=c945ea1634d3a194
-scope.1.id=function:_is_slot_equipped:12
+scope.0.endLine=34
+scope.0.semanticHash=1137e29f60325259
+scope.1.id=function:anonymous@15:15
 scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=15
-scope.1.semanticHash=73ce48eb8562e8cf
-scope.2.id=function:anonymous@26:26
+scope.1.startLine=15
+scope.1.endLine=17
+scope.1.semanticHash=5aea64757c128480
+scope.2.id=function:_append_action_button:9
 scope.2.kind=function
-scope.2.startLine=26
-scope.2.endLine=29
-scope.2.semanticHash=0f6bd16001706ea2
-scope.3.id=function:_append_action_button:20
-scope.3.kind=function
-scope.3.startLine=20
-scope.3.endLine=31
-scope.3.semanticHash=52d5e5fe845b7a56
+scope.2.startLine=9
+scope.2.endLine=19
+scope.2.semanticHash=6d23c00f726899ad
 ]]

@@ -101,3 +101,33 @@ target_cash_effects.tax = {
 }
 
 return target_cash_effects
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=a92136bcaf4cf131
+scope.0.id=chunk:src/rules/items/target_cash_effects.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=104
+scope.0.semanticHash=70e991f0995dec5f
+scope.1.id=function:_should_emit_share_wealth_cash_receive:12
+scope.1.kind=function
+scope.1.startLine=12
+scope.1.endLine=18
+scope.1.semanticHash=2ce73e689ff694c0
+scope.2.id=function:_apply_share_wealth_cash:20
+scope.2.kind=function
+scope.2.startLine=20
+scope.2.endLine=38
+scope.2.semanticHash=0c965c68b46c969a
+scope.3.id=function:anonymous@41:41
+scope.3.kind=function
+scope.3.startLine=41
+scope.3.endLine=71
+scope.3.semanticHash=dcf1fb0236681d4a
+scope.4.id=function:anonymous@75:75
+scope.4.kind=function
+scope.4.startLine=75
+scope.4.endLine=100
+scope.4.semanticHash=685b06b7d1c7520c
+]]

@@ -148,12 +148,12 @@ return market_view_controls
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=fc67760b40b7424c
+projectHash=891f4e81767e4b42
 scope.0.id=chunk:src/ui/render/market/controls.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=148
-scope.0.semanticHash=4920aedf98a629b1
+scope.0.semanticHash=3e5fc6cbff3866c8
 scope.1.id=function:_resolve_runtime:10
 scope.1.kind=function
 scope.1.startLine=10
@@ -198,7 +198,7 @@ scope.9.id=function:market_view_controls.reset_market_preview:66
 scope.9.kind=function
 scope.9.startLine=66
 scope.9.endLine=76
-scope.9.semanticHash=68b1d76d4d82538a
+scope.9.semanticHash=2501a3067129f675
 scope.10.id=function:_set_page_arrow:92
 scope.10.kind=function
 scope.10.startLine=92

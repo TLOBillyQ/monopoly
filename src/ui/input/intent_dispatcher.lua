@@ -31,20 +31,20 @@ return intent_dispatcher
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=b0092a91d976cd68
+projectHash=572cba1bbf140550
 scope.0.id=chunk:src/ui/input/intent_dispatcher.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=35
-scope.0.semanticHash=eb3f48a4dd6dec3f
-scope.1.id=function:_dispatch_game_action:8
+scope.0.endLine=31
+scope.0.semanticHash=1c04e4c701307ecd
+scope.1.id=function:_dispatch_game_action:9
 scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=11
+scope.1.startLine=9
+scope.1.endLine=12
 scope.1.semanticHash=01922b783fe2fff7
-scope.2.id=function:intent_dispatcher.dispatch:20
+scope.2.id=function:intent_dispatcher.dispatch:16
 scope.2.kind=function
-scope.2.startLine=20
-scope.2.endLine=32
-scope.2.semanticHash=f2159ba696607a8c
+scope.2.startLine=16
+scope.2.endLine=28
+scope.2.semanticHash=c929115834287281
 ]]

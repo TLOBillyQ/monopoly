@@ -50,3 +50,43 @@ function slot_assets.rarity_key(refs, level)
 end
 
 return slot_assets
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=b0bfca276c14d537
+scope.0.id=chunk:src/ui/render/market/slot_assets.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=53
+scope.0.semanticHash=b0dda2e92a465579
+scope.1.id=function:_asset_opts:6
+scope.1.kind=function
+scope.1.startLine=6
+scope.1.endLine=14
+scope.1.semanticHash=ad0ee3585a4ae9a7
+scope.2.id=function:_icon_key:16
+scope.2.kind=function
+scope.2.startLine=16
+scope.2.endLine=20
+scope.2.semanticHash=20f24ed5000b87bf
+scope.3.id=function:slot_assets.price_text:22
+scope.3.kind=function
+scope.3.startLine=22
+scope.3.endLine=28
+scope.3.semanticHash=7734c4e7ab5c7767
+scope.4.id=function:_fallback_icon_key:30
+scope.4.kind=function
+scope.4.startLine=30
+scope.4.endLine=36
+scope.4.semanticHash=7e6433190a1d191c
+scope.5.id=function:slot_assets.selection_icon_key:38
+scope.5.kind=function
+scope.5.startLine=38
+scope.5.endLine=41
+scope.5.semanticHash=35843c9f79df2321
+scope.6.id=function:slot_assets.rarity_key:43
+scope.6.kind=function
+scope.6.startLine=43
+scope.6.endLine=50
+scope.6.semanticHash=af94b52006c57a26
+]]

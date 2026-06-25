@@ -151,3 +151,13 @@ return {
   ITEM_SLOT_BUTTON = ITEM_SLOT_BUTTON,
   GENERIC_UI_BUTTON = GENERIC_UI_BUTTON,
 }
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=99ea28fc34f72e98
+scope.0.id=chunk:src/ui/input/command_definitions.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=154
+scope.0.semanticHash=dc60f1b9b88a3fe9
+]]
