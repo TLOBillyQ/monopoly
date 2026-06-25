@@ -179,3 +179,56 @@ vendor/mutate4lua e960131）的实测，把热路径拆开摆桌面，给出
 - refactorer：D1 落地
 - coder：D2 + D3 落地；D4 视用户决策
 - 用户：D4 是否落地 / 是否接受向 vendor/mutate4lua 提 D3 batch-mode upstream PR
+
+---
+
+## D6 — Verify slim：长耗时 lane 归特定 swarm role（Draft，pending execution）
+
+**Status**: Draft (2026-06-25，grilling 会话共识；architect 终稿化 prose + role prompt，refactorer 落代码)
+**Trigger**: 用户请求"verify 精简，运行耗时长的只由特定 swarm role 执行"
+**Related**: D1（crap fold）、D5（默认跳 coverage）、ADR 0008（warn allowlist，本决策不回归其 trigger）
+
+### 上下文
+
+D5 早有"默认应跳 coverage"方向但从未强制——SKILL.md 无 flag 默认仍含 coverage+crap（~50s，数字已 stale）。实测真正长耗时 lane 只有 `coverage`(~120-157s) 与 `crap_collect`(~14s)，两者都已是 refactorer 的 owns（`swarmforge/roles/refactorer.prompt:8-19`）。其余 lane（含完整 behavior）并行后 ≤4s。
+
+### 决策（9 条）
+
+1. **剥 coverage + crap** 出默认（mutation/dry/gherkin-mutation 本就不在默认，归 architect 终序）。
+2. **新默认 (无 flag)** = `contract + guards + arch + behavior(全) + lint + encoding`，并行后无 sequential 步。~5s（实测待补）。
+3. **opt-in flags**：`--coverage`（加 coverage 并行 lane；toolchain 缺失时发 warning 而非静默 skip）、`--crap`（加 crap_collect 并行 lane + crap_analyze + crap_gate sequential）、`--full`（= `--coverage --crap` 别名，恢复旧默认）。
+4. **`--no-coverage` 保留为静默 no-op**（向后兼容 D5 文本；等价裸 verify；与现有 `--smoke --no-coverage` 静默行为一致）。`--smoke`/`--tooling`/`--verbose` 不变。
+5. **role prompt 显式禁/准**：coder/specifier 禁 `--coverage`/`--crap`/`--full`（转跑 refactorer/architect owns 的工具）；refactorer/architect 准。
+6. **终序不变**：`verify` → mutate → dry → acceptance-mutate 的 `verify` 步透明继承 slim（architect 本不 owns coverage/crap）。
+7. **本 D6 即决策记录落点**（见决策共识 7）。
+8. **warn summary 不回归 ADR 0008**：由 `behavior` lane 出（`spec/support/behavior_parallel.lua:81,144-159`，走 `--output=spec/log_warns_handler.lua`），不依赖 crap_collect。移除 crap_collect 不触发 ADR 0008 任何 reactivation trigger（那些是 busted-run 下线，与本次相反），且合其"单条路径收敛"长期方向。
+9. **无 CI 依赖**：无 `.github/workflows/`、无 pre-commit；唯一 bare-verify 调用方 `Makefile:4`（`verify`→`check`）按预期变 slim。无 role prompt 硬编码旧 flag。
+
+### 落地轨道（并行）
+
+**轨道 A — refactorer（代码）**：`tools/quality/verify_full.lua` + `verify_full/spec/*.lua`
+- `_default_lanes`（:244-283）：`crap_collect` 与 `coverage` lane 从默认加入改为 opt-in。
+- `_main`（:305-373）：`crap`/`crap_gate` sequential 步（:339-350）仅在 `--crap`/`--full` 时跑。
+- CLI 解析（:386-397）：新增 `--coverage`/`--crap`/`--full`；`--no-coverage` 静默 no-op（`opts.coverage` 不再默认 true）。
+- `--coverage` 显式请求但 `env.coverage_available == false` 时 emit warning。
+- `_resolve_lanes`（:285-296）接 `coverage`/`crap` opt；`--full` = `--coverage --crap`。
+- spec 更新：`verify_full_smoke_spec.lua` 默认期望去 coverage/crap；新增 opt-in 用例；`--no-coverage` no-op 用例。
+- 约束保持：`crap_report.json` 字段不变；coverage tier 阈值（ADR 0005 I3）不变；`--smoke` 车道集不变。
+- 验证：`lua tools/quality/busted_lane.lua --profile tooling`；落地后 `verify_full`（新默认 ~5s）、`--full` 等价旧默认、`--no-coverage` no-op。
+
+**轨道 B — architect（文档/治理）**：并行于 A，不阻塞
+- `swarmforge/roles/coder.prompt` / `specifier.prompt`：加禁 `--coverage`/`--crap`/`--full`。
+- `swarmforge/roles/refactorer.prompt` / `architect.prompt`：加准 flag；终序 `verify` 步用裸 verify。
+- `.agents/skills/verify/SKILL.md`：mode 表、车道集、option 画像、"default vs smoke 边界"重写；wall 写"~5s（实测待补）"；opt-in 标归属角色。
+- 本 D6 终稿化（status → stable）。
+- `docs/architecture/quality-map.md`：wall-time、flag 文档更新。
+
+### 后果
+
+**正向**：默认 verify ~50s → ~5s（-90%）；"长耗时只由特定角色"由默认 slim + role prompt 显式禁/准 flag 双重保证；ADR 0008 不回归。
+**代价**：`--full`/`--coverage`/`--crap` 三个新 flag 增文档面；role prompt 增约束行。
+**不变量**：`crap_report.json` 字段、coverage tier 阈值、`--smoke` 车道集、ADR 0004 D5/D6 mutate 契约、warn summary 输出（经 behavior lane）均不变。
+
+### 注意
+
+smoke(~9s) 与新默认(~5s) wall 趋同；`--smoke` 价值从"快很多"转为"behavior 子集窄反馈"。两档真实 wall 由 refactorer 落地后实测回填。`--full` = `--coverage --crap`（不含 tooling）；`--full --tooling` 正交叠加。
