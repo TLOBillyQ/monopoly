@@ -1,16 +1,18 @@
 local transaction_context = require("src.app.cosmetics.transaction_context")
-local number_utils = require("src.foundation.number")
+local read_model = require("src.app.cosmetics.transaction_read_model")
 
 local state = {}
 
-local PAGE_SIZE = 6
-
-function state.role_key(role_id)
-  if role_id == nil then
-    return nil
-  end
-  return tostring(role_id)
-end
+-- Catalog indexing and slot view-model projections live in
+-- transaction_read_model; re-exported here so the transaction_state API stays
+-- unchanged for existing callers.
+state.role_key = read_model.role_key
+state.slot_index = read_model.slot_index
+state.skin_at = read_model.skin_at
+state.skin_by_product = read_model.skin_by_product
+state.clamp_page = read_model.clamp_page
+state.slot_view_model = read_model.slot_view_model
+state.slot_view_models = read_model.slot_view_models
 
 local function _new_panel()
   return {
@@ -53,24 +55,6 @@ function state.rejected(panel, reason, fields)
   result.reason = reason
   result.panel = panel
   return result
-end
-
-function state.slot_index(panel, slot_index)
-  local slot = number_utils.to_integer(slot_index) or 1
-  return ((panel and panel.page_index or 1) - 1) * PAGE_SIZE + slot
-end
-
-function state.skin_at(panel, slot_index)
-  return transaction_context.catalog()[state.slot_index(panel, slot_index)]
-end
-
-function state.skin_by_product(product_id)
-  for _, skin in ipairs(transaction_context.catalog()) do
-    if skin.product_id == product_id then
-      return skin
-    end
-  end
-  return nil
 end
 
 local function _owned_bucket(panel, key)
@@ -124,6 +108,15 @@ function state.owns_skin(panel, role_id, skin)
   return bucket ~= nil and skin ~= nil and bucket[skin.product_id] == true
 end
 
+function state.equipped_product(panel, role_id)
+  local effective_role = role_id or (panel and panel.role_id)
+  local key = state.role_key(effective_role)
+  if key == nil or panel == nil or panel.selected_by_role == nil then
+    return nil
+  end
+  return panel.selected_by_role[key]
+end
+
 function state.apply_equip(panel, role_id, skin)
   local key = state.role_key(role_id)
   if key == nil then
@@ -163,10 +156,6 @@ function state.seed_equipped(panel, role_id)
   end
   state.apply_equip(panel, role_id, skin)
   return skin.product_id
-end
-
-function state.clamp_page(page_index)
-  return number_utils.clamp(page_index, 1, number_utils.page_count(#transaction_context.catalog(), PAGE_SIZE))
 end
 
 return state

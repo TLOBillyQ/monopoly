@@ -664,8 +664,8 @@ describe("presentation_ui.event_bindings", function()
     assert(skin_action_spec ~= nil, "route specs should include skin panel slot action")
     local skin_intent = skin_action_spec.build_intent and skin_action_spec.build_intent() or nil
     _assert_eq(skin_intent and skin_intent.type, "skin_panel_action", "skin panel slot should build skin action")
-    _assert_eq(skin_intent and skin_intent.action and skin_intent.action.type, "equip",
-      "skin panel slot should request equip action")
+    _assert_eq(skin_intent and skin_intent.action and skin_intent.action.type, "activate_slot",
+      "skin panel slot should request transaction activation")
     _assert_eq(skin_intent and skin_intent.action and skin_intent.action.slot_index, 2,
       "skin panel slot should preserve clicked slot index")
     local atlas_slot_spec = _find_spec(specs, item_atlas_nodes.card_images[3])

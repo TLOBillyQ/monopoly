@@ -33,6 +33,7 @@ _copy_exports(synthetic, {
 runtime_assets.board_feedback_cue = board_feedback.board_feedback_cue
 runtime_assets.validate_catalog = validation.validate_catalog
 runtime_assets.compat_refs = state.compat_refs
+runtime_assets.asset_context = state.asset_context
 runtime_assets.configure_for_tests = state.configure_for_tests
 runtime_assets.reset_for_tests = state.reset_for_tests
 
@@ -40,10 +41,10 @@ return runtime_assets
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=051e310383b19681
+projectHash=f475c1ef6ce927be
 scope.0.id=chunk:src/config/runtime_assets.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=40
-scope.0.semanticHash=48e44e6241e614ac
+scope.0.endLine=41
+scope.0.semanticHash=2d1442272342a93a
 ]]

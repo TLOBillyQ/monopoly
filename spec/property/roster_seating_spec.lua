@@ -3,6 +3,7 @@
 local property = require("spec.support.property")
 local roster = require("src.app.roster")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
+local balance = require("src.player.actions.balance")
 
 local SEATS = 4
 
@@ -14,9 +15,15 @@ local function _mock_roles(count)
   local roles = {}
   for i = 1, count do
     local role_id = 100 + i
+    local attrs = {}
     roles[i] = {
       get_roleid = function() return role_id end,
       get_name = function() return "真人" .. tostring(i) end,
+      get_attr_raw_fixed = function(_, attr_id) return attrs[attr_id] end,
+      set_attr_raw_fixed = function(_, attr_id, value)
+        attrs[attr_id] = value
+        return attr_id == balance.COIN_COUNT_ATTR_ID
+      end,
     }
   end
   return roles

@@ -1,6 +1,6 @@
 ---@diagnostic disable
 -- luacheck: ignore 113
-local executor = require("src.rules.items.executor")
+local item_use_flow = require("src.rules.items.use_flow")
 
 local function make_cases(helpers)
   local _ENV = helpers
@@ -27,7 +27,7 @@ local function _test_owner_mine_other_player_triggers_immediately_after_placemen
   local mine_tile = assert(g.board:get_tile(mine_index), "missing owner tile")
 
   p1.inventory:add({ id = item_ids.mine })
-  local use_res = executor.use_item(g, p1, item_ids.mine, { by_ai = true })
+  local use_res = item_use_flow.begin_item_use(g, p1.id, item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
   assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
   local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
@@ -63,7 +63,7 @@ local function _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_
   local mine_tile = assert(g.board:get_tile(mine_index), "missing owner tile")
 
   p1.inventory:add({ id = item_ids.mine })
-  local use_res = executor.use_item(g, p1, item_ids.mine, { by_ai = true })
+  local use_res = item_use_flow.begin_item_use(g, p1.id, item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
   assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
   local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
@@ -96,7 +96,7 @@ local function _test_passing_armed_mine_stops_and_triggers_followup()
   local mine_tile = assert(g.board:get_tile(mine_index), "missing mine tile")
 
   p1.inventory:add({ id = item_ids.mine })
-  local use_res = executor.use_item(g, p1, item_ids.mine, { by_ai = true })
+  local use_res = item_use_flow.begin_item_use(g, p1.id, item_ids.mine, { by_ai = true })
   assert(use_res ~= nil, "mine use should succeed")
   local mine_state = assert(g.board:get_mine(mine_index), "mine should still exist after placement")
   assert(mine_state.armed == true, "mine should be active immediately for non-owners")

@@ -19,6 +19,18 @@ function transaction.is_slot_equipped(state, slot_index)
   return actions.is_slot_equipped(state, slot_index)
 end
 
+function transaction.slot_view_model(state, slot_index)
+  return actions.slot_view_model(state, slot_index)
+end
+
+function transaction.slot_view_models(state, catalog)
+  return actions.slot_view_models(state, catalog)
+end
+
+function transaction.equipped_product(state, role_id)
+  return actions.equipped_product(state, role_id)
+end
+
 function transaction.configure_equip(callback)
   transaction_context.configure_equip(callback)
 end

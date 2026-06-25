@@ -46,9 +46,7 @@ local function _resolve_refresh_deps(state, deps)
 end
 
 local function _empty_avatar_key(state)
-  local image = runtime_assets.empty_image({
-    refs = state and state.ui_refs or nil,
-  })
+  local image = runtime_assets.empty_image(runtime_assets.asset_context(state))
   return image.image_key
 end
 

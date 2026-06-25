@@ -17,6 +17,26 @@ local function _should_emit_share_wealth_cash_receive(context)
   return not (context and context.suppress_cash_receive_anim == true)
 end
 
+local function _apply_share_wealth_cash(game, user, target, deltas, next_values, should_emit)
+  local user_delta = deltas.user
+  local target_delta = deltas.target
+  if should_emit and type(game.transfer_player_cash) == "function" then
+    if user_delta < 0 then
+      game:transfer_player_cash(user, target, -user_delta)
+    elseif target_delta < 0 then
+      game:transfer_player_cash(target, user, -target_delta)
+    end
+    return
+  end
+  if should_emit and type(game.add_player_cash) == "function" then
+    game:add_player_cash(user, user_delta)
+    game:add_player_cash(target, target_delta)
+    return
+  end
+  game:set_player_cash(user, next_values.user)
+  game:set_player_cash(target, next_values.target)
+end
+
 target_cash_effects.share_wealth = {
   apply = function(game, user, target, context)
     if game:angel_immune_to_item(target, item_ids.share_wealth) then
@@ -30,13 +50,13 @@ target_cash_effects.share_wealth = {
     local user_delta = half - user_cash
     local target_delta = (total - half) - target_cash
     local should_emit_cash_receive = _should_emit_share_wealth_cash_receive(context)
-    if should_emit_cash_receive and type(game.add_player_cash) == "function" then
-      game:add_player_cash(user, user_delta)
-      game:add_player_cash(target, target_delta)
-    else
-      game:set_player_cash(user, half)
-      game:set_player_cash(target, total - half)
-    end
+    _apply_share_wealth_cash(game, user, target, {
+      user = user_delta,
+      target = target_delta,
+    }, {
+      user = half,
+      target = total - half,
+    }, should_emit_cash_receive)
     if user_delta > 0 then
       achievement_progress.cash_received(game, user, user_delta)
     end
@@ -81,3 +101,33 @@ target_cash_effects.tax = {
 }
 
 return target_cash_effects
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=a92136bcaf4cf131
+scope.0.id=chunk:src/rules/items/target_cash_effects.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=104
+scope.0.semanticHash=70e991f0995dec5f
+scope.1.id=function:_should_emit_share_wealth_cash_receive:12
+scope.1.kind=function
+scope.1.startLine=12
+scope.1.endLine=18
+scope.1.semanticHash=2ce73e689ff694c0
+scope.2.id=function:_apply_share_wealth_cash:20
+scope.2.kind=function
+scope.2.startLine=20
+scope.2.endLine=38
+scope.2.semanticHash=0c965c68b46c969a
+scope.3.id=function:anonymous@41:41
+scope.3.kind=function
+scope.3.startLine=41
+scope.3.endLine=71
+scope.3.semanticHash=dcf1fb0236681d4a
+scope.4.id=function:anonymous@75:75
+scope.4.kind=function
+scope.4.startLine=75
+scope.4.endLine=100
+scope.4.semanticHash=685b06b7d1c7520c
+]]

@@ -11,6 +11,7 @@ local event_log_view = require("src.ui.coord.event_log_view")
 local skin_panel = require("src.ui.coord.skin_panel")
 local item_atlas = require("src.ui.coord.item_atlas")
 local skin_gallery = require("src.ui.coord.skin_gallery")
+local command_policy = require("src.ui.input.command_policy")
 
 local view_command_ports = {}
 
@@ -108,11 +109,11 @@ function view_command_ports.build()
   }
   return {
     dispatch = function(state, intent)
-      local intent_type = intent and intent.type or nil
-      if intent_type == nil then
+      local handler_key = command_policy.port_handler(intent)
+      if handler_key == nil then
         return false
       end
-      local handler = handlers[intent_type]
+      local handler = handlers[handler_key]
       return handler and handler(state, intent) or false
     end,
   }
@@ -122,90 +123,90 @@ return view_command_ports
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=7f1f14e9b1c593f5
+projectHash=19af4582fda4071f
 scope.0.id=chunk:src/ui/ports/view_command.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=122
-scope.0.semanticHash=97b55bf88c16a6d5
-scope.1.id=function:_resolve_toggle_role:17
+scope.0.endLine=123
+scope.0.semanticHash=a3576a9537def5cc
+scope.1.id=function:_resolve_toggle_role:18
 scope.1.kind=function
-scope.1.startLine=17
-scope.1.endLine=26
+scope.1.startLine=18
+scope.1.endLine=27
 scope.1.semanticHash=5560ab2d8150c50c
-scope.2.id=function:_can_toggle_action_log:28
+scope.2.id=function:_can_toggle_action_log:29
 scope.2.kind=function
-scope.2.startLine=28
-scope.2.endLine=30
+scope.2.startLine=29
+scope.2.endLine=31
 scope.2.semanticHash=5b34e8d335e82ecf
-scope.3.id=function:_should_abort_toggle:32
+scope.3.id=function:_should_abort_toggle:33
 scope.3.kind=function
-scope.3.startLine=32
-scope.3.endLine=34
+scope.3.startLine=33
+scope.3.endLine=35
 scope.3.semanticHash=07139efae95f5971
-scope.4.id=function:_hide_debug_canvas:36
+scope.4.id=function:_hide_debug_canvas:37
 scope.4.kind=function
-scope.4.startLine=36
-scope.4.endLine=41
+scope.4.startLine=37
+scope.4.endLine=42
 scope.4.semanticHash=4a747bdbbc35aba5
-scope.5.id=function:_sync_debug_canvas:43
+scope.5.id=function:_sync_debug_canvas:44
 scope.5.kind=function
-scope.5.startLine=43
-scope.5.endLine=49
+scope.5.startLine=44
+scope.5.endLine=50
 scope.5.semanticHash=1ff79204b3cb31db
-scope.6.id=function:_warn_missing_debug_channel:51
+scope.6.id=function:_warn_missing_debug_channel:52
 scope.6.kind=function
-scope.6.startLine=51
-scope.6.endLine=59
+scope.6.startLine=52
+scope.6.endLine=60
 scope.6.semanticHash=5337caf7cdaf192f
-scope.7.id=function:_toggle_action_log:61
+scope.7.id=function:_toggle_action_log:62
 scope.7.kind=function
-scope.7.startLine=61
-scope.7.endLine=75
+scope.7.startLine=62
+scope.7.endLine=76
 scope.7.semanticHash=bcce837c79f5b8e1
-scope.8.id=function:anonymous@78:78
+scope.8.id=function:anonymous@79:79
 scope.8.kind=function
-scope.8.startLine=78
-scope.8.endLine=81
+scope.8.startLine=79
+scope.8.endLine=82
 scope.8.semanticHash=e392e628b04267df
-scope.9.id=function:_panel_action_handler:77
+scope.9.id=function:_panel_action_handler:78
 scope.9.kind=function
-scope.9.startLine=77
-scope.9.endLine=82
+scope.9.startLine=78
+scope.9.endLine=83
 scope.9.semanticHash=89efe58fea3c6b3c
-scope.10.id=function:anonymous@86:86
+scope.10.id=function:anonymous@87:87
 scope.10.kind=function
-scope.10.startLine=86
-scope.10.endLine=88
+scope.10.startLine=87
+scope.10.endLine=89
 scope.10.semanticHash=fa3bbf91e0a989f5
-scope.11.id=function:anonymous@89:89
+scope.11.id=function:anonymous@90:90
 scope.11.kind=function
-scope.11.startLine=89
-scope.11.endLine=92
+scope.11.startLine=90
+scope.11.endLine=93
 scope.11.semanticHash=40d7208bd025bc7e
-scope.12.id=function:anonymous@93:93
+scope.12.id=function:anonymous@94:94
 scope.12.kind=function
-scope.12.startLine=93
-scope.12.endLine=96
+scope.12.startLine=94
+scope.12.endLine=97
 scope.12.semanticHash=eb60d122dd798ecf
-scope.13.id=function:anonymous@100:100
+scope.13.id=function:anonymous@101:101
 scope.13.kind=function
-scope.13.startLine=100
-scope.13.endLine=103
+scope.13.startLine=101
+scope.13.endLine=104
 scope.13.semanticHash=4aa81e4ed3f9ef64
-scope.14.id=function:anonymous@104:104
+scope.14.id=function:anonymous@105:105
 scope.14.kind=function
-scope.14.startLine=104
-scope.14.endLine=107
+scope.14.startLine=105
+scope.14.endLine=108
 scope.14.semanticHash=5af31d9eb98b25f0
-scope.15.id=function:anonymous@110:110
+scope.15.id=function:anonymous@111:111
 scope.15.kind=function
-scope.15.startLine=110
-scope.15.endLine=117
-scope.15.semanticHash=197d7d0446b05dfb
-scope.16.id=function:view_command_ports.build:84
+scope.15.startLine=111
+scope.15.endLine=118
+scope.15.semanticHash=348a64fb8516d12a
+scope.16.id=function:view_command_ports.build:85
 scope.16.kind=function
-scope.16.startLine=84
-scope.16.endLine=119
-scope.16.semanticHash=0c74a1477771c67c
+scope.16.startLine=85
+scope.16.endLine=120
+scope.16.semanticHash=df58bbabbf39856b
 ]]

@@ -45,6 +45,19 @@ function M.compat_refs()
   return active_refs
 end
 
+function M.asset_context(root_state)
+  if type(root_state) ~= "table" then
+    return nil
+  end
+  if type(root_state.runtime_asset_context) == "table" then
+    return root_state.runtime_asset_context
+  end
+  if type(root_state.ui_refs) == "table" then
+    return { refs = root_state.ui_refs }
+  end
+  return nil
+end
+
 function M.configure_for_tests(opts)
   opts = opts or {}
   active_refs = opts.refs or default_refs
@@ -64,12 +77,12 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=3dbc348a3421ffe6
+projectHash=697d556e0b85a115
 scope.0.id=chunk:src/config/runtime_assets/state.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=64
-scope.0.semanticHash=0b38178fde06f6c3
+scope.0.endLine=77
+scope.0.semanticHash=7a1dcddfa04f0fb6
 scope.1.id=function:_default_startup_item_ids:12
 scope.1.kind=function
 scope.1.startLine=12
@@ -105,14 +118,19 @@ scope.7.kind=function
 scope.7.startLine=44
 scope.7.endLine=46
 scope.7.semanticHash=d3fd2b7dd3a70cec
-scope.8.id=function:M.configure_for_tests:48
+scope.8.id=function:M.asset_context:48
 scope.8.kind=function
 scope.8.startLine=48
-scope.8.endLine=54
-scope.8.semanticHash=017df65c5b5f85cb
-scope.9.id=function:M.reset_for_tests:56
+scope.8.endLine=59
+scope.8.semanticHash=d528bea1e23e4ce4
+scope.9.id=function:M.configure_for_tests:61
 scope.9.kind=function
-scope.9.startLine=56
-scope.9.endLine=61
-scope.9.semanticHash=a566bf1ebb804d81
+scope.9.startLine=61
+scope.9.endLine=67
+scope.9.semanticHash=017df65c5b5f85cb
+scope.10.id=function:M.reset_for_tests:69
+scope.10.kind=function
+scope.10.startLine=69
+scope.10.endLine=74
+scope.10.semanticHash=a566bf1ebb804d81
 ]]

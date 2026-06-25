@@ -96,6 +96,19 @@ describe("runtime_assets resolver", function()
     _assert_eq(missing.reason, "missing_skin_card_image", "missing skin image reason should be stable")
   end)
 
+  it("builds resolver context from state without exposing raw ui refs to adapters", function()
+    _configure()
+
+    local explicit = { refs = { images = { item_A = "CTX_ITEM" } } }
+    local legacy_state = { ui_refs = { images = { item_A = "LEGACY_ITEM" } } }
+
+    assert(runtime_assets.asset_context({ runtime_asset_context = explicit }) == explicit,
+      "explicit runtime asset context should be returned unchanged")
+    _assert_eq(runtime_assets.image_for_item("item_A", runtime_assets.asset_context(legacy_state)).image_key,
+      "LEGACY_ITEM", "legacy ui refs should remain available through resolver context")
+    _assert_eq(runtime_assets.asset_context(nil), nil, "nil root state should not provide a context")
+  end)
+
   it("resolves synthetic ai profile with avatar fallback", function()
     _configure()
 

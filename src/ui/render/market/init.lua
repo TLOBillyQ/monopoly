@@ -4,6 +4,7 @@ local runtime_state = require("src.ui.state.runtime")
 local market_view_slots = require("src.ui.render.market.slots")
 local market_view_controls = require("src.ui.render.market.controls")
 local runtime_ui = require("src.ui.render.runtime_ui")
+local runtime_assets = require("src.config.runtime_assets")
 
 local market_view = {}
 
@@ -51,9 +52,9 @@ end
 function market_view.refresh_market_selection(state, option_id, deps)
   local ui = state.ui
   assert(ui ~= nil, "missing market ui")
-local selection = market_view_slots.resolve_selection(
+  local selection = market_view_slots.resolve_selection(
     option_id,
-    state.ui_refs or {},
+    runtime_assets.asset_context(state),
     market_layout.empty_ref_key
   )
   ui:set_label(market_layout.price_label, selection.price_text)
@@ -111,7 +112,7 @@ local function _refresh_empty_market(state, market, resolved_deps, resolved_moda
 end
 
 local function _refresh_populated_market(state, market, resolved_deps, resolved_modal, options, ui, was_market_active)
-  local refs = state.ui_refs or {}
+  local refs = runtime_assets.asset_context(state)
   local rendered = market_view_slots.populate_market_slots(ui, refs, options, resolved_deps)
   ui_controls.set_control_state(ui, market_layout.selected_card, { touch_enabled = false })
   market_view_controls.clear_market_selection_frames(ui)

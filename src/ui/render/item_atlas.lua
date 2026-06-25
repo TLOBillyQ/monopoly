@@ -27,7 +27,7 @@ local function _set_enlarged_overlay_visible(ui, visible)
 end
 
 local function _item_image_key(refs, item_id)
-  local image = runtime_assets.image_for_item(item_id, { refs = refs })
+  local image = runtime_assets.image_for_item(item_id, refs)
   return image.ok == true and image.image_key or nil
 end
 
@@ -85,7 +85,7 @@ end
 function item_atlas_view.refresh_page(state, catalog, page_index, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local refs = state.ui_refs or {}
+  local refs = runtime_assets.asset_context(state)
   local offset = (page_index - 1) * PAGE_SIZE
 
   for slot, node_name in ipairs(nodes.card_images) do
@@ -98,7 +98,7 @@ end
 function item_atlas_view.show_enlarged(state, item_id, deps)
   local ui = assert(state.ui, "missing ui")
   local runtime = _resolve_runtime(state, deps)
-  local refs = state.ui_refs or {}
+  local refs = runtime_assets.asset_context(state)
 
   local image_key = _item_image_key(refs, item_id)
   if image_key == nil then

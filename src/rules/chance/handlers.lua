@@ -35,6 +35,10 @@ shared.abs_value = math.abs
 function shared.apply_cash_change(game, player, delta, opts)
   game:add_player_cash(player, delta, opts)
   local amount = number_utils.to_integer(delta)
+  shared.record_cash_received(game, player, amount)
+end
+
+function shared.record_cash_received(game, player, amount)
   if amount and amount > 0 then
     achievement_progress.cash_received(game, player, amount)
   end

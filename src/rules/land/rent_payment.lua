@@ -111,15 +111,12 @@ function rent_payment.execute_pay_rent(game, player_id, tile_id)
   })
 
   if game:player_balance(player, "金币") >= rent then
-    game:deduct_player_cash(player, rent)
-    game:add_player_cash(owner, rent)
+    game:transfer_player_cash(player, owner, rent)
     achievement_progress.cash_received(game, owner, rent)
     return result
   end
 
-  local liquid = game:player_balance(player, "金币")
-  game:add_player_cash(player, -rent)
-  game:add_player_cash(owner, liquid)
+  local _, _, liquid = game:transfer_player_cash(player, owner, rent, { allow_partial = true })
   achievement_progress.cash_received(game, owner, liquid)
   local reason = player.name .. " 资金不足，欠付(" .. owner.name .. ") " .. number_utils.format_integer_part(rent) .. " 破产"
   result.event = "rent_bankrupt"
@@ -130,3 +127,33 @@ function rent_payment.execute_pay_rent(game, player_id, tile_id)
 end
 
 return rent_payment
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=5011fa5dc1053aeb
+scope.0.id=chunk:src/rules/land/rent_payment.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=130
+scope.0.semanticHash=aece6d50228def3e
+scope.1.id=function:_compute_deity_rent:21
+scope.1.kind=function
+scope.1.startLine=21
+scope.1.endLine=33
+scope.1.semanticHash=56dbc4e7a2d7b182
+scope.2.id=function:_build_deity_label:41
+scope.2.kind=function
+scope.2.startLine=41
+scope.2.endLine=43
+scope.2.semanticHash=c41c2c9368c84652
+scope.3.id=function:_build_multiplier_text:63
+scope.3.kind=function
+scope.3.startLine=63
+scope.3.endLine=70
+scope.3.semanticHash=e239c0d2f4682724
+scope.4.id=function:rent_payment.execute_pay_rent:72
+scope.4.kind=function
+scope.4.startLine=72
+scope.4.endLine=127
+scope.4.semanticHash=fbfa23b21e346d01
+]]

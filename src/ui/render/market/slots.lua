@@ -3,7 +3,7 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 local items_cfg = require("src.config.content.items")
 local market_catalog = require("src.config.content.market_catalog")
 local runtime_ui = require("src.ui.render.runtime_ui")
-local runtime_assets = require("src.config.runtime_assets")
+local slot_assets = require("src.ui.render.market.slot_assets")
 
 local market_view_slots = {}
 
@@ -52,49 +52,6 @@ local function _resolve_market_level(cfg)
   return 2
 end
 
-local function _asset_opts(refs)
-  if type(refs) == "table" and type(refs.images) ~= "table" then
-    return { refs = { images = refs } }
-  end
-  return { refs = refs }
-end
-
-local function _resolve_market_icon_key(refs, product_id, entry, cfg)
-  local name = (cfg and cfg.name) or (entry and entry.name)
-  local image = runtime_assets.image_for_market_item(product_id, name, _asset_opts(refs))
-  return image.ok == true and image.image_key or nil
-end
-
-local function _market_price_text(entry)
-  local currency = assert(
-    entry.currency ~= nil and entry.currency ~= "" and entry.currency,
-    "missing market currency"
-  )
-  return tostring(entry.price) .. " " .. tostring(currency)
-end
-
-local function _market_fallback_icon_key(refs, empty_ref_key)
-  local rarity = runtime_assets.image_for_market_rarity(empty_ref_key, _asset_opts(refs))
-  if rarity.image_key ~= nil then
-    return rarity.image_key
-  end
-  return runtime_assets.empty_image(_asset_opts(refs)).image_key
-end
-
-local function _market_selection_icon_key(refs, option_id, entry, cfg, empty_ref_key)
-  return _resolve_market_icon_key(refs, option_id, entry, cfg)
-    or _market_fallback_icon_key(refs, empty_ref_key)
-end
-
-local function _resolve_market_rarity_key(refs, level)
-  local image = runtime_assets.image_for_market_rarity(market_layout.rarity_ref_keys[level], _asset_opts(refs))
-  if image.ok == true then
-    return image.image_key
-  end
-  local empty = runtime_assets.empty_image(_asset_opts(refs))
-  return empty.image_key
-end
-
 local function _set_market_slot_hidden(ui, slot)
   ui_controls.set_slot_state(ui, slot, {
     button = { visible = false, touch_enabled = false },
@@ -139,7 +96,7 @@ local function _set_market_slot_visible(ui, refs, slot, opt, deps)
     sold_out_label = { visible = opt.sold_out == true, touch_enabled = false },
   })
   local level = _resolve_market_level(cfg)
-  local rarity_key = _resolve_market_rarity_key(refs, level)
+  local rarity_key = slot_assets.rarity_key(refs, level)
   if rarity_key ~= nil then
     runtime.set_node_texture_keep_size(ui.query_node(slot.frame), rarity_key)
   end
@@ -216,8 +173,8 @@ function market_view_slots.resolve_selection(option_id, image_refs, empty_ref_ke
   return {
     entry = entry,
     cfg = cfg,
-    price_text = _market_price_text(entry),
-    icon_key = _market_selection_icon_key(image_refs, option_id, entry, cfg, empty_ref_key),
+    price_text = slot_assets.price_text(entry),
+    icon_key = slot_assets.selection_icon_key(image_refs, option_id, entry, cfg, empty_ref_key),
   }
 end
 
@@ -228,12 +185,12 @@ return market_view_slots
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=0f952912775c5176
+projectHash=f08774ec765dbcdb
 scope.0.id=chunk:src/ui/render/market/slots.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=228
-scope.0.semanticHash=9db61845c0ef8994
+scope.0.endLine=185
+scope.0.semanticHash=c00b6950ff022dd6
 scope.1.id=function:_resolve_runtime:10
 scope.1.kind=function
 scope.1.startLine=10
@@ -259,79 +216,49 @@ scope.5.kind=function
 scope.5.startLine=44
 scope.5.endLine=53
 scope.5.semanticHash=6a0d0f8c67f37f02
-scope.6.id=function:_asset_opts:55
+scope.6.id=function:_set_market_slot_hidden:55
 scope.6.kind=function
 scope.6.startLine=55
-scope.6.endLine=60
-scope.6.semanticHash=34e5205f46a26a41
-scope.7.id=function:_resolve_market_icon_key:62
+scope.6.endLine=63
+scope.6.semanticHash=248ac32cb5dc8542
+scope.7.id=function:_set_market_slot_visible:85
 scope.7.kind=function
-scope.7.startLine=62
-scope.7.endLine=66
-scope.7.semanticHash=116d687c2271137d
-scope.8.id=function:_market_price_text:68
+scope.7.startLine=85
+scope.7.endLine=104
+scope.7.semanticHash=6e6d35664f981293
+scope.8.id=function:_set_market_slot:106
 scope.8.kind=function
-scope.8.startLine=68
-scope.8.endLine=74
-scope.8.semanticHash=048342eda02d0fe3
-scope.9.id=function:_market_fallback_icon_key:76
+scope.8.startLine=106
+scope.8.endLine=112
+scope.8.semanticHash=122b5dc7af80449a
+scope.9.id=function:anonymous@136:136
 scope.9.kind=function
-scope.9.startLine=76
-scope.9.endLine=82
-scope.9.semanticHash=ab96ffbc9cd53b29
-scope.10.id=function:_market_selection_icon_key:84
+scope.9.startLine=136
+scope.9.endLine=138
+scope.9.semanticHash=89beb011a3f145a1
+scope.10.id=function:market_view_slots.hide_market_slots:135
 scope.10.kind=function
-scope.10.startLine=84
-scope.10.endLine=87
-scope.10.semanticHash=a93cd593ba76dc74
-scope.11.id=function:_resolve_market_rarity_key:89
+scope.10.startLine=135
+scope.10.endLine=139
+scope.10.semanticHash=e09af905f75c4591
+scope.11.id=function:anonymous@144:144
 scope.11.kind=function
-scope.11.startLine=89
-scope.11.endLine=96
-scope.11.semanticHash=9cf89c0f1d280cb9
-scope.12.id=function:_set_market_slot_hidden:98
+scope.11.startLine=144
+scope.11.endLine=151
+scope.11.semanticHash=992f66e4a3491d72
+scope.12.id=function:market_view_slots.populate_market_slots:141
 scope.12.kind=function
-scope.12.startLine=98
-scope.12.endLine=106
-scope.12.semanticHash=248ac32cb5dc8542
-scope.13.id=function:_set_market_slot_visible:128
+scope.12.startLine=141
+scope.12.endLine=156
+scope.12.semanticHash=2414ba5714375802
+scope.13.id=function:market_view_slots.resolve_selected_option:158
 scope.13.kind=function
-scope.13.startLine=128
-scope.13.endLine=147
-scope.13.semanticHash=7514ba019851c908
-scope.14.id=function:_set_market_slot:149
+scope.13.startLine=158
+scope.13.endLine=167
+scope.13.semanticHash=979c16a226790fee
+scope.14.id=function:market_view_slots.resolve_selection:169
 scope.14.kind=function
-scope.14.startLine=149
-scope.14.endLine=155
-scope.14.semanticHash=122b5dc7af80449a
-scope.15.id=function:anonymous@179:179
-scope.15.kind=function
-scope.15.startLine=179
-scope.15.endLine=181
-scope.15.semanticHash=89beb011a3f145a1
-scope.16.id=function:market_view_slots.hide_market_slots:178
-scope.16.kind=function
-scope.16.startLine=178
-scope.16.endLine=182
-scope.16.semanticHash=e09af905f75c4591
-scope.17.id=function:anonymous@187:187
-scope.17.kind=function
-scope.17.startLine=187
-scope.17.endLine=194
-scope.17.semanticHash=992f66e4a3491d72
-scope.18.id=function:market_view_slots.populate_market_slots:184
-scope.18.kind=function
-scope.18.startLine=184
-scope.18.endLine=199
-scope.18.semanticHash=2414ba5714375802
-scope.19.id=function:market_view_slots.resolve_selected_option:201
-scope.19.kind=function
-scope.19.startLine=201
-scope.19.endLine=210
-scope.19.semanticHash=979c16a226790fee
-scope.20.id=function:market_view_slots.resolve_selection:212
-scope.20.kind=function
-scope.20.startLine=212
-scope.20.endLine=222
-scope.20.semanticHash=93f525182abb8dec
+scope.14.startLine=169
+scope.14.endLine=179
+scope.14.semanticHash=03db9fb435b91540
 ]]
