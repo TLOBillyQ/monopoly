@@ -1,5 +1,6 @@
 local tiles_cfg = require("src.config.content.tiles")
 local contiguous_count = require("src.ui.view.contiguous_count")
+local tile_rent = require("src.ui.view.tile_rent")
 
 local board_slice = {}
 local cached_board_tiles = {}
@@ -13,6 +14,7 @@ end
 local _tile_state_out = {}
 local _tile_state_entries = {}
 local _count_by_owner = {}
+local _rent_by_owner = {}
 
 local function _clear_table(t)
   for k in pairs(t) do t[k] = nil end
@@ -24,9 +26,17 @@ local function _update_tile_entry(tile_id, raw, board)
   entry.owner_id = raw.owner_id
   entry.level = raw.level
   entry.contiguous_count = nil
+  entry.contiguous_rent = nil
   if raw.owner_id then _count_by_owner[raw.owner_id] = _count_by_owner[raw.owner_id] or contiguous_count.build_for_owner(board, raw.owner_id) end
+  if raw.owner_id then
+    _rent_by_owner[raw.owner_id] = _rent_by_owner[raw.owner_id] or contiguous_count.build_rent_for_owner(board, raw.owner_id, function(tile)
+      return tile_rent.for_level(tile, tile and tile.level or 0)
+    end)
+  end
   local count = raw.owner_id and _count_by_owner[raw.owner_id] and _count_by_owner[raw.owner_id][tile_id]
   if count and count > 0 then entry.contiguous_count = count end
+  local rent = raw.owner_id and _rent_by_owner[raw.owner_id] and _rent_by_owner[raw.owner_id][tile_id]
+  if rent and rent > 0 then entry.contiguous_rent = rent end
   _tile_state_out[tile_id] = entry
 end
 
@@ -34,6 +44,7 @@ local function _fill_tile_states(board)
   local lookup = board.tile_lookup or {}
   _clear_table(_tile_state_out)
   _clear_table(_count_by_owner)
+  _clear_table(_rent_by_owner)
   for tile_id, raw in pairs(lookup) do _update_tile_entry(tile_id, raw, board) end
 end
 

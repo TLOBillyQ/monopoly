@@ -1,7 +1,7 @@
--- View-layer BFS that counts how many same-owner land tiles are connected to a
--- starting tile. The gameplay equivalent lives in src.rules.land.rent_math; this
--- copy keeps src/ui from importing src/rules. Inputs come exclusively from board
--- state (read seam) so no domain knowledge is required here.
+-- View-layer BFS for same-owner land components. The gameplay equivalent lives
+-- in src.rules.land.rent_math; this copy keeps src/ui from importing src/rules.
+-- Inputs come exclusively from board state (read seam) so no domain knowledge is
+-- required here.
 
 local M = {}
 
@@ -95,6 +95,29 @@ function M.build_for_owner(board, owner_id)
       local count = #component
       for _, cid in ipairs(component) do
         out[cid] = count
+      end
+    end
+  end
+  return out
+end
+
+function M.build_rent_for_owner(board, owner_id, rent_for_tile)
+  local out = {}
+  if not (board and owner_id ~= nil and type(rent_for_tile) == "function") then
+    return out
+  end
+  local lookup = board.tile_lookup or {}
+  local neighbors = _ensure_land_neighbors(board)
+  for tile_id, tile in pairs(lookup) do
+    if tile and tile.type == "land" and tile.owner_id == owner_id and out[tile_id] == nil then
+      local component = _bfs_component(neighbors, board, tile_id, owner_id)
+      local rent_sum = 0
+      for _, cid in ipairs(component) do
+        local component_tile = lookup[cid] or (type(board.get_tile_by_id) == "function" and board:get_tile_by_id(cid) or nil)
+        rent_sum = rent_sum + (rent_for_tile(component_tile, cid) or 0)
+      end
+      for _, cid in ipairs(component) do
+        out[cid] = rent_sum
       end
     end
   end

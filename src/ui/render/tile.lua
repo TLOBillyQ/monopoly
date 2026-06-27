@@ -1,5 +1,5 @@
 local tiles_cfg = require("src.config.content.tiles")
-local number_utils = require("src.foundation.number")
+local tile_rent = require("src.ui.view.tile_rent")
 local player_colors = require("src.ui.view.player_colors")
 
 local tiles_by_id = {}
@@ -31,27 +31,20 @@ local function _render_name(unit, cfg, is_land)
   _assert_land_node_present(is_land, "name")
 end
 
-local function _rent_for_level(cfg, level)
-  if cfg.price == nil then
-    return nil
+local function _display_rent(cfg, level, contiguous_rent)
+  if contiguous_rent and contiguous_rent > 0 then
+    return contiguous_rent
   end
-  local costs = cfg.upgrade_costs
-  local max_level = type(costs) == "table" and #costs or 0
-  local normalized_level = number_utils.clamp(level or 0, 0, max_level)
-  return math.floor((cfg.price * (2 ^ normalized_level)) * 0.5)
+  return tile_rent.for_level(cfg, level)
 end
 
-local function _render_price(unit, cfg, is_land, owner_name, level, contiguous_count)
+local function _render_price(unit, cfg, is_land, owner_name, level, contiguous_rent)
   local price_node = unit.get_child_by_name("price")
   local text
   if owner_name then
-    local rent = _rent_for_level(cfg, level)
+    local rent = _display_rent(cfg, level, contiguous_rent)
     if rent and rent > 0 then
-      if contiguous_count and contiguous_count > 1 then
-        text = owner_name .. "\n租 " .. tostring(rent) .. string.rep("+", contiguous_count - 1)
-      else
-        text = owner_name .. "\n租 " .. tostring(rent)
-      end
+      text = owner_name .. "\n租 " .. tostring(rent)
     else
       text = owner_name
     end
@@ -74,7 +67,7 @@ local function _render_color(unit, owner_id, is_land)
   _assert_land_node_present(is_land, "color")
 end
 
-function tile_renderer.render_tile(unit, tile_id, owner_id, owner_name, level, contiguous_count)
+function tile_renderer.render_tile(unit, tile_id, owner_id, owner_name, level, contiguous_rent)
   local cfg = tiles_by_id[tile_id]
   assert(cfg ~= nil, "missing tile cfg: " .. tostring(tile_id))
   assert(unit ~= nil and unit.get_child_by_name ~= nil, "invalid tile unit")
@@ -84,7 +77,7 @@ function tile_renderer.render_tile(unit, tile_id, owner_id, owner_name, level, c
     assert(cfg.price ~= nil, "missing tile price: " .. tostring(tile_id))
   end
   _render_name(unit, cfg, is_land)
-  _render_price(unit, cfg, is_land, owner_name, level, contiguous_count)
+  _render_price(unit, cfg, is_land, owner_name, level, contiguous_rent)
   _render_color(unit, owner_id, is_land)
 end
 

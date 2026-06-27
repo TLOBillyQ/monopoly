@@ -5,6 +5,7 @@ local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 local overlay_compute = require("src.ui.render.anim.overlay_compute")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 local contiguous_count = require("src.ui.view.contiguous_count")
+local tile_rent = require("src.ui.view.tile_rent")
 
 local visual_sync = {}
 
@@ -113,13 +114,16 @@ local function _spawn_mine_overlay(state, idx)
   )
 end
 
-local function _resolve_contiguous_count(_state, board, tile_id, owner_id)
+local function _resolve_contiguous_rent(board, tile_id, owner_id)
   if owner_id == nil or board == nil then
     return nil
   end
-  local count = contiguous_count.for_tile(board, tile_id, owner_id)
-  if count and count > 0 then
-    return count
+  local rents = contiguous_count.build_rent_for_owner(board, owner_id, function(tile)
+    return tile_rent.for_level(tile, tile and tile.level or 0)
+  end)
+  local rent = rents[tile_id]
+  if rent and rent > 0 then
+    return rent
   end
   return nil
 end
@@ -139,8 +143,8 @@ local function _sync_owner_visual(state, tile_unit, tile_id, board)
       owner_name = player and player.name or nil
     end
   end
-  local count = _resolve_contiguous_count(state, board, tile_id, owner_id)
-  tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name, level, count)
+  local contiguous_rent = _resolve_contiguous_rent(board, tile_id, owner_id)
+  tile_renderer.render_tile(tile_unit, tile_id, owner_id, owner_name, level, contiguous_rent)
 end
 
 local function _sync_building_visual(state, scene, idx, board, tile_id, tile_unit)

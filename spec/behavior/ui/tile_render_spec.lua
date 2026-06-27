@@ -168,19 +168,17 @@ describe("tile_renderer", function()
         "no-owner tile should show sale price, expected: " .. expected .. ", got: " .. tostring(captured.price))
     end)
 
-    it("shows contiguous rent with + suffix when contiguous_count > 1", function()
+    it("shows contiguous rent total when provided", function()
       local captured = {}
       local unit = _make_unit(captured)
       local tile_id = _land_tile_id()
-      local cfg = tiles_cfg[tile_id]
-      tile_renderer.render_tile(unit, tile_id, 2, "P1", 0, 3)
-      local expected_rent = math.floor(cfg.price * 0.5)
-      local expected = "P1\n租 " .. tostring(expected_rent) .. "++"
+      tile_renderer.render_tile(unit, tile_id, 2, "P1", 0, 300)
+      local expected = "P1\n租 300"
       assert(captured.price == expected,
-        "contiguous=3 should append ++, expected: " .. expected .. ", got: " .. tostring(captured.price))
+        "contiguous rent should show the final total, expected: " .. expected .. ", got: " .. tostring(captured.price))
     end)
 
-    it("shows no + suffix when contiguous_count is nil", function()
+    it("uses single tile rent when contiguous rent is nil", function()
       local captured = {}
       local unit = _make_unit(captured)
       local tile_id = _land_tile_id()
@@ -189,19 +187,17 @@ describe("tile_renderer", function()
       local expected_rent = math.floor(cfg.price * 0.5)
       local expected = "P1\n租 " .. tostring(expected_rent)
       assert(captured.price == expected,
-        "nil contiguous should show no +, expected: " .. expected .. ", got: " .. tostring(captured.price))
+        "nil contiguous rent should use single tile rent, expected: " .. expected .. ", got: " .. tostring(captured.price))
     end)
 
-    it("shows no + suffix when contiguous_count is 1", function()
+    it("uses explicit contiguous rent without suffix", function()
       local captured = {}
       local unit = _make_unit(captured)
       local tile_id = _land_tile_id()
-      local cfg = tiles_cfg[tile_id]
       tile_renderer.render_tile(unit, tile_id, 2, "P1", 0, 1)
-      local expected_rent = math.floor(cfg.price * 0.5)
-      local expected = "P1\n租 " .. tostring(expected_rent)
+      local expected = "P1\n租 1"
       assert(captured.price == expected,
-        "contiguous=1 should show no +, expected: " .. expected .. ", got: " .. tostring(captured.price))
+        "explicit contiguous rent should not append a suffix, expected: " .. expected .. ", got: " .. tostring(captured.price))
     end)
   end)
 

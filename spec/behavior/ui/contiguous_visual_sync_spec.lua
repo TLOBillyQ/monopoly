@@ -88,6 +88,27 @@ describe("presentation contiguous visual sync", function()
     _assert_eq(counts[2], 1, "second tile is its own singleton component")
   end)
 
+  it("contiguous_count can project the same component rent total to each owned tile", function()
+    local board = _build_board({
+      { id = 1, type = "land", owner_id = 10, level = 1, price = 100, upgrade_costs = { 100 } },
+      { id = 2, type = "land", owner_id = 10, level = 0, price = 100 },
+      { id = 3, type = "land", owner_id = 20, level = 0, price = 100 },
+    }, {
+      [1] = { right = 2 },
+      [2] = { left = 1, right = 3 },
+      [3] = { left = 2 },
+    })
+
+    local rents = contiguous_count.build_rent_for_owner(board, 10, function(tile)
+      if tile.level == 1 then return 100 end
+      return 50
+    end)
+
+    _assert_eq(rents[1], 150, "first connected owner tile should receive component total rent")
+    _assert_eq(rents[2], 150, "second connected owner tile should receive the same component total rent")
+    _assert_eq(rents[3], nil, "other owner tile should not receive this owner's rent total")
+  end)
+
   it("contiguous_count yields zero when neither read seam can resolve an owner", function()
     local board = { path = {}, map = { neighbors = {} } } -- no tile_lookup, no get_tile_by_id
 
@@ -95,11 +116,11 @@ describe("presentation contiguous visual sync", function()
     _assert_eq(next(contiguous_count.build_for_owner(board, 10)), nil, "empty board should produce no counts")
   end)
 
-  it("visual_sync expands affected owners, dedupes explicit tiles, and renders contiguous counts", function()
+  it("visual_sync expands affected owners, dedupes explicit tiles, and renders contiguous rent totals", function()
     local board = _build_board({
-      { id = 1, type = "land", owner_id = 10, level = 1 },
-      { id = 2, type = "land", owner_id = 10, level = 0 },
-      { id = 3, type = "land", owner_id = 20, level = 0 },
+      { id = 1, type = "land", owner_id = 10, level = 1, price = 100, upgrade_costs = { 100 } },
+      { id = 2, type = "land", owner_id = 10, level = 0, price = 100 },
+      { id = 3, type = "land", owner_id = 20, level = 0, price = 100 },
     }, {
       [1] = { right = 2 },
       [2] = { left = 1, right = 3 },
@@ -131,14 +152,14 @@ describe("presentation contiguous visual sync", function()
       {
         target = require("src.ui.render.tile"),
         key = "render_tile",
-        value = function(unit, tile_id, owner_id, owner_name, level, count)
+        value = function(unit, tile_id, owner_id, owner_name, level, contiguous_rent)
           calls[#calls + 1] = {
             unit = unit,
             tile_id = tile_id,
             owner_id = owner_id,
             owner_name = owner_name,
             level = level,
-            count = count,
+            contiguous_rent = contiguous_rent,
           }
         end,
       },
@@ -154,9 +175,9 @@ describe("presentation contiguous visual sync", function()
     _assert_eq(calls[1].tile_id, 1, "explicit tile should render first")
     _assert_eq(calls[1].owner_name, "Ada", "owner name should be resolved for renderer")
     _assert_eq(calls[1].level, 1, "tile level should be forwarded")
-    _assert_eq(calls[1].count, 2, "first connected owner tile should receive count")
+    _assert_eq(calls[1].contiguous_rent, 150, "first connected owner tile should receive total contiguous rent")
     _assert_eq(calls[2].tile_id, 2, "affected owner expansion should render second owned tile")
-    _assert_eq(calls[2].count, 2, "second connected owner tile should receive count")
+    _assert_eq(calls[2].contiguous_rent, 150, "second connected owner tile should receive total contiguous rent")
   end)
 
   it("visual_sync uses building branch when scene exposes building groups", function()
