@@ -46,6 +46,27 @@ local function _setup_context(opts)
   runtime_ports.configure(default_ports.build(runtime_context))
 end
 
+local function _resolve_ui_sync_ports(state)
+  local ports = state and (state._resolved_gameplay_loop_ports or state.gameplay_loop_ports) or nil
+  local ui_sync = type(ports) == "table" and ports.ui_sync or nil
+  if type(ui_sync) ~= "table" or type(ui_sync.refresh_from_dirty) ~= "function" then
+    return nil
+  end
+  return ui_sync
+end
+
+local function _refresh_sign_in_reward_ui(game, state)
+  if game == nil or state == nil or type(game.consume_dirty) ~= "function" then
+    return false
+  end
+  local ui_sync = _resolve_ui_sync_ports(state)
+  if ui_sync == nil then
+    return false
+  end
+  local dirty = game:consume_dirty()
+  return ui_sync.refresh_from_dirty(game, state, dirty)
+end
+
 -- Subscribe the host's RewardDay1..7 sign-in events to coin grants. The game and
 -- app state only exist after bootstrap, so app/init injects lazy accessors that
 -- resolve at event-fire time; without them (e.g. context-only test installs) the
@@ -62,6 +83,9 @@ local function _wire_sign_in_rewards(opts)
     get_game = get_current_game,
     resolve_role_id = function(data)
       return local_actor_resolver.resolve_from_event(get_app_state(), data)
+    end,
+    after_grant = function(game)
+      return _refresh_sign_in_reward_ui(game, get_app_state())
     end,
   })
 end

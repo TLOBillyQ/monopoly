@@ -149,6 +149,96 @@ describe("host_install", function()
 	    _assert_eq(resolver_states[1], app_state, "host_install must pass the live app state to the resolver")
 	  end)
 
+	  it("reward_day_events_refresh_player_ui_from_dirty_immediately", function()
+	    local host_install = require("src.app.host_install")
+	    local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
+	    local captured = {}
+	    local refresh_calls = {}
+	    local lua_api = {
+	      call_delay_time = function(_, fn) fn() end,
+	      global_register_custom_event = function(name, handler)
+	        captured[name] = handler
+	      end,
+	      global_register_trigger_event = function() end,
+	      unit_register_custom_event = function() end,
+	      unit_register_trigger_event = function() end,
+	      global_send_custom_event = function() end,
+	    }
+	    local player = { id = 5, cash = 0 }
+	    local game = {
+	      dirty = { any = false, players = false },
+	      find_player_by_id = function(_, role_id)
+	        if role_id == 5 then return player end
+	        return nil
+	      end,
+	      add_player_cash = function(self, target, amount)
+	        target.cash = (target.cash or 0) + amount
+	        self.dirty.any = true
+	        self.dirty.players = true
+	      end,
+	      consume_dirty = function(self)
+	        local snapshot = {
+	          any = self.dirty.any,
+	          players = self.dirty.players,
+	        }
+	        self.dirty.any = false
+	        self.dirty.players = false
+	        return snapshot
+	      end,
+	    }
+	    local app_state = {
+	      ui = {},
+	      gameplay_loop_ports = {
+	        ui_sync = {
+	          refresh_from_dirty = function(refresh_game, refresh_state, dirty)
+	            refresh_calls[#refresh_calls + 1] = {
+	              game = refresh_game,
+	              state = refresh_state,
+	              dirty = dirty,
+	            }
+	            return true
+	          end,
+	        },
+	      },
+	    }
+
+	    with_patches({
+	      { key = "GameAPI", value = { get_all_valid_roles = function() return {} end, random_int = function(min) return min end } },
+	      { key = "LuaAPI", value = lua_api },
+	      { key = "SetTimeOut", value = nil },
+	      { key = "RegisterCustomEvent", value = nil },
+	      { key = "RegisterTriggerEvent", value = nil },
+	      { key = "UnitCustomEvent", value = nil },
+	      { key = "UnitTriggerEvent", value = nil },
+	      { key = "TriggerCustomEvent", value = nil },
+	      { key = "all_roles", value = nil },
+	      { key = "ALLROLES", value = nil },
+	      { key = "camera_helper", value = nil },
+	      {
+	        target = local_actor_resolver,
+	        key = "resolve_from_event",
+	        value = function(_, data)
+	          return data and data.role or nil
+	        end,
+	      },
+	    }, function()
+	      host_install.install({
+	        install_globals = true,
+	        get_current_game = function() return game end,
+	        get_app_state = function() return app_state end,
+	      })
+
+	      captured.RewardDay4(nil, nil, { role = 5 })
+	    end, { skip_runtime_context_refresh = true })
+
+	    _assert_eq(player.cash, 4000, "RewardDay4 must still grant the configured coins")
+	    _assert_eq(#refresh_calls, 1, "RewardDay4 must refresh the UI in the same host event")
+	    _assert_eq(refresh_calls[1].game, game, "refresh should use the live game")
+	    _assert_eq(refresh_calls[1].state, app_state, "refresh should use the live app state")
+	    _assert_eq(refresh_calls[1].dirty.players, true, "coin grant must refresh player rows")
+	    _assert_eq(game.dirty.any, false, "immediate refresh should consume the dirty bucket")
+	  end)
+
 	  it("skips_reward_day_wiring_when_either_lazy_accessor_is_missing", function()
 	    local host_install = require("src.app.host_install")
 	    local captured = {}

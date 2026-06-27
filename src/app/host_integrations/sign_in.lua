@@ -60,6 +60,7 @@ function sign_in.install(deps)
   local register_event = assert(deps.register_event, "missing register_event")
   local get_game = assert(deps.get_game, "missing get_game")
   local resolve_role_id = assert(deps.resolve_role_id, "missing resolve_role_id")
+  local after_grant = deps.after_grant
   for day = 1, #rewards do
     register_event(EVENT_PREFIX .. day, function(_, _, data)
       local game = get_game()
@@ -69,7 +70,9 @@ function sign_in.install(deps)
       local role_id = resolve_role_id(data)
       local player = role_id ~= nil and type(game.find_player_by_id) == "function"
         and game:find_player_by_id(role_id) or nil
-      sign_in.grant(game, player, day)
+      if sign_in.grant(game, player, day) and type(after_grant) == "function" then
+        after_grant(game, player, day)
+      end
     end)
   end
 end
