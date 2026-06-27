@@ -24,6 +24,10 @@ function balance_ops.initialize_player_coins(player, amount)
   return _write_coin_count(nil, player, amount)
 end
 
+function balance_ops.seed_player_coins(player, amount)
+  return _write_coin_count(nil, player, amount)
+end
+
 function balance_ops.player_balance(self, player, currency)
   local key = common.normalize_currency(currency)
   if key == "金币" then

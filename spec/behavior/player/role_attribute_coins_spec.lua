@@ -16,6 +16,7 @@ local function _role(initial)
     writes = {},
     fail_next_set = false,
     fail_values = nil,
+    return_nil_on_set = false,
   }
   function role.get_attr_raw_fixed(first, second)
     local attr_id = first == role and second or first
@@ -38,7 +39,11 @@ local function _role(initial)
     role.writes[#role.writes + 1] = {
       attr_id = attr_id,
       value = value,
+      value_type = math.type and math.type(value) or type(value),
     }
+    if role.return_nil_on_set == true then
+      return nil
+    end
     return true
   end
   return role
@@ -89,8 +94,48 @@ describe("role attribute coins", function()
 
     _assert_eq(game:player_balance(game.players[1], "金币"), constants.starting_cash, "player 1 starting coins")
     _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), constants.starting_cash, "role attr should be seeded")
+    _assert_eq(roles[1].writes[1].value_type, "float", "role attr should be seeded with a Fixed-compatible float")
     _assert_eq(game.players[1].cash, nil, "player.cash must not exist")
     _assert_eq(#(game.turn.action_anim_queue or {}), 0, "startup seed must not queue cash animation")
+  end)
+
+  it("seeds startup coins for host roles whose raw coin_count defaults to zero", function()
+    local roles = {
+      [1] = _role(0),
+      [2] = _role(0),
+    }
+    local game
+    _with_patches({
+      { target = runtime_ports, key = "resolve_role", value = function(player_id)
+        return roles[player_id]
+      end },
+    }, function()
+      game = support.new_game({ players = { "P1", "P2", "P3", "P4" } })
+    end)
+
+    for index, player in ipairs(game.players) do
+      _assert_eq(game:player_balance(player, "金币"), constants.starting_cash,
+        "player " .. tostring(index) .. " starting coins")
+    end
+    _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), constants.starting_cash,
+      "host role 1 should be seeded from zero")
+    _assert_eq(roles[2]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), constants.starting_cash,
+      "host role 2 should be seeded from zero")
+  end)
+
+  it("treats nil-returning host coin writes as success", function()
+    local roles = {
+      [1] = _role(nil),
+      [2] = _role(nil),
+    }
+    roles[1].return_nil_on_set = true
+
+    local game = _game_with_roles(roles)
+
+    _assert_eq(game:player_balance(game.players[1], "金币"), constants.starting_cash,
+      "nil-returning host setter should still seed player 1")
+    _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), constants.starting_cash,
+      "nil-returning host setter should persist the seeded value")
   end)
 
   it("adds, deducts, and sets coin_count through the balance boundary", function()

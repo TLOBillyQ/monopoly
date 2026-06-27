@@ -7,6 +7,10 @@ local _COIN_COUNT_ATTR_ID = coin_validation.COIN_COUNT_ATTR_ID
 local _fail = coin_validation.fail
 local _validate_coin_amount = coin_validation.validate_amount
 
+local function _as_fixed_number(amount)
+  return amount + 0.0
+end
+
 local function _new_memory_coin_role(initial)
   local attrs = {}
   if initial ~= nil then
@@ -89,11 +93,11 @@ end
 local function _try_write_coin_count(player, amount)
   amount = _validate_coin_amount(player, amount, "写入值")
   local _, _, setter = _resolve_coin_role(player)
-  local ok, result = pcall(setter, _COIN_COUNT_ATTR_ID, amount)
+  local ok, result = pcall(setter, _COIN_COUNT_ATTR_ID, _as_fixed_number(amount))
   if not ok then
     return false, tostring(result)
   end
-  if result ~= true then
+  if result == false then
     return false, "set_attr_raw_fixed返回" .. tostring(result)
   end
   return true, amount

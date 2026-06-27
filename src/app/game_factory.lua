@@ -72,7 +72,7 @@ local function _new_player_entry(id, name, role_id, is_ai, is_auto, coin_role)
     deity_duration_turns = constants.deity_duration_turns,
     inventory = inventory:new({ constants = constants }),
   })
-  balance_ops.initialize_player_coins(created, _starting_cash())
+  balance_ops.seed_player_coins(created, _starting_cash())
   return created
 end
 
