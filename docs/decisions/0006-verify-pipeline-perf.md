@@ -182,9 +182,9 @@ vendor/mutate4lua e960131）的实测，把热路径拆开摆桌面，给出
 
 ---
 
-## D6 — Verify slim：长耗时 lane 归特定 swarm role（Draft，pending execution）
+## D6 — Verify slim：长耗时 lane 归特定 swarm role
 
-**Status**: Draft (2026-06-25，grilling 会话共识；architect 终稿化 prose + role prompt，refactorer 落代码)
+**Status**: Stable (2026-06-27，role prompt / skill / quality-map 治理面已落地；refactorer 负责 verify_full.lua 代码面)
 **Trigger**: 用户请求"verify 精简，运行耗时长的只由特定 swarm role 执行"
 **Related**: D1（crap fold）、D5（默认跳 coverage）、ADR 0008（warn allowlist，本决策不回归其 trigger）
 
@@ -216,12 +216,12 @@ D5 早有"默认应跳 coverage"方向但从未强制——SKILL.md 无 flag 默
 - 约束保持：`crap_report.json` 字段不变；coverage tier 阈值（ADR 0005 I3）不变；`--smoke` 车道集不变。
 - 验证：`lua tools/quality/busted_lane.lua --profile tooling`；落地后 `verify_full`（新默认 ~5s）、`--full` 等价旧默认、`--no-coverage` no-op。
 
-**轨道 B — architect（文档/治理）**：并行于 A，不阻塞
-- `swarmforge/roles/coder.prompt` / `specifier.prompt`：加禁 `--coverage`/`--crap`/`--full`。
-- `swarmforge/roles/refactorer.prompt` / `architect.prompt`：加准 flag；终序 `verify` 步用裸 verify。
-- `.agents/skills/verify/SKILL.md`：mode 表、车道集、option 画像、"default vs smoke 边界"重写；wall 写"~5s（实测待补）"；opt-in 标归属角色。
-- 本 D6 终稿化（status → stable）。
-- `docs/architecture/quality-map.md`：wall-time、flag 文档更新。
+**轨道 B — architect（文档/治理）**：已落地
+- `swarmforge/roles/coder.prompt` / `specifier.prompt`：已加禁 `--coverage`/`--crap`/`--full`。
+- `swarmforge/roles/refactorer.prompt` / `architect.prompt`：已加准 flag；终序 `verify` 步用裸 verify。
+- `.agents/skills/verify/SKILL.md`：已重写 mode 表、车道集、option 画像、"default vs smoke 边界"；wall 写"~5s（实测待补）"；opt-in 标归属角色。
+- 本 D6 已终稿化（status → stable）。
+- `docs/architecture/quality-map.md`：已更新 wall-time、flag 文档。
 
 ### 后果
 

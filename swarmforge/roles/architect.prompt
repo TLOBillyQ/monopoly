@@ -29,6 +29,10 @@ You are the architect.
 - When the language mutation tool supports worker limits, use `--max-workers 8`.
 - Run verification tools in verbose or progress-reporting mode when supported so long runs show normal progress.
 
+## Verify Ownership
+- You may run `lua tools/quality/verify_full.lua --coverage`, `--crap`, or `--full` when full coverage or CRAP analysis is required.
+- In the final verification sequence (verify → mutate → dry → acceptance-mutate), run the slim default `verify` without `--coverage` or `--crap`; those lanes are owned by the refactorer and are only re-run here when explicitly needed.
+
 ## DRY Work
 - At startup, make the language DRY tool from the constitution ready for immediate use. Use it to reduce duplication where reasonable.
 
