@@ -12,28 +12,9 @@ local common = require("shared.lib.common")
 local REPO_ROOT = bootstrap_env.repo_root
 assert(bootstrap.ensure_tool("crap4lua", bootstrap_env))
 
-local json_reader = require("shared.lib.json_reader")
 local crap_common = require("crap4lua._internal.common")
 local json_writer = require("crap4lua._internal.json_writer")
-local analyzer = require("crap4lua.analyzer")
-
-local _CRAP_TMP_ENV = "MONOPOLY_CRAP_TMP"
-local _DEFAULT_TMP_ROOT = common.join_path(common.system_tmp_dir(), "monopoly_crap")
-
-local function _resolve_tmp_root()
-  local val = os.getenv(_CRAP_TMP_ENV)
-  if val and val ~= "" then return _normalize_path(val) end
-  return _DEFAULT_TMP_ROOT
-end
-
-local function _resolve_path(path)
-  local normalized = _normalize_path(path)
-  if normalized == "tmp" or normalized:match("^tmp/") then
-    local suffix = normalized == "tmp" and "" or normalized:sub(5)
-    return common.resolve_path(_resolve_tmp_root(), suffix)
-  end
-  return common.resolve_path(REPO_ROOT, normalized)
-end
+local report_io = require("quality.crap.report_io")
 
 local function _parse_args(args)
   local opts = {}
@@ -71,52 +52,12 @@ if not opts.in_path or not opts.out_path then
   os.exit(2)
 end
 
-local in_path = _resolve_path(opts.in_path)
-local out_path = _resolve_path(opts.out_path)
+local in_path = report_io.resolve_path(REPO_ROOT, opts.in_path)
+local out_path = report_io.resolve_path(REPO_ROOT, opts.out_path)
 
-local content, read_err = common.read_file(in_path)
-if not content then
-  io.stderr:write("cannot read collect JSON: " .. tostring(read_err) .. "\n")
-  os.exit(1)
-end
-
-local ok_parse, collected = pcall(json_reader.decode, content)
-if not ok_parse or type(collected) ~= "table" then
-  io.stderr:write("collect JSON parse error: " .. tostring(collected) .. "\n")
-  os.exit(1)
-end
-
--- JSON encodes integer line-number keys as strings (e.g. "100"). analyzer.build_report
--- looks up file_hits[line_no] with an integer, so coerce inner keys back to integers.
-local function _coerce_line_hits(line_hits)
-  if type(line_hits) ~= "table" then return {} end
-  local coerced = {}
-  for path, hits in pairs(line_hits) do
-    if type(hits) == "table" then
-      local inner = {}
-      for k, v in pairs(hits) do
-        local n = tonumber(k)
-        if n then inner[n] = v end
-      end
-      coerced[path] = inner
-    end
-  end
-  return coerced
-end
-
-if collected.coverage_result then
-  collected.coverage_result.line_hits = _coerce_line_hits(collected.coverage_result.line_hits)
-end
-
-local report, build_err = analyzer.build_report({
-  project_root = collected.project_root,
-  project_name = collected.project_name,
-  source_roots = collected.source_roots,
-  coverage_result = collected.coverage_result,
-  top = opts.top or 20,
-})
-if not report then
-  io.stderr:write("build_report failed: " .. tostring(build_err) .. "\n")
+local report, build_err = report_io.build_report(in_path, { top = opts.top or 20 })
+if report == nil then
+  io.stderr:write(tostring(build_err) .. "\n")
   os.exit(1)
 end
 

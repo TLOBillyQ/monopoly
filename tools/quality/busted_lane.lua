@@ -11,73 +11,25 @@ local bootstrap = dofile(_module_dir() .. "/../shared/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
 local common = require("shared.lib.common")
+local tap_summary = require("shared.tap_summary")
+local lane_args = require("quality.busted_lane_args")
+local lane_tools = require("quality.busted_lane_tools")
 
 local M = {}
 
-local function _usage()
-  return "usage: lua tools/quality/busted_lane.lua --profile <name> [--busted-bin <path>] [--verbose]\n"
-end
-
 function M.parse_args(args)
-  local options = { verbose = false }
-  local i = 1
-  while i <= #(args or {}) do
-    local token = args[i]
-    if token == "--profile" then
-      options.profile = args[i + 1]
-      i = i + 2
-    elseif token == "--busted-bin" then
-      options.busted_bin = args[i + 1]
-      i = i + 2
-    elseif token == "--verbose" then
-      options.verbose = true
-      i = i + 1
-    elseif token == "--help" or token == "-h" then
-      options.help = true
-      i = i + 1
-    else
-      return nil, "unknown option: " .. tostring(token)
-    end
-  end
-  if not options.help and (not options.profile or options.profile == "") then
-    return nil, "missing --profile"
-  end
-  return options
+  return lane_args.parse(args)
 end
 
 function M.compress_tap(output)
-  local passed, failed = 0, 0
-  local kept = {}
-  for line in (tostring(output or "") .. "\n"):gmatch("([^\n]*)\n") do
-    if line:match("^ok%s+%d") then
-      passed = passed + 1
-    elseif line:match("^not ok%s+%d") then
-      failed = failed + 1
-      kept[#kept + 1] = line
-    elseif not line:match("^%d+%.%.%d+%s*$") then
-      kept[#kept + 1] = line
-    end
-  end
-  if failed == 0 then
-    return string.format("%d passed\n", passed), passed, failed
-  end
-  kept[#kept + 1] = string.format("%d passed, %d failed", passed, failed)
-  return table.concat(kept, "\n") .. "\n", passed, failed
+  return tap_summary.compress(output)
 end
 
 function M.run(options)
   options = options or {}
-  local tool_sets = {
-    acceptance = { "acceptance4lua" },
-    contract = { "arch_view" },
-    guards = { "arch_view" },
-    tooling = { "acceptance4lua", "arch_view", "crap4lua", "dry4lua", "mutate4lua" },
-  }
-  for _, tool_name in ipairs(tool_sets[options.profile] or {}) do
-    local _, err = bootstrap.ensure_tool(tool_name, bootstrap_env)
-    if err ~= nil then
-      return { stdout = "tool bootstrap failed: " .. tostring(err) .. "\n", code = 1, passed = 0, failed = 1 }
-    end
+  local ok_tools, tool_err = lane_tools.ensure_for_profile(options.profile, bootstrap, bootstrap_env)
+  if ok_tools == nil then
+    return { stdout = tostring(tool_err) .. "\n", code = 1, passed = 0, failed = 1 }
   end
 
   local busted_bin = options.busted_bin or os.getenv("BUSTED_BIN") or "busted"
@@ -106,12 +58,12 @@ end
 function M.main(args)
   local options, err = M.parse_args(args)
   if not options then
-    io.stderr:write(_usage())
+    io.stderr:write(lane_args.usage())
     io.stderr:write(tostring(err) .. "\n")
     return 2
   end
   if options.help then
-    io.write(_usage())
+    io.write(lane_args.usage())
     return 0
   end
   local result = M.run(options)

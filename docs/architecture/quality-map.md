@@ -2,7 +2,7 @@
 kind: contract
 status: stable
 owner: architecture
-last_verified: 2026-05-22
+last_verified: 2026-06-27
 ---
 # 测试与静态分析地图
 
@@ -29,7 +29,8 @@ last_verified: 2026-05-22
 | `lua tools/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
 | `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构；`crap.lua summary` 输出 src/ 行覆盖率三层聚合（见 `crap_report.md#覆盖率聚合`） | 约 `9s-10s` |
 | `lua tools/quality/mutate.lua src/foo.lua --scan` | 单文件变异测试 | 这个文件现有测试是否真能杀掉简单错误 | 目标文件和 lane 差异很大；默认先按 `behavior` 估算 |
-| `lua tools/quality/verify_full.lua` | 管道编排 | 一条命令跑全套质量车道（lint→encoding→behavior→contract/guards/arch→crap→coverage） | 不含 tooling 约 `30s`，含 tooling 约 `40s` |
+| `lua tools/quality/verify_full.lua` | 管道编排 | 默认 slim：lint→encoding→behavior(全)→contract/guards/arch；`--full` 加 coverage + crap | 默认 slim 约 `6s`，`--full` 约 `70s`，含 `--tooling` 再加 `~30s` |
+| `busted --run e2e` | 真实编辑器 e2e | host 层胶水（场景实体、试玩生命周期、UI 射线、事件广播）在真实 Eggy 编辑器里有没有坏 | 取决于编辑器启动状态，单 spec 通常几秒；**仅 Windows + 编辑器在线时可跑** |
 
 建议把它们分成两层理解：
 
@@ -239,10 +240,19 @@ lua tools/quality/mutate.lua src/foundation/identity.lua
 ### 完整质量回归
 
 ```sh
-lua tools/quality/verify_full.lua
+lua tools/quality/verify_full.lua --full
 ```
 
-管道编排器一条命令跑全套：lint → encoding → behavior（并行）→ contract/guards/arch（并行）→ crap → coverage。约 `30s`。
+管道编排器一条命令跑全套：默认 slim + coverage + crap。约 `70s`。
+
+默认无 flag 只跑 slim 车道（lint → encoding → behavior(全) → contract/guards/arch），约 `6s`。
+
+opt-in flag：
+
+- `--coverage`：加 coverage 并行 lane。
+- `--crap`：加 crap_collect → crap → crap_gate。
+- `--full`：`--coverage --crap` 别名，恢复旧默认。
+- `--no-coverage`：向后兼容静默 no-op。
 
 `tooling` profile 下的工具模块单测（quality / acceptance / ops / shared / 测试基础设施）不在 verify 管线内：
 
@@ -250,11 +260,24 @@ lua tools/quality/verify_full.lua
 busted --run tooling
 ```
 
-`--no-coverage` 可跳过 lua5.4 覆盖率收集。
+### verify flag 与角色权限
+
+| flag | 含义 | 允许角色 |
+|---|---|---|
+| `--smoke` | behavior-smoke 窄反馈 | 全部 |
+| （无 flag） | slim 默认：behavior(全) + contract/guards/arch/lint/encoding | 全部 |
+| `--coverage` | 加 coverage lane | refactorer, architect |
+| `--crap` | 加 crap_collect → crap → crap_gate | refactorer, architect |
+| `--full` | `--coverage --crap` 别名，恢复旧默认 | refactorer, architect |
+| `--no-coverage` | 向后兼容静默 no-op | 全部 |
+| `--tooling` | 加 tooling lane（与上述正交） | 改工具链时任何人 |
+
+详见 ADR 0006 D6。
 
 ## 使用上的默认建议
 
-- 改业务逻辑或 UI，开发迭代先跑 `verify --smoke`（含 behavior-smoke），提交前跑 `verify`（含 behavior 全跑 + crap + coverage）。
+- 改业务逻辑或 UI，开发迭代先跑 `verify --smoke`（含 behavior-smoke），提交前跑 `verify`（默认 slim：behavior 全跑 + contract/guards/arch/lint/encoding）。
+- 需要 coverage 或 CRAP 报告时，refactorer/architect 显式跑 `verify --full`（或分别 `--coverage` / `--crap`）。coder/specifier 不直接使用这些 flag。
 - 改端口、契约、装配、边界，默认先跑 `contract + arch_view`。
 - 改 `tools/quality/*`、`tools/acceptance/*`、`tools/shared/*`、`tools/ops/*`、viewer 导出、mutation suite index，默认补跑 `busted --run tooling`。
 - 改目录结构或依赖方向，默认先跑 `guard + arch_view`。

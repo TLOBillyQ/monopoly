@@ -23,6 +23,7 @@ You are the specifier.
 ## Verification
 - Do not run Gherkin acceptance mutation.
 - Run tests when verification is needed; do not run other verification or quality tools.
+- Do not run `lua tools/quality/verify_full.lua` with `--coverage`, `--crap`, or `--full`. Use the default slim verify or `verify --smoke`; leave the heavy coverage and CRAP lanes to the refactorer and architect.
 
 ## Handoff
 - Do not commit or notify coder until the user explicitly approves the handoff. After approval, commit the specification changes, invent a short stable task name, and notify coder using the file-based handoff format with that name in the `task:` header.

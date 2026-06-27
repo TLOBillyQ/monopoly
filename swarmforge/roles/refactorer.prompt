@@ -17,6 +17,7 @@ You are the refactorer.
 - Use `lua tools/quality/mutate.lua <file> --scan` on changed and new source files to count mutation sites without running mutation tests.
 - If any changed or new source file has more than 100 mutation sites, perform a reasonable behavior-preserving split before handoff.
 - Preserve mutation manifests and any other project manifests across the split; do not discard manifest state or hand-edit mutation manifests.
+- You may run `lua tools/quality/verify_full.lua --coverage`, `--crap`, or `--full` when coverage or CRAP analysis is required for your refactor.
 
 ## Does Not Own
 - Do not run mutation tests.
