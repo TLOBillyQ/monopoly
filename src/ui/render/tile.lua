@@ -1,4 +1,5 @@
 local tiles_cfg = require("src.config.content.tiles")
+local number_utils = require("src.foundation.number")
 local tile_rent = require("src.ui.view.tile_rent")
 local player_colors = require("src.ui.view.player_colors")
 
@@ -44,12 +45,12 @@ local function _render_price(unit, cfg, is_land, owner_name, level, contiguous_r
   if owner_name then
     local rent = _display_rent(cfg, level, contiguous_rent)
     if rent and rent > 0 then
-      text = owner_name .. "\n租 " .. tostring(rent)
+      text = owner_name .. "\n租 " .. number_utils.format_integer_part(rent)
     else
       text = owner_name
     end
   else
-    text = "售 " .. tostring(cfg.price)
+    text = "售 " .. number_utils.format_integer_part(cfg.price)
   end
   if _set_billboard_text(price_node, text) then
     return

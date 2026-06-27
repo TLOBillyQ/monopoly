@@ -1832,6 +1832,15 @@ describe("item", function()
     _assert_eq(choice.confirm_body, "这次要用免税卡吗？", "tax prompt should expose confirm body from use-case output")
   end)
 
+  it("strong_rent_prompt_exposes_integer_confirm_copy", function()
+    local choice = land_choice_specs.rent_prompt(11, 1, "strong", 2800.0, "福州路")
+    _assert_eq(choice.route_key, "secondary_confirm", "strong rent prompt should expose secondary confirm route")
+    _assert_eq(choice.requires_confirm, true, "strong rent prompt should expose confirm requirement")
+    _assert_eq(choice.confirm_title, "强征卡", "strong rent prompt should expose confirm title")
+    _assert_eq(choice.confirm_body, "支付 2800 强制购入 福州路",
+      "strong rent prompt should render total value as integer text")
+  end)
+
   it("simple_item_use_pushes_item_card_popup", function()
     local g = _new_game()
     local popups = {}

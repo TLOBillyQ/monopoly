@@ -67,7 +67,7 @@ describe("presentation.action_anim_tip_text", function()
     local cash_copy = tip_text.build(state, {
       kind = "cash_receive",
       player_id = 1,
-      amount = 500,
+      amount = 500.0,
     })
 
     assert(focus_copy == "直接使用焦点文案", "focus_text should override kind-specific copy")

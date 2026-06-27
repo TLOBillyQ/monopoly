@@ -1,5 +1,6 @@
 local market_layout = require("src.ui.schema.market_layout")
 local runtime_assets = require("src.config.runtime_assets")
+local number_utils = require("src.foundation.number")
 
 local slot_assets = {}
 
@@ -24,7 +25,7 @@ function slot_assets.price_text(entry)
     entry.currency ~= nil and entry.currency ~= "" and entry.currency,
     "missing market currency"
   )
-  return tostring(entry.price) .. " " .. tostring(currency)
+  return number_utils.format_integer_part(entry.price) .. " " .. tostring(currency)
 end
 
 local function _fallback_icon_key(refs, empty_ref_key)

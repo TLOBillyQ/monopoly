@@ -168,11 +168,29 @@ describe("tile_renderer", function()
         "no-owner tile should show sale price, expected: " .. expected .. ", got: " .. tostring(captured.price))
     end)
 
+    it("shows sale price without decimal suffix for float input", function()
+      local captured = {}
+      local unit = _make_unit(captured)
+      local tile_id = _land_tile_id()
+      local cfg = tiles_cfg[tile_id]
+      local old_price = cfg.price
+      cfg.price = 1000.0
+      local ok, err = xpcall(function()
+        tile_renderer.render_tile(unit, tile_id, nil, nil, 0)
+        assert(captured.price == "售 1000",
+          "float sale price should render as integer text, got: " .. tostring(captured.price))
+      end, debug.traceback or function(e) return e end)
+      cfg.price = old_price
+      if not ok then
+        error(err)
+      end
+    end)
+
     it("shows contiguous rent total when provided", function()
       local captured = {}
       local unit = _make_unit(captured)
       local tile_id = _land_tile_id()
-      tile_renderer.render_tile(unit, tile_id, 2, "P1", 0, 300)
+      tile_renderer.render_tile(unit, tile_id, 2, "P1", 0, 300.0)
       local expected = "P1\n租 300"
       assert(captured.price == expected,
         "contiguous rent should show the final total, expected: " .. expected .. ", got: " .. tostring(captured.price))

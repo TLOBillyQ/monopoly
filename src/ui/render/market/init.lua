@@ -5,6 +5,7 @@ local market_view_slots = require("src.ui.render.market.slots")
 local market_view_controls = require("src.ui.render.market.controls")
 local runtime_ui = require("src.ui.render.runtime_ui")
 local runtime_assets = require("src.config.runtime_assets")
+local number_utils = require("src.foundation.number")
 
 local market_view = {}
 
@@ -90,7 +91,7 @@ function market_view.refresh_cash_display(state)
   if not ui then
     return
   end
-  local text = tostring(amount)
+  local text = number_utils.format_integer_part(amount)
   if ui.set_label then
     ui:set_label(market_layout.cash_text_label, "现金")
     ui:set_label(market_layout.cash_amount_label, text)

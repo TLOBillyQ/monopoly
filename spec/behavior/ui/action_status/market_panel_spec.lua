@@ -14,6 +14,7 @@ local market_service = require("src.rules.market")
 local choice_slice = require("src.ui.view.choice_slice")
 local test_profile_bootstrap = require("src.app.testing.test_profile_bootstrap")
 local runtime_state = require("src.state.runtime")
+local slot_assets = require("src.ui.render.market.slot_assets")
 
 local function _build_market_state(product_ids)
   local visible = {}
@@ -115,6 +116,13 @@ describe("presentation_market_panel", function()
     _assert_eq(reset_calls, 0, "market selected icon should not call reset_size")
     _assert_eq(labels[market_layout.price_label], tostring(entry.price) .. " " .. entry.currency,
       "market price label should update")
+  end)
+
+  it("_test_market_price_text_hides_float_decimal_suffix", function()
+    _assert_eq(slot_assets.price_text({ price = 10.0, currency = "金豆" }), "10 金豆",
+      "jindou market price should render as integer text")
+    _assert_eq(slot_assets.price_text({ price = 1200.0, currency = "金币" }), "1200 金币",
+      "coin market price should render as integer text")
   end)
 
   it("_test_market_close_resets_icon_without_resize", function()
@@ -775,7 +783,7 @@ describe("presentation_market_panel", function()
 
   it("_test_market_cash_display_shows_current_player_balance", function()
     local state, labels, visible = _build_cash_display_state({
-      current_player_cash = 1500,
+      current_player_cash = 1500.0,
     })
 
     market_view.refresh_cash_display(state)

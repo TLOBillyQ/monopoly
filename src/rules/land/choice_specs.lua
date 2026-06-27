@@ -1,4 +1,5 @@
 local use_skip_choice = require("src.rules.choice.use_skip_choice")
+local number_utils = require("src.foundation.number")
 
 local land_choice_specs = {}
 
@@ -14,7 +15,7 @@ end
 
 function land_choice_specs.rent_prompt(player_id, tile_id, card_kind, total_value, tile_name)
   if card_kind == "strong" then
-    local body = "支付 " .. tostring(total_value) .. " 强制购入 " .. tile_name
+    local body = "支付 " .. number_utils.format_integer_part(total_value) .. " 强制购入 " .. tile_name
     local choice = use_skip_choice.build(
       "rent_card_prompt",
       "是否使用强征卡",

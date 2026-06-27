@@ -1,3 +1,5 @@
+local number_utils = require("src.foundation.number")
+
 local tip_text = {}
 
 local UNKNOWN_TILE = "未知地块"
@@ -104,7 +106,7 @@ end
 local function _build_cash_receive_text(state, anim)
   local player_name = _resolve_player_name(state, anim.player_id)
   local amount = anim.amount or "?"
-  return "收钱动画：" .. player_name .. " +" .. tostring(amount)
+  return "收钱动画：" .. player_name .. " +" .. number_utils.format_integer_part(amount)
 end
 
 local TIP_BUILDERS = {
