@@ -184,7 +184,7 @@ vendor/mutate4lua e960131）的实测，把热路径拆开摆桌面，给出
 
 ## D6 — Verify slim：长耗时 lane 归特定 swarm role
 
-**Status**: Stable (2026-06-27，role prompt / skill / quality-map 治理面已落地；refactorer 负责 verify_full.lua 代码面)
+**Status**: Stable (2026-06-27，role prompt / skill / quality-map 治理面已落地；refactorer verify_full.lua 代码面已落地并实测)
 **Trigger**: 用户请求"verify 精简，运行耗时长的只由特定 swarm role 执行"
 **Related**: D1（crap fold）、D5（默认跳 coverage）、ADR 0008（warn allowlist，本决策不回归其 trigger）
 
@@ -206,15 +206,15 @@ D5 早有"默认应跳 coverage"方向但从未强制——SKILL.md 无 flag 默
 
 ### 落地轨道（并行）
 
-**轨道 A — refactorer（代码）**：`tools/quality/verify_full.lua` + `verify_full/spec/*.lua`
-- `_default_lanes`（:244-283）：`crap_collect` 与 `coverage` lane 从默认加入改为 opt-in。
-- `_main`（:305-373）：`crap`/`crap_gate` sequential 步（:339-350）仅在 `--crap`/`--full` 时跑。
-- CLI 解析（:386-397）：新增 `--coverage`/`--crap`/`--full`；`--no-coverage` 静默 no-op（`opts.coverage` 不再默认 true）。
-- `--coverage` 显式请求但 `env.coverage_available == false` 时 emit warning。
-- `_resolve_lanes`（:285-296）接 `coverage`/`crap` opt；`--full` = `--coverage --crap`。
+**轨道 A — refactorer（代码）**：已落地
+- `_default_lanes`：`crap_collect` 与 `coverage` lane 从默认加入改为 opt-in。
+- `_main`：`crap`/`crap_gate` sequential 步仅在 `--crap`/`--full` 时跑。
+- CLI 解析：新增 `--coverage`/`--crap`/`--full`；`--no-coverage` 静默 no-op。
+- `--coverage` 显式请求但 toolchain 不可用时 emit warning。
+- `_resolve_lanes` 接 `coverage`/`crap` opt；`--full` = `--coverage --crap`。
 - spec 更新：`verify_full_smoke_spec.lua` 默认期望去 coverage/crap；新增 opt-in 用例；`--no-coverage` no-op 用例。
-- 约束保持：`crap_report.json` 字段不变；coverage tier 阈值（ADR 0005 I3）不变；`--smoke` 车道集不变。
-- 验证：`lua tools/quality/busted_lane.lua --profile tooling`；落地后 `verify_full`（新默认 ~5s）、`--full` 等价旧默认、`--no-coverage` no-op。
+- 约束保持：`crap_report.json` 字段不变；coverage tier 阈值不变；`--smoke` 车道集不变。
+- 实测：`verify` 默认 slim ~6s，`--full` ~70s，`--smoke` ~13s；`lua tools/quality/busted_lane.lua --profile tooling` 358 passed。
 
 **轨道 B — architect（文档/治理）**：已落地
 - `swarmforge/roles/coder.prompt` / `specifier.prompt`：已加禁 `--coverage`/`--crap`/`--full`。

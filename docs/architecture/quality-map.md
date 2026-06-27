@@ -29,7 +29,7 @@ last_verified: 2026-06-27
 | `lua tools/quality/arch.lua check` | 静态架构扫描 | `src/**/*.lua` 的模块依赖图是否违反边界、产生循环 | 约 `0.2s` |
 | `lua tools/quality/crap.lua report --lane behavior --out tmp/crap_report.json` | 风险热点分析 | 哪些函数复杂且覆盖不足，应该先补测或重构；`crap.lua summary` 输出 src/ 行覆盖率三层聚合（见 `crap_report.md#覆盖率聚合`） | 约 `9s-10s` |
 | `lua tools/quality/mutate.lua src/foo.lua --scan` | 单文件变异测试 | 这个文件现有测试是否真能杀掉简单错误 | 目标文件和 lane 差异很大；默认先按 `behavior` 估算 |
-| `lua tools/quality/verify_full.lua` | 管道编排 | 默认 slim：lint→encoding→behavior(全)→contract/guards/arch；`--full` 加 coverage + crap | 默认 slim 约 `5s`（实测待补），`--full` 约 `50s`，含 `--tooling` 再加 `~30s` |
+| `lua tools/quality/verify_full.lua` | 管道编排 | 默认 slim：lint→encoding→behavior(全)→contract/guards/arch；`--full` 加 coverage + crap | 默认 slim 约 `6s`，`--full` 约 `70s`，含 `--tooling` 再加 `~30s` |
 | `busted --run e2e` | 真实编辑器 e2e | host 层胶水（场景实体、试玩生命周期、UI 射线、事件广播）在真实 Eggy 编辑器里有没有坏 | 取决于编辑器启动状态，单 spec 通常几秒；**仅 Windows + 编辑器在线时可跑** |
 
 建议把它们分成两层理解：
@@ -266,9 +266,9 @@ lua tools/quality/mutate.lua src/foundation/identity.lua
 lua tools/quality/verify_full.lua --full
 ```
 
-管道编排器一条命令跑全套：默认 slim + coverage + crap。约 `50s`。
+管道编排器一条命令跑全套：默认 slim + coverage + crap。约 `70s`。
 
-默认无 flag 只跑 slim 车道（lint → encoding → behavior(全) → contract/guards/arch），约 `5s`（实测待补）。
+默认无 flag 只跑 slim 车道（lint → encoding → behavior(全) → contract/guards/arch），约 `6s`。
 
 opt-in flag：
 

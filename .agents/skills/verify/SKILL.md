@@ -10,13 +10,13 @@ description: 质量车道编排器。模式：--smoke（~9s，behavior-smoke 窄
 ## 模式
 
 ```bash
-# 迭代信心扫：behavior-smoke + contract + guards + arch + lint + encoding，~9s
+# 迭代信心扫：behavior-smoke + contract + guards + arch + lint + encoding，~13s
 lua tools/quality/verify_full.lua --smoke
 
-# 默认 slim（无 flag）：contract + guards + arch + behavior(全) + lint + encoding，~5s（实测待补）
+# 默认 slim（无 flag）：contract + guards + arch + behavior(全) + lint + encoding，~6s
 lua tools/quality/verify_full.lua
 
-# 完整车道：默认 slim + coverage + crap，~50s；恢复旧默认
+# 完整车道：默认 slim + coverage + crap，~70s；恢复旧默认
 lua tools/quality/verify_full.lua --full
 
 # 分别加 opt-in 车道
@@ -32,11 +32,11 @@ lua tools/quality/verify_full.lua --no-coverage
 
 | 模式 | 车道 | 典型 wall |
 |---|---|---|
-| `--smoke` | arch, contract, behavior-smoke（turn+foundation+host+state+rules+ui+scenarios{turn_flow,startup}）, encoding, guards, lint | ~9s |
-| default（无 flag） | contract, guards, arch, behavior（全跑）, lint, encoding | ~5s（实测待补） |
-| `--coverage` | default + coverage 并行 lane | 待补 |
-| `--crap` | default + crap_collect 并行 lane → crap_analyze → crap_gate sequential | 待补 |
-| `--full` | default + coverage + crap | ~50s |
+| `--smoke` | arch, contract, behavior-smoke（turn+foundation+host+state+rules+ui+scenarios{turn_flow,startup}）, encoding, guards, lint | ~13s |
+| default（无 flag） | contract, guards, arch, behavior（全跑）, lint, encoding | ~6s |
+| `--coverage` | default + coverage 并行 lane | ~60s |
+| `--crap` | default + crap_collect 并行 lane → crap_analyze → crap_gate sequential | ~14s |
+| `--full` | default + coverage + crap | ~70s |
 | `--tooling` | 与上述模式正交叠加，加 tooling 并行 lane | +~30s |
 
 `--smoke --no-coverage` 静默（smoke 本就不含 coverage）。
