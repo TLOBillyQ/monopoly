@@ -48,14 +48,17 @@ local function _lock_choice_screens(ui)
   ui_touch_policy.set_choice_screen_locked(ui, screens.building)
 end
 
-local function _lock_market_buttons(ui)
+local function _set_market_cancel_touch(ui, enabled)
+  local cancel_buttons = market_ui.cancel_buttons or {}
+  ui_touch_policy.set_many_touch_enabled(ui, cancel_buttons, enabled)
+end
+
+local function _lock_market_buttons(ui, allow_cancel)
   ui_touch_policy.set_many_touch_enabled(ui, market_ui.item_buttons or {}, false)
   if market_ui.confirm_button then
     ui:set_touch_enabled(market_ui.confirm_button, false)
   end
-  if market_ui.cancel_button then
-    ui:set_touch_enabled(market_ui.cancel_button, false)
-  end
+  _set_market_cancel_touch(ui, allow_cancel == true)
 end
 
 local function _apply_locked_state(ui, allow_always_show_touch)
@@ -67,7 +70,7 @@ local function _apply_locked_state(ui, allow_always_show_touch)
   ui:set_touch_enabled(base_nodes.action_button, false)
   ui:set_touch_enabled(base_nodes.end_button, false)
   _lock_choice_screens(ui)
-  _lock_market_buttons(ui)
+  _lock_market_buttons(ui, ui.market_active == true)
   _set_base_auxiliary_touch(ui, allow_always_show_touch)
 end
 

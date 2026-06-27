@@ -30,6 +30,32 @@ local function build(deps)
     end
   end
 
+  local function _resolve_pending_choice(game, state, ctx)
+    local turn_choice = game and game.turn and game.turn.pending_choice or nil
+    if turn_choice ~= nil then
+      return turn_choice
+    end
+    local output_ports = ctx and ctx.output_ports or nil
+    if output_ports and type(output_ports.get_pending_choice) == "function" then
+      return output_ports.get_pending_choice(state)
+    end
+    return nil
+  end
+
+  local function _allows_market_cancel_while_blocked(gate_state, game, state, action, ctx)
+    if not gate_state or gate_state.input_blocked ~= true then
+      return false
+    end
+    if not action or action.type ~= "choice_cancel" then
+      return false
+    end
+    local choice = _resolve_pending_choice(game, state, ctx)
+    if choice == nil or choice.kind ~= "market_buy" then
+      return false
+    end
+    return action.choice_id ~= nil and choice.id ~= nil and action.choice_id == choice.id
+  end
+
   local function _handle_auto_toggle(game, _, action)
     local player = ctx_mod.resolve_actor_player(game, action)
     if not player then
@@ -126,7 +152,9 @@ local function build(deps)
     end
     local ctx = ctx_mod.resolve_dispatch_context(state, dispatch_ctx)
     local gate_state = validator.resolve_gate_state(state, ctx.ui_sync_ports)
-    if validator.should_block_action(gate_state, action) then
+    local blocked_by_gate = validator.should_block_action(gate_state, action)
+    local allows_market_cancel = _allows_market_cancel_while_blocked(gate_state, game, state, action, ctx)
+    if blocked_by_gate and not allows_market_cancel then
       return { status = "blocked" }
     end
     if _should_invalidate_ui(action) then

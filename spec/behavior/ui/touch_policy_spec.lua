@@ -5,6 +5,7 @@ local _with_patches = support.with_patches
 local ui_view = require("src.ui.coord.ui_runtime")
 local ui_touch_policy = require("src.ui.input.touch")
 local base_nodes = require("src.ui.schema.base")
+local market_ui = require("src.ui.schema.market_layout")
 local ids = require("spec.fixtures.item_slot_ids")
 
 local function _wrap_ui_refs(image_refs)
@@ -217,6 +218,34 @@ describe("presentation_ui.touch_policy", function()
     assert(touch["基础_行动日志图标"] == false, "action log toggle should yield touch priority while market is active")
     assert(touch[base_nodes.skin_button] == false, "skin button should yield touch priority while market is active")
     assert(touch[base_nodes.gallery_button] == false, "gallery button should yield touch priority while market is active")
+  end)
+
+  it("_test_apply_input_lock_keeps_market_cancel_enabled_when_market_active", function()
+    local touch = {}
+    local state = {
+      ui = {
+        input_blocked = true,
+        market_active = true,
+        item_slots = {},
+        base_hidden_nodes = {},
+        choice_screens = {
+          player = { option_buttons = {} },
+          target = {},
+          remote = { option_buttons = {} },
+          building = {},
+        },
+        set_touch_enabled = function(_, name, enabled)
+          touch[name] = enabled
+        end,
+        set_visible = function() end,
+      },
+    }
+
+    ui_view.apply_input_lock(state)
+
+    _assert_eq(touch[market_ui.confirm_button], false, "market buy should stay blocked during post-purchase input lock")
+    _assert_eq(touch[market_ui.cancel_button], true, "market close should stay touchable so it can end the market flow")
+    _assert_eq(touch[market_ui.cancel_button_alt], true, "alternate market cancel should stay touchable too")
   end)
 
   it("_test_apply_input_lock_preserves_skin_entry_visibility_decided_by_panel_refresh", function()

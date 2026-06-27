@@ -318,6 +318,57 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     _assert_eq(result.status, "blocked", "should_block_action true must short-circuit to blocked")
     _assert_eq(#events.invalidate, 0, "blocked actions skip invalidate")
   end)
+
+  it("market choice_cancel applies while input_blocked", function()
+    local dispatcher, events, deps = _build()
+    deps.validator.resolve_gate_state = function()
+      return {
+        input_blocked = true,
+        choice_active = false,
+        market_active = true,
+        popup_active = false,
+        detained_wait_active = false,
+      }
+    end
+    deps.validator.should_block_action = function(gate)
+      return gate.input_blocked == true
+    end
+    deps.validator.validate_choice_action = function(_, action, choice)
+      return choice ~= nil
+        and choice.kind == "market_buy"
+        and action.choice_id == choice.id
+    end
+
+    local dispatch_called = false
+    local clear_choice_called = false
+    deps.turn_dispatch_ref.clear_choice = function()
+      clear_choice_called = true
+    end
+
+    local game = {
+      turn = {
+        phase = "wait_action_anim",
+        pending_choice = { id = "m1", kind = "market_buy", owner_role_id = 1 },
+      },
+      dispatch_action = function(self, action)
+        if action.type == "choice_cancel" then
+          dispatch_called = true
+          self.turn.pending_choice = nil
+        end
+      end,
+      find_player_by_id = function() return { id = 1 } end,
+      players = { { id = 1 } },
+    }
+    local action = { type = "choice_cancel", choice_id = "m1", actor_role_id = 1 }
+    local ctx = _ctx_with_invalidate(events, { pending_choice = game.turn.pending_choice })
+
+    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+
+    _assert_eq(result.status, "applied", "market close must apply even while post-purchase input is blocked")
+    _assert_eq(dispatch_called, true, "choice_cancel should reach the turn runtime")
+    _assert_eq(clear_choice_called, true, "closing the market should clear the visible choice")
+    _assert_eq(#events.invalidate, 1, "applied market close should invalidate the UI model")
+  end)
 end)
 
 describe("action_dispatch _handle_auto_toggle (L33-L40)", function()

@@ -3,6 +3,8 @@ local number_utils = require("src.foundation.number")
 local market_service = require("src.rules.market")
 local choice_outcome = require("src.rules.market.choice").outcome
 local market_context = require("src.rules.market.query").context
+local event_kinds = require("src.config.gameplay.event_kinds")
+local dirty_tracker = require("src.state.dirty_tracker")
 
 local M = {}
 
@@ -54,6 +56,44 @@ local function _normalize_market_buy_action(_, _, action)
   return normalized_action
 end
 
+local function _is_market_item_reveal(anim)
+  return anim ~= nil
+    and anim.kind == event_kinds.item_get_reveal
+    and anim.source == "market"
+end
+
+local function _remove_market_reveals_from_queue(queue)
+  if type(queue) ~= "table" then
+    return false
+  end
+  local removed = false
+  for index = #queue, 1, -1 do
+    if _is_market_item_reveal(queue[index]) then
+      table.remove(queue, index)
+      removed = true
+    end
+  end
+  return removed
+end
+
+local function _clear_market_item_reveals(game)
+  local turn = game and game.turn or nil
+  if turn == nil then
+    return
+  end
+  local changed = false
+  if _is_market_item_reveal(turn.action_anim) then
+    turn.action_anim = nil
+    changed = true
+  end
+  if _remove_market_reveals_from_queue(turn.action_anim_queue) then
+    changed = true
+  end
+  if changed then
+    dirty_tracker.mark(game.dirty, "turn")
+  end
+end
+
 local function _build(helpers)
   local finish_choice = helpers.finish_choice
 
@@ -72,6 +112,11 @@ local function _build(helpers)
       normalize_meta = _normalize_market_buy_meta,
       meta_validator = _validate_market_buy_meta,
       normalize_action = _normalize_market_buy_action,
+      cancel = {
+        resolve = function(game)
+          _clear_market_item_reveals(game)
+        end,
+      },
       execute = _handle_market_buy,
     },
   }

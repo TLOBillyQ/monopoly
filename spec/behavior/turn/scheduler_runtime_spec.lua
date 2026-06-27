@@ -5,6 +5,7 @@ local wait_callbacks = require("src.turn.waits.callback_registry")
 local await = require("src.turn.waits.await")
 local logger = require("src.foundation.log")
 local tip_queue = require("src.foundation.tips")
+local market_choice = require("src.rules.market.choice")
 
 local function _new_await_session(game, action)
   local session = {
@@ -75,6 +76,47 @@ describe("gameplay.coroutine", function()
 
     assert(g.turn.pending_choice == nil, "choice_cancel should clear pending choice in coroutine mode")
     assert(g.turn.phase ~= "wait_choice", "coroutine mode should leave wait_choice after cancel")
+  end)
+
+  it("market_close_after_purchase_skips_market_reveal_wait", function()
+    local g = support.new_game()
+    local p = g:current_player()
+    g:set_player_cash(p, 999999)
+    g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
+    g.turn_engine = turn_engine:new(g, {
+      start = function()
+        return "wait_choice", { next_state = "done", next_args = {} }
+      end,
+      done = function()
+        return nil
+      end,
+    })
+
+    local choice = market_choice.builder.build(p, g, { active_tab = "item", page_index = 1 })
+    choice.id = 311
+    g.turn.pending_choice = choice
+    g:advance_turn()
+
+    g:dispatch_action({
+      type = "choice_select",
+      choice_id = choice.id,
+      option_id = choice.options[1].id,
+      actor_role_id = p.id,
+    })
+    assert(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy",
+      "market purchase should keep the market choice open")
+    assert(g.turn.action_anim and g.turn.action_anim.kind == "item_get_reveal",
+      "market purchase should queue an item reveal before closing")
+
+    g:dispatch_action({
+      type = "choice_cancel",
+      choice_id = choice.id,
+      actor_role_id = p.id,
+    })
+
+    assert(g.turn.pending_choice == nil, "market close should clear pending choice")
+    assert(g.turn.action_anim == nil, "market close should clear market reveal animation")
+    assert(g.turn.phase ~= "wait_action_anim", "market close should not wait for reveal animation")
   end)
 
   it("coroutine_mode_resolves_wait_move_anim", function()
