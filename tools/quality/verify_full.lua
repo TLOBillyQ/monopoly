@@ -241,22 +241,26 @@ end
 -- diagnostic in verify_full output; crap_collect produces the coverage data
 -- the post-parallel analyze step turns into crap_report.json without
 -- re-running the 2305 tests sequentially.
-local function _default_lanes(env, include_tooling, include_coverage)
+local function _default_lanes(env, include_tooling, include_coverage, include_crap)
   local lanes, skipped = {}, {}
   lanes[#lanes + 1] = { label = "contract", cmd = _busted_lane_cmd(env.busted_bin, "contract") }
   lanes[#lanes + 1] = { label = "guards", cmd = _busted_lane_cmd(env.busted_bin, "guards") }
   lanes[#lanes + 1] = { label = "arch", cmd = "lua tools/quality/arch.lua check" }
   lanes[#lanes + 1] = { label = "behavior", cmd = "lua spec/support/behavior_parallel.lua" }
-  lanes[#lanes + 1] = {
-    label = "crap_collect",
-    cmd = "lua tools/quality/crap.lua collect --lane behavior --out tmp/crap_collect.json",
-  }
   _add_lint_or_skip(lanes, skipped, env)
   lanes[#lanes + 1] = { label = "encoding", cmd = "lua tools/quality/encoding.lua check" }
   if include_tooling then
     lanes[#lanes + 1] = {
       label = "tooling",
       cmd = "lua spec/support/behavior_parallel.lua --profile tooling",
+    }
+  end
+  -- ADR 0006 D6: coverage and crap are opt-in (refactorer/architect owns the
+  -- long-running lanes). Default verify stays slim.
+  if include_crap then
+    lanes[#lanes + 1] = {
+      label = "crap_collect",
+      cmd = "lua tools/quality/crap.lua collect --lane behavior --out tmp/crap_collect.json",
     }
   end
   -- Coverage runs alongside the other lanes: it re-runs busted under luacov
@@ -282,6 +286,13 @@ local function _default_lanes(env, include_tooling, include_coverage)
   return lanes, skipped
 end
 
+local function _has(set, label)
+  for _, v in ipairs(set or {}) do
+    if v == label then return true end
+  end
+  return false
+end
+
 local function _resolve_lanes(opts)
   opts = opts or {}
   local env = opts.env or {}
@@ -290,8 +301,16 @@ local function _resolve_lanes(opts)
     local lanes, skipped = _smoke_lanes(env, warnings, opts.tooling == true)
     return { lanes = lanes, skipped = skipped, warnings = warnings }
   end
-  local include_coverage = opts.coverage ~= false
-  local lanes, skipped = _default_lanes(env, opts.tooling == true, include_coverage)
+  local include_coverage = opts.coverage == true
+  local include_crap = opts.crap == true
+  if opts.full == true then
+    include_coverage = true
+    include_crap = true
+  end
+  local lanes, skipped = _default_lanes(env, opts.tooling == true, include_coverage, include_crap)
+  if include_coverage and _has(skipped, "coverage") then
+    warnings[#warnings + 1] = "--coverage requested but coverage toolchain is unavailable"
+  end
   return { lanes = lanes, skipped = skipped, warnings = warnings }
 end
 
@@ -321,6 +340,8 @@ local function _main(opts)
     smoke = opts.smoke,
     tooling = opts.tooling,
     coverage = opts.coverage,
+    crap = opts.crap,
+    full = opts.full,
     env = env,
   })
 
@@ -388,7 +409,14 @@ for i = 1, #(arg or {}) do
   if arg[i] == "--tooling" then
     opts.tooling = true
   elseif arg[i] == "--no-coverage" then
+    -- ADR 0006 D6: silent no-op; coverage is already opt-out by default.
     opts.coverage = false
+  elseif arg[i] == "--coverage" then
+    opts.coverage = true
+  elseif arg[i] == "--crap" then
+    opts.crap = true
+  elseif arg[i] == "--full" then
+    opts.full = true
   elseif arg[i] == "--verbose" then
     opts.verbose = true
   elseif arg[i] == "--smoke" then
