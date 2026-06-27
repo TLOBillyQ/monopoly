@@ -9,7 +9,9 @@ local verify_full = require("quality.verify_full")
 --   opts = {
 --     smoke?    = boolean,   -- subset for human iteration
 --     tooling?  = boolean,   -- include tooling profile parallel
---     coverage? = boolean,   -- default true; false to skip
+--     coverage? = boolean,   -- default false; true to include
+--     crap?     = boolean,   -- default false; true to include
+--     full?     = boolean,   -- alias for --coverage --crap
 --     env       = {
 --       lua54_bin          = string|nil,
 --       busted_bin         = string|nil,
@@ -53,21 +55,22 @@ local function _env(over)
   return e
 end
 
-describe("verify_full._resolve_lanes — default (parity with pre-cycle)", function()
-  it("emits the canonical 8-lane set when env is complete", function()
+describe("verify_full._resolve_lanes — default (ADR 0006 D6 slim)", function()
+  it("emits the canonical 6-lane set when env is complete", function()
     local plan = verify_full._resolve_lanes({ env = _env() })
     local labels = _labels(plan.lanes)
     -- Set membership (order is implementation detail).
     for _, expected in ipairs({
-      "contract", "guards", "arch", "behavior",
-      "crap_collect", "lint", "encoding",
+      "contract", "guards", "arch", "behavior", "lint", "encoding",
     }) do
       assert.is_true(_has(labels, expected),
         "default profile missing lane: " .. expected)
     end
-    -- Coverage runs in default unless --no-coverage flips it.
-    assert.is_true(_has(labels, "coverage"),
-      "default profile must include coverage lane")
+    -- Long-running lanes are opt-in (refactorer/architect owns them).
+    assert.is_false(_has(labels, "coverage"),
+      "default profile must not include coverage lane")
+    assert.is_false(_has(labels, "crap_collect"),
+      "default profile must not include crap_collect lane")
     -- Tooling is opt-in; never present without --tooling.
     assert.is_false(_has(labels, "tooling"))
     -- behavior-smoke is the SMOKE-only label; default uses "behavior".
@@ -80,16 +83,45 @@ describe("verify_full._resolve_lanes — default (parity with pre-cycle)", funct
     assert.is_true(_has(plan.skipped, "lint"))
   end)
 
-  it("skips coverage when lua54_bin missing and reports it", function()
-    local plan = verify_full._resolve_lanes({ env = _env({ lua54_bin = ABSENT }) })
+  it("skips coverage silently by default even when toolchain is available", function()
+    local plan = verify_full._resolve_lanes({ env = _env() })
     assert.is_false(_has(_labels(plan.lanes), "coverage"))
-    assert.is_true(_has(plan.skipped, "coverage"))
+    assert.is_false(_has(plan.skipped, "coverage"))
   end)
 
-  it("skips coverage when luacov toolchain is unavailable and reports it", function()
-    local plan = verify_full._resolve_lanes({ env = _env({ coverage_available = false }) })
+  it("includes coverage when explicitly requested and toolchain is available", function()
+    local plan = verify_full._resolve_lanes({ coverage = true, env = _env() })
+    assert.is_true(_has(_labels(plan.lanes), "coverage"))
+  end)
+
+  it("warns and skips coverage when requested but lua54_bin missing", function()
+    local plan = verify_full._resolve_lanes({ coverage = true, env = _env({ lua54_bin = ABSENT }) })
     assert.is_false(_has(_labels(plan.lanes), "coverage"))
     assert.is_true(_has(plan.skipped, "coverage"))
+    local found_warning = false
+    for _, w in ipairs(plan.warnings or {}) do
+      if w:find("coverage toolchain is unavailable", 1, true) then
+        found_warning = true
+        break
+      end
+    end
+    assert.is_true(found_warning,
+      "expected warning about unavailable coverage toolchain, got: "
+        .. table.concat(plan.warnings or {}, " | "))
+  end)
+
+  it("warns and skips coverage when requested but luacov toolchain is unavailable", function()
+    local plan = verify_full._resolve_lanes({ coverage = true, env = _env({ coverage_available = false }) })
+    assert.is_false(_has(_labels(plan.lanes), "coverage"))
+    assert.is_true(_has(plan.skipped, "coverage"))
+    local found_warning = false
+    for _, w in ipairs(plan.warnings or {}) do
+      if w:find("coverage toolchain is unavailable", 1, true) then
+        found_warning = true
+        break
+      end
+    end
+    assert.is_true(found_warning)
   end)
 
   it("appends tooling lane only when opts.tooling is true", function()
@@ -120,11 +152,35 @@ describe("verify_full._resolve_lanes — default (parity with pre-cycle)", funct
     assert.is_nil(contract_lane.cmd:find("BUSTED_BIN=", 1, true))
   end)
 
-  it("excludes coverage when opts.coverage == false", function()
+  it("--no-coverage is a silent no-op (coverage already opt-out by default)", function()
     local plan = verify_full._resolve_lanes({ coverage = false, env = _env() })
     assert.is_false(_has(_labels(plan.lanes), "coverage"))
-    -- Not a "skip" — explicit opt-out is silent.
     assert.is_false(_has(plan.skipped, "coverage"))
+    for _, w in ipairs(plan.warnings or {}) do
+      assert.is_false(w:find("coverage", 1, true) ~= nil,
+        "--no-coverage must not warn, got: " .. w)
+    end
+  end)
+end)
+
+describe("verify_full._resolve_lanes — opt-in long lanes", function()
+  it("includes crap_collect when opts.crap is true", function()
+    local plan = verify_full._resolve_lanes({ crap = true, env = _env() })
+    assert.is_true(_has(_labels(plan.lanes), "crap_collect"))
+    assert.is_false(_has(_labels(plan.lanes), "coverage"))
+  end)
+
+  it("--full restores old default (coverage + crap_collect)", function()
+    local plan = verify_full._resolve_lanes({ full = true, env = _env() })
+    local labels = _labels(plan.lanes)
+    assert.is_true(_has(labels, "coverage"))
+    assert.is_true(_has(labels, "crap_collect"))
+    assert.is_true(_has(labels, "behavior"))
+  end)
+
+  it("--full overrides an explicit --no-coverage", function()
+    local plan = verify_full._resolve_lanes({ full = true, coverage = false, env = _env() })
+    assert.is_true(_has(_labels(plan.lanes), "coverage"))
   end)
 end)
 
@@ -186,6 +242,13 @@ describe("verify_full._resolve_lanes — conflict-flag rules", function()
       assert.is_false(w:find("coverage", 1, true) ~= nil,
         "smoke + no-coverage must not warn, got: " .. w)
     end
+  end)
+
+  it("--smoke + --full: smoke wins, no coverage/crap_collect lanes", function()
+    local plan = verify_full._resolve_lanes({ smoke = true, full = true, env = _env() })
+    local labels = _labels(plan.lanes)
+    assert.is_false(_has(labels, "coverage"))
+    assert.is_false(_has(labels, "crap_collect"))
   end)
 end)
 
