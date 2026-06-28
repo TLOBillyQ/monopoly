@@ -46,6 +46,7 @@ local entries = {
   { feature = "features/v102/sign_in.feature",                     generated = "sign_in_acceptance_spec.lua" },
   { feature = "features/v102/skin_persistence.feature",            generated = "skin_persistence_acceptance_spec.lua" },
   { feature = "features/v102/skin_shop.feature",                   generated = "skin_shop_acceptance_spec.lua" },
+  { feature = "features/v103/secondary_confirm_end_button.feature", generated = "secondary_confirm_end_button_acceptance_spec.lua" },
 }
 
 return {
