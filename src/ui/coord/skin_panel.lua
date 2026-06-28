@@ -85,6 +85,14 @@ local function _apply_transaction_result(state, role_id, result, opts)
   return panel
 end
 
+local function _default_apply_transaction_result(state, result)
+  return _apply_transaction_result(state, nil, result, {})
+end
+
+function skin_panel.apply_transaction_result(state, result, opts)
+  return _apply_transaction_result(state, nil, result, opts or {})
+end
+
 local function _handle_transaction(state, role_id, request, opts)
   local result = transaction.handle_skin_transaction(state, role_id, request)
   return _apply_transaction_result(state, role_id, result, opts)
@@ -118,6 +126,7 @@ end
 function skin_panel.reset_for_tests()
   transaction.reset_for_tests()
   _sync_catalog()
+  transaction.configure_transaction_result_applier(_default_apply_transaction_result)
 end
 
 function skin_panel.open(state, role_id)
@@ -177,6 +186,8 @@ function skin_panel.handle_action(state, action, role_id)
 end
 
 skin_panel.catalog = _catalog
+
+transaction.configure_transaction_result_applier(_default_apply_transaction_result)
 
 return skin_panel
 

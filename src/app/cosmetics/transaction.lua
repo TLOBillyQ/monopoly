@@ -43,6 +43,10 @@ function transaction.configure_purchase(callback)
   transaction_context.configure_purchase(callback)
 end
 
+function transaction.configure_transaction_result_applier(callback)
+  transaction_context.configure_transaction_result_applier(callback)
+end
+
 function transaction.configure_archive(archive)
   transaction_context.configure_archive(archive)
 end

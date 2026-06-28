@@ -1166,6 +1166,36 @@ describe("skin_panel", function()
       assert(panel.selected_by_role["1"] == 5001, "skin should be selected after purchase success")
     end)
 
+    it("asynchronous purchase success refreshes the slot view", function()
+      local catalog = _make_rich_catalog()
+      skin_panel.configure_catalog_for_tests(catalog)
+      local captured_on_success = nil
+      skin_panel.configure_purchase(function(_, _, on_success)
+        captured_on_success = on_success
+        return true
+      end)
+
+      local refresh_count = 0
+      _with_patches({
+        {
+          target = skin_panel_view,
+          key = "refresh_slots",
+          value = function(state, cat, opts)
+            refresh_count = refresh_count + 1
+          end,
+        },
+      }, function()
+        local s = _make_state()
+        skin_panel.open(s, 1)
+        skin_panel.equip(s, 1, 1)
+        local before_success = refresh_count
+        assert(captured_on_success ~= nil, "should provide on_success callback")
+        captured_on_success()
+        assert(refresh_count > before_success,
+          "asynchronous purchase success must refresh slots so the price button becomes 穿上")
+      end)
+    end)
+
     it("purchase success keeps the originally purchased skin after page changes", function()
       local catalog = {}
       for index = 1, 7 do

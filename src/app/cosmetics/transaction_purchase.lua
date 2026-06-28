@@ -31,6 +31,7 @@ local function _purchase_entry(root_state, role_id, skin, complete_purchase)
       local result = complete_purchase(root_state, role_id, skin.product_id, {
         source = "paid_purchase",
       })
+      transaction_context.call_transaction_result_applier(root_state, result)
       return result.accepted == true
     end,
   }
@@ -61,6 +62,7 @@ local function _start_via_legacy_adapter(root_state, role_id, skin, complete_pur
     completed = complete_purchase(root_state, role_id, skin.product_id, {
       source = "purchase_callback",
     })
+    transaction_context.call_transaction_result_applier(root_state, completed)
     return completed.accepted == true
   end
   local ok, started = pcall(adapter, role_id, skin, on_success, root_state)

@@ -9,6 +9,7 @@ local state = {
   equip_adapter = nil,
   unequip_adapter = nil,
   purchase_adapter = nil,
+  transaction_result_applier = nil,
 }
 
 function context.catalog()
@@ -79,6 +80,24 @@ function context.configure_purchase(callback)
   _configure_callback("purchase_adapter", callback, "invalid skin purchase callback")
 end
 
+function context.configure_transaction_result_applier(callback)
+  _configure_callback("transaction_result_applier", callback, "invalid skin transaction result applier")
+end
+
+function context.call_transaction_result_applier(root_state, result)
+  local applier = state.transaction_result_applier
+  if type(applier) ~= "function" then
+    return
+  end
+  local ok, err = pcall(applier, root_state, result)
+  if not ok then
+    logger.warn(
+      "skin_panel: transaction result applier failed",
+      tostring(err)
+    )
+  end
+end
+
 function context.configure_archive(archive)
   assert(archive == nil or type(archive) == "table", "invalid skin archive")
   state.archive_adapter = archive
@@ -94,6 +113,7 @@ function context.reset_for_tests()
   state.equip_adapter = nil
   state.unequip_adapter = nil
   state.purchase_adapter = nil
+  state.transaction_result_applier = nil
 end
 
 return context
