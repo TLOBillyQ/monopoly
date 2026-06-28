@@ -882,7 +882,7 @@ describe("presentation_ui.interaction", function()
     _assert_eq(destroyed, 1, "rebind should destroy existing listeners with destroy hooks")
   end)
 
-  it("_test_ui_event_router_optional_end_button_closes_choice_modal", function()
+  it("_test_ui_event_router_optional_end_button_blocked_when_choice_modal_open", function()
     local base_nodes = require("src.ui.schema.base")
     local modal = require("src.ui.coord.modal")
     local role = { get_roleid = function() return 5 end }
@@ -942,12 +942,8 @@ describe("presentation_ui.interaction", function()
       end_node._listener_cb({ role = role })
     end)
 
-    _assert_eq(#dispatched, 1, "only optional end button should dispatch optional completion")
-    _assert_eq(dispatched[1] and dispatched[1].type, "complete_optional_action_phase",
-      "optional end button should dispatch optional completion intent")
-    _assert_eq(dispatched[1] and dispatched[1].actor_role_id, 5,
-      "optional completion should carry event actor")
-    _assert_eq(closed, 1, "optional completion dispatch should close the choice modal")
+    _assert_eq(#dispatched, 0, "optional end button should not dispatch while a choice modal is open")
+    _assert_eq(closed, 0, "choice modal should stay open when end button is blocked")
   end)
 
   it("_test_ui_event_router_optional_landing_end_button_dispatches_completion_intent", function()

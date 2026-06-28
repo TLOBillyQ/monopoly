@@ -2,11 +2,16 @@ local base_nodes = require("src.ui.schema.base")
 local route_model = require("src.ui.input.route_model")
 local choice_support = require("src.ui.view.choice_support")
 local optional_action_completion = require("src.turn.optional_action_completion")
+local panel_interrupt = require("src.ui.coord.panel_interrupt")
 
 local intents = {}
 
 local function _input_blocked(state)
-  return state and state.ui and state.ui.input_blocked == true
+  local ui = state and state.ui
+  if ui and ui.input_blocked == true then
+    return true
+  end
+  return panel_interrupt.settlement_type(ui) ~= nil
 end
 
 local function _can_build_optional_completion_intent(state)

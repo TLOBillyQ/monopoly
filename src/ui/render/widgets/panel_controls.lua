@@ -2,6 +2,7 @@ local base_nodes = require("src.ui.schema.base")
 local role_id_utils = require("src.foundation.identity")
 local ui_touch_policy_runtime = require("src.ui.input.touch")
 local choice_support = require("src.ui.view.choice_support")
+local panel_interrupt = require("src.ui.coord.panel_interrupt")
 
 local panel_controls = {}
 
@@ -65,6 +66,9 @@ end
 
 function panel_controls.is_base_non_player_visible(ui, ctx)
   if ui.input_blocked then
+    return false
+  end
+  if panel_interrupt.settlement_type(ui) ~= nil then
     return false
   end
   return ctx.can_operate == true

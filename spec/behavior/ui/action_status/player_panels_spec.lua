@@ -281,6 +281,26 @@ describe("presentation_player_panels", function()
       "recovered item-slot list should be empty without cached current-player ids")
   end)
 
+  it("_test_panel_presenter_secondary_confirm_hides_end_button", function()
+    local env = _new_cash_delta_presenter_env()
+    env.state.ui.base_hidden_nodes = { base_nodes.action_button, base_nodes.end_button }
+    env.state.ui.choice_active = true
+    env.state.ui.active_choice_screen_key = "secondary_confirm"
+    env.ui_model.choice = {
+      id = 11,
+      kind = "item_phase_passive",
+      route_key = "item_phase_passive",
+      allow_cancel = true,
+    }
+
+    env.refresh()
+
+    _assert_eq(env.state.ui.visible[base_nodes.end_button], false,
+      "secondary confirm screen should hide the optional end button")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], false,
+      "secondary confirm screen should disable the optional end button touch")
+  end)
+
   it("_test_panel_presenter_optional_action_shows_end_button_instead_of_action_button", function()
     local env = _new_cash_delta_presenter_env()
     env.state.ui.base_hidden_nodes = { base_nodes.action_button, base_nodes.end_button }
