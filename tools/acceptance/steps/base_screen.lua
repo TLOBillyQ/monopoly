@@ -153,6 +153,16 @@ local function _set_optional_action_phase(world, action_name)
   return true
 end
 
+local function _set_current_action_role(world, example, key_name)
+  local role_id = number_utils.to_integer(example[key_name])
+  if not _valid_role_id(role_id) then
+    return nil, "invalid action role_id: " .. tostring(example[key_name])
+  end
+  world.base_screen_action_role_id = role_id
+  world.base_screen_action_role_unset = false
+  return true
+end
+
 local function _set_blocking_state(world, state_name)
   local text = tostring(state_name or "")
   if BLOCKING_STATE_BY_NAME[text] ~= true then
@@ -406,23 +416,11 @@ function base_screen_steps.handlers()
     end,
 
     ["当前轮到角色ID为<行动角色ID>"] = function(world, example)
-      local role_id = number_utils.to_integer(example["行动角色ID"])
-      if not _valid_role_id(role_id) then
-        return nil, "invalid action role_id: " .. tostring(example["行动角色ID"])
-      end
-      world.base_screen_action_role_id = role_id
-      world.base_screen_action_role_unset = false
-      return true
+      return _set_current_action_role(world, example, "行动角色ID")
     end,
 
     ["当前轮到角色ID为<角色ID>"] = function(world, example)
-      local role_id = number_utils.to_integer(example["角色ID"])
-      if not _valid_role_id(role_id) then
-        return nil, "invalid action role_id: " .. tostring(example["角色ID"])
-      end
-      world.base_screen_action_role_id = role_id
-      world.base_screen_action_role_unset = false
-      return true
+      return _set_current_action_role(world, example, "角色ID")
     end,
 
     ["当前行动控制为人类"] = function(world)
