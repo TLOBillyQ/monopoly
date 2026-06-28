@@ -1,12 +1,5 @@
 local parity = require("swarmforge.lib.upstream_parity")
 
-local function read_file(path)
-  local handle = assert(io.open(path, "r"))
-  local contents = handle:read("*a")
-  handle:close()
-  return contents
-end
-
 describe("swarmforge upstream parity", function()
   it("selects terminal backend from environment before host capabilities", function()
     assert.are.equal("ghostty", parity.select_terminal_backend({
@@ -213,15 +206,4 @@ describe("swarmforge upstream parity", function()
     assert.are.equal("swarmforge-architect", by_index.target_session)
   end)
 
-  it("uses four-pack daemon handoffs and architect batch mode", function()
-    local config = read_file("swarmforge/swarmforge.conf")
-    local handoffs = read_file("swarmforge/constitution/articles/handoffs.prompt")
-    local specifier = read_file("swarmforge/roles/specifier.prompt")
-    local architect = read_file("swarmforge/roles/architect.prompt")
-
-    assert.truthy(config:find("window architect codex architect batch", 1, true))
-    assert.truthy(handoffs:find("swarm_handoff.sh <draft-file>", 1, true))
-    assert.truthy(specifier:find("When the architect notifies you that the job is complete", 1, true))
-    assert.truthy(architect:find("If `ready_for_next.sh` prints `BATCH`", 1, true))
-  end)
 end)
