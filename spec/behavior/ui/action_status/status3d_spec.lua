@@ -499,6 +499,109 @@ describe("presentation_status3d_and_turn_effects", function()
       "deity layer should be visible when mountain detained status is inactive")
   end)
 
+  -- ADR 0024: the 扣留剩余回合 label uses the 含当前回合 (inclusive) convention. While a
+  -- player is being processed in their own frozen turn the internal stay_turns counter
+  -- has already decremented at turn start, so the inclusive display is stay_turns + 1 —
+  -- matching the detention tip. A 2-turn hospital stay reads 2 (landing) -> 2 (frozen
+  -- turn 1) -> 1 (frozen turn 2), and never 0 while detained.
+  local function _detained_hospital_game(env_label_ids, stay_turns)
+    return _build_status3d_game({
+      tile_type = "hospital",
+      player_status_1 = {
+        stay_turns = stay_turns,
+        deity = { type = "", remaining = 0 },
+      },
+      turn = {
+        phase = "detained_wait",
+        detained_wait_active = true,
+        no_action_notice_active = true,
+        no_action_notice_player_id = 1,
+        no_action_notice_text = "本回合无法行动",
+      },
+      last_turn = {
+        player_id = 1,
+        skipped = true,
+        stay_turns = stay_turns,
+        note = "被扣留",
+      },
+    }), env_label_ids["医院状态-剩余回合"]
+  end
+
+  it("_test_status3d_detained_label_first_frozen_turn_shows_inclusive_two", function()
+    local env = _build_status3d_test_env()
+    local state = {}
+    local game = _detained_hospital_game(env.label_node_ids, 1)
+    local prefab = require("Data.Prefab")
+    local hospital_layout = prefab.scene_eui["医院状态"]
+    _with_patches({
+      { key = "GameAPI", value = env.game_api },
+      { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+      { key = "UIManager", value = env.ui_manager },
+    }, function()
+      ui_status_3d_layer.sync(game, state, { any = true, players = true, turn = true })
+    end)
+
+    local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+    local node_id = env.label_node_ids["医院状态-剩余回合"]
+    local text_handle = "text_" .. hospital_layer .. "_" .. tostring(node_id)
+    _assert_eq(env.label_text[1] and env.label_text[1][text_handle], "剩余回合：2",
+      "first frozen turn (stay_turns decremented to 1) must show inclusive remaining 2")
+  end)
+
+  it("_test_status3d_detained_label_last_frozen_turn_shows_one_not_zero", function()
+    local env = _build_status3d_test_env()
+    local state = {}
+    local game = _detained_hospital_game(env.label_node_ids, 0)
+    local prefab = require("Data.Prefab")
+    local hospital_layout = prefab.scene_eui["医院状态"]
+    _with_patches({
+      { key = "GameAPI", value = env.game_api },
+      { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+      { key = "UIManager", value = env.ui_manager },
+    }, function()
+      ui_status_3d_layer.sync(game, state, { any = true, players = true, turn = true })
+    end)
+
+    local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+    local node_id = env.label_node_ids["医院状态-剩余回合"]
+    local text_handle = "text_" .. hospital_layer .. "_" .. tostring(node_id)
+    _assert_eq(env.layer_visibility[hospital_layer][1], true,
+      "hospital layer must stay visible on the last frozen turn")
+    _assert_eq(env.label_text[1] and env.label_text[1][text_handle], "剩余回合：1",
+      "last frozen turn (stay_turns decremented to 0) must show inclusive remaining 1, not 0")
+  end)
+
+  it("_test_status3d_detained_label_between_turns_shows_raw_stay_turns", function()
+    local env = _build_status3d_test_env()
+    local state = {}
+    local game = _build_status3d_game({
+      tile_type = "hospital",
+      player_status_1 = {
+        stay_turns = 2,
+        deity = { type = "", remaining = 0 },
+      },
+      turn = {
+        phase = "start",
+        detained_wait_active = false,
+      },
+    })
+    local prefab = require("Data.Prefab")
+    local hospital_layout = prefab.scene_eui["医院状态"]
+    _with_patches({
+      { key = "GameAPI", value = env.game_api },
+      { key = "Enums", value = { ModelSocket = { socket_head = 7 } } },
+      { key = "UIManager", value = env.ui_manager },
+    }, function()
+      ui_status_3d_layer.sync(game, state, { any = true, players = true, turn = true })
+    end)
+
+    local hospital_layer = "layer_1_" .. tostring(hospital_layout)
+    local node_id = env.label_node_ids["医院状态-剩余回合"]
+    local text_handle = "text_" .. hospital_layer .. "_" .. tostring(node_id)
+    _assert_eq(env.label_text[1] and env.label_text[1][text_handle], "剩余回合：2",
+      "between turns (not the player's frozen turn) the label shows raw stay_turns 2")
+  end)
+
   it("_test_status3d_reset_destroy_layers", function()
     local env = _build_status3d_test_env()
     local state = {}

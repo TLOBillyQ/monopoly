@@ -49,6 +49,15 @@ local function _assert_player_deity(game, player, raw_name)
   return true
 end
 
+local function _end_player1_turns(world, times)
+  local game = _game(world)
+  local player1 = game.players[1]
+  for _ = 1, times do
+    game:tick_player_deity(player1)
+  end
+  return true
+end
+
 function deities_steps.handlers()
   return {
     ["玩家1附体<神灵>持续<持续回合>回合"] = function(world, example)
@@ -75,6 +84,11 @@ function deities_steps.handlers()
       return _set_player_deity(game, game.players[1], "穷神", 3)
     end,
 
+    ["玩家1附体财神持续3回合"] = function(world)
+      local game = _game(world)
+      return _set_player_deity(game, game.players[1], "财神", 3)
+    end,
+
     ["玩家1神灵剩余回合为<验证持续回合>"] = function(world, example)
       local expected = number_utils.to_integer(example["验证持续回合"])
       if expected == nil then
@@ -95,12 +109,15 @@ function deities_steps.handlers()
       if times == nil then
         return nil, "invalid times: " .. tostring(example["持续回合"])
       end
-      local game = _game(world)
-      local player1 = game.players[1]
-      for _ = 1, times do
-        game:tick_player_deity(player1)
+      return _end_player1_turns(world, times)
+    end,
+
+    ["玩家1的回合结束<已结束回合>次"] = function(world, example)
+      local times = number_utils.to_integer(example["已结束回合"])
+      if times == nil then
+        return nil, "invalid times: " .. tostring(example["已结束回合"])
       end
-      return true
+      return _end_player1_turns(world, times)
     end,
 
     ["玩家1不再持有任何神灵"] = function(world)

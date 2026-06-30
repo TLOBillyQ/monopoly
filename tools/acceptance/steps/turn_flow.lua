@@ -14,6 +14,8 @@ local game_driver = require("tools.acceptance.game_driver")
 local turn_driver = require("tools.acceptance.turn_driver")
 local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
+local event_kinds = require("src.config.gameplay.event_kinds")
+local constants = require("src.config.content.constants")
 
 local turn_flow_steps = {}
 
@@ -363,6 +365,48 @@ function turn_flow_steps.handlers()
       end
       if turn_driver.current_player_index(_ctx(world)) ~= 1 then
         return nil, "rotation did not return to the detained player"
+      end
+      return true
+    end,
+
+    -- ── 扣留剩余回合「含当前回合」口径 (ADR 0024) ─────────────────────────────────
+    ["玩家落在医院被扣留"] = function(world)
+      _human_game(world, 4)
+      turn_driver.set_current_player(_ctx(world), 1)
+      turn_driver.detain(_ctx(world), _p(world, 1), constants.hospital_stay_turns)
+      world.detained = _p(world, 1)
+      return true
+    end,
+
+    ["进入第<扣留回合序号>个扣留回合"] = function(world, example)
+      local nth = number_utils.to_integer(example["扣留回合序号"])
+      if nth == nil then return nil, "invalid 扣留回合序号: " .. tostring(example["扣留回合序号"]) end
+      -- Drive real turns until the detained player (seat 1) has STARTED its nth frozen
+      -- turn. Each of its own turns runs start -> detained_wait -> end_turn and publishes
+      -- one 被扣留 tip through the real event feed; opponents just rotate around the table.
+      local started = 0
+      while started < nth do
+        if turn_driver.current_player_index(_ctx(world)) == 1 then
+          started = started + 1
+        end
+        turn_driver.play_turn(_ctx(world))
+      end
+      return true
+    end,
+
+    ["扣留提示显示剩余回合为<显示剩余回合>"] = function(world, example)
+      local expected = number_utils.to_integer(example["显示剩余回合"])
+      if expected == nil then return nil, "invalid 显示剩余回合: " .. tostring(example["显示剩余回合"]) end
+      local latest
+      for _, event in ipairs(game_driver.events(_ctx(world))) do
+        if event.kind == event_kinds.detained then latest = event end
+      end
+      if latest == nil then return nil, "no 被扣留 tip was published" end
+      local shown = tostring(latest.text):match("剩余回合[:：]%s*(%d+)")
+      local actual = shown and number_utils.to_integer(shown) or nil
+      if actual ~= expected then
+        return nil, "expected detention tip remaining " .. tostring(expected) ..
+          ", got " .. tostring(actual) .. " (tip: " .. tostring(latest.text) .. ")"
       end
       return true
     end,

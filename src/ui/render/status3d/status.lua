@@ -133,8 +133,16 @@ local function _resolve_deity_status(status)
   return _deity_status_map[deity.type]
 end
 
-local function _resolve_stay_turns_remaining(player)
-  return player.status and player.status.stay_turns or 0
+local function _resolve_stay_turns_remaining(game, player)
+  local stay_turns = player.status and player.status.stay_turns or 0
+  -- 扣留剩余回合 uses the 含当前回合 (inclusive) convention (ADR 0024). During the player's
+  -- own frozen turn the stay_turns counter has already decremented at turn start, so the
+  -- inclusive remaining is +1 - the same number the detention tip shows, and never 0 while
+  -- detained. Between turns (and at landing) the raw counter already is the inclusive value.
+  if _is_player_detained_this_turn(game, player) then
+    return stay_turns + 1
+  end
+  return stay_turns
 end
 
 local function _resolve_deity_remaining(player)
@@ -170,9 +178,9 @@ function M.resolve_player_status_key(game, player)
   return _resolve_deity_status(status)
 end
 
-local function _resolve_remaining_value(player, remaining_field)
+local function _resolve_remaining_value(game, player, remaining_field)
   if remaining_field == "stay_turns" then
-    return _resolve_stay_turns_remaining(player)
+    return _resolve_stay_turns_remaining(game, player)
   end
   if remaining_field == "deity_remaining" then
     return _resolve_deity_remaining(player)
@@ -180,12 +188,12 @@ local function _resolve_remaining_value(player, remaining_field)
   return 0
 end
 
-local function _resolve_text_status_context(cache, player, status_key)
+local function _resolve_text_status_context(cache, player, status_key, game)
   local spec = specs.status_specs[status_key]
   if not (spec and spec.text_node_name) then
     return nil, nil
   end
-  local remaining = _resolve_remaining_value(player, spec.remaining_field)
+  local remaining = _resolve_remaining_value(game, player, spec.remaining_field)
   local text_node = cache.text_nodes[player.id] and cache.text_nodes[player.id][status_key]
   if remaining <= 0 or text_node == nil then
     return nil, nil
@@ -193,8 +201,8 @@ local function _resolve_text_status_context(cache, player, status_key)
   return remaining, text_node
 end
 
-local function _sync_text_status(cache, player, status_key, roles)
-  local remaining, text_node = _resolve_text_status_context(cache, player, status_key)
+local function _sync_text_status(cache, player, status_key, roles, game)
+  local remaining, text_node = _resolve_text_status_context(cache, player, status_key, game)
   if remaining == nil then
     return
   end
@@ -206,7 +214,7 @@ local function _sync_text_status(cache, player, status_key, roles)
   end
 end
 
-function M.sync_layer_status(cache, player, status_key, deps)
+function M.sync_layer_status(cache, player, status_key, deps, game)
   local player_id = player.id
   local player_layers = cache.layers[player_id]
   if not player_layers then
@@ -214,7 +222,7 @@ function M.sync_layer_status(cache, player, status_key, deps)
   end
   local roles = scene.resolve_observer_roles()
   if cache.last_status_key_by_player[player_id] == status_key then
-    _sync_text_status(cache, player, status_key, roles)
+    _sync_text_status(cache, player, status_key, roles, game)
     return
   end
   for _, key in ipairs(specs.status_priority) do
@@ -223,7 +231,7 @@ function M.sync_layer_status(cache, player, status_key, deps)
       scene.set_layer_visible_for_roles(layer, roles, status_key == key, deps)
     end
   end
-  _sync_text_status(cache, player, status_key, roles)
+  _sync_text_status(cache, player, status_key, roles, game)
   cache.last_status_key_by_player[player_id] = status_key
 end
 

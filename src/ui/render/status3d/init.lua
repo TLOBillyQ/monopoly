@@ -79,7 +79,7 @@ end
 local function _sync_all_player_status(cache, game, players, deps)
   for _, player in ipairs(players or {}) do
     if cache.layers[player.id] ~= nil then
-      status.sync_layer_status(cache, player, status.resolve_player_status_key(game, player), deps)
+      status.sync_layer_status(cache, player, status.resolve_player_status_key(game, player), deps, game)
     end
   end
 end

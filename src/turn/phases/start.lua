@@ -54,10 +54,15 @@ end
 
 local function _configure_detained_wait(game, turn, player)
   local detained_wait_seconds = timing.detained_turn_wait_seconds or 5.0
-  game:set_player_status(player, "stay_turns", player.status.stay_turns - 1)
+  -- 扣留剩余回合 uses the 含当前回合 (inclusive) convention (ADR 0024): the player-visible
+  -- count includes the current frozen turn, so the tip reads the value BEFORE this turn's
+  -- decrement and never shows 0 while detained. The internal stay_turns counter still
+  -- decrements at turn start (pinned by the 减后回合 acceptance scenario).
+  local remaining_inclusive = player.status.stay_turns
+  game:set_player_status(player, "stay_turns", remaining_inclusive - 1)
   event_feed.publish(game, {
     kind = event_kinds.detained,
-    text = player.name .. " 被扣留，剩余回合:" .. tostring(player.status.stay_turns),
+    text = player.name .. " 被扣留，剩余回合:" .. tostring(remaining_inclusive),
     tip = true,
   })
   game.last_turn.note = "被扣留"
