@@ -27,11 +27,11 @@ Proposed（2026-06-30，等待用户 review）。
 ## 取舍
 
 - 选用「含当前回合」而非「不含当前回合（减后值）」：后者会在最后一个冻结回合显示「剩余 0 回合」（仍不能动却显示 0），语义矛盾；前者与落地「需停留 2 回合」宣告自然倒数对齐，且「0 = 自由 = 不显示」天然成立。
-- 路障归类有一处过时文档冲突：`docs/product/map.md` 仍写「路障…被扣留 1 回合（`stay_turns = 1`）」，与代码、验收、设计源均矛盾。本 ADR 不改该产品文档，仅记录该冲突待产品文档负责人订正。
+- 路障归类曾有一处过时文档冲突：`docs/product/map.md` 原写「路障…被扣留 1 回合（`stay_turns = 1`）」，与代码、验收、设计源均矛盾，已按本决定订正为「强制停止移动、不扣留、不冻结回合」。
 
 ## 关联
 
 - `features/game/turn_flow.feature`、`features/game/deities.feature`
 - `CONTEXT.md`（术语：扣留、扣留剩余回合）
 - 设计源 `docs/product/design-source/蛋仔--大富翁--道具表.xlsx`
-- 待订正：`docs/product/map.md` 路障条目
+- 已对齐：`docs/product/map.md` 路障条目
