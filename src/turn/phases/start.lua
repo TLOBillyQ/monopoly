@@ -138,12 +138,12 @@ return _phase_start
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=ce4e012b66a2ceda
+projectHash=10c84f19d46a15d5
 scope.0.id=chunk:src/turn/phases/start.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=133
-scope.0.semanticHash=31d44d0879866c21
+scope.0.endLine=138
+scope.0.semanticHash=f0c8663d9989e731
 scope.1.id=function:_clear_no_action_notice:10
 scope.1.kind=function
 scope.1.startLine=10
@@ -172,16 +172,16 @@ scope.5.semanticHash=c928ce11a107954e
 scope.6.id=function:_configure_detained_wait:55
 scope.6.kind=function
 scope.6.startLine=55
-scope.6.endLine=76
-scope.6.semanticHash=b168db55d645dc15
-scope.7.id=function:_run_pre_action_item_phase:78
+scope.6.endLine=81
+scope.6.semanticHash=bfd7e1ad14d2cf0d
+scope.7.id=function:_run_pre_action_item_phase:83
 scope.7.kind=function
-scope.7.startLine=78
-scope.7.endLine=94
+scope.7.startLine=83
+scope.7.endLine=99
 scope.7.semanticHash=7b585307a93cb0bc
-scope.8.id=function:_phase_start:96
+scope.8.id=function:_phase_start:101
 scope.8.kind=function
-scope.8.startLine=96
-scope.8.endLine=130
+scope.8.startLine=101
+scope.8.endLine=135
 scope.8.semanticHash=76e428b983c6dc1b
 ]]

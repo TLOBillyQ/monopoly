@@ -70,6 +70,12 @@ local function _should_skip_sync(cache, dirty, players)
   return not has_dirty and not has_missing_layer
 end
 
+local function _scene_ready(cache, host_runtime)
+  return _check_scene_ui_support(cache, host_runtime)
+      and _check_scene_ui_env(cache)
+      and _check_meta_ready(cache)
+end
+
 local function _ensure_all_player_layers(cache, players, deps)
   for _, player in ipairs(players or {}) do
     scene.ensure_layers_for_player(cache, player, deps)
@@ -93,13 +99,7 @@ function M.sync(game, state, dirty, deps)
   if cache.disabled then
     return
   end
-  if not _check_scene_ui_support(cache, host_runtime) then
-    return
-  end
-  if not _check_scene_ui_env(cache) then
-    return
-  end
-  if not _check_meta_ready(cache) then
+  if not _scene_ready(cache, host_runtime) then
     return
   end
   if _should_skip_sync(cache, dirty, game.players) then
@@ -113,12 +113,12 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=188707d62494ef2b
+projectHash=933d7394479000bd
 scope.0.id=chunk:src/ui/render/status3d/init.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=113
-scope.0.semanticHash=fde45251754433e2
+scope.0.semanticHash=c96c5fedabc6c06e
 scope.1.id=function:_check_scene_ui_support:26
 scope.1.kind=function
 scope.1.startLine=26
@@ -144,9 +144,14 @@ scope.5.kind=function
 scope.5.startLine=67
 scope.5.endLine=71
 scope.5.semanticHash=c57e763cac26353d
-scope.6.id=function:M.sync:87
+scope.6.id=function:_scene_ready:73
 scope.6.kind=function
-scope.6.startLine=87
-scope.6.endLine=110
-scope.6.semanticHash=856cd603e0051858
+scope.6.startLine=73
+scope.6.endLine=77
+scope.6.semanticHash=e701faa7d6b712c4
+scope.7.id=function:M.sync:93
+scope.7.kind=function
+scope.7.startLine=93
+scope.7.endLine=110
+scope.7.semanticHash=5a777d1152f42c60
 ]]
