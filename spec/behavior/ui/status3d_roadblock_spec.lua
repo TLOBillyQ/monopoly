@@ -1,6 +1,6 @@
-local status = require("src.ui.render.status3d.status")
+local signals = require("src.ui.render.status3d.status_signals")
 
-local _has_pending_roadblock_trigger = status._M_test._has_pending_roadblock_trigger
+local _has_pending_roadblock_trigger = signals.has_pending_roadblock_trigger
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
