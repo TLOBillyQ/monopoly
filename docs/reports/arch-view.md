@@ -2,7 +2,7 @@
 kind: report
 status: generated
 owner: quality
-last_verified: 2026-05-22
+last_verified: 2026-07-02
 ---
 # Arch View
 

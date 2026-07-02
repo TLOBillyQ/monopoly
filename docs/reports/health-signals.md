@@ -2,7 +2,7 @@
 kind: report
 status: generated
 owner: quality
-last_verified: 2026-05-22
+last_verified: 2026-07-02
 ---
 # 健康信号与周检入口
 
@@ -15,16 +15,16 @@ last_verified: 2026-05-22
 **1. 全量回归（必跑）**
 
 ```
-lua tools/quality/verify_full.lua
+lua tools/quality/verify_full.lua --full
 ```
 
-覆盖 behavior / contract / guard / tooling / acceptance 等全部 lane。健康输出：
+默认（无 flag）并行跑 contract / guards / arch / behavior / lint / encoding 六条 lane；`--full` 追加 coverage 与 crap（crap_collect → crap 分析 → crap_gate 棘轮），周检用 `--full`。tooling lane 用 `--tooling` 加跑；acceptance 由 `make acceptance` 单独驱动，不在 verify 管线内。健康输出：
 
 ```
 [verify] PASS  passed=N failed=0 skipped=0  Ns
 ```
 
-失败则优先修复，不要继续看其他信号。当前 guard lane 预期为 4 条：`dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`。
+失败则优先修复，不要继续看其他信号。当前 guard lane 预期为 6 条：`dep_rules`、`gameplay_loop_no_ui`、`forbidden_globals`、`arch_view_guard`、`fixed_type_guard`、`repo_hygiene`。
 
 **2. 架构与契约（必跑）**
 
@@ -63,7 +63,7 @@ lua tools/quality/crap.lua viewer --in-json tmp/crap_report.json
 lua tools/quality/crap.lua
 ```
 
-输出在逻辑临时目录 `tmp/crap_view/index.html`（实际会展开到系统临时目录下的 `monopoly_crap/crap_view/index.html`）。用于找"复杂度高且测试触达不足"的函数，是热点雷达，不是周检 gate。默认 lane 失败也产出报告；加 `--strict-tests` 才会把测试失败升级为命令失败。
+输出在逻辑临时目录 `tmp/crap_view/index.html`（实际会展开到系统临时目录下的 `monopoly_crap/crap_view/index.html`）。用于找"复杂度高且测试触达不足"的函数，是热点雷达，不是周检 gate。默认 lane 失败也产出报告；加 `--strict-tests` 才会把测试失败升级为命令失败。与之独立，`verify --full` 里的 `crap_gate` 是复杂度感知棘轮，只拦超出基线（`tools/quality/crap/crap_gate_baseline.lua`）的新增违规。
 
 实现上，`tools/quality/crap.lua` 会先通过公开 Lua bridge 加载 `tools/quality/crap/config.lua`、执行 `tools/quality/crap/adapter.lua` 收集 coverage，再委托纯 Lua `crap4lua.cli` 做分析与 viewer 导出。
 

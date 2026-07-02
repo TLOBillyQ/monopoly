@@ -2,7 +2,7 @@
 kind: report
 status: generated
 owner: quality
-last_verified: 2026-05-22
+last_verified: 2026-07-02
 ---
 # Coverage Report
 
@@ -15,7 +15,7 @@ last_verified: 2026-05-22
 ```
 lua5.4 tools/quality/coverage.lua
 ```
-无参数：跑 `behavior + contract + guards` 三个 profile，输出聚合报告到 `tmp/coverage.md`，门槛 90%。
+无参数：跑 `behavior + contract` 两个 profile，输出聚合报告到 `tmp/coverage.md`，门槛 90%。guards 不在默认 profile 里，需要时用 `--profiles=guards` 单跑或逗号追加。
 
 ```
 lua5.4 tools/quality/coverage.lua --threshold=85 --out=tmp/coverage_baseline.md
@@ -50,6 +50,19 @@ lua5.4 tools/quality/coverage.lua --reuse-stats --out=tmp/coverage_replay.md
 
 中间产物：`luacov.stats.out`（hook 累积数据）+ `luacov.report.out`（luacov 完整文本报告）。两者均已 gitignore。
 
+### 当前快照（2026-07-02，behavior + contract，threshold 90%）
+
+| Directory | Hits | Miss | Total | Coverage |
+|-----------|------|------|-------|----------|
+| `src/foundation/` | 682 | 15 | 697 | 97.85% |
+| `src/rules/` | 6,201 | 230 | 6,431 | 96.42% |
+| `src/turn/` | 3,981 | 149 | 4,130 | 96.39% |
+| `src/state/` | 762 | 29 | 791 | 96.33% |
+| `src/player/` | 524 | 14 | 538 | 97.40% |
+| `src/computer/` | 207 | 5 | 212 | 97.64% |
+
+聚合 **96.55%**（门槛 90%），PASS。
+
 ## 何时跑
 
 | 场景 | 命令 |
@@ -64,7 +77,7 @@ lua5.4 tools/quality/coverage.lua --reuse-stats --out=tmp/coverage_replay.md
 - **crap4lua** (`tools/quality/crap.lua`)：复杂度 × 测试覆盖度合成；coverage.lua 不替代 crap，二者并存。
 - **arch_view** (`tools/quality/arch.lua`)：架构边界静态扫描，与 line coverage 无关。
 - **mutate4lua** (`tools/quality/mutate.lua`)：变异测试，验证测试质量；coverage 通过不代表 mutation score 通过。
-- **behavior/contract/guards spec**：coverage 数据来源于这三条 lane 的合并执行；新增测试在哪个 lane 由测试性质决定（见 `docs/architecture/quality-map.md`）。
+- **behavior/contract spec**：coverage 数据默认来源于这两条 lane 的合并执行（guards 可用 `--profiles` 加跑）；新增测试在哪个 lane 由测试性质决定（见 `docs/architecture/quality-map.md`）。
 
 ## 禁用范围
 

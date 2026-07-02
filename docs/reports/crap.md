@@ -2,7 +2,7 @@
 kind: report
 status: generated
 owner: quality
-last_verified: 2026-05-22
+last_verified: 2026-07-02
 ---
 # CRAP Report
 
@@ -49,7 +49,7 @@ lua tools/quality/crap.lua viewer --in-json tmp/crap_report.json --out-dir tmp/c
 
 **复杂度**：`1 + decision_line_count`，用 `luac -p -l` 字节码清单统计条件/循环相关 opcode 的源码行数。
 
-**覆盖率**：通过 `debug.sethook(..., "l")` 动态记录命中行，函数可执行行与命中行求交得到行覆盖率（0–1）。
+**覆盖率**：通过 `debug.sethook(..., "l")` 动态记录命中行，函数可执行行与命中行求交得到行覆盖率（0–1）。加载 spec 期间执行的 src 行（模块主块、顶层 require 链）由 `tools/quality/crap/load_coverage.lua` 先记录、再在覆盖 hook 生效后回放计入；回放时主块桶按 luac 函数跨度过滤定义期行事件（函数头与收尾 `end` 行），未被调用的函数不会凭定义获得函数体覆盖。
 
 **CRAP 公式**：
 
@@ -99,30 +99,30 @@ lua tools/quality/crap.lua summary [--lane behavior] [--in-json tmp/crap_report.
 
 阈值写在 `tools/quality/crap/coverage_tiers.lua`，可在出完基线后按实际情况微调。
 
-### 当前基线（2026-05-22，behavior lane）
+### 当前基线（2026-07-02，behavior lane）
 
 | Tier | 文件数 | 可执行行 | 命中行 | 覆盖率 | 目标 | 状态 |
 |---|---|---|---|---|---|---|
-| `core_logic` | 198 | 17,730 | 13,522 | **76.3%** | 75% | PASS |
-| `host_bridge` | 13 | 1,322 | 804 | **60.8%** | 60% | PASS |
-| `ui_surface` | 139 | 10,883 | 7,336 | **67.4%** | 65% | PASS |
+| `core_logic` | 273 | 21,417 | 17,764 | **82.9%** | 75% | PASS |
+| `host_bridge` | 13 | 1,460 | 1,116 | **76.4%** | 60% | PASS |
+| `ui_surface` | 178 | 12,003 | 9,851 | **82.1%** | 65% | PASS |
 
-三层都过线，但 `core_logic` 仅高出阈值 1.3 个百分点，`host_bridge` 仅高出 0.8 个百分点。回归裕度薄，下一轮补测优先 `core_logic`。
+三层均以明显裕度过线（最小裕度 `core_logic` +7.9pp）。相对 2026-05-22 基线的跳变有两个来源，不能直接同比：一是加载期覆盖盲区修复（`tools/quality/crap/load_coverage.lua`），纯加载期执行的文件不再被记为零覆盖——旧表中 `src/app/host_install.lua` 的 0/53 在新口径下为 102/104；二是期间代码与测试量增长（`core_logic` 文件数 198 → 273）。
 
-`core_logic` 未覆盖行最多的文件（top 10）：
+`core_logic` 未覆盖行最多的文件（top 10，聚合自 `crap_report.json` 的 `modules` 字段；tier 全过线时 `summary --top` 不打印该列表）：
 
 | 文件 | 命中/总行 | 覆盖率 |
 |---|---|---|
-| `src/turn/actions/validator.lua` | 159/221 | 71.9% |
-| `src/foundation/tips.lua` | 158/217 | 72.8% |
-| `src/rules/chance/handlers.lua` | 327/385 | 84.9% |
-| `src/rules/items/handlers.lua` | 176/234 | 75.2% |
-| `src/rules/endgame.lua` | 133/190 | 70.0% |
-| `src/rules/items/strategy.lua` | 77/134 | 57.5% |
-| `src/app/compose_game.lua` | 115/170 | 67.6% |
-| `src/app/host_install.lua` | 0/53 | 0.0% |
-| `src/rules/items/roadblock.lua` | 131/183 | 71.6% |
-| `src/foundation/ports/runtime_ports.lua` | 61/112 | 54.5% |
+| `src/app/host_integrations/achievement.lua` | 86/151 | 57.0% |
+| `src/app/cosmetics/transaction_actions.lua` | 116/179 | 64.8% |
+| `src/app/host_integrations/achievement_runtime.lua` | 86/147 | 58.5% |
+| `src/turn/actions/validator.lua` | 176/229 | 76.9% |
+| `src/rules/ports/achievement_progress.lua` | 35/84 | 41.7% |
+| `src/rules/land/settlement_shared.lua` | 45/92 | 48.9% |
+| `src/rules/board/init.lua` | 121/167 | 72.5% |
+| `src/rules/land/settlement_landing.lua` | 84/128 | 65.6% |
+| `src/rules/items/strategy.lua` | 107/150 | 71.3% |
+| `src/rules/items/roadblock.lua` | 149/190 | 78.4% |
 
 刷新基线命令：
 ```sh
