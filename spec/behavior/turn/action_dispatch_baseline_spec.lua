@@ -369,6 +369,58 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     _assert_eq(clear_choice_called, true, "closing the market should clear the visible choice")
     _assert_eq(#events.invalidate, 1, "applied market close should invalidate the UI model")
   end)
+
+  local function _build_blocked_market_gate()
+    local dispatcher, events, deps = _build()
+    deps.validator.resolve_gate_state = function()
+      return { input_blocked = true }
+    end
+    deps.validator.should_block_action = function(gate)
+      return gate.input_blocked == true
+    end
+    deps.validator.validate_choice_action = function(_, action, choice)
+      return choice ~= nil
+        and choice.kind == "market_buy"
+        and action.choice_id == choice.id
+    end
+    return dispatcher, events, deps
+  end
+
+  it("market choice_cancel while blocked resolves choice via output_ports fallback", function()
+    -- turn.pending_choice is nil: _resolve_pending_choice must fall back to
+    -- ctx.output_ports.get_pending_choice (L38-L40).
+    local dispatcher, events = _build_blocked_market_gate()
+    local game = {
+      turn = { phase = "wait_action_anim", pending_choice = nil },
+      dispatch_action = function() end,
+      find_player_by_id = function() return { id = 1 } end,
+      players = { { id = 1 } },
+    }
+    local action = { type = "choice_cancel", choice_id = "m1", actor_role_id = 1 }
+    local ctx = _ctx_with_invalidate(events, { pending_choice = { id = "m1", kind = "market_buy" } })
+
+    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+
+    _assert_eq(result.status, "applied", "port-resolved market choice must allow cancel while blocked")
+  end)
+
+  it("choice_cancel while blocked with no pending choice anywhere stays blocked", function()
+    -- Neither turn.pending_choice nor the output port has a choice:
+    -- _resolve_pending_choice returns nil (L42) and the gate keeps blocking.
+    local dispatcher, events = _build_blocked_market_gate()
+    local game = {
+      turn = { phase = "wait_action_anim", pending_choice = nil },
+      dispatch_action = function() end,
+      find_player_by_id = function() return { id = 1 } end,
+      players = { { id = 1 } },
+    }
+    local action = { type = "choice_cancel", choice_id = "m1", actor_role_id = 1 }
+    local ctx = _ctx_with_invalidate(events, { pending_choice = nil })
+
+    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+
+    _assert_eq(result.status, "blocked", "cancel without any pending choice must stay gated")
+  end)
 end)
 
 describe("action_dispatch _handle_auto_toggle (L33-L40)", function()
