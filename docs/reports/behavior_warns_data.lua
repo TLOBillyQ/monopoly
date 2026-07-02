@@ -30,6 +30,7 @@ return {
     ["choice action missing actor_role_id:"] = true,
     ["choice action without pending choice:"] = true,
     ["choice route fallback to base_inline:"] = true,
+    ["close_popup ignored: popup not active"] = true,
     ["invalid choice option:"] = true,
     ["invalid item option:"] = true,
     ["item slot denied by availability:"] = true,
@@ -40,10 +41,14 @@ return {
     ["目标玩家无效:"] = true,
     ["remote_select without choice"] = true,
     ["role->player 映射失败"] = true,
+    ["toggle_action_log missing role event channel:"] = true,
     ["ui intent rejected:"] = true,
     ["ui_button actor_role_id not mapped:"] = true,
     ["ui_button blocked by actor check:"] = true,
     ["ui_button missing actor_role_id:"] = true,
     ["ui_button missing current_role_id:"] = true,
+
+    -- ── 测试自身机制：spec 合成 warn 文案（保留前缀，src 禁用）──
+    ["spec_synthetic"] = true,
   }
 }

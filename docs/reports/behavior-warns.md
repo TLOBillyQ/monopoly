@@ -2,7 +2,7 @@
 kind: report
 status: generated
 owner: quality
-last_verified: 2026-05-14
+last_verified: 2026-07-02
 ---
 # Behavior 回归中的 warn 与慢测判读
 
@@ -11,7 +11,7 @@ last_verified: 2026-05-14
 1. `busted --run behavior` 打出来的哪些 `warn` 是预期内的测试噪音。
 2. 哪些 `warn` / 慢测信号值得继续追。
 
-> 基线日期：2026-05-14（Asia/Hong_Kong）。这里记录的是当前仓库已知、可解释的输出；如果 behavior lane 出现本文档没列到的新 warn，默认按”可疑”处理。
+> 基线日期：2026-07-02（Asia/Hong_Kong）。这里记录的是当前仓库已知、可解释的输出；如果 behavior lane 出现本文档没列到的新 warn，默认按”可疑”处理。
 >
 > **匹配机制**：`spec/log_warns_handler.lua` 会先去掉日志时间与 `[warn]` 前缀，再做前缀匹配。白名单条目只需覆盖共同前缀。单源真值在 `docs/reports/behavior_warns_data.lua`。
 
@@ -54,6 +54,7 @@ last_verified: 2026-05-14
 | `choice action missing actor_role_id:` | choice 缺 actor | 预期内 |
 | `choice action without pending choice:` | 无待决 choice 时提交动作 | 预期内 |
 | `choice route fallback to base_inline:` | 测试用 choice kind 无专用路由 | 预期内 |
+| `close_popup ignored: popup not active` | popup 未激活时触发 popup_confirm，fallback 关闭被忽略（view_command_spec 健壮性 case） | 预期内 |
 | `invalid choice option:` | 无效选项 ID | 预期内 |
 | `invalid item option:` | 无效道具选项 | 预期内 |
 | `item slot denied by availability:` | 道具不可用时被拒 | 预期内 |
@@ -64,11 +65,23 @@ last_verified: 2026-05-14
 | `目标玩家无效:` | 指定 target_id 无效 / 自指 / 已淘汰 | 预期内 |
 | `remote_select without choice` | 远程选择但无待决 choice | 预期内 |
 | `role->player 映射失败` | 无效 role_id 回退到观战 | 预期内 |
+| `toggle_action_log missing role event channel:` | 用无事件频道桩的 role 切换动作日志（view_command_mutation_pin_spec 负路径） | 预期内 |
 | `ui intent rejected:` | UI intent 缺 actor 被拒 | 预期内 |
 | `ui_button actor_role_id not mapped:` | 按钮 actor 映射失败 | 预期内 |
 | `ui_button blocked by actor check:` | 按钮权限校验拒绝 | 预期内 |
 | `ui_button missing actor_role_id:` | 按钮缺 actor | 预期内 |
 | `ui_button missing current_role_id:` | 按钮缺 current role | 预期内 |
+
+### 测试自身机制：spec 合成 warn 文案
+
+| warn 片段 | 含义 | 默认处理 |
+|----------|------|----------|
+| `spec_synthetic` | 测 warn / logger 机制本身的 spec 合成文案的保留前缀 | 预期内 |
+
+测 warn 链路本身的 spec（`spec/behavior/foundation/log_spec.lua` 的 warn 级 push、`spec/behavior/ui/event_intents_spec.lua` 的 `warn_label`）合成的 warn 文案统一带 `spec_synthetic` 前缀，由白名单一条前缀整体豁免。约定：
+
+- 新增此类 spec 时沿用该前缀，不要把 `a` / `test` 这类过短、会误吞真实 warn 的文案直接入白名单。
+- `src/` 运行时代码禁止产生以 `spec_synthetic` 开头的日志，否则会被白名单误吞。
 
 ## 哪些 warn 算可疑
 
