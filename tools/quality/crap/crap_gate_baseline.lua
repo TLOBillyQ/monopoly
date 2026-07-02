@@ -6,11 +6,7 @@ return {
   base_threshold = 7,
   files = {
     ["src/app/profile_bootstrap.lua"] = 1,
-    ["src/rules/choice_handlers/item.lua"] = 1,
     ["src/rules/items/phase.lua"] = 1,
-    ["src/rules/land/effect_chance.lua"] = 1,
-    ["src/ui/coord/popup.lua"] = 1,
-    ["src/ui/input/game_action.lua"] = 1,
     ["src/ui/input/route_item_slots.lua"] = 1,
     ["src/ui/ports/callbacks.lua"] = 1,
     ["src/ui/render/anim/overlay_compute.lua"] = 1,
@@ -18,6 +14,5 @@ return {
     ["src/ui/render/anim/unit_overlay.lua"] = 2,
     ["src/ui/render/board/placement.lua"] = 1,
     ["src/ui/render/move_anim/playback.lua"] = 1,
-    ["src/ui/render/widgets/player_slots.lua"] = 1,
   },
 }
