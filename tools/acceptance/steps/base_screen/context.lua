@@ -112,6 +112,9 @@ function context.resolve_followup_flow(world)
 end
 
 function context.optional_choice_for_world(world, action_role_id)
+  if world.base_screen_target_choice ~= nil then
+    return world.base_screen_target_choice
+  end
   if world.base_screen_empty_optional_phase == true or world.base_screen_optional_action == nil then
     return nil
   end
@@ -132,6 +135,22 @@ function context.optional_choice_for_world(world, action_role_id)
       followup_flow = context.resolve_followup_flow(world),
     },
   }
+end
+
+function context.enter_item_target_selection(world, item_name)
+  local action_role_id = context.current_action_role_id(world)
+  world.base_screen_target_choice = {
+    id = 9002,
+    kind = "item_phase_passive",
+    route_key = "item_phase_passive",
+    allow_cancel = true,
+    owner_role_id = action_role_id,
+    meta = {
+      passive_origin = true,
+      item_name = item_name,
+    },
+  }
+  return true
 end
 
 function context.set_optional_action_phase(world, action_name)
@@ -170,6 +189,67 @@ end
 
 function context.auxiliary_entry_node(name)
   return context.AUXILIARY_ENTRY_NODES[tostring(name or "")]
+end
+
+function context.give_item(world, item_name)
+  world.base_screen_inventory = world.base_screen_inventory or {}
+  world.base_screen_inventory[item_name] = (world.base_screen_inventory[item_name] or 0) + 1
+  return true
+end
+
+function context.has_item(world, item_name)
+  return (world.base_screen_inventory or {})[item_name] or 0
+end
+
+function context.set_item_phase(world, item_name, phase)
+  world.base_screen_item_phases = world.base_screen_item_phases or {}
+  world.base_screen_item_phases[item_name] = phase
+  if phase == "post_action" then
+    world.base_screen_optional_action = "落地选择"
+    world.base_screen_empty_optional_phase = false
+  end
+  return true
+end
+
+function context.item_phase(world, item_name)
+  return (world.base_screen_item_phases or {})[item_name]
+end
+
+function context.set_dice_rolled_and_moved(world)
+  world.base_screen_dice_rolled = true
+  world.base_screen_move_completed = true
+  world.base_screen_stage_state = "移动完成"
+  return true
+end
+
+function context.set_landed_buyable_property(world)
+  world.base_screen_landed_property = {
+    buyable = true,
+    owner_role_id = nil,
+  }
+  return true
+end
+
+function context.show_buy_property_choice(world)
+  world.base_screen_buy_property_open = true
+  return context.set_blocking_state(world, "选择弹窗")
+end
+
+function context.resolve_forced_landing_choices(world)
+  world.base_screen_forced_landing_resolved = true
+  world.base_screen_buy_property_open = false
+  world.base_screen_blocking_state = nil
+  world.base_screen_input_blocked = false
+  if world.base_screen_optional_action == nil then
+    world.base_screen_optional_action = "落地选择"
+    world.base_screen_empty_optional_phase = false
+  end
+  return true
+end
+
+function context.set_countdown_timeout(world)
+  world.base_screen_countdown_timeout = true
+  return true
 end
 
 return context

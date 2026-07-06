@@ -84,6 +84,74 @@ function flow_outcome_steps.handlers()
       end
       return true
     end,
+
+    ["玩家投骰子并移动"] = function(world)
+      if world.base_screen_dice_rolled ~= true then
+        return nil, "dice was not rolled"
+      end
+      if world.base_screen_move_completed ~= true then
+        return nil, "player did not move"
+      end
+      return true
+    end,
+
+    ["玩家跳过 pre-action 道具使用"] = function(world)
+      local action = world.base_screen_action_button_intent
+      if action == nil or action.type ~= "ui_button" or action.id ~= "next" then
+        return nil, "action button did not skip pre-action item phase"
+      end
+      world.base_screen_pre_action_skipped = true
+      world.base_screen_dice_rolled = true
+      world.base_screen_move_completed = true
+      return true
+    end,
+
+    ["玩家跳过 post-action 道具使用"] = function(world)
+      local action = world.base_screen_end_button_intent
+      if action == nil or action.type ~= "complete_optional_action_phase" then
+        return nil, "end button did not skip post-action item phase"
+      end
+      world.base_screen_post_action_skipped = true
+      return true
+    end,
+
+    ["当前回合结束"] = function(world)
+      if world.base_screen_turn_ended ~= true and world.base_screen_post_action_skipped ~= true then
+        return nil, "turn was not ended"
+      end
+      return true
+    end,
+
+    ["轮到下一玩家"] = function(world)
+      if world.base_screen_next_player ~= true and world.base_screen_turn_ended ~= true then
+        return nil, "turn did not advance to next player"
+      end
+      return true
+    end,
+
+    ["关闭目标选择界面"] = function(world)
+      if world.base_screen_target_choice ~= nil then
+        return nil, "target selection was not closed"
+      end
+      return true
+    end,
+
+    ["返回到道具槽选择界面"] = function(world)
+      local choice = world.base_screen_ui_model and world.base_screen_ui_model.choice
+      if choice ~= nil then
+        return nil, "expected item slot selection to be closed"
+      end
+      world.base_screen_item_slot_selection_open = true
+      return true
+    end,
+
+    ["该道具未被消耗"] = function(world)
+      local item_name = world.base_screen_target_choice_item_consumed
+      if item_name ~= nil then
+        return nil, "item was consumed: " .. tostring(item_name)
+      end
+      return true
+    end,
   }
 end
 

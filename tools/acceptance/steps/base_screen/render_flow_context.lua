@@ -44,6 +44,7 @@ function render_flow_context.make_render_state(world)
   state.ui.visibility = {}
   state.ui.touch = {}
   state.ui.input_blocked = world and world.base_screen_input_blocked == true or false
+  state.ui.popup_active = world and world.base_screen_buy_property_open == true or false
   state.ui.set_label = function(self, name, text)
     self.labels[name] = text
   end
@@ -129,6 +130,8 @@ function render_flow_context.trigger_action_button(world)
   world.base_screen_action_button_intent = intent
   if intent and intent.type == "ui_button" and intent.id == "next" then
     world.base_screen_required_flow_started = true
+    world.base_screen_dice_rolled = true
+    world.base_screen_move_completed = true
   end
   return intent
 end
@@ -179,11 +182,42 @@ function render_flow_context.complete_optional_action(world, intent, input_sourc
   return result
 end
 
+function render_flow_context.cancel_optional_action(world, intent, input_source)
+  local state = world.base_screen_render_state
+  local game = render_flow_context.make_completion_game(world)
+  local result = optional_action_completion.complete_optional_action_phase(game, context.role_id(world), state, {
+    input_source = input_source,
+    choice = world.base_screen_ui_model and world.base_screen_ui_model.choice,
+    dispatch_choice_action = function(action)
+      world.base_screen_cancel_action = action
+      return { status = "applied" }
+    end,
+  })
+  world.base_screen_cancel_result = result
+  if result.ok == true then
+    world.base_screen_target_choice = nil
+    if world.base_screen_ui_model then
+      world.base_screen_ui_model.choice = nil
+    end
+    local ui_model = world.base_screen_render_state
+      and world.base_screen_render_state.ui_runtime
+      and world.base_screen_render_state.ui_runtime.ui_model
+    if ui_model then
+      ui_model.choice = nil
+    end
+  end
+  return result
+end
+
 function render_flow_context.trigger_end_button(world)
   local intent = render_flow_context.build_base_intent(world, base_nodes.end_button)
   world.base_screen_end_button_intent = intent
   if intent and intent.type == "complete_optional_action_phase" then
-    render_flow_context.complete_optional_action(world, intent, "user")
+    local result = render_flow_context.complete_optional_action(world, intent, "user")
+    if result.ok == true then
+      world.base_screen_turn_ended = true
+      world.base_screen_next_player = true
+    end
   end
   return intent
 end

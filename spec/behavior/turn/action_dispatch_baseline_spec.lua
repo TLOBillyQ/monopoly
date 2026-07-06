@@ -231,6 +231,42 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     _assert_eq(r.handle_ui_button_called, true, "game:dispatch_action invoked for ui_button next")
   end)
 
+  it("ui_button id=cancel dispatches choice_cancel for current player's item target choice", function()
+    local r = _drive("ui_button", {
+      id = "cancel",
+      pending_choice = {
+        id = "target_1",
+        kind = "item_phase_passive",
+        allow_cancel = true,
+      },
+    })
+    _assert_eq(r.result.status, "applied", "cancel ui_button must apply")
+    _assert_eq(r.handle_choice_called, true, "cancel ui_button should dispatch choice_cancel")
+  end)
+
+  it("ui_button id=cancel rejects when actor is not current player", function()
+    local dispatcher, events, deps = _build()
+    deps.validator.validate_actor_role = function(game, action)
+      return action.actor_role_id == 1
+    end
+    deps.validator.validate_choice_action = function() return true end
+
+    local game = {
+      turn = {
+        phase = "wait_action",
+        pending_choice = { id = "target_1", kind = "item_phase_passive", allow_cancel = true },
+      },
+      dispatch_action = function() end,
+      find_player_by_id = function() return { id = 1 } end,
+      players = { { id = 1 }, { id = 2 } },
+    }
+    local action = { type = "ui_button", id = "cancel", actor_role_id = 2 }
+    local ctx = _ctx_with_invalidate(events, { pending_choice = game.turn.pending_choice })
+
+    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    _assert_eq(result.status, "rejected", "cancel from non-current player must reject")
+  end)
+
   it("L159 choice_select: dispatches to _handle_choice_action", function()
     local r = _drive("choice_select", { pending_choice = { kind = "choice", id = "c1" } })
     _assert_eq(r.result.status, "applied", "choice_select must apply when validate passes")

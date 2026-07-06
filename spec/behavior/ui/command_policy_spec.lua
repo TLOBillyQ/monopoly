@@ -35,6 +35,17 @@ describe("ui command policy", function()
       "command reason should stay stable for diagnostics")
   end)
 
+  it("describes cancel ui_button with stable reason", function()
+    _assert_eq(command_policy.reason({ type = "ui_button", id = "cancel" }), "cancel_button",
+      "cancel button reason should be stable")
+    _assert_eq(command_policy.game_handler({ type = "ui_button", id = "cancel" }), "basic",
+      "cancel button should route as basic turn action")
+    _assert_eq(command_policy.requires_event_actor({ type = "ui_button", id = "cancel" }), true,
+      "cancel button should require a turn actor")
+    _assert_eq(command_policy.uses_local_actor({ type = "ui_button", id = "cancel" }), false,
+      "cancel button should resolve actor from turn context")
+  end)
+
   it("keeps host and fallback view command adapters aligned by command meaning", function()
     local view_commands = {
       "toggle_action_log",

@@ -33,6 +33,25 @@ function action_completion_steps.handlers()
       return true
     end,
 
+    ["触发基础屏取消按钮"] = function(world)
+      local intent = render_flow_context.build_base_intent(world, base_nodes.cancel_button)
+      world.base_screen_cancel_button_intent = intent
+      if intent and intent.type == "choice_cancel" then
+        render_flow_context.cancel_optional_action(world, intent, "user")
+      end
+      return true
+    end,
+
+    ["系统自动执行主按钮操作"] = function(world)
+      local stage = world.base_screen_stage_state
+      if stage == "行动等待阶段" then
+        render_flow_context.trigger_action_button(world)
+      else
+        render_flow_context.trigger_end_button(world)
+      end
+      return true
+    end,
+
     ["玩家完成可选行动阶段"] = function(world)
       if world.base_screen_optional_completed ~= true then
         return nil, "optional phase was not completed"

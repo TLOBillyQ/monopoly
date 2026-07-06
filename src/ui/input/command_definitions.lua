@@ -130,6 +130,12 @@ local UI_BUTTONS = {
     requires_event_actor = true,
     actor_source = "local",
   },
+  cancel = {
+    reason = "cancel_button",
+    game_handler = "basic",
+    requires_event_actor = true,
+    actor_source = "turn",
+  },
 }
 
 local ITEM_SLOT_BUTTON = {

@@ -301,7 +301,7 @@ describe("presentation_player_panels", function()
       "secondary confirm screen should disable the optional end button touch")
   end)
 
-  it("_test_panel_presenter_optional_action_shows_end_button_instead_of_action_button", function()
+  it("_test_panel_presenter_optional_item_target_selection_shows_cancel_button", function()
     local env = _new_cash_delta_presenter_env()
     env.state.ui.base_hidden_nodes = { base_nodes.action_button, base_nodes.end_button }
     env.ui_model.choice = {
@@ -309,22 +309,27 @@ describe("presentation_player_panels", function()
       kind = "item_phase_passive",
       route_key = "item_phase_passive",
       allow_cancel = true,
+      meta = { passive_origin = true },
     }
 
     env.refresh()
 
     _assert_eq(env.state.ui.visible[base_nodes.action_button], false,
-      "optional action should hide the normal action button")
+      "item target selection should hide the normal action button")
     _assert_eq(env.state.ui.touch_enabled[base_nodes.action_button], false,
-      "optional action should disable the normal action button")
-    _assert_eq(env.state.ui.visible[base_nodes.end_button], true,
-      "optional action should show the end button for the current player")
-    _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], true,
-      "optional action should let the current player end the optional phase")
-    _assert_eq(env.state.ui.buttons[base_nodes.end_button], nil,
-      "optional action end button should not write button text")
-    _assert_eq(env.state.ui.labels[base_nodes.end_button], nil,
-      "optional action end button should not write label text")
+      "item target selection should disable the normal action button")
+    _assert_eq(env.state.ui.visible[base_nodes.end_button], false,
+      "item target selection should hide the optional end button")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.end_button], false,
+      "item target selection should disable the optional end button")
+    _assert_eq(env.state.ui.visible[base_nodes.cancel_button], true,
+      "item target selection should show the cancel button for the current player")
+    _assert_eq(env.state.ui.touch_enabled[base_nodes.cancel_button], true,
+      "item target selection should let the current player cancel the target selection")
+    _assert_eq(env.state.ui.buttons[base_nodes.cancel_button], nil,
+      "item target selection cancel button should not write button text")
+    _assert_eq(env.state.ui.labels[base_nodes.cancel_button], nil,
+      "item target selection cancel button should not write label text")
   end)
 
   it("_test_panel_presenter_optional_landing_choice_shows_end_button", function()
@@ -704,5 +709,83 @@ describe("presentation_player_panels", function()
     }, 1)
 
     _assert_eq(queried, 0, "panel player colors should early-return before querying nodes without color hooks")
+  end)
+
+  it("_test_panel_controls_target_selection_shows_cancel_button", function()
+    local panel_controls = require("src.ui.render.widgets.panel_controls")
+    local visible = {}
+    local touch = {}
+    local ui = {
+      set_visible = function(_, name, value)
+        visible[name] = value
+      end,
+      set_touch_enabled = function(_, name, value)
+        touch[name] = value
+      end,
+    }
+    local ui_model = {
+      choice = {
+        id = 11,
+        kind = "item_phase_passive",
+        allow_cancel = true,
+        meta = { passive_origin = true },
+      },
+    }
+
+    panel_controls.apply_base_action_controls(ui, ui_model, true)
+
+    _assert_eq(visible[base_nodes.action_button], false,
+      "target selection should hide action button")
+    _assert_eq(visible[base_nodes.end_button], false,
+      "target selection should hide end button")
+    _assert_eq(visible[base_nodes.cancel_button], true,
+      "target selection should show cancel button")
+    _assert_eq(touch[base_nodes.cancel_button], true,
+      "cancel button should be touchable when shown")
+  end)
+
+  it("_test_panel_controls_wait_action_hides_cancel_button", function()
+    local panel_controls = require("src.ui.render.widgets.panel_controls")
+    local visible = {}
+    local ui = {
+      set_visible = function(_, name, value)
+        visible[name] = value
+      end,
+      set_touch_enabled = function() end,
+    }
+
+    panel_controls.apply_base_action_controls(ui, {}, true)
+
+    _assert_eq(visible[base_nodes.cancel_button], false,
+      "wait action should hide cancel button")
+    _assert_eq(visible[base_nodes.action_button], true,
+      "wait action should show action button")
+  end)
+
+  it("_test_panel_controls_non_cancelable_optional_hides_all_main_buttons", function()
+    local panel_controls = require("src.ui.render.widgets.panel_controls")
+    local visible = {}
+    local ui = {
+      set_visible = function(_, name, value)
+        visible[name] = value
+      end,
+      set_touch_enabled = function() end,
+    }
+    local ui_model = {
+      choice = {
+        id = 12,
+        kind = "item_phase_passive",
+        allow_cancel = false,
+      },
+    }
+
+    panel_controls.apply_base_action_controls(ui, ui_model, true)
+
+    _assert_eq(visible[base_nodes.action_button], false,
+      "non-cancelable optional should hide action")
+    _assert_eq(visible[base_nodes.end_button], false,
+      "non-cancelable optional should hide end")
+    _assert_eq(visible[base_nodes.cancel_button], false,
+      "non-cancelable optional should hide cancel")
   end)
 end)

@@ -68,6 +68,52 @@ function phase_state_steps.handlers()
       return context.set_stage_state(world, example["阶段状态"])
     end,
 
+    ["玩家点击道具槽位1进入目标选择"] = function(world, example)
+      local item_name = tostring(example["道具名"] or "")
+      return context.enter_item_target_selection(world, item_name)
+    end,
+
+    ["玩家背包中有<道具名>"] = function(world, example)
+      return context.give_item(world, example["道具名"])
+    end,
+
+    ["<道具名>可在行动前使用"] = function(world, example)
+      return context.set_item_phase(world, example["道具名"], "pre_action")
+    end,
+
+    ["<道具名>可在行动后使用"] = function(world, example)
+      return context.set_item_phase(world, example["道具名"], "post_action")
+    end,
+
+    ["玩家已投骰子并完成移动"] = function(world)
+      return context.set_dice_rolled_and_moved(world)
+    end,
+
+    ["玩家落在可购买的无主地块"] = function(world)
+      return context.set_landed_buyable_property(world)
+    end,
+
+    ["买地选择界面显示时"] = function(world)
+      local ok, err = context.show_buy_property_choice(world)
+      if not ok then
+        return nil, err
+      end
+      render_flow_context.refresh_base_screen_for_player(world)
+      return true
+    end,
+
+    ["所有强制落地选择已处理完毕"] = function(world)
+      return context.resolve_forced_landing_choices(world)
+    end,
+
+    ["倒计时已超时"] = function(world)
+      return context.set_countdown_timeout(world)
+    end,
+
+    ["弹窗提示导致输入锁定"] = function(world)
+      return context.set_blocking_state(world, "弹窗提示")
+    end,
+
     ["基础屏为该玩家刷新"] = function(world)
       render_flow_context.refresh_base_screen_for_player(world)
       return true

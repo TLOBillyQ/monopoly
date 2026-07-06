@@ -70,6 +70,15 @@ function assert_steps.handlers()
       return assert_helpers.node_visible_and_touchable(world, base_nodes.action_button, "action button")
     end,
 
+    ["基础屏行动按钮已隐藏"] = function(world)
+      local state = world.base_screen_render_state
+      local actual = state and state.ui and state.ui.visibility and state.ui.visibility[base_nodes.action_button]
+      if actual ~= false then
+        return nil, "expected action button hidden, got " .. tostring(actual)
+      end
+      return true
+    end,
+
     ["基础屏皮肤<节点>已隐藏"] = function(world, example)
       local node = context.SKIN_ENTRY_NODES[tostring(example["节点"] or "")]
       if node == nil then

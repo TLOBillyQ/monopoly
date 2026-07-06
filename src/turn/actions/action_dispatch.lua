@@ -101,6 +101,21 @@ local function build(deps)
     if action.id == "auto" then
       return _handle_auto_toggle(game, state, action)
     end
+    if action.id == "cancel" then
+      if not validator.validate_actor_role(game, action) then
+        return { status = "rejected" }
+      end
+      local choice = _resolve_pending_choice(game, state, ctx)
+      if choice == nil or choice.allow_cancel == false then
+        return { status = "rejected" }
+      end
+      return _dispatch_action(game, state, {
+        type = "choice_cancel",
+        choice_id = choice.id,
+        actor_role_id = action.actor_role_id,
+        input_source = action.input_source,
+      }, opts, ctx)
+    end
     if not validator.validate_actor_role(game, action) then
       return { status = "rejected" }
     end

@@ -2,6 +2,7 @@ local nodes = {
   canvas = "基础屏",
   action_button = "基础_行动按钮",
   end_button = "基础_结束按钮",
+  cancel_button = "基础_取消按钮",
   countdown = "基础_倒计时",
   countdown_line = "基础_倒计时横线",
   action_hint = "基础_行动提示",

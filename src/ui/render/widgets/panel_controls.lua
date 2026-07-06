@@ -113,23 +113,35 @@ function panel_controls.apply_action_hint(ui, panel)
   end
 end
 
+local function _is_item_target_selection(choice)
+  return choice and choice.kind == "item_phase_passive" and choice.meta and choice.meta.passive_origin == true
+end
+
 local function _resolve_base_action_visibility(ui_model, base_visible)
   if base_visible ~= true then
-    return false, false
+    return false, false, false
   end
   local choice = ui_model and ui_model.choice
   if not choice_support.is_optional_action_choice(choice) then
-    return true, false
+    return true, false, false
   end
-  return false, choice_support.is_cancelable_optional_action_choice(choice) == true
+  if not choice_support.is_cancelable_optional_action_choice(choice) then
+    return false, false, false
+  end
+  if _is_item_target_selection(choice) then
+    return false, false, true
+  end
+  return false, true, false
 end
 
 function panel_controls.apply_base_action_controls(ui, ui_model, base_visible)
-  local action_visible, end_visible = _resolve_base_action_visibility(ui_model, base_visible)
+  local action_visible, end_visible, cancel_visible = _resolve_base_action_visibility(ui_model, base_visible)
   ui:set_visible(base_nodes.action_button, action_visible)
   ui:set_touch_enabled(base_nodes.action_button, action_visible)
   ui:set_visible(base_nodes.end_button, end_visible)
   ui:set_touch_enabled(base_nodes.end_button, end_visible)
+  ui:set_visible(base_nodes.cancel_button, cancel_visible)
+  ui:set_touch_enabled(base_nodes.cancel_button, cancel_visible)
 end
 
 function panel_controls.resolve_skin_entry_visible(ui_model, ctx)

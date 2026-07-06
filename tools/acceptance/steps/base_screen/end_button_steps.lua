@@ -44,6 +44,19 @@ function end_button_steps.handlers()
       end
       return true
     end,
+
+    ["基础屏取消按钮已隐藏"] = function(world)
+      local state = world.base_screen_render_state
+      local actual = state and state.ui and state.ui.visibility and state.ui.visibility[base_nodes.cancel_button]
+      if actual ~= false then
+        return nil, "expected cancel button hidden, got " .. tostring(actual)
+      end
+      return true
+    end,
+
+    ["基础屏取消按钮已展示且可点击"] = function(world)
+      return assert_helpers.node_visible_and_touchable(world, base_nodes.cancel_button, "cancel button")
+    end,
   }
 end
 
