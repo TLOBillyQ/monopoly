@@ -62,6 +62,8 @@ scripts/analysis/loc_data.json
 # swarm-forge runtime (local state, message logs)
 .swarmforge/
 swarmtools/
+# stray local swarmforge scratch clone (own .git, no remote)
+/kimi/
 logs/*
 !logs/gherkin-survivors-*.txt
 agent_context/
