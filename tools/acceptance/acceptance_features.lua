@@ -23,6 +23,7 @@ local entries = {
   { feature = "features/game/economy.feature",                     generated = "economy_acceptance_spec.lua" },
   { feature = "features/game/endgame.feature",                     generated = "endgame_acceptance_spec.lua" },
   { feature = "features/game/items.feature",                       generated = "items_acceptance_spec.lua" },
+  { feature = "features/game/main_turn_buttons.feature",           generated = "main_turn_buttons_acceptance_spec.lua" },
   { feature = "features/game/market.feature",                      generated = "market_acceptance_spec.lua" },
   { feature = "features/game/movement.feature",                    generated = "movement_acceptance_spec.lua" },
   { feature = "features/game/paid_currency.feature",               generated = "paid_currency_acceptance_spec.lua" },
