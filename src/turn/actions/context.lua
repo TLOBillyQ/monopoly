@@ -62,21 +62,34 @@ local function resolve_actor_player(game, action)
   return player
 end
 
+local function resolve_pending_choice(game, state, ctx)
+  local turn_choice = game and game.turn and game.turn.pending_choice or nil
+  if turn_choice ~= nil then
+    return turn_choice
+  end
+  local output_ports = ctx and ctx.output_ports or nil
+  if output_ports and type(output_ports.get_pending_choice) == "function" then
+    return output_ports.get_pending_choice(state)
+  end
+  return nil
+end
+
 return {
   resolve_dispatch_context = resolve_dispatch_context,
   resolve_timestamp_now = resolve_timestamp_now,
   resolve_timestamp_diff_seconds = resolve_timestamp_diff_seconds,
   resolve_actor_player = resolve_actor_player,
+  resolve_pending_choice = resolve_pending_choice,
 }
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=f7da8baa59ead939
+projectHash=40fd82b4f75e8094
 scope.0.id=chunk:src/turn/actions/context.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=71
-scope.0.semanticHash=2e454d8319894f14
+scope.0.endLine=84
+scope.0.semanticHash=23a81f87333c9b64
 scope.1.id=function:resolve_dispatch_context:8
 scope.1.kind=function
 scope.1.startLine=8
@@ -97,4 +110,9 @@ scope.4.kind=function
 scope.4.startLine=50
 scope.4.endLine=63
 scope.4.semanticHash=bd5e5bec3798f64e
+scope.5.id=function:resolve_pending_choice:65
+scope.5.kind=function
+scope.5.startLine=65
+scope.5.endLine=75
+scope.5.semanticHash=37259071047e736b
 ]]

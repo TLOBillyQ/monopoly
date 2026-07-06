@@ -1,6 +1,6 @@
 local ctx_mod = require("src.turn.actions.context")
-local defaults = require("src.turn.actions.defaults")
 local choice_dispatch = require("src.turn.actions.choice_dispatch")
+local ui_button_dispatch = require("src.turn.actions.ui_button_dispatch")
 
 local INVALIDATING_ACTION_TYPES = {
   ui_button = true,
@@ -30,18 +30,6 @@ local function build(deps)
     end
   end
 
-  local function _resolve_pending_choice(game, state, ctx)
-    local turn_choice = game and game.turn and game.turn.pending_choice or nil
-    if turn_choice ~= nil then
-      return turn_choice
-    end
-    local output_ports = ctx and ctx.output_ports or nil
-    if output_ports and type(output_ports.get_pending_choice) == "function" then
-      return output_ports.get_pending_choice(state)
-    end
-    return nil
-  end
-
   local function _allows_market_cancel_while_blocked(gate_state, game, state, action, ctx)
     if not gate_state or gate_state.input_blocked ~= true then
       return false
@@ -49,87 +37,19 @@ local function build(deps)
     if not action or action.type ~= "choice_cancel" then
       return false
     end
-    local choice = _resolve_pending_choice(game, state, ctx)
+    local choice = ctx_mod.resolve_pending_choice(game, state, ctx)
     if choice == nil or choice.kind ~= "market_buy" then
       return false
     end
     return action.choice_id ~= nil and choice.id ~= nil and action.choice_id == choice.id
   end
 
-  local function _handle_auto_toggle(game, _, action)
-    local player = ctx_mod.resolve_actor_player(game, action)
-    if not player then
-      return { status = "rejected" }
-    end
-    player.auto = player.auto ~= true
-    return { status = "applied" }
-  end
-
-  local function _allow_next_turn(turn_runtime, phase, now, ctx)
-    if not turn_runtime.next_turn_locked then
-      return true
-    end
-    if turn_runtime.next_turn_lock_phase and phase and phase ~= turn_runtime.next_turn_lock_phase then
-      return true
-    end
-    if turn_runtime.next_turn_last_click == nil then
-      return true
-    end
-    local diff = ctx_mod.resolve_timestamp_diff_seconds(ctx, now, turn_runtime.next_turn_last_click)
-    return diff and diff >= defaults.next_turn_cooldown
-  end
-
-  local function _handle_next_turn(game, state, action, ctx)
-    local turn_runtime = runtime_state.ensure_turn_runtime(state)
-    local phase = game.turn.phase
-    local now = ctx_mod.resolve_timestamp_now(ctx)
-    if not _allow_next_turn(turn_runtime, phase, now, ctx) then
-      return { status = "rejected" }
-    end
-    turn_runtime.next_turn_locked = true
-    turn_runtime.next_turn_last_click = now
-    turn_runtime.next_turn_lock_phase = phase
-    if phase == "wait_action" then
-      game:dispatch_action(action)
-    else
-      turn_dispatch_ref.step_turn(game)
-    end
-    return { status = "applied" }
-  end
-
   local function _handle_ui_button(game, state, action, opts, ctx)
-    if action.id == "auto" then
-      return _handle_auto_toggle(game, state, action)
-    end
-    if action.id == "cancel" then
-      if not validator.validate_actor_role(game, action) then
-        return { status = "rejected" }
-      end
-      local choice = _resolve_pending_choice(game, state, ctx)
-      if choice == nil or choice.allow_cancel == false then
-        return { status = "rejected" }
-      end
-      return _dispatch_action(game, state, {
-        type = "choice_cancel",
-        choice_id = choice.id,
-        actor_role_id = action.actor_role_id,
-        input_source = action.input_source,
-      }, opts, ctx)
-    end
-    if not validator.validate_actor_role(game, action) then
-      return { status = "rejected" }
-    end
-    local slot_result = validator.resolve_item_slot_action(ctx.item_slot_source, state, action, game)
-    if slot_result ~= nil then
-      if not slot_result.ok then
-        return { status = "rejected" }
-      end
-      return _dispatch_action(game, state, slot_result.action, opts, ctx)
-    end
-    if action.id == "next" then
-      return _handle_next_turn(game, state, action, ctx)
-    end
-    return { status = "rejected" }
+    return ui_button_dispatch.handle(
+      game, state, action, opts, ctx,
+      validator, runtime_state, turn_dispatch_ref,
+      function(...) return _dispatch_action(...) end
+    )
   end
 
   local function _invoke_choice_handler(fn, game, state, action, opts, ctx)
@@ -193,12 +113,12 @@ return {
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=c1842895b595f10b
+projectHash=0b1ef4faeabef45c
 scope.0.id=chunk:src/turn/actions/action_dispatch.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=150
-scope.0.semanticHash=b583efa225e63a5c
+scope.0.endLine=113
+scope.0.semanticHash=3ad936294f285401
 scope.1.id=function:_should_invalidate_ui:23
 scope.1.kind=function
 scope.1.startLine=23
@@ -209,44 +129,39 @@ scope.2.kind=function
 scope.2.startLine=27
 scope.2.endLine=31
 scope.2.semanticHash=2199bd698f895746
-scope.3.id=function:_handle_auto_toggle:33
+scope.3.id=function:_allows_market_cancel_while_blocked:33
 scope.3.kind=function
 scope.3.startLine=33
-scope.3.endLine=40
-scope.3.semanticHash=0436400f61800c7e
-scope.4.id=function:_allow_next_turn:42
+scope.3.endLine=45
+scope.3.semanticHash=30a53c0cb57e69df
+scope.4.id=function:anonymous@51:51
 scope.4.kind=function
-scope.4.startLine=42
-scope.4.endLine=54
-scope.4.semanticHash=c2c8170d039ea768
-scope.5.id=function:_handle_next_turn:56
+scope.4.startLine=51
+scope.4.endLine=51
+scope.4.semanticHash=8f42302a52f38a20
+scope.5.id=function:_handle_ui_button:47
 scope.5.kind=function
-scope.5.startLine=56
-scope.5.endLine=72
-scope.5.semanticHash=935f0e355c626980
-scope.6.id=function:_handle_ui_button:74
+scope.5.startLine=47
+scope.5.endLine=53
+scope.5.semanticHash=2858865ab3de2240
+scope.6.id=function:_invoke_choice_handler:55
 scope.6.kind=function
-scope.6.startLine=74
-scope.6.endLine=92
-scope.6.semanticHash=5f8e0f48a615602c
-scope.7.id=function:_invoke_choice_handler:94
+scope.6.startLine=55
+scope.6.endLine=57
+scope.6.semanticHash=8471d9b91252d812
+scope.7.id=function:_invoke_action_handler:59
 scope.7.kind=function
-scope.7.startLine=94
-scope.7.endLine=96
-scope.7.semanticHash=8471d9b91252d812
-scope.8.id=function:_invoke_action_handler:98
+scope.7.startLine=59
+scope.7.endLine=70
+scope.7.semanticHash=48d2f3eb767c2223
+scope.8.id=function:anonymous@83:83
 scope.8.kind=function
-scope.8.startLine=98
-scope.8.endLine=109
-scope.8.semanticHash=48d2f3eb767c2223
-scope.9.id=function:anonymous@122:122
+scope.8.startLine=83
+scope.8.endLine=103
+scope.8.semanticHash=e770c5b6dee93a64
+scope.9.id=function:build:15
 scope.9.kind=function
-scope.9.startLine=122
-scope.9.endLine=140
-scope.9.semanticHash=538044647eaeca48
-scope.10.id=function:build:15
-scope.10.kind=function
-scope.10.startLine=15
-scope.10.endLine=145
-scope.10.semanticHash=ba37b816b5a0e096
+scope.9.startLine=15
+scope.9.endLine=108
+scope.9.semanticHash=48a3eafc6512b4b1
 ]]
