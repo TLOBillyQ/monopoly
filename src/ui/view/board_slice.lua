@@ -20,6 +20,20 @@ local function _clear_table(t)
   for k in pairs(t) do t[k] = nil end
 end
 
+local function _owner_count_for_tile(owner_id, board, tile_id)
+  _count_by_owner[owner_id] = _count_by_owner[owner_id] or contiguous_count.build_for_owner(board, owner_id)
+  local count = _count_by_owner[owner_id][tile_id]
+  return (count and count > 0) and count or nil
+end
+
+local function _owner_rent_for_tile(owner_id, board, tile_id)
+  _rent_by_owner[owner_id] = _rent_by_owner[owner_id] or contiguous_count.build_rent_for_owner(board, owner_id, function(tile)
+    return tile_rent.for_level(tile, tile and tile.level or 0)
+  end)
+  local rent = _rent_by_owner[owner_id][tile_id]
+  return (rent and rent > 0) and rent or nil
+end
+
 local function _update_tile_entry(tile_id, raw, board)
   _tile_state_entries[tile_id] = _tile_state_entries[tile_id] or {}
   local entry = _tile_state_entries[tile_id]
@@ -27,16 +41,10 @@ local function _update_tile_entry(tile_id, raw, board)
   entry.level = raw.level
   entry.contiguous_count = nil
   entry.contiguous_rent = nil
-  if raw.owner_id then _count_by_owner[raw.owner_id] = _count_by_owner[raw.owner_id] or contiguous_count.build_for_owner(board, raw.owner_id) end
   if raw.owner_id then
-    _rent_by_owner[raw.owner_id] = _rent_by_owner[raw.owner_id] or contiguous_count.build_rent_for_owner(board, raw.owner_id, function(tile)
-      return tile_rent.for_level(tile, tile and tile.level or 0)
-    end)
+    entry.contiguous_count = _owner_count_for_tile(raw.owner_id, board, tile_id)
+    entry.contiguous_rent = _owner_rent_for_tile(raw.owner_id, board, tile_id)
   end
-  local count = raw.owner_id and _count_by_owner[raw.owner_id] and _count_by_owner[raw.owner_id][tile_id]
-  if count and count > 0 then entry.contiguous_count = count end
-  local rent = raw.owner_id and _rent_by_owner[raw.owner_id] and _rent_by_owner[raw.owner_id][tile_id]
-  if rent and rent > 0 then entry.contiguous_rent = rent end
   _tile_state_out[tile_id] = entry
 end
 

@@ -1113,4 +1113,277 @@ describe("refactorer_crap_coverage", function()
     -- is_open guards a missing visibility table.
     _assert_eq(event_log_view.is_open({ ui = {} }, 9), false, "no visibility table reads as not open")
   end)
+
+  it("overlay compute resolves tile, building, and zero vector positions", function()
+    local overlay_compute = require("src.ui.render.anim.overlay_compute")
+    local state = {
+      board_scene = {
+        tiles = {
+          [1] = { get_position = function() return math.Vector3(1.0, 2.0, 3.0) end },
+          [2] = {},
+          [3] = nil,
+        },
+        buildings = {
+          [2] = { get_position = function() return math.Vector3(4.0, 5.0, 6.0) end },
+        },
+      },
+    }
+
+    local tile_pos = overlay_compute.resolve_tile_pos(state, 1)
+    _assert_eq(tile_pos.x, 1.0, "tile position should be read from tiles")
+
+    local building_pos = overlay_compute.resolve_tile_pos(state, 2)
+    _assert_eq(building_pos.x, 4.0, "building position should be used as fallback")
+
+    local zero_pos = overlay_compute.resolve_tile_pos(state, 3)
+    _assert_eq(zero_pos.x, 0.0, "missing tile/building should fall back to zero vector")
+
+    local ok, err = pcall(function() overlay_compute.resolve_tile_pos(nil, 1) end)
+    _assert_eq(ok, false, "missing state should assert")
+    assert(tostring(err):find("missing state", 1, true), "assert message should mention state")
+
+    ok, err = pcall(function() overlay_compute.resolve_tile_pos(state, nil) end)
+    _assert_eq(ok, false, "missing tile_index should assert")
+    assert(tostring(err):find("missing tile_index", 1, true), "assert message should mention tile_index")
+  end)
+
+  it("contiguous count builds owner count and rent maps", function()
+    local contiguous_count = require("src.ui.view.contiguous_count")
+    local board = {
+      path = {
+        { id = 1, type = "land" },
+        { id = 2, type = "land" },
+        { id = 3, type = "land" },
+      },
+      tile_lookup = {
+        [1] = { type = "land", owner_id = "p1" },
+        [2] = { type = "land", owner_id = "p1" },
+        [3] = { type = "land", owner_id = "p2" },
+      },
+      map = {
+        neighbors = {
+          [1] = { 2 },
+          [2] = { 1 },
+          [3] = {},
+        },
+      },
+    }
+    board.get_tile_by_id = function(_, tile_id)
+      return board.tile_lookup[tile_id]
+    end
+
+    local counts = contiguous_count.build_for_owner(board, "p1")
+    _assert_eq(counts[1], 2, "p1 contiguous count should include connected tile 1")
+    _assert_eq(counts[2], 2, "p1 contiguous count should include connected tile 2")
+    _assert_eq(counts[3], nil, "p2 tile should not appear in p1 count map")
+
+    local rents = contiguous_count.build_rent_for_owner(board, "p1", function(tile)
+      return tile and 10 or 0
+    end)
+    _assert_eq(rents[1], 20, "p1 rent should sum both connected tiles")
+    _assert_eq(rents[2], 20, "p1 rent should be identical across the component")
+    _assert_eq(rents[3], nil, "p2 tile should not appear in p1 rent map")
+
+    local empty = contiguous_count.build_for_owner({}, "p1")
+    _assert_eq(next(empty), nil, "missing board should return empty table")
+    empty = contiguous_count.build_rent_for_owner(board, "p1", nil)
+    _assert_eq(next(empty), nil, "non-function rent callback should return empty table")
+  end)
+
+  it("board slice projects contiguous counts and rents per owner", function()
+    local board_slice = require("src.ui.view.board_slice")
+    local game = {
+      board = {
+        path = {
+          { id = 1, type = "land" },
+          { id = 2, type = "land" },
+        },
+        tile_lookup = {
+          [1] = { type = "land", owner_id = "p1", level = 0, price = 100 },
+          [2] = { type = "land", owner_id = "p1", level = 0, price = 100 },
+        },
+        map = {
+          neighbors = {
+            [1] = { 2 },
+            [2] = { 1 },
+          },
+        },
+        get_overlays = function() return {} end,
+      },
+      players = {},
+    }
+    game.board.get_tile_by_id = function(_, tile_id)
+      return game.board.tile_lookup[tile_id]
+    end
+    local env = { game = game }
+    local turn = { phase = "pre_action" }
+
+    local result = board_slice.build(game, env, turn)
+    _assert_eq(result.tile_states[1].contiguous_count, 2, "p1 tile 1 should see count 2")
+    _assert_eq(result.tile_states[2].contiguous_count, 2, "p1 tile 2 should see count 2")
+    _assert_eq(result.tile_states[1].contiguous_rent, 100, "p1 tile 1 should see summed contiguous rent")
+    _assert_eq(result.tile_states[2].contiguous_rent, 100, "p1 tile 2 should see summed contiguous rent")
+
+    local game2 = {
+      board = {
+        path = { { id = 1, type = "land" } },
+        tile_lookup = { [1] = { type = "land", owner_id = nil, level = 0 } },
+        map = { neighbors = { [1] = {} } },
+        get_overlays = function() return {} end,
+      },
+      players = {},
+    }
+    game2.board.get_tile_by_id = function(_, tile_id)
+      return game2.board.tile_lookup[tile_id]
+    end
+    local result2 = board_slice.build(game2, { game = game2 }, turn)
+    _assert_eq(result2.tile_states[1].contiguous_count, nil, "unowned tile should have nil count")
+    _assert_eq(result2.tile_states[1].contiguous_rent, nil, "unowned tile should have nil rent")
+  end)
+
+  it("callbacks install sets popup owner on successful push", function()
+    local state_callback_ports = require("src.ui.ports.callbacks")
+    local modal = require("src.ui.coord.modal")
+    local calls = {}
+    local state = { ui = {} }
+    local game_with_turn = {
+      turn = { current_player_index = 3 },
+    }
+
+    _with_patches({
+      { target = modal, key = "push_popup", value = function(_, s, payload, opts)
+        calls[#calls + 1] = { payload = payload, opts = opts }
+        return true
+      end },
+    }, function()
+      state_callback_ports.install(state, function() return game_with_turn end)
+      local ok = state.push_popup(nil, "hello", {})
+      _assert_eq(ok, true, "push_popup should return modal success")
+      _assert_eq(state.ui.popup_owner_index, 3, "successful popup should record current player index")
+    end)
+
+    local state2 = { ui = {} }
+    _with_patches({
+      { target = modal, key = "push_popup", value = function() return false end },
+    }, function()
+      state_callback_ports.install(state2, function() return game_with_turn end)
+      local ok = state2.push_popup(nil, "hello", {})
+      _assert_eq(ok, false, "push_popup should return modal failure")
+      _assert_eq(state2.ui.popup_owner_index, nil, "failed popup should clear owner index")
+    end)
+
+    local state3 = {}
+    _with_patches({
+      { target = modal, key = "push_popup", value = function() return true end },
+    }, function()
+      state_callback_ports.install(state3, function() return nil end)
+      local ok = state3.push_popup(nil, "hello", {})
+      _assert_eq(ok, true, "push_popup should succeed even without ui table")
+    end)
+  end)
+
+  it("item phase auto dispatch animation branches", function()
+    local fake_strategy = {
+      auto_pre_action = function()
+        return nil
+      end,
+    }
+    local fake_intent = {
+      dispatch = function(_, pre)
+        return pre
+      end,
+    }
+    local fake_dirty = {
+      mark = function() end,
+      mark_turn = function() end,
+    }
+    local fake_chain = {
+      resolve_after_action_anim = function(args_in, _)
+        return args_in.next_state, args_in.next_args
+      end,
+    }
+
+    local function make_game(anim_state)
+      return {
+        dirty = { turn = false },
+        auto_play_port = { is_auto_player = function() return true end },
+        turn = {
+          item_phase = {},
+          item_phase_active = "",
+          action_anim = anim_state,
+          move_followup_pending = false,
+        },
+      }
+    end
+
+    local function sequenced_pre(first, second)
+      local calls = 0
+      return function()
+        calls = calls + 1
+        if calls == 1 then
+          return first
+        end
+        return second
+      end
+    end
+
+    local player = { id = "p1" }
+    local args = { player = player, next_state = "next", next_args = {} }
+    local move_followup_args = { player = player, next_state = "move_followup", next_args = {} }
+
+    _reload_with("src.rules.items.phase", {
+      ["src.config.gameplay.timing"] = { item_phase_queue = { "pre_action", "post_action", "custom_phase" } },
+      ["src.rules.items.strategy"] = fake_strategy,
+      ["src.rules.ports.intent_output"] = fake_intent,
+      ["src.state.dirty_tracker"] = fake_dirty,
+      ["src.foundation.chain_args"] = fake_chain,
+    }, function(reloaded_phase)
+      -- pre.after_action_anim table -> wait for action anim and finish phase
+      local game = make_game({ kind = "test" })
+      fake_strategy.auto_pre_action = function()
+        return { after_action_anim = {} }
+      end
+      local res = reloaded_phase.run({ game = game }, "pre_action", args)
+      _assert_eq(res.waiting, true, "after_action_anim should wait")
+      _assert_eq(res.wait_action_anim, true, "after_action_anim should set wait flag")
+
+      -- post_action with after_action_anim should not finish the phase
+      game = make_game({ kind = "test" })
+      fake_strategy.auto_pre_action = function()
+        return { after_action_anim = {} }
+      end
+      res = reloaded_phase.run({ game = game }, "post_action", args)
+      _assert_eq(res.waiting, true, "post_action after_action_anim should wait")
+      _assert_eq(game.turn.item_phase.post_action, nil, "post_action should not be finished yet")
+
+      -- action_anim present, repeatable phase, pre returns empty then nil -> wait after loop
+      game = make_game({ kind = "test" })
+      fake_strategy.auto_pre_action = sequenced_pre({}, nil)
+      res = reloaded_phase.run({ game = game }, "pre_action", args)
+      _assert_eq(res.waiting, true, "repeatable phase with action_anim should wait after loop")
+
+      -- non-repeatable custom phase with action_anim and empty pre -> wait and finish
+      game = make_game({ kind = "test" })
+      fake_strategy.auto_pre_action = sequenced_pre({}, nil)
+      res = reloaded_phase.run({ game = game }, "custom_phase", args)
+      _assert_eq(res.waiting, true, "non-repeatable phase with action_anim should wait")
+      _assert_eq(game.turn.item_phase.custom_phase.done, true, "non-repeatable phase should be finished")
+
+      -- non-repeatable custom phase without action_anim -> finish and return nil
+      game = make_game(nil)
+      fake_strategy.auto_pre_action = sequenced_pre({}, nil)
+      res = reloaded_phase.run({ game = game }, "custom_phase", args)
+      _assert_eq(res, nil, "non-repeatable phase without action_anim should finish and return nil")
+      _assert_eq(game.turn.item_phase.custom_phase.done, true, "non-repeatable phase should be finished")
+
+      -- move_followup pending flag is set when after_action_anim resolves to move_followup
+      game = make_game({ kind = "test" })
+      fake_strategy.auto_pre_action = function()
+        return { after_action_anim = {} }
+      end
+      res = reloaded_phase.run({ game = game }, "pre_action", move_followup_args)
+      _assert_eq(res.waiting, true, "move_followup after_action_anim should wait")
+      _assert_eq(game.turn.move_followup_pending, true, "move_followup should be marked pending")
+    end)
+  end)
 end)

@@ -15,23 +15,31 @@ local function _zero_vector()
   return _ZERO_VEC
 end
 
-function compute.resolve_tile_pos(state, tile_index)
+local function _validate_tile_query(state, tile_index)
   assert(state ~= nil, "missing state")
   assert(tile_index ~= nil, "missing tile_index")
   local scene = assert(state.board_scene, "missing board_scene")
   local tiles = assert(scene.tiles, "missing scene.tiles")
-  local tile = tiles[tile_index]
-  local tile_pos = unit_position.read_unit_position(tile)
+  return scene, tiles
+end
+
+local function _read_position_from_table(tbl, index)
+  if type(tbl) ~= "table" then
+    return nil
+  end
+  return unit_position.read_unit_position(tbl[index])
+end
+
+function compute.resolve_tile_pos(state, tile_index)
+  local scene, tiles = _validate_tile_query(state, tile_index)
+  local tile_pos = _read_position_from_table(tiles, tile_index)
   if tile_pos ~= nil then
     return tile_pos
   end
 
-  local buildings = scene.buildings
-  if type(buildings) == "table" then
-    local building_pos = unit_position.read_unit_position(buildings[tile_index])
-    if building_pos ~= nil then
-      return building_pos
-    end
+  local building_pos = _read_position_from_table(scene.buildings, tile_index)
+  if building_pos ~= nil then
+    return building_pos
   end
 
   return _zero_vector()

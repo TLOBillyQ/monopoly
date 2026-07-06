@@ -80,9 +80,7 @@ function M.for_tile(board, tile_id, owner_id)
   return #_bfs_component(neighbors, board, tile_id, owner_id)
 end
 
--- Build a tile_id -> count map for every land tile owned by owner_id.
--- One BFS per connected component (vs one per tile when calling for_tile in a loop).
-function M.build_for_owner(board, owner_id)
+local function _build_owner_map(board, owner_id, reducer)
   local out = {}
   if not (board and owner_id ~= nil) then
     return out
@@ -92,36 +90,35 @@ function M.build_for_owner(board, owner_id)
   for tile_id, tile in pairs(lookup) do
     if tile and tile.type == "land" and tile.owner_id == owner_id and out[tile_id] == nil then
       local component = _bfs_component(neighbors, board, tile_id, owner_id)
-      local count = #component
+      local value = reducer(lookup, component, board)
       for _, cid in ipairs(component) do
-        out[cid] = count
+        out[cid] = value
       end
     end
   end
   return out
 end
 
+-- Build a tile_id -> count map for every land tile owned by owner_id.
+-- One BFS per connected component (vs one per tile when calling for_tile in a loop).
+function M.build_for_owner(board, owner_id)
+  return _build_owner_map(board, owner_id, function(_, component)
+    return #component
+  end)
+end
+
 function M.build_rent_for_owner(board, owner_id, rent_for_tile)
-  local out = {}
-  if not (board and owner_id ~= nil and type(rent_for_tile) == "function") then
-    return out
+  if type(rent_for_tile) ~= "function" then
+    return {}
   end
-  local lookup = board.tile_lookup or {}
-  local neighbors = _ensure_land_neighbors(board)
-  for tile_id, tile in pairs(lookup) do
-    if tile and tile.type == "land" and tile.owner_id == owner_id and out[tile_id] == nil then
-      local component = _bfs_component(neighbors, board, tile_id, owner_id)
-      local rent_sum = 0
-      for _, cid in ipairs(component) do
-        local component_tile = lookup[cid] or (type(board.get_tile_by_id) == "function" and board:get_tile_by_id(cid) or nil)
-        rent_sum = rent_sum + (rent_for_tile(component_tile, cid) or 0)
-      end
-      for _, cid in ipairs(component) do
-        out[cid] = rent_sum
-      end
+  return _build_owner_map(board, owner_id, function(lookup, component, board_ref)
+    local rent_sum = 0
+    for _, cid in ipairs(component) do
+      local component_tile = lookup[cid] or (type(board_ref.get_tile_by_id) == "function" and board_ref:get_tile_by_id(cid) or nil)
+      rent_sum = rent_sum + (rent_for_tile(component_tile, cid) or 0)
     end
-  end
-  return out
+    return rent_sum
+  end)
 end
 
 return M
