@@ -218,6 +218,10 @@ local function _copy_port_groups()
   return copied
 end
 
+-- 契约：resolve(nil) / ui_sync 组部分覆盖时，门控端口是惰性默认——
+-- resolve_ui_gate 恒返回全关 gate，set_input_blocked 不落写恒返回 false；
+-- 真实门控必须由 ui_sync 组注入 resolve_ui_gate / set_input_blocked
+--（详见 src/turn/output/ui_sync_defaults.lua 头部契约注释）。
 function gameplay_loop_ports.resolve(override_ports)
   if override_ports == nil then
     return _build_resolved_ports(nil)

@@ -278,13 +278,17 @@ local _fill_ui_sync_defaults_tests = {
   end,
   function()
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
+    -- 提供门控查询 override 时必须同时提供 resolve_ui_gate（防静默降级校验）
+    local custom_gate = { input_blocked = true }
     local ports = {
       get_ui_state = function() return "custom" end,
+      resolve_ui_gate = function() return custom_gate end,
       is_input_blocked = function() return true end,
     }
     loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
     assert(ports.get_ui_state() == "custom", "should not overwrite custom get_ui_state")
     assert(ports.is_input_blocked() == true, "should not overwrite custom is_input_blocked")
+    assert(ports.resolve_ui_gate() == custom_gate, "should not overwrite custom resolve_ui_gate")
     assert(type(ports.is_popup_active) == "function", "should fill missing defaults")
   end,
   function()

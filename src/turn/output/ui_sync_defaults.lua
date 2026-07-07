@@ -1,8 +1,16 @@
 local M = {}
 
 -- turn 层不认识 UI 状态里的门控键名：门控语义一律经 ui_sync 端口的
--- resolve_ui_gate（gate 值对象，见 src/ui/ports/ui_sync/gate.lua）获取；
--- 端口缺失时回退到全关的惰性 gate。
+-- resolve_ui_gate（gate 值对象，见 src/ui/ports/ui_sync/gate.lua）获取。
+--
+-- 显式契约（gameplay_loop_ports.resolve(nil) 或 ui_sync 组部分覆盖时生效）：
+-- * 默认 resolve_ui_gate 不读 state.ui，恒返回全关的惰性 gate；
+-- * 默认 set_input_blocked 惰性：不落写 UI 输入锁标志，恒返回 false；
+-- * 需要真实门控（读或写）的调用方必须在 ui_sync 组注入
+--   resolve_ui_gate / set_input_blocked（生产链路由 presentation 端口提供，
+--   见 src/ui/ports/ui_sync.lua）。
+-- 防静默降级：override 组提供了任一门控查询/落写键却缺 resolve_ui_gate 时，
+-- fill_ui_sync_defaults 直接报错（见 _assert_gate_overrides_consistent）。
 local _inert_gate = {
   input_blocked = false,
   choice_active = false,
@@ -73,9 +81,16 @@ local function _default_set_input_blocked()
   end
 end
 
+-- fill 生成的默认实现集合（弱键）：loop 会把已解析端口组写回
+-- state.gameplay_loop_ports 并在下个 tick 重新 resolve，这些派生默认
+-- 不算「调用方 override」，防静默降级校验不得对其误报。
+local _derived_defaults = setmetatable({}, { __mode = "k" })
+
 local function _fill_default(ui_sync_ports, base_ui_sync_ports, key, resolver)
   if ui_sync_ports[key] == nil or ui_sync_ports[key] == base_ui_sync_ports[key] then
-    ui_sync_ports[key] = resolver(ui_sync_ports)
+    local fn = resolver(ui_sync_ports)
+    _derived_defaults[fn] = true
+    ui_sync_ports[key] = fn
   end
 end
 
@@ -97,9 +112,38 @@ local function _apply_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports, specs)
   end
 end
 
+-- 依赖 gate 语义的查询/落写键：override 提供了其中任意一个却缺 resolve_ui_gate
+-- 时，resolve_ui_gate 会静默回退惰性 gate，与真实查询产生不一致信号，故直接报错。
+local _gate_dependent_keys = {
+  "is_input_blocked",
+  "is_popup_active",
+  "is_choice_active",
+  "get_popup_owner_index",
+  "set_input_blocked",
+}
+
+local function _is_overridden(ui_sync_ports, base_ui_sync_ports, key)
+  local fn = ui_sync_ports[key]
+  return fn ~= nil and fn ~= base_ui_sync_ports[key] and not _derived_defaults[fn]
+end
+
+local function _assert_gate_overrides_consistent(ui_sync_ports, base_ui_sync_ports)
+  if _is_overridden(ui_sync_ports, base_ui_sync_ports, "resolve_ui_gate") then
+    return
+  end
+  for _, key in ipairs(_gate_dependent_keys) do
+    if _is_overridden(ui_sync_ports, base_ui_sync_ports, key) then
+      error("ui_sync override provides " .. key
+        .. " but lacks resolve_ui_gate; default resolve_ui_gate is inert (never reads state.ui)"
+        .. " -- provide resolve_ui_gate to keep gate signals consistent")
+    end
+  end
+end
+
 local _ui_sync_specs = _build_ui_sync_specs()
 
 function M.fill_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports)
+  _assert_gate_overrides_consistent(ui_sync_ports, base_ui_sync_ports)
   _apply_ui_sync_defaults(ui_sync_ports, base_ui_sync_ports, _ui_sync_specs)
 end
 

@@ -28,6 +28,10 @@ function ui_gate_sync.get_ui_state(state, common)
   return common.get_ui_state(state)
 end
 
+-- 契约：为省 GC，resolve_ui_gate 复用模块级单例快照——返回的 gate 表
+-- 仅在下一次 resolve_ui_gate 调用前有效，后一次调用会就地改写同一张表。
+-- 调用方不得跨 resolve 持有该 gate、也不得比较两次 resolve 的返回值；
+-- 需要自持副本时用 snapshot(ui)（不传 out，每次返回全新表）。
 function ui_gate_sync.resolve_ui_gate(state, common)
   return ui_gate_sync.snapshot(common.get_ui_state(state), _cached_gate)
 end

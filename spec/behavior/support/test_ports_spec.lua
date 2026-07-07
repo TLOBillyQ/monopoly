@@ -48,6 +48,12 @@ describe("scenario test_ports fixture", function()
     assert.equals(false, empty_gate.choice_active)
     assert.equals(false, empty_gate.market_active)
     assert.equals(false, empty_gate.popup_active)
+    -- 契约钉死：测试替身每次 resolve 返回全新 gate 表，先取的 gate
+    -- 不被后续 resolve 就地改写（防断言重排后假绿/误诊）
+    assert.is_false(rawequal(gate, empty_gate))
+    assert.equals(true, gate.choice_active)
+    assert.equals(true, gate.popup_active)
+    assert.equals(7, gate.popup_seq)
 
     assert.equals(false, ports.ui_sync.set_input_blocked({}, true))
     assert.equals(false, ports.ui_sync.set_input_blocked(state, false))

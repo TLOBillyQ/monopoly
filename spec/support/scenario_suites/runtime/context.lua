@@ -59,7 +59,9 @@ local function _build_test_ports(overrides)
         return ui_gate_sync.get_popup_owner_index(state, _gate_common)
       end,
       resolve_ui_gate = function(state)
-        return ui_gate_sync.resolve_ui_gate(state, _gate_common)
+        -- 每次返回全新 gate 表（snapshot 不传 out）：测试可安全跨 resolve
+        -- 持有 gate；生产 resolve_ui_gate 复用单例快照，契约见 gate.lua。
+        return ui_gate_sync.snapshot(_gate_common.get_ui_state(state))
       end,
       set_input_blocked = function(state, blocked)
         return ui_gate_sync.set_input_blocked(state, blocked, _gate_common)
