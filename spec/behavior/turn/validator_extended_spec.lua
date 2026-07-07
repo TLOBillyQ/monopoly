@@ -5,6 +5,16 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
+local function _item_phase_state(choice)
+  local state = {}
+  runtime_state.set_pending_choice(state, choice)
+  return state
+end
+
+local function _slot_source(item_id)
+  return { resolve_slot_action = function() return item_id end }
+end
+
 describe("domain validator extended coverage", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
@@ -39,98 +49,84 @@ describe("domain validator extended coverage", function()
     )
   end)
 
-  it("item_slot_resolution recognizes item_phase_passive choice kind", function()
-    local state = {}
-    local choice = { id = 7, kind = "item_phase_passive", options = { "item_x" } }
-    runtime_state.set_pending_choice(state, choice)
-    local source = { resolve_slot_action = function() return "item_x" end }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, nil
+  it("item slot resolution recognizes item_phase_passive choice kind", function()
+    local state = _item_phase_state({ id = 7, kind = "item_phase_passive", options = { "item_x" } })
+    local result = validator.resolve_item_slot_action(
+      _slot_source("item_x"), state, { id = "item_slot_1", actor_role_id = 1001 }, nil
     )
     _assert_eq(result.ok, true, "item_phase_passive should be a valid kind")
   end)
 
-  it("item_slot_resolution returns nil for choice with non-item-phase kind", function()
-    local state = {}
-    local choice = { id = 8, kind = "market_buy", options = { "anything" } }
-    runtime_state.set_pending_choice(state, choice)
-    local source = { resolve_slot_action = function() return "anything" end }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, nil
+  it("validate refuses item slots against a non-item-phase choice with missing_choice", function()
+    local state = _item_phase_state({ id = 8, kind = "market_buy", options = { "anything" } })
+    local game = {
+      turn = { current_player_index = 1 },
+      players = { [1] = { id = 1001 } },
+    }
+    local ok, reason = validator.validate(
+      { type = "ui_button", id = "item_slot_1", actor_role_id = 1001 },
+      { game = game, state = state, item_slot_source = _slot_source("anything") }
     )
-    _assert_eq(result.ok, false, "non-item-phase choice should fail with missing_choice")
-    _assert_eq(result.reason, "missing_choice", "reason should be missing_choice")
+    _assert_eq(ok, false, "non-item-phase choice should fail")
+    _assert_eq(reason, "missing_choice", "reason should be missing_choice")
   end)
 
-  it("item_slot_resolution availability check skips when actor is nil", function()
-    local state = {}
-    local choice = {
+  it("item slot availability check skips when actor is nil", function()
+    local state = _item_phase_state({
       id = 9,
       kind = "item_phase_choice",
       options = { "item_a" },
       meta = { phase = "items" },
-    }
-    runtime_state.set_pending_choice(state, choice)
-    local source = { resolve_slot_action = function() return "item_a" end }
+    })
     local game = { find_player_by_id = function() return nil end }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, game
+    local result = validator.resolve_item_slot_action(
+      _slot_source("item_a"), state, { id = "item_slot_1", actor_role_id = 1001 }, game
     )
     _assert_eq(result.ok, true, "missing actor should bypass availability check")
   end)
 
-  it("item_slot_resolution availability check skips when meta phase is empty", function()
-    local state = {}
-    local choice = {
+  it("item slot availability check skips when meta phase is empty", function()
+    local state = _item_phase_state({
       id = 11,
       kind = "item_phase_choice",
       options = { "item_a" },
       meta = { phase = "" },
-    }
-    runtime_state.set_pending_choice(state, choice)
-    local source = { resolve_slot_action = function() return "item_a" end }
+    })
     local game = { find_player_by_id = function() return { id = 1001 } end }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, game
+    local result = validator.resolve_item_slot_action(
+      _slot_source("item_a"), state, { id = "item_slot_1", actor_role_id = 1001 }, game
     )
     _assert_eq(result.ok, true, "empty phase string should bypass availability check")
   end)
 
-  it("item_slot_resolution availability check skips when no meta", function()
-    local state = {}
-    local choice = {
+  it("item slot availability check skips when no meta", function()
+    local state = _item_phase_state({
       id = 12,
       kind = "item_phase_choice",
       options = { "item_a" },
-    }
-    runtime_state.set_pending_choice(state, choice)
-    local source = { resolve_slot_action = function() return "item_a" end }
+    })
     local game = { find_player_by_id = function() return { id = 1001 } end }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, game
+    local result = validator.resolve_item_slot_action(
+      _slot_source("item_a"), state, { id = "item_slot_1", actor_role_id = 1001 }, game
     )
     _assert_eq(result.ok, true, "no meta should bypass availability check (phase is nil)")
   end)
 
-  it("item_slot_resolution uses state.game when game arg is nil", function()
+  it("item slot resolution uses state.game when game arg is nil", function()
     local state = {}
     local choice = { id = 13, kind = "item_phase_choice", options = { "item_a" } }
     state.game = { turn = { pending_choice = nil }, find_player_by_id = function() return nil end }
     runtime_state.set_pending_choice(state, choice)
-    local source = { resolve_slot_action = function() return "item_a" end }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, nil
+    local result = validator.resolve_item_slot_action(
+      _slot_source("item_a"), state, { id = "item_slot_1", actor_role_id = 1001 }, nil
     )
     _assert_eq(result.ok, true, "should resolve runtime_game via state.game when game arg is nil")
   end)
 
-  it("item_slot_resolution carries action input_source into resolved choice_select", function()
-    local state = {}
-    local choice = { id = 14, kind = "item_phase_choice", options = { "item_a" } }
-    runtime_state.set_pending_choice(state, choice)
-    local source = { resolve_slot_action = function() return "item_a" end }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, {
+  it("item slot resolution carries action input_source into resolved choice_select", function()
+    local state = _item_phase_state({ id = 14, kind = "item_phase_choice", options = { "item_a" } })
+    local result = validator.resolve_item_slot_action(
+      _slot_source("item_a"), state, {
         id = "item_slot_1",
         actor_role_id = 1001,
         input_source = "remote_pick",
@@ -167,11 +163,8 @@ describe("domain validator extended coverage", function()
   end)
 
   it("resolve_item_slot_action returns full result when ok", function()
-    local state = {}
-    local choice = { id = 15, kind = "item_phase_choice", options = { "item_a" } }
-    runtime_state.set_pending_choice(state, choice)
-    local source = { resolve_slot_action = function() return "item_a" end }
-    local result = validator.resolve_item_slot_action(source, state, {
+    local state = _item_phase_state({ id = 15, kind = "item_phase_choice", options = { "item_a" } })
+    local result = validator.resolve_item_slot_action(_slot_source("item_a"), state, {
       id = "item_slot_2", actor_role_id = 1001,
     }, nil)
     _assert_eq(result.ok, true, "successful resolution returns ok=true")

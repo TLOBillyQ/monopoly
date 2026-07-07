@@ -327,65 +327,79 @@ describe("ui_runtime_state_contract", function()
     assert.is_false(resolved.ok, "validator should reject slot ids that are not in choice options")
   end)
 
-  it("validator_resolve_item_slot_resolution_reports_missing_slot_mapping", function()
-    local result = validator._resolve_item_slot_resolution({
-      resolve_slot_action = function()
-        return nil
-      end,
+  it("validator_validate_reports_missing_slot_mapping", function()
+    local ok, reason = validator.validate({
+      type = "ui_button",
+      id = "item_slot_1",
+      actor_role_id = 8,
     }, {
-      ui_runtime = {
-        pending_choice = {
-          id = 91,
-          kind = "item_phase_choice",
-          options = {
-            { id = 1001 },
+      game = {
+        turn = { current_player_index = 1 },
+        players = { { id = 8 } },
+      },
+      state = {
+        ui_runtime = {
+          pending_choice = {
+            id = 91,
+            kind = "item_phase_choice",
+            options = {
+              { id = 1001 },
+            },
           },
         },
       },
-    }, {
-      id = "item_slot_1",
-      actor_role_id = 8,
+      item_slot_source = {
+        resolve_slot_action = function()
+          return nil
+        end,
+      },
     })
 
-    assert.is_false(result.ok, "intermediate result should fail when slot mapping is missing")
-    assert.equals("missing_item_id", result.reason, "intermediate result should expose missing item id reason")
+    assert.is_false(ok, "validate should fail when slot mapping is missing")
+    assert.equals("missing_item_id", reason, "validate should expose missing item id reason")
   end)
 
-  it("validator_resolve_item_slot_resolution_reports_availability_denial", function()
+  it("validator_validate_reports_availability_denial", function()
     availability.can_offer_in_phase = function()
       return false, "special_condition_failed"
     end
 
-    local result = validator._resolve_item_slot_resolution({
-      resolve_slot_action = function()
-        return 1001
-      end,
+    local ok, reason = validator.validate({
+      type = "ui_button",
+      id = "item_slot_1",
+      actor_role_id = 8,
+      input_source = "user",
     }, {
-      ui_runtime = {
-        pending_choice = {
-          id = 92,
-          kind = "item_phase_choice",
-          options = {
-            { id = 1001 },
-          },
-          meta = {
-            phase = "post_action",
-          },
-        },
-      },
       game = {
+        turn = { current_player_index = 1 },
+        players = { { id = 8 } },
         find_player_by_id = function()
           return { id = 8 }
         end,
       },
-    }, {
-      id = "item_slot_1",
-      actor_role_id = 8,
-      input_source = "user",
+      state = {
+        ui_runtime = {
+          pending_choice = {
+            id = 92,
+            kind = "item_phase_choice",
+            options = {
+              { id = 1001 },
+            },
+            meta = {
+              phase = "post_action",
+            },
+          },
+        },
+      },
+      item_slot_source = {
+        resolve_slot_action = function()
+          return 1001
+        end,
+      },
     })
 
-    assert.equals(false, result.ok, "intermediate result should fail when availability denies the slot")
-    assert.equals("item_slot_denied_by_availability", result.reason,
-      "intermediate result should expose availability denial reason")
+    assert.equals(false, ok, "validate should fail when availability denies the slot")
+    assert.equals("item_slot_denied_by_availability", reason,
+      "validate should expose availability denial reason")
   end)
 end)

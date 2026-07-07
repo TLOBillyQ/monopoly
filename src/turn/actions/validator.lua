@@ -1,6 +1,9 @@
+-- turn/actions 校验入口。窄入口 validate(action, ctx) → ok, reason，
+-- 派发器的 choice 类校验统一走 validate（内部委托 validate_choice_action，
+-- 不重写组合）；具名函数保留给 gate/slot 解析与存量调用方（turn/waits、契约 spec），
+-- validator_actor / validator_gate / validator_item_slot 为内部实现。
 local actor = require("src.turn.actions.validator_actor")
 local gate = require("src.turn.actions.validator_gate")
-local item_phase = require("src.turn.actions.validator_item_phase")
 local item_slot = require("src.turn.actions.validator_item_slot")
 
 local validator = {}
@@ -14,8 +17,51 @@ validator.resolve_gate_state = gate.resolve_gate_state
 validator.should_block_action = gate.should_block_action
 
 validator.resolve_item_slot_action = item_slot.resolve_item_slot_action
-validator._resolve_item_slot_resolution = item_slot.resolve_item_slot_resolution
-validator._validate_item_slot_action = item_phase.validate_item_slot_action
+
+local _CHOICE_BOUND_ACTION_TYPES = {
+  choice_select = true,
+  choice_cancel = true,
+  market_page_prev = true,
+  market_page_next = true,
+  market_tab_select = true,
+}
+
+local function _is_item_slot_button(action)
+  return action.id ~= nil and string.match(action.id, "^item_slot_%d+$") ~= nil
+end
+
+local function _validate_ui_button(action, ctx)
+  if not actor.validate_actor_role(ctx.game, action) then
+    return false, "actor_not_current"
+  end
+  if _is_item_slot_button(action) then
+    local resolution = item_slot.resolve_item_slot_resolution(ctx.item_slot_source, ctx.state, action, ctx.game)
+    if not resolution.ok then
+      return false, resolution.reason
+    end
+  end
+  return true
+end
+
+-- 单入口：action + ctx → ok, reason。
+-- ctx 可携带 game / state / choice / gate_state / item_slot_source。
+function validator.validate(action, ctx)
+  ctx = ctx or {}
+  if action == nil then
+    return false, "missing_action"
+  end
+  if ctx.gate_state ~= nil and gate.should_block_action(ctx.gate_state, action) then
+    return false, "input_blocked"
+  end
+  if action.type == "ui_button" then
+    return _validate_ui_button(action, ctx)
+  end
+  if _CHOICE_BOUND_ACTION_TYPES[action.type] == true then
+    -- 复用组合校验单点，不在此处重写组合逻辑。
+    return actor.validate_choice_action(ctx.game, action, ctx.choice)
+  end
+  return true
+end
 
 return validator
 

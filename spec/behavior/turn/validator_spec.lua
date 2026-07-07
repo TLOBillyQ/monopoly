@@ -17,73 +17,267 @@ local function _make_game_with_player(role_id, current_index)
   }
 end
 
-describe("domain validator coverage", function()
+local function _item_phase_state(choice)
+  local state = {}
+  runtime_state.set_pending_choice(state, choice)
+  return state
+end
+
+local function _slot_source(item_id)
+  return {
+    resolve_slot_action = function() return item_id end,
+  }
+end
+
+describe("domain validator single entry validate(action, ctx)", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
 
-  it("validate_actor_role non-turn-bound action returns true", function()
+  -- 表驱动：动作 + 上下文 → 放行与否 + 原因。ctx 为函数时惰性构建。
+  local cases = {
+    -- 入参兜底
+    {
+      name = "nil action is refused with missing_action",
+      action = nil,
+      ctx = {},
+      ok = false,
+      reason = "missing_action",
+    },
+    {
+      name = "unknown action types pass through unvalidated",
+      action = { type = "roll_dice" },
+      ctx = {},
+      ok = true,
+    },
+    -- 输入闸门
+    {
+      name = "gate_state with input_blocked refuses choice_select",
+      action = { type = "choice_select", actor_role_id = 1001, choice_id = 10 },
+      ctx = function()
+        return { gate_state = { input_blocked = true }, choice = { id = 10, owner_role_id = 1001 } }
+      end,
+      ok = false,
+      reason = "input_blocked",
+    },
+    {
+      name = "gate_state without input_blocked lets a valid choice through",
+      action = { type = "choice_select", actor_role_id = 1001, choice_id = 10 },
+      ctx = function()
+        return { gate_state = { input_blocked = false }, choice = { id = 10, owner_role_id = 1001 } }
+      end,
+      ok = true,
+    },
+    -- ui_button 行动人校验
+    {
+      name = "ui_button non-turn-bound action always passes",
+      action = { type = "ui_button", id = "buy", actor_role_id = 1002 },
+      ctx = function() return { game = _make_game_with_player(1001) } end,
+      ok = true,
+    },
+    {
+      name = "ui_button next with matching actor passes",
+      action = { type = "ui_button", id = "next", actor_role_id = 1001 },
+      ctx = function() return { game = _make_game_with_player(1001) } end,
+      ok = true,
+    },
+    {
+      name = "ui_button next with nil actor_role_id is refused",
+      action = { type = "ui_button", id = "next", actor_role_id = nil },
+      ctx = function() return { game = _make_game_with_player(1001) } end,
+      ok = false,
+      reason = "actor_not_current",
+    },
+    {
+      name = "ui_button next with missing current player is refused",
+      action = { type = "ui_button", id = "next", actor_role_id = 1001 },
+      ctx = { game = { turn = { current_player_index = 1 }, players = {} } },
+      ok = false,
+      reason = "actor_not_current",
+    },
+    {
+      name = "ui_button next with wrong actor is refused",
+      action = { type = "ui_button", id = "next", actor_role_id = 1002 },
+      ctx = function() return { game = _make_game_with_player(1001) } end,
+      ok = false,
+      reason = "actor_not_current",
+    },
+    -- choice 类动作校验
+    {
+      name = "choice action without pending choice is refused",
+      action = { type = "choice_select", actor_role_id = 1001, choice_id = 10 },
+      ctx = {},
+      ok = false,
+      reason = "missing_choice",
+    },
+    {
+      name = "choice action against a choice without id is refused",
+      action = { type = "choice_select", actor_role_id = 1001, choice_id = 10 },
+      ctx = { choice = {} },
+      ok = false,
+      reason = "missing_choice",
+    },
+    {
+      name = "choice action with nil actor_role_id is refused",
+      action = { type = "choice_select", actor_role_id = nil, choice_id = 10 },
+      ctx = { game = {}, choice = { id = 10, kind = "market_buy" } },
+      ok = false,
+      reason = "choice_actor_mismatch",
+    },
+    {
+      name = "choice action with nil owner accepts any actor",
+      action = { type = "choice_select", actor_role_id = 1001, choice_id = 10 },
+      ctx = { game = {}, choice = { id = 10, kind = "market_buy" } },
+      ok = true,
+    },
+    {
+      name = "choice action with matching owner passes",
+      action = { type = "choice_select", actor_role_id = 1001, choice_id = 10 },
+      ctx = { game = {}, choice = { id = 10, kind = "market_buy", owner_role_id = 1001 } },
+      ok = true,
+    },
+    {
+      name = "choice action with wrong owner is refused",
+      action = { type = "choice_cancel", actor_role_id = 1002, choice_id = 10 },
+      ctx = { game = {}, choice = { id = 10, kind = "market_buy", owner_role_id = 1001 } },
+      ok = false,
+      reason = "choice_actor_mismatch",
+    },
+    {
+      name = "choice action with mismatched choice_id is refused",
+      action = { type = "choice_select", actor_role_id = 1001, choice_id = 10 },
+      ctx = { game = {}, choice = { id = 99, kind = "market_buy" } },
+      ok = false,
+      reason = "choice_id_mismatch",
+    },
+    {
+      name = "choice action with nil action.choice_id is refused",
+      action = { type = "choice_select", actor_role_id = 1001, choice_id = nil },
+      ctx = { game = {}, choice = { id = 10, kind = "market_buy" } },
+      ok = false,
+      reason = "choice_id_mismatch",
+    },
+    -- item_slot 按钮：经完整解析链
+    {
+      name = "item_slot button with matching actor and valid slot passes",
+      action = { type = "ui_button", id = "item_slot_1", actor_role_id = 1001 },
+      ctx = function()
+        return {
+          game = _make_game_with_player(1001),
+          state = _item_phase_state({ id = 5, kind = "item_phase_choice", options = { "item_a" } }),
+          item_slot_source = _slot_source("item_a"),
+        }
+      end,
+      ok = true,
+    },
+    {
+      name = "item_slot button with wrong actor is refused before slot resolution",
+      action = { type = "ui_button", id = "item_slot_2", actor_role_id = 9999 },
+      ctx = function() return { game = _make_game_with_player(1001) } end,
+      ok = false,
+      reason = "actor_not_current",
+    },
+    {
+      name = "item_slot button without pending item phase choice is refused",
+      action = { type = "ui_button", id = "item_slot_1", actor_role_id = 1001 },
+      ctx = function()
+        return { game = _make_game_with_player(1001), state = {} }
+      end,
+      ok = false,
+      reason = "missing_choice",
+    },
+    {
+      name = "item_slot button without slot mapping is refused",
+      action = { type = "ui_button", id = "item_slot_1", actor_role_id = 1001 },
+      ctx = function()
+        return {
+          game = _make_game_with_player(1001),
+          state = _item_phase_state({ id = 5, kind = "item_phase_choice", options = { "item_a" } }),
+          item_slot_source = _slot_source(nil),
+        }
+      end,
+      ok = false,
+      reason = "missing_item_id",
+    },
+    {
+      name = "item_slot button whose item is not in choice options is refused",
+      action = { type = "ui_button", id = "item_slot_1", actor_role_id = 1001 },
+      ctx = function()
+        return {
+          game = _make_game_with_player(1001),
+          state = _item_phase_state({ id = 5, kind = "item_phase_choice", options = { "item_a" } }),
+          item_slot_source = _slot_source("item_not_in_options"),
+        }
+      end,
+      ok = false,
+      reason = "invalid_item_option",
+    },
+    {
+      name = "item_slot button resolves the choice from game.turn when state has none",
+      action = { type = "ui_button", id = "item_slot_1", actor_role_id = 1001 },
+      ctx = function()
+        local game = _make_game_with_player(1001)
+        game.turn.pending_choice = { id = 7, kind = "item_phase_choice", options = { "item_b" } }
+        return { game = game, state = {}, item_slot_source = _slot_source("item_b") }
+      end,
+      ok = true,
+    },
+  }
+
+  for _, case in ipairs(cases) do
+    it(case.name, function()
+      local ctx = type(case.ctx) == "function" and case.ctx() or case.ctx
+      local ok, reason = validator.validate(case.action, ctx)
+      _assert_eq(ok, case.ok, case.name .. " (ok)")
+      _assert_eq(reason, case.reason, case.name .. " (reason)")
+    end)
+  end
+
+  it("item_slot validate allowed by availability", function()
+    local state = _item_phase_state({
+      id = 5,
+      kind = "item_phase_choice",
+      options = { "item_a" },
+      meta = { phase = "pre_action" },
+    })
+    local avail_mod = require("src.rules.items.availability")
+    local saved = avail_mod.can_offer_in_phase
+    avail_mod.can_offer_in_phase = function() return true end
     local game = _make_game_with_player(1001)
-    _assert_eq(validator.validate_actor_role(game, { id = "buy", actor_role_id = 1002 }), true,
-      "non-turn-bound action should always return true")
+    game.find_player_by_id = function(_, _) return { id = 1001 } end
+    local ok, reason = validator.validate(
+      { type = "ui_button", id = "item_slot_1", actor_role_id = 1001 },
+      { game = game, state = state, item_slot_source = _slot_source("item_a") }
+    )
+    avail_mod.can_offer_in_phase = saved
+    _assert_eq(ok, true, "availability allowed should validate")
+    _assert_eq(reason, nil, "availability allowed should carry no reason")
   end)
 
-  it("validate_actor_role next matching actor returns true", function()
+  it("item_slot validate denied by availability", function()
+    local state = _item_phase_state({
+      id = 5,
+      kind = "item_phase_choice",
+      options = { "item_a" },
+      meta = { phase = "items" },
+    })
+    local avail_mod = require("src.rules.items.availability")
+    local saved = avail_mod.can_offer_in_phase
+    avail_mod.can_offer_in_phase = function() return false end
     local game = _make_game_with_player(1001)
-    _assert_eq(validator.validate_actor_role(game, { id = "next", actor_role_id = 1001 }), true,
-      "'next' with matching actor should return true")
+    game.find_player_by_id = function(_, _) return { id = 1001 } end
+    local ok, reason = validator.validate(
+      { type = "ui_button", id = "item_slot_1", actor_role_id = 1001 },
+      { game = game, state = state, item_slot_source = _slot_source("item_a") }
+    )
+    avail_mod.can_offer_in_phase = saved
+    _assert_eq(ok, false, "availability denial should refuse")
+    _assert_eq(reason, "item_slot_denied_by_availability", "reason should be item_slot_denied_by_availability")
   end)
+end)
 
-  it("validate_actor_role next nil actor_role_id returns false", function()
-    local game = _make_game_with_player(1001)
-    _assert_eq(validator.validate_actor_role(game, { id = "next", actor_role_id = nil }), false,
-      "'next' with nil actor_role_id should return false")
-  end)
-
-  it("validate_actor_role next nil current player returns false", function()
-    local game = { turn = { current_player_index = 1 }, players = {} }
-    _assert_eq(validator.validate_actor_role(game, { id = "next", actor_role_id = 1001 }), false,
-      "'next' with missing current player should return false")
-  end)
-
-  it("validate_actor_role next wrong actor returns false", function()
-    local game = _make_game_with_player(1001)
-    _assert_eq(validator.validate_actor_role(game, { id = "next", actor_role_id = 1002 }), false,
-      "'next' with wrong actor should return false")
-  end)
-
-  it("validate_actor_role item_slot matching actor returns true", function()
-    local game = _make_game_with_player(1001)
-    _assert_eq(validator.validate_actor_role(game, { id = "item_slot_2", actor_role_id = 1001 }), true,
-      "item_slot button with matching actor should return true")
-  end)
-
-  it("validate_choice_actor nil actor returns false", function()
-    local game = {}
-    local choice = { id = 10, kind = "market_buy" }
-    _assert_eq(validator.validate_choice_actor(game, { actor_role_id = nil }, choice), false,
-      "nil actor_role_id should return false")
-  end)
-
-  it("validate_choice_actor nil owner allows any actor", function()
-    local game = {}
-    local choice = { id = 10, kind = "market_buy" }
-    _assert_eq(validator.validate_choice_actor(game, { actor_role_id = 1001 }, choice), true,
-      "nil owner_role_id should accept any actor")
-  end)
-
-  it("validate_choice_actor matching owner returns true", function()
-    local game = {}
-    local choice = { id = 10, kind = "market_buy", owner_role_id = 1001 }
-    _assert_eq(validator.validate_choice_actor(game, { actor_role_id = 1001 }, choice), true,
-      "matching owner_role_id should return true")
-  end)
-
-  it("validate_choice_actor wrong owner returns false", function()
-    local game = {}
-    local choice = { id = 10, kind = "market_buy", owner_role_id = 1001 }
-    _assert_eq(validator.validate_choice_actor(game, { actor_role_id = 1002 }, choice), false,
-      "wrong owner_role_id should return false")
-  end)
+describe("domain validator named surface", function()
+  local _config_reset = require("spec.support.config_reset")
+  before_each(function() _config_reset.reset_all() end)
 
   it("validate_choice_id nil action returns false", function()
     _assert_eq(validator.validate_choice_id(nil, { id = 10 }), false,
@@ -100,14 +294,10 @@ describe("domain validator coverage", function()
       "matching choice_id should return true")
   end)
 
-  it("validate_choice_id mismatched id returns false", function()
-    _assert_eq(validator.validate_choice_id({ choice_id = 10 }, { id = 99 }), false,
-      "mismatched choice_id should return false")
-  end)
-
-  it("validate_choice_id nil action.choice_id returns false", function()
-    _assert_eq(validator.validate_choice_id({ choice_id = nil }, { id = 10 }), false,
-      "nil action.choice_id should return false")
+  it("validate_choice_action success", function()
+    local choice = { id = 10, owner_role_id = 1001 }
+    _assert_eq(validator.validate_choice_action({}, { actor_role_id = 1001, choice_id = 10 }, choice), true,
+      "valid actor and choice_id should return true")
   end)
 
   it("validate_choice_action nil choice returns false", function()
@@ -123,78 +313,13 @@ describe("domain validator coverage", function()
   it("validate_choice_action actor mismatch returns false", function()
     local choice = { id = 10, owner_role_id = 1001 }
     _assert_eq(validator.validate_choice_action({}, { actor_role_id = 1002, choice_id = 10 }, choice), false,
-      "wrong actor should return false")
+      "actor not matching choice owner should return false")
   end)
 
-  it("validate_choice_action success", function()
-    local choice = { id = 10, owner_role_id = 1001 }
-    _assert_eq(validator.validate_choice_action({}, { actor_role_id = 1001, choice_id = 10 }, choice), true,
-      "valid actor and choice_id should return true")
-  end)
-
-  it("item_slot_resolution invalid action id", function()
-    local result = validator._resolve_item_slot_resolution(nil, {}, { id = "next" }, nil)
-    _assert_eq(result.ok, false, "non-item_slot action should fail")
-    _assert_eq(result.reason, "invalid_action", "reason should be invalid_action")
-  end)
-
-  it("item_slot_resolution missing choice", function()
-    local result = validator._resolve_item_slot_resolution(nil, {}, { id = "item_slot_1" }, nil)
-    _assert_eq(result.ok, false, "missing choice should fail")
-    _assert_eq(result.reason, "missing_choice", "reason should be missing_choice")
-  end)
-
-  it("item_slot_resolution missing item_id", function()
-    local state = {}
-    local choice = { id = 5, kind = "item_phase_choice", options = { "item_a" } }
-    runtime_state.set_pending_choice(state, choice)
-    local source = {
-      resolve_slot_action = function() return nil end,
-    }
-    local result = validator._resolve_item_slot_resolution(source, state, { id = "item_slot_1", actor_role_id = 1001 }, nil)
-    _assert_eq(result.ok, false, "missing item_id should fail")
-    _assert_eq(result.reason, "missing_item_id", "reason should be missing_item_id")
-  end)
-
-  it("item_slot_resolution invalid item option", function()
-    local state = {}
-    local choice = { id = 5, kind = "item_phase_choice", options = { "item_a" } }
-    runtime_state.set_pending_choice(state, choice)
-    local source = {
-      resolve_slot_action = function() return "item_not_in_options" end,
-    }
-    local result = validator._resolve_item_slot_resolution(source, state, { id = "item_slot_1", actor_role_id = 1001 }, nil)
-    _assert_eq(result.ok, false, "item not in options should fail")
-    _assert_eq(result.reason, "invalid_item_option", "reason should be invalid_item_option")
-  end)
-
-  it("item_slot_resolution success", function()
-    local state = {}
-    local choice = { id = 5, kind = "item_phase_choice", options = { "item_a" } }
-    runtime_state.set_pending_choice(state, choice)
-    local source = {
-      resolve_slot_action = function() return "item_a" end,
-    }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001, input_source = "touch" }, nil
-    )
-    _assert_eq(result.ok, true, "valid item slot action should succeed")
-    assert(type(result.action) == "table", "success should include action")
-    _assert_eq(result.action.type, "choice_select", "action type should be choice_select")
-    _assert_eq(result.action.option_id, "item_a", "option_id should be item_a")
-  end)
-
-  it("item_slot_resolution choice from game.turn", function()
-    local state = {}
-    local choice = { id = 7, kind = "item_phase_choice", options = { "item_b" } }
-    local game = { turn = { pending_choice = choice } }
-    local source = {
-      resolve_slot_action = function() return "item_b" end,
-    }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, game
-    )
-    _assert_eq(result.ok, true, "choice from game.turn should work")
+  it("validate_actor_role next matching actor returns true", function()
+    local game = _make_game_with_player(1001)
+    _assert_eq(validator.validate_actor_role(game, { id = "next", actor_role_id = 1001 }), true,
+      "'next' with matching actor should return true")
   end)
 
   it("resolve_item_slot_action returns nil on invalid_action", function()
@@ -208,55 +333,16 @@ describe("domain validator coverage", function()
     _assert_eq(result.ok, false, "missing_choice should return {ok=false}")
   end)
 
-  it("item_slot_resolution allowed by availability", function()
-    local state = {}
-    local choice = {
-      id = 5,
-      kind = "item_phase_choice",
-      options = { "item_a" },
-      meta = { phase = "pre_action" },
-    }
-    runtime_state.set_pending_choice(state, choice)
-    local source = {
-      resolve_slot_action = function() return "item_a" end,
-    }
-    local avail_mod = require("src.rules.items.availability")
-    local saved = avail_mod.can_offer_in_phase
-    avail_mod.can_offer_in_phase = function() return true end
-    local game = {
-      find_player_by_id = function(_, _) return { id = 1001 } end,
-    }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, game
+  it("resolve_item_slot_action success returns the resolved choice_select action", function()
+    local state = _item_phase_state({ id = 5, kind = "item_phase_choice", options = { "item_a" } })
+    local result = validator.resolve_item_slot_action(
+      _slot_source("item_a"), state,
+      { id = "item_slot_1", actor_role_id = 1001, input_source = "touch" }, nil
     )
-    avail_mod.can_offer_in_phase = saved
-    _assert_eq(result.ok, true, "availability allowed should return ok=true")
-  end)
-
-  it("item_slot_resolution denied by availability", function()
-    local state = {}
-    local choice = {
-      id = 5,
-      kind = "item_phase_choice",
-      options = { "item_a" },
-      meta = { phase = "items" },
-    }
-    runtime_state.set_pending_choice(state, choice)
-    local source = {
-      resolve_slot_action = function() return "item_a" end,
-    }
-    local availability_override = require("src.rules.items.availability")
-    local saved = availability_override.can_offer_in_phase
-    availability_override.can_offer_in_phase = function() return false end
-    local game = {
-      find_player_by_id = function(_, _) return { id = 1001 } end,
-    }
-    local result = validator._resolve_item_slot_resolution(
-      source, state, { id = "item_slot_1", actor_role_id = 1001 }, game
-    )
-    availability_override.can_offer_in_phase = saved
-    _assert_eq(result.ok, false, "availability denial should return ok=false")
-    _assert_eq(result.reason, "item_slot_denied_by_availability", "reason should be item_slot_denied_by_availability")
+    _assert_eq(result.ok, true, "valid item slot action should succeed")
+    assert(type(result.action) == "table", "success should include action")
+    _assert_eq(result.action.type, "choice_select", "action type should be choice_select")
+    _assert_eq(result.action.option_id, "item_a", "option_id should be item_a")
   end)
 
   it("resolve_gate_state without ports", function()
