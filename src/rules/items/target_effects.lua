@@ -106,7 +106,7 @@ local specs = {
       return game:player_has_any_deity(target)
     end,
     apply = function(game, user, target)
-      local target_type = target.status.deity.type
+      local target_type = game:player_deity_type(target)
       game:transfer_deity(target, user)
       event_feed.publish(game, {
         kind = event_kinds.deity_evicted,

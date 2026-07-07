@@ -1,4 +1,5 @@
 local roll = require("src.turn.phases.roll")
+local status_ops = require("src.player.actions.status")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
@@ -12,6 +13,9 @@ local function _make_game(wait_action_anim)
     player_dice_count = function(_, _) return 2 end,
     rng = { next_int = function(_, _, _) return 3 end },
     last_turn = {},
+    player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+    consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
+    peek_pending_remote_dice = status_ops.peek_pending_remote_dice,
   }
   return game, anim_queued
 end

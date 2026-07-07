@@ -7,7 +7,7 @@ local function make_cases(helpers)
 
 local function _test_turn_start_logs_phase_event_to_event_feed()
   local g = _new_game()
-  g.players[1].status.stay_turns = 2
+  g:set_player_status(g.players[1], "stay_turns", 2)
   g.players[1].status.deity = { type = "poor", remaining = 3 }
   inventory.give(g.players[1], item_ids.remote_dice)
   local _, tile_ref = _first_land_tile(g.board)

@@ -37,7 +37,7 @@ local function _phase_pre_move(turn_mgr, args)
   end
 
   local last_turn = assert(game.last_turn, "missing game.last_turn")
-  local updated_total = dice_multiplier.apply_roll_total(assert(last_turn.raw_total, "missing game.last_turn.raw_total"), player)
+  local updated_total = dice_multiplier.apply_roll_total(game, assert(last_turn.raw_total, "missing game.last_turn.raw_total"), player)
   last_turn.total = updated_total
   return "move", { player = player, total = updated_total, raw_total = raw_total }
 end

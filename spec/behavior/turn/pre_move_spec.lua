@@ -1,4 +1,5 @@
 local phase_pre_move = require("src.turn.phases.pre_move")
+local status_ops = require("src.player.actions.status")
 local item_phase = require("src.rules.items.phase")
 
 local function _assert_eq(a, b, msg)
@@ -24,6 +25,8 @@ local function _build_turn_mgr(overrides)
       last_turn = overrides.last_turn or { raw_total = 3, total = 3, player_id = 1 },
       turn = { item_phase = {} },
       auto_play_port = _build_auto_play_port_stub(),
+      player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+      consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
     },
   }
 end
@@ -111,6 +114,7 @@ describe("turn_flow_pre_move", function()
       local state, args = phase_pre_move(turn_mgr, { player = player, total = 4, raw_total = 4 })
       _assert_eq(state, "move", "when item_phase returns nil, should continue to move state")
       _assert_eq(args.player, player, "move args should include player")
+      _assert_eq(args.total, 3, "move total should come from apply_roll_total over last_turn.raw_total")
     end)
   end)
 end)

@@ -103,10 +103,10 @@ describe("runtime.test_profile_bootstrap_core", function()
     })
     local status = game.players[1].status
     assert(status ~= nil, "bootstrap should create the player status table")
-    assert(status.pending_free_rent == true,
-      "bootstrap should set pending_free_rent, got: " .. tostring(status.pending_free_rent))
-    assert(status.pending_dice_multiplier == 2,
-      "bootstrap should set pending_dice_multiplier, got: " .. tostring(status.pending_dice_multiplier))
+    assert(game:has_pending_free_rent(game.players[1]) == true,
+      "bootstrap should set pending_free_rent")
+    assert(game:player_pending_dice_multiplier(game.players[1]) == 2,
+      "bootstrap should set pending_dice_multiplier")
   end)
 
   it("profile_bootstrap_ignores_non_table_statuses", function()

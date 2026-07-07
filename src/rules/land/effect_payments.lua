@@ -40,20 +40,15 @@ local function _build_rent_choice_intent(player, tile, card_kind, total_value)
   }
 end
 
-local function _apply_pending_free_rent(ctx, player, tile)
-  ctx.game:set_player_status(player, "pending_free_rent", false)
+local function _consume_pending_free_rent(ctx, player, tile)
+  if not ctx.game:consume_pending_free_rent(player) then
+    return false
+  end
   use_broadcast.dispatch(ctx.game, player, item_ids.free_rent)
   event_feed.publish(ctx.game, {
     kind = event_kinds.rent_immune,
     text = player.name .. " 使用免费卡，免租 " .. tile.name,
   })
-end
-
-local function _consume_pending_free_rent(ctx, player, tile)
-  if not player.status.pending_free_rent then
-    return false
-  end
-  _apply_pending_free_rent(ctx, player, tile)
   return true
 end
 
@@ -95,8 +90,7 @@ end
 local function _apply_tax(ctx)
   local player = ctx.player
 
-  if player.status.pending_tax_free then
-    ctx.game:set_player_status(player, "pending_tax_free", false)
+  if ctx.game:consume_pending_tax_free(player) then
     use_broadcast.dispatch(ctx.game, player, item_ids.tax_free)
     event_feed.publish(ctx.game, {
       kind = event_kinds.tax_immune,

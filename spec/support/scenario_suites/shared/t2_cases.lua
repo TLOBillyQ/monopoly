@@ -5,6 +5,7 @@ local _build_test_ports = fixtures.build_test_ports
 local _build_loop_state = fixtures.build_loop_state
 local _with_reloaded_move_module = fixtures.with_reloaded_move_module
 local roll = require("src.turn.phases.roll")
+local status_ops = require("src.player.actions.status")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local turn_timer_policy = require("src.turn.policies.timer")
 
@@ -34,9 +35,8 @@ _t2_case_groups.apply_dice_multiplier_tests = {
         dirty = {},
         players = { player },
         anim_gate_port = { wait_move_anim = false },
-        set_player_status = function(_, target, key, value)
-          target.status[key] = value
-        end,
+        player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+        consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
       },
     }
     local called_total = nil
@@ -56,7 +56,7 @@ _t2_case_groups.apply_dice_multiplier_tests = {
     end)
     assert(result == "move_ok", "move should finish through followup")
     assert(called_total == 12, "multiplier should be applied when total equals raw_total")
-    assert(player.status.pending_dice_multiplier == 1, "multiplier should be reset")
+    assert(turn_mgr.game:player_pending_dice_multiplier(player) == 1, "multiplier should be reset")
   end,
   function()
     local player = { id = 1, position = 1, status = { pending_dice_multiplier = 2 } }
@@ -66,7 +66,8 @@ _t2_case_groups.apply_dice_multiplier_tests = {
         dirty = {},
         players = { player },
         anim_gate_port = { wait_move_anim = false },
-        set_player_status = function() end,
+        player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+        consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
       },
     }
     local called_total = nil
@@ -94,7 +95,8 @@ _t2_case_groups.apply_dice_multiplier_tests = {
         dirty = {},
         players = { player },
         anim_gate_port = { wait_move_anim = false },
-        set_player_status = function() end,
+        player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+        consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
       },
     }
     local called_total = nil

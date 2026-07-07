@@ -36,12 +36,6 @@ local function _emit_turn_started(player, turn_count)
   })
 end
 
-local function _increment_own_turn_started_count(game, player)
-  local status = player and player.status or nil
-  local current = status and status.own_turn_started_count or 0
-  game:set_player_status(player, "own_turn_started_count", current + 1)
-end
-
 local function _skip_eliminated_player(game, player)
   if not player.eliminated then
     return nil
@@ -56,10 +50,9 @@ local function _configure_detained_wait(game, turn, player)
   local detained_wait_seconds = timing.detained_turn_wait_seconds or 5.0
   -- 扣留剩余回合 uses the 含当前回合 (inclusive) convention (ADR 0024): the player-visible
   -- count includes the current frozen turn, so the tip reads the value BEFORE this turn's
-  -- decrement and never shows 0 while detained. The internal stay_turns counter still
-  -- decrements at turn start (pinned by the 减后回合 acceptance scenario).
-  local remaining_inclusive = player.status.stay_turns
-  game:set_player_status(player, "stay_turns", remaining_inclusive - 1)
+  -- decrement and never shows 0 while detained. The internal counter still decrements at
+  -- turn start (pinned by the 减后回合 acceptance scenario) via consume_detention_turn.
+  local remaining_inclusive = game:consume_detention_turn(player)
   event_feed.publish(game, {
     kind = event_kinds.detained,
     text = player.name .. " 被扣留，剩余回合:" .. tostring(remaining_inclusive),
@@ -67,7 +60,7 @@ local function _configure_detained_wait(game, turn, player)
   })
   game.last_turn.note = "被扣留"
   game.last_turn.skipped = true
-  game.last_turn.stay_turns = player.status.stay_turns
+  game.last_turn.stay_turns = game:detention_remaining(player)
   turn.detained_wait_active = detained_wait_seconds > 0
   turn.detained_wait_elapsed = 0
   turn.detained_wait_seconds = detained_wait_seconds
@@ -113,7 +106,7 @@ local function _phase_start(turn_mgr)
     tostring(player.id)
   )
   _set_last_turn(turn_mgr.game, player)
-  _increment_own_turn_started_count(turn_mgr.game, player)
+  turn_mgr.game:increment_own_turn_started_count(player)
   _emit_turn_started(player, tc)
   local eliminated_state, eliminated_args = _skip_eliminated_player(turn_mgr.game, player)
   if eliminated_state ~= nil then
@@ -122,7 +115,7 @@ local function _phase_start(turn_mgr)
   tc = tc + 1
   turn_mgr.game.turn.turn_count = tc
   dirty_tracker.mark(turn_mgr.game.dirty, "turn")
-  if player.status.stay_turns and player.status.stay_turns > 0 then
+  if turn_mgr.game:detention_remaining(player) > 0 then
     return _configure_detained_wait(turn_mgr.game, turn, player)
   end
 

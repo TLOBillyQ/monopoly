@@ -445,7 +445,7 @@ describe("chance", function()
 
     post_effects.apply_post(g, p, item_ids.free_rent, {})
 
-    assert(p.status.pending_free_rent == true, "post_effects apply should set pending_free_rent status")
+    assert(g:has_pending_free_rent(p) == true, "post_effects apply should set pending_free_rent status")
   end)
 
   it("post_effects_apply_deity_sets_deity", function()
@@ -491,7 +491,7 @@ describe("chance", function()
     assert(mine.armed == true, "post_effects place_mine_here should arm normal mines immediately")
     assert(mine.owner_id == p.id, "post_effects place_mine_here should record owner id")
     assert(
-      mine.owner_turn_started_count_at_placement == (p.status.own_turn_started_count or 0),
+      mine.owner_turn_started_count_at_placement == g:player_own_turn_started_count(p),
       "post_effects place_mine_here should snapshot owner own-turn count"
     )
   end)

@@ -344,7 +344,7 @@ function driver.roll_dice(ctx, player, dice_count)
   local override = player.status and player.status.pending_remote_dice
     and player.status.pending_remote_dice.values
   local results, raw_total = roll_module._roll_dice(dice_count, override, ctx.game.rng)
-  local total = dice_mult.apply_roll_total(raw_total, player)
+  local total = dice_mult.apply_roll_total(ctx.game, raw_total, player)
   event_feed.publish(ctx.game, {
     kind = event_kinds.dice_roll,
     text = player.name .. " 投骰: [" .. table.concat(results, ",") .. "] => " .. tostring(total),

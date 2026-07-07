@@ -45,12 +45,11 @@ local function _build_chain_tip_text(game, player, position)
   return player.name .. " 在 " .. tile_name .. "踩中地雷"
 end
 
-local function _is_mine_grace_expired(player, mine)
+local function _is_mine_grace_expired(game, player, mine)
   if not (player and mine.owner_id == player.id) then return true end
   local placement_turn_count = mine.owner_turn_started_count_at_placement
   if placement_turn_count == nil then return true end
-  local own_count = player.status and player.status.own_turn_started_count or 0
-  return own_count > placement_turn_count + 1
+  return game:player_own_turn_started_count(player) > placement_turn_count + 1
 end
 
 function mine_effect.can_trigger(game, player, position)
@@ -61,7 +60,7 @@ function mine_effect.can_trigger(game, player, position)
   local mine = board:get_mine(position)
   if type(mine) ~= "table" then return true end
   if mine.armed == false then return false end
-  return _is_mine_grace_expired(player, mine)
+  return _is_mine_grace_expired(game, player, mine)
 end
 
 function mine_effect.apply(game, player, position)
@@ -138,17 +137,17 @@ return mine_effect
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=455533d324ee9169
+projectHash=5dd4b57e280880eb
 scope.0.id=chunk:src/rules/effects/mine.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=138
-scope.0.semanticHash=02ac3b4b99599853
-scope.0.lastMutatedAt=2026-06-01T04:28:24Z
+scope.0.endLine=137
+scope.0.semanticHash=e4e5594dcf495b83
+scope.0.lastMutatedAt=2026-07-07T09:56:45Z
 scope.0.lastMutationLane=behavior
-scope.0.lastMutationStatus=survived
-scope.0.lastMutationSites=13
-scope.0.lastMutationKilled=12
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=8
+scope.0.lastMutationKilled=8
 scope.1.id=function:_build_obstacle_chain_key:9
 scope.1.kind=function
 scope.1.startLine=9
@@ -182,29 +181,29 @@ scope.3.lastMutationKilled=9
 scope.4.id=function:_is_mine_grace_expired:48
 scope.4.kind=function
 scope.4.startLine=48
-scope.4.endLine=54
-scope.4.semanticHash=525f532b77860fed
-scope.4.lastMutatedAt=2026-06-01T04:28:24Z
+scope.4.endLine=53
+scope.4.semanticHash=8344072bb47e464b
+scope.4.lastMutatedAt=2026-07-07T09:56:45Z
 scope.4.lastMutationLane=behavior
-scope.4.lastMutationStatus=survived
-scope.4.lastMutationSites=12
-scope.4.lastMutationKilled=11
-scope.5.id=function:mine_effect.can_trigger:56
+scope.4.lastMutationStatus=passed
+scope.4.lastMutationSites=10
+scope.4.lastMutationKilled=10
+scope.5.id=function:mine_effect.can_trigger:55
 scope.5.kind=function
-scope.5.startLine=56
-scope.5.endLine=65
-scope.5.semanticHash=c2f79b18459b72a4
-scope.5.lastMutatedAt=2026-06-01T04:28:24Z
+scope.5.startLine=55
+scope.5.endLine=64
+scope.5.semanticHash=504912e930569a76
+scope.5.lastMutatedAt=2026-07-07T09:56:45Z
 scope.5.lastMutationLane=behavior
 scope.5.lastMutationStatus=passed
 scope.5.lastMutationSites=16
 scope.5.lastMutationKilled=16
-scope.6.id=function:mine_effect.apply:67
+scope.6.id=function:mine_effect.apply:66
 scope.6.kind=function
-scope.6.startLine=67
-scope.6.endLine=131
+scope.6.startLine=66
+scope.6.endLine=130
 scope.6.semanticHash=88a44173fa89398b
-scope.6.lastMutatedAt=2026-06-01T04:28:24Z
+scope.6.lastMutatedAt=2026-07-07T09:56:45Z
 scope.6.lastMutationLane=behavior
 scope.6.lastMutationStatus=passed
 scope.6.lastMutationSites=28

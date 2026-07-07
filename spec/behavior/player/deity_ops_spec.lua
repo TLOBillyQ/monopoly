@@ -51,6 +51,21 @@ describe("domain deity ops coverage", function()
     _assert_eq(deity_ops.player_has_deity(nil, player, "angel"), true, "matching deity with remaining>0 should return true")
   end)
 
+  it("player_deity_type nil when no active deity", function()
+    local game = _make_game()
+    game.player_has_any_deity = deity_ops.player_has_any_deity
+    _assert_eq(deity_ops.player_deity_type(game, _make_player()), nil, "no status should read nil deity type")
+    local expired = _make_player({ status = { deity = { type = "rich", remaining = 0 } } })
+    _assert_eq(deity_ops.player_deity_type(game, expired), nil, "expired deity should read nil deity type")
+  end)
+
+  it("player_deity_type returns the active deity type", function()
+    local game = _make_game()
+    game.player_has_any_deity = deity_ops.player_has_any_deity
+    local player = _make_player({ status = { deity = { type = "rich", remaining = 2 } } })
+    _assert_eq(deity_ops.player_deity_type(game, player), "rich", "active deity should expose its type")
+  end)
+
   it("player_has_angel delegates to player_has_deity", function()
     local game = _make_game()
     game.player_has_deity = deity_ops.player_has_deity

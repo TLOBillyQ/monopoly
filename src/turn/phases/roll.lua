@@ -22,11 +22,8 @@ local function _roll_dice(count, override_values, rng)
   return results, total
 end
 
-local function _resolve_dice_override(player)
-  if player.status.pending_remote_dice then
-    return player.status.pending_remote_dice.values
-  end
-  return nil
+local function _resolve_dice_override(game, player)
+  return game:peek_pending_remote_dice(player)
 end
 
 local function _log_roll_event(game, player, rolls, total)
@@ -45,9 +42,9 @@ end
 
 local function _perform_dice_roll(game, player)
   local dice_count = game:player_dice_count(player)
-  local override = _resolve_dice_override(player)
+  local override = _resolve_dice_override(game, player)
   local rolls, raw_total = _roll_dice(dice_count, override, game.rng)
-  local total = dice_multiplier.apply_roll_total(raw_total, player)
+  local total = dice_multiplier.apply_roll_total(game, raw_total, player)
   _log_roll_event(game, player, rolls, total)
   _store_roll_results(game, rolls, total, raw_total)
   return rolls, raw_total, total
@@ -143,103 +140,113 @@ return roll
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=e5348c6805fafcf8
+projectHash=0fdf5fe4f968817f
 scope.0.id=chunk:src/turn/phases/roll.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=143
-scope.0.semanticHash=c0723e3dc3048a04
-scope.0.lastMutatedAt=2026-05-23T06:09:29Z
+scope.0.endLine=140
+scope.0.semanticHash=cbc45af804fd5570
+scope.0.lastMutatedAt=2026-07-07T09:51:55Z
 scope.0.lastMutationLane=behavior
 scope.0.lastMutationStatus=passed
-scope.0.lastMutationSites=16
-scope.0.lastMutationKilled=16
+scope.0.lastMutationSites=13
+scope.0.lastMutationKilled=13
 scope.1.id=function:_resolve_dice_override:25
 scope.1.kind=function
 scope.1.startLine=25
-scope.1.endLine=30
-scope.1.semanticHash=0942eddb245c6c9e
-scope.2.id=function:_log_roll_event:32
+scope.1.endLine=27
+scope.1.semanticHash=6c6c03f1cc5c4baa
+scope.1.lastMutatedAt=2026-07-07T09:51:55Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=1
+scope.1.lastMutationKilled=1
+scope.2.id=function:_log_roll_event:29
 scope.2.kind=function
-scope.2.startLine=32
-scope.2.endLine=38
+scope.2.startLine=29
+scope.2.endLine=35
 scope.2.semanticHash=37124d3b08f36842
-scope.2.lastMutatedAt=2026-05-23T06:09:29Z
+scope.2.lastMutatedAt=2026-07-07T09:51:55Z
 scope.2.lastMutationLane=behavior
 scope.2.lastMutationStatus=passed
 scope.2.lastMutationSites=1
 scope.2.lastMutationKilled=1
-scope.3.id=function:_store_roll_results:40
+scope.3.id=function:_store_roll_results:37
 scope.3.kind=function
-scope.3.startLine=40
-scope.3.endLine=44
+scope.3.startLine=37
+scope.3.endLine=41
 scope.3.semanticHash=1833f7dbe12182e0
-scope.4.id=function:_perform_dice_roll:46
+scope.3.lastMutatedAt=2026-07-07T09:51:55Z
+scope.3.lastMutationLane=behavior
+scope.3.lastMutationStatus=no_sites
+scope.3.lastMutationSites=0
+scope.3.lastMutationKilled=0
+scope.4.id=function:_perform_dice_roll:43
 scope.4.kind=function
-scope.4.startLine=46
-scope.4.endLine=54
-scope.4.semanticHash=5628043e6f93be65
-scope.4.lastMutatedAt=2026-05-23T06:09:29Z
+scope.4.startLine=43
+scope.4.endLine=51
+scope.4.semanticHash=53c3ceb3a9b5afa5
+scope.4.lastMutatedAt=2026-07-07T09:51:55Z
 scope.4.lastMutationLane=behavior
 scope.4.lastMutationStatus=passed
 scope.4.lastMutationSites=6
 scope.4.lastMutationKilled=6
-scope.5.id=function:_should_wait_for_anim:56
+scope.5.id=function:_should_wait_for_anim:53
 scope.5.kind=function
-scope.5.startLine=56
-scope.5.endLine=62
+scope.5.startLine=53
+scope.5.endLine=59
 scope.5.semanticHash=7b2a8d406e61a2a8
-scope.5.lastMutatedAt=2026-05-23T06:09:29Z
+scope.5.lastMutatedAt=2026-07-07T09:51:55Z
 scope.5.lastMutationLane=behavior
 scope.5.lastMutationStatus=passed
 scope.5.lastMutationSites=4
 scope.5.lastMutationKilled=4
-scope.6.id=function:_build_anim_wait_result:64
+scope.6.id=function:_build_anim_wait_result:61
 scope.6.kind=function
-scope.6.startLine=64
-scope.6.endLine=75
+scope.6.startLine=61
+scope.6.endLine=72
 scope.6.semanticHash=6a1674e1a8af7237
-scope.6.lastMutatedAt=2026-05-23T06:09:29Z
+scope.6.lastMutatedAt=2026-07-07T09:51:55Z
 scope.6.lastMutationLane=behavior
 scope.6.lastMutationStatus=passed
 scope.6.lastMutationSites=3
 scope.6.lastMutationKilled=3
-scope.7.id=function:_resolve_phase_wait_result:77
+scope.7.id=function:_resolve_phase_wait_result:74
 scope.7.kind=function
-scope.7.startLine=77
-scope.7.endLine=97
+scope.7.startLine=74
+scope.7.endLine=94
 scope.7.semanticHash=3bb988ed38e76f83
-scope.7.lastMutatedAt=2026-05-23T06:09:29Z
+scope.7.lastMutatedAt=2026-07-07T09:51:55Z
 scope.7.lastMutationLane=behavior
 scope.7.lastMutationStatus=passed
 scope.7.lastMutationSites=11
 scope.7.lastMutationKilled=11
-scope.8.id=function:_queue_roll_anim:99
+scope.8.id=function:_queue_roll_anim:96
 scope.8.kind=function
-scope.8.startLine=99
-scope.8.endLine=106
+scope.8.startLine=96
+scope.8.endLine=103
 scope.8.semanticHash=bc5aea10f274bc75
-scope.8.lastMutatedAt=2026-05-23T06:09:29Z
+scope.8.lastMutatedAt=2026-07-07T09:51:55Z
 scope.8.lastMutationLane=behavior
 scope.8.lastMutationStatus=passed
 scope.8.lastMutationSites=1
 scope.8.lastMutationKilled=1
-scope.9.id=function:_phase_roll:108
+scope.9.id=function:_phase_roll:105
 scope.9.kind=function
-scope.9.startLine=108
-scope.9.endLine=127
+scope.9.startLine=105
+scope.9.endLine=124
 scope.9.semanticHash=f67872448dc4430c
-scope.9.lastMutatedAt=2026-05-23T06:09:29Z
+scope.9.lastMutatedAt=2026-07-07T09:51:55Z
 scope.9.lastMutationLane=behavior
 scope.9.lastMutationStatus=passed
 scope.9.lastMutationSites=10
 scope.9.lastMutationKilled=10
-scope.10.id=function:_phase_roll_direct:129
+scope.10.id=function:_phase_roll_direct:126
 scope.10.kind=function
-scope.10.startLine=129
-scope.10.endLine=135
+scope.10.startLine=126
+scope.10.endLine=132
 scope.10.semanticHash=efbee038bc9905b5
-scope.10.lastMutatedAt=2026-05-23T06:09:29Z
+scope.10.lastMutatedAt=2026-07-07T09:51:55Z
 scope.10.lastMutationLane=behavior
 scope.10.lastMutationStatus=passed
 scope.10.lastMutationSites=4

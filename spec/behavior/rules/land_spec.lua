@@ -283,6 +283,25 @@ describe("land", function()
     end
   end)
 
+  it("pending_free_rent_consumed_on_rent_settlement", function()
+    local land = require("src.rules.land.executors")
+    local g = _new_game()
+    local tenant = g.players[1]
+    local owner = g.players[2]
+    local idx, tile_ref = _first_land_tile(g.board)
+
+    g:set_tile_owner(tile_ref, owner.id)
+    g:set_tile_level(tile_ref, 1)
+    g:set_player_property(owner, tile_ref.id, true)
+    g:update_player_position(tenant, idx)
+    g:set_player_status(tenant, "pending_free_rent", true)
+
+    local before = g:player_balance(tenant, "金币")
+    land.executors.pay_rent.apply({ game = g, player = tenant, tile = tile_ref })
+    _assert_eq(g:player_balance(tenant, "金币"), before, "pending free rent must skip the rent payment")
+    assert(g:has_pending_free_rent(tenant) == false, "free rent flag must be consumed by the settlement")
+  end)
+
   it("rent_owner_missing_skips_payment", function()
     local land = require("src.rules.land.executors")
     local g = _new_game()
@@ -301,7 +320,7 @@ describe("land", function()
     local before = g:player_balance(tenant, "金币")
     land.executors.pay_rent.apply({ game = g, player = tenant, tile = tile_ref })
     _assert_eq(g:player_balance(tenant, "金币"), before, "rent skipped when owner in mountain")
-    assert(tenant.status.pending_free_rent == true, "pending_free_rent should remain when owner missing")
+    assert(g:has_pending_free_rent(tenant) == true, "pending_free_rent should remain when owner missing")
 
     g:set_player_status(tenant, "pending_free_rent", false)
     owner.eliminated = true
@@ -386,7 +405,7 @@ describe("land", function()
     local g = _new_game()
     local p = g:current_player()
     inventory.give(p, item_ids.tax_free, { game = g })
-    p.status.pending_tax_free = true
+    g:set_player_status(p, "pending_tax_free", true)
 
     local events = {}
     _with_patches({
@@ -516,7 +535,7 @@ describe("land", function()
       local tile = g.board:get_tile(tax_idx)
       land.executors.tax.apply({ game = g, player = p, tile = tile })
       assert(g:player_balance(p, "金币") == before_cash, "_apply_tax should skip payment when pending_tax_free is set")
-      assert(p.status.pending_tax_free == false, "_apply_tax should clear pending_tax_free after use")
+      assert(g:has_pending_tax_free(p) == false, "_apply_tax should clear pending_tax_free after use")
     end
   end)
 
@@ -572,13 +591,13 @@ describe("land", function()
     local hospital_idx = assert(g.board:find_first_by_type("hospital"), "missing hospital")
     g:update_player_position(p, hospital_idx)
     land.executors.hospital.apply({ game = g, player = p, tile = g.board:get_tile(hospital_idx) })
-    assert((p.status.stay_turns or 0) > 0, "angel should not block hospital stay")
+    assert(g:detention_remaining(p) > 0, "angel should not block hospital stay")
 
     g:set_player_status(p, "stay_turns", 0)
     g:set_player_deity(p, "angel")
     local mountain_idx = assert(g.board:find_first_by_type("mountain"), "missing mountain")
     g:update_player_position(p, mountain_idx)
     land.executors.mountain.apply({ game = g, player = p, tile = g.board:get_tile(mountain_idx) })
-    assert((p.status.stay_turns or 0) > 0, "angel should not block mountain stay")
+    assert(g:detention_remaining(p) > 0, "angel should not block mountain stay")
   end)
 end)
