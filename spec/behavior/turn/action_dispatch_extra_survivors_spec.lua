@@ -1,9 +1,10 @@
 local P = require("spec.support.shared_support")
 local _assert_eq = P.assert_eq
 
-local action_dispatch_mod = require("src.turn.actions.action_dispatch")
 local defaults = require("src.turn.actions.defaults")
 
+-- Same reload-based builder as action_dispatch_baseline_spec: swap module deps in
+-- package.loaded, re-require a fresh action_dispatcher bound to the stubs, restore.
 local function _build(extra_deps)
   local deps = {
     logger = { warn = function() end, info = function() end },
@@ -21,7 +22,6 @@ local function _build(extra_deps)
       end,
     },
     market_service = { choice = { apply_navigation = function() return true end } },
-    turn_dispatch_ref = { step_turn = function() end, clear_choice = function() end },
   }
   if extra_deps then
     for k, v in pairs(extra_deps) do
@@ -32,7 +32,30 @@ local function _build(extra_deps)
       end
     end
   end
-  return action_dispatch_mod.build(deps), deps
+  local overrides = {
+    ["src.turn.actions.validator"] = deps.validator,
+    ["src.state.runtime"] = deps.runtime_state,
+    ["src.rules.market"] = deps.market_service,
+  }
+  local originals = {}
+  for module_name, stub in pairs(overrides) do
+    originals[module_name] = package.loaded[module_name]
+    package.loaded[module_name] = stub
+  end
+  local original_dispatcher = package.loaded["src.turn.actions.action_dispatcher"]
+  package.loaded["src.turn.actions.action_dispatcher"] = nil
+  local ok, dispatcher = pcall(require, "src.turn.actions.action_dispatcher")
+  package.loaded["src.turn.actions.action_dispatcher"] = original_dispatcher
+  for module_name in pairs(overrides) do
+    package.loaded[module_name] = originals[module_name]
+  end
+  if not ok then
+    error(dispatcher)
+  end
+  dispatcher.step_turn = function() end
+  dispatcher.clear_choice = function() end
+  deps.turn_dispatch_ref = dispatcher
+  return dispatcher, deps
 end
 
 local function _ctx(overrides)
