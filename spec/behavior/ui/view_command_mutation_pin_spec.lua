@@ -1,9 +1,12 @@
--- Mutation-pinning specs for src/ui/input/view_command.lua.
+-- Mutation-pinning specs for src/ui/input/view_command.lua, plus the
+-- before-game terminal branch of src/ui/input/intent_dispatcher.lua.
 -- The dispatcher is a thin adapter: panel_interrupt gate → ports.view_command.
 -- Per [[feedback_mutation_spec_state_inline]]: state shape kept inline, no
 -- shared helpers — nil vs explicit fields are the discrimination contract.
 
 local view_command = require("src.ui.input.view_command")
+local intent_dispatcher = require("src.ui.input.intent_dispatcher")
+local game_action_dispatcher = require("src.ui.input.game_action")
 local panel_interrupt = require("src.ui.coord.panel_interrupt")
 local logger = require("src.foundation.log")
 
@@ -200,5 +203,59 @@ describe("view_command missing-port warn path", function()
     end)
     assert(result == false, "nil intent must return false; got " .. tostring(result))
     assert(#warn_calls == 1, "nil intent must still warn once; got " .. #warn_calls)
+  end)
+end)
+
+describe("intent_dispatcher before-game view command terminal branch", function()
+  local function _with_game_action_capture(body)
+    local game_action_calls = 0
+    local saved = game_action_dispatcher.dispatch
+    game_action_dispatcher.dispatch = function() game_action_calls = game_action_calls + 1; return true end
+    local ok, err = pcall(body)
+    game_action_dispatcher.dispatch = saved
+    assert(ok, err)
+    return game_action_calls
+  end
+
+  it("consumes a before-game intent on missing port: exactly one warn, no game-path fallthrough", function()
+    local warn_calls
+    local game_action_calls = _with_game_action_capture(function()
+      warn_calls = _with_warn_capture(function()
+        _with_block_entry(function() return false end, function()
+          intent_dispatcher.dispatch({}, nil, { type = "open_skin_panel", actor_role_id = 1 })
+        end)
+      end)
+    end)
+    assert(#warn_calls == 1, "missing port via intent_dispatcher must warn exactly once; got " .. #warn_calls)
+    local message = tostring(warn_calls[1][1])
+    assert(message:find("view_command port missing", 1, true) ~= nil,
+      "the single warn must be the port-missing diagnostic, not 'ui intent without game'; got " .. message)
+    assert(game_action_calls == 0,
+      "before-game view command must never fall through to game action; got " .. game_action_calls)
+  end)
+
+  it("stays terminal even when the port dispatch returns false (no second dispatch)", function()
+    local port_calls = 0
+    local state = _ports_state(function() port_calls = port_calls + 1; return false end)
+    local game_action_calls = _with_game_action_capture(function()
+      _with_block_entry(function() return false end, function()
+        intent_dispatcher.dispatch(state, {}, { type = "open_skin_panel", actor_role_id = 1 })
+      end)
+    end)
+    assert(port_calls == 1, "port dispatch must run exactly once; got " .. port_calls)
+    assert(game_action_calls == 0,
+      "port returning false must not re-enter the game/view fallthrough path; got " .. game_action_calls)
+  end)
+
+  it("still routes non-before-game view commands through the game-first path", function()
+    local port_calls = 0
+    local state = _ports_state(function() port_calls = port_calls + 1; return true end)
+    local game_action_calls = _with_game_action_capture(function()
+      _with_block_entry(function() return false end, function()
+        intent_dispatcher.dispatch(state, {}, { type = "market_select", option_id = 1 })
+      end)
+    end)
+    assert(game_action_calls == 1, "market_select must hit the game action path first; got " .. game_action_calls)
+    assert(port_calls == 0, "game action consuming the intent must skip the trailing view dispatch; got " .. port_calls)
   end)
 end)
