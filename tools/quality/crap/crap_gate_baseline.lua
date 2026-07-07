@@ -6,13 +6,7 @@ return {
   base_threshold = 7,
   files = {
     ["src/app/profile_bootstrap.lua"] = 1,
-    ["src/rules/items/phase.lua"] = 1,
-    ["src/ui/input/route_item_slots.lua"] = 1,
-    ["src/ui/ports/callbacks.lua"] = 1,
-    ["src/ui/render/anim/overlay_compute.lua"] = 1,
     ["src/ui/render/anim/overlay_runtime.lua"] = 1,
-    ["src/ui/render/anim/unit_overlay.lua"] = 2,
-    ["src/ui/render/board/placement.lua"] = 1,
     ["src/ui/render/move_anim/playback.lua"] = 1,
   },
 }
