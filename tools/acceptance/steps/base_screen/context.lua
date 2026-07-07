@@ -10,6 +10,7 @@
 -- Kept side-effect free at module scope: tables and functions only. All mutable
 -- state continues to live on the per-scenario `world` passed into each handler.
 
+local items_cfg = require("src.config.content.items")
 local number_utils = require("src.foundation.number")
 local panel_slice = require("src.ui.view.panel_slice")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
@@ -191,7 +192,19 @@ function context.auxiliary_entry_node(name)
   return context.AUXILIARY_ENTRY_NODES[tostring(name or "")]
 end
 
+local function _catalog_has_item(item_name)
+  for _, item in ipairs(items_cfg) do
+    if item.name == item_name then
+      return true
+    end
+  end
+  return false
+end
+
 function context.give_item(world, item_name)
+  if not _catalog_has_item(item_name) then
+    return nil, "unknown item name: " .. tostring(item_name)
+  end
   world.base_screen_inventory = world.base_screen_inventory or {}
   world.base_screen_inventory[item_name] = (world.base_screen_inventory[item_name] or 0) + 1
   return true
@@ -202,6 +215,9 @@ function context.has_item(world, item_name)
 end
 
 function context.set_item_phase(world, item_name, phase)
+  if not _catalog_has_item(item_name) then
+    return nil, "unknown item name: " .. tostring(item_name)
+  end
   world.base_screen_item_phases = world.base_screen_item_phases or {}
   world.base_screen_item_phases[item_name] = phase
   if phase == "post_action" then

@@ -1,11 +1,11 @@
 # language: zh-CN
-# mutation-stamp: sha256=b3ebd8cc4b70d48dcb91b08cd72ae28653e10770a442134125a74d82f854f197
+# mutation-stamp: sha256=bf1e4c880f2ca985b78b0d17a49b0749f4a03a208b99ff13e89349a141163562
 # acceptance-mutation-manifest-begin
 # {
 #   "background_hash": "10c39f71faa0d8d861ad59cadc227a6488b69c0ceff8d5de53357199bca9d95c",
 #   "feature_name": "可选行动阶段结束按钮",
 #   "feature_path": "features/v102/optional_action_end_button.feature",
-#   "implementation_hash": "sha256:0c0dbd260162a84d0dd3a5112c2b30bee43c9ec9f2d29e13a28bc544dc10e1df",
+#   "implementation_hash": "sha256:9dd33d04ad7e0af1c15f7ec4652363bb45bdafb6df9cc0feace0ad8b138dfd95",
 #   "scenarios": [
 #     {
 #       "index": 0,
@@ -61,16 +61,16 @@
 #     },
 #     {
 #       "index": 4,
-#       "mutation_count": 24,
+#       "mutation_count": 21,
 #       "name": "optional_action_end_button_005 阻断状态隐藏结束按钮",
 #       "result": {
 #         "Errors": 0,
-#         "Killed": 24,
+#         "Killed": 21,
 #         "Survived": 0,
-#         "Total": 24
+#         "Total": 21
 #       },
-#       "scenario_hash": "489387795878d41ea3cf8d1cf0ce90d039db29eee2ee59498a33a2f362679a0a",
-#       "tested_at": "2026-06-23T03:28:10Z"
+#       "scenario_hash": "4caeb44d61d104edf41387126a449590660b06e760530c3b645e6db9f6893e40",
+#       "tested_at": "2026-07-07T02:59:54Z"
 #     },
 #     {
 #       "index": 5,
@@ -112,7 +112,7 @@
 #       "tested_at": "2026-06-23T03:28:13Z"
 #     }
 #   ],
-#   "tested_at": "2026-06-24T08:08:00Z",
+#   "tested_at": "2026-07-07T02:59:54Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end

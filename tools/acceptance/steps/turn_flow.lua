@@ -836,6 +836,9 @@ function turn_flow_steps.handlers()
         return true
       end
       local expected = _WARN_LEVELS[example["警告级别"]]
+      if expected == nil then
+        return nil, "unknown warning level: " .. tostring(example["警告级别"])
+      end
       if world.warn_level ~= expected then
         return nil, "expected level " .. tostring(expected) .. ", got " .. tostring(world.warn_level)
       end

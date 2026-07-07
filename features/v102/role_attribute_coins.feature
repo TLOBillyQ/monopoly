@@ -1,4 +1,134 @@
 # language: zh-CN
+# mutation-stamp: sha256=6089b2799d2497f9a5942b3d29a67fc684a30c219a9e104c34b7f669cb40dcec
+# acceptance-mutation-manifest-begin
+# {
+#   "background_hash": "10c39f71faa0d8d861ad59cadc227a6488b69c0ceff8d5de53357199bca9d95c",
+#   "feature_name": "局内金币使用角色属性真源",
+#   "feature_path": "features/v102/role_attribute_coins.feature",
+#   "implementation_hash": "sha256:a575456b5d0f3c9daf11aaf08b343433d8b3ac4db932edc47b16fa69364a004e",
+#   "scenarios": [
+#     {
+#       "index": 0,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_001 新玩家初始化写入角色属性金币",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "da313996cdd60e972cea81e3451fa9a0acb023a74cdab03d80e8bb85f1112c9e",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     },
+#     {
+#       "index": 1,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_002 获得金币通过统一边界写入coin_count",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "536883d3acfe9ff84b6b491b01a65ad61ab21a9b0d374b8fd4f2a3abb02c2e4b",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     },
+#     {
+#       "index": 2,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_003 消费金币通过统一边界写入coin_count",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "4b5812843e4ef970a2702932671ba911b81da763344e4fd1c5a5973ebe7ed5fa",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     },
+#     {
+#       "index": 3,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_004 双方支付只在双方属性可写时提交",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "ae828be4b762c2cca567b383d8a2bd982f3e240678583fcb777b761447b8685c",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     },
+#     {
+#       "index": 4,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_005 双方支付写入失败时回滚已写余额",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "81f4d2f90e6e6635c113d53f8a049be7425c8ad0499a090dfcec399afc8622ee",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     },
+#     {
+#       "index": 5,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_006 旧cash测试档案只作为加载输入兼容",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "f4ca9956bb80cff9f6749b3aa5b8f2e8af9f6c345db9a9b6ef29742c8d4b527e",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     },
+#     {
+#       "index": 6,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_007 非法coin_count值硬失败且可诊断",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "a82769c2d23fe172a7fc55575a2934f5416cff20143f4eb464b8e18a8e56b92f",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     },
+#     {
+#       "index": 7,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_008 缺失Role属性能力时硬失败且可诊断",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "9720e44bd5d3ece3128fec8e0cbc60d64480e8cbb3bd4643e24e3b3ec521747d",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     },
+#     {
+#       "index": 8,
+#       "mutation_count": 0,
+#       "name": "role_attribute_coins_009 静态护栏禁止player.cash运行时余额回流",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 0,
+#         "Survived": 0,
+#         "Total": 0
+#       },
+#       "scenario_hash": "2786c6fa19a84bc402d0f158738dbcaf28fd37545d36f353a6aa60a7eeaf01b2",
+#       "tested_at": "2026-07-07T02:59:54Z"
+#     }
+#   ],
+#   "tested_at": "2026-07-07T02:59:54Z",
+#   "version": 1
+# }
+# acceptance-mutation-manifest-end
 功能: 局内金币使用角色属性真源
 
 # 本规格是 player.cash 到角色 Fixed 属性 coin_count 的迁移契约。

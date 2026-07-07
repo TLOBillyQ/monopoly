@@ -1,11 +1,11 @@
 # language: zh-CN
-# mutation-stamp: sha256=44d6fcee5336dd17d58f9659e687156c3c363673f2089bb02bb5fa486bde1a34
+# mutation-stamp: sha256=e599735c95b0dd0f058901ebd9776b8e72c0a11f8f0b3c16aa52c941cf6a4ad7
 # acceptance-mutation-manifest-begin
 # {
-#   "background_hash": "76594754df43d968db55202941bdbd0bd6b7240b6a9307980229f325c8e658e6",
+#   "background_hash": "93da510e430d32ed1a4205d921d89fbf9bbe03a5a320c78350cb17ea87ece031",
 #   "feature_name": "覆盖率 tier 文件级排除机制",
 #   "feature_path": "features/quality/coverage_tier_excludes.feature",
-#   "implementation_hash": "sha256:3125e08cc6327fab977d54500384ed1fa49d6655e78eb7e4c4e079b469335db4",
+#   "implementation_hash": "sha256:bf19adb408ab418908c65c45feab4b39873c738839ee953bb592d3936b5eb04e",
 #   "scenarios": [
 #     {
 #       "index": 0,
@@ -18,7 +18,7 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "9e9fcd44f94bf817f016bd3d6cb8a2f1b8cd0e73b30d1436f81a2be7d632f7b5",
-#       "tested_at": "2026-05-28T14:54:29Z"
+#       "tested_at": "2026-07-07T02:55:38Z"
 #     },
 #     {
 #       "index": 1,
@@ -31,7 +31,7 @@
 #         "Total": 3
 #       },
 #       "scenario_hash": "1933cb4f49a6e60481e8ab8bb4c1c76f0fff3bc414fc7140b0644a1bb54716aa",
-#       "tested_at": "2026-05-28T14:54:29Z"
+#       "tested_at": "2026-07-07T02:55:39Z"
 #     },
 #     {
 #       "index": 2,
@@ -44,7 +44,7 @@
 #         "Total": 2
 #       },
 #       "scenario_hash": "bf1070c5928929a77352c0664749dcfd07589d44c42c6e001f96dba63ce6600a",
-#       "tested_at": "2026-05-28T14:54:30Z"
+#       "tested_at": "2026-07-07T02:55:40Z"
 #     },
 #     {
 #       "index": 3,
@@ -57,7 +57,7 @@
 #         "Total": 16
 #       },
 #       "scenario_hash": "086c01514363b786bbf04d7bfd5aa71299d27775cfcb2630a6ce9aac491f4e46",
-#       "tested_at": "2026-05-28T14:54:31Z"
+#       "tested_at": "2026-07-07T02:55:43Z"
 #     },
 #     {
 #       "index": 4,
@@ -70,7 +70,7 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "4b144ad58878b995bd2616f9c05ab39a68dacaa1b49b97d31f36766741e8288d",
-#       "tested_at": "2026-05-28T14:54:31Z"
+#       "tested_at": "2026-07-07T02:55:43Z"
 #     },
 #     {
 #       "index": 5,
@@ -83,10 +83,10 @@
 #         "Total": 0
 #       },
 #       "scenario_hash": "41c87daf365e55244a664a602b03c985164661057fdd6def6104e9c0c52a771d",
-#       "tested_at": "2026-05-28T14:54:31Z"
+#       "tested_at": "2026-07-07T02:55:43Z"
 #     }
 #   ],
-#   "tested_at": "2026-05-28T14:54:31Z",
+#   "tested_at": "2026-07-07T02:55:43Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end

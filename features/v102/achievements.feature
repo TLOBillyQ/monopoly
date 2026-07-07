@@ -1,4 +1,82 @@
 # language: zh-CN
+# mutation-stamp: sha256=98b02ce6255ebba760f202901ddf205d8e953fa3eda6307834215168f76aba67
+# acceptance-mutation-manifest-begin
+# {
+#   "background_hash": "d0adf25c3bf4277417bb4374353ac95e5be47351c9ba821c445e07d8bd344f63",
+#   "feature_name": "成就目录",
+#   "feature_path": "features/v102/achievements.feature",
+#   "implementation_hash": "sha256:54ea3f51432b6126b64e384ef663425275be05e240f9ee79f54d18d0d124370a",
+#   "scenarios": [
+#     {
+#       "index": 0,
+#       "mutation_count": 8,
+#       "name": "成就目录 A01 按编辑器成就表暴露完整目录",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 8,
+#         "Survived": 0,
+#         "Total": 8
+#       },
+#       "scenario_hash": "6bf626fc77e5929c995d9b8b0245837ffb5fdfa00085ef1752350123c5735e6e",
+#       "tested_at": "2026-07-07T02:58:49Z"
+#     },
+#     {
+#       "index": 1,
+#       "mutation_count": 40,
+#       "name": "成就目录 A02 暴露胜利与地块成就的名称条件和目标进度",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 40,
+#         "Survived": 0,
+#         "Total": 40
+#       },
+#       "scenario_hash": "44163f648b18a46a2ee161b56c7a593724fd536ff461d83f43e75415316a41df",
+#       "tested_at": "2026-07-07T02:58:59Z"
+#     },
+#     {
+#       "index": 2,
+#       "mutation_count": 100,
+#       "name": "成就目录 A03 暴露经济与卡牌成就的名称条件和目标进度",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 100,
+#         "Survived": 0,
+#         "Total": 100
+#       },
+#       "scenario_hash": "44489ef0385bd4257e1dc931f42eb0cee34d81116a24b23b7f09b6731deb426f",
+#       "tested_at": "2026-07-07T02:59:26Z"
+#     },
+#     {
+#       "index": 3,
+#       "mutation_count": 15,
+#       "name": "成就目录 A04 暴露建筑加盖成就的名称条件和目标进度",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 15,
+#         "Survived": 0,
+#         "Total": 15
+#       },
+#       "scenario_hash": "9c2b6bdc21c39f69e49b9435b7e2c9a68a47d3b7f846893e3e305f404bd70922",
+#       "tested_at": "2026-07-07T02:59:30Z"
+#     },
+#     {
+#       "index": 4,
+#       "mutation_count": 70,
+#       "name": "成就目录 A05 暴露特殊事件与皮肤成就的名称条件和目标进度",
+#       "result": {
+#         "Errors": 0,
+#         "Killed": 70,
+#         "Survived": 0,
+#         "Total": 70
+#       },
+#       "scenario_hash": "c186ced538f3ea0c41031a5aa9ff167183c51c0bb58d90ad7c95b69a77536e39",
+#       "tested_at": "2026-07-07T02:59:47Z"
+#     }
+#   ],
+#   "tested_at": "2026-07-07T02:59:47Z",
+#   "version": 1
+# }
+# acceptance-mutation-manifest-end
 
 功能: 成就目录
 
