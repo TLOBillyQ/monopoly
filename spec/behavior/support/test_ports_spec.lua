@@ -33,8 +33,6 @@ describe("scenario test_ports fixture", function()
     assert.equals(false, ports.ui_sync.is_input_blocked(state))
     assert.equals(true, ports.ui_sync.is_popup_active(state))
     assert.equals(true, ports.ui_sync.is_choice_active(state))
-    assert.equals(false, ports.ui_sync.is_market_active(state))
-    assert.equals(false, ports.ui_sync.is_market_active(nil))
     assert.equals(2, ports.ui_sync.get_popup_owner_index(state))
 
     local gate = ports.ui_sync.resolve_ui_gate(state)
@@ -50,6 +48,12 @@ describe("scenario test_ports fixture", function()
     assert.equals(false, empty_gate.choice_active)
     assert.equals(false, empty_gate.market_active)
     assert.equals(false, empty_gate.popup_active)
+    -- 契约钉死：测试替身每次 resolve 返回全新 gate 表，先取的 gate
+    -- 不被后续 resolve 就地改写（防断言重排后假绿/误诊）
+    assert.is_false(rawequal(gate, empty_gate))
+    assert.equals(true, gate.choice_active)
+    assert.equals(true, gate.popup_active)
+    assert.equals(7, gate.popup_seq)
 
     assert.equals(false, ports.ui_sync.set_input_blocked({}, true))
     assert.equals(false, ports.ui_sync.set_input_blocked(state, false))
@@ -111,7 +115,6 @@ describe("scenario test_ports fixture", function()
       is_input_blocked = function() return "input_blocked" end,
       is_popup_active = function() return "popup_active" end,
       is_choice_active = function() return "choice_active" end,
-      is_market_active = function() return "market_active" end,
       get_popup_owner_index = function() return "popup_owner" end,
       resolve_ui_gate = function() return "gate" end,
       set_input_blocked = function() return "set_input" end,
@@ -146,7 +149,6 @@ describe("scenario test_ports fixture", function()
     assert.equals("input_blocked", ports.ui_sync.is_input_blocked())
     assert.equals("popup_active", ports.ui_sync.is_popup_active())
     assert.equals("choice_active", ports.ui_sync.is_choice_active())
-    assert.equals("market_active", ports.ui_sync.is_market_active())
     assert.equals("popup_owner", ports.ui_sync.get_popup_owner_index())
     assert.equals("gate", ports.ui_sync.resolve_ui_gate())
     assert.equals("set_input", ports.ui_sync.set_input_blocked())

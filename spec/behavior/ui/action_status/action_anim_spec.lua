@@ -777,6 +777,11 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
         get_ui_state = function(state)
           return state and state.ui or nil
         end,
+        -- 提供 is_* 等门控查询的 override 必须同时提供 resolve_ui_gate
+        --（fill_ui_sync_defaults 防静默降级校验）；基于真实 gate 模块构建。
+        resolve_ui_gate = function(state)
+          return require("src.ui.ports.ui_sync.gate").snapshot(state and state.ui or nil)
+        end,
         is_input_blocked = function(state)
           local ui = state and state.ui or nil
           return ui and ui.input_blocked == true or false

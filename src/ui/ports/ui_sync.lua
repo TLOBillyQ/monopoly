@@ -39,9 +39,6 @@ function ui_sync_ports.build(common)
     is_choice_active = function(state)
       return ui_gate_sync.is_choice_active(state, common)
     end,
-    is_market_active = function(state)
-      return ui_gate_sync.is_market_active(state, common)
-    end,
     get_popup_owner_index = function(state)
       return ui_gate_sync.get_popup_owner_index(state, common)
     end,

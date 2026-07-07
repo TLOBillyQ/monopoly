@@ -1,5 +1,6 @@
 local choice_route_policy = require("src.config.choice.route_policy")
 local choice_contract = require("src.config.choice.contract")
+local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
 local local_actor_resolver = require("src.ui.coord.local_actor_resolver")
 local role_id_utils = require("src.foundation.identity")
 local runtime_ui = require("src.ui.render.runtime_ui")
@@ -73,15 +74,17 @@ end
 choice_ui_state.resolve_route_key = choice_route_policy.resolve
 
 local _cached_gate_state = {}
+local _open_state_gate = {}
 
 local function _resolve_choice_open_state(route_key, ui, game)
   if route_key == "base_inline" or route_key == "item_phase_passive" then
     return true
   end
+  local gate = ui_gate_sync.snapshot(ui, _open_state_gate)
   if route_key == "market" then
-    return ui and ui.market_active == true or false
+    return gate.market_active
   end
-  return ui and ui.choice_active == true and ui.active_choice_screen_key == route_key or false
+  return gate.choice_active and ui ~= nil and ui.active_choice_screen_key == route_key or false
 end
 
 local function _resolve_owner_state(game, state, choice, route_key)

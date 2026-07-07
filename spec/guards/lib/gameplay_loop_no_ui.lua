@@ -31,6 +31,17 @@ local function build_ports()
       build_model = function() return {} end,
       refresh_from_dirty = function() return false end,
       get_ui_state = function(state) return state and state.ui or nil end,
+      -- 无 UI 环境：gate 恒全关，与下方 is_* 存根一致（提供门控查询
+      -- override 时必须同时提供 resolve_ui_gate，见 ui_sync_defaults 契约）。
+      -- 本 guard 禁 require src.ui.*，故内联字面 gate 而非复用 gate 模块。
+      resolve_ui_gate = function()
+        return {
+          input_blocked = false,
+          choice_active = false,
+          market_active = false,
+          popup_active = false,
+        }
+      end,
       is_input_blocked = function() return false end,
       is_popup_active = function() return false end,
       is_choice_active = function() return false end,

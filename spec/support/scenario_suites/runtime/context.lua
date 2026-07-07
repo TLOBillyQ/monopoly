@@ -13,6 +13,14 @@ local function _case(name)
   }
 end
 
+-- 门控测试替身基于真实 gate 模块构建：键名→语义的映射不在这里重复。
+local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
+local _gate_common = {
+  get_ui_state = function(state)
+    return state and state.ui or nil
+  end,
+}
+
 local function _build_test_ports(overrides)
   overrides = overrides or {}
   return gameplay_loop_ports.resolve({
@@ -35,37 +43,28 @@ local function _build_test_ports(overrides)
       build_model = function() return nil end,
       refresh_from_dirty = overrides.refresh_from_dirty or function() return false end,
       follow_camera = overrides.follow_camera or function() return false end,
-      get_ui_state = function(state) return state and state.ui or nil end,
+      get_ui_state = function(state)
+        return _gate_common.get_ui_state(state)
+      end,
       is_input_blocked = function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.input_blocked == true or false
+        return ui_gate_sync.is_input_blocked(state, _gate_common)
       end,
       is_popup_active = function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.popup_active == true or false
+        return ui_gate_sync.is_popup_active(state, _gate_common)
       end,
       is_choice_active = function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.choice_active == true or false
-      end,
-      is_market_active = function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.market_active == true or false
+        return ui_gate_sync.is_choice_active(state, _gate_common)
       end,
       get_popup_owner_index = function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.popup_owner_index or nil
+        return ui_gate_sync.get_popup_owner_index(state, _gate_common)
+      end,
+      resolve_ui_gate = function(state)
+        -- 每次返回全新 gate 表（snapshot 不传 out）：测试可安全跨 resolve
+        -- 持有 gate；生产 resolve_ui_gate 复用单例快照，契约见 gate.lua。
+        return ui_gate_sync.snapshot(_gate_common.get_ui_state(state))
       end,
       set_input_blocked = function(state, blocked)
-        local ui = state and state.ui or nil
-        if not ui then
-          return false
-        end
-        if ui.input_blocked == blocked then
-          return false
-        end
-        ui.input_blocked = blocked
-        return true
+        return ui_gate_sync.set_input_blocked(state, blocked, _gate_common)
       end,
     },
     debug = {

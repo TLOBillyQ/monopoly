@@ -5,8 +5,10 @@ local modal = require("src.ui.coord.modal")
 local main_view = require("src.ui.coord.ui_runtime")
 local view_model = require("src.ui.view")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
+local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
 
 local ui_model_sync = {}
+local _close_modal_gate = {}
 
 local function _mark_ui_dirty_from_runtime(state, dirty)
   if runtime_state.is_ui_dirty(state) then
@@ -63,11 +65,8 @@ local function _should_open_choice_modal(game, state, next_model, dirty)
 end
 
 local function _should_close_choice_modal(state, next_model)
-  local ui = state and state.ui or nil
-  if not ui then
-    return false
-  end
-  if not ui.choice_active then
+  local gate = ui_gate_sync.snapshot(state and state.ui or nil, _close_modal_gate)
+  if not gate.choice_active then
     return false
   end
   return not (next_model and next_model.choice)
