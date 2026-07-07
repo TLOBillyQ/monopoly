@@ -408,3 +408,16 @@ commit hash: 6408253e40
 ```
 
 Action taken: re-read architect role and constitution, merged 6408253e40 into swarmforge-architect (3 个行为 spec 清掉最后 CRAP gate 豁免,基线归零;无 src 改动),四阶段架构审查无需结构修正,verify --smoke PASS。本方零新增提交,按规则不转发,done_with_current 出队。
+
+## 2026-07-07 11:25:30 +0800 — sent handoffs (transient pool-release fix)
+
+Complete handoff message sent (to coder, refactorer, and specifier, priority 00):
+
+```text
+type: git_handoff
+task: main-turn-buttons-slot-check
+branch name: swarmforge-architect
+commit hash: 9dafcb82cc
+```
+
+Summary: 处理 refactorer note"overlay_runtime transient units skip pool release"。根因:_spawn_transient_entry 丢弃 _spawn_unit 的 pooled 返回值且不存 unit_id,池化瞬态单位销毁时落到 destroy_unit 分支泄漏池槽位;比照常驻桶路径补齐两字段。新增 pooled-release 行为用例;mutate-all 94.9% 写回(残留为矛盾宿主形态/内部不可达守卫等价类)。verify --smoke PASS、acceptance 755 ok、anim 目录 DRY 无重复。功能性提交,已同步 specifier。
