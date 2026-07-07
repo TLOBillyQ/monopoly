@@ -6,10 +6,6 @@ local target_layout = {}
 local ui_slot_count = 7
 local center_slot = 4
 
-local function _manhattan_distance(a, b)
-  return math.abs(a.row - b.row) + math.abs(a.col - b.col)
-end
-
 local function _max_key(t)
   local max = 0
   for k in pairs(t) do
@@ -26,7 +22,7 @@ local function _build_candidate_map(board, player_position, candidate_indices, s
       has_self = true
     else
       local tile = board:get_tile(idx)
-      local dist = _manhattan_distance(start_tile, tile)
+      local dist = target_direction.manhattan_distance(start_tile, tile)
       if dist <= 0 then dist = 1 end
       by_dist[dist] = by_dist[dist] or {}
       table.insert(by_dist[dist], idx)

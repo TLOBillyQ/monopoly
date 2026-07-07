@@ -11,7 +11,7 @@ local robot_scale = host_types.vec3(0.06, 0.94, 0.06)
 local robot_y_offset = 1.0
 local robot_rotation = host_types.quat(0.0, 0.0, 0.0)
 
-local function _deps(state)
+function robot.resolve_presentation_runtime(state)
   return state and state.presentation_runtime or nil
 end
 
@@ -144,7 +144,7 @@ function robot.play_clear_obstacles(state, anim, duration, opts)
     return
   end
   local player_pos = compute.overlay_pos_for_player(state, assert(anim.player_id, "missing player_id"), robot_y_offset)
-  local hr = _resolve_hr(_deps(state))
+  local hr = _resolve_hr(robot.resolve_presentation_runtime(state))
   local schedule = _resolve_schedule(opts, hr)
   local branches = anim.branches or {}
   if #branches == 0 then

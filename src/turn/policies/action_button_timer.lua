@@ -9,7 +9,7 @@ local function _reset_action_button(state)
   state.action_button_player_id = nil
 end
 
-local function _resolve_elapsed(elapsed, dt)
+function action_button_timer.resolve_elapsed(elapsed, dt)
   return (elapsed or 0) + (dt or 0)
 end
 
@@ -41,7 +41,7 @@ local function _should_track_action_button_for_player(game, player)
 end
 
 local function _update_elapsed_timer(state, dt, timeout)
-  local elapsed = _resolve_elapsed(state.action_button_elapsed, dt)
+  local elapsed = action_button_timer.resolve_elapsed(state.action_button_elapsed, dt)
   if elapsed < timeout then
     state.action_button_elapsed = elapsed
     return true
