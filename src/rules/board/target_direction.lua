@@ -1,5 +1,9 @@
 local target_direction = {}
 
+function target_direction.manhattan_distance(a, b)
+  return math.abs(a.row - b.row) + math.abs(a.col - b.col)
+end
+
 local function _sign_direction(value)
   return value < 0 and "forward" or "backward"
 end

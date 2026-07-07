@@ -7,10 +7,6 @@ local turn_timer_policy = {}
 turn_timer_policy.is_action_button_wait_active = action_button_wait.is_action_button_wait_active
 turn_timer_policy.update_action_button_timer = action_button_timer.update_action_button_timer
 
-local function _resolve_elapsed(elapsed, dt)
-  return (elapsed or 0) + (dt or 0)
-end
-
 local function _complete_wait(turn, active_key, elapsed_key, step_turn, game)
   turn[active_key] = false
   turn[elapsed_key] = 0
@@ -26,7 +22,7 @@ local function _wait_timer(game, state, dt, step_turn, active_key, elapsed_key, 
     return
   end
 
-  local elapsed = _resolve_elapsed(turn[elapsed_key], dt)
+  local elapsed = action_button_timer.resolve_elapsed(turn[elapsed_key], dt)
   local timeout = turn[timeout_key] or 0
   if timeout <= 0 then
     _complete_wait(turn, active_key, elapsed_key, step_turn, game)

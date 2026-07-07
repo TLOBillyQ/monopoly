@@ -9,9 +9,7 @@ local host_types = require("src.foundation.host_types")
 local overlay = {}
 local roadblock_scale = host_types.vec3(4.0, 4.0, 4.0)
 
-local function _deps(state)
-  return state and state.presentation_runtime or nil
-end
+local _deps = robot.resolve_presentation_runtime
 
 local function _play_roadblock(state, tile_index)
   local unit_id = prefab.unit and prefab.unit["路障"] or nil
