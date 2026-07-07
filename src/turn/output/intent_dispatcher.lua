@@ -4,6 +4,7 @@ local choice_route_policy = require("src.config.choice.route_policy")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
 local dirty_tracker = require("src.state.dirty_tracker")
+local choice_meta_validator = require("src.turn.output.choice_meta_validator")
 
 local intent_dispatcher = {}
 
@@ -38,44 +39,10 @@ local function _build_choice_entry(choice_id, choice_spec)
   return entry
 end
 
-local function _validate_required_meta(choice_spec, required_meta)
-  if type(required_meta) ~= "table" or #required_meta == 0 then
-    return choice_spec.meta
-  end
-
-  local meta = choice_spec.meta
-  assert(type(meta) == "table", tostring(choice_spec.kind) .. " requires meta")
-  for _, key in ipairs(required_meta) do
-    assert(meta[key] ~= nil, tostring(choice_spec.kind) .. " requires meta." .. tostring(key))
-  end
-  return meta
-end
-
-local function _validate_choice_meta(game, choice_spec)
-  local registries = game and game.registries or nil
-  local choice_registry = registries and registries.choices or nil
-  if type(choice_registry) ~= "table" or type(choice_registry.descriptor_for) ~= "function" then
-    return nil
-  end
-  local descriptor = choice_registry:descriptor_for(choice_spec.kind)
-  if descriptor and descriptor.normalize_meta ~= nil then
-    local normalized_meta = descriptor.normalize_meta(game, choice_spec.meta, choice_spec)
-    if normalized_meta ~= nil then
-      choice_spec.meta = normalized_meta
-    end
-  end
-  local required_meta = descriptor and descriptor.required_meta or nil
-  local meta = _validate_required_meta(choice_spec, required_meta)
-  if descriptor and descriptor.meta_validator ~= nil then
-    descriptor.meta_validator(game, meta, choice_spec)
-  end
-  return descriptor
-end
-
 function intent_dispatcher.open_choice(game, choice_spec)
   assert(game and game.turn, "Choice.open requires game.turn")
   assert(choice_spec ~= nil, "missing choice_spec")
-  _validate_choice_meta(game, choice_spec)
+  choice_meta_validator.validate(game, choice_spec)
 
   local seq = game.turn.choice_seq or 0
   seq = seq + 1
@@ -137,45 +104,40 @@ return intent_dispatcher
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=ac180f52a3d196a6
+projectHash=b06cd3821d2553a3
 scope.0.id=chunk:src/turn/output/intent_dispatcher.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=137
-scope.0.semanticHash=1cd311b08f47aa83
-scope.1.id=function:_build_choice_log_text:10
+scope.0.endLine=104
+scope.0.semanticHash=d5e4722064a48b13
+scope.1.id=function:_build_choice_log_text:11
 scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=19
+scope.1.startLine=11
+scope.1.endLine=20
 scope.1.semanticHash=d2630b9f3c233271
-scope.2.id=function:_build_choice_entry:22
+scope.2.id=function:_build_choice_entry:23
 scope.2.kind=function
-scope.2.startLine=22
-scope.2.endLine=39
+scope.2.startLine=23
+scope.2.endLine=40
 scope.2.semanticHash=9cc81df44cb69d4f
-scope.3.id=function:_validate_choice_meta:54
+scope.3.id=function:intent_dispatcher.open_choice:42
 scope.3.kind=function
-scope.3.startLine=54
-scope.3.endLine=73
-scope.3.semanticHash=9e272890fe9f9e10
-scope.4.id=function:intent_dispatcher.open_choice:75
+scope.3.startLine=42
+scope.3.endLine=61
+scope.3.semanticHash=352182ad1ff16f87
+scope.4.id=function:intent_dispatcher.push_popup:63
 scope.4.kind=function
-scope.4.startLine=75
-scope.4.endLine=94
-scope.4.semanticHash=f4c23bc3a874d922
-scope.5.id=function:intent_dispatcher.push_popup:96
+scope.4.startLine=63
+scope.4.endLine=75
+scope.4.semanticHash=8ad129129e1381ac
+scope.5.id=function:intent_dispatcher.dispatch:77
 scope.5.kind=function
-scope.5.startLine=96
-scope.5.endLine=108
-scope.5.semanticHash=8ad129129e1381ac
-scope.6.id=function:intent_dispatcher.dispatch:110
+scope.5.startLine=77
+scope.5.endLine=94
+scope.5.semanticHash=9c0785916467b150
+scope.6.id=function:intent_dispatcher.build_port:96
 scope.6.kind=function
-scope.6.startLine=110
-scope.6.endLine=127
-scope.6.semanticHash=9c0785916467b150
-scope.7.id=function:intent_dispatcher.build_port:129
-scope.7.kind=function
-scope.7.startLine=129
-scope.7.endLine=134
-scope.7.semanticHash=2d76d51e30879093
+scope.6.startLine=96
+scope.6.endLine=101
+scope.6.semanticHash=2d76d51e30879093
 ]]

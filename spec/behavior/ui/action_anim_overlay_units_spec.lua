@@ -208,6 +208,77 @@ describe("presentation.action_anim_overlay_units", function()
     assert(captured_scale.x == 4.0 and captured_scale.y == 4.0 and captured_scale.z == 4.0, "roadblock should use 4x scale")
   end)
 
+  it("anim_unit_overlay_play_overlay_mine_spawns_via_runtime_with_ground_offset", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local prefab = require("Data.Prefab")
+    local state = support.build_min_state()
+    local spawn_calls = {}
+    local original_group = prefab.group["地雷"]
+    prefab.group["地雷"] = 7777
+
+    _with_patches({
+      {
+        target = overlay_runtime,
+        key = "spawn_overlay",
+        value = function(_scene, kind, tile_index, group_id, _unit_id, pos)
+          spawn_calls[#spawn_calls + 1] = {
+            kind = kind,
+            tile_index = tile_index,
+            group_id = group_id,
+            pos = pos,
+          }
+        end,
+      },
+    }, function()
+      overlay.play_overlay(state, { kind = "mine", tile_index = 1 }, 0.2, {})
+    end)
+
+    prefab.group["地雷"] = original_group
+
+    assert(#spawn_calls == 1, "mine overlay should spawn exactly once")
+    assert(spawn_calls[1].kind == "mine", "mine overlay should pass the mine kind")
+    assert(spawn_calls[1].tile_index == 1, "mine overlay should target the requested tile")
+    assert(spawn_calls[1].group_id == 7777, "mine overlay should pass the resolved group id")
+    assert(spawn_calls[1].pos ~= nil, "mine overlay should pass a resolved ground position")
+  end)
+
+  it("anim_unit_overlay_play_overlay_mine_warns_and_skips_when_prefab_missing", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local prefab = require("Data.Prefab")
+    local state = support.build_min_state()
+    local spawn_calls = 0
+    local warns = 0
+    local original_group = prefab.group["地雷"]
+    local original_unit = prefab.unit["地雷"]
+    prefab.group["地雷"] = nil
+    prefab.unit["地雷"] = nil
+
+    _with_patches({
+      {
+        target = overlay_runtime,
+        key = "spawn_overlay",
+        value = function()
+          spawn_calls = spawn_calls + 1
+        end,
+      },
+      {
+        target = logger,
+        key = "warn",
+        value = function()
+          warns = warns + 1
+        end,
+      },
+    }, function()
+      overlay.play_overlay(state, { kind = "mine", tile_index = 1 }, 0.2, {})
+    end)
+
+    prefab.group["地雷"] = original_group
+    prefab.unit["地雷"] = original_unit
+
+    assert(spawn_calls == 0, "missing mine prefab should skip the spawn")
+    assert(warns == 1, "missing mine prefab should warn exactly once")
+  end)
+
   it("action_anim_robot_overlay_uses_robot_scale_not_v3_one", function()
     local overlay = require("src.ui.render.anim.unit_overlay")
     local state = support.build_min_state({
@@ -304,6 +375,46 @@ describe("presentation.action_anim_overlay_units", function()
         "robot scale must match robot_scale constant (0.06,0.94,0.06) for spawn #" .. i
       )
     end
+  end)
+
+  it("anim_unit_overlay_clear_obstacles_warns_and_skips_when_robot_prefab_missing", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local prefab = require("Data.Prefab")
+    local state = support.build_min_state()
+    local acquire_calls = 0
+    local warns = 0
+    local original_robot = prefab.unit["清障机器人"]
+    prefab.unit["清障机器人"] = nil
+
+    _with_patches({
+      {
+        target = host_runtime,
+        key = "acquire_unit",
+        value = function()
+          acquire_calls = acquire_calls + 1
+          return { id = "robot" }
+        end,
+      },
+      {
+        target = logger,
+        key = "warn",
+        value = function()
+          warns = warns + 1
+        end,
+      },
+    }, function()
+      overlay.play_clear_obstacles(state, {
+        player_id = 1,
+        branches = {},
+      }, 0.1, {
+        clear_overlay = function() end,
+      })
+    end)
+
+    prefab.unit["清障机器人"] = original_robot
+
+    assert(acquire_calls == 0, "missing robot prefab should skip spawning")
+    assert(warns == 1, "missing robot prefab should warn exactly once")
   end)
 
   it("anim_unit_overlay_clear_obstacles_moves_non_table_host_robot_without_respawn", function()

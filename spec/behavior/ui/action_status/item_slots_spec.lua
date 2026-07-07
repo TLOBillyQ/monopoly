@@ -128,6 +128,125 @@ describe("presentation_item_slots", function()
     _assert_eq(intent and intent.id, "item_slot_1", "outline click should map to slot action")
   end)
 
+  it("_test_item_slot_click_without_choice_warns_and_returns_nil", function()
+    local route = require("src.ui.input.route_item_slots")
+    local logger = require("src.foundation.log")
+    local warned = {}
+    local state = {
+      ui = {
+        item_slots = ids.slots(1),
+        card_outlines = ids.outlines(1),
+      },
+      ui_model = { choice = nil },
+    }
+    _bind_ui_runtime(state)
+
+    local specs = route.build(state)
+    local intent
+    _with_patches({
+      { target = logger, key = "warn", value = function() warned[#warned + 1] = true end },
+    }, function()
+      intent = specs[1].build_intent()
+    end)
+
+    _assert_eq(intent, nil, "slot click without an item-slot choice should yield no intent")
+    _assert_eq(#warned, 1, "slot click without a choice should log one warning")
+  end)
+
+  it("_test_item_slot_click_denied_slot_enqueues_mapped_tip", function()
+    local route = require("src.ui.input.route_item_slots")
+    local host = require("src.ui.host_bridge")
+    local tips = {}
+    local state = {
+      ui = {
+        item_slots = ids.slots(1),
+        card_outlines = ids.outlines(1),
+      },
+      ui_model = {
+        choice = {
+          kind = "item_phase_passive",
+          route_key = "item_phase_passive",
+          uses_item_slots = true,
+          slot_states = {
+            [1] = { item_id = 2001, available = false, deny_reason = "effect_group_used" },
+          },
+        },
+      },
+    }
+    _bind_ui_runtime(state)
+
+    local specs = route.build(state)
+    local intent
+    _with_patches({
+      { target = host, key = "enqueue_tip", value = function(tip) tips[#tips + 1] = tip end },
+    }, function()
+      intent = specs[1].build_intent()
+    end)
+
+    _assert_eq(intent, nil, "denied slot click should not produce an intent")
+    _assert_eq(#tips, 1, "denied slot click should enqueue one tip")
+    _assert_eq(tips[1] and tips[1].text, "骰子效果已经用过了", "known deny reason should map to its text")
+    _assert_eq(tips[1] and tips[1].dedupe_key, "item_deny:effect_group_used",
+      "deny tip should carry a reason-scoped dedupe key")
+  end)
+
+  it("_test_item_slot_click_denied_slot_without_reason_uses_default_text", function()
+    local route = require("src.ui.input.route_item_slots")
+    local host = require("src.ui.host_bridge")
+    local tips = {}
+    local state = {
+      ui = {
+        item_slots = ids.slots(1),
+        card_outlines = ids.outlines(1),
+      },
+      ui_model = {
+        choice = {
+          kind = "item_phase_passive",
+          route_key = "item_phase_passive",
+          uses_item_slots = true,
+          slot_states = {
+            [1] = { item_id = 2001, available = false },
+          },
+        },
+      },
+    }
+    _bind_ui_runtime(state)
+
+    local specs = route.build(state)
+    local intent
+    _with_patches({
+      { target = host, key = "enqueue_tip", value = function(tip) tips[#tips + 1] = tip end },
+    }, function()
+      intent = specs[1].build_intent()
+    end)
+
+    _assert_eq(intent, nil, "denied slot click should not produce an intent")
+    _assert_eq(tips[1] and tips[1].text, "现在不能用哦", "missing deny reason should fall back to default text")
+  end)
+
+  it("_test_item_slot_click_available_slot_returns_ui_button", function()
+    local route = require("src.ui.input.route_item_slots")
+    local state = {
+      ui = {
+        item_slots = ids.slots(1),
+        card_outlines = ids.outlines(1),
+      },
+      ui_model = {
+        choice = {
+          kind = "item_phase_choice",
+          route_key = "base_inline",
+          uses_item_slots = true,
+        },
+      },
+    }
+    _bind_ui_runtime(state)
+
+    local specs = route.build(state)
+    local intent = specs[1].build_intent()
+    _assert_eq(intent and intent.type, "ui_button", "playable slot click should build a ui_button intent")
+    _assert_eq(intent and intent.id, "item_slot_1", "playable slot click should target its slot action")
+  end)
+
   it("_test_item_phase_ask_confirm_clears_highlight_suppress", function()
      local item_phase_ask_flow = require("src.ui.input.item_phase_ask")
     local closed = 0

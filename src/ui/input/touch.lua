@@ -18,11 +18,11 @@ function touch_policy.set_many_touch_enabled(ui, names, enabled)
   end
 end
 
-function touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
-  if not ui or not ui.set_touch_enabled then
-    return
-  end
-  controls = controls or ui.auto_control_nodes or { base_nodes.auto_button, base_nodes.auto_label }
+local function resolve_auto_controls(ui, controls)
+  return controls or ui.auto_control_nodes or { base_nodes.auto_button, base_nodes.auto_label }
+end
+
+local function apply_auto_controls(ui, auto_enabled, controls)
   local auto_effect_seen = false
   for _, name in ipairs(controls) do
     if name == base_nodes.auto_button then
@@ -34,7 +34,15 @@ function touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
       auto_effect_seen = true
     end
   end
-  if not auto_effect_seen then
+  return auto_effect_seen
+end
+
+function touch_policy.set_auto_controls_touch(ui, auto_enabled, controls)
+  if not ui or not ui.set_touch_enabled then
+    return
+  end
+  controls = resolve_auto_controls(ui, controls)
+  if not apply_auto_controls(ui, auto_enabled, controls) then
     ui:set_touch_enabled(base_nodes.auto_effect, false)
   end
 end
@@ -83,15 +91,25 @@ return touch_policy
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=ed1a762d2a80e5a3
+projectHash=b5d58f936ea48d4f
 scope.0.id=chunk:src/ui/input/touch.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=83
-scope.0.semanticHash=eacd72806ef85176
-scope.1.id=function:touch_policy.set_choice_screen_locked:66
+scope.0.endLine=91
+scope.0.semanticHash=510b74ede98ff38e
+scope.1.id=function:resolve_auto_controls:21
 scope.1.kind=function
-scope.1.startLine=66
-scope.1.endLine=80
-scope.1.semanticHash=d71a3fd947304630
+scope.1.startLine=21
+scope.1.endLine=23
+scope.1.semanticHash=858e323f685de82d
+scope.2.id=function:touch_policy.set_auto_controls_touch:40
+scope.2.kind=function
+scope.2.startLine=40
+scope.2.endLine=48
+scope.2.semanticHash=72978f12cb826e79
+scope.3.id=function:touch_policy.set_choice_screen_locked:74
+scope.3.kind=function
+scope.3.startLine=74
+scope.3.endLine=88
+scope.3.semanticHash=d71a3fd947304630
 ]]

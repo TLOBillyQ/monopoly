@@ -1,0 +1,131 @@
+local shared = require("src.ui.render.board.visual_sync_shared")
+local tile_sync = require("src.ui.render.board.visual_sync_tile")
+local overlay_sync = require("src.ui.render.board.visual_sync_overlay")
+
+local visual_sync_batch = {}
+
+local function _dedupe_into(raw_list, out, seen)
+  for k in pairs(out) do out[k] = nil end
+  for k in pairs(seen) do seen[k] = nil end
+  if type(raw_list) ~= "table" then
+    return out
+  end
+  for _, value in ipairs(raw_list) do
+    if value ~= nil and not seen[value] then
+      seen[value] = true
+      out[#out + 1] = value
+    end
+  end
+  return out
+end
+
+local _norm_tiles = {}
+local _norm_tiles_seen = {}
+local _norm_overlays = {}
+local _norm_overlays_seen = {}
+local _norm_owners = {}
+local _norm_owners_seen = {}
+local _normalized = { tile_ids = _norm_tiles, overlay_indices = _norm_overlays, affected_owner_ids = _norm_owners }
+
+local function _normalize_payload(payload)
+  payload = payload or {}
+  _normalized.tile_ids = _dedupe_into(payload.tile_ids, _norm_tiles, _norm_tiles_seen)
+  _normalized.overlay_indices = _dedupe_into(payload.overlay_indices, _norm_overlays, _norm_overlays_seen)
+  _normalized.affected_owner_ids = _dedupe_into(payload.affected_owner_ids, _norm_owners, _norm_owners_seen)
+  return _normalized
+end
+
+local _expand_owner_set = {}
+local _expand_tile_ids = {}
+
+local function _clear_table(t)
+  for k in pairs(t) do t[k] = nil end
+end
+
+local function _build_owner_set(owner_ids)
+  _clear_table(_expand_owner_set)
+  for _, owner_id in ipairs(owner_ids) do
+    _expand_owner_set[owner_id] = true
+  end
+  return _expand_owner_set
+end
+
+local function _collect_owned_land_tiles(path, owner_set, out)
+  for _, tile in ipairs(path) do
+    if tile and tile.type == "land" and tile.owner_id and owner_set[tile.owner_id] then
+      out[#out + 1] = tile.id
+    end
+  end
+  return out
+end
+
+local function _expand_affected_tiles(state, owner_ids)
+  _clear_table(_expand_tile_ids)
+  if not owner_ids or #owner_ids == 0 then
+    return _expand_tile_ids
+  end
+  local board = shared.resolve_board(state)
+  if not (board and type(board.path) == "table") then
+    return _expand_tile_ids
+  end
+  local owner_set = _build_owner_set(owner_ids)
+  return _collect_owned_land_tiles(board.path, owner_set, _expand_tile_ids)
+end
+
+local _sync_seen = {}
+
+local function _sync_tile_dedup(state, tile_ids)
+  local handled = false
+  for _, tile_id in ipairs(tile_ids) do
+    if tile_id ~= nil and not _sync_seen[tile_id] then
+      _sync_seen[tile_id] = true
+      if tile_sync.sync_tile_visual(state, tile_id) then handled = true end
+    end
+  end
+  return handled
+end
+
+local function _sync_overlays(state, indices)
+  local handled = false
+  for _, board_index in ipairs(indices) do
+    if overlay_sync.sync_overlay_visual(state, board_index) then
+      handled = true
+    end
+  end
+  return handled
+end
+
+function visual_sync_batch.sync_many(state, payload)
+  local normalized = _normalize_payload(payload)
+  for k in pairs(_sync_seen) do _sync_seen[k] = nil end
+  local handled = _sync_tile_dedup(state, normalized.tile_ids)
+  if _sync_tile_dedup(state, _expand_affected_tiles(state, normalized.affected_owner_ids)) then
+    handled = true
+  end
+  if _sync_overlays(state, normalized.overlay_indices) then
+    handled = true
+  end
+  return handled
+end
+
+return visual_sync_batch
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=a82cb02e25454b30
+scope.0.id=chunk:src/ui/render/board/visual_sync_batch.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=112
+scope.0.semanticHash=9496e0b9d560aeb4
+scope.1.id=function:_normalize_payload:30
+scope.1.kind=function
+scope.1.startLine=30
+scope.1.endLine=36
+scope.1.semanticHash=2bd0c165cdf35b21
+scope.2.id=function:_expand_affected_tiles:62
+scope.2.kind=function
+scope.2.startLine=62
+scope.2.endLine=73
+scope.2.semanticHash=e757ea4a161c0e64
+]]
