@@ -421,3 +421,15 @@ commit hash: 9dafcb82cc
 ```
 
 Summary: 处理 refactorer note"overlay_runtime transient units skip pool release"。根因:_spawn_transient_entry 丢弃 _spawn_unit 的 pooled 返回值且不存 unit_id,池化瞬态单位销毁时落到 destroy_unit 分支泄漏池槽位;比照常驻桶路径补齐两字段。新增 pooled-release 行为用例;mutate-all 94.9% 写回(残留为矛盾宿主形态/内部不可达守卫等价类)。verify --smoke PASS、acceptance 755 ok、anim 目录 DRY 无重复。功能性提交,已同步 specifier。
+
+## 2026-07-07 11:32:00 +0800 received handoff
+
+Complete handoff message received:
+
+```text
+sender role: refactorer
+task: main-turn-buttons-slot-check
+commit hash: 58e8aa872a
+```
+
+Action taken: merged 58e8aa872a(合并池化修复后趋同的 _spawn_transient_entry/_spawn_overlay_entry 为单一 _spawn_entry),逐分支行为核对无差异,verify --smoke PASS,差分变异 42/43;mutate-all 刷新过期 manifest(94.6%,残留为装饰性 kind 字面量等价类)。本方仅 manifest/记录变更,不转发,done_with_current 出队。
