@@ -112,20 +112,35 @@ return visual_sync_batch
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=a82cb02e25454b30
+projectHash=5f59ae3beee0b6ba
 scope.0.id=chunk:src/ui/render/board/visual_sync_batch.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=112
 scope.0.semanticHash=9496e0b9d560aeb4
+scope.0.lastMutatedAt=2026-07-07T02:47:52Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=46
+scope.0.lastMutationKilled=46
 scope.1.id=function:_normalize_payload:30
 scope.1.kind=function
 scope.1.startLine=30
 scope.1.endLine=36
 scope.1.semanticHash=2bd0c165cdf35b21
+scope.1.lastMutatedAt=2026-07-07T02:47:52Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=4
+scope.1.lastMutationKilled=4
 scope.2.id=function:_expand_affected_tiles:62
 scope.2.kind=function
 scope.2.startLine=62
 scope.2.endLine=73
 scope.2.semanticHash=e757ea4a161c0e64
+scope.2.lastMutatedAt=2026-07-07T02:47:52Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=survived
+scope.2.lastMutationSites=13
+scope.2.lastMutationKilled=12
 ]]

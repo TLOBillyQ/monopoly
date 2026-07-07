@@ -199,4 +199,61 @@ describe("domain turn timer policy coverage", function()
     _assert_eq(game.turn.inter_turn_wait_active, true, "active should remain true when deferred")
     _reset_tip_queue()
   end)
+
+  it("update_detained_wait_timer nil state noop", function()
+    logger.set_test_mode(false)
+    local game = { turn = { detained_wait_active = true, detained_wait_seconds = 0 } }
+    local called = false
+    turn_timer_policy.update_detained_wait_timer(game, nil, 0.1, function() called = true end)
+    _assert_eq(called, false, "nil state should not step the turn")
+    _assert_eq(game.turn.detained_wait_active, true, "nil state should leave the wait untouched")
+  end)
+
+  it("update_detained_wait_timer missing timeout fires immediately", function()
+    logger.set_test_mode(false)
+    local game = { turn = { detained_wait_active = true } }
+    local state = {}
+    local called = false
+    turn_timer_policy.update_detained_wait_timer(game, state, 0.5, function() called = true end)
+    _assert_eq(called, true, "missing timeout should default to zero and fire")
+    _assert_eq(game.turn.detained_wait_active, false, "detained_wait_active should be cleared")
+  end)
+
+  it("update_detained_wait_timer fractional timeout waits", function()
+    logger.set_test_mode(false)
+    local game = { turn = { detained_wait_active = true, detained_wait_seconds = 0.5 } }
+    local state = {}
+    local called = false
+    turn_timer_policy.update_detained_wait_timer(game, state, 0.1, function() called = true end)
+    _assert_eq(called, false, "a positive fractional timeout must wait, not fire")
+    _assert_eq(game.turn.detained_wait_elapsed, 0.1, "elapsed should accumulate below the timeout")
+  end)
+
+  it("update_detained_wait_timer elapsed reaching timeout exactly fires", function()
+    logger.set_test_mode(false)
+    local game = { turn = { detained_wait_active = true, detained_wait_seconds = 2, detained_wait_elapsed = 1.5 } }
+    local state = {}
+    local called = false
+    turn_timer_policy.update_detained_wait_timer(game, state, 0.5, function() called = true end)
+    _assert_eq(called, true, "elapsed == timeout should fire step_turn")
+    _assert_eq(game.turn.detained_wait_active, false, "detained_wait_active should be cleared")
+    _assert_eq(game.turn.detained_wait_elapsed, 0, "elapsed should be reset")
+  end)
+
+  it("update_inter_turn_wait_timer zero timeout fires without consulting tips", function()
+    logger.set_test_mode(false)
+    _reset_tip_queue()
+    tip_queue.configure_runtime({
+      presenter = function() end,
+      scheduler = function() return true end,
+    })
+    tip_queue.enqueue({ text = "block", duration = 5.0, blocks_inter_turn = true })
+    local game = { turn = { inter_turn_wait_active = true, inter_turn_wait_seconds = 0 } }
+    local state = {}
+    local called = false
+    turn_timer_policy.update_inter_turn_wait_timer(game, state, 0.1, function() called = true end)
+    _assert_eq(called, true, "zero timeout should fire even while a blocking tip pends")
+    _assert_eq(game.turn.inter_turn_wait_active, false, "active should be cleared on the zero-timeout path")
+    _reset_tip_queue()
+  end)
 end)

@@ -176,3 +176,124 @@ describe("domain land rent contiguous behavior", function()
       "AI-owned strip and human-owned strip share contiguous_count semantics")
   end)
 end)
+
+describe("domain land rent contiguous cache and boundary behavior", function()
+  -- Synthetic single-land-tile board so version/cache/topology boundaries are
+  -- directly controllable, which the default_map fixtures cannot exercise.
+  local function _make_board(tiles, neighbors)
+    local by_id = {}
+    for _, t in ipairs(tiles) do
+      by_id[t.id] = t
+    end
+    return {
+      map = { neighbors = neighbors },
+      path = tiles,
+      get_tile_by_id = function(_, id) return by_id[id] end,
+      get_tile = function(_, index) return tiles[index] end,
+    }
+  end
+
+  -- price 200, upgrade_costs {100} → rent_for_level 0 = 100, level 1 = 200.
+  local function _single_land(owner_id, level)
+    return {
+      id = 1,
+      type = "land",
+      price = 200,
+      owner_id = owner_id,
+      level = level or 0,
+      upgrade_costs = { 100 },
+    }
+  end
+
+  it("contiguous_rent and contiguous_count return numeric values for an owned tile", function()
+    local game = {}
+    local tile = _single_land("p1", 0)
+    local board = _make_board({ tile }, { [1] = {} })
+    -- kills L114 replace _resolve_component(...) with nil (would return nil rent).
+    assert.equals(100, rent_resolver.contiguous_rent(game, board, 1, "p1"))
+    assert.equals(1, rent_resolver.contiguous_count(game, board, 1, "p1"))
+  end)
+
+  it("returns zero rent, zero count and a zero breakdown when the query owner does not own the tile", function()
+    local game = {}
+    local tile = _single_land(nil, 0) -- unowned
+    local board = _make_board({ tile }, { [1] = {} })
+    -- kills both L97 replace 0 with 1 (rent slot and count slot of the early return).
+    assert.equals(0, rent_resolver.contiguous_rent(game, board, 1, "p1"))
+    assert.equals(0, rent_resolver.contiguous_count(game, board, 1, "p1"))
+    -- kills all three L126 replace 0 with 1 (count/single_rent/total_rent of the zero breakdown).
+    local breakdown = rent_resolver.contiguous_breakdown(game, board, 1, "p1")
+    assert.equals(0, breakdown.count)
+    assert.equals(0, breakdown.single_rent)
+    assert.equals(0, breakdown.total_rent)
+  end)
+
+  it("keeps the cached total stale until the rent-version changes", function()
+    local game = {}
+    local tile = _single_land("p1", 0)
+    local board = _make_board({ tile }, { [1] = {} })
+    game._land_rent_version = 5
+
+    local first = rent_resolver.contiguous_breakdown(game, board, 1, "p1")
+    assert.equals(100, first.total_rent)
+
+    -- Raise the level (fresh rent would be 200) but keep the same version.
+    -- The cached total must remain 100.
+    tile.level = 1
+    local second = rent_resolver.contiguous_breakdown(game, board, 1, "p1")
+    -- kills L37 replace ~= with == (would rebuild on equal version) and
+    -- L50 replace not with removed not (would reset tile_count and force recompute).
+    assert.equals(100, second.total_rent)
+    -- kills L53 replace not with removed not (would reset tile_rents, dropping cached rents).
+    assert.equals(1, #second.rents)
+    assert.equals(100, second.rents[1])
+  end)
+
+  it("bumping rent-version from the implicit-zero default invalidates the cache", function()
+    local game = {}
+    local tile = _single_land("p1", 0)
+    local board = _make_board({ tile }, { [1] = {} })
+    -- No _land_rent_version set → version defaults to 0.
+    assert.equals(100, rent_resolver.contiguous_rent(game, board, 1, "p1"))
+
+    tile.level = 1
+    game._land_rent_version = 1
+    -- kills L35 replace 0 with 1 (default of nil version): a 1-default would match the
+    -- stored cache version and wrongly reuse the stale 100.
+    assert.equals(200, rent_resolver.contiguous_rent(game, board, 1, "p1"))
+  end)
+
+  it("changing rent-version away from a truthy value invalidates the cache", function()
+    local game = {}
+    local tile = _single_land("p1", 0)
+    local board = _make_board({ tile }, { [1] = {} })
+    game._land_rent_version = 7
+    assert.equals(100, rent_resolver.contiguous_rent(game, board, 1, "p1"))
+
+    tile.level = 1
+    game._land_rent_version = 0
+    -- kills L35 replace or with and: `version and 0` would collapse the stored version to 0,
+    -- matching the new 0 version and wrongly reusing the stale 100.
+    assert.equals(200, rent_resolver.contiguous_rent(game, board, 1, "p1"))
+  end)
+
+  it("skips non-land path tiles when building land neighbors", function()
+    local game = {}
+    local land = _single_land("p1", 0) -- id 1
+    local non_land = { id = 2, type = "toolshop" }
+    -- Only the land tile has a neighbors entry; the non-land tile deliberately has none.
+    local board = _make_board({ land, non_land }, { [1] = {} })
+    -- kills L16 replace and with or: touching tile id 2 would hit
+    -- `assert(neigh ~= nil)` on the missing neighbors entry and throw.
+    assert.equals(100, rent_resolver.contiguous_rent(game, board, 1, "p1"))
+  end)
+
+  it("drops neighbor ids that resolve to no tile", function()
+    local game = {}
+    local land = _single_land("p1", 0) -- id 1
+    -- Neighbor id 99 has no corresponding tile → get_tile_by_id returns nil.
+    local board = _make_board({ land }, { [1] = { 99 } })
+    -- kills L22 replace and with or: a nil next_tile would be indexed (`next_tile.type`) and throw.
+    assert.equals(100, rent_resolver.contiguous_rent(game, board, 1, "p1"))
+  end)
+end)

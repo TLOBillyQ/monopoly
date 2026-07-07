@@ -86,15 +86,25 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=8dbaf5aed2d9eb46
+projectHash=2eecf523e9ebebff
 scope.0.id=chunk:src/ui/render/board/placement.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=86
 scope.0.semanticHash=f39e445c7b689f9c
+scope.0.lastMutatedAt=2026-07-07T02:46:59Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=survived
+scope.0.lastMutationSites=35
+scope.0.lastMutationKilled=34
 scope.1.id=function:_append_occupant:57
 scope.1.kind=function
 scope.1.startLine=57
 scope.1.endLine=65
 scope.1.semanticHash=5467c1d482d8310f
+scope.1.lastMutatedAt=2026-07-07T02:46:59Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=4
+scope.1.lastMutationKilled=4
 ]]

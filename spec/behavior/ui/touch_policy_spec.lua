@@ -5,6 +5,7 @@ local _with_patches = support.with_patches
 local ui_view = require("src.ui.coord.ui_runtime")
 local ui_touch_policy = require("src.ui.input.touch")
 local base_nodes = require("src.ui.schema.base")
+local base_contract = require("src.ui.schema.base_contract")
 local market_ui = require("src.ui.schema.market_layout")
 local ids = require("spec.fixtures.item_slot_ids")
 
@@ -434,5 +435,126 @@ describe("presentation_ui.touch_policy", function()
     ui_touch_policy.set_runtime_nodes_touch_enabled({ node1, node2 }, false)
     _assert_eq(node1.disabled, true, "runtime node should be disabled")
     _assert_eq(node2.disabled, true, "runtime node should be disabled")
+  end)
+
+  it("_test_set_many_touch_enabled_noops_when_ui_lacks_hook", function()
+    -- Pins L7 guard `not ui or not ui.set_touch_enabled`: an `and` mutant proceeds and
+    -- calls the missing hook instead of returning cleanly.
+    local ok = pcall(function()
+      ui_touch_policy.set_many_touch_enabled({}, { base_nodes.action_button }, true)
+    end)
+    assert(ok, "set_many_touch_enabled should noop when ui has no set_touch_enabled hook")
+  end)
+
+  it("_test_set_auto_controls_touch_noops_when_ui_lacks_hook", function()
+    -- Pins L41 guard mirror.
+    local ok = pcall(function()
+      ui_touch_policy.set_auto_controls_touch({}, true)
+    end)
+    assert(ok, "set_auto_controls_touch should noop when ui has no set_touch_enabled hook")
+  end)
+
+  it("_test_set_action_log_toggle_touch_noops_when_ui_lacks_hook", function()
+    -- Pins L51 guard mirror.
+    local ok = pcall(function()
+      ui_touch_policy.set_action_log_toggle_touch({}, true)
+    end)
+    assert(ok, "set_action_log_toggle_touch should noop when ui has no set_touch_enabled hook")
+  end)
+
+  it("_test_set_auto_controls_touch_drives_ui_auto_control_nodes_when_no_override", function()
+    -- Pins L22 second `or`: `controls or ui.auto_control_nodes or default`; an `and` mutant
+    -- would drop the resolved node list and fall through to the default node set.
+    local touch = {}
+    local ui = {
+      auto_control_nodes = { "自定义_托管节点" },
+      set_touch_enabled = function(_, name, enabled)
+        touch[name] = enabled
+      end,
+    }
+
+    ui_touch_policy.set_auto_controls_touch(ui, false)
+
+    _assert_eq(touch["自定义_托管节点"], false,
+      "should drive ui.auto_control_nodes rather than the built-in default node set")
+  end)
+
+  it("_test_set_auto_controls_touch_skips_effect_fallback_when_effect_in_controls", function()
+    -- Pins L34 `auto_effect_seen = true`: a `false` mutant re-touches auto_effect through the
+    -- fallback branch, doubling the number of writes to that node.
+    local counts = {}
+    local ui = {
+      set_touch_enabled = function(_, name, _enabled)
+        counts[name] = (counts[name] or 0) + 1
+      end,
+    }
+
+    ui_touch_policy.set_auto_controls_touch(ui, true, { base_nodes.auto_button, base_nodes.auto_effect })
+
+    _assert_eq(counts[base_nodes.auto_effect], 1,
+      "auto_effect present in controls should be touched exactly once (no fallback write)")
+  end)
+
+  it("_test_set_action_log_toggle_touch_falls_back_to_default_target", function()
+    -- Pins L56 `toggle_targets or { action_log_button }`: an `and` mutant breaks the nil-config
+    -- fallback and iterates a nil target list.
+    local touch = {}
+    local ui = {
+      set_touch_enabled = function(_, name, enabled)
+        touch[name] = enabled
+      end,
+    }
+
+    _with_patches({
+      { target = base_contract.action_log, key = "toggle_targets", value = nil },
+    }, function()
+      ui_touch_policy.set_action_log_toggle_touch(ui, true)
+    end)
+
+    _assert_eq(touch[base_nodes.action_log_button], true,
+      "nil toggle_targets should fall back to the default action-log button")
+  end)
+
+  it("_test_set_choice_screen_locked_blocks_all_targets", function()
+    -- Pins the L75 guard `not ...` terms: any removed `not` short-circuits to an early return,
+    -- leaving the choice-screen targets un-locked.
+    local touch = {}
+    local ui = {
+      set_touch_enabled = function(_, name, enabled)
+        touch[name] = enabled
+      end,
+    }
+    local screen = {
+      option_buttons = { "选项_1", "选项_2" },
+      under_button = "下注按钮",
+      confirm = "确认按钮",
+      cancel = "取消按钮",
+    }
+
+    ui_touch_policy.set_choice_screen_locked(ui, screen)
+
+    _assert_eq(touch["选项_1"], false, "option button should be locked")
+    _assert_eq(touch["选项_2"], false, "option button should be locked")
+    _assert_eq(touch["下注按钮"], false, "under button should be locked")
+    _assert_eq(touch["确认按钮"], false, "confirm should be locked")
+    _assert_eq(touch["取消按钮"], false, "cancel should be locked")
+  end)
+
+  it("_test_set_choice_screen_locked_noops_without_screen", function()
+    -- Pins the L75 guard `or not screen`: an `and` mutant proceeds and indexes a nil screen.
+    local ui = { set_touch_enabled = function() end }
+    local ok = pcall(function()
+      ui_touch_policy.set_choice_screen_locked(ui, nil)
+    end)
+    assert(ok, "set_choice_screen_locked should noop when screen is nil")
+  end)
+
+  it("_test_set_choice_screen_locked_noops_when_ui_lacks_hook", function()
+    -- Pins the L75 guard `or not ui.set_touch_enabled`: an `and` mutant proceeds and calls the
+    -- missing hook while locking the under button.
+    local ok = pcall(function()
+      ui_touch_policy.set_choice_screen_locked({}, { under_button = "下注按钮" })
+    end)
+    assert(ok, "set_choice_screen_locked should noop when ui has no set_touch_enabled hook")
   end)
 end)

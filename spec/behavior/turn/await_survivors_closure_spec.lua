@@ -265,6 +265,29 @@ describe("await.action + _is_choice_action + _CHOICE_ACTION_TYPES + _build_actio
     end)
   end)
 
+  it("peeked choice dispatches without consulting take (empty queue still not WAIT)", function()
+    -- peek returns a choice action but the pending queue is EMPTY so take_pending_action() → nil.
+    -- Original: _is_choice_action(peeked)==true → _build_action_next, take is never called → next_state set.
+    -- Under L15 (_CHOICE_ACTION_TYPES value true→false), L19 (== → ~= or true→false),
+    -- L38 (peek → nil) or L39 (_is_choice_action(peeked) → nil): the guard turns false, control
+    -- falls to take_pending_action() → nil action → _WAIT. This separates the two paths that the
+    -- non-empty-queue test conflated (both returned the same next_state there).
+    _with_auto(false, function()
+      local await = require("src.turn.waits.await")
+      for _, t in ipairs({ "choice_select", "choice_cancel", "choice_force_skip" }) do
+        local session = _make_session({
+          game = _make_game(),
+          peek_override = { type = t },
+          pending_actions = {},
+        })
+        local res = await.action(session, { next_state = "peek_dispatch" })
+        _eq(res.wait, nil, "peeked choice type " .. t .. " must NOT WAIT (dispatch via _is_choice_action true)")
+        _eq(res.next_state, "peek_dispatch",
+          "peeked choice type " .. t .. " must dispatch via _build_action_next, never falling to take")
+      end
+    end)
+  end)
+
   it("_is_choice_action returns false for non-choice peeked types (take path)", function()
     _with_auto(false, function()
       local await = require("src.turn.waits.await")
@@ -394,6 +417,7 @@ describe("await.choice _clear_choice_wait + _finish_choice_wait + _resolve_choic
       local game = _make_game({ pending_choice = { id = "C1" } })
       local session = _make_session({ game = game, choice_elapsed_seconds = 4.25 })
       await.choice(session, {})
+      assert(captured_opts ~= nil, "decide_choice_action mock must have been called")
       _eq(captured_opts.elapsed_seconds, 4.25, "L360: must pass session.choice_elapsed_seconds")
     end)
     -- second sub-case: nil session.choice_elapsed_seconds defaults to 0
@@ -414,6 +438,7 @@ describe("await.choice _clear_choice_wait + _finish_choice_wait + _resolve_choic
       local game = _make_game({ pending_choice = { id = "C2" } })
       local session = _make_session({ game = game, choice_elapsed_seconds = nil })
       await.choice(session, {})
+      assert(captured_opts ~= nil, "decide_choice_action mock must have been called")
       _eq(captured_opts.elapsed_seconds, 0, "L360 fallback: nil must coerce to 0")
     end)
   end)
@@ -489,6 +514,29 @@ describe("await.choice _clear_choice_wait + _finish_choice_wait + _resolve_choic
       local res = await.choice(session, { next_state = "post_other" })
       _eq(validator_called, false, "L368: validator must NOT be called for non-select/non-cancel")
       _eq(res.next_state, "post_other", "L369 return true: should advance after resolve_choice")
+    end)
+  end)
+
+  it("_validate_choice_action L368: choice_cancel with invalid choice_id consults validator → WAIT", function()
+    -- choice_cancel must go through validator.validate_choice_id (the `and type ~= "choice_cancel"`
+    -- clause forces the fallthrough). If "choice_cancel" is nil'd (L115), the guard becomes true and
+    -- validation is bypassed → the invalid cancel would wrongly advance instead of WAIT.
+    local validator_called = false
+    _with_mocks({
+      ["src.turn.waits.decision"] = {
+        decide_choice_action = function() return { type = "choice_cancel", choice_id = "bogus" } end,
+        resolve_choice = function() return {} end,
+      },
+      ["src.turn.actions.validator"] = {
+        validate_choice_id = function() validator_called = true; return false end,
+      },
+    }, function()
+      local await = require("src.turn.waits.await")
+      local game = _make_game({ pending_choice = { id = "C1" } })
+      local session = _make_session({ game = game })
+      local res = await.choice(session, { next_state = "should_not_reach" })
+      _eq(validator_called, true, "L368: choice_cancel MUST consult validator (not bypassed)")
+      _eq(res.wait, true, "L368: choice_cancel failing validate must yield WAIT")
     end)
   end)
 

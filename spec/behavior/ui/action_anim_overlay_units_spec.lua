@@ -1025,4 +1025,313 @@ describe("presentation.action_anim_overlay_units", function()
     assert(calls.scheduled == 0.5, "spawn_transient should schedule delayed cleanup")
     assert(calls.destroy == 1, "spawn_transient should destroy transient group after delay")
   end)
+
+  it("anim_unit_overlay_play_overlay_roadblock_passes_resolved_unit_id", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local prefab = require("Data.Prefab")
+    local state = support.build_min_state()
+    local captured = {}
+    local original_unit = prefab.unit["路障"]
+    prefab.unit["路障"] = 4242
+
+    _with_patches({
+      {
+        target = overlay_runtime,
+        key = "spawn_overlay",
+        value = function(_scene, kind, _tile_index, _group_id, unit_id)
+          captured[#captured + 1] = { kind = kind, unit_id = unit_id }
+        end,
+      },
+    }, function()
+      overlay.play_overlay(state, { kind = "roadblock", tile_index = 1 }, 0.2, {})
+    end)
+
+    prefab.unit["路障"] = original_unit
+
+    assert(#captured == 1, "roadblock overlay should spawn exactly once")
+    assert(captured[1].unit_id == 4242,
+      "roadblock overlay should pass the resolved 路障 unit id, not the prefab.unit table")
+  end)
+
+  it("anim_unit_overlay_play_overlay_mine_passes_resolved_unit_id", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local prefab = require("Data.Prefab")
+    local state = support.build_min_state()
+    local captured = {}
+    local original_group = prefab.group["地雷"]
+    local original_unit = prefab.unit["地雷"]
+    prefab.group["地雷"] = 7777
+    prefab.unit["地雷"] = 5151
+
+    _with_patches({
+      {
+        target = overlay_runtime,
+        key = "spawn_overlay",
+        value = function(_scene, kind, _tile_index, _group_id, unit_id)
+          captured[#captured + 1] = { kind = kind, unit_id = unit_id }
+        end,
+      },
+    }, function()
+      overlay.play_overlay(state, { kind = "mine", tile_index = 1 }, 0.2, {})
+    end)
+
+    prefab.group["地雷"] = original_group
+    prefab.unit["地雷"] = original_unit
+
+    assert(#captured == 1, "mine overlay should spawn exactly once")
+    assert(captured[1].unit_id == 5151, "mine overlay should pass the resolved 地雷 unit id")
+  end)
+
+  it("anim_unit_overlay_play_missile_passes_resolved_unit_id", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local prefab = require("Data.Prefab")
+    local state = support.build_min_state()
+    local captured = {}
+    local original_unit = prefab.unit["导弹"]
+    prefab.unit["导弹"] = 6363
+
+    _with_patches({
+      {
+        target = overlay_runtime,
+        key = "spawn_transient",
+        value = function(_group_id, unit_id)
+          captured[#captured + 1] = unit_id
+        end,
+      },
+    }, function()
+      overlay.play_missile(state, { tile_index = 1 }, 0.5, {
+        clear_overlay = function() end,
+      })
+    end)
+
+    prefab.unit["导弹"] = original_unit
+
+    assert(#captured == 1, "play_missile should spawn exactly one transient")
+    assert(captured[1] == 6363,
+      "play_missile should pass the resolved 导弹 unit id, not the prefab.unit table")
+  end)
+
+  it("anim_unit_overlay_resolve_presentation_runtime_returns_runtime_not_state", function()
+    local robot = require("src.ui.render.anim.unit_overlay_robot")
+    local runtime_marker = { id = "presentation_runtime" }
+    local state = { presentation_runtime = runtime_marker }
+    assert(robot.resolve_presentation_runtime(state) == runtime_marker,
+      "should resolve the presentation_runtime value, not the state table")
+    assert(robot.resolve_presentation_runtime(nil) == nil,
+      "nil state should resolve to a nil runtime")
+    assert(robot.resolve_presentation_runtime({}) == nil,
+      "state without presentation_runtime should resolve to nil")
+  end)
+
+  it("anim_unit_overlay_clear_obstacles_uses_speed_fallback_when_duration_non_positive", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local runtime_constants = require("src.config.gameplay.runtime_constants")
+    local state = support.build_min_state({
+      mutate = function(target)
+        target.board_scene.tiles[2] = {
+          get_position = function()
+            return math.Vector3(10.0, 0.0, 0.0)
+          end,
+        }
+      end,
+    })
+    local scheduled_callbacks = {}
+    local function _mock_create(_, pos)
+      return _new_robot_handle(pos, { moves = {} })
+    end
+    _with_patches({
+      { target = host_runtime, key = "create_unit_with_scale", value = _mock_create },
+      { target = host_runtime, key = "acquire_unit", value = _mock_create },
+      {
+        target = host_runtime,
+        key = "schedule",
+        value = function(delay, callback)
+          scheduled_callbacks[#scheduled_callbacks + 1] = { delay = delay, callback = callback }
+        end,
+      },
+      { target = host_runtime, key = "destroy_unit", value = function() end },
+      { target = host_runtime, key = "release_unit", value = function() end },
+      { target = host_runtime, key = "prewarm_unit", value = function() end },
+    }, function()
+      overlay.play_clear_obstacles(state, {
+        branches = { { { tile_index = 2, has_obstacle = false } } },
+        player_id = 1,
+        duration = 0,
+      }, 0, { clear_overlay = function() end })
+    end)
+
+    assert(#scheduled_callbacks == 1, "single-step branch should schedule exactly one move")
+    local expected = 3.0 / runtime_constants.robot_speed
+    assert(math.abs(scheduled_callbacks[1].delay - expected) < 1e-6,
+      "non-positive duration should fall back to 3.0 / robot_speed step timing")
+  end)
+
+  it("anim_unit_overlay_clear_obstacles_divides_duration_by_path_length_for_single_step", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local state = support.build_min_state({
+      mutate = function(target)
+        target.board_scene.tiles[2] = {
+          get_position = function()
+            return math.Vector3(10.0, 0.0, 0.0)
+          end,
+        }
+      end,
+    })
+    local scheduled_callbacks = {}
+    local function _mock_create(_, pos)
+      return _new_robot_handle(pos, { moves = {} })
+    end
+    _with_patches({
+      { target = host_runtime, key = "create_unit_with_scale", value = _mock_create },
+      { target = host_runtime, key = "acquire_unit", value = _mock_create },
+      {
+        target = host_runtime,
+        key = "schedule",
+        value = function(delay, callback)
+          scheduled_callbacks[#scheduled_callbacks + 1] = { delay = delay, callback = callback }
+        end,
+      },
+      { target = host_runtime, key = "destroy_unit", value = function() end },
+      { target = host_runtime, key = "release_unit", value = function() end },
+      { target = host_runtime, key = "prewarm_unit", value = function() end },
+    }, function()
+      overlay.play_clear_obstacles(state, {
+        branches = { { { tile_index = 2, has_obstacle = false } } },
+        player_id = 1,
+        duration = 0.4,
+      }, 0.4, { clear_overlay = function() end })
+    end)
+
+    assert(#scheduled_callbacks == 1, "single-step branch should schedule exactly one move")
+    assert(math.abs(scheduled_callbacks[1].delay - 0.4) < 1e-6,
+      "positive duration should divide by the single-step path length (0.4 / 1)")
+  end)
+
+  it("anim_unit_overlay_clear_obstacles_prewarms_with_robot_rotation_and_scale", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local state = support.build_min_state({
+      mutate = function(target)
+        target.board_scene.tiles[2] = {
+          get_position = function()
+            return math.Vector3(10.0, 0.0, 0.0)
+          end,
+        }
+      end,
+    })
+    local prewarm_calls = {}
+    local scheduled_callbacks = {}
+    local function _mock_create(_, pos)
+      return _new_robot_handle(pos, { moves = {} })
+    end
+    _with_patches({
+      { target = host_runtime, key = "create_unit_with_scale", value = _mock_create },
+      { target = host_runtime, key = "acquire_unit", value = _mock_create },
+      {
+        target = host_runtime,
+        key = "schedule",
+        value = function(delay, callback)
+          scheduled_callbacks[#scheduled_callbacks + 1] = { delay = delay, callback = callback }
+        end,
+      },
+      { target = host_runtime, key = "destroy_unit", value = function() end },
+      { target = host_runtime, key = "release_unit", value = function() end },
+      {
+        target = host_runtime,
+        key = "prewarm_unit",
+        value = function(robot_id, count, rotation, scale, pos)
+          prewarm_calls[#prewarm_calls + 1] = {
+            robot_id = robot_id,
+            count = count,
+            rotation = rotation,
+            scale = scale,
+            pos = pos,
+          }
+        end,
+      },
+    }, function()
+      overlay.play_clear_obstacles(state, {
+        branches = { { { tile_index = 2, has_obstacle = false } } },
+        player_id = 1,
+        duration = 0.4,
+      }, 0.4, { clear_overlay = function() end })
+    end)
+
+    assert(#prewarm_calls == 1, "non-empty clear should prewarm the robot pool exactly once")
+    assert(prewarm_calls[1].rotation ~= nil, "prewarm should pass the robot rotation")
+    assert(prewarm_calls[1].scale ~= nil, "prewarm should pass the robot scale")
+    assert(prewarm_calls[1].scale.x == 0.06 and prewarm_calls[1].scale.y == 0.94
+      and prewarm_calls[1].scale.z == 0.06,
+      "prewarm should pass the robot_scale constant (0.06, 0.94, 0.06)")
+  end)
+
+  it("anim_unit_overlay_clear_obstacles_marks_shared_tile_obstacle_from_later_branch", function()
+    local overlay = require("src.ui.render.anim.unit_overlay")
+    local state = support.build_min_state({
+      mutate = function(target)
+        target.board_scene.tiles[2] = {
+          get_position = function()
+            return math.Vector3(10.0, 0.0, 0.0)
+          end,
+        }
+        target.board_scene.tiles[3] = {
+          get_position = function()
+            return math.Vector3(20.0, 0.0, 0.0)
+          end,
+        }
+        target.board_scene.tiles[4] = {
+          get_position = function()
+            return math.Vector3(20.0, 10.0, 0.0)
+          end,
+        }
+      end,
+    })
+    local cleared_calls = {}
+    local scheduled_callbacks = {}
+    local function _mock_create(_, pos)
+      return _new_robot_handle(pos, { moves = {} })
+    end
+    _with_patches({
+      { target = host_runtime, key = "create_unit_with_scale", value = _mock_create },
+      { target = host_runtime, key = "acquire_unit", value = _mock_create },
+      {
+        target = host_runtime,
+        key = "schedule",
+        value = function(delay, callback)
+          scheduled_callbacks[#scheduled_callbacks + 1] = { delay = delay, callback = callback }
+        end,
+      },
+      { target = host_runtime, key = "destroy_unit", value = function() end },
+      { target = host_runtime, key = "release_unit", value = function() end },
+      { target = host_runtime, key = "prewarm_unit", value = function() end },
+    }, function()
+      overlay.play_clear_obstacles(state, {
+        branches = {
+          {
+            { tile_index = 2, has_obstacle = false },
+            { tile_index = 3, has_obstacle = false },
+          },
+          {
+            { tile_index = 2, has_obstacle = true },
+            { tile_index = 4, has_obstacle = false },
+          },
+        },
+        player_id = 1,
+        duration = 0.6,
+      }, 0.6, {
+        clear_overlay = function(_, kind, tile_index)
+          cleared_calls[#cleared_calls + 1] = kind .. ":" .. tostring(tile_index)
+        end,
+      })
+      _drain_scheduled(scheduled_callbacks)
+    end)
+
+    local saw_roadblock_2 = false
+    for _, entry in ipairs(cleared_calls) do
+      if entry == "roadblock:2" then
+        saw_roadblock_2 = true
+      end
+    end
+    assert(saw_roadblock_2,
+      "a shared tile flagged as an obstacle in a later branch should still be cleared on arrival")
+  end)
 end)

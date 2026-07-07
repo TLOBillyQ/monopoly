@@ -54,4 +54,25 @@ describe("global_aliases", function()
       _assert_eq(TriggerCustomEvent, lua_api.global_send_custom_event, "install should expose TriggerCustomEvent")
     end)
   end)
+
+  it("install rejects a LuaAPI missing any required method", function()
+    local required_methods = {
+      "call_delay_time",
+      "global_register_custom_event",
+      "global_register_trigger_event",
+      "unit_register_custom_event",
+      "unit_register_trigger_event",
+      "global_send_custom_event",
+    }
+    for _, method_name in ipairs(required_methods) do
+      local env = _build_env()
+      env.LuaAPI[method_name] = nil
+      local ok, err = pcall(global_aliases.install, env)
+      assert(not ok, "install should reject LuaAPI missing " .. method_name)
+      assert(
+        tostring(err):find("missing LuaAPI." .. method_name, 1, true),
+        "error should name the missing method: " .. tostring(err)
+      )
+    end
+  end)
 end)

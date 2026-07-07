@@ -106,4 +106,20 @@ describe("unit_overlay_handle", function()
     _assert_eq(handle_ops.move(hr, "robot_a", nil, { x = 8 }), "respawned",
       "nil handle should go straight to respawn")
   end)
+
+  it("move_rejects_callable_non_function_move_method", function()
+    local invoked = false
+    local callable = setmetatable({}, {
+      __call = function()
+        invoked = true
+        return true
+      end,
+    })
+    local handle = { set_position_smooth = callable }
+    local hr = { acquire_unit = function() return "respawned" end }
+    local result = handle_ops.move(hr, "robot_a", handle, { x = 9 })
+    _assert_eq(result, "respawned",
+      "a callable-but-non-function move method must be rejected, forcing a respawn")
+    _assert_eq(invoked, false, "non-function move method must never be invoked")
+  end)
 end)

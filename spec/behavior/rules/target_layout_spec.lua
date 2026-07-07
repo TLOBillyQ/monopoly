@@ -57,3 +57,95 @@ describe("target_layout.arrange_target_options", function()
     assert(by_slot[5] == 4, "sole forward candidate should sit closest to center")
   end)
 end)
+
+-- Direct-geometry scenarios. The mock board exposes an empty movement map, so
+-- direction.collect_forward/backward_indices return empty sets and every
+-- candidate is classified purely by manhattan geometry relative to the start
+-- tile: a larger row is "backward", a smaller row is "forward". That makes the
+-- slot fill / overflow ordering fully deterministic.
+local function _mock_board(tiles)
+  return {
+    map = {
+      outer_next = {},
+      outer_prev = {},
+      neighbors = setmetatable({}, { __index = function() return {} end }),
+      entry_points = {},
+      direction = function() return "right" end,
+    },
+    get_tile = function(_, idx) return tiles[idx] end,
+    index_of_tile_id = function(_, id) return id end,
+  }
+end
+
+local function _row_tiles(start_row, deltas)
+  local tiles = { [1] = { id = 1, row = start_row, col = 0 } }
+  local options = {}
+  for offset, delta in ipairs(deltas) do
+    local idx = offset + 1
+    tiles[idx] = { id = idx, row = start_row + delta, col = 0 }
+    options[offset] = { id = idx }
+  end
+  return tiles, options
+end
+
+local function _dense_ids(dense_options)
+  local ids = {}
+  for i, opt in ipairs(dense_options) do
+    ids[i] = opt.id
+  end
+  return ids
+end
+
+local function _assert_list_eq(actual, expected, label)
+  assert(#actual == #expected,
+    label .. ": expected length " .. tostring(#expected) .. " got " .. tostring(#actual))
+  for i = 1, #expected do
+    assert(actual[i] == expected[i],
+      label .. "[" .. tostring(i) .. "]: expected " .. tostring(expected[i]) .. " got " .. tostring(actual[i]))
+  end
+end
+
+describe("target_layout.arrange_target_options slot geometry", function()
+  local player = { position = 1, status = nil }
+
+  it("spills surplus backward candidates outward into empty forward slots", function()
+    -- Five backward candidates (rows 11..15) fill slots 3,2,1 then overflow into
+    -- forward slots 5,6; there is no sixth slot so the layout stops at slot 6.
+    local tiles, options = _row_tiles(10, { 1, 2, 3, 4, 5 })
+    local dense, layout = target_layout.arrange_target_options(_mock_board(tiles), player, options)
+    _assert_list_eq(_dense_ids(dense), { 4, 3, 2, 5, 6 }, "backward overflow dense ids")
+    _assert_list_eq(layout, { 1, 2, 3, 5, 6 }, "backward overflow slot layout")
+  end)
+
+  it("spills surplus forward candidates inward into empty backward slots", function()
+    -- Five forward candidates (rows 9..5) fill slots 5,6,7 then overflow into
+    -- backward slots 3,2; slot 1 stays empty because the queue is exhausted.
+    local tiles, options = _row_tiles(10, { -1, -2, -3, -4, -5 })
+    local dense, layout = target_layout.arrange_target_options(_mock_board(tiles), player, options)
+    _assert_list_eq(_dense_ids(dense), { 6, 5, 2, 3, 4 }, "forward overflow dense ids")
+    _assert_list_eq(layout, { 2, 3, 5, 6, 7 }, "forward overflow slot layout")
+  end)
+
+  it("does not overwrite a filled forward slot when backward candidates overflow", function()
+    -- Four backward candidates plus one distant forward candidate: the forward
+    -- one claims slot 5 in the primary pass, so the backward overflow must skip
+    -- slot 5 and land in slot 6 rather than clobbering it.
+    local tiles, options = _row_tiles(10, { 1, 2, 3, 4, -5 })
+    local dense, layout = target_layout.arrange_target_options(_mock_board(tiles), player, options)
+    _assert_list_eq(_dense_ids(dense), { 4, 3, 2, 6, 5 }, "mixed overflow dense ids")
+    _assert_list_eq(layout, { 1, 2, 3, 5, 6 }, "mixed overflow slot layout")
+  end)
+
+  it("keeps a candidate co-located with the start tile by flooring its distance to 1", function()
+    -- A candidate sharing the start tile's position has manhattan distance 0;
+    -- it must be floored to distance 1 so it survives the distance-1..max walk
+    -- instead of being dropped into an unwalked distance-0 bucket.
+    local tiles = {
+      [1] = { id = 1, row = 10, col = 0 },
+      [2] = { id = 2, row = 10, col = 0 },
+    }
+    local dense, layout = target_layout.arrange_target_options(_mock_board(tiles), player, { { id = 2 } })
+    _assert_list_eq(_dense_ids(dense), { 2 }, "co-located dense ids")
+    _assert_list_eq(layout, { 5 }, "co-located slot layout")
+  end)
+end)
