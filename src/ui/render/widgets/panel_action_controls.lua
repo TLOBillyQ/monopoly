@@ -41,6 +41,9 @@ local function _resolve_base_action_visibility(ui_model, base_visible)
   if _is_item_target_selection(choice) then
     return false, false, true
   end
+  if choice_support.is_pre_action_item_phase_choice(choice) then
+    return true, false, false
+  end
   return false, true, false
 end
 

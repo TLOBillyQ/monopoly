@@ -77,6 +77,10 @@ function phase_state_steps.handlers()
       return context.give_item(world, example["道具名"])
     end,
 
+    ["玩家背包中还有<第二道具名>"] = function(world, example)
+      return context.give_item(world, example["第二道具名"])
+    end,
+
     ["<道具名>可在行动前使用"] = function(world, example)
       return context.set_item_phase(world, example["道具名"], "pre_action")
     end,

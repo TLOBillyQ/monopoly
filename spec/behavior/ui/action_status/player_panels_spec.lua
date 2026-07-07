@@ -788,4 +788,65 @@ describe("presentation_player_panels", function()
     _assert_eq(visible[base_nodes.cancel_button], false,
       "non-cancelable optional should hide cancel")
   end)
+
+  it("_test_panel_controls_pre_action_item_phase_shows_action_button", function()
+    local panel_controls = require("src.ui.render.widgets.panel_controls")
+    local visible = {}
+    local touch = {}
+    local ui = {
+      set_visible = function(_, name, value)
+        visible[name] = value
+      end,
+      set_touch_enabled = function(_, name, value)
+        touch[name] = value
+      end,
+    }
+    local ui_model = {
+      choice = {
+        id = 21,
+        kind = "item_phase_passive",
+        allow_cancel = true,
+        meta = { phase = "pre_action" },
+      },
+    }
+
+    panel_controls.apply_base_action_controls(ui, ui_model, true)
+
+    _assert_eq(visible[base_nodes.action_button], true,
+      "pre-action item phase should show the action button before the roll")
+    _assert_eq(touch[base_nodes.action_button], true,
+      "pre-action action button should stay touchable before the roll")
+    _assert_eq(visible[base_nodes.end_button], false,
+      "pre-action item phase should hide the end button")
+    _assert_eq(visible[base_nodes.cancel_button], false,
+      "pre-action item phase should hide the cancel button")
+  end)
+
+  it("_test_panel_controls_post_action_item_phase_still_shows_end_button", function()
+    local panel_controls = require("src.ui.render.widgets.panel_controls")
+    local visible = {}
+    local ui = {
+      set_visible = function(_, name, value)
+        visible[name] = value
+      end,
+      set_touch_enabled = function() end,
+    }
+    local ui_model = {
+      choice = {
+        id = 22,
+        kind = "item_phase_passive",
+        allow_cancel = true,
+        meta = { phase = "post_action" },
+      },
+    }
+
+    panel_controls.apply_base_action_controls(ui, ui_model, true)
+
+    _assert_eq(visible[base_nodes.end_button], true,
+      "post-action item phase should still show the end button after the roll")
+    _assert_eq(visible[base_nodes.action_button], false,
+      "post-action item phase should hide the action button")
+    _assert_eq(visible[base_nodes.cancel_button], false,
+      "post-action item phase should hide the cancel button")
+  end)
 end)

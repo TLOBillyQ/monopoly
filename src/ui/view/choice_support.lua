@@ -68,6 +68,10 @@ function M.is_cancelable_optional_action_choice(choice)
   return optional_action_completion.is_cancelable_optional_action_choice(choice)
 end
 
+function M.is_pre_action_item_phase_choice(choice)
+  return optional_action_completion.is_pre_action_item_phase_choice(choice)
+end
+
 M.resolve_screen_key = choice_route_policy.resolve
 
 return M
