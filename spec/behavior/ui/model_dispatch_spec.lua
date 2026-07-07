@@ -750,6 +750,11 @@ describe("presentation_ui.model_dispatch", function()
     for key, value in pairs(base_validator) do
       validator_stub[key] = value
     end
+    -- 派发器经单入口 validate 校验；stub 的 validate 委托本地覆写的 validate_choice_action。
+    validator_stub.validate = function(action, ctx)
+      ctx = ctx or {}
+      return validator_stub.validate_choice_action(ctx.game, action, ctx.choice)
+    end
     validator_stub.validate_choice_action = function(_, _, choice)
       validated_choice = choice
       return true
@@ -796,6 +801,11 @@ describe("presentation_ui.model_dispatch", function()
     for key, value in pairs(base_validator) do
       validator_stub[key] = value
     end
+    -- 派发器经单入口 validate 校验；stub 的 validate 委托本地覆写的 validate_choice_action。
+    validator_stub.validate = function(action, ctx)
+      ctx = ctx or {}
+      return validator_stub.validate_choice_action(ctx.game, action, ctx.choice)
+    end
     validator_stub.validate_choice_action = function(_, _, choice)
       validated_choice = choice
       return true
@@ -837,6 +847,11 @@ describe("presentation_ui.model_dispatch", function()
     local validator_stub = {}
     for key, value in pairs(base_validator) do
       validator_stub[key] = value
+    end
+    -- 派发器经单入口 validate 校验；stub 的 validate 委托本地覆写的 validate_choice_action。
+    validator_stub.validate = function(action, ctx)
+      ctx = ctx or {}
+      return validator_stub.validate_choice_action(ctx.game, action, ctx.choice)
     end
     validator_stub.validate_choice_action = function()
       validate_calls = validate_calls + 1
@@ -880,6 +895,11 @@ describe("presentation_ui.model_dispatch", function()
     for key, value in pairs(base_validator) do
       validator_stub[key] = value
     end
+    -- 派发器经单入口 validate 校验；stub 的 validate 委托本地覆写的 validate_choice_action。
+    validator_stub.validate = function(action, ctx)
+      ctx = ctx or {}
+      return validator_stub.validate_choice_action(ctx.game, action, ctx.choice)
+    end
     validator_stub.validate_choice_action = function()
       return false
     end
@@ -918,6 +938,11 @@ describe("presentation_ui.model_dispatch", function()
     local validator_stub = {}
     for key, value in pairs(base_validator) do
       validator_stub[key] = value
+    end
+    -- 派发器经单入口 validate 校验；stub 的 validate 委托本地覆写的 validate_choice_action。
+    validator_stub.validate = function(action, ctx)
+      ctx = ctx or {}
+      return validator_stub.validate_choice_action(ctx.game, action, ctx.choice)
     end
     validator_stub.validate_choice_action = function()
       return true

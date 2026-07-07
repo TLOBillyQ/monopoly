@@ -23,6 +23,11 @@ local function _build(extra_deps)
     },
     market_service = { choice = { apply_navigation = function() return true end } },
   }
+  -- 单入口 validate 委托 stub 自身的 validate_choice_action，per-test 覆写仍生效。
+  deps.validator.validate = function(action, ctx)
+    ctx = ctx or {}
+    return deps.validator.validate_choice_action(ctx.game, action, ctx.choice)
+  end
   if extra_deps then
     for k, v in pairs(extra_deps) do
       if type(v) == "table" and type(deps[k]) == "table" then
@@ -97,7 +102,7 @@ describe("action_dispatch _allow_next_turn boundary L53 diff >= cooldown", funct
         wall_diff_seconds = function(t1, t2) return t1 - t2 end,
       },
     })
-    return dispatcher.dispatch_action(game, state, action, nil, ctx)
+    return dispatcher.dispatch_action_with_ctx(game, state, action, nil, ctx)
   end
 
   it("diff exactly == cooldown (0.4) → applied (>= edge inclusive)", function()
@@ -134,7 +139,7 @@ describe("action_dispatch _allow_next_turn early-return arms L43/L46/L50", funct
     }
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
     local ctx = _ctx({ clock_ports = { wall_now_seconds = function() return 0 end } })
-    local result = dispatcher.dispatch_action(game, state, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, state, action, nil, ctx)
     _assert_eq(result.status, "applied", "not locked must short-circuit to applied")
   end)
 
@@ -155,7 +160,7 @@ describe("action_dispatch _allow_next_turn early-return arms L43/L46/L50", funct
     }
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
     local ctx = _ctx({ clock_ports = { wall_now_seconds = function() return 0 end } })
-    local result = dispatcher.dispatch_action(game, state, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, state, action, nil, ctx)
     _assert_eq(result.status, "applied", "lock_phase mismatch must short-circuit to applied")
   end)
 
@@ -176,7 +181,7 @@ describe("action_dispatch _allow_next_turn early-return arms L43/L46/L50", funct
     }
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
     local ctx = _ctx({ clock_ports = { wall_now_seconds = function() return 0 end } })
-    local result = dispatcher.dispatch_action(game, state, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, state, action, nil, ctx)
     _assert_eq(result.status, "applied", "last_click nil must short-circuit to applied")
   end)
 end)
@@ -193,7 +198,7 @@ describe("action_dispatch _handle_next_turn lock side-effect L63-65", function()
     local state = {}
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
     local ctx = _ctx({ clock_ports = { wall_now_seconds = function() return 1.5 end } })
-    dispatcher.dispatch_action(game, state, action, nil, ctx)
+    dispatcher.dispatch_action_with_ctx(game, state, action, nil, ctx)
     _assert_eq(state._turn_runtime.next_turn_locked, true, "L63: lock flag set true")
     _assert_eq(state._turn_runtime.next_turn_last_click, 1.5, "L64: last_click recorded as wall_now")
     _assert_eq(state._turn_runtime.next_turn_lock_phase, "wait_action", "L65: lock_phase recorded as current phase")
@@ -211,7 +216,7 @@ describe("action_dispatch _handle_next_turn lock side-effect L63-65", function()
     local state = {}
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
     local ctx = _ctx()
-    dispatcher.dispatch_action(game, state, action, nil, ctx)
+    dispatcher.dispatch_action_with_ctx(game, state, action, nil, ctx)
     _assert_eq(#dispatched_actions, 1, "phase wait_action must dispatch via game:dispatch_action")
     _assert_eq(dispatched_actions[1], action, "exact same action passed through")
   end)
@@ -229,7 +234,7 @@ describe("action_dispatch _handle_next_turn lock side-effect L63-65", function()
     local state = {}
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
     local ctx = _ctx()
-    dispatcher.dispatch_action(game, state, action, nil, ctx)
+    dispatcher.dispatch_action_with_ctx(game, state, action, nil, ctx)
     _assert_eq(step_turn_calls, 1, "non-wait_action phase must invoke step_turn exactly once")
   end)
 end)
@@ -245,7 +250,7 @@ describe("action_dispatch _handle_ui_button rejection literals L84/L91", functio
       players = { { id = 1 } },
     }
     local action = { type = "ui_button", id = "item_slot_3", actor_role_id = 1 }
-    local result = dispatcher.dispatch_action(game, {}, action, nil, _ctx())
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, _ctx())
     _assert_eq(result.status, "rejected", "L84: 'rejected' literal must surface on slot_result not ok")
   end)
 
@@ -259,7 +264,7 @@ describe("action_dispatch _handle_ui_button rejection literals L84/L91", functio
     }
     -- "some_other_id" is not auto / next / item_slot_N; slot_result returns nil (default)
     local action = { type = "ui_button", id = "some_other_id", actor_role_id = 1 }
-    local result = dispatcher.dispatch_action(game, {}, action, nil, _ctx())
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, _ctx())
     _assert_eq(result.status, "rejected", "L91: 'rejected' literal must surface on fallthrough")
   end)
 
@@ -273,7 +278,7 @@ describe("action_dispatch _handle_ui_button rejection literals L84/L91", functio
       players = { { id = 1 } },
     }
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
-    local result = dispatcher.dispatch_action(game, {}, action, nil, _ctx())
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, _ctx())
     _assert_eq(result.status, "rejected", "validate_actor_role false must reject")
   end)
 
@@ -290,7 +295,7 @@ describe("action_dispatch _handle_ui_button rejection literals L84/L91", functio
       players = { { id = 1 } },
     }
     local action = { type = "ui_button", id = "item_slot_1", actor_role_id = 1 }
-    local result = dispatcher.dispatch_action(game, {}, action, nil, _ctx({
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, _ctx({
       pending_choice = { id = "C" },
     }))
     _assert_eq(result.status, "applied", "slot action chain must apply")
@@ -315,7 +320,7 @@ describe("action_dispatch _handle_choice_action pending consistency L112-L113", 
     game.dispatch_action = function() game.turn.pending_choice = after_dispatch_pending end
     local action = { type = "choice_select", choice_id = "C", actor_role_id = 1 }
     -- ctx.output_ports.get_pending_choice is unused here because game.turn.pending_choice is non-nil pre-dispatch.
-    dispatcher.dispatch_action(game, {}, action, nil, _ctx({ pending_choice = nil }))
+    dispatcher.dispatch_action_with_ctx(game, {}, action, nil, _ctx({ pending_choice = nil }))
     return clear_calls
   end
 
@@ -352,7 +357,7 @@ describe("action_dispatch _handle_choice_action pending consistency L112-L113", 
       players = { { id = 1 } },
     }
     local action = { type = "choice_select", choice_id = "C", actor_role_id = 1 }
-    dispatcher.dispatch_action(game, {}, action, nil, _ctx({ pending_choice = nil }))
+    dispatcher.dispatch_action_with_ctx(game, {}, action, nil, _ctx({ pending_choice = nil }))
     _assert_eq(clear_calls, 0, "no choice anywhere: clear_choice must NOT be called")
   end)
 end)
@@ -379,7 +384,7 @@ describe("action_dispatch resolve_gate_state cap L149", function()
       players = { { id = 1 } },
     }
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
-    local result = dispatcher.dispatch_action(game, {}, action, nil, _ctx())
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, _ctx())
     assert(should_block_seen_gate == resolve_returns,
       "L149: should_block_action must receive the resolve_gate_state return verbatim")
     _assert_eq(result.status, "applied",
@@ -398,7 +403,7 @@ describe("action_dispatch _handle_choice_action validate_choice_action rejection
       players = { { id = 1 } },
     }
     local action = { type = "choice_select", choice_id = "C", actor_role_id = 1 }
-    local result = dispatcher.dispatch_action(game, {}, action, nil, _ctx({
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, _ctx({
       pending_choice = { id = "C" },
     }))
     _assert_eq(result.status, "rejected", "validate_choice_action false must reject")

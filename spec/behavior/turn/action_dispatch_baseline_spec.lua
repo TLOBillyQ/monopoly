@@ -32,6 +32,11 @@ local function _build(extra_deps)
       },
     },
   }
+  -- 单入口 validate 委托 stub 自身的 validate_choice_action，per-test 覆写仍生效。
+  deps.validator.validate = function(action, ctx)
+    ctx = ctx or {}
+    return deps.validator.validate_choice_action(ctx.game, action, ctx.choice)
+  end
   if extra_deps then
     for k, v in pairs(extra_deps) do
       if type(v) == "table" and type(deps[k]) == "table" then
@@ -105,7 +110,7 @@ describe("action_dispatch _should_invalidate_ui dispatch table (L14-L21)", funct
     }
     local action = { type = action_type, id = "x", actor_role_id = 1 }
     local ctx = _ctx_with_invalidate(events, { pending_choice = { kind = "market_buy", id = "c1" } })
-    dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     return events
   end
 
@@ -173,7 +178,7 @@ describe("action_dispatch _invalidate_ui_model nil output_ports fallback (L23-L3
       item_slot_source = nil,
     }
     -- The handler later may crash on ctx.output_ports.get_pending_choice — guard with pcall.
-    pcall(function() dispatcher.dispatch_action(game, {}, action, nil, ctx) end)
+    pcall(function() dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx) end)
     _assert_eq(invoked, false, "no invocation expected when output_ports is nil (L24 guard)")
   end)
 
@@ -198,7 +203,7 @@ describe("action_dispatch _invalidate_ui_model nil output_ports fallback (L23-L3
     }
     -- Should not crash even though invalidate_ui_model is absent
     local ok = pcall(function()
-      dispatcher.dispatch_action(game, {}, action, nil, ctx)
+      dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     end)
     assert(ok, "missing invalidate_ui_model field must NOT crash dispatch")
     _assert_eq(#events.invalidate, 0, "no invalidate happens when function field is absent")
@@ -234,7 +239,7 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     end
     local result
     local ok, err = pcall(function()
-      result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+      result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     end)
     force_resolve.force_skip = prev_force_skip
     if not ok then error(err) end
@@ -287,7 +292,7 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     local action = { type = "ui_button", id = "cancel", actor_role_id = 2 }
     local ctx = _ctx_with_invalidate(events, { pending_choice = game.turn.pending_choice })
 
-    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     _assert_eq(result.status, "rejected", "cancel from non-current player must reject")
   end)
 
@@ -353,7 +358,7 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     force_resolve.force_skip = function(_, _, _, reason)
       force_skip_calls[#force_skip_calls + 1] = reason
     end
-    dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     force_resolve.force_skip = prev_force_skip
     _assert_eq(force_skip_calls[1], "dispatch", "L167 'or dispatch' fallback must yield 'dispatch'")
   end)
@@ -374,7 +379,7 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     }
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }
     local ctx = _ctx_with_invalidate(events)
-    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     _assert_eq(result.status, "blocked", "should_block_action true must short-circuit to blocked")
     _assert_eq(#events.invalidate, 0, "blocked actions skip invalidate")
   end)
@@ -422,7 +427,7 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     local action = { type = "choice_cancel", choice_id = "m1", actor_role_id = 1 }
     local ctx = _ctx_with_invalidate(events, { pending_choice = game.turn.pending_choice })
 
-    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
 
     _assert_eq(result.status, "applied", "market close must apply even while post-purchase input is blocked")
     _assert_eq(dispatch_called, true, "choice_cancel should reach the turn runtime")
@@ -459,7 +464,7 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     local action = { type = "choice_cancel", choice_id = "m1", actor_role_id = 1 }
     local ctx = _ctx_with_invalidate(events, { pending_choice = { id = "m1", kind = "market_buy" } })
 
-    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
 
     _assert_eq(result.status, "applied", "port-resolved market choice must allow cancel while blocked")
   end)
@@ -477,7 +482,7 @@ describe("action_dispatch action.type dispatch (L156-L170)", function()
     local action = { type = "choice_cancel", choice_id = "m1", actor_role_id = 1 }
     local ctx = _ctx_with_invalidate(events, { pending_choice = nil })
 
-    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
 
     _assert_eq(result.status, "blocked", "cancel without any pending choice must stay gated")
   end)
@@ -495,12 +500,12 @@ describe("action_dispatch _handle_auto_toggle (L33-L40)", function()
     }
     local action = { type = "ui_button", id = "auto", actor_role_id = 1 }
     local ctx = _ctx_with_invalidate(events)
-    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     _assert_eq(result.status, "applied", "auto toggle must apply")
     _assert_eq(player_state.auto, true, "auto must flip false→true")
 
     -- Toggle again: true→false
-    dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     _assert_eq(player_state.auto, false, "auto must flip true→false")
   end)
 
@@ -514,7 +519,7 @@ describe("action_dispatch _handle_auto_toggle (L33-L40)", function()
     }
     local action = { type = "ui_button", id = "auto", actor_role_id = nil }
     local ctx = _ctx_with_invalidate(events)
-    local result = dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     _assert_eq(result.status, "rejected", "auto toggle without actor must reject")
   end)
 end)
@@ -530,7 +535,7 @@ describe("action_dispatch input_source default (L145-L147)", function()
     }
     local action = { type = "ui_button", id = "next", actor_role_id = 1 }  -- no input_source
     local ctx = _ctx_with_invalidate(events)
-    dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     -- action.input_source mutated in-place
     _assert_eq(action.input_source, "user", "nil input_source must default to 'user'")
   end)
@@ -545,7 +550,7 @@ describe("action_dispatch input_source default (L145-L147)", function()
     }
     local action = { type = "ui_button", id = "next", actor_role_id = 1, input_source = "remote" }
     local ctx = _ctx_with_invalidate(events)
-    dispatcher.dispatch_action(game, {}, action, nil, ctx)
+    dispatcher.dispatch_action_with_ctx(game, {}, action, nil, ctx)
     _assert_eq(action.input_source, "remote", "existing input_source must NOT be overwritten")
   end)
 end)

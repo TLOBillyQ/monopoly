@@ -94,15 +94,19 @@ function validator_actor.validate_choice_id(action, choice)
   return true
 end
 
+-- 组合校验单点：ok, reason。布尔调用方按第一返回值使用即可。
 function validator_actor.validate_choice_action(game, action, choice)
   if not choice or not choice.id then
     logger.warn("choice action without pending choice:", tostring(action and action.type))
-    return false
+    return false, "missing_choice"
   end
   if not validator_actor.validate_choice_actor(game, action, choice) then
-    return false
+    return false, "choice_actor_mismatch"
   end
-  return validator_actor.validate_choice_id(action, choice)
+  if not validator_actor.validate_choice_id(action, choice) then
+    return false, "choice_id_mismatch"
+  end
+  return true
 end
 
 return validator_actor

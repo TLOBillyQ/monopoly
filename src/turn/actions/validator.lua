@@ -1,5 +1,6 @@
--- turn/actions 校验入口。窄入口 validate(action, ctx) → ok, reason；
--- 具名函数保留给存量调用方（dispatcher、turn/waits、契约 spec），
+-- turn/actions 校验入口。窄入口 validate(action, ctx) → ok, reason，
+-- 派发器的 choice 类校验统一走 validate（内部委托 validate_choice_action，
+-- 不重写组合）；具名函数保留给 gate/slot 解析与存量调用方（turn/waits、契约 spec），
 -- validator_actor / validator_gate / validator_item_slot 为内部实现。
 local actor = require("src.turn.actions.validator_actor")
 local gate = require("src.turn.actions.validator_gate")
@@ -29,20 +30,6 @@ local function _is_item_slot_button(action)
   return action.id ~= nil and string.match(action.id, "^item_slot_%d+$") ~= nil
 end
 
-local function _validate_choice_bound(action, ctx)
-  local choice = ctx.choice
-  if not choice or not choice.id then
-    return false, "missing_choice"
-  end
-  if not actor.validate_choice_actor(ctx.game, action, choice) then
-    return false, "choice_actor_mismatch"
-  end
-  if not actor.validate_choice_id(action, choice) then
-    return false, "choice_id_mismatch"
-  end
-  return true
-end
-
 local function _validate_ui_button(action, ctx)
   if not actor.validate_actor_role(ctx.game, action) then
     return false, "actor_not_current"
@@ -70,7 +57,8 @@ function validator.validate(action, ctx)
     return _validate_ui_button(action, ctx)
   end
   if _CHOICE_BOUND_ACTION_TYPES[action.type] == true then
-    return _validate_choice_bound(action, ctx)
+    -- 复用组合校验单点，不在此处重写组合逻辑。
+    return actor.validate_choice_action(ctx.game, action, ctx.choice)
   end
   return true
 end

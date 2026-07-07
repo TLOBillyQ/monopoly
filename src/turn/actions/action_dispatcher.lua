@@ -168,7 +168,7 @@ end
 
 local function _handle_choice_action(game, state, action, opts, ctx)
   local choice = ctx_mod.resolve_pending_choice(game, state, ctx)
-  if not validator.validate_choice_action(game, action, choice) then
+  if not validator.validate(action, { game = game, choice = choice }) then
     return { status = "rejected" }
   end
   if game then
@@ -185,7 +185,7 @@ local function _apply_market_navigation(game, state, action, ctx, choice)
   if not choice or choice.kind ~= "market_buy" then
     return false
   end
-  if not validator.validate_choice_action(game, action, choice) then
+  if not validator.validate(action, { game = game, choice = choice }) then
     return false
   end
   if not market_service.choice.apply_navigation(game, choice, action) then
@@ -274,8 +274,15 @@ function turn_dispatch.should_block_action(state, action_or_type)
   return validator.should_block_action(gate_state, action_or_type)
 end
 
--- dispatch_ctx 为可选注入位（缺省从 state 解析），供重入派发与 spec 注入端口。
-function turn_dispatch.dispatch_action(game, state, action, opts, dispatch_ctx)
+-- 公开入口固定 4 参：端口上下文一律由 resolve_dispatch_context 从 state 装配，
+-- 生产调用方不得注入 dispatch_ctx。
+function turn_dispatch.dispatch_action(game, state, action, opts)
+  return _dispatch_action(game, state, action, opts, nil)
+end
+
+-- 内部/spec 端口注入入口（等价于旧 build(deps).dispatch_action 的第 5 参），
+-- 仅供测试注入端口使用；生产代码一律走 dispatch_action（重入派发走本地 _dispatch_action）。
+function turn_dispatch.dispatch_action_with_ctx(game, state, action, opts, dispatch_ctx)
   return _dispatch_action(game, state, action, opts, dispatch_ctx)
 end
 

@@ -12,6 +12,11 @@ local function _build(gate_state)
     validate_choice_action = function() return true end,
     resolve_item_slot_action = function() return nil end,
   }
+  -- 单入口 validate 委托 stub 自身的 validate_choice_action。
+  validator_stub.validate = function(action, ctx)
+    ctx = ctx or {}
+    return validator_stub.validate_choice_action(ctx.game, action, ctx.choice)
+  end
   local original_validator = package.loaded["src.turn.actions.validator"]
   package.loaded["src.turn.actions.validator"] = validator_stub
   local original_dispatcher = package.loaded["src.turn.actions.action_dispatcher"]
@@ -40,7 +45,7 @@ describe("action_dispatcher complete_optional_action_phase", function()
     })
     local dispatcher = _build({ input_blocked = true })
 
-    local result = dispatcher.dispatch_action(game, {}, {
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, {
       type = "complete_optional_action_phase",
       actor_role_id = 1,
     }, {}, { ui_sync_ports = {} })
@@ -57,7 +62,7 @@ describe("action_dispatcher complete_optional_action_phase", function()
     })
     local dispatcher = _build({ input_blocked = false })
 
-    local result = dispatcher.dispatch_action(game, {}, {
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, {
       type = "complete_optional_action_phase",
       actor_role_id = 1,
     }, {}, { ui_sync_ports = {} })

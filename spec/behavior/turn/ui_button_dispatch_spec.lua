@@ -23,6 +23,11 @@ local function _build(validator_overrides)
       end,
     },
   }
+  -- 单入口 validate 委托 stub 自身的 validate_choice_action，per-test 覆写仍生效。
+  deps.validator.validate = function(action, ctx)
+    ctx = ctx or {}
+    return deps.validator.validate_choice_action(ctx.game, action, ctx.choice)
+  end
   for k, v in pairs(validator_overrides or {}) do
     deps.validator[k] = v
   end
@@ -86,7 +91,7 @@ describe("action_dispatcher ui_button auto toggle", function()
   it("toggles player.auto when actor resolves", function()
     local player = { id = 1, auto = false }
     local game = _game({ find_player_by_id = function() return player end })
-    local result = _build().dispatch_action(game, {}, _ui_button("auto"), nil, _ctx())
+    local result = _build().dispatch_action_with_ctx(game, {}, _ui_button("auto"), nil, _ctx())
     _assert_eq(result.status, "applied", "auto toggle must apply")
     _assert_eq(player.auto, true, "auto must flip false->true")
   end)
@@ -94,7 +99,7 @@ describe("action_dispatcher ui_button auto toggle", function()
   it("rejects when no actor resolves", function()
     local game = _game({ find_player_by_id = function() return nil end })
     local action = { type = "ui_button", id = "auto", actor_role_id = nil }
-    local result = _build().dispatch_action(game, {}, action, nil, _ctx())
+    local result = _build().dispatch_action_with_ctx(game, {}, action, nil, _ctx())
     _assert_eq(result.status, "rejected", "auto toggle without actor must reject")
   end)
 end)
@@ -103,20 +108,20 @@ describe("action_dispatcher ui_button cancel", function()
   it("rejects when validate_actor_role fails", function()
     local game = _game()
     local dispatcher = _build({ validate_actor_role = function() return false end })
-    local result = dispatcher.dispatch_action(game, {}, _ui_button("cancel"), nil, _ctx())
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, _ui_button("cancel"), nil, _ctx())
     _assert_eq(result.status, "rejected", "invalid actor must reject cancel")
   end)
 
   it("resolves pending choice from game.turn and rejects when allow_cancel is false", function()
     local game = _game({ turn = { phase = "wait_action", pending_choice = { id = "c1", allow_cancel = false } } })
-    local result = _build().dispatch_action(game, {}, _ui_button("cancel"), nil, _ctx())
+    local result = _build().dispatch_action_with_ctx(game, {}, _ui_button("cancel"), nil, _ctx())
     _assert_eq(result.status, "rejected", "allow_cancel=false must reject")
   end)
 
   it("rejects when neither game.turn nor output_ports has a pending choice", function()
     local game = _game({ turn = { phase = "wait_action", pending_choice = nil } })
     local ctx = _ctx({ output_ports = {} })
-    local result = _build().dispatch_action(game, {}, _ui_button("cancel"), nil, ctx)
+    local result = _build().dispatch_action_with_ctx(game, {}, _ui_button("cancel"), nil, ctx)
     _assert_eq(result.status, "rejected", "no pending choice anywhere must reject")
   end)
 
@@ -128,7 +133,7 @@ describe("action_dispatcher ui_button cancel", function()
     })
     local ctx = _ctx({ pending_choice = { id = "c9", allow_cancel = true } })
     local action = _ui_button("cancel", { input_source = "user" })
-    local result = _build().dispatch_action(game, {}, action, nil, ctx)
+    local result = _build().dispatch_action_with_ctx(game, {}, action, nil, ctx)
     _assert_eq(result.status, "applied", "port-resolved choice must allow cancel")
     _assert_eq(dispatched[1].type, "choice_cancel", "cancel must dispatch a choice_cancel action")
     _assert_eq(dispatched[1].choice_id, "c9", "dispatched choice_cancel must carry the resolved choice id")
@@ -141,7 +146,7 @@ describe("action_dispatcher ui_button cancel", function()
       dispatch_action = function(_, a) dispatched[#dispatched + 1] = a end,
     })
     local action = _ui_button("cancel", { input_source = "remote" })
-    local result = _build().dispatch_action(game, {}, action, nil, _ctx())
+    local result = _build().dispatch_action_with_ctx(game, {}, action, nil, _ctx())
     _assert_eq(result.status, "applied", "cancel with valid choice must apply")
     _assert_eq(dispatched[1].choice_id, "c1", "dispatched choice_cancel must carry game.turn's choice id")
     _assert_eq(dispatched[1].input_source, "remote", "dispatched choice_cancel must preserve input_source")
@@ -152,14 +157,14 @@ describe("action_dispatcher ui_button item slot and next", function()
   it("rejects when validate_actor_role fails", function()
     local game = _game()
     local dispatcher = _build({ validate_actor_role = function() return false end })
-    local result = dispatcher.dispatch_action(game, {}, _ui_button("item_slot_1"), nil, _ctx())
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, _ui_button("item_slot_1"), nil, _ctx())
     _assert_eq(result.status, "rejected", "invalid actor must reject slot action")
   end)
 
   it("rejects when slot_result.ok is false", function()
     local game = _game()
     local dispatcher = _build({ resolve_item_slot_action = function() return { ok = false } end })
-    local result = dispatcher.dispatch_action(game, {}, _ui_button("item_slot_3"), nil, _ctx())
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, _ui_button("item_slot_3"), nil, _ctx())
     _assert_eq(result.status, "rejected", "slot_result.ok=false must reject")
   end)
 
@@ -171,7 +176,7 @@ describe("action_dispatcher ui_button item slot and next", function()
       dispatch_action = function(_, a) dispatched[#dispatched + 1] = a end,
     })
     local dispatcher = _build({ resolve_item_slot_action = function() return { ok = true, action = sub_action } end })
-    local result = dispatcher.dispatch_action(game, {}, _ui_button("item_slot_1"), nil, _ctx())
+    local result = dispatcher.dispatch_action_with_ctx(game, {}, _ui_button("item_slot_1"), nil, _ctx())
     _assert_eq(result.status, "applied", "slot chain must apply")
     _assert_eq(dispatched[1], sub_action, "chained slot action must reach dispatch_action")
   end)
@@ -180,14 +185,14 @@ describe("action_dispatcher ui_button item slot and next", function()
     local dispatched_actions = {}
     local game = _game()
     game.dispatch_action = function(_, a) dispatched_actions[#dispatched_actions + 1] = a end
-    local result = _build().dispatch_action(game, {}, _ui_button("next"), nil, _ctx())
+    local result = _build().dispatch_action_with_ctx(game, {}, _ui_button("next"), nil, _ctx())
     _assert_eq(result.status, "applied", "next with no lock must apply")
     _assert_eq(#dispatched_actions, 1, "wait_action phase must dispatch via game:dispatch_action")
   end)
 
   it("rejects unrecognized ids that are neither auto/cancel/slot/next", function()
     local game = _game()
-    local result = _build().dispatch_action(game, {}, _ui_button("some_other_id"), nil, _ctx())
+    local result = _build().dispatch_action_with_ctx(game, {}, _ui_button("some_other_id"), nil, _ctx())
     _assert_eq(result.status, "rejected", "unrecognized id must reject")
   end)
 
@@ -206,7 +211,7 @@ describe("action_dispatcher ui_button item slot and next", function()
         wall_diff_seconds = function(t1, t2) return t1 - t2 end,
       },
     })
-    local result = _build().dispatch_action(game, state, _ui_button("next"), nil, ctx)
+    local result = _build().dispatch_action_with_ctx(game, state, _ui_button("next"), nil, ctx)
     _assert_eq(result.status, "rejected", "diff below cooldown while locked must reject")
   end)
 end)

@@ -305,6 +305,17 @@ describe("domain validator named surface", function()
       "nil choice should return false")
   end)
 
+  it("validate_choice_action choice without id returns false", function()
+    _assert_eq(validator.validate_choice_action({}, { actor_role_id = 1001, choice_id = 10 }, {}), false,
+      "choice without id should return false")
+  end)
+
+  it("validate_choice_action actor mismatch returns false", function()
+    local choice = { id = 10, owner_role_id = 1001 }
+    _assert_eq(validator.validate_choice_action({}, { actor_role_id = 1002, choice_id = 10 }, choice), false,
+      "actor not matching choice owner should return false")
+  end)
+
   it("validate_actor_role next matching actor returns true", function()
     local game = _make_game_with_player(1001)
     _assert_eq(validator.validate_actor_role(game, { id = "next", actor_role_id = 1001 }), true,
