@@ -1,6 +1,16 @@
 local role_id_utils = require("src.foundation.identity")
+local optional_action_choice = require("src.turn.optional_action_choice")
 
 local optional_action_completion = {}
+
+-- Choice classification predicates live in optional_action_choice; re-exported here
+-- so existing callers keep the optional_action_completion.<predicate> surface.
+optional_action_completion.is_optional_action_choice =
+  optional_action_choice.is_optional_action_choice
+optional_action_completion.is_cancelable_optional_action_choice =
+  optional_action_choice.is_cancelable_optional_action_choice
+optional_action_completion.is_pre_action_item_phase_choice =
+  optional_action_choice.is_pre_action_item_phase_choice
 
 local function _indexed_current_player(game)
   local turn = game.turn
@@ -36,31 +46,6 @@ end
 local function _is_blocked(opts)
   local gate_state = opts and opts.gate_state or nil
   return gate_state and gate_state.input_blocked == true
-end
-
-function optional_action_completion.is_optional_action_choice(choice)
-  local kind = choice and choice.kind or nil
-  return kind == "item_phase_passive" or kind == "landing_optional_effect"
-end
-
-function optional_action_completion.is_cancelable_optional_action_choice(choice)
-  return optional_action_completion.is_optional_action_choice(choice) and choice.allow_cancel ~= false
-end
-
--- A pre_action item phase passive choice is opened at turn start, before the roll.
--- Unlike post_action/landing optional phases (which resolve through the 结束 button),
--- skipping it belongs on the 行动 button so 行动 precedes the roll even while a
--- pre-action card is still in the bag. Item target selection (passive_origin) keeps
--- its own 取消 affordance and is excluded here.
-function optional_action_completion.is_pre_action_item_phase_choice(choice)
-  if not optional_action_completion.is_cancelable_optional_action_choice(choice) then
-    return false
-  end
-  if choice.kind ~= "item_phase_passive" then
-    return false
-  end
-  local meta = choice.meta
-  return type(meta) == "table" and meta.phase == "pre_action" and meta.passive_origin ~= true
 end
 
 local function _rejected(reason, choice)
