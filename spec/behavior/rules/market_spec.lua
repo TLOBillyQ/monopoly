@@ -286,6 +286,31 @@ describe("market", function()
       "positive remaining limit should not be sold out")
   end)
 
+  it("market_cash_paths_hard_fail_on_non_cash_currency", function()
+    local market_query = require("src.rules.market.query")
+    local context = market_query.context
+
+    context.assert_cash_currency("金币")
+
+    for _, currency in ipairs({ "金豆", "乐园币", "贝壳" }) do
+      local ok, err = pcall(context.assert_cash_currency, currency)
+      assert(ok == false, "non-cash currency should hard fail: " .. currency)
+      assert(string.find(tostring(err), "unsupported market currency", 1, true) ~= nil,
+        "error should report unsupported market currency: " .. currency)
+    end
+
+    local g = _new_game()
+    local p = g:current_player()
+    local entry = { product_id = 2001, kind = "item", currency = "贝壳", price = 5 }
+    g.market_limits[entry.product_id] = 1
+    g:set_player_cash(p, 999999)
+
+    local ok, err = pcall(market_query.eligibility.can_buy_entry, g, p, entry)
+    assert(ok == false, "unknown currency entry should hard fail instead of reading cash")
+    assert(string.find(tostring(err), "unsupported market currency", 1, true) ~= nil,
+      "can_buy_entry should surface unsupported market currency")
+  end)
+
   it("market_query_can_buy_entry_respects_boundaries", function()
     local market_query = require("src.rules.market.query")
     local entry = { product_id = 2001, kind = "item", currency = "金币", price = 5 }
