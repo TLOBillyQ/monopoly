@@ -396,3 +396,15 @@ commit hash: 6f4df5e573
 ```
 
 Summary: 合并 refactorer 3e03fe4ee2(主回合按钮 slot pin + unit_overlay_handle spec + CRAP 基线收紧),架构四阶段审查无需结构修正。随批完成架构启动职责:45 个 bootstrap-only src 文件全量变异(修复 macOS 无 gtimeout 导致的死循环挂死,brew 安装 coreutils),10 路并行闭合约 400 个 survivor,28/31 文件 manifest 达标写回(16 个 100%);target_direction 布尔化重构消除三态字符串死状态(86.5%→93.9%);query/obstacle_clear_walk/placement_snap 因死循环变异体只能 timeout 且上游引擎 timeout>0 即拒绝写回而如实搁浅。soft 验收变异基线:38 feature,28 全杀写回;step handler 严格化(道具名对照目录、警告级别枚举)杀 6;残留 game survivor 10 个待 coder 闭合(bankruptcy 现金 pin、deities 持续回合、dice 边界、setup 截断),meta feature(quality/swarmforge)101 个为工具契约松断言,留档不阻塞。验证:verify PASS、acceptance 755 ok、tooling 362 passed、DRY 与基线一致无真重复。
+
+## 2026-07-07 11:24:00 +0800 received handoff
+
+Complete handoff message received:
+
+```text
+sender role: refactorer
+task: main-turn-buttons-slot-check
+commit hash: 6408253e40
+```
+
+Action taken: re-read architect role and constitution, merged 6408253e40 into swarmforge-architect (3 个行为 spec 清掉最后 CRAP gate 豁免,基线归零;无 src 改动),四阶段架构审查无需结构修正,verify --smoke PASS。本方零新增提交,按规则不转发,done_with_current 出队。
