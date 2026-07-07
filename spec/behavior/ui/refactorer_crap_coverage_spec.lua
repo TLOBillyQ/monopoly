@@ -32,6 +32,7 @@ local canvas_store = require("src.ui.state.canvas_store")
 local role_avatar = require("src.ui.view.role_avatar")
 local placement = require("src.ui.render.board.placement")
 local move_anim = require("src.ui.render.move_anim")
+local debug_flags = require("src.config.gameplay.debug_flags")
 local support = require("spec.support.ui_action_anim_support")
 
 local _with_patches = support.with_patches
@@ -1082,6 +1083,36 @@ describe("refactorer_crap_coverage", function()
       _assert_eq(placed[1].x, 2.0, "zero spacing should collapse offsets to base x")
       _assert_eq(placed[2].x, 2.0, "zero spacing should collapse both occupants to base x")
     end)
+    math.Vector3 = saved_vector3
+  end)
+
+  it("board placement debug log writes the stop-and-snap line when move-anim debug logging is enabled", function()
+    local saved_vector3 = math.Vector3
+    function math.Vector3(x, y, z) return { x = x, y = y, z = z } end
+    local function based(x, y, z)
+      return setmetatable({ x = x, y = y, z = z }, {
+        __add = function(a, b) return { x = a.x + b.x, y = a.y + b.y, z = a.z + b.z } end,
+      })
+    end
+
+    logger.clear()
+    _with_patches({
+      { target = runtime_state, key = "set_follow_target_position", value = function() end },
+      { target = move_anim, key = "stop_player_presentation", value = function() return { motion_stop_path = "forced" } end },
+      { target = debug_flags, key = "move_anim_debug_log_enabled", value = true },
+    }, function()
+      local state = {
+        tile_positions = { [3] = based(0.0, 5.0, 0.0) },
+        player_units = { [1] = { set_position = function() end } },
+      }
+      placement.place_players(state, { { id = 1, position = 3 } }, { [3] = { 1 } }, 2.0, 0.0)
+    end)
+
+    local text = logger.get_text()
+    assert(string.find(text, "board_refresh_stop_and_snap", 1, true) ~= nil,
+      "debug log should record the stop-and-snap event")
+    assert(string.find(text, "motion_stop=forced", 1, true) ~= nil,
+      "debug log should include the motion stop path")
     math.Vector3 = saved_vector3
   end)
 

@@ -104,6 +104,24 @@ local function _prune_unseen_roles(lock_state, buff_id)
   end
 end
 
+local function _resolve_ctrl_unit(role)
+  return role.get_ctrl_unit and role.get_ctrl_unit() or nil
+end
+
+local function _apply_seen_role_lock(role, role_id)
+  local unit = _resolve_ctrl_unit(role)
+  local exempt = role_id_utils.read(_sync_exempt_by_role, role_id) == true
+  if exempt or not unit then
+    _sync_role_lock(_sync_lock_state, role_id, nil, _sync_buff_id)
+    return
+  end
+  if not _can_apply(unit) then
+    runtime_state.log_once(_sync_state, "warn", "role_control_lock:missing_buff_api_" .. tostring(role_id), "ctrl_unit missing BuffStateComp:", tostring(role_id))
+    return
+  end
+  _sync_role_lock(_sync_lock_state, role_id, unit, _sync_buff_id)
+end
+
 local function _sync_role_callback(role)
   if not role then
     runtime_state.log_once(_sync_state, "warn", "role_control_lock:missing_roles", "role_control_lock missing role list")
@@ -114,21 +132,7 @@ local function _sync_role_callback(role)
     return
   end
   _sync_seen_roles[role_id] = true
-
-  local unit = role.get_ctrl_unit and role.get_ctrl_unit() or nil
-  if role_id_utils.read(_sync_exempt_by_role, role_id) == true then
-    _sync_role_lock(_sync_lock_state, role_id, nil, _sync_buff_id)
-    return
-  end
-  if not unit then
-    _sync_role_lock(_sync_lock_state, role_id, nil, _sync_buff_id)
-    return
-  end
-  if not _can_apply(unit) then
-    runtime_state.log_once(_sync_state, "warn", "role_control_lock:missing_buff_api_" .. tostring(role_id), "ctrl_unit missing BuffStateComp:", tostring(role_id))
-    return
-  end
-  _sync_role_lock(_sync_lock_state, role_id, unit, _sync_buff_id)
+  _apply_seen_role_lock(role, role_id)
 end
 
 function lock_policy.sync(state, enabled, deps)
@@ -161,12 +165,12 @@ return lock_policy
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=3e48c071a38d7b99
+projectHash=a8ca9f6221c2d64a
 scope.0.id=chunk:src/ui/input/role_control_lock.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=161
-scope.0.semanticHash=6620c9bb6632de45
+scope.0.endLine=165
+scope.0.semanticHash=e5a5d0435b12a1fe
 scope.1.id=function:_resolve_lock_state:6
 scope.1.kind=function
 scope.1.startLine=6
@@ -197,14 +201,24 @@ scope.6.kind=function
 scope.6.startLine=88
 scope.6.endLine=94
 scope.6.semanticHash=58f602ceff76dc53
-scope.7.id=function:_sync_role_callback:107
+scope.7.id=function:_resolve_ctrl_unit:107
 scope.7.kind=function
 scope.7.startLine=107
-scope.7.endLine=132
-scope.7.semanticHash=0cde6f0644769d8f
-scope.8.id=function:lock_policy.sync:134
+scope.7.endLine=109
+scope.7.semanticHash=cb2feb0939292b35
+scope.8.id=function:_apply_seen_role_lock:111
 scope.8.kind=function
-scope.8.startLine=134
-scope.8.endLine=158
-scope.8.semanticHash=a091311e0001aa69
+scope.8.startLine=111
+scope.8.endLine=123
+scope.8.semanticHash=204d7643ce945ebd
+scope.9.id=function:_sync_role_callback:125
+scope.9.kind=function
+scope.9.startLine=125
+scope.9.endLine=136
+scope.9.semanticHash=d99398edf6f66d3a
+scope.10.id=function:lock_policy.sync:138
+scope.10.kind=function
+scope.10.startLine=138
+scope.10.endLine=162
+scope.10.semanticHash=a091311e0001aa69
 ]]

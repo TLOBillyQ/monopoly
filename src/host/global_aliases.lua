@@ -2,14 +2,20 @@
 -- This file is a bridge exception, not a business compatibility alias layer.
 local host_runtime_bridge = {}
 
+local _REQUIRED_LUA_API_METHODS = {
+  "call_delay_time",
+  "global_register_custom_event",
+  "global_register_trigger_event",
+  "unit_register_custom_event",
+  "unit_register_trigger_event",
+  "global_send_custom_event",
+}
+
 local function _require_lua_api(lua_api)
   assert(lua_api ~= nil, "missing LuaAPI")
-  assert(type(lua_api.call_delay_time) == "function", "missing LuaAPI.call_delay_time")
-  assert(type(lua_api.global_register_custom_event) == "function", "missing LuaAPI.global_register_custom_event")
-  assert(type(lua_api.global_register_trigger_event) == "function", "missing LuaAPI.global_register_trigger_event")
-  assert(type(lua_api.unit_register_custom_event) == "function", "missing LuaAPI.unit_register_custom_event")
-  assert(type(lua_api.unit_register_trigger_event) == "function", "missing LuaAPI.unit_register_trigger_event")
-  assert(type(lua_api.global_send_custom_event) == "function", "missing LuaAPI.global_send_custom_event")
+  for _, method_name in ipairs(_REQUIRED_LUA_API_METHODS) do
+    assert(type(lua_api[method_name]) == "function", "missing LuaAPI." .. method_name)
+  end
   return lua_api
 end
 
@@ -39,20 +45,15 @@ return host_runtime_bridge
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=463c87adc3dccf65
+projectHash=05af49024bfc47d8
 scope.0.id=chunk:src/host/global_aliases.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=39
-scope.0.semanticHash=8af67667b42e1256
-scope.1.id=function:_require_lua_api:5
+scope.0.endLine=45
+scope.0.semanticHash=f3c2aaf140b04787
+scope.1.id=function:host_runtime_bridge.install:22
 scope.1.kind=function
-scope.1.startLine=5
-scope.1.endLine=14
-scope.1.semanticHash=2315041359e93a31
-scope.2.id=function:host_runtime_bridge.install:16
-scope.2.kind=function
-scope.2.startLine=16
-scope.2.endLine=36
-scope.2.semanticHash=0d244413b86b0d01
+scope.1.startLine=22
+scope.1.endLine=42
+scope.1.semanticHash=0d244413b86b0d01
 ]]
