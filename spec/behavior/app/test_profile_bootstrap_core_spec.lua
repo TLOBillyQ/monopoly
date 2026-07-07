@@ -94,6 +94,51 @@ describe("runtime.test_profile_bootstrap_core", function()
       "bootstrap should not change current_player_index when cfg omits it")
   end)
 
+  it("profile_bootstrap_applies_player_statuses", function()
+    local game = support.new_game()
+    startup_bootstrap.apply_bootstrap(game, {
+      players = {
+        [1] = { statuses = { pending_free_rent = true, pending_dice_multiplier = 2 } },
+      },
+    })
+    local status = game.players[1].status
+    assert(status ~= nil, "bootstrap should create the player status table")
+    assert(status.pending_free_rent == true,
+      "bootstrap should set pending_free_rent, got: " .. tostring(status.pending_free_rent))
+    assert(status.pending_dice_multiplier == 2,
+      "bootstrap should set pending_dice_multiplier, got: " .. tostring(status.pending_dice_multiplier))
+  end)
+
+  it("profile_bootstrap_ignores_non_table_statuses", function()
+    local game = support.new_game()
+    local before = {}
+    for key, value in pairs(game.players[1].status or {}) do
+      before[key] = value
+    end
+    startup_bootstrap.apply_bootstrap(game, {
+      players = { [1] = { statuses = "not_a_table" } },
+    })
+    local after = game.players[1].status or {}
+    for key, value in pairs(after) do
+      assert(before[key] == value, "non-table statuses should not change status key: " .. tostring(key))
+    end
+    for key, value in pairs(before) do
+      assert(after[key] == value, "non-table statuses should not drop status key: " .. tostring(key))
+    end
+  end)
+
+  it("profile_bootstrap_rejects_empty_status_key", function()
+    local game = support.new_game()
+    local ok, err = pcall(function()
+      startup_bootstrap.apply_bootstrap(game, {
+        players = { [1] = { statuses = { [""] = true } } },
+      })
+    end)
+    assert(ok == false, "empty status key should fail fast")
+    assert(tostring(err):find("invalid status key", 1, true) ~= nil,
+      "error should explain the invalid status key")
+  end)
+
   it("profile_bootstrap_applies_market_limits", function()
     local game = support.new_game()
     local product_id = game.market_limits and next(game.market_limits) or nil

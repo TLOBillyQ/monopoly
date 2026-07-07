@@ -5,8 +5,5 @@
 return {
   base_threshold = 7,
   files = {
-    ["src/app/profile_bootstrap.lua"] = 1,
-    ["src/ui/render/anim/overlay_runtime.lua"] = 1,
-    ["src/ui/render/move_anim/playback.lua"] = 1,
   },
 }
