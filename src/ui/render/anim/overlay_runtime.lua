@@ -58,12 +58,24 @@ local function _destroy_unit(host_runtime, entry)
   host_runtime.destroy_unit(entry.handle)
 end
 
+-- Overlays and transient VFX are decorative: drop physics/interact so a spawned
+-- handle never collides with pawns or steals taps.
+local function _make_decorative(handle)
+  if type(handle.set_physics_active) == "function" then
+    handle.set_physics_active(false)
+  end
+  if type(handle.disable_interact) == "function" then
+    handle.disable_interact()
+  end
+end
+
 local function _spawn_entry(host_runtime, group_id, unit_id, pos, scale)
   if group_id then
     local handle = _spawn_unit_group(host_runtime, group_id, pos)
     if not handle then
       return nil
     end
+    _make_decorative(handle)
     return { kind = "group", handle = handle }
   end
   if unit_id then
@@ -71,6 +83,7 @@ local function _spawn_entry(host_runtime, group_id, unit_id, pos, scale)
     if not handle then
       return nil
     end
+    _make_decorative(handle)
     return { kind = "unit", handle = handle, unit_id = unit_id, pooled = pooled }
   end
   return nil
