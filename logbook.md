@@ -383,3 +383,16 @@ Apply your own role rules to this state.
 ```
 
 Action taken: re-read specifier role and constitution, confirmed commit 72c8b9398c77e5671542ba9259c61de98914338c is reachable on `swarmforge-architect`, merged the identified architect state into `dev`, and resolved the logbook conflict by preserving both dev and architect handoff records.
+
+## 2026-07-07 11:10:06 +0800 — sent handoff (main-turn-buttons-slot-check batch complete)
+
+Complete handoff message sent (to coder and refactorer, priority 00):
+
+```text
+type: git_handoff
+task: main-turn-buttons-slot-check
+branch name: swarmforge-architect
+commit hash: 6f4df5e573
+```
+
+Summary: 合并 refactorer 3e03fe4ee2(主回合按钮 slot pin + unit_overlay_handle spec + CRAP 基线收紧),架构四阶段审查无需结构修正。随批完成架构启动职责:45 个 bootstrap-only src 文件全量变异(修复 macOS 无 gtimeout 导致的死循环挂死,brew 安装 coreutils),10 路并行闭合约 400 个 survivor,28/31 文件 manifest 达标写回(16 个 100%);target_direction 布尔化重构消除三态字符串死状态(86.5%→93.9%);query/obstacle_clear_walk/placement_snap 因死循环变异体只能 timeout 且上游引擎 timeout>0 即拒绝写回而如实搁浅。soft 验收变异基线:38 feature,28 全杀写回;step handler 严格化(道具名对照目录、警告级别枚举)杀 6;残留 game survivor 10 个待 coder 闭合(bankruptcy 现金 pin、deities 持续回合、dice 边界、setup 截断),meta feature(quality/swarmforge)101 个为工具契约松断言,留档不阻塞。验证:verify PASS、acceptance 755 ok、tooling 362 passed、DRY 与基线一致无真重复。
