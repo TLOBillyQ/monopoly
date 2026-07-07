@@ -145,6 +145,17 @@ function flow_outcome_steps.handlers()
       return true
     end,
 
+    ["取消该道具的使用"] = function(world)
+      local result = world.base_screen_cancel_result
+      if not (result and result.ok == true) then
+        return nil, "item usage was not cancelled"
+      end
+      if world.base_screen_item_usage_choice ~= nil then
+        return nil, "item usage phase was not closed by cancel"
+      end
+      return true
+    end,
+
     ["该道具未被消耗"] = function(world)
       local item_name = world.base_screen_target_choice_item_consumed
       if item_name ~= nil then

@@ -23,10 +23,6 @@ function panel_action_controls.apply_action_hint(ui, panel)
   end
 end
 
-local function _is_item_target_selection(choice)
-  return choice and choice.kind == "item_phase_passive" and choice.meta and choice.meta.passive_origin == true
-end
-
 local function _resolve_base_action_visibility(ui_model, base_visible)
   if base_visible ~= true then
     return false, false, false
@@ -38,11 +34,18 @@ local function _resolve_base_action_visibility(ui_model, base_visible)
   if not choice_support.is_cancelable_optional_action_choice(choice) then
     return false, false, false
   end
-  if _is_item_target_selection(choice) then
-    return false, false, true
+  -- Item target selection opens a dedicated target screen with its own cancel,
+  -- so the base screen hides all three main buttons during target selection.
+  if choice_support.is_item_target_selection_choice(choice) then
+    return false, false, false
   end
   if choice_support.is_pre_action_item_phase_choice(choice) then
     return true, false, false
+  end
+  -- The base cancel button belongs to the item phase (道具阶段) and backs out of
+  -- item usage on the base screen without consuming the card.
+  if choice_support.is_item_usage_phase_choice(choice) then
+    return false, false, true
   end
   return false, true, false
 end

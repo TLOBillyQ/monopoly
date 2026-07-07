@@ -72,6 +72,14 @@ function M.is_pre_action_item_phase_choice(choice)
   return optional_action_choice.is_pre_action_item_phase_choice(choice)
 end
 
+function M.is_item_target_selection_choice(choice)
+  return optional_action_choice.is_item_target_selection_choice(choice)
+end
+
+function M.is_item_usage_phase_choice(choice)
+  return optional_action_choice.is_item_usage_phase_choice(choice)
+end
+
 M.resolve_screen_key = choice_route_policy.resolve
 
 return M

@@ -113,6 +113,9 @@ function context.resolve_followup_flow(world)
 end
 
 function context.optional_choice_for_world(world, action_role_id)
+  if world.base_screen_item_usage_choice ~= nil then
+    return world.base_screen_item_usage_choice
+  end
   if world.base_screen_target_choice ~= nil then
     return world.base_screen_target_choice
   end
@@ -148,6 +151,24 @@ function context.enter_item_target_selection(world, item_name)
     owner_role_id = action_role_id,
     meta = {
       passive_origin = true,
+      item_name = item_name,
+    },
+  }
+  return true
+end
+
+-- 道具阶段: a specific item is being used on the base screen (not yet target
+-- selection). The base cancel button owns backing out of the item usage. Modeled
+-- as a cancelable item_phase_passive choice without passive_origin or a phase gate.
+function context.enter_item_usage_phase(world, item_name)
+  local action_role_id = context.current_action_role_id(world)
+  world.base_screen_item_usage_choice = {
+    id = 9003,
+    kind = "item_phase_passive",
+    route_key = "item_phase_passive",
+    allow_cancel = true,
+    owner_role_id = action_role_id,
+    meta = {
       item_name = item_name,
     },
   }

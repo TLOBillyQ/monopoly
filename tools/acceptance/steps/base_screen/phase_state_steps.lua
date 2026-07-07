@@ -73,6 +73,11 @@ function phase_state_steps.handlers()
       return context.enter_item_target_selection(world, item_name)
     end,
 
+    ["玩家处于<道具名>的道具使用阶段"] = function(world, example)
+      local item_name = tostring(example["道具名"] or "")
+      return context.enter_item_usage_phase(world, item_name)
+    end,
+
     ["玩家背包中有<道具名>"] = function(world, example)
       return context.give_item(world, example["道具名"])
     end,

@@ -25,6 +25,36 @@ function optional_action_choice.is_pre_action_item_phase_choice(choice)
   return type(meta) == "table" and meta.phase == "pre_action" and meta.passive_origin ~= true
 end
 
+-- Item target selection opens a dedicated target screen that owns its own cancel,
+-- so the base screen hides its cancel button while a target is being picked.
+function optional_action_choice.is_item_target_selection_choice(choice)
+  local meta = choice and choice.meta
+  return choice ~= nil and choice.kind == "item_phase_passive"
+    and type(meta) == "table" and meta.passive_origin == true
+end
+
+-- The base cancel button belongs to the item phase (道具阶段): a specific card is
+-- being used on the base screen (meta.item_name), and cancelling backs out of the
+-- usage without consuming the card. This is distinct from the generic optional
+-- action phase (which drives 结束) and from a pre/post-action skip gate (meta.phase
+-- drives 行动/结束) and from target selection (passive_origin opens its own screen).
+function optional_action_choice.is_item_usage_phase_choice(choice)
+  if not optional_action_choice.is_cancelable_optional_action_choice(choice) then
+    return false
+  end
+  if choice.kind ~= "item_phase_passive" then
+    return false
+  end
+  local meta = choice.meta
+  if type(meta) ~= "table" then
+    return false
+  end
+  if meta.passive_origin == true or meta.phase ~= nil then
+    return false
+  end
+  return meta.item_name ~= nil
+end
+
 return optional_action_choice
 
 --[[ mutate4lua-manifest

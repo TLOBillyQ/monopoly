@@ -196,6 +196,7 @@ function render_flow_context.cancel_optional_action(world, intent, input_source)
   world.base_screen_cancel_result = result
   if result.ok == true then
     world.base_screen_target_choice = nil
+    world.base_screen_item_usage_choice = nil
     if world.base_screen_ui_model then
       world.base_screen_ui_model.choice = nil
     end
