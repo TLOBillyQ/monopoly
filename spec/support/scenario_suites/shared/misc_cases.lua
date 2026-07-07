@@ -33,13 +33,13 @@ local function _test_owner_mine_other_player_triggers_immediately_after_placemen
   local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
   assert(mine_state.armed == true, "freshly placed mine should be active immediately")
   assert(
-    mine_state.owner_turn_started_count_at_placement == (p1.status.own_turn_started_count or 0),
+    mine_state.owner_turn_started_count_at_placement == g:player_own_turn_started_count(p1),
     "mine should record the owner's own-turn counter at placement"
   )
 
   local owner_res = _resolve_landing(g, p1, mine_tile, {})
   assert(not owner_res, "owner landing on freshly placed mine should not trigger extra landing")
-  assert((p1.status.stay_turns or 0) == 0, "owner should stay immune on the placement turn")
+  assert(g:detention_remaining(p1) == 0, "owner should stay immune on the placement turn")
   assert(g.board:has_mine(mine_index), "mine should remain after owner ignores it")
 
   g:update_player_position(p2, mine_index)
@@ -49,10 +49,10 @@ local function _test_owner_mine_other_player_triggers_immediately_after_placemen
   assert(trigger_res.next_state == "move_followup", "mine trigger should resume through move_followup")
   assert(trigger_res.next_args and trigger_res.next_args.log_entries and trigger_res.next_args.log_entries[1] == p2.name .. "触发地雷",
     "mine trigger should defer trigger log through move_followup")
-  assert((p2.status.stay_turns or 0) == 0, "hospital stay should be deferred until move followup")
+  assert(g:detention_remaining(p2) == 0, "hospital stay should be deferred until move followup")
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
   assert(resumed_state == "end_turn", "mine trigger should end the turn after hospital followup")
-  assert((p2.status.stay_turns or 0) > 0, "other player should be hospitalized by the fresh mine")
+  assert(g:detention_remaining(p2) > 0, "other player should be hospitalized by the fresh mine")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
 end
 
@@ -72,7 +72,7 @@ local function _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_
   g:set_player_status(p1, "own_turn_started_count", placement_turn_started_count + 1)
   local next_turn_res = _resolve_landing(g, p1, mine_tile, {})
   assert(not next_turn_res, "owner should stay immune on the next own turn after placement")
-  assert((p1.status.stay_turns or 0) == 0, "owner should not be hospitalized on the next own turn")
+  assert(g:detention_remaining(p1) == 0, "owner should not be hospitalized on the next own turn")
   assert(g.board:has_mine(mine_index), "mine should remain after the second immunity pass")
 
   g:set_player_status(p1, "own_turn_started_count", placement_turn_started_count + 2)
@@ -80,11 +80,11 @@ local function _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_
   local trigger_res = _resolve_landing(g, p1, mine_tile, {})
   assert(trigger_res and trigger_res.waiting == true, "owner should be hit by own mine on the third own turn")
   assert(trigger_res.next_state == "move_followup", "owner mine trigger should resume through move_followup")
-  assert((p1.status.stay_turns or 0) == 0, "hospital stay should still be deferred until move followup")
+  assert(g:detention_remaining(p1) == 0, "hospital stay should still be deferred until move followup")
 
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
   assert(resumed_state == "end_turn", "owner mine trigger should end the turn after hospital followup")
-  assert((p1.status.stay_turns or 0) > 0, "owner should be hospitalized by own mine on the third own turn")
+  assert(g:detention_remaining(p1) > 0, "owner should be hospitalized by own mine on the third own turn")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after detonating on owner later turn")
 end
 
@@ -111,11 +111,11 @@ local function _test_passing_armed_mine_stops_and_triggers_followup()
   local trigger_res = _resolve_landing(g, p2, mine_tile, move_res)
   assert(trigger_res and trigger_res.waiting == true, "passing mine trigger should wait for move followup")
   assert(trigger_res.next_state == "move_followup", "passing mine trigger should resume through move_followup")
-  assert((p2.status.stay_turns or 0) == 0, "hospital stay should be deferred until followup")
+  assert(g:detention_remaining(p2) == 0, "hospital stay should be deferred until followup")
 
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
   assert(resumed_state == "end_turn", "passing mine trigger should end the turn after hospital followup")
-  assert((p2.status.stay_turns or 0) > 0, "passing player should be hospitalized after mine followup")
+  assert(g:detention_remaining(p2) > 0, "passing player should be hospitalized after mine followup")
   assert(g.board:has_mine(mine_index) == false, "mine should clear after passing detonation")
 end
 
@@ -128,11 +128,11 @@ local function _test_detained_turn_enters_wait_state_before_advancing()
   g:advance_turn()
 
   assert(g.turn.current_player_index == 1, "detained player should stay current while wait is active")
-  assert((p1.status.stay_turns or 0) == 0, "detained player stay_turns should be decremented")
+  assert(g:detention_remaining(p1) == 0, "detained player stay_turns should be decremented")
   assert(g.last_turn and g.last_turn.player_id == p1.id, "last_turn should record skipped player")
   assert(g.last_turn and g.last_turn.skipped == true, "last_turn should mark detained turn as skipped")
   assert(g.last_turn and g.last_turn.stay_turns == 0, "last_turn should keep post-decrement stay_turns for UI projection")
-  assert((p1.status.own_turn_started_count or 0) == 1, "detained turn should still increment own-turn counter")
+  assert(g:player_own_turn_started_count(p1) == 1, "detained turn should still increment own-turn counter")
   assert(g.turn.phase == "detained_wait", "detained turn should enter detained_wait")
   assert(g.turn.detained_wait_active == true, "detained wait flag should stay enabled during wait")
   assert(g.turn.detained_wait_seconds == 2.0, "detained wait should use configured 2 second delay")
@@ -161,7 +161,7 @@ local function _test_turn_start_emits_turn_started_feedback_event()
   assert(#emitted >= 1, "turn_start should emit at least one event")
   assert(emitted[1].kind == monopoly_event.feedback.turn_started, "turn_start should emit feedback.turn_started")
   assert(emitted[1].payload.player_id == g:current_player().id, "turn_start should emit current player id")
-  assert((g:current_player().status.own_turn_started_count or 0) == 1, "turn_start should increment own-turn counter")
+  assert(g:player_own_turn_started_count(g:current_player()) == 1, "turn_start should increment own-turn counter")
 end
 
 local function _test_turn_start_waits_for_pre_action_item_phase_choice()
@@ -298,7 +298,7 @@ local function _test_roadblock_stop_does_not_detain_next_turn()
 
   assert(next_state == "landing", "roadblock followup should still continue into landing")
   assert(next_args and next_args.player == player, "roadblock followup should preserve landing player")
-  assert((player.status.stay_turns or 0) == 0, "roadblock should not write detained stay_turns")
+  assert(g:detention_remaining(player) == 0, "roadblock should not write detained stay_turns")
   assert(g.last_turn and g.last_turn.move_result and g.last_turn.move_result.stopped_on_roadblock == true,
     "roadblock hit should remain visible through last_turn move_result")
 

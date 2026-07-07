@@ -1,24 +1,34 @@
 local roll = require("src.turn.phases.roll")
+local dice_multiplier = require("src.turn.phases.dice_multiplier")
+local status_ops = require("src.player.actions.status")
+
+local function _test_apply_roll_total_uses_pending_multiplier()
+  local game = { player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier }
+  local boosted = { id = 1, status = { pending_dice_multiplier = 4 } }
+  assert(dice_multiplier.apply_roll_total(game, 3, boosted) == 12,
+    "apply_roll_total should multiply raw total by the pending multiplier")
+  local plain = { id = 2, status = {} }
+  assert(dice_multiplier.apply_roll_total(game, 5, plain) == 5,
+    "apply_roll_total should pass through raw total without a multiplier")
+end
 
 local _apply_dice_multiplier_tests = {
   function()
     local player = { id = 1, name = "P1", position = 1, status = { pending_dice_multiplier = 4 } }
-    local turn_mgr = {
-      game = {
-        board = { get_tile = function() return { type = "normal" } end },
-        turn = { move_anim_seq = 0, last_turn = {} },
-        dirty = {},
-        players = { player },
-        anim_gate_port = { wait_move_anim = false },
-        set_player_status = function(self, p, key, value)
-          p.status[key] = value
-        end,
-      },
+    local game = {
+      board = { get_tile = function() return { type = "normal" } end },
+      turn = { move_anim_seq = 0, last_turn = {} },
+      dirty = {},
+      players = { player },
+      anim_gate_port = { wait_move_anim = false },
+      player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+      consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
     }
+    local turn_mgr = { game = game }
     local original_movement = package.loaded["src.rules.movement"]
     local original_move_followup = package.loaded["src.turn.phases.move_followup"]
     package.loaded["src.rules.movement"] = {
-      move = function(game, p, total)
+      move = function(_, _, total)
         assert(total == 12, "total should be multiplied: expected 12, got " .. tostring(total))
         return { visited = {}, steps = {} }
       end
@@ -33,7 +43,7 @@ local _apply_dice_multiplier_tests = {
       total = 3,
       raw_total = 3,
     })
-    assert(player.status.pending_dice_multiplier == 1, "should reset multiplier to 1")
+    assert(game:player_pending_dice_multiplier(player) == 1, "should reset multiplier to 1")
     package.loaded["src.rules.movement"] = original_movement
     package.loaded["src.turn.phases.move_followup"] = original_move_followup
     package.loaded["src.turn.phases.move"] = nil
@@ -48,7 +58,8 @@ local _apply_dice_multiplier_tests = {
         dirty = {},
         players = { player },
         anim_gate_port = { wait_move_anim = false },
-        set_player_status = function() end,
+        player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+        consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
       },
     }
     local original_movement = package.loaded["src.rules.movement"]
@@ -97,6 +108,8 @@ local _roll_dice_extended_tests = {
 }
 
 describe("movement_dice", function()
+  it("_test_apply_roll_total_uses_pending_multiplier", _test_apply_roll_total_uses_pending_multiplier)
+
   it("_test_apply_dice_multiplier_applies_and_resets", _apply_dice_multiplier_tests[1])
 
   it("_test_apply_dice_multiplier_nil_raw_total", _apply_dice_multiplier_tests[2])

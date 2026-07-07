@@ -257,7 +257,7 @@ local function _test_complex_consecutive_turn_settlement()
   assert(p1, "玩家1应该存在")
 
   if p1.position == hospital_idx then
-    assert(number_utils.is_numeric(p1.status.stay_turns), "医院应设置 stay_turns")
+    assert(g:detention_remaining(p1) > 0, "医院应设置扣留剩余回合")
   end
 
   assert(true, "复杂连续结算完成")

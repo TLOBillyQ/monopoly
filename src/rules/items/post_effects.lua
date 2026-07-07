@@ -67,10 +67,7 @@ local function _handle_place_mine_here(game, player)
     owner_id = player.id,
     armed = true,
     placed_turn_count = game.turn and game.turn.turn_count or nil,
-    owner_turn_started_count_at_placement = player
-      and player.status
-      and player.status.own_turn_started_count
-      or 0,
+    owner_turn_started_count_at_placement = game:player_own_turn_started_count(player),
   })
   event_feed.publish(game, {
     kind = event_kinds.mine_placed,

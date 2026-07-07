@@ -787,11 +787,11 @@ describe("item", function()
       p.name .. " 发射导弹轰炸 " .. tile_ref.name .. "，建筑被摧毁，1 名玩家送医",
       "missile should defer main strike log until move followup"
     )
-    _assert_eq(g.players[2].status.stay_turns or 0, 0, "missile should defer hospital stay until move followup")
+    _assert_eq(g:detention_remaining(g.players[2]), 0, "missile should defer hospital stay until move followup")
 
     local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
     _assert_eq(next_state, nil, "missile move followup should return caller continuation")
-    assert(g.players[2].status.stay_turns > 0, "missile target should enter hospital after move followup")
+    assert(g:detention_remaining(g.players[2]) > 0, "missile target should enter hospital after move followup")
   end)
 
   it("missile_apply_can_destroy_own_land_and_relocate_occupant", function()
@@ -1308,7 +1308,7 @@ describe("item", function()
     _assert_eq(type(res), "table", "exile should return result payload")
     _assert_eq(res.ok, true, "exile should succeed")
     assert(type(res.after_action_anim) == "table", "exile should expose move followup continuation")
-    _assert_eq(target.status.stay_turns or 0, 0, "exile should not apply mountain stay immediately")
+    _assert_eq(g:detention_remaining(target), 0, "exile should not apply mountain stay immediately")
     assert(g.turn.action_anim and g.turn.action_anim.kind == "teleport_effect", "exile should queue teleport effect first")
     _assert_eq(
       res.after_action_anim.next_args.log_entries[1],
@@ -1318,7 +1318,7 @@ describe("item", function()
 
     local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
     _assert_eq(next_state, nil, "exile move followup should return to caller continuation")
-    assert((target.status.stay_turns or 0) > 0, "exile should apply mountain stay after move followup")
+    assert(g:detention_remaining(target) > 0, "exile should apply mountain stay after move followup")
   end)
 
   it("item_executor_fallback_item_use_anim", function()
@@ -1758,7 +1758,8 @@ describe("item", function()
     })
     assert(confirm_res and confirm_res.stay == true, "confirming repeatable pre_action follow-up should reopen item phase immediately when no anim waits")
     _assert_eq(inventory.count(p), 1, "confirming follow-up should consume exactly one item")
-    assert(p.status.pending_remote_dice and p.status.pending_remote_dice.values[1] == 4,
+    local remote_values = g:peek_pending_remote_dice(p)
+    assert(remote_values and remote_values[1] == 4,
       "confirming follow-up should apply selected remote dice value")
 
     local reopened = _get_choice(g)
@@ -1791,8 +1792,9 @@ describe("item", function()
     })
     _assert_eq(res and res.stay, false, "preconsumed follow-up should resolve instead of staying")
     _assert_eq(g.turn.pending_choice, nil, "preconsumed follow-up cancel should not keep choice")
-    assert(p.status.pending_remote_dice and p.status.pending_remote_dice.values, "remote dice value should still be applied")
-    _assert_eq(p.status.pending_remote_dice.values[1], 4, "cancel should fallback to first option value")
+    local fallback_values = g:peek_pending_remote_dice(p)
+    assert(fallback_values ~= nil, "remote dice value should still be applied")
+    _assert_eq(fallback_values[1], 4, "cancel should fallback to first option value")
   end)
 
   it("tax_prompt_cancel_maps_to_skip_and_executes_pay_tax", function()

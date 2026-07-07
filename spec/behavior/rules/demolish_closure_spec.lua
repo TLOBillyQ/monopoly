@@ -153,7 +153,7 @@ describe("demolish closure", function()
     _assert_eq(res.ok, true, "missile apply succeeds")
     _assert_eq(res.after_action_anim, nil, "no anim gate means no deferred followup")
     _assert_eq(occupant.position, g.board:find_first_by_type("hospital"), "occupant relocates to hospital now")
-    assert((occupant.status.stay_turns or 0) > 0, "hospital stay applied immediately without a gate")
+    assert(g:detention_remaining(occupant) > 0, "hospital stay applied immediately without a gate")
   end)
 
   it("missile with an anim gate defers via followup and carries target ids", function()

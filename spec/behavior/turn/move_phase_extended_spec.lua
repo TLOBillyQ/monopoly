@@ -2,13 +2,16 @@ local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
+local status_ops = require("src.player.actions.status")
+
 local function _make_game(opts)
   opts = opts or {}
   return {
     turn = { move_anim_seq = opts.prior_seq },
     dirty = { turn = false, any = false },
     anim_gate_port = { wait_move_anim = opts.wait_move_anim == true },
-    set_player_status = nil,
+    player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier,
+    consume_pending_dice_multiplier = status_ops.consume_pending_dice_multiplier,
     last_turn = nil,
   }
 end

@@ -74,8 +74,7 @@ describe("mine_effect.can_trigger / grace boundary closure", function()
     local p = g.players[1]
     g:place_mine(3, { armed = true, owner_id = p.id + 100,
       owner_turn_started_count_at_placement = 5 })
-    p.status = p.status or {}
-    p.status.own_turn_started_count = 0
+    g:set_player_status(p, "own_turn_started_count", 0)
     _assert_eq(mine_effect.can_trigger(g, p, 3), true,
       "a foreign owner expires grace regardless of turn counts")
   end)
@@ -101,8 +100,7 @@ describe("mine_effect.can_trigger / grace boundary closure", function()
     local p = g.players[1]
     g:place_mine(3, { armed = true, owner_id = p.id,
       owner_turn_started_count_at_placement = 5 })
-    p.status = p.status or {}
-    p.status.own_turn_started_count = 6 -- placement + 1: grace still holds
+    g:set_player_status(p, "own_turn_started_count", 6) -- placement + 1: grace still holds
     _assert_eq(mine_effect.can_trigger(g, p, 3), false,
       "own_count == placement + 1 is not yet expired (the > boundary holds)")
   end)
@@ -112,8 +110,7 @@ describe("mine_effect.can_trigger / grace boundary closure", function()
     local p = g.players[1]
     g:place_mine(3, { armed = true, owner_id = p.id,
       owner_turn_started_count_at_placement = 5 })
-    p.status = p.status or {}
-    p.status.own_turn_started_count = 7 -- placement + 2: grace has lapsed
+    g:set_player_status(p, "own_turn_started_count", 7) -- placement + 2: grace has lapsed
     _assert_eq(mine_effect.can_trigger(g, p, 3), true,
       "own_count > placement + 1 expires the owner's grace")
   end)

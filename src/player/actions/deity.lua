@@ -31,6 +31,14 @@ function deity_ops.player_has_any_deity(_, player)
   return d.type ~= nil and d.type ~= "" and (d.remaining or 0) > 0
 end
 
+-- 只读当前生效的神明类型；无生效神明返回 nil（供展示/文案，不暴露存储布局）。
+function deity_ops.player_deity_type(self, player)
+  if not self:player_has_any_deity(player) then
+    return nil
+  end
+  return player.status.deity.type
+end
+
 function deity_ops.player_has_angel(self, player)
   return self:player_has_deity(player, "angel")
 end

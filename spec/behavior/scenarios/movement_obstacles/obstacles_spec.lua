@@ -88,7 +88,7 @@ describe("gameplay_obstacle_chain_order", function()
 
     local resumed_state = move_followup.run({ game = game }, resumed_next_args)
     assert(resumed_state == "end_turn", "roadblock then mine followup should end the turn")
-    assert((player.status.stay_turns or 0) > 0, "mine followup should hospitalize the player")
+    assert(game:detention_remaining(player) > 0, "mine followup should hospitalize the player")
   end)
 
   it("same_tile_roadblock_then_mine_action_anim_keeps_trigger_order", function()
@@ -131,7 +131,7 @@ describe("gameplay_obstacle_chain_order", function()
       "continuation should stay armed until the queued mine animation finishes")
     assert(game.turn.action_anim and game.turn.action_anim.kind == "mine_trigger",
       "first action anim completion should promote mine trigger into the active slot")
-    assert((player.status.stay_turns or 0) == 0, "hospital effect should not apply after only the roadblock animation")
+    assert(game:detention_remaining(player) == 0, "hospital effect should not apply after only the roadblock animation")
     assert(player.status.pending_location_effect == "hospital",
       "mine followup should remain pending until the queued action animation finishes")
     assert(event_log.get_seq(game.state.event_log) == initial_event_seq,
@@ -149,7 +149,7 @@ describe("gameplay_obstacle_chain_order", function()
 
     local resumed_state = move_followup.run({ game = game }, second.next_args)
     assert(resumed_state == "end_turn", "queued mine followup should still end the turn after both animations")
-    assert((player.status.stay_turns or 0) > 0, "queued mine followup should still hospitalize the player")
+    assert(game:detention_remaining(player) > 0, "queued mine followup should still hospitalize the player")
     assert(player.status.pending_location_effect == nil, "hospital effect should resolve after move_followup runs")
     assert(event_log.get_seq(game.state.event_log) > initial_event_seq,
       "mine and hospital logs should appear only after the queued mine animation finishes")

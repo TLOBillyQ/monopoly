@@ -32,6 +32,10 @@ describe("items_post_effects", function()
       set_player_deity = function(self, player, deity_type, remaining)
         player.status.deity = { type = deity_type, remaining = remaining }
       end,
+      player_deity_type = function(self, player)
+        local deity = player.status and player.status.deity or nil
+        return deity and deity.type or nil
+      end,
       transfer_deity = function(self, src, dst)
         self:set_player_deity(dst, src.status.deity.type, src.status.deity.remaining)
         self:clear_player_deity(src)
