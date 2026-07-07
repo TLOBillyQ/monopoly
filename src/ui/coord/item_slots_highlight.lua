@@ -2,6 +2,7 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_state = require("src.ui.state.runtime")
 local timing = require("src.config.gameplay.timing")
 local choice_support = require("src.ui.view.choice_support")
+local pending_confirmation = require("src.ui.state.pending_confirmation")
 local events = require("src.ui.coord.item_slots_events")
 
 local M = {}
@@ -103,7 +104,7 @@ end
 
 function M.refresh_highlight_state(state, ctx, slot_pickable)
   local is_item_phase_ask = choice_support.requires_item_slot_pre_confirm(ctx.choice)
-    and state._item_phase_ask_active == true
+    and pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   local gate_store = _ensure_gate_store(state)
   local gate_key = _resolve_gate_key(ctx.choice_id, ctx.role_id, ctx.display_player_id)
   if is_item_phase_ask then

@@ -33,6 +33,27 @@ function modal_state.close_choice(state)
   ui_runtime.pending_choice_selected_option_id = nil
 end
 
+-- 「待确认选项」的读取口：其它模块不再直接翻 ui_runtime 字段。
+function modal_state.get_selected_option_id(state)
+  assert(state ~= nil, "missing state")
+  return _ui_runtime(state).pending_choice_selected_option_id
+end
+
+function modal_state.get_visible_option_id(state, index)
+  assert(state ~= nil, "missing state")
+  local option_ids = _ui_runtime(state).choice_visible_option_ids
+  if type(option_ids) ~= "table" then
+    return nil
+  end
+  return option_ids[index]
+end
+
+-- 当前激活的选择屏 key（由 coord 层开屏/关屏时写入 state.ui）。
+function modal_state.get_active_choice_screen_key(state)
+  local ui = state and state.ui or nil
+  return ui and ui.active_choice_screen_key or nil
+end
+
 function modal_state.open_popup(state, payload)
   assert(state ~= nil and state.ui ~= nil, "missing ui state")
   state.ui.popup_active = true

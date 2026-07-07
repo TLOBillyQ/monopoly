@@ -1,4 +1,5 @@
 local modal_state = require("src.ui.state.modal")
+local pending_confirmation = require("src.ui.state.pending_confirmation")
 local choice_openers = require("src.ui.coord.choice_openers")
 local choice_common = require("src.ui.coord.choice_helpers")
 local popup = require("src.ui.coord.popup")
@@ -78,7 +79,7 @@ local function _should_skip_reopen(state, screen_key, choice_id)
 end
 
 local function _open_item_phase_pre_confirm(state, choice)
-  state._item_phase_ask_active = true
+  pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   state._suppress_item_slot_highlight_until_pick = true
   local title = choice_common.resolve_secondary_confirm_title(choice, state.game, "base_inline", nil)
   local body = choice_common.resolve_secondary_confirm_body(choice, state.game, "base_inline", nil, nil)
@@ -86,7 +87,7 @@ local function _open_item_phase_pre_confirm(state, choice)
 end
 
 local function _close_or_reset_inline_choice(state)
-  state._item_phase_confirmed = nil
+  pending_confirmation.reset_item_phase_confirmed(state)
   if state.ui.choice_active then
     modal_presenter.close_choice_modal(state)
     return
@@ -96,7 +97,7 @@ local function _close_or_reset_inline_choice(state)
 end
 
 local function _open_base_inline_choice(state, choice)
-  if choice_common.requires_item_slot_pre_confirm(choice) and not state._item_phase_confirmed then
+  if choice_common.requires_item_slot_pre_confirm(choice) and not pending_confirmation.is_item_phase_confirmed(state) then
     _open_item_phase_pre_confirm(state, choice)
     return true
   end
@@ -140,7 +141,7 @@ function modal_presenter.open_choice_modal(state, choice, market_state)
 
   if screen_key == "item_phase_passive" then
     choice_common.switch_modal_canvas(state, canvas.CANVAS_BASE)
-    state._item_phase_ask_active = false
+    pending_confirmation.clear(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
     state._suppress_item_slot_highlight_until_pick = false
     return
   end

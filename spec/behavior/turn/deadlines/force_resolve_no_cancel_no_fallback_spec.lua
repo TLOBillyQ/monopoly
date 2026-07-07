@@ -1,5 +1,6 @@
 -- 验证：choice 无 allow_cancel + 无 auto_action + 无注册 fallback → force_skip 必然推进
 local force_resolve = require("src.turn.deadlines")
+local pending_confirmation = require("src.state.pending_confirmation")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local runtime_state = require("src.state.runtime")
 
@@ -68,7 +69,7 @@ describe("force_resolve no cancel no fallback", function()
     local game, advanced = _build_game()
     local clear_calls = 0
     local choice = { id = "c3", kind = "market_buy", options = {} }
-    state._item_phase_ask_active = true
+    pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
     state._resolved_gameplay_loop_ports = {
       output = {
         clear_pending_choice = function(state_arg)
@@ -87,7 +88,7 @@ describe("force_resolve no cancel no fallback", function()
     force_resolve.force_skip(game, state, choice, "test")
 
     assert.equals(1, clear_calls)
-    assert.is_nil(state._item_phase_ask_active)
+    assert.is_false(pending_confirmation.is_active(state))
     assert.is_true(game.turn._choice_force_skip_pending == true)
     assert.is_nil(game.turn.pending_choice)
     assert.is_false(force_resolve.is_active(state, "choice"))
@@ -117,12 +118,12 @@ describe("force_resolve no cancel no fallback", function()
 
   it("force_skip tolerates nil game and missing output ports", function()
     local state = _build_state()
-    state._item_phase_ask_active = true
+    pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
 
     local ok, err = pcall(force_resolve.force_skip, nil, state, { id = "c6", kind = "weird" }, "test")
 
     assert.is_true(ok, tostring(err))
-    assert.is_nil(state._item_phase_ask_active)
+    assert.is_false(pending_confirmation.is_active(state))
   end)
 
   it("force_skip does not advance a finished game", function()

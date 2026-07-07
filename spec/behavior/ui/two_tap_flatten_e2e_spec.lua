@@ -6,6 +6,7 @@
 --   C. target_choice with a single option auto-dispatches choice_select on first tap
 --      without going through _lock_option (locked_option_id stays nil).
 --   D. Market still requires the two-step (market_select then market_confirm).
+local pending_confirmation = require("src.state.pending_confirmation")
 local support = require("spec.support.shared_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
@@ -128,10 +129,8 @@ describe("two_tap_flatten_e2e", function()
       "Scenario A: dispatched intent should keep selected option id")
     _assert_eq(enter_calls, 0, "Scenario A: pre_confirm_flow.enter must not be called")
     _assert_eq(opened_pre_confirm, 0, "Scenario A: open_pre_confirm_screen must not be called")
-    _assert_eq(state._item_phase_ask_active, nil,
-      "Scenario A: _item_phase_ask_active must stay unset")
-    _assert_eq(state._pre_confirm_active, nil,
-      "Scenario A: _pre_confirm_active must stay unset")
+    _assert_eq(pending_confirmation.is_active(state), false,
+      "Scenario A: no pending confirmation may be active")
   end)
 
   it("Scenario B: target_choice second tap on locked option emits choice_select", function()

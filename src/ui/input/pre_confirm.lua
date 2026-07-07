@@ -2,6 +2,8 @@ local choice_support = require("src.ui.view.choice_support")
 local choice_contract = require("src.config.choice.contract")
 local role_id_utils = require("src.foundation.identity")
 local runtime_state = require("src.ui.state.runtime")
+local modal_state = require("src.ui.state.modal")
+local pending_confirmation = require("src.ui.state.pending_confirmation")
 local modal_ports = require("src.ui.input.modal_ports")
 
 local pre_confirm_flow = {}
@@ -48,7 +50,7 @@ function pre_confirm_flow.needs_pre_confirm(state, intent)
   end
 
   if intent_type == "choice_select" then
-    local screen_key = ui.active_choice_screen_key
+    local screen_key = modal_state.get_active_choice_screen_key(state)
     return _requires_choice_select_pre_confirm(choice, screen_key)
   end
 
@@ -56,7 +58,7 @@ function pre_confirm_flow.needs_pre_confirm(state, intent)
 end
 
 local function _resolve_enter_params(state, intent, choice)
-  local source_screen = state.ui and state.ui.active_choice_screen_key or nil
+  local source_screen = modal_state.get_active_choice_screen_key(state)
   local option_id, option_label
 
   if intent.type == "choice_select" then
@@ -87,12 +89,14 @@ function pre_confirm_flow.enter(state, intent)
     return false
   end
 
-  state._pre_confirm_active = true
-  state._pre_confirm_source_screen = params.source_screen
   local modal = _modal_ports(state)
   if type(modal.open_pre_confirm_screen) ~= "function" then
     return false
   end
+  pending_confirmation.enter(state, pending_confirmation.SOURCE_CHOICE_SELECT, {
+    option_id = params.option_id,
+    source_screen = params.source_screen,
+  })
   modal.open_pre_confirm_screen(state, choice, params.option_id, params.title, params.body)
   return true
 end
@@ -110,9 +114,8 @@ local function _restore_prior_screen(state, source, modal, choice)
 end
 
 function pre_confirm_flow.cancel(state)
-  state._pre_confirm_active = nil
-  local source = state._pre_confirm_source_screen
-  state._pre_confirm_source_screen = nil
+  local record = pending_confirmation.cancel(state)
+  local source = record and record.source_screen or nil
   runtime_state.set_pending_choice_id(state, nil)
 
   local current_model = runtime_state.get_ui_model(state)

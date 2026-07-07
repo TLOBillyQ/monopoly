@@ -1,3 +1,4 @@
+local pending_confirmation = require("src.state.pending_confirmation")
 local P = require("spec.support.shared_support")
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
@@ -602,7 +603,7 @@ describe("presentation_choice_routes", function()
       phase .. ": dispatch_action should keep selected option id")
     _assert_eq(enter_count(), 0, phase .. ": pre_confirm_flow.enter must not be called")
     _assert_eq(opened_count(), 0, phase .. ": modal.open_pre_confirm_screen must not be called")
-    _assert_eq(state._pre_confirm_active, nil, phase .. ": _pre_confirm_active must stay unset")
+    _assert_eq(pending_confirmation.is_active(state), false, phase .. ": no pending confirmation may be active")
   end
 
   it("active item_phase choice flat-dispatches in pre_action phase", function()

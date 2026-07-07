@@ -1,4 +1,5 @@
 -- luacheck: ignore 211
+local pending_confirmation = require("src.state.pending_confirmation")
 local support = require("spec.support.shared_support")
 local _assert_eq = support.assert_eq
 local _bind_ui_runtime = support.bind_ui_runtime
@@ -242,7 +243,7 @@ describe("presentation.market_confirm_flow", function()
 
     _assert_eq(#dispatched, 1, "item slot should dispatch directly without pre_confirm")
     _assert_eq(dispatched[1] and dispatched[1].type, "ui_button", "item slot should dispatch original ui_button")
-    _assert_eq(state._pre_confirm_active, nil, "item slot should not activate pre_confirm")
+    _assert_eq(pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT), false, "item slot should not activate pre_confirm")
   end)
 
   it("_test_ui_intent_dispatcher_remote_choice_skips_pre_confirm_when_disabled", function()
@@ -494,7 +495,7 @@ describe("presentation.market_confirm_flow", function()
     end)
 
     _assert_eq(opened_pre_confirm, 0, "non-owner item slot should not open pre-confirm")
-    _assert_eq(state._pre_confirm_active, nil, "non-owner item slot should keep pre-confirm inactive")
+    _assert_eq(pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT), false, "non-owner item slot should keep pre-confirm inactive")
     _assert_eq(#dispatched, 1, "non-owner item slot should continue with original action path")
     _assert_eq(dispatched[1] and dispatched[1].type, "ui_button", "non-owner item slot should dispatch original ui_button")
   end)

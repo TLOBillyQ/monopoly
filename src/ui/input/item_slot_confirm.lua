@@ -1,15 +1,14 @@
 local number_utils = require("src.foundation.number")
 local runtime_state = require("src.ui.state.runtime")
 local choice_support = require("src.ui.view.choice_support")
+local pending_confirmation = require("src.ui.state.pending_confirmation")
 local modal_ports = require("src.ui.input.modal_ports")
 
 local item_slot_confirm = {}
 
 local _modal_ports = modal_ports.resolve
 
-local function _close_confirm_state(state)
-  state._item_slot_confirm_active = nil
-  state._item_slot_confirm_intent = nil
+local function _close_confirm_screen(state)
   local modal = _modal_ports(state)
   if type(modal.close_choice_modal) == "function" then
     modal.close_choice_modal(state)
@@ -17,18 +16,22 @@ local function _close_confirm_state(state)
 end
 
 local function _on_slot_choice_select(state, game, intent, opts, action_port)
-  local stored = state._item_slot_confirm_intent
-  _close_confirm_state(state)
+  local record = pending_confirmation.confirm(state)
+  local stored = record and record.intent or nil
+  _close_confirm_screen(state)
   if stored then action_port.dispatch_action(game, state, stored, opts) end
 end
 
 local _SLOT_CONFIRM_DISPATCH = {
   choice_select = _on_slot_choice_select,
-  choice_cancel = function(state) _close_confirm_state(state) end,
+  choice_cancel = function(state)
+    pending_confirmation.cancel(state)
+    _close_confirm_screen(state)
+  end,
 }
 
 function item_slot_confirm.dispatch(state, game, intent, opts, action_port)
-  if not state._item_slot_confirm_active then return false end
+  if not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_ITEM_SLOT) then return false end
   local intent_type = intent and intent.type
   local handler = _SLOT_CONFIRM_DISPATCH[intent_type]
   if not handler then return false end
@@ -43,18 +46,11 @@ local function _resolve_slot_index(intent)
   return number_utils.to_integer(string.match(id, "^item_slot_(%d+)$"))
 end
 
-local function _find_confirmable_slot(state, index)
+local function _resolve_slot_option(state, index)
   local current_model = runtime_state.get_ui_model(state)
   local choice = current_model and current_model.choice or nil
-  if not choice or not choice.slot_states then return nil, nil end
-  local slot = choice.slot_states[index]
-  if not slot or not slot.available or not slot.item_id then return nil, nil end
-  return choice, slot
-end
-
-local function _resolve_slot_option(state, index)
-  local choice, slot = _find_confirmable_slot(state, index)
-  if not choice or not slot then return nil, nil, nil end
+  local slot = choice_support.find_confirmable_slot(choice, index)
+  if not slot then return nil, nil, nil end
   local option = choice_support.resolve_option_by_id(choice, slot.item_id)
   if not option or not option.confirm_title then return nil, nil, nil end
   return choice, slot, option
@@ -69,14 +65,11 @@ function item_slot_confirm.try_enter(state, intent)
   if not index then return false end
   local choice, slot, option = _resolve_slot_option(state, index)
   if not choice then return false end
-  state._item_slot_confirm_active = true
-  state._item_slot_confirm_intent = intent
   local modal = _modal_ports(state)
   if type(modal.open_pre_confirm_screen) ~= "function" then
-    state._item_slot_confirm_active = nil
-    state._item_slot_confirm_intent = nil
     return false
   end
+  pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_SLOT, { intent = intent })
   _open_slot_confirm_screen(state, modal, choice, slot, option)
   return true
 end

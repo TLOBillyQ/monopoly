@@ -2,6 +2,7 @@ local logger = require("src.foundation.log")
 local pre_confirm_flow = require("src.ui.input.pre_confirm")
 local item_phase_ask_flow = require("src.ui.input.item_phase_ask")
 local item_slot_confirm = require("src.ui.input.item_slot_confirm")
+local pending_confirmation = require("src.ui.state.pending_confirmation")
 local command_policy = require("src.ui.input.command_policy")
 
 local game_action_dispatcher = {}
@@ -22,8 +23,7 @@ end
 
 local _PRE_CONFIRM_HANDLERS = {
   choice_select = function(state, game, intent, opts, action_port)
-    state._pre_confirm_active = nil
-    state._pre_confirm_source_screen = nil
+    pending_confirmation.confirm(state)
     action_port.dispatch_action(game, state, intent, opts)
     return true
   end,
@@ -45,7 +45,7 @@ local function _dispatch_pre_confirm_handler(handler, state, game, intent, opts,
 end
 
 local function _handle_pre_confirm(state, game, intent, opts, action_port)
-  if not state._pre_confirm_active then
+  if not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT) then
     return false
   end
   return _dispatch_pre_confirm_handler(_pre_confirm_handler(intent), state, game, intent, opts, action_port)
@@ -103,7 +103,7 @@ local function _try_slot_dispatchers(state, game, intent, opts, ap)
 end
 
 local function _try_enter_pre_confirm(state, intent)
-  if state._pre_confirm_active then return false end
+  if pending_confirmation.is_active(state) then return false end
   if not pre_confirm_flow.needs_pre_confirm(state, intent) then return false end
   return pre_confirm_flow.enter(state, intent)
 end

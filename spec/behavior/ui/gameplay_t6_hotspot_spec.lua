@@ -1,4 +1,5 @@
 -- luacheck: ignore 211
+local pending_confirmation = require("src.state.pending_confirmation")
 local market_slots = require("src.ui.render.market.slots")
 local placement = require("src.ui.render.board.placement")
 local status3d_status = require("src.ui.render.status3d.status")
@@ -909,7 +910,6 @@ describe("gameplay rendering hotspots", function()
   it("pre_confirm_enter_choice_select", function()
       local state = {
         ui = { active_choice_screen_key = "base" },
-        _pre_confirm_active = false,
         game = {},
         local_actor_role_id = 7,
       }
@@ -944,7 +944,8 @@ describe("gameplay rendering hotspots", function()
 
       assert(result == true, "choice_select intent should enter pre_confirm")
       assert(opened == true, "open_pre_confirm_screen should be called")
-      assert(state._pre_confirm_active == true, "_pre_confirm_active should be set")
+      assert(pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT) == true,
+        "pending confirmation (choice_select) should be active")
   end)
 
   it("pre_confirm_enter_no_choice_returns_false", function()
@@ -1225,7 +1226,6 @@ describe("gameplay rendering hotspots", function()
   it("pre_confirm_enter_missing_modal_function", function()
       local state = {
         ui = { active_choice_screen_key = "base" },
-        _pre_confirm_active = false,
         game = {},
         local_actor_role_id = 7,
         gameplay_loop_ports = {
@@ -1263,7 +1263,6 @@ describe("gameplay rendering hotspots", function()
   it("pre_confirm_enter_requires_local_owner", function()
       local state = {
         ui = { active_choice_screen_key = "base" },
-        _pre_confirm_active = false,
         game = {},
         local_actor_role_id = 8,
       }
@@ -1303,7 +1302,6 @@ describe("gameplay rendering hotspots", function()
   it("pre_confirm_enter_requires_resolved_local_role", function()
       local state = {
         ui = { active_choice_screen_key = "base" },
-        _pre_confirm_active = false,
         game = {},
       }
       local opened = false

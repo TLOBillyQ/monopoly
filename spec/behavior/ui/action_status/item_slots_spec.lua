@@ -7,6 +7,13 @@ local _has_event = P.has_event
 local ui_view = require("src.ui.coord.ui_runtime")
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
 local ids = require("spec.fixtures.item_slot_ids")
+local pending_confirmation = require("src.state.pending_confirmation")
+
+-- 通过公开接口把 state 置为「item_phase 询问已确认」：enter 后立即 confirm。
+local function _confirm_item_phase_ask(state)
+  pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
+  pending_confirmation.confirm(state)
+end
 
 describe("presentation_item_slots", function()
   it("_test_item_slot_uses_keep_size_path", function()
@@ -251,8 +258,6 @@ describe("presentation_item_slots", function()
      local item_phase_ask_flow = require("src.ui.input.item_phase_ask")
     local closed = 0
     local state = {
-      _item_phase_ask_active = true,
-      _item_phase_confirmed = nil,
       _suppress_item_slot_highlight_until_pick = true,
       gameplay_loop_ports = {
         modal = {
@@ -267,6 +272,7 @@ describe("presentation_item_slots", function()
       ui = ui_view.build_ui_state(),
     }
     _bind_ui_runtime(state)
+    pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
 
     local handled = false
     _with_patches({}, function()
@@ -278,8 +284,8 @@ describe("presentation_item_slots", function()
     end)
 
     _assert_eq(handled, true, "item_phase_ask choice_select should be handled")
-    _assert_eq(state._item_phase_ask_active, nil, "item_phase_ask_active should clear after confirm")
-    _assert_eq(state._item_phase_confirmed, true, "item_phase_confirmed should become true after confirm")
+    _assert_eq(pending_confirmation.is_active(state), false, "item_phase_ask should clear after confirm")
+    _assert_eq(pending_confirmation.is_item_phase_confirmed(state), true, "item_phase_confirmed should become true after confirm")
     _assert_eq(state._suppress_item_slot_highlight_until_pick, nil,
       "highlight suppression should clear after item_phase ask confirm")
     _assert_eq(state._skip_item_slot_highlight_replay_choice_id, 66,
@@ -292,8 +298,6 @@ describe("presentation_item_slots", function()
     local dispatched = {}
     local closed = 0
     local state = {
-      _item_phase_ask_active = true,
-      _item_phase_confirmed = nil,
       _suppress_item_slot_highlight_until_pick = true,
       gameplay_loop_ports = {
         modal = {
@@ -317,6 +321,7 @@ describe("presentation_item_slots", function()
       ui = ui_view.build_ui_state(),
     }
     _bind_ui_runtime(state)
+    pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
 
     local handled = false
     _with_patches({}, function()
@@ -336,8 +341,8 @@ describe("presentation_item_slots", function()
     end)
 
     _assert_eq(handled, true, "single-option item_phase_ask confirm should be handled")
-    _assert_eq(state._item_phase_ask_active, nil, "single-option item_phase_ask should clear active flag")
-    _assert_eq(state._item_phase_confirmed, true, "single-option item_phase_ask should mark confirmed")
+    _assert_eq(pending_confirmation.is_active(state), false, "single-option item_phase_ask should clear active flag")
+    _assert_eq(pending_confirmation.is_item_phase_confirmed(state), true, "single-option item_phase_ask should mark confirmed")
     _assert_eq(closed, 1, "single-option item_phase_ask should close modal once")
     _assert_eq(dispatched[1] and dispatched[1].action and dispatched[1].action.type, "choice_select",
       "single-option item_phase_ask should dispatch choice_select directly")
@@ -353,8 +358,6 @@ describe("presentation_item_slots", function()
     local ui_events = require("src.ui.coord.ui_events")
     local events = {}
     local state = {
-      _item_phase_ask_active = nil,
-      _item_phase_confirmed = true,
       _skip_item_slot_highlight_replay_choice_id = 77,
       ui_refs = _wrap_ui_refs({
         ["Empty"] = "EMPTY",
@@ -367,6 +370,7 @@ describe("presentation_item_slots", function()
         set_visible = function() end,
       },
     }
+    _confirm_item_phase_ask(state)
     local ui_model = {
       current_player_id = 1,
       item_choice_owner_id = 1,
@@ -425,12 +429,8 @@ describe("presentation_item_slots", function()
     local events = {}
     local dispatched = {}
     local state = {
-      _item_phase_ask_active = nil,
-      _item_phase_confirmed = true,
       _suppress_item_slot_highlight_until_pick = nil,
       _skip_item_slot_highlight_replay_choice_id = 77,
-      _pre_confirm_active = nil,
-      _pre_confirm_source_screen = nil,
       turn_action_port = {
         dispatch_action = function(_, _, action)
           dispatched[#dispatched + 1] = action
@@ -466,6 +466,7 @@ describe("presentation_item_slots", function()
         },
       },
     }
+    _confirm_item_phase_ask(state)
     _bind_ui_runtime(state)
 
     _with_patches({
@@ -635,12 +636,8 @@ describe("presentation_item_slots", function()
   it("flat single-tap leaves no residual item_phase_ask state", function()
     local dispatched = {}
     local state = {
-      _item_phase_ask_active = nil,
-      _item_phase_confirmed = nil,
       _suppress_item_slot_highlight_until_pick = nil,
       _skip_item_slot_highlight_replay_choice_id = nil,
-      _pre_confirm_active = nil,
-      _pre_confirm_source_screen = nil,
       turn_action_port = {
         dispatch_action = function(_, _, action)
           dispatched[#dispatched + 1] = action
@@ -694,16 +691,17 @@ describe("presentation_item_slots", function()
     _assert_eq(dispatched[1] and dispatched[1].type, "ui_button", "flat single-tap should keep the ui_button path")
 
     local fields = {
-      "_item_phase_ask_active",
-      "_item_phase_confirmed",
       "_suppress_item_slot_highlight_until_pick",
       "_skip_item_slot_highlight_replay_choice_id",
-      "_pre_confirm_active",
-      "_pre_confirm_source_screen",
+      "_pending_confirmation",
     }
     for _, field in ipairs(fields) do
       _assert_eq(state[field], nil, field .. " should be nil after flat single-tap dispatch")
     end
+    _assert_eq(pending_confirmation.is_active(state), false,
+      "flat single-tap should leave no pending confirmation")
+    _assert_eq(pending_confirmation.is_item_phase_confirmed(state), false,
+      "flat single-tap should leave no item_phase confirmed latch")
   end)
 
   it("_test_item_slot_refresh_item_phase_ask_replays_highlight_then_reveals_outlines", function()
@@ -713,7 +711,6 @@ describe("presentation_item_slots", function()
     local timers = {}
 
     local state = {
-      _item_phase_ask_active = true,
       ui_refs = _wrap_ui_refs({
         ["Empty"] = "EMPTY",
         ["2002"] = "ICON2002",
@@ -728,6 +725,7 @@ describe("presentation_item_slots", function()
         end,
       },
     }
+    pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
 
     local ui_model = {
       current_player_id = 1,
