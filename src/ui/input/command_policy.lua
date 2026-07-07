@@ -65,10 +65,6 @@ function command_policy.is_optional_event_actor(intent)
   return _read(intent, "optional_event_actor") == true
 end
 
-function command_policy.fallback_handler(intent)
-  return _read(intent, "fallback_handler")
-end
-
 function command_policy.port_handler(intent)
   return _read(intent, "port_handler")
 end

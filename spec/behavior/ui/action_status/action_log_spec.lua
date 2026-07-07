@@ -7,6 +7,7 @@ local dispatch = require("src.turn.actions.action_dispatcher")
 local canvas_event_router = require("src.ui.coord.canvas_event_router")
 local ui_view = require("src.ui.coord.ui_runtime")
 local host_runtime_bridge = require("src.ui.host_bridge")
+local presentation_ports = require("src.ui.ports")
 
 describe("presentation_action_log_and_role_context", function()
   it("_test_ui_event_router_action_log_toggle_uses_role_context", function()
@@ -40,6 +41,7 @@ describe("presentation_action_log_and_role_context", function()
       ui_model = { choice = nil },
       pending_choice_selected_option_id = nil,
       choice_visible_option_ids = nil,
+      gameplay_loop_ports = presentation_ports.build(),
     }
     local role = _build_role_with_events(101, {})
 
@@ -198,6 +200,7 @@ describe("presentation_action_log_and_role_context", function()
         ui_model = {
           current_player_id = 2,
         },
+        gameplay_loop_ports = presentation_ports.build(),
       }
       canvas_event_router.bind(state, function()
         return {}

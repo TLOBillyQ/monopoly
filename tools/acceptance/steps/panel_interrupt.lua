@@ -6,6 +6,7 @@ local panel_interrupt = require("src.ui.coord.panel_interrupt")
 local view_command = require("src.ui.input.view_command")
 local base_intents = require("src.ui.input.route_base")
 local base_nodes = require("src.ui.schema.base")
+local presentation_ports = require("src.ui.ports")
 local tips = require("src.foundation.tips")
 
 local panel_interrupt_steps = {}
@@ -86,6 +87,7 @@ local function _ensure_state(world)
       set_event_log_visible = _no_op,
     },
     ui_refs = { images = {} },
+    gameplay_loop_ports = presentation_ports.build(),
   }
   world.pi_state = state
   return state

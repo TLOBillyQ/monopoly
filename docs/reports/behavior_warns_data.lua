@@ -43,6 +43,7 @@ return {
     ["role->player 映射失败"] = true,
     ["toggle_action_log missing role event channel:"] = true,
     ["ui intent rejected:"] = true,
+    ["view_command port missing, intent dropped:"] = true,
     ["ui_button actor_role_id not mapped:"] = true,
     ["ui_button blocked by actor check:"] = true,
     ["ui_button missing actor_role_id:"] = true,

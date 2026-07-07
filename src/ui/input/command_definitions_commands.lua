@@ -10,7 +10,6 @@ local COMMANDS = {
     panel_id = "action_log",
     requires_event_actor = true,
     actor_source = "local",
-    fallback_handler = "toggle_action_log",
     port_handler = "toggle_action_log",
   },
   open_skin_panel = {
@@ -21,7 +20,6 @@ local COMMANDS = {
     requires_event_actor = true,
     actor_source = "local",
     optional_event_actor = true,
-    fallback_handler = "open_skin_panel",
     port_handler = "open_skin_panel",
   },
   open_gallery_panel = {
@@ -32,7 +30,6 @@ local COMMANDS = {
     requires_event_actor = true,
     actor_source = "local",
     optional_event_actor = true,
-    fallback_handler = "open_gallery_panel",
     port_handler = "open_gallery_panel",
   },
   skin_panel_action = {
@@ -41,7 +38,6 @@ local COMMANDS = {
     dispatch_before_game = true,
     requires_event_actor = true,
     actor_source = "local",
-    fallback_handler = "skin_panel_action",
     port_handler = "skin_panel_action",
   },
   item_atlas_action = {
@@ -50,7 +46,6 @@ local COMMANDS = {
     dispatch_before_game = true,
     requires_event_actor = true,
     actor_source = "local",
-    fallback_handler = "item_atlas_action",
     port_handler = "item_atlas_action",
   },
   skin_gallery_action = {
@@ -59,19 +54,16 @@ local COMMANDS = {
     dispatch_before_game = true,
     requires_event_actor = true,
     actor_source = "local",
-    fallback_handler = "skin_gallery_action",
     port_handler = "skin_gallery_action",
   },
   market_select = {
     reason = "market_select",
     view_command = true,
-    fallback_handler = "market_select",
     port_handler = "market_select",
   },
   popup_confirm = {
     reason = "popup_confirm",
     view_command = true,
-    fallback_handler = "popup_confirm",
     port_handler = "popup_confirm",
   },
   choice_select = {

@@ -54,7 +54,7 @@ last_verified: 2026-07-02
 | `choice action missing actor_role_id:` | choice 缺 actor | 预期内 |
 | `choice action without pending choice:` | 无待决 choice 时提交动作 | 预期内 |
 | `choice route fallback to base_inline:` | 测试用 choice kind 无专用路由 | 预期内 |
-| `close_popup ignored: popup not active` | popup 未激活时触发 popup_confirm，fallback 关闭被忽略（view_command_spec 健壮性 case） | 预期内 |
+| `close_popup ignored: popup not active` | popup 未激活时触发 popup_confirm，关闭被忽略（健壮性 case） | 预期内 |
 | `invalid choice option:` | 无效选项 ID | 预期内 |
 | `invalid item option:` | 无效道具选项 | 预期内 |
 | `item slot denied by availability:` | 道具不可用时被拒 | 预期内 |
@@ -65,8 +65,9 @@ last_verified: 2026-07-02
 | `目标玩家无效:` | 指定 target_id 无效 / 自指 / 已淘汰 | 预期内 |
 | `remote_select without choice` | 远程选择但无待决 choice | 预期内 |
 | `role->player 映射失败` | 无效 role_id 回退到观战 | 预期内 |
-| `toggle_action_log missing role event channel:` | 用无事件频道桩的 role 切换动作日志（view_command_mutation_pin_spec 负路径） | 预期内 |
+| `toggle_action_log missing role event channel:` | 用无事件频道桩的 role 切换动作日志（interaction_spec 负路径） | 预期内 |
 | `ui intent rejected:` | UI intent 缺 actor 被拒 | 预期内 |
+| `view_command port missing, intent dropped:` | state 未装 gameplay_loop_ports.view_command 时派发 view command（view_command_spec / mutation pin 负路径） | 预期内 |
 | `ui_button actor_role_id not mapped:` | 按钮 actor 映射失败 | 预期内 |
 | `ui_button blocked by actor check:` | 按钮权限校验拒绝 | 预期内 |
 | `ui_button missing actor_role_id:` | 按钮缺 actor | 预期内 |
