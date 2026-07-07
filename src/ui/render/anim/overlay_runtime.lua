@@ -58,7 +58,7 @@ local function _destroy_unit(host_runtime, entry)
   host_runtime.destroy_unit(entry.handle)
 end
 
-local function _spawn_transient_entry(host_runtime, group_id, unit_id, pos)
+local function _spawn_entry(host_runtime, group_id, unit_id, pos, scale)
   if group_id then
     local handle = _spawn_unit_group(host_runtime, group_id, pos)
     if not handle then
@@ -66,11 +66,14 @@ local function _spawn_transient_entry(host_runtime, group_id, unit_id, pos)
     end
     return { kind = "group", handle = handle }
   end
-  local handle, pooled = _spawn_unit(host_runtime, unit_id, pos)
-  if not handle then
-    return nil
+  if unit_id then
+    local handle, pooled = _spawn_unit(host_runtime, unit_id, pos, scale)
+    if not handle then
+      return nil
+    end
+    return { kind = "unit", handle = handle, unit_id = unit_id, pooled = pooled }
   end
-  return { kind = "unit", handle = handle, unit_id = unit_id, pooled = pooled }
+  return nil
 end
 
 local function _schedule_transient_destroy(host_runtime, entry, duration)
@@ -90,24 +93,6 @@ local function _clear_bucket_entry(host_runtime, bucket, tile_index)
   end
   _destroy_unit(host_runtime, entry)
   bucket[tile_index] = nil
-end
-
-local function _spawn_overlay_entry(host_runtime, group_id, unit_id, pos, scale)
-  if group_id then
-    local handle = _spawn_unit_group(host_runtime, group_id, pos)
-    if not handle then
-      return nil
-    end
-    return { kind = "group", handle = handle }
-  end
-  if unit_id then
-    local handle, pooled = _spawn_unit(host_runtime, unit_id, pos, scale)
-    if not handle then
-      return nil
-    end
-    return { handle = handle, pooled = pooled, unit_id = unit_id }
-  end
-  return nil
 end
 
 function runtime.clear_overlay(scene, kind, tile_index, deps)
@@ -142,7 +127,7 @@ function runtime.spawn_overlay(scene, kind, tile_index, group_id, unit_id, pos, 
   end
   _clear_bucket_entry(host_runtime, bucket, tile_index)
 
-  local entry = _spawn_overlay_entry(host_runtime, group_id, unit_id, pos, scale)
+  local entry = _spawn_entry(host_runtime, group_id, unit_id, pos, scale)
   if entry == nil then
     return false
   end
@@ -155,7 +140,7 @@ function runtime.spawn_transient(group_id, unit_id, pos, duration, deps)
     return
   end
   local host_runtime = _resolve_host_runtime(deps and deps.scene or nil, deps)
-  local entry = _spawn_transient_entry(host_runtime, group_id, unit_id, pos)
+  local entry = _spawn_entry(host_runtime, group_id, unit_id, pos)
   if not entry then
     return
   end
