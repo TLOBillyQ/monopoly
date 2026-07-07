@@ -92,7 +92,7 @@ describe("role attribute coins", function()
 
     local game = _game_with_roles(roles)
 
-    _assert_eq(game:player_balance(game.players[1], "金币"), constants.starting_cash, "player 1 starting coins")
+    _assert_eq(game:player_cash(game.players[1]), constants.starting_cash, "player 1 starting coins")
     _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), constants.starting_cash, "role attr should be seeded")
     _assert_eq(roles[1].writes[1].value_type, "float", "role attr should be seeded with a Fixed-compatible float")
     _assert_eq(game.players[1].cash, nil, "player.cash must not exist")
@@ -114,7 +114,7 @@ describe("role attribute coins", function()
     end)
 
     for index, player in ipairs(game.players) do
-      _assert_eq(game:player_balance(player, "金币"), constants.starting_cash,
+      _assert_eq(game:player_cash(player), constants.starting_cash,
         "player " .. tostring(index) .. " starting coins")
     end
     _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), constants.starting_cash,
@@ -132,7 +132,7 @@ describe("role attribute coins", function()
 
     local game = _game_with_roles(roles)
 
-    _assert_eq(game:player_balance(game.players[1], "金币"), constants.starting_cash,
+    _assert_eq(game:player_cash(game.players[1]), constants.starting_cash,
       "nil-returning host setter should still seed player 1")
     _assert_eq(roles[1]:get_attr_raw_fixed(balance.COIN_COUNT_ATTR_ID), constants.starting_cash,
       "nil-returning host setter should persist the seeded value")
@@ -316,8 +316,8 @@ describe("role attribute coins", function()
       land_rules.execute_pay_rent(game, payer.id, tile.id)
     end, { "玩家2", balance.COIN_COUNT_ATTR_ID, "回滚结果=成功" })
 
-    _assert_eq(game:player_balance(payer, "金币"), 10000, "payer debit is rolled back")
-    _assert_eq(game:player_balance(owner, "金币"), 0, "owner receives no partial rent")
+    _assert_eq(game:player_cash(payer), 10000, "payer debit is rolled back")
+    _assert_eq(game:player_cash(owner), 0, "owner receives no partial rent")
     _assert_eq(#progress_events, 0, "failed settlement must not report receiver progress")
   end)
 
@@ -331,7 +331,7 @@ describe("role attribute coins", function()
     game.players[2]._coin_role = {}
 
     _assert_error_contains(function()
-      game:player_balance(game.players[1], "金币")
+      game:player_cash(game.players[1])
     end, { "玩家1", balance.COIN_COUNT_ATTR_ID, "有限整数" })
 
     _assert_error_contains(function()

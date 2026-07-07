@@ -18,9 +18,8 @@ local function _make_game(players, cash_map)
     occupants = {},
     board = { get_tile_by_id = function() return nil end },
     alive_players = function() return players end,
-    player_balance = function(_, player, currency)
-      if currency == "金币" then return cash_map[player] or 0 end
-      return 0
+    player_cash = function(_, player)
+      return cash_map[player] or 0
     end,
   }
 end

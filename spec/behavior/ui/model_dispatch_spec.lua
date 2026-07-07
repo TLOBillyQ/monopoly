@@ -18,7 +18,7 @@ local _build_choice_modal_state = support.build_choice_modal_state
 local function _panel_game(players, coins_by_key)
   return {
     players = players,
-    player_balance = function(_, player)
+    player_cash = function(_, player)
       local key = player and (player.id or player.name) or nil
       return coins_by_key and coins_by_key[key] or 0
     end,

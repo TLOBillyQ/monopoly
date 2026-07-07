@@ -152,7 +152,7 @@ function movement_steps.handlers()
     ["玩家移动<步数>步经过起点"] = function(world, example)
       local steps = number_utils.to_integer(example["步数"])
       local player = _player(world)
-      world.pre_move_cash = _game(world):player_balance(player, "金币")
+      world.pre_move_cash = _game(world):player_cash(player)
       world.last_move_result = game_driver.move(_ctx(world), player, steps)
       return true
     end,
@@ -169,7 +169,7 @@ function movement_steps.handlers()
     ["玩家获得<奖励金额>金币"] = function(world, example)
       local expected = number_utils.to_integer(example["奖励金额"])
       local player = _player(world)
-      local gained = _game(world):player_balance(player, "金币") - (world.pre_move_cash or 0)
+      local gained = _game(world):player_cash(player) - (world.pre_move_cash or 0)
       if gained ~= expected then
         return nil, "expected gain " .. tostring(expected) .. ", got " .. tostring(gained)
       end
@@ -184,7 +184,7 @@ function movement_steps.handlers()
 
     ["玩家移动3步经过起点"] = function(world)
       local player = _player(world)
-      world.pre_move_cash = _game(world):player_balance(player, "金币")
+      world.pre_move_cash = _game(world):player_cash(player)
       world.last_move_result = game_driver.move(_ctx(world), player, 3)
       return true
     end,
@@ -192,7 +192,7 @@ function movement_steps.handlers()
     ["玩家获得的经过起点奖励是基础值的2倍"] = function(world)
       local expected = PASS_START_BONUS * 2
       local player = _player(world)
-      local gained = _game(world):player_balance(player, "金币") - (world.pre_move_cash or 0)
+      local gained = _game(world):player_cash(player) - (world.pre_move_cash or 0)
       if gained ~= expected then
         return nil, "expected bonus " .. tostring(expected) .. ", got " .. tostring(gained)
       end
@@ -654,14 +654,14 @@ function movement_steps.handlers()
 
     ["玩家移动恰好3步到达起点"] = function(world)
       local player = _player(world)
-      world.pre_move_cash = _game(world):player_balance(player, "金币")
+      world.pre_move_cash = _game(world):player_cash(player)
       world.last_move_result = game_driver.move(_ctx(world), player, 3)
       return true
     end,
 
     ["玩家获得经过起点的金币奖励"] = function(world)
       local player = _player(world)
-      local gained = _game(world):player_balance(player, "金币") - (world.pre_move_cash or 0)
+      local gained = _game(world):player_cash(player) - (world.pre_move_cash or 0)
       if gained < PASS_START_BONUS then
         return nil, "expected at least " .. tostring(PASS_START_BONUS) .. " bonus, got " .. tostring(gained)
       end

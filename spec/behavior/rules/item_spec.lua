@@ -1151,8 +1151,8 @@ describe("item", function()
     end
     local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
     _assert_eq(ok, true, "equalize use ok")
-    _assert_eq(g:player_balance(user, "金币"), 5000, "equalize user cash")
-    _assert_eq(g:player_balance(target, "金币"), 5000, "equalize target cash")
+    _assert_eq(g:player_cash(user), 5000, "equalize user cash")
+    _assert_eq(g:player_cash(target), 5000, "equalize target cash")
   end)
 
   it("target_item_manual_direct_exec_and_duration", function()
@@ -1171,8 +1171,8 @@ describe("item", function()
 
     choice_resolver.resolve(g, pending, { option_id = target.id })
     _assert_eq(_get_choice(g), nil, "choice should be resolved directly without reopening")
-    _assert_eq(g:player_balance(user, "金币"), 5000, "manual target item should apply to user")
-    _assert_eq(g:player_balance(target, "金币"), 5000, "manual target item should apply to target")
+    _assert_eq(g:player_cash(user), 5000, "manual target item should apply to user")
+    _assert_eq(g:player_cash(target), 5000, "manual target item should apply to target")
     assert(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "target item should queue anim")
     _assert_eq(
       g.turn.action_anim.duration,
@@ -1588,7 +1588,7 @@ describe("item", function()
         events[#events + 1] = payload
       end,
       apply_cash_change = function(game, target_player, delta)
-        local before = game:player_balance(target_player, "金币")
+        local before = game:player_cash(target_player)
         local after = before + delta
         if after < 0 then
           after = 0
@@ -1605,7 +1605,7 @@ describe("item", function()
         return delta
       end,
       handle_bankruptcy_if_non_positive = function(game, target_player, reason)
-        if game:player_balance(target_player, "金币") <= 0 then
+        if game:player_cash(target_player) <= 0 then
           target_player.eliminated = true
           bankruptcy_calls[#bankruptcy_calls + 1] = { player_id = target_player.id, reason = reason }
         end
@@ -1630,7 +1630,7 @@ describe("item", function()
       player_is_in_mountain = function(_, player)
         return player.id == 3
       end,
-      player_balance = function(_, player)
+      player_cash = function(_, player)
         return balances[player.id]
       end,
       set_player_cash = function(_, player, amount)
@@ -1643,10 +1643,10 @@ describe("item", function()
       effect = "collect_from_others",
     })
 
-    _assert_eq(game:player_balance(game.players[1], "金币"), 1250, "collector should receive each payer's actual liquid only")
-    _assert_eq(game:player_balance(game.players[2], "金币"), 0, "broke payer cash should be capped at zero")
+    _assert_eq(game:player_cash(game.players[1]), 1250, "collector should receive each payer's actual liquid only")
+    _assert_eq(game:player_cash(game.players[2]), 0, "broke payer cash should be capped at zero")
     _assert_eq(game.players[2].eliminated, true, "broke payer should be marked eliminated")
-    _assert_eq(game:player_balance(game.players[3], "金币"), 100, "solvent payer should pay full doubled fee")
+    _assert_eq(game:player_cash(game.players[3]), 100, "solvent payer should pay full doubled fee")
     _assert_eq(game.players[3].eliminated, false, "solvent payer should not be eliminated")
     _assert_eq(#bankruptcy_calls, 1, "exactly one bankruptcy should fire")
     _assert_eq(bankruptcy_calls[1].player_id, 2, "bankruptcy should target the broke payer")
@@ -1823,7 +1823,7 @@ describe("item", function()
 
     _assert_eq(res and res.stay, false, "tax prompt cancel should resolve immediately")
     _assert_eq(g.turn.pending_choice, nil, "tax prompt cancel should clear pending choice")
-    _assert_eq(g:player_balance(p, "金币"), 500, "tax prompt cancel should pay tax through skip path")
+    _assert_eq(g:player_cash(p), 500, "tax prompt cancel should pay tax through skip path")
   end)
 
   it("tax_prompt_exposes_confirm_copy", function()

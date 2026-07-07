@@ -166,7 +166,7 @@ describe("presentation_action_anim_queue_and_turn_lock", function()
     function g:current_player()
       return self.players[self.turn.current_player_index]
     end
-    function g:player_balance(player)
+    function g:player_cash(player)
       return player.cash
     end
     local engine = runtime_cls:new(g, phases)

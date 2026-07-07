@@ -22,7 +22,7 @@ local function _stored_player(initial)
 end
 
 local function _read(player)
-  return balance.player_balance(nil, player, "金币")
+  return balance.player_cash(nil, player)
 end
 
 describe("coin validation properties", function()

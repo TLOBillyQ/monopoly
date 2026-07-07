@@ -24,10 +24,10 @@ function cash_handlers.register(handlers, common)
       local payer_after, receiver_after, moved = game:transfer_player_cash(payer, receiver, amount, opts)
       return payer_after, receiver_after, moved, true
     end
-    local liquid = math.min(game:player_balance(payer, "金币"), amount)
+    local liquid = math.min(game:player_cash(payer), amount)
     common.apply_cash_change(game, payer, -amount, opts)
     common.apply_cash_change(game, receiver, liquid, opts)
-    return game:player_balance(payer, "金币"), game:player_balance(receiver, "金币"), liquid, false
+    return game:player_cash(payer), game:player_cash(receiver), liquid, false
   end
 
   handlers.add_cash = function(game, player, card)
@@ -84,7 +84,7 @@ function cash_handlers.register(handlers, common)
 
   local function _fee_flat(_, _, card) return card.amount end
   local function _fee_percent(game, target, card)
-    return math.floor(game:player_balance(target, "金币") * (card.percent / 100))
+    return math.floor(game:player_cash(target) * (card.percent / 100))
   end
 
   handlers.pay_cash = function(game, player, card)

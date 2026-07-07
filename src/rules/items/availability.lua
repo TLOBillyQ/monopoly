@@ -136,7 +136,7 @@ end
 
 local function _can_afford_strong_card(game, player, ctx)
   local total_value = assert(ctx and ctx.total_value, "missing rent response total value")
-  return game:player_balance(player, "金币") >= total_value
+  return game:player_cash(player) >= total_value
 end
 
 local function _can_offer_rent_response(game, player, item_id)

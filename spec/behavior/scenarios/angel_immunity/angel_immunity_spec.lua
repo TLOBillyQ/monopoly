@@ -52,14 +52,14 @@ describe("gameplay_angel_immunity", function()
     game:set_player_cash(target, 3000)
     game:set_player_deity(target, "angel")
 
-    local before_user = game:player_balance(user, "金币")
-    local before_target = game:player_balance(target, "金币")
+    local before_user = game:player_cash(user)
+    local before_target = game:player_cash(target)
 
     local result = post_effects.apply_target(game, user, item_ids.share_wealth, target, {})
 
     assert(result == true, "share_wealth should still consume the card")
-    assert(game:player_balance(user, "金币") == before_user, "angel should keep user cash unchanged")
-    assert(game:player_balance(target, "金币") == before_target, "angel should keep target cash unchanged")
+    assert(game:player_cash(user) == before_user, "angel should keep user cash unchanged")
+    assert(game:player_cash(target) == before_target, "angel should keep target cash unchanged")
 
     local texts = _event_texts(game)
     assert(#texts > 0 and texts[#texts] == "P2 天使保护，均富无效", "item_immune event should be emitted")
@@ -75,8 +75,8 @@ describe("gameplay_angel_immunity", function()
     local result = post_effects.apply_target(game, user, item_ids.share_wealth, target, {})
 
     assert(result == true, "share_wealth should resolve normally")
-    assert(game:player_balance(user, "金币") == 2000, "wealth should be equalized")
-    assert(game:player_balance(target, "金币") == 2000, "wealth should be equalized")
+    assert(game:player_cash(user) == 2000, "wealth should be equalized")
+    assert(game:player_cash(target) == 2000, "wealth should be equalized")
 
     local texts = _event_texts(game)
     assert(texts[#texts] ~= "P2 天使保护，均富无效", "non-angel should not emit immunity event")

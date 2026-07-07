@@ -39,6 +39,9 @@ local function _make_query_mock(overrides)
       is_paid_currency = overrides.is_paid_currency or function(currency)
         return currency == "金豆"
       end,
+      assert_cash_currency = overrides.assert_cash_currency or function(currency)
+        assert(currency == "金币", "unsupported market currency: " .. tostring(currency))
+      end,
       entry_market_enabled = overrides.entry_market_enabled or function() return true end,
       remaining_global_limit = overrides.remaining_global_limit or function() return 99 end,
       try_charge_player = overrides.try_charge_player or function() return true end,
@@ -241,7 +244,7 @@ describe("choices_purchase", function()
       ["src.rules.market.choice"] = _make_choice_mock(),
     }, function(purchase)
       local game = {
-        player_balance = function()
+        player_cash = function()
           return 7
         end,
       }
@@ -281,7 +284,7 @@ describe("choices_purchase", function()
       end),
     }, function(purchase)
       local game = {
-        player_balance = function()
+        player_cash = function()
           return 6
         end,
       }
@@ -316,7 +319,7 @@ describe("choices_purchase", function()
       end),
     }, function(purchase)
       local game = {
-        player_balance = function()
+        player_cash = function()
           return 7
         end,
       }
@@ -353,7 +356,7 @@ describe("choices_purchase", function()
       end),
     }, function(purchase)
       local game = {
-        player_balance = function()
+        player_cash = function()
           return 7
         end,
       }
@@ -363,6 +366,49 @@ describe("choices_purchase", function()
     end)
     assert(failures[1].reason == "charge_failed", "charge failure should emit reason")
     assert(failures[1].body == "Buyer 支付失败", "charge failure should emit body")
+  end)
+
+  it("purchase_execute_hard_fails_before_charging_unknown_currency", function()
+    local asserted = {}
+    local entry = { product_id = 2001, kind = "item", currency = "贝壳", price = 5, name = "神秘货" }
+    _reload_module("src.rules.market.purchase", {
+      ["src.rules.market.query"] = _make_query_mock({
+        entry_by_id = function()
+          return entry
+        end,
+        is_paid_currency = function()
+          return false
+        end,
+        assert_cash_currency = function(currency)
+          asserted[#asserted + 1] = currency
+          error("unsupported market currency: " .. tostring(currency))
+        end,
+      }),
+      ["src.rules.items.inventory"] = {
+        is_full = function()
+          return false
+        end,
+        give = function()
+          error("unknown currency must not fulfill item")
+        end,
+      },
+      ["src.rules.market.choice"] = _make_choice_mock(),
+    }, function(purchase)
+      local game = {
+        player_cash = function()
+          error("unknown currency must not read cash balance")
+        end,
+        deduct_player_cash = function()
+          error("unknown currency must not deduct cash balance")
+        end,
+      }
+      local ok, err = pcall(purchase.execute, game, { id = 3, name = "Buyer" }, "2001")
+      assert(ok == false, "unknown currency purchase should hard fail")
+      assert(string.find(tostring(err), "unsupported market currency", 1, true) ~= nil,
+        "error should surface unsupported market currency")
+    end)
+    assert(#asserted == 1 and asserted[1] == "贝壳",
+      "local purchase should validate entry currency before touching cash balance")
   end)
 
   it("purchase_execute_rejects_invalid_product_ids_before_lookup", function()

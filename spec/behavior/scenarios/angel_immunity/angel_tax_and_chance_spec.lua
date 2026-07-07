@@ -20,7 +20,7 @@ describe("angel_tax_and_chance_immunity", function()
     local tile = game.board:get_tile(tax_idx)
     support.resolve_landing(game, player, tile, {})
 
-    assert(game:player_balance(player, "金币") < 10000,
+    assert(game:player_cash(player) < 10000,
       "angel should still pay tax office fee")
   end)
 
@@ -34,7 +34,7 @@ describe("angel_tax_and_chance_immunity", function()
     local tile = game.board:get_tile(tax_idx)
     support.resolve_landing(game, player, tile, {})
 
-    assert(game:player_balance(player, "金币") < 10000,
+    assert(game:player_cash(player) < 10000,
       "non-angel should pay tax")
   end)
 
@@ -55,7 +55,7 @@ describe("angel_tax_and_chance_immunity", function()
     game:set_player_cash(player, 20000)
     local result = chance_resolver.resolve(game, player, card, {})
     assert(result == nil, "resolver should return nil for angel + negative card")
-    assert(game:player_balance(player, "金币") == 20000,
+    assert(game:player_cash(player) == 20000,
       "angel drawer's cash should be unchanged")
   end)
 
@@ -80,9 +80,9 @@ describe("angel_tax_and_chance_immunity", function()
 
     chance_resolver.resolve(game, drawer, card, {})
 
-    assert(game:player_balance(angel_player, "金币") == 20000,
-      "angel player should not pay: expected 20000, got " .. tostring(game:player_balance(angel_player, "金币")))
-    assert(game:player_balance(normal_player, "金币") < 20000,
+    assert(game:player_cash(angel_player) == 20000,
+      "angel player should not pay: expected 20000, got " .. tostring(game:player_cash(angel_player)))
+    assert(game:player_cash(normal_player) < 20000,
       "non-angel player should pay")
   end)
 
@@ -107,9 +107,9 @@ describe("angel_tax_and_chance_immunity", function()
 
     chance_resolver.resolve(game, drawer, card, {})
 
-    assert(game:player_balance(angel_player, "金币") == 20000,
-      "angel player should not pay: expected 20000, got " .. tostring(game:player_balance(angel_player, "金币")))
-    assert(game:player_balance(normal_player, "金币") < 20000,
+    assert(game:player_cash(angel_player) == 20000,
+      "angel player should not pay: expected 20000, got " .. tostring(game:player_cash(angel_player)))
+    assert(game:player_cash(normal_player) < 20000,
       "non-angel player should pay percentage")
   end)
 end)

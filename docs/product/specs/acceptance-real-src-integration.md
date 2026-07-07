@@ -100,7 +100,7 @@ end
 - **dice_roll feature**：使用 0-based position（`位置0` ~ `位置N`），
   而真实 board 使用 1-based tile index。handler 做 offset 转换。
 - **经济参数**：feature 中的金额是抽象值；handler 预设玩家余额后
-  通过 `game:set_player_cash` 注入，断言也读真实 `game:player_balance`。
+  通过 `game:set_player_cash` 注入，断言也读真实 `game:player_cash`。
 - **棋盘格数**：feature 中 `棋盘共有<格数>格` 需要动态创建对应大小棋盘，
   或改用真实棋盘尺寸。推荐后者：修改 feature 例子表适配真实棋盘。
 
@@ -133,7 +133,7 @@ game_driver 复用相同 bootstrap 机制。
 | R1 | `game_driver.new_game()` 返回真实 game 实例（通过 `compose_game.new_game`） | 检查 require 链 |
 | R2 | step handler 中无自建 board/player/game 数据结构 | grep 排除 `_new_board` / `_new_player` / `_new_game` |
 | R3 | 所有 9 个 feature 全部通过（≥150 场景 ok） | `run_acceptance.lua` 逐个运行 |
-| R4 | step handler 的 state 查询使用 game API（如 `game:player_balance`），不直接访问 `world.player.cash` 等自建字段 | code review |
+| R4 | step handler 的 state 查询使用 game API（如 `game:player_cash`），不直接访问 `world.player.cash` 等自建字段 | code review |
 | R5 | movement handler 调用 `rules.movement.move`，不再自建 `_move_forward` | grep 验证 |
 | R6 | economy handler 调用真实 rent/purchase 函数，不再 inline 模拟 | grep 验证 |
 | R7 | dice handler 通过 RNG 注入控制骰子结果 | 检查 `game_driver.set_next_rolls` 调用 |

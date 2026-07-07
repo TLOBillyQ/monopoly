@@ -19,7 +19,7 @@ local function _make_game(players, opts)
   local balances = opts.balances or {}
   local deity_flags = opts.deity_flags or {}
   local g = { players = players }
-  function g:player_balance(p, _)
+  function g:player_cash(p)
     return balances[p.id] or 0
   end
   function g:player_has_deity(p, deity_type)

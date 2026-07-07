@@ -30,12 +30,14 @@ function context.entry_price(entry)
   return entry.price or 0
 end
 
+local _DEFAULT_ENTRY_CURRENCY = "金币"
+
 function context.entry_currency(entry)
   local currency = entry.currency
   if currency and currency ~= "" then
     return currency
   end
-  return "金币"
+  return _DEFAULT_ENTRY_CURRENCY
 end
 
 function context.entry_market_enabled(entry)
@@ -51,8 +53,15 @@ end
 
 context.is_paid_currency = paid_currency_bridge.is_paid_currency
 
-function context.try_charge_player(game, player, currency, price, opts)
-  game:deduct_player_balance(player, currency, price, opts)
+-- 收银防线：本地读扣路径只认默认金币币种。付费币种或未知币种必须硬失败，
+-- 不得静默按金币读扣（保持既有 unsupported currency 的 fail-fast 语义）。
+function context.assert_cash_currency(currency)
+  assert(not context.is_paid_currency(currency) and currency == _DEFAULT_ENTRY_CURRENCY,
+    "unsupported market currency: " .. tostring(currency))
+end
+
+function context.try_charge_player(game, player, price, opts)
+  game:deduct_player_cash(player, price, opts)
   return true
 end
 
@@ -90,7 +99,8 @@ function eligibility.can_buy_entry(game, player, entry)
     local ok = paid_purchase_port.can_start(game, player, entry)
     return ok == true
   end
-  return game:player_balance(player, currency) >= price
+  context.assert_cash_currency(currency)
+  return game:player_cash(player) >= price
 end
 
 function eligibility.is_sold_out(game, entry)

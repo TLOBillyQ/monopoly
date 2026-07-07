@@ -165,7 +165,7 @@ function setup_steps.handlers()
 
     ["每名角色初始金币为100000"] = function(world)
       return _each_player(world, function(player, index)
-        local cash = world.setup_game:player_balance(player, "金币")
+        local cash = world.setup_game:player_cash(player)
         if cash ~= constants.starting_cash then
           return "player " .. tostring(index) .. " should start with " .. tostring(constants.starting_cash) ..
             " coins, got " .. tostring(cash)

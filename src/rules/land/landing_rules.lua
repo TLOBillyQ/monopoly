@@ -50,7 +50,7 @@ function land_rules.execute_strong_card(game, player_id, tile_id)
   assert(owner ~= nil, "missing owner")
 
   local total_value = board_utils.total_invested(tile, st.level)
-  if game:player_balance(player, "金币") < total_value then
+  if game:player_cash(player) < total_value then
     return { ok = false, reason = "insufficient_balance" }
   end
   assert(inventory.consume(player, item_ids.strong) == true, "consume strong card failed")

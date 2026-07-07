@@ -44,8 +44,7 @@ local function _game(players, winners)
   return {
     players = players,
     winners = winners,
-    player_balance = function(_, player, currency)
-      _assert_eq(currency, "金币", "leaderboard should read cash balance")
+    player_cash = function(_, player)
       return player.cash or 0
     end,
     board = { get_tile_by_id = function() return nil end },

@@ -281,7 +281,7 @@ describe("chance", function()
     local g = _new_game()
     local handlers = chance_handlers.build()
     local p = g:current_player()
-    local before_cash = g:player_balance(p, "金币")
+    local before_cash = g:player_cash(p)
     local events = {}
 
     _with_patches({
@@ -292,7 +292,7 @@ describe("chance", function()
       handlers.pay_cash(g, p, { effect = "pay_cash", amount = 50, target = "self" })
     end)
 
-    assert(g:player_balance(p, "金币") < before_cash, "pay_cash should reduce player cash")
+    assert(g:player_cash(p) < before_cash, "pay_cash should reduce player cash")
     assert(#events == 1, "pay_cash should emit one event for single player")
     assert(events[1].effect == "pay_cash", "pay_cash event should have correct effect")
     assert(events[1].text:find("支付"), "pay_cash event text should indicate payment")
@@ -324,7 +324,7 @@ describe("chance", function()
       handlers.percent_pay_cash(g, p, { effect = "percent_pay_cash", percent = 10, target = "self" })
     end)
 
-    assert(g:player_balance(p, "金币") == 900, "percent_pay_cash should deduct 10% of 1000")
+    assert(g:player_cash(p) == 900, "percent_pay_cash should deduct 10% of 1000")
     assert(#events == 1, "percent_pay_cash should emit one event")
     assert(events[1].text:find("按比例支付"), "percent_pay_cash event text should indicate proportional payment")
   end)

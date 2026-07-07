@@ -93,10 +93,10 @@ describe("market", function()
     -- Set player to have no cash so no items are available
     g:set_player_cash(p, 0)
 
-    local before_cash = g:player_balance(p, "金币")
+    local before_cash = g:player_cash(p)
     market_service.auto.execute(g, p)
 
-    assert(g:player_balance(p, "金币") == before_cash, "should not spend money when no items available")
+    assert(g:player_cash(p) == before_cash, "should not spend money when no items available")
   end)
 
   it("auto_execute_purchases_first_available_item", function()
@@ -112,12 +112,12 @@ describe("market", function()
       return -- skip if no items available
     end
 
-    local before_cash = g:player_balance(p, "金币")
+    local before_cash = g:player_cash(p)
 
     market_service.auto.execute(g, p)
 
     -- Should have purchased the cheapest item
-    assert(g:player_balance(p, "金币") < before_cash, "should have purchased an item")
+    assert(g:player_cash(p) < before_cash, "should have purchased an item")
   end)
 
   it("market_global_limit", function()
@@ -241,7 +241,7 @@ describe("market", function()
     local market_query = require("src.rules.market.query")
     local game = {
       market_limits = { [5001] = 1 },
-      player_balance = function()
+      player_cash = function()
         return 999999
       end,
     }
@@ -284,6 +284,31 @@ describe("market", function()
       "zero remaining limit should be sold out")
     assert(market_query.eligibility.is_sold_out(game, { product_id = 2001 }) == false,
       "positive remaining limit should not be sold out")
+  end)
+
+  it("market_cash_paths_hard_fail_on_non_cash_currency", function()
+    local market_query = require("src.rules.market.query")
+    local context = market_query.context
+
+    context.assert_cash_currency("金币")
+
+    for _, currency in ipairs({ "金豆", "乐园币", "贝壳" }) do
+      local ok, err = pcall(context.assert_cash_currency, currency)
+      assert(ok == false, "non-cash currency should hard fail: " .. currency)
+      assert(string.find(tostring(err), "unsupported market currency", 1, true) ~= nil,
+        "error should report unsupported market currency: " .. currency)
+    end
+
+    local g = _new_game()
+    local p = g:current_player()
+    local entry = { product_id = 2001, kind = "item", currency = "贝壳", price = 5 }
+    g.market_limits[entry.product_id] = 1
+    g:set_player_cash(p, 999999)
+
+    local ok, err = pcall(market_query.eligibility.can_buy_entry, g, p, entry)
+    assert(ok == false, "unknown currency entry should hard fail instead of reading cash")
+    assert(string.find(tostring(err), "unsupported market currency", 1, true) ~= nil,
+      "can_buy_entry should surface unsupported market currency")
   end)
 
   it("market_query_can_buy_entry_respects_boundaries", function()

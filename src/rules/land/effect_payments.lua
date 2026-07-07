@@ -26,7 +26,7 @@ local function _find_rent_item_indices(player)
 end
 
 local function _can_use_strong_card(player, strong_idx, total_value, game)
-  return strong_idx and game:player_balance(player, "金币") >= total_value
+  return strong_idx and game:player_cash(player) >= total_value
 end
 
 local function _build_rent_choice_intent(player, tile, card_kind, total_value)

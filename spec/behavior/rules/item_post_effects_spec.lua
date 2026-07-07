@@ -4,7 +4,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 describe("items_post_effects", function()
   it("_test_apply_target_share_wealth", function()
     local game = {
-      player_balance = function(self, player, currency)
+      player_cash = function(self, player)
         if player.id == 1 then return 1000 end
         if player.id == 2 then return 3000 end
         return 0
@@ -95,7 +95,7 @@ describe("items_post_effects", function()
     local Inventory = require("src.player.actions.inventory")
     local game = {
       angel_immune_to_item = function() return false end,
-      player_balance = function() return 1000 end,
+      player_cash = function() return 1000 end,
       deduct_player_cash = function(self, player, amount)
         player.cash = (player.cash or 1000) - amount
       end,

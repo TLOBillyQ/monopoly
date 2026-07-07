@@ -34,11 +34,6 @@ function M.contains(list, value)
   return false
 end
 
-function M.normalize_currency(currency)
-  assert(currency ~= nil and currency ~= "", "missing currency")
-  return currency
-end
-
 function M.join_or_default(list, separator, default_value)
   if type(list) ~= "table" or #list == 0 then
     return default_value
@@ -50,20 +45,15 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=a48d2014800b5dbc
+projectHash=f88d0504cfc9d0d1
 scope.0.id=chunk:src/foundation/tables.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=50
-scope.0.semanticHash=d5303e288cdee4e1
-scope.1.id=function:M.normalize_currency:37
+scope.0.endLine=45
+scope.0.semanticHash=fc8d3b507ce8babb
+scope.1.id=function:M.join_or_default:37
 scope.1.kind=function
 scope.1.startLine=37
-scope.1.endLine=40
-scope.1.semanticHash=22db8994461aaaa1
-scope.2.id=function:M.join_or_default:42
-scope.2.kind=function
-scope.2.startLine=42
-scope.2.endLine=47
-scope.2.semanticHash=3b3116f0df11b0d8
+scope.1.endLine=42
+scope.1.semanticHash=3b3116f0df11b0d8
 ]]

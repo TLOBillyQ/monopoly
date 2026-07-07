@@ -26,11 +26,11 @@ local function _success_text(player, entry, price, currency, priced)
   return player.name .. " 在黑市购买 " .. name .. " 成功"
 end
 
-local function _charge_if_needed(game, player, currency, price, opts)
+local function _charge_if_needed(game, player, price, opts)
   if opts and opts.skip_charge == true then
     return true
   end
-  return _query_context().try_charge_player(game, player, currency, price, {
+  return _query_context().try_charge_player(game, player, price, {
     suppress_cash_receive_anim = true,
   })
 end
@@ -41,7 +41,7 @@ local function _fulfill_item(game, player, entry, opts)
   if inventory.is_full(player) then
     return { ok = false, reason = "inventory_full", body = player.name .. " 卡槽已满" }
   end
-  if not _charge_if_needed(game, player, opts.currency, opts.price, opts) then
+  if not _charge_if_needed(game, player, opts.price, opts) then
     return { ok = false, reason = "charge_failed", body = player.name .. " 支付失败" }
   end
   local given = inventory.give(player, entry.product_id, { game = game })

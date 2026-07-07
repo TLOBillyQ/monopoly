@@ -98,7 +98,7 @@ function driver.player_position(_, player)
 end
 
 function driver.player_cash(ctx, player)
-  return ctx.game:player_balance(player, "金币")
+  return ctx.game:player_cash(player)
 end
 
 function driver.tile_at(ctx, index)
