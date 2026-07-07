@@ -6,7 +6,7 @@ local asset_total = {}
 -- Remaining total assets for a player: cash plus the invested value of every
 -- land tile they own (purchase price plus per-level upgrade costs).
 function asset_total.player_total(game, player)
-  local total = game:player_balance(player, "金币")
+  local total = game:player_cash(player)
   assert(total ~= nil, "missing player cash")
   for tile_id in pairs(player.properties or {}) do
     local tile = game.board:get_tile_by_id(tile_id)

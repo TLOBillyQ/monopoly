@@ -57,10 +57,10 @@ local _cached_land_values = {}
 local _cached_total_values = {}
 
 local function _read_player_cash(game, player)
-  if game == nil or type(game.player_balance) ~= "function" then
+  if game == nil or type(game.player_cash) ~= "function" then
     return _ZERO
   end
-  return _normalize_integer_value(game:player_balance(player, "金币"))
+  return _normalize_integer_value(game:player_cash(player))
 end
 
 local function _accumulate_player_assets(game, player, board)

@@ -45,11 +45,8 @@ local function _ensure_src_game(world)
       end
       return alive
     end
-    game.player_balance = function(_, player, currency)
-      if currency == "金币" then
-        return player._acceptance_cash or player.cash or 0
-      end
-      return 0
+    game.player_cash = function(_, player)
+      return player._acceptance_cash or player.cash or 0
     end
     game._src_endgame = true
   end
@@ -562,7 +559,7 @@ function endgame_steps.handlers()
           })
           world.detained_turns = player.status.stay_turns
           world.player = world.player or {}
-          world.player.cash = ctx.game:player_balance(player, "金币")
+          world.player.cash = ctx.game:player_cash(player)
         end
       end
       return true
@@ -612,7 +609,7 @@ function endgame_steps.handlers()
         player = player,
         tile = tile,
       })
-      world.player.cash = ctx.game:player_balance(player, "金币")
+      world.player.cash = ctx.game:player_cash(player)
       if player.eliminated then
         world.player.bankrupt = true
       else

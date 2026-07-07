@@ -2,6 +2,8 @@
 -- 余额由角色 Fixed 属性（coin_count）承载，业务语义是非负整数金币。
 -- 校验 / 存储（Role 属性读写）/ 结算（含 transfer 原子回滚）全部内聚于此，
 -- 对外只暴露 balance_ops 结算接口；一次写入路径上同一不变量只在入口校验一次。
+-- 币种概念不出本模块：对外接口一律是无币种参数的 cash 族（player_cash 等），
+-- 调用方不需要也不允许传币种键（ADR 0018 的延续）。
 local action_anim_port = require("src.foundation.ports.action_anim")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local number_utils = require("src.foundation.number")
@@ -260,12 +262,8 @@ function balance_ops.seed_player_coins(player, amount)
   return _set_coin_count(nil, player, amount)
 end
 
-function balance_ops.player_balance(self, player, currency)
-  local key = common.normalize_currency(currency)
-  if key == "金币" then
-    return _read_coin_count(player)
-  end
-  error("unsupported currency: " .. tostring(key))
+function balance_ops.player_cash(self, player)
+  return _read_coin_count(player)
 end
 
 function balance_ops.add_player_cash(self, player, amount, opts)
@@ -308,14 +306,6 @@ function balance_ops.transfer_player_cash(self, payer, receiver, amount, opts)
   _queue_cash_anim(self, payer, -actual, opts)
   _queue_cash_anim(self, receiver, actual, opts)
   return payer_after, receiver_after, actual
-end
-
-function balance_ops.deduct_player_balance(self, player, currency, amount, opts)
-  local key = common.normalize_currency(currency)
-  if key == "金币" then
-    return self:deduct_player_cash(player, amount, opts)
-  end
-  error("unsupported currency: " .. tostring(key))
 end
 
 return balance_ops

@@ -31,7 +31,7 @@ local function _opponents(world)
 end
 
 local function _balance(world, player)
-  return _game(world):player_balance(player, "金币")
+  return _game(world):player_cash(player)
 end
 
 function bankruptcy_steps.handlers()

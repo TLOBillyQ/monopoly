@@ -55,7 +55,7 @@ function shared.adjust_chance_delta(game, player, delta)
 end
 
 function shared.handle_bankruptcy_if_non_positive(game, player, reason)
-  if game:player_balance(player, "金币") > 0 then
+  if game:player_cash(player) > 0 then
     return
   end
   bankruptcy_port.eliminate(game, player, { reason = reason })

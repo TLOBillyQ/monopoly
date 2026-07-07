@@ -50,7 +50,7 @@ end
 local function _apply_buy(ctx)
   local t = ctx.tile
   local player = ctx.player
-  if ctx.game:player_balance(player, "金币") < t.price then
+  if ctx.game:player_cash(player) < t.price then
     return {
       intent = {
         kind = "push_popup",
@@ -86,7 +86,7 @@ local function _apply_upgrade(ctx)
   local st = land_actions.safe_tile_state(ctx.game, t)
   local old_level = st.level or 0
   local cost = pricing.upgrade_cost(t, old_level)
-  if ctx.game:player_balance(player, "金币") < cost then
+  if ctx.game:player_cash(player) < cost then
     return {
       intent = {
         kind = "push_popup",

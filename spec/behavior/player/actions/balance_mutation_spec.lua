@@ -39,7 +39,7 @@ local function _game()
 end
 
 local function _read(player)
-  return balance.player_balance(nil, player, "金币")
+  return balance.player_cash(nil, player)
 end
 
 local NO_ANIM = { suppress_cash_receive_anim = true }

@@ -199,7 +199,7 @@ end
 
 local function _assert_balance(world, player_index, expected)
   return _capture_result(world, function()
-    local actual = _game(world):player_balance(_player(world, player_index), "金币")
+    local actual = _game(world):player_cash(_player(world, player_index))
     if actual ~= expected then
       error("expected balance " .. tostring(expected) .. ", got " .. tostring(actual))
     end
@@ -378,7 +378,7 @@ function role_attribute_coins_steps.handlers()
       local expected, err = _parse_amount(example, "金币")
       if expected == nil then return nil, err end
       return _capture_result(world, function()
-        local actual = _game(world):player_balance(_player(world, example["玩家序号"]), "金币")
+        local actual = _game(world):player_cash(_player(world, example["玩家序号"]))
         if actual ~= expected then
           error("expected balance " .. tostring(expected) .. ", got " .. tostring(actual))
         end
@@ -388,7 +388,7 @@ function role_attribute_coins_steps.handlers()
 
     ["查询玩家1当前金币"] = function(world)
       return _capture_result(world, function()
-        return _game(world):player_balance(_player(world, 1), "金币")
+        return _game(world):player_cash(_player(world, 1))
       end)
     end,
 
@@ -473,7 +473,7 @@ function role_attribute_coins_steps.handlers()
         finished = game.finished,
       })
       local row = model and model.panel and model.panel.player_rows and model.panel.player_rows[1] or nil
-      local expected = game:player_balance(_player(world, 1), "金币")
+      local expected = game:player_cash(_player(world, 1))
       if not row or row.cash_value ~= expected then
         return nil, "expected panel cash " .. tostring(expected)
       end
@@ -572,7 +572,7 @@ function role_attribute_coins_steps.handlers()
       for index, player in ipairs(_game(world).players or {}) do
         output.players[index] = {
           id = player.id,
-          coins = _game(world):player_balance(player, "金币"),
+          coins = _game(world):player_cash(player),
         }
       end
       for _, player_state in ipairs(output.players) do

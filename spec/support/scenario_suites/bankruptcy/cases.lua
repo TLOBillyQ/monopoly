@@ -136,17 +136,17 @@ local function _test_rent_bankruptcy_leaves_payer_cash_zero()
   g:set_tile_level(tile_ref, 3)
   g:set_player_property(p1, tile_ref.id, true)
 
-  local p1_cash_before = g:player_balance(p1, "金币")
+  local p1_cash_before = g:player_cash(p1)
   local p2_starting_cash = 10
   g:set_player_cash(p2, p2_starting_cash)
   g:update_player_position(p2, idx)
   _resolve_landing(g, p2, tile_ref, {})
 
   assert(p2.eliminated == true, "payer should be eliminated when rent unaffordable")
-  local p2_cash = g:player_balance(p2, "金币")
+  local p2_cash = g:player_cash(p2)
   assert(p2_cash == 0,
     "bankrupt rent payer cash must be capped at zero, got " .. tostring(p2_cash))
-  local p1_cash = g:player_balance(p1, "金币")
+  local p1_cash = g:player_cash(p1)
   assert(p1_cash == p1_cash_before + p2_starting_cash,
     "owner should receive only payer's liquid (" .. tostring(p1_cash_before + p2_starting_cash)
       .. "), got " .. tostring(p1_cash))
@@ -163,8 +163,8 @@ local function _test_hospital_insufficient_funds_does_not_leave_positive_cash()
   g:player_apply_hospital_effects(p1)
 
   assert(p1.eliminated == true, "player should be eliminated when hospital fee unpayable")
-  assert(g:player_balance(p1, "金币") == 0,
-    "bankrupt cash must be capped at zero, got " .. tostring(g:player_balance(p1, "金币")))
+  assert(g:player_cash(p1) == 0,
+    "bankrupt cash must be capped at zero, got " .. tostring(g:player_cash(p1)))
 end
 
 local function _test_chance_pay_others_stops_after_bankruptcy()
@@ -189,9 +189,9 @@ local function _test_chance_pay_others_stops_after_bankruptcy()
   chance_handler(g, p1, { effect = "pay_others", amount = 10 })
 
   assert(p1.eliminated == true, "payer should be eliminated when cash becomes non-positive")
-  assert(g:player_balance(p2, "金币") == 10, "first recipient should receive transfer")
-  assert(g:player_balance(p3, "金币") == 10, "second recipient should receive transfer before bankruptcy stop")
-  assert(g:player_balance(p4, "金币") == 0, "later recipients should not receive transfer after bankruptcy")
+  assert(g:player_cash(p2) == 10, "first recipient should receive transfer")
+  assert(g:player_cash(p3) == 10, "second recipient should receive transfer before bankruptcy stop")
+  assert(g:player_cash(p4) == 0, "later recipients should not receive transfer after bankruptcy")
 end
 
 local function _test_chance_collect_from_others_bankrupts_unable_payer()
@@ -216,14 +216,14 @@ local function _test_chance_collect_from_others_bankrupts_unable_payer()
   handler(g, p1, { effect = "collect_from_others", amount = 100 })
 
   assert(p2.eliminated == true, "broke payer should be eliminated by collect_from_others")
-  local p2_cash = g:player_balance(p2, "金币")
+  local p2_cash = g:player_cash(p2)
   assert(p2_cash == 0,
     "bankrupt collect-from-others payer cash must be capped at zero, got " .. tostring(p2_cash))
-  assert(g:player_balance(p3, "金币") == 100, "solvent payer should pay full amount")
-  assert(g:player_balance(p4, "金币") == 100, "solvent payer should pay full amount")
-  assert(g:player_balance(p1, "金币") == 5 + 100 + 100,
+  assert(g:player_cash(p3) == 100, "solvent payer should pay full amount")
+  assert(g:player_cash(p4) == 100, "solvent payer should pay full amount")
+  assert(g:player_cash(p1) == 5 + 100 + 100,
     "collector should receive each payer's actual liquid only, got "
-      .. tostring(g:player_balance(p1, "金币")))
+      .. tostring(g:player_cash(p1)))
 end
 
 local function _test_set_tile_owner_without_ui_port_does_not_crash()

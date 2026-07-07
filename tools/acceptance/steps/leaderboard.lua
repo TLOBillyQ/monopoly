@@ -25,7 +25,7 @@ local function _ensure(world)
     game = {
       players = {},
       winners = {},
-      player_balance = function(_, player, _currency)
+      player_cash = function(_, player)
         return player.cash or 0
       end,
       board = { get_tile_by_id = function() return nil end },

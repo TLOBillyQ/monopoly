@@ -93,10 +93,10 @@ describe("market", function()
     -- Set player to have no cash so no items are available
     g:set_player_cash(p, 0)
 
-    local before_cash = g:player_balance(p, "金币")
+    local before_cash = g:player_cash(p)
     market_service.auto.execute(g, p)
 
-    assert(g:player_balance(p, "金币") == before_cash, "should not spend money when no items available")
+    assert(g:player_cash(p) == before_cash, "should not spend money when no items available")
   end)
 
   it("auto_execute_purchases_first_available_item", function()
@@ -112,12 +112,12 @@ describe("market", function()
       return -- skip if no items available
     end
 
-    local before_cash = g:player_balance(p, "金币")
+    local before_cash = g:player_cash(p)
 
     market_service.auto.execute(g, p)
 
     -- Should have purchased the cheapest item
-    assert(g:player_balance(p, "金币") < before_cash, "should have purchased an item")
+    assert(g:player_cash(p) < before_cash, "should have purchased an item")
   end)
 
   it("market_global_limit", function()
@@ -241,7 +241,7 @@ describe("market", function()
     local market_query = require("src.rules.market.query")
     local game = {
       market_limits = { [5001] = 1 },
-      player_balance = function()
+      player_cash = function()
         return 999999
       end,
     }

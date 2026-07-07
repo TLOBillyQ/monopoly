@@ -46,7 +46,7 @@ function local_purchase.execute(game, player, entry)
   local price = query_context.entry_price(entry)
   local currency = query_context.entry_currency(entry)
 
-  if game:player_balance(player, currency) < price then
+  if game:player_cash(player) < price then
     choice_feedback.emit_buy_failed(player, entry, "insufficient_balance", player.name .. " 余额不足")
     return { ok = false, reason = "insufficient_balance", option_id = product_id }
   end

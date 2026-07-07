@@ -51,8 +51,8 @@ end
 
 context.is_paid_currency = paid_currency_bridge.is_paid_currency
 
-function context.try_charge_player(game, player, currency, price, opts)
-  game:deduct_player_balance(player, currency, price, opts)
+function context.try_charge_player(game, player, price, opts)
+  game:deduct_player_cash(player, price, opts)
   return true
 end
 
@@ -90,7 +90,7 @@ function eligibility.can_buy_entry(game, player, entry)
     local ok = paid_purchase_port.can_start(game, player, entry)
     return ok == true
   end
-  return game:player_balance(player, currency) >= price
+  return game:player_cash(player) >= price
 end
 
 function eligibility.is_sold_out(game, entry)

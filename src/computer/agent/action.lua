@@ -9,7 +9,7 @@ local function _richest_other(game, player, allow_ids)
   for _, p in ipairs(game.players) do
     if not p.eliminated and p.id ~= player.id then
       if not allow_ids or allow_ids[p.id] then
-        local cash = game:player_balance(p, "金币")
+        local cash = game:player_cash(p)
         if not best_cash or cash > best_cash then
           best = p
           best_cash = cash
@@ -21,9 +21,9 @@ local function _richest_other(game, player, allow_ids)
 end
 
 local function _is_richest(game, player)
-  local player_cash = game:player_balance(player, "金币")
+  local player_cash = game:player_cash(player)
   for _, p in ipairs(game.players) do
-    if not p.eliminated and p.id ~= player.id and game:player_balance(p, "金币") > player_cash then
+    if not p.eliminated and p.id ~= player.id and game:player_cash(p) > player_cash then
       return false
     end
   end

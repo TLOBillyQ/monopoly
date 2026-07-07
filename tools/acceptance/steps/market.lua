@@ -285,7 +285,7 @@ function market_steps.handlers()
     ["玩家金币充足"] = function(world)
       local game = _game(world)
       local player = _player(world)
-      local cash = game:player_balance(player, "金币")
+      local cash = game:player_cash(player)
       if cash < 10000 then
         game:set_player_cash(player, 10000)
       end
@@ -320,9 +320,9 @@ function market_steps.handlers()
     ["电脑玩家路过黑市"] = function(world)
       local game = _game(world)
       local player = _player(world)
-      world.coins_before_auto = game:player_balance(player, "金币")
+      world.coins_before_auto = game:player_cash(player)
       market_auto.execute(game, player)
-      world.coins_after_auto = game:player_balance(player, "金币")
+      world.coins_after_auto = game:player_cash(player)
       return true
     end,
 

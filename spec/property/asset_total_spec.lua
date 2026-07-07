@@ -31,7 +31,7 @@ end
 
 local function _game(cash, tiles)
   return {
-    player_balance = function()
+    player_cash = function()
       return cash
     end,
     board = {

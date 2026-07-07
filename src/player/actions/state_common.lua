@@ -1,5 +1,4 @@
 local constants = require("src.config.content.constants")
-local tables = require("src.foundation.tables")
 local dirty_tracker = require("src.state.dirty_tracker")
 
 local common = {}
@@ -10,8 +9,6 @@ function common.player_status_table(player)
   player.status = player.status or {}
   return player.status
 end
-
-common.normalize_currency = tables.normalize_currency
 
 function common.mark_players(game)
   dirty_tracker.mark(game.dirty, "players")

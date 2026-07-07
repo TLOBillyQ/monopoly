@@ -34,7 +34,7 @@ end
 
 function tax_rules.execute_pay_tax(game, player_id)
   local player = game:find_player_by_id(player_id)
-  local cash = game:player_balance(player, "金币")
+  local cash = game:player_cash(player)
   local fee = math.floor(cash * constants.tax_rate)
   if cash < fee then fee = cash end
 
@@ -45,7 +45,7 @@ function tax_rules.execute_pay_tax(game, player_id)
     amount = fee,
     text = player.name .. " 在税务局支付税金 " .. number_utils.format_integer_part(fee),
   })
-  if game:player_balance(player, "金币") <= 0 then
+  if game:player_cash(player) <= 0 then
     result.bankrupt_reason = player.name .. " 支付税金后破产"
   end
   return result

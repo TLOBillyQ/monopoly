@@ -34,11 +34,6 @@ function M.contains(list, value)
   return false
 end
 
-function M.normalize_currency(currency)
-  assert(currency ~= nil and currency ~= "", "missing currency")
-  return currency
-end
-
 function M.join_or_default(list, separator, default_value)
   if type(list) ~= "table" or #list == 0 then
     return default_value

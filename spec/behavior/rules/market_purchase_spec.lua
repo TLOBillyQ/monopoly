@@ -241,7 +241,7 @@ describe("choices_purchase", function()
       ["src.rules.market.choice"] = _make_choice_mock(),
     }, function(purchase)
       local game = {
-        player_balance = function()
+        player_cash = function()
           return 7
         end,
       }
@@ -281,7 +281,7 @@ describe("choices_purchase", function()
       end),
     }, function(purchase)
       local game = {
-        player_balance = function()
+        player_cash = function()
           return 6
         end,
       }
@@ -316,7 +316,7 @@ describe("choices_purchase", function()
       end),
     }, function(purchase)
       local game = {
-        player_balance = function()
+        player_cash = function()
           return 7
         end,
       }
@@ -353,7 +353,7 @@ describe("choices_purchase", function()
       end),
     }, function(purchase)
       local game = {
-        player_balance = function()
+        player_cash = function()
           return 7
         end,
       }

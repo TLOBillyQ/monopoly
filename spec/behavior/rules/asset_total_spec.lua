@@ -4,8 +4,7 @@ local asset_total = require("src.rules.land.asset_total")
 
 local function _game(cash, tiles)
   return {
-    player_balance = function(_, _, currency)
-      _assert_eq(currency, "金币", "asset total should read cash balance")
+    player_cash = function()
       return cash
     end,
     board = {

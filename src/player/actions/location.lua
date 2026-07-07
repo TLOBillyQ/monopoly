@@ -56,7 +56,7 @@ function location_ops.player_apply_hospital_effects(self, player)
     text = player.name .. " 支付医药费 " .. number_utils.format_integer_part(fee),
     tip = true,
   })
-  if self:player_balance(player, "金币") <= 0 then
+  if self:player_cash(player) <= 0 then
     bankruptcy_port.eliminate(self, player, { reason = player.name .. " 支付医药费后破产" })
     return
   end

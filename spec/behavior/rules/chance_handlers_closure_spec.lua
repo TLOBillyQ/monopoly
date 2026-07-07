@@ -26,7 +26,7 @@ local function _game(players)
 end
 
 local function _balance(game, player)
-  return game:player_balance(player, "金币")
+  return game:player_cash(player)
 end
 
 describe("chance handlers closure", function()

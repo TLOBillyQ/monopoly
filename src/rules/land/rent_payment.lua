@@ -110,7 +110,7 @@ function rent_payment.execute_pay_rent(game, player_id, tile_id)
     multiplier_text = multiplier_text,
   })
 
-  if game:player_balance(player, "金币") >= rent then
+  if game:player_cash(player) >= rent then
     game:transfer_player_cash(player, owner, rent)
     achievement_progress.cash_received(game, owner, rent)
     return result

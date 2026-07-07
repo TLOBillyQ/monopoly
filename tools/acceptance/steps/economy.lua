@@ -436,13 +436,13 @@ function economy_steps.handlers()
       local tax_idx = ctx.game.board:find_first_by_type("tax")
       local tax_tile = assert(ctx.game.board:get_tile(tax_idx), "missing tax tile")
       player.position = tax_idx
-      local before = ctx.game:player_balance(player, "金币")
+      local before = ctx.game:player_cash(player)
       effect_base.executors.tax.apply({
         game = ctx.game,
         player = player,
         tile = tax_tile,
       })
-      local after = ctx.game:player_balance(player, "金币")
+      local after = ctx.game:player_cash(player)
       world.tax_amount = before - after
       world.player.cash = after
       if after <= 0 then

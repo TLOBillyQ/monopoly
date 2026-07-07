@@ -43,8 +43,8 @@ target_cash_effects.share_wealth = {
       angel_feedback.publish(game, target, "均富")
       return true
     end
-    local user_cash = game:player_balance(user, "金币")
-    local target_cash = game:player_balance(target, "金币")
+    local user_cash = game:player_cash(user)
+    local target_cash = game:player_cash(target)
     local total = user_cash + target_cash
     local half = math.floor(total / 2)
     local user_delta = half - user_cash
@@ -86,14 +86,14 @@ target_cash_effects.tax = {
       })
       return true
     end
-    local fee = math.floor(game:player_balance(target, "金币") * 0.5)
+    local fee = math.floor(game:player_cash(target) * 0.5)
     game:deduct_player_cash(target, fee)
     achievement_progress.tax_paid(game, target, fee)
     event_feed.publish(game, {
       kind = event_kinds.tax_card,
       text = user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. number_utils.format_integer_part(fee) .. " 税金",
     })
-    if game:player_balance(target, "金币") <= 0 then
+    if game:player_cash(target) <= 0 then
       bankruptcy_port.eliminate(game, target, { reason = target.name .. " 支付查税费用后破产" })
     end
     return true

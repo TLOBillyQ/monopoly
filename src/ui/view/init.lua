@@ -45,8 +45,8 @@ local function _resolve_current_player_meta(game, current)
     return FALLBACK_CURRENT_PLAYER_NAME, FALLBACK_CURRENT_PLAYER_CASH, FALLBACK_CURRENT_PLAYER_ID
   end
   local current_cash = FALLBACK_CURRENT_PLAYER_CASH
-  if game ~= nil and type(game.player_balance) == "function" then
-    current_cash = game:player_balance(current, "金币")
+  if game ~= nil and type(game.player_cash) == "function" then
+    current_cash = game:player_cash(current)
   end
   return current.name or FALLBACK_CURRENT_PLAYER_NAME, current_cash,
     role_id_utils.normalize(current.id)

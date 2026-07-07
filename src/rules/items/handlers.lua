@@ -132,7 +132,7 @@ function handlers.handle_target_player_item(game, player, item_id, context)
         if deity_type then
           deity_text = " 神:" .. deity_type
         end
-        local cash_text = number_utils.format_integer_part(game:player_balance(t, "金币"))
+        local cash_text = number_utils.format_integer_part(game:player_cash(t))
         table.insert(body_lines, t.name .. " 现金:" .. cash_text .. deity_text)
         table.insert(options, { id = t.id, label = t.name })
         slot_layout[i] = seat_by_role_id[t.id] or i
