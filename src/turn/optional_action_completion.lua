@@ -3,15 +3,6 @@ local optional_action_choice = require("src.turn.optional_action_choice")
 
 local optional_action_completion = {}
 
--- Choice classification predicates live in optional_action_choice; re-exported here
--- so existing callers keep the optional_action_completion.<predicate> surface.
-optional_action_completion.is_optional_action_choice =
-  optional_action_choice.is_optional_action_choice
-optional_action_completion.is_cancelable_optional_action_choice =
-  optional_action_choice.is_cancelable_optional_action_choice
-optional_action_completion.is_pre_action_item_phase_choice =
-  optional_action_choice.is_pre_action_item_phase_choice
-
 local function _indexed_current_player(game)
   local turn = game.turn
   local index = turn and turn.current_player_index or nil
@@ -57,7 +48,7 @@ local function _rejected(reason, choice)
 end
 
 local function _choice_rejection_reason(choice, opts)
-  if not optional_action_completion.is_optional_action_choice(choice) then
+  if not optional_action_choice.is_optional_action_choice(choice) then
     return "no_optional_action"
   end
   if choice.allow_cancel == false then

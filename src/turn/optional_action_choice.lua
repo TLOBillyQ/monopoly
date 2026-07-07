@@ -29,7 +29,7 @@ return optional_action_choice
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=5de47f76fe542c1c
+projectHash=07736d1f9a0681bb
 scope.0.id=chunk:src/turn/optional_action_choice.lua
 scope.0.kind=chunk
 scope.0.startLine=1
@@ -40,14 +40,29 @@ scope.1.kind=function
 scope.1.startLine=3
 scope.1.endLine=6
 scope.1.semanticHash=dcaa3635497530ba
+scope.1.lastMutatedAt=2026-07-07T06:08:18Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=7
+scope.1.lastMutationKilled=7
 scope.2.id=function:optional_action_choice.is_cancelable_optional_action_choice:8
 scope.2.kind=function
 scope.2.startLine=8
 scope.2.endLine=10
 scope.2.semanticHash=43fb97456d0b3233
+scope.2.lastMutatedAt=2026-07-07T06:08:18Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=4
+scope.2.lastMutationKilled=4
 scope.3.id=function:optional_action_choice.is_pre_action_item_phase_choice:17
 scope.3.kind=function
 scope.3.startLine=17
 scope.3.endLine=26
 scope.3.semanticHash=835eb586d69f5693
+scope.3.lastMutatedAt=2026-07-07T06:08:18Z
+scope.3.lastMutationLane=behavior
+scope.3.lastMutationStatus=passed
+scope.3.lastMutationSites=15
+scope.3.lastMutationKilled=15
 ]]

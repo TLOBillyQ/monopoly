@@ -1,6 +1,6 @@
 local choice_route_policy = require("src.config.choice.route_policy")
 local choice_options = require("src.ui.view.choice_options")
-local optional_action_completion = require("src.turn.optional_action_completion")
+local optional_action_choice = require("src.turn.optional_action_choice")
 
 local M = {}
 
@@ -61,15 +61,15 @@ function M.requires_item_slot_pre_confirm(choice)
 end
 
 function M.is_optional_action_choice(choice)
-  return optional_action_completion.is_optional_action_choice(choice)
+  return optional_action_choice.is_optional_action_choice(choice)
 end
 
 function M.is_cancelable_optional_action_choice(choice)
-  return optional_action_completion.is_cancelable_optional_action_choice(choice)
+  return optional_action_choice.is_cancelable_optional_action_choice(choice)
 end
 
 function M.is_pre_action_item_phase_choice(choice)
-  return optional_action_completion.is_pre_action_item_phase_choice(choice)
+  return optional_action_choice.is_pre_action_item_phase_choice(choice)
 end
 
 M.resolve_screen_key = choice_route_policy.resolve
