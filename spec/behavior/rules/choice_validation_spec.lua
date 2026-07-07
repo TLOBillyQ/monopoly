@@ -7,7 +7,14 @@ local availability = require("src.rules.items.availability")
 local runtime_state = require("src.state.runtime")
 local logger = require("src.foundation.log")
 
-local _validate = validator._validate_item_slot_action
+-- 道具槽校验统一走 validator.resolve_item_slot_action（选项 + 可用性检查在
+-- 解析链内完成）；用 state 上的 pending choice + slot source 驱动。
+local function _resolve_item_slot(runtime_game, choice, action, item_id)
+  local state = {}
+  runtime_state.set_pending_choice(state, choice)
+  local source = { resolve_slot_action = function() return item_id end }
+  return validator.resolve_item_slot_action(source, state, action, runtime_game)
+end
 
 local _item_choice_handler_t2_tests = {
   function()
@@ -281,33 +288,37 @@ describe("choices_validation", function()
 
   it("_test_item_phase_choice_decorates_preconsumed_followup_meta", _item_choice_handler_t2_tests[8])
 
-  it("_validate_item_slot_action valid option and no phase returns true", function()
+  it("item slot validation valid option and no phase returns ok", function()
     local choice = {
+      id = 21,
+      kind = "item_phase_choice",
       options = { { id = "item_123" } },
       meta = {},
     }
-    local action = { actor_role_id = 1 }
+    local action = { id = "item_slot_1", actor_role_id = 1 }
     local runtime_game = {
       find_player_by_id = function()
         return nil
       end,
     }
 
-    local result = _validate(runtime_game, choice, action, "item_123")
-    _crap_assert_eq(result, true, "valid option without phase returns true")
+    local result = _resolve_item_slot(runtime_game, choice, action, "item_123")
+    _crap_assert_eq(result.ok, true, "valid option without phase returns ok")
   end)
 
-  it("_validate_item_slot_action invalid option returns false", function()
+  it("item slot validation invalid option returns not ok", function()
     local choice = {
+      id = 22,
+      kind = "item_phase_choice",
       options = { { id = "item_123" } },
     }
-    local action = { actor_role_id = 1 }
+    local action = { id = "item_slot_1", actor_role_id = 1 }
 
-    local result = _validate({}, choice, action, "item_999")
-    _crap_assert_eq(result, false, "invalid option returns false")
+    local result = _resolve_item_slot({}, choice, action, "item_999")
+    _crap_assert_eq(result.ok, false, "invalid option returns not ok")
   end)
 
-  it("_validate_item_slot_action availability denied returns false", function()
+  it("item slot validation availability denied returns not ok", function()
     _with_patched_dependencies({
       warn = function() end,
       can_offer_in_phase = function(_, actor, item_id, phase)
@@ -318,18 +329,20 @@ describe("choices_validation", function()
       end,
     }, function()
       local choice = {
+        id = 23,
+        kind = "item_phase_choice",
         options = { { id = "item_123" } },
         meta = { phase = "pre_move" },
       }
-      local action = { actor_role_id = 1 }
+      local action = { id = "item_slot_1", actor_role_id = 1 }
       local runtime_game = {
         find_player_by_id = function()
           return { id = 1 }
         end,
       }
 
-      local result = _validate(runtime_game, choice, action, "item_123")
-      _crap_assert_eq(result, false, "availability denial returns false")
+      local result = _resolve_item_slot(runtime_game, choice, action, "item_123")
+      _crap_assert_eq(result.ok, false, "availability denial returns not ok")
     end)
   end)
 

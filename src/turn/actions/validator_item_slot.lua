@@ -1,9 +1,54 @@
+-- validator 内部实现：item_slot_N 按钮到 choice_select 的解析与校验
+-- （含道具阶段选项与可用性检查，原 validator_item_phase 已并入本文件）。
 local logger = require("src.foundation.log")
 local item_slot_data = require("src.turn.actions.item_slot_data")
 local runtime_state = require("src.state.runtime")
-local item_phase = require("src.turn.actions.validator_item_phase")
+local availability = require("src.rules.items.availability")
 
 local validator_item_slot = {}
+
+-- 道具阶段选项与可用性
+
+local function _choice_has_item_option(choice, item_id)
+  local options = assert(choice.options, "missing choice options")
+  for _, option in ipairs(options) do
+    if (option.id or option) == item_id then
+      return true
+    end
+  end
+  return false
+end
+
+local function _validate_item_phase_option(choice, item_id)
+  if _choice_has_item_option(choice, item_id) then
+    return true
+  end
+  logger.warn("invalid item option:", tostring(item_id))
+  return false
+end
+
+local function _resolve_item_phase_actor(runtime_game, actor_role_id)
+  if not runtime_game or type(runtime_game.find_player_by_id) ~= "function" then
+    return nil
+  end
+  return runtime_game:find_player_by_id(actor_role_id)
+end
+
+local function _validate_item_phase_availability(runtime_game, choice, actor_role_id, item_id)
+  local actor = _resolve_item_phase_actor(runtime_game, actor_role_id)
+  local phase = choice and choice.meta and choice.meta.phase or nil
+  if not actor or type(phase) ~= "string" or phase == "" then
+    return true
+  end
+  local can_offer = availability.can_offer_in_phase(runtime_game, actor, item_id, phase)
+  if can_offer then
+    return true
+  end
+  logger.warn("item slot denied by availability:", tostring(item_id), tostring(phase))
+  return false
+end
+
+-- item_slot 按钮解析
 
 local function _resolve_item_slot_source(item_slot_source)
   if type(item_slot_source) == "table" and type(item_slot_source.resolve_slot_action) == "function" then
@@ -79,14 +124,14 @@ function validator_item_slot.resolve_item_slot_resolution(item_slot_source, stat
     }
   end
 
-  if not item_phase.validate_item_phase_option(choice, item_id) then
+  if not _validate_item_phase_option(choice, item_id) then
     return {
       ok = false,
       reason = "invalid_item_option",
     }
   end
 
-  if not item_phase.validate_item_phase_availability(runtime_game, choice, action.actor_role_id, item_id) then
+  if not _validate_item_phase_availability(runtime_game, choice, action.actor_role_id, item_id) then
     return {
       ok = false,
       reason = "item_slot_denied_by_availability",
