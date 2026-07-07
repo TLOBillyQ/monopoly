@@ -35,15 +35,25 @@ return resolver
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=7e49db8c5f6a83f7
+projectHash=22c8742b6c341e08
 scope.0.id=chunk:src/rules/chance/resolver.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=36
+scope.0.endLine=35
 scope.0.semanticHash=539cebc18a12c94a
+scope.0.lastMutatedAt=2026-07-07T03:30:17Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=3
+scope.0.lastMutationKilled=3
 scope.1.id=function:resolver.resolve:7
 scope.1.kind=function
 scope.1.startLine=7
 scope.1.endLine=32
 scope.1.semanticHash=7e8e796100b92b21
+scope.1.lastMutatedAt=2026-07-07T03:30:17Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=10
+scope.1.lastMutationKilled=10
 ]]

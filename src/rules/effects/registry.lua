@@ -26,12 +26,17 @@ return effect_registry
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=7ee9353a4cf1e78d
+projectHash=a51a1745a7341296
 scope.0.id=chunk:src/rules/effects/registry.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=26
 scope.0.semanticHash=c3fb61afe9e6a0d2
+scope.0.lastMutatedAt=2026-07-07T03:33:50Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=5
+scope.0.lastMutationKilled=5
 scope.1.id=function:effect_registry:init:6
 scope.1.kind=function
 scope.1.startLine=6
@@ -42,6 +47,11 @@ scope.2.kind=function
 scope.2.startLine=10
 scope.2.endLine=13
 scope.2.semanticHash=a2ec7a68ace179ee
+scope.2.lastMutatedAt=2026-07-07T03:33:50Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=1
+scope.2.lastMutationKilled=1
 scope.3.id=function:effect_registry:get:21
 scope.3.kind=function
 scope.3.startLine=21

@@ -15,10 +15,15 @@ return agent
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=b90d478d0b81a436
+projectHash=72c1f3e928302aa8
 scope.0.id=chunk:src/computer/agent/init.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=15
 scope.0.semanticHash=c543d5ed385f4a8c
+scope.0.lastMutatedAt=2026-07-07T03:18:25Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=4
+scope.0.lastMutationKilled=4
 ]]

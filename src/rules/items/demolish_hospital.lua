@@ -95,3 +95,38 @@ function demolish_hospital.handle_result(game, player, idx, kind, hospital_targe
 end
 
 return demolish_hospital
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=6ef818fb8d59ff2f
+scope.0.id=chunk:src/rules/items/demolish_hospital.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=98
+scope.0.semanticHash=8d2f5f70359dbebe
+scope.0.lastMutatedAt=2026-07-07T03:35:39Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=26
+scope.0.lastMutationKilled=26
+scope.1.id=function:_patch:53
+scope.1.kind=function
+scope.1.startLine=53
+scope.1.endLine=57
+scope.1.semanticHash=31f27cff06de3443
+scope.1.lastMutatedAt=2026-07-07T03:35:39Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=6
+scope.1.lastMutationKilled=6
+scope.2.id=function:demolish_hospital.handle_result:82
+scope.2.kind=function
+scope.2.startLine=82
+scope.2.endLine=95
+scope.2.semanticHash=a9ad618980ff0905
+scope.2.lastMutatedAt=2026-07-07T03:35:39Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=7
+scope.2.lastMutationKilled=7
+]]

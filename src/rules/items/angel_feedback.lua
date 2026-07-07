@@ -32,15 +32,25 @@ return angel_feedback
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=0710aafdfe7eb201
+projectHash=7dfc98f03e3aeaf7
 scope.0.id=chunk:src/rules/items/angel_feedback.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=32
 scope.0.semanticHash=dac2bdd8c8feebfe
+scope.0.lastMutatedAt=2026-07-07T03:34:40Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=4
+scope.0.lastMutationKilled=4
 scope.1.id=function:angel_feedback.publish:13
 scope.1.kind=function
 scope.1.startLine=13
 scope.1.endLine=29
 scope.1.semanticHash=33790f4fc01a52f3
+scope.1.lastMutatedAt=2026-07-07T03:34:40Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=6
+scope.1.lastMutationKilled=6
 ]]

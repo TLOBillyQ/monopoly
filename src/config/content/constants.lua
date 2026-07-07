@@ -40,15 +40,25 @@ return constants
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=3d16f7255f22cce5
+projectHash=20fdc805ab66a63c
 scope.0.id=chunk:src/config/content/constants.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=40
 scope.0.semanticHash=f9be789f7af8b643
+scope.0.lastMutatedAt=2026-07-07T03:19:18Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=6
+scope.0.lastMutationKilled=6
 scope.1.id=function:anonymous@32:32
 scope.1.kind=function
 scope.1.startLine=32
 scope.1.endLine=34
 scope.1.semanticHash=4ee118a174818efd
+scope.1.lastMutatedAt=2026-07-07T03:19:18Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=1
+scope.1.lastMutationKilled=1
 ]]

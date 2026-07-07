@@ -31,7 +31,7 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=5f30cb20c7ecb36a
+projectHash=bab87fc8465bec9e
 scope.0.id=chunk:src/rules/choice/fallback_registry.lua
 scope.0.kind=chunk
 scope.0.startLine=1
@@ -42,11 +42,21 @@ scope.1.kind=function
 scope.1.startLine=5
 scope.1.endLine=9
 scope.1.semanticHash=73744209d5f21a2d
+scope.1.lastMutatedAt=2026-07-07T03:32:02Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=2
+scope.1.lastMutationKilled=2
 scope.2.id=function:M.resolve:11
 scope.2.kind=function
 scope.2.startLine=11
 scope.2.endLine=24
 scope.2.semanticHash=c700a47c23e4f7c9
+scope.2.lastMutatedAt=2026-07-07T03:32:02Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=8
+scope.2.lastMutationKilled=8
 scope.3.id=function:M.reset:26
 scope.3.kind=function
 scope.3.startLine=26

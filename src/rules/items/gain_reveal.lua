@@ -21,3 +21,28 @@ function gain_reveal.queue(game, player, item_id, opts)
 end
 
 return gain_reveal
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=74db5c9850f8b181
+scope.0.id=chunk:src/rules/items/gain_reveal.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=24
+scope.0.semanticHash=9086a181dc5ab797
+scope.0.lastMutatedAt=2026-07-07T03:36:03Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=4
+scope.0.lastMutationKilled=4
+scope.1.id=function:gain_reveal.queue:8
+scope.1.kind=function
+scope.1.startLine=8
+scope.1.endLine=21
+scope.1.semanticHash=d25fe3311f874055
+scope.1.lastMutatedAt=2026-07-07T03:36:03Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=7
+scope.1.lastMutationKilled=7
+]]

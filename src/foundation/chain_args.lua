@@ -30,7 +30,7 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=1e5a16dd8c6e1dbe
+projectHash=4d4b7c933d86836b
 scope.0.id=chunk:src/foundation/chain_args.lua
 scope.0.kind=chunk
 scope.0.startLine=1
@@ -41,9 +41,19 @@ scope.1.kind=function
 scope.1.startLine=3
 scope.1.endLine=10
 scope.1.semanticHash=ceb50b5bab48753b
+scope.1.lastMutatedAt=2026-07-07T04:12:29Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=7
+scope.1.lastMutationKilled=7
 scope.2.id=function:M.resolve_after_action_anim:12
 scope.2.kind=function
 scope.2.startLine=12
 scope.2.endLine=27
 scope.2.semanticHash=4e865a160ef6d135
+scope.2.lastMutatedAt=2026-07-07T04:12:29Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=10
+scope.2.lastMutationKilled=10
 ]]

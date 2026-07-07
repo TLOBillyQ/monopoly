@@ -50,12 +50,17 @@ return choice_registry
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=4985db49dd2cbafa
+projectHash=547b4be9db3650ab
 scope.0.id=chunk:src/rules/choice/registry.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=50
 scope.0.semanticHash=5d84508e8e2e8020
+scope.0.lastMutatedAt=2026-07-07T03:32:29Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=19
+scope.0.lastMutationKilled=19
 scope.1.id=function:choice_registry:init:28
 scope.1.kind=function
 scope.1.startLine=28
@@ -66,6 +71,11 @@ scope.2.kind=function
 scope.2.startLine=32
 scope.2.endLine=35
 scope.2.semanticHash=dfea91937bed5492
+scope.2.lastMutatedAt=2026-07-07T03:32:29Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=1
+scope.2.lastMutationKilled=1
 scope.3.id=function:choice_registry:descriptor_for:37
 scope.3.kind=function
 scope.3.startLine=37

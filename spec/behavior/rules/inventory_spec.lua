@@ -172,6 +172,27 @@ describe("domain inventory coverage", function()
         "L86 'or→and' or first '1→0' mutation returns items_cfg[1].id=" ..
         tostring(items_cfg[1].id) .. " instead. Got id=" .. tostring(picked.id))
     end)
+
+    it("falls back to items_cfg[1] when weighted pick yields nothing (kills fallback '1→0')", function()
+      -- Force the weighted picker to return an empty list so picked[1] is nil and the
+      -- 'or items_cfg[1]' fallback branch executes.
+      -- Original: returns items_cfg[1] (first config item, non-nil).
+      -- Mut 'items_cfg[1]' -> 'items_cfg[0]': returns items_cfg[0] == nil.
+      require("vendor.third_party.Utils")
+      local items_cfg = require("src.config.content.items")
+      local saved_choice = Utils.choice_weight_list
+      -- luacheck: push ignore 122
+      Utils.choice_weight_list = function() return {} end
+      local picked = inventory.draw_random()
+      Utils.choice_weight_list = saved_choice
+      -- luacheck: pop
+
+      assert(picked ~= nil,
+        "draw_random must fall back to a real config item when pick is empty; " ..
+        "fallback '1→0' mutation returns items_cfg[0]=nil")
+      assert(picked == items_cfg[1],
+        "empty-pick fallback must return items_cfg[1]; got " .. tostring(picked and picked.id))
+    end)
   end)
 
   describe("clear toggles _suspend_on_change around items reset (L77/L79)", function()

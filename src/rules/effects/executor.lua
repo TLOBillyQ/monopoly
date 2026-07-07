@@ -10,7 +10,7 @@ return effect_executor
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=03562d3e23370ad2
+projectHash=d56687e916207686
 scope.0.id=chunk:src/rules/effects/executor.lua
 scope.0.kind=chunk
 scope.0.startLine=1
@@ -21,4 +21,9 @@ scope.1.kind=function
 scope.1.startLine=3
 scope.1.endLine=7
 scope.1.semanticHash=2f9c26855afc4245
+scope.1.lastMutatedAt=2026-07-07T03:33:26Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=3
+scope.1.lastMutationKilled=3
 ]]

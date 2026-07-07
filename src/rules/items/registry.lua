@@ -69,17 +69,27 @@ return registry
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=569d42f58d41d45c
+projectHash=9af5a8e19ed5db9b
 scope.0.id=chunk:src/rules/items/registry.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=69
 scope.0.semanticHash=fcc470f914a05b03
+scope.0.lastMutatedAt=2026-07-07T03:37:54Z
+scope.0.lastMutationLane=behavior
+scope.0.lastMutationStatus=passed
+scope.0.lastMutationSites=30
+scope.0.lastMutationKilled=30
 scope.1.id=function:_inject_target_candidates:19
 scope.1.kind=function
 scope.1.startLine=19
 scope.1.endLine=23
 scope.1.semanticHash=f9761e86133f63aa
+scope.1.lastMutatedAt=2026-07-07T03:37:54Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=1
+scope.1.lastMutationKilled=1
 scope.2.id=function:registry:init:25
 scope.2.kind=function
 scope.2.startLine=25
