@@ -16,7 +16,7 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=4252d5d370302de7
+projectHash=58a1da21844bb59a
 scope.0.id=chunk:src/ui/render/board/player_resolve.lua
 scope.0.kind=chunk
 scope.0.startLine=1
@@ -27,9 +27,19 @@ scope.1.kind=function
 scope.1.startLine=3
 scope.1.endLine=5
 scope.1.semanticHash=ccecb587b9d5bfe7
+scope.1.lastMutatedAt=2026-07-07T02:15:06Z
+scope.1.lastMutationLane=behavior
+scope.1.lastMutationStatus=passed
+scope.1.lastMutationSites=1
+scope.1.lastMutationKilled=1
 scope.2.id=function:M.resolve_active_player_base:7
 scope.2.kind=function
 scope.2.startLine=7
 scope.2.endLine=13
 scope.2.semanticHash=3d1a32255365cd01
+scope.2.lastMutatedAt=2026-07-07T02:15:06Z
+scope.2.lastMutationLane=behavior
+scope.2.lastMutationStatus=passed
+scope.2.lastMutationSites=4
+scope.2.lastMutationKilled=4
 ]]
