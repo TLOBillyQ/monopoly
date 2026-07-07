@@ -43,4 +43,27 @@ describe("ui.schema.base", function()
     _assert_eq(base_nodes.player_action_effects[3], "基础_玩家3行动动效", "player action effect 3")
     _assert_eq(base_nodes.player_action_effects[4], "基础_玩家4行动动效", "player action effect 4")
   end)
+
+  it("resolves main turn button slots to unique EButton host nodes", function()
+    local base_nodes = require("src.ui.schema.base")
+    local host_nodes = require("Data.UIManagerNodes")
+
+    local entry_counts = {}
+    local entry_kinds = {}
+    for _, entry in pairs(host_nodes) do
+      if type(entry) == "table" then
+        local name, kind = entry[1], entry[2]
+        entry_counts[name] = (entry_counts[name] or 0) + 1
+        entry_kinds[name] = kind
+      end
+    end
+
+    for _, slot_key in ipairs({ "action_button", "end_button", "cancel_button" }) do
+      local node_name = base_nodes[slot_key]
+      _assert_eq(entry_counts[node_name], 1,
+        slot_key .. " (" .. node_name .. ") should map to exactly one host node")
+      _assert_eq(entry_kinds[node_name], "EButton",
+        slot_key .. " (" .. node_name .. ") host node kind")
+    end
+  end)
 end)
