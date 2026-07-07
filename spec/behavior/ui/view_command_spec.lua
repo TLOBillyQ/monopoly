@@ -53,8 +53,20 @@ describe("view_command_dispatcher", function()
     assert(result == false, "expected false when ports dispatch returns nil")
   end)
 
-  it("fallback handles popup_confirm without error", function()
-    local ok = pcall(view_command.dispatch, {}, { type = "popup_confirm" })
-    assert(ok, "expected no error for popup_confirm")
+  it("dispatch warns and returns false when the view_command port is missing", function()
+    local logger = require("src.foundation.log")
+    local warn_calls = {}
+    local saved_warn = logger.warn
+    logger.warn = function(...) warn_calls[#warn_calls + 1] = { ... } end
+    local ok, result = pcall(view_command.dispatch, {}, { type = "popup_confirm" })
+    logger.warn = saved_warn
+    assert(ok, "expected no error for popup_confirm without ports")
+    assert(result == false, "expected false when port is missing")
+    assert(#warn_calls == 1, "expected one warn for missing port, got " .. #warn_calls)
+    local found = false
+    for _, arg in ipairs(warn_calls[1]) do
+      if tostring(arg):find("popup_confirm", 1, true) then found = true end
+    end
+    assert(found, "warn must include the dropped intent type")
   end)
 end)

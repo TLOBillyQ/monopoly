@@ -1,3 +1,5 @@
+local presentation_ports = require("src.ui.ports")
+
 local ui_mock = {}
 
 -- Build the in-memory ui + presentation_runtime stub shared by render-asserting
@@ -49,6 +51,7 @@ function ui_mock.build_render_state(opts)
     ui = ui,
     ui_refs = { images = {}, skins = {} },
     presentation_runtime = { runtime = fake_runtime },
+    gameplay_loop_ports = presentation_ports.build(),
   }
   return state, captures
 end

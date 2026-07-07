@@ -46,7 +46,7 @@ describe("ui command policy", function()
       "cancel button should resolve actor from turn context")
   end)
 
-  it("keeps host and fallback view command adapters aligned by command meaning", function()
+  it("routes every view command through a port handler with the same meaning", function()
     local view_commands = {
       "toggle_action_log",
       "open_skin_panel",
@@ -62,8 +62,8 @@ describe("ui command policy", function()
       local intent = { type = intent_type }
       _assert_eq(command_policy.is_view_command(intent), true,
         intent_type .. " should be a view command")
-      _assert_eq(command_policy.port_handler(intent), command_policy.fallback_handler(intent),
-        intent_type .. " should use the same host and fallback handler meaning")
+      _assert_eq(command_policy.port_handler(intent), intent_type,
+        intent_type .. " should declare a port handler matching the command meaning")
     end
 
     _assert_eq(command_policy.dispatches_before_game({ type = "market_select" }), false,

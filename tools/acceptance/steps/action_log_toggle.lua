@@ -1,6 +1,7 @@
 local number_utils = require("src.foundation.number")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local event_log_view = require("src.ui.coord.event_log_view")
+local presentation_ports = require("src.ui.ports")
 local view_command = require("src.ui.input.view_command")
 
 local action_log_toggle_steps = {}
@@ -25,6 +26,7 @@ local function _ensure_state(world)
       set_event_log = _no_op,
       set_event_log_visible = _no_op,
     },
+    gameplay_loop_ports = presentation_ports.build(),
   }
   world.action_log_state = state
   return state

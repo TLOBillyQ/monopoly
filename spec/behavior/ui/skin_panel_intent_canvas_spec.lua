@@ -3,6 +3,7 @@ local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
 local view_command = require("src.ui.input.view_command")
+local presentation_ports = require("src.ui.ports")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local ui_events = require("src.ui.coord.ui_events")
 local skin_panel = require("src.ui.coord.skin_panel")
@@ -35,7 +36,11 @@ describe("skin_panel.open via view_command.dispatch", function()
     local other_events = {}
     local clicker = _build_role_with_events(1, clicker_events)
     local other = _build_role_with_events(2, other_events)
-    local state = { ui = _build_ui_state(), ui_refs = { images = {} } }
+    local state = {
+      ui = _build_ui_state(),
+      ui_refs = { images = {} },
+      gameplay_loop_ports = presentation_ports.build(),
+    }
 
     _with_patches({
       { target = runtime_ports, key = "resolve_role", value = function(role_id)
@@ -61,7 +66,11 @@ describe("skin_panel.open via view_command.dispatch", function()
     local role2_events = {}
     local role1 = _build_role_with_events(1, role1_events)
     local role2 = _build_role_with_events(2, role2_events)
-    local state = { ui = _build_ui_state(), ui_refs = { images = {} } }
+    local state = {
+      ui = _build_ui_state(),
+      ui_refs = { images = {} },
+      gameplay_loop_ports = presentation_ports.build(),
+    }
 
     _with_patches({
       { target = runtime_ports, key = "resolve_role", value = function() return nil end },

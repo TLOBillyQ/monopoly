@@ -11,6 +11,7 @@ local modal_presenter = require("src.ui.coord.modal")
 local gameplay_rules = require("src.config.gameplay.debug_flags")
 local market_modal_renderer = require("src.ui.coord.market")
 local logger = require("src.foundation.log")
+local presentation_ports = require("src.ui.ports")
 local runtime_state = require("src.state.runtime")
 local raycast = require("src.host.raycast")
 
@@ -93,6 +94,7 @@ describe("presentation_ui.interaction", function()
         item_slot_item_ids = {},
         item_slot_item_ids_by_role = {},
       },
+      gameplay_loop_ports = presentation_ports.build(),
     }
     local game = {}
 
@@ -118,6 +120,7 @@ describe("presentation_ui.interaction", function()
         item_slot_item_ids = {},
         item_slot_item_ids_by_role = {},
       },
+      gameplay_loop_ports = presentation_ports.build(),
     }
     local game = {}
 
@@ -137,6 +140,7 @@ describe("presentation_ui.interaction", function()
   it("_test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context", function()
     local state = {
       ui = ui_view.build_ui_state(),
+      gameplay_loop_ports = presentation_ports.build(),
     }
     local game = {}
     local role = _build_role_with_events(101, {})
@@ -178,6 +182,7 @@ describe("presentation_ui.interaction", function()
     local dispatch_calls = 0
     local state = {
       ui = ui_view.build_ui_state(),
+      gameplay_loop_ports = presentation_ports.build(),
       turn_action_port = {
         dispatch_action = function()
           dispatch_calls = dispatch_calls + 1
@@ -221,6 +226,7 @@ describe("presentation_ui.interaction", function()
     local events = {}
     local state = {
       ui = ui_view.build_ui_state(),
+      gameplay_loop_ports = presentation_ports.build(),
     }
     local game = {}
     local role = _build_role_with_events(101, events)
@@ -257,6 +263,7 @@ describe("presentation_ui.interaction", function()
     local warn_count = 0
     local state = {
       ui = ui_view.build_ui_state(),
+      gameplay_loop_ports = presentation_ports.build(),
     }
     local game = {}
     local ok = false
