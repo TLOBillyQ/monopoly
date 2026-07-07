@@ -30,7 +30,11 @@ function intents.build(state)
     {
       name = base_nodes.action_button,
       build_intent = function()
-        if choice_support.is_optional_action_choice(route_model.choice(state)) then
+        local choice = route_model.choice(state)
+        if choice_support.is_pre_action_item_phase_choice(choice) then
+          return { type = "complete_optional_action_phase" }
+        end
+        if choice_support.is_optional_action_choice(choice) then
           return nil
         end
         return { type = "ui_button", id = "next" }
