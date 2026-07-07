@@ -1,4 +1,5 @@
 local action_anim = require("src.ui.render.anim")
+local pending_confirmation = require("src.state.pending_confirmation")
 local anim_units = require("src.ui.render.anim.units")
 local unit_overlay = require("src.ui.render.anim.unit_overlay")
 local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
@@ -477,12 +478,11 @@ describe("refactorer_crap_coverage", function()
 
   it("pre confirm cancel restores non-inline source screen", function()
     local state = {
-      _pre_confirm_active = true,
-      _pre_confirm_source_screen = "market",
       gameplay_loop_ports = {
         modal = {},
       },
     }
+    pending_confirmation.enter(state, pending_confirmation.SOURCE_CHOICE_SELECT, { source_screen = "market" })
     local open_calls = 0
     local close_calls = 0
     state.gameplay_loop_ports.modal.open_choice_modal = function(_, choice)
@@ -499,8 +499,8 @@ describe("refactorer_crap_coverage", function()
 
     pre_confirm.cancel(state)
 
-    _assert_eq(state._pre_confirm_active, nil, "cancel should clear active flag")
-    _assert_eq(state._pre_confirm_source_screen, nil, "cancel should clear source")
+    _assert_eq(pending_confirmation.is_active(state), false, "cancel should clear active record")
+    _assert_eq(pending_confirmation.source_screen(state), nil, "cancel should clear source")
     _assert_eq(runtime_state.get_pending_choice_id(state), nil, "cancel should clear pending choice id")
     _assert_eq(open_calls, 1, "non-inline cancel should reopen prior modal")
     _assert_eq(close_calls, 0, "non-inline cancel should not close modal")
@@ -509,12 +509,11 @@ describe("refactorer_crap_coverage", function()
   it("item slot confirm dispatches stored intent and closes confirm state", function()
     local stored_intent = { type = "ui_button", id = "item_slot_1" }
     local state = {
-      _item_slot_confirm_active = true,
-      _item_slot_confirm_intent = stored_intent,
       gameplay_loop_ports = {
         modal = {},
       },
     }
+    pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_SLOT, { intent = stored_intent })
     state.gameplay_loop_ports.modal.close_choice_modal = function(close_state)
       _assert_eq(close_state, state, "close should receive state")
     end
@@ -535,8 +534,8 @@ describe("refactorer_crap_coverage", function()
     local handled = item_slot_confirm.dispatch(state, game, { type = "choice_select" }, opts, action_port)
 
     _assert_eq(handled, true, "active slot confirm should handle choice_select")
-    _assert_eq(state._item_slot_confirm_active, nil, "dispatch should clear active flag")
-    _assert_eq(state._item_slot_confirm_intent, nil, "dispatch should clear stored intent")
+    _assert_eq(pending_confirmation.is_active(state), false, "dispatch should clear active record")
+    _assert_eq(pending_confirmation.stored_intent(state), nil, "dispatch should clear stored intent")
     _assert_eq(#dispatched, 1, "dispatch should replay stored intent")
     _assert_eq(dispatched[1].intent, stored_intent, "dispatch should replay original slot intent")
   end)
@@ -863,7 +862,7 @@ describe("refactorer_crap_coverage", function()
         "a confirmable slot should enter pre-confirm")
     end)
 
-    _assert_eq(state._item_slot_confirm_active, true, "try_enter should mark slot confirm active")
+    _assert_eq(pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_ITEM_SLOT), true, "try_enter should mark slot confirm active")
     _assert_eq(opened.item_id, 55, "pre-confirm should open for the slot item")
     _assert_eq(opened.title, "使用？", "pre-confirm should pass the resolved confirm title")
 
@@ -877,7 +876,7 @@ describe("refactorer_crap_coverage", function()
       _assert_eq(item_slot_confirm.try_enter(state2, { type = "ui_button", id = "item_slot_2" }), false,
         "a host without open_pre_confirm_screen should abort the entry")
     end)
-    _assert_eq(state2._item_slot_confirm_active, nil, "an aborted try_enter should roll back the active flag")
+    _assert_eq(pending_confirmation.is_active(state2), false, "an aborted try_enter should not leave an active record")
   end)
 
   it("ui event state resolves explicit and current role action-log flags", function()

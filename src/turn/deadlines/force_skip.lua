@@ -1,5 +1,6 @@
 local logger = require("src.foundation.log")
 local choice_ports = require("src.turn.deadlines.choice_ports")
+local pending_confirmation = require("src.state.pending_confirmation")
 
 local force_skip = {}
 
@@ -57,7 +58,7 @@ end
 
 local function _clear_force_skip_state(game, state)
   if type(state) == "table" then
-    state._item_phase_ask_active = nil
+    pending_confirmation.clear(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
     local output_ports = choice_ports.resolve_output_ports(state)
     if output_ports then
       local clear_pending_choice = output_ports.clear_pending_choice

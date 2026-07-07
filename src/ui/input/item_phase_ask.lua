@@ -1,5 +1,6 @@
 local choice_support = require("src.ui.view.choice_support")
 local runtime_state = require("src.ui.state.runtime")
+local pending_confirmation = require("src.ui.state.pending_confirmation")
 local modal_ports = require("src.ui.input.modal_ports")
 
 local item_phase_ask_flow = {}
@@ -53,8 +54,7 @@ local function _dispatch_single_pre_confirm_option(game, state, choice, intent, 
 end
 
 local function _handle_choice_select(state, game, intent, opts, action_port)
-  state._item_phase_ask_active = nil
-  state._item_phase_confirmed = true
+  pending_confirmation.confirm(state)
   state._suppress_item_slot_highlight_until_pick = nil
   local choice = _current_choice(state)
   state._skip_item_slot_highlight_replay_choice_id = choice and choice.id or nil
@@ -66,8 +66,7 @@ local function _handle_choice_select(state, game, intent, opts, action_port)
 end
 
 local function _handle_choice_cancel(state, game, intent, opts, action_port)
-  state._item_phase_ask_active = nil
-  state._item_phase_confirmed = nil
+  pending_confirmation.cancel(state)
   state._suppress_item_slot_highlight_until_pick = nil
   state._skip_item_slot_highlight_replay_choice_id = nil
   _close_choice_modal(state)
@@ -88,7 +87,7 @@ local INTENT_HANDLERS = {
 }
 
 function item_phase_ask_flow.dispatch(state, game, intent, opts, action_port)
-  if state._item_phase_ask_active ~= true then
+  if not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK) then
     return false
   end
   local handler = INTENT_HANDLERS[intent and intent.type]

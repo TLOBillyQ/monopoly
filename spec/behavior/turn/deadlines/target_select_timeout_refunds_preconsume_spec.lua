@@ -1,12 +1,13 @@
--- 验证：道具目标选择超时后清除 _item_phase_ask_active 标志，并清空 pending_choice
+-- 验证：道具目标选择超时后清除 item_phase_ask 的 pending confirmation，并清空 pending_choice
 local target_select_timer = require("src.turn.waits.target_select_timer")
+local pending_confirmation = require("src.state.pending_confirmation")
 local DeadlineService = require("src.turn.deadlines")
 local runtime_state = require("src.state.runtime")
 
 local function _build_state()
   local state = {}
   runtime_state.ensure_all(state)
-  state._item_phase_ask_active = true
+  pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   return state
 end
 
@@ -66,7 +67,7 @@ describe("target select timeout", function()
     -- 推进 16 秒（超过 target_select 15s）
     DeadlineService.tick(state, 16.0)
 
-    assert.is_nil(state._item_phase_ask_active)
+    assert.is_false(pending_confirmation.is_active(state))
     assert.is_nil(game.turn.pending_choice)
     assert.is_true(advanced.count >= 1)
   end)
@@ -75,7 +76,7 @@ describe("target select timeout", function()
     local state = _build_state()
     local game = _build_game()
     target_select_timer.step(game, state, 0.1)
-    state._item_phase_ask_active = false
+    pending_confirmation.clear(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
     target_select_timer.step(game, state, 0.1)
     assert.is_false(DeadlineService.is_active(state, "target_select"))
   end)

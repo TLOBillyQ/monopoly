@@ -23,6 +23,7 @@ local choice_resolver = require("src.rules.choice.resolver")
 local item_use_flow = require("src.rules.items.use_flow")
 local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local target_select_timer = require("src.turn.waits.target_select_timer")
+local pending_confirmation = require("src.state.pending_confirmation")
 
 local turn_driver = {}
 
@@ -456,22 +457,22 @@ end
 -- Using a target item (steal / missile / …) raises a real item_target_player choice,
 -- and src governs its timeout through a SEPARATE subsystem from the choice deadline
 -- above: target_select_timer borrows the DeadlineService `target_select` scope, but
--- only arms once `_item_phase_ask_active` is set (production sets it when the target
--- modal opens — src/ui/coord/modal.lua). We drive that real timer over the same ctx by
+-- only arms once the item_phase_ask pending confirmation is active (production enters
+-- it when the target modal opens — src/ui/coord/modal.lua). We drive that real timer over the same ctx by
 -- raising the real choice (item use-flow -> intent_dispatcher) and setting the same ask
 -- flag the modal would, then ticking the real DeadlineService. The item is consumed only
 -- when a target is APPLIED, so a timeout never consumes it (the「留存」semantics).
 
 -- Raise the real item-target-select choice for `player` using `item_id`: src's item
 -- use-flow produces the target-pick intent, the real intent dispatcher opens it into
--- pending_choice (kind item_target_player), and we set the ask flag the target modal
--- would so the real target_select timer will arm. Returns the pending choice. Give the
+-- pending_choice (kind item_target_player), and we enter the item_phase_ask pending
+-- confirmation the target modal would so the real target_select timer will arm. Returns the pending choice. Give the
 -- item + a valid target on game_driver first. The card is NOT pre-consumed here — src
 -- consumes it only on apply.
 function turn_driver.open_target_item_choice(ctx, player, item_id)
   local res = item_use_flow.begin_item_use(ctx.game, player.id, item_id, {})
   intent_dispatcher.dispatch(ctx.game, res)
-  _deadline_state(ctx)._item_phase_ask_active = true
+  pending_confirmation.enter(_deadline_state(ctx), pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   return ctx.game.turn.pending_choice
 end
 

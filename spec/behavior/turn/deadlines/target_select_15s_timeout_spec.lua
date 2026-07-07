@@ -4,13 +4,14 @@
 -- 回退 → 配置被删/调小时行为测试仍绿（回退也是 15）。这里钉死字面值并证明解析走配置而非回退。
 local timing = require("src.config.gameplay.timing")
 local target_select_timer = require("src.turn.waits.target_select_timer")
+local pending_confirmation = require("src.state.pending_confirmation")
 local DeadlineService = require("src.turn.deadlines")
 local runtime_state = require("src.state.runtime")
 
 local function _active_state()
   local state = {}
   runtime_state.ensure_all(state)
-  state._item_phase_ask_active = true
+  pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   return state
 end
 

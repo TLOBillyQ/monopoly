@@ -1,7 +1,9 @@
 -- 道具目标选择阶段独立超时。借用 DeadlineService 的 target_select scope；
--- 进入 `_item_phase_ask_active=true` 后注册 deadline，到点调 deadlines.resolve_target_select。
+-- item_phase_ask 二次确认屏激活（pending_confirmation）后注册 deadline，
+-- 到点调 deadlines.resolve_target_select。
 local timing = require("src.config.gameplay.timing")
 local deadlines = require("src.turn.deadlines")
+local pending_confirmation = require("src.state.pending_confirmation")
 local NumberUtils = require("src.foundation.number")
 
 local M = {}
@@ -15,7 +17,7 @@ local function _resolve_target_select_timeout()
 end
 
 local function _is_target_select_active(state)
-  return type(state) == "table" and state._item_phase_ask_active == true
+  return pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
 end
 
 function M.step(game, state, dt)

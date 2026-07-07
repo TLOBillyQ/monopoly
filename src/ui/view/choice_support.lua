@@ -56,6 +56,19 @@ function M.uses_item_slots(choice)
   return choice ~= nil and choice.uses_item_slots == true
 end
 
+-- 槽位点击可进入二次确认的判定：槽位存在、可用且携带道具。
+-- 把 slot_states 的内部结构知识收在 choice 视图助手这一层。
+function M.find_confirmable_slot(choice, index)
+  if not choice or type(choice.slot_states) ~= "table" then
+    return nil
+  end
+  local slot = choice.slot_states[index]
+  if not slot or not slot.available or not slot.item_id then
+    return nil
+  end
+  return slot
+end
+
 function M.requires_item_slot_pre_confirm(choice)
   return choice ~= nil and choice.pre_confirm_before_slot_pick == true
 end

@@ -1,5 +1,6 @@
 local logger = require("src.foundation.log")
 local runtime_state = require("src.ui.state.runtime")
+local modal_state = require("src.ui.state.modal")
 
 local intents = {}
 
@@ -12,8 +13,10 @@ local function _resolve_index_from_payload(payload)
 end
 
 local function _resolve_mapped_from_runtime(state, index)
-  local ui_runtime = state and runtime_state.ensure_ui_runtime(state) or nil
-  return ui_runtime and ui_runtime.choice_visible_option_ids and ui_runtime.choice_visible_option_ids[index]
+  if state == nil then
+    return nil
+  end
+  return modal_state.get_visible_option_id(state, index)
 end
 
 local function _resolve_option_by_index(choice, index)
@@ -88,10 +91,9 @@ function intents.choice_confirm_intent(state, warn_label)
   if not choice then
     return nil
   end
-  local ui_runtime = runtime_state.ensure_ui_runtime(state)
-  local option_id = ui_runtime.pending_choice_selected_option_id
-  if option_id == nil and type(ui_runtime.choice_visible_option_ids) == "table" then
-    option_id = ui_runtime.choice_visible_option_ids[1]
+  local option_id = modal_state.get_selected_option_id(state)
+  if option_id == nil then
+    option_id = modal_state.get_visible_option_id(state, 1)
   end
   if option_id == nil then
     logger.warn(warn_label .. " missing selected option")
