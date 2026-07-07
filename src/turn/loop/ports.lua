@@ -48,7 +48,6 @@ local port_groups = {
     "is_input_blocked",
     "is_popup_active",
     "is_choice_active",
-    "is_market_active",
     "get_popup_owner_index",
     "set_input_blocked",
   },

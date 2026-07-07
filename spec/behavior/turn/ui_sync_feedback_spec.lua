@@ -272,7 +272,6 @@ local _fill_ui_sync_defaults_tests = {
     assert(type(ports.is_input_blocked) == "function", "should fill is_input_blocked")
     assert(type(ports.is_popup_active) == "function", "should fill is_popup_active")
     assert(type(ports.is_choice_active) == "function", "should fill is_choice_active")
-    assert(type(ports.is_market_active) == "function", "should fill is_market_active")
     assert(type(ports.get_popup_owner_index) == "function", "should fill get_popup_owner_index")
     assert(type(ports.set_input_blocked) == "function", "should fill set_input_blocked")
     assert(type(ports.resolve_ui_gate) == "function", "should fill resolve_ui_gate")
@@ -289,19 +288,21 @@ local _fill_ui_sync_defaults_tests = {
     assert(type(ports.is_popup_active) == "function", "should fill missing defaults")
   end,
   function()
+    -- turn 层默认实现不再读 state.ui.*：逐项查询一律派生自端口 resolve_ui_gate
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
-    local ports = {}
-    for k, v in pairs(base) do
-      ports[k] = v
-    end
+    local gate = { input_blocked = true, choice_active = false, popup_active = true, popup_owner_index = 2 }
+    local ports = {
+      resolve_ui_gate = function() return gate end,
+    }
     loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-    local state = { ui = { input_blocked = true, choice_active = false, popup_active = true, popup_owner_index = 2 } }
-    assert(ports.is_input_blocked(state) == true, "is_input_blocked should read from state.ui")
-    assert(ports.is_choice_active(state) == false, "is_choice_active should read from state.ui")
-    assert(ports.is_popup_active(state) == true, "is_popup_active should read from state.ui")
-    assert(ports.get_popup_owner_index(state) == 2, "get_popup_owner_index should read from state.ui")
+    local state = {}
+    assert(ports.is_input_blocked(state) == true, "is_input_blocked should derive from resolve_ui_gate")
+    assert(ports.is_choice_active(state) == false, "is_choice_active should derive from resolve_ui_gate")
+    assert(ports.is_popup_active(state) == true, "is_popup_active should derive from resolve_ui_gate")
+    assert(ports.get_popup_owner_index(state) == 2, "get_popup_owner_index should derive from resolve_ui_gate")
   end,
   function()
+    -- turn 层默认 set_input_blocked 不认识 state.ui 键名：惰性且不落写
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
     local ports = {}
     for k, v in pairs(base) do
@@ -310,12 +311,11 @@ local _fill_ui_sync_defaults_tests = {
     loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
     local state = { ui = { input_blocked = false } }
     local changed = ports.set_input_blocked(state, true)
-    assert(changed == true, "should return true when value changes")
-    assert(state.ui.input_blocked == true, "should set input_blocked to true")
-    local changed2 = ports.set_input_blocked(state, true)
-    assert(changed2 == false, "should return false when value unchanged")
+    assert(changed == false, "default set_input_blocked should report no change")
+    assert(state.ui.input_blocked == false, "default set_input_blocked should not touch state.ui")
   end,
   function()
+    -- turn 层默认 resolve_ui_gate 不读 state.ui：返回全关惰性 gate
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
     local ports = {}
     for k, v in pairs(base) do
@@ -334,13 +334,13 @@ local _fill_ui_sync_defaults_tests = {
       }
     }
     local gate = ports.resolve_ui_gate(state)
-    assert(gate.input_blocked == true, "gate should reflect input_blocked")
-    assert(gate.choice_active == false, "gate should reflect choice_active")
-    assert(gate.market_active == true, "gate should reflect market_active")
-    assert(gate.popup_active == true, "gate should reflect popup_active")
-    assert(gate.popup_seq == 5, "gate should reflect popup_seq")
-    assert(gate.popup_owner_index == 1, "gate should reflect popup_owner_index")
-    assert(gate.popup_auto_close_seconds == 10, "gate should reflect popup_auto_close_seconds")
+    assert(gate.input_blocked == false, "inert gate should keep input_blocked false")
+    assert(gate.choice_active == false, "inert gate should keep choice_active false")
+    assert(gate.market_active == false, "inert gate should keep market_active false")
+    assert(gate.popup_active == false, "inert gate should keep popup_active false")
+    assert(gate.popup_seq == nil, "inert gate should keep popup_seq nil")
+    assert(gate.popup_owner_index == nil, "inert gate should keep popup_owner_index nil")
+    assert(gate.popup_auto_close_seconds == nil, "inert gate should keep popup_auto_close_seconds nil")
   end,
   function()
     local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() return {} end, function() return {} end)
@@ -353,7 +353,6 @@ local _fill_ui_sync_defaults_tests = {
     assert(ports.is_input_blocked(nil) == false, "is_input_blocked should handle nil state")
     assert(ports.is_choice_active(nil) == false, "is_choice_active should handle nil state")
     assert(ports.is_popup_active(nil) == false, "is_popup_active should handle nil state")
-    assert(ports.is_market_active(nil) == false, "is_market_active should handle nil state")
     assert(ports.get_popup_owner_index(nil) == nil, "get_popup_owner_index should handle nil state")
     assert(ports.set_input_blocked(nil, true) == false, "set_input_blocked should handle nil state")
   end,

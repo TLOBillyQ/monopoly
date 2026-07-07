@@ -1,6 +1,14 @@
 require("spec.bootstrap")
 
 local support = require("spec.support.shared_support")
+local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
+
+-- 门控测试替身基于真实 gate 模块构建：键名→语义的映射不在这里重复。
+local _gate_common = {
+  get_ui_state = function(state)
+    return state and state.ui or nil
+  end,
+}
 
 local function build_test_ports(overrides)
   overrides = overrides or {}
@@ -24,50 +32,26 @@ local function build_test_ports(overrides)
       build_model = overrides.build_model or function() return nil end,
       refresh_from_dirty = overrides.refresh_from_dirty or function() return false end,
       follow_camera = overrides.follow_camera or function() return false end,
-      get_ui_state = overrides.get_ui_state or function(state) return state and state.ui or nil end,
+      get_ui_state = overrides.get_ui_state or function(state)
+        return _gate_common.get_ui_state(state)
+      end,
       is_input_blocked = overrides.is_input_blocked or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.input_blocked == true or false
+        return ui_gate_sync.is_input_blocked(state, _gate_common)
       end,
       is_popup_active = overrides.is_popup_active or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.popup_active == true or false
+        return ui_gate_sync.is_popup_active(state, _gate_common)
       end,
       is_choice_active = overrides.is_choice_active or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.choice_active == true or false
-      end,
-      is_market_active = overrides.is_market_active or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.market_active == true or false
+        return ui_gate_sync.is_choice_active(state, _gate_common)
       end,
       get_popup_owner_index = overrides.get_popup_owner_index or function(state)
-        local ui = state and state.ui or nil
-        return ui and ui.popup_owner_index or nil
+        return ui_gate_sync.get_popup_owner_index(state, _gate_common)
       end,
       resolve_ui_gate = overrides.resolve_ui_gate or function(state)
-        local ui = state and state.ui or nil
-        local popup = ui and ui.popup_payload or nil
-        return {
-          input_blocked = ui and ui.input_blocked == true or false,
-          choice_active = ui and ui.choice_active == true or false,
-          market_active = ui and ui.market_active == true or false,
-          popup_active = ui and ui.popup_active == true or false,
-          popup_seq = ui and ui.popup_seq or nil,
-          popup_auto_close_seconds = popup and popup.auto_close_seconds or nil,
-          popup_owner_index = ui and ui.popup_owner_index or nil,
-        }
+        return ui_gate_sync.resolve_ui_gate(state, _gate_common)
       end,
       set_input_blocked = overrides.set_input_blocked or function(state, blocked)
-        local ui = state and state.ui or nil
-        if not ui then
-          return false
-        end
-        if ui.input_blocked == blocked then
-          return false
-        end
-        ui.input_blocked = blocked
-        return true
+        return ui_gate_sync.set_input_blocked(state, blocked, _gate_common)
       end,
     },
     debug = {
