@@ -68,4 +68,39 @@ describe("route_base intents", function()
     _assert_eq(intent.type, "ui_button", "action intent type")
     _assert_eq(intent.id, "next", "action intent id")
   end)
+
+  local function _action_intent_for(choice)
+    local specs = route_base.build(_state_with_choice(choice))
+    for _, spec in ipairs(specs) do
+      if spec.name == base_nodes.action_button then
+        return spec.build_intent()
+      end
+    end
+    return nil
+  end
+
+  it("routes action button through skip during pre-action item phase", function()
+    local intent = _action_intent_for({
+      id = "pre_action_1",
+      kind = "item_phase_passive",
+      allow_cancel = true,
+      meta = { phase = "pre_action" },
+    })
+
+    assert(intent ~= nil, "action button should build an intent during pre-action item phase")
+    _assert_eq(intent.type, "complete_optional_action_phase",
+      "action button should skip the pre-action item phase and advance to the roll")
+  end)
+
+  it("omits action intent during post-action optional phase", function()
+    local intent = _action_intent_for({
+      id = "post_action_1",
+      kind = "item_phase_passive",
+      allow_cancel = true,
+      meta = { phase = "post_action" },
+    })
+
+    assert(intent == nil,
+      "post-action optional phase should route the skip through the end button, not the action button")
+  end)
 end)
