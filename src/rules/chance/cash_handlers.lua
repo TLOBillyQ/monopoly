@@ -1,4 +1,5 @@
 local angel_feedback = require("src.rules.items.angel_feedback")
+local coin_settlement = require("src.rules.commerce.coin_settlement")
 
 local cash_handlers = {}
 
@@ -11,23 +12,6 @@ function cash_handlers.register(handlers, common)
         fn(p)
       end
     end
-  end
-
-  local function _record_cash_received(game, player, amount)
-    if type(common.record_cash_received) == "function" then
-      common.record_cash_received(game, player, amount)
-    end
-  end
-
-  local function _transfer_cash_capped(game, payer, receiver, amount, opts)
-    if type(game.transfer_player_cash) == "function" then
-      local payer_after, receiver_after, moved = game:transfer_player_cash(payer, receiver, amount, opts)
-      return payer_after, receiver_after, moved, true
-    end
-    local liquid = math.min(game:player_cash(payer), amount)
-    common.apply_cash_change(game, payer, -amount, opts)
-    common.apply_cash_change(game, receiver, liquid, opts)
-    return game:player_cash(payer), game:player_cash(receiver), liquid, false
   end
 
   handlers.add_cash = function(game, player, card)
@@ -59,7 +43,7 @@ function cash_handlers.register(handlers, common)
     local fee = compute_fee(game, target, card)
     local delta = common.adjust_chance_delta(game, target, -fee)
     local reason = target.name .. " " .. reason_label .. " " .. common.abs_value(delta) .. " 后破产"
-    common.apply_cash_and_maybe_bankrupt(game, target, delta, reason)
+    coin_settlement.charge(game, target, common.abs_value(delta), { reason = reason })
     common.emit_event(game, deps.monopoly_event.chance.applied, {
       player = target,
       card = card,
@@ -103,9 +87,10 @@ function cash_handlers.register(handlers, common)
       if other.id ~= player.id and not other.eliminated then
         local fee = math.abs(common.adjust_chance_delta(game, player, -card.amount))
         if not game:player_is_in_mountain(other) then
-          local reason = player.name .. " 向他人支付后破产"
-          common.apply_cash_change(game, player, -fee, { suppress_cash_receive_anim = true })
-          common.handle_bankruptcy_if_non_positive(game, player, reason)
+          coin_settlement.charge(game, player, fee, {
+            reason = player.name .. " 向他人支付后破产",
+            cash_opts = { suppress_cash_receive_anim = true },
+          })
           common.apply_cash_change(game, other, fee, { suppress_cash_receive_anim = true })
         end
       end
@@ -124,19 +109,11 @@ function cash_handlers.register(handlers, common)
       if other.id ~= player.id and not other.eliminated then
         local fee = common.adjust_chance_delta(game, player, card.amount)
         if not game:player_is_in_mountain(player) then
-          local _, _, liquid, used_settlement = _transfer_cash_capped(
-            game,
-            other,
-            player,
-            fee,
-            { suppress_cash_receive_anim = true, allow_partial = true }
-          )
-          if used_settlement then
-            _record_cash_received(game, player, liquid)
-          end
-          total_collected = total_collected + liquid
-          local reason = other.name .. " 被收款资金不足破产"
-          common.handle_bankruptcy_if_non_positive(game, other, reason)
+          local settled = coin_settlement.transfer(game, other, player, fee, {
+            reason = other.name .. " 被收款资金不足破产",
+            cash_opts = { suppress_cash_receive_anim = true },
+          })
+          total_collected = total_collected + settled.moved
         end
       end
     end
