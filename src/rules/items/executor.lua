@@ -1,79 +1,10 @@
 local effects = require("src.rules.items.post_effects")
 local auto_play_port = require("src.rules.ports.auto_play")
+local flow_context = require("src.rules.items.use_flow_context")
 local inventory = require("src.rules.items.inventory")
-local timing = require("src.config.gameplay.timing")
-local action_anim_port = require("src.foundation.ports.action_anim")
-local achievement_progress = require("src.rules.ports.achievement_progress")
-local use_broadcast = require("src.rules.items.use_broadcast")
+local settlement = require("src.rules.items.settlement")
 
 local executor = {}
-local action_anim_duration = timing.action_anim_default_seconds or 1.0
-
-local function _table_success_result(res)
-  if res.waiting then
-    return false
-  end
-  if type(res.ok) == "boolean" then
-    return res.ok
-  end
-  return true
-end
-
-local function _is_success_result(res)
-  if type(res) == "table" then
-    return _table_success_result(res)
-  end
-  return res == true
-end
-
-local function _should_queue_fallback_item_anim(game, before_seq, res)
-  if not action_anim_port.is_enabled(game) then
-    return false
-  end
-  if type(res) == "table" and res.action_anim then
-    return false
-  end
-  local current_seq = game.turn and game.turn.action_anim_seq or 0
-  return current_seq <= before_seq
-end
-
-local function _queue_fallback_item_anim(game, player, item_id, item_name)
-  action_anim_port.queue(game, {
-    kind = "item_use",
-    player_id = player.id,
-    item_id = item_id,
-    item_name = item_name,
-    duration = action_anim_duration,
-  })
-end
-
-local function _mark_action_anim_result(res)
-  if type(res) == "table" then
-    res.action_anim = true
-    return res
-  end
-  return { ok = true, action_anim = true }
-end
-
-local function _with_fallback_item_anim(game, player, item_id, item_name, before_seq, res)
-  if not _is_success_result(res) then
-    return res
-  end
-  if not _should_queue_fallback_item_anim(game, before_seq, res) then
-    return res
-  end
-  _queue_fallback_item_anim(game, player, item_id, item_name)
-  return _mark_action_anim_result(res)
-end
-
-local function _finalize_use_item(game, player, item_id, item_name, before_seq, res)
-  local final_res = _with_fallback_item_anim(game, player, item_id, item_name, before_seq, res)
-  if _is_success_result(final_res) then
-    achievement_progress.item_used(game, player)
-    use_broadcast.dispatch(game, player, item_id)
-  end
-  return final_res
-end
 
 local function _resolve_context(game, player, context)
   context = context or {}
@@ -89,59 +20,40 @@ local function _resolve_handler(game, item_id)
   return registry.handlers[item_id]
 end
 
-local function _apply_post_effect(game, player, item_id, context)
-  local consumed = inventory.consume(player, item_id)
-  assert(consumed == true, "item consume failed: " .. tostring(item_id))
-
-  local res = effects.apply_post(game, player, item_id, context)
-  assert(res ~= nil, "missing item post effect result: " .. tostring(item_id))
-  return res
-end
-
 function executor.use_item(game, player, item_id, context)
   context = _resolve_context(game, player, context)
   local cfg = inventory.cfg(item_id)
   assert(cfg ~= nil, "missing item cfg: " .. tostring(item_id))
-  local before_anim_seq = game.turn and game.turn.action_anim_seq or 0
+  local fallback_reason = context.reject_reason_fallback
 
   local handler = _resolve_handler(game, item_id)
-  if handler then
-    local res = handler(game, player, item_id, context)
-    return _finalize_use_item(game, player, item_id, cfg.name, before_anim_seq, res)
+  if handler == nil then
+    return settlement.execute(game, player, item_id, function()
+      local res = effects.apply_post(game, player, item_id, context)
+      assert(res ~= nil, "missing item post effect result: " .. tostring(item_id))
+      return res
+    end, { consume = "before_apply", fallback_reason = fallback_reason })
   end
 
-  local res = _apply_post_effect(game, player, item_id, context)
-  return _finalize_use_item(game, player, item_id, cfg.name, before_anim_seq, res)
+  local before_count = flow_context.count_item(player, item_id)
+  local res = handler(game, player, item_id, context)
+  if settlement.is_settled(res) then
+    return res
+  end
+  if type(res) == "table" and res.waiting == true then
+    return res
+  end
+  -- 历史 handler 契约:效果已在 handler 内部生效(含消耗),结算只负责
+  -- 判定/广播/兜底动画;消耗事实经 apply 前后计数回填台账。
+  -- 该分支随 step 3 各 kind 迁入 settlement 后仅剩注入式测试 handler 使用。
+  return settlement.execute(game, player, item_id, function()
+    return res
+  end, {
+    consume = "already_applied",
+    fallback_reason = fallback_reason,
+    preapplied_count = before_count,
+    context_preconsumed = context.item_preconsumed == true,
+  })
 end
 
 return executor
-
---[[ mutate4lua-manifest
-version=2
-projectHash=b833cf0ad68e5c11
-scope.0.id=chunk:src/rules/items/executor.lua
-scope.0.kind=chunk
-scope.0.startLine=1
-scope.0.endLine=86
-scope.0.semanticHash=9ebde87fe6ca3fe6
-scope.1.id=function:_is_success_result:11
-scope.1.kind=function
-scope.1.startLine=11
-scope.1.endLine=22
-scope.1.semanticHash=4abb5dd81c48327d
-scope.2.id=function:_with_fallback_item_anim:24
-scope.2.kind=function
-scope.2.startLine=24
-scope.2.endLine=50
-scope.2.semanticHash=7d5a39e3577d43fc
-scope.3.id=function:_finalize_use_item:52
-scope.3.kind=function
-scope.3.startLine=52
-scope.3.endLine=58
-scope.3.semanticHash=df392092232d6173
-scope.4.id=function:executor.use_item:60
-scope.4.kind=function
-scope.4.startLine=60
-scope.4.endLine=83
-scope.4.semanticHash=bdda0f783ff3fed7
-]]

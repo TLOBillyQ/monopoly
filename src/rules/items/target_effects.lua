@@ -39,8 +39,8 @@ local specs = {
     filter_target = function(_, _, target)
       return inventory.count(target) > 0
     end,
-    apply = function(game, user, target)
-      return steal.steal_random_item(game, user, target)
+    apply = function(game, user, target, context)
+      return steal.steal_random_item(game, user, target, context and context.commit_item_use or nil)
     end,
   },
   [item_ids.missile] = {

@@ -43,14 +43,23 @@ local function _bag_full_popup(game, stealer)
   }
 end
 
-function steal.steal_item_at_index(game, player, target, item_idx)
+-- commit:结算台账注入的单次消耗能力(道具使用流程必经);
+-- 缺省回退为直接自耗,仅服务不经流程的独立单测调用。
+local function _consume_steal_card(player, commit)
+  if commit ~= nil then
+    return commit()
+  end
+  return inventory.consume(player, item_ids.steal)
+end
+
+function steal.steal_item_at_index(game, player, target, item_idx, commit)
   if inventory.count(target) == 0 then
     return _fail_popup(game, player, target)
   end
   if inventory.is_full(player) then
     return _bag_full_popup(game, player)
   end
-  inventory.consume(player, item_ids.steal)
+  _consume_steal_card(player, commit)
   local stolen = inventory.remove_by_index(target, item_idx or 1)
   assert(stolen ~= nil, "missing stolen item")
   assert(inventory.add(player, stolen) == true, "add stolen item failed")
@@ -82,14 +91,14 @@ function steal.steal_item_at_index(game, player, target, item_idx)
   }
 end
 
-function steal.steal_random_item(game, player, target)
+function steal.steal_random_item(game, player, target, commit)
   local count = inventory.count(target)
   if count == 0 then
     return _fail_popup(game, player, target)
   end
   local rng = assert(game and game.rng, "missing game.rng for steal")
   assert(type(rng.next_int) == "function", "missing game.rng.next_int for steal")
-  return steal.steal_item_at_index(game, player, target, rng:next_int(1, count))
+  return steal.steal_item_at_index(game, player, target, rng:next_int(1, count), commit)
 end
 
 return steal

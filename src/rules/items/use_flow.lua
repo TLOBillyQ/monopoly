@@ -14,9 +14,9 @@ function use_flow.begin_item_use(game, actor_id, item_id, context)
     return invalid
   end
 
-  local before_count = flow_context.count_item(player, item_id)
+  resolved_context.reject_reason_fallback = resolved_context.reject_reason_fallback or "no_candidates"
   local raw_result = executor.use_item(game, player, item_id, resolved_context)
-  return flow_result.normalize_effect(raw_result, player, item_id, before_count, resolved_context, "no_candidates")
+  return flow_result.normalize_effect(raw_result, player, item_id)
 end
 
 function use_flow.resolve_item_use_choice(game, choice, action, context)

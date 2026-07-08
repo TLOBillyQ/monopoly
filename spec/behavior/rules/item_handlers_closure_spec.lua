@@ -336,9 +336,12 @@ describe("item handlers — handle_demolish cfg dispatch", function()
 
   local function _capture_use(g, item_id, context)
     local captured
+    g.players[1].inventory:add({ id = item_id })
     _with_patches({
+      -- 假 applier 也要履行 applier_owned 契约:apply 成功前必须经 consume_fn 提交消耗
       { target = demolish, key = "use", value = function(_, _, idx, consume_fn, opts)
           captured = { idx = idx, consume_fn = consume_fn, opts = opts }
+          assert(consume_fn() == true, "consume_fn must commit")
           return { ok = true }
         end },
     }, function()
