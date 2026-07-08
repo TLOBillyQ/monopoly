@@ -1,3 +1,11 @@
+-- 黑市购买选择结果解释者。purchase.execute 历史返回 4 种不兼容形状:
+--   false(非法商品) / { ok=false, reason }(校验/余额/在途/通道失败) /
+--   { ok=true, fulfilled_now=true, inventory_full_after }(本地即时成交) /
+--   { ok=true, deferred_fulfillment=true }(付费下单、异步履约)。
+-- resolve_purchase 内经 purchase_result.canonicalize 收敛为 4 个终态 status:
+--   fulfilled / deferred / rejected / residual。
+-- 本模块是市场购买结果解释的唯一解码点,判定 helpers 只认 canonical status,
+-- 不再直接读取 raw 字段(ok/fulfilled_now/deferred_fulfillment)。
 local monopoly_event = require("src.foundation.events")
 local number_utils = require("src.foundation.number")
 local tables = require("src.foundation.tables")
@@ -6,6 +14,7 @@ local choice_contract = require("src.config.choice.contract")
 local dirty_tracker = require("src.state.dirty_tracker")
 local intent_output_port = require("src.rules.ports.intent_output")
 local market_query = require("src.rules.market.query")
+local purchase_result = require("src.rules.market.purchase_result")
 
 local query_context = market_query.context
 local query_eligibility = market_query.eligibility
@@ -300,24 +309,21 @@ local function _dispatch_intent(game, intent)
   return handler(game, intent)
 end
 
-local function _is_purchase_failure(result)
-  return type(result) == "table" and result.ok == false
+local function _is_purchase_failure(canonical)
+  return canonical.status == "rejected"
 end
 
-local function _should_keep_market_open(entry, result)
-  if type(result) ~= "table" or result.ok ~= true then
-    return false
-  end
-  if result.deferred_fulfillment == true then
+local function _should_keep_market_open(entry, canonical)
+  if canonical.status == "deferred" then
     return true
   end
-  return entry and entry.kind == "item" and result.fulfilled_now == true
+  return entry and entry.kind == "item" and canonical.status == "fulfilled"
 end
 
-local function _handle_keep_open(game, choice, player, entry, result, finish_choice)
+local function _handle_keep_open(game, choice, player, entry, canonical, finish_choice)
   local rebuilt = session.rebuild_pending(game, choice, player)
   if not rebuilt then return finish_choice(game, false) end
-  local full_buy = entry and entry.kind == "item" and result.fulfilled_now == true and result.inventory_full_after == true
+  local full_buy = entry and entry.kind == "item" and canonical.status == "fulfilled" and canonical.inventory_full_after == true
   if full_buy then feedback.emit_inventory_full(player, entry) end
   return { stay = true }
 end
@@ -338,10 +344,11 @@ end
 
 function outcome.resolve_purchase(game, choice, player, entry, result, finish_choice)
   assert(type(finish_choice) == "function", "missing finish_choice")
-  if _should_keep_market_open(entry, result) then
-    return _handle_keep_open(game, choice, player, entry, result, finish_choice)
+  local canonical = purchase_result.canonicalize(result)
+  if _should_keep_market_open(entry, canonical) then
+    return _handle_keep_open(game, choice, player, entry, canonical, finish_choice)
   end
-  if _try_failure_stay(game, choice, player, result) then return { stay = true } end
+  if _try_failure_stay(game, choice, player, canonical) then return { stay = true } end
   return _dispatch_and_finish(game, result, finish_choice)
 end
 
