@@ -41,4 +41,22 @@ function coin_settlement.charge(game, payer, amount, opts)
   return { charged = charged, bankrupt = bankrupt, reason = reason }
 end
 
+-- 转账(payer → receiver)。始终 partial:payer 余额不足时封顶到其流动性,
+-- 绝不创造钱。实际到账 > 0 时记一次 receiver 的 cash_received 遥测。
+function coin_settlement.transfer(game, payer, receiver, amount, opts)
+  opts = opts or {}
+  local transfer_opts = { allow_partial = true }
+  if opts.cash_opts then
+    for key, value in pairs(opts.cash_opts) do
+      transfer_opts[key] = value
+    end
+  end
+  local _, _, moved = game:transfer_player_cash(payer, receiver, amount, transfer_opts)
+  if moved and moved > 0 then
+    achievement_progress.cash_received(game, receiver, moved)
+  end
+  local bankrupt, reason = _settle_bankruptcy(game, payer, opts)
+  return { moved = moved, bankrupt = bankrupt, reason = reason }
+end
+
 return coin_settlement
