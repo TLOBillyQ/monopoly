@@ -1,7 +1,7 @@
 local inventory = require("src.rules.items.inventory")
 local item_ids = require("src.config.gameplay.item_ids")
 local event_kinds = require("src.config.gameplay.event_kinds")
-local bankruptcy_port = require("src.rules.ports.bankruptcy")
+local coin_settlement = require("src.rules.commerce.coin_settlement")
 local event_feed = require("src.rules.ports.event_feed")
 local number_utils = require("src.foundation.number")
 local achievement_progress = require("src.rules.ports.achievement_progress")
@@ -87,15 +87,14 @@ target_cash_effects.tax = {
       return true
     end
     local fee = math.floor(game:player_cash(target) * 0.5)
-    game:deduct_player_cash(target, fee)
+    coin_settlement.charge(game, target, fee, {
+      reason = target.name .. " 支付查税费用后破产",
+    })
     achievement_progress.tax_paid(game, target, fee)
     event_feed.publish(game, {
       kind = event_kinds.tax_card,
       text = user.name .. " 使用查税卡，" .. target.name .. " 支付 " .. number_utils.format_integer_part(fee) .. " 税金",
     })
-    if game:player_cash(target) <= 0 then
-      bankruptcy_port.eliminate(game, target, { reason = target.name .. " 支付查税费用后破产" })
-    end
     return true
   end,
 }

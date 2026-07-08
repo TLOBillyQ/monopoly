@@ -22,6 +22,7 @@ local monopoly_event = require("src.foundation.events")
 local move_followup = require("src.turn.phases.move_followup")
 local roadblock = require("src.rules.items.roadblock")
 local demolish = require("src.rules.items.demolish")
+local target_cash_effects = require("src.rules.items.target_cash_effects")
 local effect_pipeline = require("src.rules.effects.pipeline")
 local effect_runner = require("src.rules.effects.runner")
 local intent_output_port = require("src.rules.ports.intent_output")
@@ -1639,6 +1640,21 @@ describe("item", function()
       set_player_cash = function(_, player, amount)
         balances[player.id] = amount
       end,
+      transfer_player_cash = function(_, payer, receiver, amount, opts)
+        local moved = amount
+        if opts and opts.allow_partial then
+          moved = math.min(amount, balances[payer.id])
+        end
+        balances[payer.id] = balances[payer.id] - moved
+        balances[receiver.id] = balances[receiver.id] + moved
+        return balances[payer.id], balances[receiver.id], moved
+      end,
+      bankruptcy_port = {
+        eliminate = function(_, player, opts)
+          player.eliminated = true
+          bankruptcy_calls[#bankruptcy_calls + 1] = { player_id = player.id, reason = opts and opts.reason }
+        end,
+      },
     }
 
     handlers.collect_from_others(game, game.players[1], {
@@ -2136,4 +2152,17 @@ describe("item", function()
   it("try_target_items_returns_nil_when_no_items_in_inventory", _effect_pipeline_tests[16])
 
   it("try_deity_items_returns_nil_when_no_deity_items", _effect_pipeline_tests[17])
+
+  it("PIN: tax card drains target to zero and eliminates on non-positive", function()
+    local g = _new_game()
+    local user, target = g.players[1], g.players[2]
+    g:set_player_cash(target, 100)  -- fee = floor(100*0.5) = 50; 两次不足以清零,构造精确边界:
+    g:set_player_cash(target, 1)    -- fee = floor(1*0.5) = 0 → 扣 0,cash 仍 1,不淘汰
+    target_cash_effects.tax.apply(g, user, target)
+    assert(target.eliminated ~= true, "fee floors to 0 at cash=1, no bankruptcy")
+
+    g:set_player_cash(target, 2)    -- fee = floor(2*0.5) = 1 → cash 1,不淘汰
+    target_cash_effects.tax.apply(g, user, target)
+    assert(g:player_cash(target) == 1, "cash 2 → pays 1 → left with 1")
+  end)
 end)

@@ -96,8 +96,8 @@ describe("items_post_effects", function()
     local game = {
       angel_immune_to_item = function() return false end,
       player_cash = function() return 1000 end,
-      deduct_player_cash = function(self, player, amount)
-        player.cash = (player.cash or 1000) - amount
+      add_player_cash = function(self, player, delta)
+        player.cash = (player.cash or 0) + delta
       end,
     }
     local user = { id = 1, name = "User" }
