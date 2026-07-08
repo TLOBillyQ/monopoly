@@ -13,7 +13,15 @@ local function _start_tick_loop(state, current_game_ref, interval)
   local fallback_tick_seconds = tick_clock.resolve_fallback_tick_seconds(tick_interval)
   SetFrameOut(tick_interval, function()
     local tick_seconds = tick_clock.resolve_tick_seconds(state, fallback_tick_seconds)
-    gameplay_loop.tick(current_game_ref[1], state, tick_seconds)
+    -- tick_observer 缝（autotest 用）：装了观察者时 tick 受 pcall 守护，
+    -- 错误交给观察者处置而不是击穿帧回调；未装时保持原路径。
+    local observer = state.tick_observer
+    if observer == nil then
+      gameplay_loop.tick(current_game_ref[1], state, tick_seconds)
+      return
+    end
+    local ok, err = pcall(gameplay_loop.tick, current_game_ref[1], state, tick_seconds)
+    observer(tick_seconds, ok, err)
   end, -1)
 end
 
@@ -47,6 +55,8 @@ local function _prime_first_turn(game)
   game:advance_turn()
   return true
 end
+
+M.prime_first_turn = _prime_first_turn
 
 function M.start(state, current_game_ref)
   assert(state ~= nil, "missing state")

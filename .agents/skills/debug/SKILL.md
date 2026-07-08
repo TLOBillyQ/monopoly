@@ -57,3 +57,16 @@ pwsh -File .agents/skills/debug/scripts/analyze_log.ps1 [-Platform win|mac] [-Ta
 
 - 脚本输出关键词命中上下文和尾部日志；最终结论由你结合用户症状归纳。
 - 重复看到 `[warn] board_feedback play_sfx_by_key ... cue_name=nil ... with_sound=false` 时，默认视为非致命声音告警，除非用户问题就是音效异常。
+
+## autotest 部署包
+
+日志里出现 `[autotest]` 行说明这是 autotest 部署（`deploy.ps1 -Autotest ...`，
+一次启动自动跑全部 test profile，见 ADR 0026）。不要逐行人肉解析，直接用：
+
+```bash
+pwsh -File tools/ops/autotest_report.ps1 [-Wait] [-LogPath PATH]
+```
+
+退出码：0 全部通过；1 有 profile 失败（fail 行带 reason/message）；2 没跑完或无输出。
+定位单个失败 profile 时，再回到该 profile 的 `[autotest] profile=<名> ...` 行与其
+前后的常规日志段。

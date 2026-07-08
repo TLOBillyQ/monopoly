@@ -12,15 +12,17 @@ local function _resolve_string_or(value, default)
 end
 
 function startup_policy.resolve(globals)
-  local resolved_profile = _resolve_string_or(
-    globals and globals.STARTUP_TEST_PROFILE, "default"
-  )
-
+  -- 单 profile 注入（STARTUP_TEST_PROFILE）已随旧 debug deploy 方案退役
+  -- （ADR 0026）：启动一律 default 局，场景验证走 autotest 选择器。
   return {
     build_mode = _resolve_string_or(
       globals and globals.MONOPOLY_BUILD_MODE, "debug"
     ),
-    profile_name = resolved_profile,
+    -- 部署注入的 autotest 选择器（all / group:<组> / 逗号名单）；
+    -- 缺省 nil。是否生效由 init 结合 build mode 决定。
+    autotest = _resolve_string_or(
+      globals and globals.STARTUP_AUTOTEST, nil
+    ),
   }
 end
 

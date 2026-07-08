@@ -2,7 +2,7 @@
 param(
     [ValidateSet("release", "debug")]
     [string]$BuildMode = "release",
-    [string]$Profile
+    [string]$Autotest
 )
 
 $ErrorActionPreference = "Stop"
@@ -266,15 +266,15 @@ function Write-MainLua {
         [string]$SourcePath,
         [string]$TargetPath,
         [string]$BuildModeValue,
-        [string]$StartupProfileValue
+        [string]$StartupAutotestValue
     )
 
     $prefix_lines = @()
     if (-not [string]::IsNullOrWhiteSpace($BuildModeValue)) {
         $prefix_lines += "MONOPOLY_BUILD_MODE = ""$(Escape-LuaDoubleQuotedString $BuildModeValue)"""
     }
-    if (-not [string]::IsNullOrWhiteSpace($StartupProfileValue)) {
-        $prefix_lines += "STARTUP_TEST_PROFILE = ""$(Escape-LuaDoubleQuotedString $StartupProfileValue)"""
+    if (-not [string]::IsNullOrWhiteSpace($StartupAutotestValue)) {
+        $prefix_lines += "STARTUP_AUTOTEST = ""$(Escape-LuaDoubleQuotedString $StartupAutotestValue)"""
     }
 
     $target_parent = Split-Path -Parent $TargetPath
@@ -336,6 +336,12 @@ function Get-LuaFileCount {
 try {
     $project_root = Resolve-ProjectRoot
     $resolved_platform = Resolve-PlatformName
+    if (-not [string]::IsNullOrWhiteSpace($Autotest)) {
+        if ($PSBoundParameters.ContainsKey("BuildMode") -and $BuildMode -eq "release") {
+            Exit-WithError "Autotest deploys are debug-only; drop -BuildMode release. / Autotest 只支持 debug 构建，请去掉 -BuildMode release。"
+        }
+        $BuildMode = "debug"
+    }
     $build_mode_resolution = Resolve-EffectiveBuildMode -RequestedBuildMode $BuildMode
     $effective_build_mode = [string]$build_mode_resolution.mode
     $target_source = Resolve-DefaultTargetPath $resolved_platform
@@ -363,6 +369,9 @@ try {
     Write-Info ("Target path: " + $target_path)
     Write-Info ("Platform: " + $resolved_platform)
     Write-Info ("Build mode: " + $effective_build_mode)
+    if (-not [string]::IsNullOrWhiteSpace($Autotest)) {
+        Write-Info ("Autotest: " + $Autotest)
+    }
     Write-Info ""
     Write-Info "--------------------------------------"
     Write-Info ("Deploy target: " + $target_path)
@@ -383,12 +392,11 @@ try {
     }
 
     if ($effective_build_mode -eq "debug") {
-        $effective_profile = if (-not [string]::IsNullOrWhiteSpace($Profile)) { $Profile } else { "default" }
         Write-MainLua `
             -SourcePath (Join-Path $project_root "main.lua") `
             -TargetPath (Join-Path $target_path "main.lua") `
             -BuildModeValue $effective_build_mode `
-            -StartupProfileValue $effective_profile
+            -StartupAutotestValue $Autotest
     }
     else {
         Write-MainLua `

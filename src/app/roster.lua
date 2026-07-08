@@ -51,6 +51,7 @@ function M.build_game_factory(state, opts)
   opts = opts or {}
   local build_mode = opts.build_mode
   local profile_name = opts.profile_name
+  local auto_all = opts.auto_all == true
   return function()
     local startup = {
       build_mode = build_mode,
@@ -64,7 +65,7 @@ function M.build_game_factory(state, opts)
     local created_game = composition_root.new_game(default_ports.resolve_game_opts({
       role_roster = role_roster,
       ai = forced_ai,
-      auto_all = false,
+      auto_all = auto_all,
       auto_players = auto_players,
       map = map_cfg,
       tiles = tiles_cfg,

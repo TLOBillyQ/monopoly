@@ -267,21 +267,14 @@ describe("startup_profile", function()
     })
   end)
 
-  it("startup_policy_defaults_to_default_profile", function()
-    with_patches({
-      { key = "STARTUP_TEST_PROFILE", value = nil },
-    }, function()
-      local policy = startup_policy.resolve(_G)
-      assert(policy.profile_name == "default", "startup should use default profile when unset")
-    end)
-  end)
-
-  it("startup_policy_accepts_explicit_profile_override", function()
+  it("startup_policy_ignores_retired_startup_test_profile_global", function()
+    -- 单 profile 注入已随旧 debug deploy 方案退役（ADR 0026）：
+    -- 即使旧部署包残留该全局，policy 也不再产出 profile 概念。
     with_patches({
       { key = "STARTUP_TEST_PROFILE", value = "market" },
     }, function()
       local policy = startup_policy.resolve(_G)
-      assert(policy.profile_name == "market", "startup should keep explicit profile override")
+      assert(policy.profile_name == nil, "startup policy no longer resolves a profile")
     end)
   end)
 
@@ -447,7 +440,10 @@ describe("startup_profile", function()
     end)
 
     assert(capture.runtime_install_called == true, "init should install runtime")
-    assert(capture.startup_opts.profile_name == "market", "init should pass resolved startup profile")
+    assert(capture.startup_opts.profile_name == nil,
+      "startup profile pass-through retired with the old debug deploy (ADR 0026)")
+    assert(type(capture.startup_opts.build_game_factory) == "function",
+      "init should hand state_factory a game factory builder")
     assert(debug_flags.debug_log_enabled == true, "startup should keep gameplay debug log config unchanged")
   end)
 
@@ -541,7 +537,8 @@ describe("startup_profile", function()
     end)
 
     assert(capture.runtime_install_called == true, "app init should install runtime")
-    assert(capture.startup_opts.profile_name == "market", "app init should pass resolved startup profile")
+    assert(capture.startup_opts.profile_name == nil,
+      "startup profile pass-through retired with the old debug deploy (ADR 0026)")
     assert(debug_flags.debug_log_enabled == true, "startup should keep gameplay debug log config unchanged")
     assert(type(capture.tip_runtime.presenter) == "function", "tip presenter should be configured")
     assert(type(capture.tip_runtime.scheduler) == "function", "tip scheduler should be configured")

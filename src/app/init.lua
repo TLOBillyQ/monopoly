@@ -150,7 +150,7 @@ function M.init()
     "[Eggy]",
     "startup policy:",
     "build_mode=" .. tostring(startup.build_mode),
-    "resolved_profile=" .. tostring(startup.profile_name)
+    "autotest=" .. tostring(startup.autotest)
   )
 
   local function _get_current_game()
@@ -164,11 +164,10 @@ function M.init()
   })
   local auto_runner = startup_roster.build_auto_runner()
   state = state_factory.build_state(_get_current_game, {
-    profile_name = startup.profile_name,
     build_game_factory = function(child_state)
       return startup_roster.build_game_factory(child_state, {
         build_mode = startup.build_mode,
-        profile_name = startup.profile_name,
+        profile_name = "default",
       })
     end,
     auto_runner = auto_runner,
@@ -186,6 +185,17 @@ function M.init()
       return gameplay_runtime_bootstrap.start(ctx_state, game_ref)
     end,
   })
+
+  -- autotest 惰性接入：release 构建剥离 src/app/testing，必须先以
+  -- build mode 门控，选择器存在才 require（同 roster 的边界约定）。
+  if not is_release(startup) and startup.autotest ~= nil then
+    local autotest_bootstrap = require("src.app.testing.autotest_bootstrap")
+    autotest_bootstrap.install(state, {
+      selector = startup.autotest,
+      build_mode = startup.build_mode,
+      get_current_game = _get_current_game,
+    })
+  end
 
   initialized = true
   return state

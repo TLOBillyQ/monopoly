@@ -622,8 +622,18 @@ local function _test_deploy_script_matches_simplified_cli()
     "deploy.ps1 should keep a top-level param block")
   _assert_contains(
     param_block,
-    "[string]$Profile",
-    "deploy.ps1 should expose the simplified profile parameter"
+    "[string]$Autotest",
+    "deploy.ps1 should expose the autotest selector parameter"
+  )
+  _assert_not_contains(
+    param_block,
+    "$Profile",
+    "deploy.ps1 should no longer expose the retired single-profile parameter (ADR 0026)"
+  )
+  _assert_not_contains(
+    script_text,
+    "STARTUP_TEST_PROFILE",
+    "deploy.ps1 should no longer inject the retired STARTUP_TEST_PROFILE global (ADR 0026)"
   )
   _assert_contains(
     script_text,
@@ -691,7 +701,7 @@ local function _test_deploy_comprehensive()
     local command = table.concat({
       "$env:HOME = " .. _powershell_single_quote(fake_home),
       "$env:USERPROFILE = " .. _powershell_single_quote(fake_home),
-      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -BuildMode debug -Profile missile",
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -BuildMode debug",
     }, "; ")
     local result = _run_powershell_command(command)
 
@@ -715,8 +725,8 @@ local function _test_deploy_comprehensive()
     local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
     _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
       "deploy should inject debug build mode into main.lua")
-    _assert_contains(deployed_main, 'STARTUP_TEST_PROFILE = "missile"',
-      "deploy should inject Profile into main.lua in debug mode")
+    _assert_not_contains(deployed_main, 'STARTUP_TEST_PROFILE = ',
+      "debug deploy should no longer inject the retired startup profile global")
     _assert_contains(result.output, "Build mode: debug",
       "deploy output should report debug mode")
     _assert_contains(result.output, common.normalize_path(publish_target),
@@ -750,12 +760,143 @@ local function _test_deploy_comprehensive()
       "deploy without startup profile should inject release build mode")
     _assert_not_contains(deployed_main, 'STARTUP_TEST_PROFILE = ',
       "deploy without startup profile should not inject STARTUP_TEST_PROFILE")
+    _assert_not_contains(deployed_main, 'STARTUP_AUTOTEST = ',
+      "release deploy should never inject STARTUP_AUTOTEST")
     _assert_contains(result.output, "Build mode: release",
       "deploy output should show release mode when no startup profile is present")
     assert(common.path_exists(common.join_path(publish_target, "src/config/testing")) == false,
       "release deploy should strip src/config/testing")
     assert(common.path_exists(common.join_path(publish_target, "src/app/testing")) == false,
       "release deploy should strip src/app/testing")
+  end)
+
+  _with_ascii_tmp("deploy_autotest", function(tmp_root)
+    local fake_home = common.join_path(tmp_root, "fake_home")
+    local publish_target = _expected_default_deploy_target(fake_home)
+    local command = table.concat({
+      "$env:HOME = " .. _powershell_single_quote(fake_home),
+      "$env:USERPROFILE = " .. _powershell_single_quote(fake_home),
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -Autotest all",
+    }, "; ")
+    local result = _run_powershell_command(command)
+
+    if result.skipped == true then
+      return
+    end
+    if publish_target == nil then
+      return
+    end
+
+    assert(result.ok == true, "deploy -Autotest should succeed and imply debug build mode")
+    local deployed_main = assert(common.read_file(common.join_path(publish_target, "main.lua")))
+    _assert_contains(deployed_main, 'MONOPOLY_BUILD_MODE = "debug"',
+      "autotest deploy should inject debug build mode")
+    _assert_contains(deployed_main, 'STARTUP_AUTOTEST = "all"',
+      "autotest deploy should inject the autotest selector")
+    _assert_not_contains(deployed_main, 'STARTUP_TEST_PROFILE = ',
+      "autotest deploy should not inject the retired startup profile global")
+    _assert_contains(result.output, "Autotest: all",
+      "deploy output should report the autotest selector")
+    assert(common.path_exists(common.join_path(publish_target, "src/app/testing")) == true,
+      "autotest deploy must keep src/app/testing (runner lives there)")
+
+    local conflict_command = table.concat({
+      "$env:HOME = " .. _powershell_single_quote(fake_home),
+      "$env:USERPROFILE = " .. _powershell_single_quote(fake_home),
+      "& " .. _powershell_single_quote("./tools/ops/deploy.ps1") .. " -BuildMode release -Autotest all",
+    }, "; ")
+    local conflict_result = _run_powershell_command(conflict_command)
+    if conflict_result.skipped ~= true then
+      assert(conflict_result.ok == false,
+        "deploy must reject -BuildMode release together with -Autotest")
+    end
+  end)
+end
+
+local function _test_autotest_report_script_matches_cli()
+  local script_text = assert(common.read_file(common.join_path(project_root, "tools/ops/autotest_report.ps1")))
+  local param_block = assert(script_text:match("param%((.-)%)"),
+    "autotest_report.ps1 should keep a top-level param block")
+  _assert_contains(param_block, "[string]$LogPath",
+    "autotest_report.ps1 should accept an explicit log path")
+  _assert_contains(param_block, "[string]$TargetPath",
+    "autotest_report.ps1 should accept a deploy target path")
+  _assert_contains(param_block, "[switch]$Wait",
+    "autotest_report.ps1 should support waiting for a running batch")
+  _assert_contains(script_text, "function Join-LuaSourceDirName",
+    "autotest_report.ps1 should resolve the same default deploy dir as deploy.ps1")
+  _assert_contains(script_text, "[autotest]",
+    "autotest_report.ps1 should parse the [autotest] line contract")
+end
+
+local function _write_autotest_log(path, lines)
+  _write_fixture_file(path, table.concat(lines, "\n") .. "\n")
+end
+
+local function _run_autotest_report(log_path)
+  local command = "& " .. _powershell_single_quote("./tools/ops/autotest_report.ps1")
+    .. " -LogPath " .. _powershell_single_quote(log_path)
+  return _run_powershell_command(command)
+end
+
+local function _test_autotest_report_parses_results()
+  _with_ascii_tmp("autotest_report", function(tmp_root)
+    local pass_log = common.join_path(tmp_root, "pass_log.txt")
+    _write_autotest_log(pass_log, {
+      "12:00:00 [info] [autotest] begin selector=all total=2",
+      "12:00:01 [info] [autotest] profile=solo_mine index=1 result=pass reason=budget_turns turns=6 seconds=3.0 warns=0",
+      "12:00:02 [info] [autotest] profile=solo_missile index=2 result=pass reason=expect_met turns=2 seconds=1.0 warns=0",
+      "12:00:03 [info] [autotest] summary total=2 pass=2 fail=0 seconds=4.0",
+    })
+    local pass_result = _run_autotest_report(pass_log)
+    if pass_result.skipped == true then
+      return
+    end
+    assert(pass_result.ok == true, "all-pass log should exit zero: " .. tostring(pass_result.output))
+    _assert_contains(pass_result.output, "All profiles passed",
+      "report should announce the all-pass verdict")
+    _assert_contains(pass_result.output, "summary total=2 pass=2 fail=0",
+      "report should echo the summary line")
+
+    local fail_log = common.join_path(tmp_root, "fail_log.txt")
+    _write_autotest_log(fail_log, {
+      "12:00:00 [info] [autotest] begin selector=all total=2",
+      "12:00:01 [info] [autotest] profile=solo_mine index=1 result=fail reason=tick_error turns=1 seconds=2.0 warns=0 message=\"boom\"",
+      "12:00:02 [info] [autotest] profile=solo_missile index=2 result=pass reason=expect_met turns=2 seconds=1.0 warns=0",
+      "12:00:03 [info] [autotest] summary total=2 pass=1 fail=1 seconds=3.0",
+    })
+    local fail_result = _run_autotest_report(fail_log)
+    assert(fail_result.ok == false, "failing profiles should exit non-zero")
+    _assert_contains(fail_result.output, "1 profile(s) failed",
+      "report should count failing profiles")
+
+    local unfinished_log = common.join_path(tmp_root, "unfinished_log.txt")
+    _write_autotest_log(unfinished_log, {
+      "12:00:00 [info] [autotest] begin selector=all total=2",
+      "12:00:01 [info] [autotest] profile=solo_mine index=1 result=pass reason=budget_turns turns=6 seconds=3.0 warns=0",
+    })
+    local unfinished_result = _run_autotest_report(unfinished_log)
+    assert(unfinished_result.ok == false, "missing summary should exit non-zero without -Wait")
+    _assert_contains(unfinished_result.output, "no summary",
+      "report should explain the run has not finished")
+
+    local empty_log = common.join_path(tmp_root, "empty_log.txt")
+    _write_autotest_log(empty_log, {
+      "12:00:00 [info] [Eggy] startup policy: build_mode=debug autotest=nil",
+    })
+    local empty_result = _run_autotest_report(empty_log)
+    assert(empty_result.ok == false, "log without autotest markers should exit non-zero")
+    _assert_contains(empty_result.output, "no [autotest] output",
+      "report should explain missing autotest output")
+
+    local error_log = common.join_path(tmp_root, "error_log.txt")
+    _write_autotest_log(error_log, {
+      "12:00:00 [info] [autotest] error message=\"unknown autotest profile: nope\"",
+    })
+    local error_result = _run_autotest_report(error_log)
+    assert(error_result.ok == false, "startup error line should exit non-zero")
+    _assert_contains(error_result.output, "startup error",
+      "report should surface the startup error verdict")
   end)
 end
 
@@ -1005,6 +1146,7 @@ local contract_tests = {
   { group = "shared", owner = "bootstrap", name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
   { group = "shared", owner = "loc_history", name = "loc_history_returns_daily_snapshots", run = _test_loc_history_returns_daily_snapshots },
   { group = "ops", owner = "deploy", name = "deploy_script_matches_simplified_cli", run = _test_deploy_script_matches_simplified_cli },
+  { group = "ops", owner = "autotest_report", name = "autotest_report_script_matches_cli", run = _test_autotest_report_script_matches_cli },
   { group = "ops", owner = "update_api", name = "update_api_writes_changelog_into_docs_eggy_api_dir", run = _test_update_api_writes_changelog_into_docs_eggy_api_dir },
   { group = "ops", owner = "update_api", name = "update_api_updates_docs_and_changelog_when_api_changes", run = _test_update_api_updates_docs_and_changelog_when_api_changes },
   { group = "ops", owner = "update_api", name = "update_api_reports_extra_doc_entries_when_check_fails", run = _test_update_api_reports_extra_doc_entries_when_check_fails },
@@ -1017,6 +1159,7 @@ local tooling_tests = {
   { group = "quality", owner = "encoding", name = "encoding_check_reports_invalid_utf8_bytes", run = _test_encoding_check_reports_invalid_utf8_bytes },
   { group = "quality", owner = "mutate", name = "mutate_wrapper_indexes_behavior_suites_as_json", run = _test_mutate_wrapper_indexes_behavior_suites_as_json },
   { group = "ops", owner = "deploy", name = "deploy_comprehensive", run = _test_deploy_comprehensive },
+  { group = "ops", owner = "autotest_report", name = "autotest_report_parses_results", run = _test_autotest_report_parses_results },
   { group = "shared", owner = "common", name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
 
@@ -1028,6 +1171,7 @@ local valid_groups = {
 
 local valid_owners = {
   arch = true,
+  autotest_report = true,
   bootstrap = true,
   common = true,
   deploy = true,
