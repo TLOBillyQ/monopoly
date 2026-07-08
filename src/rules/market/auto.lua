@@ -2,6 +2,7 @@ local auto_play_port = require("src.rules.ports.auto_play")
 local monopoly_event = require("src.foundation.events")
 local market_query = require("src.rules.market.query")
 local purchase = require("src.rules.market.purchase")
+local purchase_settlement = require("src.rules.market.purchase_settlement")
 local query = market_query.eligibility
 local context = market_query.context
 local event_feed = require("src.rules.ports.event_feed")
@@ -36,7 +37,8 @@ function auto.execute(game, player)
 
   local chosen = list[1]
   if chosen then
-    purchase.execute(game, player, chosen.product_id)
+    local result = purchase.execute(game, player, chosen.product_id)
+    purchase_settlement.resolve(game, game.turn and game.turn.pending_choice or nil, player, chosen, result)
   end
 end
 

@@ -120,6 +120,27 @@ describe("market", function()
     assert(g:player_cash(p) < before_cash, "should have purchased an item")
   end)
 
+  it("PIN: auto purchase fulfills and does not leave a market modal open", function()
+    local market_service = _reload_market_service()
+    local g = _new_game()
+    local p = g:current_player()
+
+    -- Give player enough cash to buy the cheapest item
+    g:set_player_cash(p, 999999)
+
+    local list = market_service.query.list_available(p, g)
+    if #list == 0 then
+      return -- skip if no items available
+    end
+
+    local ok = pcall(function() market_service.auto.execute(g, p) end)
+    assert(ok, "auto.execute must not error after routing through purchase_settlement")
+
+    local pending = g.turn and g.turn.pending_choice
+    assert(pending == nil or pending.kind ~= "market_buy",
+      "auto purchase must not leave a market_buy modal open")
+  end)
+
   it("market_global_limit", function()
     local market_service = require("src.rules.market")
     local g = _new_game()
