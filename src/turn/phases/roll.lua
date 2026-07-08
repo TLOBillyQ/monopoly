@@ -1,6 +1,7 @@
 local dice_multiplier = require("src.turn.phases.dice_multiplier")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
+local phase_wait = require("src.turn.phases.phase_wait")
 
 local function _roll_dice(count, override_values, rng)
   local results = {}
@@ -72,25 +73,7 @@ local function _build_anim_wait_result(player, rolls, raw_total, total)
 end
 
 local function _resolve_phase_wait_result(phase_res, player, total, raw_total)
-  local next_state = phase_res and phase_res.next_state or "move"
-  local next_args = phase_res and phase_res.next_args or nil
-  if next_args == nil then
-    next_args = {
-      player = player,
-      total = total,
-      raw_total = raw_total,
-    }
-  end
-  if phase_res and phase_res.wait_action_anim == true then
-    return "wait_action_anim", {
-      next_state = next_state,
-      next_args = next_args,
-    }
-  end
-  return "wait_choice", {
-    next_state = next_state,
-    next_args = next_args,
-  }
+  return phase_wait.resolve_result(phase_res, "move", player, total, raw_total)
 end
 
 local function _queue_roll_anim(game, player, rolls, total)
