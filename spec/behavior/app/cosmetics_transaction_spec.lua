@@ -404,6 +404,44 @@ describe("app.cosmetics.transaction", function()
     _assert_eq(duplicate.reason, "pending_purchase_missing", "duplicate callback should have stable reason")
   end)
 
+  it("PIN: native paid path builds a skin paid entry and fulfills without any UI on_success", function()
+    -- purchase_adapter 未 configure(before_each 已 reset 为 nil) => 走 transaction_purchase
+    -- 的原生 _start_via_paid_port，即删除 skin_purchase 后的生产路径。
+    local state = _state()
+    transaction.configure_equip(function() return true end)
+    transaction.handle_skin_transaction(state, 1, { type = "open" })
+
+    local captured = nil
+    with_patches({
+      {
+        target = paid_purchase_port,
+        key = "start",
+        value = function(_, _, entry)
+          captured = entry
+          return true
+        end,
+      },
+    }, function()
+      local started = transaction.handle_skin_transaction(state, 1, { type = "equip_slot", slot_index = 1 })
+      assert(started.accepted == true, "native paid path should accept the purchase start")
+      _assert_eq(started.action, "purchase_start", "start returns pending purchase_start")
+      _assert_eq(started.pending_purchase, true, "start marks pending purchase")
+    end)
+
+    -- entry 由 transaction_purchase._purchase_entry 拼出，携带 skin 商品信息。
+    _assert_eq(captured ~= nil, true, "native path must reach paid_purchase_port.start")
+    _assert_eq(captured.kind, "skin", "entry is tagged as skin")
+    _assert_eq(captured.product_id, "skin_1", "entry carries the pending product id")
+    assert(captured.name ~= nil, "entry carries display name")
+    assert(captured.on_purchase ~= nil, "entry carries an on_purchase fulfillment")
+
+    -- 履约：on_purchase 走内部 complete_skin_purchase，无 UI on_success 闭包。
+    local fulfilled = captured.on_purchase()
+    _assert_eq(fulfilled, true, "fulfillment reports success")
+    _assert_eq(state.ui.skin_panel.selected_by_role["1"], "skin_1",
+      "native fulfillment equips the purchased skin")
+  end)
+
   it("locked_purchase_rejects_invalid_purchase_inputs_and_duplicate_starts", function()
     local missing_slot_state = _state()
     transaction.handle_skin_transaction(missing_slot_state, 1, { type = "open" })
