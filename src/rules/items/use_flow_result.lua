@@ -89,6 +89,9 @@ local function _applied(raw_result, player, item_id, before_count, use_context)
 end
 
 function result.normalize_effect(raw_result, player, item_id, before_count, use_context, fallback_reason)
+  if type(raw_result) == "table" and raw_result._settled_item_use == true then
+    return raw_result
+  end
   if type(raw_result) == "table" and raw_result.waiting == true then
     return _waiting_choice(raw_result, player, item_id)
   end

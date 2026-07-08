@@ -32,6 +32,7 @@ local function _resolve_target_player_choice(game, _choice, action, use_context,
     target_id = action.option_id,
     item_preconsumed = meta.item_preconsumed == true,
     by_ai = use_context.by_ai,
+    reject_reason_fallback = "invalid_target",
   })
   return flow_result.normalize_effect(raw_result, player, item_id, before_count, meta, "invalid_target")
 end

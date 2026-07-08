@@ -817,13 +817,16 @@ describe("item", function()
     _assert_eq(occupant.position, g.board:find_first_by_type("hospital"), "occupant should relocate to hospital")
   end)
 
-  it("demolish_card_no_target_returns_false", function()
+  it("demolish_card_no_target_rejects_and_retains_card", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = 2008 })
 
     local res = executor.use_item(g, p, 2008, { by_ai = false })
-    _assert_eq(res, false, "demolish without target should return false instead of crashing")
+    _assert_eq(type(res), "table", "demolish without target should return a structured rejection")
+    _assert_eq(res.ok, false, "demolish without target should reject instead of crashing")
+    _assert_eq(res.status, "rejected", "demolish without target should carry rejected status")
+    _assert_eq(p.inventory:count(), 1, "demolish without target should retain the card")
   end)
 
   it("item_phase_filters_unusable_target_items", function()
