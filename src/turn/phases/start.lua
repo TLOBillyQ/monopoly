@@ -6,6 +6,7 @@ local timing = require("src.config.gameplay.timing")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
 local dirty_tracker = require("src.state.dirty_tracker")
+local phase_wait = require("src.turn.phases.phase_wait")
 
 local function _clear_no_action_notice(turn)
   if not turn then
@@ -83,12 +84,7 @@ local function _run_pre_action_item_phase(turn_mgr, player)
   if not (phase_res and phase_res.waiting) then
     return nil
   end
-  local next_state = phase_res.next_state or "roll"
-  local next_args = phase_res.next_args or { player = player }
-  if phase_res.wait_action_anim then
-    return "wait_action_anim", { next_state = next_state, next_args = next_args }
-  end
-  return "wait_choice", { next_state = next_state, next_args = next_args }
+  return phase_wait.resolve_result(phase_res, "roll", player)
 end
 
 local function _phase_start(turn_mgr)
