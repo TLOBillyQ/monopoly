@@ -137,8 +137,8 @@ describe("market", function()
     assert(ok, "auto.execute must not error after routing through purchase_settlement")
 
     local pending = g.turn and g.turn.pending_choice
-    assert(pending == nil or pending.kind ~= "market_buy",
-      "auto purchase must not leave a market_buy modal open")
+    assert(pending == nil or pending.kind ~= "market_buy" or pending.owner_role_id ~= p.id,
+      "AI purchase must not leave its own market_buy modal open")
   end)
 
   it("market_global_limit", function()

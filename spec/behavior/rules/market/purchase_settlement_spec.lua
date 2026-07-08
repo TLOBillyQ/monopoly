@@ -1,5 +1,5 @@
 -- purchase_settlement.resolve verdict 契约直测。
--- 由 market_choice_outcome_spec 十用例迁来:{stay}/finish_called → keep_open true/false。
+-- 由 market_choice_outcome_spec 九用例迁来:{stay}/finish_called → keep_open true/false（nil finish_choice 用例因不变式上移至 adapter 已移除）。
 local function _with_modules(overrides, fn)
   local saved = {}
   for key, value in pairs(overrides) do
