@@ -1,7 +1,7 @@
 local availability = require("src.rules.items.availability")
 local number_utils = require("src.foundation.number")
 local market_service = require("src.rules.market")
-local choice_outcome = require("src.rules.market.choice").outcome
+local purchase_settlement = require("src.rules.market.purchase_settlement")
 local market_context = require("src.rules.market.query").context
 local event_kinds = require("src.config.gameplay.event_kinds")
 local dirty_tracker = require("src.state.dirty_tracker")
@@ -103,7 +103,11 @@ local function _build(helpers)
     local product_id = assert(number_utils.to_integer(action.option_id), "missing product_id")
     local entry = _validate_market_entry(product_id)
     local result = market_service.purchase.execute(game, player, product_id)
-    return choice_outcome.resolve_purchase(game, choice, player, entry, result, finish_choice)
+    local verdict = purchase_settlement.resolve(game, choice, player, entry, result)
+    if verdict.keep_open then
+      return { stay = true }
+    end
+    return finish_choice(game, false)
   end
 
   return {
