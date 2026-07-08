@@ -46,20 +46,20 @@ return auto
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=4165084da7e71540
+projectHash=03853170cab05f21
 scope.0.id=chunk:src/rules/market/auto.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=44
-scope.0.semanticHash=efd37ca16aa71fc2
-scope.1.id=function:anonymous@29:29
+scope.0.endLine=46
+scope.0.semanticHash=798d57124354297c
+scope.1.id=function:anonymous@30:30
 scope.1.kind=function
-scope.1.startLine=29
-scope.1.endLine=31
+scope.1.startLine=30
+scope.1.endLine=32
 scope.1.semanticHash=566a2ab388db53a7
-scope.2.id=function:auto.execute:13
+scope.2.id=function:auto.execute:14
 scope.2.kind=function
-scope.2.startLine=13
-scope.2.endLine=41
-scope.2.semanticHash=c5c4b91c73c73d34
+scope.2.startLine=14
+scope.2.endLine=43
+scope.2.semanticHash=2a2d551f30234765
 ]]

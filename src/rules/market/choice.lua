@@ -290,7 +290,7 @@ return {
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=2601881b7dd499ad
+projectHash=85e3138db22900e8
 scope.0.id=chunk:src/rules/market/choice.lua
 scope.0.kind=chunk
 scope.0.startLine=1
