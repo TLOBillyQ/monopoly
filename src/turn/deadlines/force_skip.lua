@@ -14,13 +14,13 @@ local function _should_refund_preconsume(choice)
   return choice.meta.item_id ~= nil and choice.owner_role_id ~= nil
 end
 
-local function _refund_preconsume(state, choice)
+local function _refund_preconsume(game, state, choice)
   if not _should_refund_preconsume(choice) then
     return
   end
   local ok, helper = pcall(require, "src.rules.choice.item_preconsume_policy")
   if ok and type(helper) == "table" and type(helper.refund) == "function" then
-    pcall(helper.refund, state and state._game or nil, choice)
+    pcall(helper.refund, game or (state and state._game or nil), choice)
   end
 end
 
@@ -91,7 +91,7 @@ end
 function force_skip.install(api)
   function api.force_skip(game, state, choice, reason)
     _mark_force_skip_pending(game, state)
-    _refund_preconsume(state, choice)
+    _refund_preconsume(game, state, choice)
     _clear_force_skip_state(game, state)
     _cancel_choice_deadlines(api, state)
     _emit_force_skip_event(reason, choice)

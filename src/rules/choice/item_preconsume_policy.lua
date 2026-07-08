@@ -80,6 +80,13 @@ function item_preconsume_policy.merge_preconsume_context(meta, context)
   return meta
 end
 
+-- force_skip 等放弃路径的退还入口:薄适配到结算台账(惰性 require,
+-- settlement 不得反向依赖本 policy)。
+function item_preconsume_policy.refund(game, choice)
+  local settlement = require("src.rules.items.settlement")
+  return settlement.abandon(game, choice, "preconsume_refund")
+end
+
 function item_preconsume_policy.decorate_followup_choice_spec(choice_spec, context)
   if type(choice_spec) ~= "table" then
     return choice_spec

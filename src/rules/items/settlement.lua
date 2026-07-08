@@ -169,6 +169,56 @@ function settlement.execute(game, player, item_id, apply, opts)
   return _settle_applied(game, player, item_id, ledger, canonical, consume_mode, before_seq)
 end
 
+-- 非重复阶段 followup 的预消耗托管:卡即刻入台账 escrow(令牌随 choice 走),
+-- resolve 时 _seed_escrow 认领不二次消耗,放弃路径经 settlement.abandon 退还。
+-- 同时写公共跨层布尔 item_preconsumed(turn/choice 层既定接口)并禁用取消。
+function settlement.escrow(player, item_id, choice_spec)
+  assert(type(choice_spec) == "table", "escrow needs a choice spec")
+  assert(inventory.consume(player, item_id) == true, "escrow consume failed: " .. tostring(item_id))
+  local meta = choice_spec.meta or {}
+  choice_spec.meta = meta
+  meta[ESCROW_META_KEY] = { consumed = true, item_id = item_id, player_id = player.id }
+  meta.item_preconsumed = true
+  meta.item_id = meta.item_id or item_id
+  meta.player_id = meta.player_id or player.id
+  choice_spec.allow_cancel = false
+  choice_spec.cancel_label = nil
+  return choice_spec
+end
+
+-- 托管卡退还(force_skip / 目标失效放弃)。幂等:令牌只退一次;
+-- 仅有公共布尔的旧 fixture 退还后翻转布尔防重复。
+function settlement.abandon(game, choice, _)
+  local meta = type(choice) == "table" and choice.meta or nil
+  if type(meta) ~= "table" then
+    return false
+  end
+  local token = meta[ESCROW_META_KEY]
+  if token ~= nil and (token.consumed ~= true or token.refunded == true) then
+    return false
+  end
+  if token == nil and meta.item_preconsumed ~= true then
+    return false
+  end
+  local item_id = (token and token.item_id) or meta.item_id
+  if item_id == nil then
+    return false
+  end
+  local actor_id = (token and token.player_id) or meta.player_id or choice.owner_role_id
+  local player = flow_context.resolve_actor(game, actor_id)
+  if not (player and player.inventory) then
+    return false
+  end
+  if inventory.add(player, { id = item_id }) ~= true then
+    return false
+  end
+  if token ~= nil then
+    token.refunded = true
+  end
+  meta.item_preconsumed = false
+  return true
+end
+
 function settlement.is_settled(value)
   return type(value) == "table" and value._settled_item_use == true
 end

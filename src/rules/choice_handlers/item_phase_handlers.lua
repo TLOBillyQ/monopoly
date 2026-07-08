@@ -1,8 +1,7 @@
 local availability = require("src.rules.items.availability")
 local item_phase = require("src.rules.items.phase")
-local inventory = require("src.rules.items.inventory")
 local intent_output_port = require("src.rules.ports.intent_output")
-local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
+local settlement = require("src.rules.items.settlement")
 local completions = require("src.rules.choice_handlers.item_completions")
 local normalize = require("src.rules.choice_handlers.item_normalize")
 
@@ -19,11 +18,7 @@ local function _decorate_phase_followup(choice_spec, meta, item_id, player, pass
 end
 
 local function _decorate_non_repeatable_followup(choice_spec, player, item_id)
-  assert(inventory.consume(player, item_id) == true, "consume committed item failed: " .. tostring(item_id))
-  item_preconsume_policy.decorate_followup_choice_spec(choice_spec, {
-    item_id = item_id,
-    player_id = player.id,
-  })
+  settlement.escrow(player, item_id, choice_spec)
 end
 
 local function _handle_waiting_result(game, result, meta, player, item_id, phase)

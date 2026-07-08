@@ -1,13 +1,11 @@
----@diagnostic disable: redundant-parameter
--- force-skip 退还预消耗道具 pin(深化迁移 step 0,pending 记档)
+-- force-skip 退还预消耗道具 pin(深化迁移 step 0 起草,step 4 激活)
 --
--- 已核实的两个潜伏缺陷使该行为今天不成立:
--- 1. force_skip.lua:22-24 pcall 调 item_preconsume_policy.refund,该函数不存在 → 退还静默 no-op;
--- 2. 即使补上 refund,force_skip 传入的 state._game 在生产代码中从未赋值(api.force_skip 自持
---    game 却未下传)→ refund 收到 nil game。
--- 既有 target_select_timeout_refunds_preconsume_spec 名不副实:只断言清场,不断言退卡,
--- 且手工 set state._game 掩盖了缺陷 2。本 pin 用生产形状 state(不设 _game)+ 真实
--- item_phase_choice 预消耗路径构造 fixture,settlement 深化 step 4 落地退还后激活。
+-- 起草时核实的两个潜伏缺陷(现已修复):
+-- 1. item_preconsume_policy.refund 曾不存在 → 退还静默 no-op;现为薄适配
+--    到 settlement.abandon(托管台账幂等退还);
+-- 2. force_skip 曾只传 state._game(生产从未赋值)→ refund 收到 nil game;
+--    现 api.force_skip 把自持的 game 下传。
+-- 本 pin 用生产形状 state(不设 _game)+ 真实 item_phase_choice 预消耗路径构造 fixture。
 local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local availability = require("src.rules.items.availability")
@@ -84,7 +82,7 @@ describe("force_skip refund of preconsumed items", function()
   local _config_reset = require("spec.support.config_reset")
   before_each(function() _config_reset.reset_all() end)
 
-  pending("force_skip refunds the preconsumed item to the bag", function()
+  it("force_skip refunds the preconsumed item to the bag", function()
     local g = support.new_game({ map = default_map })
     local player = g.players[1]
     g.players[2].inventory:add({ id = item_ids.mine })
