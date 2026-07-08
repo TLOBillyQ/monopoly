@@ -3,6 +3,7 @@ local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
 
 local choice = require("src.rules.market.choice")
+local purchase_settlement = require("src.rules.market.purchase_settlement")
 local market_query = require("src.rules.market.query")
 local monopoly_event = require("src.foundation.events")
 local dirty_tracker = require("src.state.dirty_tracker")
@@ -33,7 +34,7 @@ local function _patch_market_query(entries)
   }
 end
 
-local function _reload_with_emit_stub(captured_ref)
+local function _reload_choice_with_emit_stub(captured_ref)
   local prev_emit = monopoly_event.emit
   monopoly_event.emit = function(kind, payload)
     captured_ref.kind = kind
@@ -47,10 +48,27 @@ local function _reload_with_emit_stub(captured_ref)
   return fresh
 end
 
+local function _reload_settlement_with_emit_stub(captured_ref)
+  local prev_emit = monopoly_event.emit
+  monopoly_event.emit = function(kind, payload)
+    captured_ref.kind = kind
+    captured_ref.payload = payload
+  end
+  package.loaded["src.rules.market.choice"] = nil
+  package.loaded["src.rules.market.purchase_settlement"] = nil
+  local fresh = require("src.rules.market.purchase_settlement")
+  monopoly_event.emit = prev_emit
+  package.loaded["src.rules.market.choice"] = nil
+  package.loaded["src.rules.market.purchase_settlement"] = nil
+  require("src.rules.market.choice")
+  require("src.rules.market.purchase_settlement")
+  return fresh
+end
+
 describe("market.choice feedback.emit_buy_failed payload entry pass-through (L18-25)", function()
   it("payload.entry must be the entry argument; payload.player must be the player argument", function()
     local cap = {}
-    local fresh = _reload_with_emit_stub(cap)
+    local fresh = _reload_choice_with_emit_stub(cap)
     local player = _stub_player(7)
     local entry = { product_id = "p_x", kind = "item", price = 999 }
 
@@ -63,7 +81,7 @@ describe("market.choice feedback.emit_buy_failed payload entry pass-through (L18
 
   it("emit_buy_failed uses monopoly_event.market.buy_failed kind", function()
     local cap = {}
-    local fresh = _reload_with_emit_stub(cap)
+    local fresh = _reload_choice_with_emit_stub(cap)
     fresh.feedback.emit_buy_failed(_stub_player(1), { product_id = "p1" }, "r", "b")
     _assert_eq(cap.kind, monopoly_event.market.buy_failed, "kind must be market.buy_failed event id")
   end)
@@ -72,7 +90,7 @@ end)
 describe("market.choice feedback.emit_inventory_full payload + kind (L27-33)", function()
   it("emit_inventory_full kind == monopoly_event.market.inventory_full; payload.body literal", function()
     local cap = {}
-    local fresh = _reload_with_emit_stub(cap)
+    local fresh = _reload_choice_with_emit_stub(cap)
     local player = _stub_player(3)
     local entry = { product_id = "p_q", kind = "item" }
 
@@ -85,7 +103,7 @@ describe("market.choice feedback.emit_inventory_full payload + kind (L27-33)", f
   end)
 end)
 
-describe("market.choice _handle_keep_open full_buy quadruple AND middle-arm pinning (L303)", function()
+describe("market.purchase_settlement _handle_keep_open full_buy quadruple AND middle-arm pinning", function()
   -- full_buy = entry and entry.kind == "item" and result.fulfilled_now == true and result.inventory_full_after == true
   -- coder pins: all-true (emit), inventory_full_after=false (no emit).
   -- mid-arm closures: entry.kind != "item" path is never reached because _should_keep_market_open
@@ -95,16 +113,15 @@ describe("market.choice _handle_keep_open full_buy quadruple AND middle-arm pinn
     -- _should_keep_market_open returns true via deferred_fulfillment arm regardless of entry.kind.
     -- _handle_keep_open's full_buy requires entry.kind == "item" → false for "other" → no inventory_full emit.
     local cap = {}
-    local fresh = _reload_with_emit_stub(cap)
+    local fresh = _reload_settlement_with_emit_stub(cap)
     local game = { dirty = { any = false } }
     local pc = { kind = "market_buy", owner_role_id = 1, active_tab = "item", page_index = 1, page_count = 1 }
-    local res
+    local v
     _with_patches(_patch_market_query(_make_entries(2)), function()
-      res = fresh.outcome.resolve_purchase(game, pc, _stub_player(1),
-        { kind = "other" }, { ok = true, deferred_fulfillment = true, fulfilled_now = true, inventory_full_after = true },
-        function() return { finished = true } end)
+      v = fresh.resolve(game, pc, _stub_player(1),
+        { kind = "other" }, { ok = true, deferred_fulfillment = true, fulfilled_now = true, inventory_full_after = true })
     end)
-    _assert_eq(res.stay, true, "deferred_fulfillment=true must yield stay")
+    _assert_eq(v.keep_open, true, "deferred_fulfillment=true must yield keep_open=true")
     _assert_eq(cap.kind, nil, "non-item entry.kind must NOT emit inventory_full even with all other flags true")
   end)
 
@@ -112,34 +129,29 @@ describe("market.choice _handle_keep_open full_buy quadruple AND middle-arm pinn
     -- _should_keep_market_open: type(result)=='table' + result.ok==true + deferred_fulfillment==true → return true.
     -- _handle_keep_open: full_buy starts with `entry and ...` → entry==nil short-circuits → false → no emit.
     local cap = {}
-    local fresh = _reload_with_emit_stub(cap)
+    local fresh = _reload_settlement_with_emit_stub(cap)
     local game = { dirty = { any = false } }
     local pc = { kind = "market_buy", owner_role_id = 1, active_tab = "item", page_index = 1, page_count = 1 }
-    local res
+    local v
     _with_patches(_patch_market_query(_make_entries(2)), function()
-      res = fresh.outcome.resolve_purchase(game, pc, _stub_player(1),
-        nil, { ok = true, deferred_fulfillment = true, fulfilled_now = true, inventory_full_after = true },
-        function() return { finished = true } end)
+      v = fresh.resolve(game, pc, _stub_player(1),
+        nil, { ok = true, deferred_fulfillment = true, fulfilled_now = true, inventory_full_after = true })
     end)
-    _assert_eq(res.stay, true, "entry nil + deferred_fulfillment=true → stay")
+    _assert_eq(v.keep_open, true, "entry nil + deferred_fulfillment=true → keep_open=true")
     _assert_eq(cap.kind, nil, "entry nil → no inventory_full emit even with other flags true")
   end)
 end)
 
-describe("market.choice _should_keep_market_open deferred_fulfillment literal == true (L294)", function()
-  it("deferred_fulfillment='yes' (truthy string but != true) → keep_open arm rejects → falls to fulfilled_now arm", function()
-    -- L294: `if result.deferred_fulfillment == true then return true end`.
-    -- Strict equality with true literal — a truthy string must NOT trigger this arm.
-    -- Then L297 checks entry.kind=="item" + fulfilled_now==true; with fulfilled_now=false here → returns false.
+describe("market.purchase_settlement _should_keep_market_open deferred_fulfillment literal == true", function()
+  it("deferred_fulfillment='yes' (truthy string but != true) → keep_open arm rejects → not keep_open", function()
     local game = { dirty = { any = false } }
     local pc = { kind = "market_buy", owner_role_id = 1, active_tab = "item", page_index = 1, page_count = 1 }
-    local finish_calls = 0
+    local v
     _with_patches(_patch_market_query(_make_entries(2)), function()
-      choice.outcome.resolve_purchase(game, pc, _stub_player(1),
-        { kind = "item" }, { ok = true, deferred_fulfillment = "yes", fulfilled_now = false },
-        function() finish_calls = finish_calls + 1; return {} end)
+      v = purchase_settlement.resolve(game, pc, _stub_player(1),
+        { kind = "item" }, { ok = true, deferred_fulfillment = "yes", fulfilled_now = false })
     end)
-    _assert_eq(finish_calls, 1, "non-literal-true deferred_fulfillment must NOT trigger keep_open arm")
+    _assert_eq(v.keep_open, false, "non-literal-true deferred_fulfillment must NOT trigger keep_open arm")
   end)
 end)
 
@@ -174,19 +186,10 @@ describe("market.choice _apply_navigation_action unknown action.type returns unc
   end)
 end)
 
-describe("market.choice _handle_keep_open rebuild failure → finish_choice (L302)", function()
-  it("when rebuild_pending fails (kind != market_buy) keep_open returns finish_choice(game, false)", function()
-    -- _should_keep_market_open true via deferred_fulfillment; rebuild fails because pc.kind is wrong;
-    -- L302 `if not rebuilt then return finish_choice(game, false) end` must run with second arg false.
-    local finish_args = {}
-    local res = choice.outcome.resolve_purchase({}, { kind = "wrong" }, _stub_player(1),
-      { kind = "item" }, { ok = true, deferred_fulfillment = true },
-      function(_, finished)
-        finish_args[#finish_args+1] = finished
-        return { finished_value = finished }
-      end)
-    _assert_eq(#finish_args, 1, "finish_choice must be called exactly once")
-    _assert_eq(finish_args[1], false, "L302 finish_choice second arg must be literal false")
-    _assert_eq(res.finished_value, false, "result must propagate finish_choice return")
+describe("market.purchase_settlement _handle_keep_open rebuild failure", function()
+  it("when rebuild_pending fails (kind != market_buy) keep_open returns false", function()
+    local v = purchase_settlement.resolve({}, { kind = "wrong" }, _stub_player(1),
+      { kind = "item" }, { ok = true, deferred_fulfillment = true })
+    _assert_eq(v.keep_open, false, "rebuild failure in keep_open path must return keep_open=false")
   end)
 end)

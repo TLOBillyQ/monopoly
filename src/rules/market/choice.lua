@@ -1,20 +1,13 @@
--- 黑市购买选择结果解释者。purchase.execute 历史返回 4 种不兼容形状:
---   false(非法商品) / { ok=false, reason }(校验/余额/在途/通道失败) /
---   { ok=true, fulfilled_now=true, inventory_full_after }(本地即时成交) /
---   { ok=true, deferred_fulfillment=true }(付费下单、异步履约)。
--- resolve_purchase 内经 purchase_result.canonicalize 收敛为 4 个终态 status:
---   fulfilled / deferred / rejected / residual。
--- 本模块是市场购买结果解释的唯一解码点,判定 helpers 只认 canonical status,
--- 不再直接读取 raw 字段(ok/fulfilled_now/deferred_fulfillment)。
+-- 黑市购买选择构建器与会话管理。
+-- 负责构建 market_buy 选择规格、应用导航、在付费回调后刷新待处理选择,
+-- 以及提供购买失败/库存已满等反馈事件。购买结果解释已迁移至 purchase_settlement。
 local monopoly_event = require("src.foundation.events")
 local number_utils = require("src.foundation.number")
 local tables = require("src.foundation.tables")
 local logger = require("src.foundation.log")
 local choice_contract = require("src.config.choice.contract")
 local dirty_tracker = require("src.state.dirty_tracker")
-local intent_output_port = require("src.rules.ports.intent_output")
 local market_query = require("src.rules.market.query")
-local purchase_result = require("src.rules.market.purchase_result")
 
 local query_context = market_query.context
 local query_eligibility = market_query.eligibility
@@ -289,237 +282,128 @@ function session.refresh_after_paid_callback(game, player, entry)
   return false
 end
 
-local outcome = {}
-
-local _INTENT_HANDLERS = {
-  need_choice = function(game, intent)
-    if intent.choice_spec == nil then return false end
-    return intent_output_port.open_choice(game, intent.choice_spec, intent.opts) ~= nil
-  end,
-  push_popup = function(game, intent)
-    if intent.payload == nil then return false end
-    return intent_output_port.push_popup(game, intent.payload, intent.popup_opts or intent.opts) == true
-  end,
-}
-
-local function _dispatch_intent(game, intent)
-  if type(intent) ~= "table" then return false end
-  local handler = _INTENT_HANDLERS[intent.kind]
-  if not handler then return false end
-  return handler(game, intent)
-end
-
-local function _is_purchase_failure(canonical)
-  return canonical.status == "rejected"
-end
-
-local function _should_keep_market_open(entry, canonical)
-  if canonical.status == "deferred" then
-    return true
-  end
-  return entry and entry.kind == "item" and canonical.status == "fulfilled"
-end
-
-local function _handle_keep_open(game, choice, player, entry, canonical, finish_choice)
-  local rebuilt = session.rebuild_pending(game, choice, player)
-  if not rebuilt then return finish_choice(game, false) end
-  local full_buy = entry and entry.kind == "item" and canonical.status == "fulfilled" and canonical.inventory_full_after == true
-  if full_buy then feedback.emit_inventory_full(player, entry) end
-  return { stay = true }
-end
-
-local function _try_failure_stay(game, choice, player, result)
-  if not _is_purchase_failure(result) then return false end
-  return not not session.rebuild_pending(game, choice, player)
-end
-
-local function _dispatch_and_finish(game, result, finish_choice)
-  if type(result) == "table" then
-    local intent = result.intent or {}
-    _dispatch_intent(game, intent)
-    if intent.kind == "need_choice" then return { stay = true } end
-  end
-  return finish_choice(game, false)
-end
-
-function outcome.resolve_purchase(game, choice, player, entry, result, finish_choice)
-  assert(type(finish_choice) == "function", "missing finish_choice")
-  local canonical = purchase_result.canonicalize(result)
-  if _should_keep_market_open(entry, canonical) then
-    return _handle_keep_open(game, choice, player, entry, canonical, finish_choice)
-  end
-  if _try_failure_stay(game, choice, player, canonical) then return { stay = true } end
-  return _dispatch_and_finish(game, result, finish_choice)
-end
-
 return {
   builder = builder,
   feedback = feedback,
   session = session,
-  outcome = outcome,
 }
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=39de3deff6bcd54f
+projectHash=2601881b7dd499ad
 scope.0.id=chunk:src/rules/market/choice.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=361
-scope.0.semanticHash=85c226d00c025257
-scope.1.id=function:feedback.emit_buy_failed:27
+scope.0.endLine=290
+scope.0.semanticHash=6d61a33cf3597da0
+scope.1.id=function:feedback.emit_buy_failed:20
 scope.1.kind=function
-scope.1.startLine=27
-scope.1.endLine=34
+scope.1.startLine=20
+scope.1.endLine=27
 scope.1.semanticHash=e71effe8d04fe328
-scope.2.id=function:feedback.emit_inventory_full:36
+scope.2.id=function:feedback.emit_inventory_full:29
 scope.2.kind=function
-scope.2.startLine=36
-scope.2.endLine=42
+scope.2.startLine=29
+scope.2.endLine=35
 scope.2.semanticHash=a54de9b8d122a75f
-scope.3.id=function:_normalize_tab:48
+scope.3.id=function:_normalize_tab:41
 scope.3.kind=function
-scope.3.startLine=48
-scope.3.endLine=53
+scope.3.startLine=41
+scope.3.endLine=46
 scope.3.semanticHash=7557bdf041850658
-scope.4.id=function:_clamp_page:55
+scope.4.id=function:_clamp_page:48
 scope.4.kind=function
-scope.4.startLine=55
-scope.4.endLine=59
+scope.4.startLine=48
+scope.4.endLine=52
 scope.4.semanticHash=c86b80b14c198bfb
-scope.5.id=function:_resolve_page_count:103
+scope.5.id=function:_resolve_page_count:96
 scope.5.kind=function
-scope.5.startLine=103
-scope.5.endLine=110
+scope.5.startLine=96
+scope.5.endLine=103
 scope.5.semanticHash=fa5c01dacf8252db
-scope.6.id=function:builder.build:112
+scope.6.id=function:builder.build:105
 scope.6.kind=function
-scope.6.startLine=112
-scope.6.endLine=138
+scope.6.startLine=105
+scope.6.endLine=131
 scope.6.semanticHash=b2306239453e1425
-scope.7.id=function:_mark_choice_dirty:142
+scope.7.id=function:_mark_choice_dirty:135
 scope.7.kind=function
-scope.7.startLine=142
-scope.7.endLine=148
+scope.7.startLine=135
+scope.7.endLine=141
 scope.7.semanticHash=e3719833b7956ff5
-scope.8.id=function:_current_choice_state:150
+scope.8.id=function:_current_choice_state:143
 scope.8.kind=function
-scope.8.startLine=150
-scope.8.endLine=155
+scope.8.startLine=143
+scope.8.endLine=148
 scope.8.semanticHash=43e56198b0ee9e82
-scope.9.id=function:_apply_spec:159
+scope.9.id=function:_apply_spec:152
 scope.9.kind=function
-scope.9.startLine=159
-scope.9.endLine=173
+scope.9.startLine=152
+scope.9.endLine=166
 scope.9.semanticHash=18c378346e7f93ea
-scope.10.id=function:session.rebuild_pending:175
+scope.10.id=function:session.rebuild_pending:168
 scope.10.kind=function
-scope.10.startLine=175
-scope.10.endLine=188
+scope.10.startLine=168
+scope.10.endLine=181
 scope.10.semanticHash=6b2af66f701b1077
-scope.11.id=function:anonymous@191:191
+scope.11.id=function:anonymous@184:184
 scope.11.kind=function
-scope.11.startLine=191
-scope.11.endLine=196
+scope.11.startLine=184
+scope.11.endLine=189
 scope.11.semanticHash=41f845f5fc748cac
-scope.12.id=function:anonymous@197:197
+scope.12.id=function:anonymous@190:190
 scope.12.kind=function
-scope.12.startLine=197
-scope.12.endLine=199
+scope.12.startLine=190
+scope.12.endLine=192
 scope.12.semanticHash=70d7278f67f6a338
-scope.13.id=function:anonymous@200:200
+scope.13.id=function:anonymous@193:193
 scope.13.kind=function
-scope.13.startLine=200
-scope.13.endLine=202
+scope.13.startLine=193
+scope.13.endLine=195
 scope.13.semanticHash=ed1b46d08fa23b4a
-scope.14.id=function:_apply_navigation_action:205
+scope.14.id=function:_apply_navigation_action:198
 scope.14.kind=function
-scope.14.startLine=205
-scope.14.endLine=211
+scope.14.startLine=198
+scope.14.endLine=204
 scope.14.semanticHash=38a11610d3762ea9
-scope.15.id=function:_resolve_navigation_player:213
+scope.15.id=function:_resolve_navigation_player:206
 scope.15.kind=function
-scope.15.startLine=213
-scope.15.endLine=222
+scope.15.startLine=206
+scope.15.endLine=215
 scope.15.semanticHash=c05baa8367d8efea
-scope.16.id=function:_build_navigation_spec:224
+scope.16.id=function:_build_navigation_spec:217
 scope.16.kind=function
-scope.16.startLine=224
-scope.16.endLine=230
+scope.16.startLine=217
+scope.16.endLine=223
 scope.16.semanticHash=6f3d0c22b3f0a240
-scope.17.id=function:_apply_navigation_spec:232
+scope.17.id=function:_apply_navigation_spec:225
 scope.17.kind=function
-scope.17.startLine=232
-scope.17.endLine=241
+scope.17.startLine=225
+scope.17.endLine=234
 scope.17.semanticHash=e3c27021d02cf4f8
-scope.18.id=function:session.apply_navigation:243
+scope.18.id=function:session.apply_navigation:236
 scope.18.kind=function
-scope.18.startLine=243
-scope.18.endLine=256
+scope.18.startLine=236
+scope.18.endLine=249
 scope.18.semanticHash=7c2b1b60ab17ab3b
-scope.19.id=function:_market_pending_choice:258
+scope.19.id=function:_market_pending_choice:251
 scope.19.kind=function
-scope.19.startLine=258
-scope.19.endLine=264
+scope.19.startLine=251
+scope.19.endLine=257
 scope.19.semanticHash=7e0d0da1c4530cb5
-scope.20.id=function:_is_pending_choice_owner:266
+scope.20.id=function:_is_pending_choice_owner:259
 scope.20.kind=function
-scope.20.startLine=266
-scope.20.endLine=269
+scope.20.startLine=259
+scope.20.endLine=262
 scope.20.semanticHash=e762cd3954e51dcf
-scope.21.id=function:_warn_refresh_skipped:271
+scope.21.id=function:_warn_refresh_skipped:264
 scope.21.kind=function
-scope.21.startLine=271
-scope.21.endLine=277
+scope.21.startLine=264
+scope.21.endLine=270
 scope.21.semanticHash=772b6013a62ccd3d
-scope.22.id=function:session.refresh_after_paid_callback:279
+scope.22.id=function:session.refresh_after_paid_callback:272
 scope.22.kind=function
-scope.22.startLine=279
-scope.22.endLine=290
+scope.22.startLine=272
+scope.22.endLine=283
 scope.22.semanticHash=0bc3dc1d485d02d6
-scope.23.id=function:anonymous@295:295
-scope.23.kind=function
-scope.23.startLine=295
-scope.23.endLine=298
-scope.23.semanticHash=27f38fdab7a8f471
-scope.24.id=function:anonymous@299:299
-scope.24.kind=function
-scope.24.startLine=299
-scope.24.endLine=302
-scope.24.semanticHash=7a968adc59580688
-scope.25.id=function:_dispatch_intent:305
-scope.25.kind=function
-scope.25.startLine=305
-scope.25.endLine=310
-scope.25.semanticHash=23ff74f8961f90bc
-scope.26.id=function:_is_purchase_failure:312
-scope.26.kind=function
-scope.26.startLine=312
-scope.26.endLine=314
-scope.26.semanticHash=09b0616cae00e9bb
-scope.27.id=function:_should_keep_market_open:316
-scope.27.kind=function
-scope.27.startLine=316
-scope.27.endLine=321
-scope.27.semanticHash=b5e3a62687d00dd1
-scope.28.id=function:_handle_keep_open:323
-scope.28.kind=function
-scope.28.startLine=323
-scope.28.endLine=329
-scope.28.semanticHash=4042e520b5ee8071
-scope.29.id=function:_try_failure_stay:331
-scope.29.kind=function
-scope.29.startLine=331
-scope.29.endLine=334
-scope.29.semanticHash=4ea90e8fe6817a58
-scope.30.id=function:_dispatch_and_finish:336
-scope.30.kind=function
-scope.30.startLine=336
-scope.30.endLine=343
-scope.30.semanticHash=6e51764679270d02
-scope.31.id=function:outcome.resolve_purchase:345
-scope.31.kind=function
-scope.31.startLine=345
-scope.31.endLine=353
-scope.31.semanticHash=66a7b380874b512b
 ]]

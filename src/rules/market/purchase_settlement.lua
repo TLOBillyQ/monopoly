@@ -1,5 +1,5 @@
 -- 商店购买结算的唯一解释者:一次购买结果 → 一个结构化 verdict { keep_open }。
--- 承接原 choice.outcome.resolve_purchase 的全部判定(经 purchase_result 收敛后
+-- 承接原 choice 模块购买结果解释的全部判定(经 purchase_result 收敛后
 -- 读 canonical status),但不再接收 choice 层的 finish_choice——收尾与否只由
 -- verdict.keep_open 表达,由 choice_handlers/market adapter 翻成框架的
 -- {stay=true} / finish_choice(game,false)。副作用(rebuild、inventory_full、
