@@ -4,7 +4,9 @@ status: stable
 owner: architecture
 last_verified: 2026-06-24
 ---
-# ADR 0018 — 可选行动阶段完成归属 turn seam
+# ADR 0025 — 可选行动阶段完成归属 turn seam
+
+> 编号勘误：本 ADR 原编号 0018，与《角色属性金币》撞号；2026-07-08 重编号为 0025，内容未变。历史提交与讨论中指向「turn seam」的 ADR 0018 均指本文。
 
 ## 背景
 
