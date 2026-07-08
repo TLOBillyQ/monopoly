@@ -37,6 +37,7 @@ describe("force_resolve dispatch path", function()
         current_player_index = 1,
         pending_choice = { id = "stale_choice" },
       },
+      find_player_by_id = function(_, id) return { id = id } end,
     }
     function game:dispatch_action(action)
       dispatched = action
@@ -77,6 +78,7 @@ describe("force_resolve dispatch path", function()
         current_player_index = 1,
         pending_choice = nil,
       },
+      find_player_by_id = function(_, id) return { id = id } end,
     }
     function game:dispatch_action(action)
       dispatched = action
@@ -152,6 +154,7 @@ describe("force_resolve dispatch path", function()
         current_player_index = 1,
         pending_choice = nil,
       },
+      find_player_by_id = function(_, id) return { id = id } end,
     }
     function game:dispatch_action(action)
       dispatched = action
@@ -197,6 +200,7 @@ describe("force_resolve dispatch path", function()
         current_player_index = 1,
         pending_choice = nil,
       },
+      find_player_by_id = function(_, id) return { id = id } end,
     }
     function game:dispatch_action(action)
       dispatched = action
