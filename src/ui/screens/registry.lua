@@ -27,7 +27,8 @@ local function _ensure_loaded()
   _loaded = true
   require("src.ui.screens.target_choice")
   require("src.ui.screens.remote_choice")
-  -- Phase B 追加：player_choice / secondary_confirm
+  require("src.ui.screens.player_choice")
+  -- Phase B 追加：secondary_confirm
 end
 
 function registry.build_choice_screens()

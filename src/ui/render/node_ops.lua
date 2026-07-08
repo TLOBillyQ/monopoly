@@ -1,6 +1,5 @@
 local runtime = require("src.ui.render.runtime_ui")
 local debug_nodes = require("src.ui.schema.debug")
-local player_choice_nodes = require("src.ui.schema.player_choice")
 local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
 local base_contract = require("src.ui.schema.base_contract")
 
@@ -114,12 +113,6 @@ end
 
 local function build_choice_screens()
   local screens = require("src.ui.screens.registry").build_choice_screens()  -- 已迁移屏
-  screens.player = screens.player or {
-    key = "player",
-    root = player_choice_nodes.canvas,
-    title = player_choice_nodes.title,
-    option_buttons = player_choice_nodes.slots,
-  }
   screens.secondary_confirm = screens.secondary_confirm or {
     key = "secondary_confirm",
     root = secondary_confirm_nodes.canvas,
