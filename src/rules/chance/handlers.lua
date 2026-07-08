@@ -2,7 +2,6 @@ local inventory = require("src.rules.items.inventory")
 local tile = require("src.rules.board.tile")
 local monopoly_event = require("src.foundation.events")
 local movement = require("src.rules.movement")
-local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local timing = require("src.config.gameplay.timing")
 local number_utils = require("src.foundation.number")
 local action_anim_port = require("src.foundation.ports.action_anim")
@@ -52,18 +51,6 @@ function shared.adjust_chance_delta(game, player, delta)
     return delta * 2
   end
   return delta
-end
-
-function shared.handle_bankruptcy_if_non_positive(game, player, reason)
-  if game:player_cash(player) > 0 then
-    return
-  end
-  bankruptcy_port.eliminate(game, player, { reason = reason })
-end
-
-function shared.apply_cash_and_maybe_bankrupt(game, player, delta, reason)
-  shared.apply_cash_change(game, player, delta)
-  shared.handle_bankruptcy_if_non_positive(game, player, reason)
 end
 
 function shared.queue_action_anim(game, payload)
