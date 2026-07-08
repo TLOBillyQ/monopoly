@@ -1,16 +1,10 @@
 local deadlines = require("src.turn.deadlines")
+local choice_scope = require("src.turn.deadlines.choice_scope")
 
 local choice_tracking = {}
 
-local function _scope_for_choice(active_choice)
-  if active_choice and active_choice.kind == "market_buy" then
-    return "market_buy"
-  end
-  return "choice"
-end
-
 function choice_tracking.sync_deadline_for_choice(state, active_choice, timeout)
-  local scope = _scope_for_choice(active_choice)
+  local scope = choice_scope.for_choice(active_choice)
   local other_scope = scope == "choice" and "market_buy" or "choice"
   if deadlines.is_active(state, other_scope) then
     deadlines.cancel(state, other_scope)
