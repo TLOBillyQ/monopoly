@@ -7,11 +7,8 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 
 local M = {}
 
-local screen_canvases = {}
-
 function M.resolve_canvas_for_screen(screen_key)
-  local from_registry = require("src.ui.screens.registry").canvas_for(screen_key)
-  return from_registry or screen_canvases[screen_key] or canvas.CANVAS_BASE
+  return require("src.ui.screens.registry").canvas_for(screen_key) or canvas.CANVAS_BASE
 end
 
 function M.hide_choice_screens(ui)

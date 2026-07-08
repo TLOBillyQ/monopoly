@@ -1,6 +1,5 @@
 local runtime = require("src.ui.render.runtime_ui")
 local debug_nodes = require("src.ui.schema.debug")
-local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
 local base_contract = require("src.ui.schema.base_contract")
 
 local M = {}
@@ -112,16 +111,7 @@ local function set_item_slot_image(slot_name, image_key)
 end
 
 local function build_choice_screens()
-  local screens = require("src.ui.screens.registry").build_choice_screens()  -- 已迁移屏
-  screens.secondary_confirm = screens.secondary_confirm or {
-    key = "secondary_confirm",
-    root = secondary_confirm_nodes.canvas,
-    title = secondary_confirm_nodes.title,
-    body = secondary_confirm_nodes.body,
-    confirm = secondary_confirm_nodes.confirm,
-    cancel = secondary_confirm_nodes.cancel,
-  }
-  return screens
+  return require("src.ui.screens.registry").build_choice_screens()
 end
 
 M.query_node = query_node

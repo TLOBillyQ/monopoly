@@ -1,6 +1,7 @@
 local modal_state = require("src.ui.state.modal")
 local pending_confirmation = require("src.ui.state.pending_confirmation")
 local choice_openers = require("src.ui.coord.choice_openers")
+local secondary_confirm_screen = require("src.ui.screens.secondary_confirm")
 local choice_common = require("src.ui.coord.choice_helpers")
 local popup = require("src.ui.coord.popup")
 local market_presenter = require("src.ui.coord.market")
@@ -12,36 +13,8 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 
 local modal_presenter = {}
 
-local function _resolve_secondary_confirm_parts(state, option_id)
-  local ui = state and state.ui
-  local screen = ui and ui.choice_screens and ui.choice_screens.secondary_confirm or nil
-  local current_model = runtime_state.get_ui_model(state)
-  local choice = current_model and current_model.choice or nil
-  if not screen or not choice then
-    return screen, choice, nil, nil
-  end
-  local option_label = choice_common.resolve_option_label_by_id(choice, option_id)
-  return screen, choice, option_label, current_model
-end
-
 local function _refresh_secondary_confirm_copy(state, option_id)
-  local ui = state and state.ui
-  if not ui or ui.active_choice_screen_key ~= "secondary_confirm" then
-    return
-  end
-  local screen, choice, option_label = _resolve_secondary_confirm_parts(state, option_id)
-  if screen and screen.title then
-    ui:set_label(screen.title, choice_common.resolve_secondary_confirm_title(choice, state.game, "secondary_confirm", option_id))
-  end
-  if screen and screen.body then
-    ui:set_label(screen.body, choice_common.resolve_secondary_confirm_body(
-      choice,
-      state.game,
-      "secondary_confirm",
-      option_id,
-      option_label
-    ))
-  end
+  secondary_confirm_screen.refresh_copy(state, option_id)
 end
 
 local function _close_market_if_needed(state)
@@ -79,11 +52,7 @@ local function _should_skip_reopen(state, screen_key, choice_id)
 end
 
 local function _open_item_phase_pre_confirm(state, choice)
-  pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
-  state._suppress_item_slot_highlight_until_pick = true
-  local title = choice_common.resolve_secondary_confirm_title(choice, state.game, "base_inline", nil)
-  local body = choice_common.resolve_secondary_confirm_body(choice, state.game, "base_inline", nil, nil)
-  choice_openers.open_pre_confirm_screen(state, choice, "__item_phase_ask__", title, body)
+  secondary_confirm_screen.open_item_phase_pre_confirm(state, choice)
 end
 
 local function _close_or_reset_inline_choice(state)

@@ -1,5 +1,5 @@
 local modal = require("src.ui.coord.modal")
-local choice_openers = require("src.ui.coord.choice_openers")
+local secondary_confirm_screen = require("src.ui.screens.secondary_confirm")
 
 local modal_ports = {}
 
@@ -12,7 +12,7 @@ function modal_ports.build()
       modal.open_choice_modal(state, choice, market)
     end,
     open_pre_confirm_screen = function(state, choice, option_id, title, body)
-      choice_openers.open_pre_confirm_screen(state, choice, option_id, title, body)
+      secondary_confirm_screen.open_pre_confirm(state, choice, option_id, title, body)
     end,
     close_popup = function(state)
       modal.close_popup(state)
