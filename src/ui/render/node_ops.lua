@@ -1,7 +1,6 @@
 local runtime = require("src.ui.render.runtime_ui")
 local debug_nodes = require("src.ui.schema.debug")
 local player_choice_nodes = require("src.ui.schema.player_choice")
-local target_choice_nodes = require("src.ui.schema.target_choice")
 local remote_choice_nodes = require("src.ui.schema.remote_choice")
 local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
 local base_contract = require("src.ui.schema.base_contract")
@@ -115,40 +114,29 @@ local function set_item_slot_image(slot_name, image_key)
 end
 
 local function build_choice_screens()
-  return {
-    player = {
-      key = "player",
-      root = player_choice_nodes.canvas,
-      title = player_choice_nodes.title,
-      option_buttons = player_choice_nodes.slots,
-    },
-    target = {
-      key = "target",
-      root = target_choice_nodes.canvas,
-      title = target_choice_nodes.title,
-      body = target_choice_nodes.body,
-      option_buttons = target_choice_nodes.slot_buttons,
-      slot_labels = target_choice_nodes.slot_labels,
-      slot_projections = target_choice_nodes.slot_projections,
-      confirm = target_choice_nodes.confirm,
-      cancel = target_choice_nodes.cancel,
-    },
-    remote = {
-      key = "remote",
-      root = remote_choice_nodes.canvas,
-      title = remote_choice_nodes.title,
-      body = remote_choice_nodes.body,
-      option_buttons = remote_choice_nodes.options,
-    },
-    secondary_confirm = {
-      key = "secondary_confirm",
-      root = secondary_confirm_nodes.canvas,
-      title = secondary_confirm_nodes.title,
-      body = secondary_confirm_nodes.body,
-      confirm = secondary_confirm_nodes.confirm,
-      cancel = secondary_confirm_nodes.cancel,
-    },
+  local screens = require("src.ui.screens.registry").build_choice_screens()  -- 已迁移屏
+  screens.player = screens.player or {
+    key = "player",
+    root = player_choice_nodes.canvas,
+    title = player_choice_nodes.title,
+    option_buttons = player_choice_nodes.slots,
   }
+  screens.remote = screens.remote or {
+    key = "remote",
+    root = remote_choice_nodes.canvas,
+    title = remote_choice_nodes.title,
+    body = remote_choice_nodes.body,
+    option_buttons = remote_choice_nodes.options,
+  }
+  screens.secondary_confirm = screens.secondary_confirm or {
+    key = "secondary_confirm",
+    root = secondary_confirm_nodes.canvas,
+    title = secondary_confirm_nodes.title,
+    body = secondary_confirm_nodes.body,
+    confirm = secondary_confirm_nodes.confirm,
+    cancel = secondary_confirm_nodes.cancel,
+  }
+  return screens
 end
 
 M.query_node = query_node

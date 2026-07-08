@@ -2,12 +2,12 @@ local base_intents = require("src.ui.input.route_base")
 local popup_intents = require("src.ui.input.route_popup")
 local item_slot_intents = require("src.ui.input.route_item_slots")
 local player_choice_intents = require("src.ui.input.route_player_choice")
-local target_choice_intents = require("src.ui.input.route_target_choice")
 local remote_choice_intents = require("src.ui.input.route_remote_choice")
 local market_intents = require("src.ui.input.route_market")
 local skin_panel_intents = require("src.ui.input.route_skin_panel")
 local item_atlas_intents = require("src.ui.input.route_item_atlas")
 local secondary_confirm_intents = require("src.ui.input.route_secondary_confirm")
+local screen_registry = require("src.ui.screens.registry")
 
 local registry = {}
 
@@ -16,7 +16,6 @@ local canvas_builders = {
   popup_intents.build,
   item_slot_intents.build,
   player_choice_intents.build,
-  target_choice_intents.build,
   remote_choice_intents.build,
   market_intents.build_items,
   market_intents.build_controls,
@@ -32,6 +31,10 @@ function registry.build_route_specs(state)
     for _, spec in ipairs(built or {}) do
       specs[#specs + 1] = spec
     end
+  end
+  -- 已迁移屏的 route specs 由 registry 按注册序统一拼接。
+  for _, spec in ipairs(screen_registry.build_route_specs(state) or {}) do
+    specs[#specs + 1] = spec
   end
   return specs
 end

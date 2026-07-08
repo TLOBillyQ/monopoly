@@ -9,13 +9,13 @@ local M = {}
 
 local screen_canvases = {
   player = canvas.CANVAS_PLAYER_CHOICE,
-  target = canvas.CANVAS_TARGET_CHOICE,
   remote = canvas.CANVAS_REMOTE_CHOICE,
   secondary_confirm = canvas.CANVAS_SECONDARY_CONFIRM,
 }
 
 function M.resolve_canvas_for_screen(screen_key)
-  return screen_canvases[screen_key] or canvas.CANVAS_BASE
+  local from_registry = require("src.ui.screens.registry").canvas_for(screen_key)
+  return from_registry or screen_canvases[screen_key] or canvas.CANVAS_BASE
 end
 
 function M.hide_choice_screens(ui)
