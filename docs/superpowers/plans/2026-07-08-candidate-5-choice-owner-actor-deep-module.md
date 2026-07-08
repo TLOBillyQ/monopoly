@@ -640,6 +640,17 @@ for s in c5b-dispatch c5b-ports c5b-doubledecide; do git worktree remove ".workt
 - **④-A await 收编**：调查 merge_verdict = **SEPARATE**——await 的 choice-anim park（无回调、arg-unwrap resume 到 post-choice）与 blocking 的 choice 路线（注册回调、resume 回未解析 wait_choice）是状态机相反阶段。应为 `blocking.wait_for_active_action_anim` 窄委托的**独立小计划**（动 `await.lua`/`blocking.lua`，与本计划文件不相交，可另行并行）。
 - **lifecycle 整体迁入 `src/turn/choice/`**（`resolve_choice`/`step_pending_choice` 从 deadlines/waits 搬家）：牵动 `deadlines`/`waits` install 接线 + ~12 pin，收益是聚合命名，本计划先只收 owner/actor 权威；迁家另立。
 - **owner 收敛的产品确认**：`choice_ports` raw→归一 翻转 bogus/非整数 owner 行为——对抗核证判**非生产可达**（所有生产 owner=live `player.id`），本计划以 characterization 收口即可；若未来出现非整数 owner 生产写入方，需回看 validator_actor 是否依赖 raw 类型/值。
+- **`validator_actor` 收编进 owner.lua**：**证伪——留独立**。`turn/actions/validator_actor._resolve_choice_owner_role_id` 是派发器的**独立校验闸**（`validator.validate` → `validate_choice_action`），刻意用 **raw 声明 owner**（不做存在性校验）比对入站 `actor_role_id`。此 raw 语义由 `validator_spec.lua:132-144`、`:297-317` 硬钉：这些 pin 传 **`game = {}`（空）+ 声明 `owner_role_id = 1001`**，断言「actor==声明 owner 通过 / 不等拒绝」。`owner.resolve_role_id`/`resolve_player` 依赖 `game.find_player_by_id` + index/method current fallback，空 game 下返回 `nil` → 校验被跳过 →「wrong owner is refused」翻绿（或 `.id` 崩）。委托 = 破 ~6 gate pin + 把闸从「比声明 owner」改成「比 game 解析 owner」= 削弱独立校验，**非行为中性**。故留独立；其 owner 读已走同一原语 `choice_contract.resolve_owner_role_id`。
+- **`ui/ports/ui_sync/choice_state`、`ui/input/pre_confirm` 的 `_resolve_choice_owner_role_id`**：属 `src/ui/` 层（`pre_confirm` 取 `state` 非 `game`），与 `src/turn/choice/owner`（domain 层）跨清洁架构边界；本计划不收，另评是否值得引 domain 权威。
+
+---
+
+## 收尾修订（2026-07-08 · 执行后审查）
+
+审查候选⑤落地结果，处理 CLAUDE 点名的两条「仍独立」owner/actor 解析路径。全景发现共 **5 份** `_resolve_choice_owner_role_id`-类实现（owner.lua 权威 + validator_actor + auto_runner + 2 个 UI 层），二者与 owner.lua **不在同一 domain**，采**混合**处置：
+
+- **`auto_runner._resolve_choice_actor_role_id`（已改）**：view-model/env 域，原**裸读** `choice.owner_role_id`（绕过 `choice_contract`，无 `to_integer` 归一）。改为 `choice_contract.resolve_owner_role_id(choice)`，**保留 env fallback**（`env.current_player_id or env.current_player_index`——它拿的是 env 快照，无 `game`）。生产等价（所有 scenario owner=整数 `player.id`），仅归一非整数 owner（非生产可达）。护栏 `auto_runner_policies_spec`/`auto_runner_timeout_spec` + 全 smoke（3539 ok）保绿。
+- **`validator_actor`（不改）**：见上「范围外」——独立校验闸，raw 声明 owner 语义被 pin 硬钉，委托非行为中性。留独立并记录理由。
 
 ---
 
