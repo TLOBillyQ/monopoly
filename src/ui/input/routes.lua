@@ -4,7 +4,6 @@ local item_slot_intents = require("src.ui.input.route_item_slots")
 local market_intents = require("src.ui.input.route_market")
 local skin_panel_intents = require("src.ui.input.route_skin_panel")
 local item_atlas_intents = require("src.ui.input.route_item_atlas")
-local secondary_confirm_intents = require("src.ui.input.route_secondary_confirm")
 local screen_registry = require("src.ui.screens.registry")
 
 local registry = {}
@@ -17,7 +16,6 @@ local canvas_builders = {
   market_intents.build_controls,
   skin_panel_intents.build,
   item_atlas_intents.build,
-  secondary_confirm_intents.build,
 }
 
 function registry.build_route_specs(state)

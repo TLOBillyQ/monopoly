@@ -1,4 +1,3 @@
-local modal_state = require("src.ui.state.modal")
 local common = require("src.ui.coord.choice_helpers")
 local ui_controls = require("src.ui.render.support.ui_controls")
 local logger = require("src.foundation.log")
@@ -139,40 +138,20 @@ function M.open_choice_modal(state, choice, market)
   return true
 end
 
-function M.open_secondary_confirm_screen(state, choice, choice_id)
-  local ui, screen = _open_screen(state, "secondary_confirm", choice, choice_id)
-  local first_option = choice.options and choice.options[1] or nil
-  local selected = common.resolve_option_id(first_option)
-  ui:set_label(screen.title, common.resolve_secondary_confirm_title(choice, state.game, "secondary_confirm", selected))
-  if screen.body then
-    ui:set_label(screen.body, common.build_secondary_confirm_body(choice, state.game, selected))
-  end
-
-  _set_action_button(ui, screen.confirm, true, selected ~= nil, "")
-  local allow_cancel = choice.allow_cancel ~= false
-  _set_action_button(ui, screen.cancel, allow_cancel, allow_cancel, allow_cancel and "" or nil)
-  modal_state.open_choice(state, choice_id, { selected }, selected)
-end
-
-function M.open_pre_confirm_screen(state, choice, option_id, title, body)
-  local ui, screen = _open_screen(state, "secondary_confirm", choice, choice.id)
-  ui:set_label(screen.title, title or "请确认")
-  if screen.body then
-    ui:set_label(screen.body, body or "")
-  end
-  _set_action_button(ui, screen.confirm, true, option_id ~= nil, "")
-  _set_action_button(ui, screen.cancel, true, true, "")
-  modal_state.open_choice(state, choice.id, { option_id }, option_id)
-end
-
-_screen_openers.secondary_confirm = M.open_secondary_confirm_screen
-
 M.open_screen = _open_screen
 M.fill_option_nodes = _fill_option_nodes
 M.order_target_options = _order_target_options
 M.store_target_button_labels = _store_target_button_labels
 M.set_action_button = _set_action_button
 M.resolve_player_or_remote_options = _resolve_player_or_remote_options
+
+-- 向后兼容：旧调用点/测试仍通过 choice_openers 访问二次确认开屏；内部已迁至 screen 模块。
+function M.open_secondary_confirm_screen(state, choice, choice_id)
+  return require("src.ui.screens.secondary_confirm").open(state, choice, choice_id)
+end
+function M.open_pre_confirm_screen(state, choice, option_id, title, body)
+  return require("src.ui.screens.secondary_confirm").open_pre_confirm(state, choice, option_id, title, body)
+end
 
 return M
 
