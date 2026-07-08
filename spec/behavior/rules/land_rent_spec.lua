@@ -1,6 +1,7 @@
 local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local land_rules = require("src.rules.land.landing_rules")
+local rent_payment = require("src.rules.land.rent_payment")
 local rent_resolver = require("src.rules.land.rent_resolver")
 
 local _new_game = function()
@@ -174,6 +175,55 @@ describe("domain land rent contiguous behavior", function()
     local b2 = rent_resolver.contiguous_breakdown(g2, g2.board, idx2, human2.id)
     assert.equals(breakdown.count, b2.count,
       "AI-owned strip and human-owned strip share contiguous_count semantics")
+  end)
+
+  it("PIN: paying exactly full rent leaves payer at zero but NOT bankrupt", function()
+    local g = _new_game()
+    local payer, owner = g.players[1], g.players[2]
+    local strip = _find_strip(g.board, 1)
+    _grant_strip_to_owner(g, owner, strip)
+    local hit = strip[1]
+    payer.position = assert(g.board:index_of_tile_id(hit.id))
+
+    -- 先探出这次租金额,再把 payer 现金精确设为 rent。
+    local probe = rent_payment.execute_pay_rent(g, payer.id, hit.id)
+    local rent = probe.payload.amount
+    -- 复位一局重来,精确边界:cash == rent
+    g = _new_game(); payer, owner = g.players[1], g.players[2]
+    _grant_strip_to_owner(g, owner, _find_strip(g.board, 1))
+    local hit2 = _find_strip(g.board, 1)[1]
+    payer.position = assert(g.board:index_of_tile_id(hit2.id))
+    g:set_player_cash(payer, rent)
+
+    local result = rent_payment.execute_pay_rent(g, payer.id, hit2.id)
+
+    assert(g:player_cash(payer) == 0, "payer drained to exactly zero")
+    assert(result.event == "rent_paid", "paying full rent is rent_paid, not rent_bankrupt")
+    assert(result.bankrupt_reason == nil, "exact-full payment is not bankruptcy")
+  end)
+
+  it("PIN: paying less than full rent is rent_bankrupt with owner credited the partial", function()
+    local g = _new_game()
+    local payer, owner = g.players[1], g.players[2]
+    _grant_strip_to_owner(g, owner, _find_strip(g.board, 1))
+    local hit = _find_strip(g.board, 1)[1]
+    payer.position = assert(g.board:index_of_tile_id(hit.id))
+    local received = {}
+    g.achievement_progress_port = {
+      cash_received = function(_, p, amt) received[#received+1] = { id = p.id, amount = amt }; return true end,
+    }
+    g:set_player_cash(payer, 1)  -- 远小于任何 rent
+
+    local owner_before = g:player_cash(owner)
+    local result = rent_payment.execute_pay_rent(g, payer.id, hit.id)
+
+    assert(result.event == "rent_bankrupt", "short payer triggers rent_bankrupt")
+    assert(result.bankrupt_reason ~= nil, "bankrupt_reason set for land_events to eliminate")
+    assert(g:player_cash(payer) == 0, "payer fully drained")
+    assert(g:player_cash(owner) == owner_before + 1, "owner credited the partial 1")
+    assert(received[1] and received[1].id == owner.id and received[1].amount == 1,
+      "cash_received telemetry fires for the partial amount")
+    assert(payer.eliminated ~= true, "eliminate deferred to land_events")
   end)
 end)
 

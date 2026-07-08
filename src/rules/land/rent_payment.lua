@@ -1,5 +1,5 @@
 local rent_resolver = require("src.rules.land.rent_resolver")
-local achievement_progress = require("src.rules.ports.achievement_progress")
+local coin_settlement = require("src.rules.commerce.coin_settlement")
 local number_utils = require("src.foundation.number")
 
 local rent_payment = {}
@@ -110,14 +110,13 @@ function rent_payment.execute_pay_rent(game, player_id, tile_id)
     multiplier_text = multiplier_text,
   })
 
-  if game:player_cash(player) >= rent then
-    game:transfer_player_cash(player, owner, rent)
-    achievement_progress.cash_received(game, owner, rent)
+  local settled = coin_settlement.transfer(game, player, owner, rent, {
+    defer_bankruptcy = true,
+  })
+  if settled.moved >= rent then
     return result
   end
 
-  local _, _, liquid = game:transfer_player_cash(player, owner, rent, { allow_partial = true })
-  achievement_progress.cash_received(game, owner, liquid)
   local reason = player.name .. " 资金不足，欠付(" .. owner.name .. ") " .. number_utils.format_integer_part(rent) .. " 破产"
   result.event = "rent_bankrupt"
   result.payload.amount = rent
