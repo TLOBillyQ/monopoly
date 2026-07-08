@@ -1,5 +1,5 @@
 local modal = require("src.ui.coord.modal")
-local choice_openers = require("src.ui.coord.choice_openers")
+local secondary_confirm_screen = require("src.ui.screens.secondary_confirm")
 
 local modal_ports = {}
 
@@ -12,7 +12,7 @@ function modal_ports.build()
       modal.open_choice_modal(state, choice, market)
     end,
     open_pre_confirm_screen = function(state, choice, option_id, title, body)
-      choice_openers.open_pre_confirm_screen(state, choice, option_id, title, body)
+      secondary_confirm_screen.open_pre_confirm(state, choice, option_id, title, body)
     end,
     close_popup = function(state)
       modal.close_popup(state)
@@ -24,12 +24,12 @@ return modal_ports
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=7bf757a9948c011f
+projectHash=24652642e6c3b039
 scope.0.id=chunk:src/ui/ports/modal.lua
 scope.0.kind=chunk
 scope.0.startLine=1
 scope.0.endLine=24
-scope.0.semanticHash=1f264b4567a7bcb2
+scope.0.semanticHash=f074ff81b7297b94
 scope.1.id=function:anonymous@8:8
 scope.1.kind=function
 scope.1.startLine=8
@@ -44,7 +44,7 @@ scope.3.id=function:anonymous@14:14
 scope.3.kind=function
 scope.3.startLine=14
 scope.3.endLine=16
-scope.3.semanticHash=cbd3ac4d0cfae8e2
+scope.3.semanticHash=4e27d31e63025871
 scope.4.id=function:anonymous@17:17
 scope.4.kind=function
 scope.4.startLine=17
@@ -54,5 +54,5 @@ scope.5.id=function:modal_ports.build:6
 scope.5.kind=function
 scope.5.startLine=6
 scope.5.endLine=21
-scope.5.semanticHash=1575ad11ab40828e
+scope.5.semanticHash=db9d7774f395fae5
 ]]

@@ -7,15 +7,8 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 
 local M = {}
 
-local screen_canvases = {
-  player = canvas.CANVAS_PLAYER_CHOICE,
-  target = canvas.CANVAS_TARGET_CHOICE,
-  remote = canvas.CANVAS_REMOTE_CHOICE,
-  secondary_confirm = canvas.CANVAS_SECONDARY_CONFIRM,
-}
-
 function M.resolve_canvas_for_screen(screen_key)
-  return screen_canvases[screen_key] or canvas.CANVAS_BASE
+  return require("src.ui.screens.registry").canvas_for(screen_key) or canvas.CANVAS_BASE
 end
 
 function M.hide_choice_screens(ui)
@@ -70,30 +63,30 @@ return M
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=3bbfcc888d46ff07
+projectHash=27449ba62c4fee28
 scope.0.id=chunk:src/ui/coord/choice_helpers.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=70
-scope.0.semanticHash=4d8d3f81ef19096f
-scope.1.id=function:M.resolve_canvas_for_screen:17
+scope.0.endLine=63
+scope.0.semanticHash=07f12e833df8bb1e
+scope.1.id=function:M.resolve_canvas_for_screen:10
 scope.1.kind=function
-scope.1.startLine=17
-scope.1.endLine=19
-scope.1.semanticHash=ce64f1c338059af0
-scope.2.id=function:M.set_option_node:34
+scope.1.startLine=10
+scope.1.endLine=12
+scope.1.semanticHash=2c8c3b09c72c6be2
+scope.2.id=function:M.set_option_node:27
 scope.2.kind=function
-scope.2.startLine=34
-scope.2.endLine=44
+scope.2.startLine=27
+scope.2.endLine=37
 scope.2.semanticHash=0c0fdbccba12fe64
-scope.3.id=function:anonymous@54:54
+scope.3.id=function:anonymous@47:47
 scope.3.kind=function
-scope.3.startLine=54
-scope.3.endLine=63
+scope.3.startLine=47
+scope.3.endLine=56
 scope.3.semanticHash=b45a68c95c96af80
-scope.4.id=function:M.switch_modal_canvas:52
+scope.4.id=function:M.switch_modal_canvas:45
 scope.4.kind=function
-scope.4.startLine=52
-scope.4.endLine=65
+scope.4.startLine=45
+scope.4.endLine=58
 scope.4.semanticHash=3c3db8a7f7f2285c
 ]]
