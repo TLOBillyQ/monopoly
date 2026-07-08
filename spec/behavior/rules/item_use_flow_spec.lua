@@ -9,6 +9,7 @@ local flow_result = require("src.rules.items.use_flow_result")
 local remote_dice = require("src.rules.items.remote_dice")
 local resolvers = require("src.rules.items.use_flow_resolvers")
 local roadblock = require("src.rules.items.roadblock")
+local settlement = require("src.rules.items.settlement")
 local use_flow = require("src.rules.items.use_flow")
 
 local function _new_game()
@@ -224,7 +225,7 @@ describe("item_use_flow", function()
     end)
   end)
 
-  it("normalizes waiting and applied effect metadata", function()
+  it("normalizes waiting effect metadata", function()
     local g = _new_game()
     local player = g.players[1]
     player.inventory:add({ id = item_ids.mine })
@@ -237,39 +238,23 @@ describe("item_use_flow", function()
       waiting = true,
       ok = false,
       intent = { choice_spec = choice_spec },
-    }, player, item_ids.mine, _count_item(player, item_ids.mine), {}, "fallback")
-    local anim = { marker = "anim" }
-    local applied = flow_result.normalize_effect({
-      ok = true,
-      action_anim = anim,
-    }, player, item_ids.mine, _count_item(player, item_ids.mine), {}, "fallback")
+    }, player, item_ids.mine)
 
-    _assert_eq(flow_result.raw_result_ok({ waiting = true, ok = false }), true, "waiting raw result should be ok")
     _assert_eq(waiting.status, "waiting_choice", "waiting result status")
     _assert_eq(waiting.actor_id, player.id, "waiting result actor id")
     _assert_eq(waiting.choice_spec, choice_spec, "waiting result choice spec")
     _assert_eq(waiting.item_consumed, false, "waiting result should not consume")
-    _assert_eq(applied.actor_id, player.id, "applied result actor id")
-    _assert_eq(applied.action_anim, anim, "applied result action anim")
-    _assert_eq(applied.item_consumed, false, "unchanged inventory should not count as consumed")
   end)
 
-  it("normalizes preconsumed failed effect results as consumed", function()
+  it("passes settled results through untouched", function()
     local g = _new_game()
     local player = g.players[1]
-    player.inventory:add({ id = item_ids.mine })
+    local settled = settlement.execute(g, player, item_ids.mine, function()
+      return { ok = false, reason = "blocked" }
+    end, { fallback_reason = "fallback", context_preconsumed = true })
 
-    local rejected = flow_result.normalize_effect({
-      ok = false,
-      reason = "blocked",
-    }, player, item_ids.mine, _count_item(player, item_ids.mine), {
-      item_preconsumed = true,
-    }, "fallback")
-
-    _assert_eq(rejected.ok, false, "failed preconsumed result should reject")
-    _assert_eq(rejected.reason, "blocked", "failed preconsumed result reason")
-    _assert_eq(rejected.actor_id, player.id, "failed preconsumed actor id")
-    _assert_eq(rejected.item_consumed, true, "preconsumed failure should stay consumed")
+    _assert_eq(flow_result.normalize_effect(settled, player, item_ids.mine), settled,
+      "settled results should pass through unchanged")
   end)
 
   it("begin returns structured waiting choice for manual target item", function()

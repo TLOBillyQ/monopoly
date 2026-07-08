@@ -186,6 +186,22 @@ function settlement.escrow(player, item_id, choice_spec)
   return choice_spec
 end
 
+-- 返回可退还的 item_id;不可退(无托管、已退、形状不符)返回 nil。
+-- 令牌在场以令牌为准;仅有公共布尔的旧 fixture 走布尔判定。
+local function _refundable_escrow_item(meta)
+  local token = meta[ESCROW_META_KEY]
+  if token ~= nil then
+    if token.consumed == true and token.refunded ~= true then
+      return token.item_id or meta.item_id
+    end
+    return nil
+  end
+  if meta.item_preconsumed == true then
+    return meta.item_id
+  end
+  return nil
+end
+
 -- 托管卡退还(force_skip / 目标失效放弃)。幂等:令牌只退一次;
 -- 仅有公共布尔的旧 fixture 退还后翻转布尔防重复。
 function settlement.abandon(game, choice, _)
@@ -193,17 +209,11 @@ function settlement.abandon(game, choice, _)
   if type(meta) ~= "table" then
     return false
   end
-  local token = meta[ESCROW_META_KEY]
-  if token ~= nil and (token.consumed ~= true or token.refunded == true) then
-    return false
-  end
-  if token == nil and meta.item_preconsumed ~= true then
-    return false
-  end
-  local item_id = (token and token.item_id) or meta.item_id
+  local item_id = _refundable_escrow_item(meta)
   if item_id == nil then
     return false
   end
+  local token = meta[ESCROW_META_KEY]
   local actor_id = (token and token.player_id) or meta.player_id or choice.owner_role_id
   local player = flow_context.resolve_actor(game, actor_id)
   if not (player and player.inventory) then

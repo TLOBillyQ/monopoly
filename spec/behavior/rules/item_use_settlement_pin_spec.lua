@@ -11,6 +11,7 @@ local demolish = require("src.rules.items.demolish")
 local item_ids = require("src.config.gameplay.item_ids")
 local post_effects = require("src.rules.items.post_effects")
 local remote_dice = require("src.rules.items.remote_dice")
+local settlement = require("src.rules.items.settlement")
 local use_flow = require("src.rules.items.use_flow")
 
 local function _assert_eq(actual, expected, msg)
@@ -392,6 +393,71 @@ describe("item_use_settlement_pins", function()
     _assert_eq(_count_item(user, item_ids.monster), 0, "demolish should consume exactly one card")
     _assert_eq(probes.item_card_popups, 1, "demolish resolve should broadcast exactly once")
     _assert_eq(probes.item_used_events, 1, "demolish resolve should report telemetry exactly once")
+  end)
+
+  -- 类别:escrow 已入账 · 拒绝路径仍如实上报消耗(不退卡、不广播)
+  it("escrowed rejection still reports the card as consumed", function()
+    local g = _new_game()
+    local user = g.players[1]
+    local probes = _install_probes(g)
+
+    local settled = settlement.execute(g, user, item_ids.mine, function()
+      return { ok = false, reason = "blocked" }
+    end, { fallback_reason = "fallback", context_preconsumed = true })
+
+    _assert_eq(settled.ok, false, "escrowed failure should reject")
+    _assert_eq(settled.reason, "blocked", "effect reason passes through")
+    _assert_eq(settled.item_consumed, true, "escrowed failure should stay consumed")
+    _assert_eq(_count_item(user, item_ids.mine), 0, "effect rejection must not refund the escrowed card")
+    _assert_eq(probes.item_card_popups, 0, "rejection must not broadcast")
+    _assert_eq(probes.item_used_events, 0, "rejection must not report telemetry")
+  end)
+
+  -- 类别:escrow 托管/退还 · settlement.escrow → settlement.abandon 直穿
+  it("abandon refunds the escrowed card exactly once", function()
+    local g = _new_game()
+    local user = g.players[1]
+    user.inventory:add({ id = item_ids.mine })
+
+    local choice = support.open_choice(g, settlement.escrow(user, item_ids.mine, {
+      kind = "item_target_player",
+      options = { { id = g.players[2].id } },
+    }))
+    _assert_eq(_count_item(user, item_ids.mine), 0, "escrow must consume the card")
+    _assert_eq(choice.meta.item_preconsumed, true, "escrow must write the public cross-layer boolean")
+    _assert_eq(choice.allow_cancel, false, "escrow must disable cancel")
+
+    _assert_eq(settlement.abandon(g, choice, "test"), true, "first abandon should refund")
+    _assert_eq(_count_item(user, item_ids.mine), 1, "abandon must return the card to the bag")
+    _assert_eq(settlement.abandon(g, choice, "test"), false, "second abandon must be a no-op")
+    _assert_eq(_count_item(user, item_ids.mine), 1, "idempotent abandon must not duplicate the card")
+  end)
+
+  it("abandon honors the legacy preconsume boolean and flips it after refund", function()
+    local g = _new_game()
+    local user = g.players[1]
+    local choice = {
+      meta = { item_preconsumed = true, item_id = item_ids.mine, player_id = user.id },
+    }
+
+    _assert_eq(settlement.abandon(g, choice, "test"), true, "legacy boolean escrow should refund")
+    _assert_eq(_count_item(user, item_ids.mine), 1, "legacy refund must return the card")
+    _assert_eq(choice.meta.item_preconsumed, false, "refund must flip the legacy boolean")
+    _assert_eq(settlement.abandon(g, choice, "test"), false, "flipped boolean must block a second refund")
+  end)
+
+  it("abandon rejects unrefundable shapes without crashing", function()
+    local g = _new_game()
+    local user = g.players[1]
+
+    _assert_eq(settlement.abandon(g, nil, "test"), false, "nil choice is not refundable")
+    _assert_eq(settlement.abandon(g, { meta = {} }, "test"), false, "choice without escrow is not refundable")
+    _assert_eq(settlement.abandon(g, {
+      meta = { item_preconsumed = true },
+    }, "test"), false, "escrow without item id is not refundable")
+    _assert_eq(settlement.abandon(nil, {
+      meta = { item_preconsumed = true, item_id = item_ids.mine, player_id = user.id },
+    }, "test"), false, "unresolvable actor is not refundable")
   end)
 
   -- 类别:预消耗(非重复阶段) · 路径:真实 item_phase_choice handler → followup resolve
