@@ -176,7 +176,6 @@ function M.open_pre_confirm_screen(state, choice, option_id, title, body)
 end
 
 _screen_openers.player = _open_player_or_remote_screen
-_screen_openers.remote = _open_player_or_remote_screen
 _screen_openers.secondary_confirm = M.open_secondary_confirm_screen
 
 M.open_screen = _open_screen

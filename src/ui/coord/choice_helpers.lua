@@ -9,7 +9,6 @@ local M = {}
 
 local screen_canvases = {
   player = canvas.CANVAS_PLAYER_CHOICE,
-  remote = canvas.CANVAS_REMOTE_CHOICE,
   secondary_confirm = canvas.CANVAS_SECONDARY_CONFIRM,
 }
 
