@@ -2,6 +2,7 @@ local constants = require("src.config.content.constants")
 local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
 local use_broadcast = require("src.rules.items.use_broadcast")
+local coin_settlement = require("src.rules.commerce.coin_settlement")
 local achievement_progress = require("src.rules.ports.achievement_progress")
 local number_utils = require("src.foundation.number")
 
@@ -38,15 +39,18 @@ function tax_rules.execute_pay_tax(game, player_id)
   local fee = math.floor(cash * constants.tax_rate)
   if cash < fee then fee = cash end
 
-  game:deduct_player_cash(player, fee)
+  local settled = coin_settlement.charge(game, player, fee, {
+    reason = player.name .. " 支付税金后破产",
+    defer_bankruptcy = true,
+  })
   achievement_progress.tax_paid(game, player, fee)
   local result = _build_land_event("tax_paid", {
     player = player,
     amount = fee,
     text = player.name .. " 在税务局支付税金 " .. number_utils.format_integer_part(fee),
   })
-  if game:player_cash(player) <= 0 then
-    result.bankrupt_reason = player.name .. " 支付税金后破产"
+  if settled.bankrupt then
+    result.bankrupt_reason = settled.reason
   end
   return result
 end

@@ -1,6 +1,7 @@
 local support = require("spec.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local settlement = require("src.rules.land.settlement")
+local tax_rules = require("src.rules.land.tax_rules")
 local effect_runner = require("src.rules.effects.runner")
 
 local function _new_game()
@@ -188,5 +189,31 @@ describe("rules.land.settlement", function()
 
     assert(result and result.ok == false, "missing actor should be rejected")
     _assert_eq(result.reason, "missing_actor", "missing actor reason should be stable")
+  end)
+
+  it("PIN: pay_tax deducts floor(cash*rate) and defers bankruptcy via bankrupt_reason", function()
+    local game = _new_game()
+    local player = game.players[1]
+    local constants = require("src.config.content.constants")
+    game:set_player_cash(player, 1000)
+
+    local expected_fee = math.floor(1000 * constants.tax_rate)
+    local result = tax_rules.execute_pay_tax(game, player.id)
+
+    assert(game:player_cash(player) == 1000 - expected_fee, "tax deducts floor(cash*rate)")
+    assert(result.event == "tax_paid", "event stays tax_paid")
+    assert(result.bankrupt_reason == nil, "solvent taxpayer has no bankrupt_reason")
+    assert(player.eliminated ~= true, "eliminate is deferred to land_events, not here")
+  end)
+
+  it("PIN: pay_tax at zero cash reports bankrupt_reason but does not eliminate in-place", function()
+    local game = _new_game()
+    local player = game.players[1]
+    game:set_player_cash(player, 0)  -- fee = floor(0*rate) = 0 → cash 仍 0,<= 0 → bankrupt_reason
+
+    local result = tax_rules.execute_pay_tax(game, player.id)
+
+    assert(result.bankrupt_reason == player.name .. " 支付税金后破产", "reason set on non-positive")
+    assert(player.eliminated ~= true, "still deferred; land_events owns the eliminate call")
   end)
 end)
