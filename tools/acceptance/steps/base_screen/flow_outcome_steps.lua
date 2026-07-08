@@ -157,9 +157,18 @@ function flow_outcome_steps.handlers()
     end,
 
     ["该道具未被消耗"] = function(world)
-      local item_name = world.base_screen_target_choice_item_consumed
-      if item_name ~= nil then
-        return nil, "item was consumed: " .. tostring(item_name)
+      local result = world.base_screen_cancel_result
+      local choice = result and result.choice
+      local item_name = choice and choice.meta and choice.meta.item_name
+      if item_name == nil then
+        return nil, "no cancelled item choice to observe"
+      end
+      local action = world.base_screen_cancel_action
+      if action == nil or action.type ~= "choice_cancel" then
+        return nil, "cancel dispatched " .. tostring(action and action.type) .. " instead of choice_cancel"
+      end
+      if context.has_item(world, item_name) < 1 then
+        return nil, "item was consumed: " .. item_name
       end
       return true
     end,
