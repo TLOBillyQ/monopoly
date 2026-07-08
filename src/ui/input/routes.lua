@@ -1,7 +1,6 @@
 local base_intents = require("src.ui.input.route_base")
 local popup_intents = require("src.ui.input.route_popup")
 local item_slot_intents = require("src.ui.input.route_item_slots")
-local player_choice_intents = require("src.ui.input.route_player_choice")
 local market_intents = require("src.ui.input.route_market")
 local skin_panel_intents = require("src.ui.input.route_skin_panel")
 local item_atlas_intents = require("src.ui.input.route_item_atlas")
@@ -14,7 +13,6 @@ local canvas_builders = {
   base_intents.build,
   popup_intents.build,
   item_slot_intents.build,
-  player_choice_intents.build,
   market_intents.build_items,
   market_intents.build_controls,
   skin_panel_intents.build,

@@ -7,10 +7,7 @@ local ui_controls = require("src.ui.render.support.ui_controls")
 
 local M = {}
 
-local screen_canvases = {
-  player = canvas.CANVAS_PLAYER_CHOICE,
-  secondary_confirm = canvas.CANVAS_SECONDARY_CONFIRM,
-}
+local screen_canvases = {}
 
 function M.resolve_canvas_for_screen(screen_key)
   local from_registry = require("src.ui.screens.registry").canvas_for(screen_key)
