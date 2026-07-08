@@ -1,5 +1,5 @@
 local number_utils = require("src.foundation.number")
-local choice_contract = require("src.config.choice.contract")
+local owner = require("src.turn.choice.owner")
 local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local auto_play_port = require("src.rules.ports.auto_play")
 local optional_action_choice = require("src.turn.optional_action_choice")
@@ -7,17 +7,7 @@ local optional_action_choice = require("src.turn.optional_action_choice")
 local choice_auto_policy = {}
 
 local function _resolve_choice_owner(game, choice)
-  local owner_role_id = choice_contract.resolve_owner_role_id(choice)
-  if owner_role_id ~= nil and game and game.find_player_by_id then
-    local player = game:find_player_by_id(owner_role_id)
-    if player then
-      return player
-    end
-  end
-  if game and game.current_player then
-    return game:current_player()
-  end
-  return nil
+  return owner.resolve_player(game, choice)
 end
 
 local function _pick_first_choice_option(choice)

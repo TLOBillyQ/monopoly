@@ -1,29 +1,13 @@
-local choice_contract = require("src.config.choice.contract")
+local owner = require("src.turn.choice.owner")
 
 local choice_dispatch = {}
 
 function choice_dispatch.resolve_choice_owner_id(game, choice)
-  local owner_role_id = choice_contract.resolve_owner_role_id(choice)
-  if owner_role_id ~= nil and game.find_player_by_id then
-    local player = game:find_player_by_id(owner_role_id)
-    if player then
-      return player.id
-    end
-  end
-  local current = game.turn and game.turn.current_player_index or nil
-  local player = current and game.players and game.players[current] or nil
-  return player and player.id or nil
+  return owner.resolve_role_id(game, choice)
 end
 
 function choice_dispatch.ensure_action_actor_role_id(game, choice, action)
-  if not action or action.actor_role_id ~= nil then
-    return action
-  end
-  local owner_id = choice_dispatch.resolve_choice_owner_id(game, choice)
-  if owner_id ~= nil then
-    action.actor_role_id = owner_id
-  end
-  return action
+  return owner.ensure_actor_role_id(game, choice, action)
 end
 
 function choice_dispatch.dispatch_choice_tick_action(game, state, choice, output_ports, opts, payload)
