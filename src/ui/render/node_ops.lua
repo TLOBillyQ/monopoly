@@ -1,7 +1,6 @@
 local runtime = require("src.ui.render.runtime_ui")
 local debug_nodes = require("src.ui.schema.debug")
 local player_choice_nodes = require("src.ui.schema.player_choice")
-local remote_choice_nodes = require("src.ui.schema.remote_choice")
 local secondary_confirm_nodes = require("src.ui.schema.secondary_confirm")
 local base_contract = require("src.ui.schema.base_contract")
 
@@ -120,13 +119,6 @@ local function build_choice_screens()
     root = player_choice_nodes.canvas,
     title = player_choice_nodes.title,
     option_buttons = player_choice_nodes.slots,
-  }
-  screens.remote = screens.remote or {
-    key = "remote",
-    root = remote_choice_nodes.canvas,
-    title = remote_choice_nodes.title,
-    body = remote_choice_nodes.body,
-    option_buttons = remote_choice_nodes.options,
   }
   screens.secondary_confirm = screens.secondary_confirm or {
     key = "secondary_confirm",

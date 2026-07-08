@@ -26,7 +26,7 @@ local function _ensure_loaded()
   end
   _loaded = true
   require("src.ui.screens.target_choice")
-  -- Task 2 追加：require("src.ui.screens.remote_choice")
+  require("src.ui.screens.remote_choice")
   -- Phase B 追加：player_choice / secondary_confirm
 end
 
