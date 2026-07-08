@@ -5,6 +5,7 @@ local tick_steps = require("src.turn.loop.tick_steps")
 local landing_visual_hold = require("src.state.visual_hold")
 local runtime_state = require("src.state.runtime")
 local wait_callbacks = require("src.turn.waits.callback_registry")
+local blocking = require("src.turn.waits.blocking")
 
 local tick_flow = {}
 local wait_keys = wait_callbacks.wait_keys
@@ -22,7 +23,8 @@ end
 
 local function _maybe_advance_turn(game)
   if not (game.turn and game.advance_turn) then return end
-  if game.turn.phase ~= "wait_landing_visual" then return end
+  local block = blocking.current_block(game)
+  if not (block and block.kind == "landing_visual") then return end
   if not wait_callbacks.is_wait_ready(game, wait_keys.landing_visual) then return end
   game:advance_turn()
 end
