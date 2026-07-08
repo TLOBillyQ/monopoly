@@ -27,7 +27,10 @@ local function _resolve_choice_elapsed(api, state, choice)
   return _elapsed_from_state(state)
 end
 
-local function _try_choice_auto(api, game, state, choice)
+local function _try_choice_auto(api, game, state, choice, precomputed_action)
+  if precomputed_action ~= nil then
+    return precomputed_action
+  end
   local elapsed = _resolve_choice_elapsed(api, state, choice)
   return choice_auto_policy.decide(game, state, choice, {
     mode = "tick_timeout",
@@ -56,8 +59,8 @@ local function _resolve_fallback_choice_action(game, choice, action)
   return fallback_registry.resolve(choice.kind, game, choice)
 end
 
-local function _dispatch_auto_or_fallback(api, game, state, choice)
-  local action = _try_choice_auto(api, game, state, choice)
+local function _dispatch_auto_or_fallback(api, game, state, choice, precomputed_action)
+  local action = _try_choice_auto(api, game, state, choice, precomputed_action)
   if _dispatch_choice_action(game, state, choice, action) then
     return true
   end
@@ -66,12 +69,12 @@ local function _dispatch_auto_or_fallback(api, game, state, choice)
 end
 
 function choice_resolution.install(api)
-  function api.resolve_choice(game, state, choice, reason)
+  function api.resolve_choice(game, state, choice, reason, precomputed_action)
     if type(choice) ~= "table" or choice.id == nil then
       api.force_skip(game, state, choice, reason or "no_choice")
       return
     end
-    if _dispatch_auto_or_fallback(api, game, state, choice) then
+    if _dispatch_auto_or_fallback(api, game, state, choice, precomputed_action) then
       return
     end
     api.force_skip(game, state, choice, reason or "tick_timeout")
@@ -93,12 +96,12 @@ return choice_resolution
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=32a409d487ed4db5
+projectHash=52f5536a06906d50
 scope.0.id=chunk:src/turn/deadlines/choice_resolution.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=93
-scope.0.semanticHash=8e59d1d2e4c02674
+scope.0.endLine=96
+scope.0.semanticHash=005de9811af188e0
 scope.1.id=function:_elapsed_from_entry:11
 scope.1.kind=function
 scope.1.startLine=11
@@ -117,36 +120,36 @@ scope.3.semanticHash=f4eba4c20fe9b175
 scope.4.id=function:_try_choice_auto:30
 scope.4.kind=function
 scope.4.startLine=30
-scope.4.endLine=38
-scope.4.semanticHash=140ba3510ad7c43b
-scope.5.id=function:_dispatch_choice_action:40
+scope.4.endLine=41
+scope.4.semanticHash=4dfcaf6929c878c3
+scope.5.id=function:_dispatch_choice_action:43
 scope.5.kind=function
-scope.5.startLine=40
-scope.5.endLine=50
+scope.5.startLine=43
+scope.5.endLine=53
 scope.5.semanticHash=866d4e2925387edf
-scope.6.id=function:_resolve_fallback_choice_action:52
+scope.6.id=function:_resolve_fallback_choice_action:55
 scope.6.kind=function
-scope.6.startLine=52
-scope.6.endLine=57
+scope.6.startLine=55
+scope.6.endLine=60
 scope.6.semanticHash=332f4831fc54f602
-scope.7.id=function:_dispatch_auto_or_fallback:59
+scope.7.id=function:_dispatch_auto_or_fallback:62
 scope.7.kind=function
-scope.7.startLine=59
-scope.7.endLine=66
-scope.7.semanticHash=29b7dc7ccc242fe2
-scope.8.id=function:api.resolve_choice:69
+scope.7.startLine=62
+scope.7.endLine=69
+scope.7.semanticHash=0d111ea8cbf2d302
+scope.8.id=function:api.resolve_choice:72
 scope.8.kind=function
-scope.8.startLine=69
-scope.8.endLine=78
-scope.8.semanticHash=7826a031963cc6b5
-scope.9.id=function:api.resolve_target_select:80
+scope.8.startLine=72
+scope.8.endLine=81
+scope.8.semanticHash=ba4e0c4255be38c1
+scope.9.id=function:api.resolve_target_select:83
 scope.9.kind=function
-scope.9.startLine=80
-scope.9.endLine=89
+scope.9.startLine=83
+scope.9.endLine=92
 scope.9.semanticHash=11af01bd44d3be0a
-scope.10.id=function:choice_resolution.install:68
+scope.10.id=function:choice_resolution.install:71
 scope.10.kind=function
-scope.10.startLine=68
-scope.10.endLine=90
-scope.10.semanticHash=8c74caa104e3a917
+scope.10.startLine=71
+scope.10.endLine=93
+scope.10.semanticHash=340de687b68011cb
 ]]

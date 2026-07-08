@@ -1,5 +1,5 @@
 local number_utils = require("src.foundation.number")
-local choice_contract = require("src.config.choice.contract")
+local owner = require("src.turn.choice.owner")
 local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local auto_play_port = require("src.rules.ports.auto_play")
 local optional_action_choice = require("src.turn.optional_action_choice")
@@ -7,17 +7,7 @@ local optional_action_choice = require("src.turn.optional_action_choice")
 local choice_auto_policy = {}
 
 local function _resolve_choice_owner(game, choice)
-  local owner_role_id = choice_contract.resolve_owner_role_id(choice)
-  if owner_role_id ~= nil and game and game.find_player_by_id then
-    local player = game:find_player_by_id(owner_role_id)
-    if player then
-      return player
-    end
-  end
-  if game and game.current_player then
-    return game:current_player()
-  end
-  return nil
+  return owner.resolve_player(game, choice)
 end
 
 local function _pick_first_choice_option(choice)
@@ -157,70 +147,70 @@ return choice_auto_policy
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=c3a8a302db63a6b3
+projectHash=7c459f84c80125e2
 scope.0.id=chunk:src/turn/policies/choice_auto.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=157
-scope.0.semanticHash=0daffa807a34ffe5
+scope.0.endLine=147
+scope.0.semanticHash=c1f4bb12303bafb5
 scope.1.id=function:_resolve_choice_owner:9
 scope.1.kind=function
 scope.1.startLine=9
-scope.1.endLine=21
-scope.1.semanticHash=9a64ffe944066964
-scope.2.id=function:_pick_first_choice_option:23
+scope.1.endLine=11
+scope.1.semanticHash=715a61254d098862
+scope.2.id=function:_pick_first_choice_option:13
 scope.2.kind=function
-scope.2.startLine=23
-scope.2.endLine=33
+scope.2.startLine=13
+scope.2.endLine=23
 scope.2.semanticHash=31a4a25726108120
-scope.3.id=function:_build_auto_or_fallback_action:35
+scope.3.id=function:_build_auto_or_fallback_action:25
 scope.3.kind=function
-scope.3.startLine=35
-scope.3.endLine=63
+scope.3.startLine=25
+scope.3.endLine=53
 scope.3.semanticHash=04e15064d27bd973
-scope.4.id=function:_normalize_visible_seconds:65
+scope.4.id=function:_normalize_visible_seconds:55
 scope.4.kind=function
-scope.4.startLine=65
-scope.4.endLine=70
+scope.4.startLine=55
+scope.4.endLine=60
 scope.4.semanticHash=0fb92c54b5fdc015
-scope.5.id=function:_can_auto_actor_choose:72
+scope.5.id=function:_can_auto_actor_choose:62
 scope.5.kind=function
-scope.5.startLine=72
-scope.5.endLine=77
+scope.5.startLine=62
+scope.5.endLine=67
 scope.5.semanticHash=00bdaaaf623adcdf
-scope.6.id=function:_resolve_auto_actor_flag:79
+scope.6.id=function:_resolve_auto_actor_flag:69
 scope.6.kind=function
-scope.6.startLine=79
-scope.6.endLine=86
+scope.6.startLine=69
+scope.6.endLine=76
 scope.6.semanticHash=635cd85c9fad982f
-scope.7.id=function:_dispatch_auto_actor_mode:88
+scope.7.id=function:_dispatch_auto_actor_mode:78
 scope.7.kind=function
-scope.7.startLine=88
-scope.7.endLine=93
+scope.7.startLine=78
+scope.7.endLine=83
 scope.7.semanticHash=e7fadf43d6edee01
-scope.8.id=function:_dispatch_timeout_mode:95
+scope.8.id=function:_dispatch_timeout_mode:85
 scope.8.kind=function
-scope.8.startLine=95
-scope.8.endLine=107
-scope.8.semanticHash=0e908792b7900328
-scope.9.id=function:_dispatch_mode:109
+scope.8.startLine=85
+scope.8.endLine=97
+scope.8.semanticHash=26a7c6db7c334f33
+scope.9.id=function:_dispatch_mode:99
 scope.9.kind=function
-scope.9.startLine=109
-scope.9.endLine=120
+scope.9.startLine=99
+scope.9.endLine=110
 scope.9.semanticHash=3e0a0e8ac4b185cf
-scope.10.id=function:_decide_before_mode:124
+scope.10.id=function:_decide_before_mode:114
 scope.10.kind=function
-scope.10.startLine=124
-scope.10.endLine=132
+scope.10.startLine=114
+scope.10.endLine=122
 scope.10.semanticHash=0fa151e82fd08d0f
-scope.11.id=function:_dispatch_mode_or_fallback:134
+scope.11.id=function:_dispatch_mode_or_fallback:124
 scope.11.kind=function
-scope.11.startLine=134
-scope.11.endLine=140
+scope.11.startLine=124
+scope.11.endLine=130
 scope.11.semanticHash=2ad3cc3614339123
-scope.12.id=function:choice_auto_policy.decide:142
+scope.12.id=function:choice_auto_policy.decide:132
 scope.12.kind=function
-scope.12.startLine=142
-scope.12.endLine=154
+scope.12.startLine=132
+scope.12.endLine=144
 scope.12.semanticHash=1c39283a98db0c31
 ]]
