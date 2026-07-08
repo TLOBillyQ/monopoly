@@ -4,12 +4,9 @@ local runtime_state = require("src.state.runtime")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local choice_ports = require("src.turn.deadlines.choice_ports")
+local choice_scope = require("src.turn.deadlines.choice_scope")
 
 local choice_resolution = {}
-
-local function _choice_timeout_scope(choice)
-  return choice and choice.kind == "market_buy" and "market_buy" or "choice"
-end
 
 local function _elapsed_from_entry(entry)
   return entry and entry.elapsed_seconds or nil
@@ -23,7 +20,7 @@ local function _resolve_choice_elapsed(api, state, choice)
   if type(state) ~= "table" then
     return 0
   end
-  local entry_elapsed = _elapsed_from_entry(api.peek(state, _choice_timeout_scope(choice)))
+  local entry_elapsed = _elapsed_from_entry(api.peek(state, choice_scope.for_choice(choice)))
   if entry_elapsed ~= nil then
     return entry_elapsed
   end
