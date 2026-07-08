@@ -1,6 +1,6 @@
 # 候选 ③ 回合序列 —— phase_res→wait_state 微映射收敛计划
 
-> **For agentic workers / swarm agents:** REQUIRED SUB-SKILL: 用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐 task 执行。步骤用 `- [ ]` 复选框跟踪。**每个 task 由一个 fresh subagent 独立完成，做完过一轮 review 再进下一个。** 按编号顺序执行。
+> **For agentic workers / swarm agents:** REQUIRED SUB-SKILL: 用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 执行。步骤用 `- [ ]` 复选框跟踪。**本计划为并行编排：Task 1 / 2 / 3 三者互不依赖、改三个不同文件，可同时 fan-out 给三个 subagent（各自 worktree 隔离）；Task 4 是 barrier，等三者合并后单独跑。** 见下方「并行执行编排」。
 
 **Goal:** 把「`phase_res` → `wait_action_anim` / `wait_choice` 打包（含 `next_state` / `next_args`）」这段被**复制 4 次**的微映射，收敛到唯一的 `src/turn/phases/phase_wait.lua` `resolve_result`——`roll` / `registry` / `start` 三处内联/重复拷贝降为对它的一行委托。
 
@@ -53,6 +53,35 @@
 - `spec/behavior/turn/roll_spec.lua`（直接钉 `roll._resolve_phase_wait_result` 四断言）
 - `spec/support/scenario_suites/shared/helpers.lua` + `spec/support/scenario_suites/turn_flow/interrupts.lua`（3 个 `_test_resolve_phase_wait_result_*` case）
 - `spec/behavior/scenarios/turn_flow/*`（整圈序列）
+
+---
+
+## 并行执行编排
+
+```
+        ┌─ Task 1  roll.lua      ─┐
+ (fan out) ─┼─ Task 2  registry.lua  ─┼─→  Task 4  barrier
+        └─ Task 3  start.lua     ─┘   (合并后：deletion-test + manifest + 完整门禁 + 验收)
+```
+
+**为何可并行（冲突矩阵）：**
+
+| | 改的文件 | 加的 require | 委托目标 | 消费别的 task 产出? | 改的 manifest |
+|---|---|---|---|---|---|
+| Task 1 | `turn/phases/roll.lua` | `phase_wait` | `resolve_result(…,"move",…)` | 否 | roll.lua 尾 |
+| Task 2 | `turn/phases/registry.lua` | `phase_wait` | `resolve_result(…,"post_action",…)` | 否 | registry.lua 尾 |
+| Task 3 | `turn/phases/start.lua` | `phase_wait` | `resolve_result(…,"roll",…)` | 否 | start.lua 尾 |
+
+- **三个不同源文件，零重叠写**；各自的 mutation manifest 也在各自文件尾，不冲突。
+- 委托目标 `phase_wait.resolve_result` **本计划不改**（既有规范实现），三者都是只读依赖 → 无「共享可变状态」。
+- `registry.lua` 在 module-load 时 `require` `roll`/`start`——这是**既有**依赖，且三处编辑都不改 require 图的形状（只各加一行 `require phase_wait`），故 Task 2 不需要等 Task 1/3。
+
+**swarm 分派方式：**
+1. **同一条消息里 fan-out 三个 subagent**，每个 `isolation: "worktree"`（隔离 git，避免并发 commit 撞 index.lock）。各 subagent 只做自己 Task 的 Step 1–5，在自己 worktree 内 `make verify` 自证 + commit。
+2. 三者全绿后**合并**三个 worktree（不同文件，无文本冲突）。
+3. **再单独跑 Task 4**（barrier）：合并后的树上做 deletion-test 复核、三文件 manifest 刷新、完整门禁 + 验收。manifest 刷新必须在合并后做（Task 4 会同时 `--update-manifest` 三个文件）。
+
+**若不想开 worktree**（顺序更省事）：三 task 面都极小（各一行委托），也可在单一工作树里顺序 1→2→3→4 执行，成本几乎等同——并行的收益主要是「三个 reviewer 并行 gate」而非壁钟时间。
 
 ---
 
@@ -265,11 +294,13 @@ git commit -m "refactor(turn): start pre_action 尾段的 wait 映射委托 phas
 
 ---
 
-## Task 4：deletion-test 复核 + manifest 刷新 + 完整门禁
+## Task 4（barrier —— Task 1/2/3 全部合并后再执行）：deletion-test 复核 + manifest 刷新 + 完整门禁
 
 **Files:**
 - Modify（manifest 刷新）: `src/turn/phases/{roll,registry,start}.lua`
 - 全仓验证
+
+> **前置：Task 1/2/3 三个 worktree 已合并进同一树。** 本 task 不可与前三者并行——manifest 刷新与完整门禁要在「三处委托都在场」的合并态上做。
 
 - [ ] **Step 1：deletion-test 复核（口头）**
 
@@ -347,7 +378,7 @@ Plan complete and saved to `docs/superpowers/plans/2026-07-08-candidate-3-phase-
 本计划 = **候选 ③-安全（微映射收敛，4 拷贝归 1）**，完整可执行、零行为变化。③-大（声明式 phase graph）见上一节，**设计先行**，需 `brainstorming` + `codebase-design` 后另写。
 
 两种执行方式：
-**1. Subagent-Driven（推荐）** — 每 task 一个 fresh subagent，task 间两段 review。3 个收敛 task 线性、面小，适配。
-**2. Inline Execution** — 本 session 用 `executing-plans` 批量执行，带 checkpoint。
+**1. Subagent-Driven 并行（推荐）** — Task 1/2/3 同一条消息 fan-out 三个 worktree-隔离 subagent 并行做，各自 gate + commit；合并后单跑 Task 4 barrier。见「并行执行编排」。
+**2. Inline 顺序** — 本 session 用 `executing-plans`，1→2→3→4 顺序执行（面极小，成本近似）。
 
 选哪个？
