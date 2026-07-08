@@ -12,6 +12,8 @@ local timing = require("src.config.gameplay.timing")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local event_feed = require("src.rules.ports.event_feed")
 
+local phase_wait = require("src.turn.phases.phase_wait")
+
 local turn_phase_registry = {}
 
 local function _resolve_tile_name(game, player)
@@ -26,12 +28,7 @@ local function _resolve_tile_name(game, player)
 end
 
 local function _resolve_post_phase_wait(player, phase_res)
-  local next_state = phase_res.next_state or "post_action"
-  local next_args = phase_res.next_args or { player = player }
-  if phase_res.wait_action_anim then
-    return "wait_action_anim", { next_state = next_state, next_args = next_args }
-  end
-  return "wait_choice", { next_state = next_state, next_args = next_args }
+  return phase_wait.resolve_result(phase_res, "post_action", player)
 end
 
 local function _phase_post(turn_mgr, args)
