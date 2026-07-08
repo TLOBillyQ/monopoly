@@ -27,7 +27,10 @@ local function _resolve_choice_elapsed(api, state, choice)
   return _elapsed_from_state(state)
 end
 
-local function _try_choice_auto(api, game, state, choice)
+local function _try_choice_auto(api, game, state, choice, precomputed_action)
+  if precomputed_action ~= nil then
+    return precomputed_action
+  end
   local elapsed = _resolve_choice_elapsed(api, state, choice)
   return choice_auto_policy.decide(game, state, choice, {
     mode = "tick_timeout",
@@ -56,8 +59,8 @@ local function _resolve_fallback_choice_action(game, choice, action)
   return fallback_registry.resolve(choice.kind, game, choice)
 end
 
-local function _dispatch_auto_or_fallback(api, game, state, choice)
-  local action = _try_choice_auto(api, game, state, choice)
+local function _dispatch_auto_or_fallback(api, game, state, choice, precomputed_action)
+  local action = _try_choice_auto(api, game, state, choice, precomputed_action)
   if _dispatch_choice_action(game, state, choice, action) then
     return true
   end
@@ -66,12 +69,12 @@ local function _dispatch_auto_or_fallback(api, game, state, choice)
 end
 
 function choice_resolution.install(api)
-  function api.resolve_choice(game, state, choice, reason)
+  function api.resolve_choice(game, state, choice, reason, precomputed_action)
     if type(choice) ~= "table" or choice.id == nil then
       api.force_skip(game, state, choice, reason or "no_choice")
       return
     end
-    if _dispatch_auto_or_fallback(api, game, state, choice) then
+    if _dispatch_auto_or_fallback(api, game, state, choice, precomputed_action) then
       return
     end
     api.force_skip(game, state, choice, reason or "tick_timeout")

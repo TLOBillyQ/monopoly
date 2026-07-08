@@ -75,7 +75,7 @@ local function _maybe_resolve_timeout(game, state, active_choice, output_ports, 
     return
   end
   output_ports.set_pending_choice_elapsed(state, 0)
-  deadlines.resolve_choice(game, state, active_choice, "tick_timeout")
+  deadlines.resolve_choice(game, state, active_choice, "tick_timeout", action)
 end
 
 function tick_choice_timeout.step(game, state, dt, opts)
