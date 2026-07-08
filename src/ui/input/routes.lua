@@ -37,10 +37,10 @@ return registry
 
 --[[ mutate4lua-manifest
 version=2
-projectHash=6fd986ec8af95f6a
+projectHash=897a9388d42fe6dc
 scope.0.id=chunk:src/ui/input/routes.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=40
-scope.0.semanticHash=2c0d89b309d33a3f
+scope.0.endLine=37
+scope.0.semanticHash=dc84bbc404825bfc
 ]]

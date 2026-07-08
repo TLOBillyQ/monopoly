@@ -37,3 +37,28 @@ end
 
 registry.register(M)
 return M
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=e4340596edd4077a
+scope.0.id=chunk:src/ui/screens/player_choice.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=40
+scope.0.semanticHash=9a8d38449aa68200
+scope.1.id=function:M.descriptor:12
+scope.1.kind=function
+scope.1.startLine=12
+scope.1.endLine=19
+scope.1.semanticHash=d1027e747a58f48a
+scope.2.id=function:M.open:21
+scope.2.kind=function
+scope.2.startLine=21
+scope.2.endLine=23
+scope.2.semanticHash=b4ea9f35f98cf992
+scope.3.id=function:anonymous@30:30
+scope.3.kind=function
+scope.3.startLine=30
+scope.3.endLine=32
+scope.3.semanticHash=152005556507b71b
+]]
