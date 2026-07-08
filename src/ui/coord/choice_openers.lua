@@ -1,6 +1,5 @@
 local modal_state = require("src.ui.state.modal")
 local common = require("src.ui.coord.choice_helpers")
-local ui_nodes = require("src.ui.render.node_ops")
 local ui_controls = require("src.ui.render.support.ui_controls")
 local logger = require("src.foundation.log")
 local panel_interrupt = require("src.ui.coord.panel_interrupt")
@@ -131,7 +130,7 @@ function M.open_choice_modal(state, choice, market)
     return false
   end
 
-  local open = _screen_openers[screen_key]
+  local open = require("src.ui.screens.registry").opener_for(screen_key) or _screen_openers[screen_key]
   if not open then
     logger.warn("unsupported choice screen key:", tostring(screen_key))
     return false
@@ -148,16 +147,6 @@ local function _open_player_or_remote_screen(state, choice, choice_id, screen_ke
   local allow_cancel = choice.allow_cancel ~= false
   _set_action_button(ui, screen.cancel, allow_cancel, allow_cancel, choice.cancel_label or "取消")
   modal_state.open_choice(state, choice_id, option_ids, selected)
-end
-
-local function _open_target_screen(state, choice, choice_id)
-  local ui, screen = _open_screen(state, "target", choice, choice_id)
-  local option_ids, selected = _fill_option_nodes(ui, screen, _order_target_options(choice), {
-    clear_button_text = true,
-  })
-  _store_target_button_labels(screen, choice)
-  modal_state.open_choice(state, choice_id, option_ids, selected)
-  ui_nodes.sync_target_choice_buttons(state)
 end
 
 function M.open_secondary_confirm_screen(state, choice, choice_id)
@@ -189,7 +178,13 @@ end
 _screen_openers.player = _open_player_or_remote_screen
 _screen_openers.remote = _open_player_or_remote_screen
 _screen_openers.secondary_confirm = M.open_secondary_confirm_screen
-_screen_openers.target = _open_target_screen
+
+M.open_screen = _open_screen
+M.fill_option_nodes = _fill_option_nodes
+M.order_target_options = _order_target_options
+M.store_target_button_labels = _store_target_button_labels
+M.set_action_button = _set_action_button
+M.resolve_player_or_remote_options = _resolve_player_or_remote_options
 
 return M
 
