@@ -66,3 +66,33 @@ function registry.build_route_specs(state)
 end
 
 return registry
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=75b573424ff7d10e
+scope.0.id=chunk:src/ui/screens/registry.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=69
+scope.0.semanticHash=0e5893bd95e5169e
+scope.1.id=function:registry.register:15
+scope.1.kind=function
+scope.1.startLine=15
+scope.1.endLine=20
+scope.1.semanticHash=812ebdf36665085b
+scope.2.id=function:_ensure_loaded:23
+scope.2.kind=function
+scope.2.startLine=23
+scope.2.endLine=32
+scope.2.semanticHash=505d00db98d5db79
+scope.3.id=function:registry.opener_for:43
+scope.3.kind=function
+scope.3.startLine=43
+scope.3.endLine=47
+scope.3.semanticHash=c1ba9c193a95a031
+scope.4.id=function:registry.canvas_for:49
+scope.4.kind=function
+scope.4.startLine=49
+scope.4.endLine=53
+scope.4.semanticHash=d113a39549f6ccae
+]]
