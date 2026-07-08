@@ -430,11 +430,11 @@ describe("item_use_settlement_pins", function()
     _assert_eq(probes.item_used_events, 1, "preconsumed resolve should report telemetry exactly once")
   end)
 
-  -- 潜伏缺陷 #4(本 pin 起草时发现):偷窃卡在 apply 内部无条件自耗(steal.lua:53),
+  -- 潜伏缺陷 #4(本 pin 起草时发现):旧偷窃卡在 apply 内部无条件自耗,
   -- 无视 item_preconsumed 标志——预消耗的偷窃 followup 在 resolve 时二次消耗,
-  -- 命中 inventory.lua 的 missing item 断言直接崩溃。该组合因 live 三个 phase
-  -- 全部 repeatable 而暂不可达;settlement 深化(commit 能力经台账)应使其自然修复。
-  pending("preconsumed steal followup resolves without crashing", function()
+  -- 命中 inventory.lua 的 missing item 断言直接崩溃。settlement 深化后偷窃
+  -- 经台账 commit 自耗(escrow 已入账则空转),此组合自然修复。
+  it("preconsumed steal followup resolves without crashing", function()
     local g = _new_game()
     local user = g.players[1]
     local target = g.players[2]
