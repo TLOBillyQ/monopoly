@@ -14,3 +14,18 @@ function choice_scope.for_choice(choice)
 end
 
 return choice_scope
+
+--[[ mutate4lua-manifest
+version=2
+projectHash=f37981d8b2631e2b
+scope.0.id=chunk:src/turn/deadlines/choice_scope.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=17
+scope.0.semanticHash=a16e0b98569ac95c
+scope.1.id=function:choice_scope.for_choice:9
+scope.1.kind=function
+scope.1.startLine=9
+scope.1.endLine=14
+scope.1.semanticHash=e0a02ba55c7d8fb8
+]]
