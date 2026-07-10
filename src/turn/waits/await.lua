@@ -88,8 +88,10 @@ local function _finish_choice_wait(session, args, game, res)
   if res and res.stay then
     return _WAIT
   end
-  session.choice_elapsed_seconds = 0
   local next_state, next_args = _resolve_after_action_anim(args, res)
+  if next_state ~= "wait_choice" then
+    session.choice_elapsed_seconds = 0
+  end
   if game.turn.action_anim then
     return _wait_for_choice_action_anim(game, next_state, next_args)
   end

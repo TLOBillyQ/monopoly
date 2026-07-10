@@ -1,4 +1,6 @@
 local phase_module = require("src.rules.items.phase")
+local support = require("spec.support.shared_support")
+local item_ids = require("src.config.gameplay.item_ids")
 
 local function _assert_eq(a, b, msg)
   assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
@@ -158,5 +160,47 @@ describe("domain items phase coverage", function()
     local spec = { data = true }
     local result = phase_module.decorate_followup_choice_spec(spec, nil)
     _assert_eq(result, spec, "nil meta should return spec unchanged")
+  end)
+
+  it("finish nil phase clears active phase without error", function()
+    local game = _make_game()
+    game.turn.item_phase_active = "pre_action"
+    phase_module.finish(game, nil)
+    _assert_eq(game.turn.item_phase_active, "", "nil phase should clear active item phase")
+  end)
+
+  it("finish empty phase clears active phase without error", function()
+    local game = _make_game()
+    game.turn.item_phase_active = "pre_action"
+    phase_module.finish(game, "")
+    _assert_eq(game.turn.item_phase_active, "", "empty phase should clear active item phase")
+  end)
+
+  it("resolve_completion nil phase returns resolved without finishing", function()
+    local game = _make_game()
+    game.turn.item_phase_active = "pre_action"
+    local result = phase_module.resolve_completion(game, nil, {}, { after_action_anim = { next_state = "x" } })
+    _assert_eq(result.status, "resolved", "nil phase should resolve")
+    _assert_eq(result.stay, false, "nil phase should not stay")
+    _assert_eq(result.after_action_anim.next_state, "x", "after_action_anim should be preserved")
+    _assert_eq(game.turn.item_phase_active, "pre_action", "nil phase should not finish active phase")
+  end)
+
+  it("resolve_completion forwards choice elapsed seconds on reopen", function()
+    local game = support.new_game()
+    local p = game.players[1]
+    p.inventory:add({ id = item_ids.mine })
+    game.turn.choice_elapsed_seconds = 7
+    local captured = {}
+    game.intent_output_port = {
+      open_choice = function(_, _, opts)
+        captured.opts = opts
+      end,
+    }
+    local meta = { phase = "pre_action", resume_next_state = "roll", resume_next_args = { player = p } }
+    local result = phase_module.resolve_completion(game, p, meta, {})
+    _assert_eq(result.status, "waiting", "reopen should stay waiting")
+    _assert_eq(result.stay, true, "reopen should stay")
+    _assert_eq(captured.opts and captured.opts.elapsed_seconds, 7, "elapsed_seconds should be forwarded from game.turn")
   end)
 end)

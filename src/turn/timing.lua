@@ -111,6 +111,9 @@ local function _build_session(opts)
     self.script = nil
     self._seconds_wait = {}
     self.choice_elapsed_seconds = 0
+    if self.game and self.game.turn then
+      self.game.turn.choice_elapsed_seconds = 0
+    end
     self:clear_pending_action()
   end
 
@@ -269,6 +272,9 @@ local function _apply_tick_to_session(session, signal)
   local next_dt = signal.dt or 0
   if session.wait_state == "wait_choice" then
     session.choice_elapsed_seconds = (session.choice_elapsed_seconds or 0) + next_dt
+    if session.game and session.game.turn then
+      session.game.turn.choice_elapsed_seconds = session.choice_elapsed_seconds
+    end
   end
 end
 

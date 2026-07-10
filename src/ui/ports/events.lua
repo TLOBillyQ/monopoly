@@ -39,7 +39,7 @@ function runtime_event_ports.on_need_choice(state, get_current_game, payload)
   end
   runtime_state.set_pending_choice(state, choice, {
     choice_id = choice.id,
-    elapsed_seconds = 0,
+    elapsed_seconds = payload and payload.elapsed_seconds or 0,
   })
   runtime_state.set_ui_dirty(state, true)
   local current_game = get_current_game()

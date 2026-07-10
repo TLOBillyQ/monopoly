@@ -39,7 +39,7 @@ local function _build_choice_entry(choice_id, choice_spec)
   return entry
 end
 
-function intent_dispatcher.open_choice(game, choice_spec)
+function intent_dispatcher.open_choice(game, choice_spec, opts)
   assert(game and game.turn, "Choice.open requires game.turn")
   assert(choice_spec ~= nil, "missing choice_spec")
   choice_meta_validator.validate(game, choice_spec)
@@ -56,7 +56,12 @@ function intent_dispatcher.open_choice(game, choice_spec)
     text = _build_choice_log_text(entry.title, entry.body_lines),
     tip = false,
   })
-  monopoly_event.emit_intent("need_choice", { choice = entry, choice_spec = choice_spec })
+  local elapsed_seconds = opts and opts.elapsed_seconds or 0
+  monopoly_event.emit_intent("need_choice", {
+    choice = entry,
+    choice_spec = choice_spec,
+    elapsed_seconds = elapsed_seconds,
+  })
   return entry
 end
 

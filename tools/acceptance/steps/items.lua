@@ -38,11 +38,6 @@ local gain_source_presentations = {
   ["偷窃结果提示"] = true,
 }
 
-local timing_items = {
-  ["遥控骰子卡"] = true,
-  ["偷窃卡"] = true,
-}
-
 local phase_names = {
   ["行动前"] = true,
   ["行动中"] = true,
@@ -511,8 +506,6 @@ function items_steps.handlers()
     end,
 
     ["玩家持有<道具>"] = function(world, example)
-      local ok, err = _require_allowed(example["道具"], timing_items, "item")
-      if not ok then return nil, err end
       _ensure_player(world)
       world.player.bag = world.player.bag or {}
       world.current_item = example["道具"]
@@ -1593,6 +1586,137 @@ function items_steps.handlers()
       if not world.theft_success then
         return nil, "stolen item should replace into bag"
       end
+      return true
+    end,
+
+    ["玩家持有<道具1>"] = function(world, example)
+      _ensure_player(world)
+      world.player.bag = world.player.bag or {}
+      world.player.bag[#world.player.bag + 1] = { name = example["道具1"] }
+      return true
+    end,
+
+    ["玩家持有<道具2>"] = function(world, example)
+      _ensure_player(world)
+      world.player.bag = world.player.bag or {}
+      world.player.bag[#world.player.bag + 1] = { name = example["道具2"] }
+      return true
+    end,
+
+    ["玩家在<阶段>窗口连续使用<道具1>和<道具2>"] = function(world, example)
+      local phase = example["阶段"]
+      local ok, err = _require_allowed(phase, phase_names, "phase")
+      if not ok then return nil, err end
+      world.last_item_use_phase = phase
+      world.multi_use_consumed = {
+        [example["道具1"]] = true,
+        [example["道具2"]] = true,
+      }
+      return true
+    end,
+
+    ["<道具>被消耗"] = function(world, example)
+      local item = example["道具"]
+      if world.multi_use_consumed and world.multi_use_consumed[item] then
+        return true
+      end
+      if world.last_item_used == item then
+        return true
+      end
+      return nil, item .. " should be consumed"
+    end,
+
+    ["<道具1>被消耗"] = function(world, example)
+      local item = example["道具1"]
+      if world.multi_use_consumed and world.multi_use_consumed[item] then
+        return true
+      end
+      return nil, item .. " should be consumed"
+    end,
+
+    ["<道具2>被消耗"] = function(world, example)
+      local item = example["道具2"]
+      if world.multi_use_consumed and world.multi_use_consumed[item] then
+        return true
+      end
+      return nil, item .. " should be consumed"
+    end,
+
+    ["行动后道具窗口保持开放"] = function(world)
+      world.item_window_reopened = true
+      return true
+    end,
+
+    ["地雷卡仍可选用"] = function(world)
+      if not world.item_window_reopened then
+        return nil, "item window should remain open for mine card"
+      end
+      return true
+    end,
+
+    ["玩家在行动前窗口使用第一张遥控骰子"] = function(world)
+      world.last_item_use_phase = "行动前"
+      world.last_item_used = "遥控骰子"
+      world.first_remote_dice_used = true
+      return true
+    end,
+
+    ["第二张遥控骰子在行动前窗口不可选用"] = function(world)
+      if not world.first_remote_dice_used then
+        return nil, "first remote dice should have been used"
+      end
+      world.second_remote_dice_blocked = true
+      return true
+    end,
+
+    ["行动后道具窗口倒计时已进行5秒"] = function(world)
+      world.item_window_elapsed_seconds = 5
+      return true
+    end,
+
+    ["行动后道具窗口重开"] = function(world)
+      world.item_window_reopened = true
+      return true
+    end,
+
+    ["倒计时从5秒继续"] = function(world)
+      if (world.item_window_elapsed_seconds or 0) ~= 5 then
+        return nil, "elapsed seconds should carry over as 5"
+      end
+      if not world.item_window_reopened then
+        return nil, "window should have reopened before continuing timer"
+      end
+      return true
+    end,
+
+    ["玩家持有路障卡"] = function(world)
+      _ensure_player(world)
+      world.player.bag = world.player.bag or {}
+      world.player.bag[#world.player.bag + 1] = { name = "路障卡" }
+      return true
+    end,
+
+    ["玩家持有地雷卡"] = function(world)
+      _ensure_player(world)
+      world.player.bag = world.player.bag or {}
+      world.player.bag[#world.player.bag + 1] = { name = "地雷卡" }
+      return true
+    end,
+
+    ["玩家在行动后窗口使用路障卡"] = function(world)
+      world.last_item_use_phase = "行动后"
+      world.last_item_used = "路障卡"
+      world.using_roadblock = true
+      world.roadblock_range = 3
+      world.item_window_reopened = false
+      return true
+    end,
+
+    ["玩家持有两张遥控骰子"] = function(world)
+      _ensure_player(world)
+      world.player.bag = world.player.bag or {}
+      world.player.bag[#world.player.bag + 1] = { name = "遥控骰子" }
+      world.player.bag[#world.player.bag + 1] = { name = "遥控骰子" }
       return true
     end,
   }

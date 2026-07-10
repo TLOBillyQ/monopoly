@@ -34,6 +34,10 @@ local function _resolve_after_action_anim(args, res)
   return chain_args.resolve_after_action_anim(args, res, "move_followup")
 end
 
+local function _result_after_action_anim(result)
+  return type(result) == "table" and result.after_action_anim or nil
+end
+
 function phase_module.is_enabled(phase)
   local queue = timing.item_phase_queue
   assert(type(queue) == "table", "invalid item_phase_queue")
@@ -74,6 +78,10 @@ local function _build_options(game, player, phase)
 end
 
 function phase_module.finish(game, phase)
+  if type(phase) ~= "string" or phase == "" then
+    game.turn.item_phase_active = ""
+    return
+  end
   game.turn.item_phase = game.turn.item_phase or {}
   game.turn.item_phase[phase] = { done = true }
   local active = game.turn.item_phase_active
@@ -134,10 +142,11 @@ function phase_module.decorate_followup_choice_spec(choice_spec, meta)
   return choice_spec
 end
 
-function phase_module.reopen_or_finish(game, player, meta)
+function phase_module.reopen_or_finish(game, player, meta, opts)
   assert(game ~= nil, "missing game")
   assert(player ~= nil, "missing player")
   assert(type(meta) == "table", "missing phase meta")
+  opts = opts or {}
   local spec = phase_module.build_passive_choice_spec(game, player, meta.phase, {
     next_state = meta.resume_next_state,
     next_args = meta.resume_next_args,
@@ -146,9 +155,51 @@ function phase_module.reopen_or_finish(game, player, meta)
     phase_module.finish(game, meta.phase)
     return false
   end
-  intent_output_port.open_choice(game, spec)
+  local open_opts = nil
+  if opts.elapsed_seconds ~= nil then
+    open_opts = { elapsed_seconds = opts.elapsed_seconds }
+  end
+  intent_output_port.open_choice(game, spec, open_opts)
   phase_module.mark_active(game, meta.phase)
   return true
+end
+
+-- Deep-module completion entry: handles repeatable/non-repeatable phases,
+-- reopen-or-finish, action-anim continuation, and elapsed preservation.
+-- Callers no longer branch by phase.
+-- Returns a normalized result: { status = "resolved/waiting", stay = bool, ... }.
+function phase_module.resolve_completion(game, player, meta, result, _opts)
+  result = result or {}
+  local phase = meta and meta.phase
+  local after_action_anim = _result_after_action_anim(result)
+  if type(phase) ~= "string" or phase == "" then
+    return { status = "resolved", stay = false, after_action_anim = after_action_anim }
+  end
+  if not phase_module.is_repeatable(phase) then
+    phase_module.finish(game, phase)
+    return { status = "resolved", stay = false, after_action_anim = after_action_anim }
+  end
+
+  local open_opts = {
+    elapsed_seconds = game.turn.choice_elapsed_seconds or 0,
+  }
+  local reopened = phase_module.reopen_or_finish(game, player, meta, open_opts)
+  if not reopened then
+    return { status = "resolved", stay = false, after_action_anim = after_action_anim }
+  end
+
+  if game.turn.action_anim then
+    return {
+      status = "resolved",
+      stay = false,
+      after_action_anim = {
+        next_state = "wait_choice",
+        next_args = phase_module.build_wait_choice_args(meta),
+      },
+    }
+  end
+
+  return { status = "waiting", stay = true }
 end
 
 
