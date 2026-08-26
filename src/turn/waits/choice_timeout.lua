@@ -95,7 +95,7 @@ return ChoiceTimeout
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=06cb8cc164a7dcc6
+projectHash=4ad8c73525b8c38a
 scope.0.id=chunk:src/turn/waits/choice_timeout.lua
 scope.0.kind=chunk
 scope.0.startLine=1

@@ -160,7 +160,7 @@ return modal_timeout
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=04122340508eeb79
+projectHash=8364b553fcc5a478
 scope.0.id=chunk:src/turn/waits/modal_timeout.lua
 scope.0.kind=chunk
 scope.0.startLine=1
