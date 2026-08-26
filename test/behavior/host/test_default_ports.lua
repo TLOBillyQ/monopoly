@@ -375,7 +375,7 @@ function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_reads_int_arch
   local seen = {}
   local role = {
     get_roleid = function() return 9 end,
-    get_archive_by_type = function(_, archive_type, key)
+    get_archive_by_type = function(archive_type, key)
       seen[#seen + 1] = { archive_type = archive_type, key = key }
       return 42
     end,
@@ -392,7 +392,7 @@ function TestDefaultPortsCustomArchiveAccess:test_set_archive_int_writes_int_arc
   local written = nil
   local role = {
     get_roleid = function() return 9 end,
-    set_archive_by_type = function(_, archive_type, key, value)
+    set_archive_by_type = function(archive_type, key, value)
       written = { archive_type = archive_type, key = key, value = value }
       return true
     end,
