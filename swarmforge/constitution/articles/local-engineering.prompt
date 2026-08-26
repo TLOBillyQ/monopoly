@@ -1,0 +1,17 @@
+# Local Engineering Rules
+
+## Language Tool Table (Lua 5.4)
+- The language table in engineering.prompt does not cover Lua; use this table instead.
+- Mutation: `mutate4lua`; CRAP: `crap4lua`; DRY: `dry4lua`; dependency boundaries: `arch-view`. All ship in this repo and run via `lua tools/cli.lua <mutate|crap|dry|arch-view>`; no separate install step is required.
+- APS tools (`gherkin-parser`, `ir-dry-checker`, `gherkin-mutator`) come from github.com/unclebob/Acceptance-Pipeline-Specification per engineering.prompt (`swarm_tool.sh require/ensure`).
+
+## Verification
+- Coverage: `lua tools/cli.lua verify --coverage`. luacov stats must exist and be fresh before `crap4lua`; CRAP scores without coverage stats are invalid. If coverage cannot run, hand back a blocker instead of inventing numbers.
+- Acceptance suite: `lua tools/cli.lua acceptance` whenever features/ exists; Gherkin soft mutation: `lua tools/cli.lua acceptance-mutate`.
+- Completion floor before every handoff: `lua tools/cli.lua verify` (slim) fully green.
+- Acceptance generation and acceptance tests run sequentially; avoid running the whole-suite spec lane concurrently with acceptance generation.
+
+## Source Conventions
+- snake_case names, CamelCase classes. In src/ never use `tonumber` or `type == "number"`; use NumberUtils (`src.foundation.number`).
+- Eggy `Fixed` parameters take floats (e.g. `30.0`).
+- Every src file ends with an embedded mutate4lua v4 manifest. After deleting or renaming functions, regenerate it with `lua tools/cli.lua mutate <file> --update-manifest`; never hand-edit manifests.

@@ -1,0 +1,32 @@
+# crap4lua Tool Spec
+
+Purpose: combine Lua complexity and coverage gaps into CRAP risk reports.
+
+Reference implementation: `crap4lua` entry in `tools/tools.lock` (v0.1.1).
+Project runner: `lua tools/cli.lua crap` (package runner `tools/packages/crap/runner.lua`; gate wiring lives in `tools/packages/crap/gate.lua` and is driven by the verify lane).
+
+CLI contract:
+- `lua tools/cli.lua crap report [--lane NAME] [--out FILE] [--top N] [--strict-tests] [--project-root DIR]`
+- `lua tools/cli.lua crap collect [--lane NAME] --out FILE [--project-root DIR]`
+- `lua tools/cli.lua crap dry-run [--lane NAME] [--config FILE]`
+- `lua tools/cli.lua crap summary [--in-json FILE] [--tier-config FILE] [--lane NAME] [--out FILE] [--top N] [--gate] [--gate-threshold N]` (`--gate` exits 2 when any tier fails or max CRAP exceeds the threshold, default 5.0)
+- Project config lives under `tools/packages/crap/`.
+- `tools/packages/crap/gate.lua` enforces the committed complexity-aware baseline.
+
+Data contract:
+- Coverage runs under luacov 0.17.0-1 pinned by `tools/tools.lock`; `crap4lua` consumes the standard luacov report (include/exclude single source: `tools/packages/coverage/coverage_config.lua`), and `collect`/`summary` exchange JSON artifacts.
+- Report/collect JSON artifacts are generated outputs and must not be committed unless explicitly requested.
+
+Algorithm requirements:
+- Load project coverage and tier config through public project adapters.
+- Compute complexity, hit executable lines, CRAP score, and tier summaries.
+- Keep CRAP analysis out of normal unit tests except through the project verification lane.
+
+Project workflow:
+- Crap is a soft-lane prioritization reference: ranks functions for refactor/test coverage, never a merge decision by itself.
+- Coverage engine is luacov 0.17.0-1 pinned by `tools/tools.lock`: specs run under `luacov.runner`; crap consumes the standard luacov report. Line coverage only, not branch coverage; `src/**/*.lua` only — `test/`/`tools/`/`vendor/` are never scored.
+- Functions without coverage data are `crap: null` (N/A) and count as violations in gate (#275-③); do not treat them as zero.
+- Only `summary --gate` (or the `verify --full` gate step) blocks merge; standalone risk bands (low 1–5 / moderate 5–30 / high 30+) are sorting colors, not gates.
+- Tier thresholds (source `tools/packages/crap/coverage_tiers.lua`): `core_logic` ≥ 75%, `host_bridge` ≥ 60%, `ui_host_adapter` ≥ 60%, `ui_surface` ≥ 65%. Gate threshold default 5.0; 416 existing violations tracked in #285.
+- `tmp/...` paths are logical aliases for `$TMPDIR/eggy_crap/` (override `EGGY_CRAP_TMP`).
+- Report format: command + lane → top-N functions (path:line + complexity + coverage + crap) → summary tier status → next step (mutate-verify or add specs).

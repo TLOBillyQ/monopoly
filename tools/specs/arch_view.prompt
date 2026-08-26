@@ -1,0 +1,31 @@
+# arch_view Tool Spec
+
+Purpose: static module dependency analysis and architecture viewer export.
+
+Reference implementation: `arch_view` entry in `tools/tools.lock` (v0.1.4).
+Project runner: `lua tools/cli.lua arch-view` (package runner `tools/packages/arch_view/runner.lua`).
+
+CLI contract:
+- `lua tools/cli.lua arch-view check [--project-root <dir>] [--config <file>]`
+- `lua tools/cli.lua arch-view scan --out <file> [--project-root <dir>] [--config <file>] [--pinned-layers]`
+- `lua tools/cli.lua arch-view viewer [--out-dir <dir>] [--project-root <dir>] [--config <file>] [--in-json <file>] [--pinned-layers] [--open]`
+- No arguments default to the project's gate-first check lane.
+
+Data contract:
+- Default project rules live at `tools/packages/arch_view/config.json`.
+- Viewer exports are generated artifacts and must go under `tmp/`, `.arch_view/`, or outside the repo (`lua tools/cli.lua clean` removes `.arch_view/viewer/`).
+
+Algorithm requirements:
+- Scan `src/**/*.lua` module-level `require` dependencies.
+- Classify modules by configured architecture boundaries.
+- Report forbidden dependencies, unclassified modules, and projection cycles.
+- Keep text guards separate; arch_view does not replace guard specs.
+
+Project workflow:
+- `check` is the boundary hard gate (non-zero exit on violations); `viewer`/`scan` are soft-lane diagnostics.
+- Gate semantics are exactly three violation kinds: `forbidden_dependency`, `unclassified_module`, and `projection_cycle` (fail-closed since v0.1.2, #338). Accepted cycles are exempted via `allowed_cycles` in `tools/packages/arch_view/config.json` — one entry per owning view + participant nodes + reason (#333); unwaived cycles fail the check and block `verify`. `test/guards/lib/arch_view_guard.lua` covers the real `analyze(...)` path.
+- Rule source is exclusively `tools/packages/arch_view/config.json`; edit rules there, do not duplicate them elsewhere.
+- Text-level hard boundaries (host globals, `state.ui_*` writes, `ui_port` bypass) belong to `test/guards/`, not arch_view.
+- Viewer reading: red = cycle involvement (label = in/subtree cycle, triangle = feedback-edge direction, bottom list = cycle paths); green = contains abstract contract (ports); edges appear on hover triangles, not as lines.
+- Viewer exports are generated artifacts: write under `tmp/`, `.arch_view/`, or outside the repo; never commit the bundle.
+- Report format: command + mode → check: violation count + cycle count; viewer/scan: export path; failures: offending modules + violation kinds + suggested fix (move / introduce port / change rules).

@@ -1,0 +1,99 @@
+-- 商店购买结算的唯一解释者:一次购买结果 → 一个结构化 verdict { keep_open }。
+-- 承接原 choice 模块购买结果解释的全部判定(经 purchase_result 收敛后
+-- 读 canonical status),但不再接收 choice 层的 finish_choice——收尾与否只由
+-- verdict.keep_open 表达,由 choice_handlers/market adapter 翻成框架的
+-- {stay=true} / finish_choice(game,false)。副作用(rebuild、inventory_full、
+-- intent 分发)全部收敛在此;finish_choice 泄漏就此消失。
+-- 单向依赖 choice(session/feedback 卫星),choice 不 require 本模块,无环。
+--
+-- 本模块**不做 intent 分发**(工单 #133):resolve 的两个调用点
+-- (choice_handlers/market.lua、market/auto.lua)传入的 result 恒为
+-- purchase.execute 的返回值,而它的四种形状(false / {ok=false,reason} /
+-- {ok=true,fulfilled_now} / {ok=true,deferred_fulfillment})**没有一种带 intent 键**。
+-- 真正产 intent 的是 market/effects.lua,但它走 intent dispatcher,不流经本模块。
+local choice = require("src.rules.market.choice")
+local purchase_result = require("src.rules.market.purchase_result")
+
+local session = choice.session
+local feedback = choice.feedback
+
+local purchase_settlement = {}
+
+local function _is_purchase_failure(canonical)
+  return canonical.status == "rejected"
+end
+
+local function _should_keep_market_open(entry, canonical)
+  if canonical.status == "deferred" then
+    return true
+  end
+  return entry and entry.kind == "item" and canonical.status == "fulfilled"
+end
+
+local function _is_full_buy(entry, canonical)
+  return entry and entry.kind == "item"
+    and canonical.status == "fulfilled" and canonical.inventory_full_after == true
+end
+
+local function _handle_keep_open(game, choice_state, player, entry, canonical)
+  local rebuilt = session.rebuild_pending(game, choice_state, player)
+  if not rebuilt then return { keep_open = false } end
+  if _is_full_buy(entry, canonical) then feedback.emit_inventory_full(player, entry) end
+  return { keep_open = true }
+end
+
+local function _try_failure_stay(game, choice_state, player, canonical)
+  if not _is_purchase_failure(canonical) then return false end
+  return not not session.rebuild_pending(game, choice_state, player)
+end
+
+function purchase_settlement.resolve(game, choice_state, player, entry, result)
+  local canonical = purchase_result.canonicalize(result)
+  if _should_keep_market_open(entry, canonical) then
+    return _handle_keep_open(game, choice_state, player, entry, canonical)
+  end
+  if _try_failure_stay(game, choice_state, player, canonical) then return { keep_open = true } end
+  return { keep_open = false }
+end
+
+return purchase_settlement
+
+--[[ mutate4lua-manifest
+version=4
+projectHash=ae44054f6baac690
+scope.0.id=chunk:src/rules/market/purchase_settlement.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=60
+scope.0.semanticHash=ef69e885f0b7af98
+scope.1.id=function:_is_purchase_failure
+scope.1.kind=function
+scope.1.startLine=22
+scope.1.endLine=24
+scope.1.semanticHash=a8b64c56e64509d5
+scope.2.id=function:_should_keep_market_open
+scope.2.kind=function
+scope.2.startLine=26
+scope.2.endLine=31
+scope.2.semanticHash=9ba67c70e65d9d92
+scope.3.id=function:_is_full_buy
+scope.3.kind=function
+scope.3.startLine=33
+scope.3.endLine=36
+scope.3.semanticHash=638bb1aaa0dd6530
+scope.4.id=function:_handle_keep_open
+scope.4.kind=function
+scope.4.startLine=38
+scope.4.endLine=43
+scope.4.semanticHash=4d90ac11f971d3ec
+scope.5.id=function:_try_failure_stay
+scope.5.kind=function
+scope.5.startLine=45
+scope.5.endLine=48
+scope.5.semanticHash=a7b59680911b3de6
+scope.6.id=function:purchase_settlement.resolve
+scope.6.kind=function
+scope.6.startLine=50
+scope.6.endLine=57
+scope.6.semanticHash=8af1a41b35893b09
+]]

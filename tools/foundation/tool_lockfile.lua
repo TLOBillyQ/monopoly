@@ -1,0 +1,89 @@
+local text_lib = require("foundation.text")
+local path_lib = require("foundation.path")
+local fs_lib = require("foundation.fs")
+
+local tool_lockfile = {}
+
+local _TOOL_DEFS = {
+  acceptance4lua = {},
+  arch_view = {},
+  crap4lua = {},
+  dry4lua = {},
+  mutate4lua = {},
+}
+
+local function _split_fields(line)
+  local fields = {}
+  -- 第一个 token 是 name,剩余部分是整个 URL(URL 内部不能有空格)。
+  local name, url = line:match("^(%S+)%s+(%S+)$")
+  if name ~= nil and url ~= nil then
+    fields[1] = name
+    fields[2] = url
+  end
+  return fields
+end
+
+local function _parse_rockspec_version(url)
+  local filename = tostring(url):match("([^/]+)%.rockspec$") or ""
+  local name, version = filename:match("^([%w_]+)-(%d+%.%d+%.%d+-%d+)$")
+  if name == nil or version == nil then
+    return nil
+  end
+  return version
+end
+
+function tool_lockfile.definition(name)
+  return _TOOL_DEFS[name]
+end
+
+function tool_lockfile.parse_contents(content)
+  local tools = {}
+  local ordered = {}
+  local errors = {}
+
+  local line_no = 0
+  for raw_line in (tostring(content or "") .. "\n"):gmatch("(.-)\n") do
+    line_no = line_no + 1
+    local line = text_lib.trim(raw_line:gsub("#.*$", ""))
+    if line ~= "" then
+      local fields = _split_fields(line)
+      local name, url = fields[1], fields[2]
+      if #fields < 2 then
+        errors[#errors + 1] = "line " .. tostring(line_no) .. ": expected <name> <url>"
+      elseif _TOOL_DEFS[name] == nil then
+        errors[#errors + 1] = "line " .. tostring(line_no) .. ": unknown tool " .. tostring(name)
+      elseif tools[name] ~= nil then
+        errors[#errors + 1] = "line " .. tostring(line_no) .. ": duplicate tool " .. tostring(name)
+      elseif tostring(url):match("^https?://") == nil and tostring(url):match("^git%+http") == nil then
+        errors[#errors + 1] = "line " .. tostring(line_no) .. ": invalid url for " .. tostring(name)
+      else
+        tools[name] = {
+          name = name,
+          url = url,
+          version = _parse_rockspec_version(url),
+        }
+        ordered[#ordered + 1] = name
+      end
+    end
+  end
+
+  if #errors > 0 then
+    return nil, table.concat(errors, "\n")
+  end
+  return { tools = tools, ordered = ordered }
+end
+
+function tool_lockfile.lock_path(env)
+  return path_lib.join_path((env or {}).repo_root or ".", "tools/tools.lock")
+end
+
+function tool_lockfile.read_lock(env)
+  local path = tool_lockfile.lock_path(env)
+  local content, err = fs_lib.read_file(path)
+  if content == nil then
+    return nil, err
+  end
+  return tool_lockfile.parse_contents(content)
+end
+
+return tool_lockfile

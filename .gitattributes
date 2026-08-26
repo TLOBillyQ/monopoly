@@ -1,0 +1,2 @@
+# 文本源码统一 LF（#475）：任意平台检出均为 LF，杜绝 CRLF 混入源侧
+* text=auto eol=lf

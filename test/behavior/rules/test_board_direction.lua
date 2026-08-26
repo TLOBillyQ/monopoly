@@ -1,0 +1,343 @@
+local lu = require("luaunit")
+local luax = require("test.support.luax")
+local board = require("src.rules.board.init")
+local direction = require("src.rules.board.direction")
+local _config_reset = require("test.support.config_reset")
+
+-- 原生 LuaUnit 迁移:两个平级 describe 拍平为两个文件级类(各自 before_each →
+-- setUp,共享 _config_reset 提升为文件级),断言切到 lu.assertXxx /
+-- luax.has_error,用例数与改写前一一对应(8 + 27 = 35 例)。
+
+local _pick_any_dir = board._M_test._pick_any_dir
+local _resolve_outer_next = board._M_test._resolve_outer_next
+local _resolve_fresh_forward_next = board._M_test._resolve_fresh_forward_next
+local _resolve_facing_next = board._M_test._resolve_facing_next
+local _resolve_fallback_next = board._M_test._resolve_fallback_next
+local _resolve_backward_from_neighbors = board._M_test._resolve_backward_from_neighbors
+local _resolve_backward_next_source = direction.resolve_backward_next_source
+local function _resolve_backward_next_id(map, current_id, neigh, facing)
+  return _resolve_backward_next_source(map, current_id, neigh, facing).next_id
+end
+
+local opposite = { up = "down", down = "up", left = "right", right = "left" }
+
+local function _assert_eq(a, b, msg)
+  lu.assertEquals(a, b, msg)
+end
+
+TestBoardDirectionCrapCoverage = {}
+
+function TestBoardDirectionCrapCoverage:setUp()
+  _config_reset.reset_all()
+end
+
+function TestBoardDirectionCrapCoverage:test_resolve_fallback_next_unique_forward()
+  local neigh = { up = 1, down = 2 }
+  local facing = "up"
+  local next_id = _resolve_fallback_next(neigh, facing)
+  _assert_eq(opposite[facing], "down", "resolve_fallback opposite check")
+  _assert_eq(next_id, 1, "resolve_fallback unique non-back should return forward id")
+end
+
+function TestBoardDirectionCrapCoverage:test_resolve_fallback_next_multiple_forward_falls_to_pick_any()
+  local neigh = { up = 1, right = 2, down = 3 }
+  local next_id = _resolve_fallback_next(neigh, "up")
+  _assert_eq(next_id, 1, "resolve_fallback multiple non-back should pick up by priority")
+end
+
+function TestBoardDirectionCrapCoverage:test_resolve_fallback_next_last_resort_any_dir()
+  local neigh = { down = 3 }
+  local next_id = _resolve_fallback_next(neigh, "up")
+  _assert_eq(next_id, 3, "resolve_fallback only back dir should return it as last resort")
+end
+
+function TestBoardDirectionCrapCoverage:test_resolve_fallback_next_no_neighbors_returns_nil()
+  local neigh = {}
+  local next_id = _resolve_fallback_next(neigh, "up")
+  _assert_eq(next_id, nil, "resolve_fallback empty neighbors should return nil")
+end
+
+function TestBoardDirectionCrapCoverage:test_resolve_backward_from_neighbors_unique_backward()
+  local neigh = { up = 1, down = 2 }
+  local next_id = _resolve_backward_from_neighbors(neigh, "up")
+  _assert_eq(next_id, 2, "resolve_backward unique non-facing should return down id")
+end
+
+function TestBoardDirectionCrapCoverage:test_resolve_backward_from_neighbors_multiple_non_facing_falls_to_pick_any()
+  local neigh = { up = 1, right = 2, down = 3 }
+  local next_id = _resolve_backward_from_neighbors(neigh, "up")
+  _assert_eq(next_id, 2, "resolve_backward multiple non-facing should pick right by priority")
+end
+
+function TestBoardDirectionCrapCoverage:test_resolve_backward_from_neighbors_only_facing_last_resort()
+  local neigh = { up = 3 }
+  local next_id = _resolve_backward_from_neighbors(neigh, "up")
+  _assert_eq(next_id, 3, "resolve_backward only facing should return it as last resort")
+end
+
+function TestBoardDirectionCrapCoverage:test_resolve_backward_from_neighbors_no_neighbors_returns_nil()
+  local neigh = {}
+  local next_id = _resolve_backward_from_neighbors(neigh, "up")
+  _assert_eq(next_id, nil, "resolve_backward empty neighbors should return nil")
+end
+
+-- Characterization tests for the forward/backward next-id resolver helpers.
+-- These pin the branch order the production movement path depends on; they were
+-- previously duplicated as inlined copies inside movement_spec.
+TestBoardDirectionResolverCharacterization = {}
+
+function TestBoardDirectionResolverCharacterization:setUp()
+  _config_reset.reset_all()
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_outer_next_returns_outer_next_when_no_entry()
+  local map = {
+    outer_next = { [1] = 2 },
+    entry_points = {},
+    outer_prev = {},
+    direction = function() return "up" end,
+  }
+  local result = _resolve_outer_next(map, 1, { parity = "up", entered_inner = false, skip_entry_on_tile_id = nil })
+  _assert_eq(result, 2, "should return outer_next when no entry point")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_outer_next_returns_inner_on_even_parity()
+  local map = {
+    outer_next = { [1] = 2 },
+    entry_points = { [1] = { inner_id = 10 } },
+    outer_prev = { [1] = 99 },
+  }
+  local result, entered_inner = _resolve_outer_next(map, 1, { parity = 2, entered_inner = false, skip_entry_on_tile_id = nil })
+  _assert_eq(result, 10, "should return inner_id on even parity")
+  _assert_eq(entered_inner, true, "should mark inner entry on even parity")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_outer_next_returns_outer_when_inner_entry_is_blocked()
+  local map = {
+    outer_next = { [1] = 2 },
+    entry_points = { [1] = { inner_id = 10 } },
+    outer_prev = { [1] = 99 },
+  }
+  local result, entered_inner = _resolve_outer_next(map, 1, { parity = 2, entered_inner = true, skip_entry_on_tile_id = nil })
+  _assert_eq(result, 2, "should return outer_next when same move already entered inner")
+  _assert_eq(entered_inner, false, "should not mark inner entry when blocked")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_outer_next_returns_nil_when_no_outer_next()
+  local map = {
+    outer_next = {},
+    entry_points = {},
+    outer_prev = {},
+  }
+  local result, entered_inner = _resolve_outer_next(map, 1, { parity = 1, entered_inner = false, skip_entry_on_tile_id = nil })
+  _assert_eq(result, nil, "should return nil when no outer_next")
+  _assert_eq(entered_inner, false, "should not mark inner entry when outer_next is missing")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_fresh_forward_next_returns_fresh_next_when_facing_nil()
+  local map = {
+    fresh_forward_next = { [1] = 5 },
+  }
+  local result = _resolve_fresh_forward_next(map, 1, nil)
+  _assert_eq(result, 5, "should return fresh_forward_next when facing is nil")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_fresh_forward_next_returns_nil_when_facing_not_nil()
+  local map = {
+    fresh_forward_next = { [1] = 5 },
+  }
+  local result = _resolve_fresh_forward_next(map, 1, "up")
+  _assert_eq(result, nil, "should return nil when facing is not nil")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_fresh_forward_next_returns_nil_when_no_fresh_forward_next()
+  local map = {}
+  local result = _resolve_fresh_forward_next(map, 1, nil)
+  _assert_eq(result, nil, "should return nil when no fresh_forward_next")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_facing_next_returns_neighbor_in_facing_direction()
+  local neigh = { up = 10, down = 20, left = 30, right = 40 }
+  local result = _resolve_facing_next(neigh, "up")
+  _assert_eq(result, 10, "should return neighbor in facing direction")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_facing_next_returns_nil_when_no_facing()
+  local neigh = { up = 10 }
+  local result = _resolve_facing_next(neigh, nil)
+  _assert_eq(result, nil, "should return nil when facing is nil")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_facing_next_returns_nil_when_no_neighbor_in_facing()
+  local neigh = { up = 10 }
+  local result = _resolve_facing_next(neigh, "down")
+  _assert_eq(result, nil, "should return nil when no neighbor in facing direction")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_fallback_next_returns_unique_dir_avoiding_back()
+  -- When facing="up", back_dir="down" (opposite)
+  -- neigh has "up" and "down", avoiding "down" leaves only "up"
+  local neigh = { up = 10, down = 20 }
+  local result = _resolve_fallback_next(neigh, "up")
+  _assert_eq(result, 10, "should return unique dir avoiding back direction (down)")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_fallback_next_returns_any_dir_avoiding_back_when_not_unique()
+  -- When facing="up", back_dir="down"
+  -- neigh has up=10, down=20, left=30 - avoiding "down" leaves "up" and "left"
+  -- 多候选时 unique 语义不成立,回落链走 any-dir 优先级取向
+  -- Then _pick_any_dir is called which returns the first sorted dir (left before up)
+  local neigh = { up = 10, down = 20, left = 30 }
+  local result = _resolve_fallback_next(neigh, "up")
+  lu.assertNotIsNil(result, "should return some direction when multiple options")
+  lu.assertNotEquals(result, 20, "should not return back direction (down)")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_fallback_next_returns_any_dir_when_back_nil()
+  local neigh = { up = 10 }
+  local result = _resolve_fallback_next(neigh, nil)
+  _assert_eq(result, 10, "should return any dir when back direction is nil")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_backward_next_returns_facing_reverse_neighbor_when_available()
+  local map = {
+    outer_prev = { [1] = 30 },
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { down = 20, left = 50 }
+  local result = _resolve_backward_next_id(map, 1, neigh, "up")
+  _assert_eq(result, 20, "should prefer the reverse-facing neighbor before all other backward sources")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_backward_next_returns_outer_prev_before_map_fallback()
+  local map = {
+    outer_prev = { [1] = 30 },
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { left = 50 }
+  local result = _resolve_backward_next_id(map, 1, neigh, nil)
+  _assert_eq(result, 30, "should prefer outer_prev before backward_fallback")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_backward_next_returns_backward_fallback_before_neighbor_fallback()
+  local map = {
+    outer_prev = {},
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { left = 50, right = 60 }
+  local result = _resolve_backward_next_id(map, 1, neigh, nil)
+  _assert_eq(result, 40, "should prefer backward_fallback before neighbor fallback")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_backward_next_returns_unique_neighbor_when_only_one_remains()
+  local map = {
+    outer_prev = {},
+    backward_fallback = {},
+  }
+  local neigh = { up = 10, left = 20 }
+  local result = _resolve_backward_next_id(map, 1, neigh, "up")
+  _assert_eq(result, 20, "should return the unique remaining neighbor when one option remains")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_backward_next_returns_sorted_any_neighbor_when_multiple_remain()
+  local map = {
+    outer_prev = {},
+    backward_fallback = {},
+  }
+  local neigh = { up = 10, right = 30, left = 20 }
+  local result = _resolve_backward_next_id(map, 1, neigh, "up")
+  _assert_eq(result, 30, "should fall back to the first sorted non-facing neighbor when multiple options remain")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_backward_next_source_reports_facing_hit()
+  local map = {
+    outer_prev = {},
+    backward_fallback = {},
+  }
+  local neigh = { down = 20, left = 50 }
+  local result = _resolve_backward_next_source(map, 1, neigh, "up")
+  _assert_eq(result.next_id, 20, "result should keep the reverse-facing neighbor")
+  _assert_eq(result.source, "facing_reverse_neighbor", "result should report facing hit as the source")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_backward_next_source_reports_outer_prev_hit()
+  local map = {
+    outer_prev = { [1] = 30 },
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { left = 50 }
+  local result = _resolve_backward_next_source(map, 1, neigh, nil)
+  _assert_eq(result.next_id, 30, "result should keep the outer_prev tile")
+  _assert_eq(result.source, "outer_prev", "result should report outer_prev as the source")
+end
+
+function TestBoardDirectionResolverCharacterization:test_resolve_backward_next_source_reports_backward_fallback_hit()
+  local map = {
+    outer_prev = {},
+    backward_fallback = { [1] = 40 },
+  }
+  local neigh = { left = 50, right = 60 }
+  local result = _resolve_backward_next_source(map, 1, neigh, nil)
+  _assert_eq(result.next_id, 40, "result should keep the backward fallback tile")
+  _assert_eq(result.source, "backward_fallback", "result should report backward_fallback as the source")
+end
+
+function TestBoardDirectionResolverCharacterization:test_pick_any_dir_returns_first_sorted_dir()
+  local neigh = { right = 10, up = 20, down = 30 }
+  local dir, id = _pick_any_dir(neigh, nil)
+  _assert_eq(dir, "up", "should return first sorted dir (up before right before down)")
+  _assert_eq(id, 20, "should return id for that dir")
+end
+
+function TestBoardDirectionResolverCharacterization:test_pick_any_dir_avoids_avoid_dir()
+  local neigh = { up = 10, down = 20 }
+  local dir, id = _pick_any_dir(neigh, "up")
+  _assert_eq(dir, "down", "should avoid the specified dir")
+  _assert_eq(id, 20, "should return id for non-avoided dir")
+end
+
+function TestBoardDirectionResolverCharacterization:test_pick_any_dir_returns_nil_when_all_avoided()
+  local neigh = { up = 10 }
+  local dir, id = _pick_any_dir(neigh, "up")
+  _assert_eq(dir, nil, "should return nil dir when all avoided")
+  _assert_eq(id, nil, "should return nil id when all avoided")
+end
+
+function TestBoardDirectionResolverCharacterization:test_pick_any_dir_asserts_on_nil_neighbors()
+  -- kills _pick_any_dir's "missing neighbors" -> nil.
+  luax.has_error(function()
+    _pick_any_dir(nil, nil)
+  end, "missing neighbors")
+end
+
+function TestBoardDirectionResolverCharacterization:test_named_dirs_always_sort_before_unknown_dirs_regardless_of_name()
+  -- pins that priority membership (not name order) separates known from
+  -- unknown dirs: `down`/`left` must precede an alphabetically-earlier
+  -- unknown dir. kills `dir_order` tail truncation ("down"/"left" -> nil,
+  -- which drops them to the 100 default and flips the tie to name order).
+  local dir1 = _pick_any_dir({ down = 1, aardvark = 2 }, nil)
+  _assert_eq(dir1, "down", "down should precede unknown aardvark despite name order")
+  local dir2 = _pick_any_dir({ left = 1, aardvark = 2 }, nil)
+  _assert_eq(dir2, "left", "left should precede unknown aardvark despite name order")
+end
+
+function TestBoardDirectionResolverCharacterization:test_sorted_dirs_tie_breaks_two_unknown_dirs_by_name()
+  -- pins the comparator's equal-priority branch: two dirs missing from the
+  -- priority table both fall to the 100 default and must order by name.
+  -- kills `pa < pb` -> `pa <= pb` / `pa == pb` -> `pa ~= pb` in
+  -- _sorted_dirs_comparator (both short-circuit the tie-break).
+  local neigh = { portal = 1, warp = 2 }
+  local dir, id = _pick_any_dir(neigh, nil)
+  _assert_eq(dir, "portal", "unknown dirs should order by name (portal before warp)")
+  _assert_eq(id, 1, "should return id for the name-first dir")
+end
+
+
+-- mutate 车道统一返回全部类（#283 多类文件 return 首类假幸存方向）：
+-- 正常车道扫 _G 收全部 Test* 类，但 mutate 内建 runner 只跑 return 的表，
+-- 只 return 首个类会让其余类的用例在变异车道完全不执行。合并全部类，
+-- 每个 test* 方法跑所属类 setUp/tearDown（见 multi_class_return）。
+return require("test.support.multi_class_return").merge(
+  TestBoardDirectionCrapCoverage,
+  TestBoardDirectionResolverCharacterization
+)

@@ -1,0 +1,23 @@
+{
+  "skill_name": "device-debug",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "帮我查一下蛋仔编辑器里 UI 节点「图鉴_关闭图鉴」现在挂在哪个 canvas 下、可见性是什么。编辑器已经开着。把结论写到指定输出目录的 node_report.md。",
+      "expected_output": "editor-cli exec + EditorAPI 查父节点与 visible，汇报区分直接证据与推断",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "试玩我已经开好了，帮我截一张当前画面，把截图拷到指定输出目录，说说截图里能看到什么。",
+      "expected_output": "status 确认 In Game Runtime → take_screenshot → Read 看图 → 拷图汇报；不代跑 stop_game，结束试玩交给用户",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "玩家反馈昨天更新后一进对局就出错，帮我看看日志定位一下。",
+      "expected_output": "跑 analyze_log.ps1 读部署目录 log.txt，按命中文件与相邻调用点追源码，输出 1-3 个关键异常、直接证据与推断分级、最小修复建议",
+      "files": []
+    }
+  ]
+}

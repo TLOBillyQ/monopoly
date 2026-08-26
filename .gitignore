@@ -1,0 +1,77 @@
+# Lua compiled files
+*.luac
+*.mutate4lua
+*.arch_view
+
+# mutate4lua: 外部 store 已退场，manifest 内嵌源码 footer（#283），
+# 保留 cache 忽略以防旧工作树残留。
+.mutate4lua/cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+~$*.docx
+.vscode/
+.idea/
+.VSCodeCounter/
+
+# Temporary files
+/tmp/
+*.tmp
+*.bak
+.venv/
+.opencode
+.sisyphus/
+.omo/
+
+# Claude Code local overrides (may contain MCP tokens)
+.claude/settings.local.json
+
+# Worktrees: .claude/worktrees/ 是 Claude Code 自身的 worktree 本地状态;
+# .worktrees/ 是 swarm 编排（launcher/daemon）持有的独立 git worktree
+# （上游硬编码路径）。两者都是本地生成物,不提交。
+/.claude/worktrees/
+.worktrees/
+
+# Logs
+*.log
+
+# quality tool cache (local state, downloaded tool pins)。
+# 不带斜杠:同时匹配目录形态与隔离 worktree 常用的软链形态(symlink 被 git
+# 视为文件,.toolcache/ 规则不会忽略它,会被 root_whitelist_guard 报违规)。
+.toolcache
+
+# Clojure 侧编辑器/linter 本地缓存(clj-kondo 分析缓存、clojure-lsp 状态),
+# 历史 swarm-test(bb)时代由编辑器索引 .bb 文件生成;纯本地可再生状态。
+.clj-kondo/
+.lsp/
+
+# swarm-forge runtime state: ALL coordination
+# state lives here; no other root-level runtime entries are tolerated — the
+# root whitelist guard catches strays.
+.swarmforge/
+
+# four-pack 原样接入(上游 four-pack 分支):launcher ./swarm 首跑从上游 main
+# 存档拉取 swarmforge/scripts/(含 shared-articles/),纯运行时产物,不版本化。
+# 可提交资产 = four-pack pack 资产(swarmforge.conf/roles/constitution)。
+/swarmforge/scripts/
+
+# Generated acceptance pipeline artifacts: regenerated from
+# features/ at the `lua tools/cli.lua acceptance` entrypoint; not version-controlled.
+/tools/packages/acceptance/generated/
+
+# Test artifacts (junit lane)
+/junit-output.xml
+
+# Generated build outputs (coverage, etc.)
+/build/
+
+# luacov 残留防护:任何链路把 luacov 产物泄进仓根时,guards 的白名单检查会
+# 报违规;gitignore 兜底保证 clean 前不把残留提交进来。
+/luacov.report.out
+/luacov.stats.out

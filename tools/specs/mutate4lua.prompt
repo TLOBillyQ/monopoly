@@ -1,0 +1,42 @@
+# mutate4lua Tool Spec
+
+Purpose: source-level mutation testing for Lua 5.4 files.
+
+Reference implementation: `mutate4lua` entry in `tools/tools.lock` (v0.2.1).
+Project wrapper: `lua tools/cli.lua mutate`.
+
+CLI contract:
+- `lua tools/cli.lua mutate <file.lua> [options]`
+- Subcommands: `(default)` run mutation tests; `--scan` scan mutation sites; `--update-manifest` rewrite the embedded manifest footer.
+- Options: `--mutate-all`, `--since-last-run`, `--lines N,N`, `--reuse-coverage`, `--max-workers N`, `--timeout-factor N`, `--test-command CMD`, `--mutation-warning N`, `--verbose`, `-h/--help`.
+- Run one source file at a time.
+- Default mode is differential mutation against the inlined v4 manifest footer.
+- When worker limits are available, architects use `--max-workers 8`.
+- `--test-command` disables coverage filtering and bypasses the built-in runner; the project treats it as a minefield and does not use it.
+- Interpreter pinning (issue #203): the engine spawns the driver via the literal `lua`; the wrapper resolves the project's Lua 5.4 through `packages.luaunit_runner.lua54` `detect_lua54()` (LUA54_BIN override + candidate list) and re-execs with a shim PATH when the host or PATH `lua` is not 5.4. If no 5.4 is found the lane fails fast before running tests.
+- cluacov: `bootstrap.ensure_cluacov_tree` installs cluacov 1.0.0-1 into `.toolcache/luarocks`; `lua54_guard` injects tree `LUA_PATH` + `LUA_CPATH` so the built-in runner's attribution matrix pass uses luacov's C hook (auto-detected via `require("cluacov.version")`). Missing cluacov is a hard fail at mutate entry (no silent pure-Lua fallback).
+
+Manifest contract:
+- Manifests are inlined v4 footers at the end of the source file (`--[[ mutate4lua-manifest ... ]]`), versioned with the source in the same commit (#283). The external `.mutate4lua/manifest/` store and `lastMutationStatus` state machine are gone; there is no migration command.
+- The footer records `version=4`, `projectHash`, and per-scope identity/semantic hashes. Differential mode skips scopes whose hash matches and mutates changed scopes only.
+- `--update-manifest` rewrites the footer for structural alignment after deleting/renaming functions; it runs no tests and does not write baselines. Agents must not edit footers by hand.
+- Mutated specs run through the upstream built-in luaunit runner; each spec file must `return` a luaunit test table (project-wide #274-① convention).
+- Changing the authoritative implementation in `tools/tools.lock` is a re-baseline event.
+
+Algorithm requirements:
+- Discover Lua mutation sites with a Lua-aware lexer/scanner.
+- Isolate mutation execution from the working tree.
+- Report killed, survived, timed-out/error, and uncovered sites.
+- Preserve stable scope identity and deterministic reports for a fixed implementation.
+
+Project workflow:
+- Mutate is a soft-lane single-file diagnostic: never part of the default regression, never a merge gate.
+- First adoption must use `--mutate-all`; the differential default only proves changed scopes.
+- Survivor disposition is three-way and mutually exclusive:
+  1. real gap — a branch/edge value no spec drives; close it with a spec in `test/<lane>/test_*.lua`;
+  2. equivalent mutant — semantics unchanged (redundant guards, dead branches, duplicated invariants, idempotent writes); delete the redundant source, do not add tests;
+  3. wrong test dimension — the test asserts a quantity the implementation ignores; rewrite the test along the dimension the implementation actually varies.
+- Survivors do NOT close via Gherkin Examples; feature files are not in the mutation corpus.
+- Pinning specs must keep nil and explicit fields verbatim; do not collapse state shape into defaults.
+- Check `git log` on a site before declaring it equivalent.
+- Report format: command + target → killed/survived/timeout/no_sites counts → per-survivor line + mutation type + disposition → next step.

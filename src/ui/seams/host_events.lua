@@ -1,0 +1,18 @@
+local host_slot = require("src.ui.seams.host_slot")
+
+-- 宿主自定义事件 port：注册/注销全局自定义事件。register 装配后透传宿主的
+-- (true, trigger) 双返回值；未装配时返回 false，与宿主缺 LuaAPI 的降级一致。
+return host_slot.new({
+  { name = "register_custom_event", default = false },
+  { name = "unregister_custom_event", default = false },
+})
+
+--[[ mutate4lua-manifest
+version=4
+projectHash=aadea42504192fdd
+scope.0.id=chunk:src/ui/seams/host_events.lua
+scope.0.kind=chunk
+scope.0.startLine=1
+scope.0.endLine=9
+scope.0.semanticHash=df567cff64f25991
+]]

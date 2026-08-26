@@ -1,0 +1,175 @@
+{
+  "abstract_rules": [
+    {
+      "match": [
+        "^src%.foundation%.ports%..+"
+      ],
+      "name": "foundation_ports"
+    },
+    {
+      "match": [
+        "^src%.rules%.ports%..+"
+      ],
+      "name": "rules_ports"
+    }
+  ],
+  "component_rules": [
+    {
+      "component": "app",
+      "layer": 1,
+      "match": [
+        "^src%.entry$",
+        "^src%.entry%..+",
+        "^src%.app$",
+        "^src%.app%..+"
+      ],
+      "name": "app"
+    },
+    {
+      "component": "host",
+      "layer": 2,
+      "match": [
+        "^src%.host$",
+        "^src%.host%..+"
+      ],
+      "name": "host"
+    },
+    {
+      "component": "ui",
+      "layer": 3,
+      "match": [
+        "^src%.ui$",
+        "^src%.ui%..+"
+      ],
+      "name": "ui"
+    },
+    {
+      "component": "turn",
+      "layer": 4,
+      "match": [
+        "^src%.turn$",
+        "^src%.turn%..+"
+      ],
+      "name": "turn"
+    },
+    {
+      "component": "player",
+      "layer": 5,
+      "match": [
+        "^src%.player$",
+        "^src%.player%..+"
+      ],
+      "name": "player"
+    },
+    {
+      "component": "computer",
+      "layer": 5,
+      "match": [
+        "^src%.computer$",
+        "^src%.computer%..+"
+      ],
+      "name": "computer"
+    },
+    {
+      "component": "rules",
+      "layer": 6,
+      "match": [
+        "^src%.rules$",
+        "^src%.rules%..+"
+      ],
+      "name": "rules"
+    },
+    {
+      "component": "state",
+      "layer": 7,
+      "match": [
+        "^src%.state$",
+        "^src%.state%..+"
+      ],
+      "name": "state"
+    },
+    {
+      "component": "config",
+      "layer": 7,
+      "match": [
+        "^src%.config$",
+        "^src%.config%..+"
+      ],
+      "name": "config"
+    },
+    {
+      "component": "foundation",
+      "match": [
+        "^src%.foundation$",
+        "^src%.foundation%..+"
+      ],
+      "name": "foundation",
+      "substrate": true
+    }
+  ],
+  "forbidden_dependency_rules": [
+    {
+      "description": "ui must not depend on player modules directly (downward-skip purity: layer order allows ui(3)->player as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
+      "from": [
+        "^src%.ui%..+"
+      ],
+      "name": "ui_no_player",
+      "to": [
+        "^src%.player%..+"
+      ]
+    },
+    {
+      "description": "ui must not depend on computer modules directly (downward-skip purity: layer order allows ui(3)->computer as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
+      "from": [
+        "^src%.ui%..+"
+      ],
+      "name": "ui_no_computer",
+      "to": [
+        "^src%.computer%..+"
+      ]
+    },
+    {
+      "description": "ui must not depend on rules modules directly (downward-skip purity: layer order allows ui(3)->rules as a legal downward edge, so this ban is NOT covered by the layer gate — retained)",
+      "from": [
+        "^src%.ui%..+"
+      ],
+      "name": "ui_no_rules",
+      "to": [
+        "^src%.rules%..+"
+      ]
+    },
+    {
+      "description": "ui schema must stay pure and only depend on inner modules / shared seams (intra-ui sub-view purity + cross-layer; NOT covered by layer order — retained as an explicit rule)",
+      "from": [
+        "^src%.ui%.schema%..+"
+      ],
+      "name": "ui_schema_pure",
+      "to": [
+        "^src%.ui%.input%..+",
+        "^src%.ui%.coord%..+",
+        "^src%.ui%.view%..+",
+        "^src%.ui%.render%..+",
+        "^src%.ui%.state%..+",
+        "^src%.turn%..+",
+        "^src%.player%..+",
+        "^src%.computer%..+",
+        "^src%.rules%..+",
+        "^src%.host%..+",
+        "^src%.app%..+"
+      ]
+    },
+    {
+      "description": "ui.state owns presentation state and must not depend on ui.coord, which consumes it and drives view/host side effects (intra-ui direction; layer order treats both as ui(3) so this is NOT covered by the layer gate — retained)",
+      "from": [
+        "^src%.ui%.state%..+"
+      ],
+      "name": "ui_state_no_coord",
+      "to": [
+        "^src%.ui%.coord%..+"
+      ]
+    }
+  ],
+  "source_roots": [
+    "src"
+  ]
+}

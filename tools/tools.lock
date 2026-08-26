@@ -1,0 +1,7 @@
+# 工具经上游 rockspec 硬钉消费，.toolcache/luarocks tree 是唯一装载面。
+# Format: <name> <tagged-rockspec-url>
+acceptance4lua http://lzxsvn:3000/eggy/acceptance4lua/raw/tag/v0.1.1/acceptance4lua-0.1.1-1.rockspec
+arch_view http://lzxsvn:3000/eggy/arch-view/raw/tag/v0.1.4/arch_view-0.1.4-1.rockspec
+crap4lua http://lzxsvn:3000/eggy/crap4lua/raw/tag/v0.1.1/crap4lua-0.1.1-1.rockspec
+dry4lua http://lzxsvn:3000/eggy/dry4lua/raw/tag/v0.1.1/dry4lua-0.1.1-1.rockspec
+mutate4lua http://lzxsvn:3000/eggy/mutate4lua/raw/tag/v0.2.1/mutate4lua-0.2.1-1.rockspec

@@ -1,0 +1,404 @@
+local lu = require("luaunit")
+local support = require("test.support.shared_support")
+local _new_game = support.new_game
+local camera_policy = require("src.turn.policies.camera")
+
+-- 原生 LuaUnit 迁移:describe("movement_camera") 拍平为文件级 TestCameraPolicy 类,
+-- 函数表用例经方法体原样调用,用例数与改写前一一对应(21 例)。
+
+local _resolve_follow_player_id_tests = {
+  function()
+    local game = _new_game()
+    local result = camera_policy._resolve_follow_player_id(game)
+    local p1 = game.players[1]
+    lu.assertEvalToTrue(result == p1.id, "should return current player id when not eliminated")
+  end,
+  function()
+    local game = _new_game()
+    game.players[1].eliminated = true
+    local result = camera_policy._resolve_follow_player_id(game)
+    local p2 = game.players[2]
+    lu.assertEvalToTrue(result == p2.id, "should return next non-eliminated player")
+  end,
+  function()
+    local game = _new_game()
+    game.turn.current_player_index = nil
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == nil, "should return nil when no current player index")
+  end,
+  function()
+    local game = _new_game()
+    game.players = {}
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == nil, "should return nil when no players")
+  end,
+}
+
+local _resolve_follow_player_id_extended_tests = {
+  function()
+    local game = _new_game()
+    game.players[1].eliminated = true
+    game.players[2].eliminated = true
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == nil, "should return nil when all players eliminated")
+  end,
+  function()
+    local game = _new_game()
+    game.players[1].id = nil
+    local result = camera_policy._resolve_follow_player_id(game)
+    local p2 = game.players[2]
+    lu.assertEvalToTrue(result == p2.id, "should skip player with nil id")
+  end,
+  function()
+    local game = _new_game()
+    game.turn = nil
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == nil, "should return nil when turn is nil")
+  end,
+  function()
+    local game = _new_game()
+    game.players = nil
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == nil, "should return nil when players is nil")
+  end,
+  function()
+    local game = _new_game()
+    game.players = {}
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == nil, "should return nil with empty players")
+  end,
+  function()
+    local game = _new_game()
+    game.players[1].eliminated = true
+    game.turn.current_player_index = 2
+    game.players[2].eliminated = false
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == game.players[2].id, "should return current player when not eliminated")
+  end,
+  function()
+    local game = _new_game()
+    game.turn.current_player_index = 2
+    game.players[2].eliminated = true
+    game.players[1].eliminated = false
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == game.players[1].id, "should wrap around to find non-eliminated player")
+  end,
+  function()
+    local game = _new_game()
+    game.players[1].id = nil
+    game.players[1].eliminated = false
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == game.players[2].id, "should skip player with nil id even if not eliminated")
+  end,
+  function()
+    local game = _new_game()
+    game.turn.current_player_index = 0
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == nil or result ~= nil, "should handle index 0 without error")
+  end,
+  function()
+    local game = _new_game()
+    game.turn.current_player_index = -1
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result ~= nil or result == nil, "should handle negative index")
+  end,
+}
+
+local _resolve_follow_player_id_more_tests = {
+  function()
+    local game = _new_game()
+    for _, p in ipairs(game.players) do
+      p.eliminated = true
+    end
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == nil, "should return nil when all players eliminated")
+  end,
+  function()
+    local game = _new_game()
+    game.players[1].id = nil
+    game.players[2].id = 2
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == 2, "should skip player with nil id")
+  end,
+}
+
+local _resolve_follow_player_id_final_tests = {
+  function()
+    local game = _new_game()
+    game.players[1].eliminated = true
+    game.players[2].eliminated = false
+    game.turn.current_player_index = 1
+
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == 2, "should return next non-eliminated player")
+  end,
+  function()
+    local game = _new_game()
+    for i, p in ipairs(game.players) do
+      p.eliminated = (i ~= 1)
+    end
+    game.turn.current_player_index = 4
+
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == 1, "should handle wrap-around")
+  end,
+  function()
+    local game = _new_game()
+    game.turn.current_player_index = 2
+    game.players[2].eliminated = false
+
+    local result = camera_policy._resolve_follow_player_id(game)
+    lu.assertEvalToTrue(result == 2, "should return current player when valid")
+  end,
+}
+
+TestCameraPolicy = {}
+
+function TestCameraPolicy:test_resolve_follow_player_id_current()
+  _resolve_follow_player_id_tests[1]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_next_non_eliminated()
+  _resolve_follow_player_id_tests[2]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_no_index()
+  _resolve_follow_player_id_tests[3]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_no_players()
+  _resolve_follow_player_id_tests[4]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_multiple_eliminated()
+  _resolve_follow_player_id_extended_tests[1]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_nil_id()
+  _resolve_follow_player_id_more_tests[2]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_nil_turn()
+  _resolve_follow_player_id_extended_tests[3]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_nil_players()
+  _resolve_follow_player_id_extended_tests[4]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_empty_players()
+  _resolve_follow_player_id_extended_tests[5]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_current_not_eliminated()
+  _resolve_follow_player_id_extended_tests[6]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_wrap_around()
+  _resolve_follow_player_id_extended_tests[7]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_skip_nil_id()
+  _resolve_follow_player_id_extended_tests[8]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_index_zero()
+  _resolve_follow_player_id_extended_tests[9]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_negative_index()
+  _resolve_follow_player_id_extended_tests[10]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_id_all_eliminated()
+  _resolve_follow_player_id_more_tests[1]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_next_non_eliminated()
+  _resolve_follow_player_id_final_tests[1]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_wrap_around()
+  _resolve_follow_player_id_final_tests[2]()
+end
+
+function TestCameraPolicy:test_resolve_follow_player_current_valid()
+  _resolve_follow_player_id_final_tests[3]()
+end
+
+function TestCameraPolicy:test_sync_follow_refreshed_without_state_changes_target()
+  local game = _new_game()
+  local followed_id = nil
+  local ports = {
+    ui_sync = {
+      follow_camera = function(state, player_id)
+        lu.assertEvalToTrue(state == nil, "state should be optional when ui was refreshed")
+        followed_id = player_id
+        return true
+      end,
+    },
+  }
+
+  camera_policy.sync_follow(game, nil, ports, true)
+
+  lu.assertEvalToTrue(followed_id == game.players[1].id, "ui_refreshed should allow target change without runtime state")
+end
+
+function TestCameraPolicy:test_sync_follow_unchanged_target_syncs_camera_position()
+  local game = _new_game()
+  local state = {}
+  local follow_calls = 0
+  local synced_state = nil
+  local ports = {
+    ui_sync = {
+      follow_camera = function() follow_calls = follow_calls + 1 return true end,
+      sync_camera_position = function(s) synced_state = s end,
+    },
+  }
+
+  camera_policy.sync_follow(game, state, ports, true)
+  camera_policy.sync_follow(game, state, ports, true)
+
+  lu.assertEvalToTrue(follow_calls == 1, "跟随目标未变时不应重复下发 follow_camera")
+  lu.assertEvalToTrue(synced_state == state, "跟随目标未变时应改为同步相机位置")
+end
+
+function TestCameraPolicy:test_sync_follow_unchanged_target_without_sync_camera_position()
+  local game = _new_game()
+  local state = {}
+  local follow_calls = 0
+  local ports = {
+    ui_sync = {
+      follow_camera = function() follow_calls = follow_calls + 1 return true end,
+    },
+  }
+
+  camera_policy.sync_follow(game, state, ports, true)
+  camera_policy.sync_follow(game, state, ports, true)
+
+  lu.assertEvalToTrue(follow_calls == 1, "宿主未提供 sync_camera_position 时目标未变仍不应重复跟随")
+end
+
+function TestCameraPolicy:test_sync_follow_without_ui_sync_ports_returns_early()
+  local game = _new_game()
+  camera_policy.sync_follow(game, {}, {}, true)
+  camera_policy.sync_follow(game, {}, nil, true)
+  lu.assertEvalToTrue(true, "sync_follow should tolerate missing ui_sync ports")
+end
+
+function TestCameraPolicy:test_sync_follow_without_refresh_keeps_existing_target()
+  local game = _new_game()
+  local follow_calls = 0
+  local ports = {
+    ui_sync = {
+      follow_camera = function()
+        follow_calls = follow_calls + 1
+        return true
+      end,
+    },
+  }
+
+  camera_policy.sync_follow(game, nil, ports, false)
+
+  lu.assertEvalToTrue(follow_calls == 0,
+    "未刷新且无运行时状态时不应切换跟随目标")
+end
+
+function TestCameraPolicy:test_reset_follow_clears_runtime_last_follow_target()
+  -- L126 `state and ensure_turn_runtime(state) or nil` 三连变异(and->or /
+  -- 调用换 nil / or->and)都会让 runtime 上的 last_follow_player_id 清不掉。
+  local runtime_state = require("src.state.runtime")
+  local state = {}
+  local runtime = runtime_state.ensure_turn_runtime(state)
+  runtime.last_follow_player_id = "p1"
+
+  camera_policy.reset_follow(state)
+
+  local after = runtime_state.ensure_turn_runtime(state)
+  lu.assertEvalToTrue(after.last_follow_player_id == nil,
+    "reset_follow must clear the runtime last_follow_player_id")
+end
+
+function TestCameraPolicy:test_resolve_follow_player_single_player_game()
+  -- L25 `count <= 0` 的 0->1:单人局(1 人)不能误判为空局返回 nil。
+  local game = _new_game()
+  game.players = { game.players[1] }
+  game.turn.current_player_index = 1
+  local result = camera_policy._resolve_follow_player_id(game)
+  lu.assertEvalToTrue(result == game.players[1].id,
+    "single-player game must still resolve its own id")
+end
+
+function TestCameraPolicy:test_scan_starts_at_player_after_current()
+  -- L34 `start_index - 1` 的 - -> +:扫描必须从 current 的下一位开始,
+  -- 不能跳到(current+2)位把后面活人优先于 immediate next 选中。
+  local game = _new_game({ players = { "P1", "P2", "P3", "P4" }, ai = {} })
+  game.players[1].eliminated = true -- 当前位淘汰,进入扫描
+  game.players[3].eliminated = true
+  -- players[2] 与 players[4] 都存活:原序应取 immediate next(2),偏移+1 会先看 4
+  game.turn.current_player_index = 1
+  local result = camera_policy._resolve_follow_player_id(game)
+  lu.assertEvalToTrue(result == game.players[2].id,
+    "scan must prefer the immediate next player")
+end
+
+function TestCameraPolicy:test_scan_with_zero_index_starts_from_first_player()
+  -- L33 `for offset = 1, count` 的 1->0:current index=0 时扫描必须从玩家 1 开始,
+  -- 不能从最后一个玩家(offset 0 命中 players[count])开始抢先返回。
+  local game = _new_game({ players = { "P1", "P2", "P3", "P4" }, ai = {} })
+  game.players[2].eliminated = true
+  game.players[3].eliminated = true
+  -- players[1] 与 players[4] 存活:原序从 1 开始返回 1,1->0 会先看 4 返回 4
+  game.turn.current_player_index = 0
+  local result = camera_policy._resolve_follow_player_id(game)
+  lu.assertEvalToTrue(result == game.players[1].id,
+    "zero index must scan from player 1")
+end
+
+function TestCameraPolicy:test_scan_with_negative_index_wraps_from_end()
+  -- L34 `+ 1` 的 1->0:negative index 下取模回绕仍须从(原序)尾端开始扫描。
+  local game = _new_game({ players = { "P1", "P2", "P3", "P4" }, ai = {} })
+  game.players[1].eliminated = true
+  -- players[2]/players[3]/players[4] 存活:原序(-1)从 4 开始返回 4,+0 偏移会从 3 开始返回 3
+  game.turn.current_player_index = -1
+  local result = camera_policy._resolve_follow_player_id(game)
+  lu.assertEvalToTrue(result == game.players[4].id,
+    "negative index must wrap to scan from the last player")
+end
+function TestCameraPolicy:test_sync_follow_skips_while_target_pan_active()
+  -- 效果平移(pan)存活期内,即使 last_follow 被 dirty.turn 心跳清掉也不得
+  -- 重放 follow,否则镜头被拽离效果地块(效果结算偶发 jitter)。
+  local game = _new_game()
+  local state = { turn_runtime = { target_pan_active = true } }
+  local follow_calls = 0
+  local ports = {
+    ui_sync = {
+      follow_camera = function() follow_calls = follow_calls + 1 return true end,
+      sync_camera_position = function() end,
+    },
+  }
+
+  camera_policy.sync_follow(game, state, ports, true)
+
+  lu.assertEvalToTrue(follow_calls == 0, "pan 存活期内不得重放 follow_camera")
+end
+
+function TestCameraPolicy:test_sync_follow_resumes_after_target_pan_release()
+  local game = _new_game()
+  local state = { turn_runtime = { target_pan_active = true } }
+  local followed_id = nil
+  local ports = {
+    ui_sync = {
+      follow_camera = function(_, player_id) followed_id = player_id return true end,
+    },
+  }
+
+  camera_policy.sync_follow(game, state, ports, true)
+  state.turn_runtime.target_pan_active = nil
+  camera_policy.sync_follow(game, state, ports, true)
+
+  lu.assertEvalToTrue(followed_id == game.players[1].id, "release 清标志后应恢复跟随")
+end
+
+
+return TestCameraPolicy

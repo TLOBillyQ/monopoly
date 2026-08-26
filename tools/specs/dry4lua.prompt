@@ -1,0 +1,27 @@
+# dry4lua Tool Spec
+
+Purpose: structural duplication detection for Lua source functions.
+
+Reference implementation: `dry4lua` entry in `tools/tools.lock` (v0.1.1).
+Project wrapper: `lua tools/cli.lua dry` (package runner `tools/packages/dry/runner.lua`).
+
+CLI contract:
+- `lua tools/cli.lua dry [options] [file-or-directory ...]`
+- Supports `--threshold N`, `--min-lines N`, `--min-nodes N`, `--limit N`, `--json`, `--text`, and `--help`.
+
+Algorithm requirements:
+- Parse Lua source into an AST.
+- Extract function scopes as normalized sub-trees.
+- Normalize identifiers and literals while retaining structural tokens within each sub-tree.
+- Compute a structural fingerprint for each normalized function sub-tree.
+- Compare fingerprints using Jaccard similarity over normalized sub-tree features and report high-similarity function pairs.
+- Reports are advisory; refactor only when the duplication represents real shared behavior.
+
+Important: upstream dry4lua v0.1.0 has switched from the previous token sliding-window algorithm to AST-normalized sub-tree fingerprints + Jaccard. Any prior manual review conclusions produced by the old token-based pipeline are no longer valid and must be re-reviewed.
+
+Project workflow:
+- Dry is a soft-lane advisory: hits are discussion starting points, never tickets and never gates.
+- Run before extracting a function (`lua tools/cli.lua dry <file-or-dir>`); default threshold 0.82. Sample with `--json` before lowering thresholds; below ~0.7 noise drowns real signals.
+- Known duplication floor: `host_types` vec3/quat-style data classes are deliberately unmanaged — ignore hits there.
+- Structural similarity ≠ semantic duplication.
+- Report format: command + target → hit count + threshold → top clusters worth extracting / ignoring → next step.
