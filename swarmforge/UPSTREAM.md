@@ -18,17 +18,18 @@ docs 叙事白名单。本文件只记录同步进度与下次同步步骤，不
 
 ## 最近一次同步
 
-- 日期：2026-08-26
+- 日期：2026-08-27
 - `four-pack` @ `83f8193` "Do not re-forward an architect merge."（未变动，pack 面无差异）
-- `main` @ `8e83a09` "Add persistent handoff audit tracking."
-- 版本化变更：仅 `handoff-protocol.md` 对齐 main tip —— 新增 Git handoff 两段式
-  审计闸门（首次调用记 `.swarmforge/handoffs/audit_pending/` 并打印
-  `AUDIT_REQUIRED`，原样重提才入队；累计 challenge 计数随 timestamped task ID
-  跨 lane/审批/驳回/重试保留，删除清零），并把 `swarm_handoff.sh` 职责描述
-  改为“校验 + 审计闸门 + 入队”。
-- 共享 3 个 article 与 `close-swarm` 与 main tip 逐字一致，无需改动。
-- 运行时：`swarmforge/scripts/` 已是 main tip（40 项，含审计闸门实现与
-  `shared-articles/`）；`#387` 命中 1 处已落（`swarmforge.bb:498`）。
+- `main` @ `60e9280` "Find completed retry notes and replace colliding completes."
+  （8e83a09..60e9280 共 7 笔：审计目录清理与澄清应答受理、逐文档 Attention
+  评审与被驳回 handoff 转审计重试、get-swarm-forge PATH 稳定化、pack 安装不再
+  覆盖宿主文件与共享 constitution、Playwright dashboard 测试并入 bb test、
+  已完成重试笔记归并与 complete 冲突替换）。
+- 版本化变更：无 —— 共享 3 个 article、`handoff-protocol.md` 与 `close-swarm`
+  与 main tip 逐字一致，本地定制面原样保留。
+- 运行时：`swarmforge/scripts/` 重拉至 main tip（47 项，新增
+  `ready_for_next_guard.bb` 与 `pack_web_test.bb`，15 个既有脚本/dashboard
+  有差异）；`#387` 命中 1 处已落（`swarmforge.bb:500`）。
 
 ## 下次同步步骤
 
