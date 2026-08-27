@@ -238,5 +238,29 @@ TestChoiceModalPresenter["test_open 与 close 都以 true 弄脏 ui"] = function
   _assert_eq(dirty_flags[2], true, "close must dirty the ui with true")
 end
 
+TestChoiceModalPresenter["test_popup 在场关 choice 时,弹窗切换带排除角色回切标记"] = function()
+  -- #604:choice 收屏的弹窗分支必须把「黑市已关」的事实传给 popup 分发,
+  -- 让排除角色(买家)回切基础屏;缺标记时买家被整体跳过,屏滞留。
+  local popup_switch = nil
+  local state = {
+    ui = { choice_active = false, market_active = false, popup_active = true, popup_kind = nil },
+  }
+
+  _with_patches({
+    { target = popup, key = "switch_popup_canvas", value = function(s, kind, target, fallback, opts)
+      popup_switch = { opts = opts }
+    end },
+    { target = choice_common, key = "switch_modal_canvas", value = function() end },
+    { target = modal_state, key = "close_choice", value = function() end },
+    { target = runtime_state, key = "set_ui_dirty", value = function() end },
+  }, function()
+    modal_presenter.close_choice_modal(state)
+  end)
+
+  lu.assertEvalToTrue(popup_switch ~= nil, "closing with an active popup must go through the popup canvas switch")
+  _assert_eq(popup_switch.opts and popup_switch.opts.excluded_return, true,
+    "choice close with live popup must mark excluded_return so the buyer returns to base canvas")
+end
+
 
 return TestChoiceModalPresenter

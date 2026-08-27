@@ -655,5 +655,39 @@ function TestPopupPresenter:test_route_popup_falls_back_to_static_nodes_when_scr
     "without popup_screen the route should fall back to the static dismiss nodes")
 end
 
+function TestPopupPresenter:test_choice_close_returns_excluded_buyer_to_base_canvas()
+  -- #604 黑市收屏滞留回归:买家在广播弹窗存活期关闭黑市,收屏走弹窗分支,
+  -- 排除口径若整体跳过买家,「隐藏黑市屏」事件永远不发,客户端屏滞留到
+  -- 无关 canvas 切换(真机实测 3.1s/7.3s)。此时黑市已随 choice 关闭,
+  -- switch_popup_canvas 带 excluded_return 时必须把买家切回返回 canvas(基础屏),
+  -- 但仍不得切去弹窗屏;旁观者行为不变。
+  local state = _make_state()
+  state.ui.current_action_role_id = 1
+  state.ui.market_active = false
+  state.ui.popup_active = true
+  state.ui.popup_broadcast = true
+  state.ui.popup_exclude_role_id = 1
+
+  local function _has_switch(switches, role_id, target)
+    for _, s in ipairs(switches) do
+      if s.role_id == role_id and s.target == target then
+        return true
+      end
+    end
+    return false
+  end
+
+  local switches = _run_with_role_fanout(_make_roles(2), nil, function()
+    popup.switch_popup_canvas(state, "card", canvas.CANVAS_POPUP, canvas.CANVAS_BASE, { excluded_return = true })
+  end)
+
+  _assert_eq(_has_switch(switches, 1, canvas.CANVAS_BASE), true,
+    "excluded buyer whose market just closed must be switched back to the base canvas")
+  _assert_eq(_has_switch(switches, 1, canvas.CANVAS_POPUP), false,
+    "excluded buyer must still not be switched to the popup canvas")
+  _assert_eq(_has_switch(switches, 2, canvas.CANVAS_POPUP), true,
+    "bystanders still follow the broadcast popup canvas")
+end
+
 
 return TestPopupPresenter

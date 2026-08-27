@@ -79,6 +79,9 @@ end
 
 -- 买家免展示口径(2026-08-25):载荷排除的角色(黑市买家)开屏不切去弹窗、
 -- 收屏也不回切——其 canvas 全程未离开(黑市屏不动),任何切换都是多余抖动。
+-- #604 例外:switch_ctx.excluded_return(choice 收屏路径)下买家黑市已随 choice
+-- 关闭,不能再整体跳过——切回其返回 canvas(面板或基础屏),否则「隐藏黑市屏」
+-- 事件永远不发,客户端屏滞留到无关 canvas 切换。
 local function _is_excluded_role(switch_ctx, ctx, role)
   if switch_ctx.exclude_role_id == nil then
     return false
@@ -87,10 +90,21 @@ local function _is_excluded_role(switch_ctx, ctx, role)
   return role_id ~= nil and role_id_utils.equals(role_id, switch_ctx.exclude_role_id)
 end
 
+local function _return_excluded_role(state, role, ctx)
+  local role_id = _resolve_role_id(ctx, role)
+  if role_id == nil then
+    return
+  end
+  _switch_canvas_for_role(state.ui, role, _resolve_bystander_return_canvas(state, role_id))
+end
+
 local function _resolve_and_switch_for_role(state, role, switch_ctx)
   local current_model = runtime_state.get_ui_model(state)
   local ctx = role_context.resolve(role, current_model, { runtime = runtime })
   if _is_excluded_role(switch_ctx, ctx, role) then
+    if switch_ctx.excluded_return then
+      _return_excluded_role(state, role, ctx)
+    end
     return
   end
   local resolved = _resolve_modal_canvas_for_ctx(ctx, switch_ctx.kind, switch_ctx.target_canvas, switch_ctx.fallback_canvas, switch_ctx.broadcast)
@@ -104,7 +118,7 @@ local function _resolve_and_switch_for_role(state, role, switch_ctx)
   _switch_canvas_for_role(state.ui, role, bystander or resolved)
 end
 
-function renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canvas)
+function renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canvas, opts)
   local ui = state.ui
   local switch_ctx = {
     kind = kind,
@@ -112,6 +126,7 @@ function renderer.switch_popup_canvas(state, kind, target_canvas, fallback_canva
     fallback_canvas = fallback_canvas,
     broadcast = ui and ui.popup_broadcast == true,
     exclude_role_id = ui and ui.popup_exclude_role_id or nil,
+    excluded_return = opts ~= nil and opts.excluded_return == true,
     is_opening = _is_popup_target(target_canvas),
     operator_role_id = modal_state.operator_role_id(state),
   }
@@ -193,12 +208,12 @@ return renderer
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=42b537791a038d41
+projectHash=f2d81a96114652fb
 scope.0.id=chunk:src/ui/coord/popup.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=193
-scope.0.semanticHash=8b910c2d6fae2d47
+scope.0.endLine=208
+scope.0.semanticHash=2c2008e564ad3179
 scope.1.id=function:_is_popup_target
 scope.1.kind=function
 scope.1.startLine=14
@@ -241,57 +256,62 @@ scope.8.endLine=78
 scope.8.semanticHash=0ffbb7fca04cb8ce
 scope.9.id=function:_is_excluded_role
 scope.9.kind=function
-scope.9.startLine=82
-scope.9.endLine=88
+scope.9.startLine=85
+scope.9.endLine=91
 scope.9.semanticHash=1ca4d503685c8f19
-scope.10.id=function:_resolve_and_switch_for_role
+scope.10.id=function:_return_excluded_role
 scope.10.kind=function
-scope.10.startLine=90
-scope.10.endLine=105
-scope.10.semanticHash=8a1e7791bcc98dd8
-scope.11.id=function:renderer.switch_popup_canvas
+scope.10.startLine=93
+scope.10.endLine=99
+scope.10.semanticHash=3b7bb5a632691d73
+scope.11.id=function:_resolve_and_switch_for_role
 scope.11.kind=function
-scope.11.startLine=107
-scope.11.endLine=125
-scope.11.semanticHash=9f149ae138757755
-scope.12.id=function:<anonymous>
+scope.11.startLine=101
+scope.11.endLine=119
+scope.11.semanticHash=afd6f6ca0009a930
+scope.12.id=function:renderer.switch_popup_canvas
 scope.12.kind=function
-scope.12.startLine=119
-scope.12.endLine=123
-scope.12.semanticHash=4a00cfb8dadf7d0f
-scope.13.id=function:<anonymous>#2
+scope.12.startLine=121
+scope.12.endLine=140
+scope.12.semanticHash=08d8a79d812fa214
+scope.13.id=function:<anonymous>
 scope.13.kind=function
-scope.13.startLine=120
-scope.13.endLine=122
-scope.13.semanticHash=4ac65c65acb92f3b
-scope.14.id=function:_render_bankruptcy_popup
+scope.13.startLine=134
+scope.13.endLine=138
+scope.13.semanticHash=4a00cfb8dadf7d0f
+scope.14.id=function:<anonymous>#2
 scope.14.kind=function
-scope.14.startLine=127
-scope.14.endLine=138
-scope.14.semanticHash=d19b7cde2d2800df
-scope.15.id=function:_render_card_popup
+scope.14.startLine=135
+scope.14.endLine=137
+scope.14.semanticHash=4ac65c65acb92f3b
+scope.15.id=function:_render_bankruptcy_popup
 scope.15.kind=function
-scope.15.startLine=139
-scope.15.endLine=148
-scope.15.semanticHash=ba11cbbd37d463f8
-scope.16.id=function:renderer.show_popup
+scope.15.startLine=142
+scope.15.endLine=153
+scope.15.semanticHash=d19b7cde2d2800df
+scope.16.id=function:_render_card_popup
 scope.16.kind=function
-scope.16.startLine=149
-scope.16.endLine=162
-scope.16.semanticHash=609e0103a08d555d
-scope.17.id=function:_hide_bankruptcy_popup
+scope.16.startLine=154
+scope.16.endLine=163
+scope.16.semanticHash=ba11cbbd37d463f8
+scope.17.id=function:renderer.show_popup
 scope.17.kind=function
-scope.17.startLine=165
-scope.17.endLine=172
-scope.17.semanticHash=1345ff882832d47b
-scope.18.id=function:_hide_card_popup
+scope.17.startLine=164
+scope.17.endLine=177
+scope.17.semanticHash=609e0103a08d555d
+scope.18.id=function:_hide_bankruptcy_popup
 scope.18.kind=function
-scope.18.startLine=173
-scope.18.endLine=179
-scope.18.semanticHash=8b8df79e77def259
-scope.19.id=function:_hide_popup
+scope.18.startLine=180
+scope.18.endLine=187
+scope.18.semanticHash=1345ff882832d47b
+scope.19.id=function:_hide_card_popup
 scope.19.kind=function
-scope.19.startLine=180
-scope.19.endLine=188
-scope.19.semanticHash=feb53ffc15c5541f
+scope.19.startLine=188
+scope.19.endLine=194
+scope.19.semanticHash=8b8df79e77def259
+scope.20.id=function:_hide_popup
+scope.20.kind=function
+scope.20.startLine=195
+scope.20.endLine=203
+scope.20.semanticHash=feb53ffc15c5541f
 ]]
