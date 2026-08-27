@@ -39,12 +39,20 @@ local function _check_market(ctx, step)
   }
 end
 
-local function _resolve_step_interrupt(ctx, step)
+-- 出发格与到达格共用的障碍判定:路障先于地雷。
+local function _check_obstacles(ctx)
   if _check_roadblock(ctx.game, ctx.board, ctx.current, ctx.player) then
     ctx.stopped_on_roadblock = true
     return true
   end
   if mine_effect.can_trigger(ctx.game, ctx.player, ctx.current) then
+    return true
+  end
+  return false
+end
+
+local function _resolve_step_interrupt(ctx, step)
+  if _check_obstacles(ctx) then
     return true
   end
   ctx.market_interrupt = _check_market(ctx, step)
@@ -171,7 +179,11 @@ end
 
 function movement.move(game, player, steps, opts)
   local ctx = movement_context.build(game, player, steps, opts)
-  _run_move_steps(ctx)
+  -- 出发格按到达格对待:布雷后才同格的玩家出发也必须触发,否则直接走过。
+  -- 黑市不参与出发判定:恢复流与已购物的落点不能重复开市。
+  if not _check_obstacles(ctx) then
+    _run_move_steps(ctx)
+  end
   _resolve_persisted_facing(ctx)
   local landing_tile = ctx.board:get_tile(ctx.current)
   movement_events.emit_move_completed(ctx, landing_tile)
@@ -188,12 +200,12 @@ return movement
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=d5baaa1f9cea84a2
+projectHash=52554f55e9eb5310
 scope.0.id=chunk:src/rules/movement.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=188
-scope.0.semanticHash=708e266b8867777f
+scope.0.endLine=200
+scope.0.semanticHash=60bf4ef6e98cd204
 scope.1.id=function:_check_roadblock
 scope.1.kind=function
 scope.1.startLine=9
@@ -204,64 +216,69 @@ scope.2.kind=function
 scope.2.startLine=22
 scope.2.endLine=40
 scope.2.semanticHash=e0dd4756c13e46b6
-scope.3.id=function:_resolve_step_interrupt
+scope.3.id=function:_check_obstacles
 scope.3.kind=function
-scope.3.startLine=42
-scope.3.endLine=56
-scope.3.semanticHash=42fc62466cf5e62c
-scope.4.id=function:_outer_next
+scope.3.startLine=43
+scope.3.endLine=52
+scope.3.semanticHash=dbce2d04ca3cb131
+scope.4.id=function:_resolve_step_interrupt
 scope.4.kind=function
-scope.4.startLine=60
-scope.4.endLine=66
-scope.4.semanticHash=c51dfe58adc7d090
-scope.5.id=function:_is_inner_exit_transition
+scope.4.startLine=54
+scope.4.endLine=64
+scope.4.semanticHash=a633b00d70a92932
+scope.5.id=function:_outer_next
 scope.5.kind=function
 scope.5.startLine=68
-scope.5.endLine=77
-scope.5.semanticHash=151db6d131bb9da8
-scope.6.id=function:_sync_inner_transition
+scope.5.endLine=74
+scope.5.semanticHash=c51dfe58adc7d090
+scope.6.id=function:_is_inner_exit_transition
 scope.6.kind=function
-scope.6.startLine=79
-scope.6.endLine=87
-scope.6.semanticHash=cbfbb0c22fb690c9
-scope.7.id=function:_record_passed_step
+scope.6.startLine=76
+scope.6.endLine=85
+scope.6.semanticHash=151db6d131bb9da8
+scope.7.id=function:_sync_inner_transition
 scope.7.kind=function
-scope.7.startLine=89
-scope.7.endLine=93
-scope.7.semanticHash=c9f190f73a2611fa
-scope.8.id=function:_sync_arrival_direction
+scope.7.startLine=87
+scope.7.endLine=95
+scope.7.semanticHash=cbfbb0c22fb690c9
+scope.8.id=function:_record_passed_step
 scope.8.kind=function
-scope.8.startLine=95
-scope.8.endLine=100
-scope.8.semanticHash=9ce22d287c53bed7
-scope.9.id=function:_step_move
+scope.8.startLine=97
+scope.8.endLine=101
+scope.8.semanticHash=c9f190f73a2611fa
+scope.9.id=function:_sync_arrival_direction
 scope.9.kind=function
-scope.9.startLine=102
-scope.9.endLine=124
-scope.9.semanticHash=9c003de9171322c4
-scope.10.id=function:_collect_encountered
+scope.9.startLine=103
+scope.9.endLine=108
+scope.9.semanticHash=9ce22d287c53bed7
+scope.10.id=function:_step_move
 scope.10.kind=function
-scope.10.startLine=128
-scope.10.endLine=136
-scope.10.semanticHash=f09b48add7beb1d1
-scope.11.id=function:_run_move_steps
+scope.10.startLine=110
+scope.10.endLine=132
+scope.10.semanticHash=9c003de9171322c4
+scope.11.id=function:_collect_encountered
 scope.11.kind=function
-scope.11.startLine=138
-scope.11.endLine=147
-scope.11.semanticHash=88a53a90ecc9a387
-scope.12.id=function:_resolve_persisted_facing
+scope.11.startLine=136
+scope.11.endLine=144
+scope.11.semanticHash=f09b48add7beb1d1
+scope.12.id=function:_run_move_steps
 scope.12.kind=function
-scope.12.startLine=149
-scope.12.endLine=153
-scope.12.semanticHash=1c02edfbf6ed6913
-scope.13.id=function:_build_move_result
+scope.12.startLine=146
+scope.12.endLine=155
+scope.12.semanticHash=88a53a90ecc9a387
+scope.13.id=function:_resolve_persisted_facing
 scope.13.kind=function
-scope.13.startLine=155
-scope.13.endLine=168
-scope.13.semanticHash=5903f8c2c65f04e3
-scope.14.id=function:movement.move
+scope.13.startLine=157
+scope.13.endLine=161
+scope.13.semanticHash=1c02edfbf6ed6913
+scope.14.id=function:_build_move_result
 scope.14.kind=function
-scope.14.startLine=172
-scope.14.endLine=185
-scope.14.semanticHash=0aac98677db78371
+scope.14.startLine=163
+scope.14.endLine=176
+scope.14.semanticHash=5903f8c2c65f04e3
+scope.15.id=function:movement.move
+scope.15.kind=function
+scope.15.startLine=180
+scope.15.endLine=197
+scope.15.semanticHash=32a63842006532ff
 ]]

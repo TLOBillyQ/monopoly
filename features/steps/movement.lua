@@ -77,6 +77,7 @@ return dsl.steps({
   ["玩家移动<步数:int>步"] = function(w, a) return _move(w, a["步数"]) end,
   ["玩家移动{步数:int}步"] = function(w, a) return _move(w, a["步数"]) end,
   ["玩家到达格子<目标位置:int>"] = function(w, a) return _at_tile(w, a["目标位置"], "到达格") end,
+  ["玩家到达格子{目标位置:int}"] = function(w, a) return _at_tile(w, a["目标位置"], "到达格") end,
   ["移动路径经过<途经格数:int>个格子"] = function(w, a) return dsl.eq(#((w.last_move_result or {}).visited or {}), a["途经格数"], "途经格数") end,
   ["玩家面朝<面朝方向>"] = function(w, a)
     w.expected_facing = FACING[a["面朝方向"]]
@@ -119,7 +120,10 @@ return dsl.steps({
     return dsl.eq(math.abs(r.steps or 0) - #(r.visited or {}), a["剩余步数"], "剩余步数")
   end,
   ["格子<地雷位置:int>放置了对手的已激活地雷"] = function(w, a) return _opp_mine(w, a["地雷位置"]) end,
+  ["格子{地雷位置:int}放置了对手的已激活地雷"] = function(w, a) return _opp_mine(w, a["地雷位置"]) end,
   ["玩家移动<步数:int>步到达地雷位置"] = function(w, a) _move(w, a["步数"]) return _try_mine(w) end,
+  -- 同格出发场景:移动先被起点格地雷拦停(0 步),再由 try_trigger_mine 代行落地结算的引爆。
+  ["玩家从地雷格出发移动{步数:int}步"] = function(w, a) _move(w, a["步数"]) return _try_mine(w) end,
   ["地雷被触发并清除"] = function(w)
     local ok, msg = _in_hospital(w)
     if not ok then return nil, msg end

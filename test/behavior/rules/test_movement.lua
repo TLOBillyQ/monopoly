@@ -139,6 +139,57 @@ do -- describe("movement")
     _assert_eq(#res.visited, 1, "owner third-turn self-trigger should stop movement on the mine tile")
   end
 
+  function TestMovement:test_cohabitant_mine_stops_departure(self)
+    local g = _new_game()
+    local p = g:current_player()
+    local mine_index = 2
+    g:update_player_position(p, mine_index)
+    g.board:place_mine(mine_index, {
+      owner_id = g.players[2].id,
+      armed = true,
+    })
+
+    local res = movement.move(g, p, 3, { branch_parity = 3, skip_market_check = true })
+
+    _assert_eq(p.position, mine_index, "cohabitant should be stopped before leaving the mine tile")
+    _assert_eq(#res.visited, 0, "departure stopped at the start tile consumes no steps")
+    _assert_eq(g.board:has_mine(mine_index), true, "movement only stops; detonation stays with landing settlement")
+  end
+
+  function TestMovement:test_owner_mine_grace_allows_departure(self)
+    local g = _new_game()
+    local p = g:current_player()
+    local mine_index = 2
+    local placement_turn_started_count = 4
+    g:update_player_position(p, mine_index)
+    g:set_player_status(p, "own_turn_started_count", placement_turn_started_count + 1)
+    g.board:place_mine(mine_index, {
+      owner_id = p.id,
+      armed = true,
+      owner_turn_started_count_at_placement = placement_turn_started_count,
+    })
+
+    local res = movement.move(g, p, 1, { branch_parity = 1, skip_market_check = true })
+
+    _assert_eq(p.position, mine_index + 1, "owner inside the grace window should depart freely")
+    _assert_eq(#res.visited, 1, "grace departure consumes the rolled step")
+    _assert_eq(g.board:has_mine(mine_index), true, "grace departure leaves the mine armed")
+  end
+
+  function TestMovement:test_cohabitant_roadblock_stops_departure(self)
+    local g = _new_game()
+    local p = g:current_player()
+    local roadblock_index = 2
+    g:update_player_position(p, roadblock_index)
+    g.board:place_roadblock(roadblock_index)
+
+    local res = movement.move(g, p, 3, { branch_parity = 3, skip_market_check = true })
+
+    _assert_eq(p.position, roadblock_index, "cohabitant should be stopped before leaving the roadblock tile")
+    _assert_eq(res.stopped_on_roadblock, true, "departure should flag the roadblock stop")
+    _assert_eq(g.board:has_roadblock(roadblock_index), false, "roadblock should clear after the departure stop")
+  end
+
   function TestMovement:test_board_indices_in_range_uses_manhattan_distance(self)
     local g = _new_game()
     local start_idx = g.board:index_of_tile_id(1)
