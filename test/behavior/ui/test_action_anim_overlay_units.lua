@@ -944,7 +944,8 @@ function TestActionAnimOverlayUnits:test_visual_sync_overlay_uses_host_unit_posi
   lu.assertEvalToTrue(#spawn_calls == 1, "visual sync should spawn one mine overlay")
   lu.assertEvalToTrue(spawn_calls[1].kind == "mine", "visual sync should spawn mine overlay")
   lu.assertEvalToTrue(spawn_calls[1].pos.x == 12.0, "visual sync should pass host unit x")
-  lu.assertEvalToTrue(spawn_calls[1].pos.y == 4.0, "visual sync should add overlay y offset")
+  -- #339 真机标定:地雷 sync 生成 y_offset 2.0(缺省 1.0 被地板埋没),tile y=3.0 → 5.0。
+  lu.assertEvalToTrue(spawn_calls[1].pos.y == 5.0, "visual sync should add the calibrated mine y offset")
   lu.assertEvalToTrue(spawn_calls[1].pos.z == 4.0, "visual sync should pass host unit z")
 end
 
