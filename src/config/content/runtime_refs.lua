@@ -139,8 +139,6 @@ refs.board_feedback = {
 }
 
 refs.skins = {
-    ["5001"] = 1073897515,
-    ["5002"] = 1073868867,
     ["5003"] = 1073913977,
     ["5004"] = 1073905737,
     ["5005"] = 1073909878,
@@ -164,10 +162,10 @@ return refs
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=f14a5dba1cd075e7
+projectHash=fc092c3a43417690
 scope.0.id=chunk:src/config/content/runtime_refs.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=164
-scope.0.semanticHash=1e2af052ef755271
+scope.0.endLine=162
+scope.0.semanticHash=56bb3a58d36ed29f
 ]]

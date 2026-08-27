@@ -17,20 +17,18 @@ return {
   ["获得三个连续地块"] = { ids = { 37 }, default_amount = 1 },
   ["被怪兽拆除房屋"] = { ids = { 38 }, default_amount = 1 },
   ["被台风拆除房屋"] = { ids = { 39 }, default_amount = 1 },
-  ["使用小猪佩奇皮肤"] = { ids = { 40 }, default_amount = 1 },
-  ["使用小猪乔治皮肤"] = { ids = { 41 }, default_amount = 1 },
-  ["使用海绵宝宝皮肤"] = { ids = { 42 }, default_amount = 1 },
-  ["使用派大星皮肤"] = { ids = { 43 }, default_amount = 1 },
-  ["使用奶龙皮肤"] = { ids = { 44 }, default_amount = 1 },
-  ["使用水豚嘟嘟皮肤"] = { ids = { 45 }, default_amount = 1 },
+  ["使用海绵宝宝皮肤"] = { ids = { 40 }, default_amount = 1 },
+  ["使用派大星皮肤"] = { ids = { 41 }, default_amount = 1 },
+  ["使用奶龙皮肤"] = { ids = { 42 }, default_amount = 1 },
+  ["使用水豚嘟嘟皮肤"] = { ids = { 43 }, default_amount = 1 },
 }
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=f73b4687fdb6a9fa
+projectHash=39f2de15345b02f7
 scope.0.id=chunk:src/config/content/achievement_progress_events.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=27
-scope.0.semanticHash=f3045c2434c938de
+scope.0.endLine=25
+scope.0.semanticHash=611b3d13e125f61e
 ]]

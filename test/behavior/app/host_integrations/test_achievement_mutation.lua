@@ -1,5 +1,5 @@
 -- Mutation-pinning specs for src/app/host_integrations/achievement.lua.
--- Catalog ids are 1..45 contiguous; progress events include "游戏胜利" -> {1,2,3,4}.
+-- Catalog ids are 1..43 contiguous; progress events include "游戏胜利" -> {1,2,3,4}.
 --
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):三个平级 describe 拍平成三个 Test* 类,
 -- after_each → tearDown,断言从裸 assert 切到 lu.assertEvalToTrue,
@@ -36,33 +36,33 @@ end
 TestAchievementIdsAreContiguous = {}
 
 function TestAchievementIdsAreContiguous:test_returns_false_when_the_range_count_matches_but_an_id_is_missing_l69_false_to_true()
-  -- Catalog holds 45 ids (1..45). Range [2,46] has count 45 == #catalog, so the
-  -- count guard passes and _has_every_id runs: find(46) is nil.
+  -- Catalog holds 43 ids (1..43). Range [2,44] has count 43 == #catalog, so the
+  -- count guard passes and _has_every_id runs: find(44) is nil.
   -- L69 `return false` -> `true` would make the missing id look present.
-  lu.assertEvalToTrue(achievement.ids_are_contiguous(2, 46) == false,
-    "range [2,46] contains missing id 46 and must not be contiguous")
+  lu.assertEvalToTrue(achievement.ids_are_contiguous(2, 44) == false,
+    "range [2,44] contains missing id 44 and must not be contiguous")
 end
 
-function TestAchievementIdsAreContiguous:test_returns_true_for_the_real_contiguous_range_1_45_sanity()
-  lu.assertEvalToTrue(achievement.ids_are_contiguous(1, 45) == true,
+function TestAchievementIdsAreContiguous:test_returns_true_for_the_real_contiguous_range_1_43_sanity()
+  lu.assertEvalToTrue(achievement.ids_are_contiguous(1, 43) == true,
     "the full catalog range must be contiguous")
 end
 
 TestAchievementCategoryCounts = {}
 
 function TestAchievementCategoryCounts:test_counts_entries_per_category_l100()
-  -- Catalog distribution (runtime): 简单=11 普通=6 困难=8 传奇=12 隐藏=8, total 45.
+  -- Catalog distribution (runtime): 简单=11 普通=6 困难=8 传奇=10 隐藏=8, total 43.
   -- L100 `tostring(entry.category or "")` -> nil crashes `counts[nil] = ...`.
   local counts = achievement.category_counts()
   lu.assertEvalToTrue(type(counts) == "table", "category_counts must return a table; got " .. type(counts))
-  lu.assertEvalToTrue(counts["简单"] == 11 and counts["传奇"] == 12,
-    "catalog category distribution is 简单=11 传奇=12; got " .. tostring(counts["简单"]) .. "," .. tostring(counts["传奇"]))
+  lu.assertEvalToTrue(counts["简单"] == 11 and counts["传奇"] == 10,
+    "catalog category distribution is 简单=11 传奇=10; got " .. tostring(counts["简单"]) .. "," .. tostring(counts["传奇"]))
   local total = 0
   for _, count in pairs(counts) do
     total = total + count
   end
-  lu.assertEvalToTrue(total == 45,
-    "category counts must total the catalog size 45; got " .. tostring(total))
+  lu.assertEvalToTrue(total == 43,
+    "category counts must total the catalog size 43; got " .. tostring(total))
 end
 
 TestAchievementSetProgress = {}

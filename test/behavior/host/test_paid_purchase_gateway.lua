@@ -223,7 +223,7 @@ end
 function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_uses_pending_specific_on_purchase()
   local gateway = require("src.host.paid_purchase_gateway")
   local mock_player = { id = 99 }
-  local mock_entry = { product_id = 5001, name = "小猪佩奇" }
+  local mock_entry = { product_id = 5003, name = "海绵宝宝" }
   local game = {
     players = { mock_player },
     find_player_by_id = function()
@@ -238,7 +238,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_uses_pending_sp
   end
   gateway._push_pending(rt, 5, {
     player_id = 99,
-    product_id = 5001,
+    product_id = 5003,
     entry = mock_entry,
     goods_id = "goods_skin_1",
     on_purchase = function(g, p, e, pending)
@@ -246,7 +246,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_uses_pending_sp
       _assert_eq(g, game, "game should match")
       _assert_eq(p, mock_player, "player should match")
       _assert_eq(e, mock_entry, "entry should match")
-      _assert_eq(pending.product_id, 5001, "pending product_id should match")
+      _assert_eq(pending.product_id, 5003, "pending product_id should match")
     end,
   })
 
@@ -649,7 +649,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_missing_or_broken_goods_
         value = game_api,
       },
     }, function()
-      ok, reason = gateway.start(game, player, _entry({ product_id = 5001 }))
+      ok, reason = gateway.start(game, player, _entry({ product_id = 5003 }))
     end)
     return ok, reason
   end

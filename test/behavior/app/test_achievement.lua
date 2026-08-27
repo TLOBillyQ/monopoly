@@ -44,14 +44,14 @@ function TestAchievement:tearDown()
 end
 
 function TestAchievement:test_exposes_the_full_editor_achievement_catalog()
-  _assert_eq(achievement.count(), 45, "achievement count")
-  _assert_eq(achievement.ids_are_contiguous(1, 45), true, "achievement ids should be contiguous")
+  _assert_eq(achievement.count(), 43, "achievement count")
+  _assert_eq(achievement.ids_are_contiguous(1, 43), true, "achievement ids should be contiguous")
 
   local counts = achievement.category_counts()
   _assert_eq(counts["简单"], 11, "simple achievement count")
   _assert_eq(counts["普通"], 6, "normal achievement count")
   _assert_eq(counts["困难"], 8, "hard achievement count")
-  _assert_eq(counts["传奇"], 12, "legend achievement count")
+  _assert_eq(counts["传奇"], 10, "legend achievement count")
   _assert_eq(counts["隐藏"], 8, "hidden achievement count")
 end
 
@@ -65,9 +65,9 @@ function TestAchievement:test_finds_achievements_by_editor_id()
 
   local hidden = achievement.find("40")
   lu.assertEvalToTrue(hidden ~= nil, "achievement 40 should exist")
-  _assert_eq(hidden.name, "小猪佩奇！", "achievement 40 name")
+  _assert_eq(hidden.name, "海绵宝宝！", "achievement 40 name")
   _assert_eq(hidden.category, "传奇", "achievement 40 category")
-  _assert_eq(hidden.condition, "使用小猪佩奇皮肤1次", "achievement 40 condition")
+  _assert_eq(hidden.condition, "使用海绵宝宝皮肤1次", "achievement 40 condition")
   _assert_eq(hidden.target_progress, 1, "achievement 40 target progress")
 
   _assert_eq(achievement.find(0), nil, "unknown achievement should not resolve")
@@ -185,7 +185,7 @@ function TestAchievement:test_advances_single_mapped_gameplay_events_by_one_poin
     end,
   })
 
-  _assert_eq(achievement.record_gameplay_event("使用小猪佩奇皮肤"), true, "skin event should advance achievement")
+  _assert_eq(achievement.record_gameplay_event("使用海绵宝宝皮肤"), true, "skin event should advance achievement")
   _assert_eq(#calls, 1, "skin event should update one achievement")
   _assert_eq(calls[1].id, 40, "skin event achievement id")
   _assert_eq(calls[1].amount, 1, "single event progress delta")
@@ -493,10 +493,10 @@ function TestAchievement:test_maps_runtime_skin_equips_by_configured_skin_name()
   })
   achievement_progress_port.configure(achievement_runtime.build_port())
 
-  _assert_eq(achievement_progress_port.skin_equipped(nil, 7, { name = "小猪佩奇" }), true,
+  _assert_eq(achievement_progress_port.skin_equipped(nil, 7, { name = "海绵宝宝" }), true,
     "skin equip should map by skin name")
   _assert_eq(#calls, 1, "skin equip should update one achievement")
-  _assert_eq(calls[1].id, 40, "peppa skin achievement id")
+  _assert_eq(calls[1].id, 40, "spongebob skin achievement id")
   _assert_eq(calls[1].amount, 1, "skin equip amount")
 end
 

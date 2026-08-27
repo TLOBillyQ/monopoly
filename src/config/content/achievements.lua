@@ -43,20 +43,18 @@ return {
   { id = 37, category = "隐藏", name = "连田阡陌", description = "这条街都是我的！", condition = "获得3个连续的地块。", target_progress = 1 },
   { id = 38, category = "隐藏", name = "哥斯拉？", description = "为什么会有哥斯拉？", condition = "被怪兽拆除1次你的房屋", target_progress = 1 },
   { id = 39, category = "隐藏", name = "风神过境！", description = "全是豆腐渣工程！", condition = "被台风拆除1次你的房屋", target_progress = 1 },
-  { id = 40, category = "传奇", name = "小猪佩奇！", description = "我们不一样", condition = "使用小猪佩奇皮肤1次", target_progress = 1 },
-  { id = 41, category = "传奇", name = "小猪乔治！", description = "我们不一样", condition = "使用小猪乔治皮肤1次", target_progress = 1 },
-  { id = 42, category = "传奇", name = "海绵宝宝！", description = "我们不一样", condition = "使用海绵宝宝皮肤1次", target_progress = 1 },
-  { id = 43, category = "传奇", name = "派大星！", description = "我们不一样", condition = "使用派大星皮肤1次", target_progress = 1 },
-  { id = 44, category = "传奇", name = "奶龙？奶龙！", description = "我们不一样", condition = "使用奶龙皮肤1次", target_progress = 1 },
-  { id = 45, category = "传奇", name = "水豚嘟嘟", description = "我们不一样", condition = "使用水豚嘟嘟皮肤1次", target_progress = 1 },
+  { id = 40, category = "传奇", name = "海绵宝宝！", description = "我们不一样", condition = "使用海绵宝宝皮肤1次", target_progress = 1 },
+  { id = 41, category = "传奇", name = "派大星！", description = "我们不一样", condition = "使用派大星皮肤1次", target_progress = 1 },
+  { id = 42, category = "传奇", name = "奶龙？奶龙！", description = "我们不一样", condition = "使用奶龙皮肤1次", target_progress = 1 },
+  { id = 43, category = "传奇", name = "水豚嘟嘟", description = "我们不一样", condition = "使用水豚嘟嘟皮肤1次", target_progress = 1 },
 }
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=eb0699a78ce2a4a4
+projectHash=99500625de2a735e
 scope.0.id=chunk:src/config/content/achievements.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=53
-scope.0.semanticHash=9fb1f2ee7f4b0679
+scope.0.endLine=51
+scope.0.semanticHash=eb65b7e8094a1195
 ]]

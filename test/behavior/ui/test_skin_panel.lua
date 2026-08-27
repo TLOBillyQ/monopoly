@@ -44,8 +44,8 @@ end
 
 local function _make_rich_catalog()
   return {
-    { product_id = 5001, name = "小猪佩奇", unlock = "purchase", currency = "金豆", price = 198 },
-    { product_id = 5002, name = "海绵宝宝", unlock = "purchase", currency = "金豆", price = 198 },
+    { product_id = 5001, name = "皮肤甲", unlock = "purchase", currency = "金豆", price = 198 },
+    { product_id = 5002, name = "皮肤乙", unlock = "purchase", currency = "金豆", price = 198 },
     { product_id = 5003, name = "奶龙", unlock = "gift", gift_name = "谢礼" },
   }
 end
@@ -263,7 +263,7 @@ function TestSkinPanel:test_configure_replaces_the_active_catalog_and_reset_rest
   skin_panel.configure_catalog_for_tests(_make_catalog(3))
   lu.assertEvalToTrue(#skin_panel.catalog == 3, "catalog size should be 3")
   skin_panel.reset_for_tests()
-  lu.assertEvalToTrue(#skin_panel.catalog == 6, "default catalog has 6 skins")
+  lu.assertEvalToTrue(#skin_panel.catalog == 4, "default catalog has 4 skins")
 end
 
 -- unlock and equip
@@ -511,16 +511,26 @@ function TestSkinPanel:test_locked_skins_render_price_gift_text_and_touch_state_
     "locked skin without display text should clear stale button text")
 end
 
-function TestSkinPanel:test_default_locked_skin_slots_5_and_6_render_as_198_jindou_purchases()
+function TestSkinPanel:test_default_catalog_fills_slots_1_to_4_and_leaves_5_and_6_empty()
   local state, calls = _make_render_state()
   skin_panel_view.refresh_slots(state, default_skins)
-  for _, slot in ipairs({ 5, 6 }) do
+  local expected_prices = { "68", "98", "198", "198" }
+  for slot = 1, 4 do
     local text = _find_call(calls, "set_button", skin_nodes.action_buttons[slot])
     local enabled = _find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[slot])
     local price_visible = _find_call(calls, "set_visible", skin_nodes.price_icons[slot])
-    lu.assertEvalToTrue(text == "198", "default slot " .. tostring(slot) .. " should show price 198")
+    lu.assertEvalToTrue(text == expected_prices[slot],
+      "default slot " .. tostring(slot) .. " should show price " .. expected_prices[slot])
     lu.assertEvalToTrue(enabled == true, "default slot " .. tostring(slot) .. " should be touch-enabled")
     lu.assertEvalToTrue(price_visible == true, "default slot " .. tostring(slot) .. " should show price icon")
+  end
+  for slot = 5, 6 do
+    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == false,
+      "empty default slot " .. tostring(slot) .. " card image should be hidden")
+    lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[slot]) == false,
+      "empty default slot " .. tostring(slot) .. " action button must not consume clicks")
+    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.price_icons[slot]) == false,
+      "empty default slot " .. tostring(slot) .. " should hide stale price icon")
   end
 end
 

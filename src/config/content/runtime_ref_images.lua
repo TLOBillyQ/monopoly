@@ -6,8 +6,6 @@ return {
     ["AI4"] = 1657905732,
 
     -- skin
-    ["5001"] = 1625626309,
-    ["5002"] = 1664857351,
     ["5003"] = 1686351773,
     ["5004"] = 1676356936,
     ["5005"] = 1799342735,
@@ -78,10 +76,10 @@ return {
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=5f3bc6913ebb337c
+projectHash=c140b15824b5846a
 scope.0.id=chunk:src/config/content/runtime_ref_images.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=78
-scope.0.semanticHash=aa2bd1a16c8a8c43
+scope.0.endLine=76
+scope.0.semanticHash=bfc67dbeb37b859d
 ]]
