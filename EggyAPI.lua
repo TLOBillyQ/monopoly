@@ -5073,6 +5073,10 @@ function LifeEntity.ai_command_start_move(_direction, _t) end
 ---@param _threshold Fixed? 距离阈值
 function LifeEntity.ai_command_start_move_high_priority(_target_position, _duration, _threshold) end
 
+---控制AI停止追击
+---@param _duration Fixed 持续时间
+function LifeEntity.ai_command_stop_chase(_duration) end
+
 ---控制AI单位停止移动
 ---@param _duration Fixed 时间
 function LifeEntity.ai_command_stop_move(_duration) end
