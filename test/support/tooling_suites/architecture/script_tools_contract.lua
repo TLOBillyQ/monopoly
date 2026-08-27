@@ -392,14 +392,14 @@ local function _test_deploy_lua_matches_simplified_cli()
     "deploy.lua should centralize the LuaSource directory name construction"
   )
 
-  -- 原生 Windows 落点:~/Desktop/dev/LuaSource_大富翁。
+  -- 原生 Windows 落点:~/Desktop/dev/eggy/LuaSource_大富翁。
   _assert_contains(
     script_text,
-    '_join_path(_join_path(_join_path(home_dir, "Desktop"), "dev"), M.join_lua_source_dir_name())',
+    '_join_path(_join_path(_join_path(_join_path(home_dir, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())',
     "deploy.lua should keep the windows default deploy path semantics"
   )
 
-  -- WSL 分支(#128 / #127 平台约束):落点解析到 Windows 用户 Desktop/dev,不是 WSL 内部 $HOME。
+  -- WSL 分支(#128 / #127 平台约束):落点解析到 Windows 用户 Desktop/dev/eggy,不是 WSL 内部 $HOME。
   _assert_contains(
     script_text,
     "function M.test_is_wsl_host",
@@ -412,8 +412,8 @@ local function _test_deploy_lua_matches_simplified_cli()
   )
   _assert_contains(
     script_text,
-    '_join_path(_join_path(_join_path(win_home, "Desktop"), "dev"), M.join_lua_source_dir_name())',
-    "deploy.lua WSL branch should target the Windows-side Desktop/dev path"
+    '_join_path(_join_path(_join_path(_join_path(win_home, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())',
+    "deploy.lua WSL branch should target the Windows-side Desktop/dev/eggy path"
   )
 
   -- 非目标平台落点与检测已删除。

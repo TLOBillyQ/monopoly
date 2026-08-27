@@ -246,7 +246,7 @@ end
 
 TestDeployDefaultTargetWsl = {}
 
-function TestDeployDefaultTargetWsl:test_wsl_branch_uses_windows_home_desktop_dev()
+function TestDeployDefaultTargetWsl:test_wsl_branch_uses_windows_home_desktop_dev_eggy()
   _with_stubbed("resolve_home_dir", function()
     return "/home/alice"
   end, function()
@@ -255,7 +255,7 @@ function TestDeployDefaultTargetWsl:test_wsl_branch_uses_windows_home_desktop_de
     end, function()
       lu.assertIs(
         deploy.resolve_default_target_path("wsl"),
-        "/mnt/c/Users/alice/Desktop/dev/" .. deploy.join_lua_source_dir_name()
+        "/mnt/c/Users/alice/Desktop/dev/eggy/" .. deploy.join_lua_source_dir_name()
       )
     end)
   end)

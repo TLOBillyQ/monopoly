@@ -417,7 +417,7 @@ function M.resolve_default_target_path(resolved_platform)
 
   if resolved_platform == "win" then
     return M.resolve_normalized_path(
-      _join_path(_join_path(_join_path(home_dir, "Desktop"), "dev"), M.join_lua_source_dir_name())
+      _join_path(_join_path(_join_path(_join_path(home_dir, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())
     )
   elseif resolved_platform == "wsl" then
     -- story2(deploy_wsl)接缝:win_home 经 /mnt 写入,不是 WSL 内部 $HOME(工单 #128)。
@@ -426,7 +426,7 @@ function M.resolve_default_target_path(resolved_platform)
       M.exit_with_error("Cannot resolve Windows host home from WSL (need cmd.exe + wslpath interop).")
     end
     return M.resolve_normalized_path(
-      _join_path(_join_path(_join_path(win_home, "Desktop"), "dev"), M.join_lua_source_dir_name())
+      _join_path(_join_path(_join_path(_join_path(win_home, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())
     )
   end
   M.exit_with_error("No default deploy target is configured for this platform.")

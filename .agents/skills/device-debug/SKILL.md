@@ -9,7 +9,7 @@ description: 真机运行时取证：分析部署目录 log.txt 定位异常，�
 
 ## 现场事实
 
-- **部署目录**：Windows 侧 `~/Desktop/dev/LuaSource_大富翁/`（WSL 经 `/mnt/c` 访问），由 `lua tools/cli.lua deploy` 纯拷贝生成，不是 git clone。`log.txt` 在根部。编辑器试玩直接加载目录里的 Lua 源码——**改文件即生效（下次启动试玩）**，这就是插桩通道。
+- **部署目录**：Windows 侧 `~/Desktop/dev/eggy/LuaSource_大富翁/`（WSL 经 `/mnt/c` 访问），由 `lua tools/cli.lua deploy` 纯拷贝生成，不是 git clone。`log.txt` 在根部。编辑器试玩直接加载目录里的 Lua 源码——**改文件即生效（下次启动试玩）**，这就是插桩通道。
 - **editor-cli**：`/mnt/c/FeverApps/party_pc/bin/editor-cli.exe`（WSL 直接可执行），默认连 `127.0.0.1:19836`。19836 是编辑器 WS+JSON-RPC 口，只供 editor-cli 使用；裸连只会收到 `on_auth_token` 推送然后静默，别浪费时间逆向。`status` 报连接拒绝 = 编辑器没启动或没开 Editor CLI 端口，提示用户开。
 - **授权分层**：只读命令（`status` / `logs` / `take_screenshot` / 只打印的 `exec` / 日志分析脚本）直接跑。`clear-logs` 与部署目录改动逐次授权：先说明影响与回滚方式，等用户明确同意；未获同意时保留现场。
 - **试玩交接：用户开关，agent 观察**。准备就绪后提示用户开启或结束试玩，只用只读 `status` 等状态翻转（约 10–20s）；确需代跑 `run_game` / `stop_game` 时，逐次说明并等用户明确同意。中断或用户暂未操作时，如实报告当前状态并等待。
