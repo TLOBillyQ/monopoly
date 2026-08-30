@@ -27,6 +27,18 @@ function TestRootWhitelistGuard:test_root_readme_is_retired()
   lu.assertEquals(violations, { "README.md" })
 end
 
+-- 上游 four-pack launcher 退役钉（2026-08-30 迁入本地 swarm-forge）：启停走
+-- forge dashboard，根部不该再有 swarm / close-swarm；重引入即破此钉。
+function TestRootWhitelistGuard:test_upstream_launchers_are_retired()
+  lu.assertEquals(guard.check({ "swarm", "close-swarm" }), { "swarm", "close-swarm" })
+end
+
+-- 运营方任务书 tasks/<task-name>.md 是版本化的意图真源（master 随任务首次
+-- git 工作提交），常驻白名单；把它降级为忽略项即破此钉。
+function TestRootWhitelistGuard:test_tasks_doc_dir_stays_whitelisted()
+  lu.assertEquals(guard.check({ "tasks" }), {})
+end
+
 -- 常规根级条目不受影响。
 function TestRootWhitelistGuard:test_regular_entries_stay_whitelisted()
   local violations = guard.check({

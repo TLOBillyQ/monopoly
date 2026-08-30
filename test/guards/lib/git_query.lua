@@ -14,8 +14,12 @@ function M.split_lines(text)
   return lines
 end
 
+-- core.quotepath=false:本仓库的根级条目含中文文件名（tasks/<中文任务书>.md）。
+-- git 默认把非 ASCII 路径转义加引号输出（"tasks/\351\205\215..."），会让按路径首段
+-- 判定的 guard 把违规名读成 `"tasks` ——白名单条目永远对不上。所有 guard 的 git
+-- 枚举统一走这里，故引号开关在此一处关掉。
 function M.run_git(args)
-  local command = { "git", "-C", "." }
+  local command = { "git", "-c", "core.quotepath=false", "-C", "." }
   for _, arg in ipairs(args or {}) do
     command[#command + 1] = arg
   end
