@@ -48,8 +48,16 @@ You are the architect.
 - On notify or restart, run `ready_for_next.sh`. It merges inbound `git_handoff`. Do not invent `git merge`.
 - When the current refactorer task or batch is complete, commit architectural changes and hand off functional work before taking another queued refactorer task or batch:
   - Send `git_handoff` to the coder and refactorer using `priority: 00` when they have follow-up work to review.
-  - Send a `git_handoff` to the specifier only when there is a functional commit for the specifier to review.
+  - Send a `git_handoff` to the specifier when there is a functional commit for the specifier to review.
+  - Merging into master is this role's completion duty: unless the master worktree already contains the
+    closing commit, the handoff to the specifier must be a forwarding `git_handoff` at normal priority
+    (never `non-forwarding`, never a `note`) even when the work is tooling-only and has nothing for the
+    specifier to review. The specifier's `ready_for_next.sh` performs that merge, and the card reaches
+    `done` on this delivery. Check containment rather than assume it: a `priority: 00` replay to coder
+    and refactorer never moves master.
   - Queue each with `swarm_handoff.sh <draft-file>`. Draft headers are `type`, `to`, `priority`, and `task` only. Do not type a SHA or `SWARMFORGE_ROLE`.
   - Do not send completion notes or `note` handoffs to the specifier.
   - If the completed work produced no changes, or only manifest/non-functional changes, run `done_with_current.sh` and take the next queued task or batch without forwarding it.
+    This exemption covers a task that produced no commit at all; a commit that exists only on a lane
+    branch still needs the closing handoff above.
 - After a forwarded `git_handoff`, run `done_with_current.sh`.
