@@ -12,7 +12,8 @@
 
 ## Language Tool Table (Lua 5.4)
 - The language table in engineering.prompt does not cover Lua; use this table instead. engineering.prompt's freshness rules apply unchanged: procure each tool at its latest available upstream version, and do not rely on stale cached, vendored, or preinstalled copies.
-- Lua tools live in Gitea under `http://lzxsvn:3000/eggy/`: mutation `mutate4lua`, CRAP `crap4lua`, DRY `dry4lua`, dependency boundaries `arch-view`. Install or refresh them from those repos and run them via `lua tools/cli.lua <mutate|crap|dry|arch-view>`.
+- Lua tools live in Gitea under `http://lzxsvn:3000/eggy/`: mutation `mutate4lua`, CRAP `crap4lua`, DRY `dry4lua`, dependency boundaries `arch-view`. Run them via `lua tools/cli.lua <mutate|crap|dry|arch-view>`.
+- Tool versions float: `bootstrap.ensure_tool` clones each repo's latest master HEAD and builds with `luarocks make` (the repo-root rockspec is the build manifest and dependency declaration — it stays upstream; only tags were dropped). HEAD resolution is cached in `.toolcache/resolved-tools.tsv` (24h TTL); delete that file to force re-resolution. Offline runs fall back to the already-installed version.
 - APS tools (`gherkin-parser`, `ir-dry-checker`, `gherkin-mutator`) are served by the Gitea `acceptance4lua` rock, not by the Babashka/Go builds named in engineering.prompt:
   those cannot read this repo's `# language: zh-CN` features (they fail with
   `missing feature declaration`), so engineering.prompt's "does not work in the current project

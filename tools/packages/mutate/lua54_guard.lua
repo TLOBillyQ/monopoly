@@ -7,7 +7,7 @@
 --
 -- 口径与 packages/luaunit_runner/lua54.lua 完全同源:解释器解析一律走
 -- lua54.detect_lua54()(LUA54_BIN 覆写 + 候选表),此处不造第二套规则。引擎不可改
--- (tools.lock 钉定的 .toolcache 参考实现),所以本模块在调引擎前保证:
+-- (tools.lock 跟随的 .toolcache 参考实现),所以本模块在调引擎前保证:
 --   1. 能解析到 Lua 5.4,否则在跑任何测试前大声失败;
 --   2. 当前进程不是 5.4、或 PATH 上 lua 不是 5.4 时,re-exec 到钉定解释器,
 --      并把 shim 目录(内含指向 5.4 的 lua)prepend 进子进程 PATH。
