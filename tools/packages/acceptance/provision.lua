@@ -80,6 +80,17 @@ local _MUTATOR_CLAMP = {
   "args+=(--workers 4)",
 }
 
+-- 解释器字面量兜底:空串与纯空白在 Lua 里都是真值,原样烘进正文就得到一条
+-- `exec  "$root/..."` 或 `exec '   ' "$root/..."` 的坏转发器——可执行名打不开,
+-- 但脚本自身退 0 之前不会有任何解释。缺省口径与 lua54_bin() 的兜底一致。
+local function _normalize_lua_bin(lua_bin)
+  local text = tostring(lua_bin or "")
+  if text:match("^%s*$") ~= nil then
+    return "lua"
+  end
+  return text
+end
+
 function M.tool(name)
   for _, tool in ipairs(M.TOOLS) do
     if tool.name == name then
@@ -96,6 +107,7 @@ function M.forwarder_body(name, lua_bin)
   if tool == nil then
     return nil
   end
+  local bin = _normalize_lua_bin(lua_bin)
 
   local lines = {
     "#!/usr/bin/env bash",
@@ -118,7 +130,7 @@ function M.forwarder_body(name, lua_bin)
   else
     exec_line = ' "$root/' .. tool.entrypoint .. '" "$@"'
   end
-  lines[#lines + 1] = "exec " .. shell_lib.shell_quote(lua_bin) .. exec_line
+  lines[#lines + 1] = "exec " .. shell_lib.shell_quote(bin) .. exec_line
   return table.concat(lines, "\n") .. "\n"
 end
 
@@ -147,7 +159,10 @@ function M.provision(options)
     return nil, "provision: 缺少 bin_dir"
   end
 
-  local lua_bin = options.lua_bin or M.detect_lua_bin()
+  -- 没给解释器(含纯空白这种「看着像有值」的假值)就走探测口径——报告里的 lua_bin
+  -- 必须等于真正烘进正文的那个词,否则下次排障就被报告带偏。
+  local requested = tostring(options.lua_bin or "")
+  local lua_bin = (requested:match("^%s*$") == nil) and requested or M.detect_lua_bin()
   local desired = M.desired_bodies(lua_bin)
 
   local ok, err = fs_lib.ensure_dir(bin_dir)

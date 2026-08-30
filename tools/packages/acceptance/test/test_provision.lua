@@ -131,6 +131,25 @@ function TestApsProvision:test_forwarder_body_bakes_bash_probed_interpreter_and_
   lu.assertNil(body:find("clojure", 1, true), "Lua 后端不得拖回 Clojure")
 end
 
+-- 逐个显式喂,不用 ipairs({nil, ...}):表里的前导 nil 会让 ipairs 零次迭代,
+-- 断言整段变空转,绿得毫无意义。
+function TestApsProvision:test_forwarder_body_falls_back_to_path_lua_when_the_interpreter_is_blank()
+  local expected = "exec 'lua' \"$root/"
+  local cases = {
+    { "nil", provision.forwarder_body("gherkin-parser", nil) },
+    { "空串", provision.forwarder_body("gherkin-parser", "") },
+    { "纯空白", provision.forwarder_body("gherkin-parser", "   ") },
+  }
+  lu.assertEquals(#cases, 3)
+  for _, case in ipairs(cases) do
+    lu.assertTrue(case[2]:find(expected, 1, true) ~= nil,
+      case[1] .. " 解释器要退回 PATH 上的 lua,别烘出打不开的 exec 目标: " .. case[2])
+  end
+
+  local pinned = provision.forwarder_body("gherkin-parser", "/pin/lua5.4")
+  lu.assertTrue(pinned:find("exec '/pin/lua5.4' \"$root/", 1, true) ~= nil, pinned)
+end
+
 function TestApsProvision:test_mutator_forwarder_clamps_to_differential_defaults()
   local body = provision.forwarder_body("gherkin-mutator", "lua")
 
