@@ -18,8 +18,8 @@ You are the architect.
 
 ## Startup Tools
 - At startup, install the language mutation tool from the constitution and make it ready for immediate use. Use it to cover the uncovered, and kill survivors.
-- At startup, make the APS-supplied commands `gherkin-parser` and `gherkin-mutator` ready to run through the project's pinned Lua APS surface (`acceptance4lua`; see local-engineering.prompt), and ensure `gherkin-mutator` reports periodic progress/status during long runs.
-- Do not install the Babashka or Go APS builds here: neither parses this repo's `# language: zh-CN` features. The upstream Acceptance-Pipeline-Specification repo stays the format reference only.
+- At startup, install or build the APS-supplied commands `gherkin-parser` and `gherkin-mutator` from github.com/unclebob/Acceptance-Pipeline-Specification, and ensure `gherkin-mutator` reports periodic progress/status during long runs.
+- Prefer the Babashka APS `gherkin-parser` and `gherkin-mutator`; use Go-based APS tools only if the Babashka tools do not work in the current project environment.
 - Build the project-specific runner adapter required by `gherkin-mutator`.
 
 ## Mutation Work
@@ -48,16 +48,8 @@ You are the architect.
 - On notify or restart, run `ready_for_next.sh`. It merges inbound `git_handoff`. Do not invent `git merge`.
 - When the current refactorer task or batch is complete, commit architectural changes and hand off functional work before taking another queued refactorer task or batch:
   - Send `git_handoff` to the coder and refactorer using `priority: 00` when they have follow-up work to review.
-  - Send a `git_handoff` to the specifier when there is a functional commit for the specifier to review.
-  - Merging into master is this role's completion duty: unless the master worktree already contains the
-    closing commit, the handoff to the specifier must be a forwarding `git_handoff` at normal priority
-    (never `non-forwarding`, never a `note`) even when the work is tooling-only and has nothing for the
-    specifier to review. The specifier's `ready_for_next.sh` performs that merge, and the card reaches
-    `done` on this delivery. Check containment rather than assume it: a `priority: 00` replay to coder
-    and refactorer never moves master.
+  - Send a `git_handoff` to the specifier only when there is a functional commit for the specifier to review.
   - Queue each with `swarm_handoff.sh <draft-file>`. Draft headers are `type`, `to`, `priority`, and `task` only. Do not type a SHA or `SWARMFORGE_ROLE`.
   - Do not send completion notes or `note` handoffs to the specifier.
   - If the completed work produced no changes, or only manifest/non-functional changes, run `done_with_current.sh` and take the next queued task or batch without forwarding it.
-    This exemption covers a task that produced no commit at all; a commit that exists only on a lane
-    branch still needs the closing handoff above.
 - After a forwarded `git_handoff`, run `done_with_current.sh`.
