@@ -4,16 +4,38 @@ Purpose: portable Gherkin acceptance pipeline support for this Lua project.
 
 Reference implementation: `acceptance4lua` entry in `tools/tools.lock` (v0.1.1); upstream rock CLI lives under `acceptance4lua/cli/` (`parser.lua`, `generator.lua`, `ir_dry.lua`, `mutator.lua`) with the mutator engine under `acceptance4lua/mutator/`.
 Project CLI wrappers: `tools/packages/acceptance/cli/parser.lua` (Gherkin → JSON IR), `tools/packages/acceptance/cli/generator.lua` (IR → bound entrypoints), `tools/packages/acceptance/cli/ir_dry.lua` (IR → findings report) and `tools/packages/acceptance_mutate/mutator.lua` (mutator with the project step module defaulted).
-Project entrypoints: `lua tools/cli.lua acceptance` (regenerate gitignored generated specs, then run/aggregate) and `lua tools/cli.lua acceptance-mutate` (Gherkin mutation soft lane).
+Project entrypoints: `lua tools/cli.lua acceptance` (regenerate gitignored generated specs, then run/aggregate) and `lua tools/cli.lua acceptance-mutate` (Gherkin mutation soft lane), plus the APS supply entrypoint
+`lua tools/packages/acceptance/provision.lua` (idempotently re-provisions the PATH forwarders; issue #606).
 
 CLI contract:
 - `lua tools/cli.lua acceptance`
 - `lua tools/cli.lua acceptance-mutate [options]` (upstream mutator flags pass through as trailing args)
+- `lua tools/packages/acceptance/provision.lua` (no args; `--help` for usage). Exit codes follow `tools/cli.lua` (#300 Q2): 0 ok / 1 business failure / 2 usage error.
 - Upstream mutator flags: `--feature <path>` (required), `--work-dir`, `--generated-dir`, `--steps-module`, `--workers`, `--timeout`, `--status-interval`, `--level full|hard|soft` (default hard), `--skip-columns <csv>`, `--runner-worker <command>` (required), `--implementation-hash`, `--json`, `--verbose`.
 - The mutator supports `--skip-columns <csv>` as the APS step-7 equivalent-mutation filter: named example columns produce no mutation entries. `tools/packages/acceptance_mutate/mutate_lane.lua` passes the project default identity-threading columns (`角色ID,观察角色ID,行动角色ID,预期行动角色ID`, issue #204); assertion/selection columns (`验证*`, `产品ID`) must never be filtered.
 - Acceptance tests for this repo are run through `lua tools/cli.lua acceptance`, never by running generated suites bare.
 - IR-DRY: `lua tools/packages/acceptance/cli/ir_dry.lua <json-ir> <report-json>` (optional `--include-exact`; exit 2 usage / 1 failure). It was reinstated as a project entrypoint after the data/driver/lane split removed the old one — the pinned rock ships `acceptance4lua/cli/ir_dry.lua`. It writes a findings report (duplicate step shapes, placeholder variants, identical example columns); it never rewrites the feature, so pruning stays a specifier decision.
-- Swarm PATH tools: `gherkin-parser`, `ir-dry-checker` and `gherkin-mutator` resolve to those project entrypoints via `<repo-root>/.swarmforge/bin/` forwarders. The Babashka Acceptance-Pipeline-Specification builds do not parse this repo's `# language: zh-CN` features and must not be installed here; see `swarmforge/constitution/articles/local-engineering.prompt`.
+- Swarm PATH tools: `gherkin-parser`, `ir-dry-checker` and `gherkin-mutator` resolve to those project entrypoints via `<swarm-root>/.swarmforge/bin/` forwarders, where
+  `<swarm-root>` is the directory holding `.swarmforge/roles.tsv` (for agent worktrees that is the
+  common-dir parent, i.e. the same root `swarm_tool.sh` probes). `.swarmforge/` is gitignored runtime
+  state and `distclean` deletes it, so the forwarders are rebuilt by
+  `lua tools/packages/acceptance/provision.lua`: it ensures the pinned `acceptance4lua` rock in
+  `<swarm-root>/.toolcache/luarocks`, bakes the interpreter probed from
+  `packages.luaunit_runner.lua54` (PATH `lua` may be 5.5, and the rock tree is pinned to 5.4), writes
+  the three bodies only when missing or drifted, and chmods them 755. Re-running it is a no-op, so it
+  is safe to call from any startup path. The mutator forwarder keeps the differential clamp
+  (`--level full` -> `--level hard`, caller `--workers` replaced by `--workers 4`).
+- One interpreter discipline (口径) across the APS surface: the forwarders, `mutate_lane.lua` (parser / generator /
+  runner_worker / mutator spawns) and `acceptance/steps/mutator_status.lua` all take the launcher
+  from `packages.luaunit_runner.lua54` (`LUA54_BIN` overrides; falls back to PATH `lua` when no 5.4
+  resolves), matching `acceptance/spawn_env.lua`. PATH `lua` on this machine is 5.5 while
+  `.toolcache/luarocks` is a 5.4 tree, so a literal `lua` at any of those sites silently runs the
+  pipeline on an unpinned interpreter.
+- The Babashka Acceptance-Pipeline-Specification builds do not parse this repo's `# language: zh-CN`
+  features and must not be installed here: never run `swarm_tool.sh ensure <aps-tool>` (it replaces the
+  forwarder with a Babashka wrapper and re-fetches the upstream Clojure clone into
+  `.swarmforge/tools/`). Probe with `swarm_tool.sh require <aps-tool>`; repair with the provision
+  command above. See `swarmforge/constitution/articles/local-engineering.prompt`.
 
 APS contract:
 - Follow the Acceptance-Pipeline-Specification (Gitea mirror http://lzxsvn:3000/agent/acceptance-pipeline-specification; upstream unclebob/Acceptance-Pipeline-Specification).

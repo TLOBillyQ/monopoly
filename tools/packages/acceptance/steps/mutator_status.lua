@@ -4,6 +4,7 @@ local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
+local lua54 = require("packages.luaunit_runner.lua54")
 
 local mutator_status_steps = {}
 
@@ -54,10 +55,13 @@ end
 local function _run_gherkin_mutator(world, options)
   local root = _root(world)
   local args = {
-    "lua", shell_lib.shell_quote(path_lib.join_path(root, "tools/packages/acceptance_mutate/mutator.lua")),
+    -- 与 .swarmforge/bin 转发器、mutate_lane 同一解释器口径(工单 #606)。
+    lua54.lua54_bin(),
+    shell_lib.shell_quote(path_lib.join_path(root, "tools/packages/acceptance_mutate/mutator.lua")),
     "--feature", shell_lib.shell_quote(world.mutator_status_feature),
     "--work-dir", shell_lib.shell_quote(world.mutator_status_work_dir),
-    "--runner-worker", shell_lib.shell_quote("lua " .. path_lib.join_path(root, "tools/packages/acceptance/runner_worker.lua")),
+    "--runner-worker", shell_lib.shell_quote(
+      lua54.lua54_bin() .. " " .. path_lib.join_path(root, "tools/packages/acceptance/runner_worker.lua")),
   }
   if options and options.status_interval ~= nil then
     args[#args + 1] = "--status-interval"
