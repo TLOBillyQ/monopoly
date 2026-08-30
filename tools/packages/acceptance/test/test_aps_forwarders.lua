@@ -94,6 +94,27 @@ function TestApsForwarders:test_bin_dir_is_the_swarmforge_bin_relative_to_the_ro
   lu.assertIs(forwarders.bin_dir("/repo"), "/repo/.swarmforge/bin")
 end
 
+-- 章程正文与本模块说的是同一份转发器,两处各写一遍就会各自漂。这个失效模式已经真咬过:
+-- 配方一度只住在 local-engineering.prompt 里,转发器丢失后无人能幂等重建(工单 #606),
+-- 而按那段手抄 bash 重写会得到 `exec lua "$root/..."` —— PATH 上的 lua 本机是 5.5,
+-- 与本仓钉在 5.4 的 rock tree 不同口径。故钉三条:修复指向 provision 入口、章程不再复述
+-- 正文配方、登记的入口路径必须仍与章程点名的一致(改名只改一侧即红)。
+function TestApsForwarders:test_local_engineering_article_defers_forwarder_bodies_to_this_module()
+  local article_path = "swarmforge/constitution/articles/local-engineering.prompt"
+  local article = fs_lib.read_raw(article_path)
+  lu.assertIsString(article, "读不到本地章程正文: " .. article_path)
+
+  lu.assertTrue(article:find("lua tools/packages/acceptance/provision.lua", 1, true) ~= nil,
+    "章程得把转发器修复指向幂等 provision 入口,而不是让人手抄")
+  lu.assertNil(article:find('exec lua "$root/', 1, true),
+    "章程不得复述转发器正文配方:正文真源只有 aps_forwarders 这一份")
+  for _, tool in ipairs(forwarders.TOOLS) do
+    lu.assertTrue(article:find(tool.entrypoint, 1, true) ~= nil,
+      "章程点名的入口与本模块登记表不一致,改了一侧就得同步另一侧: " .. tool.name
+      .. " -> " .. tool.entrypoint)
+  end
+end
+
 function TestApsForwarders:test_provisioned_parser_forwarder_reaches_the_entrypoint_with_the_two_args()
   probe.require_bash_and_lua()
   probe.with_sandbox("forwarder_parser_e2e", function(root)
