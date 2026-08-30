@@ -3,7 +3,28 @@
 ## Language Tool Table (Lua 5.4)
 - The language table in engineering.prompt does not cover Lua; use this table instead.
 - Mutation: `mutate4lua`; CRAP: `crap4lua`; DRY: `dry4lua`; dependency boundaries: `arch-view`. All ship in this repo and run via `lua tools/cli.lua <mutate|crap|dry|arch-view>`; no separate install step is required.
-- APS tools (`gherkin-parser`, `ir-dry-checker`, `gherkin-mutator`) come from github.com/unclebob/Acceptance-Pipeline-Specification per engineering.prompt (`swarm_tool.sh require/ensure`).
+- APS tools (`gherkin-parser`, `ir-dry-checker`, `gherkin-mutator`) are served by the pinned Lua rock
+  `acceptance4lua` (`tools/tools.lock`), not by the Babashka/Go builds named in engineering.prompt:
+  those cannot read this repo's `# language: zh-CN` features (they fail with
+  `missing feature declaration`), so engineering.prompt's "does not work in the current project
+  environment" fallback applies here.
+- Supply shape: `<repo-root>/.swarmforge/bin/{gherkin-parser,ir-dry-checker,gherkin-mutator}` are
+  project-provisioned bash-to-Lua forwarders onto `tools/packages/acceptance/cli/parser.lua`,
+  `tools/packages/acceptance/cli/ir_dry.lua` and `tools/packages/acceptance_mutate/mutator.lua`;
+  each entrypoint re-installs its own rock through `bootstrap.ensure_tool`. The launcher puts that
+  `bin/` first on PATH, so those three files are what "available at next startup" means.
+- Keep `swarm_tool.sh require <aps-tool>` as the availability probe (it passes on the forwarders).
+  Never run `swarm_tool.sh ensure <aps-tool>`: it replaces the Lua forwarder with a Babashka
+  wrapper and re-clones github.com/unclebob/Acceptance-Pipeline-Specification into
+  `.swarmforge/tools/`. When a forwarder is missing (fresh clone, or after
+  `lua tools/cli.lua distclean`), rewrite it, not `ensure`:
+  `set -e; root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)";`
+  `exec lua "$root/<entrypoint>" "$@"`, mode 755, and keep the mutator's differential clamp
+  (`--level full` -> `--level hard`; caller `--workers` replaced by `--workers 4`).
+- This repo keeps no Clojure sources and no `bb` project tasks; `bb` stays installed only as the
+  forge's own script runtime. `swarmforge/scripts/*.bb` are forge-overlay files: do not edit,
+  do not index them as project code, do not sync this pack from the upstream GitHub swarm-forge
+  (start/stop goes through the local forge dashboard).
 
 ## Verification
 - Coverage: `lua tools/cli.lua verify --coverage`. luacov stats must exist and be fresh before `crap4lua`; CRAP scores without coverage stats are invalid. If coverage cannot run, hand back a blocker instead of inventing numbers.

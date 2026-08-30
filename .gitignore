@@ -1,17 +1,57 @@
-# Lua compiled files
+# ── 生成物 / 构建产物 ─────────────────────────────────────────────
+# 全部由各自的正牌生产者重生成，永不版本化。
+# acceptance 生成 specs：由 `lua tools/cli.lua acceptance` 重生成。
+/tools/packages/acceptance/generated/
+# 扫描/构建产物目录与标记文件。
+/build/
 *.luac
 *.mutate4lua
 *.arch_view
+# spec_lane junit 车道输出。
+/junit-output.xml
+# luacov 残留防护：任何链路把 luacov 产物泄进仓根时，guards 的白名单检查会
+# 报违规；gitignore 兜底保证 clean 前不把残留提交进来。
+/luacov.report.out
+/luacov.stats.out
 
-# mutate4lua: 外部 store 已退场，manifest 内嵌源码 footer（#283），
+# mutate4lua 外部 store 已退场（#283，manifest 内嵌源码 footer），
 # 保留 cache 忽略以防旧工作树残留。
 .mutate4lua/cache/
 
-# OS files
+# ── 本地工具缓存 ─────────────────────────────────────────────────
+# quality tool cache（本地状态，下载/安装的工具钉）。
+# 不带斜杠：同时匹配目录形态与隔离 worktree 常用的软链形态（symlink 被 git
+# 视为文件，.toolcache/ 规则不会忽略它，会被 root_whitelist_guard 报违规）。
+.toolcache
+
+# ── SwarmForge（本地 forge 管理） ────────────────────────────────
+# swarm 编排的全部协调状态（board/handoffs/sessions/prompts 与 PATH 工具面
+# bin/）只住这里；APS 三件（gherkin-parser / ir-dry-checker / gherkin-mutator）
+# 的 Lua 后端包装器由此处的 bin/ 经 PATH 供给，属本地运行时产物，不提交。
+.swarmforge/
+# forge 注入的共享 scripts 与 roles/constitution 覆盖面：纯运行时产物。
+/swarmforge/scripts/
+# 各角色独立 git worktree（launcher 硬编码路径）。
+.worktrees/
+# Clojure 侧编辑器/linter 本地缓存（clj-kondo 分析缓存、clojure-lsp 状态）。
+# 项目自身无 Clojure 源码；这些目录只可能由编辑器索引 forge 注入的
+# swarmforge/scripts/*.bb 生成，纯本地可再生状态，兜底防白名单 guard 报违规。
+.clj-kondo/
+.lsp/
+# Claude Code 自身的 worktree 本地状态（与上面的 .worktrees/ 不同源）。
+/.claude/worktrees/
+# Claude Code 本地覆写（可能含 MCP token）。
+.claude/settings.local.json
+
+# ── 临时与本地草稿 ───────────────────────────────────────────────
+# agent 的 scratch 面：./tmp/ 只放解析产物、dry 报告与 handoff 草稿。
+/tmp/
+*.tmp
+*.bak
+
+# ── 编辑器 / OS / 其他 agent 环境 ────────────────────────────────
 .DS_Store
 Thumbs.db
-
-# Editor files
 *.swp
 *.swo
 *~
@@ -19,59 +59,7 @@ Thumbs.db
 .vscode/
 .idea/
 .VSCodeCounter/
-
-# Temporary files
-/tmp/
-*.tmp
-*.bak
 .venv/
 .opencode
 .sisyphus/
 .omo/
-
-# Claude Code local overrides (may contain MCP tokens)
-.claude/settings.local.json
-
-# Worktrees: .claude/worktrees/ 是 Claude Code 自身的 worktree 本地状态;
-# .worktrees/ 是 swarm 编排（launcher/daemon）持有的独立 git worktree
-# （上游硬编码路径）。两者都是本地生成物,不提交。
-/.claude/worktrees/
-.worktrees/
-
-# Logs
-*.log
-
-# quality tool cache (local state, downloaded tool pins)。
-# 不带斜杠:同时匹配目录形态与隔离 worktree 常用的软链形态(symlink 被 git
-# 视为文件,.toolcache/ 规则不会忽略它,会被 root_whitelist_guard 报违规)。
-.toolcache
-
-# Clojure 侧编辑器/linter 本地缓存(clj-kondo 分析缓存、clojure-lsp 状态),
-# 历史 swarm-test(bb)时代由编辑器索引 .bb 文件生成;纯本地可再生状态。
-.clj-kondo/
-.lsp/
-
-# swarm-forge runtime state: ALL coordination
-# state lives here; no other root-level runtime entries are tolerated — the
-# root whitelist guard catches strays.
-.swarmforge/
-
-# four-pack 原样接入(上游 four-pack 分支):launcher ./swarm 首跑从上游 main
-# 存档拉取 swarmforge/scripts/(含 shared-articles/),纯运行时产物,不版本化。
-# 可提交资产 = four-pack pack 资产(swarmforge.conf/roles/constitution)。
-/swarmforge/scripts/
-
-# Generated acceptance pipeline artifacts: regenerated from
-# features/ at the `lua tools/cli.lua acceptance` entrypoint; not version-controlled.
-/tools/packages/acceptance/generated/
-
-# Test artifacts (junit lane)
-/junit-output.xml
-
-# Generated build outputs (coverage, etc.)
-/build/
-
-# luacov 残留防护:任何链路把 luacov 产物泄进仓根时,guards 的白名单检查会
-# 报违规;gitignore 兜底保证 clean 前不把残留提交进来。
-/luacov.report.out
-/luacov.stats.out

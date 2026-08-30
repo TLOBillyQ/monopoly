@@ -14,10 +14,9 @@ local M = {}
 local _WHITELIST = {
   ["main.lua"] = true,
   ["Data"] = true,
-  -- four-pack 上游 launcher 与收束脚本按上游布局住根部，
-  -- 上游文件零修改（定制点限 project.prompt/local-engineering.prompt 与 #387 launcher 补丁）。
-  ["swarm"] = true,
-  ["close-swarm"] = true,
+  -- 上游 four-pack launcher（swarm / close-swarm）随 2026-08-30 迁入本地
+  -- swarm-forge 退场：启停改走 forge dashboard（open/close project），
+  -- 根部不再有可执行 launcher；重引入即破此退役钉（见本文件 spec）。
   ["swarmforge"] = true,
   ["features"] = true,
   ["EggyAPI.lua"] = true,
@@ -30,6 +29,9 @@ local _WHITELIST = {
   ["CODING_STANDARDS.md"] = true,
   -- 本地 forge 管理面：dashboard/pack_web 读取的项目使命（2026-08-30 迁入本地 swarm-forge）。
   ["mission.md"] = true,
+  -- 运营方任务书 tasks/<task-name>.md：由 master 角色随该任务首次 git 工作提交
+  -- （Tool Startup 约定），是版本化的运营意图真源，不是运行时状态，故白名单而非忽略。
+  ["tasks"] = true,
   [".gitignore"] = true,
   -- 文本源码统一 LF 的唯一真源（#475）：部署目录 = 仓库字节级 LF 镜像契约的源侧保证。
   [".gitattributes"] = true,
