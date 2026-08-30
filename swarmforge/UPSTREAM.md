@@ -1,5 +1,12 @@
 # SwarmForge 上游同步记录
 
+> **2026-08-30 迁移声明：本项目已迁入本地 swarm-forge 管理。** 运行时 scripts
+> 与共享 articles（engineering/workflow/handoffs）改由本地 forge overlay；
+> 根目录 `swarm` / `close-swarm` launcher 已移除，启停走 forge dashboard
+> （open/close project）。下方 GitHub 上游同步流程自此归档，仅作历史参考；
+> pack 定制面（conf 的 claude 后端、project.prompt、local-engineering.prompt）
+> 现同步维护于 forge 侧 `packs/monopoly`。
+
 同步边界元数据 —— 按 ADR 0059，上游资产由自己的执行/同步边界管理，不并入
 docs 叙事白名单。本文件只记录同步进度与下次同步步骤，不改动任何上游资产。
 上游仓库：https://github.com/unclebob/swarm-forge

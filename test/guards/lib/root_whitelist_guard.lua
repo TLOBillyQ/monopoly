@@ -28,6 +28,8 @@ local _WHITELIST = {
   ["AGENTS.md"] = true,
   ["CONTEXT.md"] = true,
   ["CODING_STANDARDS.md"] = true,
+  -- 本地 forge 管理面：dashboard/pack_web 读取的项目使命（2026-08-30 迁入本地 swarm-forge）。
+  ["mission.md"] = true,
   [".gitignore"] = true,
   -- 文本源码统一 LF 的唯一真源（#475）：部署目录 = 仓库字节级 LF 镜像契约的源侧保证。
   [".gitattributes"] = true,
