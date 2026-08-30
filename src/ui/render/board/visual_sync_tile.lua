@@ -4,15 +4,9 @@ local runtime_constants = require("src.config.gameplay.runtime_constants")
 local contiguous_count = require("src.ui.view.contiguous_count")
 local tile_rent = require("src.ui.view.tile_rent")
 local shared = require("src.ui.render.board.visual_sync_shared")
+local tables = require("src.foundation.tables")
 
 local visual_sync_tile = {}
-
-local function _lookup_at(table, idx)
-  if type(table) == "table" and table[idx] ~= nil then
-    return table[idx]
-  end
-  return nil
-end
 
 local function _scene_tiles(scene)
   return scene and scene.tiles or nil
@@ -20,11 +14,11 @@ end
 
 local function _resolve_tile_unit(state, scene, idx)
   local tile_units = state and state.tile_units or nil
-  local from_state = _lookup_at(tile_units, idx)
+  local from_state = tables.at(tile_units, idx)
   if from_state ~= nil then
     return from_state
   end
-  return _lookup_at(_scene_tiles(scene), idx)
+  return tables.at(_scene_tiles(scene), idx)
 end
 
 local function _resolve_contiguous_rent(board, tile_id, owner_id)
@@ -131,80 +125,75 @@ return visual_sync_tile
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=c6c28c1203ee61a4
+projectHash=ff67a269322a90d3
 scope.0.id=chunk:src/ui/render/board/visual_sync_tile.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=131
-scope.0.semanticHash=c816f2af6f332711
-scope.1.id=function:_lookup_at
+scope.0.endLine=125
+scope.0.semanticHash=765145573c6770ef
+scope.1.id=function:_scene_tiles
 scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=15
-scope.1.semanticHash=c8a72cd40cf0620d
-scope.2.id=function:_scene_tiles
+scope.1.startLine=11
+scope.1.endLine=13
+scope.1.semanticHash=616a2ca60599c94f
+scope.2.id=function:_resolve_tile_unit
 scope.2.kind=function
-scope.2.startLine=17
-scope.2.endLine=19
-scope.2.semanticHash=616a2ca60599c94f
-scope.3.id=function:_resolve_tile_unit
+scope.2.startLine=15
+scope.2.endLine=22
+scope.2.semanticHash=78bf0620d982df2f
+scope.3.id=function:_resolve_contiguous_rent
 scope.3.kind=function
-scope.3.startLine=21
-scope.3.endLine=28
-scope.3.semanticHash=78bf0620d982df2f
-scope.4.id=function:_resolve_contiguous_rent
+scope.3.startLine=24
+scope.3.endLine=36
+scope.3.semanticHash=f17ffd341f6fbf97
+scope.4.id=function:<anonymous>
 scope.4.kind=function
-scope.4.startLine=30
-scope.4.endLine=42
-scope.4.semanticHash=f17ffd341f6fbf97
-scope.5.id=function:<anonymous>
+scope.4.startLine=28
+scope.4.endLine=30
+scope.4.semanticHash=73906ad2679f0f78
+scope.5.id=function:_game_of
 scope.5.kind=function
-scope.5.startLine=34
-scope.5.endLine=36
-scope.5.semanticHash=73906ad2679f0f78
-scope.6.id=function:_game_of
+scope.5.startLine=38
+scope.5.endLine=40
+scope.5.semanticHash=616a2ca60599c94f
+scope.6.id=function:_find_player_by_id
 scope.6.kind=function
-scope.6.startLine=44
-scope.6.endLine=46
-scope.6.semanticHash=616a2ca60599c94f
-scope.7.id=function:_find_player_by_id
+scope.6.startLine=42
+scope.6.endLine=47
+scope.6.semanticHash=1bd5be72b009cc8e
+scope.7.id=function:_resolve_owner_name
 scope.7.kind=function
-scope.7.startLine=48
-scope.7.endLine=53
-scope.7.semanticHash=1bd5be72b009cc8e
-scope.8.id=function:_resolve_owner_name
+scope.7.startLine=49
+scope.7.endLine=55
+scope.7.semanticHash=fa8801ebaacc5fb2
+scope.8.id=function:_tile_owner_and_level
 scope.8.kind=function
-scope.8.startLine=55
-scope.8.endLine=61
-scope.8.semanticHash=fa8801ebaacc5fb2
-scope.9.id=function:_tile_owner_and_level
+scope.8.startLine=57
+scope.8.endLine=60
+scope.8.semanticHash=8d50068d7c62f539
+scope.9.id=function:_sync_owner_visual
 scope.9.kind=function
-scope.9.startLine=63
-scope.9.endLine=66
-scope.9.semanticHash=8d50068d7c62f539
-scope.10.id=function:_sync_owner_visual
+scope.9.startLine=62
+scope.9.endLine=70
+scope.9.semanticHash=d7da935e3f3efff3
+scope.10.id=function:_sync_building_level
 scope.10.kind=function
-scope.10.startLine=68
-scope.10.endLine=76
-scope.10.semanticHash=d7da935e3f3efff3
-scope.11.id=function:_sync_building_level
+scope.10.startLine=72
+scope.10.endLine=85
+scope.10.semanticHash=7a09a59632918525
+scope.11.id=function:_sync_building_visual
 scope.11.kind=function
-scope.11.startLine=78
-scope.11.endLine=91
-scope.11.semanticHash=7a09a59632918525
-scope.12.id=function:_sync_building_visual
+scope.11.startLine=87
+scope.11.endLine=94
+scope.11.semanticHash=98d2da3d9513c566
+scope.12.id=function:_board_and_scene
 scope.12.kind=function
-scope.12.startLine=93
-scope.12.endLine=100
-scope.12.semanticHash=98d2da3d9513c566
-scope.13.id=function:_board_and_scene
+scope.12.startLine=97
+scope.12.endLine=104
+scope.12.semanticHash=a3164f602dbac9a8
+scope.13.id=function:visual_sync_tile.sync_tile_visual
 scope.13.kind=function
-scope.13.startLine=103
-scope.13.endLine=110
-scope.13.semanticHash=a3164f602dbac9a8
-scope.14.id=function:visual_sync_tile.sync_tile_visual
-scope.14.kind=function
-scope.14.startLine=112
-scope.14.endLine=128
-scope.14.semanticHash=3e2683e7d958efd1
+scope.13.startLine=106
+scope.13.endLine=122
+scope.13.semanticHash=3e2683e7d958efd1
 ]]

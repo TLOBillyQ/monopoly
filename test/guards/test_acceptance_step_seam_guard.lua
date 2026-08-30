@@ -31,7 +31,7 @@ local items_cfg = require("src.config.content.items")
 local runtime_state = require("src.ui.state.runtime")
 local intent_output = require("src.rules.ports.intent_output")
 local game_driver = require("packages.acceptance.game_driver")
-local base_screen_context = require("packages.acceptance.steps.base_screen.context")
+local swarm_declaration = require("packages.acceptance.steps.swarm_launch.declaration")
 ]],
   })
   lu.assertIs(#violations, 0)

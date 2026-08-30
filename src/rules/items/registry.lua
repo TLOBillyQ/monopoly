@@ -2,22 +2,12 @@ local effects = require("src.rules.items.post_effects")
 local item_ids = require("src.config.gameplay.item_ids")
 local handlers = require("src.rules.items.handlers")
 local Class = require("src.foundation.class")
+local tables = require("src.foundation.tables")
 
 local registry = Class("ItemRegistry")
 
-local function _copy_context(context)
-  local next_context = {}
-  if type(context) ~= "table" then
-    return next_context
-  end
-  for key, value in pairs(context) do
-    next_context[key] = value
-  end
-  return next_context
-end
-
 local function _inject_target_candidates(context, resolve_target_candidates)
-  local next_context = _copy_context(context)
+  local next_context = tables.copy_table(context)
   next_context.resolve_target_candidates = resolve_target_candidates
   return next_context
 end
@@ -76,55 +66,50 @@ return registry
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=f6db405ee6cab950
+projectHash=6b7d94db7dc3c0dd
 scope.0.id=chunk:src/rules/items/registry.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=76
-scope.0.semanticHash=4dbe1206996738c4
-scope.1.id=function:_copy_context
+scope.0.endLine=66
+scope.0.semanticHash=d9390cbc2872b5aa
+scope.1.id=function:_inject_target_candidates
 scope.1.kind=function
-scope.1.startLine=8
-scope.1.endLine=17
-scope.1.semanticHash=cda80b580f6fded9
-scope.2.id=function:_inject_target_candidates
+scope.1.startLine=9
+scope.1.endLine=13
+scope.1.semanticHash=9adef315c32e0290
+scope.2.id=function:registry:init
 scope.2.kind=function
-scope.2.startLine=19
-scope.2.endLine=23
-scope.2.semanticHash=9adef315c32e0290
-scope.3.id=function:registry:init
+scope.2.startLine=15
+scope.2.endLine=17
+scope.2.semanticHash=71cf7d660694c7cf
+scope.3.id=function:_is_target_candidate
 scope.3.kind=function
-scope.3.startLine=25
+scope.3.startLine=19
 scope.3.endLine=27
-scope.3.semanticHash=71cf7d660694c7cf
-scope.4.id=function:_is_target_candidate
+scope.3.semanticHash=ce15763cd44edbbe
+scope.4.id=function:registry:target_candidates
 scope.4.kind=function
 scope.4.startLine=29
-scope.4.endLine=37
-scope.4.semanticHash=ce15763cd44edbbe
-scope.5.id=function:registry:target_candidates
+scope.4.endLine=44
+scope.4.semanticHash=d85c6f61cb049ee8
+scope.5.id=function:registry:register
 scope.5.kind=function
-scope.5.startLine=39
-scope.5.endLine=54
-scope.5.semanticHash=d85c6f61cb049ee8
-scope.6.id=function:registry:register
+scope.5.startLine=46
+scope.5.endLine=48
+scope.5.semanticHash=4218fa0408531805
+scope.6.id=function:registry:register_defaults
 scope.6.kind=function
-scope.6.startLine=56
-scope.6.endLine=58
-scope.6.semanticHash=4218fa0408531805
-scope.7.id=function:registry:register_defaults
+scope.6.startLine=50
+scope.6.endLine=63
+scope.6.semanticHash=7018dadca7039f56
+scope.7.id=function:<anonymous>
 scope.7.kind=function
-scope.7.startLine=60
-scope.7.endLine=73
-scope.7.semanticHash=7018dadca7039f56
-scope.8.id=function:<anonymous>
+scope.7.startLine=56
+scope.7.endLine=61
+scope.7.semanticHash=694f3a446b581b83
+scope.8.id=function:<anonymous>#2
 scope.8.kind=function
-scope.8.startLine=66
-scope.8.endLine=71
-scope.8.semanticHash=694f3a446b581b83
-scope.9.id=function:<anonymous>#2
-scope.9.kind=function
-scope.9.startLine=67
-scope.9.endLine=69
-scope.9.semanticHash=f22a39706bed814f
+scope.8.startLine=57
+scope.8.endLine=59
+scope.8.semanticHash=f22a39706bed814f
 ]]

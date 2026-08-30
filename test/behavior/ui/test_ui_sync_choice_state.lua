@@ -1,29 +1,11 @@
--- ui_sync/choice_state 直驱规约(#262 幸存闭合):五个输入封锁相位全集与
--- owner 解析不出时 served_owner 回落 false。
+-- ui_sync/choice_state 直驱规约(#262 幸存闭合):owner 解析不出时 served_owner
+-- 回落 false。输入锁相位集不再是 ui 本地复制品——真源与五相位全集钉在
+-- test/behavior/turn/test_loop_runtime.lua,ui 门控消费该真源的接线由
+-- test_choice_state.lua 的 blocked-phase 场景钉住。
 local lu = require("luaunit")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
 
 TestUiSyncChoiceState = {}
-
-function TestUiSyncChoiceState:test_blocks_exactly_the_five_input_blocked_phases()
-  -- kills _input_blocked_phases 的 true->false(既有覆盖只钉了
-  -- wait_action_anim/wait_move_anim 两个相位)。
-  local blocked = {
-    "wait_action_anim",
-    "wait_move_anim",
-    "wait_landing_visual",
-    "detained_wait",
-    "inter_turn_wait",
-  }
-  for _, phase in ipairs(blocked) do
-    lu.assertEquals(choice_ui_state.is_phase_input_blocked(phase), true,
-      phase .. " should block input")
-  end
-  lu.assertEquals(choice_ui_state.is_phase_input_blocked("free"), false,
-    "an unlisted phase should not block input")
-  lu.assertEquals(choice_ui_state.is_phase_input_blocked(nil), false,
-    "a nil phase should not block input")
-end
 
 function TestUiSyncChoiceState:test_served_owner_falls_back_to_false_when_the_owner_cannot_be_resolved()
   -- kills owner_is_served_seat 的 return false -> true:无 turn/players、choice

@@ -17,7 +17,7 @@ local _assert_eq = support.assert_eq
 local compose_game = require("src.app.compose_game")
 local default_ports = require("src.turn.output.default_ports")
 local movement_events = require("src.rules.movement_events")
-local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
+local loop_runtime = require("src.turn.loop.runtime")
 local panel_controls = require("src.ui.render.widgets.panel_controls")
 local base_nodes = require("src.ui.schema.base")
 local map_cfg = require("src.config.content.default_map")
@@ -85,8 +85,8 @@ function TestMainTurnRoadblockButton:test_a_roadblock_hit_queues_a_roadblock_tri
 end
 
 function TestMainTurnRoadblockButton:test_the_action_anim_phase_is_an_input_blocked_phase()
-  _assert_eq(choice_ui_state.is_phase_input_blocked("wait_action_anim"), true,
-    "路障触发动画播放期间输入应被锁住")
+  _assert_eq(loop_runtime.is_phase_input_blocked("wait_action_anim"), true,
+    "路障触发动画播放期间输入应被锁住(输入锁相位集真源在 turn.loop.runtime)")
 end
 
 function TestMainTurnRoadblockButton:test_hides_all_three_buttons_while_the_roadblock_trigger_animation_plays()

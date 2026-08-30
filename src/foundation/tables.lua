@@ -67,16 +67,24 @@ function M.ensure_absent_field(t, key)
   return value
 end
 
+-- 容器可能缺席时的安全下标读取:非表容器与缺失下标统一落 nil。
+function M.at(container, index)
+  if type(container) == "table" and container[index] ~= nil then
+    return container[index]
+  end
+  return nil
+end
+
 return M
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=1ed22a8cdded6393
+projectHash=208004c49756a7ed
 scope.0.id=chunk:src/foundation/tables.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=71
-scope.0.semanticHash=8bd5b8b06f35cf6a
+scope.0.endLine=79
+scope.0.semanticHash=e0164fdc35ca3d0f
 scope.1.id=function:M.copy
 scope.1.kind=function
 scope.1.startLine=3
@@ -112,4 +120,9 @@ scope.7.kind=function
 scope.7.startLine=61
 scope.7.endLine=68
 scope.7.semanticHash=2ce4c7d9acf699a9
+scope.8.id=function:M.at
+scope.8.kind=function
+scope.8.startLine=71
+scope.8.endLine=76
+scope.8.semanticHash=c8a72cd40cf0620d
 ]]

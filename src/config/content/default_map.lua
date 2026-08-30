@@ -1,4 +1,5 @@
 local tiles_cfg = require("src.config.content.tiles")
+local tables = require("src.foundation.tables")
 
 local coord_by_id = {}
 local id_by_coord = {}
@@ -53,18 +54,9 @@ local turn_right = {
   left = "up",
 }
 
-local function _ensure_neighbor_map(neighbors, tile_id)
-  local mapping = neighbors[tile_id]
-  if mapping == nil then
-    mapping = {}
-    neighbors[tile_id] = mapping
-  end
-  return mapping
-end
-
 local function _add_neighbor(neighbors, a, b)
-  local neighbors_a = _ensure_neighbor_map(neighbors, a)
-  local neighbors_b = _ensure_neighbor_map(neighbors, b)
+  local neighbors_a = tables.ensure_absent_field(neighbors, a)
+  local neighbors_b = tables.ensure_absent_field(neighbors, b)
   neighbors_a[_direction(a, b)] = b
   neighbors_b[_direction(b, a)] = a
 end
@@ -171,40 +163,35 @@ return {
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=37c6a1c482f8c1bc
+projectHash=7df3babe6dd16433
 scope.0.id=chunk:src/config/content/default_map.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=171
-scope.0.semanticHash=567abe1d300eb00b
+scope.0.endLine=163
+scope.0.semanticHash=588bff896e19aac5
 scope.1.id=function:_direction
 scope.1.kind=function
-scope.1.startLine=18
-scope.1.endLine=26
+scope.1.startLine=19
+scope.1.endLine=27
 scope.1.semanticHash=68f77a5950824ed6
 scope.2.id=function:_id_at
 scope.2.kind=function
-scope.2.startLine=28
-scope.2.endLine=32
+scope.2.startLine=29
+scope.2.endLine=33
 scope.2.semanticHash=cd80614a727bb28b
 scope.3.id=function:_to_ids
 scope.3.kind=function
-scope.3.startLine=34
-scope.3.endLine=40
+scope.3.startLine=35
+scope.3.endLine=41
 scope.3.semanticHash=a42861a62f41a049
-scope.4.id=function:_ensure_neighbor_map
+scope.4.id=function:_add_neighbor
 scope.4.kind=function
-scope.4.startLine=56
-scope.4.endLine=63
-scope.4.semanticHash=2ce4c7d9acf699a9
-scope.5.id=function:_add_neighbor
+scope.4.startLine=57
+scope.4.endLine=62
+scope.4.semanticHash=90bfc20615b7dd3b
+scope.5.id=function:_chain
 scope.5.kind=function
-scope.5.startLine=65
-scope.5.endLine=70
-scope.5.semanticHash=90bfc20615b7dd3b
-scope.6.id=function:_chain
-scope.6.kind=function
-scope.6.startLine=91
-scope.6.endLine=95
-scope.6.semanticHash=a1347e99955e6015
+scope.5.startLine=83
+scope.5.endLine=87
+scope.5.semanticHash=a1347e99955e6015
 ]]

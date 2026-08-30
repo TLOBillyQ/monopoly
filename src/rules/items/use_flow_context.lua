@@ -2,17 +2,6 @@ local inventory = require("src.rules.items.inventory")
 
 local context = {}
 
-function context.copy(raw_context)
-  local next_context = {}
-  if type(raw_context) ~= "table" then
-    return next_context
-  end
-  for key, value in pairs(raw_context) do
-    next_context[key] = value
-  end
-  return next_context
-end
-
 local function _find_by_id(game, actor_id)
   if game and type(game.find_player_by_id) == "function" then
     return game:find_player_by_id(actor_id)
@@ -50,35 +39,30 @@ return context
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=ddd52e54f7e2586f
+projectHash=744a90181888774b
 scope.0.id=chunk:src/rules/items/use_flow_context.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=50
-scope.0.semanticHash=c9f3015fb4203d1c
-scope.1.id=function:context.copy
+scope.0.endLine=39
+scope.0.semanticHash=107157863a8cabbd
+scope.1.id=function:_find_by_id
 scope.1.kind=function
 scope.1.startLine=5
-scope.1.endLine=14
-scope.1.semanticHash=cda80b580f6fded9
-scope.2.id=function:_find_by_id
+scope.1.endLine=10
+scope.1.semanticHash=1bd5be72b009cc8e
+scope.2.id=function:_find_linear
 scope.2.kind=function
-scope.2.startLine=16
-scope.2.endLine=21
-scope.2.semanticHash=1bd5be72b009cc8e
-scope.3.id=function:_find_linear
+scope.2.startLine=12
+scope.2.endLine=19
+scope.2.semanticHash=1fb73cda3c217cba
+scope.3.id=function:context.resolve_actor
 scope.3.kind=function
-scope.3.startLine=23
-scope.3.endLine=30
-scope.3.semanticHash=1fb73cda3c217cba
-scope.4.id=function:context.resolve_actor
+scope.3.startLine=21
+scope.3.endLine=26
+scope.3.semanticHash=ea495d7d15c6359a
+scope.4.id=function:context.count_item
 scope.4.kind=function
-scope.4.startLine=32
-scope.4.endLine=37
-scope.4.semanticHash=ea495d7d15c6359a
-scope.5.id=function:context.count_item
-scope.5.kind=function
-scope.5.startLine=39
-scope.5.endLine=47
-scope.5.semanticHash=b948ba617011be56
+scope.4.startLine=28
+scope.4.endLine=36
+scope.4.semanticHash=b948ba617011be56
 ]]

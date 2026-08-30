@@ -1,5 +1,6 @@
 local role_id_utils = require("src.foundation.identity")
 local choice_contract = require("src.config.choice.contract")
+local tables = require("src.foundation.tables")
 
 local item_slice = {}
 
@@ -55,22 +56,13 @@ local _slots_by_player = {}
 local _slots_pool = {}
 local _delegated_by_player = {}
 
--- 每个 player_id 复用同一张 slots 表（省 GC），首次见到时才建。
-local function _pooled_slots(player_id)
-  local slots = _slots_pool[player_id]
-  if slots == nil then
-    slots = {}
-    _slots_pool[player_id] = slots
-  end
-  return slots
-end
 
 function item_slice.build_item_slots_by_player(players, slot_count)
   _clear(_slots_by_player)
   for _, player in ipairs(players or {}) do
     local player_id = _normalized_player_id(player)
     if player_id then
-      local slots = _pooled_slots(player_id)
+      local slots = tables.ensure_absent_field(_slots_pool, player_id)
       _fill_item_slots(slots, _player_items(player), slot_count)
       role_id_utils.write(_slots_by_player, player_id, slots)
     end
@@ -107,65 +99,60 @@ return item_slice
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=35f99ce5c05c005c
+projectHash=be0d80030ad0735a
 scope.0.id=chunk:src/ui/view/item_slice.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=107
-scope.0.semanticHash=2831c59c1f1f74b8
+scope.0.endLine=99
+scope.0.semanticHash=126b4a0e5e135f0a
 scope.1.id=function:item_slice.resolve_slot_count
 scope.1.kind=function
-scope.1.startLine=6
-scope.1.endLine=12
+scope.1.startLine=7
+scope.1.endLine=13
 scope.1.semanticHash=f51f35681833414f
 scope.2.id=function:_clear
 scope.2.kind=function
-scope.2.startLine=16
-scope.2.endLine=20
+scope.2.startLine=17
+scope.2.endLine=21
 scope.2.semanticHash=b6c04f8e080b736d
 scope.3.id=function:_normalized_player_id
 scope.3.kind=function
-scope.3.startLine=22
-scope.3.endLine=24
+scope.3.startLine=23
+scope.3.endLine=25
 scope.3.semanticHash=6e8a930f39c3fdd1
 scope.4.id=function:_player_items
 scope.4.kind=function
-scope.4.startLine=27
-scope.4.endLine=30
+scope.4.startLine=28
+scope.4.endLine=31
 scope.4.semanticHash=4ffbf8f51fb57782
 scope.5.id=function:_fill_item_slots
 scope.5.kind=function
-scope.5.startLine=34
-scope.5.endLine=46
+scope.5.startLine=35
+scope.5.endLine=47
 scope.5.semanticHash=7177cdda64ce5206
 scope.6.id=function:item_slice.build_item_slots_for_player
 scope.6.kind=function
-scope.6.startLine=50
-scope.6.endLine=52
+scope.6.startLine=51
+scope.6.endLine=53
 scope.6.semanticHash=b27cb60b477b665c
-scope.7.id=function:_pooled_slots
+scope.7.id=function:item_slice.build_item_slots_by_player
 scope.7.kind=function
-scope.7.startLine=59
-scope.7.endLine=66
-scope.7.semanticHash=21fe0209d2de09f0
-scope.8.id=function:item_slice.build_item_slots_by_player
+scope.7.startLine=60
+scope.7.endLine=71
+scope.7.semanticHash=0a74b461754b430c
+scope.8.id=function:item_slice.build_delegated_by_player
 scope.8.kind=function
-scope.8.startLine=68
+scope.8.startLine=73
 scope.8.endLine=79
-scope.8.semanticHash=d4ef3d2bf1faf161
-scope.9.id=function:item_slice.build_delegated_by_player
+scope.8.semanticHash=79560ad6f3b30e42
+scope.9.id=function:_pending_choice
 scope.9.kind=function
 scope.9.startLine=81
-scope.9.endLine=87
-scope.9.semanticHash=79560ad6f3b30e42
-scope.10.id=function:_pending_choice
+scope.9.endLine=83
+scope.9.semanticHash=c250138038aa193a
+scope.10.id=function:item_slice.resolve_item_choice_owner_id
 scope.10.kind=function
-scope.10.startLine=89
-scope.10.endLine=91
-scope.10.semanticHash=c250138038aa193a
-scope.11.id=function:item_slice.resolve_item_choice_owner_id
-scope.11.kind=function
-scope.11.startLine=93
-scope.11.endLine=104
-scope.11.semanticHash=c2915cd5b98aff64
+scope.10.startLine=85
+scope.10.endLine=96
+scope.10.semanticHash=c2915cd5b98aff64
 ]]

@@ -7,9 +7,7 @@ local like_collect_subscribe = require("src.host.like_collect_subscribe")
 -- 事件名以编辑器配置为真源，这里重复字面量是有意的——src 侧漂移时验收即红。
 local LIKE_EVENT = "evt_click_like"
 local COLLECT_EVENT = "evt_add_collection"
-local SUBSCRIBE_EVENT = "evt_subscribe"
 local SUBSCRIBE_CLICK_EVENT = "evt_not_subscribe"
-local SUBSCRIBE_TIPS_TEXT = "点击\"更多\"完成订阅，下次登录领取订阅任务奖励。"
 
 local function _ensure_state(world)
   if world.lcs then

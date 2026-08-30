@@ -184,7 +184,6 @@ local function _invalid_call(operation, input)
 end
 
 return dsl.steps({
-  ["玩家背包上限为5格（高亮重放）"] = function(w) _world(w) return true end,
 
   ["展示视角为{视角}"] = function(w, a)
     _world(w).perspective = _parse_perspective(a["视角"])

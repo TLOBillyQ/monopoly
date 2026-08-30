@@ -6,6 +6,7 @@ local main_view = require("src.ui.coord.ui_runtime")
 local view_model = require("src.ui.view")
 local choice_ui_state = require("src.ui.ports.ui_sync.choice_state")
 local player_control_snapshot = require("src.turn.output.player_control_snapshot")
+local loop_runtime = require("src.turn.loop.runtime")
 local ui_gate_sync = require("src.ui.ports.ui_sync.gate")
 local modal_state = require("src.ui.state.modal")
 local role_id_utils = require("src.foundation.identity")
@@ -49,11 +50,6 @@ local function _refresh_turn_label(state, next_model)
     panel and panel.turn_label or "",
     panel and panel.countdown_visible
   )
-end
-
-local function _is_phase_input_blocked(game)
-  local phase = game and game.turn and game.turn.phase or nil
-  return choice_ui_state.is_phase_input_blocked(phase)
 end
 
 -- 存活弹窗是否占着黑市操作者的屏:排除买家本人的弹窗(黑市购买展示,
@@ -105,7 +101,7 @@ local function _should_open_choice_modal(game, state, next_model, dirty)
   if not _has_choice(next_model) then
     return false
   end
-  if _is_phase_input_blocked(game) then
+  if loop_runtime.is_game_input_blocked(game) then
     return false
   end
   local route_key = choice_ui_state.resolve_route_key(next_model.choice)
@@ -198,110 +194,105 @@ return ui_model_sync
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=ec3d1ad852a756e1
+projectHash=b54895dde974c2fd
 scope.0.id=chunk:src/ui/ports/ui_sync/model.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=198
-scope.0.semanticHash=6f886182dd76ca95
+scope.0.endLine=194
+scope.0.semanticHash=d055afbcfdb4e8fc
 scope.1.id=function:_mark_ui_dirty_from_runtime
 scope.1.kind=function
-scope.1.startLine=16
-scope.1.endLine=20
+scope.1.startLine=17
+scope.1.endLine=21
 scope.1.semanticHash=6adcfba0e2cb0d7a
 scope.2.id=function:_defer_refresh_for_landing_hold
 scope.2.kind=function
-scope.2.startLine=22
-scope.2.endLine=31
+scope.2.startLine=23
+scope.2.endLine=32
 scope.2.semanticHash=5c3b00b30a249742
 scope.3.id=function:_update_runtime_ui_model
 scope.3.kind=function
-scope.3.startLine=33
-scope.3.endLine=39
+scope.3.startLine=34
+scope.3.endLine=40
 scope.3.semanticHash=89f3c045697140cf
 scope.4.id=function:_panel_of
 scope.4.kind=function
-scope.4.startLine=41
-scope.4.endLine=43
+scope.4.startLine=42
+scope.4.endLine=44
 scope.4.semanticHash=616a2ca60599c94f
 scope.5.id=function:_refresh_turn_label
 scope.5.kind=function
-scope.5.startLine=45
-scope.5.endLine=52
+scope.5.startLine=46
+scope.5.endLine=53
 scope.5.semanticHash=4519a01afdd95883
-scope.6.id=function:_is_phase_input_blocked
+scope.6.id=function:_popup_covers_market_operator
 scope.6.kind=function
-scope.6.startLine=54
-scope.6.endLine=57
-scope.6.semanticHash=e8af86822fc69918
-scope.7.id=function:_popup_covers_market_operator
+scope.6.startLine=57
+scope.6.endLine=64
+scope.6.semanticHash=cf5e7737113e2a09
+scope.7.id=function:_market_rebuild_blocked_by_popup
 scope.7.kind=function
-scope.7.startLine=61
-scope.7.endLine=68
-scope.7.semanticHash=cf5e7737113e2a09
-scope.8.id=function:_market_rebuild_blocked_by_popup
+scope.7.startLine=74
+scope.7.endLine=78
+scope.7.semanticHash=56289fa7021bc1f9
+scope.8.id=function:_should_open_market_modal
 scope.8.kind=function
-scope.8.startLine=78
-scope.8.endLine=82
-scope.8.semanticHash=56289fa7021bc1f9
-scope.9.id=function:_should_open_market_modal
+scope.8.startLine=80
+scope.8.endLine=85
+scope.8.semanticHash=b1dc9ad787133479
+scope.9.id=function:_has_choice
 scope.9.kind=function
-scope.9.startLine=84
+scope.9.startLine=87
 scope.9.endLine=89
-scope.9.semanticHash=b1dc9ad787133479
-scope.10.id=function:_has_choice
+scope.9.semanticHash=ac1dbf12b688483f
+scope.10.id=function:_inline_route
 scope.10.kind=function
-scope.10.startLine=91
-scope.10.endLine=93
-scope.10.semanticHash=ac1dbf12b688483f
-scope.11.id=function:_inline_route
+scope.10.startLine=92
+scope.10.endLine=94
+scope.10.semanticHash=4660cf802f43a770
+scope.11.id=function:_has_market_route
 scope.11.kind=function
 scope.11.startLine=96
 scope.11.endLine=98
-scope.11.semanticHash=4660cf802f43a770
-scope.12.id=function:_has_market_route
+scope.11.semanticHash=7385398015d632c1
+scope.12.id=function:_should_open_choice_modal
 scope.12.kind=function
 scope.12.startLine=100
-scope.12.endLine=102
-scope.12.semanticHash=7385398015d632c1
-scope.13.id=function:_should_open_choice_modal
+scope.12.endLine=115
+scope.12.semanticHash=803115998fc1bc48
+scope.13.id=function:_should_close_choice_modal
 scope.13.kind=function
-scope.13.startLine=104
-scope.13.endLine=119
-scope.13.semanticHash=803115998fc1bc48
-scope.14.id=function:_should_close_choice_modal
+scope.13.startLine=117
+scope.13.endLine=123
+scope.13.semanticHash=98af457f29124de5
+scope.14.id=function:_render_ui_model
 scope.14.kind=function
-scope.14.startLine=121
-scope.14.endLine=127
-scope.14.semanticHash=98af457f29124de5
-scope.15.id=function:_render_ui_model
+scope.14.startLine=130
+scope.14.endLine=137
+scope.14.semanticHash=808eb6aedf804ac3
+scope.15.id=function:ui_model_sync.apply_input_lock
 scope.15.kind=function
-scope.15.startLine=134
+scope.15.startLine=139
 scope.15.endLine=141
-scope.15.semanticHash=808eb6aedf804ac3
-scope.16.id=function:ui_model_sync.apply_input_lock
+scope.15.semanticHash=c772a22f8680e278
+scope.16.id=function:ui_model_sync.build_model
 scope.16.kind=function
 scope.16.startLine=143
-scope.16.endLine=145
-scope.16.semanticHash=c772a22f8680e278
-scope.17.id=function:ui_model_sync.build_model
+scope.16.endLine=147
+scope.16.semanticHash=c4c98047006f4fe6
+scope.17.id=function:ui_model_sync.refresh_from_dirty
 scope.17.kind=function
-scope.17.startLine=147
-scope.17.endLine=151
-scope.17.semanticHash=c4c98047006f4fe6
-scope.18.id=function:ui_model_sync.refresh_from_dirty
+scope.17.startLine=149
+scope.17.endLine=167
+scope.17.semanticHash=e30a6f3da72f9f4d
+scope.18.id=function:_resolve_reconciled_choice_model
 scope.18.kind=function
-scope.18.startLine=153
-scope.18.endLine=171
-scope.18.semanticHash=e30a6f3da72f9f4d
-scope.19.id=function:_resolve_reconciled_choice_model
+scope.18.startLine=169
+scope.18.endLine=178
+scope.18.semanticHash=ef89f5ecd07a110b
+scope.19.id=function:ui_model_sync.reopen_choice_modal_if_needed
 scope.19.kind=function
-scope.19.startLine=173
-scope.19.endLine=182
-scope.19.semanticHash=ef89f5ecd07a110b
-scope.20.id=function:ui_model_sync.reopen_choice_modal_if_needed
-scope.20.kind=function
-scope.20.startLine=184
-scope.20.endLine=195
-scope.20.semanticHash=91fab883653acfb6
+scope.19.startLine=180
+scope.19.endLine=191
+scope.19.semanticHash=91fab883653acfb6
 ]]

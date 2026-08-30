@@ -5,15 +5,12 @@ local number_utils = require("src.foundation.number")
 local item_ids = require("src.config.gameplay.item_ids")
 local event_kinds = require("src.config.gameplay.event_kinds")
 local constants = require("src.config.content.constants")
-local ui_state = require("src.ui.coord.ui_state")
-local presenter = require("src.ui.render.widgets.presenter")
-local route_base = require("src.ui.input.route_base")
-local panel_slice = require("src.ui.view.panel_slice")
 -- 回合流程域（turn_flow.feature + main_turn_buttons.feature）：轮转/扣留/落地
 -- 结算/超时/AI 决策全走 turn_driver + game_driver 真实回合机；旧实现越界
 -- require 的 src.rules.items.inventory 已消化为 game_driver.give_item。
--- 主回合按钮句族用基础屏微驱动：真实 presenter 刷新 + route_base 意图 +
--- optional_action_completion 完成语义，按钮可见性/可点性读真实渲染态。
+-- 主回合按钮句族的机器（presenter 刷新 + route_base 意图 +
+-- optional_action_completion 完成语义）住在 features/steps/base_screen.lua
+-- （#597 按视角重划）；本文件只保留角色身份句的 world 绑定。
 local function _ctx(w) return w.driver end
 local function _game(w) return w.driver.game end
 local function _p(w, i) return w.driver.game.players[i] end
@@ -131,7 +128,6 @@ local _PHASES = { ["开始"] = "start", ["等待行动"] = "wait_action", ["掷�
 local _WARN_LEVELS = { ["警告"] = "warn_5s", ["紧急"] = "warn_3s" }
 local _CHOICE_KINDS = { ["普通选择"] = "rent_card_prompt", ["黑市购买"] = "market_buy",
   ["道具目标选择"] = "item_target_player" }
-local function _bs_turn_ended(w) return dsl.truthy(w.bs_turn_ended, "回合结束标记") end
 local function _set_cur(w, a) td.set_current_player(_ctx(w), a["当前玩家"]) return true end
 return dsl.steps({
   ["游戏有<玩家人数:int>名玩家参与"] = function(w, a) _human_game(w, a["玩家人数"]) return true end,
