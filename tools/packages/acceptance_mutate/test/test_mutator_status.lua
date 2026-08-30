@@ -4,6 +4,7 @@ local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
 local json = require("acceptance4lua.json")
+local lua54 = require("packages.luaunit_runner.lua54")
 
 local function _tmp_dir(name)
   local token = tostring(os.time()) .. "_" .. tostring({}):gsub("[^%w]+", "")
@@ -35,10 +36,11 @@ local function _run_mutator(tmp_dir, options)
   local stdout_path = path_lib.join_path(tmp_dir, options.name .. "_stdout.txt")
   local stderr_path = path_lib.join_path(tmp_dir, options.name .. "_stderr.txt")
   local args = {
-    "lua", shell_lib.shell_quote("tools/packages/acceptance_mutate/mutator.lua"),
+    lua54.lua54_bin(), shell_lib.shell_quote("tools/packages/acceptance_mutate/mutator.lua"),
     "--feature", shell_lib.shell_quote(options.feature_path),
     "--work-dir", shell_lib.shell_quote(path_lib.join_path(tmp_dir, options.name .. "_work")),
-    "--runner-worker", shell_lib.shell_quote("lua tools/packages/acceptance/runner_worker.lua"),
+    "--runner-worker", shell_lib.shell_quote(
+      lua54.lua54_bin() .. " tools/packages/acceptance/runner_worker.lua"),
     "--json",
   }
   if options.workers ~= nil then

@@ -25,6 +25,12 @@ CLI contract:
   the three bodies only when missing or drifted, and chmods them 755. Re-running it is a no-op, so it
   is safe to call from any startup path. The mutator forwarder keeps the differential clamp
   (`--level full` -> `--level hard`, caller `--workers` replaced by `--workers 4`).
+- One interpreter discipline (口径) across the APS surface: the forwarders, `mutate_lane.lua` (parser / generator /
+  runner_worker / mutator spawns) and `acceptance/steps/mutator_status.lua` all take the launcher
+  from `packages.luaunit_runner.lua54` (`LUA54_BIN` overrides; falls back to PATH `lua` when no 5.4
+  resolves), matching `acceptance/spawn_env.lua`. PATH `lua` on this machine is 5.5 while
+  `.toolcache/luarocks` is a 5.4 tree, so a literal `lua` at any of those sites silently runs the
+  pipeline on an unpinned interpreter.
 - The Babashka Acceptance-Pipeline-Specification builds do not parse this repo's `# language: zh-CN`
   features and must not be installed here: never run `swarm_tool.sh ensure <aps-tool>` (it replaces the
   forwarder with a Babashka wrapper and re-fetches the upstream Clojure clone into

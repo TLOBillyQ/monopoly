@@ -22,6 +22,13 @@ local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
 local text_lib = require("foundation.text")
 local json = require("acceptance4lua.json")
+local lua54 = require("packages.luaunit_runner.lua54")
+
+-- APS 面统一口径(工单 #606 运营方补充事实):转发器钉了探测到的解释器,车道这几个
+-- 子进程就不能再各写各的字面量 "lua"——PATH 上的 lua 本机是 5.5.1,而 rock tree 与
+-- 全部质量车道都按 5.4 走;探针存在的理由正是「worker 退回 5.5」这类坏味道,口径不一致
+-- 时它自己就先成了那个坏味道。缺 lua5.4 时 lua54_bin() 照既有约定退回 "lua"。
+local APS_LUA = lua54.lua54_bin()
 
 -- mutator 的 --feature 默认值,保持与 APS 参考实现一致。
 local DEFAULT_FEATURE = "features/a-feature.feature"
@@ -80,7 +87,7 @@ local function _probe_runner(feature_path)
     _die(_text("变异车道中止:探针目录建不起来", "acceptance-mutate aborted: cannot create probe dir"), tostring(err))
   end
 
-  ok, err = _run({ "lua", "tools/packages/acceptance/cli/parser.lua", feature_path, ir_path }, { cwd = env.repo_root })
+  ok, err = _run({ APS_LUA, "tools/packages/acceptance/cli/parser.lua", feature_path, ir_path }, { cwd = env.repo_root })
   if not ok then
     _die(_text(
       "变异车道中止:parser 跑不动,变异跑起来只会整批 error。",
@@ -88,7 +95,7 @@ local function _probe_runner(feature_path)
     ), err)
   end
 
-  ok, err = _run({ "lua", "tools/packages/acceptance/cli/generator.lua", ir_path, spec_path }, { cwd = env.repo_root })
+  ok, err = _run({ APS_LUA, "tools/packages/acceptance/cli/generator.lua", ir_path, spec_path }, { cwd = env.repo_root })
   if not ok then
     _die(_text(
       "变异车道中止:generator 跑不动,变异跑起来只会整批 error。",
@@ -106,7 +113,7 @@ local function _probe_runner(feature_path)
     _die(_text("变异车道中止:探针 job 写不下去", "acceptance-mutate aborted: cannot write probe job"), tostring(err))
   end
 
-  local result = proc_lib.run_command({ "lua", "tools/packages/acceptance/runner_worker.lua" }, {
+  local result = proc_lib.run_command({ APS_LUA, "tools/packages/acceptance/runner_worker.lua" }, {
     cwd = env.repo_root,
     stdin_path = job_path,
   })
@@ -160,10 +167,10 @@ end
 -- run_command 会把输出重定向进临时文件,长跑期间看不到进度,与「长跑必须periodic
 -- 报进度」的约束冲突。
 local parts = {
-  "lua",
+  APS_LUA,
   "tools/packages/acceptance_mutate/mutator.lua",
   "--runner-worker",
-  shell_lib.shell_quote("lua tools/packages/acceptance/runner_worker.lua"),
+  shell_lib.shell_quote(APS_LUA .. " tools/packages/acceptance/runner_worker.lua"),
 }
 if not _has_skip_columns(args) then
   parts[#parts + 1] = "--skip-columns"
