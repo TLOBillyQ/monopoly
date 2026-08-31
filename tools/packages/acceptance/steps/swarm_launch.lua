@@ -59,6 +59,19 @@ function swarm_launch_steps.handlers()
       return true
     end,
 
+    ["角色<角色名>使用工作树<工作树>"] = function(world, example)
+      local role = example["角色名"]
+      local expected = example["工作树"]
+      local row, err = declaration.role_row(world, role)
+      if row == nil then
+        return nil, err
+      end
+      if row.worktree ~= expected then
+        return nil, "角色 " .. role .. " 声明的工作树是 " .. tostring(row.worktree)
+      end
+      return true
+    end,
+
     ["检查角色<角色名>的引擎是否已安装"] = function(world, example)
       local row, err = declaration.role_row(world, example["角色名"])
       if row == nil then
