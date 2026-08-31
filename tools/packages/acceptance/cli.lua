@@ -36,7 +36,7 @@ function M.usage()
     "",
     "验收套件（按需车道）：先从 features/ 中文源重生成 gitignored 的 generated specs，",
     "再由 run_all 逐个 spawn 聚合。引擎核心由自研 acceptance4lua",
-    "rock 由 tools/tools.lock 钉定并从 .toolcache/luarocks 装载，本包是数据面 + 驱动层 + 车道胶水。",
+    "rock 由 tools/tools.lock 跟随上游主干并从 .toolcache/luarocks 装载，本包是数据面 + 驱动层 + 车道胶水。",
     "详细语义见 tools/packages/acceptance/ 与 `lua tools/cli.lua verify --help`。",
     "",
   }, "\n") .. "\n"

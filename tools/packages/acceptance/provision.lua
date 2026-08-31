@@ -2,7 +2,7 @@
 --
 -- 背景:任务卡「配置蛋仔lua swarm-forge环境」把 APS 三件(gherkin-parser /
 -- ir-dry-checker / gherkin-mutator)从 Babashka 版 Acceptance-Pipeline-Specification
--- 迁到本仓 `tools/tools.lock` 钉定的 Lua rock `acceptance4lua`(bb 版读不了本仓
+-- 迁到本仓 `tools/tools.lock` 跟随的 Lua rock `acceptance4lua`(bb 版读不了本仓
 -- `# language: zh-CN` 的 feature,直接 `missing feature declaration`)。供给形态是
 -- `<swarm-root>/.swarmforge/bin/` 里三个 bash→Lua 转发器(launcher 把该目录放 PATH 最前)。
 --
@@ -109,7 +109,7 @@ function M.usage()
     "",
     "幂等重建 SwarmForge 的 APS PATH 三件——<swarm-root>/.swarmforge/bin/ 里的",
     "gherkin-parser / ir-dry-checker / gherkin-mutator bash→Lua 转发器。入口是本仓",
-    "tools/tools.lock 钉定的 acceptance4lua rock 的 Lua 面;launcher 把该 bin 目录放 PATH",
+    "tools/tools.lock 跟随的 acceptance4lua rock 的 Lua 面;launcher 把该 bin 目录放 PATH",
     "最前,所以这三份文件就是「下次启动可用」的载体。",
     "",
     "语义:",

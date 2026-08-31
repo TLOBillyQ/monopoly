@@ -16,8 +16,8 @@ end
 require("packages.mutate.mutate4lua_paths").activate(mutate_tool.root)
 local tool_cli = require("foundation.tool_cli")
 
--- 工具经 tools/tools.lock 的 rockspec 硬钉，.toolcache/luarocks tree 是唯一装载面。
--- tools/tools.lock 钉定的上游 v0.1.0 内建 luaunit runner，宿主 driver 选项已整组删除；
+-- 工具经 tools/tools.lock 跟随上游主干，.toolcache/luarocks tree 是唯一装载面。
+-- tools/tools.lock 跟随的上游自 v0.1.0 起内建 luaunit runner，宿主 driver 选项已整组删除；
 -- spec 补 return 后由内建 runner 原生直跑。
 local _env = {
   cwd = REPO_ROOT, command_name = "tools/packages/mutate/runner.lua",
