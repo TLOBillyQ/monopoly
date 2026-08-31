@@ -100,6 +100,15 @@ local function _reexec(repo_root, lua54, script_path, args)
   return (ok == true or code == 0) and 0 or (code or 1)
 end
 
+-- tree 前缀检测工厂:LUA_PATH / LUA_CPATH 两路判据形制一致,只差环境变量名与
+-- tree 取值器,抽成一处。
+local function _tree_env_check(env_var, tree_getter)
+  return function(repo_root)
+    local current = os.getenv(env_var) or ""
+    return current:find(tree_getter(repo_root), 1, true) ~= nil
+  end
+end
+
 -- CLI 入口门禁。返回 "proceed" 或 ("reexec", exit_code) 或 (nil, 诊断)。
 -- detect / path_check / getenv 可注入,便于 spec。
 function M.ensure(opts)
@@ -107,14 +116,8 @@ function M.ensure(opts)
   local getenv = opts.getenv or os.getenv
   local detect = opts.detect or _detect_lua54
   local path_check = opts.path_check or _path_lua_is_54
-  local lua_path_check = opts.lua_path_check or function(repo_root)
-    local current = os.getenv("LUA_PATH") or ""
-    return current:find(M.tree_lua_path(repo_root), 1, true) ~= nil
-  end
-  local lua_cpath_check = opts.lua_cpath_check or function(repo_root)
-    local current = os.getenv("LUA_CPATH") or ""
-    return current:find(M.tree_lua_cpath(repo_root), 1, true) ~= nil
-  end
+  local lua_path_check = opts.lua_path_check or _tree_env_check("LUA_PATH", M.tree_lua_path)
+  local lua_cpath_check = opts.lua_cpath_check or _tree_env_check("LUA_CPATH", M.tree_lua_cpath)
   local version = opts.version or _VERSION
 
   if getenv(_MARKER) == "1" then

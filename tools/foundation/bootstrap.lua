@@ -116,12 +116,15 @@ local function _luarocks_make(tree, name, src_dir)
   }, { cwd = src_dir })
 end
 
-function bootstrap.ensure_luaunit_tree(repo_root)
+-- 用 luarocks 往 tree 里装一个工具/库,装好(或已装)返回 true。marker 判据
+-- 各不相同,由调用方给出 marker 相对子路径;name/version 是 `luarocks install`
+-- 的实参。cluacov 额外依赖 luacov,用 before_install 钩子表达,装前先确保依赖。
+local function _ensure_rock_installed(repo_root, name, version, marker_rel, before_install)
   local path_lib = require("foundation.path")
   local fs_lib = require("foundation.fs")
   local proc_lib = require("foundation.proc")
   local tree = _luarocks_tree_dir(repo_root)
-  local marker = path_lib.join_path(tree, "share/lua/5.4/luaunit.lua")
+  local marker = path_lib.join_path(tree, marker_rel)
   if fs_lib.path_exists(marker) == true then
     return true
   end
@@ -131,98 +134,51 @@ function bootstrap.ensure_luaunit_tree(repo_root)
     return nil, err
   end
 
+  if before_install ~= nil then
+    local dep_ok, dep_err = before_install()
+    if dep_ok ~= true then
+      return nil, dep_err
+    end
+  end
+
   local result = proc_lib.run_command({
     "luarocks",
     "--tree", tree,
     "--lua-version", "5.4",
-    "install", "luaunit", "3.5-1",
+    "install", name, version,
   })
   if result.ok ~= true then
-    return nil, "luarocks install failed for luaunit: " .. tostring(result.output)
+    return nil, "luarocks install failed for " .. name .. ": " .. tostring(result.output)
   end
 
   if fs_lib.path_exists(marker) ~= true then
-    return nil, "luaunit not found in luarocks tree after install"
+    return nil, name .. " not found in luarocks tree after install"
   end
 
   return true
+end
+
+function bootstrap.ensure_luaunit_tree(repo_root)
+  return _ensure_rock_installed(repo_root, "luaunit", "3.5-1", "share/lua/5.4/luaunit.lua")
 end
 
 -- 覆盖率引擎 luacov 由上游 rockspec（crap4lua/mutate4lua
 -- v0.1.0)以依赖形式带入 tree,这里只做显式确保——runner `-c` 与 coverage.lua
 -- 车道在无 crap4lua 前置调用时也能直接落地它。钉 0.17.0-1 与上游一致。
 function bootstrap.ensure_luacov_tree(repo_root)
-  local path_lib = require("foundation.path")
-  local fs_lib = require("foundation.fs")
-  local proc_lib = require("foundation.proc")
-  local tree = _luarocks_tree_dir(repo_root)
-  local marker = path_lib.join_path(tree, "share/lua/5.4/luacov/runner.lua")
-  if fs_lib.path_exists(marker) == true then
-    return true
-  end
-
-  local ok, err = fs_lib.ensure_dir(tree)
-  if not ok then
-    return nil, err
-  end
-
-  local result = proc_lib.run_command({
-    "luarocks",
-    "--tree", tree,
-    "--lua-version", "5.4",
-    "install", "luacov", "0.17.0-1",
-  })
-  if result.ok ~= true then
-    return nil, "luarocks install failed for luacov: " .. tostring(result.output)
-  end
-
-  if fs_lib.path_exists(marker) ~= true then
-    return nil, "luacov not found in luarocks tree after install"
-  end
-
-  return true
+  return _ensure_rock_installed(repo_root, "luacov", "0.17.0-1", "share/lua/5.4/luacov/runner.lua")
 end
 
 -- cluacov = luacov 的可选 C hook 加速器(lunarmodules/cluacov 1.0.0-1)。
 -- luacov.runner 顶层 pcall(require, "cluacov.version") 成功即改用 C hook;
 -- mutate4lua 归因矩阵构建是全套 spec 下的 line-hook 热点,启用后显著降 wall。
 -- 钉 1.0.0-1;C 扩展 marker 是 hook.so(仅 version.lua 不够——证明 .so 已编进 tree)。
+-- cluacov rockspec 依赖 luacov >= 0.13;先确保 base engine 在 tree。
 function bootstrap.ensure_cluacov_tree(repo_root)
-  local path_lib = require("foundation.path")
-  local fs_lib = require("foundation.fs")
-  local proc_lib = require("foundation.proc")
-  local tree = _luarocks_tree_dir(repo_root)
-  local marker = path_lib.join_path(tree, "lib/lua/5.4/cluacov/hook.so")
-  if fs_lib.path_exists(marker) == true then
-    return true
-  end
-
-  local ok, err = fs_lib.ensure_dir(tree)
-  if not ok then
-    return nil, err
-  end
-
-  -- cluacov rockspec 依赖 luacov >= 0.13;先确保 base engine 在 tree。
-  local luacov_ok, luacov_err = bootstrap.ensure_luacov_tree(repo_root)
-  if luacov_ok ~= true then
-    return nil, luacov_err
-  end
-
-  local result = proc_lib.run_command({
-    "luarocks",
-    "--tree", tree,
-    "--lua-version", "5.4",
-    "install", "cluacov", "1.0.0-1",
-  })
-  if result.ok ~= true then
-    return nil, "luarocks install failed for cluacov: " .. tostring(result.output)
-  end
-
-  if fs_lib.path_exists(marker) ~= true then
-    return nil, "cluacov not found in luarocks tree after install"
-  end
-
-  return true
+  return _ensure_rock_installed(repo_root, "cluacov", "1.0.0-1", "lib/lua/5.4/cluacov/hook.so",
+    function()
+      return bootstrap.ensure_luacov_tree(repo_root)
+    end)
 end
 
 function bootstrap.ensure_tool(name, env_or_opts)
