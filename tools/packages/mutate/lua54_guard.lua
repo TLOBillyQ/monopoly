@@ -102,9 +102,9 @@ end
 
 -- tree 前缀检测工厂:LUA_PATH / LUA_CPATH 两路判据形制一致,只差环境变量名与
 -- tree 取值器,抽成一处。
-local function _tree_env_check(env_var, tree_getter)
+local function _tree_env_check(getenv, env_var, tree_getter)
   return function(repo_root)
-    local current = os.getenv(env_var) or ""
+    local current = getenv(env_var) or ""
     return current:find(tree_getter(repo_root), 1, true) ~= nil
   end
 end
@@ -116,8 +116,8 @@ function M.ensure(opts)
   local getenv = opts.getenv or os.getenv
   local detect = opts.detect or _detect_lua54
   local path_check = opts.path_check or _path_lua_is_54
-  local lua_path_check = opts.lua_path_check or _tree_env_check("LUA_PATH", M.tree_lua_path)
-  local lua_cpath_check = opts.lua_cpath_check or _tree_env_check("LUA_CPATH", M.tree_lua_cpath)
+  local lua_path_check = opts.lua_path_check or _tree_env_check(getenv, "LUA_PATH", M.tree_lua_path)
+  local lua_cpath_check = opts.lua_cpath_check or _tree_env_check(getenv, "LUA_CPATH", M.tree_lua_cpath)
   local version = opts.version or _VERSION
 
   if getenv(_MARKER) == "1" then

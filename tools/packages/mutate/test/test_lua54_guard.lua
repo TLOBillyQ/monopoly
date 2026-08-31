@@ -84,6 +84,23 @@ function TestLua54GuardEnsure:test_proceeds_when_host_and_path_lua_are_both_54()
   lu.assertIs(guard.ensure(_env()), "proceed")
 end
 
+function TestLua54GuardEnsure:test_default_tree_checks_use_the_injected_environment_reader()
+  local root = "/repo"
+  local values = {
+    LUA_PATH = "prefix;" .. guard.tree_lua_path(root) .. "suffix",
+    LUA_CPATH = "prefix;" .. guard.tree_lua_cpath(root) .. "suffix",
+  }
+  local result = guard.ensure({
+    repo_root = root,
+    args = {},
+    getenv = function(name) return values[name] end,
+    detect = function() return "/opt/lua54/bin/lua5.4" end,
+    path_check = function() return true end,
+    version = "Lua 5.4",
+  })
+  lu.assertIs(result, "proceed")
+end
+
 -- re-exec 路径会真跑 shell;此处只钉判定走向,不钉副作用。
 function TestLua54GuardEnsure:test_chooses_reexec_when_path_lua_is_not_54()
   -- _reexec 需要可写 repo_root;用不存在目录逼出失败,证明确实走向 re-exec 分支。
