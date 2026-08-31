@@ -1,10 +1,20 @@
 # Local Engineering Rules
 
+## Project Language
+- Project language: Lua 5.4, hosted by the Eggy editor (host runs on Windows; development on macOS / WSL Ubuntu).
+- `EggyAPI.lua` / `EggyEditorAPI.lua` are third-party host-API boundaries; do not modify them.
+
+## Command Mapping
+- Upstream prompt text mentioning `bb test` / `bb coverage` / `bb acceptance` maps to `lua tools/cli.lua verify` / `lua tools/cli.lua verify --coverage` / `lua tools/cli.lua acceptance`. Never run bb/clj commands in this repo.
+- The acceptance lane lives in tools/packages/acceptance with Gherkin specs under features/; extend it, do not rescaffold from upstream Clojure templates.
+- Deployment uses tools/packages/ops/deploy.lua (Lua 5.4); there is no deploy.ps1.
+- Hard floor: `lua tools/cli.lua verify` (slim) fully green before any push.
+
 ## Language Tool Table (Lua 5.4)
-- The language table in engineering.prompt does not cover Lua; use this table instead.
-- Mutation: `mutate4lua`; CRAP: `crap4lua`; DRY: `dry4lua`; dependency boundaries: `arch-view`. All ship in this repo and run via `lua tools/cli.lua <mutate|crap|dry|arch-view>`; no separate install step is required.
-- APS tools (`gherkin-parser`, `ir-dry-checker`, `gherkin-mutator`) are served by the pinned Lua rock
-  `acceptance4lua` (`tools/tools.lock`), not by the Babashka/Go builds named in engineering.prompt:
+- The language table in engineering.prompt does not cover Lua; use this table instead. engineering.prompt's freshness rules apply unchanged: procure each tool at its latest available upstream version, and do not rely on stale cached, vendored, or preinstalled copies.
+- Lua tools live in Gitea under `http://lzxsvn:3000/eggy/`: mutation `mutate4lua`, CRAP `crap4lua`, DRY `dry4lua`, dependency boundaries `arch-view`. Run them via `lua tools/cli.lua <mutate|crap|dry|arch-view>`.
+- Tool versions float: `bootstrap.ensure_tool` clones each repo's latest master HEAD and builds with `luarocks make` (the repo-root rockspec is the build manifest and dependency declaration — it stays upstream; only tags were dropped). HEAD resolution is cached in `.toolcache/resolved-tools.tsv` (24h TTL); delete that file to force re-resolution. Offline runs fall back to the already-installed version.
+- APS tools (`gherkin-parser`, `ir-dry-checker`, `gherkin-mutator`) are served by the Gitea `acceptance4lua` rock, not by the Babashka/Go builds named in engineering.prompt:
   those cannot read this repo's `# language: zh-CN` features (they fail with
   `missing feature declaration`), so engineering.prompt's "does not work in the current project
   environment" fallback applies here.
@@ -31,11 +41,11 @@
   mode 755, the mutator's differential clamp (`--level full` -> `--level hard`, caller `--workers`
   replaced by `--workers 4`) and the baked 5.4 interpreter - have one source of truth in
   `tools/packages/acceptance/aps_forwarders.lua`; a hand-copied `exec lua ...` lands on PATH `lua`
-  (5.5 on this machine) instead of the pinned rock tree. Issue #606.
+  (5.5 on this machine) instead of the provisioned rock tree. Issue #606.
 - This repo keeps no Clojure sources and no `bb` project tasks; `bb` stays installed only as the
   forge's own script runtime. `swarmforge/scripts/*.bb` are forge-overlay files: do not edit,
-  do not index them as project code, do not sync this pack from the upstream GitHub swarm-forge
-  (start/stop goes through the local forge dashboard).
+  do not index them as project code, do not sync this project's swarmforge assets from the upstream
+  GitHub swarm-forge (start/stop goes through the local forge dashboard).
 
 ## Verification
 - Coverage: `lua tools/cli.lua verify --coverage`. luacov stats must exist and be fresh before `crap4lua`; CRAP scores without coverage stats are invalid. If coverage cannot run, hand back a blocker instead of inventing numbers.

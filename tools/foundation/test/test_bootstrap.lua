@@ -12,25 +12,24 @@ local runtime_paths = dofile("tools/foundation/runtime_paths.lua")
 
 TestBootstrap = {}
 
-function TestBootstrap:test_parses_the_new_rockspec_url_lockfile_format()
+function TestBootstrap:test_parses_the_repo_url_lockfile_format()
   local lock, err = tool_lockfile.parse_contents(table.concat({
     "# comment",
-    "mutate4lua http://example.invalid/mutate4lua/raw/tag/v0.0.0-legacy/mutate4lua-0.0.0-1.rockspec",
-    "dry4lua http://example.invalid/dry4lua/raw/tag/v0.1.0/dry4lua-0.1.0-1.rockspec",
+    "mutate4lua http://example.invalid/eggy/mutate4lua",
+    "dry4lua http://example.invalid/eggy/dry4lua.git",
     "",
   }, "\n"))
 
   lu.assertNil(err)
   lu.assertNotNil(lock)
-  lu.assertIs(lock.tools.mutate4lua.url, "http://example.invalid/mutate4lua/raw/tag/v0.0.0-legacy/mutate4lua-0.0.0-1.rockspec")
-  lu.assertIs(lock.tools.mutate4lua.version, "0.0.0-1")
-  lu.assertIs(lock.tools.dry4lua.version, "0.1.0-1")
+  lu.assertIs(lock.tools.mutate4lua.url, "http://example.invalid/eggy/mutate4lua")
+  lu.assertIs(lock.tools.dry4lua.url, "http://example.invalid/eggy/dry4lua.git")
   lu.assertEquals(lock.ordered, { "mutate4lua", "dry4lua" })
 end
 
 function TestBootstrap:test_rejects_unknown_tools()
   local lock, err = tool_lockfile.parse_contents(
-    "unknown http://example.invalid/tool/raw/tag/v0.1.0/tool-0.1.0-1.rockspec\n"
+    "unknown http://example.invalid/eggy/unknown\n"
   )
 
   lu.assertNil(lock)

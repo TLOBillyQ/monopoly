@@ -571,8 +571,8 @@ end
 local function _test_reference_tools_do_not_expose_bin_entrypoints()
   -- tree 形态下 root 即 luarocks tree,bin/ 住着其它工具的入口(dry4lua 等);
   -- arch_view 自身的契约改为检查 rock 安装清单不含 bin 条目。
-  local version = arch_tool.url:match("arch_view%-(%d+%.%d+%.%d+%-%d+)%.rockspec$")
-  assert(version ~= nil, "cannot parse arch_view version from pin url: " .. tostring(arch_tool.url))
+  local version = arch_tool.version
+  assert(version ~= nil, "arch_view should report its installed version from ensure_tool")
   local manifest_path = path_lib.join_path(arch_tool.root,
     "lib/luarocks/rocks-5.4/arch_view/" .. version .. "/rock_manifest")
   local manifest = assert(fs_lib.read_file(manifest_path))

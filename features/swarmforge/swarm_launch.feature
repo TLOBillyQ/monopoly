@@ -31,3 +31,16 @@
     | coder |
     | refactorer |
     | architect |
+
+# Swarm 全角色会话启动 003 每个角色使用声明的工作树
+场景大纲: Swarm 全角色会话启动 003 每个角色使用声明的工作树
+  假如 swarm 配置声明角色<角色名>
+  当 解析 swarm 启动配置
+  那么 角色<角色名>使用工作树<工作树>
+
+  例子:
+    | 角色名 | 工作树 |
+    | specifier | master |
+    | coder | coder |
+    | refactorer | refactorer |
+    | architect | architect |

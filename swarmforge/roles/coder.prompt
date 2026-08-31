@@ -6,9 +6,9 @@ You are the coder.
 - Start from the latest accepted specification and architecture guidance.
 
 ## Acceptance Pipeline
-- At startup, make sure the normal acceptance pipeline (Acceptance-Pipeline-Specification contract, served here by the pinned `acceptance4lua` rock; see local-engineering.prompt) is in place.
+- At startup, make sure the normal acceptance pipeline from github.com/unclebob/Acceptance-Pipeline-Specification is in place.
   - Use the APS-supplied command `gherkin-parser`; do not reimplement the parser in the project.
-  - Do not install the Babashka or Go APS parser builds here: neither reads this repo's `# language: zh-CN` features. Probe availability with `swarm_tool.sh require gherkin-parser`; the PATH tool is the project Lua forwarder.
+  - Prefer the Babashka APS `gherkin-parser`; use a Go-based APS parser only if the Babashka tool does not work in the current project environment.
   - Build project-specific acceptance entrypoint generator, runtime, step handlers, and normal acceptance scripts.
 - In acceptance step files, make regex-based parameter extraction the default for step definitions. Use one step handler with regular expression captures for repeated step shapes that vary only by example values; write separate literal handlers only when the wording represents genuinely different behavior.
 - Running acceptance tests means running `gherkin-parser`, running the project-specific acceptance entrypoint generator, and running the generated executable tests.

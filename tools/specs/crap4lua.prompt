@@ -2,7 +2,7 @@
 
 Purpose: combine Lua complexity and coverage gaps into CRAP risk reports.
 
-Reference implementation: `crap4lua` entry in `tools/tools.lock` (v0.1.1).
+Reference implementation: `crap4lua` entry in `tools/tools.lock` (follows upstream master HEAD).
 Project runner: `lua tools/cli.lua crap` (package runner `tools/packages/crap/runner.lua`; gate wiring lives in `tools/packages/crap/gate.lua` and is driven by the verify lane).
 
 CLI contract:
@@ -14,7 +14,7 @@ CLI contract:
 - `tools/packages/crap/gate.lua` enforces the committed complexity-aware baseline.
 
 Data contract:
-- Coverage runs under luacov 0.17.0-1 pinned by `tools/tools.lock`; `crap4lua` consumes the standard luacov report (include/exclude single source: `tools/packages/coverage/coverage_config.lua`), and `collect`/`summary` exchange JSON artifacts.
+- Coverage runs under luacov 0.17.0-1 pinned in `tools/foundation/bootstrap.lua`; `crap4lua` consumes the standard luacov report (include/exclude single source: `tools/packages/coverage/coverage_config.lua`), and `collect`/`summary` exchange JSON artifacts.
 - Report/collect JSON artifacts are generated outputs and must not be committed unless explicitly requested.
 
 Algorithm requirements:
@@ -24,7 +24,7 @@ Algorithm requirements:
 
 Project workflow:
 - Crap is a soft-lane prioritization reference: ranks functions for refactor/test coverage, never a merge decision by itself.
-- Coverage engine is luacov 0.17.0-1 pinned by `tools/tools.lock`: specs run under `luacov.runner`; crap consumes the standard luacov report. Line coverage only, not branch coverage; `src/**/*.lua` only — `test/`/`tools/`/`vendor/` are never scored.
+- Coverage engine is luacov 0.17.0-1 pinned in `tools/foundation/bootstrap.lua`: specs run under `luacov.runner`; crap consumes the standard luacov report. Line coverage only, not branch coverage; `src/**/*.lua` only — `test/`/`tools/`/`vendor/` are never scored.
 - Functions without coverage data are `crap: null` (N/A) and count as violations in gate (#275-③); do not treat them as zero.
 - Only `summary --gate` (or the `verify --full` gate step) blocks merge; standalone risk bands (low 1–5 / moderate 5–30 / high 30+) are sorting colors, not gates.
 - Tier thresholds (source `tools/packages/crap/coverage_tiers.lua`): `core_logic` ≥ 75%, `host_bridge` ≥ 60%, `ui_host_adapter` ≥ 60%, `ui_surface` ≥ 65%. Gate threshold default 5.0; 416 existing violations tracked in #285.

@@ -148,6 +148,30 @@ function TestSwarmLaunchSteps:test_engine_unavailable_reports_engine_name()
   end)
 end
 
+function TestSwarmLaunchSteps:test_worktree_step_accepts_the_role_s_declared_worktree()
+  local handlers = _handlers()
+  local ok, err = handlers["角色<角色名>使用工作树<工作树>"](
+    _world_with_rows(_declared_rows()), { ["角色名"] = "coder", ["工作树"] = "coder" })
+  lu.assertTrue(ok, err or "")
+  lu.assertNil(err)
+end
+
+function TestSwarmLaunchSteps:test_worktree_step_rejects_a_mismatched_worktree()
+  local handlers = _handlers()
+  local ok, err = handlers["角色<角色名>使用工作树<工作树>"](
+    _world_with_rows(_declared_rows()), { ["角色名"] = "coder", ["工作树"] = "master" })
+  lu.assertNil(ok)
+  lu.assertEvalToTrue(err:find("角色 coder 声明的工作树是 coder", 1, true), err)
+end
+
+function TestSwarmLaunchSteps:test_worktree_step_reports_an_undeclared_role()
+  local handlers = _handlers()
+  local ok, err = handlers["角色<角色名>使用工作树<工作树>"](
+    _world_with_rows(_declared_rows()), { ["角色名"] = "boss", ["工作树"] = "master" })
+  lu.assertNil(ok)
+  lu.assertEvalToTrue(err:find("swarm 配置未声明角色 boss", 1, true), err)
+end
+
 -- Property-style coverage for the parser: idempotence, formatting stability
 -- (comments / blank lines), and broad input ranges over generated inputs.
 -- Deterministic; follows the repo's fuzz-probe convention (#190).

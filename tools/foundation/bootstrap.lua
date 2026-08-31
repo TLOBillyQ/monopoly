@@ -37,52 +37,83 @@ local function _luarocks_tree_dir(repo_root)
   return runtime_paths.join_path(repo_root, ".toolcache/luarocks")
 end
 
-local function _parse_rockspec_version(url)
-  local filename = tostring(url):match("([^/]+)%.rockspec$") or ""
-  local _, version = filename:match("^([%w_]+)-(%d+%.%d+%.%d+-%d+)$")
-  return version
-end
-
-local function _luarocks_list(tree, name, version)
+local function _luarocks_list(tree, name)
   -- 调用方已确保 foundation 可用(package.path 已装好)。
   local proc_lib = require("foundation.proc")
   return proc_lib.run_command({
     "luarocks",
     "--tree", tree,
     "--lua-version", "5.4",
-    "list", name, version,
+    "list", name,
     "--porcelain",
   })
 end
 
-local function _is_tool_installed(tree, name, url)
-  local version = _parse_rockspec_version(url)
-  if version == nil then
-    return false, "cannot parse version from rockspec url: " .. tostring(url)
-  end
-  local result = _luarocks_list(tree, name, version)
+local function _installed_version(tree, name)
+  local result = _luarocks_list(tree, name)
   if result.ok ~= true then
-    return false, tostring(result.output)
+    return nil
   end
-  local escaped_name = name:gsub("%-", "%%-")
-  local escaped_version = version:gsub("%-", "%%-")
-  local pattern = "^" .. escaped_name .. "%s+" .. escaped_version .. "%s+installed"
+  local pattern = "^" .. name:gsub("%-", "%%-") .. "%s+(%S+)%s+installed"
+  local best = nil
   for line in tostring(result.output or ""):gmatch("[^\r\n]+") do
-    if line:match(pattern) then
-      return true
+    local version = line:match(pattern)
+    if version ~= nil then
+      best = version
     end
   end
-  return false
+  return best
 end
 
-local function _luarocks_install(tree, url)
+local function _is_tool_present(tree, name)
+  return _installed_version(tree, name) ~= nil
+end
+
+local function _tool_source_dir(repo_root, name)
+  return runtime_paths.join_path(repo_root, ".toolcache/src/" .. name)
+end
+
+-- 浅克隆上游主干到 .toolcache/src/<name>,返回实测 HEAD commit。
+local function _fetch_tool_source(repo_url, src_dir)
+  local fs_lib = require("foundation.fs")
   local proc_lib = require("foundation.proc")
+  local remote = tostring(repo_url):gsub("/+$", "")
+  if remote:match("%.git$") == nil then
+    remote = remote .. ".git"
+  end
+  fs_lib.remove_path(src_dir)
+  local ok, ensure_err = fs_lib.ensure_parent_dir(src_dir)
+  if not ok then
+    return nil, ensure_err
+  end
+  local result = proc_lib.run_command({ "git", "clone", "--depth", "1", "--quiet", remote, src_dir })
+  if result.ok ~= true then
+    return nil, "git clone failed for " .. remote .. ": " .. tostring(result.output)
+  end
+  local rev = proc_lib.run_command({ "git", "-C", src_dir, "rev-parse", "HEAD" })
+  if rev.ok ~= true then
+    return nil, "git rev-parse failed in " .. src_dir .. ": " .. tostring(rev.output)
+  end
+  return (tostring(rev.output or ""):match("^(%x+)"))
+end
+
+-- 从克隆的工作树构建安装。仓库根的 rockspec 是构建清单与依赖声明
+-- (luacheck/luacov/luaunit 由它带入),luarocks make 自动拾取。
+-- 先 remove 兜底:同版本号重复 make 会报 already installed。
+local function _luarocks_make(tree, name, src_dir)
+  local proc_lib = require("foundation.proc")
+  proc_lib.run_command({
+    "luarocks",
+    "--tree", tree,
+    "--lua-version", "5.4",
+    "remove", name,
+  })
   return proc_lib.run_command({
     "luarocks",
     "--tree", tree,
     "--lua-version", "5.4",
-    "install", url,
-  })
+    "make",
+  }, { cwd = src_dir })
 end
 
 function bootstrap.ensure_luaunit_tree(repo_root)
@@ -212,27 +243,47 @@ function bootstrap.ensure_tool(name, env_or_opts)
   end
 
   local fs_lib = require("foundation.fs")
+  local resolver = require("foundation.tool_resolver")
   local tree = _luarocks_tree_dir(env.repo_root)
   local ok, ensure_err = fs_lib.ensure_dir(tree)
   if not ok then
     return nil, ensure_err
   end
 
-  if not _is_tool_installed(tree, name, entry.url) then
-    local result = _luarocks_install(tree, entry.url)
-    if result.ok ~= true then
-      return nil, "luarocks install failed for " .. tostring(name) .. ": " .. tostring(result.output)
+  -- 新鲜度 = 上游 HEAD commit。解析失败(网络不通且无缓存)时,
+  -- tree 里已装任意版本则降级继续用,否则报错。
+  local resolved, resolve_err = resolver.resolve(name, entry.url, env)
+  if resolved == nil then
+    if _is_tool_present(tree, name) then
+      return { name = name, root = tree, version = _installed_version(tree, name), stale = true }
     end
-    if not _is_tool_installed(tree, name, entry.url) then
-      return nil, tostring(name) .. " not found in luarocks tree after install"
-    end
+    return nil, resolve_err
   end
 
-  return {
-    name = name,
-    root = tree,
-    url = entry.url,
-  }
+  if resolved.installed == resolved.commit and _is_tool_present(tree, name) then
+    return { name = name, root = tree, commit = resolved.commit, version = _installed_version(tree, name) }
+  end
+
+  local src_dir = _tool_source_dir(env.repo_root, name)
+  local sha, fetch_err = _fetch_tool_source(entry.url, src_dir)
+  if sha == nil then
+    if _is_tool_present(tree, name) then
+      return { name = name, root = tree, commit = resolved.installed, version = _installed_version(tree, name), stale = true }
+    end
+    return nil, fetch_err
+  end
+
+  local result = _luarocks_make(tree, name, src_dir)
+  if result.ok ~= true then
+    return nil, "luarocks make failed for " .. tostring(name) .. ": " .. tostring(result.output)
+  end
+  local installed_version = _installed_version(tree, name)
+  if installed_version == nil then
+    return nil, tostring(name) .. " not found in luarocks tree after make"
+  end
+
+  resolver.mark_installed(env, name, sha)
+  return { name = name, root = tree, commit = sha, version = installed_version }
 end
 
 return bootstrap

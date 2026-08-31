@@ -14,22 +14,14 @@ local _TOOL_DEFS = {
 
 local function _split_fields(line)
   local fields = {}
-  -- 第一个 token 是 name,剩余部分是整个 URL(URL 内部不能有空格)。
+  -- 第一个 token 是 name,剩余部分是仓库 URL(URL 内部不能有空格)。
+  -- 钉版废弃后 URL 是 Gitea 仓库地址,不再带 tag/rockspec 版本信息。
   local name, url = line:match("^(%S+)%s+(%S+)$")
   if name ~= nil and url ~= nil then
     fields[1] = name
     fields[2] = url
   end
   return fields
-end
-
-local function _parse_rockspec_version(url)
-  local filename = tostring(url):match("([^/]+)%.rockspec$") or ""
-  local name, version = filename:match("^([%w_]+)-(%d+%.%d+%.%d+-%d+)$")
-  if name == nil or version == nil then
-    return nil
-  end
-  return version
 end
 
 function tool_lockfile.definition(name)
@@ -60,7 +52,6 @@ function tool_lockfile.parse_contents(content)
         tools[name] = {
           name = name,
           url = url,
-          version = _parse_rockspec_version(url),
         }
         ordered[#ordered + 1] = name
       end
