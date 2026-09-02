@@ -1,5 +1,5 @@
--- 终局结算面板链(自 event_handlers.lua 拆分,行为保持):game.finished 事件的
--- 胜/败者面板触发,宿主对象调用「跳过必留痕」(ADR 0046),禁止静默。
+-- 终局结算面板链(自 event_handlers.lua 拆分):game.finished 事件的胜/败者
+-- 面板触发 + 整局收尾(end_game),宿主对象调用「跳过必留痕」(ADR 0046),禁止静默。
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local endgame_result_panels = {}
@@ -38,7 +38,15 @@ local function _show_panel(role, player, method_name)
   end
 end
 
-local function _notify_player_result(role, player, is_winner)
+-- resolve_role 经 port 触达宿主适配层,抛错与返回 nil 同判:各自吞成一条 warn
+-- 并跳过该玩家面板,不阻塞其余玩家与 end_game 收尾——上抛会沿事件回调冒泡
+-- 跳过收尾,会话悬挂不退出(#609 复审收口)。
+local function _notify_player_result(player, is_winner)
+  local ok, role = pcall(runtime_ports.resolve_role, player.id)
+  if not ok then
+    _warn("endgame result panel skip: resolve_role raised for player", _player_tag(player), role)
+    return
+  end
   if role == nil then
     _warn("endgame result panel skip: role not resolved for player", _player_tag(player))
     return
@@ -63,15 +71,16 @@ local function _current_players()
   return _game_players(state and state.game or nil)
 end
 
-local function _apply_game_result_panels(event_data)
+-- 终局总收尾(#609 复审更名,原名 _apply_game_result_panels 名不副实):先逐玩家
+-- 路由胜/负面板,再无条件下发 end_game——职责是「面板 + 终局收尾」,不止面板。
+local function _finalize_game_result(event_data)
   local players = _current_players()
   if players == nil then
     _warn("endgame result panel skip: no current players")
   else
     local winner_ids = event_data and event_data.winner_ids or {}
     for _, player in ipairs(players) do
-      local role = runtime_ports.resolve_role(player.id)
-      _notify_player_result(role, player, winner_ids[player.id] == true)
+      _notify_player_result(player, winner_ids[player.id] == true)
     end
   end
   -- 终局收尾:宿主要求「设置胜利或失败需要在结束之前」,故 end_game 放在全部
@@ -88,7 +97,7 @@ end
 
 function endgame_result_panels.install(register_handler, monopoly_event)
   register_handler(monopoly_event.game.finished, function(data)
-    _apply_game_result_panels(data)
+    _finalize_game_result(data)
   end)
 end
 
@@ -96,12 +105,12 @@ return endgame_result_panels
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=071bcfb89c2c277d
+projectHash=a7592a14279d2760
 scope.0.id=chunk:src/ui/coord/endgame_result_panels.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=96
-scope.0.semanticHash=b6307b10581af6d8
+scope.0.endLine=105
+scope.0.semanticHash=78f1521d364d4d98
 scope.1.id=function:_warn
 scope.1.kind=function
 scope.1.startLine=14
@@ -119,37 +128,37 @@ scope.3.endLine=39
 scope.3.semanticHash=752bcaaee9ede49d
 scope.4.id=function:_notify_player_result
 scope.4.kind=function
-scope.4.startLine=41
-scope.4.endLine=51
-scope.4.semanticHash=1f49a8408439351b
+scope.4.startLine=44
+scope.4.endLine=59
+scope.4.semanticHash=2237d38697f53d2d
 scope.5.id=function:_game_players
 scope.5.kind=function
-scope.5.startLine=53
-scope.5.endLine=59
+scope.5.startLine=61
+scope.5.endLine=67
 scope.5.semanticHash=7ecf9f077756bf6c
 scope.6.id=function:_current_players
 scope.6.kind=function
-scope.6.startLine=61
-scope.6.endLine=64
+scope.6.startLine=69
+scope.6.endLine=72
 scope.6.semanticHash=275c1bf841de2dc9
-scope.7.id=function:_apply_game_result_panels
+scope.7.id=function:_finalize_game_result
 scope.7.kind=function
-scope.7.startLine=66
-scope.7.endLine=82
-scope.7.semanticHash=c0e104bde4b50ddd
+scope.7.startLine=76
+scope.7.endLine=91
+scope.7.semanticHash=82c1ef84988eb853
 scope.8.id=function:endgame_result_panels.set_context
 scope.8.kind=function
-scope.8.startLine=84
-scope.8.endLine=87
+scope.8.startLine=93
+scope.8.endLine=96
 scope.8.semanticHash=10c5c24adc1f4b32
 scope.9.id=function:endgame_result_panels.install
 scope.9.kind=function
-scope.9.startLine=89
-scope.9.endLine=93
+scope.9.startLine=98
+scope.9.endLine=102
 scope.9.semanticHash=c3c02a023052b3ea
 scope.10.id=function:<anonymous>
 scope.10.kind=function
-scope.10.startLine=90
-scope.10.endLine=92
+scope.10.startLine=99
+scope.10.endLine=101
 scope.10.semanticHash=c772a22f8680e278
 ]]

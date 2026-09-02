@@ -86,7 +86,9 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 
 上线实测「游戏胜利不退出」暴露两个叠加断点，本 ADR 钉死修复决策与宿主时序约定：
 
-1. **整局结束必须显式调用 `GameAPI.game_end()`**。宿主文档明示「胜利并不代表玩家将离开游戏，还需要设置游戏结束才会离开」，且「设置胜利或失败需要在结束之前」——时序为逐玩家 `game_win/game_lose_and_show_result_panel()` 标记（带面板）→ 最后一次 `game_end()`。此前全仓零调用，会话永不终止（与 #608 漏调 `request_archive` 同型缺口）。落地为 `runtime_ports.end_game` 端口 + `default_ports.end_game` 宿主直调（ADR 0046 留痕），由 `endgame_result_panels._apply_game_result_panels` 在面板路由后无条件调用；面板链断裂不阻塞收尾。
+1. **整局结束必须显式调用 `GameAPI.game_end()`**。宿主文档明示「胜利并不代表玩家将离开游戏，还需要设置游戏结束才会离开」，且「设置胜利或失败需要在结束之前」——时序为逐玩家 `game_win/game_lose_and_show_result_panel()` 标记（带面板）→ 最后一次 `game_end()`。此前全仓零调用，会话永不终止（与 #608 漏调 `request_archive` 同型缺口）。落地为 `runtime_ports.end_game` 端口 + `default_ports.end_game` 宿主直调（ADR 0046 留痕），由 `endgame_result_panels._finalize_game_result` 在面板路由后无条件调用；面板链任何一环断裂（面板方法抛错、`resolve_role` 抛错）都吞成 warn，不阻塞收尾。
 2. **`gm.finished` 是终态事件，绕过落地视觉 hold 的 defer**。淘汰型胜利的 emit 天然落在 hold 激活窗口（`move_followup` 进 landing 前先 `hold.start`，结算淘汰后脚本泊在 `wait_landing_visual`），而 defer 的释放依赖 `advance_turn` 恢复脚本——`finished` 后 `advance_turn` 直接返回，release_pending 永不置位，回调永久滞留。`event_handlers._register_handler` 对 `monopoly_event.game.finished` 置 immediate 直派，其余事件 defer 语义不变。
+
+已登记例外（#609 复审）：**`default_ports.end_game` 暂以「pcall 无异常」为成功**，偏离宿主调用第 3 条「成功按明确返回值判定」。理由：`game_end` 返回值真机未取证，宿主文档只述其副作用（结束会话）未述返回值；若其确无返回值，truthy 判定会把真实成功误报为失败。真机取证后按取证结果收紧或确认本例外。
 
 未取证的线上嫌疑（不阻塞本修复，真机探针待办）：宿主事件回调三参签名假定 `(_, _, data)` 无注解依据；`gm.finished` 注册句柄被丢弃未校验（对照 #585 已证实宿主会静默拒注册）。两者若成立只会错路由胜负面板，不影响 game_end 收尾。

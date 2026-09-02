@@ -870,6 +870,51 @@ function TestEventHandlers:test_game_result_panel_raise_still_ends_game_and_warn
     "raised panel should leave exactly one warn; got " .. tostring(warns[1]))
 end
 
+function TestEventHandlers:test_game_result_resolve_raise_still_ends_game_and_warns()
+  -- #609 复审收口:resolve_role 经 port 触达宿主适配层,抛错与返回 nil 同判——
+  -- 吞成 warn、跳过该玩家面板,不阻塞其余玩家面板与 end_game 收尾;
+  -- 上抛会沿事件回调冒泡跳过收尾,会话悬挂不退出。
+  local handlers = {}
+  local calls = {}
+  local warns = {}
+  local patches = _result_panel_patches(handlers, calls, function(player_id)
+    if player_id == 1 then
+      error("host resolve exploded")
+    end
+    return {
+      game_win_and_show_result_panel = function()
+        calls[#calls + 1] = "win_panel:" .. player_id
+      end,
+      game_lose_and_show_result_panel = function()
+        calls[#calls + 1] = "lose_panel:" .. player_id
+      end,
+    }
+  end)
+
+  _with_patches(patches, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, { warn = function(...)
+      warns[#warns + 1] = table.concat({ ... }, " ")
+    end }, {
+      game = {
+        players = {
+          { id = 1, name = "P1" },
+          { id = 2, name = "P2" },
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.game.finished]
+    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    local ok = pcall(handler, nil, nil, { winner_ids = { [2] = true } })
+    lu.assertEvalToTrue(ok, "raising resolve_role must not escape the handler")
+  end)
+
+  _assert_eq(calls[1], "win_panel:2", "other players' panels must survive one player's resolve raise")
+  _assert_eq(calls[#calls], "end_game", "end_game must run even when resolve_role raises")
+  lu.assertEvalToTrue(#warns == 1 and warns[1]:find("resolve_role raised", 1, true) ~= nil,
+    "raised resolve_role should leave exactly one warn; got " .. tostring(warns[1]))
+end
+
 function TestEventHandlers:test_game_result_without_players_skips_panels()
   local handlers = {}
   local role_calls = 0
