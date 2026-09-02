@@ -726,6 +726,150 @@ function TestEventHandlers:test_game_result_feedback_routes_winner_and_loser_pan
     "the result panels must never call the plain lose marker (#334)")
 end
 
+-- gm.finished 终局链共享脚手架(#609 审查收口:两新测试近乎逐字重复的补丁组):
+-- 捕获注册表 + resolve_role 双面板桩 + end_game 桩,调用顺序记录进 calls。
+-- role_factory 覆写 resolve_role 桩(如面板抛错形态),避免数字下标改产物。
+local function _result_panel_patches(handlers, calls, role_factory)
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
+  return {
+    {
+      target = host_events,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+    {
+      target = runtime_ports,
+      key = "resolve_role",
+      value = role_factory or function(player_id)
+        return {
+          game_win_and_show_result_panel = function()
+            calls[#calls + 1] = "win_panel:" .. player_id
+          end,
+          game_lose_and_show_result_panel = function()
+            calls[#calls + 1] = "lose_panel:" .. player_id
+          end,
+        }
+      end,
+    },
+    {
+      target = runtime_ports,
+      key = "end_game",
+      value = function()
+        calls[#calls + 1] = "end_game"
+        return true
+      end,
+    },
+  }
+end
+
+-- 存量面板路由测试的 end_game 哑桩:不断言收尾,只隔离终局新增的收尾副作用。
+local function _end_game_ok_patch()
+  return {
+    target = require("src.foundation.ports.runtime_ports"),
+    key = "end_game",
+    value = function()
+      return true
+    end,
+  }
+end
+
+function TestEventHandlers:test_game_result_ends_game_after_result_panels()
+  -- 宿主文档语义:逐玩家标记胜负(带面板)之后必须显式结束游戏,玩家才会离开
+  -- 对局(「胜利并不代表玩家将离开游戏,还需要设置游戏结束才会离开」)。
+  -- 顺序敏感:game_end 先于胜负标记时宿主不采纳胜负,必须最后调用。
+  local handlers = {}
+  local sequence = {}
+
+  _with_patches(_result_panel_patches(handlers, sequence), function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, {
+      game = {
+        players = {
+          { id = 1, name = "P1" },
+          { id = 2, name = "P2" },
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.game.finished]
+    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    handler(nil, nil, { winner_ids = { [2] = true } })
+  end)
+
+  _assert_eq(#sequence, 3, "two result panels then exactly one end_game")
+  _assert_eq(sequence[3], "end_game", "game must end only after every result panel")
+end
+
+function TestEventHandlers:test_game_result_dispatches_immediately_during_landing_hold()
+  -- 终局是终态事件:landing hold 激活时不得 defer。finished 后 advance_turn
+  -- 直接返回(game_state.lua:26-28),回合脚本永不恢复,release_pending 永不
+  -- 置位,deferred 的终局处理器永久滞留——面板不弹、对局不结束。
+  local handlers = {}
+  local calls = {}
+
+  _with_patches(_result_panel_patches(handlers, calls), function()
+    local state = {
+      game = {
+        players = {
+          { id = 1, name = "P1" },
+          { id = 2, name = "P2" },
+        },
+      },
+    }
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, nil, state)
+    require("src.state.runtime").set_landing_visual_hold_active(state, true)
+    local handler = handlers[monopoly_event.game.finished]
+    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    handler(nil, nil, { winner_ids = { [2] = true } })
+  end)
+
+  _assert_eq(#calls, 3, "terminal game.finished must dispatch immediately even during landing hold")
+  _assert_eq(calls[3], "end_game", "end_game must run during landing hold, not deferred with panels")
+end
+
+function TestEventHandlers:test_game_result_panel_raise_still_ends_game_and_warns()
+  -- #609 审查收口:面板宿主方法抛错属硬断裂,必须吞成 warn 且不阻塞 end_game
+  -- 收尾——上抛会让会话悬挂不退出。
+  local handlers = {}
+  local calls = {}
+  local warns = {}
+  local patches = _result_panel_patches(handlers, calls, function(player_id)
+    return {
+      game_win_and_show_result_panel = function()
+        error("host panel exploded")
+      end,
+      game_lose_and_show_result_panel = function()
+        calls[#calls + 1] = "lose_panel:" .. player_id
+      end,
+    }
+  end)
+
+  _with_patches(patches, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, { warn = function(...)
+      warns[#warns + 1] = table.concat({ ... }, " ")
+    end }, {
+      game = {
+        players = {
+          { id = 1, name = "P1" },
+          { id = 2, name = "P2" },
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.game.finished]
+    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    local ok = pcall(handler, nil, nil, { winner_ids = { [2] = true } })
+    lu.assertEvalToTrue(ok, "raising panel must not escape the handler")
+  end)
+
+  _assert_eq(calls[#calls], "end_game", "end_game must run even when a result panel raises")
+  lu.assertEvalToTrue(#warns == 1 and warns[1]:find("panel raised", 1, true) ~= nil,
+    "raised panel should leave exactly one warn; got " .. tostring(warns[1]))
+end
+
 function TestEventHandlers:test_game_result_without_players_skips_panels()
   local handlers = {}
   local role_calls = 0
@@ -782,6 +926,7 @@ function TestEventHandlers:test_game_result_with_players_but_no_roles_skips_pane
         return nil
       end,
     },
+    _end_game_ok_patch(),
   }, function()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, { warn = function(...)
@@ -827,6 +972,7 @@ function TestEventHandlers:test_game_result_without_players_skips_panels_and_war
         error("resolve_role must not be consulted without players")
       end,
     },
+    _end_game_ok_patch(),
   }, function()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, { warn = function(...)
@@ -864,6 +1010,7 @@ function TestEventHandlers:test_game_result_winner_method_missing_warns()
         return {}
       end,
     },
+    _end_game_ok_patch(),
   }, function()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, { warn = function(...)
@@ -907,6 +1054,7 @@ function TestEventHandlers:test_game_result_loser_method_missing_warns()
         return {}
       end,
     },
+    _end_game_ok_patch(),
   }, function()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, { warn = function(...)

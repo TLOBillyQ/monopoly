@@ -23,9 +23,9 @@ function event_handlers.install(_, logger, state)
   end
   context.installed = true
 
-  local function _dispatch_or_defer(data, handler)
+  local function _dispatch_or_defer(data, handler, immediate)
     local current_state = context.state
-    if current_state == nil then
+    if current_state == nil or immediate == true then
       return handler(data)
     end
     local result = nil
@@ -38,8 +38,12 @@ function event_handlers.install(_, logger, state)
   -- handlers_by_event 登记簿已删(#262):写后无任何读者(纯记账),
   -- `#list + 1` 的下标变异不可杀;注册行为本身由 host_events 承担。
   local function _register_handler(event_name, handler)
+    -- gm.finished 是终态事件,落地 hold 激活时不得 defer:finished 后
+    -- advance_turn 直接返回(game_state),回合脚本永不恢复,release_pending
+    -- 永不置位,defer 即永久滞留——面板不弹、对局不结束。
+    local immediate = event_name == monopoly_event.game.finished
     host_events.register_custom_event(event_name, function(_, _, data)
-      return _dispatch_or_defer(data, handler)
+      return _dispatch_or_defer(data, handler, immediate)
     end)
   end
 
@@ -55,22 +59,22 @@ return event_handlers
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=37669d69c6691620
+projectHash=ec28e881a887d7a7
 scope.0.id=chunk:src/ui/coord/event_handlers.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=55
-scope.0.semanticHash=e9ccac8f103617f8
+scope.0.endLine=59
+scope.0.semanticHash=a120a19117e84195
 scope.1.id=function:event_handlers.install
 scope.1.kind=function
 scope.1.startLine=15
-scope.1.endLine=52
-scope.1.semanticHash=acb97a7200c28be2
+scope.1.endLine=56
+scope.1.semanticHash=13084d782d966157
 scope.2.id=function:_dispatch_or_defer
 scope.2.kind=function
 scope.2.startLine=26
 scope.2.endLine=36
-scope.2.semanticHash=0c5e385001349e6e
+scope.2.semanticHash=8bb1ac8df9f0edf8
 scope.3.id=function:<anonymous>
 scope.3.kind=function
 scope.3.startLine=32
@@ -79,11 +83,11 @@ scope.3.semanticHash=149ac28041462fed
 scope.4.id=function:_register_handler
 scope.4.kind=function
 scope.4.startLine=40
-scope.4.endLine=44
-scope.4.semanticHash=1f1c0dffa6dcbe5c
+scope.4.endLine=48
+scope.4.semanticHash=ac7abbffccc296b9
 scope.5.id=function:<anonymous>#2
 scope.5.kind=function
-scope.5.startLine=41
-scope.5.endLine=43
-scope.5.semanticHash=3c26bf1ea8e4b724
+scope.5.startLine=45
+scope.5.endLine=47
+scope.5.semanticHash=d590c542c8c308c5
 ]]

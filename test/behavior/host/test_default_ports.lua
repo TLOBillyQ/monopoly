@@ -10,6 +10,47 @@ local default_ports = require("src.host.default_ports")
 
 TestDefaultPorts = {}
 
+function TestDefaultPorts:test_end_game_routes_to_host_and_leaves_diagnostics()
+  -- #609 审查收口:end_game 必须直调宿主 game_end;API 缺失与宿主抛错都要
+  -- 留痕并返回 false,不得静默、不得上抛(上抛会沿事件回调跳过后续收尾)。
+  local host_calls = 0
+  local function _ports_with_game_api(game_api)
+    return default_ports.build({ current = function()
+      return { env = { GameAPI = game_api } }
+    end })
+  end
+
+  local ports = _ports_with_game_api({
+    game_end = function()
+      host_calls = host_calls + 1
+    end,
+  })
+  lu.assertEquals(ports.end_game(), true, "end_game should confirm a successful host call")
+  lu.assertEquals(host_calls, 1, "end_game should reach the host exactly once")
+
+  local logger = require("src.foundation.log")
+  local original_warn = logger.warn
+  local warns = {}
+  logger.warn = function(...)
+    warns[#warns + 1] = table.concat({ ... }, " ")
+  end
+  local ok_missing, missing_result = pcall(function()
+    return _ports_with_game_api({}).end_game()
+  end)
+  local ok_raising, raising_result = pcall(function()
+    return _ports_with_game_api({
+      game_end = function()
+        error("host exploded")
+      end,
+    }).end_game()
+  end)
+  logger.warn = original_warn
+
+  lu.assertEquals(ok_missing and missing_result == false, true, "missing game_end should report false, not raise")
+  lu.assertEquals(ok_raising and raising_result == false, true, "raising host game_end must be contained and report false")
+  lu.assertEquals(#warns, 2, "missing and raising host game_end should each leave one warn")
+end
+
 function TestDefaultPorts:test_wall_diff_seconds_prefers_game_api_then_falls_back()
   local ctx = {
     env = {

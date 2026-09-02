@@ -56,6 +56,8 @@ runtime_ports.resolve_camera_helper = _make_port("resolve_camera_helper", nil)
 
 runtime_ports.emit_event = _make_port("emit_event", false)
 
+runtime_ports.end_game = _make_port("end_game", false)
+
 runtime_ports.wall_now_seconds = _make_port("wall_now_seconds", 0)
 
 function runtime_ports.wall_now_hms()
@@ -98,12 +100,12 @@ return runtime_ports
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=55618a658e5943ac
+projectHash=4d48d13f1b0fc546
 scope.0.id=chunk:src/foundation/ports/runtime_ports.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=98
-scope.0.semanticHash=42d3113aaa4b25af
+scope.0.endLine=100
+scope.0.semanticHash=f1066f165f1e311b
 scope.1.id=function:_resolve_port
 scope.1.kind=function
 scope.1.startLine=5
@@ -136,17 +138,17 @@ scope.6.endLine=43
 scope.6.semanticHash=47ecc2dee36d3b8f
 scope.7.id=function:runtime_ports.wall_now_hms
 scope.7.kind=function
-scope.7.startLine=61
-scope.7.endLine=71
+scope.7.startLine=63
+scope.7.endLine=73
 scope.7.semanticHash=1cc795addb6d73b1
 scope.8.id=function:runtime_ports.reset_for_tests
 scope.8.kind=function
-scope.8.startLine=87
-scope.8.endLine=89
+scope.8.startLine=89
+scope.8.endLine=91
 scope.8.semanticHash=f308d8708726be18
 scope.9.id=function:runtime_ports.is_configured
 scope.9.kind=function
-scope.9.startLine=93
-scope.9.endLine=95
+scope.9.startLine=95
+scope.9.endLine=97
 scope.9.semanticHash=70efc1221c5d6d62
 ]]

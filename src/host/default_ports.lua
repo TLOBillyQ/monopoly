@@ -4,6 +4,7 @@
 local clock_ports = require("src.host.clock_ports")
 local role_ports = require("src.host.role_ports")
 local archive_ports = require("src.host.archive_ports")
+local logger = require("src.foundation.log")
 
 local default_ports = {}
 local game_api_key = "Game" .. "API"
@@ -67,6 +68,23 @@ function default_ports.build(runtime_context)
     return ok == true
   end
 
+  -- game_end 单签名直调(ADR 0046):整局结束、全员退出进结算;宿主要求先标记
+  -- 各玩家胜负再调用,顺序反了胜负不生效。调用方负责时序,本实现只留痕。
+  -- pcall 隔离宿主异常:炸穿会沿事件回调冒泡并跳过后续收尾,异常必须留痕。
+  function defaults.end_game()
+    local game_api = _current_game_api(runtime_context)
+    if game_api == nil or type(game_api.game_end) ~= "function" then
+      logger.warn("end_game skip: game api or game_end missing")
+      return false
+    end
+    local ok, err = pcall(game_api.game_end)
+    if not ok then
+      logger.warn("end_game failed: host game_end raised:", err)
+      return false
+    end
+    return true
+  end
+
   function defaults.is_effect_idle()
     local ok, effect_track = pcall(require, "src.ui.render.support.effect_track")
     if ok and type(effect_track) == "table" and type(effect_track.is_idle) == "function" then
@@ -82,60 +100,65 @@ return default_ports
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=690b63b4b4929d64
+projectHash=f8331c519f6abfd7
 scope.0.id=chunk:src/host/default_ports.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=82
-scope.0.semanticHash=926f38f28fecdb06
+scope.0.endLine=100
+scope.0.semanticHash=0219b5bedd1625e9
 scope.1.id=function:_current_env
 scope.1.kind=function
-scope.1.startLine=12
-scope.1.endLine=15
+scope.1.startLine=13
+scope.1.endLine=16
 scope.1.semanticHash=d08d43958f5bffa4
 scope.2.id=function:_current_api
 scope.2.kind=function
-scope.2.startLine=17
-scope.2.endLine=20
+scope.2.startLine=18
+scope.2.endLine=21
 scope.2.semanticHash=837e31706e29c8d9
 scope.3.id=function:_current_game_api
 scope.3.kind=function
-scope.3.startLine=22
-scope.3.endLine=24
+scope.3.startLine=23
+scope.3.endLine=25
 scope.3.semanticHash=e504e513aab7d79c
 scope.4.id=function:_current_lua_api
 scope.4.kind=function
-scope.4.startLine=26
-scope.4.endLine=28
+scope.4.startLine=27
+scope.4.endLine=29
 scope.4.semanticHash=e504e513aab7d79c
 scope.5.id=function:default_ports.build
 scope.5.kind=function
-scope.5.startLine=30
-scope.5.endLine=79
-scope.5.semanticHash=13575ef9e1751600
+scope.5.startLine=31
+scope.5.endLine=97
+scope.5.semanticHash=3925e4884f759e50
 scope.6.id=function:defaults.rng_next_int
 scope.6.kind=function
-scope.6.startLine=37
-scope.6.endLine=42
+scope.6.startLine=38
+scope.6.endLine=43
 scope.6.semanticHash=5d6c9db5ffc50c06
 scope.7.id=function:defaults.schedule
 scope.7.kind=function
-scope.7.startLine=44
-scope.7.endLine=52
+scope.7.startLine=45
+scope.7.endLine=53
 scope.7.semanticHash=87f8fc7343d323fc
 scope.8.id=function:defaults.resolve_camera_helper
 scope.8.kind=function
-scope.8.startLine=54
-scope.8.endLine=60
+scope.8.startLine=55
+scope.8.endLine=61
 scope.8.semanticHash=0a80efb7257876a4
 scope.9.id=function:defaults.emit_event
 scope.9.kind=function
-scope.9.startLine=62
-scope.9.endLine=68
+scope.9.startLine=63
+scope.9.endLine=69
 scope.9.semanticHash=4ddfe5d21ad348e2
-scope.10.id=function:defaults.is_effect_idle
+scope.10.id=function:defaults.end_game
 scope.10.kind=function
-scope.10.startLine=70
-scope.10.endLine=76
-scope.10.semanticHash=60c77742ea0fc3e3
+scope.10.startLine=74
+scope.10.endLine=86
+scope.10.semanticHash=aded3c2cc939a9ea
+scope.11.id=function:defaults.is_effect_idle
+scope.11.kind=function
+scope.11.startLine=88
+scope.11.endLine=94
+scope.11.semanticHash=60c77742ea0fc3e3
 ]]

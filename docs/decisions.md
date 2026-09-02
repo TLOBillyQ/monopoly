@@ -81,3 +81,12 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 1. **ui_sync 三透传键保留（不收窄）**。`on_pending_choice` / `is_choice_active` / `resolve_choice_ui_state` 保持必填构造键与端口在场时的一比一委派；端口缺位时分别回落：arm 帧静默 no-op、`is_choice_active` 回落运行时待决、`resolve_choice_ui_state` 回落 `should_warn=false` gate。收窄不可行：生产路径端口恒在场，委派是真实行为而非虚胖注入；缺位回落只服务无端口车道，两者都由 `type(ports[key]) == "function"` 守卫切换。
 2. **modal 收屏引用缓存保留（不逐次重建）**。`_dispatch_close_opts` 与 `_cached_dispatch_modal_ref` 按端口引用比较重绑，`on_close_choice` 在 `dispatch_action` 内同步消费（当次派单即读），共享表不会跨局残留，两局端口引用交替不串；每次重建无观测收益，予以保留。
 3. **缺屏告警不在默认装配承担**。引擎步进只取 `active` 判定做跟踪清算，gate 回落的结果即弃（#523 注释）；缺屏探针与告警经生产 ui_sync 端口在 dirty 刷新后采样（#524 时序），默认装配的 `should_warn=false` 只保证裸车道不误报。
+
+## ADR 0065 — 终局收尾：胜负标记后显式 game_end，终态事件不参与落地 hold 延迟
+
+上线实测「游戏胜利不退出」暴露两个叠加断点，本 ADR 钉死修复决策与宿主时序约定：
+
+1. **整局结束必须显式调用 `GameAPI.game_end()`**。宿主文档明示「胜利并不代表玩家将离开游戏，还需要设置游戏结束才会离开」，且「设置胜利或失败需要在结束之前」——时序为逐玩家 `game_win/game_lose_and_show_result_panel()` 标记（带面板）→ 最后一次 `game_end()`。此前全仓零调用，会话永不终止（与 #608 漏调 `request_archive` 同型缺口）。落地为 `runtime_ports.end_game` 端口 + `default_ports.end_game` 宿主直调（ADR 0046 留痕），由 `endgame_result_panels._apply_game_result_panels` 在面板路由后无条件调用；面板链断裂不阻塞收尾。
+2. **`gm.finished` 是终态事件，绕过落地视觉 hold 的 defer**。淘汰型胜利的 emit 天然落在 hold 激活窗口（`move_followup` 进 landing 前先 `hold.start`，结算淘汰后脚本泊在 `wait_landing_visual`），而 defer 的释放依赖 `advance_turn` 恢复脚本——`finished` 后 `advance_turn` 直接返回，release_pending 永不置位，回调永久滞留。`event_handlers._register_handler` 对 `monopoly_event.game.finished` 置 immediate 直派，其余事件 defer 语义不变。
+
+未取证的线上嫌疑（不阻塞本修复，真机探针待办）：宿主事件回调三参签名假定 `(_, _, data)` 无注解依据；`gm.finished` 注册句柄被丢弃未校验（对照 #585 已证实宿主会静默拒注册）。两者若成立只会错路由胜负面板，不影响 game_end 收尾。
