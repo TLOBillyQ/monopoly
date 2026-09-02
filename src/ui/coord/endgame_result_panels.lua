@@ -5,6 +5,10 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local endgame_result_panels = {}
 local context = { logger = nil, state = nil }
 
+-- 胜/败结算面板的宿主方法名(#334 面板变体):集中文件头,grep 可达。
+local _WINNER_PANEL_METHOD = "game_win_and_show_result_panel"
+local _LOSER_PANEL_METHOD = "game_lose_and_show_result_panel"
+
 -- 宿主对象调用「跳过必留痕」(ADR 0046):logger 缺位时(测试桩)静默可接受,
 -- 生产路径 logger 恒在。
 local function _warn(...)
@@ -22,25 +26,15 @@ end
 -- game_win_and_show_result_panel / 失败 game_lose_and_show_result_panel(#334);
 -- 方法缺失时跳过且留痕,不静默。pcall 隔离宿主异常:面板抛错若上抛会跳过
 -- 整局收尾(end_game),会话悬挂不退出——异常必须吞成 warn(#609 审查收口)。
-local function _show_winner_panel(role, player)
-  if type(role.game_win_and_show_result_panel) ~= "function" then
-    _warn("endgame result panel skip: role", _player_tag(player), "lacks game_win_and_show_result_panel")
+local function _show_panel(role, player, method_name)
+  local method = role[method_name]
+  if type(method) ~= "function" then
+    _warn("endgame result panel skip: role", _player_tag(player), "lacks " .. method_name)
     return
   end
-  local ok, err = pcall(role.game_win_and_show_result_panel)
+  local ok, err = pcall(method)
   if not ok then
-    _warn("endgame result panel raised: role", _player_tag(player), "game_win_and_show_result_panel", err)
-  end
-end
-
-local function _show_loser_panel(role, player)
-  if type(role.game_lose_and_show_result_panel) ~= "function" then
-    _warn("endgame result panel skip: role", _player_tag(player), "lacks game_lose_and_show_result_panel")
-    return
-  end
-  local ok, err = pcall(role.game_lose_and_show_result_panel)
-  if not ok then
-    _warn("endgame result panel raised: role", _player_tag(player), "game_lose_and_show_result_panel", err)
+    _warn("endgame result panel raised: role", _player_tag(player), method_name, err)
   end
 end
 
@@ -50,9 +44,9 @@ local function _notify_player_result(role, player, is_winner)
     return
   end
   if is_winner then
-    _show_winner_panel(role, player)
+    _show_panel(role, player, _WINNER_PANEL_METHOD)
   else
-    _show_loser_panel(role, player)
+    _show_panel(role, player, _LOSER_PANEL_METHOD)
   end
 end
 
@@ -102,65 +96,60 @@ return endgame_result_panels
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=f13d04825d100ee3
+projectHash=071bcfb89c2c277d
 scope.0.id=chunk:src/ui/coord/endgame_result_panels.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=102
-scope.0.semanticHash=b6728b7f17ad54c9
+scope.0.endLine=96
+scope.0.semanticHash=b6307b10581af6d8
 scope.1.id=function:_warn
 scope.1.kind=function
-scope.1.startLine=10
-scope.1.endLine=15
+scope.1.startLine=14
+scope.1.endLine=19
 scope.1.semanticHash=38961a0b2c68bf4e
 scope.2.id=function:_player_tag
 scope.2.kind=function
-scope.2.startLine=17
-scope.2.endLine=19
+scope.2.startLine=21
+scope.2.endLine=23
 scope.2.semanticHash=7d072b025ad9bbab
-scope.3.id=function:_show_winner_panel
+scope.3.id=function:_show_panel
 scope.3.kind=function
-scope.3.startLine=25
-scope.3.endLine=34
-scope.3.semanticHash=84b98916190b68f7
-scope.4.id=function:_show_loser_panel
+scope.3.startLine=29
+scope.3.endLine=39
+scope.3.semanticHash=752bcaaee9ede49d
+scope.4.id=function:_notify_player_result
 scope.4.kind=function
-scope.4.startLine=36
-scope.4.endLine=45
-scope.4.semanticHash=84b98916190b68f7
-scope.5.id=function:_notify_player_result
+scope.4.startLine=41
+scope.4.endLine=51
+scope.4.semanticHash=1f49a8408439351b
+scope.5.id=function:_game_players
 scope.5.kind=function
-scope.5.startLine=47
-scope.5.endLine=57
-scope.5.semanticHash=750b2f1b711639f3
-scope.6.id=function:_game_players
+scope.5.startLine=53
+scope.5.endLine=59
+scope.5.semanticHash=7ecf9f077756bf6c
+scope.6.id=function:_current_players
 scope.6.kind=function
-scope.6.startLine=59
-scope.6.endLine=65
-scope.6.semanticHash=7ecf9f077756bf6c
-scope.7.id=function:_current_players
+scope.6.startLine=61
+scope.6.endLine=64
+scope.6.semanticHash=275c1bf841de2dc9
+scope.7.id=function:_apply_game_result_panels
 scope.7.kind=function
-scope.7.startLine=67
-scope.7.endLine=70
-scope.7.semanticHash=275c1bf841de2dc9
-scope.8.id=function:_apply_game_result_panels
+scope.7.startLine=66
+scope.7.endLine=82
+scope.7.semanticHash=c0e104bde4b50ddd
+scope.8.id=function:endgame_result_panels.set_context
 scope.8.kind=function
-scope.8.startLine=72
-scope.8.endLine=88
-scope.8.semanticHash=c0e104bde4b50ddd
-scope.9.id=function:endgame_result_panels.set_context
+scope.8.startLine=84
+scope.8.endLine=87
+scope.8.semanticHash=10c5c24adc1f4b32
+scope.9.id=function:endgame_result_panels.install
 scope.9.kind=function
-scope.9.startLine=90
+scope.9.startLine=89
 scope.9.endLine=93
-scope.9.semanticHash=10c5c24adc1f4b32
-scope.10.id=function:endgame_result_panels.install
+scope.9.semanticHash=c3c02a023052b3ea
+scope.10.id=function:<anonymous>
 scope.10.kind=function
-scope.10.startLine=95
-scope.10.endLine=99
-scope.10.semanticHash=c3c02a023052b3ea
-scope.11.id=function:<anonymous>
-scope.11.kind=function
-scope.11.startLine=96
-scope.11.endLine=98
-scope.11.semanticHash=c772a22f8680e278
+scope.10.startLine=90
+scope.10.endLine=92
+scope.10.semanticHash=c772a22f8680e278
 ]]

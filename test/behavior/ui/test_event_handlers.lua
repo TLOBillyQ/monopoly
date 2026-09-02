@@ -891,6 +891,7 @@ function TestEventHandlers:test_game_result_without_players_skips_panels()
         return nil
       end,
     },
+    _end_game_ok_patch(),
   }, function()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, {})

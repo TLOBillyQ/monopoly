@@ -1,6 +1,6 @@
 -- runtime_ports 的宿主默认实现装配(>100 mutation sites 拆分):时钟族
 -- clock_ports / 角色族 role_ports / 档案族 archive_ports 各自成模块,
--- 本文件保留 build 骨架与零散默认(随机数/调度/相机/事件/特效查询)。
+-- 本文件保留 build 骨架与零散默认(随机数/调度/相机/事件/整局结束/特效查询)。
 local clock_ports = require("src.host.clock_ports")
 local role_ports = require("src.host.role_ports")
 local archive_ports = require("src.host.archive_ports")
