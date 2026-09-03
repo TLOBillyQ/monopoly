@@ -175,7 +175,7 @@ function TestSyntheticActorRegistry:test_adapter_lose_destroys_unit_and_drops_fr
   _assert_eq(destroyed[1], spawned_unit, "lose should destroy the spawned unit")
   _assert_eq(registry.resolve_actor(-4), nil, "lose should drop the actor from the registry")
 
-  _assert_eq(adapter.lose(), false, "second lose call should be a no-op")
+  _assert_eq(adapter.lose(), true, "second lose call reports the retired state as success (idempotent)")
   _assert_eq(#destroyed, 1, "second lose call should not double-destroy the unit")
 end
 
@@ -214,7 +214,9 @@ function TestSyntheticActorRegistry:test_adapter_die_retires_actor_like_lose()
   local adapter = assert(registry.resolve_actor(-5).adapter, "adapter required")
   _assert_eq(adapter.die(), true, "die should retire the actor")
   _assert_eq(#destroyed, 1, "die should destroy the unit")
-  _assert_eq(adapter.lose(), false, "lose after die should be a no-op")
+  _assert_eq(adapter.lose(), true, "lose after die reports the retired state as success (idempotent)")
+  _assert_eq(adapter.die(), true, "die after die is idempotent and still true")
+  _assert_eq(#destroyed, 1, "re-entry must not double-destroy the unit")
 end
 
 -- ── _start_actor_ai branches ──────────────────────────────────────

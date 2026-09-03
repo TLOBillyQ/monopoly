@@ -90,11 +90,8 @@ function TestMoveAnimActorModes:test_synthetic_actor_uses_unified_move_start_and
 
   local scheduled = nil
   _with_patches({
-    { target = runtime_ports, key = "resolve_role", value = function(player_id)
-      if player_id == -2 then
-        return { is_synthetic_actor = true }
-      end
-      return nil
+    { target = runtime_ports, key = "is_synthetic_player", value = function(player_id)
+      return player_id == -2
     end },
   }, function()
     scheduled = support.capture_scheduled_callbacks(function()
@@ -133,7 +130,7 @@ function TestMoveAnimActorModes:test_non_synthetic_actor_uses_regular_move_start
 
   local scheduled = nil
   _with_patches({
-    { target = runtime_ports, key = "resolve_role", value = function() return { is_synthetic_actor = false } end },
+    { target = runtime_ports, key = "is_synthetic_player", value = function() return false end },
   }, function()
     scheduled = support.capture_scheduled_callbacks(function()
       move_anim.play_sequence(scene, {

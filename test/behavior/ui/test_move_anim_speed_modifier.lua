@@ -34,11 +34,8 @@ function TestMoveAnimSpeedModifier:test_synthetic_actor_receives_speed_modifier(
 
   local scheduled = nil
   _with_patches({
-    { target = runtime_ports, key = "resolve_role", value = function(player_id)
-      if player_id == -2 then
-        return { is_synthetic_actor = true }
-      end
-      return nil
+    { target = runtime_ports, key = "is_synthetic_player", value = function(player_id)
+      return player_id == -2
     end },
   }, function()
     scheduled = support.capture_scheduled_callbacks(function()

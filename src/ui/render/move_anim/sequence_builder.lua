@@ -53,9 +53,14 @@ function sequence_builder.resolve_role(player_id)
   return role
 end
 
+-- 合成 AI 身份唯一真源是 runtime_ports.is_synthetic_player(#611 端口,注册表实现、
+-- 退役不擦除);不再从 resolve_role 的适配器标志推断——退役后适配器解析不到,
+-- 两条真源会给出相反结论。退役后本模块拿不到单位,各消费方按 nil 单位自然短路。
 function sequence_builder.is_synthetic_actor(player_id)
-  local role = sequence_builder.resolve_role(player_id)
-  return role and role.is_synthetic_actor == true or false
+  if player_id == nil then
+    return false
+  end
+  return runtime_ports.is_synthetic_player(player_id) == true
 end
 
 local function _direction_from_steps(steps)
@@ -146,12 +151,12 @@ return sequence_builder
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=a812d6c95f8157fc
+projectHash=857ee4c0bc1a3903
 scope.0.id=chunk:src/ui/render/move_anim/sequence_builder.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=134
-scope.0.semanticHash=353a6d89c06167b1
+scope.0.endLine=151
+scope.0.semanticHash=86a304011968137b
 scope.1.id=function:_zero_vector
 scope.1.kind=function
 scope.1.startLine=9
@@ -179,37 +184,52 @@ scope.5.endLine=54
 scope.5.semanticHash=ddaf37692a837981
 scope.6.id=function:sequence_builder.is_synthetic_actor
 scope.6.kind=function
-scope.6.startLine=56
-scope.6.endLine=59
-scope.6.semanticHash=9e4d39826fd3f166
+scope.6.startLine=59
+scope.6.endLine=64
+scope.6.semanticHash=258a1ea85937adfc
 scope.7.id=function:_direction_from_steps
 scope.7.kind=function
-scope.7.startLine=61
-scope.7.endLine=69
+scope.7.startLine=66
+scope.7.endLine=74
 scope.7.semanticHash=60628117eddd7be9
 scope.8.id=function:sequence_builder.resolve_direction
 scope.8.kind=function
-scope.8.startLine=71
-scope.8.endLine=76
+scope.8.startLine=76
+scope.8.endLine=81
 scope.8.semanticHash=c71b1a7ba67ce816
 scope.9.id=function:sequence_builder.build_steps
 scope.9.kind=function
-scope.9.startLine=78
-scope.9.endLine=108
+scope.9.startLine=83
+scope.9.endLine=113
 scope.9.semanticHash=e07b72ed21ab8ee7
 scope.10.id=function:_push_step
 scope.10.kind=function
-scope.10.startLine=81
-scope.10.endLine=92
+scope.10.startLine=86
+scope.10.endLine=97
 scope.10.semanticHash=a7b15fc7117290ba
 scope.11.id=function:sequence_builder.format_visited
 scope.11.kind=function
-scope.11.startLine=110
-scope.11.endLine=119
+scope.11.startLine=115
+scope.11.endLine=124
 scope.11.semanticHash=2e95ef79fedd92ce
-scope.12.id=function:sequence_builder.publish_follow_target
+scope.12.id=function:_follow_ctx
 scope.12.kind=function
-scope.12.startLine=123
-scope.12.endLine=131
-scope.12.semanticHash=9c2da74d13c62ae2
+scope.12.startLine=128
+scope.12.endLine=130
+scope.12.semanticHash=616a2ca60599c94f
+scope.13.id=function:_has_follow_args
+scope.13.kind=function
+scope.13.startLine=132
+scope.13.endLine=134
+scope.13.semanticHash=342b68d7fd51b713
+scope.14.id=function:_follow_seq
+scope.14.kind=function
+scope.14.startLine=136
+scope.14.endLine=138
+scope.14.semanticHash=616a2ca60599c94f
+scope.15.id=function:sequence_builder.publish_follow_target
+scope.15.kind=function
+scope.15.startLine=140
+scope.15.endLine=148
+scope.15.semanticHash=c6cf543e4322bef7
 ]]

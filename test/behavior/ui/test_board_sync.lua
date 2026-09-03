@@ -370,11 +370,8 @@ function TestBoardSync:test_board_refresh_synthetic_actor_matches_regular_stop_f
   end
 
   _with_board_refresh_patches({
-    { target = runtime_ports, key = "resolve_role", value = function(player_id)
-      if player_id == 1 then
-        return { is_synthetic_actor = true }
-      end
-      return nil
+    { target = runtime_ports, key = "is_synthetic_player", value = function(player_id)
+      return player_id == 1
     end },
   }, function()
     board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
@@ -415,11 +412,8 @@ function TestBoardSync:test_board_refresh_replays_pending_sync_with_synthetic_ai
   end
 
   _with_board_refresh_patches({
-    { target = runtime_ports, key = "resolve_role", value = function(player_id)
-      if player_id == 1 then
-        return { is_synthetic_actor = true }
-      end
-      return nil
+    { target = runtime_ports, key = "is_synthetic_player", value = function(player_id)
+      return player_id == 1
     end },
   }, function()
     board_view.refresh(env.state, env.ui_model, function() end, function() return "presentation_board_sync" end)
