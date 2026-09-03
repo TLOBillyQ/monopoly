@@ -386,8 +386,8 @@ function TestContiguousVisualSync:test_mine_overlay_sync_passes_deps_in_the_deps
   end)
 
   lu.assertEvalToTrue(spawn_args ~= nil, "mine tile must spawn a mine overlay")
-  _assert_eq(spawn_args.unit_id, prefab.unit and prefab.unit["地雷"] or nil,
-    "mine overlay should forward the 地雷 unit prefab key")
+  _assert_eq(spawn_args.unit_id, prefab.unit and prefab.unit["地雷A"] or nil,
+    "mine overlay should forward the 地雷A unit prefab key")
   _assert_eq(spawn_args.scale, nil,
     "mine overlay must not smuggle the deps table into the scale slot")
   _assert_eq(spawn_args.deps, runtime_sentinel,

@@ -26,10 +26,10 @@ local function _play_roadblock(state, tile_index)
 end
 
 local function _play_mine(state, tile_index)
-  local group_id = prefab.group["地雷"]
-  local unit_id = prefab.unit and prefab.unit["地雷"] or nil
+  local group_id = prefab.group["地雷A"]
+  local unit_id = prefab.unit and prefab.unit["地雷A"] or nil
   if not group_id and not unit_id then
-    logger.warn("[Eggy]", "地雷 prefab 缺失，已跳过生成")
+    logger.warn("[Eggy]", "地雷A prefab 缺失，已跳过生成")
     return
   end
   -- 地雷生成高度取 #339 真机标定的 2.0(缺省 1.0 被地板埋没),与
@@ -70,7 +70,7 @@ return overlay
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=b1c5c96499c4459d
+projectHash=5ed815c822e3096c
 scope.0.id=chunk:src/ui/render/anim/unit_overlay.lua
 scope.0.kind=chunk
 scope.0.startLine=1

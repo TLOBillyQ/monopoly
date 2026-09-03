@@ -773,7 +773,7 @@ function TestBoardRenderBranches:test_sync_overlay_visual_real_spawn_path_reache
   _assert_eq(calls[1][2], prefab.unit["路障"], "roadblock unit id should come from the prefab unit table")
   _assert_eq(calls[1][4] and calls[1][4].x or nil, 4.0, "roadblock scale should stay 4x")
   _assert_eq(calls[2][1], "unit", "mine overlay should also spawn a unit (prefab.group has no 地雷)")
-  _assert_eq(calls[2][2], prefab.unit["地雷"], "mine unit id should come from the prefab unit table")
+  _assert_eq(calls[2][2], prefab.unit["地雷A"], "mine unit id should come from the prefab unit table")
   -- #339 真机标定:缺省 y_offset 1.0 被地板埋没,地雷 scale 1x 顶不出来,
   -- sync 生成必须显式抬到 2.0(空 scene 下 tile pos 为零向量,pos.y 即偏移量)。
   _assert_eq(calls[2][3] and calls[2][3].y or nil, 2.0, "mine spawn should lift 2.0 above the tile pivot")

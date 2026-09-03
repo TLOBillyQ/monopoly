@@ -248,8 +248,8 @@ function TestActionAnimOverlayUnits:test_anim_unit_overlay_play_overlay_mine_spa
   local prefab = require("Data.Prefab")
   local state = support.build_min_state()
   local spawn_calls = {}
-  local original_group = prefab.group["地雷"]
-  prefab.group["地雷"] = 7777
+  local original_group = prefab.group["地雷A"]
+  prefab.group["地雷A"] = 7777
 
   _with_patches({
     {
@@ -268,7 +268,7 @@ function TestActionAnimOverlayUnits:test_anim_unit_overlay_play_overlay_mine_spa
     overlay.play_overlay(state, { kind = "mine", tile_index = 1 }, 0.2, {})
   end)
 
-  prefab.group["地雷"] = original_group
+  prefab.group["地雷A"] = original_group
 
   _assert_eq(#spawn_calls, 1, "mine overlay should spawn exactly once")
   _assert_eq(spawn_calls[1].kind, "mine", "mine overlay should pass the mine kind")
@@ -283,10 +283,10 @@ function TestActionAnimOverlayUnits:test_anim_unit_overlay_play_overlay_mine_war
   local state = support.build_min_state()
   local spawn_calls = 0
   local warns = 0
-  local original_group = prefab.group["地雷"]
-  local original_unit = prefab.unit["地雷"]
-  prefab.group["地雷"] = nil
-  prefab.unit["地雷"] = nil
+  local original_group = prefab.group["地雷A"]
+  local original_unit = prefab.unit["地雷A"]
+  prefab.group["地雷A"] = nil
+  prefab.unit["地雷A"] = nil
 
   _with_patches({
     {
@@ -307,8 +307,8 @@ function TestActionAnimOverlayUnits:test_anim_unit_overlay_play_overlay_mine_war
     overlay.play_overlay(state, { kind = "mine", tile_index = 1 }, 0.2, {})
   end)
 
-  prefab.group["地雷"] = original_group
-  prefab.unit["地雷"] = original_unit
+  prefab.group["地雷A"] = original_group
+  prefab.unit["地雷A"] = original_unit
 
   lu.assertEvalToTrue(spawn_calls == 0, "missing mine prefab should skip the spawn")
   lu.assertEvalToTrue(warns == 1, "missing mine prefab should warn exactly once")
@@ -1089,10 +1089,10 @@ function TestActionAnimOverlayUnits:test_anim_unit_overlay_play_overlay_mine_pas
   local prefab = require("Data.Prefab")
   local state = support.build_min_state()
   local captured = {}
-  local original_group = prefab.group["地雷"]
-  local original_unit = prefab.unit["地雷"]
-  prefab.group["地雷"] = 7777
-  prefab.unit["地雷"] = 5151
+  local original_group = prefab.group["地雷A"]
+  local original_unit = prefab.unit["地雷A"]
+  prefab.group["地雷A"] = 7777
+  prefab.unit["地雷A"] = 5151
 
   _with_patches({
     {
@@ -1106,8 +1106,8 @@ function TestActionAnimOverlayUnits:test_anim_unit_overlay_play_overlay_mine_pas
     overlay.play_overlay(state, { kind = "mine", tile_index = 1 }, 0.2, {})
   end)
 
-  prefab.group["地雷"] = original_group
-  prefab.unit["地雷"] = original_unit
+  prefab.group["地雷A"] = original_group
+  prefab.unit["地雷A"] = original_unit
 
   lu.assertEvalToTrue(#captured == 1, "mine overlay should spawn exactly once")
   lu.assertEvalToTrue(captured[1].unit_id == 5151, "mine overlay should pass the resolved 地雷 unit id")

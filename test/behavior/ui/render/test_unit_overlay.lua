@@ -22,8 +22,8 @@ local _saved_clear_overlay = runtime.clear_overlay
 local _saved_spawn_transient = runtime.spawn_transient
 
 local _saved_unit_roadblock = prefab.unit and prefab.unit["路障"]
-local _saved_unit_mine = prefab.unit and prefab.unit["地雷"]
-local _saved_group_mine = prefab.group and prefab.group["地雷"]
+local _saved_unit_mine = prefab.unit and prefab.unit["地雷A"]
+local _saved_group_mine = prefab.group and prefab.group["地雷A"]
 local _saved_unit_missile = prefab.unit and prefab.unit["导弹"]
 local _saved_group_missile = prefab.group and prefab.group["导弹"]
 
@@ -59,8 +59,8 @@ function TestUnitOverlay:setUp()
     }
   end
   prefab.unit["路障"] = "roadblock_unit"
-  prefab.unit["地雷"] = "mine_unit"
-  prefab.group["地雷"] = "mine_group"
+  prefab.unit["地雷A"] = "mine_unit"
+  prefab.group["地雷A"] = "mine_group"
   prefab.unit["导弹"] = "missile_unit"
   prefab.group["导弹"] = "missile_group"
 end
@@ -70,8 +70,8 @@ function TestUnitOverlay:tearDown()
   runtime.clear_overlay = _saved_clear_overlay
   runtime.spawn_transient = _saved_spawn_transient
   prefab.unit["路障"] = _saved_unit_roadblock
-  prefab.unit["地雷"] = _saved_unit_mine
-  prefab.group["地雷"] = _saved_group_mine
+  prefab.unit["地雷A"] = _saved_unit_mine
+  prefab.group["地雷A"] = _saved_group_mine
   prefab.unit["导弹"] = _saved_unit_missile
   prefab.group["导弹"] = _saved_group_missile
 end
@@ -138,8 +138,8 @@ end
 
 function TestUnitOverlay:test_play_mine_skips_spawn_when_prefab_missing()
   -- 基线契约:地雷 prefab 双双缺失时跳过生成(日志路径),不得落任何生成。
-  prefab.unit["地雷"] = nil
-  prefab.group["地雷"] = nil
+  prefab.unit["地雷A"] = nil
+  prefab.group["地雷A"] = nil
   overlay.play_overlay(_state(), { kind = "mine", tile_index = 2 }, 1.0)
   _assert_eq(#_captured.spawns, 0, "missing mine prefab must skip spawning")
 end
@@ -147,7 +147,7 @@ end
 function TestUnitOverlay:test_play_mine_spawns_when_group_only_present()
   -- L31 `not group_id and not unit_id` 的 and -> or(变异体在 group 缺 unit
   -- 时误判为全缺而跳过):group 在场、unit 缺失时仍必须生成。
-  prefab.unit["地雷"] = nil
+  prefab.unit["地雷A"] = nil
   local state = _state()
   overlay.play_overlay(state, { kind = "mine", tile_index = 2 }, 1.0)
   _assert_eq(#_captured.spawns, 1, "group-only mine must still spawn")

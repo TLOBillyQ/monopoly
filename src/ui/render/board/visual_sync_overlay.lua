@@ -73,8 +73,8 @@ local function _spawn_mine_overlay(state, idx)
     assert(shared.resolve_scene(state), "missing board_scene"),
     "mine",
     idx,
-    prefab.group["地雷"],
-    prefab.unit and prefab.unit["地雷"] or nil,
+    prefab.group["地雷A"],
+    prefab.unit and prefab.unit["地雷A"] or nil,
     overlay_compute.overlay_pos_for_tile(state, idx, mine_y_offset),
     nil,
     shared.deps(state)
@@ -117,7 +117,7 @@ return visual_sync_overlay
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=aaf4dd85fdebef6f
+projectHash=821c78e7fcbcf065
 scope.0.id=chunk:src/ui/render/board/visual_sync_overlay.lua
 scope.0.kind=chunk
 scope.0.startLine=1
