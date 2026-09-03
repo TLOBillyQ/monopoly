@@ -36,9 +36,9 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 
 **通用事实（2026-09-03，#610 取证）：宿主 API 参数错误不抛 Lua 异常**，只记一条 ERROR 日志并返回 nil，`pcall` 报告成功。所以「pcall 没抛」永远不是成功信号——这与 ADR 0065 登记的 `default_ports.end_game` 例外同型：那条例外之所以成立，只因 `game_end` 的成功信号真机尚未取证，取证后按本条收紧。
 
-**取证结论修正（2026-09-03，#610，取代 #263 探针结论）**：宿主 `CampRole` 上**没有** `die`，`die` 在 `role.get_ctrl_unit()` 返回的单位（`LCharacter`）上；真实签名 `unit.die(dmg_unit?)`，单参可省、**不带 self**（冒号调用被宿主以 params count mismatch 拒收），且**无返回值**，成功只能以 `unit.is_die_status()` 由 false 翻 true 判定。#263 探针记录的 `role_type=table`、`role.die` 存在且返回真值，探到的是我们自己的合成 AI 角色适配器（Lua table，自带 `die` 并自行退役），不是宿主 Role；据此写下的「role 有 die、签名 `die(self, nil)`、成功按 truthy 返回值」对宿主 Role 三条全不成立，真人玩家破产时宿主 `die` 从未成功过。修复后 `src/host/role_die.lua` 按对象分两条路径：合成适配器仍按 truthy 返回值判定，宿主 Role 走控制单位并回读 `is_die_status`。
+**取证结论修正（2026-09-03，#610，取代 #263 探针结论）**：宿主 `CampRole` 上**没有** `die`，`die` 在 `role.get_ctrl_unit()` 返回的单位（`LCharacter`）上；真实签名 `unit.die(dmg_unit?)`，单参可省、**不带 self**（冒号调用被宿主以 params count mismatch 拒收），且**无返回值**，成功只能以 `unit.is_die_status()` 由 false 翻 true 判定。#263 探针记录的 `role_type=table`、`role.die` 存在且返回真值，探到的是我们自己的合成 AI 角色适配器（Lua table，自带 `die` 并自行退役），不是宿主 Role；据此写下的「role 有 die、签名 `die(self, nil)`、成功按 truthy 返回值」对宿主 Role 三条全不成立，真人玩家破产时宿主 `die` 从未成功过。修复后 `src/host/role_die.lua` 按对象分两条路径：合成适配器仍按 truthy 返回值判定，宿主 Role 走控制单位并回读 `is_die_status`。**分派认 `is_synthetic_actor` 标志，不认 `die` 存在性**——后者正是 #263 误判的形状，宿主 Role 哪天长出 `die` 就会静默退回被证伪的判据；只有既无标志又无 `get_ctrl_unit` 的鸭子替身才回落到自带 `die`。
 
-出局后的棋子移除复用合成 AI 退役的同一条 `GameAPI.destroy_unit` 路径，使两类玩家一致（`LCharacter` 有 `destroy`、无 `set_visible`，隐藏路径尚无取证手段）。移除失败**不推翻**端口成功：出局语义由 `is_die_status` 承担，移除只是表现层收尾，失败留一条 warn。真机验证待办：若销毁真人控制单位触发宿主重生或镜头异常，退到隐藏路径并重新取证。
+出局后的棋子移除调同一个宿主入口 `GameAPI.destroy_unit`，使两类玩家一致（`LCharacter` 有 `destroy`、无 `set_visible`，隐藏路径尚无取证手段）。取句柄的路子两侧不同但同源：合成 AI 退役读 `registry.env.GameAPI`，真人侧经 `src/host/units.lua` 读全局 `GameAPI`，而 `host_install` 正是用全局 `GameAPI` 填的 `ctx.env`。移除失败**不推翻**端口成功：出局语义由 `is_die_status` 承担，移除只是表现层收尾，失败留一条 warn。真机验证待办：若销毁真人控制单位触发宿主重生或镜头异常，退到隐藏路径并重新取证。
 
 ## ADR 0054 — 单进程整房间，可见性与授权分离
 

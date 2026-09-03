@@ -1,9 +1,9 @@
 -- 破产出局的宿主侧执行(ADR 0046,取证结论以 #610 为准):宿主 CampRole 没有
 -- die,die 在 role.get_ctrl_unit() 返回的单位上,签名单参可省、不带 self、无返回
 -- 值,成功信号是 unit.is_die_status() 翻 true;合成 AI 适配器是 Lua table,自带
--- die 返回布尔并自行退役销毁单位,仍按 truthy 判定。两类对象的鸭子知识(方法在
--- 谁身上、签名、成功判据)全部收在本模块,规则层只经 runtime_ports.call_role_die
--- 触达。
+-- die 返回布尔并自行退役销毁单位,仍按 truthy 判定,由自竖的 is_synthetic_actor
+-- 标志认领。两类对象的鸭子知识(方法在谁身上、签名、成功判据)全部收在本模块,
+-- 规则层只经 runtime_ports.call_role_die 触达。
 local host_types = require("src.foundation.host_types")
 local unit_lifecycle = require("src.host.units")
 local logger = require("src.foundation.log")
@@ -71,7 +71,9 @@ local function _kill_ctrl_unit(unit)
   return true
 end
 
--- 单位移除复用合成 AI 退役的同一条 GameAPI.destroy_unit 路径,两类玩家一致。
+-- 单位移除调与合成 AI 退役同一个宿主入口 GameAPI.destroy_unit(取句柄的路子不
+-- 同但同源:registry 读 ctx.env.GameAPI,本模块经 src/host/units 读全局,而
+-- host_install 正是用全局 GameAPI 填的 ctx.env),两类玩家一致。
 -- 真机验证待主会话完成:若销毁真人控制单位触发宿主重生或镜头异常,退到隐藏路径
 -- (LCharacter 上有 destroy、无 set_visible,隐藏手段需另行取证)。出局语义已由
 -- is_die_status 达成,移除失败只留痕、不推翻端口成功(ADR 0046)。
@@ -86,6 +88,14 @@ local function _remove_ctrl_unit(unit)
   end
 end
 
+-- 分派不看「role 上有没有 die」——那正是 #263 误判的形状:宿主 Role 哪天长出
+-- die,真人就会静默退回已被证伪的 truthy 路径。合成适配器由自己竖的
+-- is_synthetic_actor 标志认领(synthetic_actor_registry 建适配器时置位),其余对象
+-- 一律走控制单位;只有既无标志又无 get_ctrl_unit 的鸭子替身才回落到自带 die。
+local function _is_synthetic_adapter(role)
+  return host_types.field(role, "is_synthetic_actor") == true
+end
+
 -- 返回 true 表示宿主侧出局处理成功。对象缺失、方法缺失、调用后状态未翻转与移除
 -- 失败四类各自留一条 warn,禁止静默。
 function role_die.call_role_die(role)
@@ -93,9 +103,19 @@ function role_die.call_role_die(role)
     logger.warn("role_die skip: role is nil")
     return false
   end
-  local adapter_die = host_types.method(role, "die")
-  if adapter_die ~= nil then
+  if _is_synthetic_adapter(role) then
+    local adapter_die = host_types.method(role, "die")
+    if adapter_die == nil then
+      logger.warn("role_die skip: synthetic adapter has no die method")
+      return false
+    end
     return _call_adapter_die(adapter_die)
+  end
+  if host_types.method(role, "get_ctrl_unit") == nil then
+    local adapter_die = host_types.method(role, "die")
+    if adapter_die ~= nil then
+      return _call_adapter_die(adapter_die)
+    end
   end
   local unit = _resolve_ctrl_unit(role)
   if unit == nil then
@@ -112,12 +132,12 @@ return role_die
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=7d0ec03f36a9823f
+projectHash=1b9aa601e8ee20d9
 scope.0.id=chunk:src/host/role_die.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=112
-scope.0.semanticHash=1e41fa045b85d5dd
+scope.0.endLine=132
+scope.0.semanticHash=dbede2463d617980
 scope.1.id=function:_call_adapter_die
 scope.1.kind=function
 scope.1.startLine=15
@@ -135,12 +155,17 @@ scope.3.endLine=72
 scope.3.semanticHash=dcb03ab7eee63de7
 scope.4.id=function:_remove_ctrl_unit
 scope.4.kind=function
-scope.4.startLine=78
-scope.4.endLine=87
+scope.4.startLine=80
+scope.4.endLine=89
 scope.4.semanticHash=ac44287f5e9abf49
-scope.5.id=function:role_die.call_role_die
+scope.5.id=function:_is_synthetic_adapter
 scope.5.kind=function
-scope.5.startLine=91
-scope.5.endLine=109
-scope.5.semanticHash=bef0eeb7377262ec
+scope.5.startLine=95
+scope.5.endLine=97
+scope.5.semanticHash=71b4071f2c7eb28d
+scope.6.id=function:role_die.call_role_die
+scope.6.kind=function
+scope.6.startLine=101
+scope.6.endLine=129
+scope.6.semanticHash=6dba2d8d11659600
 ]]

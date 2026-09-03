@@ -1,7 +1,8 @@
 -- role_die 宿主适配 spec(ADR 0046 / #610 真机取证):宿主 CampRole 无 die,
 -- die 在 role.get_ctrl_unit() 返回的单位上,签名单参无 self、无返回值,成功以
 -- unit.is_die_status() 翻 true 判定,随后经 GameAPI.destroy_unit 移除棋子;
--- 合成 AI 适配器(Lua table 自带 die 返回布尔)走原有 truthy 判据。失败必留痕。
+-- 合成 AI 适配器(自竖 is_synthetic_actor 标志、自带 die 返回布尔)走原有 truthy
+-- 判据,分派认标志不认 die 存在性。失败必留痕。
 local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local role_die = require("src.host.role_die")
@@ -84,8 +85,8 @@ function TestRoleDie:test_kills_ctrl_unit_when_role_has_no_die()
   lu.assertEvalToTrue(result == true, "a flipped is_die_status yields true")
   lu.assertEvalToTrue(#warns == 0, "the happy path must not warn; got " .. tostring(warns[1]))
   lu.assertEvalToTrue(unit.die_calls == 1, "unit.die must be called exactly once")
-  lu.assertEvalToTrue(unit.die_arg_count == 1,
-    "unit.die takes a single dmg_unit argument; got " .. tostring(unit.die_arg_count))
+  lu.assertEvalToTrue(unit.die_arg_count ~= nil and unit.die_arg_count <= 1,
+    "unit.die takes at most one dmg_unit argument; got " .. tostring(unit.die_arg_count))
   lu.assertEvalToTrue(unit.die_first_arg == nil, "unit.die must not receive self")
   lu.assertEvalToTrue(destroyed[1] == unit, "the ctrl unit must be removed from the board")
 end
@@ -196,6 +197,9 @@ function TestRoleDie:test_synthetic_adapter_die_keeps_the_truthy_contract()
   local ctrl_unit_reads = 0
   local destroyed, game_api = _destroy_recorder()
   local adapter = {
+    -- 合成适配器的真实形状(synthetic_actor_registry._build_adapter):自带标志、
+    -- die 与 get_ctrl_unit;分派必须认标志,不能靠 die 存在性。
+    is_synthetic_actor = true,
     die = function()
       calls = calls + 1
       return true
@@ -211,6 +215,32 @@ function TestRoleDie:test_synthetic_adapter_die_keeps_the_truthy_contract()
   lu.assertEvalToTrue(#warns == 0, "the adapter happy path must not warn")
   lu.assertEvalToTrue(ctrl_unit_reads == 0, "an adapter with die must not fall through to the unit path")
   lu.assertEvalToTrue(#destroyed == 0, "the adapter retires its own unit; role_die must not double destroy")
+end
+
+-- #263 的误判形状:一个自带 die 的宿主 Role。分派认 is_synthetic_actor 标志,
+-- 有控制单位的对象一律走单位路径,不会退回被证伪的 truthy 判据。
+function TestRoleDie:test_a_host_role_that_grows_a_die_method_still_takes_the_unit_path()
+  local unit = _host_unit()
+  local role_die_calls = 0
+  local role = _host_role(unit)
+  role.die = function()
+    role_die_calls = role_die_calls + 1
+    return true
+  end
+  local destroyed, game_api = _destroy_recorder()
+  local result = _call(role, game_api)
+  lu.assertEvalToTrue(result == true, "the unit path still reports success")
+  lu.assertEvalToTrue(role_die_calls == 0, "a role with a ctrl unit must not use its own die")
+  lu.assertEvalToTrue(unit.die_calls == 1, "the ctrl unit must be the one that dies")
+  lu.assertEvalToTrue(destroyed[1] == unit, "the ctrl unit must still be removed")
+end
+
+function TestRoleDie:test_returns_false_and_warns_when_a_flagged_adapter_has_no_die()
+  local result, warns = _call({ is_synthetic_actor = true })
+  lu.assertEvalToTrue(result == false, "a flagged adapter without die must yield false")
+  lu.assertEvalToTrue(#warns == 1, "such an adapter must leave exactly one warn")
+  lu.assertEvalToTrue(warns[1]:find("synthetic adapter", 1, true) ~= nil,
+    "warn should name the adapter; got " .. tostring(warns[1]))
 end
 
 function TestRoleDie:test_synthetic_adapter_die_accepts_any_truthy_return()

@@ -5,7 +5,8 @@ local P = require("test.support.shared_support")
 local _assert_eq = P.assert_eq
 local endgame = require("src.rules.endgame")
 
--- 签名钉扎:宿主调用一律不传 self(真机取证 #610,冒号调用被宿主拒收)。
+-- 签名钉扎:自带 die 的角色对象(合成适配器形状)同样不收 self——宿主调用一律
+-- 不传 self(真机取证 #610,冒号调用被宿主拒收),两条路径的调用约定一致。
 -- 只接受 nil 首参的 die 是成功;要求把 role 当 self 收的 die 现在是失败。
 local function _only_accepting(expected_first_arg)
   return function(first)
