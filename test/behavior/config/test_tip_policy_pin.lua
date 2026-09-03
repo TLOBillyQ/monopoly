@@ -32,6 +32,8 @@ function TestTipPolicyPin:test_tip_flags_are_pinned_per_event_kind()
     "rent_multiplier_breakdown should tip")
   lu.assertEvalToTrue(_tip_flag(kinds.afk_auto_enabled) == true,
     "afk_auto_enabled should tip as a room-wide broadcast")
+  lu.assertEvalToTrue(_tip_flag(kinds.market_auto_skipped) == false,
+    "market_auto_skipped should not tip")
 end
 
 function TestTipPolicyPin:test_log_flags_are_pinned()
@@ -39,6 +41,8 @@ function TestTipPolicyPin:test_log_flags_are_pinned()
     "choice_skipped should not log")
   lu.assertEvalToTrue(tip_policy[kinds.turn_end].log == false,
     "turn_end should not log")
+  lu.assertEvalToTrue(tip_policy[kinds.market_auto_skipped].log ~= false,
+    "market_auto_skipped must reach the action log so a delegated seat can see it was skipped")
 end
 
 return TestTipPolicyPin

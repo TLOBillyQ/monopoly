@@ -2,6 +2,7 @@ local dsl = require("packages.acceptance.step_dsl")
 local market_config = require("src.config.content.market")
 local game_driver = require("packages.acceptance.game_driver")
 local turn_driver = require("packages.acceptance.turn_driver")
+local event_kinds = require("src.config.gameplay.event_kinds")
 -- 黑市域绑定（#192 簇 B）：消化旧 src.rules.market.{query,purchase,auto} 豁免——陈列/售罄/可购
 -- 断言读真实 market_buy 选择的 options,购买经 turn_runtime choice_select 派发真实购买链。
 local TEST_PRODUCT_ID, FILLER_ITEM_ID = 2003, 2001 -- 骰子加倍卡（金币 5000,目录首位）/ 免费卡
@@ -135,6 +136,13 @@ return dsl.steps({
   end,
   ["电脑玩家不自动购买任何商品"] = function(w) return dsl.eq(w.coins_after_auto, w.coins_before_auto, "AI 路过黑市金币") end,
   ["电脑玩家金币保持不变"] = function(w) return dsl.eq(w.coins_after_auto, w.coins_before_auto, "AI 金币") end,
+  -- 跳过黑市要进行动日志(kind 独立于不入日志的 choice_skipped),托管席位才看得出自己被跳过。
+  ["行动日志记录该电脑玩家到达黑市未购买"] = function(w)
+    for _, e in ipairs(game_driver.events(_ctx(w))) do
+      if e.kind == event_kinds.market_auto_skipped and tostring(e.text or ""):find("到达黑市，选择不购买", 1, true) then return true end
+    end
+    return nil, "事件流缺少 market_auto_skipped「到达黑市，选择不购买」"
+  end,
   -- 选中自动回退是 UI 选择会话行为,fixture 语义保持（与旧实现一致）。
   ["当前选中的商品变为不可购买"] = function(w) w.current_selection_invalid = true end,
   ["选择列表刷新"] = function(w) w.auto_fallback_triggered = w.current_selection_invalid == true end,

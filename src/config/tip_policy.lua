@@ -21,6 +21,8 @@ M[event_kinds.remote_dice] = { tip = false }
 
 M[event_kinds.rent_multiplier_breakdown] = { tip = true }
 M[event_kinds.afk_auto_enabled] = { tip = true }
+-- 电脑/托管玩家到达黑市未购买:不弹 tip,但进行动日志——托管席位要能看出自己被跳过。
+M[event_kinds.market_auto_skipped] = { tip = false }
 
 M[event_kinds.choice_picked] = { log = false }
 M[event_kinds.choice_skipped] = { log = false }
@@ -31,10 +33,10 @@ return M
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=430699cd6ba512dc
+projectHash=1df6ea7896e2fe15
 scope.0.id=chunk:src/config/tip_policy.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=31
-scope.0.semanticHash=ae3ef943efeea695
+scope.0.endLine=33
+scope.0.semanticHash=ed1541bc8ca54043
 ]]

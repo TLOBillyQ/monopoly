@@ -17,8 +17,9 @@ local function _auto_skip(game, player)
     player = player,
     text = text,
   })
+  -- 独立 kind:通用 choice_skipped 不进行动日志,黑市跳过要留痕,托管席位才看得出被跳过。
   event_feed.publish(game, {
-    kind = event_kinds.choice_skipped,
+    kind = event_kinds.market_auto_skipped,
     text = text,
     tip = false,
   })
@@ -58,35 +59,35 @@ return auto
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=2335a2abaebf1801
+projectHash=a91159d34bc0e656
 scope.0.id=chunk:src/rules/market/auto.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=58
+scope.0.endLine=59
 scope.0.semanticHash=00fcf92ec492beb1
 scope.1.id=function:_auto_skip
 scope.1.kind=function
 scope.1.startLine=14
-scope.1.endLine=25
+scope.1.endLine=26
 scope.1.semanticHash=99491da1a80866e7
 scope.2.id=function:_sort_by_price
 scope.2.kind=function
-scope.2.startLine=27
-scope.2.endLine=31
+scope.2.startLine=28
+scope.2.endLine=32
 scope.2.semanticHash=c55adbb184afc263
 scope.3.id=function:<anonymous>
 scope.3.kind=function
-scope.3.startLine=28
-scope.3.endLine=30
+scope.3.startLine=29
+scope.3.endLine=31
 scope.3.semanticHash=386c46f9ceea61ea
 scope.4.id=function:_pending_choice
 scope.4.kind=function
-scope.4.startLine=33
-scope.4.endLine=35
+scope.4.startLine=34
+scope.4.endLine=36
 scope.4.semanticHash=13ddff47d34fa2ed
 scope.5.id=function:auto.execute
 scope.5.kind=function
-scope.5.startLine=37
-scope.5.endLine=55
+scope.5.startLine=38
+scope.5.endLine=56
 scope.5.semanticHash=10e795416d2e9cc4
 ]]

@@ -77,6 +77,20 @@ function TestEventFeedAdapter:test_turn_start_is_not_persisted_in_the_action_log
     "turn boundaries are not action results")
 end
 
+function TestEventFeedAdapter:test_market_auto_skipped_is_persisted_in_the_action_log_without_tip()
+  local enqueued = 0
+  local game = {
+    state = { event_log = event_log.new() },
+    tip_output_port = { enqueue = function() enqueued = enqueued + 1 return true end },
+  }
+  local adapter = event_feed_adapter.new(game)
+  adapter:publish(game, { kind = "market_auto_skipped", text = "P1 (AI) 到达黑市，选择不购买", tip = false })
+  local entries = event_log.get_entries(game.state.event_log)
+  lu.assertIs(#entries, 1, "a delegated seat must be able to read that the market was skipped")
+  lu.assertIs(entries[1].text, "P1 (AI) 到达黑市，选择不购买")
+  lu.assertIs(enqueued, 0, "the skip is a log line, not a tip")
+end
+
 function TestEventFeedAdapter:test_tip_not_false_enqueues_tip_intent_with_expected_shape()
   local captured_game = nil
   local captured_intent = nil

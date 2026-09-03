@@ -42,15 +42,16 @@ M.roadblock_triggered = "roadblock_triggered"
 M.market_entered = "market_entered"
 M.tax_paid = "tax_paid"
 M.afk_auto_enabled = "afk_auto_enabled"
+M.market_auto_skipped = "market_auto_skipped"
 
 return M
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=a9b8c69375f15e0c
+projectHash=83c876f7337ddca8
 scope.0.id=chunk:src/config/gameplay/event_kinds.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=47
-scope.0.semanticHash=7aaeebe5c9b8f1b8
+scope.0.endLine=48
+scope.0.semanticHash=2b72870242dad2a7
 ]]

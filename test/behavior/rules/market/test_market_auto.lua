@@ -44,7 +44,8 @@ end
 function TestMarketAuto:test_ai_player_publishes_skip_feed_without_purchase()
   local captured = _drive({ is_computer_controlled = true })
   lu.assertEvalToTrue(captured.feed ~= nil, "an AI player must publish a skip feed")
-  lu.assertEvalToTrue(captured.feed.kind == "choice_skipped", "the skip kind must be pinned")
+  lu.assertEvalToTrue(captured.feed.kind == "market_auto_skipped",
+    "the skip kind must be pinned to the logged market kind, not the unlogged choice_skipped")
   lu.assertEvalToTrue(captured.feed.tip == false, "the skip must not be a tip")
   lu.assertEvalToTrue(captured.feed.text == "P1 (AI) 到达黑市，选择不购买",
     "the skip text must be pinned")
