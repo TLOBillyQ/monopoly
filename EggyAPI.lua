@@ -4778,6 +4778,10 @@ function KVBase.get_billboard_font_size() end
 ---@return any 自定义值
 function KVBase.get_kv_by_type(_value_type, _key) end
 
+---获取所有标签
+---@return string[] 标签列表
+function KVBase.get_tags() end
+
 ---是否有自定义值
 ---@param _key string 名称
 ---@return boolean 是否有自定义值
