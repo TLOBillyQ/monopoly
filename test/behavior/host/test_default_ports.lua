@@ -265,6 +265,25 @@ function TestDefaultPorts:test_resolve_roles_returns_cached_when_populated()
   lu.assertEquals(roles[1].id, 1, "populated roles should not be replaced by a host query")
 end
 
+function TestDefaultPorts:test_is_synthetic_player_answers_from_registry_and_defaults_false()
+  -- #611:终局面板路由据此静默跳过合成 AI。判定来自合成角色注册表登记的
+  -- player_id 集合(退役不擦除),注册表缺位时一律返回 false。
+  local ctx = {
+    synthetic_actor_registry = {
+      is_synthetic_player = function(player_id)
+        return player_id == -2
+      end,
+    },
+  }
+  local ports = default_ports.build({ current = function() return ctx end })
+
+  lu.assertEquals(ports.is_synthetic_player(-2), true, "registered synthetic player should be reported")
+  lu.assertEquals(ports.is_synthetic_player(1), false, "host player should not be reported as synthetic")
+
+  local bare = default_ports.build({ current = function() return { roles = {} } end })
+  lu.assertEquals(bare.is_synthetic_player(-2), false, "missing registry should yield false, not nil")
+end
+
 function TestDefaultPorts:test_resolve_role_returns_nil_without_game_api()
   local ctx = { roles = {} }
   local ports = default_ports.build({ current = function() return ctx end })

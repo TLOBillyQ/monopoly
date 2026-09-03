@@ -182,6 +182,9 @@ function synthetic_actor_registry.new(env)
     env = env or {},
     pending_specs = {},
     actors_by_player_id = {},
+    -- 合成 AI 身份集合(#611):开局登记后只由 reset 清空,不随退役擦除。
+    -- actors_by_player_id 在 die/lose 退役时删表项,因此不能兼任身份真源。
+    synthetic_player_ids = {},
   }
 
   function registry.reset()
@@ -193,6 +196,7 @@ function synthetic_actor_registry.new(env)
     end
     registry.pending_specs = {}
     registry.actors_by_player_id = {}
+    registry.synthetic_player_ids = {}
   end
 
   function registry.register_specs(specs)
@@ -201,12 +205,20 @@ function synthetic_actor_registry.new(env)
       return
     end
     for _, spec in ipairs(specs) do
-      registry.pending_specs[#registry.pending_specs + 1] = _normalize_pending_spec(spec)
+      local normalized = _normalize_pending_spec(spec)
+      registry.pending_specs[#registry.pending_specs + 1] = normalized
+      role_id_utils.write(registry.synthetic_player_ids, normalized.player_id, true)
     end
   end
 
   function registry.resolve_actor(player_id)
     return role_id_utils.read(registry.actors_by_player_id, player_id)
+  end
+
+  -- 「该 player 是合成 AI 吗」的唯一真源:据开局登记的 spec 回答,对已退役
+  -- (resolve_actor 已返回 nil)的合成 AI 同样为真(#611)。
+  function registry.is_synthetic_player(player_id)
+    return role_id_utils.read(registry.synthetic_player_ids, player_id) == true
   end
 
   local function _registry_game_api(reg)
@@ -237,12 +249,12 @@ return synthetic_actor_registry
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=7e09650fc583243c
+projectHash=83596535517ca357
 scope.0.id=chunk:src/host/synthetic_actor_registry.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=217
-scope.0.semanticHash=d48b98be34701de5
+scope.0.endLine=249
+scope.0.semanticHash=691640ab00cee27d
 scope.1.id=function:_zero_pos
 scope.1.kind=function
 scope.1.startLine=8
@@ -273,109 +285,139 @@ scope.6.kind=function
 scope.6.startLine=53
 scope.6.endLine=58
 scope.6.semanticHash=027fadea6d7b6c90
-scope.7.id=function:_destroy_actor
+scope.7.id=function:_game_api_of
 scope.7.kind=function
 scope.7.startLine=60
-scope.7.endLine=67
-scope.7.semanticHash=71831168856b1498
-scope.8.id=function:_retire_actor
+scope.7.endLine=62
+scope.7.semanticHash=616a2ca60599c94f
+scope.8.id=function:_actor_unit
 scope.8.kind=function
-scope.8.startLine=69
-scope.8.endLine=77
-scope.8.semanticHash=1c63fb626a81ee82
-scope.9.id=function:_build_adapter
+scope.8.startLine=64
+scope.8.endLine=66
+scope.8.semanticHash=616a2ca60599c94f
+scope.9.id=function:_destroy_actor
 scope.9.kind=function
-scope.9.startLine=79
-scope.9.endLine=108
-scope.9.semanticHash=28b814cecff76637
-scope.10.id=function:<anonymous>
+scope.9.startLine=68
+scope.9.endLine=75
+scope.9.semanticHash=6c660e10de6b82d0
+scope.10.id=function:_retire_actor
 scope.10.kind=function
-scope.10.startLine=83
+scope.10.startLine=77
 scope.10.endLine=85
-scope.10.semanticHash=24f2b9b574225623
-scope.11.id=function:<anonymous>#2
+scope.10.semanticHash=1c63fb626a81ee82
+scope.11.id=function:_build_adapter
 scope.11.kind=function
-scope.11.startLine=86
-scope.11.endLine=88
-scope.11.semanticHash=24f2b9b574225623
-scope.12.id=function:<anonymous>#3
+scope.11.startLine=87
+scope.11.endLine=116
+scope.11.semanticHash=28b814cecff76637
+scope.12.id=function:<anonymous>
 scope.12.kind=function
-scope.12.startLine=89
-scope.12.endLine=91
+scope.12.startLine=91
+scope.12.endLine=93
 scope.12.semanticHash=24f2b9b574225623
-scope.13.id=function:<anonymous>#4
+scope.13.id=function:<anonymous>#2
 scope.13.kind=function
-scope.13.startLine=92
-scope.13.endLine=94
+scope.13.startLine=94
+scope.13.endLine=96
 scope.13.semanticHash=24f2b9b574225623
-scope.14.id=function:<anonymous>#5
+scope.14.id=function:<anonymous>#3
 scope.14.kind=function
-scope.14.startLine=95
-scope.14.endLine=97
-scope.14.semanticHash=22b57f529f3a8828
-scope.15.id=function:<anonymous>#6
+scope.14.startLine=97
+scope.14.endLine=99
+scope.14.semanticHash=24f2b9b574225623
+scope.15.id=function:<anonymous>#4
 scope.15.kind=function
-scope.15.startLine=98
-scope.15.endLine=100
-scope.15.semanticHash=5076d53a4090f1e9
-scope.16.id=function:<anonymous>#7
+scope.15.startLine=100
+scope.15.endLine=102
+scope.15.semanticHash=24f2b9b574225623
+scope.16.id=function:<anonymous>#5
 scope.16.kind=function
-scope.16.startLine=101
-scope.16.endLine=103
-scope.16.semanticHash=5076d53a4090f1e9
-scope.17.id=function:<anonymous>#8
+scope.16.startLine=103
+scope.16.endLine=105
+scope.16.semanticHash=22b57f529f3a8828
+scope.17.id=function:<anonymous>#6
 scope.17.kind=function
-scope.17.startLine=104
-scope.17.endLine=106
-scope.17.semanticHash=22b57f529f3a8828
-scope.18.id=function:_normalize_pending_spec
+scope.17.startLine=106
+scope.17.endLine=108
+scope.17.semanticHash=5076d53a4090f1e9
+scope.18.id=function:<anonymous>#7
 scope.18.kind=function
-scope.18.startLine=110
-scope.18.endLine=117
-scope.18.semanticHash=40983168aba70e4b
-scope.19.id=function:_validate_spawn_preconditions
+scope.18.startLine=109
+scope.18.endLine=111
+scope.18.semanticHash=5076d53a4090f1e9
+scope.19.id=function:<anonymous>#8
 scope.19.kind=function
-scope.19.startLine=119
-scope.19.endLine=127
-scope.19.semanticHash=02534c1bfa0d73fd
-scope.20.id=function:_spawn_unit
+scope.19.startLine=112
+scope.19.endLine=114
+scope.19.semanticHash=22b57f529f3a8828
+scope.20.id=function:_spec_field
 scope.20.kind=function
-scope.20.startLine=129
-scope.20.endLine=140
-scope.20.semanticHash=688e9b2b7ac2985d
-scope.21.id=function:_start_actor_ai
+scope.20.startLine=118
+scope.20.endLine=120
+scope.20.semanticHash=cd6b189045fad21d
+scope.21.id=function:_normalize_pending_spec
 scope.21.kind=function
-scope.21.startLine=142
-scope.21.endLine=151
-scope.21.semanticHash=35f3f70be94ae782
-scope.22.id=function:_spawn_actor
+scope.21.startLine=122
+scope.21.endLine=129
+scope.21.semanticHash=3c311891d1877e47
+scope.22.id=function:_validate_spawn_preconditions
 scope.22.kind=function
-scope.22.startLine=153
-scope.22.endLine=166
-scope.22.semanticHash=bf821ee60a710fd5
-scope.23.id=function:synthetic_actor_registry.new
+scope.22.startLine=131
+scope.22.endLine=139
+scope.22.semanticHash=02534c1bfa0d73fd
+scope.23.id=function:_spawn_unit
 scope.23.kind=function
-scope.23.startLine=168
-scope.23.endLine=214
-scope.23.semanticHash=10afce8f20f12c3f
-scope.24.id=function:registry.reset
+scope.23.startLine=141
+scope.23.endLine=152
+scope.23.semanticHash=688e9b2b7ac2985d
+scope.24.id=function:_start_actor_ai
 scope.24.kind=function
-scope.24.startLine=175
-scope.24.endLine=184
-scope.24.semanticHash=ee9449284d0ac76b
-scope.25.id=function:registry.register_specs
+scope.24.startLine=154
+scope.24.endLine=163
+scope.24.semanticHash=35f3f70be94ae782
+scope.25.id=function:_spawn_actor
 scope.25.kind=function
-scope.25.startLine=186
-scope.25.endLine=194
-scope.25.semanticHash=9b8178bd7d65cbce
-scope.26.id=function:registry.resolve_actor
+scope.25.startLine=165
+scope.25.endLine=178
+scope.25.semanticHash=bf821ee60a710fd5
+scope.26.id=function:synthetic_actor_registry.new
 scope.26.kind=function
-scope.26.startLine=196
-scope.26.endLine=198
-scope.26.semanticHash=233b0ba31339d60b
-scope.27.id=function:registry.spawn_pending
+scope.26.startLine=180
+scope.26.endLine=246
+scope.26.semanticHash=87ccd2c9e500e19a
+scope.27.id=function:registry.reset
 scope.27.kind=function
-scope.27.startLine=200
-scope.27.endLine=211
-scope.27.semanticHash=9bdc41fac5787841
+scope.27.startLine=190
+scope.27.endLine=200
+scope.27.semanticHash=79ec9f3f50bac0bb
+scope.28.id=function:registry.register_specs
+scope.28.kind=function
+scope.28.startLine=202
+scope.28.endLine=212
+scope.28.semanticHash=a3eb9d77ad5ea509
+scope.29.id=function:registry.resolve_actor
+scope.29.kind=function
+scope.29.startLine=214
+scope.29.endLine=216
+scope.29.semanticHash=233b0ba31339d60b
+scope.30.id=function:registry.is_synthetic_player
+scope.30.kind=function
+scope.30.startLine=220
+scope.30.endLine=222
+scope.30.semanticHash=dcf482d886ff46f1
+scope.31.id=function:_registry_game_api
+scope.31.kind=function
+scope.31.startLine=224
+scope.31.endLine=226
+scope.31.semanticHash=13ddff47d34fa2ed
+scope.32.id=function:_assert_spawn_api
+scope.32.kind=function
+scope.32.startLine=228
+scope.32.endLine=231
+scope.32.semanticHash=95f58cfbf9d54adb
+scope.33.id=function:registry.spawn_pending
+scope.33.kind=function
+scope.33.startLine=233
+scope.33.endLine=243
+scope.33.semanticHash=4a967193dab11252
 ]]

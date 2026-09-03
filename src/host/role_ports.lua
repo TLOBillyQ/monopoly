@@ -43,8 +43,10 @@ local function _registry(ctx)
   return ctx and ctx.synthetic_actor_registry or nil
 end
 
-local function _resolvable(registry)
-  return registry ~= nil and type(registry.resolve_actor) == "function"
+-- 注册表能力探测:runtime context 里的合成角色注册表在部分装配/测试桩下只实现
+-- 部分方法,取用前逐个探测,缺失即按「无合成角色」降级。
+local function _registry_supports(registry, method_name)
+  return registry ~= nil and type(registry[method_name]) == "function"
 end
 
 local function _adapter_of(actor)
@@ -56,7 +58,7 @@ end
 
 local function _try_resolve_synthetic_role(player_id, ctx)
   local synthetic_registry = _registry(ctx)
-  if not _resolvable(synthetic_registry) then
+  if not _registry_supports(synthetic_registry, "resolve_actor") then
     return nil
   end
   return _adapter_of(synthetic_registry.resolve_actor(player_id))
@@ -141,6 +143,16 @@ function role_ports.install(defaults, runtime_context)
     role.lose()
   end
 
+  -- 合成 AI 身份查询(#611):合成角色注册表是唯一真源,退役后仍答真;
+  -- 注册表缺位(未装配/非合成局)一律 false,不猜负 player_id 之类的约定。
+  defaults.is_synthetic_player = function(player_id)
+    local registry = _registry(runtime_context.current())
+    if not _registry_supports(registry, "is_synthetic_player") then
+      return false
+    end
+    return registry.is_synthetic_player(player_id) == true
+  end
+
   -- 出局的宿主侧执行(ADR 0046):宿主 Role 走控制单位、合成适配器走自带 die,
   -- 分支与判据收在 src/host/role_die,规则层只经端口触达。
   defaults.call_role_die = role_die.call_role_die
@@ -150,12 +162,12 @@ return role_ports
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=5447cdb09c9ada96
+projectHash=13ca13753c679f1e
 scope.0.id=chunk:src/host/role_ports.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=150
-scope.0.semanticHash=d673c373bbceee1d
+scope.0.endLine=162
+scope.0.semanticHash=4a5c797209ffe4fb
 scope.1.id=function:_current_env
 scope.1.kind=function
 scope.1.startLine=8
@@ -181,59 +193,64 @@ scope.5.kind=function
 scope.5.startLine=42
 scope.5.endLine=44
 scope.5.semanticHash=616a2ca60599c94f
-scope.6.id=function:_resolvable
+scope.6.id=function:_registry_supports
 scope.6.kind=function
-scope.6.startLine=46
-scope.6.endLine=48
-scope.6.semanticHash=0644415798925f16
+scope.6.startLine=48
+scope.6.endLine=50
+scope.6.semanticHash=fb5572e7ceeed93a
 scope.7.id=function:_adapter_of
 scope.7.kind=function
-scope.7.startLine=50
-scope.7.endLine=55
+scope.7.startLine=52
+scope.7.endLine=57
 scope.7.semanticHash=23b638226dd7a3e1
 scope.8.id=function:_try_resolve_synthetic_role
 scope.8.kind=function
-scope.8.startLine=57
-scope.8.endLine=63
-scope.8.semanticHash=a84155966d8bfce3
+scope.8.startLine=59
+scope.8.endLine=65
+scope.8.semanticHash=2da0cb3e2f8f39bf
 scope.9.id=function:_find_role_by_id
 scope.9.kind=function
-scope.9.startLine=65
-scope.9.endLine=75
+scope.9.startLine=67
+scope.9.endLine=77
 scope.9.semanticHash=21b5fff98d4253f5
 scope.10.id=function:_resolve_role_via_game_api
 scope.10.kind=function
-scope.10.startLine=77
-scope.10.endLine=87
+scope.10.startLine=79
+scope.10.endLine=89
 scope.10.semanticHash=957ecbdcab194c59
 scope.11.id=function:_resolve_roles
 scope.11.kind=function
-scope.11.startLine=89
-scope.11.endLine=103
+scope.11.startLine=91
+scope.11.endLine=105
 scope.11.semanticHash=2d66d66446271bcc
 scope.12.id=function:_resolve_role
 scope.12.kind=function
-scope.12.startLine=105
-scope.12.endLine=119
+scope.12.startLine=107
+scope.12.endLine=121
 scope.12.semanticHash=fb8b888770be9af2
 scope.13.id=function:role_ports.install
 scope.13.kind=function
-scope.13.startLine=121
-scope.13.endLine=147
-scope.13.semanticHash=19b975b6caa75c9e
+scope.13.startLine=123
+scope.13.endLine=159
+scope.13.semanticHash=e4456ead1085de52
 scope.14.id=function:defaults.resolve_roles
 scope.14.kind=function
-scope.14.startLine=122
-scope.14.endLine=124
+scope.14.startLine=124
+scope.14.endLine=126
 scope.14.semanticHash=7bbf31ab6751de78
 scope.15.id=function:defaults.resolve_role
 scope.15.kind=function
-scope.15.startLine=126
-scope.15.endLine=128
+scope.15.startLine=128
+scope.15.endLine=130
 scope.15.semanticHash=e504e513aab7d79c
 scope.16.id=function:defaults.mark_role_lose
 scope.16.kind=function
-scope.16.startLine=132
-scope.16.endLine=142
+scope.16.startLine=134
+scope.16.endLine=144
 scope.16.semanticHash=677e1453aea213a3
+scope.17.id=function:defaults.is_synthetic_player
+scope.17.kind=function
+scope.17.startLine=148
+scope.17.endLine=154
+scope.17.semanticHash=ff3136b327590574
 ]]

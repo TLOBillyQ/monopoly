@@ -50,6 +50,11 @@ runtime_ports.resolve_roles = _make_port("resolve_roles", _empty_roles)
 
 runtime_ports.mark_role_lose = _make_port("mark_role_lose", nil)
 
+-- 合成 AI 身份查询(#611):由合成角色注册表按开局登记的 player_id 回答,退役
+-- (die/lose 把 actor 从注册表删除)后仍为 true。未配置端口时按「无合成 AI」
+-- 处理,返回 false。
+runtime_ports.is_synthetic_player = _make_port("is_synthetic_player", false)
+
 runtime_ports.call_role_die = _make_port("call_role_die", false)
 
 runtime_ports.resolve_camera_helper = _make_port("resolve_camera_helper", nil)
@@ -100,12 +105,12 @@ return runtime_ports
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=4d48d13f1b0fc546
+projectHash=2ec7bb34d5006b3b
 scope.0.id=chunk:src/foundation/ports/runtime_ports.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=100
-scope.0.semanticHash=f1066f165f1e311b
+scope.0.endLine=105
+scope.0.semanticHash=dfc2776501a97bcb
 scope.1.id=function:_resolve_port
 scope.1.kind=function
 scope.1.startLine=5
@@ -138,17 +143,17 @@ scope.6.endLine=43
 scope.6.semanticHash=47ecc2dee36d3b8f
 scope.7.id=function:runtime_ports.wall_now_hms
 scope.7.kind=function
-scope.7.startLine=63
-scope.7.endLine=73
+scope.7.startLine=68
+scope.7.endLine=78
 scope.7.semanticHash=1cc795addb6d73b1
 scope.8.id=function:runtime_ports.reset_for_tests
 scope.8.kind=function
-scope.8.startLine=89
-scope.8.endLine=91
+scope.8.startLine=94
+scope.8.endLine=96
 scope.8.semanticHash=f308d8708726be18
 scope.9.id=function:runtime_ports.is_configured
 scope.9.kind=function
-scope.9.startLine=95
-scope.9.endLine=97
+scope.9.startLine=100
+scope.9.endLine=102
 scope.9.semanticHash=70efc1221c5d6d62
 ]]
