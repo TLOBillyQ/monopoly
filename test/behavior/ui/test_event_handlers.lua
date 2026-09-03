@@ -1123,6 +1123,104 @@ function TestEventHandlers:test_game_result_loser_method_missing_warns()
     "warn should name the missing loser method; got " .. tostring(warns[1]))
 end
 
+function TestEventHandlers:test_game_result_skips_synthetic_players_without_warn()
+  -- #611:合成 AI 没有客户端,结算面板无处显示——终局路由必须在 resolve_role
+  -- 之前静默跳过它们,不留 warn。覆盖两种情形:已退役(die/lose 已把自己从
+  -- 合成角色注册表删除,resolve_role 恒 nil)与在场(适配器无败者面板方法)。
+  local handlers = {}
+  local calls = {}
+  local warns = {}
+  local infos = {}
+  local resolved = {}
+  local runtime_ports = require("src.foundation.ports.runtime_ports")
+
+  _with_patches({
+    {
+      target = host_events,
+      key = "register_custom_event",
+      value = function(event_name, handler)
+        handlers[event_name] = handler
+        return true
+      end,
+    },
+    {
+      target = runtime_ports,
+      key = "is_synthetic_player",
+      value = function(player_id)
+        return player_id == -2 or player_id == -3
+      end,
+    },
+    {
+      target = runtime_ports,
+      key = "resolve_role",
+      value = function(player_id)
+        resolved[#resolved + 1] = player_id
+        if player_id == -2 then
+          return nil
+        end
+        if player_id == -3 then
+          return { game_win_and_show_result_panel = function() end }
+        end
+        return {
+          game_win_and_show_result_panel = function()
+            calls[#calls + 1] = "win_panel:" .. player_id
+          end,
+          game_lose_and_show_result_panel = function()
+            calls[#calls + 1] = "lose_panel:" .. player_id
+          end,
+        }
+      end,
+    },
+    {
+      target = runtime_ports,
+      key = "end_game",
+      value = function()
+        calls[#calls + 1] = "end_game"
+        return true
+      end,
+    },
+  }, function()
+    local event_handlers = _load_fresh_handlers()
+    event_handlers.install(nil, {
+      warn = function(...)
+        warns[#warns + 1] = table.concat({ ... }, " ")
+      end,
+      -- 生产 logger 的 info 受每回合节流(debug_flags.info_log_per_turn_limit=1),
+      -- 终局回合额度常已用尽:只桩不限流通道,若实现改用 logger.info 本例即红。
+      info_unlimited = function(...)
+        infos[#infos + 1] = table.concat({ ... }, " ")
+      end,
+      info = function()
+        error("synthetic skip trace must not use the throttled info channel")
+      end,
+    }, {
+      game = {
+        players = {
+          { id = 1, name = "P1" },
+          { id = -2, name = "AI-2" },
+          { id = -3, name = "AI-3" },
+        },
+      },
+    })
+    local handler = handlers[monopoly_event.game.finished]
+    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    local ok = pcall(handler, nil, nil, { winner_ids = { [1] = true } })
+    lu.assertEvalToTrue(ok, "synthetic players should not raise while routing result panels")
+  end)
+
+  _assert_eq(#warns, 0, "synthetic players must not warn; got " .. tostring(warns[1]))
+  _assert_eq(#resolved, 1, "synthetic players must not even reach resolve_role")
+  _assert_eq(resolved[1], 1, "only the host player should be resolved")
+  _assert_eq(calls[1], "win_panel:1", "host winner should still get its panel")
+  _assert_eq(#calls, 2, "one host panel then exactly one end_game")
+  _assert_eq(calls[2], "end_game", "end_game must still run exactly once after routing")
+  -- 跳过必留痕(ADR 0046):降级为 info,不是静默。
+  _assert_eq(#infos, 2, "both synthetic skips should leave an info trace")
+  lu.assertEvalToTrue(infos[1]:find("player -2", 1, true) ~= nil and infos[2]:find("player -3", 1, true) ~= nil,
+    "synthetic skip traces should carry the player context; got "
+      .. tostring(infos[1]) .. " / " .. tostring(infos[2]))
+end
+
 function TestEventHandlers:test_angel_immune_blocked_routes_tile_and_player_cues()
   local captured = {}
   local tile_calls = {}

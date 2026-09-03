@@ -528,5 +528,56 @@ function TestSyntheticActorRegistry:test_spawn_logs_nothing_when_start_ai_succee
   _assert_eq(#warned, 0, "successful start_ai should log no warning")
 end
 
+-- ── registry.is_synthetic_player: 退役后仍认得该 player ───────────
+
+function TestSyntheticActorRegistry:test_is_synthetic_player_survives_retirement()
+  -- #611:合成 AI 淘汰时 die/lose 触发退役并从注册表删除,resolve_actor 恒 nil。
+  -- 终局面板路由要静默跳过它,必须有一个不随退役消失的合成身份判定。
+  local registry_module = require("src.host.synthetic_actor_registry")
+  local registry = registry_module.new({
+    LuaAPI = {
+      query_unit = function()
+        return { get_position = function() return { x = 0, y = 0, z = 0 } end }
+      end,
+    },
+    GameAPI = {
+      create_creature_fixed_scale = function() return { start_ai = function() end } end,
+      destroy_unit = function() end,
+    },
+  })
+  registry.register_specs({
+    { player_id = -21, unit_key = "npc_21" },
+    { player_id = -22, unit_key = "npc_22" },
+  })
+  registry.spawn_pending({ path = { 1 } })
+
+  _assert_eq(registry.is_synthetic_player(-21), true, "spawned synthetic player should be recognized")
+  _assert_eq(registry.is_synthetic_player(1), false, "host player should not be recognized as synthetic")
+
+  local adapter = assert(registry.resolve_actor(-21).adapter, "adapter required")
+  adapter.die()
+  _assert_eq(registry.resolve_actor(-21), nil, "retired actor should be dropped from the registry")
+  _assert_eq(registry.is_synthetic_player(-21), true, "retired synthetic player must still be recognized (#611)")
+  _assert_eq(registry.is_synthetic_player(-22), true, "surviving synthetic player should be recognized")
+end
+
+function TestSyntheticActorRegistry:test_is_synthetic_player_is_cleared_by_reset()
+  -- 新一局重登记前 reset 清空:上一局的合成 player_id 不得泄漏给下一局。
+  local registry_module = require("src.host.synthetic_actor_registry")
+  local registry = registry_module.new({
+    LuaAPI = {},
+    GameAPI = {
+      create_creature_fixed_scale = function() return { start_ai = function() end } end,
+      destroy_unit = function() end,
+    },
+  })
+  registry.register_specs({ { player_id = -23, unit_key = "npc_23" } })
+  registry.spawn_pending({ path = { 1 } })
+  _assert_eq(registry.is_synthetic_player(-23), true, "synthetic player should be recognized before reset")
+
+  registry.reset()
+  _assert_eq(registry.is_synthetic_player(-23), false, "reset should clear synthetic player identities")
+end
+
 
 return TestSyntheticActorRegistry
