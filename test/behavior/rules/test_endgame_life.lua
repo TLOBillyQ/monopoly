@@ -1,12 +1,12 @@
--- endgame_life: consolidated life specs(ADR 0046 落码后:盲试链与
--- LifeComp 组件路径已删除,规则层经 runtime_ports 单次直调 role.die(role, nil);
--- 臂探测驱动的用例随之退场,保留返回值判据与签名钉扎)。
+-- endgame_life: consolidated life specs(ADR 0046 落码后:盲试链与 LifeComp 组件
+-- 路径已删除,规则层经 runtime_ports 触达宿主适配;#610 取证后签名钉扎改为「不传
+-- self」,保留返回值判据与签名钉扎)。
 local P = require("test.support.shared_support")
 local _assert_eq = P.assert_eq
 local endgame = require("src.rules.endgame")
 
--- 单签名直调判据:die(role, nil) 是唯一被接受的真实签名(真机取证 #263)。
--- 只接受 role 的 die 是成功;只接受 nil 或别的首参的 die 现在是失败。
+-- 签名钉扎:宿主调用一律不传 self(真机取证 #610,冒号调用被宿主拒收)。
+-- 只接受 nil 首参的 die 是成功;要求把 role 当 self 收的 die 现在是失败。
 local function _only_accepting(expected_first_arg)
   return function(first)
     if first ~= expected_first_arg then
@@ -38,20 +38,20 @@ function TestEndgameLife:test_try_call_life_die_returns_false_for_a_truthy_non_t
   _assert_eq(endgame._try_call_life_die(42), false, "number role must not report death")
 end
 
--- 钉唯一签名:die(role, nil) 调得通即成功;不再有降级臂可退。
+-- 钉唯一签名:die 不带 self 调得通即成功;不再有降级臂可退。
 function TestEndgameLife:test_try_call_life_die_uses_the_role_die_method_signature_first()
-  local role = { id = 10 }
-  role.die = _only_accepting(role)
+  local role = { id = 10, die = _only_accepting(nil) }
 
   local result = endgame._try_call_life_die(role)
-  _assert_eq(result, true, "die(role, nil) must be accepted")
+  _assert_eq(result, true, "die called without self must be accepted")
 end
 
 function TestEndgameLife:test_try_call_life_die_returns_false_when_die_rejects_the_contract()
-  local role = { id = 11, die = _only_accepting(nil) }
+  local role = { id = 11 }
+  role.die = _only_accepting(role)
 
   local result = endgame._try_call_life_die(role)
-  _assert_eq(result, false, "a die that only accepts nil must report failure under the single-signature contract")
+  _assert_eq(result, false, "a die that demands the role as self must report failure under the no-self contract")
 end
 
 function TestEndgameLife:test_resolve_bankruptcy_text_uses_reason_from_opts_when_present()

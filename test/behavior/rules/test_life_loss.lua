@@ -86,4 +86,28 @@ function TestLifeLoss:test_try_call_life_die_returns_true_when_role_die_succeeds
     "a succeeding role.die yields true")
 end
 
+-- 宿主真人 Role(#610):自身无 die,出局经控制单位完成,规则层判据不变。
+function TestLifeLoss:test_try_call_life_die_returns_true_for_a_host_role_with_a_ctrl_unit()
+  local unit = { dead = false }
+  unit.die = function()
+    unit.dead = true
+  end
+  unit.is_die_status = function()
+    return unit.dead
+  end
+  local role = {
+    get_ctrl_unit = function()
+      return unit
+    end,
+  }
+  local result
+  support.with_patches({
+    { key = "GameAPI", value = { destroy_unit = function() end } },
+  }, function()
+    result = life_loss.try_call_life_die(role)
+  end)
+  lu.assertEvalToTrue(result == true, "a host role whose ctrl unit dies yields true")
+  lu.assertEvalToTrue(unit.dead == true, "the ctrl unit must end up in die status")
+end
+
 return TestLifeLoss

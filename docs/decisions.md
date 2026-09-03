@@ -30,9 +30,15 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 
 道具窗口打开时一次物化 options，存续期内局面冻结；每次合法变化经 `reopen_or_finish` 重建窗口。验收先铺局面再开窗，断言窗口打开时的 offer 面。若未来引入窗口存续期内的并行局面变化，必须重议本决策。
 
-## ADR 0046 — 宿主调用以取证、端口和明确返回值为准
+## ADR 0046 — 宿主调用以取证、端口和明确成功信号为准
 
-已取证宿主签名采用单次直调，`pcall` 只防异常炸穿；成功按 truthy 或接口规定的明确返回值判定。宿主调用经外层 adapter/port 进入内层，业务规则不索引宿主方法。对象或方法缺失、调用异常和跳过分支必须留痕。宿主类名不稳定，逻辑不依赖 `type()` 名；API 注解只是线索，签名与返回值以真机证据为准。
+已取证宿主签名采用单次直调，`pcall` 只防异常炸穿；成功按接口规定的明确信号判定，无返回值的宿主调用以可读回的状态翻转为准。宿主调用经外层 adapter/port 进入内层，业务规则不索引宿主方法。对象缺失、方法缺失、调用异常、状态未翻转与跳过分支必须各自留痕。宿主类名不稳定，逻辑不依赖 `type()` 名；API 注解只是线索，签名与返回值以真机证据为准。
+
+**通用事实（2026-09-03，#610 取证）：宿主 API 参数错误不抛 Lua 异常**，只记一条 ERROR 日志并返回 nil，`pcall` 报告成功。所以「pcall 没抛」永远不是成功信号——这与 ADR 0065 登记的 `default_ports.end_game` 例外同型：那条例外之所以成立，只因 `game_end` 的成功信号真机尚未取证，取证后按本条收紧。
+
+**取证结论修正（2026-09-03，#610，取代 #263 探针结论）**：宿主 `CampRole` 上**没有** `die`，`die` 在 `role.get_ctrl_unit()` 返回的单位（`LCharacter`）上；真实签名 `unit.die(dmg_unit?)`，单参可省、**不带 self**（冒号调用被宿主以 params count mismatch 拒收），且**无返回值**，成功只能以 `unit.is_die_status()` 由 false 翻 true 判定。#263 探针记录的 `role_type=table`、`role.die` 存在且返回真值，探到的是我们自己的合成 AI 角色适配器（Lua table，自带 `die` 并自行退役），不是宿主 Role；据此写下的「role 有 die、签名 `die(self, nil)`、成功按 truthy 返回值」对宿主 Role 三条全不成立，真人玩家破产时宿主 `die` 从未成功过。修复后 `src/host/role_die.lua` 按对象分两条路径：合成适配器仍按 truthy 返回值判定，宿主 Role 走控制单位并回读 `is_die_status`。
+
+出局后的棋子移除复用合成 AI 退役的同一条 `GameAPI.destroy_unit` 路径，使两类玩家一致（`LCharacter` 有 `destroy`、无 `set_visible`，隐藏路径尚无取证手段）。移除失败**不推翻**端口成功：出局语义由 `is_die_status` 承担，移除只是表现层收尾，失败留一条 warn。真机验证待办：若销毁真人控制单位触发宿主重生或镜头异常，退到隐藏路径并重新取证。
 
 ## ADR 0054 — 单进程整房间，可见性与授权分离
 
@@ -89,6 +95,6 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 1. **整局结束必须显式调用 `GameAPI.game_end()`**。宿主文档明示「胜利并不代表玩家将离开游戏，还需要设置游戏结束才会离开」，且「设置胜利或失败需要在结束之前」——时序为逐玩家 `game_win/game_lose_and_show_result_panel()` 标记（带面板）→ 最后一次 `game_end()`。此前全仓零调用，会话永不终止（与 #608 漏调 `request_archive` 同型缺口）。落地为 `runtime_ports.end_game` 端口 + `default_ports.end_game` 宿主直调（ADR 0046 留痕），由 `endgame_result_panels._finalize_game_result` 在面板路由后无条件调用；面板链任何一环断裂（面板方法抛错、`resolve_role` 抛错）都吞成 warn，不阻塞收尾。
 2. **`gm.finished` 是终态事件，绕过落地视觉 hold 的 defer**。淘汰型胜利的 emit 天然落在 hold 激活窗口（`move_followup` 进 landing 前先 `hold.start`，结算淘汰后脚本泊在 `wait_landing_visual`），而 defer 的释放依赖 `advance_turn` 恢复脚本——`finished` 后 `advance_turn` 直接返回，release_pending 永不置位，回调永久滞留。`event_handlers._register_handler` 对 `monopoly_event.game.finished` 置 immediate 直派，其余事件 defer 语义不变。
 
-已登记例外（#609 复审）：**`default_ports.end_game` 暂以「pcall 无异常」为成功**，偏离宿主调用第 3 条「成功按明确返回值判定」。理由：`game_end` 返回值真机未取证，宿主文档只述其副作用（结束会话）未述返回值；若其确无返回值，truthy 判定会把真实成功误报为失败。真机取证后按取证结果收紧或确认本例外。
+已登记例外（#609 复审）：**`default_ports.end_game` 暂以「pcall 无异常」为成功**，偏离宿主调用第 3 条「成功按接口规定的明确信号判定」。理由：`game_end` 返回值真机未取证，宿主文档只述其副作用（结束会话）未述返回值；若其确无返回值，truthy 判定会把真实成功误报为失败。真机取证后按取证结果收紧或确认本例外。
 
 未取证的线上嫌疑（不阻塞本修复，真机探针待办）：宿主事件回调三参签名假定 `(_, _, data)` 无注解依据；`gm.finished` 注册句柄被丢弃未校验（对照 #585 已证实宿主会静默拒注册）。两者若成立只会错路由胜负面板，不影响 game_end 收尾。

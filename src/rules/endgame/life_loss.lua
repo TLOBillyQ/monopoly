@@ -1,7 +1,7 @@
--- 宿主 role.die 的规则层触达点(ADR 0046):盲试链与
--- get_component("LifeComp") 路径已删除,单次直调 role.die(role, nil) 的真实
--- 签名与成功判据(返回值 truthy)收在 src/host/role_die,本模块只经
--- runtime_ports 转发,规则层对宿主对象与组件系统零知识。
+-- 宿主出局调用的规则层触达点(ADR 0046):方法在 Role 还是控制单位上、调用签名
+-- 与成功判据(#610 取证:宿主经 unit.is_die_status 回读,合成适配器按 truthy)
+-- 全部收在 src/host/role_die,本模块只经 runtime_ports 转发,规则层对宿主对象
+-- 与组件系统零知识,成功判据只看端口返回 true。
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
 local life_loss = {}
@@ -17,7 +17,7 @@ return life_loss
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=05bac08ea996168d
+projectHash=13a82323fb765d29
 scope.0.id=chunk:src/rules/endgame/life_loss.lua
 scope.0.kind=chunk
 scope.0.startLine=1

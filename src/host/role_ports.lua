@@ -1,5 +1,5 @@
 -- 角色解析与标记默认实现(自 default_ports.lua 拆分,行为保持):角色枚举、
--- 合成角色适配器回退、单角色解析、失败标记与 role.die 宿主直调。
+-- 合成角色适配器回退、单角色解析、失败标记与出局的宿主侧执行。
 local logger = require("src.foundation.log")
 local role_die = require("src.host.role_die")
 
@@ -141,7 +141,8 @@ function role_ports.install(defaults, runtime_context)
     role.lose()
   end
 
-  -- role.die 单签名直调(ADR 0046):宿主适配实现,规则层只经端口触达。
+  -- 出局的宿主侧执行(ADR 0046):宿主 Role 走控制单位、合成适配器走自带 die,
+  -- 分支与判据收在 src/host/role_die,规则层只经端口触达。
   defaults.call_role_die = role_die.call_role_die
 end
 
@@ -149,11 +150,11 @@ return role_ports
 
 --[[ mutate4lua-manifest
 version=4
-projectHash=3200f2a0458576e2
+projectHash=5447cdb09c9ada96
 scope.0.id=chunk:src/host/role_ports.lua
 scope.0.kind=chunk
 scope.0.startLine=1
-scope.0.endLine=149
+scope.0.endLine=150
 scope.0.semanticHash=d673c373bbceee1d
 scope.1.id=function:_current_env
 scope.1.kind=function
@@ -218,7 +219,7 @@ scope.12.semanticHash=fb8b888770be9af2
 scope.13.id=function:role_ports.install
 scope.13.kind=function
 scope.13.startLine=121
-scope.13.endLine=146
+scope.13.endLine=147
 scope.13.semanticHash=19b975b6caa75c9e
 scope.14.id=function:defaults.resolve_roles
 scope.14.kind=function
