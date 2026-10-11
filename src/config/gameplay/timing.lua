@@ -30,7 +30,7 @@ local timing = {
   roadblock_destroy_hold_seconds = 0.5,
   teleport_effect_camera_hold_seconds = 1.0,
   -- 倒计时由宿主侧展示,此值单方面对齐宿主配置;改宿主时长需同步改这里
-  game_time_limit_seconds = 1800,
+  game_time_limit_seconds = 3000,
   turn_limit = 1000,
   item_phase_queue = { "pre_action", "pre_move", "post_action" },
   afk = {
