@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local luassert = assert
 local support = require("test.support.shared_support")
 
 local gameplay_loop = require("src.turn.loop")
@@ -156,12 +156,9 @@ local function _record_ui_writes(state)
   return writes
 end
 
--- describe("architecture_guard_contract") 拍平为文件级 TestArchitectureGuard,
--- 断言词汇从 luassert 兼容层切到 lu.assertXxx(busted (expected, actual) →
--- LuaUnit (actual, expected)),用例数与改写前一一对应(5 例)。
-TestArchitectureGuard = {}
+describe("TestArchitectureGuard", function()
 
-function TestArchitectureGuard:test_gameplay_loop_set_game_injects_narrow_runtime_ports()
+it("test_gameplay_loop_set_game_injects_narrow_runtime_ports", function()
   local game = support.new_game({ install_ui_port = false })
   local state = _build_loop_state()
   state.wait_move_anim = true
@@ -178,26 +175,26 @@ function TestArchitectureGuard:test_gameplay_loop_set_game_injects_narrow_runtim
 
   gameplay_loop.set_game(state, game)
 
-  lu.assertNil(game.ui_port, "set_game should stop exporting the catch-all runtime ui_port")
-  lu.assertNotNil(game.board_scene_port, "set_game should inject board_scene_port dto")
-  lu.assertTrue(game.board_scene_port ~= state, "board_scene_port should not expose raw state")
-  lu.assertNotNil(game.board_scene_port.get_board_scene, "board_scene_port should expose board scene getter")
-  lu.assertNotNil(game.popup_port, "set_game should inject popup_port dto")
-  lu.assertNotNil(game.board_visual_feedback_port, "set_game should inject board_visual_feedback_port dto")
-  lu.assertNotNil(game.tile_owner_notifier, "set_game should inject tile_owner_notifier dto")
-  lu.assertNotNil(game.anim_gate_port, "set_game should inject anim_gate_port dto")
-  lu.assertEquals(game.anim_gate_port.wait_move_anim, true, "anim_gate_port should expose wait_move_anim")
-  lu.assertEquals(game.anim_gate_port.wait_action_anim, true, "anim_gate_port should expose wait_action_anim")
-  lu.assertEquals(game.board_scene_port:get_board_scene(), state.board_scene, "board_scene_port should read board scene from state")
+  luassert.is_nil(game.ui_port, "set_game should stop exporting the catch-all runtime ui_port")
+  luassert.is_not_nil(game.board_scene_port, "set_game should inject board_scene_port dto")
+  luassert.is_true(game.board_scene_port ~= state, "board_scene_port should not expose raw state")
+  luassert.is_not_nil(game.board_scene_port.get_board_scene, "board_scene_port should expose board scene getter")
+  luassert.is_not_nil(game.popup_port, "set_game should inject popup_port dto")
+  luassert.is_not_nil(game.board_visual_feedback_port, "set_game should inject board_visual_feedback_port dto")
+  luassert.is_not_nil(game.tile_owner_notifier, "set_game should inject tile_owner_notifier dto")
+  luassert.is_not_nil(game.anim_gate_port, "set_game should inject anim_gate_port dto")
+  luassert.is.equal(true, game.anim_gate_port.wait_move_anim, "anim_gate_port should expose wait_move_anim")
+  luassert.is.equal(true, game.anim_gate_port.wait_action_anim, "anim_gate_port should expose wait_action_anim")
+  luassert.is.same(state.board_scene, game.board_scene_port:get_board_scene(), "board_scene_port should read board scene from state")
 
   game.popup_port:push_popup({ kind = "test_popup" })
-  lu.assertEquals(state.last_popup_payload.kind, "test_popup", "runtime ui_port should forward popup payload")
+  luassert.is.equal("test_popup", state.last_popup_payload.kind, "runtime ui_port should forward popup payload")
 
   game.tile_owner_notifier:notify_owner_changed(9, 3)
-  lu.assertEquals(state.last_board_visual_sync.tile_ids[1], 9, "runtime ui_port should forward tile id via board visual sync")
-end
+  luassert.is.equal(9, state.last_board_visual_sync.tile_ids[1], "runtime ui_port should forward tile id via board visual sync")
+end)
 
-function TestArchitectureGuard:test_turn_dispatch_next_only_marks_ui_dirty()
+it("test_turn_dispatch_next_only_marks_ui_dirty", function()
   local game = support.new_game({ ai = {} })
   local current_player = game:current_player()
   local output_log = {}
@@ -232,16 +229,16 @@ function TestArchitectureGuard:test_turn_dispatch_next_only_marks_ui_dirty()
       id = "next",
       actor_role_id = current_player.id,
     })
-    lu.assertEquals(result.status, "applied", "next should apply for current player")
+    luassert.is.equal("applied", result.status, "next should apply for current player")
   end)
 
-  lu.assertEquals(stepped, 1, "dispatch should step turn once")
-  lu.assertEquals(#ui_writes, 0, "next action should not directly write state.ui_*")
-  lu.assertEquals(#output_log, 1, "next action should emit one output invalidate signal")
-  lu.assertEquals(output_log[1].kind, "invalidate_ui_model", "next action should invalidate ui_model through output port")
-end
+  luassert.is.equal(1, stepped, "dispatch should step turn once")
+  luassert.is.equal(0, #ui_writes, "next action should not directly write state.ui_*")
+  luassert.is.equal(1, #output_log, "next action should emit one output invalidate signal")
+  luassert.is.equal("invalidate_ui_model", output_log[1].kind, "next action should invalidate ui_model through output port")
+end)
 
-function TestArchitectureGuard:test_turn_dispatch_choice_only_marks_ui_dirty()
+it("test_turn_dispatch_choice_only_marks_ui_dirty", function()
   local game = support.new_game({ ai = {} })
   local current_player = game:current_player()
   local choice = support.open_choice(game, {
@@ -283,7 +280,7 @@ function TestArchitectureGuard:test_turn_dispatch_choice_only_marks_ui_dirty()
       target = game,
       key = "dispatch_action",
       value = function(self, action)
-        lu.assertEquals(action.choice_id, choice.id, "choice dispatch should preserve pending choice id")
+        luassert.is.equal(choice.id, action.choice_id, "choice dispatch should preserve pending choice id")
         self.turn.pending_choice = nil
       end,
     },
@@ -296,14 +293,14 @@ function TestArchitectureGuard:test_turn_dispatch_choice_only_marks_ui_dirty()
     })
   end)
 
-  lu.assertEquals(result.status, "applied", "choice selection should apply for owning player")
-  lu.assertEquals(#ui_writes, 0, "choice action should not directly write state.ui_*")
-  lu.assertEquals(#output_log, 2, "choice action should invalidate UI and clear choice through output port")
-  lu.assertEquals(output_log[1].kind, "invalidate_ui_model", "choice action should invalidate ui_model through output port")
-  lu.assertEquals(output_log[2].kind, "clear_pending_choice", "choice action should clear pending choice through output port")
-end
+  luassert.is.equal("applied", result.status, "choice selection should apply for owning player")
+  luassert.is.equal(0, #ui_writes, "choice action should not directly write state.ui_*")
+  luassert.is.equal(2, #output_log, "choice action should invalidate UI and clear choice through output port")
+  luassert.is.equal("invalidate_ui_model", output_log[1].kind, "choice action should invalidate ui_model through output port")
+  luassert.is.equal("clear_pending_choice", output_log[2].kind, "choice action should clear pending choice through output port")
+end)
 
-function TestArchitectureGuard:test_gameplay_loop_set_game_routes_choice_state_through_output_port()
+it("test_gameplay_loop_set_game_routes_choice_state_through_output_port", function()
   local game = support.new_game()
   local current_player = game:current_player()
   local choice = support.open_choice(game, {
@@ -335,25 +332,24 @@ function TestArchitectureGuard:test_gameplay_loop_set_game_routes_choice_state_t
 
   gameplay_loop.set_game(state, game)
 
-  lu.assertEquals(#ui_writes, 0, "set_game should not directly write state.ui_*")
-  lu.assertEquals(output_log[1].kind, "sync_pending_choice", "set_game should publish pending choice through output port")
-  lu.assertEquals(output_log[2].kind, "sync_ui_model", "set_game should publish UI model through output port")
-  lu.assertEquals(output_log[3].kind, "invalidate_ui_model", "set_game should invalidate ui_model through output port")
-  lu.assertEquals(state.ui_runtime and state.ui_runtime.pending_choice_id, choice.id,
+  luassert.is.equal(0, #ui_writes, "set_game should not directly write state.ui_*")
+  luassert.is.equal("sync_pending_choice", output_log[1].kind, "set_game should publish pending choice through output port")
+  luassert.is.equal("sync_ui_model", output_log[2].kind, "set_game should publish UI model through output port")
+  luassert.is.equal("invalidate_ui_model", output_log[3].kind, "set_game should invalidate ui_model through output port")
+  luassert.is.equal(choice.id, state.ui_runtime and state.ui_runtime.pending_choice_id,
     "set_game should keep pending choice in ui_runtime")
-  lu.assertEquals(state.ui_runtime and state.ui_runtime.ui_model and state.ui_runtime.ui_model.choice.id, choice.id,
+  luassert.is.equal(choice.id, state.ui_runtime and state.ui_runtime.ui_model and state.ui_runtime.ui_model.choice.id,
     "set_game should keep ui_model in ui_runtime")
-end
+end)
 
-function TestArchitectureGuard:test_action_anim_port_uses_anim_gate_port_without_ui_port()
+it("test_action_anim_port_uses_anim_gate_port_without_ui_port", function()
   local game = support.new_game({ ai = {} })
   game.ui_port = nil
   game.anim_gate_port = {
     wait_action_anim = true,
   }
 
-  lu.assertEquals(action_anim_port.is_enabled(game), true, "action_anim_port should read anim_gate_port")
-end
+  luassert.is.equal(true, action_anim_port.is_enabled(game), "action_anim_port should read anim_gate_port")
+end)
 
-
-return TestArchitectureGuard
+end)
