@@ -62,11 +62,11 @@ local function _test_install_eggy_package_paths_only_installs_canonical_repo_pat
   local ok, err = pcall(function()
     package_path_helper.install_eggy_package_paths({
       repo_root = "/repo",
-      arch_view_root = "/repo/.swarmforge/tools/arch_view@abc",
+      arch_view_root = "/repo/.toolcache/arch_view@abc",
     })
     _assert_contains(package.path, "/repo/tools/?.lua", "helper should keep canonical repo tool paths")
     _assert_contains(package.path, "/repo/test/?.lua", "helper should keep canonical spec paths")
-    _assert_not_contains(package.path, "/repo/.swarmforge/tools/arch_view@abc",
+    _assert_not_contains(package.path, "/repo/.toolcache/arch_view@abc",
       "package helper should not install tool cache paths")
   end)
 

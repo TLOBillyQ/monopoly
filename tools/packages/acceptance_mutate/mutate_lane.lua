@@ -24,10 +24,8 @@ local text_lib = require("foundation.text")
 local json = require("acceptance4lua.json")
 local lua54 = require("packages.luaunit_runner.lua54")
 
--- APS 面统一口径(工单 #606 运营方补充事实):转发器钉了探测到的解释器,车道这几个
--- 子进程就不能再各写各的字面量 "lua"——PATH 上的 lua 本机是 5.5.1,而 rock tree 与
--- 全部质量车道都按 5.4 走;探针存在的理由正是「worker 退回 5.5」这类坏味道,口径不一致
--- 时它自己就先成了那个坏味道。缺 lua5.4 时 lua54_bin() 照既有约定退回 "lua"。
+-- 子进程统一使用探测到的 Lua 5.4，与 rock tree 保持一致。
+-- 缺 lua5.4 时 lua54_bin() 照既有约定退回 "lua"。
 local APS_LUA = lua54.lua54_bin()
 
 -- mutator 的 --feature 默认值,保持与 APS 参考实现一致。

@@ -2,11 +2,7 @@
 if arg then rawset(arg, 0, "tools/packages/acceptance/test/test_cli_entrypoints.lua") end
 require("test.bootstrap").install_package_paths()
 
--- APS 项目入口面(parser / generator / ir_dry / mutator 四个 cli 入口脚本)的逐文件单测。
---
--- 为什么补:工单 #606 的运营方补充事实点名「`tools/packages/*/cli/*.lua` 现状无逐文件单测
--- (parser.lua、generator.lua 同样没有)……加单测时请一并覆盖这三件,别只测 ir_dry」。
--- 本文件把「转发器指向的那三件入口」+ 车道内部同款调用的 generator 一次钉住:
+-- 项目显式入口(parser / generator / ir_dry / mutator)的公共 CLI 回归。
 -- 中文 Gherkin 能在项目入口上解析出 IR、IR 能生成入口件、IR-DRY 能出 findings、
 -- 用量错误按 APS 契约退 2、真失败退 1。全部以子进程真跑入口脚本,不测私有函数。
 local lu = require("luaunit")
@@ -22,7 +18,7 @@ local GENERATOR = "tools/packages/acceptance/cli/generator.lua"
 local IR_DRY = "tools/packages/acceptance/cli/ir_dry.lua"
 local MUTATOR = "tools/packages/acceptance_mutate/mutator.lua"
 
--- 与 .swarmforge/bin 转发器、mutate_lane 同一解释器口径(工单 #606)。
+-- 与 mutate_lane 同用 Lua 5.4 解释器。
 local APS_LUA = lua54.lua54_bin()
 
 local ZH_FEATURE = table.concat({

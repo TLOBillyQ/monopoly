@@ -2,9 +2,6 @@
 
 功能: 中文 Gherkin 验收规格
 
-背景:
-  假如 仓库启用了 SwarmForge 迁移工作流
-
 场景大纲: 业务人员只维护中文功能文件
   假如 业务功能文件位于<源文件路径>
   当 规格工具读取该文件
@@ -14,7 +11,7 @@
 
 例子:
   | 源文件路径 | 功能关键字 | 场景关键字 | 前置关键字 | 动作关键字 | 结果关键字 | 连接关键字 | 例子关键字 |
-  | features/swarmforge/chinese_gherkin_acceptance.feature | 功能 | 场景大纲 | 假如 | 当 | 那么 | 并且 | 例子 |
+  | features/tooling/chinese_gherkin_acceptance.feature | 功能 | 场景大纲 | 假如 | 当 | 那么 | 并且 | 例子 |
   | features/game/dice_roll.feature | 功能 | 场景大纲 | 假如 | 当 | 那么 | 但是 | 例子 |
   | features/game/bankruptcy.feature | 功能 | 背景 | 假如 | 当 | 那么 | 并且 | 例子 |
 
@@ -79,8 +76,8 @@
 
 例子:
   | 源文件路径 | 行号 | 错误类型 | 中文表头 | 规范参数名 |
-  | features/swarmforge/chinese_gherkin_acceptance.feature | 18 | 例子列数不匹配 | 已有道具数 | p2 |
-  | features/swarmforge/chinese_gherkin_acceptance.feature | 27 | 缺少参数值 | 提交哈希 | p2 |
+  | features/tooling/chinese_gherkin_acceptance.feature | 18 | 例子列数不匹配 | 已有道具数 | p2 |
+  | features/tooling/chinese_gherkin_acceptance.feature | 27 | 缺少参数值 | 提交哈希 | p2 |
 
 场景大纲: 变异测试报告显示中文字段名
   假如 中文功能文件定义参数<中文参数名>
@@ -94,15 +91,3 @@
   | 中文参数名 | 规范参数名 | 报告格式示例         |
   | 已有道具数 | p2         | 已有道具数: 5 -> 8   |
   | 玩家       | p1         | 玩家: A -> B         |
-
-场景大纲: SwarmForge 迁移资产边界清晰
-  假如 仓库准备提交 SwarmForge 迁移
-  当 开发者查看 git 状态
-  那么 <应提交路径>应作为迁移资产提交
-  并且 <本地路径>应保持为本地运行状态
-
-例子:
-  | 应提交路径 | 本地路径 |
-  | swarmforge/ | .swarmforge/ |
-  | features/swarmforge/chinese_gherkin_acceptance.feature | .worktrees/ |
-  | swarmforge/constitution/articles/local-engineering.prompt | tmp/ |

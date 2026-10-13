@@ -11,7 +11,7 @@
 -- 清单与生产者对应：build/ tmp/ .arch_view/viewer/ 为本地
 -- 构建/扫描产物;tools/packages/acceptance/generated/ 由 acceptance regenerate
 -- 生成;junit-output.xml 由 spec_lane 生成;luacov.* 由 coverage 车道生成。
--- clean 不清 .toolcache/、不动 .swarmforge/(distclean 才连缓存一起清)。
+-- clean 保留 .toolcache/；distclean 连工具缓存一起清。
 --
 -- 实现:开发环境限 macOS + WSL(#127),直接 sh -c rm,语义与被取代的
 -- Makefile 逐字一致(rm -rf 目录、rm -f 文件/glob,sh 下未命中 glob 原样
@@ -28,15 +28,15 @@ local _CLEAN_FILES = {
   "luacov.stats.out",
   "luacov.report.out",
 }
-local _DISTCLEAN_DIRS = { ".toolcache/", ".swarmforge/" }
+local _DISTCLEAN_DIRS = { ".toolcache/" }
 
 function M.usage()
   return table.concat({
     "用法: lua tools/cli.lua clean | distclean",
     "",
     "clean     清生成物:build/ tmp/ .arch_view/viewer/ acceptance generated/、",
-    "          junit-output.xml、luacov 残留。不动 .toolcache/ 与 .swarmforge/。",
-    "distclean clean 之上再清 .toolcache/ 与 .swarmforge/(缓存与 swarm 运行时状态)。",
+    "          junit-output.xml、luacov 残留。保留 .toolcache/。",
+    "distclean clean 之上再清 .toolcache/(工具缓存)。",
     "",
   }, "\n") .. "\n"
 end

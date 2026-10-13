@@ -55,7 +55,7 @@ end
 local function _run_gherkin_mutator(world, options)
   local root = _root(world)
   local args = {
-    -- 与 .swarmforge/bin 转发器、mutate_lane 同一解释器口径(工单 #606)。
+    -- 与 mutate_lane 同用 Lua 5.4 解释器。
     lua54.lua54_bin(),
     shell_lib.shell_quote(path_lib.join_path(root, "tools/packages/acceptance_mutate/mutator.lua")),
     "--feature", shell_lib.shell_quote(world.mutator_status_feature),

@@ -18,7 +18,6 @@
 | 工具行为、CLI、PATH/env/subprocess 或工具契约 | `tools/specs/*.prompt`、`lua tools/cli.lua <子命令> --help` 与对应 `tools/**/test/**` |
 | 宿主接口或真机行为 | `EggyAPI.lua` / `EggyEditorAPI.lua` 仅作第三方线索；当前适配器、对应测试与 [`docs/decisions.md`](docs/decisions.md) 才是项目真源 |
 | 部署 | `tools/packages/ops/deploy.lua`、`tools/packages/ops/test/` 与 `lua tools/cli.lua deploy --help` |
-| swarm 编排或修改 `swarmforge/` | 本项目由本地 swarm-forge 管理（forge dashboard open/close 启停）；`swarmforge/` 内为版本化 pack 资产，共享 scripts/articles 由 forge overlay；运行时状态只在 gitignored `.swarmforge/` |
 
 ## 验证路由
 
@@ -37,4 +36,3 @@ push 前唯一硬地板是 slim：`lua tools/cli.lua verify`。按改动风险�
 - 运行 `editor-cli` 的 `run_game`、`stop_game`、`clear-logs`，或改动部署目录前，先说明并等待用户明确同意。
 - 开发环境只支持 macOS 与 WSL Ubuntu；Eggy 宿主位于 Windows 端。部署入口是 `lua tools/cli.lua deploy`。
 - `EggyAPI.lua` 与 `EggyEditorAPI.lua` 保持第三方边界，不把它们当作当前宿主契约。
-- `swarmforge/` 的 pack 资产（conf/roles/constitution）与 `packs/monopoly` 同步；共享 scripts 与 engineering/workflow/handoffs 三 article 由本地 forge overlay，不做本地修改；项目定制只进入 `project.prompt` 与 `local-engineering.prompt`。
