@@ -24,7 +24,9 @@ Algorithm requirements:
 Project workflow:
 - `check` is the boundary hard gate (non-zero exit on violations); `viewer`/`scan` are soft-lane diagnostics.
 - Gate semantics are exactly three violation kinds: `forbidden_dependency`, `unclassified_module`, and `projection_cycle` (fail-closed since v0.1.2, #338). Accepted cycles are exempted via `allowed_cycles` in `tools/packages/arch_view/config.json` — one entry per owning view + participant nodes + reason (#333); unwaived cycles fail the check and block `verify`. `test/guards/lib/arch_view_guard.lua` covers the real `analyze(...)` path.
-- Rule source is exclusively `tools/packages/arch_view/config.json`; edit rules there, do not duplicate them elsewhere.
+- Rule source is exclusively `tools/packages/arch_policy/policy.json`; `packages.arch_policy.project_arch_view_config` projects the legacy config, with guard tests rejecting drift. Edit the policy and regenerate the projection. Keep the legacy tool and consumers until #94.
+- `test/guards/lib/arch_policy_guard.lua` consumes the same policy directly and executes layer direction, substrate direction, forbidden dependencies, unclassified modules and namespace projection cycles. Waivers require owning view and exact participant set.
+- `packages.arch_policy.project_uml_policy` generates the consumer EDN under `tmp/` for `uml-viewer.main.ir-generator <policy.edn> <out.edn>`. Its inner-first levels invert the guard layers. IR and guard scan must agree on module namespaces and internal dependency edges; UML layer highlighting does not replace the guard's forbidden-edge or cycle checks.
 - Text-level hard boundaries (host globals, `state.ui_*` writes, `ui_port` bypass) belong to `test/guards/`, not arch_view.
 - Viewer reading: red = cycle involvement (label = in/subtree cycle, triangle = feedback-edge direction, bottom list = cycle paths); green = contains abstract contract (ports); edges appear on hover triangles, not as lines.
 - Viewer exports are generated artifacts: write under `tmp/`, `.arch_view/`, or outside the repo; never commit the bundle.
