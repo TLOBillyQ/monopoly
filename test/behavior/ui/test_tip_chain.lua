@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 ---@diagnostic disable: need-check-nil, undefined-field
 -- tip_chain(自 anim/init.lua 拆分)的 tip 链直接 spec:mutation-closure pins。
 -- 覆盖:白名单 kind 展示、user 策略展示、roll 排除、debug 日志门、时长定稿

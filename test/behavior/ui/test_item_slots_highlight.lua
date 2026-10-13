@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- item_slots_highlight 直测(#262 变异清扫 survivor 闭合 + #362 锚定可见签名):
 -- 签名比对重放(true→false / build_pickable_signature call→nil);
 -- maybe_emit_phase_advance_reset 锚定可选槽集合签名,phase 空翻不触发全局重置。

@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- luacheck: ignore 211
 local pending_confirmation = require("src.state.pending_confirmation")
 local support = require("test.support.shared_support")

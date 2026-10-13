@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- 分享按钮（open_share_panel）行为规约：view_command port 把点击转为
 -- runtime_ports.emit_event 发全局自定义事件「打开分享任务」（#458 真机实证
 -- 通路，编辑器侧同名监听打开分享任务面板），每次点击都发、不锁存；发送失败

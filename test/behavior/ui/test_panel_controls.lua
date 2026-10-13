@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 local support = require("test.support.shared_support")
 local panel_interrupt = require("src.ui.state.panel_interrupt")
 local panel_controls = require("src.ui.render.widgets.panel_controls")

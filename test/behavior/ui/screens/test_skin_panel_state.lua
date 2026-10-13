@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- #293 批3 pin:src/ui/screens/skin_panel/skin_panel_state.lua 的幸存者:
 -- 包装层(ensure_panel 调用、assert(panel, err or "missing_state") 与
 -- 返回)的三处换 nil 变异。transaction_state 经 cosmetics port 转发代理

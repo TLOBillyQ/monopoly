@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- target 选择屏 Screen 深模块直测：descriptor 字段 + 路由意图 + inert 确认键。
 -- 用 shared_support 的 choice_modal fixture（与 choice_routes_spec 同款）。
 local registry = require("src.ui.screens_registry")

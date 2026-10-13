@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- src/ui/ports/modal.lua 的转发行为规约。该 port 是纯适配器：每个入口都
 -- 必须真正抵达它的协调器。此前 manifest 只有 bootstrap 记录,require 级
 -- 惰性突变（modal / secondary_confirm 换成 nil）全部幸存 —— 说明没有任何

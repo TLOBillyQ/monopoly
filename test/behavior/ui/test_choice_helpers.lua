@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- choice_helpers.lua 直测:覆盖 resolve_canvas_for_screen 的 canvas_for 回落、
 -- hide_choice_screens 的状态清理、set_option_node 的 touch_enabled 赋值。
 local support = require("test.support.shared_support")

@@ -1,9 +1,9 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- Direct coverage for src.ui.view.choice_support option-id/label/lookup shapes
 -- and secondary-confirm-body fallbacks. These pure resolvers are exercised
 -- directly since upstream callers only hit a subset of the shapes.
-local support = require("test.support.shared_support")
+require("test.support.shared_support")
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local choice_support = require("src.ui.view.choice_support")
 

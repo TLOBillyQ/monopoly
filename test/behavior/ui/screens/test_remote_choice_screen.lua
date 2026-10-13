@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- remote 选择屏 Screen 深模块直测：descriptor 字段 + 路由意图 + registry 注册。
 local registry = require("src.ui.screens_registry")
 local remote_screen = require("src.ui.screens.remote_choice")

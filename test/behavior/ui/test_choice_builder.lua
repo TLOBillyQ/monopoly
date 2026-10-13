@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- Behavior specs for src/ui/view/choice_builder.lua 守卫消息钉:
 -- pending 缺省与自定义 option_label 返回 nil 的报错路径必须保留描述性消息。
 

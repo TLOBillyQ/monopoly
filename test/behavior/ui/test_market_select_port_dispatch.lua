@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- Regression for the market_select view-command port path.
 --
 -- Field symptom (deploy log, 2026-07-11): every black-market item tap logged

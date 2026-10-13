@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- item_slots_options(#340):build(choice) 无效 choice 分支必须清空模块级缓存,
 -- 否则上一条 choice 的可选项永久残留 → 外框 visible 永挂(真机 2026-08-04 实证)。
 local item_options = require("src.ui.coord.item_slots_options")

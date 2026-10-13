@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- Behavior specs for src/ui/screens/skin_panel/skin_gallery.lua.
 -- 画廊适配器只持有关屏路由，展示与所有权事实留在 canonical 面板。
 

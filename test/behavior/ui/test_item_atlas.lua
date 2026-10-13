@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events

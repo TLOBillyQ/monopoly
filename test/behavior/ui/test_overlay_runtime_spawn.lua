@@ -1,6 +1,6 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
-local P = require("test.support.shared_support")
+local luassert = require("luassert")
+require("test.support.shared_support")
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 local runtime_constants = require("src.config.gameplay.runtime_constants")

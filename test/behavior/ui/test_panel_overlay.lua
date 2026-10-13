@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- panel_overlay.lua 直测:settlement 类型判定(遍历序、choice_active 排除、
 -- 多 flag 优先级)与 overlay 可见性。
 

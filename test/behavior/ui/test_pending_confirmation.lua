@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- 二次确认屏状态深模块的纯状态行为规约（GLOSSARY.md「二次确认屏」）。
 -- 覆盖 enter/confirm/cancel × 两来源、重入与互斥语义（单记录：后 enter 顶掉
 -- 已有记录）、item_phase_ask 的确认闩锁，以及 clear 的来源过滤。

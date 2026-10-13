@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 local support = require("test.support.shared_support")
 local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
 local runtime_ports = require("src.foundation.ports.runtime_ports")

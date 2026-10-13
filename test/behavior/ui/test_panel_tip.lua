@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- panel_tip.enqueue 补测:blocks_inter_turn=false 的 false→true 突变体。
 local support = require("test.support.shared_support")
 local tip_queue = require("src.foundation.tips")

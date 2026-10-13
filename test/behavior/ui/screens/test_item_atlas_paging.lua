@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 local property = require("test.support.property")
 local atlas_state = require("src.ui.screens.item_atlas.item_atlas_state")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")

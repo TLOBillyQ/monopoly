@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- Guard-clause regression for src.ui.render.market (init.lua):
 -- assert survivors on `and→or` mutations in refresh_market (L136) and
 -- close_market_panel (L152).

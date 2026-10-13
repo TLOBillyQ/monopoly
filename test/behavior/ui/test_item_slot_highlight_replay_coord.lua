@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- 高亮重放计划 → 宿主动画的投递直测(#594):reset 只发一次全局重置,
 -- replay 先全局重置再按槽位编号升序清除与高亮,发送失败留诊断不回滚记忆。
 local support = require("test.support.shared_support")

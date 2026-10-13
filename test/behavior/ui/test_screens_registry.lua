@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- screens_registry.lua 直测：聚合 API 的惰性加载(首次调用触发清单 require 自注册,
 -- 且重复调用幂等)与 register 的 key 契约。
 -- 清单屏模块在 behavior 车道可 require(各屏直测已验证),require 副作用即观测点。

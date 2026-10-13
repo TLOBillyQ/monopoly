@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- #293 批3 pin:src/ui/coord/popup_assets.lua 的 14 个幸存者分四簇:
 -- 卡片 image_key 直取链(L19/L30)、破产文案字段链(L67)、角色头像解析链
 -- (L3/L98/L101/L105/L108/L119)、节点显隐链(L133/L138/L161)。

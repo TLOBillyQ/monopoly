@@ -1,9 +1,9 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- 可用槽位高亮重放的展示状态直测(#594):plan_refresh 的三态判定与
 -- 逐视角记忆隔离,apply_lifecycle 的确认冻结/命令解冻,以及两个公开操作的
 -- 入参断言。本模块是纯展示状态(ui.state),不碰宿主动画。
-local support = require("test.support.shared_support")
+require("test.support.shared_support")
 local replay = require("src.ui.state.item_slot_highlight_replay")
 
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
@@ -179,7 +179,7 @@ end)
 
 -- ===== 性质覆盖(#594):例子测试逐个钉三态,这里钉住例子跨不过的不变量 =====
 do
-  local lu = require("luaunit")
+  require("luaunit")
   local property = require("test.support.property")
 
   local _PLANS = { replay = true, reset = true, none = true }

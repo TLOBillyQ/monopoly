@@ -1,10 +1,10 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- 契约钉:src/ui/schema/market_layout.lua 的节点名是宿主 UI 契约——
 -- 硬编码字符串断言使字段值->nil 变异露馅(测试与"变异后的字段"比对时,
 -- 双方同变 nil 会假通过,必须钉死字面量)。
 
-local P = require("test.support.shared_support")
+require("test.support.shared_support")
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local market_layout = require("src.ui.schema.market_layout")
 describe("TestMarketLayoutContract", function()

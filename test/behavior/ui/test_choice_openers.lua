@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- choice_openers.lua 直测:覆盖导出 helper 函数的未测分支
 -- (_set_action_button / store_target_button_labels / _compact_options /
 --  _sync_slot_label / _sync_projection_node / _sync_option_slot /

@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 require("src.app.compose_game") -- 组合根装配:注入 ui.ports.cosmetics 的 transaction 实现(工单 #244)
 local support = require("test.support.shared_support")
 local panel_interrupt = require("src.ui.state.panel_interrupt")

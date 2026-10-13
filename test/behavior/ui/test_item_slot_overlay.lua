@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- 道具槽点击的遮挡门是**逐席位**的：模态画布本就只切给操作席（旁观者留在基础屏），
 -- 所以对手的选择屏/黑市/弹窗没盖住我的屏幕，我的点击不该被连坐静默。
 -- 只有真广播弹窗才盖住所有人。

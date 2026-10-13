@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- Coverage for src.ui.screens.item_atlas: route specs, open/close/action handling.
 -- Extends the existing paging tests in test_item_atlas_paging.lua which test
 -- atlas_state pure logic.

@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- item_slots_highlight phase-advance 去重补测(#362 锚定语义,#596 收归 ui.state)。
 -- 不再预置内部缓存字段:去重状态由前一次真实观察建立,断言只看宿主是否收到
 -- 全局「重置高亮」。这样变异掉签名派生或 nil 判定都能被区分。

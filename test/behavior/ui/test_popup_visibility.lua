@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 -- luacheck: ignore 211
 local support = require("test.support.shared_support")
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
