@@ -14,9 +14,8 @@ local function _registry(executors)
   }
 end
 
-TestEffectRunner = {}
-
-function TestEffectRunner:test_returns_ok_with_the_executor_result_when_the_effect_is_allowed()
+describe("TestEffectRunner", function()
+it("test_returns_ok_with_the_executor_result_when_the_effect_is_allowed", function()
   local applied_ctx = nil
   local registry = _registry({
     gift = {
@@ -38,9 +37,9 @@ function TestEffectRunner:test_returns_ok_with_the_executor_result_when_the_effe
   _assert_eq(applied_ctx.player.id, 1, "ctx should carry the acting player")
   _assert_eq(applied_ctx.tile.id, 7, "ctx should carry the landed tile")
   _assert_eq(applied_ctx.extra, "carried", "ctx should copy game_ctx fields")
-end
+end)
 
-function TestEffectRunner:test_blocks_execution_and_skips_apply_when_can_apply_is_false()
+it("test_blocks_execution_and_skips_apply_when_can_apply_is_false", function()
   local applied = false
   local registry = _registry({
     toll = {
@@ -57,9 +56,9 @@ function TestEffectRunner:test_blocks_execution_and_skips_apply_when_can_apply_i
   _assert_eq(outcome.reason, "blocked", "blocked effect should report the blocked reason")
   _assert_eq(outcome.result, nil, "blocked effect should not carry a result")
   _assert_eq(applied, false, "blocked effect must not run apply")
-end
+end)
 
-function TestEffectRunner:test_scan_reports_an_entry_per_effect_with_ok_blocked_status_and_label_fallback()
+it("test_scan_reports_an_entry_per_effect_with_ok_blocked_status_and_label_fallback", function()
   local registry = _registry({
     open = { apply = function() end },
     shut = { can_apply = function() return false end, apply = function() end },
@@ -83,18 +82,18 @@ function TestEffectRunner:test_scan_reports_an_entry_per_effect_with_ok_blocked_
   _assert_eq(entries[2].mandatory, false, "absent mandatory flag should default to false")
   _assert_eq(entries[2].ok, false, "blocked effect should scan not ok")
   _assert_eq(entries[2].reason, "blocked", "blocked scan entry should carry the reason")
-end
+end)
 
-function TestEffectRunner:test_resolves_the_registry_from_game_registries_when_game_ctx_omits_effect_registry()
+it("test_resolves_the_registry_from_game_registries_when_game_ctx_omits_effect_registry", function()
   local registry = _registry({ grant = { apply = function() return "ok" end } })
   local game_ctx = { game = { registries = { effects = registry } } }
   local outcome = effect_runner.execute({ id = "grant" }, { id = 1 }, { id = 7 }, game_ctx)
 
   _assert_eq(outcome.ok, true, "registry should be resolved via game.registries.effects")
   _assert_eq(outcome.result, "ok", "executor from the resolved registry should run")
-end
+end)
 
-function TestEffectRunner:test_build_game_ctx_prefers_an_explicit_phase_then_the_turn_phase_then_the_default()
+it("test_build_game_ctx_prefers_an_explicit_phase_then_the_turn_phase_then_the_default", function()
   local game = { turn = { phase = "wait_choice" }, rng = "RNG", registries = { effects = "REG" } }
 
   local explicit = effect_runner.build_game_ctx(game, "MR", { phase = "landing" })
@@ -119,7 +118,7 @@ function TestEffectRunner:test_build_game_ctx_prefers_an_explicit_phase_then_the
   local fallback = effect_runner.build_game_ctx({ turn = {}, rng = "R2" }, nil, {})
   _assert_eq(fallback.phase, "wait_choice", "missing turn phase should fall back to wait_choice")
   _assert_eq(fallback.effect_registry, nil, "missing registries should leave effect_registry nil")
-end
+end)
 
 
-return TestEffectRunner
+end)
