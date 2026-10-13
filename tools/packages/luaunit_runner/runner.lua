@@ -153,6 +153,18 @@ while i <= #arg do
     opts.files[#opts.files + 1] = a
   elseif a == "--" then
     after_dashdash = true
+  elseif a:match("^%-%-file%-list=") then
+    local list_path = a:match("=(.*)$")
+    local handle = assert(io.open(list_path, "rb"), "cannot read spec file list")
+    local count = 0
+    for file in handle:lines() do
+      file = file:gsub("\r$", "")
+      assert(file ~= "" and file:match("%.lua$") and not file:find("%z"), "invalid spec file identity")
+      opts.files[#opts.files + 1] = file
+      count = count + 1
+    end
+    handle:close()
+    assert(count > 0, "empty spec file list")
   elseif a:match("^%-%-run=") then
     opts.run = a:sub(7)
   elseif a == "--run" then
@@ -372,6 +384,7 @@ local function _load_and_collect(path)
   end
 
   file_isolation.apply_globals(snap)
+  if registry.case_count_for_file(path) == 0 then return false, "empty spec file: " .. path end
   return true
 end
 

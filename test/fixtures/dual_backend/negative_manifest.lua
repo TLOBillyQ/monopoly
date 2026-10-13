@@ -1,0 +1,1 @@
+return { legacy = {}, busted = { "test/fixtures/dual_backend/passing.lua", "test/fixtures/dual_backend/failing.lua", "test/fixtures/dual_backend/empty.lua", "test/fixtures/dual_backend/runtime_error.lua" } }

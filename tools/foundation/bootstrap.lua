@@ -42,7 +42,7 @@ end
 -- 而 `-e` 形态下 arg[-1] 恒为 nil,等于沉默退回 PATH 猜测)。调用点均已装好
 -- package.path(install / script_bootstrap 在前)。
 local function _selected_interpreter()
-  return require("packages.luaunit_runner.lua54").lua54_bin()
+  return require("foundation.lua54").lua54_bin()
 end
 
 -- 裸命令名 → Lua 安装前缀(luarocks `--lua-dir` 的实参)。
@@ -204,6 +204,10 @@ end
 -- 不单独 ensure(单独钉 say 版本会与 luassert 的依赖声明漂移)。
 function bootstrap.ensure_luassert_tree(repo_root)
   return _ensure_rock_installed(repo_root, "luassert", "1.9.0-1", "share/lua/5.4/luassert/init.lua")
+end
+
+function bootstrap.ensure_busted_tree(repo_root)
+  return _ensure_rock_installed(repo_root, "busted", "2.3.0-1", "share/lua/5.4/busted/runner.lua")
 end
 
 -- 覆盖率引擎 luacov 由上游 rockspec（crap4lua/mutate4lua

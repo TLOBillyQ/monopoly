@@ -9,7 +9,7 @@
 
 require("test.bootstrap")
 
-local events = require("packages.luaunit_runner.events")
+local events = require("packages.test_runner.events")
 local env_runtime = require("test.env_runtime")
 env_runtime.refresh()
 

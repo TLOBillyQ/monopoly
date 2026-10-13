@@ -54,7 +54,7 @@ end
 -- 不再支持 busted_bin 单 token 覆写，命令
 -- 前缀恒为 argv_prefix 默认值({ lua5.4, runner.lua })。workers=1 强制单进程
 -- 串行路径(分片判定要求 worker > 1 且 profile 文件数超过阈值)。
-function TestSpecLaneSpec:test_run_defaults_backend_to_luaunit_runner()
+function TestSpecLaneSpec:test_run_defaults_to_explicit_dual_backend_runner()
   local captured
   local result = spec_lane.run({
     profile = "contract",
@@ -65,7 +65,7 @@ function TestSpecLaneSpec:test_run_defaults_backend_to_luaunit_runner()
     end,
   })
 
-  lu.assertEvalToTrue(tostring(captured[2]):find("luaunit_runner/runner%.lua"))
+  lu.assertEvalToTrue(tostring(captured[2]):find("test_runner/runner%.lua"))
   lu.assertIs(captured[3], "--output=TAP")
   lu.assertIs(captured[4], "--run")
   lu.assertIs(captured[5], "contract")
@@ -100,7 +100,7 @@ function TestSpecLaneSpec:test_sharded_profile_runs_one_runner_lane_per_worker()
   for _, lane in ipairs(captured_lanes) do
     lu.assertEvalToTrue(lane.label:match("^contract_w%d+$"), "lane label: " .. lane.label)
     local argv = table.concat(lane.cmd, "\n")
-    lu.assertEvalToTrue(argv:find("luaunit_runner/runner%.lua"))
+    lu.assertEvalToTrue(argv:find("test_runner/runner%.lua"))
     lu.assertStrContains(argv, "--helper=test/helper.lua")
     lu.assertStrContains(argv, "--output=TAP")
     lu.assertStrContains(argv, "--pattern=test_")

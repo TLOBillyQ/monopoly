@@ -27,8 +27,9 @@ function M.usage()
   return table.concat({
     "用法: lua tools/packages/luaunit_runner/runner.lua [--run <profile>|--helper=<path>|--output=<TAP|path>|--pattern=<pat>|-- <files...>]",
     "",
-    "LuaUnit 3.5 spec 运行器：加载并收集 Test* 类 / test* 函数，",
-    "一次跑完并输出 TAP。无 --run 时回退 spec_profiles default profile。",
+    "临时双后端运行器：显式 backend_manifest 文件清单调度真实 busted / LuaUnit。",
+    "集合互斥、未登记文件失败；各后端失败或空跑使车道失败。",
+    "支持 --backend-manifest=<path>，无 --run 回退 spec_profiles default profile。",
     "本 cli 不接顶层 tools/cli.lua 路由(封闭命令集无 luaunit_runner 命令),",
     "是 verify/coverage/spec_lane 内部消费的接口形态。",
     "",

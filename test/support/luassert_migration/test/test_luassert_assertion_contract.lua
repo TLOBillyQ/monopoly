@@ -631,7 +631,10 @@ end
 -- ---------------------------------------------------------------- 4. 试点对账
 
 function TestLuassertAssertionContract:test_pilot_case_set_is_unchanged_by_the_assertion_switch()
-  local result, output = _run_specs(_PILOT_FILES)
+  local command = { require("foundation.lua54").lua54_bin(), "tools/packages/test_runner/runner.lua", "--output=TAP", "--" }
+  for _, file in ipairs(_PILOT_FILES) do command[#command + 1] = file end
+  local result = proc.run_command(command, { cwd = loader.repo_root() })
+  local output = tostring(result.output or "")
 
   _expect(result.code == 0, "the migrated pilot must stay green:\n" .. output)
   local counts = _counts(output)
@@ -645,7 +648,7 @@ function TestLuassertAssertionContract:test_pilot_case_set_is_unchanged_by_the_a
   -- 逐类对账:类名与用例数都要与切断言前一致,多类文件的第二个类不许消失。
   local cases_by_class = {}
   for _, record in ipairs(_records(output)) do
-    local class_name = record.name:match("^([^.]+)%.")
+    local class_name = record.name:match("^([^. ]+)[. ]")
     if class_name ~= nil then
       cases_by_class[class_name] = (cases_by_class[class_name] or 0) + 1
     end

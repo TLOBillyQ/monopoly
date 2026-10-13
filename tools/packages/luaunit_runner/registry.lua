@@ -75,6 +75,14 @@ function M.register_function(fn_name, fn, file)
   }
 end
 
+function M.case_count_for_file(file)
+  local count = 0
+  for _, meta in pairs(_by_test) do
+    if meta.file == file then count = count + 1 end
+  end
+  return count
+end
+
 function M.instances()
   return _instances
 end

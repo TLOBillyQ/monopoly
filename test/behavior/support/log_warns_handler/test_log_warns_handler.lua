@@ -69,12 +69,18 @@ end
 
 local function _run_with_handler(spec_path, extra_args)
   local args = _runner_argv(extra_args)
+  local manifest_path = spec_path .. ".manifest.lua"
+  assert(fs_lib.write_file(manifest_path, "return { legacy = { " .. string.format("%q", spec_path:gsub("\\", "/")) .. " }, busted = {} }"))
+  args[#args + 1] = "--backend-manifest=" .. manifest_path
   args[#args + 1] = spec_path
   return proc_lib.run_command(args, { cwd = project_root })
 end
 
 local function _run_verbose_drop_info(spec_path)
   local args = _runner_argv({ "-Xoutput", "drop-info" })
+  local manifest_path = spec_path .. ".manifest.lua"
+  assert(fs_lib.write_file(manifest_path, "return { legacy = { " .. string.format("%q", spec_path:gsub("\\", "/")) .. " }, busted = {} }"))
+  args[#args + 1] = "--backend-manifest=" .. manifest_path
   args[#args + 1] = spec_path
   local run_command = shell_lib.build_command(args)
   return proc_lib.run_command('set "EGGY_TEST_VERBOSE=1" && ' .. run_command, { cwd = project_root })
@@ -90,7 +96,7 @@ function TestLogWarnsHandler:test_preserves_captured_info_lines_by_default()
     local result = _run_with_handler(spec_path)
 
     lu.assertFalse(result.ok)
-    lu.assertEvalToTrue(result.output:find("0 %[info%] noisy info line"))
+    lu.assertEvalToTrue(result.output:find("0 %[info%] noisy info line"), result.output)
     lu.assertEvalToTrue(result.output:find("plain diagnostic line", 1, true))
     lu.assertEvalToTrue(result.output:find("# WARN 0 [warn] custom warning line", 1, true))
     lu.assertEvalToTrue(result.output:find("boom failure", 1, true))
@@ -121,7 +127,7 @@ function TestLogWarnsHandler:test_does_not_drop_info_lines_in_verbose_mode()
     local result = _run_verbose_drop_info(spec_path)
 
     lu.assertFalse(result.ok)
-    lu.assertEvalToTrue(result.output:find("0 %[info%] noisy info line"))
+    lu.assertEvalToTrue(result.output:find("0 %[info%] noisy info line"), result.output)
     lu.assertEvalToTrue(result.output:find("not ok 1 -", 1, true))
   end)
 end

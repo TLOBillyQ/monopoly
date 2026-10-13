@@ -38,7 +38,13 @@ read_globals = {
   "traceback",
   "newproxy",
   "unpack",
+  "describe", "it", "before_each", "after_each", "setup", "teardown", "finally",
 }
+
+-- Genuine busted supplies its luassert object inside spec environments.
+files["test/behavior/foundation/test_class.lua"] = { read_globals = { "assert" }, std = "+busted" }
+files["test/behavior/foundation/test_scope.lua"] = { read_globals = { "assert" }, std = "+busted" }
+files["test/fixtures/dual_backend/**/*.lua"] = { std = "+busted" }
 
 globals = {
   "UIManager",

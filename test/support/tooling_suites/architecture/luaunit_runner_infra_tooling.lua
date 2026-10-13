@@ -28,7 +28,7 @@ local function _test_contract_files_require_native_events_modules()
     "output handler must not require the busted facade")
   _assert(not handler_text:find("busted%.subscribe", 1, true),
     "output handler must subscribe via the events module")
-  _assert(handler_text:find('packages.luaunit_runner.events', 1, true) ~= nil,
+  _assert(handler_text:find('packages.test_runner.events', 1, true) ~= nil,
     "output handler must require the runner events module")
 end
 

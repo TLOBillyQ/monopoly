@@ -64,12 +64,20 @@ function M.run()
   local entries = {}
   local paths = { M.LOADER_PATH }
   for _, path in ipairs(M.PILOT_FILES) do paths[#paths + 1] = path end
+  local migrated = {}
+  for _, path in ipairs(dofile(env.repo_root .. "/tools/packages/test_runner/backend_manifest.lua").busted) do
+    migrated[path] = true
+  end
   for _, path in ipairs(paths) do
+    -- Real busted owns the verified luassert object for migrated files. Loader
+    -- provenance remains mandatory for every pilot still on the old backend.
+    if not migrated[path] then
     local source, err = fs_lib.read_file(env.repo_root .. "/" .. path)
     if source == nil then
       return { ok = false, error = "luassert_migration_pilot_guard error: " .. tostring(err) }
     end
     entries[#entries + 1] = { path = path, source = source }
+    end
   end
   local violations = M.check(entries)
   if #violations > 0 then return { ok = false, error = table.concat(violations, "\n") } end

@@ -80,8 +80,8 @@ local function _has_output_argument(options, name)
 end
 
 return function(options)
-  local events = require("packages.luaunit_runner.events")
-  local tap_handler_factory = require("packages.luaunit_runner.tap_outputter").tap_handler_factory
+  local events = require("packages.test_runner.events")
+  local tap_handler_factory = require("packages.test_runner.tap_handler").tap_handler_factory
 
   local _verbose = os.getenv("EGGY_TEST_VERBOSE") == "1"
   local drop_info = _has_output_argument(options, "drop-info")

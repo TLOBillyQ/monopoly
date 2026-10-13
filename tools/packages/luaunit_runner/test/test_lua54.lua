@@ -15,12 +15,12 @@ function TestBinSpec:test_argv_prefix_defaults_to_lua54_and_runner()
   local prefix = bin.argv_prefix()
   lu.assertEquals(#prefix, 2)
   lu.assertEvalToTrue(tostring(prefix[2]):find("runner%.lua$"))
-  lu.assertEvalToTrue(tostring(prefix[2]):find("luaunit_runner", 1, true))
+  lu.assertEvalToTrue(tostring(prefix[2]):find("test_runner/runner", 1, true))
 end
 
-function TestBinSpec:test_runner_path_resolves_the_luaunit_runner_next_to_the_module()
+function TestBinSpec:test_runner_path_resolves_the_dual_backend_entry()
   local path = bin.runner_path()
-  lu.assertEvalToTrue(path:find("tools/packages/luaunit_runner/runner%.lua$"))
+  lu.assertEvalToTrue(path:find("tools/packages/test_runner/runner%.lua$"))
 end
 
 
