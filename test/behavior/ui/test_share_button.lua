@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 -- 分享按钮（open_share_panel）行为规约：view_command port 把点击转为
 -- runtime_ports.emit_event 发全局自定义事件「打开分享任务」（#458 真机实证
 -- 通路，编辑器侧同名监听打开分享任务面板），每次点击都发、不锁存；发送失败
@@ -5,27 +7,24 @@
 -- 此钉住（它仍是托管首点的触发口）：#463 后 foundation 侧是纯契约 port，
 -- 下列用例经测试基线装配的真实宿主实现（src/host/share_panel）跑全链路，
 -- 只桩 runtime_ports.resolve_role。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local view_command_ports = require("src.ui.ports.view_command")
 local share_panel = require("src.foundation.ports.share_panel")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local lock_policy = require("src.ui.input.lock")
 local base_nodes = require("src.ui.schema.base")
-
-TestShareButton = {}
-
-function TestShareButton:setUp()
+describe("TestShareButton", function()
+before_each(function()
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestShareButton:tearDown()
+after_each(function()
   support.restore_runtime_services()
-end
+end)
 
-function TestShareButton:test_dispatch_emits_open_share_task_event_and_reports_handled()
+it("test_dispatch_emits_open_share_task_event_and_reports_handled", function()
   local seen = nil
   runtime_ports.configure({
     emit_event = function(event_name, payload)
@@ -34,13 +33,13 @@ function TestShareButton:test_dispatch_emits_open_share_task_event_and_reports_h
     end,
   })
   local ports = view_command_ports.build()
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 5 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 5 }),
     "open_share_panel dispatch must report handled")
-  lu.assertEquals(seen.event_name, "打开分享任务", "dispatch must emit the share-task open event")
-  lu.assertIsTable(seen.payload, "dispatch must emit with a payload table")
-end
+  luassert.is.equal("打开分享任务", seen.event_name, "dispatch must emit the share-task open event")
+  luassert.is_table(seen.payload, "dispatch must emit with a payload table")
+end)
 
-function TestShareButton:test_every_click_emits_share_task_event_without_latching()
+it("test_every_click_emits_share_task_event_without_latching", function()
   local calls = 0
   runtime_ports.configure({
     emit_event = function()
@@ -49,14 +48,14 @@ function TestShareButton:test_every_click_emits_share_task_event_without_latchin
     end,
   })
   local ports = view_command_ports.build()
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "first click must report handled")
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "second click must report handled")
-  lu.assertEquals(calls, 2, "every click must emit the event (no latch)")
-end
+  luassert.is.equal(2, calls, "every click must emit the event (no latch)")
+end)
 
-function TestShareButton:test_emit_failure_does_not_break_dispatch_and_next_click_retries()
+it("test_emit_failure_does_not_break_dispatch_and_next_click_retries", function()
   local attempts = 0
   runtime_ports.configure({
     emit_event = function()
@@ -65,14 +64,14 @@ function TestShareButton:test_emit_failure_does_not_break_dispatch_and_next_clic
     end,
   })
   local ports = view_command_ports.build()
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "failed emit must not break the view command")
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "the retry click must also report handled")
-  lu.assertEquals(attempts, 2, "failure must not latch: next click retries the emit")
-end
+  luassert.is.equal(2, attempts, "failure must not latch: next click retries the emit")
+end)
 
-function TestShareButton:test_try_show_returns_true_only_when_host_call_completes()
+it("test_try_show_returns_true_only_when_host_call_completes", function()
   runtime_ports.configure({
     resolve_role = function()
       return {
@@ -81,24 +80,24 @@ function TestShareButton:test_try_show_returns_true_only_when_host_call_complete
     end,
   })
   _assert_eq(share_panel.try_show(1), true, "completed host call must report success")
-end
+end)
 
-function TestShareButton:test_try_show_returns_false_when_role_cannot_be_resolved()
+it("test_try_show_returns_false_when_role_cannot_be_resolved", function()
   runtime_ports.configure({
     resolve_role = function() return nil end,
   })
   _assert_eq(share_panel.try_show(1), false, "unresolved role must report failure")
   _assert_eq(share_panel.try_show(nil), false, "missing actor must report failure")
-end
+end)
 
-function TestShareButton:test_try_show_returns_false_when_role_lacks_show_map_share_panel()
+it("test_try_show_returns_false_when_role_lacks_show_map_share_panel", function()
   runtime_ports.configure({
     resolve_role = function() return {} end,
   })
   _assert_eq(share_panel.try_show(1), false, "role without the method must report failure")
-end
+end)
 
-function TestShareButton:test_try_show_returns_false_when_host_call_raises()
+it("test_try_show_returns_false_when_host_call_raises", function()
   runtime_ports.configure({
     resolve_role = function()
       return {
@@ -109,7 +108,7 @@ function TestShareButton:test_try_show_returns_false_when_host_call_raises()
     end,
   })
   _assert_eq(share_panel.try_show(1), false, "raising host call must report failure")
-end
+end)
 
 -- 真机 #458 实证：分享按钮的装饰子节点（环/动效×2/文本）默认吸触摸吞掉点击。
 -- 锁定策略施加时（锁定/解锁两态都走 _set_base_auxiliary_touch）必须统一压灭。
@@ -144,12 +143,12 @@ local function _assert_decor_pressed_off(input_blocked)
   end
 end
 
-function TestShareButton:test_lock_policy_presses_share_decor_touch_off_when_unlocked()
+it("test_lock_policy_presses_share_decor_touch_off_when_unlocked", function()
   _assert_decor_pressed_off(false)
-end
+end)
 
-function TestShareButton:test_lock_policy_presses_share_decor_touch_off_when_locked()
+it("test_lock_policy_presses_share_decor_touch_off_when_locked", function()
   _assert_decor_pressed_off(true)
-end
+end)
 
-return TestShareButton
+end)

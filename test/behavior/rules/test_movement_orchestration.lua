@@ -1,10 +1,12 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 local movement = require("src.rules.movement")
 local movement_context = require("src.rules.movement_context")
 local movement_events = require("src.rules.movement_events")
 local mine_effect = require("src.rules.effects.mine")
 
 local function _assert_eq(actual, expected, label)
-  assert(actual == expected, tostring(label) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.truthy(actual == expected, tostring(label) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
 end
 
 local function _stub(target, key, value)
@@ -100,12 +102,13 @@ local function _run_with_ctx(ctx)
       cleared_before_emit = game.cleared_roadblock ~= nil,
     }
   end)
-  local result = movement.move(ctx.game, ctx.player, ctx.steps, ctx.opts)
+  local ok, result = pcall(movement.move, ctx.game, ctx.player, ctx.steps, ctx.opts)
   restore_roadblock()
   restore_market()
   restore_completed()
   restore_mine()
   restore_build()
+  if not ok then error(result, 0) end
   return result, {
     completed_ctx = completed_ctx,
     market_calls = market_calls,
@@ -113,227 +116,227 @@ local function _run_with_ctx(ctx)
   }
 end
 
-TestMovementOrchestration = {}
 
-TestMovementOrchestration["test_records mid-step market interrupt state"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 1, type = "road", name = "一" },
-      [2] = { id = 2, type = "market", name = "黑市" },
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 3,
-    abs_steps = 3,
-    entered_inner = true,
-    step_fn = function(_, current) return current + 1, 0, "east", false end,
-  })
-  local result, calls = _run_with_ctx(ctx)
-  _assert_eq(#calls.market_calls, 1, "market interrupt emitted once")
-  _assert_eq(calls.market_calls[1].remaining, 2, "remaining steps are computed from current step")
-  _assert_eq(result.market_interrupt.position, 2, "market interrupt records tile position")
-  _assert_eq(result.market_interrupt.remaining_steps, 2, "market interrupt returns remaining steps")
-  _assert_eq(result.market_interrupt.facing, "east", "market interrupt preserves facing")
-  _assert_eq(result.market_interrupt.entered_inner, true, "market interrupt preserves entered_inner")
-end
+describe("TestMovementOrchestration", function()
+  it("test_records mid-step market interrupt state", function()
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 1, type = "road", name = "一" },
+        [2] = { id = 2, type = "market", name = "黑市" },
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 3,
+      abs_steps = 3,
+      entered_inner = true,
+      step_fn = function(_, current) return current + 1, 0, "east", false end,
+    })
+    local result, calls = _run_with_ctx(ctx)
+    _assert_eq(#calls.market_calls, 1, "market interrupt emitted once")
+    _assert_eq(calls.market_calls[1].remaining, 2, "remaining steps are computed from current step")
+    _assert_eq(result.market_interrupt.position, 2, "market interrupt records tile position")
+    _assert_eq(result.market_interrupt.remaining_steps, 2, "market interrupt returns remaining steps")
+    _assert_eq(result.market_interrupt.facing, "east", "market interrupt preserves facing")
+    _assert_eq(result.market_interrupt.entered_inner, true, "market interrupt preserves entered_inner")
+  end)
 
-TestMovementOrchestration["test_skip_market_check suppresses a market interrupt"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 1, type = "road", name = "一" },
-      [2] = { id = 2, type = "market", name = "黑市" },
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 3,
-    abs_steps = 1,
-    move_opts = { skip_market_check = true },
-    step_fn = function(_, current) return current + 1, 0, nil, false end,
-  })
-  local result, calls = _run_with_ctx(ctx)
-  _assert_eq(#calls.market_calls, 0, "market interrupt should be skipped")
-  _assert_eq(result.market_interrupt, nil, "result has no market interrupt")
-end
+  it("test_skip_market_check suppresses a market interrupt", function()
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 1, type = "road", name = "一" },
+        [2] = { id = 2, type = "market", name = "黑市" },
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 3,
+      abs_steps = 1,
+      move_opts = { skip_market_check = true },
+      step_fn = function(_, current) return current + 1, 0, nil, false end,
+    })
+    local result, calls = _run_with_ctx(ctx)
+    _assert_eq(#calls.market_calls, 0, "market interrupt should be skipped")
+    _assert_eq(result.market_interrupt, nil, "result has no market interrupt")
+  end)
 
-TestMovementOrchestration["test_non-positive logical steps suppress market checks even when a stubbed step advances"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 1, type = "road", name = "一" },
-      [2] = { id = 2, type = "market", name = "黑市" },
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 0,
-    abs_steps = 1,
-    step_fn = function(_, current) return current + 1, 0, nil, false end,
-  })
-  local result, calls = _run_with_ctx(ctx)
-  _assert_eq(#calls.market_calls, 0, "non-positive steps should suppress market interrupt")
-  _assert_eq(result.market_interrupt, nil, "non-positive steps have no market interrupt")
-end
+  it("test_non-positive logical steps suppress market checks even when a stubbed step advances", function()
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 1, type = "road", name = "一" },
+        [2] = { id = 2, type = "market", name = "黑市" },
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 0,
+      abs_steps = 1,
+      step_fn = function(_, current) return current + 1, 0, nil, false end,
+    })
+    local result, calls = _run_with_ctx(ctx)
+    _assert_eq(#calls.market_calls, 0, "non-positive steps should suppress market interrupt")
+    _assert_eq(result.market_interrupt, nil, "non-positive steps have no market interrupt")
+  end)
 
-TestMovementOrchestration["test_does not interrupt on the final market tile or count landing occupants as encountered"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 1, type = "road", name = "一" },
-      [2] = { id = 2, type = "market", name = "黑市" },
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 1,
-    abs_steps = 1,
-    occupants = { [2] = { 1, 2 } },
-    step_fn = function(_, current) return current + 1, 0, nil, false end,
-  })
-  local result, calls = _run_with_ctx(ctx)
-  _assert_eq(#calls.market_calls, 0, "final market tile should not interrupt")
-  _assert_eq(result.market_interrupt, nil, "final market tile has no interrupt result")
-  _assert_eq(#result.encountered_players, 0, "landing occupants are not pass-through encounters")
-end
+  it("test_does not interrupt on the final market tile or count landing occupants as encountered", function()
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 1, type = "road", name = "一" },
+        [2] = { id = 2, type = "market", name = "黑市" },
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 1,
+      abs_steps = 1,
+      occupants = { [2] = { 1, 2 } },
+      step_fn = function(_, current) return current + 1, 0, nil, false end,
+    })
+    local result, calls = _run_with_ctx(ctx)
+    _assert_eq(#calls.market_calls, 0, "final market tile should not interrupt")
+    _assert_eq(result.market_interrupt, nil, "final market tile has no interrupt result")
+    _assert_eq(#result.encountered_players, 0, "landing occupants are not pass-through encounters")
+  end)
 
-TestMovementOrchestration["test_tracks pass-start steps only for positive pass counts"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 1, type = "road", name = "一" },
-      [2] = { id = 2, type = "road", name = "二" },
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 1,
-    abs_steps = 1,
-    move_opts = { skip_market_check = true },
-    step_fn = function(_, current) return current + 1, 0, nil, false end,
-  })
-  local result, calls = _run_with_ctx(ctx)
-  _assert_eq(result.passed_start, 0, "zero pass count remains zero")
-  _assert_eq(#calls.completed_ctx.pass_start_at_steps, 0, "zero pass count does not record pass step")
-end
+  it("test_tracks pass-start steps only for positive pass counts", function()
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 1, type = "road", name = "一" },
+        [2] = { id = 2, type = "road", name = "二" },
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 1,
+      abs_steps = 1,
+      move_opts = { skip_market_check = true },
+      step_fn = function(_, current) return current + 1, 0, nil, false end,
+    })
+    local result, calls = _run_with_ctx(ctx)
+    _assert_eq(result.passed_start, 0, "zero pass count remains zero")
+    _assert_eq(#calls.completed_ctx.pass_start_at_steps, 0, "zero pass count does not record pass step")
+  end)
 
-TestMovementOrchestration["test_marks inner exit and requests one-shot entry skip only for entry landing tiles"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 10, type = "road", name = "内圈" },
-      [2] = { id = 20, type = "road", name = "外圈入口" },
-    },
-    map = {
-      outer_next = { [20] = 21 },
-      entry_points = { [20] = true },
-      direction = function(from_id, to_id) return tostring(from_id) .. ">" .. tostring(to_id) end,
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 1,
-    abs_steps = 1,
-    move_opts = { skip_market_check = true },
-    step_fn = function(_, current) return current + 1, 0, "north", false end,
-  })
-  local result = _run_with_ctx(ctx)
-  _assert_eq(result.arrival_direction, "10>20", "arrival direction is captured")
-  _assert_eq(result.arrival_from_index, 1, "arrival source index captured")
-  _assert_eq(ctx.exited_inner, true, "inner exit detected")
-  _assert_eq(ctx.game.statuses.skip_next_inner_entry, true, "entry landing sets one-shot skip")
-end
+  it("test_marks inner exit and requests one-shot entry skip only for entry landing tiles", function()
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 10, type = "road", name = "内圈" },
+        [2] = { id = 20, type = "road", name = "外圈入口" },
+      },
+      map = {
+        outer_next = { [20] = 21 },
+        entry_points = { [20] = true },
+        direction = function(from_id, to_id) return tostring(from_id) .. ">" .. tostring(to_id) end,
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 1,
+      abs_steps = 1,
+      move_opts = { skip_market_check = true },
+      step_fn = function(_, current) return current + 1, 0, "north", false end,
+    })
+    local result = _run_with_ctx(ctx)
+    _assert_eq(result.arrival_direction, "10>20", "arrival direction is captured")
+    _assert_eq(result.arrival_from_index, 1, "arrival source index captured")
+    _assert_eq(ctx.exited_inner, true, "inner exit detected")
+    _assert_eq(ctx.game.statuses.skip_next_inner_entry, true, "entry landing sets one-shot skip")
+  end)
 
-TestMovementOrchestration["test_does not set arrival direction when tile metadata is incomplete"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [2] = { id = 20, type = "road", name = "二" },
-    },
-    map = {
-      direction = function() return "should-not-run" end,
-      outer_next = {},
-      entry_points = {},
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 1,
-    abs_steps = 1,
-    move_opts = { skip_market_check = true },
-    step_fn = function(_, current) return current + 1, 0, nil, false end,
-  })
-  local result = _run_with_ctx(ctx)
-  _assert_eq(result.arrival_direction, nil, "missing previous tile leaves arrival direction nil")
-  _assert_eq(result.arrival_from_index, nil, "missing previous tile leaves arrival source nil")
-  _assert_eq(ctx.exited_inner, false, "missing previous tile is not an inner exit")
-end
+  it("test_does not set arrival direction when tile metadata is incomplete", function()
+    local board = _make_board({
+      tiles = {
+        [2] = { id = 20, type = "road", name = "二" },
+      },
+      map = {
+        direction = function() return "should-not-run" end,
+        outer_next = {},
+        entry_points = {},
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 1,
+      abs_steps = 1,
+      move_opts = { skip_market_check = true },
+      step_fn = function(_, current) return current + 1, 0, nil, false end,
+    })
+    local result = _run_with_ctx(ctx)
+    _assert_eq(result.arrival_direction, nil, "missing previous tile leaves arrival direction nil")
+    _assert_eq(result.arrival_from_index, nil, "missing previous tile leaves arrival source nil")
+    _assert_eq(ctx.exited_inner, false, "missing previous tile is not an inner exit")
+  end)
 
-TestMovementOrchestration["test_roadblock hit enqueues the trigger anim before clearing board state"] = function(self)
-  -- #550:同拍内必须先 emit roadblock_trigger 入队、再 clear_roadblock,
-  -- 否则 state sync 窗口内 pending 守卫查不到 trigger,overlay 被提前销毁。
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 1, type = "road", name = "一" },
-      [2] = { id = 2, type = "road", name = "二" },
-    },
-    roadblocks = { [2] = true },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 1,
-    abs_steps = 1,
-    move_opts = { skip_market_check = true },
-    step_fn = function(_, current) return current + 1, 0, nil, false end,
-  })
-  local result, calls = _run_with_ctx(ctx)
-  _assert_eq(#calls.roadblock_calls, 1, "roadblock hit should emit once")
-  _assert_eq(calls.roadblock_calls[1].current, 2, "roadblock hit should target the landing tile")
-  _assert_eq(calls.roadblock_calls[1].cleared_before_emit, false,
-    "trigger anim must be queued before the roadblock state is cleared")
-  _assert_eq(ctx.game.cleared_roadblock, 2, "board state should still clear in the same beat")
-  _assert_eq(result.stopped_on_roadblock, true, "roadblock hit should stop the move")
-end
+  it("test_roadblock hit enqueues the trigger anim before clearing board state", function()
+    -- #550:同拍内必须先 emit roadblock_trigger 入队、再 clear_roadblock,
+    -- 否则 state sync 窗口内 pending 守卫查不到 trigger,overlay 被提前销毁。
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 1, type = "road", name = "一" },
+        [2] = { id = 2, type = "road", name = "二" },
+      },
+      roadblocks = { [2] = true },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 1,
+      abs_steps = 1,
+      move_opts = { skip_market_check = true },
+      step_fn = function(_, current) return current + 1, 0, nil, false end,
+    })
+    local result, calls = _run_with_ctx(ctx)
+    _assert_eq(#calls.roadblock_calls, 1, "roadblock hit should emit once")
+    _assert_eq(calls.roadblock_calls[1].current, 2, "roadblock hit should target the landing tile")
+    _assert_eq(calls.roadblock_calls[1].cleared_before_emit, false,
+      "trigger anim must be queued before the roadblock state is cleared")
+    _assert_eq(ctx.game.cleared_roadblock, 2, "board state should still clear in the same beat")
+    _assert_eq(result.stopped_on_roadblock, true, "roadblock hit should stop the move")
+  end)
 
-TestMovementOrchestration["test_records pass-through occupants but not the moving player"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 1, type = "road", name = "一" },
-      [2] = { id = 2, type = "road", name = "二" },
-      [3] = { id = 3, type = "road", name = "三" },
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 2,
-    abs_steps = 2,
-    occupants = { [2] = { 1, 2 } },
-    move_opts = { skip_market_check = true },
-    step_fn = function(_, current) return current + 1, 0, nil, false end,
-  })
-  local result = _run_with_ctx(ctx)
-  _assert_eq(#result.encountered_players, 1, "one other player encountered while passing through")
-  _assert_eq(result.encountered_players[1], 2, "moving player is excluded from encounters")
-end
+  it("test_records pass-through occupants but not the moving player", function()
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 1, type = "road", name = "一" },
+        [2] = { id = 2, type = "road", name = "二" },
+        [3] = { id = 3, type = "road", name = "三" },
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 2,
+      abs_steps = 2,
+      occupants = { [2] = { 1, 2 } },
+      move_opts = { skip_market_check = true },
+      step_fn = function(_, current) return current + 1, 0, nil, false end,
+    })
+    local result = _run_with_ctx(ctx)
+    _assert_eq(#result.encountered_players, 1, "one other player encountered while passing through")
+    _assert_eq(result.encountered_players[1], 2, "moving player is excluded from encounters")
+  end)
 
-TestMovementOrchestration["test_keeps skip_next_inner_entry false when landing is an entry without an inner exit"] = function(self)
-  local board = _make_board({
-    tiles = {
-      [1] = { id = 10, type = "road", name = "外圈A" },
-      [2] = { id = 20, type = "road", name = "外圈入口" },
-    },
-    map = {
-      outer_next = { [10] = 20, [20] = 21 },
-      entry_points = { [20] = true },
-      direction = function() return "east" end,
-    },
-  })
-  local ctx = _base_ctx({
-    board = board,
-    steps = 1,
-    abs_steps = 1,
-    move_opts = { skip_market_check = true },
-    step_fn = function(_, current) return current + 1, 0, nil, false end,
-  })
-  _run_with_ctx(ctx)
-  _assert_eq(ctx.exited_inner, false, "outer-to-outer move is not an inner exit")
-  _assert_eq(ctx.game.statuses.skip_next_inner_entry, false, "entry tile without inner exit does not set skip")
-end
+  it("test_keeps skip_next_inner_entry false when landing is an entry without an inner exit", function()
+    local board = _make_board({
+      tiles = {
+        [1] = { id = 10, type = "road", name = "外圈A" },
+        [2] = { id = 20, type = "road", name = "外圈入口" },
+      },
+      map = {
+        outer_next = { [10] = 20, [20] = 21 },
+        entry_points = { [20] = true },
+        direction = function() return "east" end,
+      },
+    })
+    local ctx = _base_ctx({
+      board = board,
+      steps = 1,
+      abs_steps = 1,
+      move_opts = { skip_market_check = true },
+      step_fn = function(_, current) return current + 1, 0, nil, false end,
+    })
+    _run_with_ctx(ctx)
+    _assert_eq(ctx.exited_inner, false, "outer-to-outer move is not an inner exit")
+    _assert_eq(ctx.game.statuses.skip_next_inner_entry, false, "entry tile without inner exit does not set skip")
+  end)
 
 
-return TestMovementOrchestration
+end)

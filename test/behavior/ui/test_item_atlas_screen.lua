@@ -1,7 +1,9 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 -- screens/item_atlas 面板面规约(#262 幸存闭合):开/关屏 notify 载荷
 -- (source/text/key)与模块装载时 catalog 初值非 nil。
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
 local item_atlas = require("src.ui.screens.item_atlas")
 local panel_tip = require("src.ui.coord.panel_tip")
@@ -24,18 +26,16 @@ local function _panel_patches(tips, switches)
     { target = item_atlas_view, key = "hide_enlarged", value = function() end },
   }
 end
-
-TestItemAtlasScreen = {}
-
-function TestItemAtlasScreen:test_reset_for_tests_binds_the_default_catalog()
+describe("TestItemAtlasScreen", function()
+it("test_reset_for_tests_binds_the_default_catalog", function()
   -- 装载时预绑已删(#262,等价变异);catalog 字段由注入路径维护。
   item_atlas.reset_for_tests()
   local atlas_state = require("src.ui.screens.item_atlas.item_atlas_state")
   _assert_eq(item_atlas.catalog, atlas_state.catalog(), "reset should rebind the default catalog")
   _assert_eq(item_atlas.catalog ~= nil, true, "catalog after reset must not be nil")
-end
+end)
 
-function TestItemAtlasScreen:test_open_notifies_with_the_exact_tip_payload()
+it("test_open_notifies_with_the_exact_tip_payload", function()
   -- kills "ui.item_atlas" -> nil 与 "图鉴已打开" -> nil。
   local tips = {}
   local switches = {}
@@ -46,9 +46,9 @@ function TestItemAtlasScreen:test_open_notifies_with_the_exact_tip_payload()
   _assert_eq(tips[1].source, "ui.item_atlas", "open tip should carry the panel source")
   _assert_eq(tips[1].text, "图鉴已打开", "open tip should carry the opened text")
   _assert_eq(tips[1].key, "item_atlas:open:3", "open tip should carry the role-scoped key")
-end
+end)
 
-function TestItemAtlasScreen:test_close_notifies_with_the_exact_tip_payload()
+it("test_close_notifies_with_the_exact_tip_payload", function()
   -- kills "已关闭" -> nil 与 "item_atlas:close" -> nil。
   local tips = {}
   local switches = {}
@@ -59,7 +59,7 @@ function TestItemAtlasScreen:test_close_notifies_with_the_exact_tip_payload()
   _assert_eq(tips[1].source, "ui.item_atlas", "close tip should carry the panel source")
   _assert_eq(tips[1].text, "已关闭", "close tip should carry the closed text")
   _assert_eq(tips[1].key, "item_atlas:close", "close tip should carry the close key")
-end
+end)
 
 
-return TestItemAtlasScreen
+end)

@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 -- Regression for the market_select view-command port path.
 --
 -- Field symptom (deploy log, 2026-07-11): every black-market item tap logged
@@ -10,9 +12,8 @@
 -- helper, which always injects a full presentation_ports.build() table — so it
 -- cannot catch view_command being dropped from the assembled ports, nor does it
 -- assert the "port missing" warn stays silent. These specs pin both directly.
-local lu = require("luaunit")
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = P.with_patches
 local _bind_ui_runtime = P.bind_ui_runtime
 
@@ -41,12 +42,10 @@ local function _has_port_missing_warn(warns)
   end
   return false
 end
-
-TestMarketSelectPortDispatch = {}
-
-function TestMarketSelectPortDispatch:test_assembled_presentation_ports_keep_a_market_select_view_command_handler()
+describe("TestMarketSelectPortDispatch", function()
+it("test_assembled_presentation_ports_keep_a_market_select_view_command_handler", function()
   local ports = presentation_ports.build()
-  lu.assertEvalToTrue(ports.view_command ~= nil, "presentation_ports.build() must expose view_command")
+  luassert.truthy(ports.view_command ~= nil, "presentation_ports.build() must expose view_command")
   _assert_eq(type(ports.view_command.dispatch), "function",
     "assembled view_command port must expose a dispatch function")
 
@@ -61,9 +60,9 @@ function TestMarketSelectPortDispatch:test_assembled_presentation_ports_keep_a_m
 
   _assert_eq(selected, 2001,
     "market_select must route through the assembled port to select_market_option")
-end
+end)
 
-function TestMarketSelectPortDispatch:test_market_select_through_intent_dispatcher_reaches_the_port_without_a_missing_port_warn()
+it("test_market_select_through_intent_dispatcher_reaches_the_port_without_a_missing_port_warn", function()
   local selected = nil
   local warns, warn_patch = _capture_warns()
 
@@ -104,9 +103,9 @@ function TestMarketSelectPortDispatch:test_market_select_through_intent_dispatch
     "market_select dispatched through intent_dispatcher must reach the port handler")
   _assert_eq(_has_port_missing_warn(warns), false,
     "a properly wired gameplay_loop_ports must not drop market_select as 'port missing'")
-end
+end)
 
-function TestMarketSelectPortDispatch:test_view_command_survives_the_turn_loop_ports_resolve_that_overwrites_state_gameplay_loop_ports()
+it("test_view_command_survives_the_turn_loop_ports_resolve_that_overwrites_state_gameplay_loop_ports", function()
   -- Field symptom round 2 (deploy log, 2026-07-12): the assembled ports DO
   -- carry view_command, but the first tick funnels them through
   -- gameplay_loop_ports.resolve (src/turn/loop/init.lua) and writes the
@@ -120,9 +119,9 @@ function TestMarketSelectPortDispatch:test_view_command_survives_the_turn_loop_p
   local selected = nil
 
   local resolved = loop_ports.resolve(presentation_ports.build())
-  lu.assertEvalToTrue(resolved.view_command ~= nil,
+  luassert.truthy(resolved.view_command ~= nil,
     "loop ports resolve must pass the view_command group through")
-  lu.assertEvalToTrue(resolved.actor_context ~= nil,
+  luassert.truthy(resolved.actor_context ~= nil,
     "loop ports resolve must pass the actor_context group through")
 
   local state = { gameplay_loop_ports = resolved }
@@ -141,9 +140,9 @@ function TestMarketSelectPortDispatch:test_view_command_survives_the_turn_loop_p
     "resolved gameplay_loop_ports must keep routing market_select to select_market_option")
   _assert_eq(_has_port_missing_warn(warns), false,
     "the tick-time resolve must not strip view_command from state.gameplay_loop_ports")
-end
+end)
 
-function TestMarketSelectPortDispatch:test_view_command_dispatcher_warns_and_drops_market_select_when_the_port_is_unwired()
+it("test_view_command_dispatcher_warns_and_drops_market_select_when_the_port_is_unwired", function()
   -- Pins the diagnostic contract that surfaced the field bug: an absent
   -- view_command port yields the exact 'port missing' warn and a false return.
   local warns, warn_patch = _capture_warns()
@@ -159,9 +158,9 @@ function TestMarketSelectPortDispatch:test_view_command_dispatcher_warns_and_dro
   _assert_eq(dropped, false, "missing view_command port must make dispatch return false")
   _assert_eq(_has_port_missing_warn(warns), true,
     "missing view_command port must emit the 'view_command port missing' diagnostic")
-end
+end)
 
-function TestMarketSelectPortDispatch:test_game_action_intent_without_game_warns_and_drops()
+it("test_game_action_intent_without_game_warns_and_drops", function()
   local warns, warn_patch = _capture_warns()
   local state = { ui = { input_blocked = false } }
   _bind_ui_runtime(state)
@@ -177,10 +176,10 @@ function TestMarketSelectPortDispatch:test_game_action_intent_without_game_warns
     }, {})
   end)
 
-  lu.assertEvalToTrue(#warns == 1
+  luassert.truthy(#warns == 1
       and string.find(warns[1], "ui intent without game", 1, true) ~= nil,
     "a game-action intent without a game should warn and drop: " .. tostring(warns[1]))
-end
+end)
 
 
-return TestMarketSelectPortDispatch
+end)
