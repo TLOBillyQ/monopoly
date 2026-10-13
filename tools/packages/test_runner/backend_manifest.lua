@@ -102,10 +102,10 @@ return {
     "test/behavior/ui/view/test_model_api_core.lua",
     "test/behavior/ui/view/test_model_api_env.lua",
     "test/behavior/ui/view/test_panel_builder.lua",
-    "tools/packages/acceptance_mutate/test/test_mutator_level.lua",
-    "tools/packages/acceptance_mutate/test/test_mutator_status.lua",
   },
   busted = {
+    "tools/packages/acceptance_mutate/test/test_mutator_level.lua",
+    "tools/packages/acceptance_mutate/test/test_mutator_status.lua",
     "tools/packages/spec_lane/test/test_spec_lane.lua",
     "tools/packages/verify/test/test_verify_full.lua",
     "tools/packages/mutate/test/test_lua54_guard.lua",
