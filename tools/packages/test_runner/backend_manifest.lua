@@ -591,7 +591,6 @@ return {
     "tools/packages/dry/test/test_dry_cli.lua",
     "tools/packages/encoding/test/test_script_tools_contract.lua",
     "tools/packages/luaunit_runner/test/test_chunk_cache.lua",
-    "tools/packages/luaunit_runner/test/test_dual_backend.lua",
     "tools/packages/luaunit_runner/test/test_spec_sharding.lua",
     "tools/packages/mutate/test/test_lua54_guard.lua",
     "tools/packages/mutate/test/test_mutate4lua_tooling_contract.lua",
@@ -604,6 +603,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/luaunit_runner/test/test_dual_backend.lua",
     "test/support/harness/test/test_harness_fail_fast.lua",
     "tools/packages/coverage/test/test_coverage_config.lua",
     "tools/packages/coverage/test/test_coverage_quiet.lua",
