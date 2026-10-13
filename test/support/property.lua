@@ -1,3 +1,6 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local property = {}
 
 -- Exhaustive enumeration over a small integer range. Kept for specs that want
@@ -5,7 +8,7 @@ local property = {}
 function property.check_int_range(first_value, last_value, check)
   for value = first_value, last_value do
     local ok, err = pcall(check, value)
-    assert(ok, "case " .. tostring(value) .. " failed: " .. tostring(err))
+    luassert.truthy(ok, "case " .. tostring(value) .. " failed: " .. tostring(err))
   end
 end
 
@@ -45,7 +48,7 @@ end
 
 -- Uniformly pick one element of a non-empty array.
 function Rng:pick(items)
-  assert(#items > 0, "cannot pick from an empty list")
+  luassert.truthy(#items > 0, "cannot pick from an empty list")
   return items[self:int(1, #items)]
 end
 
