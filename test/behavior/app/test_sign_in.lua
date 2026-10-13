@@ -3,9 +3,11 @@
 -- 用例数与改写前一一对应(sign_in 8 + install 4 + 迁自 property 车道的
 -- parsing and claim properties 3 = 15 例)。
 
-local lu = require("luaunit")
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local sign_in = require("src.app.host_integrations.sign_in")
 
 local function _game()
@@ -159,26 +161,26 @@ do
   function TestSignInInstall:test_install_asserts_missing_deps_with_messages()
     -- #293:install 的 4 处依赖断言消息未测,消息→nil 变异存活。
     local ok_deps, err_deps = pcall(sign_in.install, nil)
-    lu.assertEvalToTrue(ok_deps == false, "install without deps should assert")
-    lu.assertEvalToTrue(tostring(err_deps):find("missing sign_in install deps", 1, true) ~= nil,
+    luassert.truthy(ok_deps == false, "install without deps should assert")
+    luassert.truthy(tostring(err_deps):find("missing sign_in install deps", 1, true) ~= nil,
       "deps assert should carry its message: " .. tostring(err_deps))
 
     local ok_register, err_register = pcall(sign_in.install, {})
-    lu.assertEvalToTrue(ok_register == false, "install without register_event should assert")
-    lu.assertEvalToTrue(tostring(err_register):find("missing register_event", 1, true) ~= nil,
+    luassert.truthy(ok_register == false, "install without register_event should assert")
+    luassert.truthy(tostring(err_register):find("missing register_event", 1, true) ~= nil,
       "register assert should carry its message: " .. tostring(err_register))
 
     local ok_game, err_game = pcall(sign_in.install, { register_event = function() end })
-    lu.assertEvalToTrue(ok_game == false, "install without get_game should assert")
-    lu.assertEvalToTrue(tostring(err_game):find("missing get_game", 1, true) ~= nil,
+    luassert.truthy(ok_game == false, "install without get_game should assert")
+    luassert.truthy(tostring(err_game):find("missing get_game", 1, true) ~= nil,
       "get_game assert should carry its message: " .. tostring(err_game))
 
     local ok_role, err_role = pcall(sign_in.install, {
       register_event = function() end,
       get_game = function() return {} end,
     })
-    lu.assertEvalToTrue(ok_role == false, "install without resolve_role_id should assert")
-    lu.assertEvalToTrue(tostring(err_role):find("missing resolve_role_id", 1, true) ~= nil,
+    luassert.truthy(ok_role == false, "install without resolve_role_id should assert")
+    luassert.truthy(tostring(err_role):find("missing resolve_role_id", 1, true) ~= nil,
       "resolve_role_id assert should carry its message: " .. tostring(err_role))
   end
 
@@ -201,7 +203,7 @@ do
       resolve_role_id = function() return nil end,
     })
     handlers["RewardDay1"](nil, nil, {})
-    lu.assertEvalToTrue(#lookups == 0,
+    luassert.truthy(#lookups == 0,
       "nil role id must not query the game; got " .. #lookups .. " lookups")
   end
 end
@@ -226,7 +228,7 @@ do
     property.for_all(function(rng)
       return rng:int(1, 10000000)
     end, function(day)
-      lu.assertEvalToTrue(sign_in.day_from_event("RewardDay" .. day) == day,
+      luassert.truthy(sign_in.day_from_event("RewardDay" .. day) == day,
         "RewardDay<day> must parse back to the same day, including beyond the configured range")
     end)
   end
@@ -238,7 +240,7 @@ do
     property.for_all(function(rng)
       return { day = rng:int(1, 10000), suffix = rng:pick(SUFFIXES) }
     end, function(case)
-      lu.assertEvalToTrue(sign_in.day_from_event("RewardDay" .. case.day .. case.suffix) == nil,
+      luassert.truthy(sign_in.day_from_event("RewardDay" .. case.day .. case.suffix) == nil,
         "a non-digit suffix must not parse as a reward event")
     end)
   end
@@ -251,11 +253,11 @@ do
       local granted = sign_in.claim(_prop_game(), "RewardDay" .. case.day, player)
       local configured = rewards[case.day]
       if configured == nil then
-        lu.assertEvalToTrue(granted == false, "an unconfigured day must not grant")
-        lu.assertEvalToTrue(player.cash == case.cash, "an unconfigured day must leave cash unchanged")
+        luassert.truthy(granted == false, "an unconfigured day must not grant")
+        luassert.truthy(player.cash == case.cash, "an unconfigured day must leave cash unchanged")
       else
-        lu.assertEvalToTrue(granted == true, "a configured day must grant")
-        lu.assertEvalToTrue(player.cash == case.cash + configured,
+        luassert.truthy(granted == true, "a configured day must grant")
+        luassert.truthy(player.cash == case.cash + configured,
           "a configured claim must add exactly the configured coins to existing cash")
       end
     end)
