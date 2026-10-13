@@ -1,7 +1,8 @@
 ---@diagnostic disable
 -- luacheck: ignore 113 211
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local function make_cases(helpers)
   local _ENV = helpers
 

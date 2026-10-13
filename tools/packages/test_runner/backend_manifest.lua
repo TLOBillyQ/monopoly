@@ -614,6 +614,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/test_runner/test/test_verified_modules.lua",
     "test/behavior/foundation/test_class.lua",
     "test/behavior/foundation/test_scope.lua",
   },
