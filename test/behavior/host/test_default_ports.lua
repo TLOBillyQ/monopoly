@@ -1,7 +1,7 @@
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
@@ -12,9 +12,9 @@ local default_ports = require("src.host.default_ports")
 -- before_each/after_each → setUp/tearDown,共享 local original_enums → self
 -- 字段),用例数与改写前一一对应(2 + 4 = 6 例)。
 
-TestDefaultPorts = {}
+describe("TestDefaultPorts", function()
 
-function TestDefaultPorts:test_end_game_routes_to_host_and_leaves_diagnostics()
+local function _test_end_game_routes_to_host_and_leaves_diagnostics()
   -- #609 审查收口:end_game 必须直调宿主 game_end;API 缺失与宿主抛错都要
   -- 留痕并返回 false,不得静默、不得上抛(上抛会沿事件回调跳过后续收尾)。
   local host_calls = 0
@@ -55,7 +55,7 @@ function TestDefaultPorts:test_end_game_routes_to_host_and_leaves_diagnostics()
   _assert_equal(#warns, 2, "missing and raising host game_end should each leave one warn")
 end
 
-function TestDefaultPorts:test_wall_diff_seconds_prefers_game_api_then_falls_back()
+local function _test_wall_diff_seconds_prefers_game_api_then_falls_back()
   local ctx = {
     env = {
       GameAPI = {
@@ -78,7 +78,7 @@ function TestDefaultPorts:test_wall_diff_seconds_prefers_game_api_then_falls_bac
   _assert_equal(ports.wall_diff_seconds("x", 7), 0, "wall diff should return 0 for non-numeric fallback inputs")
 end
 
-function TestDefaultPorts:test_cpu_now_seconds_prefers_game_api_then_falls_back()
+local function _test_cpu_now_seconds_prefers_game_api_then_falls_back()
   local ctx = { env = {} }
   local runtime_ctx = {
     current = function()
@@ -94,7 +94,7 @@ function TestDefaultPorts:test_cpu_now_seconds_prefers_game_api_then_falls_back(
   _assert_equal(ports.cpu_now_seconds(), 12345, "cpu_now should prefer GameAPI timestamp when available")
 end
 
-function TestDefaultPorts:test_wall_now_hms_formats_from_game_api_parts()
+local function _test_wall_now_hms_formats_from_game_api_parts()
   local ctx = {
     env = {
       GameAPI = {
@@ -119,7 +119,7 @@ function TestDefaultPorts:test_wall_now_hms_formats_from_game_api_parts()
   _assert_equal(ports.wall_now_hms(), "", "no GameAPI should yield empty string")
 end
 
-function TestDefaultPorts:test_rng_next_int_routes_to_the_host_random_int_and_guards_its_inputs()
+local function _test_rng_next_int_routes_to_the_host_random_int_and_guards_its_inputs()
   local seen = nil
   local function _ports_with_game_api(game_api)
     return default_ports.build({ current = function()
@@ -150,7 +150,7 @@ function TestDefaultPorts:test_rng_next_int_routes_to_the_host_random_int_and_gu
     "missing-api error should carry the reason; got " .. tostring(err_no_api))
 end
 
-function TestDefaultPorts:test_schedule_forwards_delay_and_callback_to_lua_api()
+local function _test_schedule_forwards_delay_and_callback_to_lua_api()
   local seen = nil
   local ctx = {
     env = {
@@ -175,7 +175,7 @@ function TestDefaultPorts:test_schedule_forwards_delay_and_callback_to_lua_api()
   _assert_equal(seen.delay, 3, "schedule should pass the explicit delay through")
 end
 
-function TestDefaultPorts:test_schedule_falls_back_to_sync_call_without_lua_api()
+local function _test_schedule_falls_back_to_sync_call_without_lua_api()
   local ctx = { env = {} }
   local ports = default_ports.build({ current = function() return ctx end })
 
@@ -191,7 +191,7 @@ function TestDefaultPorts:test_schedule_falls_back_to_sync_call_without_lua_api(
     "missing-callback error should carry the reason; got " .. tostring(err))
 end
 
-function TestDefaultPorts:test_resolve_camera_helper_returns_context_helper_or_nil()
+local function _test_resolve_camera_helper_returns_context_helper_or_nil()
   local ports = default_ports.build({ current = function() return nil end })
   _assert_equal(ports.resolve_camera_helper(), nil, "no context should yield no camera helper")
 
@@ -200,7 +200,7 @@ function TestDefaultPorts:test_resolve_camera_helper_returns_context_helper_or_n
   _assert_equal(ports_with_helper.resolve_camera_helper().kind, "cam", "camera helper should come from the context")
 end
 
-function TestDefaultPorts:test_emit_event_delegates_to_the_host_trigger_and_reports_ok()
+local function _test_emit_event_delegates_to_the_host_trigger_and_reports_ok()
   local ctx = { env = {} }
   local ports = default_ports.build({ current = function() return ctx end })
   local support = require("test.support.shared_support")
@@ -250,7 +250,7 @@ function TestDefaultPorts:test_emit_event_delegates_to_the_host_trigger_and_repo
   _assert_equal(missing_result, false, "emit_event should return false without the host trigger")
 end
 
-function TestDefaultPorts:test_resolve_roles_returns_cached_when_populated()
+local function _test_resolve_roles_returns_cached_when_populated()
   local ctx = {
     env = {
       GameAPI = {
@@ -269,7 +269,7 @@ function TestDefaultPorts:test_resolve_roles_returns_cached_when_populated()
   _assert_equal(roles[1].id, 1, "populated roles should not be replaced by a host query")
 end
 
-function TestDefaultPorts:test_is_synthetic_player_answers_from_registry_and_defaults_false()
+local function _test_is_synthetic_player_answers_from_registry_and_defaults_false()
   -- #611:终局面板路由据此静默跳过合成 AI。判定来自合成角色注册表登记的
   -- player_id 集合(退役不擦除),注册表缺位时一律返回 false。
   local ctx = {
@@ -288,7 +288,7 @@ function TestDefaultPorts:test_is_synthetic_player_answers_from_registry_and_def
   _assert_equal(bare.is_synthetic_player(-2), false, "missing registry should yield false, not nil")
 end
 
-function TestDefaultPorts:test_resolve_role_returns_nil_without_game_api()
+local function _test_resolve_role_returns_nil_without_game_api()
   local ctx = { roles = {} }
   local ports = default_ports.build({ current = function() return ctx end })
 
@@ -296,7 +296,7 @@ function TestDefaultPorts:test_resolve_role_returns_nil_without_game_api()
   _assert_equal(#ports.resolve_roles(), 0, "no GameAPI should yield an empty role list (no error)")
 end
 
-function TestDefaultPorts:test_resolve_roles_refreshes_empty_roles_from_game_api()
+local function _test_resolve_roles_refreshes_empty_roles_from_game_api()
   local ctx = {
     env = {
       GameAPI = {
@@ -316,7 +316,7 @@ function TestDefaultPorts:test_resolve_roles_refreshes_empty_roles_from_game_api
   _assert_equal(ctx.roles[1].id, 1, "resolve_roles should cache the queried roles back onto the context")
 end
 
-function TestDefaultPorts:test_resolve_roles_queries_game_api_when_roles_not_initialized()
+local function _test_resolve_roles_queries_game_api_when_roles_not_initialized()
   local ctx = {
     env = {
       GameAPI = {
@@ -334,7 +334,7 @@ function TestDefaultPorts:test_resolve_roles_queries_game_api_when_roles_not_ini
   _assert_equal(roles[1].id, 7, "resolve_roles should return the queried role")
 end
 
-function TestDefaultPorts:test_is_effect_idle_reports_the_effect_track_state()
+local function _test_is_effect_idle_reports_the_effect_track_state()
   local ctx = { env = {} }
   local ports = default_ports.build({ current = function() return ctx end })
   local support = require("test.support.shared_support")
@@ -365,7 +365,7 @@ local function _with_effect_track_module(value, fn)
   }, fn)
 end
 
-function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_require_raises()
+local function _test_is_effect_idle_falls_back_to_true_when_require_raises()
   local ports = default_ports.build({ current = function() return nil end })
   local result
   _with_effect_track_module(function()
@@ -376,7 +376,7 @@ function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_require_ra
   _assert_equal(result, true, "is_effect_idle should treat an unloadable effect track as idle")
 end
 
-function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_module_is_not_a_table()
+local function _test_is_effect_idle_falls_back_to_true_when_module_is_not_a_table()
   local ports = default_ports.build({ current = function() return nil end })
   local result
   _with_effect_track_module(function()
@@ -387,7 +387,7 @@ function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_module_is_
   _assert_equal(result, true, "is_effect_idle should treat a non-table effect track as idle")
 end
 
-function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_is_idle_is_missing()
+local function _test_is_effect_idle_falls_back_to_true_when_is_idle_is_missing()
   local ports = default_ports.build({ current = function() return nil end })
   local result
   _with_effect_track_module(function()
@@ -398,23 +398,22 @@ function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_is_idle_is
   _assert_equal(result, true, "is_effect_idle should treat a missing is_idle probe as idle")
 end
 
-TestDefaultPortsCustomArchiveAccess = {}
-
-function TestDefaultPortsCustomArchiveAccess:setUp()
-  self.original_enums = _G.Enums
-  _G.Enums = { ArchiveType = { Int = 4 } }
-end
-
-function TestDefaultPortsCustomArchiveAccess:tearDown()
-  _G.Enums = self.original_enums
-end
+describe("TestDefaultPortsCustomArchiveAccess", function()
+  local original_enums
+  before_each(function()
+    original_enums = _G.Enums
+    _G.Enums = { ArchiveType = { Int = 4 } }
+  end)
+  after_each(function()
+    _G.Enums = original_enums
+  end)
 
 local function _ports_with_role(role, game_api)
   local ctx = { env = { GameAPI = game_api }, roles = role and { role } or {} }
   return default_ports.build({ current = function() return ctx end })
 end
 
-function TestDefaultPortsCustomArchiveAccess:test_archives_enabled_reflects_game_api_then_defaults_false()
+local function _test_archives_enabled_reflects_game_api_then_defaults_false()
   local ports = _ports_with_role(nil, { is_archives_enabled = function() return true end })
   _assert_equal(ports.archives_enabled(), true, "archives_enabled should follow GameAPI when present")
 
@@ -425,7 +424,7 @@ function TestDefaultPortsCustomArchiveAccess:test_archives_enabled_reflects_game
   _assert_equal(ports_no_api.archives_enabled(), false, "archives_enabled should be false (not error) when GameAPI is absent")
 end
 
-function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_defaults_to_zero_for_non_numeric_archive()
+local function _test_get_archive_int_defaults_to_zero_for_non_numeric_archive()
   local role = {
     get_roleid = function() return 9 end,
     get_archive_by_type = function() return "not-a-number" end,
@@ -435,7 +434,7 @@ function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_defaults_to_ze
   _assert_equal(ports.get_archive_int(9, 1001), 0, "non-numeric archive value should default to 0")
 end
 
-function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_reads_int_archive_from_resolved_role()
+local function _test_get_archive_int_reads_int_archive_from_resolved_role()
   local seen = {}
   local role = {
     get_roleid = function() return 9 end,
@@ -452,7 +451,7 @@ function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_reads_int_arch
   _assert_equal(ports.get_archive_int(404, 1001), 0, "get_archive_int should default to 0 for an unresolved role")
 end
 
-function TestDefaultPortsCustomArchiveAccess:test_set_archive_int_writes_int_archive_on_resolved_role()
+local function _test_set_archive_int_writes_int_archive_on_resolved_role()
   local written = nil
   local role = {
     get_roleid = function() return 9 end,
@@ -470,12 +469,18 @@ function TestDefaultPortsCustomArchiveAccess:test_set_archive_int_writes_int_arc
   _assert_equal(ports.set_archive_int(404, 1002, 1), false, "set_archive_int should fail safely for an unresolved role")
 end
 
+it("test_archives_enabled_reflects_game_api_then_defaults_false", _test_archives_enabled_reflects_game_api_then_defaults_false)
+it("test_get_archive_int_defaults_to_zero_for_non_numeric_archive", _test_get_archive_int_defaults_to_zero_for_non_numeric_archive)
+it("test_get_archive_int_reads_int_archive_from_resolved_role", _test_get_archive_int_reads_int_archive_from_resolved_role)
+it("test_set_archive_int_writes_int_archive_on_resolved_role", _test_set_archive_int_writes_int_archive_on_resolved_role)
+end)
+
 -- ═══════════════════════════════════════════════════════════════════════
 -- #334 / ADR 0046:mark_role_lose 保留 role.lose() 不换方法,跳过分支必留痕;
 -- call_role_die 默认接线到 role_die 宿主适配(ADR 0046)。
 -- ═══════════════════════════════════════════════════════════════════════
 
-function TestDefaultPorts:test_mark_role_lose_calls_lose_on_the_role()
+local function _test_mark_role_lose_calls_lose_on_the_role()
   local ctx = { env = {} }
   local runtime_ctx = {
     current = function()
@@ -494,7 +499,7 @@ function TestDefaultPorts:test_mark_role_lose_calls_lose_on_the_role()
   _assert_equal(marked, 1, "mark_role_lose should call role.lose once (#334 keeps the marker method)")
 end
 
-function TestDefaultPorts:test_mark_role_lose_warns_when_role_is_nil()
+local function _test_mark_role_lose_warns_when_role_is_nil()
   local ctx = { env = {} }
   local runtime_ctx = {
     current = function()
@@ -521,7 +526,7 @@ function TestDefaultPorts:test_mark_role_lose_warns_when_role_is_nil()
     "nil role warn should carry the skip reason; got " .. tostring(warns[1]))
 end
 
-function TestDefaultPorts:test_mark_role_lose_warns_when_role_lacks_lose()
+local function _test_mark_role_lose_warns_when_role_lacks_lose()
   local ctx = { env = {} }
   local runtime_ctx = {
     current = function()
@@ -548,7 +553,7 @@ function TestDefaultPorts:test_mark_role_lose_warns_when_role_lacks_lose()
     "missing-lose warn should carry the skip reason; got " .. tostring(warns[1]))
 end
 
-function TestDefaultPorts:test_call_role_die_default_is_wired_to_the_host_adapter()
+local function _test_call_role_die_default_is_wired_to_the_host_adapter()
   local ctx = { env = {} }
   local runtime_ctx = {
     current = function()
@@ -569,11 +574,26 @@ function TestDefaultPorts:test_call_role_die_default_is_wired_to_the_host_adapte
 end
 
 
--- mutate 车道统一返回全部类（#283 多类文件 return 首类假幸存方向）：
--- 正常车道扫 _G 收全部 Test* 类，但 mutate 内建 runner 只跑 return 的表，
--- 只 return 首个类会让其余类的用例在变异车道完全不执行。合并全部类，
--- 每个 test* 方法跑所属类 setUp/tearDown（见 multi_class_return）。
-return require("test.support.multi_class_return").merge(
-  TestDefaultPorts,
-  TestDefaultPortsCustomArchiveAccess
-)
+it("test_end_game_routes_to_host_and_leaves_diagnostics", _test_end_game_routes_to_host_and_leaves_diagnostics)
+it("test_wall_diff_seconds_prefers_game_api_then_falls_back", _test_wall_diff_seconds_prefers_game_api_then_falls_back)
+it("test_cpu_now_seconds_prefers_game_api_then_falls_back", _test_cpu_now_seconds_prefers_game_api_then_falls_back)
+it("test_wall_now_hms_formats_from_game_api_parts", _test_wall_now_hms_formats_from_game_api_parts)
+it("test_rng_next_int_routes_to_the_host_random_int_and_guards_its_inputs", _test_rng_next_int_routes_to_the_host_random_int_and_guards_its_inputs)
+it("test_schedule_forwards_delay_and_callback_to_lua_api", _test_schedule_forwards_delay_and_callback_to_lua_api)
+it("test_schedule_falls_back_to_sync_call_without_lua_api", _test_schedule_falls_back_to_sync_call_without_lua_api)
+it("test_resolve_camera_helper_returns_context_helper_or_nil", _test_resolve_camera_helper_returns_context_helper_or_nil)
+it("test_emit_event_delegates_to_the_host_trigger_and_reports_ok", _test_emit_event_delegates_to_the_host_trigger_and_reports_ok)
+it("test_resolve_roles_returns_cached_when_populated", _test_resolve_roles_returns_cached_when_populated)
+it("test_is_synthetic_player_answers_from_registry_and_defaults_false", _test_is_synthetic_player_answers_from_registry_and_defaults_false)
+it("test_resolve_role_returns_nil_without_game_api", _test_resolve_role_returns_nil_without_game_api)
+it("test_resolve_roles_refreshes_empty_roles_from_game_api", _test_resolve_roles_refreshes_empty_roles_from_game_api)
+it("test_resolve_roles_queries_game_api_when_roles_not_initialized", _test_resolve_roles_queries_game_api_when_roles_not_initialized)
+it("test_is_effect_idle_reports_the_effect_track_state", _test_is_effect_idle_reports_the_effect_track_state)
+it("test_is_effect_idle_falls_back_to_true_when_require_raises", _test_is_effect_idle_falls_back_to_true_when_require_raises)
+it("test_is_effect_idle_falls_back_to_true_when_module_is_not_a_table", _test_is_effect_idle_falls_back_to_true_when_module_is_not_a_table)
+it("test_is_effect_idle_falls_back_to_true_when_is_idle_is_missing", _test_is_effect_idle_falls_back_to_true_when_is_idle_is_missing)
+it("test_mark_role_lose_calls_lose_on_the_role", _test_mark_role_lose_calls_lose_on_the_role)
+it("test_mark_role_lose_warns_when_role_is_nil", _test_mark_role_lose_warns_when_role_is_nil)
+it("test_mark_role_lose_warns_when_role_lacks_lose", _test_mark_role_lose_warns_when_role_lacks_lose)
+it("test_call_role_die_default_is_wired_to_the_host_adapter", _test_call_role_die_default_is_wired_to_the_host_adapter)
+end)
