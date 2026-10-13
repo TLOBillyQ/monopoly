@@ -3,7 +3,9 @@
 -- run_command 把 stdout/stderr 重定向到临时文件再读回来,所以本模块依赖 env(临时落点)
 -- 与 fs(读回与清理)。反向不成立:fs 不认识子进程,这条单向依赖是分层的关键。
 --
--- 工具链只跑在 macOS 与 WSL Ubuntu 上(工单 #127 / #129;#127 平台约束),所以只有 POSIX 一条路径。
+-- 原生 Windows 单平台(ADR 0066)。字符串是 cmd 语法，数组是字面参数；
+-- 临时 CRLF/UTF-8 cmd 脚本以关闭延迟展开存参数，再延迟展开启动真实程序。
+-- 不对输出换行或字节编码做隐式转换，非零退出码原样返回。
 local text_lib = require("foundation.text")
 local path_lib = require("foundation.path")
 local shell_lib = require("foundation.shell")
@@ -18,18 +20,15 @@ function proc.command_exists(name)
     return false
   end
 
-  local command = "command -v " .. shell_lib.shell_quote(command_name) .. " >/dev/null 2>&1"
+  local command = "where.exe " .. shell_lib.shell_quote(command_name) .. " >nul 2>&1"
   local ok, kind, code = os.execute(command)
-  return shell_lib.exit_status(ok, kind, code)
+  local success = shell_lib.exit_status(ok, kind, code)
+  return success
 end
 
 function proc.run_command(command, options)
   local args = command
-  if type(command) == "string" then
-    args = { "sh", "-lc", tostring(command) }
-  end
-
-  if type(args) ~= "table" or #args == 0 then
+  if type(command) ~= "string" and (type(args) ~= "table" or #args == 0) then
     return {
       ok = false,
       code = 1,
@@ -41,14 +40,31 @@ function proc.run_command(command, options)
   local cwd_path = options and options.cwd and path_lib.normalize_path(options.cwd) or nil
   local stdin_path = options and options.stdin_path and path_lib.normalize_path(options.stdin_path) or nil
 
-  local command_text = shell_lib.build_command(args)
-  local wrapped = shell_lib.wrap_command_with_cwd(command_text, cwd_path)
+  local setup = ""
+  local command_text = command
+  if type(command) == "table" then
+    local variables = {}
+    for index, value in ipairs(args) do
+      local quoted = shell_lib.shell_quote(value):gsub("%%", "%%%%"):gsub('([&|<>%^()" ])', '^%1')
+      setup = setup .. "set eggy_arg_" .. index .. "=" .. quoted .. "\r\n"
+      variables[#variables + 1] = index == 1 and shell_lib.shell_quote(value) or ("!eggy_arg_" .. index .. "!")
+    end
+    setup = setup .. "setlocal enabledelayedexpansion\r\n"
+    command_text = table.concat(variables, " ")
+  end
+  if cwd_path then
+    setup = "cd /d " .. shell_lib.shell_quote(cwd_path:gsub("/", "\\")) .. "\r\nif errorlevel 1 exit /b 1\r\n" .. setup
+  end
+  local wrapped = command_text
   local redirected = wrapped
   if stdin_path ~= nil and stdin_path ~= "" then
     redirected = redirected .. " < " .. shell_lib.shell_quote(stdin_path)
   end
   redirected = redirected .. " > " .. shell_lib.shell_quote(output_path) .. " 2>&1"
-  local ok, kind, code = os.execute(redirected)
+  local batch_path = env_lib.make_temp_path("command", ".cmd")
+  fs_lib.write_file(batch_path, "@echo off\r\nchcp 65001 >nul\r\n" .. setup .. redirected .. "\r\nexit /b %errorlevel%\r\n")
+  local ok, kind, code = os.execute('cmd.exe /d /v:off /c ""' .. batch_path:gsub("/", "\\") .. '""')
+  fs_lib.remove_path(batch_path)
   local success, exit_code = shell_lib.exit_status(ok, kind, code)
   local output = fs_lib.read_raw(output_path) or ""
   fs_lib.remove_path(output_path)
@@ -70,16 +86,7 @@ function proc.collect_files(root, extension)
     return nil, text_lib.bilingual_with_suffix("目录不存在: ", "Directory does not exist: ", root)
   end
 
-  local command = {
-    "find",
-    normalized_root,
-    "-type",
-    "f",
-  }
-  if normalized_extension ~= "" then
-    command[#command + 1] = "-name"
-    command[#command + 1] = "*" .. normalized_extension
-  end
+  local command = "(dir /b /s /a-d " .. shell_lib.shell_quote(normalized_root:gsub("/", "\\") .. "\\*") .. " 2>nul & ver >nul)"
   local result = proc.run_command(command)
   if not result.ok then
     return nil, text_lib.bilingual_with_suffix("收集文件失败: ", "Failed to collect files: ", root)
@@ -87,7 +94,8 @@ function proc.collect_files(root, extension)
 
   local files = {}
   for line in (result.output .. "\n"):gmatch("(.-)\n") do
-    if line ~= "" then
+    line = line:gsub("\r$", "")
+    if line ~= "" and (normalized_extension == "" or line:sub(-#normalized_extension) == normalized_extension) then
       files[#files + 1] = path_lib.normalize_path(line)
     end
   end

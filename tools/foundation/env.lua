@@ -3,9 +3,7 @@
 -- 与 path.lua 划清界限——那边是纯路径演算,这边要读环境变量、起子进程、建目录。
 -- 与 proc.lua 划清界限——那边是"跑一条命令拿结果",这边只是"问环境是什么样"。
 --
--- 工具链只跑在 macOS 与 WSL Ubuntu 上(工单 #127 / #129;#127 平台约束)。注意别把「工具链跑在哪个
--- OS」与「部署目标是哪个 OS」搞混:Eggy 宿主仍在 Windows 端,那条路径活在
--- tools/packages/ops/deploy.lua 里,与本文件无关。
+-- 原生 Windows 单平台(ADR 0066):忽略 MSYS PWD，临时目录取 TEMP/TMP。
 local path_lib = require("foundation.path")
 local shell_lib = require("foundation.shell")
 local fs_lib = require("foundation.fs")
@@ -28,17 +26,11 @@ local function _entropy_token()
 end
 
 function env.is_macos()
-  local process = io.popen("uname")
-  if process == nil then
-    return false
-  end
-  local content = process:read("*l") or ""
-  process:close()
-  return path_lib.normalize_path(content) == "Darwin"
+  return false
 end
 
 function env.current_dir()
-  local process = io.popen("pwd")
+  local process = io.popen("cmd.exe /d /v:off /c cd")
   if process == nil then
     return "."
   end
@@ -48,9 +40,9 @@ function env.current_dir()
 end
 
 function env.system_tmp_dir()
-  local value = os.getenv("TMPDIR")
+  local value = os.getenv("TEMP") or os.getenv("TMP")
   if value == nil or value == "" then
-    value = "/tmp"
+    value = env.current_dir()
   end
   return path_lib.normalize_path(value)
 end
@@ -67,10 +59,7 @@ end
 
 function env.build_open_command(path)
   local normalized = path_lib.normalize_path(path)
-  if env.is_macos() then
-    return shell_lib.build_command({ "open", normalized })
-  end
-  return shell_lib.build_command({ "xdg-open", normalized })
+  return 'start "" ' .. shell_lib.shell_quote(normalized:gsub("/", "\\"))
 end
 
 return env

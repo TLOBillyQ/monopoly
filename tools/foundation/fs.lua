@@ -5,7 +5,7 @@
 -- 但注意:本模块内部互调走 fs.xxx,替身穿不进来,别指望 stub fs.path_exists 能改掉
 -- fs.remove_path 的行为。
 --
--- 工具链只跑在 macOS 与 WSL Ubuntu 上(工单 #127 / #129;#127 平台约束),所以只有 POSIX 一条路径。
+-- 原生 Windows 单平台(ADR 0066):Lua 二进制 IO + cmd 内建文件操作。
 local text_lib = require("foundation.text")
 local path_lib = require("foundation.path")
 local shell_lib = require("foundation.shell")
@@ -47,7 +47,9 @@ function fs.ensure_dir(path)
   end
 
   local normalized = path_lib.normalize_path(path)
-  local command = "mkdir -p " .. shell_lib.shell_quote(normalized)
+  local native = normalized:gsub("/", "\\")
+  local quoted = shell_lib.shell_quote(native)
+  local command = "if not exist " .. quoted .. " mkdir " .. quoted
   local ok, kind, code = os.execute(command)
   local success = shell_lib.exit_status(ok, kind, code)
   if not success then
@@ -95,20 +97,21 @@ end
 -- ——两个值。verify_full 和 packages/luaunit_runner/lua54.lua 里的
 -- _path_or_command_available 又原样 `return fs_lib.path_exists(text)`,把这对值
 -- 继续往上传。谓词就该只答"是/否"。
-local function _probe_path(path, posix_flag)
-  local normalized = path_lib.normalize_path(path)
-  local command = "[ " .. posix_flag .. " " .. shell_lib.shell_quote(normalized) .. " ]"
+local function _probe_path(path, directory)
+  local normalized = path_lib.normalize_path(path):gsub("/", "\\")
+  if directory then normalized = normalized:gsub("\\+$", "") .. "\\" end
+  local command = "if exist " .. shell_lib.shell_quote(normalized) .. " (exit /b 0) else (exit /b 1)"
   local ok, kind, code = os.execute(command)
   local success = shell_lib.exit_status(ok, kind, code)
   return success
 end
 
 function fs.path_exists(path)
-  return _probe_path(path, "-e")
+  return _probe_path(path, false)
 end
 
 function fs.is_dir(path)
-  return _probe_path(path, "-d")
+  return _probe_path(path, true)
 end
 
 function fs.remove_path(path)
@@ -117,7 +120,8 @@ function fs.remove_path(path)
   end
 
   local normalized = path_lib.normalize_path(path)
-  local command = "rm -rf " .. shell_lib.shell_quote(normalized)
+  local quoted = shell_lib.shell_quote(normalized:gsub("/", "\\"))
+  local command = fs.is_dir(path) and ("rmdir /s /q " .. quoted) or ("del /f /q " .. quoted)
   local ok, kind, code = os.execute(command)
   local success = shell_lib.exit_status(ok, kind, code)
   if not success then
@@ -151,10 +155,10 @@ function fs.copy_tree(source_path, target_path)
     return nil, err
   end
 
-  local command = "cp -R "
-    .. shell_lib.shell_quote(normalized_source)
+  local command = "xcopy "
+    .. shell_lib.shell_quote(normalized_source:gsub("/", "\\"))
     .. " "
-    .. shell_lib.shell_quote(normalized_target)
+    .. shell_lib.shell_quote(normalized_target:gsub("/", "\\")) .. " /e /i /h /y >nul"
   local exec_ok, kind, code = os.execute(command)
   local success, exit_code = shell_lib.exit_status(exec_ok, kind, code)
   if not success then

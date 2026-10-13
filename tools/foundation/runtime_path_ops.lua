@@ -25,17 +25,14 @@ function runtime_path_ops.dirname(path)
   return normalized:match("^(.*)/[^/]+$") or "."
 end
 
-local function _posix_shell_quote(value)
-  return "'" .. tostring(value or ""):gsub("'", "'\\''") .. "'"
+local function _native_path_quote(value)
+  local text = tostring(value or ""):gsub("/", "\\")
+  assert(not text:find('["\r\n%%]'), "Unsupported command path")
+  return '"' .. text .. '"'
 end
 
 function runtime_path_ops.current_dir()
-  local env_cwd = os.getenv("PWD")
-  if env_cwd ~= nil and env_cwd ~= "" then
-    return runtime_path_ops.normalize(env_cwd)
-  end
-
-  local process = io.popen("pwd")
+  local process = io.popen("cmd.exe /d /v:off /c cd")
   if process == nil then
     return "."
   end
@@ -54,7 +51,8 @@ function runtime_path_ops.path_exists(path)
   end
 
   local normalized = runtime_path_ops.normalize(path)
-  local command = "[ -e " .. _posix_shell_quote(normalized) .. " ]"
+  local command = "cmd.exe /d /v:off /c if exist " .. _native_path_quote(normalized)
+    .. " (exit /b 0) else (exit /b 1)"
 
   local ok = os.execute(command)
   if type(ok) == "number" then
