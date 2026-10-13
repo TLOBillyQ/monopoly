@@ -1,4 +1,4 @@
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 -- Detention "remaining turns" use the 含当前回合 (inclusive) convention (CONTEXT「扣留剩余回合」):
 -- the player-visible 扣留剩余回合 counts the current frozen turn, so it is never 0
 -- while detained. The internal stay_turns counter still decrements at turn start
@@ -32,21 +32,21 @@ local function _detained_remaining_for(stay_turns)
   return _latest_detained_remaining(game)
 end
 
-TestDetentionRemaining = {}
+describe("TestDetentionRemaining", function()
 
-function TestDetentionRemaining:setUp()
+before_each(function()
   _config_reset.reset_all()
-end
+end)
 
-function TestDetentionRemaining:test_first_frozen_turn_of_a_2_turn_stay_shows_inclusive_remaining_2()
+it("test_first_frozen_turn_of_a_2_turn_stay_shows_inclusive_remaining_2", function()
   _assert_eq(_detained_remaining_for(2), 2,
     "tip on the first frozen turn must show 2 (含当前回合), not the decremented 1")
-end
+end)
 
-function TestDetentionRemaining:test_last_frozen_turn_of_a_2_turn_stay_shows_inclusive_remaining_1_never_0()
+it("test_last_frozen_turn_of_a_2_turn_stay_shows_inclusive_remaining_1_never_0", function()
   _assert_eq(_detained_remaining_for(1), 1,
     "tip on the last frozen turn must show 1 (含当前回合), not the decremented 0")
-end
+end)
 
 
-return TestDetentionRemaining
+end)

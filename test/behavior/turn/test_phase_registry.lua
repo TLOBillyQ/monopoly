@@ -1,4 +1,4 @@
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local support = require("test.support.shared_support")
 local event_feed = require("src.rules.ports.event_feed")
 local phase_registry = require("src.turn.phases.registry")
@@ -36,9 +36,39 @@ local function _make_turn_mgr(game)
   }
 end
 
-TestPhaseRegistry = {}
+describe("TestPhaseRegistry", function()
 
-function TestPhaseRegistry:test_end_turn_publishes_tile_name_and_arms_inter_turn_wait()
+it("test_end_turn_falls_back_to_unknown_tile_when_not_positioned", function()
+  -- kills _tile_name_or_unknown 的 `tile and tile.name` and->or 与 "未知地块"
+  -- 换 nil:玩家无落位时必须显示未知地块占位而不是报错。
+  local published = {}
+  local player = { name = "P2", position = 99 }
+  local game = _make_game(player, {
+    get_tile = function()
+      return nil
+    end,
+  })
+
+  support.with_patches({
+    {
+      target = event_feed,
+      key = "publish",
+      value = function(_, evt)
+        published[#published + 1] = evt
+      end,
+    },
+  }, function()
+    local phases = phase_registry.build_default_phases()
+    local ok = pcall(phases.end_turn, _make_turn_mgr(game), { player = player })
+    check.is_truthy(ok, "end_turn should not raise for an unpositioned player")
+  end)
+
+  check.is_truthy(#published == 1, "end_turn should still publish the turn_end event")
+  check.is_truthy(published[1].text:find("未知地块", 1, true) ~= nil,
+    "unpositioned player should fall back to the unknown tile label: " .. tostring(published[1].text))
+end)
+
+it("test_end_turn_publishes_tile_name_and_arms_inter_turn_wait", function()
   -- kills _phase_end 的 _positioned/_landing_tile 调用换 nil、inter_turn_wait_seconds
   -- 的 or->and(恒 1.0)、inter_turn_wait_elapsed 的 0->1:落位玩家必须带 tile 名,
   -- 等待时长必须用配置值(0.5),elapsed 必须从 0 起算。
@@ -76,39 +106,9 @@ function TestPhaseRegistry:test_end_turn_publishes_tile_name_and_arms_inter_turn
   _assert_eq(game.turn.inter_turn_wait_seconds, 0.5, "inter-turn wait should use the configured seconds")
   _assert_eq(game.turn.inter_turn_wait_elapsed, 0, "inter-turn wait elapsed should start at zero")
   _assert_eq(game.turn.inter_turn_wait_active, true, "inter-turn wait should be armed")
-end
+end)
 
-function TestPhaseRegistry:test_end_turn_falls_back_to_unknown_tile_when_not_positioned()
-  -- kills _tile_name_or_unknown 的 `tile and tile.name` and->or 与 "未知地块"
-  -- 换 nil:玩家无落位时必须显示未知地块占位而不是报错。
-  local published = {}
-  local player = { name = "P2", position = 99 }
-  local game = _make_game(player, {
-    get_tile = function()
-      return nil
-    end,
-  })
-
-  support.with_patches({
-    {
-      target = event_feed,
-      key = "publish",
-      value = function(_, evt)
-        published[#published + 1] = evt
-      end,
-    },
-  }, function()
-    local phases = phase_registry.build_default_phases()
-    local ok = pcall(phases.end_turn, _make_turn_mgr(game), { player = player })
-    check.is_truthy(ok, "end_turn should not raise for an unpositioned player")
-  end)
-
-  check.is_truthy(#published == 1, "end_turn should still publish the turn_end event")
-  check.is_truthy(published[1].text:find("未知地块", 1, true) ~= nil,
-    "unpositioned player should fall back to the unknown tile label: " .. tostring(published[1].text))
-end
-
-function TestPhaseRegistry:test_end_turn_replays_pending_landing_visual_release_before_clearing()
+it("test_end_turn_replays_pending_landing_visual_release_before_clearing", function()
   -- #440 回归: 真实 _phase_end 在「置 release_pending」与「tick release」之间
   -- 执行时,hold 期间 defer 的回调不得被静默丢弃。
   local player = { name = "P1", position = 2 }
@@ -129,7 +129,7 @@ function TestPhaseRegistry:test_end_turn_replays_pending_landing_visual_release_
   _assert_eq(#replayed, 1, "end_turn should replay deferred callbacks from the pending landing visual release")
   _assert_eq(landing_visual_hold.is_active_game(game), false, "end_turn should still clear the landing visual hold")
   _assert_eq(landing_visual_hold.is_release_pending_game(game), false, "end_turn should still clear the pending flag")
-end
+end)
 
 
-return TestPhaseRegistry
+end)

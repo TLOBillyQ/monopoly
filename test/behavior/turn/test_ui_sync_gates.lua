@@ -1,11 +1,11 @@
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 
 -- turn 层不再解析 state.ui.* 门控键名：base 端口返回全关的惰性 gate，
 -- fill 只从端口 resolve_ui_gate 的 gate 值对象派生逐项查询。
-TestUiSyncGates = {}
+describe("TestUiSyncGates", function()
 
-function TestUiSyncGates:test_base_resolve_ui_gate_is_inert()
+it("test_base_resolve_ui_gate_is_inert", function()
   -- base resolve_ui_gate 不读 state.ui：即使 state.ui 全开也返回惰性 gate
   local ports = loop_ui_sync_defaults.build_base_ui_sync_ports(function() end, function() end)
   local state = {
@@ -28,9 +28,23 @@ function TestUiSyncGates:test_base_resolve_ui_gate_is_inert()
   check.is_truthy(result.popup_seq == nil, "inert gate should keep popup_seq nil")
   check.is_truthy(result.popup_owner_index == nil, "inert gate should keep popup_owner_index nil")
   check.is_truthy(result.popup_auto_close_seconds == nil, "inert gate should keep popup_auto_close_seconds nil")
-end
+end)
 
-function TestUiSyncGates:test_fill_derives_queries_from_resolve_ui_gate()
+it("test_fill_accepts_gate_query_override_with_resolve_ui_gate", function()
+  -- 门控查询键与 resolve_ui_gate 一起提供时 fill 正常通过
+  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() end, function() end)
+  local ports = {
+    resolve_ui_gate = function() return { input_blocked = true } end,
+    is_input_blocked = function() return true end,
+    set_input_blocked = function() return true end,
+  }
+  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
+  check.is_truthy(ports.is_input_blocked({}) == true, "explicit is_input_blocked override should be kept")
+  check.is_truthy(ports.set_input_blocked({}, true) == true, "explicit set_input_blocked override should be kept")
+  check.is_truthy(ports.is_popup_active({}) == false, "derived query should read from provided resolve_ui_gate")
+end)
+
+it("test_fill_derives_queries_from_resolve_ui_gate", function()
   -- fill 派生的 is_* / get_popup_owner_index 全部经由端口 resolve_ui_gate
   local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() end, function() end)
   local gate = {
@@ -50,9 +64,9 @@ function TestUiSyncGates:test_fill_derives_queries_from_resolve_ui_gate()
   check.is_truthy(ports.is_choice_active({}) == false, "is_choice_active should come from resolve_ui_gate")
   check.is_truthy(ports.is_popup_active({}) == true, "is_popup_active should come from resolve_ui_gate")
   check.is_truthy(ports.get_popup_owner_index({}) == 2, "get_popup_owner_index should come from resolve_ui_gate")
-end
+end)
 
-function TestUiSyncGates:test_fill_rejects_gate_query_override_without_resolve_ui_gate()
+it("test_fill_rejects_gate_query_override_without_resolve_ui_gate", function()
   -- 防静默降级：override 提供门控查询/落写键却缺 resolve_ui_gate 时 fill 报错
   local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() end, function() end)
   local gate_dependent_keys = {
@@ -71,21 +85,7 @@ function TestUiSyncGates:test_fill_rejects_gate_query_override_without_resolve_u
     check.is_truthy(tostring(err):find("lacks resolve_ui_gate", 1, true) ~= nil,
       key .. " error should explain missing resolve_ui_gate")
   end
-end
-
-function TestUiSyncGates:test_fill_accepts_gate_query_override_with_resolve_ui_gate()
-  -- 门控查询键与 resolve_ui_gate 一起提供时 fill 正常通过
-  local base = loop_ui_sync_defaults.build_base_ui_sync_ports(function() end, function() end)
-  local ports = {
-    resolve_ui_gate = function() return { input_blocked = true } end,
-    is_input_blocked = function() return true end,
-    set_input_blocked = function() return true end,
-  }
-  loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-  check.is_truthy(ports.is_input_blocked({}) == true, "explicit is_input_blocked override should be kept")
-  check.is_truthy(ports.set_input_blocked({}, true) == true, "explicit set_input_blocked override should be kept")
-  check.is_truthy(ports.is_popup_active({}) == false, "derived query should read from provided resolve_ui_gate")
-end
+end)
 
 
-return TestUiSyncGates
+end)

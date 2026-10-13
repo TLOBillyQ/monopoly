@@ -1,6 +1,6 @@
 -- 原生 LuaUnit 改写：describe 拍平为 Test* 类，before_each → setUp（25 例），
 -- assert.has_error → luax.has_error，语句位裸 assert(cond, msg) → lu.assertEvalToTrue。
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local _config_reset = require("test.support.config_reset")
 
@@ -8,41 +8,29 @@ local function _assert_eq(a, b, msg)
   check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
-TestLoopPorts = {}
+describe("TestLoopPorts", function()
 
-function TestLoopPorts:setUp()
+before_each(function()
   _config_reset.reset_all()
-end
+end)
 
-function TestLoopPorts:test_base_modal_ports_are_no_op_and_return_nil_when_invoked()
-  local ports = gameplay_loop_ports.resolve(nil)
-  _assert_eq(ports.modal.close_choice_modal(), nil, "close_choice_modal noop returns nil")
-  _assert_eq(ports.modal.open_choice_modal(), nil, "open_choice_modal noop returns nil")
-  _assert_eq(ports.modal.close_popup(), nil, "close_popup noop returns nil")
-end
+it("test__merge_required_ports_raises_missing_base_port_key_for_an_absent_base_port", function()
+  -- kills the guard's message -> nil and tostring(key) -> nil mutants. The
+  -- public resolve path never misses a base port; drive the guard directly.
+  check.has_error(function()
+    gameplay_loop_ports._M_test._merge_required_ports({}, {}, nil, { "ghost_port" })
+  end, "missing base port: ghost_port")
+end)
 
-function TestLoopPorts:test_base_anim_ports_are_no_op_when_invoked()
+it("test_base_anim_ports_are_no_op_when_invoked", function()
   local ports = gameplay_loop_ports.resolve(nil)
   _assert_eq(ports.anim.play_move_anim(), nil, "play_move_anim noop returns nil")
   _assert_eq(ports.anim.play_action_anim(), nil, "play_action_anim noop returns nil")
   _assert_eq(ports.anim.reset_status_3d(), nil, "reset_status_3d noop returns nil")
   _assert_eq(ports.anim.sync_status_3d(), nil, "sync_status_3d noop returns nil")
-end
+end)
 
-function TestLoopPorts:test_base_state_ports_are_no_op_when_invoked()
-  local ports = gameplay_loop_ports.resolve(nil)
-  _assert_eq(ports.state.apply_role_control_lock(), nil, "apply_role_control_lock noop returns nil")
-  _assert_eq(ports.state.install_event_handlers(), nil, "install_event_handlers noop returns nil")
-  _assert_eq(ports.state.on_bankruptcy_tiles_cleared(), nil, "on_bankruptcy_tiles_cleared noop returns nil")
-end
-
-function TestLoopPorts:test_base_debug_ports_are_no_op_except_resolve_event_log_enabled_returns_false()
-  local ports = gameplay_loop_ports.resolve(nil)
-  _assert_eq(ports.debug.sync_event_log(), nil, "sync_event_log noop returns nil")
-  _assert_eq(ports.debug.resolve_event_log_enabled(), false, "resolve_event_log_enabled returns false")
-end
-
-function TestLoopPorts:test_base_clock_ports_return_zero_for_now_and_zero_for_diff_with_nil_args()
+it("test_base_clock_ports_return_zero_for_now_and_zero_for_diff_with_nil_args", function()
   local ports = gameplay_loop_ports.resolve(nil)
   _assert_eq(ports.clock.wall_now_seconds(), 0, "wall_now_seconds returns 0")
   _assert_eq(ports.clock.cpu_now_seconds(), 0, "cpu_now_seconds returns 0")
@@ -50,9 +38,45 @@ function TestLoopPorts:test_base_clock_ports_return_zero_for_now_and_zero_for_di
   _assert_eq(ports.clock.cpu_diff_seconds(2.0, nil), 0, "cpu_diff with nil second arg returns 0")
   _assert_eq(ports.clock.wall_diff_seconds(5.0, 3.0), 2.0, "wall_diff with both numeric args returns difference")
   _assert_eq(ports.clock.cpu_diff_seconds(10.0, 1.5), 8.5, "cpu_diff with both numeric args returns difference")
-end
+end)
 
-function TestLoopPorts:test_base_ui_sync_ports_include_all_declared_keys_as_functions()
+it("test_base_debug_ports_are_no_op_except_resolve_event_log_enabled_returns_false", function()
+  local ports = gameplay_loop_ports.resolve(nil)
+  _assert_eq(ports.debug.sync_event_log(), nil, "sync_event_log noop returns nil")
+  _assert_eq(ports.debug.resolve_event_log_enabled(), false, "resolve_event_log_enabled returns false")
+end)
+
+it("test_base_debug_resolve_event_log_enabled_returns_false", function()
+  -- kills the base builder's `return false` -> true.
+  local ports = gameplay_loop_ports.resolve(nil)
+  _assert_eq(ports.debug.resolve_event_log_enabled(), false,
+    "the base debug port never enables the event log")
+end)
+
+it("test_base_modal_ports_are_no_op_and_return_nil_when_invoked", function()
+  local ports = gameplay_loop_ports.resolve(nil)
+  _assert_eq(ports.modal.close_choice_modal(), nil, "close_choice_modal noop returns nil")
+  _assert_eq(ports.modal.open_choice_modal(), nil, "open_choice_modal noop returns nil")
+  _assert_eq(ports.modal.close_popup(), nil, "close_popup noop returns nil")
+end)
+
+it("test_base_output_port_invalidate_ui_model_actually_toggles_dirty_flag", function()
+  local ports = gameplay_loop_ports.resolve(nil)
+  local state = {}
+  _assert_eq(ports.output.is_ui_dirty(state), false, "fresh state not dirty")
+  _assert_eq(ports.output.invalidate_ui_model(state), true, "first invalidate returns true")
+  _assert_eq(ports.output.is_ui_dirty(state), true, "state dirty after invalidate")
+  _assert_eq(ports.output.invalidate_ui_model(state), false, "second invalidate returns false (already dirty)")
+end)
+
+it("test_base_state_ports_are_no_op_when_invoked", function()
+  local ports = gameplay_loop_ports.resolve(nil)
+  _assert_eq(ports.state.apply_role_control_lock(), nil, "apply_role_control_lock noop returns nil")
+  _assert_eq(ports.state.install_event_handlers(), nil, "install_event_handlers noop returns nil")
+  _assert_eq(ports.state.on_bankruptcy_tiles_cleared(), nil, "on_bankruptcy_tiles_cleared noop returns nil")
+end)
+
+it("test_base_ui_sync_ports_include_all_declared_keys_as_functions", function()
   local ports = gameplay_loop_ports.resolve(nil)
   local expected = {
     "apply_input_lock", "step_choice_timeout", "step_modal_timeout",
@@ -66,103 +90,32 @@ function TestLoopPorts:test_base_ui_sync_ports_include_all_declared_keys_as_func
     check.is_truthy(type(ports.ui_sync[key]) == "function",
       "ui_sync." .. key .. " should be a function")
   end
-end
+end)
 
-function TestLoopPorts:test_base_output_port_invalidate_ui_model_actually_toggles_dirty_flag()
-  local ports = gameplay_loop_ports.resolve(nil)
-  local state = {}
-  _assert_eq(ports.output.is_ui_dirty(state), false, "fresh state not dirty")
-  _assert_eq(ports.output.invalidate_ui_model(state), true, "first invalidate returns true")
-  _assert_eq(ports.output.is_ui_dirty(state), true, "state dirty after invalidate")
-  _assert_eq(ports.output.invalidate_ui_model(state), false, "second invalidate returns false (already dirty)")
-end
-
-function TestLoopPorts:test_resolve_empty_table_returns_base_ports()
-  local ports = gameplay_loop_ports.resolve({})
-  check.is_truthy(type(ports.modal) == "table", "resolve({}) should include modal group")
-  check.is_truthy(type(ports.modal.close_choice_modal) == "function",
-    "modal group should have close_choice_modal fn")
-end
-
-function TestLoopPorts:test_resolve_legacy_flat_override_errors()
-  local ok, err = pcall(function()
-    gameplay_loop_ports.resolve({ close_choice_modal = function() end })
-  end)
-  _assert_eq(ok, false, "legacy flat override should raise an error")
-  check.is_truthy(tostring(err):find("legacy flat", 1, true) ~= nil,
-    "error message should mention 'legacy flat'")
-end
-
-function TestLoopPorts:test_resolve_non_table_override_errors()
-  local ok, _ = pcall(function()
-    gameplay_loop_ports.resolve("not_a_table")
-  end)
-  _assert_eq(ok, false, "non-table override should raise an error")
-end
-
-function TestLoopPorts:test_resolve_table_without_group_keys_uses_base_ports()
-  local ports = gameplay_loop_ports.resolve({ some_other_key = "value" })
-  check.is_truthy(type(ports.modal) == "table", "no-group-key table should use base modal ports")
-  check.is_truthy(type(ports.clock.wall_now_seconds) == "function",
-    "no-group-key table should use base clock ports")
-end
-
-function TestLoopPorts:test_override_on_output_group_custom_invalidate_is_used_others_fallback()
-  local custom_called = 0
-  local custom_invalidate = function() custom_called = custom_called + 1; return "custom" end
-  local ports = gameplay_loop_ports.resolve({
-    output = { invalidate_ui_model = custom_invalidate },
-  })
-  local result = ports.output.invalidate_ui_model({})
-  _assert_eq(custom_called, 1, "custom invalidate should be called")
-  _assert_eq(result, "custom", "custom return propagates")
-  check.is_truthy(type(ports.output.sync_ui_model) == "function",
-    "sync_ui_model should remain base function (not overridden)")
-end
-
-function TestLoopPorts:test_override_on_debug_group_preserves_resolve_event_log_enabled_override()
-  local ports = gameplay_loop_ports.resolve({
-    debug = { resolve_event_log_enabled = function() return true end },
-  })
-  _assert_eq(ports.debug.resolve_event_log_enabled(), true, "overridden debug return value applies")
-end
-
-function TestLoopPorts:test_resolve_override_extra_keys_included()
+it("test_build_noop_group_includes_extra_override_keys", function()
   local extra_fn = function() return "extra" end
-  local ports = gameplay_loop_ports.resolve({
-    modal = {
-      open_choice_modal = function() end,
-      extra_non_required_key = extra_fn,
-    },
-  })
-  _assert_eq(ports.modal.extra_non_required_key, extra_fn,
-    "extra key in override group should be included in resolved ports")
-end
+  local group = gameplay_loop_ports._build_noop_group({ "a" }, { b = extra_fn })
+  check.is_truthy(type(group.a) == "function", "declared key should still be present")
+  _assert_eq(group.b, extra_fn, "extra key from overrides should be included")
+end)
 
-function TestLoopPorts:test_build_noop_group_returns_callable_noops()
+it("test_build_noop_group_returns_callable_noops", function()
   local group = gameplay_loop_ports._build_noop_group({ "x", "y" })
   check.is_truthy(type(group.x) == "function", "x should be a function")
   check.is_truthy(type(group.y) == "function", "y should be a function")
   _assert_eq(group.x(), nil, "noop x should return nil")
   _assert_eq(group.y(), nil, "noop y should return nil")
-end
+end)
 
-function TestLoopPorts:test_build_noop_group_with_overrides_prefers_override()
+it("test_build_noop_group_with_overrides_prefers_override", function()
   local custom = function() return 77 end
   local group = gameplay_loop_ports._build_noop_group({ "a", "b" }, { a = custom })
   _assert_eq(group.a, custom, "overridden key should be the custom fn")
   check.is_truthy(type(group.b) == "function", "non-overridden key should still be a function")
   _assert_eq(group.b(), nil, "non-overridden key should return nil")
-end
+end)
 
-function TestLoopPorts:test_build_noop_group_includes_extra_override_keys()
-  local extra_fn = function() return "extra" end
-  local group = gameplay_loop_ports._build_noop_group({ "a" }, { b = extra_fn })
-  check.is_truthy(type(group.a) == "function", "declared key should still be present")
-  _assert_eq(group.b, extra_fn, "extra key from overrides should be included")
-end
-
-function TestLoopPorts:test_describe_contract_group_names_includes_all_groups()
+it("test_describe_contract_group_names_includes_all_groups", function()
   local contract = gameplay_loop_ports.describe_contract()
   local group_set = {}
   for _, name in ipairs(contract.group_names) do
@@ -172,18 +125,9 @@ function TestLoopPorts:test_describe_contract_group_names_includes_all_groups()
     check.is_truthy(group_set[expected] == true,
       "describe_contract group_names should include " .. expected)
   end
-end
+end)
 
-function TestLoopPorts:test_describe_contract_returns_independent_copies()
-  local contract1 = gameplay_loop_ports.describe_contract()
-  local contract2 = gameplay_loop_ports.describe_contract()
-  check.is_truthy(contract1.group_names ~= contract2.group_names,
-    "each describe_contract call should return fresh group_names")
-  check.is_truthy(contract1.port_groups.modal ~= contract2.port_groups.modal,
-    "each describe_contract call should return fresh port_groups.modal")
-end
-
-function TestLoopPorts:test_describe_contract_port_groups_contain_expected_keys_per_group()
+it("test_describe_contract_port_groups_contain_expected_keys_per_group", function()
   local contract = gameplay_loop_ports.describe_contract()
   local function _keys_set(group_name)
     local set = {}
@@ -214,9 +158,18 @@ function TestLoopPorts:test_describe_contract_port_groups_contain_expected_keys_
   }) do
     check.is_truthy(state_keys[expected] == true, "state should include " .. expected)
   end
-end
+end)
 
-function TestLoopPorts:test_describe_contract_ui_sync_keys_are_complete_and_ordered()
+it("test_describe_contract_returns_independent_copies", function()
+  local contract1 = gameplay_loop_ports.describe_contract()
+  local contract2 = gameplay_loop_ports.describe_contract()
+  check.is_truthy(contract1.group_names ~= contract2.group_names,
+    "each describe_contract call should return fresh group_names")
+  check.is_truthy(contract1.port_groups.modal ~= contract2.port_groups.modal,
+    "each describe_contract call should return fresh port_groups.modal")
+end)
+
+it("test_describe_contract_ui_sync_keys_are_complete_and_ordered", function()
   -- kills the ui_sync port_groups key string -> nil mutants: a nil entry
   -- truncates the ipairs copy, so both length and per-position values shift.
   local contract = gameplay_loop_ports.describe_contract()
@@ -243,37 +196,84 @@ function TestLoopPorts:test_describe_contract_ui_sync_keys_are_complete_and_orde
   for i, key in ipairs(expected) do
     _assert_eq(actual[i], key, "ui_sync port key at position " .. i)
   end
-end
+end)
 
-function TestLoopPorts:test_base_debug_resolve_event_log_enabled_returns_false()
-  -- kills the base builder's `return false` -> true.
-  local ports = gameplay_loop_ports.resolve(nil)
-  _assert_eq(ports.debug.resolve_event_log_enabled(), false,
-    "the base debug port never enables the event log")
-end
+it("test_override_on_debug_group_preserves_resolve_event_log_enabled_override", function()
+  local ports = gameplay_loop_ports.resolve({
+    debug = { resolve_event_log_enabled = function() return true end },
+  })
+  _assert_eq(ports.debug.resolve_event_log_enabled(), true, "overridden debug return value applies")
+end)
 
-function TestLoopPorts:test__merge_required_ports_raises_missing_base_port_key_for_an_absent_base_port()
-  -- kills the guard's message -> nil and tostring(key) -> nil mutants. The
-  -- public resolve path never misses a base port; drive the guard directly.
-  check.has_error(function()
-    gameplay_loop_ports._M_test._merge_required_ports({}, {}, nil, { "ghost_port" })
-  end, "missing base port: ghost_port")
-end
+it("test_override_on_output_group_custom_invalidate_is_used_others_fallback", function()
+  local custom_called = 0
+  local custom_invalidate = function() custom_called = custom_called + 1; return "custom" end
+  local ports = gameplay_loop_ports.resolve({
+    output = { invalidate_ui_model = custom_invalidate },
+  })
+  local result = ports.output.invalidate_ui_model({})
+  _assert_eq(custom_called, 1, "custom invalidate should be called")
+  _assert_eq(result, "custom", "custom return propagates")
+  check.is_truthy(type(ports.output.sync_ui_model) == "function",
+    "sync_ui_model should remain base function (not overridden)")
+end)
 
-function TestLoopPorts:test_resolve_rejects_a_non_table_override_with_its_guard_message()
-  -- kills resolve's "invalid gameplay_loop_ports override: expected table" -> nil.
-  check.has_error(function()
-    gameplay_loop_ports.resolve("not a table")
-  end, "invalid gameplay_loop_ports override: expected table")
-end
-
-function TestLoopPorts:test_repeated_resolve_nil_returns_independent_group_tables_no_shared_mutation()
+it("test_repeated_resolve_nil_returns_independent_group_tables_no_shared_mutation", function()
   local ports1 = gameplay_loop_ports.resolve(nil)
   local ports2 = gameplay_loop_ports.resolve(nil)
   check.is_truthy(ports1 ~= ports2, "each resolve should return new top-level table")
   check.is_truthy(ports1.modal ~= ports2.modal, "modal group should be independent")
   check.is_truthy(ports1.output ~= ports2.output, "output group should be independent")
-end
+end)
+
+it("test_resolve_empty_table_returns_base_ports", function()
+  local ports = gameplay_loop_ports.resolve({})
+  check.is_truthy(type(ports.modal) == "table", "resolve({}) should include modal group")
+  check.is_truthy(type(ports.modal.close_choice_modal) == "function",
+    "modal group should have close_choice_modal fn")
+end)
+
+it("test_resolve_legacy_flat_override_errors", function()
+  local ok, err = pcall(function()
+    gameplay_loop_ports.resolve({ close_choice_modal = function() end })
+  end)
+  _assert_eq(ok, false, "legacy flat override should raise an error")
+  check.is_truthy(tostring(err):find("legacy flat", 1, true) ~= nil,
+    "error message should mention 'legacy flat'")
+end)
+
+it("test_resolve_non_table_override_errors", function()
+  local ok, _ = pcall(function()
+    gameplay_loop_ports.resolve("not_a_table")
+  end)
+  _assert_eq(ok, false, "non-table override should raise an error")
+end)
+
+it("test_resolve_override_extra_keys_included", function()
+  local extra_fn = function() return "extra" end
+  local ports = gameplay_loop_ports.resolve({
+    modal = {
+      open_choice_modal = function() end,
+      extra_non_required_key = extra_fn,
+    },
+  })
+  _assert_eq(ports.modal.extra_non_required_key, extra_fn,
+    "extra key in override group should be included in resolved ports")
+end)
+
+it("test_resolve_rejects_a_non_table_override_with_its_guard_message", function()
+  -- kills resolve's "invalid gameplay_loop_ports override: expected table" -> nil.
+  check.has_error(function()
+    gameplay_loop_ports.resolve("not a table")
+  end, "invalid gameplay_loop_ports override: expected table")
+end)
+
+it("test_resolve_table_without_group_keys_uses_base_ports", function()
+  local ports = gameplay_loop_ports.resolve({ some_other_key = "value" })
+  check.is_truthy(type(ports.modal) == "table", "no-group-key table should use base modal ports")
+  check.is_truthy(type(ports.clock.wall_now_seconds) == "function",
+    "no-group-key table should use base clock ports")
+end)
 
 
-return TestLoopPorts
+end)

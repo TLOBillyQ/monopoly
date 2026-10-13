@@ -1,4 +1,4 @@
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local support = require("test.support.shared_support")
 local move_anim_debug = require("src.foundation.move_anim_debug")
 local move_anim_wait = require("src.turn.waits.await_move_anim")
@@ -24,9 +24,9 @@ local function _make_session(game, pending_action)
   return session
 end
 
-TestWaitsMoveAnimAndSeconds = {}
+describe("TestWaitsMoveAnimAndSeconds", function()
 
-function TestWaitsMoveAnimAndSeconds:test_move_anim_debug_logs_fields_and_waits_for_matching_action()
+it("test_move_anim_debug_logs_fields_and_waits_for_matching_action", function()
   local game = { turn = { phase = "move", move_anim = { seq = 7 } }, dirty = {} }
   local session = _make_session(game, { type = "move_anim_done", seq = 8 })
   local captured
@@ -44,9 +44,9 @@ function TestWaitsMoveAnimAndSeconds:test_move_anim_debug_logs_fields_and_waits_
     "pending_action_type=move_anim_done",
     "pending_action_seq=8",
   })
-end
+end)
 
-function TestWaitsMoveAnimAndSeconds:test_move_anim_matching_action_clears_anim_and_advances()
+it("test_move_anim_matching_action_clears_anim_and_advances", function()
   local game = { turn = { move_anim = { seq = 7 } }, dirty = {} }
   local session = _make_session(game, { type = "move_anim_done", seq = 7 })
 
@@ -59,9 +59,9 @@ function TestWaitsMoveAnimAndSeconds:test_move_anim_matching_action_clears_anim_
   check.same(result.next_state, "done")
   check.same(result.next_args, { resumed = true })
   check.same(game.dirty.turn, true)
-end
+end)
 
-function TestWaitsMoveAnimAndSeconds:test_seconds_nonpositive_or_invalid_clock_finishes_immediately()
+it("test_seconds_nonpositive_or_invalid_clock_finishes_immediately", function()
   local session = _make_session({ turn = {} })
 
   check.same(seconds_wait.seconds(session, 0), { done = true })
@@ -72,9 +72,9 @@ function TestWaitsMoveAnimAndSeconds:test_seconds_nonpositive_or_invalid_clock_f
   check.same(seconds_wait.seconds(session, 1, {
     now_fn = function() return "later" end,
   }), { done = true })
-end
+end)
 
-function TestWaitsMoveAnimAndSeconds:test_seconds_tracks_each_key_until_elapsed()
+it("test_seconds_tracks_each_key_until_elapsed", function()
   local now = 10
   local session = _make_session({ turn = {} })
   local opts = {
@@ -88,6 +88,6 @@ function TestWaitsMoveAnimAndSeconds:test_seconds_tracks_each_key_until_elapsed(
   now = 12
   check.same(seconds_wait.seconds(session, 2, opts), { done = true })
   check.is_nil(session._seconds_wait.inter_turn)
-end
+end)
 
-return TestWaitsMoveAnimAndSeconds
+end)

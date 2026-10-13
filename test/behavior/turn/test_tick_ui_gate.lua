@@ -1,4 +1,4 @@
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 -- #293 批3:src/turn/waits/ui_gate.lua 幸存者直测——fallback gate 默认值
 -- (L7/8/9/10)与 resolve_modal_timeout_seconds 的边界(L42 and→or / >→>=)
 -- 此前只被下游间接使用,本 spec 直测模块面。
@@ -11,13 +11,27 @@ local function _assert_eq(a, b, msg)
   check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
-TestTickUiGate = {}
+describe("TestTickUiGate", function()
 
-function TestTickUiGate:setUp()
+before_each(function()
   _config_reset.reset_all()
-end
+end)
 
-function TestTickUiGate:test_resolve_ui_gate_returns_inert_fallback_when_no_resolver()
+it("test_resolve_modal_timeout_seconds_falls_back_on_non_numeric_auto_close", function()
+  -- #293: L42 and→or 变异让非数值 auto_close 也被采纳——非数值必须回退配置默认。
+  local gate = { popup_auto_close_seconds = "abc" }
+  local result = tick_ui_gate.resolve_modal_timeout_seconds(nil, { resolve_ui_gate = function() return gate end })
+  _assert_eq(result, timing.popup_auto_close_seconds, "non-numeric auto_close must fall back to the configured default")
+end)
+
+it("test_resolve_modal_timeout_seconds_falls_back_on_zero_auto_close", function()
+  -- #293: L42 >→>= 变异让 0 也被采纳——0 秒自动关闭无意义,必须回退配置默认。
+  local gate = { popup_auto_close_seconds = 0 }
+  local result = tick_ui_gate.resolve_modal_timeout_seconds(nil, { resolve_ui_gate = function() return gate end })
+  _assert_eq(result, timing.popup_auto_close_seconds, "zero auto_close must fall back to the configured default")
+end)
+
+it("test_resolve_ui_gate_returns_inert_fallback_when_no_resolver", function()
   -- #293: L7/8/9/10 _fallback_gate 默认值翻 true 变异——无 resolver 时必须
   -- 返回全部关断的惰性 gate。
   local gate = tick_ui_gate.resolve_ui_gate(nil, nil)
@@ -25,20 +39,6 @@ function TestTickUiGate:test_resolve_ui_gate_returns_inert_fallback_when_no_reso
   _assert_eq(gate.choice_active, false, "fallback choice_active must be false")
   _assert_eq(gate.market_active, false, "fallback market_active must be false")
   _assert_eq(gate.popup_active, false, "fallback popup_active must be false")
-end
+end)
 
-function TestTickUiGate:test_resolve_modal_timeout_seconds_falls_back_on_non_numeric_auto_close()
-  -- #293: L42 and→or 变异让非数值 auto_close 也被采纳——非数值必须回退配置默认。
-  local gate = { popup_auto_close_seconds = "abc" }
-  local result = tick_ui_gate.resolve_modal_timeout_seconds(nil, { resolve_ui_gate = function() return gate end })
-  _assert_eq(result, timing.popup_auto_close_seconds, "non-numeric auto_close must fall back to the configured default")
-end
-
-function TestTickUiGate:test_resolve_modal_timeout_seconds_falls_back_on_zero_auto_close()
-  -- #293: L42 >→>= 变异让 0 也被采纳——0 秒自动关闭无意义,必须回退配置默认。
-  local gate = { popup_auto_close_seconds = 0 }
-  local result = tick_ui_gate.resolve_modal_timeout_seconds(nil, { resolve_ui_gate = function() return gate end })
-  _assert_eq(result, timing.popup_auto_close_seconds, "zero auto_close must fall back to the configured default")
-end
-
-return TestTickUiGate
+end)

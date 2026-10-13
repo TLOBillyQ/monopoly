@@ -1,14 +1,14 @@
 -- 原生 LuaUnit 改写：两个无钩子 describe 合并为一个 Test* 类（4 例），
 -- assert.equals / assert.is_true / assert.has_no.errors 按映射切到 lu.assertXxx / luax。
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local gameplay_loop = require("src.turn.loop.init")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
 local bankruptcy_port = require("src.rules.ports.bankruptcy")
 local turn_default_ports = require("src.turn.output.default_ports")
 
-TestLoopFallbackPorts = {}
+describe("TestLoopFallbackPorts", function()
 
-function TestLoopFallbackPorts:test_installs_complete_no_op_port_contracts()
+it("test_installs_complete_no_op_port_contracts", function()
   local game = {
     players = { { id = 1 } },
     turn = { current_player_index = 1 },
@@ -37,9 +37,9 @@ function TestLoopFallbackPorts:test_installs_complete_no_op_port_contracts()
   check.has_no.errors(function()
     bankruptcy_port.eliminate(game, game.players[1], { reason = "spec" })
   end)
-end
+end)
 
-function TestLoopFallbackPorts:test_installs_missing_ports_onto_an_existing_game_table_in_place()
+it("test_installs_missing_ports_onto_an_existing_game_table_in_place", function()
   local game = { players = {} }
 
   local installed = turn_default_ports.install(game)
@@ -48,9 +48,9 @@ function TestLoopFallbackPorts:test_installs_missing_ports_onto_an_existing_game
   check.same(type(game.auto_play_port.is_computer_controlled), "function")
   check.same(type(game.auto_play_port.auto_action_for_choice), "function")
   check.same(type(game.bankruptcy_port.eliminate), "function")
-end
+end)
 
-function TestLoopFallbackPorts:test_keeps_ports_the_caller_already_provided()
+it("test_keeps_ports_the_caller_already_provided", function()
   local auto_play_port = { is_computer_controlled = function() return true end }
   local bankruptcy_port_stub = { eliminate = function() return "kept" end }
   local game = { auto_play_port = auto_play_port, bankruptcy_port = bankruptcy_port_stub }
@@ -59,13 +59,13 @@ function TestLoopFallbackPorts:test_keeps_ports_the_caller_already_provided()
 
   check.same(game.auto_play_port, auto_play_port, "已注入的 auto_play_port 不应被顶掉")
   check.same(game.bankruptcy_port, bankruptcy_port_stub, "已注入的 bankruptcy_port 不应被顶掉")
-end
+end)
 
-function TestLoopFallbackPorts:test_passes_non_table_arguments_through_untouched()
+it("test_passes_non_table_arguments_through_untouched", function()
   check.same(turn_default_ports.install(nil), nil)
   check.same(turn_default_ports.install(false), false)
   check.same(turn_default_ports.install("not_a_game"), "not_a_game")
-end
+end)
 
 
-return TestLoopFallbackPorts
+end)

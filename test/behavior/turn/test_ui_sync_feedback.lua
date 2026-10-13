@@ -1,4 +1,4 @@
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local _new_game = support.new_game
@@ -601,159 +601,20 @@ local function _count_missing_screen(infos)
   return count
 end
 
-TestUiSyncFeedback = {}
+describe("TestUiSyncFeedback", function()
 
-function TestUiSyncFeedback:test_update_countdown_detained_wait() _update_countdown_tests[1]() end
-
-function TestUiSyncFeedback:test_update_countdown_action_button() _update_countdown_tests[2]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_normal() _is_action_button_wait_active_tests[1]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_finished() _is_action_button_wait_active_tests[2]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_blocked() _is_action_button_wait_active_tests[3]() end
-
-function TestUiSyncFeedback:test_update_countdown_pending_choice() _update_countdown_extended_tests[1]() end
-
-function TestUiSyncFeedback:test_update_countdown_popup() _update_countdown_extended_tests[2]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_pending_choice() _is_action_button_wait_active_extended_tests[1]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_choice_active() _is_action_button_wait_active_extended_tests[2]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_market_active() _is_action_button_wait_active_extended_tests[3]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_popup_active() _is_action_button_wait_active_extended_tests[4]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_fills_all() _fill_ui_sync_defaults_tests[1]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_preserves_custom() _fill_ui_sync_defaults_tests[2]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_implementations() _fill_ui_sync_defaults_tests[3]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_set_input_blocked() _fill_ui_sync_defaults_tests[4]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_resolve_ui_gate() _fill_ui_sync_defaults_tests[5]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_nil_state() _fill_ui_sync_defaults_tests[6]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_nil_ui() _fill_ui_sync_defaults_tests[7]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_gate_nil_state() _fill_ui_sync_defaults_tests[8]() end
-
-function TestUiSyncFeedback:test_fill_ui_sync_defaults_gate_nil_popup() _fill_ui_sync_defaults_tests[9]() end
-
-function TestUiSyncFeedback:test_update_countdown_nil_turn() _update_countdown_extended_tests[3]() end
-
-function TestUiSyncFeedback:test_update_countdown_choice_active() _update_countdown_extended_tests[4]() end
-
-function TestUiSyncFeedback:test_update_countdown_market_active() _update_countdown_extended_tests[5]() end
-
-function TestUiSyncFeedback:test_update_countdown_with_elapsed() _update_countdown_extended_tests[6]() end
-
-function TestUiSyncFeedback:test_update_countdown_negative_elapsed() _update_countdown_extended_tests[7]() end
-
-function TestUiSyncFeedback:test_update_countdown_detained_calc() _update_countdown_extended_tests[8]() end
-
-function TestUiSyncFeedback:test_update_countdown_action_button_ext() _update_countdown_extended_tests[9]() end
-
-function TestUiSyncFeedback:test_update_countdown_caching() _update_countdown_extended_tests[10]() end
-
-function TestUiSyncFeedback:test_update_countdown_nil_elapsed() _update_countdown_extended_tests[11]() end
-
-function TestUiSyncFeedback:test_update_countdown_zero_popup_timeout() _update_countdown_extended_tests[12]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_nil_game() _is_action_button_wait_active_extended_tests[5]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_nil_state() _is_action_button_wait_active_extended_tests[6]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_nil_ports() _is_action_button_wait_active_extended_tests[7]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_nil_get_ui() _is_action_button_wait_active_extended_tests[8]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_nil_ui_state() _is_action_button_wait_active_extended_tests[9]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_normal_ext() _is_action_button_wait_active_extended_tests[10]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_finished_ext() _is_action_button_wait_active_extended_tests[11]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_input_blocked() _is_action_button_wait_active_extended_tests[12]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_nil_turn() _is_action_button_wait_active_extended_tests[13]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_nil_get_ui_state() _is_action_button_wait_active_more_tests[1]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_falsy_ui() _is_action_button_wait_active_more_tests[2]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_pending_choice_more() _is_action_button_wait_active_more_tests[3]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_choice_ui_active() _is_action_button_wait_active_more_tests[4]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_market_ui_active() _is_action_button_wait_active_more_tests[5]() end
-
-function TestUiSyncFeedback:test_is_action_button_wait_active_popup_ui_active() _is_action_button_wait_active_more_tests[6]() end
-
-function TestUiSyncFeedback:test_update_countdown_choice_gate() _update_countdown_more_tests[1]() end
-
-function TestUiSyncFeedback:test_is_action_button_all_early_returns() _is_action_button_wait_active_final_tests[1]() end
-
-function TestUiSyncFeedback:test_is_action_button_nil_ui_state() _is_action_button_wait_active_final_tests[2]() end
-
-function TestUiSyncFeedback:test_update_countdown_detained_and_popup() _update_countdown_final_tests[1]() end
-
-function TestUiSyncFeedback:test_update_countdown_action_button_final() _update_countdown_final_tests[2]() end
-
-function TestUiSyncFeedback:test_empty_queue_noop()
-  local queue = {}
-  _coalesce_head(queue)
-  _crap_assert_eq(#queue, 0, "empty queue should remain empty")
-end
-
-function TestUiSyncFeedback:test_single_element_queue_noop()
+it("test_both_nil_amounts_merge_to_zero", function()
   local queue = {
-    { kind = "cash_receive", amount = 10 },
+    { kind = "cash_receive" },
+    { kind = "cash_receive" },
   }
   _coalesce_head(queue)
-  _crap_assert_eq(#queue, 1, "single element queue should not be modified")
-  _crap_assert_eq(queue[1].amount, 10, "single element amount should stay unchanged")
-  _crap_assert_eq(queue[1].coalesced_count, nil, "single element should not get coalesced_count")
-end
+  _crap_assert_eq(#queue, 1, "entries should merge")
+  _crap_assert_eq(queue[1].amount, 0, "both nil amounts should merge to zero")
+  _crap_assert_eq(queue[1].coalesced_count, 2, "coalesced_count should be 2")
+end)
 
-function TestUiSyncFeedback:test_head_not_cash_receive_noop()
-  local queue = {
-    { kind = "roadblock" },
-    { kind = "cash_receive", amount = 5 },
-  }
-  _coalesce_head(queue)
-  _crap_assert_eq(#queue, 2, "head not cash_receive should skip coalescing")
-  _crap_assert_eq(queue[1].kind, "roadblock", "head kind should remain unchanged")
-  _crap_assert_eq(queue[2].amount, 5, "second entry should remain unchanged")
-end
-
-function TestUiSyncFeedback:test_two_cash_receive_merge()
-  local queue = {
-    { kind = "cash_receive", amount = 10 },
-    { kind = "cash_receive", amount = 20 },
-  }
-  _coalesce_head(queue)
-  _crap_assert_eq(#queue, 1, "two cash_receive entries should merge")
-  _crap_assert_eq(queue[1].amount, 30, "merged amount should sum")
-  _crap_assert_eq(queue[1].coalesced_count, 2, "merged coalesced_count should be 2")
-end
-
-function TestUiSyncFeedback:test_three_cash_receive_merge()
-  local queue = {
-    { kind = "cash_receive", amount = 5 },
-    { kind = "cash_receive", amount = 3 },
-    { kind = "cash_receive", amount = 7 },
-  }
-  _coalesce_head(queue)
-  _crap_assert_eq(#queue, 1, "three cash_receive entries should merge")
-  _crap_assert_eq(queue[1].amount, 15, "three-way merged amount should sum")
-  _crap_assert_eq(queue[1].coalesced_count, 3, "three-way coalesced_count should be 3")
-end
-
-function TestUiSyncFeedback:test_cash_receive_followed_by_different_kind_stops_merge()
+it("test_cash_receive_followed_by_different_kind_stops_merge", function()
   local queue = {
     { kind = "cash_receive", amount = 10 },
     { kind = "roadblock" },
@@ -763,9 +624,92 @@ function TestUiSyncFeedback:test_cash_receive_followed_by_different_kind_stops_m
   _crap_assert_eq(#queue, 3, "non-cash second entry should prevent merge")
   _crap_assert_eq(queue[1].amount, 10, "head amount should remain unchanged")
   _crap_assert_eq(queue[1].coalesced_count, nil, "head should not get coalesced_count when no merge")
-end
+end)
 
-function TestUiSyncFeedback:test_nil_amount_treated_as_zero()
+it("test_empty_queue_noop", function()
+  local queue = {}
+  _coalesce_head(queue)
+  _crap_assert_eq(#queue, 0, "empty queue should remain empty")
+end)
+
+it("test_fill_ui_sync_defaults_fills_all", function() _fill_ui_sync_defaults_tests[1]() end)
+
+it("test_fill_ui_sync_defaults_gate_nil_popup", function() _fill_ui_sync_defaults_tests[9]() end)
+
+it("test_fill_ui_sync_defaults_gate_nil_state", function() _fill_ui_sync_defaults_tests[8]() end)
+
+it("test_fill_ui_sync_defaults_implementations", function() _fill_ui_sync_defaults_tests[3]() end)
+
+it("test_fill_ui_sync_defaults_nil_state", function() _fill_ui_sync_defaults_tests[6]() end)
+
+it("test_fill_ui_sync_defaults_nil_ui", function() _fill_ui_sync_defaults_tests[7]() end)
+
+it("test_fill_ui_sync_defaults_preserves_custom", function() _fill_ui_sync_defaults_tests[2]() end)
+
+it("test_fill_ui_sync_defaults_resolve_ui_gate", function() _fill_ui_sync_defaults_tests[5]() end)
+
+it("test_fill_ui_sync_defaults_set_input_blocked", function() _fill_ui_sync_defaults_tests[4]() end)
+
+it("test_head_not_cash_receive_noop", function()
+  local queue = {
+    { kind = "roadblock" },
+    { kind = "cash_receive", amount = 5 },
+  }
+  _coalesce_head(queue)
+  _crap_assert_eq(#queue, 2, "head not cash_receive should skip coalescing")
+  _crap_assert_eq(queue[1].kind, "roadblock", "head kind should remain unchanged")
+  _crap_assert_eq(queue[2].amount, 5, "second entry should remain unchanged")
+end)
+
+it("test_is_action_button_all_early_returns", function() _is_action_button_wait_active_final_tests[1]() end)
+
+it("test_is_action_button_nil_ui_state", function() _is_action_button_wait_active_final_tests[2]() end)
+
+it("test_is_action_button_wait_active_blocked", function() _is_action_button_wait_active_tests[3]() end)
+
+it("test_is_action_button_wait_active_choice_active", function() _is_action_button_wait_active_extended_tests[2]() end)
+
+it("test_is_action_button_wait_active_choice_ui_active", function() _is_action_button_wait_active_more_tests[4]() end)
+
+it("test_is_action_button_wait_active_falsy_ui", function() _is_action_button_wait_active_more_tests[2]() end)
+
+it("test_is_action_button_wait_active_finished", function() _is_action_button_wait_active_tests[2]() end)
+
+it("test_is_action_button_wait_active_finished_ext", function() _is_action_button_wait_active_extended_tests[11]() end)
+
+it("test_is_action_button_wait_active_input_blocked", function() _is_action_button_wait_active_extended_tests[12]() end)
+
+it("test_is_action_button_wait_active_market_active", function() _is_action_button_wait_active_extended_tests[3]() end)
+
+it("test_is_action_button_wait_active_market_ui_active", function() _is_action_button_wait_active_more_tests[5]() end)
+
+it("test_is_action_button_wait_active_nil_game", function() _is_action_button_wait_active_extended_tests[5]() end)
+
+it("test_is_action_button_wait_active_nil_get_ui", function() _is_action_button_wait_active_extended_tests[8]() end)
+
+it("test_is_action_button_wait_active_nil_get_ui_state", function() _is_action_button_wait_active_more_tests[1]() end)
+
+it("test_is_action_button_wait_active_nil_ports", function() _is_action_button_wait_active_extended_tests[7]() end)
+
+it("test_is_action_button_wait_active_nil_state", function() _is_action_button_wait_active_extended_tests[6]() end)
+
+it("test_is_action_button_wait_active_nil_turn", function() _is_action_button_wait_active_extended_tests[13]() end)
+
+it("test_is_action_button_wait_active_nil_ui_state", function() _is_action_button_wait_active_extended_tests[9]() end)
+
+it("test_is_action_button_wait_active_normal", function() _is_action_button_wait_active_tests[1]() end)
+
+it("test_is_action_button_wait_active_normal_ext", function() _is_action_button_wait_active_extended_tests[10]() end)
+
+it("test_is_action_button_wait_active_pending_choice", function() _is_action_button_wait_active_extended_tests[1]() end)
+
+it("test_is_action_button_wait_active_pending_choice_more", function() _is_action_button_wait_active_more_tests[3]() end)
+
+it("test_is_action_button_wait_active_popup_active", function() _is_action_button_wait_active_extended_tests[4]() end)
+
+it("test_is_action_button_wait_active_popup_ui_active", function() _is_action_button_wait_active_more_tests[6]() end)
+
+it("test_nil_amount_treated_as_zero", function()
   local queue = {
     { kind = "cash_receive" },
     { kind = "cash_receive", amount = 5 },
@@ -774,20 +718,19 @@ function TestUiSyncFeedback:test_nil_amount_treated_as_zero()
   _crap_assert_eq(#queue, 1, "entries should merge when both are cash_receive")
   _crap_assert_eq(queue[1].amount, 5, "nil amount should be treated as zero")
   _crap_assert_eq(queue[1].coalesced_count, 2, "coalesced_count should reflect merged entries")
-end
+end)
 
-function TestUiSyncFeedback:test_both_nil_amounts_merge_to_zero()
+it("test_single_element_queue_noop", function()
   local queue = {
-    { kind = "cash_receive" },
-    { kind = "cash_receive" },
+    { kind = "cash_receive", amount = 10 },
   }
   _coalesce_head(queue)
-  _crap_assert_eq(#queue, 1, "entries should merge")
-  _crap_assert_eq(queue[1].amount, 0, "both nil amounts should merge to zero")
-  _crap_assert_eq(queue[1].coalesced_count, 2, "coalesced_count should be 2")
-end
+  _crap_assert_eq(#queue, 1, "single element queue should not be modified")
+  _crap_assert_eq(queue[1].amount, 10, "single element amount should stay unchanged")
+  _crap_assert_eq(queue[1].coalesced_count, nil, "single element should not get coalesced_count")
+end)
 
-function TestUiSyncFeedback:test_stays_silent_for_the_screenless_item_window()
+it("test_stays_silent_for_the_screenless_item_window", function()
   local infos = _capture_infos({
     id = 17,
     kind = "item_phase_passive",
@@ -795,9 +738,9 @@ function TestUiSyncFeedback:test_stays_silent_for_the_screenless_item_window()
   })
   check.is_truthy(_count_missing_screen(infos) == 0,
     "item_phase_passive lives on the base screen: a missing choice screen is normal, not loggable")
-end
+end)
 
-function TestUiSyncFeedback:test_still_reports_a_screen_route_whose_screen_never_opened()
+it("test_still_reports_a_screen_route_whose_screen_never_opened", function()
   local infos = _capture_infos({
     id = 89,
     kind = "landing_optional_effect",
@@ -805,7 +748,64 @@ function TestUiSyncFeedback:test_still_reports_a_screen_route_whose_screen_never
   })
   check.is_truthy(_count_missing_screen(infos) == 1,
     "secondary_confirm owns a screen: countdown running without it is a real signal")
-end
+end)
+
+it("test_three_cash_receive_merge", function()
+  local queue = {
+    { kind = "cash_receive", amount = 5 },
+    { kind = "cash_receive", amount = 3 },
+    { kind = "cash_receive", amount = 7 },
+  }
+  _coalesce_head(queue)
+  _crap_assert_eq(#queue, 1, "three cash_receive entries should merge")
+  _crap_assert_eq(queue[1].amount, 15, "three-way merged amount should sum")
+  _crap_assert_eq(queue[1].coalesced_count, 3, "three-way coalesced_count should be 3")
+end)
+
+it("test_two_cash_receive_merge", function()
+  local queue = {
+    { kind = "cash_receive", amount = 10 },
+    { kind = "cash_receive", amount = 20 },
+  }
+  _coalesce_head(queue)
+  _crap_assert_eq(#queue, 1, "two cash_receive entries should merge")
+  _crap_assert_eq(queue[1].amount, 30, "merged amount should sum")
+  _crap_assert_eq(queue[1].coalesced_count, 2, "merged coalesced_count should be 2")
+end)
+
+it("test_update_countdown_action_button", function() _update_countdown_tests[2]() end)
+
+it("test_update_countdown_action_button_ext", function() _update_countdown_extended_tests[9]() end)
+
+it("test_update_countdown_action_button_final", function() _update_countdown_final_tests[2]() end)
+
+it("test_update_countdown_caching", function() _update_countdown_extended_tests[10]() end)
+
+it("test_update_countdown_choice_active", function() _update_countdown_extended_tests[4]() end)
+
+it("test_update_countdown_choice_gate", function() _update_countdown_more_tests[1]() end)
+
+it("test_update_countdown_detained_and_popup", function() _update_countdown_final_tests[1]() end)
+
+it("test_update_countdown_detained_calc", function() _update_countdown_extended_tests[8]() end)
+
+it("test_update_countdown_detained_wait", function() _update_countdown_tests[1]() end)
+
+it("test_update_countdown_market_active", function() _update_countdown_extended_tests[5]() end)
+
+it("test_update_countdown_negative_elapsed", function() _update_countdown_extended_tests[7]() end)
+
+it("test_update_countdown_nil_elapsed", function() _update_countdown_extended_tests[11]() end)
+
+it("test_update_countdown_nil_turn", function() _update_countdown_extended_tests[3]() end)
+
+it("test_update_countdown_pending_choice", function() _update_countdown_extended_tests[1]() end)
+
+it("test_update_countdown_popup", function() _update_countdown_extended_tests[2]() end)
+
+it("test_update_countdown_with_elapsed", function() _update_countdown_extended_tests[6]() end)
+
+it("test_update_countdown_zero_popup_timeout", function() _update_countdown_extended_tests[12]() end)
 
 
-return TestUiSyncFeedback
+end)

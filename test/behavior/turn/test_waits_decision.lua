@@ -3,7 +3,7 @@
 -- log_turn_start 的回合数钳制链(L36-37)加 tip 标志(L41)。
 -- 策略:桩 choice_auto_policy.decide 与 event_feed.publish 捕获可观测面。
 
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local turn_decision = require("src.turn.waits.decision")
 local timing = require("src.config.gameplay.timing")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
@@ -20,9 +20,9 @@ end
 local _decide_captured = nil
 local _publish_captured = nil
 
-TestWaitsDecision = {}
+describe("TestWaitsDecision", function()
 
-function TestWaitsDecision:setUp()
+before_each(function()
   _decide_captured = nil
   _publish_captured = nil
   choice_auto_policy.decide = function(game, actor, choice, ctx)
@@ -32,17 +32,17 @@ function TestWaitsDecision:setUp()
   event_feed.publish = function(game, event)
     _publish_captured = event
   end
-end
+end)
 
-function TestWaitsDecision:tearDown()
+after_each(function()
   timing.auto_decision_delay_seconds = _saved_delay
   choice_auto_policy.decide = _saved_decide
   event_feed.publish = _saved_publish
-end
+end)
 
 -- ============ decide_choice_action ============
 
-function TestWaitsDecision:test_decide_ctx_carries_mode_pending_action_and_elapsed()
+it("test_decide_ctx_carries_mode_pending_action_and_elapsed", function()
   -- L20 `mode = "wait_choice"` 换 nil、L19 `opts and opts.elapsed_seconds or 0`
   -- 的 and->or(opts 表整表进 elapsed)与 0->1(无 opts 时落 1):
   -- ctx 三字段必须按契约组装。
@@ -55,25 +55,38 @@ function TestWaitsDecision:test_decide_ctx_carries_mode_pending_action_and_elaps
   _assert_eq(_decide_captured.pending_action.type, "pick", "ctx must carry the pending action")
   _assert_eq(_decide_captured.elapsed_seconds, 1.5, "explicit elapsed must carry through")
   _assert_eq(_decide_captured.min_visible_seconds, 0, "nil timing delay must default to 0")
-end
+end)
 
-function TestWaitsDecision:test_decide_ctx_defaults_elapsed_to_zero_without_opts()
-  -- L19 `opts and opts.elapsed_seconds or 0` 的 0->1:无 opts 时 elapsed 必须 0。
-  turn_decision.decide_choice_action({}, { id = "c" }, nil, nil)
-  _assert_eq(_decide_captured.elapsed_seconds, 0, "no opts must yield elapsed 0")
-end
-
-function TestWaitsDecision:test_decide_ctx_carries_timing_delay_verbatim()
+it("test_decide_ctx_carries_timing_delay_verbatim", function()
   -- L18 `timing.auto_decision_delay_seconds or 0` 的 or->and:配置的延迟必须
   -- 原样进 ctx,变异体 `delay and 0` 恒 0。
   timing.auto_decision_delay_seconds = 0.5
   turn_decision.decide_choice_action({}, { id = "c" }, nil, { elapsed_seconds = 0.1 })
   _assert_eq(_decide_captured.min_visible_seconds, 0.5, "configured delay must carry through")
-end
+end)
+
+it("test_decide_ctx_defaults_elapsed_to_zero_without_opts", function()
+  -- L19 `opts and opts.elapsed_seconds or 0` 的 0->1:无 opts 时 elapsed 必须 0。
+  turn_decision.decide_choice_action({}, { id = "c" }, nil, nil)
+  _assert_eq(_decide_captured.elapsed_seconds, 0, "no opts must yield elapsed 0")
+end)
 
 -- ============ log_turn_start ============
 
-function TestWaitsDecision:test_log_turn_start_publishes_next_turn_count_and_tip_false()
+it("test_log_turn_start_defaults_missing_turn_count_to_first", function()
+  -- L36 `... or 0` 的 0->1 与 L37 `(turn_count or 0) + 1` 的 0->1:
+  -- 无 turn_count 时必须报「第1回合」。
+  local game = {
+    current_player = function()
+      return { name = "乙" }
+    end,
+  }
+  turn_decision.log_turn_start(game)
+  check.is_truthy(_publish_captured.text:find("第1回合", 1, true) ~= nil,
+    "missing turn count must announce turn 1: " .. tostring(_publish_captured.text))
+end)
+
+it("test_log_turn_start_publishes_next_turn_count_and_tip_false", function()
   -- L36 `game and game.turn and game.turn.turn_count or 0` 的 or->and
   -- (5 被 and 0 吃掉)与 L37 `(turn_count or 0) + 1` 的 or->and:
   -- 第 5 回合开始必须报「第6回合」;L41 `tip=false` -> true 必须为 false。
@@ -88,19 +101,6 @@ function TestWaitsDecision:test_log_turn_start_publishes_next_turn_count_and_tip
   check.is_truthy(_publish_captured.text:find("第6回合", 1, true) ~= nil,
     "text must announce the next turn count: " .. tostring(_publish_captured.text))
   _assert_eq(_publish_captured.tip, false, "turn start must not tip")
-end
+end)
 
-function TestWaitsDecision:test_log_turn_start_defaults_missing_turn_count_to_first()
-  -- L36 `... or 0` 的 0->1 与 L37 `(turn_count or 0) + 1` 的 0->1:
-  -- 无 turn_count 时必须报「第1回合」。
-  local game = {
-    current_player = function()
-      return { name = "乙" }
-    end,
-  }
-  turn_decision.log_turn_start(game)
-  check.is_truthy(_publish_captured.text:find("第1回合", 1, true) ~= nil,
-    "missing turn count must announce turn 1: " .. tostring(_publish_captured.text))
-end
-
-return TestWaitsDecision
+end)

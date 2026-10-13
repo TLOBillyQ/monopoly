@@ -1,9 +1,19 @@
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local roll = require("src.turn.phases.roll")
 local dice_multiplier = require("src.turn.phases.dice_multiplier")
 local status_ops = require("src.player.actions.status")
 
-TestRollDice = {}
+describe("TestRollDice", function()
+
+local module_names = { "src.rules.movement", "src.turn.phases.move_followup", "src.turn.phases.move" }
+local original_modules
+before_each(function()
+  original_modules = {}
+  for _, name in ipairs(module_names) do original_modules[name] = package.loaded[name] end
+end)
+after_each(function()
+  for _, name in ipairs(module_names) do package.loaded[name] = original_modules[name] end
+end)
 
 local function _test_apply_roll_total_uses_pending_multiplier()
   local game = { player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier }
@@ -110,41 +120,15 @@ local _roll_dice_extended_tests = {
   end,
 }
 
-function TestRollDice:test_apply_roll_total_uses_pending_multiplier()
-  _test_apply_roll_total_uses_pending_multiplier()
-end
+it("test_apply_dice_multiplier_applies_and_resets", function()
+  _apply_dice_multiplier_tests[1]()
+end)
 
-function TestRollDice:test_roll_dice_screen_tolerates_a_nil_anim()
-  local dice_anim = require("src.ui.render.anim.dice")
-  local runtime = {
-    query_node = function()
-      return { visible = false }
-    end,
-    for_each_role_or_global = function(fn)
-      fn()
-    end,
-  }
-  local opts = {
-    runtime = runtime,
-    dice_screen_nodes = {
-      canvas = "canvas_node",
-      spin = "spin_node",
-      faces = { "face_1", "face_2", "face_3", "face_4", "face_5", "face_6" },
-    },
-    ui_events = {
-      show = {},
-      hide = {},
-      send_to_all = function() end,
-    },
-    schedule = function() end,
-  }
+it("test_apply_dice_multiplier_nil_raw_total", function()
+  _apply_dice_multiplier_tests[2]()
+end)
 
-  dice_anim.play_roll_dice_screen(nil, 0, 0, opts)
-
-  check.is_truthy(true, "roll dice screen should tolerate a nil anim")
-end
-
-function TestRollDice:test_apply_move_total_applies_multiplier_updates_last_turn_and_publishes()
+it("test_apply_move_total_applies_multiplier_updates_last_turn_and_publishes", function()
   local game = {
     last_turn = { total = 0 },
     dirty = {},
@@ -157,30 +141,65 @@ function TestRollDice:test_apply_move_total_applies_multiplier_updates_last_turn
 
   check.is_truthy(total == 12, "multiplied total should be applied")
   check.is_truthy(game.last_turn.total == 12, "last_turn should record the multiplied total")
-end
+end)
 
-function TestRollDice:test_apply_dice_multiplier_applies_and_resets()
-  _apply_dice_multiplier_tests[1]()
-end
+it("test_apply_roll_total_uses_pending_multiplier", function()
+  _test_apply_roll_total_uses_pending_multiplier()
+end)
 
-function TestRollDice:test_apply_dice_multiplier_nil_raw_total()
-  _apply_dice_multiplier_tests[2]()
-end
+it("test_play_roll_dice_rejects_invalid_face_zero", function()
+  -- anim.total = 0：无效值，_resolve_face_value 返回 nil，回退到默认 face 1
+  -- 变异 >=0 会使 face=0 通过检查，导致 face 0 而非 face 1（Lua 中 0 是 truthy）
+  local dice_anim = require("src.ui.render.anim.dice")
 
-function TestRollDice:test_roll_dice_zero_count()
-  _roll_dice_extended_tests[1]()
-end
+  local face_nodes = {}
+  for i = 1, 6 do
+    face_nodes[i] = { visible = false }
+  end
 
-function TestRollDice:test_roll_dice_single_die_rng()
-  _roll_dice_extended_tests[2]()
-end
+  local node_map = {
+    canvas = { visible = false },
+    spin = { visible = false },
+    f1 = face_nodes[1], f2 = face_nodes[2], f3 = face_nodes[3],
+    f4 = face_nodes[4], f5 = face_nodes[5], f6 = face_nodes[6],
+  }
 
-function TestRollDice:test_roll_dice_more_overrides()
-  _roll_dice_extended_tests[3]()
-end
+  local runtime = {
+    query_node = function(name) return node_map[name] end,
+    for_each_role_or_global = function(fn) fn() end,
+  }
 
+  local schedule_calls = {}
+  local opts = {
+    runtime = runtime,
+    dice_screen_nodes = {
+      canvas = "canvas", spin = "spin",
+      faces = { "f1", "f2", "f3", "f4", "f5", "f6" },
+    },
+    ui_events = {
+      show = {}, hide = {},
+      send_to_all = function() end,
+    },
+    schedule = function(delay, fn)
+      table.insert(schedule_calls, delay)
+      if #schedule_calls == 1 then
+        fn()
+      end
+    end,
+  }
 
-function TestRollDice:test_play_roll_dice_resolves_face_from_anim_data()
+  dice_anim.play_roll_dice_screen({ total = 0 }, 0, 0, opts)
+  -- total=0 被 >=1 拒绝，_resolve_face_value 返回 nil
+  -- _resolve_roll_display_face 走 or 1 默认，最终 face=1
+  -- 变异 >=0 会使 0 通过检查，_resolve_face_value 返回 0（0 是 truthy）
+  -- _resolve_roll_display_face: 0 or 1 = 0（Lua 中 0 是 truthy，or 短路返回 0）
+  -- _show_roll_result 设 face=0 → _set_face_nodes_visibility 中 face==index 全为 false
+  -- 原代码 face 1 可见，变异存活则所有 face 不可见
+  check.is_truthy(face_nodes[1].visible == true,
+    "face 1 should be visible as default when total=0 is rejected (kill replace 1 with 0)")
+end)
+
+it("test_play_roll_dice_resolves_face_from_anim_data", function()
   -- 测试 face 解析逻辑：total 边界值(6)、正常值(3)、rolls 优先、回退到 total
   -- 覆盖 _resolve_face_value 和 _resolve_roll_face 的各条分支
   local dice_anim = require("src.ui.render.anim.dice")
@@ -242,61 +261,9 @@ function TestRollDice:test_play_roll_dice_resolves_face_from_anim_data()
   -- anim.rolls = {3}：验证优先使用 rolls[1]（杀死 _resolve_roll_face(anim)→nil）
   dice_anim.play_roll_dice_screen({ rolls = { 3 } }, 0, 0, make_opts())
   check.is_truthy(face_nodes[3].visible, "face 3 should be visible when rolls={3}")
-end
+end)
 
-function TestRollDice:test_play_roll_dice_rejects_invalid_face_zero()
-  -- anim.total = 0：无效值，_resolve_face_value 返回 nil，回退到默认 face 1
-  -- 变异 >=0 会使 face=0 通过检查，导致 face 0 而非 face 1（Lua 中 0 是 truthy）
-  local dice_anim = require("src.ui.render.anim.dice")
-
-  local face_nodes = {}
-  for i = 1, 6 do
-    face_nodes[i] = { visible = false }
-  end
-
-  local node_map = {
-    canvas = { visible = false },
-    spin = { visible = false },
-    f1 = face_nodes[1], f2 = face_nodes[2], f3 = face_nodes[3],
-    f4 = face_nodes[4], f5 = face_nodes[5], f6 = face_nodes[6],
-  }
-
-  local runtime = {
-    query_node = function(name) return node_map[name] end,
-    for_each_role_or_global = function(fn) fn() end,
-  }
-
-  local schedule_calls = {}
-  local opts = {
-    runtime = runtime,
-    dice_screen_nodes = {
-      canvas = "canvas", spin = "spin",
-      faces = { "f1", "f2", "f3", "f4", "f5", "f6" },
-    },
-    ui_events = {
-      show = {}, hide = {},
-      send_to_all = function() end,
-    },
-    schedule = function(delay, fn)
-      table.insert(schedule_calls, delay)
-      if #schedule_calls == 1 then
-        fn()
-      end
-    end,
-  }
-
-  dice_anim.play_roll_dice_screen({ total = 0 }, 0, 0, opts)
-  -- total=0 被 >=1 拒绝，_resolve_face_value 返回 nil
-  -- _resolve_roll_display_face 走 or 1 默认，最终 face=1
-  -- 变异 >=0 会使 0 通过检查，_resolve_face_value 返回 0（0 是 truthy）
-  -- _resolve_roll_display_face: 0 or 1 = 0（Lua 中 0 是 truthy，or 短路返回 0）
-  -- _show_roll_result 设 face=0 → _set_face_nodes_visibility 中 face==index 全为 false
-  -- 原代码 face 1 可见，变异存活则所有 face 不可见
-  check.is_truthy(face_nodes[1].visible == true,
-    "face 1 should be visible as default when total=0 is rejected (kill replace 1 with 0)")
-end
-
-function TestRollDice:test_play_roll_dice_timing_defaults_to_zero()
+it("test_play_roll_dice_timing_defaults_to_zero", function()
   -- 测试 duration/hold_seconds nil 时默认值为 0（杀死 replace 0 with 1）
   local dice_anim = require("src.ui.render.anim.dice")
 
@@ -349,6 +316,49 @@ function TestRollDice:test_play_roll_dice_timing_defaults_to_zero()
   -- 第二帧 schedule 的 delay 就是 cleanup 调度的 delay
   check.is_truthy(schedule_calls[2] == 0,
     "cleanup delay should default to 0 when hold_seconds is nil, got " .. tostring(schedule_calls[2]))
-end
+end)
 
-return TestRollDice
+it("test_roll_dice_more_overrides", function()
+  _roll_dice_extended_tests[3]()
+end)
+
+
+it("test_roll_dice_screen_tolerates_a_nil_anim", function()
+  local dice_anim = require("src.ui.render.anim.dice")
+  local runtime = {
+    query_node = function()
+      return { visible = false }
+    end,
+    for_each_role_or_global = function(fn)
+      fn()
+    end,
+  }
+  local opts = {
+    runtime = runtime,
+    dice_screen_nodes = {
+      canvas = "canvas_node",
+      spin = "spin_node",
+      faces = { "face_1", "face_2", "face_3", "face_4", "face_5", "face_6" },
+    },
+    ui_events = {
+      show = {},
+      hide = {},
+      send_to_all = function() end,
+    },
+    schedule = function() end,
+  }
+
+  dice_anim.play_roll_dice_screen(nil, 0, 0, opts)
+
+  check.is_truthy(true, "roll dice screen should tolerate a nil anim")
+end)
+
+it("test_roll_dice_single_die_rng", function()
+  _roll_dice_extended_tests[2]()
+end)
+
+it("test_roll_dice_zero_count", function()
+  _roll_dice_extended_tests[1]()
+end)
+
+end)
