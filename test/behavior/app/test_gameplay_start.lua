@@ -2,9 +2,12 @@
 -- and the M.start early-return / tick handle / port-assignment paths.
 -- Survivors from #293 batch 2.
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 
 local gameplay_start = require("src.app.gameplay_start")
@@ -141,7 +144,7 @@ function TestGameplayStart:test_start_stop_start_replaces_tick_without_duplicate
     _assert_eq(#capture.callbacks, 2, "restart should register exactly one replacement tick callback")
     _assert_eq(#capture.stopped_handles, 1, "stop should cancel an active tick only once")
     _assert_eq(capture.stopped_handles[1], first_handle, "stop should cancel the first tick handle")
-    lu.assertEvalToTrue(state.tick_handle ~= first_handle, "restart should retain the replacement handle")
+    luassert.truthy(state.tick_handle ~= first_handle, "restart should retain the replacement handle")
   end)
 end
 
@@ -160,10 +163,10 @@ function TestGameplayStart:test_start_assigns_turn_action_port_with_dispatch_and
     local current_game_ref = { nil }
     gameplay_start.start(state, current_game_ref)
 
-    lu.assertEvalToTrue(type(state.turn_action_port) == "table", "turn_action_port should be a table")
-    lu.assertEvalToTrue(type(state.turn_action_port.dispatch_action) == "function",
+    luassert.truthy(type(state.turn_action_port) == "table", "turn_action_port should be a table")
+    luassert.truthy(type(state.turn_action_port.dispatch_action) == "function",
       "dispatch_action should be a function")
-    lu.assertEvalToTrue(type(state.turn_action_port.should_block_action) == "function",
+    luassert.truthy(type(state.turn_action_port.should_block_action) == "function",
       "should_block_action should be a function")
   end)
 end
@@ -181,7 +184,7 @@ function TestGameplayStart:test_start_assigns_presentation_runtime()
     local current_game_ref = { nil }
     gameplay_start.start(state, current_game_ref)
 
-    lu.assertEvalToTrue(type(state.presentation_runtime) == "table", "presentation_runtime should be assigned")
+    luassert.truthy(type(state.presentation_runtime) == "table", "presentation_runtime should be assigned")
   end)
 end
 
@@ -213,7 +216,7 @@ function TestGameplayStart:test_tick_callback_reads_current_game_ref_correctly()
     local state = {}
     local current_game_ref = { nil }
     gameplay_start.start(state, current_game_ref)
-    lu.assertEvalToTrue(type(capture.tick_cb) == "function", "tick callback should be registered")
+    luassert.truthy(type(capture.tick_cb) == "function", "tick callback should be registered")
     -- First tick uses game_v1
     capture.tick_cb()
     _assert_eq(capture.tick_values[1], game_v1, "first tick should use current game from ref[1]")
