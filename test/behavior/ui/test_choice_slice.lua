@@ -1,8 +1,10 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 -- Behavior specs for src/ui/view/choice_slice.lua 的 market 视图构建:
 -- active_tab 归一化契约与 pending_choice_selected_option_id 的透传。
 
-local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+require("test.support.shared_support")
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local choice_slice = require("src.ui.view.choice_slice")
 
 local function _game_with_market_choice(active_tab)
@@ -26,10 +28,8 @@ local function _ui_state_with_selection(selected)
     },
   }
 end
-
-TestChoiceSlice = {}
-
-function TestChoiceSlice:test_market_view_normalizes_active_tab_to_item()
+describe("TestChoiceSlice", function()
+it("test_market_view_normalizes_active_tab_to_item", function()
   -- 杀 L7 "item"->nil:非 item 与缺省 tab 都归一为 "item"。
   local _, market = choice_slice.build_choice_and_market(
     _game_with_market_choice("skins"),
@@ -54,9 +54,9 @@ function TestChoiceSlice:test_market_view_normalizes_active_tab_to_item()
     _ui_state_with_selection(nil)
   )
   _assert_eq(market.active_tab, "item", "missing tab should normalize to item")
-end
+end)
 
-function TestChoiceSlice:test_market_view_passes_selected_option_id_through()
+it("test_market_view_passes_selected_option_id_through", function()
   -- 杀 L19 两个 or 位点与 L47 ensure_ui_runtime() -> nil / or->and:
   -- 选中项 id 必须从 ui_runtime 透传到 market 视图,不能变 nil 或整表。
   local _, market = choice_slice.build_choice_and_market(
@@ -66,9 +66,9 @@ function TestChoiceSlice:test_market_view_passes_selected_option_id_through()
   )
   _assert_eq(market.selected_option_id, 5,
     "selected option id should pass through the ui_runtime")
-end
+end)
 
-function TestChoiceSlice:test_market_view_without_ui_state_keeps_selection_nil()
+it("test_market_view_without_ui_state_keeps_selection_nil", function()
   -- 无 ui_state 时 selected_option_id 必须为 nil(不报错)。
   local _, market = choice_slice.build_choice_and_market(
     _game_with_market_choice("item"),
@@ -77,6 +77,6 @@ function TestChoiceSlice:test_market_view_without_ui_state_keeps_selection_nil()
   )
   _assert_eq(market.selected_option_id, nil,
     "missing ui_state should leave the selection nil")
-end
+end)
 
-return TestChoiceSlice
+end)
