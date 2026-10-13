@@ -10,6 +10,9 @@
 -- seed 分片薄 spec 见 test/behavior/rules/items/test_item_timing_fuzz*.lua（#190 分片
 -- 让 LPT 并行吸收，总 seed 数不变）。MONOPOLY_FUZZ_SEEDS=2000 放大做 soak；
 -- FUZZ_ONLY_SEED=<n> 单 seed 复放（失败输出自带完整 trace）。
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local property = require("test.support.property")
 local inventory = require("src.rules.items.inventory")
@@ -452,7 +455,7 @@ function M.run_range(seed_from, seed_to)
       break
     end
   end
-  assert(#failures == 0, "\n" .. table.concat(failures, "\n----\n"))
+  luassert.truthy(#failures == 0, "\n" .. table.concat(failures, "\n----\n"))
 end
 
 return M

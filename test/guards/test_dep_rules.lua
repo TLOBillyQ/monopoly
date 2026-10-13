@@ -1,7 +1,7 @@
 ---@diagnostic disable: undefined-global, undefined-field
 require("test.bootstrap").install_package_paths()
 
-local lu = require("luaunit")
+local luassert = assert
 local guard_support = require("test.support.guards.guard_support")
 
 -- 规则表与行级白名单是本仓佐料,住 test/guards/config/dep_rules.lua(#176);本文件只留扫描壳。
@@ -82,22 +82,19 @@ local function _build_violation_report(violation)
   }, "\n")
 end
 
-TestDepRules = {}
+describe("TestDepRules", function()
+  for index, rule in ipairs(rules) do
+    it("test_" .. string.format("rule %02d: %s", index, rule.description), function()
+      local hit, err = _scan_rule(rule)
 
-for index, rule in ipairs(rules) do
-  TestDepRules["test_" .. string.format("rule %02d: %s", index, rule.description)] = function(self)
-    local hit, err = _scan_rule(rule)
+      if err and not tostring(err):find("no lua files found under", 1, true) then
+        luassert.is_true(false, _build_error_report(rule, err))
+        return
+      end
 
-    if err and not tostring(err):find("no lua files found under", 1, true) then
-      lu.assertTrue(false, _build_error_report(rule, err))
-      return
-    end
-
-    local ok = hit == nil
-    local full_report = ok and "dep_rules ok" or _build_violation_report(hit)
-    lu.assertTrue(ok, full_report)
+      local ok = hit == nil
+      local full_report = ok and "dep_rules ok" or _build_violation_report(hit)
+      luassert.is_true(ok, full_report)
+    end)
   end
-end
-
-
-return TestDepRules
+end)
