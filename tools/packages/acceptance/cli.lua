@@ -23,7 +23,9 @@ end
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua acceptance [args...]",
+    "用法: lua tools/cli.lua acceptance [--serial|--parallel]",
+    "默认串行；--parallel 使用原生 cmd 并行并按注册顺序汇总，空结果失败。",
+    "并行期间会出现最小化窗口，超时停止对应进程树。",
     "",
     "验收套件（按需车道）：先从 features/ 中文源重生成 gitignored 的 generated specs，",
     "再由 run_all 逐个 spawn 聚合。引擎核心由自研 acceptance4lua",

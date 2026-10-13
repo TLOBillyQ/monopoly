@@ -123,6 +123,8 @@ local opts = { serial = true }
 for i = 1, #(arg or {}) do
   if arg[i] == "--serial" then
     opts.serial = true
+  elseif arg[i] == "--parallel" then
+    opts.serial = false
   elseif arg[i] == "--tooling" then
     opts.tooling = true
   elseif arg[i] == "--no-coverage" then

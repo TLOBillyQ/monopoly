@@ -103,17 +103,14 @@ function run_all.run(options)
     return { passed = passed, failed = failed, total = #entries }
   end
 
-  -- 并行路径:每 entry 一条 lane(label 唯一,acceptance_1..N),stream=false
-  -- 收集。lane 命令复用 runner.build_command(LUA_PATH 前缀 + lua_bin + 生成
-  -- 脚本);cwd 语义与原 run_generated 的 opts.cwd 一致——parallel_lanes 的
-  -- launcher 只 cd 到自身 cwd,这里显式 cd 进 repo_root,生成脚本内相对路径
-  -- (如 tmp/acceptance_mutator_status_<token>)依赖它。
+  -- 原生并行命令与串行共享 cwd/LUA_PATH,按注册顺序汇总。
   local lanes = {}
   for index, entry in ipairs(entries) do
     local path = path_lib.join_path(generated_dir, entry.generated)
     lanes[index] = {
       label = "acceptance_" .. tostring(index),
-      cmd = shell_lib.wrap_command_with_cwd(runner.build_command(path, base_opts), base_opts.cwd),
+      cmd = shell_lib.wrap_command_with_cwd('set "LUA_PATH=' .. base_opts.lua_path .. '" && '
+        .. shell_lib.build_command({ base_opts.lua_bin, path }), base_opts.cwd),
     }
   end
 
@@ -122,8 +119,18 @@ function run_all.run(options)
   -- results 按提交顺序(lanes 顺序)对齐,即 registry 顺序,直接按序输出。
   local passed = 0
   local failed = {}
+  local cases, case_passed, case_failed = 0, 0, 0
   for index, entry in ipairs(entries) do
     local result = _map_result(results[index])
+    local good, bad = result.output:match("(%d+) passed, (%d+) failed")
+    good = tonumber(good) or tonumber(result.output:match("(%d+) passed")) or 0
+    bad = tonumber(bad) or 0
+    cases, case_passed, case_failed = cases + good + bad, case_passed + good, case_failed + bad
+    io.write(string.format("[acceptance] counts %s cases=%d passed=%d failed=%d\n", entry.generated, good + bad, good, bad))
+    if good + bad == 0 then
+      result.passed = false
+      if result.error == "" then result.error = results[index].message or "no acceptance cases executed" end
+    end
     if result.passed == true and result.error == "" then
       passed = passed + 1
       io.write("[acceptance] ok ", entry.generated, "\n")
@@ -136,6 +143,7 @@ function run_all.run(options)
       io.write("[acceptance] FAILED ", entry.generated, "\n")
     end
   end
+  io.write(string.format("[acceptance] COUNTS: files=%d cases=%d passed=%d failed=%d\n", #entries, cases, case_passed, case_failed))
   io.flush()
   return { passed = passed, failed = failed, total = #entries }
 end
@@ -144,6 +152,7 @@ function run_all.main()
   local options = { serial = true }
   for _, token in ipairs(arg or {}) do
     if token == "--serial" then options.serial = true
+    elseif token == "--parallel" then options.serial = false
     else io.stderr:write("unknown option: " .. token .. "\n"); return 2 end
   end
   local summary = run_all.run(options)

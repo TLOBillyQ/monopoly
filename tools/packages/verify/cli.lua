@@ -26,13 +26,15 @@ end
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua verify [--serial|--full|--coverage|--crap|--tooling|--verbose|--no-coverage]",
+    "用法: lua tools/cli.lua verify [--serial|--parallel|--full|--coverage|--crap|--tooling|--verbose|--no-coverage]",
     "",
     "质量门禁编排器:默认 slim 车道(contract + guards + arch + behavior 七层 + foundation",
     "+ lint-src/lint-test/lint-tools + encoding),是迭代默认与 push 前唯一硬地板。",
     "",
     "flag 映射:",
     "  --serial       所有车道及其测试子进程按序执行(原生 Windows 默认)",
+    "  --parallel     原生 cmd 后台并行车道；超时按唯一控制台标题停进程树",
+    "                 执行期间会出现最小化窗口；空输出按失败计",
     "  (默认)         slim:七层 + foundation 行为 spec 全跑",
     "  --full         slim + coverage + crap(完整报告,按需)",
     "  --coverage     显式加 coverage 并行 lane(只看覆盖率)",

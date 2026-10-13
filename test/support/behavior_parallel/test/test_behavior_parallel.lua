@@ -34,7 +34,7 @@ function TestBehaviorParallel:test_discovers_specs_across_multiple_roots()
 end
 
 function TestBehaviorParallel:test_parses_quiet_result_summaries_from_the_shared_output_handler()
-  local parsed = behavior_parallel._test_support.parse_output("# RESULT: 123 ok\n")
+  local parsed = behavior_parallel._test_support.parse_output("# RESULT: 123 ok\r\n")
 
   lu.assertEquals(parsed.passed, 123)
   lu.assertEquals(parsed.failed, 0)

@@ -1,128 +1,144 @@
-local env_lib = require("foundation.env")
-local fs_lib = require("foundation.fs")
-local shell_lib = require("foundation.shell")
-local number_utils = require("src.foundation.number")
-
+-- 原生 Windows 并行边界:输出关闭后原子发布完成状态,结果按提交顺序返回。
+-- 独立最小化控制台提供唯一标题,超时用 taskkill /t 停掉对应进程树。
+local env = require("foundation.env")
+local fs = require("foundation.fs")
+local path = require("foundation.path")
+local shell = require("foundation.shell")
 local M = {}
 
-local _DEFAULT_TIMEOUT_SECONDS = 600
-local _POLL_INTERVAL_SECONDS = 0.3
-
-local function _lane_paths(label)
-  local prefix = "vf_" .. label
-  return {
-    output = env_lib.make_temp_path(prefix .. "_out", ".txt"),
-    status = env_lib.make_temp_path(prefix .. "_status", ".txt"),
-    launcher = env_lib.make_temp_path(prefix .. "_launcher", ".sh"),
-  }
+local function native(value)
+  return (value:gsub("/", "\\"))
 end
 
-local function _write_lane_launcher(cmd, paths)
-  local cwd = env_lib.current_dir()
-  local script = table.concat({
-    "#!/bin/sh",
-    "cd " .. shell_lib.shell_quote(cwd)
-      .. " || { printf '%s\\n' '1' > " .. shell_lib.shell_quote(paths.status) .. "; exit 0; }",
-    cmd .. " > " .. shell_lib.shell_quote(paths.output) .. " 2>&1",
-    "code=$?",
-    "printf '%s\\n' \"$code\" > " .. shell_lib.shell_quote(paths.status),
-    "exit 0",
-  }, "\n")
-  return fs_lib.write_file(paths.launcher, script)
+local function quote(value)
+  return shell.shell_quote(native(value))
 end
 
-local function _launch(paths)
-  local cmd = "sh " .. shell_lib.shell_quote(paths.launcher) .. " >/dev/null 2>&1 &"
-  local ok, _, code = os.execute(cmd)
-  if ok == true and (code == nil or code == 0) then
-    return true
+local function status(entry)
+  local text = fs.read_raw(entry.status)
+  return text and tonumber(text:match("^%s*(%-?%d+)%s*$")) or nil
+end
+
+local function pause(seconds)
+  -- Lua 5.4 标准库没有阻塞定时器;不引入额外运行依赖。
+  local deadline = os.clock() + seconds
+  while os.clock() < deadline do end
+end
+
+local function launch(entry)
+  local command = entry.cmd
+  if type(command) == "table" then
+    -- Lua argv 落盘绕过 cmd 的 8191 字符限制。数组只接受 Lua解释器+脚本+参数。
+    local args = {}
+    for index = 2, #command do args[#args + 1] = string.format("[%d]=%q", index - 2, command[index]) end
+    local argv = entry.dir .. "/argv.lua"
+    local ok, err = fs.write_file(argv, "arg={" .. table.concat(args, ",") .. "}; dofile(arg[0])\n")
+    if not ok then return nil, err end
+    command = shell.build_command({ command[1], argv })
   end
-  if number_utils.is_numeric(code) and code == 0 then
-    return true
-  end
-  return nil, "failed to launch lane"
+  local command_path = entry.dir .. "/command.cmd"
+  local ok, err = fs.write_file(command_path, "@echo off\r\nchcp 65001 >nul\r\n" .. command .. "\r\nexit /b %errorlevel%\r\n")
+  if not ok then return nil, err end
+  local launcher = entry.dir .. "/launcher.cmd"
+  ok, err = fs.write_file(launcher, table.concat({
+    "@echo off", "chcp 65001 >nul", "title " .. entry.title,
+    'cmd.exe /d /v:off /s /c ""' .. native(command_path) .. '"" > ' .. quote(entry.output) .. " 2>&1",
+    "set eggy_code=%errorlevel%",
+    "> " .. quote(entry.status .. ".done") .. " echo %eggy_code%",
+    "move /y " .. quote(entry.status .. ".done") .. " " .. quote(entry.status) .. " >nul",
+    "exit",
+  }, "\r\n") .. "\r\n")
+  if not ok then return nil, err end
+  local exec_ok, kind, code = os.execute('start "" /min cmd.exe /d /v:off /s /c ""' .. native(launcher) .. '""')
+  if not shell.exit_status(exec_ok, kind, code) then return nil, "failed to start launcher: " .. tostring(code) end
+  return true
 end
 
-local function _sleep(seconds)
-  os.execute("sleep " .. tostring(seconds) .. " >/dev/null 2>&1")
+local function stop(entry)
+  local log = entry.dir .. "/stop.log"
+  local ok, kind, code = os.execute("taskkill /fi " .. shell.shell_quote("WINDOWTITLE eq " .. entry.title)
+    .. " /t /f > " .. quote(log) .. " 2>&1")
+  entry.stopped = shell.exit_status(ok, kind, code)
+  entry.stop_log = fs.read_raw(log) or "termination returned no diagnostic"
 end
 
-local function _read_status(path)
-  local content = fs_lib.read_file(path)
-  if content == nil then
-    return nil
-  end
-  return number_utils.to_integer(tostring(content):gsub("%s+", ""))
-end
-
-local function _cleanup_lane(paths)
-  fs_lib.remove_path(paths.output)
-  fs_lib.remove_path(paths.status)
-  fs_lib.remove_path(paths.launcher)
-end
-
+-- lanes[i]={label,cmd}; cmd 是 cmd语法字符串,或 Lua解释器/脚本/参数数组。
+-- timeout 默认600s,stream 默认true;lane_dir仅用作隔离临时目录的父目录。
 function M.run(lanes, opts)
   opts = opts or {}
-  local timeout = opts.timeout or _DEFAULT_TIMEOUT_SECONDS
-  local stream = opts.stream
-  if stream == nil then stream = true end
-
-  local active = {}
-  for _, lane in ipairs(lanes) do
-    local paths = _lane_paths(lane.label)
-    local ok, err = _write_lane_launcher(lane.cmd, paths)
-    if not ok then
-      for _, a in ipairs(active) do _cleanup_lane(a.paths) end
-      error("failed to write launcher for " .. lane.label .. ": " .. tostring(err))
-    end
-    local launched, launch_err = _launch(paths)
-    if not launched then
-      _cleanup_lane(paths)
-      for _, a in ipairs(active) do _cleanup_lane(a.paths) end
-      error("failed to launch " .. lane.label .. ": " .. tostring(launch_err))
-    end
-    active[#active + 1] = { label = lane.label, paths = paths }
+  local timeout = opts.timeout or 600
+  local entries = {}
+  local started = os.time()
+  for index, lane in ipairs(lanes or {}) do
+    local unique = env.make_temp_path("parallel_lane", "")
+    local dir = opts.lane_dir and path.join_path(opts.lane_dir, unique:match("[^/]+$")) or unique
+    local entry = { label = lane.label, cmd = lane.cmd, dir = dir,
+      title = "eggy_parallel_" .. tostring(started) .. "_" .. tostring(index) .. "_" .. tostring({}):gsub("[^%w]", "") }
+    entry.output, entry.status = dir .. "/output.log", dir .. "/status.txt"
+    entries[#entries + 1] = entry
+    local prepared, prepare_err = fs.ensure_dir(dir)
+    if prepared then
+      local launched, launch_err = launch(entry)
+      if not launched then entry.launch_error = tostring(launch_err) end
+    else entry.launch_error = tostring(prepare_err) end
   end
 
-  local deadline = os.time() + timeout
   while true do
-    local pending = false
-    for _, a in ipairs(active) do
-      if fs_lib.path_exists(a.paths.status) ~= true then
-        pending = true
-        break
+    local pending = {}
+    for _, entry in ipairs(entries) do
+      if not entry.launch_error and status(entry) == nil then pending[#pending + 1] = entry end
+    end
+    if #pending == 0 then break end
+    if os.time() >= started + timeout then
+      for _, entry in ipairs(pending) do stop(entry) end
+      break
+    end
+    pause(opts.poll_interval or 0.1)
+  end
+
+  local all_ok, results = #entries > 0, {}
+  for _, entry in ipairs(entries) do
+    local code = status(entry)
+    local output = fs.read_raw(entry.output) or ""
+    local result = { label = entry.label, ok = false, exit_code = code, output = output }
+    if entry.launch_error then
+      result.reason, result.message = "launch_failed", entry.launch_error
+    elseif entry.stop_log then
+      result.reason = "timeout"
+      result.message = "Lane " .. tostring(entry.label) .. " timed out after " .. timeout .. "s; termination: " .. entry.stop_log
+    elseif code == nil then
+      result.reason, result.message = "output_incomplete", "Missing completion state for " .. tostring(entry.label)
+    elseif code ~= 0 then
+      result.reason = code == 9009 and "launch_failed" or "exit"
+      result.message = "Lane " .. tostring(entry.label) .. " exited " .. code
+    elseif output == "" then
+      result.reason, result.message = "output_incomplete", "Lane " .. tostring(entry.label) .. " exited 0 with empty output"
+    else result.ok = true end
+
+    -- 无法确认停止时保留产物,不删除仍被子进程使用的目录。
+    if entry.stopped == false then
+      result.artifact_dir = entry.dir
+      result.message = result.message .. "\nTermination not confirmed; retained " .. entry.dir
+    else
+      local cleaned, clean_err = fs.remove_path(entry.dir)
+      if not cleaned then
+        result.ok, result.artifact_dir = false, entry.dir
+        result.message = tostring(result.message or "") .. "\n" .. tostring(clean_err)
       end
     end
-    if not pending then break end
-    if os.time() > deadline then
-      for _, a in ipairs(active) do _cleanup_lane(a.paths) end
-      error("parallel lanes timed out after " .. tostring(timeout) .. "s")
+    if not result.ok then
+      all_ok = false
+      if result.message and (result.output == "" or result.reason ~= "exit") then
+        result.output = result.output .. (result.output == "" and "" or "\n") .. result.message .. "\n"
+      end
     end
-    _sleep(_POLL_INTERVAL_SECONDS)
-  end
-
-  local all_ok = true
-  local results = {}
-  for _, a in ipairs(active) do
-    local status_code = _read_status(a.paths.status)
-    local output = fs_lib.read_file(a.paths.output) or ""
-    local success = status_code == 0
-    if stream and output ~= "" then
-      io.write(output)
-      if output:sub(-1) ~= "\n" then io.write("\n") end
+    results[#results + 1] = result
+    if opts.stream ~= false and result.output ~= "" then
+      io.write(result.output)
+      if result.output:sub(-1) ~= "\n" then io.write("\n") end
     end
-    results[#results + 1] = {
-      label = a.label,
-      ok = success,
-      output = output,
-      exit_code = status_code,
-    }
-    if not success then all_ok = false end
-    _cleanup_lane(a.paths)
   end
-  if stream then io.flush() end
-
+  if opts.stream ~= false then io.flush() end
   return all_ok, results
 end
-
 return M

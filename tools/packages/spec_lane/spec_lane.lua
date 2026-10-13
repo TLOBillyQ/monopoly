@@ -12,7 +12,6 @@ local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S"
 
 local fs_lib = require("foundation.fs")
 local proc_lib = require("foundation.proc")
-local shell_lib = require("foundation.shell")
 local tap_summary = require("foundation.tap_summary")
 local parallel_lanes = require("foundation.parallel_lanes")
 local sharding = require("packages.luaunit_runner.spec_sharding")
@@ -106,7 +105,7 @@ local function _build_shard_cmd(profile, files)
   for _, f in ipairs(files) do
     args[#args + 1] = f
   end
-  return shell_lib.build_command(args)
+  return args
 end
 
 -- 分片路径:每 lane 一条 runner 子进程(run_lanes 注入替身,默认 parallel_lanes,
