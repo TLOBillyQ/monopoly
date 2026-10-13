@@ -574,8 +574,6 @@ return {
     "tools/packages/acceptance/test/test_spec_hash.lua",
     "tools/packages/acceptance/test/test_step_dsl.lua",
     "tools/packages/acceptance/test/test_turn_driver.lua",
-    "tools/packages/acceptance_mutate/test/test_acceptance_mutate_cli.lua",
-    "tools/packages/acceptance_mutate/test/test_mutate_lane.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_level.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_status.lua",
     "tools/packages/arch_view/test/test_arch_view_live_tooling_contract.lua",
@@ -597,6 +595,8 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/acceptance_mutate/test/test_acceptance_mutate_cli.lua",
+    "tools/packages/acceptance_mutate/test/test_mutate_lane.lua",
     "tools/packages/dry/test/test_dry_cli.lua",
     "test/support/behavior_parallel/test/test_behavior_parallel.lua",
     "tools/foundation/test/test_bootstrap.lua",

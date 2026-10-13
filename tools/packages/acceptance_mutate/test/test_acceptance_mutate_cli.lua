@@ -12,7 +12,7 @@ require("test.bootstrap").install_package_paths()
 -- 进程 stdin 抽干,于是 runner_worker 读不到任何 job、什么都不吐,车道报
 -- 「runner_worker 没吐出可解析的 job 响应」——一条把基础设施故障说成变异失败的
 -- 假诊断。本票不去修那条链(移交范围外),只保证它不再被当作变异结论。
-local lu = require("luaunit")
+local check = require("luassert")
 local proc_lib = require("foundation.proc")
 
 local CLI = "tools/cli.lua"
@@ -29,69 +29,69 @@ local function _run(tail)
   return proc_lib.run_command(command)
 end
 
-TestAcceptanceMutateCli = {}
+describe("acceptance mutate cli boundary", function()
 
 -- 正例:--help 仍然有用(退出码 0),并说清能力边界与逃生开关。
-function TestAcceptanceMutateCli:test_help_stays_useful_and_states_the_windows_boundary()
+it("help stays useful and states the windows boundary", function()
   local result = _run({ "--help" })
 
-  lu.assertEquals(result.code, 0, result.output)
-  lu.assertEvalToTrue(result.output:find("acceptance-mutate", 1, true) ~= nil, result.output)
-  lu.assertEvalToTrue(result.output:find("--skip-if-unavailable", 1, true) ~= nil,
+  check.same(result.code, 0, result.output)
+  check.truthy(result.output:find("acceptance-mutate", 1, true) ~= nil, result.output)
+  check.truthy(result.output:find("--skip-if-unavailable", 1, true) ~= nil,
     "帮助要写出显式跳过开关: " .. result.output)
-  lu.assertEvalToTrue(result.output:find("status=skipped", 1, true) ~= nil,
+  check.truthy(result.output:find("status=skipped", 1, true) ~= nil,
     "帮助要写出跳过状态词: " .. result.output)
-end
+end)
 
 -- 反例(本票核心):显式请求判「不可用」,而不是让探针把假诊断当结论。
-function TestAcceptanceMutateCli:test_an_explicit_request_is_unavailable_not_a_mutation_verdict()
+it("an explicit request is unavailable not a mutation verdict", function()
   local result = _run({ "--level", "soft" })
 
-  lu.assertEquals(result.code, 3, result.output)
-  lu.assertEvalToTrue(result.output:find("status=unavailable", 1, true) ~= nil,
+  check.same(result.code, 3, result.output)
+  check.truthy(result.output:find("status=unavailable", 1, true) ~= nil,
     "诊断要带可机读状态词: " .. result.output)
-  lu.assertEvalToTrue(result.output:find("POSIX", 1, true) ~= nil,
+  check.truthy(result.output:find("POSIX", 1, true) ~= nil,
     "诊断要点明 POSIX 专用: " .. result.output)
-  lu.assertNil(result.output:find(PROBE_MISDIAGNOSIS, 1, true),
+  check.is_nil(result.output:find(PROBE_MISDIAGNOSIS, 1, true),
     "不可用路径不得给出探针误诊: " .. result.output)
-end
+end)
 
 -- 显式跳过:调用方确认边界后跳过,状态与退出码都与不可用不同。
-function TestAcceptanceMutateCli:test_an_explicit_skip_exits_zero_with_a_skipped_status()
+it("an explicit skip exits zero with a skipped status", function()
   local result = _run({ "--skip-if-unavailable", "--level", "soft" })
 
-  lu.assertEquals(result.code, 0, result.output)
-  lu.assertEvalToTrue(result.output:find("status=skipped", 1, true) ~= nil,
+  check.same(result.code, 0, result.output)
+  check.truthy(result.output:find("status=skipped", 1, true) ~= nil,
     "跳过要带可机读状态词: " .. result.output)
-  lu.assertNil(result.output:find(PROBE_MISDIAGNOSIS, 1, true), result.output)
-end
+  check.is_nil(result.output:find(PROBE_MISDIAGNOSIS, 1, true), result.output)
+end)
 
 -- 脚本形态入口(cli 以子进程转发的真实入口)与 CLI 同口径:旁门不许假绿。
-function TestAcceptanceMutateCli:test_native_absolute_lane_help_and_actual_request()
+it("native absolute lane help and actual request", function()
   local root = require("foundation.bootstrap").resolve("tools/packages/acceptance_mutate/mutate_lane.lua").repo_root
   local entry = (root .. "/" .. LANE):gsub("/", "\\")
   local help = proc_lib.run_command({ "lua", entry, "--help" })
-  lu.assertEquals(help.code, 0, help.output)
+  check.same(help.code, 0, help.output)
   local actual = proc_lib.run_command({ "lua", entry, "--feature", "ignored.feature" })
-  lu.assertEquals(actual.code, 3, actual.output)
-  lu.assertStrContains(actual.output, "status=unavailable")
-end
+  check.same(actual.code, 3, actual.output)
+  check.matches("status=unavailable", actual.output, 1, true)
+end)
 
-function TestAcceptanceMutateCli:test_explicit_retained_engine_test_request_is_unavailable()
+it("explicit retained engine test request is unavailable", function()
   for _, identity in ipairs({ "test_mutator_level.lua", "test_mutator_status.lua" }) do
     local result = proc_lib.run_command({ "lua", "tools/packages/luaunit_runner/runner.lua", "--",
       "tools/packages/acceptance_mutate/test/" .. identity })
-    lu.assertEquals(result.code, 3, result.output)
-    lu.assertStrContains(result.output, "status=unavailable")
+    check.same(result.code, 3, result.output)
+    check.matches("status=unavailable", result.output, 1, true)
   end
-end
+end)
 
-function TestAcceptanceMutateCli:test_the_lane_script_form_reports_the_same_boundary()
+it("the lane script form reports the same boundary", function()
   local result = proc_lib.run_command({ "lua", LANE, "--level", "soft" })
 
-  lu.assertEquals(result.code, 3, result.output)
-  lu.assertEvalToTrue(result.output:find("status=unavailable", 1, true) ~= nil, result.output)
-  lu.assertNil(result.output:find(PROBE_MISDIAGNOSIS, 1, true), result.output)
-end
+  check.same(result.code, 3, result.output)
+  check.truthy(result.output:find("status=unavailable", 1, true) ~= nil, result.output)
+  check.is_nil(result.output:find(PROBE_MISDIAGNOSIS, 1, true), result.output)
+end)
 
-return TestAcceptanceMutateCli
+end)
