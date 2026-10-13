@@ -3,7 +3,8 @@
 -- the contract each test pins. Every test drives the real decision fn built from
 -- decision_engine.build and asserts a value that differs between original/mutant.
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local decision_engine = require("src.computer.agent.decision")
 
 local function _ai_game(player)
@@ -37,8 +38,8 @@ TestDecisionMutationPins["test_L9 _first_option_id returns options[1] via bare-s
   local game = _ai_game({ id = "ai_1", is_ai = true })
   local choice = { id = 1, kind = "remote_dice_value", options = { "opt_x" }, meta = { dice_count = 1 } }
   local result = fn(game, choice)
-  lu.assertEvalToTrue(result ~= nil, "remote_dice fallback must produce an action")
-  lu.assertEvalToTrue(result.option_id == "opt_x",
+  luassert.truthy(result ~= nil, "remote_dice fallback must produce an action")
+  luassert.truthy(result.option_id == "opt_x",
     "first option of bare-string list must be 'opt_x'; got " .. tostring(result.option_id))
 end
 
@@ -57,8 +58,8 @@ TestDecisionMutationPins["test_L14 _choice_owner needs BOTH player_id AND find_p
   local game = _ai_game({ id = "ai_owner", is_ai = true }) -- no find_player_by_id
   local choice = { id = 2, kind = "market_buy", options = {}, meta = { player_id = "p2" } }
   local ok, result = pcall(fn, game, choice)
-  lu.assertEvalToTrue(ok, "original must not enter the find_player branch when method is absent")
-  lu.assertEvalToTrue(result ~= nil and result.type == "choice_cancel",
+  luassert.truthy(ok, "original must not enter the find_player branch when method is absent")
+  luassert.truthy(result ~= nil and result.type == "choice_cancel",
     "AI current_player owner must dispatch market_buy -> choice_cancel; got "
       .. tostring(result and result.type))
 end
@@ -78,10 +79,10 @@ TestDecisionMutationPins["test_L41 _resolve_target_option falls back to _first_o
   local choice = { id = 41, kind = "landing_optional_effect",
     options = { { id = "pass" } }, meta = {} }
   local result = fn(game, choice)
-  lu.assertEvalToTrue(result ~= nil, "landing_optional_effect must produce an action")
-  lu.assertEvalToTrue(result.type == "choice_select",
+  luassert.truthy(result ~= nil, "landing_optional_effect must produce an action")
+  luassert.truthy(result.type == "choice_select",
     "unmatched-but-nonempty options must select first, not cancel; got " .. tostring(result.type))
-  lu.assertEvalToTrue(result.option_id == "pass",
+  luassert.truthy(result.option_id == "pass",
     "fallback option_id must be first option 'pass'; got " .. tostring(result.option_id))
 end
 
@@ -104,8 +105,8 @@ TestDecisionMutationPins["test_L56/L57 roadblock branch uses resolver(game,actor
   local game = _ai_game({ id = "ai_1", is_ai = true })
   local choice = { id = 56, kind = "roadblock_target", options = {}, meta = {} }
   local result = fn(game, choice)
-  lu.assertEvalToTrue(result ~= nil, "roadblock_target must produce an action")
-  lu.assertEvalToTrue(result.option_id == "two",
+  luassert.truthy(result ~= nil, "roadblock_target must produce an action")
+  luassert.truthy(result.option_id == "two",
     "roadblock resolver must be called as resolver(game,actor) with no count; got "
       .. tostring(result.option_id))
 end

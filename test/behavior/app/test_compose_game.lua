@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local composition_root = require("src.app.compose_game")
 
@@ -11,8 +12,8 @@ function TestComposeGame:test_exposes_only_new_game()
     exported_count = exported_count + 1
     exported_key = key
   end
-  lu.assertEquals(exported_count, 1, "composition root must expose exactly one entrypoint")
-  lu.assertEquals(exported_key, "new_game", "composition root must only expose game creation")
+  luassert.is.equal(1, exported_count, "composition root must expose exactly one entrypoint")
+  luassert.is.equal("new_game", exported_key, "composition root must only expose game creation")
 end
 
 function TestComposeGame:test_rejects_player_mixin_collision_during_module_assembly()
@@ -30,8 +31,8 @@ function TestComposeGame:test_rejects_player_mixin_collision_during_module_assem
     },
   }, function()
     local ok, err = pcall(require, "src.app.compose_game")
-    lu.assertFalse(ok, "duplicate player mixin key must fail module assembly")
-    lu.assertStrContains(tostring(err), "compose_game mixin collision: status_ops.shared_key")
+    luassert.is_false(ok, "duplicate player mixin key must fail module assembly")
+    luassert.matches("compose_game mixin collision: status_ops.shared_key", tostring(err), 1, true)
   end, {
     skip_runtime_context_refresh = true,
   })
@@ -40,16 +41,16 @@ end
 function TestComposeGame:test_new_game_applies_game_defaults()
   local game_state = require("src.state.game_state")
   local game = support.new_game()
-  lu.assertNotEquals(game, game_state, "new_game returns an instance, not the class")
+  luassert.is_not.same(game_state, game, "new_game returns an instance, not the class")
   local player_count = 0
   for _ in pairs(game.player_by_id) do
     player_count = player_count + 1
   end
-  lu.assertEquals(player_count, #game.players, "player_by_id indexes all players")
-  lu.assertEquals(game._land_rent_version, 0, "land rent version defaults to zero")
-  lu.assertEquals(type(game.tile_owner_notifier.notify_owner_changed), "function")
-  lu.assertFalse(game.board_visual_feedback_port.sync_many())
-  lu.assertEquals(type(game.intent_output_port), "table")
+  luassert.is.equal(#game.players, player_count, "player_by_id indexes all players")
+  luassert.is.equal(0, game._land_rent_version, "land rent version defaults to zero")
+  luassert.is.equal("function", type(game.tile_owner_notifier.notify_owner_changed))
+  luassert.is_false(game.board_visual_feedback_port.sync_many())
+  luassert.is.equal("table", type(game.intent_output_port))
 end
 
 function TestComposeGame:test_new_game_installs_default_ports_for_a_fresh_class()
@@ -65,9 +66,9 @@ function TestComposeGame:test_new_game_installs_default_ports_for_a_fresh_class(
     tiles = require("src.config.content.tiles"),
   })
   local game = composition_root.new_game(opts, fake_class)
-  lu.assertEquals(type(game.intent_output_port), "table")
-  lu.assertFalse(game.board_visual_feedback_port.sync_many())
-  lu.assertEquals(type(game.tile_owner_notifier.notify_owner_changed), "function")
+  luassert.is.equal("table", type(game.intent_output_port))
+  luassert.is_false(game.board_visual_feedback_port.sync_many())
+  luassert.is.equal("function", type(game.tile_owner_notifier.notify_owner_changed))
 end
 
 return TestComposeGame

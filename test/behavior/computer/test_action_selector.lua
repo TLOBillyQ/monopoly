@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local action_selector = require("src.computer.agent.action")
 local item_ids = require("src.config.gameplay.item_ids")
 local roadblock = require("src.rules.items.roadblock")
@@ -8,7 +9,7 @@ local original_auto_candidates = roadblock.auto_candidates
 local original_pick_best = roadblock.pick_best
 
 local function _assert_eq(a, b, msg)
-  lu.assertEvalToTrue(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.truthy(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_player(id, opts)

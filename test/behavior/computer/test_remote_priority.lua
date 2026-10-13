@@ -1,16 +1,17 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local path_planner = require("src.computer.agent.path")
 
 local function _assert_eq(actual, expected, message)
-  lu.assertEvalToTrue(actual == expected, string.format("%s: expected %s got %s", tostring(message), tostring(expected), tostring(actual)))
+  luassert.truthy(actual == expected, string.format("%s: expected %s got %s", tostring(message), tostring(expected), tostring(actual)))
 end
 
 local function _require_upvalue(fn, expected_name)
-  lu.assertEvalToTrue(debug and type(debug.getupvalue) == "function", "debug.getupvalue should be available for characterization tests")
+  luassert.truthy(debug and type(debug.getupvalue) == "function", "debug.getupvalue should be available for characterization tests")
   local index = 1
   while true do
     local name, value = debug.getupvalue(fn, index)
-    lu.assertEvalToTrue(name ~= nil, "missing upvalue: " .. tostring(expected_name))
+    luassert.truthy(name ~= nil, "missing upvalue: " .. tostring(expected_name))
     if name == expected_name then
       return value
     end
@@ -133,7 +134,7 @@ function TestRemotePriority:test_pick_remote_dice_value_defaults_to_single_dice(
   end
   local board = _flat_board(tiles)
   local ok, value, tile_ref = pcall(path_planner.pick_remote_dice_value, { board = board }, { id = 7, position = 0 })
-  lu.assertEvalToTrue(ok == true, "pick_remote_dice_value must tolerate a missing dice_count")
+  luassert.truthy(ok == true, "pick_remote_dice_value must tolerate a missing dice_count")
   _assert_eq(value, 6, "item tiles rank by step count; max steps should win")
   _assert_eq(tile_ref, tiles[6], "winning candidate should expose its tile")
 end
