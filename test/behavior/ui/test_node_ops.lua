@@ -1,5 +1,4 @@
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local P = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -15,9 +14,9 @@ local function _ok(val, msg)
   luassert.truthy(val, msg or "expected truthy")
 end
 
-TestNodeOps = {}
+describe("TestNodeOps", function()
 
-function TestNodeOps:test_sets_text_on_queried_node()
+it("test_sets_text_on_queried_node", function()
   local node = { text = "" }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function() return { node } end },
@@ -26,9 +25,9 @@ function TestNodeOps:test_sets_text_on_queried_node()
     node_ops.set_text(nil, "test_label", "hello")
   end)
   _assert_eq(node.text, "hello", "text should be set")
-end
+end)
 
-function TestNodeOps:test_defaults_nil_text_to_empty_string()
+it("test_defaults_nil_text_to_empty_string", function()
   local node = { text = "old" }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function() return { node } end },
@@ -37,9 +36,9 @@ function TestNodeOps:test_defaults_nil_text_to_empty_string()
     node_ops.set_text(nil, "test_label", nil)
   end)
   _assert_eq(node.text, "", "nil text should default to empty")
-end
+end)
 
-function TestNodeOps:test_sets_visible_true()
+it("test_sets_visible_true", function()
   local node = { visible = false }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function() return { node } end },
@@ -49,9 +48,9 @@ function TestNodeOps:test_sets_visible_true()
     node_ops.set_visible(nil, "test_node", true)
   end)
   _ok(node.visible == true, "visible should be true")
-end
+end)
 
-function TestNodeOps:test_sets_visible_false()
+it("test_sets_visible_false", function()
   local node = { visible = true }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function() return { node } end },
@@ -61,9 +60,9 @@ function TestNodeOps:test_sets_visible_false()
     node_ops.set_visible(nil, "test_node", false)
   end)
   _ok(node.visible == false, "visible should be false")
-end
+end)
 
-function TestNodeOps:test_coerces_truthy_non_true_to_false()
+it("test_coerces_truthy_non_true_to_false", function()
   local node = { visible = true }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function() return { node } end },
@@ -73,9 +72,9 @@ function TestNodeOps:test_coerces_truthy_non_true_to_false()
     node_ops.set_visible(nil, "test_node", 1)
   end)
   _ok(node.visible == false, "non-true truthy should become false (visible == true check)")
-end
+end)
 
-function TestNodeOps:test_sets_disabled_false_when_enabled_true()
+it("test_sets_disabled_false_when_enabled_true", function()
   local node = { disabled = true }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function() return { node } end },
@@ -85,9 +84,9 @@ function TestNodeOps:test_sets_disabled_false_when_enabled_true()
     node_ops.set_touch_enabled(nil, "test_button", true)
   end)
   _ok(node.disabled == false, "disabled should be false when enabled")
-end
+end)
 
-function TestNodeOps:test_sets_disabled_true_when_enabled_false()
+it("test_sets_disabled_true_when_enabled_false", function()
   local node = { disabled = false }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function() return { node } end },
@@ -97,9 +96,9 @@ function TestNodeOps:test_sets_disabled_true_when_enabled_false()
     node_ops.set_touch_enabled(nil, "test_button", false)
   end)
   _ok(node.disabled == true, "disabled should be true when not enabled")
-end
+end)
 
-function TestNodeOps:test_sets_texture_on_slot_nodes_with_active_role()
+it("test_sets_texture_on_slot_nodes_with_active_role", function()
   local node = {}
   local texture_calls = {}
   _with_patches({
@@ -114,9 +113,9 @@ function TestNodeOps:test_sets_texture_on_slot_nodes_with_active_role()
 
   _assert_eq(#texture_calls, 1, "should set one texture")
   _assert_eq(texture_calls[1].key, "ICON_2001", "should use correct image key")
-end
+end)
 
-function TestNodeOps:test_iterates_all_roles_when_no_active_role()
+it("test_iterates_all_roles_when_no_active_role", function()
   local node = {}
   local texture_calls = {}
   _with_patches({
@@ -133,23 +132,23 @@ function TestNodeOps:test_iterates_all_roles_when_no_active_role()
   end)
 
   _assert_eq(#texture_calls, 3, "should set texture for each role iteration")
-end
+end)
 
-function TestNodeOps:test_rejects_nil_slot_name()
+it("test_rejects_nil_slot_name", function()
   local ok = pcall(node_ops.set_item_slot_image, nil, "ICON")
   _ok(not ok, "should reject nil slot name")
   -- 消息钉:变异把 "missing slot name" -> nil 后无消息,has_error 必须露馅。
   luassert.has_error(function()
     node_ops.set_item_slot_image(nil, "ICON")
   end, "missing slot name")
-end
+end)
 
-function TestNodeOps:test_rejects_nil_image_key()
+it("test_rejects_nil_image_key", function()
   local ok = pcall(node_ops.set_item_slot_image, "slot_1", nil)
   _ok(not ok, "should reject nil image key")
-end
+end)
 
-function TestNodeOps:test_hides_confirm_and_cancel_buttons()
+it("test_hides_confirm_and_cancel_buttons", function()
   local calls = {}
   local ui = {
     choice_screens = {
@@ -193,19 +192,19 @@ function TestNodeOps:test_hides_confirm_and_cancel_buttons()
   _ok(cancel_hidden, "cancel should be hidden")
   _ok(confirm_cleared, "confirm text should be cleared to empty")
   _ok(confirm_disabled, "confirm should be touch-disabled")
-end
+end)
 
-function TestNodeOps:test_does_nothing_when_ui_is_nil()
+it("test_does_nothing_when_ui_is_nil", function()
   local ok = pcall(node_ops.sync_target_choice_buttons, { ui = nil })
   _ok(ok, "should not error with nil ui")
-end
+end)
 
-function TestNodeOps:test_does_nothing_when_target_screen_is_nil()
+it("test_does_nothing_when_target_screen_is_nil", function()
   local ok = pcall(node_ops.sync_target_choice_buttons, { ui = { choice_screens = {} } })
   _ok(ok, "should not error with nil target screen")
-end
+end)
 
-function TestNodeOps:test_does_nothing_when_button_name_is_nil()
+it("test_does_nothing_when_button_name_is_nil", function()
   local calls = {}
   local ui = {
     choice_screens = {
@@ -227,53 +226,53 @@ function TestNodeOps:test_does_nothing_when_button_name_is_nil()
 
   node_ops.sync_target_choice_buttons({ ui = ui })
   _assert_eq(#calls, 0, "should not call any methods when button names are nil")
-end
+end)
 
-function TestNodeOps:test_returns_screens_with_player_target_remote_secondary_confirm_keys()
+it("test_returns_screens_with_player_target_remote_secondary_confirm_keys", function()
   local screens = require("src.ui.screens_registry").build_choice_screens()
   _ok(screens.player ~= nil, "should have player screen")
   _ok(screens.target ~= nil, "should have target screen")
   _ok(screens.remote ~= nil, "should have remote screen")
   _ok(screens.secondary_confirm ~= nil, "should have secondary_confirm screen")
-end
+end)
 
-function TestNodeOps:test_sets_correct_key_for_each_screen()
+it("test_sets_correct_key_for_each_screen", function()
   local screens = require("src.ui.screens_registry").build_choice_screens()
   _assert_eq(screens.player.key, "player", "player key")
   _assert_eq(screens.target.key, "target", "target key")
   _assert_eq(screens.remote.key, "remote", "remote key")
   _assert_eq(screens.secondary_confirm.key, "secondary_confirm", "secondary_confirm key")
-end
+end)
 
-function TestNodeOps:test_target_screen_has_confirm_and_cancel_nodes()
+it("test_target_screen_has_confirm_and_cancel_nodes", function()
   local screens = require("src.ui.screens_registry").build_choice_screens()
   _ok(screens.target.confirm ~= nil, "target should have confirm")
   _ok(screens.target.cancel ~= nil, "target should have cancel")
-end
+end)
 
-function TestNodeOps:test_secondary_confirm_screen_has_confirm_and_cancel_nodes()
+it("test_secondary_confirm_screen_has_confirm_and_cancel_nodes", function()
   local screens = require("src.ui.screens_registry").build_choice_screens()
   _ok(screens.secondary_confirm.confirm ~= nil, "secondary_confirm should have confirm")
   _ok(screens.secondary_confirm.cancel ~= nil, "secondary_confirm should have cancel")
-end
+end)
 
-function TestNodeOps:test_all_screens_have_root_and_title_nodes()
+it("test_all_screens_have_root_and_title_nodes", function()
   local screens = require("src.ui.screens_registry").build_choice_screens()
   for key, screen in pairs(screens) do
     _ok(screen.root ~= nil, key .. " should have root")
     _ok(screen.title ~= nil, key .. " should have title")
   end
-end
+end)
 
-function TestNodeOps:test_target_screen_has_body_option_buttons_slot_labels_slot_projections()
+it("test_target_screen_has_body_option_buttons_slot_labels_slot_projections", function()
   local screens = require("src.ui.screens_registry").build_choice_screens()
   _ok(screens.target.body ~= nil, "target should have body")
   _ok(screens.target.option_buttons ~= nil, "target should have option_buttons")
   _ok(screens.target.slot_labels ~= nil, "target should have slot_labels")
   _ok(screens.target.slot_projections ~= nil, "target should have slot_projections")
-end
+end)
 
-function TestNodeOps:test_sets_text_on_action_log_label()
+it("test_sets_text_on_action_log_label", function()
   local node = { text = "" }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function(name)
@@ -285,9 +284,9 @@ function TestNodeOps:test_sets_text_on_action_log_label()
     node_ops.set_event_log(nil, "test log message")
   end)
   _assert_eq(node.text, "test log message", "should set event log text")
-end
+end)
 
-function TestNodeOps:test_sets_debug_visible_on_ui_when_ui_provided()
+it("test_sets_debug_visible_on_ui_when_ui_provided", function()
   local node = { visible = false }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function(name)
@@ -302,9 +301,9 @@ function TestNodeOps:test_sets_debug_visible_on_ui_when_ui_provided()
     _ok(ui.debug_visible == true, "ui.debug_visible should be true")
     _ok(node.visible == true, "canvas should be visible")
   end)
-end
+end)
 
-function TestNodeOps:test_does_not_set_debug_visible_when_ui_is_nil()
+it("test_does_not_set_debug_visible_when_ui_is_nil", function()
   local node = { visible = false }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function(name)
@@ -317,9 +316,9 @@ function TestNodeOps:test_does_not_set_debug_visible_when_ui_is_nil()
     node_ops.set_event_log_visible(nil, true)
     _ok(node.visible == true, "canvas should still be visible")
   end)
-end
+end)
 
-function TestNodeOps:test_hides_canvas_when_visible_is_false()
+it("test_hides_canvas_when_visible_is_false", function()
   local node = { visible = true }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function(name)
@@ -332,9 +331,9 @@ function TestNodeOps:test_hides_canvas_when_visible_is_false()
     node_ops.set_event_log_visible(nil, false)
     _ok(node.visible == false, "canvas should be hidden")
   end)
-end
+end)
 
-function TestNodeOps:test_calls_mutator_on_single_node_when_active_role()
+it("test_calls_mutator_on_single_node_when_active_role", function()
   local node = { text = "" }
   _with_patches({
     { target = runtime, key = "query_nodes", value = function() return { node } end },
@@ -343,9 +342,9 @@ function TestNodeOps:test_calls_mutator_on_single_node_when_active_role()
     node_ops.set_text(nil, "test", "x")
   end)
   _assert_eq(node.text, "x", "text should be set via single path")
-end
+end)
 
-function TestNodeOps:test_calls_for_each_role_or_global_when_no_active_role()
+it("test_calls_for_each_role_or_global_when_no_active_role", function()
   local node = { text = "" }
   local role_calls = 0
   _with_patches({
@@ -359,16 +358,16 @@ function TestNodeOps:test_calls_for_each_role_or_global_when_no_active_role()
     node_ops.set_text(nil, "test", "x")
   end)
   _assert_eq(role_calls, 1, "should call for_each_role_or_global once")
-end
+end)
 
-function TestNodeOps:test_rejects_nil_name()
+it("test_rejects_nil_name", function()
   local ok = pcall(node_ops.set_text, nil, nil, "x")
   _ok(not ok, "should reject nil name")
   -- 消息钉:变异把 "missing ui node name" -> nil 后无消息,has_error 必须露馅。
   luassert.has_error(function()
     node_ops.set_text(nil, nil, "x")
   end, "missing ui node name")
-end
+end)
 
 
-return TestNodeOps
+end)

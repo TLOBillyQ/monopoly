@@ -1,5 +1,4 @@
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 
 local function _eq(a, b, msg)
   luassert.is.equal(b, a, msg)
@@ -10,6 +9,7 @@ end
 local function _with_role_context(body)
   local warn_calls = {}
   local prev_log = package.loaded["src.foundation.log"]
+  local prev_role_context = package.loaded["src.ui.view.role_context"]
   package.loaded["src.foundation.log"] = {
     warn = function(...) warn_calls[#warn_calls + 1] = { ... } end,
     info = function() end,
@@ -19,7 +19,7 @@ local function _with_role_context(body)
   local role_context = require("src.ui.view.role_context")
   local ok, err = pcall(body, role_context, warn_calls)
   package.loaded["src.foundation.log"] = prev_log
-  package.loaded["src.ui.view.role_context"] = nil
+  package.loaded["src.ui.view.role_context"] = prev_role_context
   if not ok then error(err) end
 end
 
@@ -27,10 +27,17 @@ local function _deps(resolve_fn)
   return { runtime = { resolve_role_id = resolve_fn } }
 end
 
-TestRoleContextWarnSurvivors = {}
+describe("TestRoleContextWarnSurvivors", function()
+local original_role_context
+before_each(function()
+  original_role_context = package.loaded["src.ui.view.role_context"]
+end)
+after_each(function()
+  package.loaded["src.ui.view.role_context"] = original_role_context
+end)
 
 -- role_context.resolve unmapped warn-once guard survivors
-TestRoleContextWarnSurvivors["test_L10: role_id + ui_model present and unseen → warns once (kills ~=→==, not-removal)"] = function(self)
+it("test_L10: role_id + ui_model present and unseen → warns once (kills ~=→==, not-removal)", function()
   -- role resolves to an id that is NOT in item_slots → unmapped fallback with a fresh warn table.
   _with_role_context(function(role_context, warn_calls)
     local ui_model = { current_player_id = 1, item_slots_by_player_id = {} }
@@ -39,27 +46,27 @@ TestRoleContextWarnSurvivors["test_L10: role_id + ui_model present and unseen �
     _eq(ctx.can_operate, false, "L20: unmapped context must NOT be operable")
     _eq(ctx.is_player_role, false, "unmapped context is not a player role")
   end)
-end
+end)
 
-TestRoleContextWarnSurvivors["test_L10: ui_model nil suppresses warn even with a role_id (kills and→or)"] = function(self)
+it("test_L10: ui_model nil suppresses warn even with a role_id (kills and→or)", function()
   -- ui_model nil makes the middle conjunct false; the whole guard must stay false → no warn.
   _with_role_context(function(role_context, warn_calls)
     local ctx = role_context.resolve("roleB", nil, _deps(function() return "player_9" end))
     _eq(#warn_calls, 0, "unmapped role with nil ui_model must NOT warn")
     _eq(ctx.can_operate, false, "L20: unmapped context must NOT be operable")
   end)
-end
+end)
 
-TestRoleContextWarnSurvivors["test_L11: second unmapped resolve of same role_id is suppressed (kills warned=true→false)"] = function(self)
+it("test_L11: second unmapped resolve of same role_id is suppressed (kills warned=true→false)", function()
   _with_role_context(function(role_context, warn_calls)
     local ui_model = { current_player_id = 1, item_slots_by_player_id = {} }
     role_context.resolve("roleC", ui_model, _deps(function() return "player_3" end))
     role_context.resolve("roleC", ui_model, _deps(function() return "player_3" end))
     _eq(#warn_calls, 1, "same unmapped role_id must warn only once across repeated resolves")
   end)
-end
+end)
 
-TestRoleContextWarnSurvivors["test_L61: role present but role_id nil → unmapped, not self (kills and→or)"] = function(self)
+it("test_L61: role present but role_id nil → unmapped, not self (kills and→or)", function()
   -- role is non-nil while resolve_role_id yields nil: only ONE side of `role_id==nil and role==nil`
   -- is nil, so the self branch must NOT fire; result must be the non-operable unmapped context.
   _with_role_context(function(role_context)
@@ -69,9 +76,9 @@ TestRoleContextWarnSurvivors["test_L61: role present but role_id nil → unmappe
     _eq(ctx.is_player_role, false, "L61: single-nil case must NOT be treated as the self player role")
     _eq(ctx.role_id, nil, "unmapped role_id here is nil (resolve returned nil)")
   end)
-end
+end)
 
-TestRoleContextWarnSurvivors["test_L13: unmapped warn payload label is pinned"] = function(self)
+it("test_L13: unmapped warn payload label is pinned", function()
   -- 杀 L13 消息标签->nil:回退 warn 的首参必须钉死。
   _with_role_context(function(role_context, warn_calls)
     local ui_model = { current_player_id = 1, item_slots_by_player_id = {} }
@@ -79,9 +86,9 @@ TestRoleContextWarnSurvivors["test_L13: unmapped warn payload label is pinned"] 
     _eq(warn_calls[1][1], "role->player 映射失败，按观战回退:",
       "unmapped warn must carry the pinned label")
   end)
-end
+end)
 
-TestRoleContextWarnSurvivors["test_L35: missing runtime asserts descriptive error"] = function(self)
+it("test_L35: missing runtime asserts descriptive error", function()
   -- 杀 L35 两个位点(and->or 与消息->nil):deps 缺 runtime 必须报带消息的错。
   package.loaded["src.ui.view.role_context"] = nil
   local role_context = require("src.ui.view.role_context")
@@ -89,7 +96,6 @@ TestRoleContextWarnSurvivors["test_L35: missing runtime asserts descriptive erro
     role_context.resolve("roleA", {}, {})
   end, "missing runtime.resolve_role_id")
   package.loaded["src.ui.view.role_context"] = nil
-end
+end)
 
-
-return TestRoleContextWarnSurvivors
+end)

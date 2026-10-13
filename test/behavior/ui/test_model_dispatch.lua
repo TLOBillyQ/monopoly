@@ -1,8 +1,5 @@
---- 原生 LuaUnit 迁移(busted → luaunit):describe 拍平为文件级 Test* 类,
---- 断言词汇切到 lu.assertXxx(裸 assert 语句 → luassert.truthy),
---- 用例数与改写前一一对应(30 例)。
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+-- UI model and action dispatch behavior: 31 explicit busted cases.
+local luassert = assert
 
 local support = require("test.support.shared_support")
 local control = require("src.player.control")
@@ -107,9 +104,9 @@ local function _with_reloaded_turn_dispatch(overrides, fn)
   return result
 end
 
-TestModelDispatch = {}
+describe("TestModelDispatch", function()
 
-function TestModelDispatch:test_ui_model_structure()
+it("test_ui_model_structure", function()
   local ui_model = require("src.ui.view")
   local g = _new_game()
   local player = g:current_player()
@@ -129,9 +126,9 @@ function TestModelDispatch:test_ui_model_structure()
   luassert.truthy(model.panel and model.panel.turn_label, "ui_model.panel.turn_label expected")
   luassert.truthy(type(model.item_slots) == "table" and model.item_slots[1] == 2001, "ui_model.item_slots[1] expected")
   luassert.truthy(model.board and model.board.tiles and model.board.tile_states, "ui_model.board data")
-end
+end)
 
-function TestModelDispatch:test_ui_panel_clamps_negative_assets_to_zero()
+it("test_ui_panel_clamps_negative_assets_to_zero", function()
   local ui_panel = require("src.ui.view.panel_builder")
   local statuses = ui_panel.build_player_statuses(
     _panel_game({
@@ -155,9 +152,9 @@ function TestModelDispatch:test_ui_panel_clamps_negative_assets_to_zero()
   _assert_eq(row.cash, "现金: 0", "negative cash should render as zero")
   _assert_eq(row.total_assets_value, 0, "negative total_assets_value should normalize as zero")
   _assert_eq(row.total_assets, "总资产: 0", "negative total assets should render as zero")
-end
+end)
 
-function TestModelDispatch:test_ui_panel_handles_invalid_cash_missing_role_id_and_empty_remote_name()
+it("test_ui_panel_handles_invalid_cash_missing_role_id_and_empty_remote_name", function()
   local ui_panel = require("src.ui.view.panel_builder")
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local resolve_calls = 0
@@ -222,9 +219,9 @@ function TestModelDispatch:test_ui_panel_handles_invalid_cash_missing_role_id_an
     _assert_eq(row2.total_assets_value, 50, "missing land level should not include upgrade cost")
     _assert_eq(row2.total_assets, "总资产: 50", "missing land level should render purchase value only")
   end)
-end
+end)
 
-function TestModelDispatch:test_ui_panel_missing_player_name_renders_blank_label()
+it("test_ui_panel_missing_player_name_renders_blank_label", function()
   local ui_panel = require("src.ui.view.panel_builder")
   local statuses = ui_panel.build_player_statuses(
     _panel_game({
@@ -238,9 +235,9 @@ function TestModelDispatch:test_ui_panel_missing_player_name_renders_blank_label
   local row = statuses and statuses[1] or nil
   luassert.truthy(row ~= nil, "panel row should exist")
   _assert_eq(row.name, "", "missing player name should render as blank")
-end
+end)
 
-function TestModelDispatch:test_ui_panel_empty_rows_and_zero_count_do_not_leak_cache_entries()
+it("test_ui_panel_empty_rows_and_zero_count_do_not_leak_cache_entries", function()
   local ui_panel = require("src.ui.view.panel_builder")
   local statuses = ui_panel.build_player_statuses({
     players = {},
@@ -261,9 +258,9 @@ function TestModelDispatch:test_ui_panel_empty_rows_and_zero_count_do_not_leak_c
   _assert_eq(#statuses, 0, "zero requested rows should trim the status array")
   _assert_eq(statuses[0], nil, "zero requested rows should not write a cache entry at index 0")
   _assert_eq(statuses[1], nil, "zero requested rows should clear previous array rows")
-end
+end)
 
-function TestModelDispatch:test_ui_panel_builds_empty_rows_and_counts_land_assets_only()
+it("test_ui_panel_builds_empty_rows_and_counts_land_assets_only", function()
   local ui_panel = require("src.ui.view.panel_builder")
   local statuses = ui_panel.build_player_statuses(
     _panel_game({
@@ -306,9 +303,9 @@ function TestModelDispatch:test_ui_panel_builds_empty_rows_and_counts_land_asset
   _assert_eq(row2.name, "", "missing player slots should render empty name")
   _assert_eq(row2.cash, "", "missing player slots should render empty cash")
   _assert_eq(row2.total_assets_value, nil, "missing player slots should keep total assets empty")
-end
+end)
 
-function TestModelDispatch:test_ui_model_player_slot_map_and_choice_owner()
+it("test_ui_model_player_slot_map_and_choice_owner", function()
   local ui_model = require("src.ui.view")
   local g = _new_game({ ai = {} })
   g.players[1].inventory:add({ id = 2001 })
@@ -348,9 +345,9 @@ function TestModelDispatch:test_ui_model_player_slot_map_and_choice_owner()
     "player1 auto label should use fixed delegate copy")
   luassert.truthy(model.panel and model.panel.auto_label_by_player and model.panel.auto_label_by_player[2] == "托管",
     "player2 auto label should use fixed delegate copy")
-end
+end)
 
-function TestModelDispatch:test_ui_model_build_falls_back_when_no_current_player()
+it("test_ui_model_build_falls_back_when_no_current_player", function()
   local ui_model = require("src.ui.view")
   local g = _new_game()
   g.turn.current_player_index = nil
@@ -365,24 +362,24 @@ function TestModelDispatch:test_ui_model_build_falls_back_when_no_current_player
   _assert_eq(model.current_player_name, "-", "no current player should fall back to the dash name")
   _assert_eq(model.current_player_cash, 0, "no current player should fall back to zero cash")
   luassert.is_nil(model.current_player_id, "no current player should leave the id nil")
-end
+end)
 
-function TestModelDispatch:test_panel_auto_label_stays_fixed_across_auto_states()
+it("test_panel_auto_label_stays_fixed_across_auto_states", function()
   local panel_view = require("src.ui.view.panel_builder")
 
   _assert_eq(panel_view.build_auto_label(false), "托管", "disabled auto label should be fixed")
   _assert_eq(panel_view.build_auto_label(true), "托管", "enabled auto label should be fixed")
-end
+end)
 
-function TestModelDispatch:test_panel_turn_label_defaults_missing_countdown_to_zero()
+it("test_panel_turn_label_defaults_missing_countdown_to_zero", function()
   local panel_view = require("src.ui.view.panel_builder")
 
   _assert_eq(panel_view.build_turn_label(nil, 7), "倒计时:7", "explicit countdown should render")
   _assert_eq(panel_view.build_turn_label(nil, nil), "倒计时:0", "missing countdown should render as zero")
   _assert_eq(panel_view.build_turn_label(nil, 0), "倒计时:0", "zero countdown should stay zero")
-end
+end)
 
-function TestModelDispatch:test_ui_model_player_profile_prefers_role_api_with_fallback()
+it("test_ui_model_player_profile_prefers_role_api_with_fallback", function()
   local ui_model = require("src.ui.view")
   local g = _new_game()
   g.players[1].name = "本地玩家1"
@@ -426,9 +423,9 @@ function TestModelDispatch:test_ui_model_player_profile_prefers_role_api_with_fa
   luassert.truthy(row1 and row1.avatar == 12345, "player1 should use role avatar")
   luassert.truthy(row2 and row2.name == "本地玩家2 (出局)", "player2 name should fallback to local name with eliminated suffix")
   luassert.truthy(row2 and row2.avatar == nil, "player2 avatar should fallback to nil when role api failed")
-end
+end)
 
-function TestModelDispatch:test_ui_model_player_profile_accepts_stringified_avatar()
+it("test_ui_model_player_profile_accepts_stringified_avatar", function()
   local ui_model = require("src.ui.view")
   local g = _new_game()
   g.players[1].name = "本地玩家1"
@@ -463,9 +460,9 @@ function TestModelDispatch:test_ui_model_player_profile_accepts_stringified_avat
 
   local row1 = model and model.panel and model.panel.player_rows and model.panel.player_rows[1] or nil
   luassert.truthy(row1 and row1.avatar == 67890, "player1 avatar should parse stringified icon key")
-end
+end)
 
-function TestModelDispatch:test_ui_model_player_profile_uses_slot_avatar_for_synthetic_ai()
+it("test_ui_model_player_profile_uses_slot_avatar_for_synthetic_ai", function()
   local ui_model = require("src.ui.view")
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local runtime_refs = require("src.config.content.runtime_refs")
@@ -563,9 +560,9 @@ function TestModelDispatch:test_ui_model_player_profile_uses_slot_avatar_for_syn
   luassert.truthy(row2 and row2.avatar == avatar_ai_2, "player2 should use slot-mapped AI2 avatar")
   luassert.truthy(row3 and row3.avatar == avatar_ai_3, "player3 should use slot-mapped AI3 avatar")
   luassert.truthy(row4 and row4.avatar == avatar_ai_4, "player4 should use slot-mapped AI4 avatar")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_rejects_non_current_actor()
+it("test_turn_dispatch_rejects_non_current_actor", function()
   local g = _new_game({ ai = {} })
   local state = {
     ui = {
@@ -587,9 +584,9 @@ function TestModelDispatch:test_turn_dispatch_rejects_non_current_actor()
     actor_role_id = 2,
   }, {})
   luassert.truthy(res_next and res_next.status == "rejected", "next button should reject non-current actor")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_rejects_choice_non_owner()
+it("test_turn_dispatch_rejects_choice_non_owner", function()
   local g = _new_game()
   local state = {
     ui = {
@@ -623,9 +620,9 @@ function TestModelDispatch:test_turn_dispatch_rejects_choice_non_owner()
   luassert.truthy(res and res.status == "rejected", "choice_select should reject non-owner actor")
   luassert.truthy(dispatched == nil, "rejected choice should not dispatch")
   luassert.truthy(g.turn.pending_choice ~= nil, "rejected choice should keep pending")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_auto_rejects_unmapped_role()
+it("test_turn_dispatch_auto_rejects_unmapped_role", function()
   local g = _new_game()
   local state = {
     ui = {
@@ -640,9 +637,9 @@ function TestModelDispatch:test_turn_dispatch_auto_rejects_unmapped_role()
   }, {})
   luassert.truthy(res and res.status == "rejected", "auto button should reject unmapped role")
   luassert.truthy(control.is_delegated(g.players[1]) == before, "mapped players delegation should keep unchanged")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_choice_action_prefers_turn_pending_choice()
+it("test_turn_dispatch_choice_action_prefers_turn_pending_choice", function()
   local g = _new_game()
   local turn_choice = {
     id = 707,
@@ -712,11 +709,11 @@ function TestModelDispatch:test_turn_dispatch_choice_action_prefers_turn_pending
   _assert_eq(dispatched and dispatched.choice_id, 707, "dispatch should keep turn pending choice id")
   _assert_eq(dispatched and dispatched.option_id, 2005, "dispatch should keep turn pending choice option")
   _assert_eq(cleared, 1, "resolved choice should clear stale runtime pending choice")
-end
+end)
 
 -- 槽位 → 道具按「行动者自己的背包」解析：两名玩家同一槽位各持不同的卡,
 -- 派发出去的必须是点击者手里那张,绝不串到另一名玩家的背包。
-function TestModelDispatch:test_turn_dispatch_item_slot_resolves_actor_own_inventory()
+it("test_turn_dispatch_item_slot_resolves_actor_own_inventory", function()
   local g = _new_game()
   local captured = nil
   local actor = g.players[2]
@@ -755,9 +752,9 @@ function TestModelDispatch:test_turn_dispatch_item_slot_resolves_actor_own_inven
   luassert.truthy(res and res.status == "applied", "item slot click should apply")
   luassert.truthy(captured and captured.type == "choice_select", "choice_select should dispatch")
   luassert.truthy(captured and captured.option_id == 4001, "should read the clicker's own bag, not the other player's")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_market_navigation_prefers_turn_pending_choice()
+it("test_turn_dispatch_market_navigation_prefers_turn_pending_choice", function()
   local g, state, calls = _build_market_nav_dispatch_env()
   local turn_choice = {
     id = 101,
@@ -812,9 +809,9 @@ function TestModelDispatch:test_turn_dispatch_market_navigation_prefers_turn_pen
   _assert_eq(calls.sync_pending_choice, 1, "successful navigation should sync pending choice once")
   _assert_eq(calls.synced_choice, turn_choice, "synced choice should be turn pending choice")
   _assert_eq(calls.invalidate_ui_model, 1, "market navigation should invalidate ui once")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_market_navigation_falls_back_to_state_choice()
+it("test_turn_dispatch_market_navigation_falls_back_to_state_choice", function()
   local g, state, calls = _build_market_nav_dispatch_env()
   local state_choice = {
     id = 303,
@@ -859,9 +856,9 @@ function TestModelDispatch:test_turn_dispatch_market_navigation_falls_back_to_st
 
   _assert_eq(validated_choice, state_choice, "state pending choice should be used when turn choice is absent")
   _assert_eq(calls.synced_choice, state_choice, "synced choice should match state pending choice")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_market_navigation_rejects_non_market_choice()
+it("test_turn_dispatch_market_navigation_rejects_non_market_choice", function()
   local g, state, calls = _build_market_nav_dispatch_env()
   state.pending_choice = {
     id = 404,
@@ -907,9 +904,9 @@ function TestModelDispatch:test_turn_dispatch_market_navigation_rejects_non_mark
   _assert_eq(validate_calls, 0, "non-market choice should reject before choice validation")
   _assert_eq(apply_calls, 0, "non-market choice should reject before navigation apply")
   _assert_eq(calls.sync_pending_choice, 0, "rejected navigation should not sync pending choice")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_market_navigation_rejects_when_validator_fails()
+it("test_turn_dispatch_market_navigation_rejects_when_validator_fails", function()
   local g, state, calls = _build_market_nav_dispatch_env()
   state.pending_choice = {
     id = 505,
@@ -952,9 +949,9 @@ function TestModelDispatch:test_turn_dispatch_market_navigation_rejects_when_val
 
   _assert_eq(apply_calls, 0, "validator failure should stop before apply_navigation")
   _assert_eq(calls.sync_pending_choice, 0, "validator failure should not sync pending choice")
-end
+end)
 
-function TestModelDispatch:test_turn_dispatch_market_navigation_rejects_when_apply_fails()
+it("test_turn_dispatch_market_navigation_rejects_when_apply_fails", function()
   local g, state, calls = _build_market_nav_dispatch_env()
   state.pending_choice = {
     id = 606,
@@ -994,9 +991,9 @@ function TestModelDispatch:test_turn_dispatch_market_navigation_rejects_when_app
   end)
 
   _assert_eq(calls.sync_pending_choice, 0, "failed apply_navigation should not sync pending choice")
-end
+end)
 
-function TestModelDispatch:test_ui_intent_dispatcher_market_confirm_routes_choice_select()
+it("test_ui_intent_dispatcher_market_confirm_routes_choice_select", function()
   local captured = nil
   local state = {
     turn_action_port = {
@@ -1024,9 +1021,9 @@ function TestModelDispatch:test_ui_intent_dispatcher_market_confirm_routes_choic
   luassert.truthy(captured and captured.type == "choice_select", "market_confirm should route as choice_select")
   _assert_eq(captured and captured.choice_id, 12, "market_confirm should keep choice id")
   _assert_eq(captured and captured.option_id, 34, "market_confirm should keep option id")
-end
+end)
 
-function TestModelDispatch:test_ui_model_update_refreshes_targeted_slices_only()
+it("test_ui_model_update_refreshes_targeted_slices_only", function()
   local ui_model = require("src.ui.view")
   local g = _new_game()
   local state = {
@@ -1067,9 +1064,9 @@ function TestModelDispatch:test_ui_model_update_refreshes_targeted_slices_only()
   _assert_eq(updated.current_player_cash, 4321, "current player cash should refresh")
   _assert_eq(updated.turn_count, 7, "turn count should refresh")
   luassert.truthy(updated.panel.turn_label ~= nil, "turn label should remain populated")
-end
+end)
 
-function TestModelDispatch:test_ui_model_update_refreshes_inventory_owned_slots()
+it("test_ui_model_update_refreshes_inventory_owned_slots", function()
   local ui_model = require("src.ui.view")
   local g = _new_game()
   local state = {
@@ -1104,9 +1101,9 @@ function TestModelDispatch:test_ui_model_update_refreshes_inventory_owned_slots(
   luassert.truthy(after_has_2001, "inventory refresh should include newly added item")
   luassert.truthy(updated.item_slots_by_player ~= nil, "inventory refresh should keep per-player slots")
   luassert.truthy(updated.item_choice_owner_id ~= nil or updated.choice == nil, "inventory refresh should recompute choice owner when needed")
-end
+end)
 
-function TestModelDispatch:test_panel_slice_update_refreshes_only_requested_flags()
+it("test_panel_slice_update_refreshes_only_requested_flags", function()
   local g = _new_game()
   local env = { game = g }
   local turn = g.turn
@@ -1131,9 +1128,9 @@ function TestModelDispatch:test_panel_slice_update_refreshes_only_requested_flag
   luassert.truthy(updated.player_rows == player_rows, "auto-label-only refresh should keep player rows")
   luassert.truthy(updated.auto_label == auto_label, "auto-label-only refresh should keep fixed delegate copy")
   luassert.truthy(updated.no_action_text ~= "locked", "no_action notice should not refresh without turn_label flag")
-end
+end)
 
-function TestModelDispatch:test_panel_slice_tracks_countdown_visibility()
+it("test_panel_slice_tracks_countdown_visibility", function()
   local g = _new_game()
   local env = { game = g }
   local turn = g.turn
@@ -1151,9 +1148,9 @@ function TestModelDispatch:test_panel_slice_tracks_countdown_visibility()
 
   luassert.truthy(updated == panel, "panel update should reuse panel table")
   _assert_eq(updated.countdown_visible, true, "turn label refresh should track active countdown visibility")
-end
+end)
 
-function TestModelDispatch:test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy()
+it("test_modal_presenter_select_choice_option_refreshes_secondary_confirm_copy", function()
   local state = _build_choice_modal_state()
   local canvas_store = require("src.ui.state.canvas_store")
   local labels = {}
@@ -1197,9 +1194,9 @@ function TestModelDispatch:test_modal_presenter_select_choice_option_refreshes_s
   luassert.truthy(labels["通用二次确认_文本"] ~= nil, "secondary confirm body should refresh")
   _assert_eq(choice_dirty_marks, 0, "secondary confirm selection should not write choice canvas dirty")
   _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "secondary confirm selection should invalidate ui_model")
-end
+end)
 
-function TestModelDispatch:test_modal_state_select_choice_option_invalidates_ui_model_without_choice_canvas_dirty()
+it("test_modal_state_select_choice_option_invalidates_ui_model_without_choice_canvas_dirty", function()
   local modal_state = require("src.ui.state.modal")
   local canvas_store = require("src.ui.state.canvas_store")
   local state = {}
@@ -1224,9 +1221,9 @@ function TestModelDispatch:test_modal_state_select_choice_option_invalidates_ui_
   _assert_eq(_ui_runtime(state).pending_choice_selected_option_id, 101, "modal_state should still store selected option in ui_runtime")
   _assert_eq(choice_dirty_marks, 0, "modal_state choice selection should not write choice canvas dirty")
   _assert_eq(_ui_runtime(state).ui_dirty, true, "modal_state choice selection should invalidate ui_model")
-end
+end)
 
-function TestModelDispatch:test_modal_presenter_close_choice_modal_resets_choice_and_market()
+it("test_modal_presenter_close_choice_modal_resets_choice_and_market", function()
   local state = {
     ui = {
       choice_active = true,
@@ -1269,7 +1266,7 @@ function TestModelDispatch:test_modal_presenter_close_choice_modal_resets_choice
   luassert.truthy(state.ui.market_active == false, "close_choice_modal should deactivate market")
   luassert.truthy(market_closed == 1, "close_choice_modal should close market once")
   luassert.truthy(modal_closed == 1, "close_choice_modal should close modal state once")
-end
+end)
 
 
-return TestModelDispatch
+end)
