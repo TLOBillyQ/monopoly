@@ -1,9 +1,6 @@
--- 原生 LuaUnit 迁移:四个顶层 describe(placeholder dispatch / failures / spec
--- binding / inline-capture patterns)均无钩子、无嵌套,全部拍平进单一类 TestRuntime,
--- 用例数与改写前一致(7 + 5 + 1 + 5 = 16 例);inline-capture describe 体内的
--- _pattern helper 提升为文件级 local;assert.has_no.errors 经 luax 补件等价映射。
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+-- Runtime public-seam assertions use the trusted project luassert module.
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local runtime = require("packages.acceptance.runtime")
 
 -- Build a one-scenario IR by hand. The parser keeps Chinese placeholder names in
@@ -46,8 +43,8 @@ function TestRuntime:test_binds_a_differently_named_placeholder_to_the_handlers_
     end,
   })
 
-  lu.assertTrue(result.ok, runtime.format_failures(result))
-  lu.assertIs(seen, "3")
+  luassert.is_true(result.ok, runtime.format_failures(result))
+  luassert.is.equal(seen, "3")
 end
 
 function TestRuntime:test_binds_several_renamed_placeholders_by_position()
@@ -63,9 +60,9 @@ function TestRuntime:test_binds_several_renamed_placeholders_by_position()
     end,
   })
 
-  lu.assertTrue(result.ok, runtime.format_failures(result))
-  lu.assertIs(slot, "2")
-  lu.assertIs(product, "skin_02")
+  luassert.is_true(result.ok, runtime.format_failures(result))
+  luassert.is.equal(slot, "2")
+  luassert.is.equal(product, "skin_02")
 end
 
 function TestRuntime:test_keeps_non_parameter_example_columns_readable_through_the_bound_view()
@@ -78,8 +75,8 @@ function TestRuntime:test_keeps_non_parameter_example_columns_readable_through_t
     end,
   })
 
-  lu.assertTrue(result.ok, runtime.format_failures(result))
-  lu.assertIs(extra, "限定")
+  luassert.is_true(result.ok, runtime.format_failures(result))
+  luassert.is.equal(extra, "限定")
 end
 
 function TestRuntime:test_prefers_an_exact_step_text_handler_over_a_same_shape_handler()
@@ -97,8 +94,8 @@ function TestRuntime:test_prefers_an_exact_step_text_handler_over_a_same_shape_h
     end,
   })
 
-  lu.assertTrue(result.ok, runtime.format_failures(result))
-  lu.assertIs(called, "exact")
+  luassert.is_true(result.ok, runtime.format_failures(result))
+  luassert.is.equal(called, "exact")
 end
 
 function TestRuntime:test_reports_an_ambiguous_shape_instead_of_picking_a_handler_at_random()
@@ -108,12 +105,12 @@ function TestRuntime:test_reports_an_ambiguous_shape_instead_of_picking_a_handle
     ["槽位<验证槽位>的皮肤已归玩家持有"] = function() return true end,
   })
 
-  lu.assertFalse(result.ok)
+  luassert.is_false(result.ok)
   local message = runtime.format_failures(result)
-  lu.assertEvalToTrue(message:find("ambiguous", 1, true), message)
-  lu.assertEvalToTrue(message:find("槽位<槽位>的皮肤已归玩家持有", 1, true), message)
-  lu.assertEvalToTrue(message:find("槽位<验证槽位>的皮肤已归玩家持有", 1, true), message)
-  lu.assertEvalToTrue(message:find("features/test.feature", 1, true), message)
+  luassert.truthy(message:find("ambiguous", 1, true), message)
+  luassert.truthy(message:find("槽位<槽位>的皮肤已归玩家持有", 1, true), message)
+  luassert.truthy(message:find("槽位<验证槽位>的皮肤已归玩家持有", 1, true), message)
+  luassert.truthy(message:find("features/test.feature", 1, true), message)
 end
 
 function TestRuntime:test_passes_world_resolved_text_and_the_step_to_the_handler()
@@ -127,10 +124,10 @@ function TestRuntime:test_passes_world_resolved_text_and_the_step_to_the_handler
     end,
   })
 
-  lu.assertTrue(result.ok, runtime.format_failures(result))
-  lu.assertIs(resolved, "玩家穿上槽位3的皮肤")
-  lu.assertIs(keyword, "Then")
-  lu.assertTrue(world_seen.touched)
+  luassert.is_true(result.ok, runtime.format_failures(result))
+  luassert.is.equal(resolved, "玩家穿上槽位3的皮肤")
+  luassert.is.equal(keyword, "Then")
+  luassert.is_true(world_seen.touched)
 end
 
 -- -------------------------------------------------- failures
@@ -139,11 +136,11 @@ function TestRuntime:test_rejects_a_step_no_handler_shape_matches()
   local ir = _ir({ { text = "无人认领的步骤<槽位>" } }, { { ["槽位"] = "1" } })
   local result = runtime.run_feature(ir, {})
 
-  lu.assertFalse(result.ok)
+  luassert.is_false(result.ok)
   local message = runtime.format_failures(result)
-  lu.assertEvalToTrue(message:find("unsupported step", 1, true), message)
-  lu.assertEvalToTrue(message:find("无人认领的步骤<槽位>", 1, true), message)
-  lu.assertEvalToTrue(message:find("features/test.feature:第11行", 1, true), message)
+  luassert.truthy(message:find("unsupported step", 1, true), message)
+  luassert.truthy(message:find("无人认领的步骤<槽位>", 1, true), message)
+  luassert.truthy(message:find("features/test.feature:第11行", 1, true), message)
 end
 
 function TestRuntime:test_names_the_chinese_column_when_the_example_has_no_value_for_a_placeholder()
@@ -156,10 +153,10 @@ function TestRuntime:test_names_the_chinese_column_when_the_example_has_no_value
     ["玩家穿上槽位<槽位>的皮肤"] = function() return true end,
   })
 
-  lu.assertFalse(result.ok)
+  luassert.is_false(result.ok)
   local message = runtime.format_failures(result)
-  lu.assertEvalToTrue(message:find("missing example value", 1, true), message)
-  lu.assertEvalToTrue(message:find("新槽位", 1, true), message)
+  luassert.truthy(message:find("missing example value", 1, true), message)
+  luassert.truthy(message:find("新槽位", 1, true), message)
 end
 
 function TestRuntime:test_surfaces_a_handlers_own_failure_message()
@@ -168,8 +165,8 @@ function TestRuntime:test_surfaces_a_handlers_own_failure_message()
     ["玩家穿上槽位<槽位>的皮肤"] = function() return nil, "no skin at slot 9" end,
   })
 
-  lu.assertFalse(result.ok)
-  lu.assertEvalToTrue(runtime.format_failures(result):find("no skin at slot 9", 1, true))
+  luassert.is_false(result.ok)
+  luassert.truthy(runtime.format_failures(result):find("no skin at slot 9", 1, true))
 end
 
 function TestRuntime:test_runs_background_steps_before_scenario_steps_and_reports_each_example()
@@ -194,11 +191,11 @@ function TestRuntime:test_runs_background_steps_before_scenario_steps_and_report
     end,
   })
 
-  lu.assertFalse(result.ok)
-  lu.assertEquals(calls, { "background", "equip:1", "background", "equip:2" })
-  lu.assertIs(#result.failures, 2)
-  lu.assertIs(result.failures[1].name, "测试场景/example_1")
-  lu.assertEvalToTrue(runtime.format_failures(result):find("boom 2", 1, true))
+  luassert.is_false(result.ok)
+  luassert.is.same({ "background", "equip:1", "background", "equip:2" }, calls)
+  luassert.is.equal(#result.failures, 2)
+  luassert.is.equal(result.failures[1].name, "测试场景/example_1")
+  luassert.truthy(runtime.format_failures(result):find("boom 2", 1, true))
 end
 
 -- -------------------------------------------------- spec binding
@@ -215,10 +212,10 @@ function TestRuntime:test_defines_one_spec_per_example()
     defined[#defined + 1] = { name = name, fn = fn }
   end)
 
-  lu.assertIs(#defined, 2)
-  lu.assertIs(defined[1].name, "测试场景/example_1")
-  lu.assertIs(defined[2].name, "测试场景/example_2")
-  luax.has_no_error(defined[1].fn)
+  luassert.is.equal(#defined, 2)
+  luassert.is.equal(defined[1].name, "测试场景/example_1")
+  luassert.is.equal(defined[2].name, "测试场景/example_2")
+  luassert.has_no.errors(defined[1].fn)
 end
 
 -- -------------------------------------------------- inline-capture patterns
@@ -235,8 +232,8 @@ function TestRuntime:test_matches_a_pattern_when_exact_and_shape_both_miss_coerc
     },
   })
 
-  lu.assertTrue(result.ok, runtime.format_failures(result))
-  lu.assertIs(seen, 5)
+  luassert.is_true(result.ok, runtime.format_failures(result))
+  luassert.is.equal(seen, 5)
 end
 
 function TestRuntime:test_matches_against_the_resolved_step_text_not_the_raw_placeholder()
@@ -260,10 +257,10 @@ function TestRuntime:test_matches_against_the_resolved_step_text_not_the_raw_pla
     },
   })
 
-  lu.assertTrue(result.ok, runtime.format_failures(result))
-  lu.assertIs(seat, 2)
-  lu.assertIs(deity, "财神")
-  lu.assertIs(turns, 3)
+  luassert.is_true(result.ok, runtime.format_failures(result))
+  luassert.is.equal(seat, 2)
+  luassert.is.equal(deity, "财神")
+  luassert.is.equal(turns, 3)
 end
 
 function TestRuntime:test_prefers_an_exact_handler_over_a_matching_pattern()
@@ -278,8 +275,8 @@ function TestRuntime:test_prefers_an_exact_handler_over_a_matching_pattern()
     },
   })
 
-  lu.assertTrue(result.ok, runtime.format_failures(result))
-  lu.assertIs(called, "exact")
+  luassert.is_true(result.ok, runtime.format_failures(result))
+  luassert.is.equal(called, "exact")
 end
 
 function TestRuntime:test_reports_an_ambiguous_pattern_when_two_patterns_match()
@@ -291,11 +288,11 @@ function TestRuntime:test_reports_an_ambiguous_pattern_when_two_patterns_match()
     },
   })
 
-  lu.assertFalse(result.ok)
+  luassert.is_false(result.ok)
   local message = runtime.format_failures(result)
-  lu.assertEvalToTrue(message:find("ambiguous pattern", 1, true), message)
-  lu.assertEvalToTrue(message:find("值 {a}", 1, true), message)
-  lu.assertEvalToTrue(message:find("值 {b}", 1, true), message)
+  luassert.truthy(message:find("ambiguous pattern", 1, true), message)
+  luassert.truthy(message:find("值 {a}", 1, true), message)
+  luassert.truthy(message:find("值 {b}", 1, true), message)
 end
 
 function TestRuntime:test_hints_the_nearest_pattern_when_nothing_matches()
@@ -306,11 +303,27 @@ function TestRuntime:test_hints_the_nearest_pattern_when_nothing_matches()
     },
   })
 
-  lu.assertFalse(result.ok)
+  luassert.is_false(result.ok)
   local message = runtime.format_failures(result)
-  lu.assertEvalToTrue(message:find("unsupported step", 1, true), message)
-  lu.assertEvalToTrue(message:find("最近候选", 1, true), message)
+  luassert.truthy(message:find("unsupported step", 1, true), message)
+  luassert.truthy(message:find("最近候选", 1, true), message)
 end
 
+function TestRuntime:test_failure_runs_deferred_cleanup_before_the_next_example()
+  local patched = false
+  local ir = _ir({ { text = "临时补丁" }, { text = "故意失败" } }, { {}, {} })
+  local result = runtime.run_feature(ir, {
+    ["临时补丁"] = function(world)
+      luassert.is_false(patched)
+      patched = true
+      world.defer(function() patched = false end)
+      return true
+    end,
+    ["故意失败"] = function() return false, "预期失败" end,
+  })
+  luassert.is_false(result.ok)
+  luassert.is.equal(2, #result.failures)
+  luassert.is_false(patched)
+end
 
 return TestRuntime
