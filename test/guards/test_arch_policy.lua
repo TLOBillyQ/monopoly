@@ -1,7 +1,8 @@
 ---@diagnostic disable: undefined-global
 require("test.bootstrap").install_package_paths()
 
-local lu = require("luaunit")
+-- luacheck: ignore 143 (genuine busted injects luassert)
+local luassert = assert
 
 local arch_policy = require("packages.arch_policy")
 local policy_scan = require("packages.arch_policy.scan")
@@ -44,56 +45,66 @@ end
 
 local function _only(modules, edges, policy)
   local violations = _violations(modules, edges, policy)
-  lu.assertEquals(#violations, 1, guard.describe(violations[1] or {}))
+  luassert.is.equal(1, #violations, guard.describe(violations[1] or {}))
   return violations[1]
 end
 
-TestArchPolicy = {}
+describe("TestArchPolicy", function()
+  local pending_root
 
-function TestArchPolicy:test_declared_layers_match_the_registry()
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.app.init"), 1)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.host.units"), 2)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.ui.panel"), 3)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.turn.loop"), 4)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.player.actions.balance"), 5)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.computer.strategy"), 5)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.rules.bootstrap"), 6)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.state.game"), 7)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.config.game"), 7)
-  lu.assertEquals(arch_policy.declared_layer(POLICY, "src.foundation.number"), "substrate")
-  lu.assertNil(arch_policy.declared_layer(POLICY, "src.mystery.thing"))
-end
+  after_each(function()
+    if pending_root then
+      local root = pending_root
+      pending_root = nil
+      assert(require("foundation.fs").remove_path(root))
+    end
+  end)
 
-function TestArchPolicy:test_legal_graph_passes()
+
+it("test_declared_layers_match_the_registry", function()
+  luassert.is.equal(1, arch_policy.declared_layer(POLICY, "src.app.init"))
+  luassert.is.equal(2, arch_policy.declared_layer(POLICY, "src.host.units"))
+  luassert.is.equal(3, arch_policy.declared_layer(POLICY, "src.ui.panel"))
+  luassert.is.equal(4, arch_policy.declared_layer(POLICY, "src.turn.loop"))
+  luassert.is.equal(5, arch_policy.declared_layer(POLICY, "src.player.actions.balance"))
+  luassert.is.equal(5, arch_policy.declared_layer(POLICY, "src.computer.strategy"))
+  luassert.is.equal(6, arch_policy.declared_layer(POLICY, "src.rules.bootstrap"))
+  luassert.is.equal(7, arch_policy.declared_layer(POLICY, "src.state.game"))
+  luassert.is.equal(7, arch_policy.declared_layer(POLICY, "src.config.game"))
+  luassert.is.equal("substrate", arch_policy.declared_layer(POLICY, "src.foundation.number"))
+  luassert.is_nil(arch_policy.declared_layer(POLICY, "src.mystery.thing"))
+end)
+
+it("test_legal_graph_passes", function()
   local result = _check(LEGAL_MODULES, LEGAL_EDGES)
-  lu.assertTrue(result.ok, tostring(result.error))
-end
+  luassert.is_true(result.ok, tostring(result.error))
+end)
 
-function TestArchPolicy:test_downward_skip_is_a_layer_violation()
+it("test_downward_skip_is_a_layer_violation", function()
   local violation = _only({ "src.rules.bootstrap", "src.app.init" }, {
     { from = "src.rules.bootstrap", to = "src.app.init" },
   })
-  lu.assertEquals(violation.kind, "layer_violation")
-  lu.assertEquals(violation.from_layer, 6)
-  lu.assertEquals(violation.to_layer, 1)
-end
+  luassert.is.equal("layer_violation", violation.kind)
+  luassert.is.equal(6, violation.from_layer)
+  luassert.is.equal(1, violation.to_layer)
+end)
 
-function TestArchPolicy:test_substrate_must_not_depend_on_a_layered_component()
+it("test_substrate_must_not_depend_on_a_layered_component", function()
   local violation = _only({ "src.foundation.number", "src.rules.bootstrap" }, {
     { from = "src.foundation.number", to = "src.rules.bootstrap" },
   })
-  lu.assertEquals(violation.kind, "layer_violation")
-  lu.assertEquals(violation.from_layer, "substrate")
-end
+  luassert.is.equal("layer_violation", violation.kind)
+  luassert.is.equal("substrate", violation.from_layer)
+end)
 
-function TestArchPolicy:test_any_layer_may_depend_on_substrate()
+it("test_any_layer_may_depend_on_substrate", function()
   local result = _check({ "src.foundation.number", "src.rules.bootstrap" }, {
     { from = "src.rules.bootstrap", to = "src.foundation.number" },
   })
-  lu.assertTrue(result.ok, tostring(result.error))
-end
+  luassert.is_true(result.ok, tostring(result.error))
+end)
 
-function TestArchPolicy:test_ui_must_not_depend_on_player_computer_or_rules()
+it("test_ui_must_not_depend_on_player_computer_or_rules", function()
   local expected = {
     { to = "src.player.actions.balance", rule = "ui_no_player" },
     { to = "src.computer.strategy", rule = "ui_no_computer" },
@@ -103,43 +114,43 @@ function TestArchPolicy:test_ui_must_not_depend_on_player_computer_or_rules()
     local violation = _only({ "src.ui.panel", case.to }, {
       { from = "src.ui.panel", to = case.to },
     })
-    lu.assertEquals(violation.kind, "forbidden_dependency")
-    lu.assertEquals(violation.rule, case.rule)
+    luassert.is.equal("forbidden_dependency", violation.kind)
+    luassert.is.equal(case.rule, violation.rule)
   end
-end
+end)
 
-function TestArchPolicy:test_ui_schema_stays_pure()
+it("test_ui_schema_stays_pure", function()
   local violation = _only({ "src.ui.schema.node", "src.ui.coord.layout" }, {
     { from = "src.ui.schema.node", to = "src.ui.coord.layout" },
   })
-  lu.assertEquals(violation.kind, "forbidden_dependency")
-  lu.assertEquals(violation.rule, "ui_schema_pure")
-end
+  luassert.is.equal("forbidden_dependency", violation.kind)
+  luassert.is.equal("ui_schema_pure", violation.rule)
+end)
 
-function TestArchPolicy:test_ui_state_must_not_depend_on_ui_coord()
+it("test_ui_state_must_not_depend_on_ui_coord", function()
   local violation = _only({ "src.ui.state.turn", "src.ui.coord.host" }, {
     { from = "src.ui.state.turn", to = "src.ui.coord.host" },
   })
-  lu.assertEquals(violation.kind, "forbidden_dependency")
-  lu.assertEquals(violation.rule, "ui_state_no_coord")
-end
+  luassert.is.equal("forbidden_dependency", violation.kind)
+  luassert.is.equal("ui_state_no_coord", violation.rule)
+end)
 
-function TestArchPolicy:test_unclassified_module_is_reported()
+it("test_unclassified_module_is_reported", function()
   local violation = _only({ "src.mystery.thing" }, {})
-  lu.assertEquals(violation.kind, "unclassified_module")
-  lu.assertEquals(violation.module_id, "src.mystery.thing")
-end
+  luassert.is.equal("unclassified_module", violation.kind)
+  luassert.is.equal("src.mystery.thing", violation.module_id)
+end)
 
-function TestArchPolicy:test_cycle_is_reported_and_waivable()
+it("test_cycle_is_reported_and_waivable", function()
   local modules = { "src.rules.a", "src.rules.b" }
   local edges = {
     { from = "src.rules.a", to = "src.rules.b" },
     { from = "src.rules.b", to = "src.rules.a" },
   }
   local violation = _only(modules, edges)
-  lu.assertEquals(violation.kind, "projection_cycle")
-  lu.assertEquals(violation.nodes, { "rules.a", "rules.b" })
-  lu.assertEquals(violation.cycle, "rules.a->rules.b->rules.a")
+  luassert.is.equal("projection_cycle", violation.kind)
+  luassert.is.same({ "rules.a", "rules.b" }, violation.nodes)
+  luassert.is.equal("rules.a->rules.b->rules.a", violation.cycle)
 
   local waived = {
     component_rules = POLICY.component_rules,
@@ -148,38 +159,39 @@ function TestArchPolicy:test_cycle_is_reported_and_waivable()
       { view = "rules", nodes = { "rules.a", "rules.b" }, reason = "synthetic waiver" },
     },
   }
-  lu.assertTrue(arch_policy.check(waived, { modules = modules, edges = edges }).ok)
+  luassert.is_true(arch_policy.check(waived, { modules = modules, edges = edges }).ok)
   -- 白名单按参与者集合匹配,不认遍历顺序。
   local reversed = {
     component_rules = POLICY.component_rules,
     allowed_cycles = { { view = "rules", nodes = { "rules.b", "rules.a" }, reason = "synthetic waiver" } },
   }
-  lu.assertTrue(arch_policy.check(reversed, { modules = modules, edges = edges }).ok)
+  luassert.is_true(arch_policy.check(reversed, { modules = modules, edges = edges }).ok)
   -- 参与者集合不同就不豁免。
   local narrowed = {
     component_rules = POLICY.component_rules,
     allowed_cycles = { { view = "rules", nodes = { "rules.a" }, reason = "synthetic waiver" } },
   }
-  lu.assertFalse(arch_policy.check(narrowed, { modules = modules, edges = edges }).ok)
-end
+  luassert.is_false(arch_policy.check(narrowed, { modules = modules, edges = edges }).ok)
+end)
 
-function TestArchPolicy:test_namespace_projection_cycle_without_module_cycle_is_rejected()
+it("test_namespace_projection_cycle_without_module_cycle_is_rejected", function()
   local modules = { "src.rules.a.first", "src.rules.a.second", "src.rules.b.first", "src.rules.b.second" }
   local edges = {
     { from = "src.rules.a.first", to = "src.rules.b.first" },
     { from = "src.rules.b.second", to = "src.rules.a.second" },
   }
-  lu.assertFalse(_check(modules, edges).ok)
+  luassert.is_false(_check(modules, edges).ok)
   local violation = _only(modules, edges)
-  lu.assertEquals(violation.view, "rules")
-  lu.assertEquals(violation.nodes, { "rules.a", "rules.b" })
-end
+  luassert.is.equal("rules", violation.view)
+  luassert.is.same({ "rules.a", "rules.b" }, violation.nodes)
+end)
 
-function TestArchPolicy:test_complex_scc_path_waivers_match_legacy_public_analyzer()
+it("test_complex_scc_path_waivers_match_legacy_public_analyzer", function()
   local fs = require("foundation.fs")
   local json = require("foundation.json_writer")
   local legacy = require("arch_view")
-  local root = "tmp/arch_policy_cycle_compare"
+  local root = require("foundation.env").make_temp_path("monopoly_76_arch_policy_cycle")
+  pending_root = root
   local graph = {
     modules = { "src.rules.a", "src.rules.b", "src.rules.c" },
     edges = {
@@ -210,25 +222,27 @@ function TestArchPolicy:test_complex_scc_path_waivers_match_legacy_public_analyz
     assert(fs.write_file(root .. "/config.json", json.encode(arch_policy.project_arch_view_config(policy))))
     local old = legacy.analyze({ project_root = root, config_path = root .. "/config.json" }).check
     local current = arch_policy.check(policy, graph)
-    lu.assertEquals(current.ok, old.ok)
-    lu.assertEquals(#current.violations, #old.violations)
-    lu.assertEquals(#current.all_violations, #old.projection_cycles)
+    luassert.is.equal(old.ok, current.ok)
+    luassert.is.equal(#old.violations, #current.violations)
+    luassert.is.equal(#old.projection_cycles, #current.all_violations)
     for index, cycle in ipairs(old.projection_cycles) do
       local actual = current.all_violations[index]
-      lu.assertEquals(actual.view, cycle.view)
-      lu.assertEquals(actual.cycle, cycle.cycle)
-      lu.assertEquals(actual.nodes, cycle.nodes)
-      lu.assertEquals(actual.waived, cycle.waived)
-      lu.assertEquals(actual.reason, cycle.reason)
+      luassert.is.equal(cycle.view, actual.view)
+      luassert.is.equal(cycle.cycle, actual.cycle)
+      luassert.is.same(cycle.nodes, actual.nodes)
+      luassert.is.equal(cycle.waived, actual.waived)
+      luassert.is.equal(cycle.reason, actual.reason)
     end
   end
   assert(fs.remove_path(root))
-end
+  pending_root = nil
+end)
 
-function TestArchPolicy:test_large_scc_greedy_paths_match_legacy_public_analyzer()
+it("test_large_scc_greedy_paths_match_legacy_public_analyzer", function()
   local fs = require("foundation.fs")
   local json = require("foundation.json_writer")
-  local root = "tmp/arch_policy_greedy_compare"
+  local root = require("foundation.env").make_temp_path("monopoly_76_arch_policy_greedy")
+  pending_root = root
   local graph = { modules = {}, edges = {} }
   for index = 1, 9 do
     local id = "src.rules.n" .. index
@@ -244,26 +258,27 @@ function TestArchPolicy:test_large_scc_greedy_paths_match_legacy_public_analyzer
   assert(fs.write_file(root .. "/config.json", json.encode(arch_policy.project_arch_view_config(POLICY))))
   local old = require("arch_view").analyze({ project_root = root, config_path = root .. "/config.json" }).check
   local current = arch_policy.check(POLICY, graph)
-  lu.assertFalse(current.ok)
-  lu.assertEquals(#current.all_violations, #old.projection_cycles)
+  luassert.is_false(current.ok)
+  luassert.is.equal(#old.projection_cycles, #current.all_violations)
   for index, cycle in ipairs(old.projection_cycles) do
-    lu.assertEquals(current.all_violations[index].cycle, cycle.cycle)
-    lu.assertEquals(current.all_violations[index].nodes, cycle.nodes)
-    lu.assertEquals(current.all_violations[index].view, cycle.view)
+    luassert.is.equal(cycle.cycle, current.all_violations[index].cycle)
+    luassert.is.same(cycle.nodes, current.all_violations[index].nodes)
+    luassert.is.equal(cycle.view, current.all_violations[index].view)
   end
   assert(fs.remove_path(root))
-end
+  pending_root = nil
+end)
 
-function TestArchPolicy:test_external_and_self_edges_are_outside_the_graph()
+it("test_external_and_self_edges_are_outside_the_graph", function()
   local result = _check({ "src.rules.bootstrap" }, {
     { from = "src.rules.bootstrap", to = "lfs" },
     { from = "src.rules.bootstrap", to = "src.rules.bootstrap" },
   })
-  lu.assertTrue(result.ok, tostring(result.error))
-end
+  luassert.is_true(result.ok, tostring(result.error))
+end)
 
 -- 扫描面:注释与字符串里的 require 不造边,`.init` 折叠与旧工具同口径。
-function TestArchPolicy:test_requires_ignores_comments_and_strings()
+it("test_requires_ignores_comments_and_strings", function()
   local source = table.concat({
     "-- require(\"src.app.commented\")\n",
     "--[[\nrequire(\"src.app.long_comment\")\n]]\n",
@@ -272,29 +287,28 @@ function TestArchPolicy:test_requires_ignores_comments_and_strings()
     "local real = require(\"src.app.real\")\n",
     "local bare = require 'src.app.bare'\n",
   }, "")
-  lu.assertEquals(policy_scan.requires(source), { "src.app.bare", "src.app.real" })
-end
+  luassert.is.same({ "src.app.bare", "src.app.real" }, policy_scan.requires(source))
+end)
 
 -- 名字里的下划线是模块名的一部分。截断成 `src.app.event` 会让一条真实依赖
 -- 落进「外部模块」桶,门禁就漏判了(`src/app/init.lua` 的 event_bridge 就是这样)。
-function TestArchPolicy:test_requires_keeps_underscores_in_module_names()
+it("test_requires_keeps_underscores_in_module_names", function()
   local source = "local a = require(\"src.app.event_bridge\")\n"
     .. "local b = require(\"src.turn.output.player_control_snapshot\")\n"
-  lu.assertEquals(policy_scan.requires(source), {
+  luassert.is.same({
     "src.app.event_bridge",
     "src.turn.output.player_control_snapshot",
-  })
-end
+  }, policy_scan.requires(source))
+end)
 
 -- `require` 出现在字段/方法位不是指令,与 uml-viewer 的 keyword-at? 同口径。
-function TestArchPolicy:test_requires_ignores_field_access()
+it("test_requires_ignores_field_access", function()
   local source = "loader.require(\"src.app.field\")\nlocal x = loader:require(\"src.app.method\")\n"
-  lu.assertEquals(policy_scan.requires(source), {})
-end
+  luassert.is.same({}, policy_scan.requires(source))
+end)
 
-function TestArchPolicy:test_module_id_folds_init_and_separators()
-  lu.assertEquals(policy_scan.module_id("src/rules/init.lua"), "src.rules")
-  lu.assertEquals(policy_scan.module_id("src/ui/panel.lua"), "src.ui.panel")
-end
-
-return TestArchPolicy
+it("test_module_id_folds_init_and_separators", function()
+  luassert.is.equal("src.rules", policy_scan.module_id("src/rules/init.lua"))
+  luassert.is.equal("src.ui.panel", policy_scan.module_id("src/ui/panel.lua"))
+end)
+end)

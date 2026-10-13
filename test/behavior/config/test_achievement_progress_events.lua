@@ -1,4 +1,7 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects the extensible assertion object into each file environment.
+-- luacheck: ignore 143
+local luassert = assert
 
 local EXPECTED = {
   ["游戏胜利"] = { ids = { 1, 2, 3, 4 }, default_amount = 1 },
@@ -26,41 +29,38 @@ local EXPECTED = {
 }
 
 local function _assert_ids(actual, expected, event_name)
-  lu.assertEvalToTrue(type(actual) == "table", event_name .. " ids should be a table")
-  lu.assertEvalToTrue(#actual == #expected, event_name .. " id count mismatch")
+  luassert.truthy(type(actual) == "table", event_name .. " ids should be a table")
+  luassert.truthy(#actual == #expected, event_name .. " id count mismatch")
   for index, id in ipairs(expected) do
-    lu.assertEvalToTrue(actual[index] == id,
-      event_name .. " id " .. tostring(index) .. " mismatch: expected " .. tostring(id)
+    luassert.truthy(actual[index] == id, event_name .. " id " .. tostring(index) .. " mismatch: expected " .. tostring(id)
         .. ", got " .. tostring(actual[index]))
   end
 end
 
-TestAchievementProgressEvents = {}
+describe("TestAchievementProgressEvents", function()
 
-function TestAchievementProgressEvents:test_maps_every_gameplay_progress_event_to_the_exported_achievement_ids()
-  package.loaded["src.config.content.achievement_progress_events"] = nil
-  local progress_events = require("src.config.content.achievement_progress_events")
-  local actual_count = 0
-  for event_name in pairs(progress_events) do
-    actual_count = actual_count + 1
-    lu.assertEvalToTrue(EXPECTED[event_name] ~= nil, "unexpected achievement progress event: " .. tostring(event_name))
-  end
+  it("test_maps_every_gameplay_progress_event_to_the_exported_achievement_ids", function()
+    package.loaded["src.config.content.achievement_progress_events"] = nil
+    local progress_events = require("src.config.content.achievement_progress_events")
+    local actual_count = 0
+    for event_name in pairs(progress_events) do
+      actual_count = actual_count + 1
+      luassert.truthy(EXPECTED[event_name] ~= nil, "unexpected achievement progress event: " .. tostring(event_name))
+    end
 
-  local expected_count = 0
-  for event_name, expected in pairs(EXPECTED) do
-    expected_count = expected_count + 1
-    local actual = progress_events[event_name]
-    lu.assertEvalToTrue(actual ~= nil, "missing achievement progress event: " .. tostring(event_name))
-    _assert_ids(actual.ids, expected.ids, event_name)
-    lu.assertEvalToTrue(actual.default_amount == expected.default_amount,
-      event_name .. " default amount mismatch: expected " .. tostring(expected.default_amount)
-        .. ", got " .. tostring(actual.default_amount))
-  end
+    local expected_count = 0
+    for event_name, expected in pairs(EXPECTED) do
+      expected_count = expected_count + 1
+      local actual = progress_events[event_name]
+      luassert.truthy(actual ~= nil, "missing achievement progress event: " .. tostring(event_name))
+      _assert_ids(actual.ids, expected.ids, event_name)
+      luassert.truthy(actual.default_amount == expected.default_amount, event_name .. " default amount mismatch: expected " .. tostring(expected.default_amount)
+          .. ", got " .. tostring(actual.default_amount))
+    end
 
-  lu.assertEvalToTrue(actual_count == expected_count,
-    "achievement progress event count mismatch: expected " .. tostring(expected_count)
-      .. ", got " .. tostring(actual_count))
-end
+    luassert.truthy(actual_count == expected_count, "achievement progress event count mismatch: expected " .. tostring(expected_count)
+        .. ", got " .. tostring(actual_count))
+  end)
 
 
-return TestAchievementProgressEvents
+end)

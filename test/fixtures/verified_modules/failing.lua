@@ -1,4 +1,4 @@
-local helpers = require("test.support.scenario_suites.shared.helpers")
+require("test.support.scenario_suites.shared.helpers")
 local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
 describe("shared scenario failure", function()
   it("propagates a deliberately incorrect assertion", function()
