@@ -11,7 +11,7 @@
 -- 用例数与改写前一一对应(4 例)。
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 
 local transaction = require("src.app.cosmetics.transaction")
@@ -65,21 +65,18 @@ local function _archive(owned, equipped)
   }
 end
 
-TestCosmeticsTransactionStatePin = {}
+describe("TestCosmeticsTransactionStatePin", function()
+  before_each(function()
+    transaction.reset_for_tests()
+    transaction.configure_catalog_for_tests(_catalog())
+  end)
+  after_each(function()
+    transaction.reset_for_tests()
+    paid_purchase_port.reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestCosmeticsTransactionStatePin:setUp()
-  transaction.reset_for_tests()
-  transaction.configure_catalog_for_tests(_catalog())
-end
-
-function TestCosmeticsTransactionStatePin:tearDown()
-  transaction.reset_for_tests()
-  paid_purchase_port.reset_for_tests()
-  -- 拆了共享端口基线必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
-  support.restore_runtime_services()
-end
-
-function TestCosmeticsTransactionStatePin:test_state_module_pins_panel_result_defaults_and_role_guards()
+local function _test_state_module_pins_panel_result_defaults_and_role_guards()
   local missing_panel, missing_reason = transaction_state.ensure_panel(nil)
   _assert_eq(missing_panel, nil, "missing state should not create a panel")
   _assert_eq(missing_reason, "missing_state", "missing state reason should be stable")
@@ -124,7 +121,7 @@ function TestCosmeticsTransactionStatePin:test_state_module_pins_panel_result_de
     "apply_unequip should accept a valid role")
 end
 
-function TestCosmeticsTransactionStatePin:test_state_module_loads_owned_maps_and_preserves_existing_selection()
+local function _test_state_module_loads_owned_maps_and_preserves_existing_selection()
   transaction.configure_catalog_for_tests(_catalog())
   local archive = _archive({ ["1"] = { skin_1 = true, skin_2 = false } }, { ["1"] = "skin_2" })
   transaction.configure_archive(archive)
@@ -142,7 +139,7 @@ function TestCosmeticsTransactionStatePin:test_state_module_loads_owned_maps_and
   _assert_eq(panel.selected_by_role["1"], "skin_1", "seed_equipped should preserve existing selection")
 end
 
-function TestCosmeticsTransactionStatePin:test_equipped_product_pins_nil_guards_and_effective_role_fallback()
+local function _test_equipped_product_pins_nil_guards_and_effective_role_fallback()
   -- equipped_product 的 nil guard 链是第 114 行的核心防御：panel / key /
   -- selected_by_role 三者之一缺失即返回 nil。这里直接测所有 guard 分支以消灭
   -- 该行的全部等价变异体。
@@ -170,7 +167,7 @@ function TestCosmeticsTransactionStatePin:test_equipped_product_pins_nil_guards_
     "explicit role takes priority over panel.role_id fallback")
 end
 
-function TestCosmeticsTransactionStatePin:test_result_module_pins_missing_panel_and_equip_result_fields()
+local function _test_result_module_pins_missing_panel_and_equip_result_fields()
   local panel, rejected = transaction_result.panel_or_rejection(nil)
   _assert_eq(panel, nil, "missing root state should not return a panel")
   _assert_rejected(rejected, "missing_state")
@@ -194,4 +191,8 @@ function TestCosmeticsTransactionStatePin:test_result_module_pins_missing_panel_
 end
 
 
-return TestCosmeticsTransactionStatePin
+it("test_state_module_pins_panel_result_defaults_and_role_guards", _test_state_module_pins_panel_result_defaults_and_role_guards)
+it("test_state_module_loads_owned_maps_and_preserves_existing_selection", _test_state_module_loads_owned_maps_and_preserves_existing_selection)
+it("test_equipped_product_pins_nil_guards_and_effective_role_fallback", _test_equipped_product_pins_nil_guards_and_effective_role_fallback)
+it("test_result_module_pins_missing_panel_and_equip_result_fields", _test_result_module_pins_missing_panel_and_equip_result_fields)
+end)
