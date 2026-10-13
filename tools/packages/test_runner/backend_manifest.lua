@@ -1,7 +1,6 @@
 -- Temporary exhaustive file-identity registry. No content-based dispatch.
 return {
   legacy = {
-    "test/behavior/app/cosmetics/test_request_shape.lua",
     "test/behavior/app/cosmetics/test_transaction_read_model_mutation.lua",
     "test/behavior/app/host_integrations/test_achievement_mutation.lua",
     "test/behavior/app/host_integrations/test_leaderboard_settlement.lua",
@@ -384,6 +383,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/app/cosmetics/test_request_shape.lua",
     "test/behavior/app/test_leaderboard.lua",
     "test/behavior/app/test_achievement.lua",
     "test/behavior/app/test_init_runtime.lua",
