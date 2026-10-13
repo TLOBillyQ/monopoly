@@ -41,6 +41,10 @@ end
 
 local guards = {
   {
+    name = "arch_policy_guard",
+    module = "test.guards.lib.arch_policy_guard",
+  },
+  {
     name = "arch_view_guard",
     module = "test.guards.lib.arch_view_guard",
   },
