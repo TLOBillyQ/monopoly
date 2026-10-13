@@ -1,10 +1,15 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- canvas_event_router:
 --   Scope 生命周期(#417):重复 bind / destroy / 中途失败回滚
 --   变异幸存者补测:
 --     L5 require("src.ui.coord.modal") → nil (on_close_choice 路径)
 --     action_log_button bind_client_role 分支
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local ui_view = require("src.ui.coord.ui_runtime")
@@ -108,17 +113,17 @@ local function _click_data(role_id)
   }
 end
 
-TestCanvasEventRouter = {}
+describe("TestCanvasEventRouter", function()
 
-function TestCanvasEventRouter:tearDown()
+after_each(function()
   support.restore_runtime_services()
-end
+end)
 
 -- L5 幸存者: require("src.ui.coord.modal") → nil
 -- on_close_choice 回调从未被 dispatch 侧触发,modal 的 nil 突变体存活。
 -- 这里构造 market_buy 选择并通过 dispatch_action 显式调用 on_close_choice,
 -- 验证其会调用 modal.close_choice_modal。
-function TestCanvasEventRouter:test_on_close_choice_calls_close_choice_modal()
+it("test_on_close_choice_calls_close_choice_modal", function()
   local market_nodes = require("src.ui.schema.market")
   local node_map = {
     [market_nodes.confirm] = _new_listenable_node(),
@@ -170,13 +175,13 @@ function TestCanvasEventRouter:test_on_close_choice_calls_close_choice_modal()
 
   _assert_eq(closed_choice, true,
     "on_close_choice dispatch callback should invoke modal.close_choice_modal")
-end
+end)
 
 -- L59 幸存者: route_name ~= base_nodes.action_log_button 的 ~= → == 突变体
 -- action_log_button 路由的 bind_client_role 必须为 false(原始逻辑),突变体反转后
 -- 为 true。截获 register_node_click 的 opts 直接验证(不能观察 client_role 副作用:
 -- enable_action_log_toggle_touch 在 bind 时无条件清 client_role)。
-function TestCanvasEventRouter:test_action_log_button_no_client_role_bind()
+it("test_action_log_button_no_client_role_bind", function()
   local node_map = {
     [base_nodes.action_log_button] = _new_listenable_node(),
   }
@@ -215,10 +220,10 @@ function TestCanvasEventRouter:test_action_log_button_no_client_role_bind()
     "register_node_click should be called for action_log_button route")
   _assert_eq(action_log_opts and action_log_opts.bind_client_role, false,
     "action_log_button should not bind client role (bind_client_role must be false)")
-end
+end)
 
 -- #417: 重复 bind 销毁旧 Scope/listener;新 listener 只派发一次 intent。
-function TestCanvasEventRouter:test_rebind_destroys_old_listeners_and_dispatches_once()
+it("test_rebind_destroys_old_listeners_and_dispatches_once", function()
   local node_map = {}
   local state, captured = _make_dispatch_state()
 
@@ -245,9 +250,9 @@ function TestCanvasEventRouter:test_rebind_destroys_old_listeners_and_dispatches
   _assert_eq(#captured, 1, "new listener should dispatch intent exactly once")
   _assert_eq(captured[1] and captured[1].type, "ui_button", "action_button should dispatch ui_button")
   _assert_eq(captured[1] and captured[1].id, "next", "action_button should dispatch next")
-end
+end)
 
-function TestCanvasEventRouter:test_clears_afk_sequence_for_game_intents_but_not_view_commands()
+it("test_clears_afk_sequence_for_game_intents_but_not_view_commands", function()
   local node_map = {}
   local state = _make_dispatch_state()
   local calls = {}
@@ -272,10 +277,10 @@ function TestCanvasEventRouter:test_clears_afk_sequence_for_game_intents_but_not
   _assert_eq(#calls, 1, "only a game intent should clear the AFK sequence")
   _assert_eq(calls[1].state, state, "the router must pass its state to the clear seam")
   _assert_eq(calls[1].role_id, 3, "the attached event actor must identify the seat")
-end
+end)
 
 -- #417: router.destroy 幂等,兼容字段恢复为空 table。
-function TestCanvasEventRouter:test_destroy_is_idempotent_and_clears_compat_fields()
+it("test_destroy_is_idempotent_and_clears_compat_fields", function()
   local node_map = {}
   local state = _make_dispatch_state()
 
@@ -295,10 +300,10 @@ function TestCanvasEventRouter:test_destroy_is_idempotent_and_clears_compat_fiel
     canvas_event_router.destroy(state)
     _assert_empty_compat_fields(state, "after second destroy")
   end)
-end
+end)
 
 -- #417: 路由注册中途失败时回滚已创建 listener 与兼容字段,并重抛原始错误。
-function TestCanvasEventRouter:test_mid_registration_failure_rolls_back_and_rethrows()
+it("test_mid_registration_failure_rolls_back_and_rethrows", function()
   local node_map = {}
   local state = _make_dispatch_state()
   local orig_register = event_bindings.register_node_click
@@ -336,10 +341,10 @@ function TestCanvasEventRouter:test_mid_registration_failure_rolls_back_and_reth
         "rolled-back listeners must not receive events")
     end
   end
-end
+end)
 
 -- #417: 回滚 cleanup 抛错不阻断其他清理,且不覆盖原始注册错误。
-function TestCanvasEventRouter:test_rollback_cleanup_error_does_not_mask_registration_error()
+it("test_rollback_cleanup_error_does_not_mask_registration_error", function()
   local node_map = {}
   local state = _make_dispatch_state()
   local orig_register = event_bindings.register_node_click
@@ -388,6 +393,6 @@ function TestCanvasEventRouter:test_rollback_cleanup_error_does_not_mask_registr
   local joined = table.concat(warnings, "\n")
   _assert_eq(joined:find("cleanup boom", 1, true) ~= nil, true,
     "logged warnings should mention the cleanup failure")
-end
+end)
 
-return TestCanvasEventRouter
+end)

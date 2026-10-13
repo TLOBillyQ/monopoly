@@ -1,8 +1,12 @@
-local lu = require("luaunit")
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local control = require("src.player.control")
 local _new_game = support.new_game
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local dispatch = require("src.turn.actions.action_dispatcher")
@@ -117,12 +121,12 @@ local function _assert_panel_opens_without_event_actor(opts)
   end
 end
 
-TestInteraction = {}
+describe("TestInteraction", function()
 
-function TestInteraction:tearDown()
+after_each(function()
   -- 部分用例结尾把共享端口基线拆到未配置态,必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
   support.restore_runtime_services()
-end
+end)
 
 -- toggle_action_log 公共补丁:GameAPI/UIManager 假件,all_roles 可选。
 local function _toggle_log_patches(opts, extra)
@@ -165,7 +169,7 @@ local function _toggle_log_intent()
   return { type = "toggle_action_log", actor_role_id = 101 }
 end
 
-function TestInteraction:test_ui_intent_dispatcher_routes_market_select_and_popup_confirm_to_view_side()
+it("test_ui_intent_dispatcher_routes_market_select_and_popup_confirm_to_view_side", function()
   local selected_option = nil
   local closed = 0
   local state = {
@@ -195,9 +199,9 @@ function TestInteraction:test_ui_intent_dispatcher_routes_market_select_and_popu
 
   _assert_eq(selected_option, 99, "market_select should update selected option")
   _assert_eq(closed, 1, "popup_confirm should close popup once")
-end
+end)
 
-function TestInteraction:test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context()
+it("test_ui_intent_dispatcher_toggle_action_log_uses_actor_role_context", function()
   local state = _toggle_log_state()
   local game = {}
   local role = _build_role_with_events(101, {})
@@ -210,9 +214,9 @@ function TestInteraction:test_ui_intent_dispatcher_toggle_action_log_uses_actor_
     _assert_eq(state.ui.debug_visible_by_role[101], false, "toggle_action_log second click should disable action_log")
     _assert_eq(UIManager.client_role, nil, "toggle_action_log second click should restore client role")
   end)
-end
+end)
 
-function TestInteraction:test_ui_intent_dispatcher_toggle_action_log_ignores_block_without_game()
+it("test_ui_intent_dispatcher_toggle_action_log_ignores_block_without_game", function()
   local dispatch_calls = 0
   local state = _toggle_log_state({
     turn_action_port = {
@@ -232,9 +236,9 @@ function TestInteraction:test_ui_intent_dispatcher_toggle_action_log_ignores_blo
 
   _assert_eq(dispatch_calls, 0, "toggle_action_log should not dispatch gameplay action")
   _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should bypass block without game")
-end
+end)
 
-function TestInteraction:test_ui_intent_dispatcher_toggle_action_log_resolves_role_via_game_api()
+it("test_ui_intent_dispatcher_toggle_action_log_resolves_role_via_game_api", function()
   local events = {}
   local state = _toggle_log_state()
   local role = _build_role_with_events(101, events)
@@ -243,11 +247,11 @@ function TestInteraction:test_ui_intent_dispatcher_toggle_action_log_resolves_ro
     ui_intent_dispatcher.dispatch(state, {}, _toggle_log_intent(), {})
   end)
 
-  lu.assertEvalToTrue(_has_event(events, "显示日志屏"), "toggle_action_log should send 显示日志屏 via GameAPI role fallback")
+  luassert.truthy(_has_event(events, "显示日志屏"), "toggle_action_log should send 显示日志屏 via GameAPI role fallback")
   _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should enable role debug state")
-end
+end)
 
-function TestInteraction:test_ui_intent_dispatcher_toggle_action_log_warns_when_role_event_channel_missing()
+it("test_ui_intent_dispatcher_toggle_action_log_warns_when_role_event_channel_missing", function()
   local warn_count = 0
   local state = _toggle_log_state()
   local ok = false
@@ -264,12 +268,12 @@ function TestInteraction:test_ui_intent_dispatcher_toggle_action_log_warns_when_
     end)
   end)
 
-  lu.assertEvalToTrue(ok == true, "toggle_action_log should not crash when role event channel is missing")
+  luassert.truthy(ok == true, "toggle_action_log should not crash when role event channel is missing")
   _assert_eq(state.ui.debug_visible_by_role[101], true, "toggle_action_log should still toggle debug state")
   _assert_eq(warn_count, 1, "toggle_action_log should warn once when role cannot send ui event")
-end
+end)
 
-function TestInteraction:test_ui_intent_dispatcher_auto_button_actor_resolution_scenarios()
+it("test_ui_intent_dispatcher_auto_button_actor_resolution_scenarios", function()
   -- 显式 actor 优先于本地 role;本地 role 缺失回退 intent actor;两者皆缺拒发。
   local scenarios = {
     {
@@ -314,9 +318,9 @@ function TestInteraction:test_ui_intent_dispatcher_auto_button_actor_resolution_
       _assert_eq(#captured, 0, "rejected auto dispatch must not reach the action port")
     end
   end
-end
+end)
 
-function TestInteraction:test_ui_intent_dispatcher_auto_button_honors_intent_actor_during_other_turn()
+it("test_ui_intent_dispatcher_auto_button_honors_intent_actor_during_other_turn", function()
   local g = _new_game()
   g.turn.current_player_index = 1
   local state = {
@@ -352,9 +356,9 @@ function TestInteraction:test_ui_intent_dispatcher_auto_button_honors_intent_act
 
   _assert_eq(control.is_delegated(g.players[1]), not before_1, "auto click should toggle explicit actor role auto state")
   _assert_eq(control.is_delegated(g.players[2]), before_2, "auto click should not be rewritten to local role")
-end
+end)
 
-function TestInteraction:test_ui_event_router_rejects_next_without_trusted_actor()
+it("test_ui_event_router_rejects_next_without_trusted_actor", function()
   -- current_player_id 不是可信 actor 来源:无 event/client/cached actor 一律拒发;
   -- 连 current_player_id 都缺时还要提示一次。
   local base_nodes = require("src.ui.schema.base")
@@ -393,9 +397,9 @@ function TestInteraction:test_ui_event_router_rejects_next_without_trusted_actor
         "next click without actor context should show tip once")
     end
   end
-end
+end)
 
-function TestInteraction:test_ui_event_router_opens_skin_panel_without_event_actor()
+it("test_ui_event_router_opens_skin_panel_without_event_actor", function()
   _assert_panel_opens_without_event_actor({
     coord_module_path = "src.ui.screens.skin_panel",
     button_node_key = "skin_button",
@@ -405,9 +409,9 @@ function TestInteraction:test_ui_event_router_opens_skin_panel_without_event_act
     panel_label = "skin panel",
     canvas_label = "the skin shop canvas",
   })
-end
+end)
 
-function TestInteraction:test_ui_event_router_opens_gallery_panel_without_event_actor()
+it("test_ui_event_router_opens_gallery_panel_without_event_actor", function()
   _assert_panel_opens_without_event_actor({
     coord_module_path = "src.ui.screens.item_atlas",
     button_node_key = "gallery_button",
@@ -417,9 +421,9 @@ function TestInteraction:test_ui_event_router_opens_gallery_panel_without_event_
     panel_label = "gallery panel",
     canvas_label = "the atlas canvas",
   })
-end
+end)
 
-function TestInteraction:test_ui_event_router_item_atlas_arrows_move_pages()
+it("test_ui_event_router_item_atlas_arrows_move_pages", function()
   local item_atlas = require("src.ui.screens.item_atlas")
   local item_atlas_nodes = require("src.ui.schema.item_atlas")
 
@@ -460,9 +464,9 @@ function TestInteraction:test_ui_event_router_item_atlas_arrows_move_pages()
       "clicking atlas prev button through the router should return to page 1")
   end)
   item_atlas.reset_for_tests()
-end
+end)
 
-function TestInteraction:test_ui_event_router_turn_bound_actor_without_identity_is_rejected()
+it("test_ui_event_router_turn_bound_actor_without_identity_is_rejected", function()
   -- #341:turn-bound 事件解析不出身份(data.role 缺失、client_role 缺位、缓存退路
   -- 已拆)→ intent 拒收(warn + 缺失玩家上下文提示),不得拿上次点击者缓存顶替。
   local base_nodes = require("src.ui.schema.base")
@@ -504,9 +508,9 @@ function TestInteraction:test_ui_event_router_turn_bound_actor_without_identity_
   _assert_eq(#captured, 0, "turn-bound click without identity must not dispatch")
   _assert_eq(#warns >= 1, true, "rejected actor must leave a warn")
   _assert_eq(#tips >= 1, true, "rejected actor must enqueue the missing-actor tip")
-end
+end)
 
-function TestInteraction:test_local_actor_resolver_client_role_resolves_without_writing_any_cache()
+it("test_local_actor_resolver_client_role_resolves_without_writing_any_cache", function()
   local local_actor_resolver = require("src.ui.render.support.local_actor_resolver")
   local client_role = {
     get_roleid = function()
@@ -530,9 +534,9 @@ function TestInteraction:test_local_actor_resolver_client_role_resolves_without_
     _assert_eq(state.local_actor_role_id, nil,
       "resolution must not write the retired local actor cache (#601)")
   end)
-end
+end)
 
-function TestInteraction:test_camera_follow_uses_current_player_display_fallback_without_caching_actor()
+it("test_camera_follow_uses_current_player_display_fallback_without_caching_actor", function()
   local camera_sync = require("src.ui.ports.ui_sync")._camera
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local reset_calls = 0
@@ -582,9 +586,9 @@ function TestInteraction:test_camera_follow_uses_current_player_display_fallback
   if not ok then
     error(err)
   end
-end
+end)
 
-function TestInteraction:test_ui_event_router_injects_actor_for_market_confirm_and_cancel()
+it("test_ui_event_router_injects_actor_for_market_confirm_and_cancel", function()
   local market_nodes = require("src.ui.schema.market")
   local node_map = {
     [market_nodes.confirm] = _new_listenable_node(),
@@ -628,9 +632,9 @@ function TestInteraction:test_ui_event_router_injects_actor_for_market_confirm_a
   _assert_eq(captured[2] and captured[2].type, "choice_cancel", "market_close should dispatch choice_cancel")
   _assert_eq(captured[2] and captured[2].choice_id, 12, "market_close should keep choice id")
   _assert_eq(captured[2] and captured[2].actor_role_id, 3, "market_close should inject actor_role_id")
-end
+end)
 
-function TestInteraction:test_ui_event_router_rebind_destroys_old_listeners()
+it("test_ui_event_router_rebind_destroys_old_listeners", function()
   local base_nodes = require("src.ui.schema.base")
   local destroyed = 0
 
@@ -652,9 +656,9 @@ function TestInteraction:test_ui_event_router_rebind_destroys_old_listeners()
   end)
 
   _assert_eq(destroyed, 1, "rebind should destroy existing listeners with destroy hooks")
-end
+end)
 
-function TestInteraction:test_ui_event_router_optional_end_button_blocked_when_choice_modal_open()
+it("test_ui_event_router_optional_end_button_blocked_when_choice_modal_open", function()
   local base_nodes = require("src.ui.schema.base")
   local modal = require("src.ui.coord.modal")
   local role = { get_roleid = function() return 5 end }
@@ -705,9 +709,9 @@ function TestInteraction:test_ui_event_router_optional_end_button_blocked_when_c
 
   _assert_eq(#dispatched, 0, "optional end button should not dispatch while a choice modal is open")
   _assert_eq(closed, 0, "choice modal should stay open when end button is blocked")
-end
+end)
 
-function TestInteraction:test_ui_event_router_optional_landing_end_button_dispatches_completion_intent()
+it("test_ui_event_router_optional_landing_end_button_dispatches_completion_intent", function()
   local route_base = require("src.ui.input.route_base")
   local base_nodes = require("src.ui.schema.base")
   local state = {
@@ -737,9 +741,9 @@ function TestInteraction:test_ui_event_router_optional_landing_end_button_dispat
     "landing optional end button should dispatch completion intent")
   _assert_eq(end_intent and end_intent.choice_id, nil,
     "landing optional end button should not expose choice id")
-end
+end)
 
-function TestInteraction:test_route_base_non_cancelable_optional_choice_routes_no_base_progression()
+it("test_route_base_non_cancelable_optional_choice_routes_no_base_progression", function()
   local route_base = require("src.ui.input.route_base")
   local base_nodes = require("src.ui.schema.base")
   local state = {
@@ -767,9 +771,9 @@ function TestInteraction:test_route_base_non_cancelable_optional_choice_routes_n
     "non-cancelable optional choice should not route through action button")
   _assert_eq(end_spec and end_spec.build_intent(), nil,
     "non-cancelable optional choice should not dispatch optional completion")
-end
+end)
 
-function TestInteraction:test_route_base_input_lock_blocks_optional_end_intent()
+it("test_route_base_input_lock_blocks_optional_end_intent", function()
   local route_base = require("src.ui.input.route_base")
   local base_nodes = require("src.ui.schema.base")
   local state = {
@@ -795,9 +799,9 @@ function TestInteraction:test_route_base_input_lock_blocks_optional_end_intent()
 
   _assert_eq(end_spec and end_spec.build_intent(), nil,
     "input lock should block optional end button dispatch")
-end
+end)
 
-function TestInteraction:test_ui_event_state_base_screen_active_requires_modal_free_ui()
+it("test_ui_event_state_base_screen_active_requires_modal_free_ui", function()
   local ui_event_state = require("src.ui.coord.event_state")
   _assert_eq(ui_event_state.is_base_screen_active({ ui = {} }), true,
     "base screen should be active when no modal flags are set")
@@ -809,9 +813,9 @@ function TestInteraction:test_ui_event_state_base_screen_active_requires_modal_f
     "popup should disable base screen")
   _assert_eq(ui_event_state.is_base_screen_active({}), false,
     "missing ui state should disable base screen")
-end
+end)
 
-function TestInteraction:test_ui_sync_ports_rebuilds_model_before_reopening_choice()
+it("test_ui_sync_ports_rebuilds_model_before_reopening_choice", function()
   local ui_sync_ports = require("src.ui.ports.ui_sync")
   local runtime_state_local = require("src.state.runtime")
   local rebuilt = {
@@ -852,9 +856,9 @@ function TestInteraction:test_ui_sync_ports_rebuilds_model_before_reopening_choi
   _assert_eq(opened_choice, rebuilt.choice, "ui sync should reopen with rebuilt choice view")
   _assert_eq(opened_market, rebuilt.market, "ui sync should reopen with rebuilt market view")
   _assert_eq(runtime_state_local.is_ui_dirty(state), true, "ui sync should mark ui dirty when pending choice arrives")
-end
+end)
 
-function TestInteraction:test_ui_sync_ports_defers_pending_choice_during_wait_landing_visual()
+it("test_ui_sync_ports_defers_pending_choice_during_wait_landing_visual", function()
   local ui_sync_ports = require("src.ui.ports.ui_sync")
   local rebuilt = {
     current_player_id = 1,
@@ -898,9 +902,9 @@ function TestInteraction:test_ui_sync_ports_defers_pending_choice_during_wait_la
   end)
 
   _assert_eq(opened, 0, "on_pending_choice should defer market modal during wait_landing_visual")
-end
+end)
 
-function TestInteraction:test_event_log_view_global_and_role_paths_preserve_state()
+it("test_event_log_view_global_and_role_paths_preserve_state", function()
   local event_log_view = require("src.ui.coord.event_log_view")
   local runtime_ui = require("src.ui.render.support.runtime_ui")
   local state = {
@@ -942,9 +946,9 @@ function TestInteraction:test_event_log_view_global_and_role_paths_preserve_stat
   _assert_eq(state.ui.debug_log_enabled_by_role[7], false, "role path should persist event log flag by role")
   _assert_eq(calls[1].text, "all", "global log path should pass through text")
   _assert_eq(calls[#calls].text, "role only", "role log path should pass through text")
-end
+end)
 
-function TestInteraction:test_event_log_view_tolerates_missing_ui_and_unresolved_roles()
+it("test_event_log_view_tolerates_missing_ui_and_unresolved_roles", function()
   local event_log_view = require("src.ui.coord.event_log_view")
   local runtime_ui = require("src.ui.render.support.runtime_ui")
   local role = { get_roleid = function() return 7 end }
@@ -961,9 +965,9 @@ function TestInteraction:test_event_log_view_tolerates_missing_ui_and_unresolved
     _assert_eq(event_log_view.set_event_log_visible_for_role(state, role, true), false,
       "unresolved role id should return false")
   end)
-end
+end)
 
-function TestInteraction:test_event_log_view_routes_to_role_path_when_a_client_role_exists()
+it("test_event_log_view_routes_to_role_path_when_a_client_role_exists", function()
   local event_log_view = require("src.ui.coord.event_log_view")
   local runtime_ui = require("src.ui.render.support.runtime_ui")
   local visible_writes = {}
@@ -984,11 +988,11 @@ function TestInteraction:test_event_log_view_routes_to_role_path_when_a_client_r
       "a client role should route the global call into the role path")
   end)
 
-  lu.assertEvalToTrue(#visible_writes == 1 and visible_writes[1] == true,
+  luassert.truthy(#visible_writes == 1 and visible_writes[1] == true,
     "the role path should drive the host visibility hook")
-end
+end)
 
-function TestInteraction:test_actor_context_and_host_runtime_fallbacks()
+it("test_actor_context_and_host_runtime_fallbacks", function()
   local actor_context = require("src.ui.coord.actor_context")
   local host_runtime_local = require("src.host")
   local runtime_ui = require("src.ui.render.support.runtime_ui")
@@ -1062,9 +1066,9 @@ function TestInteraction:test_actor_context_and_host_runtime_fallbacks()
   _assert_eq(registered.handler, handler, "host runtime should pass handler through")
   _assert_eq(host_runtime_local.register_custom_event(nil, handler), false,
     "host runtime should reject invalid event name")
-end
+end)
 
-function TestInteraction:test_choice_ui_state_gate_honors_room_seated_owner_only()
+it("test_choice_ui_state_gate_honors_room_seated_owner_only", function()
   -- 门控不吃 current_player 回退:只有落在房间席位名册内的 owner 才开共享确认 UI。
   -- 判定源是 resolve_roles 名册(#444);client_role 不参与,点击者缓存已随 #601 退役(#341)。
   local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
@@ -1139,9 +1143,9 @@ function TestInteraction:test_choice_ui_state_gate_honors_room_seated_owner_only
   local seated = _resolve_gate({ client_role_id = 1, seated_role_id = 2, current_player_id = 1, choice_id = 13 })
   _assert_eq(seated.served_owner, true, "choice gate should honor an owner seated in the room roster")
   _assert_eq(seated.expects_ui, true, "seated owner should still open shared confirm UI")
-end
+end)
 
-function TestInteraction:test_view_command_ports_toggle_action_log_tolerates_missing_ui_and_actor()
+it("test_view_command_ports_toggle_action_log_tolerates_missing_ui_and_actor", function()
   local view_command_ports = require("src.ui.ports.view_command")
   local ports = view_command_ports.build()
 
@@ -1158,13 +1162,13 @@ function TestInteraction:test_view_command_ports_toggle_action_log_tolerates_mis
     _assert_eq(result, true, "toggle_action_log should return true even when actor_role_id is missing")
     _assert_eq(#warn_calls >= 1, true, "toggle_action_log should warn when actor_role_id is missing")
   end)
-end
+end)
 
 
 	-- canvas_event_router.bind 传入 dispatch_opts.on_close_choice 回调,
 	-- 必须在 dispatch 侧触发以验证 modal.close_choice_modal 连通性,
 	-- 否则 require("src.ui.coord.modal") 被置 nil 的突变体无法被杀死。
-	function TestInteraction:test_ui_event_router_dispatch_close_choice_modal_callback()
+	it("test_ui_event_router_dispatch_close_choice_modal_callback", function()
 	  local market_nodes = require("src.ui.schema.market")
 	  local modal_module = require("src.ui.coord.modal")
 	  local node_map = {
@@ -1217,11 +1221,11 @@ end
 
 	  _assert_eq(closed_choice, true,
 	    "on_close_choice dispatch callback should invoke modal.close_choice_modal")
-	end
+	end)
 
 		-- action_log_button 路由的 bind_client_role 必须为 false,
 	-- 否则 route_name ~= base_nodes.action_log_button 的 ~= 变 == 的突变体无法被杀死。
-	function TestInteraction:test_ui_event_router_action_log_button_no_client_role_bind()
+	it("test_ui_event_router_action_log_button_no_client_role_bind", function()
 	  local base_nodes = require("src.ui.schema.base")
 	  local action_log_opts = nil
 	  local action_log_registered = false
@@ -1266,5 +1270,5 @@ end
 	    "register_node_click should be called for action_log_button route")
 	  _assert_eq(action_log_opts and action_log_opts.bind_client_role, false,
 	    "action_log_button should not bind client role (bind_client_role must be false)")
-	end
-return TestInteraction
+	end)
+end)

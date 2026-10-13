@@ -1,5 +1,7 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- luacheck: ignore 211
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 local number_utils = require("src.foundation.number")
@@ -12,9 +14,7 @@ local panel_interrupt = require("src.ui.state.panel_interrupt")
 local landing_visual_hold = require("src.state.visual_hold")
 
 local function _assert_eq(actual, expected, message)
-  assert(actual == expected, (message or "assertion failed")
-    .. " expected=" .. tostring(expected)
-    .. " actual=" .. tostring(actual))
+  luassert.is.equal(expected, actual, message)
 end
 
 if not math.Vector3 then
@@ -33,15 +33,24 @@ local function _load_fresh_handlers()
   return require("src.ui.coord.event_handlers")
 end
 
--- 原生 LuaUnit 迁移(busted → LuaUnit):外层 describe 与无钩子的内层 survivor
--- closure describe 拍平进同一个 TestEventHandlers(16 + 15 = 31 例,与改写前
--- 一一对应);内层 describe 级 local(_drive / STATE)原样留在 do 块内;
--- 语句位 assert(cond, msg) → lu.assertEvalToTrue,表达式位 assert(exp) 保留
--- Lua 内建。
 
-TestEventHandlers = {}
+describe("TestEventHandlers", function()
+  local loaded_before_case
+  before_each(function()
+    loaded_before_case = {}
+    for name, object in pairs(package.loaded) do
+      if name:match("^src%.") then loaded_before_case[name] = object end
+    end
+  end)
+  after_each(function()
+    for name in pairs(package.loaded) do
+      if name:match("^src%.") and loaded_before_case[name] == nil then package.loaded[name] = nil end
+    end
+    for name, object in pairs(loaded_before_case) do package.loaded[name] = object end
+  end)
 
-function TestEventHandlers:test_market_buy_failed_shows_tip_for_three_seconds_without_popup()
+
+it("test_market_buy_failed_shows_tip_for_three_seconds_without_popup", function()
   local handlers = {}
   local tips = {}
 
@@ -66,7 +75,7 @@ function TestEventHandlers:test_market_buy_failed_shows_tip_for_three_seconds_wi
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, {})
     local handler = handlers[monopoly_event.market.buy_failed]
-    lu.assertEvalToTrue(type(handler) == "function", "buy_failed handler should be registered")
+    luassert.truthy(type(handler) == "function", "buy_failed handler should be registered")
     handler(nil, nil, {
       popup = {
         title = "黑市",
@@ -75,13 +84,13 @@ function TestEventHandlers:test_market_buy_failed_shows_tip_for_three_seconds_wi
     })
   end)
 
-  lu.assertEvalToTrue(#tips == 1, "buy_failed should emit exactly one tip")
-  lu.assertEvalToTrue(tips[1].text == "余额不足", "tip text should use popup body when available")
-  lu.assertEvalToTrue(number_utils.is_numeric(tips[1].duration), "tip duration should be numeric")
-  lu.assertEvalToTrue(tips[1].duration == 3.0, "tip duration should be exactly 3 seconds")
-end
+  luassert.truthy(#tips == 1, "buy_failed should emit exactly one tip")
+  luassert.truthy(tips[1].text == "余额不足", "tip text should use popup body when available")
+  luassert.truthy(number_utils.is_numeric(tips[1].duration), "tip duration should be numeric")
+  luassert.truthy(tips[1].duration == 3.0, "tip duration should be exactly 3 seconds")
+end)
 
-function TestEventHandlers:test_market_buy_failed_without_popup_body_uses_fallback_tip()
+it("test_market_buy_failed_without_popup_body_uses_fallback_tip", function()
   local handlers = {}
   local tips = {}
 
@@ -106,19 +115,19 @@ function TestEventHandlers:test_market_buy_failed_without_popup_body_uses_fallba
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, {})
     local handler = handlers[monopoly_event.market.buy_failed]
-    lu.assertEvalToTrue(type(handler) == "function", "buy_failed handler should be registered")
+    luassert.truthy(type(handler) == "function", "buy_failed handler should be registered")
     handler(nil, nil, {
       reason = "charge_failed",
     })
   end)
 
-  lu.assertEvalToTrue(#tips == 1, "fallback buy_failed should still emit tip")
-  lu.assertEvalToTrue(tips[1].text == "黑市购买失败", "fallback tip should use default text")
-  lu.assertEvalToTrue(number_utils.is_numeric(tips[1].duration), "fallback duration should be numeric")
-  lu.assertEvalToTrue(tips[1].duration == 3.0, "fallback tip duration should be exactly 3 seconds")
-end
+  luassert.truthy(#tips == 1, "fallback buy_failed should still emit tip")
+  luassert.truthy(tips[1].text == "黑市购买失败", "fallback tip should use default text")
+  luassert.truthy(number_utils.is_numeric(tips[1].duration), "fallback duration should be numeric")
+  luassert.truthy(tips[1].duration == 3.0, "fallback tip duration should be exactly 3 seconds")
+end)
 
-function TestEventHandlers:test_roadblock_hit_no_longer_drives_visual_feedback()
+it("test_roadblock_hit_no_longer_drives_visual_feedback", function()
   local handlers = {}
   local cleared = 0
   local looked_up_tile_id = nil
@@ -155,15 +164,15 @@ function TestEventHandlers:test_roadblock_hit_no_longer_drives_visual_feedback()
       },
     })
     local handler = handlers[monopoly_event.movement.roadblock_hit]
-    lu.assertEvalToTrue(type(handler) == "function", "roadblock_hit handler should be registered")
+    luassert.truthy(type(handler) == "function", "roadblock_hit handler should be registered")
     handler(nil, nil, { tile_id = 12 })
   end)
 
-  lu.assertEvalToTrue(cleared == 0, "roadblock_hit should no longer clear overlay directly")
-  lu.assertEvalToTrue(looked_up_tile_id == 12, "roadblock_hit should still resolve payload tile ids through board lookup")
-end
+  luassert.truthy(cleared == 0, "roadblock_hit should no longer clear overlay directly")
+  luassert.truthy(looked_up_tile_id == 12, "roadblock_hit should still resolve payload tile ids through board lookup")
+end)
 
-function TestEventHandlers:test_roadblock_hit_returns_explicit_tile_index_without_lookup()
+it("test_roadblock_hit_returns_explicit_tile_index_without_lookup", function()
   local handlers = {}
   local looked_up_tile_id = nil
 
@@ -189,18 +198,18 @@ function TestEventHandlers:test_roadblock_hit_returns_explicit_tile_index_withou
       },
     })
     local handler = handlers[monopoly_event.movement.roadblock_hit]
-    lu.assertEvalToTrue(type(handler) == "function", "roadblock_hit handler should be registered")
+    luassert.truthy(type(handler) == "function", "roadblock_hit handler should be registered")
     local resolved = handler(nil, nil, {
       tile_index = 7,
       tile_id = 12,
     })
-    lu.assertEvalToTrue(resolved == 7, "roadblock_hit should return the explicit tile_index")
+    luassert.truthy(resolved == 7, "roadblock_hit should return the explicit tile_index")
   end)
 
-  lu.assertEvalToTrue(looked_up_tile_id == nil, "roadblock_hit should not consult board lookup when tile_index exists")
-end
+  luassert.truthy(looked_up_tile_id == nil, "roadblock_hit should not consult board lookup when tile_index exists")
+end)
 
-function TestEventHandlers:test_mine_hit_no_longer_drives_visual_feedback()
+it("test_mine_hit_no_longer_drives_visual_feedback", function()
   local handlers = {}
   local cleared = 0
   local cues = 0
@@ -246,19 +255,19 @@ function TestEventHandlers:test_mine_hit_no_longer_drives_visual_feedback()
       },
     })
     local handler = handlers[monopoly_event.land.mine_hit]
-    lu.assertEvalToTrue(type(handler) == "function", "mine_hit handler should be registered")
+    luassert.truthy(type(handler) == "function", "mine_hit handler should be registered")
     handler(nil, nil, {
       tile = { id = 20 },
       player = { id = 3 },
     })
   end)
 
-  lu.assertEvalToTrue(cleared == 0, "mine_hit should no longer clear overlay directly")
-  lu.assertEvalToTrue(cues == 0, "mine_hit should no longer emit direct cue playback")
-  lu.assertEvalToTrue(looked_up_tile_id == 20, "mine_hit should still resolve nested payload tile ids through board lookup")
-end
+  luassert.truthy(cleared == 0, "mine_hit should no longer clear overlay directly")
+  luassert.truthy(cues == 0, "mine_hit should no longer emit direct cue playback")
+  luassert.truthy(looked_up_tile_id == 20, "mine_hit should still resolve nested payload tile ids through board lookup")
+end)
 
-function TestEventHandlers:test_mine_hit_returns_board_lookup_index_for_nested_tile_id()
+it("test_mine_hit_returns_board_lookup_index_for_nested_tile_id", function()
   local handlers = {}
   local looked_up_tile_id = nil
 
@@ -284,18 +293,18 @@ function TestEventHandlers:test_mine_hit_returns_board_lookup_index_for_nested_t
       },
     })
     local handler = handlers[monopoly_event.land.mine_hit]
-    lu.assertEvalToTrue(type(handler) == "function", "mine_hit handler should be registered")
+    luassert.truthy(type(handler) == "function", "mine_hit handler should be registered")
     local resolved = handler(nil, nil, {
       tile = { id = 20 },
       player = { id = 3 },
     })
-    lu.assertEvalToTrue(resolved == 11, "mine_hit should return the board lookup index")
+    luassert.truthy(resolved == 11, "mine_hit should return the board lookup index")
   end)
 
-  lu.assertEvalToTrue(looked_up_tile_id == 20, "mine_hit should resolve nested payload tile ids through board lookup")
-end
+  luassert.truthy(looked_up_tile_id == 20, "mine_hit should resolve nested payload tile ids through board lookup")
+end)
 
-function TestEventHandlers:test_mine_hit_tolerates_missing_state_and_lookup_api()
+it("test_mine_hit_tolerates_missing_state_and_lookup_api", function()
   local handlers = {}
 
   _with_patches({
@@ -311,7 +320,7 @@ function TestEventHandlers:test_mine_hit_tolerates_missing_state_and_lookup_api(
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, {})
     local handler = handlers[monopoly_event.land.mine_hit]
-    lu.assertEvalToTrue(type(handler) == "function", "mine_hit handler should be registered")
+    luassert.truthy(type(handler) == "function", "mine_hit handler should be registered")
     handler(nil, nil, { tile_id = 77 })
 
     package.loaded["src.ui.coord.event_handlers"] = nil
@@ -323,12 +332,12 @@ function TestEventHandlers:test_mine_hit_tolerates_missing_state_and_lookup_api(
       },
     })
     handler = handlers[monopoly_event.land.mine_hit]
-    lu.assertEvalToTrue(type(handler) == "function", "mine_hit handler should stay registered without lookup api")
+    luassert.truthy(type(handler) == "function", "mine_hit handler should stay registered without lookup api")
     handler(nil, nil, { tile_id = 88 })
   end)
-end
+end)
 
-function TestEventHandlers:test_turn_started_feedback_routes_to_player_cue()
+it("test_turn_started_feedback_routes_to_player_cue", function()
   local handlers = {}
   local calls = {}
   local action_roles = {}
@@ -364,18 +373,18 @@ function TestEventHandlers:test_turn_started_feedback_routes_to_player_cue()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.feedback.turn_started]
-    lu.assertEvalToTrue(type(handler) == "function", "turn_started handler should be registered")
+    luassert.truthy(type(handler) == "function", "turn_started handler should be registered")
     handler(nil, nil, { player_id = 2 })
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "turn_started should route one player cue")
-  lu.assertEvalToTrue(calls[1].cue_name == "turn_started", "turn_started cue name mismatch")
-  lu.assertEvalToTrue(calls[1].player_id == 2, "turn_started should target payload player id")
-  lu.assertEvalToTrue(#action_roles == 1, "turn_started should begin player action once")
-  lu.assertEvalToTrue(action_roles[1] == 2, "turn_started should begin action for payload player id")
-end
+  luassert.truthy(#calls == 1, "turn_started should route one player cue")
+  luassert.truthy(calls[1].cue_name == "turn_started", "turn_started cue name mismatch")
+  luassert.truthy(calls[1].player_id == 2, "turn_started should target payload player id")
+  luassert.truthy(#action_roles == 1, "turn_started should begin player action once")
+  luassert.truthy(action_roles[1] == 2, "turn_started should begin action for payload player id")
+end)
 
-function TestEventHandlers:test_market_bought_item_plays_immediate_cash_burst()
+it("test_market_bought_item_plays_immediate_cash_burst", function()
   local handlers = {}
   local calls = {}
 
@@ -403,7 +412,7 @@ function TestEventHandlers:test_market_bought_item_plays_immediate_cash_burst()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.market.bought_item]
-    lu.assertEvalToTrue(type(handler) == "function", "bought_item handler should be registered")
+    luassert.truthy(type(handler) == "function", "bought_item handler should be registered")
     handler(nil, nil, {
       player = { id = 3, name = "测试玩家" },
       entry = { product_id = 2003, kind = "item" },
@@ -413,17 +422,17 @@ function TestEventHandlers:test_market_bought_item_plays_immediate_cash_burst()
     })
   end)
 
-  lu.assertEvalToTrue(#calls >= 1, "bought_item should play at least one player cue")
+  luassert.truthy(#calls >= 1, "bought_item should play at least one player cue")
   local found_cash_burst = false
   for _, call in ipairs(calls) do
     if call.cue_name == "cash_burst" and call.player_id == 3 then
       found_cash_burst = true
     end
   end
-  lu.assertEvalToTrue(found_cash_burst, "bought_item should play immediate cash_burst on buyer")
-end
+  luassert.truthy(found_cash_burst, "bought_item should play immediate cash_burst on buyer")
+end)
 
-function TestEventHandlers:test_turn_started_feedback_routes_configured_audio_without_error()
+it("test_turn_started_feedback_routes_configured_audio_without_error", function()
   local handlers = {}
   local play_3d_sound_calls = {}
 
@@ -467,15 +476,15 @@ function TestEventHandlers:test_turn_started_feedback_routes_configured_audio_wi
       },
     })
     local handler = handlers[monopoly_event.feedback.turn_started]
-    lu.assertEvalToTrue(type(handler) == "function", "turn_started handler should be registered")
+    luassert.truthy(type(handler) == "function", "turn_started handler should be registered")
     handler(nil, nil, { player_id = 2 })
   end)
 
-  lu.assertEvalToTrue(#play_3d_sound_calls == 1, "configured turn_started audio should call engine once")
-  lu.assertEvalToTrue(play_3d_sound_calls[1].sound_id == 4233, "turn_started should resolve configured integer sound id")
-end
+  luassert.truthy(#play_3d_sound_calls == 1, "configured turn_started audio should call engine once")
+  luassert.truthy(play_3d_sound_calls[1].sound_id == 4233, "turn_started should resolve configured integer sound id")
+end)
 
-function TestEventHandlers:test_status_applied_feedback_prefers_tile_cue()
+it("test_status_applied_feedback_prefers_tile_cue", function()
   local handlers = {}
   local tile_calls = {}
   local player_calls = 0
@@ -512,7 +521,7 @@ function TestEventHandlers:test_status_applied_feedback_prefers_tile_cue()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.feedback.status_applied]
-    lu.assertEvalToTrue(type(handler) == "function", "status_applied handler should be registered")
+    luassert.truthy(type(handler) == "function", "status_applied handler should be registered")
     handler(nil, nil, {
       cue_name = "hospital_shock",
       player_id = 1,
@@ -520,13 +529,13 @@ function TestEventHandlers:test_status_applied_feedback_prefers_tile_cue()
     })
   end)
 
-  lu.assertEvalToTrue(#tile_calls == 1, "status_applied should prefer tile cue when tile_index exists")
-  lu.assertEvalToTrue(tile_calls[1].cue_name == "hospital_shock", "status_applied cue mismatch")
-  lu.assertEvalToTrue(tile_calls[1].tile_index == 7, "status_applied tile index mismatch")
-  lu.assertEvalToTrue(player_calls == 0, "status_applied should not fallback to player cue when tile cue is used")
-end
+  luassert.truthy(#tile_calls == 1, "status_applied should prefer tile cue when tile_index exists")
+  luassert.truthy(tile_calls[1].cue_name == "hospital_shock", "status_applied cue mismatch")
+  luassert.truthy(tile_calls[1].tile_index == 7, "status_applied tile index mismatch")
+  luassert.truthy(player_calls == 0, "status_applied should not fallback to player cue when tile cue is used")
+end)
 
-function TestEventHandlers:test_deity_applied_feedback_routes_specific_cue()
+it("test_deity_applied_feedback_routes_specific_cue", function()
   local handlers = {}
   local calls = {}
 
@@ -554,19 +563,19 @@ function TestEventHandlers:test_deity_applied_feedback_routes_specific_cue()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.feedback.deity_applied]
-    lu.assertEvalToTrue(type(handler) == "function", "deity_applied handler should be registered")
+    luassert.truthy(type(handler) == "function", "deity_applied handler should be registered")
     handler(nil, nil, {
       player_id = 3,
       deity_type = "angel",
     })
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "deity_applied should route one player cue")
-  lu.assertEvalToTrue(calls[1].cue_name == "angel_deity", "deity cue name mismatch")
-  lu.assertEvalToTrue(calls[1].player_id == 3, "deity cue should target payload player id")
-end
+  luassert.truthy(#calls == 1, "deity_applied should route one player cue")
+  luassert.truthy(calls[1].cue_name == "angel_deity", "deity cue name mismatch")
+  luassert.truthy(calls[1].player_id == 3, "deity cue should target payload player id")
+end)
 
-function TestEventHandlers:test_negative_chance_routes_generic_negative_cue()
+it("test_negative_chance_routes_generic_negative_cue", function()
   local handlers = {}
   local calls = {}
 
@@ -594,19 +603,19 @@ function TestEventHandlers:test_negative_chance_routes_generic_negative_cue()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.chance.applied]
-    lu.assertEvalToTrue(type(handler) == "function", "chance.applied handler should be registered")
+    luassert.truthy(type(handler) == "function", "chance.applied handler should be registered")
     handler(nil, nil, {
       player = { id = 4 },
       card = { negative = true },
     })
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "negative chance should route one player cue")
-  lu.assertEvalToTrue(calls[1].cue_name == "generic_negative", "negative chance cue mismatch")
-  lu.assertEvalToTrue(calls[1].player_id == 4, "negative chance should target payload player id")
-end
+  luassert.truthy(#calls == 1, "negative chance should route one player cue")
+  luassert.truthy(calls[1].cue_name == "generic_negative", "negative chance cue mismatch")
+  luassert.truthy(calls[1].player_id == 4, "negative chance should target payload player id")
+end)
 
-function TestEventHandlers:test_turn_started_feedback_defers_during_landing_hold()
+it("test_turn_started_feedback_defers_during_landing_hold", function()
   local handlers = {}
   local calls = {}
   local state = {
@@ -648,24 +657,24 @@ function TestEventHandlers:test_turn_started_feedback_defers_during_landing_hold
     state.game.turn.landing_visual_hold_active = false
     state.game.turn.landing_visual_release_pending = false
     local handler = handlers[monopoly_event.feedback.turn_started]
-    lu.assertEvalToTrue(type(handler) == "function", "turn_started handler should be registered")
+    luassert.truthy(type(handler) == "function", "turn_started handler should be registered")
     handler(nil, nil, { player_id = 5 })
-    lu.assertEvalToTrue(#calls == 0, "landing hold should defer turn_started cue")
+    luassert.truthy(#calls == 0, "landing hold should defer turn_started cue")
 
       local hold = state.turn_runtime and state.turn_runtime.landing_visual_hold or nil
-      lu.assertEvalToTrue(hold and #hold.release_callbacks == 1, "landing hold should queue deferred runtime event")
-      lu.assertEvalToTrue(hold.release_callbacks[1].key == "runtime_event", "landing hold should register runtime_event callback")
+      luassert.truthy(hold and #hold.release_callbacks == 1, "landing hold should queue deferred runtime event")
+      luassert.truthy(hold.release_callbacks[1].key == "runtime_event", "landing hold should register runtime_event callback")
 
     state.game.turn.landing_visual_release_pending = true
     landing_visual_hold.release(state, state.game)
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "releasing landing hold should replay deferred runtime event")
-  lu.assertEvalToTrue(calls[1].cue_name == "turn_started", "replayed turn_started cue mismatch")
-  lu.assertEvalToTrue(calls[1].player_id == 5, "replayed turn_started player mismatch")
-end
+  luassert.truthy(#calls == 1, "releasing landing hold should replay deferred runtime event")
+  luassert.truthy(calls[1].cue_name == "turn_started", "replayed turn_started cue mismatch")
+  luassert.truthy(calls[1].player_id == 5, "replayed turn_started player mismatch")
+end)
 
-function TestEventHandlers:test_game_result_feedback_routes_winner_and_loser_panels()
+it("test_game_result_feedback_routes_winner_and_loser_panels", function()
   local handlers = {}
   local role_calls = {}
 
@@ -708,7 +717,7 @@ function TestEventHandlers:test_game_result_feedback_routes_winner_and_loser_pan
       },
     })
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     handler(nil, nil, {
       winner_ids = {
         [2] = true,
@@ -716,15 +725,15 @@ function TestEventHandlers:test_game_result_feedback_routes_winner_and_loser_pan
     })
   end)
 
-  lu.assertEvalToTrue(role_calls[1].wins == 0 and role_calls[1].loses == 1,
+  luassert.truthy(role_calls[1].wins == 0 and role_calls[1].loses == 1,
     "loser should open the defeat panel once")
-  lu.assertEvalToTrue(role_calls[2].wins == 1 and role_calls[2].loses == 0,
+  luassert.truthy(role_calls[2].wins == 1 and role_calls[2].loses == 0,
     "winner should show result panel once")
-  lu.assertEvalToTrue(role_calls[3].wins == 0 and role_calls[3].loses == 1,
+  luassert.truthy(role_calls[3].wins == 0 and role_calls[3].loses == 1,
     "other loser should open the defeat panel once")
-  lu.assertEvalToTrue(role_calls[1].lose_calls == 0 and role_calls[2].lose_calls == 0 and role_calls[3].lose_calls == 0,
+  luassert.truthy(role_calls[1].lose_calls == 0 and role_calls[2].lose_calls == 0 and role_calls[3].lose_calls == 0,
     "the result panels must never call the plain lose marker (#334)")
-end
+end)
 
 -- gm.finished 终局链共享脚手架(#609 审查收口:两新测试近乎逐字重复的补丁组):
 -- 捕获注册表 + resolve_role 双面板桩 + end_game 桩,调用顺序记录进 calls。
@@ -776,7 +785,7 @@ local function _end_game_ok_patch()
   }
 end
 
-function TestEventHandlers:test_game_result_ends_game_after_result_panels()
+it("test_game_result_ends_game_after_result_panels", function()
   -- 宿主文档语义:逐玩家标记胜负(带面板)之后必须显式结束游戏,玩家才会离开
   -- 对局(「胜利并不代表玩家将离开游戏,还需要设置游戏结束才会离开」)。
   -- 顺序敏感:game_end 先于胜负标记时宿主不采纳胜负,必须最后调用。
@@ -794,15 +803,15 @@ function TestEventHandlers:test_game_result_ends_game_after_result_panels()
       },
     })
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     handler(nil, nil, { winner_ids = { [2] = true } })
   end)
 
   _assert_eq(#sequence, 3, "two result panels then exactly one end_game")
   _assert_eq(sequence[3], "end_game", "game must end only after every result panel")
-end
+end)
 
-function TestEventHandlers:test_game_result_dispatches_immediately_during_landing_hold()
+it("test_game_result_dispatches_immediately_during_landing_hold", function()
   -- 终局是终态事件:landing hold 激活时不得 defer。finished 后 advance_turn
   -- 直接返回(game_state.lua:26-28),回合脚本永不恢复,release_pending 永不
   -- 置位,deferred 的终局处理器永久滞留——面板不弹、对局不结束。
@@ -822,15 +831,15 @@ function TestEventHandlers:test_game_result_dispatches_immediately_during_landin
     event_handlers.install(nil, nil, state)
     require("src.state.runtime").set_landing_visual_hold_active(state, true)
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     handler(nil, nil, { winner_ids = { [2] = true } })
   end)
 
   _assert_eq(#calls, 3, "terminal game.finished must dispatch immediately even during landing hold")
   _assert_eq(calls[3], "end_game", "end_game must run during landing hold, not deferred with panels")
-end
+end)
 
-function TestEventHandlers:test_game_result_panel_raise_still_ends_game_and_warns()
+it("test_game_result_panel_raise_still_ends_game_and_warns", function()
   -- #609 审查收口:面板宿主方法抛错属硬断裂,必须吞成 warn 且不阻塞 end_game
   -- 收尾——上抛会让会话悬挂不退出。
   local handlers = {}
@@ -860,17 +869,17 @@ function TestEventHandlers:test_game_result_panel_raise_still_ends_game_and_warn
       },
     })
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     local ok = pcall(handler, nil, nil, { winner_ids = { [2] = true } })
-    lu.assertEvalToTrue(ok, "raising panel must not escape the handler")
+    luassert.truthy(ok, "raising panel must not escape the handler")
   end)
 
   _assert_eq(calls[#calls], "end_game", "end_game must run even when a result panel raises")
-  lu.assertEvalToTrue(#warns == 1 and warns[1]:find("panel raised", 1, true) ~= nil,
+  luassert.truthy(#warns == 1 and warns[1]:find("panel raised", 1, true) ~= nil,
     "raised panel should leave exactly one warn; got " .. tostring(warns[1]))
-end
+end)
 
-function TestEventHandlers:test_game_result_resolve_raise_still_ends_game_and_warns()
+it("test_game_result_resolve_raise_still_ends_game_and_warns", function()
   -- #609 复审收口:resolve_role 经 port 触达宿主适配层,抛错与返回 nil 同判——
   -- 吞成 warn、跳过该玩家面板,不阻塞其余玩家面板与 end_game 收尾;
   -- 上抛会沿事件回调冒泡跳过收尾,会话悬挂不退出。
@@ -904,18 +913,18 @@ function TestEventHandlers:test_game_result_resolve_raise_still_ends_game_and_wa
       },
     })
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     local ok = pcall(handler, nil, nil, { winner_ids = { [2] = true } })
-    lu.assertEvalToTrue(ok, "raising resolve_role must not escape the handler")
+    luassert.truthy(ok, "raising resolve_role must not escape the handler")
   end)
 
   _assert_eq(calls[1], "win_panel:2", "other players' panels must survive one player's resolve raise")
   _assert_eq(calls[#calls], "end_game", "end_game must run even when resolve_role raises")
-  lu.assertEvalToTrue(#warns == 1 and warns[1]:find("resolve_role raised", 1, true) ~= nil,
+  luassert.truthy(#warns == 1 and warns[1]:find("resolve_role raised", 1, true) ~= nil,
     "raised resolve_role should leave exactly one warn; got " .. tostring(warns[1]))
-end
+end)
 
-function TestEventHandlers:test_game_result_without_players_skips_panels()
+it("test_game_result_without_players_skips_panels", function()
   local handlers = {}
   local role_calls = 0
 
@@ -941,14 +950,14 @@ function TestEventHandlers:test_game_result_without_players_skips_panels()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, {})
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     handler(nil, nil, { winner_ids = { [1] = true } })
   end)
 
-  lu.assertEvalToTrue(role_calls == 0, "no players should mean no role resolution")
-end
+  luassert.truthy(role_calls == 0, "no players should mean no role resolution")
+end)
 
-function TestEventHandlers:test_game_result_with_players_but_no_roles_skips_panels_and_warns()
+it("test_game_result_with_players_but_no_roles_skips_panels_and_warns", function()
   -- #327:players 存在但 resolve_role 返回 nil 时必须跳过面板且每条跳过留痕
   -- (warn 带 player 上下文),不得静默、也不得在 nil role 上索引方法报错。
   local handlers = {}
@@ -986,18 +995,18 @@ function TestEventHandlers:test_game_result_with_players_but_no_roles_skips_pane
       },
     })
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     local ok = pcall(handler, nil, nil, { winner_ids = { [1] = true } })
-    lu.assertEvalToTrue(ok, "missing role should not raise while routing result panels")
+    luassert.truthy(ok, "missing role should not raise while routing result panels")
   end)
 
-  lu.assertEvalToTrue(resolve_calls == 2, "both players should attempt role resolution")
-  lu.assertEvalToTrue(#warns == 2, "each unresolved role should leave one warn (#327)")
-  lu.assertEvalToTrue(warns[1]:find("player 1", 1, true) ~= nil and warns[2]:find("player 2", 1, true) ~= nil,
+  luassert.truthy(resolve_calls == 2, "both players should attempt role resolution")
+  luassert.truthy(#warns == 2, "each unresolved role should leave one warn (#327)")
+  luassert.truthy(warns[1]:find("player 1", 1, true) ~= nil and warns[2]:find("player 2", 1, true) ~= nil,
     "warns should carry the player context; got " .. tostring(warns[1]) .. " / " .. tostring(warns[2]))
-end
+end)
 
-function TestEventHandlers:test_game_result_without_players_skips_panels_and_warns()
+it("test_game_result_without_players_skips_panels_and_warns", function()
   -- #327 guard ①:_current_players() 返回 nil 时必须留痕,不得静默 return。
   local handlers = {}
   local warns = {}
@@ -1025,17 +1034,17 @@ function TestEventHandlers:test_game_result_without_players_skips_panels_and_war
       warns[#warns + 1] = table.concat({ ... }, " ")
     end }, {})
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     local ok = pcall(handler, nil, nil, { winner_ids = { [1] = true } })
-    lu.assertEvalToTrue(ok, "missing players should not raise while routing result panels")
+    luassert.truthy(ok, "missing players should not raise while routing result panels")
   end)
 
-  lu.assertEvalToTrue(#warns == 1, "no players should leave exactly one warn (#327)")
-  lu.assertEvalToTrue(warns[1]:find("no current players", 1, true) ~= nil,
+  luassert.truthy(#warns == 1, "no players should leave exactly one warn (#327)")
+  luassert.truthy(warns[1]:find("no current players", 1, true) ~= nil,
     "no-players warn should carry the skip reason; got " .. tostring(warns[1]))
-end
+end)
 
-function TestEventHandlers:test_game_result_winner_method_missing_warns()
+it("test_game_result_winner_method_missing_warns", function()
   -- #327 guard ③:胜者方法缺失时跳过且留痕,不静默。
   local handlers = {}
   local warns = {}
@@ -1069,17 +1078,17 @@ function TestEventHandlers:test_game_result_winner_method_missing_warns()
       },
     })
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     local ok = pcall(handler, nil, nil, { winner_ids = { [9] = true } })
-    lu.assertEvalToTrue(ok, "missing winner method should not raise while routing result panels")
+    luassert.truthy(ok, "missing winner method should not raise while routing result panels")
   end)
 
-  lu.assertEvalToTrue(#warns == 1, "missing winner method should leave exactly one warn (#327)")
-  lu.assertEvalToTrue(warns[1]:find("game_win_and_show_result_panel", 1, true) ~= nil,
+  luassert.truthy(#warns == 1, "missing winner method should leave exactly one warn (#327)")
+  luassert.truthy(warns[1]:find("game_win_and_show_result_panel", 1, true) ~= nil,
     "warn should name the missing winner method; got " .. tostring(warns[1]))
-end
+end)
 
-function TestEventHandlers:test_game_result_loser_method_missing_warns()
+it("test_game_result_loser_method_missing_warns", function()
   -- #327 guard ④:败者方法缺失时跳过且留痕,不静默。
   local handlers = {}
   local warns = {}
@@ -1113,17 +1122,17 @@ function TestEventHandlers:test_game_result_loser_method_missing_warns()
       },
     })
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     local ok = pcall(handler, nil, nil, { winner_ids = {} })
-    lu.assertEvalToTrue(ok, "missing loser method should not raise while routing result panels")
+    luassert.truthy(ok, "missing loser method should not raise while routing result panels")
   end)
 
-  lu.assertEvalToTrue(#warns == 1, "missing loser method should leave exactly one warn (#327)")
-  lu.assertEvalToTrue(warns[1]:find("game_lose_and_show_result_panel", 1, true) ~= nil,
+  luassert.truthy(#warns == 1, "missing loser method should leave exactly one warn (#327)")
+  luassert.truthy(warns[1]:find("game_lose_and_show_result_panel", 1, true) ~= nil,
     "warn should name the missing loser method; got " .. tostring(warns[1]))
-end
+end)
 
-function TestEventHandlers:test_game_result_skips_synthetic_players_without_warn()
+it("test_game_result_skips_synthetic_players_without_warn", function()
   -- #611:合成 AI 没有客户端,结算面板无处显示——终局路由必须在 resolve_role
   -- 之前静默跳过它们,不留 warn。覆盖两种情形:已退役(die/lose 已把自己从
   -- 合成角色注册表删除,resolve_role 恒 nil)与在场(适配器无败者面板方法)。
@@ -1203,9 +1212,9 @@ function TestEventHandlers:test_game_result_skips_synthetic_players_without_warn
       },
     })
     local handler = handlers[monopoly_event.game.finished]
-    lu.assertEvalToTrue(type(handler) == "function", "game_finished handler should be registered")
+    luassert.truthy(type(handler) == "function", "game_finished handler should be registered")
     local ok = pcall(handler, nil, nil, { winner_ids = { [1] = true } })
-    lu.assertEvalToTrue(ok, "synthetic players should not raise while routing result panels")
+    luassert.truthy(ok, "synthetic players should not raise while routing result panels")
   end)
 
   _assert_eq(#warns, 0, "synthetic players must not warn; got " .. tostring(warns[1]))
@@ -1216,12 +1225,12 @@ function TestEventHandlers:test_game_result_skips_synthetic_players_without_warn
   _assert_eq(calls[2], "end_game", "end_game must still run exactly once after routing")
   -- 跳过必留痕(ADR 0046):降级为 info,不是静默。
   _assert_eq(#infos, 2, "both synthetic skips should leave an info trace")
-  lu.assertEvalToTrue(infos[1]:find("player -2", 1, true) ~= nil and infos[2]:find("player -3", 1, true) ~= nil,
+  luassert.truthy(infos[1]:find("player -2", 1, true) ~= nil and infos[2]:find("player -3", 1, true) ~= nil,
     "synthetic skip traces should carry the player context; got "
       .. tostring(infos[1]) .. " / " .. tostring(infos[2]))
-end
+end)
 
-function TestEventHandlers:test_angel_immune_blocked_routes_tile_and_player_cues()
+it("test_angel_immune_blocked_routes_tile_and_player_cues", function()
   local captured = {}
   local tile_calls = {}
   local player_calls = {}
@@ -1250,7 +1259,7 @@ function TestEventHandlers:test_angel_immune_blocked_routes_tile_and_player_cues
 
   _assert_eq(tile_calls[1], "angel_deity:3", "tile event should prefer tile cue")
   _assert_eq(player_calls[1], "angel_deity:4", "player event should fall back to player cue")
-end
+end)
 
 do
   -- 共享驱动:装一次 handlers,捕获 player/tile cue 与 tip,触发一个事件。
@@ -1285,20 +1294,20 @@ do
 
   local STATE = { game = {} }
 
-  function TestEventHandlers:test_buy_failed_with_an_empty_popup_body_falls_back_to_the_default_tip_text()
+  it("test_buy_failed_with_an_empty_popup_body_falls_back_to_the_default_tip_text", function()
     -- kills _resolve_market_buy_failed_tip's `body ~= ""` "" -> nil.
     local c = _drive(monopoly_event.market.buy_failed, STATE, { popup = { body = "" } })
     _assert_eq(c.tips[1].text, "黑市购买失败", "empty body falls back to the default")
-  end
+  end)
 
-  function TestEventHandlers:test_buy_failed_tip_pins_blocks_inter_turn_and_source()
+  it("test_buy_failed_tip_pins_blocks_inter_turn_and_source", function()
     -- kills the tip literal's blocks_inter_turn false -> true and source -> nil.
     local c = _drive(monopoly_event.market.buy_failed, STATE, { popup = { body = "余额不足" } })
     _assert_eq(c.tips[1].blocks_inter_turn, false, "buy_failed tip must not block inter-turn")
     _assert_eq(c.tips[1].source, "market.buy_failed", "buy_failed tip source pinned")
-  end
+  end)
 
-  function TestEventHandlers:test_inventory_full_tip_carries_body_text_and_full_field_set()
+  it("test_inventory_full_tip_carries_body_text_and_full_field_set", function()
     -- kills _event_data call -> nil, the body fallback chain's and/or mutants,
     -- and the dedupe_key/blocks_inter_turn/source literals.
     local c = _drive(monopoly_event.market.inventory_full, STATE, { body = "背包不够用了" })
@@ -1307,15 +1316,15 @@ do
     _assert_eq(tip.dedupe_key, "market_inventory_full", "dedupe key pinned")
     _assert_eq(tip.blocks_inter_turn, false, "inventory_full tip must not block inter-turn")
     _assert_eq(tip.source, "market.inventory_full", "inventory_full tip source pinned")
-  end
+  end)
 
-  function TestEventHandlers:test_inventory_full_without_a_body_uses_the_default_tip_text()
+  it("test_inventory_full_without_a_body_uses_the_default_tip_text", function()
     -- kills the fallback chain's "卡槽已满，无法继续购买" -> nil.
     local c = _drive(monopoly_event.market.inventory_full, STATE, {})
     _assert_eq(c.tips[1].text, "卡槽已满，无法继续购买", "missing body falls back to the default")
-  end
+  end)
 
-  function TestEventHandlers:test_install_is_idempotent_a_second_install_does_not_re_register()
+  it("test_install_is_idempotent_a_second_install_does_not_re_register", function()
     -- kills `context.installed = true` true -> false.
     local registrations = 0
     _with_patches({
@@ -1327,13 +1336,13 @@ do
       local event_handlers = _load_fresh_handlers()
       event_handlers.install(nil, nil, STATE)
       local first = registrations
-      lu.assertEvalToTrue(first > 0, "first install registers handlers")
+      luassert.truthy(first > 0, "first install registers handlers")
       event_handlers.install(nil, nil, STATE)
       _assert_eq(registrations, first, "second install must not re-register")
     end)
-  end
+  end)
 
-  function TestEventHandlers:test_install_loads_the_anim_module_for_its_registration_side_effects()
+  it("test_install_loads_the_anim_module_for_its_registration_side_effects", function()
     -- kills pcall(require, "src.ui.render.anim")'s module-name -> nil.
     local saved = package.loaded["src.ui.render.anim"]
     package.loaded["src.ui.render.anim"] = nil
@@ -1344,16 +1353,16 @@ do
     end)
     local loaded = package.loaded["src.ui.render.anim"] ~= nil
     package.loaded["src.ui.render.anim"] = package.loaded["src.ui.render.anim"] or saved
-    lu.assertEvalToTrue(loaded, "install must require src.ui.render.anim")
-  end
+    luassert.truthy(loaded, "install must require src.ui.render.anim")
+  end)
 
-  function TestEventHandlers:test_roadblock_hit_without_state_returns_the_handler_result_directly()
+  it("test_roadblock_hit_without_state_returns_the_handler_result_directly", function()
     -- kills _dispatch_or_defer's `return handler(data)` call -> nil.
     local c = _drive(monopoly_event.movement.roadblock_hit, nil, { tile_index = 7 })
     _assert_eq(c.result, 7, "state-less dispatch returns the handler result")
-  end
+  end)
 
-  function TestEventHandlers:test_chance_applied_guard_matrix_every_missing_piece_suppresses_the_cue()
+  it("test_chance_applied_guard_matrix_every_missing_piece_suppresses_the_cue", function()
     -- kills the guard's four `and` -> `or` mutants.
     local data = { player = { id = 4 }, card = { negative = true } }
     local c1 = _drive(monopoly_event.chance.applied, nil, data)
@@ -1366,21 +1375,21 @@ do
     _assert_eq(#c4.player_cues, 0, "missing card suppresses the cue")
     local c5 = _drive(monopoly_event.chance.applied, STATE, { player = { id = 4 }, card = { negative = false } })
     _assert_eq(#c5.player_cues, 0, "a non-negative card suppresses the cue")
-  end
+  end)
 
-  function TestEventHandlers:test_turn_started_without_state_fires_no_cue()
+  it("test_turn_started_without_state_fires_no_cue", function()
     -- kills the turn_started guard's `and` -> `or`.
     local c = _drive(monopoly_event.feedback.turn_started, nil, { player_id = 2 })
     _assert_eq(#c.player_cues, 0, "nil state suppresses the turn_started cue")
-  end
+  end)
 
-  function TestEventHandlers:test_bankruptcy_without_state_fires_no_cue()
+  it("test_bankruptcy_without_state_fires_no_cue", function()
     -- kills _player_cue_from_player_id's guard `and` -> `or`.
     local c = _drive(monopoly_event.feedback.bankruptcy, nil, { player_id = 3 })
     _assert_eq(#c.player_cues, 0, "nil state suppresses the bankruptcy cue")
-  end
+  end)
 
-  function TestEventHandlers:test_status_applied_falls_back_to_a_player_cue_when_no_tile_index()
+  it("test_status_applied_falls_back_to_a_player_cue_when_no_tile_index", function()
     -- kills the fallback's _event_player_id call -> nil, `player_id ~= nil`
     -- ~= -> ==, and the guard `and` -> `or` pair.
     local c = _drive(monopoly_event.feedback.status_applied, STATE, { cue_name = "zap", player_id = 5 })
@@ -1391,40 +1400,40 @@ do
     _assert_eq(#no_state.player_cues, 0, "nil state suppresses the fallback")
     local no_cue = _drive(monopoly_event.feedback.status_applied, STATE, { player_id = 5 })
     _assert_eq(#no_cue.player_cues, 0, "missing cue_name suppresses the fallback")
-  end
+  end)
 
-  function TestEventHandlers:test_status_applied_tile_path_needs_state_cue_name_and_tile_index_together()
+  it("test_status_applied_tile_path_needs_state_cue_name_and_tile_index_together", function()
     -- kills the tile guard's `and` -> `or` pair.
     local no_state = _drive(monopoly_event.feedback.status_applied, nil, { cue_name = "zap", tile_index = 9 })
     _assert_eq(#no_state.tile_cues, 0, "nil state suppresses the tile cue")
     local no_name = _drive(monopoly_event.feedback.status_applied, STATE, { tile_index = 9 })
     _assert_eq(#no_name.tile_cues, 0, "missing cue_name suppresses the tile cue")
-  end
+  end)
 
-  function TestEventHandlers:test_deity_applied_routes_rich_to_the_rich_deity_cue()
+  it("test_deity_applied_routes_rich_to_the_rich_deity_cue", function()
     -- kills the "rich" / "rich_deity" literal mutants.
     local c = _drive(monopoly_event.feedback.deity_applied, STATE, { deity_type = "rich", player_id = 6 })
     _assert_eq(#c.player_cues, 1, "rich deity fires one cue")
     _assert_eq(c.player_cues[1].cue_name, "rich_deity", "rich maps to rich_deity")
-  end
+  end)
 
-  function TestEventHandlers:test_deity_applied_without_state_or_with_an_unmapped_deity_fires_no_cue()
+  it("test_deity_applied_without_state_or_with_an_unmapped_deity_fires_no_cue", function()
     -- kills the deity guard's `and` -> `or` pair.
     local no_state = _drive(monopoly_event.feedback.deity_applied, nil, { deity_type = "rich", player_id = 6 })
     _assert_eq(#no_state.player_cues, 0, "nil state suppresses the deity cue")
     local poor = _drive(monopoly_event.feedback.deity_applied, STATE, { deity_type = "poor", player_id = 6 })
     _assert_eq(#poor.player_cues, 0, "an unmapped deity fires no cue")
-  end
+  end)
 
-  function TestEventHandlers:test_angel_immune_blocked_falls_back_to_a_player_cue_and_needs_state()
+  it("test_angel_immune_blocked_falls_back_to_a_player_cue_and_needs_state", function()
     -- kills the player fallback guard's `and` -> `or`.
     local c = _drive(monopoly_event.feedback.angel_immune_blocked, STATE, { player_id = 8 })
     _assert_eq(#c.player_cues, 1, "angel immune player fallback fires")
     _assert_eq(c.player_cues[1].cue_name, "angel_deity", "fallback cue is angel_deity")
     local no_state = _drive(monopoly_event.feedback.angel_immune_blocked, nil, { player_id = 8 })
     _assert_eq(#no_state.player_cues, 0, "nil state suppresses the angel cue")
-  end
+  end)
 end
 
 
-return TestEventHandlers
+end)
