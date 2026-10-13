@@ -1,8 +1,10 @@
-local lu = require("luaunit")
-local support = require("test.support.shared_support")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local camera_helper = require("src.host.camera")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 local _config_reset = require("test.support.config_reset")
 
@@ -18,8 +20,8 @@ end
 
 function TestCameraHelper:test_camera_helper_new_returns_object_with_target_nil()
   local helper = _new_helper()
-  lu.assertEvalToTrue(type(helper) == "table", "new should return table")
-  lu.assertEvalToTrue(helper.target_role_id == nil, "target_role_id should default nil")
+  luassert.truthy(type(helper) == "table", "new should return table")
+  luassert.truthy(helper.target_role_id == nil, "target_role_id should default nil")
 end
 
 function TestCameraHelper:test_camera_helper_set_target_sets_target_role_id()
