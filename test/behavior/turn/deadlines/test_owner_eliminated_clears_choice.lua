@@ -3,7 +3,12 @@
 -- pending_choice,窗口原本要挂满 15s 超时 force_skip 才消失。守卫落在 choice
 -- 超时 tick 的公共入口:owner 已淘汰 → 立即 force_skip(reason=owner_eliminated),
 -- 不走自动代答——被淘汰者不该被代答。
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local tick_choice_timeout = require("test.support.choice_timeout")
 local ChoiceTimeout = require("src.turn.waits.choice_timeout")
@@ -32,18 +37,18 @@ local function _step_once(g, state, dispatched)
   lifecycle.step(g, state, 0.1)
 end
 
-TestOwnerEliminatedClearsChoice = {}
+describe("TestOwnerEliminatedClearsChoice", function()
 
-function TestOwnerEliminatedClearsChoice:setUp()
+before_each(function()
   config_reset.reset_all()
-end
+end)
 
-function TestOwnerEliminatedClearsChoice:test_force_skips_the_pending_choice_as_soon_as_its_owner_is_eliminated()
+it("test_force_skips_the_pending_choice_as_soon_as_its_owner_is_eliminated", function()
   local g = support.new_game({ players = { "P1", "P2", "P3" } })
   local owner = g.players[1]
   _open_owned_choice(g, owner)
   bankruptcy.eliminate(g, owner, { reason = "测试破产" })
-  lu.assertNotNil(g.turn.pending_choice, "eliminate itself does not clear the window (that is the tick guard's job)")
+  luassert.is_not_nil(g.turn.pending_choice, "eliminate itself does not clear the window (that is the tick guard's job)")
 
   local dispatched = {}
   local warns = {}
@@ -54,20 +59,20 @@ function TestOwnerEliminatedClearsChoice:test_force_skips_the_pending_choice_as_
   end
   local ok, err = pcall(_step_once, g, {}, dispatched)
   logger.warn = orig_warn
-  lu.assertEvalToTrue(ok, err)
+  luassert.truthy(ok, err)
 
-  lu.assertNil(g.turn.pending_choice, "eliminated owner's choice must be cleared on the next tick, not after the 15s countdown")
-  lu.assertEquals(#dispatched, 0, "an eliminated owner must be skipped, never auto-answered")
+  luassert.is_nil(g.turn.pending_choice, "eliminated owner's choice must be cleared on the next tick, not after the 15s countdown")
+  _assert_same(#dispatched, 0, "an eliminated owner must be skipped, never auto-answered")
   local skip_logged = false
   for _, line in ipairs(warns) do
     if line:find("owner_eliminated", 1, true) then
       skip_logged = true
     end
   end
-  lu.assertTrue(skip_logged, "the skip must be attributed to owner_eliminated for diagnosis")
-end
+  luassert.is_true(skip_logged, "the skip must be attributed to owner_eliminated for diagnosis")
+end)
 
-function TestOwnerEliminatedClearsChoice:test_leaves_a_living_owners_choice_untouched()
+it("test_leaves_a_living_owners_choice_untouched", function()
   local g = support.new_game({ players = { "P1", "P2", "P3" } })
   local owner = g.players[1]
   local pending = _open_owned_choice(g, owner)
@@ -75,11 +80,11 @@ function TestOwnerEliminatedClearsChoice:test_leaves_a_living_owners_choice_unto
   local dispatched = {}
   _step_once(g, {}, dispatched)
 
-  lu.assertEquals(g.turn.pending_choice, pending, "a living owner keeps the window and the countdown")
-  lu.assertEquals(#dispatched, 0)
-end
+  _assert_same(g.turn.pending_choice, pending, "a living owner keeps the window and the countdown")
+  _assert_same(#dispatched, 0)
+end)
 
-function TestOwnerEliminatedClearsChoice:test_guards_the_production_default_choice_tick_as_well()
+it("test_guards_the_production_default_choice_tick_as_well", function()
   local g = support.new_game({ players = { "P1", "P2", "P3" } })
   local owner = g.players[1]
   _open_owned_choice(g, owner)
@@ -87,8 +92,8 @@ function TestOwnerEliminatedClearsChoice:test_guards_the_production_default_choi
 
   ChoiceTimeout.step_default(g, {}, 0.1)
 
-  lu.assertNil(g.turn.pending_choice, "the default production tick must clear an eliminated owner's window")
-end
+  luassert.is_nil(g.turn.pending_choice, "the default production tick must clear an eliminated owner's window")
+end)
 
 
-return TestOwnerEliminatedClearsChoice
+end)

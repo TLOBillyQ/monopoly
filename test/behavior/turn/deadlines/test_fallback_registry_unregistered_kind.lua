@@ -1,6 +1,10 @@
 -- 验证：未注册的 choice.kind 走 force_skip，不抛异常
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local force_resolve = require("src.turn.deadlines")
@@ -40,17 +44,17 @@ local function _build_game()
   return game, advanced
 end
 
-TestFallbackRegistryUnregisteredKind = {}
+describe("TestFallbackRegistryUnregisteredKind", function()
 
-function TestFallbackRegistryUnregisteredKind:setUp()
+before_each(function()
   fallback_registry.reset()
-end
+end)
 
-function TestFallbackRegistryUnregisteredKind:test_resolve_returns_nil_for_unknown_kind()
-  lu.assertNil(fallback_registry.resolve("unknown_kind", nil, nil))
-end
+it("test_resolve_returns_nil_for_unknown_kind", function()
+  luassert.is_nil(fallback_registry.resolve("unknown_kind", nil, nil))
+end)
 
-function TestFallbackRegistryUnregisteredKind:test_force_resolve_resolve_choice_on_unknown_kind_triggers_force_skip_without_error()
+it("test_force_resolve_resolve_choice_on_unknown_kind_triggers_force_skip_without_error", function()
   local state = _build_state()
   local game, advanced = _build_game()
   local choice = {
@@ -64,34 +68,34 @@ function TestFallbackRegistryUnregisteredKind:test_force_resolve_resolve_choice_
   state._game = game
 
   local ok, err = pcall(force_resolve.resolve_choice, game, state, choice, "tick_timeout")
-  lu.assertTrue(ok, tostring(err))
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertTrue(advanced.count >= 1)
-end
+  luassert.is_true(ok, tostring(err))
+  luassert.is_nil(game.turn.pending_choice)
+  luassert.is_true(advanced.count >= 1)
+end)
 
-function TestFallbackRegistryUnregisteredKind:test_registered_fallback_gets_used_when_present()
+it("test_registered_fallback_gets_used_when_present", function()
   fallback_registry.register("market_buy", function(_, choice)
     return { type = "choice_cancel", choice_id = choice.id }
   end)
   local resolved = fallback_registry.resolve("market_buy", nil, { id = "x" })
-  lu.assertIsTable(resolved)
-  lu.assertEquals(resolved.type, "choice_cancel")
-  lu.assertEquals(resolved.choice_id, "x")
-end
+  luassert.is_table(resolved)
+  _assert_same(resolved.type, "choice_cancel")
+  _assert_same(resolved.choice_id, "x")
+end)
 
 
-function TestFallbackRegistryUnregisteredKind:test_register_rejects_an_empty_string_kind()
+it("test_register_rejects_an_empty_string_kind", function()
   -- #293:register 的 kind 校验断言(and/or/""/nil 变异)未测。
-  luax.has_error(function()
+  luassert.has_error(function()
     fallback_registry.register("", function() end)
   end, "invalid kind")
-end
+end)
 
-function TestFallbackRegistryUnregisteredKind:test_register_rejects_a_non_function_fallback()
+it("test_register_rejects_a_non_function_fallback", function()
   -- #293:register 的 fn 校验断言("invalid fallback fn"→nil 变异)未测。
-  luax.has_error(function()
+  luassert.has_error(function()
     fallback_registry.register("test_kind", "not_a_function")
   end, "invalid fallback fn")
-end
+end)
 
-return TestFallbackRegistryUnregisteredKind
+end)

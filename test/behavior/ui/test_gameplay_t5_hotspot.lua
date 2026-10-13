@@ -1,6 +1,8 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- luacheck: ignore 211
 
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 local monopoly_event = require("src.foundation.events")
@@ -21,9 +23,23 @@ local function _clicker_role(role_id)
   return { role = { get_roleid = function() return role_id end } }
 end
 
-TestGameplayT5Hotspot = {}
+describe("TestGameplayT5Hotspot", function()
+  local loaded_before_case
+  before_each(function()
+    loaded_before_case = {}
+    for name, object in pairs(package.loaded) do
+      if name:match("^src%.") then loaded_before_case[name] = object end
+    end
+  end)
+  after_each(function()
+    for name in pairs(package.loaded) do
+      if name:match("^src%.") and loaded_before_case[name] == nil then package.loaded[name] = nil end
+    end
+    for name, object in pairs(loaded_before_case) do package.loaded[name] = object end
+  end)
 
-function TestGameplayT5Hotspot:test_build_intent_always_emits_item_slot_click_without_reading_choice()
+
+it("test_build_intent_always_emits_item_slot_click_without_reading_choice", function()
   -- 展示层只报事实:无遮挡时点哪个槽就产哪个槽的 item_slot_click,
   -- 不看 choice、不看道具镜像——「能不能用」全归 turn 层裁定。
   local item_slot_intents = _load_fresh("src.ui.input.route_item_slots")
@@ -32,36 +48,36 @@ function TestGameplayT5Hotspot:test_build_intent_always_emits_item_slot_click_wi
   }
 
   local specs = item_slot_intents.build(state)
-  lu.assertEvalToTrue(#specs == 2, "each item slot should get exactly one route spec")
+  luassert.truthy(#specs == 2, "each item slot should get exactly one route spec")
 
   -- 没有任何 pending choice(既没道具窗也没道具镜像),照样产 intent
   local first = specs[1].build_intent(_clicker_role(7))
-  lu.assertEvalToTrue(type(first) == "table", "build_intent should return a table")
-  lu.assertEvalToTrue(first.type == "item_slot_click",
+  luassert.truthy(type(first) == "table", "build_intent should return a table")
+  luassert.truthy(first.type == "item_slot_click",
     "intent type should be item_slot_click, got " .. tostring(first.type))
-  lu.assertEvalToTrue(first.slot_index == 1, "slot 1 should carry slot_index 1")
-  lu.assertEvalToTrue(first.actor_role_id == 7,
+  luassert.truthy(first.slot_index == 1, "slot 1 should carry slot_index 1")
+  luassert.truthy(first.actor_role_id == 7,
     "intent should carry the clicking role, got " .. tostring(first.actor_role_id))
-  lu.assertEvalToTrue(first.id == nil, "item_slot_click intent must not carry a ui_button id")
+  luassert.truthy(first.id == nil, "item_slot_click intent must not carry a ui_button id")
 
   local second = specs[2].build_intent(_clicker_role(7))
-  lu.assertEvalToTrue(second.slot_index == 2, "slot 2 should carry slot_index 2")
-end
+  luassert.truthy(second.slot_index == 2, "slot 2 should carry slot_index 2")
+end)
 
-function TestGameplayT5Hotspot:test_build_intent_returns_nil_when_overlay_blocks_the_click()
+it("test_build_intent_returns_nil_when_overlay_blocks_the_click", function()
   local item_slot_intents = _load_fresh("src.ui.input.route_item_slots")
   local state = {
     ui = { item_slots = { "slot1" }, popup_active = true },
   }
 
   local specs = item_slot_intents.build(state)
-  lu.assertEvalToTrue(#specs == 1, "should generate a spec for the item slot")
+  luassert.truthy(#specs == 1, "should generate a spec for the item slot")
 
   local intent = specs[1].build_intent(_clicker_role(7))
-  lu.assertEvalToTrue(intent == nil, "clicks under an overlay are mis-taps and must stay silent")
-end
+  luassert.truthy(intent == nil, "clicks under an overlay are mis-taps and must stay silent")
+end)
 
-function TestGameplayT5Hotspot:test_build_intent_handles_missing_ui_state()
+it("test_build_intent_handles_missing_ui_state", function()
   local item_slot_intents = _load_fresh("src.ui.input.route_item_slots")
   local nodes = require("src.ui.schema.permanent")
 
@@ -71,39 +87,39 @@ function TestGameplayT5Hotspot:test_build_intent_handles_missing_ui_state()
   local specs = item_slot_intents.build(state)
   local expected_slots = nodes.item_slots or {}
   local base = #expected_slots
-  lu.assertEvalToTrue(
+  luassert.truthy(
     #specs == base * 2 + 1 or #specs == base * 2 or #specs == base + 1 or #specs == base,
     "should handle missing ui state"
   )
-end
+end)
 
-function TestGameplayT5Hotspot:test_on_bankruptcy_tiles_cleared_returns_true_when_sync_succeeds()
+it("test_on_bankruptcy_tiles_cleared_returns_true_when_sync_succeeds", function()
   local state_ports = _load_fresh("src.ui.ports.state")
   local ports = state_ports.build()
 
   local game = {
     landing_visual_hold_state = {
       on_board_visual_sync = function(_, payload)
-        lu.assertEvalToTrue(type(payload.tile_ids) == "table", "should receive tile_ids")
+        luassert.truthy(type(payload.tile_ids) == "table", "should receive tile_ids")
         return true
       end
     }
   }
 
   local result = ports.on_bankruptcy_tiles_cleared(game, nil, { 1, 2, 3 })
-  lu.assertEvalToTrue(result == true, "should return true when sync succeeds")
-end
+  luassert.truthy(result == true, "should return true when sync succeeds")
+end)
 
-function TestGameplayT5Hotspot:test_on_bankruptcy_tiles_cleared_returns_false_when_no_state()
+it("test_on_bankruptcy_tiles_cleared_returns_false_when_no_state", function()
   local state_ports = _load_fresh("src.ui.ports.state")
   local ports = state_ports.build()
 
   local game = {}
   local result = ports.on_bankruptcy_tiles_cleared(game, nil, { 1, 2, 3 })
-  lu.assertEvalToTrue(result == false, "should return false when no landing_visual_hold_state")
-end
+  luassert.truthy(result == false, "should return false when no landing_visual_hold_state")
+end)
 
-function TestGameplayT5Hotspot:test_on_bankruptcy_tiles_cleared_returns_false_when_sync_returns_false()
+it("test_on_bankruptcy_tiles_cleared_returns_false_when_sync_returns_false", function()
   local state_ports = _load_fresh("src.ui.ports.state")
   local ports = state_ports.build()
 
@@ -116,10 +132,10 @@ function TestGameplayT5Hotspot:test_on_bankruptcy_tiles_cleared_returns_false_wh
   }
 
   local result = ports.on_bankruptcy_tiles_cleared(game, nil, { 1, 2, 3 })
-  lu.assertEvalToTrue(result == false, "should return false when sync returns false")
-end
+  luassert.truthy(result == false, "should return false when sync returns false")
+end)
 
-function TestGameplayT5Hotspot:test_rent_paid_handler_calls_board_feedback()
+it("test_rent_paid_handler_calls_board_feedback", function()
   local handlers = {}
   local calls = {}
 
@@ -144,16 +160,16 @@ function TestGameplayT5Hotspot:test_rent_paid_handler_calls_board_feedback()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.land.rent_paid]
-    lu.assertEvalToTrue(type(handler) == "function", "rent_paid handler should be registered")
+    luassert.truthy(type(handler) == "function", "rent_paid handler should be registered")
     handler(nil, nil, { owner = { id = 5 }, amount = 100 })
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "rent_paid should call board_feedback once")
-  lu.assertEvalToTrue(calls[1].cue_name == "cash_burst", "rent_paid should use cash_burst cue")
-  lu.assertEvalToTrue(calls[1].player_id == 5, "rent_paid should target owner")
-end
+  luassert.truthy(#calls == 1, "rent_paid should call board_feedback once")
+  luassert.truthy(calls[1].cue_name == "cash_burst", "rent_paid should use cash_burst cue")
+  luassert.truthy(calls[1].player_id == 5, "rent_paid should target owner")
+end)
 
-function TestGameplayT5Hotspot:test_rent_paid_handler_skips_when_no_context()
+it("test_rent_paid_handler_skips_when_no_context", function()
   local handlers = {}
   local calls = {}
 
@@ -178,14 +194,14 @@ function TestGameplayT5Hotspot:test_rent_paid_handler_skips_when_no_context()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, nil) -- nil context
     local handler = handlers[monopoly_event.land.rent_paid]
-    lu.assertEvalToTrue(type(handler) == "function", "rent_paid handler should be registered")
+    luassert.truthy(type(handler) == "function", "rent_paid handler should be registered")
     handler(nil, nil, { owner = { id = 5 } })
   end)
 
-  lu.assertEvalToTrue(#calls == 0, "rent_paid should not call board_feedback when no context")
-end
+  luassert.truthy(#calls == 0, "rent_paid should not call board_feedback when no context")
+end)
 
-function TestGameplayT5Hotspot:test_rent_bankrupt_handler_calls_board_feedback()
+it("test_rent_bankrupt_handler_calls_board_feedback", function()
   local handlers = {}
   local calls = {}
 
@@ -210,16 +226,16 @@ function TestGameplayT5Hotspot:test_rent_bankrupt_handler_calls_board_feedback()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.land.rent_bankrupt]
-    lu.assertEvalToTrue(type(handler) == "function", "rent_bankrupt handler should be registered")
+    luassert.truthy(type(handler) == "function", "rent_bankrupt handler should be registered")
     handler(nil, nil, { owner = { id = 3 }, amount = 200 })
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "rent_bankrupt should call board_feedback once")
-  lu.assertEvalToTrue(calls[1].cue_name == "cash_burst", "rent_bankrupt should use cash_burst cue")
-  lu.assertEvalToTrue(calls[1].player_id == 3, "rent_bankrupt should target owner")
-end
+  luassert.truthy(#calls == 1, "rent_bankrupt should call board_feedback once")
+  luassert.truthy(calls[1].cue_name == "cash_burst", "rent_bankrupt should use cash_burst cue")
+  luassert.truthy(calls[1].player_id == 3, "rent_bankrupt should target owner")
+end)
 
-function TestGameplayT5Hotspot:test_tax_paid_handler_calls_board_feedback()
+it("test_tax_paid_handler_calls_board_feedback", function()
   local handlers = {}
   local calls = {}
 
@@ -244,16 +260,16 @@ function TestGameplayT5Hotspot:test_tax_paid_handler_calls_board_feedback()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.land.tax_paid]
-    lu.assertEvalToTrue(type(handler) == "function", "tax_paid handler should be registered")
+    luassert.truthy(type(handler) == "function", "tax_paid handler should be registered")
     handler(nil, nil, { player = { id = 2 }, amount = 50 })
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "tax_paid should call board_feedback once")
-  lu.assertEvalToTrue(calls[1].cue_name == "tax_wave", "tax_paid should use tax_wave cue")
-  lu.assertEvalToTrue(calls[1].player_id == 2, "tax_paid should target player")
-end
+  luassert.truthy(#calls == 1, "tax_paid should call board_feedback once")
+  luassert.truthy(calls[1].cue_name == "tax_wave", "tax_paid should use tax_wave cue")
+  luassert.truthy(calls[1].player_id == 2, "tax_paid should target player")
+end)
 
-function TestGameplayT5Hotspot:test_bankruptcy_handler_calls_board_feedback()
+it("test_bankruptcy_handler_calls_board_feedback", function()
   local handlers = {}
   local calls = {}
 
@@ -278,16 +294,16 @@ function TestGameplayT5Hotspot:test_bankruptcy_handler_calls_board_feedback()
     local event_handlers = _load_fresh_handlers()
     event_handlers.install(nil, nil, { game = {} })
     local handler = handlers[monopoly_event.feedback.bankruptcy]
-    lu.assertEvalToTrue(type(handler) == "function", "bankruptcy handler should be registered")
+    luassert.truthy(type(handler) == "function", "bankruptcy handler should be registered")
     handler(nil, nil, { player = { id = 4 } })
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "bankruptcy should call board_feedback once")
-  lu.assertEvalToTrue(calls[1].cue_name == "bankruptcy_slam", "bankruptcy should use bankruptcy_slam cue")
-  lu.assertEvalToTrue(calls[1].player_id == 4, "bankruptcy should target player")
-end
+  luassert.truthy(#calls == 1, "bankruptcy should call board_feedback once")
+  luassert.truthy(calls[1].cue_name == "bankruptcy_slam", "bankruptcy should use bankruptcy_slam cue")
+  luassert.truthy(calls[1].player_id == 4, "bankruptcy should target player")
+end)
 
-function TestGameplayT5Hotspot:test_bankruptcy_handler_uses_player_id_directly()
+it("test_bankruptcy_handler_uses_player_id_directly", function()
   local handlers = {}
   local calls = {}
 
@@ -315,11 +331,11 @@ function TestGameplayT5Hotspot:test_bankruptcy_handler_uses_player_id_directly()
     handler(nil, nil, { player_id = 7 }) -- player_id directly, not nested in player
   end)
 
-  lu.assertEvalToTrue(#calls == 1, "bankruptcy should call board_feedback once")
-  lu.assertEvalToTrue(calls[1].player_id == 7, "bankruptcy should use player_id directly")
-end
+  luassert.truthy(#calls == 1, "bankruptcy should call board_feedback once")
+  luassert.truthy(calls[1].player_id == 7, "bankruptcy should use player_id directly")
+end)
 
-function TestGameplayT5Hotspot:test_register_node_click_skips_when_already_registered()
+it("test_register_node_click_skips_when_already_registered", function()
   local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local registered = { test_node = true }
   local listeners = {}
@@ -328,9 +344,9 @@ function TestGameplayT5Hotspot:test_register_node_click_skips_when_already_regis
   -- Should return early without error
   event_bindings.register_node_click(cache, "test_node", function() end, registered, listeners)
   -- No assertion needed - just verifying no error is thrown
-end
+end)
 
-function TestGameplayT5Hotspot:test_register_node_click_handles_missing_nodes()
+it("test_register_node_click_handles_missing_nodes", function()
   local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.support.runtime_ui")
   local registered = {}
@@ -350,10 +366,10 @@ function TestGameplayT5Hotspot:test_register_node_click_handles_missing_nodes()
     event_bindings.register_node_click(cache, "missing_node", function() end, registered, listeners)
   end)
 
-  lu.assertEvalToTrue(registered["missing_node"] == nil, "should not register when query fails")
-end
+  luassert.truthy(registered["missing_node"] == nil, "should not register when query fails")
+end)
 
-function TestGameplayT5Hotspot:test_register_node_click_caches_nodes()
+it("test_register_node_click_caches_nodes", function()
   local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.support.runtime_ui")
   local registered = {}
@@ -381,18 +397,18 @@ function TestGameplayT5Hotspot:test_register_node_click_caches_nodes()
   }, function()
     -- First call should query nodes
     event_bindings.register_node_click(cache, "test_node", function() end, registered, listeners)
-    lu.assertEvalToTrue(query_count == 1, "first call should query nodes")
+    luassert.truthy(query_count == 1, "first call should query nodes")
 
     -- Reset registered to allow second registration
     registered["test_node"] = nil
 
     -- Second call should use cache
     event_bindings.register_node_click(cache, "test_node", function() end, registered, listeners)
-    lu.assertEvalToTrue(query_count == 1, "second call should use cached nodes")
+    luassert.truthy(query_count == 1, "second call should use cached nodes")
   end)
-end
+end)
 
-function TestGameplayT5Hotspot:test_register_node_click_registers_multiple_nodes()
+it("test_register_node_click_registers_multiple_nodes", function()
   local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.support.runtime_ui")
   local registered = {}
@@ -431,12 +447,12 @@ function TestGameplayT5Hotspot:test_register_node_click_registers_multiple_nodes
     },
   }, function()
     event_bindings.register_node_click(cache, "multi_node", function() end, registered, listeners)
-    lu.assertEvalToTrue(#listen_calls == 2, "should register listeners for all nodes")
-    lu.assertEvalToTrue(#listeners == 2, "should add all listeners to list")
+    luassert.truthy(#listen_calls == 2, "should register listeners for all nodes")
+    luassert.truthy(#listeners == 2, "should add all listeners to list")
   end)
-end
+end)
 
-function TestGameplayT5Hotspot:test_register_node_click_handles_empty_nodes_result()
+it("test_register_node_click_handles_empty_nodes_result", function()
   local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.support.runtime_ui")
   local registered = {}
@@ -453,11 +469,11 @@ function TestGameplayT5Hotspot:test_register_node_click_handles_empty_nodes_resu
     },
   }, function()
     event_bindings.register_node_click(cache, "empty_node", function() end, registered, listeners)
-    lu.assertEvalToTrue(registered["empty_node"] == nil, "should not register when nodes is empty")
+    luassert.truthy(registered["empty_node"] == nil, "should not register when nodes is empty")
   end)
-end
+end)
 
-function TestGameplayT5Hotspot:test_register_node_click_logs_action_log_button_query_failure()
+it("test_register_node_click_logs_action_log_button_query_failure", function()
   local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.support.runtime_ui")
   local always_show_nodes = require("src.ui.schema.base")
@@ -479,11 +495,11 @@ function TestGameplayT5Hotspot:test_register_node_click_logs_action_log_button_q
     always_show_nodes.action_log_button = "test_action_log_btn"
     event_bindings.register_node_click(cache, "test_action_log_btn", function() end, registered, listeners)
     always_show_nodes.action_log_button = original_action_log_button
-    lu.assertEvalToTrue(registered["test_action_log_btn"] == nil, "should not register when query fails")
+    luassert.truthy(registered["test_action_log_btn"] == nil, "should not register when query fails")
   end)
-end
+end)
 
-function TestGameplayT5Hotspot:test_register_node_click_logs_action_log_button_not_found()
+it("test_register_node_click_logs_action_log_button_not_found", function()
   local event_bindings = _load_fresh("src.ui.coord.event_bindings")
   local runtime = require("src.ui.render.support.runtime_ui")
   local always_show_nodes = require("src.ui.schema.base")
@@ -505,11 +521,11 @@ function TestGameplayT5Hotspot:test_register_node_click_logs_action_log_button_n
     always_show_nodes.action_log_button = "test_action_log_btn2"
     event_bindings.register_node_click(cache, "test_action_log_btn2", function() end, registered, listeners)
     always_show_nodes.action_log_button = original_action_log_button
-    lu.assertEvalToTrue(registered["test_action_log_btn2"] == nil, "should not register when nodes not found")
+    luassert.truthy(registered["test_action_log_btn2"] == nil, "should not register when nodes not found")
   end)
-end
+end)
 
-function TestGameplayT5Hotspot:test_build_choice_view_builds_basic_view()
+it("test_build_choice_view_builds_basic_view", function()
   local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
@@ -525,17 +541,17 @@ function TestGameplayT5Hotspot:test_build_choice_view_builds_basic_view()
   local game = { turn = {} }
   local view = choice_builder.build_choice_view(pending, { game = game })
 
-  lu.assertEvalToTrue(view.id == 123, "view should preserve id")
-  lu.assertEvalToTrue(view.kind == "test_choice", "view should preserve kind")
-  lu.assertEvalToTrue(view.title == "Test Title", "view should preserve title")
-  lu.assertEvalToTrue(view.body == "Test Body", "view should preserve body")
-  lu.assertEvalToTrue(#view.options == 2, "view should have 2 options")
-  lu.assertEvalToTrue(view.options[1].label == "Option 1", "view should preserve option labels")
-  lu.assertEvalToTrue(view.allow_cancel == true, "view should preserve allow_cancel")
-  lu.assertEvalToTrue(view.cancel_label == "Cancel", "view should preserve cancel_label")
-end
+  luassert.truthy(view.id == 123, "view should preserve id")
+  luassert.truthy(view.kind == "test_choice", "view should preserve kind")
+  luassert.truthy(view.title == "Test Title", "view should preserve title")
+  luassert.truthy(view.body == "Test Body", "view should preserve body")
+  luassert.truthy(#view.options == 2, "view should have 2 options")
+  luassert.truthy(view.options[1].label == "Option 1", "view should preserve option labels")
+  luassert.truthy(view.allow_cancel == true, "view should preserve allow_cancel")
+  luassert.truthy(view.cancel_label == "Cancel", "view should preserve cancel_label")
+end)
 
-function TestGameplayT5Hotspot:test_build_choice_view_uses_phase_title()
+it("test_build_choice_view_uses_phase_title", function()
   local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
@@ -551,10 +567,10 @@ function TestGameplayT5Hotspot:test_build_choice_view_uses_phase_title()
   }
 
   local view = choice_builder.build_choice_view(pending, { game = game })
-  lu.assertEvalToTrue(view.title == "Use Item", "title should not include phase label (item-ui simplification removed phase prefix)")
-end
+  luassert.truthy(view.title == "Use Item", "title should not include phase label (item-ui simplification removed phase prefix)")
+end)
 
-function TestGameplayT5Hotspot:test_build_choice_view_joins_body_lines()
+it("test_build_choice_view_joins_body_lines", function()
   local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
@@ -565,10 +581,10 @@ function TestGameplayT5Hotspot:test_build_choice_view_joins_body_lines()
 
   local game = { turn = {} }
   local view = choice_builder.build_choice_view(pending, { game = game })
-  lu.assertEvalToTrue(view.body == "Line 1\nLine 2\nLine 3", "body should join lines with newlines")
-end
+  luassert.truthy(view.body == "Line 1\nLine 2\nLine 3", "body should join lines with newlines")
+end)
 
-function TestGameplayT5Hotspot:test_build_choice_view_prefers_body_lines_over_body()
+it("test_build_choice_view_prefers_body_lines_over_body", function()
   local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
@@ -580,10 +596,10 @@ function TestGameplayT5Hotspot:test_build_choice_view_prefers_body_lines_over_bo
 
   local game = { turn = {} }
   local view = choice_builder.build_choice_view(pending, { game = game })
-  lu.assertEvalToTrue(view.body == "Line 1\nLine 2", "should prefer body_lines over body")
-end
+  luassert.truthy(view.body == "Line 1\nLine 2", "should prefer body_lines over body")
+end)
 
-function TestGameplayT5Hotspot:test_build_choice_view_uses_default_option_label()
+it("test_build_choice_view_uses_default_option_label", function()
   local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
@@ -593,10 +609,10 @@ function TestGameplayT5Hotspot:test_build_choice_view_uses_default_option_label(
 
   local game = { turn = {} }
   local view = choice_builder.build_choice_view(pending, { game = game })
-  lu.assertEvalToTrue(view.options[1].label == "opt1", "should use id as default label")
-end
+  luassert.truthy(view.options[1].label == "opt1", "should use id as default label")
+end)
 
-function TestGameplayT5Hotspot:test_build_choice_view_copies_option_view_fields()
+it("test_build_choice_view_copies_option_view_fields", function()
   local choice_builder = _load_fresh("src.ui.view.choice_builder")
 
   local pending = {
@@ -617,13 +633,13 @@ function TestGameplayT5Hotspot:test_build_choice_view_copies_option_view_fields(
   local game = { turn = {} }
   local view = choice_builder.build_choice_view(pending, { game = game })
   local opt = view.options[1]
-  lu.assertEvalToTrue(opt.id == "opt1", "should copy id")
-  lu.assertEvalToTrue(opt.can_buy == true, "should copy can_buy")
-  lu.assertEvalToTrue(opt.requires_pre_confirm == true, "should copy requires_pre_confirm")
-  lu.assertEvalToTrue(opt.pre_confirm_kind == "expensive", "should copy pre_confirm_kind")
-  lu.assertEvalToTrue(opt.confirm_title == "Confirm Purchase", "should copy confirm_title")
-  lu.assertEvalToTrue(opt.confirm_body == "Are you sure?", "should copy confirm_body")
-end
+  luassert.truthy(opt.id == "opt1", "should copy id")
+  luassert.truthy(opt.can_buy == true, "should copy can_buy")
+  luassert.truthy(opt.requires_pre_confirm == true, "should copy requires_pre_confirm")
+  luassert.truthy(opt.pre_confirm_kind == "expensive", "should copy pre_confirm_kind")
+  luassert.truthy(opt.confirm_title == "Confirm Purchase", "should copy confirm_title")
+  luassert.truthy(opt.confirm_body == "Are you sure?", "should copy confirm_body")
+end)
 
 
-return TestGameplayT5Hotspot
+end)

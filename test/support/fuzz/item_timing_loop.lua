@@ -14,6 +14,9 @@
 -- 注意：抓取力依赖 seed 覆盖面（当初的活锁在换 Rng 后最早红点是 seed 37），
 -- 别把默认 seed 数往下调。
 -- FUZZ_ONLY_SEED=<n> 单 seed 复放（自动附带 resolve/deadline 细 trace）。
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local property = require("test.support.property")
@@ -425,7 +428,7 @@ function M.run_range(seed_from, seed_to)
       break
     end
   end
-  assert(#failures == 0, "\n" .. table.concat(failures, "\n----\n"))
+  luassert.is.equal(0, #failures, "\n" .. table.concat(failures, "\n----\n"))
 end
 
 return M

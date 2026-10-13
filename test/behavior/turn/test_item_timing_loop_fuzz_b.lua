@@ -2,15 +2,12 @@
 -- test/support/fuzz/item_timing_loop.lua（#190 分片让 LPT 并行吸收，总 seed 数不变）。
 local fuzz = require("test.support.fuzz.item_timing_loop")
 
-TestItemTimingLoopFuzzB = {}
+describe("TestItemTimingLoopFuzzB", function()
+  before_each(function()
+    fuzz.reset()
+  end)
 
-function TestItemTimingLoopFuzzB:setUp()
-  fuzz.reset()
-end
-
-function TestItemTimingLoopFuzzB:test_every_timing_asks_gates_never_livelock_turns_advance()
-  fuzz.run_range(fuzz.shard_range(2, 3))
-end
-
-
-return TestItemTimingLoopFuzzB
+  it("test_every_timing_asks_gates_never_livelock_turns_advance", function()
+    fuzz.run_range(fuzz.shard_range(2, 3))
+  end)
+end)

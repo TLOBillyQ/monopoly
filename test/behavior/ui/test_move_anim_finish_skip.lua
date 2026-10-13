@@ -1,3 +1,6 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 --- 原生 LuaUnit 迁移(busted → luaunit):describe 拍平为文件级 Test* 类,
 --- 断言词汇切到 lu.assertXxx,用例数与改写前一一对应(2 例)。
 
@@ -6,7 +9,7 @@ local rt = require("src.ui.render.move_anim.runtime")
 local debug_alias = require("src.ui.render.move_anim.debug")
 local support = require("test.support.move_anim_support")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message) luassert.is.equal(expected, actual, message) end
 local _with_patches = support.with_patches
 
 local function _play_and_capture(scene)
@@ -22,45 +25,45 @@ local function _play_and_capture(scene)
   return scheduled
 end
 
-TestMoveAnimFinishSkip = {}
+describe("TestMoveAnimFinishSkip", function()
 
-function TestMoveAnimFinishSkip:test_finish_callback_skips_stop_when_token_is_stale()
-  local unit, calls = support.new_unit_spy()
-  local scene = support.new_scene_with_linear_tiles(2, {
-    units_by_player_id = { [1] = unit },
-  })
-  local scheduled = _play_and_capture(scene)
-  _assert_eq(#scheduled, 1, "move sequence should schedule one finish callback")
+  it("test_finish_callback_skips_stop_when_token_is_stale", function()
+    local unit, calls = support.new_unit_spy()
+    local scene = support.new_scene_with_linear_tiles(2, {
+      units_by_player_id = { [1] = unit },
+    })
+    local scheduled = _play_and_capture(scene)
+    _assert_eq(#scheduled, 1, "move sequence should schedule one finish callback")
 
-  rt.set_active_token(scene, 1, "stale_token_override")
-  scheduled[1].fn()
-  _assert_eq(#calls, 1, "stale token should skip stop; only the initial move call remains")
-  _assert_eq(calls[1], "start_move_by_direction", "initial move call should be untouched")
-end
-
-function TestMoveAnimFinishSkip:test_finish_skip_logs_when_debug_enabled()
-  local unit, _ = support.new_unit_spy()
-  local scene = support.new_scene_with_linear_tiles(2, {
-    units_by_player_id = { [1] = unit },
-  })
-  local logged = {}
-  local scheduled
-  _with_patches({
-    { target = debug_alias, key = "enabled", value = function() return true end },
-    { target = debug_alias, key = "debug_log", value = function(tag)
-      logged[#logged + 1] = tag
-    end },
-  }, function()
-    scheduled = _play_and_capture(scene)
     rt.set_active_token(scene, 1, "stale_token_override")
     scheduled[1].fn()
+    _assert_eq(#calls, 1, "stale token should skip stop; only the initial move call remains")
+    _assert_eq(calls[1], "start_move_by_direction", "initial move call should be untouched")
   end)
-  local saw_skip = false
-  for _, tag in ipairs(logged) do
-    if tag == "finish_skip_stale_token" then saw_skip = true end
-  end
-  _assert_eq(saw_skip, true, "debug mode should log the stale-token finish skip")
-end
+
+  it("test_finish_skip_logs_when_debug_enabled", function()
+    local unit, _ = support.new_unit_spy()
+    local scene = support.new_scene_with_linear_tiles(2, {
+      units_by_player_id = { [1] = unit },
+    })
+    local logged = {}
+    local scheduled
+    _with_patches({
+      { target = debug_alias, key = "enabled", value = function() return true end },
+      { target = debug_alias, key = "debug_log", value = function(tag)
+        logged[#logged + 1] = tag
+      end },
+    }, function()
+      scheduled = _play_and_capture(scene)
+      rt.set_active_token(scene, 1, "stale_token_override")
+      scheduled[1].fn()
+    end)
+    local saw_skip = false
+    for _, tag in ipairs(logged) do
+      if tag == "finish_skip_stale_token" then saw_skip = true end
+    end
+    _assert_eq(saw_skip, true, "debug mode should log the stale-token finish skip")
+  end)
 
 
-return TestMoveAnimFinishSkip
+end)

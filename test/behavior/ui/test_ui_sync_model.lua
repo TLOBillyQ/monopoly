@@ -1,4 +1,6 @@
-local lu = require("luaunit")
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local model_sync = require("src.ui.ports.ui_sync")._model
 local runtime_state = require("src.ui.state.runtime")
 local turn_ui_sync_shared = require("src.state.ui_sync_shared")
@@ -37,9 +39,9 @@ local function _common()
   }
 end
 
-TestUiSyncModel = {}
+describe("TestUiSyncModel", function()
 
-function TestUiSyncModel:test_refresh_feeds_the_seeded_model_to_view_update()
+it("test_refresh_feeds_the_seeded_model_to_view_update", function()
   -- L32 `runtime_state.get_ui_model(state)` 换 nil:已播种的模型必须原样
   -- 交给 view_model.update,变异体传 nil 走 build 全新建模。
   local state = { ui = {} }
@@ -69,12 +71,12 @@ function TestUiSyncModel:test_refresh_feeds_the_seeded_model_to_view_update()
     { modal, "close_choice_modal", function() end },
   }, function()
     local result = model_sync.refresh_from_dirty(game, state, dirty, _common())
-    lu.assertEquals(result, true, "dirty refresh should render")
-    lu.assertEquals(captured_prev, seeded, "view update must receive the seeded model as prev")
+    luassert.is.same( true,result, "dirty refresh should render")
+    luassert.is.same( seeded,captured_prev, "view update must receive the seeded model as prev")
   end)
-end
+end)
 
-function TestUiSyncModel:test_turn_label_falls_back_to_empty_string()
+it("test_turn_label_falls_back_to_empty_string", function()
   -- L45 `panel and panel.turn_label or ""` 的 `""` 换 nil:无 turn_label 时
   -- 刷新标签必须传空串,不能传 nil。
   local state = { ui = {} }
@@ -97,17 +99,17 @@ function TestUiSyncModel:test_turn_label_falls_back_to_empty_string()
     end },
     { main_view, "refresh_turn_label", function(_, label, countdown_visible)
       captured_label = label
-      lu.assertEquals(countdown_visible, false, "countdown visibility should pass through")
+      luassert.is.same( false,countdown_visible, "countdown visibility should pass through")
     end },
   }, function()
     local result = model_sync.refresh_from_dirty(game, state, dirty, _common())
-    lu.assertEquals(result, false, "only-countdown refresh should not render full UI")
-    lu.assertEquals(captured_label, "", "missing turn label must fall back to empty string")
+    luassert.is.same( false,result, "only-countdown refresh should not render full UI")
+    luassert.is.same( "",captured_label, "missing turn label must fall back to empty string")
   end)
-end
+end)
 
 
-function TestUiSyncModel:test_refreshes_when_runtime_ui_dirty_marks_the_dirty_bucket()
+it("test_refreshes_when_runtime_ui_dirty_marks_the_dirty_bucket", function()
   local state = { ui = {} }
   local dirty = { any = false, ui = false }
   local env = { source = "test-env" }
@@ -124,8 +126,8 @@ function TestUiSyncModel:test_refreshes_when_runtime_ui_dirty_marks_the_dirty_bu
       return false
     end },
     { view_model, "update", function(_, _, update_env, update_dirty)
-      lu.assertEquals(update_env, env, "refresh should pass the built env to view model")
-      lu.assertEquals(update_dirty.ui, true, "runtime UI dirty should mark dirty.ui")
+      luassert.is.same( env,update_env, "refresh should pass the built env to view model")
+      luassert.is.same( true,update_dirty.ui, "runtime UI dirty should mark dirty.ui")
       return { panel = { turn_label = "P1", countdown_visible = true } }
     end },
     { main_view, "render", function(_, next_model)
@@ -140,14 +142,14 @@ function TestUiSyncModel:test_refreshes_when_runtime_ui_dirty_marks_the_dirty_bu
   }, function()
     local result = model_sync.refresh_from_dirty(_game(), state, dirty, _common())
 
-    lu.assertEquals(result, true, "dirty UI refresh should render full UI")
-    lu.assertEquals(dirty.ui, true, "dirty bucket should retain the UI mark for this refresh")
-    lu.assertEquals(runtime_state.is_ui_dirty(state), false, "runtime UI dirty flag should be cleared")
-    lu.assertNotNil(rendered_model, "refresh should render the new model")
+    luassert.is.same( true,result, "dirty UI refresh should render full UI")
+    luassert.is.same( true,dirty.ui, "dirty bucket should retain the UI mark for this refresh")
+    luassert.is.same( false,runtime_state.is_ui_dirty(state), "runtime UI dirty flag should be cleared")
+    luassert.is_not_nil(rendered_model, "refresh should render the new model")
   end)
-end
+end)
 
-function TestUiSyncModel:test_defers_refresh_while_landing_visual_hold_is_active()
+it("test_defers_refresh_while_landing_visual_hold_is_active", function()
   local state = { ui = {} }
   local dirty = { any = true, ui = false, turn = true }
   local frozen = false
@@ -173,13 +175,13 @@ function TestUiSyncModel:test_defers_refresh_while_landing_visual_hold_is_active
   }, function()
     local result = model_sync.refresh_from_dirty(_game(), state, dirty, _common())
 
-    lu.assertEquals(result, false, "deferred refresh should report no render")
-    lu.assertEquals(frozen, true, "active UI should be frozen")
-    lu.assertEquals(deferred_dirty, dirty, "dirty bucket should be deferred")
+    luassert.is.same( false,result, "deferred refresh should report no render")
+    luassert.is.same( true,frozen, "active UI should be frozen")
+    luassert.is.same( dirty,deferred_dirty, "dirty bucket should be deferred")
   end)
-end
+end)
 
-function TestUiSyncModel:test_opens_inline_choices_only_outside_input_blocked_phases()
+it("test_opens_inline_choices_only_outside_input_blocked_phases", function()
   local state = { ui = {} }
   local opened = 0
 
@@ -198,14 +200,14 @@ function TestUiSyncModel:test_opens_inline_choices_only_outside_input_blocked_ph
       opened = opened + 1
     end },
   }, function()
-    lu.assertEquals(model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common()), true)
-    lu.assertEquals(opened, 1, "inline choice should open when input is allowed")
-    lu.assertEquals(model_sync.refresh_from_dirty(_game("wait_move_anim"), state, { any = true }, _common()), true)
-    lu.assertEquals(opened, 1, "input-blocked phase should not open inline choice")
+    luassert.is.same( true,model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common()))
+    luassert.is.same( 1,opened, "inline choice should open when input is allowed")
+    luassert.is.same( true,model_sync.refresh_from_dirty(_game("wait_move_anim"), state, { any = true }, _common()))
+    luassert.is.same( 1,opened, "input-blocked phase should not open inline choice")
   end)
-end
+end)
 
-function TestUiSyncModel:test_opens_passive_item_choices_as_inline_choices()
+it("test_opens_passive_item_choices_as_inline_choices", function()
   local state = { ui = {} }
   local opened = 0
 
@@ -226,12 +228,12 @@ function TestUiSyncModel:test_opens_passive_item_choices_as_inline_choices()
   }, function()
     local result = model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common())
 
-    lu.assertEquals(result, true, "passive choice refresh should render")
-    lu.assertEquals(opened, 1, "item_phase_passive should open through inline modal handler")
+    luassert.is.same( true,result, "passive choice refresh should render")
+    luassert.is.same( 1,opened, "item_phase_passive should open through inline modal handler")
   end)
-end
+end)
 
-function TestUiSyncModel:test_does_not_open_market_choice_without_market_payload()
+it("test_does_not_open_market_choice_without_market_payload", function()
   local state = { ui = {} }
 
   _with_patches({
@@ -250,11 +252,11 @@ function TestUiSyncModel:test_does_not_open_market_choice_without_market_payload
       error("market choice without market payload should not open")
     end },
   }, function()
-    lu.assertEquals(model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true, market = true }, _common()), true)
+    luassert.is.same( true,model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true, market = true }, _common()))
   end)
-end
+end)
 
-function TestUiSyncModel:test_opens_non_inline_choices_when_reconcile_requires_it()
+it("test_opens_non_inline_choices_when_reconcile_requires_it", function()
   local state = { ui = {} }
   local opened = 0
 
@@ -278,12 +280,12 @@ function TestUiSyncModel:test_opens_non_inline_choices_when_reconcile_requires_i
   }, function()
     local result = model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common())
 
-    lu.assertEquals(result, true, "target choice refresh should render")
-    lu.assertEquals(opened, 1, "reconciled target choice should open")
+    luassert.is.same( true,result, "target choice refresh should render")
+    luassert.is.same( 1,opened, "reconciled target choice should open")
   end)
-end
+end)
 
-function TestUiSyncModel:test_build_model_forwards_the_ui_env_to_view_model_build()
+it("test_build_model_forwards_the_ui_env_to_view_model_build", function()
   local state = { ui = {} }
   local game = _game()
   local env = { source = "build-env" }
@@ -291,21 +293,21 @@ function TestUiSyncModel:test_build_model_forwards_the_ui_env_to_view_model_buil
 
   _with_patches({
     { turn_ui_sync_shared, "build_ui_env", function(build_state, build_game)
-      lu.assertEquals(build_state, state, "build_model should pass state to env builder")
-      lu.assertEquals(build_game, game, "build_model should pass game to env builder")
+      luassert.is.same( state,build_state, "build_model should pass state to env builder")
+      luassert.is.same( game,build_game, "build_model should pass game to env builder")
       return env
     end },
     { view_model, "build", function(build_game, build_env)
-      lu.assertEquals(build_game, game, "build_model should pass game to view model")
-      lu.assertEquals(build_env, env, "build_model should pass env to view model")
+      luassert.is.same( game,build_game, "build_model should pass game to view model")
+      luassert.is.same( env,build_env, "build_model should pass env to view model")
       return built_model
     end },
   }, function()
-    lu.assertEquals(model_sync.build_model(state, game), built_model)
+    luassert.is.same( built_model,model_sync.build_model(state, game))
   end)
-end
+end)
 
-function TestUiSyncModel:test_closes_stale_choice_modal_when_the_refreshed_model_has_no_choice()
+it("test_closes_stale_choice_modal_when_the_refreshed_model_has_no_choice", function()
   local state = { ui = { choice_active = true } }
   local closed = 0
 
@@ -326,12 +328,12 @@ function TestUiSyncModel:test_closes_stale_choice_modal_when_the_refreshed_model
   }, function()
     local result = model_sync.refresh_from_dirty(_game(), state, { any = true }, _common())
 
-    lu.assertEquals(result, true, "full refresh should still report a render")
-    lu.assertEquals(closed, 1, "stale active choice should be closed")
+    luassert.is.same( true,result, "full refresh should still report a render")
+    luassert.is.same( 1,closed, "stale active choice should be closed")
   end)
-end
+end)
 
-function TestUiSyncModel:test_reopens_a_pending_choice_from_the_cached_model_without_rebuilding()
+it("test_reopens_a_pending_choice_from_the_cached_model_without_rebuilding", function()
   local state = { ui = {} }
   local pending = { id = "pending", route_key = "target" }
   local opened = 0
@@ -345,19 +347,19 @@ function TestUiSyncModel:test_reopens_a_pending_choice_from_the_cached_model_wit
       error("matching cached pending choice should not rebuild")
     end },
     { modal, "open_choice_modal", function(_, choice, market)
-      lu.assertEquals(choice, pending, "cached choice should be reopened")
-      lu.assertEquals(market.id, "market", "cached market payload should be reused")
+      luassert.is.same( pending,choice, "cached choice should be reopened")
+      luassert.is.same( "market",market.id, "cached market payload should be reused")
       opened = opened + 1
     end },
   }, function()
     local result = model_sync.reopen_choice_modal_if_needed(_game(), state, pending)
 
-    lu.assertEquals(result, true, "reconciled pending choice should reopen")
-    lu.assertEquals(opened, 1, "modal should open once")
+    luassert.is.same( true,result, "reconciled pending choice should reopen")
+    luassert.is.same( 1,opened, "modal should open once")
   end)
-end
+end)
 
-function TestUiSyncModel:test_does_not_reopen_when_reconcile_says_the_ui_is_already_current()
+it("test_does_not_reopen_when_reconcile_says_the_ui_is_already_current", function()
   local state = { ui = {} }
 
   _with_patches({
@@ -368,11 +370,11 @@ function TestUiSyncModel:test_does_not_reopen_when_reconcile_says_the_ui_is_alre
       error("already-current UI should not reopen")
     end },
   }, function()
-    lu.assertEquals(model_sync.reopen_choice_modal_if_needed(_game(), state, { id = "pending" }), false)
+    luassert.is.same( false,model_sync.reopen_choice_modal_if_needed(_game(), state, { id = "pending" }))
   end)
-end
+end)
 
-function TestUiSyncModel:test_does_not_reopen_when_rebuilt_model_has_no_choice()
+it("test_does_not_reopen_when_rebuilt_model_has_no_choice", function()
   local state = { ui = {} }
 
   _with_patches({
@@ -386,11 +388,11 @@ function TestUiSyncModel:test_does_not_reopen_when_rebuilt_model_has_no_choice()
       error("model without choice should not reopen")
     end },
   }, function()
-    lu.assertEquals(model_sync.reopen_choice_modal_if_needed(_game(), state, { id = "pending" }), false)
+    luassert.is.same( false,model_sync.reopen_choice_modal_if_needed(_game(), state, { id = "pending" }))
   end)
-end
+end)
 
-function TestUiSyncModel:test_release_frame_opens_choice_modal_before_render()
+it("test_release_frame_opens_choice_modal_before_render", function()
   -- #525 时序 pin:阻塞期创建的窗口在放行帧首开。若 render 先跑,读到陈旧
   -- choice_active=false,post-action 可选窗口会把基础「结束」按钮点得与弹窗
   -- 同屏亮。开屏必须先于 main_view.render,让渲染读到开屏后的门控。
@@ -416,18 +418,18 @@ function TestUiSyncModel:test_release_frame_opens_choice_modal_before_render()
     end },
     { main_view, "render", function()
       table.insert(order, "render")
-      lu.assertEquals(state.ui.choice_active, true,
+      luassert.is.same( true,state.ui.choice_active,
         "render must observe choice_active after the modal opened")
     end },
   }, function()
     local result = model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common())
 
-    lu.assertEquals(result, true, "release frame refresh should render")
-    lu.assertEquals(order, { "open", "render" }, "modal open must precede render")
+    luassert.is.same( true,result, "release frame refresh should render")
+    luassert.is.same( { "open", "render" },order, "modal open must precede render")
   end)
-end
+end)
 
-function TestUiSyncModel:test_release_frame_closes_choice_modal_before_render()
+it("test_release_frame_closes_choice_modal_before_render", function()
   -- #525 时序 pin(收屏侧):窗口 resolve 后模型无 choice,收屏必须先于
   -- main_view.render,否则渲染读到陈旧 choice_active=true,基础按钮整门
   -- 持续落下,答完弹窗后行动/结束按钮不回。
@@ -447,18 +449,18 @@ function TestUiSyncModel:test_release_frame_closes_choice_modal_before_render()
     end },
     { main_view, "render", function()
       table.insert(order, "render")
-      lu.assertEquals(state.ui.choice_active, false,
+      luassert.is.same( false,state.ui.choice_active,
         "render must observe choice_active after the modal closed")
     end },
   }, function()
     local result = model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common())
 
-    lu.assertEquals(result, true, "release frame refresh should render")
-    lu.assertEquals(order, { "close", "render" }, "modal close must precede render")
+    luassert.is.same( true,result, "release frame refresh should render")
+    luassert.is.same( { "close", "render" },order, "modal close must precede render")
   end)
-end
+end)
 
-function TestUiSyncModel:test_does_not_close_a_choice_modal_when_ui_state_is_absent()
+it("test_does_not_close_a_choice_modal_when_ui_state_is_absent", function()
   local state = {}
 
   _with_patches({
@@ -479,9 +481,9 @@ function TestUiSyncModel:test_does_not_close_a_choice_modal_when_ui_state_is_abs
       error("model without choice should not open a modal")
     end },
   }, function()
-    lu.assertEquals(model_sync.refresh_from_dirty(_game(), state, { any = true }, _common()), true)
+    luassert.is.same( true,model_sync.refresh_from_dirty(_game(), state, { any = true }, _common()))
   end)
-end
+end)
 
 
-return TestUiSyncModel
+end)

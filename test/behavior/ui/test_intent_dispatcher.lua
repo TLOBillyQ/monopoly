@@ -1,7 +1,8 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- ui/input/intent_dispatcher.lua 直测:intent 派发分流——端口解析/兜底
 -- 调用、view-command 终态、should_block 短路、无 game 告警、game-action 优先。
-local lu = require("luaunit")
-local luax = require("test.support.luax")
 local support = require("test.support.shared_support")
 
 local intent_dispatcher = require("src.ui.input.intent_dispatcher")
@@ -10,7 +11,7 @@ local game_action_dispatcher = require("src.ui.input.game_action")
 local command_policy = require("src.ui.input.command_policy")
 local log = require("src.foundation.log")
 
-TestIntentDispatcher = {}
+describe("TestIntentDispatcher", function()
 
 local function _drive(opts)
   local captured = {}
@@ -52,64 +53,64 @@ local function _drive(opts)
 end
 
 -- 无显式端口时解析一次并转发给 game-action。
-function TestIntentDispatcher:test_resolves_the_turn_action_port_once()
+it("test_resolves_the_turn_action_port_once", function()
   local captured = _drive({})
-  lu.assertEvalToTrue(captured.resolve_calls == 1, "the port must resolve exactly once")
-  lu.assertEvalToTrue(captured.game_action ~= nil, "a game action must dispatch")
-  lu.assertEvalToTrue(captured.game_action.port.id == "port1", "the resolved port must be forwarded")
-  lu.assertEvalToTrue(captured.game_action.intent.type == "move", "the intent must be forwarded")
-end
+  luassert.truthy(captured.resolve_calls == 1, "the port must resolve exactly once")
+  luassert.truthy(captured.game_action ~= nil, "a game action must dispatch")
+  luassert.truthy(captured.game_action.port.id == "port1", "the resolved port must be forwarded")
+  luassert.truthy(captured.game_action.intent.type == "move", "the intent must be forwarded")
+end)
 
 -- 兜底 or 短路:action_port 已非 nil 时不得再解析(变异 or→and 会解析
 -- 两次,第二次端口对象不同,断言拆穿)。
-function TestIntentDispatcher:test_resolve_or_fallback_must_not_double_resolve()
+it("test_resolve_or_fallback_must_not_double_resolve", function()
   local captured = _drive({})
-  lu.assertEvalToTrue(captured.resolve_calls == 1, "the fallback must short-circuit")
-end
+  luassert.truthy(captured.resolve_calls == 1, "the fallback must short-circuit")
+end)
 
 -- 缺 intent 断言带消息。
-function TestIntentDispatcher:test_missing_intent_asserts()
-  luax.has_error(function()
+it("test_missing_intent_asserts", function()
+  luassert.has_error(function()
     intent_dispatcher.dispatch({ id = "st" }, { id = "g" }, nil, {})
   end, "missing intent")
-end
+end)
 
 -- should_block 短路:两个派发面都不动。
-function TestIntentDispatcher:test_blocked_intent_skips_both_dispatches()
+it("test_blocked_intent_skips_both_dispatches", function()
   local captured = _drive({ blocked = true })
-  lu.assertEvalToTrue(captured.game_action == nil and captured.view_command == nil,
+  luassert.truthy(captured.game_action == nil and captured.view_command == nil,
     "a blocked intent must not dispatch anywhere")
-end
+end)
 
 -- 无 game 时告警,告警携带 intent 类型。
-function TestIntentDispatcher:test_without_game_warns_with_the_intent_type()
+it("test_without_game_warns_with_the_intent_type", function()
   local captured = _drive({ no_game = true })
-  lu.assertEvalToTrue(captured.warned ~= nil and #captured.warned >= 1,
+  luassert.truthy(captured.warned ~= nil and #captured.warned >= 1,
     "a missing game must warn")
-  lu.assertEvalToTrue(captured.warned[1]:find("move", 1, true) ~= nil,
+  luassert.truthy(captured.warned[1]:find("move", 1, true) ~= nil,
     "the warning must carry the intent type")
-  lu.assertEvalToTrue(captured.view_command == nil, "a missing game must not dispatch a view command")
-end
+  luassert.truthy(captured.view_command == nil, "a missing game must not dispatch a view command")
+end)
 
 -- view command 在 game 前派发即为终态。
-function TestIntentDispatcher:test_view_command_before_game_is_terminal()
+it("test_view_command_before_game_is_terminal", function()
   local captured = _drive({ before_game = true })
-  lu.assertEvalToTrue(captured.view_command ~= nil, "a before-game intent must dispatch the view command")
-  lu.assertEvalToTrue(captured.game_action == nil, "the game action must not dispatch")
-end
+  luassert.truthy(captured.view_command ~= nil, "a before-game intent must dispatch the view command")
+  luassert.truthy(captured.game_action == nil, "the game action must not dispatch")
+end)
 
 -- game-action 消费后不再回落 view command。
-function TestIntentDispatcher:test_game_action_consumed_skips_view_command()
+it("test_game_action_consumed_skips_view_command", function()
   local captured = _drive({ game_action_consumed = true })
-  lu.assertEvalToTrue(captured.game_action ~= nil, "the game action must dispatch")
-  lu.assertEvalToTrue(captured.view_command == nil, "a consumed action must not fall through")
-end
+  luassert.truthy(captured.game_action ~= nil, "the game action must dispatch")
+  luassert.truthy(captured.view_command == nil, "a consumed action must not fall through")
+end)
 
 -- game-action 未消费时回落 view command。
-function TestIntentDispatcher:test_falls_through_to_view_command()
+it("test_falls_through_to_view_command", function()
   local captured = _drive({})
-  lu.assertEvalToTrue(captured.game_action ~= nil, "the game action must dispatch first")
-  lu.assertEvalToTrue(captured.view_command ~= nil, "an unconsumed action must fall through")
-end
+  luassert.truthy(captured.game_action ~= nil, "the game action must dispatch first")
+  luassert.truthy(captured.view_command ~= nil, "an unconsumed action must fall through")
+end)
 
-return TestIntentDispatcher
+end)
