@@ -56,6 +56,8 @@ local function _write(path, content)
 end
 
 local function _run(entry, args)
+  local root = require("foundation.bootstrap").resolve("tools/packages/acceptance/cli/parser.lua").repo_root
+  entry = (root .. "/" .. entry):gsub("/", "\\")
   local command = { APS_LUA, entry }
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value
