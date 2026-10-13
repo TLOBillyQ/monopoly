@@ -1,5 +1,4 @@
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local player_colors = require("src.ui.view.player_colors")
 local assets = require("src.ui.render.support.assets")
 local runtime = require("src.ui.render.support.runtime_ui")
@@ -13,9 +12,9 @@ local function _assert_eq(actual, expected, msg)
   luassert.is.equal(expected, actual, msg)
 end
 
-TestPlayerColors = {}
+describe("TestPlayerColors", function()
 
-function TestPlayerColors:test_remap_by_index_integer_ids()
+it("test_remap_by_index_integer_ids", function()
   player_colors.remap_by_index({
     { id = 1 }, { id = 2 }, { id = 3 }, { id = 4 },
   })
@@ -24,9 +23,9 @@ function TestPlayerColors:test_remap_by_index_integer_ids()
   _assert_eq(player_colors.resolve_owner_color(3), 0x4fc3f7, "player 3 should be blue")
   _assert_eq(player_colors.resolve_owner_color(4), 0xba68c8, "player 4 should be purple")
   _assert_eq(player_colors.resolve_owner_color(999), 0xcfcfcf, "unknown id returns default")
-end
+end)
 
-function TestPlayerColors:test_remap_by_index_role_ids()
+it("test_remap_by_index_role_ids", function()
   player_colors.remap_by_index({
     { id = "role_abc" }, { id = "role_def" }, { id = 9999 },
   })
@@ -34,29 +33,29 @@ function TestPlayerColors:test_remap_by_index_role_ids()
   _assert_eq(player_colors.resolve_owner_color("role_def"), 0xffeb3b, "role_def should be yellow (index 2)")
   _assert_eq(player_colors.resolve_owner_color(9999), 0x4fc3f7, "9999 should be blue (index 3)")
   _assert_eq(player_colors.resolve_owner_color(1), 0xcfcfcf, "integer 1 should no longer match")
-end
+end)
 
-function TestPlayerColors:test_remap_by_index_caps_at_4()
+it("test_remap_by_index_caps_at_4", function()
   player_colors.remap_by_index({
     { id = "a" }, { id = "b" }, { id = "c" }, { id = "d" }, { id = "e" },
   })
   _assert_eq(player_colors.resolve_owner_color("d"), 0xba68c8, "4th player should be purple")
   _assert_eq(player_colors.resolve_owner_color("e"), 0xcfcfcf, "5th player has no color")
-end
+end)
 
-function TestPlayerColors:test_remap_by_index_nil_safe()
+it("test_remap_by_index_nil_safe", function()
   player_colors.remap_by_index(nil)
   player_colors.remap_by_index({})
   _assert_eq(player_colors.resolve_owner_color(1), 0xcfcfcf, "empty remap returns default")
-end
+end)
 
-function TestPlayerColors:test_remap_by_index_tolerates_nil_entries_in_players()
+it("test_remap_by_index_tolerates_nil_entries_in_players", function()
   -- 杀 L24 位点1 and->or:players 数组含 nil 条目时变异体求值 nil.id 报错。
   local ok = pcall(player_colors.remap_by_index, { nil })
   _assert_eq(ok, true, "nil entries in players must not crash the remap")
-end
+end)
 
-function TestPlayerColors:test_capture_player_colors_prefers_base_panel_colors()
+it("test_capture_player_colors_prefers_base_panel_colors", function()
   local captured = nil
   local fallback_calls = 0
   local sampled = {
@@ -100,9 +99,9 @@ function TestPlayerColors:test_capture_player_colors_prefers_base_panel_colors()
   _assert_eq(captured["p3"], sampled[3], "p3 should use base panel color #3")
   _assert_eq(captured["p4"], sampled[4], "p4 should use base panel color #4")
   _assert_eq(fallback_calls, 0, "capture should not fallback when sampled colors are valid")
-end
+end)
 
-function TestPlayerColors:test_capture_player_colors_fallbacks_on_invalid_sample()
+it("test_capture_player_colors_fallbacks_on_invalid_sample", function()
   local captured = nil
   local fallback_calls = 0
 
@@ -136,9 +135,9 @@ function TestPlayerColors:test_capture_player_colors_fallbacks_on_invalid_sample
 
   _assert_eq(captured, nil, "invalid sampled colors should not be used as source")
   _assert_eq(fallback_calls, 1, "invalid sampled colors should fallback to remap_by_index")
-end
+end)
 
-function TestPlayerColors:test_set_owner_colors_copies_supplied_owner_colors_and_defaults_missing_owners()
+it("test_set_owner_colors_copies_supplied_owner_colors_and_defaults_missing_owners", function()
   player_colors.set_owner_colors("invalid")
   player_colors.set_owner_colors({
     p1 = 101,
@@ -148,9 +147,9 @@ function TestPlayerColors:test_set_owner_colors_copies_supplied_owner_colors_and
   _assert_eq(player_colors.resolve_owner_color("p1"), 101, "setter should keep p1 color")
   _assert_eq(player_colors.resolve_owner_color("p2"), 202, "setter should keep p2 color")
   _assert_eq(player_colors.resolve_owner_color("missing"), 0xcfcfcf, "missing owner should use default")
-end
+end)
 
-function TestPlayerColors:test_assets_init_assigns_all_configured_item_slot_icons()
+it("test_assets_init_assigns_all_configured_item_slot_icons", function()
   local slot_images = {}
   local role_iterations = 0
   local state = {}
@@ -177,7 +176,7 @@ function TestPlayerColors:test_assets_init_assigns_all_configured_item_slot_icon
   _assert_eq(#slot_images, 5, "asset init should set five item slot images")
   _assert_eq(slot_images[1].node_name, permanent_nodes.item_slots[1], "first slot node should match schema")
   luassert.truthy(state.runtime_asset_context ~= nil, "asset init should store the resolver context on state")
-end
+end)
 
 
-return TestPlayerColors
+end)

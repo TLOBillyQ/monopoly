@@ -1,17 +1,16 @@
 -- Coverage for the view-model projection modules src.ui.view.board_slice and
 -- src.ui.view.item_slice: contiguous count/rent projection onto tile states,
 -- and the standalone item-slot builder that trims empty inventory entries.
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local board_slice = require("src.ui.view.board_slice")
 local item_slice = require("src.ui.view.item_slice")
 local function assert_equal(actual, expected, message)
   luassert.is.same(expected, actual, message)
 end
 
-TestBoardSlice = {}
+describe("TestBoardSlice", function()
 
-function TestBoardSlice:test_projects_contiguous_counts_and_rents_per_owner()
+it("test_projects_contiguous_counts_and_rents_per_owner", function()
   local game = {
     board = {
       path = {
@@ -59,7 +58,7 @@ function TestBoardSlice:test_projects_contiguous_counts_and_rents_per_owner()
   local result2 = board_slice.build(game2, { game = game2 }, turn)
   assert_equal(result2.tile_states[1].contiguous_count, nil, "unowned tile should have nil count")
   assert_equal(result2.tile_states[1].contiguous_rent, nil, "unowned tile should have nil rent")
-end
+end)
 
 local function _slice_game(path_ids)
   local path = {}
@@ -79,7 +78,7 @@ local function _slice_game(path_ids)
   return game
 end
 
-function TestBoardSlice:test_build_projects_tile_fields_from_config()
+it("test_build_projects_tile_fields_from_config", function()
   -- L85-L91 cfg 字段投影(名称/类型/价格/行列的换 nil 变异):path 里的
   -- tile 必须按 tiles_cfg 投影全量字段。
   local game = _slice_game({ 1, 2 })
@@ -91,9 +90,9 @@ function TestBoardSlice:test_build_projects_tile_fields_from_config()
   assert_equal(result.tiles[1].row, 9, "tile row must come from cfg")
   assert_equal(result.tiles[1].col, 8, "tile col must come from cfg")
   assert_equal(#result.tiles, 2, "one projected tile per path entry")
-end
+end)
 
-function TestBoardSlice:test_build_populates_board_envelope_fields()
+it("test_build_populates_board_envelope_fields", function()
   -- L103-L113 封套字段(players/phase/move_anim/action_anim/布尔强制/
   -- 序号回退/玩家 id/tile_count/overlays 的换 nil 变异):target 必须全量
   -- 搬运,布尔字段必须真值化,序号缺省回退 0。
@@ -117,17 +116,17 @@ function TestBoardSlice:test_build_populates_board_envelope_fields()
   assert_equal(result.turn_start_prompt_player_id, "p7", "prompt player id must pass through")
   assert_equal(result.tile_count, 1, "tile count must match the projected path")
   assert_equal(result.overlays[1], "overlay_a", "overlays must come from the board")
-end
+end)
 
-function TestBoardSlice:test_build_overlays_come_from_board()
+it("test_build_overlays_come_from_board", function()
   -- L94 `env.game.board:get_overlays()` 调用换 nil:overlays 必须直取
   -- board 的 get_overlays 结果。
   local game = _slice_game({ 1 })
   local result = board_slice.build(game, { game = game }, { phase = "x" })
   assert_equal(result.overlays[1], "overlay_a", "overlays must be the board overlays")
-end
+end)
 
-function TestBoardSlice:test_update_caches_board_tiles_and_tracks_count()
+it("test_update_caches_board_tiles_and_tracks_count", function()
   -- L66 缓存换 path 的 and->or 与 L117 缓存赋值换 nil:tile_count 必须
   -- 反映最近一次 build 的投影结果。
   local game = _slice_game({ 1, 2 })
@@ -137,9 +136,9 @@ function TestBoardSlice:test_update_caches_board_tiles_and_tracks_count()
   local second = board_slice.build(game2, { game = game2 }, { phase = "x" })
   assert_equal(#second.tiles, 1, "a new path must rebuild the projection")
   assert_equal(board_slice.tile_count(), 1, "tile count must follow the new build")
-end
+end)
 
-function TestBoardSlice:test_single_owned_tile_projects_count_one_and_level_zero_rent()
+it("test_single_owned_tile_projects_count_one_and_level_zero_rent", function()
   -- L26 `count > 0` 的 0 -> 1(变异体对单连片误判为 nil)与 L31
   -- `tile.level or 0` 的 0 -> 1(变异体把 level 0 抬成 level 1 换租金档):
   -- 单块自有地与 0 级租金必须按真实连片数与 0 级档投影。
@@ -162,9 +161,9 @@ function TestBoardSlice:test_single_owned_tile_projects_count_one_and_level_zero
   local result = board_slice.build(game, { game = game }, { phase = "x" })
   assert_equal(result.tile_states[1].contiguous_count, 1, "single owned tile must see count 1")
   assert_equal(result.tile_states[1].contiguous_rent, 50, "level zero rent must be the level zero tier")
-end
+end)
 
-function TestBoardSlice:test_update_reuses_the_cached_projection_for_the_same_path()
+it("test_update_reuses_the_cached_projection_for_the_same_path", function()
   -- L69 `#cached_board_tiles > 0` 的 0 -> 1(变异体对单块缓存误判重建):
   -- 同一 path 表的连续 build 必须复用同一张投影表。
   local game = _slice_game({ 1 })
@@ -172,9 +171,9 @@ function TestBoardSlice:test_update_reuses_the_cached_projection_for_the_same_pa
   local second = board_slice.build(game, { game = game }, { phase = "x" })
   luassert.truthy(second.tiles == first.tiles, "same path must reuse the cached tiles table")
   assert_equal(board_slice.tile_count(), 1, "tile count must stay one")
-end
+end)
 
-function TestBoardSlice:test_standalone_slots_map_bag_index_directly_without_compaction()
+it("test_standalone_slots_map_bag_index_directly_without_compaction", function()
   -- CONTEXT「道具槽位」 稳定槽位:槽位 i 直映射背包第 i 格,无 id 条目留空、不补位,
   -- 后面的卡保持原槽位,超槽数部分裁掉。
   local slots = item_slice.build_item_slots_for_player({
@@ -192,7 +191,6 @@ function TestBoardSlice:test_standalone_slots_map_bag_index_directly_without_com
   assert_equal(slots[2], nil, "bag entry without id leaves slot 2 empty (no compaction)")
   assert_equal(slots[3], 22, "the card after the empty entry keeps slot 3")
   assert_equal(slots[4], nil, "slot builder should trim beyond slot count")
-end
+end)
 
-
-return TestBoardSlice
+end)
