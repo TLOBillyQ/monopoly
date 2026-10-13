@@ -9,7 +9,7 @@
 | 触发场景 | 真源 |
 |---|---|
 | 修改 `src/**` 或 `test/**` | [`CODING_STANDARDS.md`](CODING_STANDARDS.md)，再读目标模块与对应测试 |
-| 领域词汇、对象命名或产品概念 | [`CONTEXT.md`](CONTEXT.md) |
+| 领域词汇、对象命名或产品概念 | [`GLOSSARY.md`](GLOSSARY.md) |
 | 模块归属、依赖方向或层边界 | [`docs/architecture.md`](docs/architecture.md)，再以 `tools/packages/arch_view/config.json` 与 `test/guards/` 为执行真源 |
 | 决策理由、已批准例外或 ADR | [`docs/decisions.md`](docs/decisions.md) |
 | 工单登记、台账或 triage | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md)、[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |

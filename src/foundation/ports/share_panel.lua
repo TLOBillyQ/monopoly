@@ -1,4 +1,4 @@
--- 「宿主分享面板」（CONTEXT.md 词条）触发口的纯契约 port（#463）：resolve Role、
+-- 「宿主分享面板」（GLOSSARY.md 词条）触发口的纯契约 port（#463）：resolve Role、
 -- pcall 宿主方法属宿主逻辑（boundaries.md 规则 4「宿主逻辑不回流内层」），实现
 -- 下沉 src/host/share_panel.lua，由装配侧 configure 注入（host_install / 测试
 -- 基线 / acceptance 绑定三处同款，与 card_reveal #329 同构）。契约留在

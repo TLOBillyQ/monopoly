@@ -25,7 +25,7 @@ local _WHITELIST = {
   ["EggyEditorAPI.lua"] = true,
   ["CLAUDE.md"] = true,
   ["AGENTS.md"] = true,
-  ["CONTEXT.md"] = true,
+  ["GLOSSARY.md"] = true,
   ["CODING_STANDARDS.md"] = true,
   -- 本地 forge 管理面：dashboard/pack_web 读取的项目使命（2026-08-30 迁入本地 swarm-forge）。
   ["mission.md"] = true,

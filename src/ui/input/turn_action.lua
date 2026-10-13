@@ -43,7 +43,7 @@ function turn_action_port.should_block(state, intent, action_port)
 end
 
 -- 行动者归属在事件边界(canvas_event_router 的 attach_event_actor)裁定一次,
--- 用例层只消费不再解析(ADR 0054,CONTEXT.md「行动者」)。auto 按钮经
+-- 用例层只消费不再解析(ADR 0054,GLOSSARY.md「行动者」)。auto 按钮经
 -- event_actor_policy.attach_event_actor 后才到这里,actor_role_id 保证非 nil;
 -- nil 兜底拒绝是挡测试误用的 guard,生产路径不可达(#442 复核结论)。
 function turn_action_port.normalize_auto_intent(state, intent)
