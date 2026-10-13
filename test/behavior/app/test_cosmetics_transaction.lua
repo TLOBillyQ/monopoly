@@ -7,7 +7,8 @@
 -- 原生 LuaUnit 改写:describe 带 before_each/after_each → setUp/tearDown,
 -- 用例数与改写前一一对应(17 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
@@ -16,11 +17,11 @@ local transaction_purchase = require("src.app.cosmetics.transaction_purchase")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
 
 local function _assert_eq(actual, expected, message)
-  assert(actual == expected, (message or "assertion failed") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.is.equal(expected, actual, message)
 end
 
 local function _assert_rejected(result, reason)
-  assert(result and result.accepted == false, "transaction should reject")
+  luassert.truthy(result and result.accepted == false, "transaction should reject")
   _assert_eq(result.reason, reason, "rejection reason should be stable")
 end
 
@@ -111,7 +112,7 @@ function TestCosmeticsTransaction:test_open_restores_owned_and_auto_equips_archi
 
   local result = transaction.handle_skin_transaction(state, 1, { type = "open" })
 
-  lu.assertEvalToTrue(result.accepted == true, "open should be accepted")
+  luassert.truthy(result.accepted == true, "open should be accepted")
   _assert_eq(state.ui.skin_panel.owned_by_role["1"]["skin_1"], true, "archive owned skin should seed panel state")
   _assert_eq(state.ui.skin_panel.selected_by_role["1"], "skin_1", "owned archived equipped skin should be selected")
   _assert_eq(equipped[1] and equipped[1].product_id, "skin_1", "open should apply equipped skin to host adapter")
@@ -123,22 +124,22 @@ function TestCosmeticsTransaction:test_page_commands_return_results_and_support_
   transaction.handle_skin_transaction(state, 1, { type = "open" })
 
   local next_result = transaction.handle_skin_transaction(state, 1, "next")
-  lu.assertEvalToTrue(next_result.accepted == true, "next alias should be accepted")
+  luassert.truthy(next_result.accepted == true, "next alias should be accepted")
   _assert_eq(next_result.action, "page", "next alias should return a page result")
   _assert_eq(next_result.slot_view_dirty, true, "page result should dirty slots")
   _assert_eq(state.ui.skin_panel.page_index, 2, "next alias should advance the page")
 
   local page_next_result = transaction.handle_skin_transaction(state, 1, { type = "page_next" })
-  lu.assertEvalToTrue(page_next_result.accepted == true, "page_next should be accepted at max page")
+  luassert.truthy(page_next_result.accepted == true, "page_next should be accepted at max page")
   _assert_eq(state.ui.skin_panel.page_index, 2, "page_next should clamp at max page")
 
   local prev_result = transaction.handle_skin_transaction(state, 1, "prev")
-  lu.assertEvalToTrue(prev_result.accepted == true, "prev alias should be accepted")
+  luassert.truthy(prev_result.accepted == true, "prev alias should be accepted")
   _assert_eq(prev_result.action, "page", "prev alias should return a page result")
   _assert_eq(state.ui.skin_panel.page_index, 1, "prev alias should move back")
 
   local page_prev_result = transaction.handle_skin_transaction(state, 1, { type = "page_prev" })
-  lu.assertEvalToTrue(page_prev_result.accepted == true, "page_prev should be accepted at min page")
+  luassert.truthy(page_prev_result.accepted == true, "page_prev should be accepted at min page")
   _assert_eq(state.ui.skin_panel.page_index, 1, "page_prev should clamp at min page")
 end
 
@@ -205,7 +206,7 @@ function TestCosmeticsTransaction:test_unlock_commands_support_request_slot_alia
     index = 2,
     source = "purchase",
   })
-  lu.assertEvalToTrue(purchase_result.accepted == true, "unlock_slot with index alias should be accepted")
+  luassert.truthy(purchase_result.accepted == true, "unlock_slot with index alias should be accepted")
   _assert_eq(purchase_result.action, "unlock", "unlock_slot should return an unlock result")
   _assert_eq(purchase_result.product_id, "skin_2", "index alias should select the indexed skin")
   _assert_eq(archive.store.marked[1], "skin_2", "purchase source should persist ownership")
@@ -214,19 +215,19 @@ function TestCosmeticsTransaction:test_unlock_commands_support_request_slot_alia
     type = "gift",
     slot = 3,
   })
-  lu.assertEvalToTrue(gift_result.accepted == true, "gift with slot alias should be accepted")
+  luassert.truthy(gift_result.accepted == true, "gift with slot alias should be accepted")
   _assert_eq(gift_result.product_id, "skin_3", "slot alias should select the requested skin")
 
   local buy_result = transaction.handle_skin_transaction(state, 1, "buy")
-  lu.assertEvalToTrue(buy_result.accepted == true, "string buy should use the fallback handler")
+  luassert.truthy(buy_result.accepted == true, "string buy should use the fallback handler")
   _assert_eq(buy_result.product_id, "skin_1", "string buy should default to slot 1")
 
   local table_buy_result = transaction.handle_skin_transaction(state, 1, { type = "buy" })
-  lu.assertEvalToTrue(table_buy_result.accepted == true, "table buy without slot should be accepted")
+  luassert.truthy(table_buy_result.accepted == true, "table buy without slot should be accepted")
   _assert_eq(table_buy_result.product_id, "skin_1", "table buy should default to slot 1")
 
   local string_gift_result = transaction.handle_skin_transaction(state, 1, "gift")
-  lu.assertEvalToTrue(string_gift_result.accepted == true, "string gift should use the fallback handler")
+  luassert.truthy(string_gift_result.accepted == true, "string gift should use the fallback handler")
   _assert_eq(string_gift_result.product_id, "skin_1", "string gift should default to slot 1")
 end
 
@@ -243,7 +244,7 @@ function TestCosmeticsTransaction:test_unknown_transaction_returns_stable_reject
   local result = transaction.handle_skin_transaction(state, 1, { type = "bogus" })
 
   _assert_rejected(result, "unknown_skin_transaction")
-  lu.assertEvalToTrue(result.panel == existing_panel, "unknown transaction should still expose the ensured panel")
+  luassert.truthy(result.panel == existing_panel, "unknown transaction should still expose the ensured panel")
 end
 
 function TestCosmeticsTransaction:test_locked_purchase_rejects_missing_paid_purchase_contexts()
@@ -363,12 +364,12 @@ function TestCosmeticsTransaction:test_complete_skin_purchase_rejects_duplicate_
   end)
 
   local mismatch = transaction.complete_skin_purchase(state, 1, "skin_2")
-  lu.assertEvalToTrue(mismatch.accepted == false, "wrong product callback should reject")
+  luassert.truthy(mismatch.accepted == false, "wrong product callback should reject")
   _assert_eq(mismatch.reason, "pending_purchase_mismatch", "wrong callback should have stable reason")
 
   _assert_eq(captured.on_purchase(), true, "original callback should still fulfill")
   local duplicate = transaction.complete_skin_purchase(state, 1, "skin_1")
-  lu.assertEvalToTrue(duplicate.accepted == false, "duplicate callback should reject")
+  luassert.truthy(duplicate.accepted == false, "duplicate callback should reject")
   _assert_eq(duplicate.reason, "pending_purchase_missing", "duplicate callback should have stable reason")
 end
 
@@ -515,7 +516,7 @@ function TestCosmeticsTransaction:test_pin_native_paid_path_builds_a_skin_paid_e
     },
   }, function()
     local started = transaction.handle_skin_transaction(state, 1, { type = "equip_slot", slot_index = 1 })
-    lu.assertEvalToTrue(started.accepted == true, "native paid path should accept the purchase start")
+    luassert.truthy(started.accepted == true, "native paid path should accept the purchase start")
     _assert_eq(started.action, "purchase_start", "start returns pending purchase_start")
     _assert_eq(started.pending_purchase, true, "start marks pending purchase")
   end)
@@ -524,8 +525,8 @@ function TestCosmeticsTransaction:test_pin_native_paid_path_builds_a_skin_paid_e
   _assert_eq(captured ~= nil, true, "native path must reach paid_purchase_port.start")
   _assert_eq(captured.kind, "skin", "entry is tagged as skin")
   _assert_eq(captured.product_id, "skin_1", "entry carries the pending product id")
-  lu.assertEvalToTrue(captured.name ~= nil, "entry carries display name")
-  lu.assertEvalToTrue(captured.on_purchase ~= nil, "entry carries an on_purchase fulfillment")
+  luassert.truthy(captured.name ~= nil, "entry carries display name")
+  luassert.truthy(captured.on_purchase ~= nil, "entry carries an on_purchase fulfillment")
 
   -- 履约：on_purchase 走内部 complete_skin_purchase，无 UI on_success 闭包。
   local fulfilled = captured.on_purchase()
@@ -582,7 +583,7 @@ function TestCosmeticsTransaction:test_locked_purchase_rejects_invalid_purchase_
     },
   }, function()
     local first = transaction.handle_skin_transaction(duplicate_state, 1, { type = "equip_slot", slot_index = 1 })
-    lu.assertEvalToTrue(first.accepted == true, "first purchase start should be accepted")
+    luassert.truthy(first.accepted == true, "first purchase start should be accepted")
     _assert_rejected(
       transaction.handle_skin_transaction(duplicate_state, 1, { type = "equip_slot", slot_index = 1 }),
       "purchase_in_flight"
@@ -604,29 +605,29 @@ function TestCosmeticsTransaction:test_purchase_module_guards_internal_public_en
 
   panel.pending_skin_purchase_by_role["1"] = { product_id = "skin_1" }
   transaction_purchase.clear_pending(panel, nil)
-  lu.assertEvalToTrue(panel.pending_skin_purchase_by_role["1"] ~= nil, "nil role clear should leave existing pending state intact")
+  luassert.truthy(panel.pending_skin_purchase_by_role["1"] ~= nil, "nil role clear should leave existing pending state intact")
 end
 
 function TestCosmeticsTransaction:test_is_slot_equipped_guards_panel_role_and_slot_state()
-  lu.assertEvalToTrue(transaction.is_slot_equipped(nil, 1) == false, "nil root state should not report equipped")
-  lu.assertEvalToTrue(transaction.is_slot_equipped({ ui = {} }, 1) == false, "missing panel should not report equipped")
+  luassert.truthy(transaction.is_slot_equipped(nil, 1) == false, "nil root state should not report equipped")
+  luassert.truthy(transaction.is_slot_equipped({ ui = {} }, 1) == false, "missing panel should not report equipped")
 
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
-  lu.assertEvalToTrue(transaction.is_slot_equipped(state, 1) == false, "unselected skin should not report equipped")
-  lu.assertEvalToTrue(transaction.is_slot_equipped(state, 9) == false, "missing catalog slot should not report equipped")
+  luassert.truthy(transaction.is_slot_equipped(state, 1) == false, "unselected skin should not report equipped")
+  luassert.truthy(transaction.is_slot_equipped(state, 9) == false, "missing catalog slot should not report equipped")
 
   local panel = state.ui.skin_panel
   panel.role_id = nil
   panel.selected_by_role["1"] = "skin_1"
-  lu.assertEvalToTrue(transaction.is_slot_equipped(state, 1) == false, "missing panel role should not report equipped")
+  luassert.truthy(transaction.is_slot_equipped(state, 1) == false, "missing panel role should not report equipped")
 
   panel.role_id = 1
-  lu.assertEvalToTrue(transaction.is_slot_equipped(state, 1) == true, "selected skin should report equipped")
-  lu.assertEvalToTrue(transaction.is_slot_equipped(state, 2) == false, "different slot should not report equipped")
+  luassert.truthy(transaction.is_slot_equipped(state, 1) == true, "selected skin should report equipped")
+  luassert.truthy(transaction.is_slot_equipped(state, 2) == false, "different slot should not report equipped")
 
   panel.role_id = 2
-  lu.assertEvalToTrue(transaction.is_slot_equipped(state, 1) == false, "selection should be scoped to panel role")
+  luassert.truthy(transaction.is_slot_equipped(state, 1) == false, "selection should be scoped to panel role")
 end
 
 function TestCosmeticsTransaction:test_slot_view_models_expose_transaction_owned_slot_state()
@@ -682,12 +683,12 @@ function TestCosmeticsTransaction:test_activate_slot_owns_equip_or_unequip_decis
   transaction.handle_skin_transaction(state, 1, { type = "unlock_slot", slot_index = 1 })
 
   local equip = transaction.handle_skin_transaction(state, 1, { type = "activate_slot", slot_index = 1 })
-  lu.assertEvalToTrue(equip.accepted == true, "activate_slot should equip an owned inactive slot")
+  luassert.truthy(equip.accepted == true, "activate_slot should equip an owned inactive slot")
   _assert_eq(equip.action, "equip", "activate_slot should return the equip result when inactive")
   _assert_eq(transaction.equipped_product(state), "skin_1", "activate_slot equip should select the skin")
 
   local unequip = transaction.handle_skin_transaction(state, 1, { type = "activate_slot", slot_index = 1 })
-  lu.assertEvalToTrue(unequip.accepted == true, "activate_slot should unequip the active slot")
+  luassert.truthy(unequip.accepted == true, "activate_slot should unequip the active slot")
   _assert_eq(unequip.action, "unequip", "activate_slot should return the unequip result when active")
   _assert_eq(transaction.equipped_product(state), nil, "activate_slot unequip should clear the selection")
 end
@@ -701,7 +702,7 @@ function TestCosmeticsTransaction:test_activate_slot_honors_explicit_role_over_p
   transaction.handle_skin_transaction(state, 2, { type = "unlock_slot", slot_index = 2 })
 
   local equip = transaction.handle_skin_transaction(state, 2, { type = "activate_slot", slot_index = 2 })
-  lu.assertEvalToTrue(equip.accepted == true, "explicit-role activate_slot should equip for the given role")
+  luassert.truthy(equip.accepted == true, "explicit-role activate_slot should equip for the given role")
   _assert_eq(transaction.equipped_product(state, 2), "skin_2",
     "activate_slot should equip for the explicit role, not the panel owner")
   _assert_eq(transaction.equipped_product(state, 1), nil,
@@ -729,14 +730,14 @@ function TestCosmeticsTransaction:test_owned_skin_equips_without_paid_purchase_a
     },
   }, function()
     local equip_result = transaction.handle_skin_transaction(state, 1, { type = "equip_slot", slot_index = 2 })
-    lu.assertEvalToTrue(equip_result.accepted == true, "owned skin should equip")
+    luassert.truthy(equip_result.accepted == true, "owned skin should equip")
   end)
 
   _assert_eq(paid_starts, 0, "owned equip should not start paid purchase")
   _assert_eq(state.ui.skin_panel.selected_by_role["1"], "skin_2", "owned equip should select product")
 
   local unequip_result = transaction.handle_skin_transaction(state, 1, { type = "unequip" })
-  lu.assertEvalToTrue(unequip_result.accepted == true, "unequip should be accepted")
+  luassert.truthy(unequip_result.accepted == true, "unequip should be accepted")
   _assert_eq(state.ui.skin_panel.selected_by_role["1"], nil, "unequip should clear selected product")
   _assert_eq(archive.store.equipped["1"], nil, "unequip should persist cleared equipped product")
   _assert_eq(unequipped, 1, "unequip should call host adapter")
