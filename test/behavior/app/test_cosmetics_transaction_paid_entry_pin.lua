@@ -11,7 +11,7 @@
 -- 用例数与改写前一一对应(1 例)。
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
@@ -69,21 +69,18 @@ local function _archive(owned, equipped)
   }
 end
 
-TestCosmeticsTransactionPaidEntryPin = {}
+describe("TestCosmeticsTransactionPaidEntryPin", function()
+  before_each(function()
+    transaction.reset_for_tests()
+    transaction.configure_catalog_for_tests(_catalog())
+  end)
+  after_each(function()
+    transaction.reset_for_tests()
+    paid_purchase_port.reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestCosmeticsTransactionPaidEntryPin:setUp()
-  transaction.reset_for_tests()
-  transaction.configure_catalog_for_tests(_catalog())
-end
-
-function TestCosmeticsTransactionPaidEntryPin:tearDown()
-  transaction.reset_for_tests()
-  paid_purchase_port.reset_for_tests()
-  -- 拆了共享端口基线必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
-  support.restore_runtime_services()
-end
-
-function TestCosmeticsTransactionPaidEntryPin:test_locked_purchase_starts_paid_entry_and_completion_fulfills_original_product()
+it("test_locked_purchase_starts_paid_entry_and_completion_fulfills_original_product", function()
   local state, player = _state()
   local archive = _archive()
   local equipped = {}
@@ -124,7 +121,5 @@ function TestCosmeticsTransactionPaidEntryPin:test_locked_purchase_starts_paid_e
   _assert_eq(state.ui.skin_panel.selected_by_role["1"], "skin_1", "fulfilled purchase should equip original product")
   _assert_eq(equipped[1], "skin_1", "fulfillment should apply equip adapter")
   _assert_eq(archive.store.marked[1], "skin_1", "fulfillment should persist ownership")
-end
-
-
-return TestCosmeticsTransactionPaidEntryPin
+end)
+end)
