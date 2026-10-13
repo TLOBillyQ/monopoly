@@ -1,5 +1,8 @@
 -- Shared helpers for regression suites.
 local M = {}
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 
 require("test.bootstrap")
 
@@ -40,9 +43,7 @@ local landing_visual_hold_seam = require("src.ui.visual_hold")
 local event_feed_adapter = require("src.turn.output.event_feed_adapter")
 local ui_view = require("src.ui.coord.ui_runtime")
 local function assert_eq(a, b, msg)
-  if a ~= b then
-    error((msg or "assert failed") .. " | expected=" .. tostring(b) .. " got=" .. tostring(a))
-  end
+  luassert.is.equal(b, a, msg)
 end
 
 local function assert_player_move_dir(player, expected, msg)
