@@ -223,6 +223,128 @@ function TestApsCliEntrypoints:test_generator_rejects_metadata_identity_conflict
   end)
 end
 
+function TestApsCliEntrypoints:test_generated_chinese_examples_execute_in_genuine_busted()
+  _with_sandbox("busted", function(root)
+    local feature = path_lib.join_path(root, "probe.feature")
+    _write(feature, ZH_FEATURE:gsub("场景大纲:", "背景:\n  假如 项目验收步骤已加载\n\n场景大纲:", 1))
+    local ir = _sandbox_ir(root, feature)
+    local output = path_lib.join_path(root, "test_probe_acceptance.lua")
+    local generated_result = _run(GENERATOR, { ir, output })
+    lu.assertEquals(generated_result.code, 0, generated_result.output)
+    local result = _run("tools/packages/acceptance/execute.lua", { output, ir })
+    lu.assertEquals(result.code, 0, result.output)
+    local response = json.decode(result.output)
+    lu.assertEquals(response.backend, "busted")
+    lu.assertEquals(response.counts.cases, 2)
+    lu.assertEquals(response.counts.passed, 2)
+    lu.assertEquals(response.counts.failed, 0)
+    lu.assertEquals(response.counts.errors, 0)
+    lu.assertEquals(response.executions, {
+      { scenario = 1, example = 1, name = "解析整数文本/example_1", status = "success" },
+      { scenario = 1, example = 2, name = "解析整数文本/example_2", status = "success" },
+    })
+    local ir_doc = _decoded(ir)
+    ir_doc.scenarios[1].examples[1]["整数结果"] = "999"
+    local bad_ir = path_lib.join_path(root, "bad.json")
+    _write(bad_ir, json.encode(ir_doc))
+    local bad = _run("tools/packages/acceptance/execute.lua", { output, bad_ir })
+    lu.assertEquals(bad.code, 1, bad.output)
+    local bad_response = json.decode(bad.output)
+    lu.assertEquals(bad_response.outcome, "test_failure")
+    lu.assertEquals(bad_response.counts.failed, 1)
+    lu.assertEquals(bad_response.counts.errors, 0)
+    local broken = path_lib.join_path(root, "broken.lua")
+    _write(broken, 'error("故意加载失败")')
+    local infra = _run("tools/packages/acceptance/execute.lua", { broken, ir })
+    lu.assertEquals(infra.code, 1, infra.output)
+    lu.assertEquals(json.decode(infra.output).outcome, "infrastructure_error")
+    local worker_spec = path_lib.join_path(root, "test_feature_acceptance.lua")
+    _write(worker_spec, assert(fs_lib.read_raw(output)))
+    local jobs = path_lib.join_path(root, "jobs.jsonl")
+    local function job(id, feature_json) return json.encode_compact({ id = id, generated_dir = root, feature_json = feature_json }) end
+    _write(jobs, job("bad", bad_ir) .. "\nnull\n" .. job("good", ir) .. "\n")
+    local worker = proc_lib.run_command({ APS_LUA, "tools/packages/acceptance/runner_worker.lua" }, { stdin_path = jobs })
+    lu.assertEquals(worker.code, 0, worker.output)
+    local responses = {}
+    for line in worker.output:gmatch("[^\r\n]+") do responses[#responses + 1] = json.decode(line) end
+    lu.assertEquals(#responses, 3, worker.output)
+    lu.assertEquals(responses[1].id, "bad")
+    lu.assertEquals(responses[1].outcome, "test_failure")
+    lu.assertEquals(responses[2].outcome, "infrastructure_error")
+    lu.assertEquals(responses[3].id, "good")
+    lu.assertEquals(responses[3].outcome, "test_success")
+    local metadata = require("packages.acceptance.entrypoint").metadata_path_for(output, feature)
+    local original_metadata = assert(fs_lib.read_raw(metadata))
+    local metadata_doc = json.decode(original_metadata)
+    metadata_doc.implementation_hash = "wrong"
+    _write(metadata, json.encode(metadata_doc))
+    local hash_failure = _run("tools/packages/acceptance/execute.lua", { output, ir, feature })
+    lu.assertEquals(hash_failure.code, 1, hash_failure.output)
+    lu.assertEquals(json.decode(hash_failure.output).outcome, "infrastructure_error")
+    _write(metadata, original_metadata)
+    local incomplete = path_lib.join_path(root, "incomplete.lua")
+    _write(incomplete, 'describe("漏场景", function() it("unrelated", function() end) end)')
+    local missing = _run("tools/packages/acceptance/execute.lua", { incomplete, ir })
+    lu.assertEquals(missing.code, 1, missing.output)
+    lu.assertEquals(json.decode(missing.output).outcome, "infrastructure_error")
+  end)
+end
+
+function TestApsCliEntrypoints:test_executor_distinguishes_errors_and_restores_example_lifecycle()
+  _with_sandbox("executor_lifecycle", function(root)
+    local function execute(name, text)
+      local spec = path_lib.join_path(root, name .. ".lua")
+      _write(spec, text)
+      local result = _run("tools/packages/acceptance/execute.lua", { spec })
+      return result, json.decode(result.output)
+    end
+    local negatives = {
+      throw = [[local runtime=require("packages.acceptance.runtime")
+        describe("异常",function() runtime.define_specs({scenarios={{name="例子",steps={{text="异常"}}}}},
+          {["异常"]=function() error("ordinary handler exception") end},it) end)]],
+      hook = [[describe("钩子",function() before_each(function() error("hook exception") end)
+        it("例子",function() end) end)]],
+      leak = [[describe("泄漏",function() it("例子",function()
+        require("src.rules.ports.paid_purchase").reset_for_tests() end) end)]],
+    }
+    for name, text in pairs(negatives) do
+      local result, response = execute(name, text)
+      lu.assertEquals(result.code, 1, result.output)
+      lu.assertEquals(response.outcome, "infrastructure_error", result.output)
+      lu.assertEquals(response.counts.failed, 0, result.output)
+      lu.assertEquals(response.counts.errors, 1, result.output)
+    end
+    local result, response = execute("assertion", [[local runtime=require("packages.acceptance.runtime")
+      describe("断言",function() runtime.define_specs({scenarios={{name="例子",steps={{text="断言"}}}}},
+        {["断言"]=function() require("luassert").equal(1,2) end},it) end)]])
+    lu.assertEquals(result.code, 1, result.output)
+    lu.assertEquals(response.outcome, "test_failure", result.output)
+    lu.assertEquals(response.counts.failed, 1, result.output)
+    lu.assertEquals(response.counts.errors, 0, result.output)
+    lu.assertEquals(response.executions[1].status, "failure", result.output)
+    result, response = execute("cleanup", [[local runtime=require("packages.acceptance.runtime")
+      describe("清理",function() runtime.define_specs({scenarios={{name="例子",steps={{text="清理"}}}}},
+        {["清理"]=function(world) world.defer(function() error("cleanup exception") end); return true end},it) end)]])
+    lu.assertEquals(result.code, 1, result.output)
+    lu.assertEquals(response.counts.errors, 1, result.output)
+    lu.assertEquals(response.executions[1].status, "error", result.output)
+    result, response = execute("rng", [[
+      local assert=require("luassert")
+      describe("每例随机基线",function()
+        local first
+        before_each(function()
+          local value=math.random()
+          if first then assert.equal(first,value) else first=value end
+        end)
+        it("扰动随机状态",function() for _=1,10 do math.random() end end)
+        it("下一例在钩子前恢复",function() end)
+      end)]])
+    lu.assertEquals(result.code, 0, result.output)
+    lu.assertEquals(response.counts.cases, 2, result.output)
+    lu.assertEquals(response.counts.passed, 2, result.output)
+  end)
+end
+
 function TestApsCliEntrypoints:test_generator_exits_2_without_arguments()
   local usage = _run(GENERATOR, {})
   lu.assertEquals(usage.code, 2, usage.output)

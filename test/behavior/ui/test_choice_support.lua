@@ -1,16 +1,14 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 -- Direct coverage for src.ui.view.choice_support option-id/label/lookup shapes
 -- and secondary-confirm-body fallbacks. These pure resolvers are exercised
 -- directly since upstream callers only hit a subset of the shapes.
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+require("test.support.shared_support")
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local choice_support = require("src.ui.view.choice_support")
 
--- 原生 LuaUnit 迁移(busted → LuaUnit):describe 拍平为 TestChoiceSupport,
--- 断言走 support.assert_eq(actual, expected),用例数与改写前一一对应(2 例)。
-
-TestChoiceSupport = {}
-
-function TestChoiceSupport:test_resolves_option_ids_labels_and_lookups_across_shapes()
+describe("TestChoiceSupport", function()
+it("test_resolves_option_ids_labels_and_lookups_across_shapes", function()
   _assert_eq(choice_support.resolve_option_id({ id = 5 }), 5, "table option resolves its id")
   _assert_eq(choice_support.resolve_option_id("scalar"), "scalar", "scalar option resolves to itself")
 
@@ -29,9 +27,9 @@ function TestChoiceSupport:test_resolves_option_ids_labels_and_lookups_across_sh
   _assert_eq(choice_support.resolve_option_label_by_id(choice, 9), nil, "missing id label resolves to nil")
   _assert_eq(choice_support.resolve_option_label_by_id({ options = { 3 } }, 3), "3",
     "scalar option falls back to the matched id string")
-end
+end)
 
-function TestChoiceSupport:test_secondary_confirm_body_falls_back_through_option_and_choice_text()
+it("test_secondary_confirm_body_falls_back_through_option_and_choice_text", function()
   _assert_eq(choice_support.resolve_secondary_confirm_body(nil, nil, nil, nil, ""),
     "请再确认一次", "no choice and empty label uses the generic fallback")
   _assert_eq(choice_support.resolve_secondary_confirm_body(nil, nil, nil, nil, "金牌"),
@@ -42,7 +40,7 @@ function TestChoiceSupport:test_secondary_confirm_body_falls_back_through_option
     "option confirm_body wins when present")
   _assert_eq(choice_support.resolve_secondary_confirm_body({ confirm_body = "通用确认" }, nil, nil, 1),
     "通用确认", "choice confirm_body is the next fallback")
-end
+end)
 
 
-return TestChoiceSupport
+end)
