@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
@@ -8,13 +8,12 @@ local chance_resolver = require("src.rules.chance.resolver")
 local chance_cfg = require("src.config.content.chance_cards")
 local _config_reset = require("test.support.config_reset")
 
-TestAngelTaxAndChanceImmunity = {}
+describe("TestAngelTaxAndChanceImmunity", function()
+  before_each(function()
+    _config_reset.reset_all()
+  end)
 
-function TestAngelTaxAndChanceImmunity:setUp()
-  _config_reset.reset_all()
-end
-
-function TestAngelTaxAndChanceImmunity:test_angel_does_not_block_tax_office_landing_effect()
+local function _test_angel_does_not_block_tax_office_landing_effect()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local player = game.players[1]
   local tax_idx = support.first_tile_by_type(game.board, "tax")
@@ -29,7 +28,7 @@ function TestAngelTaxAndChanceImmunity:test_angel_does_not_block_tax_office_land
     "angel should still pay tax office fee")
 end
 
-function TestAngelTaxAndChanceImmunity:test_non_angel_pays_tax_normally()
+local function _test_non_angel_pays_tax_normally()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local player = game.players[1]
   local tax_idx = support.first_tile_by_type(game.board, "tax")
@@ -43,7 +42,7 @@ function TestAngelTaxAndChanceImmunity:test_non_angel_pays_tax_normally()
     "non-angel should pay tax")
 end
 
-function TestAngelTaxAndChanceImmunity:test_resolver_blocks_negative_chance_card_for_angel_drawer()
+local function _test_resolver_blocks_negative_chance_card_for_angel_drawer()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local player = game.players[1]
   game:set_player_deity(player, "angel")
@@ -64,7 +63,7 @@ function TestAngelTaxAndChanceImmunity:test_resolver_blocks_negative_chance_card
     "angel drawer's cash should be unchanged")
 end
 
-function TestAngelTaxAndChanceImmunity:test_target_all_pay_cash_skips_angel_protected_players()
+local function _test_target_all_pay_cash_skips_angel_protected_players()
   local game = support.new_game({ players = { "P1", "P2", "P3" }, auto_all = true })
   local drawer = game.players[1]
   local angel_player = game.players[2]
@@ -91,7 +90,7 @@ function TestAngelTaxAndChanceImmunity:test_target_all_pay_cash_skips_angel_prot
     "non-angel player should pay")
 end
 
-function TestAngelTaxAndChanceImmunity:test_target_all_percent_pay_cash_skips_angel_protected_players()
+local function _test_target_all_percent_pay_cash_skips_angel_protected_players()
   local game = support.new_game({ players = { "P1", "P2", "P3" }, auto_all = true })
   local drawer = game.players[1]
   local angel_player = game.players[2]
@@ -119,4 +118,9 @@ function TestAngelTaxAndChanceImmunity:test_target_all_percent_pay_cash_skips_an
 end
 
 
-return TestAngelTaxAndChanceImmunity
+it("test_angel_does_not_block_tax_office_landing_effect", _test_angel_does_not_block_tax_office_landing_effect)
+it("test_non_angel_pays_tax_normally", _test_non_angel_pays_tax_normally)
+it("test_resolver_blocks_negative_chance_card_for_angel_drawer", _test_resolver_blocks_negative_chance_card_for_angel_drawer)
+it("test_target_all_pay_cash_skips_angel_protected_players", _test_target_all_pay_cash_skips_angel_protected_players)
+it("test_target_all_percent_pay_cash_skips_angel_protected_players", _test_target_all_percent_pay_cash_skips_angel_protected_players)
+end)
