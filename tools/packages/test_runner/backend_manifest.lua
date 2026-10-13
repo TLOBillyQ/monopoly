@@ -67,7 +67,6 @@ return {
     "test/behavior/host/test_context.lua",
     "test/behavior/host/test_default_ports.lua",
     "test/behavior/host/test_entity_pool.lua",
-    "test/behavior/host/test_global_aliases.lua",
     "test/behavior/host/test_init_mutation.lua",
     "test/behavior/host/test_like_collect_subscribe.lua",
     "test/behavior/host/test_paid_purchase_gateway.lua",
@@ -588,6 +587,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/host/test_global_aliases.lua",
     "test/behavior/host/test_camera_helper.lua",
     "test/behavior/host/test_role_die.lua",
     "test/behavior/host/test_query_units_seam.lua",

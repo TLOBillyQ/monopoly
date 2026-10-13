@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local global_aliases = require("src.host.global_aliases")
 
@@ -27,13 +27,12 @@ local function _build_env()
   }, game_api, lua_api
 end
 
-TestGlobalAliases = {}
+describe("TestGlobalAliases", function()
+  before_each(function()
+    _config_reset.reset_all()
+  end)
 
-function TestGlobalAliases:setUp()
-  _config_reset.reset_all()
-end
-
-function TestGlobalAliases:test_install_sets_required_global_aliases()
+local function _test_install_sets_required_global_aliases()
   local env, game_api, lua_api = _build_env()
   support.with_patches({
     { key = "GameAPI", value = nil },
@@ -70,7 +69,7 @@ function TestGlobalAliases:test_install_sets_required_global_aliases()
   end)
 end
 
-function TestGlobalAliases:test_install_rejects_a_luaapi_missing_any_required_method()
+local function _test_install_rejects_a_luaapi_missing_any_required_method()
   local required_methods = {
     "call_delay_time",
     "global_register_custom_event",
@@ -92,7 +91,7 @@ function TestGlobalAliases:test_install_rejects_a_luaapi_missing_any_required_me
   end
 end
 
-function TestGlobalAliases:test_install_asserts_missing_env_and_luaapi()
+local function _test_install_asserts_missing_env_and_luaapi()
   -- #293:install(nil) 与 env.LuaAPI 缺失的断言消息未测,消息位点变异存活。
   local ok_env, err_env = pcall(global_aliases.install, nil)
   luassert.truthy(not ok_env, "install should reject a missing env")
@@ -106,4 +105,7 @@ function TestGlobalAliases:test_install_asserts_missing_env_and_luaapi()
 end
 
 
-return TestGlobalAliases
+it("test_install_sets_required_global_aliases", _test_install_sets_required_global_aliases)
+it("test_install_rejects_a_luaapi_missing_any_required_method", _test_install_rejects_a_luaapi_missing_any_required_method)
+it("test_install_asserts_missing_env_and_luaapi", _test_install_asserts_missing_env_and_luaapi)
+end)
