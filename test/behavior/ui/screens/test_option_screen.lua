@@ -1,7 +1,9 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- screens/_option_screen 开屏 helper 规约(#262 基线复核发现的欠账):
 -- 灰底触摸放行、确定/取消按钮的可见/可用/文案、allow_cancel 三态。
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
 local option_screen = require("src.ui.screens._option_screen")
 local openers = require("src.ui.coord.choice_openers")

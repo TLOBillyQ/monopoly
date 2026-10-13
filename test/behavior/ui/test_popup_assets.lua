@@ -1,9 +1,10 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- #293 批3 pin:src/ui/coord/popup_assets.lua 的 14 个幸存者分四簇:
 -- 卡片 image_key 直取链(L19/L30)、破产文案字段链(L67)、角色头像解析链
 -- (L3/L98/L101/L105/L108/L119)、节点显隐链(L133/L138/L161)。
 -- 策略:桩 runtime_ports / role_avatar / runtime 同表函数 + ui 双显存桩直测。
 
-local lu = require("luaunit")
 local popup_assets = require("src.ui.coord.popup_assets")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local role_avatar = require("src.ui.view.role_avatar")
@@ -17,7 +18,7 @@ local _saved_keep_size = runtime.set_node_texture_keep_size
 local _saved_native_size = runtime.set_node_texture_native_size
 
 local function _assert_eq(a, b, msg)
-  lu.assertEvalToTrue(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.truthy(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local _captured = nil
@@ -135,7 +136,7 @@ function TestPopupAssets:test_set_popup_card_image_tolerates_missing_card_node()
   -- 缺失时基线直接返回,变异体放行后仍会落纹理。
   local state = { ui = { popup_screen = {} } }
   popup_assets.set_popup_card_image(state, { image_key = "popup_key" })
-  lu.assertEvalToTrue(#_captured.textures == 0, "missing card node must not apply a texture")
+  luassert.truthy(#_captured.textures == 0, "missing card node must not apply a texture")
 end
 
 return TestPopupAssets

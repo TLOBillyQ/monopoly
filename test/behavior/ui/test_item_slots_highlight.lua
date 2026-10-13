@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- item_slots_highlight 直测(#262 变异清扫 survivor 闭合 + #362 锚定可见签名):
 -- 签名比对重放(true→false / build_pickable_signature call→nil);
 -- maybe_emit_phase_advance_reset 锚定可选槽集合签名,phase 空翻不触发全局重置。
@@ -11,7 +13,7 @@ local highlight = require("src.ui.coord.item_slots_highlight")
 local events = require("src.ui.coord.item_slots_events")
 local highlight_lifecycle = require("src.ui.state.item_slot_highlight_lifecycle_queue")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 -- 驱动一次 refresh 并捕获宿主出口事件。
 local function _drive(opts)

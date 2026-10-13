@@ -1,6 +1,7 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- item_slots_options(#340):build(choice) 无效 choice 分支必须清空模块级缓存,
 -- 否则上一条 choice 的可选项永久残留 → 外框 visible 永挂(真机 2026-08-04 实证)。
-local lu = require("luaunit")
 local item_options = require("src.ui.coord.item_slots_options")
 
 local function _ids(set)
@@ -15,14 +16,14 @@ end
 TestItemSlotsOptions = {}
 
 function TestItemSlotsOptions:test_build_nil_returns_empty_set()
-  lu.assertEvalToTrue(_ids(item_options.build(nil)) == "",
+  luassert.truthy(_ids(item_options.build(nil)) == "",
     "build(nil) must yield an empty option id set")
 end
 
 function TestItemSlotsOptions:test_build_choice_without_options_returns_empty_set()
-  lu.assertEvalToTrue(_ids(item_options.build({ id = "c1" })) == "",
+  luassert.truthy(_ids(item_options.build({ id = "c1" })) == "",
     "a choice without an options table must yield an empty set")
-  lu.assertEvalToTrue(_ids(item_options.build({ id = "c2", options = "not a table" })) == "",
+  luassert.truthy(_ids(item_options.build({ id = "c2", options = "not a table" })) == "",
     "a choice with non-table options must yield an empty set")
 end
 
@@ -32,7 +33,7 @@ function TestItemSlotsOptions:test_build_nil_after_filled_choice_clears_stale_id
     id = "c1",
     options = { { id = "item_a" }, { id = "item_b" } },
   })
-  lu.assertEvalToTrue(_ids(item_options.build(nil)) == "",
+  luassert.truthy(_ids(item_options.build(nil)) == "",
     "build(nil) after a filled choice must not leak the previous option ids")
 end
 
@@ -43,7 +44,7 @@ function TestItemSlotsOptions:test_build_same_options_ref_rebuilds_after_invalid
   item_options.build({ id = "c1", options = options })
   item_options.build(nil)
   local set = item_options.build({ id = "c2", options = options })
-  lu.assertEvalToTrue(_ids(set) == "item_a,item_b",
+  luassert.truthy(_ids(set) == "item_a,item_b",
     "the same options ref must be rebuilt after an invalid choice cleared the cache")
 end
 

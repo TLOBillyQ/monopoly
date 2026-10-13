@@ -1,11 +1,12 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 道具槽点击的遮挡门是**逐席位**的：模态画布本就只切给操作席（旁观者留在基础屏），
 -- 所以对手的选择屏/黑市/弹窗没盖住我的屏幕，我的点击不该被连坐静默。
 -- 只有真广播弹窗才盖住所有人。
-local lu = require("luaunit")
 local item_slot_overlay = require("src.ui.input.item_slot_overlay")
 
 local function _assert_eq(actual, expected, msg)
-  lu.assertEvalToTrue(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. " got " .. tostring(actual))
+  luassert.truthy(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. " got " .. tostring(actual))
 end
 
 local function _state(ui)

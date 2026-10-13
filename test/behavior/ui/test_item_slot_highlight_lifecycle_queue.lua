@@ -1,10 +1,12 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 输入侧 → 刷新层的高亮生命周期队列直测(#595)。这个 seam 存在的理由是
 -- 「输入侧知道发生了什么、但还不知道展示视角」,所以它只搬运种类与选择标识,
 -- 顺序必须保留(冻结/解冻是时序语义),且事件只应被应用一次。
 local support = require("test.support.shared_support")
 local queue = require("src.ui.state.item_slot_highlight_lifecycle_queue")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 TestItemSlotHighlightLifecycleQueue = {}
 

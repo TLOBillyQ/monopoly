@@ -1,6 +1,7 @@
-local luax = require("test.support.luax")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 
@@ -165,16 +166,16 @@ function TestOverlayRuntimeSpawn:test_requires_a_scene_a_kind_a_tile_index_and_a
   -- 精确消息钉(#262,kills 四条 assert 消息 -> nil)。
   local hr = _new_host_spy()
   local deps = { host_runtime = hr }
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.spawn_overlay(nil, "mine", 5, nil, "u", { x = 1 }, nil, deps)
   end, "missing board_scene")
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.spawn_overlay(_new_scene(), nil, 5, nil, "u", { x = 1 }, nil, deps)
   end, "missing kind")
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.spawn_overlay(_new_scene(), "mine", nil, nil, "u", { x = 1 }, nil, deps)
   end, "missing tile_index")
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.spawn_overlay(_new_scene(), "mine", 5, nil, "u", nil, nil, deps)
   end, "missing pos")
 end
@@ -255,13 +256,13 @@ end
 function TestOverlayRuntimeSpawn:test_requires_a_scene_a_kind_and_a_tile_index()
   -- 精确消息钉(#262,kills 三条 assert 消息 -> nil)。
   local deps = { host_runtime = _new_host_spy() }
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.clear_overlay(nil, "mine", 5, deps)
   end, "missing board_scene")
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.clear_overlay(_new_scene(), nil, 5, deps)
   end, "missing kind")
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.clear_overlay(_new_scene(), "mine", nil, deps)
   end, "missing tile_index")
 end

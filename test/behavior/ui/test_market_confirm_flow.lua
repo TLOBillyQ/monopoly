@@ -1,8 +1,9 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- luacheck: ignore 211
-local lu = require("luaunit")
 local pending_confirmation = require("src.state.pending_confirmation")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
@@ -704,7 +705,7 @@ function TestMarketConfirmFlow:test_market_confirm_blocked_with_tip_when_buyer_s
     intent = spec.build_intent()
   end)
 
-  lu.assertNil(intent, "slots full must reject the click locally: no market_confirm intent")
+  luassert.is_nil(intent, "slots full must reject the click locally: no market_confirm intent")
   _assert_eq(#tips, 1, "slots full should enqueue exactly one rejection tip")
   _assert_eq(tips[1] and tips[1].text, "道具槽已满，无法购买",
     "rejection tip should tell the player slots are full")
@@ -739,7 +740,7 @@ function TestMarketConfirmFlow:test_market_confirm_gate_reads_choice_owner_slots
     intent = spec.build_intent()
   end)
 
-  lu.assertNil(intent, "gate must judge by the choice owner's slots, not the viewing player's")
+  luassert.is_nil(intent, "gate must judge by the choice owner's slots, not the viewing player's")
 end
 
 -- 模型里没有任何槽位数据时放行,交给引擎侧兜底 —— 本地闸只做「确定满了」的

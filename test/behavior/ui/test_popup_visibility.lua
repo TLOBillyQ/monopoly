@@ -1,7 +1,8 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- luacheck: ignore 211
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local runtime_port = require("src.ui.render.support.runtime_ui")
@@ -109,8 +110,8 @@ function TestPopupVisibility:test_popup_hidden_for_non_current_role()
     })
   end)
 
-  lu.assertEvalToTrue(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
-  lu.assertEvalToTrue(not _has_event(role2_events, "显示卡牌展示屏"), "non-current role should not see popup canvas")
+  luassert.truthy(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
+  luassert.truthy(not _has_event(role2_events, "显示卡牌展示屏"), "non-current role should not see popup canvas")
 end
 
 -- #142 反转旧 pin「卡牌弹窗时旁观者 canvas 不动」:机会卡抽卡展示走广播载荷
@@ -153,8 +154,8 @@ function TestPopupVisibility:test_broadcast_chance_popup_switches_spectator_to_p
     })
   end)
 
-  lu.assertEvalToTrue(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
-  lu.assertEvalToTrue(_has_event(role2_events, "显示卡牌展示屏"),
+  luassert.truthy(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
+  luassert.truthy(_has_event(role2_events, "显示卡牌展示屏"),
     "spectator must be switched to popup canvas for broadcast chance card")
 end
 
@@ -196,12 +197,12 @@ function TestPopupVisibility:test_non_broadcast_card_popup_keeps_spectator_canva
     })
   end)
 
-  lu.assertEvalToTrue(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
-  lu.assertEvalToTrue(not _has_event(role2_events, "显示卡牌展示屏"),
+  luassert.truthy(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
+  luassert.truthy(not _has_event(role2_events, "显示卡牌展示屏"),
     "spectator must not be switched to popup canvas for non-broadcast card")
-  lu.assertEvalToTrue(not _has_event(role2_events, "显示基础屏"),
+  luassert.truthy(not _has_event(role2_events, "显示基础屏"),
     "spectator canvas must remain untouched so opened atlas stays visible")
-  lu.assertEvalToTrue(not _has_event(role2_events, "隐藏道具图鉴"),
+  luassert.truthy(not _has_event(role2_events, "隐藏道具图鉴"),
     "spectator atlas canvas must not be force-hidden during non-broadcast card popup")
 end
 
@@ -241,8 +242,8 @@ function TestPopupVisibility:test_bankruptcy_popup_visible_for_all_roles()
     })
   end)
 
-  lu.assertEvalToTrue(_has_event(role1_events, "显示破产展示屏"), "current role should see bankruptcy canvas")
-  lu.assertEvalToTrue(_has_event(role2_events, "显示破产展示屏"), "non-current role should see bankruptcy canvas")
+  luassert.truthy(_has_event(role1_events, "显示破产展示屏"), "current role should see bankruptcy canvas")
+  luassert.truthy(_has_event(role2_events, "显示破产展示屏"), "non-current role should see bankruptcy canvas")
 end
 
 function TestPopupVisibility:test_hide_bankruptcy_popup_hides_bankruptcy_root()

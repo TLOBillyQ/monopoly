@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events
@@ -58,11 +59,11 @@ function TestSkinPanelIntentCanvasOpenViaViewCommandDispatch:test_open_skin_pane
     view_command.dispatch(state, { type = "open_skin_panel", actor_role_id = 1 })
   end)
 
-  lu.assertEvalToTrue(state.ui.skin_panel and state.ui.skin_panel.open == true,
+  luassert.truthy(state.ui.skin_panel and state.ui.skin_panel.open == true,
     "model state must mark skin panel open")
-  lu.assertEvalToTrue(_has_event(clicker_events, "显示皮肤商店"),
+  luassert.truthy(_has_event(clicker_events, "显示皮肤商店"),
     "clicker role must receive 显示皮肤商店 — model open without canvas show is the v102 bug")
-  lu.assertEvalToTrue(not _has_event(other_events, "显示皮肤商店"),
+  luassert.truthy(not _has_event(other_events, "显示皮肤商店"),
     "non-clicker role must not have their canvas yanked to skin shop")
 end
 
@@ -84,11 +85,11 @@ function TestSkinPanelIntentCanvasOpenViaViewCommandDispatch:test_open_skin_pane
     view_command.dispatch(state, { type = "open_skin_panel" })
   end)
 
-  lu.assertEvalToTrue(state.ui.skin_panel and state.ui.skin_panel.open == true,
+  luassert.truthy(state.ui.skin_panel and state.ui.skin_panel.open == true,
     "model state must mark skin panel open even without actor_role_id")
-  lu.assertEvalToTrue(_has_event(role1_events, "显示皮肤商店"),
+  luassert.truthy(_has_event(role1_events, "显示皮肤商店"),
     "broadcast path must reach role1 when actor_role_id is missing")
-  lu.assertEvalToTrue(_has_event(role2_events, "显示皮肤商店"),
+  luassert.truthy(_has_event(role2_events, "显示皮肤商店"),
     "broadcast path must reach role2 when actor_role_id is missing")
 end
 
@@ -133,32 +134,32 @@ function TestSkinPanelIntentCanvasActionButtonRouting:test_action_button_routes_
   -- whether that activation equips or unequips.
   local state = _state_with("s1")
   local spec = _spec_named(skin_intents.build_route_specs(state), skin_nodes.action_buttons[1])
-  lu.assertNotNil(spec, "slot 1 action button must have a canvas route")
+  luassert.is_not_nil(spec, "slot 1 action button must have a canvas route")
   local intent = spec.build_intent()
-  lu.assertEvalToTrue(intent.type == "skin_panel_action", "route must dispatch a skin_panel_action intent")
-  lu.assertEvalToTrue(intent.action.type == "activate_slot",
+  luassert.truthy(intent.type == "skin_panel_action", "route must dispatch a skin_panel_action intent")
+  luassert.truthy(intent.action.type == "activate_slot",
     "action button route should leave equip/unequip selection to the transaction flow")
-  lu.assertEvalToTrue(intent.action.slot_index == 1, "activate_slot intent must carry the clicked slot index")
+  luassert.truthy(intent.action.slot_index == 1, "activate_slot intent must carry the clicked slot index")
 end
 
 function TestSkinPanelIntentCanvasActionButtonRouting:test_action_button_routes_activate_slot_for_unequipped_slot()
   local state = _state_with("s1")
   local spec = _spec_named(skin_intents.build_route_specs(state), skin_nodes.action_buttons[2])
-  lu.assertNotNil(spec, "slot 2 action button must have a canvas route")
+  luassert.is_not_nil(spec, "slot 2 action button must have a canvas route")
   local intent = spec.build_intent()
-  lu.assertEvalToTrue(intent.action.type == "activate_slot", "non-equipped slot's button should emit activate_slot")
-  lu.assertEvalToTrue(intent.action.slot_index == 2, "activate_slot intent must carry the clicked slot index")
+  luassert.truthy(intent.action.type == "activate_slot", "non-equipped slot's button should emit activate_slot")
+  luassert.truthy(intent.action.slot_index == 2, "activate_slot intent must carry the clicked slot index")
 end
 
 function TestSkinPanelIntentCanvasActionButtonRouting:test_action_intent_does_not_read_live_equipped_state()
   local state = _state_with(nil)
   local specs = skin_intents.build_route_specs(state)
   local spec = _spec_named(specs, skin_nodes.action_buttons[1])
-  lu.assertNotNil(spec, "slot 1 action button must have a canvas route")
-  lu.assertEvalToTrue(spec.build_intent().action.type == "activate_slot",
+  luassert.is_not_nil(spec, "slot 1 action button must have a canvas route")
+  luassert.truthy(spec.build_intent().action.type == "activate_slot",
     "nothing equipped should still route through activate_slot")
   state.ui.skin_panel.selected_by_role["1"] = "s1"
-  lu.assertEvalToTrue(spec.build_intent().action.type == "activate_slot",
+  luassert.truthy(spec.build_intent().action.type == "activate_slot",
     "equipped state changes should not alter the input-layer action")
 end
 

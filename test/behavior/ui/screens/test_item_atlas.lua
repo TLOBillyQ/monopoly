@@ -1,7 +1,8 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- Coverage for src.ui.screens.item_atlas: route specs, open/close/action handling.
 -- Extends the existing paging tests in test_item_atlas_paging.lua which test
 -- atlas_state pure logic.
-local lu = require("luaunit")
 local item_atlas = require("src.ui.screens.item_atlas")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
 local base_nodes = require("src.ui.schema.base")
@@ -45,7 +46,7 @@ do
     local action_names = {}
     local select_count = 0
     for _, s in ipairs(specs) do
-      lu.assertEvalToTrue(s.build_intent ~= nil, "each spec has a build_intent function")
+      luassert.truthy(s.build_intent ~= nil, "each spec has a build_intent function")
       local intent = s.build_intent()
       if type(intent.action) == "string" then
         action_names[intent.action] = true
@@ -53,11 +54,11 @@ do
         select_count = select_count + 1
       end
     end
-    lu.assertEvalToTrue(action_names["close"], "has close action")
-    lu.assertEvalToTrue(action_names["dismiss"], "has dismiss action")
-    lu.assertEvalToTrue(action_names["prev"], "has prev action")
-    lu.assertEvalToTrue(action_names["next"], "has next action")
-    lu.assertEvalToTrue(select_count == #item_atlas_nodes.card_images, "one select spec per card slot")
+    luassert.truthy(action_names["close"], "has close action")
+    luassert.truthy(action_names["dismiss"], "has dismiss action")
+    luassert.truthy(action_names["prev"], "has prev action")
+    luassert.truthy(action_names["next"], "has next action")
+    luassert.truthy(select_count == #item_atlas_nodes.card_images, "one select spec per card slot")
   end
 end
 
@@ -86,12 +87,12 @@ do
   TestItemAtlasOpenClose["test_open() passes state.ui and role_id to canvas"] = function(self)
     local state = _make_state()
     item_atlas.open(state, "roleA")
-    lu.assertEvalToTrue(self._canvas_called_with ~= nil, "canvas.switch_by_role_id was called")
+    luassert.truthy(self._canvas_called_with ~= nil, "canvas.switch_by_role_id was called")
     -- Regression for --mutate and→or on `state and state.ui` (L90):
     -- the first arg must be state.ui, not state (which 'or' would return).
-    lu.assertEvalToTrue(self._canvas_called_with.ui == state.ui, "canvas receives state.ui, not state")
-    lu.assertEvalToTrue(self._canvas_called_with.target == item_atlas_nodes.canvas, "switches to item_atlas canvas")
-    lu.assertEvalToTrue(self._canvas_called_with.role_id == "roleA", "role_id passed through")
+    luassert.truthy(self._canvas_called_with.ui == state.ui, "canvas receives state.ui, not state")
+    luassert.truthy(self._canvas_called_with.target == item_atlas_nodes.canvas, "switches to item_atlas canvas")
+    luassert.truthy(self._canvas_called_with.role_id == "roleA", "role_id passed through")
   end
 
   TestItemAtlasOpenClose["test_close() with nil role_id falls back to atlas.role_id for canvas call"] = function(self)
@@ -102,12 +103,12 @@ do
     -- Reset spy, open() already called canvas.
     self._canvas_called_with = nil
     item_atlas.close(state, nil)
-    lu.assertEvalToTrue(self._canvas_called_with ~= nil, "canvas.switch_by_role_id was called on close")
+    luassert.truthy(self._canvas_called_with ~= nil, "canvas.switch_by_role_id was called on close")
     -- Regression for --mutate and→or on `state and state.ui` (L100):
     -- the first arg must be state.ui, not state.
-    lu.assertEvalToTrue(self._canvas_called_with.ui == state.ui, "canvas receives state.ui, not state")
-    lu.assertEvalToTrue(self._canvas_called_with.target == base_nodes.canvas, "switches to base canvas")
-    lu.assertEvalToTrue(self._canvas_called_with.role_id == "roleB",
+    luassert.truthy(self._canvas_called_with.ui == state.ui, "canvas receives state.ui, not state")
+    luassert.truthy(self._canvas_called_with.target == base_nodes.canvas, "switches to base canvas")
+    luassert.truthy(self._canvas_called_with.role_id == "roleB",
       "role_id falls back to atlas.role_id when nil is passed")
   end
 
@@ -116,7 +117,7 @@ do
     item_atlas.open(state, "roleX")
     self._canvas_called_with = nil
     item_atlas.close(state, "roleY")
-    lu.assertEvalToTrue(self._canvas_called_with.role_id == "roleY",
+    luassert.truthy(self._canvas_called_with.role_id == "roleY",
       "explicit role_id is used, not stored atlas.role_id")
   end
 
@@ -132,7 +133,7 @@ do
     } })
     item_atlas.open(state, "roleA")
     item_atlas.handle_action(state, { type = "select", slot_index = 1 }, "roleA")
-    lu.assertEvalToTrue(state.ui.item_atlas.selected_item_id ~= nil,
+    luassert.truthy(state.ui.item_atlas.selected_item_id ~= nil,
       "slot select should mark a selection before close")
     -- 测试环境无贴图 refs,show_enlarged 不推可见性;直接置捕获态模拟宿主侧
     -- 覆盖层正可见(与真机「选中后三节点可见」同形态)。
@@ -142,10 +143,10 @@ do
 
     item_atlas.close(state, "roleA")
 
-    lu.assertEvalToTrue(state.ui.item_atlas.selected_item_id == nil,
+    luassert.truthy(state.ui.item_atlas.selected_item_id == nil,
       "close should clear the selected item")
     for _, node in ipairs({ item_atlas_nodes.enlarged_card, item_atlas_nodes.close_hint_label, item_atlas_nodes.close_blank }) do
-      lu.assertEvalToTrue(vis[node] == false, node .. " should be hidden on close")
+      luassert.truthy(vis[node] == false, node .. " should be hidden on close")
     end
   end
 end
@@ -162,7 +163,7 @@ do
     end)
     state.game.turn = { action_anim = { kind = "item_gain_popup", seq = 42, owner_role_id = "roleC" } }
     item_atlas.handle_action(state, "dismiss", "roleC")
-    lu.assertEvalToTrue(dispatched == nil, "dismiss must not dispatch action_anim_done")
+    luassert.truthy(dispatched == nil, "dismiss must not dispatch action_anim_done")
   end
 end
 

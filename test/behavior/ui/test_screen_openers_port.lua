@@ -1,8 +1,9 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local screen_openers = require("src.ui.seams.screen_openers")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 -- screen_openers 是纯契约 port(#332 拆 coord↔screens):coord 开屏动作经此接缝,
 -- 实现由装配侧 configure 注入(host_install / 测试基线 / acceptance 绑定),本文件
@@ -66,8 +67,8 @@ end
 
 local function _expect_error(fragment, fn)
   local ok, err = pcall(fn)
-  lu.assertEvalToTrue(ok == false, "call should raise")
-  lu.assertEvalToTrue(
+  luassert.truthy(ok == false, "call should raise")
+  luassert.truthy(
     tostring(err):find(fragment, 1, true) ~= nil,
     "error should mention: " .. tostring(fragment) .. ", got: " .. tostring(err)
   )
@@ -127,11 +128,11 @@ function TestScreenOpenersPort:test_missing_impl_errors_name_each_unconfigured_v
 end
 
 function TestScreenOpenersPort:test_is_configured_reflects_the_configuration_state()
-  lu.assertEvalToTrue(screen_openers.is_configured() == false, "a fresh port starts unconfigured")
+  luassert.truthy(screen_openers.is_configured() == false, "a fresh port starts unconfigured")
   screen_openers.configure(_fake_impl({}))
-  lu.assertEvalToTrue(screen_openers.is_configured() == true, "a configured port reports configured")
+  luassert.truthy(screen_openers.is_configured() == true, "a configured port reports configured")
   screen_openers.reset_for_tests()
-  lu.assertEvalToTrue(screen_openers.is_configured() == false, "reset returns to unconfigured")
+  luassert.truthy(screen_openers.is_configured() == false, "reset returns to unconfigured")
 end
 
 function TestScreenOpenersPort:test_forwarding_proxies_are_stable_across_reconfiguration()

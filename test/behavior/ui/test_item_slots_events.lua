@@ -1,6 +1,8 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- item_slots_events 事件路由规约(#262 幸存闭合;#459 外框设施退役)。
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
 local runtime = require("src.ui.render.support.runtime_ui")
 local ui_events = require("src.ui.coord.ui_events")

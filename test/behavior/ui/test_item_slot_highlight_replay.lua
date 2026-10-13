@@ -1,10 +1,12 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 可用槽位高亮重放的展示状态直测(#594):plan_refresh 的三态判定与
 -- 逐视角记忆隔离,apply_lifecycle 的确认冻结/命令解冻,以及两个公开操作的
 -- 入参断言。本模块是纯展示状态(ui.state),不碰宿主动画。
 local support = require("test.support.shared_support")
 local replay = require("src.ui.state.item_slot_highlight_replay")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local function _new_state()
   return {}
@@ -216,7 +218,7 @@ do
   function TestItemSlotHighlightReplay:test_plan_refresh_only_ever_returns_a_known_plan()
     property.for_all(_gen_case, function(case)
       local plan = replay.plan_refresh(_new_state(), case.perspective, case.slots)
-      lu.assertEvalToTrue(_PLANS[plan] == true,
+      luassert.truthy(_PLANS[plan] == true,
         "plan_refresh 必须返回三态之一, 实际: " .. tostring(plan))
     end)
   end
@@ -228,10 +230,10 @@ do
       replay.plan_refresh(state, case.perspective, case.slots)
       local remembered = replay.remembered_signature(state, case.perspective)
       for _ = 1, 3 do
-        lu.assertEvalToTrue(
+        luassert.truthy(
           replay.plan_refresh(state, case.perspective, case.slots) == "none",
           "重复同一快照不应再产生计划")
-        lu.assertEvalToTrue(
+        luassert.truthy(
           replay.remembered_signature(state, case.perspective) == remembered,
           "重复同一快照不应改变记忆")
       end
@@ -244,7 +246,7 @@ do
     property.for_all(_gen_case, function(case)
       local state = _new_state()
       replay.plan_refresh(state, case.perspective, case.slots)
-      lu.assertEvalToTrue(
+      luassert.truthy(
         replay.remembered_signature(state, case.perspective) == _signature_of(case.slots),
         "记忆签名必须恰好是可选槽位编号升序")
     end)
@@ -261,21 +263,21 @@ do
       local latest = replay.remembered_signature(state, case.perspective)
       for _ = 1, 3 do
         local next_case = _gen_case(rng)
-        lu.assertEvalToTrue(
+        luassert.truthy(
           replay.plan_refresh(state, case.perspective, next_case.slots) ~= "replay",
           "冻结期间不得整组重播")
         latest = replay.remembered_signature(state, case.perspective)
       end
       replay.apply_lifecycle(state, case.perspective,
         { kind = "slot_command", choice_id = case.choice_id })
-      lu.assertEvalToTrue(
+      luassert.truthy(
         replay.remembered_signature(state, case.perspective) == latest,
         "解冻不得丢弃冻结期间记下的集合")
       -- 解冻后判定以「冻结期间记下的最新集合」为基准:与之相同则不动,
       -- 不同则整组重播(记忆已非空, 故不会是 reset)。
       local signature_now = _signature_of(case.slots)
       local expected = (latest == signature_now) and "none" or "replay"
-      lu.assertEvalToTrue(
+      luassert.truthy(
         replay.plan_refresh(state, case.perspective, case.slots) == expected,
         "解冻后必须以冻结期间记下的最新集合为基准判定, 期望: " .. expected)
     end)
@@ -317,7 +319,7 @@ do
       end
       -- 冻结中集合变化 → reset;未冻结 → replay。计划即冻结状态的可观察投影。
       local expected = _frozen_after(case.events) and "reset" or "replay"
-      lu.assertEvalToTrue(
+      luassert.truthy(
         replay.plan_refresh(state, case.perspective, { true, true, false, false, false }) == expected,
         "冻结状态必须只跟随最后一次未被释放的确认, 期望计划: " .. expected)
     end)
@@ -349,7 +351,7 @@ do
         local slots = (observation ~= nil_marker) and observation or nil
         local signature = (slots ~= nil) and _signature_of(slots) or nil
         local expected = (not seen_any) or previous ~= signature
-        lu.assertEvalToTrue(
+        luassert.truthy(
           replay.needs_phase_advance_reset(state, slots) == expected,
           "全局重置必须恰在快照与上一次观察不同时发出, 期望: " .. tostring(expected))
         previous, seen_any = signature, true
@@ -368,7 +370,7 @@ do
       replay.plan_refresh(state, case.perspective, case.slots)
       replay.apply_lifecycle(state, case.perspective,
         { kind = "confirm_item_use", choice_id = case.choice_id })
-      lu.assertEvalToTrue(replay.remembered_signature(state, other) == other_before,
+      luassert.truthy(replay.remembered_signature(state, other) == other_before,
         "刷新与冻结都不得越过视角边界")
     end)
   end

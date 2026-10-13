@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- Regression for the market_select view-command port path.
 --
 -- Field symptom (deploy log, 2026-07-11): every black-market item tap logged
@@ -10,9 +12,8 @@
 -- helper, which always injects a full presentation_ports.build() table — so it
 -- cannot catch view_command being dropped from the assembled ports, nor does it
 -- assert the "port missing" warn stays silent. These specs pin both directly.
-local lu = require("luaunit")
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = P.with_patches
 local _bind_ui_runtime = P.bind_ui_runtime
 
@@ -46,7 +47,7 @@ TestMarketSelectPortDispatch = {}
 
 function TestMarketSelectPortDispatch:test_assembled_presentation_ports_keep_a_market_select_view_command_handler()
   local ports = presentation_ports.build()
-  lu.assertEvalToTrue(ports.view_command ~= nil, "presentation_ports.build() must expose view_command")
+  luassert.truthy(ports.view_command ~= nil, "presentation_ports.build() must expose view_command")
   _assert_eq(type(ports.view_command.dispatch), "function",
     "assembled view_command port must expose a dispatch function")
 
@@ -120,9 +121,9 @@ function TestMarketSelectPortDispatch:test_view_command_survives_the_turn_loop_p
   local selected = nil
 
   local resolved = loop_ports.resolve(presentation_ports.build())
-  lu.assertEvalToTrue(resolved.view_command ~= nil,
+  luassert.truthy(resolved.view_command ~= nil,
     "loop ports resolve must pass the view_command group through")
-  lu.assertEvalToTrue(resolved.actor_context ~= nil,
+  luassert.truthy(resolved.actor_context ~= nil,
     "loop ports resolve must pass the actor_context group through")
 
   local state = { gameplay_loop_ports = resolved }
@@ -177,7 +178,7 @@ function TestMarketSelectPortDispatch:test_game_action_intent_without_game_warns
     }, {})
   end)
 
-  lu.assertEvalToTrue(#warns == 1
+  luassert.truthy(#warns == 1
       and string.find(warns[1], "ui intent without game", 1, true) ~= nil,
     "a game-action intent without a game should warn and drop: " .. tostring(warns[1]))
 end

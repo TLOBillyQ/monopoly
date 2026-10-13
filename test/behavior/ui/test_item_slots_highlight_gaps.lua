@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- item_slots_highlight phase-advance 去重补测(#362 锚定语义,#596 收归 ui.state)。
 -- 不再预置内部缓存字段:去重状态由前一次真实观察建立,断言只看宿主是否收到
 -- 全局「重置高亮」。这样变异掉签名派生或 nil 判定都能被区分。
@@ -5,7 +7,7 @@ local support = require("test.support.shared_support")
 local highlight = require("src.ui.coord.item_slots_highlight")
 local events = require("src.ui.coord.item_slots_events")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 -- 按顺序喂入若干快照,返回宿主收到的全局重置次数。
 local function _emits_for(snapshots)

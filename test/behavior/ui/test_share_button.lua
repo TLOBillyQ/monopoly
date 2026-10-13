@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 分享按钮（open_share_panel）行为规约：view_command port 把点击转为
 -- runtime_ports.emit_event 发全局自定义事件「打开分享任务」（#458 真机实证
 -- 通路，编辑器侧同名监听打开分享任务面板），每次点击都发、不锁存；发送失败
@@ -5,9 +7,8 @@
 -- 此钉住（它仍是托管首点的触发口）：#463 后 foundation 侧是纯契约 port，
 -- 下列用例经测试基线装配的真实宿主实现（src/host/share_panel）跑全链路，
 -- 只桩 runtime_ports.resolve_role。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local view_command_ports = require("src.ui.ports.view_command")
 local share_panel = require("src.foundation.ports.share_panel")
@@ -34,10 +35,10 @@ function TestShareButton:test_dispatch_emits_open_share_task_event_and_reports_h
     end,
   })
   local ports = view_command_ports.build()
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 5 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 5 }),
     "open_share_panel dispatch must report handled")
-  lu.assertEquals(seen.event_name, "打开分享任务", "dispatch must emit the share-task open event")
-  lu.assertIsTable(seen.payload, "dispatch must emit with a payload table")
+  luassert.is.equal("打开分享任务", seen.event_name, "dispatch must emit the share-task open event")
+  luassert.is_table(seen.payload, "dispatch must emit with a payload table")
 end
 
 function TestShareButton:test_every_click_emits_share_task_event_without_latching()
@@ -49,11 +50,11 @@ function TestShareButton:test_every_click_emits_share_task_event_without_latchin
     end,
   })
   local ports = view_command_ports.build()
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "first click must report handled")
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "second click must report handled")
-  lu.assertEquals(calls, 2, "every click must emit the event (no latch)")
+  luassert.is.equal(2, calls, "every click must emit the event (no latch)")
 end
 
 function TestShareButton:test_emit_failure_does_not_break_dispatch_and_next_click_retries()
@@ -65,11 +66,11 @@ function TestShareButton:test_emit_failure_does_not_break_dispatch_and_next_clic
     end,
   })
   local ports = view_command_ports.build()
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "failed emit must not break the view command")
-  lu.assertEquals(ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }), true,
+  luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "the retry click must also report handled")
-  lu.assertEquals(attempts, 2, "failure must not latch: next click retries the emit")
+  luassert.is.equal(2, attempts, "failure must not latch: next click retries the emit")
 end
 
 function TestShareButton:test_try_show_returns_true_only_when_host_call_completes()

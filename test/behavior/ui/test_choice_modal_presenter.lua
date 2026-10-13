@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- src/ui/coord/modal.lua 的开关屏流程规约。首跑变异的幸存集中在:
 -- skip-reopen 判定（同 choice 重复开屏 / market 豁免）、base_inline 的
 -- 二次确认门控与 suppress-highlight 记号、item_phase_passive 接管、
@@ -8,9 +10,8 @@
 -- TestChoiceModalPresenter 单类;it 名全为中文,按「原名逐字保留」用 table
 -- key 赋值写法;裸 assert(cond, msg) 机械映射为 lu.assertEvalToTrue,用例数
 -- 与改写前一一对应(3+2+1+1+1 = 8 例)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
 
 local modal_presenter = require("src.ui.coord.modal")
@@ -69,7 +70,7 @@ TestChoiceModalPresenter["test_market choice 即使已是当前屏也照常重�
     modal_presenter.open_choice_modal(state, choice, market_snapshot)
   end)
 
-  lu.assertEvalToTrue(market_open ~= nil, "an already-active market choice must still reopen the market screen")
+  luassert.truthy(market_open ~= nil, "an already-active market choice must still reopen the market screen")
   _assert_eq(market_open.choice_id, 42, "market open must carry the choice id")
   _assert_eq(market_open.market, market_snapshot, "market open must carry the market snapshot")
 end
@@ -94,8 +95,8 @@ TestChoiceModalPresenter["test_缺 choice / 缺 choice.id 时告警拒绝,不开
   end)
 
   _assert_eq(#warns, 2, "both rejects must warn exactly once each")
-  lu.assertEvalToTrue(warns[1]:find("missing choice", 1, true), "nil choice must warn 'missing choice'")
-  lu.assertEvalToTrue(warns[2]:find("missing choice id", 1, true), "id-less choice must warn 'missing choice id'")
+  luassert.truthy(warns[1]:find("missing choice", 1, true), "nil choice must warn 'missing choice'")
+  luassert.truthy(warns[2]:find("missing choice id", 1, true), "id-less choice must warn 'missing choice id'")
   _assert_eq(opener_calls, 0, "a rejected open must not reach the generic choice opener")
   _assert_eq(market_open_calls, 0, "a rejected open must not reach the market screen")
   _assert_eq(dirty_calls, 0, "a rejected open must not dirty the ui")
@@ -202,7 +203,7 @@ TestChoiceModalPresenter["test_popup 在场时关 choice 回 popup 画布,不走
     modal_presenter.close_choice_modal(state)
   end)
 
-  lu.assertEvalToTrue(popup_switch ~= nil, "closing with an active popup must switch back to the popup canvas")
+  luassert.truthy(popup_switch ~= nil, "closing with an active popup must switch back to the popup canvas")
   _assert_eq(popup_switch.kind, "card", "a nil popup_kind must default to the card popup")
   _assert_eq(popup_switch.target, canvas.CANVAS_POPUP, "the popup switch target must be the popup canvas")
   _assert_eq(popup_switch.fallback, canvas.CANVAS_BASE, "the popup switch fallback must be the base canvas")
@@ -257,7 +258,7 @@ TestChoiceModalPresenter["test_popup 在场关 choice 时,弹窗切换带排除�
     modal_presenter.close_choice_modal(state)
   end)
 
-  lu.assertEvalToTrue(popup_switch ~= nil, "closing with an active popup must go through the popup canvas switch")
+  luassert.truthy(popup_switch ~= nil, "closing with an active popup must go through the popup canvas switch")
   _assert_eq(popup_switch.opts and popup_switch.opts.excluded_return, true,
     "choice close with live popup must mark excluded_return so the buyer returns to base canvas")
 end

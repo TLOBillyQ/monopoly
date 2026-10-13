@@ -1,15 +1,15 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- Guard-clause regression for src.ui.render.market (init.lua):
 -- assert survivors on `and→or` mutations in refresh_market (L136) and
 -- close_market_panel (L152).
-local lu = require("luaunit")
-local luax = require("test.support.luax")
 local market_view = require("src.ui.render.market")
 local market_view_slots = require("src.ui.render.market.slots")
 local market_view_controls = require("src.ui.render.market.controls")
 local ui_controls = require("src.ui.render.support.ui_controls")
 local market_layout = require("src.ui.schema.market_layout")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 
@@ -39,7 +39,7 @@ function TestMarketGuard:test_refresh_market_asserts_when_market_options_is_nil(
   -- against nil options.
   local state = { ui = _full_ui_stub() }
   _bind_ui_runtime(state)
-  luax.has_error(function()
+  luassert.has_error(function()
     market_view.refresh_market(state, { options = nil })
   end, "missing market data/ui")
 end
@@ -48,7 +48,7 @@ function TestMarketGuard:test_refresh_market_asserts_when_ui_is_nil()
   -- Regression for --mutate and→or on L136 assert (third and):
   -- a nil ui should assert regardless of market validity.
   local state = { ui = nil }
-  luax.has_error(function()
+  luassert.has_error(function()
     market_view.refresh_market(state, { options = {} })
   end, "missing market data/ui")
 end
@@ -58,7 +58,7 @@ function TestMarketGuard:test_close_market_panel_asserts_when_ui_is_nil()
   -- `ui ~= nil and ui.market_active == true` → `or`, letting nil ui
   -- short-circuit the `or` branch and crash with nil.market_active.
   local state = { ui = nil }
-  luax.has_error(function()
+  luassert.has_error(function()
     market_view.close_market_panel(state)
   end, "market panel not active")
 end
@@ -68,14 +68,14 @@ function TestMarketGuard:test_close_market_panel_asserts_when_market_active_is_f
   -- `ui.market_active == false`, `or` may evade the guard.
   local state = { ui = _full_ui_stub() }
   _bind_ui_runtime(state)
-  luax.has_error(function()
+  luassert.has_error(function()
     market_view.close_market_panel(state)
   end, "market panel not active")
 end
 
 function TestMarketGuard:test_refresh_market_selection_asserts_when_ui_is_nil_262()
   -- kills L55 "missing market ui" -> nil。
-  luax.has_error(function()
+  luassert.has_error(function()
     market_view.refresh_market_selection({ ui = nil }, 10)
   end, "missing market ui")
 end
@@ -93,7 +93,7 @@ function TestMarketGuard:test_refresh_cash_display_pins_control_visibility_and_t
     market_view.refresh_cash_display(state)
   end)
 
-  lu.assertEvalToTrue(captured ~= nil, "cash display should update control states")
+  luassert.truthy(captured ~= nil, "cash display should update control states")
   _assert_eq(captured.flags.visible, true, "cash controls should be visible")
   _assert_eq(captured.flags.touch_enabled, false, "cash controls must not be touchable")
   _assert_eq(captured.names[1], market_layout.cash_text_label, "cash text label should lead the control list")

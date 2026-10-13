@@ -1,10 +1,11 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- Behavior specs for src/ui/screens/skin_panel/skin_gallery.lua.
 -- 画廊适配器只持有关屏路由，展示与所有权事实留在 canonical 面板。
 
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = P.with_patches
-local luax = require("test.support.luax")
 local skin_gallery = require("src.ui.screens.skin_panel.skin_gallery")
 local skin_panel = require("src.ui.screens.skin_panel")
 
@@ -12,10 +13,10 @@ TestSkinGallery = {}
 
 function TestSkinGallery:test_asserts_descriptive_errors_for_missing_state()
   -- 杀 L7 两层消息钉:state 缺失与 state.ui 缺失必须各报各的消息。
-  luax.has_error(function()
+  luassert.has_error(function()
     skin_gallery.handle_action(nil, "close")
   end, "missing state")
-  luax.has_error(function()
+  luassert.has_error(function()
     skin_gallery.handle_action({}, "close")
   end, "missing state.ui")
 end

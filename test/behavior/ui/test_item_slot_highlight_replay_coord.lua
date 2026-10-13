@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 高亮重放计划 → 宿主动画的投递直测(#594):reset 只发一次全局重置,
 -- replay 先全局重置再按槽位编号升序清除与高亮,发送失败留诊断不回滚记忆。
 local support = require("test.support.shared_support")
@@ -7,7 +9,7 @@ local runtime_ui = require("src.ui.render.support.runtime_ui")
 local ui_events = require("src.ui.coord.ui_events")
 local logger = require("src.foundation.log")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 -- 在真实 events 之上捕获事件名序列:只换宿主出口(ui_events / client role),
 -- 顺序与「重置高亮」次数都由被测链路真实产生。

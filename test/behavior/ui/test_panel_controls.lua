@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local panel_interrupt = require("src.ui.state.panel_interrupt")
 local panel_controls = require("src.ui.render.widgets.panel_controls")
@@ -140,8 +141,8 @@ function TestPanelControls:test_apply_auto_effect_calls_host_visibility_with_cor
 
   panel_controls.apply_auto_effect(ui, ui_model, ctx)
 
-  lu.assertEvalToTrue(#set_visible_calls >= 1, "set_visible should be called at least once")
-  lu.assertEvalToTrue(#set_touch_calls >= 1, "set_touch_enabled should be called at least once")
+  luassert.truthy(#set_visible_calls >= 1, "set_visible should be called at least once")
+  luassert.truthy(#set_touch_calls >= 1, "set_touch_enabled should be called at least once")
   _assert_eq(set_touch_calls[1].enabled, false, "auto_effect touch should be disabled")
 end
 

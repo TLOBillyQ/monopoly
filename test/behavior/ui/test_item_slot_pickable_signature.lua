@@ -1,9 +1,11 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 可选槽位签名的规范派生直测(#594)。这个派生是「集合是否变了」的唯一口径,
 -- 重放记忆(ui.state)与阶段推进重置(ui.coord)都按它比对,故单独钉住。
 local support = require("test.support.shared_support")
 local pickable_signature = require("src.ui.state.item_slot_pickable_signature")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 TestItemSlotPickableSignature = {}
 

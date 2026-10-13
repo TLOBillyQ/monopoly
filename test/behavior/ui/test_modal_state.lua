@@ -1,10 +1,12 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 --- 原生 LuaUnit 迁移(busted → luaunit):describe 拍平为文件级 Test* 类,
 --- 断言词汇切到 lu.assertXxx,用例数与改写前一一对应(5 例)。
 
 local support = require("test.support.shared_support")
 local modal_state = require("src.ui.state.modal")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 TestModalState = {}
 

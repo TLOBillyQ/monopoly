@@ -1,9 +1,10 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local canvas = require("src.ui.coord.canvas_coordinator")
 local skin_panel = require("src.ui.screens.skin_panel")
 local transaction = require("src.app.cosmetics.transaction")
@@ -144,11 +145,11 @@ function TestSkinPanel:test_open_shows_and_close_hides_the_skin_canvas_for_the_a
     end },
   }, function()
     skin_panel.open(s, 1)
-    lu.assertEvalToTrue(_has_event(events, "显示皮肤商店"), "opening skin panel should show skin canvas")
+    luassert.truthy(_has_event(events, "显示皮肤商店"), "opening skin panel should show skin canvas")
     skin_panel.handle_action(s, "close", 1)
   end)
 
-  lu.assertEvalToTrue(_has_event(events, "隐藏皮肤商店"), "closing skin panel should hide skin canvas")
+  luassert.truthy(_has_event(events, "隐藏皮肤商店"), "closing skin panel should hide skin canvas")
 end
 
 -- owner refresh 经 presentation_runtime.with_client_role 的路由由
@@ -172,13 +173,13 @@ function TestSkinPanel:test_falls_back_to_ensured_panel_when_transaction_returns
     local prev_panel = skin_panel.handle_action(s, "prev", 1)
     local unequip_panel = skin_panel.handle_action(s, "unequip", 1)
 
-    lu.assertEvalToTrue(unlock_panel == s.ui.skin_panel, "nil transaction result should return ensured panel")
-    lu.assertEvalToTrue(next_panel == s.ui.skin_panel, "nil next result should return ensured panel")
-    lu.assertEvalToTrue(prev_panel == s.ui.skin_panel, "nil prev result should return ensured panel")
-    lu.assertEvalToTrue(unequip_panel == s.ui.skin_panel, "nil unequip result should return ensured panel")
+    luassert.truthy(unlock_panel == s.ui.skin_panel, "nil transaction result should return ensured panel")
+    luassert.truthy(next_panel == s.ui.skin_panel, "nil next result should return ensured panel")
+    luassert.truthy(prev_panel == s.ui.skin_panel, "nil prev result should return ensured panel")
+    luassert.truthy(unequip_panel == s.ui.skin_panel, "nil unequip result should return ensured panel")
   end)
 
-  lu.assertEvalToTrue(tips == 0, "nil transaction result should not enqueue notifications")
+  luassert.truthy(tips == 0, "nil transaction result should not enqueue notifications")
 end
 
 function TestSkinPanel:test_uses_stable_notification_keys_and_honors_silent_close()
@@ -196,12 +197,12 @@ function TestSkinPanel:test_uses_stable_notification_keys_and_honors_silent_clos
     skin_panel.close(s)
   end)
 
-  lu.assertEvalToTrue(#tips == 3, "silent close should not enqueue a notification")
-  lu.assertEvalToTrue(tips[1].dedupe_key == "skin_panel:open:1:",
+  luassert.truthy(#tips == 3, "silent close should not enqueue a notification")
+  luassert.truthy(tips[1].dedupe_key == "skin_panel:open:1:",
     "open notification key should include empty product suffix")
-  lu.assertEvalToTrue(tips[2].dedupe_key == "skin_panel:open:1:",
+  luassert.truthy(tips[2].dedupe_key == "skin_panel:open:1:",
     "second open notification key should remain stable")
-  lu.assertEvalToTrue(tips[3].dedupe_key == "skin_panel:close:1:",
+  luassert.truthy(tips[3].dedupe_key == "skin_panel:close:1:",
     "close notification key should include empty product suffix")
 end
 
@@ -220,7 +221,7 @@ function TestSkinPanel:test_uses_equipped_product_in_equip_notification_key()
     skin_panel.equip(s, 1, 1)
   end)
 
-  lu.assertEvalToTrue(tips[#tips].dedupe_key == "skin_panel:equip:1:skin_1",
+  luassert.truthy(tips[#tips].dedupe_key == "skin_panel:equip:1:skin_1",
     "equip notification key should use equipped_product")
 end
 
@@ -254,16 +255,16 @@ function TestSkinPanel:test_does_not_close_canvas_when_result_does_not_request_c
     skin_panel.close(s, 1)
   end)
 
-  lu.assertEvalToTrue(not _has_event(events, "隐藏皮肤商店"),
+  luassert.truthy(not _has_event(events, "隐藏皮肤商店"),
     "close result without panel_should_close must not hide the skin canvas")
 end
 
 -- catalog injection
 function TestSkinPanel:test_configure_replaces_the_active_catalog_and_reset_restores_the_default()
   skin_panel.configure_catalog_for_tests(_make_catalog(3))
-  lu.assertEvalToTrue(#skin_panel.catalog == 3, "catalog size should be 3")
+  luassert.truthy(#skin_panel.catalog == 3, "catalog size should be 3")
   skin_panel.reset_for_tests()
-  lu.assertEvalToTrue(#skin_panel.catalog == 4, "default catalog has 4 skins")
+  luassert.truthy(#skin_panel.catalog == 4, "default catalog has 4 skins")
 end
 
 -- unlock and equip
@@ -271,7 +272,7 @@ function TestSkinPanel:test_is_slot_equipped_returns_false_for_an_empty_slot()
   skin_panel.configure_catalog_for_tests(_make_catalog(1))
   local s = _make_state()
   skin_panel.open(s, 1)
-  lu.assertEquals(skin_panel.is_slot_equipped(s, 2), false)
+  luassert.is.equal(false, skin_panel.is_slot_equipped(s, 2))
 end
 
 function TestSkinPanel:test_unequip_invokes_the_restore_callback_with_the_role_id()
@@ -283,7 +284,7 @@ function TestSkinPanel:test_unequip_invokes_the_restore_callback_with_the_role_i
   skin_panel.unlock(s, 2, "buy", 1)
   skin_panel.equip(s, 2, 1)
   skin_panel.handle_action(s, "unequip", 2)
-  lu.assertEvalToTrue(received == 2,
+  luassert.truthy(received == 2,
     "unequip should pass the role id to the restore callback, got " .. tostring(received))
 end
 
@@ -304,8 +305,8 @@ function TestSkinPanel:test_unequip_warns_and_still_clears_selection_when_the_re
   }, function()
     skin_panel.handle_action(s, "unequip", 1)
   end)
-  lu.assertEvalToTrue(warned, "a throwing restore callback must hit the warn failure path")
-  lu.assertNil(s.ui.skin_panel.selected_by_role["1"],
+  luassert.truthy(warned, "a throwing restore callback must hit the warn failure path")
+  luassert.is_nil(s.ui.skin_panel.selected_by_role["1"],
     "a throwing restore callback must not block selection clearing")
 end
 
@@ -315,9 +316,9 @@ function TestSkinPanel:test_unequip_clears_the_explicitly_passed_role_not_the_pa
   skin_panel.open(s, 1) -- panel.role_id stays 1
   skin_panel.unlock(s, 2, "buy", 1)
   skin_panel.equip(s, 2, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["2"] == "skin_1", "role 2 should be equipped")
+  luassert.truthy(s.ui.skin_panel.selected_by_role["2"] == "skin_1", "role 2 should be equipped")
   skin_panel.handle_action(s, "unequip", 2)
-  lu.assertNil(s.ui.skin_panel.selected_by_role["2"],
+  luassert.is_nil(s.ui.skin_panel.selected_by_role["2"],
     "unequip must act on the passed role id (role_id or panel.role_id), not panel.role_id")
 end
 
@@ -336,8 +337,8 @@ function TestSkinPanel:test_purchase_unlock_marks_ownership_and_persists_the_aut
   }, function()
     skin_panel.equip(s, 1, 1) -- slot 1 is a locked purchase skin -> initiates purchase
   end)
-  lu.assertEvalToTrue(archive.store.owned["1"][5001] == true, "purchase should persist ownership")
-  lu.assertEvalToTrue(archive.store.equipped["1"] == 5001, "purchase auto-equip should persist equipped product")
+  luassert.truthy(archive.store.owned["1"][5001] == true, "purchase should persist ownership")
+  luassert.truthy(archive.store.equipped["1"] == 5001, "purchase auto-equip should persist equipped product")
 end
 
 function TestSkinPanel:test_does_not_persist_gift_unlocked_ownership()
@@ -347,7 +348,7 @@ function TestSkinPanel:test_does_not_persist_gift_unlocked_ownership()
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "gift", 3)
-  lu.assertEvalToTrue(archive.store.owned["1"] == nil or archive.store.owned["1"][5003] == nil,
+  luassert.truthy(archive.store.owned["1"] == nil or archive.store.owned["1"][5003] == nil,
     "gift unlock must not write to the archive")
 end
 
@@ -359,9 +360,9 @@ function TestSkinPanel:test_unequip_clears_the_persisted_equipped_product()
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "purchase", 1)
   skin_panel.equip(s, 1, 1)
-  lu.assertEvalToTrue(archive.store.equipped["1"] == 5001, "equip should persist equipped product")
+  luassert.truthy(archive.store.equipped["1"] == 5001, "equip should persist equipped product")
   skin_panel.handle_action(s, "unequip", 1)
-  lu.assertNil(archive.store.equipped["1"], "unequip should clear the persisted equipped product")
+  luassert.is_nil(archive.store.equipped["1"], "unequip should clear the persisted equipped product")
 end
 
 -- open 从档案重建持有集 + 仅对已持有的存档皮肤自动装备,由文件末尾
@@ -380,9 +381,9 @@ function TestSkinPanel:test_open_auto_equips_the_persisted_skin_fires_the_equip_
   skin_panel.configure_archive(archive)
   local s = _make_state()
   skin_panel.open(s, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["1"] == 5001, "open should auto-equip the persisted skin")
-  lu.assertEvalToTrue(equipped_product == 5001, "auto-equip should fire the equip callback with the product id")
-  lu.assertEvalToTrue(s.ui.skin_panel.open == true, "panel must stay open after seeding auto-equip")
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == 5001, "open should auto-equip the persisted skin")
+  luassert.truthy(equipped_product == 5001, "auto-equip should fire the equip callback with the product id")
+  luassert.truthy(s.ui.skin_panel.open == true, "panel must stay open after seeding auto-equip")
 end
 
 function TestSkinPanel:test_no_archive_configured_leaves_persistence_paths_inert()
@@ -392,7 +393,7 @@ function TestSkinPanel:test_no_archive_configured_leaves_persistence_paths_inert
   skin_panel.unlock(s, 1, "purchase", 1)
   skin_panel.equip(s, 1, 1)
   skin_panel.handle_action(s, "unequip", 1)
-  lu.assertNil(s.ui.skin_panel.selected_by_role["1"],
+  luassert.is_nil(s.ui.skin_panel.selected_by_role["1"],
     "without an archive the equip/unequip flow behaves as before")
 end
 
@@ -405,7 +406,7 @@ function TestSkinPanel:test_open_skips_ownership_seeding_when_the_archive_lacks_
   local s = _make_state()
   skin_panel.open(s, 1) -- must not call a nil load_owned
   local owned = s.ui.skin_panel.owned_by_role["1"]
-  lu.assertEvalToTrue(owned == nil or next(owned) == nil,
+  luassert.truthy(owned == nil or next(owned) == nil,
     "a missing load_owned must leave ownership unseeded, not error")
 end
 
@@ -417,9 +418,9 @@ function TestSkinPanel:test_open_skips_equipped_restore_when_the_archive_lacks_l
   })
   local s = _make_state()
   skin_panel.open(s, 1) -- must not call a nil load_equipped
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"][5001] == true,
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"][5001] == true,
     "ownership is still seeded when only load_equipped is absent")
-  lu.assertNil(s.ui.skin_panel.selected_by_role["1"],
+  luassert.is_nil(s.ui.skin_panel.selected_by_role["1"],
     "a missing load_equipped must skip equipped restore, not error")
 end
 
@@ -430,21 +431,21 @@ function TestSkinPanel:test_dispatches_buy_gift_close_equip_integer_action_forms
   skin_panel.open(s, 1)
 
   skin_panel.handle_action(s, { type = "buy", slot_index = 2 }, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"]["skin_2"] == true, "buy action should own skin_2")
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"]["skin_2"] == true, "buy action should own skin_2")
 
   skin_panel.handle_action(s, { type = "gift", slot_index = 1 }, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"]["skin_1"] == true, "gift action should own skin")
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"]["skin_1"] == true, "gift action should own skin")
 
   skin_panel.handle_action(s, { type = "equip", slot_index = 2 }, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["1"] == "skin_2", "equip action should select skin")
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == "skin_2", "equip action should select skin")
 
   skin_panel.open(s, 1)
   skin_panel.handle_action(s, 1, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["1"] == "skin_1", "integer action should equip slot")
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == "skin_1", "integer action should equip slot")
 
   skin_panel.open(s, 1)
   skin_panel.handle_action(s, "close", 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.open == false, "close action should close panel")
+  luassert.truthy(s.ui.skin_panel.open == false, "close action should close panel")
 end
 
 function TestSkinPanel:test_activate_slot_action_toggles_equip_and_unequip_via_handle_action()
@@ -453,10 +454,10 @@ function TestSkinPanel:test_activate_slot_action_toggles_equip_and_unequip_via_h
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "buy", 2)
   skin_panel.handle_action(s, { type = "activate_slot", slot_index = 2 }, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["1"] == "skin_2",
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == "skin_2",
     "activate_slot should equip owned unequipped skin")
   skin_panel.handle_action(s, { type = "activate_slot", slot_index = 2 }, 1)
-  lu.assertNil(s.ui.skin_panel.selected_by_role["1"],
+  luassert.is_nil(s.ui.skin_panel.selected_by_role["1"],
     "activate_slot on equipped slot should unequip")
 end
 
@@ -472,11 +473,11 @@ function TestSkinPanel:test_apply_transaction_result_honors_opts_and_returns_res
     skin_panel.open(s, 1)
     local result = { panel = s.ui.skin_panel, action = "external", notification = "外部结果" }
     local panel = skin_panel.apply_transaction_result(s, result, { silent = true })
-    lu.assertEvalToTrue(panel == s.ui.skin_panel, "apply_transaction_result should return the result panel")
+    luassert.truthy(panel == s.ui.skin_panel, "apply_transaction_result should return the result panel")
     local tip_count = #tips
     skin_panel.apply_transaction_result(s, result)
-    lu.assertEvalToTrue(#tips == tip_count + 1, "default opts should enqueue the result notification")
-    lu.assertEvalToTrue(tips[#tips].dedupe_key == "skin_panel:external:1:",
+    luassert.truthy(#tips == tip_count + 1, "default opts should enqueue the result notification")
+    luassert.truthy(tips[#tips].dedupe_key == "skin_panel:external:1:",
       "external result notification key should follow the panel key scheme")
   end)
 end
@@ -487,12 +488,12 @@ function TestSkinPanel:test_locked_skins_render_price_gift_text_and_touch_state_
   local state, calls = _make_render_state()
   skin_panel_view.refresh_slots(state, _make_rich_catalog())
   local price_text = _find_call(calls, "set_button", skin_nodes.action_buttons[1])
-  lu.assertEvalToTrue(price_text == "198", "locked purchase button should show price only, got: " .. tostring(price_text))
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[1]) == true,
+  luassert.truthy(price_text == "198", "locked purchase button should show price only, got: " .. tostring(price_text))
+  luassert.truthy(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[1]) == true,
     "locked purchase button should be touch-enabled")
   local gift_text = _find_call(calls, "set_button", skin_nodes.action_buttons[3])
-  lu.assertEvalToTrue(gift_text == "谢礼", "locked gift button should show gift_name, got: " .. tostring(gift_text))
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[3]) == false,
+  luassert.truthy(gift_text == "谢礼", "locked gift button should show gift_name, got: " .. tostring(gift_text))
+  luassert.truthy(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[3]) == false,
     "locked gift button should be touch-disabled")
 
   -- 缺 gift_name 的礼皮回退价格文本;两样皆缺时清掉旧文案
@@ -500,14 +501,14 @@ function TestSkinPanel:test_locked_skins_render_price_gift_text_and_touch_state_
   skin_panel_view.refresh_slots(fallback_state, {
     { product_id = 1, name = "gift_without_name", unlock = "gift", currency = "金豆", price = 100 },
   })
-  lu.assertEvalToTrue(_find_call(fallback_calls, "set_button", skin_nodes.action_buttons[1]) == "100",
+  luassert.truthy(_find_call(fallback_calls, "set_button", skin_nodes.action_buttons[1]) == "100",
     "gift skin without gift_name should fall back to price text only")
 
   local bare_state, bare_calls = _make_render_state()
   skin_panel_view.refresh_slots(bare_state, {
     { product_id = 1, name = "missing_price", unlock = "purchase" },
   })
-  lu.assertEvalToTrue(_find_call(bare_calls, "set_button", skin_nodes.action_buttons[1]) == "",
+  luassert.truthy(_find_call(bare_calls, "set_button", skin_nodes.action_buttons[1]) == "",
     "locked skin without display text should clear stale button text")
 end
 
@@ -519,17 +520,17 @@ function TestSkinPanel:test_default_catalog_fills_slots_1_to_4_and_leaves_5_and_
     local text = _find_call(calls, "set_button", skin_nodes.action_buttons[slot])
     local enabled = _find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[slot])
     local price_visible = _find_call(calls, "set_visible", skin_nodes.price_icons[slot])
-    lu.assertEvalToTrue(text == expected_prices[slot],
+    luassert.truthy(text == expected_prices[slot],
       "default slot " .. tostring(slot) .. " should show price " .. expected_prices[slot])
-    lu.assertEvalToTrue(enabled == true, "default slot " .. tostring(slot) .. " should be touch-enabled")
-    lu.assertEvalToTrue(price_visible == true, "default slot " .. tostring(slot) .. " should show price icon")
+    luassert.truthy(enabled == true, "default slot " .. tostring(slot) .. " should be touch-enabled")
+    luassert.truthy(price_visible == true, "default slot " .. tostring(slot) .. " should show price icon")
   end
   for slot = 5, 6 do
-    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == false,
+    luassert.truthy(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == false,
       "empty default slot " .. tostring(slot) .. " card image should be hidden")
-    lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[slot]) == false,
+    luassert.truthy(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[slot]) == false,
       "empty default slot " .. tostring(slot) .. " action button must not consume clicks")
-    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.price_icons[slot]) == false,
+    luassert.truthy(_find_call(calls, "set_visible", skin_nodes.price_icons[slot]) == false,
       "empty default slot " .. tostring(slot) .. " should hide stale price icon")
   end
 end
@@ -541,8 +542,8 @@ TestSkinPanel["test_owned and equipped skins render 穿上/脱下 with touch ena
   })
   skin_panel_view.refresh_slots(owned_state, catalog)
   local owned_text = _find_call(owned_calls, "set_button", skin_nodes.action_buttons[1])
-  lu.assertEvalToTrue(owned_text == "穿上", "owned button should show 穿上, got: " .. tostring(owned_text))
-  lu.assertEvalToTrue(_find_call(owned_calls, "set_touch_enabled", skin_nodes.action_buttons[1]) == true,
+  luassert.truthy(owned_text == "穿上", "owned button should show 穿上, got: " .. tostring(owned_text))
+  luassert.truthy(_find_call(owned_calls, "set_touch_enabled", skin_nodes.action_buttons[1]) == true,
     "owned button should be touch-enabled")
 
   local equipped_state, equipped_calls = _make_render_state({
@@ -551,8 +552,8 @@ TestSkinPanel["test_owned and equipped skins render 穿上/脱下 with touch ena
   })
   skin_panel_view.refresh_slots(equipped_state, catalog)
   local equipped_text = _find_call(equipped_calls, "set_button", skin_nodes.action_buttons[1])
-  lu.assertEvalToTrue(equipped_text == "脱下", "equipped button should show 脱下, got: " .. tostring(equipped_text))
-  lu.assertEvalToTrue(_find_call(equipped_calls, "set_touch_enabled", skin_nodes.action_buttons[1]) == true,
+  luassert.truthy(equipped_text == "脱下", "equipped button should show 脱下, got: " .. tostring(equipped_text))
+  luassert.truthy(_find_call(equipped_calls, "set_touch_enabled", skin_nodes.action_buttons[1]) == true,
     "equipped button should be touch-enabled")
 end
 
@@ -565,11 +566,11 @@ function TestSkinPanel:test_card_outline_containers_follow_slot_occupancy_regard
   skin_panel_view.refresh_slots(state, catalog)
   for slot = 1, 3 do
     local vis = _find_call(calls, "set_visible", skin_nodes.card_outlines[slot])
-    lu.assertEvalToTrue(vis == true, "occupied outline container " .. slot .. " should be visible")
+    luassert.truthy(vis == true, "occupied outline container " .. slot .. " should be visible")
   end
   for slot = 4, #skin_nodes.card_outlines do
     local vis = _find_call(calls, "set_visible", skin_nodes.card_outlines[slot])
-    lu.assertEvalToTrue(vis == false, "empty outline container " .. slot .. " should be hidden")
+    luassert.truthy(vis == false, "empty outline container " .. slot .. " should be hidden")
   end
 end
 
@@ -585,9 +586,9 @@ function TestSkinPanel:test_sets_card_texture_when_image_ref_exists()
     end,
   }
   skin_panel_view.refresh_slots(state, catalog, { runtime = runtime })
-  lu.assertEvalToTrue(textures[skin_nodes.card_images[1]] == "tex_pig",
+  luassert.truthy(textures[skin_nodes.card_images[1]] == "tex_pig",
     "should set texture for skin with image ref")
-  lu.assertNil(textures[skin_nodes.card_images[2]],
+  luassert.is_nil(textures[skin_nodes.card_images[2]],
     "should not set texture for skin without image ref")
 end
 
@@ -611,9 +612,9 @@ function TestSkinPanel:test_sets_card_texture_from_resolver_asset_context()
 
   skin_panel_view.refresh_slots(state, catalog, { runtime = runtime })
 
-  lu.assertEvalToTrue(runtime_assets.asset_context(state) == state.runtime_asset_context,
+  luassert.truthy(runtime_assets.asset_context(state) == state.runtime_asset_context,
     "state asset context should be the adapter-facing resolver fixture")
-  lu.assertEvalToTrue(textures[skin_nodes.card_images[1]] == "tex_pig",
+  luassert.truthy(textures[skin_nodes.card_images[1]] == "tex_pig",
     "skin card renderer should consume resolver asset context")
 end
 
@@ -632,7 +633,7 @@ function TestSkinPanel:test_uses_card_image_refs_instead_of_skin_prefab_refs_for
     end,
   }
   skin_panel_view.refresh_slots(state, catalog, { runtime = runtime })
-  lu.assertEvalToTrue(textures[skin_nodes.card_images[1]] == "card_tex_pig",
+  luassert.truthy(textures[skin_nodes.card_images[1]] == "card_tex_pig",
     "skin shop card image must use context images, not context skins prefab refs")
 end
 
@@ -653,9 +654,9 @@ function TestSkinPanel:test_sets_card_texture_on_all_matched_nodes_when_runtime_
     end,
   }
   skin_panel_view.refresh_slots(state, catalog, { runtime = runtime })
-  lu.assertEvalToTrue(textures[skin_nodes.card_images[1] .. "#a"] == "tex_pig",
+  luassert.truthy(textures[skin_nodes.card_images[1] .. "#a"] == "tex_pig",
     "should set texture on first matched node")
-  lu.assertEvalToTrue(textures[skin_nodes.card_images[1] .. "#b"] == "tex_pig",
+  luassert.truthy(textures[skin_nodes.card_images[1] .. "#b"] == "tex_pig",
     "should set texture on second matched node")
 end
 
@@ -670,7 +671,7 @@ function TestSkinPanel:test_ignores_non_table_and_failed_query_nodes_results_whe
       texture_calls = texture_calls + 1
     end,
   } })
-  lu.assertEvalToTrue(texture_calls == 0, "non-table query_nodes result should not set textures")
+  luassert.truthy(texture_calls == 0, "non-table query_nodes result should not set textures")
 
   local failed_state, _ = _make_render_state()
   failed_state.runtime_asset_context = { refs = { images = { ["5001"] = "tex_pig" } } }
@@ -683,7 +684,7 @@ function TestSkinPanel:test_ignores_non_table_and_failed_query_nodes_results_whe
       textures[node.name] = key
     end,
   } })
-  lu.assertNil(textures.should_not_be_textured,
+  luassert.is_nil(textures.should_not_be_textured,
     "failed query_nodes payload must not be treated as matched nodes")
 end
 
@@ -691,13 +692,13 @@ function TestSkinPanel:test_shows_action_buttons_and_card_frames_only_for_occupi
   local catalog = _make_catalog(3)
   local state, calls = _make_render_state()
   skin_panel_view.refresh_slots(state, catalog)
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.action_buttons[1]) == true,
+  luassert.truthy(_find_call(calls, "set_visible", skin_nodes.action_buttons[1]) == true,
     "occupied slot action button should be visible")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.action_buttons[4]) == false,
+  luassert.truthy(_find_call(calls, "set_visible", skin_nodes.action_buttons[4]) == false,
     "empty slot action button should be hidden")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.card_frames[1]) == true,
+  luassert.truthy(_find_call(calls, "set_visible", skin_nodes.card_frames[1]) == true,
     "occupied slot frame should be visible")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.card_frames[4]) == false,
+  luassert.truthy(_find_call(calls, "set_visible", skin_nodes.card_frames[4]) == false,
     "empty slot frame should be hidden")
 end
 
@@ -707,8 +708,8 @@ function TestSkinPanel:test_price_icon_visible_for_purchase_skin_hidden_for_gift
   skin_panel_view.refresh_slots(state, catalog)
   local purchase_icon = _find_call(calls, "set_visible", skin_nodes.price_icons[1])
   local gift_icon = _find_call(calls, "set_visible", skin_nodes.price_icons[3])
-  lu.assertEvalToTrue(purchase_icon == true, "purchase skin should show price icon")
-  lu.assertEvalToTrue(gift_icon == false, "gift skin should hide price icon")
+  luassert.truthy(purchase_icon == true, "purchase skin should show price icon")
+  luassert.truthy(gift_icon == false, "gift skin should hide price icon")
 end
 
 -- L111 mutation closure: src/ui/render/skin_panel.lua _refresh_price_icon
@@ -732,7 +733,7 @@ function TestSkinPanel:test_l111_conjuncts_each_independently_hide_the_price_ico
   for _, case in ipairs(cases) do
     local state, calls = _make_render_state()
     skin_panel_view.refresh_slots(state, case.catalog)
-    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.price_icons[1]) == false, case.message)
+    luassert.truthy(_find_call(calls, "set_visible", skin_nodes.price_icons[1]) == false, case.message)
   end
 end
 
@@ -742,9 +743,9 @@ function TestSkinPanel:test_price_icon_hides_for_owned_equipped_skins_but_stays_
     owned_by_role = { ["1"] = { [5001] = true } },
   })
   skin_panel_view.refresh_slots(owned_state, catalog)
-  lu.assertEvalToTrue(_find_call(owned_calls, "set_visible", skin_nodes.price_icons[1]) == false,
+  luassert.truthy(_find_call(owned_calls, "set_visible", skin_nodes.price_icons[1]) == false,
     "owned purchase skin should hide its price icon")
-  lu.assertEvalToTrue(_find_call(owned_calls, "set_visible", skin_nodes.price_icons[2]) == true,
+  luassert.truthy(_find_call(owned_calls, "set_visible", skin_nodes.price_icons[2]) == true,
     "an unowned purchase skin should still show its price icon")
 
   local equipped_state, equipped_calls = _make_render_state({
@@ -752,7 +753,7 @@ function TestSkinPanel:test_price_icon_hides_for_owned_equipped_skins_but_stays_
     selected_by_role = { ["1"] = 5001 },
   })
   skin_panel_view.refresh_slots(equipped_state, catalog)
-  lu.assertEvalToTrue(_find_call(equipped_calls, "set_visible", skin_nodes.price_icons[1]) == false,
+  luassert.truthy(_find_call(equipped_calls, "set_visible", skin_nodes.price_icons[1]) == false,
     "equipped purchase skin should hide its price icon")
 end
 
@@ -761,7 +762,7 @@ function TestSkinPanel:test_full_first_page_shows_all_6_card_images_also_without
   local state, calls = _make_render_state()
   skin_panel_view.refresh_slots(state, catalog)
   for slot = 1, 6 do
-    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == true,
+    luassert.truthy(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == true,
       "slot " .. slot .. " card image should be visible")
   end
 
@@ -769,7 +770,7 @@ function TestSkinPanel:test_full_first_page_shows_all_6_card_images_also_without
   bare_state.ui.skin_panel = nil
   skin_panel_view.refresh_slots(bare_state, catalog)
   for slot = 1, 6 do
-    lu.assertEvalToTrue(_find_call(bare_calls, "set_visible", skin_nodes.card_images[slot]) == true,
+    luassert.truthy(_find_call(bare_calls, "set_visible", skin_nodes.card_images[slot]) == true,
       "slot " .. slot .. " should render from the first page without panel state")
   end
 end
@@ -779,21 +780,21 @@ function TestSkinPanel:test_trailing_empty_slots_hide_disable_card_images_button
   local state, calls = _make_render_state()
   skin_panel_view.refresh_slots(state, catalog)
   for slot = 1, 3 do
-    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == true,
+    luassert.truthy(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == true,
       "slot " .. slot .. " card image should be visible")
-    lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", skin_nodes.card_images[slot]) == true,
+    luassert.truthy(_find_call(calls, "set_touch_enabled", skin_nodes.card_images[slot]) == true,
       "slot " .. slot .. " card image should be touch-enabled")
   end
   for slot = 4, 6 do
-    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == false,
+    luassert.truthy(_find_call(calls, "set_visible", skin_nodes.card_images[slot]) == false,
       "slot " .. slot .. " card image should be hidden (no skin)")
-    lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", skin_nodes.card_images[slot]) == false,
+    luassert.truthy(_find_call(calls, "set_touch_enabled", skin_nodes.card_images[slot]) == false,
       "empty card slot " .. slot .. " must not consume clicks")
-    lu.assertEvalToTrue(_find_call(calls, "set_button", skin_nodes.action_buttons[slot]) == "",
+    luassert.truthy(_find_call(calls, "set_button", skin_nodes.action_buttons[slot]) == "",
       "empty slot " .. slot .. " should clear stale button text")
-    lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[slot]) == false,
+    luassert.truthy(_find_call(calls, "set_touch_enabled", skin_nodes.action_buttons[slot]) == false,
       "empty slot " .. slot .. " action button must not consume clicks")
-    lu.assertEvalToTrue(_find_call(calls, "set_visible", skin_nodes.price_icons[slot]) == false,
+    luassert.truthy(_find_call(calls, "set_visible", skin_nodes.price_icons[slot]) == false,
       "empty slot " .. slot .. " should hide stale price icon")
   end
 end
@@ -813,9 +814,9 @@ function TestSkinPanel:test_page_2_renders_offset_card_slots_from_full_catalog()
     end,
   }
   skin_panel_view.refresh_slots(state, catalog, { runtime = runtime })
-  lu.assertEvalToTrue(textures[skin_nodes.card_images[1]] == "tex_7",
+  luassert.truthy(textures[skin_nodes.card_images[1]] == "tex_7",
     "page 2 slot 1 should render skin_7 texture, got " .. tostring(textures[skin_nodes.card_images[1]]))
-  lu.assertEvalToTrue(textures[skin_nodes.card_images[6]] == "tex_12",
+  luassert.truthy(textures[skin_nodes.card_images[6]] == "tex_12",
     "page 2 slot 6 should render skin_12 texture, got " .. tostring(textures[skin_nodes.card_images[6]]))
 end
 
@@ -825,11 +826,11 @@ function TestSkinPanel:test_page_2_hides_trailing_empty_slots_when_last_page_par
   skin_panel_view.refresh_slots(state, catalog)
   for slot = 1, 2 do
     local vis = _find_call(calls, "set_visible", skin_nodes.card_images[slot])
-    lu.assertEvalToTrue(vis == true, "page 2 slot " .. slot .. " card image should be visible")
+    luassert.truthy(vis == true, "page 2 slot " .. slot .. " card image should be visible")
   end
   for slot = 3, 6 do
     local vis = _find_call(calls, "set_visible", skin_nodes.card_images[slot])
-    lu.assertEvalToTrue(vis == false, "page 2 slot " .. slot .. " card image should be hidden")
+    luassert.truthy(vis == false, "page 2 slot " .. slot .. " card image should be hidden")
   end
 end
 
@@ -848,9 +849,9 @@ function TestSkinPanel:test_equip_on_locked_purchase_skin_calls_purchase_handler
   }, function()
     skin_panel.equip(s, 1, 1)
   end)
-  lu.assertEvalToTrue(#purchase_calls == 1, "should call purchase handler once, got " .. #purchase_calls)
-  lu.assertEvalToTrue(purchase_calls[1].product_id == 5001, "should pass correct product_id")
-  lu.assertEvalToTrue(purchase_calls[1].role_id == 1, "should pass correct role_id")
+  luassert.truthy(#purchase_calls == 1, "should call purchase handler once, got " .. #purchase_calls)
+  luassert.truthy(purchase_calls[1].product_id == 5001, "should pass correct product_id")
+  luassert.truthy(purchase_calls[1].role_id == 1, "should pass correct role_id")
 end
 
 function TestSkinPanel:test_equip_on_locked_gift_skin_does_not_call_purchase_handler()
@@ -867,7 +868,7 @@ function TestSkinPanel:test_equip_on_locked_gift_skin_does_not_call_purchase_han
   }, function()
     skin_panel.equip(s, 1, 3)
   end)
-  lu.assertEvalToTrue(#purchase_calls == 0, "gift skin should not trigger purchase")
+  luassert.truthy(#purchase_calls == 0, "gift skin should not trigger purchase")
 end
 
 function TestSkinPanel:test_purchase_success_unlocks_and_selects_skin()
@@ -884,11 +885,11 @@ function TestSkinPanel:test_purchase_success_unlocks_and_selects_skin()
   }, function()
     skin_panel.equip(s, 1, 1)
   end)
-  lu.assertNotNil(captured_entry, "locked equip should reach the paid gateway")
+  luassert.is_not_nil(captured_entry, "locked equip should reach the paid gateway")
   captured_entry.on_purchase()
   local panel = s.ui.skin_panel
-  lu.assertEvalToTrue(panel.owned_by_role["1"][5001] == true, "skin should be owned after purchase success")
-  lu.assertEvalToTrue(panel.selected_by_role["1"] == 5001, "skin should be selected after purchase success")
+  luassert.truthy(panel.owned_by_role["1"][5001] == true, "skin should be owned after purchase success")
+  luassert.truthy(panel.selected_by_role["1"] == 5001, "skin should be selected after purchase success")
 end
 
 function TestSkinPanel:test_asynchronous_purchase_success_refreshes_the_slot_view()
@@ -914,9 +915,9 @@ function TestSkinPanel:test_asynchronous_purchase_success_refreshes_the_slot_vie
     skin_panel.open(s, 1)
     skin_panel.equip(s, 1, 1)
     local before_success = refresh_count
-    lu.assertNotNil(captured_entry, "locked equip should reach the paid gateway")
+    luassert.is_not_nil(captured_entry, "locked equip should reach the paid gateway")
     captured_entry.on_purchase()
-    lu.assertEvalToTrue(refresh_count > before_success,
+    luassert.truthy(refresh_count > before_success,
       "asynchronous purchase success must refresh slots so the price button becomes 穿上")
   end)
 end
@@ -945,17 +946,17 @@ function TestSkinPanel:test_purchase_success_keeps_the_originally_purchased_skin
   }, function()
     skin_panel.equip(s, 1, 1)
   end)
-  lu.assertEvalToTrue(captured_entry ~= nil and captured_entry.product_id == 7001,
+  luassert.truthy(captured_entry ~= nil and captured_entry.product_id == 7001,
     "purchase should start for page 1 slot 1")
   skin_panel.handle_action(s, "next", 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.page_index == 2, "precondition: panel moved to page 2 before payment callback")
+  luassert.truthy(s.ui.skin_panel.page_index == 2, "precondition: panel moved to page 2 before payment callback")
 
   captured_entry.on_purchase()
 
   local panel = s.ui.skin_panel
-  lu.assertEvalToTrue(panel.owned_by_role["1"][7001] == true, "success should own the purchased skin")
-  lu.assertEvalToTrue(panel.selected_by_role["1"] == 7001, "success should equip the purchased skin")
-  lu.assertEvalToTrue(panel.owned_by_role["1"][7007] ~= true, "success must not own page 2 slot 1")
+  luassert.truthy(panel.owned_by_role["1"][7001] == true, "success should own the purchased skin")
+  luassert.truthy(panel.selected_by_role["1"] == 7001, "success should equip the purchased skin")
+  luassert.truthy(panel.owned_by_role["1"][7007] ~= true, "success must not own page 2 slot 1")
 end
 
 function TestSkinPanel:test_equip_on_owned_skin_still_equips_normally_without_purchase_handler()
@@ -973,8 +974,8 @@ function TestSkinPanel:test_equip_on_owned_skin_still_equips_normally_without_pu
   }, function()
     skin_panel.equip(s, 1, 1)
   end)
-  lu.assertEvalToTrue(#purchase_calls == 0, "owned skin should not trigger purchase")
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["1"] == 5001, "should equip normally")
+  luassert.truthy(#purchase_calls == 0, "owned skin should not trigger purchase")
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == 5001, "should equip normally")
 end
 
 function TestSkinPanel:test_leaves_selection_unchanged_when_the_paid_gateway_errors()
@@ -990,7 +991,7 @@ function TestSkinPanel:test_leaves_selection_unchanged_when_the_paid_gateway_err
     skin_panel.equip(s, 1, 1)
   end)
 
-  lu.assertNil(s.ui.skin_panel.selected_by_role["1"], "failed purchase must not equip skin")
+  luassert.is_nil(s.ui.skin_panel.selected_by_role["1"], "failed purchase must not equip skin")
 end
 
 -- equip callback outcomes
@@ -1013,7 +1014,7 @@ function TestSkinPanel:test_last_equip_ok_reflects_callback_outcome_true_only_on
     skin_panel.open(s, 1)
     skin_panel.unlock(s, 1, "buy", 1)
     skin_panel.equip(s, 1, 1)
-    lu.assertEvalToTrue(s.ui.skin_panel.last_equip_ok_by_role["1"] == case.expect,
+    luassert.truthy(s.ui.skin_panel.last_equip_ok_by_role["1"] == case.expect,
       case.label .. " should set last_equip_ok to " .. tostring(case.expect))
   end
 end
@@ -1028,10 +1029,10 @@ function TestSkinPanel:test_branch_1_out_of_range_slots_beyond_catalog_or_page_s
   skin_panel.open(s, 1)
   for _, slot in ipairs({ 5, 99 }) do
     local panel = skin_panel.equip(s, 1, slot)
-    lu.assertEvalToTrue(panel == s.ui.skin_panel, "equip on slot " .. slot .. " should still return the panel state")
-    lu.assertNil(s.ui.skin_panel.selected_by_role["1"],
+    luassert.truthy(panel == s.ui.skin_panel, "equip on slot " .. slot .. " should still return the panel state")
+    luassert.is_nil(s.ui.skin_panel.selected_by_role["1"],
       "slot-" .. slot .. " equip must not touch selection")
-    lu.assertNil(s.ui.skin_panel.last_equip_ok_by_role,
+    luassert.is_nil(s.ui.skin_panel.last_equip_ok_by_role,
       "out-of-range equip must short-circuit before last_equip_ok bookkeeping")
   end
 end
@@ -1042,9 +1043,9 @@ function TestSkinPanel:test_branch_2_not_owned_purchase_skin_without_callback_le
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.equip(s, 1, 1)
-  lu.assertNil(s.ui.skin_panel.selected_by_role["1"],
+  luassert.is_nil(s.ui.skin_panel.selected_by_role["1"],
     "without purchase callback, not-owned purchase skin equip leaves selection nil")
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"] == nil or
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"] == nil or
     s.ui.skin_panel.owned_by_role["1"][5001] ~= true,
     "without purchase callback, skin should not become owned")
 end
@@ -1055,10 +1056,10 @@ function TestSkinPanel:test_branch_3_not_owned_non_purchase_gift_skin_notifies_a
   local s = _make_state()
   skin_panel.open(s, 1)
   local panel = skin_panel.equip(s, 1, 3)
-  lu.assertEvalToTrue(panel == s.ui.skin_panel, "not-owned gift skin should return the panel state")
-  lu.assertNil(s.ui.skin_panel.selected_by_role["1"],
+  luassert.truthy(panel == s.ui.skin_panel, "not-owned gift skin should return the panel state")
+  luassert.is_nil(s.ui.skin_panel.selected_by_role["1"],
     "equip on not-owned gift skin must not select it")
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"] == nil or
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"] == nil or
     s.ui.skin_panel.owned_by_role["1"][5003] ~= true,
     "equip on not-owned gift skin must not mark it owned")
 end
@@ -1070,11 +1071,11 @@ function TestSkinPanel:test_branch_4_owned_skin_success_sets_selection_and_last_
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "buy", 2)
   skin_panel.equip(s, 1, 2)
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["1"] == 5002,
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == 5002,
     "owned equip success must set selected_by_role to product_id")
-  lu.assertEvalToTrue(s.ui.skin_panel.last_equip_ok_by_role["1"] == true,
+  luassert.truthy(s.ui.skin_panel.last_equip_ok_by_role["1"] == true,
     "owned equip success must record callback outcome in last_equip_ok_by_role")
-  lu.assertEvalToTrue(s.ui.skin_panel.open == false,
+  luassert.truthy(s.ui.skin_panel.open == false,
     "owned equip success must close the skin panel")
 end
 
@@ -1084,7 +1085,7 @@ function TestSkinPanel:test_equip_with_role_id_nil_falls_back_to_panel_role_id()
   skin_panel.open(s, 7)  -- panel.role_id = 7
   skin_panel.unlock(s, 7, "buy", 1)
   skin_panel.equip(s, nil, 1)  -- role_id=nil → should use panel.role_id (7)
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["7"] == "skin_1",
+  luassert.truthy(s.ui.skin_panel.selected_by_role["7"] == "skin_1",
     "equip with role_id=nil should use panel.role_id (7) for the key")
 end
 
@@ -1093,7 +1094,7 @@ function TestSkinPanel:test_unlock_with_nil_skin_slot_out_of_range_is_no_op()
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "buy", 99)
-  lu.assertNil(s.ui.skin_panel.owned_by_role["1"],
+  luassert.is_nil(s.ui.skin_panel.owned_by_role["1"],
     "unlock on out-of-range slot must not initialize owned_by_role bucket")
 end
 
@@ -1113,7 +1114,7 @@ function TestSkinPanel:test_coord_equip_calls_refresh_slots_to_update_buttons()
   local before_equip = refresh_count
   skin_panel.unlock(s, 1, "buy", 1)
   skin_panel.equip(s, 1, 1)
-  lu.assertEvalToTrue(refresh_count > before_equip, "equip should trigger refresh_slots")
+  luassert.truthy(refresh_count > before_equip, "equip should trigger refresh_slots")
 
   skin_panel_view.refresh_slots = orig_refresh
 end
@@ -1122,11 +1123,11 @@ end
 function TestSkinPanel:test_handle_action_with_unknown_action_returns_panel_with_defaults_l21_l22_l236()
   local s = _make_state() -- fresh, no skin_panel yet
   local result = skin_panel.handle_action(s, "unknown_xyz_no_handler", 1)
-  lu.assertEvalToTrue(type(result) == "table",
+  luassert.truthy(type(result) == "table",
     "L236 _ensure_state mutation to nil would return nil; got " .. type(result))
-  lu.assertEvalToTrue(result.open == false,
+  luassert.truthy(result.open == false,
     "L21 default open=false; mutation 'true' would yield true. Got " .. tostring(result.open))
-  lu.assertEvalToTrue(result.page_index == 1,
+  luassert.truthy(result.page_index == 1,
     "L22 default page_index=1; mutation '0' would yield 0. Got " .. tostring(result.page_index))
 end
 
@@ -1136,7 +1137,7 @@ function TestSkinPanel:test_equip_with_non_integer_slot_defaults_to_slot_1_l34_o
   skin_panel.open(s, 1)
   skin_panel.unlock(s, 1, "buy", 1) -- own skin_1
   skin_panel.equip(s, 1, "not_an_integer")
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["1"] == "skin_1",
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == "skin_1",
     "L34 default slot=1 must pick skin_1; mutation 0 yields nil catalog lookup. " ..
     "Got: " .. tostring(s.ui.skin_panel.selected_by_role["1"]))
 end
@@ -1146,10 +1147,10 @@ function TestSkinPanel:test_equip_on_page_2_uses_page_1_page_size_arithmetic_l35
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.handle_action(s, "next", 1) -- advance to page 2
-  lu.assertEvalToTrue(s.ui.skin_panel.page_index == 2, "precondition: now on page 2")
+  luassert.truthy(s.ui.skin_panel.page_index == 2, "precondition: now on page 2")
   skin_panel.unlock(s, 1, "buy", 1) -- slot 1 on page 2 = catalog index 7
   skin_panel.equip(s, 1, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.selected_by_role["1"] == "skin_7",
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == "skin_7",
     "L35 multiplication must yield slot 7 (page=2 slot=1); division gives ~1.17 → wrong skin. " ..
     "Got: " .. tostring(s.ui.skin_panel.selected_by_role["1"]))
 end
@@ -1159,7 +1160,7 @@ function TestSkinPanel:test_buy_action_with_only_type_field_defaults_slot_to_1_l
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.handle_action(s, { type = "buy" }, 1) -- no slot_index/index/slot
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"]["skin_1"] == true,
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"]["skin_1"] == true,
     "L61 default '1' must own skin_1; mutation 0 yields out-of-range no-op")
 end
 
@@ -1168,9 +1169,9 @@ function TestSkinPanel:test_buy_action_prefers_slot_index_over_index_l61_first_o
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.handle_action(s, { type = "buy", slot_index = 2, index = 99 }, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"]["skin_2"] == true,
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"]["skin_2"] == true,
     "L61 first 'or' must short-circuit to slot_index=2; mutation 'and' yields slot=99 (out of range, no own)")
-  lu.assertNil(s.ui.skin_panel.owned_by_role["1"]["skin_99"],
+  luassert.is_nil(s.ui.skin_panel.owned_by_role["1"]["skin_99"],
     "skin_99 must not exist; sanity check")
 end
 
@@ -1179,7 +1180,7 @@ function TestSkinPanel:test_buy_action_falls_back_to_index_when_slot_index_missi
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.handle_action(s, { type = "buy", index = 2, slot = 99 }, 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"]["skin_2"] == true,
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"]["skin_2"] == true,
     "L61 second 'or' must fall back to index=2 when slot_index nil; " ..
     "mutation 'and' yields slot=99 (out of range)")
 end
@@ -1190,7 +1191,7 @@ function TestSkinPanel:test_buy_action_falls_back_to_slot_when_slot_index_index_
   skin_panel.open(s, 1)
   skin_panel.handle_action(s, { type = "buy", slot = 2 }, 1)
   -- Original: nil or nil or 2 or 1 → 2. Mutated 3rd 'or→and': nil or nil or 2 and 1 → 1.
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"]["skin_2"] == true,
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"]["skin_2"] == true,
     "L61 third 'or' must yield slot=2 from .slot field; mutation 'and' yields 1 (2 and 1 = 1)")
 end
 
@@ -1199,13 +1200,13 @@ function TestSkinPanel:test_string_buy_action_non_table_defaults_slot_to_1_l63()
   local s = _make_state()
   skin_panel.open(s, 1)
   skin_panel.handle_action(s, "buy", 1)
-  lu.assertEvalToTrue(s.ui.skin_panel.owned_by_role["1"]["skin_1"] == true,
+  luassert.truthy(s.ui.skin_panel.owned_by_role["1"]["skin_1"] == true,
     "L63 non-table action must default slot to 1; mutation 0 yields no ownership")
 end
 
 function TestSkinPanel:test_configure_equip_nil_does_not_throw_l84_guards_the_assert()
   local ok, err = pcall(function() skin_panel.configure_equip(nil) end)
-  lu.assertEvalToTrue(ok,
+  luassert.truthy(ok,
     "L84 '~=' must skip assert when callback is nil. Mutation '==' makes assert fire on nil. Err: " ..
     tostring(err))
 end
@@ -1303,20 +1304,20 @@ do
       local owned_set = _owned_set(case.owned)
 
       for _, product_id in ipairs(PRODUCTS) do
-        lu.assertEvalToTrue((owned_map[product_id] == true) == (owned_set[product_id] == true),
+        luassert.truthy((owned_map[product_id] == true) == (owned_set[product_id] == true),
           "ownership of " .. tostring(product_id) .. " must match the archive")
       end
 
       local should_restore = case.equipped ~= nil and owned_set[case.equipped] == true
       if should_restore then
-        lu.assertEvalToTrue(panel.selected_by_role["1"] == case.equipped,
+        luassert.truthy(panel.selected_by_role["1"] == case.equipped,
           "an owned archived equipped skin must be auto-equipped")
-        lu.assertEvalToTrue(#equip_calls == 1 and equip_calls[1] == case.equipped,
+        luassert.truthy(#equip_calls == 1 and equip_calls[1] == case.equipped,
           "auto-equip must fire the equip callback once with the archived skin (model restore)")
       else
-        lu.assertNil(panel.selected_by_role["1"],
+        luassert.is_nil(panel.selected_by_role["1"],
           "no auto-equip when the archived equipped skin is nil or unowned")
-        lu.assertEvalToTrue(#equip_calls == 0,
+        luassert.truthy(#equip_calls == 0,
           "no equip callback fires when there is nothing to restore")
       end
     end)
@@ -1336,11 +1337,11 @@ function TestSkinPanel:test_build_route_specs_pins_close_and_equip_actions()
       equip_intent = spec.build_intent()
     end
   end
-  lu.assertEvalToTrue(close_intent ~= nil, "close button should be routed")
-  lu.assertEvalToTrue(close_intent.action == "close", "close intent action should be pinned")
-  lu.assertEvalToTrue(equip_intent ~= nil, "card image should be routed")
-  lu.assertEvalToTrue(equip_intent.action.type == "equip", "card intent action type should be equip")
-  lu.assertEvalToTrue(equip_intent.action.slot_index == 1, "card intent slot index should pass through")
+  luassert.truthy(close_intent ~= nil, "close button should be routed")
+  luassert.truthy(close_intent.action == "close", "close intent action should be pinned")
+  luassert.truthy(equip_intent ~= nil, "card image should be routed")
+  luassert.truthy(equip_intent.action.type == "equip", "card intent action type should be equip")
+  luassert.truthy(equip_intent.action.slot_index == 1, "card intent slot index should pass through")
 end
 
 function TestSkinPanel:test_notification_payloads_pin_source_blocking_and_unknown_action_key()
@@ -1358,7 +1359,7 @@ function TestSkinPanel:test_notification_payloads_pin_source_blocking_and_unknow
   end)
   _assert_eq(tips[1].blocks_inter_turn, false, "skin panel notifications must not block inter-turn")
   _assert_eq(tips[1].source, "ui.skin_panel", "notification source should be pinned")
-  lu.assertEvalToTrue(string.find(tips[1].dedupe_key, "unknown", 1, true) ~= nil,
+  luassert.truthy(string.find(tips[1].dedupe_key, "unknown", 1, true) ~= nil,
     "result without action should use the unknown key suffix")
 end
 
@@ -1382,7 +1383,7 @@ function TestSkinPanel:test_canvas_switches_pass_state_ui_and_resolved_role()
   }, function()
     skin_panel.open(s, 1)
   end)
-  lu.assertEvalToTrue(#switches >= 1, "open result should switch the canvas")
+  luassert.truthy(#switches >= 1, "open result should switch the canvas")
   _assert_eq(switches[1][1], s.ui, "canvas switch should receive state.ui, not the state")
   _assert_eq(switches[1][2], skin_nodes.canvas, "open should switch to the skin canvas")
 
@@ -1403,7 +1404,7 @@ function TestSkinPanel:test_canvas_switches_pass_state_ui_and_resolved_role()
   }, function()
     skin_panel.close(s, 2)
   end)
-  lu.assertEvalToTrue(#switches >= 1, "close result should switch the canvas")
+  luassert.truthy(#switches >= 1, "close result should switch the canvas")
   _assert_eq(switches[1][1], s.ui, "close canvas switch should receive state.ui")
   _assert_eq(switches[1][3], "R1", "close should switch to the result role id")
 end

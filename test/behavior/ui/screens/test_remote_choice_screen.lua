@@ -1,5 +1,6 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- remote 选择屏 Screen 深模块直测：descriptor 字段 + 路由意图 + registry 注册。
-local lu = require("luaunit")
 local registry = require("src.ui.screens_registry")
 local remote_screen = require("src.ui.screens.remote_choice")
 local schema = require("src.ui.schema.remote_choice")
@@ -30,17 +31,17 @@ TestRemoteChoiceScreen = {}
 
 function TestRemoteChoiceScreen:test_exposes_a_descriptor_with_the_pinned_remote_fields()
   local d = remote_screen.descriptor()
-  lu.assertEvalToTrue(d.key == "remote", "descriptor key is remote")
-  lu.assertNotNil(d.root, "has root/canvas node")
-  lu.assertNotNil(d.title, "has title")
-  lu.assertNotNil(d.body, "has body")
-  lu.assertNotNil(d.option_buttons, "has option_buttons")
+  luassert.truthy(d.key == "remote", "descriptor key is remote")
+  luassert.is_not_nil(d.root, "has root/canvas node")
+  luassert.is_not_nil(d.title, "has title")
+  luassert.is_not_nil(d.body, "has body")
+  luassert.is_not_nil(d.option_buttons, "has option_buttons")
 end
 
 function TestRemoteChoiceScreen:test_registers_itself_into_the_registry_under_its_key()
-  lu.assertNotNil(registry.build_choice_screens().remote, "registry aggregates remote descriptor")
-  lu.assertEvalToTrue(registry.canvas_for("remote") == remote_screen.canvas, "registry maps remote canvas")
-  lu.assertEvalToTrue(registry.opener_for("remote") == remote_screen.open, "registry maps remote opener")
+  luassert.is_not_nil(registry.build_choice_screens().remote, "registry aggregates remote descriptor")
+  luassert.truthy(registry.canvas_for("remote") == remote_screen.canvas, "registry maps remote canvas")
+  luassert.truthy(registry.opener_for("remote") == remote_screen.open, "registry maps remote opener")
 end
 
 function TestRemoteChoiceScreen:test_builds_a_route_spec_for_every_option_node()
@@ -50,7 +51,7 @@ function TestRemoteChoiceScreen:test_builds_a_route_spec_for_every_option_node()
     spec_names[s.name] = true
   end
   for _, name in ipairs(schema.options) do
-    lu.assertEvalToTrue(spec_names[name], "option node has route spec: " .. name)
+    luassert.truthy(spec_names[name], "option node has route spec: " .. name)
   end
 end
 
@@ -61,10 +62,10 @@ function TestRemoteChoiceScreen:test_returns_a_choice_select_intent_for_an_optio
       local specs = remote_screen.build_route_specs(state)
       return specs[1].build_intent()
     end)
-  lu.assertNotNil(intent, "first option resolves to an intent")
-  lu.assertEvalToTrue(intent.type == "choice_select", "intent type is choice_select")
-  lu.assertEvalToTrue(intent.choice_id == 7, "intent carries the choice id")
-  lu.assertEvalToTrue(intent.option_id == 11, "first option maps to option id 11")
+  luassert.is_not_nil(intent, "first option resolves to an intent")
+  luassert.truthy(intent.type == "choice_select", "intent type is choice_select")
+  luassert.truthy(intent.choice_id == 7, "intent carries the choice id")
+  luassert.truthy(intent.option_id == 11, "first option maps to option id 11")
 end
 
 function TestRemoteChoiceScreen:test_warns_and_returns_nil_when_no_choice_is_present()
@@ -74,8 +75,8 @@ function TestRemoteChoiceScreen:test_warns_and_returns_nil_when_no_choice_is_pre
       return remote_screen.build_route_specs(state)[1].build_intent()
     end)
   end)
-  lu.assertNil(intent, "missing choice yields nil intent")
-  lu.assertEvalToTrue(warned, "missing choice logs a warning")
+  luassert.is_nil(intent, "missing choice yields nil intent")
+  luassert.truthy(warned, "missing choice logs a warning")
 end
 
 function TestRemoteChoiceScreen:test_warns_and_returns_nil_when_the_option_cannot_be_resolved()
@@ -85,8 +86,8 @@ function TestRemoteChoiceScreen:test_warns_and_returns_nil_when_the_option_canno
       return remote_screen.build_route_specs(state)[1].build_intent()
     end)
   end)
-  lu.assertNil(intent, "unresolvable option yields nil intent")
-  lu.assertEvalToTrue(warned, "unresolvable option logs a warning")
+  luassert.is_nil(intent, "unresolvable option yields nil intent")
+  luassert.truthy(warned, "unresolvable option logs a warning")
 end
 
 

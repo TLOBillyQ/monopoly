@@ -1,6 +1,7 @@
-local luax = require("test.support.luax")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 
 local function _new_host_spy(overrides)
@@ -35,10 +36,10 @@ TestOverlayRuntimeTransient = {}
 function TestOverlayRuntimeTransient:test_requires_a_position_for_both_group_and_unit_paths()
   -- 精确消息钉(kills _spawn_unit_group/_spawn_unit 两条 "missing pos" -> nil)。
   local hr = _new_host_spy()
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.spawn_transient("group_a", nil, nil, 0, { host_runtime = hr })
   end, "missing pos")
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.spawn_transient(nil, "unit_a", nil, 0, { host_runtime = hr })
   end, "missing pos")
 end

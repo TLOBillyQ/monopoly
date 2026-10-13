@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events
@@ -83,7 +84,7 @@ end
 function TestItemAtlas:test_marks_atlas_open_after_open()
   local s = _make_state()
   local atlas = item_atlas.open(s, 1)
-  lu.assertEvalToTrue(atlas.open == true, "atlas should be open")
+  luassert.truthy(atlas.open == true, "atlas should be open")
 end
 
 function TestItemAtlas:test_opens_the_atlas_canvas_for_the_active_role()
@@ -102,14 +103,14 @@ function TestItemAtlas:test_opens_the_atlas_canvas_for_the_active_role()
     item_atlas.open(s, 1)
   end)
 
-  lu.assertEvalToTrue(_has_event(events, "显示道具图鉴"), "opening atlas should show atlas canvas")
+  luassert.truthy(_has_event(events, "显示道具图鉴"), "opening atlas should show atlas canvas")
 end
 
 function TestItemAtlas:test_open_normalizes_a_nil_page_index_to_page_1()
   local s = _make_state()
   s.ui.item_atlas = { open = false, page_index = nil, selected_item_id = "stale" }
   local atlas = item_atlas.open(s, 1)
-  lu.assertEvalToTrue(atlas.page_index == 1, "nil page_index should reopen at page 1")
+  luassert.truthy(atlas.page_index == 1, "nil page_index should reopen at page 1")
 end
 
 function TestItemAtlas:test_open_refreshes_page_even_when_the_owner_role_cannot_be_resolved()
@@ -128,7 +129,7 @@ function TestItemAtlas:test_open_refreshes_page_even_when_the_owner_role_cannot_
     item_atlas.open(s, 99)
   end)
 
-  lu.assertEvalToTrue(refresh_count == 1, "open should refresh atlas page through the global fallback path")
+  luassert.truthy(refresh_count == 1, "open should refresh atlas page through the global fallback path")
 end
 
 function TestItemAtlas:test_owner_refresh_uses_the_state_presentation_runtime()
@@ -162,14 +163,14 @@ function TestItemAtlas:test_owner_refresh_uses_the_state_presentation_runtime()
     item_atlas.open(s, 4)
   end)
 
-  lu.assertEvalToTrue(refresh_role == role, "owner refresh should run under the provided presentation runtime")
+  luassert.truthy(refresh_role == role, "owner refresh should run under the provided presentation runtime")
 end
 
 function TestItemAtlas:test_marks_atlas_closed_after_close()
   local s = _make_state()
   item_atlas.open(s, 1)
   local atlas = item_atlas.close(s)
-  lu.assertEvalToTrue(atlas.open == false, "atlas should be closed")
+  luassert.truthy(atlas.open == false, "atlas should be closed")
 end
 
 function TestItemAtlas:test_closes_the_atlas_canvas_for_the_active_role()
@@ -189,19 +190,19 @@ function TestItemAtlas:test_closes_the_atlas_canvas_for_the_active_role()
     item_atlas.handle_action(s, "close", 1)
   end)
 
-  lu.assertEvalToTrue(_has_event(events, "隐藏道具图鉴"), "closing atlas should hide atlas canvas")
+  luassert.truthy(_has_event(events, "隐藏道具图鉴"), "closing atlas should hide atlas canvas")
 end
 
 function TestItemAtlas:test_configure_catalog_for_tests_replaces_active_catalog()
   local cat = _make_catalog(5)
   item_atlas.configure_catalog_for_tests(cat)
-  lu.assertEvalToTrue(#item_atlas.catalog == 5, "catalog size should be 5")
+  luassert.truthy(#item_atlas.catalog == 5, "catalog size should be 5")
 end
 
 function TestItemAtlas:test_reset_for_tests_restores_default_catalog_size()
   item_atlas.configure_catalog_for_tests(_make_catalog(3))
   item_atlas.reset_for_tests()
-  lu.assertEvalToTrue(#item_atlas.catalog == 19, "default catalog has 19 items")
+  luassert.truthy(#item_atlas.catalog == 19, "default catalog has 19 items")
 end
 
 function TestItemAtlas:test_select_slot_records_selected_item_id()
@@ -209,7 +210,7 @@ function TestItemAtlas:test_select_slot_records_selected_item_id()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 1 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_1", "slot 1 should select item_1")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_1", "slot 1 should select item_1")
 end
 
 function TestItemAtlas:test_select_slot_5_records_item_5()
@@ -217,7 +218,7 @@ function TestItemAtlas:test_select_slot_5_records_item_5()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 5 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_5", "slot 5 should select item_5")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_5", "slot 5 should select item_5")
 end
 
 function TestItemAtlas:test_selecting_empty_slot_does_not_set_selected_item_id()
@@ -225,7 +226,7 @@ function TestItemAtlas:test_selecting_empty_slot_does_not_set_selected_item_id()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 7 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == nil, "empty slot should leave selection nil")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == nil, "empty slot should leave selection nil")
 end
 
 function TestItemAtlas:test_dismiss_action_clears_selected_item_id()
@@ -233,9 +234,9 @@ function TestItemAtlas:test_dismiss_action_clears_selected_item_id()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 1 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_1")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_1")
   item_atlas.handle_action(s, "dismiss", 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == nil, "dismiss should clear selection")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == nil, "dismiss should clear selection")
 end
 
 function TestItemAtlas:test_dismiss_action_never_dispatches_anim_done()
@@ -253,7 +254,7 @@ function TestItemAtlas:test_dismiss_action_never_dispatches_anim_done()
   }
 
   item_atlas.handle_action(s, "dismiss", 7)
-  lu.assertEvalToTrue(#dispatched == 0, "dismiss must not dispatch action_anim_done")
+  luassert.truthy(#dispatched == 0, "dismiss must not dispatch action_anim_done")
 end
 
 function TestItemAtlas:test_dismiss_action_tolerates_state_without_dispatch_action()
@@ -265,7 +266,7 @@ function TestItemAtlas:test_dismiss_action_tolerates_state_without_dispatch_acti
   }
 
   item_atlas.handle_action(s, "dismiss", 7)
-  lu.assertEvalToTrue(s.ui.item_atlas ~= nil, "dismiss should leave atlas state valid")
+  luassert.truthy(s.ui.item_atlas ~= nil, "dismiss should leave atlas state valid")
 end
 
 function TestItemAtlas:test_select_and_reselect_refresh_enlarged_card_visibility()
@@ -286,10 +287,10 @@ function TestItemAtlas:test_select_and_reselect_refresh_enlarged_card_visibility
     local hides_after_open = hide_count
     item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
     item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
-    lu.assertEvalToTrue(hide_count == hides_after_open + 1, "reselecting the selected item should hide enlarged view")
+    luassert.truthy(hide_count == hides_after_open + 1, "reselecting the selected item should hide enlarged view")
   end)
 
-  lu.assertEvalToTrue(shown_item_id == "item_2", "selecting a non-empty slot should show its enlarged card")
+  luassert.truthy(shown_item_id == "item_2", "selecting a non-empty slot should show its enlarged card")
 end
 
 function TestItemAtlas:test_page_next_advances_page_when_multiple_pages_exist()
@@ -297,7 +298,7 @@ function TestItemAtlas:test_page_next_advances_page_when_multiple_pages_exist()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, "next", 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.page_index == 2, "page should advance to 2")
+  luassert.truthy(s.ui.item_atlas.page_index == 2, "page should advance to 2")
 end
 
 function TestItemAtlas:test_page_next_does_not_exceed_max_page()
@@ -306,7 +307,7 @@ function TestItemAtlas:test_page_next_does_not_exceed_max_page()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, "next", 1)
   item_atlas.handle_action(s, "next", 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.page_index == 1, "single-page atlas should clamp to page 1")
+  luassert.truthy(s.ui.item_atlas.page_index == 1, "single-page atlas should clamp to page 1")
 end
 
 function TestItemAtlas:test_page_prev_goes_to_previous_page()
@@ -314,9 +315,9 @@ function TestItemAtlas:test_page_prev_goes_to_previous_page()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, "next", 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.page_index == 2)
+  luassert.truthy(s.ui.item_atlas.page_index == 2)
   item_atlas.handle_action(s, "prev", 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.page_index == 1, "prev should go back to page 1")
+  luassert.truthy(s.ui.item_atlas.page_index == 1, "prev should go back to page 1")
 end
 
 function TestItemAtlas:test_page_prev_does_not_go_below_page_1()
@@ -324,7 +325,7 @@ function TestItemAtlas:test_page_prev_does_not_go_below_page_1()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, "prev", 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.page_index == 1, "prev on page 1 should stay at page 1")
+  luassert.truthy(s.ui.item_atlas.page_index == 1, "prev on page 1 should stay at page 1")
 end
 
 function TestItemAtlas:test_page_next_clears_selected_item_id()
@@ -332,9 +333,9 @@ function TestItemAtlas:test_page_next_clears_selected_item_id()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 1 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_1")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_1")
   item_atlas.handle_action(s, "next", 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == nil, "page_next should clear selection")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == nil, "page_next should clear selection")
 end
 
 function TestItemAtlas:test_nil_role_atlas_actions_keep_the_existing_owner_role()
@@ -343,13 +344,13 @@ function TestItemAtlas:test_nil_role_atlas_actions_keep_the_existing_owner_role(
   item_atlas.open(s, 7)
 
   item_atlas.handle_action(s, "next", nil)
-  lu.assertEvalToTrue(s.ui.item_atlas.role_id == 7, "page movement without role_id should keep atlas owner")
+  luassert.truthy(s.ui.item_atlas.role_id == 7, "page movement without role_id should keep atlas owner")
 
   item_atlas.handle_action(s, { type = "select", slot_index = 1 }, nil)
-  lu.assertEvalToTrue(s.ui.item_atlas.role_id == 7, "selection without role_id should keep atlas owner")
+  luassert.truthy(s.ui.item_atlas.role_id == 7, "selection without role_id should keep atlas owner")
 
   item_atlas.handle_action(s, "dismiss", nil)
-  lu.assertEvalToTrue(s.ui.item_atlas.role_id == 7, "dismiss without role_id should keep atlas owner")
+  luassert.truthy(s.ui.item_atlas.role_id == 7, "dismiss without role_id should keep atlas owner")
 end
 
 function TestItemAtlas:test_page_next_refreshes_card_textures_for_the_atlas_owner_role()
@@ -406,7 +407,7 @@ function TestItemAtlas:test_page_next_refreshes_card_textures_for_the_atlas_owne
   end, { skip_runtime_context_refresh = true })
 
   local role2_textures = textures_by_role[2] or {}
-  lu.assertEvalToTrue(role2_textures[item_atlas_nodes.card_images[1]] == "tex_9",
+  luassert.truthy(role2_textures[item_atlas_nodes.card_images[1]] == "tex_9",
     "page_next should refresh slot 1 texture on the atlas owner role")
 end
 
@@ -416,24 +417,24 @@ function TestItemAtlas:test_page_prev_clears_selected_item_id()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, "next", 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 1 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_9")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_9")
   item_atlas.handle_action(s, "prev", 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == nil, "page_prev should clear selection")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == nil, "page_prev should clear selection")
 end
 
 function TestItemAtlas:test_unknown_string_action_returns_state_and_sets_role_id()
   local s = _make_state()
   item_atlas.open(s, 1)
   local atlas = item_atlas.handle_action(s, "no_such_action", 2)
-  lu.assertEvalToTrue(atlas == s.ui.item_atlas, "unknown action should still return atlas state")
-  lu.assertEvalToTrue(atlas.role_id == 2, "unknown action should update role_id from arg")
+  luassert.truthy(atlas == s.ui.item_atlas, "unknown action should still return atlas state")
+  luassert.truthy(atlas.role_id == 2, "unknown action should update role_id from arg")
 end
 
 function TestItemAtlas:test_unknown_table_action_returns_state_without_crashing()
   local s = _make_state()
   item_atlas.open(s, 1)
   local atlas = item_atlas.handle_action(s, { type = "unknown_intent_kind" }, 1)
-  lu.assertEvalToTrue(atlas == s.ui.item_atlas, "unknown table action should return atlas state")
+  luassert.truthy(atlas == s.ui.item_atlas, "unknown table action should return atlas state")
 end
 
 function TestItemAtlas:test_re_selecting_the_same_slot_clears_the_selection_toggle_off()
@@ -441,9 +442,9 @@ function TestItemAtlas:test_re_selecting_the_same_slot_clears_the_selection_togg
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 3 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_3", "first select should pick item_3")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_3", "first select should pick item_3")
   item_atlas.handle_action(s, { type = "select", slot_index = 3 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == nil, "second select on same slot should clear selection")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == nil, "second select on same slot should clear selection")
 end
 
 function TestItemAtlas:test_selecting_a_different_slot_replaces_the_selection()
@@ -451,9 +452,9 @@ function TestItemAtlas:test_selecting_a_different_slot_replaces_the_selection()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_2")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_2")
   item_atlas.handle_action(s, { type = "select", slot_index = 5 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_5", "selecting another slot should replace selection")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_5", "selecting another slot should replace selection")
 end
 
 function TestItemAtlas:test_selecting_an_empty_slot_does_not_clear_an_existing_selection()
@@ -461,9 +462,9 @@ function TestItemAtlas:test_selecting_an_empty_slot_does_not_clear_an_existing_s
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, { type = "select", slot_index = 3 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_3")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_3")
   item_atlas.handle_action(s, { type = "select", slot_index = 7 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_3",
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_3",
     "empty-slot click while item selected must leave selection intact")
 end
 
@@ -473,11 +474,11 @@ function TestItemAtlas:test_shows_present_items_and_hides_empty_slots()
   item_atlas_view.refresh_page(state, catalog, 1)
   for slot = 1, 3 do
     local vis = _find_call(calls, "set_visible", item_atlas_nodes.card_images[slot])
-    lu.assertEvalToTrue(vis == true, "slot " .. slot .. " with item should be visible")
+    luassert.truthy(vis == true, "slot " .. slot .. " with item should be visible")
   end
   for slot = 4, 8 do
     local vis = _find_call(calls, "set_visible", item_atlas_nodes.card_images[slot])
-    lu.assertEvalToTrue(vis == false, "slot " .. slot .. " without item should be hidden")
+    luassert.truthy(vis == false, "slot " .. slot .. " without item should be hidden")
   end
 end
 
@@ -487,11 +488,11 @@ function TestItemAtlas:test_disables_touch_for_hidden_empty_card_slots()
   item_atlas_view.refresh_page(state, catalog, 1)
   for slot = 1, 3 do
     local enabled = _find_call(calls, "set_touch_enabled", item_atlas_nodes.card_images[slot])
-    lu.assertEvalToTrue(enabled == true, "slot " .. slot .. " with item should be touch-enabled")
+    luassert.truthy(enabled == true, "slot " .. slot .. " with item should be touch-enabled")
   end
   for slot = 4, 8 do
     local enabled = _find_call(calls, "set_touch_enabled", item_atlas_nodes.card_images[slot])
-    lu.assertEvalToTrue(enabled == false, "hidden slot " .. slot .. " must not consume clicks")
+    luassert.truthy(enabled == false, "hidden slot " .. slot .. " must not consume clicks")
   end
 end
 
@@ -500,7 +501,7 @@ function TestItemAtlas:test_never_writes_the_static_title_label_on_refresh_page(
   local state, calls = _make_render_state()
   item_atlas_view.refresh_page(state, catalog, 2)
   for _, c in ipairs(calls) do
-    lu.assertEvalToTrue(not (c[1] == "set_label" and c[2] == "图鉴_图鉴文本"),
+    luassert.truthy(not (c[1] == "set_label" and c[2] == "图鉴_图鉴文本"),
       "refresh_page must not write to 图鉴_图鉴文本")
   end
 end
@@ -509,9 +510,9 @@ function TestItemAtlas:test_single_page_catalog_hides_both_prev_and_next_arrows(
   local catalog = _make_catalog(8)
   local state, calls = _make_render_state()
   item_atlas_view.refresh_page(state, catalog, 1)
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
     "prev arrow should be hidden on single-page catalog")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
     "next arrow should be hidden on single-page catalog")
 end
 
@@ -519,13 +520,13 @@ function TestItemAtlas:test_multi_page_first_page_shows_only_next_arrow()
   local catalog = _make_catalog(16)
   local state, calls = _make_render_state()
   item_atlas_view.refresh_page(state, catalog, 1)
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
     "prev arrow should be hidden on first page")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == true,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == true,
     "next arrow should be visible on first page of multi-page catalog")
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", item_atlas_nodes.page_prev) == false,
+  luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.page_prev) == false,
     "hidden prev arrow must not consume clicks on first page")
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", item_atlas_nodes.page_next) == true,
+  luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.page_next) == true,
     "visible next arrow should be touchable on first page")
 end
 
@@ -533,9 +534,9 @@ function TestItemAtlas:test_multi_page_middle_page_shows_both_arrows()
   local catalog = _make_catalog(24)
   local state, calls = _make_render_state()
   item_atlas_view.refresh_page(state, catalog, 2)
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == true,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == true,
     "prev arrow should be visible on middle page")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == true,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == true,
     "next arrow should be visible on middle page")
 end
 
@@ -543,13 +544,13 @@ function TestItemAtlas:test_multi_page_last_page_shows_only_prev_arrow()
   local catalog = _make_catalog(16)
   local state, calls = _make_render_state()
   item_atlas_view.refresh_page(state, catalog, 2)
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == true,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == true,
     "prev arrow should be visible on last page")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
     "next arrow should be hidden on last page")
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", item_atlas_nodes.page_prev) == true,
+  luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.page_prev) == true,
     "visible prev arrow should be touchable on last page")
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", item_atlas_nodes.page_next) == false,
+  luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.page_next) == false,
     "hidden next arrow must not consume clicks on last page")
 end
 
@@ -557,9 +558,9 @@ function TestItemAtlas:test_single_page_catalog_with_out_of_range_page_index_sti
   local catalog = _make_catalog(8)
   local state, calls = _make_render_state()
   item_atlas_view.refresh_page(state, catalog, 5)
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_prev) == false,
     "single-page catalog must keep prev arrow hidden regardless of page_index")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.page_next) == false,
     "single-page catalog must keep next arrow hidden regardless of page_index")
 end
 
@@ -579,7 +580,7 @@ function TestItemAtlas:test_refresh_page_queries_exactly_page_size_card_nodes_on
     set_node_texture_keep_size = function(_, _) end,
   }
   item_atlas_view.refresh_page(state, catalog, 1, { runtime = runtime })
-  lu.assertEvalToTrue(query_count == 8,
+  luassert.truthy(query_count == 8,
     "refresh_page should query exactly 8 card nodes for a full page, got " .. tostring(query_count))
 end
 
@@ -589,7 +590,7 @@ function TestItemAtlas:test_sets_texture_when_image_refs_are_provided()
   state.runtime_asset_context = { refs = { images = { item_A = "texture_A" } } }
   local runtime = _stub_runtime()
   item_atlas_view.refresh_page(state, catalog, 1, { runtime = runtime })
-  lu.assertEvalToTrue(runtime.textures[item_atlas_nodes.card_images[1]] == "texture_A",
+  luassert.truthy(runtime.textures[item_atlas_nodes.card_images[1]] == "texture_A",
     "should set texture for item with image ref")
 end
 
@@ -601,7 +602,7 @@ function TestItemAtlas:test_sets_texture_from_resolver_asset_context()
 
   item_atlas_view.refresh_page(state, catalog, 1, { runtime = runtime })
 
-  lu.assertEvalToTrue(runtime.textures[item_atlas_nodes.card_images[1]] == "texture_A",
+  luassert.truthy(runtime.textures[item_atlas_nodes.card_images[1]] == "texture_A",
     "item atlas renderer should consume resolver asset context")
 end
 
@@ -622,9 +623,9 @@ function TestItemAtlas:test_sets_texture_on_all_matched_card_nodes_when_runtime_
     end,
   }
   item_atlas_view.refresh_page(state, catalog, 1, { runtime = runtime })
-  lu.assertEvalToTrue(textures[item_atlas_nodes.card_images[1] .. "#a"] == "texture_A",
+  luassert.truthy(textures[item_atlas_nodes.card_images[1] .. "#a"] == "texture_A",
     "should set texture on first matched node")
-  lu.assertEvalToTrue(textures[item_atlas_nodes.card_images[1] .. "#b"] == "texture_A",
+  luassert.truthy(textures[item_atlas_nodes.card_images[1] .. "#b"] == "texture_A",
     "should set texture on second matched node")
 end
 
@@ -636,16 +637,16 @@ function TestItemAtlas:test_show_enlarged_shows_the_enlarged_card_trio_and_sets_
   local card_vis = _find_call(calls, "set_visible", item_atlas_nodes.enlarged_card)
   local hint_vis = _find_call(calls, "set_visible", item_atlas_nodes.close_hint_label)
   local blank_vis = _find_call(calls, "set_visible", item_atlas_nodes.close_blank)
-  lu.assertEvalToTrue(card_vis == true, "enlarged card should be visible")
-  lu.assertEvalToTrue(hint_vis == true, "close hint should be visible")
-  lu.assertEvalToTrue(blank_vis == true, "close blank layer should be visible")
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", item_atlas_nodes.close_blank) == true,
+  luassert.truthy(card_vis == true, "enlarged card should be visible")
+  luassert.truthy(hint_vis == true, "close hint should be visible")
+  luassert.truthy(blank_vis == true, "close blank layer should be visible")
+  luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.close_blank) == true,
     "visible blank close layer should be touchable")
-  lu.assertEvalToTrue(runtime.textures[item_atlas_nodes.enlarged_card] == "texture_X",
+  luassert.truthy(runtime.textures[item_atlas_nodes.enlarged_card] == "texture_X",
     "enlarged card should show correct texture")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible_global", item_atlas_nodes.enlarged_card) == nil,
+  luassert.truthy(_find_call(calls, "set_visible_global", item_atlas_nodes.enlarged_card) == nil,
     "enlarged overlay must not use global broadcast variants (#544)")
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled_global", item_atlas_nodes.close_blank) == nil,
+  luassert.truthy(_find_call(calls, "set_touch_enabled_global", item_atlas_nodes.close_blank) == nil,
     "close blank touch must not use global broadcast variants (#544)")
 end
 
@@ -655,12 +656,12 @@ function TestItemAtlas:test_hide_enlarged_hides_the_enlarged_card_trio()
   local card_vis = _find_call(calls, "set_visible", item_atlas_nodes.enlarged_card)
   local hint_vis = _find_call(calls, "set_visible", item_atlas_nodes.close_hint_label)
   local blank_vis = _find_call(calls, "set_visible", item_atlas_nodes.close_blank)
-  lu.assertEvalToTrue(card_vis == false, "enlarged card should be hidden")
-  lu.assertEvalToTrue(hint_vis == false, "close hint should be hidden")
-  lu.assertEvalToTrue(blank_vis == false, "close blank layer should be hidden")
-  lu.assertEvalToTrue(_find_call(calls, "set_touch_enabled", item_atlas_nodes.close_blank) == false,
+  luassert.truthy(card_vis == false, "enlarged card should be hidden")
+  luassert.truthy(hint_vis == false, "close hint should be hidden")
+  luassert.truthy(blank_vis == false, "close blank layer should be hidden")
+  luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.close_blank) == false,
     "hidden blank close layer must not consume clicks")
-  lu.assertEvalToTrue(_find_call(calls, "set_visible_global", item_atlas_nodes.enlarged_card) == nil,
+  luassert.truthy(_find_call(calls, "set_visible_global", item_atlas_nodes.enlarged_card) == nil,
     "hide enlarged must not use global broadcast variants (#544)")
 end
 
@@ -680,16 +681,16 @@ function TestItemAtlas:test_show_enlarged_sets_texture_on_all_matched_nodes_when
     end,
   }
   item_atlas_view.show_enlarged(state, "item_X", { runtime = runtime })
-  lu.assertEvalToTrue(textures[item_atlas_nodes.enlarged_card .. "#a"] == "texture_X",
+  luassert.truthy(textures[item_atlas_nodes.enlarged_card .. "#a"] == "texture_X",
     "should set texture on first matched enlarged node")
-  lu.assertEvalToTrue(textures[item_atlas_nodes.enlarged_card .. "#b"] == "texture_X",
+  luassert.truthy(textures[item_atlas_nodes.enlarged_card .. "#b"] == "texture_X",
     "should set texture on second matched enlarged node")
 end
 
 function TestItemAtlas:test_show_enlarged_with_missing_image_ref_is_a_no_op()
   local state, calls = _make_render_state()
   item_atlas_view.show_enlarged(state, "no_such_item")
-  lu.assertEvalToTrue(#calls == 0, "no calls when image ref missing")
+  luassert.truthy(#calls == 0, "no calls when image ref missing")
 end
 
 function TestItemAtlas:test_show_enlarged_falls_back_to_module_level_runtime_ui_when_deps_omitted()
@@ -709,11 +710,11 @@ function TestItemAtlas:test_show_enlarged_falls_back_to_module_level_runtime_ui_
   end
   local ok, err = pcall(item_atlas_view.show_enlarged, state, "item_X")
   UIManager.query_nodes_by_name = prev_query
-  lu.assertEvalToTrue(ok, "show_enlarged should succeed without deps: " .. tostring(err))
-  lu.assertEvalToTrue(queried[item_atlas_nodes.enlarged_card] == 1,
+  luassert.truthy(ok, "show_enlarged should succeed without deps: " .. tostring(err))
+  luassert.truthy(queried[item_atlas_nodes.enlarged_card] == 1,
     "fallback runtime should query enlarged_card via UIManager exactly once")
   local card_vis = _find_call(calls, "set_visible", item_atlas_nodes.enlarged_card)
-  lu.assertEvalToTrue(card_vis == true, "enlarged card should be visible via fallback path")
+  luassert.truthy(card_vis == true, "enlarged card should be visible via fallback path")
 end
 
 function TestItemAtlas:test_page_2_shows_correct_items_by_offset()
@@ -725,12 +726,12 @@ function TestItemAtlas:test_page_2_shows_correct_items_by_offset()
   end
   local runtime = _stub_runtime()
   item_atlas_view.refresh_page(state, catalog, 2, { runtime = runtime })
-  lu.assertEvalToTrue(runtime.textures[item_atlas_nodes.card_images[1]] == "tex_9",
+  luassert.truthy(runtime.textures[item_atlas_nodes.card_images[1]] == "tex_9",
     "page 2 slot 1 should show item 9")
-  lu.assertEvalToTrue(runtime.textures[item_atlas_nodes.card_images[4]] == "tex_12",
+  luassert.truthy(runtime.textures[item_atlas_nodes.card_images[4]] == "tex_12",
     "page 2 slot 4 should show item 12")
   local vis5 = _find_call(calls, "set_visible", item_atlas_nodes.card_images[5])
-  lu.assertEvalToTrue(vis5 == false, "page 2 slot 5 should be hidden (only 12 items)")
+  luassert.truthy(vis5 == false, "page 2 slot 5 should be hidden (only 12 items)")
 end
 
 function TestItemAtlas:test_integer_action_selects_slot_by_index()
@@ -738,7 +739,7 @@ function TestItemAtlas:test_integer_action_selects_slot_by_index()
   local s = _make_state()
   item_atlas.open(s, 1)
   item_atlas.handle_action(s, 3, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_3", "integer 3 should select item_3")
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_3", "integer 3 should select item_3")
 end
 
 -- T16 mutation-pinning addendum.
@@ -750,7 +751,7 @@ end
 function TestItemAtlas:test_initial_open_flag_is_false_until_item_atlas_open_flips_it_l18()
   local s = _make_state()
   local atlas = item_atlas.handle_action(s, "no_such_action", 1)
-  lu.assertEvalToTrue(atlas.open == false,
+  luassert.truthy(atlas.open == false,
     "default atlas.open must be false; L18 mutation flips _ensure_state default to true. " ..
     "Got: " .. tostring(atlas.open))
 end
@@ -762,12 +763,12 @@ function TestItemAtlas:test_initial_page_index_is_1_so_item_at_points_at_catalog
   -- page_index. Then a select with slot_index=1 should resolve to catalog[1] (page 1).
   item_atlas.handle_action(s, "no_such_action", 1)
   local atlas = s.ui.item_atlas
-  lu.assertEvalToTrue(atlas.page_index == 1,
+  luassert.truthy(atlas.page_index == 1,
     "default page_index must be 1; L19 mutation makes it 0. Got: " .. tostring(atlas.page_index))
   -- Cross-check via _item_at: page_index=1 + slot 1 ⇒ item_1; mutated page_index=0 ⇒
   -- catalog[(0-1)*8+1] = catalog[-7] = nil ⇒ no selection.
   item_atlas.handle_action(s, { type = "select", slot_index = 1 }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_1",
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_1",
     "page_index default must allow selecting item_1; L19 makes catalog index negative. " ..
     "Got: " .. tostring(s.ui.item_atlas.selected_item_id))
 end
@@ -780,7 +781,7 @@ function TestItemAtlas:test_select_with_nil_slot_index_resolves_to_catalog_slot_
   -- Original: catalog[(1-1)*8 + 1] = catalog[1] = item_1 → selection set.
   -- Mutated `or 0`: catalog[(1-1)*8 + 0] = catalog[0] = nil → no selection.
   item_atlas.handle_action(s, { type = "select", slot_index = nil }, 1)
-  lu.assertEvalToTrue(s.ui.item_atlas.selected_item_id == "item_1",
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_1",
     "_item_at fallback must pick slot 1 when slot_index is nil; L31 mutation `or 1 → or 0` " ..
     "makes catalog[0] = nil and leaves selection unset. Got: " ..
     tostring(s.ui.item_atlas.selected_item_id))

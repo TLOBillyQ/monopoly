@@ -1,8 +1,10 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- Behavior specs for src/ui/view/choice_slice.lua 的 market 视图构建:
 -- active_tab 归一化契约与 pending_choice_selected_option_id 的透传。
 
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local choice_slice = require("src.ui.view.choice_slice")
 
 local function _game_with_market_choice(active_tab)

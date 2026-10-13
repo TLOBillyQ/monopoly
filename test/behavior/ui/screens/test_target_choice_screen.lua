@@ -1,6 +1,7 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- target 选择屏 Screen 深模块直测：descriptor 字段 + 路由意图 + inert 确认键。
 -- 用 shared_support 的 choice_modal fixture（与 choice_routes_spec 同款）。
-local lu = require("luaunit")
 local registry = require("src.ui.screens_registry")
 local target_screen = require("src.ui.screens.target_choice")
 local schema = require("src.ui.schema.target_choice")
@@ -39,18 +40,18 @@ TestTargetChoiceScreen = {}
 
 function TestTargetChoiceScreen:test_exposes_a_descriptor_with_the_pinned_target_fields()
   local d = target_screen.descriptor()
-  lu.assertEvalToTrue(d.key == "target", "descriptor key is target")
-  lu.assertNotNil(d.root, "has root/canvas node")
-  lu.assertEvalToTrue(d.title ~= nil and d.body ~= nil, "has title and body")
-  lu.assertNotNil(d.option_buttons, "has option_buttons")
-  lu.assertEvalToTrue(d.slot_labels ~= nil and d.slot_projections ~= nil, "has slot label/projection nodes")
-  lu.assertEvalToTrue(d.confirm ~= nil and d.cancel ~= nil, "has confirm and cancel nodes")
+  luassert.truthy(d.key == "target", "descriptor key is target")
+  luassert.is_not_nil(d.root, "has root/canvas node")
+  luassert.truthy(d.title ~= nil and d.body ~= nil, "has title and body")
+  luassert.is_not_nil(d.option_buttons, "has option_buttons")
+  luassert.truthy(d.slot_labels ~= nil and d.slot_projections ~= nil, "has slot label/projection nodes")
+  luassert.truthy(d.confirm ~= nil and d.cancel ~= nil, "has confirm and cancel nodes")
 end
 
 function TestTargetChoiceScreen:test_registers_itself_into_the_registry_under_its_key()
-  lu.assertNotNil(registry.build_choice_screens().target, "registry aggregates target descriptor")
-  lu.assertEvalToTrue(registry.canvas_for("target") == target_screen.canvas, "registry maps target canvas")
-  lu.assertEvalToTrue(registry.opener_for("target") == target_screen.open, "registry maps target opener")
+  luassert.is_not_nil(registry.build_choice_screens().target, "registry aggregates target descriptor")
+  luassert.truthy(registry.canvas_for("target") == target_screen.canvas, "registry maps target canvas")
+  luassert.truthy(registry.opener_for("target") == target_screen.open, "registry maps target opener")
 end
 
 TestTargetChoiceScreen["test_keeps the confirm key inert (build_intent returns nil) — target auto-confirms on slot"] = function(self)
@@ -59,8 +60,8 @@ TestTargetChoiceScreen["test_keeps the confirm key inert (build_intent returns n
   for _, s in ipairs(specs) do
     if s.name == schema.confirm then confirm_spec = s end
   end
-  lu.assertNotNil(confirm_spec, "confirm node has a route spec")
-  lu.assertNil(confirm_spec.build_intent(), "confirm intent is inert nil by design")
+  luassert.is_not_nil(confirm_spec, "confirm node has a route spec")
+  luassert.is_nil(confirm_spec.build_intent(), "confirm intent is inert nil by design")
 end
 
 function TestTargetChoiceScreen:test_builds_a_choice_select_intent_for_a_slot_button_when_a_choice_is_present()
@@ -71,7 +72,7 @@ function TestTargetChoiceScreen:test_builds_a_choice_select_intent_for_a_slot_bu
   for _, s in ipairs(specs) do
     if s.name == schema.slot_buttons[1] then has_slot = true end
   end
-  lu.assertEvalToTrue(has_slot, "first slot button has a route spec")
+  luassert.truthy(has_slot, "first slot button has a route spec")
 end
 
 function TestTargetChoiceScreen:test_resolves_the_slots_own_index_when_the_choice_has_multiple_options()
@@ -80,10 +81,10 @@ function TestTargetChoiceScreen:test_resolves_the_slots_own_index_when_the_choic
     function(state)
       return _first_slot_spec(state).build_intent()
     end)
-  lu.assertNotNil(intent, "first slot resolves to an intent")
-  lu.assertEvalToTrue(intent.type == "choice_select", "intent type is choice_select")
-  lu.assertEvalToTrue(intent.choice_id == 8, "intent carries the choice id")
-  lu.assertEvalToTrue(intent.option_id == 21, "first slot maps to its own index -> option 21")
+  luassert.is_not_nil(intent, "first slot resolves to an intent")
+  luassert.truthy(intent.type == "choice_select", "intent type is choice_select")
+  luassert.truthy(intent.choice_id == 8, "intent carries the choice id")
+  luassert.truthy(intent.option_id == 21, "first slot maps to its own index -> option 21")
 end
 
 function TestTargetChoiceScreen:test_collapses_to_the_single_option_when_the_choice_has_exactly_one()
@@ -92,8 +93,8 @@ function TestTargetChoiceScreen:test_collapses_to_the_single_option_when_the_cho
     function(state)
       return _first_slot_spec(state).build_intent()
     end)
-  lu.assertNotNil(intent, "single-option choice resolves to an intent")
-  lu.assertEvalToTrue(intent.option_id == 99, "single-option choice collapses to option 99")
+  luassert.is_not_nil(intent, "single-option choice resolves to an intent")
+  luassert.truthy(intent.option_id == 99, "single-option choice collapses to option 99")
 end
 
 function TestTargetChoiceScreen:test_warns_and_returns_nil_when_no_choice_is_present()
@@ -103,8 +104,8 @@ function TestTargetChoiceScreen:test_warns_and_returns_nil_when_no_choice_is_pre
       return _first_slot_spec(state).build_intent()
     end)
   end)
-  lu.assertNil(intent, "missing choice yields nil intent")
-  lu.assertEvalToTrue(warned, "missing choice logs a warning")
+  luassert.is_nil(intent, "missing choice yields nil intent")
+  luassert.truthy(warned, "missing choice logs a warning")
 end
 
 function TestTargetChoiceScreen:test_warns_and_returns_nil_when_the_option_cannot_be_resolved()
@@ -114,8 +115,8 @@ function TestTargetChoiceScreen:test_warns_and_returns_nil_when_the_option_canno
       return _first_slot_spec(state).build_intent()
     end)
   end)
-  lu.assertNil(intent, "unresolvable option yields nil intent")
-  lu.assertEvalToTrue(warned, "unresolvable option logs a warning")
+  luassert.is_nil(intent, "unresolvable option yields nil intent")
+  luassert.truthy(warned, "unresolvable option logs a warning")
 end
 
 

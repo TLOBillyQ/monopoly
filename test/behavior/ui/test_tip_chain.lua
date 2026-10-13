@@ -1,15 +1,16 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 ---@diagnostic disable: need-check-nil, undefined-field
 -- tip_chain(自 anim/init.lua 拆分)的 tip 链直接 spec:mutation-closure pins。
 -- 覆盖:白名单 kind 展示、user 策略展示、roll 排除、debug 日志门、时长定稿
 -- (tofixed 设备链 + 原始直通)、nil anim 容忍。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local tip_chain = require("src.ui.render.anim.tip_chain")
 local handlers = require("src.ui.render.anim.handlers")
 local logger = require("src.foundation.log")
 
 local _with_patches = support.with_patches
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local _TIP = "测试提示"
 
@@ -47,20 +48,20 @@ function TestTipChain:test_whitelisted_kinds_emit_tips()
   -- kills user_tip_whitelist 五个条目 true→false:白名单 kind 必须展示 tip。
   for _, kind in ipairs({ "monster", "missile", "item_target_player", "teleport_effect", "clear_obstacles" }) do
     local captured = _emit_with_tip({ kind = kind }, 2.0)
-    lu.assertEvalToTrue(captured ~= nil, "whitelisted kind should emit a tip; got nil for " .. tostring(kind))
+    luassert.truthy(captured ~= nil, "whitelisted kind should emit a tip; got nil for " .. tostring(kind))
     _assert_eq(captured.text, _TIP, "whitelisted tip should carry the built text")
   end
 end
 
 function TestTipChain:test_non_whitelisted_kind_emits_no_tip()
   local captured = _emit_with_tip({ kind = "unknown_kind" }, 2.0)
-  lu.assertEvalToTrue(captured == nil, "a non-whitelisted kind without a policy must not emit a tip")
+  luassert.truthy(captured == nil, "a non-whitelisted kind without a policy must not emit a tip")
 end
 
 function TestTipChain:test_user_policy_emits_tip_for_any_kind()
   -- kills _should_show_tip 的 user 策略分支 true→false。
   local captured = _emit_with_tip({ kind = "anything", tip_policy = "user" }, 2.0)
-  lu.assertEvalToTrue(captured ~= nil, "user policy should emit a tip regardless of kind")
+  luassert.truthy(captured ~= nil, "user policy should emit a tip regardless of kind")
 end
 
 function TestTipChain:test_roll_kind_emits_no_tip_and_no_debug_log()
@@ -92,7 +93,7 @@ function TestTipChain:test_roll_kind_emits_no_tip_and_no_debug_log()
   }, function()
     captured = _emit({ kind = "roll" }, 2.0)
   end)
-  lu.assertEvalToTrue(captured == nil, "roll kind must not emit a tip")
+  luassert.truthy(captured == nil, "roll kind must not emit a tip")
   _assert_eq(logged, 0, "roll kind must not leave a debug log")
 end
 
@@ -111,14 +112,14 @@ function TestTipChain:test_nil_anim_is_tolerated_without_error()
     local result = pcall(_emit, nil, 2.0)
     ok = result
   end)
-  lu.assertEvalToTrue(ok, "emit with a nil anim should not raise")
+  luassert.truthy(ok, "emit with a nil anim should not raise")
 end
 
 function TestTipChain:test_duration_passes_through_without_tofixed()
   -- kills _to_fixed_duration 的 ok/as_fixed 守卫:宿主无 math.tofixed 时
   -- 原样直通,不得把 pcall 错误串当时长。
   local captured = _emit_with_tip({ kind = "monster", tip_policy = "user" }, 3.5)
-  lu.assertEvalToTrue(captured ~= nil, "tip should enqueue")
+  luassert.truthy(captured ~= nil, "tip should enqueue")
   _assert_eq(captured.duration, 3.5, "duration should pass through raw without math.tofixed")
 end
 

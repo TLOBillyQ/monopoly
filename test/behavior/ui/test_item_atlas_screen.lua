@@ -1,7 +1,9 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- screens/item_atlas 面板面规约(#262 幸存闭合):开/关屏 notify 载荷
 -- (source/text/key)与模块装载时 catalog 初值非 nil。
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
 local item_atlas = require("src.ui.screens.item_atlas")
 local panel_tip = require("src.ui.coord.panel_tip")

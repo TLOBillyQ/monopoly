@@ -1,7 +1,7 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 弹层簇合并规约（#191）：popup_presenter 生命周期 + 卡牌展示广播（原
 -- card_reveal_broadcast_spec 并入）。共享 _make_state / 角色扇出 / reveal fixture。
-local lu = require("luaunit")
-local luax = require("test.support.luax")
 local support = require("test.support.shared_support")
 local popup = require("src.ui.coord.popup")
 local popup_presenter = require("src.ui.coord.popup_presenter")
@@ -16,7 +16,7 @@ local view_command_ports = require("src.ui.ports.view_command")
 local route_popup = require("src.ui.input.route_popup")
 local event_actor_policy = require("src.ui.coord.event_actor_policy")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
 
 local function _make_state()
@@ -151,7 +151,7 @@ end
 function TestPopupPresenter:test_push_requires_payload_and_close_warns_when_inactive_262()
   -- kills assert 消息 "missing popup payload" -> nil 与
   -- logger.warn 消息 "close_popup ignored: popup not active" -> nil。
-  luax.has_error(function()
+  luassert.has_error(function()
     popup_presenter.push_popup(_make_state(), nil)
   end, "missing popup payload")
 
@@ -484,7 +484,7 @@ function TestPopupPresenter:test_bystander_return_to_atlas_clears_stale_enlarged
   _assert_eq(state.ui.item_atlas.selected_item_id, nil,
     "stale atlas selection must be cleared on bystander return")
   for _, node in ipairs({ item_atlas_nodes.enlarged_card, item_atlas_nodes.close_hint_label, item_atlas_nodes.close_blank }) do
-    lu.assertEvalToTrue(vis[node] == false, node .. " should be hidden on bystander return")
+    luassert.truthy(vis[node] == false, node .. " should be hidden on bystander return")
   end
 end
 
@@ -567,9 +567,9 @@ function TestPopupPresenter:test_real_intent_path_attaches_click_actor_for_popup
 
     local function _dispatch_click_from(role)
       local specs = route_popup.build(state)
-      lu.assertEvalToTrue(#specs > 0, "popup route should expose dismiss nodes")
+      luassert.truthy(#specs > 0, "popup route should expose dismiss nodes")
       local intent = specs[1].build_intent()
-      lu.assertEvalToTrue(intent ~= nil, "active popup should build popup_confirm intent")
+      luassert.truthy(intent ~= nil, "active popup should build popup_confirm intent")
       _assert_eq(intent.actor_role_id, nil, "route_popup intent must not carry a hand-fed actor")
       local ok = event_actor_policy.attach_event_actor(state, intent, { role = role })
       _assert_eq(ok, true, "attach_event_actor should accept popup_confirm intent")
@@ -606,12 +606,12 @@ function TestPopupPresenter:test_item_tile_landing_reveals_to_bystander_through_
   })
 
   local anim = g.turn.action_anim
-  lu.assertEvalToTrue(anim ~= nil, "item tile landing should queue an action anim")
+  luassert.truthy(anim ~= nil, "item tile landing should queue an action anim")
   _assert_eq(anim.kind, "item_gain_popup", "queued anim kind mismatch")
   _assert_eq(anim.broadcast, true, "item tile reveal should broadcast through real queue")
 
   local payload = captured.payload
-  lu.assertEvalToTrue(payload ~= nil, "item tile landing should push card reveal popup through real chain")
+  luassert.truthy(payload ~= nil, "item tile landing should push card reveal popup through real chain")
   _assert_eq(payload.kind, "item_card", "gain popup kind mismatch")
   _assert_eq(payload.title, "道具卡", "gain popup title mismatch")
   _assert_eq(payload.broadcast, true, "gain popup should broadcast to all roles")
@@ -624,10 +624,10 @@ function TestPopupPresenter:test_route_popup_falls_back_to_static_dismiss_nodes_
   -- state 无 ui 时 route 必须静默回落静态节点表,or 变异体会在 nil 上索引报错。
   local state = {}
   local specs = route_popup.build(state)
-  lu.assertEvalToTrue(type(specs) == "table" and #specs > 0,
+  luassert.truthy(type(specs) == "table" and #specs > 0,
     "without ui the popup route should fall back to static dismiss nodes")
   local intent = specs[1].build_intent()
-  lu.assertEvalToTrue(intent == nil, "without ui there is no active popup, so no confirm intent")
+  luassert.truthy(intent == nil, "without ui there is no active popup, so no confirm intent")
 end
 
 function TestPopupPresenter:test_route_popup_uses_screen_dismiss_nodes_when_present()
@@ -641,7 +641,7 @@ function TestPopupPresenter:test_route_popup_uses_screen_dismiss_nodes_when_pres
     },
   }
   local specs = route_popup.build(state)
-  lu.assertEvalToTrue(type(specs) == "table" and #specs == 2, "specs should mirror the screen dismiss nodes")
+  luassert.truthy(type(specs) == "table" and #specs == 2, "specs should mirror the screen dismiss nodes")
   _assert_eq(specs[1].name, "custom_dismiss_1", "first spec should use the screen dismiss node")
   _assert_eq(specs[2].name, "custom_dismiss_2", "second spec should use the screen dismiss node")
 end
@@ -651,7 +651,7 @@ function TestPopupPresenter:test_route_popup_falls_back_to_static_nodes_when_scr
   -- 静态节点表,require 被删会让 nodes.dismiss_nodes 索引 nil 报错。
   local state = { ui = {} }
   local specs = route_popup.build(state)
-  lu.assertEvalToTrue(type(specs) == "table" and #specs > 0,
+  luassert.truthy(type(specs) == "table" and #specs > 0,
     "without popup_screen the route should fall back to the static dismiss nodes")
 end
 
