@@ -1,13 +1,14 @@
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,
--- after_each → tearDown,断言从裸 assert 切到 lu.assertEvalToTrue,
+-- after_each → tearDown,断言从裸 assert 切到 luassert.truthy,
 -- 用例数与改写前一一对应(9 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
 local function _assert_eq(actual, expected, message)
-  lu.assertEvalToTrue(actual == expected, (message or "assertion failed") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.is.equal(expected, actual, message)
 end
 
 TestHostInstall = {}
@@ -47,7 +48,7 @@ function TestHostInstall:test_rejects_removed_runtime_options()
     skip_context_install = true,
   })
   _assert_eq(context_ok, false, "context_policy should be rejected")
-  lu.assertEvalToTrue(tostring(context_err):find("context_policy option removed", 1, true) ~= nil,
+  luassert.truthy(tostring(context_err):find("context_policy option removed", 1, true) ~= nil,
     "context_policy error should identify removed option")
 
   local fallback_ok, fallback_err = pcall(host_install.install, {
@@ -55,7 +56,7 @@ function TestHostInstall:test_rejects_removed_runtime_options()
     skip_context_install = true,
   })
   _assert_eq(fallback_ok, false, "legacy helper fallback should be rejected")
-  lu.assertEvalToTrue(tostring(fallback_err):find("enable_legacy_helper_fallback option removed", 1, true) ~= nil,
+  luassert.truthy(tostring(fallback_err):find("enable_legacy_helper_fallback option removed", 1, true) ~= nil,
     "legacy fallback error should identify removed option")
 end
 
@@ -651,8 +652,8 @@ function TestHostInstall:test_install_configures_achievement_progress_with_built
   }, function()
     require("src.app.host_install").install({ skip_context_install = true })
   end)
-  lu.assertEvalToTrue(captured ~= nil, "achievement_progress must be configured with a built port")
-  lu.assertEvalToTrue(type(captured) == "table", "achievement_progress port must be a table, got " .. type(captured))
+  luassert.truthy(captured ~= nil, "achievement_progress must be configured with a built port")
+  luassert.truthy(type(captured) == "table", "achievement_progress port must be a table, got " .. type(captured))
 end
 
 
