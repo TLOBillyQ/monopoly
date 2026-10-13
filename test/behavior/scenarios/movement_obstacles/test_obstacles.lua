@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local movement = require("src.rules.movement")
 local move_followup = require("src.turn.phases.move_followup")
@@ -69,9 +69,9 @@ local function _run_same_tile_obstacle_chain(wait_action_anim)
   return game, player, target_index, move_result, next_state, land_state, land_args
 end
 
-TestObstacles = {}
+describe("TestObstacles", function()
 
-function TestObstacles:test_same_tile_roadblock_then_mine_without_action_anim()
+local function _test_same_tile_roadblock_then_mine_without_action_anim()
   local game, player, target_index, move_result, next_state, land_state, land_args =
     _run_same_tile_obstacle_chain(false)
 
@@ -93,7 +93,7 @@ function TestObstacles:test_same_tile_roadblock_then_mine_without_action_anim()
   luassert.truthy(game:detention_remaining(player) > 0, "mine followup should hospitalize the player")
 end
 
-function TestObstacles:test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_order()
+local function _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_order()
   local game, player, target_index, move_result, next_state, land_state, land_args =
     _run_same_tile_obstacle_chain(true)
   local queue = game.turn.action_anim_queue or {}
@@ -159,7 +159,7 @@ function TestObstacles:test_same_tile_roadblock_then_mine_action_anim_keeps_trig
   luassert.truthy(event_text:find("住院，需停留", 1, true) ~= nil, "hospital log should appear after queued animation completion")
 end
 
-function TestObstacles:test_same_tile_obstacle_chain_emits_single_summary_tip()
+local function _test_same_tile_obstacle_chain_emits_single_summary_tip()
   local game, _, _, _, _, land_state, _ = _run_same_tile_obstacle_chain(true)
   local captured = {}
   local runtime_bundle = {
@@ -212,4 +212,7 @@ function TestObstacles:test_same_tile_obstacle_chain_emits_single_summary_tip()
 end
 
 
-return TestObstacles
+it("test_same_tile_roadblock_then_mine_without_action_anim", _test_same_tile_roadblock_then_mine_without_action_anim)
+it("test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_order", _test_same_tile_roadblock_then_mine_action_anim_keeps_trigger_order)
+it("test_same_tile_obstacle_chain_emits_single_summary_tip", _test_same_tile_obstacle_chain_emits_single_summary_tip)
+end)
