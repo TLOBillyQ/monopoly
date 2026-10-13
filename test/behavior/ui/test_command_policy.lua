@@ -1,16 +1,16 @@
-local lu = require("luaunit")
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 local command_policy = require("src.ui.input.command_policy")
 
--- 原生 LuaUnit 迁移(busted → LuaUnit):describe 拍平为 TestCommandPolicy,
--- 断言走 support.assert_eq(actual, expected),语句位 assert(cond, msg)
--- → lu.assertEvalToTrue,用例数与改写前一一对应(3 例)。
 
-TestCommandPolicy = {}
+describe("TestCommandPolicy", function()
 
-function TestCommandPolicy:test_describes_turn_optional_end_and_panel_command_meaning_from_one_seam()
+it("test_describes_turn_optional_end_and_panel_command_meaning_from_one_seam", function()
   local action_reason = command_policy.reason({ type = "ui_button", id = "next" })
   local optional_end_reason = command_policy.reason({ type = "complete_optional_action_phase" })
 
@@ -21,7 +21,7 @@ function TestCommandPolicy:test_describes_turn_optional_end_and_panel_command_me
   _assert_eq(action_reason, "action_button", "action button reason should be stable")
   _assert_eq(optional_end_reason, "complete_optional_action_phase",
     "optional end reason should be stable")
-  lu.assertEvalToTrue(action_reason ~= optional_end_reason,
+  luassert.truthy(action_reason ~= optional_end_reason,
     "action button and optional end command meanings must be distinct")
   _assert_eq(command_policy.is_view_command({ type = "ui_button", id = "next" }), false,
     "action button should not be a view command")
@@ -39,9 +39,9 @@ function TestCommandPolicy:test_describes_turn_optional_end_and_panel_command_me
     "skin panel opener should tolerate missing actor context")
   _assert_eq(command_policy.reason({ type = "open_skin_panel" }), "open_skin_panel",
     "command reason should stay stable for diagnostics")
-end
+end)
 
-function TestCommandPolicy:test_describes_cancel_ui_button_with_stable_reason()
+it("test_describes_cancel_ui_button_with_stable_reason", function()
   _assert_eq(command_policy.reason({ type = "ui_button", id = "cancel" }), "cancel_button",
     "cancel button reason should be stable")
   _assert_eq(command_policy.game_handler({ type = "ui_button", id = "cancel" }), "basic",
@@ -50,9 +50,9 @@ function TestCommandPolicy:test_describes_cancel_ui_button_with_stable_reason()
     "cancel button should require a turn actor")
   _assert_eq(command_policy.uses_local_actor({ type = "ui_button", id = "cancel" }), false,
     "cancel button should resolve actor from turn context")
-end
+end)
 
-function TestCommandPolicy:test_routes_every_view_command_through_a_port_handler_with_the_same_meaning()
+it("test_routes_every_view_command_through_a_port_handler_with_the_same_meaning", function()
   local view_commands = {
     "toggle_action_log",
     "open_skin_panel",
@@ -80,7 +80,7 @@ function TestCommandPolicy:test_routes_every_view_command_through_a_port_handler
     "skin panel actions should remain view commands handled before game dispatch")
   _assert_eq(command_policy.uses_local_actor({ type = "skin_panel_action" }), true,
     "skin panel actions should use local actor context across canvas and host paths")
-end
+end)
 
 
-return TestCommandPolicy
+end)

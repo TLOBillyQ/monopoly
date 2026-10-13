@@ -1,10 +1,12 @@
 -- 验证：黑市不再屏蔽 action_button 倒计时（_has_blocking_ui 不再考虑 is_market_active）
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local turn_timer_policy = require("src.turn.policies.timer")
 
-TestMarketNoLongerBlocksActionButton = {}
+describe("TestMarketNoLongerBlocksActionButton", function()
 
-function TestMarketNoLongerBlocksActionButton:test_is_action_button_wait_active_returns_true_when_market_is_active_but_no_choice_popup()
+it("test_is_action_button_wait_active_returns_true_when_market_is_active_but_no_choice_popup", function()
   local game = {
     finished = false,
     turn = { current_player_index = 1, pending_choice = nil },
@@ -21,10 +23,10 @@ function TestMarketNoLongerBlocksActionButton:test_is_action_button_wait_active_
     }
   }
   local active = turn_timer_policy.is_action_button_wait_active(game, state, ports)
-  lu.assertTrue(active)
-end
+  luassert.is_true(active)
+end)
 
-function TestMarketNoLongerBlocksActionButton:test_still_blocked_by_choice_active_or_popup_active()
+it("test_still_blocked_by_choice_active_or_popup_active", function()
   local game = {
     finished = false,
     turn = { current_player_index = 1, pending_choice = nil },
@@ -40,7 +42,7 @@ function TestMarketNoLongerBlocksActionButton:test_still_blocked_by_choice_activ
       is_popup_active = function() return false end,
     }
   }
-  lu.assertFalse(turn_timer_policy.is_action_button_wait_active(game, state, ports_with_choice))
+  luassert.is_false(turn_timer_policy.is_action_button_wait_active(game, state, ports_with_choice))
 
   local ports_with_popup = {
     ui_sync = {
@@ -51,8 +53,8 @@ function TestMarketNoLongerBlocksActionButton:test_still_blocked_by_choice_activ
       is_popup_active = function() return true end,
     }
   }
-  lu.assertFalse(turn_timer_policy.is_action_button_wait_active(game, state, ports_with_popup))
-end
+  luassert.is_false(turn_timer_policy.is_action_button_wait_active(game, state, ports_with_popup))
+end)
 
 
-return TestMarketNoLongerBlocksActionButton
+end)

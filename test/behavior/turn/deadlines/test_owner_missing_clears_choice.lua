@@ -6,7 +6,12 @@
 -- "choice action blocked by actor check: choice_cancel actor_role_id=1 owner_role_id=2")。
 -- 守卫落在 choice 超时 tick 的公共入口:owner 悬空 → 立即 force_skip
 -- (reason=owner_dangling),与 owner_eliminated 同口径,不带兜底 actor 去派发。
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local tick_choice_timeout = require("test.support.choice_timeout")
 local ChoiceTimeout = require("src.turn.waits.choice_timeout")
@@ -62,7 +67,7 @@ local function _with_captured_channels(fn)
   local ok, err = pcall(fn)
   logger.warn = orig_warn
   logger.set_ui_sink(nil)
-  lu.assertEvalToTrue(ok, err)
+  luassert.truthy(ok, err)
   return warns, marquee
 end
 
@@ -78,16 +83,16 @@ local function _spy_advance_turn(g)
   return function() return calls end
 end
 
-TestOwnerMissingClearsChoice = {}
+describe("TestOwnerMissingClearsChoice", function()
 
-function TestOwnerMissingClearsChoice:setUp()
+before_each(function()
   config_reset.reset_all()
-end
+end)
 
-function TestOwnerMissingClearsChoice:test_force_skips_the_pending_choice_when_owner_is_dangling()
+it("test_force_skips_the_pending_choice_when_owner_is_dangling", function()
   local g = support.new_game({ players = { "P1", "P2", "P3" } })
   _open_orphaned_choice(g)
-  lu.assertNotNil(g.turn.pending_choice, "precondition: orphaned choice is pending")
+  luassert.is_not_nil(g.turn.pending_choice, "precondition: orphaned choice is pending")
   local advance_calls = _spy_advance_turn(g)
 
   local dispatched = {}
@@ -97,21 +102,21 @@ function TestOwnerMissingClearsChoice:test_force_skips_the_pending_choice_when_o
     _step_once(g, {}, dispatched)
   end)
 
-  lu.assertNil(g.turn.pending_choice, "orphaned choice must be cleared on the next tick")
-  lu.assertEquals(#dispatched, 0, "a dangling owner must be force-skipped, never auto-answered")
-  lu.assertEquals(advance_calls(), 1,
+  luassert.is_nil(g.turn.pending_choice, "orphaned choice must be cleared on the next tick")
+  _assert_same(#dispatched, 0, "a dangling owner must be force-skipped, never auto-answered")
+  _assert_same(advance_calls(), 1,
     "force_skip advances the turn exactly once to unblock the current player")
-  lu.assertTrue(_any_line_contains(warns, "owner_dangling"),
+  luassert.is_true(_any_line_contains(warns, "owner_dangling"),
     "the skip must be attributed to owner_dangling for diagnosis")
-  lu.assertFalse(_any_line_contains(warns, "choice action blocked by actor check"),
+  luassert.is_false(_any_line_contains(warns, "choice action blocked by actor check"),
     "no actor-mismatch blocked warn may escape to the marquee channel")
-  lu.assertTrue(_any_line_contains(marquee, "choice_force_skipped") and _any_line_contains(marquee, "owner_dangling"),
+  luassert.is_true(_any_line_contains(marquee, "choice_force_skipped") and _any_line_contains(marquee, "owner_dangling"),
     "the single force_skip diagnostic must reach the marquee (ui_sink) channel")
-  lu.assertFalse(_any_line_contains(marquee, "choice action blocked by actor check"),
+  luassert.is_false(_any_line_contains(marquee, "choice action blocked by actor check"),
     "the marquee must never carry the blocked warn")
-end
+end)
 
-function TestOwnerMissingClearsChoice:test_leaves_a_resolvable_owners_choice_untouched()
+it("test_leaves_a_resolvable_owners_choice_untouched", function()
   local g = support.new_game({ players = { "P1", "P2", "P3" } })
   local owner = g.players[2]
   local pending = support.open_choice(g, {
@@ -124,18 +129,18 @@ function TestOwnerMissingClearsChoice:test_leaves_a_resolvable_owners_choice_unt
   local dispatched = {}
   _step_once(g, {}, dispatched)
 
-  lu.assertEquals(g.turn.pending_choice, pending, "a resolvable owner keeps the window and the countdown")
-  lu.assertEquals(#dispatched, 0)
-end
+  _assert_same(g.turn.pending_choice, pending, "a resolvable owner keeps the window and the countdown")
+  _assert_same(#dispatched, 0)
+end)
 
-function TestOwnerMissingClearsChoice:test_guards_the_production_default_choice_tick_as_well()
+it("test_guards_the_production_default_choice_tick_as_well", function()
   local g = support.new_game({ players = { "P1", "P2", "P3" } })
   _open_orphaned_choice(g)
 
   ChoiceTimeout.step_default(g, {}, 0.1)
 
-  lu.assertNil(g.turn.pending_choice, "the default production tick must clear an orphaned window")
-end
+  luassert.is_nil(g.turn.pending_choice, "the default production tick must clear an orphaned window")
+end)
 
 
-return TestOwnerMissingClearsChoice
+end)

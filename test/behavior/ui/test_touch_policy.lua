@@ -1,9 +1,11 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- luacheck: ignore 211
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):describe/it 拍平为文件级 Test*
--- 类,断言从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(23 例)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _build_asset_context = support.build_asset_context
 local _with_patches = support.with_patches
 local ui_view = require("src.ui.coord.ui_runtime")
@@ -13,9 +15,9 @@ local base_contract = require("src.ui.schema.base_contract")
 local market_ui = require("src.ui.schema.market_layout")
 local ids = require("test.fixtures.item_slot_ids")
 
-TestTouchPolicy = {}
+describe("TestTouchPolicy", function()
 
-function TestTouchPolicy:test_apply_input_lock_keeps_auto_controls_enabled()
+it("test_apply_input_lock_keeps_auto_controls_enabled", function()
   -- 槽位 touch 预置成 true，模拟刷新阶段已把持卡槽位打开：输入锁**不得**把它关回去。
   local touch = { [ids.slot[1]] = true }
   local visible = {}
@@ -59,22 +61,22 @@ function TestTouchPolicy:test_apply_input_lock_keeps_auto_controls_enabled()
     ui_view.apply_input_lock(state)
   end)
 
-  lu.assertEvalToTrue(touch["基础_行动按钮"] == false, "action button should stay blocked")
-  lu.assertEvalToTrue(touch["基础_托管按钮"] == true, "auto button should stay enabled")
-  lu.assertEvalToTrue(touch["基础_托管文本"] == false, "auto label should stay non-clickable")
-  lu.assertEvalToTrue(touch[base_nodes.skin_button] == true, "skin button should stay enabled")
-  lu.assertEvalToTrue(touch[base_nodes.gallery_button] == true, "gallery button should stay enabled")
-  lu.assertEvalToTrue(touch[base_nodes.action_log_button] == true, "action log button should stay enabled")
-  lu.assertEvalToTrue(touch[base_nodes.end_button] == false, "optional end button should stay blocked")
-  lu.assertEvalToTrue(visible[ids.slot[1]] == true, "item slot should stay visible when locked")
+  luassert.truthy(touch["基础_行动按钮"] == false, "action button should stay blocked")
+  luassert.truthy(touch["基础_托管按钮"] == true, "auto button should stay enabled")
+  luassert.truthy(touch["基础_托管文本"] == false, "auto label should stay non-clickable")
+  luassert.truthy(touch[base_nodes.skin_button] == true, "skin button should stay enabled")
+  luassert.truthy(touch[base_nodes.gallery_button] == true, "gallery button should stay enabled")
+  luassert.truthy(touch[base_nodes.action_log_button] == true, "action log button should stay enabled")
+  luassert.truthy(touch[base_nodes.end_button] == false, "optional end button should stay blocked")
+  luassert.truthy(visible[ids.slot[1]] == true, "item slot should stay visible when locked")
   -- 输入锁不关道具槽 touch：槽位是「全时段可点、点了必有反馈」口径(#162)。
   -- 点击本身不推进状态——item_slot_click 在 turn 闸上豁免，裁定后要么发提示
   -- 要么转成 choice_select 再过一次闸。锁死 touch 会把移动动画等阶段位里的
   -- 点击变成零反馈，正是重做前 lock 与该口径互相打架的地方。
-  lu.assertEvalToTrue(touch[ids.slot[1]] == true, "input lock must not swallow item slot clicks")
-end
+  luassert.truthy(touch[ids.slot[1]] == true, "input lock must not swallow item slot clicks")
+end)
 
-function TestTouchPolicy:test_apply_input_lock_leaves_auxiliary_controls_enabled_when_unlocked()
+it("test_apply_input_lock_leaves_auxiliary_controls_enabled_when_unlocked", function()
   local touch = {}
   local state = {
     ui = {
@@ -88,14 +90,14 @@ function TestTouchPolicy:test_apply_input_lock_leaves_auxiliary_controls_enabled
 
   ui_view.apply_input_lock(state)
 
-  lu.assertEvalToTrue(touch[base_nodes.auto_button] == true, "unlocked auto button should remain touchable")
-  lu.assertEvalToTrue(touch[base_nodes.auto_label] == false, "auto label should stay non-clickable")
-  lu.assertEvalToTrue(touch[base_nodes.action_log_button] == true, "unlocked action log should remain touchable")
-  lu.assertEvalToTrue(touch[base_nodes.skin_button] == true, "unlocked skin button should remain touchable")
-  lu.assertEvalToTrue(touch[base_nodes.gallery_button] == true, "unlocked gallery button should remain touchable")
-end
+  luassert.truthy(touch[base_nodes.auto_button] == true, "unlocked auto button should remain touchable")
+  luassert.truthy(touch[base_nodes.auto_label] == false, "auto label should stay non-clickable")
+  luassert.truthy(touch[base_nodes.action_log_button] == true, "unlocked action log should remain touchable")
+  luassert.truthy(touch[base_nodes.skin_button] == true, "unlocked skin button should remain touchable")
+  luassert.truthy(touch[base_nodes.gallery_button] == true, "unlocked gallery button should remain touchable")
+end)
 
-function TestTouchPolicy:test_apply_input_lock_noops_without_touch_hook()
+it("test_apply_input_lock_noops_without_touch_hook", function()
   local visible_called = false
   local state = {
     ui = {
@@ -108,10 +110,10 @@ function TestTouchPolicy:test_apply_input_lock_noops_without_touch_hook()
 
   ui_view.apply_input_lock(state)
 
-  lu.assertEvalToTrue(visible_called == false, "input lock should not mutate visibility without touch hook")
-end
+  luassert.truthy(visible_called == false, "input lock should not mutate visibility without touch hook")
+end)
 
-function TestTouchPolicy:test_apply_input_lock_tolerates_missing_visible_hook()
+it("test_apply_input_lock_tolerates_missing_visible_hook", function()
   local touch = {}
   local state = {
     ui = {
@@ -132,11 +134,11 @@ function TestTouchPolicy:test_apply_input_lock_tolerates_missing_visible_hook()
 
   ui_view.apply_input_lock(state)
 
-  lu.assertEvalToTrue(touch[base_nodes.action_button] == false, "action button should still be blocked")
-  lu.assertEvalToTrue(touch[base_nodes.end_button] == false, "end button should still be blocked")
-end
+  luassert.truthy(touch[base_nodes.action_button] == false, "action button should still be blocked")
+  luassert.truthy(touch[base_nodes.end_button] == false, "end button should still be blocked")
+end)
 
-function TestTouchPolicy:test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped()
+it("test_apply_input_lock_keeps_auto_button_enabled_when_role_unmapped", function()
   local touch = {}
   local state = {
     ui_model = {
@@ -175,11 +177,11 @@ function TestTouchPolicy:test_apply_input_lock_keeps_auto_button_enabled_when_ro
     ui_view.apply_input_lock(state)
   end)
 
-  lu.assertEvalToTrue(touch["基础_托管按钮"] == true, "auto button should stay enabled when role mapping is missing")
-  lu.assertEvalToTrue(touch["基础_托管文本"] == false, "auto label should stay non-clickable when role mapping is missing")
-end
+  luassert.truthy(touch["基础_托管按钮"] == true, "auto button should stay enabled when role mapping is missing")
+  luassert.truthy(touch["基础_托管文本"] == false, "auto label should stay non-clickable when role mapping is missing")
+end)
 
-function TestTouchPolicy:test_apply_input_lock_disables_always_show_controls_when_market_active()
+it("test_apply_input_lock_disables_always_show_controls_when_market_active", function()
   local touch = {}
   local state = {
     ui_model = {
@@ -219,14 +221,14 @@ function TestTouchPolicy:test_apply_input_lock_disables_always_show_controls_whe
     ui_view.apply_input_lock(state)
   end)
 
-  lu.assertEvalToTrue(touch["基础_托管按钮"] == false, "auto button should yield touch priority while market is active")
-  lu.assertEvalToTrue(touch["基础_托管文本"] == false, "auto label should stay non-clickable while market is active")
-  lu.assertEvalToTrue(touch["基础_行动日志图标"] == false, "action log toggle should yield touch priority while market is active")
-  lu.assertEvalToTrue(touch[base_nodes.skin_button] == false, "skin button should yield touch priority while market is active")
-  lu.assertEvalToTrue(touch[base_nodes.gallery_button] == false, "gallery button should yield touch priority while market is active")
-end
+  luassert.truthy(touch["基础_托管按钮"] == false, "auto button should yield touch priority while market is active")
+  luassert.truthy(touch["基础_托管文本"] == false, "auto label should stay non-clickable while market is active")
+  luassert.truthy(touch["基础_行动日志图标"] == false, "action log toggle should yield touch priority while market is active")
+  luassert.truthy(touch[base_nodes.skin_button] == false, "skin button should yield touch priority while market is active")
+  luassert.truthy(touch[base_nodes.gallery_button] == false, "gallery button should yield touch priority while market is active")
+end)
 
-function TestTouchPolicy:test_apply_input_lock_keeps_market_cancel_enabled_when_market_active()
+it("test_apply_input_lock_keeps_market_cancel_enabled_when_market_active", function()
   local touch = {}
   local state = {
     ui = {
@@ -255,9 +257,9 @@ function TestTouchPolicy:test_apply_input_lock_keeps_market_cancel_enabled_when_
   for _, name in ipairs(market_ui.item_buttons) do
     _assert_eq(touch[name], false, "market item buttons must be disabled by the input lock (kills `or {}` -> `and {}` and false -> true)")
   end
-end
+end)
 
-function TestTouchPolicy:test_apply_input_lock_preserves_skin_entry_visibility_decided_by_panel_refresh()
+it("test_apply_input_lock_preserves_skin_entry_visibility_decided_by_panel_refresh", function()
   local visible = {
     [base_nodes.auto_button] = true,
     [base_nodes.auto_label] = true,
@@ -306,23 +308,23 @@ function TestTouchPolicy:test_apply_input_lock_preserves_skin_entry_visibility_d
 
   ui_view.apply_input_lock(state)
 
-  lu.assertEvalToTrue(visible[base_nodes.action_button] == false, "input lock should still hide action button")
-  lu.assertEvalToTrue(visible[ids.slot[1]] == true, "input lock should still force item slots visible")
-  lu.assertEvalToTrue(visible[base_nodes.skin_button] == true,
+  luassert.truthy(visible[base_nodes.action_button] == false, "input lock should still hide action button")
+  luassert.truthy(visible[ids.slot[1]] == true, "input lock should still force item slots visible")
+  luassert.truthy(visible[base_nodes.skin_button] == true,
     "input lock must not override the panel refresh decision for skin button visibility")
-  lu.assertEvalToTrue(visible[base_nodes.skin_label] == true,
+  luassert.truthy(visible[base_nodes.skin_label] == true,
     "input lock must not override the panel refresh decision for skin label visibility")
-  lu.assertEvalToTrue(visible[base_nodes.gallery_button] == true,
+  luassert.truthy(visible[base_nodes.gallery_button] == true,
     "input lock must not hide the gallery entry")
-  lu.assertEvalToTrue(visible[base_nodes.auto_button] == true,
+  luassert.truthy(visible[base_nodes.auto_button] == true,
     "input lock must not hide the auto entry")
-  lu.assertEvalToTrue(visible[base_nodes.auto_label] == true,
+  luassert.truthy(visible[base_nodes.auto_label] == true,
     "input lock must not hide the auto label")
-  lu.assertEvalToTrue(visible[base_nodes.action_log_button] == true,
+  luassert.truthy(visible[base_nodes.action_log_button] == true,
     "input lock must not hide the action log entry")
-end
+end)
 
-function TestTouchPolicy:test_apply_input_lock_tolerates_false_choice_screens()
+it("test_apply_input_lock_tolerates_false_choice_screens", function()
   local touch = {}
   local state = {
     ui = {
@@ -339,11 +341,11 @@ function TestTouchPolicy:test_apply_input_lock_tolerates_false_choice_screens()
 
   ui_view.apply_input_lock(state)
 
-  lu.assertEvalToTrue(touch[base_nodes.action_button] == false, "locked action button should still be blocked")
-  lu.assertEvalToTrue(touch[base_nodes.end_button] == false, "locked end button should still be blocked")
-end
+  luassert.truthy(touch[base_nodes.action_button] == false, "locked action button should still be blocked")
+  luassert.truthy(touch[base_nodes.end_button] == false, "locked end button should still be blocked")
+end)
 
-function TestTouchPolicy:test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists()
+it("test_ui_view_render_auto_button_keeps_local_touch_when_unmapped_role_exists", function()
   local touch_logs = {}
   local state = {
     runtime_asset_context = _build_asset_context({ ["Empty"] = "EMPTY", ["2001"] = "ICON2001" }),
@@ -407,11 +409,11 @@ function TestTouchPolicy:test_ui_view_render_auto_button_keeps_local_touch_when_
     ui_view.refresh_panel(state, ui_model)
   end)
 
-  lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_托管按钮"] == true, "local role auto button should stay enabled")
-  lu.assertEvalToTrue(touch_logs[99] and touch_logs[99]["基础_托管按钮"] == false, "unmapped role auto button should stay disabled")
-end
+  luassert.truthy(touch_logs[1] and touch_logs[1]["基础_托管按钮"] == true, "local role auto button should stay enabled")
+  luassert.truthy(touch_logs[99] and touch_logs[99]["基础_托管按钮"] == false, "unmapped role auto button should stay disabled")
+end)
 
-function TestTouchPolicy:test_ui_touch_policy_auto_controls_touch()
+it("test_ui_touch_policy_auto_controls_touch", function()
   local touch = {}
   local ui = {
     auto_control_nodes = { "基础_托管按钮", "基础_托管文本" },
@@ -429,9 +431,9 @@ function TestTouchPolicy:test_ui_touch_policy_auto_controls_touch()
   _assert_eq(touch["基础_托管按钮"], false, "auto button should be non-clickable when disabled")
   _assert_eq(touch["基础_托管文本"], false, "auto label should stay non-clickable when disabled")
   _assert_eq(touch["基础_托管按钮特效"], false, "auto effect should stay non-clickable when disabled")
-end
+end)
 
-function TestTouchPolicy:test_ui_touch_policy_runtime_nodes_touch_enabled()
+it("test_ui_touch_policy_runtime_nodes_touch_enabled", function()
   local node1 = { disabled = true }
   local node2 = { disabled = true }
 
@@ -442,34 +444,34 @@ function TestTouchPolicy:test_ui_touch_policy_runtime_nodes_touch_enabled()
   ui_touch_policy.set_runtime_nodes_touch_enabled({ node1, node2 }, false)
   _assert_eq(node1.disabled, true, "runtime node should be disabled")
   _assert_eq(node2.disabled, true, "runtime node should be disabled")
-end
+end)
 
-function TestTouchPolicy:test_set_many_touch_enabled_noops_when_ui_lacks_hook()
+it("test_set_many_touch_enabled_noops_when_ui_lacks_hook", function()
   -- Pins L7 guard `not ui or not ui.set_touch_enabled`: an `and` mutant proceeds and
   -- calls the missing hook instead of returning cleanly.
   local ok = pcall(function()
     ui_touch_policy.set_many_touch_enabled({}, { base_nodes.action_button }, true)
   end)
-  lu.assertEvalToTrue(ok, "set_many_touch_enabled should noop when ui has no set_touch_enabled hook")
-end
+  luassert.truthy(ok, "set_many_touch_enabled should noop when ui has no set_touch_enabled hook")
+end)
 
-function TestTouchPolicy:test_set_auto_controls_touch_noops_when_ui_lacks_hook()
+it("test_set_auto_controls_touch_noops_when_ui_lacks_hook", function()
   -- Pins L41 guard mirror.
   local ok = pcall(function()
     ui_touch_policy.set_auto_controls_touch({}, true)
   end)
-  lu.assertEvalToTrue(ok, "set_auto_controls_touch should noop when ui has no set_touch_enabled hook")
-end
+  luassert.truthy(ok, "set_auto_controls_touch should noop when ui has no set_touch_enabled hook")
+end)
 
-function TestTouchPolicy:test_set_action_log_toggle_touch_noops_when_ui_lacks_hook()
+it("test_set_action_log_toggle_touch_noops_when_ui_lacks_hook", function()
   -- Pins L51 guard mirror.
   local ok = pcall(function()
     ui_touch_policy.set_action_log_toggle_touch({}, true)
   end)
-  lu.assertEvalToTrue(ok, "set_action_log_toggle_touch should noop when ui has no set_touch_enabled hook")
-end
+  luassert.truthy(ok, "set_action_log_toggle_touch should noop when ui has no set_touch_enabled hook")
+end)
 
-function TestTouchPolicy:test_set_auto_controls_touch_drives_ui_auto_control_nodes_when_no_override()
+it("test_set_auto_controls_touch_drives_ui_auto_control_nodes_when_no_override", function()
   -- Pins L22 second `or`: `controls or ui.auto_control_nodes or default`; an `and` mutant
   -- would drop the resolved node list and fall through to the default node set.
   local touch = {}
@@ -484,9 +486,9 @@ function TestTouchPolicy:test_set_auto_controls_touch_drives_ui_auto_control_nod
 
   _assert_eq(touch["自定义_托管节点"], false,
     "should drive ui.auto_control_nodes rather than the built-in default node set")
-end
+end)
 
-function TestTouchPolicy:test_set_auto_controls_touch_skips_effect_fallback_when_effect_in_controls()
+it("test_set_auto_controls_touch_skips_effect_fallback_when_effect_in_controls", function()
   -- Pins L34 `auto_effect_seen = true`: a `false` mutant re-touches auto_effect through the
   -- fallback branch, doubling the number of writes to that node.
   local counts = {}
@@ -500,9 +502,9 @@ function TestTouchPolicy:test_set_auto_controls_touch_skips_effect_fallback_when
 
   _assert_eq(counts[base_nodes.auto_effect], 1,
     "auto_effect present in controls should be touched exactly once (no fallback write)")
-end
+end)
 
-function TestTouchPolicy:test_set_action_log_toggle_touch_falls_back_to_default_target()
+it("test_set_action_log_toggle_touch_falls_back_to_default_target", function()
   -- Pins L56 `toggle_targets or { action_log_button }`: an `and` mutant breaks the nil-config
   -- fallback and iterates a nil target list.
   local touch = {}
@@ -520,9 +522,9 @@ function TestTouchPolicy:test_set_action_log_toggle_touch_falls_back_to_default_
 
   _assert_eq(touch[base_nodes.action_log_button], true,
     "nil toggle_targets should fall back to the default action-log button")
-end
+end)
 
-function TestTouchPolicy:test_set_choice_screen_locked_blocks_all_targets()
+it("test_set_choice_screen_locked_blocks_all_targets", function()
   -- Pins the L75 guard `not ...` terms: any removed `not` short-circuits to an early return,
   -- leaving the choice-screen targets un-locked.
   local touch = {}
@@ -545,27 +547,27 @@ function TestTouchPolicy:test_set_choice_screen_locked_blocks_all_targets()
   _assert_eq(touch["下注按钮"], false, "under button should be locked")
   _assert_eq(touch["确认按钮"], false, "confirm should be locked")
   _assert_eq(touch["取消按钮"], false, "cancel should be locked")
-end
+end)
 
-function TestTouchPolicy:test_set_choice_screen_locked_noops_without_screen()
+it("test_set_choice_screen_locked_noops_without_screen", function()
   -- Pins the L75 guard `or not screen`: an `and` mutant proceeds and indexes a nil screen.
   local ui = { set_touch_enabled = function() end }
   local ok = pcall(function()
     ui_touch_policy.set_choice_screen_locked(ui, nil)
   end)
-  lu.assertEvalToTrue(ok, "set_choice_screen_locked should noop when screen is nil")
-end
+  luassert.truthy(ok, "set_choice_screen_locked should noop when screen is nil")
+end)
 
-function TestTouchPolicy:test_set_choice_screen_locked_noops_when_ui_lacks_hook()
+it("test_set_choice_screen_locked_noops_when_ui_lacks_hook", function()
   -- Pins the L75 guard `or not ui.set_touch_enabled`: an `and` mutant proceeds and calls the
   -- missing hook while locking the under button.
   local ok = pcall(function()
     ui_touch_policy.set_choice_screen_locked({}, { under_button = "下注按钮" })
   end)
-  lu.assertEvalToTrue(ok, "set_choice_screen_locked should noop when ui has no set_touch_enabled hook")
-end
+  luassert.truthy(ok, "set_choice_screen_locked should noop when ui has no set_touch_enabled hook")
+end)
 
-function TestTouchPolicy:test_set_many_touch_enabled_noops_when_names_is_not_a_table()
+it("test_set_many_touch_enabled_noops_when_names_is_not_a_table", function()
   -- Pins the `type(names) ~= "table"` guard: names may arrive as a bare node name.
   local calls = {}
   local ui = {
@@ -575,9 +577,9 @@ function TestTouchPolicy:test_set_many_touch_enabled_noops_when_names_is_not_a_t
   }
   ui_touch_policy.set_many_touch_enabled(ui, "基础_行动按钮", true)
   _assert_eq(#calls, 0, "a non-table names argument must touch nothing")
-end
+end)
 
-function TestTouchPolicy:test_set_many_touch_enabled_skips_nil_holes_and_coerces_enabled()
+it("test_set_many_touch_enabled_skips_nil_holes_and_coerces_enabled", function()
   local calls = {}
   local ui = {
     set_touch_enabled = function(_, name, value)
@@ -590,7 +592,7 @@ function TestTouchPolicy:test_set_many_touch_enabled_skips_nil_holes_and_coerces
   _assert_eq(calls[1].name, "a", "first name")
   _assert_eq(calls[1].value, false, "enabled coerced with == true")
   _assert_eq(calls[2].name, "b", "second name")
-end
+end)
 
 
-return TestTouchPolicy
+end)

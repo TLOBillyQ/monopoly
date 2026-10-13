@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local card_reveal = require("src.rules.ports.card_reveal")
 local land_presenter = require("src.rules.land.presenter")
@@ -27,13 +28,12 @@ local function _fake_impl(seen)
   }
 end
 
-TestCardRevealPort = {}
-
-function TestCardRevealPort:setUp()
+describe("TestCardRevealPort", function()
+before_each(function()
   card_reveal.reset_for_tests()
-end
+end)
 
-function TestCardRevealPort:test_push_land_popup_forwards_to_the_configured_impl()
+it("test_push_land_popup_forwards_to_the_configured_impl", function()
   local seen = {}
   card_reveal.configure(_fake_impl(seen))
   local game, opts = { g = 1 }, { o = 1 }
@@ -43,9 +43,9 @@ function TestCardRevealPort:test_push_land_popup_forwards_to_the_configured_impl
   _assert_eq(seen.push.title, "标题", "title must pass through")
   _assert_eq(seen.push.text, "正文", "text must pass through")
   _assert_eq(seen.push.opts, opts, "opts must pass through")
-end
+end)
 
-function TestCardRevealPort:test_queue_gain_reveal_forwards_to_the_configured_impl()
+it("test_queue_gain_reveal_forwards_to_the_configured_impl", function()
   local seen = {}
   card_reveal.configure(_fake_impl(seen))
   local game, player, opts = { g = 2 }, { p = 1 }, { o = 2 }
@@ -55,9 +55,9 @@ function TestCardRevealPort:test_queue_gain_reveal_forwards_to_the_configured_im
   _assert_eq(seen.queue.player, player, "player must pass through")
   _assert_eq(seen.queue.item_id, 2001, "item_id must pass through")
   _assert_eq(seen.queue.opts, opts, "opts must pass through")
-end
+end)
 
-function TestCardRevealPort:test_bankruptcy_text_forwards_to_the_configured_impl()
+it("test_bankruptcy_text_forwards_to_the_configured_impl", function()
   local seen = {}
   card_reveal.configure(_fake_impl(seen))
   local player, opts = { p = 2 }, { o = 3 }
@@ -65,18 +65,18 @@ function TestCardRevealPort:test_bankruptcy_text_forwards_to_the_configured_impl
   _assert_eq(ret, "破产文案", "text must pass through")
   _assert_eq(seen.bankruptcy.player, player, "player must pass through")
   _assert_eq(seen.bankruptcy.opts, opts, "opts must pass through")
-end
+end)
 
 local function _expect_error(fragment, fn)
   local ok, err = pcall(fn)
-  lu.assertEvalToTrue(ok == false, "call should raise")
-  lu.assertEvalToTrue(
+  luassert.truthy(ok == false, "call should raise")
+  luassert.truthy(
     tostring(err):find(fragment, 1, true) ~= nil,
     "error should mention: " .. tostring(fragment) .. ", got: " .. tostring(err)
   )
 end
 
-function TestCardRevealPort:test_calls_without_a_configured_impl_error_loudly()
+it("test_calls_without_a_configured_impl_error_loudly", function()
   _expect_error("missing card_reveal implementation", function()
     card_reveal.push_land_popup({}, "标题", "正文")
   end)
@@ -86,17 +86,17 @@ function TestCardRevealPort:test_calls_without_a_configured_impl_error_loudly()
   _expect_error("missing card_reveal implementation", function()
     card_reveal.bankruptcy_text({})
   end)
-end
+end)
 
-function TestCardRevealPort:test_reset_for_tests_clears_the_configured_impl()
+it("test_reset_for_tests_clears_the_configured_impl", function()
   card_reveal.configure(_fake_impl({}))
   card_reveal.reset_for_tests()
   _expect_error("missing card_reveal implementation", function()
     card_reveal.push_land_popup({}, "标题", "正文")
   end)
-end
+end)
 
-function TestCardRevealPort:test_configure_rejects_an_impl_missing_verbs()
+it("test_configure_rejects_an_impl_missing_verbs", function()
   _expect_error("missing push_land_popup", function()
     card_reveal.configure({ queue_gain_reveal = function() end })
   end)
@@ -109,27 +109,27 @@ function TestCardRevealPort:test_configure_rejects_an_impl_missing_verbs()
       queue_gain_reveal = function() end,
     })
   end)
-end
+end)
 
-function TestCardRevealPort:test_configure_rejects_a_non_table_impl()
+it("test_configure_rejects_a_non_table_impl", function()
   _expect_error("invalid card_reveal implementation", function()
     card_reveal.configure(nil)
   end)
-end
+end)
 
-function TestCardRevealPort:test_is_configured_reflects_the_configuration_state()
-  lu.assertEvalToTrue(card_reveal.is_configured() == false, "a fresh port starts unconfigured")
+it("test_is_configured_reflects_the_configuration_state", function()
+  luassert.truthy(card_reveal.is_configured() == false, "a fresh port starts unconfigured")
   card_reveal.configure(_fake_impl({}))
-  lu.assertEvalToTrue(card_reveal.is_configured() == true, "a configured port reports configured")
+  luassert.truthy(card_reveal.is_configured() == true, "a configured port reports configured")
   card_reveal.reset_for_tests()
-  lu.assertEvalToTrue(card_reveal.is_configured() == false, "reset returns to unconfigured")
-end
+  luassert.truthy(card_reveal.is_configured() == false, "reset returns to unconfigured")
+end)
 
-function TestCardRevealPort:test_push_popup_returns_false_without_game()
+it("test_push_popup_returns_false_without_game", function()
   -- #293:presenter.push_popup 的 nil-game 守卫 false→true 变异未测。
   _assert_eq(land_presenter.push_popup(nil, "标题", "正文"), false,
     "push_popup without a game should return false")
-end
+end)
 
 
-return TestCardRevealPort
+end)

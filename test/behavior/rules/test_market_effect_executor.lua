@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 local market_service = require("src.rules.market")
 local market_effects = require("src.rules.market.effects")
 
@@ -41,93 +42,93 @@ local function _ctx(is_auto)
   }
 end
 
-TestMarketEffectExecutor = {}
 
-function TestMarketEffectExecutor:test_can_apply_only_on_market_tile()
-  lu.assertEvalToTrue(executor.can_apply({ tile = { type = "market" } }) == true, "applies on market tile")
-  lu.assertEvalToTrue(executor.can_apply({ tile = { type = "land" } }) == false, "does not apply on other tiles")
-end
-
-function TestMarketEffectExecutor:test_auto_player_runs_auto_purchase_and_never_builds_a_choice()
-  local auto_calls = 0
-  local choice_built = false
-
-  _with_market_stubs({
-    auto_execute = function(game, player)
-      auto_calls = auto_calls + 1
-      lu.assertEvalToTrue(game ~= nil and player ~= nil, "auto execute receives game and player")
-    end,
-    list_available = function()
-      error("auto player must not query buyable items", 0)
-    end,
-    choice_build = function()
-      choice_built = true
-      return { kind = "market_buy" }, nil
-    end,
-  }, function()
-    local result = executor.apply(_ctx(true))
-    lu.assertEvalToTrue(result == nil, "auto player path yields no pending intent")
+describe("TestMarketEffectExecutor", function()
+  it("test_can_apply_only_on_market_tile", function()
+    luassert.truthy(executor.can_apply({ tile = { type = "market" } }) == true, "applies on market tile")
+    luassert.truthy(executor.can_apply({ tile = { type = "land" } }) == false, "does not apply on other tiles")
   end)
 
-  lu.assertEvalToTrue(auto_calls == 1, "auto purchase ran exactly once")
-  lu.assertEvalToTrue(choice_built == false, "auto player path never builds a choice spec")
-end
+  it("test_auto_player_runs_auto_purchase_and_never_builds_a_choice", function()
+    local auto_calls = 0
+    local choice_built = false
 
-function TestMarketEffectExecutor:test_human_player_with_no_buyable_items_yields_nothing()
-  _with_market_stubs({
-    auto_execute = function()
-      error("human player must not trigger auto purchase", 0)
-    end,
-    list_available = function()
-      return {}
-    end,
-  }, function()
-    lu.assertEvalToTrue(executor.apply(_ctx(false)) == nil, "empty market yields no intent")
+    _with_market_stubs({
+      auto_execute = function(game, player)
+        auto_calls = auto_calls + 1
+        luassert.truthy(game ~= nil and player ~= nil, "auto execute receives game and player")
+      end,
+      list_available = function()
+        error("auto player must not query buyable items", 0)
+      end,
+      choice_build = function()
+        choice_built = true
+        return { kind = "market_buy" }, nil
+      end,
+    }, function()
+      local result = executor.apply(_ctx(true))
+      luassert.truthy(result == nil, "auto player path yields no pending intent")
+    end)
+
+    luassert.truthy(auto_calls == 1, "auto purchase ran exactly once")
+    luassert.truthy(choice_built == false, "auto player path never builds a choice spec")
   end)
-end
 
-function TestMarketEffectExecutor:test_human_player_with_ready_intent_returns_that_intent()
-  local intent = { kind = "market_buy_direct" }
-
-  _with_market_stubs({
-    auto_execute = function()
-      error("human player must not trigger auto purchase", 0)
-    end,
-    list_available = function()
-      return { { id = "item_1" } }
-    end,
-    choice_build = function()
-      return nil, intent
-    end,
-  }, function()
-    local result = executor.apply(_ctx(false))
-    lu.assertEvalToTrue(result.intent == intent, "returns the built intent as-is")
-    lu.assertEvalToTrue(result.waiting == nil, "a ready intent is not a waiting choice")
+  it("test_human_player_with_no_buyable_items_yields_nothing", function()
+    _with_market_stubs({
+      auto_execute = function()
+        error("human player must not trigger auto purchase", 0)
+      end,
+      list_available = function()
+        return {}
+      end,
+    }, function()
+      luassert.truthy(executor.apply(_ctx(false)) == nil, "empty market yields no intent")
+    end)
   end)
-end
 
-function TestMarketEffectExecutor:test_human_player_with_choice_spec_waits_on_market_choice()
-  local spec = { kind = "market_buy", owner_role_id = 1 }
+  it("test_human_player_with_ready_intent_returns_that_intent", function()
+    local intent = { kind = "market_buy_direct" }
 
-  _with_market_stubs({
-    auto_execute = function()
-      error("human player must not trigger auto purchase", 0)
-    end,
-    list_available = function()
-      return { { id = "item_1" } }
-    end,
-    choice_build = function()
-      return spec, nil
-    end,
-  }, function()
-    local result = executor.apply(_ctx(false))
-    lu.assertEvalToTrue(result.waiting == true, "waits for the player to choose")
-    lu.assertEvalToTrue(result.reason == "market_choice", "waiting reason is market_choice")
-    lu.assertEvalToTrue(result.intent.kind == "need_choice", "intent asks for a choice")
-    lu.assertEvalToTrue(result.intent.choice_spec == spec, "carries the built choice spec")
+    _with_market_stubs({
+      auto_execute = function()
+        error("human player must not trigger auto purchase", 0)
+      end,
+      list_available = function()
+        return { { id = "item_1" } }
+      end,
+      choice_build = function()
+        return nil, intent
+      end,
+    }, function()
+      local result = executor.apply(_ctx(false))
+      luassert.truthy(result.intent == intent, "returns the built intent as-is")
+      luassert.truthy(result.waiting == nil, "a ready intent is not a waiting choice")
+    end)
   end)
-end
+
+  it("test_human_player_with_choice_spec_waits_on_market_choice", function()
+    local spec = { kind = "market_buy", owner_role_id = 1 }
+
+    _with_market_stubs({
+      auto_execute = function()
+        error("human player must not trigger auto purchase", 0)
+      end,
+      list_available = function()
+        return { { id = "item_1" } }
+      end,
+      choice_build = function()
+        return spec, nil
+      end,
+    }, function()
+      local result = executor.apply(_ctx(false))
+      luassert.truthy(result.waiting == true, "waits for the player to choose")
+      luassert.truthy(result.reason == "market_choice", "waiting reason is market_choice")
+      luassert.truthy(result.intent.kind == "need_choice", "intent asks for a choice")
+      luassert.truthy(result.intent.choice_spec == spec, "carries the built choice spec")
+    end)
+  end)
 
 
 
-return TestMarketEffectExecutor
+end)

@@ -1,9 +1,14 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local gameplay_cases = require("test.support.scenario_suites.shared.cases")
 
 local function _case(name, overrides)
+  local run = gameplay_cases[name]
+  luassert.truthy(run, "missing gameplay case: " .. tostring(name))
   local case = {
     name = name,
-    run = assert(gameplay_cases[name], "missing gameplay case: " .. tostring(name)),
+    run = run,
   }
   for key, value in pairs(overrides or {}) do
     case[key] = value

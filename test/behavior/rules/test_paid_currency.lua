@@ -1,7 +1,6 @@
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 拍平为文件级 Test* 类,
--- before_each 转 setUp,裸 assert 转 lu.assertEvalToTrue,用例数与改写前一一对应(8 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local _new_game = support.new_game
 local _with_patches = support.with_patches
@@ -140,13 +139,27 @@ end
 
 local _config_reset = require("test.support.config_reset")
 
-TestPaidCurrency = {}
-
-function TestPaidCurrency:setUp()
+describe("TestPaidCurrency", function()
+local reloaded_modules = {
+  "src.rules.commerce.paid_currency_bridge", "src.rules.market",
+  "src.rules.market.query", "src.rules.market.purchase",
+  "src.rules.market.auto", "src.rules.market.choice",
+}
+local saved_modules
+before_each(function()
+  saved_modules = {}
+  for _, name in ipairs(reloaded_modules) do
+    saved_modules[name] = package.loaded[name]
+  end
   _config_reset.reset_all()
-end
+end)
+after_each(function()
+  for _, name in ipairs(reloaded_modules) do
+    package.loaded[name] = saved_modules[name]
+  end
+end)
 
-function TestPaidCurrency:test_paid_bridge_external_currency_is_not_managed_and_setup_is_silent()
+it("test_paid_bridge_external_currency_is_not_managed_and_setup_is_silent", function()
   local game = _new_game()
   local warns = _collect_warn_logs(function()
     _with_currency_cfg({
@@ -155,21 +168,21 @@ function TestPaidCurrency:test_paid_bridge_external_currency_is_not_managed_and_
     }, function()
       local bridge = _reload_bridge()
       bridge.setup_for_game(game)
-      lu.assertEvalToTrue(bridge.is_paid_currency("金豆") == true, "jindou should remain a paid currency")
-      lu.assertEvalToTrue(bridge.is_paid_currency("乐园币") == true, "leyuanbi should remain a paid currency")
-      lu.assertEvalToTrue(bridge.is_managed_currency(game, "金豆") == false, "external jindou should not be locally managed")
-      lu.assertEvalToTrue(bridge.is_managed_currency(game, "乐园币") == false, "external leyuanbi should not be locally managed")
-      lu.assertEvalToTrue(bridge.is_currency_channel_ready(game, "金豆") == true, "external paid currency should be ready for goods flow")
-      lu.assertEvalToTrue(bridge.unavailable_reason(game, "金豆") == nil, "external paid currency should not expose commodity errors")
+      luassert.truthy(bridge.is_paid_currency("金豆") == true, "jindou should remain a paid currency")
+      luassert.truthy(bridge.is_paid_currency("乐园币") == true, "leyuanbi should remain a paid currency")
+      luassert.truthy(bridge.is_managed_currency(game, "金豆") == false, "external jindou should not be locally managed")
+      luassert.truthy(bridge.is_managed_currency(game, "乐园币") == false, "external leyuanbi should not be locally managed")
+      luassert.truthy(bridge.is_currency_channel_ready(game, "金豆") == true, "external paid currency should be ready for goods flow")
+      luassert.truthy(bridge.unavailable_reason(game, "金豆") == nil, "external paid currency should not expose commodity errors")
     end)
   end)
 
   local joined = table.concat(warns, "\n")
-  lu.assertEvalToTrue(joined:find("invalid_commodity_id", 1, true) == nil, "external currency setup should not log commodity mapping errors")
-  lu.assertEvalToTrue(joined:find("paid channel startup unavailable", 1, true) == nil, "external currency setup should not log startup unavailable")
-end
+  luassert.truthy(joined:find("invalid_commodity_id", 1, true) == nil, "external currency setup should not log commodity mapping errors")
+  luassert.truthy(joined:find("paid channel startup unavailable", 1, true) == nil, "external currency setup should not log startup unavailable")
+end)
 
-function TestPaidCurrency:test_commodity_currency_is_managed_and_unknown_is_not()
+it("test_commodity_currency_is_managed_and_unknown_is_not", function()
   -- #293:commodity source 分支(entry 命中、source=="commodity")未测,
   -- `_currency_entry`→nil / not 移除 / false→true / source→nil 变异全在此分支可分。
   local game = _new_game()
@@ -178,27 +191,27 @@ function TestPaidCurrency:test_commodity_currency_is_managed_and_unknown_is_not(
     ["钻石"] = { source = "commodity" },
   }, function()
     local bridge = _reload_bridge()
-    lu.assertEvalToTrue(bridge.is_managed_currency(game, "钻石") == true,
+    luassert.truthy(bridge.is_managed_currency(game, "钻石") == true,
       "commodity currency should be locally managed")
-    lu.assertEvalToTrue(bridge.is_paid_currency("钻石") == true,
+    luassert.truthy(bridge.is_paid_currency("钻石") == true,
       "commodity currency should count as paid")
-    lu.assertEvalToTrue(bridge.is_managed_currency(game, "不存在") == false,
+    luassert.truthy(bridge.is_managed_currency(game, "不存在") == false,
       "unknown currency should not be managed")
   end)
-end
+end)
 
-function TestPaidCurrency:test_setup_for_game_returns_true()
+it("test_setup_for_game_returns_true", function()
   -- #293:setup_for_game 的 true 字面值(→ false 变异)未测。
   _with_currency_cfg({ ["金豆"] = { source = "external" } }, function()
     local bridge = _reload_bridge()
-    lu.assertEvalToTrue(bridge.setup_for_game({}) == true,
+    luassert.truthy(bridge.setup_for_game({}) == true,
       "setup_for_game should report readiness")
   end)
-end
+end)
 
 
 
-function TestPaidCurrency:test_external_paid_currency_still_starts_goods_purchase_panel()
+it("test_external_paid_currency_still_starts_goods_purchase_panel", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game)
@@ -211,17 +224,17 @@ function TestPaidCurrency:test_external_paid_currency_still_starts_goods_purchas
       local bridge = _reload_bridge()
       local market = _reload_market()
       bridge.setup_for_game(game)
-      lu.assertEvalToTrue(bridge.is_managed_currency(game, "金豆") == false, "external paid currency should not enable display sync")
+      luassert.truthy(bridge.is_managed_currency(game, "金豆") == false, "external paid currency should not enable display sync")
 
       local result = market.purchase.execute(game, p, 2009)
-      lu.assertEvalToTrue(type(result) == "table" and result.ok == true, "paid purchase should still start via goods panel")
-      lu.assertEvalToTrue(result.deferred_fulfillment == true, "paid purchase should defer fulfillment to purchase callback")
-      lu.assertEvalToTrue(#env.panel_calls == 1, "paid purchase should open goods purchase panel")
+      luassert.truthy(type(result) == "table" and result.ok == true, "paid purchase should still start via goods panel")
+      luassert.truthy(result.deferred_fulfillment == true, "paid purchase should defer fulfillment to purchase callback")
+      luassert.truthy(#env.panel_calls == 1, "paid purchase should open goods purchase panel")
     end)
   end)
-end
+end)
 
-function TestPaidCurrency:test_market_paid_purchase_requires_goods_mapping()
+it("test_market_paid_purchase_requires_goods_mapping", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game, {
@@ -238,17 +251,17 @@ function TestPaidCurrency:test_market_paid_purchase_requires_goods_mapping()
       _with_patches(env.patch_list, function()
         local market = _reload_market()
         local result = market.purchase.execute(game, p, 2009)
-        lu.assertEvalToTrue(type(result) == "table" and result.ok == false, "missing goods mapping should reject paid purchase")
-        lu.assertEvalToTrue(result.reason == "goods_mapping_missing", "missing goods mapping reason should be explicit")
-        lu.assertEvalToTrue(#env.panel_calls == 0, "missing goods mapping should not open purchase panel")
+        luassert.truthy(type(result) == "table" and result.ok == false, "missing goods mapping should reject paid purchase")
+        luassert.truthy(result.reason == "goods_mapping_missing", "missing goods mapping reason should be explicit")
+        luassert.truthy(#env.panel_calls == 0, "missing goods mapping should not open purchase panel")
       end)
     end)
   end)
   local joined = table.concat(warns, "\n")
-  lu.assertEvalToTrue(joined:find("market paid goods mapping missing:", 1, true) ~= nil, "should log missing paid goods mapping")
-end
+  luassert.truthy(joined:find("market paid goods mapping missing:", 1, true) ~= nil, "should log missing paid goods mapping")
+end)
 
-function TestPaidCurrency:test_market_paid_purchase_warns_missing_mapping_only_once_per_product()
+it("test_market_paid_purchase_warns_missing_mapping_only_once_per_product", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game, {
@@ -266,8 +279,8 @@ function TestPaidCurrency:test_market_paid_purchase_warns_missing_mapping_only_o
         local market = _reload_market()
         local first = market.purchase.execute(game, p, 2009)
         local second = market.purchase.execute(game, p, 2009)
-        lu.assertEvalToTrue(type(first) == "table" and first.ok == false, "first missing mapping should reject paid purchase")
-        lu.assertEvalToTrue(type(second) == "table" and second.ok == false, "second missing mapping should still reject paid purchase")
+        luassert.truthy(type(first) == "table" and first.ok == false, "first missing mapping should reject paid purchase")
+        luassert.truthy(type(second) == "table" and second.ok == false, "second missing mapping should still reject paid purchase")
       end)
     end)
   end)
@@ -278,10 +291,10 @@ function TestPaidCurrency:test_market_paid_purchase_warns_missing_mapping_only_o
       warn_count = warn_count + 1
     end
   end
-  lu.assertEvalToTrue(warn_count == 1, "missing mapping should only warn once per product_id")
-end
+  luassert.truthy(warn_count == 1, "missing mapping should only warn once per product_id")
+end)
 
-function TestPaidCurrency:test_hidden_paid_entries_do_not_log_mapping_missing()
+it("test_hidden_paid_entries_do_not_log_mapping_missing", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game, {
@@ -298,21 +311,21 @@ function TestPaidCurrency:test_hidden_paid_entries_do_not_log_mapping_missing()
       _with_patches(env.patch_list, function()
         local market = _reload_market()
         local result = market.purchase.execute(game, p, 2009)
-        lu.assertEvalToTrue(type(result) == "table" and result.ok == true, "enabled paid item should still start purchase flow")
-        lu.assertEvalToTrue(result.deferred_fulfillment == true, "enabled paid item should stay deferred")
-        lu.assertEvalToTrue(#env.panel_calls == 1, "enabled paid item should open purchase panel")
+        luassert.truthy(type(result) == "table" and result.ok == true, "enabled paid item should still start purchase flow")
+        luassert.truthy(result.deferred_fulfillment == true, "enabled paid item should stay deferred")
+        luassert.truthy(#env.panel_calls == 1, "enabled paid item should open purchase panel")
       end)
     end)
   end)
 
   local joined = table.concat(warns, "\n")
   for _, product_id in ipairs(_hidden_paid_product_ids()) do
-    lu.assertEvalToTrue(joined:find("product_id=" .. tostring(product_id), 1, true) == nil,
+    luassert.truthy(joined:find("product_id=" .. tostring(product_id), 1, true) == nil,
       "hidden paid entry should not emit missing mapping warning: " .. tostring(product_id))
   end
-end
+end)
 
-function TestPaidCurrency:test_paid_purchase_without_purchase_api_returns_explicit_reason()
+it("test_paid_purchase_without_purchase_api_returns_explicit_reason", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game)
@@ -325,14 +338,14 @@ function TestPaidCurrency:test_paid_purchase_without_purchase_api_returns_explic
     _with_patches(env.patch_list, function()
       local market = _reload_market()
       local result = market.purchase.execute(game, p, 2009)
-      lu.assertEvalToTrue(type(result) == "table" and result.ok == false, "missing purchase api should reject paid purchase")
-      lu.assertEvalToTrue(result.reason == "purchase_api_missing", "missing purchase api reason should stay explicit")
-      lu.assertEvalToTrue(#env.panel_calls == 0, "missing purchase api should not open purchase panel")
+      luassert.truthy(type(result) == "table" and result.ok == false, "missing purchase api should reject paid purchase")
+      luassert.truthy(result.reason == "purchase_api_missing", "missing purchase api reason should stay explicit")
+      luassert.truthy(#env.panel_calls == 0, "missing purchase api should not open purchase panel")
     end)
   end)
-end
+end)
 
-function TestPaidCurrency:test_hidden_paid_product_is_rejected_before_mapping()
+it("test_hidden_paid_product_is_rejected_before_mapping", function()
   local hidden_entry = _find_hidden_paid_entry()
   if hidden_entry == nil then
     return
@@ -354,20 +367,20 @@ function TestPaidCurrency:test_hidden_paid_product_is_rejected_before_mapping()
       _with_patches(env.patch_list, function()
         local market = _reload_market()
         local result = market.purchase.execute(game, p, hidden_entry.product_id)
-        lu.assertEvalToTrue(type(result) == "table" and result.ok == false, "hidden paid product should be rejected")
-        lu.assertEvalToTrue(result.reason == "disabled",
+        luassert.truthy(type(result) == "table" and result.ok == false, "hidden paid product should be rejected")
+        luassert.truthy(result.reason == "disabled",
           "hidden paid product should fail via market policy, not goods mapping")
-        lu.assertEvalToTrue(#env.panel_calls == 0, "hidden paid product should not open purchase panel")
+        luassert.truthy(#env.panel_calls == 0, "hidden paid product should not open purchase panel")
       end)
     end)
   end)
 
   local joined = table.concat(warns, "\n")
-  lu.assertEvalToTrue(joined:find("product_id=" .. tostring(hidden_entry.product_id), 1, true) == nil,
+  luassert.truthy(joined:find("product_id=" .. tostring(hidden_entry.product_id), 1, true) == nil,
     "hidden paid product rejection should not depend on its paid goods mapping warning")
-end
+end)
 
-function TestPaidCurrency:test_paid_purchase_callback_fulfills_item()
+it("test_paid_purchase_callback_fulfills_item", function()
   local game = _new_game()
   local p = game.players[1]
   local env = _build_fake_env(game)
@@ -381,17 +394,17 @@ function TestPaidCurrency:test_paid_purchase_callback_fulfills_item()
     _with_patches(env.patch_list, function()
       local market = _reload_market()
       local result = market.purchase.execute(game, p, 2009)
-      lu.assertEvalToTrue(type(result) == "table" and result.ok == true and result.deferred_fulfillment == true,
+      luassert.truthy(type(result) == "table" and result.ok == true and result.deferred_fulfillment == true,
         "paid purchase should enter deferred mode")
 
       local cb = env.trigger_handlers[p.id]
-      lu.assertEvalToTrue(type(cb) == "function", "purchase callback should be registered")
+      luassert.truthy(type(cb) == "function", "purchase callback should be registered")
       cb(nil, nil, { role = env.role_by_player_id[p.id], goods_id = "goods_strong_card" })
-      lu.assertEvalToTrue(p.inventory:count() == before_count + 1, "purchase callback should grant item")
-      lu.assertEvalToTrue(game.market_limits[2009] == before_limit - 1, "purchase callback should consume global market limit")
+      luassert.truthy(p.inventory:count() == before_count + 1, "purchase callback should grant item")
+      luassert.truthy(game.market_limits[2009] == before_limit - 1, "purchase callback should consume global market limit")
     end)
   end)
-end
+end)
 
 
-return TestPaidCurrency
+end)

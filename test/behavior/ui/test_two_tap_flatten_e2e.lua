@@ -1,3 +1,6 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- luacheck: ignore 211
 -- Spec-driven end-to-end QA for the two-tap flatten effort.
 -- Covers five scenarios:
@@ -10,12 +13,11 @@
 --      without going through _lock_option (locked_option_id stays nil).
 --   D. Market still requires the two-step (market_select then market_confirm).
 --
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):describe/it 拍平为文件级 Test*
--- 类,用例数与改写前一一对应(5 例)。it 名含冒号/空格,方法用字符串 key 注册。
-local lu = require("luaunit")
 local pending_confirmation = require("src.state.pending_confirmation")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 local _bind_ui_runtime = support.bind_ui_runtime
 local ui_intent_dispatcher = require("src.ui.input.intent_dispatcher")
@@ -59,9 +61,9 @@ local function _real_turn_action_port()
   }
 end
 
-TestTwoTapFlattenE2e = {}
+describe("TestTwoTapFlattenE2e", function()
 
-TestTwoTapFlattenE2e["test_Scenario A0: stale ui_model still lets the first item slot tap reach choice_select"] = function(self)
+it("test_Scenario A0: stale ui_model still lets the first item slot tap reach choice_select", function()
   local game, player, choice = _open_real_pre_action_item_window()
 
   -- 规则落地不是本条的射程：在 game 的派发边界上截获，钉「点击真的走到了这里」。
@@ -109,9 +111,9 @@ TestTwoTapFlattenE2e["test_Scenario A0: stale ui_model still lets the first item
   _assert_eq(dispatched[1] and dispatched[1].option_id, item_ids.remote_dice,
     "Scenario A0: slot 1 should resolve to the only card in the bag")
   _assert_eq(#tips, 0, "Scenario A0: an admitted tap must not raise a denial tip")
-end
+end)
 
-TestTwoTapFlattenE2e["test_Scenario A: item phase single tap directly dispatches choice_select"] = function(self)
+it("test_Scenario A: item phase single tap directly dispatches choice_select", function()
   local enter_calls = 0
   local opened_pre_confirm = 0
   local dispatched = {}
@@ -173,9 +175,9 @@ TestTwoTapFlattenE2e["test_Scenario A: item phase single tap directly dispatches
   _assert_eq(opened_pre_confirm, 0, "Scenario A: open_pre_confirm_screen must not be called")
   _assert_eq(pending_confirmation.is_active(state), false,
     "Scenario A: no pending confirmation may be active")
-end
+end)
 
-TestTwoTapFlattenE2e["test_Scenario B: target_choice second tap on locked option emits choice_select"] = function(self)
+it("test_Scenario B: target_choice second tap on locked option emits choice_select", function()
   local dispatched = {}
   local state = {
     ui = {},
@@ -224,9 +226,9 @@ TestTwoTapFlattenE2e["test_Scenario B: target_choice second tap on locked option
     "Scenario B: dispatch_action should receive choice_select")
   _assert_eq(dispatched[1] and dispatched[1].option_id, "tile_5",
     "Scenario B: dispatched intent should keep tile_5 option id")
-end
+end)
 
-TestTwoTapFlattenE2e["test_Scenario C: target_choice unique target auto-dispatches choice_select on first tap"] = function(self)
+it("test_Scenario C: target_choice unique target auto-dispatches choice_select on first tap", function()
   local state = {
     ui = {},
     ui_model = {
@@ -253,9 +255,9 @@ TestTwoTapFlattenE2e["test_Scenario C: target_choice unique target auto-dispatch
   -- Critical: unique-target path must NOT have routed through _lock_option.
   _assert_eq(state.target_choice_runtime, nil,
     "Scenario C: target_choice_runtime must remain nil (no _lock_option side-effect)")
-end
+end)
 
-TestTwoTapFlattenE2e["test_Scenario D: market still requires two-step (market_select then market_confirm)"] = function(self)
+it("test_Scenario D: market still requires two-step (market_select then market_confirm)", function()
   local dispatched = {}
   local selected_option = nil
   local state = {
@@ -338,7 +340,7 @@ TestTwoTapFlattenE2e["test_Scenario D: market still requires two-step (market_se
     "Scenario D: market_confirm dispatcher path should emit choice_select")
   _assert_eq(dispatched[1] and dispatched[1].option_id, 2001,
     "Scenario D: market_confirm dispatched intent should keep option id")
-end
+end)
 
 
-return TestTwoTapFlattenE2e
+end)

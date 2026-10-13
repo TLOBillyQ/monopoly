@@ -1,5 +1,7 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- luacheck: ignore 211
-local lu = require("luaunit")
 local pending_confirmation = require("src.state.pending_confirmation")
 local market_slots = require("src.ui.render.market.slots")
 local placement = require("src.ui.render.board.placement")
@@ -81,7 +83,7 @@ local _play_cue_final_tests = {
     }
 
     local result = board_feedback.play_tile_cue(state, nil, 1, {}, { host_runtime = mock_host })
-    lu.assertEvalToTrue(result == false, "should return false for nil cue name")
+    luassert.truthy(result == false, "should return false for nil cue name")
   end,
   function()
     -- Test _play_cue with empty cue name returns false
@@ -98,7 +100,7 @@ local _play_cue_final_tests = {
     }
 
     local result = board_feedback.play_tile_cue(state, "", 1, {}, { host_runtime = mock_host })
-    lu.assertEvalToTrue(result == false, "should return false for empty cue name")
+    luassert.truthy(result == false, "should return false for empty cue name")
   end,
   function()
     -- Test _play_cue with nonexistent cue returns false
@@ -115,7 +117,7 @@ local _play_cue_final_tests = {
     }
 
     local result = board_feedback.play_tile_cue(state, "nonexistent_cue_12345", 1, {}, { host_runtime = mock_host })
-    lu.assertEvalToTrue(result == false, "should return false for nonexistent cue")
+    luassert.truthy(result == false, "should return false for nonexistent cue")
   end,
   function()
     -- Test play_sound_only with nil pos fallback
@@ -138,7 +140,7 @@ local _play_cue_final_tests = {
       { host_runtime = mock_host }
     )
 
-    lu.assertEvalToTrue(result == false, "should return false for nonexistent cue even with nil pos fallback")
+    luassert.truthy(result == false, "should return false for nonexistent cue even with nil pos fallback")
   end,
   function()
     -- Test play_player_cue when player position cannot be resolved
@@ -156,84 +158,98 @@ local _play_cue_final_tests = {
     }
 
     local result = board_feedback.play_player_cue(state, "test_cue", "p1", {}, { host_runtime = mock_host })
-    lu.assertEvalToTrue(result == false, "should return false when player position cannot be resolved")
+    luassert.truthy(result == false, "should return false when player position cannot be resolved")
   end,
 }
 
-TestGameplayT6Hotspot = {}
+describe("TestGameplayT6Hotspot", function()
+  local loaded_before_case
+  before_each(function()
+    loaded_before_case = {}
+    for name, object in pairs(package.loaded) do
+      if name:match("^src%.") then loaded_before_case[name] = object end
+    end
+  end)
+  after_each(function()
+    for name in pairs(package.loaded) do
+      if name:match("^src%.") and loaded_before_case[name] == nil then package.loaded[name] = nil end
+    end
+    for name, object in pairs(loaded_before_case) do package.loaded[name] = object end
+  end)
 
-function TestGameplayT6Hotspot:test_01_resolve_market_name_from_entry()
+
+it("test_01_resolve_market_name_from_entry", function()
   local name = market_slots._resolve_market_name(nil, 1001, { name = "EntryName" }, nil)
-  lu.assertEvalToTrue(name == "EntryName", "should return entry name when available")
-end
+  luassert.truthy(name == "EntryName", "should return entry name when available")
+end)
 
-function TestGameplayT6Hotspot:test_02_resolve_market_name_from_cfg()
+it("test_02_resolve_market_name_from_cfg", function()
   local name = market_slots._resolve_market_name(nil, 1001, nil, { name = "CfgName" })
-  lu.assertEvalToTrue(name == "CfgName", "should return cfg name when entry name missing")
-end
+  luassert.truthy(name == "CfgName", "should return cfg name when entry name missing")
+end)
 
-function TestGameplayT6Hotspot:test_03_resolve_market_name_from_opt_label()
+it("test_03_resolve_market_name_from_opt_label", function()
   local name = market_slots._resolve_market_name({ label = "OptLabel" }, 1001, nil, nil)
-  lu.assertEvalToTrue(name == "OptLabel", "should return opt label when entry/cfg missing")
-end
+  luassert.truthy(name == "OptLabel", "should return opt label when entry/cfg missing")
+end)
 
-function TestGameplayT6Hotspot:test_04_resolve_market_name_fallback_to_product_id()
+it("test_04_resolve_market_name_fallback_to_product_id", function()
   local name = market_slots._resolve_market_name(nil, 1001, nil, nil)
-  lu.assertEvalToTrue(name == "1001", "should fallback to product_id as string")
-end
+  luassert.truthy(name == "1001", "should fallback to product_id as string")
+end)
 
-function TestGameplayT6Hotspot:test_05_resolve_occupant_slot_single_player()
+it("test_05_resolve_occupant_slot_single_player", function()
   local list = { "p1" }
   local slot, count = placement._resolve_occupant_slot(list, "p1")
-  lu.assertEvalToTrue(slot == 1, "single player should be slot 1")
-  lu.assertEvalToTrue(count == 1, "single player count should be 1")
-end
+  luassert.truthy(slot == 1, "single player should be slot 1")
+  luassert.truthy(count == 1, "single player count should be 1")
+end)
 
-function TestGameplayT6Hotspot:test_06_resolve_occupant_slot_first_in_list()
+it("test_06_resolve_occupant_slot_first_in_list", function()
   local list = { "p1", "p2", "p3" }
   local slot, count = placement._resolve_occupant_slot(list, "p1")
-  lu.assertEvalToTrue(slot == 1, "first player should be slot 1")
-  lu.assertEvalToTrue(count == 3, "count should be list length")
-end
+  luassert.truthy(slot == 1, "first player should be slot 1")
+  luassert.truthy(count == 3, "count should be list length")
+end)
 
-function TestGameplayT6Hotspot:test_07_resolve_occupant_slot_middle_in_list()
+it("test_07_resolve_occupant_slot_middle_in_list", function()
   local list = { "p1", "p2", "p3" }
   local slot, count = placement._resolve_occupant_slot(list, "p2")
-  lu.assertEvalToTrue(slot == 2, "middle player should be slot 2")
-  lu.assertEvalToTrue(count == 3, "count should be list length")
-end
+  luassert.truthy(slot == 2, "middle player should be slot 2")
+  luassert.truthy(count == 3, "count should be list length")
+end)
 
-function TestGameplayT6Hotspot:test_08_resolve_occupant_slot_last_in_list()
+it("test_08_resolve_occupant_slot_last_in_list", function()
   local list = { "p1", "p2", "p3" }
   local slot, count = placement._resolve_occupant_slot(list, "p3")
-  lu.assertEvalToTrue(slot == 3, "last player should be slot 3")
-  lu.assertEvalToTrue(count == 3, "count should be list length")
-end
+  luassert.truthy(slot == 3, "last player should be slot 3")
+  luassert.truthy(count == 3, "count should be list length")
+end)
 
-function TestGameplayT6Hotspot:test_09_resolve_player_status_key_eliminated()
+it("test_09_resolve_player_status_key_eliminated", function()
   local game = {}
   local player = { eliminated = true }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == nil, "eliminated player should have no status key")
-end
+  luassert.truthy(key == nil, "eliminated player should have no status key")
+end)
 
-function TestGameplayT6Hotspot:test_10_resolve_player_status_key_nil_player()
+it("test_10_resolve_player_status_key_nil_player", function()
   local key = status3d_status.resolve_player_status_key({}, nil)
-  lu.assertEvalToTrue(key == nil, "nil player should have no status key")
-end
+  luassert.truthy(key == nil, "nil player should have no status key")
+end)
 
-function TestGameplayT6Hotspot:test_11_resolve_player_status_key_nil_game_with_stay_turns_does_not_error()
+it("test_11_resolve_player_status_key_nil_game_with_stay_turns_does_not_error", function()
   local player = {
     id = 1,
     position = 5,
     status = { stay_turns = 0 },
   }
   local ok, key = pcall(status3d_status.resolve_player_status_key, nil, player)
-  lu.assertEvalToTrue(ok, "nil game should not raise while checking detention state")
-  lu.assertEvalToTrue(key == nil, "nil game should not produce a location status")
-end
+  luassert.truthy(ok, "nil game should not raise while checking detention state")
+  luassert.truthy(key == nil, "nil game should not produce a location status")
+end)
 
-function TestGameplayT6Hotspot:test_12_resolve_player_status_key_hospital()
+it("test_12_resolve_player_status_key_hospital", function()
   local game = {
     board = {
       get_tile = function()
@@ -255,10 +271,10 @@ function TestGameplayT6Hotspot:test_12_resolve_player_status_key_hospital()
     status = { stay_turns = 3 },
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == "hospital", "hospital tile with stay_turns should return hospital")
-end
+  luassert.truthy(key == "hospital", "hospital tile with stay_turns should return hospital")
+end)
 
-function TestGameplayT6Hotspot:test_13_resolve_player_status_key_hospital_detained_wait_flag()
+it("test_13_resolve_player_status_key_hospital_detained_wait_flag", function()
   local game = {
     board = {
       get_tile = function()
@@ -280,10 +296,10 @@ function TestGameplayT6Hotspot:test_13_resolve_player_status_key_hospital_detain
     status = { stay_turns = 0 },
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == "hospital", "detained_wait_active should keep location status visible")
-end
+  luassert.truthy(key == "hospital", "detained_wait_active should keep location status visible")
+end)
 
-function TestGameplayT6Hotspot:test_14_resolve_player_status_key_hospital_detained_wait_phase()
+it("test_14_resolve_player_status_key_hospital_detained_wait_phase", function()
   local game = {
     board = {
       get_tile = function()
@@ -305,10 +321,10 @@ function TestGameplayT6Hotspot:test_14_resolve_player_status_key_hospital_detain
     status = { stay_turns = 0 },
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == "hospital", "detained_wait phase should keep location status visible")
-end
+  luassert.truthy(key == "hospital", "detained_wait phase should keep location status visible")
+end)
 
-function TestGameplayT6Hotspot:test_15_resolve_player_status_key_hospital_requires_matching_detention_turn()
+it("test_15_resolve_player_status_key_hospital_requires_matching_detention_turn", function()
   local base_game = {
     board = {
       get_tile = function()
@@ -326,19 +342,19 @@ function TestGameplayT6Hotspot:test_15_resolve_player_status_key_hospital_requir
   }
 
   base_game.last_turn = nil
-  lu.assertEvalToTrue(status3d_status.resolve_player_status_key(base_game, player) == nil,
+  luassert.truthy(status3d_status.resolve_player_status_key(base_game, player) == nil,
     "missing last_turn should not count as detained")
 
   base_game.last_turn = { player_id = 1, skipped = false, stay_turns = 1 }
-  lu.assertEvalToTrue(status3d_status.resolve_player_status_key(base_game, player) == nil,
+  luassert.truthy(status3d_status.resolve_player_status_key(base_game, player) == nil,
     "non-skipped last_turn should not count as detained")
 
   base_game.last_turn = { player_id = 1, skipped = true }
-  lu.assertEvalToTrue(status3d_status.resolve_player_status_key(base_game, player) == nil,
+  luassert.truthy(status3d_status.resolve_player_status_key(base_game, player) == nil,
     "missing stay_turns should not count as detained")
-end
+end)
 
-function TestGameplayT6Hotspot:test_16_resolve_player_status_key_hospital_without_turn_or_stay_turns_is_hidden()
+it("test_16_resolve_player_status_key_hospital_without_turn_or_stay_turns_is_hidden", function()
   local game = {
     board = {
       get_tile = function()
@@ -357,10 +373,10 @@ function TestGameplayT6Hotspot:test_16_resolve_player_status_key_hospital_withou
     status = {},
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == nil, "missing turn wait and stay_turns should not show hospital")
-end
+  luassert.truthy(key == nil, "missing turn wait and stay_turns should not show hospital")
+end)
 
-function TestGameplayT6Hotspot:test_17_resolve_player_status_key_mountain()
+it("test_17_resolve_player_status_key_mountain", function()
   local game = {
     board = {
       get_tile = function()
@@ -382,10 +398,10 @@ function TestGameplayT6Hotspot:test_17_resolve_player_status_key_mountain()
     status = { stay_turns = 2 },
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == "mountain", "mountain tile with stay_turns should return mountain")
-end
+  luassert.truthy(key == "mountain", "mountain tile with stay_turns should return mountain")
+end)
 
-function TestGameplayT6Hotspot:test_18_resolve_player_status_key_roadblock()
+it("test_18_resolve_player_status_key_roadblock", function()
   local game = {
     board = {
       get_tile = function()
@@ -403,10 +419,10 @@ function TestGameplayT6Hotspot:test_18_resolve_player_status_key_roadblock()
     status = {},
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == "roadblock", "roadblock stop should return roadblock key")
-end
+  luassert.truthy(key == "roadblock", "roadblock stop should return roadblock key")
+end)
 
-function TestGameplayT6Hotspot:test_19_resolve_player_status_key_poor_deity()
+it("test_19_resolve_player_status_key_poor_deity", function()
   local game = {
     board = {
       get_tile = function()
@@ -423,10 +439,10 @@ function TestGameplayT6Hotspot:test_19_resolve_player_status_key_poor_deity()
     },
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == "poor", "poor deity should return poor key")
-end
+  luassert.truthy(key == "poor", "poor deity should return poor key")
+end)
 
-function TestGameplayT6Hotspot:test_20_resolve_player_status_key_poor_deity_without_remaining_is_hidden()
+it("test_20_resolve_player_status_key_poor_deity_without_remaining_is_hidden", function()
   local game = {
     board = {
       get_tile = function()
@@ -443,10 +459,10 @@ function TestGameplayT6Hotspot:test_20_resolve_player_status_key_poor_deity_with
     },
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == nil, "deity without remaining turns should not return a status key")
-end
+  luassert.truthy(key == nil, "deity without remaining turns should not return a status key")
+end)
 
-function TestGameplayT6Hotspot:test_21_resolve_player_status_key_rich_deity()
+it("test_21_resolve_player_status_key_rich_deity", function()
   local game = {
     board = {
       get_tile = function()
@@ -463,10 +479,10 @@ function TestGameplayT6Hotspot:test_21_resolve_player_status_key_rich_deity()
     },
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == "rich", "rich deity should return rich key")
-end
+  luassert.truthy(key == "rich", "rich deity should return rich key")
+end)
 
-function TestGameplayT6Hotspot:test_22_resolve_player_status_key_angel_deity()
+it("test_22_resolve_player_status_key_angel_deity", function()
   local game = {
     board = {
       get_tile = function()
@@ -483,10 +499,10 @@ function TestGameplayT6Hotspot:test_22_resolve_player_status_key_angel_deity()
     },
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == "angel", "angel deity should return angel key")
-end
+  luassert.truthy(key == "angel", "angel deity should return angel key")
+end)
 
-function TestGameplayT6Hotspot:test_23_resolve_player_status_key_no_status()
+it("test_23_resolve_player_status_key_no_status", function()
   local game = {
     board = {
       get_tile = function()
@@ -501,10 +517,10 @@ function TestGameplayT6Hotspot:test_23_resolve_player_status_key_no_status()
     status = {},
   }
   local key = status3d_status.resolve_player_status_key(game, player)
-  lu.assertEvalToTrue(key == nil, "no special status should return nil")
-end
+  luassert.truthy(key == nil, "no special status should return nil")
+end)
 
-function TestGameplayT6Hotspot:test_24_role_control_lock_sync_disabled_releases_all()
+it("test_24_role_control_lock_sync_disabled_releases_all", function()
   local state = {
     role_control_lock = {
       by_role = {},
@@ -514,10 +530,10 @@ function TestGameplayT6Hotspot:test_24_role_control_lock_sync_disabled_releases_
     for_each_role_or_global = function() end,
   }
   role_control_lock_policy.sync(state, false, { runtime = mock_runtime })
-  lu.assertEvalToTrue(state.role_control_lock ~= nil, "lock state should exist")
-end
+  luassert.truthy(state.role_control_lock ~= nil, "lock state should exist")
+end)
 
-function TestGameplayT6Hotspot:test_25_role_control_lock_sync_missing_buff_id_warns()
+it("test_25_role_control_lock_sync_missing_buff_id_warns", function()
   local state = {
     role_control_lock = {
       by_role = {},
@@ -530,10 +546,10 @@ function TestGameplayT6Hotspot:test_25_role_control_lock_sync_missing_buff_id_wa
   }
   role_control_lock_policy.sync(state, true, { runtime = mock_runtime })
   _G.Enums = original_enums
-  lu.assertEvalToTrue(state.role_control_lock ~= nil, "lock state should exist after warning")
-end
+  luassert.truthy(state.role_control_lock ~= nil, "lock state should exist after warning")
+end)
 
-function TestGameplayT6Hotspot:test_26_role_control_lock_sync_exempt_role_skips_lock()
+it("test_26_role_control_lock_sync_exempt_role_skips_lock", function()
   local state = {
     role_control_lock = {
       by_role = {},
@@ -550,10 +566,10 @@ function TestGameplayT6Hotspot:test_26_role_control_lock_sync_exempt_role_skips_
     resolve_role_id = function(r) return "p1" end,
   }
   role_control_lock_policy.sync(state, true, { runtime = mock_runtime })
-  lu.assertEvalToTrue(state.role_control_lock ~= nil, "lock state should exist")
-end
+  luassert.truthy(state.role_control_lock ~= nil, "lock state should exist")
+end)
 
-function TestGameplayT6Hotspot:test_27_role_control_lock_sync_missing_unit_skips()
+it("test_27_role_control_lock_sync_missing_unit_skips", function()
   local state = {
     role_control_lock = {
       by_role = {},
@@ -569,10 +585,10 @@ function TestGameplayT6Hotspot:test_27_role_control_lock_sync_missing_unit_skips
     resolve_role_id = function(r) return "p1" end,
   }
   role_control_lock_policy.sync(state, true, { runtime = mock_runtime })
-  lu.assertEvalToTrue(state.role_control_lock.by_role["p1"] == nil, "missing unit should not create entry")
-end
+  luassert.truthy(state.role_control_lock.by_role["p1"] == nil, "missing unit should not create entry")
+end)
 
-function TestGameplayT6Hotspot:test_28_role_control_lock_sync_unit_without_buff_api_warns()
+it("test_28_role_control_lock_sync_unit_without_buff_api_warns", function()
   local state = {
     role_control_lock = {
       by_role = {},
@@ -589,22 +605,22 @@ function TestGameplayT6Hotspot:test_28_role_control_lock_sync_unit_without_buff_
     resolve_role_id = function(r) return "p1" end,
   }
   role_control_lock_policy.sync(state, true, { runtime = mock_runtime })
-  lu.assertEvalToTrue(
+  luassert.truthy(
     state.debug_runtime ~= nil
       and state.debug_runtime.log_once ~= nil
       and state.debug_runtime.log_once["role_control_lock:missing_buff_api_p1"] == true,
     "log_once should record missing buff api"
   )
-end
+end)
 
-function TestGameplayT6Hotspot:test_29_role_control_lock_sync_applies_and_tracks_owned_lock()
+it("test_29_role_control_lock_sync_applies_and_tracks_owned_lock", function()
   local original_enums = _G.Enums
   _G.Enums = { BuffState = { BUFF_FORBID_CONTROL = 77 } }
   local add_calls = 0
   local mock_unit = {
     get_state_count = function() return 0 end,
     add_state = function(buff_id)
-      lu.assertEvalToTrue(buff_id == 77, "should apply configured buff id")
+      luassert.truthy(buff_id == 77, "should apply configured buff id")
       add_calls = add_calls + 1
     end,
     remove_state = function() end,
@@ -630,11 +646,11 @@ function TestGameplayT6Hotspot:test_29_role_control_lock_sync_applies_and_tracks
   if not ok then
     error(err)
   end
-  lu.assertEvalToTrue(add_calls == 1, "should add control-forbid buff when unit is unlocked")
-  lu.assertEvalToTrue(state.role_control_lock.by_role.p1.owned == true, "lock state should track owned buff")
-end
+  luassert.truthy(add_calls == 1, "should add control-forbid buff when unit is unlocked")
+  luassert.truthy(state.role_control_lock.by_role.p1.owned == true, "lock state should track owned buff")
+end)
 
-function TestGameplayT6Hotspot:test_30_role_control_lock_sync_cleans_stale_role_entries()
+it("test_30_role_control_lock_sync_cleans_stale_role_entries", function()
   local original_enums = _G.Enums
   _G.Enums = { BuffState = { BUFF_FORBID_CONTROL = 88 } }
   local removed = 0
@@ -642,7 +658,7 @@ function TestGameplayT6Hotspot:test_30_role_control_lock_sync_cleans_stale_role_
     get_state_count = function() return 1 end,
     add_state = function() end,
     remove_state = function(buff_id)
-      lu.assertEvalToTrue(buff_id == 88, "should remove stale buff with configured id")
+      luassert.truthy(buff_id == 88, "should remove stale buff with configured id")
       removed = removed + 1
     end,
   }
@@ -667,11 +683,11 @@ function TestGameplayT6Hotspot:test_30_role_control_lock_sync_cleans_stale_role_
   if not ok then
     error(err)
   end
-  lu.assertEvalToTrue(removed == 1, "stale owned entry should be released")
-  lu.assertEvalToTrue(state.role_control_lock.by_role.stale == nil, "stale role entry should be pruned")
-end
+  luassert.truthy(removed == 1, "stale owned entry should be released")
+  luassert.truthy(state.role_control_lock.by_role.stale == nil, "stale role entry should be pruned")
+end)
 
-function TestGameplayT6Hotspot:test_31_anim_overlay_spawn_overlay_group()
+it("test_31_anim_overlay_spawn_overlay_group", function()
   local scene = {
     overlay_units = { roadblocks = {}, mines = {} },
     presentation_runtime = {
@@ -684,11 +700,11 @@ function TestGameplayT6Hotspot:test_31_anim_overlay_spawn_overlay_group()
     },
   }
   local result = anim_overlay_runtime.spawn_overlay(scene, "roadblock", 1, "group_123", nil, { x = 0, y = 0, z = 0 }, nil, nil)
-  lu.assertEvalToTrue(result == true, "spawn_overlay with group_id should return true")
-  lu.assertEvalToTrue(scene.overlay_units.roadblocks[1] ~= nil, "roadblock entry should exist")
-end
+  luassert.truthy(result == true, "spawn_overlay with group_id should return true")
+  luassert.truthy(scene.overlay_units.roadblocks[1] ~= nil, "roadblock entry should exist")
+end)
 
-function TestGameplayT6Hotspot:test_32_anim_overlay_spawn_overlay_unit()
+it("test_32_anim_overlay_spawn_overlay_unit", function()
   local scene = {
     overlay_units = { roadblocks = {}, mines = {} },
     presentation_runtime = {
@@ -701,11 +717,11 @@ function TestGameplayT6Hotspot:test_32_anim_overlay_spawn_overlay_unit()
     },
   }
   local result = anim_overlay_runtime.spawn_overlay(scene, "mine", 2, nil, "unit_456", { x = 1, y = 1, z = 1 }, 1.5, nil)
-  lu.assertEvalToTrue(result == true, "spawn_overlay with unit_id should return true")
-  lu.assertEvalToTrue(scene.overlay_units.mines[2] ~= nil, "mine entry should exist")
-end
+  luassert.truthy(result == true, "spawn_overlay with unit_id should return true")
+  luassert.truthy(scene.overlay_units.mines[2] ~= nil, "mine entry should exist")
+end)
 
-function TestGameplayT6Hotspot:test_33_anim_overlay_spawn_overlay_unknown_kind()
+it("test_33_anim_overlay_spawn_overlay_unknown_kind", function()
   local scene = {
     overlay_units = { roadblocks = {}, mines = {} },
     presentation_runtime = {
@@ -713,10 +729,10 @@ function TestGameplayT6Hotspot:test_33_anim_overlay_spawn_overlay_unknown_kind()
     },
   }
   local result = anim_overlay_runtime.spawn_overlay(scene, "unknown", 1, nil, nil, { x = 0, y = 0, z = 0 }, nil, nil)
-  lu.assertEvalToTrue(result == false, "spawn_overlay with unknown kind should return false")
-end
+  luassert.truthy(result == false, "spawn_overlay with unknown kind should return false")
+end)
 
-function TestGameplayT6Hotspot:test_34_anim_overlay_spawn_overlay_replaces_existing()
+it("test_34_anim_overlay_spawn_overlay_replaces_existing", function()
   local destroyed = false
   local scene = {
     overlay_units = {
@@ -735,11 +751,11 @@ function TestGameplayT6Hotspot:test_34_anim_overlay_spawn_overlay_replaces_exist
     },
   }
   local result = anim_overlay_runtime.spawn_overlay(scene, "roadblock", 1, "new_group", nil, { x = 0, y = 0, z = 0 }, nil, nil)
-  lu.assertEvalToTrue(result == true, "spawn_overlay should succeed")
-  lu.assertEvalToTrue(destroyed == true, "old overlay should be destroyed")
-end
+  luassert.truthy(result == true, "spawn_overlay should succeed")
+  luassert.truthy(destroyed == true, "old overlay should be destroyed")
+end)
 
-function TestGameplayT6Hotspot:test_35_anim_overlay_spawn_overlay_no_ids_returns_false()
+it("test_35_anim_overlay_spawn_overlay_no_ids_returns_false", function()
   local scene = {
     overlay_units = { roadblocks = {}, mines = {} },
     presentation_runtime = {
@@ -747,10 +763,10 @@ function TestGameplayT6Hotspot:test_35_anim_overlay_spawn_overlay_no_ids_returns
     },
   }
   local result = anim_overlay_runtime.spawn_overlay(scene, "roadblock", 1, nil, nil, { x = 0, y = 0, z = 0 }, nil, nil)
-  lu.assertEvalToTrue(result == false, "spawn_overlay with no group_id or unit_id should return false")
-end
+  luassert.truthy(result == false, "spawn_overlay with no group_id or unit_id should return false")
+end)
 
-function TestGameplayT6Hotspot:test_36_create_scene_ui_bind_unit_from_ctrl_unit()
+it("test_36_create_scene_ui_bind_unit_from_ctrl_unit", function()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
   }, function()
@@ -762,12 +778,12 @@ function TestGameplayT6Hotspot:test_36_create_scene_ui_bind_unit_from_ctrl_unit(
     }
     local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_1")
     math.Vector3 = original_vector3
-    lu.assertEvalToTrue(result ~= nil, "should create layer from ctrl_unit")
-    lu.assertEvalToTrue(created == true, "ctrl_unit.create_scene_ui_bind_unit should be called")
+    luassert.truthy(result ~= nil, "should create layer from ctrl_unit")
+    luassert.truthy(created == true, "ctrl_unit.create_scene_ui_bind_unit should be called")
   end)
-end
+end)
 
-function TestGameplayT6Hotspot:test_37_create_scene_ui_bind_unit_ignores_role_factory_when_ctrl_unit_missing()
+it("test_37_create_scene_ui_bind_unit_ignores_role_factory_when_ctrl_unit_missing", function()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
   }, function()
@@ -780,12 +796,12 @@ function TestGameplayT6Hotspot:test_37_create_scene_ui_bind_unit_ignores_role_fa
     }
     local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_2")
     math.Vector3 = original_vector3
-    lu.assertEvalToTrue(result == nil, "should not fall back to role factory")
-    lu.assertEvalToTrue(created == false, "role factory should no longer be called")
+    luassert.truthy(result == nil, "should not fall back to role factory")
+    luassert.truthy(created == false, "role factory should no longer be called")
   end)
-end
+end)
 
-function TestGameplayT6Hotspot:test_38_create_scene_ui_bind_unit_ignores_global_factory_when_ctrl_unit_missing()
+it("test_38_create_scene_ui_bind_unit_ignores_global_factory_when_ctrl_unit_missing", function()
   _with_globals({
     SceneUI = {
       create_scene_ui_bind_unit = function() return { id = "layer3" } end,
@@ -796,11 +812,11 @@ function TestGameplayT6Hotspot:test_38_create_scene_ui_bind_unit_ignores_global_
     math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
     local result = status3d_scene._create_scene_ui_bind_unit(nil, "layout_3")
     math.Vector3 = original_vector3
-    lu.assertEvalToTrue(result == nil, "should not fall back to global SceneUI")
+    luassert.truthy(result == nil, "should not fall back to global SceneUI")
   end)
-end
+end)
 
-function TestGameplayT6Hotspot:test_39_create_scene_ui_bind_unit_returns_nil_when_unavailable()
+it("test_39_create_scene_ui_bind_unit_returns_nil_when_unavailable", function()
   local original_scene_ui = _G.SceneUI
   local original_enums = _G.Enums
   local original_vector3 = math.Vector3
@@ -809,7 +825,7 @@ function TestGameplayT6Hotspot:test_39_create_scene_ui_bind_unit_returns_nil_whe
   math.Vector3 = function(x, y, z) return { x = x, y = y, z = z } end
   local ok, err = pcall(function()
     local result = status3d_scene._create_scene_ui_bind_unit({}, "layout_4")
-    lu.assertEvalToTrue(result == nil, "should return nil when no method available")
+    luassert.truthy(result == nil, "should return nil when no method available")
   end)
   _G.SceneUI = original_scene_ui
   _G.Enums = original_enums
@@ -817,9 +833,9 @@ function TestGameplayT6Hotspot:test_39_create_scene_ui_bind_unit_returns_nil_whe
   if not ok then
     error(err)
   end
-end
+end)
 
-function TestGameplayT6Hotspot:test_40_ensure_layers_for_player_returns_false_when_ctrl_unit_factory_missing()
+it("test_40_ensure_layers_for_player_returns_false_when_ctrl_unit_factory_missing", function()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
   }, function()
@@ -856,12 +872,12 @@ function TestGameplayT6Hotspot:test_40_ensure_layers_for_player_returns_false_wh
     local ok = status3d_scene.ensure_layers_for_player(cache, player, { host_runtime = host_runtime })
     math.Vector3 = original_vector3
 
-    lu.assertEvalToTrue(ok == false, "ensure_layers should fail when ctrl_unit factory is missing")
-    lu.assertEvalToTrue(cache.layers[player.id] == nil, "player layers should not be cached without ctrl_unit factory")
+    luassert.truthy(ok == false, "ensure_layers should fail when ctrl_unit factory is missing")
+    luassert.truthy(cache.layers[player.id] == nil, "player layers should not be cached without ctrl_unit factory")
   end)
-end
+end)
 
-function TestGameplayT6Hotspot:test_41_ensure_layers_for_player_ignores_global_factory_when_ctrl_unit_factory_missing()
+it("test_41_ensure_layers_for_player_ignores_global_factory_when_ctrl_unit_factory_missing", function()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
     SceneUI = {
@@ -903,12 +919,12 @@ function TestGameplayT6Hotspot:test_41_ensure_layers_for_player_ignores_global_f
     local ok = status3d_scene.ensure_layers_for_player(cache, player, { host_runtime = host_runtime })
     math.Vector3 = original_vector3
 
-    lu.assertEvalToTrue(ok == false, "ensure_layers should ignore global SceneUI fallback")
-    lu.assertEvalToTrue(cache.layers[player.id] == nil, "player layers should not be cached from global fallback")
+    luassert.truthy(ok == false, "ensure_layers should ignore global SceneUI fallback")
+    luassert.truthy(cache.layers[player.id] == nil, "player layers should not be cached from global fallback")
   end)
-end
+end)
 
-function TestGameplayT6Hotspot:test_42_pre_confirm_enter_choice_select()
+it("test_42_pre_confirm_enter_choice_select", function()
     local state = {
       ui = { active_choice_screen_key = "base" },
       game = {},
@@ -942,13 +958,13 @@ function TestGameplayT6Hotspot:test_42_pre_confirm_enter_choice_select()
       return flow.enter(state, { type = "choice_select", option_id = "opt1", actor_role_id = 7 })
     end)
 
-    lu.assertEvalToTrue(result == true, "choice_select intent should enter pre_confirm")
-    lu.assertEvalToTrue(opened == true, "open_pre_confirm_screen should be called")
-    lu.assertEvalToTrue(pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT) == true,
+    luassert.truthy(result == true, "choice_select intent should enter pre_confirm")
+    luassert.truthy(opened == true, "open_pre_confirm_screen should be called")
+    luassert.truthy(pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT) == true,
       "pending confirmation (choice_select) should be active")
-end
+end)
 
-function TestGameplayT6Hotspot:test_43_pre_confirm_enter_no_choice_returns_false()
+it("test_43_pre_confirm_enter_no_choice_returns_false", function()
     local state = {
       ui = {},
       game = {},
@@ -960,10 +976,10 @@ function TestGameplayT6Hotspot:test_43_pre_confirm_enter_no_choice_returns_false
     }, function(flow)
       return flow.enter(state, { type = "choice_select", option_id = "opt1" })
     end)
-    lu.assertEvalToTrue(result == false, "enter with no choice should return false")
-end
+    luassert.truthy(result == false, "enter with no choice should return false")
+end)
 
-function TestGameplayT6Hotspot:test_44_pre_confirm_enter_unknown_intent_returns_false()
+it("test_44_pre_confirm_enter_unknown_intent_returns_false", function()
     local state = {
       ui = {},
       game = {},
@@ -977,26 +993,26 @@ function TestGameplayT6Hotspot:test_44_pre_confirm_enter_unknown_intent_returns_
     }, function(flow)
       return flow.enter(state, { type = "unknown_type" })
     end)
-    lu.assertEvalToTrue(result == false, "unknown intent type should return false")
-end
+    luassert.truthy(result == false, "unknown intent type should return false")
+end)
 
-function TestGameplayT6Hotspot:test_45_status3d_init_sync_no_game_returns_early()
+it("test_45_status3d_init_sync_no_game_returns_early", function()
   local state = {}
   status3d_init.sync(nil, state, {}, {})
-  lu.assertEvalToTrue(next(state) == nil, "no game should leave state untouched")
-end
+  luassert.truthy(next(state) == nil, "no game should leave state untouched")
+end)
 
-function TestGameplayT6Hotspot:test_46_status3d_init_sync_disabled_cache_returns_early()
+it("test_46_status3d_init_sync_disabled_cache_returns_early", function()
   local state = {
     ui_status_3d = { disabled = true, layers = {}, text_nodes = {}, last_status_key_by_player = {} },
   }
   local game = { players = {} }
   status3d_init.sync(game, state, {}, { host_runtime = { has_scene_ui_support = function() return true end } })
-  lu.assertEvalToTrue(state.ui_status_3d.disabled == true, "disabled cache should remain disabled")
-  lu.assertEvalToTrue(next(state.ui_status_3d.layers) == nil, "disabled cache should not gain layers")
-end
+  luassert.truthy(state.ui_status_3d.disabled == true, "disabled cache should remain disabled")
+  luassert.truthy(next(state.ui_status_3d.layers) == nil, "disabled cache should not gain layers")
+end)
 
-function TestGameplayT6Hotspot:test_47_status3d_init_sync_no_dirty_no_missing_layers()
+it("test_47_status3d_init_sync_no_dirty_no_missing_layers", function()
   local state = {
     ui_status_3d = {
       layers = { p1 = {} },
@@ -1018,10 +1034,10 @@ function TestGameplayT6Hotspot:test_47_status3d_init_sync_no_dirty_no_missing_la
       host_runtime = { has_scene_ui_support = function() return true end },
     })
   end)
-  lu.assertEvalToTrue(state.ui_status_3d.layers.p1 ~= nil, "existing layer should be preserved on no-op sync")
-end
+  luassert.truthy(state.ui_status_3d.layers.p1 ~= nil, "existing layer should be preserved on no-op sync")
+end)
 
-function TestGameplayT6Hotspot:test_48_status3d_init_sync_missing_scene_ui_support_disables()
+it("test_48_status3d_init_sync_missing_scene_ui_support_disables", function()
   local state = {
     ui_status_3d = {
       layers = {},
@@ -1048,10 +1064,10 @@ function TestGameplayT6Hotspot:test_48_status3d_init_sync_missing_scene_ui_suppo
   end)
 
   local was_disabled = state.ui_status_3d.disabled
-  lu.assertEvalToTrue(was_disabled == true, "missing scene ui support should disable cache")
-end
+  luassert.truthy(was_disabled == true, "missing scene ui support should disable cache")
+end)
 
-function TestGameplayT6Hotspot:test_49_status3d_init_sync_missing_env_disables()
+it("test_49_status3d_init_sync_missing_env_disables", function()
   local state = {
     ui_status_3d = {
       layers = {},
@@ -1084,10 +1100,10 @@ function TestGameplayT6Hotspot:test_49_status3d_init_sync_missing_env_disables()
   if not ok then
     error(err)
   end
-  lu.assertEvalToTrue(state.ui_status_3d.disabled == true, "missing scene ui env should disable cache")
-end
+  luassert.truthy(state.ui_status_3d.disabled == true, "missing scene ui env should disable cache")
+end)
 
-function TestGameplayT6Hotspot:test_50_play_cue_with_nil_pos()
+it("test_50_play_cue_with_nil_pos", function()
   -- This test covers the nil pos fallback path in _play_cue at line 197
   -- The fallback uses runtime_constants.v3_zero when pos is nil
   -- play_sound_only with no payload.pos, no player_id, no tile_index will pass nil pos
@@ -1106,10 +1122,10 @@ function TestGameplayT6Hotspot:test_50_play_cue_with_nil_pos()
     { host_runtime = mock_host }
   )
 
-  lu.assertEvalToTrue(result == false, "should return false for nonexistent cue")
-end
+  luassert.truthy(result == false, "should return false for nonexistent cue")
+end)
 
-function TestGameplayT6Hotspot:test_51_play_sound_only_with_nil_pos_fallback()
+it("test_51_play_sound_only_with_nil_pos_fallback", function()
   -- This test covers the nil pos fallback path in _play_cue at line 197
   -- by calling play_sound_only with minimal params that result in nil pos
   local mock_host = {
@@ -1126,10 +1142,10 @@ function TestGameplayT6Hotspot:test_51_play_sound_only_with_nil_pos_fallback()
     { host_runtime = mock_host }
   )
 
-  lu.assertEvalToTrue(result == false, "should return false for nonexistent cue even with nil pos fallback")
-end
+  luassert.truthy(result == false, "should return false for nonexistent cue even with nil pos fallback")
+end)
 
-function TestGameplayT6Hotspot:test_52_pre_confirm_enter_missing_modal_function()
+it("test_52_pre_confirm_enter_missing_modal_function", function()
     local state = {
       ui = { active_choice_screen_key = "base" },
       game = {},
@@ -1162,10 +1178,10 @@ function TestGameplayT6Hotspot:test_52_pre_confirm_enter_missing_modal_function(
       return flow.enter(state, { type = "choice_select", option_id = "opt1", actor_role_id = 7 })
     end)
 
-    lu.assertEvalToTrue(result == false, "should return false when modal.open_pre_confirm_screen is not a function")
-end
+    luassert.truthy(result == false, "should return false when modal.open_pre_confirm_screen is not a function")
+end)
 
-function TestGameplayT6Hotspot:test_53_pre_confirm_enter_rejects_non_owner_click()
+it("test_53_pre_confirm_enter_rejects_non_owner_click", function()
     local state = {
       ui = { active_choice_screen_key = "base" },
       game = {},
@@ -1200,11 +1216,11 @@ function TestGameplayT6Hotspot:test_53_pre_confirm_enter_rejects_non_owner_click
       return flow.enter(state, { type = "choice_select", option_id = "opt1", actor_role_id = 8 })
     end)
 
-    lu.assertEvalToTrue(result == false, "pre_confirm should reject a non-owner click")
-    lu.assertEvalToTrue(opened == false, "pre_confirm should not open modal for a non-owner click")
-end
+    luassert.truthy(result == false, "pre_confirm should reject a non-owner click")
+    luassert.truthy(opened == false, "pre_confirm should not open modal for a non-owner click")
+end)
 
-function TestGameplayT6Hotspot:test_54_pre_confirm_enter_requires_actor_role_id()
+it("test_54_pre_confirm_enter_requires_actor_role_id", function()
     local state = {
       ui = { active_choice_screen_key = "base" },
       game = {},
@@ -1238,11 +1254,11 @@ function TestGameplayT6Hotspot:test_54_pre_confirm_enter_requires_actor_role_id(
       return flow.enter(state, { type = "choice_select", option_id = "opt1" })
     end)
 
-    lu.assertEvalToTrue(result == false, "pre_confirm should reject an intent without actor_role_id")
-    lu.assertEvalToTrue(opened == false, "pre_confirm should not open modal without actor_role_id")
-end
+    luassert.truthy(result == false, "pre_confirm should reject an intent without actor_role_id")
+    luassert.truthy(opened == false, "pre_confirm should not open modal without actor_role_id")
+end)
 
-function TestGameplayT6Hotspot:test_55_role_control_lock_sync_unit_with_existing_buff()
+it("test_55_role_control_lock_sync_unit_with_existing_buff", function()
   local original_enums = _G.Enums
   _G.Enums = { BuffState = { BUFF_FORBID_CONTROL = 77 } }
   local mock_unit = {
@@ -1272,11 +1288,11 @@ function TestGameplayT6Hotspot:test_55_role_control_lock_sync_unit_with_existing
     error(err)
   end
   -- Entry should exist but not owned (since buff was pre-existing)
-  lu.assertEvalToTrue(state.role_control_lock.by_role.p1 ~= nil, "should create entry for unit with existing buff")
-  lu.assertEvalToTrue(state.role_control_lock.by_role.p1.owned == false, "should not mark as owned when buff pre-exists")
-end
+  luassert.truthy(state.role_control_lock.by_role.p1 ~= nil, "should create entry for unit with existing buff")
+  luassert.truthy(state.role_control_lock.by_role.p1.owned == false, "should not mark as owned when buff pre-exists")
+end)
 
-function TestGameplayT6Hotspot:test_56_role_control_lock_sync_nil_role_id()
+it("test_56_role_control_lock_sync_nil_role_id", function()
   local original_enums = _G.Enums
   _G.Enums = { BuffState = { BUFF_FORBID_CONTROL = 77 } }
   local state = {
@@ -1303,10 +1319,10 @@ function TestGameplayT6Hotspot:test_56_role_control_lock_sync_nil_role_id()
   -- Should not create entry for nil role_id
   local count = 0
   for _ in pairs(state.role_control_lock.by_role) do count = count + 1 end
-  lu.assertEvalToTrue(count == 0, "should not create entry for nil role_id")
-end
+  luassert.truthy(count == 0, "should not create entry for nil role_id")
+end)
 
-function TestGameplayT6Hotspot:test_57_role_control_lock_sync_role_without_get_ctrl_unit()
+it("test_57_role_control_lock_sync_role_without_get_ctrl_unit", function()
   local original_enums = _G.Enums
   _G.Enums = { BuffState = { BUFF_FORBID_CONTROL = 77 } }
   local state = {
@@ -1331,10 +1347,10 @@ function TestGameplayT6Hotspot:test_57_role_control_lock_sync_role_without_get_c
     error(err)
   end
   -- When unit is nil, the entry is pruned (set to nil), so it should not exist
-  lu.assertEvalToTrue(state.role_control_lock.by_role.p1 == nil, "should not create entry for role without get_ctrl_unit")
-end
+  luassert.truthy(state.role_control_lock.by_role.p1 == nil, "should not create entry for role without get_ctrl_unit")
+end)
 
-function TestGameplayT6Hotspot:test_58_anim_overlay_spawn_overlay_failed_spawn()
+it("test_58_anim_overlay_spawn_overlay_failed_spawn", function()
   local scene = {
     overlay_units = { roadblocks = {}, mines = {} },
     presentation_runtime = {
@@ -1347,10 +1363,10 @@ function TestGameplayT6Hotspot:test_58_anim_overlay_spawn_overlay_failed_spawn()
     },
   }
   local result = anim_overlay_runtime.spawn_overlay(scene, "roadblock", 1, "group_123", nil, { x = 0, y = 0, z = 0 }, nil, nil)
-  lu.assertEvalToTrue(result == false, "spawn_overlay should return false when unit creation fails")
-end
+  luassert.truthy(result == false, "spawn_overlay should return false when unit creation fails")
+end)
 
-function TestGameplayT6Hotspot:test_59_create_scene_ui_bind_unit_preserves_offset()
+it("test_59_create_scene_ui_bind_unit_preserves_offset", function()
   _with_globals({
     Enums = { ModelSocket = { socket_head = 1 } },
   }, function()
@@ -1367,13 +1383,13 @@ function TestGameplayT6Hotspot:test_59_create_scene_ui_bind_unit_preserves_offse
     }
     local result = status3d_scene._create_scene_ui_bind_unit(mock_ctrl_unit, "layout_1")
     math.Vector3 = original_vector3
-    lu.assertEvalToTrue(result ~= nil, "should create layer")
-    lu.assertEvalToTrue(captured_offset ~= nil, "should create offset vector")
-    lu.assertEvalToTrue(captured_offset.y == 4, "offset y should be 4")
+    luassert.truthy(result ~= nil, "should create layer")
+    luassert.truthy(captured_offset ~= nil, "should create offset vector")
+    luassert.truthy(captured_offset.y == 4, "offset y should be 4")
   end)
-end
+end)
 
-function TestGameplayT6Hotspot:test_60_play_cue_empty_cue_name()
+it("test_60_play_cue_empty_cue_name", function()
   local result = board_feedback.play_tile_cue(
     { presentation_runtime = { host_runtime = { play_sfx_by_key = function() end, play_3d_sound = function() end } } },
     "",
@@ -1381,10 +1397,10 @@ function TestGameplayT6Hotspot:test_60_play_cue_empty_cue_name()
     {},
     {}
   )
-  lu.assertEvalToTrue(result == false, "should return false for empty cue name")
-end
+  luassert.truthy(result == false, "should return false for empty cue name")
+end)
 
-function TestGameplayT6Hotspot:test_61_play_cue_nil_cue_name()
+it("test_61_play_cue_nil_cue_name", function()
   local result = board_feedback.play_tile_cue(
     { presentation_runtime = { host_runtime = { play_sfx_by_key = function() end, play_3d_sound = function() end } } },
     nil,
@@ -1392,10 +1408,10 @@ function TestGameplayT6Hotspot:test_61_play_cue_nil_cue_name()
     {},
     {}
   )
-  lu.assertEvalToTrue(result == false, "should return false for nil cue name")
-end
+  luassert.truthy(result == false, "should return false for nil cue name")
+end)
 
-function TestGameplayT6Hotspot:test_62_play_player_cue_nil_position()
+it("test_62_play_player_cue_nil_position", function()
   local mock_host = {
     play_sfx_by_key = function() return nil end,
     play_3d_sound = function() return nil end,
@@ -1412,10 +1428,10 @@ function TestGameplayT6Hotspot:test_62_play_player_cue_nil_position()
   }
 
   local result = board_feedback.play_player_cue(state, "test_cue", "p1", {}, { host_runtime = mock_host })
-  lu.assertEvalToTrue(result == false, "should return false when player position cannot be resolved")
-end
+  luassert.truthy(result == false, "should return false when player position cannot be resolved")
+end)
 
-function TestGameplayT6Hotspot:test_63_play_tile_cue_nil_position()
+it("test_63_play_tile_cue_nil_position", function()
   local mock_host = {
     play_sfx_by_key = function() return nil end,
     play_3d_sound = function() return nil end,
@@ -1428,28 +1444,28 @@ function TestGameplayT6Hotspot:test_63_play_tile_cue_nil_position()
   }
 
   local result = board_feedback.play_tile_cue(state, "test_cue", 1, {}, { host_runtime = mock_host })
-  lu.assertEvalToTrue(result == false, "should return false when tile position cannot be resolved")
-end
+  luassert.truthy(result == false, "should return false when tile position cannot be resolved")
+end)
 
-function TestGameplayT6Hotspot:test_64_play_cue_with_followup_sounds()
+it("test_64_play_cue_with_followup_sounds", function()
   _play_cue_final_tests[1]()
-end
+end)
 
-function TestGameplayT6Hotspot:test_65_play_cue_bind_to_player()
+it("test_65_play_cue_bind_to_player", function()
   _play_cue_final_tests[2]()
-end
+end)
 
-function TestGameplayT6Hotspot:test_66_play_cue_sound_only_fallback()
+it("test_66_play_cue_sound_only_fallback", function()
   _play_cue_final_tests[3]()
-end
+end)
 
-function TestGameplayT6Hotspot:test_67_play_cue_payload_overrides()
+it("test_67_play_cue_payload_overrides", function()
   _play_cue_final_tests[4]()
-end
+end)
 
-function TestGameplayT6Hotspot:test_68_play_cue_allow_missing_resource()
+it("test_68_play_cue_allow_missing_resource", function()
   _play_cue_final_tests[5]()
-end
+end)
 
 
-return TestGameplayT6Hotspot
+end)
