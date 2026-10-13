@@ -1,4 +1,8 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function _assert_identity(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local item_ids = require("src.config.gameplay.item_ids")
 local inventory = require("src.rules.items.inventory")
@@ -36,9 +40,9 @@ function TestLandingAutoAdvance:test_sold_out_market_landing_skips_choice_and_co
 
   _run_landing_turn(game, player)
 
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertIs(game.turn.phase, "inter_turn_wait")
-  lu.assertTrue(game.turn.inter_turn_wait_active)
+  luassert.is_nil(game.turn.pending_choice)
+  _assert_identity(game.turn.phase, "inter_turn_wait")
+  luassert.is_true(game.turn.inter_turn_wait_active)
 end
 
 function TestLandingAutoAdvance:test_free_rent_card_on_enemy_land_is_consumed_without_waiting_for_choice()
@@ -56,11 +60,11 @@ function TestLandingAutoAdvance:test_free_rent_card_on_enemy_land_is_consumed_wi
 
   _run_landing_turn(game, player)
 
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertIs(game.turn.phase, "inter_turn_wait")
-  lu.assertIs(support.count_item(player, item_ids.free_rent), 0)
-  lu.assertIs(game:player_cash(player), player_cash)
-  lu.assertIs(game:player_cash(owner), owner_cash)
+  luassert.is_nil(game.turn.pending_choice)
+  _assert_identity(game.turn.phase, "inter_turn_wait")
+  _assert_identity(support.count_item(player, item_ids.free_rent), 0)
+  _assert_identity(game:player_cash(player), player_cash)
+  _assert_identity(game:player_cash(owner), owner_cash)
 end
 
 function TestLandingAutoAdvance:test_declining_strong_card_uses_free_rent_and_does_not_open_second_choice()
@@ -80,8 +84,8 @@ function TestLandingAutoAdvance:test_declining_strong_card_uses_free_rent_and_do
   _run_landing_turn(game, player)
 
   local strong_choice = assert(game.turn.pending_choice, "strong card prompt should open first")
-  lu.assertIs(strong_choice.kind, "rent_card_prompt")
-  lu.assertIs(strong_choice.meta.card_kind, "strong")
+  _assert_identity(strong_choice.kind, "rent_card_prompt")
+  _assert_identity(strong_choice.meta.card_kind, "strong")
 
   game:dispatch_action({
     type = "choice_cancel",
@@ -89,12 +93,12 @@ function TestLandingAutoAdvance:test_declining_strong_card_uses_free_rent_and_do
     actor_role_id = player.id,
   })
 
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertIs(game.turn.phase, "inter_turn_wait")
-  lu.assertIs(support.count_item(player, item_ids.strong), 1)
-  lu.assertIs(support.count_item(player, item_ids.free_rent), 0)
-  lu.assertIs(game:player_cash(player), player_cash)
-  lu.assertIs(game:player_cash(owner), owner_cash)
+  luassert.is_nil(game.turn.pending_choice)
+  _assert_identity(game.turn.phase, "inter_turn_wait")
+  _assert_identity(support.count_item(player, item_ids.strong), 1)
+  _assert_identity(support.count_item(player, item_ids.free_rent), 0)
+  _assert_identity(game:player_cash(player), player_cash)
+  _assert_identity(game:player_cash(owner), owner_cash)
 end
 
 function TestLandingAutoAdvance:test_accepting_strong_card_prompt_executes_the_selected_card()
@@ -111,7 +115,7 @@ function TestLandingAutoAdvance:test_accepting_strong_card_prompt_executes_the_s
   _run_landing_turn(game, player)
 
   local strong_choice = assert(game.turn.pending_choice, "strong card prompt should open first")
-  lu.assertIs(strong_choice.meta.card_kind, "strong")
+  _assert_identity(strong_choice.meta.card_kind, "strong")
 
   game:dispatch_action({
     type = "choice_select",
@@ -120,9 +124,9 @@ function TestLandingAutoAdvance:test_accepting_strong_card_prompt_executes_the_s
     actor_role_id = player.id,
   })
 
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertIs(support.count_item(player, item_ids.strong), 0, "接受提示应消耗强征卡")
-  lu.assertIs(support.tile_state(game, land_tile).owner_id, player.id, "强征应把地块转到出牌者名下")
+  luassert.is_nil(game.turn.pending_choice)
+  _assert_identity(support.count_item(player, item_ids.strong), 0, "接受提示应消耗强征卡")
+  _assert_identity(support.tile_state(game, land_tile).owner_id, player.id, "强征应把地块转到出牌者名下")
 end
 
 function TestLandingAutoAdvance:test_unknown_rent_card_kind_falls_through_to_paying_rent()
@@ -152,11 +156,11 @@ function TestLandingAutoAdvance:test_unknown_rent_card_kind_falls_through_to_pay
     actor_role_id = player.id,
   })
 
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertIs(support.count_item(player, item_ids.strong), 1, "未知卡种不应消耗手牌")
-  lu.assertIs(support.tile_state(game, land_tile).owner_id, owner.id, "未知卡种不应转移地权")
-  lu.assertTrue(game:player_cash(player) < player_cash, "未知卡种应回落到正常付租")
-  lu.assertTrue(game:player_cash(owner) > owner_cash, "地主应收到租金")
+  luassert.is_nil(game.turn.pending_choice)
+  _assert_identity(support.count_item(player, item_ids.strong), 1, "未知卡种不应消耗手牌")
+  _assert_identity(support.tile_state(game, land_tile).owner_id, owner.id, "未知卡种不应转移地权")
+  luassert.is_true(game:player_cash(player) < player_cash, "未知卡种应回落到正常付租")
+  luassert.is_true(game:player_cash(owner) > owner_cash, "地主应收到租金")
 end
 
 
