@@ -1,9 +1,10 @@
+local check = require("luassert")
 local phase_pre_move = require("src.turn.phases.pre_move")
 local status_ops = require("src.player.actions.status")
 local item_phase = require("src.rules.items.phase")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _build_auto_play_port_stub()
@@ -39,39 +40,9 @@ local function _with_item_phase_run(stub_fn, fn)
   if not ok then error(err, 2) end
 end
 
-TestPreMove = {}
+describe("TestPreMove", function()
 
-function TestPreMove:test_resolve_wait_choice_when_no_wait_action_anim()
-  local player = { id = 1, status = {} }
-  local turn_mgr = _build_turn_mgr({ player = player })
-  local captured_state, captured_args
-
-  _with_item_phase_run(function(_, _, _)
-    return { waiting = true, next_state = "pre_move", next_args = nil }
-  end, function()
-    captured_state, captured_args = phase_pre_move(turn_mgr, { player = player, total = 5, raw_total = 5 })
-  end)
-
-  _assert_eq(captured_state, "wait_choice", "should return wait_choice when no wait_action_anim")
-  _assert_eq(captured_args.next_state, "pre_move", "next_state should be pre_move")
-end
-
-function TestPreMove:test_resolve_wait_action_anim_when_flag_set()
-  local player = { id = 1, status = {} }
-  local turn_mgr = _build_turn_mgr({ player = player })
-  local captured_state
-
-  local _
-  _with_item_phase_run(function(_, _, _)
-    return { waiting = true, wait_action_anim = true, next_state = "pre_move", next_args = nil }
-  end, function()
-    captured_state, _ = phase_pre_move(turn_mgr, { player = player, total = 5, raw_total = 5 })
-  end)
-
-  _assert_eq(captured_state, "wait_action_anim", "should return wait_action_anim when flag is set")
-end
-
-function TestPreMove:test_default_next_args_built_from_player_total_raw_total()
+it("test_default_next_args_built_from_player_total_raw_total", function()
   local player = { id = 1, status = {} }
   local turn_mgr = _build_turn_mgr({ player = player })
   local captured_args
@@ -86,9 +57,23 @@ function TestPreMove:test_default_next_args_built_from_player_total_raw_total()
   _assert_eq(captured_args.next_args.total, 7, "default next_args should include total")
   _assert_eq(captured_args.next_args.raw_total, 3, "default next_args should include raw_total")
   _assert_eq(captured_args.next_args.player, player, "default next_args should include player")
-end
+end)
 
-function TestPreMove:test_provided_next_args_used_as_is()
+it("test_no_item_phase_continues_to_move", function()
+  local player = { id = 1, status = {} }
+  local turn_mgr = _build_turn_mgr({ player = player })
+
+  _with_item_phase_run(function(_, _, _)
+    return nil
+  end, function()
+    local state, args = phase_pre_move(turn_mgr, { player = player, total = 4, raw_total = 4 })
+    _assert_eq(state, "move", "when item_phase returns nil, should continue to move state")
+    _assert_eq(args.player, player, "move args should include player")
+    _assert_eq(args.total, 3, "move total should come from apply_roll_total over last_turn.raw_total")
+  end)
+end)
+
+it("test_provided_next_args_used_as_is", function()
   local player = { id = 1, status = {} }
   local custom_args = { player = player, total = 99, raw_total = 1, custom = true }
   local turn_mgr = _build_turn_mgr({ player = player })
@@ -103,21 +88,37 @@ function TestPreMove:test_provided_next_args_used_as_is()
 
   _assert_eq(captured_args.next_state, "move", "should use provided next_state")
   _assert_eq(captured_args.next_args, custom_args, "should use provided next_args unchanged")
-end
+end)
 
-function TestPreMove:test_no_item_phase_continues_to_move()
+it("test_resolve_wait_action_anim_when_flag_set", function()
   local player = { id = 1, status = {} }
   local turn_mgr = _build_turn_mgr({ player = player })
+  local captured_state
+
+  local _
+  _with_item_phase_run(function(_, _, _)
+    return { waiting = true, wait_action_anim = true, next_state = "pre_move", next_args = nil }
+  end, function()
+    captured_state, _ = phase_pre_move(turn_mgr, { player = player, total = 5, raw_total = 5 })
+  end)
+
+  _assert_eq(captured_state, "wait_action_anim", "should return wait_action_anim when flag is set")
+end)
+
+it("test_resolve_wait_choice_when_no_wait_action_anim", function()
+  local player = { id = 1, status = {} }
+  local turn_mgr = _build_turn_mgr({ player = player })
+  local captured_state, captured_args
 
   _with_item_phase_run(function(_, _, _)
-    return nil
+    return { waiting = true, next_state = "pre_move", next_args = nil }
   end, function()
-    local state, args = phase_pre_move(turn_mgr, { player = player, total = 4, raw_total = 4 })
-    _assert_eq(state, "move", "when item_phase returns nil, should continue to move state")
-    _assert_eq(args.player, player, "move args should include player")
-    _assert_eq(args.total, 3, "move total should come from apply_roll_total over last_turn.raw_total")
+    captured_state, captured_args = phase_pre_move(turn_mgr, { player = player, total = 5, raw_total = 5 })
   end)
-end
+
+  _assert_eq(captured_state, "wait_choice", "should return wait_choice when no wait_action_anim")
+  _assert_eq(captured_args.next_state, "pre_move", "next_state should be pre_move")
+end)
 
 
-return TestPreMove
+end)
