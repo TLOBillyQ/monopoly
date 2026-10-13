@@ -65,58 +65,58 @@ end
 describe("deploy public sandbox contracts", function()
 
 it("get text formats bilingual", function()
-  check.equal(deploy.get_text("部署", "Deploy"), "部署 / Deploy")
+  check.equal("部署 / Deploy", deploy.get_text("部署", "Deploy"))
 end)
 
 it("normalize path replaces all backslashes", function()
-  check.equal(deploy.normalize_path_text("C:\\Users\\foo"), "C:/Users/foo")
-  check.equal(deploy.normalize_path_text("/mnt/c"), "/mnt/c")
-  check.equal(deploy.normalize_path_text(""), "")
+  check.equal("C:/Users/foo", deploy.normalize_path_text("C:\\Users\\foo"))
+  check.equal("/mnt/c", deploy.normalize_path_text("/mnt/c"))
+  check.equal("", deploy.normalize_path_text(""))
 end)
 
 it("Lua source directory name is retained", function()
   -- "大富翁" = U+5927 U+5BCC U+7FC1(UTF-8)。
-  check.equal(deploy.join_lua_source_dir_name(), "LuaSource_大富翁")
+  check.equal("LuaSource_大富翁", deploy.join_lua_source_dir_name())
 end)
 
 it("blank path returns empty", function()
-  check.equal(deploy.resolve_normalized_path(""), "")
-  check.equal(deploy.resolve_normalized_path(nil), "")
-  check.equal(deploy.resolve_normalized_path("   "), "")
+  check.equal("", deploy.resolve_normalized_path(""))
+  check.equal("", deploy.resolve_normalized_path(nil))
+  check.equal("", deploy.resolve_normalized_path("   "))
 end)
 
 it("keeps absolute path and trims trailing slashes", function()
-  check.equal(deploy.resolve_normalized_path("/home/alice/"), "/home/alice")
-  check.equal(deploy.resolve_normalized_path("/home/alice"), "/home/alice")
+  check.equal("/home/alice", deploy.resolve_normalized_path("/home/alice/"))
+  check.equal("/home/alice", deploy.resolve_normalized_path("/home/alice"))
   -- Windows 盘符绝对路径语义仅在真实 Windows 上成立(POSIX 上 IsPathRooted 只认 "/")。
   if package.config:sub(1, 1) == "\\" then
-    check.equal(deploy.resolve_normalized_path("C:/Users/foo/"), "C:/Users/foo")
+    check.equal("C:/Users/foo", deploy.resolve_normalized_path("C:/Users/foo/"))
   end
 end)
 
 it("relative path is joined to cwd", function()
   local cwd = env_lib.current_dir()
-  check.equal(deploy.resolve_normalized_path("src"), cwd .. "/src")
+  check.equal(cwd .. "/src", deploy.resolve_normalized_path("src"))
 end)
 
 it("tilde expands against home", function()
   _with_stubbed("resolve_home_dir", function()
     return "/home/alice"
   end, function()
-    check.equal(deploy.resolve_normalized_path("~/Desktop"), "/home/alice/Desktop")
+    check.equal("/home/alice/Desktop", deploy.resolve_normalized_path("~/Desktop"))
   end)
 end)
 
 it("folds dot and dotdot segments", function()
-  check.equal(deploy.resolve_normalized_path("/home/alice/sub/../bob"), "/home/alice/bob")
-  check.equal(deploy.resolve_normalized_path("/home/alice/sub/./bob"), "/home/alice/sub/bob")
-  check.equal(deploy.resolve_normalized_path("/home/alice/../../bob"), "/bob")
+  check.equal("/home/alice/bob", deploy.resolve_normalized_path("/home/alice/sub/../bob"))
+  check.equal("/home/alice/sub/bob", deploy.resolve_normalized_path("/home/alice/sub/./bob"))
+  check.equal("/bob", deploy.resolve_normalized_path("/home/alice/../../bob"))
 end)
 
 it("Windows drive path folds on Windows", function()
   -- Windows 盘符绝对路径语义仅在真实 Windows 上成立(POSIX 上 IsPathRooted 只认 "/")。
   if package.config:sub(1, 1) == "\\" then
-    check.equal(deploy.resolve_normalized_path("C:/Users/foo/../bar/"), "C:/Users/bar")
+    check.equal("C:/Users/bar", deploy.resolve_normalized_path("C:/Users/foo/../bar/"))
   end
 end)
 
@@ -125,19 +125,19 @@ it("expands percent environment variables", function()
   if home == nil or tostring(home):gsub("^%s+", ""):gsub("%s+$", "") == "" then
     return
   end
-  check.equal(deploy.resolve_normalized_path("%HOME%/x"), deploy.normalize_path_text(home) .. "/x")
+  check.equal(deploy.normalize_path_text(home) .. "/x", deploy.resolve_normalized_path("%HOME%/x"))
 end)
 
 it("Windows host matches OS or separator", function()
   local expected = os.getenv("OS") == "Windows_NT" or package.config:sub(1, 1) == "\\"
-  check.equal(deploy.test_is_windows_host(), expected)
+  check.equal(expected, deploy.test_is_windows_host())
 end)
 
 it("platform name returns win on Windows host", function()
   _with_stubbed("test_is_windows_host", function()
     return true
   end, function()
-    check.equal(deploy.resolve_platform_name(), "win")
+    check.equal("win", deploy.resolve_platform_name())
   end)
 end)
 
@@ -175,11 +175,11 @@ it("line count skips blank and full line comments", function()
   _with_sandbox(function(root)
     local sample = root .. "/sample.lua"
     _write_file(sample, "-- a\nlocal x = 1\n\n")
-    check.equal(deploy.get_effective_lua_line_count_for_file(sample), 1)
+    check.equal(1, deploy.get_effective_lua_line_count_for_file(sample))
     _write_file(sample, "-- only comment\n")
-    check.equal(deploy.get_effective_lua_line_count_for_file(sample), 0)
+    check.equal(0, deploy.get_effective_lua_line_count_for_file(sample))
     _write_file(sample, "")
-    check.equal(deploy.get_effective_lua_line_count_for_file(sample), 0)
+    check.equal(0, deploy.get_effective_lua_line_count_for_file(sample))
   end)
 end)
 
@@ -188,10 +188,10 @@ it("line count skips block comment interior", function()
   _with_sandbox(function(root)
     local sample = root .. "/sample.lua"
     _write_file(sample, "local a = 1\n--[[ mutate4lua-manifest\nscope.1.id=function:x\nscope.1.startLine=1\n]]\nlocal b = 2\n")
-    check.equal(deploy.get_effective_lua_line_count_for_file(sample), 2)
+    check.equal(2, deploy.get_effective_lua_line_count_for_file(sample))
     -- 长括号等级形式 --[==[ ... ]==]
     _write_file(sample, "--[==[\ninterior line\n]==]\nlocal c = 3\n")
-    check.equal(deploy.get_effective_lua_line_count_for_file(sample), 1)
+    check.equal(1, deploy.get_effective_lua_line_count_for_file(sample))
   end)
 end)
 
@@ -200,34 +200,34 @@ it("line count handles inline block close and trailing code", function()
     local sample = root .. "/sample.lua"
     -- 同行闭合的行首块注释,余下代码仍计
     _write_file(sample, "--[[@meta]] local x = 1\n")
-    check.equal(deploy.get_effective_lua_line_count_for_file(sample), 1)
+    check.equal(1, deploy.get_effective_lua_line_count_for_file(sample))
     -- 块注释闭合行尾部带代码仍计
     _write_file(sample, "--[[\ninterior\n]] local y = 2\n")
-    check.equal(deploy.get_effective_lua_line_count_for_file(sample), 1)
+    check.equal(1, deploy.get_effective_lua_line_count_for_file(sample))
     -- 行内注释(--[[@as T]] 在行尾,行首为代码)行为不变
     _write_file(sample, "local z = f() --[[@as T]]\n")
-    check.equal(deploy.get_effective_lua_line_count_for_file(sample), 1)
+    check.equal(1, deploy.get_effective_lua_line_count_for_file(sample))
   end)
 end)
 
 it("line count for missing file is zero", function()
-  check.equal(deploy.get_effective_lua_line_count_for_file("/nonexistent/deploy_core_spec.lua"), 0)
+  check.equal(0, deploy.get_effective_lua_line_count_for_file("/nonexistent/deploy_core_spec.lua"))
 end)
 
 it("line count for directory includes hidden files", function()
   _with_sandbox(function(root)
     local proj = _make_project(root)
-    check.equal(deploy.get_effective_lua_line_count_for_dir(proj .. "/src"), 6)
-    check.equal(deploy.get_effective_lua_line_count_for_dir(proj .. "/nonexistent"), 0)
+    check.equal(6, deploy.get_effective_lua_line_count_for_dir(proj .. "/src"))
+    check.equal(0, deploy.get_effective_lua_line_count_for_dir(proj .. "/nonexistent"))
   end)
 end)
 
 it("Lua file count includes recursive Lua files only", function()
   _with_sandbox(function(root)
     local proj = _make_project(root)
-    check.equal(deploy.get_lua_file_count(proj .. "/src"), 4)
-    check.equal(deploy.get_lua_file_count(proj .. "/main.lua"), 1)
-    check.equal(deploy.get_lua_file_count(proj .. "/nonexistent"), 0)
+    check.equal(4, deploy.get_lua_file_count(proj .. "/src"))
+    check.equal(1, deploy.get_lua_file_count(proj .. "/main.lua"))
+    check.equal(0, deploy.get_lua_file_count(proj .. "/nonexistent"))
   end)
 end)
 
@@ -237,10 +237,10 @@ it("copy file creates parent and overwrites", function()
     _write_file(source, "hello")
     local target = root .. "/nested/dir/dst.txt"
     check.is_true(deploy.copy_file_with_parent_dir(source, target))
-    check.equal(fs_lib.read_raw(target), "hello")
+    check.equal("hello", fs_lib.read_raw(target))
     _write_file(source, "updated")
     check.is_true(deploy.copy_file_with_parent_dir(source, target))
-    check.equal(fs_lib.read_raw(target), "updated")
+    check.equal("updated", fs_lib.read_raw(target))
   end)
 end)
 
@@ -283,7 +283,7 @@ it("copy tree mirrors hidden and non Lua files", function()
     for _, relative in ipairs({
       "a.lua", "sub/b.lua", ".hidden.lua", ".hiddendir/x.lua", "notes.txt", ".keep",
     }) do
-      check.equal(fs_lib.read_raw(target .. "/" .. relative), fs_lib.read_raw(proj .. "/src/" .. relative),
+      check.equal(fs_lib.read_raw(proj .. "/src/" .. relative), fs_lib.read_raw(target .. "/" .. relative),
         "mirror must include " .. relative)
     end
   end)

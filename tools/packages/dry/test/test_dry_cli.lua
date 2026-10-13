@@ -72,7 +72,7 @@ describe("dry cli platform boundary", function()
 it("help stays useful and states the windows boundary", function()
   local result = _run({ "--help" })
 
-  check.same(result.code, 0, result.output)
+  check.same(0, result.code, result.output)
   check.truthy(result.output:find("dry4lua", 1, true) ~= nil, result.output)
   check.truthy(result.output:find("--skip-if-unavailable", 1, true) ~= nil,
     "帮助要写出显式跳过开关: " .. result.output)
@@ -88,7 +88,7 @@ it("an explicit request is unavailable and never claims a result", function()
     _write_duplicate_pair(root)
     local result = _run({ root })
 
-    check.same(result.code, 3, result.output)
+    check.same(3, result.code, result.output)
     check.truthy(result.output:find("status=unavailable", 1, true) ~= nil,
       "诊断要带可机读状态词: " .. result.output)
     check.truthy(result.output:find("POSIX", 1, true) ~= nil,
@@ -105,7 +105,7 @@ it("an explicit skip exits zero with a skipped status", function()
   _with_fixture(function(root)
     local result = _run({ "--skip-if-unavailable", root })
 
-    check.same(result.code, 0, result.output)
+    check.same(0, result.code, result.output)
     check.truthy(result.output:find("status=skipped", 1, true) ~= nil,
       "跳过要带可机读状态词: " .. result.output)
     check.is_nil(result.output:find(UPSTREAM_NO_HITS, 1, true),
@@ -129,7 +129,7 @@ it("the runner script form reports the same boundary", function()
   _with_fixture(function(root)
     local result = proc_lib.run_command({ "lua", RUNNER, root })
 
-    check.same(result.code, 3, result.output)
+    check.same(3, result.code, result.output)
     check.truthy(result.output:find("status=unavailable", 1, true) ~= nil,
       result.output)
     check.is_nil(result.output:find(UPSTREAM_NO_HITS, 1, true), result.output)

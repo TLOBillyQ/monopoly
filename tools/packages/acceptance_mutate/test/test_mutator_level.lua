@@ -135,7 +135,7 @@ skips_the_feature_on_a_second_hard_level_run_when_the_stamp_is_current()
       level = "hard",
     })
     check.is_nil(first_err)
-    check.equal(first.summary.skipped_scenarios, 0)
+    check.equal(0, first.summary.skipped_scenarios)
 
     local second, second_err = mutator.run({
       feature = feature_path,
@@ -144,7 +144,7 @@ skips_the_feature_on_a_second_hard_level_run_when_the_stamp_is_current()
     })
     check.is_nil(second_err)
     check.is_true((second.summary.skipped_scenarios or 0) >= 1)
-    check.equal(second.summary.total, 0)
+    check.equal(0, second.summary.total)
   end)
 end
 
@@ -162,7 +162,7 @@ ignores_the_stamp_at_level_full()
       level = "full",
     })
     check.is_nil(err)
-    check.equal(full_run.summary.skipped_scenarios, 0)
+    check.equal(0, full_run.summary.skipped_scenarios)
   end)
 end
 
@@ -184,8 +184,8 @@ writes_a_scenario_manifest_after_a_successful_run()
     local after = assert(fs_lib.read_file(feature_path))
     local manifest = scenario_manifest.read(after)
     check.is_not_nil(manifest)
-    check.equal(manifest.version, scenario_manifest.VERSION)
-    check.equal(#manifest.scenarios, 2)
+    check.equal(scenario_manifest.VERSION, manifest.version)
+    check.equal(2, #manifest.scenarios)
   end)
 end
 
@@ -203,8 +203,8 @@ skips_both_scenarios_on_a_clean_second_hard_level_run()
       level = "hard",
     })
     check.is_nil(err)
-    check.equal(second.summary.skipped_scenarios, 2)
-    check.equal(second.summary.total, 0)
+    check.equal(2, second.summary.skipped_scenarios)
+    check.equal(0, second.summary.total)
   end)
 end
 
@@ -229,8 +229,8 @@ does_not_rewrite_the_feature_file_when_all_scenarios_are_skipped()
     })
     local second_content = assert(fs_lib.read_file(feature_path))
     local second_manifest = scenario_manifest.read(second_content)
-    check.equal(second_manifest.scenarios[1].tested_at, first_scenario_tested_at)
-    check.equal(second_content, first_content)
+    check.equal(first_scenario_tested_at, second_manifest.scenarios[1].tested_at)
+    check.equal(first_content, second_content)
   end)
 end
 
@@ -248,7 +248,7 @@ does_not_skip_via_manifest_at_level_full()
       level = "full",
     })
     check.is_nil(err)
-    check.equal(full_run.summary.skipped_scenarios, 0)
+    check.equal(0, full_run.summary.skipped_scenarios)
   end)
 end
 

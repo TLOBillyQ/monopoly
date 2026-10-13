@@ -16,6 +16,8 @@ local bootstrap_path = test_dir .. "/../bootstrap.lua"
 local bootstrap = require("foundation.bootstrap")
 
 local function _with_stubs(stubs, fn)
+  local saved_lua54 = package.loaded["foundation.lua54"]
+  package.loaded["foundation.lua54"] = nil
   local originals = {}
   for index, stub in ipairs(stubs) do
     originals[index] = stub.target[stub.key]
@@ -26,6 +28,7 @@ local function _with_stubs(stubs, fn)
     local stub = stubs[index]
     stub.target[stub.key] = originals[index]
   end
+  package.loaded["foundation.lua54"] = saved_lua54
   if not ok then
     error(err, 0)
   end
@@ -58,9 +61,9 @@ it("parses the repo url lockfile format", function()
 
   check.is_nil(err)
   check.is_not_nil(lock)
-  check.equal(lock.tools.mutate4lua.url, "http://example.invalid/eggy/mutate4lua")
-  check.equal(lock.tools.dry4lua.url, "http://example.invalid/eggy/dry4lua.git")
-  check.same(lock.ordered, { "mutate4lua", "dry4lua" })
+  check.equal("http://example.invalid/eggy/mutate4lua", lock.tools.mutate4lua.url)
+  check.equal("http://example.invalid/eggy/dry4lua.git", lock.tools.dry4lua.url)
+  check.same({ "mutate4lua", "dry4lua" }, lock.ordered)
 end)
 
 it("rejects unknown tools", function()
@@ -141,8 +144,8 @@ it("resolves a repo root from the lockfile based tool layout", function()
 
   fs_lib.remove_path(root)
 
-  check.equal(env.repo_root, path_lib.normalize_path(root))
-  check.equal(env.tool_cache_dir, path_lib.join_path(path_lib.normalize_path(root), ".toolcache"))
+  check.equal(path_lib.normalize_path(root), env.repo_root)
+  check.equal(path_lib.join_path(path_lib.normalize_path(root), ".toolcache"), env.tool_cache_dir)
 end)
 
 it("ensure luaunit tree skips install when marker exists", function()
@@ -150,7 +153,7 @@ it("ensure luaunit tree skips install when marker exists", function()
   local command_calls = 0
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path)
-      check.equal(path, "/repo/.toolcache/luarocks/share/lua/5.4/luaunit.lua")
+      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/luaunit.lua", path)
       return true
     end },
     { target = fs_lib, key = "ensure_dir", value = function()
@@ -164,8 +167,8 @@ it("ensure luaunit tree skips install when marker exists", function()
   }, function()
     check.is_true(bootstrap.ensure_luaunit_tree("/repo"))
   end)
-  check.equal(ensure_calls, 0)
-  check.equal(command_calls, 0)
+  check.equal(0, ensure_calls)
+  check.equal(0, command_calls)
 end)
 
 it("ensure luaunit tree installs pinned rock and checks marker", function()
@@ -177,11 +180,11 @@ it("ensure luaunit tree installs pinned rock and checks marker", function()
       -- 解释器候选路径(/opt/homebrew/bin/lua5.4 之类)不参与 marker 计数。
       if path:match("%.lua$") == nil then return false end
       marker_checks = marker_checks + 1
-      check.equal(path, "/repo/.toolcache/luarocks/share/lua/5.4/luaunit.lua")
+      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/luaunit.lua", path)
       return marker_checks > 1
     end },
     { target = fs_lib, key = "ensure_dir", value = function(path)
-      check.equal(path, "/repo/.toolcache/luarocks")
+      check.equal("/repo/.toolcache/luarocks", path)
       return true
     end },
     { target = proc_lib, key = "command_exists", value = function() return true end },
@@ -194,15 +197,15 @@ it("ensure luaunit tree installs pinned rock and checks marker", function()
   }, function()
     check.is_true(bootstrap.ensure_luaunit_tree("/repo"))
   end)
-  check.same({ table.unpack(captured_command, 2, 5) },
-    { "--tree", "/repo/.toolcache/luarocks", "--lua-version", "5.4" })
-  check.same({ table.unpack(captured_command, 8) },
-    { "install", "luaunit", "3.5-1", "--deps-mode", "one" })
-  check.equal(captured_command[6], "--lua-dir")
+  check.same({ "--tree", "/repo/.toolcache/luarocks", "--lua-version", "5.4" },
+    { table.unpack(captured_command, 2, 5) })
+  check.same({ "install", "luaunit", "3.5-1", "--deps-mode", "one" },
+    { table.unpack(captured_command, 8) })
+  check.equal("--lua-dir", captured_command[6])
   -- --lua-dir 取真实解释器(lua.exe)所在前缀,而不是 where.exe 首行的
   -- lua.cmd / lua.bat 垫片目录。
-  check.equal(captured_command[7], _LUAROCKS_PREFIX)
-  check.equal(marker_checks, 2)
+  check.equal(_LUAROCKS_PREFIX, captured_command[7])
+  check.equal(2, marker_checks)
 end)
 
 it("ensure luaunit tree propagates tree creation failure", function()
@@ -219,9 +222,9 @@ it("ensure luaunit tree propagates tree creation failure", function()
   }, function()
     local ok, err = bootstrap.ensure_luaunit_tree("/repo")
     check.is_nil(ok)
-    check.equal(err, "mkdir failed")
+    check.equal("mkdir failed", err)
   end)
-  check.equal(command_calls, 0)
+  check.equal(0, command_calls)
 end)
 
 it("ensure luacov tree reports install failure", function()
@@ -232,14 +235,14 @@ it("ensure luacov tree reports install failure", function()
     { target = proc_lib, key = "run_command", value = function(command)
       local probe = _native_probe(command)
       if probe then return probe end
-      check.equal(command[#command - 3], "luacov")
-      check.equal(command[#command - 2], "0.17.0-1")
+      check.equal("luacov", command[#command - 3])
+      check.equal("0.17.0-1", command[#command - 2])
       return { ok = false, output = "offline" }
     end },
   }, function()
     local ok, err = bootstrap.ensure_luacov_tree("/repo")
     check.is_nil(ok)
-    check.equal(err, "luarocks install failed for luacov: offline")
+    check.equal("luarocks install failed for luacov: offline", err)
   end)
 end)
 
@@ -254,7 +257,7 @@ it("ensure luacov tree reports missing post install marker", function()
   }, function()
     local ok, err = bootstrap.ensure_luacov_tree("/repo")
     check.is_nil(ok)
-    check.equal(err, "luacov not found in luarocks tree after install")
+    check.equal("luacov not found in luarocks tree after install", err)
   end)
 end)
 
@@ -262,7 +265,7 @@ it("ensure cluacov tree stops when luacov dependency fails", function()
   local command_calls = 0
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path)
-      check.equal(path, "/repo/.toolcache/luarocks/lib/lua/5.4/cluacov/hook.dll")
+      check.equal("/repo/.toolcache/luarocks/lib/lua/5.4/cluacov/hook.dll", path)
       return false
     end },
     { target = fs_lib, key = "ensure_dir", value = function() return true end },
@@ -271,15 +274,15 @@ it("ensure cluacov tree stops when luacov dependency fails", function()
       return { ok = true }
     end },
     { target = bootstrap, key = "ensure_luacov_tree", value = function(repo_root)
-      check.equal(repo_root, "/repo")
+      check.equal("/repo", repo_root)
       return nil, "luacov failed"
     end },
   }, function()
     local ok, err = bootstrap.ensure_cluacov_tree("/repo")
     check.is_nil(ok)
-    check.equal(err, "luacov failed")
+    check.equal("luacov failed", err)
   end)
-  check.equal(command_calls, 0)
+  check.equal(0, command_calls)
 end)
 
 end)

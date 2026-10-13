@@ -27,14 +27,14 @@ end
 local function
 parse_args_parses_profile()
   local opts = spec_lane.parse_args({ "--profile", "contract" })
-  check.equal(opts.profile, "contract")
+  check.equal("contract", opts.profile)
   check.is_false(opts.verbose)
 end
 
 local function
 parse_args_parses_verbose_alongside_profile()
   local opts = spec_lane.parse_args({ "--profile", "guards", "--verbose" })
-  check.equal(opts.profile, "guards")
+  check.equal("guards", opts.profile)
   check.is_true(opts.verbose)
 end
 
@@ -51,9 +51,9 @@ end
 local function
 compress_tap_collapses_all_pass_tap_to_single_passed_line()
   local out, passed, failed = spec_lane.compress_tap(_all_pass_tap())
-  check.equal(out, "3 passed\n")
-  check.equal(passed, 3)
-  check.equal(failed, 0)
+  check.equal("3 passed\n", out)
+  check.equal(3, passed)
+  check.equal(0, failed)
 end
 
 -- 不再支持 busted_bin 单 token 覆写，命令
@@ -72,11 +72,11 @@ run_defaults_to_explicit_dual_backend_runner()
   })
 
   check.truthy(tostring(captured[2]):find("test_runner/runner%.lua"))
-  check.equal(captured[3], "--output=TAP")
-  check.equal(captured[4], "--run")
-  check.equal(captured[5], "contract")
-  check.equal(result.code, 0)
-  check.equal(result.stdout, "3 passed\n")
+  check.equal("--output=TAP", captured[3])
+  check.equal("--run", captured[4])
+  check.equal("contract", captured[5])
+  check.equal(0, result.code)
+  check.equal("3 passed\n", result.stdout)
 end
 
 -- LPT 分片路径契约:文件数超过阈值(20)的具名 profile 且 worker > 1 时,每
@@ -114,10 +114,10 @@ sharded_profile_runs_one_runner_lane_per_worker()
     check.matches("test/contract/", argv, 1, true)
   end
   -- 3 条 lane × 3 条 ok 行 → 聚合压缩摘要
-  check.equal(result.code, 0)
-  check.equal(result.passed, #captured_lanes * 3)
-  check.equal(result.failed, 0)
-  check.equal(result.stdout, tostring(#captured_lanes * 3) .. " passed\n")
+  check.equal(0, result.code)
+  check.equal(#captured_lanes * 3, result.passed)
+  check.equal(0, result.failed)
+  check.equal(tostring(#captured_lanes * 3) .. " passed\n", result.stdout)
 end
 
 -- 分片失败聚合:任一 lane 输出带 not ok → failed 计数进摘要、exit code 1。
@@ -140,9 +140,9 @@ sharded_failure_aggregates_into_failed_summary()
     end,
   })
 
-  check.equal(result.code, 1)
-  check.equal(result.failed, 1)
-  check.equal(result.passed, 7)
+  check.equal(1, result.code)
+  check.equal(1, result.failed)
+  check.equal(7, result.passed)
   check.truthy(result.stdout:find("not ok 2 - failing: shard two broke", 1, true),
     "failure line must survive aggregation: " .. result.stdout)
   check.truthy(result.stdout:find("7 passed, 1 failed", 1, true),
@@ -155,7 +155,7 @@ local function
 discover_test_roots_covers_both_scopes()
   local roots, err = lane_tools.discover_test_roots()
   check.is_not_nil(roots, tostring(err))
-  check.equal(err, nil)
+  check.equal(nil, err)
   check.is_true(#roots > 0, "discovery must find at least one test root")
 end
 

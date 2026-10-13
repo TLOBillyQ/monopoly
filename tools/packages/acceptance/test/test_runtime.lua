@@ -44,7 +44,7 @@ it("binds a differently named placeholder to the handler name", function()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(seen, "3")
+  luassert.is.equal("3", seen)
 end)
 
 it("binds several renamed placeholders by position", function()
@@ -61,8 +61,8 @@ it("binds several renamed placeholders by position", function()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(slot, "2")
-  luassert.is.equal(product, "skin_02")
+  luassert.is.equal("2", slot)
+  luassert.is.equal("skin_02", product)
 end)
 
 it("keeps non parameter example columns readable", function()
@@ -76,7 +76,7 @@ it("keeps non parameter example columns readable", function()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(extra, "限定")
+  luassert.is.equal("限定", extra)
 end)
 
 it("prefers exact text over a same shape handler", function()
@@ -95,7 +95,7 @@ it("prefers exact text over a same shape handler", function()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(called, "exact")
+  luassert.is.equal("exact", called)
 end)
 
 it("reports an ambiguous shape", function()
@@ -125,8 +125,8 @@ it("passes world resolved text and step to the handler", function()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(resolved, "玩家穿上槽位3的皮肤")
-  luassert.is.equal(keyword, "Then")
+  luassert.is.equal("玩家穿上槽位3的皮肤", resolved)
+  luassert.is.equal("Then", keyword)
   luassert.is_true(world_seen.touched)
 end)
 
@@ -193,8 +193,8 @@ it("runs background before scenario and reports each example", function()
 
   luassert.is_false(result.ok)
   luassert.is.same({ "background", "equip:1", "background", "equip:2" }, calls)
-  luassert.is.equal(#result.failures, 2)
-  luassert.is.equal(result.failures[1].name, "测试场景/example_1")
+  luassert.is.equal(2, #result.failures)
+  luassert.is.equal("测试场景/example_1", result.failures[1].name)
   luassert.truthy(runtime.format_failures(result):find("boom 2", 1, true))
 end)
 
@@ -212,9 +212,9 @@ it("defines one spec per example", function()
     defined[#defined + 1] = { name = name, fn = fn }
   end)
 
-  luassert.is.equal(#defined, 2)
-  luassert.is.equal(defined[1].name, "测试场景/example_1")
-  luassert.is.equal(defined[2].name, "测试场景/example_2")
+  luassert.is.equal(2, #defined)
+  luassert.is.equal("测试场景/example_1", defined[1].name)
+  luassert.is.equal("测试场景/example_2", defined[2].name)
   luassert.has_no.errors(defined[1].fn)
 end)
 
@@ -233,7 +233,7 @@ it("matches fallback pattern and coerces integer captures", function()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(seen, 5)
+  luassert.is.equal(5, seen)
 end)
 
 it("matches patterns against resolved step text", function()
@@ -258,9 +258,9 @@ it("matches patterns against resolved step text", function()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(seat, 2)
-  luassert.is.equal(deity, "财神")
-  luassert.is.equal(turns, 3)
+  luassert.is.equal(2, seat)
+  luassert.is.equal("财神", deity)
+  luassert.is.equal(3, turns)
 end)
 
 it("prefers exact handler over matching pattern", function()
@@ -276,7 +276,7 @@ it("prefers exact handler over matching pattern", function()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(called, "exact")
+  luassert.is.equal("exact", called)
 end)
 
 it("reports ambiguity when two patterns match", function()

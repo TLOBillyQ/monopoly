@@ -62,7 +62,7 @@ local function _open_market_choice(ctx)
   game_driver.seat_to_pass_through_market(ctx, p1)
   local choice = turn_driver.advance_to_choice(ctx)
   check.truthy(choice ~= nil, "a market-purchase choice must be open")
-  check.equal(choice.kind, "market_buy", "a market-purchase choice is open")
+  check.equal("market_buy", choice.kind, "a market-purchase choice is open")
   return p1
 end
 
@@ -77,7 +77,7 @@ local function _open_rent_prompt(ctx)
   game_driver.set_next_rolls(ctx, { 1 })
   local choice = turn_driver.advance_to_choice(ctx)
   check.truthy(choice ~= nil, "a rent-card prompt must be open")
-  check.equal(choice.kind, "rent_card_prompt", "a rent-card prompt is open")
+  check.equal("rent_card_prompt", choice.kind, "a rent-card prompt is open")
   return p1
 end
 
@@ -93,34 +93,34 @@ end
 local function
 reports_the_real_current_player_and_index()
   local ctx = _ctx()
-  check.equal(turn_driver.current_player_index(ctx), 1, "fresh game starts on player 1")
-  check.equal(turn_driver.current_player(ctx), ctx.game.players[1], "current_player reads real game state")
+  check.equal(1, turn_driver.current_player_index(ctx), "fresh game starts on player 1")
+  check.equal(ctx.game.players[1], turn_driver.current_player(ctx), "current_player reads real game state")
 end
 
 local function
 counts_participants_and_active_non_eliminated_participants()
   local ctx = _ctx()
-  check.equal(turn_driver.participant_count(ctx), 4, "four players seated")
-  check.equal(turn_driver.active_participant_count(ctx), 4, "all active before elimination")
+  check.equal(4, turn_driver.participant_count(ctx), "four players seated")
+  check.equal(4, turn_driver.active_participant_count(ctx), "all active before elimination")
   turn_driver.eliminate(ctx, ctx.game.players[2])
-  check.equal(turn_driver.active_participant_count(ctx), 3, "eliminating one drops the active count")
-  check.equal(turn_driver.is_eliminated(ctx, ctx.game.players[2]), true, "elimination reads back")
+  check.equal(3, turn_driver.active_participant_count(ctx), "eliminating one drops the active count")
+  check.equal(true, turn_driver.is_eliminated(ctx, ctx.game.players[2]), "elimination reads back")
 end
 
 local function
 sets_the_current_player_as_a_seed()
   local ctx = _ctx()
   turn_driver.set_current_player(ctx, 3)
-  check.equal(turn_driver.current_player_index(ctx), 3, "seed sets whose turn it is")
-  check.equal(turn_driver.current_player(ctx), ctx.game.players[3], "current_player follows the seed")
+  check.equal(3, turn_driver.current_player_index(ctx), "seed sets whose turn it is")
+  check.equal(ctx.game.players[3], turn_driver.current_player(ctx), "current_player follows the seed")
 end
 
 local function
 resolves_a_seated_players_index_and_reports_nil_for_a_non_participant()
   local ctx = _ctx()
-  check.equal(turn_driver.player_index(ctx, ctx.game.players[3]), 3, "a seated player resolves to its seat index")
-  check.equal(turn_driver.player_index(ctx, ctx.game.players[1]), 1, "the first seat resolves to index 1")
-  check.equal(turn_driver.player_index(ctx, { id = "outsider" }), nil, "a player not in the roster resolves to nil")
+  check.equal(3, turn_driver.player_index(ctx, ctx.game.players[3]), "a seated player resolves to its seat index")
+  check.equal(1, turn_driver.player_index(ctx, ctx.game.players[1]), "the first seat resolves to index 1")
+  check.equal(nil, turn_driver.player_index(ctx, { id = "outsider" }), "a player not in the roster resolves to nil")
 end
 
 -- -------------------------------------------------- rotation via the real machine
@@ -129,8 +129,8 @@ local function
 hands_off_to_the_next_player_when_a_turn_is_played()
   local ctx = _ctx()
   local next_player = turn_driver.play_turn(ctx)
-  check.equal(next_player, ctx.game.players[2], "after P1 plays, P2 is up")
-  check.equal(turn_driver.current_player_index(ctx), 2, "runtime index advanced to 2")
+  check.equal(ctx.game.players[2], next_player, "after P1 plays, P2 is up")
+  check.equal(2, turn_driver.current_player_index(ctx), "runtime index advanced to 2")
 end
 
 local function
@@ -138,7 +138,7 @@ wraps_from_the_last_player_back_to_the_first()
   local ctx = _ctx()
   turn_driver.set_current_player(ctx, 4)
   local next_player = turn_driver.play_turn(ctx)
-  check.equal(next_player, ctx.game.players[1], "player 4's turn wraps to player 1")
+  check.equal(ctx.game.players[1], next_player, "player 4's turn wraps to player 1")
 end
 
 local function
@@ -146,8 +146,8 @@ skips_an_eliminated_player_on_handoff()
   local ctx = _ctx()
   turn_driver.eliminate(ctx, ctx.game.players[2])
   local next_player = turn_driver.play_turn(ctx)
-  check.equal(next_player, ctx.game.players[3], "eliminated P2 is skipped, P3 is up")
-  check.equal(turn_driver.current_player_index(ctx), 3, "runtime landed on player 3")
+  check.equal(ctx.game.players[3], next_player, "eliminated P2 is skipped, P3 is up")
+  check.equal(3, turn_driver.current_player_index(ctx), "runtime landed on player 3")
 end
 
 -- -------------------------------------------------- detention via the real machine
@@ -159,8 +159,8 @@ decrements_stay_turns_at_turn_start_and_skips_the_players_action()
   turn_driver.detain(ctx, detained, 2)
   local position_before = detained.position
   turn_driver.play_turn(ctx)
-  check.equal(turn_driver.stay_turns(ctx, detained), 1, "real start phase decrements stay_turns 2 -> 1")
-  check.equal(detained.position, position_before, "a detained player does not roll or move")
+  check.equal(1, turn_driver.stay_turns(ctx, detained), "real start phase decrements stay_turns 2 -> 1")
+  check.equal(position_before, detained.position, "a detained player does not roll or move")
 end
 
 local function
@@ -169,13 +169,13 @@ lets_the_player_act_normally_once_detention_expires()
   local player = ctx.game.players[1]
   turn_driver.detain(ctx, player, 1)
   turn_driver.play_turn(ctx)
-  check.equal(turn_driver.stay_turns(ctx, player), 0, "the single detained turn clears stay_turns")
+  check.equal(0, turn_driver.stay_turns(ctx, player), "the single detained turn clears stay_turns")
   -- Play around the table back to player 1; their detention has expired now.
   local position_before = player.position
   turn_driver.play_turn(ctx) -- P2
   turn_driver.play_turn(ctx) -- P3
   turn_driver.play_turn(ctx) -- P4 hands back to P1
-  check.equal(turn_driver.current_player_index(ctx), 1, "rotation comes back to player 1")
+  check.equal(1, turn_driver.current_player_index(ctx), "rotation comes back to player 1")
   turn_driver.play_turn(ctx) -- P1 now acts normally
   check.truthy(player.position ~= position_before, "after detention expires the player rolls and moves")
 end
@@ -192,8 +192,8 @@ clears_remote_dice_and_resets_the_dice_multiplier_when_the_turn_ends()
   game_driver.set_dice_multiplier(ctx, player, 3)
   check.truthy(turn_driver.pending_remote_dice(ctx, player) ~= nil, "remote dice seeded")
   turn_driver.play_turn(ctx)
-  check.equal(turn_driver.pending_remote_dice(ctx, player), nil, "remote dice cleared at end of turn")
-  check.equal(turn_driver.dice_multiplier(ctx, player), 1, "dice multiplier reset to 1 at end of turn")
+  check.equal(nil, turn_driver.pending_remote_dice(ctx, player), "remote dice cleared at end of turn")
+  check.equal(1, turn_driver.dice_multiplier(ctx, player), "dice multiplier reset to 1 at end of turn")
 end
 
 -- -------------------------------------------------- phase sequence via the real machine (cluster 2)
@@ -218,7 +218,7 @@ local function
 reports_the_standard_milestone_order_holds_as_a_subsequence()
   local ctx = _ctx()
   local holds = turn_driver.turn_phase_order_holds(ctx, STANDARD)
-  check.equal(holds, true, "the real turn must satisfy the standard phase order")
+  check.equal(true, holds, "the real turn must satisfy the standard phase order")
 end
 
 local function
@@ -227,7 +227,7 @@ rejects_an_impossible_phase_order_end_before_start()
   -- end_turn never precedes start within a turn, so the predicate must say no —
   -- proving it checks ordering, not just membership.
   local holds = turn_driver.turn_phase_order_holds(ctx, { "end_turn", "start", "roll" })
-  check.equal(holds, false, "a scrambled order must not hold against the real sequence")
+  check.equal(false, holds, "a scrambled order must not hold against the real sequence")
 end
 
 local function
@@ -253,10 +253,10 @@ auto_consumes_a_free_rent_card_on_an_opponent_tile_without_a_choice_or_rent()
   local opponent_cash_before = game_driver.player_cash(ctx, ctx.game.players[2])
 
   local choice = turn_driver.advance_to_choice(ctx)
-  check.equal(choice, nil, "a lone free-rent card is auto-used — no manual choice is raised")
-  check.equal(game_driver.has_item(ctx, p1, item_ids.free_rent), false, "the free-rent card is consumed")
-  check.equal(game_driver.player_cash(ctx, p1), cash_before, "no rent is paid when免租 applies")
-  check.equal(game_driver.player_cash(ctx, ctx.game.players[2]), opponent_cash_before,
+  check.equal(nil, choice, "a lone free-rent card is auto-used — no manual choice is raised")
+  check.equal(false, game_driver.has_item(ctx, p1, item_ids.free_rent), "the free-rent card is consumed")
+  check.equal(cash_before, game_driver.player_cash(ctx, p1), "no rent is paid when免租 applies")
+  check.equal(opponent_cash_before, game_driver.player_cash(ctx, ctx.game.players[2]),
     "the owner receives no rent")
   check.truthy(_saw_event(ctx, event_kinds.item_used), "the free-rent card use is published as an item-used event")
   check.truthy(not _saw_event(ctx, event_kinds.rent_paid), "no rent-paid event is published")
@@ -272,16 +272,16 @@ local function declining_seizure_uses_free_rent()
 
   local choice = turn_driver.advance_to_choice(ctx)
   check.truthy(choice ~= nil, "holding a seizure card raises a prompt before rent settles")
-  check.equal(choice.kind, "rent_card_prompt", "the prompt is the rent-card choice")
-  check.equal(choice.meta.card_kind, "strong", "the prompt offers the seizure (strong) card")
+  check.equal("rent_card_prompt", choice.kind, "the prompt is the rent-card choice")
+  check.equal("strong", choice.meta.card_kind, "the prompt offers the seizure (strong) card")
 
   turn_driver.resolve_choice(ctx, "skip")
-  check.equal(game_driver.has_item(ctx, p1, item_ids.strong), true,
+  check.equal(true, game_driver.has_item(ctx, p1, item_ids.strong),
     "declining the seizure keeps the strong card")
-  check.equal(game_driver.has_item(ctx, p1, item_ids.free_rent), false,
+  check.equal(false, game_driver.has_item(ctx, p1, item_ids.free_rent),
     "declining the seizure auto-consumes the free-rent card")
-  check.equal(game_driver.player_cash(ctx, p1), cash_before, "no rent is paid after the free-rent fallback")
-  check.equal(game_driver.player_cash(ctx, ctx.game.players[2]), opponent_cash_before,
+  check.equal(cash_before, game_driver.player_cash(ctx, p1), "no rent is paid after the free-rent fallback")
+  check.equal(opponent_cash_before, game_driver.player_cash(ctx, ctx.game.players[2]),
     "the owner receives no rent")
 end
 
@@ -294,10 +294,10 @@ seizes_the_tile_when_the_seizure_prompt_is_accepted()
 
   local choice = turn_driver.advance_to_choice(ctx)
   check.truthy(choice ~= nil, "the seizure prompt must be raised")
-  check.equal(choice.meta.card_kind, "strong", "the seizure prompt is raised")
+  check.equal("strong", choice.meta.card_kind, "the seizure prompt is raised")
   turn_driver.resolve_choice(ctx, "use")
-  check.equal(game_driver.has_item(ctx, p1, item_ids.strong), false, "accepting consumes the strong card")
-  check.equal(ctx.game.board:get_tile_by_id(_RENT_TILE_ID).owner_id, p1.id,
+  check.equal(false, game_driver.has_item(ctx, p1, item_ids.strong), "accepting consumes the strong card")
+  check.equal(p1.id, ctx.game.board:get_tile_by_id(_RENT_TILE_ID).owner_id,
     "the tile ownership transfers to the seizer")
   check.truthy(game_driver.player_cash(ctx, p1) < cash_before, "seizing pays the tile's total invested value")
 end
@@ -313,8 +313,8 @@ raises_no_purchase_choice_when_landing_on_a_sold_out_black_market()
   local market_id = game_driver.seat_to_land_on_market(ctx, p1)
 
   local choice = turn_driver.advance_to_choice(ctx)
-  check.equal(choice, nil, "a sold-out market offers nothing to buy — no purchase choice is raised")
-  check.equal(ctx.game.board:get_tile(p1.position).id, market_id,
+  check.equal(nil, choice, "a sold-out market offers nothing to buy — no purchase choice is raised")
+  check.equal(market_id, ctx.game.board:get_tile(p1.position).id,
     "the player really moved onto the market tile via the inner path")
 end
 
@@ -330,7 +330,7 @@ still_opens_the_market_when_passing_through_it_sold_out_the_visit_is_reached()
 
   local choice = turn_driver.advance_to_choice(ctx)
   check.truthy(choice ~= nil, "passing through the market opens it even when sold out")
-  check.equal(choice.kind, "market_buy", "the opened choice is the black-market purchase prompt")
+  check.equal("market_buy", choice.kind, "the opened choice is the black-market purchase prompt")
 end
 
 -- ------------------------------------- choice deadlines / timeouts via the real machine (cluster 4)
@@ -342,13 +342,13 @@ local function
 reads_each_choice_types_real_configured_deadline_market_60_and_normal_15()
   local ctx = _ctx()
   _open_market_choice(ctx)
-  check.equal(turn_driver.choice_timeout_seconds(ctx), 60, "market_buy uses the 60s scope timeout")
+  check.equal(60, turn_driver.choice_timeout_seconds(ctx), "market_buy uses the 60s scope timeout")
 end
 
 local function reads_normal_choice_deadline()
   local ctx = _ctx()
   _open_rent_prompt(ctx)
-  check.equal(turn_driver.choice_timeout_seconds(ctx), 15, "a普通 choice uses the 15s scope timeout")
+  check.equal(15, turn_driver.choice_timeout_seconds(ctx), "a普通 choice uses the 15s scope timeout")
 end
 
 local function
@@ -358,14 +358,14 @@ counts_the_deadline_down_through_warning_levels_without_pausing()
   local ctx = _ctx()
   _open_market_choice(ctx)
   turn_driver.arm_choice_deadline(ctx)
-  check.equal(turn_driver.choice_deadline_level(ctx), "normal", "a fresh deadline starts normal")
+  check.equal("normal", turn_driver.choice_deadline_level(ctx), "a fresh deadline starts normal")
 
   turn_driver.elapse_choice_deadline(ctx, 54.0) -- remaining ~6
-  check.equal(turn_driver.choice_deadline_level(ctx), "normal", "still normal above the 5s threshold")
+  check.equal("normal", turn_driver.choice_deadline_level(ctx), "still normal above the 5s threshold")
   turn_driver.elapse_choice_deadline(ctx, 1.0) -- remaining ~5
-  check.equal(turn_driver.choice_deadline_level(ctx), "warn_5s", "crossing 5s raises the warning level")
+  check.equal("warn_5s", turn_driver.choice_deadline_level(ctx), "crossing 5s raises the warning level")
   turn_driver.elapse_choice_deadline(ctx, 2.0) -- remaining ~3
-  check.equal(turn_driver.choice_deadline_level(ctx), "warn_3s", "crossing 3s raises the urgent level")
+  check.equal("warn_3s", turn_driver.choice_deadline_level(ctx), "crossing 3s raises the urgent level")
 end
 
 local function timeout_declines_sold_out_market()
@@ -375,7 +375,7 @@ local function timeout_declines_sold_out_market()
   turn_driver.arm_choice_deadline(ctx)
 
   turn_driver.elapse_choice_deadline(ctx, 61.0) -- past the 60s market deadline
-  check.equal(game_driver.player_cash(ctx, p1), cash_before,
+  check.equal(cash_before, game_driver.player_cash(ctx, p1),
     "timing out the market is a gentle 不买 — no cash is deducted")
   check.truthy(turn_driver.pending_choice(ctx) == nil
     or turn_driver.pending_choice(ctx).kind ~= "market_buy",
@@ -389,11 +389,11 @@ waits_the_inter_turn_interval_before_the_next_players_turn_starts()
   local ctx = _ctx()
   check.truthy(turn_driver.advance_to_inter_turn_wait(ctx),
     "the turn opens an inter-turn wait at end of turn")
-  check.equal(turn_driver.current_player_index(ctx), 1, "the first player's turn has ended but not handed off")
+  check.equal(1, turn_driver.current_player_index(ctx), "the first player's turn has ended but not handed off")
   check.truthy((turn_driver.inter_turn_wait_seconds(ctx) or 0) > 0, "a positive inter-turn interval is configured")
 
   turn_driver.elapse_inter_turn_wait(ctx, turn_driver.inter_turn_wait_seconds(ctx))
-  check.equal(turn_driver.current_player_index(ctx), 2,
+  check.equal(2, turn_driver.current_player_index(ctx),
     "elapsing the interval hands the turn to the next player")
 end
 
@@ -405,13 +405,13 @@ holds_the_inter_turn_wait_until_a_blocking_prompt_finishes()
   turn_driver.hold_inter_turn_with_blocking_tip(ctx)
 
   turn_driver.elapse_inter_turn_wait(ctx, 5.0) -- well past the interval
-  check.equal(turn_driver.current_player_index(ctx), 1,
+  check.equal(1, turn_driver.current_player_index(ctx),
     "a blocking prompt holds the gate — the next player does not start")
   check.truthy(turn_driver.inter_turn_wait_active(ctx), "the inter-turn wait stays active while blocked")
 
   turn_driver.reset_tips(ctx)
   turn_driver.elapse_inter_turn_wait(ctx, 5.0)
-  check.equal(turn_driver.current_player_index(ctx), 2,
+  check.equal(2, turn_driver.current_player_index(ctx),
     "once the blocking prompt clears, the wait completes and hands off")
 end
 
@@ -422,9 +422,9 @@ end
 local function
 recognises_the_computer_player_through_the_real_auto_play_port()
   local ctx = _ctx() -- all human
-  check.equal(turn_driver.is_computer_controlled(ctx, ctx.game.players[1]), false, "a human player is not auto")
+  check.equal(false, turn_driver.is_computer_controlled(ctx, ctx.game.players[1]), "a human player is not auto")
   local ai_ctx = game_driver.new_game() -- default AI on seats 2..4
-  check.equal(turn_driver.is_computer_controlled(ai_ctx, ai_ctx.game.players[2]), true, "seat 2 is a computer player")
+  check.equal(true, turn_driver.is_computer_controlled(ai_ctx, ai_ctx.game.players[2]), "seat 2 is a computer player")
 end
 
 local function
@@ -436,7 +436,7 @@ uses_the_obstacle_clearing_card_only_when_the_real_trigger_finds_an_obstacle_ahe
   game_driver.seat_with_obstacle_ahead(ctx, ai)
 
   turn_driver.run_ai_item_phase(ctx, ai, "pre_action")
-  check.equal(game_driver.has_item(ctx, ai, item_ids.clear_obstacles), false,
+  check.equal(false, game_driver.has_item(ctx, ai, item_ids.clear_obstacles),
     "an obstacle ahead triggers the real clear-obstacles use")
 end
 
@@ -449,7 +449,7 @@ keeps_the_obstacle_clearing_card_when_the_real_trigger_finds_no_obstacle()
   game_driver.seat_on_ring(ctx, ai) -- clear path
 
   turn_driver.run_ai_item_phase(ctx, ai, "pre_action")
-  check.equal(game_driver.has_item(ctx, ai, item_ids.clear_obstacles), true,
+  check.equal(true, game_driver.has_item(ctx, ai, item_ids.clear_obstacles),
     "with no obstacle ahead the real trigger declines to use the card")
 end
 
@@ -460,9 +460,9 @@ does_not_run_the_item_phase_for_a_human_player()
   game_driver.give_item(ctx, human, item_ids.clear_obstacles)
   game_driver.seat_with_obstacle_ahead(ctx, human)
 
-  check.equal(turn_driver.run_ai_item_phase(ctx, human, "pre_action"), nil,
+  check.equal(nil, turn_driver.run_ai_item_phase(ctx, human, "pre_action"),
     "the AI item phase is a no-op for a human player")
-  check.equal(game_driver.has_item(ctx, human, item_ids.clear_obstacles), true,
+  check.equal(true, game_driver.has_item(ctx, human, item_ids.clear_obstacles),
     "the human keeps the card — only manual use applies")
 end
 
@@ -481,11 +481,11 @@ auto_buys_an_unowned_affordable_land_it_lands_on()
   local cash_before = game_driver.player_cash(ctx, ai)
 
   local choice = turn_driver.settle_landing(ctx, ai)
-  check.equal(choice and choice.kind, "landing_optional_effect",
+  check.equal("landing_optional_effect", choice and choice.kind,
     "an unowned land opens the real optional-buy choice")
-  check.equal(turn_driver.auto_resolve_landing_choice(ctx), "buy_land",
+  check.equal("buy_land", turn_driver.auto_resolve_landing_choice(ctx),
     "the real AI decision buys the land")
-  check.equal(game_driver.tile_owner(ctx, idx), ai.id, "the tile is now owned by the AI")
+  check.equal(ai.id, game_driver.tile_owner(ctx, idx), "the tile is now owned by the AI")
   check.truthy(game_driver.player_cash(ctx, ai) < cash_before, "the purchase deducted cash")
 end
 
@@ -500,9 +500,9 @@ auto_upgrades_its_own_land_it_lands_on()
   local cash_before = game_driver.player_cash(ctx, ai)
 
   local choice = turn_driver.settle_landing(ctx, ai)
-  check.equal(choice and choice.kind, "landing_optional_effect",
+  check.equal("landing_optional_effect", choice and choice.kind,
     "own land opens the real optional-upgrade choice")
-  check.equal(turn_driver.auto_resolve_landing_choice(ctx), "upgrade_land",
+  check.equal("upgrade_land", turn_driver.auto_resolve_landing_choice(ctx),
     "the real AI decision upgrades the land")
   check.truthy(game_driver.tile_level(ctx, idx) > level_before, "the upgrade raised the tile level")
   check.truthy(game_driver.player_cash(ctx, ai) < cash_before, "the upgrade deducted cash")
@@ -519,11 +519,11 @@ local function auto_uses_free_rent_card()
   local cash_before = game_driver.player_cash(ctx, ai)
 
   local choice = turn_driver.settle_landing(ctx, ai)
-  check.equal(choice, nil, "免租 auto-resolves as a mandatory effect — no manual choice")
-  check.equal(game_driver.player_cash(ctx, ai), cash_before, "no rent was paid (免租)")
-  check.equal(game_driver.has_item(ctx, ai, item_ids.free_rent), false,
+  check.equal(nil, choice, "免租 auto-resolves as a mandatory effect — no manual choice")
+  check.equal(cash_before, game_driver.player_cash(ctx, ai), "no rent was paid (免租)")
+  check.equal(false, game_driver.has_item(ctx, ai, item_ids.free_rent),
     "the 免租 card was consumed")
-  check.equal(game_driver.tile_owner(ctx, idx), opp.id, "the tile stays the opponent's")
+  check.equal(opp.id, game_driver.tile_owner(ctx, idx), "the tile stays the opponent's")
 end
 
 local function
@@ -534,12 +534,12 @@ leaves_a_humans_landing_choice_pending_the_ai_seam_never_auto_decides_for_a_huma
   game_driver.set_player_position(ctx, human, idx)
 
   local choice = turn_driver.settle_landing(ctx, human)
-  check.equal(choice and choice.kind, "landing_optional_effect",
+  check.equal("landing_optional_effect", choice and choice.kind,
     "a human also opens the real optional-buy choice")
-  check.equal(turn_driver.auto_resolve_landing_choice(ctx), nil,
+  check.equal(nil, turn_driver.auto_resolve_landing_choice(ctx),
     "the real auto-play port yields no auto action for a human owner")
-  check.equal(turn_driver.pending_choice(ctx) and turn_driver.pending_choice(ctx).kind,
-    "landing_optional_effect", "the human's choice is left pending for a manual decision")
+  check.equal("landing_optional_effect",
+    turn_driver.pending_choice(ctx) and turn_driver.pending_choice(ctx).kind, "the human's choice is left pending for a manual decision")
 end
 
 -- -------------------------------------------------- settle_landing move_result passthrough
@@ -563,10 +563,10 @@ forwards_a_supplied_move_result_to_the_real_land_phase_and_defaults_to_nil()
   land_phase.run = original_run
 
   check.truthy(ok, err)
-  check.equal(#captured, 2, "both settle calls reach the real land phase")
-  check.equal(captured[1].move_result and captured[1].move_result.encountered_players[1],
-    ctx.game.players[2].id, "a supplied move_result is passed through")
-  check.equal(captured[2].move_result, nil, "an omitted move_result keeps the old nil default")
+  check.equal(2, #captured, "both settle calls reach the real land phase")
+  check.equal(ctx.game.players[2].id,
+    captured[1].move_result and captured[1].move_result.encountered_players[1], "a supplied move_result is passed through")
+  check.equal(nil, captured[2].move_result, "an omitted move_result keeps the old nil default")
 end
 
 -- -------------------------------------------------- resolve_pending_choice
@@ -588,10 +588,10 @@ resolves_an_un_parked_pending_choice_without_advancing_the_turn_machine()
 
   turn_driver.resolve_pending_choice(ctx, "use")
 
-  check.equal(game_driver.has_item(ctx, p1, item_ids.tax_free), false,
+  check.equal(false, game_driver.has_item(ctx, p1, item_ids.tax_free),
     "confirming consumes the tax-free card")
-  check.equal(game_driver.player_cash(ctx, p1), cash_before, "the tax-free card waives the tax")
-  check.equal(turn_driver.current_player_index(ctx), index_before,
+  check.equal(cash_before, game_driver.player_cash(ctx, p1), "the tax-free card waives the tax")
+  check.equal(index_before, turn_driver.current_player_index(ctx),
     "the turn machine is not advanced")
 end
 

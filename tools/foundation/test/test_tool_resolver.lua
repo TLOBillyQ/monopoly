@@ -22,7 +22,7 @@ end
 
 local function _run_ok(sha)
   return function(command)
-    check.same(command, { "git", "ls-remote", "http://example.invalid/eggy/mutate4lua.git", "HEAD" })
+    check.same({ "git", "ls-remote", "http://example.invalid/eggy/mutate4lua.git", "HEAD" }, command)
     return { ok = true, output = sha .. "\tHEAD\n" }
   end
 end
@@ -38,7 +38,7 @@ it("head commit appends git suffix and parses sha", function()
   local sha, err = tool_resolver.head_commit("http://example.invalid/eggy/mutate4lua", _run_ok(_SHA_NEW))
 
   check.is_nil(err)
-  check.equal(sha, _SHA_NEW)
+  check.equal(_SHA_NEW, sha)
 end)
 
 it("head commit reports remote failure", function()
@@ -56,9 +56,9 @@ it("cache roundtrip", function()
   local cache = tool_resolver.read_cache(env)
   fs_lib.remove_path(root)
 
-  check.equal(cache.mutate4lua.commit, _SHA_NEW)
-  check.equal(cache.mutate4lua.installed, _SHA_OLD)
-  check.equal(cache.mutate4lua.resolved_at, 123)
+  check.equal(_SHA_NEW, cache.mutate4lua.commit)
+  check.equal(_SHA_OLD, cache.mutate4lua.installed)
+  check.equal(123, cache.mutate4lua.resolved_at)
 end)
 
 it("cache dash installed reads as nil", function()
@@ -69,7 +69,7 @@ it("cache dash installed reads as nil", function()
   local cache = tool_resolver.read_cache(env)
   fs_lib.remove_path(root)
 
-  check.equal(cache.mutate4lua.commit, _SHA_NEW)
+  check.equal(_SHA_NEW, cache.mutate4lua.commit)
   check.is_nil(cache.mutate4lua.installed)
 end)
 
@@ -85,9 +85,9 @@ it("resolve hits fresh cache without network", function()
   fs_lib.remove_path(root)
 
   check.is_nil(err)
-  check.equal(resolved.commit, _SHA_OLD)
-  check.equal(resolved.installed, _SHA_OLD)
-  check.equal(resolved.source, "cache")
+  check.equal(_SHA_OLD, resolved.commit)
+  check.equal(_SHA_OLD, resolved.installed)
+  check.equal("cache", resolved.source)
 end)
 
 it("resolve refreshes stale cache from remote", function()
@@ -103,11 +103,11 @@ it("resolve refreshes stale cache from remote", function()
   fs_lib.remove_path(root)
 
   check.is_nil(err)
-  check.equal(resolved.commit, _SHA_NEW)
-  check.equal(resolved.source, "remote")
+  check.equal(_SHA_NEW, resolved.commit)
+  check.equal("remote", resolved.source)
   -- 远端解析成功只更新 head;installed 保留,由 mark_installed 在装完后更新。
-  check.equal(cache.mutate4lua.commit, _SHA_NEW)
-  check.equal(cache.mutate4lua.installed, _SHA_OLD)
+  check.equal(_SHA_NEW, cache.mutate4lua.commit)
+  check.equal(_SHA_OLD, cache.mutate4lua.installed)
 end)
 
 it("resolve falls back to stale cache offline", function()
@@ -122,8 +122,8 @@ it("resolve falls back to stale cache offline", function()
   fs_lib.remove_path(root)
 
   check.is_nil(err)
-  check.equal(resolved.commit, _SHA_OLD)
-  check.equal(resolved.source, "stale-cache")
+  check.equal(_SHA_OLD, resolved.commit)
+  check.equal("stale-cache", resolved.source)
   check.is_not_nil(resolved.warning)
 end)
 
@@ -144,8 +144,8 @@ it("mark installed records actual commit", function()
   local cache = tool_resolver.read_cache(env)
   fs_lib.remove_path(root)
 
-  check.equal(cache.mutate4lua.commit, _SHA_NEW)
-  check.equal(cache.mutate4lua.installed, _SHA_NEW)
+  check.equal(_SHA_NEW, cache.mutate4lua.commit)
+  check.equal(_SHA_NEW, cache.mutate4lua.installed)
 end)
 
 end)

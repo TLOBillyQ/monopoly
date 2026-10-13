@@ -35,7 +35,7 @@ describe("acceptance mutate cli boundary", function()
 it("help stays useful and states the windows boundary", function()
   local result = _run({ "--help" })
 
-  check.same(result.code, 0, result.output)
+  check.same(0, result.code, result.output)
   check.truthy(result.output:find("acceptance-mutate", 1, true) ~= nil, result.output)
   check.truthy(result.output:find("--skip-if-unavailable", 1, true) ~= nil,
     "帮助要写出显式跳过开关: " .. result.output)
@@ -47,7 +47,7 @@ end)
 it("an explicit request is unavailable not a mutation verdict", function()
   local result = _run({ "--level", "soft" })
 
-  check.same(result.code, 3, result.output)
+  check.same(3, result.code, result.output)
   check.truthy(result.output:find("status=unavailable", 1, true) ~= nil,
     "诊断要带可机读状态词: " .. result.output)
   check.truthy(result.output:find("POSIX", 1, true) ~= nil,
@@ -60,7 +60,7 @@ end)
 it("an explicit skip exits zero with a skipped status", function()
   local result = _run({ "--skip-if-unavailable", "--level", "soft" })
 
-  check.same(result.code, 0, result.output)
+  check.same(0, result.code, result.output)
   check.truthy(result.output:find("status=skipped", 1, true) ~= nil,
     "跳过要带可机读状态词: " .. result.output)
   check.is_nil(result.output:find(PROBE_MISDIAGNOSIS, 1, true), result.output)
@@ -71,9 +71,9 @@ it("native absolute lane help and actual request", function()
   local root = require("foundation.bootstrap").resolve("tools/packages/acceptance_mutate/mutate_lane.lua").repo_root
   local entry = (root .. "/" .. LANE):gsub("/", "\\")
   local help = proc_lib.run_command({ "lua", entry, "--help" })
-  check.same(help.code, 0, help.output)
+  check.same(0, help.code, help.output)
   local actual = proc_lib.run_command({ "lua", entry, "--feature", "ignored.feature" })
-  check.same(actual.code, 3, actual.output)
+  check.same(3, actual.code, actual.output)
   check.matches("status=unavailable", actual.output, 1, true)
 end)
 
@@ -81,7 +81,7 @@ it("explicit retained engine test request is unavailable", function()
   for _, identity in ipairs({ "test_mutator_level.lua", "test_mutator_status.lua" }) do
     local result = proc_lib.run_command({ "lua", "tools/packages/luaunit_runner/runner.lua", "--",
       "tools/packages/acceptance_mutate/test/" .. identity })
-    check.same(result.code, 3, result.output)
+    check.same(3, result.code, result.output)
     check.matches("status=unavailable", result.output, 1, true)
   end
 end)
@@ -89,7 +89,7 @@ end)
 it("the lane script form reports the same boundary", function()
   local result = proc_lib.run_command({ "lua", LANE, "--level", "soft" })
 
-  check.same(result.code, 3, result.output)
+  check.same(3, result.code, result.output)
   check.truthy(result.output:find("status=unavailable", 1, true) ~= nil, result.output)
   check.is_nil(result.output:find(PROBE_MISDIAGNOSIS, 1, true), result.output)
 end)

@@ -63,7 +63,7 @@ end)
 
 it("native selection and exclusion partition complete manifest", function()
   local selected, excluded = registry.select()
-  check.equal(#selected + #excluded, #registry.entries)
+  check.equal(#registry.entries, #selected + #excluded)
   local seen = {}
   for _, entries in ipairs({ selected, excluded }) do
     for _, entry in ipairs(entries) do
@@ -72,11 +72,11 @@ it("native selection and exclusion partition complete manifest", function()
     end
   end
   for _, entry in ipairs(registry.entries) do
-    check.equal(seen[entry.feature], entry.generated)
+    check.equal(entry.generated, seen[entry.feature])
   end
-  check.equal(#excluded, 1)
-  check.equal(excluded[1].feature, "features/tooling/acceptance_mutator_status.feature")
-  check.equal(excluded[1].capability, "acceptance-mutate")
+  check.equal(1, #excluded)
+  check.equal("features/tooling/acceptance_mutator_status.feature", excluded[1].feature)
+  check.equal("acceptance-mutate", excluded[1].capability)
 end)
 
 it("points every entry at readable feature file", function()
@@ -96,7 +96,7 @@ it("regenerates feature spec deterministically", function()
   -- Re-deriving the same feature must produce byte-identical output.
   local first = fs_lib.read_file(out)
   check.is_true(regenerate.run({ generated_dir = tmp, entries = { entry } }))
-  check.equal(fs_lib.read_file(out), first)
+  check.equal(first, fs_lib.read_file(out))
 end)
 
 it("fails loudly when feature path is missing", function()

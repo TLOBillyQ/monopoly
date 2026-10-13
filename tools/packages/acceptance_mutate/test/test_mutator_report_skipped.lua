@@ -139,8 +139,8 @@ it("includes skipped scenarios and skipped mutations when skips are present", fu
     results = {},
   }
   local decoded = json.decode(mutator.format_json_report(report))
-  check.equal(decoded.summary.SkippedScenarios, 2)
-  check.equal(decoded.summary.SkippedMutations, 5)
+  check.equal(2, decoded.summary.SkippedScenarios)
+  check.equal(5, decoded.summary.SkippedMutations)
 end)
 
 it("preserves existing summary key casing alongside the new fields", function()
@@ -154,12 +154,12 @@ it("preserves existing summary key casing alongside the new fields", function()
     results = {},
   }
   local decoded = json.decode(mutator.format_json_report(report))
-  check.equal(decoded.summary.Total, 3)
-  check.equal(decoded.summary.Killed, 3)
-  check.equal(decoded.summary.Survived, 0)
-  check.equal(decoded.summary.Errors, 0)
-  check.equal(decoded.summary.SkippedScenarios, 1)
-  check.equal(decoded.summary.SkippedMutations, 2)
+  check.equal(3, decoded.summary.Total)
+  check.equal(3, decoded.summary.Killed)
+  check.equal(0, decoded.summary.Survived)
+  check.equal(0, decoded.summary.Errors)
+  check.equal(1, decoded.summary.SkippedScenarios)
+  check.equal(2, decoded.summary.SkippedMutations)
 end)
 
 

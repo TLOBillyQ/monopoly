@@ -51,13 +51,13 @@ local function
 creates_players_starting_at_position_1()
   local ctx = game_driver.new_game()
   local player = ctx.game.players[1]
-  check.equal(player.position, 1)
+  check.equal(1, player.position)
 end
 
 local function
 provides_outer_ring_size()
   local ctx = game_driver.new_game()
-  check.equal(ctx.outer_ring_size, 32)
+  check.equal(32, ctx.outer_ring_size)
 end
 
 -- #164：new_game 必须先把会触碰的进程级全局端口 reset 到已知基线再 configure，
@@ -119,7 +119,7 @@ resets_both_global_ports_before_configuring_its_own()
       reset_count = reset_count + 1
     end
   end
-  check.equal(reset_count, 2, "both global ports should be reset")
+  check.equal(2, reset_count, "both global ports should be reset")
 end
 
 local function
@@ -143,14 +143,14 @@ replaces_a_leftover_paid_gateway_with_the_driver_noop_gateway()
   local ctx = game_driver.new_game()
   local ok, reason = paid_purchase_port.can_start(ctx.game, ctx.game.players[1], {})
   check.is_false(ok)
-  check.equal(reason, "acceptance_noop")
+  check.equal("acceptance_noop", reason)
 end
 
 local function
 returns_the_first_player()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
-  check.equal(player, ctx.game.players[1])
+  check.equal(ctx.game.players[1], player)
 end
 
 local function
@@ -158,7 +158,7 @@ updates_player_position_via_game_api()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   game_driver.set_player_position(ctx, player, 10)
-  check.equal(player.position, 10)
+  check.equal(10, player.position)
 end
 
 local function
@@ -166,9 +166,9 @@ moves_player_forward_using_rules_movement_move()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   local result = game_driver.move(ctx, player, 3)
-  check.equal(player.position, 4)
-  check.equal(result.passed_start, 0)
-  check.equal(#result.visited, 3)
+  check.equal(4, player.position)
+  check.equal(0, result.passed_start)
+  check.equal(3, #result.visited)
 end
 
 local function
@@ -178,16 +178,16 @@ tracks_pass_start_when_wrapping_around_outer_ring()
   game_driver.set_player_position(ctx, player, 30)
   game_driver.clear_move_state(ctx, player)
   local result = game_driver.move(ctx, player, 5)
-  check.equal(result.passed_start, 1)
+  check.equal(1, result.passed_start)
 end
 
 local function
 queues_deterministic_dice_results()
   local ctx = game_driver.new_game()
   game_driver.set_next_rolls(ctx, {3, 5, 7})
-  check.equal(ctx.game.rng:next_int(1, 6), 3)
-  check.equal(ctx.game.rng:next_int(1, 6), 5)
-  check.equal(ctx.game.rng:next_int(1, 6), 7)
+  check.equal(3, ctx.game.rng:next_int(1, 6))
+  check.equal(5, ctx.game.rng:next_int(1, 6))
+  check.equal(7, ctx.game.rng:next_int(1, 6))
 end
 
 local function
@@ -195,7 +195,7 @@ returns_current_player_position()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   game_driver.set_player_position(ctx, player, 15)
-  check.equal(game_driver.player_position(ctx, player), 15)
+  check.equal(15, game_driver.player_position(ctx, player))
 end
 
 -- #165:道具/棋盘观察动词——step 模块经 driver 而非直 require src.rules 内部。
@@ -206,7 +206,7 @@ clear_items_items_of_round_trip_through_real_inventory()
   game_driver.give_item(ctx, player, 1)
   check.is_true(#game_driver.items_of(ctx, player) >= 1)
   game_driver.clear_items(ctx, player)
-  check.equal(#game_driver.items_of(ctx, player), 0)
+  check.equal(0, #game_driver.items_of(ctx, player))
 end
 
 local function
@@ -226,11 +226,11 @@ target_candidates_reads_the_real_item_registry_candidate_face()
   local user = game_driver.current_player(ctx)
   local opponent = ctx.game.players[2]
 
-  check.equal(#game_driver.target_candidates(ctx, user, item_ids.invite_deity), 0)
+  check.equal(0, #game_driver.target_candidates(ctx, user, item_ids.invite_deity))
   game_driver.set_player_deity(ctx, opponent, "rich", 3)
   local candidates = game_driver.target_candidates(ctx, user, item_ids.invite_deity)
-  check.equal(#candidates, 1)
-  check.equal(candidates[1], opponent)
+  check.equal(1, #candidates)
+  check.equal(opponent, candidates[1])
 end
 
 local function
@@ -262,7 +262,7 @@ consumes_the_monster_card_and_levels_the_target_building_through_the_real_apply(
   local result = game_driver.use_demolish_on(ctx, player, idx, item_ids.monster)
 
   check.is_table(result)
-  check.equal(tile.level, 0, "the building is demolished by the real apply")
+  check.equal(0, tile.level, "the building is demolished by the real apply")
   check.is_false(game_driver.has_item(ctx, player, item_ids.monster),
     "the monster card is consumed by the use")
 end
@@ -277,8 +277,8 @@ missile_injures_occupants_the_bombed_opponent_relocates_to_the_hospital_tile()
 
   game_driver.use_demolish_on(ctx, player, idx, item_ids.missile)
 
-  check.equal(tile.level, 0, "missile demolishes the building on the bombed tile")
-  check.equal(game_driver.tile_at(ctx, opponent.position).type, "hospital",
+  check.equal(0, tile.level, "missile demolishes the building on the bombed tile")
+  check.equal("hospital", game_driver.tile_at(ctx, opponent.position).type,
     "the bombed opponent is sent to hospital")
   check.is_false(game_driver.has_item(ctx, player, item_ids.missile),
     "the missile card is consumed by the use")
@@ -295,7 +295,7 @@ angel_immunity_blocks_the_demolition_and_publishes_the_feedback_event()
   local idx = game_driver.first_land_tile(ctx)
   game_driver.use_demolish_on(ctx, player, idx, item_ids.monster)
 
-  check.equal(tile.level, 2, "angel immunity keeps the building standing")
+  check.equal(2, tile.level, "angel immunity keeps the building standing")
   check.is_true(_saw_event(ctx, event_kinds.item_immune),
     "the angel protection feedback event is published")
 end
@@ -325,7 +325,7 @@ dispatches_a_real_slot_click_applied_and_the_item_follow_up_choice_opens()
 
   local result = game_driver.click_item_slot(ctx, player, 1)
 
-  check.equal(result and result.status, "applied")
+  check.equal("applied", result and result.status)
   local pending = ctx.game.turn.pending_choice
   check.truthy(pending ~= nil and pending.id ~= phase_choice_id,
     "the slot click opens the item's follow-up choice")

@@ -49,7 +49,7 @@ happy_path_emits_at_most_3_lines()
   local out = verify_full.build_output(input)
   local lines = _count_lines(out.stdout)
   check.is_true(lines <= 3, "expected <= 3 lines on happy path, got " .. lines .. ":\n" .. out.stdout)
-  check.equal(out.exit_code, 0)
+  check.equal(0, out.exit_code)
 end
 
 local function
@@ -74,7 +74,7 @@ local function
 failure_path_emits_failing_lane_stdout_verbatim()
   local input = _one_fail_results()
   local out = verify_full.build_output(input)
-  check.equal(out.exit_code, 1)
+  check.equal(1, out.exit_code)
   check.truthy(out.stdout:find("not ok 2 %- failing: guard check"),
     "failing lane stdout must be preserved: " .. out.stdout)
   check.truthy(out.stdout:find("Failure message: boom", 1, true),

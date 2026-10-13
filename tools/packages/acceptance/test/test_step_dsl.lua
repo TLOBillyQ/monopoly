@@ -23,7 +23,7 @@ it("keeps placeholder sentence verbatim", function()
   -- The runtime binds <数量> from the example; the DSL only registers the key.
   local ok = handlers["玩家有<数量>个金币"]({}, { ["数量"] = "7" })
   check.is_true(ok)
-  check.equal(seen, "7")
+  check.equal("7", seen)
 end)
 
 it("strips int annotation and coerces column", function()
@@ -39,7 +39,7 @@ it("strips int annotation and coerces column", function()
 
   local ok = handlers["玩家有<数量>个金币"]({}, { ["数量"] = "42" })
   check.is_true(ok)
-  check.equal(seen, 42)
+  check.equal(42, seen)
 end)
 
 it("passes non annotated columns untouched", function()
@@ -52,7 +52,7 @@ it("passes non annotated columns untouched", function()
   })
   local ok = handlers["玩家<玩家名>有<数量>个金币"]({}, { ["玩家名"] = "小明", ["数量"] = "3" })
   check.is_true(ok)
-  check.equal(other, "小明")
+  check.equal("小明", other)
 end)
 
 it("reports uniform failure for non integer column", function()
@@ -70,10 +70,10 @@ it("compiles anchored integer capture pattern", function()
     ["玩家掷出 {点数:int} 点"] = function() return true end,
   })
   check.is_table(handlers.__patterns)
-  check.equal(#handlers.__patterns, 1)
+  check.equal(1, #handlers.__patterns)
   local entry = handlers.__patterns[1]
-  check.same(entry.names, { "点数" })
-  check.equal(entry.types["点数"], "int")
+  check.same({ "点数" }, entry.names)
+  check.equal("int", entry.types["点数"])
   check.truthy(("玩家掷出 5 点"):match(entry.pattern))
   check.is_nil(("玩家掷出  点"):match(entry.pattern))
 end)
@@ -83,10 +83,10 @@ it("captures non empty text run", function()
     ["当前玩家是 {名字}"] = function() return true end,
   })
   local entry = handlers.__patterns[1]
-  check.equal(entry.types["名字"], "text")
+  check.equal("text", entry.types["名字"])
   -- Non-empty: an empty run does not match.
   check.is_nil(("当前玩家是 "):match(entry.pattern))
-  check.equal(("当前玩家是 小红"):match(entry.pattern), "小红")
+  check.equal("小红", ("当前玩家是 小红"):match(entry.pattern))
 end)
 
 it("escapes Lua magic literals", function()
@@ -94,7 +94,7 @@ it("escapes Lua magic literals", function()
     ["余额 (元) 为 {金额:int}"] = function() return true end,
   })
   local entry = handlers.__patterns[1]
-  check.equal(("余额 (元) 为 9"):match(entry.pattern), "9")
+  check.equal("9", ("余额 (元) 为 9"):match(entry.pattern))
 end)
 
 it("errors on ordinary key collision", function()
@@ -109,7 +109,7 @@ it("concatenates pattern arrays", function()
   local base = dsl.steps({ ["掷出 {点数:int} 点"] = function() return true end })
   local extra = dsl.steps({ ["移动 {格数:int} 格"] = function() return true end })
   dsl.merge(base, extra, "mod_b")
-  check.equal(#base.__patterns, 2)
+  check.equal(2, #base.__patterns)
 end)
 
 it("merges ordinary keys without collision", function()

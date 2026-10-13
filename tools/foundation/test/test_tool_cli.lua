@@ -29,33 +29,33 @@ end
 
 describe("tool cli", function()
 it("normalize exit code passes numbers through", function()
-  check.equal(tool_cli.normalize_exit_code(0), 0)
-  check.equal(tool_cli.normalize_exit_code(1), 1)
-  check.equal(tool_cli.normalize_exit_code(2), 2)
+  check.equal(0, tool_cli.normalize_exit_code(0))
+  check.equal(1, tool_cli.normalize_exit_code(1))
+  check.equal(2, tool_cli.normalize_exit_code(2))
 end)
 
 it("normalize exit code maps truthy and falsy", function()
-  check.equal(tool_cli.normalize_exit_code(true), 0)
-  check.equal(tool_cli.normalize_exit_code(false), 1)
-  check.equal(tool_cli.normalize_exit_code(nil), 1)
+  check.equal(0, tool_cli.normalize_exit_code(true))
+  check.equal(1, tool_cli.normalize_exit_code(false))
+  check.equal(1, tool_cli.normalize_exit_code(nil))
 end)
 
 it("merge env overlays overrides on base", function()
   local merged = tool_cli.merge_env({ from_base = "base", shared = "base-default" }, { shared = "override" })
 
-  check.equal(merged.from_base, "base")
-  check.equal(merged.shared, "override")
+  check.equal("base", merged.from_base)
+  check.equal("override", merged.shared)
 end)
 
 it("merge env tolerates nil sides and does not mutate inputs", function()
   local base = { key = "base" }
   local overrides = { key = "override" }
 
-  check.same(tool_cli.merge_env(nil, nil), {})
-  check.same(tool_cli.merge_env(base, nil), { key = "base" })
-  check.same(tool_cli.merge_env(nil, overrides), { key = "override" })
-  check.same(base, { key = "base" })
-  check.same(overrides, { key = "override" })
+  check.same({}, tool_cli.merge_env(nil, nil))
+  check.same({ key = "base" }, tool_cli.merge_env(base, nil))
+  check.same({ key = "override" }, tool_cli.merge_env(nil, overrides))
+  check.same({ key = "base" }, base)
+  check.same({ key = "override" }, overrides)
 end)
 
 it("run passes caller env through untouched", function()
@@ -78,11 +78,11 @@ it("run passes caller env through untouched", function()
       caller_env
     )
 
-    check.equal(code, 3)
+    check.equal(3, code)
     local captured = require("fixture_runner").captured
-    check.same(captured.args, { "a", "b" })
+    check.same({ "a", "b" }, captured.args)
     -- merge 职责在 runner 侧(#323):cli adapter 原样透传,不替 runner 合并
-    check.equal(captured.env, caller_env)
+    check.equal(caller_env, captured.env)
   end)
 end)
 
@@ -97,9 +97,9 @@ it("run normalizes boolean runner results", function()
     local runner = require("fixture_runner")
 
     runner.result = true
-    check.equal(tool_cli.run({ runner_module = "fixture_runner", runner_script = "missing" }, {}, nil), 0)
+    check.equal(0, tool_cli.run({ runner_module = "fixture_runner", runner_script = "missing" }, {}, nil))
     runner.result = false
-    check.equal(tool_cli.run({ runner_module = "fixture_runner", runner_script = "missing" }, {}, nil), 1)
+    check.equal(1, tool_cli.run({ runner_module = "fixture_runner", runner_script = "missing" }, {}, nil))
   end)
 end)
 
@@ -114,7 +114,7 @@ it("run falls back to subprocess when module missing", function()
       nil
     )
 
-    check.equal(code, 7)
+    check.equal(7, code)
   end)
 end)
 
@@ -123,7 +123,7 @@ it("forward subprocess passes args and exit code", function()
     local script = path_lib.join_path(root, "fixture_script.lua")
     check.is_true(fs_lib.write_file(script, "assert(arg[1] == 'has space')\nos.exit(5)\n"))
 
-    check.equal(tool_cli.forward_subprocess(script, { "has space" }), 5)
+    check.equal(5, tool_cli.forward_subprocess(script, { "has space" }))
   end)
 end)
 
@@ -136,7 +136,7 @@ it("forward subprocess honors explicit lua bin", function()
       "assert(_VERSION == 'Lua 5.4', 'must run under Lua 5.4, got ' .. _VERSION)\nos.exit(5)\n"))
     local lua54 = require("packages.luaunit_runner.lua54")
 
-    check.equal(tool_cli.forward_subprocess(script, {}, lua54.detect_lua54()), 5)
+    check.equal(5, tool_cli.forward_subprocess(script, {}, lua54.detect_lua54()))
   end)
 end)
 

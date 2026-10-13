@@ -53,14 +53,14 @@ it("stops at first failing case across suites when stop on first failure is set"
   local calls = {}
   local result = harness.run_all(failing_suites(calls), quiet_opts({ stop_on_first_failure = true }))
   check.is_true(result.failed)
-  check.same(calls, { "c1" })
+  check.same({ "c1" }, calls)
 end)
 
 it("runs every case after a failure by default no early stop", function()
   local calls = {}
   local result = harness.run_all(failing_suites(calls), quiet_opts())
   check.is_true(result.failed)
-  check.same(calls, { "c1", "c2", "c3" })
+  check.same({ "c1", "c2", "c3" }, calls)
 end)
 
 it("runs every case when all pass even with fail fast enabled", function()
@@ -77,7 +77,7 @@ it("runs every case when all pass even with fail fast enabled", function()
   }
   local result = harness.run_all(suites, quiet_opts({ stop_on_first_failure = true }))
   check.is_false(result.failed)
-  check.same(calls, { "p1", "p2" })
+  check.same({ "p1", "p2" }, calls)
 end)
 
 end)

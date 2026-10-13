@@ -42,12 +42,12 @@ end
 
 local function
 resolves_a_dedicated_shim_directory_under_tmp_not_the_tmp_root()
-  check.equal(guard.shim_dir("/tmp/repo"), "/tmp/repo/tmp/lua54-shim")
+  check.equal("/tmp/repo/tmp/lua54-shim", guard.shim_dir("/tmp/repo"))
 end
 
 local function
 keeps_the_shim_directory_nested_when_the_repo_root_has_a_trailing_slash()
-  check.equal(guard.shim_dir("/tmp/repo/"), "/tmp/repo/tmp/lua54-shim")
+  check.equal("/tmp/repo/tmp/lua54-shim", guard.shim_dir("/tmp/repo/"))
 end
 
 local function _env(overrides)
@@ -84,12 +84,12 @@ proceeds_without_reexec_when_marker_env_is_already_set()
     version = "Lua 5.5",
     path_check = function() return false end,
   }))
-  check.equal(result, "proceed")
+  check.equal("proceed", result)
 end
 
 local function
 proceeds_when_host_and_path_lua_are_both_54()
-  check.equal(guard.ensure(_env()), "proceed")
+  check.equal("proceed", guard.ensure(_env()))
 end
 
 local function
@@ -107,7 +107,7 @@ default_tree_checks_use_the_injected_environment_reader()
     path_check = function() return true end,
     version = "Lua 5.4",
   })
-  check.equal(result, "proceed")
+  check.equal("proceed", result)
 end
 
 -- re-exec 路径会真跑 shell;此处只钉判定走向,不钉副作用。
@@ -190,14 +190,14 @@ end
 
 local function
 tree_lua_cpath_points_at_lib_so_pattern()
-  check.equal(guard.tree_lua_cpath("/tmp/repo"),
-    "/tmp/repo/.toolcache/luarocks/lib/lua/5.4/?.so;;")
+  check.equal("/tmp/repo/.toolcache/luarocks/lib/lua/5.4/?.so;;",
+    guard.tree_lua_cpath("/tmp/repo"))
 end
 
 local function
 tree_lua_path_points_at_share_lua_pattern()
-  check.equal(guard.tree_lua_path("/tmp/repo"),
-    "/tmp/repo/.toolcache/luarocks/share/lua/5.4/?.lua;;")
+  check.equal("/tmp/repo/.toolcache/luarocks/share/lua/5.4/?.lua;;",
+    guard.tree_lua_path("/tmp/repo"))
 end
 
 

@@ -61,7 +61,7 @@ it("reports unavailable before probing a broken runner", function()
     level = "soft",
   })
 
-  check.same(result.code, 3, result.output)
+  check.same(3, result.code, result.output)
   check.truthy(tostring(result.output):find("status=unavailable", 1, true))
   check.is_nil(tostring(result.output):find("infrastructure_error", 1, true),
     "平台不可用要在 runner 探针之前诊断")

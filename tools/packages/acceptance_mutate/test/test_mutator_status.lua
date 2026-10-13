@@ -99,12 +99,12 @@ writes_status_lines_to_stderr_without_polluting_the_json_report(_self)
   local worker_input = assert(fs_lib.read_file(path_lib.join_path(tmp_dir, "status_work/runner-worker-input.jsonl")))
   local first_job = json.decode(worker_input:match("([^\n]+)"))
   check.equal(
-    first_job.feature_json,
-    path_lib.join_path(tmp_dir, "status_work/mutations/m1/feature.json")
+    path_lib.join_path(tmp_dir, "status_work/mutations/m1/feature.json"),
+    first_job.feature_json
   )
   check.equal(
-    first_job.work_dir,
-    path_lib.join_path(tmp_dir, "status_work/mutations/m1")
+    path_lib.join_path(tmp_dir, "status_work/mutations/m1"),
+    first_job.work_dir
   )
 
   local status_line = _last_status_line(run.stderr)

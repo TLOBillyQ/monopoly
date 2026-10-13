@@ -43,7 +43,7 @@ it("install is idempotent", function()
   chunk_cache.install()
   local installed = package.searchers[2]
   chunk_cache.install()
-  check.equal(package.searchers[2], installed)
+  check.equal(installed, package.searchers[2])
 end)
 
 it("repeated require returns fresh module tables", function()
@@ -54,10 +54,10 @@ it("repeated require returns fresh module tables", function()
   _evict()
   local second = require(_MODULE_NAME)
 
-  check.equal(first == second, false)
+  check.equal(false, first == second)
   -- 顶层代码逐次重执行:每个新实例的模块态都从初始值重算(隔离语义不变)。
-  check.equal(first.counter, 1)
-  check.equal(second.counter, 1)
+  check.equal(1, first.counter)
+  check.equal(1, second.counter)
 end)
 
 it("second load serves cached chunk", function()
@@ -65,20 +65,20 @@ it("second load serves cached chunk", function()
   _write_module("return { version = 1 }\n")
 
   local first = require(_MODULE_NAME)
-  check.equal(first.version, 1)
-  check.equal(chunk_cache.stats().size >= 1, true)
+  check.equal(1, first.version)
+  check.equal(true, chunk_cache.stats().size >= 1)
 
   -- 文件内容已变,但同路径重复 require 走缓存原型(进程内不感知磁盘变化)。
   _evict()
   _write_module("return { version = 2 }\n")
   local second = require(_MODULE_NAME)
-  check.equal(second.version, 1)
+  check.equal(1, second.version)
 end)
 
 it("missing module returns search error string", function()
   chunk_cache.install()
   local ok, err = pcall(require, "chunk_cache_mod_that_does_not_exist")
-  check.equal(ok, false)
+  check.equal(false, ok)
   check.matches("module 'chunk_cache_mod_that_does_not_exist' not found", tostring(err), 1, true)
 end)
 
@@ -86,7 +86,7 @@ it("syntax error raises load error", function()
   chunk_cache.install()
   _write_module("this is not valid lua\n")
   local ok, err = pcall(require, _MODULE_NAME)
-  check.equal(ok, false)
+  check.equal(false, ok)
   check.matches("error loading module", tostring(err), 1, true)
 end)
 

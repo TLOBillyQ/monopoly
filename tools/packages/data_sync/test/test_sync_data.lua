@@ -64,10 +64,10 @@ describe("parse UI nodes", function()
 
 it("parses bracket bare and commented forms", function()
   local data = sync_data.parse_uinodes(SAMPLE_UINODES)
-  check.same(data["1519736575|1821865760"], { name = "位置-槽位1投影", node_type = "EImage" })
-  check.same(data["1519736575|1002562102"], { name = "日志", node_type = "ELabel" })
+  check.same({ name = "位置-槽位1投影", node_type = "EImage" }, data["1519736575|1821865760"])
+  check.same({ name = "日志", node_type = "ELabel" }, data["1519736575|1002562102"])
   -- 同 id 后者覆盖:注释行里的"旧节点"覆盖裸键形式的"基础屏"(与 JS 一致)。
-  check.same(data["1519736575|2147314485"], { name = "旧节点", node_type = "EImage" })
+  check.same({ name = "旧节点", node_type = "EImage" }, data["1519736575|2147314485"])
 end)
 
 it("ignores non entry lines", function()
@@ -76,12 +76,12 @@ it("ignores non entry lines", function()
   for _ in pairs(data) do
     count = count + 1
   end
-  check.same(count, 3)
+  check.same(3, count)
 end)
 
 it("empty input yields an empty map", function()
-  check.same(next(sync_data.parse_uinodes("")), nil)
-  check.same(next(sync_data.parse_uinodes(nil)), nil)
+  check.same(nil, next(sync_data.parse_uinodes("")))
+  check.same(nil, next(sync_data.parse_uinodes(nil)))
 end)
 end)
 
@@ -89,7 +89,7 @@ describe("render UI manager nodes", function()
 
 it("renders sorted nodes without a length line", function()
   local rendered = sync_data.render_ui_manager_nodes(sync_data.parse_uinodes(SAMPLE_UINODES))
-  check.same(rendered, EXPECTED_RENDER)
+  check.same(EXPECTED_RENDER, rendered)
   check.is_nil(rendered:find("length", 1, true))
 end)
 end)
@@ -104,7 +104,7 @@ it("sync writes all files", function()
 
     local stats, err = sync_data.sync_from_deploy(deploy_dir, repo_root)
     check.is_not_nil(stats, tostring(err))
-    check.same(stats.node_count, 3)
+    check.same(3, stats.node_count)
     check.is_true(stats.prefab_changed)
     check.is_true(stats.nodes_changed)
     check.is_true(stats.prefab_bytes > 0)
@@ -113,18 +113,18 @@ it("sync writes all files", function()
     check.is_true(stats.api_bytes > 0)
     check.is_true(stats.editor_api_bytes > 0)
 
-    check.same(fs_lib.read_file(repo_root .. "/Data/UIManagerNodes.lua"), EXPECTED_RENDER)
+    check.same(EXPECTED_RENDER, fs_lib.read_file(repo_root .. "/Data/UIManagerNodes.lua"))
     check.same(
-      fs_lib.read_file(repo_root .. "/Data/Prefab.lua"),
-      fs_lib.read_file(deploy_dir .. "/Data/Prefab.lua")
+      fs_lib.read_file(deploy_dir .. "/Data/Prefab.lua"),
+      fs_lib.read_file(repo_root .. "/Data/Prefab.lua")
     )
     check.same(
-      fs_lib.read_file(repo_root .. "/EggyAPI.lua"),
-      fs_lib.read_file(deploy_dir .. "/EggyAPI.lua")
+      fs_lib.read_file(deploy_dir .. "/EggyAPI.lua"),
+      fs_lib.read_file(repo_root .. "/EggyAPI.lua")
     )
     check.same(
-      fs_lib.read_file(repo_root .. "/EggyEditorAPI.lua"),
-      fs_lib.read_file(deploy_dir .. "/EggyEditorAPI.lua")
+      fs_lib.read_file(deploy_dir .. "/EggyEditorAPI.lua"),
+      fs_lib.read_file(repo_root .. "/EggyEditorAPI.lua")
     )
   end)
 end)

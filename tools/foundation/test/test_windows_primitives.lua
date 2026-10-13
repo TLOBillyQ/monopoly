@@ -17,7 +17,7 @@ describe("native Windows primitives", function()
 it("real cwd ignores MSYS PWD", function()
   local cwd = runtime.current_dir()
   check.matches("^%a:/", cwd, "cwd must be a native absolute drive path: " .. cwd)
-  check.equal(env.current_dir(), cwd, "bootstrap and process cwd must agree")
+  check.equal(cwd, env.current_dir(), "bootstrap and process cwd must agree")
   check.is_true(runtime.path_exists(cwd .. "/tools/tools.lock"), "cwd must load the real project")
 end)
 
