@@ -15,7 +15,8 @@ local DEPLOY_ENTRY = "tools/packages/ops/deploy.lua"
 
 local function _shell_quote(value)
   local text = tostring(value or "")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
+  assert(not text:find('["\r\n%%!]'), "Unsupported command argument")
+  return '"' .. text .. '"'
 end
 
 function M.usage()

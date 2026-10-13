@@ -369,7 +369,7 @@ function TestDeployCliSurface:test_cli_subcommand_help_shows_usage()
 end
 
 function TestDeployCliSurface:test_cli_subcommand_forwards_extra_args_to_script()
-  local result = _run_cli_deploy({ "extra1" })
+  local result = _run_cli_deploy({ "额外 参数" })
   lu.assertFalse(result.ok)
   lu.assertEvalToTrue(result.output:find("ERROR:", 1, true),
     "extra args via cli.lua must reach deploy.lua and fail with ERROR: " .. result.output)
