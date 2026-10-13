@@ -31,7 +31,7 @@ local items_cfg = require("src.config.content.items")
 local runtime_state = require("src.ui.state.runtime")
 local intent_output = require("src.rules.ports.intent_output")
 local game_driver = require("packages.acceptance.game_driver")
-local swarm_declaration = require("packages.acceptance.steps.swarm_launch.declaration")
+local mutator_status = require("packages.acceptance.steps.mutator_status")
 ]],
   })
   lu.assertIs(#violations, 0)

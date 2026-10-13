@@ -13,10 +13,8 @@ local gherkin_parser = require("acceptance4lua.gherkin_parser")
 local mutator = require("acceptance4lua.mutator")
 local source = require("acceptance4lua.source")
 local fs_lib = require("foundation.fs")
-local proc_lib = require("foundation.proc")
 local dsl = require("packages.acceptance.step_dsl")
 local mutator_status_steps = require("packages.acceptance.steps.mutator_status")
-local swarm_launch_steps = require("packages.acceptance.steps.swarm_launch")
 
 local builtin = {}
 
@@ -106,13 +104,6 @@ local function _handlers()
       if world.integer_result ~= expected then
         return nil, "expected " .. tostring(expected) .. ", got " .. tostring(world.integer_result)
       end
-      return true
-    end,
-
-    -- Background
-    ["仓库启用了 SwarmForge 迁移工作流"] = function(world)
-      world.swarmforge_enabled = true
-      world.project_root = _project_root()
       return true
     end,
 
@@ -572,50 +563,6 @@ local function _handlers()
       return true
     end,
 
-    -- Scenario 8: SwarmForge 迁移资产边界清晰
-    ["仓库准备提交 SwarmForge 迁移"] = function(world)
-      world.project_root = _project_root()
-      return true
-    end,
-
-    ["开发者查看 git 状态"] = function(world)
-      world.git_ready = true
-      return true
-    end,
-
-    ["<应提交路径>应作为迁移资产提交"] = function(world, example)
-      local path = example["应提交路径"]
-      local known_prefixes = { "swarmforge/", "features/", "docs/" }
-      local valid = false
-      for _, prefix in ipairs(known_prefixes) do
-        if path:sub(1, #prefix) == prefix then
-          valid = true
-          break
-        end
-      end
-      if not valid then
-        return nil, "path does not match known migration asset prefixes: " .. path
-      end
-      local result = proc_lib.run_command({
-        "git", "check-ignore", "--quiet", path,
-      }, { cwd = world.project_root })
-      if result.ok then
-        return nil, "path is gitignored but should be committed: " .. path
-      end
-      return true
-    end,
-
-    ["<本地路径>应保持为本地运行状态"] = function(world, example)
-      local path = example["本地路径"]
-      local result = proc_lib.run_command({
-        "git", "check-ignore", "--quiet", path,
-      }, { cwd = world.project_root })
-      if not result.ok then
-        return nil, "path is NOT gitignored but should be local-only: " .. path
-      end
-      return true
-    end,
-
   }
 end
 
@@ -624,7 +571,6 @@ end
 function builtin.handlers()
   local h = _handlers()
   dsl.merge(h, mutator_status_steps.handlers(), "mutator_status")
-  dsl.merge(h, swarm_launch_steps.handlers(), "swarm_launch")
   return h
 end
 

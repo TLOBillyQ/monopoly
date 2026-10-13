@@ -26,21 +26,13 @@
 # 视为文件，.toolcache/ 规则不会忽略它，会被 root_whitelist_guard 报违规）。
 .toolcache
 
-# ── SwarmForge（本地 forge 管理） ────────────────────────────────
-# swarm 编排的全部协调状态（board/handoffs/sessions/prompts 与 PATH 工具面
-# bin/）只住这里；APS 三件（gherkin-parser / ir-dry-checker / gherkin-mutator）
-# 的 Lua 后端包装器由此处的 bin/ 经 PATH 供给，属本地运行时产物，不提交。
-.swarmforge/
-# forge 注入的共享 scripts 与 roles/constitution 覆盖面：纯运行时产物。
+# ── 外部 overlay 与编辑器缓存 ────────────────────────────────────
+# 已批准保留的外部共享 scripts overlay：本地状态，不版本化。
 /swarmforge/scripts/
-# 各角色独立 git worktree（launcher 硬编码路径）。
-.worktrees/
-# Clojure 侧编辑器/linter 本地缓存（clj-kondo 分析缓存、clojure-lsp 状态）。
-# 项目自身无 Clojure 源码；这些目录只可能由编辑器索引 forge 注入的
-# swarmforge/scripts/*.bb 生成，纯本地可再生状态，兜底防白名单 guard 报违规。
+# Clojure 编辑器/linter 缓存兜底。
 .clj-kondo/
 .lsp/
-# Claude Code 自身的 worktree 本地状态（与上面的 .worktrees/ 不同源）。
+# Claude Code 自身的 worktree 本地状态。
 /.claude/worktrees/
 # Claude Code 本地覆写（可能含 MCP token）。
 .claude/settings.local.json
