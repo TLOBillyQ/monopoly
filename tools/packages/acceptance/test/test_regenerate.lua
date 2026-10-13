@@ -28,6 +28,24 @@ function TestRegenerate:test_lists_features_with_unique_well_formed_generated_sp
   end
 end
 
+function TestRegenerate:test_native_selection_and_exclusion_partition_the_complete_manifest()
+  local selected, excluded = registry.select()
+  lu.assertEquals(#selected + #excluded, #registry.entries)
+  local seen = {}
+  for _, entries in ipairs({ selected, excluded }) do
+    for _, entry in ipairs(entries) do
+      lu.assertNil(seen[entry.feature], "identity appears in both sets")
+      seen[entry.feature] = entry.generated
+    end
+  end
+  for _, entry in ipairs(registry.entries) do
+    lu.assertEquals(seen[entry.feature], entry.generated)
+  end
+  lu.assertEquals(#excluded, 1)
+  lu.assertEquals(excluded[1].feature, "features/tooling/acceptance_mutator_status.feature")
+  lu.assertEquals(excluded[1].capability, "acceptance-mutate")
+end
+
 function TestRegenerate:test_points_every_entry_at_a_readable_feature_file()
   for _, entry in ipairs(registry.entries) do
     lu.assertEvalToTrue(fs_lib.path_exists(entry.feature), "missing feature: " .. entry.feature)

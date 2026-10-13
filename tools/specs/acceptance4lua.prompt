@@ -7,7 +7,7 @@ Project CLI wrappers: `tools/packages/acceptance/cli/parser.lua` (Gherkin → JS
 Project entrypoints: `lua tools/cli.lua acceptance` (regenerate gitignored generated specs, then run/aggregate) and `lua tools/cli.lua acceptance-mutate` (Gherkin mutation soft lane). Parser, generator, IR-DRY and mutator wrappers are called by their explicit project paths.
 
 CLI contract:
-- `lua tools/cli.lua acceptance [--serial]` (native serial execution by default; nonempty case counts required)
+- `lua tools/cli.lua acceptance [--serial|--capabilities]` (native serial execution by default; nonempty case counts required). `--capabilities` reports registered/selected/excluded identities without generation or execution. The retained `features/tooling/acceptance_mutator_status.feature` / `test_acceptance_mutator_status_acceptance.lua` is declared `capability=acceptance-mutate`: native Windows excludes it with `status=unavailable` and an explicit reason, never counts it as passed. Default regeneration and execution use the same selected set.
 - `lua tools/cli.lua acceptance-mutate [options]` (upstream mutator flags pass through as trailing args)
 - Parser: `lua tools/packages/acceptance/cli/parser.lua <feature> <json-ir>`.
 - Generator: `lua tools/packages/acceptance/cli/generator.lua <json-ir> <spec-output>`.
@@ -16,7 +16,7 @@ CLI contract:
 
 Windows guarantee boundary (#96, ADR 0066):
 - The acceptance pipeline itself (`lua tools/cli.lua acceptance`, plus the explicit parser / generator / IR-DRY entrypoints) is inside the native-Windows guarantee surface and is a required gate.
-- `lua tools/cli.lua acceptance-mutate` is currently declared a POSIX-only capability. On Windows a request is reported as unavailable *before* any tool install or spawn: exit code 3, `status=unavailable` on stderr, no mutator run, no mutation verdict. It must never be reported as a pass, and it must not surface the lane probe's own misdiagnosis (the probe chain — parser → generator → runner_worker — loses the process stdin to subprocesses spawned during bootstrap on native Windows, so `runner_worker` reads no job at all and the lane blames the job response instead of the platform).
+- All actual mutation entrypoints (`lua tools/cli.lua acceptance-mutate`, `acceptance_mutate/mutate_lane.lua`, and `acceptance_mutate/mutator.lua`) are currently declared a POSIX-only capability. Direct mutator `--help` remains exit 0 and no-argument usage remains exit 2 without installing the tool. On Windows a request is reported as unavailable *before* any tool install or spawn: exit code 3, `status=unavailable` on stderr, no mutator run, no mutation verdict. It must never be reported as a pass, and it must not surface the lane probe's own misdiagnosis (the probe chain — parser → generator → runner_worker — loses the process stdin to subprocesses spawned during bootstrap on native Windows, so `runner_worker` reads no job at all and the lane blames the job response instead of the platform).
 - `--skip-if-unavailable` is the explicit opt-in that records the skip: exit code 0, `status=skipped` on stdout. A skip is not a pass; it means no mutation result exists on this platform. The flag is consumed by `foundation.platform_boundary` and is never forwarded upstream.
 - Supported subset on native Windows: `--help` (exit 0), the boundary diagnostic, and the whole non-mutation acceptance surface (parser, generator, IR-DRY, `acceptance`). Out of the guarantee surface: any real mutation run, its periodic status output, and its killed/survived/error report.
 - Upstream mutator flags: `--feature <path>` (required), `--work-dir`, `--generated-dir`, `--steps-module`, `--workers`, `--timeout`, `--status-interval`, `--level full|hard|soft` (default hard), `--skip-columns <csv>`, `--runner-worker <command>` (required), `--implementation-hash`, `--json`, `--verbose`.
@@ -28,7 +28,7 @@ Windows guarantee boundary (#96, ADR 0066):
 APS contract:
 - Follow the Acceptance-Pipeline-Specification (Gitea mirror http://lzxsvn:3000/agent/acceptance-pipeline-specification; upstream unclebob/Acceptance-Pipeline-Specification).
 - The parser writes canonical JSON IR for the supported deterministic Gherkin subset.
-- The generator writes deterministic standalone Lua entrypoints and metadata whose implementation hash covers generated files only.
+- The project entrypoint uses the public upstream generator.generate API and native foundation writes. Metadata filenames use a full SHA-256 of the original feature identity to bound Windows path length; metadata preserves the complete feature_path, ir_path, generated_files and generated-files-only implementation_hash. An existing malformed or mismatched identity rejects generation before overwriting the entry. Upstream/cache sources are unchanged.
 - The mutator changes Gherkin example values, runs mutated IR through a persistent runner adapter, emits periodic status to stderr, and reports killed/survived/error results.
 
 Runtime dispatch requirement:

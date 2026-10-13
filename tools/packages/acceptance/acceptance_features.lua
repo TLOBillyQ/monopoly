@@ -38,7 +38,28 @@ end
 
 local manifest = _load_manifest()
 
-return {
+local registry = {
   generated_dir = manifest.generated_dir or DEFAULT_GENERATED_DIR,
   entries = manifest.entries or {},
 }
+
+function registry.select(report)
+  local selected, excluded = {}, {}
+  local boundary = require("foundation.platform_boundary")
+  for _, entry in ipairs(registry.entries) do
+    local verdict = entry.capability and boundary.evaluate(entry.capability, {}) or {}
+    if verdict.status then
+      excluded[#excluded + 1] = entry
+      if report then report("[acceptance] excluded status=" .. verdict.status
+        .. " feature=" .. entry.feature .. " generated=" .. entry.generated
+        .. " capability=" .. entry.capability .. " reason=" .. verdict.entry.reason) end
+    else
+      selected[#selected + 1] = entry
+    end
+  end
+  if report then report(string.format("[acceptance] registered=%d selected=%d excluded=%d",
+    #registry.entries, #selected, #excluded)) end
+  return selected, excluded
+end
+
+return registry

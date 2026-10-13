@@ -47,7 +47,7 @@ function regenerate.run(options)
   options = options or {}
   local report = options.report or function(_) end
   local generated_dir = options.generated_dir or registry.generated_dir
-  local entries = options.entries or registry.entries
+  local entries = options.entries or registry.select(report)
   local total = #entries
   for index, entry in ipairs(entries) do
     local generated_path = path_lib.join_path(generated_dir, entry.generated)

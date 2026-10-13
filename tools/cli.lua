@@ -27,7 +27,7 @@ local commands = {
   { name = "crap",              pkg = "crap",               summary = "CRAP 风险热点 + 覆盖率聚合(crap4lua)" },
   { name = "arch-view",         pkg = "arch_view",          summary = "静态架构扫描(默认 check;viewer/scan 等见包内帮助)" },
   { name = "lint",              pkg = "lint",               summary = "luacheck 静态检查(默认扫 src/test/tools)" },
-  { name = "deploy",            pkg = "ops",                summary = "部署到本地 Eggy 目录(Windows/WSL;零参数)" },
+  { name = "deploy",            pkg = "ops",                summary = "部署到本地 Eggy 目录(原生 Windows;零参数)" },
   { name = "sync-data",         pkg = "data_sync",          summary = "从部署目录回同步导出(Data;EggyAPI/EggyEditorAPI 存根)" },
   { name = "clean",             pkg = "clean",              summary = "清生成物(build/tmp/luacov 等)",              action = "clean" },
   { name = "distclean",         pkg = "clean",              summary = "clean 之上再清 .toolcache", action = "distclean" },
