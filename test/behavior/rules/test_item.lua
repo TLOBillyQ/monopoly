@@ -1,7 +1,8 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- luacheck: ignore 211
 -- 原生 LuaUnit(busted → LuaUnit 迁移):describe 拍平为 TestItem 类,before_each
 -- → setUp,用例数与改写前一一对应(61 例)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local control = require("src.player.control")
 local default_map = require("src.config.content.default_map")
@@ -11,7 +12,7 @@ end
 local _open_choice = support.open_choice
 local _get_choice = support.get_choice
 local _tile_state = support.tile_state
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local executor = require("src.rules.items.executor")
 local choice_resolver = require("src.rules.choice.resolver")
 local inventory = require("src.rules.items.inventory")
@@ -92,12 +93,12 @@ function TestItem:test_monster_card()
       _open_choice(g, res.intent.choice_spec)
     end
     local pending = _get_choice(g)
-    lu.assertEvalToTrue(pending and pending.kind == "demolish_target", "monster should open choice")
+    luassert.truthy(pending and pending.kind == "demolish_target", "monster should open choice")
     res = choice_resolver.resolve(g, pending, { option_id = pending.options[1].id })
   end
   _assert_eq(res.status, "resolved", "monster choice should resolve")
   _assert_eq(_tile_state(g, tile_ref).level, 0, "building destroyed")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "monster", "monster should queue monster action anim")
+  luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "monster", "monster should queue monster action anim")
   _assert_eq(res.after_action_anim, nil, "monster should not expose move followup")
 end
 
@@ -118,16 +119,16 @@ function TestItem:test_missile_card()
       _open_choice(g, res.intent.choice_spec)
     end
     local pending = _get_choice(g)
-    lu.assertEvalToTrue(pending and pending.kind == "item_target_player", "missile should open player target choice")
+    luassert.truthy(pending and pending.kind == "item_target_player", "missile should open player target choice")
     res = choice_resolver.resolve(g, pending, { option_id = g.players[2].id })
   end
   _assert_eq(res.status, "resolved", "missile choice should resolve")
   _assert_eq(_tile_state(g, tile_ref).level, 0, "building destroyed by missile")
   _assert_eq(g.board:has_roadblock(idx), false, "roadblock cleared")
   _assert_eq(g.board:has_mine(idx), false, "mine cleared")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "missile", "missile should queue missile action anim")
+  luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "missile", "missile should queue missile action anim")
   _assert_eq(#(g.turn.action_anim_queue or {}), 0, "missile should not queue a second target-player anim")
-  lu.assertEvalToTrue(type(res.after_action_anim) == "table", "missile should expose move followup")
+  luassert.truthy(type(res.after_action_anim) == "table", "missile should expose move followup")
   _assert_eq(
     res.after_action_anim.next_args.log_entries[1],
     p.name .. " 发射导弹轰炸 " .. tile_ref.name .. "，建筑被摧毁，1 名玩家送医",
@@ -137,7 +138,7 @@ function TestItem:test_missile_card()
 
   local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
   _assert_eq(next_state, nil, "missile move followup should return caller continuation")
-  lu.assertEvalToTrue(g:detention_remaining(g.players[2]) > 0, "missile target should enter hospital after move followup")
+  luassert.truthy(g:detention_remaining(g.players[2]) > 0, "missile target should enter hospital after move followup")
 end
 
 function TestItem:test_missile_apply_can_destroy_own_land_and_relocate_occupant()
@@ -196,7 +197,7 @@ function TestItem:test_item_phase_keeps_demolish_when_target_exists()
   p.inventory:add({ id = 2008 })
 
   local spec = item_phase.build_passive_choice_spec(g, p, "post_action")
-  lu.assertEvalToTrue(spec and spec.options and #spec.options > 0, "item_phase should include demolish when target exists")
+  luassert.truthy(spec and spec.options and #spec.options > 0, "item_phase should include demolish when target exists")
   _assert_eq(spec.options[1].id, 2008, "demolish item should be selectable when target exists")
 end
 
@@ -246,17 +247,16 @@ function TestItem:test_passive_spec_mixed_slots()
     next_state = "roll",
     next_args = { player = p },
   })
-  lu.assertEvalToTrue(spec ~= nil, "passive spec should exist with mixed available items")
+  luassert.truthy(spec ~= nil, "passive spec should exist with mixed available items")
   _assert_eq(spec.kind, "item_phase_passive", "passive spec kind mismatch")
   _assert_eq(spec.route_key, "item_phase_passive", "passive spec route key mismatch")
-  lu.assertEvalToTrue(type(spec.slot_states) == "table", "passive spec should expose slot_states")
-  lu.assertEvalToTrue(type(spec.options) == "table", "passive spec should expose options")
+  luassert.truthy(type(spec.slot_states) == "table", "passive spec should expose slot_states")
+  luassert.truthy(type(spec.options) == "table", "passive spec should expose options")
 
   local slot1 = spec.slot_states[1]
   local slot2 = spec.slot_states[2]
   local slot3 = spec.slot_states[3]
-  lu.assertEvalToTrue(type(slot1) == "table" and type(slot2) == "table" and type(slot3) == "table",
-    "first three slot states should be present")
+  luassert.truthy(type(slot1) == "table" and type(slot2) == "table" and type(slot3) == "table", "first three slot states should be present")
   _assert_eq(slot1.available, true, "send_poor should be available in post_action")
   _assert_eq(slot1.alert, true, "send_poor should mark alert bubble when available")
   _assert_eq(slot1.alert_text, "送神卡可用！", "send_poor alert text mismatch")
@@ -288,11 +288,11 @@ function TestItem:test_passive_spec_has_options_for_validator()
     next_state = "roll",
     next_args = { player = p },
   })
-  lu.assertEvalToTrue(spec ~= nil, "passive spec should exist when item is available")
-  lu.assertEvalToTrue(type(spec.options) == "table" and #spec.options > 0, "passive spec options should be non-empty")
+  luassert.truthy(spec ~= nil, "passive spec should exist when item is available")
+  luassert.truthy(type(spec.options) == "table" and #spec.options > 0, "passive spec options should be non-empty")
   for _, option in ipairs(spec.options) do
-    lu.assertEvalToTrue(option.id ~= nil, "validator option should include id")
-    lu.assertEvalToTrue(type(option.label) == "string" and option.label ~= "", "validator option should include label")
+    luassert.truthy(option.id ~= nil, "validator option should include id")
+    luassert.truthy(type(option.label) == "string" and option.label ~= "", "validator option should include label")
   end
 end
 
@@ -302,7 +302,7 @@ function TestItem:test_passive_handler_direct_execute()
   inventory.clear(p)
   p.inventory:add({ id = item_ids.mine })
 
-  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "roll",
     next_args = { player = p },
   }), "passive pre_action choice should open"))
@@ -323,7 +323,7 @@ function TestItem:test_passive_handler_cancel_finishes_phase()
   inventory.clear(p)
   p.inventory:add({ id = item_ids.mine })
 
-  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "roll",
     next_args = { player = p },
   }), "passive pre_action choice should open"))
@@ -335,8 +335,7 @@ function TestItem:test_passive_handler_cancel_finishes_phase()
   })
 
   _assert_eq(res and res.stay, false, "cancel should finish passive phase")
-  lu.assertEvalToTrue(g.turn.item_phase and g.turn.item_phase.pre_action and g.turn.item_phase.pre_action.done == true,
-    "cancel should mark phase finished")
+  luassert.truthy(g.turn.item_phase and g.turn.item_phase.pre_action and g.turn.item_phase.pre_action.done == true, "cancel should mark phase finished")
   _assert_eq(g.turn.item_phase_active, "", "cancel should clear active item phase")
 end
 
@@ -346,7 +345,7 @@ function TestItem:test_passive_handler_marks_effect_group_after_use()
   inventory.clear(p)
   p.inventory:add({ id = item_ids.dice_multiplier })
 
-  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_move", {
+  local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_move", {
     next_state = "roll",
     next_args = { player = p },
   }), "passive pre_move choice should open"))
@@ -358,8 +357,7 @@ function TestItem:test_passive_handler_marks_effect_group_after_use()
   })
 
   _assert_eq(res and res.stay, false, "effect-group item execute should finish passive phase when no options remain")
-  lu.assertEvalToTrue(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_multiply == true,
-    "dice_double execute should mark dice_multiply effect group used")
+  luassert.truthy(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_multiply == true, "dice_double execute should mark dice_multiply effect group used")
 end
 
 function TestItem:test_passive_handler_no_effect_group_on_cancel()
@@ -368,7 +366,7 @@ function TestItem:test_passive_handler_no_effect_group_on_cancel()
   inventory.clear(p)
   p.inventory:add({ id = item_ids.remote_dice })
 
-  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "roll",
     next_args = { player = p },
   }), "passive pre_action choice should open"))
@@ -379,7 +377,7 @@ function TestItem:test_passive_handler_no_effect_group_on_cancel()
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(res and res.stay == true, "remote dice passive execute should open follow-up choice")
+  luassert.truthy(res and res.stay == true, "remote dice passive execute should open follow-up choice")
   _assert_eq(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control, nil,
     "waiting follow-up should not mark dice_control effect group")
 end
@@ -391,7 +389,7 @@ function TestItem:test_passive_handler_resolve_returns_table_when_reopened()
   p.inventory:add({ id = item_ids.mine })
   p.inventory:add({ id = item_ids.remote_dice })
 
-  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "roll",
     next_args = { player = p },
   }), "passive pre_action choice should open"))
@@ -402,7 +400,7 @@ function TestItem:test_passive_handler_resolve_returns_table_when_reopened()
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(type(res) == "table", "passive handler resolve should return table when phase reopens")
+  luassert.truthy(type(res) == "table", "passive handler resolve should return table when phase reopens")
   _assert_eq(res.stay, true, "passive handler resolve should return stay=true when phase reopens")
 end
 
@@ -412,7 +410,7 @@ function TestItem:test_passive_followup_completion_marks_effect_group()
   inventory.clear(p)
   p.inventory:add({ id = item_ids.remote_dice })
 
-  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "roll",
     next_args = { player = p },
   }), "passive pre_action choice should open"))
@@ -422,13 +420,13 @@ function TestItem:test_passive_followup_completion_marks_effect_group()
     option_id = item_ids.remote_dice,
     actor_role_id = p.id,
   })
-  lu.assertEvalToTrue(select_res and select_res.stay == true, "remote dice passive execute should open follow-up choice")
+  luassert.truthy(select_res and select_res.stay == true, "remote dice passive execute should open follow-up choice")
   _assert_eq(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control, nil,
     "effect group should stay unmarked before follow-up completion")
 
-  local followup = assert(g.turn.pending_choice, "remote dice should open follow-up choice")
+  local followup = luassert.truthy(g.turn.pending_choice, "remote dice should open follow-up choice")
   _assert_eq(followup.kind, "remote_dice_value", "remote dice follow-up kind mismatch")
-  local option = assert(followup.options and followup.options[1], "remote dice follow-up should expose options")
+  local option = luassert.truthy(followup.options and followup.options[1], "remote dice follow-up should expose options")
   local followup_res = choice_resolver.resolve(g, followup, {
     type = "choice_select",
     choice_id = followup.id,
@@ -436,9 +434,8 @@ function TestItem:test_passive_followup_completion_marks_effect_group()
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(type(followup_res) == "table", "remote dice follow-up completion should return table")
-  lu.assertEvalToTrue(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control == true,
-    "passive-origin follow-up completion should mark dice_control effect group")
+  luassert.truthy(type(followup_res) == "table", "remote dice follow-up completion should return table")
+  luassert.truthy(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control == true, "passive-origin follow-up completion should mark dice_control effect group")
 end
 
 function TestItem:test_build_wait_choice_args_requires_resume_next_state()
@@ -446,8 +443,7 @@ function TestItem:test_build_wait_choice_args_requires_resume_next_state()
     item_phase.build_wait_choice_args(nil)
   end)
   _assert_eq(ok, false, "build_wait_choice_args should assert when meta is missing")
-  lu.assertEvalToTrue(type(err) == "string" and string.find(err, "missing meta%.resume_next_state", 1, false),
-    "build_wait_choice_args should explain missing resume_next_state")
+  luassert.truthy(type(err) == "string" and string.find(err, "missing meta%.resume_next_state", 1, false), "build_wait_choice_args should explain missing resume_next_state")
 end
 
 function TestItem:test_build_wait_choice_args_allows_nil_resume_next_args()
@@ -466,7 +462,7 @@ function TestItem:test_build_wait_choice_args_restores_next_state_and_args()
     resume_next_args = resume_next_args,
   })
   _assert_eq(result.next_state, "move_followup", "build_wait_choice_args should restore resume_next_state")
-  lu.assertEvalToTrue(result.next_args == resume_next_args, "build_wait_choice_args should forward the original next_args table")
+  luassert.truthy(result.next_args == resume_next_args, "build_wait_choice_args should forward the original next_args table")
 end
 
 function TestItem:test_wait_choice_arg_helpers_split_state_and_args()
@@ -477,7 +473,7 @@ function TestItem:test_wait_choice_arg_helpers_split_state_and_args()
   })
 
   _assert_eq(result.next_state, "move_followup", "build_wait_choice_args should forward resume_next_state")
-  lu.assertEvalToTrue(result.next_args == resume_next_args, "build_wait_choice_args should forward the original next_args table")
+  luassert.truthy(result.next_args == resume_next_args, "build_wait_choice_args should forward the original next_args table")
 end
 
 function TestItem:test_item_equalize_cash()
@@ -493,7 +489,7 @@ function TestItem:test_item_equalize_cash()
       _open_choice(g, res.intent.choice_spec)
     end
     local pending = _get_choice(g)
-    lu.assertEvalToTrue(pending and pending.kind == "item_target_player", "equalize should open choice")
+    luassert.truthy(pending and pending.kind == "item_target_player", "equalize should open choice")
     local first = pending.options[1]
     choice_resolver.resolve(g, pending, { option_id = first.id })
     res = true
@@ -513,16 +509,16 @@ function TestItem:test_target_item_manual_direct_exec_and_duration()
   user.inventory:add({ id = 2011 })
 
   local res = executor.use_item(g, user, 2011, {})
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting, "target item should open choice first")
+  luassert.truthy(type(res) == "table" and res.waiting, "target item should open choice first")
   _open_choice(g, res.intent.choice_spec)
   local pending = _get_choice(g)
-  lu.assertEvalToTrue(pending and pending.kind == "item_target_player", "pending choice kind")
+  luassert.truthy(pending and pending.kind == "item_target_player", "pending choice kind")
 
   choice_resolver.resolve(g, pending, { option_id = target.id })
   _assert_eq(_get_choice(g), nil, "choice should be resolved directly without reopening")
   _assert_eq(g:player_cash(user), 5000, "manual target item should apply to user")
   _assert_eq(g:player_cash(target), 5000, "manual target item should apply to target")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "target item should queue anim")
+  luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "target item should queue anim")
   _assert_eq(
     g.turn.action_anim.duration,
     timing.action_anim_default_seconds or 1.0,
@@ -539,9 +535,9 @@ function TestItem:test_steal_manual_uses_item_target_player_and_random_stolen_it
   target.inventory:add({ id = item_ids.roadblock })
 
   local res = executor.use_item(g, user, item_ids.steal, {})
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting, "steal should open choice first")
+  luassert.truthy(type(res) == "table" and res.waiting, "steal should open choice first")
   local pending = res.intent.choice_spec
-  lu.assertEvalToTrue(pending and pending.kind == "item_target_player", "steal should use shared player target choice")
+  luassert.truthy(pending and pending.kind == "item_target_player", "steal should use shared player target choice")
   _assert_eq(#pending.options, 1, "only players with items should be selectable")
   _assert_eq(pending.options[1].id, target.id, "target with items should be selectable")
 
@@ -549,7 +545,7 @@ function TestItem:test_steal_manual_uses_item_target_player_and_random_stolen_it
   _assert_eq(res.status, "resolved", "steal target choice should resolve")
   _assert_eq(user.inventory:count(), 1, "stealer should spend steal card and receive one item")
   _assert_eq(target.inventory:count(), 1, "target should lose one random item")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "steal should queue target player anim")
+  luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "item_target_player", "steal should queue target player anim")
   _assert_eq(#(g.turn.action_anim_queue or {}), 1, "steal should queue gained item reveal after target-player anim")
   _assert_eq(g.turn.action_anim_queue[1].kind, "item_gain_popup", "steal reveal kind mismatch")
   _assert_eq(g.turn.action_anim_queue[1].player_id, user.id, "steal reveal player mismatch")
@@ -573,7 +569,7 @@ function TestItem:test_steal_target_candidates_exclude_empty_and_angel_players()
   local candidates = g.registries.items:target_candidates(g, user, item_ids.steal)
   _assert_eq(#candidates, 1, "only valid steal target should remain")
   _assert_eq(candidates[1].id, valid.id, "candidate should be player with items and no angel")
-  lu.assertEvalToTrue(empty.inventory:count() == 0, "empty target setup should be empty")
+  luassert.truthy(empty.inventory:count() == 0, "empty target setup should be empty")
 end
 
 function TestItem:test_missile_target_candidates_exclude_angel_players()
@@ -591,10 +587,10 @@ function TestItem:test_missile_target_candidates_exclude_angel_players()
   local candidates = g.registries.items:target_candidates(g, user, item_ids.missile)
   _assert_eq(#candidates, 2, "missile should target unprotected other players")
   for _, candidate in ipairs(candidates) do
-    lu.assertEvalToTrue(candidate.id ~= user.id, "self should not be a missile target")
-    lu.assertEvalToTrue(candidate.id ~= protected.id, "angel player should not be a missile target")
+    luassert.truthy(candidate.id ~= user.id, "self should not be a missile target")
+    luassert.truthy(candidate.id ~= protected.id, "angel player should not be a missile target")
   end
-  lu.assertEvalToTrue(valid ~= nil, "valid player setup should exist")
+  luassert.truthy(valid ~= nil, "valid player setup should exist")
 end
 
 function TestItem:test_item_target_player_choice_assigns_seat_aligned_slot_layout()
@@ -613,10 +609,10 @@ function TestItem:test_item_target_player_choice_assigns_seat_aligned_slot_layou
   user.inventory:add({ id = 2011 })
 
   local res = executor.use_item(g, user, 2011, {})
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting, "equalize on p1 should open choice")
+  luassert.truthy(type(res) == "table" and res.waiting, "equalize on p1 should open choice")
   local pending = res.intent.choice_spec
-  lu.assertEvalToTrue(pending and pending.kind == "item_target_player", "should be item_target_player choice")
-  lu.assertEvalToTrue(pending.target_slot_layout ~= nil, "item_target_player must include target_slot_layout")
+  luassert.truthy(pending and pending.kind == "item_target_player", "should be item_target_player choice")
+  luassert.truthy(pending.target_slot_layout ~= nil, "item_target_player must include target_slot_layout")
   _assert_eq(#pending.options, 3, "p1 should see 3 candidate players")
   _assert_eq(pending.target_slot_layout[1], 2, "candidate 1 (p2) → slot 2")
   _assert_eq(pending.target_slot_layout[2], 3, "candidate 2 (p3) → slot 3")
@@ -636,7 +632,7 @@ function TestItem:test_item_target_player_choice_assigns_seat_aligned_slot_layou
   g2:set_player_cash(g2.players[4], 9000)
   user2.inventory:add({ id = 2011 })
   local res2 = executor.use_item(g2, user2, 2011, {})
-  lu.assertEvalToTrue(type(res2) == "table" and res2.waiting, "equalize on p2 should open choice")
+  luassert.truthy(type(res2) == "table" and res2.waiting, "equalize on p2 should open choice")
   local pending2 = res2.intent.choice_spec
   _assert_eq(pending2.target_slot_layout[1], 1, "p1 → slot 1")
   _assert_eq(pending2.target_slot_layout[2], 3, "p3 → slot 3")
@@ -656,9 +652,9 @@ function TestItem:test_exile_item_defers_mountain_effect_until_move_followup()
 
   _assert_eq(type(res), "table", "exile should return result payload")
   _assert_eq(res.ok, true, "exile should succeed")
-  lu.assertEvalToTrue(type(res.after_action_anim) == "table", "exile should expose move followup continuation")
+  luassert.truthy(type(res.after_action_anim) == "table", "exile should expose move followup continuation")
   _assert_eq(g:detention_remaining(target), 0, "exile should not apply mountain stay immediately")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "teleport_effect", "exile should queue teleport effect first")
+  luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "teleport_effect", "exile should queue teleport effect first")
   _assert_eq(
     res.after_action_anim.next_args.log_entries[1],
     user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山，停留 2 回合",
@@ -667,7 +663,7 @@ function TestItem:test_exile_item_defers_mountain_effect_until_move_followup()
 
   local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
   _assert_eq(next_state, nil, "exile move followup should return to caller continuation")
-  lu.assertEvalToTrue(g:detention_remaining(target) > 0, "exile should apply mountain stay after move followup")
+  luassert.truthy(g:detention_remaining(target) > 0, "exile should apply mountain stay after move followup")
 end
 
 function TestItem:test_item_executor_fallback_item_use_anim()
@@ -676,8 +672,8 @@ function TestItem:test_item_executor_fallback_item_use_anim()
   p.inventory:add({ id = 2003 })
 
   local res = executor.use_item(g, p, 2003, { is_computer_controlled = true })
-  lu.assertEvalToTrue(type(res) == "table" and res.action_anim, "fallback item anim should be marked")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "fallback should queue item_use anim")
+  luassert.truthy(type(res) == "table" and res.action_anim, "fallback item anim should be marked")
+  luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "fallback should queue item_use anim")
   _assert_eq(
     g.turn.action_anim.duration,
     timing.action_anim_default_seconds or 1.0,
@@ -691,8 +687,8 @@ function TestItem:test_item_executor_keeps_specific_anim_without_fallback()
   p.inventory:add({ id = 2005 })
 
   local res = executor.use_item(g, p, 2005, { is_computer_controlled = true })
-  lu.assertEvalToTrue(type(res) == "table" and res.action_anim, "mine should return action anim marker")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "mine", "specific mine anim should not be replaced")
+  luassert.truthy(type(res) == "table" and res.action_anim, "mine should return action anim marker")
+  luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "mine", "specific mine anim should not be replaced")
   _assert_eq(
     g.turn.action_anim.duration,
     timing.action_anim_default_seconds or 1.0,
@@ -705,7 +701,7 @@ function TestItem:test_item_phase_exposes_mine_in_pre_action()
   local p = g:current_player()
   p.inventory:add({ id = item_ids.mine })
 
-  local spec = assert(item_phase.build_passive_choice_spec(g, p, "pre_action"), "mine should be offered in pre_action")
+  local spec = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action"), "mine should be offered in pre_action")
   _assert_eq(spec.uses_item_slots, true, "item_phase choice should expose uses_item_slots flag")
   _assert_eq(spec.pre_confirm_before_slot_pick, false,
     "item_phase choice should expose pre_confirm_before_slot_pick flag")
@@ -716,7 +712,7 @@ function TestItem:test_item_phase_exposes_mine_in_pre_action()
       break
     end
   end
-  lu.assertEvalToTrue(found ~= nil, "pre_action choice should include mine")
+  luassert.truthy(found ~= nil, "pre_action choice should include mine")
   _assert_eq(found.confirm_title, "地雷卡", "item_phase option should expose the card name as confirm title")
   _assert_eq(found.confirm_body, "使用地雷卡，在你脚下放置地雷，任何玩家经过此地时触发地雷，被强制送进医院住院。",
     "item_phase option should expose the card description as confirm body")
@@ -727,7 +723,7 @@ function TestItem:test_item_phase_exposes_mine_in_post_action()
   local p = g:current_player()
   p.inventory:add({ id = item_ids.mine })
 
-  local spec = assert(item_phase.build_passive_choice_spec(g, p, "post_action"), "mine should be offered in post_action")
+  local spec = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "post_action"), "mine should be offered in post_action")
   local found = nil
   for _, option in ipairs(spec.options) do
     if option.id == item_ids.mine then
@@ -735,7 +731,7 @@ function TestItem:test_item_phase_exposes_mine_in_post_action()
       break
     end
   end
-  lu.assertEvalToTrue(found ~= nil, "post_action choice should include mine")
+  luassert.truthy(found ~= nil, "post_action choice should include mine")
   _assert_eq(found.confirm_title, "地雷卡", "post_action option should expose the card name as confirm title")
 end
 
@@ -745,7 +741,7 @@ function TestItem:test_item_phase_exposes_send_poor_in_pre_and_post_action()
   p.inventory:add({ id = item_ids.send_poor })
   g:set_player_deity(p, "poor", 2)
 
-  local pre_action = assert(item_phase.build_passive_choice_spec(g, p, "pre_action"), "send_poor should be offered in pre_action")
+  local pre_action = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action"), "send_poor should be offered in pre_action")
   local pre_action_found = nil
   for _, option in ipairs(pre_action.options) do
     if option.id == item_ids.send_poor then
@@ -753,10 +749,10 @@ function TestItem:test_item_phase_exposes_send_poor_in_pre_and_post_action()
       break
     end
   end
-  lu.assertEvalToTrue(pre_action_found ~= nil, "pre_action choice should include send_poor")
+  luassert.truthy(pre_action_found ~= nil, "pre_action choice should include send_poor")
   _assert_eq(pre_action_found.confirm_title, "送神卡", "pre_action option should expose the card name as confirm title")
 
-  local post_action = assert(item_phase.build_passive_choice_spec(g, p, "post_action"), "send_poor should be offered in post_action")
+  local post_action = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "post_action"), "send_poor should be offered in post_action")
   local post_action_found = nil
   for _, option in ipairs(post_action.options) do
     if option.id == item_ids.send_poor then
@@ -764,7 +760,7 @@ function TestItem:test_item_phase_exposes_send_poor_in_pre_and_post_action()
       break
     end
   end
-  lu.assertEvalToTrue(post_action_found ~= nil, "post_action choice should include send_poor")
+  luassert.truthy(post_action_found ~= nil, "post_action choice should include send_poor")
   _assert_eq(post_action_found.confirm_title, "送神卡", "post_action option should expose the card name as confirm title")
 end
 
@@ -804,8 +800,7 @@ function TestItem:test_item_phase_run_loops_auto_repeatable_phase_until_no_actio
   end)
 
   _assert_eq(calls, 3, "auto repeatable phase should keep probing until no further action is returned")
-  lu.assertEvalToTrue(g.turn.item_phase and g.turn.item_phase.pre_action and g.turn.item_phase.pre_action.done == true,
-    "auto repeatable phase should mark done only after the final no-op probe")
+  luassert.truthy(g.turn.item_phase and g.turn.item_phase.pre_action and g.turn.item_phase.pre_action.done == true, "auto repeatable phase should mark done only after the final no-op probe")
 end
 
 function TestItem:test_item_strategy_hides_reactive_cards_from_active_window()
@@ -820,18 +815,9 @@ function TestItem:test_item_strategy_hides_reactive_cards_from_active_window()
 
   g:set_tile_owner(tile_ref, p.id)
   g:set_player_property(p, tile_ref.id, true)
-  lu.assertEvalToTrue(
-    item_strategy.can_offer_in_phase(g, p, item_ids.strong, "post_action") == false,
-    "strong card should stay hidden in active windows"
-  )
-  lu.assertEvalToTrue(
-    item_strategy.can_offer_in_phase(g, p, item_ids.free_rent, "post_action") == false,
-    "free_rent card should stay hidden in active windows"
-  )
-  lu.assertEvalToTrue(
-    item_strategy.can_offer_in_phase(g, p, item_ids.roadblock, "post_action") == true,
-    "roadblock should be offered when UI candidates exist"
-  )
+  luassert.truthy(item_strategy.can_offer_in_phase(g, p, item_ids.strong, "post_action") == false, "strong card should stay hidden in active windows")
+  luassert.truthy(item_strategy.can_offer_in_phase(g, p, item_ids.free_rent, "post_action") == false, "free_rent card should stay hidden in active windows")
+  luassert.truthy(item_strategy.can_offer_in_phase(g, p, item_ids.roadblock, "post_action") == true, "roadblock should be offered when UI candidates exist")
 end
 
 function TestItem:test_item_phase_run_wait_action_anim_patches_move_followup_args()
@@ -860,9 +846,9 @@ function TestItem:test_item_phase_run_wait_action_anim_patches_move_followup_arg
   end)
   item_strategy.auto_pre_action = original_auto_pre_action
 
-  lu.assertEvalToTrue(ok, res)
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting == true, "auto item phase should wait for action anim when item queued anim")
-  lu.assertEvalToTrue(res.wait_action_anim == true, "auto item phase should route through wait_action_anim")
+  luassert.truthy(ok, res)
+  luassert.truthy(type(res) == "table" and res.waiting == true, "auto item phase should wait for action anim when item queued anim")
+  luassert.truthy(res.wait_action_anim == true, "auto item phase should route through wait_action_anim")
   _assert_eq(res.next_state, "move_followup", "auto item phase should preserve move_followup next state")
   _assert_eq(res.next_args.mode, "resume_turn_move", "move_followup mode should be preserved")
   _assert_eq(res.next_args.next_state, "roll", "move_followup args should receive default next state")
@@ -894,7 +880,7 @@ function TestItem:test_board_advance_tracks_branch_and_wrap()
   })
   local current = 1
   local branch = board.branches[current]
-  lu.assertEvalToTrue(branch and branch.odd and branch.even, "selected branch entry should expose odd/even targets")
+  luassert.truthy(branch and branch.odd and branch.even, "selected branch entry should expose odd/even targets")
 
   local odd_index = select(1, board:advance(current, 1, 1))
   local even_index = select(1, board:advance(current, 1, 2))
@@ -1019,7 +1005,7 @@ function TestItem:test_item_phase_select_remote_dice_keeps_followup_cancelable_i
   local p = g:current_player()
   p.inventory:add({ id = item_ids.remote_dice })
 
-  local spec = assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local spec = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "roll",
     next_args = { player = p },
   }), "item_phase should open when remote dice exists")
@@ -1033,14 +1019,14 @@ function TestItem:test_item_phase_select_remote_dice_keeps_followup_cancelable_i
     option_id = item_ids.remote_dice,
     actor_role_id = p.id,
   })
-  lu.assertEvalToTrue(res and res.stay == true, "selecting remote dice should open follow-up choice")
+  luassert.truthy(res and res.stay == true, "selecting remote dice should open follow-up choice")
 
   local after_pending = _get_choice(g)
-  lu.assertEvalToTrue(after_pending and after_pending.kind == "remote_dice_value", "follow-up choice kind should be remote_dice_value")
+  luassert.truthy(after_pending and after_pending.kind == "remote_dice_value", "follow-up choice kind should be remote_dice_value")
   _assert_eq(inventory.count(p), 1, "repeatable pre_action should defer consume until follow-up confirm")
   _assert_eq(after_pending.allow_cancel, true, "repeatable pre_action follow-up should still allow cancel")
-  lu.assertEvalToTrue(after_pending.meta and after_pending.meta.phase == "pre_action", "follow-up choice should carry repeatable phase context")
-  lu.assertEvalToTrue(after_pending.meta and after_pending.meta.item_preconsumed ~= true, "repeatable phase follow-up should not mark preconsumed")
+  luassert.truthy(after_pending.meta and after_pending.meta.phase == "pre_action", "follow-up choice should carry repeatable phase context")
+  luassert.truthy(after_pending.meta and after_pending.meta.item_preconsumed ~= true, "repeatable phase follow-up should not mark preconsumed")
 end
 
 function TestItem:test_repeatable_phase_followup_cancel_reopens_item_phase_without_consuming()
@@ -1048,7 +1034,7 @@ function TestItem:test_repeatable_phase_followup_cancel_reopens_item_phase_witho
   local p = g:current_player()
   p.inventory:add({ id = item_ids.remote_dice })
 
-  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "roll",
     next_args = { player = p },
   }), "repeatable pre_action choice should open"))
@@ -1058,7 +1044,7 @@ function TestItem:test_repeatable_phase_followup_cancel_reopens_item_phase_witho
     option_id = item_ids.remote_dice,
     actor_role_id = p.id,
   })
-  lu.assertEvalToTrue(select_res and select_res.stay == true, "selecting remote dice should enter follow-up choice")
+  luassert.truthy(select_res and select_res.stay == true, "selecting remote dice should enter follow-up choice")
 
   local followup = _get_choice(g)
   local cancel_res = choice_resolver.resolve(g, followup, {
@@ -1066,12 +1052,12 @@ function TestItem:test_repeatable_phase_followup_cancel_reopens_item_phase_witho
     choice_id = followup.id,
     actor_role_id = p.id,
   })
-  lu.assertEvalToTrue(cancel_res and cancel_res.stay == true, "canceling repeatable follow-up should keep phase active")
+  luassert.truthy(cancel_res and cancel_res.stay == true, "canceling repeatable follow-up should keep phase active")
 
   local reopened = _get_choice(g)
-  lu.assertEvalToTrue(reopened and reopened.kind == "item_phase_passive", "cancel should reopen item phase passive choice")
+  luassert.truthy(reopened and reopened.kind == "item_phase_passive", "cancel should reopen item phase passive choice")
   _assert_eq(inventory.count(p), 1, "cancel should not consume remote dice")
-  lu.assertEvalToTrue(_find_option_id_by_label(reopened, "遥控骰子卡") ~= nil, "reopened phase should still offer remote dice")
+  luassert.truthy(_find_option_id_by_label(reopened, "遥控骰子卡") ~= nil, "reopened phase should still offer remote dice")
 end
 
 function TestItem:test_repeatable_phase_followup_confirm_consumes_and_reopens_item_phase()
@@ -1080,7 +1066,7 @@ function TestItem:test_repeatable_phase_followup_confirm_consumes_and_reopens_it
   p.inventory:add({ id = item_ids.remote_dice })
   p.inventory:add({ id = item_ids.mine })
 
-  local pending = _open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "roll",
     next_args = { player = p },
   }), "repeatable pre_action choice should open"))
@@ -1090,7 +1076,7 @@ function TestItem:test_repeatable_phase_followup_confirm_consumes_and_reopens_it
     option_id = item_ids.remote_dice,
     actor_role_id = p.id,
   })
-  lu.assertEvalToTrue(select_res and select_res.stay == true, "selecting remote dice should enter follow-up choice")
+  luassert.truthy(select_res and select_res.stay == true, "selecting remote dice should enter follow-up choice")
 
   local followup = _get_choice(g)
   local confirm_res = choice_resolver.resolve(g, followup, {
@@ -1099,15 +1085,14 @@ function TestItem:test_repeatable_phase_followup_confirm_consumes_and_reopens_it
     option_id = 4,
     actor_role_id = p.id,
   })
-  lu.assertEvalToTrue(confirm_res and confirm_res.stay == true, "confirming repeatable pre_action follow-up should reopen item phase immediately when no anim waits")
+  luassert.truthy(confirm_res and confirm_res.stay == true, "confirming repeatable pre_action follow-up should reopen item phase immediately when no anim waits")
   _assert_eq(inventory.count(p), 1, "confirming follow-up should consume exactly one item")
   local remote_values = g:peek_pending_remote_dice(p)
-  lu.assertEvalToTrue(remote_values and remote_values[1] == 4,
-    "confirming follow-up should apply selected remote dice value")
+  luassert.truthy(remote_values and remote_values[1] == 4, "confirming follow-up should apply selected remote dice value")
 
   local reopened = _get_choice(g)
-  lu.assertEvalToTrue(reopened and reopened.kind == "item_phase_passive", "confirming repeatable follow-up should reopen item phase")
-  lu.assertEvalToTrue(_find_option_id_by_label(reopened, "地雷卡") ~= nil, "reopened phase should expose remaining pre_action item")
+  luassert.truthy(reopened and reopened.kind == "item_phase_passive", "confirming repeatable follow-up should reopen item phase")
+  luassert.truthy(_find_option_id_by_label(reopened, "地雷卡") ~= nil, "reopened phase should expose remaining pre_action item")
 end
 
 function TestItem:test_preconsumed_followup_cancel_falls_back_to_first_option()
@@ -1136,7 +1121,7 @@ function TestItem:test_preconsumed_followup_cancel_falls_back_to_first_option()
   _assert_eq(res and res.stay, false, "preconsumed follow-up should resolve instead of staying")
   _assert_eq(g.turn.pending_choice, nil, "preconsumed follow-up cancel should not keep choice")
   local fallback_values = g:peek_pending_remote_dice(p)
-  lu.assertEvalToTrue(fallback_values ~= nil, "remote dice value should still be applied")
+  luassert.truthy(fallback_values ~= nil, "remote dice value should still be applied")
   _assert_eq(fallback_values[1], 4, "cancel should fallback to first option value")
 end
 
@@ -1294,10 +1279,10 @@ function TestItem:test_steal_uses_tip_without_popup()
   end)
 
   _assert_eq(#popups, 0, "steal success should not push popup")
-  lu.assertEvalToTrue(#tips >= 1, "steal success should show tip")
-  lu.assertEvalToTrue(string.find(tips[1], stealer.name, 1, true), "steal success tip should include stealer name")
-  lu.assertEvalToTrue(string.find(tips[1], target.name, 1, true), "steal success tip should include target name")
-  lu.assertEvalToTrue(string.find(tips[1], "免税卡", 1, true), "steal success tip should include stolen item name")
+  luassert.truthy(#tips >= 1, "steal success should show tip")
+  luassert.truthy(string.find(tips[1], stealer.name, 1, true), "steal success tip should include stealer name")
+  luassert.truthy(string.find(tips[1], target.name, 1, true), "steal success tip should include target name")
+  luassert.truthy(string.find(tips[1], "免税卡", 1, true), "steal success tip should include stolen item name")
 end
 
 function TestItem:test_steal_direct_success_queues_target_player_anim()
@@ -1311,7 +1296,7 @@ function TestItem:test_steal_direct_success_queues_target_player_anim()
 
   _assert_eq(res and res.ok, true, "steal should succeed")
   _assert_eq(res and res.action_anim, true, "steal should report queued action anim")
-  lu.assertEvalToTrue(g.turn.action_anim ~= nil, "steal should queue an action anim")
+  luassert.truthy(g.turn.action_anim ~= nil, "steal should queue an action anim")
   _assert_eq(g.turn.action_anim.kind, "item_target_player", "steal anim kind mismatch")
   _assert_eq(g.turn.action_anim.player_id, stealer.id, "steal anim player mismatch")
   _assert_eq(g.turn.action_anim.target_player_id, target.id, "steal anim target mismatch")
@@ -1355,10 +1340,10 @@ function TestItem:test_steal_failure_uses_tip_without_popup()
 
   _assert_eq(stealer.inventory:count(), 1, "steal failure should NOT consume steal card")
   _assert_eq(#popups, 0, "steal failure should not push popup")
-  lu.assertEvalToTrue(#tips >= 1, "steal failure should show tip")
-  lu.assertEvalToTrue(string.find(tips[1], stealer.name, 1, true), "steal failure tip should include stealer name")
-  lu.assertEvalToTrue(string.find(tips[1], target.name, 1, true), "steal failure tip should include target name")
-  lu.assertEvalToTrue(string.find(tips[1], "没有任何道具", 1, true), "steal failure tip should explain failure")
+  luassert.truthy(#tips >= 1, "steal failure should show tip")
+  luassert.truthy(string.find(tips[1], stealer.name, 1, true), "steal failure tip should include stealer name")
+  luassert.truthy(string.find(tips[1], target.name, 1, true), "steal failure tip should include target name")
+  luassert.truthy(string.find(tips[1], "没有任何道具", 1, true), "steal failure tip should explain failure")
 end
 
 function TestItem:test_steal_random_empty_target_fails_without_rng_or_consuming_card()
@@ -1388,7 +1373,7 @@ function TestItem:test_steal_with_full_inventory_succeeds_by_freeing_the_steal_c
   stealer.inventory:add({ id = item_ids.steal })
   while stealer.inventory:count() < 5 do
     local ok = stealer.inventory:add({ id = item_ids.tax_free })
-    lu.assertEvalToTrue(ok == true, "preload stealer inventory failed")
+    luassert.truthy(ok == true, "preload stealer inventory failed")
   end
   target.inventory:add({ id = item_ids.roadblock })
 
@@ -1396,10 +1381,10 @@ function TestItem:test_steal_with_full_inventory_succeeds_by_freeing_the_steal_c
 
   _assert_eq(res and res.ok, true, "full-bag steal must succeed")
   _assert_eq(stealer.inventory:count(), 5, "bag stays full: steal card out, stolen item in")
-  lu.assertEvalToTrue(stealer.inventory:find_index(function(it)
+  luassert.truthy(stealer.inventory:find_index(function(it)
     return it.id == item_ids.steal
   end) == nil, "steal card must be consumed to free its slot")
-  lu.assertEvalToTrue(stealer.inventory:find_index(function(it)
+  luassert.truthy(stealer.inventory:find_index(function(it)
     return it.id == item_ids.roadblock
   end) ~= nil, "stolen roadblock must take the freed slot")
   _assert_eq(target.inventory:count(), 0, "target must lose the stolen item")
@@ -1426,7 +1411,7 @@ function TestItem:test_rich_item_emits_deity_feedback_event()
     _assert_eq(ok, true, "rich item use ok")
   end)
 
-  lu.assertEvalToTrue(#emitted >= 1, "rich item should emit at least one event")
+  luassert.truthy(#emitted >= 1, "rich item should emit at least one event")
   _assert_eq(emitted[1].kind, monopoly_event.feedback.deity_applied, "rich item should emit deity feedback event")
   _assert_eq(emitted[1].payload.deity_type, "rich", "rich item should emit rich deity type")
   _assert_eq(emitted[1].payload.player_id, p.id, "rich item should emit current player id")
@@ -1438,11 +1423,11 @@ TestItem["test_PIN: tax card drains target to zero and eliminates on non-positiv
   g:set_player_cash(target, 100)  -- fee = floor(100*0.5) = 50; 两次不足以清零,构造精确边界:
   g:set_player_cash(target, 1)    -- fee = floor(1*0.5) = 0 → 扣 0,cash 仍 1,不淘汰
   target_cash_effects.tax.apply(g, user, target)
-  lu.assertEvalToTrue(target.eliminated ~= true, "fee floors to 0 at cash=1, no bankruptcy")
+  luassert.truthy(target.eliminated ~= true, "fee floors to 0 at cash=1, no bankruptcy")
 
   g:set_player_cash(target, 2)    -- fee = floor(2*0.5) = 1 → cash 1,不淘汰
   target_cash_effects.tax.apply(g, user, target)
-  lu.assertEvalToTrue(g:player_cash(target) == 1, "cash 2 → pays 1 → left with 1")
+  luassert.truthy(g:player_cash(target) == 1, "cash 2 → pays 1 → left with 1")
 end
 
 -- Merged from test_item_strategy.lua -------------------------------------------------
@@ -1456,12 +1441,12 @@ function TestItem:test_auto_pre_action_returns_use_flow_result_for_target_items(
 
   local result = item_strategy.auto_pre_action(g, actor, "pre_action")
 
-  lu.assertEvalToTrue(type(result) == "table", "auto target item should return a use-flow result")
-  lu.assertEvalToTrue(result.ok == true, "auto target item should apply successfully")
-  lu.assertEvalToTrue(result.status == "applied", "auto target item should be normalized as applied")
-  lu.assertEvalToTrue(result.actor_id == actor.id, "auto target item result should carry actor id")
-  lu.assertEvalToTrue(result.item_id == item_ids.steal, "auto target item result should carry item id")
-  lu.assertEvalToTrue(result.item_consumed == true, "auto target item should consume the item")
+  luassert.truthy(type(result) == "table", "auto target item should return a use-flow result")
+  luassert.truthy(result.ok == true, "auto target item should apply successfully")
+  luassert.truthy(result.status == "applied", "auto target item should be normalized as applied")
+  luassert.truthy(result.actor_id == actor.id, "auto target item result should carry actor id")
+  luassert.truthy(result.item_id == item_ids.steal, "auto target item result should carry item id")
+  luassert.truthy(result.item_consumed == true, "auto target item should consume the item")
 end
 
 function TestItem:test_try_use_item_cond_false_returns_nil()
@@ -1473,8 +1458,8 @@ function TestItem:test_try_use_item_cond_false_returns_nil()
     return false
   end
   local result = item_strategy._try_use_item(game, player, 1, cond, false)
-  lu.assertEvalToTrue(result == nil, "should return nil when cond returns false")
-  lu.assertEvalToTrue(called_cond == true, "should have called cond")
+  luassert.truthy(result == nil, "should return nil when cond returns false")
+  luassert.truthy(called_cond == true, "should have called cond")
 end
 
 function TestItem:test_try_use_item_no_inventory_returns_nil()
@@ -1489,14 +1474,14 @@ function TestItem:test_try_use_item_no_inventory_returns_nil()
     },
   }
   local result = item_strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, false)
-  lu.assertEvalToTrue(result == nil, "should return nil when item not in inventory")
+  luassert.truthy(result == nil, "should return nil when item not in inventory")
 end
 
 function TestItem:test_try_use_item_not_ai_usable_returns_nil()
   local game = { turn = { phase = "post_action" } }
   local player = { id = 1, status = { inventory = {} } }
   local result = item_strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, false)
-  lu.assertEvalToTrue(result == nil, "should return nil when item not AI-usable in phase")
+  luassert.truthy(result == nil, "should return nil when item not AI-usable in phase")
 end
 
 function TestItem:test_try_use_item_returns_waiting_payload()
@@ -1508,11 +1493,11 @@ function TestItem:test_try_use_item_returns_waiting_payload()
     return { offer_in_phases = { "pre_action" } }
   end
   use_flow.begin_item_use = function(_, actor_id, item_id, opts)
-    lu.assertEvalToTrue(actor_id == 1, "expected actor id")
-    lu.assertEvalToTrue(item_id == item_ids.dice_multiplier, "expected item id")
-    lu.assertEvalToTrue(opts.phase == "pre_action", "expected phase")
-    lu.assertEvalToTrue(opts.is_computer_controlled == true, "expected is_computer_controlled flag")
-    lu.assertEvalToTrue(opts.auto_play == true, "expected auto_play flag")
+    luassert.truthy(actor_id == 1, "expected actor id")
+    luassert.truthy(item_id == item_ids.dice_multiplier, "expected item id")
+    luassert.truthy(opts.phase == "pre_action", "expected phase")
+    luassert.truthy(opts.is_computer_controlled == true, "expected is_computer_controlled flag")
+    luassert.truthy(opts.auto_play == true, "expected auto_play flag")
     return { ok = true, waiting = true, status = "waiting_choice", source = "test" }
   end
 
@@ -1520,8 +1505,8 @@ function TestItem:test_try_use_item_returns_waiting_payload()
     local game = { turn = { phase = "pre_action" } }
     local player = { id = 1 }
     local result = item_strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, true)
-    lu.assertEvalToTrue(type(result) == "table", "should return waiting table")
-    lu.assertEvalToTrue(result.source == "test", "should preserve use-flow payload")
+    luassert.truthy(type(result) == "table", "should return waiting table")
+    luassert.truthy(result.source == "test", "should preserve use-flow payload")
   end)
 
   inventory_module.cfg = original_cfg
@@ -1547,7 +1532,7 @@ function TestItem:test_try_use_item_returns_nil_for_rejected_flow_result()
     local game = { turn = { phase = "pre_action" } }
     local player = { id = 1 }
     local result = item_strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, false)
-    lu.assertEvalToTrue(result == nil, "should ignore rejected use-flow result")
+    luassert.truthy(result == nil, "should ignore rejected use-flow result")
   end)
 
   inventory_module.cfg = original_cfg

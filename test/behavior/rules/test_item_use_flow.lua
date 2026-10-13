@@ -1,9 +1,10 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit(busted → LuaUnit 迁移):文件原有两个 do 块各包一个带
 -- before_each 的 describe,各拍平成一个 Test* 类(item_use_flow 24 例 +
 -- item_use_settlement_pins 23 例),before_each → setUp,块内 local 原样留在
 -- 各自 do 块里,用例数与改写前一一对应(47 例)。
 do
-  local lu = require("luaunit")
   local support = require("test.support.shared_support")
   local default_map = require("src.config.content.default_map")
   local item_ids = require("src.config.gameplay.item_ids")
@@ -23,11 +24,11 @@ do
   end
 
   local function _assert_eq(actual, expected, msg)
-    assert(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+    luassert.truthy(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
   end
 
   local function _with_item_handler(game, item_id, handler, fn)
-    local handlers = assert(game.registries and game.registries.items and game.registries.items.handlers,
+    local handlers = luassert.truthy(game.registries and game.registries.items and game.registries.items.handlers,
       "missing item handlers")
     local previous = handlers[item_id]
     handlers[item_id] = handler
@@ -263,8 +264,7 @@ do
     -- 非 settled 也非 waiting 的结果必须抛错;不对具体消息做精确匹配避免脆断言。
     local ok, err = pcall(flow_result.normalize_effect, { ok = true }, player, item_ids.mine)
     _assert_eq(ok, false, "unsettled non-waiting result should error")
-    lu.assertEvalToTrue(type(err) == "string" and err:find("unsettled item effect result", 1, true),
-      "error should include unsettled item effect result prefix, got: " .. tostring(err))
+    luassert.truthy(type(err) == "string" and err:find("unsettled item effect result", 1, true), "error should include unsettled item effect result prefix, got: " .. tostring(err))
   end
 
   function TestItemUseFlow:test_begin_returns_structured_waiting_choice_for_manual_target_item()
@@ -279,7 +279,7 @@ do
     _assert_eq(result.ok, true, "steal begin should be accepted")
     _assert_eq(result.status, "waiting_choice", "steal should wait for target choice")
     _assert_eq(result.item_consumed, false, "waiting choice should not consume item")
-    lu.assertEvalToTrue(result.choice_spec and result.choice_spec.kind == "item_target_player", "steal should expose target-player choice")
+    luassert.truthy(result.choice_spec and result.choice_spec.kind == "item_target_player", "steal should expose target-player choice")
     _assert_eq(result.choice_spec.options[1].id, target.id, "target with item should be offered")
   end
 
@@ -625,7 +625,6 @@ do
 -- 在 settlement 深模块落地前,把散布在 executor/handlers/use_flow_resolvers 的
 -- 结算行为(成功判定、消耗时机、广播/遥测恰好一次、留卡语义)按 类别×路径 钉死。
 -- fixture 一律经真实 begin/resolve 路径构造;禁止手搓 choice.meta(假绿风险)。
-  local lu = require("luaunit")
   local support = require("test.support.shared_support")
   local default_map = require("src.config.content.default_map")
   local availability = require("src.rules.items.availability")
@@ -639,7 +638,7 @@ do
   local action_anim_port = require("src.foundation.ports.action_anim")
 
   local function _assert_eq(actual, expected, msg)
-    assert(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+    luassert.truthy(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
   end
 
   local function _new_game()
@@ -715,7 +714,7 @@ do
       result = use_flow.begin_item_use(game, player.id, item_id, { phase = "landing" })
     end)
     local followup_spec = result and result.intent and result.intent.choice_spec or nil
-    lu.assertEvalToTrue(followup_spec ~= nil, "waiting item use should surface a followup choice spec")
+    luassert.truthy(followup_spec ~= nil, "waiting item use should surface a followup choice spec")
     settlement.escrow(player, item_id, followup_spec)
     return followup_spec
   end

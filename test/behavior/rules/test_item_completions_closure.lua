@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- Closure pins for src/rules/choice_handlers/item_completions.lua.
 -- The three completion paths used to branch by phase (post_action early-finished).
 -- After the deep-module convergence they delegate to item_phase.resolve_completion
@@ -13,7 +15,7 @@ local completions = require("src.rules.choice_handlers.item_completions")
 local item_config = require("src.rules.items.config")
 
 local _with_patches = support.with_patches
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local function _effect_group(item_id)
   local cfg = item_config.cfg_by_id[item_id]

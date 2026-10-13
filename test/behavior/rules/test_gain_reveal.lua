@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert
 -- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(7 例)。
 -- 2026-08-22 #543 口径反转:全来源统一「卡牌展示屏」弹窗广播,
@@ -8,7 +10,7 @@ local inventory = require("src.rules.items.inventory")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local function _new_game()
   local g = support.new_game()
@@ -26,7 +28,7 @@ local function _capture_popup(g)
 end
 
 local function _assert_gain_popup_payload(captured, player, item_id)
-  local payload = assert(captured.payload, "gain should push card reveal popup")
+  local payload = luassert.truthy(captured.payload, "gain should push card reveal popup")
   _assert_eq(payload.title, "道具卡", "gain popup title mismatch")
   _assert_eq(payload.kind, "item_card", "gain popup kind mismatch")
   _assert_eq(payload.image_ref, item_id, "gain popup image ref mismatch")
@@ -39,7 +41,7 @@ local function _assert_gain_popup_payload(captured, player, item_id)
 end
 
 local function _assert_broadcast_anim(g, player, item_id, source)
-  local anim = assert(g.turn.action_anim, "missing item gain popup anim")
+  local anim = luassert.truthy(g.turn.action_anim, "missing item gain popup anim")
   _assert_eq(anim.kind, "item_gain_popup", "gain anim kind mismatch")
   _assert_eq(anim.player_id, player.id, "reveal player mismatch")
   _assert_eq(anim.owner_role_id, player.id, "reveal owner role mismatch")
@@ -124,7 +126,7 @@ function TestGainReveal:test_sourceless_gain_also_broadcasts_popup()
   local queued = gain_reveal.queue(g, player, item_ids.free_rent)
 
   _assert_eq(queued, true, "sourceless gain should queue reveal anim")
-  local anim = assert(g.turn.action_anim, "missing gain popup anim")
+  local anim = luassert.truthy(g.turn.action_anim, "missing gain popup anim")
   _assert_eq(anim.kind, "item_gain_popup", "sourceless gain anim kind mismatch")
   _assert_eq(anim.source, nil, "sourceless gain should keep nil source")
   _assert_eq(anim.broadcast, true, "sourceless gain should broadcast")

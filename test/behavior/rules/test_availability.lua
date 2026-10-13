@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local availability = require("src.rules.items.availability")
 local item_ids = require("src.config.gameplay.item_ids")
 local _config_reset = require("test.support.config_reset")
@@ -8,7 +9,7 @@ local _config_reset = require("test.support.config_reset")
 -- 用例数与改写前一一对应(22 例)。
 
 local function _assert_eq(a, b, msg)
-  lu.assertEquals(a, b, msg)
+  luassert.is.same(b, a, msg)
 end
 
 TestAvailability = {}
@@ -30,8 +31,7 @@ function TestAvailability:test_normalize_integer_field_nil_required_asserts()
   end)
   _assert_eq(ok, false, "nil value with required=true should assert")
   -- #293:缺省 field_prefix 回落 "meta"(→ nil 变异)进断言文案。
-  lu.assertEvalToTrue(tostring(err):find("meta.missing_key", 1, true) ~= nil,
-    "assert should name the meta field; got: " .. tostring(err))
+  luassert.truthy(tostring(err):find("meta.missing_key", 1, true) ~= nil, "assert should name the meta field; got: " .. tostring(err))
 end
 
 function TestAvailability:test_normalize_integer_field_numeric_converts()
@@ -126,14 +126,14 @@ function TestAvailability:test_analyze_offer_missing_cfg_returns_cannot_offer()
   local player = { id = 1001, inventory = { items = {} } }
   local result = availability.analyze_offer(game, player, "nonexistent_item_xyz", "pre_action")
   _assert_eq(result.can_offer, false, "missing cfg should report cannot offer")
-  lu.assertNotNil(result.deny_reason, "should have deny reason")
+  luassert.is_not_nil(result.deny_reason, "should have deny reason")
 end
 
 function TestAvailability:test_analyze_offer_always_includes_requires_followup()
   local game = { turn = {} }
   local player = { id = 1001, inventory = { items = {} } }
   local result = availability.analyze_offer(game, player, item_ids.missile, nil)
-  lu.assertIsBoolean(result.requires_followup_choice, "should always include requires_followup_choice")
+  luassert.is_boolean(result.requires_followup_choice, "should always include requires_followup_choice")
 end
 
 -- 穷神卡是负面道具：所有对手都有天使守护时应无合适目标（unusable_card_tip_001）。

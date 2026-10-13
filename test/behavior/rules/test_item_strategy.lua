@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- luacheck: ignore 211
 -- Item AI strategy + effect-pipeline characterization tests.
 -- Extracted verbatim from test_item.lua (formerly the _effect_pipeline_tests
@@ -5,13 +7,12 @@
 --
 -- 原生 LuaUnit(busted → LuaUnit 迁移):describe 拍平为 TestItemStrategy 类,
 -- before_each → setUp,用例数与改写前一一对应(19 例)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local item_ids = require("src.config.gameplay.item_ids")
 local item_strategy = require("src.rules.items.strategy")
 local effect_pipeline = require("src.rules.effects.pipeline")
@@ -73,13 +74,13 @@ function TestItemStrategy:test_effect_pipeline_waiting_result_patches_followup_a
       next_state = "resume_turn",
       next_args = { source = "effect_pipeline" },
     })
-    lu.assertEvalToTrue(type(result) == "table" and result.waiting == true, "waiting result should be returned")
+    luassert.truthy(type(result) == "table" and result.waiting == true, "waiting result should be returned")
     _assert_eq(result.next_state, "resume_turn", "waiting result should inherit next_state")
     _assert_eq(result.next_args.source, "effect_pipeline", "waiting result should inherit next_args")
     _assert_eq(result.intent, nil, "waiting result should not leak intent payload")
   end)
 
-  lu.assertEvalToTrue(type(dispatched) == "table" and dispatched.waiting == true, "waiting payload should still dispatch")
+  luassert.truthy(type(dispatched) == "table" and dispatched.waiting == true, "waiting payload should still dispatch")
 end
 
 function TestItemStrategy:test_effect_pipeline_stop_if_short_circuits_before_optional_choice()
@@ -178,12 +179,12 @@ function TestItemStrategy:test_effect_pipeline_single_optional_effect_uses_secon
       next_args = { source = "optional_effect" },
       optional_title = "可选效果",
     })
-    lu.assertEvalToTrue(type(result) == "table" and result.waiting == true, "optional effect should wait on choice")
+    luassert.truthy(type(result) == "table" and result.waiting == true, "optional effect should wait on choice")
     _assert_eq(result.next_state, "after_optional", "optional followup should preserve next_state")
     _assert_eq(result.next_args.source, "optional_effect", "optional followup should preserve next_args")
   end)
 
-  lu.assertEvalToTrue(type(opened_choice) == "table", "single optional effect should open choice")
+  luassert.truthy(type(opened_choice) == "table", "single optional effect should open choice")
   _assert_eq(opened_choice.route_key, "secondary_confirm", "single optional effect should use secondary_confirm route")
   _assert_eq(opened_choice.requires_confirm, true, "single optional effect should require confirm")
   _assert_eq(opened_choice.options[1].id, "buy_land", "single optional effect should expose chosen effect id")
@@ -224,7 +225,7 @@ function TestItemStrategy:test_effect_pipeline_builds_confirm_copy_for_buy_land_
     })
   end)
 
-  lu.assertEvalToTrue(type(opened_choice) == "table", "optional effects should open a choice")
+  luassert.truthy(type(opened_choice) == "table", "optional effects should open a choice")
   local buy, upgrade = opened_choice.options[1], opened_choice.options[2]
   _assert_eq(buy.confirm_title, "买地", "buy_land should carry its confirm title")
   _assert_eq(buy.confirm_body, "地块：" .. tostring(tile_ref.name) .. "。要买吗？",
@@ -262,7 +263,7 @@ function TestItemStrategy:test_effect_pipeline_leaves_confirm_copy_empty_for_oth
     effect_pipeline.run({}, player, tile_ref, { game = g }, {})
   end)
 
-  lu.assertEvalToTrue(type(opened_choice) == "table", "optional effects should open a choice")
+  luassert.truthy(type(opened_choice) == "table", "optional effects should open a choice")
   _assert_eq(opened_choice.options[1].confirm_title, nil, "an unknown effect gets no confirm title")
   _assert_eq(opened_choice.options[1].confirm_body, nil, "an unknown effect gets no confirm body")
   _assert_eq(opened_choice.options[1].label, "神秘", "the declared label should be used")
@@ -409,7 +410,7 @@ function TestItemStrategy:test_try_clear_obstacles_returns_result_when_obstacles
     -- Result should be a table (the use_item result) or nil
     -- Since we're not mocking executor.use_item, it will actually try to use it
     -- which may return a result or nil depending on the game state
-    lu.assertEvalToTrue(type(result) == "table" or result == nil, "result should be table or nil")
+    luassert.truthy(type(result) == "table" or result == nil, "result should be table or nil")
   end)
 end
 

@@ -1,6 +1,7 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- steal.lua 直测:steal_nth_occupied 的缺省序号、自耗、事件契约(blocks_
 -- inter_turn/source)、anim 参数与返回值;steal_random_item 的 rng 守卫。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 
 local steal = require("src.rules.items.steal")
@@ -64,26 +65,24 @@ end
 function TestSteal:test_defaults_to_the_first_occupied_card()
   local item_ids = require("src.config.gameplay.item_ids")
   local captured = _drive(nil)
-  lu.assertEvalToTrue(captured.result.ok == true, "the steal must succeed")
-  lu.assertEvalToTrue(captured.result.stolen.id == item_ids.mine,
-    "a nil ordinal must default to the first occupied card")
-  lu.assertEvalToTrue(inventory_mod.find_index(captured.player, item_ids.mine) ~= nil,
-    "the stolen item must land in the stealer bag")
+  luassert.truthy(captured.result.ok == true, "the steal must succeed")
+  luassert.truthy(captured.result.stolen.id == item_ids.mine, "a nil ordinal must default to the first occupied card")
+  luassert.truthy(inventory_mod.find_index(captured.player, item_ids.mine) ~= nil, "the stolen item must land in the stealer bag")
 end
 
 function TestSteal:test_success_event_contract()
   local captured = _drive(1)
-  lu.assertEvalToTrue(captured.feed ~= nil, "a success feed must be published")
-  lu.assertEvalToTrue(captured.feed.blocks_inter_turn == false, "steal must not block inter-turn")
-  lu.assertEvalToTrue(captured.feed.source == "rules.items.steal", "the feed source must be pinned")
+  luassert.truthy(captured.feed ~= nil, "a success feed must be published")
+  luassert.truthy(captured.feed.blocks_inter_turn == false, "steal must not block inter-turn")
+  luassert.truthy(captured.feed.source == "rules.items.steal", "the feed source must be pinned")
 end
 
 function TestSteal:test_anim_uses_the_steal_card_identity()
   local captured = _drive(1)
-  lu.assertEvalToTrue(captured.anim ~= nil, "an action anim must be queued")
-  lu.assertEvalToTrue(captured.anim.kind == "item_target_player", "the anim kind must be pinned")
-  lu.assertEvalToTrue(captured.anim.item_name == "偷窃卡", "the item name must be pinned")
-  lu.assertEvalToTrue(captured.anim.target_player_id == 2, "the target must be pinned")
+  luassert.truthy(captured.anim ~= nil, "an action anim must be queued")
+  luassert.truthy(captured.anim.kind == "item_target_player", "the anim kind must be pinned")
+  luassert.truthy(captured.anim.item_name == "偷窃卡", "the item name must be pinned")
+  luassert.truthy(captured.anim.target_player_id == 2, "the target must be pinned")
 end
 
 function TestSteal:test_empty_target_fails_without_consuming()
@@ -94,13 +93,10 @@ function TestSteal:test_empty_target_fails_without_consuming()
   _with_steal_ports(captured, function()
     captured.result = steal.steal_nth_occupied({}, player, target, 1)
   end)
-  lu.assertEvalToTrue(captured.result.ok == false, "an empty target must fail")
-  lu.assertEvalToTrue(inventory_mod.find_index(player, item_ids.steal) ~= nil,
-    "the steal card must not be consumed on failure")
-  lu.assertEvalToTrue(captured.feed ~= nil and captured.feed.blocks_inter_turn == false,
-    "the failure feed must not block inter-turn")
-  lu.assertEvalToTrue(captured.feed ~= nil and captured.feed.source == "rules.items.steal",
-    "the failure feed source must be pinned")
+  luassert.truthy(captured.result.ok == false, "an empty target must fail")
+  luassert.truthy(inventory_mod.find_index(player, item_ids.steal) ~= nil, "the steal card must not be consumed on failure")
+  luassert.truthy(captured.feed ~= nil and captured.feed.blocks_inter_turn == false, "the failure feed must not block inter-turn")
+  luassert.truthy(captured.feed ~= nil and captured.feed.source == "rules.items.steal", "the failure feed source must be pinned")
 end
 
 function TestSteal:test_random_steal_uses_the_rng_range()
@@ -110,9 +106,8 @@ function TestSteal:test_random_steal_uses_the_rng_range()
   _with_steal_ports(captured, function()
     captured.result = steal.steal_random_item(_game(captured), player, target)
   end)
-  lu.assertEvalToTrue(captured.rng_low == 1 and captured.rng_high == 3,
-    "the rng must draw within the target occupied count")
-  lu.assertEvalToTrue(captured.result.ok == true, "a random steal must succeed")
+  luassert.truthy(captured.rng_low == 1 and captured.rng_high == 3, "the rng must draw within the target occupied count")
+  luassert.truthy(captured.result.ok == true, "a random steal must succeed")
 end
 
 -- 稳定槽位集成:钉住双方槽位布局(其余卡不动、战利品填最前洞、被偷者留洞)。
@@ -125,15 +120,15 @@ function TestSteal:test_stable_slots_other_cards_unmoved_and_stolen_fills_freed_
   _with_steal_ports(captured, function()
     captured.result = steal.steal_nth_occupied({}, player, target, 2)
   end)
-  lu.assertEvalToTrue(captured.result.ok == true, "the steal must succeed")
-  lu.assertEvalToTrue(captured.result.stolen.id == item_ids.missile, "the second occupied card is stolen")
+  luassert.truthy(captured.result.ok == true, "the steal must succeed")
+  luassert.truthy(captured.result.stolen.id == item_ids.missile, "the second occupied card is stolen")
   local bag = player.inventory.items
-  lu.assertEvalToTrue(bag[1].id == item_ids.roadblock, "stealer slot 1 must stay put")
-  lu.assertEvalToTrue(bag[2].id == item_ids.missile, "the stolen card fills the slot freed by the steal card")
-  lu.assertEvalToTrue(bag[3].id == item_ids.free_rent, "stealer slot 3 must stay put")
+  luassert.truthy(bag[1].id == item_ids.roadblock, "stealer slot 1 must stay put")
+  luassert.truthy(bag[2].id == item_ids.missile, "the stolen card fills the slot freed by the steal card")
+  luassert.truthy(bag[3].id == item_ids.free_rent, "stealer slot 3 must stay put")
   local target_bag = target.inventory.items
-  lu.assertEvalToTrue(target_bag[1].id == item_ids.mine, "target slot 1 must stay put")
-  lu.assertEvalToTrue(target_bag[2] == false, "the stolen slot becomes a hole on the target side")
+  luassert.truthy(target_bag[1].id == item_ids.mine, "target slot 1 must stay put")
+  luassert.truthy(target_bag[2] == false, "the stolen slot becomes a hole on the target side")
 end
 
 function TestSteal:test_stolen_card_prefers_an_earlier_hole_over_the_freed_slot()
@@ -146,19 +141,19 @@ function TestSteal:test_stolen_card_prefers_an_earlier_hole_over_the_freed_slot(
   _with_steal_ports(captured, function()
     captured.result = steal.steal_nth_occupied({}, player, target, 1)
   end)
-  lu.assertEvalToTrue(captured.result.ok == true, "the steal must succeed")
+  luassert.truthy(captured.result.ok == true, "the steal must succeed")
   local bag = player.inventory.items
-  lu.assertEvalToTrue(bag[1].id == item_ids.missile, "the stolen card fills the earliest hole")
-  lu.assertEvalToTrue(bag[2].id == item_ids.roadblock, "stealer slot 2 must stay put")
-  lu.assertEvalToTrue(bag[3] == false, "the freed steal-card slot stays a hole")
+  luassert.truthy(bag[1].id == item_ids.missile, "the stolen card fills the earliest hole")
+  luassert.truthy(bag[2].id == item_ids.roadblock, "stealer slot 2 must stay put")
+  luassert.truthy(bag[3] == false, "the freed steal-card slot stays a hole")
 end
 
 function TestSteal:test_random_steal_guards_missing_rng()
   local player = _real_player(1, "P1", { "steal" })
   local target = _real_player(2, "T2", { "mine" })
-  lu.assertErrorMsgContains("missing game.rng for steal", function()
+  luassert.has_error.match(function() (function()
     steal.steal_random_item({}, player, target)
-  end)
+  end)() end, "missing game.rng for steal", 1, true)
 end
 
 return TestSteal

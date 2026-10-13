@@ -1,11 +1,11 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- use_result 构造器与 canonicalize 的直接单测(深化迁移 step 1)。
 -- 六种历史 raw 形状逐一钉死,不依赖活流量杀变异体。
-local lu = require("luaunit")
-local luax = require("test.support.luax")
 local use_result = require("src.rules.items.use_result")
 
 local function _assert_eq(actual, expected, msg)
-  assert(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.truthy(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
 end
 
 TestUseResult = {}
@@ -18,7 +18,7 @@ function TestUseResult:test_builds_applied_results_with_closed_field_set()
   _assert_eq(result.status, "applied", "applied status")
   _assert_eq(result.action_anim, anim, "applied should preserve anim value")
   _assert_eq(result.consumed_by_applier, true, "applied consumed marker")
-  lu.assertEvalToTrue(not pcall(use_result.applied, { unknown_field = 1 }), "unknown applied field must error")
+  luassert.truthy(not pcall(use_result.applied, { unknown_field = 1 }), "unknown applied field must error")
 end
 
 function TestUseResult:test_requires_a_stable_reason_for_rejected_results()
@@ -27,10 +27,10 @@ function TestUseResult:test_requires_a_stable_reason_for_rejected_results()
   _assert_eq(result.status, "rejected", "rejected status")
   _assert_eq(result.reason, "handler_blocked", "rejected reason")
   -- pcall 只钉失败不钉消息;改 has_error 精确匹配封死 message -> nil。
-  luax.has_error(function()
+  luassert.has_error(function()
     use_result.rejected()
   end, "rejected requires a stable reason")
-  luax.has_error(function()
+  luassert.has_error(function()
     use_result.rejected("")
   end, "rejected requires a stable reason")
 end
@@ -41,7 +41,7 @@ function TestUseResult:test_requires_a_choice_spec_for_await_choice_results()
 
   _assert_eq(result.status, "await_choice", "await status")
   _assert_eq(result.choice_spec, spec, "await choice spec")
-  luax.has_error(function()
+  luassert.has_error(function()
     use_result.await_choice()
   end, "await_choice requires a choice_spec table")
 end

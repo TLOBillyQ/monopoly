@@ -1,9 +1,11 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local mine_effect = require("src.rules.effects.mine")
 
 local _find = mine_effect._M_test._find_pending_roadblock_trigger
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.truthy(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 do -- describe("mine_effect_crap_coverage")

@@ -1,8 +1,10 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 拍平为文件级 Test* 类,
 -- 嵌套 describe 均无钩子,直接合并进 TestRoadblock,用例数与改写前一一对应(16 例)。
 
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = P.with_patches
 
 local roadblock = require("src.rules.items.roadblock")
@@ -12,7 +14,7 @@ local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.foundation.ports.action_anim")
 
 local function _ok(val, msg)
-  assert(val, msg or "expected truthy")
+  luassert.truthy(val, msg or "expected truthy")
 end
 
 local function _make_board(tiles, roadblocks, mines)

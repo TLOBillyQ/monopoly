@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- Mutation-closure pins for src/rules/items/handlers.lua.
 -- The item-use handlers are registered into the item registry and exercised
 -- through integration in item_spec, which leaves the dispatch-layer branch and
@@ -18,8 +20,6 @@
 -- 原生 LuaUnit 迁移:各 describe 按钩子边界拍平为独立 Test* 类(带
 -- before_each 的六个 → setUp;guard closure 无钩子 → 无 setUp 类),断言词汇
 -- 从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(26 例)。
-local lu = require("luaunit")
-local luax = require("test.support.luax")
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local item_ids = require("src.config.gameplay.item_ids")
@@ -37,7 +37,7 @@ local remote_dice = require("src.rules.items.remote_dice")
 local event_feed = require("src.rules.ports.event_feed")
 local settlement = require("src.rules.items.settlement")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
 local _anim_duration = timing.action_anim_default_seconds or 1.0
 
@@ -94,7 +94,7 @@ local function _capture_use(g, item_id, context)
     -- 假 applier 也要履行 applier_owned 契约:apply 成功前必须经 consume_fn 提交消耗
     { target = demolish, key = "use", value = function(_, _, idx, consume_fn, opts)
         captured = { idx = idx, consume_fn = consume_fn, opts = opts }
-        lu.assertEvalToTrue(consume_fn() == true, "consume_fn must commit")
+        luassert.truthy(consume_fn() == true, "consume_fn must commit")
         return { ok = true }
       end },
   }, function()
@@ -274,7 +274,7 @@ function TestItemHandlersChoiceFlowBranches:test_a_human_actor_returns_a_waiting
   local res = handlers.handle_target_player_item(g, p, item_ids.exile, {
     resolve_target_candidates = function() return { other } end,
   })
-  lu.assertEquals(res.waiting, true, "a human actor waits on a choice")
+  luassert.is.same(true, res.waiting, "a human actor waits on a choice")
   _assert_eq(res.intent.kind, "need_choice", "the intent requests a choice")
   local spec = res.intent.choice_spec
   _assert_eq(spec.kind, "item_target_player", "the choice spec is an item_target_player choice")
@@ -288,7 +288,7 @@ function TestItemHandlersChoiceFlowBranches:test_a_human_actor_returns_a_waiting
   _assert_eq(spec.meta.player_id, p.id, "the meta carries the acting player id")
   _assert_eq(spec.options[1].id, other.id, "the candidate is offered as an option")
   _assert_eq(spec.options[1].label, other.name, "the option is labeled with the candidate name")
-  lu.assertEquals(#spec.body_lines, 1, "one body line per candidate")
+  luassert.is.same(1, #spec.body_lines, "one body line per candidate")
 end
 
 -- --------------------------------------------------------------------------
@@ -304,8 +304,8 @@ function TestItemHandlersRemoteDice:test_ai_publishes_a_remote_dice_feed_entry_w
   local g = _game()
   local published = _run_ai(g, 4, { name = "财神庙" }, { ok = true })
   _assert_eq(#published, 1, "a successful targeted ai dice publishes one feed entry")
-  lu.assertNotNil(published[1].kind, "the published entry carries a kind")
-  lu.assertEvalToTrue(published[1].text:find("财神庙", 1, true), "the feed text names the target tile")
+  luassert.is_not_nil(published[1].kind, "the published entry carries a kind")
+  luassert.truthy(published[1].text:find("财神庙", 1, true), "the feed text names the target tile")
 end
 
 function TestItemHandlersRemoteDice:test_ai_publishes_nothing_when_no_target_tile_is_chosen()
@@ -482,7 +482,7 @@ TestItemHandlersGuardClosure = {}
 function TestItemHandlersGuardClosure:test_rejects_a_context_without_resolve_target_candidates()
   -- kills handle_target_player_item's "missing resolve_target_candidates" -> nil.
   local g = _game()
-  luax.has_error(function()
+  luassert.has_error(function()
     handlers.handle_target_player_item(g, g.players[1], item_ids.exile, {})
   end, "missing resolve_target_candidates")
 end

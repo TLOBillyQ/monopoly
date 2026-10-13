@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- Mutation-closure pins for src/rules/effects/mine.lua.
 -- mine_effect_spec already pins _find_pending_roadblock_trigger; this file
 -- covers the remaining survivors in can_trigger / _is_mine_grace_expired
@@ -6,13 +8,12 @@
 -- the obstacle-chain tip fields built via _build_obstacle_chain_key /
 -- _build_chain_tip_text). Routed by architect
 -- (agent_context/rules-mutation-bootstrap-debt.md).
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local timing = require("src.config.gameplay.timing")
 local mine_effect = require("src.rules.effects.mine")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _anim_duration = timing.action_anim_default_seconds
 
 local function _game(players)
@@ -172,7 +173,7 @@ do -- describe("mine_effect.apply closure")
     _assert_eq(p.status.pending_location_effect, "hospital", "a pending hospital effect is flagged")
 
     local anim = _find_action_anim(g, "mine_trigger")
-    lu.assertEvalToTrue(anim ~= nil, "a mine_trigger anim is queued")
+    luassert.truthy(anim ~= nil, "a mine_trigger anim is queued")
     _assert_eq(anim.player_id, p.id, "the anim carries the victim id")
     _assert_eq(anim.tile_index, 3, "the anim records the mine tile")
     _assert_eq(anim.from_index, 3, "the blast originates at the mine tile")
@@ -198,7 +199,7 @@ do -- describe("mine_effect.apply closure")
     mine_effect.apply(g, p, 3)
 
     local anim = _find_action_anim(g, "mine_trigger")
-    lu.assertEvalToTrue(anim ~= nil, "the chained blast is queued behind the roadblock trigger")
+    luassert.truthy(anim ~= nil, "the chained blast is queued behind the roadblock trigger")
     _assert_eq(anim.tip_policy, "user", "a chained blast surfaces a user tip")
     _assert_eq(anim.tip_source, "obstacle_chain", "the tip is sourced from the obstacle chain")
     _assert_eq(anim.chain_key, "5:" .. tostring(p.id) .. ":3",
@@ -220,7 +221,7 @@ do -- describe("mine_effect.apply closure")
     mine_effect.apply(g, p, 3)
 
     local anim = _find_action_anim(g, "mine_trigger")
-    lu.assertEvalToTrue(anim ~= nil, "the chained blast is queued")
+    luassert.truthy(anim ~= nil, "the chained blast is queued")
     _assert_eq(anim.dedupe_key, "obstacle_chain:0:" .. tostring(p.id) .. ":3",
       "a missing turn_count defaults the chain key's turn segment to 0")
   end
@@ -250,23 +251,19 @@ do -- describe("mine_effect.apply closure")
 
     local ok_nil_game, err_nil_game = _apply_err(nil, p, 3)
     _assert_eq(ok_nil_game, false, "nil game should error")
-    lu.assertEvalToTrue(type(err_nil_game) == "string" and err_nil_game:find("missing game", 1, true),
-      "nil game error should mention missing game, got: " .. tostring(err_nil_game))
+    luassert.truthy(type(err_nil_game) == "string" and err_nil_game:find("missing game", 1, true), "nil game error should mention missing game, got: " .. tostring(err_nil_game))
 
     local ok_nil_board, err_nil_board = _apply_err({}, p, 3)
     _assert_eq(ok_nil_board, false, "missing board should error")
-    lu.assertEvalToTrue(type(err_nil_board) == "string" and err_nil_board:find("missing board", 1, true),
-      "missing board error should mention missing board, got: " .. tostring(err_nil_board))
+    luassert.truthy(type(err_nil_board) == "string" and err_nil_board:find("missing board", 1, true), "missing board error should mention missing board, got: " .. tostring(err_nil_board))
 
     local ok_nil_player, err_nil_player = _apply_err(g, nil, 3)
     _assert_eq(ok_nil_player, false, "nil player should error")
-    lu.assertEvalToTrue(type(err_nil_player) == "string" and err_nil_player:find("missing player", 1, true),
-      "nil player error should mention missing player, got: " .. tostring(err_nil_player))
+    luassert.truthy(type(err_nil_player) == "string" and err_nil_player:find("missing player", 1, true), "nil player error should mention missing player, got: " .. tostring(err_nil_player))
 
     local ok_nil_pos, err_nil_pos = _apply_err(g, p, nil)
     _assert_eq(ok_nil_pos, false, "nil position should error")
-    lu.assertEvalToTrue(type(err_nil_pos) == "string" and err_nil_pos:find("missing position", 1, true),
-      "nil position error should mention missing position, got: " .. tostring(err_nil_pos))
+    luassert.truthy(type(err_nil_pos) == "string" and err_nil_pos:find("missing position", 1, true), "nil position error should mention missing position, got: " .. tostring(err_nil_pos))
   end
 
   TestMineClosureApplyClosure["test__build_chain_tip_text falls back to position when board has no tile"] = function(self)

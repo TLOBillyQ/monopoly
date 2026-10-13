@@ -1,16 +1,17 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- obstacle_clear 直测(#259 变异清扫 survivor 闭合):
 -- 模块级 `timing.action_anim_default_seconds or 1.0` 的 or -> and
 -- (变异体把回退时长钉成 1.0 而非配置值);
 -- _new_state 的 "missing context" 守卫与 `branch_parity or distance` 的
 -- or -> and(变异体把显式 parity 换成 distance)。
-local luax = require("test.support.luax")
 local support = require("test.support.shared_support")
 local timing = require("src.config.gameplay.timing")
 local obstacle_clear = require("src.rules.items.obstacle_clear")
 local obstacle_clear_walk = require("src.rules.items.obstacle_clear_walk")
 local action_anim_port = require("src.foundation.ports.action_anim")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local function _drive(context, distance)
   local captured = {}
@@ -66,7 +67,7 @@ function TestObstacleClear:test_prefers_an_explicit_context_branch_parity_over_d
 end
 
 function TestObstacleClear:test_handle_rejects_a_nil_context_with_the_guard_message()
-  luax.has_error(function()
+  luassert.has_error(function()
     obstacle_clear.handle({ board = {} }, { id = 1, name = "P1" }, { distance = 1 }, nil)
   end, "missing context")
 end

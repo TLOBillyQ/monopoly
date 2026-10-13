@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit 迁移:三个 do 块 + describe 按钩子边界拍平为三个 Test* 类
 -- (crap_coverage 与 guard paths 带 before_each → setUp;mutation pins 无钩子
 -- → 无 setUp 类),重复的 local 辅助合并到文件级,断言词汇从 luassert
@@ -6,19 +8,19 @@ local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy"
 local policy = require("src.rules.choice.item_preconsume_policy")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.truthy(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _assert_true(value, msg)
-  assert(value == true, tostring(msg) .. ": expected true, got " .. tostring(value))
+  luassert.truthy(value == true, tostring(msg) .. ": expected true, got " .. tostring(value))
 end
 
 local function _assert_false(value, msg)
-  assert(value == false, tostring(msg) .. ": expected false, got " .. tostring(value))
+  luassert.truthy(value == false, tostring(msg) .. ": expected false, got " .. tostring(value))
 end
 
 local function _assert_table(value, msg)
-  assert(type(value) == "table", tostring(msg) .. ": expected table, got " .. type(value))
+  luassert.truthy(type(value) == "table", tostring(msg) .. ": expected table, got " .. type(value))
 end
 
 TestItemPreconsumeCrapCoverage = {}

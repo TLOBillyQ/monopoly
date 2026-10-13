@@ -1,14 +1,15 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit(busted → LuaUnit 迁移):两个 describe 各拍平成一个 Test* 类
 -- (coverage 47 例带 before_each → setUp;auto dispatch 6 例无钩子,describe 级
 -- local 留在对应 do 块内),用例数与改写前一一对应(53 例)。
-local lu = require("luaunit")
 local phase_module = require("src.rules.items.phase")
 local support = require("test.support.shared_support")
 local item_ids = require("src.config.gameplay.item_ids")
 local strategy = require("src.rules.items.strategy")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.truthy(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_game()
@@ -118,7 +119,7 @@ end
 function TestDomainItemsPhaseCoverage:test_finish_marks_phase_done()
   local game = _make_game()
   phase_module.finish(game, "pre_action")
-  lu.assertEvalToTrue(game.turn.item_phase, "item_phase should be initialized")
+  luassert.truthy(game.turn.item_phase, "item_phase should be initialized")
   _assert_eq(game.turn.item_phase.pre_action.done, true, "done should be true")
   _assert_eq(game.dirty.turn, true, "dirty.turn should be set")
   _assert_eq(game.dirty.any, true, "dirty.any should be set")
@@ -157,7 +158,7 @@ end
 function TestDomainItemsPhaseCoverage:test_build_wait_choice_args_extracts_next_args_from_meta()
   local meta = { resume_next_state = "move", resume_next_args = { player = 1 } }
   local result = phase_module.build_wait_choice_args(meta)
-  lu.assertEvalToTrue(result.next_args ~= nil and result.next_args.player == 1, "should return resume_next_args with player=1")
+  luassert.truthy(result.next_args ~= nil and result.next_args.player == 1, "should return resume_next_args with player=1")
 end
 
 function TestDomainItemsPhaseCoverage:test_build_wait_choice_args_returns_nil_next_args_for_nil_meta_resume_next_args()
@@ -176,7 +177,7 @@ end
 function TestDomainItemsPhaseCoverage:test_mark_active_sets_phase_active()
   local game = _make_game()
   phase_module.mark_active(game, "pre_move")
-  lu.assertEvalToTrue(game.turn.item_phase, "item_phase should exist")
+  luassert.truthy(game.turn.item_phase, "item_phase should exist")
   _assert_eq(game.turn.item_phase.pre_move.active, true, "active should be true")
   _assert_eq(game.turn.item_phase_active, "pre_move", "item_phase_active should be set")
   _assert_eq(game.dirty.turn, true, "dirty.turn should be set")
@@ -255,7 +256,7 @@ function TestDomainItemsPhaseCoverage:test_resolve_completion_non_repeatable_pha
   _assert_eq(result.status, "resolved", "non-repeatable phase should resolve")
   _assert_eq(result.stay, false, "non-repeatable phase should not stay")
   _assert_eq(result.after_action_anim.next_state, "y", "after_action_anim should be preserved")
-  lu.assertEvalToTrue(game.turn.item_phase and game.turn.item_phase.one_shot_phase, "non-repeatable phase should be finished")
+  luassert.truthy(game.turn.item_phase and game.turn.item_phase.one_shot_phase, "non-repeatable phase should be finished")
   _assert_eq(game.turn.item_phase.one_shot_phase.done, true, "finished phase marked done")
 end
 
@@ -280,7 +281,7 @@ function TestDomainItemsPhaseCoverage:test_resolve_completion_reopened_phase_wit
   local result = phase_module.resolve_completion(game, p, meta, {})
   _assert_eq(result.status, "resolved", "pending action_anim resolves rather than waiting")
   _assert_eq(result.stay, false, "action_anim continuation does not stay")
-  lu.assertEvalToTrue(result.after_action_anim ~= nil, "should carry an after_action_anim continuation")
+  luassert.truthy(result.after_action_anim ~= nil, "should carry an after_action_anim continuation")
   _assert_eq(result.after_action_anim.next_state, "wait_choice", "continuation targets wait_choice")
   _assert_eq(result.after_action_anim.next_args.next_state, "roll", "continuation args come from meta")
 end

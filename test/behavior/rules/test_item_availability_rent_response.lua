@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,断言词汇
 -- 从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(5 例)。
 local support = require("test.support.shared_support")
@@ -7,7 +9,7 @@ local availability = require("src.rules.items.availability")
 local inventory = require("src.rules.items.inventory")
 local property_value = require("src.rules.commerce.property_value")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local function _new_game()
   return support.new_game({ map = default_map })

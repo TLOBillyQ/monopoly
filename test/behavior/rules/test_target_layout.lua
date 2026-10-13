@@ -1,6 +1,7 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):两个平级 describe 合并为文件级 Test* 类,
 -- 均无钩子,直接合并进 TestTargetLayout,用例数与改写前一一对应(12 例)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local target_layout = require("src.rules.board.target_layout")
@@ -10,7 +11,7 @@ local function _new_game()
 end
 
 local function _option(g, tile_id)
-  local idx = assert(g.board:index_of_tile_id(tile_id), "missing tile id " .. tostring(tile_id))
+  local idx = luassert.truthy(g.board:index_of_tile_id(tile_id), "missing tile id " .. tostring(tile_id))
   return { id = idx, tile_id = tile_id }
 end
 
@@ -61,10 +62,10 @@ local function _dense_ids(dense_options)
 end
 
 local function _assert_list_eq(actual, expected, label)
-  assert(#actual == #expected,
+  luassert.truthy(#actual == #expected,
     label .. ": expected length " .. tostring(#expected) .. " got " .. tostring(#actual))
   for i = 1, #expected do
-    assert(actual[i] == expected[i],
+    luassert.truthy(actual[i] == expected[i],
       label .. "[" .. tostring(i) .. "]: expected " .. tostring(expected[i]) .. " got " .. tostring(actual[i]))
   end
 end
@@ -86,13 +87,11 @@ function TestTargetLayout:test_centers_the_players_own_tile_and_orders_neighbors
   local dense_options, slot_layout = target_layout.arrange_target_options(g.board, p, options)
   local by_slot = _slot_tile_ids(dense_options, slot_layout)
 
-  lu.assertEvalToTrue(#dense_options == 7, "seven UI slots should be filled (one candidate overflows)")
-  lu.assertEvalToTrue(by_slot[4] == 42, "player's own tile should occupy the center slot")
-  lu.assertEvalToTrue(by_slot[3] == 3 and by_slot[2] == 2 and by_slot[1] == 1,
-    "backward neighbors should fill outward from center in distance order")
-  lu.assertEvalToTrue(by_slot[5] == 4 and by_slot[6] == 45 and by_slot[7] == 31,
-    "forward neighbors should fill outward from center in distance order")
-  lu.assertEvalToTrue(by_slot[nil] == nil, "no slot should be assigned past the overflow candidate")
+  luassert.truthy(#dense_options == 7, "seven UI slots should be filled (one candidate overflows)")
+  luassert.truthy(by_slot[4] == 42, "player's own tile should occupy the center slot")
+  luassert.truthy(by_slot[3] == 3 and by_slot[2] == 2 and by_slot[1] == 1, "backward neighbors should fill outward from center in distance order")
+  luassert.truthy(by_slot[5] == 4 and by_slot[6] == 45 and by_slot[7] == 31, "forward neighbors should fill outward from center in distance order")
+  luassert.truthy(by_slot[nil] == nil, "no slot should be assigned past the overflow candidate")
 end
 
 function TestTargetLayout:test_omits_the_players_own_tile_from_slots_when_it_is_not_among_the_options()
@@ -104,10 +103,10 @@ function TestTargetLayout:test_omits_the_players_own_tile_from_slots_when_it_is_
   local dense_options, slot_layout = target_layout.arrange_target_options(g.board, p, options)
   local by_slot = _slot_tile_ids(dense_options, slot_layout)
 
-  lu.assertEvalToTrue(#dense_options == 2, "only the two supplied candidates should be arranged")
-  lu.assertEvalToTrue(by_slot[4] == nil, "center slot should stay empty when the player's tile is not offered")
-  lu.assertEvalToTrue(by_slot[3] == 3, "sole backward candidate should sit closest to center")
-  lu.assertEvalToTrue(by_slot[5] == 4, "sole forward candidate should sit closest to center")
+  luassert.truthy(#dense_options == 2, "only the two supplied candidates should be arranged")
+  luassert.truthy(by_slot[4] == nil, "center slot should stay empty when the player's tile is not offered")
+  luassert.truthy(by_slot[3] == 3, "sole backward candidate should sit closest to center")
+  luassert.truthy(by_slot[5] == 4, "sole forward candidate should sit closest to center")
 end
 
 function TestTargetLayout:test_spills_surplus_backward_candidates_outward_into_empty_forward_slots()
@@ -152,53 +151,46 @@ function TestTargetLayout:test_keeps_a_candidate_colocated_with_the_start_tile_b
 end
 
 function TestTargetLayout:test__max_key_returns_0_for_an_empty_table()
-  lu.assertEvalToTrue(target_layout._M_test._max_key({}) == 0,
-    "_max_key of empty table must return 0")
+  luassert.truthy(target_layout._M_test._max_key({}) == 0, "_max_key of empty table must return 0")
 end
 
 function TestTargetLayout:test__center_out_order_errors_on_nil_board_with_expected_message()
   local ok, err = pcall(target_layout._M_test._center_out_order, nil, player, {})
-  lu.assertEvalToTrue(not ok, "nil board should error")
-  lu.assertEvalToTrue(type(err) == "string" and err:find("missing board", 1, true),
-    "error should mention missing board, got: " .. tostring(err))
+  luassert.truthy(not ok, "nil board should error")
+  luassert.truthy(type(err) == "string" and err:find("missing board", 1, true), "error should mention missing board, got: " .. tostring(err))
 end
 
 function TestTargetLayout:test__center_out_order_errors_on_nil_player_with_expected_message()
   local ok, err = pcall(target_layout._M_test._center_out_order, _mock_board({}), nil, {})
-  lu.assertEvalToTrue(not ok, "nil player should error")
-  lu.assertEvalToTrue(type(err) == "string" and err:find("missing player", 1, true),
-    "error should mention missing player, got: " .. tostring(err))
+  luassert.truthy(not ok, "nil player should error")
+  luassert.truthy(type(err) == "string" and err:find("missing player", 1, true), "error should mention missing player, got: " .. tostring(err))
 end
 
 function TestTargetLayout:test__center_out_order_errors_on_missing_player_position()
   local p_no_pos = { name = "no_pos" }
   local ok, err = pcall(target_layout._M_test._center_out_order, _mock_board({}), p_no_pos, {})
-  lu.assertEvalToTrue(not ok, "missing position should error")
-  lu.assertEvalToTrue(type(err) == "string" and err:find("missing player.position", 1, true),
-    "error should mention missing player.position, got: " .. tostring(err))
+  luassert.truthy(not ok, "missing position should error")
+  luassert.truthy(type(err) == "string" and err:find("missing player.position", 1, true), "error should mention missing player.position, got: " .. tostring(err))
 end
 
 function TestTargetLayout:test_arrange_target_options_errors_on_nil_board_with_expected_message()
   local ok, err = pcall(target_layout.arrange_target_options, nil, player, {})
-  lu.assertEvalToTrue(not ok, "nil board should error")
-  lu.assertEvalToTrue(type(err) == "string" and err:find("missing board", 1, true),
-    "error should mention missing board, got: " .. tostring(err))
+  luassert.truthy(not ok, "nil board should error")
+  luassert.truthy(type(err) == "string" and err:find("missing board", 1, true), "error should mention missing board, got: " .. tostring(err))
 end
 
 function TestTargetLayout:test_arrange_target_options_errors_on_nil_player_with_expected_message()
   local ok, err = pcall(target_layout.arrange_target_options, _mock_board({}), nil, {})
-  lu.assertEvalToTrue(not ok, "nil player should error")
-  lu.assertEvalToTrue(type(err) == "string" and err:find("missing player", 1, true),
-    "error should mention missing player, got: " .. tostring(err))
+  luassert.truthy(not ok, "nil player should error")
+  luassert.truthy(type(err) == "string" and err:find("missing player", 1, true), "error should mention missing player, got: " .. tostring(err))
 end
 
 function TestTargetLayout:test_arrange_asserts_missing_start_tile_with_message()
   -- #293:missing start tile 断言消息未测。
   local ok, err = pcall(target_layout.arrange_target_options,
     _mock_board({}, { get_tile = function() return nil end }), { position = 1 }, {})
-  lu.assertEvalToTrue(not ok, "unresolvable start tile should error")
-  lu.assertEvalToTrue(type(err) == "string" and err:find("missing start tile", 1, true) ~= nil,
-    "error should mention the start tile, got: " .. tostring(err))
+  luassert.truthy(not ok, "unresolvable start tile should error")
+  luassert.truthy(type(err) == "string" and err:find("missing start tile", 1, true) ~= nil, "error should mention the start tile, got: " .. tostring(err))
 end
 
 

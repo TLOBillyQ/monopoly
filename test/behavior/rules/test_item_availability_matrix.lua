@@ -1,7 +1,8 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- luacheck: ignore 211
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,断言词汇
 -- 从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(11 例)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local item_ids = require("src.config.gameplay.item_ids")
@@ -12,7 +13,7 @@ local function _new_game()
   return support.new_game({ map = default_map })
 end
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 
 local function _with_offer_phase_cfg(item_ids_to_patch, fn)
@@ -174,14 +175,14 @@ do
       _assert_eq(no_tile_ok, false, "rent response card should be unavailable without tile")
       _assert_eq(no_tile_reason, "special_condition_failed", "missing tile should fail through special condition")
 
-      local start_tile = assert(g.board:get_tile(1), "default map should expose start tile")
+      local start_tile = luassert.truthy(g.board:get_tile(1), "default map should expose start tile")
       g:update_player_position(p, 1)
       local non_land_ok, non_land_reason = availability.can_offer_in_phase(g, p, item_id, "post_action")
       _assert_eq(non_land_ok, false, "rent response card should be unavailable on non-land tile")
       _assert_eq(non_land_reason, "special_condition_failed", "non-land tile should fail through special condition")
 
       local land_index = 3
-      local land_tile = assert(g.board:get_tile(land_index), "default map should expose land tile for rent response test")
+      local land_tile = luassert.truthy(g.board:get_tile(land_index), "default map should expose land tile for rent response test")
       g:update_player_position(p, land_index)
       g:set_tile_owner(land_tile, p.id)
       g:set_player_property(p, land_tile.id, true)
@@ -206,7 +207,7 @@ do
       local g = _new_game()
       local p = g:current_player()
       local land_index = 3
-      local land_tile = assert(g.board:get_tile(land_index), "default map should expose land tile")
+      local land_tile = luassert.truthy(g.board:get_tile(land_index), "default map should expose land tile")
       g:update_player_position(p, land_index)
       g:set_tile_owner(land_tile, g.players[2].id)
       -- 不给 level:必须按 0 级计价(变异会按 1 级,抬高所需余额)。
@@ -225,7 +226,7 @@ do
       local g = _new_game()
       local p = g:current_player()
       local land_index = 3
-      local land_tile = assert(g.board:get_tile(land_index), "default map should expose land tile for strong-card test")
+      local land_tile = luassert.truthy(g.board:get_tile(land_index), "default map should expose land tile for strong-card test")
       g:update_player_position(p, land_index)
       g:set_tile_owner(land_tile, g.players[2].id)
       g:set_tile_level(land_tile, 2)

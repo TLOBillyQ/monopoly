@@ -1,13 +1,14 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- demolish_hospital 直测(#259 变异清扫 survivor 闭合):
 -- _relocate_to_hospital 的 move_dir_mode "clear" 字面值,与
 -- _patch_queued_anim_targets 的 `action_anim_queue or {}` `or` -> `and`
 -- (变异体在 queue 缺位时对 nil 跑 ipairs 报错)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local demolish_hospital = require("src.rules.items.demolish_hospital")
 local event_feed = require("src.rules.ports.event_feed")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 TestDemolishHospital = {}
 
@@ -67,9 +68,8 @@ function TestDemolishHospital:test_handle_result_asserts_missing_hospital()
     },
   }
   local ok, err = pcall(demolish_hospital.handle_result, game, {}, 3, "missile", {}, nil, "msg", {})
-  lu.assertEvalToTrue(ok == false, "missing hospital should assert")
-  lu.assertEvalToTrue(tostring(err):find("missing hospital", 1, true) ~= nil,
-    "assert should carry its message: " .. tostring(err))
+  luassert.truthy(ok == false, "missing hospital should assert")
+  luassert.truthy(tostring(err):find("missing hospital", 1, true) ~= nil, "assert should carry its message: " .. tostring(err))
 end
 
 

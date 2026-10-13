@@ -1,14 +1,15 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 嵌套按钩子边界拍平——外层
 -- describe(含无钩子的「clear toggles」「_notify_full」嵌套)合并进 TestInventory;
 -- 带 before_each 的「draw_random」嵌套拆出 TestInventoryDrawRandom 子类,
 -- setUp 首行调父 setUp。用例数与改写前一一对应(17 + 3 + 2 + 1 = 23 例)。
-local lu = require("luaunit")
 local inventory = require("src.rules.items.inventory")
 local inventory_class = require("src.player.actions.inventory")
 local control = require("src.player.control")
 
 local function _assert_eq(a, b, msg)
-  lu.assertEquals(a, b, msg)
+  luassert.is.same(b, a, msg)
 end
 
 -- 用真实 Inventory 类(CONTEXT「道具槽位」 稳定槽位):固定 5 槽、空槽以 false 占位、
@@ -44,7 +45,7 @@ do
 
   function TestInventory:test_cfg_known_id_returns_table_or_nil()
     local result = inventory.cfg("strong")
-    lu.assertEvalToTrue(result == nil or type(result) == "table", "cfg should return table or nil for any id")
+    luassert.truthy(result == nil or type(result) == "table", "cfg should return table or nil for any id")
   end
 
   function TestInventory:test_items_returns_items_list()
@@ -250,11 +251,9 @@ do
     local player = _make_player({ {}, {}, {}, {}, {} }, { name = "P3" })
     local result = inventory.give(player, item_ids.free_rent, { game = game })
     _assert_eq(result, false, "give full must report failure")
-    lu.assertEvalToTrue(#pushed >= 1,
-      "_notify_full must invoke intent_output_port:push_popup with an installed popup port")
-    lu.assertEvalToTrue(pushed[1].title == "道具", "popup title must be '道具'; got " .. tostring(pushed[1].title))
-    lu.assertEvalToTrue(tostring(pushed[1].body):find("P3"),
-      "popup body must include player name; got " .. tostring(pushed[1].body))
+    luassert.truthy(#pushed >= 1, "_notify_full must invoke intent_output_port:push_popup with an installed popup port")
+    luassert.truthy(pushed[1].title == "道具", "popup title must be '道具'; got " .. tostring(pushed[1].title))
+    luassert.truthy(tostring(pushed[1].body):find("P3"), "popup body must include player name; got " .. tostring(pushed[1].body))
   end
 end
 
@@ -276,8 +275,8 @@ do
 
   function TestInventoryDrawRandom:test_draw_random_returns_a_config_item_table_with_id_and_weight_fields()
     local picked = inventory.draw_random()
-    lu.assertEvalToTrue(type(picked) == "table", "draw_random must return a table; got " .. type(picked))
-    lu.assertEvalToTrue(picked.id ~= nil, "drawn item must carry an id field")
+    luassert.truthy(type(picked) == "table", "draw_random must return a table; got " .. type(picked))
+    luassert.truthy(picked.id ~= nil, "drawn item must carry an id field")
   end
 
   function TestInventoryDrawRandom:test_draw_random_returns_the_picked_from_weight_list()
@@ -286,15 +285,14 @@ do
     -- cumulative weight >= rand wins. rng returning the max (total_weight) → last item wins.
     local items_cfg = require("src.config.content.items")
     local last_item = items_cfg[#items_cfg]
-    lu.assertEvalToTrue(last_item.id ~= items_cfg[1].id, "fixture invariant: last cfg item differs from first")
+    luassert.truthy(last_item.id ~= items_cfg[1].id, "fixture invariant: last cfg item differs from first")
 
     local saved_rng = runtime_ports.rng_next_int
     runtime_ports.rng_next_int = function(_, max) return max end -- forces last bucket
     local picked = inventory.draw_random()
     runtime_ports.rng_next_int = saved_rng
 
-    lu.assertEvalToTrue(picked.id == last_item.id,
-      "draw_random must return picked[1] from weighted choice (last item under rng=max); " ..
+    luassert.truthy(picked.id == last_item.id, "draw_random must return picked[1] from weighted choice (last item under rng=max); " ..
       "L86 'or→and' or first '1→0' mutation returns items_cfg[1].id=" ..
       tostring(items_cfg[1].id) .. " instead. Got id=" .. tostring(picked.id))
   end
@@ -310,11 +308,9 @@ do
     local picked = inventory.draw_random()
     weighted_draw.pick = saved_pick
 
-    lu.assertEvalToTrue(picked ~= nil,
-      "draw_random must fall back to a real config item when pick is empty; " ..
+    luassert.truthy(picked ~= nil, "draw_random must fall back to a real config item when pick is empty; " ..
       "fallback '1→0' mutation returns items_cfg[0]=nil")
-    lu.assertEvalToTrue(picked == items_cfg[1],
-      "empty-pick fallback must return items_cfg[1]; got " .. tostring(picked and picked.id))
+    luassert.truthy(picked == items_cfg[1], "empty-pick fallback must return items_cfg[1]; got " .. tostring(picked and picked.id))
   end
 
   function TestInventoryDrawRandom:test_weight_fn_defaults_nil_to_zero_and_removes_nil_entries()
@@ -328,9 +324,9 @@ do
     end
     inventory.draw_random()
     weighted_draw.pick = saved_pick
-    lu.assertEquals(captured_remove_nil, true, "remove_nil_entries passes true to filter nil weights")
-    lu.assertEquals(captured_weight_fn({ weight = nil }), 0, "nil weight defaults to 0")
-    lu.assertEquals(captured_weight_fn({ weight = 10 }), 10, "present weight passes through")
+    luassert.is.same(true, captured_remove_nil, "remove_nil_entries passes true to filter nil weights")
+    luassert.is.same(0, captured_weight_fn({ weight = nil }), "nil weight defaults to 0")
+    luassert.is.same(10, captured_weight_fn({ weight = 10 }), "present weight passes through")
   end
 end
 
@@ -344,9 +340,8 @@ function TestInventory:test_items_asserts_missing_items_with_message()
   -- #293:inventory.items 的 missing inventory items 断言消息未测。
   local player = { inventory = { items = nil } }
   local ok, err = pcall(inventory.items, player)
-  lu.assertEvalToTrue(ok == false, "items without an items list should assert")
-  lu.assertEvalToTrue(tostring(err):find("missing inventory items", 1, true) ~= nil,
-    "assert should carry its message: " .. tostring(err))
+  luassert.truthy(ok == false, "items without an items list should assert")
+  luassert.truthy(tostring(err):find("missing inventory items", 1, true) ~= nil, "assert should carry its message: " .. tostring(err))
 end
 
 return require("test.support.multi_class_return").merge(

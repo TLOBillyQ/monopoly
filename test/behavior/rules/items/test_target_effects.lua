@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- target_effects 直测(#259 变异清扫 survivor 闭合):
 -- exile apply 的 queued 初值 false -> true(无深山格时变异体伪装成已排队)
 -- 与 queued 路径返回表(action_anim 字面值、next_state "move_followup");
@@ -8,7 +10,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local event_feed = require("src.rules.ports.event_feed")
 local action_anim_port = require("src.foundation.ports.action_anim")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 local function _exile_apply(game, target)
   return target_effects.get(item_ids.exile).apply(game, { id = 1, name = "P1" }, target)

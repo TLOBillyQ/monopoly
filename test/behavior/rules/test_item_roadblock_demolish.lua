@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- luacheck: ignore 211
 -- Manual roadblock / demolish target-selection tests.
 -- Extracted verbatim from test_item.lua (formerly the
@@ -5,14 +7,13 @@
 --
 -- 原生 LuaUnit(busted → LuaUnit 迁移):describe 拍平为 TestItemRoadblockAndDemolish
 -- 类,before_each → setUp,用例数与改写前一一对应(8 例)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local function _new_game()
   return support.new_game({ map = default_map })
 end
 local _open_choice = support.open_choice
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _assert_tile_id_sequence = support.assert_tile_id_sequence
 local executor = require("src.rules.items.executor")
 local choice_resolver = require("src.rules.choice.resolver")
@@ -34,10 +35,10 @@ function TestItemRoadblockAndDemolish:test_roadblock_manual_choice_shows_seven_t
   p.inventory:add({ id = item_id })
 
   local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting, "manual roadblock should open choice")
+  luassert.truthy(type(res) == "table" and res.waiting, "manual roadblock should open choice")
 
   local pending = res.intent.choice_spec
-  lu.assertEvalToTrue(pending and pending.kind == "roadblock_target", "roadblock should open target choice")
+  luassert.truthy(pending and pending.kind == "roadblock_target", "roadblock should open target choice")
   _assert_eq(#pending.options, 7, "manual roadblock should expose seven nearest unique options")
 
   local expected_ids = {}
@@ -45,11 +46,11 @@ function TestItemRoadblockAndDemolish:test_roadblock_manual_choice_shows_seven_t
     expected_ids[cand.idx] = cand.tile.name
   end
   for i, opt in ipairs(pending.options) do
-    lu.assertEvalToTrue(expected_ids[opt.id] ~= nil, "roadblock option at " .. i .. " should be a valid candidate")
+    luassert.truthy(expected_ids[opt.id] ~= nil, "roadblock option at " .. i .. " should be a valid candidate")
     _assert_eq(opt.label, expected_ids[opt.id], "roadblock option should show tile name only at " .. i)
   end
 
-  lu.assertEvalToTrue(pending.target_slot_layout ~= nil, "roadblock choice should include target_slot_layout")
+  luassert.truthy(pending.target_slot_layout ~= nil, "roadblock choice should include target_slot_layout")
   _assert_eq(#pending.target_slot_layout, 7, "target_slot_layout should map all seven options")
 end
 
@@ -61,7 +62,7 @@ function TestItemRoadblockAndDemolish:test_roadblock_manual_choice_allows_curren
   p.inventory:add({ id = item_id })
 
   local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting, "manual roadblock should wait for target choice")
+  luassert.truthy(type(res) == "table" and res.waiting, "manual roadblock should wait for target choice")
   local pending = _open_choice(g, res.intent.choice_spec)
 
   local center_slot = 4
@@ -72,7 +73,7 @@ function TestItemRoadblockAndDemolish:test_roadblock_manual_choice_allows_curren
       break
     end
   end
-  lu.assertEvalToTrue(self_option ~= nil, "center slot should have an option")
+  luassert.truthy(self_option ~= nil, "center slot should have an option")
   _assert_eq(self_option.id, current_idx, "center slot should target current tile")
 
   choice_resolver.resolve(g, pending, { option_id = current_idx })
@@ -113,7 +114,7 @@ function TestItemRoadblockAndDemolish:test_roadblock_manual_choice_hongkong_keep
   }
 
   local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting, "manual roadblock should open choice at hongkong")
+  luassert.truthy(type(res) == "table" and res.waiting, "manual roadblock should open choice at hongkong")
   local pending = _open_choice(g, res.intent.choice_spec)
   for index, expected_name in ipairs(arranged_names) do
     _assert_eq(pending.options[index].label, expected_name, "pending roadblock option label mismatch at slot " .. index)
@@ -129,7 +130,7 @@ function TestItemRoadblockAndDemolish:test_roadblock_manual_choice_hongkong_near
   p.inventory:add({ id = item_id })
 
   local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting, "manual roadblock should wait for target choice at hongkong")
+  luassert.truthy(type(res) == "table" and res.waiting, "manual roadblock should wait for target choice at hongkong")
   local pending = _open_choice(g, res.intent.choice_spec)
 
   _assert_eq(pending.options[1].id, 4, "haikou should be at backward-far slot")
@@ -183,23 +184,23 @@ function TestItemRoadblockAndDemolish:test_demolish_manual_choice_uses_manhattan
   local target_ids = { 3, 4, 31, 5, 2, 1 }
   local target_indices = {}
   for _, tile_id in ipairs(target_ids) do
-    local tile_ref = assert(g.board:get_tile(g.board:index_of_tile_id(tile_id)), "missing target tile")
+    local tile_ref = luassert.truthy(g.board:get_tile(g.board:index_of_tile_id(tile_id)), "missing target tile")
     g:set_tile_owner(tile_ref, g.players[2].id)
     g:set_tile_level(tile_ref, 1)
     target_indices[#target_indices + 1] = g.board:index_of_tile_id(tile_id)
   end
 
   local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
-  lu.assertEvalToTrue(type(res) == "table" and res.waiting == true, "monster manual use should open choice")
+  luassert.truthy(type(res) == "table" and res.waiting == true, "monster manual use should open choice")
   local pending = res.intent.choice_spec
-  lu.assertEvalToTrue(pending and pending.kind == "demolish_target", "monster manual use should expose demolish target choice")
+  luassert.truthy(pending and pending.kind == "demolish_target", "monster manual use should expose demolish target choice")
 
   local option_ids = {}
   for _, option in ipairs(pending.options or {}) do
     option_ids[#option_ids + 1] = option.id
   end
   for _, target_idx in ipairs(target_indices) do
-    lu.assertEvalToTrue(support.list_contains(option_ids, target_idx), "demolish manual choice should include index " .. tostring(target_idx))
+    luassert.truthy(support.list_contains(option_ids, target_idx), "demolish manual choice should include index " .. tostring(target_idx))
   end
 end
 

@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 -- 请神卡候选面规约(deities_008/009/010):请神卡只请正面神灵。
 -- 走真实 registry:target_candidates —— availability / 无目标提示 / 托管选靶都读这条候选面。
 --
@@ -7,7 +9,7 @@ local item_ids = require("src.config.gameplay.item_ids")
 local support = require("test.support.shared_support")
 
 local function _candidates(game, user)
-  local registry = assert(game.registries and game.registries.items, "missing item registry")
+  local registry = luassert.truthy(game.registries and game.registries.items, "missing item registry")
   return registry:target_candidates(game, user, item_ids.invite_deity)
 end
 
@@ -24,22 +26,22 @@ TestItemInviteDeityTarget = {}
 
 function TestItemInviteDeityTarget:test_rich_holder_is_an_invite_candidate()
   local game, user, target = _two_players("rich")
-  support.assert_eq(support.list_contains(_candidates(game, user), target), true, "财神持有者应在候选列表中")
+  luassert.is.equal(true, support.list_contains(_candidates(game, user), target), "财神持有者应在候选列表中")
 end
 
 function TestItemInviteDeityTarget:test_angel_holder_is_an_invite_candidate()
   local game, user, target = _two_players("angel")
-  support.assert_eq(support.list_contains(_candidates(game, user), target), true, "天使持有者应在候选列表中")
+  luassert.is.equal(true, support.list_contains(_candidates(game, user), target), "天使持有者应在候选列表中")
 end
 
 function TestItemInviteDeityTarget:test_poor_holder_is_not_an_invite_candidate()
   local game, user, target = _two_players("poor")
-  support.assert_eq(support.list_contains(_candidates(game, user), target), false, "穷神持有者不应在候选列表中")
+  luassert.is.equal(false, support.list_contains(_candidates(game, user), target), "穷神持有者不应在候选列表中")
 end
 
 function TestItemInviteDeityTarget:test_deityless_player_is_not_an_invite_candidate()
   local game, user, target = _two_players(nil)
-  support.assert_eq(support.list_contains(_candidates(game, user), target), false, "无神灵者不应在候选列表中")
+  luassert.is.equal(false, support.list_contains(_candidates(game, user), target), "无神灵者不应在候选列表中")
 end
 
 function TestItemInviteDeityTarget:test_all_poor_opponents_leave_no_invite_target()
@@ -48,7 +50,7 @@ function TestItemInviteDeityTarget:test_all_poor_opponents_leave_no_invite_targe
   for index = 2, #game.players do
     game:set_player_deity(game.players[index], "poor", 3)
   end
-  support.assert_eq(#_candidates(game, user), 0, "对手只剩穷神时请神卡候选数")
+  luassert.is.equal(0, #_candidates(game, user), "对手只剩穷神时请神卡候选数")
 end
 
 
