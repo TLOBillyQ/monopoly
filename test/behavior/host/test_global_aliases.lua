@@ -1,8 +1,11 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local global_aliases = require("src.host.global_aliases")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 local _config_reset = require("test.support.config_reset")
 
@@ -81,8 +84,8 @@ function TestGlobalAliases:test_install_rejects_a_luaapi_missing_any_required_me
     local env = _build_env()
     env.LuaAPI[method_name] = nil
     local ok, err = pcall(global_aliases.install, env)
-    lu.assertEvalToTrue(not ok, "install should reject LuaAPI missing " .. method_name)
-    lu.assertEvalToTrue(
+    luassert.truthy(not ok, "install should reject LuaAPI missing " .. method_name)
+    luassert.truthy(
       tostring(err):find("missing LuaAPI." .. method_name, 1, true),
       "error should name the missing method: " .. tostring(err)
     )
@@ -92,13 +95,13 @@ end
 function TestGlobalAliases:test_install_asserts_missing_env_and_luaapi()
   -- #293:install(nil) 与 env.LuaAPI 缺失的断言消息未测,消息位点变异存活。
   local ok_env, err_env = pcall(global_aliases.install, nil)
-  lu.assertEvalToTrue(not ok_env, "install should reject a missing env")
-  lu.assertEvalToTrue(tostring(err_env):find("missing runtime env", 1, true) ~= nil,
+  luassert.truthy(not ok_env, "install should reject a missing env")
+  luassert.truthy(tostring(err_env):find("missing runtime env", 1, true) ~= nil,
     "missing-env assert should carry its message: " .. tostring(err_env))
 
   local ok_api, err_api = pcall(global_aliases.install, {})
-  lu.assertEvalToTrue(not ok_api, "install should reject a LuaAPI-less env")
-  lu.assertEvalToTrue(tostring(err_api):find("missing LuaAPI", 1, true) ~= nil,
+  luassert.truthy(not ok_api, "install should reject a LuaAPI-less env")
+  luassert.truthy(tostring(err_api):find("missing LuaAPI", 1, true) ~= nil,
     "missing-LuaAPI assert should carry its message: " .. tostring(err_api))
 end
 
