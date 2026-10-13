@@ -83,7 +83,6 @@ return {
     "test/behavior/rules/test_settlement_shared.lua",
     "test/behavior/rules/test_tile.lua",
     "test/behavior/rules/test_weighted_draw.lua",
-    "test/behavior/scenarios/deadlines/test_all_human_no_input_full_game.lua",
     "test/behavior/support/log_warns_handler/test_log_warns_handler.lua",
     "test/behavior/support/test_test_ports.lua",
     "test/behavior/test_core_logic_module_smoke.lua",
@@ -374,6 +373,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/scenarios/deadlines/test_all_human_no_input_full_game.lua",
     "test/behavior/scenarios/item_phase/test_repro_full_loop.lua",
     "test/behavior/host/test_default_ports.lua",
     "test/behavior/host/test_entity_pool.lua",

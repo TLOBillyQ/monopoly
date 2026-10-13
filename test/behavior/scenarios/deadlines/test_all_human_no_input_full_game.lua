@@ -1,7 +1,7 @@
 -- 验证：全人类玩家全程不操作，每个 scope 仍按 timeout 自动推进，不卡死
 -- 这里用一个简化的多回合模拟：连续多次 force_skip + advance_turn
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local force_resolve = require("src.turn.deadlines")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local runtime_state = require("src.state.runtime")
@@ -50,13 +50,12 @@ local function _build_game(num_players)
   return game, advanced
 end
 
-TestAllHumanNoInputFullGame = {}
+describe("TestAllHumanNoInputFullGame", function()
+  before_each(function()
+    fallback_registry.reset()
+  end)
 
-function TestAllHumanNoInputFullGame:setUp()
-  fallback_registry.reset()
-end
-
-function TestAllHumanNoInputFullGame:test_4_idle_players_each_timeout_in_sequence_advances_turns_n_times()
+it("test_4_idle_players_each_timeout_in_sequence_advances_turns_n_times", function()
   local state = _build_state()
   local game, advanced = _build_game(4)
   state._game = game
@@ -78,7 +77,5 @@ function TestAllHumanNoInputFullGame:test_4_idle_players_each_timeout_in_sequenc
   for _, p in ipairs(game.players) do
     luassert.is.equal(100000, p.cash)
   end
-end
-
-
-return TestAllHumanNoInputFullGame
+end)
+end)
