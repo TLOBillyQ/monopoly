@@ -213,7 +213,6 @@ return {
     "test/behavior/scenarios/deadlines/test_all_human_no_input_full_game.lua",
     "test/behavior/scenarios/item_phase/test_repro_full_loop.lua",
     "test/behavior/scenarios/ui_sync/test_auto_player_landing_choice_event_path.lua",
-    "test/behavior/scenarios/ui_sync/test_auto_player_market_modal_race.lua",
     "test/behavior/state/test_board_state.lua",
     "test/behavior/state/test_dirty_tracker.lua",
     "test/behavior/state/test_event_log.lua",
@@ -596,6 +595,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/scenarios/ui_sync/test_auto_player_market_modal_race.lua",
     "test/behavior/scenarios/angel_immunity/test_angel_tax_and_chance.lua",
     "test/behavior/scenarios/startup/test_runtime_bootstrap.lua",
     "test/behavior/scenarios/angel_immunity/test_angel_immunity.lua",
