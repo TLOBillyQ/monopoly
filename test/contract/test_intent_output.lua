@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local luassert = assert
 
 local support = require("test.support.shared_support")
 
@@ -18,9 +18,9 @@ local function build_state()
   }
 end
 
-TestIntentOutput = {}
+describe("TestIntentOutput", function()
 
-function TestIntentOutput:test_gameplay_loop_set_game_installs_intent_output_port()
+  it("test_gameplay_loop_set_game_installs_intent_output_port", function()
   local game = support.new_game({ install_ui_port = false })
   local state = build_state()
   local installed_port = { open_choice = function() end, push_popup = function() return true end }
@@ -33,11 +33,11 @@ function TestIntentOutput:test_gameplay_loop_set_game_installs_intent_output_por
     gameplay_loop.set_game(state, game)
   end)
 
-  lu.assertEquals(game.intent_output_port, installed_port,
+  luassert.is.same(installed_port, game.intent_output_port,
     "set_game should install intent_output_port from adapter")
-end
+  end)
 
-function TestIntentOutput:test_land_presenter_push_popup_prefers_intent_output_port()
+  it("test_land_presenter_push_popup_prefers_intent_output_port", function()
   local payload = nil
   local popup_called = false
   local game = {
@@ -69,26 +69,24 @@ function TestIntentOutput:test_land_presenter_push_popup_prefers_intent_output_p
     popup_opts = { policy = "replace" },
   })
 
-  lu.assertEquals(ok, true, "landing presenter should report success when intent_output_port handles popup")
-  lu.assertEquals(popup_called, false, "landing presenter should not bypass intent_output_port directly")
-  lu.assertEquals(payload.title, "机会卡", "landing presenter should pass popup title through intent_output_port")
-  lu.assertEquals(payload.body, "描述", "landing presenter should pass popup body through intent_output_port")
-  lu.assertEquals(payload.kind, "chance", "landing presenter should pass popup kind through intent_output_port")
-  lu.assertEquals(payload.image_ref, 101, "landing presenter should pass image_ref through intent_output_port")
-  lu.assertEquals(payload.auto_close_seconds, 2.0,
+  luassert.is.equal(true, ok, "landing presenter should report success when intent_output_port handles popup")
+  luassert.is.equal(false, popup_called, "landing presenter should not bypass intent_output_port directly")
+  luassert.is.equal("机会卡", payload.title, "landing presenter should pass popup title through intent_output_port")
+  luassert.is.equal("描述", payload.body, "landing presenter should pass popup body through intent_output_port")
+  luassert.is.equal("chance", payload.kind, "landing presenter should pass popup kind through intent_output_port")
+  luassert.is.equal(101, payload.image_ref, "landing presenter should pass image_ref through intent_output_port")
+  luassert.is.equal(2.0, payload.auto_close_seconds,
     "landing presenter should pass auto_close_seconds through intent_output_port")
-  lu.assertEquals(payload.popup_opts.policy, "replace",
+  luassert.is.equal("replace", payload.popup_opts.policy,
     "landing presenter should pass popup opts through intent_output_port")
-end
+  end)
 
-function TestIntentOutput:test_intent_output_port_returns_default_when_game_port_missing()
+  it("test_intent_output_port_returns_default_when_game_port_missing", function()
   local game = {}
   local popup_ok = intent_output_port.push_popup(game, { title = "A" }, { policy = "defer" })
   local choice_entry = intent_output_port.open_choice(game, { title = "B" }, { source = "test" })
 
-  lu.assertEquals(popup_ok, false, "intent_output_port should stay inert when no adapter is installed")
-  lu.assertNil(choice_entry, "intent_output_port should not resolve choice output without installed adapter")
-end
-
-
-return TestIntentOutput
+  luassert.is.equal(false, popup_ok, "intent_output_port should stay inert when no adapter is installed")
+  luassert.is_nil(choice_entry, "intent_output_port should not resolve choice output without installed adapter")
+  end)
+end)

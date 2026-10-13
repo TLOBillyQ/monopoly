@@ -1,13 +1,14 @@
--- 原生 LuaUnit(自研 busted → LuaUnit 迁移):describe 拍平为 TestAngelImmuneConfig,
--- before_each → setUp,用例数与改写前一一对应(12 例)。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects the extensible assertion object into each file environment.
+-- luacheck: ignore 143
+local luassert = assert
 local deity_ops = require("src.player.actions.deity")
 local item_ids = require("src.config.gameplay.item_ids")
 
 local _config_reset = require("test.support.config_reset")
 
 local function _assert_eq(a, b, msg)
-  lu.assertEvalToTrue(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.truthy(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_game()
@@ -27,84 +28,84 @@ local function _make_player(opts)
   }
 end
 
-TestAngelImmuneConfig = {}
+describe("TestAngelImmuneConfig", function()
 
-function TestAngelImmuneConfig:setUp()
-  _config_reset.reset_all()
-end
+  before_each(function()
+    _config_reset.reset_all()
+  end)
 
-function TestAngelImmuneConfig:test_mine_is_immune_when_player_has_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.mine), true, "mine should be immune with angel")
-end
+  it("test_mine_is_immune_when_player_has_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.mine), true, "mine should be immune with angel")
+  end)
 
-function TestAngelImmuneConfig:test_mine_is_not_immune_without_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "devil", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.mine), false, "mine should not be immune without angel")
-end
+  it("test_mine_is_not_immune_without_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "devil", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.mine), false, "mine should not be immune without angel")
+  end)
 
-function TestAngelImmuneConfig:test_free_rent_is_not_angel_immune()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.free_rent), false, "free_rent should not be immune")
-end
+  it("test_free_rent_is_not_angel_immune", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.free_rent), false, "free_rent should not be immune")
+  end)
 
-function TestAngelImmuneConfig:test_nil_item_id_errors()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  local ok = pcall(function() deity_ops.angel_immune_to_item(game, player, nil) end)
-  _assert_eq(ok, false, "nil item_id should error")
-end
+  it("test_nil_item_id_errors", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    local ok = pcall(function() deity_ops.angel_immune_to_item(game, player, nil) end)
+    _assert_eq(ok, false, "nil item_id should error")
+  end)
 
-function TestAngelImmuneConfig:test_roadblock_is_not_immune_when_player_has_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.roadblock), false, "roadblock should not be immune with angel")
-end
+  it("test_roadblock_is_not_immune_when_player_has_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.roadblock), false, "roadblock should not be immune with angel")
+  end)
 
-function TestAngelImmuneConfig:test_share_wealth_is_immune_when_player_has_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.share_wealth), true, "share_wealth should be immune with angel")
-end
+  it("test_share_wealth_is_immune_when_player_has_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.share_wealth), true, "share_wealth should be immune with angel")
+  end)
 
-function TestAngelImmuneConfig:test_exile_is_immune_when_player_has_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.exile), true, "exile should be immune with angel")
-end
+  it("test_exile_is_immune_when_player_has_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.exile), true, "exile should be immune with angel")
+  end)
 
-function TestAngelImmuneConfig:test_steal_is_immune_when_player_has_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.steal), true, "steal should be immune with angel")
-end
+  it("test_steal_is_immune_when_player_has_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.steal), true, "steal should be immune with angel")
+  end)
 
-function TestAngelImmuneConfig:test_tax_is_immune_when_player_has_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.tax), true, "tax should be immune with angel")
-end
+  it("test_tax_is_immune_when_player_has_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.tax), true, "tax should be immune with angel")
+  end)
 
-function TestAngelImmuneConfig:test_missile_is_immune_when_player_has_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.missile), true, "missile should be immune with angel")
-end
+  it("test_missile_is_immune_when_player_has_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.missile), true, "missile should be immune with angel")
+  end)
 
-function TestAngelImmuneConfig:test_monster_is_immune_when_player_has_angel()
-  local game = _make_game()
-  local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
-  _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.monster), true, "monster should be immune with angel")
-end
+  it("test_monster_is_immune_when_player_has_angel", function()
+    local game = _make_game()
+    local player = _make_player({ status = { deity = { type = "angel", remaining = 1 } } })
+    _assert_eq(deity_ops.angel_immune_to_item(game, player, item_ids.monster), true, "monster should be immune with angel")
+  end)
 
-function TestAngelImmuneConfig:test_game_exposes_angel_immune_to_item_mixin()
-  local support = require("test.support.shared_support")
-  local game = support.new_game({ players = { "P1" }, auto_all = true })
-  lu.assertEvalToTrue(type(game.angel_immune_to_item) == "function", "Expected angel_immune_to_item mixin")
-end
+  it("test_game_exposes_angel_immune_to_item_mixin", function()
+    local support = require("test.support.shared_support")
+    local game = support.new_game({ players = { "P1" }, auto_all = true })
+    luassert.truthy(type(game.angel_immune_to_item) == "function", "Expected angel_immune_to_item mixin")
+  end)
 
 
-return TestAngelImmuneConfig
+end)
