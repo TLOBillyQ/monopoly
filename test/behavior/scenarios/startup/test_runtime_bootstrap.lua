@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 local game_runtime_bootstrap = require("src.app.gameplay_start")
@@ -54,9 +54,9 @@ local function _common_start_patches(capture, clock)
   }
 end
 
-TestRuntimeBootstrap = {}
+describe("TestRuntimeBootstrap", function()
 
-function TestRuntimeBootstrap:test_frame_timer_repeat_every_registers_repeat_timeout_with_frame_interval()
+local function _test_frame_timer_repeat_every_registers_repeat_timeout_with_frame_interval()
   -- 直测 host adapter 本体(本 spec 其余用例全部 stub 它):钉死 RegisterTriggerEvent
   -- 调用形状——EVENT.REPEAT_TIMEOUT + interval(帧)/30.0 秒换算(Fixed 浮点)+ 回调透传。
   local captured = {}
@@ -88,13 +88,13 @@ function TestRuntimeBootstrap:test_frame_timer_repeat_every_registers_repeat_tim
   luassert.is.equal(1, captured.unregister_calls, "stop should be idempotent for the same handle")
 end
 
-function TestRuntimeBootstrap:test_frame_timer_repeat_every_rejects_non_function_callback()
+local function _test_frame_timer_repeat_every_rejects_non_function_callback()
   luassert.has_error(function()
     frame_timer.repeat_every(3, nil)
   end, "frame_timer.repeat_every requires callback")
 end
 
-function TestRuntimeBootstrap:test_runtime_bootstrap_uses_wall_clock_diff_after_first_tick()
+local function _test_runtime_bootstrap_uses_wall_clock_diff_after_first_tick()
   local capture = { tick_callback = nil, dt_values = {} }
   local now_values = { 100, 100.05 }
   local now_index = 0
@@ -128,7 +128,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_uses_wall_clock_diff_after_
   _assert_close(capture.dt_values[2], 0.05, 0.0001, "second tick should use wall clock diff delta")
 end
 
-function TestRuntimeBootstrap:test_runtime_bootstrap_sets_game_before_priming_first_turn()
+local function _test_runtime_bootstrap_sets_game_before_priming_first_turn()
   local capture = {
     tick_callback = nil,
     dt_values = {},
@@ -221,7 +221,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_sets_game_before_priming_fi
   luassert.truthy(primed_game.turn.phase == "wait_action", "primed startup game should reach wait_action before rendering")
 end
 
-function TestRuntimeBootstrap:test_runtime_bootstrap_falls_back_when_wall_clock_unavailable()
+local function _test_runtime_bootstrap_falls_back_when_wall_clock_unavailable()
   local capture = { tick_callback = nil, dt_values = {} }
   local clock = {
     wall_now_seconds = function()
@@ -250,7 +250,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_falls_back_when_wall_clock_
   _assert_close(capture.dt_values[1], 1.0 / 30.0, 0.0001, "invalid wall clock should fallback to fixed delta")
 end
 
-function TestRuntimeBootstrap:test_runtime_bootstrap_uses_raw_diff_when_wall_diff_returns_zero()
+local function _test_runtime_bootstrap_uses_raw_diff_when_wall_diff_returns_zero()
   local capture = { tick_callback = nil, dt_values = {} }
   local now_values = { 10.00, 10.08 }
   local now_index = 0
@@ -283,7 +283,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_uses_raw_diff_when_wall_dif
   _assert_close(capture.dt_values[2], 0.08, 0.0001, "second tick should fallback to raw timestamp diff")
 end
 
-function TestRuntimeBootstrap:test_runtime_bootstrap_accepts_reversed_wall_diff()
+local function _test_runtime_bootstrap_accepts_reversed_wall_diff()
   local capture = { tick_callback = nil, dt_values = {} }
   local now_values = { 20.00, 20.06 }
   local now_index = 0
@@ -316,7 +316,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_accepts_reversed_wall_diff(
   _assert_close(capture.dt_values[2], 0.06, 0.0001, "second tick should accept reversed diff source")
 end
 
-function TestRuntimeBootstrap:test_runtime_bootstrap_ignores_coarse_wall_clock()
+local function _test_runtime_bootstrap_ignores_coarse_wall_clock()
   local capture = { tick_callback = nil, dt_values = {} }
   local now_values = { 123456, 123457, 123458 }
   local now_index = 0
@@ -351,7 +351,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_ignores_coarse_wall_clock()
   _assert_close(capture.dt_values[3], 1.0 / 30.0, 0.0001, "coarse wall clock should keep fixed delta")
 end
 
-function TestRuntimeBootstrap:test_runtime_bootstrap_preserves_fractional_wall_clock_diff_across_many_ticks()
+local function _test_runtime_bootstrap_preserves_fractional_wall_clock_diff_across_many_ticks()
   local capture = { tick_callback = nil, dt_values = {} }
   local now_values = { 200.00, 200.03, 200.06, 200.09 }
   local now_index = 0
@@ -389,4 +389,13 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_preserves_fractional_wall_c
 end
 
 
-return TestRuntimeBootstrap
+it("test_frame_timer_repeat_every_registers_repeat_timeout_with_frame_interval", _test_frame_timer_repeat_every_registers_repeat_timeout_with_frame_interval)
+it("test_frame_timer_repeat_every_rejects_non_function_callback", _test_frame_timer_repeat_every_rejects_non_function_callback)
+it("test_runtime_bootstrap_uses_wall_clock_diff_after_first_tick", _test_runtime_bootstrap_uses_wall_clock_diff_after_first_tick)
+it("test_runtime_bootstrap_sets_game_before_priming_first_turn", _test_runtime_bootstrap_sets_game_before_priming_first_turn)
+it("test_runtime_bootstrap_falls_back_when_wall_clock_unavailable", _test_runtime_bootstrap_falls_back_when_wall_clock_unavailable)
+it("test_runtime_bootstrap_uses_raw_diff_when_wall_diff_returns_zero", _test_runtime_bootstrap_uses_raw_diff_when_wall_diff_returns_zero)
+it("test_runtime_bootstrap_accepts_reversed_wall_diff", _test_runtime_bootstrap_accepts_reversed_wall_diff)
+it("test_runtime_bootstrap_ignores_coarse_wall_clock", _test_runtime_bootstrap_ignores_coarse_wall_clock)
+it("test_runtime_bootstrap_preserves_fractional_wall_clock_diff_across_many_ticks", _test_runtime_bootstrap_preserves_fractional_wall_clock_diff_across_many_ticks)
+end)
