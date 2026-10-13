@@ -15,25 +15,12 @@ local M = {}
 
 local lua54 = require("packages.luaunit_runner.lua54")
 
-local function _shell_quote(value)
-  local text = tostring(value or "")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
-end
-
--- 子进程转发:spawn lua5.4 runner.lua <args>,退出码透传。
 local function _forward(args)
-  local parts = {}
-  for _, token in ipairs(lua54.argv_prefix()) do
-    parts[#parts + 1] = _shell_quote(token)
-  end
-  for _, value in ipairs(args or {}) do
-    parts[#parts + 1] = _shell_quote(value)
-  end
-  local ok, how, code = os.execute(table.concat(parts, " "))
-  if how == "exit" then
-    return code or (ok and 0 or 1)
-  end
-  return 1
+  local parts = lua54.argv_prefix()
+  for _, value in ipairs(args or {}) do parts[#parts + 1] = value end
+  local result = require("foundation.proc").run_command(parts)
+  io.write(result.output or "")
+  return result.code or (result.ok and 0 or 1)
 end
 
 function M.usage()

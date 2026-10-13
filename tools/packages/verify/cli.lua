@@ -10,32 +10,29 @@ local M = {}
 
 local ENTRY = "tools/packages/verify/main.lua"
 
-local function _shell_quote(value)
-  local text = tostring(value or "")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
-end
-
--- 子进程转发:spawn 包内入口,退出码透传(入口自带 os.exit,语义即本包语义)。
+-- 原生 argv 转发，与 foundation 的 cmd quoting 保持单一真源。
 local function _forward(args)
-  local parts = { "lua", ENTRY }
+  require("test.bootstrap").install_package_paths()
+  local proc = require("foundation.proc")
+  local lua54 = require("packages.luaunit_runner.lua54")
+  local command = { lua54.lua54_bin(), ENTRY }
   for _, value in ipairs(args or {}) do
-    parts[#parts + 1] = _shell_quote(value)
+    command[#command + 1] = value
   end
-  local ok, how, code = os.execute(table.concat(parts, " "))
-  if how == "exit" then
-    return code or (ok and 0 or 1)
-  end
-  return 1
+  local result = proc.run_command(command)
+  io.write(result.output or "")
+  return result.code or (result.ok and 0 or 1)
 end
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua verify [--full|--coverage|--crap|--tooling|--verbose|--no-coverage]",
+    "用法: lua tools/cli.lua verify [--serial|--full|--coverage|--crap|--tooling|--verbose|--no-coverage]",
     "",
     "质量门禁编排器:默认 slim 车道(contract + guards + arch + behavior 七层 + foundation",
     "+ lint-src/lint-test/lint-tools + encoding),是迭代默认与 push 前唯一硬地板。",
     "",
     "flag 映射:",
+    "  --serial       所有车道及其测试子进程按序执行(原生 Windows 默认)",
     "  (默认)         slim:七层 + foundation 行为 spec 全跑",
     "  --full         slim + coverage + crap(完整报告,按需)",
     "  --coverage     显式加 coverage 并行 lane(只看覆盖率)",

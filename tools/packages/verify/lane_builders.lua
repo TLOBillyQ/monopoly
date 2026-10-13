@@ -23,7 +23,7 @@ end
 local LINT_TARGETS = { "src", "test", "tools" }
 
 local function _add_lint_or_skip(lanes, skipped, env)
-  if env.luacheck_available == true and env.lua54_bin then
+  if env.lua54_bin then
     for _, target in ipairs(LINT_TARGETS) do
       lanes[#lanes + 1] = {
         label = "lint-" .. target,
@@ -42,7 +42,7 @@ end
 -- diagnostic in verify_full output; crap_collect produces the coverage data
 -- the post-parallel analyze step turns into crap_report.json without
 -- re-running the 2305 tests sequentially.
-function builders.default(env, include_tooling, include_coverage, include_crap)
+function builders.default(env, include_tooling, include_coverage, include_crap, serial)
   local lanes, skipped = {}, {}
   lanes[#lanes + 1] = { label = "contract", cmd = _spec_lane_cmd("contract") }
   lanes[#lanes + 1] = { label = "guards", cmd = _spec_lane_cmd("guards") }
@@ -97,6 +97,15 @@ function builders.default(env, include_tooling, include_coverage, include_crap)
       }
     else
       skipped[#skipped + 1] = "coverage"
+    end
+  end
+  if serial then
+    for _, lane in ipairs(lanes) do
+      if lane.label == "behavior" or lane.label == "tooling" or lane.label == "contract" or lane.label == "guards" then
+        lane.cmd = shell_lib.build_command({ env.lua54_bin, "tools/packages/spec_lane/spec_lane.lua", "--profile", lane.label, "--serial" })
+      elseif lane.label == "coverage" or lane.label == "crap_collect" then
+        lane.cmd = lane.cmd .. " --serial"
+      end
     end
   end
   return lanes, skipped

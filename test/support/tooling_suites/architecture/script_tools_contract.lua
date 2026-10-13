@@ -596,7 +596,7 @@ local function _test_bootstrap_resolves_repo_root_from_non_repo_cwd()
       "local env = bootstrap.install(" .. string.format("%q", script_path) .. ")",
       "assert(env.repo_root == " .. string.format("%q", expected_root) .. ", 'repo root mismatch')",
       "io.write(env.repo_root)",
-    }, "\n")
+    }, "; ")
 
     local bootstrap_result = proc_lib.run_command({ "lua", "-e", lua_snippet }, {
       cwd = outside_dir,

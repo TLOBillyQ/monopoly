@@ -124,7 +124,7 @@ TestVerifyLanePlan = {}
 -- 不再有统一的 "lint" 车道。
 function TestVerifyLanePlan:test_slim_plan_splits_lint_into_three_directory_lanes()
   local plan = verify_full._resolve_lanes({
-    env = { lua54_bin = "lua5.4", luacheck_available = true },
+    env = { lua54_bin = "lua5.4" },
   })
   local labels = {}
   for _, lane in ipairs(plan.lanes) do
@@ -136,21 +136,24 @@ function TestVerifyLanePlan:test_slim_plan_splits_lint_into_three_directory_lane
   lu.assertNil(labels["lint"], "unified lint lane should be gone")
   lu.assertEvalToTrue(labels["lint-test"]:find("lint/runner.lua", 1, true) ~= nil,
     "lint-test lane must invoke lint runner: " .. labels["lint-test"])
-  lu.assertEvalToTrue(labels["lint-test"]:find("'test'", 1, true) ~= nil,
+  -- lint 车道走钉定 5.4 解释器 + 原生 argv 定界(^"),不再是 PATH 上的 luacheck。
+  lu.assertEvalToTrue(labels["lint-test"]:find('^"test^"', 1, true) ~= nil,
     "lint-test lane must target test dir: " .. labels["lint-test"])
 end
 
-function TestVerifyLanePlan:test_missing_luacheck_skips_all_three_lint_lanes()
+-- luacheck 不再由 PATH 探测供给(装进项目 tree 后经钉定 5.4 跑),所以
+-- "全局没有 luacheck" 不再是跳过 lint 车道的理由——三条 lint 车道恒在。
+function TestVerifyLanePlan:test_missing_global_luacheck_keeps_project_install_lanes()
   local plan = verify_full._resolve_lanes({
-    env = { lua54_bin = "lua5.4", luacheck_available = false },
+    env = { lua54_bin = "lua5.4" },
   })
   local skipped = {}
   for _, label in ipairs(plan.skipped) do
     skipped[label] = true
   end
-  lu.assertTrue(skipped["lint-src"] == true, "lint-src should be skipped")
-  lu.assertTrue(skipped["lint-test"] == true, "lint-test should be skipped")
-  lu.assertTrue(skipped["lint-tools"] == true, "lint-tools should be skipped")
+  lu.assertNil(skipped["lint-src"])
+  lu.assertNil(skipped["lint-test"])
+  lu.assertNil(skipped["lint-tools"])
 end
 
 

@@ -12,22 +12,13 @@ local M = {}
 local REGENERATE_ENTRY = "tools/packages/acceptance/regenerate.lua"
 local RUN_ALL_ENTRY = "tools/packages/acceptance/run_all.lua"
 
-local function _shell_quote(value)
-  local text = tostring(value or "")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
-end
-
--- 子进程转发:spawn 现状入口,退出码透传(入口自带 os.exit,语义即本包语义)。
 local function _forward(entry, args)
-  local parts = { "lua", entry }
-  for _, value in ipairs(args or {}) do
-    parts[#parts + 1] = _shell_quote(value)
-  end
-  local ok, how, code = os.execute(table.concat(parts, " "))
-  if how == "exit" then
-    return code or (ok and 0 or 1)
-  end
-  return 1
+  require("test.bootstrap").install_package_paths()
+  local parts = { require("packages.luaunit_runner.lua54").lua54_bin(), entry }
+  for _, value in ipairs(args or {}) do parts[#parts + 1] = value end
+  local result = require("foundation.proc").run_command(parts)
+  io.write(result.output or "")
+  return result.code or (result.ok and 0 or 1)
 end
 
 function M.usage()
@@ -53,7 +44,7 @@ function M.main(args, env)
   if regenerated ~= 0 then
     return regenerated
   end
-  return _forward(RUN_ALL_ENTRY, {})
+  return _forward(RUN_ALL_ENTRY, args)
 end
 
 return M

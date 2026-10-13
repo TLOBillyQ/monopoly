@@ -116,6 +116,9 @@ require("packages.luaunit_runner.chunk_cache").install()
 
 local proc_lib = require("foundation.proc")
 local fs_lib = require("foundation.fs")
+local luaunit_source = assert(package.searchpath("luaunit", package.path))
+assert(luaunit_source:gsub("\\", "/"):find(_repo_root .. "/.toolcache/luarocks/", 1, true),
+  "luaunit must load from the project tree: " .. luaunit_source)
 local lu = require("luaunit")
 local events = require("packages.luaunit_runner.events")
 local registry = require("packages.luaunit_runner.registry")
@@ -374,4 +377,7 @@ lu_runner:runSuiteByInstancesNoCmdLineParsing(registry.instances())
 -- 覆盖率由 luacov 的 os.exit 包装在退出时落盘(on_exit),runner 不额外保存。
 
 local r = events.results
-os.exit((r.failures + r.errors) > 0 and 1 or 0)
+local cases = lu_runner.result and lu_runner.result.currentTestNumber or 0
+io.write(string.format("# COUNTS: files=%d cases=%d passed=%d failed=%d errors=%d\n",
+  #spec_files, cases, r.successes or 0, r.failures, r.errors))
+os.exit(((r.failures + r.errors) > 0 or cases == 0) and 1 or 0)

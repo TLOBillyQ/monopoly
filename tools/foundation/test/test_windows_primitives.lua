@@ -77,6 +77,44 @@ function TestWindowsPrimitives:test_empty_discovery_and_native_cli_startup()
   assert(result.output:find("profile", 1, true), result.output)
 end
 
+function TestWindowsPrimitives:test_empty_registered_suite_fails()
+  local root = env.make_temp_path("zero_cases_73", "")
+  assert(fs.write_file(root .. "/test_empty.lua", "return {}\n"))
+  local result = proc.run_command({ "lua", "tools/packages/luaunit_runner/runner.lua", "--", root .. "/test_empty.lua" })
+  assert(fs.remove_path(root))
+  assert(not result.ok and result.output:find("cases=0", 1, true), result.output)
+end
+
+function TestWindowsPrimitives:test_spec_lane_accepts_serial_and_rejects_empty_execution()
+  local opts, err = require("packages.spec_lane.spec_lane_args").parse({ "--profile", "guards", "--serial" })
+  assert(opts and opts.serial, err)
+end
+
+function TestWindowsPrimitives:test_project_cache_exposes_native_dll_modules()
+  local helper = dofile("tools/foundation/package_path_helper.lua")
+  helper.install_luarocks_tree_paths({ repo_root = "C:/project" })
+  assert(package.cpath:find("C:/project/.toolcache/luarocks/lib/lua/5.4/?.dll", 1, true))
+end
+
+function TestWindowsPrimitives:test_selected_interpreter_rejects_non_lua_override()
+  local result = proc.run_command('set "LUA54_BIN=cmd.exe" && lua -e "package.path=package.path..\';./tools/?.lua\'; assert(require(\'packages.luaunit_runner.lua54\').detect_lua54()==nil)"')
+  assert(result.ok, result.output)
+end
+
+function TestWindowsPrimitives:test_tooling_discovers_retained_native_test_roots()
+  local roots, err = require("packages.spec_lane.spec_lane_tools").discover_test_roots()
+  assert(roots and #roots > 0, err)
+  local found = {}
+  for _, root in ipairs(roots) do found[root] = true end
+  assert(found["tools/foundation/test"] and found["tools/packages/acceptance/test"])
+end
+
+function TestWindowsPrimitives:test_verify_forwards_native_flags_without_literal_quotes()
+  local result = proc.run_command({ "lua", "tools/cli.lua", "verify", "--ticket73-unknown" })
+  assert(result.code == 2, result.output)
+  assert(result.output:find("unknown flag: --ticket73-unknown", 1, true), result.output)
+end
+
 function TestWindowsPrimitives:test_windows_path_shapes_and_string_command()
   assert(path.resolve_path("C:\\中文 space\\root", "..\\file.lua") == "C:/中文 space/file.lua")
   assert(path.simplify_path("//server/share/a/../b") == "//server/share/b")

@@ -31,6 +31,21 @@ local function _with_stubs(stubs, fn)
   end
 end
 
+-- 原生子进程替身:`where.exe <解释器>` 形如真实机器——首行是用户 shell 的
+-- lua.cmd 垫片,真解释器在第二行;安装前缀必须由后者导出。
+local function _native_probe(command)
+  if command[1] == "where.exe" then
+    if command[2] == "luarocks.exe" then
+      return { ok = false, output = "" }
+    end
+    return { ok = true, output = "C:\\tools\\shim\\lua.cmd\r\n"
+      .. os.getenv("LOCALAPPDATA") .. "\\Programs\\Lua\\bin\\lua.exe\r\n" }
+  end
+  if command[2] == "-v" then return { ok = true, output = "Lua 5.4.6" } end
+end
+
+local _LUAROCKS_PREFIX = os.getenv("LOCALAPPDATA"):gsub("\\", "/") .. "/Programs/Lua"
+
 TestBootstrap = {}
 
 function TestBootstrap:test_parses_the_repo_url_lockfile_format()
@@ -158,6 +173,9 @@ function TestBootstrap:test_ensure_luaunit_tree_installs_pinned_rock_and_checks_
   local captured_command
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path)
+      if path:match("luarocks%.exe$") then return true end
+      -- 解释器候选路径(/opt/homebrew/bin/lua5.4 之类)不参与 marker 计数。
+      if path:match("%.lua$") == nil then return false end
       marker_checks = marker_checks + 1
       lu.assertIs(path, "/repo/.toolcache/luarocks/share/lua/5.4/luaunit.lua")
       return marker_checks > 1
@@ -166,24 +184,31 @@ function TestBootstrap:test_ensure_luaunit_tree_installs_pinned_rock_and_checks_
       lu.assertIs(path, "/repo/.toolcache/luarocks")
       return true
     end },
+    { target = proc_lib, key = "command_exists", value = function() return true end },
     { target = proc_lib, key = "run_command", value = function(command)
+      local probe = _native_probe(command)
+      if probe then return probe end
       captured_command = command
       return { ok = true, output = "" }
     end },
   }, function()
     lu.assertTrue(bootstrap.ensure_luaunit_tree("/repo"))
   end)
-  lu.assertEquals(captured_command, {
-    "luarocks", "--tree", "/repo/.toolcache/luarocks", "--lua-version", "5.4",
-    "install", "luaunit", "3.5-1",
-  })
+  lu.assertEquals({ table.unpack(captured_command, 2, 5) },
+    { "--tree", "/repo/.toolcache/luarocks", "--lua-version", "5.4" })
+  lu.assertEquals({ table.unpack(captured_command, 8) },
+    { "install", "luaunit", "3.5-1", "--deps-mode", "one" })
+  lu.assertIs(captured_command[6], "--lua-dir")
+  -- --lua-dir 取真实解释器(lua.exe)所在前缀,而不是 where.exe 首行的
+  -- lua.cmd / lua.bat 垫片目录。
+  lu.assertIs(captured_command[7], _LUAROCKS_PREFIX)
   lu.assertIs(marker_checks, 2)
 end
 
 function TestBootstrap:test_ensure_luaunit_tree_propagates_tree_creation_failure()
   local command_calls = 0
   _with_stubs({
-    { target = fs_lib, key = "path_exists", value = function() return false end },
+    { target = fs_lib, key = "path_exists", value = function(path) return path:match("luarocks.exe$") ~= nil end },
     { target = fs_lib, key = "ensure_dir", value = function()
       return nil, "mkdir failed"
     end },
@@ -201,11 +226,14 @@ end
 
 function TestBootstrap:test_ensure_luacov_tree_reports_install_failure()
   _with_stubs({
-    { target = fs_lib, key = "path_exists", value = function() return false end },
+    { target = fs_lib, key = "path_exists", value = function(path) return path:match("luarocks.exe$") ~= nil end },
     { target = fs_lib, key = "ensure_dir", value = function() return true end },
+    { target = proc_lib, key = "command_exists", value = function() return true end },
     { target = proc_lib, key = "run_command", value = function(command)
-      lu.assertIs(command[#command - 1], "luacov")
-      lu.assertIs(command[#command], "0.17.0-1")
+      local probe = _native_probe(command)
+      if probe then return probe end
+      lu.assertIs(command[#command - 3], "luacov")
+      lu.assertIs(command[#command - 2], "0.17.0-1")
       return { ok = false, output = "offline" }
     end },
   }, function()
@@ -217,10 +245,11 @@ end
 
 function TestBootstrap:test_ensure_luacov_tree_reports_missing_post_install_marker()
   _with_stubs({
-    { target = fs_lib, key = "path_exists", value = function() return false end },
+    { target = fs_lib, key = "path_exists", value = function(path) return path:match("luarocks.exe$") ~= nil end },
     { target = fs_lib, key = "ensure_dir", value = function() return true end },
-    { target = proc_lib, key = "run_command", value = function()
-      return { ok = true, output = "" }
+    { target = proc_lib, key = "command_exists", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      return _native_probe(command) or { ok = true, output = "" }
     end },
   }, function()
     local ok, err = bootstrap.ensure_luacov_tree("/repo")
@@ -233,7 +262,7 @@ function TestBootstrap:test_ensure_cluacov_tree_stops_when_luacov_dependency_fai
   local command_calls = 0
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path)
-      lu.assertIs(path, "/repo/.toolcache/luarocks/lib/lua/5.4/cluacov/hook.so")
+      lu.assertIs(path, "/repo/.toolcache/luarocks/lib/lua/5.4/cluacov/hook.dll")
       return false
     end },
     { target = fs_lib, key = "ensure_dir", value = function() return true end },

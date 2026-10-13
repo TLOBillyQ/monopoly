@@ -1,8 +1,5 @@
 -- verify 车道的执行与输出聚合。
 -- _build_output 是纯函数(results -> stdout/exit_code),verify_full_spec 直接拿它断言。
-local env_lib = require("foundation.env")
-local fs_lib = require("foundation.fs")
-local shell_lib = require("foundation.shell")
 local number_utils = require("src.foundation.number")
 local parallel_lanes = require("foundation.parallel_lanes")
 
@@ -10,23 +7,19 @@ local runner = {}
 
 runner.PHASE_TIMEOUT = 600
 
--- 串行跑一步,输出重定向到临时文件后回收。os.execute 在不同 Lua/平台上对退出码的
--- 表达不一致,所以 ok 与 code 两路都判。
+-- 串行跑一步。输出回收、stdout/stderr 合流、退出码归一都由 foundation.proc 负责
+-- (原生 Windows 单平台,ADR 0066:不再手拼 `> file 2>&1` 重定向);
+-- 这里只把 ok/code 两路折成 verify 的 success 判据。
 function runner.run_step(label, cmd)
-  local paths = {
-    output = env_lib.make_temp_path("vf_step_" .. label .. "_out", ".txt"),
-  }
-  local redirected = cmd .. " > " .. shell_lib.shell_quote(paths.output) .. " 2>&1"
   local started = os.time()
-  local ok, _, code = os.execute(redirected)
+  local result = require("foundation.proc").run_command(cmd)
+  local ok, code = result.ok, result.code
   local elapsed = math.max(0, os.time() - started)
   local success = ok == true and (code == nil or code == 0)
   if not success and number_utils.is_numeric(code) then
     success = code == 0
   end
-  local output = fs_lib.read_file(paths.output) or ""
-  fs_lib.remove_path(paths.output)
-  return { label = label, ok = success, elapsed = elapsed, output = output }
+  return { label = label, ok = success, elapsed = elapsed, output = result.output or "" }
 end
 
 -- 启动 + 调度 + 输出聚合委托给 foundation.parallel_lanes（曾经在这里复制粘贴一份）。
@@ -68,11 +61,15 @@ function runner.build_output(input)
       failed[#failed + 1] = r.label
     end
   end
-  local all_ok = #failed == 0
+  local all_ok = #results > 0 and #failed == 0
 
   local buf = {}
   for _, r in ipairs(results) do
     local show_this = verbose or not r.ok
+    if not show_this then
+      local counts = tostring(r.output or ""):match("# COUNTS: [^\r\n]+")
+      if counts then buf[#buf + 1] = "[verify] " .. r.label .. " " .. counts .. "\n" end
+    end
     if show_this then
       buf[#buf + 1] = string.format(
         "[verify] %s %s  %ds\n",

@@ -65,7 +65,9 @@ function M.detect_lua54()
 
   local override = _env_value("LUA54_BIN")
   if override ~= nil then
-    _lua54_cache = override
+    if _path_or_command_available(override) and _lua_reports_54(override) then
+      _lua54_cache = override
+    end
     return _lua54_cache
   end
   for _, candidate in ipairs(_LUA54_BIN_CANDIDATES) do
@@ -78,9 +80,9 @@ function M.detect_lua54()
   return nil
 end
 
---- 命令前缀要的是一个总能用的解释器,探不到就退回 PATH 上的 "lua"。
+--- 命令前缀必须使用验证过的 Lua 5.4；缺失或错误覆写直接失败。
 function M.lua54_bin()
-  return M.detect_lua54() or "lua"
+  return assert(M.detect_lua54(), "Lua 5.4 interpreter required; check LUA54_BIN")
 end
 
 local function _script_dir()

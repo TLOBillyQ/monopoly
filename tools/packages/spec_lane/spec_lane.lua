@@ -180,6 +180,7 @@ function M.run(options)
     and #files > _SHARD_THRESHOLD
     and _resolve_workers(#files, options) > 1
     and options.verbose ~= true
+    and options.serial ~= true
 
   if not shardable then
     local command = {}
@@ -192,16 +193,12 @@ function M.run(options)
     local result = run_command(command)
     local raw = tostring(result.output or "")
 
-    if options.verbose then
-      return { stdout = raw, code = result.code or (result.ok and 0 or 1), passed = 0, failed = 0 }
-    end
-
     local compressed, passed, failed = M.compress_tap(raw)
     local code = result.code or (result.ok and 0 or 1)
-    if failed > 0 and code == 0 then
-      code = 1
-    end
-    return { stdout = compressed, code = code, passed = passed, failed = failed }
+    if (failed > 0 or passed == 0) and code == 0 then code = 1 end
+    local counts = raw:match("# COUNTS: [^\r\n]+")
+    return { stdout = options.verbose and raw or (compressed .. (counts and counts .. "\n" or "")),
+      code = code, passed = passed, failed = failed, discovered = #files }
   end
 
   return _run_sharded(options, options.profile, files)

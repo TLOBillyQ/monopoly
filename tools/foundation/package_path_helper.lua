@@ -81,6 +81,7 @@ function package_path_helper.install_luarocks_tree_paths(opts)
   _prepend_path(_join(share_root, "?.lua"))
   _prepend_path(_join(share_root, "?/init.lua"))
   _prepend_cpath(_join(lib_root, "?.so"))
+  _prepend_cpath(_join(lib_root, "?.dll"))
 end
 
 return package_path_helper

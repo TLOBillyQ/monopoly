@@ -7,7 +7,7 @@ Project CLI wrappers: `tools/packages/acceptance/cli/parser.lua` (Gherkin → JS
 Project entrypoints: `lua tools/cli.lua acceptance` (regenerate gitignored generated specs, then run/aggregate) and `lua tools/cli.lua acceptance-mutate` (Gherkin mutation soft lane). Parser, generator, IR-DRY and mutator wrappers are called by their explicit project paths.
 
 CLI contract:
-- `lua tools/cli.lua acceptance`
+- `lua tools/cli.lua acceptance [--serial]` (native serial execution by default; nonempty case counts required)
 - `lua tools/cli.lua acceptance-mutate [options]` (upstream mutator flags pass through as trailing args)
 - Parser: `lua tools/packages/acceptance/cli/parser.lua <feature> <json-ir>`.
 - Generator: `lua tools/packages/acceptance/cli/generator.lua <json-ir> <spec-output>`.
@@ -17,7 +17,7 @@ CLI contract:
 - The mutator supports `--skip-columns <csv>` as the APS step-7 equivalent-mutation filter: named example columns produce no mutation entries. `tools/packages/acceptance_mutate/mutate_lane.lua` passes the project default identity-threading columns (`角色ID,观察角色ID,行动角色ID,预期行动角色ID`, issue #204); assertion/selection columns (`验证*`, `产品ID`) must never be filtered.
 - Acceptance tests for this repo are run through `lua tools/cli.lua acceptance`, never by running generated suites bare.
 - IR-DRY: `lua tools/packages/acceptance/cli/ir_dry.lua <json-ir> <report-json>` (optional `--include-exact`; exit 2 usage / 1 failure). It was reinstated as a project entrypoint after the data/driver/lane split removed the old one — the rock ships `acceptance4lua/cli/ir_dry.lua`. It writes a findings report (duplicate step shapes, placeholder variants, identical example columns); it never rewrites the feature, so pruning stays a specifier decision.
-- One interpreter discipline across the acceptance surface: `mutate_lane.lua` (parser / generator / runner_worker / mutator spawns) and `acceptance/steps/mutator_status.lua` use `packages.luaunit_runner.lua54` (`LUA54_BIN` overrides; falls back to PATH `lua` when no 5.4 resolves), matching `acceptance/spawn_env.lua` and the project's LuaRocks 5.4 tree.
+- One interpreter discipline across the acceptance surface: `mutate_lane.lua` (parser / generator / runner_worker / mutator spawns) and `acceptance/steps/mutator_status.lua` use `packages.luaunit_runner.lua54` (`LUA54_BIN` overrides are version-validated; missing or non-5.4 interpreters fail explicitly), matching `acceptance/spawn_env.lua` and the project's LuaRocks 5.4 tree.
 
 APS contract:
 - Follow the Acceptance-Pipeline-Specification (Gitea mirror http://lzxsvn:3000/agent/acceptance-pipeline-specification; upstream unclebob/Acceptance-Pipeline-Specification).

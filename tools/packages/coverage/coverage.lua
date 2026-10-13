@@ -48,7 +48,7 @@ end
 -- 入 luarocks 树的 LUA_PATH/LUA_CPATH —— 运行器 install_eggy_package_paths 自举
 -- 全套仓内路径,luacov 由 runner 在 require 前确保 tree 就绪。
 local function _coverage_env_prefix(config_path)
-  return "LUACOV_CONFIG=" .. shell_lib.shell_quote(config_path)
+  return 'set "LUACOV_CONFIG=' .. config_path .. '" &&'
 end
 
 -- Profile -> spec root. Sharded profiles run as N parallel coverage lanes (one
@@ -83,6 +83,7 @@ local function parse_args(args)
     out = "tmp/coverage.md",
     profiles = { "behavior", "contract" },
     quiet = false,
+    serial = true,
   }
 
   for _, arg in ipairs(args) do
@@ -101,6 +102,7 @@ local function parse_args(args)
       result.profiles = text_lib.split(profiles_match, ",")
     end
 
+    if arg == "--serial" then result.serial = true end
     if arg == "--quiet" then
       result.quiet = true
     end
@@ -347,13 +349,13 @@ local function _cleanup_stats(profiles, shard_counts)
   end
 end
 
-local function run_spec_profiles_parallel(profiles)
+local function run_spec_profiles_parallel(profiles, serial)
   local configs = {}
   local lanes = {}
   local shard_counts = {}
   for _, profile in ipairs(profiles) do
     local shard_root = _SHARDED_PROFILES[profile]
-    if shard_root then
+    if shard_root and not serial then
       local count, err = _append_sharded_lanes(profile, shard_root, configs, lanes)
       if not count then
         for _, c in ipairs(configs) do fs_lib.remove_path(c) end
@@ -374,7 +376,18 @@ local function run_spec_profiles_parallel(profiles)
   end
 
   print("Running parallel coverage profiles: " .. table.concat(profiles, ", "))
-  local ok_all, results = parallel_lanes.run(lanes, { stream = true })
+  local ok_all, results
+  if serial then
+    ok_all, results = true, {}
+    for _, lane in ipairs(lanes) do
+      local result = require("foundation.proc").run_command(lane.cmd)
+      io.write(result.output)
+      results[#results + 1] = { label = lane.label, ok = result.ok, exit_code = result.code }
+      ok_all = ok_all and result.ok
+    end
+  else
+    ok_all, results = parallel_lanes.run(lanes, { stream = true })
+  end
 
   for _, c in ipairs(configs) do fs_lib.remove_path(c) end
 
@@ -430,19 +443,14 @@ local function run_reporter(quiet)
   -- deepactivelines 同样):cluacov 的 .so 住 tree 的 lib/lua/5.4/,只注入
   -- LUA_PATH 会 module not found(实测 macOS 必红)。LUA_CPATH 与 LUA_PATH
   -- 同 tree 派生,不加平台特判(macOS / WSL 同一 luarocks tree 布局)。
-  local lua_cpath = path_lib.join_path(tree, "lib/lua/5.4/?.so") .. ";;"
-  local cmd = table.concat({
-    "LUA_PATH=" .. shell_lib.shell_quote(lua_path),
-    "LUA_CPATH=" .. shell_lib.shell_quote(lua_cpath),
-    shell_lib.shell_quote(lua54_bin),
-    "-e", shell_lib.shell_quote(script),
-  }, " ")
+  local lua_cpath = path_lib.join_path(tree, "lib/lua/5.4/?.dll") .. ";;"
+  local cmd = 'set "LUA_PATH=' .. lua_path .. '" && set "LUA_CPATH=' .. lua_cpath .. '" && '
+    .. shell_lib.build_command({ lua54_bin, "-e", script })
   _trace(quiet, "Running luacov reporter (stats: build/luacov.stats.out)")
-  local ok, _, code = os.execute(cmd .. " > " .. shell_lib.shell_quote("build/luacov_reporter.log") .. " 2>&1")
-  local success = ok == true and (code == nil or code == 0)
+  local result = require("foundation.proc").run_command(cmd)
+  local success = result.ok
   if not success then
-    local log = fs_lib.read_file("build/luacov_reporter.log") or ""
-    print_stderr("ERROR: luacov reporter failed: " .. text_lib.trim(log))
+    print_stderr("ERROR: luacov reporter failed: " .. text_lib.trim(result.output))
   end
   fs_lib.remove_path(config_path)
   fs_lib.remove_path("build/luacov_reporter.log")
@@ -704,7 +712,7 @@ local function main(args)
       fs_lib.remove_path(_profile_stats_path(profile))
     end
 
-    local ok = run_spec_profiles_parallel(opts.profiles)
+    local ok = run_spec_profiles_parallel(opts.profiles, opts.serial)
     if not ok then
       os.exit(1)
     end

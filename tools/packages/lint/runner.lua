@@ -30,8 +30,8 @@ local function _help_text(command_name)
     "",
     "默认检查 src、test、tools。",
     "Default targets are src, test, and tools.",
-    "需要系统已安装 luacheck。",
-    "Requires luacheck to be installed and available on PATH.",
+    "按需安装 luacheck 1.2.0-1 到项目 LuaRocks 5.4 tree；安装失败明确报错。",
+    "Installs luacheck into the project LuaRocks tree; installation failure is an error.",
   }, "\n") .. "\n"
 end
 
@@ -92,19 +92,20 @@ function M.run(args)
     return 1
   end
 
-  if not proc_lib.command_exists("luacheck") then
-    io.stderr:write(_text(
-      "未找到 luacheck，请先安装 luacheck 并确保它在 PATH 中。",
-      "luacheck was not found. Install luacheck and make sure it is on PATH."
-    ), "\n")
+  local bootstrap = require("foundation.bootstrap")
+  local ensured, ensure_err = bootstrap.ensure_luacheck_tree(REPO_ROOT)
+  if not ensured then
+    io.stderr:write(tostring(ensure_err), "\n")
     return 1
   end
-
   local command = {
-    "luacheck",
-    "--config",
-    "tools/packages/lint/.luacheckrc",
-    "-j", "4",
+    require("packages.luaunit_runner.lua54").lua54_bin(),
+    "-e", "dofile('tools/foundation/bootstrap.lua').install('tools/cli.lua'); "
+      .. "assert(package.searchpath('luacheck.main',package.path):find('/.toolcache/luarocks/',1,true)); "
+      .. "require('luacheck.main')()",
+    "--", "luacheck",
+    "--config", "tools/packages/lint/.luacheckrc",
+    "-j", "1",
   }
   for _, target in ipairs(options.targets) do
     command[#command + 1] = target

@@ -17,7 +17,7 @@ local function _write_file(path, content)
 end
 
 local function _expected_discovered_path(path)
-  return path
+  return require("foundation.path").resolve_path(require("foundation.env").current_dir(), path)
 end
 
 TestSpecShardingDiscoverSpecFiles = {}

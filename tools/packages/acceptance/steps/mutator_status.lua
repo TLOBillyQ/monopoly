@@ -74,7 +74,7 @@ local function _run_gherkin_mutator(world, options)
   local command = table.concat(args, " ")
     .. " > " .. shell_lib.shell_quote(world.mutator_status_stdout)
     .. " 2> " .. shell_lib.shell_quote(world.mutator_status_stderr)
-  local result = proc_lib.run_command(command, { cwd = root })
+  local result = proc_lib.run_command("(" .. command .. ")", { cwd = root })
   world.mutator_status_result = result
   world.mutator_status_stdout_text = fs_lib.read_file(world.mutator_status_stdout) or ""
   world.mutator_status_stderr_text = fs_lib.read_file(world.mutator_status_stderr) or ""

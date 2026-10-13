@@ -100,11 +100,13 @@ function TestSpecLaneSpec:test_sharded_profile_runs_one_runner_lane_per_worker()
   for _, lane in ipairs(captured_lanes) do
     lu.assertEvalToTrue(lane.label:match("^contract_w%d+$"), "lane label: " .. lane.label)
     lu.assertEvalToTrue(lane.cmd:find("luaunit_runner/runner%.lua"), "lane cmd: " .. lane.cmd)
-    lu.assertEvalToTrue(lane.cmd:find("'%-%-helper=test/helper%.lua'"), "lane cmd: " .. lane.cmd)
-    lu.assertEvalToTrue(lane.cmd:find("'%-%-output=TAP'"), "lane cmd: " .. lane.cmd)
-    lu.assertEvalToTrue(lane.cmd:find("'%-%-pattern=test_'"), "lane cmd: " .. lane.cmd)
-    lu.assertEvalToTrue(lane.cmd:find("'%-%-'"), "lane cmd must pass files after --: " .. lane.cmd)
-    lu.assertEvalToTrue(lane.cmd:find("test/contract/"), "lane cmd must carry spec files: " .. lane.cmd)
+    -- 原生 Windows 单平台(ADR 0066):lane 命令经 foundation.shell.build_command
+    -- 生成 cmd 形态,argv token 以 ^" 定界(POSIX 单引号形态已退场)。
+    lu.assertEvalToTrue(lane.cmd:find('^"--helper=test/helper.lua^"', 1, true), "lane cmd: " .. lane.cmd)
+    lu.assertEvalToTrue(lane.cmd:find('^"--output=TAP^"', 1, true), "lane cmd: " .. lane.cmd)
+    lu.assertEvalToTrue(lane.cmd:find('^"--pattern=test_^"', 1, true), "lane cmd: " .. lane.cmd)
+    lu.assertEvalToTrue(lane.cmd:find('^"--^"', 1, true), "lane cmd must pass files after --: " .. lane.cmd)
+    lu.assertEvalToTrue(lane.cmd:find("test/contract/", 1, true), "lane cmd must carry spec files: " .. lane.cmd)
   end
   -- 3 条 lane × 3 条 ok 行 → 聚合压缩摘要
   lu.assertIs(result.code, 0)

@@ -4,15 +4,13 @@
 -- 经包内 cli.lua 子进程 spawn 时解析 flag 并 os.exit。
 require("test.bootstrap").install_package_paths()
 
+-- 工具树与 repo_root 在模块加载时解析一次(与其它包入口同口径:
+-- `bootstrap.install(<本文件>)` 从源文件路径向上找仓库根,不依赖 cwd)。
+local bootstrap_env = require("foundation.bootstrap").install(debug.getinfo(1, "S").source)
 local fs_lib = require("foundation.fs")
-local proc_lib = require("foundation.proc")
 local runner_bin = require("packages.luaunit_runner.lua54")
 local lanes_mod = require("packages.verify.lanes")
 local runner = require("packages.verify.runner")
-
-local function _check_command(name)
-  return proc_lib.command_exists(name)
-end
 
 -- lua5.4 探测(候选表 + `<candidate> -v` 验证 + 记忆化)原先在这里有一份逐字副本,
 -- 与 packages.luaunit_runner.lua54 靠"同口径"的注释手工同步。归一到
@@ -26,7 +24,7 @@ end
 -- (spec 与 Eggy 宿主同版本)+ luacov 在 tree(coverage.lua 车道入口会 ensure)。
 local function _coverage_toolchain_available(lua54_bin)
   return lua54_bin ~= nil
-    and fs_lib.path_exists(".toolcache/luarocks/share/lua/5.4/luacov/runner.lua") == true
+    and fs_lib.path_exists(bootstrap_env.repo_root .. "/.toolcache/luarocks/share/lua/5.4/luacov/runner.lua") == true
 end
 
 -- crap 的两步(analyze + gate)在并行车道跑完后串行补跑:它们吃的是 crap_collect
@@ -48,10 +46,11 @@ local function _main(opts)
   opts = opts or {}
   local started = os.time()
 
-  local env = {
-    lua54_bin = _resolve_lua54(),
-    luacheck_available = _check_command("luacheck"),
-  }
+  local env = { lua54_bin = _resolve_lua54() }
+  if env.lua54_bin == nil then error("Lua 5.4 interpreter required; check LUA54_BIN") end
+  if opts.coverage or opts.full then
+    assert(require("foundation.bootstrap").ensure_luacov_tree(bootstrap_env.repo_root))
+  end
   env.coverage_available = _coverage_toolchain_available(env.lua54_bin)
 
   local plan = lanes_mod.resolve({
@@ -59,6 +58,7 @@ local function _main(opts)
     coverage = opts.coverage,
     crap = opts.crap,
     full = opts.full,
+    serial = opts.serial,
     env = env,
   })
 
@@ -67,7 +67,19 @@ local function _main(opts)
   end
   io.flush()
 
-  local _, parallel_results, parallel_elapsed = runner.run_parallel(plan.lanes)
+  local parallel_results, parallel_elapsed
+  if opts.serial then
+    parallel_results = {}
+    local lane_started = os.time()
+    for _, lane in ipairs(plan.lanes) do
+      parallel_results[#parallel_results + 1] = runner.run_step(lane.label, lane.cmd)
+    end
+    parallel_elapsed = os.time() - lane_started
+  else
+    local all_ok
+    all_ok, parallel_results, parallel_elapsed = runner.run_parallel(plan.lanes)
+    if all_ok == nil then error("verify runner returned no result") end
+  end
   local all_results = {}
   for _, r in ipairs(parallel_results) do
     r.elapsed = r.elapsed or parallel_elapsed
@@ -107,9 +119,11 @@ if ... == "packages.verify.main" then
   return M
 end
 
-local opts = {}
+local opts = { serial = true }
 for i = 1, #(arg or {}) do
-  if arg[i] == "--tooling" then
+  if arg[i] == "--serial" then
+    opts.serial = true
+  elseif arg[i] == "--tooling" then
     opts.tooling = true
   elseif arg[i] == "--no-coverage" then
     -- Silent no-op; coverage is already opt-out by default.

@@ -24,7 +24,7 @@
 -- shell 拼装与退出码收成复用 foundation.shell(纯演算砖),不再各 cli 内联
 -- _shell_quote。
 
-local shell_lib = require("foundation.shell")
+local proc_lib = require("foundation.proc")
 
 local tool_cli = {}
 
@@ -46,12 +46,9 @@ function tool_cli.forward_subprocess(runner_script, args, lua_bin)
   for _, value in ipairs(args or {}) do
     parts[#parts + 1] = value
   end
-  local ok, kind, code = os.execute(shell_lib.build_command(parts))
-  if kind == "exit" then
-    local _, exit_code = shell_lib.exit_status(ok, kind, code)
-    return exit_code
-  end
-  return 1
+  local result = proc_lib.run_command(parts)
+  io.write(result.output or "")
+  return result.code or (result.ok and 0 or 1)
 end
 
 -- env merge 唯一出处(#323):base 为底、overrides 覆盖(后者优先),nil 侧按
