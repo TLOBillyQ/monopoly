@@ -3,6 +3,7 @@
 -- 用例数与改写前一一对应(sign_in 8 + install 4 + 迁自 property 车道的
 -- parsing and claim properties 3 = 15 例)。
 
+-- luacheck: ignore 143
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local function _assert_eq(actual, expected, message)

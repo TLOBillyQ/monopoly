@@ -1,6 +1,8 @@
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.equal(expected, actual, message)

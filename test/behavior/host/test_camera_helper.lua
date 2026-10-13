@@ -1,4 +1,6 @@
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local camera_helper = require("src.host.camera")
 

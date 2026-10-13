@@ -2,6 +2,8 @@
 -- + 真实 need_choice 消费者 + 真实触控输入管线(输入锁/槽位预确认)。
 -- 剧本:同回合 2 查税 + 1 财神后,最后一张查税是否可用。
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -72,7 +74,6 @@ it("test_window_after_rich_use_stays_interactive", function()
   state.wait_move_anim = true
 
   -- 纯视图渲染打桩(需要完整宿主节点),modal 开合 / reconcile 判定保持真身
-  local main_view = require("src.ui.coord.ui_runtime")
   local old_render = main_view.render
   main_view.render = function() end
 

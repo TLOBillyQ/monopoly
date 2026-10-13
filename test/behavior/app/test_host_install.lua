@@ -3,6 +3,8 @@
 -- 用例数与改写前一一对应(9 例)。
 
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches

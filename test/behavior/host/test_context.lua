@@ -4,6 +4,8 @@
 -- install_globals 有效路径(杀 ~= -> ==)、globals 安装字面值、
 -- synthetic_actor_registry 懒建(not 移除 / call->nil)。
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local runtime_context = require("src.host.context")
 

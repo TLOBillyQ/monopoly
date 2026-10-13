@@ -5,6 +5,8 @@
 -- build_synthetic_player_specs 2 + 迁自 property 车道的 seating invariants 1 = 16 例)。
 
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local roster_roles = require("src.app.roster_roles")
 local support = require("test.support.shared_support")

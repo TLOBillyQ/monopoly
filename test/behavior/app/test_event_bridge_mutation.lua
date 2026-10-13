@@ -12,10 +12,10 @@ local visual_hold = require("src.ui.visual_hold")
 local event_bridge = require("src.app.event_bridge")
 
 describe("TestEventBridgeMutation", function()
-  local saved_context, saved_run_or_defer
+  local saved_context, lifecycle_run_or_defer
   before_each(function()
     saved_context = runtime_context.current()
-    saved_run_or_defer = visual_hold.run_or_defer
+    lifecycle_run_or_defer = visual_hold.run_or_defer
   end)
 
 local function build_event_host()
@@ -43,7 +43,7 @@ end
     if event_bridge.uninstall then
       event_bridge.uninstall()
     end
-    visual_hold.run_or_defer = saved_run_or_defer
+    visual_hold.run_or_defer = lifecycle_run_or_defer
     runtime_context.set_current(saved_context)
   end)
 

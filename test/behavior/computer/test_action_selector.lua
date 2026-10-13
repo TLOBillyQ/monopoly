@@ -1,4 +1,6 @@
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local action_selector = require("src.computer.agent.action")
 local item_ids = require("src.config.gameplay.item_ids")

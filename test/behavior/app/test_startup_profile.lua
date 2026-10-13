@@ -1,3 +1,4 @@
+-- luacheck: ignore 143
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 

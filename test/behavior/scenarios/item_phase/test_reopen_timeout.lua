@@ -2,6 +2,8 @@
 -- 累计超过 action_timeout_seconds,最后一张查税的窗口被立即超时关闭)。
 -- 语义:成功用卡后续开刷新倒计时;followup 取消(返回)路径仍保留累计防挂机。
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.equal(expected, actual, message)

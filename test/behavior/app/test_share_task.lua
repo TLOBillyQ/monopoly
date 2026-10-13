@@ -3,6 +3,8 @@
 -- (host-managed rewards 3 例 + 迁自 property 车道的 config properties 2 例 = 5 例)。
 
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)

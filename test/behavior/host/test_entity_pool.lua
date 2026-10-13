@@ -1,4 +1,6 @@
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local entity_pool = require("src.host.entity_pool")
 local unit_lifecycle = require("src.host.units")

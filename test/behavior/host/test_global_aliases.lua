@@ -1,4 +1,6 @@
 require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
 local luassert = assert
 local support = require("test.support.shared_support")
 local global_aliases = require("src.host.global_aliases")
