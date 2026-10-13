@@ -1,10 +1,13 @@
+require("test.bootstrap").install_package_paths()
+-- busted injects the extensible assertion object into each file environment.
+-- luacheck: ignore 143
+local luassert = assert
 -- items.lua 数据契约 pin：整表逐条深等式 lock (#293 变异清扫)。
 -- 为什么深等而不是逐字段存在性断言：mutate4lua 在多字节 UTF-8 文件上会把
 -- 「字段名 → nil」变异错位应用到字段串上，产出一条新增的垃圾键
 -- (如 offer_in_phanil) 而非真正的字段删除——只有严格 key set + value 深等
 -- 才能同时抓「多出来的键」和「被改动的值」两类位点。
 -- 文案 (name/usage/description) 也钉死原样：改道具要先改本契约，这是数据契约的价。
-local lu = require("luaunit")
 local items = require("src.config.content.items")
 
 local expected = {
@@ -160,23 +163,23 @@ local expected = {
   },
 }
 
-TestItemCatalogPin = {}
+describe("TestItemCatalogPin", function()
 
-function TestItemCatalogPin:test_item_catalog_matches_the_pinned_contract()
-  lu.assertEvalToTrue(#items == #expected, "item count mismatch: got " .. tostring(#items) .. " want " .. tostring(#expected))
+  it("test_item_catalog_matches_the_pinned_contract", function()
+    luassert.truthy(#items == #expected, "item count mismatch: got " .. tostring(#items) .. " want " .. tostring(#expected))
 
-  -- 按 id 索引排列顺序无关紧要但记录本身必须逐字段全等：
-  -- 多一个键、少一个键、任一值被改，全部当场炸。
-  local by_id = {}
-  for _, item in ipairs(items) do
-    by_id[item.id] = item
-  end
-  for i, exp in ipairs(expected) do
-    local actual = by_id[exp.id]
-    lu.assertEvalToTrue(actual ~= nil, "catalog missing item id " .. tostring(exp.id))
-    lu.assertEquals(actual, exp, "item " .. tostring(exp.id) .. " (" .. tostring(exp.key) .. ") deviates from the pinned contract")
-  end
-end
+    -- 按 id 索引排列顺序无关紧要但记录本身必须逐字段全等：
+    -- 多一个键、少一个键、任一值被改，全部当场炸。
+    local by_id = {}
+    for _, item in ipairs(items) do
+      by_id[item.id] = item
+    end
+    for i, exp in ipairs(expected) do
+      local actual = by_id[exp.id]
+      luassert.truthy(actual ~= nil, "catalog missing item id " .. tostring(exp.id))
+      luassert.is.same(exp, actual, "item " .. tostring(exp.id) .. " (" .. tostring(exp.key) .. ") deviates from the pinned contract")
+    end
+  end)
 
 
-return TestItemCatalogPin
+end)
