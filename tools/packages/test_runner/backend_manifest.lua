@@ -577,7 +577,6 @@ return {
     "tools/packages/arch_view/test/test_arch_view_snapshot_tooling_contract.lua",
     "tools/packages/crap/test/test_crap_cli_lua54_guard.lua",
     "tools/packages/crap/test/test_crap_tooling_contract.lua",
-    "tools/packages/data_sync/test/test_sync_data.lua",
     "tools/packages/mutate/test/test_lua54_guard.lua",
     "tools/packages/mutate/test/test_mutate4lua_tooling_contract.lua",
     "tools/packages/ops/test/test_deploy.lua",
@@ -586,6 +585,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/data_sync/test/test_sync_data.lua",
     "tools/foundation/test/test_script_tools_contract.lua",
     "tools/foundation/test/test_script_tools_contract_common.lua",
     "tools/packages/arch_view/test/test_script_tools_contract.lua",
