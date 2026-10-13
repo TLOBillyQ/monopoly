@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -78,9 +78,9 @@ local function _with_gateway_env(opts, fn)
   }, fn)
 end
 
-TestPaidPurchaseGateway = {}
+describe("TestPaidPurchaseGateway", function()
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_goods_id()
+local function _test_eggy_paid_gateway_callback_missing_goods_id()
   local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
@@ -101,7 +101,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_goods_i
   _assert_eq(warned, "market paid callback ignored: goods_id missing", "should warn when goods_id is missing")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_empty_goods_id()
+local function _test_eggy_paid_gateway_callback_empty_goods_id()
   local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
@@ -122,7 +122,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_empty_goods_id(
   _assert_eq(warned, "market paid callback ignored: goods_id missing", "should warn when goods_id is empty")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_pending()
+local function _test_eggy_paid_gateway_callback_missing_pending()
   local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
@@ -143,7 +143,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_pending
   luassert.truthy(warned and warned:find("pending missing", 1, true), "should warn when pending is missing: " .. tostring(warned))
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_player()
+local function _test_eggy_paid_gateway_callback_missing_player()
   local gateway = require("src.host.paid_purchase_gateway")
   local game = {
     players = {},
@@ -170,7 +170,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_player(
   luassert.truthy(warned and warned:find("player missing", 1, true), "should warn when player is missing: " .. tostring(warned))
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_entry()
+local function _test_eggy_paid_gateway_callback_missing_entry()
   local gateway = require("src.host.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local game = {
@@ -198,7 +198,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_entry()
   luassert.truthy(warned and warned:find("market entry missing", 1, true), "should warn when entry is missing: " .. tostring(warned))
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_success_with_on_purchase()
+local function _test_eggy_paid_gateway_callback_success_with_on_purchase()
   local gateway = require("src.host.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local mock_entry = { product_id = 1001, name = "Test Item" }
@@ -223,7 +223,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_success_with_on
   _assert_eq(purchase_called, true, "on_purchase should be called")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_uses_pending_specific_on_purchase()
+local function _test_eggy_paid_gateway_callback_uses_pending_specific_on_purchase()
   local gateway = require("src.host.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local mock_entry = { product_id = 5003, name = "海绵宝宝" }
@@ -262,7 +262,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_uses_pending_sp
   _assert_eq(runtime_called, false, "runtime on_purchase should not handle pending-specific purchases")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_success_without_on_purchase()
+local function _test_eggy_paid_gateway_callback_success_without_on_purchase()
   local gateway = require("src.host.paid_purchase_gateway")
   local mock_player = { id = 99 }
   local mock_entry = { product_id = 1001, name = "Test Item" }
@@ -280,7 +280,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_success_without
   _assert_eq(rt.pending_by_role_id[5], nil, "pending should be consumed even without an on_purchase handler")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_start_missing_purchase_api()
+local function _test_eggy_paid_gateway_start_missing_purchase_api()
   local gateway = require("src.host.paid_purchase_gateway")
   local game = {
     players = {
@@ -323,7 +323,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_start_missing_purchase_a
   end)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_start_uses_zero_arity_role_id_and_dot_panel_args()
+local function _test_eggy_paid_gateway_start_uses_zero_arity_role_id_and_dot_panel_args()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = { id = 1 }
   local game = {
@@ -385,7 +385,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_start_uses_zero_arity_ro
   _assert_eq(rt.pending_by_role_id[77][1].entry, entry, "pending queue should carry original market entry")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_can_start_reports_mapping_role_and_api_failures()
+local function _test_eggy_paid_gateway_can_start_reports_mapping_role_and_api_failures()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local game = _game_with_player(player)
@@ -440,7 +440,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_can_start_reports_mappin
   end)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_start_reports_specific_failure_reasons()
+local function _test_eggy_paid_gateway_start_reports_specific_failure_reasons()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local game = _game_with_player(player)
@@ -490,7 +490,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_start_reports_specific_f
   end)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_treats_empty_goods_id_as_missing_mapping()
+local function _test_eggy_paid_gateway_treats_empty_goods_id_as_missing_mapping()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local game = _game_with_player(player)
@@ -506,7 +506,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_treats_empty_goods_id_as
   end)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_ignores_empty_goods_names()
+local function _test_eggy_paid_gateway_ignores_empty_goods_names()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local game = _game_with_player(player)
@@ -522,7 +522,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_ignores_empty_goods_name
   end)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_falls_back_to_player_id_when_role_id_fails()
+local function _test_eggy_paid_gateway_falls_back_to_player_id_when_role_id_fails()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(8)
   local game = _game_with_player(player)
@@ -552,7 +552,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_falls_back_to_player_id_
   end)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_warns_mapping_edge_cases()
+local function _test_eggy_paid_gateway_warns_mapping_edge_cases()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local game = _game_with_player(player)
@@ -595,7 +595,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_warns_mapping_edge_cases
   luassert.truthy(text:find("ambiguous goods_id", 1, true), "ambiguous goods id should warn: " .. text)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_warns_distinct_mapping_failure_reasons()
+local function _test_eggy_paid_gateway_warns_distinct_mapping_failure_reasons()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local warnings = {}
@@ -639,7 +639,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_warns_distinct_mapping_f
     "missing name mapping should warn its reason: " .. text)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_missing_or_broken_goods_list_maps_unavailable()
+local function _test_eggy_paid_gateway_missing_or_broken_goods_list_maps_unavailable()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
 
@@ -678,7 +678,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_missing_or_broken_goods_
   _assert_eq(non_table_reason, "goods_mapping_missing", "non-table goods list should fail goods mapping")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_pending_missing_or_unmatched()
+local function _test_eggy_paid_gateway_callback_pending_missing_or_unmatched()
   local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
@@ -712,7 +712,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_pending_missing
   end)
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_pending_queue_recovers_and_cleans_up()
+local function _test_eggy_paid_gateway_pending_queue_recovers_and_cleans_up()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(99)
   local entry = _entry()
@@ -740,7 +740,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_pending_queue_recovers_a
   _assert_eq(rt.pending_by_role_id[5], nil, "empty pending queue should be removed")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_pending_queue_appends_existing_queue()
+local function _test_eggy_paid_gateway_pending_queue_appends_existing_queue()
   local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = {} }
   local rt = gateway._runtime(game)
@@ -756,7 +756,7 @@ end
 
 -- 批3 击杀：映射缺失告警的完整参数面——name/currency 的 _entry_field 取值通道
 -- （call 换 nil + key 换 nil + and/or 变异 + 空串兜底）全部由精确告警文案钉死。
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_mapping_missing_warn_carries_full_args()
+local function _test_eggy_paid_gateway_mapping_missing_warn_carries_full_args()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local warnings = {}
@@ -793,7 +793,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_mapping_missing_warn_car
 end
 
 -- 批3 击杀 L60：role_id 解析失败回退时，告警必须带真实的 player_id 字段。
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_role_id_failure_warn_carries_player_id()
+local function _test_eggy_paid_gateway_role_id_failure_warn_carries_player_id()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(8)
   local game = _game_with_player(player)
@@ -826,7 +826,7 @@ end
 
 -- 批3 击杀 L376：_already_registered 守卫——setup_done 复位后重跑 setup，
 -- 已注册角色不得二次注册（变异把守卫换 nil 会重复注册）。
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_register_guard_skips_already_registered_roles()
+local function _test_eggy_paid_gateway_register_guard_skips_already_registered_roles()
   local gateway = require("src.host.paid_purchase_gateway")
   local game = { players = { _player(1) } }
   local registrations = {}
@@ -857,7 +857,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_register_guard_skips_alr
 end
 
 -- 批3 击杀 L460：面板调用失败告警必须带固定 caption。
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_panel_call_failure_warns_with_caption()
+local function _test_eggy_paid_gateway_panel_call_failure_warns_with_caption()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local game = _game_with_player(player)
@@ -891,7 +891,7 @@ end
 
 -- 批3 击杀 L484 五处：pending 里的 on_purchase 字段——函数类型原样进入，
 -- 非函数（如字符串）必须落 nil，不能泄漏进上下文。
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_pending_on_purchase_field_keeps_only_functions()
+local function _test_eggy_paid_gateway_pending_on_purchase_field_keeps_only_functions()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local fn = function() end
@@ -916,7 +916,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_pending_on_purchase_fiel
     "a non-function on_purchase must not leak into the pending context")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_hides_purchase_panel()
+local function _test_eggy_paid_gateway_callback_hides_purchase_panel()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(99)
   local entry = _entry()
@@ -953,7 +953,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_hides_purchase_
   _assert_eq(hidden, false, "successful callback should hide purchase panel")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_registers_purchase_events_once()
+local function _test_eggy_paid_gateway_registers_purchase_events_once()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local game = _game_with_player(player)
@@ -987,7 +987,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_registers_purchase_event
   _assert_eq(rt.setup_done, true, "runtime should mark setup done")
 end
 
-function TestPaidPurchaseGateway:test_eggy_paid_gateway_skips_event_registration_without_event_contract()
+local function _test_eggy_paid_gateway_skips_event_registration_without_event_contract()
   local gateway = require("src.host.paid_purchase_gateway")
   local player = _player(1)
   local game = _game_with_player(player)
@@ -1018,4 +1018,33 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_skips_event_registration
 end
 
 
-return TestPaidPurchaseGateway
+it("test_eggy_paid_gateway_callback_missing_goods_id", _test_eggy_paid_gateway_callback_missing_goods_id)
+it("test_eggy_paid_gateway_callback_empty_goods_id", _test_eggy_paid_gateway_callback_empty_goods_id)
+it("test_eggy_paid_gateway_callback_missing_pending", _test_eggy_paid_gateway_callback_missing_pending)
+it("test_eggy_paid_gateway_callback_missing_player", _test_eggy_paid_gateway_callback_missing_player)
+it("test_eggy_paid_gateway_callback_missing_entry", _test_eggy_paid_gateway_callback_missing_entry)
+it("test_eggy_paid_gateway_callback_success_with_on_purchase", _test_eggy_paid_gateway_callback_success_with_on_purchase)
+it("test_eggy_paid_gateway_callback_uses_pending_specific_on_purchase", _test_eggy_paid_gateway_callback_uses_pending_specific_on_purchase)
+it("test_eggy_paid_gateway_callback_success_without_on_purchase", _test_eggy_paid_gateway_callback_success_without_on_purchase)
+it("test_eggy_paid_gateway_start_missing_purchase_api", _test_eggy_paid_gateway_start_missing_purchase_api)
+it("test_eggy_paid_gateway_start_uses_zero_arity_role_id_and_dot_panel_args", _test_eggy_paid_gateway_start_uses_zero_arity_role_id_and_dot_panel_args)
+it("test_eggy_paid_gateway_can_start_reports_mapping_role_and_api_failures", _test_eggy_paid_gateway_can_start_reports_mapping_role_and_api_failures)
+it("test_eggy_paid_gateway_start_reports_specific_failure_reasons", _test_eggy_paid_gateway_start_reports_specific_failure_reasons)
+it("test_eggy_paid_gateway_treats_empty_goods_id_as_missing_mapping", _test_eggy_paid_gateway_treats_empty_goods_id_as_missing_mapping)
+it("test_eggy_paid_gateway_ignores_empty_goods_names", _test_eggy_paid_gateway_ignores_empty_goods_names)
+it("test_eggy_paid_gateway_falls_back_to_player_id_when_role_id_fails", _test_eggy_paid_gateway_falls_back_to_player_id_when_role_id_fails)
+it("test_eggy_paid_gateway_warns_mapping_edge_cases", _test_eggy_paid_gateway_warns_mapping_edge_cases)
+it("test_eggy_paid_gateway_warns_distinct_mapping_failure_reasons", _test_eggy_paid_gateway_warns_distinct_mapping_failure_reasons)
+it("test_eggy_paid_gateway_missing_or_broken_goods_list_maps_unavailable", _test_eggy_paid_gateway_missing_or_broken_goods_list_maps_unavailable)
+it("test_eggy_paid_gateway_callback_pending_missing_or_unmatched", _test_eggy_paid_gateway_callback_pending_missing_or_unmatched)
+it("test_eggy_paid_gateway_pending_queue_recovers_and_cleans_up", _test_eggy_paid_gateway_pending_queue_recovers_and_cleans_up)
+it("test_eggy_paid_gateway_pending_queue_appends_existing_queue", _test_eggy_paid_gateway_pending_queue_appends_existing_queue)
+it("test_eggy_paid_gateway_mapping_missing_warn_carries_full_args", _test_eggy_paid_gateway_mapping_missing_warn_carries_full_args)
+it("test_eggy_paid_gateway_role_id_failure_warn_carries_player_id", _test_eggy_paid_gateway_role_id_failure_warn_carries_player_id)
+it("test_eggy_paid_gateway_register_guard_skips_already_registered_roles", _test_eggy_paid_gateway_register_guard_skips_already_registered_roles)
+it("test_eggy_paid_gateway_panel_call_failure_warns_with_caption", _test_eggy_paid_gateway_panel_call_failure_warns_with_caption)
+it("test_eggy_paid_gateway_pending_on_purchase_field_keeps_only_functions", _test_eggy_paid_gateway_pending_on_purchase_field_keeps_only_functions)
+it("test_eggy_paid_gateway_callback_hides_purchase_panel", _test_eggy_paid_gateway_callback_hides_purchase_panel)
+it("test_eggy_paid_gateway_registers_purchase_events_once", _test_eggy_paid_gateway_registers_purchase_events_once)
+it("test_eggy_paid_gateway_skips_event_registration_without_event_contract", _test_eggy_paid_gateway_skips_event_registration_without_event_contract)
+end)
