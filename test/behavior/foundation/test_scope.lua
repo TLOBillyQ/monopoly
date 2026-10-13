@@ -1,4 +1,18 @@
-local lu = require("luaunit")
+-- foundation.scope 资源作用域直测:LIFO 清理、幂等 destroy、fork 级联、清理期报错。
+--
+-- 断言层迁移(#74 第一步「先断言、后结构」):断言后端从 LuaUnit 的 lu.* 换成真
+-- luassert,结构、用例集合与期望值一字未改。断言对象经 test.support.luassert_loader
+-- 从项目工具缓存局部取得,不接管全局 Lua assert——旧运行器与 LuaUnit 的后端语义
+-- 仍挂在全局 assert 上,覆盖它等于换执行后端而不是换断言词汇。
+--
+-- 迁移口径(详见 CODING_STANDARDS.md 的「断言层迁移」):
+--   - 参数顺序是 (expected, actual),与 LuaUnit 的 (actual, expected) 相反;
+--   - 表比较用 is.same(深比较),is.equal 是 `==` 身份比较;
+--   - 严格布尔用 is_true/is_false,truthiness 用 truthy/falsy;
+--   - 子串口径走 matches(..., 1, true) 或 has_error.match(..., 1, true)。
+require("test.bootstrap").install_package_paths()
+
+local luassert = assert(require("test.support.luassert_loader").load())
 local logger = require("src.foundation.log")
 local scope = require("src.foundation.scope")
 
@@ -18,7 +32,7 @@ function TestScope:test_runs_cleanup_in_lifo_order_and_ignores_return_values()
 
   resource_scope:destroy()
 
-  lu.assertEquals(order, { "second", "first" })
+  luassert.is.same({ "second", "first" }, order)
 end
 
 function TestScope:test_invokes_cleanup_without_arguments()
@@ -30,7 +44,7 @@ function TestScope:test_invokes_cleanup_without_arguments()
 
   resource_scope:destroy()
 
-  lu.assertEquals(argument_count, 0)
+  luassert.is.equal(0, argument_count)
 end
 
 function TestScope:test_destroy_is_idempotent_and_reentrant()
@@ -45,7 +59,7 @@ function TestScope:test_destroy_is_idempotent_and_reentrant()
   resource_scope:destroy()
   resource_scope:destroy()
 
-  lu.assertEquals(calls, 1)
+  luassert.is.equal(1, calls)
 end
 
 function TestScope:test_fork_destroy_cascades_in_one_lifo_order()
@@ -64,7 +78,7 @@ function TestScope:test_fork_destroy_cascades_in_one_lifo_order()
 
   parent:destroy()
 
-  lu.assertEquals(order, { "parent-last", "child", "parent-first" })
+  luassert.is.same({ "parent-last", "child", "parent-first" }, order)
 end
 
 function TestScope:test_destroy_continues_after_cleanup_errors_and_raises_first_error()
@@ -90,11 +104,11 @@ function TestScope:test_destroy_continues_after_cleanup_errors_and_raises_first_
   end)
   logger.warn = original_warn
 
-  lu.assertFalse(ok)
-  lu.assertStrContains(tostring(err), "second cleanup error")
-  lu.assertEquals(calls, { "second", "first" })
-  lu.assertEquals(#warnings, 1)
-  lu.assertStrContains(warnings[1], "first cleanup error")
+  luassert.is_false(ok)
+  luassert.matches("second cleanup error", tostring(err), 1, true)
+  luassert.is.same({ "second", "first" }, calls)
+  luassert.is.equal(1, #warnings)
+  luassert.matches("first cleanup error", warnings[1], 1, true)
 end
 
 function TestScope:test_defer_on_destroyed_scope_runs_immediately()
@@ -106,15 +120,16 @@ function TestScope:test_defer_on_destroyed_scope_runs_immediately()
     calls = calls + 1
   end)
 
-  lu.assertEquals(calls, 1)
+  luassert.is.equal(1, calls)
 end
 
 function TestScope:test_defer_during_destruction_is_rejected()
   local resource_scope = scope.new()
   resource_scope:defer(function()
-    lu.assertErrorMsgContains("destroying scope", function()
+    -- LuaUnit 的 assertErrorMsgContains 是子串口径 → has_error.match 的 plain 模式。
+    luassert.has_error.match(function()
       resource_scope:defer(function() end)
-    end)
+    end, "destroying scope", 1, true)
   end)
 
   resource_scope:destroy()
@@ -133,7 +148,7 @@ function TestScope:test_scope_has_no_active_cleanup_after_destroy()
   end)
   resource_scope:destroy()
 
-  lu.assertEquals(calls, 2)
+  luassert.is.equal(2, calls)
 end
 
 function TestScope:test_cleanup_error_with_nil_value_still_fails_destroy()
@@ -146,7 +161,7 @@ function TestScope:test_cleanup_error_with_nil_value_still_fails_destroy()
     resource_scope:destroy()
   end)
 
-  lu.assertFalse(ok)
+  luassert.is_false(ok)
 end
 
 return TestScope
