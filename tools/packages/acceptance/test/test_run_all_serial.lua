@@ -6,7 +6,7 @@
 --   * spawn 走仓库根 cwd + LUA_PATH(生成脚本的相对路径依赖该 cwd)。
 require("test.bootstrap").install_package_paths()
 
-local lu = require("luaunit")
+local check = require("luassert")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 -- 预热点:解释器探测会 spawn `<candidate> -v`,必须在 stub proc 之前完成,
@@ -16,8 +16,7 @@ local bootstrap = require("foundation.bootstrap")
 local run_all = require("packages.acceptance.run_all")
 local registry = require("packages.acceptance.acceptance_features")
 
--- 原生 spec 形态:Test* 必须是全局表(runner 靠 _G 增量收集用例)。
-TestAcceptanceSerialLane = {}
+describe("acceptance serial JSON protocol", function()
 
 -- 把 proc.run_command 换成固定结果序列;fn(calls) 里 calls[i] 记录第 i 次调用。
 local function _with_stubbed_proc(results, fn)
@@ -55,46 +54,46 @@ local function _run_serial()
   return run_all.run({ serial = true, generated_dir = "build/acceptance/serial_spec_tmp" })
 end
 
-function TestAcceptanceSerialLane:test_silent_launcher_failure_keeps_a_nonempty_diagnostic()
+it("silent launcher failure keeps a nonempty diagnostic", function()
   local summary
   _with_single_entry(function()
     _with_stubbed_proc({ { ok = false, code = 127, output = "" } }, function()
       summary = _run_serial()
     end)
   end)
-  lu.assertIs(#summary.failed, 1)
-  lu.assertIs(summary.passed, 0)
-  lu.assertEvalToTrue(
+  check.equal(1, #summary.failed)
+  check.equal(0, summary.passed)
+  check.truthy(
     summary.failed[1].error:find("lua launcher failed with exit code 127", 1, true) ~= nil,
     "empty launcher output must still name the exit code: " .. summary.failed[1].error
   )
-end
+end)
 
-function TestAcceptanceSerialLane:test_zero_executed_cases_never_counts_as_passing()
+it("zero executed cases never counts as passing", function()
   local summary
   _with_single_entry(function()
     _with_stubbed_proc({ { ok = true, code = 0, output = _result(0, 0, 0) } }, function()
       summary = _run_serial()
     end)
   end)
-  lu.assertIs(summary.passed, 0)
-  lu.assertIs(#summary.failed, 1)
-  lu.assertIs(summary.failed[1].error, "no acceptance cases executed")
-end
+  check.equal(0, summary.passed)
+  check.equal(1, #summary.failed)
+  check.equal("no acceptance cases executed", summary.failed[1].error)
+end)
 
-function TestAcceptanceSerialLane:test_real_failure_keeps_output_without_infrastructure_error()
+it("real failure keeps output without infrastructure error", function()
   local summary
   _with_single_entry(function()
     _with_stubbed_proc({ { ok = false, code = 1, output = _result(18, 16, 2) } }, function()
       summary = _run_serial()
     end)
   end)
-  lu.assertIs(#summary.failed, 1)
-  lu.assertIs(summary.failed[1].error, "")
-  lu.assertEvalToTrue(summary.failed[1].output:find("real busted output", 1, true) ~= nil)
-end
+  check.equal(1, #summary.failed)
+  check.equal("", summary.failed[1].error)
+  check.truthy(summary.failed[1].output:find("real busted output", 1, true) ~= nil)
+end)
 
-function TestAcceptanceSerialLane:test_spawns_from_repo_root_with_project_lua_path()
+it("spawns argv executor from repo root", function()
   local summary, calls
   _with_single_entry(function()
     _with_stubbed_proc({ { ok = true, code = 0, output = _result(1, 1, 0) } }, function(captured)
@@ -102,8 +101,8 @@ function TestAcceptanceSerialLane:test_spawns_from_repo_root_with_project_lua_pa
       summary = _run_serial()
     end)
   end)
-  lu.assertIs(summary.passed, 1)
-  lu.assertIs(#calls, 1)
+  check.equal(1, summary.passed)
+  check.equal(1, #calls)
 
   -- bootstrap 从相对 source 路径解析时给出 "<root>/." 形式,与 run_all 内部的
   -- 绝对解析同指一个目录;归一化后比较。
@@ -111,10 +110,9 @@ function TestAcceptanceSerialLane:test_spawns_from_repo_root_with_project_lua_pa
     return (tostring(path):gsub("/%.$", ""))
   end
   local repo_root = bootstrap.resolve("tools/packages/acceptance/run_all.lua").repo_root
-  lu.assertIs(_strip_dot(calls[1].options.cwd), _strip_dot(repo_root))
-  lu.assertIsTable(calls[1].command)
-  lu.assertStrContains(calls[1].command[2], "tools/packages/acceptance/execute.lua")
-  lu.assertIs(calls[1].command[3], path_lib.join_path("build/acceptance/serial_spec_tmp", "test_x_acceptance.lua"))
-end
-
-return TestAcceptanceSerialLane
+  check.equal(_strip_dot(repo_root), _strip_dot(calls[1].options.cwd))
+  check.is_table(calls[1].command)
+  check.matches("tools/packages/acceptance/execute.lua", calls[1].command[2], 1, true)
+  check.equal(path_lib.join_path("build/acceptance/serial_spec_tmp", "test_x_acceptance.lua"), calls[1].command[3])
+end)
+end)

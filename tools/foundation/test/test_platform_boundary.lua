@@ -15,9 +15,9 @@ describe("platform boundary", function()
 it("declares the posix only capability unavailable on windows", function()
   local verdict = boundary.evaluate("dry", { "src" }, "windows")
 
-  check.same(verdict.status, boundary.UNAVAILABLE)
-  check.same(verdict.exit_code, boundary.UNAVAILABLE_EXIT_CODE)
-  check.equal(verdict.stream, "stderr")
+  check.same(boundary.UNAVAILABLE, verdict.status)
+  check.same(boundary.UNAVAILABLE_EXIT_CODE, verdict.exit_code)
+  check.equal("stderr", verdict.stream)
   check.truthy(verdict.message:find("status=unavailable", 1, true) ~= nil,
     "诊断要带可机读的状态词: " .. tostring(verdict.message))
 end)
@@ -26,9 +26,9 @@ end)
 it("leaves a supported platform request to the real tool", function()
   local verdict = boundary.evaluate("dry", { "src", "--json" }, "posix")
 
-  check.equal(verdict.status, nil)
-  check.equal(verdict.exit_code, nil)
-  check.same(verdict.args, { "src", "--json" })
+  check.equal(nil, verdict.status)
+  check.equal(nil, verdict.exit_code)
+  check.same({ "src", "--json" }, verdict.args)
 end)
 
 -- 不可用与显式跳过必须是两个可区分的状态(输出流 + 状态词 + 退出码都不同)。
@@ -36,9 +36,9 @@ it("explicit skip is distinguishable from unavailable", function()
   local unavailable = boundary.evaluate("dry", { "src" }, "windows")
   local skipped = boundary.evaluate("dry", { "--skip-if-unavailable", "src" }, "windows")
 
-  check.same(skipped.status, boundary.SKIPPED)
-  check.same(skipped.exit_code, boundary.SKIPPED_EXIT_CODE)
-  check.equal(skipped.stream, "stdout")
+  check.same(boundary.SKIPPED, skipped.status)
+  check.same(boundary.SKIPPED_EXIT_CODE, skipped.exit_code)
+  check.equal("stdout", skipped.stream)
   check.truthy(skipped.message:find("status=skipped", 1, true) ~= nil,
     tostring(skipped.message))
   check.is_not.same(skipped.status, unavailable.status)
@@ -50,15 +50,15 @@ end)
 it("strips the skip flag before forwarding", function()
   local verdict = boundary.evaluate("dry", { "--skip-if-unavailable", "--json", "src" }, "posix")
 
-  check.equal(verdict.status, nil)
-  check.same(verdict.args, { "--json", "src" })
+  check.equal(nil, verdict.status)
+  check.same({ "--json", "src" }, verdict.args)
 end)
 
 it("declares acceptance mutate on the same boundary", function()
   local verdict = boundary.evaluate("acceptance-mutate", { "--level", "soft" }, "windows")
 
-  check.same(verdict.status, boundary.UNAVAILABLE)
-  check.same(verdict.exit_code, boundary.UNAVAILABLE_EXIT_CODE)
+  check.same(boundary.UNAVAILABLE, verdict.status)
+  check.same(boundary.UNAVAILABLE_EXIT_CODE, verdict.exit_code)
   check.truthy(verdict.message:find("acceptance-mutate", 1, true) ~= nil,
     tostring(verdict.message))
 end)
@@ -73,16 +73,16 @@ end)
 -- ADR 0066:原生 Windows 是唯一受支持的开发平台。这条断言在别的平台上红,
 -- 是显式事实而不是注释里的约定。
 it("reports the host platform as windows", function()
-  check.same(boundary.host_platform(), "windows")
+  check.same("windows", boundary.host_platform())
 end)
 
 -- 退出码约定扩展(#300 Q2 → #96):0 成功 / 1 业务失败 / 2 用法错误 / 3 不可用。
 -- 三态必须互不相同,否则调用方分不清「工具没跑」与「工具跑了但失败」。
 it("exit codes separate unavailable from usage and failure", function()
-  check.same(boundary.UNAVAILABLE_EXIT_CODE, 3)
-  check.is_not.same(boundary.UNAVAILABLE_EXIT_CODE, 0)
-  check.is_not.same(boundary.UNAVAILABLE_EXIT_CODE, 1)
-  check.is_not.same(boundary.UNAVAILABLE_EXIT_CODE, 2)
+  check.same(3, boundary.UNAVAILABLE_EXIT_CODE)
+  check.is_not.same(0, boundary.UNAVAILABLE_EXIT_CODE)
+  check.is_not.same(1, boundary.UNAVAILABLE_EXIT_CODE)
+  check.is_not.same(2, boundary.UNAVAILABLE_EXIT_CODE)
 end)
 
 it("retained test capabilities partition only the named engine files", function()
@@ -92,15 +92,15 @@ it("retained test capabilities partition only the named engine files", function(
     local verdict = boundary.test_verdict(file)
     if verdict then excluded[#excluded + 1] = verdict else selected[#selected + 1] = file end
   end
-  check.same(#excluded, 2)
-  check.same(#selected + #excluded, #files)
+  check.same(2, #excluded)
+  check.same(#files, #selected + #excluded)
   local cases = 0
   for _, verdict in ipairs(excluded) do
-    check.same(verdict.exit_code, 3)
-    check.same(boundary.test_capabilities[verdict.identity], "acceptance-mutate")
+    check.same(3, verdict.exit_code)
+    check.same("acceptance-mutate", boundary.test_capabilities[verdict.identity])
     cases = cases + verdict.cases
   end
-  check.same(cases, 14)
+  check.same(14, cases)
   check.is_nil(boundary.test_verdict("tools/packages/acceptance_mutate/test/test_mutator_status_format.lua"))
   check.is_nil(boundary.test_verdict("tools/packages/acceptance_mutate/test/test_mutator_report_skipped.lua"))
 end)

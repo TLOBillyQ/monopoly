@@ -1,6 +1,6 @@
 -- Runtime public-seam assertions use the trusted project luassert module.
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = require("luassert")
 local runtime = require("packages.acceptance.runtime")
 
 -- Build a one-scenario IR by hand. The parser keeps Chinese placeholder names in
@@ -29,11 +29,11 @@ local function _pattern(source_text, pattern, names, types, fn)
   return { source = source_text, pattern = pattern, names = names, types = types, fn = fn }
 end
 
-TestRuntime = {}
+describe("acceptance runtime public dispatch and cleanup", function()
 
 -- -------------------------------------------------- placeholder dispatch
 
-function TestRuntime:test_binds_a_differently_named_placeholder_to_the_handlers_declared_name()
+it("binds a differently named placeholder to the handler name", function()
   local seen
   local ir = _ir({ { text = "玩家穿上槽位<新槽位>的皮肤" } }, { { ["新槽位"] = "3" } })
   local result = runtime.run_feature(ir, {
@@ -44,10 +44,10 @@ function TestRuntime:test_binds_a_differently_named_placeholder_to_the_handlers_
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(seen, "3")
-end
+  luassert.is.equal("3", seen)
+end)
 
-function TestRuntime:test_binds_several_renamed_placeholders_by_position()
+it("binds several renamed placeholders by position", function()
   local slot, product
   local ir = _ir(
     { { text = "槽位<购买槽位>对应皮肤产品ID为<购买产品ID>" } },
@@ -61,11 +61,11 @@ function TestRuntime:test_binds_several_renamed_placeholders_by_position()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(slot, "2")
-  luassert.is.equal(product, "skin_02")
-end
+  luassert.is.equal("2", slot)
+  luassert.is.equal("skin_02", product)
+end)
 
-function TestRuntime:test_keeps_non_parameter_example_columns_readable_through_the_bound_view()
+it("keeps non parameter example columns readable", function()
   local extra
   local ir = _ir({ { text = "玩家穿上槽位<新槽位>的皮肤" } }, { { ["新槽位"] = "3", ["赠礼名"] = "限定" } })
   local result = runtime.run_feature(ir, {
@@ -76,10 +76,10 @@ function TestRuntime:test_keeps_non_parameter_example_columns_readable_through_t
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(extra, "限定")
-end
+  luassert.is.equal("限定", extra)
+end)
 
-function TestRuntime:test_prefers_an_exact_step_text_handler_over_a_same_shape_handler()
+it("prefers exact text over a same shape handler", function()
   -- 验证槽位 carries assert-only semantics that the 槽位 handler must not steal.
   local called
   local ir = _ir({ { text = "槽位<验证槽位>的皮肤已归玩家持有" } }, { { ["验证槽位"] = "1" } })
@@ -95,10 +95,10 @@ function TestRuntime:test_prefers_an_exact_step_text_handler_over_a_same_shape_h
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(called, "exact")
-end
+  luassert.is.equal("exact", called)
+end)
 
-function TestRuntime:test_reports_an_ambiguous_shape_instead_of_picking_a_handler_at_random()
+it("reports an ambiguous shape", function()
   local ir = _ir({ { text = "槽位<旧槽位>的皮肤已归玩家持有" } }, { { ["旧槽位"] = "1" } })
   local result = runtime.run_feature(ir, {
     ["槽位<槽位>的皮肤已归玩家持有"] = function() return true end,
@@ -111,9 +111,9 @@ function TestRuntime:test_reports_an_ambiguous_shape_instead_of_picking_a_handle
   luassert.truthy(message:find("槽位<槽位>的皮肤已归玩家持有", 1, true), message)
   luassert.truthy(message:find("槽位<验证槽位>的皮肤已归玩家持有", 1, true), message)
   luassert.truthy(message:find("features/test.feature", 1, true), message)
-end
+end)
 
-function TestRuntime:test_passes_world_resolved_text_and_the_step_to_the_handler()
+it("passes world resolved text and step to the handler", function()
   local resolved, keyword, world_seen
   local ir = _ir({ { keyword = "Then", text = "玩家穿上槽位<新槽位>的皮肤" } }, { { ["新槽位"] = "3" } })
   local result = runtime.run_feature(ir, {
@@ -125,14 +125,14 @@ function TestRuntime:test_passes_world_resolved_text_and_the_step_to_the_handler
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(resolved, "玩家穿上槽位3的皮肤")
-  luassert.is.equal(keyword, "Then")
+  luassert.is.equal("玩家穿上槽位3的皮肤", resolved)
+  luassert.is.equal("Then", keyword)
   luassert.is_true(world_seen.touched)
-end
+end)
 
 -- -------------------------------------------------- failures
 
-function TestRuntime:test_rejects_a_step_no_handler_shape_matches()
+it("rejects a step without a matching handler", function()
   local ir = _ir({ { text = "无人认领的步骤<槽位>" } }, { { ["槽位"] = "1" } })
   local result = runtime.run_feature(ir, {})
 
@@ -141,9 +141,9 @@ function TestRuntime:test_rejects_a_step_no_handler_shape_matches()
   luassert.truthy(message:find("unsupported step", 1, true), message)
   luassert.truthy(message:find("无人认领的步骤<槽位>", 1, true), message)
   luassert.truthy(message:find("features/test.feature:第11行", 1, true), message)
-end
+end)
 
-function TestRuntime:test_names_the_chinese_column_when_the_example_has_no_value_for_a_placeholder()
+it("names the Chinese column for missing example value", function()
   local ir = _ir(
     { { text = "玩家穿上槽位<p1>的皮肤" } },
     { { ["其他列"] = "x" } },
@@ -157,9 +157,9 @@ function TestRuntime:test_names_the_chinese_column_when_the_example_has_no_value
   local message = runtime.format_failures(result)
   luassert.truthy(message:find("missing example value", 1, true), message)
   luassert.truthy(message:find("新槽位", 1, true), message)
-end
+end)
 
-function TestRuntime:test_surfaces_a_handlers_own_failure_message()
+it("surfaces the handler failure message", function()
   local ir = _ir({ { text = "玩家穿上槽位<新槽位>的皮肤" } }, { { ["新槽位"] = "9" } })
   local result = runtime.run_feature(ir, {
     ["玩家穿上槽位<槽位>的皮肤"] = function() return nil, "no skin at slot 9" end,
@@ -167,9 +167,9 @@ function TestRuntime:test_surfaces_a_handlers_own_failure_message()
 
   luassert.is_false(result.ok)
   luassert.truthy(runtime.format_failures(result):find("no skin at slot 9", 1, true))
-end
+end)
 
-function TestRuntime:test_runs_background_steps_before_scenario_steps_and_reports_each_example()
+it("runs background before scenario and reports each example", function()
   local calls = {}
   local ir = _ir(
     { { text = "玩家穿上槽位<新槽位>的皮肤" } },
@@ -193,14 +193,14 @@ function TestRuntime:test_runs_background_steps_before_scenario_steps_and_report
 
   luassert.is_false(result.ok)
   luassert.is.same({ "background", "equip:1", "background", "equip:2" }, calls)
-  luassert.is.equal(#result.failures, 2)
-  luassert.is.equal(result.failures[1].name, "测试场景/example_1")
+  luassert.is.equal(2, #result.failures)
+  luassert.is.equal("测试场景/example_1", result.failures[1].name)
   luassert.truthy(runtime.format_failures(result):find("boom 2", 1, true))
-end
+end)
 
 -- -------------------------------------------------- spec binding
 
-function TestRuntime:test_defines_one_spec_per_example()
+it("defines one spec per example", function()
   local defined = {}
   local ir = _ir(
     { { text = "玩家穿上槽位<新槽位>的皮肤" } },
@@ -212,15 +212,15 @@ function TestRuntime:test_defines_one_spec_per_example()
     defined[#defined + 1] = { name = name, fn = fn }
   end)
 
-  luassert.is.equal(#defined, 2)
-  luassert.is.equal(defined[1].name, "测试场景/example_1")
-  luassert.is.equal(defined[2].name, "测试场景/example_2")
+  luassert.is.equal(2, #defined)
+  luassert.is.equal("测试场景/example_1", defined[1].name)
+  luassert.is.equal("测试场景/example_2", defined[2].name)
   luassert.has_no.errors(defined[1].fn)
-end
+end)
 
 -- -------------------------------------------------- inline-capture patterns
 
-function TestRuntime:test_matches_a_pattern_when_exact_and_shape_both_miss_coercing_int_captures()
+it("matches fallback pattern and coerces integer captures", function()
   local seen
   local ir = _ir({ { text = "玩家掷出 5 点" } }, { {} })
   local result = runtime.run_feature(ir, {
@@ -233,10 +233,10 @@ function TestRuntime:test_matches_a_pattern_when_exact_and_shape_both_miss_coerc
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(seen, 5)
-end
+  luassert.is.equal(5, seen)
+end)
 
-function TestRuntime:test_matches_against_the_resolved_step_text_not_the_raw_placeholder()
+it("matches patterns against resolved step text", function()
   -- A pruned Examples column leaves a step that mixes a literal with a live
   -- placeholder (`玩家2附体<神灵>持续3回合`). The pattern tier must see the
   -- example value, not the `<神灵>` spelling.
@@ -258,12 +258,12 @@ function TestRuntime:test_matches_against_the_resolved_step_text_not_the_raw_pla
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(seat, 2)
-  luassert.is.equal(deity, "财神")
-  luassert.is.equal(turns, 3)
-end
+  luassert.is.equal(2, seat)
+  luassert.is.equal("财神", deity)
+  luassert.is.equal(3, turns)
+end)
 
-function TestRuntime:test_prefers_an_exact_handler_over_a_matching_pattern()
+it("prefers exact handler over matching pattern", function()
   local called
   local ir = _ir({ { text = "玩家掷出 5 点" } }, { {} })
   local result = runtime.run_feature(ir, {
@@ -276,10 +276,10 @@ function TestRuntime:test_prefers_an_exact_handler_over_a_matching_pattern()
   })
 
   luassert.is_true(result.ok, runtime.format_failures(result))
-  luassert.is.equal(called, "exact")
-end
+  luassert.is.equal("exact", called)
+end)
 
-function TestRuntime:test_reports_an_ambiguous_pattern_when_two_patterns_match()
+it("reports ambiguity when two patterns match", function()
   local ir = _ir({ { text = "值 7" } }, { {} })
   local result = runtime.run_feature(ir, {
     __patterns = {
@@ -293,9 +293,9 @@ function TestRuntime:test_reports_an_ambiguous_pattern_when_two_patterns_match()
   luassert.truthy(message:find("ambiguous pattern", 1, true), message)
   luassert.truthy(message:find("值 {a}", 1, true), message)
   luassert.truthy(message:find("值 {b}", 1, true), message)
-end
+end)
 
-function TestRuntime:test_hints_the_nearest_pattern_when_nothing_matches()
+it("hints nearest pattern when nothing matches", function()
   local ir = _ir({ { text = "玩家掷出 abc 点" } }, { {} })
   local result = runtime.run_feature(ir, {
     __patterns = {
@@ -307,9 +307,9 @@ function TestRuntime:test_hints_the_nearest_pattern_when_nothing_matches()
   local message = runtime.format_failures(result)
   luassert.truthy(message:find("unsupported step", 1, true), message)
   luassert.truthy(message:find("最近候选", 1, true), message)
-end
+end)
 
-function TestRuntime:test_failure_runs_deferred_cleanup_before_the_next_example()
+it("failure runs deferred cleanup before next example", function()
   local patched = false
   local ir = _ir({ { text = "临时补丁" }, { text = "故意失败" } }, { {}, {} })
   local result = runtime.run_feature(ir, {
@@ -324,6 +324,5 @@ function TestRuntime:test_failure_runs_deferred_cleanup_before_the_next_example(
   luassert.is_false(result.ok)
   luassert.is.equal(2, #result.failures)
   luassert.is_false(patched)
-end
-
-return TestRuntime
+end)
+end)

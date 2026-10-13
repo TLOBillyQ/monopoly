@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local check = require("luassert")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
@@ -75,9 +76,10 @@ end
 -- #361 P4:原差分跳过汇报 e2e 已删——与 test_mutator_level 集成层重复;
 -- e2e 层独有价值仅「stderr 不污染 stdout JSON」与「jsonl 按 workers 拆分」,
 -- 即下方两例。
-TestMutatorStatus = {}
+-- POSIX-only examples are excluded, never counted as passed on Windows.
 
-function TestMutatorStatus:test_writes_status_lines_to_stderr_without_polluting_the_json_report(_self)
+local function
+writes_status_lines_to_stderr_without_polluting_the_json_report(_self)
   local tmp_dir = _tmp_dir("acceptance_mutator_status")
   local feature_path = path_lib.join_path(tmp_dir, "status.feature")
   _write_sample_feature(feature_path)
@@ -88,32 +90,33 @@ function TestMutatorStatus:test_writes_status_lines_to_stderr_without_polluting_
     status_interval = "30s",
   })
 
-  lu.assertTrue(run.result.ok, run.stderr)
-  lu.assertIsTable(json.decode(run.stdout))
-  lu.assertNil(run.stdout:find("^status%s+"))
-  lu.assertTrue(fs_lib.path_exists(path_lib.join_path(tmp_dir, "status_work/mutations/m1/feature.json")))
-  lu.assertFalse(fs_lib.path_exists(path_lib.join_path(tmp_dir, "status_work/m1/feature.json")))
+  check.is_true(run.result.ok, run.stderr)
+  check.is_table(json.decode(run.stdout))
+  check.is_nil(run.stdout:find("^status%s+"))
+  check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "status_work/mutations/m1/feature.json")))
+  check.is_false(fs_lib.path_exists(path_lib.join_path(tmp_dir, "status_work/m1/feature.json")))
 
   local worker_input = assert(fs_lib.read_file(path_lib.join_path(tmp_dir, "status_work/runner-worker-input.jsonl")))
   local first_job = json.decode(worker_input:match("([^\n]+)"))
-  lu.assertIs(
-    first_job.feature_json,
-    path_lib.join_path(tmp_dir, "status_work/mutations/m1/feature.json")
+  check.equal(
+    path_lib.join_path(tmp_dir, "status_work/mutations/m1/feature.json"),
+    first_job.feature_json
   )
-  lu.assertIs(
-    first_job.work_dir,
-    path_lib.join_path(tmp_dir, "status_work/mutations/m1")
+  check.equal(
+    path_lib.join_path(tmp_dir, "status_work/mutations/m1"),
+    first_job.work_dir
   )
 
   local status_line = _last_status_line(run.stderr)
-  lu.assertIsString(status_line)
-  lu.assertEvalToTrue(status_line:find("total=2", 1, true))
-  lu.assertEvalToTrue(status_line:find("completed=2", 1, true))
-  lu.assertEvalToTrue(status_line:find("running=0", 1, true))
-  lu.assertEvalToTrue(status_line:find("elapsed=", 1, true))
+  check.is_string(status_line)
+  check.truthy(status_line:find("total=2", 1, true))
+  check.truthy(status_line:find("completed=2", 1, true))
+  check.truthy(status_line:find("running=0", 1, true))
+  check.truthy(status_line:find("elapsed=", 1, true))
 end
 
-function TestMutatorStatus:test_splits_runner_worker_jobs_across_requested_workers(_self)
+local function
+splits_runner_worker_jobs_across_requested_workers(_self)
   local tmp_dir = _tmp_dir("acceptance_mutator_status_workers")
   local feature_path = path_lib.join_path(tmp_dir, "status.feature")
   _write_sample_feature(feature_path)
@@ -124,9 +127,12 @@ function TestMutatorStatus:test_splits_runner_worker_jobs_across_requested_worke
     workers = 2,
   })
 
-  lu.assertTrue(run.result.ok, run.stderr)
-  lu.assertTrue(fs_lib.path_exists(path_lib.join_path(tmp_dir, "workers_work/runner-worker-input-1.jsonl")))
-  lu.assertTrue(fs_lib.path_exists(path_lib.join_path(tmp_dir, "workers_work/runner-worker-input-2.jsonl")))
+  check.is_true(run.result.ok, run.stderr)
+  check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "workers_work/runner-worker-input-1.jsonl")))
+  check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "workers_work/runner-worker-input-2.jsonl")))
 end
 
-return TestMutatorStatus
+describe("acceptance mutator status POSIX capability", function()
+  it("writes_status_lines_to_stderr_without_polluting_the_json_report", writes_status_lines_to_stderr_without_polluting_the_json_report)
+  it("splits_runner_worker_jobs_across_requested_workers", splits_runner_worker_jobs_across_requested_workers)
+end)

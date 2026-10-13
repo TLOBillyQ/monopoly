@@ -2,7 +2,7 @@
 if arg then rawset(arg, 0, "tools/packages/spec_lane/test/test_spec_lane.lua") end
 require("test.bootstrap").install_package_paths()
 
-local lu = require("luaunit")
+local check = require("luassert")
 local spec_lane = require("packages.spec_lane.spec_lane")
 local lane_tools = require("packages.spec_lane.spec_lane_tools")
 
@@ -15,46 +15,52 @@ local function _all_pass_tap()
   }, "\n") .. "\n"
 end
 
-TestSpecLaneSpec = {}
+-- Public argument, runner, sharding and discovery cases.
 
-function TestSpecLaneSpec:test_parse_args_requires_profile()
+local function
+parse_args_requires_profile()
   local opts, err = spec_lane.parse_args({})
-  lu.assertNil(opts)
-  lu.assertEvalToTrue(tostring(err):find("missing --profile", 1, true))
+  check.is_nil(opts)
+  check.truthy(tostring(err):find("missing --profile", 1, true))
 end
 
-function TestSpecLaneSpec:test_parse_args_parses_profile()
+local function
+parse_args_parses_profile()
   local opts = spec_lane.parse_args({ "--profile", "contract" })
-  lu.assertIs(opts.profile, "contract")
-  lu.assertFalse(opts.verbose)
+  check.equal("contract", opts.profile)
+  check.is_false(opts.verbose)
 end
 
-function TestSpecLaneSpec:test_parse_args_parses_verbose_alongside_profile()
+local function
+parse_args_parses_verbose_alongside_profile()
   local opts = spec_lane.parse_args({ "--profile", "guards", "--verbose" })
-  lu.assertIs(opts.profile, "guards")
-  lu.assertTrue(opts.verbose)
+  check.equal("guards", opts.profile)
+  check.is_true(opts.verbose)
 end
 
 -- --busted-bin 不再是合法选项。
-function TestSpecLaneSpec:test_parse_args_rejects_removed_busted_bin_escape_hatch()
+local function
+parse_args_rejects_removed_busted_bin_escape_hatch()
   local opts, err = spec_lane.parse_args({ "--profile", "contract", "--busted-bin", "custom-busted" })
-  lu.assertNil(opts)
-  lu.assertEvalToTrue(tostring(err):find("unknown option: --busted-bin", 1, true))
+  check.is_nil(opts)
+  check.truthy(tostring(err):find("unknown option: --busted-bin", 1, true))
 end
 
 -- compress_tap 是 foundation.tap_summary.compress 的纯转发(#361 P5):行为面
 -- 全在 test_tap_summary.lua,这里只留一个透传冒烟钉住接线没断。
-function TestSpecLaneSpec:test_compress_tap_collapses_all_pass_tap_to_single_passed_line()
+local function
+compress_tap_collapses_all_pass_tap_to_single_passed_line()
   local out, passed, failed = spec_lane.compress_tap(_all_pass_tap())
-  lu.assertIs(out, "3 passed\n")
-  lu.assertIs(passed, 3)
-  lu.assertIs(failed, 0)
+  check.equal("3 passed\n", out)
+  check.equal(3, passed)
+  check.equal(0, failed)
 end
 
 -- 不再支持 busted_bin 单 token 覆写，命令
 -- 前缀恒为 argv_prefix 默认值({ lua5.4, runner.lua })。workers=1 强制单进程
 -- 串行路径(分片判定要求 worker > 1 且 profile 文件数超过阈值)。
-function TestSpecLaneSpec:test_run_defaults_to_explicit_dual_backend_runner()
+local function
+run_defaults_to_explicit_dual_backend_runner()
   local captured
   local result = spec_lane.run({
     profile = "contract",
@@ -65,19 +71,20 @@ function TestSpecLaneSpec:test_run_defaults_to_explicit_dual_backend_runner()
     end,
   })
 
-  lu.assertEvalToTrue(tostring(captured[2]):find("test_runner/runner%.lua"))
-  lu.assertIs(captured[3], "--output=TAP")
-  lu.assertIs(captured[4], "--run")
-  lu.assertIs(captured[5], "contract")
-  lu.assertIs(result.code, 0)
-  lu.assertIs(result.stdout, "3 passed\n")
+  check.truthy(tostring(captured[2]):find("test_runner/runner%.lua"))
+  check.equal("--output=TAP", captured[3])
+  check.equal("--run", captured[4])
+  check.equal("contract", captured[5])
+  check.equal(0, result.code)
+  check.equal("3 passed\n", result.stdout)
 end
 
 -- LPT 分片路径契约:文件数超过阈值(20)的具名 profile 且 worker > 1 时,每
 -- worker 一条 runner 进程(helper/output/pattern 取自 profile config,
 -- `--` 后显式文件列表),各 lane 输出按 lane 顺序聚合后统一压缩。依赖真实
 -- test/contract 文件数 > 20(22 个)触发分片;run_lanes 注入替身避免真 spawn。
-function TestSpecLaneSpec:test_sharded_profile_runs_one_runner_lane_per_worker()
+local function
+sharded_profile_runs_one_runner_lane_per_worker()
   local captured_lanes
   local result = spec_lane.run({
     profile = "contract",
@@ -95,26 +102,27 @@ function TestSpecLaneSpec:test_sharded_profile_runs_one_runner_lane_per_worker()
     end,
   })
 
-  lu.assertTrue(#captured_lanes >= 2,
+  check.is_true(#captured_lanes >= 2,
     "contract should shard into >= 2 lanes, got " .. #captured_lanes)
   for _, lane in ipairs(captured_lanes) do
-    lu.assertEvalToTrue(lane.label:match("^contract_w%d+$"), "lane label: " .. lane.label)
+    check.truthy(lane.label:match("^contract_w%d+$"), "lane label: " .. lane.label)
     local argv = table.concat(lane.cmd, "\n")
-    lu.assertEvalToTrue(argv:find("test_runner/runner%.lua"))
-    lu.assertStrContains(argv, "--helper=test/helper.lua")
-    lu.assertStrContains(argv, "--output=TAP")
-    lu.assertStrContains(argv, "--pattern=test_")
-    lu.assertStrContains(argv, "test/contract/")
+    check.truthy(argv:find("test_runner/runner%.lua"))
+    check.matches("--helper=test/helper.lua", argv, 1, true)
+    check.matches("--output=TAP", argv, 1, true)
+    check.matches("--pattern=test_", argv, 1, true)
+    check.matches("test/contract/", argv, 1, true)
   end
   -- 3 条 lane × 3 条 ok 行 → 聚合压缩摘要
-  lu.assertIs(result.code, 0)
-  lu.assertIs(result.passed, #captured_lanes * 3)
-  lu.assertIs(result.failed, 0)
-  lu.assertIs(result.stdout, tostring(#captured_lanes * 3) .. " passed\n")
+  check.equal(0, result.code)
+  check.equal(#captured_lanes * 3, result.passed)
+  check.equal(0, result.failed)
+  check.equal(tostring(#captured_lanes * 3) .. " passed\n", result.stdout)
 end
 
 -- 分片失败聚合:任一 lane 输出带 not ok → failed 计数进摘要、exit code 1。
-function TestSpecLaneSpec:test_sharded_failure_aggregates_into_failed_summary()
+local function
+sharded_failure_aggregates_into_failed_summary()
   local result = spec_lane.run({
     profile = "contract",
     workers = 3,
@@ -132,55 +140,70 @@ function TestSpecLaneSpec:test_sharded_failure_aggregates_into_failed_summary()
     end,
   })
 
-  lu.assertIs(result.code, 1)
-  lu.assertIs(result.failed, 1)
-  lu.assertIs(result.passed, 7)
-  lu.assertEvalToTrue(result.stdout:find("not ok 2 - failing: shard two broke", 1, true),
+  check.equal(1, result.code)
+  check.equal(1, result.failed)
+  check.equal(7, result.passed)
+  check.truthy(result.stdout:find("not ok 2 - failing: shard two broke", 1, true),
     "failure line must survive aggregation: " .. result.stdout)
-  lu.assertEvalToTrue(result.stdout:find("7 passed, 1 failed", 1, true),
+  check.truthy(result.stdout:find("7 passed, 1 failed", 1, true),
     "summary must count the shard failure: " .. result.stdout)
 end
 
 -- #298 的发现式包结构：tooling 车道 33 行手维护 ROOT 清单
 -- 废除,塌缩为 tools/**/test/ + test/support/**/test/ 双口径自动收养。
-function TestSpecLaneSpec:test_discover_test_roots_covers_both_scopes()
+local function
+discover_test_roots_covers_both_scopes()
   local roots, err = lane_tools.discover_test_roots()
-  lu.assertNotNil(roots, tostring(err))
-  lu.assertIs(err, nil)
-  lu.assertTrue(#roots > 0, "discovery must find at least one test root")
+  check.is_not_nil(roots, tostring(err))
+  check.equal(nil, err)
+  check.is_true(#roots > 0, "discovery must find at least one test root")
 end
 
-function TestSpecLaneSpec:test_discover_test_roots_returns_sorted_unique_test_dirs()
+local function
+discover_test_roots_returns_sorted_unique_test_dirs()
   local roots = lane_tools.discover_test_roots()
   local seen = {}
   local previous = ""
   for _, root in ipairs(roots) do
-    lu.assertEvalToTrue(root:find("/test$"), "root must be a test dir: " .. root)
-    lu.assertIsNil(seen[root], "duplicate root: " .. root)
+    check.truthy(root:find("/test$"), "root must be a test dir: " .. root)
+    check.is_nil(seen[root], "duplicate root: " .. root)
     seen[root] = true
-    lu.assertEvalToTrue(previous <= root, "roots must be sorted: " .. previous .. " > " .. root)
+    check.truthy(previous <= root, "roots must be sorted: " .. previous .. " > " .. root)
     previous = root
   end
 end
 
 -- 双口径同时匹配新旧布局:同名对时代(foo.lua + foo/test/)与目录即包时代
 -- (<pkg>/test/)的测试目录都要被收养。
-function TestSpecLaneSpec:test_discover_test_roots_adopts_both_layout_shapes()
+local function
+discover_test_roots_adopts_both_layout_shapes()
   local roots = lane_tools.discover_test_roots()
   local index = {}
   for _, root in ipairs(roots) do
     index[root] = true
   end
   -- 目录即包时代:tools/packages/spec_lane.lua + 同包 test/
-  lu.assertTrue(index["tools/packages/spec_lane/test"],
+  check.is_true(index["tools/packages/spec_lane/test"],
     "package-as-dir root must be adopted")
   -- 同名对时代:test/support/behavior_parallel.lua + behavior_parallel/test/
-  lu.assertTrue(index["test/support/behavior_parallel/test"],
+  check.is_true(index["test/support/behavior_parallel/test"],
     "support same-name-pair root must be adopted")
   -- 目录即包时代:test/support/luaunit_runner_infra/ 无同名 .lua,纯 <pkg>/test/ 形态
-  lu.assertTrue(index["test/support/luaunit_runner_infra/test"],
+  check.is_true(index["test/support/luaunit_runner_infra/test"],
     "package-as-dir root must be adopted")
 end
 
 
-return TestSpecLaneSpec
+describe("spec lane public contracts", function()
+  it("parse_args_requires_profile", parse_args_requires_profile)
+  it("parse_args_parses_profile", parse_args_parses_profile)
+  it("parse_args_parses_verbose_alongside_profile", parse_args_parses_verbose_alongside_profile)
+  it("parse_args_rejects_removed_busted_bin_escape_hatch", parse_args_rejects_removed_busted_bin_escape_hatch)
+  it("compress_tap_collapses_all_pass_tap_to_single_passed_line", compress_tap_collapses_all_pass_tap_to_single_passed_line)
+  it("run_defaults_to_explicit_dual_backend_runner", run_defaults_to_explicit_dual_backend_runner)
+  it("sharded_profile_runs_one_runner_lane_per_worker", sharded_profile_runs_one_runner_lane_per_worker)
+  it("sharded_failure_aggregates_into_failed_summary", sharded_failure_aggregates_into_failed_summary)
+  it("discover_test_roots_covers_both_scopes", discover_test_roots_covers_both_scopes)
+  it("discover_test_roots_returns_sorted_unique_test_dirs", discover_test_roots_returns_sorted_unique_test_dirs)
+  it("discover_test_roots_adopts_both_layout_shapes", discover_test_roots_adopts_both_layout_shapes)
+end)

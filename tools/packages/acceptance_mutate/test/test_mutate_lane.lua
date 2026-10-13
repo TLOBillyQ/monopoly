@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local check = require("luassert")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
@@ -45,10 +46,10 @@ end
 -- test_mutator_level 集成层重复,健康路径与上层重复;差分语义面由
 -- test_scenario_manifest(decide_scenario_skip 全分支)+ test_mutator_level
 -- (skipped/total 计数)承接。此处只留探针失败大声退非零的回归钉。
-TestMutateLane = {}
+describe("mutate lane boundary", function()
 
 -- Windows 上即使 runner 配置损坏,也先报告平台不可用(#96),不给变异结论。
-function TestMutateLane:test_reports_unavailable_before_probing_a_broken_runner()
+it("reports unavailable before probing a broken runner", function()
   local tmp_dir = _tmp_dir("mutate_lane_broken")
   local feature_path = path_lib.join_path(tmp_dir, "sample.feature")
   _write_sample_feature(feature_path)
@@ -60,12 +61,12 @@ function TestMutateLane:test_reports_unavailable_before_probing_a_broken_runner(
     level = "soft",
   })
 
-  lu.assertEquals(result.code, 3, result.output)
-  lu.assertEvalToTrue(tostring(result.output):find("status=unavailable", 1, true))
-  lu.assertNil(tostring(result.output):find("infrastructure_error", 1, true),
+  check.same(3, result.code, result.output)
+  check.truthy(tostring(result.output):find("status=unavailable", 1, true))
+  check.is_nil(tostring(result.output):find("infrastructure_error", 1, true),
     "平台不可用要在 runner 探针之前诊断")
 
   fs_lib.remove_path(tmp_dir)
-end
+end)
 
-return TestMutateLane
+end)

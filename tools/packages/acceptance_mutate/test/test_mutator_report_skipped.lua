@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local check = require("luassert")
 local json = require("acceptance4lua.json")
 local mutator = require("acceptance4lua.mutator")
 
@@ -19,35 +20,35 @@ local function _summary(overrides)
   return base
 end
 
-TestMutatorReportSkipped = {}
+describe("mutator report skipped", function()
 
-function TestMutatorReportSkipped:test_omits_the_skipped_line_when_no_scenarios_or_mutations_were_skipped()
+it("omits the skipped line when no scenarios or mutations were skipped", function()
   local report = { summary = _summary(), results = {} }
   local text = mutator.format_text_report(report)
-  lu.assertEvalToTrue(text:find("total=0", 1, true))
-  lu.assertNil(text:find("skipped_scenarios", 1, true))
-  lu.assertNil(text:find("skipped_mutations", 1, true))
-end
+  check.truthy(text:find("total=0", 1, true))
+  check.is_nil(text:find("skipped_scenarios", 1, true))
+  check.is_nil(text:find("skipped_mutations", 1, true))
+end)
 
-function TestMutatorReportSkipped:test_emits_the_skipped_line_when_skipped_scenarios_is_positive()
+it("emits the skipped line when skipped scenarios is positive", function()
   local report = {
     summary = _summary({ skipped_scenarios = 3, skipped_mutations = 0 }),
     results = {},
   }
   local text = mutator.format_text_report(report)
-  lu.assertEvalToTrue(text:find("skipped_scenarios=3 skipped_mutations=0", 1, true))
-end
+  check.truthy(text:find("skipped_scenarios=3 skipped_mutations=0", 1, true))
+end)
 
-function TestMutatorReportSkipped:test_emits_the_skipped_line_when_only_skipped_mutations_is_positive()
+it("emits the skipped line when only skipped mutations is positive", function()
   local report = {
     summary = _summary({ skipped_scenarios = 0, skipped_mutations = 7 }),
     results = {},
   }
   local text = mutator.format_text_report(report)
-  lu.assertEvalToTrue(text:find("skipped_scenarios=0 skipped_mutations=7", 1, true))
-end
+  check.truthy(text:find("skipped_scenarios=0 skipped_mutations=7", 1, true))
+end)
 
-function TestMutatorReportSkipped:test_places_the_skipped_line_immediately_after_the_summary_line()
+it("places the skipped line immediately after the summary line", function()
   local report = {
     summary = _summary({ killed = 2, skipped_scenarios = 1, skipped_mutations = 4 }),
     results = {},
@@ -57,11 +58,11 @@ function TestMutatorReportSkipped:test_places_the_skipped_line_immediately_after
   for line in text:gmatch("([^\n]+)") do
     lines[#lines + 1] = line
   end
-  lu.assertEvalToTrue(lines[1]:find("total="))
-  lu.assertEvalToTrue(lines[2]:find("skipped_scenarios="))
-end
+  check.truthy(lines[1]:find("total="))
+  check.truthy(lines[2]:find("skipped_scenarios="))
+end)
 
-function TestMutatorReportSkipped:test_omits_killed_mutation_rows_by_default()
+it("omits killed mutation rows by default", function()
   local report = {
     summary = _summary({ total = 2, killed = 2 }),
     results = {
@@ -82,12 +83,12 @@ function TestMutatorReportSkipped:test_omits_killed_mutation_rows_by_default()
 
   local text = mutator.format_text_report(report)
 
-  lu.assertEvalToTrue(text:find("total=2 killed=2 survived=0 errors=0", 1, true))
-  lu.assertNil(text:find("first noisy killed detail", 1, true))
-  lu.assertNil(text:find("second noisy killed detail", 1, true))
-end
+  check.truthy(text:find("total=2 killed=2 survived=0 errors=0", 1, true))
+  check.is_nil(text:find("first noisy killed detail", 1, true))
+  check.is_nil(text:find("second noisy killed detail", 1, true))
+end)
 
-function TestMutatorReportSkipped:test_keeps_killed_mutation_rows_when_verbose_is_requested()
+it("keeps killed mutation rows when verbose is requested", function()
   local report = {
     summary = _summary({ total = 1, killed = 1 }),
     results = {
@@ -102,10 +103,10 @@ function TestMutatorReportSkipped:test_keeps_killed_mutation_rows_when_verbose_i
 
   local text = mutator.format_text_report(report, { verbose = true })
 
-  lu.assertEvalToTrue(text:find("verbose killed detail", 1, true))
-end
+  check.truthy(text:find("verbose killed detail", 1, true))
+end)
 
-function TestMutatorReportSkipped:test_preserves_survived_diagnostics_without_verbose()
+it("preserves survived diagnostics without verbose", function()
   local report = {
     summary = _summary({ total = 1, survived = 1 }),
     results = {
@@ -120,29 +121,29 @@ function TestMutatorReportSkipped:test_preserves_survived_diagnostics_without_ve
 
   local text = mutator.format_text_report(report)
 
-  lu.assertEvalToTrue(text:find("important survivor", 1, true))
-  lu.assertEvalToTrue(text:find("survivor error", 1, true))
-  lu.assertEvalToTrue(text:find("runner output", 1, true))
-end
+  check.truthy(text:find("important survivor", 1, true))
+  check.truthy(text:find("survivor error", 1, true))
+  check.truthy(text:find("runner output", 1, true))
+end)
 
-function TestMutatorReportSkipped:test_omits_skippedscenarios_and_skippedmutations_when_no_skips_occurred()
+it("omits skipped scenarios and skipped mutations when no skips occurred", function()
   local report = { summary = _summary(), results = {} }
   local decoded = json.decode(mutator.format_json_report(report))
-  lu.assertNil(decoded.summary.SkippedScenarios)
-  lu.assertNil(decoded.summary.SkippedMutations)
-end
+  check.is_nil(decoded.summary.SkippedScenarios)
+  check.is_nil(decoded.summary.SkippedMutations)
+end)
 
-function TestMutatorReportSkipped:test_includes_skippedscenarios_and_skippedmutations_when_skips_are_present()
+it("includes skipped scenarios and skipped mutations when skips are present", function()
   local report = {
     summary = _summary({ skipped_scenarios = 2, skipped_mutations = 5 }),
     results = {},
   }
   local decoded = json.decode(mutator.format_json_report(report))
-  lu.assertIs(decoded.summary.SkippedScenarios, 2)
-  lu.assertIs(decoded.summary.SkippedMutations, 5)
-end
+  check.equal(2, decoded.summary.SkippedScenarios)
+  check.equal(5, decoded.summary.SkippedMutations)
+end)
 
-function TestMutatorReportSkipped:test_preserves_the_existing_summary_key_casing_alongside_the_new_fields()
+it("preserves existing summary key casing alongside the new fields", function()
   local report = {
     summary = _summary({
       total = 3,
@@ -153,13 +154,13 @@ function TestMutatorReportSkipped:test_preserves_the_existing_summary_key_casing
     results = {},
   }
   local decoded = json.decode(mutator.format_json_report(report))
-  lu.assertIs(decoded.summary.Total, 3)
-  lu.assertIs(decoded.summary.Killed, 3)
-  lu.assertIs(decoded.summary.Survived, 0)
-  lu.assertIs(decoded.summary.Errors, 0)
-  lu.assertIs(decoded.summary.SkippedScenarios, 1)
-  lu.assertIs(decoded.summary.SkippedMutations, 2)
-end
+  check.equal(3, decoded.summary.Total)
+  check.equal(3, decoded.summary.Killed)
+  check.equal(0, decoded.summary.Survived)
+  check.equal(0, decoded.summary.Errors)
+  check.equal(1, decoded.summary.SkippedScenarios)
+  check.equal(2, decoded.summary.SkippedMutations)
+end)
 
 
-return TestMutatorReportSkipped
+end)

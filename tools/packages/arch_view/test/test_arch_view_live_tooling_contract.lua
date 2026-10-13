@@ -1,13 +1,8 @@
+require("test.bootstrap").install_package_paths()
 local suite = require("test.support.tooling_suites.architecture.arch_view_live_tooling_contract")
-local cases = suite.tests or {}
 
-TestArchViewLiveToolingContract = {}
-
-for _, case in ipairs(cases) do
-  TestArchViewLiveToolingContract["test_" .. case.name] = function(self)
-    case.run()
+describe("arch view live tooling contracts", function()
+  for _, case in ipairs(suite.tests) do
+    it(case.name, case.run)
   end
-end
-
-
-return TestArchViewLiveToolingContract
+end)

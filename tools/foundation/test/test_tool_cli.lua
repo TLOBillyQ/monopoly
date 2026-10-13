@@ -3,20 +3,19 @@ if arg then rawset(arg, 0, "tools/foundation/test/test_tool_cli.lua") end
 
 require("test.bootstrap").install_package_paths()
 
-local lu = require("luaunit")
+local check = require("luassert")
 local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local tool_cli = require("foundation.tool_cli")
 
-TestToolCli = {}
 
 -- 每个用例一间临时 fixture 仓:package.path 挂上临时目录,teardown 时还原并
 -- 清掉 require 缓存,避免用例间串扰。
 local function _with_fixture_root(body)
   local root = env_lib.make_temp_path("tool_cli_spec", "")
   fs_lib.remove_path(root)
-  lu.assertTrue(fs_lib.ensure_dir(root))
+  check.is_true(fs_lib.ensure_dir(root))
   local original_path = package.path
   package.path = package.path .. ";" .. root .. "/?.lua"
   local ok, err = pcall(body, root)
@@ -28,40 +27,41 @@ local function _with_fixture_root(body)
   end
 end
 
-function TestToolCli:test_normalize_exit_code_passes_numbers_through()
-  lu.assertIs(tool_cli.normalize_exit_code(0), 0)
-  lu.assertIs(tool_cli.normalize_exit_code(1), 1)
-  lu.assertIs(tool_cli.normalize_exit_code(2), 2)
-end
+describe("tool cli", function()
+it("normalize exit code passes numbers through", function()
+  check.equal(0, tool_cli.normalize_exit_code(0))
+  check.equal(1, tool_cli.normalize_exit_code(1))
+  check.equal(2, tool_cli.normalize_exit_code(2))
+end)
 
-function TestToolCli:test_normalize_exit_code_maps_truthy_and_falsy()
-  lu.assertIs(tool_cli.normalize_exit_code(true), 0)
-  lu.assertIs(tool_cli.normalize_exit_code(false), 1)
-  lu.assertIs(tool_cli.normalize_exit_code(nil), 1)
-end
+it("normalize exit code maps truthy and falsy", function()
+  check.equal(0, tool_cli.normalize_exit_code(true))
+  check.equal(1, tool_cli.normalize_exit_code(false))
+  check.equal(1, tool_cli.normalize_exit_code(nil))
+end)
 
-function TestToolCli:test_merge_env_overlays_overrides_on_base()
+it("merge env overlays overrides on base", function()
   local merged = tool_cli.merge_env({ from_base = "base", shared = "base-default" }, { shared = "override" })
 
-  lu.assertIs(merged.from_base, "base")
-  lu.assertIs(merged.shared, "override")
-end
+  check.equal("base", merged.from_base)
+  check.equal("override", merged.shared)
+end)
 
-function TestToolCli:test_merge_env_tolerates_nil_sides_and_does_not_mutate_inputs()
+it("merge env tolerates nil sides and does not mutate inputs", function()
   local base = { key = "base" }
   local overrides = { key = "override" }
 
-  lu.assertEquals(tool_cli.merge_env(nil, nil), {})
-  lu.assertEquals(tool_cli.merge_env(base, nil), { key = "base" })
-  lu.assertEquals(tool_cli.merge_env(nil, overrides), { key = "override" })
-  lu.assertEquals(base, { key = "base" })
-  lu.assertEquals(overrides, { key = "override" })
-end
+  check.same({}, tool_cli.merge_env(nil, nil))
+  check.same({ key = "base" }, tool_cli.merge_env(base, nil))
+  check.same({ key = "override" }, tool_cli.merge_env(nil, overrides))
+  check.same({ key = "base" }, base)
+  check.same({ key = "override" }, overrides)
+end)
 
-function TestToolCli:test_run_passes_caller_env_through_untouched()
+it("run passes caller env through untouched", function()
   _with_fixture_root(function(root)
     -- fixture 故意带 env 字段:断言 adapter 对它视而不见(不替 runner 合并)
-    lu.assertTrue(fs_lib.write_file(path_lib.join_path(root, "fixture_runner.lua"), table.concat({
+    check.is_true(fs_lib.write_file(path_lib.join_path(root, "fixture_runner.lua"), table.concat({
       "local M = { env = { from_runner = 'runner', shared = 'runner-default' } }",
       "function M.run(args, env)",
       "  M.captured = { args = args, env = env }",
@@ -78,17 +78,17 @@ function TestToolCli:test_run_passes_caller_env_through_untouched()
       caller_env
     )
 
-    lu.assertIs(code, 3)
+    check.equal(3, code)
     local captured = require("fixture_runner").captured
-    lu.assertEquals(captured.args, { "a", "b" })
+    check.same({ "a", "b" }, captured.args)
     -- merge 职责在 runner 侧(#323):cli adapter 原样透传,不替 runner 合并
-    lu.assertIs(captured.env, caller_env)
+    check.equal(caller_env, captured.env)
   end)
-end
+end)
 
-function TestToolCli:test_run_normalizes_boolean_runner_results()
+it("run normalizes boolean runner results", function()
   _with_fixture_root(function(root)
-    lu.assertTrue(fs_lib.write_file(path_lib.join_path(root, "fixture_runner.lua"), table.concat({
+    check.is_true(fs_lib.write_file(path_lib.join_path(root, "fixture_runner.lua"), table.concat({
       "local M = {}",
       "function M.run() return M.result end",
       "return M",
@@ -97,16 +97,16 @@ function TestToolCli:test_run_normalizes_boolean_runner_results()
     local runner = require("fixture_runner")
 
     runner.result = true
-    lu.assertIs(tool_cli.run({ runner_module = "fixture_runner", runner_script = "missing" }, {}, nil), 0)
+    check.equal(0, tool_cli.run({ runner_module = "fixture_runner", runner_script = "missing" }, {}, nil))
     runner.result = false
-    lu.assertIs(tool_cli.run({ runner_module = "fixture_runner", runner_script = "missing" }, {}, nil), 1)
+    check.equal(1, tool_cli.run({ runner_module = "fixture_runner", runner_script = "missing" }, {}, nil))
   end)
-end
+end)
 
-function TestToolCli:test_run_falls_back_to_subprocess_when_module_missing()
+it("run falls back to subprocess when module missing", function()
   _with_fixture_root(function(root)
     local script = path_lib.join_path(root, "fixture_script.lua")
-    lu.assertTrue(fs_lib.write_file(script, "os.exit(tonumber(arg[1]))\n"))
+    check.is_true(fs_lib.write_file(script, "os.exit(tonumber(arg[1]))\n"))
 
     local code = tool_cli.run(
       { runner_module = "no_such_module_xyz", runner_script = script },
@@ -114,30 +114,30 @@ function TestToolCli:test_run_falls_back_to_subprocess_when_module_missing()
       nil
     )
 
-    lu.assertIs(code, 7)
+    check.equal(7, code)
   end)
-end
+end)
 
-function TestToolCli:test_forward_subprocess_passes_args_and_exit_code()
+it("forward subprocess passes args and exit code", function()
   _with_fixture_root(function(root)
     local script = path_lib.join_path(root, "fixture_script.lua")
-    lu.assertTrue(fs_lib.write_file(script, "assert(arg[1] == 'has space')\nos.exit(5)\n"))
+    check.is_true(fs_lib.write_file(script, "assert(arg[1] == 'has space')\nos.exit(5)\n"))
 
-    lu.assertIs(tool_cli.forward_subprocess(script, { "has space" }), 5)
+    check.equal(5, tool_cli.forward_subprocess(script, { "has space" }))
   end)
-end
+end)
 
 -- lua_bin 显式钉定(#453):crap 在非 5.4 解释器下 re-exec 到 lua5.4,
 -- 子进程由钉定解释器执行而非 PATH 上的 lua。fixture 断言解释器身份。
-function TestToolCli:test_forward_subprocess_honors_explicit_lua_bin()
+it("forward subprocess honors explicit lua bin", function()
   _with_fixture_root(function(root)
     local script = path_lib.join_path(root, "fixture_lua54.lua")
-    lu.assertTrue(fs_lib.write_file(script,
+    check.is_true(fs_lib.write_file(script,
       "assert(_VERSION == 'Lua 5.4', 'must run under Lua 5.4, got ' .. _VERSION)\nos.exit(5)\n"))
     local lua54 = require("packages.luaunit_runner.lua54")
 
-    lu.assertIs(tool_cli.forward_subprocess(script, {}, lua54.detect_lua54()), 5)
+    check.equal(5, tool_cli.forward_subprocess(script, {}, lua54.detect_lua54()))
   end)
-end
+end)
 
-return TestToolCli
+end)

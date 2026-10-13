@@ -4,7 +4,7 @@ require("test.bootstrap").install_package_paths()
 
 -- sync_data.lua 的聚焦单测:UINodes → UIManagerNodes 转换(parse/render,移植自
 -- UIManager_web script.js,无 length 行)+ sync_from_deploy 沙箱文件系统行为。
-local lu = require("luaunit")
+local check = require("luassert")
 local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local sync_data = require("packages.data_sync.sync_data")
@@ -60,74 +60,76 @@ local function _make_deploy_dir(root)
   return deploy_dir
 end
 
-TestParseUinodes = {}
+describe("parse UI nodes", function()
 
-function TestParseUinodes.test_bracket_and_bare_and_commented_forms()
+it("parses bracket bare and commented forms", function()
   local data = sync_data.parse_uinodes(SAMPLE_UINODES)
-  lu.assertEquals(data["1519736575|1821865760"], { name = "位置-槽位1投影", node_type = "EImage" })
-  lu.assertEquals(data["1519736575|1002562102"], { name = "日志", node_type = "ELabel" })
+  check.same({ name = "位置-槽位1投影", node_type = "EImage" }, data["1519736575|1821865760"])
+  check.same({ name = "日志", node_type = "ELabel" }, data["1519736575|1002562102"])
   -- 同 id 后者覆盖:注释行里的"旧节点"覆盖裸键形式的"基础屏"(与 JS 一致)。
-  lu.assertEquals(data["1519736575|2147314485"], { name = "旧节点", node_type = "EImage" })
-end
+  check.same({ name = "旧节点", node_type = "EImage" }, data["1519736575|2147314485"])
+end)
 
-function TestParseUinodes.test_ignores_non_entry_lines()
+it("ignores non entry lines", function()
   local data = sync_data.parse_uinodes(SAMPLE_UINODES)
   local count = 0
   for _ in pairs(data) do
     count = count + 1
   end
-  lu.assertEquals(count, 3)
-end
+  check.same(3, count)
+end)
 
-function TestParseUinodes.test_empty_input_yields_empty_map()
-  lu.assertEquals(next(sync_data.parse_uinodes("")), nil)
-  lu.assertEquals(next(sync_data.parse_uinodes(nil)), nil)
-end
+it("empty input yields an empty map", function()
+  check.same(nil, next(sync_data.parse_uinodes("")))
+  check.same(nil, next(sync_data.parse_uinodes(nil)))
+end)
+end)
 
-TestRender = {}
+describe("render UI manager nodes", function()
 
-function TestRender.test_render_sorted_without_length_line()
+it("renders sorted nodes without a length line", function()
   local rendered = sync_data.render_ui_manager_nodes(sync_data.parse_uinodes(SAMPLE_UINODES))
-  lu.assertEquals(rendered, EXPECTED_RENDER)
-  lu.assertIsNil(rendered:find("length", 1, true))
-end
+  check.same(EXPECTED_RENDER, rendered)
+  check.is_nil(rendered:find("length", 1, true))
+end)
+end)
 
-TestSyncFromDeploy = {}
+describe("sync from sandbox deploy directory", function()
 
-function TestSyncFromDeploy.test_sync_writes_all_files()
+it("sync writes all files", function()
   _with_sandbox(function(root)
     local deploy_dir = _make_deploy_dir(root)
     local repo_root = root .. "/repo"
     fs_lib.ensure_dir(repo_root .. "/Data")
 
     local stats, err = sync_data.sync_from_deploy(deploy_dir, repo_root)
-    lu.assertNotIsNil(stats, tostring(err))
-    lu.assertEquals(stats.node_count, 3)
-    lu.assertTrue(stats.prefab_changed)
-    lu.assertTrue(stats.nodes_changed)
-    lu.assertTrue(stats.prefab_bytes > 0)
-    lu.assertTrue(stats.api_changed)
-    lu.assertTrue(stats.editor_api_changed)
-    lu.assertTrue(stats.api_bytes > 0)
-    lu.assertTrue(stats.editor_api_bytes > 0)
+    check.is_not_nil(stats, tostring(err))
+    check.same(3, stats.node_count)
+    check.is_true(stats.prefab_changed)
+    check.is_true(stats.nodes_changed)
+    check.is_true(stats.prefab_bytes > 0)
+    check.is_true(stats.api_changed)
+    check.is_true(stats.editor_api_changed)
+    check.is_true(stats.api_bytes > 0)
+    check.is_true(stats.editor_api_bytes > 0)
 
-    lu.assertEquals(fs_lib.read_file(repo_root .. "/Data/UIManagerNodes.lua"), EXPECTED_RENDER)
-    lu.assertEquals(
-      fs_lib.read_file(repo_root .. "/Data/Prefab.lua"),
-      fs_lib.read_file(deploy_dir .. "/Data/Prefab.lua")
+    check.same(EXPECTED_RENDER, fs_lib.read_file(repo_root .. "/Data/UIManagerNodes.lua"))
+    check.same(
+      fs_lib.read_file(deploy_dir .. "/Data/Prefab.lua"),
+      fs_lib.read_file(repo_root .. "/Data/Prefab.lua")
     )
-    lu.assertEquals(
-      fs_lib.read_file(repo_root .. "/EggyAPI.lua"),
-      fs_lib.read_file(deploy_dir .. "/EggyAPI.lua")
+    check.same(
+      fs_lib.read_file(deploy_dir .. "/EggyAPI.lua"),
+      fs_lib.read_file(repo_root .. "/EggyAPI.lua")
     )
-    lu.assertEquals(
-      fs_lib.read_file(repo_root .. "/EggyEditorAPI.lua"),
-      fs_lib.read_file(deploy_dir .. "/EggyEditorAPI.lua")
+    check.same(
+      fs_lib.read_file(deploy_dir .. "/EggyEditorAPI.lua"),
+      fs_lib.read_file(repo_root .. "/EggyEditorAPI.lua")
     )
   end)
-end
+end)
 
-function TestSyncFromDeploy.test_second_run_reports_no_change()
+it("second run reports no change", function()
   _with_sandbox(function(root)
     local deploy_dir = _make_deploy_dir(root)
     local repo_root = root .. "/repo"
@@ -135,15 +137,15 @@ function TestSyncFromDeploy.test_second_run_reports_no_change()
 
     sync_data.sync_from_deploy(deploy_dir, repo_root)
     local stats, err = sync_data.sync_from_deploy(deploy_dir, repo_root)
-    lu.assertNotIsNil(stats, tostring(err))
-    lu.assertFalse(stats.prefab_changed)
-    lu.assertFalse(stats.nodes_changed)
-    lu.assertFalse(stats.api_changed)
-    lu.assertFalse(stats.editor_api_changed)
+    check.is_not_nil(stats, tostring(err))
+    check.is_false(stats.prefab_changed)
+    check.is_false(stats.nodes_changed)
+    check.is_false(stats.api_changed)
+    check.is_false(stats.editor_api_changed)
   end)
-end
+end)
 
-function TestSyncFromDeploy.test_missing_prefab_is_error_and_writes_nothing()
+it("missing prefab is an error and writes nothing", function()
   _with_sandbox(function(root)
     local deploy_dir = root .. "/deploy"
     _write(deploy_dir .. "/Data/UINodes.lua", SAMPLE_UINODES)
@@ -151,13 +153,13 @@ function TestSyncFromDeploy.test_missing_prefab_is_error_and_writes_nothing()
     fs_lib.ensure_dir(repo_root .. "/Data")
 
     local stats, err = sync_data.sync_from_deploy(deploy_dir, repo_root)
-    lu.assertNil(stats)
-    lu.assertStrContains(tostring(err), "Prefab.lua")
-    lu.assertFalse(fs_lib.path_exists(repo_root .. "/Data/UIManagerNodes.lua"))
+    check.is_nil(stats)
+    check.matches("Prefab.lua", tostring(err), 1, true)
+    check.is_false(fs_lib.path_exists(repo_root .. "/Data/UIManagerNodes.lua"))
   end)
-end
+end)
 
-function TestSyncFromDeploy.test_missing_uinodes_is_error()
+it("missing UI nodes is an error", function()
   _with_sandbox(function(root)
     local deploy_dir = root .. "/deploy"
     _write(deploy_dir .. "/Data/Prefab.lua", "return {}\n")
@@ -165,12 +167,12 @@ function TestSyncFromDeploy.test_missing_uinodes_is_error()
     fs_lib.ensure_dir(repo_root .. "/Data")
 
     local stats, err = sync_data.sync_from_deploy(deploy_dir, repo_root)
-    lu.assertNil(stats)
-    lu.assertStrContains(tostring(err), "UINodes.lua")
+    check.is_nil(stats)
+    check.matches("UINodes.lua", tostring(err), 1, true)
   end)
-end
+end)
 
-function TestSyncFromDeploy.test_unparseable_uinodes_is_error_and_writes_nothing()
+it("unparseable UI nodes is an error and writes nothing", function()
   _with_sandbox(function(root)
     local deploy_dir = root .. "/deploy"
     _write(deploy_dir .. "/Data/Prefab.lua", "return {}\n")
@@ -181,13 +183,13 @@ function TestSyncFromDeploy.test_unparseable_uinodes_is_error_and_writes_nothing
     fs_lib.ensure_dir(repo_root .. "/Data")
 
     local stats, err = sync_data.sync_from_deploy(deploy_dir, repo_root)
-    lu.assertNil(stats)
-    lu.assertStrContains(tostring(err), "未解析出任何节点")
-    lu.assertFalse(fs_lib.path_exists(repo_root .. "/Data/Prefab.lua"))
+    check.is_nil(stats)
+    check.matches("未解析出任何节点", tostring(err), 1, true)
+    check.is_false(fs_lib.path_exists(repo_root .. "/Data/Prefab.lua"))
   end)
-end
+end)
 
-function TestSyncFromDeploy.test_missing_eggy_api_is_error_and_writes_nothing()
+it("missing Eggy API is an error and writes nothing", function()
   _with_sandbox(function(root)
     local deploy_dir = root .. "/deploy"
     _write(deploy_dir .. "/Data/Prefab.lua", "return {}\n")
@@ -197,14 +199,14 @@ function TestSyncFromDeploy.test_missing_eggy_api_is_error_and_writes_nothing()
     fs_lib.ensure_dir(repo_root .. "/Data")
 
     local stats, err = sync_data.sync_from_deploy(deploy_dir, repo_root)
-    lu.assertNil(stats)
-    lu.assertStrContains(tostring(err), "EggyAPI.lua")
-    lu.assertFalse(fs_lib.path_exists(repo_root .. "/Data/Prefab.lua"))
-    lu.assertFalse(fs_lib.path_exists(repo_root .. "/EggyEditorAPI.lua"))
+    check.is_nil(stats)
+    check.matches("EggyAPI.lua", tostring(err), 1, true)
+    check.is_false(fs_lib.path_exists(repo_root .. "/Data/Prefab.lua"))
+    check.is_false(fs_lib.path_exists(repo_root .. "/EggyEditorAPI.lua"))
   end)
-end
+end)
 
-function TestSyncFromDeploy.test_missing_eggy_editor_api_is_error_and_writes_nothing()
+it("missing Eggy editor API is an error and writes nothing", function()
   _with_sandbox(function(root)
     local deploy_dir = root .. "/deploy"
     _write(deploy_dir .. "/Data/Prefab.lua", "return {}\n")
@@ -214,15 +216,17 @@ function TestSyncFromDeploy.test_missing_eggy_editor_api_is_error_and_writes_not
     fs_lib.ensure_dir(repo_root .. "/Data")
 
     local stats, err = sync_data.sync_from_deploy(deploy_dir, repo_root)
-    lu.assertNil(stats)
-    lu.assertStrContains(tostring(err), "EggyEditorAPI.lua")
-    lu.assertFalse(fs_lib.path_exists(repo_root .. "/Data/Prefab.lua"))
-    lu.assertFalse(fs_lib.path_exists(repo_root .. "/EggyAPI.lua"))
+    check.is_nil(stats)
+    check.matches("EggyEditorAPI.lua", tostring(err), 1, true)
+    check.is_false(fs_lib.path_exists(repo_root .. "/Data/Prefab.lua"))
+    check.is_false(fs_lib.path_exists(repo_root .. "/EggyAPI.lua"))
   end)
-end
+end)
+end)
 
-TestCliArgs = {}
+describe("sync data CLI arguments", function()
 
-function TestCliArgs.test_unexpected_arg_is_usage_error()
-  lu.assertEquals(sync_data.main({ "extra" }), 2)
-end
+it("unexpected argument is a usage error", function()
+  check.equal(2, sync_data.main({ "extra" }))
+end)
+end)
