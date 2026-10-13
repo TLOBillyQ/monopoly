@@ -4,23 +4,13 @@ local fs = require("foundation.fs")
 local path = require("foundation.path")
 local shell = require("foundation.shell")
 local M = {}
-local helper_cache
-
 local function native(value) return (value:gsub("/", "\\")) end
 local function helper()
-  if helper_cache then return helper_cache end
   local source = debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")
   local root = assert(source:match("^(.*)/tools/foundation/parallel_lanes.lua$"))
   if not path.is_absolute_path(root) then root = path.join_path(env.current_dir(), root) end
-  local unique = env.make_temp_path("lane_helper", ""):match("[^/]+$")
-  local target = root .. "/.toolcache/" .. unique .. "/lane_process.exe"
-  local source_path = root .. "/tools/foundation/lane_process.c"
-  local prepared, prepare_err = fs.ensure_parent_dir(target)
-  if not prepared then return nil, tostring(prepare_err) end
-  -- 独立会话独立目标,避免多Lua进程覆盖正在执行的helper。
-  local build = require("foundation.proc").run_command({ "gcc", "-municode", "-Wall", "-Wextra", "-Werror", "-O2", source_path, "-o", target })
-  if not build.ok then return nil, "native lane helper requires gcc: " .. tostring(build.output) end
-  helper_cache = target
+  local target = root .. "/tools/foundation/lane_process.ps1"
+  if not fs.path_exists(target) then return nil, "Windows lane owner script missing: " .. target end
   return target
 end
 local function status(entry)
@@ -48,8 +38,10 @@ local function launch(entry, executable, timeout)
   if not ok then return nil, err end
   local launcher = entry.dir .. "/launcher.cmd"
   ok, err = fs.write_file(launcher, "@echo off\r\nchcp 65001 >nul\r\n" .. shell.build_command({
-    executable, native(command_path), native(entry.output), native(entry.status), tostring(timeout),
-  }) .. "\r\nexit /b %errorlevel%\r\n")
+    (os.getenv("SystemRoot") or "C:/Windows") .. "/System32/WindowsPowerShell/v1.0/powershell.exe",
+    "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", native(executable),
+    native(command_path), native(entry.output), native(entry.status), tostring(timeout),
+  }) .. ' >"' .. native(entry.dir .. '/owner.log') .. '" 2>&1\r\nexit /b %errorlevel%\r\n')
   if not ok then return nil, err end
   local exec_ok, kind, code = os.execute('start "" /b cmd.exe /d /v:off /s /c ""' .. native(launcher) .. '"" >nul 2>&1')
   if not shell.exit_status(exec_ok, kind, code) then return nil, "failed to start owner: " .. tostring(code) end
@@ -95,8 +87,10 @@ function M.run(lanes, opts)
     elseif code == nil then
       result.reason, result.message = "output_incomplete", "Owner did not publish completion state: " .. tostring(entry.label)
       result.artifact_dir = entry.dir
+      result.output = result.output .. (fs.read_raw(entry.dir .. "/owner.log") or "")
     elseif reason ~= "exit" then
       result.reason, result.message = reason, "Lane " .. tostring(entry.label) .. " " .. reason .. ": " .. code
+      result.output = result.output .. (fs.read_raw(entry.status .. ".error") or "")
       if reason == "termination_failed" then result.artifact_dir = entry.dir end
     elseif code ~= 0 then
       result.reason, result.message = "exit", "Lane " .. tostring(entry.label) .. " exited " .. code

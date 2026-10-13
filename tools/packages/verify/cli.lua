@@ -34,7 +34,7 @@ function M.usage()
     "flag 映射:",
     "  --serial       所有车道及其测试子进程按序执行(原生 Windows 默认)",
     "  --parallel     原生 start /b 后台并行；Job Object超时停止自有进程树",
-    "                 首次会话用gcc编译项目原生helper；空输出按失败计",
+    "                 Windows PowerShell内置.NET Add-Type/PInvoke；空输出按失败计",
     "  (默认)         slim:七层 + foundation 行为 spec 全跑",
     "  --full         slim + coverage + crap(完整报告,按需)",
     "  --coverage     显式加 coverage 并行 lane(只看覆盖率)",
