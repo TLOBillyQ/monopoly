@@ -2,8 +2,7 @@ require("test.bootstrap").install_package_paths()
 -- busted injects the extensible assertion object into each file environment.
 -- luacheck: ignore 143
 local luassert = assert
-local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local item_ids = require("src.config.gameplay.item_ids")
 
 describe("TestItemIdsRegister", function()

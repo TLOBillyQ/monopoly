@@ -8,7 +8,7 @@ local _config_reset = require("test.support.config_reset")
 
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.is.equal(b, a, msg)
 end
 
 local function _before()

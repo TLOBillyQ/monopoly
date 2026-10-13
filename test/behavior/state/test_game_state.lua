@@ -5,7 +5,7 @@ local luassert = assert
 local Game = require("src.state.game_state")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.is.equal(b, a, msg)
 end
 
 local _config_reset = require("test.support.config_reset")
