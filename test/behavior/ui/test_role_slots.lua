@@ -1,5 +1,7 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- luacheck: ignore 211
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local _build_asset_context = support.build_asset_context
 local _with_patches = support.with_patches
@@ -7,9 +9,9 @@ local ui_view = require("src.ui.coord.ui_runtime")
 local base_nodes = require("src.ui.schema.base")
 local ids = require("test.fixtures.item_slot_ids")
 
-TestRoleSlots = {}
+describe("TestRoleSlots", function()
 
-function TestRoleSlots:test_render_auto_controls_tolerates_a_missing_panel()
+it("test_render_auto_controls_tolerates_a_missing_panel", function()
   local panel_controls = require("src.ui.render.widgets.panel_controls")
   local visible_calls = {}
   local ui = {
@@ -32,16 +34,16 @@ function TestRoleSlots:test_render_auto_controls_tolerates_a_missing_panel()
   panel_controls.render_auto_controls_for_role(ui, ctx, {}, touch)
 
   -- panel 缺失只跳过文案,托管控件照常显示、触摸策略照常下发
-  lu.assertEquals(#visible_calls, 1)
-  lu.assertEquals(visible_calls[1][1], "基础_托管按钮")
-  lu.assertEquals(visible_calls[1][2], true)
-  lu.assertEquals(#touch_calls, 1)
-  lu.assertEquals(touch_calls[1].is_player, false)
-  lu.assertEquals(touch_calls[1].controls, ui.auto_control_nodes)
-end
+  luassert.is.same( 1,#visible_calls)
+  luassert.is.same( "基础_托管按钮",visible_calls[1][1])
+  luassert.is.same( true,visible_calls[1][2])
+  luassert.is.same( 1,#touch_calls)
+  luassert.is.same( false,touch_calls[1].is_player)
+  luassert.is.same( ui.auto_control_nodes,touch_calls[1].controls)
+end)
 
 do
-  function TestRoleSlots:test_base_schema_node_names_are_stable()
+  it("test_base_schema_node_names_are_stable", function()
     local expected = {
       canvas = "基础屏",
       action_button = "基础_行动按钮",
@@ -69,7 +71,7 @@ do
     }
 
     for key, value in pairs(expected) do
-      lu.assertEvalToTrue(base_nodes[key] == value, "base schema node mismatch: " .. key)
+      luassert.truthy(base_nodes[key] == value, "base schema node mismatch: " .. key)
     end
     for index, value in ipairs({
       "基础_玩家1行动动效",
@@ -77,26 +79,26 @@ do
       "基础_玩家3行动动效",
       "基础_玩家4行动动效",
     }) do
-      lu.assertEvalToTrue(base_nodes.player_action_effects[index] == value,
+      luassert.truthy(base_nodes.player_action_effects[index] == value,
         "base schema action effect mismatch: " .. tostring(index))
     end
-  end
+  end)
 
-  function TestRoleSlots:test_ui_state_defaults_start_inactive_and_hide_skin_entry_with_base_controls()
+  it("test_ui_state_defaults_start_inactive_and_hide_skin_entry_with_base_controls", function()
     local ui = ui_view.build_ui_state()
     local hidden = {}
     for _, name in ipairs(ui.base_hidden_nodes) do
       hidden[name] = true
     end
 
-    lu.assertEvalToTrue(ui.auto_play == false, "ui auto_play should default off")
-    lu.assertEvalToTrue(ui.move_active == false, "ui move_active should default inactive")
-    lu.assertEvalToTrue(ui.popup_seq == 0, "ui popup sequence should start at zero")
-    lu.assertEvalToTrue(hidden["基础_皮肤图标"] == true, "skin button should follow base hidden controls")
-    lu.assertEvalToTrue(hidden["基础_皮肤文本"] == true, "skin label should follow base hidden controls")
-  end
+    luassert.truthy(ui.auto_play == false, "ui auto_play should default off")
+    luassert.truthy(ui.move_active == false, "ui move_active should default inactive")
+    luassert.truthy(ui.popup_seq == 0, "ui popup sequence should start at zero")
+    luassert.truthy(hidden["基础_皮肤图标"] == true, "skin button should follow base hidden controls")
+    luassert.truthy(hidden["基础_皮肤文本"] == true, "skin label should follow base hidden controls")
+  end)
 
-  function TestRoleSlots:test_ui_view_render_by_role_slots_are_isolated()
+  it("test_ui_view_render_by_role_slots_are_isolated", function()
     local image_logs = {}
     local node_map = {}
     local touch_logs = {}
@@ -232,44 +234,44 @@ do
       ui_view.refresh_panel(state, ui_model)
     end)
 
-    lu.assertEvalToTrue(image_logs[1] and image_logs[1][ids.slot[1]] == "ICON2001", "role1 slot icon expected")
-    lu.assertEvalToTrue(image_logs[2] and image_logs[2][ids.slot[1]] == "ICON2002", "role2 slot icon expected")
-    lu.assertEvalToTrue(image_logs[0] and image_logs[0]["基础_玩家1头像"] == "AVATAR_1", "player1 avatar should use row avatar")
-    lu.assertEvalToTrue(image_logs[0] and image_logs[0]["基础_玩家2头像"] == "EMPTY", "player2 avatar should fallback to empty key")
-    lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_行动按钮"] == true, "current role action button should be enabled")
-    lu.assertEvalToTrue(touch_logs[2] and touch_logs[2]["基础_行动按钮"] == false, "non-current role action button should be disabled")
-    lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_托管按钮"] == true, "role1 auto button should be enabled")
-    lu.assertEvalToTrue(touch_logs[2] and touch_logs[2]["基础_托管按钮"] == true, "player role auto button should stay enabled")
-    lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_托管文本"] == false, "role1 auto label should stay non-clickable")
-    lu.assertEvalToTrue(touch_logs[2] and touch_logs[2]["基础_托管文本"] == false, "role2 auto label should stay non-clickable")
-    lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_托管按钮特效"] == false, "role1 auto effect should stay non-clickable")
-    lu.assertEvalToTrue(touch_logs[2] and touch_logs[2]["基础_托管按钮特效"] == false, "role2 auto effect should stay non-clickable")
-    lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_皮肤图标"] == false, "current role skin button should not consume hidden clicks")
-    lu.assertEvalToTrue(touch_logs[2] and touch_logs[2]["基础_皮肤图标"] == true, "visible off-turn skin button should be touchable")
-    lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_皮肤文本"] == false, "skin label should never consume clicks for current role")
-    lu.assertEvalToTrue(touch_logs[2] and touch_logs[2]["基础_皮肤文本"] == false, "skin label should never consume clicks for non-current role")
-    lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_皮肤动效1"] == false, "skin effect 1 should never consume clicks for current role")
-    lu.assertEvalToTrue(touch_logs[2] and touch_logs[2]["基础_皮肤动效1"] == false, "skin effect 1 should never consume clicks for non-current role")
-    lu.assertEvalToTrue(touch_logs[1] and touch_logs[1]["基础_皮肤动效2"] == false, "skin effect 2 should never consume clicks for current role")
-    lu.assertEvalToTrue(touch_logs[2] and touch_logs[2]["基础_皮肤动效2"] == false, "skin effect 2 should never consume clicks for non-current role")
-    lu.assertEvalToTrue(label_logs[1] and label_logs[1]["基础_托管文本"] == "托管", "role1 auto label should show fixed copy")
-    lu.assertEvalToTrue(label_logs[2] and label_logs[2]["基础_托管文本"] == "托管", "role2 auto label should show fixed copy")
-    lu.assertEvalToTrue(visible_logs[2] and visible_logs[2]["基础_倒计时"] == true, "non-current role countdown should be visible")
-    lu.assertEvalToTrue(visible_logs[2] and visible_logs[2][ids.slot[1]] == true, "non-current role slot should be visible")
-    lu.assertEvalToTrue(visible_logs[2] and visible_logs[2]["基础_托管按钮"] == true, "auto button should stay visible")
-    lu.assertEvalToTrue(visible_logs[2] and visible_logs[2]["基础_托管文本"] == true, "auto label should stay visible")
-    lu.assertEvalToTrue(visible_logs[1] and visible_logs[1]["基础_皮肤图标"] == false, "current role skin button should hide on own turn")
-    lu.assertEvalToTrue(visible_logs[1] and visible_logs[1]["基础_皮肤文本"] == false, "current role skin label should hide on own turn")
-    lu.assertEvalToTrue(visible_logs[2] and visible_logs[2]["基础_皮肤图标"] == true, "non-current role skin button should show off turn")
-    lu.assertEvalToTrue(visible_logs[2] and visible_logs[2]["基础_皮肤文本"] == true, "non-current role skin label should show off turn")
-    lu.assertEvalToTrue(visible_logs[1] and visible_logs[1]["基础_托管按钮特效"] == false, "role1 auto effect should hide when auto off")
-    lu.assertEvalToTrue(visible_logs[2] and visible_logs[2]["基础_托管按钮特效"] == true, "role2 auto effect should show when auto on")
+    luassert.truthy(image_logs[1] and image_logs[1][ids.slot[1]] == "ICON2001", "role1 slot icon expected")
+    luassert.truthy(image_logs[2] and image_logs[2][ids.slot[1]] == "ICON2002", "role2 slot icon expected")
+    luassert.truthy(image_logs[0] and image_logs[0]["基础_玩家1头像"] == "AVATAR_1", "player1 avatar should use row avatar")
+    luassert.truthy(image_logs[0] and image_logs[0]["基础_玩家2头像"] == "EMPTY", "player2 avatar should fallback to empty key")
+    luassert.truthy(touch_logs[1] and touch_logs[1]["基础_行动按钮"] == true, "current role action button should be enabled")
+    luassert.truthy(touch_logs[2] and touch_logs[2]["基础_行动按钮"] == false, "non-current role action button should be disabled")
+    luassert.truthy(touch_logs[1] and touch_logs[1]["基础_托管按钮"] == true, "role1 auto button should be enabled")
+    luassert.truthy(touch_logs[2] and touch_logs[2]["基础_托管按钮"] == true, "player role auto button should stay enabled")
+    luassert.truthy(touch_logs[1] and touch_logs[1]["基础_托管文本"] == false, "role1 auto label should stay non-clickable")
+    luassert.truthy(touch_logs[2] and touch_logs[2]["基础_托管文本"] == false, "role2 auto label should stay non-clickable")
+    luassert.truthy(touch_logs[1] and touch_logs[1]["基础_托管按钮特效"] == false, "role1 auto effect should stay non-clickable")
+    luassert.truthy(touch_logs[2] and touch_logs[2]["基础_托管按钮特效"] == false, "role2 auto effect should stay non-clickable")
+    luassert.truthy(touch_logs[1] and touch_logs[1]["基础_皮肤图标"] == false, "current role skin button should not consume hidden clicks")
+    luassert.truthy(touch_logs[2] and touch_logs[2]["基础_皮肤图标"] == true, "visible off-turn skin button should be touchable")
+    luassert.truthy(touch_logs[1] and touch_logs[1]["基础_皮肤文本"] == false, "skin label should never consume clicks for current role")
+    luassert.truthy(touch_logs[2] and touch_logs[2]["基础_皮肤文本"] == false, "skin label should never consume clicks for non-current role")
+    luassert.truthy(touch_logs[1] and touch_logs[1]["基础_皮肤动效1"] == false, "skin effect 1 should never consume clicks for current role")
+    luassert.truthy(touch_logs[2] and touch_logs[2]["基础_皮肤动效1"] == false, "skin effect 1 should never consume clicks for non-current role")
+    luassert.truthy(touch_logs[1] and touch_logs[1]["基础_皮肤动效2"] == false, "skin effect 2 should never consume clicks for current role")
+    luassert.truthy(touch_logs[2] and touch_logs[2]["基础_皮肤动效2"] == false, "skin effect 2 should never consume clicks for non-current role")
+    luassert.truthy(label_logs[1] and label_logs[1]["基础_托管文本"] == "托管", "role1 auto label should show fixed copy")
+    luassert.truthy(label_logs[2] and label_logs[2]["基础_托管文本"] == "托管", "role2 auto label should show fixed copy")
+    luassert.truthy(visible_logs[2] and visible_logs[2]["基础_倒计时"] == true, "non-current role countdown should be visible")
+    luassert.truthy(visible_logs[2] and visible_logs[2][ids.slot[1]] == true, "non-current role slot should be visible")
+    luassert.truthy(visible_logs[2] and visible_logs[2]["基础_托管按钮"] == true, "auto button should stay visible")
+    luassert.truthy(visible_logs[2] and visible_logs[2]["基础_托管文本"] == true, "auto label should stay visible")
+    luassert.truthy(visible_logs[1] and visible_logs[1]["基础_皮肤图标"] == false, "current role skin button should hide on own turn")
+    luassert.truthy(visible_logs[1] and visible_logs[1]["基础_皮肤文本"] == false, "current role skin label should hide on own turn")
+    luassert.truthy(visible_logs[2] and visible_logs[2]["基础_皮肤图标"] == true, "non-current role skin button should show off turn")
+    luassert.truthy(visible_logs[2] and visible_logs[2]["基础_皮肤文本"] == true, "non-current role skin label should show off turn")
+    luassert.truthy(visible_logs[1] and visible_logs[1]["基础_托管按钮特效"] == false, "role1 auto effect should hide when auto off")
+    luassert.truthy(visible_logs[2] and visible_logs[2]["基础_托管按钮特效"] == true, "role2 auto effect should show when auto on")
     -- 逐席位隔离的凭据是**渲染结果**(各 role 看到自己的卡图),不再是槽位镜像:
     -- ui.item_slot_item_ids{,_by_role} 已随道具槽点击重做退场(槽位 → 道具由 turn
     -- 层直读行动者背包)。image_logs 的 role1/role2 断言就是这条隔离的真凭据。
-  end
+  end)
 
-  function TestRoleSlots:test_skin_entry_hidden_when_current_player_id_nil()
+  it("test_skin_entry_hidden_when_current_player_id_nil", function()
     local visible_logs = {}
     local state = {
       runtime_asset_context = _build_asset_context({ ["Empty"] = "EMPTY" }),
@@ -310,11 +312,11 @@ do
     }, function()
       ui_view.refresh_panel(state, ui_model)
     end)
-    lu.assertEvalToTrue(visible_logs["基础_皮肤图标"] == false, "skin button must hide when no current player")
-    lu.assertEvalToTrue(visible_logs["基础_皮肤文本"] == false, "skin label must hide when no current player")
-  end
+    luassert.truthy(visible_logs["基础_皮肤图标"] == false, "skin button must hide when no current player")
+    luassert.truthy(visible_logs["基础_皮肤文本"] == false, "skin label must hide when no current player")
+  end)
 
-  function TestRoleSlots:test_skin_entry_visible_for_spectator_even_when_input_blocked()
+  it("test_skin_entry_visible_for_spectator_even_when_input_blocked", function()
     local visible_logs = {}
     local state = {
       runtime_asset_context = _build_asset_context({ ["Empty"] = "EMPTY" }),
@@ -356,13 +358,13 @@ do
     }, function()
       ui_view.refresh_panel(state, ui_model)
     end)
-    lu.assertEvalToTrue(visible_logs["基础_皮肤图标"] == true,
+    luassert.truthy(visible_logs["基础_皮肤图标"] == true,
       "skin button must stay visible for a spectator even while input_blocked (input gate locks bot turns; should not hide entry)")
-    lu.assertEvalToTrue(visible_logs["基础_皮肤文本"] == true,
+    luassert.truthy(visible_logs["基础_皮肤文本"] == true,
       "skin label must stay visible for a spectator even while input_blocked")
-  end
+  end)
 
-  function TestRoleSlots:test_ui_view_hides_inactive_countdown()
+  it("test_ui_view_hides_inactive_countdown", function()
     local visible_logs = {}
     local label_logs = {}
 
@@ -415,18 +417,18 @@ do
       ui_view.refresh_panel(state, ui_model)
     end)
 
-    lu.assertEvalToTrue(visible_logs["基础_倒计时"] == false, "inactive countdown should hide countdown label")
-    lu.assertEvalToTrue(visible_logs["基础_倒计时横线"] == false, "inactive countdown should hide countdown line")
-    lu.assertEvalToTrue(label_logs["基础_倒计时"] == "倒计时:0", "countdown label should stay synchronized when hidden")
-  end
+    luassert.truthy(visible_logs["基础_倒计时"] == false, "inactive countdown should hide countdown label")
+    luassert.truthy(visible_logs["基础_倒计时横线"] == false, "inactive countdown should hide countdown line")
+    luassert.truthy(label_logs["基础_倒计时"] == "倒计时:0", "countdown label should stay synchronized when hidden")
+  end)
 
-  function TestRoleSlots:test_ui_events_send_without_roles_no_crash()
+  it("test_ui_events_send_without_roles_no_crash", function()
     local ui_events = require("src.ui.coord.ui_events")
     ui_events.set_roles(nil)
     ui_events.send_to_all("测试事件", { ok = true })
-  end
+  end)
 
-  function TestRoleSlots:test_ui_nodes_validate_reports_missing()
+  it("test_ui_nodes_validate_reports_missing", function()
     local nodes = require("Data.UIManagerNodes")
     local known = {}
     for _, entry in pairs(nodes) do
@@ -441,10 +443,10 @@ do
         missing[#missing + 1] = name
       end
     end
-    lu.assertEvalToTrue(#missing == 1, "validate should return missing node list")
-    lu.assertEvalToTrue(missing[1] == "不存在的节点_测试", "missing node name should match")
-  end
+    luassert.truthy(#missing == 1, "validate should return missing node list")
+    luassert.truthy(missing[1] == "不存在的节点_测试", "missing node name should match")
+  end)
 end
 
 
-return TestRoleSlots
+end)
